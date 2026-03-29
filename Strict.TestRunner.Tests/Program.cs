@@ -19,3 +19,12 @@ Console.WriteLine("Allocated bytes per run: " + (allocatedAfter - allocatedBefor
 tests.interpreter.Statistics.Reset();
 tests.RunAllTestsInPackage();
 Console.WriteLine("One run: " + tests.interpreter.Statistics);
+Console.WriteLine("Now running all tests in all .strict files found in this repo!");
+allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+startTicks = DateTime.UtcNow.Ticks;
+tests.RunAllTestsForAllStrictFilesInThisRepo().GetAwaiter().GetResult();
+endTicks = DateTime.UtcNow.Ticks;
+allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
+Console.WriteLine("Total execution for all tests: " + TimeSpan.FromTicks(endTicks - startTicks));
+Console.WriteLine("Allocated bytes for all tests: " + (allocatedAfter - allocatedBefore));
+//TODO: the changes are mostly stupid and useless, go through them one by one, still good to have things able to be parallized, but the performance benefit is close to zero and mostly negative (3 times slower running all tests in parallel), too much overhead and not the right way. even now we have extra overhead by locking too many things, we can use some good lock tricks from the past (first return value, then lock if a change is needed, etc.)

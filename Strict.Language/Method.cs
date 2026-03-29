@@ -335,6 +335,7 @@ public sealed class Method : Context
 	}
 
 	private int methodLineNumber = 1;
+	private readonly object parseLock = new();
 
 	private bool CheckBodyLine(string line, Body body)
 	{
@@ -392,24 +393,28 @@ public sealed class Method : Context
 	{
 		if (methodBody == null)
 			throw new CannotCallBodyOnTraitMethod(Type, Name);
-		if (parseTestsOnlyForGeneric && Type.IsGeneric)
-			return ParseTestsOnlyForGeneric();
-		if (methodBody.Expressions.Count > 0)
-			return !parseTestsOnlyForGeneric && methodBody.Expressions.Any(expression =>
-				expression.GetType().Name == nameof(PlaceholderExpression))
-				? methodBody.Parse()
-				: methodBody.Expressions.Count == 1
-					? methodBody.Expressions[0]
-					: methodBody;
-		var expression = methodBody.Parse();
-		if (expression.GetType().Name == Body.Declaration)
-			throw new DeclarationIsNeverUsedAndMustBeRemoved(Type, TypeLineNumber, expression);
-		if (methodBody.Variables != null)
-			foreach (var variable in methodBody.Variables)
-				if (variable is { IsMutable: true, InitialValue.IsConstant: true } &&
-					!Parser.IsVariableMutated(methodBody, variable.Name))
-					throw new MutableUsesConstantValue(methodBody, variable.Name, variable.InitialValue);
-		return BodyParsed?.Invoke(expression) ?? expression;
+		lock (parseLock)
+		{
+			if (parseTestsOnlyForGeneric && Type.IsGeneric)
+				return ParseTestsOnlyForGeneric();
+			if (methodBody.Expressions.Count > 0)
+				return !parseTestsOnlyForGeneric && methodBody.Expressions.Any(expression =>
+					expression.GetType().Name == nameof(PlaceholderExpression))
+					? methodBody.Parse()
+					: methodBody.Expressions.Count == 1
+						? methodBody.Expressions[0]
+						: methodBody;
+			var expression = methodBody.Parse();
+			if (expression.GetType().Name == Body.Declaration)
+				throw new DeclarationIsNeverUsedAndMustBeRemoved(Type, TypeLineNumber, expression);
+			if (methodBody.Variables != null)
+				foreach (var variable in methodBody.Variables)
+					if (variable is { IsMutable: true, InitialValue.IsConstant: true } &&
+						!Parser.IsVariableMutated(methodBody, variable.Name))
+						throw new MutableUsesConstantValue(methodBody, variable.Name,
+							variable.InitialValue);
+			return BodyParsed?.Invoke(expression) ?? expression;
+		}
 	}
 
 	private Expression ParseTestsOnlyForGeneric()

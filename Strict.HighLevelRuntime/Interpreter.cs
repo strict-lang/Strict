@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Strict.Expressions;
 using Strict.Language;
 using System.Runtime.CompilerServices;
@@ -48,7 +49,7 @@ public class Interpreter
 	private readonly ForEvaluator forEvaluator;
 	internal readonly MethodCallEvaluator methodCallEvaluator;
 	private readonly ToEvaluator toEvaluator;
-	private readonly Stack<ExecutionContext> contextPool = new();
+	private readonly ConcurrentStack<ExecutionContext> contextPool = new();
 
 	internal ExecutionContext RentContext(Type type, Method method, ValueInstance? instance,
 		ExecutionContext? parent)
@@ -66,15 +67,15 @@ public class Interpreter
 	public ValueInstance Execute(Method method)
 	{
 		var returnValue = noneInstance;
-		if (bodyEvaluator.inlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
-			(behavior == TestBehavior.TestRunner || validatedMethods.Add(method)))
+		if (bodyEvaluator.InlineTestDepth == 0 && behavior != TestBehavior.Disabled &&
+			(behavior == TestBehavior.TestRunner || validatedMethods.TryAdd(method, 0)))
 			returnValue = Execute(method, noneInstance, [], null, true);
-		if (bodyEvaluator.inlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
+		if (bodyEvaluator.InlineTestDepth > 0 || behavior != TestBehavior.TestRunner)
 			returnValue = Execute(method, noneInstance, []);
 		return returnValue;
 	}
 
-	private readonly HashSet<Method> validatedMethods = [];
+	private readonly ConcurrentDictionary<Method, byte> validatedMethods = new();
 	public readonly Statistics Statistics = new();
 
 	public void ExecuteRunMethod(Type type)
@@ -517,19 +518,13 @@ public class Interpreter
 		body.Method, "Return value " + last + " does not match method " + body.Method.Name +
 		" ReturnType=" + body.Method.ReturnType);
 
-	private readonly Dictionary<Method, bool> simpleMethodCache = new();
+	private readonly ConcurrentDictionary<Method, bool> simpleMethodCache = new();
 
 	/// <summary>
 	/// Skip parsing for trivially simple methods during validation to avoid missing-instance errors.
 	/// </summary>
-	private bool IsSimpleSingleLineMethod(Method method)
-	{
-		if (simpleMethodCache.TryGetValue(method, out var cached))
-			return cached;
-		var result = CheckIsSimpleSingleLineMethod(method);
-		simpleMethodCache[method] = result;
-		return result;
-	}
+	private bool IsSimpleSingleLineMethod(Method method) =>
+		simpleMethodCache.GetOrAdd(method, CheckIsSimpleSingleLineMethod);
 
 	private static bool CheckIsSimpleSingleLineMethod(Method method)
 	{

@@ -256,12 +256,17 @@ public class TestInterpreterTests
 	{
 		var repos = new Repositories(new MethodExpressionParser());
 		var strict = await repos.LoadStrictPackage();
+		var math = await repos.LoadStrictPackage("Strict/Math");
+		var imageProcessing = await repos.LoadStrictPackage("Strict/ImageProcessing");
+		var language = await repos.LoadStrictPackage("Strict/Language");
+		var examples = await repos.LoadStrictPackage("Strict/Examples");
 		var fullInterpreter = new TestInterpreter(strict);
-		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage());
-		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Math"));
-		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/ImageProcessing"));
-		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Language"));
-		fullInterpreter.RunAllTestsInPackage(await repos.LoadStrictPackage("Strict/Examples"));
+		var packages = new[] { strict, math, imageProcessing, language, examples };
+		var tasks = new List<Task>();
+		foreach (var packageToTest in packages)
+			tasks.Add(Task.Run(() => fullInterpreter.RunAllTestsInPackage(packageToTest)));
+		await Task.WhenAll(tasks);
+		Console.WriteLine("All tests ran: " + fullInterpreter.Statistics);
 	}
 
 	[Test]

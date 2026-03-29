@@ -47,7 +47,7 @@ internal class TypeMethodFinder(Type type)
 		if (Type.IsEnum && Type.Members.Count > 0 && Type.Members[0].Type.IsNumber)
 			return Type.Members[0].Type.FindMethod(methodName, arguments);
 		return Type.Name == "Enum"
-			? Type.GetType(Type.Number).FindMethod(methodName, arguments)
+			? Type.GetType(Number).FindMethod(methodName, arguments)
 			: null;
 	}
 
@@ -263,9 +263,11 @@ internal class TypeMethodFinder(Type type)
 		if (methodParameterType is { IsText: false, IsEnum: true } &&
 			methodParameterType.Members[0].Type.IsSameOrCanBeUsedAs(argumentType))
 			return true;
-		if (methodParameterType.Name == Type.Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))
+		if (methodParameterType.Name == Iterator && method.Type.IsSameOrCanBeUsedAs(argumentType))
 			return true; //ncrunch: no coverage
-		if (argumentType.Name == Type.GenericUppercase && !methodParameterType.IsGeneric)
+		if (argumentType.Name == GenericUppercase && !methodParameterType.IsGeneric)
+			return true;
+		if (argumentType.IsError)
 			return true;
 		if (!methodParameterType.IsGeneric)
 			return argumentType.IsSameOrCanBeUsedAs(methodParameterType);

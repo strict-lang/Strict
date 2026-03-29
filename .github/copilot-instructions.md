@@ -464,3 +464,8 @@ No exceptions without your human partner's permission.
 
 ## Additional Guidelines
 - In this repo, keep fixes narrowly focused and avoid adding many new tests; prefer relying on existing coverage and add at most one specific regression test when needed.
+
+## Multithreading Support
+- In this repo, treat Repositories and related package-loading/test-running code as intended to support multithreaded execution; caching exists to avoid reloading the same package across parallel tests.
+- Keep the `typesToTest` snapshot list in `TestInterpreter.RunAllTestsInPackage` because package types can change while lazily adding generic implementations during execution.
+- For this repo's test-runner performance work, parallelize at the package level, not per type; avoid `Parallel.ForEachAsync` over types because type tests are too fine-grained and the overhead dominates.

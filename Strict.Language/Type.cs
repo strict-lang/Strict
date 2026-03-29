@@ -203,6 +203,8 @@ public class Type : Context, IDisposable
 
 	internal void InvalidateAvailableMethodsCache()
 	{
+		if (Package.Name is nameof(Strict) or "TestPackage")
+			cachedAnyMethods = null;
 		cachedAvailableMethods = null;
 		if (cachedGenericTypes == null)
 			return;
@@ -644,44 +646,41 @@ public class Type : Context, IDisposable
 			var cached = cachedAvailableMethods;
 			if (cached != null && !ReferenceEquals(cached, InProgress))
 				return cached;
-			lock (availableMethodsLock)
-			{
-				cached = cachedAvailableMethods;
-				if (cached != null && !ReferenceEquals(cached, InProgress))
-					return cached; // fully built by another thread
-				if (ReferenceEquals(cached, InProgress))
-					return InProgress; // same-thread recursive call, break cycle
-				// Mark as in-progress before recursive member lookups to prevent same-thread cycles
-				cachedAvailableMethods = InProgress;
-				var built = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
-				foreach (var method in methods)
-					if (method.IsPublic || method.Name == Method.From || method.Name.AsSpan().IsOperator())
-						AddAvailableMethod(method, built);
-				if (Name == Any)
-					return cachedAvailableMethods = built;
-				// Types are composed in Strict, we want users to be able to use base methods but exclude
-				// public members (e.g., Type.Name), constants (e.g., constant Tab = Character(7)) and if we
-				// have implemented a trait here anyway (then all the methods are already implemented).
-				foreach (var member in Members.Where(m =>
-					m is { IsPublic: false, InitialValue: null } && !IsTraitImplementation(m.Type)))
-					AddNonGenericMethods(member.Type, built);
-				if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
-					methods.All(m => m.Name != Method.From))
-				{
-					var fromParser = methods.Count > 0
-						? methods[0].Parser
-						: savedParser ?? GetType(Any).Methods.FirstOrDefault()?.Parser;
-					if (fromParser != null)
-						AddFromConstructorWithMembersAsArguments(fromParser, built);
-				}
-				if (this is GenericTypeImplementation { Generic.IsDictionary: true } dictImpl &&
-					dictImpl.Generic.AvailableMethods.TryGetValue(Method.From, out var genericFromMethods) &&
-					built.TryGetValue(Method.From, out var existingFromMethods))
-					foreach (var fromMethod in genericFromMethods)
-						existingFromMethods.Add(new Method(fromMethod, dictImpl));
-				AddAnyMethods(built);
+			cached = cachedAvailableMethods;
+			if (cached != null && !ReferenceEquals(cached, InProgress))
+				return cached; // fully built by another thread
+			if (ReferenceEquals(cached, InProgress))
+				return InProgress; // same-thread recursive call, break cycle
+			// Mark as in-progress before recursive member lookups to prevent same-thread cycles
+			cachedAvailableMethods = InProgress;
+			var built = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
+			foreach (var method in methods)
+				if (method.IsPublic || method.Name == Method.From || method.Name.AsSpan().IsOperator())
+					AddAvailableMethod(method, built);
+			if (Name == Any)
 				return cachedAvailableMethods = built;
+			// Types are composed in Strict, we want users to be able to use base methods but exclude
+			// public members (e.g., Type.Name), constants (e.g., constant Tab = Character(7)) and if we
+			// have implemented a trait here anyway (then all the methods are already implemented).
+			foreach (var member in Members.Where(m =>
+				m is { IsPublic: false, InitialValue: null } && !IsTraitImplementation(m.Type)))
+				AddNonGenericMethods(member.Type, built);
+			if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
+				methods.All(m => m.Name != Method.From))
+			{
+				var fromParser = methods.Count > 0
+					? methods[0].Parser
+					: savedParser ?? GetType(Any).Methods.FirstOrDefault()?.Parser;
+				if (fromParser != null)
+					AddFromConstructorWithMembersAsArguments(fromParser, built);
 			}
+			if (this is GenericTypeImplementation { Generic.IsDictionary: true } dictImpl &&
+				dictImpl.Generic.AvailableMethods.TryGetValue(Method.From, out var genericFromMethods) &&
+				built.TryGetValue(Method.From, out var existingFromMethods))
+				foreach (var fromMethod in genericFromMethods)
+					existingFromMethods.Add(new Method(fromMethod, dictImpl));
+			AddAnyMethods(built);
+			return cachedAvailableMethods = built;
 		}
 	}
 	private ExpressionParser? savedParser;
@@ -689,7 +688,6 @@ public class Type : Context, IDisposable
 	public int LineNumber => typeParser.LineNumber;
 	private static readonly Dictionary<string, List<Method>> InProgress = [];
 	private volatile Dictionary<string, List<Method>>? cachedAvailableMethods;
-	private readonly object availableMethodsLock = new();
 
 	private void AddAvailableMethod(Method method, Dictionary<string, List<Method>> cache)
 	{
@@ -701,9 +699,8 @@ public class Type : Context, IDisposable
 				return;
 			method = new Method(method, this);
 		}
-		if (cache.ContainsKey(method.Name))
+		if (cache.TryGetValue(method.Name, out var methodsWithThisName))
 		{
-			var methodsWithThisName = cache[method.Name];
 			foreach (var existingMethod in methodsWithThisName)
 				if (existingMethod.IsSameMethodNameReturnTypeAndParameters(method))
 					return;

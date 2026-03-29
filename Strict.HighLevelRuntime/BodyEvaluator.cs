@@ -9,13 +9,14 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 	{
 		interpreter.Statistics.BodyCount++;
 		if (runOnlyTests)
-			inlineTestDepth++;
+			inlineTestDepth.Value++;
 		try
 		{
 			return TryEvaluate(body, ctx, runOnlyTests);
 		}
 		catch (InterpreterExecutionFailed ex)
 		{
+			//TODO: is this really needed, can't we build the failure message already correct where the original InterpreterExecutionFailed is thrown?
 			if (ex.Message.Contains(InterpreterExecutionFailed.GetMethodFailureHeader(body.Method),
 				StringComparison.Ordinal))
 				throw;
@@ -29,14 +30,15 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		finally
 		{
 			if (runOnlyTests)
-				inlineTestDepth--;
+				inlineTestDepth.Value--;
 		}
 	}
 
 	/// <summary>
 	/// Evaluate inline tests at top-level only (outermost call), avoid recursion
 	/// </summary>
-	internal int inlineTestDepth;
+	internal int InlineTestDepth => inlineTestDepth.Value;
+	private readonly ThreadLocal<int> inlineTestDepth = new(() => 0);
 
 	private ValueInstance TryEvaluate(Body body, ExecutionContext ctx, bool runOnlyTests)
 	{

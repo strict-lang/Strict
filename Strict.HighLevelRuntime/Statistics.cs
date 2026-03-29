@@ -4,7 +4,7 @@ using Strict.Language;
 namespace Strict.HighLevelRuntime;
 
 /// <summary>
-/// Keeps track of things happening the classes here, usually used together with TestRunner.
+/// Keeps track of things happening while executing Interpreter, used together with TestRunner.
 /// </summary>
 //ncrunch: no coverage start
 public sealed record Statistics
