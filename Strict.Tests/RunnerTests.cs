@@ -179,6 +179,19 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task RunParseExpressions()
+	{
+		await new Runner(GetExamplesFilePath("ParseExpressions"), TestPackage.Instance).Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Parsing HelloLogger.strict expressions"));
+		Assert.That(output, Does.Contain("has member"));
+		Assert.That(output, Does.Contain("mutable member"));
+		Assert.That(output, Does.Contain("Method body expressions:"));
+		Assert.That(output, Does.Contain("MethodCall: logger.Log"));
+		Assert.That(output, Does.Contain("Return: return total"));
+	}
+
+	[Test]
 	public async Task RunFibonacci()
 	{
 		await new Runner(GetExamplesFilePath("Fibonacci"), TestPackage.Instance).Run();

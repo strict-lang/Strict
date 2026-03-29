@@ -1,0 +1,4 @@
+has variableName Text
+has newValue Text
+to Text
+	variableName + " = " + newValue

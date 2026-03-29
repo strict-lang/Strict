@@ -1,0 +1,11 @@
+has elements Texts
+has elementTypeName Text
+to Text
+	"(" + JoinElements + ")"
+JoinElements Text
+	mutable result = ""
+	for elements
+		if result is not ""
+			result = result + ", "
+		result = result + value
+	result

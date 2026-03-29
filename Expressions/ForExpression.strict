@@ -1,0 +1,4 @@
+has iterator Text
+has body Text
+to Text
+	"for " + iterator + "\n\t" + body

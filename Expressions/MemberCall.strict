@@ -1,0 +1,7 @@
+has instance Text
+has memberName Text
+has memberTypeName Text
+to Text
+	if instance is ""
+		return memberName
+	instance + "." + memberName

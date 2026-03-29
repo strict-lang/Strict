@@ -1,0 +1,3 @@
+has operand Text
+to Text
+	"not " + operand

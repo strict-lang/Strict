@@ -1,0 +1,4 @@
+has Value
+has number Number
+to Text
+	number to Text

@@ -1,0 +1,31 @@
+has logger
+Run
+	logger.Log("Parsing HelloLogger.strict expressions")
+	LogMembers
+	LogExpressions
+LogMembers
+	constant memberLines = ("has logger", "mutable count = 0")
+	logger.Log("Members:")
+	for memberLines
+		logger.Log("> " + ClassifyMember(value))
+LogExpressions
+	constant bodyLines = ("logger.Log(Hi)", "return total")
+	logger.Log("Method body expressions:")
+	for bodyLines
+		logger.Log("> " + ClassifyExpression(value))
+ClassifyMember(line Text) Text
+	if line.StartsWith("has ")
+		return "has member"
+	if line.StartsWith("mutable ")
+		return "mutable member"
+	"constant member"
+ClassifyExpression(line Text) Text
+	if line.IndexOf(".") > 0
+		return "MethodCall: " + line
+	if line.StartsWith("return ")
+		return "Return: " + line
+	if line.StartsWith("if ")
+		return "If: " + line
+	if line.StartsWith("for ")
+		return "For: " + line
+	"Expression: " + line

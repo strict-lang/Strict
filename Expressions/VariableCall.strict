@@ -1,0 +1,4 @@
+has variableName Text
+has variableTypeName Text
+to Text
+	variableName

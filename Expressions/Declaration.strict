@@ -1,0 +1,11 @@
+has variableName Text
+has variableTypeName Text
+has initialValue Text
+has isMutable Boolean
+has isConstant Boolean
+to Text
+	if isConstant
+		return "constant " + variableName + " = " + initialValue
+	if isMutable
+		return "mutable " + variableName + " = " + initialValue
+	"let " + variableName + " = " + initialValue

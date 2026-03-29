@@ -1,0 +1,15 @@
+has methodName Text
+has instance Text
+has arguments Texts
+has returnTypeName Text
+to Text
+	if instance is ""
+		return methodName + "(" + JoinArguments + ")"
+	instance + "." + methodName + "(" + JoinArguments + ")"
+JoinArguments Text
+	mutable result = ""
+	for arguments
+		if result is not ""
+			result = result + ", "
+		result = result + value
+	result
