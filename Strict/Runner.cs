@@ -101,6 +101,7 @@ public sealed class Runner
 	private async Task<BinaryExecutable> GetBinary()
 	{
 		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
+		basePackage = await TryLoadSubPackageIfNeeded(basePackage);
 		if (Path.GetExtension(strictFilePath) == BinaryExecutable.Extension)
 			return LogTiming("Loading existing " + strictFilePath,
 				() => new BinaryExecutable(strictFilePath, basePackage));
@@ -152,6 +153,42 @@ public sealed class Runner
 			return await repositories.LoadStrictPackage(name);
 		});
 	}
+
+	private async Task<Package> TryLoadSubPackageIfNeeded(Package basePackage)
+	{
+		if (skipPackageSearchAndUseThisTestPackage != null)
+			return basePackage;
+		var fileDirectory = Path.GetDirectoryName(Path.GetFullPath(strictFilePath));
+		var repoRoot = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
+		if (string.IsNullOrEmpty(fileDirectory) ||
+			fileDirectory.Equals(repoRoot, StringComparison.OrdinalIgnoreCase))
+			return basePackage;
+		var relativePath = Path.GetRelativePath(repoRoot, fileDirectory);
+		if (string.IsNullOrEmpty(relativePath) || relativePath == "." || relativePath.StartsWith("..",
+			StringComparison.Ordinal) || relativePath == "Examples" || relativePath.StartsWith(
+			"Examples" + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+			return basePackage;
+		await LoadDependencyPackages(repoRoot, relativePath);
+		var subPackageName = nameof(Strict) + Context.ParentSeparator +
+			relativePath.Replace(Path.DirectorySeparatorChar, Context.ParentSeparator);
+		return await GetPackage(subPackageName);
+	}
+
+	private async Task LoadDependencyPackages(string repoRoot, string targetSubDir)
+	{
+		foreach (var directory in Directory.GetDirectories(repoRoot))
+		{
+			var dirName = Path.GetFileName(directory);
+			if (dirName != targetSubDir && IsRuntimePackageDirectory(dirName, directory))
+				await GetPackage(nameof(Strict) + Context.ParentSeparator + dirName);
+		}
+	}
+
+	private static bool IsRuntimePackageDirectory(string dirName, string directory) =>
+		!dirName.StartsWith(".", StringComparison.Ordinal) &&
+		!dirName.StartsWith("Strict", StringComparison.Ordinal) &&
+		dirName is not ("Language" or "Expressions" or "Examples") &&
+		Directory.EnumerateFiles(directory, "*" + Type.Extension).Any();
 
 	private T LogTiming<T>(string message, Func<T> callToTime)
 	{
@@ -274,9 +311,16 @@ public sealed class Runner
 	private BinaryExecutable CacheStrictExecutable(BinaryExecutable binary)
 	{
 		var outputFilePath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
-		binary.Serialize(outputFilePath);
-		Log("Saving " + new FileInfo(outputFilePath).Length + " bytes of bytecode to: " +
-			outputFilePath);
+		try
+		{
+			binary.Serialize(outputFilePath);
+			Log("Saving " + new FileInfo(outputFilePath).Length + " bytes of bytecode to: " +
+				outputFilePath);
+		}
+		catch (NotSupportedException ex)
+		{
+			Log("Bytecode serialization not yet supported for this program: " + ex.Message);
+		}
 		return binary;
 	}
 

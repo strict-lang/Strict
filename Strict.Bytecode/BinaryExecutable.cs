@@ -385,6 +385,9 @@ public sealed class BinaryExecutable(Package basePackage)
 		var cleanName = parenIndex > 0
 			? name[..parenIndex]
 			: name;
+		var dotIndex = cleanName.IndexOf('.');
+		if (dotIndex > 0)
+			cleanName = cleanName[..dotIndex];
 		var param = new Parameter(type, cleanName, new Value(type, new ValueInstance(type)));
 		return new ParameterCall(param);
 	}

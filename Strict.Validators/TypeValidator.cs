@@ -86,10 +86,26 @@ public sealed class TypeValidator : Visitor
 		else if (expression is VariableCall variableCall)
 			variables.used.Add(variableCall.Variable.Name);
 		else if (expression is MutableReassignment reassignment)
+		{
 			variables.reassignedMutables.Add(reassignment.Name);
+			if (GetRootParameterName(reassignment.Target) is { } rootName)
+				variables.reassignedMutables.Add(rootName);
+		}
 		else
 			return base.Visit(expression, body, context);
 		return expression;
+	}
+
+	private static string? GetRootParameterName(Expression target)
+	{
+		var current = target;
+		while (current is ListCall listCall)
+			current = listCall.List;
+		while (current is MemberCall memberCall && memberCall.Instance != null)
+			current = memberCall.Instance;
+		return current is ParameterCall rootParam
+			? rootParam.Parameter.Name
+			: null;
 	}
 
 	public sealed class ListArgumentCanBeAutoParsedWithoutDoubleBrackets(Body body, string line)
