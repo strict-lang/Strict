@@ -21,7 +21,7 @@ public sealed class RegisterFile
 	internal bool TryGet(Register r, out ValueInstance value)
 	{
 		value = data[(int)r];
-		return !EqualityComparer<ValueInstance>.Default.Equals(value, default);
+		return value.HasValue;
 	}
 
 	public ValueInstance[] Save()
