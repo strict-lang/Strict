@@ -481,6 +481,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		if (expression is Value value)
 			return value.Data;
+		if (expression is VariableCall variableCall && variableCall.IsConstant &&
+			variableCall.Variable.InitialValue is Value constantValue)
+			return constantValue.Data;
 		if (expression is VariableCall or ParameterCall or Instance)
 			return Memory.Frame.Get(expression.ToString());
 		if (expression is MemberCall memberCall)

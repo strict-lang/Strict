@@ -1,5 +1,6 @@
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict.Optimizers;
 
@@ -28,8 +29,30 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 				used.Add(load.Identifier);
 			else if (instruction is StoreFromRegisterInstruction store)
 				used.Add(store.Identifier);
-			else if (instruction is Invoke { Method: { Instance: VariableCall instanceVar } })
-				used.Add(instanceVar.Variable.Name);
+			else if (instruction is Invoke invoke)
+				CollectVariableCallsFromInvoke(invoke, used);
 		return used;
+	}
+
+	private static void CollectVariableCallsFromInvoke(Invoke invoke, HashSet<string> used)
+	{
+		if (invoke.Method.Instance is VariableCall instanceVar)
+			used.Add(instanceVar.Variable.Name);
+		foreach (var argument in invoke.Method.Arguments)
+			CollectVariableCallsFromExpression(argument, used);
+	}
+
+	private static void CollectVariableCallsFromExpression(Expression expression,
+		HashSet<string> used)
+	{
+		if (expression is VariableCall variableCall)
+			used.Add(variableCall.Variable.Name);
+		else if (expression is MethodCall methodCall)
+		{
+			if (methodCall.Instance != null)
+				CollectVariableCallsFromExpression(methodCall.Instance, used);
+			foreach (var arg in methodCall.Arguments)
+				CollectVariableCallsFromExpression(arg, used);
+		}
 	}
 }
