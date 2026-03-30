@@ -13,10 +13,6 @@ GetBrightnessAdjustedColor(current Color) Color
 	AdjustBrightness(-0.25).GetBrightnessAdjustedColor(testColor) is Color(0, 0.25, 0)
 	Color(current.Red + brightness, current.Green + brightness, current.Blue + brightness)
 Run
-	constant width = 1280
-	constant height = 720
-	mutable image = ColorImage(Size(width, height))
-	image = AdjustBrightness(0.25).Process(image)
-	for pixelIndex in Range(0, image.Size.Length)
-		GetBrightnessAdjustedColor(image.Colors(pixelIndex))
-	image
+	constant width = 640
+	constant height = 360
+	AdjustBrightness(0.25).Process(ColorImage(Size(width, height)))

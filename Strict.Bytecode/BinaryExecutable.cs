@@ -340,8 +340,19 @@ public sealed class BinaryExecutable(Package basePackage)
 			ExpressionKind.MemberRef => ReadMemberRef(reader, table),
 			ExpressionKind.BinaryExpr => ReadBinaryExpr(reader, table),
 			ExpressionKind.MethodCallExpr => ReadMethodCall(reader, table),
+     ExpressionKind.ListExpr => ReadListExpr(reader, table),
 			_ => throw new InvalidFile("Unknown ExpressionKind: " + kind)
 		};
+	}
+
+	private Expressions.List ReadListExpr(BinaryReader reader, NameTable table)
+	{
+		var listType = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
+		var itemCount = reader.Read7BitEncodedInt();
+		var values = new List<Expression>(itemCount);
+		for (var index = 0; index < itemCount; index++)
+			values.Add(ReadExpression(reader, table));
+    return new Expressions.List(listType, values, 0, false);
 	}
 
 	//TODO: missing test
@@ -354,17 +365,27 @@ public sealed class BinaryExecutable(Package basePackage)
 	//TODO: avoid! remove!
 	private static Type EnsureResolvedType(Package package, string typeName)
 	{
-		var resolved = package.FindType(typeName) ?? (typeName.Contains('.')
+    var resolved = package.FindType(typeName) ?? (typeName.Contains(Context.ParentSeparator)
 			? package.FindFullType(typeName)
 			: null);
 		if (resolved != null)
 			return resolved;
 		if (typeName.EndsWith(')') && typeName.Contains('('))
-			return package.GetType(typeName); //ncrunch: no coverage
+      return package.GetType(GetGenericLookupName(typeName));
 		if (char.IsLower(typeName[0]))
 			throw new TypeNotFoundForBytecode(typeName);
 		EnsureTypeExists(package, typeName);
 		return package.GetType(typeName);
+	}
+
+	private static string GetGenericLookupName(string typeName)
+	{
+		var openParenIndex = typeName.IndexOf('(');
+		var mainTypeName = typeName[..openParenIndex];
+		var simpleMainTypeName = mainTypeName.Contains(Context.ParentSeparator)
+			? mainTypeName[(mainTypeName.LastIndexOf(Context.ParentSeparator) + 1)..]
+			: mainTypeName;
+		return simpleMainTypeName + typeName[openParenIndex..];
 	}
 
 	public sealed class TypeNotFoundForBytecode(string typeName)
@@ -425,6 +446,13 @@ public sealed class BinaryExecutable(Package basePackage)
 	{
 		switch (expr)
 		{
+   case Expressions.List list:
+			writer.Write((byte)ExpressionKind.ListExpr);
+			writer.Write7BitEncodedInt(table[list.ReturnType.FullName]);
+			writer.Write7BitEncodedInt(list.Values.Count);
+			foreach (var value in list.Values)
+				WriteExpression(writer, value, table);
+			break;
 		case Value { Data.IsText: true } val:
 			writer.Write((byte)ExpressionKind.TextValue);
 			writer.Write7BitEncodedInt(table[val.Data.Text]);

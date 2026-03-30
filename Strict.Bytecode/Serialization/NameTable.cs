@@ -174,6 +174,7 @@ public sealed class NameTable
 		expr switch
 		{
 			null => this,
+      Expressions.List list => Add(list.ReturnType.FullName).CollectListExpressionStrings(list),
 			Value { Data.IsText: true } val => Add(val.Data.Text),
 			Value val when val.Data.GetType().IsBoolean => Add(val.Data.GetType().Name),
 			Value val when !val.Data.GetType().IsNumber || !BinaryExecutable.IsIntegerNumber(val.Data.Number)
@@ -185,6 +186,13 @@ public sealed class NameTable
 			MethodCall mc => CollectMethodCallStrings(mc),
 			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
 		};
+
+	private NameTable CollectListExpressionStrings(Expressions.List list)
+	{
+		foreach (var value in list.Values)
+			CollectExpressionStrings(value);
+		return this;
+	}
 
 	public void Write(BinaryWriter writer)
 	{

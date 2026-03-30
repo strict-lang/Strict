@@ -15,6 +15,7 @@ public sealed class BinaryGenerator
 {
 	public BinaryGenerator(MethodCall methodCall)
 	{
+    entryMethodCall = methodCall;
 		entryTypeFullName = methodCall.Method.Type.FullName;
 		if (methodCall.Instance is MethodCall instanceCall)
 			AddInstanceMemberVariables(instanceCall);
@@ -37,6 +38,7 @@ public sealed class BinaryGenerator
 	}
 
 	private readonly BinaryExecutable binary;
+  private readonly MethodCall? entryMethodCall;
 	private readonly string entryTypeFullName;
 	private readonly List<Instruction> instructions = []; //TODO: why not keep this in BinaryMethod
 	private readonly Dictionary<string, Type> dependencyTypes = new(StringComparer.Ordinal);
@@ -47,7 +49,11 @@ public sealed class BinaryGenerator
 	private Type ReturnType { get; } //TODO: stupid, remove
 	private int conditionalId; //TODO: a bit strange
 	private int forResultId;
-	public BinaryExecutable Generate() => Generate(entryTypeFullName, Expressions, ReturnType);
+ public BinaryExecutable Generate() => entryMethodCall != null && entryMethodCall.Method.Name == Method.Run &&
+		entryMethodCall.Arguments.Count == 0
+		? Generate(entryMethodCall.Method,
+			entryMethodCall.Method.Type.Methods.Where(method => method.Name == Method.Run).ToArray())
+		: Generate(entryTypeFullName, Expressions, ReturnType);
 
 	public static BinaryExecutable GenerateFromRunMethods(Method preferredEntryMethod,
 		IReadOnlyList<Method> runMethods)
@@ -74,10 +80,25 @@ public sealed class BinaryGenerator
 		IReadOnlyList<Expression> entryExpressions, Type runReturnType)
 	{
 		var methodsByType = CompileMethodsFromExpressions(typeFullName, entryExpressions, runReturnType);
-		foreach (var (compiledTypeFullName, methodGroups) in methodsByType)
-			binary.AddType(compiledTypeFullName, [], methodGroups);
+   var entryType = FindEntryType(typeFullName);
+		if (entryType == null)
+			foreach (var (compiledTypeFullName, methodGroups) in methodsByType)
+				binary.AddType(compiledTypeFullName, [], methodGroups);
+		else
+		{
+			CollectTypeDependency(entryType, true);
+			CollectTypeDependency(runReturnType, false);
+			foreach (var expression in entryExpressions)
+				CollectExpressionDependencies(expression);
+			AddGeneratedTypes(methodsByType, entryType);
+		}
 		return binary;
 	}
+
+	private Type? FindEntryType(string typeFullName) =>
+		string.IsNullOrEmpty(typeFullName)
+			? null
+			: binary.basePackage.FindFullType(typeFullName) ?? binary.basePackage.FindType(typeFullName);
 
 	private static Package GetBasePackage(Expression expression)
 	{
@@ -763,6 +784,7 @@ public sealed class BinaryGenerator
 		while (methodsToCompile.Count > 0)
 		{
 			var method = methodsToCompile.Dequeue();
+      CollectMethodDependencies(method);
 			var body = method.GetBodyAndParseIfNeeded();
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions

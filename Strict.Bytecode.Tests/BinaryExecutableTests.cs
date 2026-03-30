@@ -1,5 +1,6 @@
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
+using Strict.Optimizers;
 using System.IO.Compression;
 using Type = Strict.Language.Type;
 
@@ -34,6 +35,41 @@ public sealed class BinaryExecutableTests : TestBytecode
 		sourceBinary.Serialize(filePath);
 		var loadedBinary = new BinaryExecutable(filePath, TestPackage.Instance);
 		Assert.That(loadedBinary.MethodsPerType[Type.Number].Members[0].Name, Is.EqualTo("value"));
+	}
+
+	[Test]
+	public async Task SerializeAndLoadAdjustBrightnessBinaryPreservesDependencyTypes()
+	{
+		var repos = new Repositories(new MethodExpressionParser());
+		using var strictPackage = await repos.LoadStrictPackage();
+		using var mathPackage = await repos.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + "Math");
+		using var imageProcessingPackage = await repos.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + "ImageProcessing");
+		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
+		var runMethods = adjustBrightness.Methods.Where(method => method.Name == Method.Run).ToArray();
+		var binary = BinaryGenerator.GenerateFromRunMethods(runMethods[0], runMethods);
+    OptimizeLikeRunner(binary);
+		var filePath = CreateTempFilePath();
+		binary.Serialize(filePath);
+		using var archive = ZipFile.OpenRead(filePath);
+		var entries = archive.Entries.Select(entry => entry.FullName.Replace('\\', '/')).ToList();
+		Assert.That(entries, Does.Contain("AdjustBrightness.bytecode"));
+		Assert.That(entries, Does.Contain("Color.bytecode"));
+		Assert.That(entries, Does.Contain("ColorImage.bytecode"));
+		Assert.That(entries.Any(entry => entry.EndsWith("/Size.bytecode", StringComparison.Ordinal)), Is.True,
+			$"Entries: {string.Join(", ", entries)}");
+		Assert.That(entries, Does.Contain("Strict/Number.bytecode"));
+		Assert.That(() => new BinaryExecutable(filePath, imageProcessingPackage), Throws.Nothing);
+	}
+
+	private static void OptimizeLikeRunner(BinaryExecutable binary)
+	{
+		InstructionOptimizer[] optimizers =
+		[
+			new TestCodeRemover(), new ConstantFoldingOptimizer(), new DeadStoreEliminator(),
+			new UnreachableCodeEliminator(), new RedundantLoadEliminator()
+		];
+		foreach (var optimizer in optimizers)
+			optimizer.Optimize(binary);
 	}
 
 	[Test]

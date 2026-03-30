@@ -1,5 +1,8 @@
+using System.Runtime.CompilerServices;
 using Strict.Language;
 using Type = Strict.Language.Type;
+
+[assembly: InternalsVisibleTo("Strict.Bytecode")]
 
 namespace Strict.Expressions;
 
@@ -10,6 +13,8 @@ public sealed class List : Value
 			GetListImplementationType(GetCommonBaseType(values, bodyForErrorMessage)), [],
 		values[0].LineNumber, isMutable) =>
 		Values = values;
+ internal List(Type type, List<Expression> values, int lineNumber, bool isMutable) :
+		base(type, [], lineNumber, isMutable) => Values = values;
 
 	public List(Type type, int lineNumber = 0) : base(type, [], lineNumber, true) => Values = [];
 
