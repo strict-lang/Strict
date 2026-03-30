@@ -164,9 +164,9 @@ public sealed class Runner
 			fileDirectory.Equals(repoRoot, StringComparison.OrdinalIgnoreCase))
 			return basePackage;
 		var relativePath = Path.GetRelativePath(repoRoot, fileDirectory);
-		if (string.IsNullOrEmpty(relativePath) || relativePath == "." || relativePath.StartsWith("..",
-			StringComparison.Ordinal) || relativePath == "Examples" || relativePath.StartsWith(
-			"Examples" + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+		if (string.IsNullOrEmpty(relativePath) || relativePath == "." ||
+			relativePath.StartsWith("..", StringComparison.Ordinal) ||
+			!IsRuntimePackageDirectory(relativePath, Path.Combine(repoRoot, relativePath)))
 			return basePackage;
 		await LoadDependencyPackages(repoRoot, relativePath);
 		var subPackageName = nameof(Strict) + Context.ParentSeparator +
@@ -184,10 +184,14 @@ public sealed class Runner
 		}
 	}
 
+	/// <summary>
+	/// Runtime packages define custom types and can be loaded as sub-packages. Meta-packages
+	/// (Language, Expressions) and example collections (Examples, Parsing) are excluded.
+	/// </summary>
 	private static bool IsRuntimePackageDirectory(string dirName, string directory) =>
 		!dirName.StartsWith(".", StringComparison.Ordinal) &&
 		!dirName.StartsWith("Strict", StringComparison.Ordinal) &&
-		dirName is not ("Language" or "Expressions" or "Examples") &&
+		dirName is not ("Language" or "Expressions" or "Examples" or "Parsing") &&
 		Directory.EnumerateFiles(directory, "*" + Type.Extension).Any();
 
 	private T LogTiming<T>(string message, Func<T> callToTime)
