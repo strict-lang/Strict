@@ -381,7 +381,11 @@ public sealed class BinaryExecutable(Package basePackage)
 	{
 		var name = table.names[reader.Read7BitEncodedInt()];
 		var type = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
-		var param = new Parameter(type, name, new Value(type, new ValueInstance(type)));
+		var parenIndex = name.IndexOf('(');
+		var cleanName = parenIndex > 0
+			? name[..parenIndex]
+			: name;
+		var param = new Parameter(type, cleanName, new Value(type, new ValueInstance(type)));
 		return new ParameterCall(param);
 	}
 

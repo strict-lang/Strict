@@ -2,4 +2,4 @@ has Method
 has FilePath Text
 has Line Number
 to Text
-	"\tat " + Method + " in " + FilePath + ":line " + Line
+	"	at " + Method + " in " + FilePath + ":line " + Line

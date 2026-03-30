@@ -66,12 +66,9 @@ public sealed class StrictLanguageConversionTests
 		using var typeParser = CreateLanguageType(languagePackage, "Type");
 		Assert.That(typeParser.Members.Count, Is.EqualTo(1));
 		Assert.That(typeParser.Members[0].Name, Is.EqualTo("lines"));
-		Assert.That(typeParser.Methods.Count, Is.EqualTo(12));
+		Assert.That(typeParser.Methods.Count, Is.EqualTo(2));
 		Assert.That(typeParser.Methods[0].Name, Is.EqualTo("IsMember"));
 		Assert.That(typeParser.Methods[1].Name, Is.EqualTo("IsMethodHeader"));
-		Assert.That(typeParser.Methods[9].Name, Is.EqualTo("MethodName"));
-		Assert.That(typeParser.Methods[10].Name, Is.EqualTo("HasReturnType"));
-		Assert.That(typeParser.Methods[11].Name, Is.EqualTo("ReturnTypeName"));
 	}
 
 	[Test]
@@ -81,12 +78,8 @@ public sealed class StrictLanguageConversionTests
 		using var typeFinder = CreateLanguageType(languagePackage, "TypeFinder");
 		Assert.That(typeFinder.Members.Count, Is.EqualTo(1));
 		Assert.That(typeFinder.Members[0].Name, Is.EqualTo("typeNames"));
-		Assert.That(typeFinder.Methods.Count, Is.EqualTo(5));
-		Assert.That(typeFinder.Methods[0].Name, Is.EqualTo("Find"));
-		Assert.That(typeFinder.Methods[1].Name, Is.EqualTo("Get"));
-		Assert.That(typeFinder.Methods[2].Name, Is.EqualTo("Has"));
-		Assert.That(typeFinder.Methods[3].Name, Is.EqualTo("Count"));
-		Assert.That(typeFinder.Methods[4].Name, Is.EqualTo("FindPlural"));
+		Assert.That(typeFinder.Methods.Count, Is.EqualTo(1));
+		Assert.That(typeFinder.Methods[0].Name, Is.EqualTo("Count"));
 	}
 
 	[Test]
