@@ -507,7 +507,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		value.IsText
 			? value.Text
 			: value.IsList
-				? null
+				? value.List.Items.Select(ConvertValueInstanceToNativeArgument).ToArray()
 				: value.Number;
 
 	/// <summary>

@@ -1,7 +1,6 @@
 using System.Reflection;
 using Strict.Expressions;
 using Strict.Language;
-using Type = Strict.Language.Type;
 
 namespace Strict;
 
@@ -47,7 +46,7 @@ public static class NativePluginLoader
 			}
 			catch (Exception)
 			{
-				// Skip DLLs that can't be loaded
+				// Skip DLLs that can't be loaded (bad format, missing deps, etc.)
 			}
 		}
 		return null;
