@@ -156,8 +156,6 @@ public sealed class Runner
 
 	private async Task<Package> TryLoadSubPackageIfNeeded(Package basePackage)
 	{
-		if (skipPackageSearchAndUseThisTestPackage != null)
-			return basePackage;
 		var fileDirectory = Path.GetDirectoryName(Path.GetFullPath(strictFilePath));
 		var repoRoot = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
 		if (string.IsNullOrEmpty(fileDirectory) ||
@@ -168,10 +166,12 @@ public sealed class Runner
 			relativePath.StartsWith("..", StringComparison.Ordinal) ||
 			!IsRuntimePackageDirectory(relativePath, Path.Combine(repoRoot, relativePath)))
 			return basePackage;
+		if (skipPackageSearchAndUseThisTestPackage != null)
+			await repositories.LoadStrictPackage();
 		await LoadDependencyPackages(repoRoot, relativePath);
 		var subPackageName = nameof(Strict) + Context.ParentSeparator +
 			relativePath.Replace(Path.DirectorySeparatorChar, Context.ParentSeparator);
-		return await GetPackage(subPackageName);
+		return await repositories.LoadStrictPackage(subPackageName);
 	}
 
 	private async Task LoadDependencyPackages(string repoRoot, string targetSubDir)
@@ -180,7 +180,7 @@ public sealed class Runner
 		{
 			var dirName = Path.GetFileName(directory);
 			if (dirName != targetSubDir && IsRuntimePackageDirectory(dirName, directory))
-				await GetPackage(nameof(Strict) + Context.ParentSeparator + dirName);
+				await repositories.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + dirName);
 		}
 	}
 

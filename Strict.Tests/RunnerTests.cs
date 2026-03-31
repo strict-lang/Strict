@@ -1,6 +1,7 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
+using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
 using System.IO.Compression;
@@ -284,6 +285,15 @@ public sealed class RunnerTests
 		return File.Exists(localPath)
 			? localPath
 			: Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
+	}
+
+	[Test]
+	public async Task RunAdjustBrightness()
+	{
+		await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
+			await new Repositories(new MethodExpressionParser()).LoadStrictPackage()).Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Brightness adjustment successful: (0.25, 0.25, 0.25)"));
 	}
 
 	//ncrunch: no coverage start

@@ -722,20 +722,28 @@ public class Type : Context, IDisposable
 		var parameters = "";
 		foreach (var member in members)
 			if (!member.Type.IsGeneric && !member.IsConstant)
-				parameters +=
-					(parameters == ""
-						? ""
-						: ", ") +
-					member.Name.MakeFirstLetterLowercase() +
-					(member.InitialValue != null
-						? " = " + member.InitialValue
+			{
+				var memberType = member.Type.IsMutable
+					? member.Type.GetFirstImplementation()
+					: member.Type;
+				parameters += (parameters == ""
+					? ""
+					: ", ") + member.Name.MakeFirstLetterLowercase() + (member.InitialValue != null
+					? " = " + member.InitialValue
+					: member.IsMutable && (memberType.IsNumber || memberType.IsBoolean || memberType.IsText)
+						? " = " + GetDefaultValueForType(memberType.Name)
 						: member.IsMutable
-							? " = " + GetDefaultValueForType(member.Type.Name)
-							: member.Type.Name == List
+							? " " + memberType.Name
+							: CanUseImplicitListParameterType(memberType, member.Name)
 								? ""
-								: " " + member.Type.Name);
+								: " " + memberType.Name);
+			}
 		return parameters;
 	}
+
+	private static bool CanUseImplicitListParameterType(Type memberType, string memberName) =>
+		memberType.IsList && memberType.Name.StartsWith(memberName.MakeFirstLetterUppercase(),
+			StringComparison.Ordinal);
 
 	private static string GetDefaultValueForType(string typeName) =>
 		typeName switch

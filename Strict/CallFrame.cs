@@ -29,8 +29,16 @@ internal sealed class CallFrame(CallFrame? parent = null)
 	{
 		if (variables != null && variables.TryGetValue(name, out value))
 			return true;
-		if (parent != null)
-			return parent.TryGetMember(name, out value);
+		if (parent != null && parent.TryGetMember(name, out value))
+			return true;
+		var dotIndex = name.IndexOf('.');
+		if (dotIndex > 0 && TryGet(name[..dotIndex], out var root))
+		{
+			var memberName = name[(dotIndex + 1)..];
+			var typeInstance = root.TryGetValueTypeInstance();
+			if (typeInstance != null && typeInstance.TryGetValue(memberName, out value))
+				return true;
+		}
 		value = default;
 		return false;
 	}

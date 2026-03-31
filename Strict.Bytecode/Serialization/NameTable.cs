@@ -174,20 +174,20 @@ public sealed class NameTable
 		expr switch
 		{
 			null => this,
-      Expressions.List list => Add(list.ReturnType.FullName).CollectListExpressionStrings(list),
+			List list => Add(list.ReturnType.FullName).CollectListExpressionStrings(list),
 			Value { Data.IsText: true } val => Add(val.Data.Text),
 			Value val when val.Data.GetType().IsBoolean => Add(val.Data.GetType().Name),
 			Value val when !val.Data.GetType().IsNumber || !BinaryExecutable.IsIntegerNumber(val.Data.Number)
 				=> Add(val.Data.GetType().Name), //ncrunch: no coverage
 			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
 				CollectExpressionStrings(memberCall.Instance),
-			Expressions.Binary binary => Add(binary.Method.Name). //ncrunch: no coverage
+			Binary binary => Add(binary.Method.Name). //ncrunch: no coverage
 				CollectExpressionStrings(binary.Instance).CollectExpressionStrings(binary.Arguments[0]),
 			MethodCall mc => CollectMethodCallStrings(mc),
 			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
 		};
 
-	private NameTable CollectListExpressionStrings(Expressions.List list)
+	private NameTable CollectListExpressionStrings(List list)
 	{
 		foreach (var value in list.Values)
 			CollectExpressionStrings(value);

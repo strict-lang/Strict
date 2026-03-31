@@ -631,19 +631,13 @@ public class MethodExpressionParser : ExpressionParser
 				expression is For forExpression &&
 				(IsForCustomVariableMutation(forExpression, variableName) ||
 					forExpression.Body is MutableReassignment ||
-					forExpression.Body is MethodCall
-					{
-						Instance: VariableCall forVariableCall, IsMutable: true
-					} &&
-					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
+					IsMutableMethodCallOnVariable(forExpression.Body, variableName) ||
+					forExpression.Body is Body forBody &&
 					IsVariableMutated(forBody, variableName) ||
 					forExpression.Body is If forIfBody &&
-					CheckForVariableMutationInIf(variableName, forIfBody) ||
-					forExpression.Body is MethodCall { Instance: VariableCall bodyVarCall, IsMutable: true } &&
-					bodyVarCall.Variable.Name == variableName))
+					CheckForVariableMutationInIf(variableName, forIfBody)))
 				return true;
-			if (expression is MethodCall { Instance: VariableCall variableCall, IsMutable: true } &&
-				variableCall.Variable.Name == variableName)
+			if (IsMutableMethodCallOnVariable(expression, variableName))
 				return true;
 		}
 		return false;
@@ -679,8 +673,36 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private static bool IsMutableMethodCallOnVariable(Expression expression, string variableName) =>
-		expression is MethodCall { Instance: VariableCall varCall, IsMutable: true } &&
+		expression is MethodCall methodCall &&
+		(IsMutableInstanceMethodCall(methodCall, variableName) ||
+			IsVariablePassedToMutableParameter(methodCall, variableName));
+
+	private static bool IsMutableInstanceMethodCall(MethodCall methodCall, string variableName) =>
+		methodCall is { Instance: VariableCall varCall, IsMutable: true } &&
 		varCall.Variable.Name == variableName;
+
+	private static bool IsVariablePassedToMutableParameter(MethodCall methodCall, string variableName)
+	{
+		for (var index = 0;
+			index < methodCall.Arguments.Count && index < methodCall.Method.Parameters.Count;
+			index++)
+			if (methodCall.Method.Parameters[index].IsMutable &&
+				GetRootVariableName(methodCall.Arguments[index]) == variableName)
+				return true;
+		return false;
+	}
+
+	private static string? GetRootVariableName(Expression expression)
+	{
+		var current = expression;
+		while (current is ListCall listCall)
+			current = listCall.List;
+		while (current is MemberCall memberCall && memberCall.Instance != null)
+			current = memberCall.Instance;
+		return current is VariableCall variableCall
+			? variableCall.Variable.Name
+			: null;
+	}
 
 	/// <summary>
 	/// Similar to TryParseExpression, but we know there are commas separating expressions

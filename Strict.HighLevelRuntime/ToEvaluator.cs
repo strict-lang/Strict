@@ -10,14 +10,19 @@ internal sealed class ToEvaluator(Interpreter interpreter)
 	{
 		interpreter.Statistics.ToConversionCount++;
 		var left = interpreter.RunExpression(to.Instance!, ctx);
-		if (TryConvert(left, to.ConversionType, out var convertedValue))
+		if (ShouldUseGenericConversion(left, to) &&
+			TryConvert(left, to.ConversionType, out var convertedValue))
 			return convertedValue;
 		return to.Method.IsTrait
 			? throw new ToMethodNotImplemented(left, to.ConversionType)
 			: interpreter.methodCallEvaluator.Evaluate(to, ctx);
 	}
 
-	internal static bool TryConvert(ValueInstance value, Type conversionType,
+	private static bool ShouldUseGenericConversion(ValueInstance value, To to) =>
+		!to.ConversionType.IsText || to.Method.IsTrait || value.TryGetValueTypeInstance() == null ||
+		to.Method.Type != value.GetType();
+
+	private static bool TryConvert(ValueInstance value, Type conversionType,
 		out ValueInstance convertedValue)
 	{
 		if (value.IsText)
@@ -75,21 +80,9 @@ internal sealed class ToEvaluator(Interpreter interpreter)
 
 	private static ValueInstance CreateTextValue(ValueInstance value) =>
 		value.TryGetValueTypeInstance() is { } typeInstance
-			? new ValueInstance(BuildMembersText(typeInstance))
+			? new ValueInstance(typeInstance.ToAutomaticText())
 			: new ValueInstance(value.ToExpressionCodeString());
 
-	private static string BuildMembersText(ValueTypeInstance typeInstance)
-	{
-		var values = typeInstance.Values;
-		if (values.Length == 0)
-			return typeInstance.ReturnType.Name; //ncrunch: no coverage
-		var parts = new string[values.Length];
-		for (var index = 0; index < values.Length; index++)
-			parts[index] = values[index].ToExpressionCodeString();
-		return "(" + string.Join(", ", parts) + ")";
-	}
-
-	//ncrunch: no coverage start
 	public sealed class ToMethodNotImplemented(ValueInstance left, Type toConversionType)
 		: InterpreterExecutionFailed(toConversionType, "Conversion from " + left + " to " +
 			toConversionType.Name + " not supported");
