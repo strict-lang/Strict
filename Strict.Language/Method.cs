@@ -77,11 +77,6 @@ public sealed class Method : Context
 
 	public int TypeLineNumber { get; }
 	public ExpressionParser Parser { get; }
-	/// <summary>
-	/// For constraint bodies, tracks the type that declared the constrained member so sibling
-	/// members can be resolved during expression parsing (e.g. Size.Length in ColorImage).
-	/// </summary>
-	public Type? ConstraintDeclaringType { get; internal set; }
 	internal readonly IReadOnlyList<string> lines;
 	private readonly Body? methodBody;
 	public bool WasParsedAlready => methodBody is { Expressions.Count: > 0 };

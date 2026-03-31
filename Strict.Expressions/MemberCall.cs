@@ -39,8 +39,7 @@ public sealed class MemberCall(Expression? instance, Member member, int lineNumb
 	private static MemberCall? FindContainingMethodTypeMemberForConstraints(Body body,
 		Expression? instance, string searchFor)
 	{
-		var member = body.Method.Type.FindMember(searchFor) ??
-			body.Method.ConstraintDeclaringType?.FindMember(searchFor);
+		var member = body.Method.Type.FindMember(searchFor);
 		return member != null
 			? new MemberCall(instance, member, body.CurrentFileLineNumber)
 			: null;

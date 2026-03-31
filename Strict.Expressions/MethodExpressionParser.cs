@@ -395,17 +395,11 @@ public class MethodExpressionParser : ExpressionParser
 					context = current.ReturnType;
 					continue;
 				}
-				if (body.Method is { Name: Language.Member.ConstraintsBody,
-					ConstraintDeclaringType: not null })
+				current = TryParseConstraintRoot(body, context, inputText);
+				if (current is not null)
 				{
-					var siblingMember =
-						body.Method.ConstraintDeclaringType.FindMember(inputText.ToString());
-					if (siblingMember != null)
-					{
-						current = new MemberCall(null, siblingMember, body.CurrentFileLineNumber);
-						context = current.ReturnType;
-						continue;
-					}
+					context = current.ReturnType;
+					continue;
 				}
 				var foundType = body.Method.FindType(inputText.ToString());
 				if (foundType != null && !members.IsAtEnd &&
@@ -440,6 +434,11 @@ public class MethodExpressionParser : ExpressionParser
 		}
 		return ListCall.TryParse(body, current, callArguments);
 	}
+
+	private Expression? TryParseConstraintRoot(Body body, Type context, ReadOnlySpan<char> inputText) =>
+		body.Method.Name == Language.Member.ConstraintsBody
+			? TryVariableOrValueOrParameterOrMemberOrMethodCall(context, null, body, inputText, [])
+			: null;
 
 	private static bool TryParseLeadingNumberInstance(Body body, ref ReadOnlySpan<char> nestedInput,
 		ref Expression? current, ref Type context)

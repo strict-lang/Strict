@@ -18,6 +18,37 @@ public sealed class ForTests
 			new MethodExpressionParser());
 
 	[Test]
+	public async Task SizeIterationOrderMatchesTwoDimensionalColorImageIndexing()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		using var strictPackage = await repositories.LoadStrictPackage();
+		using var mathPackage = await repositories.LoadStrictPackage("Strict/Math");
+		using var imageProcessingPackage = await repositories.LoadStrictPackage("Strict/ImageProcessing");
+		using var testType = new Type(imageProcessingPackage,
+			new TypeLines("ColorImageIndexing",
+				"has number",
+				"CenterIsExpectedColor Boolean",
+				"\tconstant width = 2",
+				"\tconstant height = 2",
+				"\tconstant colors = (Color(0, 0, 0),",
+				"\tColor(0.25, 0.25, 0.25),",
+				"\tColor(0.5, 0.5, 0.5),",
+				"\tColor(0.75, 0.75, 0.75))",
+				"\tconstant image = ColorImage(Size(width, height), colors)",
+				"\timage.Colors(width / 2, height / 2) is Color(0.75, 0.75, 0.75)",
+				"Indices Numbers",
+				"\tfor Size(2, 2)",
+				"\t\tvalue.X + value.Y * 10")).ParseMembersAndMethods(parser);
+		var packageInterpreter = new Interpreter(imageProcessingPackage, TestBehavior.Disabled);
+		Assert.That(packageInterpreter.Execute(
+			testType.Methods.Single(method => method.Name == "CenterIsExpectedColor"),
+			packageInterpreter.noneInstance, []).Boolean, Is.True);
+		Assert.That(packageInterpreter.Execute(testType.Methods.Single(method => method.Name == "Indices"),
+			packageInterpreter.noneInstance, []).ToExpressionCodeString(), Is.EqualTo("(0, 1, 10, 11)"));
+	}
+
+	[Test]
 	public void CustomVariableInForLoopIsUsed()
 	{
 		using var t = CreateType(nameof(CustomVariableInForLoopIsUsed), "has number", "Sum Number",

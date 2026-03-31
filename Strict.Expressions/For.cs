@@ -17,24 +17,19 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	public Expression Body { get; } = body;
 	public string ShorthandOperator { get; } = shorthandOperator;
 	public override int GetHashCode() => Iterator.GetHashCode();
-
 	public override string ToString() =>
 		$"for {InCustomVariables()}{Iterator}" + Environment.NewLine +
 		(ShorthandOperator.Length == 0
 			? IndentExpression(Body)
 			: "\t" + ShorthandOperator + " " + Body);
-
 	private string InCustomVariables() =>
 		CustomVariables.Length > 0
 			? string.Join(", ", CustomVariables) + " in "
 			: "";
-
 	public override bool IsConstant => Iterator.IsConstant && Body.IsConstant;
-
 	public override bool Equals(Expression? other) =>
 		other is For forExpression && Iterator.Equals(forExpression.Iterator) &&
 		Body.Equals(forExpression.Body);
-
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line)
 	{
 		if (!line.StartsWith(Keyword.For, StringComparison.Ordinal))
@@ -47,7 +42,6 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			? throw new IndexIsReservedDoNotUseItExplicitly(body)
 			: ParseFor(body, line, innerBody);
 	}
-
 	private static Expression ParseForImplicitIteratorOfThis(Body body)
 	{
 		var innerBody = body.FindCurrentChild() ??
@@ -61,9 +55,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		return new For([], new Instance(body.Method.Type, body.CurrentFileLineNumber), innerBody.Parse(),
 			body.CurrentFileLineNumber);
 	}
-
 	public sealed class IndexIsReservedDoNotUseItExplicitly(Body body) : ParsingFailed(body);
-
 	private static Body? TryGetInnerForAsBody(Body body)
 	{
 		if (IsLastLine(body) || !IsNextLineStartsWithFor(body))
@@ -74,16 +66,12 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			? null
 			: body.GetInnerBodyAndUpdateHierarchy(currentLineNumber, child);
 	}
-
 	private static bool IsLastLine(Body body) =>
 		body.ParsingLineNumber + 1 == body.LineRange.End.Value;
-
 	private static bool IsNextLineStartsWithFor(Body body) =>
 		body.GetLine(body.ParsingLineNumber + 1).TrimStart().
 			StartsWith(Keyword.For, StringComparison.Ordinal);
-
 	public sealed class MissingInnerBody(Body body) : ParsingFailed(body);
-
 	private static Expression ParseFor(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		if (!HasIn(line) && line[^1] == ')')
@@ -116,11 +104,10 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		if (generatedLines != originalLines && normalizedGenerated != normalizedOriginal &&
 			!innerLines.Any(loopLine =>
 				loopLine.TrimStart().StartsWith(BinaryOperator.To + " ", StringComparison.Ordinal)))
-			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines); //ncrunch: no coverage
+			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines);
 #endif
 		return forExpression;
 	}
-
 	private static string GetForBodyShorthandOperator(IReadOnlyList<string> innerLines)
 	{
 		if (innerLines.Count != 1)
@@ -134,14 +121,12 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			? candidate
 			: string.Empty;
 	}
-
 	private static bool HasIn(ReadOnlySpan<char> line) =>
 		line.Contains(InWithSpaces, StringComparison.Ordinal);
-
 	private const string InWithSpaces = " in ";
 #if DEBUG
 	private sealed class GeneratedForExpressionDoesNotMatchInputExactly(Body body, Expression @for,
-		string line) : ParsingFailed(body, "\n" + //ncrunch: no coverage
+		string line) : ParsingFailed(body, "\n" +
 		@for.ToString().Replace("\t", "  ") + "\nOriginal lines:\n" + line.Replace("\t", "  "));
 #endif
 	private static Expression ParseWithImplicitVariable(Body body, ReadOnlySpan<char> line,
@@ -151,15 +136,22 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		return new For([], body.Method.ParseExpression(body, line[4..], true), innerBody.Parse(),
 			body.CurrentFileLineNumber);
 	}
-
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		if (innerBody.FindVariable(Type.IndexLowercase) != null &&
 			innerBody.FindVariable(Type.ValueLowercase) != null)
 			return;
 		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), true);
+		var iteratorYieldType = TryGetIteratorYieldType(body, GetForIteratorText(line));
+		if (iteratorYieldType != null)
+		{
+			innerBody.AddVariable(Type.ValueLowercase,
+				new Instance(iteratorYieldType, body.CurrentFileLineNumber), true);
+			return;
+		}
 		var valueExpression = body.Method.ParseExpression(body,
 			GetVariableExpressionValue(body, line), true);
+		valueExpression = ConvertIteratorExpressionToYieldedValueIfNeeded(body, valueExpression);
 		if (valueExpression.ReturnType.IsList)
 		{
 			var listElementType = valueExpression.ReturnType is GenericTypeImplementation listType
@@ -171,7 +163,38 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		}
 		innerBody.AddVariable(Type.ValueLowercase, valueExpression, true);
 	}
-
+	private static Type? TryGetIteratorYieldType(Body body, ReadOnlySpan<char> iteratorText)
+	{
+		var iteratorType = GetIteratorSourceType(body, iteratorText);
+		var iteratorMethod = iteratorType?.Methods.FirstOrDefault(method => method.Name == Keyword.For);
+		return iteratorMethod?.ReturnType.IsIterator == true
+			? iteratorMethod.ReturnType.GetFirstImplementation()
+			: null;
+	}
+	private static Type? GetIteratorSourceType(Body body, ReadOnlySpan<char> iteratorText)
+	{
+		var variableType = body.FindVariable(iteratorText)?.Type ??
+			body.Method.Type.FindMember(iteratorText.ToString())?.Type;
+		if (variableType != null)
+			return variableType;
+		var openingBracketIndex = iteratorText.IndexOf('(');
+		return openingBracketIndex > 0
+			? body.Method.FindType(iteratorText[..openingBracketIndex].ToString())
+			: null;
+	}
+	private static Expression ConvertIteratorExpressionToYieldedValueIfNeeded(Body body,
+		Expression valueExpression)
+	{
+		if (!valueExpression.ReturnType.IsIterator || valueExpression.ReturnType.IsList ||
+			valueExpression.ReturnType.IsNumber)
+			return valueExpression;
+		var iteratorMethod = valueExpression.ReturnType.Methods.FirstOrDefault(method =>
+			method.Name == Keyword.For);
+		return iteratorMethod?.ReturnType.IsIterator == true
+			? new Instance(iteratorMethod.ReturnType.GetFirstImplementation(),
+				body.CurrentFileLineNumber)
+			: valueExpression;
+	}
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line,
 		ReadOnlySpan<char> knownIterableName = default)
 	{
@@ -182,7 +205,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			: knownIterableName;
 		var variable = body.FindVariable(iterableName)?.Type ??
 			body.Method.Type.FindMember(iterableName.ToString())?.Type;
-		if (iterableName[^1] == ')')
+		if (iterableName.Length > 0 && iterableName[0] == '(' && iterableName[^1] == ')')
 			return iterableName[1..iterableName.IndexOf(',')].ToString();
 		if (variable is { IsIterator: true })
 		{
@@ -195,15 +218,12 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		}
 		return $"{iterableName}";
 	}
-
 	private static ReadOnlySpan<char> GetRangeExpression(ReadOnlySpan<char> line) =>
 		line[line.LastIndexOf("Range")..(line.LastIndexOf(')') + 1)];
-
 	private static ReadOnlySpan<char> FindVariableNames(ReadOnlySpan<char> line) =>
 		line.Contains(InWithSpaces, StringComparison.Ordinal)
 			? line[4..line.LastIndexOf(InWithSpaces)]
 			: "";
-
 	private static Expression[] AddVariablesIfTheyDoNotExistYet(Body body, ReadOnlySpan<char> line,
 		ReadOnlySpan<char> variableNames, Body innerBody)
 	{
@@ -223,7 +243,7 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			}
 			var name = variable.ToString();
 			if (body.Method.Type.FindMember(name) != null ||
-				body.Method.Parameters.FirstOrDefault(p => p.Name == name) != null)
+				body.Method.Parameters.FirstOrDefault(parameter => parameter.Name == name) != null)
 			{
 				var instanceVariable = body.FindVariable(Type.ValueLowercase);
 				variables.Add(new MemberCall(instanceVariable != null
@@ -238,29 +258,41 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 		}
 		return variables.ToArray();
 	}
-
 	private static Expression GetVariableValue(Body body, ReadOnlySpan<char> line, int variableIndex)
 	{
 		var forIteratorText = GetForIteratorText(line);
+		var iteratorYieldType = TryGetIteratorYieldType(body, forIteratorText);
+		if (iteratorYieldType != null)
+			return variableIndex > 0
+				? throw new MoreThanTwoVariablesAreNotSupportedYet(body)
+				: new Instance(iteratorYieldType, body.CurrentFileLineNumber);
 		var iterator = body.Method.ParseExpression(body, forIteratorText, true);
 		if (iterator is MethodCall { ReturnType.Name: Type.Range } methodCall)
 			return GetVariableValueFromRange(iterator, methodCall);
-		if (iterator.ReturnType is not GenericTypeImplementation { Generic.Name: Type.List })
-			return iterator;
-		var firstValue = body.Method.ParseExpression(body, forIteratorText[^1] == ')'
-			? forIteratorText[1..forIteratorText.IndexOf(',')]
-			: forIteratorText.ToString() + "(0)", true);
-		if (variableIndex <= 0)
-			return firstValue;
-		var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)", true);
-		return variableIndex > 1
-			? throw new MoreThanTwoVariablesAreNotSupportedYet(body)
-			: innerFirstValue;
+		if (iterator.ReturnType is GenericTypeImplementation { Generic.Name: Type.List })
+		{
+			var firstValue = body.Method.ParseExpression(body, forIteratorText.Length > 0 &&
+				forIteratorText[0] == '(' && forIteratorText[^1] == ')'
+					? forIteratorText[1..forIteratorText.IndexOf(',')]
+					: forIteratorText.ToString() + "(0)", true);
+			if (variableIndex <= 0)
+				return firstValue;
+			var innerFirstValue = body.Method.ParseExpression(body, firstValue + "(0)", true);
+			return variableIndex > 1
+				? throw new MoreThanTwoVariablesAreNotSupportedYet(body)
+				: innerFirstValue;
+		}
+		var iteratorMethod = iterator.ReturnType.Methods.FirstOrDefault(method =>
+			method.Name == Keyword.For);
+		if (iteratorMethod?.ReturnType.IsIterator == true)
+			return variableIndex > 0
+				? throw new MoreThanTwoVariablesAreNotSupportedYet(body)
+				: new Instance(iteratorMethod.ReturnType.GetFirstImplementation(),
+					body.CurrentFileLineNumber);
+		return iterator;
 	}
-
 	public sealed class MoreThanTwoVariablesAreNotSupportedYet(Body body)
 		: ParsingFailed(body, "More than 2 for variables are not supported yet");
-
 	private static Expression GetVariableValueFromRange(Expression iterator, MethodCall methodCall) =>
 		methodCall.Arguments.Count > 0
 			? methodCall.Arguments[0]
@@ -270,20 +302,16 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			} innerMethodCall
 				? innerMethodCall.Arguments[0]
 				: iterator;
-
 	private static ReadOnlySpan<char> GetForIteratorText(ReadOnlySpan<char> line) =>
 		line.Contains(InWithSpaces, StringComparison.Ordinal)
 			? line[(line.LastIndexOf(InWithSpaces) + InWithSpaces.Length)..]
 			: line.Contains("(", StringComparison.Ordinal) && line.IndexOf('(') > line.IndexOf(' ')
 				? line[(line.IndexOf(' ') + 1)..]
 				: line[(line.LastIndexOf(' ') + 1)..];
-
 	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) =>
 		FindVariableNames(line).Contains(',') && line.Contains(InWithSpaces, StringComparison.Ordinal)
-			// Currently only the first expression is evaluated, the other one would fail
 			? line[4..line.IndexOf(',')].ToString() + line[(line.IndexOf(InWithSpaces) - 1)..].ToString()
 			: line[4..];
-
 	private static void CheckForIncorrectMatchingTypes(Body innerBody, ReadOnlySpan<char> variableNames,
 		Expression forValueExpression)
 	{
@@ -305,18 +333,14 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			implementationDepth++;
 		}
 	}
-
 	private static Type GetIteratorType(Expression forValueExpression) =>
 		forValueExpression is Binary binary
 			? binary.Arguments[0].ReturnType
 			: forValueExpression.ReturnType;
-
 	public sealed class ExpressionTypeIsNotAnIterator(Body body, string typeName, string line)
 		: ParsingFailed(body, $"Type {typeName} in line " + line);
-
 	public sealed class ImmutableIterator(string iteratorVariableName, Body body)
 		: ParsingFailed(body, iteratorVariableName);
-
 	public sealed class IteratorTypeDoesNotMatchWithIterable(Body body, string iteratorTypeName,
 		ReadOnlySpan<char> variable, string? variableType) : ParsingFailed(body,
 		$"Iterator {variable} type {iteratorTypeName} does not match with {variableType}");

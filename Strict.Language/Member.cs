@@ -44,16 +44,33 @@ public sealed class Member : NamedType
 	public void ParseConstraints(ExpressionParser parser, string[] constraintsText)
 	{
 		var expressions = new Expression[constraintsText.Length];
+		var body = new Body(new Method(Type, 0, parser, [ConstraintsBody]));
+		AddContainingTypeMembersAsConstraintVariables(body);
 		for (var index = 0; index < constraintsText.Length; index++)
 		{
-			var constraintMethod = new Method(Type, 0, parser, [ConstraintsBody]);
-			constraintMethod.ConstraintDeclaringType = DefinedIn;
-			expressions[index] = parser.ParseExpression(
-				new Body(constraintMethod), constraintsText[index]);
+			expressions[index] = parser.ParseExpression(body, constraintsText[index]);
 			if (!expressions[index].ReturnType.IsBoolean)
 				throw new InvalidConstraintExpression(Type, Name, constraintsText[index]);
 		}
 		Constraints = expressions;
+	}
+
+	private void AddContainingTypeMembersAsConstraintVariables(Body body)
+	{
+		foreach (var member in DefinedIn.Members)
+			if (Type.FindMember(member.Name) == null)
+				body.AddVariable(member.Name, new ConstraintMemberReference(member.Name, member.Type), false);
+	}
+
+	private sealed class ConstraintMemberReference(string memberName, Type returnType)
+		: Expression(returnType)
+	{
+		public override bool IsConstant => false;
+		public override string ToString() => memberName;
+		public override bool Equals(Expression? other) =>
+			ReferenceEquals(this, other) || other is ConstraintMemberReference reference &&
+			reference.ReturnType == ReturnType && reference.ToString() == memberName;
+		public override int GetHashCode() => HashCode.Combine(memberName, ReturnType);
 	}
 
 	public const string ConstraintsBody = nameof(ConstraintsBody);

@@ -325,7 +325,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				: (string)value,
 			ListId => BuildListString(((ValueListInstance)value).Items, escapeText),
 			DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
-			TypeId => ((ValueTypeInstance)value).ToString(),
+			TypeId => ((ValueTypeInstance)value).ToAutomaticText(),
 			_ => GetPrimitiveCodeString((Type)value)
 		};
 

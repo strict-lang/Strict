@@ -694,7 +694,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return EvaluateMethodCall(methodCall);
 		if (expression is ListCall listCall)
 			return EvaluateListCallExpression(listCall);
-		return new ValueInstance(expression.ToString());
+		return Memory.Frame.TryGet(expression.ToString(), out var frameValue)
+			? frameValue
+			: new ValueInstance(expression.ToString());
 	}
 
 	private ValueInstance EvaluateListCallExpression(ListCall listCall)

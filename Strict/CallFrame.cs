@@ -32,15 +32,42 @@ internal sealed class CallFrame(CallFrame? parent = null)
 		if (parent != null && parent.TryGetMember(name, out value))
 			return true;
 		var dotIndex = name.IndexOf('.');
-		if (dotIndex > 0 && TryGet(name[..dotIndex], out var root))
-		{
-			var memberName = name[(dotIndex + 1)..];
-			var typeInstance = root.TryGetValueTypeInstance();
-			if (typeInstance != null && typeInstance.TryGetValue(memberName, out value))
-				return true;
-		}
+		if (dotIndex > 0 && TryGet(name[..dotIndex], out var root) &&
+			TryGetNestedMemberValue(root, name[(dotIndex + 1)..], out value))
+			return true;
 		value = default;
 		return false;
+	}
+
+	private static bool TryGetNestedMemberValue(ValueInstance root, string path,
+		out ValueInstance value)
+	{
+		var current = root;
+		var remainingPath = path;
+		while (true)
+		{
+			var currentTypeInstance = current.TryGetValueTypeInstance();
+			if (currentTypeInstance == null)
+			{
+				value = default;
+				return false;
+			}
+			var nextDotIndex = remainingPath.IndexOf('.');
+			var segment = nextDotIndex < 0
+				? remainingPath
+				: remainingPath[..nextDotIndex];
+			if (!currentTypeInstance.TryGetValue(segment, out current))
+			{
+				value = default;
+				return false;
+			}
+			if (nextDotIndex < 0)
+			{
+				value = current;
+				return true;
+			}
+			remainingPath = remainingPath[(nextDotIndex + 1)..];
+		}
 	}
 
 	private bool TryGetMember(string name, out ValueInstance value)

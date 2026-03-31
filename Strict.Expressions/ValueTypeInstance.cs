@@ -49,13 +49,64 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 		var members = ReturnType.Members;
 		if (Values.Length == 0)
 			return ReturnType.Name;
-		var parts = new List<string>(Values.Length);
+		var visibleMembers = new List<(Strict.Language.Member Member, ValueInstance Value)>(Values.Length);
+		var totalValueCount = 0;
+		var containsCollection = false;
 		for (var index = 0; index < Values.Length && index < members.Count; index++)
 			if (ShouldIncludeMember(members[index], Values[index]))
-				parts.Add(Values[index].ToExpressionCodeString());
-		return parts.Count == 0
-			? ReturnType.Name
+			{
+				visibleMembers.Add((members[index], Values[index]));
+				totalValueCount += CountDisplayValues(Values[index]);
+				containsCollection |= Values[index].IsList || Values[index].IsDictionary;
+			}
+		if (visibleMembers.Count == 0)
+			return ReturnType.Name;
+		return containsCollection || totalValueCount > 4
+			? ReturnType.Name + "(" + string.Join(", ", visibleMembers.Select(member =>
+				member.Member.Name + "=" + FormatValue(member.Value, true))) + ")"
+			: "(" + string.Join(", ", visibleMembers.Select(member =>
+				FormatValue(member.Value, false))) + ")";
+	}
+
+	private static string FormatValue(ValueInstance value, bool limitCollectionEntries) =>
+		value.IsList
+			? FormatList(value.List.Items, limitCollectionEntries)
+			: value.ToExpressionCodeString();
+
+	private static string FormatList(IReadOnlyList<ValueInstance> items, bool limitEntries)
+	{
+		if (items.Count == 0)
+			return string.Empty;
+		var displayedItemCount = limitEntries && items.Count > 3
+			? 3
+			: items.Count;
+		var parts = new string[displayedItemCount + (displayedItemCount < items.Count
+			? 1
+			: 0)];
+		for (var index = 0; index < displayedItemCount; index++)
+			parts[index] = items[index].ToExpressionCodeString();
+		if (displayedItemCount < items.Count)
+			parts[^1] = "...";
+		return parts.Length == 1
+			? parts[0]
 			: "(" + string.Join(", ", parts) + ")";
+	}
+
+	private static int CountDisplayValues(ValueInstance value) =>
+		value.IsList
+			? value.List.Items.Count
+			: value.TryGetValueTypeInstance() is { } typeInstance
+				? typeInstance.CountDisplayValues()
+				: 1;
+
+	private int CountDisplayValues()
+	{
+		var members = ReturnType.Members;
+		var totalValueCount = 0;
+		for (var index = 0; index < Values.Length && index < members.Count; index++)
+			if (ShouldIncludeMember(members[index], Values[index]))
+				totalValueCount += CountDisplayValues(Values[index]);
+		return totalValueCount;
 	}
 
 	private static bool ShouldIncludeMember(Strict.Language.Member member, ValueInstance value) =>
