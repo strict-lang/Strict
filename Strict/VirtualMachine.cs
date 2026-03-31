@@ -457,21 +457,58 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	/// <summary>
 	/// Handles native trait method calls like logger.Log(...) by writing directly to Console.
 	/// Logger delegates to TextWriter.Write which maps to System -> Console.WriteLine.
+	/// For unknown trait types, searches DLLs in the current directory for matching implementations.
 	/// </summary>
 	private bool TryHandleNativeTraitMethod(Invoke invoke)
 	{
 		if (invoke.Method.Instance is not MemberCall memberCall)
-			return false;
+			return TryHandleStaticTraitMethod(invoke);
 		var memberTypeName = memberCall.Member.Type.Name;
-		if (memberTypeName is not (Type.Logger or Type.TextWriter or Type.System))
-			return false;
-		if (invoke.Method.Arguments.Count > 0)
+		if (memberTypeName is Type.Logger or Type.TextWriter or Type.System)
 		{
-			var argValue = EvaluateExpression(invoke.Method.Arguments[0]);
-			Console.WriteLine(argValue.ToExpressionCodeString());
+			if (invoke.Method.Arguments.Count > 0)
+			{
+				var argValue = EvaluateExpression(invoke.Method.Arguments[0]);
+				Console.WriteLine(argValue.ToExpressionCodeString());
+			}
+			return true;
 		}
-		return true;
+		return memberCall.Member.Type.IsTrait &&
+			TryCallNativePlugin(invoke, memberCall.Member.Type.Name);
 	}
+
+	private bool TryHandleStaticTraitMethod(Invoke invoke)
+	{
+		if (!invoke.Method.Method.IsTrait)
+			return false;
+		return TryCallNativePlugin(invoke, invoke.Method.Method.Type.Name);
+	}
+
+	private bool TryCallNativePlugin(Invoke invoke, string typeName)
+	{
+		var searchDirectory = Directory.GetCurrentDirectory();
+		var arguments = invoke.Method.Arguments
+			.Select(arg => ConvertValueInstanceToNativeArgument(EvaluateExpression(arg))).ToArray();
+		try
+		{
+			var result = NativePluginLoader.TryCallNativeMethod(typeName,
+				invoke.Method.Method.Name, arguments, searchDirectory);
+			Memory.Registers[invoke.Register] =
+				NativePluginLoader.ConvertToValueInstance(result, invoke.Method.Method.ReturnType);
+			return true;
+		}
+		catch (NativePluginLoader.NativeMethodNotFound)
+		{
+			return false;
+		}
+	}
+
+	private static object? ConvertValueInstanceToNativeArgument(ValueInstance value) =>
+		value.IsText
+			? value.Text
+			: value.IsList
+				? null
+				: value.Number;
 
 	/// <summary>
 	/// Evaluates an arbitrary expression to a ValueInstance using the current VM state.
