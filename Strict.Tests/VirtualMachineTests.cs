@@ -195,6 +195,20 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(actual, Is.EqualTo(expected));
 	}
 
+	[Test]
+	public void AutoTypeTextSkipsDefaultAndConstant()
+	{
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(AutoTypeTextSkipsDefaultAndConstant),
+			nameof(AutoTypeTextSkipsDefaultAndConstant) + "(0.25, 0.25, 0.25, 1).Format",
+			"has red Number", "has green Number", "has blue Number", "has alpha = 1",
+			"constant max = 1", "Format Text",
+			"\tAutoTypeTextSkipsDefaultAndConstant(red, green, blue, alpha) to Text")).Generate();
+		Assert.That(
+			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Text,
+			Is.EqualTo("(0.25, 0.25, 0.25)"));
+	}
+
 	//ncrunch: no coverage start
 	private static IEnumerable<TestCaseData> MethodCallTests
 	{
@@ -246,9 +260,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void IfAndElseTest()
 	{
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("IfAndElseTest",
-				"IfAndElseTest(3).IsEven",
-				//
-				"has number", "IsEven Text", "\tmutable result = \"\"",
+				"IfAndElseTest(3).IsEven", "has number", "IsEven Text", "\tmutable result = \"\"",
 				"\tif number > 10", "\t\tresult = \"Number is more than 10\"", "\t\treturn result",
 				"\telse", "\t\tresult = \"Number is less or equal than 10\"", "\t\treturn result")).
 			Generate();
@@ -626,19 +638,28 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
-	public void CreateInstanceWithTextWriterTraitMemberCreatesSystemMemberValue()
+	public void CreateInstanceWithConcreteListMemberUsesEmptyListDefault()
 	{
-		if (type.Package.FindDirectType("TypeWithTextWriter") == null)
-			new Type(type.Package, new TypeLines("TypeWithTextWriter", "has writer TextWriter",
+		if (type.Package.FindDirectType("HolderWithColors") == null)
+		{
+			new Type(type.Package, new TypeLines("Color", "has red Number",
 				"GetZero Number", "\t0")).ParseMembersAndMethods(new MethodExpressionParser());
-		var typeWithTextWriter = type.Package.FindDirectType("TypeWithTextWriter")!;
-		var fromMethodCall = CreateFromMethodCall(typeWithTextWriter);
-		var instructions =
-			new List<Instruction> { new Invoke(Register.R0, fromMethodCall, new Registry()) };
-		var result = ExecuteVm(instructions).Memory.Registers[Register.R0];
-		var typeInstance = result.TryGetValueTypeInstance();
-		Assert.That(typeInstance, Is.Not.Null);
-		Assert.That(typeInstance!["writer"].GetType().Name, Is.EqualTo(Type.System));
+			new Type(type.Package, new TypeLines("HolderWithColors", "mutable colors Colors",
+				"GetFirst Number", "\tcolors(0).red")).ParseMembersAndMethods(
+				new MethodExpressionParser());
+		}
+		var holderType = type.Package.FindDirectType("HolderWithColors")!;
+		var fromMethod = holderType.FindMethod(Method.From, []);
+		Assert.That(fromMethod, Is.Not.Null);
+		Assert.That(fromMethod!.Parameters, Has.Count.EqualTo(1));
+		Assert.That(fromMethod.Parameters[0].Type.IsList, Is.True);
+		Assert.That(fromMethod.Parameters[0].DefaultValue?.ToString(), Is.Null);
+		var result = ExecuteVm([
+			new Invoke(Register.R0, CreateFromMethodCall(holderType), new Registry())
+		]).Memory.Registers[Register.R0];
+		var colors = result.TryGetValueTypeInstance()!["colors"];
+		Assert.That(colors.IsList, Is.True);
+		Assert.That(colors.List.Items, Is.Empty);
 	}
 
 	[Test]

@@ -83,6 +83,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 		Mutable.strict = Mutable.strict
 		Name.strict = Name.strict
 		Number.strict = Number.strict
+		Path.strict = Path.strict
 		Range.strict = Range.strict
 		Stacktrace.strict = Stacktrace.strict
 		System.strict = System.strict
@@ -90,7 +91,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 		TextReader.strict = TextReader.strict
 		TextWriter.strict = TextWriter.strict
 		Type.strict = Type.strict
-		Path.strict = Path.strict
 		Variable.strict = Variable.strict
 	EndProjectSection
 EndProject
@@ -111,6 +111,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Examples", "Examples\Examples.csproj", "{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Language", "Language\Language.csproj", "{3F15AC2A-18E5-4CC0-6232-44946661D054}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Expressions", "Expressions\Expressions.csproj", "{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -250,6 +252,10 @@ Global
 		{3F15AC2A-18E5-4CC0-6232-44946661D054}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3F15AC2A-18E5-4CC0-6232-44946661D054}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3F15AC2A-18E5-4CC0-6232-44946661D054}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -259,6 +265,7 @@ Global
 		{4F35B2E8-E46D-8D5B-BE27-65E34CCBCCD5} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 		{3F15AC2A-18E5-4CC0-6232-44946661D054} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
+		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEA35D12-F095-424A-8A50-6D7EBE08D917}

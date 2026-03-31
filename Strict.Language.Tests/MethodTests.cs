@@ -361,6 +361,17 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void MutablePassedToMutableParameter()
+	{
+		using var typeToCheck = new Type(TestPackage.Instance,
+			new TypeLines(nameof(MutablePassedToMutableParameter), "has logger",
+				"Mutate(mutable number Number)", "\tnumber = number + 1",
+				"Run Number", "\tmutable number = 5", "\tMutate(number)", "\tnumber"));
+		typeToCheck.ParseMembersAndMethods(parser);
+		Assert.That(() => typeToCheck.Methods[1].GetBodyAndParseIfNeeded(), Throws.Nothing);
+	}
+
+	[Test]
 	public void GetVariableUsageCount() =>
 		Assert.That(
 			TestPackage.Instance.GetType(Type.Character).AvailableMethods["to"][0].

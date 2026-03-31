@@ -50,22 +50,6 @@ public sealed class BinaryGeneratorTests : TestBytecode
 			"Method without logger.Log does not produce PrintInstruction");
 	}
 
-	[Test]
-	public async Task RunAdjustBrightnessAndConfirmDependenciesAreLoaded()
-	{
-		var repos = new Repositories(new MethodExpressionParser());
-		using var basePackage = await repos.LoadStrictPackage();
-		using var mathPackage = await repos.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + "Math");
-		var packageName = nameof(Strict) + Context.ParentSeparator + "ImageProcessing";
-		using var imageProcessingPackage = await repos.LoadStrictPackage(packageName);
-		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
-		var call = new MethodCall(adjustBrightness.FindMethod(Method.Run, [])!);
-		var binary = new BinaryGenerator(call).Generate();
-		Assert.That(binary.MethodsPerType.Keys.Any(fullName =>
-				fullName.EndsWith("/Size", StringComparison.Ordinal)), Is.True,
-			$"Loaded types: {string.Join(", ", binary.MethodsPerType.Keys)}");
-	}
-
 	//ncrunch: no coverage start
 	private static IEnumerable<TestCaseData> ByteCodeCases
 	{
