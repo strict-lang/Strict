@@ -114,7 +114,7 @@ public sealed class Runner
 			{
 				binary = new BinaryExecutable(cachedBinaryPath, basePackage);
 			}
-			catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile)
+			catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile or EndOfStreamException)
 			{
 				Log("Cached " + cachedBinaryPath + " is no longer compatible: " + ex.Message);
 				return await LoadFromSourceAndSaveBinary(basePackage);
