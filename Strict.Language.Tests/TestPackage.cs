@@ -118,6 +118,9 @@ public sealed class TestPackage : Package
 			"\tif number is in Range(65, 91)",
 			"\t\treturn Character(number + 32)",
 			"\tCharacter(number)"));
+		var byteType = new Type(this, new TypeLines("Byte",
+			"has number = 0 with value >= 0 and value <= 255",
+			"constant Max = 255"));
 		var mutable = new Type(this, new TypeLines(Type.Mutable,
 			"has generic"));
 		var iterator = new Type(this, new TypeLines(Type.Iterator,
