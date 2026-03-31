@@ -165,9 +165,10 @@ public sealed class TypeValidator : Visitor
 
 	public override void Visit(Method method, bool forceParsingBody = false, object? context = null)
 	{
-		if (method.Parameters.Any(p => p.IsMutable))
+		var hasMutableParameter = method.Parameters.Any(parameter => parameter.IsMutable);
+		if (hasMutableParameter)
 			context ??= new VariableUsages();
-		base.Visit(method, forceParsingBody, context);
+		base.Visit(method, forceParsingBody || hasMutableParameter, context);
 		foreach (var parameter in method.Parameters)
 		{
 			ValidateUnusedParameter(method, parameter.Name);

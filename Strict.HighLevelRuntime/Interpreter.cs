@@ -275,29 +275,29 @@ public class Interpreter
 		}
 	}
 
-	private ValueInstance GetFromConstructorValue(Method method, ValueInstance[] args)
+	private ValueInstance GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
 	{
 		Statistics.FromCreationsCount++;
-		if (args.Length == 0 && method.Type.IsText)
+		if (args.Count == 0 && method.Type.IsText)
 			return new ValueInstance("");
-		if (args.Length == 0 && method.Type.IsCharacter)
+		if (args.Count == 0 && method.Type.IsCharacter)
 			return new ValueInstance(method.Type, 0);
-		if ((method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum) && args.Length == 1)
+		if ((method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum) && args.Count == 1)
 		{
 			if (IsSingleCharacterTextArgument(method.Type, args[0]))
 				return new ValueInstance(method.Type, args[0].Text[0]);
 			if (!args[0].IsText || args[0].IsSameOrCanBeUsedAs(method.Type))
 				return new ValueInstance(method.Type, args[0].Number);
-		} //ncrunch: no coverage
+		}
 		if (method.Type.IsList)
-			return new ValueInstance(method.Type, args);
+			return new ValueInstance(method.Type, args.ToArray());
 		if (method.Type.IsDictionary)
 			return args[0].IsDictionary
 				? args[0]
 				: new ValueInstance(method.Type, FillDictionaryFromListKeyAndValues(args[0]));
 		var typeMembers = method.Type.Members;
 		var values = new ValueInstance[typeMembers.Count];
-		for (var index = 0; index < args.Length; index++)
+		for (var index = 0; index < args.Count; index++)
 		{
 			var parameter = method.Parameters[index];
 			if (!args[index].IsSameOrCanBeUsedAs(parameter.Type) &&
@@ -308,16 +308,17 @@ public class Interpreter
 				? new ValueInstance(characterType, args[index].Text[0])
 				: args[index];
 		}
-		for (var index = args.Length; index < method.Parameters.Count; index++)
+		for (var index = args.Count; index < method.Parameters.Count; index++)
 		{
-			var param = method.Parameters[index];
-			var memberIndex = GetMemberIndexForParameter(typeMembers, param, index);
+			var parameter = method.Parameters[index];
+			var memberIndex = GetMemberIndexForParameter(typeMembers, parameter, index);
 			if (memberIndex >= typeMembers.Count)
 				continue;
 			var memberType = typeMembers[memberIndex].Type;
-			if (param.DefaultValue != null)
+			if (parameter.DefaultValue != null)
 			{
-				var defaultVal = RunExpression(param.DefaultValue, RentContext(method.Type, method, noneInstance, null));
+				var defaultVal = RunExpression(parameter.DefaultValue,
+					RentContext(method.Type, method, noneInstance, null));
 				values[memberIndex] = memberType.IsList && !defaultVal.IsSameOrCanBeUsedAs(memberType)
 					? new ValueInstance(memberType, Array.Empty<ValueInstance>())
 					: defaultVal;
@@ -331,8 +332,111 @@ public class Interpreter
 		}
 		for (var memberIndex = 0; memberIndex < typeMembers.Count; memberIndex++)
 			if (!values[memberIndex].HasValue && typeMembers[memberIndex].Type.IsList)
-				values[memberIndex] = new ValueInstance(typeMembers[memberIndex].Type, Array.Empty<ValueInstance>());
+				values[memberIndex] = new ValueInstance(typeMembers[memberIndex].Type,
+					Array.Empty<ValueInstance>());
+		TryPreFillConstrainedListMembers(method.Type, values, method);
 		return new ValueInstance(method.Type, values);
+	}
+
+	private void TryPreFillConstrainedListMembers(Type targetType, ValueInstance[] values,
+		Method method)
+	{
+		var members = targetType.Members;
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+		{
+			if (!values[memberIndex].IsList || values[memberIndex].List.Items.Count > 0 ||
+				members[memberIndex].Constraints == null)
+				continue;
+			var constrainedLength = TryGetConstrainedLength(targetType, values, members[memberIndex],
+				method);
+			if (constrainedLength is not > 0)
+				continue;
+			var elementType = members[memberIndex].Type is GenericTypeImplementation genericList
+				? genericList.ImplementationTypes[0]
+				: members[memberIndex].Type;
+			var elements = new ValueInstance[constrainedLength.Value];
+			for (var elementIndex = 0; elementIndex < constrainedLength.Value; elementIndex++)
+				elements[elementIndex] = CreateDefaultMemberValue(elementType);
+			values[memberIndex] = new ValueInstance(members[memberIndex].Type, elements);
+		}
+	}
+
+	private int? TryGetConstrainedLength(Type targetType, ValueInstance[] values, Member member,
+		Method method)
+	{
+		foreach (var constraint in member.Constraints!)
+		{
+			if (constraint is not Binary { Method.Name: BinaryOperator.Is } binary ||
+				binary.Instance?.ToString() != "Length")
+				continue;
+			if (binary.Arguments[0] is Value numberValue)
+				return (int)numberValue.Data.Number;
+			return TryEvaluateLengthInMemberScope(targetType, values, binary.Arguments[0], method);
+		}
+		return null;
+	}
+
+	private int? TryEvaluateLengthInMemberScope(Type targetType, ValueInstance[] values,
+		Expression lengthExpression, Method method)
+	{
+		var context = RentContext(targetType, method, noneInstance, null);
+		try
+		{
+			for (var memberIndex = 0; memberIndex < targetType.Members.Count; memberIndex++)
+				if (values[memberIndex].HasValue)
+					context.Variables[targetType.Members[memberIndex].Name] = values[memberIndex];
+			return (int)RunExpression(lengthExpression, context).Number;
+		}
+		catch
+		{
+			return null;
+		}
+		finally
+		{
+			ReturnContext(context);
+		}
+	}
+
+	private ValueInstance CreateDefaultMemberValue(Type type)
+	{
+		if (type.IsText)
+			return new ValueInstance("");
+		if (type.IsBoolean)
+			return new ValueInstance(type, false);
+		if (type.IsNumber || type.IsCharacter || type.IsEnum)
+			return new ValueInstance(type, 0);
+		if (type.IsNone)
+			return noneInstance;
+		if (type.IsList)
+			return new ValueInstance(type, Array.Empty<ValueInstance>());
+		if (type.IsDictionary)
+			return new ValueInstance(type, new Dictionary<ValueInstance, ValueInstance>());
+		var members = type.Members;
+		if (members.Count == 0)
+			return new ValueInstance(type, 0);
+		var values = new ValueInstance[members.Count];
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+		{
+			var member = members[memberIndex];
+			if (member.Type.IsTrait)
+			{
+				var traitValue = TryAutoCreateInstance(member.Type);
+				values[memberIndex] = traitValue ?? noneInstance;
+				continue;
+			}
+			if (member.InitialValue is Value initialValue)
+			{
+				values[memberIndex] = initialValue.Data;
+				continue;
+			}
+			if (member.Type.IsList)
+			{
+				values[memberIndex] = new ValueInstance(member.Type, Array.Empty<ValueInstance>());
+				continue;
+			}
+			values[memberIndex] = CreateDefaultMemberValue(member.Type);
+		}
+		return new ValueInstance(type, values);
 	}
 
 	private static readonly IReadOnlyDictionary<string, string> TraitImplementationRegistry =
