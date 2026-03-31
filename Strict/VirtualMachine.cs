@@ -519,16 +519,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private void TryPreFillConstrainedListMembers(Type targetType, ValueInstance[] values)
 	{
 		var members = targetType.Members;
-		Console.Error.WriteLine($"TryPreFill for {targetType.Name} with {members.Count} members");
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 		{
-			var isList = values[memberIndex].IsList;
-			Console.Error.WriteLine($"  member[{memberIndex}]={members[memberIndex].Name} type={members[memberIndex].Type.Name} isList={isList} constraints={members[memberIndex].Constraints != null}");
-			if (!isList || values[memberIndex].List.Items.Count > 0 ||
+			if (!values[memberIndex].IsList || values[memberIndex].List.Items.Count > 0 ||
 				members[memberIndex].Constraints == null)
 				continue;
 			var length = TryGetConstrainedLength(targetType, values, members[memberIndex]);
-			Console.Error.WriteLine($"  constrainedLength={length}");
 			if (length is not > 0)
 				continue;
 			var elementType = members[memberIndex].Type is GenericTypeImplementation genericList
@@ -545,37 +541,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		foreach (var constraint in member.Constraints!)
 		{
-			Console.Error.WriteLine($"  constraint={constraint} isBinary={constraint is Expressions.Binary}");
-			if (constraint is Expressions.Binary binaryDbg)
-				Console.Error.WriteLine($"    binary.Method={binaryDbg.Method.Name} instance={binaryDbg.Instance}");
 			if (constraint is not Expressions.Binary { Method.Name: BinaryOperator.Is } binary ||
 				binary.Instance?.ToString() != "Length")
 				continue;
 			var rhs = binary.Arguments[0];
-			Console.Error.WriteLine($"    rhs={rhs} rhsType={rhs.GetType().Name}");
 			if (rhs is Value numberValue)
 				return (int)numberValue.Data.Number;
-			try
-			{
-				var eval = TryEvaluateLengthInMemberScope(targetType, values, rhs);
-				Console.Error.WriteLine($"    evalResult={eval}");
-				if (eval != null)
-					return eval;
-			}
-			catch (Exception ex)
-			{
-				Console.Error.WriteLine($"    evalError={ex.GetType().Name}: {ex.Message}");
-			}
-			try
-			{
-				var resolve = TryResolveMemberMethodLength(targetType, values, rhs);
-				Console.Error.WriteLine($"    resolveResult={resolve}");
-				return resolve;
-			}
-			catch (Exception ex)
-			{
-				Console.Error.WriteLine($"    resolveError={ex.GetType().Name}: {ex.Message}");
-			}
+			return TryEvaluateLengthInMemberScope(targetType, values, rhs) ??
+				TryResolveMemberMethodLength(targetType, values, rhs);
 		}
 		return null;
 	}
@@ -589,7 +562,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return null;
 		var memberName = rhsText[..dotIndex];
 		var methodName = rhsText[(dotIndex + 1)..];
-		Console.Error.WriteLine($"    resolve: memberName={memberName} methodName={methodName}");
 		for (var memberIndex = 0; memberIndex < targetType.Members.Count; memberIndex++)
 		{
 			if (!targetType.Members[memberIndex].Name.Equals(memberName,
@@ -597,25 +569,56 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				continue;
 			var memberValue = values[memberIndex];
 			var typeInstance = memberValue.TryGetValueTypeInstance();
-			Console.Error.WriteLine($"    typeInstance={typeInstance?.ReturnType.Name} isNull={typeInstance == null}");
 			var method = typeInstance?.ReturnType.FindMethod(methodName, []);
-			Console.Error.WriteLine($"    method={method?.Name} methodType={method?.Type.Name}");
 			if (method == null)
 				continue;
 			var methodInstructions = GetPrecompiledMethodInstructions(method);
-			Console.Error.WriteLine($"    instructions={(methodInstructions != null ? methodInstructions.Count + " found" : "NOT FOUND")}");
-			Console.Error.WriteLine($"    available types: {string.Join(", ", executable.MethodsPerType.Keys)}");
-			if (methodInstructions == null)
-				continue;
-			var result = RunChildScope(methodInstructions, () =>
+			if (methodInstructions != null)
 			{
-				Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
-				TrySetScopeMembersFromTypeMembers(typeInstance!);
-			});
-			if (result.HasValue)
-				return (int)result.Value.Number;
+				var result = RunChildScope(methodInstructions, () =>
+				{
+					Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
+					TrySetScopeMembersFromTypeMembers(typeInstance!);
+				});
+				if (result.HasValue)
+					return (int)result.Value.Number;
+			}
+			else
+			{
+				var bodyResult = TryEvaluateMethodBodyWithInstance(method, memberValue, typeInstance!);
+				if (bodyResult != null)
+					return bodyResult;
+			}
 		}
 		return null;
+	}
+
+	private int? TryEvaluateMethodBodyWithInstance(Method method, ValueInstance memberValue,
+		ValueTypeInstance typeInstance)
+	{
+		try
+		{
+			var body = method.GetBodyAndParseIfNeeded();
+			if (body is not Body { Expressions.Count: > 0 } methodBody)
+				return null;
+			var savedFrame = Memory.Frame;
+			Memory.Frame = new CallFrame();
+			Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
+			TrySetScopeMembersFromTypeMembers(typeInstance);
+			try
+			{
+				var lastExpression = methodBody.Expressions[^1];
+				return (int)EvaluateExpression(lastExpression).Number;
+			}
+			finally
+			{
+				Memory.Frame = savedFrame;
+			}
+		}
+		catch
+		{
+			return null;
+		}
 	}
 
 	private int? TryEvaluateLengthInMemberScope(Type targetType, ValueInstance[] values,
@@ -689,7 +692,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return EvaluateBinary(binary);
 		if (expression is MethodCall methodCall)
 			return EvaluateMethodCall(methodCall);
+		if (expression is ListCall listCall)
+			return EvaluateListCallExpression(listCall);
 		return new ValueInstance(expression.ToString());
+	}
+
+	private ValueInstance EvaluateListCallExpression(ListCall listCall)
+	{
+		var listValue = EvaluateExpression(listCall.List);
+		if (!listValue.IsList)
+			return Memory.Frame.Get(listCall.ToString());
+		var indexValue = EvaluateExpression(listCall.Index);
+		var index = (int)indexValue.Number;
+		return listValue.List.Items[index];
 	}
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
@@ -764,15 +779,52 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 					: rawValue;
 		}
 		var precompiledInstructions = GetPrecompiledMethodInstructions(call.Method);
-		if (precompiledInstructions == null)
-			throw new InvalidOperationException("No precompiled method instructions found for method call");
-		var evaluatedArguments = call.Arguments.Select(EvaluateExpression).ToArray();
+		if (precompiledInstructions != null)
+		{
+			var evaluatedArguments = call.Arguments.Select(EvaluateExpression).ToArray();
+			var evaluatedInstance = call.Instance != null
+				? EvaluateExpression(call.Instance)
+				: (ValueInstance?)null;
+			var precompiledResult = RunChildScope(precompiledInstructions,
+				() => InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance));
+			return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
+		}
+		return TryEvaluateMethodCallFromBody(call) ??
+			throw new InvalidOperationException(
+				"No precompiled method instructions found for method call: " + call);
+	}
+
+	private ValueInstance? TryEvaluateMethodCallFromBody(MethodCall call)
+	{
+		var methodBody = call.Method.GetBodyAndParseIfNeeded();
+		if (methodBody is not Body { Expressions.Count: > 0 } body)
+			return null;
 		var evaluatedInstance = call.Instance != null
 			? EvaluateExpression(call.Instance)
 			: (ValueInstance?)null;
-		var precompiledResult = RunChildScope(precompiledInstructions,
-			() => InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance));
-		return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
+		var savedFrame = Memory.Frame;
+		Memory.Frame = new CallFrame(savedFrame);
+		try
+		{
+			if (evaluatedInstance.HasValue)
+			{
+				Memory.Frame.Set(Type.ValueLowercase, evaluatedInstance.Value, isMember: true);
+				var typeInstance = evaluatedInstance.Value.TryGetValueTypeInstance();
+				if (typeInstance != null)
+					TrySetScopeMembersFromTypeMembers(typeInstance);
+			}
+			for (var paramIndex = 0;
+				paramIndex < call.Method.Parameters.Count && paramIndex < call.Arguments.Count;
+				paramIndex++)
+				Memory.Frame.Set(call.Method.Parameters[paramIndex].Name,
+					EvaluateExpression(call.Arguments[paramIndex]));
+			var lastExpression = body.Expressions[^1];
+			return EvaluateExpression(lastExpression);
+		}
+		finally
+		{
+			Memory.Frame = savedFrame;
+		}
 	}
 
 	private ValueInstance EvaluateFromConstructor(MethodCall call)
@@ -924,7 +976,40 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			Memory.Frame.Set(storeVariable.Identifier, value, storeVariable.IsMember);
 		}
 		else if (instruction is StoreFromRegisterInstruction storeFromRegister)
-			Memory.Frame.Set(storeFromRegister.Identifier, Memory.Registers[storeFromRegister.Register]);
+		{
+			if (!TryStoreToListElement(storeFromRegister))
+				Memory.Frame.Set(storeFromRegister.Identifier,
+					Memory.Registers[storeFromRegister.Register]);
+		}
+	}
+
+	private bool TryStoreToListElement(StoreFromRegisterInstruction store)
+	{
+		var identifier = store.Identifier;
+		var openParen = identifier.LastIndexOf('(');
+		if (openParen <= 0 || !identifier.EndsWith(')'))
+			return false;
+		var listPath = identifier[..openParen];
+		var indexExprName = identifier[(openParen + 1)..^1];
+		if (!Memory.Frame.TryGet(listPath, out var listValue))
+		{
+			var lastDot = listPath.LastIndexOf('.');
+			if (lastDot > 0)
+				Memory.Frame.TryGet(listPath[(lastDot + 1)..], out listValue);
+		}
+		if (!listValue.IsList)
+			return false;
+		if (!Memory.Frame.TryGet(indexExprName, out var indexInstance))
+			Memory.Frame.TryGet(Type.IndexLowercase, out indexInstance);
+		if (!indexInstance.HasValue)
+			return false;
+		var index = (int)indexInstance.Number;
+		if (index >= 0 && index < listValue.List.Items.Count)
+		{
+			listValue.List.Items[index] = Memory.Registers[store.Register];
+			return true;
+		}
+		return false;
 	}
 
 	private void TryLoadInstructions(Instruction instruction)
@@ -984,7 +1069,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return left;
 		}
 		if (left.IsText || right.IsText)
-			return new ValueInstance(left.ToExpressionCodeString() + right.ToExpressionCodeString());
+			return new ValueInstance(ConvertToText(left).Text + ConvertToText(right).Text);
 		return new ValueInstance(right.GetType(), left.Number + right.Number);
 	}
 
