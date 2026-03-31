@@ -161,7 +161,18 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			method.Parameters.Count, method.ReturnType.Name) ??
 		executable.FindInstructions(
 			nameof(Strict) + Context.ParentSeparator + method.Type.Name, method.Name,
-			method.Parameters.Count, method.ReturnType.Name);
+			method.Parameters.Count, method.ReturnType.Name) ??
+		FindInstructionsWithStrippedPackagePrefix(method);
+
+	private IReadOnlyList<Instruction>? FindInstructionsWithStrippedPackagePrefix(Method method)
+	{
+		var fullName = method.Type.FullName;
+		var strictPrefix = nameof(Strict) + Context.ParentSeparator;
+		return fullName.StartsWith(strictPrefix, StringComparison.Ordinal)
+			? executable.FindInstructions(fullName[strictPrefix.Length..], method.Name,
+				method.Parameters.Count, method.ReturnType.Name)
+			: null;
+	}
 
 	private IReadOnlyList<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
 		GetPrecompiledMethodInstructions(invoke.Method.Method);
@@ -508,12 +519,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private void TryPreFillConstrainedListMembers(Type targetType, ValueInstance[] values)
 	{
 		var members = targetType.Members;
+		Console.Error.WriteLine($"TryPreFill for {targetType.Name} with {members.Count} members");
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 		{
-			if (!values[memberIndex].IsList || values[memberIndex].List.Items.Count > 0 ||
+			var isList = values[memberIndex].IsList;
+			Console.Error.WriteLine($"  member[{memberIndex}]={members[memberIndex].Name} type={members[memberIndex].Type.Name} isList={isList} constraints={members[memberIndex].Constraints != null}");
+			if (!isList || values[memberIndex].List.Items.Count > 0 ||
 				members[memberIndex].Constraints == null)
 				continue;
 			var length = TryGetConstrainedLength(targetType, values, members[memberIndex]);
+			Console.Error.WriteLine($"  constrainedLength={length}");
 			if (length is not > 0)
 				continue;
 			var elementType = members[memberIndex].Type is GenericTypeImplementation genericList
@@ -530,14 +545,37 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		foreach (var constraint in member.Constraints!)
 		{
+			Console.Error.WriteLine($"  constraint={constraint} isBinary={constraint is Expressions.Binary}");
+			if (constraint is Expressions.Binary binaryDbg)
+				Console.Error.WriteLine($"    binary.Method={binaryDbg.Method.Name} instance={binaryDbg.Instance}");
 			if (constraint is not Expressions.Binary { Method.Name: BinaryOperator.Is } binary ||
 				binary.Instance?.ToString() != "Length")
 				continue;
 			var rhs = binary.Arguments[0];
+			Console.Error.WriteLine($"    rhs={rhs} rhsType={rhs.GetType().Name}");
 			if (rhs is Value numberValue)
 				return (int)numberValue.Data.Number;
-			return TryEvaluateLengthInMemberScope(targetType, values, rhs) ??
-				TryResolveMemberMethodLength(targetType, values, rhs);
+			try
+			{
+				var eval = TryEvaluateLengthInMemberScope(targetType, values, rhs);
+				Console.Error.WriteLine($"    evalResult={eval}");
+				if (eval != null)
+					return eval;
+			}
+			catch (Exception ex)
+			{
+				Console.Error.WriteLine($"    evalError={ex.GetType().Name}: {ex.Message}");
+			}
+			try
+			{
+				var resolve = TryResolveMemberMethodLength(targetType, values, rhs);
+				Console.Error.WriteLine($"    resolveResult={resolve}");
+				return resolve;
+			}
+			catch (Exception ex)
+			{
+				Console.Error.WriteLine($"    resolveError={ex.GetType().Name}: {ex.Message}");
+			}
 		}
 		return null;
 	}
@@ -551,6 +589,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return null;
 		var memberName = rhsText[..dotIndex];
 		var methodName = rhsText[(dotIndex + 1)..];
+		Console.Error.WriteLine($"    resolve: memberName={memberName} methodName={methodName}");
 		for (var memberIndex = 0; memberIndex < targetType.Members.Count; memberIndex++)
 		{
 			if (!targetType.Members[memberIndex].Name.Equals(memberName,
@@ -558,10 +597,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				continue;
 			var memberValue = values[memberIndex];
 			var typeInstance = memberValue.TryGetValueTypeInstance();
+			Console.Error.WriteLine($"    typeInstance={typeInstance?.ReturnType.Name} isNull={typeInstance == null}");
 			var method = typeInstance?.ReturnType.FindMethod(methodName, []);
+			Console.Error.WriteLine($"    method={method?.Name} methodType={method?.Type.Name}");
 			if (method == null)
 				continue;
 			var methodInstructions = GetPrecompiledMethodInstructions(method);
+			Console.Error.WriteLine($"    instructions={(methodInstructions != null ? methodInstructions.Count + " found" : "NOT FOUND")}");
+			Console.Error.WriteLine($"    available types: {string.Join(", ", executable.MethodsPerType.Keys)}");
 			if (methodInstructions == null)
 				continue;
 			var result = RunChildScope(methodInstructions, () =>

@@ -46,8 +46,10 @@ public sealed class Member : NamedType
 		var expressions = new Expression[constraintsText.Length];
 		for (var index = 0; index < constraintsText.Length; index++)
 		{
+			var constraintMethod = new Method(Type, 0, parser, [ConstraintsBody]);
+			constraintMethod.ConstraintDeclaringType = DefinedIn;
 			expressions[index] = parser.ParseExpression(
-				new Body(new Method(Type, 0, parser, [ConstraintsBody])), constraintsText[index]);
+				new Body(constraintMethod), constraintsText[index]);
 			if (!expressions[index].ReturnType.IsBoolean)
 				throw new InvalidConstraintExpression(Type, Name, constraintsText[index]);
 		}

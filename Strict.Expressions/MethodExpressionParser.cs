@@ -395,6 +395,18 @@ public class MethodExpressionParser : ExpressionParser
 					context = current.ReturnType;
 					continue;
 				}
+				if (body.Method is { Name: Language.Member.ConstraintsBody,
+					ConstraintDeclaringType: not null })
+				{
+					var siblingMember =
+						body.Method.ConstraintDeclaringType.FindMember(inputText.ToString());
+					if (siblingMember != null)
+					{
+						current = new MemberCall(null, siblingMember, body.CurrentFileLineNumber);
+						context = current.ReturnType;
+						continue;
+					}
+				}
 				var foundType = body.Method.FindType(inputText.ToString());
 				if (foundType != null && !members.IsAtEnd &&
 					!inputText.Equals(Type.ValueLowercase, StringComparison.Ordinal) &&
