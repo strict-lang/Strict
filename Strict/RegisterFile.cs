@@ -24,6 +24,8 @@ public sealed class RegisterFile
 		return value.HasValue;
 	}
 
+	public void SaveTo(ValueInstance[] snapshot) => Array.Copy(data, snapshot, 16);
+	public void RestoreFrom(ValueInstance[] snapshot) => Array.Copy(snapshot, data, 16);
 	public ValueInstance[] Save()
 	{
 		var snapshot = new ValueInstance[16];

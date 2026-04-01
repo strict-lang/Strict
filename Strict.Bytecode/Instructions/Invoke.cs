@@ -22,6 +22,10 @@ public sealed class Invoke(Register register, MethodCall method, Registry persis
 
 	public MethodCall Method { get; } = method;
 	public Registry PersistedRegistry { get; } = persistedRegistry;
+	/// <summary>
+	/// Cached precompiled instructions for this invoke, set on first execution to avoid repeated lookups.
+	/// </summary>
+	public IReadOnlyList<Instruction>? CachedInstructions { get; set; }
 
 	public override void Write(BinaryWriter writer, NameTable table)
 	{

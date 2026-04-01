@@ -29,11 +29,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private IReadOnlyList<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
+	private int callDepth;
+	private const int MaxCallDepth = 64;
+	private readonly ValueInstance[][] registerSaveStack =
+		Enumerable.Range(0, MaxCallDepth).Select(_ => new ValueInstance[16]).ToArray();
+	private readonly Dictionary<string, IReadOnlyList<BinaryMember>> binaryMembersCache = new(StringComparer.Ordinal);
+	private readonly CallFrame[] callFramePool =
+		Enumerable.Range(0, MaxCallDepth).Select(_ => new CallFrame()).ToArray();
 
 	private VirtualMachine RunInstructions(IReadOnlyList<Instruction> blockInstructions)
 	{
-		foreach (var loopBegin in blockInstructions.OfType<LoopBeginInstruction>())
-			loopBegin.Reset();
+		for (var resetIndex = 0; resetIndex < blockInstructions.Count; resetIndex++)
+			if (blockInstructions[resetIndex] is LoopBeginInstruction loopBeginToReset)
+				loopBeginToReset.Reset();
 		instructions = blockInstructions;
 		var instructionsLength = instructions.Count;
 		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
@@ -109,7 +117,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
-		instructionIndex = GetInstructionIndex(loopBegin) - 1;
+		if (loopEnd.BeginIndex < 0)
+			loopEnd.BeginIndex = GetInstructionIndex(loopBegin);
+		instructionIndex = loopEnd.BeginIndex - 1;
 	}
 
 	private int GetInstructionIndex(Instruction instruction)
@@ -142,11 +152,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke) ||
 			TryHandleNativeTextMethod(invoke))
 			return;
-		var evaluatedArgs = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
+		var arguments = invoke.Method.Arguments;
+		var evaluatedArgs = new ValueInstance[arguments.Count];
+		for (var argIndex = 0; argIndex < arguments.Count; argIndex++)
+			evaluatedArgs[argIndex] = EvaluateExpression(arguments[argIndex]);
 		var evaluatedInstance = invoke.Method.Instance != null
 			? EvaluateExpression(invoke.Method.Instance)
 			: (ValueInstance?)null;
-		var invokeInstructions = GetPrecompiledMethodInstructions(invoke) ??
+		var invokeInstructions = invoke.CachedInstructions ??= GetPrecompiledMethodInstructions(invoke) ??
 			throw new InvalidOperationException("No precompiled method instructions found for invoke");
 		var result = RunChildScope(invokeInstructions,
 			() => InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance));
@@ -234,13 +247,17 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryGetBinaryMembers(Type type, out IReadOnlyList<BinaryMember> members)
 	{
+		if (binaryMembersCache.TryGetValue(type.FullName, out members!))
+			return members.Count > 0;
 		foreach (var (typeName, typeData) in executable.MethodsPerType)
 			if (typeData.Members.Count > 0 && (typeName == type.FullName || typeName == type.Name ||
 				typeName.EndsWith(Context.ParentSeparator + type.Name, StringComparison.Ordinal)))
 			{
+				binaryMembersCache[type.FullName] = typeData.Members;
 				members = typeData.Members;
 				return true;
 			}
+		binaryMembersCache[type.FullName] = [];
 		members = [];
 		return false;
 	}
@@ -268,15 +285,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var savedConditionFlag = conditionFlag;
 		var savedReturns = Returns;
 		var savedFrame = Memory.Frame;
-		var savedRegisters = Memory.Registers.Save();
-		Memory.Frame = new CallFrame(savedFrame);
+		var depth = callDepth++;
+		Memory.Registers.SaveTo(registerSaveStack[depth]);
+		var childFrame = callFramePool[depth];
+		childFrame.Reset(savedFrame);
+		Memory.Frame = childFrame;
 		initializeScope?.Invoke();
 		Returns = null;
 		RunInstructions(childInstructions);
 		var result = Returns;
 		Memory.Frame.Clear();
 		Memory.Frame = savedFrame;
-		Memory.Registers.Restore(savedRegisters);
+		Memory.Registers.RestoreFrom(registerSaveStack[depth]);
+		callDepth--;
 		instructions = savedInstructions;
 		instructionIndex = savedIndex;
 		conditionFlag = savedConditionFlag;

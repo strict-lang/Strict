@@ -17,6 +17,17 @@ internal sealed class CallFrame(CallFrame? parent = null)
 				Set(name, value);
 	}
 
+	private CallFrame? Parent { get; set; } = parent;
+
+	/// <summary>
+	/// Resets this frame for reuse with a new parent, clearing all locals.
+	/// </summary>
+	internal void Reset(CallFrame? newParent)
+	{
+		variables?.Clear();
+		memberNames?.Clear();
+		Parent = newParent;
+	}
 	private Dictionary<string, ValueInstance>? variables;
 	private HashSet<string>? memberNames;
 	/// <summary>
@@ -29,7 +40,7 @@ internal sealed class CallFrame(CallFrame? parent = null)
 	{
 		if (variables != null && variables.TryGetValue(name, out value))
 			return true;
-		if (parent != null && parent.TryGetMember(name, out value))
+		if (Parent != null && Parent.TryGetMember(name, out value))
 			return true;
 		var dotIndex = name.IndexOf('.');
 		if (dotIndex > 0 && TryGet(name[..dotIndex], out var root) &&
@@ -112,7 +123,7 @@ internal sealed class CallFrame(CallFrame? parent = null)
 		", members: " + (memberNames != null
 			? string.Join(", ", memberNames)
 			: "") +
-		(parent != null
-			? "\n\tParent: " + parent
+		(Parent != null
+			? "\n\tParent: " + Parent
 			: "");
 }
