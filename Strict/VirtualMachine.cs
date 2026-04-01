@@ -29,6 +29,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private IReadOnlyList<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
+	private const int MaxCallDepth = 64;
+	private readonly ValueInstance[][] registerStack = new ValueInstance[MaxCallDepth][];
+	private int registerStackDepth;
+	private readonly CallFrame[] framePool = new CallFrame[MaxCallDepth];
+	private int framePoolDepth;
 
 	private VirtualMachine RunInstructions(IReadOnlyList<Instruction> blockInstructions)
 	{
@@ -142,11 +147,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke) ||
 			TryHandleNativeTextMethod(invoke))
 			return;
-		var evaluatedArgs = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
+		var argCount = invoke.Method.Arguments.Count;
+		var evaluatedArgs = argCount == 0
+			? Array.Empty<ValueInstance>()
+			: new ValueInstance[argCount];
+		for (var argIndex = 0; argIndex < argCount; argIndex++)
+			evaluatedArgs[argIndex] = EvaluateExpression(invoke.Method.Arguments[argIndex]);
 		var evaluatedInstance = invoke.Method.Instance != null
 			? EvaluateExpression(invoke.Method.Instance)
 			: (ValueInstance?)null;
-		var invokeInstructions = GetPrecompiledMethodInstructions(invoke) ??
+		var invokeInstructions = invoke.CachedInstructions ??= GetPrecompiledMethodInstructions(invoke) ??
 			throw new InvalidOperationException("No precompiled method instructions found for invoke");
 		var result = RunChildScope(invokeInstructions,
 			() => InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance));
@@ -268,15 +278,24 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var savedConditionFlag = conditionFlag;
 		var savedReturns = Returns;
 		var savedFrame = Memory.Frame;
-		var savedRegisters = Memory.Registers.Save();
-		Memory.Frame = new CallFrame(savedFrame);
+		var depth = registerStackDepth++;
+		if (registerStack[depth] == null)
+			registerStack[depth] = new ValueInstance[16];
+		Memory.Registers.SaveTo(registerStack[depth]);
+		var frame = framePoolDepth > 0
+			? framePool[--framePoolDepth]
+			: new CallFrame();
+		frame.Reset(savedFrame);
+		Memory.Frame = frame;
 		initializeScope?.Invoke();
 		Returns = null;
 		RunInstructions(childInstructions);
 		var result = Returns;
-		Memory.Frame.Clear();
+		frame.Reset(null);
+		if (framePoolDepth < MaxCallDepth)
+			framePool[framePoolDepth++] = frame;
 		Memory.Frame = savedFrame;
-		Memory.Registers.Restore(savedRegisters);
+		Memory.Registers.RestoreFrom(registerStack[--registerStackDepth]);
 		instructions = savedInstructions;
 		instructionIndex = savedIndex;
 		conditionFlag = savedConditionFlag;
@@ -498,8 +517,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				GenericTypeImplementation nestedElementsList)
 				elementType = nestedElementsList.ImplementationTypes[0];
 			var elements = new ValueInstance[length.Value];
-			for (var elementIndex = 0; elementIndex < length.Value; elementIndex++)
-				elements[elementIndex] = CreateDefaultComplexValue(elementType);
+			var defaultElement = CreateDefaultComplexValue(elementType);
+			Array.Fill(elements, defaultElement);
 			values[memberIndex] = new ValueInstance(members[memberIndex].Type, elements);
 		}
 	}

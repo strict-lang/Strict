@@ -31,6 +31,8 @@ public sealed class RegisterFile
 		return snapshot;
 	}
 
+	public void SaveTo(ValueInstance[] snapshot) => Array.Copy(data, snapshot, 16);
 	public void Restore(ValueInstance[] snapshot) => Array.Copy(snapshot, data, 16);
+	public void RestoreFrom(ValueInstance[] snapshot) => Array.Copy(snapshot, data, 16);
 	public void Clear() => Array.Clear(data, 0, 16);
 }

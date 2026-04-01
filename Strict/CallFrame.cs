@@ -8,14 +8,18 @@ namespace Strict;
 /// reads walk the parent chain but only through member variables, so child calls can access
 /// the caller's 'has' fields without copying them. Modeled after ExecutionContext.
 /// </summary>
-internal sealed class CallFrame(CallFrame? parent = null)
+internal sealed class CallFrame
 {
-	public CallFrame(IReadOnlyDictionary<string, ValueInstance>? initialVariables) : this()
+	internal CallFrame(CallFrame? parent = null) => this.parent = parent;
+
+	public CallFrame(IReadOnlyDictionary<string, ValueInstance>? initialVariables)
 	{
 		if (initialVariables != null)
 			foreach (var (name, value) in initialVariables)
 				Set(name, value);
 	}
+
+	private CallFrame? parent;
 
 	private Dictionary<string, ValueInstance>? variables;
 	private HashSet<string>? memberNames;
@@ -105,6 +109,16 @@ internal sealed class CallFrame(CallFrame? parent = null)
 	{
 		variables?.Clear();
 		memberNames?.Clear();
+	}
+
+	/// <summary>
+	/// Resets this frame for reuse from the pool: clears all variables and sets a new parent.
+	/// </summary>
+	internal void Reset(CallFrame? newParent)
+	{
+		variables?.Clear();
+		memberNames?.Clear();
+		parent = newParent;
 	}
 
 	public override string ToString() =>
