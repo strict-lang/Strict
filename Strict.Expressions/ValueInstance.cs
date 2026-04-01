@@ -6,7 +6,7 @@ namespace Strict.Expressions;
 /// <summary>
 /// Optimized for size, always just contains 2 values, a pointer to the type, string, list,
 /// dictionary, or type instance and if it is a primitive (most common, most lines just return
-/// None or True) the None, Boolean, or Number data. This is also
+/// None or True) the None, Boolean, or Number data.
 /// </summary>
 public readonly struct ValueInstance : IEquatable<ValueInstance>
 {

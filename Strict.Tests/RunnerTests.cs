@@ -25,7 +25,7 @@ public sealed class RunnerTests
 	public void RestoreConsole()
 	{
 		Console.SetOut(rememberConsole);
-		//this is slow and a bit crazy: CleanupGeneratedFiles();
+		//this is slow and a bit crazy to do EVERY time for every test killing everything: CleanupGeneratedFiles();
 	}
 
 	private static void CleanupGeneratedFiles()

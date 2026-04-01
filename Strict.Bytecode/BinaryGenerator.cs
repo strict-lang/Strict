@@ -64,6 +64,10 @@ public sealed class BinaryGenerator
 		return generator.Generate(preferredEntryMethod, runMethods);
 	}
 
+	public static List<Instruction> GenerateInlineInstructions(Package basePackage,
+		Expression expression) =>
+		new BinaryGenerator(basePackage, [expression], expression.ReturnType).GenerateInstructionList();
+
 	public BinaryExecutable Generate(string typeFullName, Expression entryPointExpression) =>
 		Generate(typeFullName, [entryPointExpression], entryPointExpression.ReturnType);
 

@@ -137,7 +137,7 @@ public sealed class Runner
 			}
 #endif
 			Log("Cached " + cachedBinaryPath + " is outdated from " + binaryLastModified +
-				", source modified at " + sourceLastModified);
+				", source modified at " + sourceLastModified + ". Will regenerate now ..");
 		}
 		return await LoadFromSourceAndSaveBinary(basePackage);
 	}

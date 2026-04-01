@@ -143,4 +143,22 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 			new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3, Register.R4),
 			new ReturnInstruction(Register.R4)
 		], 3)[^1], Is.InstanceOf<ReturnInstruction>());
+
+	[Test]
+	public void InlineOneLineMethodInsideLoop()
+	{
+   var binary = GenerateBinary("LoopInlining",
+			"has number Number",
+			"Run Number",
+			"\tmutable temp = number",
+			"\tfor 1000",
+			"\t\ttemp = AddToNumber(temp, 2)",
+			"\ttemp",
+			"AddToNumber(temp Number, increase Number) Number",
+			"\ttemp + increase");
+		new AllInstructionOptimizers().Optimize(binary);
+		Assert.That(binary.EntryPoint.instructions.OfType<Invoke>().Any(invoke =>
+			invoke.Method.Method.Name == "AddToNumber"), Is.False);
+		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(2000));
+	}
 }

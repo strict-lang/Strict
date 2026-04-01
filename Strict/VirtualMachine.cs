@@ -46,6 +46,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return this;
 	}
 
+	//TODO: almost called 3 million times, our loop is only 0.23m, so we are doing too much each time
+	//TODO: inlining should reduce the call to GetBrightnessAdjustedColor to something much simpler
+	//for colorIndex in Range(0, image.Colors.Length)
+	//	image.Colors(colorIndex) = GetBrightnessAdjustedColor(image.Colors(colorIndex))
+	//+GetBrightnessAdjustedColor(current Color) Color
+	//+ Color(current.Red + brightness, current.Green + brightness, current.Blue + brightness)
+	//should be:
+	//for colorIndex in Range(0, image.Colors.Length)
+	//	keep this color, maybe as value?: image.Colors(colorIndex)
+	//  color.Red += brightness (e.g. using color.Red.Increase(brightness))
+	//  color.Green += brightness
+	//  color.Blue += brightness
+	// Now it should be 0.23m*(3-4) instructions, less than 1m, also no lookups, we can keep value and brightness directly in memory and reuse, index increases were we are in our big Colors array ..
 	private void ExecuteInstruction(Instruction instruction)
 	{
 		if (TryExecuteReturn(instruction))
@@ -147,6 +160,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke) ||
 			TryHandleNativeTextMethod(invoke))
 			return;
+		//TODO: this is crazy amount of work and a bit crazy for GetBrightnessAdjustedColor
 		var argCount = invoke.Method.Arguments.Count;
 		var evaluatedArgs = argCount == 0
 			? Array.Empty<ValueInstance>()
@@ -412,6 +426,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var hasBinaryMembers = TryGetBinaryMembers(targetType, out var binaryMembers);
 		if (members.Count == 0 && hasBinaryMembers)
 		{
+			//TODO: called almost 1 million times? wtf?
 			Memory.Registers[invoke.Register] = new ValueInstance(targetType,
 				CreateConstructorValuesFromBinaryMembers(targetType, invoke, binaryMembers));
 			return true;
@@ -419,6 +434,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var values = new ValueInstance[members.Count];
 		for (var parameterIndex = 0; parameterIndex < invoke.Method.Method.Parameters.Count; parameterIndex++)
 		{
+			//wtf, another 1.2m calls?
 			var parameter = invoke.Method.Method.Parameters[parameterIndex];
 			var memberIndex = FindMemberIndex(members, parameter.Name);
 			if (memberIndex == -1)
@@ -699,6 +715,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	/// Evaluates an arbitrary expression to a ValueInstance using the current VM state.
 	/// Handles values, variables, member calls, binary operations, and method calls.
 	/// </summary>
+	//TODO: this is called 4 million times, stupid!
 	private ValueInstance EvaluateExpression(Expression expression)
 	{
 		if (expression is Value value)
@@ -711,11 +728,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (expression is MemberCall memberCall)
 			return EvaluateMemberCall(memberCall);
 		if (expression is Expressions.Binary binary)
-			return EvaluateBinary(binary);
+			return EvaluateBinary(binary); //TODO: eats up 75% of the time here! 0.7m calls
 		if (expression is MethodCall methodCall)
 			return EvaluateMethodCall(methodCall);
 		if (expression is ListCall listCall)
-			return EvaluateListCallExpression(listCall);
+			return EvaluateListCallExpression(listCall); //TODO: another almost 25% here, 0.23m calls
+		//almost never called, not sure? AdjustBrightness does not need this even once:
     var frameKey = GetFrameKey(expression);
 		return Memory.Frame.TryGet(frameKey, out var frameValue)
 			? frameValue

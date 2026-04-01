@@ -29,12 +29,15 @@ internal sealed class CallFrame
 	internal Dictionary<string, ValueInstance> Variables =>
 		variables ??= new Dictionary<string, ValueInstance>();
 
+	//TODO: called 4 million times, needs to be avoided. it doesn't even make sense to call this that often, we have many 5 lookups in AdjustBrightness, rest is just repeating the same stuff over and over
+	//TODO: main optimization in the for loop is to take the image.Colors(colorIndex) and to work directly on it without looking it up multiple times per iteration. this is still a VirtualMachine, but we don't have to be stupid!
 	internal bool TryGet(string name, out ValueInstance value)
 	{
 		if (variables != null && variables.TryGetValue(name, out value))
-			return true;
+			return true; //80% ends up here
 		if (parent != null && parent.TryGetMember(name, out value))
-			return true;
+			return true; //15% here
+		// rest is 5%, but still tooooooooooo many times (0.23 million calls here)
 		var dotIndex = name.IndexOf('.');
 		if (dotIndex > 0 && TryGet(name[..dotIndex], out var root) &&
 			TryGetNestedMemberValue(root, name[(dotIndex + 1)..], out value))

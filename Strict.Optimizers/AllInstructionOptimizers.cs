@@ -1,3 +1,4 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 
 namespace Strict.Optimizers;
@@ -17,6 +18,7 @@ public class AllInstructionOptimizers : InstructionOptimizer
 	private readonly InstructionOptimizer[] optimizers =
 	[
 		new TestCodeRemover(),
+   new MethodInliningOptimizer(),
 		new ConstantFoldingOptimizer(),
 		new StrengthReducer(),
 		new DeadStoreEliminator(),
@@ -24,6 +26,12 @@ public class AllInstructionOptimizers : InstructionOptimizer
 		new JumpThreadingOptimizer(),
 		new UnreachableCodeEliminator()
 	];
+
+  public override void Optimize(BinaryExecutable binary)
+	{
+		foreach (var optimizer in optimizers)
+			optimizer.Optimize(binary);
+	}
 
 	public override List<Instruction> Optimize(List<Instruction> instructions)
 	{

@@ -9,7 +9,7 @@ namespace Strict.Optimizers;
 /// </summary>
 public abstract class InstructionOptimizer
 {
-	public void Optimize(BinaryExecutable binary)
+ public virtual void Optimize(BinaryExecutable binary)
 	{
 		foreach (var type in binary.MethodsPerType.Values)
 		foreach (var methodGroup in type.MethodGroups.Values)
