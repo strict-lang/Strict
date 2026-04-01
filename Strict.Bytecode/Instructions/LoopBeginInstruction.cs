@@ -4,19 +4,28 @@ namespace Strict.Bytecode.Instructions;
 
 public sealed class LoopBeginInstruction : RegisterInstruction
 {
-	public LoopBeginInstruction(Register register) : base(InstructionType.LoopBegin, register) { }
+	public LoopBeginInstruction(Register register, string customVariableName = "")
+		: base(InstructionType.LoopBegin, register) =>
+		CustomVariableName = customVariableName;
 
-	public LoopBeginInstruction(Register startIndex, Register endIndex)
-		: base(InstructionType.LoopBegin, startIndex) =>
+	public LoopBeginInstruction(Register startIndex, Register endIndex,
+		string customVariableName = "")
+		: base(InstructionType.LoopBegin, startIndex)
+	{
 		EndIndex = endIndex;
+		CustomVariableName = customVariableName;
+	}
 
-	public LoopBeginInstruction(BinaryReader reader) : this((Register)reader.ReadByte())
+	public LoopBeginInstruction(BinaryReader reader, NameTable table)
+		: this((Register)reader.ReadByte())
 	{
 		if (reader.ReadBoolean())
 			EndIndex = (Register)reader.Read7BitEncodedInt();
+		CustomVariableName = table.names[reader.Read7BitEncodedInt()];
 	}
 
 	public Register? EndIndex { get; }
+	public string CustomVariableName { get; }
 	public bool IsRange => EndIndex != null;
 
 	public override void Write(BinaryWriter writer, NameTable table)
@@ -25,6 +34,7 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 		writer.Write(EndIndex != null);
 		if (EndIndex != null)
 			writer.Write7BitEncodedInt((int)EndIndex!.Value);
+		writer.Write7BitEncodedInt(table[CustomVariableName]);
 	}
 
 	public bool IsInitialized { get; set; }

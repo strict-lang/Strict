@@ -112,6 +112,7 @@ public sealed class NameTable
 			RemoveInstruction remove => Add(remove.Identifier),
 			ListCallInstruction listCall => Add(listCall.Identifier),
 			PrintInstruction print => Add(print.TextPrefix),
+			LoopBeginInstruction loopBegin => Add(loopBegin.CustomVariableName),
 			_ => this
 		};
 
@@ -180,11 +181,13 @@ public sealed class NameTable
 			Value val when !val.Data.GetType().IsNumber || !BinaryExecutable.IsIntegerNumber(val.Data.Number)
 				=> Add(val.Data.GetType().Name), //ncrunch: no coverage
 			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
-				CollectExpressionStrings(memberCall.Instance),
-			Binary binary => Add(binary.Method.Name). //ncrunch: no coverage
-				CollectExpressionStrings(binary.Instance).CollectExpressionStrings(binary.Arguments[0]),
-			MethodCall mc => CollectMethodCallStrings(mc),
-			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
+					CollectExpressionStrings(memberCall.Instance),
+				Binary binary => Add(binary.Method.Name). //ncrunch: no coverage
+					CollectExpressionStrings(binary.Instance).CollectExpressionStrings(binary.Arguments[0]),
+				MethodCall mc => CollectMethodCallStrings(mc),
+				ListCall listCall => Add(listCall.ReturnType.Name).
+					CollectExpressionStrings(listCall.List).CollectExpressionStrings(listCall.Index),
+				_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
 		};
 
 	private NameTable CollectListExpressionStrings(List list)

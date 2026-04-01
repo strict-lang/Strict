@@ -51,8 +51,9 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 			var isTest = index < count - 1 && IsStandaloneInlineTest(e);
 			if (isTest)
 				interpreter.Statistics.TestExpressions++;
-			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
-				runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
+			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment
+					&& (e is not MethodCall || !runOnlyTests) && e is not For ||
+					runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
 					skippedVariables != null &&
 					ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)))
 			{

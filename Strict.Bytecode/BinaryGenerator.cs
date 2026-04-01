@@ -370,15 +370,18 @@ public sealed class BinaryGenerator
 	private void GenerateLoopInstructions(For forExpression, string? aggregationTarget = null)
 	{
 		var instructionCountBeforeLoopStart = instructions.Count;
+		var customVariableName = forExpression.CustomVariables.Length > 0
+			? forExpression.CustomVariables[0].ToString()
+			: "";
 		LoopBeginInstruction loopBegin;
 		if (forExpression.Iterator is MethodCall rangeExpression &&
 			forExpression.Iterator.ReturnType.Name == Type.Range &&
 			rangeExpression.Method.Name == Method.From)
-			loopBegin = GenerateInstructionForRangeLoopInstruction(rangeExpression);
+			loopBegin = GenerateInstructionForRangeLoopInstruction(rangeExpression, customVariableName);
 		else
 		{
 			GenerateInstructionFromExpression(forExpression.Iterator);
-			loopBegin = new LoopBeginInstruction(registry.PreviousRegister);
+			loopBegin = new LoopBeginInstruction(registry.PreviousRegister, customVariableName);
 			instructions.Add(loopBegin);
 		}
 		GenerateInstructionsForLoopBody(forExpression);
@@ -400,13 +403,15 @@ public sealed class BinaryGenerator
 		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, aggregationTarget));
 	}
 
-	private LoopBeginInstruction GenerateInstructionForRangeLoopInstruction(MethodCall rangeExpression)
+	private LoopBeginInstruction GenerateInstructionForRangeLoopInstruction(
+		MethodCall rangeExpression, string customVariableName = "")
 	{
 		GenerateInstructionFromExpression(rangeExpression.Arguments[0]);
 		var startIndexRegister = registry.PreviousRegister;
 		GenerateInstructionFromExpression(rangeExpression.Arguments[1]);
 		var endIndexRegister = registry.PreviousRegister;
-		var loopBegin = new LoopBeginInstruction(startIndexRegister, endIndexRegister);
+		var loopBegin = new LoopBeginInstruction(startIndexRegister, endIndexRegister,
+			customVariableName);
 		instructions.Add(loopBegin);
 		return loopBegin;
 	}

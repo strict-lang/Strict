@@ -137,7 +137,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			InstructionType.Set => new SetInstruction(reader, table, this),
 			InstructionType.Invoke => new Invoke(reader, table, this),
 			InstructionType.Return => new ReturnInstruction(reader),
-			InstructionType.LoopBegin => new LoopBeginInstruction(reader),
+			InstructionType.LoopBegin => new LoopBeginInstruction(reader, table),
 			InstructionType.LoopEnd => new LoopEndInstruction(reader),
 			InstructionType.JumpIfNotZero => new JumpIfNotZero(reader),
 			InstructionType.JumpIfTrue => new Jump(reader, InstructionType.JumpIfTrue),
@@ -341,6 +341,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			ExpressionKind.BinaryExpr => ReadBinaryExpr(reader, table),
 			ExpressionKind.MethodCallExpr => ReadMethodCall(reader, table),
 			ExpressionKind.ListExpr => ReadListExpr(reader, table),
+			ExpressionKind.ListCallExpr => ReadListCallExpr(reader, table),
 			_ => throw new InvalidFile("Unknown ExpressionKind: " + kind)
 		};
 	}
@@ -353,6 +354,18 @@ public sealed class BinaryExecutable(Package basePackage)
 		for (var index = 0; index < itemCount; index++)
 			values.Add(ReadExpression(reader, table));
 		return new List(concreteListType, values, 0, false);
+	}
+
+	private ListCall ReadListCallExpr(BinaryReader reader, NameTable table)
+	{
+		EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
+		var list = ReadExpression(reader, table);
+		var index = ReadExpression(reader, table);
+		var hasSecondIndex = reader.ReadBoolean();
+		var secondIndex = hasSecondIndex
+			? ReadExpression(reader, table)
+			: null;
+		return new ListCall(list, index, secondIndex);
 	}
 
 	//TODO: missing test
@@ -496,25 +509,34 @@ public sealed class BinaryExecutable(Package basePackage)
 			WriteExpression(writer, binary.Instance!, table);
 			WriteExpression(writer, binary.Arguments[0], table);
 			break;
-		case MethodCall methodCall:
-			writer.Write((byte)ExpressionKind.MethodCallExpr);
-			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
-			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
-			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
-			foreach (var parameter in methodCall.Method.Parameters)
-			{
-				writer.Write7BitEncodedInt(table[parameter.Name]);
-				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
-			}
-			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
-			writer.Write(methodCall.Instance != null);
-			if (methodCall.Instance != null)
-				WriteExpression(writer, methodCall.Instance, table);
-			writer.Write7BitEncodedInt(methodCall.Arguments.Count);
-			foreach (var argument in methodCall.Arguments)
-				WriteExpression(writer, argument, table);
-			break;
-		default:
+		case ListCall listCall:
+				writer.Write((byte)ExpressionKind.ListCallExpr);
+				writer.Write7BitEncodedInt(table[listCall.ReturnType.Name]);
+				WriteExpression(writer, listCall.List, table);
+				WriteExpression(writer, listCall.Index, table);
+				writer.Write(listCall.SecondIndex != null);
+				if (listCall.SecondIndex != null)
+					WriteExpression(writer, listCall.SecondIndex, table);
+				break;
+			case MethodCall methodCall:
+				writer.Write((byte)ExpressionKind.MethodCallExpr);
+				writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
+				writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
+				writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
+				foreach (var parameter in methodCall.Method.Parameters)
+				{
+					writer.Write7BitEncodedInt(table[parameter.Name]);
+					writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
+				}
+				writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
+				writer.Write(methodCall.Instance != null);
+				if (methodCall.Instance != null)
+					WriteExpression(writer, methodCall.Instance, table);
+				writer.Write7BitEncodedInt(methodCall.Arguments.Count);
+				foreach (var argument in methodCall.Arguments)
+					WriteExpression(writer, argument, table);
+				break;
+			default:
 			writer.Write((byte)ExpressionKind.VariableRef);
 			writer.Write7BitEncodedInt(table[expr.ToString()]);
 			writer.Write7BitEncodedInt(table[expr.ReturnType.Name]);

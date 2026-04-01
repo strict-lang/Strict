@@ -480,23 +480,47 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return values;
 	}
 
+	private void TryPreFillConstrainedListMembers(Type targetType, ValueInstance[] values)
+	{
+		var members = targetType.Members;
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+		{
+			if (!values[memberIndex].IsList || values[memberIndex].List.Items.Count > 0 ||
+				members[memberIndex].Constraints == null)
+				continue;
+			var length = TryGetConstrainedLength(targetType, values, members[memberIndex]);
+			if (length is not > 0)
+				continue;
+			var elementType = members[memberIndex].Type is GenericTypeImplementation genericList
+				? genericList.ImplementationTypes[0]
+				: members[memberIndex].Type;
+			if (elementType.Members.FirstOrDefault(member => member.Name == Type.ElementsLowercase)?.Type is
+				GenericTypeImplementation nestedElementsList)
+				elementType = nestedElementsList.ImplementationTypes[0];
+			var elements = new ValueInstance[length.Value];
+			for (var elementIndex = 0; elementIndex < length.Value; elementIndex++)
+				elements[elementIndex] = CreateDefaultComplexValue(elementType);
+			values[memberIndex] = new ValueInstance(members[memberIndex].Type, elements);
+		}
+	}
+
 	private static ValueInstance CreateDefaultValue(Type memberType) =>
-		(memberType.IsMutable
+	(memberType.IsMutable
+		? memberType.GetFirstImplementation()
+		: memberType).IsList
+		? new ValueInstance(memberType, Array.Empty<ValueInstance>())
+		: (memberType.IsMutable
 			? memberType.GetFirstImplementation()
-			: memberType).IsList
-			? new ValueInstance(memberType, Array.Empty<ValueInstance>())
-			: (memberType.IsMutable
-				? memberType.GetFirstImplementation()
-				: memberType).IsDictionary
-				? new ValueInstance(memberType, new Dictionary<ValueInstance, ValueInstance>())
-				: memberType.IsText
-					? new ValueInstance("")
-					: memberType.IsBoolean
-						? new ValueInstance(memberType, false)
-						: memberType.IsMutable
-							// ReSharper disable once TailRecursiveCall
-							? CreateDefaultValue(memberType.GetFirstImplementation())
-							: new ValueInstance(memberType, 0);
+			: memberType).IsDictionary
+			? new ValueInstance(memberType, new Dictionary<ValueInstance, ValueInstance>())
+			: memberType.IsText
+				? new ValueInstance("")
+				: memberType.IsBoolean
+					? new ValueInstance(memberType, false)
+					: memberType.IsMutable
+						// ReSharper disable once TailRecursiveCall
+						? CreateDefaultValue(memberType.GetFirstImplementation())
+						: new ValueInstance(memberType, 0);
 
 	private static ValueInstance CreateDefaultComplexValue(Type type)
 	{
@@ -514,27 +538,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 					? initialValue.Data
 					: CreateDefaultValue(members[memberIndex].Type);
 		return new ValueInstance(type, values);
-	}
-
-	private void TryPreFillConstrainedListMembers(Type targetType, ValueInstance[] values)
-	{
-		var members = targetType.Members;
-		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-		{
-			if (!values[memberIndex].IsList || values[memberIndex].List.Items.Count > 0 ||
-				members[memberIndex].Constraints == null)
-				continue;
-			var length = TryGetConstrainedLength(targetType, values, members[memberIndex]);
-			if (length is not > 0)
-				continue;
-			var elementType = members[memberIndex].Type is GenericTypeImplementation genericList
-				? genericList.ImplementationTypes[0]
-				: members[memberIndex].Type;
-			var elements = new ValueInstance[length.Value];
-			for (var elementIndex = 0; elementIndex < length.Value; elementIndex++)
-				elements[elementIndex] = CreateDefaultComplexValue(elementType);
-			values[memberIndex] = new ValueInstance(members[memberIndex].Type, elements);
-		}
 	}
 
 	private int? TryGetConstrainedLength(Type targetType, ValueInstance[] values, Member member)
@@ -702,11 +705,20 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private ValueInstance EvaluateListCallExpression(ListCall listCall)
 	{
 		var listValue = EvaluateExpression(listCall.List);
-		if (!listValue.IsList)
-			return Memory.Frame.Get(listCall.ToString());
 		var indexValue = EvaluateExpression(listCall.Index);
 		var index = (int)indexValue.Number;
-		return listValue.List.Items[index];
+		if (listValue.IsList || listValue.IsText || listValue.TryGetValueTypeInstance()?.ReturnType.IsList == true)
+			return listValue.GetIteratorValue(executable.characterType, index);
+		if (listValue.TryGetValueTypeInstance() is { } typeInstance)
+		{
+			if (typeInstance.TryGetValue(Type.ElementsLowercase, out var elementsValue) &&
+				(elementsValue.IsList || elementsValue.IsText))
+				return elementsValue.GetIteratorValue(executable.characterType, index);
+			for (var valueIndex = 0; valueIndex < typeInstance.Values.Length; valueIndex++)
+				if (typeInstance.Values[valueIndex].IsText)
+					return typeInstance.Values[valueIndex].GetIteratorValue(executable.characterType, index);
+		}
+		return Memory.Frame.Get(listCall.ToString());
 	}
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
@@ -902,6 +914,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			loopBegin.IsInitialized = true;
 		}
 		AlterValueVariable(iterableVariable, loopBegin);
+		if (!string.IsNullOrEmpty(loopBegin.CustomVariableName))
+			Memory.Frame.Set(loopBegin.CustomVariableName, Memory.Frame.Get(Type.ValueLowercase));
 		if (loopBegin.LoopCount <= 0)
 		{
 			var skipTo = instructionIndex + 1;
@@ -922,11 +936,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var incrementValue = loopBegin.IsDecreasing == true
 			? -1
 			: 1;
-		Memory.Frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType,
-			Memory.Frame.TryGet(Type.IndexLowercase, out var indexValue)
-				? indexValue.Number + incrementValue
-				: loopBegin.StartIndexValue ?? 0));
+		var currentIndex = Memory.Frame.TryGet(Type.IndexLowercase, out var indexValue)
+			? indexValue.Number + incrementValue
+			: loopBegin.StartIndexValue ?? 0;
+		Memory.Frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType, currentIndex));
 		Memory.Frame.Set(Type.ValueLowercase, Memory.Frame.Get(Type.IndexLowercase));
+		if (!string.IsNullOrEmpty(loopBegin.CustomVariableName))
+			Memory.Frame.Set(loopBegin.CustomVariableName,
+				new ValueInstance(executable.numberType, currentIndex));
 	}
 
 	private static int GetLength(ValueInstance iterableInstance)

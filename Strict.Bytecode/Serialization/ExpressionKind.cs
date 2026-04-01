@@ -41,5 +41,9 @@ internal enum ExpressionKind : byte
 	/// <summary>
 	/// NameTable index (list type) + item count + item expressions
 	/// </summary>
-	ListExpr
+	ListExpr,
+	/// <summary>
+	/// List expression + index expression + optional second index expression
+	/// </summary>
+	ListCallExpr
 }
