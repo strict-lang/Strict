@@ -138,3 +138,4 @@ ipch/
 *.obj
 Examples/PureAdder
 *.7z
+test_output.txt
