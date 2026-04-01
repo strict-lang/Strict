@@ -167,8 +167,9 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 	{
 		var iteratorType = GetIteratorSourceType(body, iteratorText);
 		var iteratorMethod = iteratorType?.Methods.FirstOrDefault(method => method.Name == Keyword.For);
-		return iteratorMethod?.ReturnType.IsIterator == true
-			? iteratorMethod.ReturnType.GetFirstImplementation()
+		return iteratorMethod?.ReturnType.IsIterator == true &&
+			iteratorMethod.ReturnType is GenericTypeImplementation generic
+			? generic.ImplementationTypes[0]
 			: null;
 	}
 	private static Type? GetIteratorSourceType(Body body, ReadOnlySpan<char> iteratorText)
@@ -190,9 +191,9 @@ public sealed class For(Expression[] customVariables, Expression iterator, Expre
 			return valueExpression;
 		var iteratorMethod = valueExpression.ReturnType.Methods.FirstOrDefault(method =>
 			method.Name == Keyword.For);
-		return iteratorMethod?.ReturnType.IsIterator == true
-			? new Instance(iteratorMethod.ReturnType.GetFirstImplementation(),
-				body.CurrentFileLineNumber)
+		return iteratorMethod?.ReturnType.IsIterator == true &&
+			iteratorMethod.ReturnType is GenericTypeImplementation generic
+			? new Instance(generic.ImplementationTypes[0], body.CurrentFileLineNumber)
 			: valueExpression;
 	}
 	private static string GetVariableExpressionValue(Body body, ReadOnlySpan<char> line,

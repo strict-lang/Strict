@@ -45,17 +45,22 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		var last = interpreter.noneInstance;
 		var count = body.Expressions.Count;
 		HashSet<string>? skippedVariables = null;
+		var pastTestBlock = false;
 		for (var index = 0; index < count; index++)
 		{
 			var e = body.Expressions[index];
-			var isTest = index < count - 1 && IsStandaloneInlineTest(e);
+			var isTest = !pastTestBlock && index < count - 1 && IsStandaloneInlineTest(e);
+			if (!isTest && e is not Declaration && e is not MutableReassignment)
+				pastTestBlock = true;
 			if (isTest)
 				interpreter.Statistics.TestExpressions++;
 			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment
-					&& (e is not MethodCall || !runOnlyTests) && e is not For ||
+					&& e is not For ||
 					runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
 					skippedVariables != null &&
-					ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)))
+					ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)) ||
+					runOnlyTests && skippedVariables != null && e is not Declaration &&
+					ExpressionReferencesSkippedVariable(e, skippedVariables))
 			{
 				if (runOnlyTests && e is Declaration skippedDecl)
 					(skippedVariables ??= []).Add(skippedDecl.Name);

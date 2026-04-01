@@ -176,12 +176,23 @@ public sealed class Runner
 
 	private async Task LoadDependencyPackages(string repoRoot, string targetSubDir)
 	{
-		foreach (var directory in Directory.GetDirectories(repoRoot))
+		var deferred = new List<string>();
+		foreach (var directory in Directory.GetDirectories(repoRoot).OrderBy(Path.GetFileName, StringComparer.Ordinal))
 		{
 			var dirName = Path.GetFileName(directory);
-			if (dirName != targetSubDir && IsRuntimePackageDirectory(dirName, directory))
+			if (dirName == targetSubDir || !IsRuntimePackageDirectory(dirName, directory))
+				continue;
+			try
+			{
 				await repositories.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + dirName);
+			}
+			catch (ParsingFailed)
+			{
+				deferred.Add(dirName);
+			}
 		}
+		foreach (var dirName in deferred)
+			await repositories.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + dirName);
 	}
 
 	/// <summary>
