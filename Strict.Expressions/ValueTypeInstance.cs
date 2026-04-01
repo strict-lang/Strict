@@ -5,6 +5,9 @@ namespace Strict.Expressions;
 public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 	: IEquatable<ValueTypeInstance>
 {
+ private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type,
+		Dictionary<string, int>> MemberIndexes = new();
+
 	public readonly Type ReturnType = returnType;
 	public readonly ValueInstance[] Values = values;
 
@@ -14,16 +17,25 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 	/// </summary>
 	public bool TryGetValue(string name, out ValueInstance value)
 	{
-		var members = ReturnType.Members;
-		for (var i = 0; i < members.Count; i++)
-			if (!members[i].IsConstant &&
-				members[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-			{
-				value = Values[i];
-				return true;
-			}
+   var memberIndexes = MemberIndexes.GetValue(ReturnType, CreateMemberIndexes);
+		if (memberIndexes.TryGetValue(name, out var memberIndex) && memberIndex < Values.Length)
+		{
+			value = Values[memberIndex];
+			return true;
+		}
 		value = default;
 		return false;
+	}
+
+	private static Dictionary<string, int> CreateMemberIndexes(Type type)
+	{
+		var members = type.Members;
+		var memberIndexes = new Dictionary<string, int>(members.Count,
+			StringComparer.OrdinalIgnoreCase);
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			if (!members[memberIndex].IsConstant)
+				memberIndexes.TryAdd(members[memberIndex].Name, memberIndex);
+		return memberIndexes;
 	}
 
 	public ValueInstance this[string name] =>

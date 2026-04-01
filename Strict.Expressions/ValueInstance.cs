@@ -342,8 +342,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return "";
 		if (items.Count == 1)
 			return items[0].ToExpressionCodeString(escapeText);
-		var parts = new string[items.Count];
-		for (var i = 0; i < items.Count; i++)
+		const int MaxItems = 10;
+		var itemsToAdd = Math.Min(items.Count, MaxItems);
+		var parts = new string[itemsToAdd];
+		for (var i = 0; i < itemsToAdd; i++)
 			parts[i] = items[i].ToExpressionCodeString(escapeText);
 		return parts.ToBrackets();
 	}

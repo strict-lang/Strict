@@ -308,8 +308,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var methodName = invoke.Method.Method.Name;
 		if (methodName != "Increment" && methodName != "Decrement")
 			return false;
-		if (invoke.Method.Instance == null ||
-			!Memory.Frame.TryGet(invoke.Method.Instance.ToString(), out var current))
+   if (invoke.Method.Instance == null ||
+			!Memory.Frame.TryGet(GetFrameKey(invoke.Method.Instance), out var current))
 			return false;
 		var delta = methodName == "Increment"
 			? 1.0
@@ -707,7 +707,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			variableCall.Variable.InitialValue is Value constantValue)
 			return constantValue.Data;
 		if (expression is VariableCall or ParameterCall or Instance)
-			return Memory.Frame.Get(expression.ToString());
+      return Memory.Frame.Get(GetFrameKey(expression));
 		if (expression is MemberCall memberCall)
 			return EvaluateMemberCall(memberCall);
 		if (expression is Expressions.Binary binary)
@@ -716,9 +716,28 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return EvaluateMethodCall(methodCall);
 		if (expression is ListCall listCall)
 			return EvaluateListCallExpression(listCall);
-		return Memory.Frame.TryGet(expression.ToString(), out var frameValue)
+    var frameKey = GetFrameKey(expression);
+		return Memory.Frame.TryGet(frameKey, out var frameValue)
 			? frameValue
-			: new ValueInstance(expression.ToString());
+     : new ValueInstance(frameKey);
+	}
+
+	private static string GetFrameKey(Expression expression) =>
+		expression switch
+		{
+			VariableCall variableCall => variableCall.Variable.Name,
+			ParameterCall parameterCall => parameterCall.Parameter.Name,
+			Instance => Type.ValueLowercase,
+			MemberCall memberCall => GetMemberCallFrameKey(memberCall),
+			_ => expression.ToString()
+		};
+
+	private static string GetMemberCallFrameKey(MemberCall memberCall)
+	{
+		if (memberCall.Instance == null)
+			return memberCall.ToString();
+		var instanceKey = GetFrameKey(memberCall.Instance);
+		return string.Concat(instanceKey, ".", memberCall.Member.Name);
 	}
 
 	private ValueInstance EvaluateListCallExpression(ListCall listCall)
@@ -737,7 +756,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				if (typeInstance.Values[valueIndex].IsText)
 					return typeInstance.Values[valueIndex].GetIteratorValue(executable.characterType, index);
 		}
-		return Memory.Frame.Get(listCall.ToString());
+    return Memory.Frame.Get(GetFrameKey(listCall));
 	}
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
@@ -753,13 +772,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			if (instanceValue.IsText && memberCall.Member.Name is "characters" or "elements")
 				return instanceValue;
 		}
-		if (Memory.Frame.TryGet(memberCall.ToString(), out var frameValue))
+    var frameKey = GetFrameKey(memberCall);
+		if (Memory.Frame.TryGet(frameKey, out var frameValue))
 			return frameValue;
 		if (Memory.Frame.TryGet(memberCall.Member.Name, out var memberFrameValue))
 			return memberFrameValue;
 		if (memberCall.Member.InitialValue is Value enumValue)
 			return enumValue.Data;
-		return new ValueInstance(memberCall.ToString());
+   return new ValueInstance(frameKey);
 	}
 
 	private bool TryGetNativeLength(ValueInstance instance, string memberName, out ValueInstance result)
@@ -890,8 +910,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var keyArg = invoke.Method.Arguments[0];
 		var keyData = keyArg is Value argValue
 			? argValue.Data
-			: Memory.Frame.Get(keyArg.ToString());
-		var dictionary = Memory.Frame.Get(invoke.Method.Instance.ToString());
+      : Memory.Frame.Get(GetFrameKey(keyArg));
+		var dictionary = Memory.Frame.Get(GetFrameKey(invoke.Method.Instance));
 		var value = dictionary.GetDictionaryItems().
 			FirstOrDefault(element => element.Key.Equals(keyData)).Value;
 		if (!Equals(value, default(ValueInstance)))
