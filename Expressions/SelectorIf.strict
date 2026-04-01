@@ -1,0 +1,6 @@
+has expression Text
+has cases Texts
+to Text
+	expression + " is"
+CaseCount Number
+	cases.Length

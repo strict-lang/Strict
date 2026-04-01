@@ -1,1 +1,9 @@
-Parse(expressionBody Body, input Text) Expression
+has input Text
+IsAssignment(input Text) Boolean
+	input.StartsWith("let ") or input.StartsWith("mutable ") or input.StartsWith("constant ")
+IsArithmeticExpression(input Text) Boolean
+	input.IndexOf(" + ") > 0
+IsComparisonExpression(input Text) Boolean
+	input.IndexOf(" is ") > 0
+IsReassignment(input Text) Boolean
+	input.IndexOf(" = ") > 0

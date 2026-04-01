@@ -18,6 +18,37 @@ public sealed class ForTests
 			new MethodExpressionParser());
 
 	[Test]
+	public async Task SizeIterationOrderMatchesTwoDimensionalColorImageIndexing()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		using var strictPackage = await repositories.LoadStrictPackage();
+		using var mathPackage = await repositories.LoadStrictPackage("Strict/Math");
+		using var imageProcessingPackage = await repositories.LoadStrictPackage("Strict/ImageProcessing");
+		using var testType = new Type(imageProcessingPackage,
+			new TypeLines("ColorImageIndexing",
+				"has number",
+				"CenterIsExpectedColor Boolean",
+				"\tconstant width = 2",
+				"\tconstant height = 2",
+				"\tconstant colors = (Color(0, 0, 0),",
+				"\tColor(0.25, 0.25, 0.25),",
+				"\tColor(0.5, 0.5, 0.5),",
+				"\tColor(0.75, 0.75, 0.75))",
+				"\tconstant image = ColorImage(Size(width, height), colors)",
+				"\timage.Colors(width / 2, height / 2) is Color(0.75, 0.75, 0.75)",
+				"Indices Numbers",
+				"\tfor Size(2, 2)",
+				"\t\tvalue.X + value.Y * 10")).ParseMembersAndMethods(parser);
+		var packageInterpreter = new Interpreter(imageProcessingPackage, TestBehavior.Disabled);
+		Assert.That(packageInterpreter.Execute(
+			testType.Methods.Single(method => method.Name == "CenterIsExpectedColor"),
+			packageInterpreter.noneInstance, []).Boolean, Is.True);
+		Assert.That(packageInterpreter.Execute(testType.Methods.Single(method => method.Name == "Indices"),
+			packageInterpreter.noneInstance, []).ToExpressionCodeString(), Is.EqualTo("(0, 1, 10, 11)"));
+	}
+
+	[Test]
 	public void CustomVariableInForLoopIsUsed()
 	{
 		using var t = CreateType(nameof(CustomVariableInForLoopIsUsed), "has number", "Sum Number",
@@ -279,5 +310,101 @@ public sealed class ForTests
 			new ValueInstance(numberType, 3),
 			new ValueInstance(numberType, 4)])]), []);
 		Assert.That(result.Number, Is.EqualTo(2 * 3 * 4));
+	}
+
+	[Test]
+	public void StrictTypeParserCountsMembers()
+	{
+		using var typeParser = CreateType(nameof(StrictTypeParserCountsMembers),
+			"has lines Texts",
+			"MemberCount Number",
+			"\tfor lines",
+			"\t\tif StartsWith(\"has \")",
+			"\t\t\t1");
+		var textsType = typeParser.Members[0].Type;
+		var testLines = new ValueInstance(textsType,
+		[
+			new ValueInstance("has logger"),
+			new ValueInstance("Run"),
+			new ValueInstance("\tbody")
+		]);
+		var instance = new ValueInstance(typeParser, [testLines]);
+		var result = interpreter.Execute(
+			typeParser.Methods.Single(m => m.Name == "MemberCount"), instance, []);
+		Assert.That(result.Number, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void StrictTypeParserCountsMethods()
+	{
+		using var typeParser = CreateType(nameof(StrictTypeParserCountsMethods),
+			"has lines Texts",
+			"IsMethodHeader(line Text) Boolean",
+			"\t(not line.StartsWith(\"has \")) and (not line.StartsWith(\"\\t\"))",
+			"MethodCount Number",
+			"\tfor lines",
+			"\t\tif IsMethodHeader(value)",
+			"\t\t\t1");
+		var textsType = typeParser.Members[0].Type;
+		var testLines = new ValueInstance(textsType,
+		[
+			new ValueInstance("has logger"),
+			new ValueInstance("Run"),
+			new ValueInstance("\tbody")
+		]);
+		var instance = new ValueInstance(typeParser, [testLines]);
+		var result = interpreter.Execute(
+			typeParser.Methods.Single(m => m.Name == "MethodCount"), instance, []);
+		Assert.That(result.Number, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void StrictTypeParserExtractsMemberNames()
+	{
+		using var typeParser = CreateType(nameof(StrictTypeParserExtractsMemberNames),
+			"has lines Texts",
+			"ExtractMemberName(line Text) Text",
+			"\tline.Substring(4, line.characters.Length - 4)",
+			"MemberNames Texts",
+			"\tfor lines",
+			"\t\tif StartsWith(\"has \")",
+			"\t\t\tExtractMemberName(value)");
+		var textsType = typeParser.Members[0].Type;
+		var testLines = new ValueInstance(textsType,
+		[
+			new ValueInstance("has logger"),
+			new ValueInstance("Run"),
+			new ValueInstance("\tbody")
+		]);
+		var instance = new ValueInstance(typeParser, [testLines]);
+		var result = interpreter.Execute(
+			typeParser.Methods.Single(m => m.Name == "MemberNames"), instance, []);
+		Assert.That(result.List.Items, Has.Count.EqualTo(1));
+		Assert.That(result.List.Items[0].Text, Is.EqualTo("logger"));
+	}
+
+	[Test]
+	public void StrictTypeParserExtractsMethodHeaders()
+	{
+		using var typeParser = CreateType(nameof(StrictTypeParserExtractsMethodHeaders),
+			"has lines Texts",
+			"IsMethodHeader(line Text) Boolean",
+			"\t(not line.StartsWith(\"has \")) and (not line.StartsWith(\"\\t\"))",
+			"MethodHeaders Texts",
+			"\tfor lines",
+			"\t\tif IsMethodHeader(value)",
+			"\t\t\tvalue");
+		var textsType = typeParser.Members[0].Type;
+		var testLines = new ValueInstance(textsType,
+		[
+			new ValueInstance("has logger"),
+			new ValueInstance("Run"),
+			new ValueInstance("\tbody")
+		]);
+		var instance = new ValueInstance(typeParser, [testLines]);
+		var result = interpreter.Execute(
+			typeParser.Methods.Single(m => m.Name == "MethodHeaders"), instance, []);
+		Assert.That(result.List.Items, Has.Count.EqualTo(1));
+		Assert.That(result.List.Items[0].Text, Is.EqualTo("Run"));
 	}
 }

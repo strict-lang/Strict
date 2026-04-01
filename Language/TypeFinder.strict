@@ -1,0 +1,3 @@
+has typeNames Texts
+Count Number
+	typeNames.Length

@@ -1,0 +1,24 @@
+has typeName Text
+has number Number
+has text Text
+has kind Text
+HasValue Boolean
+	(not typeName is "None") or number is not 0
+IsText Boolean
+	text is not ""
+IsList Boolean
+	kind is "list"
+IsDictionary Boolean
+	kind is "dictionary"
+IsTypeInstance Boolean
+	kind is "type"
+to Text
+	if IsText
+		return "\"" + text + "\""
+	if IsList
+		return "(list)"
+	if IsDictionary
+		return "(dictionary)"
+	if IsTypeInstance
+		return typeName
+	number to Text

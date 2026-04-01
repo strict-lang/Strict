@@ -1,4 +1,4 @@
-﻿namespace Strict.Bytecode.Serialization;
+namespace Strict.Bytecode.Serialization;
 
 internal enum ExpressionKind : byte
 {
@@ -37,5 +37,13 @@ internal enum ExpressionKind : byte
 	/// <summary>
 	/// NameTable indices + optional instance + args
 	/// </summary>
-	MethodCallExpr
+	MethodCallExpr,
+	/// <summary>
+	/// NameTable index (list type) + item count + item expressions
+	/// </summary>
+	ListExpr,
+	/// <summary>
+	/// List expression + index expression + optional second index expression
+	/// </summary>
+	ListCallExpr
 }

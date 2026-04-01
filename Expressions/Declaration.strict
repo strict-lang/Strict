@@ -1,0 +1,10 @@
+has variableName Text
+has variableTypeName Text
+has initialValue Text
+has declarationKind Text
+to Text
+	if declarationKind is "constant"
+		return "constant " + variableName + " = " + initialValue
+	if declarationKind is "mutable"
+		return "mutable " + variableName + " = " + initialValue
+	"let " + variableName + " = " + initialValue

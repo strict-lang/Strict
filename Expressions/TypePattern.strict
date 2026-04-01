@@ -1,0 +1,6 @@
+has concreteTypeName Text
+has displayName Text
+IsConstant Boolean
+	true
+to Text
+	displayName

@@ -1,0 +1,4 @@
+has parameterName Text
+has parameterTypeName Text
+to Text
+	parameterName

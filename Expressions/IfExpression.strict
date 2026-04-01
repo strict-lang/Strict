@@ -1,0 +1,7 @@
+has condition Text
+has thenExpression Text
+has elseExpression Text
+to Text
+	if elseExpression is ""
+		return "if " + condition + "\n\t" + thenExpression
+	"if " + condition + "\n\t" + thenExpression + "\nelse\n\t" + elseExpression

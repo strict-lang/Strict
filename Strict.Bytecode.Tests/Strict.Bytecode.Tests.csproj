@@ -22,6 +22,7 @@
 		<ProjectReference Include="..\Strict.Expressions.Tests\Strict.Expressions.Tests.csproj" />
 		<ProjectReference Include="..\Strict.Language.Tests\Strict.Language.Tests.csproj" />
 		<ProjectReference Include="..\Strict.Bytecode\Strict.Bytecode.csproj" />
+    <ProjectReference Include="..\Strict.Optimizers\Strict.Optimizers.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

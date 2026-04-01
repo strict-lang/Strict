@@ -1,0 +1,16 @@
+has resultTypeName Text
+has keys Texts
+has values Texts
+Count Number
+	keys.Length
+to Text
+	resultTypeName + "(" + JoinEntries + ")"
+JoinEntries Text
+	mutable result = ""
+	mutable index = 0
+	for keys
+		if result is not ""
+			result = result + ", "
+		result = result + value + "=" + values(index)
+		index = index + 1
+	result

@@ -10,7 +10,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 	public ValueInstance Evaluate(For f, ExecutionContext ctx)
 	{
 		interpreter.Statistics.ForCount++;
-		var iterator = interpreter.RunExpression(f.Iterator, ctx);
+		var iterator = MaterializeIteratorIfNeeded(interpreter.RunExpression(f.Iterator, ctx));
 		var loop = interpreter.RentContext(ctx.Type, ctx.Method, ctx.This, ctx);
 		try
 		{
@@ -20,6 +20,37 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		{
 			interpreter.ReturnContext(loop);
 		}
+	}
+
+	private ValueInstance MaterializeIteratorIfNeeded(ValueInstance iterator)
+	{
+		if (iterator.IsText || iterator.IsList || iterator.IsPrimitiveType(interpreter.numberType))
+			return iterator;
+		var typeInstance = iterator.TryGetValueTypeInstance();
+		if (typeInstance == null)
+			return iterator;
+		var iteratorMethod = typeInstance.ReturnType.Methods.FirstOrDefault(method =>
+			method.Name == Keyword.For);
+		if (iteratorMethod?.ReturnType.IsIterator != true)
+			return iterator;
+		var materialized = interpreter.Execute(iteratorMethod, iterator, []);
+		return TryFlattenNestedIteratorList(materialized);
+	}
+
+	private ValueInstance TryFlattenNestedIteratorList(ValueInstance materialized)
+	{
+		if (!materialized.IsList || materialized.List.Items.Count == 0)
+			return materialized;
+		if (!materialized.List.Items.All(item => item.IsList))
+			return materialized;
+		var flattenedItems = new List<ValueInstance>();
+		foreach (var nested in materialized.List.Items)
+			flattenedItems.AddRange(nested.List.Items);
+		if (flattenedItems.Count == 0)
+			return materialized;
+		var flattenedElementType = flattenedItems[0].GetType();
+		return new ValueInstance(interpreter.listType.GetGenericImplementation(flattenedElementType),
+			flattenedItems.ToArray());
 	}
 
 	private ValueInstance TryEvaluate(For f, ExecutionContext ctx, ValueInstance iterator, ExecutionContext loop)
@@ -206,6 +237,10 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 			if (typeInstance.TryGetValue("elements", out var elementsMember) && elementsMember.IsList)
 				return elementsMember.GetIteratorType();
 		}
-		return interpreter.numberType;
+		var iteratorMethod = typeInstance?.ReturnType.Methods.FirstOrDefault(method =>
+			method.Name == Keyword.For);
+		return iteratorMethod?.ReturnType.IsIterator == true
+			? iteratorMethod.ReturnType.GetFirstImplementation()
+			: interpreter.numberType;
 	}
 }

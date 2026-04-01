@@ -176,13 +176,21 @@ public sealed class Repositories
 #endif
 		lock (loadedPackages)
 			loadedPackages.Add(package);
-		var types = GetTypes(files, package);
-		foreach (var type in types)
-			type.ParseMembersAndMethodsForPackage(parser);
-		InvalidateAllAvailableMethodsCaches();
-		foreach (var type in types)
-			type.ParseDeferredConstraints(parser);
-		return package;
+		try
+		{
+			var types = GetTypes(files, package);
+			foreach (var type in types)
+				type.ParseMembersAndMethodsForPackage(parser);
+			InvalidateAllAvailableMethodsCaches();
+			foreach (var type in types)
+				type.ParseDeferredConstraints(parser);
+			return package;
+		}
+		catch
+		{
+			package.Dispose();
+			throw;
+		}
 	}
 
 	private void InvalidateAllAvailableMethodsCaches()

@@ -1,0 +1,11 @@
+has typeName Text
+has arguments Texts
+to Text
+	typeName + "(" + JoinArguments + ")"
+JoinArguments Text
+	mutable result = ""
+	for arguments
+		if result is not ""
+			result = result + ", "
+		result = result + value
+	result

@@ -1,8 +1,8 @@
 has Width Number with value > 0
 has Height Number with value > 0
 for Iterator(Vector2)
-	for xi in Range(0, Width)
-		for yi in Range(0, Height)
+	for yi in Range(0, Height)
+		for xi in Range(0, Width)
 			Vector2(xi, yi)
 in(element Vector2) Boolean
 	true

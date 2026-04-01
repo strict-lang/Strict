@@ -327,7 +327,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (leftItemType.IsNumber && (item.IsText || item.IsPrimitiveType(interpreter.characterType)))
 			return double.TryParse(item.ToExpressionCodeString(), out var itemNumber)
 				? new ValueInstance(leftItemType, itemNumber)
-				: Error("Cannot downcast Text to Number for list: " + item, ctx, call);
+				: Error("Cannot downcast Text to Number for list: " +
+					item.ToString().Replace("\"", "\\\"", StringComparison.Ordinal), ctx, call);
 		return item;
 	}
 

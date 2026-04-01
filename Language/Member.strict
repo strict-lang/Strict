@@ -1,0 +1,12 @@
+has memberName Text
+has typeName Text
+has memberKind Text
+has initialValue Text
+IsMutable Boolean
+	memberKind is "mutable"
+IsConstant Boolean
+	memberKind is "constant"
+IsPublic Boolean
+	memberName.StartsWith("A")
+to Text
+	memberKind + " " + memberName

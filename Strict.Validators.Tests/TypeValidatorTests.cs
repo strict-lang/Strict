@@ -1,4 +1,4 @@
-﻿global using Type = Strict.Language.Type;
+global using Type = Strict.Language.Type;
 
 namespace Strict.Validators.Tests;
 
@@ -8,7 +8,8 @@ public sealed class TypeValidatorTests
 	public void CreateTypeAndParser()
 	{
 		type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(TypeValidatorTests), "has logger", "Run", "\tlogger.Log(5)"));
+			new TypeLines(nameof(TypeValidatorTests), "has logger", "Run", "\tlogger.Log(5)",
+				"UseMutable(mutable input Number)", "\tinput = input + 1"));
 		parser = new MethodExpressionParser();
 		type.ParseMembersAndMethods(parser);
 		validator = new TypeValidator();
@@ -197,4 +198,13 @@ public sealed class TypeValidatorTests
 
 	[Test]
 	public void CheckPackage() => Assert.That(() => validator.Visit(type.Package), Throws.Nothing);
+
+	[Test]
+	public void MutableVariablePassedIntoMutableParameterIsConsideredChanged() =>
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Run",
+			"\tmutable source = 5",
+			"\tUseMutable(source)",
+			"\t5"
+		]), true));
 }

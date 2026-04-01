@@ -1,0 +1,6 @@
+has typeName Text
+has lines Texts
+LineCount Number
+	lines.Length
+to Text
+	typeName

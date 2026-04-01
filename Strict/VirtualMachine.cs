@@ -139,7 +139,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (instruction is not Invoke invoke ||
 			TryCreateEmptyDictionaryInstance(invoke) || TryHandleFromConstructor(invoke) ||
 			TryHandleNativeTraitMethod(invoke) || TryHandleToConversion(invoke) ||
-			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke))
+			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke) ||
+			TryHandleNativeTextMethod(invoke))
 			return;
 		var evaluatedArgs = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
 		var evaluatedInstance = invoke.Method.Instance != null
@@ -160,7 +161,18 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			method.Parameters.Count, method.ReturnType.Name) ??
 		executable.FindInstructions(
 			nameof(Strict) + Context.ParentSeparator + method.Type.Name, method.Name,
-			method.Parameters.Count, method.ReturnType.Name);
+			method.Parameters.Count, method.ReturnType.Name) ??
+		FindInstructionsWithStrippedPackagePrefix(method);
+
+	private IReadOnlyList<Instruction>? FindInstructionsWithStrippedPackagePrefix(Method method)
+	{
+		var fullName = method.Type.FullName;
+		var strictPrefix = nameof(Strict) + Context.ParentSeparator;
+		return fullName.StartsWith(strictPrefix, StringComparison.Ordinal)
+			? executable.FindInstructions(fullName[strictPrefix.Length..], method.Name,
+				method.Parameters.Count, method.ReturnType.Name)
+			: null;
+	}
 
 	private IReadOnlyList<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
 		GetPrecompiledMethodInstructions(invoke.Method.Method);
@@ -256,6 +268,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var savedConditionFlag = conditionFlag;
 		var savedReturns = Returns;
 		var savedFrame = Memory.Frame;
+		var savedRegisters = Memory.Registers.Save();
 		Memory.Frame = new CallFrame(savedFrame);
 		initializeScope?.Invoke();
 		Returns = null;
@@ -263,6 +276,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var result = Returns;
 		Memory.Frame.Clear();
 		Memory.Frame = savedFrame;
+		Memory.Registers.Restore(savedRegisters);
 		instructions = savedInstructions;
 		instructionIndex = savedIndex;
 		conditionFlag = savedConditionFlag;
@@ -286,17 +300,53 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return true;
 	}
 
+	private bool TryHandleNativeTextMethod(Invoke invoke)
+	{
+		var methodName = invoke.Method.Method.Name;
+		if (methodName is not ("StartsWith" or "IndexOf" or "Substring"))
+			return false;
+		if (invoke.Method.Instance == null)
+			return false;
+		var instance = EvaluateExpression(invoke.Method.Instance);
+		if (!instance.IsText)
+			return false;
+		var text = instance.Text;
+		var args = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
+		Memory.Registers[invoke.Register] = methodName switch
+		{
+			"StartsWith" => EvaluateStartsWith(text, args),
+			"IndexOf" => new ValueInstance(executable.numberType,
+				text.IndexOf(args[0].Text, StringComparison.Ordinal)),
+			"Substring" => new ValueInstance(
+				text.Substring((int)args[0].Number, (int)args[1].Number)),
+			_ => throw new InvalidOperationException("Unhandled native text method: " + methodName)
+		};
+		return true;
+	}
+
+	private ValueInstance EvaluateStartsWith(string text, ValueInstance[] args)
+	{
+		var prefix = args[0].Text;
+		var start = args.Length > 1
+			? (int)args[1].Number
+			: 0;
+		var matches = start + prefix.Length <= text.Length &&
+			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
+		return new ValueInstance(executable.booleanType, matches
+			? 1.0
+			: 0.0);
+	}
+
 	private bool TryHandleToConversion(Invoke invoke)
 	{
 		if (invoke.Method.Method.Name != BinaryOperator.To)
 			return false;
-		var instanceExpr = invoke.Method.Instance ?? throw new InvalidOperationException();
-		var rawValue = instanceExpr is Value constValue
-			? constValue.Data
-			: Memory.Frame.TryGet(instanceExpr.ToString(), out var variableValue)
-				? variableValue
-				: throw new InvalidOperationException();
 		var conversionType = invoke.Method.ReturnType;
+		var rawValue = EvaluateExpression(invoke.Method.Instance ?? throw new InvalidOperationException());
+		if (conversionType.IsText && !invoke.Method.Method.IsTrait &&
+			invoke.Method.Method.Type == rawValue.GetType() &&
+			rawValue.TryGetValueTypeInstance() != null)
+			return false;
 		if (conversionType.IsText)
 			Memory.Registers[invoke.Register] = ConvertToText(rawValue);
 		else if (conversionType.IsNumber)
@@ -312,17 +362,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (rawValue.IsText)
 			return rawValue;
 		if (rawValue.TryGetValueTypeInstance() is { } typeInstance)
-		{
-			var members = typeInstance.ReturnType.Members;
-			var memberValues = new List<string>(typeInstance.Values.Length);
-			for (var memberIndex = 0; memberIndex < typeInstance.Values.Length && memberIndex < members.Count; memberIndex++)
-				if (!members[memberIndex].Type.IsTrait && members[memberIndex].Type.Name is not
-					(Type.Logger or Type.TextWriter or Type.System))
-					memberValues.Add(typeInstance.Values[memberIndex].ToExpressionCodeString());
-			return memberValues.Count == 0
-				? new ValueInstance(typeInstance.ReturnType.Name)
-				: new ValueInstance("(" + string.Join(", ", memberValues) + ")");
-		}
+			return new ValueInstance(typeInstance.ToAutomaticText());
 		return new ValueInstance(rawValue.ToExpressionCodeString());
 	}
 
@@ -350,23 +390,69 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (targetType is GenericTypeImplementation)
 			return false;
 		var members = targetType.Members;
-		if (members.Count == 0 && TryGetBinaryMembers(targetType, out var binaryMembers))
+		var hasBinaryMembers = TryGetBinaryMembers(targetType, out var binaryMembers);
+		if (members.Count == 0 && hasBinaryMembers)
 		{
 			Memory.Registers[invoke.Register] = new ValueInstance(targetType,
 				CreateConstructorValuesFromBinaryMembers(targetType, invoke, binaryMembers));
 			return true;
 		}
 		var values = new ValueInstance[members.Count];
-		var argumentIndex = 0;
+		for (var parameterIndex = 0; parameterIndex < invoke.Method.Method.Parameters.Count; parameterIndex++)
+		{
+			var parameter = invoke.Method.Method.Parameters[parameterIndex];
+			var memberIndex = FindMemberIndex(members, parameter.Name);
+			if (memberIndex == -1)
+				continue;
+			var memberInitialValue = members[memberIndex].InitialValue;
+			values[memberIndex] = parameterIndex < invoke.Method.Arguments.Count
+				? EvaluateExpression(invoke.Method.Arguments[parameterIndex])
+				: parameter.DefaultValue != null
+					? EvaluateExpression(parameter.DefaultValue)
+					: memberInitialValue != null
+						? EvaluateExpression(memberInitialValue)
+						: hasBinaryMembers && TryGetBinaryMemberInitialValue(binaryMembers, memberIndex,
+							out var initialValue)
+							? initialValue
+							: CreateDefaultValue(members[memberIndex].Type);
+		}
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-			if (members[memberIndex].Type.IsTrait)
-				values[memberIndex] = CreateTraitInstance(members[memberIndex].Type);
-			else if (argumentIndex < invoke.Method.Arguments.Count)
-				values[memberIndex] = EvaluateExpression(invoke.Method.Arguments[argumentIndex++]);
-			else
-				values[memberIndex] = CreateDefaultValue(members[memberIndex].Type);
+			if (!values[memberIndex].HasValue)
+			{
+				var memberInitialValue = members[memberIndex].InitialValue;
+				values[memberIndex] = members[memberIndex].Type.IsTrait
+					? CreateTraitInstance(members[memberIndex].Type)
+					: memberInitialValue != null
+						? EvaluateExpression(memberInitialValue)
+						: hasBinaryMembers && TryGetBinaryMemberInitialValue(binaryMembers, memberIndex,
+							out var initialValue)
+							? initialValue
+							: CreateDefaultValue(members[memberIndex].Type);
+			}
+		TryPreFillConstrainedListMembers(targetType, values);
 		Memory.Registers[invoke.Register] = new ValueInstance(targetType, values);
 		return true;
+	}
+
+	private static bool TryGetBinaryMemberInitialValue(IReadOnlyList<BinaryMember> binaryMembers,
+		int memberIndex, out ValueInstance value)
+	{
+		if (memberIndex < binaryMembers.Count &&
+			binaryMembers[memberIndex].InitialValueExpression is SetInstruction setInstruction)
+		{
+			value = setInstruction.ValueInstance;
+			return true;
+		}
+		value = default;
+		return false;
+	}
+
+	private static int FindMemberIndex(IReadOnlyList<Member> members, string name)
+	{
+		for (var index = 0; index < members.Count; index++)
+			if (members[index].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+				return index;
+		return -1;
 	}
 
 	private ValueInstance[] CreateConstructorValuesFromBinaryMembers(Type targetType, Invoke invoke,
@@ -394,15 +480,172 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return values;
 	}
 
+	private void TryPreFillConstrainedListMembers(Type targetType, ValueInstance[] values)
+	{
+		var members = targetType.Members;
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+		{
+			if (!values[memberIndex].IsList || values[memberIndex].List.Items.Count > 0 ||
+				members[memberIndex].Constraints == null)
+				continue;
+			var length = TryGetConstrainedLength(targetType, values, members[memberIndex]);
+			if (length is not > 0)
+				continue;
+			var elementType = members[memberIndex].Type is GenericTypeImplementation genericList
+				? genericList.ImplementationTypes[0]
+				: members[memberIndex].Type;
+			if (elementType.Members.FirstOrDefault(member => member.Name == Type.ElementsLowercase)?.Type is
+				GenericTypeImplementation nestedElementsList)
+				elementType = nestedElementsList.ImplementationTypes[0];
+			var elements = new ValueInstance[length.Value];
+			for (var elementIndex = 0; elementIndex < length.Value; elementIndex++)
+				elements[elementIndex] = CreateDefaultComplexValue(elementType);
+			values[memberIndex] = new ValueInstance(members[memberIndex].Type, elements);
+		}
+	}
+
 	private static ValueInstance CreateDefaultValue(Type memberType) =>
-		memberType.IsText
-			? new ValueInstance("")
-			: memberType.IsBoolean
-				? new ValueInstance(memberType, false)
-				: memberType.IsMutable
-					// ReSharper disable once TailRecursiveCall
-					? CreateDefaultValue(memberType.GetFirstImplementation())
-					: new ValueInstance(memberType, 0);
+	(memberType.IsMutable
+		? memberType.GetFirstImplementation()
+		: memberType).IsList
+		? new ValueInstance(memberType, Array.Empty<ValueInstance>())
+		: (memberType.IsMutable
+			? memberType.GetFirstImplementation()
+			: memberType).IsDictionary
+			? new ValueInstance(memberType, new Dictionary<ValueInstance, ValueInstance>())
+			: memberType.IsText
+				? new ValueInstance("")
+				: memberType.IsBoolean
+					? new ValueInstance(memberType, false)
+					: memberType.IsMutable
+						// ReSharper disable once TailRecursiveCall
+						? CreateDefaultValue(memberType.GetFirstImplementation())
+						: new ValueInstance(memberType, 0);
+
+	private static ValueInstance CreateDefaultComplexValue(Type type)
+	{
+		if (type.IsList || type.IsDictionary || type.IsText || type.IsBoolean || type.IsNumber ||
+			type.IsNone)
+			return CreateDefaultValue(type);
+		var members = type.Members;
+		if (members.Count == 0)
+			return CreateDefaultValue(type);
+		var values = new ValueInstance[members.Count];
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			values[memberIndex] = members[memberIndex].Type.IsTrait
+				? CreateTraitInstance(members[memberIndex].Type)
+				: members[memberIndex].InitialValue is Value initialValue
+					? initialValue.Data
+					: CreateDefaultValue(members[memberIndex].Type);
+		return new ValueInstance(type, values);
+	}
+
+	private int? TryGetConstrainedLength(Type targetType, ValueInstance[] values, Member member)
+	{
+		foreach (var constraint in member.Constraints!)
+		{
+			if (constraint is not Expressions.Binary { Method.Name: BinaryOperator.Is } binary ||
+				binary.Instance?.ToString() != "Length")
+				continue;
+			var rhs = binary.Arguments[0];
+			if (rhs is Value numberValue)
+				return (int)numberValue.Data.Number;
+			return TryEvaluateLengthInMemberScope(targetType, values, rhs) ??
+				TryResolveMemberMethodLength(targetType, values, rhs);
+		}
+		return null;
+	}
+
+	private int? TryResolveMemberMethodLength(Type targetType, ValueInstance[] values,
+		Expression rhs)
+	{
+		var rhsText = rhs.ToString();
+		var dotIndex = rhsText.IndexOf('.');
+		if (dotIndex <= 0)
+			return null;
+		var memberName = rhsText[..dotIndex];
+		var methodName = rhsText[(dotIndex + 1)..];
+		for (var memberIndex = 0; memberIndex < targetType.Members.Count; memberIndex++)
+		{
+			if (!targetType.Members[memberIndex].Name.Equals(memberName,
+					StringComparison.OrdinalIgnoreCase) || !values[memberIndex].HasValue)
+				continue;
+			var memberValue = values[memberIndex];
+			var typeInstance = memberValue.TryGetValueTypeInstance();
+			var method = typeInstance?.ReturnType.FindMethod(methodName, []);
+			if (method == null)
+				continue;
+			var methodInstructions = GetPrecompiledMethodInstructions(method);
+			if (methodInstructions != null)
+			{
+				var result = RunChildScope(methodInstructions, () =>
+				{
+					Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
+					TrySetScopeMembersFromTypeMembers(typeInstance!);
+				});
+				if (result.HasValue)
+					return (int)result.Value.Number;
+			}
+			else
+			{
+				var bodyResult = TryEvaluateMethodBodyWithInstance(method, memberValue, typeInstance!);
+				if (bodyResult != null)
+					return bodyResult;
+			}
+		}
+		return null;
+	}
+
+	private int? TryEvaluateMethodBodyWithInstance(Method method, ValueInstance memberValue,
+		ValueTypeInstance typeInstance)
+	{
+		try
+		{
+			var body = method.GetBodyAndParseIfNeeded();
+			if (body is not Body { Expressions.Count: > 0 } methodBody)
+				return null;
+			var savedFrame = Memory.Frame;
+			Memory.Frame = new CallFrame();
+			Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
+			TrySetScopeMembersFromTypeMembers(typeInstance);
+			try
+			{
+				var lastExpression = methodBody.Expressions[^1];
+				return (int)EvaluateExpression(lastExpression).Number;
+			}
+			finally
+			{
+				Memory.Frame = savedFrame;
+			}
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private int? TryEvaluateLengthInMemberScope(Type targetType, ValueInstance[] values,
+		Expression lengthExpression)
+	{
+		var savedFrame = Memory.Frame;
+		Memory.Frame = new CallFrame();
+		try
+		{
+			for (var memberIndex = 0; memberIndex < targetType.Members.Count; memberIndex++)
+				if (values[memberIndex].HasValue)
+					Memory.Frame.Set(targetType.Members[memberIndex].Name, values[memberIndex],
+						isMember: true);
+			return (int)EvaluateExpression(lengthExpression).Number;
+		}
+		catch
+		{
+			return null;
+		}
+		finally
+		{
+			Memory.Frame = savedFrame;
+		}
+	}
 
 	private static ValueInstance CreateTraitInstance(Type traitType)
 	{
@@ -441,6 +684,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		if (expression is Value value)
 			return value.Data;
+		if (expression is VariableCall variableCall && variableCall.IsConstant &&
+			variableCall.Variable.InitialValue is Value constantValue)
+			return constantValue.Data;
 		if (expression is VariableCall or ParameterCall or Instance)
 			return Memory.Frame.Get(expression.ToString());
 		if (expression is MemberCall memberCall)
@@ -449,23 +695,71 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return EvaluateBinary(binary);
 		if (expression is MethodCall methodCall)
 			return EvaluateMethodCall(methodCall);
-		return new ValueInstance(expression.ToString());
+		if (expression is ListCall listCall)
+			return EvaluateListCallExpression(listCall);
+		return Memory.Frame.TryGet(expression.ToString(), out var frameValue)
+			? frameValue
+			: new ValueInstance(expression.ToString());
+	}
+
+	private ValueInstance EvaluateListCallExpression(ListCall listCall)
+	{
+		var listValue = EvaluateExpression(listCall.List);
+		var indexValue = EvaluateExpression(listCall.Index);
+		var index = (int)indexValue.Number;
+		if (listValue.IsList || listValue.IsText || listValue.TryGetValueTypeInstance()?.ReturnType.IsList == true)
+			return listValue.GetIteratorValue(executable.characterType, index);
+		if (listValue.TryGetValueTypeInstance() is { } typeInstance)
+		{
+			if (typeInstance.TryGetValue(Type.ElementsLowercase, out var elementsValue) &&
+				(elementsValue.IsList || elementsValue.IsText))
+				return elementsValue.GetIteratorValue(executable.characterType, index);
+			for (var valueIndex = 0; valueIndex < typeInstance.Values.Length; valueIndex++)
+				if (typeInstance.Values[valueIndex].IsText)
+					return typeInstance.Values[valueIndex].GetIteratorValue(executable.characterType, index);
+		}
+		return Memory.Frame.Get(listCall.ToString());
 	}
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
 	{
-		if (memberCall.Instance != null &&
-			Memory.Frame.TryGet(memberCall.Instance.ToString(), out var instanceValue))
+		if (memberCall.Instance != null)
 		{
+			var instanceValue = EvaluateExpression(memberCall.Instance);
+			if (TryGetNativeLength(instanceValue, memberCall.Member.Name, out var lengthValue))
+				return lengthValue;
 			var typeInstance = instanceValue.TryGetValueTypeInstance();
 			if (typeInstance != null && typeInstance.TryGetValue(memberCall.Member.Name, out var memberValue))
 				return memberValue;
+			if (instanceValue.IsText && memberCall.Member.Name is "characters" or "elements")
+				return instanceValue;
 		}
 		if (Memory.Frame.TryGet(memberCall.ToString(), out var frameValue))
 			return frameValue;
+		if (Memory.Frame.TryGet(memberCall.Member.Name, out var memberFrameValue))
+			return memberFrameValue;
 		if (memberCall.Member.InitialValue is Value enumValue)
 			return enumValue.Data;
 		return new ValueInstance(memberCall.ToString());
+	}
+
+	private bool TryGetNativeLength(ValueInstance instance, string memberName, out ValueInstance result)
+	{
+		if (memberName is "Length" or "Count")
+		{
+			if (instance.IsText)
+			{
+				result = new ValueInstance(executable.numberType, instance.Text.Length);
+				return true;
+			}
+			if (instance.IsList)
+			{
+				result = new ValueInstance(executable.numberType, instance.List.Items.Count);
+				return true;
+			}
+		}
+		result = default;
+		return false;
 	}
 
 	private ValueInstance EvaluateBinary(Binary binary)
@@ -499,15 +793,52 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 					: rawValue;
 		}
 		var precompiledInstructions = GetPrecompiledMethodInstructions(call.Method);
-		if (precompiledInstructions == null)
-			throw new InvalidOperationException("No precompiled method instructions found for method call");
-		var evaluatedArguments = call.Arguments.Select(EvaluateExpression).ToArray();
+		if (precompiledInstructions != null)
+		{
+			var evaluatedArguments = call.Arguments.Select(EvaluateExpression).ToArray();
+			var evaluatedInstance = call.Instance != null
+				? EvaluateExpression(call.Instance)
+				: (ValueInstance?)null;
+			var precompiledResult = RunChildScope(precompiledInstructions,
+				() => InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance));
+			return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
+		}
+		return TryEvaluateMethodCallFromBody(call) ??
+			throw new InvalidOperationException(
+				"No precompiled method instructions found for method call: " + call);
+	}
+
+	private ValueInstance? TryEvaluateMethodCallFromBody(MethodCall call)
+	{
+		var methodBody = call.Method.GetBodyAndParseIfNeeded();
+		if (methodBody is not Body { Expressions.Count: > 0 } body)
+			return null;
 		var evaluatedInstance = call.Instance != null
 			? EvaluateExpression(call.Instance)
 			: (ValueInstance?)null;
-		var precompiledResult = RunChildScope(precompiledInstructions,
-			() => InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance));
-		return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
+		var savedFrame = Memory.Frame;
+		Memory.Frame = new CallFrame(savedFrame);
+		try
+		{
+			if (evaluatedInstance.HasValue)
+			{
+				Memory.Frame.Set(Type.ValueLowercase, evaluatedInstance.Value, isMember: true);
+				var typeInstance = evaluatedInstance.Value.TryGetValueTypeInstance();
+				if (typeInstance != null)
+					TrySetScopeMembersFromTypeMembers(typeInstance);
+			}
+			for (var paramIndex = 0;
+				paramIndex < call.Method.Parameters.Count && paramIndex < call.Arguments.Count;
+				paramIndex++)
+				Memory.Frame.Set(call.Method.Parameters[paramIndex].Name,
+					EvaluateExpression(call.Arguments[paramIndex]));
+			var lastExpression = body.Expressions[^1];
+			return EvaluateExpression(lastExpression);
+		}
+		finally
+		{
+			Memory.Frame = savedFrame;
+		}
 	}
 
 	private ValueInstance EvaluateFromConstructor(MethodCall call)
@@ -583,6 +914,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			loopBegin.IsInitialized = true;
 		}
 		AlterValueVariable(iterableVariable, loopBegin);
+		if (!string.IsNullOrEmpty(loopBegin.CustomVariableName))
+			Memory.Frame.Set(loopBegin.CustomVariableName, Memory.Frame.Get(Type.ValueLowercase));
 		if (loopBegin.LoopCount <= 0)
 		{
 			var skipTo = instructionIndex + 1;
@@ -603,11 +936,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var incrementValue = loopBegin.IsDecreasing == true
 			? -1
 			: 1;
-		Memory.Frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType,
-			Memory.Frame.TryGet(Type.IndexLowercase, out var indexValue)
-				? indexValue.Number + incrementValue
-				: loopBegin.StartIndexValue ?? 0));
+		var currentIndex = Memory.Frame.TryGet(Type.IndexLowercase, out var indexValue)
+			? indexValue.Number + incrementValue
+			: loopBegin.StartIndexValue ?? 0;
+		Memory.Frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType, currentIndex));
 		Memory.Frame.Set(Type.ValueLowercase, Memory.Frame.Get(Type.IndexLowercase));
+		if (!string.IsNullOrEmpty(loopBegin.CustomVariableName))
+			Memory.Frame.Set(loopBegin.CustomVariableName,
+				new ValueInstance(executable.numberType, currentIndex));
 	}
 
 	private static int GetLength(ValueInstance iterableInstance)
@@ -659,7 +995,40 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			Memory.Frame.Set(storeVariable.Identifier, value, storeVariable.IsMember);
 		}
 		else if (instruction is StoreFromRegisterInstruction storeFromRegister)
-			Memory.Frame.Set(storeFromRegister.Identifier, Memory.Registers[storeFromRegister.Register]);
+		{
+			if (!TryStoreToListElement(storeFromRegister))
+				Memory.Frame.Set(storeFromRegister.Identifier,
+					Memory.Registers[storeFromRegister.Register]);
+		}
+	}
+
+	private bool TryStoreToListElement(StoreFromRegisterInstruction store)
+	{
+		var identifier = store.Identifier;
+		var openParen = identifier.LastIndexOf('(');
+		if (openParen <= 0 || !identifier.EndsWith(')'))
+			return false;
+		var listPath = identifier[..openParen];
+		var indexExprName = identifier[(openParen + 1)..^1];
+		if (!Memory.Frame.TryGet(listPath, out var listValue))
+		{
+			var lastDot = listPath.LastIndexOf('.');
+			if (lastDot > 0)
+				Memory.Frame.TryGet(listPath[(lastDot + 1)..], out listValue);
+		}
+		if (!listValue.IsList)
+			return false;
+		if (!Memory.Frame.TryGet(indexExprName, out var indexInstance))
+			Memory.Frame.TryGet(Type.IndexLowercase, out indexInstance);
+		if (!indexInstance.HasValue)
+			return false;
+		var index = (int)indexInstance.Number;
+		if (index >= 0 && index < listValue.List.Items.Count)
+		{
+			listValue.List.Items[index] = Memory.Registers[store.Register];
+			return true;
+		}
+		return false;
 	}
 
 	private void TryLoadInstructions(Instruction instruction)
@@ -719,7 +1088,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return left;
 		}
 		if (left.IsText || right.IsText)
-			return new ValueInstance(left.ToExpressionCodeString() + right.ToExpressionCodeString());
+			return new ValueInstance(ConvertToText(left).Text + ConvertToText(right).Text);
 		return new ValueInstance(right.GetType(), left.Number + right.Number);
 	}
 

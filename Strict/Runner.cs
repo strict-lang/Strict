@@ -101,6 +101,7 @@ public sealed class Runner
 	private async Task<BinaryExecutable> GetBinary()
 	{
 		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
+		basePackage = await TryLoadSubPackageIfNeeded(basePackage);
 		if (Path.GetExtension(strictFilePath) == BinaryExecutable.Extension)
 			return LogTiming("Loading existing " + strictFilePath,
 				() => new BinaryExecutable(strictFilePath, basePackage));
@@ -113,7 +114,7 @@ public sealed class Runner
 			{
 				binary = new BinaryExecutable(cachedBinaryPath, basePackage);
 			}
-			catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile)
+			catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile or EndOfStreamException)
 			{
 				Log("Cached " + cachedBinaryPath + " is no longer compatible: " + ex.Message);
 				return await LoadFromSourceAndSaveBinary(basePackage);
@@ -152,6 +153,57 @@ public sealed class Runner
 			return await repositories.LoadStrictPackage(name);
 		});
 	}
+
+	private async Task<Package> TryLoadSubPackageIfNeeded(Package basePackage)
+	{
+		var fileDirectory = Path.GetDirectoryName(Path.GetFullPath(strictFilePath));
+		var repoRoot = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
+		if (string.IsNullOrEmpty(fileDirectory) ||
+			fileDirectory.Equals(repoRoot, StringComparison.OrdinalIgnoreCase))
+			return basePackage;
+		var relativePath = Path.GetRelativePath(repoRoot, fileDirectory);
+		if (string.IsNullOrEmpty(relativePath) || relativePath == "." ||
+			relativePath.StartsWith("..", StringComparison.Ordinal) ||
+			!IsRuntimePackageDirectory(relativePath, Path.Combine(repoRoot, relativePath)))
+			return basePackage;
+		if (skipPackageSearchAndUseThisTestPackage != null)
+			await repositories.LoadStrictPackage();
+		await LoadDependencyPackages(repoRoot, relativePath);
+		var subPackageName = nameof(Strict) + Context.ParentSeparator +
+			relativePath.Replace(Path.DirectorySeparatorChar, Context.ParentSeparator);
+		return await repositories.LoadStrictPackage(subPackageName);
+	}
+
+	private async Task LoadDependencyPackages(string repoRoot, string targetSubDir)
+	{
+		var deferred = new List<string>();
+		foreach (var directory in Directory.GetDirectories(repoRoot).OrderBy(Path.GetFileName, StringComparer.Ordinal))
+		{
+			var dirName = Path.GetFileName(directory);
+			if (dirName == targetSubDir || !IsRuntimePackageDirectory(dirName, directory))
+				continue;
+			try
+			{
+				await repositories.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + dirName);
+			}
+			catch (ParsingFailed)
+			{
+				deferred.Add(dirName);
+			}
+		}
+		foreach (var dirName in deferred)
+			await repositories.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + dirName);
+	}
+
+	/// <summary>
+	/// Runtime packages define custom types and can be loaded as sub-packages. Meta-packages
+	/// (Language, Expressions) and example collections (Examples, Parsing) are excluded.
+	/// </summary>
+	private static bool IsRuntimePackageDirectory(string dirName, string directory) =>
+		!dirName.StartsWith(".", StringComparison.Ordinal) &&
+		!dirName.StartsWith("Strict", StringComparison.Ordinal) &&
+		dirName is not ("Language" or "Expressions" or "Examples" or "Parsing") &&
+		Directory.EnumerateFiles(directory, "*" + Type.Extension).Any();
 
 	private T LogTiming<T>(string message, Func<T> callToTime)
 	{
@@ -247,9 +299,6 @@ public sealed class Runner
 			return BinaryGenerator.GenerateFromRunMethods(preferredEntryMethod, runMethods);
 		});
 
-	private BinaryExecutable GenerateExpressionBinaryExecutable(Expression entryPoint) =>
-		LogTiming(nameof(GenerateBinaryExecutable), () => new BinaryGenerator(entryPoint).Generate());
-
 	private void OptimizeBytecode(BinaryExecutable executable) =>
 		Log(LogTiming(nameof(OptimizeBytecode), () =>
 		{
@@ -277,9 +326,16 @@ public sealed class Runner
 	private BinaryExecutable CacheStrictExecutable(BinaryExecutable binary)
 	{
 		var outputFilePath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
-		binary.Serialize(outputFilePath);
-		Log("Saving " + new FileInfo(outputFilePath).Length + " bytes of bytecode to: " +
-			outputFilePath);
+		try
+		{
+			binary.Serialize(outputFilePath);
+			Log("Saving " + new FileInfo(outputFilePath).Length + " bytes of bytecode to: " +
+				outputFilePath);
+		}
+		catch (NotSupportedException ex)
+		{
+			Log("Bytecode serialization not yet supported for this program: " + ex.Message);
+		}
 		return binary;
 	}
 
@@ -302,10 +358,11 @@ public sealed class Runner
 		var targetType = new Type(basePackage, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
 		try
 		{
-			var expression = parser.ParseExpression(
-				new Body(new Method(targetType, 0, parser, [nameof(RunExpression)])),
-				expressionString);
-			var binary = GenerateExpressionBinaryExecutable(expression);
+			var method = new Method(targetType, 0, parser,
+				[nameof(RunExpression), "\t" + expressionString]);
+			var call = new MethodCall(method);
+			var binary = LogTiming(nameof(GenerateBinaryExecutable),
+				() => new BinaryGenerator(call).Generate());
 			OptimizeBytecode(binary);
 			var vm = new VirtualMachine(binary);
 			vm.Execute();

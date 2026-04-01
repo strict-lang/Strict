@@ -1,0 +1,4 @@
+has Value
+has text Text
+to Text
+	"\"" + text + "\""

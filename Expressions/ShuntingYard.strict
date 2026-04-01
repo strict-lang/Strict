@@ -1,0 +1,9 @@
+has input Text
+has output Texts
+has operators Texts
+OutputCount Number
+	output.Length
+HasOperators Boolean
+	operators.Length > 0
+to Text
+	input

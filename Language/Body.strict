@@ -1,2 +1,22 @@
 has method
 has lines Texts
+LineCount Number
+	lines.Length
+Line(number Number) Text
+	lines(number)
+IsMethodCallLine(line Text) Boolean
+	line.IndexOf(".") > 0
+IsReturnLine(line Text) Boolean
+	line.StartsWith("return ")
+IsIfLine(line Text) Boolean
+	line.StartsWith("if ")
+IsForLine(line Text) Boolean
+	line.StartsWith("for ")
+IsDeclarationLine(line Text) Boolean
+	line.StartsWith("let ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
+IsReassignment(line Text) Boolean
+	line.IndexOf(" = ") > 0
+IsArithmeticExpression(line Text) Boolean
+	line.IndexOf(" + ") > 0
+IsNotExpression(line Text) Boolean
+	line.StartsWith("not ")

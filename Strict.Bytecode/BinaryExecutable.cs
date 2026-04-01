@@ -137,7 +137,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			InstructionType.Set => new SetInstruction(reader, table, this),
 			InstructionType.Invoke => new Invoke(reader, table, this),
 			InstructionType.Return => new ReturnInstruction(reader),
-			InstructionType.LoopBegin => new LoopBeginInstruction(reader),
+			InstructionType.LoopBegin => new LoopBeginInstruction(reader, table),
 			InstructionType.LoopEnd => new LoopEndInstruction(reader),
 			InstructionType.JumpIfNotZero => new JumpIfNotZero(reader),
 			InstructionType.JumpIfTrue => new Jump(reader, InstructionType.JumpIfTrue),
@@ -340,8 +340,32 @@ public sealed class BinaryExecutable(Package basePackage)
 			ExpressionKind.MemberRef => ReadMemberRef(reader, table),
 			ExpressionKind.BinaryExpr => ReadBinaryExpr(reader, table),
 			ExpressionKind.MethodCallExpr => ReadMethodCall(reader, table),
+			ExpressionKind.ListExpr => ReadListExpr(reader, table),
+			ExpressionKind.ListCallExpr => ReadListCallExpr(reader, table),
 			_ => throw new InvalidFile("Unknown ExpressionKind: " + kind)
 		};
+	}
+
+	private List ReadListExpr(BinaryReader reader, NameTable table)
+	{
+		var concreteListType = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
+		var itemCount = reader.Read7BitEncodedInt();
+		var values = new List<Expression>(itemCount);
+		for (var index = 0; index < itemCount; index++)
+			values.Add(ReadExpression(reader, table));
+		return new List(concreteListType, values, 0, false);
+	}
+
+	private ListCall ReadListCallExpr(BinaryReader reader, NameTable table)
+	{
+		EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
+		var list = ReadExpression(reader, table);
+		var index = ReadExpression(reader, table);
+		var hasSecondIndex = reader.ReadBoolean();
+		var secondIndex = hasSecondIndex
+			? ReadExpression(reader, table)
+			: null;
+		return new ListCall(list, index, secondIndex);
 	}
 
 	//TODO: missing test
@@ -354,17 +378,27 @@ public sealed class BinaryExecutable(Package basePackage)
 	//TODO: avoid! remove!
 	private static Type EnsureResolvedType(Package package, string typeName)
 	{
-		var resolved = package.FindType(typeName) ?? (typeName.Contains('.')
+		var resolved = package.FindType(typeName) ?? (typeName.Contains(Context.ParentSeparator)
 			? package.FindFullType(typeName)
 			: null);
 		if (resolved != null)
 			return resolved;
 		if (typeName.EndsWith(')') && typeName.Contains('('))
-			return package.GetType(typeName); //ncrunch: no coverage
+			return package.GetType(GetGenericLookupName(typeName));
 		if (char.IsLower(typeName[0]))
 			throw new TypeNotFoundForBytecode(typeName);
 		EnsureTypeExists(package, typeName);
 		return package.GetType(typeName);
+	}
+
+	private static string GetGenericLookupName(string typeName)
+	{
+		var openParenIndex = typeName.IndexOf('(');
+		var mainTypeName = typeName[..openParenIndex];
+		var simpleMainTypeName = mainTypeName.Contains(Context.ParentSeparator)
+			? mainTypeName[(mainTypeName.LastIndexOf(Context.ParentSeparator) + 1)..]
+			: mainTypeName;
+		return simpleMainTypeName + typeName[openParenIndex..];
 	}
 
 	public sealed class TypeNotFoundForBytecode(string typeName)
@@ -381,7 +415,14 @@ public sealed class BinaryExecutable(Package basePackage)
 	{
 		var name = table.names[reader.Read7BitEncodedInt()];
 		var type = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
-		var param = new Parameter(type, name, new Value(type, new ValueInstance(type)));
+		var parenIndex = name.IndexOf('(');
+		var cleanName = parenIndex > 0
+			? name[..parenIndex]
+			: name;
+		var dotIndex = cleanName.IndexOf('.');
+		if (dotIndex > 0)
+			cleanName = cleanName[..dotIndex];
+		var param = new Parameter(type, cleanName, new Value(type, new ValueInstance(type)));
 		return new ParameterCall(param);
 	}
 
@@ -418,6 +459,13 @@ public sealed class BinaryExecutable(Package basePackage)
 	{
 		switch (expr)
 		{
+		case List list:
+			writer.Write((byte)ExpressionKind.ListExpr);
+			writer.Write7BitEncodedInt(table[list.ReturnType.FullName]);
+			writer.Write7BitEncodedInt(list.Values.Count);
+			foreach (var value in list.Values)
+				WriteExpression(writer, value, table);
+			break;
 		case Value { Data.IsText: true } val:
 			writer.Write((byte)ExpressionKind.TextValue);
 			writer.Write7BitEncodedInt(table[val.Data.Text]);
@@ -455,31 +503,40 @@ public sealed class BinaryExecutable(Package basePackage)
 				// ReSharper disable TailRecursiveCall
 				WriteExpression(writer, memberCall.Instance, table);
 			break;
-		case Expressions.Binary binary:
+		case Binary binary:
 			writer.Write((byte)ExpressionKind.BinaryExpr);
 			writer.Write7BitEncodedInt(table[binary.Method.Name]);
 			WriteExpression(writer, binary.Instance!, table);
 			WriteExpression(writer, binary.Arguments[0], table);
 			break;
-		case MethodCall methodCall:
-			writer.Write((byte)ExpressionKind.MethodCallExpr);
-			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
-			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
-			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
-			foreach (var parameter in methodCall.Method.Parameters)
-			{
-				writer.Write7BitEncodedInt(table[parameter.Name]);
-				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
-			}
-			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
-			writer.Write(methodCall.Instance != null);
-			if (methodCall.Instance != null)
-				WriteExpression(writer, methodCall.Instance, table);
-			writer.Write7BitEncodedInt(methodCall.Arguments.Count);
-			foreach (var argument in methodCall.Arguments)
-				WriteExpression(writer, argument, table);
-			break;
-		default:
+		case ListCall listCall:
+				writer.Write((byte)ExpressionKind.ListCallExpr);
+				writer.Write7BitEncodedInt(table[listCall.ReturnType.Name]);
+				WriteExpression(writer, listCall.List, table);
+				WriteExpression(writer, listCall.Index, table);
+				writer.Write(listCall.SecondIndex != null);
+				if (listCall.SecondIndex != null)
+					WriteExpression(writer, listCall.SecondIndex, table);
+				break;
+			case MethodCall methodCall:
+				writer.Write((byte)ExpressionKind.MethodCallExpr);
+				writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
+				writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
+				writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
+				foreach (var parameter in methodCall.Method.Parameters)
+				{
+					writer.Write7BitEncodedInt(table[parameter.Name]);
+					writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
+				}
+				writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
+				writer.Write(methodCall.Instance != null);
+				if (methodCall.Instance != null)
+					WriteExpression(writer, methodCall.Instance, table);
+				writer.Write7BitEncodedInt(methodCall.Arguments.Count);
+				foreach (var argument in methodCall.Arguments)
+					WriteExpression(writer, argument, table);
+				break;
+			default:
 			writer.Write((byte)ExpressionKind.VariableRef);
 			writer.Write7BitEncodedInt(table[expr.ToString()]);
 			writer.Write7BitEncodedInt(table[expr.ReturnType.Name]);

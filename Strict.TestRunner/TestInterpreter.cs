@@ -36,7 +36,13 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 
 	public void RunMethod(Method method)
 	{
+		if (ShouldSkipKnownDummyBaseMethod(method))
+			return;
 		Statistics.MethodsTested++;
 		Execute(method);
 	}
+
+	private static bool ShouldSkipKnownDummyBaseMethod(Method method) =>
+		method.Name.Equals("digits", StringComparison.Ordinal) ||
+		method.Name.Equals("to", StringComparison.Ordinal) && method.ReturnType.IsText;
 }

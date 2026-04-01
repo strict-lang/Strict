@@ -1,0 +1,8 @@
+has parameterName Text
+has typeName Text
+has isMutable Boolean
+has defaultValue Text
+HasDefault Boolean
+	defaultValue is not ""
+to Text
+	parameterName + " " + typeName

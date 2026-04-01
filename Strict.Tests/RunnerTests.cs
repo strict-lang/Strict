@@ -1,6 +1,7 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
+using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
 using System.IO.Compression;
@@ -166,6 +167,54 @@ public sealed class RunnerTests
 		await new Runner(GetExamplesFilePath("AutofilledMutable"), TestPackage.Instance).Run();
 
 	[Test]
+	public async Task RunParseHelloLogger()
+	{
+		await new Runner(GetExamplesFilePath("Parsing/ParseHelloLogger"), TestPackage.Instance).Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Member(has): has logger"));
+		Assert.That(output, Does.Contain("Member(mutable): mutable count = 0"));
+		Assert.That(output, Does.Contain("Member(constant): constant Max = 100"));
+		Assert.That(output, Does.Contain("Method: Run"));
+		Assert.That(output, Does.Contain("Method: Add(other) Number"));
+		Assert.That(output, Does.Contain("Body:"));
+	}
+
+	[Test]
+	public async Task RunParseExpressions()
+	{
+		await new Runner(GetExamplesFilePath("Parsing/ParseExpressions"), TestPackage.Instance).Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Parsing HelloLogger.strict expressions"));
+		Assert.That(output, Does.Contain("has member: logger"));
+		Assert.That(output, Does.Contain("mutable member: count = 0"));
+		Assert.That(output, Does.Contain("Method body expressions:"));
+		Assert.That(output, Does.Contain("MethodCall: logger.Log"));
+		Assert.That(output, Does.Contain("Return: total"));
+		Assert.That(output, Does.Contain("If: condition=count > 0"));
+		Assert.That(output, Does.Contain("For: iterator=items"));
+		Assert.That(output, Does.Contain("Declaration: count = 5"));
+	}
+
+	[Test]
+	public async Task RunParseMethodHeaders()
+	{
+		await new Runner(GetExamplesFilePath("Parsing/ParseMethodHeaders"), TestPackage.Instance).Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Parsing method headers from type definitions"));
+		Assert.That(output, Does.Contain("Method: Run (no return type)"));
+		Assert.That(output, Does.Contain("Method: Add returns Number"));
+		Assert.That(output, Does.Contain("Method: GetName returns Text"));
+		Assert.That(output, Does.Contain("Method: IsDone returns Boolean"));
+		Assert.That(output, Does.Contain("Body expression types:"));
+		Assert.That(output, Does.Contain("MethodCall: logger.Log"));
+		Assert.That(output, Does.Contain("Return: count + 1"));
+		Assert.That(output, Does.Contain("If: count > 0"));
+		Assert.That(output, Does.Contain("For: items"));
+		Assert.That(output, Does.Contain("Declaration: total = 0"));
+		Assert.That(output, Does.Contain("Reassignment: total = total + value"));
+	}
+
+	[Test]
 	public async Task RunFibonacci()
 	{
 		await new Runner(GetExamplesFilePath("Fibonacci"), TestPackage.Instance).Run();
@@ -236,6 +285,15 @@ public sealed class RunnerTests
 		return File.Exists(localPath)
 			? localPath
 			: Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
+	}
+
+	[Test]
+	public async Task RunAdjustBrightness()
+	{
+		await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
+			await new Repositories(new MethodExpressionParser()).LoadStrictPackage()).Run();
+		var output = writer.ToString();
+		Assert.That(output, Does.Contain("Brightness adjustment successful: (0.25, 0.25, 0.25)"));
 	}
 
 	//ncrunch: no coverage start

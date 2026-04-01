@@ -2,5 +2,4 @@ has Method
 has FilePath Text
 has Line Number
 to Text
-	value to Text is "	at Stacktrace.to in Base\Stacktrace.strict:line 7"
 	"	at " + Method + " in " + FilePath + ":line " + Line

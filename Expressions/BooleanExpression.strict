@@ -1,0 +1,6 @@
+has Value
+has boolean Boolean
+to Text
+	if boolean
+		return "true"
+	"false"

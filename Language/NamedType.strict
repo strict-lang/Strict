@@ -1,0 +1,8 @@
+has elementName Text
+has typeName Text
+has isMutable Boolean
+has isConstant Boolean
+IsPublic Boolean
+	elementName.StartsWith("A")
+to Text
+	elementName + " " + typeName
