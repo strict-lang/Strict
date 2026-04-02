@@ -36,7 +36,6 @@ internal sealed class CallFrame
 			return true; //80% ends up here
 		if (parent != null && parent.TryGetMember(name, out value))
 			return true; //15% here
-		// rest is 5%, but still tooooooooooo many times (0.23 million calls here)
 		var dotIndex = name.IndexOf('.');
 		if (dotIndex > 0 && TryGetRootValue(name, dotIndex, out var root) &&
 			TryGetNestedMemberValue(root, name, dotIndex + 1, out value))
@@ -56,7 +55,7 @@ internal sealed class CallFrame
 		return false;
 	}
 
-  private static bool TryGetNestedMemberValue(ValueInstance root, string path, int segmentStart,
+	private static bool TryGetNestedMemberValue(ValueInstance root, string path, int segmentStart,
 		out ValueInstance value)
 	{
 		var current = root;
@@ -68,9 +67,9 @@ internal sealed class CallFrame
 				value = default;
 				return false;
 			}
-      var nextDotIndex = path.IndexOf('.', segmentStart);
+			var nextDotIndex = path.IndexOf('.', segmentStart);
 			var segment = nextDotIndex < 0
-       ? path[segmentStart..]
+				? path[segmentStart..]
 				: path[segmentStart..nextDotIndex];
 			if (!currentTypeInstance.TryGetValue(segment, out current))
 			{
@@ -82,7 +81,7 @@ internal sealed class CallFrame
 				value = current;
 				return true;
 			}
-      segmentStart = nextDotIndex + 1;
+			segmentStart = nextDotIndex + 1;
 		}
 	}
 

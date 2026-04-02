@@ -42,7 +42,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		for (var index = 0; index < blockInstructions.Count; index++)
 			if (blockInstructions[index].InstructionType == InstructionType.LoopBegin)
-				((LoopBeginInstruction)blockInstructions[index]).Reset();
+		{
+			var loopBegin = (LoopBeginInstruction)blockInstructions[index];
+			loopBegin.Reset();
+			loopBegin.InstructionIndex = index;
+		}
 		instructions = blockInstructions;
 		var instructionsLength = instructions.Count;
 		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
@@ -84,7 +88,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var separatorIndex = entryTypeName.LastIndexOf(Context.ParentSeparator);
 		return separatorIndex < 0
 			? memberTypeName
-			: entryTypeName[..(separatorIndex + 1)] + memberTypeName;
+			: string.Concat(entryTypeName.AsSpan(0, separatorIndex + 1), memberTypeName);
 	}
 
 	//TODO: almost called 3 million times, our loop is only 0.23m, so we are doing too much each time
@@ -211,9 +215,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
-		if (loopEnd.BeginIndex < 0)
-			loopEnd.BeginIndex = GetInstructionIndex(loopBegin);
-		instructionIndex = loopEnd.BeginIndex - 1;
+		instructionIndex = loopBegin.InstructionIndex - 1;
 	}
 
 	private int GetInstructionIndex(Instruction instruction)
@@ -1200,16 +1202,29 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 		if (Memory.Frame.TryGet(identifier, out value))
 			return true;
-		var parts = identifier.Split('.');
-		if (parts.Length < 2 || !Memory.Frame.TryGet(parts[0], out var current))
+		var separatorIndex = identifier.IndexOf('.');
+		if (separatorIndex <= 0 || !Memory.Frame.TryGet(identifier[..separatorIndex], out var current))
 			return false;
-		for (var index = 1; index < parts.Length; index++)
+		var segmentStart = separatorIndex + 1;
+		while (segmentStart < identifier.Length)
 		{
-			if (TryGetNativeMemberValue(current, parts[index], out current))
+			separatorIndex = identifier.IndexOf('.', segmentStart);
+			var memberName = separatorIndex < 0
+				? identifier[segmentStart..]
+				: identifier[segmentStart..separatorIndex];
+			if (TryGetNativeMemberValue(current, memberName, out current))
+			{
+				if (separatorIndex < 0)
+					break;
+				segmentStart = separatorIndex + 1;
 				continue;
+			}
 			var typeInstance = current.TryGetValueTypeInstance();
-			if (typeInstance == null || !typeInstance.TryGetValue(parts[index], out current))
+			if (typeInstance == null || !typeInstance.TryGetValue(memberName, out current))
 				return false;
+			if (separatorIndex < 0)
+				break;
+			segmentStart = separatorIndex + 1;
 		}
 		value = current;
 		return true;

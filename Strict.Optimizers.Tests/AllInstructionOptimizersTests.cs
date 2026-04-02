@@ -1,4 +1,6 @@
 using Strict.Bytecode.Instructions;
+using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict.Optimizers.Tests;
 
@@ -153,6 +155,14 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(20000));
 	}
 
+	[Test]
+	public void InlineColorAdjustmentInsideLoopRemovesInvokeFromEntryPoint()
+	{
+		var binary = CreateColorAdjustmentInliningBinary();
+		new AllInstructionOptimizers().Optimize(binary);
+		Assert.That(binary.EntryPoint.instructions.OfType<Invoke>().Any(), Is.False);
+	}
+
 	internal BinaryExecutable CreateLoopInliningBinary() =>
 		GenerateBinary("LoopInlining",
 		// @formatter:off
@@ -165,4 +175,40 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 		"AddToNumber(temp Number, increase Number) Number",
 		"\ttemp + increase");
 	// @formatter: on
+
+	internal BinaryExecutable CreateColorAdjustmentInliningBinary()
+	{
+		var parser = new MethodExpressionParser();
+		var package = new Package(TestPackage.Instance, "ColorAdjustmentInliningTests");
+		var size = new Type(package, new TypeLines("Size",
+			"has Width Number",
+			"has Height Number",
+			"Length Number",
+			"Width * Height")).ParseMembersAndMethods(parser);
+		_ = size;
+		var color = new Type(package, new TypeLines("Color",
+			"has Red Number",
+			"has Green Number",
+			"has Blue Number")).ParseMembersAndMethods(parser);
+		_ = color;
+		var colors = new Type(package, new TypeLines("Colors",
+			"has elements Color",
+			"Length Number",
+			"1")).ParseMembersAndMethods(parser);
+		_ = colors;
+		var colorImage = new Type(package, new TypeLines("ColorImage",
+			"has Size",
+			"mutable Colors Colors with Length is Size.Length")).ParseMembersAndMethods(parser);
+		_ = colorImage;
+		var adjustBrightness = new Type(package, new TypeLines("ColorAdjustmentInlining",
+			"has brightness Number",
+			"Process(mutable image ColorImage) ColorImage",
+			"\tfor colorIndex in Range(0, image.Colors.Length)",
+			"\t\timage.Colors(colorIndex) = GetBrightnessAdjustedColor(image.Colors(colorIndex))",
+			"\timage",
+			"GetBrightnessAdjustedColor(current Color) Color",
+			"\tColor(current.Red + brightness, current.Green + brightness, current.Blue + brightness)")).ParseMembersAndMethods(parser);
+		var processMethod = adjustBrightness.Methods.Single(method => method.Name == "Process");
+		return BinaryGenerator.GenerateFromRunMethods(processMethod, [processMethod]);
+	}
 }
