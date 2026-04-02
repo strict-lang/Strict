@@ -302,6 +302,7 @@ public sealed class Runner
 	private void OptimizeBytecode(BinaryExecutable executable) =>
 		Log(LogTiming(nameof(OptimizeBytecode), () =>
 		{
+			/*TODO: this duplicates what AllOptimizers does
 			var optimizers = new InstructionOptimizer[]
 			{
 				new TestCodeRemover(), new ConstantFoldingOptimizer(), new DeadStoreEliminator(),
@@ -318,9 +319,15 @@ public sealed class Runner
 			}
 			var afterInstructionsCount = executable.TotalInstructionsCount;
 			var removedInstructions = beforeInstructionsCount - afterInstructionsCount;
+			//:\n\t" + string.Join("\n\t", optimizersResults
+			*/
+			var beforeInstructionsCount = executable.TotalInstructionsCount;
+			var allOptimizers = new AllInstructionOptimizers();
+			allOptimizers.Optimize(executable);
+			var removedInstructions = beforeInstructionsCount - executable.TotalInstructionsCount;
 			return "Removed instruction: " + removedInstructions + " (" +
 				removedInstructions * 100 / beforeInstructionsCount + "%)" +
-				" with " + optimizers.Length + " optimizers:\n\t" + string.Join("\n\t", optimizersResults);
+				" with " + allOptimizers.NumberOfOptimizers + " optimizers.";
 		}));
 
 	private BinaryExecutable CacheStrictExecutable(BinaryExecutable binary)
@@ -506,6 +513,7 @@ public sealed class Runner
 			LogTiming(nameof(Run), () => new VirtualMachine(binary).Execute());
 		Console.WriteLine("Executed " + strictFilePath + " via " + nameof(VirtualMachine) + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
+		stepTimes.Clear();
 	}
 }
-//TODO: whole class is too long and complicated, this should all be doable in 300-400 lines max!
+//TODO: whole class is too long and complicated, this should all be doable in 300-400 lines max! we can probably remove some unused methods and simplify some calls above and get it to 400 already ..

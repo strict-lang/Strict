@@ -1,4 +1,7 @@
 using Strict.Bytecode;
+using Strict.Expressions;
+using Strict.Language;
+using System.Text;
 
 namespace Strict.Tests;
 
@@ -7,8 +10,14 @@ internal class Program
 {
 	public static async Task Main()
 	{
+		await RunSimpleCalculator();
+		await RunAdjustBrightness();
+	}
+
+	private static async Task RunSimpleCalculator()
+	{
 		var binaryFilePath = Path.ChangeExtension(
-			Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict"),
+			Path.Combine(GetExamplesFolder(), "SimpleCalculator.strict"),
 			BinaryExecutable.Extension);
 		// First, ensure the .strictbinary file exists by compiling from source
 		if (!File.Exists(binaryFilePath))
@@ -44,6 +53,14 @@ internal class Program
 			(hotAllocatedAfter - hotAllocatedBefore) / Runs);
 	}
 
+	private static string GetExamplesFolder()
+	{
+		var path = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Examples"));
+		return Directory.Exists(path)
+			? path
+			: @"c:\code\GitHub\strict-lang\Strict\Examples";
+	}
+
 	private static async Task RunBinaryOnce(string binaryFilePath)
 	{
 		var saved = Console.Out;
@@ -56,5 +73,24 @@ internal class Program
 		{
 			Console.SetOut(saved);
 		}
+	}
+
+	private static async Task RunAdjustBrightness()
+	{
+		Console.WriteLine("Running RunAdjustBrightness");
+		var strictBasePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var runner = new Runner(Path.Combine(GetExamplesFolder(), "..", "ImageProcessing",
+			"AdjustBrightness.strict"), strictBasePackage);
+		var runAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		var runStartTicks = DateTime.UtcNow.Ticks;
+		const int Runs = 10;
+		for (var run = 0; run < Runs; run++)
+			await runner.Run();
+		var runEndTicks = DateTime.UtcNow.Ticks;
+		var runAllocatedAfter = GC.GetAllocatedBytesForCurrentThread();
+		Console.WriteLine("RunAdjustBrightness execution time: " +
+			TimeSpan.FromTicks(runEndTicks - runStartTicks) / Runs);
+		Console.WriteLine("RunAdjustBrightness allocated bytes: " +
+			(runAllocatedAfter - runAllocatedBefore) / Runs);
 	}
 }

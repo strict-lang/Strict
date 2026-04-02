@@ -19,6 +19,7 @@ public class AllInstructionOptimizers : InstructionOptimizer
 		new JumpThreadingOptimizer(),
 		new UnreachableCodeEliminator()
 	];
+	public int NumberOfOptimizers => optimizers.Length;
 
 	public override void Optimize(BinaryExecutable binary)
 	{

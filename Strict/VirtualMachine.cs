@@ -182,7 +182,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private void ExecuteRemove(RemoveInstruction removeInstruction)
 	{
 		var item = Memory.Registers[removeInstruction.Register];
-		Memory.Frame.Get(removeInstruction.Identifier).List.Items.RemoveAll(existingItem => existingItem.Equals(item));
+		var items = Memory.Frame.Get(removeInstruction.Identifier).List.Items;
+		//TODO: is there actually a need for this loop? or is there always 1 entry anyway?
+		for (var itemIndex = items.Count - 1; itemIndex >= 0; itemIndex--)
+			if (items[itemIndex].Equals(item))
+				items.RemoveAt(itemIndex);
 	}
 
 	private void ExecuteListCall(ListCallInstruction listCallInstruction)
@@ -733,18 +737,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			if (methodInstructions != null)
 			{
         var childScope = InitializeChildScope();
-				ValueInstance? result = null;
-				try
-				{
-					Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
+				Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
 					TrySetScopeMembersFromTypeMembers(typeInstance!);
-         RunInstructions(methodInstructions);
-					result = Returns;
-				}
-				finally
-				{
-					CleanupChildScope(childScope);
-				}
+        RunInstructions(methodInstructions);
+				var result = Returns;
+				CleanupChildScope(childScope);
 				if (result.HasValue)
 					return (int)result.Value.Number;
 			}
@@ -982,17 +979,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				? EvaluateExpression(call.Instance)
 				: (ValueInstance?)null;
       var childScope = InitializeChildScope();
-			ValueInstance? precompiledResult = null;
-			try
-			{
-				InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance);
-				RunInstructions(precompiledInstructions);
-				precompiledResult = Returns;
-			}
-			finally
-			{
-				CleanupChildScope(childScope);
-			}
+			InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance);
+			RunInstructions(precompiledInstructions);
+			var precompiledResult = Returns;
+			CleanupChildScope(childScope);
 			return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
 		}
 		return TryEvaluateMethodCallFromBody(call) ??
