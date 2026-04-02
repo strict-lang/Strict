@@ -527,8 +527,11 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		var strings = new List<(string, string)>();
 		var seen = new HashSet<string>(StringComparer.Ordinal);
 		var labelIndex = 0;
-		foreach (var instruction in instructions.OfType<PrintInstruction>())
+    for (var instructionIndex = 0; instructionIndex < instructions.Count; instructionIndex++)
 		{
+     if (instructions[instructionIndex].InstructionType != InstructionType.Print)
+				continue;
+			var instruction = (PrintInstruction)instructions[instructionIndex];
 			var key = BuildPrintKey(instruction);
 			if (seen.Add(key))
 				strings.Add(($"str_{labelIndex++}", key));

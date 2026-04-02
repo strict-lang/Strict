@@ -100,42 +100,65 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		var instruction = instructions[index];
 		if (context.JumpTargets.Contains(index))
 			lines.Add($"  ^bb{index}:");
-		switch (instruction)
+    switch (instruction.InstructionType)
 		{
-		case LoadConstantInstruction loadConst:
+   case InstructionType.LoadConstantToRegister:
+			var loadConst = (LoadConstantInstruction)instruction;
 			EmitLoadConstant(loadConst, lines, context);
 			break;
-		case BinaryInstruction binary:
+    case InstructionType.Add:
+		case InstructionType.Subtract:
+		case InstructionType.Multiply:
+		case InstructionType.Divide:
+		case InstructionType.Modulo:
+		case InstructionType.Equal:
+		case InstructionType.NotEqual:
+		case InstructionType.LessThan:
+		case InstructionType.GreaterThan:
+			var binary = (BinaryInstruction)instruction;
 			EmitBinary(binary, lines, context);
 			break;
-		case ReturnInstruction ret:
+   case InstructionType.Return:
+			var ret = (ReturnInstruction)instruction;
 			EmitReturn(ret, lines, context);
 			break;
-		case StoreFromRegisterInstruction storeReg:
+   case InstructionType.StoreRegisterToVariable:
+			var storeReg = (StoreFromRegisterInstruction)instruction;
 			EmitStoreFromRegister(storeReg, context);
 			break;
-		case LoadVariableToRegister loadVar:
+    case InstructionType.LoadVariableToRegister:
+			var loadVar = (LoadVariableToRegister)instruction;
 			EmitLoadVariable(loadVar, context);
 			break;
-		case StoreVariableInstruction storeVar:
+   case InstructionType.StoreConstantToVariable:
+			var storeVar = (StoreVariableInstruction)instruction;
 			EmitStoreVariable(storeVar, context);
 			break;
-		case Jump jump:
+   case InstructionType.Jump:
+		case InstructionType.JumpIfTrue:
+		case InstructionType.JumpIfFalse:
+			var jump = (Jump)instruction;
 			EmitJump(jump, lines, context, index);
 			break;
-		case PrintInstruction print:
+    case InstructionType.Print:
+			var print = (PrintInstruction)instruction;
 			EmitPrint(print, lines, context); //ncrunch: no coverage
 			break; //ncrunch: no coverage
-		case Invoke invoke:
+   case InstructionType.Invoke:
+			var invoke = (Invoke)instruction;
 			EmitInvoke(invoke, lines, context, compiledMethods);
 			break;
-		case JumpToId jumpToId:
+   case InstructionType.JumpEnd:
+		case InstructionType.JumpToIdIfFalse:
+		case InstructionType.JumpToIdIfTrue:
+			var jumpToId = (JumpToId)instruction;
 			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
 			break; //ncrunch: no coverage
-		case LoopBeginInstruction loopBegin:
+    case InstructionType.LoopBegin:
+			var loopBegin = (LoopBeginInstruction)instruction;
 			EmitLoopBegin(loopBegin, lines, context, instructions, index);
 			break;
-		case LoopEndInstruction:
+    case InstructionType.LoopEnd:
 			EmitLoopEnd(lines, context);
 			break;
 		default:

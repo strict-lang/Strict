@@ -167,52 +167,69 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	{
 		var positions = new Dictionary<int, int>();
 		for (var index = 0; index < instructions.Count; index++)
-			if (instructions[index] is JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd)
-				positions[jumpEnd.Id] = index; //ncrunch: no coverage
+     if (instructions[index].InstructionType == InstructionType.JumpEnd)
+				positions[((JumpToId)instructions[index]).Id] = index; //ncrunch: no coverage
 		return positions;
 	}
 
 	private static void EmitInstruction(Instruction instruction, List<string> lines,
 		EmitContext context, int index)
 	{
-		switch (instruction)
+    switch (instruction.InstructionType)
 		{
-		case StoreVariableInstruction storeConst
-			when !context.ParamIndexByName.ContainsKey(storeConst.Identifier):
-			EmitStoreVariable(storeConst, lines, context);
-			break;
-		case StoreVariableInstruction:
+    case InstructionType.StoreConstantToVariable:
+			var storeConst = (StoreVariableInstruction)instruction;
+			if (!context.ParamIndexByName.ContainsKey(storeConst.Identifier))
+				EmitStoreVariable(storeConst, lines, context);
 			break; //ncrunch: no coverage
-		case LoadVariableToRegister loadVar:
+    case InstructionType.LoadVariableToRegister:
+			var loadVar = (LoadVariableToRegister)instruction;
 			EmitLoadVariable(loadVar, lines, context);
 			break;
-		case LoadConstantInstruction loadConst:
+   case InstructionType.LoadConstantToRegister:
+			var loadConst = (LoadConstantInstruction)instruction;
 			EmitLoadConstant(loadConst, context);
 			break;
-		case BinaryInstruction binary when !binary.IsConditional():
-			EmitArithmetic(binary, lines, context);
+   case InstructionType.Add:
+		case InstructionType.Subtract:
+		case InstructionType.Multiply:
+		case InstructionType.Divide:
+		case InstructionType.Modulo:
+			EmitArithmetic((BinaryInstruction)instruction, lines, context);
 			break;
-		case BinaryInstruction binary:
-			EmitComparison(binary, lines, context);
+		case InstructionType.Equal:
+		case InstructionType.NotEqual:
+		case InstructionType.LessThan:
+		case InstructionType.GreaterThan:
+			EmitComparison((BinaryInstruction)instruction, lines, context);
 			break;
-		case StoreFromRegisterInstruction storeReg:
+   case InstructionType.StoreRegisterToVariable:
+			var storeReg = (StoreFromRegisterInstruction)instruction;
 			EmitStoreFromRegister(storeReg, lines, context);
 			break;
-		case ReturnInstruction ret:
+   case InstructionType.Return:
+			var ret = (ReturnInstruction)instruction;
 			EmitReturn(ret, lines, context);
 			break;
-		case PrintInstruction print:
+    case InstructionType.Print:
+			var print = (PrintInstruction)instruction;
 			EmitPrint(print, lines, context);
 			break;
-		case Jump jump:
+   case InstructionType.Jump:
+		case InstructionType.JumpIfTrue:
+		case InstructionType.JumpIfFalse:
+			var jump = (Jump)instruction;
 			EmitJump(jump, lines, context, index);
 			break;
-		case Invoke invoke:
+   case InstructionType.Invoke:
+			var invoke = (Invoke)instruction;
 			EmitInvoke(invoke, lines, context);
 			break;
-		case JumpToId { InstructionType: InstructionType.JumpEnd }:
+   case InstructionType.JumpEnd:
 			break; //ncrunch: no coverage
-		case JumpToId jumpToId:
+   case InstructionType.JumpToIdIfFalse:
+		case InstructionType.JumpToIdIfTrue:
+			var jumpToId = (JumpToId)instruction;
 			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
 			break; //ncrunch: no coverage
 		default:

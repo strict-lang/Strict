@@ -160,8 +160,13 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		case InstructionType.GreaterThan:
 			ExecuteBinaryInstruction((BinaryInstruction)instruction);
 			return;
+		default:
+			throw new InvalidInstruction(instruction);
 		}
 	}
+
+	private sealed class InvalidInstruction(Instruction instruction)
+		: Exception(instruction.ToString());
 
 	private void ExecutePrint(PrintInstruction print)
 	{
