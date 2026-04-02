@@ -1,3 +1,4 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
@@ -25,12 +26,18 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 	{
 		var used = new HashSet<string>();
 		foreach (var instruction in instructions)
-			if (instruction is LoadVariableToRegister load)
-				used.Add(load.Identifier);
-			else if (instruction is StoreFromRegisterInstruction store)
-				used.Add(store.Identifier);
-			else if (instruction is Invoke invoke)
-				CollectVariableCallsFromInvoke(invoke, used);
+			switch (instruction.InstructionType)
+			{
+			case InstructionType.LoadVariableToRegister:
+				used.Add(((LoadVariableToRegister)instruction).Identifier);
+				break;
+			case InstructionType.StoreRegisterToVariable:
+				used.Add(((StoreFromRegisterInstruction)instruction).Identifier);
+				break;
+			case InstructionType.Invoke:
+				CollectVariableCallsFromInvoke((Invoke)instruction, used);
+				break;
+			}
 		return used;
 	}
 

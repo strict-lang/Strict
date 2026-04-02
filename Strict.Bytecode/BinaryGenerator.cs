@@ -68,6 +68,7 @@ public sealed class BinaryGenerator
 		Expression expression) =>
 		new BinaryGenerator(basePackage, [expression], expression.ReturnType).GenerateInstructionList();
 
+	//TODO: unused again?
 	public BinaryExecutable Generate(string typeFullName, Expression entryPointExpression) =>
 		Generate(typeFullName, [entryPointExpression], entryPointExpression.ReturnType);
 
@@ -121,11 +122,13 @@ public sealed class BinaryGenerator
 		return (Package)context;
 	}
 
+	//TODO: unused again?
 	private static string GetEntryTypeFullName(Expression expression) =>
 		expression is MethodCall methodCall
 			? methodCall.Method.Type.FullName
 			: expression.ReturnType.FullName;
 
+	//TODO: unused again?
 	private void AddMembersFromCaller(ValueInstance instance)
 	{
 		instructions.Add(new StoreVariableInstruction(instance, Type.ValueLowercase, isMember: true));

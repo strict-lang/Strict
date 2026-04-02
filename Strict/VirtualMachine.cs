@@ -38,8 +38,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private VirtualMachine RunInstructions(IReadOnlyList<Instruction> blockInstructions)
 	{
-		foreach (var loopBegin in blockInstructions.OfType<LoopBeginInstruction>())
-			loopBegin.Reset();
+		for (var index = 0; index < blockInstructions.Count; index++)
+			if (blockInstructions[index].InstructionType == InstructionType.LoopBegin)
+				((LoopBeginInstruction)blockInstructions[index]).Reset();
 		instructions = blockInstructions;
 		var instructionsLength = instructions.Count;
 		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
@@ -97,68 +98,102 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	// Now it should be 0.23m*(3-4) instructions, less than 1m, also no lookups, we can keep value and brightness directly in memory and reuse, index increases were we are in our big Colors array ..
 	private void ExecuteInstruction(Instruction instruction)
 	{
-		if (TryExecuteReturn(instruction))
+		switch (instruction.InstructionType)
+		{
+		case InstructionType.Return:
+			ExecuteReturn((ReturnInstruction)instruction);
 			return;
-		TryStoreInstructions(instruction);
-		TryLoadInstructions(instruction);
-		TryLoopInitInstruction(instruction);
-		TryLoopEndInstruction(instruction);
-		TryPrintInstruction(instruction);
-		TryInvokeInstruction(instruction);
-		TryWriteToListInstruction(instruction);
-		TryWriteToTableInstruction(instruction);
-		TryRemoveInstruction(instruction);
-		TryExecuteListCall(instruction);
-		TryExecuteRest(instruction);
+		case InstructionType.Set:
+		case InstructionType.StoreConstantToVariable:
+		case InstructionType.StoreRegisterToVariable:
+			TryStoreInstructions(instruction);
+			return;
+		case InstructionType.LoadVariableToRegister:
+		case InstructionType.LoadConstantToRegister:
+			TryLoadInstructions(instruction);
+			return;
+		case InstructionType.LoopBegin:
+			ExecuteLoopBegin((LoopBeginInstruction)instruction);
+			return;
+		case InstructionType.LoopEnd:
+			ExecuteLoopEnd((LoopEndInstruction)instruction);
+			return;
+		case InstructionType.Print:
+			ExecutePrint((PrintInstruction)instruction);
+			return;
+		case InstructionType.Invoke:
+			ExecuteInvoke((Invoke)instruction);
+			return;
+		case InstructionType.InvokeWriteToList:
+			ExecuteWriteToList((WriteToListInstruction)instruction);
+			return;
+		case InstructionType.InvokeWriteToTable:
+			ExecuteWriteToTable((WriteToTableInstruction)instruction);
+			return;
+		case InstructionType.InvokeRemove:
+			ExecuteRemove((RemoveInstruction)instruction);
+			return;
+		case InstructionType.ListCall:
+			ExecuteListCall((ListCallInstruction)instruction);
+			return;
+		case InstructionType.Jump:
+		case InstructionType.JumpIfTrue:
+		case InstructionType.JumpIfFalse:
+			TryJumpOperation((Jump)instruction);
+			return;
+		case InstructionType.JumpIfNotZero:
+			TryJumpIfOperation((JumpIfNotZero)instruction);
+			return;
+		case InstructionType.JumpEnd:
+		case InstructionType.JumpToIdIfFalse:
+		case InstructionType.JumpToIdIfTrue:
+			TryJumpToIdOperation((JumpToId)instruction);
+			return;
+		case InstructionType.Add:
+		case InstructionType.Subtract:
+		case InstructionType.Multiply:
+		case InstructionType.Divide:
+		case InstructionType.Modulo:
+		case InstructionType.Equal:
+		case InstructionType.NotEqual:
+		case InstructionType.LessThan:
+		case InstructionType.GreaterThan:
+			ExecuteBinaryInstruction((BinaryInstruction)instruction);
+			return;
+		}
 	}
 
-	private void TryPrintInstruction(Instruction instruction)
+	private void ExecutePrint(PrintInstruction print)
 	{
-		if (instruction is not PrintInstruction print)
-			return;
 		if (print.ValueRegister.HasValue)
 			Console.WriteLine(print.TextPrefix + Memory.Registers[print.ValueRegister.Value].ToExpressionCodeString());
 		else
 			Console.WriteLine(print.TextPrefix);
 	}
 
-	private void TryRemoveInstruction(Instruction instruction)
+	private void ExecuteRemove(RemoveInstruction removeInstruction)
 	{
-		if (instruction is not RemoveInstruction removeInstruction)
-			return;
 		var item = Memory.Registers[removeInstruction.Register];
 		Memory.Frame.Get(removeInstruction.Identifier).List.Items.RemoveAll(existingItem => existingItem.Equals(item));
 	}
 
-	private void TryExecuteListCall(Instruction instruction)
+	private void ExecuteListCall(ListCallInstruction listCallInstruction)
 	{
-		if (instruction is not ListCallInstruction listCallInstruction)
-			return;
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
 		var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List.Items[indexValue];
 		Memory.Registers[listCallInstruction.Register] = variableListElement;
 	}
 
-	private void TryWriteToListInstruction(Instruction instruction)
-	{
-		if (instruction is not WriteToListInstruction writeToListInstruction)
-			return;
+	private void ExecuteWriteToList(WriteToListInstruction writeToListInstruction) =>
 		Memory.AddToCollectionVariable(writeToListInstruction.Identifier,
 			Memory.Registers[writeToListInstruction.Register]);
-	}
 
-	private void TryWriteToTableInstruction(Instruction instruction)
-	{
-		if (instruction is not WriteToTableInstruction writeToTableInstruction)
-			return;
+	private void ExecuteWriteToTable(WriteToTableInstruction writeToTableInstruction) =>
 		Memory.AddToDictionary(writeToTableInstruction.Identifier,
 			Memory.Registers[writeToTableInstruction.Register], Memory.Registers[writeToTableInstruction.Value]);
-	}
 
-	private void TryLoopEndInstruction(Instruction instruction)
+	private void ExecuteLoopEnd(LoopEndInstruction loopEnd)
 	{
-		if (instruction is not LoopEndInstruction loopEnd)
-			return;
 		var loopBegin = loopEnd.Begin ?? FindLoopBeginByScanning(loopEnd.Steps);
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
@@ -181,22 +216,20 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private LoopBeginInstruction FindLoopBeginByScanning(int steps)
 	{
 		var idx = Math.Max(0, instructionIndex - steps);
-		while (idx < instructions.Count && instructions[idx] is not LoopBeginInstruction)
+		while (idx < instructions.Count && instructions[idx].InstructionType != InstructionType.LoopBegin)
 			idx++;
 		return idx < instructions.Count
 			? (LoopBeginInstruction)instructions[idx]
 			: throw new InvalidOperationException("No matching LoopBeginInstruction found for LoopEnd");
 	}
 
-	private void TryInvokeInstruction(Instruction instruction)
+	private void ExecuteInvoke(Invoke invoke)
 	{
-		if (instruction is not Invoke invoke ||
-			TryCreateEmptyDictionaryInstance(invoke) || TryHandleFromConstructor(invoke) ||
+		if (TryCreateEmptyDictionaryInstance(invoke) || TryHandleFromConstructor(invoke) ||
 			TryHandleNativeTraitMethod(invoke) || TryHandleToConversion(invoke) ||
 			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke) ||
 			TryHandleNativeTextMethod(invoke))
 			return;
-		//TODO: this is crazy amount of work and a bit crazy for GetBrightnessAdjustedColor
 		var argCount = invoke.Method.Arguments.Count;
 		var evaluatedArgs = argCount == 0
 			? Array.Empty<ValueInstance>()
@@ -974,21 +1007,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return true;
 	}
 
-	private bool TryExecuteReturn(Instruction instruction)
+	private void ExecuteReturn(ReturnInstruction returnInstruction)
 	{
-		if (instruction is not ReturnInstruction returnInstruction)
-			return false;
 		Returns = Memory.Registers[returnInstruction.Register];
 		instructionIndex = ExitExecutionLoopIndex;
-		return true;
 	}
 
 	private const int ExitExecutionLoopIndex = 100_000;
 
-	private void TryLoopInitInstruction(Instruction instruction)
+	private void ExecuteLoopBegin(LoopBeginInstruction loopBegin)
 	{
-		if (instruction is not LoopBeginInstruction loopBegin)
-			return;
 		if (loopBegin.IsRange)
 			ProcessRangeLoopIteration(loopBegin);
 		else
@@ -1013,7 +1041,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (loopBegin.LoopCount <= 0)
 		{
 			var skipTo = instructionIndex + 1;
-			while (skipTo < instructions.Count && instructions[skipTo] is not LoopEndInstruction)
+			while (skipTo < instructions.Count &&
+				instructions[skipTo].InstructionType != InstructionType.LoopEnd)
 				skipTo++;
 			instructionIndex = skipTo;
 		}
@@ -1075,77 +1104,56 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private void TryStoreInstructions(Instruction instruction)
 	{
-		if (instruction.InstructionType > InstructionType.StoreSeparator)
-			return;
-		if (instruction is SetInstruction set)
-			Memory.Registers[set.Register] = set.ValueInstance;
-		else if (instruction is StoreVariableInstruction storeVariable)
+		switch (instruction.InstructionType)
 		{
+		case InstructionType.Set:
+			var set = (SetInstruction)instruction;
+			Memory.Registers[set.Register] = set.ValueInstance;
+			break;
+		case InstructionType.StoreConstantToVariable:
+			var storeVariable = (StoreVariableInstruction)instruction;
 			var value = storeVariable.ValueInstance;
-			// Create a defensive copy to isolate the list state between separate Execute() calls
-			// when lists are mutated in-place
 			if (value.IsList)
 				value = new ValueInstance(value.List.ReturnType, value.List.Items.ToArray());
 			Memory.Frame.Set(storeVariable.Identifier, value, storeVariable.IsMember);
-		}
-		else if (instruction is StoreFromRegisterInstruction storeFromRegister)
-		{
+			break;
+		case InstructionType.StoreRegisterToVariable:
+			var storeFromRegister = (StoreFromRegisterInstruction)instruction;
 			if (!TryStoreToListElement(storeFromRegister))
 				Memory.Frame.Set(storeFromRegister.Identifier,
 					Memory.Registers[storeFromRegister.Register]);
+			break;
 		}
-	}
-
-	private bool TryStoreToListElement(StoreFromRegisterInstruction store)
-	{
-		var identifier = store.Identifier;
-		var openParen = identifier.LastIndexOf('(');
-		if (openParen <= 0 || !identifier.EndsWith(')'))
-			return false;
-		var listPath = identifier[..openParen];
-		var indexExprName = identifier[(openParen + 1)..^1];
-		if (!Memory.Frame.TryGet(listPath, out var listValue))
-		{
-			var lastDot = listPath.LastIndexOf('.');
-			if (lastDot > 0)
-				Memory.Frame.TryGet(listPath[(lastDot + 1)..], out listValue);
-		}
-		if (!listValue.IsList)
-			return false;
-		if (!Memory.Frame.TryGet(indexExprName, out var indexInstance))
-			Memory.Frame.TryGet(Type.IndexLowercase, out indexInstance);
-		if (!indexInstance.HasValue)
-			return false;
-		var index = (int)indexInstance.Number;
-		if (index >= 0 && index < listValue.List.Items.Count)
-		{
-			listValue.List.Items[index] = Memory.Registers[store.Register];
-			return true;
-		}
-		return false;
 	}
 
 	private void TryLoadInstructions(Instruction instruction)
 	{
-		if (instruction is LoadVariableToRegister loadVariable)
-      Memory.Registers[loadVariable.Register] = TryGetFrameValue(loadVariable.Identifier,
+		switch (instruction.InstructionType)
+		{
+		case InstructionType.LoadVariableToRegister:
+			var loadVariable = (LoadVariableToRegister)instruction;
+			Memory.Registers[loadVariable.Register] = TryGetFrameValue(loadVariable.Identifier,
 				out var value)
 				? value
 				: Memory.Frame.Get(loadVariable.Identifier);
-		else if (instruction is LoadConstantInstruction loadConstant)
+			break;
+		case InstructionType.LoadConstantToRegister:
+			var loadConstant = (LoadConstantInstruction)instruction;
 			Memory.Registers[loadConstant.Register] = loadConstant.Constant;
+			break;
+		}
 	}
 
 	private bool TryGetFrameValue(string identifier, out ValueInstance value)
 	{
-   if (identifier == Type.None)
+		if (identifier == Type.None)
 		{
 			value = new ValueInstance(executable.noneType);
 			return true;
 		}
 		if (Memory.Frame.TryGet(identifier, out value))
 			return true;
-   var parts = identifier.Split('.');
+		var parts = identifier.Split('.');
 		if (parts.Length < 2 || !Memory.Frame.TryGet(parts[0], out var current))
 			return false;
 		for (var index = 1; index < parts.Length; index++)
@@ -1163,7 +1171,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private bool TryGetNativeMemberValue(ValueInstance current, string memberName,
 		out ValueInstance value)
 	{
-    if (current.IsText && (memberName == "characters" || memberName == Type.ElementsLowercase))
+		if (current.IsText && (memberName == "characters" || memberName == Type.ElementsLowercase))
 		{
 			value = current;
 			return true;
@@ -1185,29 +1193,15 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return false;
 	}
 
-	private void TryExecuteRest(Instruction instruction)
+	private void ExecuteBinaryInstruction(BinaryInstruction instruction)
 	{
-		switch (instruction)
-		{
-		case BinaryInstruction binary:
-			if (binary.IsConditional())
-				TryConditionalOperationExecution(binary);
-			else
-				TryBinaryOperationExecution(binary);
-			break;
-		case JumpIfNotZero jumpIfNotZero:
-			TryJumpIfOperation(jumpIfNotZero);
-			break;
-		case Jump jump:
-			TryJumpOperation(jump);
-			break;
-		case JumpToId jumpToId:
-			TryJumpToIdOperation(jumpToId);
-			break;
-		}
+		if (instruction.IsConditional())
+			ExecuteConditionalOperation(instruction);
+		else
+			ExecuteBinaryOperation(instruction);
 	}
 
-	private void TryBinaryOperationExecution(BinaryInstruction instruction)
+	private void ExecuteBinaryOperation(BinaryInstruction instruction)
 	{
 		var (right, left) = GetOperands(instruction);
 		Memory.Registers[instruction.Registers[^1]] = instruction.InstructionType switch
@@ -1228,7 +1222,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		if (left.IsList)
 		{
-			// Mutates left's list in-place; caller's defensive copy in TryStoreInstructions ensures isolation
 			left.List.Items.Add(right);
 			return left;
 		}
@@ -1253,7 +1246,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			? throw new OperandsRequired()
 			: (Memory.Registers[instruction.Registers[1]], Memory.Registers[instruction.Registers[0]]);
 
-	private void TryConditionalOperationExecution(BinaryInstruction instruction)
+	private void ExecuteConditionalOperation(BinaryInstruction instruction)
 	{
 		var (right, left) = GetOperands(instruction);
 		conditionFlag = instruction.InstructionType switch
@@ -1293,11 +1286,40 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private int FindJumpEndInstructionIndex(int id)
 	{
 		for (var index = 0; index < instructions.Count; index++)
-			if (instructions[index] is JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd &&
-				jumpEnd.Id == id)
+			if (instructions[index].InstructionType == InstructionType.JumpEnd &&
+				((JumpToId)instructions[index]).Id == id)
 				return index;
 		return -1;
 	}
 
 	public sealed class OperandsRequired : Exception;
+
+	private bool TryStoreToListElement(StoreFromRegisterInstruction store)
+	{
+		var identifier = store.Identifier;
+		var openParen = identifier.LastIndexOf('(');
+		if (openParen <= 0 || !identifier.EndsWith(')'))
+			return false;
+		var listPath = identifier[..openParen];
+		var indexExprName = identifier[(openParen + 1)..^1];
+		if (!Memory.Frame.TryGet(listPath, out var listValue))
+		{
+			var lastDot = listPath.LastIndexOf('.');
+			if (lastDot > 0)
+				Memory.Frame.TryGet(listPath[(lastDot + 1)..], out listValue);
+		}
+		if (!listValue.IsList)
+			return false;
+		if (!Memory.Frame.TryGet(indexExprName, out var indexInstance))
+			Memory.Frame.TryGet(Type.IndexLowercase, out indexInstance);
+		if (!indexInstance.HasValue)
+			return false;
+		var index = (int)indexInstance.Number;
+		if (index >= 0 && index < listValue.List.Items.Count)
+		{
+			listValue.List.Items[index] = Memory.Registers[store.Register];
+			return true;
+		}
+		return false;
+	}
 }
