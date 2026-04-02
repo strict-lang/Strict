@@ -273,6 +273,7 @@ public sealed class RunnerTests
 	[Category("Slow")]
 	public async Task RunAdjustBrightness()
 	{
+		//TODO: the for loop is wrong in AdjustBrightness.strict, it should be just: for image.Size
 		await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage()).Run();
 		var output = consoleWriter.ToString();

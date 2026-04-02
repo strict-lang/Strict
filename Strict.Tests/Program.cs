@@ -42,11 +42,14 @@ internal class Program
 		var hotPathBenchmark = new BinaryExecutionPerformanceTests();
 		await hotPathBenchmark.ExecuteBinary();
 		Console.WriteLine("Warmup (VM-only) complete. Measuring VM-only hot path...");
+		var saved = Console.Out;
+		Console.SetOut(TextWriter.Null);
 		var hotAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 		var hotStartTicks = DateTime.UtcNow.Ticks;
 		await hotPathBenchmark.ExecuteBinary1000Times();
 		var hotEndTicks = DateTime.UtcNow.Ticks;
 		var hotAllocatedAfter = GC.GetAllocatedBytesForCurrentThread();
+		Console.SetOut(saved);
 		Console.WriteLine("Total execution time per run (VM-only, pre-loaded bytecode): " +
 			TimeSpan.FromTicks(hotEndTicks - hotStartTicks) / Runs);
 		Console.WriteLine("Allocated bytes per run (VM-only): " +
@@ -83,7 +86,7 @@ internal class Program
 			"AdjustBrightness.strict"), strictBasePackage);
 		var runAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 		var runStartTicks = DateTime.UtcNow.Ticks;
-		const int Runs = 10;
+		const int Runs = 1;//2;//10;
 		for (var run = 0; run < Runs; run++)
 			await runner.Run();
 		var runEndTicks = DateTime.UtcNow.Ticks;

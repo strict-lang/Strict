@@ -285,7 +285,9 @@ public sealed class BinaryExecutable(Package basePackage)
 			? ReadExpression(reader, table)
 			: null;
 		var argCount = reader.Read7BitEncodedInt();
-		var args = new Expression[argCount];
+		var args = argCount == 0
+			? Array.Empty<Expression>()
+			: new Expression[argCount];
 		for (var index = 0; index < argCount; index++)
 			args[index] = ReadExpression(reader, table);
 		var declaringType = EnsureResolvedType(package, declaringTypeName);
