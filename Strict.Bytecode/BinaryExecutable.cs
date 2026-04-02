@@ -65,7 +65,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	/// Each key is a type.FullName (e.g. Strict/Number, Strict/ImageProcessing/Color), the Value
 	/// contains all members of this type and all not stripped out methods that were actually used.
 	/// </summary>
-	public Dictionary<string, BinaryType> MethodsPerType = new();
+	public readonly Dictionary<string, BinaryType> MethodsPerType = new();
 	private BinaryMethod? entryPoint;
 	public BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
 	public sealed class InvalidFile(string message) : Exception(message);
@@ -88,10 +88,10 @@ public sealed class BinaryExecutable(Package basePackage)
 		throw new InvalidOperationException("No Run entry point found in binary executable");
 	}
 
-	public IReadOnlyList<Instruction>? FindInstructions(Type type, Method method) =>
+	public List<Instruction>? FindInstructions(Type type, Method method) =>
 		FindInstructions(type.FullName, method.Name, method.Parameters.Count, method.ReturnType.Name);
 
-	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
+	public List<Instruction>? FindInstructions(string fullTypeName, string methodName,
 		int parametersCount, string returnType = "") =>
 		MethodsPerType.TryGetValue(fullTypeName, out var methods)
 			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(method =>

@@ -36,7 +36,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private readonly CallFrame[] framePool = new CallFrame[MaxCallDepth];
 	private int framePoolDepth;
 
-	private VirtualMachine RunInstructions(IReadOnlyList<Instruction> blockInstructions)
+	private VirtualMachine RunInstructions(List<Instruction> blockInstructions)
 	{
 		for (var index = 0; index < blockInstructions.Count; index++)
 			if (blockInstructions[index].InstructionType == InstructionType.LoopBegin)
@@ -50,10 +50,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private void InitializeEntryPointMembers(BinaryMethod method)
 	{
+		//TODO: linq queries are forbidden in inner loops like this!
 		var entryType = executable.MethodsPerType.FirstOrDefault(type =>
 			type.Value.MethodGroups.Values.Any(overloads => overloads.Contains(method)));
 		if (entryType.Value == null)
 			return;
+		//TODO: too complex, needs to be simplified
 		foreach (var member in entryType.Value.Members)
 		{
 			var value = member.InitialValueExpression is SetInstruction setInstruction
@@ -230,30 +232,59 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private void ExecuteInvoke(Invoke invoke)
 	{
-		if (TryCreateEmptyDictionaryInstance(invoke) || TryHandleFromConstructor(invoke) ||
-			TryHandleNativeTraitMethod(invoke) || TryHandleToConversion(invoke) ||
-			TryHandleIncrementDecrement(invoke) || GetValueByKeyForDictionaryAndStoreInRegister(invoke) ||
-			TryHandleNativeTextMethod(invoke))
+		if (TryExecuteSpecialInvoke(invoke))
 			return;
-		var argCount = invoke.Method.Arguments.Count;
+		var methodCall = invoke.Method;
+		var argCount = methodCall.Arguments.Count;
 		var evaluatedArgs = argCount == 0
 			? Array.Empty<ValueInstance>()
 			: new ValueInstance[argCount];
 		for (var argIndex = 0; argIndex < argCount; argIndex++)
-			evaluatedArgs[argIndex] = EvaluateExpression(invoke.Method.Arguments[argIndex]);
-		var evaluatedInstance = invoke.Method.Instance != null
-			? EvaluateExpression(invoke.Method.Instance)
+			evaluatedArgs[argIndex] = EvaluateExpression(methodCall.Arguments[argIndex]);
+		var evaluatedInstance = methodCall.Instance != null
+			? EvaluateExpression(methodCall.Instance)
 			: (ValueInstance?)null;
-		var invokeInstructions = invoke.CachedInstructions ??= GetPrecompiledMethodInstructions(invoke) ??
+		var invokeInstructions = invoke.CachedInstructions ??=
+			GetPrecompiledMethodInstructions(invoke) ??
 			throw new InvalidOperationException("No precompiled method instructions found for invoke");
 		var result = RunChildScope(invokeInstructions,
-			() => InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance));
+			() => InitializeMethodCallScope(methodCall, evaluatedArgs, evaluatedInstance));
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
 	}
 
+	private bool TryExecuteSpecialInvoke(Invoke invoke)
+	{
+		var methodCall = invoke.Method;
+		var instanceExpression = methodCall.Instance;
+		return methodCall.Method.Name switch
+		{
+			Method.From => instanceExpression == null &&
+				ExecuteFromInvoke(invoke, methodCall.ReturnType),
+			BinaryOperator.To => instanceExpression != null && TryHandleToConversion(invoke),
+			"Increment" or "Decrement" => TryHandleIncrementDecrement(invoke),
+			"Get" => instanceExpression != null && instanceExpression.ReturnType.IsDictionary &&
+				GetValueByKeyForDictionaryAndStoreInRegister(invoke),
+			"StartsWith" or "IndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
+			_ => instanceExpression is MemberCall memberCall &&
+				memberCall.Member.Type.Name is Type.Logger or Type.TextWriter or Type.System &&
+				TryHandleNativeTraitMethod(invoke)
+		};
+	}
+
+	private bool ExecuteFromInvoke(Invoke invoke, Type returnType)
+	{
+		if (returnType.IsDictionary)
+		{
+			Memory.Registers[invoke.Register] = new ValueInstance(returnType,
+				new Dictionary<ValueInstance, ValueInstance>());
+			return true;
+		}
+		return TryHandleFromConstructor(invoke, returnType);
+	}
+
 	//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
-	private IReadOnlyList<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
+	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
 		executable.FindInstructions(method.Type, method) ??
 		executable.FindInstructions(method.Type.Name, method.Name,
 			method.Parameters.Count, method.ReturnType.Name) ??
@@ -262,7 +293,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			method.Parameters.Count, method.ReturnType.Name) ??
 		FindInstructionsWithStrippedPackagePrefix(method);
 
-	private IReadOnlyList<Instruction>? FindInstructionsWithStrippedPackagePrefix(Method method)
+	private List<Instruction>? FindInstructionsWithStrippedPackagePrefix(Method method)
 	{
 		var fullName = method.Type.FullName;
 		var strictPrefix = nameof(Strict) + Context.ParentSeparator;
@@ -272,7 +303,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: null;
 	}
 
-	private IReadOnlyList<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
+	private List<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
 		GetPrecompiledMethodInstructions(invoke.Method.Method);
 
 	private void InitializeMethodCallScope(MethodCall methodCall,
@@ -358,7 +389,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: fullTypeName;
 	}
 
-	private ValueInstance? RunChildScope(IReadOnlyList<Instruction> childInstructions,
+	private ValueInstance? RunChildScope(List<Instruction> childInstructions,
 		Action? initializeScope = null)
 	{
 		var savedInstructions = instructions;
@@ -476,27 +507,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return new ValueInstance(rawValue.ToExpressionCodeString());
 	}
 
-	private bool TryCreateEmptyDictionaryInstance(Invoke invoke)
-	{
-		if (invoke.Method.Instance != null || invoke.Method.Method.Name != Method.From ||
-			invoke.Method.ReturnType is not GenericTypeImplementation
-			{
-				Generic.Name: Type.Dictionary
-			} dictionaryType)
-			return false;
-		Memory.Registers[invoke.Register] = new ValueInstance(dictionaryType, new Dictionary<ValueInstance, ValueInstance>());
-		return true;
-	}
-
 	/// <summary>
 	/// Handles From constructor calls like SimpleCalculator(2, 3) by creating a ValueInstance
 	/// with evaluated argument values for each non-trait member.
 	/// </summary>
 	private bool TryHandleFromConstructor(Invoke invoke)
 	{
-		if (invoke.Method.Method.Name != Method.From || invoke.Method.Instance != null)
+   if (invoke.Method.Method.Name != Method.From || invoke.Method.Instance != null)
 			return false;
-		var targetType = invoke.Method.ReturnType;
+		return TryHandleFromConstructor(invoke, invoke.Method.ReturnType);
+	}
+
+	private bool TryHandleFromConstructor(Invoke invoke, Type targetType)
+	{
 		if (targetType is GenericTypeImplementation)
 			return false;
 		var members = targetType.Members;
@@ -994,11 +1017,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool GetValueByKeyForDictionaryAndStoreInRegister(Invoke invoke)
 	{
-		if (invoke.Method.Method.Name != "Get" ||
-			invoke.Method.Instance?.ReturnType is not GenericTypeImplementation
-			{
-				Generic.Name: Type.Dictionary
-			})
+   if (invoke.Method.Method.Name != "Get" || invoke.Method.Instance?.ReturnType.IsDictionary != true)
 			return false;
 		var keyArg = invoke.Method.Arguments[0];
 		var keyData = keyArg is Value argValue
@@ -1109,43 +1128,42 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private void TryStoreInstructions(Instruction instruction)
 	{
-		switch (instruction.InstructionType)
+		if (instruction.InstructionType == InstructionType.Set)
 		{
-		case InstructionType.Set:
 			var set = (SetInstruction)instruction;
 			Memory.Registers[set.Register] = set.ValueInstance;
-			break;
-		case InstructionType.StoreConstantToVariable:
+		}
+		else if (instruction.InstructionType == InstructionType.StoreConstantToVariable)
+		{
 			var storeVariable = (StoreVariableInstruction)instruction;
 			var value = storeVariable.ValueInstance;
 			if (value.IsList)
 				value = new ValueInstance(value.List.ReturnType, value.List.Items.ToArray());
 			Memory.Frame.Set(storeVariable.Identifier, value, storeVariable.IsMember);
-			break;
-		case InstructionType.StoreRegisterToVariable:
+		}
+		else if (instruction.InstructionType == InstructionType.StoreRegisterToVariable)
+		{
 			var storeFromRegister = (StoreFromRegisterInstruction)instruction;
 			if (!TryStoreToListElement(storeFromRegister))
 				Memory.Frame.Set(storeFromRegister.Identifier,
 					Memory.Registers[storeFromRegister.Register]);
-			break;
 		}
 	}
 
 	private void TryLoadInstructions(Instruction instruction)
 	{
-		switch (instruction.InstructionType)
+		if (instruction.InstructionType == InstructionType.LoadVariableToRegister)
 		{
-		case InstructionType.LoadVariableToRegister:
 			var loadVariable = (LoadVariableToRegister)instruction;
 			Memory.Registers[loadVariable.Register] = TryGetFrameValue(loadVariable.Identifier,
 				out var value)
 				? value
 				: Memory.Frame.Get(loadVariable.Identifier);
-			break;
-		case InstructionType.LoadConstantToRegister:
+		}
+		else if (instruction.InstructionType == InstructionType.LoadConstantToRegister)
+		{
 			var loadConstant = (LoadConstantInstruction)instruction;
 			Memory.Registers[loadConstant.Register] = loadConstant.Constant;
-			break;
 		}
 	}
 

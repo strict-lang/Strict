@@ -39,6 +39,7 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 
 	public bool IsInitialized { get; set; }
 	public int LoopCount { get; set; }
+ public int InstructionIndex { get; set; } = -1;
 	public int? StartIndexValue { get; private set; }
 	public int? EndIndexValue { get; private set; }
 	public bool? IsDecreasing { get; private set; }
@@ -58,6 +59,7 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 	{
 		IsInitialized = false;
 		LoopCount = 0;
+   InstructionIndex = -1;
 		StartIndexValue = null;
 		EndIndexValue = null;
 		IsDecreasing = null;

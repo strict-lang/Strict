@@ -26,7 +26,7 @@ public sealed class Invoke(Register register, MethodCall method, Registry persis
 	/// Lazily cached precompiled instructions for this invoke, set on first execution to avoid
 	/// repeated dictionary lookups in the hot path.
 	/// </summary>
-	internal IReadOnlyList<Instruction>? CachedInstructions { get; set; }
+	internal List<Instruction>? CachedInstructions { get; set; }
 
 	public override void Write(BinaryWriter writer, NameTable table)
 	{
