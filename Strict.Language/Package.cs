@@ -73,14 +73,15 @@ public class Package : Context, IDisposable
 			cachedFoundTypes.Add(Type.None, new Type(this, new TypeLines(Type.None)));
 
 		public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
-			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
+			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType) && previouslyFoundType != null
 				? previouslyFoundType
 				: FindTypeInChildrenAndCache(name, searchingFrom);
 
 		private Type? FindTypeInChildrenAndCache(string name, Context? searchingFrom)
 		{
 			var type = FindTypeInChildrenPackages(name, searchingFrom as Package);
-			cachedFoundTypes.Add(name, type!);
+			if (type != null)
+				cachedFoundTypes[name] = type;
 			return type;
 		}
 
@@ -97,7 +98,7 @@ public class Package : Context, IDisposable
 			return null; //ncrunch: no coverage
 		var parts = fullName.Split(Context.ParentSeparator);
 		if (parts.Length < 2)
-			throw new FullNameMustContainPackageAndTypeNames();
+			throw new FullNameMustContainPackageAndTypeNames(fullName);
 		if (IsPrivateName(parts[^1]))
 			throw new PrivateTypesAreOnlyAvailableInItsPackage(fullName);
 		if (!fullName.StartsWith(FullName + Context.ParentSeparator, StringComparison.Ordinal))
@@ -111,7 +112,7 @@ public class Package : Context, IDisposable
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static bool IsPrivateName(string name) => char.IsLower(name[0]);
 
-	public sealed class FullNameMustContainPackageAndTypeNames : Exception;
+	public sealed class FullNameMustContainPackageAndTypeNames(string fullName) : Exception(fullName);
 
 	public sealed class PrivateTypesAreOnlyAvailableInItsPackage(string fullName)
 		: Exception(fullName);
@@ -123,14 +124,16 @@ public class Package : Context, IDisposable
 	/// </summary>
 	public override Type? FindTypeCore(string name, Context? searchingFrom = null)
 	{
-		if (name == lastName)
+		if (name == lastName && lastType != null)
 			return lastType;
 		if (IsPrivateName(name))
 			return null;
-		var type = FindDirectType(name) ??
-			FindTypeInChildrenOrParentPackages(name, searchingFrom);
-		lastName = name;
-		lastType = type;
+		var type = FindDirectType(name) ?? FindTypeInChildrenOrParentPackages(name, searchingFrom);
+		if (type != null)
+		{
+			lastName = name;
+			lastType = type;
+		}
 		return type;
 	}
 

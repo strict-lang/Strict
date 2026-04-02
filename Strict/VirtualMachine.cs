@@ -57,17 +57,21 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		{
 			var value = member.InitialValueExpression is SetInstruction setInstruction
 				? setInstruction.ValueInstance
-				: CreateDefaultValue(ResolveBinaryMemberType(member, entryType.Key));
+       : CreateDefaultComplexValue(ResolveBinaryMemberType(member, entryType.Key));
 			Memory.Frame.Set(member.Name, value, isMember: true);
 		}
 	}
 
-	private Type ResolveBinaryMemberType(BinaryMember member, string entryTypeName) =>
-		executable.basePackage.FindFullType(member.FullTypeName) ??
-		executable.basePackage.FindType(member.FullTypeName) ??
-		executable.basePackage.FindType(member.JustTypeName) ??
-		executable.basePackage.FindType(GetBinaryMemberContextualTypeName(entryTypeName,
-			member.FullTypeName)) ?? executable.numberType;
+  private Type ResolveBinaryMemberType(BinaryMember member, string entryTypeName)
+	{
+		var fullTypeName = member.FullTypeName;
+		var contextualTypeName = GetBinaryMemberContextualTypeName(entryTypeName, fullTypeName);
+		return (fullTypeName.Contains(Context.ParentSeparator)
+				? executable.basePackage.FindFullType(fullTypeName)
+				: null) ?? executable.basePackage.FindType(fullTypeName) ??
+			executable.basePackage.FindType(member.JustTypeName) ??
+			executable.basePackage.FindType(contextualTypeName) ?? executable.numberType;
+	}
 
 	private static string GetBinaryMemberContextualTypeName(string entryTypeName,
 		string memberTypeName)
@@ -543,7 +547,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			else if (argumentIndex < arguments.Count)
 				values[memberIndex] = EvaluateExpression(arguments[argumentIndex++]);
 			else if (memberType != null)
-				values[memberIndex] = CreateDefaultValue(memberType);
+       values[memberIndex] = CreateDefaultComplexValue(memberType);
 			else
 				values[memberIndex] = new ValueInstance(executable.numberType, 0);
 		}
@@ -1124,10 +1128,61 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private void TryLoadInstructions(Instruction instruction)
 	{
 		if (instruction is LoadVariableToRegister loadVariable)
-			Memory.Registers[loadVariable.Register] =
-				Memory.Frame.Get(loadVariable.Identifier);
+      Memory.Registers[loadVariable.Register] = TryGetFrameValue(loadVariable.Identifier,
+				out var value)
+				? value
+				: Memory.Frame.Get(loadVariable.Identifier);
 		else if (instruction is LoadConstantInstruction loadConstant)
 			Memory.Registers[loadConstant.Register] = loadConstant.Constant;
+	}
+
+	private bool TryGetFrameValue(string identifier, out ValueInstance value)
+	{
+   if (identifier == Type.None)
+		{
+			value = new ValueInstance(executable.noneType);
+			return true;
+		}
+		if (Memory.Frame.TryGet(identifier, out value))
+			return true;
+   var parts = identifier.Split('.');
+		if (parts.Length < 2 || !Memory.Frame.TryGet(parts[0], out var current))
+			return false;
+		for (var index = 1; index < parts.Length; index++)
+		{
+			if (TryGetNativeMemberValue(current, parts[index], out current))
+				continue;
+			var typeInstance = current.TryGetValueTypeInstance();
+			if (typeInstance == null || !typeInstance.TryGetValue(parts[index], out current))
+				return false;
+		}
+		value = current;
+		return true;
+	}
+
+	private bool TryGetNativeMemberValue(ValueInstance current, string memberName,
+		out ValueInstance value)
+	{
+    if (current.IsText && (memberName == "characters" || memberName == Type.ElementsLowercase))
+		{
+			value = current;
+			return true;
+		}
+		if (memberName is "Length" or "Count")
+		{
+			if (current.IsText)
+			{
+				value = new ValueInstance(executable.numberType, current.Text.Length);
+				return true;
+			}
+			if (current.IsList)
+			{
+				value = new ValueInstance(executable.numberType, current.List.Items.Count);
+				return true;
+			}
+		}
+		value = default;
+		return false;
 	}
 
 	private void TryExecuteRest(Instruction instruction)

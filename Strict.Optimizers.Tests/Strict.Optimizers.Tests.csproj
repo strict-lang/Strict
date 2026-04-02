@@ -8,6 +8,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <IsPackable>false</IsPackable>
+    <StartupObject>Strict.Optimizers.Tests.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>

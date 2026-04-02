@@ -268,7 +268,9 @@ public sealed class RunnerTests
 			: Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
 	}
 
+	//ncrunch: no coverage start, needs to be ignored atm, too slow
 	[Test]
+	[Category("Slow")]
 	public async Task RunAdjustBrightness()
 	{
 		await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),

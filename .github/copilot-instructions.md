@@ -24,6 +24,7 @@
 
 ## Code Style
 - No empty lines are allowed inside methods.
+- Always indent with tabs, never use spaces, follow the coding guidelines in .editorconfig and the project's existing style.
 - Avoid adding `ArgumentNullException.ThrowIfNull`/debug asserts.
 - No duplicate code is allowed, not in production, not in tests. If code exists for something, reuse it. If it doesn't exist, add it in the right place and reuse it.
 - Do name variables and members properly, no 1 letter abbreviations (not even i, a, b, c, s, n), explain what this is. i should be index, s could be name or message or whatever, n might be number or name. Do not use long verbose names either. Short scope -> short names, long scope -> longer names with more of an explanation what they are for (e.g. outputFilePath, optimizedInstructions).
