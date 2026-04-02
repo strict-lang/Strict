@@ -50,19 +50,26 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		return true;
 	}
 
-	private static bool CanInline(Bytecode.BinaryExecutable binary,
-		string currentTypeName, string currentMethodName, Invoke invoke)
+	private static bool CanInline(Bytecode.BinaryExecutable binary, string currentTypeName,
+		string currentMethodName, Invoke invoke)
 	{
-		if (invoke.Method.Instance != null || invoke.Method.Method.Type.FullName != currentTypeName ||
-			invoke.Method.Method.Name == currentMethodName)
+		if (invoke.Method.Instance != null || invoke.Method.Method.Name == currentMethodName ||
+			!IsCurrentTypeCall(currentTypeName, invoke.Method.Method.Type.FullName,
+				invoke.Method.Method.Type.Name))
 			return false;
-		var compiledMethod = FindCompiledMethod(binary, invoke.Method.Method);
+		var compiledMethod = FindCompiledMethod(binary, currentTypeName, invoke.Method.Method);
 		return compiledMethod != null && IsInlineBlock(compiledMethod.instructions);
 	}
 
+	private static bool IsCurrentTypeCall(string currentTypeName, string invokedTypeFullName,
+		string invokedTypeName) =>
+		invokedTypeFullName == currentTypeName || invokedTypeName == currentTypeName ||
+		currentTypeName.EndsWith(Context.ParentSeparator + invokedTypeName,
+			StringComparison.Ordinal);
+
 	private static BinaryMethod? FindCompiledMethod(Bytecode.BinaryExecutable binary,
-		Method method) =>
-		binary.MethodsPerType.TryGetValue(method.Type.FullName, out var typeData)
+		string currentTypeName, Method method) =>
+		binary.MethodsPerType.TryGetValue(currentTypeName, out var typeData)
 			? typeData.MethodGroups.GetValueOrDefault(method.Name)?.FirstOrDefault(candidate =>
 				candidate.parameters.Count == method.Parameters.Count &&
 				candidate.ReturnTypeName.EndsWith(method.ReturnType.Name, StringComparison.Ordinal))

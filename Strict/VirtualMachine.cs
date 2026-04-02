@@ -20,6 +20,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		Returns = null;
 		Memory.Registers.Clear();
 		Memory.Frame = new CallFrame(initialVariables);
+		InitializeEntryPointMembers(method);
 		return RunInstructions(method.instructions);
 	}
 
@@ -44,6 +45,37 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
 			ExecuteInstruction(instructions[instructionIndex]);
 		return this;
+	}
+
+	private void InitializeEntryPointMembers(BinaryMethod method)
+	{
+		var entryType = executable.MethodsPerType.FirstOrDefault(type =>
+			type.Value.MethodGroups.Values.Any(overloads => overloads.Contains(method)));
+		if (entryType.Value == null)
+			return;
+		foreach (var member in entryType.Value.Members)
+		{
+			var value = member.InitialValueExpression is SetInstruction setInstruction
+				? setInstruction.ValueInstance
+				: CreateDefaultValue(ResolveBinaryMemberType(member, entryType.Key));
+			Memory.Frame.Set(member.Name, value, isMember: true);
+		}
+	}
+
+	private Type ResolveBinaryMemberType(BinaryMember member, string entryTypeName) =>
+		executable.basePackage.FindFullType(member.FullTypeName) ??
+		executable.basePackage.FindType(member.FullTypeName) ??
+		executable.basePackage.FindType(member.JustTypeName) ??
+		executable.basePackage.FindType(GetBinaryMemberContextualTypeName(entryTypeName,
+			member.FullTypeName)) ?? executable.numberType;
+
+	private static string GetBinaryMemberContextualTypeName(string entryTypeName,
+		string memberTypeName)
+	{
+		var separatorIndex = entryTypeName.LastIndexOf(Context.ParentSeparator);
+		return separatorIndex < 0
+			? memberTypeName
+			: entryTypeName[..(separatorIndex + 1)] + memberTypeName;
 	}
 
 	//TODO: almost called 3 million times, our loop is only 0.23m, so we are doing too much each time
