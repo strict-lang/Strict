@@ -31,6 +31,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private IReadOnlyList<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
+	private int callDepth;
 	private const int MaxCallDepth = 64;
 	private readonly ValueInstance[][] registerStack = new ValueInstance[MaxCallDepth][];
 	private int registerStackDepth;
@@ -210,7 +211,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
 			return;
-		instructionIndex = GetInstructionIndex(loopBegin) - 1;
+		if (loopEnd.BeginIndex < 0)
+			loopEnd.BeginIndex = GetInstructionIndex(loopBegin);
+		instructionIndex = loopEnd.BeginIndex - 1;
 	}
 
 	private int GetInstructionIndex(Instruction instruction)
@@ -239,31 +242,23 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		if (TryExecuteSpecialInvoke(invoke))
 			return;
-		var methodCall = invoke.Method;
-		var argCount = methodCall.Arguments.Count;
-		var evaluatedArgs = argCount == 0
+		var arguments = invoke.Method.Arguments;
+		var evaluatedArgs = arguments.Count == 0
 			? Array.Empty<ValueInstance>()
-			: new ValueInstance[argCount];
-		for (var argIndex = 0; argIndex < argCount; argIndex++)
-			evaluatedArgs[argIndex] = EvaluateExpression(methodCall.Arguments[argIndex]);
-		var evaluatedInstance = methodCall.Instance != null
-			? EvaluateExpression(methodCall.Instance)
+			: new ValueInstance[arguments.Count];
+		for (var argIndex = 0; argIndex < arguments.Count; argIndex++)
+			evaluatedArgs[argIndex] = EvaluateExpression(invoke.Method.Arguments[argIndex]);
+		var evaluatedInstance = invoke.Method.Instance != null
+			? EvaluateExpression(invoke.Method.Instance)
 			: (ValueInstance?)null;
 		var invokeInstructions = invoke.CachedInstructions ??=
 			GetPrecompiledMethodInstructions(invoke) ??
 			throw new InvalidOperationException("No precompiled method instructions found for invoke");
-    var childScope = InitializeChildScope();
-		ValueInstance? result = null;
-		try
-		{
-			InitializeMethodCallScope(methodCall, evaluatedArgs, evaluatedInstance);
-			RunInstructions(invokeInstructions);
-			result = Returns;
-		}
-		finally
-		{
-			CleanupChildScope(childScope);
-		}
+		var childScope = InitializeChildScope();
+		InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance);
+		RunInstructions(invokeInstructions);
+		var result = Returns;
+		CleanupChildScope(childScope);
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
 	}
@@ -425,7 +420,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		frame.Reset(savedFrame);
 		Memory.Frame = frame;
 		Returns = null;
-   return new ChildScopeState(savedInstructions, savedIndex, savedConditionFlag, savedReturns,
+		return new ChildScopeState(savedInstructions, savedIndex, savedConditionFlag, savedReturns,
 			savedFrame, depth, frame);
 	}
 
@@ -435,8 +430,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (framePoolDepth < MaxCallDepth)
 			framePool[framePoolDepth++] = state.Frame;
 		Memory.Frame = state.SavedFrame;
-    registerStackDepth = state.StackDepth;
+		registerStackDepth = state.StackDepth;
 		Memory.Registers.RestoreFrom(registerStack[state.StackDepth]);
+		callDepth--;
 		instructions = state.SavedInstructions;
 		instructionIndex = state.SavedInstructionIndex;
 		conditionFlag = state.SavedConditionFlag;

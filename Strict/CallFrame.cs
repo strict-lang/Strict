@@ -38,7 +38,7 @@ internal sealed class CallFrame
 			return true; //15% here
 		// rest is 5%, but still tooooooooooo many times (0.23 million calls here)
 		var dotIndex = name.IndexOf('.');
-   if (dotIndex > 0 && TryGetRootValue(name, dotIndex, out var root) &&
+		if (dotIndex > 0 && TryGetRootValue(name, dotIndex, out var root) &&
 			TryGetNestedMemberValue(root, name, dotIndex + 1, out value))
 			return true;
 		value = default;
