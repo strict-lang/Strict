@@ -5,9 +5,8 @@ namespace Strict.Expressions;
 public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 	: IEquatable<ValueTypeInstance>
 {
- private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type,
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type,
 		Dictionary<string, int>> MemberIndexes = new();
-
 	public readonly Type ReturnType = returnType;
 	public readonly ValueInstance[] Values = values;
 
@@ -17,7 +16,7 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 	/// </summary>
 	public bool TryGetValue(string name, out ValueInstance value)
 	{
-   var memberIndexes = MemberIndexes.GetValue(ReturnType, CreateMemberIndexes);
+		var memberIndexes = MemberIndexes.GetValue(ReturnType, CreateMemberIndexes);
 		if (memberIndexes.TryGetValue(name, out var memberIndex) && memberIndex < Values.Length)
 		{
 			value = Values[memberIndex];

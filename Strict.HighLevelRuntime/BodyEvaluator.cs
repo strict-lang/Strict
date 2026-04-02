@@ -54,14 +54,14 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 				pastTestBlock = true;
 			if (isTest)
 				interpreter.Statistics.TestExpressions++;
-			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment
-					&& e is not For ||
-					runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
+			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment &&
+				e is not For ||
+				runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
 					skippedVariables != null &&
 					ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)) ||
-					runOnlyTests && skippedVariables != null && e is not Declaration &&
-					ExpressionReferencesSkippedVariable(e, skippedVariables) ||
-					runOnlyTests && e is For forExpr && ForExpressionReferencesAnyMember(body, forExpr))
+				runOnlyTests && skippedVariables != null && e is not Declaration &&
+				ExpressionReferencesSkippedVariable(e, skippedVariables) || runOnlyTests &&
+				e is For forExpr && ForExpressionReferencesAnyMember(body, forExpr))
 			{
 				if (runOnlyTests && e is Declaration skippedDecl)
 					(skippedVariables ??= []).Add(skippedDecl.Name);

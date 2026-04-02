@@ -293,6 +293,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var savedReturns = Returns;
 		var savedFrame = Memory.Frame;
 		var depth = registerStackDepth++;
+		//TODO: needs testing and cleanU
+		// ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
+		// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 		if (registerStack[depth] == null)
 			registerStack[depth] = new ValueInstance[16];
 		Memory.Registers.SaveTo(registerStack[depth]);
@@ -322,7 +325,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var methodName = invoke.Method.Method.Name;
 		if (methodName != "Increment" && methodName != "Decrement")
 			return false;
-   if (invoke.Method.Instance == null ||
+		if (invoke.Method.Instance == null ||
 			!Memory.Frame.TryGet(GetFrameKey(invoke.Method.Instance), out var current))
 			return false;
 		var delta = methodName == "Increment"
@@ -540,22 +543,22 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	}
 
 	private static ValueInstance CreateDefaultValue(Type memberType) =>
-	(memberType.IsMutable
-		? memberType.GetFirstImplementation()
-		: memberType).IsList
-		? new ValueInstance(memberType, Array.Empty<ValueInstance>())
-		: (memberType.IsMutable
+		(memberType.IsMutable
 			? memberType.GetFirstImplementation()
-			: memberType).IsDictionary
-			? new ValueInstance(memberType, new Dictionary<ValueInstance, ValueInstance>())
-			: memberType.IsText
-				? new ValueInstance("")
-				: memberType.IsBoolean
-					? new ValueInstance(memberType, false)
-					: memberType.IsMutable
-						// ReSharper disable once TailRecursiveCall
-						? CreateDefaultValue(memberType.GetFirstImplementation())
-						: new ValueInstance(memberType, 0);
+			: memberType).IsList
+			? new ValueInstance(memberType, Array.Empty<ValueInstance>())
+			: (memberType.IsMutable
+				? memberType.GetFirstImplementation()
+				: memberType).IsDictionary
+				? new ValueInstance(memberType, new Dictionary<ValueInstance, ValueInstance>())
+				: memberType.IsText
+					? new ValueInstance("")
+					: memberType.IsBoolean
+						? new ValueInstance(memberType, false)
+						: memberType.IsMutable
+							// ReSharper disable once TailRecursiveCall
+							? CreateDefaultValue(memberType.GetFirstImplementation())
+							: new ValueInstance(memberType, 0);
 
 	private static ValueInstance CreateDefaultComplexValue(Type type)
 	{
@@ -724,20 +727,20 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			variableCall.Variable.InitialValue is Value constantValue)
 			return constantValue.Data;
 		if (expression is VariableCall or ParameterCall or Instance)
-      return Memory.Frame.Get(GetFrameKey(expression));
+			return Memory.Frame.Get(GetFrameKey(expression));
 		if (expression is MemberCall memberCall)
 			return EvaluateMemberCall(memberCall);
-		if (expression is Expressions.Binary binary)
+		if (expression is Binary binary)
 			return EvaluateBinary(binary); //TODO: eats up 75% of the time here! 0.7m calls
 		if (expression is MethodCall methodCall)
 			return EvaluateMethodCall(methodCall);
 		if (expression is ListCall listCall)
 			return EvaluateListCallExpression(listCall); //TODO: another almost 25% here, 0.23m calls
 		//almost never called, not sure? AdjustBrightness does not need this even once:
-    var frameKey = GetFrameKey(expression);
+		var frameKey = GetFrameKey(expression);
 		return Memory.Frame.TryGet(frameKey, out var frameValue)
 			? frameValue
-     : new ValueInstance(frameKey);
+			: new ValueInstance(frameKey);
 	}
 
 	private static string GetFrameKey(Expression expression) =>
@@ -750,13 +753,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			_ => expression.ToString()
 		};
 
-	private static string GetMemberCallFrameKey(MemberCall memberCall)
-	{
-		if (memberCall.Instance == null)
-			return memberCall.ToString();
-		var instanceKey = GetFrameKey(memberCall.Instance);
-		return string.Concat(instanceKey, ".", memberCall.Member.Name);
-	}
+	private static string GetMemberCallFrameKey(MemberCall memberCall) =>
+		memberCall.Instance == null
+			? memberCall.ToString()
+			: string.Concat(GetFrameKey(memberCall.Instance), ".", memberCall.Member.Name);
 
 	private ValueInstance EvaluateListCallExpression(ListCall listCall)
 	{
@@ -774,7 +774,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				if (typeInstance.Values[valueIndex].IsText)
 					return typeInstance.Values[valueIndex].GetIteratorValue(executable.characterType, index);
 		}
-    return Memory.Frame.Get(GetFrameKey(listCall));
+		return Memory.Frame.Get(GetFrameKey(listCall));
 	}
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
@@ -790,16 +790,17 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			if (instanceValue.IsText && memberCall.Member.Name is "characters" or "elements")
 				return instanceValue;
 		}
-    var frameKey = GetFrameKey(memberCall);
+		var frameKey = GetFrameKey(memberCall);
 		if (Memory.Frame.TryGet(frameKey, out var frameValue))
 			return frameValue;
 		if (Memory.Frame.TryGet(memberCall.Member.Name, out var memberFrameValue))
 			return memberFrameValue;
 		if (memberCall.Member.InitialValue is Value enumValue)
 			return enumValue.Data;
-   return new ValueInstance(frameKey);
+		return new ValueInstance(frameKey);
 	}
 
+	//TODO: cumbersome, simplify in a few lines
 	private bool TryGetNativeLength(ValueInstance instance, string memberName, out ValueInstance result)
 	{
 		if (memberName is "Length" or "Count")
@@ -928,7 +929,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var keyArg = invoke.Method.Arguments[0];
 		var keyData = keyArg is Value argValue
 			? argValue.Data
-      : Memory.Frame.Get(GetFrameKey(keyArg));
+			: Memory.Frame.Get(GetFrameKey(keyArg));
 		var dictionary = Memory.Frame.Get(GetFrameKey(invoke.Method.Instance));
 		var value = dictionary.GetDictionaryItems().
 			FirstOrDefault(element => element.Key.Equals(keyData)).Value;

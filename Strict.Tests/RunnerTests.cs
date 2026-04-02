@@ -13,35 +13,16 @@ public sealed class RunnerTests
 	[SetUp]
 	public void CreateTextWriter()
 	{
-		writer = new StringWriter();
+		consoleWriter = new StringWriter();
 		rememberConsole = Console.Out;
-		Console.SetOut(writer);
+		Console.SetOut(consoleWriter);
 	}
 
-	private StringWriter writer = null!;
+	private StringWriter consoleWriter = null!;
 	private TextWriter rememberConsole = null!;
 
 	[TearDown]
-	public void RestoreConsole()
-	{
-		Console.SetOut(rememberConsole);
-		//this is slow and a bit crazy to do EVERY time for every test killing everything: CleanupGeneratedFiles();
-	}
-
-	private static void CleanupGeneratedFiles()
-	{
-		var examplesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..",
-			"Examples");
-		if (!Directory.Exists(examplesDir))
-			return;
-		//ncrunch: no coverage start
-		foreach (var extension in new[]
-			{
-				".ll", ".mlir", ".llvm.mlir", ".asm", ".obj", ".exe", ".strictbinary"
-			})
-		foreach (var file in Directory.GetFiles(examplesDir, "*" + extension))
-			File.Delete(file);
-	} //ncrunch: no coverage end
+	public void RestoreConsole() => Console.SetOut(rememberConsole);
 
 	[Test]
 	public async Task RunSimpleCalculator()
@@ -60,7 +41,7 @@ public sealed class RunnerTests
 			Thread.Sleep(100);
 			await new Runner(SimpleCalculatorFilePath, TestPackage.Instance).Run();
 		} //ncrunch: no coverage end
-		Assert.That(writer.ToString(),
+		Assert.That(consoleWriter.ToString(),
 			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6" + Environment.NewLine));
 		Assert.That(File.Exists(asmFilePath), Is.False);
 	}
@@ -70,7 +51,7 @@ public sealed class RunnerTests
 	{
 		var binaryFilePath = await GetExamplesBinaryFile("SimpleCalculator");
 		await new Runner(binaryFilePath, TestPackage.Instance).Run();
-		Assert.That(writer.ToString(),
+		Assert.That(consoleWriter.ToString(),
 			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 	}
 
@@ -88,10 +69,10 @@ public sealed class RunnerTests
 			File.Copy(SimpleCalculatorFilePath, copiedSourceFilePath);
 			await new Runner(copiedSourceFilePath, TestPackage.Instance).Run();
 			Assert.That(File.Exists(copiedBinaryFilePath), Is.True);
-			writer.GetStringBuilder().Clear();
+			consoleWriter.GetStringBuilder().Clear();
 			File.Delete(copiedSourceFilePath);
 			await new Runner(copiedBinaryFilePath, TestPackage.Instance).Run();
-			Assert.That(writer.ToString(),
+			Assert.That(consoleWriter.ToString(),
 				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 		}
 		finally
@@ -143,23 +124,23 @@ public sealed class RunnerTests
 	public async Task RunSumWithProgramArguments()
 	{
 		await new Runner(SumFilePath, TestPackage.Instance, "5 10 20").Run();
-		Assert.That(writer.ToString(), Does.Contain("35"));
+		Assert.That(consoleWriter.ToString(), Does.Contain("35"));
 	}
 
 	[Test]
 	public async Task RunSumWithDifferentProgramArgumentsDoesNotReuseCachedEntryPoint()
 	{
 		await new Runner(SumFilePath, TestPackage.Instance, "5 10 20").Run();
-		writer.GetStringBuilder().Clear();
+		consoleWriter.GetStringBuilder().Clear();
 		await new Runner(SumFilePath, TestPackage.Instance, "1 2").Run();
-		Assert.That(writer.ToString(), Does.Contain("3"));
+		Assert.That(consoleWriter.ToString(), Does.Contain("3"));
 	}
 
 	[Test]
 	public async Task RunSumWithNoArgumentsUsesEmptyList()
 	{
 		await new Runner(SumFilePath, TestPackage.Instance, "0").Run();
-		Assert.That(writer.ToString(), Does.Contain("0"));
+		Assert.That(consoleWriter.ToString(), Does.Contain("0"));
 	}
 
 	[Test]
@@ -170,7 +151,7 @@ public sealed class RunnerTests
 	public async Task RunParseHelloLogger()
 	{
 		await new Runner(GetExamplesFilePath("Parsing/ParseHelloLogger"), TestPackage.Instance).Run();
-		var output = writer.ToString();
+		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Member(has): has logger"));
 		Assert.That(output, Does.Contain("Member(mutable): mutable count = 0"));
 		Assert.That(output, Does.Contain("Member(constant): constant Max = 100"));
@@ -183,7 +164,7 @@ public sealed class RunnerTests
 	public async Task RunParseExpressions()
 	{
 		await new Runner(GetExamplesFilePath("Parsing/ParseExpressions"), TestPackage.Instance).Run();
-		var output = writer.ToString();
+		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Parsing HelloLogger.strict expressions"));
 		Assert.That(output, Does.Contain("has member: logger"));
 		Assert.That(output, Does.Contain("mutable member: count = 0"));
@@ -199,7 +180,7 @@ public sealed class RunnerTests
 	public async Task RunParseMethodHeaders()
 	{
 		await new Runner(GetExamplesFilePath("Parsing/ParseMethodHeaders"), TestPackage.Instance).Run();
-		var output = writer.ToString();
+		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Parsing method headers from type definitions"));
 		Assert.That(output, Does.Contain("Method: Run (no return type)"));
 		Assert.That(output, Does.Contain("Method: Add returns Number"));
@@ -218,7 +199,7 @@ public sealed class RunnerTests
 	public async Task RunFibonacci()
 	{
 		await new Runner(GetExamplesFilePath("Fibonacci"), TestPackage.Instance).Run();
-		var output = writer.ToString();
+		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Fibonacci(10) = 55"));
 		Assert.That(output, Does.Contain("Fibonacci(5) = 5"));
 	}
@@ -227,9 +208,9 @@ public sealed class RunnerTests
 	public async Task RunSimpleCalculatorTwiceWithoutTestPackage()
 	{
 		await new Runner(SimpleCalculatorFilePath).Run();
-		writer.GetStringBuilder().Clear();
+		consoleWriter.GetStringBuilder().Clear();
 		await new Runner(SimpleCalculatorFilePath).Run();
-		Assert.That(writer.ToString(), Does.Contain("2 + 3 = 5"));
+		Assert.That(consoleWriter.ToString(), Does.Contain("2 + 3 = 5"));
 	}
 
 	[Test]
@@ -273,7 +254,7 @@ public sealed class RunnerTests
 		var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BinaryExecutable.Extension);
 		if (!File.Exists(localPath))
 			await new Runner(GetExamplesFilePath(filename), TestPackage.Instance).Run(); //ncrunch: no coverage
-		writer.GetStringBuilder().Clear();
+		consoleWriter.GetStringBuilder().Clear();
 		return localPath;
 	}
 
@@ -292,7 +273,7 @@ public sealed class RunnerTests
 	{
 		await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage()).Run();
-		var output = writer.ToString();
+		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Brightness adjustment successful: (0.25, 0.25, 0.25)"));
 	}
 

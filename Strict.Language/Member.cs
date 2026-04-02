@@ -67,9 +67,11 @@ public sealed class Member : NamedType
 	{
 		public override bool IsConstant => false;
 		public override string ToString() => memberName;
+
 		public override bool Equals(Expression? other) =>
 			ReferenceEquals(this, other) || other is ConstraintMemberReference reference &&
 			reference.ReturnType == ReturnType && reference.ToString() == memberName;
+
 		public override int GetHashCode() => HashCode.Combine(memberName, ReturnType);
 	}
 

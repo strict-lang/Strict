@@ -178,18 +178,21 @@ public sealed class NameTable
 			List list => Add(list.ReturnType.FullName).CollectListExpressionStrings(list),
 			Value { Data.IsText: true } val => Add(val.Data.Text),
 			Value val when val.Data.GetType().IsBoolean => Add(val.Data.GetType().Name),
-			Value val when !val.Data.GetType().IsNumber || !BinaryExecutable.IsIntegerNumber(val.Data.Number)
-				=> Add(val.Data.GetType().Name), //ncrunch: no coverage
+			Value val when !val.Data.GetType().IsNumber ||
+				!BinaryExecutable.IsIntegerNumber(val.Data.Number) =>
+				Add(val.Data.GetType().Name),
+			//TODO: need tests!
 			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
-					CollectExpressionStrings(memberCall.Instance),
-				Binary binary => Add(binary.Method.Name). //ncrunch: no coverage
-					CollectExpressionStrings(binary.Instance).CollectExpressionStrings(binary.Arguments[0]),
-				MethodCall mc => CollectMethodCallStrings(mc),
-				ListCall listCall => Add(listCall.ReturnType.Name).
-					CollectExpressionStrings(listCall.List).CollectExpressionStrings(listCall.Index),
-				_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
+				CollectExpressionStrings(memberCall.Instance),
+			Binary binary => Add(binary.Method.Name).
+				CollectExpressionStrings(binary.Instance).CollectExpressionStrings(binary.Arguments[0]),
+			MethodCall mc => CollectMethodCallStrings(mc),
+			ListCall listCall => Add(listCall.ReturnType.Name).CollectExpressionStrings(listCall.List).
+				CollectExpressionStrings(listCall.Index),
+			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
 		};
 
+	//TODO: never called, even needed?
 	private NameTable CollectListExpressionStrings(List list)
 	{
 		foreach (var value in list.Values)

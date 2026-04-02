@@ -20,7 +20,6 @@ internal sealed class CallFrame
 	}
 
 	private CallFrame? parent;
-
 	private Dictionary<string, ValueInstance>? variables;
 	private HashSet<string>? memberNames;
 	/// <summary>

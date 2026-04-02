@@ -7,6 +7,7 @@ using Strict.Language;
 using Type = Strict.Language.Type;
 
 [assembly: InternalsVisibleTo("Strict")]
+[assembly: InternalsVisibleTo("Strict.Optimizers")]
 
 namespace Strict.Bytecode;
 
@@ -510,33 +511,33 @@ public sealed class BinaryExecutable(Package basePackage)
 			WriteExpression(writer, binary.Arguments[0], table);
 			break;
 		case ListCall listCall:
-				writer.Write((byte)ExpressionKind.ListCallExpr);
-				writer.Write7BitEncodedInt(table[listCall.ReturnType.Name]);
-				WriteExpression(writer, listCall.List, table);
-				WriteExpression(writer, listCall.Index, table);
-				writer.Write(listCall.SecondIndex != null);
-				if (listCall.SecondIndex != null)
-					WriteExpression(writer, listCall.SecondIndex, table);
-				break;
-			case MethodCall methodCall:
-				writer.Write((byte)ExpressionKind.MethodCallExpr);
-				writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
-				writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
-				writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
-				foreach (var parameter in methodCall.Method.Parameters)
-				{
-					writer.Write7BitEncodedInt(table[parameter.Name]);
-					writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
-				}
-				writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
-				writer.Write(methodCall.Instance != null);
-				if (methodCall.Instance != null)
-					WriteExpression(writer, methodCall.Instance, table);
-				writer.Write7BitEncodedInt(methodCall.Arguments.Count);
-				foreach (var argument in methodCall.Arguments)
-					WriteExpression(writer, argument, table);
-				break;
-			default:
+			writer.Write((byte)ExpressionKind.ListCallExpr);
+			writer.Write7BitEncodedInt(table[listCall.ReturnType.Name]);
+			WriteExpression(writer, listCall.List, table);
+			WriteExpression(writer, listCall.Index, table);
+			writer.Write(listCall.SecondIndex != null);
+			if (listCall.SecondIndex != null)
+				WriteExpression(writer, listCall.SecondIndex, table);
+			break;
+		case MethodCall methodCall:
+			writer.Write((byte)ExpressionKind.MethodCallExpr);
+			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
+			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
+			foreach (var parameter in methodCall.Method.Parameters)
+			{
+				writer.Write7BitEncodedInt(table[parameter.Name]);
+				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
+			}
+			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
+			writer.Write(methodCall.Instance != null);
+			if (methodCall.Instance != null)
+				WriteExpression(writer, methodCall.Instance, table);
+			writer.Write7BitEncodedInt(methodCall.Arguments.Count);
+			foreach (var argument in methodCall.Arguments)
+				WriteExpression(writer, argument, table);
+			break;
+		default:
 			writer.Write((byte)ExpressionKind.VariableRef);
 			writer.Write7BitEncodedInt(table[expr.ToString()]);
 			writer.Write7BitEncodedInt(table[expr.ReturnType.Name]);

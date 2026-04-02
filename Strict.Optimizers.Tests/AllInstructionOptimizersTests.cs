@@ -147,7 +147,8 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 	[Test]
 	public void InlineOneLineMethodInsideLoop()
 	{
-   var binary = GenerateBinary("LoopInlining",
+		var binary = GenerateBinary("LoopInlining",
+			// @formatter:off
 			"has number Number",
 			"Run Number",
 			"\tmutable temp = number",
@@ -156,9 +157,11 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 			"\ttemp",
 			"AddToNumber(temp Number, increase Number) Number",
 			"\ttemp + increase");
+		// @formatter: on
 		new AllInstructionOptimizers().Optimize(binary);
-		Assert.That(binary.EntryPoint.instructions.OfType<Invoke>().Any(invoke =>
-			invoke.Method.Method.Name == "AddToNumber"), Is.False);
+		Assert.That(
+			binary.EntryPoint.instructions.OfType<Invoke>().
+				Any(invoke => invoke.Method.Method.Name == "AddToNumber"), Is.False);
 		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(2000));
 	}
 }

@@ -150,9 +150,11 @@ public sealed class ListCall(Expression list, Expression index, Expression? seco
 		$"constraint on the {list} definition: {constraint}.", list.ReturnType);
 
 	public override bool IsConstant => List.IsConstant && Index.IsConstant;
-	public override string ToString() => SecondIndex == null
-		? $"{List}({Index})"
-		: $"{List}({OriginalIndex}, {SecondIndex})";
+
+	public override string ToString() =>
+		SecondIndex == null
+			? $"{List}({Index})"
+			: $"{List}({OriginalIndex}, {SecondIndex})";
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
@@ -160,6 +162,7 @@ public sealed class ListCall(Expression list, Expression index, Expression? seco
 		other is ListCall listCall && List.Equals(listCall.List) && Index.Equals(listCall.Index) &&
 		OriginalIndex.Equals(listCall.OriginalIndex) && Equals(SecondIndex, listCall.SecondIndex);
 
-	public override int GetHashCode() => List.GetHashCode() ^ Index.GetHashCode() ^
-		OriginalIndex.GetHashCode() ^ (SecondIndex?.GetHashCode() ?? 0);
+	public override int GetHashCode() =>
+		List.GetHashCode() ^ Index.GetHashCode() ^ OriginalIndex.GetHashCode() ^
+		(SecondIndex?.GetHashCode() ?? 0);
 }

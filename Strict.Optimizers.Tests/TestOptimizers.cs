@@ -8,11 +8,12 @@ public class TestOptimizers : TestExpressions
 {
 	public ValueInstance Num(double value) => new(numberType, value);
 	protected readonly Type numberType = TestPackage.Instance.GetType(Type.Number);
-  protected BinaryExecutable GenerateBinary(string programName, params string[] source)
+
+	protected BinaryExecutable GenerateBinary(string programName, params string[] source)
 	{
-   var programType = type.Package.FindDirectType(programName) ??
+		var programType = type.Package.FindDirectType(programName) ??
 			new Type(type.Package, new TypeLines(programName, source)).ParseMembersAndMethods(this);
-		var runMethods = programType.Methods.Where(method => method.Name == Method.Run).ToArray();
+		var runMethods = programType.Methods.Where(m => m.Name == Method.Run).ToArray();
 		return BinaryGenerator.GenerateFromRunMethods(runMethods[0], runMethods);
 	}
 

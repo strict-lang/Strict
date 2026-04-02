@@ -96,6 +96,7 @@ public sealed class TypeValidator : Visitor
 				if (IsVariablePassedToMutableParameter(nestedExpression, variableName))
 					return true;
 		if (expression is For forExpression)
+			// ReSharper disable once TailRecursiveCall
 			return IsVariablePassedToMutableParameter(forExpression.Body, variableName);
 		return false;
 	}
@@ -120,8 +121,6 @@ public sealed class TypeValidator : Visitor
 		}
 		else if (expression is MethodCall methodCall)
 			TrackMutableArgumentsPassedByReference(methodCall, variables);
-		else
-			return base.Visit(expression, body, context);
 		return base.Visit(expression, body, context);
 	}
 
