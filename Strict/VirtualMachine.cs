@@ -7,6 +7,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict;
 
+//TODO: way too long, remove unused methods, shorten some very badly written long methods, try to convert some switch statements to expression switch .. then split up into 2-3 classes each <400 lines
 //ncrunch: no coverage start, performance is very bad when NCrunch is tracking every line
 public sealed class VirtualMachine(BinaryExecutable executable)
 {
@@ -60,12 +61,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		{
 			var value = member.InitialValueExpression is SetInstruction setInstruction
 				? setInstruction.ValueInstance
-       : CreateDefaultComplexValue(ResolveBinaryMemberType(member, entryType.Key));
+				: CreateDefaultComplexValue(ResolveBinaryMemberType(member, entryType.Key));
 			Memory.Frame.Set(member.Name, value, isMember: true);
 		}
 	}
 
-  private Type ResolveBinaryMemberType(BinaryMember member, string entryTypeName)
+	private Type ResolveBinaryMemberType(BinaryMember member, string entryTypeName)
 	{
 		var fullTypeName = member.FullTypeName;
 		var contextualTypeName = GetBinaryMemberContextualTypeName(entryTypeName, fullTypeName);
@@ -247,8 +248,18 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var invokeInstructions = invoke.CachedInstructions ??=
 			GetPrecompiledMethodInstructions(invoke) ??
 			throw new InvalidOperationException("No precompiled method instructions found for invoke");
-		var result = RunChildScope(invokeInstructions,
-			() => InitializeMethodCallScope(methodCall, evaluatedArgs, evaluatedInstance));
+    var childScope = InitializeChildScope();
+		ValueInstance? result = null;
+		try
+		{
+			InitializeMethodCallScope(methodCall, evaluatedArgs, evaluatedInstance);
+			RunInstructions(invokeInstructions);
+			result = Returns;
+		}
+		finally
+		{
+			CleanupChildScope(childScope);
+		}
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
 	}
@@ -322,6 +333,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		Memory.Frame.Set(Type.ValueLowercase, instance, isMember: true);
 		if (instance.IsText)
 		{
+			//TODO: this seems to be more of a hack
 			Memory.Frame.Set("elements", instance, isMember: true);
 			Memory.Frame.Set("characters", instance, isMember: true);
 			return;
@@ -389,8 +401,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: fullTypeName;
 	}
 
-	private ValueInstance? RunChildScope(List<Instruction> childInstructions,
-		Action? initializeScope = null)
+ private ChildScopeState InitializeChildScope()
 	{
 		var savedInstructions = instructions;
 		var savedIndex = instructionIndex;
@@ -409,21 +420,28 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: new CallFrame();
 		frame.Reset(savedFrame);
 		Memory.Frame = frame;
-		initializeScope?.Invoke();
 		Returns = null;
-		RunInstructions(childInstructions);
-		var result = Returns;
-		frame.Reset(null);
-		if (framePoolDepth < MaxCallDepth)
-			framePool[framePoolDepth++] = frame;
-		Memory.Frame = savedFrame;
-		Memory.Registers.RestoreFrom(registerStack[--registerStackDepth]);
-		instructions = savedInstructions;
-		instructionIndex = savedIndex;
-		conditionFlag = savedConditionFlag;
-		Returns = savedReturns;
-		return result;
+   return new ChildScopeState(savedInstructions, savedIndex, savedConditionFlag, savedReturns,
+			savedFrame, depth, frame);
 	}
+
+	private void CleanupChildScope(ChildScopeState state)
+	{
+		state.Frame.Reset(null);
+		if (framePoolDepth < MaxCallDepth)
+			framePool[framePoolDepth++] = state.Frame;
+		Memory.Frame = state.SavedFrame;
+    registerStackDepth = state.StackDepth;
+		Memory.Registers.RestoreFrom(registerStack[state.StackDepth]);
+		instructions = state.SavedInstructions;
+		instructionIndex = state.SavedInstructionIndex;
+		conditionFlag = state.SavedConditionFlag;
+		Returns = state.SavedReturns;
+	}
+
+	private readonly record struct ChildScopeState(IReadOnlyList<Instruction> SavedInstructions,
+		int SavedInstructionIndex, bool SavedConditionFlag, ValueInstance? SavedReturns,
+		CallFrame SavedFrame, int StackDepth, CallFrame Frame);
 
 	private bool TryHandleIncrementDecrement(Invoke invoke)
 	{
@@ -511,9 +529,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	/// Handles From constructor calls like SimpleCalculator(2, 3) by creating a ValueInstance
 	/// with evaluated argument values for each non-trait member.
 	/// </summary>
+	//TODO: remove
 	private bool TryHandleFromConstructor(Invoke invoke)
 	{
-   if (invoke.Method.Method.Name != Method.From || invoke.Method.Instance != null)
+		if (invoke.Method.Method.Name != Method.From || invoke.Method.Instance != null)
 			return false;
 		return TryHandleFromConstructor(invoke, invoke.Method.ReturnType);
 	}
@@ -608,7 +627,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			else if (argumentIndex < arguments.Count)
 				values[memberIndex] = EvaluateExpression(arguments[argumentIndex++]);
 			else if (memberType != null)
-       values[memberIndex] = CreateDefaultComplexValue(memberType);
+				values[memberIndex] = CreateDefaultComplexValue(memberType);
 			else
 				values[memberIndex] = new ValueInstance(executable.numberType, 0);
 		}
@@ -713,11 +732,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			var methodInstructions = GetPrecompiledMethodInstructions(method);
 			if (methodInstructions != null)
 			{
-				var result = RunChildScope(methodInstructions, () =>
+        var childScope = InitializeChildScope();
+				ValueInstance? result = null;
+				try
 				{
 					Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
 					TrySetScopeMembersFromTypeMembers(typeInstance!);
-				});
+         RunInstructions(methodInstructions);
+					result = Returns;
+				}
+				finally
+				{
+					CleanupChildScope(childScope);
+				}
 				if (result.HasValue)
 					return (int)result.Value.Number;
 			}
@@ -954,8 +981,18 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			var evaluatedInstance = call.Instance != null
 				? EvaluateExpression(call.Instance)
 				: (ValueInstance?)null;
-			var precompiledResult = RunChildScope(precompiledInstructions,
-				() => InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance));
+      var childScope = InitializeChildScope();
+			ValueInstance? precompiledResult = null;
+			try
+			{
+				InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance);
+				RunInstructions(precompiledInstructions);
+				precompiledResult = Returns;
+			}
+			finally
+			{
+				CleanupChildScope(childScope);
+			}
 			return precompiledResult ?? new ValueInstance(call.Method.ReturnType, 0);
 		}
 		return TryEvaluateMethodCallFromBody(call) ??
@@ -1017,7 +1054,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool GetValueByKeyForDictionaryAndStoreInRegister(Invoke invoke)
 	{
-   if (invoke.Method.Method.Name != "Get" || invoke.Method.Instance?.ReturnType.IsDictionary != true)
+		if (invoke.Method.Method.Name != "Get" ||
+			invoke.Method.Instance?.ReturnType.IsDictionary != true)
 			return false;
 		var keyArg = invoke.Method.Arguments[0];
 		var keyData = keyArg is Value argValue
@@ -1191,10 +1229,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return true;
 	}
 
+	//TODO: simplify method, can be much shorter!
 	private bool TryGetNativeMemberValue(ValueInstance current, string memberName,
 		out ValueInstance value)
 	{
-		if (current.IsText && (memberName == "characters" || memberName == Type.ElementsLowercase))
+		if (current.IsText && memberName is "characters" or Type.ElementsLowercase)
 		{
 			value = current;
 			return true;

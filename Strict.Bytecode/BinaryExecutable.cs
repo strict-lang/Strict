@@ -70,7 +70,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	public BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
 	public sealed class InvalidFile(string message) : Exception(message);
 
-	public IReadOnlyList<BinaryMethod> GetRunMethods()
+	public List<BinaryMethod> GetRunMethods()
 	{
 		var runMethods = new List<BinaryMethod>();
 		foreach (var typeData in MethodsPerType.Values)
@@ -104,7 +104,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		storedReturnType.EndsWith(Context.ParentSeparator + expectedReturnType,
 			StringComparison.Ordinal);
 
-	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
+	public List<Instruction>? FindInstructions(string fullTypeName, string methodName,
 		int parametersCount, Type returnType) =>
 		FindInstructions(fullTypeName, methodName, parametersCount, returnType.Name);
 
@@ -298,18 +298,18 @@ public sealed class BinaryExecutable(Package basePackage)
 	}
 
 	private static Method FindMethod(Type type, string methodName,
-		IReadOnlyList<BinaryMember> parameters, Type returnType)
+		BinaryMember[] parameters, Type returnType)
 	{
 		var method = type.Methods.FirstOrDefault(existingMethod =>
 				existingMethod.Name == methodName &&
-				existingMethod.Parameters.Count == parameters.Count) ??
+				existingMethod.Parameters.Count == parameters.Length) ??
 			type.Methods.FirstOrDefault(existingMethod => existingMethod.Name == methodName);
 		if (method != null)
 			return method;
 		if (type.AvailableMethods.TryGetValue(methodName, out var availableMethods))
 		{
 			var found = availableMethods.FirstOrDefault(existingMethod =>
-				existingMethod.Parameters.Count == parameters.Count) ?? availableMethods.FirstOrDefault();
+				existingMethod.Parameters.Count == parameters.Length) ?? availableMethods.FirstOrDefault();
 			if (found != null)
 				return found;
 		} //ncrunch: no coverage
@@ -320,8 +320,8 @@ public sealed class BinaryExecutable(Package basePackage)
 	}
 
 	public static string BuildMethodHeader(string methodName,
-		IReadOnlyList<BinaryMember> parameters, Type returnType) =>
-		parameters.Count == 0
+		BinaryMember[] parameters, Type returnType) =>
+		parameters.Length == 0
 			? returnType.IsNone
 				? methodName
 				: methodName + " " + returnType.Name

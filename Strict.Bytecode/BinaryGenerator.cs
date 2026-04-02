@@ -865,15 +865,15 @@ public sealed class BinaryGenerator
 	private static string BuildMethodKey(Method method) =>
 		method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
+				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToArray(),
 			method.ReturnType);
 
-  private static void EnqueueInvokedMethods(IReadOnlyList<Instruction> instructions,
+	private static void EnqueueInvokedMethods(IReadOnlyList<Instruction> instructions,
 		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
 	{
-   for (var instructionIndex = 0; instructionIndex < instructions.Count; instructionIndex++)
+		for (var instructionIndex = 0; instructionIndex < instructions.Count; instructionIndex++)
 		{
-     if (instructions[instructionIndex].InstructionType != InstructionType.Invoke)
+			if (instructions[instructionIndex].InstructionType != InstructionType.Invoke)
 				continue;
 			var invoke = (Invoke)instructions[instructionIndex];
 			if (invoke.Method.Method.Name == Method.From)
@@ -881,7 +881,7 @@ public sealed class BinaryGenerator
 			var method = invoke.Method.Method;
 			var methodKey = method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
 				method.Parameters.Select(parameter =>
-					new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
+					new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToArray(),
 				method.ReturnType);
 			if (compiledMethodKeys.Add(methodKey))
 				methodsToCompile.Enqueue(method);
@@ -947,7 +947,7 @@ public sealed class BinaryGenerator
 		if (methodCall.Instance == null)
 			return;
 		GenerateInstructionFromExpression(methodCall.Arguments[0]);
-    if (methodCall.Instance.ReturnType.IsList)
+		if (methodCall.Instance.ReturnType.IsList)
 			instructions.Add(new RemoveInstruction(registry.PreviousRegister, methodCall.Instance.ToString()));
 	}
 
@@ -972,6 +972,7 @@ public sealed class BinaryGenerator
 		return true;
 	}
 
+	//TODO: remove?
 	private bool? TryGenerateBodyInstructions(Expression expression)
 	{
 		if (expression is not Body body)
@@ -980,6 +981,7 @@ public sealed class BinaryGenerator
 		return true;
 	}
 
+	//TODO: remove?
 	private bool? TryGenerateMutableInstructions(Expression expression)
 	{
 		if (expression is Declaration { IsMutable: true } declaration)
@@ -1004,6 +1006,7 @@ public sealed class BinaryGenerator
 		}
 	}
 
+	//TODO: remove?
 	private bool? TryGenerateLoopInstructions(Expression expression)
 	{
 		if (expression is not For forExpression)
@@ -1012,6 +1015,7 @@ public sealed class BinaryGenerator
 		return true;
 	}
 
+	//TODO: remove?
 	private bool? TryGenerateAssignmentInstructions(Expression expression)
 	{
 		if (expression is not Declaration assignmentExpression || expression.IsMutable)
@@ -1030,6 +1034,7 @@ public sealed class BinaryGenerator
 		instructions.Add(new StoreVariableInstruction(data, variableName));
 	}
 
+	//TODO: remove?
 	private bool? TryGenerateIfInstructions(Expression expression)
 	{
 		if (expression is not If ifExpression)
@@ -1038,6 +1043,7 @@ public sealed class BinaryGenerator
 		return true;
 	}
 
+	//TODO: remove?
 	private bool? TryGenerateSelectorIfInstructions(Expression expression)
 	{
 		if (expression is not SelectorIf selectorIf)

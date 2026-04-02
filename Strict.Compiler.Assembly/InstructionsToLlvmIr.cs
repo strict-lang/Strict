@@ -167,7 +167,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	{
 		var positions = new Dictionary<int, int>();
 		for (var index = 0; index < instructions.Count; index++)
-     if (instructions[index].InstructionType == InstructionType.JumpEnd)
+			if (instructions[index].InstructionType == InstructionType.JumpEnd)
 				positions[((JumpToId)instructions[index]).Id] = index; //ncrunch: no coverage
 		return positions;
 	}
@@ -175,22 +175,22 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	private static void EmitInstruction(Instruction instruction, List<string> lines,
 		EmitContext context, int index)
 	{
-    switch (instruction.InstructionType)
+		switch (instruction.InstructionType)
 		{
-    case InstructionType.StoreConstantToVariable:
+		case InstructionType.StoreConstantToVariable:
 			var storeConst = (StoreVariableInstruction)instruction;
 			if (!context.ParamIndexByName.ContainsKey(storeConst.Identifier))
 				EmitStoreVariable(storeConst, lines, context);
 			break; //ncrunch: no coverage
-    case InstructionType.LoadVariableToRegister:
+		case InstructionType.LoadVariableToRegister:
 			var loadVar = (LoadVariableToRegister)instruction;
 			EmitLoadVariable(loadVar, lines, context);
 			break;
-   case InstructionType.LoadConstantToRegister:
+		case InstructionType.LoadConstantToRegister:
 			var loadConst = (LoadConstantInstruction)instruction;
 			EmitLoadConstant(loadConst, context);
 			break;
-   case InstructionType.Add:
+		case InstructionType.Add:
 		case InstructionType.Subtract:
 		case InstructionType.Multiply:
 		case InstructionType.Divide:
@@ -203,38 +203,41 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		case InstructionType.GreaterThan:
 			EmitComparison((BinaryInstruction)instruction, lines, context);
 			break;
-   case InstructionType.StoreRegisterToVariable:
+		case InstructionType.StoreRegisterToVariable:
 			var storeReg = (StoreFromRegisterInstruction)instruction;
 			EmitStoreFromRegister(storeReg, lines, context);
 			break;
-   case InstructionType.Return:
+		case InstructionType.Return:
 			var ret = (ReturnInstruction)instruction;
 			EmitReturn(ret, lines, context);
 			break;
-    case InstructionType.Print:
+		case InstructionType.Print:
 			var print = (PrintInstruction)instruction;
 			EmitPrint(print, lines, context);
 			break;
-   case InstructionType.Jump:
+		case InstructionType.Jump:
 		case InstructionType.JumpIfTrue:
 		case InstructionType.JumpIfFalse:
 			var jump = (Jump)instruction;
 			EmitJump(jump, lines, context, index);
 			break;
-   case InstructionType.Invoke:
+		case InstructionType.Invoke:
 			var invoke = (Invoke)instruction;
 			EmitInvoke(invoke, lines, context);
 			break;
-   case InstructionType.JumpEnd:
+		case InstructionType.JumpEnd:
 			break; //ncrunch: no coverage
-   case InstructionType.JumpToIdIfFalse:
+		case InstructionType.JumpToIdIfFalse:
 		case InstructionType.JumpToIdIfTrue:
 			var jumpToId = (JumpToId)instruction;
 			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
 			break; //ncrunch: no coverage
 		default:
-			throw new NotSupportedException(
-				$"LLVM IR compilation does not support instruction: {instruction.GetType().Name} ({instruction.InstructionType})");
+			throw new NotSupportedException($"LLVM IR compilation does not support instruction: {
+				instruction.GetType().Name
+			} ({
+				instruction.InstructionType
+			})");
 		}
 	}
 

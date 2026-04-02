@@ -150,7 +150,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 		var binary = CreateLoopInliningBinary();
 		new AllInstructionOptimizers().Optimize(binary);
 		Assert.That(binary.EntryPoint.instructions.OfType<Invoke>().Any(), Is.False);
-		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(2000));
+		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(20000));
 	}
 
 	internal BinaryExecutable CreateLoopInliningBinary() =>
@@ -159,7 +159,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 		"has number Number",
 		"Run Number",
 		"\tmutable temp = number",
-		"\tfor 1000",
+		"\tfor 10000",
 		"\t\ttemp = AddToNumber(temp, 2)",
 		"\ttemp",
 		"AddToNumber(temp Number, increase Number) Number",

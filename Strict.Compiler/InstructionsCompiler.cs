@@ -11,7 +11,7 @@ public abstract class InstructionsCompiler
 	protected static string BuildMethodHeaderKeyInternal(Method method) =>
 		BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToList(),
+				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToArray(),
 			method.ReturnType);
 
 	protected static Dictionary<string, List<Instruction>> BuildPrecompiledMethodsInternal(
