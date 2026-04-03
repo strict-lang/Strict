@@ -978,13 +978,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		{
 			BinaryOperator.Plus => AddValueInstances(left, right),
 			BinaryOperator.Minus => SubtractValueInstances(left, right),
-			BinaryOperator.Multiply => left.IsText || right.IsText
-				? new ValueInstance(ConvertToText(left).Text + ConvertToText(right).Text)
-				: new ValueInstance(right.GetType(), left.Number * right.Number),
-			BinaryOperator.Divide => !left.IsText && !right.IsText
-				? new ValueInstance(right.GetType(), left.Number / right.Number)
-				: new ValueInstance(left.IsText ? left.Text : right.Text),
-			_ => left.IsText ? left : new ValueInstance(left.GetType(), left.Number)
+      BinaryOperator.Multiply => new ValueInstance(right.GetType(),
+				left.Number * right.Number),
+			BinaryOperator.Divide => new ValueInstance(right.GetType(),
+				left.Number / right.Number),
+			_ => new ValueInstance(left.GetType(), left.Number)
 		};
 	}
 
@@ -1328,7 +1326,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private static ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
 	{
-		if (!left.IsList && !left.IsText && !right.IsText)
+    if (!left.IsList)
 			return new ValueInstance(left.GetType(), left.Number - right.Number);
 		var items = new List<ValueInstance>(left.List.Items);
 		var removeIndex = items.FindIndex(item => item.Equals(right));

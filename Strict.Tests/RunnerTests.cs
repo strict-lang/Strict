@@ -102,7 +102,7 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public async Task SaveStrictBinaryWithTypeBytecodeEntriesOnlyAsync()
+	public async Task SaveStrictBinaryWithTypeBytecodeEntriesOnly()
 	{
 		var binaryPath = await GetExamplesBinaryFile("SimpleCalculator");
 		await using var archive = await ZipFile.OpenReadAsync(binaryPath);
