@@ -1,6 +1,7 @@
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
+using static System.Net.Mime.MediaTypeNames;
 using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Serialization;
@@ -118,6 +119,10 @@ public sealed class NameTable
 
 	public NameTable Add(string name)
 	{
+		//TODO: remove again
+		if (name.StartsWith("for "))
+			throw new NotSupportedException("Invalid NameTable name: " + name);
+
 		if (indices.ContainsKey(name))
 			return this;
 		indices[name] = names.Count;

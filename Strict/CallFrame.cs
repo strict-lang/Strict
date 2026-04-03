@@ -1,5 +1,6 @@
 using Strict.Expressions;
 using Strict.Language;
+using System.Reflection.Metadata;
 
 namespace Strict;
 
@@ -33,7 +34,11 @@ internal sealed class CallFrame
 	internal bool TryGet(string name, out ValueInstance value)
 	{
 		if (variables != null && variables.TryGetValue(name, out value))
+		{
+			if (value.IsText && value.Text.StartsWith("for elements"))
+				throw new NotSupportedException("Invalid CallFrame.TryGet variable: " + name + " " + value.Text);
 			return true; //80% ends up here
+		}
 		if (parent != null && parent.TryGetMember(name, out value))
 			return true; //15% here
 		var dotIndex = name.IndexOf('.');
@@ -44,6 +49,7 @@ internal sealed class CallFrame
 		return false;
 	}
 
+	//TODO: never called
 	private bool TryGetRootValue(string name, int dotIndex, out ValueInstance value)
 	{
 		var rootName = name[..dotIndex];
@@ -55,6 +61,7 @@ internal sealed class CallFrame
 		return false;
 	}
 
+	//TODO: never called
 	private static bool TryGetNestedMemberValue(ValueInstance root, string path, int segmentStart,
 		out ValueInstance value)
 	{
@@ -85,6 +92,7 @@ internal sealed class CallFrame
 		}
 	}
 
+	//TODO: slow and complicated, but only called for member lookups
 	private bool TryGetMember(string name, out ValueInstance value)
 	{
 		if (memberNames != null && memberNames.Contains(name) &&
@@ -94,6 +102,7 @@ internal sealed class CallFrame
 		return false;
 	}
 
+	//TODO: we shouldn't have these many ways of getting a variable
 	internal ValueInstance Get(string name) =>
 		TryGet(name, out var value)
 			? value
@@ -108,6 +117,8 @@ internal sealed class CallFrame
 	internal void Set(string name, ValueInstance value, bool isMember = false)
 	{
 		variables ??= new Dictionary<string, ValueInstance>();
+		if (value.IsText && value.Text.StartsWith("for elements"))
+			throw new NotSupportedException("Invalid CallFrame.Set variable: isMember="+ isMember+", name: " + name + ", value: " + value.Text);
 		variables[name] = value;
 		if (isMember)
 		{

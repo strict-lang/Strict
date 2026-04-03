@@ -12,7 +12,12 @@ public sealed class RegisterFile
 	public ValueInstance this[Register r]
 	{
 		get => data[(int)r];
-		set => data[(int)r] = value;
+		set
+		{
+			if (value.IsText && value.Text.StartsWith("for elements"))
+				throw new NotSupportedException(value.Text);
+			data[(int)r] = value;
+		}
 	}
 
 	/// <summary>

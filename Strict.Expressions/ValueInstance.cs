@@ -1,4 +1,5 @@
 using Strict.Language;
+using System.Reflection.Metadata;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -48,12 +49,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	}
 
 	public sealed class InvalidTypeValue(Type returnType, object value) : ParsingFailed(returnType,
-		//ncrunch: no coverage start
 		0, value switch
 		{
 			null => "null",
 			Expression => "Expression " + value + " needs to be evaluated!",
-			//ncrunch: no coverage end
+			double valueDouble => valueDouble == TextId ? "IsText" :
+			valueDouble == ListId ? "IsList" :
+			valueDouble == DictionaryId ? "IsDictionary" :
+			valueDouble == TypeId ? "IsType" : value + "",
 			_ => value + ""
 		} + " (" + value?.GetType() + ") for " + returnType.Name);
 
@@ -61,6 +64,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	{
 		value = text;
 		number = TextId;
+		//TODO: remove again
+		if (text.StartsWith("for elements"))
+			throw new NotSupportedException("Invalid ValueInstance text: " + text);
 	}
 
 	public ValueInstance(Type returnType, Dictionary<ValueInstance, ValueInstance> dictionary)

@@ -8,7 +8,7 @@ using Type = Strict.Language.Type;
 namespace Strict;
 
 //TODO: way too long, remove unused methods, shorten some very badly written long methods, try to convert some switch statements to expression switch .. then split up into 2-3 classes each <400 lines
-//ncrunch: no coverage start, performance is very bad when NCrunch is tracking every line
+//nocrunch: no coverage start, performance is very bad when NCrunch is tracking every line
 public sealed class VirtualMachine(BinaryExecutable executable)
 {
 	public VirtualMachine(Package basePackage) : this(new BinaryExecutable(basePackage)) { }
@@ -978,7 +978,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		{
 			BinaryOperator.Plus => AddValueInstances(left, right),
 			BinaryOperator.Minus => SubtractValueInstances(left, right),
-      BinaryOperator.Multiply => new ValueInstance(right.GetType(),
+			BinaryOperator.Multiply => new ValueInstance(right.GetType(),
 				left.Number * right.Number),
 			BinaryOperator.Divide => new ValueInstance(right.GetType(),
 				left.Number / right.Number),
@@ -1212,10 +1212,20 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (instruction.InstructionType == InstructionType.LoadVariableToRegister)
 		{
 			var loadVariable = (LoadVariableToRegister)instruction;
-			Memory.Registers[loadVariable.Register] = TryGetFrameValue(loadVariable.Identifier,
-				out var value)
-				? value
-				: Memory.Frame.Get(loadVariable.Identifier);
+			ValueInstance registerValue = default;
+			if (TryGetFrameValue(loadVariable.Identifier,	out registerValue))
+			{
+				if (registerValue.IsText && registerValue.Text.StartsWith("for elements"))
+					throw new NotSupportedException("Invalid load of non-constant text variable: " + loadVariable.Identifier+" "+registerValue.Text);
+			}
+			else
+			{
+				//TODO: this doesn't even make sense, we just did this in TryGetFrameValue, using TryGet ..
+				registerValue = Memory.Frame.Get(loadVariable.Identifier);
+				if (registerValue.IsText && registerValue.Text.StartsWith("for elements"))
+					throw new NotSupportedException("Invalid Frame.Get variable: " + loadVariable.Identifier + " " + registerValue.Text);
+			}
+			Memory.Registers[loadVariable.Register] = registerValue;
 		}
 		else if (instruction.InstructionType == InstructionType.LoadConstantToRegister)
 		{
@@ -1243,7 +1253,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			var memberName = separatorIndex < 0
 				? identifier[segmentStart..]
 				: identifier[segmentStart..separatorIndex];
-			if (TryGetNativeMemberValue(current, memberName, out current))
+			current = TryGetNativeMemberValue(current, memberName);
+			if (current.HasValue)
 			{
 				if (separatorIndex < 0)
 					break;
@@ -1261,31 +1272,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return true;
 	}
 
-	//TODO: simplify method, can be much shorter!
-	private bool TryGetNativeMemberValue(ValueInstance current, string memberName,
-		out ValueInstance value)
-	{
-		if (current.IsText && memberName is "characters" or Type.ElementsLowercase)
-		{
-			value = current;
-			return true;
-		}
-		if (memberName is "Length" or "Count")
-		{
-			if (current.IsText)
-			{
-				value = new ValueInstance(executable.numberType, current.Text.Length);
-				return true;
-			}
-			if (current.IsList)
-			{
-				value = new ValueInstance(executable.numberType, current.List.Items.Count);
-				return true;
-			}
-		}
-		value = default;
-		return false;
-	}
+	private ValueInstance TryGetNativeMemberValue(ValueInstance current, string memberName) =>
+		current.IsText && memberName is "characters" or Type.ElementsLowercase
+			? current
+			: memberName is "Length"
+				? current.IsText
+					? new ValueInstance(executable.numberType, current.Text.Length)
+					: current.IsList
+						? new ValueInstance(executable.numberType, current.List.Items.Count)
+						: default
+				: default;
 
 	private void ExecuteBinaryInstruction(BinaryInstruction instruction)
 	{
@@ -1319,6 +1315,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			left.List.Items.Add(right);
 			return left;
 		}
+		if (right.IsList)
+		{
+			throw new NotSupportedException("Cannot add list right="+right+" to left="+left);
+		}
 		if (left.IsText || right.IsText)
 			return new ValueInstance(ConvertToText(left).Text + ConvertToText(right).Text);
 		return new ValueInstance(right.GetType(), left.Number + right.Number);
@@ -1326,13 +1326,17 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private static ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
 	{
-    if (!left.IsList)
-			return new ValueInstance(left.GetType(), left.Number - right.Number);
-		var items = new List<ValueInstance>(left.List.Items);
-		var removeIndex = items.FindIndex(item => item.Equals(right));
-		if (removeIndex >= 0)
-			items.RemoveAt(removeIndex);
-		return new ValueInstance(left.List.ReturnType, items.ToArray());
+		if (left.IsList)
+		{
+			var items = new List<ValueInstance>(left.List.Items);
+			var removeIndex = items.FindIndex(item => item.Equals(right));
+			if (removeIndex >= 0)
+				items.RemoveAt(removeIndex);
+			return new ValueInstance(left.List.ReturnType, items.ToArray());
+		}
+		if (left.IsText || right.IsText)
+			throw new NotSupportedException("Texts cannot be subtracted: " + left + " - " + right);
+		return new ValueInstance(left.GetType(), left.Number - right.Number);
 	}
 
 	private (ValueInstance, ValueInstance) GetOperands(BinaryInstruction instruction) =>

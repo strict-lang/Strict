@@ -1,5 +1,5 @@
 // When things are in flux, force generating a new .strictbinary every time by disabling the cache
-//#define DISABLE_BINARY_CACHE
+#define DISABLE_BINARY_CACHE
 using Strict.Bytecode;
 using Strict.Compiler;
 using Strict.Compiler.Assembly;
@@ -105,6 +105,7 @@ public sealed class Runner
 		if (Path.GetExtension(strictFilePath) == BinaryExecutable.Extension)
 			return LogTiming("Loading existing " + strictFilePath,
 				() => new BinaryExecutable(strictFilePath, basePackage));
+#if !DISABLE_BINARY_CACHE
 		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
 		if (File.Exists(cachedBinaryPath))
 		{
@@ -114,7 +115,8 @@ public sealed class Runner
 			{
 				binary = new BinaryExecutable(cachedBinaryPath, basePackage);
 			}
-			catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile or EndOfStreamException)
+			catch (Exception ex)
+			when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile or EndOfStreamException)
 			{
 				Log("Cached " + cachedBinaryPath + " is no longer compatible: " + ex.Message);
 				return await LoadFromSourceAndSaveBinary(basePackage);
@@ -128,17 +130,16 @@ public sealed class Runner
 				if (fileLastModified > sourceLastModified)
 					sourceLastModified = fileLastModified;
 			}
-#if !DISABLE_BINARY_CACHE
 			if (binaryLastModified >= sourceLastModified)
 			{
 				Log("Cached " + cachedBinaryPath + " from " + binaryLastModified +
 					" is still good, using it. Latest source file change: " + sourceLastModified);
 				return binary;
 			}
-#endif
 			Log("Cached " + cachedBinaryPath + " is outdated from " + binaryLastModified +
 				", source modified at " + sourceLastModified + ". Will regenerate now ..");
 		}
+#endif
 		return await LoadFromSourceAndSaveBinary(basePackage);
 	}
 

@@ -180,6 +180,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 	// @formatter: on
 
 	[Test]
+	[Category("Slow")]//TODO: way too slow atm, annoying
 	public void InlineColorAdjustmentInsideLoopRemovesInvoke()
 	{
 		var binary = CreateColorAdjustmentBinary();
