@@ -1,5 +1,4 @@
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode;
 
 namespace Strict.Optimizers;
 

@@ -1,18 +1,15 @@
 using Strict.Bytecode;
 using Strict.Expressions;
 using Strict.Language;
-using System.Text;
 
 namespace Strict.Tests;
 
 //ncrunch: no coverage start
 internal class Program
 {
-	public static async Task Main()
-	{
-		await RunSimpleCalculator();
+	public static async Task Main() =>
+		//await RunSimpleCalculator();
 		await RunAdjustBrightness();
-	}
 
 	private static async Task RunSimpleCalculator()
 	{
@@ -86,7 +83,7 @@ internal class Program
 			"AdjustBrightness.strict"), strictBasePackage);
 		var runAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 		var runStartTicks = DateTime.UtcNow.Ticks;
-		const int Runs = 1;//2;//10;
+		const int Runs = 2; //10;
 		for (var run = 0; run < Runs; run++)
 			await runner.Run();
 		var runEndTicks = DateTime.UtcNow.Ticks;

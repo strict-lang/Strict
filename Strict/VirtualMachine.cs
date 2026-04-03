@@ -31,7 +31,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private IReadOnlyList<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
-	private int callDepth;
 	private const int MaxCallDepth = 64;
 	private readonly ValueInstance[][] registerStack = new ValueInstance[MaxCallDepth][];
 	private int registerStackDepth;
@@ -42,11 +41,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		for (var index = 0; index < blockInstructions.Count; index++)
 			if (blockInstructions[index].InstructionType == InstructionType.LoopBegin)
-		{
-			var loopBegin = (LoopBeginInstruction)blockInstructions[index];
-			loopBegin.Reset();
-			loopBegin.InstructionIndex = index;
-		}
+			{
+				var loopBegin = (LoopBeginInstruction)blockInstructions[index];
+				loopBegin.Reset();
+				loopBegin.InstructionIndex = index;
+			}
 		instructions = blockInstructions;
 		var instructionsLength = instructions.Count;
 		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
@@ -430,7 +429,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: fullTypeName;
 	}
 
- private ChildScopeState InitializeChildScope()
+	private ChildScopeState InitializeChildScope()
 	{
 		var savedInstructions = instructions;
 		var savedIndex = instructionIndex;
@@ -462,7 +461,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		Memory.Frame = state.SavedFrame;
 		registerStackDepth = state.StackDepth;
 		Memory.Registers.RestoreFrom(registerStack[state.StackDepth]);
-		callDepth--;
 		instructions = state.SavedInstructions;
 		instructionIndex = state.SavedInstructionIndex;
 		conditionFlag = state.SavedConditionFlag;
@@ -762,10 +760,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			var methodInstructions = GetPrecompiledMethodInstructions(method);
 			if (methodInstructions != null)
 			{
-        var childScope = InitializeChildScope();
+				var childScope = InitializeChildScope();
 				Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
-					TrySetScopeMembersFromTypeMembers(typeInstance!);
-        RunInstructions(methodInstructions);
+				TrySetScopeMembersFromTypeMembers(typeInstance!);
+				RunInstructions(methodInstructions);
 				var result = Returns;
 				CleanupChildScope(childScope);
 				if (result.HasValue)
@@ -944,6 +942,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return memberFrameValue;
 		if (memberCall.Member.InitialValue is Value enumValue)
 			return enumValue.Data;
+		var memberType = memberCall.Member.Type;
+		if (memberType.IsNumber)
+			return new ValueInstance(executable.numberType, 0);
+		if (memberType.IsBoolean)
+			return new ValueInstance(executable.booleanType, 0);
 		return new ValueInstance(frameKey);
 	}
 
@@ -975,11 +978,13 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		{
 			BinaryOperator.Plus => AddValueInstances(left, right),
 			BinaryOperator.Minus => SubtractValueInstances(left, right),
-			BinaryOperator.Multiply => new ValueInstance(right.GetType(),
-				left.Number * right.Number),
-			BinaryOperator.Divide => new ValueInstance(right.GetType(),
-				left.Number / right.Number),
-			_ => new ValueInstance(left.GetType(), left.Number)
+			BinaryOperator.Multiply => left.IsText || right.IsText
+				? new ValueInstance(ConvertToText(left).Text + ConvertToText(right).Text)
+				: new ValueInstance(right.GetType(), left.Number * right.Number),
+			BinaryOperator.Divide => !left.IsText && !right.IsText
+				? new ValueInstance(right.GetType(), left.Number / right.Number)
+				: new ValueInstance(left.IsText ? left.Text : right.Text),
+			_ => left.IsText ? left : new ValueInstance(left.GetType(), left.Number)
 		};
 	}
 
@@ -1004,7 +1009,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			var evaluatedInstance = call.Instance != null
 				? EvaluateExpression(call.Instance)
 				: (ValueInstance?)null;
-      var childScope = InitializeChildScope();
+			var childScope = InitializeChildScope();
 			InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance);
 			RunInstructions(precompiledInstructions);
 			var precompiledResult = Returns;
@@ -1323,7 +1328,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private static ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
 	{
-		if (!left.IsList)
+		if (!left.IsList && !left.IsText && !right.IsText)
 			return new ValueInstance(left.GetType(), left.Number - right.Number);
 		var items = new List<ValueInstance>(left.List.Items);
 		var removeIndex = items.FindIndex(item => item.Equals(right));

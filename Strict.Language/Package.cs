@@ -73,7 +73,7 @@ public class Package : Context, IDisposable
 			cachedFoundTypes.Add(Type.None, new Type(this, new TypeLines(Type.None)));
 
 		public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
-			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType) && previouslyFoundType != null
+			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
 				? previouslyFoundType
 				: FindTypeInChildrenAndCache(name, searchingFrom);
 

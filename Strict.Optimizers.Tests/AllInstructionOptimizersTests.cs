@@ -1,6 +1,5 @@
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
-using Strict.Language;
 
 namespace Strict.Optimizers.Tests;
 
@@ -10,14 +9,12 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 	public async Task LoadPackagesAsync()
 	{
 		repos = new Repositories(new MethodExpressionParser());
-		basePackage = await repos.LoadStrictPackage();
-		mathPackage = await repos.LoadStrictPackage("Strict/Math");
+		await repos.LoadStrictPackage();
+		await repos.LoadStrictPackage("Strict/Math");
 		imageProcessingPackage = await repos.LoadStrictPackage("Strict/ImageProcessing");
 	}
 
 	private Repositories? repos;
-	private Package? basePackage;
-	private Package? mathPackage;
 	private Package? imageProcessingPackage;
 
 	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
@@ -207,9 +204,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 
 	internal BinaryExecutable CreateColorAdjustmentBinary()
 	{
-		if (imageProcessingPackage == null || mathPackage == null || basePackage == null)
-			throw new InvalidOperationException("Packages not loaded");
-		var brightnerType = imageProcessingPackage.FindDirectType("AdjustBrightness")!;
+		var brightnerType = imageProcessingPackage!.FindDirectType("AdjustBrightness")!;
 		var runMethod = brightnerType.Methods.Single(m => m.Name == "Run");
 		return new BinaryGenerator(new MethodCall(runMethod)).Generate();
 	}
