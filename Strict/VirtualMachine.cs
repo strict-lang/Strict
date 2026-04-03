@@ -129,6 +129,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		case InstructionType.Print:
 			ExecutePrint((PrintInstruction)instruction);
 			return;
+		case InstructionType.FieldLoad:
+			ExecuteFieldLoad((FieldLoadInstruction)instruction);
+			return;
+		case InstructionType.ConstructValueType:
+			ExecuteConstructValueType((ConstructValueTypeInstruction)instruction);
+			return;
 		case InstructionType.Invoke:
 			ExecuteInvoke((Invoke)instruction);
 			return;
@@ -175,6 +181,28 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private sealed class InvalidInstruction(Instruction instruction)
 		: Exception(instruction.ToString());
+
+	private void ExecuteFieldLoad(FieldLoadInstruction instr)
+	{
+		var typeInstance = Memory.Registers[instr.ObjectRegister].TryGetValueTypeInstance();
+		if (typeInstance == null)
+			return;
+		var members = typeInstance.ReturnType.Members;
+		for (var index = 0; index < members.Count; index++)
+			if (members[index].Name.Equals(instr.FieldName, StringComparison.OrdinalIgnoreCase))
+			{
+				Memory.Registers[instr.Register] = typeInstance.Values[index];
+				return;
+			}
+	}
+
+	private void ExecuteConstructValueType(ConstructValueTypeInstruction instr)
+	{
+		var values = new ValueInstance[instr.FieldRegisters.Length];
+		for (var index = 0; index < instr.FieldRegisters.Length; index++)
+			values[index] = Memory.Registers[instr.FieldRegisters[index]];
+		Memory.Registers[instr.Register] = new ValueInstance(instr.ReturnType, values);
+	}
 
 	private void ExecutePrint(PrintInstruction print)
 	{

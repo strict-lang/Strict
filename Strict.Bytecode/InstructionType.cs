@@ -40,5 +40,7 @@ public enum InstructionType : byte
 	InvokeWriteToList,
 	InvokeWriteToTable,
 	InvokeRemove,
-	Print
+	Print,
+	FieldLoad,
+	ConstructValueType
 }

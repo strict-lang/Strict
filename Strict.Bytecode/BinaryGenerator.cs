@@ -56,6 +56,7 @@ public sealed class BinaryGenerator
 				entryMethodCall.Method.Type.Methods.Where(method => method.Name == Method.Run).ToArray())
 			: Generate(entryTypeFullName, Expressions, ReturnType);
 
+	//TODO: this is convoluted and not good
 	public static BinaryExecutable GenerateFromRunMethods(Method preferredEntryMethod,
 		IReadOnlyList<Method> runMethods)
 	{
