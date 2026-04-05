@@ -22,7 +22,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		Memory.Registers.Clear();
 		Memory.Frame = new CallFrame(initialVariables);
 		InitializeEntryPointMembers(method);
-		return RunInstructions(method.instructions);
+		return RunInstructions(method.instructions, method.Name);
 	}
 
 	private bool conditionFlag;
@@ -36,9 +36,23 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private int registerStackDepth;
 	private readonly CallFrame[] framePool = new CallFrame[MaxCallDepth];
 	private int framePoolDepth;
+	private static readonly int ValueSymbolId = CallFrame.ValueSymbolId;
+	private static readonly int IndexSymbolId = CallFrame.IndexSymbolId;
+	private static readonly int OuterSymbolId = CallFrame.OuterSymbolId;
+	private static readonly int ElementsSymbolId = CallFrame.ElementsSymbolId;
+	private static readonly int CharactersSymbolId = CallFrame.CharactersSymbolId;
+  private readonly int noneSymbolId = CallFrame.ResolveSymbolId(Type.None);
+	private readonly Dictionary<string, IdentifierAccessPath> identifierAccessPaths =
+		new(StringComparer.Ordinal);
+	private readonly Dictionary<string, IndexedElementAccessPath> indexedElementAccessPaths =
+		new(StringComparer.Ordinal);
 
-	private VirtualMachine RunInstructions(List<Instruction> blockInstructions)
+  private VirtualMachine RunInstructions(List<Instruction> blockInstructions,
+		string context = "body")
 	{
+   if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("VirtualMachine.RunInstructions", "context=" + context + ", count=" + blockInstructions.Count);
+   CacheInstructionAccessPaths(blockInstructions);
 		for (var index = 0; index < blockInstructions.Count; index++)
 			if (blockInstructions[index].InstructionType == InstructionType.LoopBegin)
 			{
@@ -51,6 +65,53 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
 			ExecuteInstruction(instructions[instructionIndex]);
 		return this;
+	}
+
+	private void CacheInstructionAccessPaths(IReadOnlyList<Instruction> blockInstructions)
+	{
+		identifierAccessPaths.EnsureCapacity(identifierAccessPaths.Count + blockInstructions.Count * 2);
+		indexedElementAccessPaths.EnsureCapacity(indexedElementAccessPaths.Count + blockInstructions.Count);
+		for (var instructionIndex = 0; instructionIndex < blockInstructions.Count; instructionIndex++)
+			switch (blockInstructions[instructionIndex])
+			{
+			case LoadVariableToRegister loadVariable:
+				CacheIdentifierAccessPath(loadVariable.Identifier);
+				break;
+			case StoreVariableInstruction storeVariable:
+				CacheIdentifierAccessPath(storeVariable.Identifier);
+				break;
+			case StoreFromRegisterInstruction storeFromRegister:
+				CacheStoreAccessPath(storeFromRegister.Identifier);
+				break;
+			case ListCallInstruction listCall:
+				CacheIdentifierAccessPath(listCall.Identifier);
+				break;
+			case WriteToListInstruction writeToList:
+				CacheIdentifierAccessPath(writeToList.Identifier);
+				break;
+			case RemoveInstruction remove:
+				CacheIdentifierAccessPath(remove.Identifier);
+				break;
+			}
+	}
+
+	private void CacheStoreAccessPath(string identifier)
+	{
+		var indexedAccessPath = GetIndexedElementAccessPath(identifier);
+		if (!indexedAccessPath.IsValid)
+		{
+			CacheIdentifierAccessPath(identifier);
+			return;
+		}
+		CacheIdentifierAccessPath(indexedAccessPath.ListPath);
+		CacheIdentifierAccessPath(indexedAccessPath.IndexExpression);
+	}
+
+	private void CacheIdentifierAccessPath(string identifier)
+	{
+		if (identifier.Length == 0 || double.TryParse(identifier, out _))
+			return;
+		_ = GetIdentifierAccessPath(identifier);
 	}
 
 	private void InitializeEntryPointMembers(BinaryMethod method)
@@ -105,6 +166,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	// Now it should be 0.23m*(3-4) instructions, less than 1m, also no lookups, we can keep value and brightness directly in memory and reuse, index increases were we are in our big Colors array ..
 	private void ExecuteInstruction(Instruction instruction)
 	{
+    if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("** VirtualMachine.ExecuteInstruction",
+				"index=" + instructionIndex + ", type=" + instruction.InstructionType +
+				GetInstructionDetails(instruction));
 		switch (instruction.InstructionType)
 		{
 		case InstructionType.Return:
@@ -178,6 +243,77 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 	}
 
+  private string GetInstructionDetails(Instruction instruction) => instruction switch
+	{
+		StoreVariableInstruction storeVariable => ", Identifier=" + storeVariable.Identifier +
+			", IsMember=" + storeVariable.IsMember + ", ValueInstance=" +
+			DescribeValueInstance(storeVariable.ValueInstance),
+		StoreFromRegisterInstruction storeFromRegister => ", Identifier=" +
+			storeFromRegister.Identifier + ", Register=" + storeFromRegister.Register,
+		LoadVariableToRegister loadVariable => ", Identifier=" + loadVariable.Identifier +
+			", Register=" + loadVariable.Register,
+		LoadConstantInstruction loadConstant => ", Constant=" +
+			DescribeValueInstance(loadConstant.Constant) + ", Register=" + loadConstant.Register,
+		Invoke invoke => ", Method=" + DescribeMethodCall(invoke.Method) + ", Register=" +
+			invoke.Register,
+		PrintInstruction print => ", TextPrefix=" + print.TextPrefix + ", ValueRegister=" +
+			print.ValueRegister + ", ValueIsText=" + print.ValueIsText,
+		LoopBeginInstruction loopBegin => ", Register=" + loopBegin.Register + ", IsRange=" +
+			loopBegin.IsRange + ", CustomVariableName=" + loopBegin.CustomVariableName,
+		LoopEndInstruction loopEnd => ", Steps=" + loopEnd.Steps,
+		BinaryInstruction binary => ", Registers=" + DescribeRegisters(binary.Registers),
+		ListCallInstruction listCall => ", Identifier=" + listCall.Identifier + ", Register=" +
+			listCall.Register + ", IndexValueRegister=" + listCall.IndexValueRegister,
+		WriteToListInstruction writeToList => ", Identifier=" + writeToList.Identifier +
+			", Register=" + writeToList.Register,
+		WriteToTableInstruction writeToTable => ", Identifier=" + writeToTable.Identifier +
+			", KeyRegister=" + writeToTable.Register + ", ValueRegister=" + writeToTable.Value,
+		RemoveInstruction remove => ", Identifier=" + remove.Identifier + ", Register=" +
+			remove.Register,
+		FieldLoadInstruction fieldLoad => ", FieldName=" + fieldLoad.FieldName +
+			", ObjectRegister=" + fieldLoad.ObjectRegister + ", Register=" + fieldLoad.Register,
+		ConstructValueTypeInstruction construct => ", ReturnType=" + construct.ReturnType.Name +
+			", Register=" + construct.Register + ", Fields=" +
+			DescribeRegisters(construct.FieldRegisters),
+   JumpIfNotZero jumpIfNotZero => ", Register=" + jumpIfNotZero.Register +
+			", InstructionsToSkip=" + jumpIfNotZero.InstructionsToSkip,
+		JumpToId jumpToId => ", Id=" + jumpToId.Id,
+		Jump jump => ", InstructionsToSkip=" + jump.InstructionsToSkip,
+		_ => string.Empty
+	};
+
+	private static string DescribeRegisters(Register[] registers)
+	{
+    if (registers.Length == 0)
+			return "[]";
+		var parts = new string[registers.Length];
+		for (var index = 0; index < registers.Length; index++)
+			parts[index] = registers[index].ToString();
+		return "[" + string.Join(", ", parts) + "]";
+	}
+
+ private string DescribeMethodCall(MethodCall methodCall)
+	{
+    var method = methodCall.Method;
+		return method.Name + " on " + method.Type.Name + " args=" + methodCall.Arguments.Count +
+			", hasInstance=" + (methodCall.Instance != null);
+	}
+
+	private static string DescribeValueInstance(ValueInstance value) =>
+		!value.HasValue
+			? "unset"
+			: value.IsText
+				? "Text(length=" + value.Text.Length + ")"
+				: value.IsList
+					? "List(type=" + value.List.ReturnType.Name + ", count=" +
+						value.List.Items.Count + ")"
+					: value.IsDictionary
+						? "Dictionary(count=" + value.GetDictionaryItems().Count + ")"
+						: value.TryGetValueTypeInstance() is { } typeInstance
+							? "TypeInstance(type=" + typeInstance.ReturnType.Name + ", members=" +
+								typeInstance.Values.Length + ")"
+							: value.GetType().Name + "(" + value.Number + ")";
+
 	private sealed class InvalidInstruction(Instruction instruction)
 		: Exception(instruction.ToString());
 
@@ -224,17 +360,28 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private void ExecuteListCall(ListCallInstruction listCallInstruction)
 	{
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
-		var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List.Items[indexValue];
+    var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List[indexValue];
 		Memory.Registers[listCallInstruction.Register] = variableListElement;
 	}
 
-	private void ExecuteWriteToList(WriteToListInstruction writeToListInstruction) =>
-		Memory.AddToCollectionVariable(writeToListInstruction.Identifier,
-			Memory.Registers[writeToListInstruction.Register]);
+ private void ExecuteWriteToList(WriteToListInstruction writeToListInstruction)
+	{
+    if (!GetIdentifierAccessPath(writeToListInstruction.Identifier).TryResolve(this,
+			out var collection) || !collection.IsList)
+			throw new InvalidOperationException("Cannot add to non-list variable \"" +
+				writeToListInstruction.Identifier + "\"");
+		collection.List.Items.Add(Memory.Registers[writeToListInstruction.Register]);
+	}
 
-	private void ExecuteWriteToTable(WriteToTableInstruction writeToTableInstruction) =>
-		Memory.AddToDictionary(writeToTableInstruction.Identifier,
-			Memory.Registers[writeToTableInstruction.Register], Memory.Registers[writeToTableInstruction.Value]);
+  private void ExecuteWriteToTable(WriteToTableInstruction writeToTableInstruction)
+	{
+   if (!GetIdentifierAccessPath(writeToTableInstruction.Identifier).TryResolve(this,
+			out var collection) || !collection.IsDictionary)
+			throw new InvalidOperationException("Cannot add to non-dictionary variable \"" +
+				writeToTableInstruction.Identifier + "\"");
+		collection.GetDictionaryItems()[Memory.Registers[writeToTableInstruction.Register]] =
+			Memory.Registers[writeToTableInstruction.Value];
+	}
 
 	private void ExecuteLoopEnd(LoopEndInstruction loopEnd)
 	{
@@ -285,7 +432,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			throw new InvalidOperationException("No precompiled method instructions found for invoke");
 		var childScope = InitializeChildScope();
 		InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance);
-		RunInstructions(invokeInstructions);
+    RunInstructions(invokeInstructions, invoke.Method.Method.Name);
 		var result = Returns;
 		CleanupChildScope(childScope);
 		if (result != null)
@@ -298,9 +445,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var instanceExpression = methodCall.Instance;
 		return methodCall.Method.Name switch
 		{
-			Method.From => instanceExpression == null &&
-				ExecuteFromInvoke(invoke, methodCall.ReturnType),
+      Method.From => instanceExpression == null &&
+				(TryHandleAdjustedColorConstructor(invoke) ||
+				ExecuteFromInvoke(invoke, methodCall.ReturnType)),
 			BinaryOperator.To => instanceExpression != null && TryHandleToConversion(invoke),
+      "Length" or "Count" => instanceExpression != null && TryHandleNativeLength(invoke),
 			"Increment" or "Decrement" => TryHandleIncrementDecrement(invoke),
 			"Get" => instanceExpression != null && instanceExpression.ReturnType.IsDictionary &&
 				GetValueByKeyForDictionaryAndStoreInRegister(invoke),
@@ -321,6 +470,133 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 		return TryHandleFromConstructor(invoke, returnType);
 	}
+
+	private bool TryHandleNativeLength(Invoke invoke)
+	{
+		var instanceExpression = invoke.Method.Instance;
+		if (instanceExpression == null)
+			return false;
+		var instanceValue = instanceExpression is MemberCall memberCall
+			? EvaluateMemberCall(memberCall)
+			: EvaluateExpression(instanceExpression);
+		if (!TryGetNativeLength(instanceValue, invoke.Method.Method.Name, out var lengthValue))
+			return false;
+		Memory.Registers[invoke.Register] = lengthValue;
+		return true;
+	}
+
+	private bool TryHandleAdjustedColorConstructor(Invoke invoke)
+	{
+		if (invoke.Method.ReturnType.Name != "Color" || invoke.Method.Arguments.Count != 3 ||
+			!TryExtractColorChannelAdjustment(invoke.Method.Arguments[0], "Red", out var listCall,
+				out var adjustmentExpression) ||
+			!TryExtractMatchingColorChannelAdjustment(invoke.Method.Arguments[1], "Green", listCall,
+				adjustmentExpression) ||
+			!TryExtractMatchingColorChannelAdjustment(invoke.Method.Arguments[2], "Blue", listCall,
+				adjustmentExpression))
+			return false;
+   var sourceColor = TryResolveIndexedListValue(listCall, out var resolvedColor)
+			? resolvedColor
+			: EvaluateListCallExpression(listCall);
+		var brightness = EvaluateExpression(adjustmentExpression).Number;
+		if (!TryGetColorChannels(sourceColor, out var red, out var green, out var blue,
+				out var alpha))
+			return false;
+   Memory.Registers[invoke.Register] = ValueInstance.CreateRgba(invoke.Method.ReturnType,
+			red + brightness, green + brightness, blue + brightness,
+			alpha ?? GetConstructorMemberValue(invoke.Method.ReturnType, 3).Number);
+		return true;
+	}
+
+	private bool TryGetColorChannels(ValueInstance colorValue, out double red, out double green,
+		out double blue, out double? alpha)
+	{
+		if (colorValue.TryGetPackedRgbaChannels(out red, out green, out blue, out var packedAlpha))
+		{
+			alpha = packedAlpha;
+			return true;
+		}
+		var colorTypeInstance = colorValue.TryGetValueTypeInstance();
+		if (colorTypeInstance != null && colorTypeInstance.TryGetValue("Red", out var redValue) &&
+			colorTypeInstance.TryGetValue("Green", out var greenValue) &&
+			colorTypeInstance.TryGetValue("Blue", out var blueValue))
+		{
+			red = redValue.Number;
+			green = greenValue.Number;
+			blue = blueValue.Number;
+			alpha = colorTypeInstance.TryGetValue("Alpha", out var alphaValue)
+				? alphaValue.Number
+				: null;
+			return true;
+		}
+		red = green = blue = 0;
+		alpha = null;
+		return false;
+	}
+
+	private ValueInstance GetConstructorMemberValue(Type targetType, int memberIndex)
+	{
+		var members = targetType.Members;
+		if (memberIndex >= members.Count)
+			return default;
+		var member = members[memberIndex];
+		if (member.Type.IsTrait)
+			return CreateTraitInstance(member.Type);
+		return member.InitialValue is Value initialValue
+			? initialValue.Data
+			: CreateDefaultValue(member.Type);
+	}
+
+	private bool TryExtractMatchingColorChannelAdjustment(Expression expression, string expectedMemberName,
+		ListCall expectedListCall, Expression expectedAdjustmentExpression) =>
+		TryExtractColorChannelAdjustment(expression, expectedMemberName, out var listCall,
+			out var adjustmentExpression) && AreEquivalentExpression(listCall.List,
+			expectedListCall.List) && AreEquivalentExpression(listCall.Index,
+			expectedListCall.Index) && AreEquivalentExpression(adjustmentExpression,
+			expectedAdjustmentExpression);
+
+	private static bool TryExtractColorChannelAdjustment(Expression expression,
+		string expectedMemberName, out ListCall listCall, out Expression adjustmentExpression)
+	{
+		if (expression is Binary
+			{
+				Method.Name: BinaryOperator.Plus,
+				Instance: MemberCall
+				{
+					Member.Name: var memberName,
+					Instance: ListCall currentListCall
+				},
+				Arguments: [var rightExpression]
+			} && memberName == expectedMemberName)
+		{
+			listCall = currentListCall;
+			adjustmentExpression = rightExpression;
+			return true;
+		}
+		listCall = null!;
+		adjustmentExpression = null!;
+		return false;
+	}
+
+	private static bool AreEquivalentExpression(Expression left, Expression right) =>
+		ReferenceEquals(left, right) || (left, right) switch
+		{
+			(Value leftValue, Value rightValue) => leftValue.Data.Equals(rightValue.Data),
+			(VariableCall leftVariable, VariableCall rightVariable) =>
+				leftVariable.Variable.Name == rightVariable.Variable.Name,
+				(ParameterCall leftParameter, ParameterCall rightParameter) =>
+					leftParameter.Parameter.Name == rightParameter.Parameter.Name,
+					(MemberCall leftMember, MemberCall rightMember) =>
+						leftMember.Member.Name == rightMember.Member.Name &&
+						((leftMember.Instance == null && rightMember.Instance == null) ||
+							leftMember.Instance != null && rightMember.Instance != null &&
+							AreEquivalentExpression(leftMember.Instance, rightMember.Instance)),
+						(ListCall leftListCall, ListCall rightListCall) =>
+							AreEquivalentExpression(leftListCall.List, rightListCall.List) &&
+							AreEquivalentExpression(leftListCall.Index, rightListCall.Index),
+						(Instance, Instance) => true,
+						_ => false
+		};
 
 	//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
@@ -476,9 +752,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var methodName = invoke.Method.Method.Name;
 		if (methodName != "Increment" && methodName != "Decrement")
 			return false;
-		if (invoke.Method.Instance == null ||
-			!Memory.Frame.TryGet(GetFrameKey(invoke.Method.Instance), out var current))
+   if (invoke.Method.Instance == null)
 			return false;
+   var current = EvaluateExpression(invoke.Method.Instance);
 		var delta = methodName == "Increment"
 			? 1.0
 			: -1.0;
@@ -519,9 +795,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: 0;
 		var matches = start + prefix.Length <= text.Length &&
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
-		return new ValueInstance(executable.booleanType, matches
-			? 1.0
-			: 0.0);
+    return new ValueInstance(executable.booleanType, matches);
 	}
 
 	private bool TryHandleToConversion(Invoke invoke)
@@ -667,7 +941,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var members = targetType.Members;
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 		{
-			if (!values[memberIndex].IsList || values[memberIndex].List.Items.Count > 0 ||
+      if (!values[memberIndex].IsList || values[memberIndex].List.Count > 0 ||
 				members[memberIndex].Constraints == null)
 				continue;
 			var length = TryGetConstrainedLength(targetType, values, members[memberIndex]);
@@ -679,10 +953,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			if (elementType.Members.FirstOrDefault(member => member.Name == Type.ElementsLowercase)?.Type is
 				GenericTypeImplementation nestedElementsList)
 				elementType = nestedElementsList.ImplementationTypes[0];
-			var elements = new ValueInstance[length.Value];
 			var defaultElement = CreateDefaultComplexValue(elementType);
-			Array.Fill(elements, defaultElement);
-			values[memberIndex] = new ValueInstance(members[memberIndex].Type, elements);
+      values[memberIndex] = new ValueInstance(members[memberIndex].Type, defaultElement,
+				length.Value);
 		}
 	}
 
@@ -699,6 +972,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 					? new ValueInstance("")
 					: memberType.IsBoolean
 						? new ValueInstance(memberType, false)
+            : memberType.IsNone
+							? new ValueInstance(memberType)
+							: memberType.Members.Count > 0 && !memberType.IsMutable
+								? new ValueInstance(memberType)
 						: memberType.IsMutable
 							// ReSharper disable once TailRecursiveCall
 							? CreateDefaultValue(memberType.GetFirstImplementation())
@@ -871,8 +1148,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (expression is VariableCall variableCall && variableCall.IsConstant &&
 			variableCall.Variable.InitialValue is Value constantValue)
 			return constantValue.Data;
-		if (expression is VariableCall or ParameterCall or Instance)
-			return Memory.Frame.Get(GetFrameKey(expression));
+    if (expression is VariableCall directVariable)
+			return EvaluateVariableCall(directVariable);
+		if (expression is ParameterCall parameterCall)
+			return Memory.Frame.Get(CallFrame.ResolveSymbolId(parameterCall.Parameter.Name));
+		if (expression is Instance)
+			return Memory.Frame.Get(ValueSymbolId);
 		if (expression is MemberCall memberCall)
 			return EvaluateMemberCall(memberCall);
 		if (expression is Binary binary)
@@ -881,32 +1162,28 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return EvaluateMethodCall(methodCall);
 		if (expression is ListCall listCall)
 			return EvaluateListCallExpression(listCall); //TODO: another almost 25% here, 0.23m calls
-		//almost never called, not sure? AdjustBrightness does not need this even once:
-		var frameKey = GetFrameKey(expression);
-		return Memory.Frame.TryGet(frameKey, out var frameValue)
-			? frameValue
-			: new ValueInstance(frameKey);
+   return TryResolveExpressionFallback(expression, out var resolvedValue)
+			? resolvedValue
+			: throw new InvalidOperationException("Could not evaluate expression " + expression);
 	}
 
-	private static string GetFrameKey(Expression expression) =>
-		expression switch
-		{
-			VariableCall variableCall => variableCall.Variable.Name,
-			ParameterCall parameterCall => parameterCall.Parameter.Name,
-			Instance => Type.ValueLowercase,
-			MemberCall memberCall => GetMemberCallFrameKey(memberCall),
-			_ => expression.ToString()
-		};
-
-	private static string GetMemberCallFrameKey(MemberCall memberCall) =>
-		memberCall.Instance == null
-			? memberCall.ToString()
-			: string.Concat(GetFrameKey(memberCall.Instance), ".", memberCall.Member.Name);
+	private ValueInstance EvaluateVariableCall(VariableCall variableCall)
+	{
+		if (variableCall.Variable.Name == Type.OuterLowercase)
+			return Memory.Frame.Get(OuterSymbolId);
+		return Memory.Frame.Get(CallFrame.ResolveSymbolId(variableCall.Variable.Name));
+	}
 
 	private ValueInstance EvaluateListCallExpression(ListCall listCall)
 	{
+    if (TryResolveIndexedListValue(listCall, out var directListElement))
+			return directListElement;
+    if (TryEvaluateDirectSpecialListCall(listCall, out var directValue))
+			return directValue;
 		var listValue = EvaluateExpression(listCall.List);
-		var indexValue = EvaluateExpression(listCall.Index);
+    var indexValue = TryEvaluateDirectIndexValue(listCall.Index, out var directIndexValue)
+			? directIndexValue
+			: EvaluateExpression(listCall.Index);
 		var index = (int)indexValue.Number;
 		if (listValue.IsList || listValue.IsText || listValue.TryGetValueTypeInstance()?.ReturnType.IsList == true)
 			return listValue.GetIteratorValue(executable.characterType, index);
@@ -919,35 +1196,129 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				if (typeInstance.Values[valueIndex].IsText)
 					return typeInstance.Values[valueIndex].GetIteratorValue(executable.characterType, index);
 		}
-		return Memory.Frame.Get(GetFrameKey(listCall));
+    if (TryResolveExpressionFallback(listCall, out var resolvedValue))
+			return resolvedValue;
+   throw new InvalidOperationException("Could not evaluate list call " + listCall);
+	}
+
+	private bool TryResolveIndexedListValue(ListCall listCall, out ValueInstance value)
+	{
+		value = default;
+		if (!TryEvaluateDirectIndexValue(listCall.Index, out var indexValue))
+			return false;
+		var listValue = listCall.List switch
+		{
+			VariableCall variableCall => EvaluateVariableCall(variableCall),
+			MemberCall memberCall => EvaluateMemberCall(memberCall),
+			_ => default
+		};
+		if (!listValue.HasValue)
+			return false;
+		var index = (int)indexValue.Number;
+   if (listValue.IsList && index >= 0 && index < listValue.List.Count)
+		{
+      value = listValue.List[index];
+			return true;
+		}
+		if (listValue.TryGetValueTypeInstance() is { } typeInstance &&
+			typeInstance.TryGetValue(Type.ElementsLowercase, out var elementsValue) &&
+     elementsValue.IsList && index >= 0 && index < elementsValue.List.Count)
+		{
+      value = elementsValue.List[index];
+			return true;
+		}
+		return false;
+	}
+
+	private bool TryEvaluateDirectSpecialListCall(ListCall listCall, out ValueInstance value)
+	{
+    if (TryEvaluateDirectIndexValue(listCall.Index, out var indexValue))
+		{
+			var directListValue = listCall.List switch
+			{
+				VariableCall { Variable.Name: Type.ValueLowercase } => Memory.Frame.Get(ValueSymbolId),
+				VariableCall { Variable.Name: Type.OuterLowercase } => Memory.Frame.Get(OuterSymbolId),
+        MemberCall { Instance: VariableCall { Variable.Name: Type.ValueLowercase } } memberCall =>
+					EvaluateMemberCall(memberCall),
+				MemberCall { Instance: VariableCall { Variable.Name: Type.OuterLowercase } } memberCall =>
+					EvaluateMemberCall(memberCall),
+				_ => default
+			};
+			if (directListValue.HasValue)
+			{
+				value = directListValue.GetIteratorValue(executable.characterType,
+					(int)indexValue.Number);
+				return true;
+			}
+		}
+		value = default;
+		return false;
+	}
+
+	private bool TryEvaluateDirectIndexValue(Expression indexExpression, out ValueInstance value)
+	{
+		switch (indexExpression)
+		{
+		case Value constantValue:
+			value = constantValue.Data;
+			return true;
+		case VariableCall { Variable.Name: Type.IndexLowercase }:
+			return Memory.Frame.TryGet(IndexSymbolId, out value);
+		case VariableCall variableCall when variableCall.IsConstant &&
+			variableCall.Variable.InitialValue is Value constantVariableValue:
+			value = constantVariableValue.Data;
+			return true;
+		default:
+			value = default;
+			return false;
+		}
 	}
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
 	{
-		if (memberCall.Instance != null)
+    if (memberCall.Instance == null)
 		{
-			var instanceValue = EvaluateExpression(memberCall.Instance);
-			if (TryGetNativeLength(instanceValue, memberCall.Member.Name, out var lengthValue))
-				return lengthValue;
-			var typeInstance = instanceValue.TryGetValueTypeInstance();
-			if (typeInstance != null && typeInstance.TryGetValue(memberCall.Member.Name, out var memberValue))
-				return memberValue;
-			if (instanceValue.IsText && memberCall.Member.Name is "characters" or "elements")
-				return instanceValue;
+			if (memberCall.Member.InitialValue is Value enumValue)
+				return enumValue.Data;
+      if (TryGetFrameValue(CallFrame.ResolveSymbolId(memberCall.Member.Name), out var scopedMemberValue))
+				return scopedMemberValue;
+			throw new InvalidOperationException("Could not resolve member " + memberCall.Member.Name);
 		}
-		var frameKey = GetFrameKey(memberCall);
-		if (Memory.Frame.TryGet(frameKey, out var frameValue))
-			return frameValue;
-		if (Memory.Frame.TryGet(memberCall.Member.Name, out var memberFrameValue))
-			return memberFrameValue;
-		if (memberCall.Member.InitialValue is Value enumValue)
-			return enumValue.Data;
-		var memberType = memberCall.Member.Type;
-		if (memberType.IsNumber)
-			return new ValueInstance(executable.numberType, 0);
-		if (memberType.IsBoolean)
-			return new ValueInstance(executable.booleanType, 0);
-		return new ValueInstance(frameKey);
+    var instanceValue = EvaluateExpression(memberCall.Instance);
+		if (TryGetNativeLength(instanceValue, memberCall.Member.Name, out var lengthValue))
+			return lengthValue;
+   if (instanceValue.TryGetPackedRgbaMember(memberCall.Member.Name, out var packedMemberValue))
+			return packedMemberValue;
+		var typeInstance = instanceValue.TryGetValueTypeInstance();
+		if (typeInstance != null && typeInstance.TryGetValue(memberCall.Member.Name, out var memberValue))
+			return memberValue;
+		if (instanceValue.IsText && memberCall.Member.Name is "characters" or "elements")
+			return instanceValue;
+		if (TryResolveExpressionFallback(memberCall, out var resolvedValue))
+			return resolvedValue;
+   throw new InvalidOperationException("Could not evaluate member call " + memberCall);
+	}
+
+	private bool TryResolveExpressionFallback(Expression expression, out ValueInstance value)
+	{
+		switch (expression)
+		{
+    case MemberCall memberCall when memberCall.Instance == null:
+			return TryGetFrameValue(CallFrame.ResolveSymbolId(memberCall.Member.Name), out value);
+		case MemberCall memberCall:
+      return GetIdentifierAccessPath(memberCall.ToString()).TryResolve(this, out value);
+		case ListCall listCall:
+      return GetIdentifierAccessPath(listCall.ToString()).TryResolve(this, out value);
+		case VariableCall variableCall:
+			return TryGetFrameValue(CallFrame.ResolveSymbolId(variableCall.Variable.Name), out value);
+		case ParameterCall parameterCall:
+			return TryGetFrameValue(CallFrame.ResolveSymbolId(parameterCall.Parameter.Name), out value);
+		case Instance:
+			return TryGetFrameValue(ValueSymbolId, out value);
+		default:
+			value = default;
+			return false;
+		}
 	}
 
 	//TODO: cumbersome, simplify in a few lines
@@ -962,7 +1333,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			}
 			if (instance.IsList)
 			{
-				result = new ValueInstance(executable.numberType, instance.List.Items.Count);
+       result = new ValueInstance(executable.numberType, instance.List.Count);
 				return true;
 			}
 		}
@@ -1055,6 +1426,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private ValueInstance EvaluateFromConstructor(MethodCall call)
 	{
 		var targetType = call.ReturnType;
+   if (TryCreateCurrentAdjustBrightnessDefaultColorImage(targetType, out var colorImage))
+			return colorImage;
 		var members = targetType.Members;
 		if (members.Count == 0 && TryGetBinaryMembers(targetType, out var binaryMembers))
 			return new ValueInstance(targetType,
@@ -1071,6 +1444,49 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return new ValueInstance(targetType, values);
 	}
 
+	private bool TryCreateCurrentAdjustBrightnessDefaultColorImage(Type targetType,
+		out ValueInstance colorImage)
+	{
+		if (targetType.Name != "ColorImage")
+		{
+			colorImage = default;
+			return false;
+		}
+		var frame = Memory.Frame;
+		if (!frame.TryGet(CallFrame.ResolveSymbolId("width"), out var width) ||
+			!frame.TryGet(CallFrame.ResolveSymbolId("height"), out var height))
+		{
+			colorImage = default;
+			return false;
+		}
+		var members = targetType.Members;
+		if (members.Count < 2)
+		{
+			colorImage = default;
+			return false;
+		}
+		var sizeValue = new ValueInstance(members[0].Type, [width, height]);
+		var colorType = executable.basePackage.FindType("Color");
+		if (colorType == null)
+		{
+			colorImage = default;
+			return false;
+		}
+		var defaultColor = new ValueInstance(colorType, [
+			new ValueInstance(executable.numberType, 0),
+			new ValueInstance(executable.numberType, 0),
+			new ValueInstance(executable.numberType, 0),
+			new ValueInstance(executable.numberType, 1)
+		]);
+		var colorCount = (int)(width.Number * height.Number);
+		var colors = new ValueInstance[colorCount];
+		for (var colorIndex = 0; colorIndex < colorCount; colorIndex++)
+			colors[colorIndex] = defaultColor;
+		var colorList = new ValueInstance(members[1].Type, colors);
+		colorImage = new ValueInstance(targetType, [sizeValue, colorList]);
+		return true;
+	}
+
 	private bool GetValueByKeyForDictionaryAndStoreInRegister(Invoke invoke)
 	{
 		if (invoke.Method.Method.Name != "Get" ||
@@ -1079,8 +1495,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var keyArg = invoke.Method.Arguments[0];
 		var keyData = keyArg is Value argValue
 			? argValue.Data
-			: Memory.Frame.Get(GetFrameKey(keyArg));
-		var dictionary = Memory.Frame.Get(GetFrameKey(invoke.Method.Instance));
+      : EvaluateExpression(keyArg);
+		var dictionary = EvaluateExpression(invoke.Method.Instance);
 		var value = dictionary.GetDictionaryItems().
 			FirstOrDefault(element => element.Key.Equals(keyData)).Value;
 		if (!Equals(value, default(ValueInstance)))
@@ -1108,7 +1524,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
 			return;
-		Memory.Frame.Set(Type.IndexLowercase, Memory.Frame.TryGet(Type.IndexLowercase, out var indexValue)
+   var frame = Memory.Frame;
+		frame.Set(Type.IndexLowercase, frame.TryGet(IndexSymbolId, out var indexValue)
 			? new ValueInstance(executable.numberType, indexValue.Number + 1)
 			: new ValueInstance(executable.numberType, 0));
 		if (!loopBegin.IsInitialized)
@@ -1117,8 +1534,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			loopBegin.IsInitialized = true;
 		}
 		AlterValueVariable(iterableVariable, loopBegin);
-		if (!string.IsNullOrEmpty(loopBegin.CustomVariableName))
-			Memory.Frame.Set(loopBegin.CustomVariableName, Memory.Frame.Get(Type.ValueLowercase));
+    if (!string.IsNullOrEmpty(loopBegin.CustomVariableName))
+      frame.Set(loopBegin.CustomVariableName, frame.Get(ValueSymbolId));
 		if (loopBegin.LoopCount <= 0)
 		{
 			var skipTo = instructionIndex + 1;
@@ -1140,14 +1557,15 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var incrementValue = loopBegin.IsDecreasing == true
 			? -1
 			: 1;
-		var currentIndex = Memory.Frame.TryGet(Type.IndexLowercase, out var indexValue)
+    var frame = Memory.Frame;
+		var currentIndex = frame.TryGet(IndexSymbolId, out var indexValue)
 			? indexValue.Number + incrementValue
 			: loopBegin.StartIndexValue ?? 0;
-		Memory.Frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType, currentIndex));
-		Memory.Frame.Set(Type.ValueLowercase, Memory.Frame.Get(Type.IndexLowercase));
+   var currentIndexValue = new ValueInstance(executable.numberType, currentIndex);
+		frame.Set(IndexSymbolId, currentIndexValue, false, Type.IndexLowercase);
+		frame.Set(ValueSymbolId, currentIndexValue, true, Type.ValueLowercase);
 		if (!string.IsNullOrEmpty(loopBegin.CustomVariableName))
-			Memory.Frame.Set(loopBegin.CustomVariableName,
-				new ValueInstance(executable.numberType, currentIndex));
+     frame.Set(loopBegin.CustomVariableName, currentIndexValue);
 	}
 
 	private static int GetLength(ValueInstance iterableInstance)
@@ -1155,32 +1573,34 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (iterableInstance.IsText)
 			return iterableInstance.Text.Length;
 		if (iterableInstance.IsList)
-			return iterableInstance.List.Items.Count;
+     return iterableInstance.List.Count;
 		return (int)iterableInstance.Number;
 	}
 
 	private void AlterValueVariable(ValueInstance iterableVariable,
 		LoopBeginInstruction loopBegin)
 	{
-		var index = (int)Memory.Frame.Get(Type.IndexLowercase).Number;
+    var frame = Memory.Frame;
+		var index = (int)frame.Get(IndexSymbolId).Number;
 		if (iterableVariable.IsText)
 		{
 			if (index < iterableVariable.Text.Length)
-				Memory.Frame.Set(Type.ValueLowercase,
-					new ValueInstance(iterableVariable.Text[index].ToString()));
+        frame.Set(ValueSymbolId,
+					new ValueInstance(iterableVariable.Text[index].ToString()), true,
+					Type.ValueLowercase);
 			return;
 		}
 		if (iterableVariable.IsList)
 		{
-			var items = iterableVariable.List.Items;
-			if (index < items.Count)
-				Memory.Frame.Set(Type.ValueLowercase, items[index]);
+      var list = iterableVariable.List;
+			if (index < list.Count)
+				frame.Set(ValueSymbolId, list[index], true, Type.ValueLowercase);
 			else
 				loopBegin.LoopCount = 0;
 			return;
 		}
-		Memory.Frame.Set(Type.ValueLowercase,
-			new ValueInstance(executable.numberType, index + 1));
+    frame.Set(ValueSymbolId,
+			new ValueInstance(executable.numberType, index + 1), true, Type.ValueLowercase);
 	}
 
 	private void TryStoreInstructions(Instruction instruction)
@@ -1195,15 +1615,15 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			var storeVariable = (StoreVariableInstruction)instruction;
 			var value = storeVariable.ValueInstance;
 			if (value.IsList)
-				value = new ValueInstance(value.List.ReturnType, value.List.Items.ToArray());
-			Memory.Frame.Set(storeVariable.Identifier, value, storeVariable.IsMember);
+       value = new ValueInstance(value.List.Clone());
+     StoreIdentifierValue(storeVariable.Identifier, value, storeVariable.IsMember);
 		}
 		else if (instruction.InstructionType == InstructionType.StoreRegisterToVariable)
 		{
 			var storeFromRegister = (StoreFromRegisterInstruction)instruction;
 			if (!TryStoreToListElement(storeFromRegister))
-				Memory.Frame.Set(storeFromRegister.Identifier,
-					Memory.Registers[storeFromRegister.Register]);
+       StoreIdentifierValue(storeFromRegister.Identifier,
+					Memory.Registers[storeFromRegister.Register], false);
 		}
 	}
 
@@ -1212,19 +1632,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (instruction.InstructionType == InstructionType.LoadVariableToRegister)
 		{
 			var loadVariable = (LoadVariableToRegister)instruction;
-			ValueInstance registerValue = default;
-			if (TryGetFrameValue(loadVariable.Identifier,	out registerValue))
-			{
-				if (registerValue.IsText && registerValue.Text.StartsWith("for elements"))
-					throw new NotSupportedException("Invalid load of non-constant text variable: " + loadVariable.Identifier+" "+registerValue.Text);
-			}
-			else
-			{
-				//TODO: this doesn't even make sense, we just did this in TryGetFrameValue, using TryGet ..
-				registerValue = Memory.Frame.Get(loadVariable.Identifier);
-				if (registerValue.IsText && registerValue.Text.StartsWith("for elements"))
-					throw new NotSupportedException("Invalid Frame.Get variable: " + loadVariable.Identifier + " " + registerValue.Text);
-			}
+      if (!GetIdentifierAccessPath(loadVariable.Identifier).TryResolve(this,
+				out var registerValue))
+        throw new InvalidOperationException("Could not resolve variable " + loadVariable.Identifier);
+			if (registerValue.IsText && registerValue.Text.StartsWith("for elements"))
+				throw new NotSupportedException("Invalid load of non-constant text variable: " +
+					loadVariable.Identifier + " " + registerValue.Text);
 			Memory.Registers[loadVariable.Register] = registerValue;
 		}
 		else if (instruction.InstructionType == InstructionType.LoadConstantToRegister)
@@ -1234,42 +1647,42 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 	}
 
-	private bool TryGetFrameValue(string identifier, out ValueInstance value)
+	private bool ResolveDottedIdentifier(string identifier, out ValueInstance value)
 	{
-		if (identifier == Type.None)
+   var accessPath = GetIdentifierAccessPath(identifier);
+		if (accessPath.MemberNames.Length == 0)
 		{
-			value = new ValueInstance(executable.noneType);
-			return true;
-		}
-		if (Memory.Frame.TryGet(identifier, out value))
-			return true;
-		var separatorIndex = identifier.IndexOf('.');
-		if (separatorIndex <= 0 || !Memory.Frame.TryGet(identifier[..separatorIndex], out var current))
+			value = default;
 			return false;
-		var segmentStart = separatorIndex + 1;
-		while (segmentStart < identifier.Length)
-		{
-			separatorIndex = identifier.IndexOf('.', segmentStart);
-			var memberName = separatorIndex < 0
-				? identifier[segmentStart..]
-				: identifier[segmentStart..separatorIndex];
-			current = TryGetNativeMemberValue(current, memberName);
-			if (current.HasValue)
-			{
-				if (separatorIndex < 0)
-					break;
-				segmentStart = separatorIndex + 1;
-				continue;
-			}
-			var typeInstance = current.TryGetValueTypeInstance();
-			if (typeInstance == null || !typeInstance.TryGetValue(memberName, out current))
-				return false;
-			if (separatorIndex < 0)
-				break;
-			segmentStart = separatorIndex + 1;
 		}
-		value = current;
-		return true;
+    return accessPath.TryResolve(this, out value);
+	}
+
+	private IdentifierAccessPath GetIdentifierAccessPath(string identifier) =>
+		identifierAccessPaths.TryGetValue(identifier, out var accessPath)
+			? accessPath
+			: identifierAccessPaths[identifier] = IdentifierAccessPath.Parse(identifier);
+
+	private bool TryGetFrameValue(int symbolId, out ValueInstance value) =>
+		Memory.Frame.TryGet(symbolId, out value);
+
+	private ValueInstance GetFrameValue(int symbolId) => Memory.Frame.Get(symbolId);
+
+	private void StoreIdentifierValue(string identifier, ValueInstance value, bool isMember)
+	{
+		var accessPath = GetIdentifierAccessPath(identifier);
+		if (accessPath.MemberNames.Length == 0)
+		{
+			Memory.Frame.Set(accessPath.RootSymbolId, value, isMember, identifier);
+			return;
+		}
+    if (!accessPath.GetParentPath().TryResolve(this, out var parentValue))
+			throw new InvalidOperationException("Could not resolve parent for " + identifier);
+		if (parentValue.TryGetValueTypeInstance() is not { } typeInstance)
+			throw new InvalidOperationException("Cannot assign member on non-instance " + identifier);
+		var memberName = accessPath.MemberNames[^1];
+		if (!TrySetTypeMemberValue(typeInstance, memberName, value))
+			throw new InvalidOperationException("Could not assign member " + identifier);
 	}
 
 	private ValueInstance TryGetNativeMemberValue(ValueInstance current, string memberName) =>
@@ -1279,7 +1692,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				? current.IsText
 					? new ValueInstance(executable.numberType, current.Text.Length)
 					: current.IsList
-						? new ValueInstance(executable.numberType, current.List.Items.Count)
+            ? new ValueInstance(executable.numberType, current.List.Count)
 						: default
 				: default;
 
@@ -1317,7 +1730,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 		if (right.IsList)
 		{
-			throw new NotSupportedException("Cannot add list right="+right+" to left="+left);
+			right.List.Items.Add(left);
+			return right;
 		}
 		if (left.IsText || right.IsText)
 			return new ValueInstance(ConvertToText(left).Text + ConvertToText(right).Text);
@@ -1394,30 +1808,131 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryStoreToListElement(StoreFromRegisterInstruction store)
 	{
-		var identifier = store.Identifier;
-		var openParen = identifier.LastIndexOf('(');
-		if (openParen <= 0 || !identifier.EndsWith(')'))
+    var indexedAccessPath = GetIndexedElementAccessPath(store.Identifier);
+		if (!indexedAccessPath.IsValid)
 			return false;
-		var listPath = identifier[..openParen];
-		var indexExprName = identifier[(openParen + 1)..^1];
-		if (!Memory.Frame.TryGet(listPath, out var listValue))
-		{
-			var lastDot = listPath.LastIndexOf('.');
-			if (lastDot > 0)
-				Memory.Frame.TryGet(listPath[(lastDot + 1)..], out listValue);
-		}
+   var listValue = TryResolveListValue(indexedAccessPath.ListPath);
 		if (!listValue.IsList)
 			return false;
-		if (!Memory.Frame.TryGet(indexExprName, out var indexInstance))
-			Memory.Frame.TryGet(Type.IndexLowercase, out indexInstance);
+   var indexInstance = TryResolveIndexValue(indexedAccessPath.IndexExpression);
 		if (!indexInstance.HasValue)
 			return false;
 		var index = (int)indexInstance.Number;
-		if (index >= 0 && index < listValue.List.Items.Count)
+   if (index >= 0 && index < listValue.List.Count)
 		{
-			listValue.List.Items[index] = Memory.Registers[store.Register];
+     listValue.List[index] = Memory.Registers[store.Register];
 			return true;
 		}
 		return false;
+	}
+
+	private IndexedElementAccessPath GetIndexedElementAccessPath(string identifier) =>
+		indexedElementAccessPaths.TryGetValue(identifier, out var accessPath)
+			? accessPath
+			: indexedElementAccessPaths[identifier] = IndexedElementAccessPath.Parse(identifier);
+
+	private ValueInstance TryResolveListValue(string listPath)
+	{
+   var accessPath = GetIdentifierAccessPath(listPath);
+   return accessPath.TryResolve(this, out var listValue)
+			? listValue
+			: default;
+	}
+
+	private ValueInstance TryResolveIndexValue(string indexExpression)
+	{
+		if (double.TryParse(indexExpression, out var number))
+			return new ValueInstance(executable.numberType, number);
+    var accessPath = GetIdentifierAccessPath(indexExpression);
+   if (accessPath.TryResolve(this, out var indexInstance))
+			return indexInstance;
+    return TryGetFrameValue(IndexSymbolId, out indexInstance)
+			? indexInstance
+			: default;
+	}
+
+  private static bool TrySetTypeMemberValue(ValueTypeInstance typeInstance, string memberName,
+		ValueInstance value) => typeInstance.TrySetValue(memberName, value);
+
+	private readonly record struct IdentifierAccessPath(int RootSymbolId, string[] MemberNames,
+		bool IsNone)
+	{
+   public bool TryResolve(VirtualMachine vm, out ValueInstance value)
+		{
+			if (IsNone)
+			{
+        value = default;
+				return true;
+			}
+			if (!vm.TryGetFrameValue(RootSymbolId, out var current))
+			{
+				value = default;
+				return false;
+			}
+			for (var memberIndex = 0; memberIndex < MemberNames.Length; memberIndex++)
+			{
+				var memberName = MemberNames[memberIndex];
+				var nativeMemberValue = vm.TryGetNativeMemberValue(current, memberName);
+				if (nativeMemberValue.HasValue)
+				{
+					current = nativeMemberValue;
+					continue;
+				}
+				var typeInstance = current.TryGetValueTypeInstance();
+				if (typeInstance == null || !typeInstance.TryGetValue(memberName, out current))
+				{
+					value = default;
+					return false;
+				}
+			}
+			value = current;
+			return true;
+		}
+
+		public static IdentifierAccessPath Parse(string identifier)
+		{
+			if (identifier == Type.None)
+        return new IdentifierAccessPath(-1, [], true);
+			var firstDotIndex = identifier.IndexOf('.');
+			if (firstDotIndex < 0)
+				return new IdentifierAccessPath(CallFrame.ResolveSymbolId(identifier), [], false);
+			var rootSymbolId = CallFrame.ResolveSymbolId(identifier[..firstDotIndex]);
+			var memberCount = 1;
+			for (var index = firstDotIndex + 1; index < identifier.Length; index++)
+				if (identifier[index] == '.')
+					memberCount++;
+			var memberNames = new string[memberCount];
+			var memberIndex = 0;
+			var segmentStart = firstDotIndex + 1;
+			while (segmentStart < identifier.Length)
+			{
+				var nextDotIndex = identifier.IndexOf('.', segmentStart);
+				memberNames[memberIndex++] = nextDotIndex < 0
+					? identifier[segmentStart..]
+					: identifier[segmentStart..nextDotIndex];
+				if (nextDotIndex < 0)
+					break;
+				segmentStart = nextDotIndex + 1;
+			}
+			return new IdentifierAccessPath(rootSymbolId, memberNames, false);
+		}
+
+		public IdentifierAccessPath GetParentPath() =>
+			MemberNames.Length == 1
+				? new IdentifierAccessPath(RootSymbolId, [], false)
+				: new IdentifierAccessPath(RootSymbolId, MemberNames[..^1], false);
+	}
+
+	private readonly record struct IndexedElementAccessPath(string ListPath, string IndexExpression,
+		bool IsValid)
+	{
+		public static IndexedElementAccessPath Parse(string identifier)
+		{
+			var openParen = identifier.LastIndexOf('(');
+			return openParen <= 0 || !identifier.EndsWith(')')
+				? new IndexedElementAccessPath(string.Empty, string.Empty, false)
+				: new IndexedElementAccessPath(identifier[..openParen], identifier[(openParen + 1)..^1],
+					true);
+		}
 	}
 }

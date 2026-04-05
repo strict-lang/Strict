@@ -95,7 +95,11 @@ public sealed class NameTable
 		"characters",
 		"texts",
 		"NewLine",
-		"Tab"
+		"Tab",
+		nameof(Strict) + Context.ParentSeparator + Type.List + "(" + Type.Number + ")",
+		Type.List + "(" + Type.Number + ")",
+		nameof(Strict) + Context.ParentSeparator + Type.List + "(" + Type.Text + ")",
+		Type.List + "(" + Type.Text + ")",
 	];
 
 	public NameTable CollectStrings(Instruction instruction) =>

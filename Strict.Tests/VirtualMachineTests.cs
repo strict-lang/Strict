@@ -162,6 +162,32 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void FlatBackedListLengthDoesNotMaterializeItems()
+	{
+		using var pointType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(FlatBackedListLengthDoesNotMaterializeItems),
+				"has xValue Number",
+				"has yValue Number")).ParseMembersAndMethods(new MethodExpressionParser());
+   var numberType = TestPackage.Instance.GetType(Type.Number);
+		var listType = TestPackage.Instance.GetListImplementationType(pointType);
+		var point = new ValueInstance(pointType,
+     [new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
+		var list = new ValueInstance(listType, point, 3);
+		var itemsField = typeof(ValueListInstance).GetField("items",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+		Assert.That(itemsField, Is.Not.Null);
+		Assert.That(itemsField!.GetValue(list.List), Is.Null);
+		var vm = new VirtualMachine(TestPackage.Instance);
+		var tryGetNativeLength = typeof(VirtualMachine).GetMethod("TryGetNativeLength",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+		Assert.That(tryGetNativeLength, Is.Not.Null);
+		object?[] arguments = [list, "Length", null];
+		Assert.That(tryGetNativeLength!.Invoke(vm, arguments), Is.EqualTo(true));
+		Assert.That(((ValueInstance)arguments[2]!).Number, Is.EqualTo(3));
+		Assert.That(itemsField.GetValue(list.List), Is.Null);
+	}
+
+	[Test]
 	public void ReduceButGrowLoopExample() =>
 		Assert.That(ExecuteVm([
 			new StoreVariableInstruction(Number(10), "number"),
@@ -323,6 +349,35 @@ public sealed class VirtualMachineTests : TestBytecode
 			methodCall, code)).Generate();
 		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
 		Assert.That(result.ToExpressionCodeString(), Is.EqualTo(expectedResult));
+	}
+
+	[Test]
+  public void ExecuteOptimizedRunMethodWithProgramArguments()
+	{
+    var programType = new Type(type.Package,
+			new TypeLines(nameof(ExecuteOptimizedRunMethodWithProgramArguments),
+				"has logger",
+				"Run(numbers)",
+				"\tlogger.Log(numbers.Sum)")).ParseMembersAndMethods(new MethodExpressionParser());
+		var runMethod = programType.Methods.Single(method => method.Name == Method.Run);
+		var binary = BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod]);
+		new Strict.Optimizers.AllInstructionOptimizers().Optimize(binary);
+		using var consoleWriter = new StringWriter();
+		var rememberConsole = Console.Out;
+		Console.SetOut(consoleWriter);
+		try
+		{
+			new VirtualMachine(binary).Execute(initialVariables: new Dictionary<string, ValueInstance>
+			{
+				[runMethod.Parameters[0].Name] = new ValueInstance(runMethod.Parameters[0].Type,
+					[Number(5), Number(10), Number(20)])
+			});
+		}
+		finally
+		{
+			Console.SetOut(rememberConsole);
+		}
+		Assert.That(consoleWriter.ToString(), Does.Contain("35"));
 	}
 
 	[TestCase("NumbersAdder(5).AddNumberToList", "1 2 3 5", "has number", "AddNumberToList Numbers",
@@ -717,5 +772,32 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\tFirst + Second")).Generate();
 		var vm = new VirtualMachine(binary);
 		Assert.That(vm.Execute().Returns!.Value.Number, Is.EqualTo(15));
+	}
+
+	[Test]
+	public void PreloadsIdentifierAccessPathsForInstructionBlock()
+	{
+		List<Instruction> instructions =
+		[
+			new LoadVariableToRegister(Register.R0, "image.Colors"),
+			new LoadVariableToRegister(Register.R1, "image.Size.Width"),
+			new StoreFromRegisterInstruction(Register.R0, "image.Colors(index)"),
+			new StoreFromRegisterInstruction(Register.R1, "image.Colors(index)")
+		];
+		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);
+		var vm = new VirtualMachine(binary);
+		var preloadMethod = typeof(VirtualMachine).GetMethod("CacheInstructionAccessPaths",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+		Assert.That(preloadMethod, Is.Not.Null);
+		preloadMethod!.Invoke(vm, [instructions]);
+		var identifierPathsField = typeof(VirtualMachine).GetField("identifierAccessPaths",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		var indexedPathsField = typeof(VirtualMachine).GetField("indexedElementAccessPaths",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		var identifierPaths =
+			(System.Collections.IDictionary)identifierPathsField.GetValue(vm)!;
+		var indexedPaths = (System.Collections.IDictionary)indexedPathsField.GetValue(vm)!;
+		Assert.That(identifierPaths.Count, Is.EqualTo(3));
+		Assert.That(indexedPaths.Count, Is.EqualTo(1));
 	}
 }

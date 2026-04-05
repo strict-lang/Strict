@@ -10,7 +10,7 @@ public sealed class MemoryTests
 	public void AddToCollectionVariableThrowsWhenValueIsNotAList()
 	{
 		var memory = new Memory { Variables = { ["count"] = new ValueInstance(NumberType, 5) } };
-		Assert.That(() => memory.AddToCollectionVariable("count", new ValueInstance(NumberType, 1)),
+		Assert.That(() => memory.AddToCollection("count", new ValueInstance(NumberType, 1)),
 			Throws.InvalidOperationException);
 	}
 
@@ -22,7 +22,7 @@ public sealed class MemoryTests
 		var memory = new Memory();
 		var listType = TestPackage.Instance.GetListImplementationType(NumberType);
 		memory.Variables["items"] = new ValueInstance(listType, [new(NumberType, 1)]);
-		memory.AddToCollectionVariable("items", new ValueInstance(NumberType, 2));
+		memory.AddToCollection("items", new ValueInstance(NumberType, 2));
 		Assert.That(memory.Variables["items"].List.Items.Count, Is.EqualTo(2));
 	}
 }

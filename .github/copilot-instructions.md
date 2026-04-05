@@ -108,6 +108,7 @@ Write the test first. Watch it fail. Write minimal code to pass.
 Thinking "skip TDD just this once"? Stop. That's rationalization.
 
 ### The Iron Law
+
 ```
 NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 ```
@@ -370,36 +371,21 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 
 **Bug:** Empty email accepted
 
-**RED**
-```typescript
-test('rejects empty email', async () => {
+**RED**test('rejects empty email', async () => {
   const result = await submitForm({ email: '' });
   expect(result.error).toBe('Email required');
 });
-```
-
-**Verify RED**
-```bash
-$ npm test
+**Verify RED**$ npm test
 FAIL: expected 'Email required', got undefined
-```
-
 **GREEN**
-```typescript
 function submitForm(data: FormData) {
   if (!data.email?.trim()) {
     return { error: 'Email required' };
   }
   // ...
 }
-```
-
-**Verify GREEN**
-```bash
-$ npm test
+**Verify GREEN**$ npm test
 PASS
-```
-
 **REFACTOR**
 Extract validation for multiple fields if needed.
 
@@ -470,3 +456,15 @@ No exceptions without your human partner's permission.
 - In this repo, treat Repositories and related package-loading/test-running code as intended to support multithreaded execution; caching exists to avoid reloading the same package across parallel tests.
 - Keep the `typesToTest` snapshot list in `TestInterpreter.RunAllTestsInPackage` because package types can change while lazily adding generic implementations during execution.
 - For this repo's test-runner performance work, parallelize at the package level, not per type; avoid `Parallel.ForEachAsync` over types because type tests are too fine-grained and the overhead dominates.
+
+## Logging Guidelines
+- When logging caller chains for diagnostics, include more than just a few methods so the upstream caller beyond framework helpers (like String.Join) is visible.
+
+## VM Optimization Work
+- Prefer root-cause VM optimization work that removes string-based frame lookups (FrameKey/CallFrame string access) and stays in ValueInstance/object model lookups instead of adding more caching or tests.
+- For the ongoing VM refactor in this repo, remove remaining CallFrame string-lookup issues properly: avoid FrameKey-style fallback behavior, avoid returning fabricated string-based ValueInstances for non-text cases, reduce duplicated Get/TryGet helpers, and focus on lowering the still-high AdjustBrightness allocations.
+- For ongoing Strict VM optimization, prioritize root-cause fixes that maximize preallocated register-array use, remove remaining string/dictionary/list hot-loop lookups where possible, and use allocation profiling to target ValueInstance/object allocations before deeper VM changes.
+
+## VM Collection Optimization
+- Prefer a single flat preallocated float32 backing for any type composed only of numbers and lists of such types, with fast index-based reads and writes and no per-access object creation in VM or compiled execution.
+- Prefer a general flat numeric-list backing for types composed only of numeric members; first implement double-based flattening, then evaluate lower-precision storage later.

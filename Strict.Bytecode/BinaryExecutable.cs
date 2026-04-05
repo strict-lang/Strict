@@ -18,6 +18,7 @@ namespace Strict.Bytecode;
 /// </summary>
 public sealed class BinaryExecutable(Package basePackage)
 {
+	//TODO: still need to remove the double package stuff here
 	internal readonly Package basePackage = basePackage;
 	private readonly Package package = basePackage;
 	internal Type noneType = basePackage.GetType(Type.None);
@@ -275,7 +276,9 @@ public sealed class BinaryExecutable(Package basePackage)
 		var declaringTypeName = table.names[reader.Read7BitEncodedInt()];
 		var methodName = table.names[reader.Read7BitEncodedInt()];
 		var paramCount = reader.Read7BitEncodedInt();
-		var parameters = new BinaryMember[paramCount];
+		var parameters = paramCount == 0
+			? Array.Empty<BinaryMember>()
+			: new BinaryMember[paramCount];
 		for (var index = 0; index < paramCount; index++)
 			parameters[index] = new BinaryMember(table.names[reader.Read7BitEncodedInt()],
 				table.names[reader.Read7BitEncodedInt()], null);

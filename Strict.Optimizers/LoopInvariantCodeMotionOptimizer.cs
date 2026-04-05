@@ -1,4 +1,5 @@
 using Strict.Bytecode.Instructions;
+using Type = Strict.Language.Type;
 
 namespace Strict.Optimizers;
 
@@ -86,6 +87,8 @@ public sealed class LoopInvariantCodeMotionOptimizer : InstructionOptimizer
 	}
 
 	private static bool IsLoopControlVariable(string name, LoopBeginInstruction loopBegin) =>
+    name.Equals(Type.ValueLowercase, StringComparison.OrdinalIgnoreCase) ||
+		name.Equals(Type.IndexLowercase, StringComparison.OrdinalIgnoreCase) ||
 		!string.IsNullOrEmpty(loopBegin.CustomVariableName) &&
 		loopBegin.CustomVariableName.Equals(name, StringComparison.OrdinalIgnoreCase);
 }

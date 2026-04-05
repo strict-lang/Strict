@@ -268,9 +268,7 @@ public sealed class RunnerTests
 			: Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
 	}
 
-	//ncrunch: no coverage start, needs to be ignored atm, too slow
 	[Test]
-	[Category("Slow")]
 	public async Task RunAdjustBrightness()
 	{
 		//TODO: the for loop is wrong in AdjustBrightness.strict, it should be just: for image.Size

@@ -1,5 +1,5 @@
 // When things are in flux, force generating a new .strictbinary every time by disabling the cache
-#define DISABLE_BINARY_CACHE
+//#define DISABLE_BINARY_CACHE
 using Strict.Bytecode;
 using Strict.Compiler;
 using Strict.Compiler.Assembly;
@@ -115,8 +115,8 @@ public sealed class Runner
 			{
 				binary = new BinaryExecutable(cachedBinaryPath, basePackage);
 			}
-			catch (Exception ex)
-			when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile or EndOfStreamException)
+			catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile
+				or EndOfStreamException)
 			{
 				Log("Cached " + cachedBinaryPath + " is no longer compatible: " + ex.Message);
 				return await LoadFromSourceAndSaveBinary(basePackage);

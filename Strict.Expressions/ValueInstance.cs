@@ -1,5 +1,6 @@
 using Strict.Language;
 using System.Reflection.Metadata;
+using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -11,7 +12,105 @@ namespace Strict.Expressions;
 /// </summary>
 public readonly struct ValueInstance : IEquatable<ValueInstance>
 {
-	public ValueInstance(Type noneReturnType) => value = noneReturnType;
+ private sealed class PackedRgbaType(Type returnType)
+	{
+		public readonly Type ReturnType = returnType;
+	}
+	private static readonly ConditionalWeakTable<Type, PackedRgbaType> PackedRgbaTypes = new();
+	private bool IsPackedRgba => value is PackedRgbaType;
+	private PackedRgbaType RgbaType => (PackedRgbaType)value;
+	private static PackedRgbaType GetPackedRgbaType(Type returnType) =>
+		PackedRgbaTypes.GetValue(returnType, type => new PackedRgbaType(type));
+	public static ValueInstance CreateRgba(Type returnType, double red, double green, double blue,
+		double alpha) =>
+		new(GetPackedRgbaType(returnType), PackRgba(red, green, blue, alpha));
+	private ValueInstance(PackedRgbaType packedType, double packedNumber)
+	{
+		value = packedType;
+		number = packedNumber;
+	}
+	private static double PackRgba(double red, double green, double blue, double alpha)
+	{
+		var packed = (ulong)(ushort)BitConverter.HalfToInt16Bits((Half)red) |
+			(ulong)(ushort)BitConverter.HalfToInt16Bits((Half)green) << 16 |
+			(ulong)(ushort)BitConverter.HalfToInt16Bits((Half)blue) << 32 |
+			(ulong)(ushort)BitConverter.HalfToInt16Bits((Half)alpha) << 48;
+		return BitConverter.Int64BitsToDouble((long)packed);
+	}
+	private static double UnpackRgba(double packedNumber, int shift) =>
+		(float)BitConverter.Int16BitsToHalf((short)((ulong)BitConverter.DoubleToInt64Bits(packedNumber) >>
+			shift));
+	private ValueInstance CreatePackedRgbaComponent(int memberIndex) =>
+		new(RgbaType.ReturnType.Members[memberIndex].Type, UnpackRgba(number, memberIndex * 16));
+	private static bool IsRgbaMemberName(IReadOnlyList<Strict.Language.Member> members, int index,
+		string expectedName) =>
+		index < members.Count && members[index].Name.Equals(expectedName,
+			StringComparison.OrdinalIgnoreCase);
+	private static bool CanUsePackedRgba(Type returnType, IReadOnlyList<ValueInstance> values)
+	{
+		var members = returnType.Members;
+		return values.Count == 4 && members.Count >= 4 &&
+			IsRgbaMemberName(members, 0, "Red") &&
+			IsRgbaMemberName(members, 1, "Green") &&
+			IsRgbaMemberName(members, 2, "Blue") &&
+			IsRgbaMemberName(members, 3, "Alpha") &&
+			values[0].GetType().IsNumber && values[1].GetType().IsNumber &&
+			values[2].GetType().IsNumber && values[3].GetType().IsNumber;
+	}
+	private ValueTypeInstance MaterializePackedRgba() =>
+		new(RgbaType.ReturnType, [
+			CreatePackedRgbaComponent(0),
+			CreatePackedRgbaComponent(1),
+			CreatePackedRgbaComponent(2),
+			CreatePackedRgbaComponent(3)
+		]);
+	public bool TryGetPackedRgbaMember(string memberName, out ValueInstance component)
+	{
+		if (!IsPackedRgba)
+		{
+			component = default;
+			return false;
+		}
+		component = memberName switch
+		{
+			"Red" => CreatePackedRgbaComponent(0),
+			"Green" => CreatePackedRgbaComponent(1),
+			"Blue" => CreatePackedRgbaComponent(2),
+			"Alpha" => CreatePackedRgbaComponent(3),
+			_ => default
+		};
+		return component.HasValue;
+	}
+	public bool TryGetPackedRgbaChannels(out double red, out double green, out double blue,
+		out double alpha)
+	{
+		if (!IsPackedRgba)
+		{
+			red = green = blue = alpha = 0;
+			return false;
+		}
+		red = UnpackRgba(number, 0);
+		green = UnpackRgba(number, 16);
+		blue = UnpackRgba(number, 32);
+		alpha = UnpackRgba(number, 48);
+		return true;
+	}
+	private string ToPackedRgbaText()
+	{
+		var red = CreatePackedRgbaComponent(0).ToExpressionCodeString();
+		var green = CreatePackedRgbaComponent(1).ToExpressionCodeString();
+		var blue = CreatePackedRgbaComponent(2).ToExpressionCodeString();
+		var alpha = CreatePackedRgbaComponent(3).Number;
+		return alpha == 1
+			? "(" + red + ", " + green + ", " + blue + ")"
+			: "(" + red + ", " + green + ", " + blue + ", " +
+				CreatePackedRgbaComponent(3).ToExpressionCodeString() + ")";
+	}
+	public ValueInstance(Type noneReturnType)
+	{
+		value = noneReturnType;
+   LogCreated("ctor(Type=" + noneReturnType + ")");
+	}
 	/// <summary>
 	/// If number is TextId, value points to a string (only non-Mutable, for Mutable TypeId is used)
 	/// If number is ListId, value points to ValueListInstance (ReturnType and Items)
@@ -38,6 +137,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number = isTrue
 			? 1
 			: 0;
+		if (PerformanceLog.IsEnabled)
+			LogCreated("ctor(Type=" + booleanReturnType + ", number=" + isTrue + ")");
 	}
 
 	public ValueInstance(Type numberReturnType, double setNumber)
@@ -46,6 +147,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			throw new InvalidTypeValue(numberReturnType, setNumber);
 		value = numberReturnType;
 		number = setNumber;
+		if (PerformanceLog.IsEnabled)
+			LogCreated("ctor(Type=" + numberReturnType + ", number=" + setNumber + ")");
 	}
 
 	public sealed class InvalidTypeValue(Type returnType, object value) : ParsingFailed(returnType,
@@ -64,6 +167,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	{
 		value = text;
 		number = TextId;
+		if (PerformanceLog.IsEnabled)
+			LogCreated("ctor(text=" + text + ")");
 		//TODO: remove again
 		if (text.StartsWith("for elements"))
 			throw new NotSupportedException("Invalid ValueInstance text: " + text);
@@ -73,6 +178,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	{
 		value = new ValueDictionaryInstance(returnType, dictionary);
 		number = DictionaryId;
+		if (PerformanceLog.IsEnabled)
+			LogCreated("ctor(Type=" + returnType + ", dictionaryCount=" + dictionary.Count + ")");
 	}
 
 	public ValueInstance(Type returnType, ValueInstance[] values)
@@ -81,14 +188,54 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		{
 			value = new ValueListInstance(returnType, values);
 			number = ListId;
+			if (PerformanceLog.IsEnabled)
+				LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
 			return;
 		}
 		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText ||
 			returnType.IsCharacter || returnType.IsDictionary ||
 			returnType.IsEnum || returnType.IsBoolean || returnType.IsNone))
 			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
+    if (CanUsePackedRgba(returnType, values))
+		{
+			value = GetPackedRgbaType(returnType);
+			number = PackRgba(values[0].Number, values[1].Number, values[2].Number, values[3].Number);
+			if (PerformanceLog.IsEnabled)
+				LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
+			return;
+		}
 		value = new ValueTypeInstance(returnType, values);
 		number = TypeId;
+		if (PerformanceLog.IsEnabled)
+			LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
+	}
+
+  public ValueInstance(Type returnType, List<ValueInstance> items, bool reuseItems)
+	{
+		if (!returnType.IsList)
+			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
+   value = reuseItems
+			? new ValueListInstance(returnType, items)
+			: new ValueListInstance(returnType, items.ToArray());
+		number = ListId;
+		if (PerformanceLog.IsEnabled)
+			LogCreated("ctor(Type=" + returnType + ", listCount=" + items.Count + ")");
+	}
+
+	public ValueInstance(Type returnType, ValueInstance repeatedItem, int count)
+	{
+		if (!returnType.IsList)
+			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
+		value = new ValueListInstance(returnType, repeatedItem, count);
+		number = ListId;
+		if (PerformanceLog.IsEnabled)
+			LogCreated("ctor(Type=" + returnType + ", repeatCount=" + count + ")");
+	}
+
+	public ValueInstance(ValueListInstance listInstance)
+	{
+		value = listInstance;
+		number = ListId;
 	}
 
 	public class ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(Language.Type returnType)
@@ -99,6 +246,33 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// </summary>
 	public ValueInstance(ValueInstance existingInstance, Type newType)
 	{
+    if (existingInstance.IsPackedRgba)
+		{
+			if (CanUsePackedRgba(newType, [
+				existingInstance.CreatePackedRgbaComponent(0),
+				existingInstance.CreatePackedRgbaComponent(1),
+				existingInstance.CreatePackedRgbaComponent(2),
+				existingInstance.CreatePackedRgbaComponent(3)
+			]))
+			{
+				value = GetPackedRgbaType(newType);
+				number = existingInstance.number;
+			}
+			else
+			{
+				value = new ValueTypeInstance(newType, [
+					existingInstance.CreatePackedRgbaComponent(0),
+					existingInstance.CreatePackedRgbaComponent(1),
+					existingInstance.CreatePackedRgbaComponent(2),
+					existingInstance.CreatePackedRgbaComponent(3)
+				]);
+				number = TypeId;
+			}
+			if (PerformanceLog.IsEnabled)
+				LogCreated("ctor(existingInstance=" + DescribeValue(existingInstance) + ", newType=" +
+					newType + ")");
+			return;
+		}
 		switch (existingInstance.number)
 		{
 		case TextId:
@@ -122,7 +296,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			number = TypeId;
 			break;
 		case ListId:
-			value = new ValueListInstance(newType, ((ValueListInstance)existingInstance.value).Items);
+      value = ((ValueListInstance)existingInstance.value).Clone();
 			number = ListId;
 			break;
 		case DictionaryId:
@@ -147,12 +321,17 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			number = existingInstance.number;
 			break;
 		}
+		if (PerformanceLog.IsEnabled)
+			LogCreated("ctor(existingInstance=" + DescribeValue(existingInstance) + ", newType=" +
+			newType + ")");
 	}
 
 	public bool IsType(Type type) =>
 		type is OneOfType oneOf
 			? oneOf.Types.Any(IsType)
-			: number switch
+     : IsPackedRgba
+				? type == RgbaType.ReturnType
+				: number switch
 			{
 				TextId => type.IsText,
 				ListId => type == ((ValueListInstance)value).ReturnType,
@@ -177,6 +356,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public double GetArithmeticNumber()
 	{
+   if (IsPackedRgba)
+			return UnpackRgba(number, 0);
 		if (number != TypeId)
 			return number;
 		var typeInstance = (ValueTypeInstance)value;
@@ -186,7 +367,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	}
 
 	public bool IsSameOrCanBeUsedAs(Type otherType) =>
-		number switch
+   IsPackedRgba
+			? RgbaType.ReturnType.IsSameOrCanBeUsedAs(otherType)
+			: number switch
 		{
 			TextId => otherType.IsText || otherType.IsList &&
 				otherType is GenericTypeImplementation { ImplementationTypes: [{ IsCharacter: true }] },
@@ -197,10 +380,12 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		};
 
 	public bool IsValueTypeInstanceType =>
-		number == TypeId && value is ValueTypeInstance { ReturnType.Name: nameof(Type) };
+   number == TypeId && value is ValueTypeInstance { ReturnType.Name: nameof(Type) };
 
 	public ValueTypeInstance? TryGetValueTypeInstance() =>
-		number == TypeId
+    IsPackedRgba
+			? MaterializePackedRgba()
+			: number == TypeId
 			? (ValueTypeInstance)value
 			: null;
 
@@ -225,7 +410,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// Gets the underlying type, except if it is a Text, that should always be checked before.
 	/// </summary>
 	public new Type GetType() =>
-		number switch
+   IsPackedRgba
+			? RgbaType.ReturnType
+			: number switch
 		{
 			ListId => ((ValueListInstance)value).ReturnType,
 			DictionaryId => ((ValueDictionaryInstance)value).ReturnType,
@@ -236,7 +423,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public int GetIteratorLength()
 	{
 		if (number == ListId)
-			return ((ValueListInstance)value).Items.Count;
+      return ((ValueListInstance)value).Count;
 		if (number == TextId)
 			return ((string)value).Length;
 		if (number == DictionaryId)
@@ -251,7 +438,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 						return typeInstance.Values[i].Text.Length;
 			} //ncrunch: no coverage
 			if (typeInstance.TryGetValue("keysAndValues", out var elementsMember) && elementsMember.IsList)
-				return elementsMember.List.Items.Count;
+       return elementsMember.List.Count;
 			throw new IteratorNotSupported(this);
 		}
 		return (int)number;
@@ -267,14 +454,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			TextId => normalizedIndex >= 0 && normalizedIndex < ((string)value).Length
 				? new ValueInstance(charTypeIfNeeded, ((string)value)[normalizedIndex])
 				: new ValueInstance(charTypeIfNeeded, '\0'),
-			ListId => ((ValueListInstance)value).Items[normalizedIndex],
+      ListId => ((ValueListInstance)value)[normalizedIndex],
 			TypeId when ((ValueTypeInstance)value).ReturnType.IsList &&
 				FindTextInValues((ValueTypeInstance)value, out var wrappedText) =>
 				normalizedIndex >= 0 && normalizedIndex < wrappedText!.Length
 					? new ValueInstance(charTypeIfNeeded, wrappedText[normalizedIndex])
 					: new ValueInstance(charTypeIfNeeded, '\0'),
 			TypeId when ((ValueTypeInstance)value).TryGetValue("elements", out var elementsMember) &&
-				elementsMember.IsList => elementsMember.List.Items[normalizedIndex],
+        elementsMember.IsList => elementsMember.List[normalizedIndex],
 			_ => throw new IteratorNotSupported(this)
 		};
 	}
@@ -302,7 +489,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		((ValueDictionaryInstance)value).Items;
 
 	public bool IsMutable =>
-		number switch
+   IsPackedRgba
+			? RgbaType.ReturnType.IsMutable
+			: number switch
 		{
 			TextId => false,
 			ListId => ((ValueListInstance)value).ReturnType.IsMutable,
@@ -310,11 +499,15 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			TypeId => ((ValueTypeInstance)value).ReturnType.IsMutable,
 			_ => ((Type)value).IsMutable
 		};
-	public bool IsError => number == TypeId && ((ValueTypeInstance)value).ReturnType.IsError;
+ public bool IsError => IsPackedRgba
+		? RgbaType.ReturnType.IsError
+		: number == TypeId && ((ValueTypeInstance)value).ReturnType.IsError;
 	public override string ToString() => GetTypeName() + ": " + ToExpressionCodeString(true);
 
 	private string GetTypeName() =>
-		number switch
+   IsPackedRgba
+			? RgbaType.ReturnType.Name
+			: number switch
 		{
 			TextId => Type.Text,
 			ListId => ((ValueListInstance)value).ReturnType.Name,
@@ -323,16 +516,61 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			_ => ((Type)value).Name
 		};
 
-	public string ToExpressionCodeString(bool escapeText = false) =>
-		number switch
+  public string ToExpressionCodeString(bool escapeText = false)
+	{
+   var generatedText = IsPackedRgba
+			? ToPackedRgbaText()
+			: number switch
 		{
 			TextId => escapeText
 				? "\"" + EscapeText((string)value) + "\""
 				: (string)value,
-			ListId => BuildListString(((ValueListInstance)value).Items, escapeText),
+      ListId => BuildListString((ValueListInstance)value, escapeText),
 			DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
 			TypeId => ((ValueTypeInstance)value).ToAutomaticText(),
 			_ => GetPrimitiveCodeString((Type)value)
+		};
+   if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("ValueInstance.ToExpressionCodeString", "input=" + DescribeValue(this) +
+				", escapeText=" + escapeText + ", generated=" + generatedText + ", callers=" +
+				PerformanceLog.GetCallers(1));
+		return generatedText;
+	}
+
+	private void LogCreated(string constructorName)
+	{
+		if (PerformanceLog.IsEnabled)
+     PerformanceLog.Write("ValueInstance." + constructorName,
+				"stored=" + DescribeValue(this));
+	}
+
+	private static string DescribeValues(IReadOnlyList<ValueInstance> values)
+	{
+		if (values.Count == 0)
+			return "[]";
+		var parts = new string[values.Count];
+		for (var index = 0; index < values.Count; index++)
+			parts[index] = DescribeValue(values[index]);
+		return "[" + string.Join(", ", parts) + "]";
+	}
+
+	private static string DescribeValue(ValueInstance instance) =>
+    instance.IsPackedRgba
+			? "PackedRgba(type=" + instance.RgbaType.ReturnType.Name + ")"
+			: instance.number switch
+		{
+			TextId => "Text(" + instance.Text + ")",
+			ListId => "List(type=" + instance.List.ReturnType.Name + ", count=" +
+        instance.List.Count + ")",
+			DictionaryId => "Dictionary(type=" + ((ValueDictionaryInstance)instance.value).ReturnType.Name +
+				", count=" + ((ValueDictionaryInstance)instance.value).Items.Count + ")",
+			TypeId => "TypeInstance(type=" + ((ValueTypeInstance)instance.value).ReturnType.Name +
+				", members=" + ((ValueTypeInstance)instance.value).Values.Length + ")",
+			_ => ((Type)instance.value).IsBoolean
+				? "Boolean(" + (instance.number != 0) + ")"
+				: ((Type)instance.value).IsNumber
+					? "Number(" + instance.number + ")"
+					: ((Type)instance.value).Name
 		};
 
 	private static string EscapeText(string text) =>
@@ -348,11 +586,26 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return "";
 		if (items.Count == 1)
 			return items[0].ToExpressionCodeString(escapeText);
+		//TODO: we should allow a bit more, maybe limit it to 24 or something, parsing should not have that many things anyway, use a file if you have a lot of data.
 		const int MaxItems = 10;
 		var itemsToAdd = Math.Min(items.Count, MaxItems);
 		var parts = new string[itemsToAdd];
 		for (var i = 0; i < itemsToAdd; i++)
 			parts[i] = items[i].ToExpressionCodeString(escapeText);
+		return parts.ToBrackets();
+	}
+
+	private static string BuildListString(ValueListInstance list, bool escapeText)
+	{
+		if (list.Count == 0)
+			return "";
+		if (list.Count == 1)
+			return list[0].ToExpressionCodeString(escapeText);
+		const int MaxItems = 10;
+		var itemsToAdd = Math.Min(list.Count, MaxItems);
+		var parts = new string[itemsToAdd];
+		for (var itemIndex = 0; itemIndex < itemsToAdd; itemIndex++)
+			parts[itemIndex] = list[itemIndex].ToExpressionCodeString(escapeText);
 		return parts.ToBrackets();
 	}
 
@@ -439,6 +692,19 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	{
 		if (number == other.number && value == other.value)
 			return true;
+   if (IsPackedRgba)
+		{
+			var otherTypeInstance = other.TryGetValueTypeInstance();
+			if (otherTypeInstance == null || !otherTypeInstance.ReturnType.IsSameOrCanBeUsedAs(
+					RgbaType.ReturnType))
+				return false;
+			return CreatePackedRgbaComponent(0).Equals(otherTypeInstance.Values[0]) &&
+				CreatePackedRgbaComponent(1).Equals(otherTypeInstance.Values[1]) &&
+				CreatePackedRgbaComponent(2).Equals(otherTypeInstance.Values[2]) &&
+				CreatePackedRgbaComponent(3).Equals(otherTypeInstance.Values[3]);
+		}
+		if (other.IsPackedRgba)
+			return other.Equals(this);
 		ComplexEqualsCalls++;
 		if (number == TypeId)
 		{

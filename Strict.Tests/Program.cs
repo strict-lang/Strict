@@ -77,13 +77,14 @@ internal class Program
 
 	private static async Task RunAdjustBrightness()
 	{
+		//PerformanceLog.IsEnabled = true;
 		Console.WriteLine("Running RunAdjustBrightness");
 		var strictBasePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		var runner = new Runner(Path.Combine(GetExamplesFolder(), "..", "ImageProcessing",
 			"AdjustBrightness.strict"), strictBasePackage);
 		var runAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 		var runStartTicks = DateTime.UtcNow.Ticks;
-		const int Runs = 2; //10;
+		const int Runs = 100;//2; //10;
 		for (var run = 0; run < Runs; run++)
 			await runner.Run();
 		var runEndTicks = DateTime.UtcNow.Ticks;

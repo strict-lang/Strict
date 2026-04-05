@@ -42,6 +42,15 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 			? value
 			: throw new KeyNotFoundException("Member not found: " + name);
 
+	public bool TrySetValue(string name, ValueInstance value)
+	{
+		var memberIndexes = MemberIndexes.GetValue(ReturnType, CreateMemberIndexes);
+		if (!memberIndexes.TryGetValue(name, out var memberIndex) || memberIndex >= Values.Length)
+			return false;
+		Values[memberIndex] = value;
+		return true;
+	}
+
 	public override string ToString()
 	{
 		var typeMembers = ReturnType.Members;

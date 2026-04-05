@@ -11,7 +11,7 @@
         <TestName>Strict.Tests.BinaryExecutionPerformanceTests.BenchmarkCompare</TestName>
       </NamedTestSelector>
       <NamedTestSelector>
-        <TestName>Strict.Tests.RunnerTests.RunAdjustBrightness</TestName>
+        <TestName>Strict.Tests.VirtualMachineTests.ExecuteWithPerformanceLoggingWritesHotPathLogs</TestName>
       </NamedTestSelector>
     </IgnoredTests>
   </Settings>
