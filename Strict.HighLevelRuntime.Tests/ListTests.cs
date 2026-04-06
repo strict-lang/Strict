@@ -76,8 +76,8 @@ public sealed class ListTests
 			interpreter.Execute(t.Methods.Single(m => m.Name == "Divide"), CreateNumbers(t), []).List.Items,
 			Is.EqualTo(new[]
 			{
-				new ValueInstance(t.GetType(Type.Number), 0.1),
-				new ValueInstance(t.GetType(Type.Number), 0.2)
+				new ValueInstance(t.GetType(Type.Number), 1 / 10f),
+				new ValueInstance(t.GetType(Type.Number), 2 / 10f)
 			}));
 	}
 

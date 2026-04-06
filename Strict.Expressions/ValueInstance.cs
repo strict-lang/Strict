@@ -296,7 +296,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			number = TypeId;
 			break;
 		case ListId:
-      value = ((ValueListInstance)existingInstance.value).Clone();
+      value = ((ValueListInstance)existingInstance.value).Clone(newType);
 			number = ListId;
 			break;
 		case DictionaryId:
@@ -401,9 +401,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			return IsSameOrCanBeUsedAs(methodReturnType.GetFirstImplementation())
 				? new ValueInstance(this, methodReturnType)
 				: this;
-		return GetType().GetFirstImplementation().IsSameOrCanBeUsedAs(methodReturnType)
-			? new ValueInstance(this, methodReturnType)
-			: this;
+		if (GetType().GetFirstImplementation().IsSameOrCanBeUsedAs(methodReturnType))
+		{
+			return new ValueInstance(this, methodReturnType);
+		}
+		else
+		{
+			return this;
+		}
 	}
 
 	/// <summary>

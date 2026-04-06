@@ -304,18 +304,27 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		ExecutionContext ctx, MethodCall call)
 	{
 		var leftItemType = leftList.List.ReturnType.GetFirstImplementation();
+   var convertedRightItems = new ValueInstance[rightList.Count];
+   for (var rightItemIndex = 0; rightItemIndex < rightList.Count; rightItemIndex++)
+		{
+     convertedRightItems[rightItemIndex] = RightItemForCombineLists(leftItemType,
+				rightList[rightItemIndex],
+				ctx, call);
+     if (convertedRightItems[rightItemIndex].IsError)
+				return convertedRightItems[rightItemIndex];
+		}
 		if (leftList.IsMutable)
 		{
-			foreach (var item in rightList)
-				leftList.List.Items.Add(RightItemForCombineLists(leftItemType, item, ctx, call));
+     foreach (var item in convertedRightItems)
+				leftList.List.Items.Add(item);
 			return leftList;
 		}
 		var combined = new ValueInstance[leftList.List.Items.Count + rightList.Count];
 		var itemIndex = 0;
 		foreach (var item in leftList.List.Items)
 			combined[itemIndex++] = item;
-		foreach (var item in rightList)
-			combined[itemIndex++] = RightItemForCombineLists(leftItemType, item, ctx, call);
+   foreach (var item in convertedRightItems)
+			combined[itemIndex++] = item;
 		return new ValueInstance(leftList.List.ReturnType, combined);
 	}
 

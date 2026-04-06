@@ -63,8 +63,20 @@ public sealed class Memory
 		collection.List.Items.Add(element);
 	}
 
-	public void AddToCollection(string key, ValueInstance element) =>
-		AddToCollection(CallFrame.ResolveSymbolId(key), element);
+ public void AddToCollection(string key, ValueInstance element)
+	{
+		var symbolId = CallFrame.ResolveSymbolId(key);
+		if (Frame.TryGet(symbolId, out _))
+		{
+			AddToCollection(symbolId, element);
+			return;
+		}
+    var hasCollection = Variables.TryGetValue(key, out var collection);
+		if (!hasCollection || !collection.IsList)
+			throw new InvalidOperationException("Cannot add to non-list variable \"" + key +
+       "\" of type " + (hasCollection ? collection.GetType().Name : "unset"));
+		collection.List.Items.Add(element);
+	}
 
 	public void AddToDictionary(int symbolId, ValueInstance keyToAddTo, ValueInstance value)
 	{

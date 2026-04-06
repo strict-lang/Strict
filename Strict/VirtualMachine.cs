@@ -125,7 +125,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		foreach (var member in entryType.Value.Members)
 		{
 			var value = member.InitialValueExpression is SetInstruction setInstruction
-				? setInstruction.ValueInstance
+       ? CloneConstantValue(setInstruction.ValueInstance)
 				: CreateDefaultComplexValue(ResolveBinaryMemberType(member, entryType.Key));
 			Memory.Frame.Set(member.Name, value, isMember: true);
 		}
@@ -1608,14 +1608,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (instruction.InstructionType == InstructionType.Set)
 		{
 			var set = (SetInstruction)instruction;
-			Memory.Registers[set.Register] = set.ValueInstance;
+     Memory.Registers[set.Register] = CloneConstantValue(set.ValueInstance);
 		}
 		else if (instruction.InstructionType == InstructionType.StoreConstantToVariable)
 		{
 			var storeVariable = (StoreVariableInstruction)instruction;
-			var value = storeVariable.ValueInstance;
-			if (value.IsList)
-       value = new ValueInstance(value.List.Clone());
+      var value = CloneConstantValue(storeVariable.ValueInstance);
      StoreIdentifierValue(storeVariable.Identifier, value, storeVariable.IsMember);
 		}
 		else if (instruction.InstructionType == InstructionType.StoreRegisterToVariable)
@@ -1643,9 +1641,17 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		else if (instruction.InstructionType == InstructionType.LoadConstantToRegister)
 		{
 			var loadConstant = (LoadConstantInstruction)instruction;
-			Memory.Registers[loadConstant.Register] = loadConstant.Constant;
+      Memory.Registers[loadConstant.Register] = CloneConstantValue(loadConstant.Constant);
 		}
 	}
+
+	private static ValueInstance CloneConstantValue(ValueInstance value) =>
+		value.IsList
+			? new ValueInstance(value.List.Clone(value.List.ReturnType))
+			: value.IsDictionary
+				? new ValueInstance(value.GetType(), new Dictionary<ValueInstance, ValueInstance>(
+					value.GetDictionaryItems()))
+				: value;
 
 	private bool ResolveDottedIdentifier(string identifier, out ValueInstance value)
 	{

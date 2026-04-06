@@ -96,6 +96,12 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 
 	private bool TryGetFlatElementLayout(out Type elementType, out int elementWidth)
 	{
+    if (ReturnType.IsGeneric || ReturnType is not Strict.Language.GenericTypeImplementation)
+		{
+			elementType = ReturnType;
+			elementWidth = 0;
+			return false;
+		}
 		elementType = ReturnType.GetFirstImplementation();
 		if (elementType.IsNumber)
 		{
@@ -143,13 +149,13 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 		return true;
 	}
 
-	public ValueListInstance Clone() =>
+	public ValueListInstance Clone(Type newType) =>
 		items != null
-			? new ValueListInstance(ReturnType, new List<ValueInstance>(items))
+     ? new ValueListInstance(newType, new List<ValueInstance>(items))
 			: flatNumbers != null && flatElementType != null
-				? new ValueListInstance(ReturnType, (float[])flatNumbers.Clone(), flatElementType,
-					flatElementWidth)
-				: new ValueListInstance(ReturnType, []);
+        ? new ValueListInstance(newType, (float[])flatNumbers.Clone(),
+					flatElementType, flatElementWidth)
+				: new ValueListInstance(newType, []);
 
 	private List<ValueInstance> MaterializeItems()
 	{

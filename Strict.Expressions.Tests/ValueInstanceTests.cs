@@ -1,4 +1,5 @@
 using Strict.Language.Tests;
+using System.Runtime.InteropServices;
 
 namespace Strict.Expressions.Tests;
 
@@ -8,6 +9,10 @@ public sealed class ValueInstanceTests
 	public void CreateNumber() => numberType = TestPackage.Instance.GetType(Type.Number);
 
 	private Type numberType = null!;
+
+	[Test]
+	public void ValueInstanceIsAlwaysJustTwoValuesAsStruct() =>
+		Assert.That(Marshal.SizeOf(typeof(ValueInstance)), Is.EqualTo(2 * sizeof(double)));
 
 	[Test]
 	public void ToStringShowsTypeAndValue() =>
@@ -136,7 +141,7 @@ public sealed class ValueInstanceTests
     var constructor = typeof(ValueInstance).GetConstructor([typeof(Type), typeof(List<ValueInstance>), typeof(bool)]);
 		Assert.That(constructor, Is.Not.Null);
    var instance = (ValueInstance)constructor!.Invoke([listType, items, true]);
-		Assert.That(instance.List.Items, Is.SameAs(items));
+		Assert.That(instance.List.Items, Is.EqualTo(items));
 	}
 
 	[Test]
