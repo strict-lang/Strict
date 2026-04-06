@@ -18,7 +18,7 @@ to Number
 in(text) Boolean
 	"hi" is not in "hello there"
 	"lo" is in "hello there"
-	for Range(0, Length - text.Length)
+	for Length - text.Length
 		StartsWith(text, index)
 Combine(texts Texts, separator = ", ") Text
 	Combine(("a", "b", "c")) is "a, b, c"

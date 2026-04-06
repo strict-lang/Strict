@@ -39,6 +39,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private static readonly int ValueSymbolId = CallFrame.ValueSymbolId;
 	private static readonly int IndexSymbolId = CallFrame.IndexSymbolId;
 	private static readonly int OuterSymbolId = CallFrame.OuterSymbolId;
+  private static readonly int OuterIndexSymbolId =
+		CallFrame.ResolveSymbolId(Type.OuterLowercase + "." + Type.IndexLowercase);
 	private static readonly int ElementsSymbolId = CallFrame.ElementsSymbolId;
 	private static readonly int CharactersSymbolId = CallFrame.CharactersSymbolId;
   private readonly int noneSymbolId = CallFrame.ResolveSymbolId(Type.None);
@@ -259,7 +261,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		PrintInstruction print => ", TextPrefix=" + print.TextPrefix + ", ValueRegister=" +
 			print.ValueRegister + ", ValueIsText=" + print.ValueIsText,
 		LoopBeginInstruction loopBegin => ", Register=" + loopBegin.Register + ", IsRange=" +
-			loopBegin.IsRange + ", CustomVariableName=" + loopBegin.CustomVariableName,
+     loopBegin.IsRange + ", CustomVariableNames=" +
+			string.Join(", ", loopBegin.CustomVariableNames),
 		LoopEndInstruction loopEnd => ", Steps=" + loopEnd.Steps,
 		BinaryInstruction binary => ", Registers=" + DescribeRegisters(binary.Registers),
 		ListCallInstruction listCall => ", Identifier=" + listCall.Identifier + ", Register=" +
@@ -433,10 +436,30 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var childScope = InitializeChildScope();
 		InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance);
     RunInstructions(invokeInstructions, invoke.Method.Method.Name);
-		var result = Returns;
+   var result = TryFlattenNestedIteratorList(invoke.Method, Returns);
 		CleanupChildScope(childScope);
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
+	}
+
+	private static ValueInstance? TryFlattenNestedIteratorList(MethodCall methodCall,
+		ValueInstance? result)
+	{
+		if (result == null || methodCall.Method.Name != Keyword.For ||
+			!methodCall.Method.ReturnType.IsIterator || !result.Value.IsList)
+			return result;
+		var materialized = result.Value;
+		if (materialized.List.Items.Count == 0 ||
+			!materialized.List.Items.All(item => item.IsList))
+			return result;
+		var flattenedItems = new List<ValueInstance>();
+		foreach (var nested in materialized.List.Items)
+			flattenedItems.AddRange(nested.List.Items);
+		if (flattenedItems.Count == 0)
+			return result;
+		var flattenedElementType = flattenedItems[0].GetType();
+		return new ValueInstance(materialized.GetType().GetGenericImplementation(flattenedElementType),
+			flattenedItems.ToArray());
 	}
 
 	private bool TryExecuteSpecialInvoke(Invoke invoke)
@@ -1520,52 +1543,154 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			ProcessCollectionLoopIteration(loopBegin);
 	}
 
+	private void CaptureLoopState(LoopBeginInstruction loopBegin, CallFrame frame)
+	{
+		if (loopBegin.SavedCustomValues != null)
+			return;
+		loopBegin.SavedIndexValue = frame.TryGet(IndexSymbolId, out var indexValue)
+			? indexValue
+			: default;
+		loopBegin.SavedValue = frame.TryGet(ValueSymbolId, out var value)
+			? value
+			: default;
+		loopBegin.SavedOuterValue = frame.TryGet(OuterSymbolId, out var outerValue)
+			? outerValue
+			: default;
+    loopBegin.SavedOuterIndexValue = frame.TryGet(OuterIndexSymbolId, out var outerIndexValue)
+			? outerIndexValue
+			: default;
+		var savedCustomValues = new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
+		for (var variableIndex = 0; variableIndex < loopBegin.CustomVariableNames.Length;
+			variableIndex++)
+			if (frame.TryGet(loopBegin.CustomVariableNames[variableIndex], out var customValue))
+				savedCustomValues.Add(loopBegin.CustomVariableNames[variableIndex], customValue);
+		loopBegin.SavedCustomValues = savedCustomValues;
+	}
+
+	private void RestoreLoopState(LoopBeginInstruction loopBegin, CallFrame frame)
+	{
+		RestoreLoopVariable(frame, IndexSymbolId, Type.IndexLowercase, loopBegin.SavedIndexValue);
+		RestoreLoopVariable(frame, ValueSymbolId, Type.ValueLowercase, loopBegin.SavedValue);
+		RestoreLoopVariable(frame, OuterSymbolId, Type.OuterLowercase, loopBegin.SavedOuterValue);
+   RestoreLoopVariable(frame, OuterIndexSymbolId,
+			Type.OuterLowercase + "." + Type.IndexLowercase, loopBegin.SavedOuterIndexValue);
+		for (var variableIndex = 0; variableIndex < loopBegin.CustomVariableNames.Length;
+			variableIndex++)
+		{
+			var name = loopBegin.CustomVariableNames[variableIndex];
+			RestoreLoopVariable(frame, CallFrame.ResolveSymbolId(name), name,
+				loopBegin.SavedCustomValues != null && loopBegin.SavedCustomValues.TryGetValue(name,
+					out var customValue)
+					? customValue
+					: default);
+		}
+   loopBegin.IsInitialized = false;
+		loopBegin.LoopCount = 0;
+		loopBegin.ResetIterationState();
+	}
+
+	private static void RestoreLoopVariable(CallFrame frame, int symbolId, string name,
+		ValueInstance value)
+	{
+		frame.Set(symbolId, value, false, name);
+	}
+
+	private void SkipLoopBody()
+	{
+		var skipTo = instructionIndex + 1;
+		while (skipTo < instructions.Count &&
+			instructions[skipTo].InstructionType != InstructionType.LoopEnd)
+			skipTo++;
+		instructionIndex = skipTo;
+	}
+
 	private void ProcessCollectionLoopIteration(LoopBeginInstruction loopBegin)
 	{
 		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
 			return;
    var frame = Memory.Frame;
-		frame.Set(Type.IndexLowercase, frame.TryGet(IndexSymbolId, out var indexValue)
-			? new ValueInstance(executable.numberType, indexValue.Number + 1)
-			: new ValueInstance(executable.numberType, 0));
 		if (!loopBegin.IsInitialized)
 		{
 			loopBegin.LoopCount = GetLength(iterableVariable);
+     loopBegin.CurrentIndexValue = -1;
+			CaptureLoopState(loopBegin, frame);
 			loopBegin.IsInitialized = true;
 		}
+    var nextIndex = (loopBegin.CurrentIndexValue ?? -1) + 1;
+		loopBegin.CurrentIndexValue = nextIndex;
+		frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType, nextIndex));
+		if (loopBegin.SavedValue.HasValue)
+			frame.Set(OuterSymbolId, loopBegin.SavedValue, false, Type.OuterLowercase);
+    if (loopBegin.SavedIndexValue.HasValue)
+			frame.Set(OuterIndexSymbolId, loopBegin.SavedIndexValue, false,
+				Type.OuterLowercase + "." + Type.IndexLowercase);
 		AlterValueVariable(iterableVariable, loopBegin);
-    if (!string.IsNullOrEmpty(loopBegin.CustomVariableName))
-      frame.Set(loopBegin.CustomVariableName, frame.Get(ValueSymbolId));
+    AssignCustomLoopVariables(loopBegin, frame.Get(ValueSymbolId));
 		if (loopBegin.LoopCount <= 0)
 		{
-			var skipTo = instructionIndex + 1;
-			while (skipTo < instructions.Count &&
-				instructions[skipTo].InstructionType != InstructionType.LoopEnd)
-				skipTo++;
-			instructionIndex = skipTo;
+      RestoreLoopState(loopBegin, frame);
+			SkipLoopBody();
 		}
 	}
 
 	private void ProcessRangeLoopIteration(LoopBeginInstruction loopBegin)
 	{
+   var frame = Memory.Frame;
 		if (!loopBegin.IsInitialized)
 		{
 			var startIndex = Convert.ToInt32(Memory.Registers[loopBegin.Register].Number);
 			var endIndex = Convert.ToInt32(Memory.Registers[loopBegin.EndIndex!.Value].Number);
 			loopBegin.InitializeRangeState(startIndex, endIndex);
+     CaptureLoopState(loopBegin, frame);
+			if (loopBegin.LoopCount <= 0)
+			{
+				RestoreLoopState(loopBegin, frame);
+				SkipLoopBody();
+				return;
+			}
 		}
 		var incrementValue = loopBegin.IsDecreasing == true
 			? -1
 			: 1;
-    var frame = Memory.Frame;
-		var currentIndex = frame.TryGet(IndexSymbolId, out var indexValue)
-			? indexValue.Number + incrementValue
+   var currentIndex = loopBegin.CurrentIndexValue.HasValue
+			? loopBegin.CurrentIndexValue.Value + incrementValue
 			: loopBegin.StartIndexValue ?? 0;
+    loopBegin.CurrentIndexValue = (int)currentIndex;
    var currentIndexValue = new ValueInstance(executable.numberType, currentIndex);
 		frame.Set(IndexSymbolId, currentIndexValue, false, Type.IndexLowercase);
 		frame.Set(ValueSymbolId, currentIndexValue, true, Type.ValueLowercase);
-		if (!string.IsNullOrEmpty(loopBegin.CustomVariableName))
-     frame.Set(loopBegin.CustomVariableName, currentIndexValue);
+    if (loopBegin.SavedValue.HasValue)
+			frame.Set(OuterSymbolId, loopBegin.SavedValue, false, Type.OuterLowercase);
+    if (loopBegin.SavedIndexValue.HasValue)
+			frame.Set(OuterIndexSymbolId, loopBegin.SavedIndexValue, false,
+				Type.OuterLowercase + "." + Type.IndexLowercase);
+    AssignCustomLoopVariables(loopBegin, currentIndexValue);
+	}
+
+	private void AssignCustomLoopVariables(LoopBeginInstruction loopBegin, ValueInstance value)
+	{
+		if (loopBegin.CustomVariableNames.Length == 0)
+			return;
+		if (loopBegin.CustomVariableNames.Length == 1)
+		{
+			Memory.Frame.Set(loopBegin.CustomVariableNames[0], value);
+			return;
+		}
+		var loopValues = GetLoopVariableValues(value);
+		for (var index = 0; index < loopBegin.CustomVariableNames.Length; index++)
+			Memory.Frame.Set(loopBegin.CustomVariableNames[index], loopValues[index]);
+	}
+
+	private static IReadOnlyList<ValueInstance> GetLoopVariableValues(ValueInstance value)
+	{
+		if (value.IsList)
+			return value.List.Items;
+		var typeInstance = value.TryGetValueTypeInstance();
+		if (typeInstance != null)
+			for (var index = 0; index < typeInstance.Values.Length; index++)
+				if (!typeInstance.ReturnType.Members[index].IsConstant && typeInstance.Values[index].IsList)
+					return typeInstance.Values[index].List.Items;
+		throw new InvalidOperationException("Cannot split loop value " + value + " into variables");
 	}
 
 	private static int GetLength(ValueInstance iterableInstance)
@@ -1878,6 +2003,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			for (var memberIndex = 0; memberIndex < MemberNames.Length; memberIndex++)
 			{
 				var memberName = MemberNames[memberIndex];
+        if (RootSymbolId == OuterSymbolId && memberName == Type.ValueLowercase)
+					continue;
+				if (RootSymbolId == OuterSymbolId && memberName == Type.IndexLowercase &&
+					vm.TryGetFrameValue(OuterIndexSymbolId, out var outerIndexValue))
+				{
+					current = outerIndexValue;
+					continue;
+				}
 				var nativeMemberValue = vm.TryGetNativeMemberValue(current, memberName);
 				if (nativeMemberValue.HasValue)
 				{

@@ -228,7 +228,7 @@ public sealed class TestPackage : Package
 			"IndexOf(text Text) Number",
 			"\t\"hello\".IndexOf(\"ll\") is 2",
 			"\t\"hello\".IndexOf(\"no\") is -1",
-			"\tfor Range(0, characters.Length - text.characters.Length)",
+			"\tfor characters.Length - text.characters.Length",
 			"\t\tif StartsWith(text, value)",
 			"\t\t\treturn value",
 			"\t-1",

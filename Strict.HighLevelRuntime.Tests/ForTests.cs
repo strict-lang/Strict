@@ -49,6 +49,24 @@ public sealed class ForTests
 	}
 
 	[Test]
+	public async Task SizeIteratorCanAssignTwoVariables()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		using var strictPackage = await repositories.LoadStrictPackage();
+		using var mathPackage = await repositories.LoadStrictPackage("Strict/Math");
+		using var testType = new Type(mathPackage,
+			new TypeLines(nameof(SizeIteratorCanAssignTwoVariables),
+				"has number",
+				"Coordinates Numbers",
+       "\tfor horizontal, vertical in Size(2, 2)",
+				"\t\thorizontal + vertical * 10")).ParseMembersAndMethods(parser);
+		var packageInterpreter = new Interpreter(mathPackage, TestBehavior.Disabled);
+		Assert.That(packageInterpreter.Execute(testType.Methods.Single(method => method.Name == "Coordinates"),
+			packageInterpreter.noneInstance, []).ToExpressionCodeString(), Is.EqualTo("(0, 1, 10, 11)"));
+	}
+
+	[Test]
 	public void CustomVariableInForLoopIsUsed()
 	{
 		using var t = CreateType(nameof(CustomVariableInForLoopIsUsed), "has number", "Sum Number",

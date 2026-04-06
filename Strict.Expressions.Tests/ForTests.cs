@@ -16,7 +16,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void VariableOutOfScope() =>
 		Assert.That(
-			() => ParseExpression("for Range(2, 5)", "\tconstant num = 5", "for Range(0, 10)",
+			() => ParseExpression("for Range(2, 5)", "\tconstant num = 5", "for 10",
 				"\tlogger.Log(num)"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("num"));
 
@@ -39,7 +39,7 @@ public sealed class ForTests : TestExpressions
 
 	[Test]
 	public void IndexIsReserved() =>
-		Assert.That(() => ParseExpression("for index in Range(0, 5)", "\tlogger.Log(index)"),
+		Assert.That(() => ParseExpression("for index in 5", "\tlogger.Log(index)"),
 			Throws.InstanceOf<For.IndexIsReservedDoNotUseItExplicitly>());
 
 	[Test]
@@ -55,7 +55,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ImmutableVariableNotAllowedToBeAnIterator() =>
 		Assert.That(
-			() => ParseExpression("constant myIndex = 0", "for myIndex in Range(0, 10)",
+			() => ParseExpression("constant myIndex = 0", "for myIndex in 10",
 				"\tlogger.Log(myIndex)"), Throws.InstanceOf<For.ImmutableIterator>());
 
 	[Test]
@@ -92,6 +92,12 @@ public sealed class ForTests : TestExpressions
 		Assert.That(((For)ParseExpression("for Range(2, 5)", "\tlogger.Log(index)")).ToString(),
 			Is.EqualTo("for Range(2, 5)" + Environment.NewLine + "\tlogger.Log(index)"));
 
+	[TestCase("for Range(0, 2)", "\tlogger.Log(index)")]
+	[TestCase("for rowIndex in Range(0, 2)", "\tlogger.Log(rowIndex)")]
+	[TestCase("let elements = (1, 2)", "for Range(0, elements.Length)", "\tlogger.Log(index)")]
+	public void RangeStartingAtZeroMustUseNumberIterator(params string[] lines) =>
+		Assert.That(() => ParseExpression(lines), Throws.InstanceOf<ZeroBasedRangeMustUseNumberIterator>());
+
 	[Test]
 	public void ParseForDictionaryElementsExpression()
 	{
@@ -109,17 +115,17 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ParseForInExpression() =>
 		Assert.That(
-			((For)((Body)ParseExpression("mutable myIndex = 0", "for myIndex in Range(0, 5)",
+     ((For)((Body)ParseExpression("mutable myIndex = 0", "for myIndex in 5",
 				"\tlogger.Log(myIndex)")).Expressions[1]).ToString(),
-			Is.EqualTo("for myIndex in Range(0, 5)" + Environment.NewLine + "\tlogger.Log(myIndex)"));
+      Is.EqualTo("for myIndex in 5" + Environment.NewLine + "\tlogger.Log(myIndex)"));
 
-	[TestCase("for myIndex in Range(0, 5)", "\tlogger.Log(myIndex)",
-		"for myIndex in Range(0, 5)\n\tlogger.Log(myIndex)")]
+  [TestCase("for myIndex in 5", "\tlogger.Log(myIndex)",
+		"for myIndex in 5\n\tlogger.Log(myIndex)")]
 	[TestCase("for (1, 2, 3)", "\tlogger.Log(index)", "for (1, 2, 3)\n\tlogger.Log(index)")]
 	[TestCase("for (1, 2, 3)", "\tlogger.Log(value)", "for (1, 2, 3)\n\tlogger.Log(value)")]
-	[TestCase("for myIndex in Range(2, 5)", "\tlogger.Log(myIndex)", "\tfor Range(0, 10)",
+  [TestCase("for myIndex in Range(2, 5)", "\tlogger.Log(myIndex)", "\tfor 10",
 		"\t\tlogger.Log(index)",
-		"for myIndex in Range(2, 5)\n" + "\tlogger.Log(myIndex)\n" + "\tfor Range(0, 10)\n" +
+   "for myIndex in Range(2, 5)\n" + "\tlogger.Log(myIndex)\n" + "\tfor 10\n" +
 		"\t\tlogger.Log(index)")]
 	[TestCase("for firstIndex in Range(1, 10)", "\tfor secondIndex in Range(1, 10)",
 		"\t\tlogger.Log(firstIndex)", "\t\tlogger.Log(secondIndex)",
@@ -132,9 +138,9 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void NestedIfInForIsIndented() =>
 		Assert.That(
-			((For)ParseExpression("for Range(0, 2)", "\tif five is 5", "\t\tlogger.Log(\"Hey\")")).
+     ((For)ParseExpression("for 2", "\tif five is 5", "\t\tlogger.Log(\"Hey\")")).
 			ToString(),
-			Is.EqualTo("for Range(0, 2)" + Environment.NewLine + "\tif five is 5" +
+     Is.EqualTo("for 2" + Environment.NewLine + "\tif five is 5" +
 				Environment.NewLine + "\t\tlogger.Log(\"Hey\")"));
 
 	[Test]
@@ -145,8 +151,8 @@ public sealed class ForTests : TestExpressions
 
 	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlogger.Log(index)",
 		"for elements\n\tlogger.Log(index)")]
-	[TestCase("constant elements = (1, 2, 3)", "for Range(0, elements.Length)",
-		"\tlogger.Log(index)", "for Range(0, elements.Length)\n\tlogger.Log(index)")]
+ [TestCase("constant elements = (1, 2, 3)", "for elements.Length",
+		"\tlogger.Log(index)", "for elements.Length\n\tlogger.Log(index)")]
 	[TestCase("mutable element = 0", "for element in (1, 2, 3)", "\tlogger.Log(element)",
 		"for element in (1, 2, 3)\n\tlogger.Log(element)")]
 	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlogger.Log(index)",
@@ -161,7 +167,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ValidIteratorReturnTypeForRange() =>
 		Assert.That(
-			((MethodCall)((For)ParseExpression("for Range(0, 10)", "\tlogger.Log(index)")).Body).
+     ((MethodCall)((For)ParseExpression("for 10", "\tlogger.Log(index)")).Body).
 			Arguments[0].ReturnType.IsNumber);
 
 	[Test]
@@ -176,10 +182,9 @@ public sealed class ForTests : TestExpressions
 	{
 		using var programType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ValidLoopProgram), "has number", "CountNumber Number",
-				"\tfor Range(0, number)", "\t\t1")).ParseMembersAndMethods(new MethodExpressionParser());
+				"\tfor number", "\t\t1")).ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(parsedExpression.ReturnType.Name, Is.EqualTo(Type.Range));
-		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo("Range(0, number)"));
+		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo("number"));
 	}
 
 	[Test]

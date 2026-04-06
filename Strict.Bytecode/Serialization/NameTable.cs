@@ -117,7 +117,8 @@ public sealed class NameTable
 			RemoveInstruction remove => Add(remove.Identifier),
 			ListCallInstruction listCall => Add(listCall.Identifier),
 			PrintInstruction print => Add(print.TextPrefix),
-			LoopBeginInstruction loopBegin => Add(loopBegin.CustomVariableName),
+      LoopBeginInstruction loopBegin => loopBegin.CustomVariableNames.Aggregate(this,
+				(current, customVariableName) => current.Add(customVariableName)),
 			_ => this
 		};
 

@@ -152,7 +152,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 	{
 		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(AssignmentWithMutableKeyword), "has something Character",
-				"CountEvenNumbers(limit Number) Number", "\tmutable counter = 0", "\tfor Range(0, limit)",
+				"CountEvenNumbers(limit Number) Number", "\tmutable counter = 0", "\tfor limit",
 				"\t\tcounter = counter + 1", "\tcounter"));
 		program.ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();

@@ -111,9 +111,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 			? indexInstance
 			: iterator.GetIteratorValue(itemType, index);
 		loop.Variables[Type.ValueLowercase] = value;
-		foreach (var customVariable in f.CustomVariables)
-			if (customVariable is VariableCall variableCall)
-				loop.Variables[variableCall.Variable.Name] = value;
+   AssignCustomVariables(f, ctx, loop, value);
 		var itemResult = bodyAsBody != null
 			? EvaluateBody(bodyAsBody, loop)
 			: interpreter.RunExpression(f.Body, loop);
@@ -124,6 +122,39 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 			results ??= new List<ValueInstance>();
 			results.Add(itemResult);
 		}
+	}
+
+	private static void AssignCustomVariables(For f, ExecutionContext ctx, ExecutionContext loop,
+		ValueInstance value)
+	{
+		if (f.CustomVariables.Length == 0)
+			return;
+		if (f.CustomVariables.Length == 1)
+		{
+			if (f.CustomVariables[0] is VariableCall variableCall)
+				loop.Variables[variableCall.Variable.Name] = value;
+			return;
+		}
+		var loopValues = GetLoopVariableValues(f, ctx, value);
+		for (var index = 0; index < f.CustomVariables.Length; index++)
+			if (f.CustomVariables[index] is VariableCall variableCall)
+				loop.Variables[variableCall.Variable.Name] = loopValues[index];
+	}
+
+	private static IReadOnlyList<ValueInstance> GetLoopVariableValues(For f, ExecutionContext ctx,
+		ValueInstance value)
+	{
+		if (value.IsList)
+			return value.List.Items;
+		var typeInstance = value.TryGetValueTypeInstance();
+		if (typeInstance != null)
+			for (var index = 0; index < typeInstance.Values.Length; index++)
+				if (!typeInstance.ReturnType.Members[index].IsConstant && typeInstance.Values[index].IsList)
+					return typeInstance.Values[index].List.Items;
+		throw new InterpreterExecutionFailed(ctx.Method,
+			InterpreterExecutionFailed.BuildContextMessage(ctx.Method, f.LineNumber, ctx,
+				"Cannot split loop value " + value + " into " + f.CustomVariables.Length +
+				" variables"));
 	}
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx)

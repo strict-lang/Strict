@@ -218,6 +218,8 @@ public sealed class BinaryGenerator
 			expression = returnExpression.Value;
 		if (TryGenerateNumberForLoopReturn(expression))
 			return;
+    if (TryGenerateListForLoopReturn(expression))
+			return;
 		GenerateInstructionFromExpression(expression);
 		instructions.Add(new ReturnInstruction(registry.PreviousRegister));
 	}
@@ -230,13 +232,46 @@ public sealed class BinaryGenerator
 		return true;
 	}
 
+	private bool TryGenerateListForLoopReturn(Expression expression)
+	{
+		if (expression is not For forExpression || !ShouldAggregateLoopToList())
+			return false;
+		GenerateInstructionForListAggregation(forExpression);
+		instructions.Add(new ReturnInstruction(registry.PreviousRegister));
+		return true;
+	}
+
 	private void GenerateInstructionForNumberAggregation(For forExpression)
 	{
 		var resultVariable = $"forResult{forResultId++}";
 		instructions.Add(new StoreVariableInstruction(new ValueInstance(ReturnType, 0), resultVariable));
-		GenerateLoopInstructions(forExpression, resultVariable);
+    GenerateLoopInstructions(forExpression, resultVariable, LoopAggregation.Number);
 		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultVariable));
 		instructions.Add(new ReturnInstruction(registry.PreviousRegister));
+	}
+
+	private void GenerateInstructionForListAggregation(For forExpression)
+	{
+		var resultVariable = $"forResult{forResultId++}";
+		var listType = GetListType(forExpression.Body.ReturnType);
+		instructions.Add(new StoreVariableInstruction(new ValueInstance(listType,
+			Array.Empty<ValueInstance>()), resultVariable));
+		GenerateLoopInstructions(forExpression, resultVariable, LoopAggregation.List);
+		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultVariable));
+	}
+
+	private bool ShouldAggregateLoopToList() =>
+		ReturnType.IsIterator || ReturnType.IsList;
+
+	private Type GetListType(Type elementType) =>
+		binary.basePackage.FindType(Type.List)?.GetGenericImplementation(elementType) ??
+		throw new InvalidOperationException("List type not found for loop aggregation");
+
+	private enum LoopAggregation
+	{
+		None,
+		Number,
+		List
 	}
 
 	//TODO: try optimize into a expression switch
@@ -377,30 +412,46 @@ public sealed class BinaryGenerator
 		return true;
 	}
 
-	private void GenerateLoopInstructions(For forExpression, string? aggregationTarget = null)
+  private void GenerateLoopInstructions(For forExpression, string? aggregationTarget = null,
+		LoopAggregation aggregation = LoopAggregation.None)
 	{
 		var instructionCountBeforeLoopStart = instructions.Count;
-		var customVariableName = forExpression.CustomVariables.Length > 0
-			? forExpression.CustomVariables[0].ToString()
-			: "";
+   var customVariableNames = forExpression.CustomVariables.Select(variable =>
+			variable.ToString()).ToArray();
+		var iterator = GetLoopIteratorExpression(forExpression.Iterator);
 		LoopBeginInstruction loopBegin;
-		if (forExpression.Iterator is MethodCall rangeExpression &&
-			forExpression.Iterator.ReturnType.Name == Type.Range &&
+   if (iterator is MethodCall rangeExpression &&
+			iterator.ReturnType.Name == Type.Range &&
 			rangeExpression.Method.Name == Method.From)
-			loopBegin = GenerateInstructionForRangeLoopInstruction(rangeExpression, customVariableName);
+      loopBegin = GenerateInstructionForRangeLoopInstruction(rangeExpression,
+				customVariableNames);
 		else
 		{
-			GenerateInstructionFromExpression(forExpression.Iterator);
-			loopBegin = new LoopBeginInstruction(registry.PreviousRegister, customVariableName);
+      GenerateInstructionFromExpression(iterator);
+			loopBegin = new LoopBeginInstruction(registry.PreviousRegister, customVariableNames);
 			instructions.Add(loopBegin);
 		}
-		GenerateInstructionsForLoopBody(forExpression);
-		if (!string.IsNullOrWhiteSpace(aggregationTarget))
-			AddNumberAggregation(aggregationTarget);
+    var bodyAggregatedDirectly =
+			GenerateInstructionsForLoopBody(forExpression, aggregationTarget, aggregation);
+		if (!string.IsNullOrWhiteSpace(aggregationTarget) && !bodyAggregatedDirectly)
+			AddLoopAggregation(aggregationTarget, aggregation);
 		instructions.Add(new LoopEndInstruction(instructions.Count - instructionCountBeforeLoopStart)
 		{
 			Begin = loopBegin
 		});
+	}
+
+	private void AddLoopAggregation(string aggregationTarget, LoopAggregation aggregation)
+	{
+		switch (aggregation)
+		{
+		case LoopAggregation.Number:
+			AddNumberAggregation(aggregationTarget);
+			break;
+		case LoopAggregation.List:
+			AddListAggregation(aggregationTarget);
+			break;
+		}
 	}
 
 	private void AddNumberAggregation(string aggregationTarget)
@@ -413,25 +464,64 @@ public sealed class BinaryGenerator
 		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, aggregationTarget));
 	}
 
+	private void AddListAggregation(string aggregationTarget) =>
+		instructions.Add(new WriteToListInstruction(registry.PreviousRegister, aggregationTarget));
+
+  private static Expression GetLoopIteratorExpression(Expression iterator)
+	{
+   if (iterator.ReturnType.IsList || iterator.ReturnType.IsText || iterator.ReturnType.IsNumber ||
+			iterator is MethodCall { ReturnType.Name: Type.Range, Method.Name: Method.From })
+			return iterator;
+		var iteratorMethod = iterator.ReturnType.Methods.FirstOrDefault(method =>
+			method.Name == Keyword.For && method.ReturnType.IsIterator);
+		return iteratorMethod == null
+			? iterator
+			: new MethodCall(iteratorMethod, iterator, lineNumber: iterator.LineNumber);
+	}
+
 	private LoopBeginInstruction GenerateInstructionForRangeLoopInstruction(
-		MethodCall rangeExpression, string customVariableName = "")
+		MethodCall rangeExpression, params string[] customVariableNames)
 	{
 		GenerateInstructionFromExpression(rangeExpression.Arguments[0]);
 		var startIndexRegister = registry.PreviousRegister;
 		GenerateInstructionFromExpression(rangeExpression.Arguments[1]);
 		var endIndexRegister = registry.PreviousRegister;
 		var loopBegin = new LoopBeginInstruction(startIndexRegister, endIndexRegister,
-			customVariableName);
+      customVariableNames);
 		instructions.Add(loopBegin);
 		return loopBegin;
 	}
 
-	private void GenerateInstructionsForLoopBody(For forExpression)
+ private bool GenerateInstructionsForLoopBody(For forExpression, string? aggregationTarget,
+		LoopAggregation aggregation)
 	{
-		if (forExpression.Body is Body forExpressionBody)
-			GenerateInstructions(forExpressionBody.Expressions);
+    if (aggregation == LoopAggregation.List && !string.IsNullOrWhiteSpace(aggregationTarget) &&
+			forExpression.Body is For directNestedFor)
+		{
+      GenerateLoopInstructions(directNestedFor, aggregationTarget, aggregation);
+     return true;
+		}
+   if (forExpression.Body is Body forExpressionBody)
+		{
+			for (var expressionIndex = 0; expressionIndex < forExpressionBody.Expressions.Count;
+				expressionIndex++)
+			{
+				var expression = forExpressionBody.Expressions[expressionIndex];
+       if (aggregation == LoopAggregation.List &&
+					expressionIndex == forExpressionBody.Expressions.Count - 1 &&
+					expression is For nestedFor &&
+					!string.IsNullOrWhiteSpace(aggregationTarget))
+        {
+					GenerateLoopInstructions(nestedFor, aggregationTarget, aggregation);
+          return true;
+				}
+				else
+					GenerateInstructionFromExpression(expression);
+			}
+		}
 		else
 			GenerateInstructionFromExpression(forExpression.Body);
+   return false;
 	}
 
 	private void GenerateIfInstructions(If ifExpression)
@@ -690,7 +780,7 @@ public sealed class BinaryGenerator
 			CollectExpressionDependencies(reassignment.Value);
 			break;
 		case For forExpression:
-			CollectExpressionDependencies(forExpression.Iterator);
+      CollectExpressionDependencies(GetLoopIteratorExpression(forExpression.Iterator));
 			CollectExpressionDependencies(forExpression.Body);
 			break;
 		case If ifExpression:

@@ -97,11 +97,13 @@ public sealed class For(Expression[] customVariables,
 		var iterator = body.Method.ParseExpression(body, HasIn(line)
 			? GetForIteratorText(line)
 			: GetForExpressionText(line));
+    if (IsZeroBasedRange(iterator))
+			throw new ZeroBasedRangeMustUseNumberIterator(body, line[4..].ToString());
 		if (HasIn(line))
 			CheckForIncorrectMatchingTypes(innerBody, variableNames, iterator);
 		else
 			AddImplicitVariables(body, line, innerBody);
-		if (!GetIteratorType(iterator).IsIterator && !iterator.ReturnType.IsNumber)
+   if (!CanIterate(iterator))
 			throw new ExpressionTypeIsNotAnIterator(body, iterator.ReturnType.Name,
 				line[4..].ToString());
 		var innerLines = body.Method.GetLinesAndStripTabs(innerBody.LineRange, body);
@@ -153,8 +155,10 @@ public sealed class For(Expression[] customVariables,
 		Body innerBody)
 	{
 		AddImplicitVariables(body, line, innerBody);
-		return new For([], body.Method.ParseExpression(body, line[4..], true), innerBody.Parse(),
-			body.CurrentFileLineNumber);
+   var iterator = body.Method.ParseExpression(body, line[4..], true);
+		if (IsZeroBasedRange(iterator))
+			throw new ZeroBasedRangeMustUseNumberIterator(body, line[4..].ToString());
+		return new For([], iterator, innerBody.Parse(), body.CurrentFileLineNumber);
 	}
 
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
@@ -295,9 +299,7 @@ public sealed class For(Expression[] customVariables,
 		var forIteratorText = GetForIteratorText(line);
 		var iteratorYieldType = TryGetIteratorYieldType(body, forIteratorText);
 		if (iteratorYieldType != null)
-			return variableIndex > 0
-				? throw new MoreThanTwoVariablesAreNotSupportedYet(body)
-				: new Instance(iteratorYieldType, body.CurrentFileLineNumber);
+      return GetVariableValueFromIteratorYieldType(body, iteratorYieldType, variableIndex);
 		var iterator = body.Method.ParseExpression(body, forIteratorText, true);
 		if (iterator is MethodCall { ReturnType.Name: Type.Range } methodCall)
 			return GetVariableValueFromRange(iterator, methodCall);
@@ -354,16 +356,19 @@ public sealed class For(Expression[] customVariables,
 	private static void CheckForIncorrectMatchingTypes(Body innerBody,
 		ReadOnlySpan<char> variableNames, Expression forValueExpression)
 	{
+    var explicitIteratorElementType = TryGetExplicitIteratorElementType(variableNames,
+			forValueExpression);
 		var implementationDepth = 1;
 		foreach (var variable in variableNames.Split(',', StringSplitOptions.TrimEntries))
 		{
 			var mutableValue = innerBody.FindVariable(variable);
 			if (mutableValue == null)
 				throw new Body.IdentifierNotFound(innerBody, variable.ToString());
-			var iteratorType = GetIteratorType(forValueExpression);
-			for (var depth = 0; depth < implementationDepth; depth++)
-				if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
-					iteratorType = genericType.ImplementationTypes[0];
+     var iteratorType = explicitIteratorElementType ?? GetIteratorType(forValueExpression);
+			if (explicitIteratorElementType == null)
+				for (var depth = 0; depth < implementationDepth; depth++)
+					if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)
+						iteratorType = genericType.ImplementationTypes[0];
 			if ((iteratorType.Name != Type.Range || !mutableValue.Type.IsNumber) &&
 				iteratorType.Name != mutableValue.Type.Name &&
 				!iteratorType.IsSameOrCanBeUsedAs(mutableValue.Type, false))
@@ -373,6 +378,77 @@ public sealed class For(Expression[] customVariables,
 		}
 	}
 
+	private static bool CanIterate(Expression iterator)
+	{
+		var iteratorType = GetIteratorType(iterator);
+		return iteratorType.IsIterator || iteratorType.IsNumber ||
+			TryGetDeclaredIteratorMethod(iteratorType) != null;
+	}
+
+	private static bool IsZeroBasedRange(Expression iterator) =>
+		iterator is MethodCall { ReturnType.Name: Type.Range, Arguments.Count: > 1 } rangeCall &&
+		rangeCall.Arguments[0] is Number { Data.number: 0 };
+
+	private static Expression GetVariableValueFromIteratorYieldType(Body body, Type iteratorYieldType,
+		int variableIndex)
+	{
+		if (variableIndex < 0)
+			return new Instance(iteratorYieldType, body.CurrentFileLineNumber);
+		if (variableIndex > 1)
+			throw new MoreThanTwoVariablesAreNotSupportedYet(body);
+		var elementType = TryGetIteratorElementType(iteratorYieldType);
+		if (elementType == null)
+			throw new MoreThanTwoVariablesAreNotSupportedYet(body);
+		var yieldedValue = new Instance(iteratorYieldType, body.CurrentFileLineNumber);
+		if (iteratorYieldType.IsList)
+			return new ListCall(yieldedValue, new Number(body.Method, variableIndex));
+		var listMember = FindSingleListMember(iteratorYieldType) ??
+			throw new MoreThanTwoVariablesAreNotSupportedYet(body);
+		return new ListCall(new MemberCall(yieldedValue, listMember, body.CurrentFileLineNumber),
+			new Number(body.Method, variableIndex));
+	}
+
+	private static Type? TryGetExplicitIteratorElementType(ReadOnlySpan<char> variableNames,
+		Expression forValueExpression)
+	{
+		if (!variableNames.Contains(','))
+			return null;
+		var iteratorYieldType = TryGetDeclaredIteratorYieldType(GetIteratorType(forValueExpression));
+		return iteratorYieldType == null
+			? null
+			: TryGetIteratorElementType(iteratorYieldType);
+	}
+
+	private static Type? TryGetDeclaredIteratorYieldType(Type iteratorType) =>
+		TryGetDeclaredIteratorMethod(iteratorType)?.ReturnType is GenericTypeImplementation generic
+			? generic.ImplementationTypes[0]
+			: null;
+
+	private static Method? TryGetDeclaredIteratorMethod(Type iteratorType) =>
+		iteratorType.Methods.FirstOrDefault(method => method.Name == Keyword.For &&
+			method.ReturnType.IsIterator);
+
+	private static Type? TryGetIteratorElementType(Type iteratorYieldType)
+	{
+		if (iteratorYieldType is GenericTypeImplementation { Generic.Name: Type.List } listType)
+			return listType.ImplementationTypes[0];
+		return FindSingleListMember(iteratorYieldType)?.Type.GetFirstImplementation();
+	}
+
+	private static Member? FindSingleListMember(Type iteratorYieldType)
+	{
+		Member? listMember = null;
+		foreach (var member in iteratorYieldType.Members)
+		{
+			if (member.IsConstant || !member.Type.IsList)
+				continue;
+			if (listMember != null)
+				return null;
+			listMember = member;
+		}
+		return listMember;
+	}
+
 	private static Type GetIteratorType(Expression forValueExpression) =>
 		forValueExpression is Binary binary
 			? binary.Arguments[0].ReturnType
@@ -380,6 +456,9 @@ public sealed class For(Expression[] customVariables,
 
 	public sealed class ExpressionTypeIsNotAnIterator(Body body, string typeName, string line)
 		: ParsingFailed(body, $"Type {typeName} in line " + line);
+
+	public sealed class ZeroBasedRangeMustUseNumberIterator(Body body, string line)
+		: ParsingFailed(body, $"Use number iteration instead of {line}, e.g. for 5");
 
 	public sealed class ImmutableIterator(string iteratorVariableName, Body body)
 		: ParsingFailed(body, iteratorVariableName);

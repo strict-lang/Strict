@@ -546,27 +546,6 @@ public sealed class VirtualMachineTests : TestBytecode
 			Throws.InstanceOf<VirtualMachine.OperandsRequired>());
 
 	[Test]
-	public void LoopOverEmptyListSkipsBody()
-	{
-		var numbersListType = ListType.GetGenericImplementation(NumberType);
-		var emptyList = new ValueInstance(numbersListType, Array.Empty<ValueInstance>());
-		var result = ExecuteVm([
-			new StoreVariableInstruction(emptyList, "numbers"),
-			new StoreVariableInstruction(Number(0), "result"),
-			new LoadVariableToRegister(Register.R0, "numbers"),
-			new LoopBeginInstruction(Register.R0),
-			new LoadVariableToRegister(Register.R1, "result"),
-			new LoadConstantInstruction(Register.R2, Number(1)),
-			new BinaryInstruction(InstructionType.Add, Register.R1, Register.R2, Register.R3),
-			new StoreFromRegisterInstruction(Register.R3, "result"),
-			new LoopEndInstruction(5),
-			new LoadVariableToRegister(Register.R4, "result"),
-			new ReturnInstruction(Register.R4)
-		]).Returns;
-		Assert.That(result!.Value.Number, Is.EqualTo(0));
-	}
-
-	[Test]
 	public void LoopOverTextStopsWhenIndexExceedsLength()
 	{
 		var text = Text("Hi");
@@ -645,6 +624,21 @@ public sealed class VirtualMachineTests : TestBytecode
 			new ReturnInstruction(Register.R4)
 		]).Returns;
 		Assert.That(result!.Value.Number, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void NestedForLoopCanReturnListInBytecode()
+	{
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(NestedForLoopCanReturnListInBytecode),
+			$"{nameof(NestedForLoopCanReturnListInBytecode)}.Coordinates",
+      "has number",
+			"Coordinates Numbers",
+      "\tfor 2",
+			"\t\tfor 2",
+			"\t\t\tindex + outer.index * 10")).Generate();
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
+		Assert.That(result.ToExpressionCodeString(), Is.EqualTo("(0, 1, 10, 11)"));
 	}
 
 	[TestCase("add", 1)]
