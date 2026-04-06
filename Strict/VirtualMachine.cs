@@ -391,7 +391,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var loopBegin = loopEnd.Begin ?? FindLoopBeginByScanning(loopEnd.Steps);
 		loopBegin.LoopCount--;
 		if (loopBegin.LoopCount <= 0)
+		{
+			RestoreLoopState(loopBegin, Memory.Frame);
 			return;
+		}
 		instructionIndex = loopBegin.InstructionIndex - 1;
 	}
 
