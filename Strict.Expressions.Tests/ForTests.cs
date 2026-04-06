@@ -94,7 +94,7 @@ public sealed class ForTests : TestExpressions
 
 	[TestCase("for Range(0, 2)", "\tlogger.Log(index)")]
 	[TestCase("for rowIndex in Range(0, 2)", "\tlogger.Log(rowIndex)")]
-	[TestCase("let elements = (1, 2)", "for Range(0, elements.Length)", "\tlogger.Log(index)")]
+	[TestCase("constant elements = (1, 2)", "for Range(0, elements.Length)", "\tlogger.Log(index)")]
 	public void RangeStartingAtZeroMustUseNumberIterator(params string[] lines) =>
 		Assert.That(() => ParseExpression(lines), Throws.InstanceOf<ZeroBasedRangeMustUseNumberIterator>());
 

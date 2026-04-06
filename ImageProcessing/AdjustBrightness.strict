@@ -18,5 +18,5 @@ Run
 	constant height = 720 / 10
 	mutable image = ColorImage(Size(width, height))
 	AdjustBrightness(0.25).Process(image)
-	image.Colors(width / 2, height / 2) is Color(0.25, 0.25, 0.25)
 	logger.Log("Brightness adjustment successful: " + image.Colors(width / 2, height / 2))
+	image.Colors(width / 2, height / 2) is Color(0.25, 0.25, 0.25)
