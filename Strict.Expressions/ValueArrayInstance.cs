@@ -2,16 +2,17 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public sealed class ValueListInstance : IEquatable<ValueListInstance>
+public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 {
-	//TODO: there should be one way to store lists, flat array it is! we can resize as needed, do not have list functionality here as well!
 	private List<ValueInstance>? items;
 	private float[]? flatNumbers;
 	private Type? flatElementType;
 	private int flatElementWidth;
 	private const string FlatNumbersFieldName = "flatNumbers";
+	private const int MinimumCapacity = 4;
+	private const int LargeGrowthChunk = 8192;
 
-	public ValueListInstance(Type returnType, IEnumerable<ValueInstance> items)
+	public ValueArrayInstance(Type returnType, IEnumerable<ValueInstance> items)
 	{
 		ReturnType = returnType;
 		if (items is IReadOnlyList<ValueInstance> readableItems && TryUseFlatNumbers(readableItems))
@@ -19,14 +20,7 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 		this.items = new List<ValueInstance>(items);
 	}
 
-	public ValueListInstance(Type returnType, List<ValueInstance> items)
-	{
-		ReturnType = returnType;
-		if (!TryUseFlatNumbers(items))
-			this.items = items;
-	}
-
-	public ValueListInstance(Type returnType, ValueInstance repeatedItem, int count)
+	public ValueArrayInstance(Type returnType, ValueInstance repeatedItem, int count)
 	{
 		ReturnType = returnType;
 		if (!TryUseRepeatedFlatNumbers(repeatedItem, count))
@@ -37,7 +31,7 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 		}
 	}
 
-	private ValueListInstance(Type returnType, float[] flatNumbers, Type flatElementType,
+	private ValueArrayInstance(Type returnType, float[] flatNumbers, Type flatElementType,
 		int flatElementWidth)
 	{
 		ReturnType = returnType;
@@ -49,6 +43,36 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 	public readonly Type ReturnType;
 	public List<ValueInstance> Items => items ??= MaterializeItems();
 	public int Count => items?.Count ?? (flatNumbers?.Length ?? 0) / flatElementWidth;
+
+	public static ValueArrayInstance CreateWithCapacity(Type returnType, int capacity)
+	{
+		var instance = new ValueArrayInstance(returnType, Array.Empty<ValueInstance>());
+		instance.flatNumbers = null;
+		instance.flatElementType = null;
+		instance.flatElementWidth = 0;
+		instance.items = new List<ValueInstance>(Math.Max(capacity, MinimumCapacity));
+		return instance;
+	}
+
+	public void Add(ValueInstance item)
+	{
+		if (flatNumbers != null)
+			MaterializeItems();
+		var currentItems = items ??= new List<ValueInstance>(MinimumCapacity);
+		if (currentItems.Count == currentItems.Capacity)
+			currentItems.Capacity = GetExpandedCapacity(currentItems.Capacity);
+		currentItems.Add(item);
+	}
+
+	private static int GetExpandedCapacity(int currentCapacity)
+	{
+		if (currentCapacity < MinimumCapacity)
+			return MinimumCapacity;
+		return currentCapacity < LargeGrowthChunk
+			? currentCapacity * 2
+			: currentCapacity + LargeGrowthChunk;
+	}
+
 	public ValueInstance this[int index]
 	{
 		get =>
@@ -152,13 +176,13 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 		return true;
 	}
 
-	public ValueListInstance Clone(Type newType) =>
+	public ValueArrayInstance Clone(Type newType) =>
 		items != null
-			? new ValueListInstance(newType, new List<ValueInstance>(items))
+			? new ValueArrayInstance(newType, new List<ValueInstance>(items))
 			: flatNumbers != null && flatElementType != null
-				? new ValueListInstance(newType, (float[])flatNumbers.Clone(), flatElementType,
+				? new ValueArrayInstance(newType, (float[])flatNumbers.Clone(), flatElementType,
 					flatElementWidth)
-				: new ValueListInstance(newType, []);
+				: new ValueArrayInstance(newType, []);
 
 	private List<ValueInstance> MaterializeItems()
 	{
@@ -168,6 +192,7 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 		flatNumbers = null;
 		flatElementType = null;
 		flatElementWidth = 0;
+		items = createdItems;
 		return createdItems;
 	}
 
@@ -203,11 +228,11 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 		elementType.Members[2].Name.Equals("Blue", StringComparison.OrdinalIgnoreCase) && elementType.
 			Members[3].Name.Equals("Alpha", StringComparison.OrdinalIgnoreCase);
 
-	public bool Equals(ValueListInstance? other) =>
+	public bool Equals(ValueArrayInstance? other) =>
 		other is not null && (ReferenceEquals(this, other) ||
 			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) && HasSameItems(other));
 
-	private bool HasSameItems(ValueListInstance other)
+	private bool HasSameItems(ValueArrayInstance other)
 	{
 		if (Count != other.Count)
 			return false;
@@ -217,7 +242,6 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 		return true;
 	}
 
-	//ncrunch: no coverage start
-	public override bool Equals(object? other) => Equals(other as ValueListInstance);
+	public override bool Equals(object? other) => Equals(other as ValueArrayInstance);
 	public override int GetHashCode() => HashCode.Combine(ReturnType, Items);
 }

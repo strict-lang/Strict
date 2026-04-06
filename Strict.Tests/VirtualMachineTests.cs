@@ -173,7 +173,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		var point = new ValueInstance(pointType,
 			[new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
 		var backedList = new ValueInstance(listType, point, 3);
-		var itemsField = typeof(ValueListInstance).GetField("items",
+		var itemsField = typeof(ValueArrayInstance).GetField("items",
 			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 		Assert.That(itemsField, Is.Not.Null);
 		Assert.That(itemsField!.GetValue(backedList.List), Is.Null);

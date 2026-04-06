@@ -64,17 +64,21 @@ public sealed class ValueInstanceTests
 	}
 
 	[Test]
-	public void ValueInstanceCanWrapExistingListWithoutCopying()
+	public void ValueInstanceDoesNotExposeListReuseConstructor()
+	{
+		var constructor = typeof(ValueInstance).GetConstructor([
+			typeof(Type), typeof(List<ValueInstance>), typeof(bool)
+		]);
+		Assert.That(constructor, Is.Null);
+	}
+
+	[Test]
+	public void ValueInstanceCreatesEmptyListWithRequestedCapacity()
 	{
 		var listType = TestPackage.Instance.GetListImplementationType(numberType);
-		List<ValueInstance> items = [new(numberType, 1), new(numberType, 2)];
-		var constructor =
-			typeof(ValueInstance).GetConstructor([
-				typeof(Type), typeof(List<ValueInstance>), typeof(bool)
-			]);
-		Assert.That(constructor, Is.Not.Null);
-		var instance = (ValueInstance)constructor!.Invoke([listType, items, true]);
-		Assert.That(instance.List.Items, Is.EqualTo(items));
+		var instance = ValueInstance.CreateListWithCapacity(listType, 12);
+		Assert.That(instance.List.Items.Count, Is.EqualTo(0));
+		Assert.That(instance.List.Items.Capacity, Is.GreaterThanOrEqualTo(12));
 	}
 
 	[Test]
@@ -89,9 +93,9 @@ public sealed class ValueInstanceTests
 		var point2 = new ValueInstance(pointType,
 			[new ValueInstance(numberType, 3), new ValueInstance(numberType, 4)]);
 		var list = new ValueInstance(listType, [point1, point2]);
-		var flatNumbersField = typeof(ValueListInstance).GetField("flatNumbers",
+		var flatNumbersField = typeof(ValueArrayInstance).GetField("flatNumbers",
 			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-		var itemsField = typeof(ValueListInstance).GetField("items",
+		var itemsField = typeof(ValueArrayInstance).GetField("items",
 			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 		Assert.That(flatNumbersField, Is.Not.Null);
 		Assert.That(itemsField, Is.Not.Null);
@@ -138,7 +142,7 @@ public sealed class ValueInstanceTests
 	}
 
 	[Test]
-	public void ValueListInstanceStoresTypeAndItems()
+	public void ValueArrayInstanceStoresTypeAndItems()
 	{
 		var listType = TestPackage.Instance.GetListImplementationType(numberType);
 		ValueInstance[] items = [new(numberType, 1), new(numberType, 2)];

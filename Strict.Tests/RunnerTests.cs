@@ -278,6 +278,56 @@ public sealed class RunnerTests
 		Assert.That(output, Does.Contain("Brightness adjustment successful: (0.25, 0.25, 0.25)"));
 	}
 
+	[Test]
+	public async Task RunAdjustBrightnessAllocatesBelowHalfMegabytePerRun()
+	{
+		var strictBasePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var runner = new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
+			strictBasePackage);
+		GC.Collect();
+		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		await runner.Run();
+		var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
+		const int Width = 128;
+		const int Height = 72;
+		Assert.That(allocatedAfter - allocatedBefore, Is.LessThan(Width * Height * 4 * 4 + 50_000));
+	}
+
+	[Test]
+	public async Task RunAdjustBrightnessThrowsWhenValueInstanceCreationLimitIsExceeded()
+	{
+		var strictBasePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var runner = new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
+			strictBasePackage);
+		ValueInstance.SetCreationLimit(10);
+		try
+		{
+			Assert.That(async () => await runner.Run(),
+				Throws.TypeOf<ValueInstance.CreationLimitExceeded>());
+		}
+		finally
+		{
+			ValueInstance.SetCreationLimit(int.MaxValue);
+		}
+	}
+
+	[Test]
+	public async Task RunAdjustBrightnessStaysBelowFortyFiveThousandValueInstanceCreations()
+	{
+		var strictBasePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var runner = new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
+			strictBasePackage);
+		ValueInstance.SetCreationLimit(45_000);
+		try
+		{
+			Assert.That(async () => await runner.Run(), Throws.Nothing);
+		}
+		finally
+		{
+			ValueInstance.SetCreationLimit(int.MaxValue);
+		}
+	}
+
 	//ncrunch: no coverage start
 	private static string FindRepoRoot()
 	{

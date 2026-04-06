@@ -19,6 +19,26 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	//TODO: stupid, remove!
 	private static readonly ConditionalWeakTable<Type, PackedRgbaType> PackedRgbaTypes = new();
+
+	private static int createdCount;
+	private static int creationLimit = int.MaxValue;
+
+	public static void SetCreationLimit(int newLimit)
+	{
+		createdCount = 0;
+		creationLimit = newLimit;
+	}
+
+	public sealed class CreationLimitExceeded(long created, long limit)
+		: Exception("ValueInstance creation limit exceeded: " + created + " > " + limit);
+
+	private static void TrackCreation()
+	{
+		createdCount++;
+		if (createdCount > creationLimit)
+			throw new CreationLimitExceeded(createdCount, creationLimit);
+	}
+
 	private bool IsPackedRgba => value is PackedRgbaType;
 	private PackedRgbaType RgbaType => (PackedRgbaType)value;
 
@@ -32,6 +52,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	private ValueInstance(PackedRgbaType packedType, double packedNumber)
 	{
+		TrackCreation();
 		value = packedType;
 		number = packedNumber;
 	}
@@ -131,6 +152,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public ValueInstance(Type noneReturnType)
 	{
+		TrackCreation();
 		value = noneReturnType;
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + noneReturnType + ")");
@@ -138,7 +160,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	/// <summary>
 	/// If number is TextId, value points to a string (only non-Mutable, for Mutable TypeId is used)
-	/// If number is ListId, value points to ValueListInstance (ReturnType and Items)
+	/// If number is ListId, value points to ValueArrayInstance (ReturnType and Items)
 	/// If number is DictionaryId, value points to ValueDictionaryInstance (ReturnType and Items)
 	/// If number is TypeId, then this points to a TypeValueInstance containing with ReturnType
 	/// In all other cases this is a primitive (None, Boolean, Number), and value is the ReturnType
@@ -158,6 +180,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public ValueInstance(Type booleanReturnType, bool isTrue)
 	{
+		TrackCreation();
 		value = booleanReturnType;
 		number = isTrue
 			? 1
@@ -168,6 +191,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public ValueInstance(Type numberReturnType, double setNumber)
 	{
+		TrackCreation();
 		if (setNumber is TextId or ListId or DictionaryId or TypeId)
 			throw new InvalidTypeValue(numberReturnType, setNumber);
 		value = numberReturnType;
@@ -194,6 +218,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public ValueInstance(string text)
 	{
+		TrackCreation();
 		value = text;
 		number = TextId;
 		if (PerformanceLog.IsEnabled)
@@ -202,6 +227,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public ValueInstance(Type returnType, Dictionary<ValueInstance, ValueInstance> dictionary)
 	{
+		TrackCreation();
 		value = new ValueDictionaryInstance(returnType, dictionary);
 		number = DictionaryId;
 		if (PerformanceLog.IsEnabled)
@@ -210,9 +236,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public ValueInstance(Type returnType, ValueInstance[] values)
 	{
+		TrackCreation();
 		if (returnType.IsList)
 		{
-			value = new ValueListInstance(returnType, values);
+			value = new ValueArrayInstance(returnType, values);
 			number = ListId;
 			if (PerformanceLog.IsEnabled)
 				LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
@@ -236,30 +263,30 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
 	}
 
-	public ValueInstance(Type returnType, List<ValueInstance> items, bool reuseItems)
+	/// <summary>
+	/// Creates an empty list instance with preallocated capacity to reduce growth allocations.
+	/// </summary>
+	public static ValueInstance CreateListWithCapacity(Type returnType, int listCapacity)
 	{
 		if (!returnType.IsList)
 			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
-		value = reuseItems
-			? new ValueListInstance(returnType, items)
-			: new ValueListInstance(returnType, items.ToArray());
-		number = ListId;
-		if (PerformanceLog.IsEnabled)
-			LogCreated("ctor(Type=" + returnType + ", listCount=" + items.Count + ")");
+		return new ValueInstance(ValueArrayInstance.CreateWithCapacity(returnType, listCapacity));
 	}
 
 	public ValueInstance(Type returnType, ValueInstance repeatedItem, int count)
 	{
+		TrackCreation();
 		if (!returnType.IsList)
 			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
-		value = new ValueListInstance(returnType, repeatedItem, count);
+		value = new ValueArrayInstance(returnType, repeatedItem, count);
 		number = ListId;
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + returnType + ", repeatCount=" + count + ")");
 	}
 
-	public ValueInstance(ValueListInstance listInstance)
+	public ValueInstance(ValueArrayInstance listInstance)
 	{
+		TrackCreation();
 		value = listInstance;
 		number = ListId;
 	}
@@ -272,6 +299,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// </summary>
 	public ValueInstance(ValueInstance existingInstance, Type newType)
 	{
+		TrackCreation();
 		if (existingInstance.IsPackedRgba)
 		{
 			if (CanUsePackedRgba(newType, [
@@ -322,7 +350,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			number = TypeId;
 			break;
 		case ListId:
-			value = ((ValueListInstance)existingInstance.value).Clone(newType);
+			value = ((ValueArrayInstance)existingInstance.value).Clone(newType);
 			number = ListId;
 			break;
 		case DictionaryId:
@@ -361,7 +389,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				: number switch
 				{
 					TextId => type.IsText,
-					ListId => type == ((ValueListInstance)value).ReturnType,
+					ListId => type == ((ValueArrayInstance)value).ReturnType,
 					DictionaryId => type == ((ValueDictionaryInstance)value).ReturnType,
 					TypeId => type == ((ValueTypeInstance)value).ReturnType,
 					_ => IsPrimitiveType(type)
@@ -374,7 +402,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public double Number => number;
 	public bool Boolean => number != 0;
 	public bool IsList => number is ListId;
-	public ValueListInstance List => (ValueListInstance)value;
+	public ValueArrayInstance List => (ValueArrayInstance)value;
 	public bool IsDictionary => number is DictionaryId;
 
 	public bool IsNumberLike(Type numberType) =>
@@ -402,7 +430,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				{
 					ImplementationTypes: [{ IsCharacter: true }]
 				},
-				ListId => ((ValueListInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
+				ListId => ((ValueArrayInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 				DictionaryId =>
 					((ValueDictionaryInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 				TypeId => ((ValueTypeInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
@@ -444,7 +472,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			? RgbaType.ReturnType
 			: number switch
 			{
-				ListId => ((ValueListInstance)value).ReturnType,
+				ListId => ((ValueArrayInstance)value).ReturnType,
 				DictionaryId => ((ValueDictionaryInstance)value).ReturnType,
 				TypeId => ((ValueTypeInstance)value).ReturnType,
 				_ => (Type)value
@@ -453,7 +481,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public int GetIteratorLength()
 	{
 		if (number == ListId)
-			return ((ValueListInstance)value).Count;
+			return ((ValueArrayInstance)value).Count;
 		if (number == TextId)
 			return ((string)value).Length;
 		if (number == DictionaryId)
@@ -475,7 +503,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		return (int)number;
 	}
 
-	public Type GetIteratorType() => ((ValueListInstance)value).ReturnType.GetFirstImplementation();
+	public Type GetIteratorType() => ((ValueArrayInstance)value).ReturnType.GetFirstImplementation();
 
 	public ValueInstance GetIteratorValue(Type charTypeIfNeeded, int index)
 	{
@@ -485,7 +513,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			TextId => normalizedIndex >= 0 && normalizedIndex < ((string)value).Length
 				? new ValueInstance(charTypeIfNeeded, ((string)value)[normalizedIndex])
 				: new ValueInstance(charTypeIfNeeded, '\0'),
-			ListId => ((ValueListInstance)value)[normalizedIndex],
+			ListId => ((ValueArrayInstance)value)[normalizedIndex],
 			TypeId when ((ValueTypeInstance)value).ReturnType.IsList &&
 				FindTextInValues((ValueTypeInstance)value, out var wrappedText) => normalizedIndex >= 0 &&
 				normalizedIndex < wrappedText!.Length
@@ -525,7 +553,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			: number switch
 			{
 				TextId => false,
-				ListId => ((ValueListInstance)value).ReturnType.IsMutable,
+				ListId => ((ValueArrayInstance)value).ReturnType.IsMutable,
 				DictionaryId => ((ValueDictionaryInstance)value).ReturnType.IsMutable,
 				TypeId => ((ValueTypeInstance)value).ReturnType.IsMutable,
 				_ => ((Type)value).IsMutable
@@ -542,7 +570,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			: number switch
 			{
 				TextId => Type.Text,
-				ListId => ((ValueListInstance)value).ReturnType.Name,
+				ListId => ((ValueArrayInstance)value).ReturnType.Name,
 				DictionaryId => ((ValueDictionaryInstance)value).ReturnType.Name,
 				TypeId => ((ValueTypeInstance)value).ReturnType.Name,
 				_ => ((Type)value).Name
@@ -557,7 +585,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				TextId => escapeText
 					? "\"" + EscapeText((string)value) + "\""
 					: (string)value,
-				ListId => BuildListString((ValueListInstance)value, escapeText),
+				ListId => BuildListString((ValueArrayInstance)value, escapeText),
 				DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
 				TypeId => ((ValueTypeInstance)value).ToAutomaticText(),
 				_ => GetPrimitiveCodeString((Type)value)
@@ -627,7 +655,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		return parts.ToBrackets();
 	}
 
-	private static string BuildListString(ValueListInstance list, bool escapeText)
+	private static string BuildListString(ValueArrayInstance list, bool escapeText)
 	{
 		if (list.Count == 0)
 			return "";
@@ -758,7 +786,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (number == TextId)
 			return (string)value == (string)other.value;
 		if (number == ListId)
-			return ((ValueListInstance)value).Equals((ValueListInstance)other.value);
+			return ((ValueArrayInstance)value).Equals((ValueArrayInstance)other.value);
 		return number == DictionaryId
 			? ((ValueDictionaryInstance)value).Equals((ValueDictionaryInstance)other.value)
 			: ((Type)other.value).IsSameOrCanBeUsedAs((Type)value);
