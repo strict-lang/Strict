@@ -19,76 +19,6 @@ public sealed class ValueInstanceTests
 		Assert.That(new ValueInstance(numberType, 42).ToString(), Is.EqualTo("Number: 42"));
 
 	[Test]
-	public void ValueInstancePerformanceLoggingWritesConstructorAndCodeStringLogs()
-	{
-		using var consoleWriter = new StringWriter();
-		var rememberLogging = Environment.GetEnvironmentVariable("STRICT_PERFORMANCE_LOGGING");
-   var rememberIsEnabled = PerformanceLog.IsEnabled;
-		var logWriterField = typeof(PerformanceLog).GetField("logWriter",
-			System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!;
-		var rememberLogWriter = logWriterField.GetValue(null);
-		logWriterField.SetValue(null, consoleWriter);
-		Environment.SetEnvironmentVariable("STRICT_PERFORMANCE_LOGGING", "1");
-   PerformanceLog.IsEnabled = true;
-		try
-		{
-			var noneType = TestPackage.Instance.GetType(Type.None);
-			var booleanType = TestPackage.Instance.GetType(Type.Boolean);
-			var listType = TestPackage.Instance.GetListImplementationType(numberType);
-			var dictionaryType = TestPackage.Instance.GetDictionaryImplementationType(numberType, numberType);
-     using var customType = new Type(TestPackage.Instance,
-				new TypeLines("ValueInstanceLoggingSample",
-					"has number", "Run Number", "\t5")).ParseMembersAndMethods(new MethodExpressionParser());
-			_ = new ValueInstance(noneType).ToExpressionCodeString();
-			_ = new ValueInstance(booleanType, true).ToExpressionCodeString();
-			_ = new ValueInstance(numberType, 42).ToExpressionCodeString();
-			_ = new ValueInstance("hello").ToExpressionCodeString(true);
-			_ = new ValueInstance(dictionaryType, new Dictionary<ValueInstance, ValueInstance>
-			{
-				{ new ValueInstance(numberType, 1), new ValueInstance(numberType, 2) }
-			}).ToExpressionCodeString();
-			_ = new ValueInstance(listType, [new ValueInstance(numberType, 1)]).ToExpressionCodeString();
-      var typeInstance = new ValueInstance(customType, [new ValueInstance(numberType, 7)]);
-			_ = GetExpressionCodeStringViaHelperEntry(typeInstance);
-			_ = new ValueInstance(typeInstance, customType).ToExpressionCodeString();
-		}
-		finally
-		{
-     logWriterField.SetValue(null, rememberLogWriter);
-			PerformanceLog.IsEnabled = rememberIsEnabled;
-			Environment.SetEnvironmentVariable("STRICT_PERFORMANCE_LOGGING", rememberLogging);
-		}
-		var output = consoleWriter.ToString();
-    Assert.That(output, Does.Contain("ValueInstance.ctor(Type=None)"));
-   Assert.That(output, Does.Contain("ValueInstance.ctor(Type=TestPackage/Boolean"));
-		Assert.That(output, Does.Contain("number=True"));
-    Assert.That(output, Does.Contain("ValueInstance.ctor(Type=TestPackage/Number"));
-		Assert.That(output, Does.Contain("number=42"));
-		Assert.That(output, Does.Contain("ValueInstance.ctor(text=hello)"));
-    Assert.That(output, Does.Contain("ValueInstance.ctor(Type=TestPackage/Dictionary("));
-		Assert.That(output, Does.Contain("ValueInstance.ctor(Type=TestPackage/List("));
-		Assert.That(output, Does.Contain("ValueInstance.ctor(existingInstance="));
-		Assert.That(output, Does.Contain("ValueInstance.ToExpressionCodeString"));
-   Assert.That(output, Does.Contain("generated=(7)"));
-		Assert.That(output, Does.Contain("callers="));
-   Assert.That(output, Does.Contain(nameof(GetExpressionCodeStringViaHelperEntry)));
-   Assert.That(output, Does.Contain(nameof(GetExpressionCodeStringViaHelperRoot)));
-		Assert.That(output, Does.Contain(nameof(GetExpressionCodeStringViaHelpers)));
-	}
-
-	private static string GetExpressionCodeStringViaHelperEntry(ValueInstance instance) =>
-		GetExpressionCodeStringViaHelperRoot(instance);
-
-	private static string GetExpressionCodeStringViaHelperRoot(ValueInstance instance) =>
-		GetExpressionCodeStringViaHelpers(instance);
-
-	private static string GetExpressionCodeStringViaHelpers(ValueInstance instance) =>
-		GetExpressionCodeStringViaHelper(instance);
-
-	private static string GetExpressionCodeStringViaHelper(ValueInstance instance) =>
-		instance.ToExpressionCodeString();
-
-	[Test]
 	public void CompareTwoNumbers() =>
 		Assert.That(new ValueInstance(numberType, 42),
 			Is.EqualTo(new ValueInstance(numberType, 42)));
@@ -138,9 +68,12 @@ public sealed class ValueInstanceTests
 	{
 		var listType = TestPackage.Instance.GetListImplementationType(numberType);
 		List<ValueInstance> items = [new(numberType, 1), new(numberType, 2)];
-    var constructor = typeof(ValueInstance).GetConstructor([typeof(Type), typeof(List<ValueInstance>), typeof(bool)]);
+		var constructor =
+			typeof(ValueInstance).GetConstructor([
+				typeof(Type), typeof(List<ValueInstance>), typeof(bool)
+			]);
 		Assert.That(constructor, Is.Not.Null);
-   var instance = (ValueInstance)constructor!.Invoke([listType, items, true]);
+		var instance = (ValueInstance)constructor!.Invoke([listType, items, true]);
 		Assert.That(instance.List.Items, Is.EqualTo(items));
 	}
 
@@ -148,8 +81,8 @@ public sealed class ValueInstanceTests
 	public void NumericDataTypeListsUseFlatNumberBacking()
 	{
 		using var pointType = new Type(TestPackage.Instance,
-     new TypeLines("Point2", "has xValue Number", "has yValue Number")).
-				ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines("Point2", "has xValue Number", "has yValue Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var listType = TestPackage.Instance.GetListImplementationType(pointType);
 		var point1 = new ValueInstance(pointType,
 			[new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
@@ -158,10 +91,10 @@ public sealed class ValueInstanceTests
 		var list = new ValueInstance(listType, [point1, point2]);
 		var flatNumbersField = typeof(ValueListInstance).GetField("flatNumbers",
 			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-   var itemsField = typeof(ValueListInstance).GetField("items",
+		var itemsField = typeof(ValueListInstance).GetField("items",
 			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 		Assert.That(flatNumbersField, Is.Not.Null);
-   Assert.That(itemsField, Is.Not.Null);
+		Assert.That(itemsField, Is.Not.Null);
 		Assert.That((float[]?)flatNumbersField!.GetValue(list.List), Is.Not.Null);
 		Assert.That(itemsField!.GetValue(list.List), Is.Null);
 		Assert.That(list.List[1].TryGetValueTypeInstance()!["yValue"].Number, Is.EqualTo(4));
@@ -239,22 +172,19 @@ public sealed class ValueInstanceTests
 	public void ValueInstanceWithRgbaMembersUsesCompactRepresentation()
 	{
 		using var rgbaType = new Type(TestPackage.Instance,
-      new TypeLines("CompactRgbaValue",
-				"has Red Number",
-				"has Green Number",
-				"has Blue Number",
-				"has Alpha = 1",
-				"Run Number",
-				"\tRed")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines("CompactRgbaValue", "has Red Number", "has Green Number", "has Blue Number",
+					"has Alpha = 1", "Run Number", "\tRed")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var instance = new ValueInstance(rgbaType, [
 			new ValueInstance(numberType, 0.5),
 			new ValueInstance(numberType, 0.75),
 			new ValueInstance(numberType, 0.5),
 			new ValueInstance(numberType, 1)
 		]);
-   var valueField = typeof(ValueInstance).GetField("value",
+		var valueField = typeof(ValueInstance).GetField("value",
 			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
-		Assert.That(valueField.GetValue(instance)!.GetType().Name, Is.Not.EqualTo("ValueTypeInstance"));
+		Assert.That(valueField.GetValue(instance)!.GetType().Name,
+			Is.Not.EqualTo("ValueTypeInstance"));
 		Assert.That(instance.ToExpressionCodeString(), Is.EqualTo("(0.5, 0.75, 0.5)"));
 	}
 

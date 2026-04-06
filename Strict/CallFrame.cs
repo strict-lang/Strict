@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using System.Reflection.Metadata;
 using Type = Strict.Language.Type;
 
 namespace Strict;
@@ -13,9 +12,9 @@ namespace Strict;
 internal sealed class CallFrame
 {
 	internal CallFrame(CallFrame? parent = null) => this.parent = parent;
-  private static readonly Lock symbolLock = new();
-	private static readonly Dictionary<string, int> symbolIds = new(StringComparer.Ordinal);
-	private static readonly List<string> symbolNames = [];
+	private static readonly Lock SymbolLock = new();
+	private static readonly Dictionary<string, int> SymbolIds = new(StringComparer.Ordinal);
+	private static readonly List<string> SymbolNames = [];
 	internal static readonly int ValueSymbolId = ResolveSymbolId(Type.ValueLowercase);
 	internal static readonly int IndexSymbolId = ResolveSymbolId(Type.IndexLowercase);
 	internal static readonly int OuterSymbolId = ResolveSymbolId(Type.OuterLowercase);
@@ -31,19 +30,19 @@ internal sealed class CallFrame
 
 	private CallFrame? parent;
 	private Dictionary<string, ValueInstance>? variables;
-  private ValueInstance[] slots = [];
+	private ValueInstance[] slots = [];
 	private bool[] memberSlots = [];
 	private int highestAssignedSymbolId = -1;
 	/// <summary>
 	/// Materialized locals dict — used by <see cref="Memory.Variables"/> for test compatibility
 	/// </summary>
- internal Dictionary<string, ValueInstance> Variables
+	internal Dictionary<string, ValueInstance> Variables
 	{
 		get
 		{
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("CallFrame.Variables", "access");
-     return variables ??= CreateVariablesSnapshot();
+			return variables ??= CreateVariablesSnapshot();
 		}
 	}
 
@@ -58,22 +57,22 @@ internal sealed class CallFrame
 
 	internal static int ResolveSymbolId(string name)
 	{
-		lock (symbolLock)
+		lock (SymbolLock)
 		{
-			if (symbolIds.TryGetValue(name, out var symbolId))
+			if (SymbolIds.TryGetValue(name, out var symbolId))
 				return symbolId;
-			symbolId = symbolNames.Count;
-			symbolIds.Add(name, symbolId);
-			symbolNames.Add(name);
+			symbolId = SymbolNames.Count;
+			SymbolIds.Add(name, symbolId);
+			SymbolNames.Add(name);
 			return symbolId;
 		}
 	}
 
 	internal static string GetSymbolName(int symbolId)
 	{
-		lock (symbolLock)
-			return symbolId >= 0 && symbolId < symbolNames.Count
-				? symbolNames[symbolId]
+		lock (SymbolLock)
+			return symbolId >= 0 && symbolId < SymbolNames.Count
+				? SymbolNames[symbolId]
 				: symbolId.ToString();
 	}
 
@@ -81,17 +80,17 @@ internal sealed class CallFrame
 	//TODO: main optimization in the for loop is to take the image.Colors(colorIndex) and to work directly on it without looking it up multiple times per iteration. this is still a VirtualMachine, but we don't have to be stupid!
 	internal bool TryGet(string name, out ValueInstance value)
 	{
-   if (PerformanceLog.IsEnabled)
+		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.TryGet", "name=" + name);
 		var dotIndex = name.IndexOf('.');
-    return dotIndex <= 0
+		return dotIndex <= 0
 			? TryGet(ResolveSymbolId(name), out value)
 			: TryGetNestedPath(name, dotIndex, out value);
 	}
 
- internal bool TryGet(int symbolId, out ValueInstance value)
+	internal bool TryGet(int symbolId, out ValueInstance value)
 	{
-   if (TryGetSlotValue(symbolId, false, out value))
+		if (TryGetSlotValue(symbolId, false, out value))
 			return true;
 		if (parent != null && parent.TryGetMember(symbolId, out value))
 			return true;
@@ -99,9 +98,9 @@ internal sealed class CallFrame
 		return false;
 	}
 
-  private bool TryGetNestedPath(string name, int dotIndex, out ValueInstance value)
+	private bool TryGetNestedPath(string name, int dotIndex, out ValueInstance value)
 	{
-   if (TryGet(ResolveSymbolId(name[..dotIndex]), out var root) &&
+		if (TryGet(ResolveSymbolId(name[..dotIndex]), out var root) &&
 			TryGetNestedMemberValue(root, name, dotIndex + 1, out value))
 			return true;
 		value = default;
@@ -140,9 +139,9 @@ internal sealed class CallFrame
 	}
 
 	//TODO: slow and complicated, but only called for member lookups
- private bool TryGetMember(int symbolId, out ValueInstance value)
+	private bool TryGetMember(int symbolId, out ValueInstance value)
 	{
-   if (PerformanceLog.IsEnabled)
+		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.TryGetMember", "name=" + GetSymbolName(symbolId));
 		return TryGetSlotValue(symbolId, true, out value);
 	}
@@ -152,13 +151,10 @@ internal sealed class CallFrame
 		if (!requireMember && symbolId == OuterSymbolId && parent != null &&
 			parent.TryGet(ValueSymbolId, out value))
 			return true;
-   if (symbolId >= 0 && symbolId < slots.Length && slots[symbolId].HasValue &&
+		if (symbolId >= 0 && symbolId < slots.Length && slots[symbolId].HasValue &&
 			(!requireMember || symbolId < memberSlots.Length && memberSlots[symbolId]))
 		{
 			value = slots[symbolId];
-			if (value.IsText && value.Text.StartsWith("for elements"))
-				throw new NotSupportedException("Invalid CallFrame.TryGet variable: " +
-					GetSymbolName(symbolId) + " " + value.Text);
 			return true;
 		}
 		value = default;
@@ -166,11 +162,11 @@ internal sealed class CallFrame
 	}
 
 	//TODO: we shouldn't have these many ways of getting a variable
- internal ValueInstance Get(string name)
+	internal ValueInstance Get(string name)
 	{
-   if (PerformanceLog.IsEnabled)
+		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.Get", "name=" + name);
-    return TryGet(name, out var value)
+		return TryGet(name, out var value)
 			? value
 			: throw new ValueNotFound(name, this);
 	}
@@ -181,7 +177,7 @@ internal sealed class CallFrame
 			PerformanceLog.Write("CallFrame.Get", "name=" + GetSymbolName(symbolId));
 		return TryGet(symbolId, out var value)
 			? value
-      : throw new ValueNotFound(GetSymbolName(symbolId), this);
+			: throw new ValueNotFound(GetSymbolName(symbolId), this);
 	}
 
 	private sealed class ValueNotFound(string message, CallFrame frame)
@@ -190,32 +186,27 @@ internal sealed class CallFrame
 	/// <summary>
 	/// Always writes to this frame's own dict (never clobbers parent).
 	/// </summary>
-	internal void Set(string name, ValueInstance value, bool isMember = false)
-   => Set(ResolveSymbolId(name), value, isMember, name);
+	internal void Set(string name, ValueInstance value, bool isMember = false) =>
+		Set(ResolveSymbolId(name), value, isMember, name);
 
-	internal void Set(int symbolId, ValueInstance value, bool isMember = false,
-		string? name = null)
+	internal void Set(int symbolId, ValueInstance value, bool isMember = false, string? name = null)
 	{
-    if (PerformanceLog.IsEnabled)
-      PerformanceLog.Write("CallFrame.Set", "name=" + (name ?? GetSymbolName(symbolId)) +
-				", isMember=" + isMember + ", value=" + Describe(value));
-		//TODO: remove
-		if (value.IsText && value.Text.StartsWith("for elements"))
-      throw new NotSupportedException("Invalid CallFrame.Set variable: isMember=" +
-				isMember + ", name: " + (name ?? GetSymbolName(symbolId)) + ", value: " +
-				value.Text);
+		if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("CallFrame.Set",
+				"name=" + (name ?? GetSymbolName(symbolId)) + ", isMember=" + isMember + ", value=" +
+				Describe(value));
 		EnsureCapacity(symbolId);
 		slots[symbolId] = value;
 		memberSlots[symbolId] = isMember;
 		highestAssignedSymbolId = Math.Max(highestAssignedSymbolId, symbolId);
-		if (variables != null)
-			variables[name ?? GetSymbolName(symbolId)] = value;
+		variables?[name ?? GetSymbolName(symbolId)] = value;
 	}
 
 	internal void Clear()
 	{
-   if (PerformanceLog.IsEnabled)
-      PerformanceLog.Write("CallFrame.Clear", "locals=" + (variables?.Count ?? 0) + ", members=" + CountMembers());
+		if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("CallFrame.Clear",
+				"locals=" + (variables?.Count ?? 0) + ", members=" + CountMembers());
 		if (highestAssignedSymbolId >= 0)
 		{
 			Array.Clear(slots, 0, highestAssignedSymbolId + 1);
@@ -230,8 +221,10 @@ internal sealed class CallFrame
 	/// </summary>
 	internal void Reset(CallFrame? newParent)
 	{
-   if (PerformanceLog.IsEnabled)
-      PerformanceLog.Write("CallFrame.Reset", "locals=" + (variables?.Count ?? 0) + ", members=" + CountMembers() + ", parent=" + (newParent != null));
+		if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("CallFrame.Reset",
+				"locals=" + (variables?.Count ?? 0) + ", members=" + CountMembers() + ", parent=" +
+				(newParent != null));
 		Clear();
 		parent = newParent;
 	}
@@ -275,10 +268,10 @@ internal sealed class CallFrame
 
 	public override string ToString() =>
 		nameof(CallFrame) + " " + nameof(variables) + ": " + variables?.DictionaryToWordList() +
-    ", members: " + string.Join(", ", Enumerable.Range(0, highestAssignedSymbolId + 1).
-			Where(symbolId => symbolId < memberSlots.Length && memberSlots[symbolId] &&
-				slots[symbolId].HasValue).Select(GetSymbolName)) +
-		(parent != null
+		", members: " + string.Join(", ",
+			Enumerable.Range(0, highestAssignedSymbolId + 1).Where(symbolId =>
+					symbolId < memberSlots.Length && memberSlots[symbolId] && slots[symbolId].HasValue).
+				Select(GetSymbolName)) + (parent != null
 			? "\n\tParent: " + parent
 			: "");
 }

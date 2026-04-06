@@ -39,22 +39,22 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private static readonly int ValueSymbolId = CallFrame.ValueSymbolId;
 	private static readonly int IndexSymbolId = CallFrame.IndexSymbolId;
 	private static readonly int OuterSymbolId = CallFrame.OuterSymbolId;
-  private static readonly int OuterIndexSymbolId =
+	private static readonly int OuterIndexSymbolId =
 		CallFrame.ResolveSymbolId(Type.OuterLowercase + "." + Type.IndexLowercase);
 	private static readonly int ElementsSymbolId = CallFrame.ElementsSymbolId;
 	private static readonly int CharactersSymbolId = CallFrame.CharactersSymbolId;
-  private readonly int noneSymbolId = CallFrame.ResolveSymbolId(Type.None);
+	private readonly int noneSymbolId = CallFrame.ResolveSymbolId(Type.None);
 	private readonly Dictionary<string, IdentifierAccessPath> identifierAccessPaths =
 		new(StringComparer.Ordinal);
 	private readonly Dictionary<string, IndexedElementAccessPath> indexedElementAccessPaths =
 		new(StringComparer.Ordinal);
 
-  private VirtualMachine RunInstructions(List<Instruction> blockInstructions,
+	private VirtualMachine RunInstructions(List<Instruction> blockInstructions,
 		string context = "body")
 	{
-   if (PerformanceLog.IsEnabled)
+		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("VirtualMachine.RunInstructions", "context=" + context + ", count=" + blockInstructions.Count);
-   CacheInstructionAccessPaths(blockInstructions);
+		CacheInstructionAccessPaths(blockInstructions);
 		for (var index = 0; index < blockInstructions.Count; index++)
 			if (blockInstructions[index].InstructionType == InstructionType.LoopBegin)
 			{
@@ -73,8 +73,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		identifierAccessPaths.EnsureCapacity(identifierAccessPaths.Count + blockInstructions.Count * 2);
 		indexedElementAccessPaths.EnsureCapacity(indexedElementAccessPaths.Count + blockInstructions.Count);
-		for (var instructionIndex = 0; instructionIndex < blockInstructions.Count; instructionIndex++)
-			switch (blockInstructions[instructionIndex])
+		for (var cachedInstructionIndex = 0; cachedInstructionIndex < blockInstructions.Count; cachedInstructionIndex++)
+			switch (blockInstructions[cachedInstructionIndex])
 			{
 			case LoadVariableToRegister loadVariable:
 				CacheIdentifierAccessPath(loadVariable.Identifier);
@@ -127,7 +127,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		foreach (var member in entryType.Value.Members)
 		{
 			var value = member.InitialValueExpression is SetInstruction setInstruction
-       ? CloneConstantValue(setInstruction.ValueInstance)
+				? CloneConstantValue(setInstruction.ValueInstance)
 				: CreateDefaultComplexValue(ResolveBinaryMemberType(member, entryType.Key));
 			Memory.Frame.Set(member.Name, value, isMember: true);
 		}
@@ -168,7 +168,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	// Now it should be 0.23m*(3-4) instructions, less than 1m, also no lookups, we can keep value and brightness directly in memory and reuse, index increases were we are in our big Colors array ..
 	private void ExecuteInstruction(Instruction instruction)
 	{
-    if (PerformanceLog.IsEnabled)
+		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("** VirtualMachine.ExecuteInstruction",
 				"index=" + instructionIndex + ", type=" + instruction.InstructionType +
 				GetInstructionDetails(instruction));
@@ -245,49 +245,50 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 	}
 
-  private string GetInstructionDetails(Instruction instruction) => instruction switch
-	{
-		StoreVariableInstruction storeVariable => ", Identifier=" + storeVariable.Identifier +
-			", IsMember=" + storeVariable.IsMember + ", ValueInstance=" +
-			DescribeValueInstance(storeVariable.ValueInstance),
-		StoreFromRegisterInstruction storeFromRegister => ", Identifier=" +
-			storeFromRegister.Identifier + ", Register=" + storeFromRegister.Register,
-		LoadVariableToRegister loadVariable => ", Identifier=" + loadVariable.Identifier +
-			", Register=" + loadVariable.Register,
-		LoadConstantInstruction loadConstant => ", Constant=" +
-			DescribeValueInstance(loadConstant.Constant) + ", Register=" + loadConstant.Register,
-		Invoke invoke => ", Method=" + DescribeMethodCall(invoke.Method) + ", Register=" +
-			invoke.Register,
-		PrintInstruction print => ", TextPrefix=" + print.TextPrefix + ", ValueRegister=" +
-			print.ValueRegister + ", ValueIsText=" + print.ValueIsText,
-		LoopBeginInstruction loopBegin => ", Register=" + loopBegin.Register + ", IsRange=" +
-     loopBegin.IsRange + ", CustomVariableNames=" +
-			string.Join(", ", loopBegin.CustomVariableNames),
-		LoopEndInstruction loopEnd => ", Steps=" + loopEnd.Steps,
-		BinaryInstruction binary => ", Registers=" + DescribeRegisters(binary.Registers),
-		ListCallInstruction listCall => ", Identifier=" + listCall.Identifier + ", Register=" +
-			listCall.Register + ", IndexValueRegister=" + listCall.IndexValueRegister,
-		WriteToListInstruction writeToList => ", Identifier=" + writeToList.Identifier +
-			", Register=" + writeToList.Register,
-		WriteToTableInstruction writeToTable => ", Identifier=" + writeToTable.Identifier +
-			", KeyRegister=" + writeToTable.Register + ", ValueRegister=" + writeToTable.Value,
-		RemoveInstruction remove => ", Identifier=" + remove.Identifier + ", Register=" +
-			remove.Register,
-		FieldLoadInstruction fieldLoad => ", FieldName=" + fieldLoad.FieldName +
-			", ObjectRegister=" + fieldLoad.ObjectRegister + ", Register=" + fieldLoad.Register,
-		ConstructValueTypeInstruction construct => ", ReturnType=" + construct.ReturnType.Name +
-			", Register=" + construct.Register + ", Fields=" +
-			DescribeRegisters(construct.FieldRegisters),
-   JumpIfNotZero jumpIfNotZero => ", Register=" + jumpIfNotZero.Register +
-			", InstructionsToSkip=" + jumpIfNotZero.InstructionsToSkip,
-		JumpToId jumpToId => ", Id=" + jumpToId.Id,
-		Jump jump => ", InstructionsToSkip=" + jump.InstructionsToSkip,
-		_ => string.Empty
-	};
+	private static string GetInstructionDetails(Instruction instruction) =>
+		instruction switch
+		{
+			StoreVariableInstruction storeVariable => ", Identifier=" + storeVariable.Identifier +
+				", IsMember=" + storeVariable.IsMember + ", ValueInstance=" +
+				DescribeValueInstance(storeVariable.ValueInstance),
+			StoreFromRegisterInstruction storeFromRegister => ", Identifier=" +
+				storeFromRegister.Identifier + ", Register=" + storeFromRegister.Register,
+			LoadVariableToRegister loadVariable => ", Identifier=" + loadVariable.Identifier +
+				", Register=" + loadVariable.Register,
+			LoadConstantInstruction loadConstant => ", Constant=" +
+				DescribeValueInstance(loadConstant.Constant) + ", Register=" + loadConstant.Register,
+			Invoke invoke => ", Method=" + DescribeMethodCall(invoke.Method) + ", Register=" +
+				invoke.Register,
+			PrintInstruction print => ", TextPrefix=" + print.TextPrefix + ", ValueRegister=" +
+				print.ValueRegister + ", ValueIsText=" + print.ValueIsText,
+			LoopBeginInstruction loopBegin => ", Register=" + loopBegin.Register + ", IsRange=" +
+				loopBegin.IsRange + ", CustomVariableNames=" +
+				string.Join(", ", loopBegin.CustomVariableNames),
+			LoopEndInstruction loopEnd => ", Steps=" + loopEnd.Steps,
+			BinaryInstruction binary => ", Registers=" + DescribeRegisters(binary.Registers),
+			ListCallInstruction listCall => ", Identifier=" + listCall.Identifier + ", Register=" +
+				listCall.Register + ", IndexValueRegister=" + listCall.IndexValueRegister,
+			WriteToListInstruction writeToList => ", Identifier=" + writeToList.Identifier +
+				", Register=" + writeToList.Register,
+			WriteToTableInstruction writeToTable => ", Identifier=" + writeToTable.Identifier +
+				", KeyRegister=" + writeToTable.Register + ", ValueRegister=" + writeToTable.Value,
+			RemoveInstruction remove => ", Identifier=" + remove.Identifier + ", Register=" +
+				remove.Register,
+			FieldLoadInstruction fieldLoad => ", FieldName=" + fieldLoad.FieldName +
+				", ObjectRegister=" + fieldLoad.ObjectRegister + ", Register=" + fieldLoad.Register,
+			ConstructValueTypeInstruction construct => ", ReturnType=" + construct.ReturnType.Name +
+				", Register=" + construct.Register + ", Fields=" +
+				DescribeRegisters(construct.FieldRegisters),
+			JumpIfNotZero jumpIfNotZero => ", Register=" + jumpIfNotZero.Register +
+				", InstructionsToSkip=" + jumpIfNotZero.InstructionsToSkip,
+			JumpToId jumpToId => ", Id=" + jumpToId.Id,
+			Jump jump => ", InstructionsToSkip=" + jump.InstructionsToSkip,
+			_ => string.Empty
+		};
 
 	private static string DescribeRegisters(Register[] registers)
 	{
-    if (registers.Length == 0)
+		if (registers.Length == 0)
 			return "[]";
 		var parts = new string[registers.Length];
 		for (var index = 0; index < registers.Length; index++)
@@ -295,9 +296,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return "[" + string.Join(", ", parts) + "]";
 	}
 
- private string DescribeMethodCall(MethodCall methodCall)
+	private static string DescribeMethodCall(MethodCall methodCall)
 	{
-    var method = methodCall.Method;
+		var method = methodCall.Method;
 		return method.Name + " on " + method.Type.Name + " args=" + methodCall.Arguments.Count +
 			", hasInstance=" + (methodCall.Instance != null);
 	}
@@ -309,12 +310,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				? "Text(length=" + value.Text.Length + ")"
 				: value.IsList
 					? "List(type=" + value.List.ReturnType.Name + ", count=" +
-						value.List.Items.Count + ")"
+					value.List.Items.Count + ")"
 					: value.IsDictionary
 						? "Dictionary(count=" + value.GetDictionaryItems().Count + ")"
 						: value.TryGetValueTypeInstance() is { } typeInstance
 							? "TypeInstance(type=" + typeInstance.ReturnType.Name + ", members=" +
-								typeInstance.Values.Length + ")"
+							typeInstance.Values.Length + ")"
 							: value.GetType().Name + "(" + value.Number + ")";
 
 	private sealed class InvalidInstruction(Instruction instruction)
@@ -363,23 +364,23 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private void ExecuteListCall(ListCallInstruction listCallInstruction)
 	{
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
-    var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List[indexValue];
+		var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List[indexValue];
 		Memory.Registers[listCallInstruction.Register] = variableListElement;
 	}
 
- private void ExecuteWriteToList(WriteToListInstruction writeToListInstruction)
+	private void ExecuteWriteToList(WriteToListInstruction writeToListInstruction)
 	{
-    if (!GetIdentifierAccessPath(writeToListInstruction.Identifier).TryResolve(this,
-			out var collection) || !collection.IsList)
+		if (!GetIdentifierAccessPath(writeToListInstruction.Identifier).TryResolve(this,
+				out var collection) || !collection.IsList)
 			throw new InvalidOperationException("Cannot add to non-list variable \"" +
 				writeToListInstruction.Identifier + "\"");
 		collection.List.Items.Add(Memory.Registers[writeToListInstruction.Register]);
 	}
 
-  private void ExecuteWriteToTable(WriteToTableInstruction writeToTableInstruction)
+	private void ExecuteWriteToTable(WriteToTableInstruction writeToTableInstruction)
 	{
-   if (!GetIdentifierAccessPath(writeToTableInstruction.Identifier).TryResolve(this,
-			out var collection) || !collection.IsDictionary)
+		if (!GetIdentifierAccessPath(writeToTableInstruction.Identifier).TryResolve(this,
+				out var collection) || !collection.IsDictionary)
 			throw new InvalidOperationException("Cannot add to non-dictionary variable \"" +
 				writeToTableInstruction.Identifier + "\"");
 		collection.GetDictionaryItems()[Memory.Registers[writeToTableInstruction.Register]] =
@@ -438,8 +439,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			throw new InvalidOperationException("No precompiled method instructions found for invoke");
 		var childScope = InitializeChildScope();
 		InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance);
-    RunInstructions(invokeInstructions, invoke.Method.Method.Name);
-   var result = TryFlattenNestedIteratorList(invoke.Method, Returns);
+		RunInstructions(invokeInstructions, invoke.Method.Method.Name);
+		var result = TryFlattenNestedIteratorList(invoke.Method, Returns);
 		CleanupChildScope(childScope);
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
@@ -471,11 +472,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var instanceExpression = methodCall.Instance;
 		return methodCall.Method.Name switch
 		{
-      Method.From => instanceExpression == null &&
-				(TryHandleAdjustedColorConstructor(invoke) ||
+			Method.From => instanceExpression == null && (TryHandleAdjustedColorConstructor(invoke) ||
 				ExecuteFromInvoke(invoke, methodCall.ReturnType)),
 			BinaryOperator.To => instanceExpression != null && TryHandleToConversion(invoke),
-      "Length" or "Count" => instanceExpression != null && TryHandleNativeLength(invoke),
+			"Length" or "Count" => instanceExpression != null && TryHandleNativeLength(invoke),
 			"Increment" or "Decrement" => TryHandleIncrementDecrement(invoke),
 			"Get" => instanceExpression != null && instanceExpression.ReturnType.IsDictionary &&
 				GetValueByKeyForDictionaryAndStoreInRegister(invoke),
@@ -521,20 +521,20 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			!TryExtractMatchingColorChannelAdjustment(invoke.Method.Arguments[2], "Blue", listCall,
 				adjustmentExpression))
 			return false;
-   var sourceColor = TryResolveIndexedListValue(listCall, out var resolvedColor)
+		var sourceColor = TryResolveIndexedListValue(listCall, out var resolvedColor)
 			? resolvedColor
 			: EvaluateListCallExpression(listCall);
 		var brightness = EvaluateExpression(adjustmentExpression).Number;
 		if (!TryGetColorChannels(sourceColor, out var red, out var green, out var blue,
-				out var alpha))
+			out var alpha))
 			return false;
-   Memory.Registers[invoke.Register] = ValueInstance.CreateRgba(invoke.Method.ReturnType,
+		Memory.Registers[invoke.Register] = ValueInstance.CreateRgba(invoke.Method.ReturnType,
 			red + brightness, green + brightness, blue + brightness,
 			alpha ?? GetConstructorMemberValue(invoke.Method.ReturnType, 3).Number);
 		return true;
 	}
 
-	private bool TryGetColorChannels(ValueInstance colorValue, out double red, out double green,
+	private static bool TryGetColorChannels(ValueInstance colorValue, out double red, out double green,
 		out double blue, out double? alpha)
 	{
 		if (colorValue.TryGetPackedRgbaChannels(out red, out green, out blue, out var packedAlpha))
@@ -560,7 +560,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return false;
 	}
 
-	private ValueInstance GetConstructorMemberValue(Type targetType, int memberIndex)
+	private static ValueInstance GetConstructorMemberValue(Type targetType, int memberIndex)
 	{
 		var members = targetType.Members;
 		if (memberIndex >= members.Count)
@@ -573,7 +573,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: CreateDefaultValue(member.Type);
 	}
 
-	private bool TryExtractMatchingColorChannelAdjustment(Expression expression, string expectedMemberName,
+	private static bool TryExtractMatchingColorChannelAdjustment(Expression expression, string expectedMemberName,
 		ListCall expectedListCall, Expression expectedAdjustmentExpression) =>
 		TryExtractColorChannelAdjustment(expression, expectedMemberName, out var listCall,
 			out var adjustmentExpression) && AreEquivalentExpression(listCall.List,
@@ -608,20 +608,20 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		ReferenceEquals(left, right) || (left, right) switch
 		{
 			(Value leftValue, Value rightValue) => leftValue.Data.Equals(rightValue.Data),
-			(VariableCall leftVariable, VariableCall rightVariable) =>
-				leftVariable.Variable.Name == rightVariable.Variable.Name,
-				(ParameterCall leftParameter, ParameterCall rightParameter) =>
-					leftParameter.Parameter.Name == rightParameter.Parameter.Name,
-					(MemberCall leftMember, MemberCall rightMember) =>
-						leftMember.Member.Name == rightMember.Member.Name &&
-						((leftMember.Instance == null && rightMember.Instance == null) ||
-							leftMember.Instance != null && rightMember.Instance != null &&
-							AreEquivalentExpression(leftMember.Instance, rightMember.Instance)),
-						(ListCall leftListCall, ListCall rightListCall) =>
-							AreEquivalentExpression(leftListCall.List, rightListCall.List) &&
-							AreEquivalentExpression(leftListCall.Index, rightListCall.Index),
-						(Instance, Instance) => true,
-						_ => false
+			(VariableCall leftVariable, VariableCall rightVariable) => leftVariable.Variable.Name ==
+				rightVariable.Variable.Name,
+			(ParameterCall leftParameter, ParameterCall rightParameter) =>
+				leftParameter.Parameter.Name == rightParameter.Parameter.Name,
+			(MemberCall leftMember, MemberCall rightMember) =>
+				leftMember.Member.Name == rightMember.Member.Name &&
+				(leftMember.Instance == null && rightMember.Instance == null ||
+					leftMember.Instance != null && rightMember.Instance != null &&
+					AreEquivalentExpression(leftMember.Instance, rightMember.Instance)),
+			(ListCall leftListCall, ListCall rightListCall) =>
+				AreEquivalentExpression(leftListCall.List, rightListCall.List) &&
+				AreEquivalentExpression(leftListCall.Index, rightListCall.Index),
+			(Instance, Instance) => true,
+			_ => false
 		};
 
 	//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
@@ -778,9 +778,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var methodName = invoke.Method.Method.Name;
 		if (methodName != "Increment" && methodName != "Decrement")
 			return false;
-   if (invoke.Method.Instance == null)
+		if (invoke.Method.Instance == null)
 			return false;
-   var current = EvaluateExpression(invoke.Method.Instance);
+		var current = EvaluateExpression(invoke.Method.Instance);
 		var delta = methodName == "Increment"
 			? 1.0
 			: -1.0;
@@ -821,7 +821,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: 0;
 		var matches = start + prefix.Length <= text.Length &&
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
-    return new ValueInstance(executable.booleanType, matches);
+		return new ValueInstance(executable.booleanType, matches);
 	}
 
 	private bool TryHandleToConversion(Invoke invoke)
@@ -967,7 +967,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var members = targetType.Members;
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 		{
-      if (!values[memberIndex].IsList || values[memberIndex].List.Count > 0 ||
+			if (!values[memberIndex].IsList || values[memberIndex].List.Count > 0 ||
 				members[memberIndex].Constraints == null)
 				continue;
 			var length = TryGetConstrainedLength(targetType, values, members[memberIndex]);
@@ -980,7 +980,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				GenericTypeImplementation nestedElementsList)
 				elementType = nestedElementsList.ImplementationTypes[0];
 			var defaultElement = CreateDefaultComplexValue(elementType);
-      values[memberIndex] = new ValueInstance(members[memberIndex].Type, defaultElement,
+			values[memberIndex] = new ValueInstance(members[memberIndex].Type, defaultElement,
 				length.Value);
 		}
 	}
@@ -998,14 +998,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 					? new ValueInstance("")
 					: memberType.IsBoolean
 						? new ValueInstance(memberType, false)
-            : memberType.IsNone
+						: memberType.IsNone
 							? new ValueInstance(memberType)
 							: memberType.Members.Count > 0 && !memberType.IsMutable
 								? new ValueInstance(memberType)
-						: memberType.IsMutable
-							// ReSharper disable once TailRecursiveCall
-							? CreateDefaultValue(memberType.GetFirstImplementation())
-							: new ValueInstance(memberType, 0);
+								: memberType.IsMutable
+									// ReSharper disable once TailRecursiveCall
+									? CreateDefaultValue(memberType.GetFirstImplementation())
+									: new ValueInstance(memberType, 0);
 
 	private static ValueInstance CreateDefaultComplexValue(Type type)
 	{
@@ -1174,7 +1174,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (expression is VariableCall variableCall && variableCall.IsConstant &&
 			variableCall.Variable.InitialValue is Value constantValue)
 			return constantValue.Data;
-    if (expression is VariableCall directVariable)
+		if (expression is VariableCall directVariable)
 			return EvaluateVariableCall(directVariable);
 		if (expression is ParameterCall parameterCall)
 			return Memory.Frame.Get(CallFrame.ResolveSymbolId(parameterCall.Parameter.Name));
@@ -1188,30 +1188,29 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return EvaluateMethodCall(methodCall);
 		if (expression is ListCall listCall)
 			return EvaluateListCallExpression(listCall); //TODO: another almost 25% here, 0.23m calls
-   return TryResolveExpressionFallback(expression, out var resolvedValue)
+		return TryResolveExpressionFallback(expression, out var resolvedValue)
 			? resolvedValue
 			: throw new InvalidOperationException("Could not evaluate expression " + expression);
 	}
 
-	private ValueInstance EvaluateVariableCall(VariableCall variableCall)
-	{
-		if (variableCall.Variable.Name == Type.OuterLowercase)
-			return Memory.Frame.Get(OuterSymbolId);
-		return Memory.Frame.Get(CallFrame.ResolveSymbolId(variableCall.Variable.Name));
-	}
+	private ValueInstance EvaluateVariableCall(VariableCall variableCall) =>
+		Memory.Frame.Get(variableCall.Variable.Name == Type.OuterLowercase
+			? OuterSymbolId
+			: CallFrame.ResolveSymbolId(variableCall.Variable.Name));
 
 	private ValueInstance EvaluateListCallExpression(ListCall listCall)
 	{
-    if (TryResolveIndexedListValue(listCall, out var directListElement))
+		if (TryResolveIndexedListValue(listCall, out var directListElement))
 			return directListElement;
-    if (TryEvaluateDirectSpecialListCall(listCall, out var directValue))
+		if (TryEvaluateDirectSpecialListCall(listCall, out var directValue))
 			return directValue;
 		var listValue = EvaluateExpression(listCall.List);
-    var indexValue = TryEvaluateDirectIndexValue(listCall.Index, out var directIndexValue)
+		var indexValue = TryEvaluateDirectIndexValue(listCall.Index, out var directIndexValue)
 			? directIndexValue
 			: EvaluateExpression(listCall.Index);
 		var index = (int)indexValue.Number;
-		if (listValue.IsList || listValue.IsText || listValue.TryGetValueTypeInstance()?.ReturnType.IsList == true)
+		if (listValue.IsList || listValue.IsText ||
+			listValue.TryGetValueTypeInstance()?.ReturnType.IsList == true)
 			return listValue.GetIteratorValue(executable.characterType, index);
 		if (listValue.TryGetValueTypeInstance() is { } typeInstance)
 		{
@@ -1220,11 +1219,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				return elementsValue.GetIteratorValue(executable.characterType, index);
 			for (var valueIndex = 0; valueIndex < typeInstance.Values.Length; valueIndex++)
 				if (typeInstance.Values[valueIndex].IsText)
-					return typeInstance.Values[valueIndex].GetIteratorValue(executable.characterType, index);
+					return typeInstance.Values[valueIndex].
+						GetIteratorValue(executable.characterType, index);
 		}
-    if (TryResolveExpressionFallback(listCall, out var resolvedValue))
-			return resolvedValue;
-   throw new InvalidOperationException("Could not evaluate list call " + listCall);
+		return TryResolveExpressionFallback(listCall, out var resolvedValue)
+			? resolvedValue
+			: throw new InvalidOperationException("Could not evaluate list call " + listCall);
 	}
 
 	private bool TryResolveIndexedListValue(ListCall listCall, out ValueInstance value)
@@ -1241,16 +1241,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (!listValue.HasValue)
 			return false;
 		var index = (int)indexValue.Number;
-   if (listValue.IsList && index >= 0 && index < listValue.List.Count)
+		if (listValue.IsList && index >= 0 && index < listValue.List.Count)
 		{
-      value = listValue.List[index];
+			value = listValue.List[index];
 			return true;
 		}
 		if (listValue.TryGetValueTypeInstance() is { } typeInstance &&
 			typeInstance.TryGetValue(Type.ElementsLowercase, out var elementsValue) &&
-     elementsValue.IsList && index >= 0 && index < elementsValue.List.Count)
+			elementsValue.IsList && index >= 0 && index < elementsValue.List.Count)
 		{
-      value = elementsValue.List[index];
+			value = elementsValue.List[index];
 			return true;
 		}
 		return false;
@@ -1258,13 +1258,13 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryEvaluateDirectSpecialListCall(ListCall listCall, out ValueInstance value)
 	{
-    if (TryEvaluateDirectIndexValue(listCall.Index, out var indexValue))
+		if (TryEvaluateDirectIndexValue(listCall.Index, out var indexValue))
 		{
 			var directListValue = listCall.List switch
 			{
 				VariableCall { Variable.Name: Type.ValueLowercase } => Memory.Frame.Get(ValueSymbolId),
 				VariableCall { Variable.Name: Type.OuterLowercase } => Memory.Frame.Get(OuterSymbolId),
-        MemberCall { Instance: VariableCall { Variable.Name: Type.ValueLowercase } } memberCall =>
+				MemberCall { Instance: VariableCall { Variable.Name: Type.ValueLowercase } } memberCall =>
 					EvaluateMemberCall(memberCall),
 				MemberCall { Instance: VariableCall { Variable.Name: Type.OuterLowercase } } memberCall =>
 					EvaluateMemberCall(memberCall),
@@ -1302,39 +1302,41 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
 	{
-    if (memberCall.Instance == null)
+		if (memberCall.Instance == null)
 		{
 			if (memberCall.Member.InitialValue is Value enumValue)
 				return enumValue.Data;
-      if (TryGetFrameValue(CallFrame.ResolveSymbolId(memberCall.Member.Name), out var scopedMemberValue))
-				return scopedMemberValue;
-			throw new InvalidOperationException("Could not resolve member " + memberCall.Member.Name);
+			return TryGetFrameValue(CallFrame.ResolveSymbolId(memberCall.Member.Name),
+				out var scopedMemberValue)
+				? scopedMemberValue
+				: throw new InvalidOperationException("Could not resolve member " + memberCall.Member.Name);
 		}
-    var instanceValue = EvaluateExpression(memberCall.Instance);
+		var instanceValue = EvaluateExpression(memberCall.Instance);
 		if (TryGetNativeLength(instanceValue, memberCall.Member.Name, out var lengthValue))
 			return lengthValue;
-   if (instanceValue.TryGetPackedRgbaMember(memberCall.Member.Name, out var packedMemberValue))
+		if (instanceValue.TryGetPackedRgbaMember(memberCall.Member.Name, out var packedMemberValue))
 			return packedMemberValue;
 		var typeInstance = instanceValue.TryGetValueTypeInstance();
-		if (typeInstance != null && typeInstance.TryGetValue(memberCall.Member.Name, out var memberValue))
+		if (typeInstance != null &&
+			typeInstance.TryGetValue(memberCall.Member.Name, out var memberValue))
 			return memberValue;
 		if (instanceValue.IsText && memberCall.Member.Name is "characters" or "elements")
 			return instanceValue;
-		if (TryResolveExpressionFallback(memberCall, out var resolvedValue))
-			return resolvedValue;
-   throw new InvalidOperationException("Could not evaluate member call " + memberCall);
+		return TryResolveExpressionFallback(memberCall, out var resolvedValue)
+			? resolvedValue
+			: throw new InvalidOperationException("Could not evaluate member call " + memberCall);
 	}
 
 	private bool TryResolveExpressionFallback(Expression expression, out ValueInstance value)
 	{
 		switch (expression)
 		{
-    case MemberCall memberCall when memberCall.Instance == null:
+		case MemberCall memberCall when memberCall.Instance == null:
 			return TryGetFrameValue(CallFrame.ResolveSymbolId(memberCall.Member.Name), out value);
 		case MemberCall memberCall:
-      return GetIdentifierAccessPath(memberCall.ToString()).TryResolve(this, out value);
+			return GetIdentifierAccessPath(memberCall.ToString()).TryResolve(this, out value);
 		case ListCall listCall:
-      return GetIdentifierAccessPath(listCall.ToString()).TryResolve(this, out value);
+			return GetIdentifierAccessPath(listCall.ToString()).TryResolve(this, out value);
 		case VariableCall variableCall:
 			return TryGetFrameValue(CallFrame.ResolveSymbolId(variableCall.Variable.Name), out value);
 		case ParameterCall parameterCall:
@@ -1359,7 +1361,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			}
 			if (instance.IsList)
 			{
-       result = new ValueInstance(executable.numberType, instance.List.Count);
+				result = new ValueInstance(executable.numberType, instance.List.Count);
 				return true;
 			}
 		}
@@ -1452,7 +1454,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private ValueInstance EvaluateFromConstructor(MethodCall call)
 	{
 		var targetType = call.ReturnType;
-   if (TryCreateCurrentAdjustBrightnessDefaultColorImage(targetType, out var colorImage))
+		if (TryCreateCurrentAdjustBrightnessDefaultColorImage(targetType, out var colorImage))
 			return colorImage;
 		var members = targetType.Members;
 		if (members.Count == 0 && TryGetBinaryMembers(targetType, out var binaryMembers))
@@ -1521,7 +1523,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var keyArg = invoke.Method.Arguments[0];
 		var keyData = keyArg is Value argValue
 			? argValue.Data
-      : EvaluateExpression(keyArg);
+			: EvaluateExpression(keyArg);
 		var dictionary = EvaluateExpression(invoke.Method.Instance);
 		var value = dictionary.GetDictionaryItems().
 			FirstOrDefault(element => element.Key.Equals(keyData)).Value;
@@ -1546,7 +1548,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			ProcessCollectionLoopIteration(loopBegin);
 	}
 
-	private void CaptureLoopState(LoopBeginInstruction loopBegin, CallFrame frame)
+	private static void CaptureLoopState(LoopBeginInstruction loopBegin, CallFrame frame)
 	{
 		if (loopBegin.SavedCustomValues != null)
 			return;
@@ -1559,7 +1561,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		loopBegin.SavedOuterValue = frame.TryGet(OuterSymbolId, out var outerValue)
 			? outerValue
 			: default;
-    loopBegin.SavedOuterIndexValue = frame.TryGet(OuterIndexSymbolId, out var outerIndexValue)
+		loopBegin.SavedOuterIndexValue = frame.TryGet(OuterIndexSymbolId, out var outerIndexValue)
 			? outerIndexValue
 			: default;
 		var savedCustomValues = new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
@@ -1570,12 +1572,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		loopBegin.SavedCustomValues = savedCustomValues;
 	}
 
-	private void RestoreLoopState(LoopBeginInstruction loopBegin, CallFrame frame)
+	private static void RestoreLoopState(LoopBeginInstruction loopBegin, CallFrame frame)
 	{
 		RestoreLoopVariable(frame, IndexSymbolId, Type.IndexLowercase, loopBegin.SavedIndexValue);
 		RestoreLoopVariable(frame, ValueSymbolId, Type.ValueLowercase, loopBegin.SavedValue);
 		RestoreLoopVariable(frame, OuterSymbolId, Type.OuterLowercase, loopBegin.SavedOuterValue);
-   RestoreLoopVariable(frame, OuterIndexSymbolId,
+		RestoreLoopVariable(frame, OuterIndexSymbolId,
 			Type.OuterLowercase + "." + Type.IndexLowercase, loopBegin.SavedOuterIndexValue);
 		for (var variableIndex = 0; variableIndex < loopBegin.CustomVariableNames.Length;
 			variableIndex++)
@@ -1587,16 +1589,14 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 					? customValue
 					: default);
 		}
-   loopBegin.IsInitialized = false;
+		loopBegin.IsInitialized = false;
 		loopBegin.LoopCount = 0;
 		loopBegin.ResetIterationState();
 	}
 
 	private static void RestoreLoopVariable(CallFrame frame, int symbolId, string name,
-		ValueInstance value)
-	{
+		ValueInstance value) =>
 		frame.Set(symbolId, value, false, name);
-	}
 
 	private void SkipLoopBody()
 	{
@@ -1611,40 +1611,40 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	{
 		if (!Memory.Registers.TryGet(loopBegin.Register, out var iterableVariable))
 			return;
-   var frame = Memory.Frame;
+		var frame = Memory.Frame;
 		if (!loopBegin.IsInitialized)
 		{
 			loopBegin.LoopCount = GetLength(iterableVariable);
-     loopBegin.CurrentIndexValue = -1;
+			loopBegin.CurrentIndexValue = -1;
 			CaptureLoopState(loopBegin, frame);
 			loopBegin.IsInitialized = true;
 		}
-    var nextIndex = (loopBegin.CurrentIndexValue ?? -1) + 1;
+		var nextIndex = (loopBegin.CurrentIndexValue ?? -1) + 1;
 		loopBegin.CurrentIndexValue = nextIndex;
 		frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType, nextIndex));
 		if (loopBegin.SavedValue.HasValue)
 			frame.Set(OuterSymbolId, loopBegin.SavedValue, false, Type.OuterLowercase);
-    if (loopBegin.SavedIndexValue.HasValue)
+		if (loopBegin.SavedIndexValue.HasValue)
 			frame.Set(OuterIndexSymbolId, loopBegin.SavedIndexValue, false,
 				Type.OuterLowercase + "." + Type.IndexLowercase);
 		AlterValueVariable(iterableVariable, loopBegin);
-    AssignCustomLoopVariables(loopBegin, frame.Get(ValueSymbolId));
+		AssignCustomLoopVariables(loopBegin, frame.Get(ValueSymbolId));
 		if (loopBegin.LoopCount <= 0)
 		{
-      RestoreLoopState(loopBegin, frame);
+			RestoreLoopState(loopBegin, frame);
 			SkipLoopBody();
 		}
 	}
 
 	private void ProcessRangeLoopIteration(LoopBeginInstruction loopBegin)
 	{
-   var frame = Memory.Frame;
+		var frame = Memory.Frame;
 		if (!loopBegin.IsInitialized)
 		{
 			var startIndex = Convert.ToInt32(Memory.Registers[loopBegin.Register].Number);
 			var endIndex = Convert.ToInt32(Memory.Registers[loopBegin.EndIndex!.Value].Number);
 			loopBegin.InitializeRangeState(startIndex, endIndex);
-     CaptureLoopState(loopBegin, frame);
+			CaptureLoopState(loopBegin, frame);
 			if (loopBegin.LoopCount <= 0)
 			{
 				RestoreLoopState(loopBegin, frame);
@@ -1655,19 +1655,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var incrementValue = loopBegin.IsDecreasing == true
 			? -1
 			: 1;
-   var currentIndex = loopBegin.CurrentIndexValue.HasValue
+		var currentIndex = loopBegin.CurrentIndexValue.HasValue
 			? loopBegin.CurrentIndexValue.Value + incrementValue
 			: loopBegin.StartIndexValue ?? 0;
-    loopBegin.CurrentIndexValue = (int)currentIndex;
-   var currentIndexValue = new ValueInstance(executable.numberType, currentIndex);
+		loopBegin.CurrentIndexValue = currentIndex;
+		var currentIndexValue = new ValueInstance(executable.numberType, currentIndex);
 		frame.Set(IndexSymbolId, currentIndexValue, false, Type.IndexLowercase);
 		frame.Set(ValueSymbolId, currentIndexValue, true, Type.ValueLowercase);
-    if (loopBegin.SavedValue.HasValue)
+		if (loopBegin.SavedValue.HasValue)
 			frame.Set(OuterSymbolId, loopBegin.SavedValue, false, Type.OuterLowercase);
-    if (loopBegin.SavedIndexValue.HasValue)
+		if (loopBegin.SavedIndexValue.HasValue)
 			frame.Set(OuterIndexSymbolId, loopBegin.SavedIndexValue, false,
 				Type.OuterLowercase + "." + Type.IndexLowercase);
-    AssignCustomLoopVariables(loopBegin, currentIndexValue);
+		AssignCustomLoopVariables(loopBegin, currentIndexValue);
 	}
 
 	private void AssignCustomLoopVariables(LoopBeginInstruction loopBegin, ValueInstance value)
@@ -1701,33 +1701,33 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (iterableInstance.IsText)
 			return iterableInstance.Text.Length;
 		if (iterableInstance.IsList)
-     return iterableInstance.List.Count;
+			return iterableInstance.List.Count;
 		return (int)iterableInstance.Number;
 	}
 
 	private void AlterValueVariable(ValueInstance iterableVariable,
 		LoopBeginInstruction loopBegin)
 	{
-    var frame = Memory.Frame;
+		var frame = Memory.Frame;
 		var index = (int)frame.Get(IndexSymbolId).Number;
 		if (iterableVariable.IsText)
 		{
 			if (index < iterableVariable.Text.Length)
-        frame.Set(ValueSymbolId,
+				frame.Set(ValueSymbolId,
 					new ValueInstance(iterableVariable.Text[index].ToString()), true,
 					Type.ValueLowercase);
 			return;
 		}
 		if (iterableVariable.IsList)
 		{
-      var list = iterableVariable.List;
+			var list = iterableVariable.List;
 			if (index < list.Count)
 				frame.Set(ValueSymbolId, list[index], true, Type.ValueLowercase);
 			else
 				loopBegin.LoopCount = 0;
 			return;
 		}
-    frame.Set(ValueSymbolId,
+		frame.Set(ValueSymbolId,
 			new ValueInstance(executable.numberType, index + 1), true, Type.ValueLowercase);
 	}
 
@@ -1736,19 +1736,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (instruction.InstructionType == InstructionType.Set)
 		{
 			var set = (SetInstruction)instruction;
-     Memory.Registers[set.Register] = CloneConstantValue(set.ValueInstance);
+			Memory.Registers[set.Register] = CloneConstantValue(set.ValueInstance);
 		}
 		else if (instruction.InstructionType == InstructionType.StoreConstantToVariable)
 		{
 			var storeVariable = (StoreVariableInstruction)instruction;
-      var value = CloneConstantValue(storeVariable.ValueInstance);
-     StoreIdentifierValue(storeVariable.Identifier, value, storeVariable.IsMember);
+			var value = CloneConstantValue(storeVariable.ValueInstance);
+			StoreIdentifierValue(storeVariable.Identifier, value, storeVariable.IsMember);
 		}
 		else if (instruction.InstructionType == InstructionType.StoreRegisterToVariable)
 		{
 			var storeFromRegister = (StoreFromRegisterInstruction)instruction;
 			if (!TryStoreToListElement(storeFromRegister))
-       StoreIdentifierValue(storeFromRegister.Identifier,
+				StoreIdentifierValue(storeFromRegister.Identifier,
 					Memory.Registers[storeFromRegister.Register], false);
 		}
 	}
@@ -1758,18 +1758,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		if (instruction.InstructionType == InstructionType.LoadVariableToRegister)
 		{
 			var loadVariable = (LoadVariableToRegister)instruction;
-      if (!GetIdentifierAccessPath(loadVariable.Identifier).TryResolve(this,
+			if (!GetIdentifierAccessPath(loadVariable.Identifier).TryResolve(this,
 				out var registerValue))
-        throw new InvalidOperationException("Could not resolve variable " + loadVariable.Identifier);
-			if (registerValue.IsText && registerValue.Text.StartsWith("for elements"))
-				throw new NotSupportedException("Invalid load of non-constant text variable: " +
-					loadVariable.Identifier + " " + registerValue.Text);
+				throw new InvalidOperationException("Could not resolve variable " +
+					loadVariable.Identifier);
 			Memory.Registers[loadVariable.Register] = registerValue;
 		}
 		else if (instruction.InstructionType == InstructionType.LoadConstantToRegister)
 		{
 			var loadConstant = (LoadConstantInstruction)instruction;
-      Memory.Registers[loadConstant.Register] = CloneConstantValue(loadConstant.Constant);
+			Memory.Registers[loadConstant.Register] = CloneConstantValue(loadConstant.Constant);
 		}
 	}
 
@@ -1781,17 +1779,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 					value.GetDictionaryItems()))
 				: value;
 
-	private bool ResolveDottedIdentifier(string identifier, out ValueInstance value)
-	{
-   var accessPath = GetIdentifierAccessPath(identifier);
-		if (accessPath.MemberNames.Length == 0)
-		{
-			value = default;
-			return false;
-		}
-    return accessPath.TryResolve(this, out value);
-	}
-
 	private IdentifierAccessPath GetIdentifierAccessPath(string identifier) =>
 		identifierAccessPaths.TryGetValue(identifier, out var accessPath)
 			? accessPath
@@ -1799,8 +1786,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryGetFrameValue(int symbolId, out ValueInstance value) =>
 		Memory.Frame.TryGet(symbolId, out value);
-
-	private ValueInstance GetFrameValue(int symbolId) => Memory.Frame.Get(symbolId);
 
 	private void StoreIdentifierValue(string identifier, ValueInstance value, bool isMember)
 	{
@@ -1810,7 +1795,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			Memory.Frame.Set(accessPath.RootSymbolId, value, isMember, identifier);
 			return;
 		}
-    if (!accessPath.GetParentPath().TryResolve(this, out var parentValue))
+		if (!accessPath.GetParentPath().TryResolve(this, out var parentValue))
 			throw new InvalidOperationException("Could not resolve parent for " + identifier);
 		if (parentValue.TryGetValueTypeInstance() is not { } typeInstance)
 			throw new InvalidOperationException("Cannot assign member on non-instance " + identifier);
@@ -1826,7 +1811,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				? current.IsText
 					? new ValueInstance(executable.numberType, current.Text.Length)
 					: current.IsList
-            ? new ValueInstance(executable.numberType, current.List.Count)
+						? new ValueInstance(executable.numberType, current.List.Count)
 						: default
 				: default;
 
@@ -1942,19 +1927,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryStoreToListElement(StoreFromRegisterInstruction store)
 	{
-    var indexedAccessPath = GetIndexedElementAccessPath(store.Identifier);
+		var indexedAccessPath = GetIndexedElementAccessPath(store.Identifier);
 		if (!indexedAccessPath.IsValid)
 			return false;
-   var listValue = TryResolveListValue(indexedAccessPath.ListPath);
+		var listValue = TryResolveListValue(indexedAccessPath.ListPath);
 		if (!listValue.IsList)
 			return false;
-   var indexInstance = TryResolveIndexValue(indexedAccessPath.IndexExpression);
+		var indexInstance = TryResolveIndexValue(indexedAccessPath.IndexExpression);
 		if (!indexInstance.HasValue)
 			return false;
 		var index = (int)indexInstance.Number;
-   if (index >= 0 && index < listValue.List.Count)
+		if (index >= 0 && index < listValue.List.Count)
 		{
-     listValue.List[index] = Memory.Registers[store.Register];
+			listValue.List[index] = Memory.Registers[store.Register];
 			return true;
 		}
 		return false;
@@ -1965,37 +1950,35 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			? accessPath
 			: indexedElementAccessPaths[identifier] = IndexedElementAccessPath.Parse(identifier);
 
-	private ValueInstance TryResolveListValue(string listPath)
-	{
-   var accessPath = GetIdentifierAccessPath(listPath);
-   return accessPath.TryResolve(this, out var listValue)
+	private ValueInstance TryResolveListValue(string listPath) =>
+		GetIdentifierAccessPath(listPath).TryResolve(this, out var listValue)
 			? listValue
 			: default;
-	}
 
 	private ValueInstance TryResolveIndexValue(string indexExpression)
 	{
 		if (double.TryParse(indexExpression, out var number))
 			return new ValueInstance(executable.numberType, number);
-    var accessPath = GetIdentifierAccessPath(indexExpression);
-   if (accessPath.TryResolve(this, out var indexInstance))
+		var accessPath = GetIdentifierAccessPath(indexExpression);
+		if (accessPath.TryResolve(this, out var indexInstance))
 			return indexInstance;
-    return TryGetFrameValue(IndexSymbolId, out indexInstance)
+		return TryGetFrameValue(IndexSymbolId, out indexInstance)
 			? indexInstance
 			: default;
 	}
 
-  private static bool TrySetTypeMemberValue(ValueTypeInstance typeInstance, string memberName,
-		ValueInstance value) => typeInstance.TrySetValue(memberName, value);
+	private static bool TrySetTypeMemberValue(ValueTypeInstance typeInstance, string memberName,
+		ValueInstance value) =>
+		typeInstance.TrySetValue(memberName, value);
 
 	private readonly record struct IdentifierAccessPath(int RootSymbolId, string[] MemberNames,
 		bool IsNone)
 	{
-   public bool TryResolve(VirtualMachine vm, out ValueInstance value)
+		public bool TryResolve(VirtualMachine vm, out ValueInstance value)
 		{
 			if (IsNone)
 			{
-        value = default;
+				value = default;
 				return true;
 			}
 			if (!vm.TryGetFrameValue(RootSymbolId, out var current))
@@ -2006,7 +1989,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			for (var memberIndex = 0; memberIndex < MemberNames.Length; memberIndex++)
 			{
 				var memberName = MemberNames[memberIndex];
-        if (RootSymbolId == OuterSymbolId && memberName == Type.ValueLowercase)
+				if (RootSymbolId == OuterSymbolId && memberName == Type.ValueLowercase)
 					continue;
 				if (RootSymbolId == OuterSymbolId && memberName == Type.IndexLowercase &&
 					vm.TryGetFrameValue(OuterIndexSymbolId, out var outerIndexValue))
@@ -2034,7 +2017,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		public static IdentifierAccessPath Parse(string identifier)
 		{
 			if (identifier == Type.None)
-        return new IdentifierAccessPath(-1, [], true);
+				return new IdentifierAccessPath(-1, [], true);
 			var firstDotIndex = identifier.IndexOf('.');
 			if (firstDotIndex < 0)
 				return new IdentifierAccessPath(CallFrame.ResolveSymbolId(identifier), [], false);

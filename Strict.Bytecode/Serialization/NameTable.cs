@@ -1,7 +1,6 @@
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
-using static System.Net.Mime.MediaTypeNames;
 using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Serialization;
@@ -99,7 +98,7 @@ public sealed class NameTable
 		nameof(Strict) + Context.ParentSeparator + Type.List + "(" + Type.Number + ")",
 		Type.List + "(" + Type.Number + ")",
 		nameof(Strict) + Context.ParentSeparator + Type.List + "(" + Type.Text + ")",
-		Type.List + "(" + Type.Text + ")",
+		Type.List + "(" + Type.Text + ")"
 	];
 
 	public NameTable CollectStrings(Instruction instruction) =>
@@ -117,17 +116,13 @@ public sealed class NameTable
 			RemoveInstruction remove => Add(remove.Identifier),
 			ListCallInstruction listCall => Add(listCall.Identifier),
 			PrintInstruction print => Add(print.TextPrefix),
-      LoopBeginInstruction loopBegin => loopBegin.CustomVariableNames.Aggregate(this,
+			LoopBeginInstruction loopBegin => loopBegin.CustomVariableNames.Aggregate(this,
 				(current, customVariableName) => current.Add(customVariableName)),
 			_ => this
 		};
 
 	public NameTable Add(string name)
 	{
-		//TODO: remove again
-		if (name.StartsWith("for "))
-			throw new NotSupportedException("Invalid NameTable name: " + name);
-
 		if (indices.ContainsKey(name))
 			return this;
 		indices[name] = names.Count;
@@ -189,13 +184,12 @@ public sealed class NameTable
 			Value { Data.IsText: true } val => Add(val.Data.Text),
 			Value val when val.Data.GetType().IsBoolean => Add(val.Data.GetType().Name),
 			Value val when !val.Data.GetType().IsNumber ||
-				!BinaryExecutable.IsIntegerNumber(val.Data.Number) =>
-				Add(val.Data.GetType().Name),
+				!BinaryExecutable.IsIntegerNumber(val.Data.Number) => Add(val.Data.GetType().Name),
 			//TODO: need tests!
 			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
 				CollectExpressionStrings(memberCall.Instance),
-			Binary binary => Add(binary.Method.Name).
-				CollectExpressionStrings(binary.Instance).CollectExpressionStrings(binary.Arguments[0]),
+			Binary binary => Add(binary.Method.Name).CollectExpressionStrings(binary.Instance).
+				CollectExpressionStrings(binary.Arguments[0]),
 			MethodCall mc => CollectMethodCallStrings(mc),
 			ListCall listCall => Add(listCall.ReturnType.Name).CollectExpressionStrings(listCall.List).
 				CollectExpressionStrings(listCall.Index),

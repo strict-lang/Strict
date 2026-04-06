@@ -97,13 +97,13 @@ public sealed class For(Expression[] customVariables,
 		var iterator = body.Method.ParseExpression(body, HasIn(line)
 			? GetForIteratorText(line)
 			: GetForExpressionText(line));
-    if (IsZeroBasedRange(iterator))
+		if (IsZeroBasedRange(iterator))
 			throw new ZeroBasedRangeMustUseNumberIterator(body, line[4..].ToString());
 		if (HasIn(line))
 			CheckForIncorrectMatchingTypes(innerBody, variableNames, iterator);
 		else
 			AddImplicitVariables(body, line, innerBody);
-   if (!CanIterate(iterator))
+		if (!CanIterate(iterator))
 			throw new ExpressionTypeIsNotAnIterator(body, iterator.ReturnType.Name,
 				line[4..].ToString());
 		var innerLines = body.Method.GetLinesAndStripTabs(innerBody.LineRange, body);
@@ -155,10 +155,10 @@ public sealed class For(Expression[] customVariables,
 		Body innerBody)
 	{
 		AddImplicitVariables(body, line, innerBody);
-   var iterator = body.Method.ParseExpression(body, line[4..], true);
-		if (IsZeroBasedRange(iterator))
-			throw new ZeroBasedRangeMustUseNumberIterator(body, line[4..].ToString());
-		return new For([], iterator, innerBody.Parse(), body.CurrentFileLineNumber);
+		var iterator = body.Method.ParseExpression(body, line[4..], true);
+		return IsZeroBasedRange(iterator)
+			? throw new ZeroBasedRangeMustUseNumberIterator(body, line[4..].ToString())
+			: new For([], iterator, innerBody.Parse(), body.CurrentFileLineNumber);
 	}
 
 	private static void AddImplicitVariables(Body body, ReadOnlySpan<char> line, Body innerBody)
@@ -299,7 +299,7 @@ public sealed class For(Expression[] customVariables,
 		var forIteratorText = GetForIteratorText(line);
 		var iteratorYieldType = TryGetIteratorYieldType(body, forIteratorText);
 		if (iteratorYieldType != null)
-      return GetVariableValueFromIteratorYieldType(body, iteratorYieldType, variableIndex);
+			return GetVariableValueFromIteratorYieldType(body, iteratorYieldType, variableIndex);
 		var iterator = body.Method.ParseExpression(body, forIteratorText, true);
 		if (iterator is MethodCall { ReturnType.Name: Type.Range } methodCall)
 			return GetVariableValueFromRange(iterator, methodCall);
@@ -356,7 +356,7 @@ public sealed class For(Expression[] customVariables,
 	private static void CheckForIncorrectMatchingTypes(Body innerBody,
 		ReadOnlySpan<char> variableNames, Expression forValueExpression)
 	{
-    var explicitIteratorElementType = TryGetExplicitIteratorElementType(variableNames,
+		var explicitIteratorElementType = TryGetExplicitIteratorElementType(variableNames,
 			forValueExpression);
 		var implementationDepth = 1;
 		foreach (var variable in variableNames.Split(',', StringSplitOptions.TrimEntries))
@@ -364,7 +364,7 @@ public sealed class For(Expression[] customVariables,
 			var mutableValue = innerBody.FindVariable(variable);
 			if (mutableValue == null)
 				throw new Body.IdentifierNotFound(innerBody, variable.ToString());
-     var iteratorType = explicitIteratorElementType ?? GetIteratorType(forValueExpression);
+			var iteratorType = explicitIteratorElementType ?? GetIteratorType(forValueExpression);
 			if (explicitIteratorElementType == null)
 				for (var depth = 0; depth < implementationDepth; depth++)
 					if (iteratorType is GenericTypeImplementation { IsIterator: true } genericType)

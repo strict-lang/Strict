@@ -59,7 +59,7 @@ public sealed class ForTests
 			new TypeLines(nameof(SizeIteratorCanAssignTwoVariables),
 				"has number",
 				"Coordinates Numbers",
-       "\tfor horizontal, vertical in Size(2, 2)",
+				"\tfor horizontal, vertical in Size(2, 2)",
 				"\t\thorizontal + vertical * 10")).ParseMembersAndMethods(parser);
 		var packageInterpreter = new Interpreter(mathPackage, TestBehavior.Disabled);
 		Assert.That(packageInterpreter.Execute(testType.Methods.Single(method => method.Name == "Coordinates"),

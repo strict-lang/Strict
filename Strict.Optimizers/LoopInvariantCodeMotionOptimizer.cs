@@ -87,8 +87,8 @@ public sealed class LoopInvariantCodeMotionOptimizer : InstructionOptimizer
 	}
 
 	private static bool IsLoopControlVariable(string name, LoopBeginInstruction loopBegin) =>
-    name.Equals(Type.ValueLowercase, StringComparison.OrdinalIgnoreCase) ||
+		name.Equals(Type.ValueLowercase, StringComparison.OrdinalIgnoreCase) ||
 		name.Equals(Type.IndexLowercase, StringComparison.OrdinalIgnoreCase) ||
-    loopBegin.CustomVariableNames.Any(customVariableName =>
+		loopBegin.CustomVariableNames.Any(customVariableName =>
 			customVariableName.Equals(name, StringComparison.OrdinalIgnoreCase));
 }

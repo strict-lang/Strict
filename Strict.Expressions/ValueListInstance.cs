@@ -4,15 +4,17 @@ namespace Strict.Expressions;
 
 public sealed class ValueListInstance : IEquatable<ValueListInstance>
 {
- private List<ValueInstance>? items;
-  private float[]? flatNumbers;
+	//TODO: there should be one way to store lists, flat array it is! we can resize as needed, do not have list functionality here as well!
+	private List<ValueInstance>? items;
+	private float[]? flatNumbers;
 	private Type? flatElementType;
 	private int flatElementWidth;
 	private const string FlatNumbersFieldName = "flatNumbers";
+
 	public ValueListInstance(Type returnType, IEnumerable<ValueInstance> items)
 	{
 		ReturnType = returnType;
-   if (items is IReadOnlyList<ValueInstance> readableItems && TryUseFlatNumbers(readableItems))
+		if (items is IReadOnlyList<ValueInstance> readableItems && TryUseFlatNumbers(readableItems))
 			return;
 		this.items = new List<ValueInstance>(items);
 	}
@@ -20,7 +22,7 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 	public ValueListInstance(Type returnType, List<ValueInstance> items)
 	{
 		ReturnType = returnType;
-    if (!TryUseFlatNumbers(items))
+		if (!TryUseFlatNumbers(items))
 			this.items = items;
 	}
 
@@ -45,13 +47,14 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 	}
 
 	public readonly Type ReturnType;
-  public List<ValueInstance> Items => items ??= MaterializeItems();
+	public List<ValueInstance> Items => items ??= MaterializeItems();
 	public int Count => items?.Count ?? (flatNumbers?.Length ?? 0) / flatElementWidth;
 	public ValueInstance this[int index]
 	{
-		get => items != null
-			? items[index]
-			: CreateFlatItem(index);
+		get =>
+			items != null
+				? items[index]
+				: CreateFlatItem(index);
 		set
 		{
 			if (items != null)
@@ -68,10 +71,10 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 	{
 		if (!TryGetFlatElementLayout(out var elementType, out var elementWidth))
 			return false;
-   var numbers = new float[sourceItems.Count * elementWidth];
+		var numbers = new float[sourceItems.Count * elementWidth];
 		for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
-			if (!TryCopyItemNumbers(sourceItems[itemIndex], elementType, elementWidth,
-				numbers, itemIndex * elementWidth))
+			if (!TryCopyItemNumbers(sourceItems[itemIndex], elementType, elementWidth, numbers,
+				itemIndex * elementWidth))
 				return false;
 		flatNumbers = numbers;
 		flatElementType = elementType;
@@ -83,7 +86,7 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 	{
 		if (!TryGetFlatElementLayout(out var elementType, out var elementWidth))
 			return false;
-   var numbers = new float[count * elementWidth];
+		var numbers = new float[count * elementWidth];
 		if (!TryCopyItemNumbers(repeatedItem, elementType, elementWidth, numbers, 0))
 			return false;
 		for (var itemIndex = 1; itemIndex < count; itemIndex++)
@@ -96,7 +99,7 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 
 	private bool TryGetFlatElementLayout(out Type elementType, out int elementWidth)
 	{
-    if (ReturnType.IsGeneric || ReturnType is not Strict.Language.GenericTypeImplementation)
+		if (ReturnType.IsGeneric || ReturnType is not Strict.Language.GenericTypeImplementation)
 		{
 			elementType = ReturnType;
 			elementWidth = 0;
@@ -123,18 +126,18 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 		return true;
 	}
 
-  private static bool TryCopyItemNumbers(ValueInstance item, Type elementType, int elementWidth,
+	private static bool TryCopyItemNumbers(ValueInstance item, Type elementType, int elementWidth,
 		float[] target, int offset)
 	{
 		if (elementWidth == 1)
 		{
-     target[offset] = (float)item.Number;
+			target[offset] = (float)item.Number;
 			return true;
 		}
 		if (item.TryGetPackedRgbaChannels(out var red, out var green, out var blue, out var alpha) &&
 			elementWidth == 4)
 		{
-     target[offset] = (float)red;
+			target[offset] = (float)red;
 			target[offset + 1] = (float)green;
 			target[offset + 2] = (float)blue;
 			target[offset + 3] = (float)alpha;
@@ -145,16 +148,16 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 			typeInstance.Values.Length < elementWidth)
 			return false;
 		for (var memberIndex = 0; memberIndex < elementWidth; memberIndex++)
-     target[offset + memberIndex] = (float)typeInstance.Values[memberIndex].Number;
+			target[offset + memberIndex] = (float)typeInstance.Values[memberIndex].Number;
 		return true;
 	}
 
 	public ValueListInstance Clone(Type newType) =>
 		items != null
-     ? new ValueListInstance(newType, new List<ValueInstance>(items))
+			? new ValueListInstance(newType, new List<ValueInstance>(items))
 			: flatNumbers != null && flatElementType != null
-        ? new ValueListInstance(newType, (float[])flatNumbers.Clone(),
-					flatElementType, flatElementWidth)
+				? new ValueListInstance(newType, (float[])flatNumbers.Clone(), flatElementType,
+					flatElementWidth)
 				: new ValueListInstance(newType, []);
 
 	private List<ValueInstance> MaterializeItems()
@@ -197,11 +200,11 @@ public sealed class ValueListInstance : IEquatable<ValueListInstance>
 		elementType.Members.Count >= 4 &&
 		elementType.Members[0].Name.Equals("Red", StringComparison.OrdinalIgnoreCase) &&
 		elementType.Members[1].Name.Equals("Green", StringComparison.OrdinalIgnoreCase) &&
-		elementType.Members[2].Name.Equals("Blue", StringComparison.OrdinalIgnoreCase) &&
-		elementType.Members[3].Name.Equals("Alpha", StringComparison.OrdinalIgnoreCase);
+		elementType.Members[2].Name.Equals("Blue", StringComparison.OrdinalIgnoreCase) && elementType.
+			Members[3].Name.Equals("Alpha", StringComparison.OrdinalIgnoreCase);
 
 	public bool Equals(ValueListInstance? other) =>
-   other is not null && (ReferenceEquals(this, other) ||
+		other is not null && (ReferenceEquals(this, other) ||
 			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) && HasSameItems(other));
 
 	private bool HasSameItems(ValueListInstance other)

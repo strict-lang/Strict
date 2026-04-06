@@ -7,20 +7,20 @@ public sealed class Memory
 {
 	private readonly RegisterFile registers = new();
 	/// <summary>
-  /// Array-backed register file — O(1) access with no hashing overhead.
+	/// Array-backed register file — O(1) access with no hashing overhead.
 	/// </summary>
 	public RegisterFile Registers
 	{
 		get
 		{
 			if (PerformanceLog.IsEnabled)
-       PerformanceLog.Write("Memory.Registers get", "callers=" + PerformanceLog.GetCallers(1));
+				PerformanceLog.Write("Memory.Registers get", "callers=" + PerformanceLog.GetCallers(1));
 			return registers;
 		}
 	}
 	private CallFrame frame = new();
 	/// <summary>
- /// Current variable scope; replaced via <see cref="VirtualMachine"/> call stack.
+	/// Current variable scope; replaced via <see cref="VirtualMachine"/> call stack.
 	/// </summary>
 	internal CallFrame Frame
 	{
@@ -38,7 +38,7 @@ public sealed class Memory
 		}
 	}
 	/// <summary>
-  /// Exposes the current frame's local variable dict for backward-compatible test access.
+	/// Exposes the current frame's local variable dict for backward-compatible test access.
 	/// Use <see cref="Frame"/> methods for scoped lookup inside the interpreter.
 	/// </summary>
 	public Dictionary<string, ValueInstance> Variables
@@ -63,7 +63,7 @@ public sealed class Memory
 		collection.List.Items.Add(element);
 	}
 
- public void AddToCollection(string key, ValueInstance element)
+	public void AddToCollection(string key, ValueInstance element)
 	{
 		var symbolId = CallFrame.ResolveSymbolId(key);
 		if (Frame.TryGet(symbolId, out _))
@@ -71,10 +71,12 @@ public sealed class Memory
 			AddToCollection(symbolId, element);
 			return;
 		}
-    var hasCollection = Variables.TryGetValue(key, out var collection);
+		var hasCollection = Variables.TryGetValue(key, out var collection);
 		if (!hasCollection || !collection.IsList)
 			throw new InvalidOperationException("Cannot add to non-list variable \"" + key +
-       "\" of type " + (hasCollection ? collection.GetType().Name : "unset"));
+				"\" of type " + (hasCollection
+					? collection.GetType().Name
+					: "unset"));
 		collection.List.Items.Add(element);
 	}
 

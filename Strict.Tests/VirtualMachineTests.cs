@@ -168,23 +168,23 @@ public sealed class VirtualMachineTests : TestBytecode
 			new TypeLines(nameof(FlatBackedListLengthDoesNotMaterializeItems),
 				"has xValue Number",
 				"has yValue Number")).ParseMembersAndMethods(new MethodExpressionParser());
-   var numberType = TestPackage.Instance.GetType(Type.Number);
+		var numberType = TestPackage.Instance.GetType(Type.Number);
 		var listType = TestPackage.Instance.GetListImplementationType(pointType);
 		var point = new ValueInstance(pointType,
-     [new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
-		var list = new ValueInstance(listType, point, 3);
+			[new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
+		var backedList = new ValueInstance(listType, point, 3);
 		var itemsField = typeof(ValueListInstance).GetField("items",
 			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 		Assert.That(itemsField, Is.Not.Null);
-		Assert.That(itemsField!.GetValue(list.List), Is.Null);
+		Assert.That(itemsField!.GetValue(backedList.List), Is.Null);
 		var vm = new VirtualMachine(TestPackage.Instance);
 		var tryGetNativeLength = typeof(VirtualMachine).GetMethod("TryGetNativeLength",
 			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 		Assert.That(tryGetNativeLength, Is.Not.Null);
-		object?[] arguments = [list, "Length", null];
+		object?[] arguments = [backedList, "Length", null];
 		Assert.That(tryGetNativeLength!.Invoke(vm, arguments), Is.EqualTo(true));
 		Assert.That(((ValueInstance)arguments[2]!).Number, Is.EqualTo(3));
-		Assert.That(itemsField.GetValue(list.List), Is.Null);
+		Assert.That(itemsField.GetValue(backedList.List), Is.Null);
 	}
 
 	[Test]
@@ -352,16 +352,16 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
-  public void ExecuteOptimizedRunMethodWithProgramArguments()
+	public void ExecuteOptimizedRunMethodWithProgramArguments()
 	{
-    var programType = new Type(type.Package,
+		var programType = new Type(type.Package,
 			new TypeLines(nameof(ExecuteOptimizedRunMethodWithProgramArguments),
 				"has logger",
 				"Run(numbers)",
 				"\tlogger.Log(numbers.Sum)")).ParseMembersAndMethods(new MethodExpressionParser());
-		var runMethod = programType.Methods.Single(method => method.Name == Method.Run);
+		var runMethod = programType.Methods.Single(m => m.Name == Method.Run);
 		var binary = BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod]);
-		new Strict.Optimizers.AllInstructionOptimizers().Optimize(binary);
+		new Optimizers.AllInstructionOptimizers().Optimize(binary);
 		using var consoleWriter = new StringWriter();
 		var rememberConsole = Console.Out;
 		Console.SetOut(consoleWriter);
@@ -369,7 +369,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		{
 			new VirtualMachine(binary).Execute(initialVariables: new Dictionary<string, ValueInstance>
 			{
-				[runMethod.Parameters[0].Name] = new ValueInstance(runMethod.Parameters[0].Type,
+				[runMethod.Parameters[0].Name] = new(runMethod.Parameters[0].Type,
 					[Number(5), Number(10), Number(20)])
 			});
 		}
@@ -632,9 +632,9 @@ public sealed class VirtualMachineTests : TestBytecode
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(NestedForLoopCanReturnListInBytecode),
 			$"{nameof(NestedForLoopCanReturnListInBytecode)}.Coordinates",
-      "has number",
+			"has number",
 			"Coordinates Numbers",
-      "\tfor 2",
+			"\tfor 2",
 			"\t\tfor 2",
 			"\t\t\tindex + outer.index * 10")).Generate();
 		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;

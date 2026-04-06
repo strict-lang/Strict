@@ -12,7 +12,7 @@ public sealed class RegisterFile
 	private readonly ValueInstance[] data = new ValueInstance[16];
 	public ValueInstance this[Register r]
 	{
-   get
+		get
 		{
 			var value = data[(int)r];
 			if (PerformanceLog.IsEnabled)
@@ -21,10 +21,8 @@ public sealed class RegisterFile
 		}
 		set
 		{
-     if (PerformanceLog.IsEnabled)
+			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("RegisterFile.set", "register=" + r + ", value=" + Describe(value));
-			if (value.IsText && value.Text.StartsWith("for elements"))
-				throw new NotSupportedException(value.Text);
 			data[(int)r] = value;
 		}
 	}
@@ -35,12 +33,12 @@ public sealed class RegisterFile
 	internal bool TryGet(Register r, out ValueInstance value)
 	{
 		value = data[(int)r];
-   if (PerformanceLog.IsEnabled)
+		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("RegisterFile.TryGet", "register=" + r + ", value=" + Describe(value));
 		return value.HasValue;
 	}
 
- public void SaveTo(ValueInstance[] snapshot)
+	public void SaveTo(ValueInstance[] snapshot)
 	{
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("RegisterFile.SaveTo", "snapshotLength=" + snapshot.Length);
