@@ -16,6 +16,8 @@ GetBrightnessAdjustedColor(current Color) Color
 Run
 	constant width = 1280 / 10
 	constant height = 720 / 10
+	constant width = 1280 / speedUpCalculationsDivisor
+	constant height = 720 / speedUpCalculationsDivisor
 	mutable image = ColorImage(Size(width, height))
 	AdjustBrightness(0.25).Process(image)
 	logger.Log("Brightness adjustment successful: " + image.Colors(width / 2, height / 2))

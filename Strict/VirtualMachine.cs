@@ -537,16 +537,15 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		*/
 	}
 
+		/*TODO
 	private static bool TryGetColorChannels(ValueInstance colorValue, out double red, out double green,
 		out double blue, out double? alpha)
 	{
-		/*TODO
 		if (colorValue.TryGetPackedRgbaChannels(out red, out green, out blue, out var packedAlpha))
 		{
 			alpha = packedAlpha;
 			return true;
 		}
-		*/
 		var colorTypeInstance = colorValue.TryGetValueTypeInstance();
 		if (colorTypeInstance != null && colorTypeInstance.TryGetValue("Red", out var redValue) &&
 			colorTypeInstance.TryGetValue("Green", out var greenValue) &&
@@ -608,7 +607,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		adjustmentExpression = null!;
 		return false;
 	}
-
+		*/
 	private static bool AreEquivalentExpression(Expression left, Expression right) =>
 		ReferenceEquals(left, right) || (left, right) switch
 		{
