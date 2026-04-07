@@ -11,6 +11,7 @@ namespace Strict.Expressions;
 /// </summary>
 public readonly struct ValueInstance : IEquatable<ValueInstance>
 {
+	/*TODO: nah
 	//TODO: stupid, remove!
 	private sealed class PackedRgbaType(Type returnType)
 	{
@@ -19,25 +20,6 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	//TODO: stupid, remove!
 	private static readonly ConditionalWeakTable<Type, PackedRgbaType> PackedRgbaTypes = new();
-	private static int createdCount;
-	private static int creationLimit = int.MaxValue;
-
-	public static void SetCreationLimit(int newLimit)
-	{
-		createdCount = 0;
-		creationLimit = newLimit;
-	}
-
-	public sealed class CreationLimitExceeded(long created, long limit)
-		: Exception("ValueInstance creation limit exceeded: " + created + " > " + limit);
-
-	private static void TrackCreation()
-	{
-		createdCount++;
-		if (createdCount > creationLimit)
-			throw new CreationLimitExceeded(createdCount, creationLimit);
-	}
-
 	private bool IsPackedRgba => value is PackedRgbaType;
 	private PackedRgbaType RgbaType => (PackedRgbaType)value;
 
@@ -148,13 +130,32 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			: "(" + red + ", " + green + ", " + blue + ", " +
 			CreatePackedRgbaComponent(3).ToExpressionCodeString() + ")";
 	}
-
+*/
 	public ValueInstance(Type noneReturnType)
 	{
 		TrackCreation();
 		value = noneReturnType;
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + noneReturnType + ")");
+	}
+
+	private static int createdCount;
+	private static int creationLimit = int.MaxValue;
+
+	public static void SetCreationLimit(int newLimit)
+	{
+		createdCount = 0;
+		creationLimit = newLimit;
+	}
+
+	public sealed class CreationLimitExceeded(long created, long limit)
+		: Exception("ValueInstance creation limit exceeded: " + created + " > " + limit);
+
+	private static void TrackCreation()
+	{
+		createdCount++;
+		if (createdCount > creationLimit)
+			throw new CreationLimitExceeded(createdCount, creationLimit);
 	}
 
 	/// <summary>
@@ -273,6 +274,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			returnType.IsCharacter || returnType.IsDictionary || returnType.IsEnum ||
 			returnType.IsBoolean || returnType.IsNone))
 			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
+		/*obs, this is not the way!
 		if (CanUsePackedRgba(returnType, values))
 		{
 			value = GetPackedRgbaType(returnType);
@@ -281,6 +283,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
 			return;
 		}
+		*/
 		if (ValueArrayInstance.IsAllNumericType(returnType))
 		{
 			var flatNumbers = new float[values.Length];
@@ -299,6 +302,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
 	}
 
+	/*TODO, this is not the way this should be called!
 	/// <summary>
 	/// Creates an empty list instance with preallocated capacity to reduce growth allocations.
 	/// </summary>
@@ -318,7 +322,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			elementWidth);
 		return new ValueInstance(backing);
 	}
-
+*/
 	public ValueInstance(Type returnType, ValueInstance repeatedItem, int count)
 	{
 		TrackCreation();
@@ -346,6 +350,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public ValueInstance(ValueInstance existingInstance, Type newType)
 	{
 		TrackCreation();
+		/*TODO: this is not the way
 		if (existingInstance.IsPackedRgba)
 		{
 			if (CanUsePackedRgba(newType, [
@@ -373,6 +378,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 					newType + ")");
 			return;
 		}
+		*/
 		switch (existingInstance.number)
 		{
 		case TextId:
@@ -446,9 +452,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public bool IsType(Type type) =>
 		type is OneOfType oneOf
 			? oneOf.Types.Any(IsType)
-			: IsPackedRgba
+			: /*TODO: IsPackedRgba
 				? type == RgbaType.ReturnType
-				: number switch
+				:*/ number switch
 				{
 					TextId => type.IsText,
 					ListId => type == ((ValueArrayInstance)value).ReturnType,
@@ -474,8 +480,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public double GetArithmeticNumber()
 	{
+		/*TODO
 		if (IsPackedRgba)
 			return UnpackRgba(number, 0);
+			*/
 		if (number == FlatNumericId)
 			return ((ValueArrayInstance)value).GetFlat(0);
 		if (number != TypeId)
@@ -487,9 +495,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	}
 
 	public bool IsSameOrCanBeUsedAs(Type otherType) =>
+		/*TODO
 		IsPackedRgba
 			? RgbaType.ReturnType.IsSameOrCanBeUsedAs(otherType)
-			: number switch
+			: */number switch
 			{
 				TextId => otherType.IsText || otherType.IsList && otherType is GenericTypeImplementation
 				{
@@ -508,9 +517,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number == TypeId && value is ValueTypeInstance { ReturnType.Name: nameof(Type) };
 
 	public ValueTypeInstance? TryGetValueTypeInstance() =>
+		/*TODO: this is not the way, should be general!
 		IsPackedRgba
 			? MaterializePackedRgba()
-			: number == TypeId
+			: */number == TypeId
 				? (ValueTypeInstance)value
 				: number == FlatNumericId
 					? ((ValueArrayInstance)value).MaterializeAsType()
@@ -552,9 +562,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// Gets the underlying type, except if it is a Text, that should always be checked before.
 	/// </summary>
 	public new Type GetType() =>
-		IsPackedRgba
+		/*TODO: IsPackedRgba
 			? RgbaType.ReturnType
-			: number switch
+			: */number switch
 			{
 				ListId => ((ValueArrayInstance)value).ReturnType,
 				DictionaryId => ((ValueDictionaryInstance)value).ReturnType,
@@ -633,9 +643,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		((ValueDictionaryInstance)value).Items;
 
 	public bool IsMutable =>
+		/*TODO
 		IsPackedRgba
 			? RgbaType.ReturnType.IsMutable
-			: number switch
+			: */number switch
 			{
 				TextId => false,
 				ListId => ((ValueArrayInstance)value).ReturnType.IsMutable,
@@ -645,16 +656,16 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				_ => ((Type)value).IsMutable
 			};
 	public bool IsError =>
-		IsPackedRgba
+		/*TODO: IsPackedRgba
 			? RgbaType.ReturnType.IsError
-			: number is TypeId && ((ValueTypeInstance)value).ReturnType.IsError ||
+			: */number is TypeId && ((ValueTypeInstance)value).ReturnType.IsError ||
 			number is FlatNumericId && ((ValueArrayInstance)value).ReturnType.IsError;
 	public override string ToString() => GetTypeName() + ": " + ToExpressionCodeString(true);
 
 	private string GetTypeName() =>
-		IsPackedRgba
+		/*TODO: IsPackedRgba
 			? RgbaType.ReturnType.Name
-			: number switch
+			: */number switch
 			{
 				TextId => Type.Text,
 				ListId => ((ValueArrayInstance)value).ReturnType.Name,
@@ -666,9 +677,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	public string ToExpressionCodeString(bool escapeText = false)
 	{
-		var generatedText = IsPackedRgba
+		var generatedText = /*TODO: IsPackedRgba
 			? ToPackedRgbaText()
-			: number switch
+			: */number switch
 			{
 				TextId => escapeText
 					? "\"" + EscapeText((string)value) + "\""
@@ -702,10 +713,11 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		return "[" + string.Join(", ", parts) + "]";
 	}
 
+	//TODO: only allow this stuff in debug mode
 	private static string DescribeValue(ValueInstance instance) =>
-		instance.IsPackedRgba
+		/*TODO: instance.IsPackedRgba
 			? "PackedRgba(type=" + instance.RgbaType.ReturnType.Name + ")"
-			: instance.number switch
+			: */instance.number switch
 			{
 				TextId => "Text(" + instance.Text + ")",
 				ListId => "List(type=" + instance.List.ReturnType.Name + ", count=" +
@@ -731,21 +743,6 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			Replace("\r", "\\r", StringComparison.Ordinal).
 			Replace("\t", "\\t", StringComparison.Ordinal).
 			Replace("\"", "\\\"", StringComparison.Ordinal);
-
-	private static string BuildListString(IReadOnlyList<ValueInstance> items, bool escapeText)
-	{
-		if (items.Count == 0)
-			return "";
-		if (items.Count == 1)
-			return items[0].ToExpressionCodeString(escapeText);
-		//TODO: we should allow a bit more, maybe limit it to 24 or something, parsing should not have that many things anyway, use a file if you have a lot of data.
-		const int MaxItems = 10;
-		var itemsToAdd = Math.Min(items.Count, MaxItems);
-		var parts = new string[itemsToAdd];
-		for (var i = 0; i < itemsToAdd; i++)
-			parts[i] = items[i].ToExpressionCodeString(escapeText);
-		return parts.ToBrackets();
-	}
 
 	private static string BuildListString(ValueArrayInstance list, bool escapeText)
 	{
@@ -842,8 +839,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// </summary>
 	public bool Equals(ValueInstance other)
 	{
+		//TODO: this is way too complicated!
 		if (number == other.number && value == other.value)
 			return true;
+		/*TODO
 		if (IsPackedRgba)
 		{
 			var otherTypeInstance = other.TryGetValueTypeInstance();
@@ -857,6 +856,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		}
 		if (other.IsPackedRgba)
 			return other.Equals(this);
+			*/
 		ComplexEqualsCalls++;
 		if (number == FlatNumericId)
 		{

@@ -25,12 +25,11 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	public ValueArrayInstance(Type returnType, ValueInstance repeatedItem, int count)
 	{
 		ReturnType = returnType;
-		if (!TryUseRepeatedFlatNumbers(repeatedItem, count))
-		{
-			items = new List<ValueInstance>(count);
-			for (var index = 0; index < count; index++)
-				items.Add(repeatedItem);
-		}
+		if (TryUseRepeatedFlatNumbers(repeatedItem, count))
+			return;
+		items = new List<ValueInstance>(count);
+		for (var index = 0; index < count; index++)
+			items.Add(repeatedItem);
 	}
 
 	private ValueArrayInstance(Type returnType, float[] flatNumbers, Type flatElementType,
@@ -125,7 +124,6 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	}
 
 	public float GetFlat(int index) => flatNumbers![offset + index];
-	public void SetFlat(int index, float flatValue) => flatNumbers![offset + index] = flatValue;
 	public int FlatWidth { get; private set; }
 
 	/// <summary>
@@ -144,7 +142,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	public readonly Type ReturnType;
 	public List<ValueInstance> Items => items ??= MaterializeItems();
 	public int Count => items?.Count ?? (flatNumbers?.Length ?? 0) / FlatWidth;
-
+/*obs, this is not the way we should call any of this!
 	public static ValueArrayInstance CreateWithCapacity(Type returnType, int capacity)
 	{
 		var instance = new ValueArrayInstance(returnType, Array.Empty<ValueInstance>());
@@ -181,7 +179,8 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			? currentCapacity * 2
 			: currentCapacity + LargeGrowthChunk;
 	}
-
+	public void SetFlat(int index, float flatValue) => flatNumbers![offset + index] = flatValue;
+*/
 	public ValueInstance this[int index]
 	{
 		get =>
@@ -274,6 +273,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 				target[offset + memberIndex] = arrayBacking.GetFlat(memberIndex);
 			return true;
 		}
+		/*TODO
 		if (item.TryGetPackedRgbaChannels(out var red, out var green, out var blue, out var alpha) &&
 			elementWidth == 4)
 		{
@@ -283,6 +283,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			target[offset + 3] = (float)alpha;
 			return true;
 		}
+		*/
 		var typeInstance = item.TryGetValueTypeInstance();
 		if (typeInstance == null || !typeInstance.ReturnType.IsSameOrCanBeUsedAs(elementType) ||
 			typeInstance.Values.Length < elementWidth)
@@ -339,13 +340,6 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		return TryCopyItemNumbers(value, flatElementType, FlatWidth, flatNumbers,
 			offset + index * FlatWidth);
 	}
-
-	private static bool CanCreateRgba(Type elementType) =>
-		elementType.Members.Count >= 4 &&
-		elementType.Members[0].Name.Equals("Red", StringComparison.OrdinalIgnoreCase) &&
-		elementType.Members[1].Name.Equals("Green", StringComparison.OrdinalIgnoreCase) &&
-		elementType.Members[2].Name.Equals("Blue", StringComparison.OrdinalIgnoreCase) && elementType.
-			Members[3].Name.Equals("Alpha", StringComparison.OrdinalIgnoreCase);
 
 	public bool Equals(ValueArrayInstance? other) =>
 		other is not null && (ReferenceEquals(this, other) ||

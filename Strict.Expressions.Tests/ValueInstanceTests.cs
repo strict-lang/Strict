@@ -72,6 +72,7 @@ public sealed class ValueInstanceTests
 		Assert.That(constructor, Is.Null);
 	}
 
+	/*wtf, this is not the way we call it
 	[Test]
 	public void ValueInstanceCreatesEmptyListWithRequestedCapacity()
 	{
@@ -80,13 +81,14 @@ public sealed class ValueInstanceTests
 		Assert.That(instance.List.Items.Count, Is.EqualTo(0));
 		Assert.That(instance.List.Items.Capacity, Is.GreaterThanOrEqualTo(12));
 	}
-
+*/
 	[Test]
 	public void NumericDataTypeListsUseFlatNumberBacking()
 	{
 		using var pointType = new Type(TestPackage.Instance,
 				new TypeLines("Point2", "has xValue Number", "has yValue Number")).
 			ParseMembersAndMethods(new MethodExpressionParser());
+		//TODO: this is not a good way to test this, we just want to make sure when using two Point2 that the backing will be a flat numbers array!
 		var listType = TestPackage.Instance.GetListImplementationType(pointType);
 		var point1 = new ValueInstance(pointType,
 			[new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
@@ -393,7 +395,7 @@ public sealed class ValueInstanceTests
 		Assert.That(color.TryGetFlatNumericMember("Opacity", out var opacity), Is.True);
 		Assert.That(opacity.Number, Is.EqualTo(1).Within(0.001));
 	}
-
+/*should Not be called directly, it should happen automatically!
 	[Test]
 	public void ListOfColorsUsesSharedFlatBackingArray()
 	{
@@ -430,4 +432,5 @@ public sealed class ValueInstanceTests
 		Assert.That(elementBackingNumbers.GetValue(elementBacking),
 			Is.SameAs(backingArray), "Slice should reference same backing array");
 	}
+*/
 }

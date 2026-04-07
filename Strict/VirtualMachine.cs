@@ -513,6 +513,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private bool TryHandleAdjustedColorConstructor(Invoke invoke)
 	{
+		return false;
+		/*TODO: this needs to be generalized, this is stupid just for Color
 		if (invoke.Method.ReturnType.Name != "Color" || invoke.Method.Arguments.Count != 3 ||
 			!TryExtractColorChannelAdjustment(invoke.Method.Arguments[0], "Red", out var listCall,
 				out var adjustmentExpression) ||
@@ -532,16 +534,19 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			red + brightness, green + brightness, blue + brightness,
 			alpha ?? GetConstructorMemberValue(invoke.Method.ReturnType, 3).Number);
 		return true;
+		*/
 	}
 
 	private static bool TryGetColorChannels(ValueInstance colorValue, out double red, out double green,
 		out double blue, out double? alpha)
 	{
+		/*TODO
 		if (colorValue.TryGetPackedRgbaChannels(out red, out green, out blue, out var packedAlpha))
 		{
 			alpha = packedAlpha;
 			return true;
 		}
+		*/
 		var colorTypeInstance = colorValue.TryGetValueTypeInstance();
 		if (colorTypeInstance != null && colorTypeInstance.TryGetValue("Red", out var redValue) &&
 			colorTypeInstance.TryGetValue("Green", out var greenValue) &&
@@ -1326,8 +1331,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var instanceValue = EvaluateExpression(memberCall.Instance);
 		if (TryGetNativeLength(instanceValue, memberCall.Member.Name, out var lengthValue))
 			return lengthValue;
+		/*TODO
 		if (instanceValue.TryGetPackedRgbaMember(memberCall.Member.Name, out var packedMemberValue))
 			return packedMemberValue;
+			*/
 		if (instanceValue.TryGetFlatNumericMember(memberCall.Member.Name, out var flatMemberValue))
 			return flatMemberValue;
 		var typeInstance = instanceValue.TryGetValueTypeInstance();
