@@ -147,7 +147,7 @@ public class Interpreter
 			catch (Exception inner) when (runOnlyTests)
 			{
 				if (ShouldIgnoreGenericListTestParseFailure(method, inner) ||
-					inner is ParsingFailed)
+					IsKnownParserLimitation(inner))
 					return trueInstance;
 				throw new MethodRequiresTest(method,
 					$"Test execution failed: {method.Parent.FullName}.{method.Name}\n" +
@@ -172,6 +172,12 @@ public class Interpreter
 	private static bool ShouldIgnoreGenericListTestParseFailure(Method method, Exception inner) =>
 		method.Type.IsGeneric && method.Type.Name == Type.List &&
 		inner is Type.GenericTypesCannotBeUsedDirectlyUseImplementation;
+
+	private static bool IsKnownParserLimitation(Exception inner) =>
+		inner is ParsingFailed &&
+		(inner.InnerException is Type.NoMatchingMethodFound or
+			Type.ArgumentsDoNotMatchMethodParameters ||
+			inner.Message.Contains("Use number iteration"));
 
 	private static bool ShouldSkipGenericListTestValidation(Method method, bool runOnlyTests) =>
 		runOnlyTests && method.Type is { IsGeneric: true, Name: Type.List or Type.Dictionary };

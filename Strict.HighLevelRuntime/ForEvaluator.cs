@@ -111,8 +111,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		var iterationValue = isNumberOnlyIteration
 			? indexInstance
 			: iterator.GetIteratorValue(itemType, index);
-		if (!isNumberOnlyIteration)
-			loop.Variables[Type.ValueLowercase] = iterationValue;
+		loop.Variables[Type.ValueLowercase] = iterationValue;
 		AssignCustomVariables(f, ctx, loop, iterationValue);
 		var itemResult = bodyAsBody != null
 			? EvaluateBody(bodyAsBody, loop)
