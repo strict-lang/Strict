@@ -8,6 +8,6 @@ Acos Degrees
 	Ratio(1).Acos is Degrees(0)
 	value
 Atan Degrees
-	Ratio(1).Atan is Degrees(90)
-	Ratio(-1).Atan is Degrees(-90)
+	Ratio(1).Atan is Degrees(45)
+	Ratio(-1).Atan is Degrees(-45)
 	value

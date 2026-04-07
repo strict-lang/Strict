@@ -79,6 +79,8 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 			throw new Interpreter.MethodRequiresTest(body.Method, body);
 		if (runOnlyTests || last.IsError || last.IsType(body.Method.ReturnType))
 			return last;
+		if (body.Method.ReturnType.IsSameOrCanBeUsedAs(last.GetType()))
+			return last;
 		if (body.Method.ReturnType.IsMutable && !last.IsMutable &&
 			last.IsType(((GenericTypeImplementation)body.Method.ReturnType).ImplementationTypes[0]))
 			return new ValueInstance(last, body.Method.ReturnType);

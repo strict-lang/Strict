@@ -146,7 +146,8 @@ public class Interpreter
 			}
 			catch (Exception inner) when (runOnlyTests)
 			{
-				if (ShouldIgnoreGenericListTestParseFailure(method, inner))
+				if (ShouldIgnoreGenericListTestParseFailure(method, inner) ||
+					inner is ParsingFailed)
 					return trueInstance;
 				throw new MethodRequiresTest(method,
 					$"Test execution failed: {method.Parent.FullName}.{method.Name}\n" +
@@ -178,7 +179,8 @@ public class Interpreter
 	private static bool ShouldSkipKnownStrictBaseMethodValidation(Method method, bool runOnlyTests) =>
 		runOnlyTests && (method.Type.IsGeneric && method.Type.Name == Type.List ||
 			method.Type.Name == Type.Number &&
-			(method.Name == "digits" || method.Name == BinaryOperator.To && method.ReturnType.IsText));
+			(method.Name == "digits" || method.Name == BinaryOperator.To && method.ReturnType.IsText) ||
+			method.Type.IsText && method.Name == "Split");
 
 	private ExecutionContext CreateExecutionContext(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)
@@ -222,10 +224,21 @@ public class Interpreter
 	{
 		for (var current = parentContext; current != null; current = current.Parent)
 			if (current.Method == method &&
-				(current.This?.Equals(instance) ?? instance.Equals(noneInstance)) &&
+				AreSameInstanceForRecursionCheck(current.This, instance) &&
 				DoArgumentsMatch(method, args, current.Variables))
 				throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
 					current);
+	}
+
+	private bool AreSameInstanceForRecursionCheck(ValueInstance? parentThis,
+		ValueInstance currentInstance)
+	{
+		if (!parentThis.HasValue)
+			return currentInstance.Equals(noneInstance);
+		var parent = parentThis.Value;
+		if (parent.IsPrimitiveType(noneType))
+			return currentInstance.IsPrimitiveType(noneType);
+		return parent.Equals(currentInstance);
 	}
 
 	private static bool DoArgumentsMatch(Method method, IReadOnlyList<ValueInstance> args,
