@@ -11,6 +11,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 	public Method Method { get; private set; } = method;
 	public ExecutionContext? Parent { get; private set; } = parent;
 	public ValueInstance? This { get; private set; } = thisInstance;
+	public bool IsTestAtCurrentLine { get; set; }
 	private Dictionary<string, ValueInstance>? variables;
 	/// <summary>
 	/// Lazy-initialized: only created when a variable is actually written, avoiding allocation for

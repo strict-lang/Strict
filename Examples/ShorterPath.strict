@@ -10,11 +10,11 @@ GetNorthDirections Text
 	ShorterPath(0, 0).GetNorthDirections is ""
 	ShorterPath(2, 0).GetNorthDirections is "NN"
 	ShorterPath(1, 0).GetNorthDirections is "N"
-	for Range(0, northCount)
+	for northCount
 		"N"
 GetEastDirections Text
 	ShorterPath(0, 0).GetEastDirections is ""
 	ShorterPath(0, 2).GetEastDirections is "EE"
 	ShorterPath(0, 1).GetEastDirections is "E"
-	for Range(0, eastCount)
+	for eastCount
 		"E"

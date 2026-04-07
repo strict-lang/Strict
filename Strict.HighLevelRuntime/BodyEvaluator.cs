@@ -49,12 +49,12 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		for (var index = 0; index < count; index++)
 		{
 			var e = body.Expressions[index];
-			var isTest = !pastTestBlock && index < count - 1 && IsStandaloneInlineTest(e);
-			if (!isTest && e is not Declaration && e is not MutableReassignment)
+			ctx.IsTestAtCurrentLine = !pastTestBlock && index < count - 1 && IsStandaloneInlineTest(e);
+			if (!ctx.IsTestAtCurrentLine && e is not Declaration && e is not MutableReassignment)
 				pastTestBlock = true;
-			if (isTest)
+			if (ctx.IsTestAtCurrentLine)
 				interpreter.Statistics.TestExpressions++;
-			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment &&
+			if (ctx.IsTestAtCurrentLine == !runOnlyTests && e is not Declaration && e is not MutableReassignment &&
 				e is not For ||
 				runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
 					skippedVariables != null &&
@@ -71,7 +71,7 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 			last = interpreter.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;
-			if (runOnlyTests && isTest && !last.Boolean)
+			if (runOnlyTests && ctx.IsTestAtCurrentLine && !last.Boolean)
 				throw new Interpreter.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}
 		if (runOnlyTests && count > 1 && last.Equals(interpreter.noneInstance) &&

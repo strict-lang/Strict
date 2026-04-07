@@ -249,6 +249,10 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			if (left.IsText && (right.IsPrimitiveType(interpreter.numberType) ||
 				right.IsPrimitiveType(interpreter.characterType)))
 				right = new ValueInstance(right.ToExpressionCodeString());
+			if (ctx.IsTestAtCurrentLine && !left.IsText && left.GetType().IsNumber && !right.IsText &&
+				right.GetType().IsNumber)
+				return interpreter.ToBoolean(Math.Abs(left.Number - right.Number) <
+					TestComparisonEpsilon);
 			return interpreter.ToBoolean(left.Equals(right));
 		}
 		var l = left.Number;
@@ -266,6 +270,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
 	}
+
+	private const double TestComparisonEpsilon = 0.00001;
 
 	private ValueInstance ExecuteLogicalBinaryOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance left, ValueInstance right)

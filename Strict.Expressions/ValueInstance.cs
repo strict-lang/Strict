@@ -1,5 +1,4 @@
 using Strict.Language;
-using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;

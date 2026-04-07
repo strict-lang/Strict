@@ -1,15 +1,18 @@
 ﻿has number
-Sin Number
+Sin Ratio
 	Degrees(0).Sin is 0
 	Degrees(90).Sin is 1
 	value
-Cos Number
+Cos Ratio
 	Degrees(0).Sin is 1
 	Degrees(90).Sin is 0
 	value
-Asin Number
-Acos Number
-//TODO: RadiansToDegrees
-//TODO: DegreesToRadians
-Tan Number
-Atan(other) Number
+Tan Ratio
+	Degrees(0).Tan is 0
+	Degrees(180).Tan is 0
+	Degrees(45).Tan is 1
+	value
+to Radians
+	Degrees(180) to Radians is Radians.Pi
+	Degrees(180) to Radians is Radians.Pi
+	value / Radians.DegreesPerRadian
