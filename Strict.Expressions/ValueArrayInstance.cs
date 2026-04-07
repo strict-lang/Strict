@@ -9,8 +9,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	private List<ValueInstance>? items;
 	private float[]? flatNumbers;
 	private Type? flatElementType;
-	private int flatElementWidth;
-	private int offset;
+	private readonly int offset;
 	private const string FlatNumbersFieldName = "flatNumbers";
 	private const int MinimumCapacity = 4;
 	private const int LargeGrowthChunk = 8192;
@@ -40,7 +39,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		ReturnType = returnType;
 		this.flatNumbers = flatNumbers;
 		this.flatElementType = flatElementType;
-		this.flatElementWidth = flatElementWidth;
+		FlatWidth = flatElementWidth;
 	}
 
 	private ValueArrayInstance(Type returnType, float[] flatNumbers, Type flatElementType,
@@ -49,7 +48,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		ReturnType = returnType;
 		this.flatNumbers = flatNumbers;
 		this.flatElementType = flatElementType;
-		this.flatElementWidth = flatElementWidth;
+		FlatWidth = flatElementWidth;
 		this.offset = offset;
 	}
 
@@ -85,7 +84,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			return false;
 		}
 		var memberIndex = GetMemberIndex(name);
-		if (memberIndex < 0 || memberIndex >= flatElementWidth)
+		if (memberIndex < 0 || memberIndex >= FlatWidth)
 		{
 			memberValue = default;
 			return false;
@@ -100,7 +99,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		if (flatNumbers == null || flatElementType == null)
 			return false;
 		var memberIndex = GetMemberIndex(name);
-		if (memberIndex < 0 || memberIndex >= flatElementWidth)
+		if (memberIndex < 0 || memberIndex >= FlatWidth)
 			return false;
 		flatNumbers[offset + memberIndex] = (float)memberValue.Number;
 		return true;
@@ -127,7 +126,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 
 	public float GetFlat(int index) => flatNumbers![offset + index];
 	public void SetFlat(int index, float flatValue) => flatNumbers![offset + index] = flatValue;
-	public int FlatWidth => flatElementWidth;
+	public int FlatWidth { get; private set; }
 
 	/// <summary>
 	/// Materializes a type-backing ValueArrayInstance into a ValueTypeInstance with individual
@@ -135,8 +134,8 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	/// </summary>
 	public ValueTypeInstance MaterializeAsType()
 	{
-		var values = new ValueInstance[flatElementWidth];
-		for (var memberIndex = 0; memberIndex < flatElementWidth; memberIndex++)
+		var values = new ValueInstance[FlatWidth];
+		for (var memberIndex = 0; memberIndex < FlatWidth; memberIndex++)
 			values[memberIndex] = new ValueInstance(flatElementType!.Members[memberIndex].Type,
 				flatNumbers![offset + memberIndex]);
 		return new ValueTypeInstance(flatElementType!, values);
@@ -144,14 +143,14 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 
 	public readonly Type ReturnType;
 	public List<ValueInstance> Items => items ??= MaterializeItems();
-	public int Count => items?.Count ?? (flatNumbers?.Length ?? 0) / flatElementWidth;
+	public int Count => items?.Count ?? (flatNumbers?.Length ?? 0) / FlatWidth;
 
 	public static ValueArrayInstance CreateWithCapacity(Type returnType, int capacity)
 	{
 		var instance = new ValueArrayInstance(returnType, Array.Empty<ValueInstance>());
 		instance.flatNumbers = null;
 		instance.flatElementType = null;
-		instance.flatElementWidth = 0;
+		instance.FlatWidth = 0;
 		instance.items = new List<ValueInstance>(Math.Max(capacity, MinimumCapacity));
 		return instance;
 	}
@@ -212,7 +211,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 				return false;
 		flatNumbers = numbers;
 		flatElementType = elementType;
-		flatElementWidth = elementWidth;
+		FlatWidth = elementWidth;
 		return true;
 	}
 
@@ -227,7 +226,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			Array.Copy(numbers, 0, numbers, itemIndex * elementWidth, elementWidth);
 		flatNumbers = numbers;
 		flatElementType = elementType;
-		flatElementWidth = elementWidth;
+		FlatWidth = elementWidth;
 		return true;
 	}
 
@@ -298,7 +297,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			? new ValueArrayInstance(newType, new List<ValueInstance>(items))
 			: flatNumbers != null && flatElementType != null
 				? new ValueArrayInstance(newType, (float[])flatNumbers.Clone(), flatElementType,
-					flatElementWidth)
+					FlatWidth)
 				: new ValueArrayInstance(newType, []);
 
 	private List<ValueInstance> MaterializeItems()
@@ -308,7 +307,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			createdItems.Add(CreateFlatItem(itemIndex));
 		flatNumbers = null;
 		flatElementType = null;
-		flatElementWidth = 0;
+		FlatWidth = 0;
 		items = createdItems;
 		return createdItems;
 	}
@@ -317,17 +316,17 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	{
 		if (flatNumbers == null || flatElementType == null)
 			throw new InvalidOperationException(FlatNumbersFieldName + " not initialized");
-		var elementOffset = this.offset + index * flatElementWidth;
-		if (flatElementWidth == 1)
+		var elementOffset = offset + index * FlatWidth;
+		if (FlatWidth == 1)
 			return new ValueInstance(flatElementType, flatNumbers[elementOffset]);
 		if (IsAllNumericType(flatElementType))
 		{
 			var slice = CreateForTypeBacking(flatElementType, flatNumbers,
-				elementOffset, flatElementWidth);
+				elementOffset, FlatWidth);
 			return new ValueInstance(slice, isFlatNumericType: true);
 		}
-		var values = new ValueInstance[flatElementWidth];
-		for (var memberIndex = 0; memberIndex < flatElementWidth; memberIndex++)
+		var values = new ValueInstance[FlatWidth];
+		for (var memberIndex = 0; memberIndex < FlatWidth; memberIndex++)
 			values[memberIndex] = new ValueInstance(flatElementType.Members[memberIndex].Type,
 				flatNumbers[elementOffset + memberIndex]);
 		return new ValueInstance(flatElementType, values);
@@ -337,8 +336,8 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	{
 		if (flatNumbers == null || flatElementType == null)
 			return false;
-		return TryCopyItemNumbers(value, flatElementType, flatElementWidth, flatNumbers,
-			this.offset + index * flatElementWidth);
+		return TryCopyItemNumbers(value, flatElementType, FlatWidth, flatNumbers,
+			offset + index * FlatWidth);
 	}
 
 	private static bool CanCreateRgba(Type elementType) =>

@@ -87,7 +87,7 @@ public sealed class TestPackage : Package
 			"\tRange(2, 5).Sum is 2 + 3 + 4",
 			"\tRange(42, 45).Sum is 42 + 43 + 44",
 			"\tfor",
-			"\t\tvalue",
+			"\t\tindex",
 			"Reverse Range",
 			"\tRange(0, 5).Reverse is Range(4, -1)",
 			"\tRange(1, 4).Reverse is Range(3, 0)",

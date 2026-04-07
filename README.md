@@ -53,16 +53,16 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 
 ## Architecture at a Glance (from low to high level)
 
-| Layer | Responsibility | When It Runs | Rejects / Optimises |
-|-------|----------------|-------------|---------------------|
-| **Strict.Language** | Load *.strict* files, package handling, core type parsing (structure only) | File load | Bad formatting & package errors |
-| **Strict.Expressions** | Lazy-parse method bodies into an immutable tree of `if`, `for`, assignments, calls… | First method call | Structural/semantic violations |
-| **Strict.Validators** | Visitor-based static analysis & constant folding | After expression parsing | Duplicate code remover, impossible casts, unused mutables, foldable constants |
-| **Strict.HighLevelRuntime** | Execute expressions directly in interpreter mode for fast checks and tests | On demand during test execution | Value/type errors, side-effects |
-| **Strict.TestRunner** | Run in-code tests via HighLevelRuntime (`method must start with a test`) | First call to a method | Failing test expressions, the central verification point |
-| **Strict.Bytecode** | Generate register-based bytecode instructions from expression trees | After tests succeed | Unsupported expression patterns |
-| **Strict.Optimizers** | Remove passed tests and other provably dead code from bytecode | After bytecode generation | Dead instructions, test artefacts, constant folds |
-| **Strict** (exe) | Execute optimized bytecode in the VirtualMachine; orchestrate the full pipeline | Final step | Value/type errors, side-effects |
+| Layer                       | Responsibility                                                                      | When It Runs                    | Rejects / Optimises                                                           |
+|-----------------------------|-------------------------------------------------------------------------------------|---------------------------------|-------------------------------------------------------------------------------|
+| **Strict.Language**         | Load *.strict* files, package handling, core type parsing (structure only)          | File load                       | Bad formatting & package errors                                               |
+| **Strict.Expressions**      | Lazy-parse method bodies into an immutable tree of `if`, `for`, assignments, calls… | First method call               | Structural/semantic violations                                                |
+| **Strict.Validators**       | Visitor-based static analysis & constant folding                                    | After expression parsing        | Duplicate code remover, impossible casts, unused mutables, foldable constants |
+| **Strict.HighLevelRuntime** | Execute expressions directly in interpreter mode for fast checks and tests          | On demand during test execution | Value/type errors, side-effects                                               |
+| **Strict.TestRunner**       | Run in-code tests via HighLevelRuntime (`method must start with a test`)            | First call to a method          | Failing test expressions, the central verification point                      |
+| **Strict.Bytecode**         | Generate register-based bytecode instructions from expression trees                 | After tests succeed             | Unsupported expression patterns                                               |
+| **Strict.Optimizers**       | Remove passed tests and other provably dead code from bytecode                      | After bytecode generation       | Dead instructions, test artefacts, constant folds                             |
+| **Strict** (exe)            | Execute optimized bytecode in the VirtualMachine; create executable                 | Final step                      | Value/type errors, side-effects                                               |
 
 ## 1 · Strict.Language
 * Parses package headers and type signatures only.
@@ -78,7 +78,7 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 * Flags impossible casts (`"abc" to Number`) and other static mistakes. These are validation errors same as parsing errors that need to be fixed before anything can continue.
 * Runs constant folding & simple propagation (e.g. `"5" to Number → 5`). This doesn't affect tests code, but for execution (any step after this) it still uses the folded expressions. Production is always folded and collapsed to the simplest form (in an IDE via a warning that needs to be fixed).
 * TODO: finds all duplicate code and removes it (reinventing the wheel over and over), e.g.
-	* Reimplenting GetElementsText like the example below will be replaced with existing code: Text.Combine
+	* Reimplementing GetElementsText like the example below will be replaced with existing code: Text.Combine
 	* This will affect ALL new code and make it much faster to write code, as you can just write the most straightforward code and Strict will figure out if there is already an existing implementation for it and replace it with that, which is also a great way to learn how to do things in Strict by just writing the most straightforward code and then looking at the optimized version of it.
 	* Implemented like ReSharper/Jetbrains warning issues: Since there is no warnings in Strict, everything is an error and thus this needs to be fixed before it can be used.
 	* Also removes verbose code that can be shorter, like Text.characters.Length -> Text.Length
@@ -106,8 +106,8 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 * Preserve original line numbers for precise error reporting.
 
 ## 8. Strict.Compiler
-* Compiles bytecode into actual executables for any supported platform (Windows, Linux, MacOS).
-* Currently can utilize MLIR (for the most optimized output, supporting parallization and GPU execution), LLVM (for a more general approach) or direct NASM code generation (low level assembly).
+* Compiles bytecode into actual executables for any supported platform (Windows, Linux, macOS).
+* Currently, can utilize MLIR (for the most optimized output, supporting parallelization and GPU execution), LLVM (for a more general approach) or direct NASM code generation (low level assembly).
 * Executables are very tiny and do not require any runtime, the Strict executable contains everything needed to do all these steps, parsing, validation, testing, bytecode generation, optimization and execution. External libraries used or needed for compilation (like MLIR) are not included and need to be on the executing machine. Same for any content used of course (but maybe we include them into the bytecode .strictbinary files like .apk packages).
 
 ## 9 · Strict (exe) — Runner + VirtualMachine
@@ -225,9 +225,9 @@ List.strict usage (all lists are simply surrounded by brackets, basically any me
 ```
 
 ## Members, variables, constants, let, mutable
-Members are always defined at the top of any type file. Members are basically fields in other languages, but can do much more. For example almost all strict types are composed from more basic types and can be used as such. This kind of allows multiple inheritence (as you can have multiple members) and also gives you any feature from another type you want by just adding it is a member. If a member type is a trait (kind of interface, traits have no implementation), the type must implement all of the trait methods.
+Members are always defined at the top of any type file. Members are basically fields in other languages, but can do much more. For example almost all strict types are composed from more basic types and can be used as such. This kind of allows multiple inheritence (as you can have multiple members) and also gives you any feature from another type you want by just adding it is a member. If a member type is a trait (kind of interface, traits have no implementation), the type must implement all the trait methods.
 
-Members can be either `has` (default), `constant` (for anything that does not change, think of static readonly, this includes way more than other programming languages and propagates upward, anything composed out of constants is a constant too, constants are always precomputed and optimized away, even if this is a complex operation) or `mutable` (rarely used, this means the value is allowed to change, mostly for optimization purposes, should be avoided otherwise as parallization will struggle with mutables).
+Members can be either `has` (default), `constant` (for anything that does not change, think of static readonly, this includes way more than other programming languages and propagates upward, anything composed out of constants is a constant too, constants are always precomputed and optimized away, even if this is a complex operation) or `mutable` (rarely used, this means the value is allowed to change, mostly for optimization purposes, should be avoided otherwise as parallelization will struggle with mutables).
 
 Some examples:
 
@@ -343,9 +343,9 @@ let result = case operation of
 It is important to note that if there is no fallback else case at the end an Error is automatically generated and thrown at runtime if no case above it matches.
 
 # for
-The only iterator in Strict is the "for" expression, it is usually used to enumerate through lists, but anything that implements Iterator can be enumerated (Enum, List, Number, Range and anything that implements List like Dictionary). The syntax for "for" is quite powerful and not much like c-style languages, it is more like functional languages. A for loop is also usually the only spot where mutable variables are used and make sense, so a lot of optimizations are done here to avoid actual mutable usage at runtime and thus allowing almost all code to be executed without side effects and in parallel. Remember that you don't have to write any parallel code, threads, processes, async, etc. it is all done automatically be the runtime and way more powerful than any other programming language could provide. All of the following examples are automatically executed in parallel and even on the GPU if available and if it would be faster to do so.
+The only iterator in Strict is the "for" expression, it is usually used to enumerate through lists, but anything that implements Iterator can be enumerated (Enum, List, Number, Range and anything that implements List like Dictionary). The syntax for "for" is quite powerful and not much like c-style languages, it is more like in functional languages. A for loop is also usually the only spot where mutable variables are used and make sense, so a lot of optimizations are done here to avoid actual mutable usage at runtime and thus allowing almost all code to be executed without side effects and in parallel. Remember that you don't have to write any parallel code, threads, processes, async, etc. it is all done automatically be the runtime and way more powerful than any other programming language could provide. All the following examples are automatically executed in parallel and even on the GPU if available and if it would be faster to do so.
 
-Unlike the above examples or any other code in strict for expressions are not as self explanatory, so each use case is explained here in a bit more detail.
+Unlike the above examples or any other code in strict for expressions are not as self-explanatory, so each use case is explained here in a bit more detail.
 
 ## Normal iteration
 ```
@@ -360,15 +360,15 @@ Outputs this into the logger (defaults to the console):
 1: 2
 2: 3
 
-The for expression requires an iterator to go through each element, which is what someList is. There is no need to specify an enumerator index or value as this is done automatically and you can access these via "index" (0, 1, 2, 3, etc.) and "value" (whatever value is at this index). If you need to access the outer value you can type "outer.value".
+The for expression requires an iterator to go through each element, which is what someList is. There is no need to specify an enumerator index or value as this is done automatically, and you can access these via "index" (0, 1, 2, 3, etc.) and "value" (whatever value is at this index). If you need to access the outer value you can use "outer.value".
 
-You can iterate over a number if you just want a quick for loop for lets say 10 iterations. This outputs 10 lines starting from 0 to 9, index and value are identical here:
+You can iterate over a number if you just want a quick for loop for let's say 10 iterations. This outputs 10 lines starting from 0 to 9, index is available and the outer value stays unchanged and isn't used or needed here:
 ```
   for 10
-    logger.Log(value)
+    logger.Log(index)
 ```
 
-Iterating over a Range will start at the Range.Start and end before the Range.ExclusiveEnd is reached. This outputs 2, 3, 4 into 3 lines:
+Iterating over a Range will start at the Range.Start and end before the Range.ExclusiveEnd is reached. Note that iterating a Range from 0 to a number is not allowed, you have to use the 'for number' syntax just described. The following outputs 2, 3, 4 into 3 lines:
 ```
 	for Range(2, 5)
   	logger.Log(value)
@@ -399,21 +399,21 @@ LogNumbers
 ```
 Outputs 1 to 4 in 4 lines. Index still can be used, but value wasn't used or overwritten, so you can access the outer value this way. A more complex example would be:
 ```
-for x in Range(1, 10)
-  for y in Range(1, 10)
+for y in Range(1, 11)
+  for x in Range(1, 11)
     logger.Log((x, y))
 ```
-which would output 100 values starting at (0, 0) ending at (10, 10). Notice that Strict will evaluate the fastest execution, so for image processing it is not needed to iterate y first. Here it makes no difference. Since output logging is a side effect this can't be executed fully in parallel (the logger will still get all values at once, but in order and output them at once as pretty much no time will have passed from start to finish).
+which would output 100 values starting at (1, 1) ending at (10, 10). Notice that Strict will evaluate the fastest execution, so for image processing it is not needed to iterate y first. Since output logging is a side effect this can't be executed fully in parallel (the logger will still get all values at once, but in order and output them at once as pretty much no time will have passed from start to finish).
 
 ## Dictionaries
-For dictionaries you might want to use index, key and value variables, but again: you don't have to. This works fine:
+For dictionaries, you might want to use index, key and value variables, but again: you don't have to. This works fine:
 ```
 for someDictionary
   if value.Key is "Apple"
     return value.Value
 ```
 
-Dictionaries are just Lists of key+value pairs, so each enumeration just returns one of these pairs and we can grab the first value as the key with value(0), which is exactly what value.Key will do. Same goes for value(1) for value.Value.
+Dictionaries are just Lists of key+value pairs, so each enumeration just returns one of these pairs, and we can grab the first value as the key with value(0), which is exactly what value.Key will do. Same goes for value(1) for value.Value.
 
 ```
 Index(other Generic) Number
@@ -430,32 +430,29 @@ If you look at the source code of Dictionary.strict you might be confused how si
 
 ## Image processing
 ```
-has brightness Number
+has brightness Number with value is not 0
 Process(mutable image ColorImage) ColorImage
 	mutable testImage = ColorImage(Size(1, 1), (Color(0, 1, 2)))
 	AdjustBrightness(0).Process(testImage) is ColorImage(Size(1, 1), (Color(0, 1, 2)))
 	AdjustBrightness(5).Process(testImage) is ColorImage(Size(1, 1), (Color(5, 6, 7)))
-	if brightness is 0
-		return image
-	for row, column in image.Size
-		GetBrightnessAdjustedColor(image.Colors(column * image.Size.Width + row))
-GetBrightnessAdjustedColor(currentColor Color) Color
+	for image.Size
+		image.Colors(index) = GetBrightnessAdjustedColor(image.Colors(index))
+GetBrightnessAdjustedColor(current Color) Color
 	AdjustBrightness(0).GetBrightnessAdjustedColor(Color(0, 1, 2)) is Color(0, 1, 2)
 	AdjustBrightness(5).GetBrightnessAdjustedColor(Color(0, 0, 0)) is Color(5, 5, 5)
 	AdjustBrightness(-5).GetBrightnessAdjustedColor(Color(0, 0, 0)) is Color(0, 0, 0)
-	Color((currentColor.Red + brightness).Clamp(0, 255),
-	(currentColor.Green + brightness).Clamp(0, 255),
-	(currentColor.Blue + brightness).Clamp(0, 255))
+	Color(current.Red + brightness, current.Green + brightness, current.Blue + brightness)
 ```
 
-If the iterator is multidimensional like Size, it can be used in a for loop and multiple variables can be named (value would here be a list of 2 values like for Dictionary):
+If the iterator is multidimensional like Size, it can be used in a for loop and multiple variables can be named (value here is a Vector2 with X and Y values):
 ```has iterator Iterator(Vector2)
 has Width Number with value > 0
 has Height Number with value > 0
+has iterator
 for Iterator(Vector2)
-	for x in Range(0, Width)
-	for y in Range(0, Height)
-		Vector2(x, y)
+	for Height
+		for Width
+			Vector2(index, outer.index)
 ...
 ```
 Notice that Size(0, 0) or Size(-1, 5) would not be valid as all dimensions must be positive numbers as defined above. The iterator is also returning a Vector2, which is just a list with 2 numbers.
@@ -471,7 +468,7 @@ in(key Generic) Boolean
 	for keysAndValues
 		value.Key is key
 ```
-Here the dictionary with keysAndValues is iterated. On each iteration the for body is executed, which here is just a comparision if the value.Key is the given key value. If that evaluation is true, the for loop is aborted and true is returned (we found the key). If the whole loop finishes and no key was found, the whole for expression returns false. In strict the last line in a method is always automatically the return expression. "return" is only needed when it happens in any line above it.
+Here the dictionary with keysAndValues is iterated (the actual runtime will use a hashtable implementation to find a key quickly instead of going manually through all elements). On each iteration the for body is executed, which here is just a comparision if the value.Key is the given key value. If that evaluation is true, the for loop is aborted and true is returned (we found the key). If the whole loop finishes and no key was found, the whole for expression returns false. In strict the last line in a method is always automatically the return expression. "return" is only needed when it happens in any line above it.
 
 ```
 GetElementsText Text
@@ -506,7 +503,7 @@ Count(searchFor Generic) Number
 			1
 ```
 
-You can of course also use any other operator instead of the default creation of a list and concatentation. The above Sum method would return the same value if it were written as:
+You can of course also use any other operator instead of the default creation of a list and concatenation. The above Sum method would return the same value if it were written as:
 ```
 Sum Generic
 	for elements
@@ -579,9 +576,9 @@ The python example is a bit more compact, but you have to get used to the syntax
 
 Here is the same example in Strict (creates a list of numbers, which is then concatenated automatically for us using List.Sum or the identical output via + concatenation as in the example above):
 ```
-for Range(0, 10)
-  if value % 2
-    value * 10
+for 10
+  if index % 2
+    index * 10
 ```
 
 ## More examples
@@ -594,9 +591,9 @@ Let's look at a more complex example (not really useful, but is shows how we can
 			4 + value * 3
 			to Text
 ```
-Here we start iterating through a list of numbers, then we convert each value to Text (value is always used by default on any call, no matter if we are in a method were it defaults to our type instance or in a for loop, where it is the current iteration value).Then we use Length on the new value inside the for body, which is now a Text, so that would be the length of that Text and multiply it by itself. That length is a number again, the if expression now checks if that value is above 3. If so we go into the inner if body and do a quick calculation and finally we convert the resulting number to Text, which is then added to the for expression result. If the return value is a List of Text that would be returned, if it is a Text, then everything is concatenated. Otherwise an error is given with the incompatible type. Also note that some of these things could be done in one line like (value to Text).Length * (value to Text).Length, but that would be longer and is not prefered. (4 + value * 3) to Text is probably slightly shorter and would be prefered, but the point here is you can call whatever code you like to transform any Iterator.
+Here we start iterating through a list of numbers, then we convert each value to Text (value is always used by default on any call, no matter if we are in a method were it defaults to our type instance or in a for loop, where it is the current iteration value).Then we use Length on the new value inside the for body, which is now a Text, so that would be the length of that Text and multiply it by itself. That length is a number again, the if expression now checks if that value is above 3. If so we go into the inner if body and do a quick calculation and finally we convert the resulting number to Text, which is then added to the for expression result. If the return value is a List of Text that would be returned, if it is a Text, then everything is concatenated. Otherwise, an error is given with the incompatible type. Also note that some of these things could be done in one line like (value to Text).Length * (value to Text).Length, but that would be longer and is not preferred. (4 + value * 3) to Text is probably slightly shorter and would be preferred, but the point here is you can call whatever code you like to transform any Iterator.
 
-Here is the final example from Strict.Examples/RemoveParentheses.strict
+Here is the final example from Strict.Examples/RemoveParentheses.strict utilizing the selection if described in the if section. Note that we can have different things happening depending on what the selection if decides. Here the value character is only appended if we reach the else block and the parentheses value is still at 0, anything in parentheses will be skipped.
 ```
 Remove Text
 	RemoveParentheses("example(unwanted thing)example").Remove is "exampleexample"

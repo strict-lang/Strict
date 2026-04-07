@@ -19,7 +19,6 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	//TODO: stupid, remove!
 	private static readonly ConditionalWeakTable<Type, PackedRgbaType> PackedRgbaTypes = new();
-
 	private static int createdCount;
 	private static int creationLimit = int.MaxValue;
 
@@ -230,14 +229,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			null => "null",
 			Expression => "Expression " + value + " needs to be evaluated!",
 			double valueDouble => valueDouble switch
-				{
-					TextId => "IsText",
-					ListId => "IsList",
-					DictionaryId => "IsDictionary",
-					TypeId => "IsType",
-					FlatNumericId => "IsFlatNumeric",
-					_ => value + ""
-				},
+			{
+				TextId => "IsText",
+				ListId => "IsList",
+				DictionaryId => "IsDictionary",
+				TypeId => "IsType",
+				FlatNumericId => "IsFlatNumeric",
+				_ => value + ""
+			},
 			_ => value + ""
 		} + " (" + value?.GetType() + ") for " + returnType.Name);
 
@@ -303,12 +302,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// <summary>
 	/// Creates an empty list instance with preallocated capacity to reduce growth allocations.
 	/// </summary>
-	public static ValueInstance CreateListWithCapacity(Type returnType, int listCapacity)
-	{
-		if (!returnType.IsList)
-			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
-		return new ValueInstance(ValueArrayInstance.CreateWithCapacity(returnType, listCapacity));
-	}
+	public static ValueInstance CreateListWithCapacity(Type returnType, int listCapacity) =>
+		returnType.IsList
+			? new ValueInstance(ValueArrayInstance.CreateWithCapacity(returnType, listCapacity))
+			: throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
 
 	/// <summary>
 	/// Creates a flat numeric list from a pre-built float[] without creating individual
@@ -651,7 +648,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		IsPackedRgba
 			? RgbaType.ReturnType.IsError
 			: number is TypeId && ((ValueTypeInstance)value).ReturnType.IsError ||
-				number is FlatNumericId && ((ValueArrayInstance)value).ReturnType.IsError;
+			number is FlatNumericId && ((ValueArrayInstance)value).ReturnType.IsError;
 	public override string ToString() => GetTypeName() + ": " + ToExpressionCodeString(true);
 
 	private string GetTypeName() =>

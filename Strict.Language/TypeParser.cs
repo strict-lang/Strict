@@ -341,7 +341,11 @@ public sealed class TypeParser(Type type, string[] lines)
 			return;
 
 		//TODO: way to complicated and slow just to check for /t at the beginning of a line
-		static int GetIndent(string line) => line.TakeWhile(c => c == '\t').Count();
+		static int GetIndent(string line)
+		{
+			return line.TakeWhile(c => c == '\t').Count();
+		}
+
 		if (GetIndent(checkLines[^1]) != GetIndent(checkLines[^2]))
 			return;
 		var prevAssignmentIndex = checkLines[^2].IndexOf(" = ", StringComparison.Ordinal);
