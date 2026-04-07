@@ -177,6 +177,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	private const double ListId = -7.81590825e307;
 	private const double DictionaryId = -7.719027815e307;
 	private const double TypeId = -7.657178621e307;
+	private const double FlatNumericId = -7.595329427e307;
 
 	public ValueInstance(Type booleanReturnType, bool isTrue)
 	{
@@ -189,10 +190,33 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			LogCreated("ctor(Type=" + booleanReturnType + ", number=" + isTrue + ")");
 	}
 
-	public ValueInstance(Type numberReturnType, double setNumber)
+	/// <summary>
+	/// Creates a flat numeric type where all members are backed by a float[] without
+	/// creating individual ValueInstances for each member. Use this instead of
+	/// new ValueInstance(type, ValueInstance[]) when the type is all-numeric.
+	/// </summary>
+	public static ValueInstance CreateFlatNumericType(Type type, float[] numbers)
+	{
+		var backing = ValueArrayInstance.CreateForTypeBacking(type, numbers);
+		return new ValueInstance(backing, isFlatNumericType: true);
+	}
+
+	internal ValueInstance(ValueArrayInstance backing, bool isFlatNumericType)
 	{
 		TrackCreation();
-		if (setNumber is TextId or ListId or DictionaryId or TypeId)
+		value = backing;
+		number = isFlatNumericType
+			? FlatNumericId
+			: ListId;
+		if (PerformanceLog.IsEnabled)
+			LogCreated("ctor(" + (isFlatNumericType
+				? "FlatNumericType"
+				: "List") + "=" + backing.ReturnType + ")");
+	}
+
+	public ValueInstance(Type numberReturnType, double setNumber)
+	{
+		if (setNumber is TextId or ListId or DictionaryId or TypeId or FlatNumericId)
 			throw new InvalidTypeValue(numberReturnType, setNumber);
 		value = numberReturnType;
 		number = setNumber;
@@ -206,13 +230,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			null => "null",
 			Expression => "Expression " + value + " needs to be evaluated!",
 			double valueDouble => valueDouble switch
-			{
-				TextId => "IsText",
-				ListId => "IsList",
-				DictionaryId => "IsDictionary",
-				TypeId => "IsType",
-				_ => value + ""
-			},
+				{
+					TextId => "IsText",
+					ListId => "IsList",
+					DictionaryId => "IsDictionary",
+					TypeId => "IsType",
+					FlatNumericId => "IsFlatNumeric",
+					_ => value + ""
+				},
 			_ => value + ""
 		} + " (" + value?.GetType() + ") for " + returnType.Name);
 
@@ -257,6 +282,18 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
 			return;
 		}
+		if (ValueArrayInstance.IsAllNumericType(returnType))
+		{
+			var flatNumbers = new float[values.Length];
+			for (var flatIndex = 0; flatIndex < values.Length; flatIndex++)
+				flatNumbers[flatIndex] = (float)values[flatIndex].Number;
+			value = ValueArrayInstance.CreateForTypeBacking(returnType, flatNumbers);
+			number = FlatNumericId;
+			if (PerformanceLog.IsEnabled)
+				LogCreated("ctor(FlatNumeric=" + returnType + ", values=" +
+					DescribeValues(values) + ")");
+			return;
+		}
 		value = new ValueTypeInstance(returnType, values);
 		number = TypeId;
 		if (PerformanceLog.IsEnabled)
@@ -271,6 +308,18 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (!returnType.IsList)
 			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
 		return new ValueInstance(ValueArrayInstance.CreateWithCapacity(returnType, listCapacity));
+	}
+
+	/// <summary>
+	/// Creates a flat numeric list from a pre-built float[] without creating individual
+	/// ValueInstances for each element. Element access returns slices of the same backing array.
+	/// </summary>
+	public static ValueInstance CreateFlatNumericList(Type listType, Type elementType,
+		float[] flatNumbers, int elementWidth)
+	{
+		var backing = ValueArrayInstance.CreateFlatList(listType, elementType, flatNumbers,
+			elementWidth);
+		return new ValueInstance(backing);
 	}
 
 	public ValueInstance(Type returnType, ValueInstance repeatedItem, int count)
@@ -371,6 +420,22 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				number = TypeId;
 			}
 			break;
+		case FlatNumericId:
+			var existingFlatArray = (ValueArrayInstance)existingInstance.value;
+			if (ValueArrayInstance.IsAllNumericType(newType))
+			{
+				var clonedNumbers = new float[existingFlatArray.FlatWidth];
+				for (var flatIndex = 0; flatIndex < existingFlatArray.FlatWidth; flatIndex++)
+					clonedNumbers[flatIndex] = existingFlatArray.GetFlat(flatIndex);
+				value = ValueArrayInstance.CreateForTypeBacking(newType, clonedNumbers);
+				number = FlatNumericId;
+			}
+			else
+			{
+				value = new ValueTypeInstance(newType, existingFlatArray.MaterializeAsType().Values);
+				number = TypeId;
+			}
+			break;
 		default:
 			value = newType;
 			number = existingInstance.number;
@@ -392,6 +457,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 					ListId => type == ((ValueArrayInstance)value).ReturnType,
 					DictionaryId => type == ((ValueDictionaryInstance)value).ReturnType,
 					TypeId => type == ((ValueTypeInstance)value).ReturnType,
+					FlatNumericId => type == ((ValueArrayInstance)value).ReturnType,
 					_ => IsPrimitiveType(type)
 				};
 
@@ -413,6 +479,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	{
 		if (IsPackedRgba)
 			return UnpackRgba(number, 0);
+		if (number == FlatNumericId)
+			return ((ValueArrayInstance)value).GetFlat(0);
 		if (number != TypeId)
 			return number;
 		var typeInstance = (ValueTypeInstance)value;
@@ -434,6 +502,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				DictionaryId =>
 					((ValueDictionaryInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 				TypeId => ((ValueTypeInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
+				FlatNumericId =>
+					((ValueArrayInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
 				_ => ((Type)value).IsSameOrCanBeUsedAs(otherType)
 			};
 
@@ -445,7 +515,24 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			? MaterializePackedRgba()
 			: number == TypeId
 				? (ValueTypeInstance)value
-				: null;
+				: number == FlatNumericId
+					? ((ValueArrayInstance)value).MaterializeAsType()
+					: null;
+
+	public bool IsFlatNumeric => number is FlatNumericId;
+
+	public ValueArrayInstance? TryGetFlatNumericArrayInstance() =>
+		number == FlatNumericId
+			? (ValueArrayInstance)value
+			: null;
+
+	public bool TryGetFlatNumericMember(string memberName, out ValueInstance memberValue)
+	{
+		if (number == FlatNumericId)
+			return ((ValueArrayInstance)value).TryGetMember(memberName, out memberValue);
+		memberValue = default;
+		return false;
+	}
 
 	/// <summary>
 	/// Special code to make the ValueInstance mutable if the method return type requires it (rare)
@@ -475,6 +562,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				ListId => ((ValueArrayInstance)value).ReturnType,
 				DictionaryId => ((ValueDictionaryInstance)value).ReturnType,
 				TypeId => ((ValueTypeInstance)value).ReturnType,
+				FlatNumericId => ((ValueArrayInstance)value).ReturnType,
 				_ => (Type)value
 			};
 
@@ -556,12 +644,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				ListId => ((ValueArrayInstance)value).ReturnType.IsMutable,
 				DictionaryId => ((ValueDictionaryInstance)value).ReturnType.IsMutable,
 				TypeId => ((ValueTypeInstance)value).ReturnType.IsMutable,
+				FlatNumericId => ((ValueArrayInstance)value).ReturnType.IsMutable,
 				_ => ((Type)value).IsMutable
 			};
 	public bool IsError =>
 		IsPackedRgba
 			? RgbaType.ReturnType.IsError
-			: number == TypeId && ((ValueTypeInstance)value).ReturnType.IsError;
+			: number is TypeId && ((ValueTypeInstance)value).ReturnType.IsError ||
+				number is FlatNumericId && ((ValueArrayInstance)value).ReturnType.IsError;
 	public override string ToString() => GetTypeName() + ": " + ToExpressionCodeString(true);
 
 	private string GetTypeName() =>
@@ -573,6 +663,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				ListId => ((ValueArrayInstance)value).ReturnType.Name,
 				DictionaryId => ((ValueDictionaryInstance)value).ReturnType.Name,
 				TypeId => ((ValueTypeInstance)value).ReturnType.Name,
+				FlatNumericId => ((ValueArrayInstance)value).ReturnType.Name,
 				_ => ((Type)value).Name
 			};
 
@@ -588,6 +679,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				ListId => BuildListString((ValueArrayInstance)value, escapeText),
 				DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
 				TypeId => ((ValueTypeInstance)value).ToAutomaticText(),
+				FlatNumericId => ((ValueArrayInstance)value).MaterializeAsType().ToAutomaticText(),
 				_ => GetPrimitiveCodeString((Type)value)
 			};
 		if (PerformanceLog.IsEnabled)
@@ -626,6 +718,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 					((ValueDictionaryInstance)instance.value).Items.Count + ")",
 				TypeId => "TypeInstance(type=" + ((ValueTypeInstance)instance.value).ReturnType.Name +
 					", members=" + ((ValueTypeInstance)instance.value).Values.Length + ")",
+				FlatNumericId => "FlatNumeric(type=" +
+					((ValueArrayInstance)instance.value).ReturnType.Name + ", width=" +
+					((ValueArrayInstance)instance.value).FlatWidth + ")",
 				_ => ((Type)instance.value).IsBoolean
 					? "Boolean(" + (instance.number != 0) + ")"
 					: ((Type)instance.value).IsNumber
@@ -766,6 +861,28 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (other.IsPackedRgba)
 			return other.Equals(this);
 		ComplexEqualsCalls++;
+		if (number == FlatNumericId)
+		{
+			var flatArray = (ValueArrayInstance)value;
+			if (other.number == FlatNumericId)
+			{
+				var otherFlatArray = (ValueArrayInstance)other.value;
+				if (!flatArray.ReturnType.IsSameOrCanBeUsedAs(otherFlatArray.ReturnType) ||
+					flatArray.FlatWidth != otherFlatArray.FlatWidth)
+					return false;
+				for (var flatIndex = 0; flatIndex < flatArray.FlatWidth; flatIndex++)
+					if (flatArray.GetFlat(flatIndex) != otherFlatArray.GetFlat(flatIndex))
+						return false;
+				return true;
+			}
+			if (other.number != ListId && other.number != DictionaryId && other.number != TextId &&
+				flatArray.TryGetMember("number", out var flatNumberMember) &&
+				flatNumberMember.number == other.number)
+				return true;
+			return flatArray.MaterializeAsType().Equals(other.TryGetValueTypeInstance());
+		}
+		if (other.number == FlatNumericId)
+			return other.Equals(this);
 		if (number == TypeId)
 		{
 			var instance = (ValueTypeInstance)value;

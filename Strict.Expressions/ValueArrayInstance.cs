@@ -1,13 +1,17 @@
+using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
 public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 {
+	private static readonly ConditionalWeakTable<Type, Dictionary<string, int>> MemberIndexes =
+		new();
 	private List<ValueInstance>? items;
 	private float[]? flatNumbers;
 	private Type? flatElementType;
 	private int flatElementWidth;
+	private int offset;
 	private const string FlatNumbersFieldName = "flatNumbers";
 	private const int MinimumCapacity = 4;
 	private const int LargeGrowthChunk = 8192;
@@ -40,6 +44,107 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		this.flatElementWidth = flatElementWidth;
 	}
 
+	private ValueArrayInstance(Type returnType, float[] flatNumbers, Type flatElementType,
+		int flatElementWidth, int offset)
+	{
+		ReturnType = returnType;
+		this.flatNumbers = flatNumbers;
+		this.flatElementType = flatElementType;
+		this.flatElementWidth = flatElementWidth;
+		this.offset = offset;
+	}
+
+	/// <summary>
+	/// Creates a flat numeric backing for a type where all members are numbers.
+	/// No individual ValueInstances are created for each member.
+	/// </summary>
+	public static ValueArrayInstance CreateForTypeBacking(Type type, float[] numbers) =>
+		new(type, numbers, type, numbers.Length, 0);
+
+	public static ValueArrayInstance CreateForTypeBacking(Type type, float[] parentNumbers,
+		int offset, int width) =>
+		new(type, parentNumbers, type, width, offset);
+
+	/// <summary>
+	/// Returns true when all non-constant members of the type are numeric.
+	/// </summary>
+	public static bool IsAllNumericType(Type type)
+	{
+		if (type.Members.Count == 0)
+			return false;
+		for (var memberIndex = 0; memberIndex < type.Members.Count; memberIndex++)
+			if (!type.Members[memberIndex].IsConstant && !type.Members[memberIndex].Type.IsNumber)
+				return false;
+		return true;
+	}
+
+	public bool TryGetMember(string name, out ValueInstance memberValue)
+	{
+		if (flatNumbers == null || flatElementType == null)
+		{
+			memberValue = default;
+			return false;
+		}
+		var memberIndex = GetMemberIndex(name);
+		if (memberIndex < 0 || memberIndex >= flatElementWidth)
+		{
+			memberValue = default;
+			return false;
+		}
+		memberValue = new ValueInstance(flatElementType.Members[memberIndex].Type,
+			flatNumbers[offset + memberIndex]);
+		return true;
+	}
+
+	public bool TrySetMember(string name, ValueInstance memberValue)
+	{
+		if (flatNumbers == null || flatElementType == null)
+			return false;
+		var memberIndex = GetMemberIndex(name);
+		if (memberIndex < 0 || memberIndex >= flatElementWidth)
+			return false;
+		flatNumbers[offset + memberIndex] = (float)memberValue.Number;
+		return true;
+	}
+
+	private int GetMemberIndex(string name)
+	{
+		var indexes = MemberIndexes.GetValue(flatElementType!, CreateMemberIndexes);
+		return indexes.TryGetValue(name, out var index)
+			? index
+			: -1;
+	}
+
+	private static Dictionary<string, int> CreateMemberIndexes(Type type)
+	{
+		var members = type.Members;
+		var indexes = new Dictionary<string, int>(members.Count,
+			StringComparer.OrdinalIgnoreCase);
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			if (!members[memberIndex].IsConstant && members[memberIndex].Type.IsNumber)
+				indexes.TryAdd(members[memberIndex].Name, memberIndex);
+		return indexes;
+	}
+
+	public float GetFlat(int index) => flatNumbers![offset + index];
+
+	public void SetFlat(int index, float flatValue) => flatNumbers![offset + index] = flatValue;
+
+	public int FlatWidth => flatElementWidth;
+
+	/// <summary>
+	/// Materializes a type-backing ValueArrayInstance into a ValueTypeInstance with individual
+	/// member ValueInstances. Used when legacy code needs a ValueTypeInstance representation.
+	/// </summary>
+	public ValueTypeInstance MaterializeAsType()
+	{
+		var values = new ValueInstance[flatElementWidth];
+		for (var memberIndex = 0; memberIndex < flatElementWidth; memberIndex++)
+			values[memberIndex] = new ValueInstance(flatElementType!.Members[memberIndex].Type,
+				flatNumbers![offset + memberIndex]);
+		return new ValueTypeInstance(flatElementType!, values);
+	}
+
 	public readonly Type ReturnType;
 	public List<ValueInstance> Items => items ??= MaterializeItems();
 	public int Count => items?.Count ?? (flatNumbers?.Length ?? 0) / flatElementWidth;
@@ -53,6 +158,14 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		instance.items = new List<ValueInstance>(Math.Max(capacity, MinimumCapacity));
 		return instance;
 	}
+
+	/// <summary>
+	/// Creates a flat-backed list from a pre-built float[] without creating individual
+	/// ValueInstances. Element access returns slices sharing the same backing array.
+	/// </summary>
+	public static ValueArrayInstance CreateFlatList(Type listType, Type elementType,
+		float[] flatNumbers, int elementWidth) =>
+		new(listType, flatNumbers, elementType, elementWidth, 0);
 
 	public void Add(ValueInstance item)
 	{
@@ -158,6 +271,13 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			target[offset] = (float)item.Number;
 			return true;
 		}
+		if (item.IsFlatNumeric)
+		{
+			var arrayBacking = item.TryGetFlatNumericArrayInstance()!;
+			for (var memberIndex = 0; memberIndex < elementWidth; memberIndex++)
+				target[offset + memberIndex] = arrayBacking.GetFlat(memberIndex);
+			return true;
+		}
 		if (item.TryGetPackedRgbaChannels(out var red, out var green, out var blue, out var alpha) &&
 			elementWidth == 4)
 		{
@@ -200,16 +320,19 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	{
 		if (flatNumbers == null || flatElementType == null)
 			throw new InvalidOperationException(FlatNumbersFieldName + " not initialized");
-		var offset = index * flatElementWidth;
+		var elementOffset = this.offset + index * flatElementWidth;
 		if (flatElementWidth == 1)
-			return new ValueInstance(flatElementType, flatNumbers[offset]);
-		if (flatElementWidth == 4 && CanCreateRgba(flatElementType))
-			return ValueInstance.CreateRgba(flatElementType, flatNumbers[offset],
-				flatNumbers[offset + 1], flatNumbers[offset + 2], flatNumbers[offset + 3]);
+			return new ValueInstance(flatElementType, flatNumbers[elementOffset]);
+		if (IsAllNumericType(flatElementType))
+		{
+			var slice = CreateForTypeBacking(flatElementType, flatNumbers,
+				elementOffset, flatElementWidth);
+			return new ValueInstance(slice, isFlatNumericType: true);
+		}
 		var values = new ValueInstance[flatElementWidth];
 		for (var memberIndex = 0; memberIndex < flatElementWidth; memberIndex++)
 			values[memberIndex] = new ValueInstance(flatElementType.Members[memberIndex].Type,
-				flatNumbers[offset + memberIndex]);
+				flatNumbers[elementOffset + memberIndex]);
 		return new ValueInstance(flatElementType, values);
 	}
 
@@ -218,7 +341,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		if (flatNumbers == null || flatElementType == null)
 			return false;
 		return TryCopyItemNumbers(value, flatElementType, flatElementWidth, flatNumbers,
-			index * flatElementWidth);
+			this.offset + index * flatElementWidth);
 	}
 
 	private static bool CanCreateRgba(Type elementType) =>

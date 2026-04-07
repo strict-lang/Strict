@@ -284,13 +284,20 @@ public sealed class RunnerTests
 		var strictBasePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		var runner = new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
 			strictBasePackage);
-		GC.Collect();
-		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
-		await runner.Run();
-		var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
-		const int Width = 128;
-		const int Height = 72;
-		Assert.That(allocatedAfter - allocatedBefore, Is.LessThan(Width * Height * 4 * 4 + 50_000));
+		ValueInstance.SetCreationLimit(11);
+		try
+		{
+			var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+			await runner.Run();
+			var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
+			const int Width = 128;
+			const int Height = 72;
+			Assert.That(allocatedAfter - allocatedBefore, Is.LessThan(Width * Height * 4 * 4 + 50_000));
+		}
+		finally
+		{
+			ValueInstance.SetCreationLimit(int.MaxValue);
+		}
 	}
 
 	[Test]
@@ -304,23 +311,6 @@ public sealed class RunnerTests
 		{
 			Assert.That(async () => await runner.Run(),
 				Throws.TypeOf<ValueInstance.CreationLimitExceeded>());
-		}
-		finally
-		{
-			ValueInstance.SetCreationLimit(int.MaxValue);
-		}
-	}
-
-	[Test]
-	public async Task RunAdjustBrightnessStaysBelowFortyFiveThousandValueInstanceCreations()
-	{
-		var strictBasePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var runner = new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
-			strictBasePackage);
-		ValueInstance.SetCreationLimit(45_000);
-		try
-		{
-			Assert.That(async () => await runner.Run(), Throws.Nothing);
 		}
 		finally
 		{

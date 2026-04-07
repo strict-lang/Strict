@@ -668,6 +668,18 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			Memory.Frame.Set("characters", instance, isMember: true);
 			return;
 		}
+		var flatNumeric = instance.TryGetFlatNumericArrayInstance();
+		if (flatNumeric != null)
+		{
+			var flatMembers = flatNumeric.ReturnType.Members;
+			for (var memberIndex = 0; memberIndex < flatMembers.Count &&
+				memberIndex < flatNumeric.FlatWidth; memberIndex++)
+				if (!flatMembers[memberIndex].Type.IsTrait)
+					Memory.Frame.Set(flatMembers[memberIndex].Name,
+						new ValueInstance(flatMembers[memberIndex].Type, flatNumeric.GetFlat(memberIndex)),
+						isMember: true);
+			return;
+		}
 		var typeInstance = instance.TryGetValueTypeInstance();
 		if (typeInstance != null && (TrySetScopeMembersFromTypeMembers(typeInstance) ||
 			TrySetScopeMembersFromBinaryMembers(typeInstance)))
@@ -1316,6 +1328,8 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			return lengthValue;
 		if (instanceValue.TryGetPackedRgbaMember(memberCall.Member.Name, out var packedMemberValue))
 			return packedMemberValue;
+		if (instanceValue.TryGetFlatNumericMember(memberCall.Member.Name, out var flatMemberValue))
+			return flatMemberValue;
 		var typeInstance = instanceValue.TryGetValueTypeInstance();
 		if (typeInstance != null &&
 			typeInstance.TryGetValue(memberCall.Member.Name, out var memberValue))
@@ -1431,12 +1445,26 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		try
 		{
 			if (evaluatedInstance.HasValue)
-			{
-				Memory.Frame.Set(Type.ValueLowercase, evaluatedInstance.Value, isMember: true);
-				var typeInstance = evaluatedInstance.Value.TryGetValueTypeInstance();
-				if (typeInstance != null)
-					TrySetScopeMembersFromTypeMembers(typeInstance);
-			}
+				{
+					Memory.Frame.Set(Type.ValueLowercase, evaluatedInstance.Value, isMember: true);
+					var flatNumericInstance = evaluatedInstance.Value.TryGetFlatNumericArrayInstance();
+					if (flatNumericInstance != null)
+					{
+						var flatMembers = flatNumericInstance.ReturnType.Members;
+						for (var memberIndex = 0; memberIndex < flatMembers.Count &&
+							memberIndex < flatNumericInstance.FlatWidth; memberIndex++)
+							if (!flatMembers[memberIndex].Type.IsTrait)
+								Memory.Frame.Set(flatMembers[memberIndex].Name,
+									new ValueInstance(flatMembers[memberIndex].Type,
+										flatNumericInstance.GetFlat(memberIndex)), isMember: true);
+					}
+					else
+					{
+						var typeInstance = evaluatedInstance.Value.TryGetValueTypeInstance();
+						if (typeInstance != null)
+							TrySetScopeMembersFromTypeMembers(typeInstance);
+					}
+				}
 			for (var paramIndex = 0;
 				paramIndex < call.Method.Parameters.Count && paramIndex < call.Arguments.Count;
 				paramIndex++)
@@ -1797,9 +1825,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		}
 		if (!accessPath.GetParentPath().TryResolve(this, out var parentValue))
 			throw new InvalidOperationException("Could not resolve parent for " + identifier);
+		var memberName = accessPath.MemberNames[^1];
+		var flatInstance = parentValue.TryGetFlatNumericArrayInstance();
+		if (flatInstance != null)
+		{
+			if (!flatInstance.TrySetMember(memberName, value))
+				throw new InvalidOperationException("Could not assign member " + identifier);
+			return;
+		}
 		if (parentValue.TryGetValueTypeInstance() is not { } typeInstance)
 			throw new InvalidOperationException("Cannot assign member on non-instance " + identifier);
-		var memberName = accessPath.MemberNames[^1];
 		if (!TrySetTypeMemberValue(typeInstance, memberName, value))
 			throw new InvalidOperationException("Could not assign member " + identifier);
 	}
@@ -2001,6 +2036,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				if (nativeMemberValue.HasValue)
 				{
 					current = nativeMemberValue;
+					continue;
+				}
+				if (current.TryGetFlatNumericMember(memberName, out var flatMember))
+				{
+					current = flatMember;
 					continue;
 				}
 				var typeInstance = current.TryGetValueTypeInstance();

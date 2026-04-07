@@ -354,4 +354,80 @@ public sealed class ValueInstanceTests
 		var typeInstance = new ValueInstance(t, [new ValueInstance(numberType, 42)]);
 		Assert.That(new ValueInstance(numberType, 42), Is.EqualTo(typeInstance));
 	}
+
+	[Test]
+	public void SizeTypeUsesFlatFloatArrayBacking()
+	{
+		using var sizeType = new Type(TestPackage.Instance,
+				new TypeLines("FlatSize", "has Width Number", "has Height Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var size = ValueInstance.CreateFlatNumericType(sizeType, [128f, 72f]);
+		var valueField = typeof(ValueInstance).GetField("value",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		Assert.That(valueField.GetValue(size), Is.InstanceOf<ValueArrayInstance>());
+		Assert.That(size.GetType(), Is.EqualTo(sizeType));
+		Assert.That(size.TryGetFlatNumericMember("Width", out var width), Is.True);
+		Assert.That(width.Number, Is.EqualTo(128));
+		Assert.That(size.TryGetFlatNumericMember("Height", out var height), Is.True);
+		Assert.That(height.Number, Is.EqualTo(72));
+	}
+
+	[Test]
+	public void ColorTypeUsesFlatFloatArrayBacking()
+	{
+		using var colorType = new Type(TestPackage.Instance,
+				new TypeLines("FlatColor", "has Hue Number", "has Saturation Number",
+					"has Lightness Number", "has Opacity Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var color = ValueInstance.CreateFlatNumericType(colorType,
+			[0.5f, 0.75f, 0.25f, 1f]);
+		var valueField = typeof(ValueInstance).GetField("value",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		Assert.That(valueField.GetValue(color), Is.InstanceOf<ValueArrayInstance>());
+		Assert.That(color.TryGetFlatNumericMember("Hue", out var hue), Is.True);
+		Assert.That(hue.Number, Is.EqualTo(0.5).Within(0.001));
+		Assert.That(color.TryGetFlatNumericMember("Saturation", out var saturation), Is.True);
+		Assert.That(saturation.Number, Is.EqualTo(0.75).Within(0.001));
+		Assert.That(color.TryGetFlatNumericMember("Lightness", out var lightness), Is.True);
+		Assert.That(lightness.Number, Is.EqualTo(0.25).Within(0.001));
+		Assert.That(color.TryGetFlatNumericMember("Opacity", out var opacity), Is.True);
+		Assert.That(opacity.Number, Is.EqualTo(1).Within(0.001));
+	}
+
+	[Test]
+	public void ListOfColorsUsesSharedFlatBackingArray()
+	{
+		using var colorType = new Type(TestPackage.Instance,
+				new TypeLines("FlatColor2", "has Hue Number", "has Saturation Number",
+					"has Lightness Number", "has Opacity Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var listType = TestPackage.Instance.GetListImplementationType(colorType);
+		var flatNumbers = new float[40];
+		for (var colorIndex = 0; colorIndex < 10; colorIndex++)
+		{
+			flatNumbers[colorIndex * 4] = colorIndex * 0.1f;
+			flatNumbers[colorIndex * 4 + 1] = colorIndex * 0.05f;
+			flatNumbers[colorIndex * 4 + 2] = colorIndex * 0.02f;
+			flatNumbers[colorIndex * 4 + 3] = 1f;
+		}
+		var list = ValueInstance.CreateFlatNumericList(listType, colorType, flatNumbers, 4);
+		var flatNumbersField = typeof(ValueArrayInstance).GetField("flatNumbers",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		var backingArray = (float[]?)flatNumbersField.GetValue(list.List);
+		Assert.That(backingArray, Is.Not.Null);
+		Assert.That(backingArray!.Length, Is.EqualTo(40));
+		var element5 = list.List[5];
+		Assert.That(element5.IsFlatNumeric, Is.True);
+		Assert.That(element5.TryGetFlatNumericMember("Hue", out var hue5), Is.True);
+		Assert.That(hue5.Number, Is.EqualTo(0.5).Within(0.01));
+		Assert.That(element5.TryGetFlatNumericMember("Opacity", out var opacity5), Is.True);
+		Assert.That(opacity5.Number, Is.EqualTo(1).Within(0.001));
+		var valueField = typeof(ValueInstance).GetField("value",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		var elementBacking = (ValueArrayInstance)valueField.GetValue(element5)!;
+		var elementBackingNumbers = typeof(ValueArrayInstance).GetField("flatNumbers",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		Assert.That(elementBackingNumbers.GetValue(elementBacking),
+			Is.SameAs(backingArray), "Slice should reference same backing array");
+	}
 }

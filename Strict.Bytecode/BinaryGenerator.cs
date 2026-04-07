@@ -254,6 +254,7 @@ public sealed class BinaryGenerator
 	{
 		var resultVariable = $"forResult{forResultId++}";
 		var listType = GetListType(forExpression.Body.ReturnType);
+		//TODO: why does this create a new ValueInstance, no good, especially the array version!
 		instructions.Add(new StoreVariableInstruction(new ValueInstance(listType,
 			Array.Empty<ValueInstance>()), resultVariable));
 		GenerateLoopInstructions(forExpression, resultVariable, LoopAggregation.List);
