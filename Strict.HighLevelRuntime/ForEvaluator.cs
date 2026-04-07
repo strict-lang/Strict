@@ -107,11 +107,13 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		var indexInstance = new ValueInstance(interpreter.numberType, index);
 		loop.Variables[Type.IndexLowercase] = indexInstance;
 		loop.Variables[Type.OuterLowercase] = ctx.Get(Type.ValueLowercase, interpreter.Statistics);
-		var value = iterator.IsPrimitiveType(interpreter.numberType) || isRangeIterator
+		var isNumberOnlyIteration = iterator.IsPrimitiveType(interpreter.numberType) || isRangeIterator;
+		var iterationValue = isNumberOnlyIteration
 			? indexInstance
 			: iterator.GetIteratorValue(itemType, index);
-		loop.Variables[Type.ValueLowercase] = value;
-		AssignCustomVariables(f, ctx, loop, value);
+		if (!isNumberOnlyIteration)
+			loop.Variables[Type.ValueLowercase] = iterationValue;
+		AssignCustomVariables(f, ctx, loop, iterationValue);
 		var itemResult = bodyAsBody != null
 			? EvaluateBody(bodyAsBody, loop)
 			: interpreter.RunExpression(f.Body, loop);

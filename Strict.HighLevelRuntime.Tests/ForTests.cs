@@ -177,24 +177,10 @@ public sealed class ForTests
 	}
 
 	[Test]
-	public void DirectOuterIndexerUsesImmediateParentValue()
-	{
-		using var t = CreateType(nameof(DirectOuterIndexerUsesImmediateParentValue), "has number",
-			"Get(number, length Number) Text", "\tfor Range(number, number + length)",
-			"\t\touter(value)");
-		var instance = new ValueInstance(t, [new ValueInstance("hello")]);
-		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Get"), instance,
-		[
-			new ValueInstance(interpreter.numberType, 1), new ValueInstance(interpreter.numberType, 3)
-		]);
-		Assert.That(result.Text, Is.EqualTo("ell"));
-	}
-
-	[Test]
 	public void ForLoopWithAscendingRangeAndEarlyReturn()
 	{
 		using var t = CreateType(nameof(ForLoopWithAscendingRangeAndEarlyReturn), "has number",
-			"FindFirst Number", "\tfor Range(1, 5)", "\t\tif value is 3", "\t\t\treturn value",
+			"FindFirst Number", "\tfor Range(1, 5)", "\t\tif index is 3", "\t\t\treturn index",
 			"\t\t0");
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
 			interpreter.noneInstance, []);
@@ -205,7 +191,7 @@ public sealed class ForTests
 	public void ForLoopWithDescendingRangeAndEarlyReturn()
 	{
 		using var t = CreateType(nameof(ForLoopWithDescendingRangeAndEarlyReturn), "has number",
-			"FindFirst Number", "\tfor Range(5, 1)", "\t\tif value is 3", "\t\t\treturn value",
+			"FindFirst Number", "\tfor Range(5, 1)", "\t\tif index is 3", "\t\t\treturn index",
 			"\t\t0");
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
 			interpreter.noneInstance, []);

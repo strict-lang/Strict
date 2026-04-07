@@ -5,8 +5,7 @@ namespace Strict.Expressions;
 
 public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 {
-	private static readonly ConditionalWeakTable<Type, Dictionary<string, int>> MemberIndexes =
-		new();
+	private static readonly ConditionalWeakTable<Type, Dictionary<string, int>> MemberIndexes = new();
 	private List<ValueInstance>? items;
 	private float[]? flatNumbers;
 	private Type? flatElementType;
@@ -127,9 +126,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	}
 
 	public float GetFlat(int index) => flatNumbers![offset + index];
-
 	public void SetFlat(int index, float flatValue) => flatNumbers![offset + index] = flatValue;
-
 	public int FlatWidth => flatElementWidth;
 
 	/// <summary>

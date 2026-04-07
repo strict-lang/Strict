@@ -1445,26 +1445,26 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		try
 		{
 			if (evaluatedInstance.HasValue)
+			{
+				Memory.Frame.Set(Type.ValueLowercase, evaluatedInstance.Value, isMember: true);
+				var flatNumericInstance = evaluatedInstance.Value.TryGetFlatNumericArrayInstance();
+				if (flatNumericInstance != null)
 				{
-					Memory.Frame.Set(Type.ValueLowercase, evaluatedInstance.Value, isMember: true);
-					var flatNumericInstance = evaluatedInstance.Value.TryGetFlatNumericArrayInstance();
-					if (flatNumericInstance != null)
-					{
-						var flatMembers = flatNumericInstance.ReturnType.Members;
-						for (var memberIndex = 0; memberIndex < flatMembers.Count &&
-							memberIndex < flatNumericInstance.FlatWidth; memberIndex++)
-							if (!flatMembers[memberIndex].Type.IsTrait)
-								Memory.Frame.Set(flatMembers[memberIndex].Name,
-									new ValueInstance(flatMembers[memberIndex].Type,
-										flatNumericInstance.GetFlat(memberIndex)), isMember: true);
-					}
-					else
-					{
-						var typeInstance = evaluatedInstance.Value.TryGetValueTypeInstance();
-						if (typeInstance != null)
-							TrySetScopeMembersFromTypeMembers(typeInstance);
-					}
+					var flatMembers = flatNumericInstance.ReturnType.Members;
+					for (var memberIndex = 0; memberIndex < flatMembers.Count &&
+						memberIndex < flatNumericInstance.FlatWidth; memberIndex++)
+						if (!flatMembers[memberIndex].Type.IsTrait)
+							Memory.Frame.Set(flatMembers[memberIndex].Name,
+								new ValueInstance(flatMembers[memberIndex].Type,
+									flatNumericInstance.GetFlat(memberIndex)), isMember: true);
 				}
+				else
+				{
+					var typeInstance = evaluatedInstance.Value.TryGetValueTypeInstance();
+					if (typeInstance != null)
+						TrySetScopeMembersFromTypeMembers(typeInstance);
+				}
+			}
 			for (var paramIndex = 0;
 				paramIndex < call.Method.Parameters.Count && paramIndex < call.Arguments.Count;
 				paramIndex++)

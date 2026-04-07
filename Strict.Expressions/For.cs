@@ -167,7 +167,10 @@ public sealed class For(Expression[] customVariables,
 			innerBody.FindVariable(Type.ValueLowercase) != null)
 			return;
 		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), true);
-		var iteratorYieldType = TryGetIteratorYieldType(body, GetForIteratorText(line));
+		var iteratorText = GetForIteratorText(line);
+		if (IsNumberOrRangeOnlyIteration(body, iteratorText))
+			return;
+		var iteratorYieldType = TryGetIteratorYieldType(body, iteratorText);
 		if (iteratorYieldType != null)
 		{
 			innerBody.AddVariable(Type.ValueLowercase,
@@ -187,6 +190,18 @@ public sealed class For(Expression[] customVariables,
 				: new ListCall(valueExpression, new Number(body.Method, 0));
 		}
 		innerBody.AddVariable(Type.ValueLowercase, valueExpression, true);
+	}
+
+	/// <summary>
+	/// Returns true when the for loop iterates over a plain number count or a Range,
+	/// meaning only <c>index</c> is auto-generated — no <c>value</c> variable is created.
+	/// </summary>
+	private static bool IsNumberOrRangeOnlyIteration(Body body, ReadOnlySpan<char> iteratorText)
+	{
+		var sourceType = GetIteratorSourceType(body, iteratorText);
+		if (sourceType != null)
+			return sourceType.IsNumber || sourceType.Name == Type.Range;
+		return !iteratorText.IsEmpty && (char.IsDigit(iteratorText[0]) || iteratorText[0] == '.');
 	}
 
 	private static Type? TryGetIteratorYieldType(Body body, ReadOnlySpan<char> iteratorText)
