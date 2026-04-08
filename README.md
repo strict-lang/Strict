@@ -77,7 +77,7 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 ## 3 · Strict.Validators
 * Flags impossible casts (`"abc" to Number`) and other static mistakes. These are validation errors same as parsing errors that need to be fixed before anything can continue.
 * Runs constant folding & simple propagation (e.g. `"5" to Number → 5`). This doesn't affect tests code, but for execution (any step after this) it still uses the folded expressions. Production is always folded and collapsed to the simplest form (in an IDE via a warning that needs to be fixed).
-* TODO: finds all duplicate code and removes it (reinventing the wheel over and over), e.g.
+* finds all duplicate code and removes it (reinventing the wheel over and over), e.g.
 	* Reimplementing GetElementsText like the example below will be replaced with existing code: Text.Combine
 	* This will affect ALL new code and make it much faster to write code, as you can just write the most straightforward code and Strict will figure out if there is already an existing implementation for it and replace it with that, which is also a great way to learn how to do things in Strict by just writing the most straightforward code and then looking at the optimized version of it.
 	* Implemented like ReSharper/Jetbrains warning issues: Since there is no warnings in Strict, everything is an error and thus this needs to be fixed before it can be used.

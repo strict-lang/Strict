@@ -172,7 +172,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		if (val.IsList)
 		{
 			writer.Write((byte)ValueKind.List);
-			writer.Write7BitEncodedInt(table[val.List.ReturnType.Name]);
+			writer.Write7BitEncodedInt(table[val.List.ReturnType.FullName]);
 			var items = val.List.Items;
 			writer.Write7BitEncodedInt(items.Count);
 			foreach (var item in items)
@@ -182,7 +182,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		if (val.IsDictionary)
 		{
 			writer.Write((byte)ValueKind.Dictionary);
-			writer.Write7BitEncodedInt(table[val.GetType().Name]);
+			writer.Write7BitEncodedInt(table[val.GetType().FullName]);
 			var items = val.GetDictionaryItems();
 			writer.Write7BitEncodedInt(items.Count);
 			foreach (var kvp in items)
@@ -254,7 +254,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		var items = new ValueInstance[count];
 		for (var index = 0; index < count; index++)
 			items[index] = ReadValueInstance(reader, table);
-		return new ValueInstance(basePackage.GetType(typeName), items);
+		return new ValueInstance(EnsureResolvedType(package, typeName), items);
 	}
 
 	private ValueInstance ReadDictionaryValueInstance(BinaryReader reader, NameTable table)
@@ -268,7 +268,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			var value = ReadValueInstance(reader, table);
 			items[key] = value;
 		}
-		return new ValueInstance(basePackage.GetType(typeName), items);
+		return new ValueInstance(EnsureResolvedType(package, typeName), items);
 	}
 
 	internal MethodCall ReadMethodCall(BinaryReader reader, NameTable table)
@@ -478,7 +478,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			break;
 		case Value val when val.Data.GetType().IsBoolean:
 			writer.Write((byte)ExpressionKind.BooleanValue);
-			writer.Write7BitEncodedInt(table[val.Data.GetType().Name]);
+			writer.Write7BitEncodedInt(table[val.Data.GetType().FullName]);
 			writer.Write(val.Data.Boolean);
 			break;
 		case Value val when val.Data.GetType().IsNumber:
@@ -503,7 +503,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		case MemberCall memberCall:
 			writer.Write((byte)ExpressionKind.MemberRef);
 			writer.Write7BitEncodedInt(table[memberCall.Member.Name]);
-			writer.Write7BitEncodedInt(table[memberCall.Member.Type.Name]);
+			writer.Write7BitEncodedInt(table[memberCall.Member.Type.FullName]);
 			writer.Write(memberCall.Instance != null);
 			if (memberCall.Instance != null)
 				// ReSharper disable TailRecursiveCall
@@ -517,7 +517,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			break;
 		case ListCall listCall:
 			writer.Write((byte)ExpressionKind.ListCallExpr);
-			writer.Write7BitEncodedInt(table[listCall.ReturnType.Name]);
+			writer.Write7BitEncodedInt(table[listCall.ReturnType.FullName]);
 			WriteExpression(writer, listCall.List, table);
 			WriteExpression(writer, listCall.Index, table);
 			writer.Write(listCall.SecondIndex != null);
@@ -526,7 +526,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			break;
 		case MethodCall methodCall:
 			writer.Write((byte)ExpressionKind.MethodCallExpr);
-			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.Method.Type.FullName]);
 			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
 			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
 			foreach (var parameter in methodCall.Method.Parameters)
@@ -534,7 +534,7 @@ public sealed class BinaryExecutable(Package basePackage)
 				writer.Write7BitEncodedInt(table[parameter.Name]);
 				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
 			}
-			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.ReturnType.FullName]);
 			writer.Write(methodCall.Instance != null);
 			if (methodCall.Instance != null)
 				WriteExpression(writer, methodCall.Instance, table);
@@ -545,7 +545,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		default:
 			writer.Write((byte)ExpressionKind.VariableRef);
 			writer.Write7BitEncodedInt(table[expr.ToString()]);
-			writer.Write7BitEncodedInt(table[expr.ReturnType.Name]);
+			writer.Write7BitEncodedInt(table[expr.ReturnType.FullName]);
 			break;
 		}
 	}
@@ -556,7 +556,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		writer.Write(methodCall != null);
 		if (methodCall != null)
 		{
-			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.Method.Type.FullName]);
 			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
 			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
 			foreach (var parameter in methodCall.Method.Parameters)
@@ -564,7 +564,7 @@ public sealed class BinaryExecutable(Package basePackage)
 				writer.Write7BitEncodedInt(table[parameter.Name]);
 				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
 			}
-			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.ReturnType.FullName]);
 			writer.Write(methodCall.Instance != null);
 			if (methodCall.Instance != null)
 				WriteExpression(writer, methodCall.Instance, table);

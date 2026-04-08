@@ -593,22 +593,16 @@ public sealed class VirtualMachineTests : TestBytecode
 		var repositories = new Repositories(parser);
 		using var strictPackage = await repositories.LoadStrictPackage();
 		using var mathPackage = await repositories.LoadStrictPackage("Strict/Math");
-		using var imageProcessingPackage = await repositories.LoadStrictPackage("Strict/ImageProcessing");
+		using var imageProcessingPackage =
+			await repositories.LoadStrictPackage("Strict/ImageProcessing");
 		using var testType = new Type(imageProcessingPackage,
-			new TypeLines(nameof(LoopOverSizeIteratesWidthTimesHeight),
-				"has number",
-				"Run Number",
-				"\tconstant width = 80",
-				"\tconstant height = 45",
-				"\tmutable image = ColorImage(Size(width, height))",
-				"\tfor image.Size",
-        "\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)",
-				"\tmutable count = 0",
-				"\tfor image.Size",
-				"\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",
-				"\t\t\tcount = count + 1",
-				"\tcount")).ParseMembersAndMethods(parser);
-		var runMethod = testType.Methods.Single(method => method.Name == Method.Run);
+			new TypeLines(nameof(LoopOverSizeIteratesWidthTimesHeight), "has number", "Run Number",
+				"\tconstant width = 80", "\tconstant height = 45",
+				"\tmutable image = ColorImage(Size(width, height))", "\tfor image.Size",
+				"\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)", "\tmutable count = 0",
+				"\tfor image.Size", "\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",
+				"\t\t\tcount = count + 1", "\tcount")).ParseMembersAndMethods(parser);
+		var runMethod = testType.Methods.Single(m => m.Name == Method.Run);
 		var executable = BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod]);
 		var result = new VirtualMachine(executable).Execute().Returns!.Value.Number;
 		Assert.That(result, Is.EqualTo(80 * 45));
@@ -769,6 +763,98 @@ public sealed class VirtualMachineTests : TestBytecode
 			"Calculate Number",
 			"\tFirst + Second")).Generate();
 		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(15));
+	}
+
+	[Test]
+	public void ExecuteLoadedBinaryPreservesNestedForLoopBehavior()
+	{
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ExecuteLoadedBinaryPreservesNestedForLoopBehavior),
+			$"{nameof(ExecuteLoadedBinaryPreservesNestedForLoopBehavior)}(3, 2).CountAll",
+			"has Width Number",
+			"has Height Number",
+			"CountAll Number",
+			"\tmutable total = Width - Width",
+			"\tfor Height",
+			"\t\tfor Width",
+			"\t\t\ttotal = total + 1",
+			"\ttotal")).Generate();
+		var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + BinaryExecutable.Extension);
+		try
+		{
+			binary.Serialize(filePath);
+			var loadedBinary = new BinaryExecutable(filePath, TestPackage.Instance);
+			Assert.That(new VirtualMachine(loadedBinary).Execute().Returns!.Value.Number, Is.EqualTo(6));
+		}
+		finally
+		{
+			if (File.Exists(filePath))
+				File.Delete(filePath);
+		}
+	}
+
+	[Test]
+	public void ExecuteLoadedBinaryPreservesNestedIteratorAggregation()
+	{
+		const string ProgramName = "NestedIteratorAggregation";
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource(
+			ProgramName,
+			$"{ProgramName}(3, 2).All",
+			"has Width Number",
+			"has Height Number",
+			"All Numbers",
+			"\tfor Height",
+			"\t\tfor Width",
+			"\t\t\tindex")).Generate();
+		var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + BinaryExecutable.Extension);
+		try
+		{
+			binary.Serialize(filePath);
+			var loadedBinary = new BinaryExecutable(filePath, TestPackage.Instance);
+			Assert.That(new VirtualMachine(loadedBinary).Execute().Returns!.Value.ToExpressionCodeString(),
+				Is.EqualTo("(0, 1, 2, 0, 1, 2)"));
+		}
+		finally
+		{
+			if (File.Exists(filePath))
+				File.Delete(filePath);
+		}
+	}
+
+	[Test]
+	public async Task ExecuteLoadedBinaryPreservesAdjustBrightnessColorComputation()
+	{
+		var repositories = new Repositories(new MethodExpressionParser());
+		using var basePackage = await repositories.LoadStrictPackage();
+		using var mathPackage = await repositories.LoadStrictPackage(nameof(Strict) +
+			Context.ParentSeparator + "Math");
+		using var imageProcessingPackage = await repositories.LoadStrictPackage(nameof(Strict) +
+			Context.ParentSeparator + "ImageProcessing");
+		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
+		var color = imageProcessingPackage.GetType("Color");
+		var zero = new Number(imageProcessingPackage, 0);
+		var brightness = new Number(imageProcessingPackage, 0.25);
+		var colorCall = new MethodCall(color.FindMethod(Method.From, [zero, zero, zero])!, null,
+			[zero, zero, zero]);
+		var adjustBrightnessCall = new MethodCall(
+			adjustBrightness.FindMethod(Method.From, [brightness])!, null, [brightness]);
+		var getBrightnessAdjustedColor = adjustBrightness.FindMethod(
+			"GetBrightnessAdjustedColor", [colorCall])!;
+		var methodCall = new MethodCall(getBrightnessAdjustedColor, adjustBrightnessCall, [colorCall]);
+		var binary = new BinaryGenerator(methodCall).Generate();
+		var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + BinaryExecutable.Extension);
+		try
+		{
+			binary.Serialize(filePath);
+			var loadedBinary = new BinaryExecutable(filePath, imageProcessingPackage);
+			Assert.That(new VirtualMachine(loadedBinary).Execute().Returns!.Value.ToExpressionCodeString(),
+				Is.EqualTo("(0.25, 0.25, 0.25)"));
+		}
+		finally
+		{
+			if (File.Exists(filePath))
+				File.Delete(filePath);
+		}
 	}
 
 	[Test]

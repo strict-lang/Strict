@@ -140,14 +140,14 @@ public sealed class NameTable
 			return Add(val.Text);
 		if (val.IsList)
 		{
-			Add(val.List.ReturnType.Name);
+			Add(val.List.ReturnType.FullName);
 			foreach (var item in val.List.Items)
 				CollectValueInstanceStrings(item);
 			return this;
 		}
 		if (val.IsDictionary)
 		{
-			Add(val.GetType().Name);
+			Add(val.GetType().FullName);
 			foreach (var kvp in val.GetDictionaryItems())
 			{
 				CollectValueInstanceStrings(kvp.Key);
@@ -159,14 +159,14 @@ public sealed class NameTable
 		if ((type.IsNone || type.IsBoolean || type.IsNumber || type.IsCharacter) &&
 			BinaryExecutable.IsIntegerNumber(val.Number))
 			return this;
-		return Add(type.Name);
+		return Add(type.FullName);
 	}
 
 	private NameTable CollectMethodCallStrings(MethodCall mc)
 	{
-		Add(mc.Method.Type.Name);
+		Add(mc.Method.Type.FullName);
 		Add(mc.Method.Name);
-		Add(mc.ReturnType.Name);
+		Add(mc.ReturnType.FullName);
 		foreach (var parameter in mc.Method.Parameters)
 			Add(parameter.Name).Add(parameter.Type.FullName);
 		if (mc.Instance != null)
@@ -186,14 +186,14 @@ public sealed class NameTable
 			Value val when !val.Data.GetType().IsNumber ||
 				!BinaryExecutable.IsIntegerNumber(val.Data.Number) => Add(val.Data.GetType().Name),
 			//TODO: need tests!
-			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
+			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.FullName).
 				CollectExpressionStrings(memberCall.Instance),
 			Binary binary => Add(binary.Method.Name).CollectExpressionStrings(binary.Instance).
 				CollectExpressionStrings(binary.Arguments[0]),
 			MethodCall mc => CollectMethodCallStrings(mc),
-			ListCall listCall => Add(listCall.ReturnType.Name).CollectExpressionStrings(listCall.List).
+			ListCall listCall => Add(listCall.ReturnType.FullName).CollectExpressionStrings(listCall.List).
 				CollectExpressionStrings(listCall.Index),
-			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
+			_ => Add(expr.ToString()).Add(expr.ReturnType.FullName)
 		};
 
 	//TODO: never called, even needed?

@@ -4,6 +4,7 @@ using Strict.Bytecode;
 using Strict.Compiler;
 using Strict.Compiler.Assembly;
 using System.Globalization;
+using System.IO.Compression;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Optimizers;
@@ -109,6 +110,14 @@ public sealed class Runner
 		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
 		if (File.Exists(cachedBinaryPath))
 		{
+			var binaryLastModified = new FileInfo(cachedBinaryPath).LastWriteTimeUtc;
+			var sourceLastModified = GetLatestSourceModification(cachedBinaryPath, basePackage);
+			if (binaryLastModified < sourceLastModified)
+			{
+				Log("Cached " + cachedBinaryPath + " is outdated from " + binaryLastModified +
+					", source modified at " + sourceLastModified + ". Will regenerate now ..");
+				return await LoadFromSourceAndSaveBinary(basePackage);
+			}
 			//TODO: convoluted! fix and remove this mess
 			BinaryExecutable binary;
 			try
@@ -116,19 +125,12 @@ public sealed class Runner
 				binary = new BinaryExecutable(cachedBinaryPath, basePackage);
 			}
 			catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile
-				or EndOfStreamException)
+				or BinaryExecutable.TypeNotFoundForBytecode or ParsingFailed
+				or Type.TypeAlreadyExistsInPackage
+				or Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers or EndOfStreamException)
 			{
 				Log("Cached " + cachedBinaryPath + " is no longer compatible: " + ex.Message);
 				return await LoadFromSourceAndSaveBinary(basePackage);
-			}
-			var binaryLastModified = new FileInfo(cachedBinaryPath).LastWriteTimeUtc;
-			var sourceLastModified = new FileInfo(strictFilePath).LastWriteTimeUtc;
-			foreach (var typeFullName in binary.MethodsPerType.Keys)
-			{
-				var fileLastModified =
-					new FileInfo(typeFullName + Type.Extension).LastWriteTimeUtc;
-				if (fileLastModified > sourceLastModified)
-					sourceLastModified = fileLastModified;
 			}
 			if (binaryLastModified >= sourceLastModified)
 			{
@@ -141,6 +143,54 @@ public sealed class Runner
 		}
 #endif
 		return await LoadFromSourceAndSaveBinary(basePackage);
+	}
+
+	private DateTime GetLatestSourceModification(string cachedBinaryPath, Package basePackage)
+	{
+		var latestSourceModification = new FileInfo(strictFilePath).LastWriteTimeUtc;
+		using var archive = ZipFile.OpenRead(cachedBinaryPath);
+		foreach (var entry in archive.Entries)
+		{
+			if (!entry.FullName.EndsWith(BinaryType.BytecodeEntryExtension,
+				StringComparison.OrdinalIgnoreCase))
+				continue;
+			var sourceFilePath = TryGetSourceFilePath(basePackage,
+				GetEntryNameWithoutExtension(entry.FullName));
+			if (sourceFilePath == null)
+				continue;
+			var fileLastModified = new FileInfo(sourceFilePath).LastWriteTimeUtc;
+			if (fileLastModified > latestSourceModification)
+				latestSourceModification = fileLastModified;
+		}
+		return latestSourceModification;
+	}
+
+	private static string GetEntryNameWithoutExtension(string fullName)
+	{
+		var normalized = fullName.Replace('\\', '/');
+		var extensionStart = normalized.LastIndexOf('.');
+		return extensionStart > 0
+			? normalized[..extensionStart]
+			: normalized;
+	}
+
+	private static string? TryGetSourceFilePath(Package basePackage, string typeFullName)
+	{
+		var type = (typeFullName.Contains(Context.ParentSeparator)
+				? basePackage.FindFullType(typeFullName)
+				: null) ?? basePackage.FindType(typeFullName) ??
+			basePackage.FindType(GetShortTypeName(typeFullName));
+		return type == null
+			? null
+			: Path.Combine(type.Package.FolderPath, type.Name + Type.Extension);
+	}
+
+	private static string GetShortTypeName(string typeFullName)
+	{
+		var separatorIndex = typeFullName.LastIndexOf(Context.ParentSeparator);
+		return separatorIndex < 0
+			? typeFullName
+			: typeFullName[(separatorIndex + 1)..];
 	}
 
 	private async Task<Package> GetPackage(string name)

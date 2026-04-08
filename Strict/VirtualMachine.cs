@@ -440,7 +440,9 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			: (ValueInstance?)null;
 		var invokeInstructions = invoke.CachedInstructions ??=
 			GetPrecompiledMethodInstructions(invoke) ??
-			throw new InvalidOperationException("No precompiled method instructions found for invoke");
+			throw new InvalidOperationException("No precompiled method instructions found for " +
+				invoke.Method.Method.Type.FullName + "." + invoke.Method.Method.Name +
+				" with return type " + invoke.Method.ReturnType.FullName);
 		var childScope = InitializeChildScope();
 		InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance);
 		RunInstructions(invokeInstructions, invoke.Method.Method.Name);
@@ -640,7 +642,17 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		executable.FindInstructions(
 			nameof(Strict) + Context.ParentSeparator + method.Type.Name, method.Name,
 			method.Parameters.Count, method.ReturnType.Name) ??
+		FindInstructionsWithMissingRootPackagePrefix(method) ??
 		FindInstructionsWithStrippedPackagePrefix(method);
+
+	private List<Instruction>? FindInstructionsWithMissingRootPackagePrefix(Method method)
+	{
+		var fullName = method.Type.FullName;
+		return fullName.StartsWith(nameof(Strict) + Context.ParentSeparator, StringComparison.Ordinal)
+			? null
+			: executable.FindInstructions(nameof(Strict) + Context.ParentSeparator + fullName,
+				method.Name, method.Parameters.Count, method.ReturnType.Name);
+	}
 
 	private List<Instruction>? FindInstructionsWithStrippedPackagePrefix(Method method)
 	{

@@ -281,6 +281,51 @@ public sealed class RunnerTests
 
 	[Test]
 	[Category("Slow")]
+	public async Task RunAdjustBrightnessRegeneratesCachedBinaryWhenColorChanges()
+	{
+		var adjustBrightnessPath = GetExamplesFilePath("../ImageProcessing/AdjustBrightness");
+		var colorPath = Path.Combine(Path.GetDirectoryName(adjustBrightnessPath)!, "Color.strict");
+		var binaryPath = Path.ChangeExtension(adjustBrightnessPath, BinaryExecutable.Extension);
+		var originalColorCode = await File.ReadAllTextAsync(colorPath);
+		var originalColorTimestamp = File.GetLastWriteTimeUtc(colorPath);
+		var hadBinary = File.Exists(binaryPath);
+		var originalBinaryBytes = hadBinary
+			? await File.ReadAllBytesAsync(binaryPath)
+			: [];
+		var originalBinaryTimestamp = hadBinary
+			? File.GetLastWriteTimeUtc(binaryPath)
+			: DateTime.MinValue;
+		try
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+			await new Runner(adjustBrightnessPath,
+				await new Repositories(new MethodExpressionParser()).LoadStrictPackage()).Run();
+			var firstBinaryTimestamp = File.GetLastWriteTimeUtc(binaryPath);
+			consoleWriter.GetStringBuilder().Clear();
+			await File.WriteAllTextAsync(colorPath,
+				originalColorCode.Replace("has Alpha = 1", "has Alpha = 0.5"));
+			File.SetLastWriteTimeUtc(colorPath, DateTime.UtcNow.AddSeconds(2));
+			await new Runner(adjustBrightnessPath,
+				await new Repositories(new MethodExpressionParser()).LoadStrictPackage()).Run();
+			Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(firstBinaryTimestamp));
+		}
+		finally
+		{
+			await File.WriteAllTextAsync(colorPath, originalColorCode);
+			File.SetLastWriteTimeUtc(colorPath, originalColorTimestamp);
+			if (hadBinary)
+			{
+				await File.WriteAllBytesAsync(binaryPath, originalBinaryBytes);
+				File.SetLastWriteTimeUtc(binaryPath, originalBinaryTimestamp);
+			}
+			else if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	[Category("Slow")]
 	public async Task RunAdjustBrightnessAllocatesBelowHalfMegabytePerRun()
 	{
 		var strictBasePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();

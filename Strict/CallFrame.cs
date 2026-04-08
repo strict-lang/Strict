@@ -255,7 +255,7 @@ internal sealed class CallFrame
 		Array.Resize(ref slots, newLength);
 		Array.Resize(ref memberSlots, newLength);
 	}
-
+#if DEBUG
 	private int CountMembers()
 	{
 		var count = 0;
@@ -265,7 +265,6 @@ internal sealed class CallFrame
 		return count;
 	}
 
-	//TODO: only in debug mode, only used when LogPerformance.IsEnabled
 	private static string Describe(ValueInstance value)
 	{
 		if (!value.HasValue)
@@ -281,7 +280,7 @@ internal sealed class CallFrame
 			? "TypeInstance(type=" + typeInstance.ReturnType.Name + ", members=" + typeInstance.Values.Length + ")"
 			: value.GetType().Name + "(" + value.Number + ")";
 	}
-
+#endif
 	public override string ToString() =>
 		nameof(CallFrame) + " " + nameof(variables) + ": " + variables?.DictionaryToWordList() +
 		", members: " + string.Join(", ",
