@@ -359,7 +359,6 @@ public class MethodExpressionParser : ExpressionParser
 		var context = body.Method.Type;
 		var callArguments = arguments;
 		if (TryParseLeadingNumberInstance(body, ref nestedInput, ref current, ref context))
-			callArguments = [];
 		if (nestedInput.Length > 0 && nestedInput[0] == '.')
 		{
 			if (arguments.Count == 1 && arguments[0] is Binary)
@@ -443,10 +442,16 @@ public class MethodExpressionParser : ExpressionParser
 	private static bool TryParseLeadingNumberInstance(Body body, ref ReadOnlySpan<char> nestedInput,
 		ref Expression? current, ref Type context)
 	{
-		if (nestedInput.IsEmpty || !char.IsDigit(nestedInput[0]))
+   var numberStart = nestedInput.Length > 1 && nestedInput[0] == '-' &&
+			char.IsDigit(nestedInput[1])
+				? 1
+				: 0;
+		if (nestedInput.IsEmpty || nestedInput.Length <= numberStart ||
+			!char.IsDigit(nestedInput[numberStart]))
 			return false;
-		var numberLength = GetLeadingNumberLength(nestedInput);
-		if (numberLength <= 0 || numberLength >= nestedInput.Length || nestedInput[numberLength] != '.')
+   var numberLength = numberStart + GetLeadingNumberLength(nestedInput[numberStart..]);
+		if (numberLength <= numberStart || numberLength >= nestedInput.Length ||
+			nestedInput[numberLength] != '.')
 			return false;
 		var leadingNumber = Number.TryParse(body, nestedInput[..numberLength]);
 		if (leadingNumber == null)
