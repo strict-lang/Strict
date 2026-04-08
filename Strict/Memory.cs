@@ -13,8 +13,8 @@ public sealed class Memory
 		get
 		{
 #if DEBUG
-			if (PerformanceLog.IsEnabled)
-				PerformanceLog.Write("Memory.Registers get", "callers=" + PerformanceLog.GetCallers(1));
+			if (Language.PerformanceLog.IsEnabled)
+				Language.PerformanceLog.Write("Memory.Registers get", "callers=" + Language.PerformanceLog.GetCallers(1));
 #endif
 			return registers;
 		}
@@ -28,16 +28,16 @@ public sealed class Memory
 		get
 		{
 #if DEBUG
-			if (PerformanceLog.IsEnabled)
-				PerformanceLog.Write("Memory.Frame get", "access");
+			if (Language.PerformanceLog.IsEnabled)
+				Language.PerformanceLog.Write("Memory.Frame get", "access");
 #endif
 			return frame;
 		}
 		set
 		{
 #if DEBUG
-			if (PerformanceLog.IsEnabled)
-				PerformanceLog.Write("Memory.Frame set", "frame=" + value.GetHashCode());
+			if (Language.PerformanceLog.IsEnabled)
+				Language.PerformanceLog.Write("Memory.Frame set", "frame=" + value.GetHashCode());
 #endif
 			frame = value;
 		}
@@ -51,8 +51,8 @@ public sealed class Memory
 		get
 		{
 #if DEBUG
-			if (PerformanceLog.IsEnabled)
-				PerformanceLog.Write("Memory.Variables get", "access");
+			if (Language.PerformanceLog.IsEnabled)
+				Language.PerformanceLog.Write("Memory.Variables get", "access");
 #endif
 			return Frame.Variables;
 		}
@@ -61,8 +61,8 @@ public sealed class Memory
 	public void AddToCollection(int symbolId, ValueInstance element)
 	{
 #if DEBUG
-		if (PerformanceLog.IsEnabled)
-			PerformanceLog.Write("Memory.AddToCollection", "key=" + CallFrame.GetSymbolName(symbolId) +
+		if (Language.PerformanceLog.IsEnabled)
+			Language.PerformanceLog.Write("Memory.AddToCollection", "key=" + CallFrame.GetSymbolName(symbolId) +
 				", element=" + Describe(element));
 #endif
 		Frame.TryGet(symbolId, out var collection);
@@ -92,8 +92,8 @@ public sealed class Memory
 	public void AddToDictionary(int symbolId, ValueInstance keyToAddTo, ValueInstance value)
 	{
 #if DEBUG
-		if (PerformanceLog.IsEnabled)
-			PerformanceLog.Write("Memory.AddToDictionary", "key=" + CallFrame.GetSymbolName(symbolId) +
+		if (Language.PerformanceLog.IsEnabled)
+			Language.PerformanceLog.Write("Memory.AddToDictionary", "key=" + CallFrame.GetSymbolName(symbolId) +
 				", itemKey=" + Describe(keyToAddTo) + ", value=" + Describe(value));
 #endif
 		Frame.TryGet(symbolId, out var collection);

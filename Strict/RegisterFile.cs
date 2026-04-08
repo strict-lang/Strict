@@ -15,16 +15,16 @@ public sealed class RegisterFile
 		{
 			var value = data[(int)r];
 #if DEBUG
-			if (PerformanceLog.IsEnabled)
-				PerformanceLog.Write("RegisterFile.get", "register=" + r + ", value=" + Describe(value));
+			if (Language.PerformanceLog.IsEnabled)
+				Language.PerformanceLog.Write("RegisterFile.get", "register=" + r + ", value=" + Describe(value));
 #endif
 			return value;
 		}
 		set
 		{
 #if DEBUG
-			if (PerformanceLog.IsEnabled)
-				PerformanceLog.Write("RegisterFile.set", "register=" + r + ", value=" + Describe(value));
+			if (Language.PerformanceLog.IsEnabled)
+				Language.PerformanceLog.Write("RegisterFile.set", "register=" + r + ", value=" + Describe(value));
 #endif
 			data[(int)r] = value;
 		}
@@ -37,8 +37,8 @@ public sealed class RegisterFile
 	{
 		value = data[(int)r];
 #if DEBUG
-		if (PerformanceLog.IsEnabled)
-			PerformanceLog.Write("RegisterFile.TryGet", "register=" + r + ", value=" + Describe(value));
+		if (Language.PerformanceLog.IsEnabled)
+			Language.PerformanceLog.Write("RegisterFile.TryGet", "register=" + r + ", value=" + Describe(value));
 #endif
 		return value.HasValue;
 	}
@@ -46,8 +46,8 @@ public sealed class RegisterFile
 	public void SaveTo(ValueInstance[] snapshot)
 	{
 #if DEBUG
-		if (PerformanceLog.IsEnabled)
-			PerformanceLog.Write("RegisterFile.SaveTo", "snapshotLength=" + snapshot.Length);
+		if (Language.PerformanceLog.IsEnabled)
+			Language.PerformanceLog.Write("RegisterFile.SaveTo", "snapshotLength=" + snapshot.Length);
 #endif
 		Array.Copy(data, snapshot, 16);
 	}
@@ -55,8 +55,8 @@ public sealed class RegisterFile
 	public void RestoreFrom(ValueInstance[] snapshot)
 	{
 #if DEBUG
-		if (PerformanceLog.IsEnabled)
-			PerformanceLog.Write("RegisterFile.RestoreFrom", "snapshotLength=" + snapshot.Length);
+		if (Language.PerformanceLog.IsEnabled)
+			Language.PerformanceLog.Write("RegisterFile.RestoreFrom", "snapshotLength=" + snapshot.Length);
 #endif
 		Array.Copy(snapshot, data, 16);
 	}
@@ -64,8 +64,8 @@ public sealed class RegisterFile
 	public void Clear()
 	{
 #if DEBUG
-		if (PerformanceLog.IsEnabled)
-			PerformanceLog.Write("RegisterFile.Clear", "registerCount=16");
+		if (Language.PerformanceLog.IsEnabled)
+			Language.PerformanceLog.Write("RegisterFile.Clear", "registerCount=16");
 #endif
 		Array.Clear(data, 0, 16);
 	}
