@@ -1,6 +1,5 @@
 using Strict.Bytecode;
 using Strict.Expressions;
-using Strict.Language;
 
 namespace Strict;
 
@@ -15,14 +14,18 @@ public sealed class RegisterFile
 		get
 		{
 			var value = data[(int)r];
+#if DEBUG
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("RegisterFile.get", "register=" + r + ", value=" + Describe(value));
+#endif
 			return value;
 		}
 		set
 		{
+#if DEBUG
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("RegisterFile.set", "register=" + r + ", value=" + Describe(value));
+#endif
 			data[(int)r] = value;
 		}
 	}
@@ -33,32 +36,40 @@ public sealed class RegisterFile
 	internal bool TryGet(Register r, out ValueInstance value)
 	{
 		value = data[(int)r];
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("RegisterFile.TryGet", "register=" + r + ", value=" + Describe(value));
+#endif
 		return value.HasValue;
 	}
 
 	public void SaveTo(ValueInstance[] snapshot)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("RegisterFile.SaveTo", "snapshotLength=" + snapshot.Length);
+#endif
 		Array.Copy(data, snapshot, 16);
 	}
 
 	public void RestoreFrom(ValueInstance[] snapshot)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("RegisterFile.RestoreFrom", "snapshotLength=" + snapshot.Length);
+#endif
 		Array.Copy(snapshot, data, 16);
 	}
 
 	public void Clear()
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("RegisterFile.Clear", "registerCount=16");
+#endif
 		Array.Clear(data, 0, 16);
 	}
-
+#if DEBUG
 	private static string Describe(ValueInstance value)
 	{
 		if (!value.HasValue)
@@ -74,4 +85,5 @@ public sealed class RegisterFile
 			? "TypeInstance(type=" + typeInstance.ReturnType.Name + ", members=" + typeInstance.Values.Length + ")"
 			: value.GetType().Name + "(" + value.Number + ")";
 	}
+#endif
 }

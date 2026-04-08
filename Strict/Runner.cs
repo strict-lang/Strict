@@ -285,8 +285,7 @@ public sealed class Runner
 		{
 			var testExecutor = new TestInterpreter(basePackage);
 			testExecutor.RunAllTestsInType(mainType);
-			return "Methods tested: " + testExecutor.Statistics.MethodsTested + ", Types tested: " +
-				testExecutor.Statistics.TypesTested + "\n" + testExecutor.Statistics;
+			return testExecutor.Statistics.ToString();
 		}));
 
 	private BinaryExecutable GenerateBinaryExecutable(Type mainType) =>

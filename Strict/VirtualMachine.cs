@@ -52,8 +52,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private VirtualMachine RunInstructions(List<Instruction> blockInstructions,
 		string context = "body")
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("VirtualMachine.RunInstructions", "context=" + context + ", count=" + blockInstructions.Count);
+#endif
 		CacheInstructionAccessPaths(blockInstructions);
 		for (var index = 0; index < blockInstructions.Count; index++)
 			if (blockInstructions[index].InstructionType == InstructionType.LoopBegin)
@@ -168,10 +170,12 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	// Now it should be 0.23m*(3-4) instructions, less than 1m, also no lookups, we can keep value and brightness directly in memory and reuse, index increases were we are in our big Colors array ..
 	private void ExecuteInstruction(Instruction instruction)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("** VirtualMachine.ExecuteInstruction",
 				"index=" + instructionIndex + ", type=" + instruction.InstructionType +
 				GetInstructionDetails(instruction));
+#endif
 		switch (instruction.InstructionType)
 		{
 		case InstructionType.Return:

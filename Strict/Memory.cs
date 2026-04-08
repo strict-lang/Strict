@@ -1,5 +1,4 @@
 using Strict.Expressions;
-using Strict.Language;
 
 namespace Strict;
 
@@ -13,8 +12,10 @@ public sealed class Memory
 	{
 		get
 		{
+#if DEBUG
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("Memory.Registers get", "callers=" + PerformanceLog.GetCallers(1));
+#endif
 			return registers;
 		}
 	}
@@ -26,14 +27,18 @@ public sealed class Memory
 	{
 		get
 		{
+#if DEBUG
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("Memory.Frame get", "access");
+#endif
 			return frame;
 		}
 		set
 		{
+#if DEBUG
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("Memory.Frame set", "frame=" + value.GetHashCode());
+#endif
 			frame = value;
 		}
 	}
@@ -45,17 +50,21 @@ public sealed class Memory
 	{
 		get
 		{
+#if DEBUG
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("Memory.Variables get", "access");
+#endif
 			return Frame.Variables;
 		}
 	}
 
 	public void AddToCollection(int symbolId, ValueInstance element)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("Memory.AddToCollection", "key=" + CallFrame.GetSymbolName(symbolId) +
 				", element=" + Describe(element));
+#endif
 		Frame.TryGet(symbolId, out var collection);
 		if (!collection.IsList)
 			throw new InvalidOperationException("Cannot add to non-list variable \"" +
@@ -82,17 +91,16 @@ public sealed class Memory
 
 	public void AddToDictionary(int symbolId, ValueInstance keyToAddTo, ValueInstance value)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("Memory.AddToDictionary", "key=" + CallFrame.GetSymbolName(symbolId) +
 				", itemKey=" + Describe(keyToAddTo) + ", value=" + Describe(value));
+#endif
 		Frame.TryGet(symbolId, out var collection);
 		if (collection.IsDictionary)
 			collection.GetDictionaryItems()[keyToAddTo] = value;
 	}
-
-	public void AddToDictionary(string variableKey, ValueInstance keyToAddTo, ValueInstance value) =>
-		AddToDictionary(CallFrame.ResolveSymbolId(variableKey), keyToAddTo, value);
-
+#if DEBUG
 	private static string Describe(ValueInstance value)
 	{
 		if (!value.HasValue)
@@ -108,4 +116,5 @@ public sealed class Memory
 			? "TypeInstance(type=" + typeInstance.ReturnType.Name + ", members=" + typeInstance.Values.Length + ")"
 			: value.GetType().Name + "(" + value.Number + ")";
 	}
+#endif
 }

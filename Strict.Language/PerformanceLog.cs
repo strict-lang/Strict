@@ -1,3 +1,4 @@
+#if DEBUG
 namespace Strict.Language;
 
 public static class PerformanceLog
@@ -58,3 +59,4 @@ public static class PerformanceLog
 		public void Dispose() => suppressedDepth--;
 	}
 }
+#endif

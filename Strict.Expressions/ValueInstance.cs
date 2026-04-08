@@ -134,8 +134,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	{
 		TrackCreation();
 		value = noneReturnType;
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + noneReturnType + ")");
+#endif
 	}
 
 	private static int createdCount;
@@ -159,9 +161,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	/// <summary>
 	/// If number is TextId, value points to a string (only non-Mutable, for Mutable TypeId is used)
-	/// If number is ListId, value points to ValueArrayInstance (ReturnType and Items)
-	/// If number is DictionaryId, value points to ValueDictionaryInstance (ReturnType and Items)
-	/// If number is TypeId, then this points to a TypeValueInstance containing with ReturnType
+	/// If number is ListId, value points to ValueArrayInstance (ReturnType and Items).
+	/// If number is DictionaryId, value points to ValueDictionaryInstance (ReturnType and Items).
+	/// If number is TypeId, then this points to a TypeValueInstance containing with ReturnType.
 	/// In all other cases this is a primitive (None, Boolean, Number), and value is the ReturnType
 	/// </summary>
 	private readonly object value;
@@ -185,8 +187,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number = isTrue
 			? 1
 			: 0;
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + booleanReturnType + ", number=" + isTrue + ")");
+#endif
 	}
 
 	/// <summary>
@@ -207,10 +211,12 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number = isFlatNumericType
 			? FlatNumericId
 			: ListId;
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(" + (isFlatNumericType
 				? "FlatNumericType"
 				: "List") + "=" + backing.ReturnType + ")");
+#endif
 	}
 
 	public ValueInstance(Type numberReturnType, double setNumber)
@@ -219,8 +225,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			throw new InvalidTypeValue(numberReturnType, setNumber);
 		value = numberReturnType;
 		number = setNumber;
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + numberReturnType + ", number=" + setNumber + ")");
+#endif
 	}
 
 	public sealed class InvalidTypeValue(Type returnType, object value) : ParsingFailed(returnType,
@@ -245,8 +253,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		TrackCreation();
 		value = text;
 		number = TextId;
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(text=" + text + ")");
+#endif
 	}
 
 	public ValueInstance(Type returnType, Dictionary<ValueInstance, ValueInstance> dictionary)
@@ -254,8 +264,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		TrackCreation();
 		value = new ValueDictionaryInstance(returnType, dictionary);
 		number = DictionaryId;
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + returnType + ", dictionaryCount=" + dictionary.Count + ")");
+#endif
 	}
 
 	public ValueInstance(Type returnType, ValueInstance[] values)
@@ -265,8 +277,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		{
 			value = new ValueArrayInstance(returnType, values);
 			number = ListId;
+#if DEBUG
 			if (PerformanceLog.IsEnabled)
 				LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
+#endif
 			return;
 		}
 		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText ||
@@ -290,15 +304,19 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				flatNumbers[flatIndex] = (float)values[flatIndex].Number;
 			value = ValueArrayInstance.CreateForTypeBacking(returnType, flatNumbers);
 			number = FlatNumericId;
+#if DEBUG
 			if (PerformanceLog.IsEnabled)
 				LogCreated("ctor(FlatNumeric=" + returnType + ", values=" +
 					DescribeValues(values) + ")");
+#endif
 			return;
 		}
 		value = new ValueTypeInstance(returnType, values);
 		number = TypeId;
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
+#endif
 	}
 
 	/*TODO, this is not the way this should be called!
@@ -329,8 +347,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			throw new ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(returnType);
 		value = new ValueArrayInstance(returnType, repeatedItem, count);
 		number = ListId;
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + returnType + ", repeatCount=" + count + ")");
+#endif
 	}
 
 	public ValueInstance(ValueArrayInstance listInstance)
@@ -443,9 +463,11 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			number = existingInstance.number;
 			break;
 		}
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(existingInstance=" + DescribeValue(existingInstance) + ", newType=" +
 				newType + ")");
+#endif
 	}
 
 	public bool IsType(Type type) =>
@@ -689,13 +711,15 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				FlatNumericId => ((ValueArrayInstance)value).MaterializeAsType().ToAutomaticText(),
 				_ => GetPrimitiveCodeString((Type)value)
 			};
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("ValueInstance.ToExpressionCodeString",
 				"input=" + DescribeValue(this) + ", escapeText=" + escapeText + ", generated=" +
 				generatedText + ", callers=" + PerformanceLog.GetCallers(1));
+#endif
 		return generatedText;
 	}
-
+#if DEBUG
 	private void LogCreated(string constructorName)
 	{
 		if (PerformanceLog.IsEnabled)
@@ -735,9 +759,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 						? "Number(" + instance.number + ")"
 						: ((Type)instance.value).Name
 			};
+#endif
 
 	private static string EscapeText(string text) =>
-		text.Replace("\\", "\\\\", StringComparison.Ordinal).
+		text.Replace("\\", @"\\", StringComparison.Ordinal).
 			Replace("\n", "\\n", StringComparison.Ordinal).
 			Replace("\r", "\\r", StringComparison.Ordinal).
 			Replace("\t", "\\t", StringComparison.Ordinal).

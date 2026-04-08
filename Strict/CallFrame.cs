@@ -40,8 +40,10 @@ internal sealed class CallFrame
 	{
 		get
 		{
+#if DEBUG
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("CallFrame.Variables", "access");
+#endif
 			return variables ??= CreateVariablesSnapshot();
 		}
 	}
@@ -80,8 +82,10 @@ internal sealed class CallFrame
 	//TODO: main optimization in the for loop is to take the image.Colors(colorIndex) and to work directly on it without looking it up multiple times per iteration. this is still a VirtualMachine, but we don't have to be stupid!
 	internal bool TryGet(string name, out ValueInstance value)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.TryGet", "name=" + name);
+#endif
 		var dotIndex = name.IndexOf('.');
 		return dotIndex <= 0
 			? TryGet(ResolveSymbolId(name), out value)
@@ -141,8 +145,10 @@ internal sealed class CallFrame
 	//TODO: slow and complicated, but only called for member lookups
 	private bool TryGetMember(int symbolId, out ValueInstance value)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.TryGetMember", "name=" + GetSymbolName(symbolId));
+#endif
 		return TryGetSlotValue(symbolId, true, out value);
 	}
 
@@ -164,8 +170,10 @@ internal sealed class CallFrame
 	//TODO: we shouldn't have these many ways of getting a variable
 	internal ValueInstance Get(string name)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.Get", "name=" + name);
+#endif
 		return TryGet(name, out var value)
 			? value
 			: throw new ValueNotFound(name, this);
@@ -173,8 +181,10 @@ internal sealed class CallFrame
 
 	internal ValueInstance Get(int symbolId)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.Get", "name=" + GetSymbolName(symbolId));
+#endif
 		return TryGet(symbolId, out var value)
 			? value
 			: throw new ValueNotFound(GetSymbolName(symbolId), this);
@@ -191,10 +201,12 @@ internal sealed class CallFrame
 
 	internal void Set(int symbolId, ValueInstance value, bool isMember = false, string? name = null)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.Set",
 				"name=" + (name ?? GetSymbolName(symbolId)) + ", isMember=" + isMember + ", value=" +
 				Describe(value));
+#endif
 		EnsureCapacity(symbolId);
 		slots[symbolId] = value;
 		memberSlots[symbolId] = isMember;
@@ -204,9 +216,11 @@ internal sealed class CallFrame
 
 	internal void Clear()
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.Clear",
 				"locals=" + (variables?.Count ?? 0) + ", members=" + CountMembers());
+#endif
 		if (highestAssignedSymbolId >= 0)
 		{
 			Array.Clear(slots, 0, highestAssignedSymbolId + 1);
@@ -221,10 +235,12 @@ internal sealed class CallFrame
 	/// </summary>
 	internal void Reset(CallFrame? newParent)
 	{
+#if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.Reset",
 				"locals=" + (variables?.Count ?? 0) + ", members=" + CountMembers() + ", parent=" +
 				(newParent != null));
+#endif
 		Clear();
 		parent = newParent;
 	}

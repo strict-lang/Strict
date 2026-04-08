@@ -175,8 +175,8 @@ public class Interpreter
 
 	private static bool IsKnownParserLimitation(Exception inner) =>
 		inner is ParsingFailed &&
-		(inner.InnerException is Type.NoMatchingMethodFound or
-			Type.ArgumentsDoNotMatchMethodParameters ||
+		(inner.InnerException is Type.NoMatchingMethodFound
+				or Type.ArgumentsDoNotMatchMethodParameters ||
 			inner.Message.Contains("Use number iteration"));
 
 	private static bool ShouldSkipGenericListTestValidation(Method method, bool runOnlyTests) =>
@@ -242,9 +242,9 @@ public class Interpreter
 		if (!parentThis.HasValue)
 			return currentInstance.Equals(noneInstance);
 		var parent = parentThis.Value;
-		if (parent.IsPrimitiveType(noneType))
-			return currentInstance.IsPrimitiveType(noneType);
-		return parent.Equals(currentInstance);
+		return parent.IsPrimitiveType(noneType)
+			? currentInstance.IsPrimitiveType(noneType)
+			: parent.Equals(currentInstance);
 	}
 
 	private static bool DoArgumentsMatch(Method method, IReadOnlyList<ValueInstance> args,
