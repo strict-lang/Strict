@@ -9,9 +9,15 @@ namespace Strict.HighLevelRuntime;
 //ncrunch: no coverage start
 public sealed record Statistics
 {
-	public int PackagesTested { get; internal set; }
-	public int TypesTested { get; internal set; }
-	public int MethodsTested { get; internal set; }
+	public int PackagesTested => packagesTested;
+	private int packagesTested;
+	public void IncrementPackagesTested() => Interlocked.Increment(ref packagesTested);
+	public int TypesTested => typesTested;
+	private int typesTested;
+	public void IncrementTypesTested() => Interlocked.Increment(ref typesTested);
+	public int MethodsTested => methodsTested;
+	private int methodsTested;
+	public void IncrementMethodsTested() => Interlocked.Increment(ref methodsTested);
 	public int TestExpressions { get; internal set; }
 	public int MethodCount { get; internal set; }
 	public int ExpressionCount { get; internal set; }
@@ -40,9 +46,9 @@ public sealed record Statistics
 
 	public void Reset()
 	{
-		PackagesTested = 0;
-		TypesTested = 0;
-		MethodsTested = 0;
+		packagesTested = 0;
+		typesTested = 0;
+		methodsTested = 0;
 		TestExpressions = 0;
 		MethodCount = 0;
 		ExpressionCount = 0;

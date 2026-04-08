@@ -13,7 +13,7 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 {
 	public void RunAllTestsInPackage(Package package)
 	{
-		Statistics.PackagesTested++;
+		Statistics.IncrementPackagesTested();
 		var typesToTest = new List<Type>();
 		foreach (var pair in package.Types)
 			if (pair.Value is not GenericTypeImplementation)
@@ -26,7 +26,7 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 	{
 		if (ShouldSkipKnownDummyBaseType(type))
 			return;
-		Statistics.TypesTested++;
+		Statistics.IncrementTypesTested();
 		foreach (var method in type.Methods)
 			if (!method.IsTrait)
 				RunMethod(method);
@@ -38,7 +38,7 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 	{
 		if (ShouldSkipKnownDummyBaseMethod(method))
 			return;
-		Statistics.MethodsTested++;
+		Statistics.IncrementMethodsTested();
 		Execute(method);
 	}
 
