@@ -55,6 +55,8 @@ public sealed class GrammarTests
 	[TestCase("to Number\n\t\"1e10\" to Number is 1e10")]
 	[TestCase("has InitialValue Generic or None")]
 	[TestCase("from(generic)\n\tif generic is\n\t\tNumber then generic\n\t\tIterator then generic.Length\n\t\telse 0")]
+	[TestCase("(\"3\", \"4\") + (1, 2) to Text is (\"3\", \"4\", \"(1, 2)\")")]
+	[TestCase("(1) + (\"Hi\") is Error(\"Cannot downcast Text to Number for list: Text \\\"Hi\\\"\")")]
 	public void ParsesValidStrictCode(string code)
 	{
 		var result = BuildGrammar().Match(code + "\n");
