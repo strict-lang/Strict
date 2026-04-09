@@ -1,4 +1,3 @@
-using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
@@ -330,7 +329,7 @@ public sealed partial class VirtualMachine
 				text.IndexOf(args[0].Text, StringComparison.Ordinal)),
 			"Substring" => new ValueInstance(
 				text.Substring((int)args[0].Number, (int)args[1].Number)),
-			_ => throw new InvalidOperationException("Unhandled native text method: " + methodName)
+			_ => throw new InvalidOperationException("Unhandled native text method: " + methodName) //ncrunch: no coverage
 		};
 		return true;
 	}

@@ -26,6 +26,25 @@ public sealed class BinaryMethod
 		var instructionCount = reader.Read7BitEncodedInt();
 		for (var instructionIndex = 0; instructionIndex < instructionCount; instructionIndex++)
 			instructions.Add(type.binary!.ReadInstruction(reader, type.Table));
+   RestoreLoopLinks();
+	}
+
+	private void RestoreLoopLinks()
+	{
+		var loopBeginIndexes = new Stack<int>();
+		for (var instructionIndex = 0; instructionIndex < instructions.Count; instructionIndex++)
+			switch (instructions[instructionIndex])
+			{
+			case LoopBeginInstruction loopBegin:
+				loopBegin.InstructionIndex = instructionIndex;
+				loopBeginIndexes.Push(instructionIndex);
+				break;
+			case LoopEndInstruction loopEnd when loopBeginIndexes.Count > 0:
+				var beginIndex = loopBeginIndexes.Pop();
+				loopEnd.Begin = (LoopBeginInstruction)instructions[beginIndex];
+				loopEnd.BeginIndex = beginIndex;
+				break;
+			}
 	}
 
 	public bool UsesConsolePrint => instructions.Any(instruction => instruction is PrintInstruction);

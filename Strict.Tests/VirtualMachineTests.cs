@@ -597,7 +597,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			await repositories.LoadStrictPackage("Strict/ImageProcessing");
 		using var testType = new Type(imageProcessingPackage,
 			new TypeLines(nameof(LoopOverSizeIteratesWidthTimesHeight), "has number", "Run Number",
-				"\tconstant width = 1", "\tconstant height = 9",
+        "\tconstant width = 16", "\tconstant height = 9",
 				"\tmutable image = ColorImage(Size(width, height))", "\tfor image.Size",
 				"\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)", "\tmutable count = 0",
 				"\tfor image.Size", "\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",

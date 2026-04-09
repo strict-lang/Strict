@@ -227,7 +227,7 @@ public sealed partial class VirtualMachine
 			var loadVariable = (LoadVariableToRegister)instruction;
 			if (!GetIdentifierAccessPath(loadVariable.Identifier).TryResolve(this,
 				out var registerValue))
-				throw new InvalidOperationException("Could not resolve variable " +
+				throw new InvalidOperationException("Could not resolve variable " + //ncrunch: no coverage
 					loadVariable.Identifier);
 			Memory.Registers[loadVariable.Register] = registerValue;
 		}
@@ -248,8 +248,10 @@ public sealed partial class VirtualMachine
 
 	private IdentifierAccessPath GetIdentifierAccessPath(string identifier)
 	{
+		//TODO: remove this
 		if (identifier.Length == 0 || double.TryParse(identifier, out _))
 			return default;
+
 		return identifierAccessPaths.TryGetValue(identifier, out var accessPath)
 			? accessPath
 			: identifierAccessPaths[identifier] = IdentifierAccessPath.Parse(identifier);
@@ -346,7 +348,7 @@ public sealed partial class VirtualMachine
 			return new ValueInstance(left.List.ReturnType, items.ToArray());
 		}
 		if (left.IsText || right.IsText)
-			throw new NotSupportedException("Texts cannot be subtracted: " + left + " - " + right);
+			throw new NotSupportedException("Texts cannot be subtracted: " + left + " - " + right); //ncrunch: no coverage
 		return new ValueInstance(left.GetType(), left.Number - right.Number);
 	}
 
@@ -398,7 +400,7 @@ public sealed partial class VirtualMachine
 			if (instructions[index].InstructionType == InstructionType.JumpEnd &&
 				((JumpToId)instructions[index]).Id == id)
 				return index;
-		return -1;
+		return -1; //ncrunch: no coverage
 	}
 
 	public sealed class OperandsRequired : Exception;

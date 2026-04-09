@@ -162,8 +162,48 @@ public sealed class Runner
 			if (fileLastModified > latestSourceModification)
 				latestSourceModification = fileLastModified;
 		}
+    var latestImplementationModification = GetLatestImplementationModification();
+		if (latestImplementationModification > latestSourceModification)
+			latestSourceModification = latestImplementationModification;
 		return latestSourceModification;
 	}
+
+	private static DateTime GetLatestImplementationModification()
+	{
+		var repoRoot = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
+		var latestModification = DateTime.MinValue;
+		foreach (var directoryName in BinaryImplementationDirectories)
+		{
+			var directoryPath = Path.Combine(repoRoot, directoryName);
+			if (!Directory.Exists(directoryPath))
+				continue;
+			foreach (var filePath in Directory.EnumerateFiles(directoryPath, "*.cs",
+				SearchOption.AllDirectories))
+				if (!IsBuildArtifactFile(filePath))
+				{
+					var fileLastModified = new FileInfo(filePath).LastWriteTimeUtc;
+					if (fileLastModified > latestModification)
+						latestModification = fileLastModified;
+				}
+		}
+		return latestModification;
+	}
+
+	private static bool IsBuildArtifactFile(string filePath) =>
+		filePath.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar,
+			StringComparison.OrdinalIgnoreCase) ||
+		filePath.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar,
+			StringComparison.OrdinalIgnoreCase);
+
+	private static readonly string[] BinaryImplementationDirectories =
+	[
+		"Strict",
+		"Strict.Bytecode",
+		"Strict.Expressions",
+		"Strict.Language",
+		"Strict.Optimizers",
+		"Strict.Validators"
+	];
 
 	private static string GetEntryNameWithoutExtension(string fullName)
 	{

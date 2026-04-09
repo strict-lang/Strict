@@ -22,7 +22,7 @@ public sealed partial class VirtualMachine
 		{
 			//TODO: called almost 1 million times? wtf?
 			Memory.Registers[invoke.Register] = new ValueInstance(targetType,
-				CreateConstructorValuesFromBinaryMembers(targetType, invoke, binaryMembers));
+				CreateConstructorValuesFromBinaryMembers(targetType, invoke.Method.Arguments, binaryMembers));
 			return true;
 		}
 		var values = new ValueInstance[members.Count];
@@ -84,10 +84,6 @@ public sealed partial class VirtualMachine
 		return -1;
 	}
 
-	private ValueInstance[] CreateConstructorValuesFromBinaryMembers(Type targetType, Invoke invoke,
-		IReadOnlyList<BinaryMember> binaryMembers) =>
-		CreateConstructorValuesFromBinaryMembers(targetType, invoke.Method.Arguments, binaryMembers);
-
 	private ValueInstance[] CreateConstructorValuesFromBinaryMembers(Type targetType,
 		IReadOnlyList<Expression> arguments, IReadOnlyList<BinaryMember> binaryMembers)
 	{
@@ -132,27 +128,29 @@ public sealed partial class VirtualMachine
 		}
 	}
 
-	private static ValueInstance CreateDefaultValue(Type memberType) =>
-		(memberType.IsMutable
+	private static ValueInstance CreateDefaultValue(Type memberType)
+	{
+		if ((memberType.IsMutable
 			? memberType.GetFirstImplementation()
-			: memberType).IsList
-			? new ValueInstance(memberType, Array.Empty<ValueInstance>())
-			: (memberType.IsMutable
-				? memberType.GetFirstImplementation()
-				: memberType).IsDictionary
-				? new ValueInstance(memberType, new Dictionary<ValueInstance, ValueInstance>())
-				: memberType.IsText
-					? new ValueInstance("")
-					: memberType.IsBoolean
-						? new ValueInstance(memberType, false)
-						: memberType.IsNone
-							? new ValueInstance(memberType)
-							: memberType.Members.Count > 0 && !memberType.IsMutable
-								? new ValueInstance(memberType)
-								: memberType.IsMutable
-									// ReSharper disable once TailRecursiveCall
-									? CreateDefaultValue(memberType.GetFirstImplementation())
-									: new ValueInstance(memberType, 0);
+			: memberType).IsList)
+			return new ValueInstance(memberType, Array.Empty<ValueInstance>());
+		if ((memberType.IsMutable
+			? memberType.GetFirstImplementation()
+			: memberType).IsDictionary)
+			return new ValueInstance(memberType, new Dictionary<ValueInstance, ValueInstance>());
+		if (memberType.IsText)
+			return new ValueInstance("");
+		if (memberType.IsBoolean)
+			return new ValueInstance(memberType, false);
+		if (memberType.IsNone)
+			return new ValueInstance(memberType);
+		if (memberType.Members.Count > 0 && !memberType.IsMutable)
+			return new ValueInstance(memberType);
+		if (memberType.IsMutable)
+			// ReSharper disable once TailRecursiveCall
+			return CreateDefaultValue(memberType.GetFirstImplementation());
+		return new ValueInstance(memberType, 0);
+	}
 
 	private static ValueInstance CreateDefaultComplexValue(Type type)
 	{
@@ -176,7 +174,7 @@ public sealed partial class VirtualMachine
 	{
 		foreach (var constraint in member.Constraints!)
 		{
-			if (constraint is not Expressions.Binary { Method.Name: BinaryOperator.Is } binary ||
+			if (constraint is not Binary { Method.Name: BinaryOperator.Is } binary ||
 				binary.Instance?.ToString() != "Length")
 				continue;
 			var rhs = binary.Arguments[0];

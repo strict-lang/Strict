@@ -527,13 +527,17 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	/// </summary>
 	private LoopBeginInstruction FindLoopBeginByScanning(int steps)
 	{
-		var idx = Math.Max(0, instructionIndex - steps);
-		while (idx < instructions.Count &&
-			instructions[idx].InstructionType != InstructionType.LoopBegin)
-			idx++;
-		return idx < instructions.Count
-			? (LoopBeginInstruction)instructions[idx]
-			: throw new InvalidOperationException("No matching LoopBeginInstruction found for LoopEnd");
+    var loopDepth = 0;
+		for (var candidateIndex = instructionIndex - 1;
+			candidateIndex >= Math.Max(0, instructionIndex - steps - 1); candidateIndex--)
+			if (instructions[candidateIndex].InstructionType == InstructionType.LoopEnd)
+				loopDepth++;
+			else if (instructions[candidateIndex].InstructionType == InstructionType.LoopBegin)
+				if (loopDepth == 0)
+					return (LoopBeginInstruction)instructions[candidateIndex];
+				else
+					loopDepth--;
+		throw new InvalidOperationException("No matching LoopBeginInstruction found for LoopEnd");
 	}
 
 	private void ExecuteReturn(ReturnInstruction returnInstruction)
