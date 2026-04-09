@@ -1,4 +1,3 @@
-using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
@@ -13,14 +12,6 @@ public sealed partial class VirtualMachine
 	/// Handles From constructor calls like SimpleCalculator(2, 3) by creating a ValueInstance
 	/// with evaluated argument values for each non-trait member.
 	/// </summary>
-	//TODO: remove
-	private bool TryHandleFromConstructor(Invoke invoke)
-	{
-		if (invoke.Method.Method.Name != Method.From || invoke.Method.Instance != null)
-			return false;
-		return TryHandleFromConstructor(invoke, invoke.Method.ReturnType);
-	}
-
 	private bool TryHandleFromConstructor(Invoke invoke, Type targetType)
 	{
 		if (targetType is GenericTypeImplementation)

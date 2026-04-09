@@ -18,6 +18,7 @@ internal sealed class CallFrame
 	internal static readonly int ValueSymbolId = ResolveSymbolId(Type.ValueLowercase);
 	internal static readonly int IndexSymbolId = ResolveSymbolId(Type.IndexLowercase);
 	internal static readonly int OuterSymbolId = ResolveSymbolId(Type.OuterLowercase);
+	/*TODO: not really used or needed, but if we don't resolve the symbols here, it fails later when using them	*/
 	internal static readonly int ElementsSymbolId = ResolveSymbolId(Type.ElementsLowercase);
 	internal static readonly int CharactersSymbolId = ResolveSymbolId("characters");
 

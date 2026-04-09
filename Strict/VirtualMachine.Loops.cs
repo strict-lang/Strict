@@ -1,7 +1,6 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
-using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict;
@@ -247,10 +246,14 @@ public sealed partial class VirtualMachine
 					value.GetDictionaryItems()))
 				: value;
 
-	private IdentifierAccessPath GetIdentifierAccessPath(string identifier) =>
-		identifierAccessPaths.TryGetValue(identifier, out var accessPath)
+	private IdentifierAccessPath GetIdentifierAccessPath(string identifier)
+	{
+		if (identifier.Length == 0 || double.TryParse(identifier, out _))
+			return default;
+		return identifierAccessPaths.TryGetValue(identifier, out var accessPath)
 			? accessPath
 			: identifierAccessPaths[identifier] = IdentifierAccessPath.Parse(identifier);
+	}
 
 	private bool TryGetFrameValue(int symbolId, out ValueInstance value) =>
 		Memory.Frame.TryGet(symbolId, out value);
