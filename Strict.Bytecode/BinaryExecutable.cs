@@ -385,7 +385,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	private static Type EnsureResolvedType(Package package, string typeName)
 	{
 		var resolved = package.FindType(typeName) ?? (typeName.Contains(Context.ParentSeparator)
-			? package.FindFullType(typeName)
+			? package.FindFullType(typeName) ?? package.FindType(GetSimpleTypeName(typeName))
 			: null);
 		if (resolved != null)
 			return resolved;
@@ -393,9 +393,15 @@ public sealed class BinaryExecutable(Package basePackage)
 			return package.GetType(GetGenericLookupName(typeName));
 		if (char.IsLower(typeName[0]))
 			throw new TypeNotFoundForBytecode(typeName);
-		EnsureTypeExists(package, typeName);
-		return package.GetType(typeName);
+		var simpleTypeName = GetSimpleTypeName(typeName);
+		EnsureTypeExists(package, simpleTypeName);
+		return package.GetType(simpleTypeName);
 	}
+
+	private static string GetSimpleTypeName(string typeName) =>
+		typeName.Contains(Context.ParentSeparator)
+			? typeName[(typeName.LastIndexOf(Context.ParentSeparator) + 1)..]
+			: typeName;
 
 	private static string GetGenericLookupName(string typeName)
 	{
@@ -440,8 +446,9 @@ public sealed class BinaryExecutable(Package basePackage)
 		var instance = hasInstance
 			? ReadExpression(reader, table)
 			: null;
-		var anyBaseType = EnsureResolvedType(package, Type.Number);
-		var fakeMember = new Member(anyBaseType, memberName + " " + memberTypeName, null);
+   var anyBaseType = EnsureResolvedType(package, Type.Number);
+		var memberType = EnsureResolvedType(package, memberTypeName);
+		var fakeMember = new Member(anyBaseType, memberName, memberType);
 		return new MemberCall(instance, fakeMember);
 	}
 

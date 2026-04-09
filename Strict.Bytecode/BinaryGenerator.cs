@@ -195,9 +195,44 @@ public sealed class BinaryGenerator
 	{
 		for (var index = 0; index < methodCall.Method.Parameters.Count &&
 			index < methodCall.Arguments.Count; index++)
-			instructions?.Add(new StoreVariableInstruction(
-				GetValueInstanceFromExpression(methodCall.Arguments[index]),
-				methodCall.Method.Parameters[index].Name));
+     StoreEntryVariable(methodCall.Method.Parameters[index].Name,
+				methodCall.Arguments[index]);
+	}
+
+	private void StoreEntryVariable(string identifier, Expression expression)
+	{
+		if (TryGetConstantValueInstance(expression, out var value))
+			instructions.Add(new StoreVariableInstruction(value, identifier));
+		else
+		{
+			GenerateInstructionFromExpression(expression);
+			instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, identifier));
+		}
+	}
+
+	private static bool TryGetConstantValueInstance(Expression expression, out ValueInstance value)
+	{
+		switch (expression)
+		{
+		case List list:
+			var listValue = list.TryGetConstantData();
+			if (listValue != null)
+			{
+				value = listValue.Value;
+				return true;
+			}
+			break;
+		case Value constantValue:
+			value = constantValue.Data;
+			return true;
+		case MemberCall memberCall when memberCall.Member.InitialValue != null:
+			value = memberCall.Member.InitialValue is Value enumValue
+				? enumValue.Data
+				: new ValueInstance(memberCall.Member.InitialValue.ToString());
+			return true;
+		}
+		value = default;
+		return false;
 	}
 
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)
