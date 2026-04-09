@@ -140,12 +140,12 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 #endif
 	}
 
-	private static int createdCount;
+	public static int CreatedCount;
 	private static int creationLimit = int.MaxValue;
 
 	public static void SetCreationLimit(int newLimit)
 	{
-		createdCount = 0;
+		CreatedCount = 0;
 		creationLimit = newLimit;
 	}
 
@@ -154,9 +154,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 
 	private static void TrackCreation()
 	{
-		createdCount++;
-		if (createdCount > creationLimit)
-			throw new CreationLimitExceeded(createdCount, creationLimit);
+		CreatedCount++;
+		if (CreatedCount > creationLimit)
+			throw new CreationLimitExceeded(CreatedCount, creationLimit);
 	}
 
 	/// <summary>
@@ -172,7 +172,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// </summary>
 	internal readonly double number;
 	/// <summary>
-	/// These are all unsupported double values, which we don't allow or support.
+	/// These are all unsupported double values, which we don't allow or support and use to id types
 	/// </summary>
 	private const double TextId = -7.90897526e307;
 	private const double ListId = -7.81590825e307;

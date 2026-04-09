@@ -42,6 +42,7 @@ public sealed record Statistics
 	public int MutableUsageCount { get; internal set; }
 	public int FindVariableCount { get; internal set; }
 	public int FindTypeCount => Context.FindTypeCount;
+	public int ValueInstanceCreatedCount => ValueInstance.CreatedCount;
 	public int ValueInstanceComplexEqualsCalls => ValueInstance.ComplexEqualsCalls;
 
 	public void Reset()
