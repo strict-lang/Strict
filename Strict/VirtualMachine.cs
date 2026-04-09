@@ -22,7 +22,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		Memory.Registers.Clear();
 		Memory.Frame = new CallFrame(initialVariables);
 		InitializeEntryPointMembers(method);
-		return RunInstructions(method.instructions, method.Name);
+		return RunInstructions(method.instructions
+#if DEBUG
+			, method.Name
+#endif
+		);
 	}
 
 	private bool conditionFlag;
@@ -49,8 +53,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 	private readonly Dictionary<string, IndexedElementAccessPath> indexedElementAccessPaths =
 		new(StringComparer.Ordinal);
 
-	private VirtualMachine RunInstructions(List<Instruction> blockInstructions,
-		string context = "body")
+	private VirtualMachine RunInstructions(List<Instruction> blockInstructions
+#if DEBUG
+		, string context = "body"
+#endif
+	)
 	{
 #if DEBUG
 		if (PerformanceLog.IsEnabled)
@@ -120,19 +127,16 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 
 	private void InitializeEntryPointMembers(BinaryMethod method)
 	{
-		//TODO: linq queries are forbidden in inner loops like this!
-		var entryType = executable.MethodsPerType.FirstOrDefault(type =>
-			type.Value.MethodGroups.Values.Any(overloads => overloads.Contains(method)));
-		if (entryType.Value == null)
-			return;
-		//TODO: too complex, needs to be simplified
-		foreach (var member in entryType.Value.Members)
-		{
-			var value = member.InitialValueExpression is SetInstruction setInstruction
-				? CloneConstantValue(setInstruction.ValueInstance)
-				: CreateDefaultComplexValue(ResolveBinaryMemberType(member, entryType.Key));
-			Memory.Frame.Set(member.Name, value, isMember: true);
-		}
+		foreach (var type in executable.MethodsPerType)
+		foreach (var overloads in type.Value.MethodGroups.Values)
+			if (overloads.Contains(method))
+			{
+				foreach (var member in type.Value.Members)
+					Memory.Frame.Set(member.Name, member.InitialValueExpression is SetInstruction setInstruction
+						? CloneConstantValue(setInstruction.ValueInstance)
+						: CreateDefaultComplexValue(ResolveBinaryMemberType(member, type.Key)), isMember: true);
+				return;
+			}
 	}
 
 	private Type ResolveBinaryMemberType(BinaryMember member, string entryTypeName)
@@ -403,14 +407,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		instructionIndex = loopBegin.InstructionIndex - 1;
 	}
 
-	private int GetInstructionIndex(Instruction instruction)
-	{
-		for (var index = 0; index < instructions.Count; index++)
-			if (ReferenceEquals(instructions[index], instruction))
-				return index;
-		return -1;
-	}
-
 	/// <summary>
 	/// Fallback for deserialized LoopEndInstructions that don't have LoopBegin set.
 	/// Uses Steps as a hint to find the LoopBeginInstruction by scanning.
@@ -445,7 +441,11 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 				" with return type " + invoke.Method.ReturnType.FullName);
 		var childScope = InitializeChildScope();
 		InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance);
-		RunInstructions(invokeInstructions, invoke.Method.Method.Name);
+		RunInstructions(invokeInstructions
+#if DEBUG
+			, invoke.Method.Method.Name
+#endif
+		);
 		var result = TryFlattenNestedIteratorList(invoke.Method, Returns);
 		CleanupChildScope(childScope);
 		if (result != null)
@@ -478,8 +478,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var instanceExpression = methodCall.Instance;
 		return methodCall.Method.Name switch
 		{
-			Method.From => instanceExpression == null && (TryHandleAdjustedColorConstructor(invoke) ||
-				ExecuteFromInvoke(invoke, methodCall.ReturnType)),
+			Method.From => ExecuteFromInvoke(invoke, methodCall.ReturnType),
 			BinaryOperator.To => instanceExpression != null && TryHandleToConversion(invoke),
 			"Length" or "Count" => instanceExpression != null && TryHandleNativeLength(invoke),
 			"Increment" or "Decrement" => TryHandleIncrementDecrement(invoke),
@@ -503,24 +502,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		return TryHandleFromConstructor(invoke, returnType);
 	}
 
-	private bool TryHandleNativeLength(Invoke invoke)
-	{
-		var instanceExpression = invoke.Method.Instance;
-		if (instanceExpression == null)
-			return false;
-		var instanceValue = instanceExpression is MemberCall memberCall
-			? EvaluateMemberCall(memberCall)
-			: EvaluateExpression(instanceExpression);
-		if (!TryGetNativeLength(instanceValue, invoke.Method.Method.Name, out var lengthValue))
-			return false;
-		Memory.Registers[invoke.Register] = lengthValue;
-		return true;
-	}
-
+	/*TODO: this needs to be generalized, this is stupid just for Color
 	private bool TryHandleAdjustedColorConstructor(Invoke invoke)
 	{
 		return false;
-		/*TODO: this needs to be generalized, this is stupid just for Color
 		if (invoke.Method.ReturnType.Name != "Color" || invoke.Method.Arguments.Count != 3 ||
 			!TryExtractColorChannelAdjustment(invoke.Method.Arguments[0], "Red", out var listCall,
 				out var adjustmentExpression) ||
@@ -540,10 +525,10 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			red + brightness, green + brightness, blue + brightness,
 			alpha ?? GetConstructorMemberValue(invoke.Method.ReturnType, 3).Number);
 		return true;
-		*/
 	}
+		*/
 
-		/*TODO
+	/*TODO
 	private static bool TryGetColorChannels(ValueInstance colorValue, out double red, out double green,
 		out double blue, out double? alpha)
 	{
@@ -613,8 +598,7 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		adjustmentExpression = null!;
 		return false;
 	}
-		*/
-	private static bool AreEquivalentExpression(Expression left, Expression right) =>
+		private static bool AreEquivalentExpression(Expression left, Expression right) =>
 		ReferenceEquals(left, right) || (left, right) switch
 		{
 			(Value leftValue, Value rightValue) => leftValue.Data.Equals(rightValue.Data),
@@ -633,6 +617,56 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 			(Instance, Instance) => true,
 			_ => false
 		};
+		*/
+	private bool TryHandleToConversion(Invoke invoke)
+	{
+		if (invoke.Method.Method.Name != BinaryOperator.To)
+			return false;
+		var conversionType = invoke.Method.ReturnType;
+		var rawValue = EvaluateExpression(invoke.Method.Instance ?? throw new InvalidOperationException());
+		if (conversionType.IsText && !invoke.Method.Method.IsTrait &&
+			invoke.Method.Method.Type == rawValue.GetType() &&
+			rawValue.TryGetValueTypeInstance() != null)
+			return false;
+		if (conversionType.IsText)
+			Memory.Registers[invoke.Register] = ConvertToText(rawValue);
+		else if (conversionType.IsNumber)
+			Memory.Registers[invoke.Register] =
+				rawValue.IsText
+					? new ValueInstance(conversionType, Convert.ToDouble(rawValue.Text))
+					: rawValue;
+		return true;
+	}
+
+	private bool TryHandleNativeLength(Invoke invoke)
+	{
+		var instanceExpression = invoke.Method.Instance;
+		if (instanceExpression == null)
+			return false;
+		var instanceValue = instanceExpression is MemberCall memberCall
+			? EvaluateMemberCall(memberCall)
+			: EvaluateExpression(instanceExpression);
+		if (!TryGetNativeLength(instanceValue, invoke.Method.Method.Name, out var lengthValue))
+			return false;
+		Memory.Registers[invoke.Register] = lengthValue;
+		return true;
+	}
+
+	private bool TryHandleIncrementDecrement(Invoke invoke)
+	{
+		var methodName = invoke.Method.Method.Name;
+		if (methodName != "Increment" && methodName != "Decrement")
+			return false;
+		if (invoke.Method.Instance == null)
+			return false;
+		var current = EvaluateExpression(invoke.Method.Instance);
+		var delta = methodName == "Increment"
+			? 1.0
+			: -1.0;
+		Memory.Registers[invoke.Register] =
+			new ValueInstance(current.GetType(), current.Number + delta);
+		return true;
+	}
 
 	//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
@@ -805,22 +839,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		int SavedInstructionIndex, bool SavedConditionFlag, ValueInstance? SavedReturns,
 		CallFrame SavedFrame, int StackDepth, CallFrame Frame);
 
-	private bool TryHandleIncrementDecrement(Invoke invoke)
-	{
-		var methodName = invoke.Method.Method.Name;
-		if (methodName != "Increment" && methodName != "Decrement")
-			return false;
-		if (invoke.Method.Instance == null)
-			return false;
-		var current = EvaluateExpression(invoke.Method.Instance);
-		var delta = methodName == "Increment"
-			? 1.0
-			: -1.0;
-		Memory.Registers[invoke.Register] =
-			new ValueInstance(current.GetType(), current.Number + delta);
-		return true;
-	}
-
 	private bool TryHandleNativeTextMethod(Invoke invoke)
 	{
 		var methodName = invoke.Method.Method.Name;
@@ -854,26 +872,6 @@ public sealed class VirtualMachine(BinaryExecutable executable)
 		var matches = start + prefix.Length <= text.Length &&
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
 		return new ValueInstance(executable.booleanType, matches);
-	}
-
-	private bool TryHandleToConversion(Invoke invoke)
-	{
-		if (invoke.Method.Method.Name != BinaryOperator.To)
-			return false;
-		var conversionType = invoke.Method.ReturnType;
-		var rawValue = EvaluateExpression(invoke.Method.Instance ?? throw new InvalidOperationException());
-		if (conversionType.IsText && !invoke.Method.Method.IsTrait &&
-			invoke.Method.Method.Type == rawValue.GetType() &&
-			rawValue.TryGetValueTypeInstance() != null)
-			return false;
-		if (conversionType.IsText)
-			Memory.Registers[invoke.Register] = ConvertToText(rawValue);
-		else if (conversionType.IsNumber)
-			Memory.Registers[invoke.Register] =
-				rawValue.IsText
-					? new ValueInstance(conversionType, Convert.ToDouble(rawValue.Text))
-					: rawValue;
-		return true;
 	}
 
 	private static ValueInstance ConvertToText(ValueInstance rawValue)
