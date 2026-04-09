@@ -195,8 +195,7 @@ public sealed class BinaryGenerator
 	{
 		for (var index = 0; index < methodCall.Method.Parameters.Count &&
 			index < methodCall.Arguments.Count; index++)
-     StoreEntryVariable(methodCall.Method.Parameters[index].Name,
-				methodCall.Arguments[index]);
+			StoreEntryVariable(methodCall.Method.Parameters[index].Name, methodCall.Arguments[index]);
 	}
 
 	private void StoreEntryVariable(string identifier, Expression expression)

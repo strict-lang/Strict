@@ -446,7 +446,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		var instance = hasInstance
 			? ReadExpression(reader, table)
 			: null;
-   var anyBaseType = EnsureResolvedType(package, Type.Number);
+		var anyBaseType = EnsureResolvedType(package, Type.Number);
 		var memberType = EnsureResolvedType(package, memberTypeName);
 		var fakeMember = new Member(anyBaseType, memberName, memberType);
 		return new MemberCall(instance, fakeMember);
