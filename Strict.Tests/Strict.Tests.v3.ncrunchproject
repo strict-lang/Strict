@@ -16,9 +16,6 @@
       <NamedTestSelector>
         <TestName>Strict.Tests.RunnerTests.RunAdjustBrightnessAllocatesBelowHalfMegabytePerRun</TestName>
       </NamedTestSelector>
-      <NamedTestSelector>
-        <TestName>Strict.Tests.RunnerTests.RunAdjustBrightness</TestName>
-      </NamedTestSelector>
     </IgnoredTests>
   </Settings>
 </ProjectConfiguration>
