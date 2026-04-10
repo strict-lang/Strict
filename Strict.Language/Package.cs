@@ -35,10 +35,13 @@ public class Package : Context, IDisposable
 				packagePath.Replace("TestPackage", "Strict"));
 		if (parentPackage == null)
 			return;
-		var existing = parentPackage.children.FirstOrDefault(existing => existing.Name == Name);
-		if (existing != null)
-			throw new PackageAlreadyExists(Name, parentPackage, existing); //ncrunch: no coverage
-		parentPackage.children.Add(this);
+    lock (parentPackage.syncRoot)
+		{
+			var existing = parentPackage.children.FirstOrDefault(existing => existing.Name == Name);
+			if (existing != null)
+				throw new PackageAlreadyExists(Name, parentPackage, existing); //ncrunch: no coverage
+			parentPackage.children.Add(this);
+		}
 	}
 
 	public class PackageAlreadyExists(string name, Package parentPackage, Package existing)
@@ -73,9 +76,15 @@ public class Package : Context, IDisposable
 			cachedFoundTypes.Add(Type.None, new Type(this, new TypeLines(Type.None)));
 
 		public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
-			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
+     TryGetCachedType(name, out var previouslyFoundType)
 				? previouslyFoundType
 				: FindTypeInChildrenAndCache(name, searchingFrom);
+
+		private bool TryGetCachedType(string name, out Type? type)
+		{
+			lock (syncRoot)
+				return cachedFoundTypes.TryGetValue(name, out type);
+		}
 
 		private Type? FindTypeInChildrenAndCache(string name, Context? searchingFrom)
 		{
@@ -89,7 +98,12 @@ public class Package : Context, IDisposable
 	}
 
 	private readonly List<Package> children = new();
-	internal void Add(Type type) => types.Add(type.Name, type);
+ private readonly Lock syncRoot = new();
+	internal void Add(Type type)
+	{
+		lock (syncRoot)
+			types.Add(type.Name, type);
+	}
 	private readonly Dictionary<string, Type> types = new();
 
 	public Type? FindFullType(string fullName)
@@ -124,23 +138,26 @@ public class Package : Context, IDisposable
 	/// </summary>
 	public override Type? FindTypeCore(string name, Context? searchingFrom = null)
 	{
-		if (name == lastName && lastType != null)
-			return lastType;
+   lock (syncRoot)
+			if (name == lastName && lastType != null)
+				return lastType;
 		if (IsPrivateName(name))
 			return null;
 		var type = FindDirectType(name) ?? FindTypeInChildrenOrParentPackages(name, searchingFrom);
 		if (type != null)
-		{
-			lastName = name;
-			lastType = type;
-		}
+     lock (syncRoot)
+			{
+				lastName = name;
+				lastType = type;
+			}
 		return type;
 	}
 
 	private Type? FindTypeInChildrenOrParentPackages(string name, Context? searchingFrom)
 	{
 		Type? type = null;
-		if (children.Count > 0)
+   lock (syncRoot)
+			if (children.Count > 0)
 			type = FindTypeInChildrenPackages(name, searchingFrom ?? this);
 		type ??= Parent.FindTypeCore(name, this);
 		return type;
@@ -150,14 +167,21 @@ public class Package : Context, IDisposable
 	private Type? lastType;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Type? FindDirectType(string name) => types.GetValueOrDefault(name);
+  public Type? FindDirectType(string name)
+	{
+		lock (syncRoot)
+			return types.GetValueOrDefault(name);
+	}
 
 	private Type? FindTypeInChildrenPackages(string name, Context? searchingFromPackage)
 	{
-		foreach (var t in children)
+   Package[] childrenSnapshot;
+		lock (syncRoot)
+			childrenSnapshot = children.ToArray();
+		foreach (var t in childrenSnapshot)
 			if (t != searchingFromPackage)
 			{
-				var childType = t.FindDirectType(name) ?? (children.Count > 0
+       var childType = t.FindDirectType(name) ?? (childrenSnapshot.Length > 0
 					? t.FindTypeInChildrenPackages(name, searchingFromPackage)
 					: null);
 				if (childType != null)
@@ -168,7 +192,10 @@ public class Package : Context, IDisposable
 
 	public Package? FindSubPackage(string name)
 	{
-		foreach (var child in children)
+   Package[] childrenSnapshot;
+		lock (syncRoot)
+			childrenSnapshot = children.ToArray();
+		foreach (var child in childrenSnapshot)
 			if (child.Name == name || child.FullName == name)
 				return child;
 		return null;
@@ -180,10 +207,15 @@ public class Package : Context, IDisposable
 	public void Remove(Type? type)
 	{
 		if (type != null)
-			types.Remove(type.Name);
+      lock (syncRoot)
+				types.Remove(type.Name);
 	}
 
-	internal void Remove(Package package) => children.Remove(package);
+  internal void Remove(Package package)
+	{
+		lock (syncRoot)
+			children.Remove(package);
+	}
 	public IReadOnlyDictionary<string, Type> Types => types;
 	public const string TestLanguageConversion = nameof(TestLanguageConversion);
 
