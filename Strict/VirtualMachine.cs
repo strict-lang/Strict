@@ -379,7 +379,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 				", Register=" + loadVariable.Register,
 			LoadConstantInstruction loadConstant => ", Constant=" +
 				DescribeValueInstance(loadConstant.Constant) + ", Register=" + loadConstant.Register,
-			Invoke invoke => ", Method=" + DescribeMethodCall(invoke.Method) + ", Register=" +
+			Invoke invoke => ", Method=" + invoke.MethodInfo + ", Register=" +
 				invoke.Register,
 			PrintInstruction print => ", TextPrefix=" + print.TextPrefix + ", ValueRegister=" +
 				print.ValueRegister + ", ValueIsText=" + print.ValueIsText,
@@ -416,13 +416,6 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		for (var index = 0; index < registers.Length; index++)
 			parts[index] = registers[index].ToString();
 		return "[" + string.Join(", ", parts) + "]";
-	}
-
-	private static string DescribeMethodCall(MethodCall methodCall)
-	{
-		var method = methodCall.Method;
-		return method.Name + " on " + method.Type.Name + " args=" + methodCall.Arguments.Count +
-			", hasInstance=" + (methodCall.Instance != null);
 	}
 
 	private static string DescribeValueInstance(ValueInstance value) =>

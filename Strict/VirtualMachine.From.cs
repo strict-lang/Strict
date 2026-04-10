@@ -1,3 +1,4 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
@@ -16,42 +17,39 @@ public sealed partial class VirtualMachine
 	{
 		if (targetType is GenericTypeImplementation)
 			return false;
+		var info = invoke.MethodInfo;
 		var members = targetType.Members;
 		var hasBinaryMembers = TryGetBinaryMembers(targetType, out var binaryMembers);
 		if (members.Count == 0 && hasBinaryMembers)
 		{
-			//TODO: called almost 1 million times? wtf?
 			Memory.Registers[invoke.Register] = new ValueInstance(targetType,
-				CreateConstructorValuesFromBinaryMembers(targetType, invoke.Method.Arguments, binaryMembers));
+				CreateConstructorValuesFromBinaryMembers(targetType, info.ArgumentRegisters,
+					binaryMembers));
 			return true;
 		}
 		var values = new ValueInstance[members.Count];
-		for (var parameterIndex = 0; parameterIndex < invoke.Method.Method.Parameters.Count; parameterIndex++)
+		for (var parameterIndex = 0; parameterIndex < info.ParameterNames.Length; parameterIndex++)
 		{
-			//wtf, another 1.2m calls?
-			var parameter = invoke.Method.Method.Parameters[parameterIndex];
-			var memberIndex = FindMemberIndex(members, parameter.Name);
+			var parameterName = info.ParameterNames[parameterIndex];
+			var memberIndex = FindMemberIndex(members, parameterName);
 			if (memberIndex == -1 && parameterIndex < members.Count)
 				memberIndex = parameterIndex;
 			if (memberIndex == -1 || values[memberIndex].HasValue)
 				continue;
 			var memberInitialValue = members[memberIndex].InitialValue;
-			values[memberIndex] = parameterIndex < invoke.Method.Arguments.Count
-				? EvaluateExpression(invoke.Method.Arguments[parameterIndex])
-				: parameter.DefaultValue != null
-					? EvaluateExpression(parameter.DefaultValue)
-					: memberInitialValue != null
-						? EvaluateExpression(memberInitialValue)
-						: hasBinaryMembers && TryGetBinaryMemberInitialValue(binaryMembers, memberIndex,
-							out var initialValue)
-							? initialValue
-							: CreateDefaultValue(members[memberIndex].Type);
+			values[memberIndex] = parameterIndex < info.ArgumentRegisters.Length
+				? Memory.Registers[info.ArgumentRegisters[parameterIndex]]
+				: memberInitialValue != null
+					? EvaluateExpression(memberInitialValue)
+					: hasBinaryMembers && TryGetBinaryMemberInitialValue(binaryMembers, memberIndex,
+						out var initialValue)
+						? initialValue
+						: CreateDefaultValue(members[memberIndex].Type);
 		}
-		var constructorArguments = invoke.Method.Arguments;
-		for (var memberIndex = 0; memberIndex < members.Count && memberIndex < constructorArguments.Count;
-			memberIndex++)
+		for (var memberIndex = 0; memberIndex < members.Count &&
+			memberIndex < info.ArgumentRegisters.Length; memberIndex++)
 			if (!values[memberIndex].HasValue)
-				values[memberIndex] = EvaluateExpression(constructorArguments[memberIndex]);
+				values[memberIndex] = Memory.Registers[info.ArgumentRegisters[memberIndex]];
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 			if (!values[memberIndex].HasValue)
 			{
@@ -92,7 +90,7 @@ public sealed partial class VirtualMachine
 	}
 
 	private ValueInstance[] CreateConstructorValuesFromBinaryMembers(Type targetType,
-		IReadOnlyList<Expression> arguments, IReadOnlyList<BinaryMember> binaryMembers)
+		Register[] argumentRegisters, IReadOnlyList<BinaryMember> binaryMembers)
 	{
 		var values = new ValueInstance[binaryMembers.Count];
 		var argumentIndex = 0;
@@ -102,8 +100,8 @@ public sealed partial class VirtualMachine
 				targetType.FindType(GetShortTypeName(binaryMembers[memberIndex].FullTypeName));
 			if (memberType is { IsTrait: true })
 				values[memberIndex] = CreateTraitInstance(memberType);
-			else if (argumentIndex < arguments.Count)
-				values[memberIndex] = EvaluateExpression(arguments[argumentIndex++]);
+			else if (argumentIndex < argumentRegisters.Length)
+				values[memberIndex] = Memory.Registers[argumentRegisters[argumentIndex++]];
 			else if (memberType != null)
 				values[memberIndex] = CreateDefaultComplexValue(memberType);
 			else

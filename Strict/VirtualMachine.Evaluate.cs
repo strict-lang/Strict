@@ -145,7 +145,7 @@ public sealed partial class VirtualMachine
 				? EvaluateExpression(call.Instance)
 				: (ValueInstance?)null;
 			var childScope = InitializeChildScope();
-			InitializeMethodCallScope(call, evaluatedArguments, evaluatedInstance);
+			InitializeMethodCallScopeFromExpressions(call, evaluatedArguments, evaluatedInstance);
 			RunInstructions(precompiledInstructions);
 			var precompiledResult = Returns;
 			CleanupChildScope(childScope);
@@ -211,7 +211,7 @@ public sealed partial class VirtualMachine
 		var members = targetType.Members;
 		if (members.Count == 0 && TryGetBinaryMembers(targetType, out var binaryMembers))
 			return new ValueInstance(targetType,
-				CreateConstructorValuesFromBinaryMembers(targetType, call.Arguments, binaryMembers));
+				CreateConstructorValuesFromExpressions(targetType, call.Arguments, binaryMembers));
 		var values = new ValueInstance[members.Count];
 		var argumentIndex = 0;
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
@@ -274,5 +274,72 @@ public sealed partial class VirtualMachine
 		if (rawValue.TryGetValueTypeInstance() is { } typeInstance)
 			return new ValueInstance(typeInstance.ToAutomaticText());
 		return new ValueInstance(rawValue.ToExpressionCodeString());
+	}
+
+	/// <summary>
+	/// Legacy expression-based scope initialization used by EvaluateMethodCall fallback path.
+	/// Will be removed when all expression evaluation is eliminated from the VM.
+	/// </summary>
+	private void InitializeMethodCallScopeFromExpressions(MethodCall methodCall,
+		IReadOnlyList<ValueInstance> evaluatedArguments, ValueInstance? evaluatedInstance)
+	{
+		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count &&
+			parameterIndex < methodCall.Arguments.Count; parameterIndex++)
+			Memory.Frame.Set(methodCall.Method.Parameters[parameterIndex].Name,
+				evaluatedArguments[parameterIndex]);
+		if (methodCall.Instance == null)
+			return;
+		var instance = evaluatedInstance ?? EvaluateExpression(methodCall.Instance);
+		Memory.Frame.Set(Type.ValueLowercase, instance, isMember: true);
+		if (instance.IsText)
+		{
+			Memory.Frame.Set("elements", instance, isMember: true);
+			Memory.Frame.Set("characters", instance, isMember: true);
+			return;
+		}
+		var flatNumeric = instance.TryGetFlatNumericArrayInstance();
+		if (flatNumeric != null)
+		{
+			var flatMembers = flatNumeric.ReturnType.Members;
+			for (var memberIndex = 0; memberIndex < flatMembers.Count &&
+				memberIndex < flatNumeric.FlatWidth; memberIndex++)
+				if (!flatMembers[memberIndex].Type.IsTrait)
+					Memory.Frame.Set(flatMembers[memberIndex].Name,
+						new ValueInstance(flatMembers[memberIndex].Type, flatNumeric.GetFlat(memberIndex)),
+						isMember: true);
+			return;
+		}
+		var typeInst = instance.TryGetValueTypeInstance();
+		if (typeInst != null && TrySetScopeMembersFromTypeMembers(typeInst))
+			return;
+		var firstNonTraitMember = instance.GetType().Members.FirstOrDefault(member =>
+			!member.Type.IsTrait);
+		if (firstNonTraitMember != null)
+			Memory.Frame.Set(firstNonTraitMember.Name, instance, isMember: true);
+	}
+
+	/// <summary>
+	/// Legacy expression-based constructor value creation used by EvaluateFromConstructor fallback.
+	/// Will be removed when all expression evaluation is eliminated from the VM.
+	/// </summary>
+	private ValueInstance[] CreateConstructorValuesFromExpressions(Type targetType,
+		IReadOnlyList<Expression> arguments, IReadOnlyList<Bytecode.Serialization.BinaryMember> binaryMembers)
+	{
+		var values = new ValueInstance[binaryMembers.Count];
+		var argumentIndex = 0;
+		for (var memberIndex = 0; memberIndex < binaryMembers.Count; memberIndex++)
+		{
+			var memberType = targetType.FindType(binaryMembers[memberIndex].FullTypeName) ??
+				targetType.FindType(GetShortTypeName(binaryMembers[memberIndex].FullTypeName));
+			if (memberType is { IsTrait: true })
+				values[memberIndex] = CreateTraitInstance(memberType);
+			else if (argumentIndex < arguments.Count)
+				values[memberIndex] = EvaluateExpression(arguments[argumentIndex++]);
+			else if (memberType != null)
+				values[memberIndex] = CreateDefaultComplexValue(memberType);
+			else
+				values[memberIndex] = new ValueInstance(executable.numberType, 0);
+		}
+		return values;
 	}
 }

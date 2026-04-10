@@ -12,38 +12,37 @@ public sealed partial class VirtualMachine
 	{
 		if (TryExecuteSpecialInvoke(invoke))
 			return;
-		var arguments = invoke.Method.Arguments;
-		var evaluatedArgs = arguments.Count == 0
+		var info = invoke.MethodInfo;
+		var evaluatedArgs = info.ArgumentRegisters.Length == 0
 			? Array.Empty<ValueInstance>()
-			: new ValueInstance[arguments.Count];
-		for (var argIndex = 0; argIndex < arguments.Count; argIndex++)
-			evaluatedArgs[argIndex] = EvaluateExpression(invoke.Method.Arguments[argIndex]);
-		var evaluatedInstance = invoke.Method.Instance != null
-			? EvaluateExpression(invoke.Method.Instance)
+			: new ValueInstance[info.ArgumentRegisters.Length];
+		for (var argIndex = 0; argIndex < info.ArgumentRegisters.Length; argIndex++)
+			evaluatedArgs[argIndex] = Memory.Registers[info.ArgumentRegisters[argIndex]];
+		var evaluatedInstance = info.InstanceRegister.HasValue
+			? Memory.Registers[info.InstanceRegister.Value]
 			: (ValueInstance?)null;
 		var invokeInstructions = invoke.CachedInstructions ??=
 			GetPrecompiledMethodInstructions(invoke) ??
 			throw new InvalidOperationException("No precompiled method instructions found for " +
-				invoke.Method.Method.Type.FullName + "." + invoke.Method.Method.Name +
-				" with return type " + invoke.Method.ReturnType.FullName);
+				info.TypeFullName + "." + info.MethodName +
+				" with return type " + info.ReturnTypeName);
 		var childScope = InitializeChildScope();
-		InitializeMethodCallScope(invoke.Method, evaluatedArgs, evaluatedInstance);
+		InitializeMethodCallScope(info, evaluatedArgs, evaluatedInstance);
 		RunInstructions(invokeInstructions
 #if DEBUG
-			, invoke.Method.Method.Name
+			, info.MethodName
 #endif
 		);
-		var result = TryFlattenNestedIteratorList(invoke.Method, Returns);
+		var result = TryFlattenNestedIteratorList(info, Returns);
 		CleanupChildScope(childScope);
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
 	}
 
-	private static ValueInstance? TryFlattenNestedIteratorList(MethodCall methodCall,
+	private static ValueInstance? TryFlattenNestedIteratorList(InvokeMethodInfo info,
 		ValueInstance? result)
 	{
-		if (result == null || methodCall.Method.Name != Keyword.For ||
-			!methodCall.Method.ReturnType.IsIterator || !result.Value.IsList)
+		if (result == null || info.MethodName != Keyword.For || !result.Value.IsList)
 			return result;
 		var materialized = result.Value;
 		if (materialized.List.Items.Count == 0 ||
@@ -61,13 +60,12 @@ public sealed partial class VirtualMachine
 
 	private bool TryExecuteSpecialInvoke(Invoke invoke)
 	{
-		var methodCall = invoke.Method;
-		var instanceExpression = methodCall.Instance;
-		return methodCall.Method.Name switch
+		var info = invoke.MethodInfo;
+		return info.MethodName switch
 		{
-			Method.From => ExecuteFromInvoke(invoke, methodCall.ReturnType),
-			BinaryOperator.To => instanceExpression != null && TryHandleToConversion(invoke),
-			"Length" or "Count" => instanceExpression != null && TryHandleNativeLength(invoke),
+			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.basePackage)),
+			BinaryOperator.To => info.InstanceRegister.HasValue && TryHandleToConversion(invoke),
+			"Length" or "Count" => info.InstanceRegister.HasValue && TryHandleNativeLength(invoke),
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
 			"StartsWith" or "IndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
@@ -88,12 +86,9 @@ public sealed partial class VirtualMachine
 
 	private bool TryHandleToConversion(Invoke invoke)
 	{
-		var conversionType = invoke.Method.ReturnType;
-		var rawValue = EvaluateExpression(invoke.Method.Instance!);
-		if (conversionType.IsText && !invoke.Method.Method.IsTrait &&
-			invoke.Method.Method.Type == rawValue.GetType() &&
-			rawValue.TryGetValueTypeInstance() != null)
-			return false;
+		var info = invoke.MethodInfo;
+		var conversionType = info.ResolveReturnType(executable.basePackage);
+		var rawValue = Memory.Registers[info.InstanceRegister!.Value];
 		if (conversionType.IsText)
 			Memory.Registers[invoke.Register] = ConvertToText(rawValue);
 		else if (conversionType.IsNumber)
@@ -106,10 +101,8 @@ public sealed partial class VirtualMachine
 
 	private bool TryHandleNativeLength(Invoke invoke)
 	{
-		var instanceValue = invoke.Method.Instance is MemberCall memberCall
-			? EvaluateMemberCall(memberCall)
-			: EvaluateExpression(invoke.Method.Instance!);
-		if (!TryGetNativeLength(instanceValue, invoke.Method.Method.Name, out var lengthValue))
+		var instanceValue = Memory.Registers[invoke.MethodInfo.InstanceRegister!.Value];
+		if (!TryGetNativeLength(instanceValue, invoke.MethodInfo.MethodName, out var lengthValue))
 			return false;
 		Memory.Registers[invoke.Register] = lengthValue;
 		return true;
@@ -117,14 +110,13 @@ public sealed partial class VirtualMachine
 
 	private bool TryHandleIncrementDecrement(Invoke invoke, bool isIncrement)
 	{
-		var current = EvaluateExpression(invoke.Method.Instance!);
+		var current = Memory.Registers[invoke.MethodInfo.InstanceRegister!.Value];
 		var delta = isIncrement ? 1.0 : -1.0;
 		Memory.Registers[invoke.Register] =
 			new ValueInstance(current.GetType(), current.Number + delta);
 		return true;
 	}
 
-	//TODO: find all [.. with existing list and no changes, all those cases need to be removed, there is a crazy amount of those added (54 wtf)!
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
 		executable.FindInstructions(method.Type, method) ??
 		executable.FindInstructions(method.Type.Name, method.Name,
@@ -154,26 +146,42 @@ public sealed partial class VirtualMachine
 			: null;
 	}
 
-	private List<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke) =>
-		GetPrecompiledMethodInstructions(invoke.Method.Method);
-
-	private void InitializeMethodCallScope(MethodCall methodCall,
-		IReadOnlyList<ValueInstance>? evaluatedArguments = null,
-		ValueInstance? evaluatedInstance = null)
+	private List<Instruction>? GetPrecompiledMethodInstructions(Invoke invoke)
 	{
-		for (var parameterIndex = 0; parameterIndex < methodCall.Method.Parameters.Count &&
-			parameterIndex < methodCall.Arguments.Count; parameterIndex++)
-			Memory.Frame.Set(methodCall.Method.Parameters[parameterIndex].Name,
-				evaluatedArguments != null
-					? evaluatedArguments[parameterIndex]
-					: EvaluateExpression(methodCall.Arguments[parameterIndex]));
-		if (methodCall.Instance == null)
+		var info = invoke.MethodInfo;
+		return executable.FindInstructions(info.TypeFullName, info.MethodName,
+				info.ParameterNames.Length, info.ReturnTypeName) ??
+			executable.FindInstructions(
+				nameof(Strict) + Context.ParentSeparator + info.TypeFullName, info.MethodName,
+				info.ParameterNames.Length, info.ReturnTypeName) ??
+			FindInstructionsFromInvokeInfo(info);
+	}
+
+	private List<Instruction>? FindInstructionsFromInvokeInfo(InvokeMethodInfo info)
+	{
+		var strictPrefix = nameof(Strict) + Context.ParentSeparator;
+		if (info.TypeFullName.StartsWith(strictPrefix, StringComparison.Ordinal))
+			return executable.FindInstructions(info.TypeFullName[strictPrefix.Length..],
+				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName);
+		return !info.TypeFullName.StartsWith(strictPrefix, StringComparison.Ordinal)
+			? executable.FindInstructions(strictPrefix + info.TypeFullName,
+				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName)
+			: null;
+	}
+
+	private void InitializeMethodCallScope(InvokeMethodInfo info,
+		IReadOnlyList<ValueInstance> evaluatedArguments, ValueInstance? evaluatedInstance)
+	{
+		for (var parameterIndex = 0; parameterIndex < info.ParameterNames.Length &&
+			parameterIndex < evaluatedArguments.Count; parameterIndex++)
+			Memory.Frame.Set(info.ParameterNames[parameterIndex],
+				evaluatedArguments[parameterIndex]);
+		if (!evaluatedInstance.HasValue)
 			return;
-		var instance = evaluatedInstance ?? EvaluateExpression(methodCall.Instance);
+		var instance = evaluatedInstance.Value;
 		Memory.Frame.Set(Type.ValueLowercase, instance, isMember: true);
 		if (instance.IsText)
 		{
-			//TODO: this seems to be more of a hack
 			Memory.Frame.Set("elements", instance, isMember: true);
 			Memory.Frame.Set("characters", instance, isMember: true);
 			return;
@@ -248,7 +256,6 @@ public sealed partial class VirtualMachine
 		var savedReturns = Returns;
 		var savedFrame = Memory.Frame;
 		var depth = registerStackDepth++;
-		//TODO: needs testing and cleanU
 		// ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
 		// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 		if (registerStack[depth] == null)
@@ -284,18 +291,20 @@ public sealed partial class VirtualMachine
 
 	private bool TryHandleNativeTextMethod(Invoke invoke)
 	{
-		var instance = EvaluateExpression(invoke.Method.Instance!);
+		var info = invoke.MethodInfo;
+		var instance = Memory.Registers[info.InstanceRegister!.Value];
 		var text = instance.Text;
-		var methodName = invoke.Method.Method.Name;
-		var args = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
-		Memory.Registers[invoke.Register] = methodName switch
+		var args = new ValueInstance[info.ArgumentRegisters.Length];
+		for (var argIndex = 0; argIndex < info.ArgumentRegisters.Length; argIndex++)
+			args[argIndex] = Memory.Registers[info.ArgumentRegisters[argIndex]];
+		Memory.Registers[invoke.Register] = info.MethodName switch
 		{
 			"StartsWith" => EvaluateStartsWith(text, args),
 			"IndexOf" => new ValueInstance(executable.numberType,
 				text.IndexOf(args[0].Text, StringComparison.Ordinal)),
 			"Substring" => new ValueInstance(
 				text.Substring((int)args[0].Number, (int)args[1].Number)),
-			_ => throw new InvalidOperationException("Unhandled native text method: " + methodName) //ncrunch: no coverage
+			_ => throw new InvalidOperationException("Unhandled native text method: " + info.MethodName)
 		};
 		return true;
 	}
