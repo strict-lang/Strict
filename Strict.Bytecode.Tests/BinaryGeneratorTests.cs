@@ -322,7 +322,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 				[
 					new StoreVariableInstruction(Number(2), "firstNumber"),
 					new StoreVariableInstruction(Number(5), "secondNumber"),
-					new Invoke(Register.R0, null!, null!),
+					new Invoke(Register.R0, null!),
 					new ReturnInstruction(Register.R0)
 				],
 				(string[])
@@ -338,7 +338,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 				new Instruction[]
 				{
 					new StoreVariableInstruction(Number(5), "number"),
-					new Invoke(Register.R0, null!, null!),
+					new Invoke(Register.R0, null!),
 					new LoadConstantInstruction(Register.R1, Number(0)),
 					new BinaryInstruction(InstructionType.GreaterThan, Register.R0, Register.R1),
 					new JumpToId(0, InstructionType.JumpToIdIfFalse),

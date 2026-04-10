@@ -14,6 +14,14 @@ public abstract class InstructionsCompiler
 				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToArray(),
 			method.ReturnType);
 
+	protected static string BuildMethodHeaderKeyInternal(InvokeMethodInfo info) =>
+		info.ParameterNames.Length == 0
+			? BinaryMemberJustTypeName(info.ReturnTypeName) == Type.None
+				? info.MethodName
+				: info.MethodName + " " + BinaryMemberJustTypeName(info.ReturnTypeName)
+			: info.MethodName + "(" + string.Join(", ", info.ParameterNames) + ") " +
+			BinaryMemberJustTypeName(info.ReturnTypeName);
+
 	protected static Dictionary<string, List<Instruction>> BuildPrecompiledMethodsInternal(
 		BinaryExecutable binary)
 	{
