@@ -67,14 +67,19 @@ public sealed class InvokeMethodInfo
 
 	public Type ResolveReturnType(Package basePackage) =>
 		ResolvedReturnType ??= basePackage.FindType(ReturnTypeName) ??
-			basePackage.FindFullType(ReturnTypeName) ??
+			TryFindFullType(basePackage, ReturnTypeName) ??
 			basePackage.FindType(GetSimpleTypeName(ReturnTypeName)) ??
 			basePackage.GetType(Type.None);
 
 	public Type ResolveDeclaringType(Package basePackage) =>
-		basePackage.FindFullType(TypeFullName) ?? basePackage.FindType(TypeFullName) ??
+		TryFindFullType(basePackage, TypeFullName) ?? basePackage.FindType(TypeFullName) ??
 			basePackage.FindType(GetSimpleTypeName(TypeFullName)) ??
 			basePackage.GetType(Type.None);
+
+	private static Type? TryFindFullType(Package basePackage, string typeName) =>
+		typeName.Contains(Context.ParentSeparator)
+			? basePackage.FindFullType(typeName)
+			: null;
 
 	private static string GetSimpleTypeName(string fullTypeName)
 	{

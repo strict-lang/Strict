@@ -8,12 +8,6 @@ namespace Strict.Compiler;
 
 public abstract class InstructionsCompiler
 {
-	protected static string BuildMethodHeaderKeyInternal(Method method) =>
-		BinaryExecutable.BuildMethodHeader(method.Name,
-			method.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.Name, null)).ToArray(),
-			method.ReturnType);
-
 	protected static string BuildMethodHeaderKeyInternal(InvokeMethodInfo info) =>
 		info.ParameterNames.Length == 0
 			? BinaryMemberJustTypeName(info.ReturnTypeName) == Type.None
@@ -41,8 +35,8 @@ public abstract class InstructionsCompiler
 			? BinaryMemberJustTypeName(method.ReturnTypeName) == Type.None
 				? methodName
 				: methodName + " " + BinaryMemberJustTypeName(method.ReturnTypeName)
-			: methodName + "(" + string.Join(", ", method.parameters) + ") " +
-			BinaryMemberJustTypeName(method.ReturnTypeName);
+			: methodName + "(" + string.Join(", ", method.parameters.Select(parameter => parameter.Name)) +
+			") " + BinaryMemberJustTypeName(method.ReturnTypeName);
 
 	private static string BinaryMemberJustTypeName(string fullTypeName) =>
 		fullTypeName.Split(Context.ParentSeparator)[^1];
@@ -58,53 +52,60 @@ public abstract class InstructionsCompiler
 
 	protected static Dictionary<string, CompiledMethodInfo> CollectMethods(
 		List<Instruction> instructions,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods,
+		BinaryExecutable? binary = null)
 	{
 		var methods = new Dictionary<string, CompiledMethodInfo>(StringComparer.Ordinal);
-		var queue = new Queue<(Method Method, bool IncludeMembers)>();
-		EnqueueInvokedMethods(instructions, queue);
+		if (precompiledMethods == null)
+			return methods;
+		var queue = new Queue<InvokeMethodInfo>();
+		EnqueueInvokedMethodInfos(instructions, queue);
+		var processed = new HashSet<string>(StringComparer.Ordinal);
 		while (queue.Count > 0)
 		{
-			var (method, includeMembers) = queue.Dequeue();
-			var methodKey = BuildMethodHeaderKeyInternal(method);
-			if (methods.TryGetValue(methodKey, out var existing))
-			{
-				if (includeMembers && existing.MemberNames.Count == 0)
-					methods[methodKey] = BuildMethodInfo(method, true, precompiledMethods);
+			var info = queue.Dequeue();
+			var methodKey = BuildMethodHeaderKeyInternal(info);
+			if (!processed.Add(methodKey))
 				continue;
-			}
-			var methodInfo = BuildMethodInfo(method, includeMembers, precompiledMethods);
-			methods[methodKey] = methodInfo;
-			EnqueueInvokedMethods(methodInfo.Instructions, queue);
+			if (!precompiledMethods.TryGetValue(methodKey, out var precompiled))
+				continue;
+			var methodInstructions = new List<Instruction>(precompiled);
+			var memberNames = info.InstanceRegister.HasValue
+				? GetMemberNamesFromBinary(binary, info.TypeFullName)
+				: [];
+			var parameterNames = new List<string>(memberNames);
+			parameterNames.AddRange(info.ParameterNames);
+			var typeName = BinaryMemberJustTypeName(info.TypeFullName);
+			var symbol = typeName + "_" + info.MethodName + "_" + info.ParameterNames.Length;
+			var compiledMethodInfo = new CompiledMethodInfo(symbol, methodInstructions,
+				parameterNames, memberNames);
+			methods[methodKey] = compiledMethodInfo;
+			EnqueueInvokedMethodInfos(methodInstructions, queue);
 		}
 		return methods;
 	}
 
-	private static CompiledMethodInfo BuildMethodInfo(Method method, bool includeMembers,
-		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods)
+	private static List<string> GetMemberNamesFromBinary(BinaryExecutable? binary, string typeFullName)
 	{
-		var methodKey = BuildMethodHeaderKeyInternal(method);
-		var instructions =
-			precompiledMethods != null && precompiledMethods.TryGetValue(methodKey, out var precompiled)
-				? new List<Instruction>(precompiled)
-				: throw new NotSupportedException("Method " + methodKey + " must be precompiled in BinaryExecutable. Ensure it is included via BuildPrecompiledMethodsInternal.");
-		var memberNames = includeMembers
-			? method.Type.Members.Where(member => !member.Type.IsTrait).Select(member => member.Name).ToList()
-			: new List<string>();
-		var parameterNames = new List<string>(memberNames);
-		parameterNames.AddRange(method.Parameters.Select(parameter => parameter.Name));
-		return new CompiledMethodInfo(BuildMethodSymbol(method), instructions, parameterNames,
-			memberNames);
+		if (binary == null)
+			return [];
+		if (binary.MethodsPerType.TryGetValue(typeFullName, out var typeData))
+			return typeData.Members.Where(member => !member.FullTypeName.EndsWith("Trait",
+				StringComparison.OrdinalIgnoreCase)).Select(member => member.Name).ToList();
+		var justTypeName = BinaryMemberJustTypeName(typeFullName);
+		foreach (var (key, data) in binary.MethodsPerType)
+			if (BinaryMemberJustTypeName(key) == justTypeName)
+				return data.Members.Where(member => !member.FullTypeName.EndsWith("Trait",
+					StringComparison.OrdinalIgnoreCase)).Select(member => member.Name).ToList();
+		return [];
 	}
 
-	protected static string BuildMethodSymbol(Method method) =>
-		method.Type.Name + "_" + method.Name + "_" + method.Parameters.Count;
-
-	private static void EnqueueInvokedMethods(IEnumerable<Instruction> instructions,
-		Queue<(Method Method, bool IncludeMembers)> queue)
+	private static void EnqueueInvokedMethodInfos(IEnumerable<Instruction> instructions,
+		Queue<InvokeMethodInfo> queue)
 	{
-		// With the new register-based Invoke, method discovery for native compilation is not
-		// needed during instruction scanning - all methods are already precompiled in the binary
+		foreach (var instruction in instructions)
+			if (instruction is Invoke invoke && invoke.MethodInfo.MethodName != Method.From)
+				queue.Enqueue(invoke.MethodInfo);
 	}
 
 	protected static bool HasNumericPrint(IEnumerable<Instruction> instructions) =>

@@ -16,7 +16,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	{
 		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
 		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions,
-			precompiledMethods);
+			precompiledMethods, binary);
 		return Task.FromResult(output);
 	}
 
@@ -26,10 +26,11 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		BuildFunction(methodName, [], instructions).Text;
 
 	private static string CompileForPlatform(string methodName, List<Instruction> instructions,
-		Dictionary<string, List<Instruction>>? precompiledMethods = null)
+		Dictionary<string, List<Instruction>>? precompiledMethods = null,
+		BinaryExecutable? binary = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
-		var methodInfos = CollectMethods([.. instructions], precompiledMethods);
+		var methodInfos = CollectMethods([.. instructions], precompiledMethods, binary);
 		var allStringConstants = new List<(string Name, string Text, int ByteLen)>();
 		var entryFunction = BuildFunction(methodName, [], [.. instructions], methodInfos);
 		allStringConstants.AddRange(entryFunction.StringConstants);

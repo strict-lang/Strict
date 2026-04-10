@@ -16,7 +16,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	{
 		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
 		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
-			precompiledMethods);
+			precompiledMethods, binary);
 		return Task.FromResult(output);
 	}
 
@@ -26,10 +26,11 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		BuildFunction(methodName, [], instructions, Platform.Linux);
 
 	private static string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
-		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
+		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null,
+		BinaryExecutable? binary = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
-		var methodInfos = CollectMethods([.. instructions], precompiledMethods);
+		var methodInfos = CollectMethods([.. instructions], precompiledMethods, binary);
 		var hasNumericPrint = HasNumericPrint(instructions) ||
 			methodInfos.Values.Any(info => HasNumericPrint(info.Instructions));
 		var module = BuildModuleHeader(platform, hasPrint, hasNumericPrint);

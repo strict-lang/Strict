@@ -17,7 +17,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	{
 		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
 		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
-			precompiledMethods);
+			precompiledMethods, binary);
 		return Task.FromResult(output);
 	}
 
@@ -27,10 +27,11 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		BuildAssembly(methodName, [], instructions);
 
 	private static string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
-		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
+		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null,
+		BinaryExecutable? binary = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
-		var methodInfos = CollectMethods([.. instructions], precompiledMethods);
+		var methodInfos = CollectMethods([.. instructions], precompiledMethods, binary);
 		var hasNumericPrint = HasNumericPrint(instructions) ||
 			methodInfos.Values.Any(methodInfo => HasNumericPrint(methodInfo.Instructions));
 		var functionAsm = BuildAssembly(methodName, [], [.. instructions], platform, methodInfos);
