@@ -883,29 +883,70 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
-	public void PreloadsIdentifierAccessPathsForInstructionBlock()
+	public void RunFibonacciVm()
 	{
-		List<Instruction> instructions =
-		[
-			new LoadVariableToRegister(Register.R0, "image.Colors"),
-			new LoadVariableToRegister(Register.R1, "image.Size.Width"),
-			new StoreFromRegisterInstruction(Register.R0, "image.Colors(index)"),
-			new StoreFromRegisterInstruction(Register.R1, "image.Colors(index)")
-		];
-		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);
-		var vm = new VirtualMachine(binary);
-		var preloadMethod = typeof(VirtualMachine).GetMethod("CacheInstructionAccessPaths",
-			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-		Assert.That(preloadMethod, Is.Not.Null);
-		preloadMethod!.Invoke(vm, [instructions]);
-		var identifierPathsField = typeof(VirtualMachine).GetField("identifierAccessPaths",
-			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
-		var indexedPathsField = typeof(VirtualMachine).GetField("indexedElementAccessPaths",
-			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
-		var identifierPaths =
-			(System.Collections.IDictionary)identifierPathsField.GetValue(vm)!;
-		var indexedPaths = (System.Collections.IDictionary)indexedPathsField.GetValue(vm)!;
-		Assert.That(identifierPaths.Count, Is.EqualTo(3));
-		Assert.That(indexedPaths.Count, Is.EqualTo(1));
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("Fibonacci",
+			"Fibonacci(10).GetNthFibonacci",
+			"has number",
+			"GetNthFibonacci Number",
+			"\tmutable first = 1",
+			"\tmutable second = 1",
+			"\tfor Range(2, number)",
+			"\t\tlet next = first + second",
+			"\t\tfirst = second",
+			"\t\tsecond = next",
+			"\tsecond")).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(55));
+	}
+
+	[Test]
+	public void ExecuteFieldLoadInstruction()
+	{
+		using var pointType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ExecuteFieldLoadInstruction),
+				"has xValue Number",
+				"has yValue Number")).ParseMembersAndMethods(new MethodExpressionParser());
+		var point = new ValueInstance(pointType,
+			[new ValueInstance(NumberType, 3), new ValueInstance(NumberType, 7)]);
+		var result = ExecuteVm([
+			new SetInstruction(point, Register.R0),
+			new FieldLoadInstruction(Register.R1, Register.R0, "xValue"),
+			new ReturnInstruction(Register.R1)
+		]);
+		Assert.That(result.Returns!.Value.Number, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void ExecuteConstructValueTypeInstruction()
+	{
+		using var pointType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ExecuteConstructValueTypeInstruction),
+				"has xValue Number",
+				"has yValue Number")).ParseMembersAndMethods(new MethodExpressionParser());
+		var result = ExecuteVm([
+			new SetInstruction(Number(3), Register.R0),
+			new SetInstruction(Number(7), Register.R1),
+			new ConstructValueTypeInstruction(Register.R2, pointType, [Register.R0, Register.R1]),
+			new ReturnInstruction(Register.R2)
+		]);
+		var typeInstance = result.Returns!.Value.TryGetValueTypeInstance()!;
+		Assert.That(typeInstance.Values[0].Number, Is.EqualTo(3));
+		Assert.That(typeInstance.Values[1].Number, Is.EqualTo(7));
+	}
+
+	[Test]
+	public void AddScalarToRightListAppendsElement()
+	{
+		var numbersListType = ListType.GetGenericImplementation(NumberType);
+		var right = new ValueInstance(numbersListType,
+			[new ValueInstance(NumberType, 2), new ValueInstance(NumberType, 3)]);
+		var result = ExecuteVm([
+			new SetInstruction(Number(1), Register.R0),
+			new SetInstruction(right, Register.R1),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
+			new ReturnInstruction(Register.R2)
+		]);
+		Assert.That(result.Returns!.Value.List.Items.Count, Is.EqualTo(3));
 	}
 }

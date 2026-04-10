@@ -33,9 +33,7 @@ public sealed partial class VirtualMachine
 			return EvaluateMethodCall(methodCall);
 		if (expression is ListCall listCall)
 			return EvaluateListCallExpression(listCall); //TODO: another almost 25% here, 0.23m calls
-		return TryResolveExpressionFallback(expression, out var resolvedValue)
-			? resolvedValue
-			: throw new InvalidOperationException("Could not evaluate expression " + expression);
+		throw new InvalidOperationException("Could not evaluate expression " + expression);
 	}
 
 	private ValueInstance EvaluateVariableCall(VariableCall variableCall) =>
@@ -45,14 +43,8 @@ public sealed partial class VirtualMachine
 
 	private ValueInstance EvaluateListCallExpression(ListCall listCall)
 	{
-		if (TryResolveIndexedListValue(listCall, out var directListElement))
-			return directListElement;
-		if (TryEvaluateDirectSpecialListCall(listCall, out var directValue))
-			return directValue;
 		var listValue = EvaluateExpression(listCall.List);
-		var indexValue = TryEvaluateDirectIndexValue(listCall.Index, out var directIndexValue)
-			? directIndexValue
-			: EvaluateExpression(listCall.Index);
+		var indexValue = EvaluateExpression(listCall.Index);
 		var index = (int)indexValue.Number;
 		if (listValue.IsList || listValue.IsText ||
 			listValue.TryGetValueTypeInstance()?.ReturnType.IsList == true)
@@ -67,82 +59,7 @@ public sealed partial class VirtualMachine
 					return typeInstance.Values[valueIndex].
 						GetIteratorValue(executable.characterType, index);
 		}
-		return TryResolveExpressionFallback(listCall, out var resolvedValue)
-			? resolvedValue
-			: throw new InvalidOperationException("Could not evaluate list call " + listCall);
-	}
-
-	private bool TryResolveIndexedListValue(ListCall listCall, out ValueInstance value)
-	{
-		value = default;
-		if (!TryEvaluateDirectIndexValue(listCall.Index, out var indexValue))
-			return false;
-		var listValue = listCall.List switch
-		{
-			VariableCall variableCall => EvaluateVariableCall(variableCall),
-			MemberCall memberCall => EvaluateMemberCall(memberCall),
-			_ => default
-		};
-		if (!listValue.HasValue)
-			return false;
-		var index = (int)indexValue.Number;
-		if (listValue.IsList && index >= 0 && index < listValue.List.Count)
-		{
-			value = listValue.List[index];
-			return true;
-		}
-		if (listValue.TryGetValueTypeInstance() is { } typeInstance &&
-			typeInstance.TryGetValue(Type.ElementsLowercase, out var elementsValue) &&
-			elementsValue.IsList && index >= 0 && index < elementsValue.List.Count)
-		{
-			value = elementsValue.List[index];
-			return true;
-		}
-		return false;
-	}
-
-	private bool TryEvaluateDirectSpecialListCall(ListCall listCall, out ValueInstance value)
-	{
-		if (TryEvaluateDirectIndexValue(listCall.Index, out var indexValue))
-		{
-			var directListValue = listCall.List switch
-			{
-				VariableCall { Variable.Name: Type.ValueLowercase } => Memory.Frame.Get(ValueSymbolId),
-				VariableCall { Variable.Name: Type.OuterLowercase } => Memory.Frame.Get(OuterSymbolId),
-				MemberCall { Instance: VariableCall { Variable.Name: Type.ValueLowercase } } memberCall =>
-					EvaluateMemberCall(memberCall),
-				MemberCall { Instance: VariableCall { Variable.Name: Type.OuterLowercase } } memberCall =>
-					EvaluateMemberCall(memberCall),
-				_ => default
-			};
-			if (directListValue.HasValue)
-			{
-				value = directListValue.GetIteratorValue(executable.characterType,
-					(int)indexValue.Number);
-				return true;
-			}
-		}
-		value = default;
-		return false;
-	}
-
-	private bool TryEvaluateDirectIndexValue(Expression indexExpression, out ValueInstance value)
-	{
-		switch (indexExpression)
-		{
-		case Value constantValue:
-			value = constantValue.Data;
-			return true;
-		case VariableCall { Variable.Name: Type.IndexLowercase }:
-			return Memory.Frame.TryGet(IndexSymbolId, out value);
-		case VariableCall variableCall when variableCall.IsConstant &&
-			variableCall.Variable.InitialValue is Value constantVariableValue:
-			value = constantVariableValue.Data;
-			return true;
-		default:
-			value = default;
-			return false;
-		}
+		throw new InvalidOperationException("Could not evaluate list call " + listCall);
 	}
 
 	private ValueInstance EvaluateMemberCall(MemberCall memberCall)
@@ -167,31 +84,7 @@ public sealed partial class VirtualMachine
 			return memberValue;
 		if (instanceValue.IsText && memberCall.Member.Name is "characters" or "elements")
 			return instanceValue;
-		return TryResolveExpressionFallback(memberCall, out var resolvedValue)
-			? resolvedValue
-			: throw new InvalidOperationException("Could not evaluate member call " + memberCall);
-	}
-
-	private bool TryResolveExpressionFallback(Expression expression, out ValueInstance value)
-	{
-		switch (expression)
-		{
-		case MemberCall memberCall when memberCall.Instance == null:
-			return TryGetFrameValue(CallFrame.ResolveSymbolId(memberCall.Member.Name), out value);
-		case MemberCall memberCall:
-			return GetIdentifierAccessPath(memberCall.ToString()).TryResolve(this, out value);
-		case ListCall listCall:
-			return GetIdentifierAccessPath(listCall.ToString()).TryResolve(this, out value);
-		case VariableCall variableCall:
-			return TryGetFrameValue(CallFrame.ResolveSymbolId(variableCall.Variable.Name), out value);
-		case ParameterCall parameterCall:
-			return TryGetFrameValue(CallFrame.ResolveSymbolId(parameterCall.Parameter.Name), out value);
-		case Instance:
-			return TryGetFrameValue(ValueSymbolId, out value);
-		default:
-			value = default;
-			return false;
-		}
+		throw new InvalidOperationException("Could not evaluate member call " + memberCall);
 	}
 
 	//TODO: cumbersome, simplify in a few lines
@@ -226,7 +119,7 @@ public sealed partial class VirtualMachine
 				left.Number * right.Number),
 			BinaryOperator.Divide => new ValueInstance(right.GetType(),
 				left.Number / right.Number),
-			_ => new ValueInstance(left.GetType(), left.Number)
+			_ => throw new InvalidOperationException("Unsupported binary operator: " + binary.Method.Name)
 		};
 	}
 
@@ -266,7 +159,7 @@ public sealed partial class VirtualMachine
 	private ValueInstance? TryEvaluateMethodCallFromBody(MethodCall call)
 	{
 		var methodBody = call.Method.GetBodyAndParseIfNeeded();
-		if (methodBody is not Body { Expressions.Count: > 0 } body)
+		if (methodBody is not Body body)
 			return null;
 		var evaluatedInstance = call.Instance != null
 			? EvaluateExpression(call.Instance)
@@ -371,23 +264,6 @@ public sealed partial class VirtualMachine
 			colors[colorIndex] = defaultColor;
 		var colorList = new ValueInstance(members[1].Type, colors);
 		colorImage = new ValueInstance(targetType, [sizeValue, colorList]);
-		return true;
-	}
-
-	private bool GetValueByKeyForDictionaryAndStoreInRegister(Invoke invoke)
-	{
-		if (invoke.Method.Method.Name != "Get" ||
-			invoke.Method.Instance?.ReturnType.IsDictionary != true)
-			return false;
-		var keyArg = invoke.Method.Arguments[0];
-		var keyData = keyArg is Value argValue
-			? argValue.Data
-			: EvaluateExpression(keyArg);
-		var dictionary = EvaluateExpression(invoke.Method.Instance);
-		var value = dictionary.GetDictionaryItems().
-			FirstOrDefault(element => element.Key.Equals(keyData)).Value;
-		if (!Equals(value, default(ValueInstance)))
-			Memory.Registers[invoke.Register] = value;
 		return true;
 	}
 

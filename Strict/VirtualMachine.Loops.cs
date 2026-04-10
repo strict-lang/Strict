@@ -280,7 +280,7 @@ public sealed partial class VirtualMachine
 		}
 		if (parentValue.TryGetValueTypeInstance() is not { } typeInstance)
 			throw new InvalidOperationException("Cannot assign member on non-instance " + identifier);
-		if (!TrySetTypeMemberValue(typeInstance, memberName, value))
+		if (!typeInstance.TrySetValue(memberName, value))
 			throw new InvalidOperationException("Could not assign member " + identifier);
 	}
 
@@ -316,7 +316,7 @@ public sealed partial class VirtualMachine
 				left.Number / right.Number),
 			InstructionType.Modulo => new ValueInstance(right.GetType(),
 				left.Number % right.Number),
-			_ => Memory.Registers[instruction.Registers[^1]]
+			_ => throw new InvalidOperationException("Unsupported binary operation: " + instruction.InstructionType) //ncrunch: no coverage
 		};
 	}
 
@@ -366,7 +366,7 @@ public sealed partial class VirtualMachine
 			InstructionType.LessThan => left.Number < right.Number,
 			InstructionType.Equal => left.Equals(right),
 			InstructionType.NotEqual => !left.Equals(right),
-			_ => false
+			_ => throw new InvalidOperationException("Unsupported conditional operation: " + instruction.InstructionType) //ncrunch: no coverage
 		};
 	}
 
@@ -447,20 +447,10 @@ public sealed partial class VirtualMachine
 			: default;
 	}
 
-	private static bool TrySetTypeMemberValue(ValueTypeInstance typeInstance, string memberName,
-		ValueInstance value) =>
-		typeInstance.TrySetValue(memberName, value);
-
-	private readonly record struct IdentifierAccessPath(int RootSymbolId, string[] MemberNames,
-		bool IsNone)
+	private readonly record struct IdentifierAccessPath(int RootSymbolId, string[] MemberNames)
 	{
 		public bool TryResolve(VirtualMachine vm, out ValueInstance value)
 		{
-			if (IsNone)
-			{
-				value = default;
-				return true;
-			}
 			if (!vm.TryGetFrameValue(RootSymbolId, out var current))
 			{
 				value = default;
@@ -501,11 +491,9 @@ public sealed partial class VirtualMachine
 
 		public static IdentifierAccessPath Parse(string identifier)
 		{
-			if (identifier == Type.None)
-				return new IdentifierAccessPath(-1, [], true);
 			var firstDotIndex = identifier.IndexOf('.');
 			if (firstDotIndex < 0)
-				return new IdentifierAccessPath(CallFrame.ResolveSymbolId(identifier), [], false);
+				return new IdentifierAccessPath(CallFrame.ResolveSymbolId(identifier), []);
 			var rootSymbolId = CallFrame.ResolveSymbolId(identifier[..firstDotIndex]);
 			var memberCount = 1;
 			for (var index = firstDotIndex + 1; index < identifier.Length; index++)
@@ -524,13 +512,13 @@ public sealed partial class VirtualMachine
 					break;
 				segmentStart = nextDotIndex + 1;
 			}
-			return new IdentifierAccessPath(rootSymbolId, memberNames, false);
+			return new IdentifierAccessPath(rootSymbolId, memberNames);
 		}
 
 		public IdentifierAccessPath GetParentPath() =>
 			MemberNames.Length == 1
-				? new IdentifierAccessPath(RootSymbolId, [], false)
-				: new IdentifierAccessPath(RootSymbolId, MemberNames[..^1], false);
+				? new IdentifierAccessPath(RootSymbolId, [])
+				: new IdentifierAccessPath(RootSymbolId, MemberNames[..^1]);
 	}
 
 	private readonly record struct IndexedElementAccessPath(string ListPath, string IndexExpression,

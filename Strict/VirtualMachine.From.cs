@@ -32,7 +32,8 @@ public sealed partial class VirtualMachine
 			var parameter = invoke.Method.Method.Parameters[parameterIndex];
 			var memberIndex = FindMemberIndex(members, parameter.Name);
 			if (memberIndex == -1)
-				continue;
+				throw new InvalidOperationException("No matching member for parameter " + parameter.Name +
+					" in type " + targetType.Name);
 			var memberInitialValue = members[memberIndex].InitialValue;
 			values[memberIndex] = parameterIndex < invoke.Method.Arguments.Count
 				? EvaluateExpression(invoke.Method.Arguments[parameterIndex])
@@ -230,28 +231,21 @@ public sealed partial class VirtualMachine
 	private int? TryEvaluateMethodBodyWithInstance(Method method, ValueInstance memberValue,
 		ValueTypeInstance typeInstance)
 	{
+		var body = method.GetBodyAndParseIfNeeded();
+		if (body is not Body methodBody)
+			return null;
+		var savedFrame = Memory.Frame;
+		Memory.Frame = new CallFrame();
+		Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
+		TrySetScopeMembersFromTypeMembers(typeInstance);
 		try
 		{
-			var body = method.GetBodyAndParseIfNeeded();
-			if (body is not Body { Expressions.Count: > 0 } methodBody)
-				return null;
-			var savedFrame = Memory.Frame;
-			Memory.Frame = new CallFrame();
-			Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
-			TrySetScopeMembersFromTypeMembers(typeInstance);
-			try
-			{
-				var lastExpression = methodBody.Expressions[^1];
-				return (int)EvaluateExpression(lastExpression).Number;
-			}
-			finally
-			{
-				Memory.Frame = savedFrame;
-			}
+			var lastExpression = methodBody.Expressions[^1];
+			return (int)EvaluateExpression(lastExpression).Number;
 		}
-		catch
+		finally
 		{
-			return null;
+			Memory.Frame = savedFrame;
 		}
 	}
 
@@ -268,10 +262,6 @@ public sealed partial class VirtualMachine
 						isMember: true);
 			return (int)EvaluateExpression(lengthExpression).Number;
 		}
-		catch
-		{
-			return null;
-		}
 		finally
 		{
 			Memory.Frame = savedFrame;
@@ -286,5 +276,13 @@ public sealed partial class VirtualMachine
 		return concreteType != null
 			? new ValueInstance(concreteType, Array.Empty<ValueInstance>())
 			: new ValueInstance(traitType, 0);
+	}
+
+	private static string GetShortTypeName(string fullTypeName)
+	{
+		var index = fullTypeName.LastIndexOf(Context.ParentSeparator);
+		return index >= 0
+			? fullTypeName[(index + 1)..]
+			: fullTypeName;
 	}
 }

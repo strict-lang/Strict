@@ -68,13 +68,10 @@ public sealed partial class VirtualMachine
 			Method.From => ExecuteFromInvoke(invoke, methodCall.ReturnType),
 			BinaryOperator.To => instanceExpression != null && TryHandleToConversion(invoke),
 			"Length" or "Count" => instanceExpression != null && TryHandleNativeLength(invoke),
-			"Increment" or "Decrement" => TryHandleIncrementDecrement(invoke),
-			"Get" => instanceExpression != null && instanceExpression.ReturnType.IsDictionary &&
-				GetValueByKeyForDictionaryAndStoreInRegister(invoke),
+			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
+			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
 			"StartsWith" or "IndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
-			_ => instanceExpression is MemberCall memberCall &&
-				memberCall.Member.Type.Name is Type.Logger or Type.TextWriter or Type.System &&
-				TryHandleNativeTraitMethod(invoke)
+			_ => false
 		};
 	}
 
@@ -91,10 +88,8 @@ public sealed partial class VirtualMachine
 
 	private bool TryHandleToConversion(Invoke invoke)
 	{
-		if (invoke.Method.Method.Name != BinaryOperator.To)
-			return false;
 		var conversionType = invoke.Method.ReturnType;
-		var rawValue = EvaluateExpression(invoke.Method.Instance ?? throw new InvalidOperationException());
+		var rawValue = EvaluateExpression(invoke.Method.Instance!);
 		if (conversionType.IsText && !invoke.Method.Method.IsTrait &&
 			invoke.Method.Method.Type == rawValue.GetType() &&
 			rawValue.TryGetValueTypeInstance() != null)
@@ -111,29 +106,19 @@ public sealed partial class VirtualMachine
 
 	private bool TryHandleNativeLength(Invoke invoke)
 	{
-		var instanceExpression = invoke.Method.Instance;
-		if (instanceExpression == null)
-			return false;
-		var instanceValue = instanceExpression is MemberCall memberCall
+		var instanceValue = invoke.Method.Instance is MemberCall memberCall
 			? EvaluateMemberCall(memberCall)
-			: EvaluateExpression(instanceExpression);
+			: EvaluateExpression(invoke.Method.Instance!);
 		if (!TryGetNativeLength(instanceValue, invoke.Method.Method.Name, out var lengthValue))
 			return false;
 		Memory.Registers[invoke.Register] = lengthValue;
 		return true;
 	}
 
-	private bool TryHandleIncrementDecrement(Invoke invoke)
+	private bool TryHandleIncrementDecrement(Invoke invoke, bool isIncrement)
 	{
-		var methodName = invoke.Method.Method.Name;
-		if (methodName != "Increment" && methodName != "Decrement")
-			return false;
-		if (invoke.Method.Instance == null)
-			return false;
-		var current = EvaluateExpression(invoke.Method.Instance);
-		var delta = methodName == "Increment"
-			? 1.0
-			: -1.0;
+		var current = EvaluateExpression(invoke.Method.Instance!);
+		var delta = isIncrement ? 1.0 : -1.0;
 		Memory.Registers[invoke.Register] =
 			new ValueInstance(current.GetType(), current.Number + delta);
 		return true;
@@ -206,8 +191,7 @@ public sealed partial class VirtualMachine
 			return;
 		}
 		var typeInstance = instance.TryGetValueTypeInstance();
-		if (typeInstance != null && (TrySetScopeMembersFromTypeMembers(typeInstance) ||
-			TrySetScopeMembersFromBinaryMembers(typeInstance)))
+		if (typeInstance != null && TrySetScopeMembersFromTypeMembers(typeInstance))
 			return;
 		var firstNonTraitMember = instance.GetType().Members.FirstOrDefault(member =>
 			!member.Type.IsTrait);
@@ -228,18 +212,6 @@ public sealed partial class VirtualMachine
 		return true;
 	}
 
-	private bool TrySetScopeMembersFromBinaryMembers(ValueTypeInstance typeInstance)
-	{
-		if (!TryGetBinaryMembers(typeInstance.ReturnType, out var binaryMembers))
-			return false;
-		for (var memberIndex = 0; memberIndex < binaryMembers.Count &&
-			memberIndex < typeInstance.Values.Length; memberIndex++)
-			if (CanExposeBinaryMember(typeInstance.ReturnType, binaryMembers[memberIndex]))
-				Memory.Frame.Set(binaryMembers[memberIndex].Name, typeInstance.Values[memberIndex],
-					isMember: true);
-		return true;
-	}
-
 	private bool TryGetBinaryMembers(Type type, out IReadOnlyList<BinaryMember> members)
 	{
 		foreach (var (typeName, typeData) in executable.MethodsPerType)
@@ -251,21 +223,6 @@ public sealed partial class VirtualMachine
 			}
 		members = [];
 		return false;
-	}
-
-	private static bool CanExposeBinaryMember(Type instanceType, BinaryMember binaryMember)
-	{
-		var memberType = instanceType.FindType(binaryMember.FullTypeName) ??
-			instanceType.FindType(GetShortTypeName(binaryMember.FullTypeName));
-		return memberType == null || !memberType.IsTrait;
-	}
-
-	private static string GetShortTypeName(string fullTypeName)
-	{
-		var index = fullTypeName.LastIndexOf(Context.ParentSeparator);
-		return index >= 0
-			? fullTypeName[(index + 1)..]
-			: fullTypeName;
 	}
 
 	private ChildScopeState InitializeChildScope()
@@ -312,15 +269,9 @@ public sealed partial class VirtualMachine
 
 	private bool TryHandleNativeTextMethod(Invoke invoke)
 	{
-		var methodName = invoke.Method.Method.Name;
-		if (methodName is not ("StartsWith" or "IndexOf" or "Substring"))
-			return false;
-		if (invoke.Method.Instance == null)
-			return false;
-		var instance = EvaluateExpression(invoke.Method.Instance);
-		if (!instance.IsText)
-			return false;
+		var instance = EvaluateExpression(invoke.Method.Instance!);
 		var text = instance.Text;
+		var methodName = invoke.Method.Method.Name;
 		var args = invoke.Method.Arguments.Select(EvaluateExpression).ToArray();
 		Memory.Registers[invoke.Register] = methodName switch
 		{
@@ -343,24 +294,5 @@ public sealed partial class VirtualMachine
 		var matches = start + prefix.Length <= text.Length &&
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
 		return new ValueInstance(executable.booleanType, matches);
-	}
-
-	/// <summary>
-	/// Handles native trait method calls like logger.Log(...) by writing directly to Console.
-	/// Logger delegates to TextWriter.Write which maps to System -> Console.WriteLine.
-	/// </summary>
-	private bool TryHandleNativeTraitMethod(Invoke invoke)
-	{
-		if (invoke.Method.Instance is not MemberCall memberCall)
-			return false;
-		var memberTypeName = memberCall.Member.Type.Name;
-		if (memberTypeName is not (Type.Logger or Type.TextWriter or Type.System))
-			return false;
-		if (invoke.Method.Arguments.Count > 0)
-		{
-			var argValue = EvaluateExpression(invoke.Method.Arguments[0]);
-			Console.WriteLine(argValue.ToExpressionCodeString());
-		}
-		return true;
 	}
 }

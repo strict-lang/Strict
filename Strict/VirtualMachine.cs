@@ -444,9 +444,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 
 	private void ExecuteFieldLoad(FieldLoadInstruction instr)
 	{
-		var typeInstance = Memory.Registers[instr.ObjectRegister].TryGetValueTypeInstance();
-		if (typeInstance == null)
-			return;
+		var typeInstance = Memory.Registers[instr.ObjectRegister].TryGetValueTypeInstance()!;
 		var members = typeInstance.ReturnType.Members;
 		for (var index = 0; index < members.Count; index++)
 			if (members[index].Name.Equals(instr.FieldName, StringComparison.OrdinalIgnoreCase))
@@ -492,19 +490,15 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 
 	private void ExecuteWriteToList(WriteToListInstruction writeToListInstruction)
 	{
-		if (!GetIdentifierAccessPath(writeToListInstruction.Identifier).
-				TryResolve(this, out var collection) || !collection.IsList)
-			throw new InvalidOperationException("Cannot add to non-list variable \"" +
-				writeToListInstruction.Identifier + "\"");
+		if (!GetIdentifierAccessPath(writeToListInstruction.Identifier).TryResolve(this, out var collection))
+			throw new InvalidOperationException("Cannot resolve list variable \"" + writeToListInstruction.Identifier + "\"");
 		collection.List.Items.Add(Memory.Registers[writeToListInstruction.Register]);
 	}
 
 	private void ExecuteWriteToTable(WriteToTableInstruction writeToTableInstruction)
 	{
-		if (!GetIdentifierAccessPath(writeToTableInstruction.Identifier).
-				TryResolve(this, out var collection) || !collection.IsDictionary)
-			throw new InvalidOperationException("Cannot add to non-dictionary variable \"" +
-				writeToTableInstruction.Identifier + "\"");
+		if (!GetIdentifierAccessPath(writeToTableInstruction.Identifier).TryResolve(this, out var collection))
+			throw new InvalidOperationException("Cannot resolve table variable \"" + writeToTableInstruction.Identifier + "\"");
 		collection.GetDictionaryItems()[Memory.Registers[writeToTableInstruction.Register]] =
 			Memory.Registers[writeToTableInstruction.Value];
 	}
