@@ -414,13 +414,22 @@ public sealed class VirtualMachineTests : TestBytecode
 				GetDictionaryItems().Count, Is.EqualTo(1));
 	}
 
+	private static Invoke CreateFromInvoke(Type targetType, Register register)
+	{
+		var fromMethod = targetType.FindMethod(Method.From, []);
+		var parameterNames = fromMethod != null
+			? fromMethod.Parameters.Select(parameter => parameter.Name).ToArray()
+			: Array.Empty<string>();
+		return new Invoke(register, new InvokeMethodInfo(targetType.FullName, Method.From,
+			parameterNames, targetType.Name, [], null));
+	}
+
 	[Test]
 	public void CreateEmptyDictionaryFromConstructor()
 	{
 		var dictionaryType = TestPackage.Instance.GetType(Type.Dictionary).
 			GetGenericImplementation(NumberType, NumberType);
-		var methodCall = CreateFromMethodCall(dictionaryType);
-		var instructions = new List<Instruction> { new Invoke(Register.R0, methodCall, new Registry()) };
+		var instructions = new List<Instruction> { CreateFromInvoke(dictionaryType, Register.R0) };
 		var result = ExecuteVm(instructions).Memory.Registers[Register.R0];
 		Assert.That(result.IsDictionary, Is.True);
 		Assert.That(result.GetDictionaryItems().Count, Is.EqualTo(0));
@@ -702,8 +711,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			new Type(type.Package, new TypeLines("TypeWithLogger", "has logger",
 				"GetZero Number", "\t0")).ParseMembersAndMethods(new MethodExpressionParser());
 		var typeWithLogger = type.Package.FindDirectType("TypeWithLogger")!;
-		var fromMethodCall = CreateFromMethodCall(typeWithLogger);
-		var instructions = new List<Instruction> { new Invoke(Register.R0, fromMethodCall, new Registry()) };
+		var instructions = new List<Instruction> { CreateFromInvoke(typeWithLogger, Register.R0) };
 		var result = ExecuteVm(instructions).Memory.Registers[Register.R0];
 		Assert.That(result.TryGetValueTypeInstance(), Is.Not.Null);
 	}
@@ -726,7 +734,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(fromMethod.Parameters[0].Type.IsList, Is.True);
 		Assert.That(fromMethod.Parameters[0].DefaultValue?.ToString(), Is.Null);
 		var result = ExecuteVm([
-			new Invoke(Register.R0, CreateFromMethodCall(holderType), new Registry())
+			CreateFromInvoke(holderType, Register.R0)
 		]).Memory.Registers[Register.R0];
 		var colors = result.TryGetValueTypeInstance()!["colors"];
 		Assert.That(colors.IsList, Is.True);

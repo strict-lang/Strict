@@ -319,4 +319,32 @@ public sealed partial class VirtualMachine
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
 		return new ValueInstance(executable.booleanType, matches);
 	}
+
+	private bool TryGetNativeLength(ValueInstance instance, string memberName, out ValueInstance result)
+	{
+		if (memberName is "Length" or "Count")
+		{
+			if (instance.IsText)
+			{
+				result = new ValueInstance(executable.numberType, instance.Text.Length);
+				return true;
+			}
+			if (instance.IsList)
+			{
+				result = new ValueInstance(executable.numberType, instance.List.Count);
+				return true;
+			}
+		}
+		result = default;
+		return false;
+	}
+
+	internal static ValueInstance ConvertToText(ValueInstance rawValue)
+	{
+		if (rawValue.IsText)
+			return rawValue;
+		if (rawValue.TryGetValueTypeInstance() is { } typeInstance)
+			return new ValueInstance(typeInstance.ToAutomaticText());
+		return new ValueInstance(rawValue.ToExpressionCodeString());
+	}
 }

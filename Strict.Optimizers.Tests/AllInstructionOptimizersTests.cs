@@ -186,7 +186,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 		var binary = CreateColorAdjustmentBinary();
 		new AllInstructionOptimizers().Optimize(binary);
 		var remainingNames = binary.EntryPoint.instructions.OfType<Invoke>()
-			.Select(i => i.Method.Method.Name).ToList();
+			.Select(i => i.MethodInfo.MethodName).ToList();
 		Assert.That(remainingNames, Does.Not.Contain("GetBrightnessAdjustedColor"));
 		var oldOld = Console.Out;
 		try
