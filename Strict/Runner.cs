@@ -306,11 +306,24 @@ public sealed class Runner
 	/// Runtime packages define custom types and can be loaded as sub-packages. Meta-packages
 	/// (Language, Expressions) and example collections (Examples, Parsing) are excluded.
 	/// </summary>
-	private static bool IsRuntimePackageDirectory(string dirName, string directory) =>
-		!dirName.StartsWith(".", StringComparison.Ordinal) &&
-		!dirName.StartsWith("Strict", StringComparison.Ordinal) &&
-		dirName is not ("Language" or "Expressions" or "Examples" or "Parsing") &&
-		Directory.EnumerateFiles(directory, "*" + Type.Extension).Any();
+	private static bool IsRuntimePackageDirectory(string dirName, string directory)
+	{
+		if (dirName.StartsWith(".", StringComparison.Ordinal) ||
+			dirName.StartsWith("Strict", StringComparison.Ordinal) ||
+			dirName is "Language" or "Expressions" or "Examples" or "Parsing")
+			return false;
+		if (!Directory.EnumerateFiles(directory, "*" + Type.Extension).Any())
+			return false;
+		return !IsDecompilerOutputDirectory(dirName, directory);
+	}
+	private static bool IsDecompilerOutputDirectory(string dirName, string directory)
+	{
+		if (Directory.EnumerateFiles(directory, "*.csproj", SearchOption.TopDirectoryOnly).Any())
+			return false;
+		if (!Directory.Exists(Path.Combine(directory, nameof(Strict))))
+			return false;
+		return File.Exists(Path.Combine(directory, dirName + Type.Extension));
+	}
 
 	private T LogTiming<T>(string message, Func<T> callToTime)
 	{

@@ -202,13 +202,28 @@ public sealed partial class VirtualMachine
 	private bool TrySetScopeMembersFromTypeMembers(ValueTypeInstance typeInstance)
 	{
 		var members = typeInstance.ReturnType.Members;
-		if (members.Count == 0)
+		if (members.Count > 0)
+		{
+			for (var memberIndex = 0; memberIndex < members.Count &&
+				memberIndex < typeInstance.Values.Length; memberIndex++)
+				if (!members[memberIndex].Type.IsTrait)
+					Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex],
+						isMember: true);
+			return true;
+		}
+		if (!TryGetBinaryMembers(typeInstance.ReturnType, out var binaryMembers) ||
+			binaryMembers.Count == 0)
 			return false;
-		for (var memberIndex = 0; memberIndex < members.Count &&
+		for (var memberIndex = 0; memberIndex < binaryMembers.Count &&
 			memberIndex < typeInstance.Values.Length; memberIndex++)
-			if (!members[memberIndex].Type.IsTrait)
-				Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex],
-					isMember: true);
+		{
+			var memberType = typeInstance.ReturnType.FindType(binaryMembers[memberIndex].FullTypeName) ??
+				typeInstance.ReturnType.FindType(GetShortTypeName(binaryMembers[memberIndex].FullTypeName));
+			if (memberType is { IsTrait: true })
+				continue;
+			Memory.Frame.Set(binaryMembers[memberIndex].Name, typeInstance.Values[memberIndex],
+				isMember: true);
+		}
 		return true;
 	}
 

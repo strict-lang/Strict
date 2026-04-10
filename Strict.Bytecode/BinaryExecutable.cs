@@ -354,7 +354,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			ExpressionKind.NumberValue => new Number(package, reader.ReadDouble()),
 			ExpressionKind.TextValue => new Text(package, table.names[reader.Read7BitEncodedInt()]),
 			ExpressionKind.BooleanValue => ReadBooleanValue(reader, package, table),
-			ExpressionKind.VariableRef => ReadVariableRef(reader, package, table),
+			ExpressionKind.VariableRef => ReadVariableRef(reader, table),
 			ExpressionKind.MemberRef => ReadMemberRef(reader, table),
 			ExpressionKind.BinaryExpr => ReadBinaryExpr(reader, table),
 			ExpressionKind.MethodCallExpr => ReadMethodCall(reader, table),
@@ -435,7 +435,8 @@ public sealed class BinaryExecutable(Package basePackage)
 				new MethodExpressionParser());
 	}
 
-	private static Expression ReadVariableRef(BinaryReader reader, Package package, NameTable table)
+	private readonly Dictionary<Type, Value> cachedDefaultValuesForVariableRefs = new();
+	private Expression ReadVariableRef(BinaryReader reader, NameTable table)
 	{
 		var name = table.names[reader.Read7BitEncodedInt()];
 		var type = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
@@ -446,7 +447,12 @@ public sealed class BinaryExecutable(Package basePackage)
 		var dotIndex = cleanName.IndexOf('.');
 		if (dotIndex > 0)
 			cleanName = cleanName[..dotIndex];
-		var param = new Parameter(type, cleanName, new Value(type, new ValueInstance(type)));
+		if (!cachedDefaultValuesForVariableRefs.TryGetValue(type, out var defaultValue))
+		{
+			defaultValue = new Value(type, new ValueInstance(type));
+			cachedDefaultValuesForVariableRefs[type] = defaultValue;
+		}
+		var param = new Parameter(type, cleanName, defaultValue);
 		return new ParameterCall(param);
 	}
 
