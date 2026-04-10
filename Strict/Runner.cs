@@ -178,7 +178,7 @@ public sealed class Runner
 			if (fileLastModified > latestSourceModification)
 				latestSourceModification = fileLastModified;
 		}
-    var latestImplementationModification = GetLatestImplementationModification();
+		var latestImplementationModification = GetLatestImplementationModification();
 		if (latestImplementationModification > latestSourceModification)
 			latestSourceModification = latestImplementationModification;
 		return latestSourceModification;
@@ -316,6 +316,8 @@ public sealed class Runner
 			return false;
 		return !IsDecompilerOutputDirectory(dirName, directory);
 	}
+
+	//TODO: clean up this mess, way too many methods doing nonsense
 	private static bool IsDecompilerOutputDirectory(string dirName, string directory)
 	{
 		if (Directory.EnumerateFiles(directory, "*.csproj", SearchOption.TopDirectoryOnly).Any())

@@ -1,4 +1,3 @@
-using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -33,7 +32,8 @@ public sealed partial class VirtualMachine
 			return EvaluateMethodCall(methodCall);
 		if (expression is ListCall listCall)
 			return EvaluateListCallExpression(listCall); //TODO: another almost 25% here, 0.23m calls
-		throw new InvalidOperationException("Could not evaluate expression " + expression);
+		throw new InvalidOperationException("Could not evaluate expression " + expression + " (" +
+			expression.GetType().Name + ")");
 	}
 
 	private ValueInstance EvaluateVariableCall(VariableCall variableCall) =>
