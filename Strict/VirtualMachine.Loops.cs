@@ -451,6 +451,11 @@ public sealed partial class VirtualMachine
 	{
 		public bool TryResolve(VirtualMachine vm, out ValueInstance value)
 		{
+			if (MemberNames == null)
+			{
+				value = default;
+				return false;
+			}
 			if (!vm.TryGetFrameValue(RootSymbolId, out var current))
 			{
 				value = default;
@@ -491,6 +496,8 @@ public sealed partial class VirtualMachine
 
 		public static IdentifierAccessPath Parse(string identifier)
 		{
+			if (identifier == Type.None)
+				return default;
 			var firstDotIndex = identifier.IndexOf('.');
 			if (firstDotIndex < 0)
 				return new IdentifierAccessPath(CallFrame.ResolveSymbolId(identifier), []);

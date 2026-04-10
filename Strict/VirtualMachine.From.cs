@@ -32,8 +32,7 @@ public sealed partial class VirtualMachine
 			var parameter = invoke.Method.Method.Parameters[parameterIndex];
 			var memberIndex = FindMemberIndex(members, parameter.Name);
 			if (memberIndex == -1)
-				throw new InvalidOperationException("No matching member for parameter " + parameter.Name +
-					" in type " + targetType.Name);
+				continue;
 			var memberInitialValue = members[memberIndex].InitialValue;
 			values[memberIndex] = parameterIndex < invoke.Method.Arguments.Count
 				? EvaluateExpression(invoke.Method.Arguments[parameterIndex])
@@ -242,6 +241,10 @@ public sealed partial class VirtualMachine
 		{
 			var lastExpression = methodBody.Expressions[^1];
 			return (int)EvaluateExpression(lastExpression).Number;
+		}
+		catch
+		{
+			return null;
 		}
 		finally
 		{
