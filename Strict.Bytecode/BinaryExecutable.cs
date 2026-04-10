@@ -306,18 +306,30 @@ public sealed class BinaryExecutable(Package basePackage)
 		BinaryMember[] parameters, Type returnType)
 	{
 		var method = type.Methods.FirstOrDefault(existingMethod =>
-				existingMethod.Name == methodName &&
-				existingMethod.Parameters.Count == parameters.Length) ??
-			type.Methods.FirstOrDefault(existingMethod => existingMethod.Name == methodName);
+			existingMethod.Name == methodName &&
+			existingMethod.Parameters.Count == parameters.Length);
 		if (method != null)
 			return method;
 		if (type.AvailableMethods.TryGetValue(methodName, out var availableMethods))
 		{
 			var found = availableMethods.FirstOrDefault(existingMethod =>
-				existingMethod.Parameters.Count == parameters.Length) ?? availableMethods.FirstOrDefault();
+				existingMethod.Parameters.Count == parameters.Length);
 			if (found != null)
 				return found;
+			if (parameters.Length == 0)
+			{
+				var noParameterFallback = availableMethods.FirstOrDefault();
+				if (noParameterFallback != null)
+					return noParameterFallback;
+			}
 		} //ncrunch: no coverage
+		if (parameters.Length == 0)
+		{
+			var noParameterMethod = type.Methods.FirstOrDefault(existingMethod =>
+				existingMethod.Name == methodName);
+			if (noParameterMethod != null)
+				return noParameterMethod;
+		}
 		var methodHeader = BuildMethodHeader(methodName, parameters, returnType);
 		var createdMethod = new Method(type, 0, new MethodExpressionParser(), [methodHeader]);
 		type.Methods.Add(createdMethod);

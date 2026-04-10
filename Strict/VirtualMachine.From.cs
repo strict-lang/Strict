@@ -31,7 +31,9 @@ public sealed partial class VirtualMachine
 			//wtf, another 1.2m calls?
 			var parameter = invoke.Method.Method.Parameters[parameterIndex];
 			var memberIndex = FindMemberIndex(members, parameter.Name);
-			if (memberIndex == -1)
+			if (memberIndex == -1 && parameterIndex < members.Count)
+				memberIndex = parameterIndex;
+			if (memberIndex == -1 || values[memberIndex].HasValue)
 				continue;
 			var memberInitialValue = members[memberIndex].InitialValue;
 			values[memberIndex] = parameterIndex < invoke.Method.Arguments.Count
@@ -45,6 +47,11 @@ public sealed partial class VirtualMachine
 							? initialValue
 							: CreateDefaultValue(members[memberIndex].Type);
 		}
+		var constructorArguments = invoke.Method.Arguments;
+		for (var memberIndex = 0; memberIndex < members.Count && memberIndex < constructorArguments.Count;
+			memberIndex++)
+			if (!values[memberIndex].HasValue)
+				values[memberIndex] = EvaluateExpression(constructorArguments[memberIndex]);
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 			if (!values[memberIndex].HasValue)
 			{

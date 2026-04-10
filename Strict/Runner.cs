@@ -104,8 +104,24 @@ public sealed class Runner
 		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
 		basePackage = await TryLoadSubPackageIfNeeded(basePackage);
 		if (Path.GetExtension(strictFilePath) == BinaryExecutable.Extension)
-			return LogTiming("Loading existing " + strictFilePath,
-				() => new BinaryExecutable(strictFilePath, basePackage));
+			try
+			{
+				return LogTiming("Loading existing " + strictFilePath,
+					() => new BinaryExecutable(strictFilePath, basePackage));
+			}
+			catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile
+				or BinaryExecutable.TypeNotFoundForBytecode or ParsingFailed
+				or Type.TypeAlreadyExistsInPackage
+				or Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers or EndOfStreamException)
+			{
+				var siblingSourcePath = Path.ChangeExtension(strictFilePath, Type.Extension);
+				if (!File.Exists(siblingSourcePath))
+					throw;
+				Log("Existing " + strictFilePath + " is no longer compatible: " + ex.Message +
+					" Regenerating from sibling source " + siblingSourcePath + " ..");
+				return await new Runner(siblingSourcePath, skipPackageSearchAndUseThisTestPackage,
+					expressionToRun, enableTestsAndDetailedOutput).GetBinary();
+			}
 #if !DISABLE_BINARY_CACHE
 		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
 		if (File.Exists(cachedBinaryPath))
