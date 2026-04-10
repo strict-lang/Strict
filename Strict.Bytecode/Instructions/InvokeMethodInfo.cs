@@ -84,6 +84,19 @@ public sealed class InvokeMethodInfo
 			: fullTypeName;
 	}
 
-	public override string ToString() =>
-		TypeFullName + "." + MethodName + "(" + ArgumentRegisters.Length + " args)";
-}
+	public override string ToString()
+	{
+		if (MethodName == Method.From)
+		{
+			var args = ArgumentRegisters.Length > 0
+				? string.Join(", ", ArgumentRegisters.Select(register => register.ToString()))
+				: "";
+			var simpleTypeName = TypeFullName.Contains(Context.ParentSeparator)
+				? TypeFullName[(TypeFullName.LastIndexOf(Context.ParentSeparator) + 1)..]
+				: TypeFullName;
+			return simpleTypeName + "(" + args + ")";
+		}
+		if (InstanceRegister.HasValue)
+			return InstanceRegister.Value + "." + MethodName;
+		return TypeFullName + "." + MethodName + "(" + ArgumentRegisters.Length + " args)";
+	}}

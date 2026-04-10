@@ -185,15 +185,42 @@ public sealed class Decompiler
 	private bool TryDeserializeInvokeInstruction(BinaryMethod method, List<string> bodyLines,
 		Invoke invoke, int instructionIndex)
 	{
-		registerExpressions[invoke.Register] = invoke.MethodInfo.ToString();
+		registerExpressions[invoke.Register] = ExpandInvokeToExpression(invoke.MethodInfo);
 		if (instructionIndex + 1 < method.instructions.Count &&
 			method.instructions[instructionIndex + 1] is StoreFromRegisterInstruction nextStore &&
 			nextStore.Register == invoke.Register)
 			return true;
 		if (invoke.MethodInfo.ReturnTypeName == Type.None)
-			bodyLines.Add("\t" + invoke.MethodInfo);
+			bodyLines.Add("\t" + registerExpressions[invoke.Register]);
 		return true;
 	}
+
+	private string ExpandInvokeToExpression(InvokeMethodInfo info)
+	{
+		var argParts = new string[info.ArgumentRegisters.Length];
+		for (var index = 0; index < info.ArgumentRegisters.Length; index++)
+			argParts[index] = ResolveRegister(info.ArgumentRegisters[index]);
+		if (info.MethodName == Method.From)
+		{
+			var simpleTypeName = info.TypeFullName.Contains(Context.ParentSeparator)
+				? info.TypeFullName[(info.TypeFullName.LastIndexOf(Context.ParentSeparator) + 1)..]
+				: info.TypeFullName;
+			return simpleTypeName + "(" + string.Join(", ", argParts) + ")";
+		}
+		if (info.InstanceRegister.HasValue)
+		{
+			var instanceText = ResolveRegister(info.InstanceRegister.Value);
+			return argParts.Length > 0
+				? instanceText + "." + info.MethodName + "(" + string.Join(", ", argParts) + ")"
+				: instanceText + "." + info.MethodName;
+		}
+		return info.TypeFullName + "." + info.MethodName + "(" + string.Join(", ", argParts) + ")";
+	}
+
+	private string ResolveRegister(Register register) =>
+		registerExpressions.TryGetValue(register, out var expression)
+			? expression
+			: register.ToString();
 
 	private bool TryDeserializeJumpInstruction(List<string> bodyLines, Instruction instruction)
 	{

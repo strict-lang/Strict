@@ -103,6 +103,8 @@ public sealed class BinaryExecutable(Package basePackage)
 	private static bool DoesReturnTypeMatch(string storedReturnType, string expectedReturnType) =>
 		expectedReturnType.Length == 0 || storedReturnType == expectedReturnType ||
 		storedReturnType.EndsWith(Context.ParentSeparator + expectedReturnType,
+			StringComparison.Ordinal) ||
+		expectedReturnType.EndsWith(Context.ParentSeparator + storedReturnType,
 			StringComparison.Ordinal);
 
 	public List<Instruction>? FindInstructions(string fullTypeName, string methodName,

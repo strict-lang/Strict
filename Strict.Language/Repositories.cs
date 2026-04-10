@@ -199,10 +199,10 @@ public sealed class Repositories
 		lock (loadedPackages)
 			loadedPackagesSnapshot = loadedPackages.ToArray();
 		foreach (var loadedPackage in loadedPackagesSnapshot)
-		foreach (var type in loadedPackage.Types.Values)
+		foreach (var type in loadedPackage.Types.Values.ToArray())
 			type.InvalidateAvailableMethodsCache();
 		foreach (var loadedPackage in loadedPackagesSnapshot)
-		foreach (var type in loadedPackage.Types.Values)
+		foreach (var type in loadedPackage.Types.Values.ToArray())
 			type.ReimplementGenericTypeMethods();
 	}
 

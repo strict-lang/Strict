@@ -322,8 +322,10 @@ public sealed class BinaryGeneratorTests : TestBytecode
 				[
 					new StoreVariableInstruction(Number(2), "firstNumber"),
 					new StoreVariableInstruction(Number(5), "secondNumber"),
-					new Invoke(Register.R0, null!),
-					new ReturnInstruction(Register.R0)
+					new LoadVariableToRegister(Register.R0, "firstNumber"),
+					new LoadVariableToRegister(Register.R1, "secondNumber"),
+					new Invoke(Register.R2, null!),
+					new ReturnInstruction(Register.R2)
 				],
 				(string[])
 				[
