@@ -45,6 +45,8 @@ public sealed class BinaryGenerator
 	private readonly Registry registry = new();
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
+	private readonly List<Method> discoveredInvokeMethods = [];
+	internal IReadOnlyList<Method> DiscoveredInvokeMethods => discoveredInvokeMethods;
 	private IReadOnlyList<Expression> Expressions { get; } //TODO: stupid, remove
 	private Type ReturnType { get; } //TODO: stupid, remove
 	private int conditionalId; //TODO: a bit strange
@@ -396,7 +398,29 @@ public sealed class BinaryGenerator
 			return;
 		if (TryGeneratePrintInstruction(methodCall))
 			return;
-		instructions.Add(new Invoke(registry.AllocateRegister(), methodCall, registry));
+		if (methodCall.Method.Name != Method.From)
+			discoveredInvokeMethods.Add(methodCall.Method);
+		Register? instanceRegister = null;
+		if (methodCall.Instance != null)
+		{
+			GenerateInstructionFromExpression(methodCall.Instance);
+			instanceRegister = registry.PreviousRegister;
+		}
+		var argumentRegisters = new Register[methodCall.Arguments.Count];
+		for (var argumentIndex = 0; argumentIndex < methodCall.Arguments.Count; argumentIndex++)
+		{
+			GenerateInstructionFromExpression(methodCall.Arguments[argumentIndex]);
+			argumentRegisters[argumentIndex] = registry.PreviousRegister;
+		}
+		var parameterNames = new string[methodCall.Method.Parameters.Count];
+		for (var paramIndex = 0; paramIndex < methodCall.Method.Parameters.Count; paramIndex++)
+			parameterNames[paramIndex] = methodCall.Method.Parameters[paramIndex].Name;
+		var methodInfo = new InvokeMethodInfo(
+			GetBinaryTypeName(methodCall.Method.Type, methodCall.Method.Type),
+			methodCall.Method.Name, parameterNames,
+			GetBinaryTypeName(methodCall.ReturnType, methodCall.Method.Type),
+			argumentRegisters, instanceRegister);
+		instructions.Add(new Invoke(registry.AllocateRegister(), methodInfo));
 	}
 
 	private void TryGenerateForEnum(Type type, Expression value)
@@ -710,13 +734,15 @@ public sealed class BinaryGenerator
 			var methodExpressions = methodBody is Body body
 				? body.Expressions
 				: [methodBody];
-			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
-				runMethod.ReturnType).GenerateInstructionList();
+			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
+				runMethod.ReturnType);
+			var methodInstructions = childGenerator.GenerateInstructionList();
 			var parameters = CreateBinaryMembers(runMethod.Parameters, entryType);
 			AddCompiledMethod(methodsByType, runMethod.Type.FullName, runMethod.Name, parameters,
 				GetBinaryTypeName(runMethod.ReturnType, entryType), methodInstructions);
 			compiledMethodKeys.Add(BuildMethodKey(runMethod));
-			EnqueueInvokedMethods(methodInstructions, methodsToCompile, compiledMethodKeys);
+			EnqueueDiscoveredMethods(childGenerator.DiscoveredInvokeMethods, methodsToCompile,
+				compiledMethodKeys);
 		}
 		while (methodsToCompile.Count > 0)
 		{
@@ -726,12 +752,14 @@ public sealed class BinaryGenerator
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions
 				: [body];
-			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
-				method.ReturnType).GenerateInstructionList();
+			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
+				method.ReturnType);
+			var methodInstructions = childGenerator.GenerateInstructionList();
 			var parameters = CreateBinaryMembers(method.Parameters, entryType);
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
 				GetBinaryTypeName(method.ReturnType, entryType), methodInstructions);
-			EnqueueInvokedMethods(methodInstructions, methodsToCompile, compiledMethodKeys);
+			EnqueueDiscoveredMethods(childGenerator.DiscoveredInvokeMethods, methodsToCompile,
+				compiledMethodKeys);
 		}
 		return methodsByType;
 	}
@@ -902,7 +930,7 @@ public sealed class BinaryGenerator
 		var runInstructions = GenerateInstructions(entryExpressions);
 		AddCompiledMethod(methodsByType, thisEntryTypeFullName, Method.Run, [], runReturnType.Name,
 			runInstructions);
-		EnqueueInvokedMethods(runInstructions, methodsToCompile, compiledMethodKeys);
+		EnqueueDiscoveredMethods(discoveredInvokeMethods, methodsToCompile, compiledMethodKeys);
 		while (methodsToCompile.Count > 0)
 		{
 			var method = methodsToCompile.Dequeue();
@@ -911,13 +939,15 @@ public sealed class BinaryGenerator
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions
 				: [body];
-			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
-				method.ReturnType).GenerateInstructionList();
+			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
+				method.ReturnType);
+			var methodInstructions = childGenerator.GenerateInstructionList();
 			var parameters = method.Parameters.Select(parameter =>
 				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList();
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
 				method.ReturnType.Name, methodInstructions);
-			EnqueueInvokedMethods(methodInstructions, methodsToCompile, compiledMethodKeys);
+			EnqueueDiscoveredMethods(childGenerator.DiscoveredInvokeMethods, methodsToCompile,
+				compiledMethodKeys);
 		}
 		return methodsByType;
 	}
@@ -931,21 +961,12 @@ public sealed class BinaryGenerator
 				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToArray(),
 			method.ReturnType);
 
-	private static void EnqueueInvokedMethods(IReadOnlyList<Instruction> instructions,
+	private static void EnqueueDiscoveredMethods(IReadOnlyList<Method> methods,
 		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
 	{
-		for (var instructionIndex = 0; instructionIndex < instructions.Count; instructionIndex++)
+		foreach (var method in methods)
 		{
-			if (instructions[instructionIndex].InstructionType != InstructionType.Invoke)
-				continue;
-			var invoke = (Invoke)instructions[instructionIndex];
-			if (invoke.Method.Method.Name == Method.From)
-				continue;
-			var method = invoke.Method.Method;
-			var methodKey = method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
-				method.Parameters.Select(parameter =>
-					new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToArray(),
-				method.ReturnType);
+			var methodKey = BuildMethodKey(method);
 			if (compiledMethodKeys.Add(methodKey))
 				methodsToCompile.Enqueue(method);
 		}
@@ -995,14 +1016,34 @@ public sealed class BinaryGenerator
 			return true;
 		case "Increment":
 		case "Decrement":
-			var register = registry.AllocateRegister();
-			instructions.Add(new Invoke(register, methodCall, registry));
-			if (methodCall.Instance != null)
-				instructions.Add(new StoreFromRegisterInstruction(register, methodCall.Instance.ToString()));
+			GenerateIncrementDecrementInvoke(methodCall);
 			return true;
 		default:
 			return false;
 		}
+	}
+
+	private void GenerateIncrementDecrementInvoke(MethodCall methodCall)
+	{
+		Register? instanceRegister = null;
+		if (methodCall.Instance != null)
+		{
+			GenerateInstructionFromExpression(methodCall.Instance);
+			instanceRegister = registry.PreviousRegister;
+		}
+		var parameterNames = new string[methodCall.Method.Parameters.Count];
+		for (var paramIndex = 0; paramIndex < methodCall.Method.Parameters.Count; paramIndex++)
+			parameterNames[paramIndex] = methodCall.Method.Parameters[paramIndex].Name;
+		var methodInfo = new InvokeMethodInfo(
+			GetBinaryTypeName(methodCall.Method.Type, methodCall.Method.Type),
+			methodCall.Method.Name, parameterNames,
+			GetBinaryTypeName(methodCall.ReturnType, methodCall.Method.Type),
+			[], instanceRegister);
+		var resultRegister = registry.AllocateRegister();
+		instructions.Add(new Invoke(resultRegister, methodInfo));
+		if (methodCall.Instance != null)
+			instructions.Add(new StoreFromRegisterInstruction(resultRegister,
+				methodCall.Instance.ToString()));
 	}
 
 	private void GenerateInstructionsForRemoveMethod(MethodCall methodCall)

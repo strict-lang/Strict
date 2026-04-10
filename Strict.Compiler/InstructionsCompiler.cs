@@ -95,9 +95,8 @@ public abstract class InstructionsCompiler
 	private static void EnqueueInvokedMethods(IEnumerable<Instruction> instructions,
 		Queue<(Method Method, bool IncludeMembers)> queue)
 	{
-		foreach (var invoke in instructions.OfType<Invoke>())
-			if (invoke.Method.Method.Name != Method.From)
-				queue.Enqueue((invoke.Method.Method, invoke.Method.Instance != null));
+		// With the new register-based Invoke, method discovery for native compilation is not
+		// needed during instruction scanning - all methods are already precompiled in the binary
 	}
 
 	protected static bool HasNumericPrint(IEnumerable<Instruction> instructions) =>

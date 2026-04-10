@@ -185,13 +185,13 @@ public sealed class Decompiler
 	private bool TryDeserializeInvokeInstruction(BinaryMethod method, List<string> bodyLines,
 		Invoke invoke, int instructionIndex)
 	{
-		registerExpressions[invoke.Register] = invoke.Method.ToString();
+		registerExpressions[invoke.Register] = invoke.MethodInfo.ToString();
 		if (instructionIndex + 1 < method.instructions.Count &&
 			method.instructions[instructionIndex + 1] is StoreFromRegisterInstruction nextStore &&
 			nextStore.Register == invoke.Register)
 			return true;
-		if (invoke.Method.ReturnType.Name == Type.None)
-			bodyLines.Add("\t" + invoke.Method);
+		if (invoke.MethodInfo.ReturnTypeName == Type.None)
+			bodyLines.Add("\t" + invoke.MethodInfo);
 		return true;
 	}
 

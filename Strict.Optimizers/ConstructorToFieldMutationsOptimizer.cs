@@ -1,6 +1,5 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Expressions;
 using Strict.Language;
 
 namespace Strict.Optimizers;
@@ -20,80 +19,55 @@ public sealed class ConstructorToFieldMutationsOptimizer : InstructionOptimizer
 		foreach (var typeEntry in binary.MethodsPerType)
 		foreach (var methodGroup in typeEntry.Value.MethodGroups.Values)
 		foreach (var method in methodGroup)
-			method.instructions = Optimize(method.instructions);
+			method.instructions = Optimize(method.instructions, binary);
 	}
 
-	public override List<Instruction> Optimize(List<Instruction> instructions)
+	public override List<Instruction> Optimize(List<Instruction> instructions) => instructions;
+
+	private static List<Instruction> Optimize(List<Instruction> instructions,
+		BinaryExecutable binary)
 	{
 		for (var index = 0; index < instructions.Count; index++)
 		{
 			if (instructions[index] is Invoke invoke &&
-				TryBuildConstructValueType(invoke, instructions, index, out var replacement))
+				TryBuildConstructValueType(invoke, instructions, index, binary, out var replacement))
 				instructions[index] = replacement;
 		}
 		return instructions;
 	}
 
 	private static bool TryBuildConstructValueType(Invoke invoke, List<Instruction> instructions,
-		int invokeIndex, out ConstructValueTypeInstruction replacement)
+		int invokeIndex, BinaryExecutable binary, out ConstructValueTypeInstruction replacement)
 	{
 		replacement = null!;
-		if (invoke.Method.Method.Name != Method.From || invoke.Method.Instance != null)
+		if (invoke.MethodInfo.MethodName != Method.From || invoke.MethodInfo.InstanceRegister.HasValue)
 			return false;
-		var returnType = invoke.Method.ReturnType;
+		var argRegisters = invoke.MethodInfo.ArgumentRegisters;
+		if (argRegisters.Length == 0)
+			return false;
+		var returnType = invoke.MethodInfo.ResolveReturnType(binary.basePackage);
 		if (returnType.IsNumber || returnType.IsText || returnType.IsBoolean || returnType.IsList ||
 			returnType.IsDictionary || returnType.IsTrait || returnType.Members.Count == 0)
 			return false;
-		var args = invoke.Method.Arguments;
-		if (args.Count == 0 || args.Count > returnType.Members.Count)
+		if (argRegisters.Length > returnType.Members.Count)
 			return false;
-		// Every arg must be a simple arithmetic binary (field + modifier)
-		if (!AllArgsAreBinaryExpressions(args))
-			return false;
-		// Collect the registers that hold each arg result by scanning backwards from invokeIndex
-		var argRegisters = FindArgRegisters(invoke, instructions, invokeIndex);
-		if (argRegisters == null)
+		if (!AllPrecedingArgsAreBinaryInstructions(instructions, invokeIndex, argRegisters.Length))
 			return false;
 		replacement = new ConstructValueTypeInstruction(invoke.Register, returnType, argRegisters);
 		return true;
 	}
 
-	private static bool AllArgsAreBinaryExpressions(IReadOnlyList<Expression> args)
+	private static bool AllPrecedingArgsAreBinaryInstructions(List<Instruction> instructions,
+		int invokeIndex, int argCount)
 	{
-		foreach (var arg in args)
-			if (arg is not Binary binary || !IsDirectArithmetic(binary.Method.Name))
-				return false;
-		return true;
-	}
-
-	/// <summary>
-	/// Walks backward through the instruction list to find the registers that hold each argument
-	/// of the Invoke. It matches BinaryInstruction result registers (index Registers[2]) because
-	/// the arg expressions are arithmetic operations whose result is the last register written.
-	/// </summary>
-	private static Register[]? FindArgRegisters(Invoke invoke, List<Instruction> instructions,
-		int invokeIndex)
-	{
-		var args = invoke.Method.Arguments;
-		var found = new Register[args.Count];
-		var remaining = args.Count;
-		// Walk backwards; pick up BinaryInstruction output registers in order
-		var matchIndex = args.Count - 1;
+		var remaining = argCount;
 		for (var scan = invokeIndex - 1; scan >= 0 && remaining > 0; scan--)
 		{
 			if (instructions[scan] is not BinaryInstruction bin || bin.Registers.Length < 3 ||
 				bin.IsConditional())
 				continue;
-			found[matchIndex] = bin.Registers[2];
-			matchIndex--;
 			remaining--;
 		}
-		return remaining == 0
-			? found
-			: null;
+		return remaining == 0;
 	}
-
-	private static bool IsDirectArithmetic(string methodName) =>
-		methodName is BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply
-			or BinaryOperator.Divide;
 }

@@ -110,7 +110,7 @@ public sealed class NameTable
 			StoreFromRegisterInstruction storeReg => Add(storeReg.Identifier),
 			SetInstruction set => CollectValueInstanceStrings(set.ValueInstance),
 			LoadConstantInstruction loadConst => CollectValueInstanceStrings(loadConst.Constant),
-			Invoke invoke => CollectMethodCallStrings(invoke.Method),
+			Invoke invoke => CollectInvokeMethodInfoStrings(invoke.MethodInfo),
 			WriteToListInstruction writeList => Add(writeList.Identifier),
 			WriteToTableInstruction writeTable => Add(writeTable.Identifier),
 			RemoveInstruction remove => Add(remove.Identifier),
@@ -160,6 +160,16 @@ public sealed class NameTable
 			BinaryExecutable.IsIntegerNumber(val.Number))
 			return this;
 		return Add(type.FullName);
+	}
+
+	private NameTable CollectInvokeMethodInfoStrings(InvokeMethodInfo info)
+	{
+		Add(info.TypeFullName);
+		Add(info.MethodName);
+		Add(info.ReturnTypeName);
+		foreach (var paramName in info.ParameterNames)
+			Add(paramName);
+		return this;
 	}
 
 	private NameTable CollectMethodCallStrings(MethodCall mc)

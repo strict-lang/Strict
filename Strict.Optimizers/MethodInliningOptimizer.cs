@@ -1,6 +1,5 @@
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
-using Strict.Expressions;
 using Strict.Language;
 
 namespace Strict.Optimizers;
@@ -37,13 +36,11 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		inlinedInstructions = [];
 		if (!CanInline(binary, currentTypeName, currentMethodName, invoke))
 			return false;
-		var generatedInstructions =
-			Bytecode.BinaryGenerator.GenerateInlineInstructions(binary.basePackage,
-				GetInlinedExpression(invoke.Method));
-		if (!IsInlineBlock(generatedInstructions))
+		var compiledMethod = FindCompiledMethod(binary, currentTypeName, invoke.MethodInfo);
+		if (compiledMethod == null || !IsInlineBlock(compiledMethod.instructions))
 			return false;
 		var recursivelyInlinedInstructions = InlineInstructions(binary, currentTypeName,
-			currentMethodName, generatedInstructions);
+			currentMethodName, compiledMethod.instructions);
 		if (!IsInlineBlock(recursivelyInlinedInstructions))
 			return false;
 		inlinedInstructions = RemapRegisters(recursivelyInlinedInstructions, invoke.Register);
@@ -53,27 +50,31 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 	private static bool CanInline(Bytecode.BinaryExecutable binary, string currentTypeName,
 		string currentMethodName, Invoke invoke)
 	{
-		if (invoke.Method.Instance != null || invoke.Method.Method.Name == currentMethodName ||
-			!IsCurrentTypeCall(currentTypeName, invoke.Method.Method.Type.FullName,
-				invoke.Method.Method.Type.Name))
+		if (invoke.MethodInfo.InstanceRegister.HasValue ||
+			invoke.MethodInfo.MethodName == currentMethodName ||
+			!IsCurrentTypeCall(currentTypeName, invoke.MethodInfo.TypeFullName))
 			return false;
-		var compiledMethod = FindCompiledMethod(binary, currentTypeName, invoke.Method.Method);
+		var compiledMethod = FindCompiledMethod(binary, currentTypeName, invoke.MethodInfo);
 		return compiledMethod != null && IsInlineBlock(compiledMethod.instructions);
 	}
 
-	private static bool IsCurrentTypeCall(string currentTypeName, string invokedTypeFullName,
-		string invokedTypeName) =>
-		invokedTypeFullName == currentTypeName || invokedTypeName == currentTypeName ||
-		currentTypeName.EndsWith(Context.ParentSeparator + invokedTypeName,
+	private static bool IsCurrentTypeCall(string currentTypeName, string invokedTypeFullName) =>
+		invokedTypeFullName == currentTypeName ||
+		currentTypeName.EndsWith(Context.ParentSeparator + invokedTypeFullName,
+			StringComparison.Ordinal) ||
+		invokedTypeFullName.EndsWith(Context.ParentSeparator + currentTypeName,
 			StringComparison.Ordinal);
 
 	private static BinaryMethod? FindCompiledMethod(Bytecode.BinaryExecutable binary,
-		string currentTypeName, Method method) =>
-		binary.MethodsPerType.TryGetValue(currentTypeName, out var typeData)
-			? typeData.MethodGroups.GetValueOrDefault(method.Name)?.FirstOrDefault(candidate =>
-				candidate.parameters.Count == method.Parameters.Count &&
-				candidate.ReturnTypeName.EndsWith(method.ReturnType.Name, StringComparison.Ordinal))
-			: null;
+		string currentTypeName, InvokeMethodInfo methodInfo)
+	{
+		if (binary.MethodsPerType.TryGetValue(currentTypeName, out var typeData) &&
+			typeData.MethodGroups.TryGetValue(methodInfo.MethodName, out var overloads))
+			return overloads.FirstOrDefault(candidate =>
+				candidate.parameters.Count == methodInfo.ParameterNames.Length &&
+				candidate.ReturnTypeName.EndsWith(methodInfo.ReturnTypeName, StringComparison.Ordinal));
+		return null;
+	}
 
 	private static bool IsInlineBlock(IReadOnlyList<Instruction> instructions)
 	{
@@ -84,50 +85,6 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 				or BinaryInstruction or ListCallInstruction or Invoke or SetInstruction))
 				return false;
 		return true;
-	}
-
-	private static Expression GetInlinedExpression(MethodCall call)
-	{
-		var body = call.Method.GetBodyAndParseIfNeeded();
-		var implementation = body is Body methodBody
-			? methodBody.Expressions[^1]
-			: body;
-		return SubstituteParameters(implementation, call.Method.Parameters, call.Arguments);
-	}
-
-	private static Expression SubstituteParameters(Expression expression,
-		IReadOnlyList<Parameter> parameters, IReadOnlyList<Expression> arguments)
-	{
-		if (expression is ParameterCall parameterCall)
-			for (var index = 0; index < parameters.Count && index < arguments.Count; index++)
-				if (parameters[index].Name == parameterCall.Parameter.Name)
-					return arguments[index];
-		return expression switch
-		{
-			Binary binary => new Binary(SubstituteParameters(binary.Instance!, parameters, arguments),
-				binary.Method, [SubstituteParameters(binary.Arguments[0], parameters, arguments)]),
-			Not not => new Not(not.Method, SubstituteParameters(not.Instance!, parameters, arguments)),
-			MethodCall methodCall => new MethodCall(methodCall.Method, methodCall.Instance != null
-					? SubstituteParameters(methodCall.Instance, parameters, arguments)
-					: null,
-				methodCall.Arguments.Select(argument =>
-					SubstituteParameters(argument, parameters, arguments)).ToArray()),
-			MemberCall memberCall => new MemberCall(memberCall.Instance != null
-				? SubstituteParameters(memberCall.Instance, parameters, arguments)
-				: null, memberCall.Member, memberCall.LineNumber),
-			ListCall listCall => new ListCall(
-				SubstituteParameters(listCall.List, parameters, arguments),
-				SubstituteParameters(listCall.Index, parameters, arguments), listCall.SecondIndex != null
-					? SubstituteParameters(listCall.SecondIndex, parameters, arguments)
-					: null, SubstituteParameters(listCall.OriginalIndex, parameters, arguments)),
-			If ifExpression => new If(
-				SubstituteParameters(ifExpression.Condition, parameters, arguments),
-				SubstituteParameters(ifExpression.Then, parameters, arguments), ifExpression.LineNumber,
-				ifExpression.OptionalElse != null
-					? SubstituteParameters(ifExpression.OptionalElse, parameters, arguments)
-					: null),
-			_ => expression
-		};
 	}
 
 	private static List<Instruction> RemapRegisters(IReadOnlyList<Instruction> instructions,
@@ -177,8 +134,8 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 				binary.Registers.Select(register => registerMap[register]).ToArray()),
 			ListCallInstruction listCall => new ListCallInstruction(registerMap[listCall.Register],
 				registerMap[listCall.IndexValueRegister], listCall.Identifier),
-			Invoke nestedInvoke => new Invoke(registerMap[nestedInvoke.Register], nestedInvoke.Method,
-				nestedInvoke.PersistedRegistry),
+			Invoke nestedInvoke => new Invoke(registerMap[nestedInvoke.Register],
+				nestedInvoke.MethodInfo),
 			SetInstruction set => new SetInstruction(set.ValueInstance, registerMap[set.Register]),
 			_ => instruction
 		};
