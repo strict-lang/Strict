@@ -114,27 +114,8 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 	{
 		var loaded = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var instruction in instructions)
-			switch (instruction.InstructionType)
-			{
-			case InstructionType.LoadVariableToRegister:
+			if (instruction.InstructionType == InstructionType.LoadVariableToRegister)
 				loaded.Add(((LoadVariableToRegister)instruction).Identifier);
-				break;
-			case InstructionType.Invoke:
-				CollectVariableCallsFromInvoke((Invoke)instruction, loaded);
-				break;
-			}
 		return loaded;
 	}
-
-	// Keep the legacy name as an alias used by existing callers in the optimizer pipeline
-	private static HashSet<string> CollectUsedVariables(List<Instruction> instructions) =>
-		CollectLoadedVariables(instructions);
-
-	private static void CollectVariableCallsFromInvoke(Invoke invoke, HashSet<string> used)
-	{
-		// No expression tree walking needed - instance and arguments are in registers
-	}
-
-	private static void CollectVariableCallsFromExpression(Expression expression,
-		HashSet<string> used) { }
 }

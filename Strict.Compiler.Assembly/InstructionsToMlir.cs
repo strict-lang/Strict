@@ -248,8 +248,8 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 	{
 		if (context.RegisterValues.TryGetValue(storeReg.Register, out var value))
 			context.VariableValues[storeReg.Identifier] = value;
-		if (context.RegisterInstances.TryGetValue(storeReg.Register, out var instances))
-			context.VariableInstances[storeReg.Identifier] = instances;
+		//unused: if (context.RegisterInstances.TryGetValue(storeReg.Register, out var instances))
+		//unused:	context.VariableInstances[storeReg.Identifier] = instances;
 	}
 
 	private static void EmitLoadVariable(LoadVariableToRegister loadVar, EmitContext context)
@@ -510,8 +510,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		public Dictionary<Register, string> RegisterValues { get; } = new();
 		public Dictionary<Register, Register[]> RegisterInstances { get; } = new();
 		public Dictionary<string, string> VariableValues { get; } = new(StringComparer.Ordinal);
-		public Dictionary<string, Register[]> VariableInstances { get; } =
-			new(StringComparer.Ordinal);
+		//unused: public Dictionary<string, Register[]> VariableInstances { get; } = new(StringComparer.Ordinal);
 		public Dictionary<string, int> ParamIndexByName { get; } = new(StringComparer.Ordinal);
 		public string? LastConditionTemp { get; set; }
 		public HashSet<int> JumpTargets { get; } = [];

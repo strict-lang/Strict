@@ -111,7 +111,9 @@ public sealed partial class VirtualMachine
 	private bool TryHandleIncrementDecrement(Invoke invoke, bool isIncrement)
 	{
 		var current = Memory.Registers[invoke.MethodInfo.InstanceRegister!.Value];
-		var delta = isIncrement ? 1.0 : -1.0;
+		var delta = isIncrement
+			? 1.0
+			: -1.0;
 		Memory.Registers[invoke.Register] =
 			new ValueInstance(current.GetType(), current.Number + delta);
 		return true;
@@ -162,11 +164,30 @@ public sealed partial class VirtualMachine
 		var strictPrefix = nameof(Strict) + Context.ParentSeparator;
 		if (info.TypeFullName.StartsWith(strictPrefix, StringComparison.Ordinal))
 			return executable.FindInstructions(info.TypeFullName[strictPrefix.Length..],
-				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName);
-		return !info.TypeFullName.StartsWith(strictPrefix, StringComparison.Ordinal)
-			? executable.FindInstructions(strictPrefix + info.TypeFullName,
-				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName)
-			: null;
+				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName) ??
+				FindInstructionsByTypeSuffix(info);
+		return executable.FindInstructions(strictPrefix + info.TypeFullName,
+				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName) ??
+			FindInstructionsByTypeSuffix(info);
+	}
+
+	private List<Instruction>? FindInstructionsByTypeSuffix(InvokeMethodInfo info)
+	{
+		var typeFullName = info.TypeFullName;
+		var strictPrefix = nameof(Strict) + Context.ParentSeparator;
+		for (var separatorIndex = typeFullName.IndexOf(Context.ParentSeparator);
+			separatorIndex >= 0; separatorIndex = typeFullName.IndexOf(Context.ParentSeparator,
+				separatorIndex + 1))
+		{
+			var strippedTypeName = typeFullName[(separatorIndex + 1)..];
+			var instructions = executable.FindInstructions(strippedTypeName, info.MethodName,
+				info.ParameterNames.Length, info.ReturnTypeName) ??
+				executable.FindInstructions(strictPrefix + strippedTypeName, info.MethodName,
+					info.ParameterNames.Length, info.ReturnTypeName);
+			if (instructions != null)
+				return instructions;
+		}
+		return null;
 	}
 
 	private void InitializeMethodCallScope(InvokeMethodInfo info,

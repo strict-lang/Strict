@@ -277,8 +277,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			EmitJump(jump, jumpLabels, index, lines);
 			break;
 		case Invoke invoke:
-			EmitInvoke(invoke, lines, paramIndexByName, variableSlots, dataConstants,
-				registerInstances, variableInstances, compiledMethods);
+			EmitInvoke(invoke, lines,
+				registerInstances, compiledMethods);
 			break;
 		case JumpToId { InstructionType: InstructionType.JumpEnd }:
 			break;
@@ -289,10 +289,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	}
 
 	private static void EmitInvoke(Invoke invoke, List<string> lines,
-		Dictionary<string, int> paramIndexByName, Dictionary<string, int> variableSlots,
-		List<(string Label, double Value)> dataConstants,
 		Dictionary<Register, Register[]> registerInstances,
-		Dictionary<string, Register[]> variableInstances,
 		Dictionary<string, CompiledMethodInfo>? compiledMethods)
 	{
 		if (invoke.MethodInfo == null)

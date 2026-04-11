@@ -139,7 +139,7 @@ public sealed class BinaryExecutable(Package basePackage)
 				new StoreVariableInstruction(reader, table, this),
 			InstructionType.StoreRegisterToVariable => new StoreFromRegisterInstruction(reader, table),
 			InstructionType.Set => new SetInstruction(reader, table, this),
-			InstructionType.Invoke => new Invoke(reader, table, this),
+			InstructionType.Invoke => new Invoke(reader, table),
 			InstructionType.Return => new ReturnInstruction(reader),
 			InstructionType.LoopBegin => new LoopBeginInstruction(reader, table),
 			InstructionType.LoopEnd => new LoopEndInstruction(reader),
@@ -438,6 +438,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	}
 
 	private readonly Dictionary<Type, Value> cachedDefaultValuesForVariableRefs = new();
+
 	private Expression ReadVariableRef(BinaryReader reader, NameTable table)
 	{
 		var name = table.names[reader.Read7BitEncodedInt()];

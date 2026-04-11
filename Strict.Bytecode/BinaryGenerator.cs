@@ -51,6 +51,7 @@ public sealed class BinaryGenerator
 	private Type ReturnType { get; } //TODO: stupid, remove
 	private int conditionalId; //TODO: a bit strange
 	private int forResultId;
+	private int listResultId;
 
 	public BinaryExecutable Generate() =>
 		entryMethodCall is { Method.Name: Method.Run, Arguments.Count: 0 }
@@ -236,6 +237,24 @@ public sealed class BinaryGenerator
 		return false;
 	}
 
+	private void GenerateListExpression(List list)
+	{
+		if (list.TryGetConstantData() is { } constantList)
+		{
+			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(), constantList));
+			return;
+		}
+		var listVariable = $"listResult{listResultId++}";
+		instructions.Add(new StoreVariableInstruction(new ValueInstance(list.ReturnType,
+			Array.Empty<ValueInstance>()), listVariable));
+		for (var valueIndex = 0; valueIndex < list.Values.Count; valueIndex++)
+		{
+			GenerateInstructionFromExpression(list.Values[valueIndex]);
+			instructions.Add(new WriteToListInstruction(registry.PreviousRegister, listVariable));
+		}
+		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), listVariable));
+	}
+
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)
 	{
 		for (var i = 0; i < expressions.Count; i++)
@@ -356,6 +375,9 @@ public sealed class BinaryGenerator
 			instructions.Add(
 				new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
 			return;
+		case List list:
+			GenerateListExpression(list);
+			return;
 		case Value value:
 			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
 				GetValueInstanceFromExpression(value)));
@@ -416,7 +438,7 @@ public sealed class BinaryGenerator
 		for (var paramIndex = 0; paramIndex < methodCall.Method.Parameters.Count; paramIndex++)
 			parameterNames[paramIndex] = methodCall.Method.Parameters[paramIndex].Name;
 		var methodInfo = new InvokeMethodInfo(
-			GetBinaryTypeName(methodCall.Method.Type, methodCall.Method.Type),
+			methodCall.Method.Type.FullName,
 			methodCall.Method.Name, parameterNames,
 			GetBinaryTypeName(methodCall.ReturnType, methodCall.Method.Type),
 			argumentRegisters, instanceRegister);
@@ -730,6 +752,7 @@ public sealed class BinaryGenerator
 		foreach (var runMethod in runMethods)
 		{
 			CollectMethodDependencies(runMethod);
+			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 			var methodBody = runMethod.GetBodyAndParseIfNeeded();
 			var methodExpressions = methodBody is Body body
 				? body.Expressions
@@ -743,11 +766,13 @@ public sealed class BinaryGenerator
 			compiledMethodKeys.Add(BuildMethodKey(runMethod));
 			EnqueueDiscoveredMethods(childGenerator.DiscoveredInvokeMethods, methodsToCompile,
 				compiledMethodKeys);
+			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 		}
 		while (methodsToCompile.Count > 0)
 		{
 			var method = methodsToCompile.Dequeue();
 			CollectMethodDependencies(method);
+			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 			var body = method.GetBodyAndParseIfNeeded();
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions
@@ -760,6 +785,7 @@ public sealed class BinaryGenerator
 				GetBinaryTypeName(method.ReturnType, entryType), methodInstructions);
 			EnqueueDiscoveredMethods(childGenerator.DiscoveredInvokeMethods, methodsToCompile,
 				compiledMethodKeys);
+			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 		}
 		return methodsByType;
 	}
@@ -955,6 +981,35 @@ public sealed class BinaryGenerator
 	//TODO: remove
 	private List<Instruction> GenerateInstructionList() => GenerateInstructions(Expressions);
 
+	private void EnqueueConstraintMethods(Queue<Method> methodsToCompile,
+		HashSet<string> compiledMethodKeys)
+	{
+		foreach (var type in dependencyTypes.Values)
+			foreach (var member in type.Members)
+				EnqueueConstraintMethods(type, member, methodsToCompile, compiledMethodKeys);
+	}
+
+	private static void EnqueueConstraintMethods(Type type, Member member,
+		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
+	{
+		if (member.Constraints == null)
+			return;
+		foreach (var constraint in member.Constraints)
+			if (constraint is Binary { Method.Name: BinaryOperator.Is, Instance: { } instance } binary &&
+				instance.ToString() == "Length")
+			{
+				var rhsText = binary.Arguments[0].ToString();
+				var separatorIndex = rhsText.IndexOf('.');
+				if (separatorIndex <= 0)
+					continue;
+				var referencedMember = type.Members.FirstOrDefault(typeMember =>
+					typeMember.Name.Equals(rhsText[..separatorIndex], StringComparison.OrdinalIgnoreCase));
+				var method = referencedMember?.Type.FindMethod(rhsText[(separatorIndex + 1)..], []);
+				if (method != null && compiledMethodKeys.Add(BuildMethodKey(method)))
+					methodsToCompile.Enqueue(method);
+			}
+	}
+
 	private static string BuildMethodKey(Method method) =>
 		method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
@@ -1035,7 +1090,7 @@ public sealed class BinaryGenerator
 		for (var paramIndex = 0; paramIndex < methodCall.Method.Parameters.Count; paramIndex++)
 			parameterNames[paramIndex] = methodCall.Method.Parameters[paramIndex].Name;
 		var methodInfo = new InvokeMethodInfo(
-			GetBinaryTypeName(methodCall.Method.Type, methodCall.Method.Type),
+			methodCall.Method.Type.FullName,
 			methodCall.Method.Name, parameterNames,
 			GetBinaryTypeName(methodCall.ReturnType, methodCall.Method.Type),
 			[], instanceRegister);

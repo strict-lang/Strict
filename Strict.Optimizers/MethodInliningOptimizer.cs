@@ -43,8 +43,9 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 			currentMethodName, compiledMethod.instructions);
 		if (!IsInlineBlock(recursivelyInlinedInstructions))
 			return false;
-		inlinedInstructions = RemapRegisters(recursivelyInlinedInstructions, invoke.Register);
-		return true;
+		inlinedInstructions = RemapInstructions(recursivelyInlinedInstructions, compiledMethod,
+			invoke);
+		return inlinedInstructions.Count > 0;
 	}
 
 	private static bool CanInline(Bytecode.BinaryExecutable binary, string currentTypeName,
@@ -87,31 +88,88 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		return true;
 	}
 
-	private static List<Instruction> RemapRegisters(IReadOnlyList<Instruction> instructions,
-		Bytecode.Register targetRegister)
+	private static List<Instruction> RemapInstructions(IReadOnlyList<Instruction> instructions,
+		BinaryMethod compiledMethod, Invoke invoke)
 	{
 		var returnRegister = ((ReturnInstruction)instructions[^1]).Register;
-		var map = new Dictionary<Bytecode.Register, Bytecode.Register>
+		var registerMap = new Dictionary<Bytecode.Register, Bytecode.Register>
 		{
-			[returnRegister] = targetRegister
+			[returnRegister] = invoke.Register
 		};
-		var nextRegister = ((int)targetRegister + 1) %
+		if (!TryMapParameterRegisters(instructions, compiledMethod, invoke, returnRegister,
+			registerMap))
+			return [];
+		var nextRegister = ((int)invoke.Register + 1) %
 			Enum.GetValues<Bytecode.Register>().Length;
 		foreach (var register in instructions.SelectMany(GetRegisters))
-			if (!map.ContainsKey(register))
+			if (!registerMap.ContainsKey(register))
 			{
-				while (map.ContainsValue((Bytecode.Register)nextRegister))
+				while (RegisterMapContainsValue(registerMap, (Bytecode.Register)nextRegister))
 					nextRegister = (nextRegister + 1) %
 						Enum.GetValues<Bytecode.Register>().Length;
-				map[register] = (Bytecode.Register)nextRegister;
+				registerMap[register] = (Bytecode.Register)nextRegister;
 				nextRegister = (nextRegister + 1) %
 					Enum.GetValues<Bytecode.Register>().Length;
 			}
 		var remapped = new List<Instruction>(instructions.Count - 1);
 		for (var index = 0; index < instructions.Count - 1; index++)
-			remapped.Add(Clone(instructions[index], map));
+		{
+			if (instructions[index] is LoadVariableToRegister loadVariable &&
+				TryGetParameterIndex(compiledMethod, loadVariable.Identifier, out _))
+				continue;
+			remapped.Add(Clone(instructions[index], registerMap));
+		}
 		return remapped;
 	}
+
+	private static bool TryMapParameterRegisters(IReadOnlyList<Instruction> instructions,
+		BinaryMethod compiledMethod, Invoke invoke, Bytecode.Register returnRegister,
+		IDictionary<Bytecode.Register, Bytecode.Register> registerMap)
+	{
+		for (var index = 0; index < instructions.Count - 1; index++)
+			switch (instructions[index])
+			{
+			case LoadVariableToRegister loadVariable:
+				if (TryGetParameterIndex(compiledMethod, loadVariable.Identifier, out var parameterIndex))
+				{
+					var argumentRegister = invoke.MethodInfo.ArgumentRegisters[parameterIndex];
+					if (loadVariable.Register == returnRegister && argumentRegister != invoke.Register)
+						return false;
+					registerMap[loadVariable.Register] = argumentRegister;
+				}
+				else if (UsesParameterAccessPath(compiledMethod, loadVariable.Identifier))
+					return false;
+				break;
+			case ListCallInstruction listCall when UsesParameterAccessPath(compiledMethod,
+				listCall.Identifier):
+				return false;
+			}
+		return true;
+	}
+
+	private static bool TryGetParameterIndex(BinaryMethod compiledMethod, string identifier,
+		out int parameterIndex)
+	{
+		for (parameterIndex = 0; parameterIndex < compiledMethod.parameters.Count; parameterIndex++)
+			if (compiledMethod.parameters[parameterIndex].Name == identifier)
+				return true;
+		parameterIndex = -1;
+		return false;
+	}
+
+	private static bool UsesParameterAccessPath(BinaryMethod compiledMethod, string identifier)
+	{
+		foreach (var parameter in compiledMethod.parameters)
+			if (identifier.StartsWith(parameter.Name + ".", StringComparison.Ordinal) ||
+				identifier.StartsWith(parameter.Name + "(", StringComparison.Ordinal))
+				return true;
+		return false;
+	}
+
+	private static bool RegisterMapContainsValue(
+		IReadOnlyDictionary<Bytecode.Register, Bytecode.Register> registerMap,
+		Bytecode.Register register) =>
+		registerMap.Any(pair => pair.Value == register);
 
 	private static IEnumerable<Bytecode.Register> GetRegisters(Instruction instruction) =>
 		instruction switch
@@ -135,7 +193,14 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 			ListCallInstruction listCall => new ListCallInstruction(registerMap[listCall.Register],
 				registerMap[listCall.IndexValueRegister], listCall.Identifier),
 			Invoke nestedInvoke => new Invoke(registerMap[nestedInvoke.Register],
-				nestedInvoke.MethodInfo),
+				new InvokeMethodInfo(nestedInvoke.MethodInfo.TypeFullName,
+					nestedInvoke.MethodInfo.MethodName,
+					nestedInvoke.MethodInfo.ParameterNames,
+					nestedInvoke.MethodInfo.ReturnTypeName,
+					nestedInvoke.MethodInfo.ArgumentRegisters.Select(register => registerMap[register]).ToArray(),
+					nestedInvoke.MethodInfo.InstanceRegister.HasValue
+						? registerMap[nestedInvoke.MethodInfo.InstanceRegister.Value]
+						: null)),
 			SetInstruction set => new SetInstruction(set.ValueInstance, registerMap[set.Register]),
 			_ => instruction
 		};

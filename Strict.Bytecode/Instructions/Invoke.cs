@@ -13,7 +13,7 @@ public sealed class Invoke : RegisterInstruction
 		InstructionType.Invoke, register) =>
 		MethodInfo = methodInfo;
 
-	public Invoke(BinaryReader reader, NameTable table, BinaryExecutable binary) : base(
+	public Invoke(BinaryReader reader, NameTable table) : base(
 		InstructionType.Invoke, (Register)reader.ReadByte()) =>
 		MethodInfo = new InvokeMethodInfo(reader, table);
 

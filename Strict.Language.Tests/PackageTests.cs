@@ -161,7 +161,7 @@ public class PackageTests
 	{
 		var tasks = Enumerable.Range(0, 8).Select(async index =>
 		{
-      var typeSuffix = ((char)('A' + index)).ToString();
+			var typeSuffix = ((char)('A' + index)).ToString();
 			var parser = new MethodExpressionParser();
 			var repositories = new Repositories(parser);
 			using var strictPackage = await repositories.LoadStrictPackage();
@@ -169,20 +169,13 @@ public class PackageTests
 			using var imageProcessingPackage =
 				await repositories.LoadStrictPackage("Strict/ImageProcessing");
 			using var testType = new Type(imageProcessingPackage,
-       new TypeLines(nameof(LoadingStrictPackagesInParallelDoesNotFail) + typeSuffix,
-					"has number",
-					"Run Number",
-					"\tconstant width = 80",
-					"\tconstant height = 45",
-					"\tmutable image = ColorImage(Size(width, height))",
-					"\tfor image.Size",
-					"\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)",
-					"\tmutable count = 0",
-					"\tfor image.Size",
-					"\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",
-					"\t\t\tcount = count + 1",
-					"\tcount")).ParseMembersAndMethods(parser);
-     var runMethod = testType.Methods.Single(method => method.Name == Method.Run);
+				new TypeLines(nameof(LoadingStrictPackagesInParallelDoesNotFail) + typeSuffix,
+					"has number", "Run Number", "\tconstant width = 80", "\tconstant height = 45",
+					"\tmutable image = ColorImage(Size(width, height))", "\tfor image.Size",
+					"\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)", "\tmutable count = 0",
+					"\tfor image.Size", "\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",
+					"\t\t\tcount = count + 1", "\tcount")).ParseMembersAndMethods(parser);
+			var runMethod = testType.Methods.Single(method => method.Name == Method.Run);
 			return runMethod.GetBodyAndParseIfNeeded().ToString();
 		});
 		Assert.That(async () => await Task.WhenAll(tasks), Throws.Nothing);

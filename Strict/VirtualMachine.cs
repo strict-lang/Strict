@@ -400,7 +400,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	/// </summary>
 	private LoopBeginInstruction FindLoopBeginByScanning(int steps)
 	{
-    var loopDepth = 0;
+		var loopDepth = 0;
 		for (var candidateIndex = instructionIndex - 1;
 			candidateIndex >= Math.Max(0, instructionIndex - steps - 1); candidateIndex--)
 			if (instructions[candidateIndex].InstructionType == InstructionType.LoopEnd)

@@ -26,7 +26,7 @@ public sealed class BinaryMethod
 		var instructionCount = reader.Read7BitEncodedInt();
 		for (var instructionIndex = 0; instructionIndex < instructionCount; instructionIndex++)
 			instructions.Add(type.binary!.ReadInstruction(reader, type.Table));
-   RestoreLoopLinks();
+		RestoreLoopLinks();
 	}
 
 	private void RestoreLoopLinks()
