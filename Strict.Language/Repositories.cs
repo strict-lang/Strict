@@ -66,7 +66,18 @@ public sealed class Repositories(ExpressionParser parser)
 		var path = DevelopmentBaseFolder + organization + Context.ParentSeparator + packageFullName;
 		if (Directory.Exists(path))
 			return path;
-		return FindRepositoryRoot() + Context.ParentSeparator + packageFullName;
+		var repoRoot = FindRepositoryRoot();
+		if (repoRoot == null)
+			return path;
+		// When running inside the Strict repo, the repo root IS the base Strict package
+		// (contains .strict files). Sub-packages like "Strict/Math" map to repoRoot/Math.
+		var separatorIndex = packageFullName.IndexOf(Context.ParentSeparator);
+		var repoPath = separatorIndex < 0
+			? repoRoot
+			: repoRoot + Context.ParentSeparator + packageFullName[(separatorIndex + 1)..];
+		return Directory.Exists(repoPath)
+			? repoPath
+			: repoRoot + Context.ParentSeparator + packageFullName;
 	}
 
 	private static string? FindRepositoryRoot()

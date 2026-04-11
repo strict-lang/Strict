@@ -49,7 +49,9 @@ public sealed class RedundantLoadEliminator : InstructionOptimizer
 	}
 
 	private static bool IsBlockBoundary(Instruction instruction) =>
-		instruction.InstructionType >= InstructionType.LoopBegin;
+		instruction.InstructionType is >= InstructionType.LoopBegin
+			or InstructionType.Invoke or InstructionType.InvokeWriteToList
+			or InstructionType.InvokeWriteToTable or InstructionType.InvokeRemove;
 
 	private static void RemapRegisters(List<Instruction> instructions,
 		Dictionary<Register, Register> remapping)
