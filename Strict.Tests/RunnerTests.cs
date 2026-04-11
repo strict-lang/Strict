@@ -273,11 +273,18 @@ public sealed class RunnerTests
 	//TODO: works and helps finding issues, but is so annoyingly slow that NCrunch becomes stuck for 10-20s, no good! we first need to get things fast!
 	public async Task RunAdjustBrightness()
 	{
-		PerformanceLog.IsEnabled = true;
-		await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
-			await new Repositories(new MethodExpressionParser()).LoadStrictPackage()).Run();
-		var output = consoleWriter.ToString();
-		Assert.That(output, Does.Contain("Brightness adjustment successful: (0.25, 0.25, 0.25)"));
+		try
+		{
+			PerformanceLog.IsEnabled = true;
+			await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"),
+				await new Repositories(new MethodExpressionParser()).LoadStrictPackage()).Run();
+			var output = consoleWriter.ToString();
+			Assert.That(output, Does.Contain("Brightness adjustment successful: (0.25, 0.25, 0.25)"));
+		}
+		finally
+		{
+			PerformanceLog.IsEnabled = false;
+		}
 	}
 
 	[Test]
