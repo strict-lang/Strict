@@ -11,9 +11,9 @@ public sealed class LoadVariableToRegister(Register register, string identifier)
 	public string Identifier { get; } = identifier;
 	public override string ToString() => $"{InstructionType} {Identifier} {Register}";
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		writer.Write7BitEncodedInt(table[Identifier]);
 	}
 }

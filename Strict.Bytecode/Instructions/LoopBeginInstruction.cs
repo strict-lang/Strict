@@ -31,9 +31,9 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 	public string[] CustomVariableNames { get; }
 	public bool IsRange => EndIndex != null;
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		writer.Write(EndIndex != null);
 		if (EndIndex != null)
 			writer.Write7BitEncodedInt((int)EndIndex!.Value);

@@ -24,8 +24,9 @@ public sealed class BinaryMethod
 		type.ReadMembers(reader, parameters);
 		ReturnTypeName = type.Table.names[reader.Read7BitEncodedInt()];
 		var instructionCount = reader.Read7BitEncodedInt();
+		var prevSourceLine = 0;
 		for (var instructionIndex = 0; instructionIndex < instructionCount; instructionIndex++)
-			instructions.Add(type.binary!.ReadInstruction(reader, type.Table));
+			instructions.Add(type.binary!.ReadInstruction(reader, type.Table, ref prevSourceLine));
 		RestoreLoopLinks();
 	}
 
@@ -54,7 +55,8 @@ public sealed class BinaryMethod
 		type.WriteMembers(writer, parameters);
 		writer.Write7BitEncodedInt(type.Table[ReturnTypeName]);
 		writer.Write7BitEncodedInt(instructions.Count);
+		var prevSourceLine = 0;
 		foreach (var instruction in instructions)
-			instruction.Write(writer, type.Table);
+			instruction.WriteCompressed(writer, type.Table, ref prevSourceLine);
 	}
 }

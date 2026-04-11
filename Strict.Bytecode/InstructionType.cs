@@ -42,5 +42,6 @@ public enum InstructionType : byte
 	InvokeRemove,
 	Print,
 	FieldLoad,
-	ConstructValueType
+	ConstructValueType,
+	IncludesSourceLine = 128
 }

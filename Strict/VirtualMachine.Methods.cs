@@ -23,10 +23,12 @@ public sealed partial class VirtualMachine
 			: (ValueInstance?)null;
 		var invokeInstructions = invoke.CachedInstructions ??=
 			GetPrecompiledMethodInstructions(invoke) ??
-			throw new InvalidOperationException("No precompiled method instructions found for " +
+			throw Fail("No precompiled method instructions found for '" +
 				info.TypeFullName + "." + info.MethodName +
-				" with return type " + info.ReturnTypeName);
+				"' with return type " + info.ReturnTypeName);
 		var childScope = InitializeChildScope();
+		var previousMethodContext = currentMethodContext;
+		currentMethodContext = info.TypeFullName + "." + info.MethodName;
 		InitializeMethodCallScope(info, evaluatedArgs, evaluatedInstance);
 		RunInstructions(invokeInstructions
 #if DEBUG
@@ -34,6 +36,7 @@ public sealed partial class VirtualMachine
 #endif
 		);
 		var result = TryFlattenNestedIteratorList(info, Returns);
+		currentMethodContext = previousMethodContext;
 		CleanupChildScope(childScope);
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
@@ -79,6 +82,15 @@ public sealed partial class VirtualMachine
 		{
 			Memory.Registers[invoke.Register] = new ValueInstance(returnType,
 				new Dictionary<ValueInstance, ValueInstance>());
+			return true;
+		}
+		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText ||
+			returnType.IsCharacter || returnType.IsEnum || returnType.IsBoolean || returnType.IsNone))
+		{
+			var info = invoke.MethodInfo;
+			Memory.Registers[invoke.Register] = info.ArgumentRegisters.Length > 0
+				? Memory.Registers[info.ArgumentRegisters[0]]
+				: CreateDefaultValue(returnType);
 			return true;
 		}
 		return TryHandleFromConstructor(invoke, returnType);
@@ -314,6 +326,8 @@ public sealed partial class VirtualMachine
 	{
 		var info = invoke.MethodInfo;
 		var instance = Memory.Registers[info.InstanceRegister!.Value];
+		if (!instance.IsText)
+			return false;
 		var text = instance.Text;
 		var args = new ValueInstance[info.ArgumentRegisters.Length];
 		for (var argIndex = 0; argIndex < info.ArgumentRegisters.Length; argIndex++)

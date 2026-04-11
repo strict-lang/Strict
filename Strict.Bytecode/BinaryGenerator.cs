@@ -53,6 +53,12 @@ public sealed class BinaryGenerator
 	private int forResultId;
 	private int listResultId;
 
+	private void AddInstruction(Instruction instruction, int sourceLine)
+	{
+		instruction.SourceLine = sourceLine;
+		instructions.Add(instruction);
+	}
+
 	public BinaryExecutable Generate() =>
 		entryMethodCall is { Method.Name: Method.Run, Arguments.Count: 0 }
 			? Generate(entryMethodCall.Method,
@@ -333,6 +339,7 @@ public sealed class BinaryGenerator
 	//TODO: try optimize into a expression switch
 	private void GenerateInstructionFromExpression(Expression expression)
 	{
+		var countBefore = instructions.Count;
 		switch (expression)
 		{
 		case Body body:
@@ -344,10 +351,10 @@ public sealed class BinaryGenerator
 			if (!CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
 			{
 				GenerateMethodCallInstruction(binaryExpression);
-				return;
+				break;
 			}
 			GenerateCodeForBinary(binaryExpression);
-			return;
+			break;
 		case If ifExpression:
 			GenerateIfInstructions(ifExpression);
 			return;
@@ -368,32 +375,36 @@ public sealed class BinaryGenerator
 			return;
 		case MemberCall memberCall:
 			GenerateMemberCallInstruction(memberCall);
-			return;
+			break;
 		case VariableCall:
 		case ParameterCall:
 		case Instance:
 			instructions.Add(
 				new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
-			return;
+			break;
 		case List list:
 			GenerateListExpression(list);
-			return;
+			break;
 		case Value value:
 			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
 				GetValueInstanceFromExpression(value)));
-			return;
+			break;
 		case MethodCall methodCall:
 			GenerateMethodCallInstruction(methodCall);
-			return;
+			break;
 		case ListCall listCall:
 			GenerateInstructionFromExpression(listCall.Index);
 			var indexRegister = registry.PreviousRegister;
 			instructions.Add(new ListCallInstruction(registry.AllocateRegister(), indexRegister,
 				listCall.List.ToString()));
-			return;
+			break;
 		default:
 			throw new NotSupportedException(expression.ToString()); //ncrunch: no coverage
 		}
+		var sourceLine = expression.LineNumber;
+		for (var instructionIndex = countBefore; instructionIndex < instructions.Count; instructionIndex++)
+			if (instructions[instructionIndex].SourceLine == 0)
+				instructions[instructionIndex].SourceLine = sourceLine;
 	}
 
 	private void GenerateMemberCallInstruction(MemberCall memberCall)
@@ -496,6 +507,7 @@ public sealed class BinaryGenerator
 	private void GenerateLoopInstructions(For forExpression, string? aggregationTarget = null,
 		LoopAggregation aggregation = LoopAggregation.None)
 	{
+		var forSourceLine = forExpression.LineNumber;
 		var instructionCountBeforeLoopStart = instructions.Count;
 		var customVariableNames = forExpression.CustomVariables.Select(variable =>
 			variable.ToString()).ToArray();
@@ -504,22 +516,32 @@ public sealed class BinaryGenerator
 		if (iterator is MethodCall rangeExpression &&
 			iterator.ReturnType.Name == Type.Range &&
 			rangeExpression.Method.Name == Method.From)
+		{
 			loopBegin = GenerateInstructionForRangeLoopInstruction(rangeExpression,
 				customVariableNames);
+			loopBegin.SourceLine = forSourceLine;
+		}
 		else
 		{
+			var iteratorStart = instructions.Count;
 			GenerateInstructionFromExpression(iterator);
+			for (var instructionIndex = iteratorStart; instructionIndex < instructions.Count;
+				instructionIndex++)
+				instructions[instructionIndex].SourceLine = forSourceLine;
 			loopBegin = new LoopBeginInstruction(registry.PreviousRegister, customVariableNames);
+			loopBegin.SourceLine = forSourceLine;
 			instructions.Add(loopBegin);
 		}
 		var bodyAggregatedDirectly =
 			GenerateInstructionsForLoopBody(forExpression, aggregationTarget, aggregation);
 		if (!string.IsNullOrWhiteSpace(aggregationTarget) && !bodyAggregatedDirectly)
 			AddLoopAggregation(aggregationTarget, aggregation);
-		instructions.Add(new LoopEndInstruction(instructions.Count - instructionCountBeforeLoopStart)
+		var loopEnd = new LoopEndInstruction(instructions.Count - instructionCountBeforeLoopStart)
 		{
-			Begin = loopBegin
-		});
+			Begin = loopBegin,
+			SourceLine = forSourceLine
+		};
+		instructions.Add(loopEnd);
 	}
 
 	private void AddLoopAggregation(string aggregationTarget, LoopAggregation aggregation)

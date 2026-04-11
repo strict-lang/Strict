@@ -10,9 +10,9 @@ public sealed class JumpIfNotZero(int instructionsToSkip, Register register)
 
 	public Register Register { get; } = register;
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		writer.Write((byte)Register);
 	}
 }

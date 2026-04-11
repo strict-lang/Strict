@@ -58,7 +58,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 	public void ReadingUnknownInstructionTypeThrowsInvalidFile()
 	{
 		var binary = new BinaryExecutable(TestPackage.Instance);
-		using var stream = new MemoryStream([255]);
+		using var stream = new MemoryStream([105]);
 		using var reader = new BinaryReader(stream);
 		Assert.That(() => binary.ReadInstruction(reader, new NameTable(Type.Number)),
 			Throws.TypeOf<BinaryExecutable.InvalidFile>().With.Message.Contains("Unknown instruction type"));

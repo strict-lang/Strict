@@ -18,6 +18,8 @@ internal sealed class CallFrame
 	internal static readonly int ValueSymbolId = ResolveSymbolId(Type.ValueLowercase);
 	internal static readonly int IndexSymbolId = ResolveSymbolId(Type.IndexLowercase);
 	internal static readonly int OuterSymbolId = ResolveSymbolId(Type.OuterLowercase);
+	internal static readonly int OuterIndexSymbolId =
+		ResolveSymbolId(Type.OuterLowercase + "." + Type.IndexLowercase);
 	/*TODO: not really used or needed, but if we don't resolve the symbols here, it fails later when using them	*/
 	internal static readonly int ElementsSymbolId = ResolveSymbolId(Type.ElementsLowercase);
 	internal static readonly int CharactersSymbolId = ResolveSymbolId("characters");
@@ -143,20 +145,30 @@ internal sealed class CallFrame
 		}
 	}
 
-	//TODO: slow and complicated, but only called for member lookups
+	/// <summary>
+	/// Walks the entire parent chain looking for member variables (isMember: true).
+	/// </summary>
 	private bool TryGetMember(int symbolId, out ValueInstance value)
 	{
 #if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.TryGetMember", "name=" + GetSymbolName(symbolId));
 #endif
-		return TryGetSlotValue(symbolId, true, out value);
+		if (TryGetSlotValue(symbolId, true, out value))
+			return true;
+		if (parent != null)
+			return parent.TryGetMember(symbolId, out value);
+		value = default;
+		return false;
 	}
 
 	private bool TryGetSlotValue(int symbolId, bool requireMember, out ValueInstance value)
 	{
 		if (!requireMember && symbolId == OuterSymbolId && parent != null &&
 			parent.TryGet(ValueSymbolId, out value))
+			return true;
+		if (!requireMember && symbolId == OuterIndexSymbolId && parent != null &&
+			parent.TryGet(IndexSymbolId, out value))
 			return true;
 		if (symbolId >= 0 && symbolId < slots.Length && slots[symbolId].HasValue &&
 			(!requireMember || symbolId < memberSlots.Length && memberSlots[symbolId]))

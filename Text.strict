@@ -83,7 +83,7 @@ LastIndexOf(text Text) Number
 Substring(start Number, length Number) Text
 	"hello".Substring(1, 3) is "ell"
 	for Range(start, start + length)
-		outer(index)
+		characters(index)
 Replace(searchFor Text, replaceWith Text) Text
 	"a,b,c".Replace(",", ";") is "a;b;c"
 	let separatorIndex = IndexOf(searchFor)

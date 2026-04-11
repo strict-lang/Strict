@@ -89,11 +89,16 @@ public sealed partial class VirtualMachine
 		var nextIndex = (loopBegin.CurrentIndexValue ?? -1) + 1;
 		loopBegin.CurrentIndexValue = nextIndex;
 		frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType, nextIndex));
-		if (loopBegin.SavedValue.HasValue)
-			frame.Set(OuterSymbolId, loopBegin.SavedValue, false, Type.OuterLowercase);
-		if (loopBegin.SavedIndexValue.HasValue)
-			frame.Set(OuterIndexSymbolId, loopBegin.SavedIndexValue, false,
-				Type.OuterLowercase + "." + Type.IndexLowercase);
+		frame.Set(OuterSymbolId,
+			loopBegin.SavedOuterValue.HasValue
+				? loopBegin.SavedOuterValue
+				: loopBegin.SavedValue,
+			false, Type.OuterLowercase);
+		frame.Set(OuterIndexSymbolId,
+			loopBegin.SavedOuterIndexValue.HasValue
+				? loopBegin.SavedOuterIndexValue
+				: loopBegin.SavedIndexValue,
+			false, Type.OuterLowercase + "." + Type.IndexLowercase);
 		AlterValueVariable(iterableVariable, loopBegin);
 		AssignCustomLoopVariables(loopBegin, frame.Get(ValueSymbolId));
 		if (loopBegin.LoopCount <= 0)
@@ -129,11 +134,16 @@ public sealed partial class VirtualMachine
 		var currentIndexValue = new ValueInstance(executable.numberType, currentIndex);
 		frame.Set(IndexSymbolId, currentIndexValue, false, Type.IndexLowercase);
 		frame.Set(ValueSymbolId, currentIndexValue, true, Type.ValueLowercase);
-		if (loopBegin.SavedValue.HasValue)
-			frame.Set(OuterSymbolId, loopBegin.SavedValue, false, Type.OuterLowercase);
-		if (loopBegin.SavedIndexValue.HasValue)
-			frame.Set(OuterIndexSymbolId, loopBegin.SavedIndexValue, false,
-				Type.OuterLowercase + "." + Type.IndexLowercase);
+		frame.Set(OuterSymbolId,
+			loopBegin.SavedOuterValue.HasValue
+				? loopBegin.SavedOuterValue
+				: loopBegin.SavedValue,
+			false, Type.OuterLowercase);
+		frame.Set(OuterIndexSymbolId,
+			loopBegin.SavedOuterIndexValue.HasValue
+				? loopBegin.SavedOuterIndexValue
+				: loopBegin.SavedIndexValue,
+			false, Type.OuterLowercase + "." + Type.IndexLowercase);
 		AssignCustomLoopVariables(loopBegin, currentIndexValue);
 	}
 
@@ -151,7 +161,7 @@ public sealed partial class VirtualMachine
 			Memory.Frame.Set(loopBegin.CustomVariableNames[index], loopValues[index]);
 	}
 
-	private static IReadOnlyList<ValueInstance> GetLoopVariableValues(ValueInstance value)
+	private IReadOnlyList<ValueInstance> GetLoopVariableValues(ValueInstance value)
 	{
 		if (value.IsList)
 			return value.List.Items;
@@ -160,7 +170,7 @@ public sealed partial class VirtualMachine
 			for (var index = 0; index < typeInstance.Values.Length; index++)
 				if (!typeInstance.ReturnType.Members[index].IsConstant && typeInstance.Values[index].IsList)
 					return typeInstance.Values[index].List.Items;
-		throw new InvalidOperationException("Cannot split loop value " + value + " into variables");
+		throw Fail("Cannot split loop value '" + value + "' into variables - expected a list or a type instance with a list member");
 	}
 
 	private static int GetLength(ValueInstance iterableInstance)
@@ -227,8 +237,8 @@ public sealed partial class VirtualMachine
 			var loadVariable = (LoadVariableToRegister)instruction;
 			if (!GetIdentifierAccessPath(loadVariable.Identifier).TryResolve(this,
 				out var registerValue))
-				throw new InvalidOperationException("Could not resolve variable " + //ncrunch: no coverage
-					loadVariable.Identifier);
+				throw Fail("Could not resolve variable '" + loadVariable.Identifier + //ncrunch: no coverage
+					"' - check that the variable is defined and in scope");
 			Memory.Registers[loadVariable.Register] = registerValue;
 		}
 		else if (instruction.InstructionType == InstructionType.LoadConstantToRegister)
@@ -263,19 +273,20 @@ public sealed partial class VirtualMachine
 			return;
 		}
 		if (!accessPath.GetParentPath().TryResolve(this, out var parentValue))
-			throw new InvalidOperationException("Could not resolve parent for " + identifier);
+			throw Fail("Could not resolve parent path for '" + identifier + "'");
 		var memberName = accessPath.MemberNames[^1];
 		var flatInstance = parentValue.TryGetFlatNumericArrayInstance();
 		if (flatInstance != null)
 		{
 			if (!flatInstance.TrySetMember(memberName, value))
-				throw new InvalidOperationException("Could not assign member " + identifier);
+				throw Fail("Could not assign member '" + identifier + "' on flat numeric array");
 			return;
 		}
 		if (parentValue.TryGetValueTypeInstance() is not { } typeInstance)
-			throw new InvalidOperationException("Cannot assign member on non-instance " + identifier);
+			throw Fail("Cannot assign member '" + identifier + "' - parent is not a type instance (" +
+				parentValue.GetType().Name + ")");
 		if (!typeInstance.TrySetValue(memberName, value))
-			throw new InvalidOperationException("Could not assign member " + identifier);
+			throw Fail("Could not assign member '" + identifier + "' on " + typeInstance.ReturnType.Name);
 	}
 
 	private ValueInstance TryGetNativeMemberValue(ValueInstance current, string memberName) =>
@@ -310,7 +321,7 @@ public sealed partial class VirtualMachine
 				left.Number / right.Number),
 			InstructionType.Modulo => new ValueInstance(right.GetType(),
 				left.Number % right.Number),
-			_ => throw new InvalidOperationException("Unsupported binary operation: " + instruction.InstructionType) //ncrunch: no coverage
+			_ => throw Fail("Unsupported binary operation: " + instruction.InstructionType) //ncrunch: no coverage
 		};
 	}
 
@@ -331,7 +342,7 @@ public sealed partial class VirtualMachine
 		return new ValueInstance(right.GetType(), left.Number + right.Number);
 	}
 
-	private static ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
+	private ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
 	{
 		if (left.IsList)
 		{
@@ -342,7 +353,7 @@ public sealed partial class VirtualMachine
 			return new ValueInstance(left.List.ReturnType, items.ToArray());
 		}
 		if (left.IsText || right.IsText)
-			throw new NotSupportedException("Texts cannot be subtracted: " + left + " - " + right); //ncrunch: no coverage
+			throw Fail("Text subtraction is not supported: '" + left + "' - '" + right + "'"); //ncrunch: no coverage
 		return new ValueInstance(left.GetType(), left.Number - right.Number);
 	}
 
@@ -360,7 +371,7 @@ public sealed partial class VirtualMachine
 			InstructionType.LessThan => left.Number < right.Number,
 			InstructionType.Equal => left.Equals(right),
 			InstructionType.NotEqual => !left.Equals(right),
-			_ => throw new InvalidOperationException("Unsupported conditional operation: " + instruction.InstructionType) //ncrunch: no coverage
+			_ => throw Fail("Unsupported conditional operation: " + instruction.InstructionType) //ncrunch: no coverage
 		};
 	}
 

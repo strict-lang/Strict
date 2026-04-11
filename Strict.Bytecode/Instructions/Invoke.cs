@@ -24,9 +24,9 @@ public sealed class Invoke : RegisterInstruction
 	/// </summary>
 	internal List<Instruction>? CachedInstructions { get; set; }
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		MethodInfo.Write(writer, table);
 	}
 }

@@ -13,9 +13,6 @@ public sealed class LoopEndInstruction(int steps) : Instruction(InstructionType.
 	/// </summary>
 	public int BeginIndex { get; set; } = -1;
 
-	public override void Write(BinaryWriter writer, NameTable table)
-	{
-		base.Write(writer, table);
+	protected override void WritePayload(BinaryWriter writer, NameTable table) =>
 		writer.Write7BitEncodedInt(Steps);
-	}
 }

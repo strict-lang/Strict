@@ -9,9 +9,6 @@ public abstract class InstanceInstruction(InstructionType instructionType,
 	public ValueInstance ValueInstance { get; } = valueInstance;
 	public override string ToString() => $"{InstructionType} {ValueInstance.ToExpressionCodeString()}";
 
-	public override void Write(BinaryWriter writer, NameTable table)
-	{
-		base.Write(writer, table);
+	protected override void WritePayload(BinaryWriter writer, NameTable table) =>
 		BinaryExecutable.WriteValueInstance(writer, ValueInstance, table);
-	}
 }

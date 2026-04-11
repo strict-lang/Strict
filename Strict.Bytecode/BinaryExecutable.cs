@@ -127,16 +127,33 @@ public sealed class BinaryExecutable(Package basePackage)
 
 	public List<Instruction> ToInstructions() => EntryPoint.instructions;
 	public const string Extension = ".strictbinary";
+	internal static int hasSourceLines = 0;
+	internal static int hasNoSourceLines = 0;
 
 	public Instruction ReadInstruction(BinaryReader reader, NameTable table)
 	{
-		var type = (InstructionType)reader.ReadByte();
-		return type switch
+		var prevSourceLine = 0;
+		return ReadInstruction(reader, table, ref prevSourceLine);
+	}
+
+	internal Instruction ReadInstruction(BinaryReader reader, NameTable table,
+		ref int prevSourceLine)
+	{
+		var rawByte = reader.ReadByte();
+		var hasSourceLine = (rawByte & (byte)InstructionType.IncludesSourceLine) != 0;
+		var type = (InstructionType)(rawByte & ((byte)InstructionType.IncludesSourceLine - 1));
+		if (hasSourceLine)
+		{
+			prevSourceLine = reader.Read7BitEncodedInt();
+			hasSourceLines++;
+		}
+		else
+			hasNoSourceLines++;
+		Instruction instruction = type switch
 		{
 			InstructionType.LoadConstantToRegister => new LoadConstantInstruction(reader, table, this),
 			InstructionType.LoadVariableToRegister => new LoadVariableToRegister(reader, table),
-			InstructionType.StoreConstantToVariable =>
-				new StoreVariableInstruction(reader, table, this),
+			InstructionType.StoreConstantToVariable => new StoreVariableInstruction(reader, table, this),
 			InstructionType.StoreRegisterToVariable => new StoreFromRegisterInstruction(reader, table),
 			InstructionType.Set => new SetInstruction(reader, table, this),
 			InstructionType.Invoke => new Invoke(reader, table),
@@ -158,6 +175,8 @@ public sealed class BinaryExecutable(Package basePackage)
 			_ when IsBinaryOp(type) => new BinaryInstruction(reader, type),
 			_ => throw new InvalidFile("Unknown instruction type: " + type) //ncrunch: no coverage
 		};
+		instruction.SourceLine = prevSourceLine;
+		return instruction;
 	}
 
 	private static bool IsBinaryOp(InstructionType type) =>

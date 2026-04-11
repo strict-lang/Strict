@@ -24,9 +24,8 @@ public sealed class BinaryInstruction(InstructionType instructionType, params Re
 		InstructionType is > InstructionType.ArithmeticSeparator
 			and < InstructionType.BinaryOperatorsSeparator;
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
 		writer.Write((byte)Registers.Length);
 		foreach (var register in Registers)
 			writer.Write((byte)register);

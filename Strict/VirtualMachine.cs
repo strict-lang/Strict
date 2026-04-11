@@ -21,6 +21,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		Memory.Registers.Clear();
 		Memory.Frame = new CallFrame(initialVariables);
 		InitializeEntryPointMembers(method);
+		currentMethodContext = ResolveMethodContext(method);
 		return RunInstructions(method.instructions
 #if DEBUG
 			, method.Name
@@ -34,6 +35,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private IReadOnlyList<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
+	private string currentMethodContext = "";
 	private const int MaxCallDepth = 64;
 	private readonly ValueInstance[][] registerStack = new ValueInstance[MaxCallDepth][];
 	private int registerStackDepth;
@@ -321,6 +323,41 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private sealed class InvalidInstruction(Instruction instruction)
 		: Exception(instruction.ToString()); //ncrunch: no coverage
 
+	private string ResolveMethodContext(BinaryMethod method)
+	{
+		foreach (var (typeFullName, typeData) in executable.MethodsPerType)
+			foreach (var overloads in typeData.MethodGroups.Values)
+				if (overloads.Contains(method))
+					return typeFullName + "." + method.Name;
+		return method.Name;
+	}
+
+	private InstructionExecutionFailed Fail(string message, Exception? inner = null)
+	{
+		var index = Math.Max(0, Math.Min(instructionIndex, instructions.Count - 1));
+		var (sourceLines, filePath) = TryGetSourceContext();
+		return new InstructionExecutionFailed(message, instructions, index, currentMethodContext,
+			sourceLines, filePath, inner);
+	}
+
+	private (string[]? lines, string filePath) TryGetSourceContext()
+	{
+		var dotIndex = currentMethodContext.LastIndexOf('.');
+		if (dotIndex < 0)
+			return (null, "");
+		var typeFullName = currentMethodContext[..dotIndex];
+		var type = executable.basePackage.FindFullType(typeFullName) ??
+			executable.basePackage.FindType(typeFullName.Contains('/')
+				? typeFullName[(typeFullName.LastIndexOf('/') + 1)..]
+				: typeFullName);
+		if (type == null)
+			return (null, "");
+		var filePath = type.FilePath;
+		return File.Exists(filePath)
+			? (File.ReadAllLines(filePath), filePath)
+			: (null, filePath);
+	}
+
 	private void ExecuteFieldLoad(FieldLoadInstruction instr)
 	{
 		var typeInstance = Memory.Registers[instr.ObjectRegister].TryGetValueTypeInstance()!;
@@ -363,21 +400,41 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private void ExecuteListCall(ListCallInstruction listCallInstruction)
 	{
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
-		var variableListElement = Memory.Frame.Get(listCallInstruction.Identifier).List[indexValue];
+		var collectionValue = Memory.Frame.Get(listCallInstruction.Identifier);
+		if (!collectionValue.IsList && !collectionValue.IsText)
+		{
+			if (listCallInstruction.Identifier == Type.OuterLowercase &&
+				TryGetFrameValue(ValueSymbolId, out var currentValue))
+				collectionValue = currentValue;
+			else if ((listCallInstruction.Identifier == "characters" ||
+				listCallInstruction.Identifier == Type.ElementsLowercase) &&
+				TryGetFrameValue(OuterSymbolId, out var outerValue) && outerValue.IsText)
+				collectionValue = outerValue;
+		}
+		if (collectionValue.IsText)
+		{
+			Memory.Registers[listCallInstruction.Register] =
+				new ValueInstance(collectionValue.Text[indexValue].ToString());
+			return;
+		}
+		if (!collectionValue.IsList)
+			throw Fail("Cannot index non-list variable \"" +
+				listCallInstruction.Identifier + "\" of type " + collectionValue.GetType().Name);
+		var variableListElement = collectionValue.List[indexValue];
 		Memory.Registers[listCallInstruction.Register] = variableListElement;
 	}
 
 	private void ExecuteWriteToList(WriteToListInstruction writeToListInstruction)
 	{
 		if (!GetIdentifierAccessPath(writeToListInstruction.Identifier).TryResolve(this, out var collection))
-			throw new InvalidOperationException("Cannot resolve list variable \"" + writeToListInstruction.Identifier + "\"");
+			throw Fail("Cannot resolve list variable \"" + writeToListInstruction.Identifier + "\"");
 		collection.List.Items.Add(Memory.Registers[writeToListInstruction.Register]);
 	}
 
 	private void ExecuteWriteToTable(WriteToTableInstruction writeToTableInstruction)
 	{
 		if (!GetIdentifierAccessPath(writeToTableInstruction.Identifier).TryResolve(this, out var collection))
-			throw new InvalidOperationException("Cannot resolve table variable \"" + writeToTableInstruction.Identifier + "\"");
+			throw Fail("Cannot resolve table variable \"" + writeToTableInstruction.Identifier + "\"");
 		collection.GetDictionaryItems()[Memory.Registers[writeToTableInstruction.Register]] =
 			Memory.Registers[writeToTableInstruction.Value];
 	}
@@ -410,7 +467,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 					return (LoopBeginInstruction)instructions[candidateIndex];
 				else
 					loopDepth--;
-		throw new InvalidOperationException("No matching LoopBeginInstruction found for LoopEnd");
+		throw Fail("No matching LoopBeginInstruction found for LoopEnd");
 	}
 
 	private void ExecuteReturn(ReturnInstruction returnInstruction)
