@@ -740,13 +740,15 @@ public class Type : Context, IDisposable
 					? ""
 					: ", ") + member.Name.MakeFirstLetterLowercase() + (member.InitialValue != null
 					? " = " + member.InitialValue
-					: member.IsMutable && (memberType.IsNumber || memberType.IsBoolean || memberType.IsText)
-						? " = " + GetDefaultValueForType(memberType.Name)
-						: member.IsMutable
-							? " " + memberType.Name
-							: CanUseImplicitListParameterType(memberType, member.Name)
-								? ""
-								: " " + memberType.Name);
+					: member.InitialValueText != null
+						? " = " + member.InitialValueText
+						: member.IsMutable && (memberType.IsNumber || memberType.IsBoolean || memberType.IsText)
+							? " = " + GetDefaultValueForType(memberType.Name)
+							: member.IsMutable
+								? " " + memberType.Name
+								: CanUseImplicitListParameterType(memberType, member.Name)
+									? ""
+									: " " + memberType.Name);
 			}
 		return parameters;
 	}

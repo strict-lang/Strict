@@ -26,6 +26,7 @@ public sealed class Member : NamedType
 
 	public Type DefinedIn { get; }
 	public Expression? InitialValue { get; internal set; }
+	internal string? InitialValueText { get; set; }
 	public int LineNumber { get; }
 	public bool IsPublic => char.IsUpper(Name[0]);
 	public Expression[]? Constraints { get; private set; }

@@ -799,7 +799,7 @@ public sealed class BinaryGenerator
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions
 				: [body];
-			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
+				var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
 				method.ReturnType);
 			var methodInstructions = childGenerator.GenerateInstructionList();
 			var parameters = CreateBinaryMembers(method.Parameters, entryType);
