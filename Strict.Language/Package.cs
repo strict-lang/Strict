@@ -161,7 +161,7 @@ public class Package : Context, IDisposable
 		lock (syncRoot)
 			if (children.Count > 0)
 				type = FindTypeInChildrenPackages(name, searchingFrom ?? this);
-		type ??= Parent.FindTypeCore(name, this);
+		type ??= Parent?.FindTypeCore(name, this);
 		return type;
 	}
 

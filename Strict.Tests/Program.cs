@@ -79,9 +79,8 @@ internal class Program
 	{
 		//PerformanceLog.IsEnabled = true;
 		Console.WriteLine("Running RunAdjustBrightness");
-		var strictBasePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		var runner = new Runner(Path.Combine(GetExamplesFolder(), "..", "ImageProcessing",
-			"AdjustBrightness.strict"), strictBasePackage);
+			"AdjustBrightness.strict"));
 		var runAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 		var runStartTicks = DateTime.UtcNow.Ticks;
 		const int Runs = 10;

@@ -71,15 +71,13 @@ Notes:
 			new HashSet<string>(args.Skip(1).Where(arg => arg.StartsWith("-", StringComparison.Ordinal)),
 				StringComparer.OrdinalIgnoreCase);
 		if (options.Contains("-decompile"))
-		{
-			var outputFolder = Path.GetFileNameWithoutExtension(filePath);
-			using var basePackage =
-				await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-			var bytecodeTypes = new BinaryExecutable(filePath, basePackage);
-			new Decompiler().Decompile(bytecodeTypes, outputFolder);
-			Console.WriteLine("Decompilation complete, written partial .strict files (no tests, only " +
-				"bytecode reconstruction) to folder:" + Environment.NewLine + outputFolder);
-		}
+			{
+				var outputFolder = Path.GetFileNameWithoutExtension(filePath);
+				var bytecodeTypes = new BinaryExecutable(filePath);
+				new Decompiler().Decompile(bytecodeTypes, outputFolder);
+				Console.WriteLine("Decompilation complete, written partial .strict files (no tests, only " +
+					"bytecode reconstruction) to folder:" + Environment.NewLine + outputFolder);
+			}
 		else
 		{
 			var nonFlagArgs = args.Skip(1).Where(arg => !arg.StartsWith("-", StringComparison.Ordinal)).
@@ -92,7 +90,7 @@ Notes:
 			var expression = nonFlagArgs.Length == 0
 				? Method.Run
 				: string.Join(" ", nonFlagArgs);
-			var runner = new Runner(filePath, null, expression, diagnostics);
+			var runner = new Runner(filePath, expression, diagnostics);
 			var buildForPlatform = GetPlatformOption(options);
 			var backend = options.Contains("-nasm")
 				? CompilerBackend.Nasm
