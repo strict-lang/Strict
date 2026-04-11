@@ -28,8 +28,6 @@ public sealed partial class VirtualMachine
 				"' with return type " + info.ReturnTypeName);
 		var childScope = InitializeChildScope();
 		var previousMethodContext = currentMethodContext;
-		var invokeSourceLine = invoke.SourceLine;
-		callStack.Push((previousMethodContext, invokeSourceLine));
 		currentMethodContext = info.TypeFullName + "." + info.MethodName;
 		InitializeMethodCallScope(info, evaluatedArgs, evaluatedInstance);
 		RunInstructions(invokeInstructions
@@ -38,7 +36,6 @@ public sealed partial class VirtualMachine
 #endif
 		);
 		var result = TryFlattenNestedIteratorList(info, Returns);
-		callStack.Pop();
 		currentMethodContext = previousMethodContext;
 		CleanupChildScope(childScope);
 		if (result != null)

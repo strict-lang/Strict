@@ -12,19 +12,8 @@ namespace Strict.Language;
 /// always available for any .strict file in the Editor. If a type is not found, we check on github
 /// </summary>
 /// <remarks>Everything in here is async, you can load many packages in parallel</remarks>
-public sealed class Repositories
+public sealed class Repositories(ExpressionParser parser)
 {
-	/// <summary>
-	/// Keeps a cache of loaded repositories for 20 minutes, default CachingService.DefaultCachePolicy
-	/// </summary>
-	public Repositories(ExpressionParser parser)
-	{
-		cacheService = new CachingService();
-		this.parser = parser;
-	}
-
-	private readonly IAppCache cacheService;
-	private readonly ExpressionParser parser;
 	public Task<Package> LoadStrictPackage(string packageNameAndSubfolder = nameof(Strict)
 #if DEBUG
 		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
@@ -69,21 +58,15 @@ public sealed class Repositories
 		);
 	} //ncrunch: no coverage end
 
+	private readonly IAppCache cacheService = new CachingService();
+	private readonly ExpressionParser parser = parser;
+
 	public static string GetLocalDevelopmentPath(string organization, string packageFullName)
 	{
-		var traditional = DevelopmentBaseFolder + organization + Context.ParentSeparator +
-			packageFullName;
-		if (Directory.Exists(traditional))
-			return traditional;
-		var repoRoot = FindRepositoryRoot();
-		if (repoRoot == null)
-			return traditional;
-		var parts = packageFullName.Split(Context.ParentSeparator);
-		if (Path.GetFileName(repoRoot) != parts[0])
-			return traditional;
-		return parts.Length == 1
-			? repoRoot
-			: Path.Combine(repoRoot, Path.Combine(parts[1..]));
+		var path = DevelopmentBaseFolder + organization + Context.ParentSeparator + packageFullName;
+		if (Directory.Exists(path))
+			return path;
+		return FindRepositoryRoot() + Context.ParentSeparator + packageFullName;
 	}
 
 	private static string? FindRepositoryRoot()
@@ -93,12 +76,8 @@ public sealed class Repositories
 		var current = AppContext.BaseDirectory;
 		while (current != null)
 		{
-			if (File.Exists(Path.Combine(current, "Strict.sln")) &&
-				File.Exists(Path.Combine(current, "Any.strict")))
-			{
-				cachedRepositoryRoot = current;
-				return current;
-			}
+			if (File.Exists(Path.Combine(current, Type.Any + Type.Extension)))
+				return cachedRepositoryRoot = current;
 			current = Path.GetDirectoryName(current);
 		}
 		return null;
@@ -176,21 +155,13 @@ public sealed class Repositories
 #endif
 		lock (loadedPackages)
 			loadedPackages.Add(package);
-		try
-		{
-			var types = GetTypes(files, package);
-			foreach (var type in types)
-				type.ParseMembersAndMethodsForPackage(parser);
-			InvalidateAllAvailableMethodsCaches();
-			foreach (var type in types)
-				type.ParseDeferredConstraints(parser);
-			return package;
-		}
-		catch
-		{
-			package.Dispose();
-			throw;
-		}
+		var types = GetTypes(files, package);
+		foreach (var type in types)
+			type.ParseMembersAndMethodsForPackage(parser);
+		InvalidateAllAvailableMethodsCaches();
+		foreach (var type in types)
+			type.ParseDeferredConstraints(parser);
+		return package;
 	}
 
 	private void InvalidateAllAvailableMethodsCaches()

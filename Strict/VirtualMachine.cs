@@ -36,7 +36,6 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 	private string currentMethodContext = "";
-	private readonly Stack<(string method, int sourceLineOfCall)> callStack = new();
 	private const int MaxCallDepth = 64;
 	private readonly ValueInstance[][] registerStack = new ValueInstance[MaxCallDepth][];
 	private int registerStackDepth;
@@ -336,51 +335,21 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private InstructionExecutionFailed Fail(string message, Exception? inner = null)
 	{
 		var index = Math.Max(0, Math.Min(instructionIndex, instructions.Count - 1));
-		var (sourceLines, filePath) = TryGetSourceContextForMethod(currentMethodContext);
-		var callStackInfo = GetCallStackInfo();
+		var (sourceLines, filePath) = TryGetSourceContext();
 		return new InstructionExecutionFailed(message, instructions, index, currentMethodContext,
-			sourceLines, filePath, callStackInfo, inner);
+			sourceLines, filePath, inner);
 	}
 
-	private List<(string method, string filePath, int sourceLine)> GetCallStackInfo()
+	private (string[]? lines, string filePath) TryGetSourceContext()
 	{
-		var callStackInfo = new List<(string method, string filePath, int sourceLine)>();
-		var stackArray = callStack.ToArray();
-		for (var i = 0; i < stackArray.Length; i++)
-		{
-			var (method, sourceLineOfCall) = stackArray[i];
-			var (_, filePath) = TryGetSourceContextForMethod(method);
-			callStackInfo.Add((method, filePath, sourceLineOfCall));
-		}
-		return callStackInfo;
-	}
-
-	private (string[]? lines, string filePath) TryGetSourceContextForMethod(string methodContext)
-	{
-		if (string.IsNullOrEmpty(methodContext))
-			return (null, "");
-		var dotIndex = methodContext.LastIndexOf('.');
-		string typeFullName;
+		var dotIndex = currentMethodContext.LastIndexOf('.');
 		if (dotIndex < 0)
-		{
-			typeFullName = methodContext;
-		}
-		else
-		{
-			typeFullName = methodContext[..dotIndex];
-		}
-		Type? type = null;
-		try
-		{
-			type = executable.basePackage.FindFullType(typeFullName);
-		}
-		catch
-		{
-			// Ignore if full type lookup fails
-		}
-		type ??= executable.basePackage.FindType(typeFullName.Contains('/')
-			? typeFullName[(typeFullName.LastIndexOf('/') + 1)..]
-			: typeFullName);
+			return (null, "");
+		var typeFullName = currentMethodContext[..dotIndex];
+		var type = executable.basePackage.FindFullType(typeFullName) ??
+			executable.basePackage.FindType(typeFullName.Contains('/')
+				? typeFullName[(typeFullName.LastIndexOf('/') + 1)..]
+				: typeFullName);
 		if (type == null)
 			return (null, "");
 		var filePath = type.FilePath;
