@@ -15,6 +15,13 @@ public sealed partial class VirtualMachine
 			return false;
 		var info = invoke.MethodInfo;
 		var members = targetType.Members;
+		if (targetType.Name == "ColorImage")
+		{
+			Console.Error.WriteLine("DEBUG ColorImage constructor: members.Count=" + members.Count +
+				" paramNames=" + string.Join(",", info.ParameterNames) +
+				" argRegs=" + string.Join(",", info.ArgumentRegisters) +
+				" memberNames=" + string.Join(",", members.Select(m => m.Name)));
+		}
 		var hasBinaryMembers = TryGetBinaryMembers(targetType, out var binaryMembers);
 		if (members.Count == 0 && hasBinaryMembers)
 		{

@@ -29,7 +29,19 @@ public sealed partial class VirtualMachine
 		var childScope = InitializeChildScope();
 		var previousMethodContext = currentMethodContext;
 		currentMethodContext = info.TypeFullName + "." + info.MethodName;
+		if (info.MethodName == "Process")
+		{
+			Console.Error.WriteLine("DEBUG Process invoke: params=" + string.Join(",", info.ParameterNames) +
+				" argRegs=" + string.Join(",", info.ArgumentRegisters) +
+				" args=" + string.Join(",", evaluatedArgs.Select(arg => arg.HasValue + ":" + arg)) +
+				" instance=" + evaluatedInstance?.HasValue + ":" + evaluatedInstance);
+		}
 		InitializeMethodCallScope(info, evaluatedArgs, evaluatedInstance);
+		if (info.MethodName is "Process" or "for")
+		{
+			Console.Error.WriteLine("DEBUG " + info.TypeFullName + "." + info.MethodName +
+				" params: " + string.Join(",", info.ParameterNames));
+		}
 		RunInstructions(invokeInstructions
 #if DEBUG
 			, info.MethodName
@@ -64,6 +76,9 @@ public sealed partial class VirtualMachine
 	private bool TryExecuteSpecialInvoke(Invoke invoke)
 	{
 		var info = invoke.MethodInfo;
+		if (info.MethodName == Method.From && !info.ReturnTypeName.Contains("Number"))
+			Console.Error.WriteLine("DEBUG TrySpecial from: type=" + info.TypeFullName +
+				" ret=" + info.ReturnTypeName + " params=" + string.Join(",", info.ParameterNames));
 		return info.MethodName switch
 		{
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.basePackage)),
@@ -78,6 +93,10 @@ public sealed partial class VirtualMachine
 
 	private bool ExecuteFromInvoke(Invoke invoke, Type returnType)
 	{
+		if (returnType.Name == "ColorImage")
+			Console.Error.WriteLine("DEBUG ExecuteFromInvoke ColorImage: isMutable=" + returnType.IsMutable +
+				" isList=" + returnType.IsList + " isDict=" + returnType.IsDictionary +
+				" members=" + returnType.Members.Count);
 		if (returnType.IsDictionary)
 		{
 			Memory.Registers[invoke.Register] = new ValueInstance(returnType,

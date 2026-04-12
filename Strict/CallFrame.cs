@@ -107,9 +107,21 @@ internal sealed class CallFrame
 
 	private bool TryGetNestedPath(string name, int dotIndex, out ValueInstance value)
 	{
-		if (TryGet(ResolveSymbolId(name[..dotIndex]), out var root) &&
-			TryGetNestedMemberValue(root, name, dotIndex + 1, out value))
-			return true;
+		if (TryGet(ResolveSymbolId(name[..dotIndex]), out var root))
+		{
+			if (name.StartsWith("image"))
+			{
+				var typeInst = root.TryGetValueTypeInstance();
+				var segment = name[(dotIndex + 1)..];
+				Console.Error.WriteLine("DEBUG TryGetNestedPath root=" + name[..dotIndex] +
+					" segment=" + segment +
+					" hasTypeInst=" + (typeInst != null) +
+					" valuesLen=" + (typeInst?.Values.Length ?? -1) +
+					" tryGet=" + (typeInst?.TryGetValue(segment, out _) ?? false));
+			}
+			if (TryGetNestedMemberValue(root, name, dotIndex + 1, out value))
+				return true;
+		}
 		value = default;
 		return false;
 	}
