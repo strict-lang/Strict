@@ -96,21 +96,20 @@ public sealed class Runner
 	private async Task<BinaryExecutable> GetBinary()
 	{
 		if (Path.GetExtension(strictFilePath) == BinaryExecutable.Extension)
-			return LogTiming("Loading " + strictFilePath,
-				() => new BinaryExecutable(strictFilePath));
+			return LogTiming("Loading " + strictFilePath,	() => new BinaryExecutable(strictFilePath));
 #if !DISABLE_BINARY_CACHE
-		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
-		if (File.Exists(cachedBinaryPath))
+		var cachedBinaryFilePath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
+		if (File.Exists(cachedBinaryFilePath))
 		{
-			var binaryTime = new FileInfo(cachedBinaryPath).LastWriteTimeUtc;
+			var binaryTime = new FileInfo(cachedBinaryFilePath).LastWriteTimeUtc;
 			var sourceTime = new FileInfo(strictFilePath).LastWriteTimeUtc;
 			if (binaryTime >= sourceTime)
 			{
 				try
 				{
-					var binary = LogTiming("Loading cached " + cachedBinaryPath,
-						() => new BinaryExecutable(cachedBinaryPath));
-					Log("Using cached " + cachedBinaryPath + " from " + binaryTime);
+					var binary = LogTiming("Loading cached " + cachedBinaryFilePath,
+						() => new BinaryExecutable(cachedBinaryFilePath));
+					Log("Using cached " + cachedBinaryFilePath + " from " + binaryTime);
 					return binary;
 				}
 				catch (Exception ex) when (ex is BinaryType.InvalidVersion
@@ -123,8 +122,7 @@ public sealed class Runner
 				}
 			}
 			else
-				Log("Cached binary outdated (" + binaryTime + " < " + sourceTime +
-					"), regenerating ..");
+				Log("Cached binary outdated (" + binaryTime + " < " + sourceTime + "), regenerating ..");
 		}
 #endif
 		var package = await LoadBasePackage();
@@ -135,54 +133,21 @@ public sealed class Runner
 	{
 		var basePackage = await repositories.LoadStrictPackage();
 		var sourceDir = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
-		var strictRoot = basePackage.FolderPath;
+		var strictRoot = Path.GetFullPath(basePackage.FolderPath);
 		if (!sourceDir.StartsWith(strictRoot, StringComparison.OrdinalIgnoreCase) ||
 			string.Equals(sourceDir, strictRoot, StringComparison.OrdinalIgnoreCase) ||
 			IsExamplesDir(sourceDir))
 			return basePackage;
 		var relative = Path.GetRelativePath(strictRoot, sourceDir)
-			.Replace(Path.DirectorySeparatorChar, Context.ParentSeparator);
-		await LoadDependencyPackages(strictRoot, relative);
+			.Replace(Path.DirectorySeparatorChar, Context.ParentSeparator)
+			.Replace(Path.AltDirectorySeparatorChar, Context.ParentSeparator);
 		return await repositories.LoadStrictPackage(
 			nameof(Strict) + Context.ParentSeparator + relative);
 	}
 
-	private async Task LoadDependencyPackages(string repoRoot, string targetSubDir)
-	{
-		var deferred = new List<string>();
-		foreach (var directory in Directory.GetDirectories(repoRoot)
-			.OrderBy(Path.GetFileName, StringComparer.Ordinal))
-		{
-			var dirName = Path.GetFileName(directory);
-			if (dirName == targetSubDir || !IsRuntimePackageDirectory(dirName, directory))
-				continue;
-			try
-			{
-				await repositories.LoadStrictPackage(
-					nameof(Strict) + Context.ParentSeparator + dirName);
-			}
-			catch (ParsingFailed)
-			{
-				deferred.Add(dirName);
-			}
-		}
-		foreach (var dirName in deferred)
-			await repositories.LoadStrictPackage(
-				nameof(Strict) + Context.ParentSeparator + dirName);
-	}
-
-	private static bool IsRuntimePackageDirectory(string dirName, string directory)
-	{
-		if (dirName.StartsWith('.') ||
-			dirName.StartsWith("Strict", StringComparison.Ordinal) ||
-			dirName is "Language" or "Expressions" or "Examples" or "Parsing")
-			return false;
-		return Directory.EnumerateFiles(directory, "*" + Type.Extension).Any();
-	}
-
 	private static bool IsExamplesDir(string dir) =>
-		dir.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar])
-			.Any(part => part.Equals("Examples", StringComparison.OrdinalIgnoreCase));
+	dir.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar])
+		.Any(part => part.Equals("Examples", StringComparison.OrdinalIgnoreCase));
 
 	private async Task<BinaryExecutable> LoadFromSourceAndSaveBinary(Package package)
 	{

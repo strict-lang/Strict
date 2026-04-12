@@ -833,9 +833,6 @@ public sealed class VirtualMachineTests : TestBytecode
 	public async Task ExecuteLoadedBinaryPreservesAdjustBrightnessColorComputation()
 	{
 		var repositories = new Repositories(new MethodExpressionParser());
-		using var basePackage = await repositories.LoadStrictPackage();
-		using var mathPackage = await repositories.LoadStrictPackage(nameof(Strict) +
-			Context.ParentSeparator + "Math");
 		using var imageProcessingPackage = await repositories.LoadStrictPackage(nameof(Strict) +
 			Context.ParentSeparator + "ImageProcessing");
 		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");

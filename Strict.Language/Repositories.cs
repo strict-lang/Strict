@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using LazyCache;
 
 [assembly: InternalsVisibleTo("Strict.Transpiler.Tests")]
@@ -119,15 +120,80 @@ public sealed class Repositories(ExpressionParser parser)
 #endif
 	)
 	{
-		var parent = FindParentPackage(fullName);
-		return cacheService.GetOrAddAsync(fullName, _ => CreatePackageFromFiles(packagePath,
-			Directory.GetFiles(packagePath, "*" + Type.Extension)
+		var files = Directory.GetFiles(packagePath, "*" + Type.Extension);
+		return cacheService.GetOrAddAsync(fullName, async _ =>
+		{
+			var parent = await LoadParentPackage(fullName);
+			await LoadDependencyPackages(fullName, files);
+			return await CreatePackageFromFiles(packagePath, files
 #if DEBUG
-			, parent, callerFilePath, callerLineNumber, callerMemberName));
+				, parent, callerFilePath, callerLineNumber, callerMemberName);
 #else
-			, parent));
+				, parent);
 #endif
+		});
 	}
+
+	private async Task<Package?> LoadParentPackage(string fullName)
+	{
+		var parent = FindParentPackage(fullName);
+		if (parent != null)
+			return parent;
+		var separatorIndex = fullName.LastIndexOf(Context.ParentSeparator);
+		if (separatorIndex < 0)
+			return null;
+		var parentName = fullName[..separatorIndex];
+		return await LoadStrictPackage(parentName);
+	}
+
+	private async Task LoadDependencyPackages(string fullName, IReadOnlyCollection<string> files)
+	{
+		if (fullName == nameof(Strict) || files.Count == 0)
+			return;
+		var rootPackageName = GetRootPackageName(fullName);
+		foreach (var dependencyPackage in FindDependencyPackages(fullName, rootPackageName, files))
+			await LoadStrictPackage(dependencyPackage);
+	}
+
+	private static string GetRootPackageName(string fullName)
+	{
+		var separatorIndex = fullName.IndexOf(Context.ParentSeparator);
+		return separatorIndex == -1
+			? fullName
+			: fullName[..separatorIndex];
+	}
+
+	private static IEnumerable<string> FindDependencyPackages(string fullName, string rootPackageName,
+		IReadOnlyCollection<string> files)
+	{
+		var dependencies = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var file in files)
+		{
+			foreach (Match match in TypeFullNamePattern.Matches(File.ReadAllText(file)))
+			{
+				var typeFullName = match.Value;
+				var lastSeparatorIndex = typeFullName.LastIndexOf(Context.ParentSeparator);
+				if (lastSeparatorIndex <= 0)
+					continue;
+				var packageName = NormalizePackageName(typeFullName[..lastSeparatorIndex], rootPackageName);
+				if (packageName != fullName)
+					dependencies.Add(packageName);
+			}
+		}
+		return dependencies;
+	}
+
+	private static string NormalizePackageName(string packageName, string rootPackageName)
+	{
+		if (packageName == rootPackageName ||
+			packageName.StartsWith(rootPackageName + Context.ParentSeparator, StringComparison.Ordinal))
+			return packageName;
+		return rootPackageName + Context.ParentSeparator + packageName;
+	}
+
+	private static readonly Regex TypeFullNamePattern = new(
+		"(?<![A-Za-z0-9/])[A-Z][A-Za-z0-9]*(?:/[A-Z][A-Za-z0-9]*)+(?![A-Za-z0-9/])",
+		RegexOptions.Compiled);
 
 	private Package? FindParentPackage(string fullName)
 	{
