@@ -16,14 +16,6 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		IReadOnlyDictionary<string, ValueInstance>? initialVariables = null)
 	{
 		method ??= executable.EntryPoint;
-		if (method.Name == "Run" && method.instructions.Count > 10)
-		{
-			var sb = new System.Text.StringBuilder();
-			sb.AppendLine("DEBUG Run instructions (" + method.instructions.Count + "):");
-			for (var dbgIdx = 0; dbgIdx < method.instructions.Count; dbgIdx++)
-				sb.AppendLine("  [" + dbgIdx + "] " + method.instructions[dbgIdx].InstructionType + ": " + method.instructions[dbgIdx]);
-			Console.Error.Write(sb.ToString());
-		}
 		conditionFlag = false;
 		Returns = null;
 		Memory.Registers.Clear();
@@ -380,9 +372,17 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 
 	private void ExecuteConstructValueType(ConstructValueTypeInstruction instr)
 	{
-		var values = new ValueInstance[instr.FieldRegisters.Length];
-		for (var index = 0; index < instr.FieldRegisters.Length; index++)
+		var members = instr.ReturnType.Members;
+		var values = new ValueInstance[members.Count];
+		for (var index = 0; index < instr.FieldRegisters.Length && index < members.Count; index++)
 			values[index] = Memory.Registers[instr.FieldRegisters[index]];
+		for (var index = instr.FieldRegisters.Length; index < members.Count; index++)
+			values[index] = members[index].Type.IsTrait
+				? CreateTraitInstance(members[index].Type)
+				: members[index].InitialValue is Value initialValue
+					? initialValue.Data
+					: CreateDefaultValue(members[index].Type);
+		TryPreFillConstrainedListMembers(instr.ReturnType, values);
 		Memory.Registers[instr.Register] = new ValueInstance(instr.ReturnType, values);
 	}
 
@@ -407,12 +407,6 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 
 	private void ExecuteListCall(ListCallInstruction listCallInstruction)
 	{
-		if (listCallInstruction.Identifier.Contains("image"))
-		{
-			Console.Error.WriteLine("DEBUG ListCall: " + listCallInstruction.Identifier +
-				" hasImage=" + Memory.Frame.TryGet("image", out var dbgVal) +
-				" imageType=" + (dbgVal.HasValue ? dbgVal.GetType().Name : "N/A"));
-		}
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
 		var collectionValue = Memory.Frame.Get(listCallInstruction.Identifier);
 		if (!collectionValue.IsList && !collectionValue.IsText)
