@@ -198,6 +198,7 @@ public sealed class Runner
 			mainType = existingType;
 		else
 		{
+			//TODO: this seems a bit strange
 			package.Remove(existingType);
 			var typeLines = new TypeLines(typeName, await File.ReadAllLinesAsync(strictFilePath));
 			mainType = new Type(package, typeLines).ParseMembersAndMethods(parser);
