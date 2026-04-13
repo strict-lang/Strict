@@ -1,4 +1,4 @@
-﻿namespace Strict.Language;
+namespace Strict.Language;
 
 public abstract class NamedType
 {
@@ -31,7 +31,7 @@ public abstract class NamedType
 			Name = nameAndType.ToString();
 			Type = typeFromValue;
 			if (Name.Contains(' '))
-				throw new AssignmentWithInitializerTypeShouldNotHaveNameWithType(Name);
+				throw new AssignmentWithInitializerTypeShouldNotHaveNameWithSameType(Name);
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 		}
@@ -54,7 +54,7 @@ public abstract class NamedType
 	/// </summary>
 	public bool IsConstant { get; protected init; }
 
-	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithType(string name)
+	public sealed class AssignmentWithInitializerTypeShouldNotHaveNameWithSameType(string name)
 		: Exception(name);
 
 	public sealed class NameLengthIsNotWithinTheAllowedLimit(string name) : Exception(

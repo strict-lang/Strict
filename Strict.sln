@@ -1,4 +1,3 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11109.219
@@ -68,6 +67,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 	ProjectSection(SolutionItems) = preProject
 		Any.strict = Any.strict
 		Boolean.strict = Boolean.strict
+		Byte.strict = Byte.strict
 		Character.strict = Character.strict
 		Dictionary.strict = Dictionary.strict
 		Directory.strict = Directory.strict
@@ -93,7 +93,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 		TextWriter.strict = TextWriter.strict
 		Type.strict = Type.strict
 		Variable.strict = Variable.strict
-		Byte.strict = Byte.strict
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict", "Strict\Strict.csproj", "{4F9E13DD-52AA-5923-2207-40EE4E0E8879}"
@@ -117,14 +116,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Expressions", "Expressions\Expressions.csproj", "{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NativePlugins", "NativePlugins", "{5AD28B30-F0EC-46AC-B391-4942F74C1D31}"
-	ProjectSection(SolutionItems) = preProject
-		NativePlugins\ImageLoader\CMakeLists.txt = NativePlugins\ImageLoader\CMakeLists.txt
-		NativePlugins\ImageLoader\README.md = NativePlugins\ImageLoader\README.md
-		NativePlugins\ImageLoader\build.bat = NativePlugins\ImageLoader\build.bat
-		NativePlugins\ImageLoader\build.sh = NativePlugins\ImageLoader\build.sh
-		NativePlugins\ImageLoader\src\imageloader.c = NativePlugins\ImageLoader\src\imageloader.c
-		NativePlugins\ImageLoader\src\stb_image.h = NativePlugins\ImageLoader\src\stb_image.h
-	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageLoader", "NativePlugins\ImageLoader\ImageLoader.vcxproj", "{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -268,6 +261,10 @@ Global
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1}.Debug|Any CPU.Build.0 = Debug|x64
+		{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1}.Release|Any CPU.ActiveCfg = Release|x64
+		{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -278,6 +275,7 @@ Global
 		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 		{3F15AC2A-18E5-4CC0-6232-44946661D054} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
+		{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1} = {5AD28B30-F0EC-46AC-B391-4942F74C1D31}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEA35D12-F095-424A-8A50-6D7EBE08D917}

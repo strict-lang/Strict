@@ -253,7 +253,7 @@ public sealed class MethodTests
 	public void ParameterWithTypeNameAndInitializerIsForbidden() =>
 		Assert.That(
 			() => new Method(type, 0, parser, ["Run(input Number = 5)", "	5"]),
-			Throws.InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
+			Throws.InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithSameType>());
 
 	[Test]
 	public void MethodWithTestsAreAllowed()

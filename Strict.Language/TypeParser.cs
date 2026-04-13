@@ -515,11 +515,11 @@ public sealed class TypeParser(Type type, string[] lines)
 			? constantValue[..withIndex]
 			: constantValue;
 		var member = new Member(type, nameAndType, null, LineNumber, usedKeyword)
-		{
-			InitialValueText = valueOnly.ToString()
+   {
+			InitialValueText = GetTypedMemberInitializerText(parser, nameAndType, valueOnly)
 		};
 		rememberToInitializeMemberInitialValues ??= new Dictionary<Member, string>();
-		rememberToInitializeMemberInitialValues.Add(member, valueOnly.ToString());
+    rememberToInitializeMemberInitialValues.Add(member, member.InitialValueText);
 		if (withIndex >= 0)
 		{
 			var constraintsSpan = constantValue[(withIndex + Keyword.With.Length + 2)..];
@@ -529,6 +529,29 @@ public sealed class TypeParser(Type type, string[] lines)
 		}
 		return member;
 	}
+
+	private string GetTypedMemberInitializerText(ExpressionParser parser, string nameAndType,
+		ReadOnlySpan<char> valueOnly)
+	{
+		var declaredTypeName = nameAndType[(nameAndType.IndexOf(' ') + 1)..];
+		if (StartsWithConstructorCall(valueOnly, declaredTypeName))
+			throw new NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithSameType(nameAndType);
+		var parsedValue = parser.ParseExpression(
+			new Body(new Method(type, LineNumber, parser, [nameof(GetMemberExpression)])), valueOnly);
+   return parsedValue.ReturnType.Name == declaredTypeName ||
+			!HasMatchingFromConstructor(type.GetType(declaredTypeName), parsedValue.ReturnType)
+				? valueOnly.ToString()
+				: declaredTypeName + "(" + valueOnly.ToString() + ")";
+	}
+
+	private static bool HasMatchingFromConstructor(Type declaredType, Type valueType) =>
+		declaredType.AvailableMethods.TryGetValue(Method.From, out var fromMethods) &&
+		fromMethods.Any(fromMethod => fromMethod.Parameters.Count == 1 &&
+			valueType.IsSameOrCanBeUsedAs(fromMethod.Parameters[0].Type));
+
+	private static bool StartsWithConstructorCall(ReadOnlySpan<char> valueOnly, string declaredTypeName) =>
+		valueOnly.StartsWith(declaredTypeName, StringComparison.Ordinal) &&
+		valueOnly.Length > declaredTypeName.Length && valueOnly[declaredTypeName.Length] == '(';
 
 	private Member GetMemberWithConstraints(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
 		string usedKeyword, string nameAndType)

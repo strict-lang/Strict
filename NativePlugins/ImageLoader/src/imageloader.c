@@ -3,7 +3,7 @@
  *
  * Exports three C functions that NativePluginLoader calls:
  *   ImageLoader_Create(path)   — loads the image, returns an opaque handle
- *   ImageLoader_Colors(handle) — returns RGBA8888 byte data + count
+ *   ImageLoader_Colors(handle) — returns RGBA8888 byte data + width + height
  *   ImageLoader_Delete(handle) — frees the native memory
  *
  * Uses stb_image (single-header, public domain) for PNG/JPG/BMP/GIF/TGA support.
@@ -16,19 +16,18 @@
  */
 
 #define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_JPEG
+#define STBI_ONLY_PNG
 #include "stb_image.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-/* Opaque handle that stores the decoded image pixels. */
 typedef struct ImageHandle
 {
 	unsigned char* data;
 	int width;
 	int height;
-	int channels;
-	int byteCount;
 } ImageHandle;
 
 /* Creates a loader for the image at the given path.
@@ -41,28 +40,21 @@ void* ImageLoader_Create(const char* path)
 	if (pixels == NULL)
 		return NULL;
 	ImageHandle* handle = (ImageHandle*)malloc(sizeof(ImageHandle));
-	if (handle == NULL)
-	{
-		stbi_image_free(pixels);
-		return NULL;
-	}
 	handle->data = pixels;
 	handle->width = width;
 	handle->height = height;
-	handle->channels = 4;
-	handle->byteCount = width * height * 4;
 	return handle;
 }
 
-/* Returns a pointer to the RGBA8888 pixel bytes and sets *outCount to the byte count.
- * The caller must NOT free this pointer — call ImageLoader_Delete to release it.
- * Returns NULL if the handle is invalid. */
-const unsigned char* ImageLoader_Colors(void* opaqueHandle, int* outCount)
+/* Returns a pointer to the RGBA8888 pixel bytes and width, height.
+ * The caller must NOT free this pointer — call ImageLoader_Delete to release it. */
+const unsigned char* ImageLoader_Colors(void* opaqueHandle, int* outWidth, int* outHeight)
 {
-	if (opaqueHandle == NULL || outCount == NULL)
+	if (opaqueHandle == NULL || outWidth == NULL || outHeight == NULL)
 		return NULL;
 	ImageHandle* handle = (ImageHandle*)opaqueHandle;
-	*outCount = handle->byteCount;
+	*outWidth = handle->width;
+	*outHeight = handle->height;
 	return handle->data;
 }
 

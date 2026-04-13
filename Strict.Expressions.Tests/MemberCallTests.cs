@@ -51,14 +51,24 @@ public sealed class MemberCallTests : TestExpressions
 		Assert.That(ParseExpression("Range(0, 5).Start").ToString(), Is.EqualTo("Range(0, 5).Start"));
 
 	[Test]
-	public void MemberWithArgumentsInitializerShouldNotHaveType() =>
+	public void MemberWithArgumentsInitializerShouldNotHaveSameType() =>
 		Assert.That(() =>
 			{
 				using var _ = new Type(TestPackage.Instance, new TypeLines(Body.Declaration,
 					"has input Text = Text(5)")).ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType>());
+				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithSameType>());
+
+	[Test]
+	public void MemberWithByteInitializerKeepsByteType()
+	{
+		using var assignmentType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(MemberWithByteInitializerKeepsByteType), "has one Byte = 1",
+				"GetOne Byte", "\tone")).ParseMembersAndMethods(parser);
+		Assert.That(assignmentType.Members[0].Type.Name, Is.EqualTo("Byte"));
+		Assert.That(assignmentType.Members[0].InitialValue?.ReturnType.Name, Is.EqualTo("Byte"));
+	}
 
 	private readonly ExpressionParser parser = new MethodExpressionParser();
 

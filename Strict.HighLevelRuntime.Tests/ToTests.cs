@@ -27,7 +27,7 @@ public sealed class ToTests
 			new TypeLines("ImageToText",
 				"has number",
 				"Run Text",
-				"\tImage(Size(2, 2), (Color(0, 0, 0), Color(0, 0, 0), Color(0, 0, 0), Color(0.25, 0.25, 0.25))) to Text")).ParseMembersAndMethods(parser);
+				"\tImage(Size(2, 2), (Color(0, 0, 0), Color(0, 0, 0), Color(0, 0, 0), ColorValue(0.25, 0.25, 0.25))) to Text")).ParseMembersAndMethods(parser);
 		var fullInterpreter = new Interpreter(package, TestBehavior.Disabled);
 		Assert.That(fullInterpreter.Execute(program.Methods.Single(method => method.Name == Method.Run),
 			fullInterpreter.noneInstance, []).Text, Is.EqualTo(
