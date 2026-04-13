@@ -116,7 +116,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Language", "Language\Langua
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Expressions", "Expressions\Expressions.csproj", "{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageLoader", "NativePlugins\ImageLoader\ImageLoader.csproj", "{5AD28B30-F0EC-46AC-B391-4942F74C1D31}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NativePlugins", "NativePlugins", "{5AD28B30-F0EC-46AC-B391-4942F74C1D31}"
+	ProjectSection(SolutionItems) = preProject
+		NativePlugins\ImageLoader\CMakeLists.txt = NativePlugins\ImageLoader\CMakeLists.txt
+		NativePlugins\ImageLoader\README.md = NativePlugins\ImageLoader\README.md
+		NativePlugins\ImageLoader\build.bat = NativePlugins\ImageLoader\build.bat
+		NativePlugins\ImageLoader\build.sh = NativePlugins\ImageLoader\build.sh
+		NativePlugins\ImageLoader\src\imageloader.c = NativePlugins\ImageLoader\src\imageloader.c
+		NativePlugins\ImageLoader\src\stb_image.h = NativePlugins\ImageLoader\src\stb_image.h
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -260,10 +268,6 @@ Global
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5AD28B30-F0EC-46AC-B391-4942F74C1D31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5AD28B30-F0EC-46AC-B391-4942F74C1D31}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5AD28B30-F0EC-46AC-B391-4942F74C1D31}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5AD28B30-F0EC-46AC-B391-4942F74C1D31}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

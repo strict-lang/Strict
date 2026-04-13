@@ -1,0 +1,7 @@
+has value Byte
+has scale Byte = 255
+from(numberHolder)
+	value = numberHolder.value * 255
+	scale = numberHolder.scale * 255
+to NumberHolder
+	NumberHolder(value / 255, scale / 255)
