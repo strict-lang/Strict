@@ -8,6 +8,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	private static readonly ConditionalWeakTable<Type, Dictionary<string, int>> MemberIndexes = new();
 	private List<ValueInstance>? items;
 	private float[]? flatNumbers;
+	private bool hasSharedFlatNumbers;
 	private Type? flatElementType;
 	private readonly int offset;
 	private const string FlatNumbersFieldName = "flatNumbers";
@@ -100,6 +101,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		var memberIndex = GetMemberIndex(name);
 		if (memberIndex < 0 || memberIndex >= FlatWidth)
 			return false;
+		EnsureWritableFlatNumbers();
 		flatNumbers[offset + memberIndex] = (float)memberValue.Number;
 		return true;
 	}
@@ -203,6 +205,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	{
 		if (!TryGetFlatElementLayout(out var elementType, out var elementWidth))
 			return false;
+		//TODO: why would we have 0 items here?
 		var numbers = new float[sourceItems.Count * elementWidth];
 		for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
 			if (!TryCopyItemNumbers(sourceItems[itemIndex], elementType, elementWidth, numbers,
@@ -293,13 +296,28 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		return true;
 	}
 
-	public ValueArrayInstance Clone(Type newType) =>
-		items != null
-			? new ValueArrayInstance(newType, new List<ValueInstance>(items))
-			: flatNumbers != null && flatElementType != null
-				? new ValueArrayInstance(newType, (float[])flatNumbers.Clone(), flatElementType,
-					FlatWidth)
-				: new ValueArrayInstance(newType, []);
+	public ValueArrayInstance Clone(Type newType)
+	{
+		if (items != null)
+			return new ValueArrayInstance(newType, new List<ValueInstance>(items));
+		if (flatNumbers != null && flatElementType != null)
+		{
+			hasSharedFlatNumbers = true;
+			return new ValueArrayInstance(newType, flatNumbers, flatElementType, FlatWidth)
+			{
+				hasSharedFlatNumbers = true
+			};
+		}
+		return new ValueArrayInstance(newType, []);
+	}
+
+	private void EnsureWritableFlatNumbers()
+	{
+		if (!hasSharedFlatNumbers || flatNumbers == null)
+			return;
+		flatNumbers = (float[])flatNumbers.Clone();
+		hasSharedFlatNumbers = false;
+	}
 
 	private List<ValueInstance> MaterializeItems()
 	{
@@ -307,6 +325,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		for (var itemIndex = 0; itemIndex < Count; itemIndex++)
 			createdItems.Add(CreateFlatItem(itemIndex));
 		flatNumbers = null;
+		hasSharedFlatNumbers = false;
 		flatElementType = null;
 		FlatWidth = 0;
 		items = createdItems;
@@ -337,6 +356,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	{
 		if (flatNumbers == null || flatElementType == null)
 			return false;
+		EnsureWritableFlatNumbers();
 		return TryCopyItemNumbers(value, flatElementType, FlatWidth, flatNumbers,
 			offset + index * FlatWidth);
 	}

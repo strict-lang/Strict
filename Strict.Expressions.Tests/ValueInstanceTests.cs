@@ -433,4 +433,31 @@ public sealed class ValueInstanceTests
 			Is.SameAs(backingArray), "Slice should reference same backing array");
 	}
 */
+	[Test]
+	public void ClonedFlatBackedListSharesBackingUntilWrite()
+	{
+		using var pointType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ClonedFlatBackedListSharesBackingUntilWrite), "has xValue Number",
+					"has yValue Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var listType = TestPackage.Instance.GetListImplementationType(pointType);
+		var firstPoint = new ValueInstance(pointType,
+			[new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
+		var secondPoint = new ValueInstance(pointType,
+			[new ValueInstance(numberType, 3), new ValueInstance(numberType, 4)]);
+		var original = new ValueInstance(listType, [firstPoint, secondPoint]);
+		var clonedList = original.List.Clone(listType);
+		var flatNumbersField = typeof(ValueArrayInstance).GetField("flatNumbers",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+		Assert.That(flatNumbersField, Is.Not.Null);
+		var originalBacking = (float[]?)flatNumbersField!.GetValue(original.List);
+		var cloneBackingBeforeWrite = (float[]?)flatNumbersField.GetValue(clonedList);
+		Assert.That(cloneBackingBeforeWrite, Is.SameAs(originalBacking));
+		clonedList[0] = new ValueInstance(pointType,
+			[new ValueInstance(numberType, 9), new ValueInstance(numberType, 10)]);
+		var cloneBackingAfterWrite = (float[]?)flatNumbersField.GetValue(clonedList);
+		Assert.That(cloneBackingAfterWrite, Is.Not.SameAs(originalBacking));
+		Assert.That(original.List[0].TryGetValueTypeInstance()!["xValue"].Number, Is.EqualTo(1));
+		Assert.That(clonedList[0].TryGetValueTypeInstance()!["xValue"].Number, Is.EqualTo(9));
+	}
 }

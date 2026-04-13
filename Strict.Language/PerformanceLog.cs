@@ -41,11 +41,11 @@ public static class PerformanceLog
 
 	public static TextWriter LogWriter
 	{
-		get
+		get	
 		{
 			if (field != null)
 				return field;
-			var logFile = File.Create("Strict.txt");
+			var logFile = new FileStream("Strict.txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 			field = new StreamWriter(logFile);
 			return field;
 		}
