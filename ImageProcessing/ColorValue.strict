@@ -1,0 +1,4 @@
+has Red Number with value >= 0 and value <= 1
+has Green Number with value >= 0 and value <= 1
+has Blue Number with value >= 0 and value <= 1
+has Alpha = 1 with value >= 0 and value <= 1

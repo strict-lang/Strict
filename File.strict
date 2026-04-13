@@ -1,4 +1,4 @@
-from(filename Name)
+from(path)
 Length Number
 Read Text
 Write(text)

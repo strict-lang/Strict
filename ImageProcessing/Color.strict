@@ -1,4 +1,11 @@
-has Red Number with value >= 0 and value <= 1
-has Green Number with value >= 0 and value <= 1
-has Blue Number with value >= 0 and value <= 1
-has Alpha = 1 with value >= 0 and value <= 1
+has Red Byte
+has Green Byte
+has Blue Byte
+has Alpha Byte = 255
+from(colorValue)
+	Red = colorValue.Red * 255
+	Green = colorValue.Green * 255
+	Blue = colorValue.Blue * 255
+	Alpha = colorValue.Alpha * 255
+to ColorValue
+	ColorValue(Red / 255, Green / 255, Blue / 255, Alpha / 255)

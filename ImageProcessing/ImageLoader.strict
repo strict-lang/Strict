@@ -1,1 +1,2 @@
-Load(path Text) Bytes
+has colors Bytes
+from(path)
