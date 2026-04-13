@@ -22,16 +22,13 @@ public sealed class ToTests
 	{
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
-		using var strictPackage = await repositories.LoadStrictPackage();
-		using var mathPackage = await repositories.LoadStrictPackage("Strict/Math");
-		using var imageProcessingPackage =
-			await repositories.LoadStrictPackage("Strict/ImageProcessing");
-		using var program = new Type(imageProcessingPackage,
+		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
+		using var program = new Type(package,
 			new TypeLines("ColorImageToText",
 				"has number",
 				"Run Text",
 				"\tColorImage(Size(2, 2), (Color(0, 0, 0), Color(0, 0, 0), Color(0, 0, 0), Color(0.25, 0.25, 0.25))) to Text")).ParseMembersAndMethods(parser);
-		var fullInterpreter = new Interpreter(imageProcessingPackage, TestBehavior.Disabled);
+		var fullInterpreter = new Interpreter(package, TestBehavior.Disabled);
 		Assert.That(fullInterpreter.Execute(program.Methods.Single(method => method.Name == Method.Run),
 			fullInterpreter.noneInstance, []).Text, Is.EqualTo(
 			"ColorImage(Size=(2, 2), Colors=((0, 0, 0), (0, 0, 0), (0, 0, 0), ...))"));

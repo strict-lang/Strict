@@ -600,11 +600,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
-		using var strictPackage = await repositories.LoadStrictPackage();
-		using var mathPackage = await repositories.LoadStrictPackage("Strict/Math");
-		using var imageProcessingPackage =
-			await repositories.LoadStrictPackage("Strict/ImageProcessing");
-		using var testType = new Type(imageProcessingPackage,
+		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
+		using var testType = new Type(package,
 			new TypeLines(nameof(LoopOverSizeIteratesWidthTimesHeight), "has number", "Run Number",
 				"\tconstant width = 16", "\tconstant height = 9",
 				"\tmutable image = ColorImage(Size(width, height))", "\tfor image.Size",
@@ -833,12 +830,12 @@ public sealed class VirtualMachineTests : TestBytecode
 	public async Task ExecuteLoadedBinaryPreservesAdjustBrightnessColorComputation()
 	{
 		var repositories = new Repositories(new MethodExpressionParser());
-		using var imageProcessingPackage = await repositories.LoadStrictPackage(nameof(Strict) +
+		using var package = await repositories.LoadStrictPackage(nameof(Strict) +
 			Context.ParentSeparator + "ImageProcessing");
-		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
-		var color = imageProcessingPackage.GetType("Color");
-		var zero = new Number(imageProcessingPackage, 0);
-		var brightness = new Number(imageProcessingPackage, 0.25);
+		var adjustBrightness = package.GetType("AdjustBrightness");
+		var color = package.GetType("Color");
+		var zero = new Number(package, 0);
+		var brightness = new Number(package, 0.25);
 		var colorCall = new MethodCall(color.FindMethod(Method.From, [zero, zero, zero])!, null,
 			[zero, zero, zero]);
 		var adjustBrightnessCall = new MethodCall(
@@ -851,7 +848,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		try
 		{
 			binary.Serialize(filePath);
-			var loadedBinary = new BinaryExecutable(filePath, imageProcessingPackage);
+			var loadedBinary = new BinaryExecutable(filePath, package);
 			Assert.That(new VirtualMachine(loadedBinary).Execute().Returns!.Value.ToExpressionCodeString(),
 				Is.EqualTo("(0.25, 0.25, 0.25)"));
 		}

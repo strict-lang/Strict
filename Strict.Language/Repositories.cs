@@ -59,7 +59,7 @@ public sealed class Repositories(ExpressionParser parser)
 		);
 	} //ncrunch: no coverage end
 
-	private readonly IAppCache cacheService = new CachingService();
+	private static readonly IAppCache CacheService = new CachingService();
 	private readonly ExpressionParser parser = parser;
 
 	public static string GetLocalDevelopmentPath(string organization, string packageFullName)
@@ -118,21 +118,22 @@ public sealed class Repositories(ExpressionParser parser)
 		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = ""
 #endif
-	)
-	{
-		var files = Directory.GetFiles(packagePath, "*" + Type.Extension);
-		return cacheService.GetOrAddAsync(fullName, async _ =>
+	) =>
+		CacheService.GetOrAddAsync(fullName, async _ =>
 		{
+			//Console.WriteLine("Repositories.LoadFromPath package " + fullName + " from path " + packagePath);
 			var parent = await LoadParentPackage(fullName);
-			await LoadDependencyPackages(fullName, files);
-			return await CreatePackageFromFiles(packagePath, files
+			var files = Directory.GetFiles(packagePath, "*" + Type.Extension);
+			var dependencyPackages = await LoadDependencyPackages(fullName, files);
+			var package = await CreatePackageFromFiles(packagePath, files
 #if DEBUG
 				, parent, callerFilePath, callerLineNumber, callerMemberName);
 #else
-				, parent);
+		, parent);
 #endif
+			package.automaticallyLoadedDependencyPackages = dependencyPackages;
+			return package;
 		});
-	}
 
 	private async Task<Package?> LoadParentPackage(string fullName)
 	{
@@ -146,13 +147,16 @@ public sealed class Repositories(ExpressionParser parser)
 		return await LoadStrictPackage(parentName);
 	}
 
-	private async Task LoadDependencyPackages(string fullName, IReadOnlyCollection<string> files)
+	private async Task<List<Package>> LoadDependencyPackages(string fullName,
+		IReadOnlyCollection<string> files)
 	{
+		var dependencyPackages = new List<Package>();
 		if (fullName == nameof(Strict) || files.Count == 0)
-			return;
+			return dependencyPackages;
 		var rootPackageName = GetRootPackageName(fullName);
 		foreach (var dependencyPackage in FindDependencyPackages(fullName, rootPackageName, files))
-			await LoadStrictPackage(dependencyPackage);
+			dependencyPackages.Add(await LoadStrictPackage(dependencyPackage));
+		return dependencyPackages;
 	}
 
 	private static string GetRootPackageName(string fullName)
@@ -163,12 +167,11 @@ public sealed class Repositories(ExpressionParser parser)
 			: fullName[..separatorIndex];
 	}
 
-	private static IEnumerable<string> FindDependencyPackages(string fullName, string rootPackageName,
+	private IEnumerable<string> FindDependencyPackages(string fullName, string rootPackageName,
 		IReadOnlyCollection<string> files)
 	{
 		var dependencies = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var file in files)
-		{
 			foreach (Match match in TypeFullNamePattern.Matches(File.ReadAllText(file)))
 			{
 				var typeFullName = match.Value;
@@ -176,10 +179,9 @@ public sealed class Repositories(ExpressionParser parser)
 				if (lastSeparatorIndex <= 0)
 					continue;
 				var packageName = NormalizePackageName(typeFullName[..lastSeparatorIndex], rootPackageName);
-				if (packageName != fullName)
+				if (packageName != fullName && LoadedPackages.Find(p => p.FullName == packageName) == null)
 					dependencies.Add(packageName);
 			}
-		}
 		return dependencies;
 	}
 
@@ -202,7 +204,7 @@ public sealed class Repositories(ExpressionParser parser)
 			return null;
 		var parentName = fullName[..separatorIndex];
 		// ReSharper disable once InconsistentlySynchronizedField
-		return loadedPackages.Find(package => package.FullName == parentName);
+		return LoadedPackages.Find(package => package.FullName == parentName);
 	}
 
 	/// <summary>
@@ -230,8 +232,8 @@ public sealed class Repositories(ExpressionParser parser)
 			? new Package(parent, packagePath, this)
 			: new Package(packagePath, this);
 #endif
-		lock (loadedPackages)
-			loadedPackages.Add(package);
+		lock (LoadedPackages)
+			LoadedPackages.Add(package);
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethodsForPackage(parser);
@@ -244,8 +246,8 @@ public sealed class Repositories(ExpressionParser parser)
 	private void InvalidateAllAvailableMethodsCaches()
 	{
 		Package[] loadedPackagesSnapshot;
-		lock (loadedPackages)
-			loadedPackagesSnapshot = loadedPackages.ToArray();
+		lock (LoadedPackages)
+			loadedPackagesSnapshot = LoadedPackages.ToArray();
 		foreach (var loadedPackage in loadedPackagesSnapshot)
 		foreach (var type in loadedPackage.Types.Values.ToArray())
 			type.InvalidateAvailableMethodsCache();
@@ -254,7 +256,7 @@ public sealed class Repositories(ExpressionParser parser)
 			type.ReimplementGenericTypeMethods();
 	}
 
-	private readonly List<Package> loadedPackages = [];
+	private static readonly List<Package> LoadedPackages = [];
 
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{
@@ -368,21 +370,21 @@ public sealed class Repositories(ExpressionParser parser)
 	/// </summary>
 	internal void Remove(Package result)
 	{
-		cacheService.Remove(result.FullName);
-		lock (loadedPackages)
-			loadedPackages.Remove(result);
+		CacheService.Remove(result.FullName);
+		lock (LoadedPackages)
+			LoadedPackages.Remove(result);
 	}
 
 	public bool ContainsPackageNameInCache(string fullName) =>
-		cacheService.TryGetValue<AsyncLazy<Package>>(fullName, out _);
+		CacheService.TryGetValue<AsyncLazy<Package>>(fullName, out _);
 
 	public async Task<string> ToDebugString() =>
 		nameof(Repositories) +
-		"\nStrict: " + (cacheService.TryGetValue<AsyncLazy<Package>>(nameof(Strict),
+		"\nStrict: " + (CacheService.TryGetValue<AsyncLazy<Package>>(nameof(Strict),
 			out var lazyPackage)
 			? (await lazyPackage.Value).ToDebugString()
 			: "") +
 		// ReSharper disable once InconsistentlySynchronizedField
-		"\nLoadedPackages: " + string.Join("\n  ", loadedPackages) +
+		"\nLoadedPackages: " + string.Join("\n  ", LoadedPackages) +
 		"\nPreviouslyCheckedDirectories: " + string.Join<string>(", ", PreviouslyCheckedDirectories.ToList());
 }
