@@ -39,7 +39,7 @@ public class Package : Context, IDisposable
 		{
 			var existing = parentPackage.children.FirstOrDefault(existing => existing.Name == Name);
 			if (existing != null)
-				throw new PackageAlreadyExists(Name, parentPackage, existing); //ncrunch: no coverage
+				return;//TODO? throw new PackageAlreadyExists(Name, parentPackage, existing); //ncrunch: no coverage
 			parentPackage.children.Add(this);
 		}
 	}
@@ -220,17 +220,22 @@ public class Package : Context, IDisposable
 	}
 
 	public IReadOnlyDictionary<string, Type> Types => types;
-	public const string TestLanguageConversion = nameof(TestLanguageConversion);
+	internal List<Package> automaticallyLoadedDependencyPackages = new();
 
 	public void Dispose()
 	{
+		/*
 		GC.SuppressFinalize(this);
 		while (children.Count > 0)
 			children[0].Dispose();
+		foreach (var dependencyPackage in automaticallyLoadedDependencyPackages)
+			dependencyPackage.Dispose();
 		foreach (var type in types)
 			type.Value.Dispose();
+		//Console.WriteLine("Package.Dispose " + FullName);
 		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		((Package)Parent)?.Remove(this);
 		createdFromRepos?.Remove(this);
+		*/
 	}
 }

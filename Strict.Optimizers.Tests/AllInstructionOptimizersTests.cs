@@ -5,18 +5,6 @@ namespace Strict.Optimizers.Tests;
 
 public sealed class AllInstructionOptimizersTests : TestOptimizers
 {
-	[OneTimeSetUp]
-	public async Task LoadPackagesAsync()
-	{
-		repos = new Repositories(new MethodExpressionParser());
-		await repos.LoadStrictPackage();
-		await repos.LoadStrictPackage("Strict/Math");
-		imageProcessingPackage = await repos.LoadStrictPackage("Strict/ImageProcessing");
-	}
-
-	private Repositories? repos;
-	private Package? imageProcessingPackage;
-
 	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
 		Optimize(new AllInstructionOptimizers(), instructions, expectedCount);
 
@@ -180,10 +168,11 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 	// @formatter: on
 
 	[Test]
-	[Category("Slow")]//TODO: way too slow atm, annoying
-	public void InlineColorAdjustmentInsideLoopRemovesInvoke()
+	public async Task InlineColorAdjustmentInsideLoopRemovesInvoke()
 	{
-		var binary = CreateColorAdjustmentBinary();
+		var repos = new Repositories(new MethodExpressionParser());
+		var package = await repos.LoadStrictPackage("Strict/ImageProcessing");
+		var binary = CreateColorAdjustmentBinary(package);
 		new AllInstructionOptimizers().Optimize(binary);
 		var remainingNames = binary.EntryPoint.instructions.OfType<Invoke>()
 			.Select(i => i.MethodInfo.MethodName).ToList();
@@ -203,9 +192,9 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 		}
 	}
 
-	internal BinaryExecutable CreateColorAdjustmentBinary()
+	internal BinaryExecutable CreateColorAdjustmentBinary(Package package)
 	{
-		var brightnerType = imageProcessingPackage!.FindDirectType("AdjustBrightness")!;
+		var brightnerType = package.FindDirectType("AdjustBrightness")!;
 		var runMethod = brightnerType.Methods.Single(m => m.Name == "Run");
 		return new BinaryGenerator(new MethodCall(runMethod)).Generate();
 	}

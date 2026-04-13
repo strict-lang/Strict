@@ -22,8 +22,8 @@ public sealed class ForTests
 	{
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
-		using var pack[age = await repositories.LoadStrictPackage("Strict/ImageProcessing");
-		using var testType = new Type(pack[age,
+		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
+		using var testType = new Type(package,
 			new TypeLines("ColorImageIndexing",
 				"has number",
 				"CenterIsExpectedColor Boolean",
@@ -38,7 +38,7 @@ public sealed class ForTests
 				"Indices Numbers",
 				"\tfor Size(2, 2)",
 				"\t\tvalue.X + value.Y * 10")).ParseMembersAndMethods(parser);
-		var packageInterpreter = new Interpreter(pack[age, TestBehavior.Disabled);
+		var packageInterpreter = new Interpreter(package, TestBehavior.Disabled);
 		Assert.That(packageInterpreter.Execute(
 			testType.Methods.Single(method => method.Name == "CenterIsExpectedColor"),
 			packageInterpreter.noneInstance, []).Boolean, Is.True);

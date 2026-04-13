@@ -399,10 +399,7 @@ public class Type : Context, IDisposable
 		: Exception("Type: " + name + ", Generic Implementation: " + key);
 
 	public string FilePath =>
-		Path.GetFullPath(Path.Combine(Path.GetFileName(Package.FolderPath).StartsWith(
-				Package.TestLanguageConversion, StringComparison.Ordinal)
-				? Path.Combine(((Package)Package.Parent).FolderPath, "Language")
-				: Package.FolderPath,
+		Path.GetFullPath(Path.Combine(Package.FolderPath,
 			(this is GenericTypeImplementation genericType
 				? genericType.Generic.Name
 				: Name) + Extension));

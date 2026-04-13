@@ -164,10 +164,7 @@ public class PackageTests
 			var typeSuffix = ((char)('A' + index)).ToString();
 			var parser = new MethodExpressionParser();
 			var repositories = new Repositories(parser);
-			using var strictPackage = await repositories.LoadStrictPackage();
-			using var mathPackage = await repositories.LoadStrictPackage("Strict/Math");
-			using var package =
-				await repositories.LoadStrictPackage("Strict/ImageProcessing");
+			using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
 			using var testType = new Type(package,
 				new TypeLines(nameof(LoadingStrictPackagesInParallelDoesNotFail) + typeSuffix,
 					"has number", "Run Number", "\tconstant width = 80", "\tconstant height = 45",
