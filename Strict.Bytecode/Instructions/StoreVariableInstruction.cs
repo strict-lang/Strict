@@ -14,9 +14,9 @@ public sealed class StoreVariableInstruction(ValueInstance constant, string iden
 	public bool IsMember { get; } = isMember;
 	public override string ToString() => $"{base.ToString()} {Identifier}";
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		writer.Write7BitEncodedInt(table[Identifier]);
 		writer.Write(IsMember);
 	}

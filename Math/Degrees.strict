@@ -1,0 +1,18 @@
+﻿has number
+Sin Ratio
+	Degrees(0).Sin is 0
+	Degrees(90).Sin is 1
+	value
+Cos Ratio
+	Degrees(0).Cos is 1
+	Degrees(90).Cos is 0
+	value
+Tan Ratio
+	Degrees(0).Tan is 0
+	Degrees(180).Tan is 0
+	Degrees(45).Tan is 1
+	value
+to Radians
+	Degrees(180) to Radians is Radians.Pi
+	Degrees(180) to Radians is Radians.Pi
+	value / Radians.DegreesPerRadian

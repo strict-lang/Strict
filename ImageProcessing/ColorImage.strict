@@ -1,8 +1,2 @@
 has Size
 mutable Colors Colors where Length is Size.Length
-BytesToColors(data Numbers, pixelCount Number) Colors
-	constant testData = (0, 255, 0)
-	BytesToColors(testData, 1) is (Color(0, 1, 0))
-	for pixelIndex in Range(0, pixelCount)
-		constant byteOffset = pixelIndex * 3
-		Color(data(byteOffset) / 255, data(byteOffset + 1) / 255, data(byteOffset + 2) / 255)

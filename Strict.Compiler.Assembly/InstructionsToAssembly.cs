@@ -2,7 +2,6 @@ using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
-using Binary = Strict.Expressions.Binary;
 
 namespace Strict.Compiler.Assembly;
 
@@ -18,7 +17,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	{
 		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
 		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
-			precompiledMethods);
+			precompiledMethods, binary);
 		return Task.FromResult(output);
 	}
 
@@ -28,10 +27,11 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		BuildAssembly(methodName, [], instructions);
 
 	private static string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
-		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
+		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null,
+		BinaryExecutable? binary = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
-		var methodInfos = CollectMethods([.. instructions], precompiledMethods);
+		var methodInfos = CollectMethods([.. instructions], precompiledMethods, binary);
 		var hasNumericPrint = HasNumericPrint(instructions) ||
 			methodInfos.Values.Any(methodInfo => HasNumericPrint(methodInfo.Instructions));
 		var functionAsm = BuildAssembly(methodName, [], [.. instructions], platform, methodInfos);
@@ -114,8 +114,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			if (frameSize > 0)
 				lines.Add($"    sub rsp, {frameSize}");
 		}
-		var registerInstances = new Dictionary<Register, List<Expression>>();
-		var variableInstances = new Dictionary<string, List<Expression>>(StringComparer.Ordinal);
+		var registerInstances = new Dictionary<Register, Register[]>();
+		var variableInstances = new Dictionary<string, Register[]>(StringComparer.Ordinal);
 		for (var index = 0; index < instructions.Count; index++)
 		{
 			if (jumpLabels.TryGetValue(index, out var label))
@@ -174,47 +174,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			};
 			if (value is { } constantValue && constantValue != 0.0 && seenValues.Add(constantValue))
 				constants.Add(($"const_{index++}", constantValue));
-			if (instruction is Invoke invoke)
-				foreach (var invokeValue in CollectInvokeNumericConstants(invoke.Method))
-					if (invokeValue != 0.0 && seenValues.Add(invokeValue))
-						constants.Add(($"const_{index++}", invokeValue));
 		}
 		return constants;
-	}
-
-	private static IEnumerable<double> CollectInvokeNumericConstants(MethodCall call)
-	{
-		foreach (var argument in call.Arguments)
-		foreach (var value in CollectExpressionNumericConstants(argument))
-			yield return value;
-		if (call.Instance is MethodCall constructorCall)
-			//ncrunch: no coverage start
-			foreach (var constructorArgument in constructorCall.Arguments)
-			foreach (var value in CollectExpressionNumericConstants(constructorArgument))
-				yield return value;
-	} //ncrunch: no coverage end
-
-	private static IEnumerable<double> CollectExpressionNumericConstants(Expression expression)
-	{
-		switch (expression)
-		{
-		case Value { Data.IsText: false } value:
-			yield return value.Data.Number;
-			break;
-		case Binary binary:
-			//ncrunch: no coverage start
-			if (binary.Instance != null)
-				foreach (var nested in CollectExpressionNumericConstants(binary.Instance))
-					yield return nested;
-			for (var index = 0; index < binary.Arguments.Count; index++)
-				foreach (var nested in CollectExpressionNumericConstants(binary.Arguments[index]))
-					yield return nested;
-			break;
-		case MethodCall methodCall:
-			foreach (var nested in CollectInvokeNumericConstants(methodCall))
-				yield return nested;
-			break; //ncrunch: no coverage end
-		}
 	}
 
 	private static (Dictionary<int, string> Labels, Dictionary<int, int> JumpEndPositions)
@@ -252,8 +213,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		Dictionary<int, string> jumpLabels,
 		Dictionary<int, int> jumpEndPositions, List<Instruction> allInstructions, int index,
 		Platform platform = Platform.Linux,
-		Dictionary<Register, List<Expression>> registerInstances = null!,
-		Dictionary<string, List<Expression>> variableInstances = null!,
+		Dictionary<Register, Register[]> registerInstances = null!,
+		Dictionary<string, Register[]> variableInstances = null!,
 		Dictionary<string, CompiledMethodInfo>? compiledMethods = null,
 		HashSet<int>? optimizedReturns = null)
 	{
@@ -316,8 +277,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			EmitJump(jump, jumpLabels, index, lines);
 			break;
 		case Invoke invoke:
-			EmitInvoke(invoke, lines, paramIndexByName, variableSlots, dataConstants,
-				registerInstances, variableInstances, compiledMethods);
+			EmitInvoke(invoke, lines,
+				registerInstances, compiledMethods);
 			break;
 		case JumpToId { InstructionType: InstructionType.JumpEnd }:
 			break;
@@ -328,101 +289,41 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	}
 
 	private static void EmitInvoke(Invoke invoke, List<string> lines,
-		Dictionary<string, int> paramIndexByName, Dictionary<string, int> variableSlots,
-		List<(string Label, double Value)> dataConstants,
-		Dictionary<Register, List<Expression>> registerInstances,
-		Dictionary<string, List<Expression>> variableInstances,
+		Dictionary<Register, Register[]> registerInstances,
 		Dictionary<string, CompiledMethodInfo>? compiledMethods)
 	{
-		if (invoke.Method == null)
+		if (invoke.MethodInfo == null)
 			throw new NotSupportedException("Invoke instruction is missing method metadata"); //ncrunch: no coverage
-		if (invoke.Method.Method.Name == Method.From && invoke.Method.Instance == null)
+		if (invoke.MethodInfo.MethodName == Method.From && !invoke.MethodInfo.InstanceRegister.HasValue)
 		{
-			registerInstances[invoke.Register] = ResolveConstructorArguments(invoke.Method);
+			registerInstances[invoke.Register] = invoke.MethodInfo.ArgumentRegisters;
 			return;
 		}
-		var methodKey = BuildMethodHeaderKeyInternal(invoke.Method.Method);
+		var methodKey = BuildMethodHeaderKeyInternal(invoke.MethodInfo);
 		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
 			throw new NotSupportedException( //ncrunch: no coverage
 				"Non-print method calls cannot be compiled to native assembly. " +
 				"Use the interpreted runner for programs with complex runtime method calls.");
-		var argumentExpressions = new List<Expression>();
-		if (methodInfo.MemberNames.Count > 0)
-			argumentExpressions.AddRange(ResolveInstanceMemberArguments(invoke.Method, variableInstances));
-		for (var argumentIndex = 0; argumentIndex < invoke.Method.Arguments.Count; argumentIndex++)
-			argumentExpressions.Add(invoke.Method.Arguments[argumentIndex]);
-		if (argumentExpressions.Count > 8)
+		var sourceRegisters = new List<Register>();
+		if (methodInfo.MemberNames.Count > 0 && invoke.MethodInfo.InstanceRegister.HasValue &&
+			registerInstances.TryGetValue(invoke.MethodInfo.InstanceRegister.Value, out var memberRegisters))
+			sourceRegisters.AddRange(memberRegisters);
+		sourceRegisters.AddRange(invoke.MethodInfo.ArgumentRegisters);
+		if (sourceRegisters.Count > 8)
 			throw new NotSupportedException( //ncrunch: no coverage
 				"Native assembly compiler currently supports up to 8 call arguments");
-		for (var argumentIndex = 0; argumentIndex < argumentExpressions.Count; argumentIndex++)
-			EmitLoadExpressionToXmm(argumentExpressions[argumentIndex], "xmm" + argumentIndex, lines,
-				paramIndexByName, variableSlots, dataConstants, variableInstances);
+		for (var argumentIndex = 0; argumentIndex < sourceRegisters.Count; argumentIndex++)
+		{
+			var sourceXmm = ToXmm(sourceRegisters[argumentIndex]);
+			var destinationXmm = "xmm" + argumentIndex;
+			if (sourceXmm != destinationXmm)
+				lines.Add("    movsd " + destinationXmm + ", " + sourceXmm);
+		}
 		lines.Add("    call " + methodInfo.Symbol);
 		var destination = ToXmm(invoke.Register);
 		if (destination != "xmm0")
 			lines.Add("    movsd " + destination + ", xmm0");
 	}
-
-	private static List<Expression> ResolveConstructorArguments(MethodCall constructorCall)
-	{
-		var members = constructorCall.ReturnType.Members.Where(member => !member.Type.IsTrait).ToList();
-		var result = new List<Expression>(members.Count);
-		for (var index = 0; index < members.Count; index++)
-			result.Add(index < constructorCall.Arguments.Count
-				? constructorCall.Arguments[index]
-				: new Value(members[index].Type, new ValueInstance(members[index].Type, 0)));
-		return result;
-	}
-
-	private static IEnumerable<Expression> ResolveInstanceMemberArguments(MethodCall methodCall,
-		Dictionary<string, List<Expression>> variableInstances)
-	{
-		if (methodCall.Instance is MethodCall constructorCall &&
-			constructorCall.Method.Name == Method.From && constructorCall.Instance == null)
-			return ResolveConstructorArguments(constructorCall); //ncrunch: no coverage
-		var instanceName = methodCall.Instance?.ToString();
-		if (instanceName != null && variableInstances.TryGetValue(instanceName, out var values))
-			return values;
-		throw new NotSupportedException( //ncrunch: no coverage
-			"Cannot resolve instance values for method call: " + methodCall);
-	}
-
-	private static void EmitLoadExpressionToXmm(Expression expression, string destinationXmm,
-		List<string> lines, Dictionary<string, int> paramIndexByName,
-		Dictionary<string, int> variableSlots,
-		List<(string Label, double Value)> dataConstants,
-		Dictionary<string, List<Expression>> variableInstances)
-	{
-		if (expression is Value value)
-		{
-			if (value.Data.IsText)
-				throw new NotSupportedException( //ncrunch: no coverage
-					"Text call arguments are not supported in native assembly calls");
-			if (value.Data.Number == 0.0)
-				lines.Add("    xorpd " + destinationXmm + ", " + destinationXmm); //ncrunch: no coverage
-			else
-				lines.Add("    movsd " + destinationXmm + ", [rel " +
-					GetOrAddConstantLabel(value.Data.Number, dataConstants) + "]");
-			return;
-		}
-		//ncrunch: no coverage start
-		var variableName = expression.ToString();
-		if (paramIndexByName.TryGetValue(variableName, out var parameterIndex))
-		{
-			var sourceXmm = "xmm" + parameterIndex;
-			if (sourceXmm != destinationXmm)
-				lines.Add("    movsd " + destinationXmm + ", " + sourceXmm);
-			return;
-		}
-		if (variableSlots.TryGetValue(variableName, out var slot))
-		{
-			lines.Add("    movsd " + destinationXmm + ", [rbp-" + (slot + 1) * 8 + "]");
-			return;
-		}
-		if (variableInstances.ContainsKey(variableName))
-			throw new NotSupportedException("Cannot pass instance variable as numeric argument: " + variableName);
-		throw new NotSupportedException("Unsupported call argument expression for native compilation: " + expression);
-	} //ncrunch: no coverage end
 
 	private static string GetOrAddConstantLabel(double number,
 		List<(string Label, double Value)> dataConstants)
@@ -527,8 +428,11 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		var strings = new List<(string, string)>();
 		var seen = new HashSet<string>(StringComparer.Ordinal);
 		var labelIndex = 0;
-		foreach (var instruction in instructions.OfType<PrintInstruction>())
+		for (var instructionIndex = 0; instructionIndex < instructions.Count; instructionIndex++)
 		{
+			if (instructions[instructionIndex].InstructionType != InstructionType.Print)
+				continue;
+			var instruction = (PrintInstruction)instructions[instructionIndex];
 			var key = BuildPrintKey(instruction);
 			if (seen.Add(key))
 				strings.Add(($"str_{labelIndex++}", key));

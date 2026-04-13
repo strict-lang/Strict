@@ -1,16 +1,10 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 
 namespace Strict.Optimizers;
 
 /// <summary>
-/// Chains all instruction-level optimizers into a single optimization pipeline. The order is:
-/// 1. TestCodeRemover — strip passed test assertions first (the core Optimizer mission)
-/// 2. ConstantFoldingOptimizer — fold remaining constant arithmetic
-/// 3. StrengthReducer — simplify identity/zero operations (x*1→x, x+0→x, x*0→0)
-/// 4. DeadStoreEliminator — remove stores to variables that are never loaded
-/// 5. RedundantLoadEliminator — remove duplicate loads of the same variable
-/// 6. JumpThreadingOptimizer — remove empty conditional jump blocks
-/// 7. UnreachableCodeEliminator — remove instructions after unconditional return/jump
+/// Chains all instruction-level optimizers into a single optimization pipeline.
 /// </summary>
 public class AllInstructionOptimizers : InstructionOptimizer
 {
@@ -18,12 +12,22 @@ public class AllInstructionOptimizers : InstructionOptimizer
 	[
 		new TestCodeRemover(),
 		new ConstantFoldingOptimizer(),
+		new MethodInliningOptimizer(),
+		new ConstructorToFieldMutationsOptimizer(),
+		new LoopInvariantCodeMotionOptimizer(),
 		new StrengthReducer(),
 		new DeadStoreEliminator(),
 		new RedundantLoadEliminator(),
 		new JumpThreadingOptimizer(),
 		new UnreachableCodeEliminator()
 	];
+	public int NumberOfOptimizers => optimizers.Length;
+
+	public override void Optimize(BinaryExecutable binary)
+	{
+		foreach (var optimizer in optimizers)
+			optimizer.Optimize(binary);
+	}
 
 	public override List<Instruction> Optimize(List<Instruction> instructions)
 	{

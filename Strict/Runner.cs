@@ -15,33 +15,29 @@ using Strict.Bytecode.Serialization;
 namespace Strict;
 
 /// <summary>
-/// Allows running or build a .strict source file, running the Run method or supplying an
-/// expression to be executed based on what is available in the given file. Caches .strictbinary
-/// bytecode instructions that are used in later runs, only updated when source files are newer.
-/// Note that only .strict files contain the full actual code, everything after that is
-/// stripped, optimized, and just includes what is actually executed.
+/// Runs or builds a .strict source file via its Run method or a supplied expression.
+/// Caches .strictbinary bytecode for later runs, regenerating when source is newer.
+/// Loading a .strictbinary is fully self-contained and needs no source packages at all.
 /// </summary>
 public sealed class Runner
 {
-	public Runner(string strictFilePath, Package? skipPackageSearchAndUseThisTestPackage = null,
-		string expressionToRun = Method.Run, bool enableTestsAndDetailedOutput = false)
+	public Runner(string strictFilePath, string expressionToRun = Method.Run,
+		bool enableDetailedOutput = false)
 	{
 		this.strictFilePath = strictFilePath;
-		this.skipPackageSearchAndUseThisTestPackage = skipPackageSearchAndUseThisTestPackage;
 		this.expressionToRun = expressionToRun;
-		this.enableTestsAndDetailedOutput = enableTestsAndDetailedOutput;
+		this.enableDetailedOutput = enableDetailedOutput;
 		parser = new MethodExpressionParser();
 		repositories = new Repositories(parser);
 		Log("Strict.Runner: " + strictFilePath);
 	}
 
 	private readonly string strictFilePath;
-	private readonly Package? skipPackageSearchAndUseThisTestPackage;
 	private readonly string expressionToRun;
-	private readonly bool enableTestsAndDetailedOutput;
+	private readonly bool enableDetailedOutput;
 	private readonly MethodExpressionParser parser;
 	private readonly Repositories repositories;
-	private readonly List<long> stepTimes = new();
+	private readonly List<long> stepTimes = [];
 	private bool IsExpressionInvocation =>
 		expressionToRun != Method.Run && expressionToRun.Contains('(');
 	private string[] ProgramArguments =>
@@ -52,14 +48,13 @@ public sealed class Runner
 
 	private void Log(string message)
 	{
-		if (enableTestsAndDetailedOutput)
+		if (enableDetailedOutput)
 			Console.WriteLine(message);
 	}
 
 	/// <summary>
 	/// Generates a platform-specific executable from the compiled instructions. Uses MLIR when
 	/// -mlir is specified, LLVM IR when -llvm is specified, otherwise NASM + gcc/clang pipeline.
-	/// LLVM and MLIR are opt-in until feature parity is reached.
 	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
 	/// </summary>
 	public async Task Build(Platform platform, CompilerBackend backend = CompilerBackend.MlirDefault)
@@ -67,7 +62,6 @@ public sealed class Runner
 		if (IsExpressionInvocation)
 			throw new CannotBuildExecutableWithCustomExpression();
 		var binary = await GetBinary();
-		//TODO: convoluted! fix and remove this mess
 		if (binary.GetRunMethods().Any(method => method.parameters.Count > 0))
 		{
 			var launcherPath = CreateManagedLauncher(platform);
@@ -95,144 +89,90 @@ public sealed class Runner
 	public class CannotBuildExecutableWithCustomExpression : Exception;
 
 	/// <summary>
-	/// Tries to load a .strictbinary directly if it exists and is up to date, otherwise will load
-	/// from source and generate a fresh .strictbinary to be used in later runs as well.
+	/// Returns a BinaryExecutable. For .strictbinary input or a valid cache, loads directly
+	/// without any package — the binary is fully self-contained. Only loads source packages
+	/// when we need to compile from .strict source files.
 	/// </summary>
 	private async Task<BinaryExecutable> GetBinary()
 	{
-		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
-		basePackage = await TryLoadSubPackageIfNeeded(basePackage);
 		if (Path.GetExtension(strictFilePath) == BinaryExecutable.Extension)
-			return LogTiming("Loading existing " + strictFilePath,
-				() => new BinaryExecutable(strictFilePath, basePackage));
-		var cachedBinaryPath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
-		if (File.Exists(cachedBinaryPath))
-		{
-			//TODO: convoluted! fix and remove this mess
-			BinaryExecutable binary;
-			try
-			{
-				binary = new BinaryExecutable(cachedBinaryPath, basePackage);
-			}
-			catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile)
-			{
-				Log("Cached " + cachedBinaryPath + " is no longer compatible: " + ex.Message);
-				return await LoadFromSourceAndSaveBinary(basePackage);
-			}
-			var binaryLastModified = new FileInfo(cachedBinaryPath).LastWriteTimeUtc;
-			var sourceLastModified = new FileInfo(strictFilePath).LastWriteTimeUtc;
-			foreach (var typeFullName in binary.MethodsPerType.Keys)
-			{
-				var fileLastModified =
-					new FileInfo(typeFullName + Type.Extension).LastWriteTimeUtc;
-				if (fileLastModified > sourceLastModified)
-					sourceLastModified = fileLastModified;
-			}
+			return LogTiming("Loading " + strictFilePath, () => new BinaryExecutable(strictFilePath));
 #if !DISABLE_BINARY_CACHE
-			if (binaryLastModified >= sourceLastModified)
+		var cachedBinaryFilePath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
+		if (File.Exists(cachedBinaryFilePath))
+		{
+			var binaryTime = new FileInfo(cachedBinaryFilePath).LastWriteTimeUtc;
+			var sourceTime = new FileInfo(strictFilePath).LastWriteTimeUtc;
+			if (binaryTime >= sourceTime)
 			{
-				Log("Cached " + cachedBinaryPath + " from " + binaryLastModified +
-					" is still good, using it. Latest source file change: " + sourceLastModified);
-				return binary;
+				try
+				{
+					var binary = LogTiming("Loading cached " + cachedBinaryFilePath,
+						() => new BinaryExecutable(cachedBinaryFilePath));
+					Log("Using cached " + cachedBinaryFilePath + " from " + binaryTime);
+					return binary;
+				}
+				catch (Exception ex) when (ex is BinaryType.InvalidVersion
+					or BinaryExecutable.InvalidFile or BinaryExecutable.TypeNotFoundForBytecode
+					or ParsingFailed or Type.TypeAlreadyExistsInPackage
+					or Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers
+					or Context.TypeNotFound or EndOfStreamException)
+				{
+					Log("Cached binary incompatible: " + ex.Message + ", regenerating ..");
+				}
 			}
+			else
+				Log("Cached binary outdated (" + binaryTime + " < " + sourceTime + "), regenerating ..");
+		}
 #endif
-			Log("Cached " + cachedBinaryPath + " is outdated from " + binaryLastModified +
-				", source modified at " + sourceLastModified);
-		}
-		return await LoadFromSourceAndSaveBinary(basePackage);
+		var package = await LoadBasePackage();
+		return await LoadFromSourceAndSaveBinary(package);
 	}
 
-	private async Task<Package> GetPackage(string name)
+	private async Task<Package> LoadBasePackage()
 	{
-		if (skipPackageSearchAndUseThisTestPackage != null)
-			return skipPackageSearchAndUseThisTestPackage;
-		return await LogTiming(nameof(GetPackage) + " " + name, async () =>
-		{
-			if (!name.StartsWith(nameof(Strict), StringComparison.Ordinal))
-				throw new NotSupportedException("No github package search ability was implemented yet, only Strict packages work for now: " + name);
-			return await repositories.LoadStrictPackage(name);
-		});
-	}
-
-	private async Task<Package> TryLoadSubPackageIfNeeded(Package basePackage)
-	{
-		if (skipPackageSearchAndUseThisTestPackage != null)
+		var basePackage = await repositories.LoadStrictPackage();
+		var sourceDir = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
+		var strictRoot = Path.GetFullPath(basePackage.FolderPath);
+		if (!sourceDir.StartsWith(strictRoot, StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(sourceDir, strictRoot, StringComparison.OrdinalIgnoreCase) ||
+			IsExamplesDir(sourceDir))
 			return basePackage;
-		var fileDirectory = Path.GetDirectoryName(Path.GetFullPath(strictFilePath));
-		var repoRoot = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
-		if (string.IsNullOrEmpty(fileDirectory) ||
-			fileDirectory.Equals(repoRoot, StringComparison.OrdinalIgnoreCase))
-			return basePackage;
-		var relativePath = Path.GetRelativePath(repoRoot, fileDirectory);
-		if (string.IsNullOrEmpty(relativePath) || relativePath == "." ||
-			relativePath.StartsWith("..", StringComparison.Ordinal) ||
-			!IsRuntimePackageDirectory(relativePath, Path.Combine(repoRoot, relativePath)))
-			return basePackage;
-		await LoadDependencyPackages(repoRoot, relativePath);
-		var subPackageName = nameof(Strict) + Context.ParentSeparator +
-			relativePath.Replace(Path.DirectorySeparatorChar, Context.ParentSeparator);
-		return await GetPackage(subPackageName);
+		var relative = Path.GetRelativePath(strictRoot, sourceDir).
+			Replace(Path.DirectorySeparatorChar, Context.ParentSeparator).
+			Replace(Path.AltDirectorySeparatorChar, Context.ParentSeparator);
+		return await repositories.LoadStrictPackage(
+			nameof(Strict) + Context.ParentSeparator + relative);
 	}
 
-	private async Task LoadDependencyPackages(string repoRoot, string targetSubDir)
-	{
-		foreach (var directory in Directory.GetDirectories(repoRoot))
-		{
-			var dirName = Path.GetFileName(directory);
-			if (dirName != targetSubDir && IsRuntimePackageDirectory(dirName, directory))
-				await GetPackage(nameof(Strict) + Context.ParentSeparator + dirName);
-		}
-	}
+	private static bool IsExamplesDir(string dir) =>
+		dir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part =>
+			part.Equals("Examples", StringComparison.OrdinalIgnoreCase));
 
-	/// <summary>
-	/// Runtime packages define custom types and can be loaded as sub-packages. Meta-packages
-	/// (Language, Expressions) and example collections (Examples, Parsing) are excluded.
-	/// </summary>
-	private static bool IsRuntimePackageDirectory(string dirName, string directory) =>
-		!dirName.StartsWith(".", StringComparison.Ordinal) &&
-		!dirName.StartsWith("Strict", StringComparison.Ordinal) &&
-		dirName is not ("Language" or "Expressions" or "Examples" or "Parsing") &&
-		Directory.EnumerateFiles(directory, "*" + Type.Extension).Any();
-
-	private T LogTiming<T>(string message, Func<T> callToTime)
-	{
-		var startTicks = DateTime.UtcNow.Ticks;
-		try
-		{
-			return callToTime();
-		}
-		finally
-		{
-			var endTicks = DateTime.UtcNow.Ticks;
-			Log(message + " Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
-				" ms");
-			stepTimes.Add(endTicks - startTicks);
-		}
-	}
-
-	private async Task<BinaryExecutable> LoadFromSourceAndSaveBinary(Package basePackage)
+	private async Task<BinaryExecutable> LoadFromSourceAndSaveBinary(Package package)
 	{
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
-		var existingType = basePackage.FindDirectType(typeName);
+		var existingType = package.FindDirectType(typeName);
 		Type mainType;
 		if (existingType == null)
 		{
 			var typeLines = new TypeLines(typeName, await File.ReadAllLinesAsync(strictFilePath));
-			mainType = new Type(basePackage, typeLines).ParseMembersAndMethods(parser);
+			mainType = new Type(package, typeLines).ParseMembersAndMethods(parser);
 		}
 		else if (existingType.Methods.Any(method => !method.IsTrait))
 			mainType = existingType;
 		else
 		{
-			basePackage.Remove(existingType);
+			//TODO: this seems a bit strange
+			package.Remove(existingType);
 			var typeLines = new TypeLines(typeName, await File.ReadAllLinesAsync(strictFilePath));
-			mainType = new Type(basePackage, typeLines).ParseMembersAndMethods(parser);
+			mainType = new Type(package, typeLines).ParseMembersAndMethods(parser);
 		}
-		if (enableTestsAndDetailedOutput)
+		if (enableDetailedOutput)
 		{
 			Parse(mainType);
 			Validate(mainType);
-			RunTests(basePackage, mainType);
+			RunTests(package, mainType);
 		}
 		var executable = GenerateBinaryExecutable(mainType);
 		Log("Generated bytecode instructions: " + executable.TotalInstructionsCount);
@@ -268,13 +208,12 @@ public sealed class Runner
 				constants.CollapsedCount;
 		}));
 
-	private void RunTests(Package basePackage, Type mainType) =>
-		Log(LogTiming(nameof(Parse) + " " + strictFilePath, () =>
+	private void RunTests(Package package, Type mainType) =>
+		Log(LogTiming(nameof(RunTests) + " " + strictFilePath, () =>
 		{
-			var testExecutor = new TestInterpreter(basePackage);
+			var testExecutor = new TestInterpreter(package);
 			testExecutor.RunAllTestsInType(mainType);
-			return "Methods tested: " + testExecutor.Statistics.MethodsTested + ", Types tested: " +
-				testExecutor.Statistics.TypesTested + "\n" + testExecutor.Statistics;
+			return testExecutor.Statistics.ToString();
 		}));
 
 	private BinaryExecutable GenerateBinaryExecutable(Type mainType) =>
@@ -283,33 +222,20 @@ public sealed class Runner
 			var runMethods = mainType.Methods.Where(method => method.Name == Method.Run).ToArray();
 			if (runMethods.Length == 0)
 				throw new NotSupportedException("No Run method found in " + mainType.Name);
-			var preferredEntryMethod = runMethods.FirstOrDefault(method => method.Parameters.Count == 0) ??
-				runMethods[0];
+			var preferredEntryMethod =
+				runMethods.FirstOrDefault(method => method.Parameters.Count == 0) ?? runMethods[0];
 			return BinaryGenerator.GenerateFromRunMethods(preferredEntryMethod, runMethods);
 		});
 
 	private void OptimizeBytecode(BinaryExecutable executable) =>
 		Log(LogTiming(nameof(OptimizeBytecode), () =>
 		{
-			var optimizers = new InstructionOptimizer[]
-			{
-				new TestCodeRemover(), new ConstantFoldingOptimizer(), new DeadStoreEliminator(),
-				new UnreachableCodeEliminator(), new RedundantLoadEliminator()
-			};
-			var beforeInstructionsCount = executable.TotalInstructionsCount;
-			var optimizersResults = new List<string>();
-			foreach (var optimizer in optimizers)
-			{
-				var beforeOptimizerInstructions = executable.TotalInstructionsCount;
-				optimizer.Optimize(executable);
-				var removed = executable.TotalInstructionsCount - beforeOptimizerInstructions;
-				optimizersResults.Add(optimizer.GetType().Name + ": removed " + removed + " instructions");
-			}
-			var afterInstructionsCount = executable.TotalInstructionsCount;
-			var removedInstructions = beforeInstructionsCount - afterInstructionsCount;
-			return "Removed instruction: " + removedInstructions + " (" +
-				removedInstructions * 100 / beforeInstructionsCount + "%)" +
-				" with " + optimizers.Length + " optimizers:\n\t" + string.Join("\n\t", optimizersResults);
+			var beforeCount = executable.TotalInstructionsCount;
+			var allOptimizers = new AllInstructionOptimizers();
+			allOptimizers.Optimize(executable);
+			var removed = beforeCount - executable.TotalInstructionsCount;
+			return "Removed instructions: " + removed + " (" + removed * 100 / beforeCount +
+				"%) with " + allOptimizers.NumberOfOptimizers + " optimizers.";
 		}));
 
 	private BinaryExecutable CacheStrictExecutable(BinaryExecutable binary)
@@ -328,23 +254,56 @@ public sealed class Runner
 		return binary;
 	}
 
-	private void PrintCompilationSummary(CompilerBackend backend, Platform platform, string exeFilePath) =>
-		Console.WriteLine("Compiled " + strictFilePath + " via " + backend + " in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
-			" executable of " + new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
+	private T LogTiming<T>(string message, Func<T> callToTime)
+	{
+		var startTicks = DateTime.UtcNow.Ticks;
+		try
+		{
+			return callToTime();
+		}
+		finally
+		{
+			var endTicks = DateTime.UtcNow.Ticks;
+			Log(message + " Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
+				" ms");
+			stepTimes.Add(endTicks - startTicks);
+		}
+	}
 
-	/// <summary>
-	/// Evaluates a Strict expression like "TypeName(args).Method" or "TypeName(args)" (calls Run).
-	/// The result is printed to Console if the method returns a value.
-	/// Example: runner.RunExpression("FibonacciRunner(5).Compute") prints "5".
-	/// </summary>
+	public async Task Run()
+	{
+		if (IsExpressionInvocation)
+		{
+			await RunExpression(expressionToRun);
+			return;
+		}
+		var binary = await GetBinary();
+		if (ProgramArguments.Length > 0)
+		{
+			var runMethod = FindRunMethodForArguments(binary);
+			binary.SetEntryPoint(
+				binary.MethodsPerType.First(typeData =>
+					typeData.Value.MethodGroups.TryGetValue(Method.Run, out var overloads) &&
+					overloads.Contains(runMethod)).Key,
+				Method.Run, runMethod.parameters.Count, runMethod.ReturnTypeName);
+			var arguments = BuildProgramArguments(binary, runMethod);
+			LogTiming(nameof(Run),
+				() => new VirtualMachine(binary).Execute(initialVariables: arguments));
+		}
+		else
+			LogTiming(nameof(Run), () => new VirtualMachine(binary).Execute());
+		Console.WriteLine("Executed " + strictFilePath + " via " + nameof(VirtualMachine) + " in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
+		stepTimes.Clear();
+	}
+
 	public async Task RunExpression(string expressionString)
 	{
-		//TODO: still duplicated code, should be the same as Run!
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
-		var basePackage = skipPackageSearchAndUseThisTestPackage ?? await GetPackage(nameof(Strict));
+		var package = await LoadBasePackage();
 		var sourceLines = await File.ReadAllLinesAsync(strictFilePath);
-		var targetType = new Type(basePackage, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
+		var targetType =
+			new Type(package, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
 		try
 		{
 			var method = new Method(targetType, 0, parser,
@@ -364,23 +323,17 @@ public sealed class Runner
 		}
 	}
 
-	//TODO: why do we care? just use BinaryExecutable.EntryPoint!
 	private BinaryMethod FindRunMethodForArguments(BinaryExecutable binary)
 	{
 		var runMethods = binary.GetRunMethods();
-		var exactMatch = runMethods.FirstOrDefault(method =>
-			method.parameters.Count == ProgramArguments.Length);
-		if (exactMatch != null)
-			return exactMatch;
-		var listMatch = runMethods.FirstOrDefault(method => method.parameters.Count == 1 &&
-			ResolveType(binary, method.parameters[0].FullTypeName).IsList);
-		if (listMatch != null)
-			return listMatch;
-		throw new NotSupportedException("No Run method accepts " + ProgramArguments.Length +
-			" arguments.");
+		return runMethods.FirstOrDefault(method =>
+				method.parameters.Count == ProgramArguments.Length) ??
+			runMethods.FirstOrDefault(method => method.parameters.Count == 1 &&
+				ResolveType(binary, method.parameters[0].FullTypeName).IsList) ??
+			throw new NotSupportedException("No Run method accepts " + ProgramArguments.Length +
+				" arguments.");
 	}
 
-	//TODO: overcomplicated
 	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(
 		BinaryExecutable binary, BinaryMethod runMethod)
 	{
@@ -407,21 +360,26 @@ public sealed class Runner
 		for (var index = 0; index < runMethod.parameters.Count; index++)
 		{
 			var parameter = runMethod.parameters[index];
-			values[parameter.Name] = CreateValueInstance(ResolveType(binary, parameter.FullTypeName), ProgramArguments[index]);
+			values[parameter.Name] =
+				CreateValueInstance(ResolveType(binary, parameter.FullTypeName),
+					ProgramArguments[index]);
 		}
 		return values;
 	}
 
-	//TODO: overcomplicated
-	private static Type ResolveType(BinaryExecutable binary, string fullTypeName) =>
-		(fullTypeName.Contains(Context.ParentSeparator)
-			? binary.basePackage.FindFullType(fullTypeName)
-			: null) ??
-		binary.basePackage.FindType(fullTypeName) ??
-		(fullTypeName.StartsWith(nameof(Strict) + Context.ParentSeparator, StringComparison.Ordinal)
-			? binary.basePackage.FindType(fullTypeName[(nameof(Strict).Length + 1)..])
-			: null) ??
-		binary.basePackage.GetType(fullTypeName);
+	private static Type ResolveType(BinaryExecutable binary, string fullTypeName)
+	{
+		if (fullTypeName.Contains(Context.ParentSeparator))
+		{
+			var found = binary.basePackage.FindFullType(fullTypeName);
+			if (found != null)
+				return found;
+		}
+		return binary.basePackage.FindType(fullTypeName) ??
+			binary.basePackage.FindType(
+				fullTypeName[(fullTypeName.LastIndexOf(Context.ParentSeparator) + 1)..]) ??
+			binary.basePackage.GetType(fullTypeName);
+	}
 
 	private static ValueInstance CreateValueInstance(Type targetType, string argument)
 	{
@@ -431,14 +389,10 @@ public sealed class Runner
 			return new ValueInstance(argument);
 		return targetType.IsBoolean
 			? new ValueInstance(targetType, bool.Parse(argument))
-			: throw new NotSupportedException("Only Number, Text, Boolean and List arguments are supported.");
+			: throw new NotSupportedException(
+				"Only Number, Text, Boolean and List arguments are supported.");
 	}
 
-	private static string GetRunMethodTypeFullName(BinaryExecutable binary, BinaryMethod runMethod) =>
-		binary.MethodsPerType.First(typeData => typeData.Value.MethodGroups.TryGetValue(Method.Run,
-			out var overloads) && overloads.Contains(runMethod)).Key;
-
-	//TODO: why do we have to do this here? shouldn't this be happening in generation?
 	private string CreateManagedLauncher(Platform platform)
 	{
 		if (platform == Platform.Windows && !OperatingSystem.IsWindows() ||
@@ -473,28 +427,9 @@ public sealed class Runner
 		Console.WriteLine("Created " + platform + " executable launcher of " +
 			new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
 
-	public async Task Run()
-	{
-		if (IsExpressionInvocation)
-		{
-			await RunExpression(expressionToRun);
-			return;
-		}
-		var binary = await GetBinary();
-		if (ProgramArguments.Length > 0)
-		{
-			//TODO: why do we have to do this here? shouldn't this be happening in generation?
-			var runMethod = FindRunMethodForArguments(binary);
-			binary.SetEntryPoint(GetRunMethodTypeFullName(binary, runMethod), Method.Run,
-				runMethod.parameters.Count, runMethod.ReturnTypeName);
-			var programArguments = BuildProgramArguments(binary, runMethod);
-			LogTiming(nameof(Run),
-				() => new VirtualMachine(binary).Execute(initialVariables: programArguments));
-		}
-		else
-			LogTiming(nameof(Run), () => new VirtualMachine(binary).Execute());
-		Console.WriteLine("Executed " + strictFilePath + " via " + nameof(VirtualMachine) + " in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
-	}
+	private void PrintCompilationSummary(CompilerBackend backend, Platform platform,
+		string exeFilePath) =>
+		Console.WriteLine("Compiled " + strictFilePath + " via " + backend + " in " +
+			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
+			" executable of " + new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
 }
-//TODO: whole class is too long and complicated, this should all be doable in 300-400 lines max!

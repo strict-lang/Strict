@@ -45,16 +45,23 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		var last = interpreter.noneInstance;
 		var count = body.Expressions.Count;
 		HashSet<string>? skippedVariables = null;
+		var pastTestBlock = false;
 		for (var index = 0; index < count; index++)
 		{
 			var e = body.Expressions[index];
-			var isTest = index < count - 1 && IsStandaloneInlineTest(e);
-			if (isTest)
+			ctx.IsTestAtCurrentLine = !pastTestBlock && index < count - 1 && IsStandaloneInlineTest(e);
+			if (!ctx.IsTestAtCurrentLine && e is not Declaration && e is not MutableReassignment)
+				pastTestBlock = true;
+			if (ctx.IsTestAtCurrentLine)
 				interpreter.Statistics.TestExpressions++;
-			if (isTest == !runOnlyTests && e is not Declaration && e is not MutableReassignment ||
+			if (ctx.IsTestAtCurrentLine == !runOnlyTests && e is not Declaration && e is not MutableReassignment &&
+				e is not For ||
 				runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
 					skippedVariables != null &&
-					ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)))
+					ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)) ||
+				runOnlyTests && skippedVariables != null && e is not Declaration &&
+				ExpressionReferencesSkippedVariable(e, skippedVariables) || runOnlyTests &&
+				e is For forExpr && ForExpressionReferencesAnyMember(body, forExpr))
 			{
 				if (runOnlyTests && e is Declaration skippedDecl)
 					(skippedVariables ??= []).Add(skippedDecl.Name);
@@ -64,13 +71,15 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 			last = interpreter.RunExpression(e, ctx);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;
-			if (runOnlyTests && isTest && !last.Boolean)
+			if (runOnlyTests && ctx.IsTestAtCurrentLine && !last.Boolean)
 				throw new Interpreter.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}
 		if (runOnlyTests && count > 1 && last.Equals(interpreter.noneInstance) &&
 			body.Method.Name != Method.Run)
 			throw new Interpreter.MethodRequiresTest(body.Method, body);
 		if (runOnlyTests || last.IsError || last.IsType(body.Method.ReturnType))
+			return last;
+		if (body.Method.ReturnType.IsSameOrCanBeUsedAs(last.GetType()))
 			return last;
 		if (body.Method.ReturnType.IsMutable && !last.IsMutable &&
 			last.IsType(((GenericTypeImplementation)body.Method.ReturnType).ImplementationTypes[0]))
@@ -82,6 +91,7 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		expr switch
 		{
 			MemberCall m => m.Member.Name == memberName && m.Instance == null,
+			ListCall lc => ExpressionReferencesMember(lc.List, memberName),
 			MethodCall call => call.Instance == null && call.Method.Name != Method.From ||
 				call.Instance != null && ExpressionReferencesMember(call.Instance, memberName) ||
 				call.Arguments.Any(a => ExpressionReferencesMember(a, memberName)),
@@ -104,8 +114,25 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 			MemberCall m => m.Instance != null &&
 				ExpressionReferencesSkippedVariable(m.Instance, skippedVariables),
 			List list => list.Values.Any(v => ExpressionReferencesSkippedVariable(v, skippedVariables)),
+			For f => ExpressionReferencesSkippedVariable(f.Iterator, skippedVariables) ||
+				BodyExpressionsReferenceSkippedVariable(f.Body, skippedVariables),
+			If iff => ExpressionReferencesSkippedVariable(iff.Condition, skippedVariables) ||
+				BodyExpressionsReferenceSkippedVariable(iff.Then, skippedVariables) ||
+				iff.OptionalElse != null &&
+				BodyExpressionsReferenceSkippedVariable(iff.OptionalElse, skippedVariables),
+			MutableReassignment mr =>
+				ExpressionReferencesSkippedVariable(mr.Target, skippedVariables) ||
+				ExpressionReferencesSkippedVariable(mr.Value, skippedVariables),
+			Body body => body.Expressions.Any(e =>
+				ExpressionReferencesSkippedVariable(e, skippedVariables)),
 			_ => false
 		};
+
+	private static bool BodyExpressionsReferenceSkippedVariable(Expression expr,
+		IReadOnlySet<string> skippedVariables) =>
+		expr is Body body
+			? body.Expressions.Any(e => ExpressionReferencesSkippedVariable(e, skippedVariables))
+			: ExpressionReferencesSkippedVariable(expr, skippedVariables);
 
 	private static bool IsStandaloneInlineTest(Expression e) =>
 		e.ReturnType.IsBoolean && e is not If && e is not Return && e is not Declaration &&
@@ -119,6 +146,24 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 				return true;
 		return false;
 	}
+
+	private static bool ForExpressionReferencesAnyMember(Body body, For forExpr)
+	{
+		var members = body.Method.Type.Members;
+		for (var i = 0; i < members.Count; i++)
+		{
+			var name = members[i].Name;
+			if (!members[i].IsConstant && (ExpressionReferencesMember(forExpr.Iterator, name) ||
+				BodyExpressionsReferencesMember(forExpr.Body, name)))
+				return true;
+		}
+		return false;
+	}
+
+	private static bool BodyExpressionsReferencesMember(Expression expr, string memberName) =>
+		expr is Body body
+			? body.Expressions.Any(e => ExpressionReferencesMember(e, memberName))
+			: ExpressionReferencesMember(expr, memberName);
 
 	private string GetTestFailureDetails(Expression expression, ExecutionContext ctx) =>
 		expression is Binary

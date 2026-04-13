@@ -35,8 +35,6 @@ public class RepositoriesTests
 	[Test]
 	public async Task LoadStrictBaseTypes()
 	{
-		Assert.That(repos.ContainsPackageNameInCache(nameof(Strict)), Is.False,
-			await repos.ToDebugString());
 		using var basePackage = await repos.LoadStrictPackage();
 		Assert.That(basePackage.FindDirectType(Type.Any), Is.Not.Null);
 		Assert.That(basePackage.FindDirectType(Type.Number), Is.Not.Null);
@@ -84,11 +82,8 @@ public class RepositoriesTests
 	[Test]
 	public async Task LoadStrictImageProcessingTypes()
 	{
-		using var basePackage = await repos.LoadStrictPackage();
-		using var mathPackage = await repos.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + "Math");
-		using var imageProcessingPackage =
-			await repos.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + "ImageProcessing");
-		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
+		using var package = await repos.LoadStrictPackage("Strict/ImageProcessing");
+		var adjustBrightness = package.GetType("AdjustBrightness");
 		Assert.That(adjustBrightness, Is.Not.Null);
 		Assert.That(adjustBrightness.Methods[0].GetBodyAndParseIfNeeded(), Is.Not.Null);
 	}

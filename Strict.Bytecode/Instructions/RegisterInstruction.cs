@@ -1,4 +1,4 @@
-﻿using Strict.Bytecode.Serialization;
+using Strict.Bytecode.Serialization;
 
 namespace Strict.Bytecode.Instructions;
 
@@ -8,9 +8,6 @@ public abstract class RegisterInstruction(InstructionType instructionType, Regis
 	public Register Register { get; } = register;
 	public override string ToString() => $"{InstructionType} {Register}";
 
-	public override void Write(BinaryWriter writer, NameTable table)
-	{
-		base.Write(writer, table);
+	protected override void WritePayload(BinaryWriter writer, NameTable table) =>
 		writer.Write((byte)Register);
-	}
 }

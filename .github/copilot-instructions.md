@@ -1,5 +1,20 @@
 # Copilot Instructions
 
+Respond terse like smart caveman. All technical substance stay. Only fluff die.
+
+Rules:
+
+Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
+Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
+Pattern: [thing] [action] [reason]. [next step].
+Not: "Sure! I'd be happy to help you with that." or "You're absolutely right!" or "Great!"
+Yes: "Bug in auth middleware. Fix:"
+Switch level: /caveman lite|full|ultra|wenyan Stop: "stop caveman" or "normal mode"
+
+Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
+
+Boundaries: code/commits/PRs written normal.
+
 ## 🚨 Top Priority: Strict Self-Hosting Conversion
 
 **Read [`strict-conversion-plan.md`](../strict-conversion-plan.md) first.** It is the top priority for all ongoing work. The plan outlines converting every C# layer of the Strict implementation into `.strict` files so the language can bootstrap itself. Always check the plan before starting any new task, update progress percentages when `.strict` files are added or C# files are replaced, and follow the layer-by-layer order described there.
@@ -24,6 +39,7 @@
 
 ## Code Style
 - No empty lines are allowed inside methods.
+- Always indent with tabs, never use spaces, follow the coding guidelines in .editorconfig and the project's existing style.
 - Avoid adding `ArgumentNullException.ThrowIfNull`/debug asserts.
 - No duplicate code is allowed, not in production, not in tests. If code exists for something, reuse it. If it doesn't exist, add it in the right place and reuse it.
 - Do name variables and members properly, no 1 letter abbreviations (not even i, a, b, c, s, n), explain what this is. i should be index, s could be name or message or whatever, n might be number or name. Do not use long verbose names either. Short scope -> short names, long scope -> longer names with more of an explanation what they are for (e.g. outputFilePath, optimizedInstructions).
@@ -107,6 +123,7 @@ Write the test first. Watch it fail. Write minimal code to pass.
 Thinking "skip TDD just this once"? Stop. That's rationalization.
 
 ### The Iron Law
+
 ```
 NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 ```
@@ -369,36 +386,21 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 
 **Bug:** Empty email accepted
 
-**RED**
-```typescript
-test('rejects empty email', async () => {
+**RED**test('rejects empty email', async () => {
   const result = await submitForm({ email: '' });
   expect(result.error).toBe('Email required');
 });
-```
-
-**Verify RED**
-```bash
-$ npm test
+**Verify RED**$ npm test
 FAIL: expected 'Email required', got undefined
-```
-
 **GREEN**
-```typescript
 function submitForm(data: FormData) {
   if (!data.email?.trim()) {
     return { error: 'Email required' };
   }
   // ...
 }
-```
-
-**Verify GREEN**
-```bash
-$ npm test
+**Verify GREEN**$ npm test
 PASS
-```
-
 **REFACTOR**
 Extract validation for multiple fields if needed.
 
@@ -469,3 +471,15 @@ No exceptions without your human partner's permission.
 - In this repo, treat Repositories and related package-loading/test-running code as intended to support multithreaded execution; caching exists to avoid reloading the same package across parallel tests.
 - Keep the `typesToTest` snapshot list in `TestInterpreter.RunAllTestsInPackage` because package types can change while lazily adding generic implementations during execution.
 - For this repo's test-runner performance work, parallelize at the package level, not per type; avoid `Parallel.ForEachAsync` over types because type tests are too fine-grained and the overhead dominates.
+
+## Logging Guidelines
+- When logging caller chains for diagnostics, include more than just a few methods so the upstream caller beyond framework helpers (like String.Join) is visible.
+
+## VM Optimization Work
+- Prefer root-cause VM optimization work that removes string-based frame lookups (FrameKey/CallFrame string access) and stays in ValueInstance/object model lookups instead of adding more caching or tests.
+- For the ongoing VM refactor in this repo, remove remaining CallFrame string-lookup issues properly: avoid FrameKey-style fallback behavior, avoid returning fabricated string-based ValueInstances for non-text cases, reduce duplicated Get/TryGet helpers, and focus on lowering the still-high AdjustBrightness allocations.
+- For ongoing Strict VM optimization, prioritize root-cause fixes that maximize preallocated register-array use, remove remaining string/dictionary/list hot-loop lookups where possible, and use allocation profiling to target ValueInstance/object allocations before deeper VM changes.
+
+## VM Collection Optimization
+- Prefer a single flat preallocated float32 backing for any type composed only of numbers and lists of such types, with fast index-based reads and writes and no per-access object creation in VM or compiled execution.
+- Prefer a general flat numeric-list backing for types composed only of numeric members; first implement double-based flattening, then evaluate lower-precision storage later.

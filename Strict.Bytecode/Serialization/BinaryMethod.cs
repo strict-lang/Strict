@@ -24,8 +24,28 @@ public sealed class BinaryMethod
 		type.ReadMembers(reader, parameters);
 		ReturnTypeName = type.Table.names[reader.Read7BitEncodedInt()];
 		var instructionCount = reader.Read7BitEncodedInt();
+		var prevSourceLine = 0;
 		for (var instructionIndex = 0; instructionIndex < instructionCount; instructionIndex++)
-			instructions.Add(type.binary!.ReadInstruction(reader, type.Table));
+			instructions.Add(type.binary!.ReadInstruction(reader, type.Table, ref prevSourceLine));
+		RestoreLoopLinks();
+	}
+
+	private void RestoreLoopLinks()
+	{
+		var loopBeginIndexes = new Stack<int>();
+		for (var instructionIndex = 0; instructionIndex < instructions.Count; instructionIndex++)
+			switch (instructions[instructionIndex])
+			{
+			case LoopBeginInstruction loopBegin:
+				loopBegin.InstructionIndex = instructionIndex;
+				loopBeginIndexes.Push(instructionIndex);
+				break;
+			case LoopEndInstruction loopEnd when loopBeginIndexes.Count > 0:
+				var beginIndex = loopBeginIndexes.Pop();
+				loopEnd.Begin = (LoopBeginInstruction)instructions[beginIndex];
+				loopEnd.BeginIndex = beginIndex;
+				break;
+			}
 	}
 
 	public bool UsesConsolePrint => instructions.Any(instruction => instruction is PrintInstruction);
@@ -35,7 +55,8 @@ public sealed class BinaryMethod
 		type.WriteMembers(writer, parameters);
 		writer.Write7BitEncodedInt(type.Table[ReturnTypeName]);
 		writer.Write7BitEncodedInt(instructions.Count);
+		var prevSourceLine = 0;
 		foreach (var instruction in instructions)
-			instruction.Write(writer, type.Table);
+			instruction.WriteCompressed(writer, type.Table, ref prevSourceLine);
 	}
 }

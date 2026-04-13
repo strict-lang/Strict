@@ -94,7 +94,11 @@ public sealed class NameTable
 		"characters",
 		"texts",
 		"NewLine",
-		"Tab"
+		"Tab",
+		nameof(Strict) + Context.ParentSeparator + Type.List + "(" + Type.Number + ")",
+		Type.List + "(" + Type.Number + ")",
+		nameof(Strict) + Context.ParentSeparator + Type.List + "(" + Type.Text + ")",
+		Type.List + "(" + Type.Text + ")"
 	];
 
 	public NameTable CollectStrings(Instruction instruction) =>
@@ -106,12 +110,14 @@ public sealed class NameTable
 			StoreFromRegisterInstruction storeReg => Add(storeReg.Identifier),
 			SetInstruction set => CollectValueInstanceStrings(set.ValueInstance),
 			LoadConstantInstruction loadConst => CollectValueInstanceStrings(loadConst.Constant),
-			Invoke invoke => CollectMethodCallStrings(invoke.Method),
+			Invoke invoke => CollectInvokeMethodInfoStrings(invoke.MethodInfo),
 			WriteToListInstruction writeList => Add(writeList.Identifier),
 			WriteToTableInstruction writeTable => Add(writeTable.Identifier),
 			RemoveInstruction remove => Add(remove.Identifier),
 			ListCallInstruction listCall => Add(listCall.Identifier),
 			PrintInstruction print => Add(print.TextPrefix),
+			LoopBeginInstruction loopBegin => loopBegin.CustomVariableNames.Aggregate(this,
+				(current, customVariableName) => current.Add(customVariableName)),
 			_ => this
 		};
 
@@ -134,14 +140,14 @@ public sealed class NameTable
 			return Add(val.Text);
 		if (val.IsList)
 		{
-			Add(val.List.ReturnType.Name);
+			Add(val.List.ReturnType.FullName);
 			foreach (var item in val.List.Items)
 				CollectValueInstanceStrings(item);
 			return this;
 		}
 		if (val.IsDictionary)
 		{
-			Add(val.GetType().Name);
+			Add(val.GetType().FullName);
 			foreach (var kvp in val.GetDictionaryItems())
 			{
 				CollectValueInstanceStrings(kvp.Key);
@@ -153,14 +159,24 @@ public sealed class NameTable
 		if ((type.IsNone || type.IsBoolean || type.IsNumber || type.IsCharacter) &&
 			BinaryExecutable.IsIntegerNumber(val.Number))
 			return this;
-		return Add(type.Name);
+		return Add(type.FullName);
+	}
+
+	private NameTable CollectInvokeMethodInfoStrings(InvokeMethodInfo info)
+	{
+		Add(info.TypeFullName);
+		Add(info.MethodName);
+		Add(info.ReturnTypeName);
+		foreach (var paramName in info.ParameterNames)
+			Add(paramName);
+		return this;
 	}
 
 	private NameTable CollectMethodCallStrings(MethodCall mc)
 	{
-		Add(mc.Method.Type.Name);
+		Add(mc.Method.Type.FullName);
 		Add(mc.Method.Name);
-		Add(mc.ReturnType.Name);
+		Add(mc.ReturnType.FullName);
 		foreach (var parameter in mc.Method.Parameters)
 			Add(parameter.Name).Add(parameter.Type.FullName);
 		if (mc.Instance != null)
@@ -174,20 +190,24 @@ public sealed class NameTable
 		expr switch
 		{
 			null => this,
-      Expressions.List list => Add(list.ReturnType.FullName).CollectListExpressionStrings(list),
+			List list => Add(list.ReturnType.FullName).CollectListExpressionStrings(list),
 			Value { Data.IsText: true } val => Add(val.Data.Text),
 			Value val when val.Data.GetType().IsBoolean => Add(val.Data.GetType().Name),
-			Value val when !val.Data.GetType().IsNumber || !BinaryExecutable.IsIntegerNumber(val.Data.Number)
-				=> Add(val.Data.GetType().Name), //ncrunch: no coverage
-			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.Name).
+			Value val when !val.Data.GetType().IsNumber ||
+				!BinaryExecutable.IsIntegerNumber(val.Data.Number) => Add(val.Data.GetType().Name),
+			//TODO: need tests!
+			MemberCall memberCall => Add(memberCall.Member.Name).Add(memberCall.Member.Type.FullName).
 				CollectExpressionStrings(memberCall.Instance),
-			Expressions.Binary binary => Add(binary.Method.Name). //ncrunch: no coverage
-				CollectExpressionStrings(binary.Instance).CollectExpressionStrings(binary.Arguments[0]),
+			Binary binary => Add(binary.Method.Name).CollectExpressionStrings(binary.Instance).
+				CollectExpressionStrings(binary.Arguments[0]),
 			MethodCall mc => CollectMethodCallStrings(mc),
-			_ => Add(expr.ToString()).Add(expr.ReturnType.Name)
+			ListCall listCall => Add(listCall.ReturnType.FullName).CollectExpressionStrings(listCall.List).
+				CollectExpressionStrings(listCall.Index),
+			_ => Add(expr.ToString()).Add(expr.ReturnType.FullName)
 		};
 
-	private NameTable CollectListExpressionStrings(Expressions.List list)
+	//TODO: never called, even needed?
+	private NameTable CollectListExpressionStrings(List list)
 	{
 		foreach (var value in list.Values)
 			CollectExpressionStrings(value);

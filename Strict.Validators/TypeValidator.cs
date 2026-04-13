@@ -61,7 +61,7 @@ public sealed class TypeValidator : Visitor
 		//ncrunch: no coverage start
 		var mutableReassignments = body.Expressions.OfType<MutableReassignment>().ToList();
 		foreach (var mutableVariable in body.Variables.Where(variable => variable.IsMutable))
-			if (IsVariableValueUnchanged(mutableVariable, mutableReassignments))
+			if (IsVariableValueUnchanged(body, mutableVariable, mutableReassignments))
 				throw new VariableDeclaredAsMutableButValueNeverChanged(body, mutableVariable);
 	} //ncrunch: no coverage end
 
@@ -69,9 +69,37 @@ public sealed class TypeValidator : Visitor
 		: ParsingFailed(type, 0, name);
 
 	//ncrunch: no coverage start
-	private static bool IsVariableValueUnchanged(Variable mutableVariable,
+	private static bool IsVariableValueUnchanged(Body body, Variable mutableVariable,
 		IEnumerable<MutableReassignment> mutableReassignments) =>
-		mutableReassignments.FirstOrDefault(m => m.Name == mutableVariable.Name) == null;
+		mutableReassignments.FirstOrDefault(reassignment => reassignment.Name == mutableVariable.Name) ==
+		null && !IsVariablePassedToMutableParameter(body, mutableVariable.Name);
+
+	private static bool IsVariablePassedToMutableParameter(Body body, string variableName)
+	{
+		foreach (var expression in body.Expressions)
+			if (IsVariablePassedToMutableParameter(expression, variableName))
+				return true;
+		return false;
+	}
+
+	private static bool IsVariablePassedToMutableParameter(Expression expression,
+		string variableName)
+	{
+		if (expression is MethodCall methodCall)
+			for (var argumentIndex = 0; argumentIndex < methodCall.Arguments.Count &&
+				argumentIndex < methodCall.Method.Parameters.Count; argumentIndex++)
+				if (methodCall.Method.Parameters[argumentIndex].IsMutable &&
+					GetRootName(methodCall.Arguments[argumentIndex]) == variableName)
+					return true;
+		if (expression is Body nestedBody)
+			foreach (var nestedExpression in nestedBody.Expressions)
+				if (IsVariablePassedToMutableParameter(nestedExpression, variableName))
+					return true;
+		if (expression is For forExpression)
+			// ReSharper disable once TailRecursiveCall
+			return IsVariablePassedToMutableParameter(forExpression.Body, variableName);
+		return false;
+	}
 
 	public sealed class VariableDeclaredAsMutableButValueNeverChanged(Body body, Variable variable)
 		: ParsingFailed(body, variable.Name);
@@ -88,23 +116,35 @@ public sealed class TypeValidator : Visitor
 		else if (expression is MutableReassignment reassignment)
 		{
 			variables.reassignedMutables.Add(reassignment.Name);
-			if (GetRootParameterName(reassignment.Target) is { } rootName)
+			if (GetRootName(reassignment.Target) is { } rootName)
 				variables.reassignedMutables.Add(rootName);
 		}
-		else
-			return base.Visit(expression, body, context);
-		return expression;
+		else if (expression is MethodCall methodCall)
+			TrackMutableArgumentsPassedByReference(methodCall, variables);
+		return base.Visit(expression, body, context);
 	}
 
-	private static string? GetRootParameterName(Expression target)
+	private static void TrackMutableArgumentsPassedByReference(MethodCall methodCall,
+		VariableUsages variables)
+	{
+		for (var argumentIndex = 0; argumentIndex < methodCall.Arguments.Count &&
+			argumentIndex < methodCall.Method.Parameters.Count; argumentIndex++)
+			if (methodCall.Method.Parameters[argumentIndex].IsMutable &&
+				GetRootName(methodCall.Arguments[argumentIndex]) is { } rootName)
+				variables.reassignedMutables.Add(rootName);
+	}
+
+	private static string? GetRootName(Expression target)
 	{
 		var current = target;
 		while (current is ListCall listCall)
 			current = listCall.List;
 		while (current is MemberCall memberCall && memberCall.Instance != null)
 			current = memberCall.Instance;
-		return current is ParameterCall rootParam
-			? rootParam.Parameter.Name
+		if (current is ParameterCall rootParam)
+			return rootParam.Parameter.Name;
+		return current is VariableCall rootVariable
+			? rootVariable.Variable.Name
 			: null;
 	}
 
@@ -124,9 +164,10 @@ public sealed class TypeValidator : Visitor
 
 	public override void Visit(Method method, bool forceParsingBody = false, object? context = null)
 	{
-		if (method.Parameters.Any(p => p.IsMutable))
+		var hasMutableParameter = method.Parameters.Any(parameter => parameter.IsMutable);
+		if (hasMutableParameter)
 			context ??= new VariableUsages();
-		base.Visit(method, forceParsingBody, context);
+		base.Visit(method, forceParsingBody || hasMutableParameter, context);
 		foreach (var parameter in method.Parameters)
 		{
 			ValidateUnusedParameter(method, parameter.Name);

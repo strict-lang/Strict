@@ -184,12 +184,28 @@ public abstract class Context
 	public GenericTypeImplementation GetDictionaryImplementationType(Type keyType, Type valueType) =>
 		GetType(Type.Dictionary).GetGenericImplementation(keyType, valueType);
 
-	private Type? FindFullType(string name) =>
-		!name.Contains(' ') && !name.Contains('"') && name.Contains(ParentSeparator)
-			? name == FullName
-				? this as Type
-				: GetPackage()?.FindFullType(name)
+	private Type? FindFullType(string name)
+	{
+		if (name.Contains(' ') || name.Contains('"') || !name.Contains(ParentSeparator))
+			return null;
+		if (name == FullName)
+			return this as Type;
+		var package = GetPackage();
+		return package?.FindFullType(name) ?? TryFindWithRootPrefix(package, name);
+	}
+
+	private static Type? TryFindWithRootPrefix(Package? package, string name)
+	{
+		if (package == null)
+			return null;
+		var root = package;
+		while (root.Parent is Package parentPackage && parentPackage.Name.Length > 0)
+			root = parentPackage;
+		var rootPrefix = root.FullName + ParentSeparator;
+		return !name.StartsWith(rootPrefix, StringComparison.Ordinal)
+			? root.FindFullType(rootPrefix + name)
 			: null;
+	}
 
 	public override string ToString() => FullName;
 

@@ -10,9 +10,9 @@ public sealed class RemoveInstruction(Register register, string identifier)
 
 	public string Identifier { get; } = identifier;
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		writer.Write7BitEncodedInt(table[Identifier]);
 	}
 }

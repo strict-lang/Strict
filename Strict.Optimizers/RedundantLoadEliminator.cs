@@ -23,20 +23,23 @@ public sealed class RedundantLoadEliminator : InstructionOptimizer
 				variableToRegister.Clear();
 				continue;
 			}
-			if (instructions[i] is StoreFromRegisterInstruction storeReg)
+			switch (instructions[i].InstructionType)
 			{
+			case InstructionType.StoreRegisterToVariable:
+				var storeReg = (StoreFromRegisterInstruction)instructions[i];
 				variableToRegister.Remove(storeReg.Identifier);
 				continue;
+			case InstructionType.LoadVariableToRegister:
+				var load = (LoadVariableToRegister)instructions[i];
+				if (variableToRegister.TryGetValue(load.Identifier, out var existingRegister))
+				{
+					registerRemapping[load.Register] = existingRegister;
+					toRemove.Add(i);
+				}
+				else
+					variableToRegister[load.Identifier] = load.Register;
+				break;
 			}
-			if (instructions[i] is not LoadVariableToRegister load)
-				continue;
-			if (variableToRegister.TryGetValue(load.Identifier, out var existingRegister))
-			{
-				registerRemapping[load.Register] = existingRegister;
-				toRemove.Add(i);
-			}
-			else
-				variableToRegister[load.Identifier] = load.Register;
 		}
 		for (var i = toRemove.Count - 1; i >= 0; i--)
 			instructions.RemoveAt(toRemove[i]);
@@ -46,7 +49,7 @@ public sealed class RedundantLoadEliminator : InstructionOptimizer
 	}
 
 	private static bool IsBlockBoundary(Instruction instruction) =>
-		instruction.InstructionType >= InstructionType.LoopBegin;
+		instruction.InstructionType is InstructionType.Invoke or >= InstructionType.LoopBegin;
 
 	private static void RemapRegisters(List<Instruction> instructions,
 		Dictionary<Register, Register> remapping)

@@ -18,7 +18,7 @@ to Number
 in(text) Boolean
 	"hi" is not in "hello there"
 	"lo" is in "hello there"
-	for Range(0, Length - text.Length)
+	for Length - text.Length
 		StartsWith(text, index)
 Combine(texts Texts, separator = ", ") Text
 	Combine(("a", "b", "c")) is "a, b, c"
@@ -77,13 +77,13 @@ LastIndexOf(text Text) Number
 	"hello".LastIndexOf("l") is 3
 	"hello".LastIndexOf("x") is -1
 	for Range(0, Length - text.Length).Reverse
-		if StartsWith(text, value)
-			return value
+		if StartsWith(text, index)
+			return index
 	-1
 Substring(start Number, length Number) Text
 	"hello".Substring(1, 3) is "ell"
 	for Range(start, start + length)
-		outer(value)
+		characters(index)
 Replace(searchFor Text, replaceWith Text) Text
 	"a,b,c".Replace(",", ";") is "a;b;c"
 	let separatorIndex = IndexOf(searchFor)

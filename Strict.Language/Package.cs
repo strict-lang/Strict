@@ -1,3 +1,4 @@
+#define DISABLE_DISPOSING
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Transpiler.Cuda")]
@@ -24,23 +25,34 @@ public class Package : Context, IDisposable
 		[CallerMemberName] string callerMemberName = "") : base(parentPackage,
 		Path.GetFileName(packagePath), callerFilePath, callerLineNumber, callerMemberName)
 #else
+	// ReSharper disable once UnusedParameter.Local
 	public Package(Package? parentPackage, string packagePath, Repositories? createdFromRepos = null)
 		: base(parentPackage, Path.GetFileName(packagePath))
 #endif
 	{
+#if !DISABLE_DISPOSING
 		this.createdFromRepos = createdFromRepos;
+#endif
 		FolderPath = Path.IsPathRooted(packagePath)
 			? packagePath
 			: Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg,
 				packagePath.Replace("TestPackage", "Strict"));
 		if (parentPackage == null)
 			return;
-		var existing = parentPackage.children.FirstOrDefault(existing => existing.Name == Name);
-		if (existing != null)
-			throw new PackageAlreadyExists(Name, parentPackage, existing); //ncrunch: no coverage
-		parentPackage.children.Add(this);
+		lock (parentPackage.syncRoot)
+		{
+			var existing = parentPackage.children.FirstOrDefault(existing => existing.Name == Name);
+			if (existing != null)
+#if DISABLE_DISPOSING
+				return;
+#else
+				throw new PackageAlreadyExists(Name, parentPackage, existing);
+#endif
+			parentPackage.children.Add(this);
+		}
 	}
 
+#if !DISABLE_DISPOSING
 	public class PackageAlreadyExists(string name, Package parentPackage, Package existing)
 		: Exception(name + " in " + (parentPackage.Name == "" //ncrunch: no coverage
 				? nameof(Root)
@@ -50,9 +62,9 @@ public class Package : Context, IDisposable
 			existing.callerLineNumber + " from method " + existing.callerMemberName
 #endif
 		);
-
-	private static readonly Root RootForPackages = new();
 	private readonly Repositories? createdFromRepos;
+#endif
+	private static readonly Root RootForPackages = new();
 	public string FolderPath { get; }
 
 	/// <summary>
@@ -73,14 +85,21 @@ public class Package : Context, IDisposable
 			cachedFoundTypes.Add(Type.None, new Type(this, new TypeLines(Type.None)));
 
 		public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
-			cachedFoundTypes.TryGetValue(name, out var previouslyFoundType)
+			TryGetCachedType(name, out var previouslyFoundType)
 				? previouslyFoundType
 				: FindTypeInChildrenAndCache(name, searchingFrom);
+
+		private bool TryGetCachedType(string name, out Type? type)
+		{
+			lock (syncRoot)
+				return cachedFoundTypes.TryGetValue(name, out type);
+		}
 
 		private Type? FindTypeInChildrenAndCache(string name, Context? searchingFrom)
 		{
 			var type = FindTypeInChildrenPackages(name, searchingFrom as Package);
-			cachedFoundTypes.Add(name, type!);
+			if (type != null)
+				cachedFoundTypes[name] = type;
 			return type;
 		}
 
@@ -88,7 +107,14 @@ public class Package : Context, IDisposable
 	}
 
 	private readonly List<Package> children = new();
-	internal void Add(Type type) => types.Add(type.Name, type);
+	private readonly Lock syncRoot = new();
+
+	internal void Add(Type type)
+	{
+		lock (syncRoot)
+			types.Add(type.Name, type);
+	}
+
 	private readonly Dictionary<string, Type> types = new();
 
 	public Type? FindFullType(string fullName)
@@ -97,7 +123,7 @@ public class Package : Context, IDisposable
 			return null; //ncrunch: no coverage
 		var parts = fullName.Split(Context.ParentSeparator);
 		if (parts.Length < 2)
-			throw new FullNameMustContainPackageAndTypeNames();
+			throw new FullNameMustContainPackageAndTypeNames(fullName);
 		if (IsPrivateName(parts[^1]))
 			throw new PrivateTypesAreOnlyAvailableInItsPackage(fullName);
 		if (!fullName.StartsWith(FullName + Context.ParentSeparator, StringComparison.Ordinal))
@@ -111,7 +137,7 @@ public class Package : Context, IDisposable
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static bool IsPrivateName(string name) => char.IsLower(name[0]);
 
-	public sealed class FullNameMustContainPackageAndTypeNames : Exception;
+	public sealed class FullNameMustContainPackageAndTypeNames(string fullName) : Exception(fullName);
 
 	public sealed class PrivateTypesAreOnlyAvailableInItsPackage(string fullName)
 		: Exception(fullName);
@@ -123,23 +149,28 @@ public class Package : Context, IDisposable
 	/// </summary>
 	public override Type? FindTypeCore(string name, Context? searchingFrom = null)
 	{
-		if (name == lastName)
-			return lastType;
+		lock (syncRoot)
+			if (name == lastName && lastType != null)
+				return lastType;
 		if (IsPrivateName(name))
 			return null;
-		var type = FindDirectType(name) ??
-			FindTypeInChildrenOrParentPackages(name, searchingFrom);
-		lastName = name;
-		lastType = type;
+		var type = FindDirectType(name) ?? FindTypeInChildrenOrParentPackages(name, searchingFrom);
+		if (type != null)
+			lock (syncRoot)
+			{
+				lastName = name;
+				lastType = type;
+			}
 		return type;
 	}
 
 	private Type? FindTypeInChildrenOrParentPackages(string name, Context? searchingFrom)
 	{
 		Type? type = null;
-		if (children.Count > 0)
-			type = FindTypeInChildrenPackages(name, searchingFrom ?? this);
-		type ??= Parent.FindTypeCore(name, this);
+		lock (syncRoot)
+			if (children.Count > 0)
+				type = FindTypeInChildrenPackages(name, searchingFrom ?? this);
+		type ??= Parent?.FindTypeCore(name, this);
 		return type;
 	}
 
@@ -147,14 +178,21 @@ public class Package : Context, IDisposable
 	private Type? lastType;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public Type? FindDirectType(string name) => types.GetValueOrDefault(name);
+	public Type? FindDirectType(string name)
+	{
+		lock (syncRoot)
+			return types.GetValueOrDefault(name);
+	}
 
 	private Type? FindTypeInChildrenPackages(string name, Context? searchingFromPackage)
 	{
-		foreach (var t in children)
+		Package[] childrenSnapshot;
+		lock (syncRoot)
+			childrenSnapshot = children.ToArray();
+		foreach (var t in childrenSnapshot)
 			if (t != searchingFromPackage)
 			{
-				var childType = t.FindDirectType(name) ?? (children.Count > 0
+				var childType = t.FindDirectType(name) ?? (childrenSnapshot.Length > 0
 					? t.FindTypeInChildrenPackages(name, searchingFromPackage)
 					: null);
 				if (childType != null)
@@ -165,7 +203,10 @@ public class Package : Context, IDisposable
 
 	public Package? FindSubPackage(string name)
 	{
-		foreach (var child in children)
+		Package[] childrenSnapshot;
+		lock (syncRoot)
+			childrenSnapshot = children.ToArray();
+		foreach (var child in childrenSnapshot)
 			if (child.Name == name || child.FullName == name)
 				return child;
 		return null;
@@ -177,22 +218,34 @@ public class Package : Context, IDisposable
 	public void Remove(Type? type)
 	{
 		if (type != null)
-			types.Remove(type.Name);
+			lock (syncRoot)
+				types.Remove(type.Name);
 	}
 
-	internal void Remove(Package package) => children.Remove(package);
+#if !DISABLE_DISPOSING
+	internal void Remove(Package package)
+	{
+		lock (syncRoot)
+			children.Remove(package);
+	}
+#endif
 	public IReadOnlyDictionary<string, Type> Types => types;
-	public const string TestLanguageConversion = nameof(TestLanguageConversion);
+	internal List<Package> automaticallyLoadedDependencyPackages = new();
 
 	public void Dispose()
 	{
+#if !DISABLE_DISPOSING
 		GC.SuppressFinalize(this);
 		while (children.Count > 0)
 			children[0].Dispose();
+		foreach (var dependencyPackage in automaticallyLoadedDependencyPackages)
+			dependencyPackage.Dispose();
 		foreach (var type in types)
 			type.Value.Dispose();
+		//Console.WriteLine("Package.Dispose " + FullName);
 		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		((Package)Parent)?.Remove(this);
 		createdFromRepos?.Remove(this);
+#endif
 	}
 }

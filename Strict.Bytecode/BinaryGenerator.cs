@@ -15,7 +15,7 @@ public sealed class BinaryGenerator
 {
 	public BinaryGenerator(MethodCall methodCall)
 	{
-    entryMethodCall = methodCall;
+		entryMethodCall = methodCall;
 		entryTypeFullName = methodCall.Method.Type.FullName;
 		if (methodCall.Instance is MethodCall instanceCall)
 			AddInstanceMemberVariables(instanceCall);
@@ -38,23 +38,34 @@ public sealed class BinaryGenerator
 	}
 
 	private readonly BinaryExecutable binary;
-  private readonly MethodCall? entryMethodCall;
+	private readonly MethodCall? entryMethodCall;
 	private readonly string entryTypeFullName;
 	private readonly List<Instruction> instructions = []; //TODO: why not keep this in BinaryMethod
 	private readonly Dictionary<string, Type> dependencyTypes = new(StringComparer.Ordinal);
 	private readonly Registry registry = new();
 	private readonly Stack<int> idStack = new();
 	private readonly Register[] registers = Enum.GetValues<Register>();
+	private readonly List<Method> discoveredInvokeMethods = [];
+	internal IReadOnlyList<Method> DiscoveredInvokeMethods => discoveredInvokeMethods;
 	private IReadOnlyList<Expression> Expressions { get; } //TODO: stupid, remove
 	private Type ReturnType { get; } //TODO: stupid, remove
 	private int conditionalId; //TODO: a bit strange
 	private int forResultId;
- public BinaryExecutable Generate() => entryMethodCall != null && entryMethodCall.Method.Name == Method.Run &&
-		entryMethodCall.Arguments.Count == 0
-		? Generate(entryMethodCall.Method,
-			entryMethodCall.Method.Type.Methods.Where(method => method.Name == Method.Run).ToArray())
-		: Generate(entryTypeFullName, Expressions, ReturnType);
+	private int listResultId;
 
+	private void AddInstruction(Instruction instruction, int sourceLine)
+	{
+		instruction.SourceLine = sourceLine;
+		instructions.Add(instruction);
+	}
+
+	public BinaryExecutable Generate() =>
+		entryMethodCall is { Method.Name: Method.Run, Arguments.Count: 0 }
+			? Generate(entryMethodCall.Method,
+				entryMethodCall.Method.Type.Methods.Where(method => method.Name == Method.Run).ToArray())
+			: Generate(entryTypeFullName, Expressions, ReturnType);
+
+	//TODO: this is convoluted and not good
 	public static BinaryExecutable GenerateFromRunMethods(Method preferredEntryMethod,
 		IReadOnlyList<Method> runMethods)
 	{
@@ -63,6 +74,11 @@ public sealed class BinaryGenerator
 		return generator.Generate(preferredEntryMethod, runMethods);
 	}
 
+	public static List<Instruction> GenerateInlineInstructions(Package basePackage,
+		Expression expression) =>
+		new BinaryGenerator(basePackage, [expression], expression.ReturnType).GenerateInstructionList();
+
+	//TODO: unused again?
 	public BinaryExecutable Generate(string typeFullName, Expression entryPointExpression) =>
 		Generate(typeFullName, [entryPointExpression], entryPointExpression.ReturnType);
 
@@ -80,7 +96,7 @@ public sealed class BinaryGenerator
 		IReadOnlyList<Expression> entryExpressions, Type runReturnType)
 	{
 		var methodsByType = CompileMethodsFromExpressions(typeFullName, entryExpressions, runReturnType);
-   var entryType = FindEntryType(typeFullName);
+		var entryType = FindEntryType(typeFullName);
 		if (entryType == null)
 			foreach (var (compiledTypeFullName, methodGroups) in methodsByType)
 				binary.AddType(compiledTypeFullName, [], methodGroups);
@@ -116,11 +132,13 @@ public sealed class BinaryGenerator
 		return (Package)context;
 	}
 
+	//TODO: unused again?
 	private static string GetEntryTypeFullName(Expression expression) =>
 		expression is MethodCall methodCall
 			? methodCall.Method.Type.FullName
 			: expression.ReturnType.FullName;
 
+	//TODO: unused again?
 	private void AddMembersFromCaller(ValueInstance instance)
 	{
 		instructions.Add(new StoreVariableInstruction(instance, Type.ValueLowercase, isMember: true));
@@ -159,30 +177,88 @@ public sealed class BinaryGenerator
 	{
 		for (var parameterIndex = 0; parameterIndex < instance.Method.Parameters.Count;
 			parameterIndex++)
-			if (instance.Method.Parameters[parameterIndex].Type is GenericTypeImplementation
-				{
-					Generic.Name: Type.List
-				} && !(instance.Arguments.Count == 1 && instance.Arguments[0] is List))
+		{
+			var parameter = instance.Method.Parameters[parameterIndex];
+			var member = instance.ReturnType.Members.FirstOrDefault(typeMember =>
+				typeMember.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase));
+			if (member == null)
+				continue;
+			var argumentExpression = parameterIndex < instance.Arguments.Count
+				? instance.Arguments[parameterIndex]
+				: parameter.DefaultValue ?? member.InitialValue;
+			if (argumentExpression == null)
+				continue;
+			if (parameter.Type.IsList && instance.Arguments is not [List])
 			{
-				//TODO: not very efficient
 				var listItems = instance.Arguments.Select(GetValueInstanceFromExpression).ToArray();
 				instructions.Add(new StoreVariableInstruction(
-					new ValueInstance(instance.Method.Parameters[parameterIndex].Type, listItems),
-					instance.ReturnType.Members[parameterIndex].Name, isMember: true));
+					new ValueInstance(parameter.Type, listItems), member.Name, isMember: true));
 			}
 			else
 				instructions.Add(new StoreVariableInstruction(
-					GetValueInstanceFromExpression(instance.Arguments[parameterIndex]),
-					instance.ReturnType.Members[parameterIndex].Name, isMember: true));
+					GetValueInstanceFromExpression(argumentExpression), member.Name, isMember: true));
+		}
 	}
 
 	private void AddMethodParameterVariables(MethodCall methodCall)
 	{
 		for (var index = 0; index < methodCall.Method.Parameters.Count &&
 			index < methodCall.Arguments.Count; index++)
-			instructions?.Add(new StoreVariableInstruction(
-				GetValueInstanceFromExpression(methodCall.Arguments[index]),
-				methodCall.Method.Parameters[index].Name));
+			StoreEntryVariable(methodCall.Method.Parameters[index].Name, methodCall.Arguments[index]);
+	}
+
+	private void StoreEntryVariable(string identifier, Expression expression)
+	{
+		if (TryGetConstantValueInstance(expression, out var value))
+			instructions.Add(new StoreVariableInstruction(value, identifier));
+		else
+		{
+			GenerateInstructionFromExpression(expression);
+			instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, identifier));
+		}
+	}
+
+	private static bool TryGetConstantValueInstance(Expression expression, out ValueInstance value)
+	{
+		switch (expression)
+		{
+		case List list:
+			var listValue = list.TryGetConstantData();
+			if (listValue != null)
+			{
+				value = listValue.Value;
+				return true;
+			}
+			break;
+		case Value constantValue:
+			value = constantValue.Data;
+			return true;
+		case MemberCall memberCall when memberCall.Member.InitialValue != null:
+			value = memberCall.Member.InitialValue is Value enumValue
+				? enumValue.Data
+				: new ValueInstance(memberCall.Member.InitialValue.ToString());
+			return true;
+		}
+		value = default;
+		return false;
+	}
+
+	private void GenerateListExpression(List list)
+	{
+		if (list.TryGetConstantData() is { } constantList)
+		{
+			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(), constantList));
+			return;
+		}
+		var listVariable = $"listResult{listResultId++}";
+		instructions.Add(new StoreVariableInstruction(new ValueInstance(list.ReturnType,
+			Array.Empty<ValueInstance>()), listVariable));
+		for (var valueIndex = 0; valueIndex < list.Values.Count; valueIndex++)
+		{
+			GenerateInstructionFromExpression(list.Values[valueIndex]);
+			instructions.Add(new WriteToListInstruction(registry.PreviousRegister, listVariable));
+		}
+		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), listVariable));
 	}
 
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)
@@ -203,6 +279,8 @@ public sealed class BinaryGenerator
 			expression = returnExpression.Value;
 		if (TryGenerateNumberForLoopReturn(expression))
 			return;
+		if (TryGenerateListForLoopReturn(expression))
+			return;
 		GenerateInstructionFromExpression(expression);
 		instructions.Add(new ReturnInstruction(registry.PreviousRegister));
 	}
@@ -215,63 +293,167 @@ public sealed class BinaryGenerator
 		return true;
 	}
 
+	private bool TryGenerateListForLoopReturn(Expression expression)
+	{
+		if (expression is not For forExpression || !ShouldAggregateLoopToList())
+			return false;
+		GenerateInstructionForListAggregation(forExpression);
+		instructions.Add(new ReturnInstruction(registry.PreviousRegister));
+		return true;
+	}
+
 	private void GenerateInstructionForNumberAggregation(For forExpression)
 	{
 		var resultVariable = $"forResult{forResultId++}";
 		instructions.Add(new StoreVariableInstruction(new ValueInstance(ReturnType, 0), resultVariable));
-		GenerateLoopInstructions(forExpression, resultVariable);
+		GenerateLoopInstructions(forExpression, resultVariable, LoopAggregation.Number);
 		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultVariable));
 		instructions.Add(new ReturnInstruction(registry.PreviousRegister));
 	}
 
-	private void GenerateInstructionFromExpression(Expression expression) =>
-		_ = TryGenerateBodyInstructions(expression) ?? TryGenerateBinaryInstructions(expression) ??
-			TryGenerateIfInstructions(expression) ?? TryGenerateSelectorIfInstructions(expression) ??
-			TryGenerateAssignmentInstructions(expression) ??
-			TryGenerateLoopInstructions(expression) ?? TryGenerateMutableInstructions(expression) ??
-			TryGenerateMemberCallInstruction(expression) ??
-			TryGenerateVariableCallInstruction(expression) ?? TryGenerateValueInstruction(expression) ??
-			TryGenerateMethodCallInstruction(expression) ?? TryGenerateListCallInstruction(expression) ??
-			throw new NotSupportedException(expression.ToString());
-
-	private bool? TryGenerateListCallInstruction(Expression expression)
+	private void GenerateInstructionForListAggregation(For forExpression)
 	{
-		if (expression is not ListCall listCall)
-			return null; //ncrunch: no coverage
-		GenerateInstructionFromExpression(listCall.Index);
-		var indexRegister = registry.PreviousRegister;
-		instructions.Add(new ListCallInstruction(registry.AllocateRegister(), indexRegister,
-			listCall.List.ToString()));
-		return true;
+		var resultVariable = $"forResult{forResultId++}";
+		var listType = GetListType(forExpression.Body.ReturnType);
+		//TODO: why does this create a new ValueInstance, no good, especially the array version!
+		instructions.Add(new StoreVariableInstruction(new ValueInstance(listType,
+			Array.Empty<ValueInstance>()), resultVariable));
+		GenerateLoopInstructions(forExpression, resultVariable, LoopAggregation.List);
+		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultVariable));
 	}
 
-	private bool? TryGenerateVariableCallInstruction(Expression expression)
+	private bool ShouldAggregateLoopToList() =>
+		ReturnType.IsIterator || ReturnType.IsList;
+
+	private Type GetListType(Type elementType) =>
+		binary.basePackage.FindType(Type.List)?.GetGenericImplementation(elementType) ??
+		throw new InvalidOperationException("List type not found for loop aggregation");
+
+	private enum LoopAggregation
 	{
-		if (expression is not (VariableCall or ParameterCall or Instance))
-			return null;
-		instructions.Add(
-			new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
-		return true;
+		None,
+		Number,
+		List
 	}
 
-	private bool? TryGenerateMemberCallInstruction(Expression expression)
+	//TODO: try optimize into a expression switch
+	private void GenerateInstructionFromExpression(Expression expression)
 	{
-		if (expression is not MemberCall memberCall)
-			return null;
+		var countBefore = instructions.Count;
+		switch (expression)
+		{
+		case Body body:
+			GenerateInstructions(body.Expressions);
+			return;
+		case Binary binaryExpression:
+			if (binaryExpression.Method.Name == BinaryOperator.Is)
+				return;
+			if (!CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
+			{
+				GenerateMethodCallInstruction(binaryExpression);
+				break;
+			}
+			GenerateCodeForBinary(binaryExpression);
+			break;
+		case If ifExpression:
+			GenerateIfInstructions(ifExpression);
+			return;
+		case SelectorIf selectorIf:
+			GenerateSelectorIfInstructions(selectorIf);
+			return;
+		case Declaration { IsMutable: true } mutableDeclaration:
+			GenerateForAssignmentOrDeclaration(mutableDeclaration.Value, mutableDeclaration.Name);
+			return;
+		case Declaration declaration:
+			GenerateForAssignmentOrDeclaration(declaration.Value, declaration.Name);
+			return;
+		case For forExpression:
+			GenerateLoopInstructions(forExpression);
+			return;
+		case MutableReassignment reassignment:
+			GenerateForAssignmentOrDeclaration(reassignment.Value, reassignment.Name);
+			return;
+		case MemberCall memberCall:
+			GenerateMemberCallInstruction(memberCall);
+			break;
+		case VariableCall:
+		case ParameterCall:
+		case Instance:
+			instructions.Add(
+				new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
+			break;
+		case List list:
+			GenerateListExpression(list);
+			break;
+		case Value value:
+			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
+				GetValueInstanceFromExpression(value)));
+			break;
+		case MethodCall methodCall:
+			GenerateMethodCallInstruction(methodCall);
+			break;
+		case ListCall listCall:
+			GenerateInstructionFromExpression(listCall.Index);
+			var indexRegister = registry.PreviousRegister;
+			instructions.Add(new ListCallInstruction(registry.AllocateRegister(), indexRegister,
+				listCall.List.ToString()));
+			break;
+		default:
+			throw new NotSupportedException(expression.ToString()); //ncrunch: no coverage
+		}
+		var sourceLine = expression.LineNumber;
+		for (var instructionIndex = countBefore; instructionIndex < instructions.Count; instructionIndex++)
+			if (instructions[instructionIndex].SourceLine == 0)
+				instructions[instructionIndex].SourceLine = sourceLine;
+	}
+
+	private void GenerateMemberCallInstruction(MemberCall memberCall)
+	{
 		if (memberCall.Member.InitialValue != null && memberCall.Member.DefinedIn.IsEnum)
 		{
 			TryGenerateForEnum(memberCall.Member.DefinedIn, memberCall.Member.InitialValue);
-			return true;
+			return;
 		}
 		if (memberCall.Instance == null)
 			instructions.Add(
-				new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
+				new LoadVariableToRegister(registry.AllocateRegister(), memberCall.ToString()));
+		//TODO: no tests exist for any of this yet:
 		else if (memberCall.Member.InitialValue != null)
 			TryGenerateForEnum(memberCall.Member.DefinedIn, memberCall.Member.InitialValue);
 		else
 			instructions.Add(
-				new LoadVariableToRegister(registry.AllocateRegister(), expression.ToString()));
-		return true;
+				new LoadVariableToRegister(registry.AllocateRegister(), memberCall.ToString()));
+	}
+
+	private void GenerateMethodCallInstruction(MethodCall methodCall)
+	{
+		if (TryGenerateInstructionForCollectionManipulation(methodCall))
+			return;
+		if (TryGeneratePrintInstruction(methodCall))
+			return;
+		if (methodCall.Method.Name != Method.From)
+			discoveredInvokeMethods.Add(methodCall.Method);
+		Register? instanceRegister = null;
+		if (methodCall.Instance != null)
+		{
+			GenerateInstructionFromExpression(methodCall.Instance);
+			instanceRegister = registry.PreviousRegister;
+		}
+		var argumentRegisters = new Register[methodCall.Arguments.Count];
+		for (var argumentIndex = 0; argumentIndex < methodCall.Arguments.Count; argumentIndex++)
+		{
+			GenerateInstructionFromExpression(methodCall.Arguments[argumentIndex]);
+			argumentRegisters[argumentIndex] = registry.PreviousRegister;
+		}
+		var parameterNames = new string[methodCall.Method.Parameters.Count];
+		for (var paramIndex = 0; paramIndex < methodCall.Method.Parameters.Count; paramIndex++)
+			parameterNames[paramIndex] = methodCall.Method.Parameters[paramIndex].Name;
+		var methodInfo = new InvokeMethodInfo(
+			methodCall.Method.Type.FullName,
+			methodCall.Method.Name, parameterNames,
+			GetBinaryTypeName(methodCall.ReturnType, methodCall.Method.Type),
+			argumentRegisters, instanceRegister);
+		instructions.Add(new Invoke(registry.AllocateRegister(), methodInfo));
 	}
 
 	private void TryGenerateForEnum(Type type, Expression value)
@@ -283,27 +465,6 @@ public sealed class BinaryGenerator
 				: new ValueInstance(value.ToString());
 			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(), data));
 		}
-	}
-
-	private bool? TryGenerateValueInstruction(Expression expression)
-	{
-		if (expression is not Value)
-			return null;
-		instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
-			GetValueInstanceFromExpression(expression)));
-		return true;
-	}
-
-	private bool? TryGenerateMethodCallInstruction(Expression expression)
-	{
-		if (expression is not MethodCall methodCall)
-			return null;
-		if (TryGenerateInstructionForCollectionManipulation(methodCall))
-			return true;
-		if (TryGeneratePrintInstruction(methodCall))
-			return true;
-		instructions.Add(new Invoke(registry.AllocateRegister(), methodCall, registry));
-		return true;
 	}
 
 	private bool TryGeneratePrintInstruction(MethodCall methodCall)
@@ -343,41 +504,57 @@ public sealed class BinaryGenerator
 		return true;
 	}
 
-	private bool? TryGenerateBinaryInstructions(Expression expression)
+	private void GenerateLoopInstructions(For forExpression, string? aggregationTarget = null,
+		LoopAggregation aggregation = LoopAggregation.None)
 	{
-		if (expression is Binary binaryExpression)
-		{
-			if (binaryExpression.Method.Name == BinaryOperator.Is)
-				return true;
-			if (!CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
-				return TryGenerateMethodCallInstruction(binaryExpression);
-			GenerateCodeForBinary(binaryExpression);
-			return true; //TODO: there is not even false here, this is no good
-		}
-		return null;
-	}
-
-	private void GenerateLoopInstructions(For forExpression, string? aggregationTarget = null)
-	{
+		var forSourceLine = forExpression.LineNumber;
 		var instructionCountBeforeLoopStart = instructions.Count;
+		var customVariableNames = forExpression.CustomVariables.Select(variable =>
+			variable.ToString()).ToArray();
+		var iterator = GetLoopIteratorExpression(forExpression.Iterator);
 		LoopBeginInstruction loopBegin;
-		if (forExpression.Iterator is MethodCall rangeExpression &&
-			forExpression.Iterator.ReturnType.Name == Type.Range &&
+		if (iterator is MethodCall rangeExpression &&
+			iterator.ReturnType.Name == Type.Range &&
 			rangeExpression.Method.Name == Method.From)
-			loopBegin = GenerateInstructionForRangeLoopInstruction(rangeExpression);
+		{
+			loopBegin = GenerateInstructionForRangeLoopInstruction(rangeExpression,
+				customVariableNames);
+			loopBegin.SourceLine = forSourceLine;
+		}
 		else
 		{
-			GenerateInstructionFromExpression(forExpression.Iterator);
-			loopBegin = new LoopBeginInstruction(registry.PreviousRegister);
+			var iteratorStart = instructions.Count;
+			GenerateInstructionFromExpression(iterator);
+			for (var instructionIndex = iteratorStart; instructionIndex < instructions.Count;
+				instructionIndex++)
+				instructions[instructionIndex].SourceLine = forSourceLine;
+			loopBegin = new LoopBeginInstruction(registry.PreviousRegister, customVariableNames);
+			loopBegin.SourceLine = forSourceLine;
 			instructions.Add(loopBegin);
 		}
-		GenerateInstructionsForLoopBody(forExpression);
-		if (!string.IsNullOrWhiteSpace(aggregationTarget))
-			AddNumberAggregation(aggregationTarget);
-		instructions.Add(new LoopEndInstruction(instructions.Count - instructionCountBeforeLoopStart)
+		var bodyAggregatedDirectly =
+			GenerateInstructionsForLoopBody(forExpression, aggregationTarget, aggregation);
+		if (!string.IsNullOrWhiteSpace(aggregationTarget) && !bodyAggregatedDirectly)
+			AddLoopAggregation(aggregationTarget, aggregation);
+		var loopEnd = new LoopEndInstruction(instructions.Count - instructionCountBeforeLoopStart)
 		{
-			Begin = loopBegin
-		});
+			Begin = loopBegin,
+			SourceLine = forSourceLine
+		};
+		instructions.Add(loopEnd);
+	}
+
+	private void AddLoopAggregation(string aggregationTarget, LoopAggregation aggregation)
+	{
+		switch (aggregation)
+		{
+		case LoopAggregation.Number:
+			AddNumberAggregation(aggregationTarget);
+			break;
+		case LoopAggregation.List:
+			AddListAggregation(aggregationTarget);
+			break;
+		}
 	}
 
 	private void AddNumberAggregation(string aggregationTarget)
@@ -390,23 +567,62 @@ public sealed class BinaryGenerator
 		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, aggregationTarget));
 	}
 
-	private LoopBeginInstruction GenerateInstructionForRangeLoopInstruction(MethodCall rangeExpression)
+	private void AddListAggregation(string aggregationTarget) =>
+		instructions.Add(new WriteToListInstruction(registry.PreviousRegister, aggregationTarget));
+
+	private static Expression GetLoopIteratorExpression(Expression iterator)
+	{
+		if (iterator.ReturnType.IsList || iterator.ReturnType.IsText || iterator.ReturnType.IsNumber ||
+			iterator is MethodCall { ReturnType.Name: Type.Range, Method.Name: Method.From })
+			return iterator;
+		var iteratorMethod = iterator.ReturnType.Methods.FirstOrDefault(method =>
+			method.Name == Keyword.For && method.ReturnType.IsIterator);
+		return iteratorMethod == null
+			? iterator
+			: new MethodCall(iteratorMethod, iterator, lineNumber: iterator.LineNumber);
+	}
+
+	private LoopBeginInstruction GenerateInstructionForRangeLoopInstruction(
+		MethodCall rangeExpression, params string[] customVariableNames)
 	{
 		GenerateInstructionFromExpression(rangeExpression.Arguments[0]);
 		var startIndexRegister = registry.PreviousRegister;
 		GenerateInstructionFromExpression(rangeExpression.Arguments[1]);
 		var endIndexRegister = registry.PreviousRegister;
-		var loopBegin = new LoopBeginInstruction(startIndexRegister, endIndexRegister);
+		var loopBegin = new LoopBeginInstruction(startIndexRegister, endIndexRegister,
+			customVariableNames);
 		instructions.Add(loopBegin);
 		return loopBegin;
 	}
 
-	private void GenerateInstructionsForLoopBody(For forExpression)
+	private bool GenerateInstructionsForLoopBody(For forExpression, string? aggregationTarget,
+		LoopAggregation aggregation)
 	{
+		if (aggregation == LoopAggregation.List && !string.IsNullOrWhiteSpace(aggregationTarget) &&
+			forExpression.Body is For directNestedFor)
+		{
+			GenerateLoopInstructions(directNestedFor, aggregationTarget, aggregation);
+			return true;
+		}
 		if (forExpression.Body is Body forExpressionBody)
-			GenerateInstructions(forExpressionBody.Expressions);
+		{
+			for (var expressionIndex = 0; expressionIndex < forExpressionBody.Expressions.Count;
+				expressionIndex++)
+			{
+				var expression = forExpressionBody.Expressions[expressionIndex];
+				if (aggregation == LoopAggregation.List &&
+					expressionIndex == forExpressionBody.Expressions.Count - 1 &&
+					expression is For nestedFor && !string.IsNullOrWhiteSpace(aggregationTarget))
+				{
+					GenerateLoopInstructions(nestedFor, aggregationTarget, aggregation);
+					return true;
+				}
+				GenerateInstructionFromExpression(expression);
+			}
+		}
 		else
 			GenerateInstructionFromExpression(forExpression.Body);
+		return false;
 	}
 
 	private void GenerateIfInstructions(If ifExpression)
@@ -555,49 +771,43 @@ public sealed class BinaryGenerator
 			new Dictionary<string, Dictionary<string, List<BinaryMethod>>>(StringComparer.Ordinal);
 		var methodsToCompile = new Queue<Method>();
 		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
-
-		void EnqueueInvokedMethods(IReadOnlyList<Instruction> methodInstructions)
-		{
-			foreach (var invoke in methodInstructions.OfType<Invoke>())
-			{
-				if (invoke.Method.Method.Name == Method.From)
-					continue;
-				var invokedMethod = invoke.Method.Method;
-				var methodKey = BuildMethodKey(invokedMethod);
-				if (compiledMethodKeys.Add(methodKey))
-					methodsToCompile.Enqueue(invokedMethod);
-			}
-		}
-
 		foreach (var runMethod in runMethods)
 		{
 			CollectMethodDependencies(runMethod);
+			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 			var methodBody = runMethod.GetBodyAndParseIfNeeded();
 			var methodExpressions = methodBody is Body body
 				? body.Expressions
 				: [methodBody];
-			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
-				runMethod.ReturnType).GenerateInstructionList();
+			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
+				runMethod.ReturnType);
+			var methodInstructions = childGenerator.GenerateInstructionList();
 			var parameters = CreateBinaryMembers(runMethod.Parameters, entryType);
 			AddCompiledMethod(methodsByType, runMethod.Type.FullName, runMethod.Name, parameters,
 				GetBinaryTypeName(runMethod.ReturnType, entryType), methodInstructions);
 			compiledMethodKeys.Add(BuildMethodKey(runMethod));
-			EnqueueInvokedMethods(methodInstructions);
+			EnqueueDiscoveredMethods(childGenerator.DiscoveredInvokeMethods, methodsToCompile,
+				compiledMethodKeys);
+			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 		}
 		while (methodsToCompile.Count > 0)
 		{
 			var method = methodsToCompile.Dequeue();
 			CollectMethodDependencies(method);
+			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 			var body = method.GetBodyAndParseIfNeeded();
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions
 				: [body];
-			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
-				method.ReturnType).GenerateInstructionList();
+			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
+				method.ReturnType);
+			var methodInstructions = childGenerator.GenerateInstructionList();
 			var parameters = CreateBinaryMembers(method.Parameters, entryType);
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
 				GetBinaryTypeName(method.ReturnType, entryType), methodInstructions);
-			EnqueueInvokedMethods(methodInstructions);
+			EnqueueDiscoveredMethods(childGenerator.DiscoveredInvokeMethods, methodsToCompile,
+				compiledMethodKeys);
+			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 		}
 		return methodsByType;
 	}
@@ -609,8 +819,7 @@ public sealed class BinaryGenerator
 			ToList();
 
 	private void AddGeneratedTypes(
-		Dictionary<string, Dictionary<string, List<BinaryMethod>>> methodsByType,
-		Type entryType)
+		Dictionary<string, Dictionary<string, List<BinaryMethod>>> methodsByType, Type entryType)
 	{
 		var orderedTypes = dependencyTypes.Values.OrderBy(type =>
 			type == entryType
@@ -621,9 +830,7 @@ public sealed class BinaryGenerator
 			var members = type.Members.
 				Where(member => !member.IsConstant || member.InitialValue != null).Select(member =>
 					new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType),
-						member.IsConstant && member.InitialValue is Value val
-							? new SetInstruction(val.Data, Register.R0)
-							: null)).ToList();
+						CreateInitialValueInstruction(member.InitialValue))).ToList();
 			binary.AddType(GetBinaryTypeName(type, entryType), members,
 				methodsByType.TryGetValue(type.FullName, out var methodGroups)
 					? methodGroups
@@ -631,6 +838,15 @@ public sealed class BinaryGenerator
 				type == entryType);
 		}
 	}
+
+	private static Instruction? CreateInitialValueInstruction(Expression? initialValue) =>
+		initialValue switch
+		{
+			List list when list.TryGetConstantData() is { } listValue => new SetInstruction(listValue,
+				Register.R0),
+			Value value => new SetInstruction(value.Data, Register.R0),
+			_ => null
+		};
 
 	private void CollectMethodDependencies(Method method)
 	{
@@ -673,7 +889,7 @@ public sealed class BinaryGenerator
 			CollectExpressionDependencies(reassignment.Value);
 			break;
 		case For forExpression:
-			CollectExpressionDependencies(forExpression.Iterator);
+			CollectExpressionDependencies(GetLoopIteratorExpression(forExpression.Iterator));
 			CollectExpressionDependencies(forExpression.Body);
 			break;
 		case If ifExpression:
@@ -759,43 +975,27 @@ public sealed class BinaryGenerator
 			StringComparer.Ordinal);
 		var methodsToCompile = new Queue<Method>();
 		var compiledMethodKeys = new HashSet<string>(StringComparer.Ordinal);
-
-		//TODO: remove
-		void EnqueueInvokedMethods(IReadOnlyList<Instruction> thisInstructions)
-		{
-			foreach (var invoke in thisInstructions.OfType<Invoke>())
-			{
-				if (invoke.Method.Method.Name == Method.From)
-					continue;
-				var method = invoke.Method.Method;
-				var methodKey = method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
-					method.Parameters.Select(parameter =>
-						new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
-					method.ReturnType);
-				if (compiledMethodKeys.Add(methodKey))
-					methodsToCompile.Enqueue(method);
-			}
-		}
-
 		var runInstructions = GenerateInstructions(entryExpressions);
 		AddCompiledMethod(methodsByType, thisEntryTypeFullName, Method.Run, [], runReturnType.Name,
 			runInstructions);
-		EnqueueInvokedMethods(runInstructions);
+		EnqueueDiscoveredMethods(discoveredInvokeMethods, methodsToCompile, compiledMethodKeys);
 		while (methodsToCompile.Count > 0)
 		{
 			var method = methodsToCompile.Dequeue();
-      CollectMethodDependencies(method);
+			CollectMethodDependencies(method);
 			var body = method.GetBodyAndParseIfNeeded();
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions
 				: [body];
-			var methodInstructions = new BinaryGenerator(binary.basePackage, methodExpressions,
-				method.ReturnType).GenerateInstructionList();
+			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
+				method.ReturnType);
+			var methodInstructions = childGenerator.GenerateInstructionList();
 			var parameters = method.Parameters.Select(parameter =>
 				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList();
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
 				method.ReturnType.Name, methodInstructions);
-			EnqueueInvokedMethods(methodInstructions);
+			EnqueueDiscoveredMethods(childGenerator.DiscoveredInvokeMethods, methodsToCompile,
+				compiledMethodKeys);
 		}
 		return methodsByType;
 	}
@@ -803,25 +1003,47 @@ public sealed class BinaryGenerator
 	//TODO: remove
 	private List<Instruction> GenerateInstructionList() => GenerateInstructions(Expressions);
 
+	private void EnqueueConstraintMethods(Queue<Method> methodsToCompile,
+		HashSet<string> compiledMethodKeys)
+	{
+		foreach (var type in dependencyTypes.Values)
+		foreach (var member in type.Members)
+			EnqueueConstraintMethods(type, member, methodsToCompile, compiledMethodKeys);
+	}
+
+	private static void EnqueueConstraintMethods(Type type, Member member,
+		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
+	{
+		if (member.Constraints == null)
+			return;
+		foreach (var constraint in member.Constraints)
+			if (constraint is Binary { Method.Name: BinaryOperator.Is, Instance: { } instance } binary &&
+				instance.ToString() == "Length")
+			{
+				var rhsText = binary.Arguments[0].ToString();
+				var separatorIndex = rhsText.IndexOf('.');
+				if (separatorIndex <= 0)
+					continue;
+				var referencedMember = type.Members.FirstOrDefault(typeMember =>
+					typeMember.Name.Equals(rhsText[..separatorIndex], StringComparison.OrdinalIgnoreCase));
+				var method = referencedMember?.Type.FindMethod(rhsText[(separatorIndex + 1)..], []);
+				if (method != null && compiledMethodKeys.Add(BuildMethodKey(method)))
+					methodsToCompile.Enqueue(method);
+			}
+	}
+
 	private static string BuildMethodKey(Method method) =>
 		method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
 			method.Parameters.Select(parameter =>
-				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
+				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToArray(),
 			method.ReturnType);
 
-	//TODO: remove, not even called!
-	private static void EnqueueCalledMethods(IReadOnlyList<Instruction> instructions,
+	private static void EnqueueDiscoveredMethods(IReadOnlyList<Method> methods,
 		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
 	{
-		foreach (var invoke in instructions.OfType<Invoke>())
+		foreach (var method in methods)
 		{
-			if (invoke.Method.Method.Name == Method.From)
-				continue;
-			var method = invoke.Method.Method;
-			var methodKey = method.Type.FullName + ":" + BinaryExecutable.BuildMethodHeader(method.Name,
-				method.Parameters.Select(parameter =>
-					new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList(),
-				method.ReturnType);
+			var methodKey = BuildMethodKey(method);
 			if (compiledMethodKeys.Add(methodKey))
 				methodsToCompile.Enqueue(method);
 		}
@@ -871,14 +1093,34 @@ public sealed class BinaryGenerator
 			return true;
 		case "Increment":
 		case "Decrement":
-			var register = registry.AllocateRegister();
-			instructions.Add(new Invoke(register, methodCall, registry));
-			if (methodCall.Instance != null)
-				instructions.Add(new StoreFromRegisterInstruction(register, methodCall.Instance.ToString()));
+			GenerateIncrementDecrementInvoke(methodCall);
 			return true;
 		default:
 			return false;
 		}
+	}
+
+	private void GenerateIncrementDecrementInvoke(MethodCall methodCall)
+	{
+		Register? instanceRegister = null;
+		if (methodCall.Instance != null)
+		{
+			GenerateInstructionFromExpression(methodCall.Instance);
+			instanceRegister = registry.PreviousRegister;
+		}
+		var parameterNames = new string[methodCall.Method.Parameters.Count];
+		for (var paramIndex = 0; paramIndex < methodCall.Method.Parameters.Count; paramIndex++)
+			parameterNames[paramIndex] = methodCall.Method.Parameters[paramIndex].Name;
+		var methodInfo = new InvokeMethodInfo(
+			methodCall.Method.Type.FullName,
+			methodCall.Method.Name, parameterNames,
+			GetBinaryTypeName(methodCall.ReturnType, methodCall.Method.Type),
+			[], instanceRegister);
+		var resultRegister = registry.AllocateRegister();
+		instructions.Add(new Invoke(resultRegister, methodInfo));
+		if (methodCall.Instance != null)
+			instructions.Add(new StoreFromRegisterInstruction(resultRegister,
+				methodCall.Instance.ToString()));
 	}
 
 	private void GenerateInstructionsForRemoveMethod(MethodCall methodCall)
@@ -886,7 +1128,7 @@ public sealed class BinaryGenerator
 		if (methodCall.Instance == null)
 			return;
 		GenerateInstructionFromExpression(methodCall.Arguments[0]);
-		if (methodCall.Instance.ReturnType is GenericTypeImplementation { Generic.Name: Type.List })
+		if (methodCall.Instance.ReturnType.IsList)
 			instructions.Add(new RemoveInstruction(registry.PreviousRegister, methodCall.Instance.ToString()));
 	}
 
@@ -911,25 +1153,6 @@ public sealed class BinaryGenerator
 		return true;
 	}
 
-	private bool? TryGenerateBodyInstructions(Expression expression)
-	{
-		if (expression is not Body body)
-			return null;
-		GenerateInstructions(body.Expressions);
-		return true;
-	}
-
-	private bool? TryGenerateMutableInstructions(Expression expression)
-	{
-		if (expression is Declaration { IsMutable: true } declaration)
-			GenerateForAssignmentOrDeclaration(declaration.Value, declaration.Name);
-		else if (expression is MutableReassignment assignment)
-			GenerateForAssignmentOrDeclaration(assignment.Value, assignment.Name);
-		else
-			return null;
-		return true;
-	}
-
 	private void GenerateForAssignmentOrDeclaration(Expression declarationOrAssignment,
 		string name)
 	{
@@ -943,22 +1166,6 @@ public sealed class BinaryGenerator
 		}
 	}
 
-	private bool? TryGenerateLoopInstructions(Expression expression)
-	{
-		if (expression is not For forExpression)
-			return null;
-		GenerateLoopInstructions(forExpression);
-		return true;
-	}
-
-	private bool? TryGenerateAssignmentInstructions(Expression expression)
-	{
-		if (expression is not Declaration assignmentExpression || expression.IsMutable)
-			return null;
-		GenerateForAssignmentOrDeclaration(assignmentExpression.Value, assignmentExpression.Name);
-		return true;
-	}
-
 	private void TryGenerateInstructionsForAssignmentValue(Value assignmentValue,
 		string variableName)
 	{
@@ -967,22 +1174,6 @@ public sealed class BinaryGenerator
 				new Dictionary<ValueInstance, ValueInstance>())
 			: GetValueInstanceFromExpression(assignmentValue);
 		instructions.Add(new StoreVariableInstruction(data, variableName));
-	}
-
-	private bool? TryGenerateIfInstructions(Expression expression)
-	{
-		if (expression is not If ifExpression)
-			return null;
-		GenerateIfInstructions(ifExpression);
-		return true;
-	}
-
-	private bool? TryGenerateSelectorIfInstructions(Expression expression)
-	{
-		if (expression is not SelectorIf selectorIf)
-			return null;
-		GenerateSelectorIfInstructions(selectorIf);
-		return true;
 	}
 
 	private void GenerateSelectorIfInstructions(SelectorIf selectorIf)

@@ -12,9 +12,9 @@ public sealed class WriteToTableInstruction(Register key, Register value, string
 	public Register Value { get; } = value;
 	public string Identifier { get; } = identifier;
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		writer.Write((byte)Value);
 		writer.Write7BitEncodedInt(table[Identifier]);
 	}

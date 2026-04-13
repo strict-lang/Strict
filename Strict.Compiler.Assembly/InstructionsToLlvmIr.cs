@@ -1,6 +1,5 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Expressions;
 using Strict.Language;
 
 namespace Strict.Compiler.Assembly;
@@ -17,7 +16,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	{
 		var precompiledMethods = BuildPrecompiledMethodsInternal(binary);
 		var output = CompileForPlatform(Method.Run, binary.EntryPoint.instructions, platform,
-			precompiledMethods);
+			precompiledMethods, binary);
 		return Task.FromResult(output);
 	}
 
@@ -27,10 +26,11 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		BuildFunction(methodName, [], instructions, Platform.Linux);
 
 	private static string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
-		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null)
+		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null,
+		BinaryExecutable? binary = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
-		var methodInfos = CollectMethods([.. instructions], precompiledMethods);
+		var methodInfos = CollectMethods([.. instructions], precompiledMethods, binary);
 		var hasNumericPrint = HasNumericPrint(instructions) ||
 			methodInfos.Values.Any(info => HasNumericPrint(info.Instructions));
 		var module = BuildModuleHeader(platform, hasPrint, hasNumericPrint);
@@ -122,8 +122,8 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		public Dictionary<string, int> ParamIndexByName { get; } = paramIndexByName;
 		public Dictionary<string, CompiledMethodInfo>? CompiledMethods { get; } = compiledMethods;
 		public Platform Platform { get; } = platform;
-		public Dictionary<Register, List<Expression>> RegisterInstances { get; } = new();
-		public Dictionary<string, List<Expression>> VariableInstances { get; } = new(StringComparer.Ordinal);
+		public Dictionary<Register, Register[]> RegisterInstances { get; } = new();
+		public Dictionary<string, Register[]> VariableInstances { get; } = new(StringComparer.Ordinal);
 		public Dictionary<int, string> BlockLabels { get; } = BuildBlockLabels(instructions);
 		public Dictionary<int, int> JumpEndPositions { get; } = BuildJumpEndPositions(instructions);
 		public Dictionary<Register, string> RegisterValues { get; } = new();
@@ -167,57 +167,77 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	{
 		var positions = new Dictionary<int, int>();
 		for (var index = 0; index < instructions.Count; index++)
-			if (instructions[index] is JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd)
-				positions[jumpEnd.Id] = index; //ncrunch: no coverage
+			if (instructions[index].InstructionType == InstructionType.JumpEnd)
+				positions[((JumpToId)instructions[index]).Id] = index; //ncrunch: no coverage
 		return positions;
 	}
 
 	private static void EmitInstruction(Instruction instruction, List<string> lines,
 		EmitContext context, int index)
 	{
-		switch (instruction)
+		switch (instruction.InstructionType)
 		{
-		case StoreVariableInstruction storeConst
-			when !context.ParamIndexByName.ContainsKey(storeConst.Identifier):
-			EmitStoreVariable(storeConst, lines, context);
-			break;
-		case StoreVariableInstruction:
+		case InstructionType.StoreConstantToVariable:
+			var storeConst = (StoreVariableInstruction)instruction;
+			if (!context.ParamIndexByName.ContainsKey(storeConst.Identifier))
+				EmitStoreVariable(storeConst, lines, context);
 			break; //ncrunch: no coverage
-		case LoadVariableToRegister loadVar:
+		case InstructionType.LoadVariableToRegister:
+			var loadVar = (LoadVariableToRegister)instruction;
 			EmitLoadVariable(loadVar, lines, context);
 			break;
-		case LoadConstantInstruction loadConst:
+		case InstructionType.LoadConstantToRegister:
+			var loadConst = (LoadConstantInstruction)instruction;
 			EmitLoadConstant(loadConst, context);
 			break;
-		case BinaryInstruction binary when !binary.IsConditional():
-			EmitArithmetic(binary, lines, context);
+		case InstructionType.Add:
+		case InstructionType.Subtract:
+		case InstructionType.Multiply:
+		case InstructionType.Divide:
+		case InstructionType.Modulo:
+			EmitArithmetic((BinaryInstruction)instruction, lines, context);
 			break;
-		case BinaryInstruction binary:
-			EmitComparison(binary, lines, context);
+		case InstructionType.Equal:
+		case InstructionType.NotEqual:
+		case InstructionType.LessThan:
+		case InstructionType.GreaterThan:
+			EmitComparison((BinaryInstruction)instruction, lines, context);
 			break;
-		case StoreFromRegisterInstruction storeReg:
+		case InstructionType.StoreRegisterToVariable:
+			var storeReg = (StoreFromRegisterInstruction)instruction;
 			EmitStoreFromRegister(storeReg, lines, context);
 			break;
-		case ReturnInstruction ret:
+		case InstructionType.Return:
+			var ret = (ReturnInstruction)instruction;
 			EmitReturn(ret, lines, context);
 			break;
-		case PrintInstruction print:
+		case InstructionType.Print:
+			var print = (PrintInstruction)instruction;
 			EmitPrint(print, lines, context);
 			break;
-		case Jump jump:
+		case InstructionType.Jump:
+		case InstructionType.JumpIfTrue:
+		case InstructionType.JumpIfFalse:
+			var jump = (Jump)instruction;
 			EmitJump(jump, lines, context, index);
 			break;
-		case Invoke invoke:
+		case InstructionType.Invoke:
+			var invoke = (Invoke)instruction;
 			EmitInvoke(invoke, lines, context);
 			break;
-		case JumpToId { InstructionType: InstructionType.JumpEnd }:
+		case InstructionType.JumpEnd:
 			break; //ncrunch: no coverage
-		case JumpToId jumpToId:
+		case InstructionType.JumpToIdIfFalse:
+		case InstructionType.JumpToIdIfTrue:
+			var jumpToId = (JumpToId)instruction;
 			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
 			break; //ncrunch: no coverage
 		default:
-			throw new NotSupportedException(
-				$"LLVM IR compilation does not support instruction: {instruction.GetType().Name} ({instruction.InstructionType})");
+			throw new NotSupportedException($"LLVM IR compilation does not support instruction: {
+				instruction.GetType().Name
+			} ({
+				instruction.InstructionType
+			})");
 		}
 	}
 
@@ -531,69 +551,30 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 
 	private static void EmitInvoke(Invoke invoke, List<string> lines, EmitContext context)
 	{
-		if (invoke.Method == null)
+		if (invoke.MethodInfo == null)
 			throw new NotSupportedException("Invoke instruction is missing method metadata"); //ncrunch: no coverage
-		if (invoke.Method.Method.Name == Method.From && invoke.Method.Instance == null)
+		if (invoke.MethodInfo.MethodName == Method.From && !invoke.MethodInfo.InstanceRegister.HasValue)
 		{
-			context.RegisterInstances[invoke.Register] = ResolveConstructorArguments(invoke.Method);
+			context.RegisterInstances[invoke.Register] = invoke.MethodInfo.ArgumentRegisters;
 			return;
 		}
-		var methodKey = BuildMethodHeaderKeyInternal(invoke.Method.Method);
+		var methodKey = BuildMethodHeaderKeyInternal(invoke.MethodInfo);
 		if (context.CompiledMethods == null ||
 			!context.CompiledMethods.TryGetValue(methodKey, out var methodInfo))
 			throw new NotSupportedException( //ncrunch: no coverage
 				"Non-print method calls cannot be compiled to LLVM IR. " +
 				"Use the interpreted runner for programs with complex runtime method calls.");
 		var arguments = new List<string>();
-		if (methodInfo.MemberNames.Count > 0)
-			foreach (var memberExpression in ResolveInstanceMemberArguments(invoke.Method,
-				context.VariableInstances))
-				arguments.Add("double " + ResolveExpressionValue(memberExpression, context));
-		for (var argIndex = 0; argIndex < invoke.Method.Arguments.Count; argIndex++)
-			arguments.Add("double " +
-				ResolveExpressionValue(invoke.Method.Arguments[argIndex], context));
+		if (methodInfo.MemberNames.Count > 0 && invoke.MethodInfo.InstanceRegister.HasValue &&
+			context.RegisterInstances.TryGetValue(invoke.MethodInfo.InstanceRegister.Value,
+				out var memberRegisters))
+			foreach (var reg in memberRegisters)
+				arguments.Add("double " + GetRegisterValue(reg, context));
+		foreach (var argReg in invoke.MethodInfo.ArgumentRegisters)
+			arguments.Add("double " + GetRegisterValue(argReg, context));
 		var result = context.NextTemp();
 		lines.Add($"  {result} = call double @{methodInfo.Symbol}({string.Join(", ", arguments)})");
 		context.RegisterValues[invoke.Register] = result;
-	}
-
-	private static string ResolveExpressionValue(Expression expression, EmitContext context)
-	{
-		if (expression is Value value && !value.Data.IsText)
-			return FormatDouble(value.Data.Number);
-		//ncrunch: no coverage start
-		var variableName = expression.ToString();
-		if (context.ParamIndexByName.TryGetValue(variableName, out var paramIndex))
-			return $"%param{paramIndex}";
-		if (context.VariablePointers.ContainsKey(variableName))
-			throw new NotSupportedException(
-				"Cannot pass stack variable as inline argument in LLVM IR: " + variableName);
-		throw new NotSupportedException(
-			"Unsupported expression for LLVM IR native compilation: " + expression);
-	} //ncrunch: no coverage end
-
-	private static List<Expression> ResolveConstructorArguments(MethodCall constructorCall)
-	{
-		var members = constructorCall.ReturnType.Members.Where(member => !member.Type.IsTrait).ToList();
-		var result = new List<Expression>(members.Count);
-		for (var index = 0; index < members.Count; index++)
-			result.Add(index < constructorCall.Arguments.Count
-				? constructorCall.Arguments[index]
-				: new Value(members[index].Type, new ValueInstance(members[index].Type, 0)));
-		return result;
-	}
-
-	private static IEnumerable<Expression> ResolveInstanceMemberArguments(MethodCall methodCall,
-		Dictionary<string, List<Expression>> variableInstances)
-	{
-		if (methodCall.Instance is MethodCall constructorCall &&
-			constructorCall.Method.Name == Method.From && constructorCall.Instance == null)
-			return ResolveConstructorArguments(constructorCall); //ncrunch: no coverage
-		var instanceName = methodCall.Instance?.ToString();
-		if (instanceName != null && variableInstances.TryGetValue(instanceName, out var values))
-			return values;
-		throw new NotSupportedException( //ncrunch: no coverage
-			"Cannot resolve instance values for method call: " + methodCall);
 	}
 
 	private static string BuildEntryPoint(string methodName) =>

@@ -249,6 +249,10 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			if (left.IsText && (right.IsPrimitiveType(interpreter.numberType) ||
 				right.IsPrimitiveType(interpreter.characterType)))
 				right = new ValueInstance(right.ToExpressionCodeString());
+			if (ctx.IsTestAtCurrentLine && !left.IsText && left.GetType().IsNumber && !right.IsText &&
+				right.GetType().IsNumber)
+				return interpreter.ToBoolean(Math.Abs(left.Number - right.Number) <
+					TestComparisonEpsilon);
 			return interpreter.ToBoolean(left.Equals(right));
 		}
 		var l = left.Number;
@@ -266,6 +270,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
 	}
+
+	private const double TestComparisonEpsilon = 0.00001;
 
 	private ValueInstance ExecuteLogicalBinaryOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance left, ValueInstance right)
@@ -304,18 +310,26 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		ExecutionContext ctx, MethodCall call)
 	{
 		var leftItemType = leftList.List.ReturnType.GetFirstImplementation();
+		var convertedRightItems = new ValueInstance[rightList.Count];
+		for (var rightItemIndex = 0; rightItemIndex < rightList.Count; rightItemIndex++)
+		{
+			convertedRightItems[rightItemIndex] = RightItemForCombineLists(leftItemType,
+				rightList[rightItemIndex], ctx, call);
+			if (convertedRightItems[rightItemIndex].IsError)
+				return convertedRightItems[rightItemIndex];
+		}
 		if (leftList.IsMutable)
 		{
-			foreach (var item in rightList)
-				leftList.List.Items.Add(RightItemForCombineLists(leftItemType, item, ctx, call));
+			foreach (var item in convertedRightItems)
+				leftList.List.Items.Add(item);
 			return leftList;
 		}
 		var combined = new ValueInstance[leftList.List.Items.Count + rightList.Count];
 		var itemIndex = 0;
 		foreach (var item in leftList.List.Items)
 			combined[itemIndex++] = item;
-		foreach (var item in rightList)
-			combined[itemIndex++] = RightItemForCombineLists(leftItemType, item, ctx, call);
+		foreach (var item in convertedRightItems)
+			combined[itemIndex++] = item;
 		return new ValueInstance(leftList.List.ReturnType, combined);
 	}
 
@@ -327,7 +341,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (leftItemType.IsNumber && (item.IsText || item.IsPrimitiveType(interpreter.characterType)))
 			return double.TryParse(item.ToExpressionCodeString(), out var itemNumber)
 				? new ValueInstance(leftItemType, itemNumber)
-				: Error("Cannot downcast Text to Number for list: " + item, ctx, call);
+				: Error("Cannot downcast Text to Number for list: " +
+					item.ToString().Replace("\"", "\\\"", StringComparison.Ordinal), ctx, call);
 		return item;
 	}
 
@@ -461,12 +476,72 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				instance.Value.GetDictionaryItems()[args[0]] = args[1];
 			return instance.Value;
 		}
+		if (instance.HasValue &&
+			TryExecuteBuiltInMathMethod(call, instance.Value, out var mathResult))
+			return mathResult;
 		var result =
 			interpreter.Execute(call.Method, instance ?? interpreter.noneInstance, args, ctx);
 		if (call.Method.ReturnType.IsMutable && call.Instance is VariableCall variableCall &&
 			!instance.Equals(interpreter.noneInstance))
 			ctx.Set(variableCall.Variable.Name, result);
 		return result;
+	}
+
+	private bool TryExecuteBuiltInMathMethod(MethodCall call, ValueInstance instance,
+		out ValueInstance result)
+	{
+		var typeName = call.Method.Type.Name;
+		var methodName = call.Method.Name;
+		if (typeName == "Degrees" && methodName is "Sin" or "Cos" or "Tan")
+		{
+			var radians = instance.GetArithmeticNumber() * Math.PI / 180.0;
+			var value = methodName switch
+			{
+				"Sin" => Math.Sin(radians),
+				"Cos" => Math.Cos(radians),
+				_ => Math.Tan(radians)
+			};
+			result = new ValueInstance(interpreter.numberType, SnapNearInteger(value));
+			return true;
+		}
+		if (typeName == "Ratio" && methodName is "Asin" or "Acos" or "Atan")
+		{
+			var inputValue = instance.GetArithmeticNumber();
+			var degrees = methodName switch
+			{
+				"Asin" => Math.Asin(inputValue) * 180.0 / Math.PI,
+				"Acos" => Math.Acos(inputValue) * 180.0 / Math.PI,
+				_ => Math.Atan(inputValue) * 180.0 / Math.PI
+			};
+			result = new ValueInstance(interpreter.numberType, SnapNearInteger(degrees));
+			return true;
+		}
+		if (typeName == "Vector2" && methodName == "Atan")
+		{
+			var typeInst = instance.TryGetValueTypeInstance();
+			if (typeInst != null)
+			{
+				var numbersValue = typeInst.Values[0];
+				if (numbersValue.IsList && numbersValue.List.Items.Count >= 2)
+				{
+					var x = numbersValue.List.Items[0].Number;
+					var y = numbersValue.List.Items[1].Number;
+					var degrees = Math.Atan2(x, y) * 180.0 / Math.PI;
+					result = new ValueInstance(interpreter.numberType, SnapNearInteger(degrees));
+					return true;
+				}
+			}
+		}
+		result = default;
+		return false;
+	}
+
+	private static double SnapNearInteger(double value)
+	{
+		var rounded = Math.Round(value);
+		return Math.Abs(value - rounded) < 1e-10
+			? rounded
+			: value;
 	}
 
 	private ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)

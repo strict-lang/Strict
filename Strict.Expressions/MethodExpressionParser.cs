@@ -359,19 +359,18 @@ public class MethodExpressionParser : ExpressionParser
 		var context = body.Method.Type;
 		var callArguments = arguments;
 		if (TryParseLeadingNumberInstance(body, ref nestedInput, ref current, ref context))
-			callArguments = [];
-		if (nestedInput.Length > 0 && nestedInput[0] == '.')
-		{
-			if (arguments.Count == 1 && arguments[0] is Binary)
+			if (nestedInput.Length > 0 && nestedInput[0] == '.')
 			{
-				current = arguments[0];
-				context = current.ReturnType;
-				callArguments = [];
-				nestedInput = nestedInput[1..];
+				if (arguments.Count == 1 && arguments[0] is Binary)
+				{
+					current = arguments[0];
+					context = current.ReturnType;
+					callArguments = [];
+					nestedInput = nestedInput[1..];
+				}
+				else
+					throw new InvalidOperatorHere(body, nestedInput.ToString());
 			}
-			else
-				throw new InvalidOperatorHere(body, nestedInput.ToString());
-		}
 		var members = new RangeEnumerator(nestedInput, '.', 0);
 		while (members.MoveNext())
 		{
@@ -390,6 +389,12 @@ public class MethodExpressionParser : ExpressionParser
 					(inputText.Length > 0 && (char.IsDigit(inputText[0]) || inputText[0] == '-')
 						? Number.TryParse(body, inputText)
 						: null);
+				if (current is not null)
+				{
+					context = current.ReturnType;
+					continue;
+				}
+				current = TryParseConstraintRoot(body, context, inputText);
 				if (current is not null)
 				{
 					context = current.ReturnType;
@@ -429,13 +434,24 @@ public class MethodExpressionParser : ExpressionParser
 		return ListCall.TryParse(body, current, callArguments);
 	}
 
+	private Expression? TryParseConstraintRoot(Body body, Type context, ReadOnlySpan<char> inputText) =>
+		body.Method.Name == Language.Member.ConstraintsBody
+			? TryVariableOrValueOrParameterOrMemberOrMethodCall(context, null, body, inputText, [])
+			: null;
+
 	private static bool TryParseLeadingNumberInstance(Body body, ref ReadOnlySpan<char> nestedInput,
 		ref Expression? current, ref Type context)
 	{
-		if (nestedInput.IsEmpty || !char.IsDigit(nestedInput[0]))
+		var numberStart = nestedInput.Length > 1 && nestedInput[0] == '-' &&
+			char.IsDigit(nestedInput[1])
+				? 1
+				: 0;
+		if (nestedInput.IsEmpty || nestedInput.Length <= numberStart ||
+			!char.IsDigit(nestedInput[numberStart]))
 			return false;
-		var numberLength = GetLeadingNumberLength(nestedInput);
-		if (numberLength <= 0 || numberLength >= nestedInput.Length || nestedInput[numberLength] != '.')
+		var numberLength = numberStart + GetLeadingNumberLength(nestedInput[numberStart..]);
+		if (numberLength <= numberStart || numberLength >= nestedInput.Length ||
+			nestedInput[numberLength] != '.')
 			return false;
 		var leadingNumber = Number.TryParse(body, nestedInput[..numberLength]);
 		if (leadingNumber == null)
@@ -631,19 +647,13 @@ public class MethodExpressionParser : ExpressionParser
 				expression is For forExpression &&
 				(IsForCustomVariableMutation(forExpression, variableName) ||
 					forExpression.Body is MutableReassignment ||
-					forExpression.Body is MethodCall
-					{
-						Instance: VariableCall forVariableCall, IsMutable: true
-					} &&
-					forVariableCall.Variable.Name == variableName || forExpression.Body is Body forBody &&
+					IsMutableMethodCallOnVariable(forExpression.Body, variableName) ||
+					forExpression.Body is Body forBody &&
 					IsVariableMutated(forBody, variableName) ||
 					forExpression.Body is If forIfBody &&
-					CheckForVariableMutationInIf(variableName, forIfBody) ||
-					forExpression.Body is MethodCall { Instance: VariableCall bodyVarCall, IsMutable: true } &&
-					bodyVarCall.Variable.Name == variableName))
+					CheckForVariableMutationInIf(variableName, forIfBody)))
 				return true;
-			if (expression is MethodCall { Instance: VariableCall variableCall, IsMutable: true } &&
-				variableCall.Variable.Name == variableName)
+			if (IsMutableMethodCallOnVariable(expression, variableName))
 				return true;
 		}
 		return false;
@@ -679,8 +689,36 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private static bool IsMutableMethodCallOnVariable(Expression expression, string variableName) =>
-		expression is MethodCall { Instance: VariableCall varCall, IsMutable: true } &&
+		expression is MethodCall methodCall &&
+		(IsMutableInstanceMethodCall(methodCall, variableName) ||
+			IsVariablePassedToMutableParameter(methodCall, variableName));
+
+	private static bool IsMutableInstanceMethodCall(MethodCall methodCall, string variableName) =>
+		methodCall is { Instance: VariableCall varCall, IsMutable: true } &&
 		varCall.Variable.Name == variableName;
+
+	private static bool IsVariablePassedToMutableParameter(MethodCall methodCall, string variableName)
+	{
+		for (var index = 0;
+			index < methodCall.Arguments.Count && index < methodCall.Method.Parameters.Count;
+			index++)
+			if (methodCall.Method.Parameters[index].IsMutable &&
+				GetRootVariableName(methodCall.Arguments[index]) == variableName)
+				return true;
+		return false;
+	}
+
+	private static string? GetRootVariableName(Expression expression)
+	{
+		var current = expression;
+		while (current is ListCall listCall)
+			current = listCall.List;
+		while (current is MemberCall memberCall && memberCall.Instance != null)
+			current = memberCall.Instance;
+		return current is VariableCall variableCall
+			? variableCall.Variable.Name
+			: null;
+	}
 
 	/// <summary>
 	/// Similar to TryParseExpression, but we know there are commas separating expressions

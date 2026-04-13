@@ -1,8 +1,8 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
+using Strict.Expressions;
 using Strict.Language;
-using Strict.Language.Tests;
 using System.IO.Compression;
 
 namespace Strict.Tests;
@@ -12,38 +12,16 @@ public sealed class RunnerTests
 	[SetUp]
 	public void CreateTextWriter()
 	{
-		writer = new StringWriter();
+		consoleWriter = new StringWriter();
 		rememberConsole = Console.Out;
-		Console.SetOut(writer);
+		Console.SetOut(consoleWriter);
 	}
 
-	private StringWriter writer = null!;
+	private StringWriter consoleWriter = null!;
 	private TextWriter rememberConsole = null!;
 
 	[TearDown]
-	public void RestoreConsole()
-	{
-		Console.SetOut(rememberConsole);
-		CleanupGeneratedFiles();
-	}
-
-	private static void CleanupGeneratedFiles()
-	{
-		var baseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..");
-		foreach (var subDir in new[] { "Examples", "ImageProcessing" })
-		{
-			var dir = Path.Combine(baseDir, subDir);
-			if (!Directory.Exists(dir))
-				continue;
-			//ncrunch: no coverage start
-			foreach (var extension in new[]
-				{
-					".ll", ".mlir", ".llvm.mlir", ".asm", ".obj", ".exe", ".strictbinary"
-				})
-			foreach (var file in Directory.GetFiles(dir, "*" + extension))
-				File.Delete(file);
-		}
-	} //ncrunch: no coverage end
+	public void RestoreConsole() => Console.SetOut(rememberConsole);
 
 	[Test]
 	public async Task RunSimpleCalculator()
@@ -53,16 +31,15 @@ public sealed class RunnerTests
 			File.Delete(asmFilePath); //ncrunch: no coverage
 		try
 		{
-			await new Runner(SimpleCalculatorFilePath, TestPackage.Instance).Run();
+			await new Runner(SimpleCalculatorFilePath).Run();
 		}
 		//ncrunch: no coverage start
 		catch (IOException)
 		{
-			// Try again if the file was used in another test
 			Thread.Sleep(100);
-			await new Runner(SimpleCalculatorFilePath, TestPackage.Instance).Run();
+			await new Runner(SimpleCalculatorFilePath).Run();
 		} //ncrunch: no coverage end
-		Assert.That(writer.ToString(),
+		Assert.That(consoleWriter.ToString(),
 			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6" + Environment.NewLine));
 		Assert.That(File.Exists(asmFilePath), Is.False);
 	}
@@ -71,8 +48,8 @@ public sealed class RunnerTests
 	public async Task RunFromBytecodeFileProducesSameOutput()
 	{
 		var binaryFilePath = await GetExamplesBinaryFile("SimpleCalculator");
-		await new Runner(binaryFilePath, TestPackage.Instance).Run();
-		Assert.That(writer.ToString(),
+		await new Runner(binaryFilePath).Run();
+		Assert.That(consoleWriter.ToString(),
 			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 	}
 
@@ -88,12 +65,12 @@ public sealed class RunnerTests
 		try
 		{
 			File.Copy(SimpleCalculatorFilePath, copiedSourceFilePath);
-			await new Runner(copiedSourceFilePath, TestPackage.Instance).Run();
+			await new Runner(copiedSourceFilePath).Run();
 			Assert.That(File.Exists(copiedBinaryFilePath), Is.True);
-			writer.GetStringBuilder().Clear();
+			consoleWriter.GetStringBuilder().Clear();
 			File.Delete(copiedSourceFilePath);
-			await new Runner(copiedBinaryFilePath, TestPackage.Instance).Run();
-			Assert.That(writer.ToString(),
+			await new Runner(copiedBinaryFilePath).Run();
+			Assert.That(consoleWriter.ToString(),
 				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
 		}
 		finally
@@ -106,7 +83,7 @@ public sealed class RunnerTests
 	[Test]
 	public void BuildWithExpressionEntryPointThrows()
 	{
-		var runner = new Runner(SimpleCalculatorFilePath, TestPackage.Instance, "(1, 2, 3).Length");
+		var runner = new Runner(SimpleCalculatorFilePath, "(1, 2, 3).Length");
 		Assert.That(async () => await runner.Build(Platform.Windows),
 			Throws.TypeOf<Runner.CannotBuildExecutableWithCustomExpression>());
 	}
@@ -118,12 +95,12 @@ public sealed class RunnerTests
 		if (File.Exists(asmPath))
 			File.Delete(asmPath); //ncrunch: no coverage
 		var binaryPath = await GetExamplesBinaryFile("SimpleCalculator");
-		await new Runner(binaryPath, TestPackage.Instance).Run();
+		await new Runner(binaryPath).Run();
 		Assert.That(File.Exists(asmPath), Is.False);
 	}
 
 	[Test]
-	public async Task SaveStrictBinaryWithTypeBytecodeEntriesOnlyAsync()
+	public async Task SaveStrictBinaryWithTypeBytecodeEntriesOnly()
 	{
 		var binaryPath = await GetExamplesBinaryFile("SimpleCalculator");
 		await using var archive = await ZipFile.OpenReadAsync(binaryPath);
@@ -144,35 +121,35 @@ public sealed class RunnerTests
 	[Test]
 	public async Task RunSumWithProgramArguments()
 	{
-		await new Runner(SumFilePath, TestPackage.Instance, "5 10 20").Run();
-		Assert.That(writer.ToString(), Does.Contain("35"));
+		await new Runner(SumFilePath, "5 10 20").Run();
+		Assert.That(consoleWriter.ToString(), Does.Contain("35"));
 	}
 
 	[Test]
 	public async Task RunSumWithDifferentProgramArgumentsDoesNotReuseCachedEntryPoint()
 	{
-		await new Runner(SumFilePath, TestPackage.Instance, "5 10 20").Run();
-		writer.GetStringBuilder().Clear();
-		await new Runner(SumFilePath, TestPackage.Instance, "1 2").Run();
-		Assert.That(writer.ToString(), Does.Contain("3"));
+		await new Runner(SumFilePath, "5 10 20").Run();
+		consoleWriter.GetStringBuilder().Clear();
+		await new Runner(SumFilePath, "1 2").Run();
+		Assert.That(consoleWriter.ToString(), Does.Contain("3"));
 	}
 
 	[Test]
 	public async Task RunSumWithNoArgumentsUsesEmptyList()
 	{
-		await new Runner(SumFilePath, TestPackage.Instance, "0").Run();
-		Assert.That(writer.ToString(), Does.Contain("0"));
+		await new Runner(SumFilePath, "0").Run();
+		Assert.That(consoleWriter.ToString(), Does.Contain("0"));
 	}
 
 	[Test]
 	public async Task RunAutofilledMutable() =>
-		await new Runner(GetExamplesFilePath("AutofilledMutable"), TestPackage.Instance).Run();
+		await new Runner(GetExamplesFilePath("AutofilledMutable")).Run();
 
 	[Test]
 	public async Task RunParseHelloLogger()
 	{
-		await new Runner(GetExamplesFilePath("Parsing/ParseHelloLogger"), TestPackage.Instance).Run();
-		var output = writer.ToString();
+		await new Runner(GetExamplesFilePath("Parsing/ParseHelloLogger")).Run();
+		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Member(has): has logger"));
 		Assert.That(output, Does.Contain("Member(mutable): mutable count = 0"));
 		Assert.That(output, Does.Contain("Member(constant): constant Max = 100"));
@@ -184,8 +161,8 @@ public sealed class RunnerTests
 	[Test]
 	public async Task RunParseExpressions()
 	{
-		await new Runner(GetExamplesFilePath("Parsing/ParseExpressions"), TestPackage.Instance).Run();
-		var output = writer.ToString();
+		await new Runner(GetExamplesFilePath("Parsing/ParseExpressions")).Run();
+		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Parsing HelloLogger.strict expressions"));
 		Assert.That(output, Does.Contain("has member: logger"));
 		Assert.That(output, Does.Contain("mutable member: count = 0"));
@@ -200,8 +177,8 @@ public sealed class RunnerTests
 	[Test]
 	public async Task RunParseMethodHeaders()
 	{
-		await new Runner(GetExamplesFilePath("Parsing/ParseMethodHeaders"), TestPackage.Instance).Run();
-		var output = writer.ToString();
+		await new Runner(GetExamplesFilePath("Parsing/ParseMethodHeaders")).Run();
+		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Parsing method headers from type definitions"));
 		Assert.That(output, Does.Contain("Method: Run (no return type)"));
 		Assert.That(output, Does.Contain("Method: Add returns Number"));
@@ -219,8 +196,8 @@ public sealed class RunnerTests
 	[Test]
 	public async Task RunFibonacci()
 	{
-		await new Runner(GetExamplesFilePath("Fibonacci"), TestPackage.Instance).Run();
-		var output = writer.ToString();
+		await new Runner(GetExamplesFilePath("Fibonacci")).Run();
+		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Fibonacci(10) = 55"));
 		Assert.That(output, Does.Contain("Fibonacci(5) = 5"));
 	}
@@ -229,9 +206,9 @@ public sealed class RunnerTests
 	public async Task RunSimpleCalculatorTwiceWithoutTestPackage()
 	{
 		await new Runner(SimpleCalculatorFilePath).Run();
-		writer.GetStringBuilder().Clear();
+		consoleWriter.GetStringBuilder().Clear();
 		await new Runner(SimpleCalculatorFilePath).Run();
-		Assert.That(writer.ToString(), Does.Contain("2 + 3 = 5"));
+		Assert.That(consoleWriter.ToString(), Does.Contain("2 + 3 = 5"));
 	}
 
 	[Test]
@@ -244,7 +221,7 @@ public sealed class RunnerTests
 			var sourceCopyPath =
 				Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
 			File.Copy(SimpleCalculatorFilePath, sourceCopyPath);
-			await new Runner(sourceCopyPath, TestPackage.Instance).Run();
+			await new Runner(sourceCopyPath).Run();
 			var binaryPath = Path.ChangeExtension(sourceCopyPath, BinaryExecutable.Extension);
 			await using var archive = await ZipFile.OpenReadAsync(binaryPath);
 			var entry = archive.Entries.First(file => file.FullName == "SimpleCalculator.bytecode");
@@ -267,31 +244,6 @@ public sealed class RunnerTests
 		}
 	}
 
-	[Test]
-	public async Task RunAdjustBrightness()
-	{
-		var filePath = GetImageProcessingFilePath("AdjustBrightness");
-		await new Runner(filePath).Run();
-		Assert.That(writer.ToString(), Does.Contain("Executed"));
-	}
-
-	[Test]
-	public async Task RunAdjustBrightnessWithDiagnostics()
-	{
-		var filePath = GetImageProcessingFilePath("AdjustBrightness");
-		var binaryPath = Path.ChangeExtension(filePath, BinaryExecutable.Extension);
-		if (File.Exists(binaryPath))
-			File.Delete(binaryPath);
-		await new Runner(filePath, enableTestsAndDetailedOutput: true).Run();
-		var output = writer.ToString();
-		Assert.That(output, Does.Contain("Parsed methods:"));
-		Assert.That(output, Does.Contain("All type validations passed"));
-		Assert.That(output, Does.Contain("Methods tested:"));
-		Assert.That(output, Does.Contain("Generated bytecode instructions:"));
-		Assert.That(output, Does.Contain("Removed instruction:"));
-		Assert.That(output, Does.Contain("Executed"));
-	}
-
 	private static string SimpleCalculatorFilePath => GetExamplesFilePath("SimpleCalculator");
 	private static string SumFilePath => GetExamplesFilePath("Sum");
 
@@ -299,8 +251,8 @@ public sealed class RunnerTests
 	{
 		var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BinaryExecutable.Extension);
 		if (!File.Exists(localPath))
-			await new Runner(GetExamplesFilePath(filename), TestPackage.Instance).Run(); //ncrunch: no coverage
-		writer.GetStringBuilder().Clear();
+			await new Runner(GetExamplesFilePath(filename)).Run(); //ncrunch: no coverage
+		consoleWriter.GetStringBuilder().Clear();
 		return localPath;
 	}
 
@@ -314,14 +266,90 @@ public sealed class RunnerTests
 			: Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
 	}
 
-	public static string GetImageProcessingFilePath(string filename)
+	[Test]
+	//[Category("Slow")]
+	//TODO: works and helps finding issues, but is so annoyingly slow that NCrunch becomes stuck for 10-20s, no good! we first need to get things fast!
+	public async Task RunAdjustBrightness()
 	{
-		var localPath = Path.Combine(
-			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
-			"ImageProcessing", filename + Language.Type.Extension);
-		return File.Exists(localPath)
-			? localPath
-			: Path.Combine(FindRepoRoot(), "ImageProcessing", filename + Language.Type.Extension);
+#if DEBUG
+		try
+		{
+			PerformanceLog.IsEnabled = true;
+#endif
+		await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness")).Run();
+		var output = consoleWriter.ToString();
+		Assert.That(output, Does.Contain("Brightness adjustment successful: (0.25, 0.25, 0.25)"));
+#if DEBUG
+		}
+		finally
+		{
+			PerformanceLog.IsEnabled = false;
+		}
+#endif
+	}
+
+	[Test]
+	[Category("Slow")]
+	public async Task RunAdjustBrightnessRegeneratesCachedBinaryWhenColorChanges()
+	{
+		var adjustBrightnessPath = GetExamplesFilePath("../ImageProcessing/AdjustBrightness");
+		var colorPath = Path.Combine(Path.GetDirectoryName(adjustBrightnessPath)!, "Color.strict");
+		var binaryPath = Path.ChangeExtension(adjustBrightnessPath, BinaryExecutable.Extension);
+		var originalColorCode = await File.ReadAllTextAsync(colorPath);
+		var originalColorTimestamp = File.GetLastWriteTimeUtc(colorPath);
+		var hadBinary = File.Exists(binaryPath);
+		var originalBinaryBytes = hadBinary
+			? await File.ReadAllBytesAsync(binaryPath)
+			: [];
+		var originalBinaryTimestamp = hadBinary
+			? File.GetLastWriteTimeUtc(binaryPath)
+			: DateTime.MinValue;
+		try
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+			await new Runner(adjustBrightnessPath).Run();
+			var firstBinaryTimestamp = File.GetLastWriteTimeUtc(binaryPath);
+			consoleWriter.GetStringBuilder().Clear();
+			await File.WriteAllTextAsync(colorPath,
+				originalColorCode.Replace("has Alpha = 1", "has Alpha = 0.5"));
+			File.SetLastWriteTimeUtc(colorPath, DateTime.UtcNow.AddSeconds(2));
+			await new Runner(adjustBrightnessPath).Run();
+			Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(firstBinaryTimestamp));
+		}
+		finally
+		{
+			await File.WriteAllTextAsync(colorPath, originalColorCode);
+			File.SetLastWriteTimeUtc(colorPath, originalColorTimestamp);
+			if (hadBinary)
+			{
+				await File.WriteAllBytesAsync(binaryPath, originalBinaryBytes);
+				File.SetLastWriteTimeUtc(binaryPath, originalBinaryTimestamp);
+			}
+			else if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+		}
+	}
+
+	[Test]
+	[Category("Slow")]
+	public async Task RunAdjustBrightnessAllocatesBelowHalfMegabytePerRun()
+	{
+		var runner = new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness"));
+		ValueInstance.SetCreationLimit(20);
+		try
+		{
+			var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+			await runner.Run();
+			var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
+			const int Width = 128;
+			const int Height = 72;
+			Assert.That(allocatedAfter - allocatedBefore, Is.LessThan(Width * Height * 4 * 4 + 50_000));
+		}
+		finally
+		{
+			ValueInstance.SetCreationLimit(int.MaxValue);
+		}
 	}
 
 	//ncrunch: no coverage start

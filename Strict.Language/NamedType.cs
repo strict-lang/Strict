@@ -9,16 +9,22 @@ public abstract class NamedType
 		{
 			var parts = nameAndType.Split();
 			parts.MoveNext();
-			Name = parts.Current.ToString();
+			var rawName = parts.Current.ToString();
+			var fullTypePath = rawName.Contains(Context.ParentSeparator)
+				? rawName
+				: null;
+			Name = fullTypePath != null
+				? rawName[(rawName.LastIndexOf(Context.ParentSeparator) + 1)..]
+				: rawName;
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 			if (Name.IsKeyword())
 				throw new CannotUseKeywordsAsName(Name);
 			Type = definedIn.GetType(parts.MoveNext()
-				? nameAndType[(Name.Length + 1)..].ToString()
-				: Name.StartsWith("is", StringComparison.OrdinalIgnoreCase)
+				? nameAndType[(rawName.Length + 1)..].ToString()
+				: fullTypePath ?? (Name.StartsWith("is", StringComparison.OrdinalIgnoreCase)
 					? Type.Boolean
-					: Name.MakeFirstLetterUppercase());
+					: Name.MakeFirstLetterUppercase()));
 		}
 		else
 		{

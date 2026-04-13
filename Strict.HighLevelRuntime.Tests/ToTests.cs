@@ -18,6 +18,23 @@ public sealed class ToTests
 			new MethodExpressionParser());
 
 	[Test]
+	public async Task ComplexValuesToTextUseRecordLikeOutputAndLimitLongLists()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
+		using var program = new Type(package,
+			new TypeLines("ColorImageToText",
+				"has number",
+				"Run Text",
+				"\tColorImage(Size(2, 2), (Color(0, 0, 0), Color(0, 0, 0), Color(0, 0, 0), Color(0.25, 0.25, 0.25))) to Text")).ParseMembersAndMethods(parser);
+		var fullInterpreter = new Interpreter(package, TestBehavior.Disabled);
+		Assert.That(fullInterpreter.Execute(program.Methods.Single(method => method.Name == Method.Run),
+			fullInterpreter.noneInstance, []).Text, Is.EqualTo(
+			"ColorImage(Size=(2, 2), Colors=((0, 0, 0), (0, 0, 0), (0, 0, 0), ...))"));
+	}
+
+	[Test]
 	public void EvaluateToTextAndNumber()
 	{
 		using var t = CreateType(nameof(EvaluateToTextAndNumber), "has number", "GetText Text",

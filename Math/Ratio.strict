@@ -1,0 +1,13 @@
+﻿has number with value >= -1 and value <= 1
+Asin Degrees
+	Ratio(0).Asin is Degrees(0)
+	Ratio(1).Asin is Degrees(90)
+	value
+Acos Degrees
+	Ratio(0).Acos is Degrees(90)
+	Ratio(1).Acos is Degrees(0)
+	value
+Atan Degrees
+	Ratio(1).Atan is Degrees(45)
+	Ratio(-1).Atan is Degrees(-45)
+	value

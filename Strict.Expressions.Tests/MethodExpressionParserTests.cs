@@ -78,7 +78,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		var body = (Body)new Method(type, 0, this, [
 			MethodTests.Run,
 			"\tmutable result = 0",
-			"\tfor Range(0, 10)",
+			"\tfor 10",
 			"\t\tresult = result + 1",
 			"\tresult"
 		]).GetBodyAndParseIfNeeded();

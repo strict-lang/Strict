@@ -10,9 +10,6 @@ public sealed class JumpToId(int id, InstructionType instructionType)
 
 	public int Id { get; } = id;
 
-	public override void Write(BinaryWriter writer, NameTable table)
-	{
-		base.Write(writer, table);
+	protected override void WritePayload(BinaryWriter writer, NameTable table) =>
 		writer.Write7BitEncodedInt(Id);
-	}
 }

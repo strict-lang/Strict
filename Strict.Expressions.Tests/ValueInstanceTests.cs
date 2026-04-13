@@ -1,4 +1,5 @@
 using Strict.Language.Tests;
+using System.Runtime.InteropServices;
 
 namespace Strict.Expressions.Tests;
 
@@ -8,6 +9,10 @@ public sealed class ValueInstanceTests
 	public void CreateNumber() => numberType = TestPackage.Instance.GetType(Type.Number);
 
 	private Type numberType = null!;
+
+	[Test]
+	public void ValueInstanceIsAlwaysJustTwoValuesAsStruct() =>
+		Assert.That(Marshal.SizeOf(typeof(ValueInstance)), Is.EqualTo(2 * sizeof(double)));
 
 	[Test]
 	public void ToStringShowsTypeAndValue() =>
@@ -59,6 +64,49 @@ public sealed class ValueInstanceTests
 	}
 
 	[Test]
+	public void ValueInstanceDoesNotExposeListReuseConstructor()
+	{
+		var constructor = typeof(ValueInstance).GetConstructor([
+			typeof(Type), typeof(List<ValueInstance>), typeof(bool)
+		]);
+		Assert.That(constructor, Is.Null);
+	}
+
+	/*wtf, this is not the way we call it
+	[Test]
+	public void ValueInstanceCreatesEmptyListWithRequestedCapacity()
+	{
+		var listType = TestPackage.Instance.GetListImplementationType(numberType);
+		var instance = ValueInstance.CreateListWithCapacity(listType, 12);
+		Assert.That(instance.List.Items.Count, Is.EqualTo(0));
+		Assert.That(instance.List.Items.Capacity, Is.GreaterThanOrEqualTo(12));
+	}
+*/
+	[Test]
+	public void NumericDataTypeListsUseFlatNumberBacking()
+	{
+		using var pointType = new Type(TestPackage.Instance,
+				new TypeLines("Point2", "has xValue Number", "has yValue Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		//TODO: this is not a good way to test this, we just want to make sure when using two Point2 that the backing will be a flat numbers array!
+		var listType = TestPackage.Instance.GetListImplementationType(pointType);
+		var point1 = new ValueInstance(pointType,
+			[new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
+		var point2 = new ValueInstance(pointType,
+			[new ValueInstance(numberType, 3), new ValueInstance(numberType, 4)]);
+		var list = new ValueInstance(listType, [point1, point2]);
+		var flatNumbersField = typeof(ValueArrayInstance).GetField("flatNumbers",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+		var itemsField = typeof(ValueArrayInstance).GetField("items",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+		Assert.That(flatNumbersField, Is.Not.Null);
+		Assert.That(itemsField, Is.Not.Null);
+		Assert.That((float[]?)flatNumbersField!.GetValue(list.List), Is.Not.Null);
+		Assert.That(itemsField!.GetValue(list.List), Is.Null);
+		Assert.That(list.List[1].TryGetValueTypeInstance()!["yValue"].Number, Is.EqualTo(4));
+	}
+
+	[Test]
 	public void CompareDictionaries()
 	{
 		var dictType = TestPackage.Instance.GetDictionaryImplementationType(numberType, numberType);
@@ -96,7 +144,7 @@ public sealed class ValueInstanceTests
 	}
 
 	[Test]
-	public void ValueListInstanceStoresTypeAndItems()
+	public void ValueArrayInstanceStoresTypeAndItems()
 	{
 		var listType = TestPackage.Instance.GetListImplementationType(numberType);
 		ValueInstance[] items = [new(numberType, 1), new(numberType, 2)];
@@ -124,6 +172,26 @@ public sealed class ValueInstanceTests
 				"\tnumber is 1")).ParseMembersAndMethods(new MethodExpressionParser());
 		var instance = new ValueInstance(t, [new ValueInstance(numberType, 7)]);
 		Assert.That(instance.ToString(), Does.Contain(nameof(ValueTypeInstanceStoresMembers)));
+	}
+
+	[Test]
+	public void ValueInstanceWithRgbaMembersUsesCompactRepresentation()
+	{
+		using var rgbaType = new Type(TestPackage.Instance,
+				new TypeLines("CompactRgbaValue", "has Red Number", "has Green Number", "has Blue Number",
+					"has Alpha = 1", "Run Number", "\tRed")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var instance = new ValueInstance(rgbaType, [
+			new ValueInstance(numberType, 0.5),
+			new ValueInstance(numberType, 0.75),
+			new ValueInstance(numberType, 0.5),
+			new ValueInstance(numberType, 1)
+		]);
+		var valueField = typeof(ValueInstance).GetField("value",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		Assert.That(valueField.GetValue(instance)!.GetType().Name,
+			Is.Not.EqualTo("ValueTypeInstance"));
+		Assert.That(instance.ToExpressionCodeString(), Is.EqualTo("(0.5, 0.75, 0.5)"));
 	}
 
 	[Test]
@@ -287,5 +355,109 @@ public sealed class ValueInstanceTests
 				"\tnumber is 1")).ParseMembersAndMethods(new MethodExpressionParser());
 		var typeInstance = new ValueInstance(t, [new ValueInstance(numberType, 42)]);
 		Assert.That(new ValueInstance(numberType, 42), Is.EqualTo(typeInstance));
+	}
+
+	[Test]
+	public void SizeTypeUsesFlatFloatArrayBacking()
+	{
+		using var sizeType = new Type(TestPackage.Instance,
+				new TypeLines("FlatSize", "has Width Number", "has Height Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var size = ValueInstance.CreateFlatNumericType(sizeType, [128f, 72f]);
+		var valueField = typeof(ValueInstance).GetField("value",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		Assert.That(valueField.GetValue(size), Is.InstanceOf<ValueArrayInstance>());
+		Assert.That(size.GetType(), Is.EqualTo(sizeType));
+		Assert.That(size.TryGetFlatNumericMember("Width", out var width), Is.True);
+		Assert.That(width.Number, Is.EqualTo(128));
+		Assert.That(size.TryGetFlatNumericMember("Height", out var height), Is.True);
+		Assert.That(height.Number, Is.EqualTo(72));
+	}
+
+	[Test]
+	public void ColorTypeUsesFlatFloatArrayBacking()
+	{
+		using var colorType = new Type(TestPackage.Instance,
+				new TypeLines("FlatColor", "has Hue Number", "has Saturation Number",
+					"has Lightness Number", "has Opacity Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var color = ValueInstance.CreateFlatNumericType(colorType,
+			[0.5f, 0.75f, 0.25f, 1f]);
+		var valueField = typeof(ValueInstance).GetField("value",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		Assert.That(valueField.GetValue(color), Is.InstanceOf<ValueArrayInstance>());
+		Assert.That(color.TryGetFlatNumericMember("Hue", out var hue), Is.True);
+		Assert.That(hue.Number, Is.EqualTo(0.5).Within(0.001));
+		Assert.That(color.TryGetFlatNumericMember("Saturation", out var saturation), Is.True);
+		Assert.That(saturation.Number, Is.EqualTo(0.75).Within(0.001));
+		Assert.That(color.TryGetFlatNumericMember("Lightness", out var lightness), Is.True);
+		Assert.That(lightness.Number, Is.EqualTo(0.25).Within(0.001));
+		Assert.That(color.TryGetFlatNumericMember("Opacity", out var opacity), Is.True);
+		Assert.That(opacity.Number, Is.EqualTo(1).Within(0.001));
+	}
+/*should Not be called directly, it should happen automatically!
+	[Test]
+	public void ListOfColorsUsesSharedFlatBackingArray()
+	{
+		using var colorType = new Type(TestPackage.Instance,
+				new TypeLines("FlatColor2", "has Hue Number", "has Saturation Number",
+					"has Lightness Number", "has Opacity Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var listType = TestPackage.Instance.GetListImplementationType(colorType);
+		var flatNumbers = new float[40];
+		for (var colorIndex = 0; colorIndex < 10; colorIndex++)
+		{
+			flatNumbers[colorIndex * 4] = colorIndex * 0.1f;
+			flatNumbers[colorIndex * 4 + 1] = colorIndex * 0.05f;
+			flatNumbers[colorIndex * 4 + 2] = colorIndex * 0.02f;
+			flatNumbers[colorIndex * 4 + 3] = 1f;
+		}
+		var list = ValueInstance.CreateFlatNumericList(listType, colorType, flatNumbers, 4);
+		var flatNumbersField = typeof(ValueArrayInstance).GetField("flatNumbers",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		var backingArray = (float[]?)flatNumbersField.GetValue(list.List);
+		Assert.That(backingArray, Is.Not.Null);
+		Assert.That(backingArray!.Length, Is.EqualTo(40));
+		var element5 = list.List[5];
+		Assert.That(element5.IsFlatNumeric, Is.True);
+		Assert.That(element5.TryGetFlatNumericMember("Hue", out var hue5), Is.True);
+		Assert.That(hue5.Number, Is.EqualTo(0.5).Within(0.01));
+		Assert.That(element5.TryGetFlatNumericMember("Opacity", out var opacity5), Is.True);
+		Assert.That(opacity5.Number, Is.EqualTo(1).Within(0.001));
+		var valueField = typeof(ValueInstance).GetField("value",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		var elementBacking = (ValueArrayInstance)valueField.GetValue(element5)!;
+		var elementBackingNumbers = typeof(ValueArrayInstance).GetField("flatNumbers",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		Assert.That(elementBackingNumbers.GetValue(elementBacking),
+			Is.SameAs(backingArray), "Slice should reference same backing array");
+	}
+*/
+	[Test]
+	public void ClonedFlatBackedListSharesBackingUntilWrite()
+	{
+		using var pointType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ClonedFlatBackedListSharesBackingUntilWrite), "has xValue Number",
+					"has yValue Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var listType = TestPackage.Instance.GetListImplementationType(pointType);
+		var firstPoint = new ValueInstance(pointType,
+			[new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
+		var secondPoint = new ValueInstance(pointType,
+			[new ValueInstance(numberType, 3), new ValueInstance(numberType, 4)]);
+		var original = new ValueInstance(listType, [firstPoint, secondPoint]);
+		var clonedList = original.List.Clone(listType);
+		var flatNumbersField = typeof(ValueArrayInstance).GetField("flatNumbers",
+			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+		Assert.That(flatNumbersField, Is.Not.Null);
+		var originalBacking = (float[]?)flatNumbersField!.GetValue(original.List);
+		var cloneBackingBeforeWrite = (float[]?)flatNumbersField.GetValue(clonedList);
+		Assert.That(cloneBackingBeforeWrite, Is.SameAs(originalBacking));
+		clonedList[0] = new ValueInstance(pointType,
+			[new ValueInstance(numberType, 9), new ValueInstance(numberType, 10)]);
+		var cloneBackingAfterWrite = (float[]?)flatNumbersField.GetValue(clonedList);
+		Assert.That(cloneBackingAfterWrite, Is.Not.SameAs(originalBacking));
+		Assert.That(original.List[0].TryGetValueTypeInstance()!["xValue"].Number, Is.EqualTo(1));
+		Assert.That(clonedList[0].TryGetValueTypeInstance()!["xValue"].Number, Is.EqualTo(9));
 	}
 }

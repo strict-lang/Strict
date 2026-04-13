@@ -12,9 +12,9 @@ public sealed class SetInstruction(ValueInstance valueInstance, Register registe
 	public Register Register { get; } = register;
 	public override string ToString() => $"{base.ToString()} {Register}";
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		writer.Write((byte)Register);
 	}
 }

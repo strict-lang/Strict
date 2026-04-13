@@ -16,9 +16,9 @@ public sealed class LoadConstantInstruction(Register register, ValueInstance con
 	public ValueInstance Constant { get; } = constant;
 	public override string ToString() => $"{base.ToString()} {Register} {Constant}";
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		BinaryExecutable.WriteValueInstance(writer, Constant, table);
 	}
 }

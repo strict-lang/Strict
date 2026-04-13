@@ -12,9 +12,9 @@ public sealed class ListCallInstruction(Register register, Register indexValueRe
 	public Register IndexValueRegister { get; } = indexValueRegister;
 	public string Identifier { get; } = identifier;
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
+		base.WritePayload(writer, table);
 		writer.Write((byte)IndexValueRegister);
 		writer.Write7BitEncodedInt(table[Identifier]);
 	}

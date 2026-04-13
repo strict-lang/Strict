@@ -52,14 +52,16 @@ public sealed class MutableReassignment : ConcreteExpression
 		var expression = body.Method.ParseExpression(body, parts.Current, true);
 		var newExpression = body.Method.ParseExpression(body, line[(parts.Current.Length + 3)..]);
 		if (!newExpression.ReturnType.IsSameOrCanBeUsedAs(expression.ReturnType, false))
-			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType.Name,
-				newExpression.ReturnType.Name);
+			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType,
+				newExpression.ReturnType);
 		return new MutableReassignment(body, expression, newExpression);
 	}
 
 	public sealed class ValueTypeNotMatchingWithAssignmentType(Body body,
-		string currentValueType, string newValueType) : ParsingFailed(body,
-		$"Cannot assign {newValueType} value type to {currentValueType} member or variable");
+		Language.Type currentValueType, Language.Type newValueType) : ParsingFailed(body,
+		$"Cannot assign {newValueType} value type to {currentValueType} (" + newValueType.Package +
+		"packages are equal: " + (newValueType.Package == currentValueType.Package) +
+		") member or variable");
 
 	public override bool IsConstant => false;
 	public override string ToString() => Name + " = " + Value;

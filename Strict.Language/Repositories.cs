@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using LazyCache;
 
 [assembly: InternalsVisibleTo("Strict.Transpiler.Tests")]
@@ -9,22 +10,11 @@ namespace Strict.Language;
 /// Loads packages from url (like GitHub) and caches it to disc for the current and later runs.
 /// Next time Repositories is created, we will check for outdated cache and delete the zip files
 /// to allow redownloading fresh files. All locally cached packages and all types in them are
-/// always available for any .strict file in the Editor. If a type is not found, we check on github
+/// always available for any .strict file in the Editor. If a type is not found, we check on GitHub
 /// </summary>
 /// <remarks>Everything in here is async, you can load many packages in parallel</remarks>
-public sealed class Repositories
+public sealed class Repositories(ExpressionParser parser)
 {
-	/// <summary>
-	/// Keeps a cache of loaded repositories for 20 minutes, default CachingService.DefaultCachePolicy
-	/// </summary>
-	public Repositories(ExpressionParser parser)
-	{
-		cacheService = new CachingService();
-		this.parser = parser;
-	}
-
-	private readonly IAppCache cacheService;
-	private readonly ExpressionParser parser;
 	public Task<Package> LoadStrictPackage(string packageNameAndSubfolder = nameof(Strict)
 #if DEBUG
 		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
@@ -69,21 +59,26 @@ public sealed class Repositories
 		);
 	} //ncrunch: no coverage end
 
+	private static readonly IAppCache CacheService = new CachingService();
+	private readonly ExpressionParser parser = parser;
+
 	public static string GetLocalDevelopmentPath(string organization, string packageFullName)
 	{
-		var traditional = DevelopmentBaseFolder + organization + Context.ParentSeparator +
-			packageFullName;
-		if (Directory.Exists(traditional))
-			return traditional;
+		var path = DevelopmentBaseFolder + organization + Context.ParentSeparator + packageFullName;
+		if (Directory.Exists(path))
+			return path;
 		var repoRoot = FindRepositoryRoot();
 		if (repoRoot == null)
-			return traditional;
-		var parts = packageFullName.Split(Context.ParentSeparator);
-		if (Path.GetFileName(repoRoot) != parts[0])
-			return traditional;
-		return parts.Length == 1
+			return path;
+		// When running inside the Strict repo, the repo root IS the base Strict package
+		// (contains .strict files). Sub-packages like "Strict/Math" map to repoRoot/Math.
+		var separatorIndex = packageFullName.IndexOf(Context.ParentSeparator);
+		var repoPath = separatorIndex < 0
 			? repoRoot
-			: Path.Combine(repoRoot, Path.Combine(parts[1..]));
+			: repoRoot + Context.ParentSeparator + packageFullName[(separatorIndex + 1)..];
+		return Directory.Exists(repoPath)
+			? repoPath
+			: repoRoot + Context.ParentSeparator + packageFullName;
 	}
 
 	private static string? FindRepositoryRoot()
@@ -93,12 +88,8 @@ public sealed class Repositories
 		var current = AppContext.BaseDirectory;
 		while (current != null)
 		{
-			if (File.Exists(Path.Combine(current, "Strict.sln")) &&
-				File.Exists(Path.Combine(current, "Any.strict")))
-			{
-				cachedRepositoryRoot = current;
-				return current;
-			}
+			if (File.Exists(Path.Combine(current, Type.Any + Type.Extension)))
+				return cachedRepositoryRoot = current;
 			current = Path.GetDirectoryName(current);
 		}
 		return null;
@@ -127,26 +118,96 @@ public sealed class Repositories
 		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = ""
 #endif
-	)
+	) =>
+		CacheService.GetOrAddAsync(fullName, async _ =>
+		{
+			//Console.WriteLine("Repositories.LoadFromPath package " + fullName + " from path " + packagePath);
+			var parent = await LoadParentPackage(fullName);
+			var files = Directory.GetFiles(packagePath, "*" + Type.Extension);
+			var dependencyPackages = await LoadDependencyPackages(fullName, files);
+			var package = CreatePackageFromFiles(packagePath, files
+#if DEBUG
+				, parent, callerFilePath, callerLineNumber, callerMemberName);
+#else
+				, parent);
+#endif
+			package.automaticallyLoadedDependencyPackages = dependencyPackages;
+			return package;
+		});
+
+	private async Task<Package?> LoadParentPackage(string fullName)
 	{
 		var parent = FindParentPackage(fullName);
-		return cacheService.GetOrAddAsync(fullName, _ => CreatePackageFromFiles(packagePath,
-			Directory.GetFiles(packagePath, "*" + Type.Extension)
-#if DEBUG
-			, parent, callerFilePath, callerLineNumber, callerMemberName));
-#else
-			, parent));
-#endif
+		if (parent != null)
+			return parent;
+		var separatorIndex = fullName.LastIndexOf(Context.ParentSeparator);
+		if (separatorIndex < 0)
+			return null;
+		var parentName = fullName[..separatorIndex];
+		return await LoadStrictPackage(parentName);
 	}
 
-	private Package? FindParentPackage(string fullName)
+	private async Task<List<Package>> LoadDependencyPackages(string fullName,
+		IReadOnlyCollection<string> files)
+	{
+		var dependencyPackages = new List<Package>();
+		if (fullName == nameof(Strict) || files.Count == 0)
+			return dependencyPackages;
+		var rootPackageName = GetRootPackageName(fullName);
+		foreach (var dependencyPackage in FindDependencyPackages(fullName, rootPackageName, files))
+			dependencyPackages.Add(await LoadStrictPackage(dependencyPackage));
+		return dependencyPackages;
+	}
+
+	private static string GetRootPackageName(string fullName)
+	{
+		var separatorIndex = fullName.IndexOf(Context.ParentSeparator);
+		return separatorIndex == -1
+			? fullName
+			: fullName[..separatorIndex];
+	}
+
+	private static IEnumerable<string> FindDependencyPackages(string fullName, string rootPackageName,
+		IReadOnlyCollection<string> files)
+	{
+		var dependencies = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var file in files)
+		foreach (Match match in TypeFullNamePattern.Matches(File.ReadAllText(file)))
+		{
+			var typeFullName = match.Value;
+			var lastSeparatorIndex = typeFullName.LastIndexOf(Context.ParentSeparator);
+			if (lastSeparatorIndex <= 0)
+				continue;
+			var packageName = NormalizePackageName(typeFullName[..lastSeparatorIndex], rootPackageName);
+			lock (LoadedPackages)
+			{
+				if (packageName != fullName && LoadedPackages.Find(p => p.FullName == packageName) == null)
+					dependencies.Add(packageName);
+			}
+		}
+		return dependencies;
+	}
+
+	private static string NormalizePackageName(string packageName, string rootPackageName)
+	{
+		if (packageName == rootPackageName ||
+			packageName.StartsWith(rootPackageName + Context.ParentSeparator, StringComparison.Ordinal))
+			return packageName;
+		return rootPackageName + Context.ParentSeparator + packageName;
+	}
+
+	private static readonly Regex TypeFullNamePattern = new(
+		"(?<![A-Za-z0-9/])[A-Z][A-Za-z0-9]*(?:/[A-Z][A-Za-z0-9]*)+(?![A-Za-z0-9/])",
+		RegexOptions.Compiled);
+
+	private static Package? FindParentPackage(string fullName)
 	{
 		var separatorIndex = fullName.LastIndexOf(Context.ParentSeparator);
 		if (separatorIndex < 0)
 			return null;
 		var parentName = fullName[..separatorIndex];
 		// ReSharper disable once InconsistentlySynchronizedField
-		return loadedPackages.Find(package => package.FullName == parentName);
+		return LoadedPackages.Find(package => package.FullName == parentName);
 	}
 
 	/// <summary>
@@ -154,8 +215,8 @@ public sealed class Repositories
 	/// we will fill and load them, otherwise we could not use types within the package context.
 	/// Constraint parsing is deferred to a second pass so all type methods are available.
 	/// </summary>
-	private async Task<Package> CreatePackageFromFiles(string packagePath,
-		IReadOnlyCollection<string> files, Package? parent = null
+	private Package CreatePackageFromFiles(string packagePath, IReadOnlyCollection<string> files,
+		Package? parent = null
 #if DEBUG
 		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = ""
@@ -174,8 +235,8 @@ public sealed class Repositories
 			? new Package(parent, packagePath, this)
 			: new Package(packagePath, this);
 #endif
-		lock (loadedPackages)
-			loadedPackages.Add(package);
+		lock (LoadedPackages)
+			LoadedPackages.Add(package);
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethodsForPackage(parser);
@@ -185,20 +246,20 @@ public sealed class Repositories
 		return package;
 	}
 
-	private void InvalidateAllAvailableMethodsCaches()
+	private static void InvalidateAllAvailableMethodsCaches()
 	{
 		Package[] loadedPackagesSnapshot;
-		lock (loadedPackages)
-			loadedPackagesSnapshot = loadedPackages.ToArray();
+		lock (LoadedPackages)
+			loadedPackagesSnapshot = LoadedPackages.ToArray();
 		foreach (var loadedPackage in loadedPackagesSnapshot)
-		foreach (var type in loadedPackage.Types.Values)
+		foreach (var type in loadedPackage.Types.Values.ToArray())
 			type.InvalidateAvailableMethodsCache();
 		foreach (var loadedPackage in loadedPackagesSnapshot)
-		foreach (var type in loadedPackage.Types.Values)
+		foreach (var type in loadedPackage.Types.Values.ToArray())
 			type.ReimplementGenericTypeMethods();
 	}
 
-	private readonly List<Package> loadedPackages = [];
+	private static readonly List<Package> LoadedPackages = [];
 
 	private ICollection<Type> GetTypes(IReadOnlyCollection<string> files, Package package)
 	{
@@ -312,21 +373,21 @@ public sealed class Repositories
 	/// </summary>
 	internal void Remove(Package result)
 	{
-		cacheService.Remove(result.FullName);
-		lock (loadedPackages)
-			loadedPackages.Remove(result);
+		CacheService.Remove(result.FullName);
+		lock (LoadedPackages)
+			LoadedPackages.Remove(result);
 	}
 
 	public bool ContainsPackageNameInCache(string fullName) =>
-		cacheService.TryGetValue<AsyncLazy<Package>>(fullName, out _);
+		CacheService.TryGetValue<AsyncLazy<Package>>(fullName, out _);
 
 	public async Task<string> ToDebugString() =>
 		nameof(Repositories) +
-		"\nStrict: " + (cacheService.TryGetValue<AsyncLazy<Package>>(nameof(Strict),
+		"\nStrict: " + (CacheService.TryGetValue<AsyncLazy<Package>>(nameof(Strict),
 			out var lazyPackage)
 			? (await lazyPackage.Value).ToDebugString()
 			: "") +
 		// ReSharper disable once InconsistentlySynchronizedField
-		"\nLoadedPackages: " + string.Join("\n  ", loadedPackages) +
+		"\nLoadedPackages: " + string.Join("\n  ", LoadedPackages) +
 		"\nPreviouslyCheckedDirectories: " + string.Join<string>(", ", PreviouslyCheckedDirectories.ToList());
 }

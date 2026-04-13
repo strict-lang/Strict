@@ -239,6 +239,8 @@ internal class TypeMethodFinder(Type type)
 	{
 		if (type.IsNumber || type.IsBoolean || type.IsCharacter || type.IsText)
 			return false;
+		if (type.IsList || type.IsDictionary)
+			return true;
 		if (type.IsTrait)
 			return true;
 		if (type.Members.Count == 0)

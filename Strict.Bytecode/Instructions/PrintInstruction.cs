@@ -36,9 +36,8 @@ public sealed class PrintInstruction(string textPrefix, Register? valueRegister 
 			}"
 			: $"Print \"{TextPrefix}\"";
 
-	public override void Write(BinaryWriter writer, NameTable table)
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
 	{
-		base.Write(writer, table);
 		writer.Write7BitEncodedInt(table[TextPrefix]);
 		writer.Write(ValueRegister.HasValue);
 		if (!ValueRegister.HasValue)

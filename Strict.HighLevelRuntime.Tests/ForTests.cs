@@ -18,6 +18,53 @@ public sealed class ForTests
 			new MethodExpressionParser());
 
 	[Test]
+	public async Task SizeIterationOrderMatchesTwoDimensionalColorImageIndexing()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
+		using var testType = new Type(package,
+			new TypeLines("ColorImageIndexing",
+				"has number",
+				"CenterIsExpectedColor Boolean",
+				"\tconstant width = 2",
+				"\tconstant height = 2",
+				"\tconstant colors = (Color(0, 0, 0),",
+				"\tColor(0.25, 0.25, 0.25),",
+				"\tColor(0.5, 0.5, 0.5),",
+				"\tColor(0.75, 0.75, 0.75))",
+				"\tconstant image = ColorImage(Size(width, height), colors)",
+				"\timage.Colors(width / 2, height / 2) is Color(0.75, 0.75, 0.75)",
+				"Indices Numbers",
+				"\tfor Size(2, 2)",
+				"\t\tvalue.X + value.Y * 10")).ParseMembersAndMethods(parser);
+		var packageInterpreter = new Interpreter(package, TestBehavior.Disabled);
+		Assert.That(packageInterpreter.Execute(
+			testType.Methods.Single(method => method.Name == "CenterIsExpectedColor"),
+			packageInterpreter.noneInstance, []).Boolean, Is.True);
+		Assert.That(packageInterpreter.Execute(testType.Methods.Single(method => method.Name == "Indices"),
+			packageInterpreter.noneInstance, []).ToExpressionCodeString(), Is.EqualTo("(0, 1, 10, 11)"));
+	}
+
+	[Test]
+	public async Task SizeIteratorCanAssignTwoVariables()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		using var strictPackage = await repositories.LoadStrictPackage();
+		using var mathPackage = await repositories.LoadStrictPackage("Strict/Math");
+		using var testType = new Type(mathPackage,
+			new TypeLines(nameof(SizeIteratorCanAssignTwoVariables),
+				"has number",
+				"Coordinates Numbers",
+				"\tfor horizontal, vertical in Size(2, 2)",
+				"\t\thorizontal + vertical * 10")).ParseMembersAndMethods(parser);
+		var packageInterpreter = new Interpreter(mathPackage, TestBehavior.Disabled);
+		Assert.That(packageInterpreter.Execute(testType.Methods.Single(method => method.Name == "Coordinates"),
+			packageInterpreter.noneInstance, []).ToExpressionCodeString(), Is.EqualTo("(0, 1, 10, 11)"));
+	}
+
+	[Test]
 	public void CustomVariableInForLoopIsUsed()
 	{
 		using var t = CreateType(nameof(CustomVariableInForLoopIsUsed), "has number", "Sum Number",
@@ -128,24 +175,10 @@ public sealed class ForTests
 	}
 
 	[Test]
-	public void DirectOuterIndexerUsesImmediateParentValue()
-	{
-		using var t = CreateType(nameof(DirectOuterIndexerUsesImmediateParentValue), "has number",
-			"Get(number, length Number) Text", "\tfor Range(number, number + length)",
-			"\t\touter(value)");
-		var instance = new ValueInstance(t, [new ValueInstance("hello")]);
-		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Get"), instance,
-		[
-			new ValueInstance(interpreter.numberType, 1), new ValueInstance(interpreter.numberType, 3)
-		]);
-		Assert.That(result.Text, Is.EqualTo("ell"));
-	}
-
-	[Test]
 	public void ForLoopWithAscendingRangeAndEarlyReturn()
 	{
 		using var t = CreateType(nameof(ForLoopWithAscendingRangeAndEarlyReturn), "has number",
-			"FindFirst Number", "\tfor Range(1, 5)", "\t\tif value is 3", "\t\t\treturn value",
+			"FindFirst Number", "\tfor Range(1, 5)", "\t\tif index is 3", "\t\t\treturn index",
 			"\t\t0");
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
 			interpreter.noneInstance, []);
@@ -156,7 +189,7 @@ public sealed class ForTests
 	public void ForLoopWithDescendingRangeAndEarlyReturn()
 	{
 		using var t = CreateType(nameof(ForLoopWithDescendingRangeAndEarlyReturn), "has number",
-			"FindFirst Number", "\tfor Range(5, 1)", "\t\tif value is 3", "\t\t\treturn value",
+			"FindFirst Number", "\tfor Range(5, 1)", "\t\tif index is 3", "\t\t\treturn index",
 			"\t\t0");
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
 			interpreter.noneInstance, []);

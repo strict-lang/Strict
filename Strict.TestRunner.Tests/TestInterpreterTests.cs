@@ -139,7 +139,7 @@ public class TestInterpreterTests
 					"\tSumRange(Range(2, 5)) is 2 + 3 + 4",
 					"\tSumRange(Range(42, 45)) is 42 + 43 + 44",
 					"\tfor range",
-					"\t\tvalue")).
+					"\t\tindex")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo(new[]
@@ -147,7 +147,7 @@ public class TestInterpreterTests
 				"SumRange(Range(2, 5)) is 2 + 3 + 4",
 				"SumRange(Range(42, 45)) is 42 + 43 + 44",
 				"for range",
-				"\tvalue"
+				"\tindex"
 				// @formatter:on
 			}.ToLines()));
 		interpreter.RunAllTestsInType(type);

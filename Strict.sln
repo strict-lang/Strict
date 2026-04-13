@@ -17,6 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		strict-conversion-plan.md = strict-conversion-plan.md
 		Strict.sln.DotSettings = Strict.sln.DotSettings
 		Strict.v3.ncrunchsolution = Strict.v3.ncrunchsolution
+		Strict.Tests\bin\Debug\net10.0\StrictVirtualMachineLog.txt = Strict.Tests\bin\Debug\net10.0\StrictVirtualMachineLog.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Strict.Transpiler", "Strict.Transpiler\Strict.Transpiler.csproj", "{D9E14E41-8F3C-4B92-B773-227871A96F96}"

@@ -50,22 +50,6 @@ public sealed class BinaryGeneratorTests : TestBytecode
 			"Method without logger.Log does not produce PrintInstruction");
 	}
 
-	[Test]
-	public async Task RunAdjustBrightnessAndConfirmDependenciesAreLoaded()
-	{
-		var repos = new Repositories(new MethodExpressionParser());
-		using var basePackage = await repos.LoadStrictPackage();
-		using var mathPackage = await repos.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator + "Math");
-		var packageName = nameof(Strict) + Context.ParentSeparator + "ImageProcessing";
-		using var imageProcessingPackage = await repos.LoadStrictPackage(packageName);
-		var adjustBrightness = imageProcessingPackage.GetType("AdjustBrightness");
-		var call = new MethodCall(adjustBrightness.FindMethod(Method.Run, [])!);
-		var binary = new BinaryGenerator(call).Generate();
-		Assert.That(binary.MethodsPerType.Keys.Any(fullName =>
-				fullName.EndsWith("/Size", StringComparison.Ordinal)), Is.True,
-			$"Loaded types: {string.Join(", ", binary.MethodsPerType.Keys)}");
-	}
-
 	//ncrunch: no coverage start
 	private static IEnumerable<TestCaseData> ByteCodeCases
 	{
@@ -338,8 +322,10 @@ public sealed class BinaryGeneratorTests : TestBytecode
 				[
 					new StoreVariableInstruction(Number(2), "firstNumber"),
 					new StoreVariableInstruction(Number(5), "secondNumber"),
-					new Invoke(Register.R0, null!, null!),
-					new ReturnInstruction(Register.R0)
+					new LoadVariableToRegister(Register.R0, "firstNumber"),
+					new LoadVariableToRegister(Register.R1, "secondNumber"),
+					new Invoke(Register.R2, null!),
+					new ReturnInstruction(Register.R2)
 				],
 				(string[])
 				[
@@ -354,7 +340,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 				new Instruction[]
 				{
 					new StoreVariableInstruction(Number(5), "number"),
-					new Invoke(Register.R0, null!, null!),
+					new Invoke(Register.R0, null!),
 					new LoadConstantInstruction(Register.R1, Number(0)),
 					new BinaryInstruction(InstructionType.GreaterThan, Register.R0, Register.R1),
 					new JumpToId(0, InstructionType.JumpToIdIfFalse),

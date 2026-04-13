@@ -7,6 +7,7 @@ using Strict.Language;
 using Type = Strict.Language.Type;
 
 [assembly: InternalsVisibleTo("Strict")]
+[assembly: InternalsVisibleTo("Strict.Optimizers")]
 
 namespace Strict.Bytecode;
 
@@ -18,13 +19,19 @@ namespace Strict.Bytecode;
 public sealed class BinaryExecutable(Package basePackage)
 {
 	internal readonly Package basePackage = basePackage;
-	private readonly Package package = basePackage;
-	internal Type noneType = basePackage.GetType(Type.None);
-	internal Type booleanType = basePackage.GetType(Type.Boolean);
-	internal Type numberType = basePackage.GetType(Type.Number);
-	internal Type characterType = basePackage.GetType(Type.Character);
-	internal Type rangeType = basePackage.GetType(Type.Range);
-	internal Type listType = basePackage.GetType(Type.List);
+	internal Type noneType = basePackage.FindType(Type.None) ?? new Type(basePackage, new TypeLines(Type.None));
+	internal Type booleanType = basePackage.FindType(Type.Boolean) ?? new Type(basePackage, new TypeLines(Type.Boolean));
+	internal Type numberType = basePackage.FindType(Type.Number) ?? new Type(basePackage, new TypeLines(Type.Number));
+	internal Type characterType = basePackage.FindType(Type.Character) ?? new Type(basePackage, new TypeLines(Type.Character));
+	internal Type rangeType = basePackage.FindType(Type.Range) ?? new Type(basePackage, new TypeLines(Type.Range));
+	internal Type listType = basePackage.FindType(Type.List) ?? new Type(basePackage, new TypeLines(Type.List));
+
+	/// <summary>
+	/// Loads a fully self-contained .strictbinary without needing any external package.
+	/// Builds an internal package of stub types from the embedded type entries so the VM
+	/// can resolve type identity checks (IsNumber, IsList, etc.) without any source files.
+	/// </summary>
+	public BinaryExecutable(string filePath) : this(filePath, new Package(null, nameof(Strict))) { }
 
 	/// <summary>
 	/// Reads a .strictbinary ZIP containing all type bytecode (used types, members, methods) and
@@ -44,11 +51,36 @@ public sealed class BinaryExecutable(Package basePackage)
 					var reader = new BinaryReader(bytecode);
 					MethodsPerType.Add(typeFullName, new BinaryType(reader, this, typeFullName));
 				}
+			if (basePackage.Parent == null)
+				PopulateStubTypesFromEmbeddedEntries();
 		}
 		catch (InvalidDataException ex)
 		{
 			throw new InvalidFile(ex.Message);
 		}
+	}
+
+	/// <summary>
+	/// After loading all entries, create stub types for every embedded type so the VM
+	/// can resolve IsNumber, IsList, etc. via the package without loading any source.
+	/// </summary>
+	private void PopulateStubTypesFromEmbeddedEntries()
+	{
+		foreach (var typeFullName in MethodsPerType.Keys)
+		{
+			var simpleName = typeFullName.Split(Context.ParentSeparator)[^1];
+			if (basePackage.FindDirectType(simpleName) == null)
+				new Type(basePackage, new TypeLines(simpleName));
+		}
+		noneType = basePackage.GetType(Type.None);
+		booleanType = basePackage.GetType(Type.Boolean);
+		numberType = basePackage.GetType(Type.Number);
+		if (basePackage.FindDirectType(Type.Character) != null)
+			characterType = basePackage.GetType(Type.Character);
+		if (basePackage.FindDirectType(Type.Range) != null)
+			rangeType = basePackage.GetType(Type.Range);
+		if (basePackage.FindDirectType(Type.List) != null)
+			listType = basePackage.GetType(Type.List);
 	}
 
 	private static string GetEntryNameWithoutExtension(string fullName)
@@ -64,12 +96,12 @@ public sealed class BinaryExecutable(Package basePackage)
 	/// Each key is a type.FullName (e.g. Strict/Number, Strict/ImageProcessing/Color), the Value
 	/// contains all members of this type and all not stripped out methods that were actually used.
 	/// </summary>
-	public Dictionary<string, BinaryType> MethodsPerType = new();
+	public readonly Dictionary<string, BinaryType> MethodsPerType = new();
 	private BinaryMethod? entryPoint;
 	public BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
 	public sealed class InvalidFile(string message) : Exception(message);
 
-	public IReadOnlyList<BinaryMethod> GetRunMethods()
+	public List<BinaryMethod> GetRunMethods()
 	{
 		var runMethods = new List<BinaryMethod>();
 		foreach (var typeData in MethodsPerType.Values)
@@ -87,10 +119,10 @@ public sealed class BinaryExecutable(Package basePackage)
 		throw new InvalidOperationException("No Run entry point found in binary executable");
 	}
 
-	public IReadOnlyList<Instruction>? FindInstructions(Type type, Method method) =>
+	public List<Instruction>? FindInstructions(Type type, Method method) =>
 		FindInstructions(type.FullName, method.Name, method.Parameters.Count, method.ReturnType.Name);
 
-	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
+	public List<Instruction>? FindInstructions(string fullTypeName, string methodName,
 		int parametersCount, string returnType = "") =>
 		MethodsPerType.TryGetValue(fullTypeName, out var methods)
 			? methods.MethodGroups.GetValueOrDefault(methodName)?.Find(method =>
@@ -101,9 +133,11 @@ public sealed class BinaryExecutable(Package basePackage)
 	private static bool DoesReturnTypeMatch(string storedReturnType, string expectedReturnType) =>
 		expectedReturnType.Length == 0 || storedReturnType == expectedReturnType ||
 		storedReturnType.EndsWith(Context.ParentSeparator + expectedReturnType,
+			StringComparison.Ordinal) ||
+		expectedReturnType.EndsWith(Context.ParentSeparator + storedReturnType,
 			StringComparison.Ordinal);
 
-	public IReadOnlyList<Instruction>? FindInstructions(string fullTypeName, string methodName,
+	public List<Instruction>? FindInstructions(string fullTypeName, string methodName,
 		int parametersCount, Type returnType) =>
 		FindInstructions(fullTypeName, methodName, parametersCount, returnType.Name);
 
@@ -126,18 +160,28 @@ public sealed class BinaryExecutable(Package basePackage)
 
 	public Instruction ReadInstruction(BinaryReader reader, NameTable table)
 	{
-		var type = (InstructionType)reader.ReadByte();
-		return type switch
+		var prevSourceLine = 0;
+		return ReadInstruction(reader, table, ref prevSourceLine);
+	}
+
+	internal Instruction ReadInstruction(BinaryReader reader, NameTable table,
+		ref int prevSourceLine)
+	{
+		var rawByte = reader.ReadByte();
+		var hasSourceLine = (rawByte & (byte)InstructionType.IncludesSourceLine) != 0;
+		var type = (InstructionType)(rawByte & ((byte)InstructionType.IncludesSourceLine - 1));
+		if (hasSourceLine)
+			prevSourceLine = reader.Read7BitEncodedInt(); // 20-40% of instructions have source lines
+		Instruction instruction = type switch
 		{
 			InstructionType.LoadConstantToRegister => new LoadConstantInstruction(reader, table, this),
 			InstructionType.LoadVariableToRegister => new LoadVariableToRegister(reader, table),
-			InstructionType.StoreConstantToVariable =>
-				new StoreVariableInstruction(reader, table, this),
+			InstructionType.StoreConstantToVariable => new StoreVariableInstruction(reader, table, this),
 			InstructionType.StoreRegisterToVariable => new StoreFromRegisterInstruction(reader, table),
 			InstructionType.Set => new SetInstruction(reader, table, this),
-			InstructionType.Invoke => new Invoke(reader, table, this),
+			InstructionType.Invoke => new Invoke(reader, table),
 			InstructionType.Return => new ReturnInstruction(reader),
-			InstructionType.LoopBegin => new LoopBeginInstruction(reader),
+			InstructionType.LoopBegin => new LoopBeginInstruction(reader, table),
 			InstructionType.LoopEnd => new LoopEndInstruction(reader),
 			InstructionType.JumpIfNotZero => new JumpIfNotZero(reader),
 			InstructionType.JumpIfTrue => new Jump(reader, InstructionType.JumpIfTrue),
@@ -154,6 +198,8 @@ public sealed class BinaryExecutable(Package basePackage)
 			_ when IsBinaryOp(type) => new BinaryInstruction(reader, type),
 			_ => throw new InvalidFile("Unknown instruction type: " + type) //ncrunch: no coverage
 		};
+		instruction.SourceLine = prevSourceLine;
+		return instruction;
 	}
 
 	private static bool IsBinaryOp(InstructionType type) =>
@@ -170,7 +216,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		if (val.IsList)
 		{
 			writer.Write((byte)ValueKind.List);
-			writer.Write7BitEncodedInt(table[val.List.ReturnType.Name]);
+			writer.Write7BitEncodedInt(table[val.List.ReturnType.FullName]);
 			var items = val.List.Items;
 			writer.Write7BitEncodedInt(items.Count);
 			foreach (var item in items)
@@ -180,7 +226,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		if (val.IsDictionary)
 		{
 			writer.Write((byte)ValueKind.Dictionary);
-			writer.Write7BitEncodedInt(table[val.GetType().Name]);
+			writer.Write7BitEncodedInt(table[val.GetType().FullName]);
 			var items = val.GetDictionaryItems();
 			writer.Write7BitEncodedInt(items.Count);
 			foreach (var kvp in items)
@@ -252,7 +298,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		var items = new ValueInstance[count];
 		for (var index = 0; index < count; index++)
 			items[index] = ReadValueInstance(reader, table);
-		return new ValueInstance(basePackage.GetType(typeName), items);
+		return new ValueInstance(EnsureResolvedType(basePackage, typeName), items);
 	}
 
 	private ValueInstance ReadDictionaryValueInstance(BinaryReader reader, NameTable table)
@@ -266,7 +312,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			var value = ReadValueInstance(reader, table);
 			items[key] = value;
 		}
-		return new ValueInstance(basePackage.GetType(typeName), items);
+		return new ValueInstance(EnsureResolvedType(basePackage, typeName), items);
 	}
 
 	internal MethodCall ReadMethodCall(BinaryReader reader, NameTable table)
@@ -274,7 +320,9 @@ public sealed class BinaryExecutable(Package basePackage)
 		var declaringTypeName = table.names[reader.Read7BitEncodedInt()];
 		var methodName = table.names[reader.Read7BitEncodedInt()];
 		var paramCount = reader.Read7BitEncodedInt();
-		var parameters = new BinaryMember[paramCount];
+		var parameters = paramCount == 0
+			? Array.Empty<BinaryMember>()
+			: new BinaryMember[paramCount];
 		for (var index = 0; index < paramCount; index++)
 			parameters[index] = new BinaryMember(table.names[reader.Read7BitEncodedInt()],
 				table.names[reader.Read7BitEncodedInt()], null);
@@ -284,11 +332,13 @@ public sealed class BinaryExecutable(Package basePackage)
 			? ReadExpression(reader, table)
 			: null;
 		var argCount = reader.Read7BitEncodedInt();
-		var args = new Expression[argCount];
+		var args = argCount == 0
+			? Array.Empty<Expression>()
+			: new Expression[argCount];
 		for (var index = 0; index < argCount; index++)
 			args[index] = ReadExpression(reader, table);
-		var declaringType = EnsureResolvedType(package, declaringTypeName);
-		var returnType = EnsureResolvedType(package, returnTypeName);
+		var declaringType = EnsureResolvedType(basePackage, declaringTypeName);
+		var returnType = EnsureResolvedType(basePackage, returnTypeName);
 		var method = FindMethod(declaringType, methodName, parameters, returnType);
 		var methodReturnType = returnType != method.ReturnType
 			? returnType
@@ -297,21 +347,33 @@ public sealed class BinaryExecutable(Package basePackage)
 	}
 
 	private static Method FindMethod(Type type, string methodName,
-		IReadOnlyList<BinaryMember> parameters, Type returnType)
+		BinaryMember[] parameters, Type returnType)
 	{
 		var method = type.Methods.FirstOrDefault(existingMethod =>
-				existingMethod.Name == methodName &&
-				existingMethod.Parameters.Count == parameters.Count) ??
-			type.Methods.FirstOrDefault(existingMethod => existingMethod.Name == methodName);
+			existingMethod.Name == methodName &&
+			existingMethod.Parameters.Count == parameters.Length);
 		if (method != null)
 			return method;
 		if (type.AvailableMethods.TryGetValue(methodName, out var availableMethods))
 		{
 			var found = availableMethods.FirstOrDefault(existingMethod =>
-				existingMethod.Parameters.Count == parameters.Count) ?? availableMethods.FirstOrDefault();
+				existingMethod.Parameters.Count == parameters.Length);
 			if (found != null)
 				return found;
+			if (parameters.Length == 0)
+			{
+				var noParameterFallback = availableMethods.FirstOrDefault();
+				if (noParameterFallback != null)
+					return noParameterFallback;
+			}
 		} //ncrunch: no coverage
+		if (parameters.Length == 0)
+		{
+			var noParameterMethod = type.Methods.FirstOrDefault(existingMethod =>
+				existingMethod.Name == methodName);
+			if (noParameterMethod != null)
+				return noParameterMethod;
+		}
 		var methodHeader = BuildMethodHeader(methodName, parameters, returnType);
 		var createdMethod = new Method(type, 0, new MethodExpressionParser(), [methodHeader]);
 		type.Methods.Add(createdMethod);
@@ -319,8 +381,8 @@ public sealed class BinaryExecutable(Package basePackage)
 	}
 
 	public static string BuildMethodHeader(string methodName,
-		IReadOnlyList<BinaryMember> parameters, Type returnType) =>
-		parameters.Count == 0
+		BinaryMember[] parameters, Type returnType) =>
+		parameters.Length == 0
 			? returnType.IsNone
 				? methodName
 				: methodName + " " + returnType.Name
@@ -331,28 +393,41 @@ public sealed class BinaryExecutable(Package basePackage)
 		var kind = (ExpressionKind)reader.ReadByte();
 		return kind switch
 		{
-			ExpressionKind.SmallNumberValue => new Number(package, reader.ReadByte()),
-			ExpressionKind.IntegerNumberValue => new Number(package, reader.ReadInt32()),
-			ExpressionKind.NumberValue => new Number(package, reader.ReadDouble()),
-			ExpressionKind.TextValue => new Text(package, table.names[reader.Read7BitEncodedInt()]),
-			ExpressionKind.BooleanValue => ReadBooleanValue(reader, package, table),
-			ExpressionKind.VariableRef => ReadVariableRef(reader, package, table),
+			ExpressionKind.SmallNumberValue => new Number(basePackage, reader.ReadByte()),
+			ExpressionKind.IntegerNumberValue => new Number(basePackage, reader.ReadInt32()),
+			ExpressionKind.NumberValue => new Number(basePackage, reader.ReadDouble()),
+			ExpressionKind.TextValue => new Text(basePackage, table.names[reader.Read7BitEncodedInt()]),
+			ExpressionKind.BooleanValue => ReadBooleanValue(reader, basePackage, table),
+			ExpressionKind.VariableRef => ReadVariableRef(reader, table),
 			ExpressionKind.MemberRef => ReadMemberRef(reader, table),
 			ExpressionKind.BinaryExpr => ReadBinaryExpr(reader, table),
 			ExpressionKind.MethodCallExpr => ReadMethodCall(reader, table),
-     ExpressionKind.ListExpr => ReadListExpr(reader, table),
+			ExpressionKind.ListExpr => ReadListExpr(reader, table),
+			ExpressionKind.ListCallExpr => ReadListCallExpr(reader, table),
 			_ => throw new InvalidFile("Unknown ExpressionKind: " + kind)
 		};
 	}
 
-	private Expressions.List ReadListExpr(BinaryReader reader, NameTable table)
+	private List ReadListExpr(BinaryReader reader, NameTable table)
 	{
-		var listType = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
+		var concreteListType = EnsureResolvedType(basePackage, table.names[reader.Read7BitEncodedInt()]);
 		var itemCount = reader.Read7BitEncodedInt();
 		var values = new List<Expression>(itemCount);
 		for (var index = 0; index < itemCount; index++)
 			values.Add(ReadExpression(reader, table));
-    return new Expressions.List(listType, values, 0, false);
+		return new List(concreteListType, values, 0, false);
+	}
+
+	private ListCall ReadListCallExpr(BinaryReader reader, NameTable table)
+	{
+		EnsureResolvedType(basePackage, table.names[reader.Read7BitEncodedInt()]);
+		var list = ReadExpression(reader, table);
+		var index = ReadExpression(reader, table);
+		var hasSecondIndex = reader.ReadBoolean();
+		var secondIndex = hasSecondIndex
+			? ReadExpression(reader, table)
+			: null;
+		return new ListCall(list, index, secondIndex);
 	}
 
 	//TODO: missing test
@@ -365,18 +440,24 @@ public sealed class BinaryExecutable(Package basePackage)
 	//TODO: avoid! remove!
 	private static Type EnsureResolvedType(Package package, string typeName)
 	{
-    var resolved = package.FindType(typeName) ?? (typeName.Contains(Context.ParentSeparator)
-			? package.FindFullType(typeName)
+		var resolved = package.FindType(typeName) ?? (typeName.Contains(Context.ParentSeparator)
+			? package.FindFullType(typeName) ?? package.FindType(GetSimpleTypeName(typeName))
 			: null);
 		if (resolved != null)
 			return resolved;
 		if (typeName.EndsWith(')') && typeName.Contains('('))
-      return package.GetType(GetGenericLookupName(typeName));
+			return package.GetType(GetGenericLookupName(typeName));
 		if (char.IsLower(typeName[0]))
 			throw new TypeNotFoundForBytecode(typeName);
-		EnsureTypeExists(package, typeName);
-		return package.GetType(typeName);
+		var simpleTypeName = GetSimpleTypeName(typeName);
+		EnsureTypeExists(package, simpleTypeName);
+		return package.GetType(simpleTypeName);
 	}
+
+	private static string GetSimpleTypeName(string typeName) =>
+		typeName.Contains(Context.ParentSeparator)
+			? typeName[(typeName.LastIndexOf(Context.ParentSeparator) + 1)..]
+			: typeName;
 
 	private static string GetGenericLookupName(string typeName)
 	{
@@ -398,10 +479,12 @@ public sealed class BinaryExecutable(Package basePackage)
 				new MethodExpressionParser());
 	}
 
-	private static Expression ReadVariableRef(BinaryReader reader, Package package, NameTable table)
+	private readonly Dictionary<Type, Value> cachedDefaultValuesForVariableRefs = new();
+
+	private Expression ReadVariableRef(BinaryReader reader, NameTable table)
 	{
 		var name = table.names[reader.Read7BitEncodedInt()];
-		var type = EnsureResolvedType(package, table.names[reader.Read7BitEncodedInt()]);
+		var type = EnsureResolvedType(basePackage, table.names[reader.Read7BitEncodedInt()]);
 		var parenIndex = name.IndexOf('(');
 		var cleanName = parenIndex > 0
 			? name[..parenIndex]
@@ -409,7 +492,12 @@ public sealed class BinaryExecutable(Package basePackage)
 		var dotIndex = cleanName.IndexOf('.');
 		if (dotIndex > 0)
 			cleanName = cleanName[..dotIndex];
-		var param = new Parameter(type, cleanName, new Value(type, new ValueInstance(type)));
+		if (!cachedDefaultValuesForVariableRefs.TryGetValue(type, out var defaultValue))
+		{
+			defaultValue = new Value(type, new ValueInstance(type));
+			cachedDefaultValuesForVariableRefs[type] = defaultValue;
+		}
+		var param = new Parameter(type, cleanName, defaultValue);
 		return new ParameterCall(param);
 	}
 
@@ -421,8 +509,9 @@ public sealed class BinaryExecutable(Package basePackage)
 		var instance = hasInstance
 			? ReadExpression(reader, table)
 			: null;
-		var anyBaseType = EnsureResolvedType(package, Type.Number);
-		var fakeMember = new Member(anyBaseType, memberName + " " + memberTypeName, null);
+		var anyBaseType = EnsureResolvedType(basePackage, Type.Number);
+		var memberType = EnsureResolvedType(basePackage, memberTypeName);
+		var fakeMember = new Member(anyBaseType, memberName, memberType);
 		return new MemberCall(instance, fakeMember);
 	}
 
@@ -446,7 +535,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	{
 		switch (expr)
 		{
-   case Expressions.List list:
+		case List list:
 			writer.Write((byte)ExpressionKind.ListExpr);
 			writer.Write7BitEncodedInt(table[list.ReturnType.FullName]);
 			writer.Write7BitEncodedInt(list.Values.Count);
@@ -459,7 +548,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			break;
 		case Value val when val.Data.GetType().IsBoolean:
 			writer.Write((byte)ExpressionKind.BooleanValue);
-			writer.Write7BitEncodedInt(table[val.Data.GetType().Name]);
+			writer.Write7BitEncodedInt(table[val.Data.GetType().FullName]);
 			writer.Write(val.Data.Boolean);
 			break;
 		case Value val when val.Data.GetType().IsNumber:
@@ -484,21 +573,30 @@ public sealed class BinaryExecutable(Package basePackage)
 		case MemberCall memberCall:
 			writer.Write((byte)ExpressionKind.MemberRef);
 			writer.Write7BitEncodedInt(table[memberCall.Member.Name]);
-			writer.Write7BitEncodedInt(table[memberCall.Member.Type.Name]);
+			writer.Write7BitEncodedInt(table[memberCall.Member.Type.FullName]);
 			writer.Write(memberCall.Instance != null);
 			if (memberCall.Instance != null)
 				// ReSharper disable TailRecursiveCall
 				WriteExpression(writer, memberCall.Instance, table);
 			break;
-		case Expressions.Binary binary:
+		case Binary binary:
 			writer.Write((byte)ExpressionKind.BinaryExpr);
 			writer.Write7BitEncodedInt(table[binary.Method.Name]);
 			WriteExpression(writer, binary.Instance!, table);
 			WriteExpression(writer, binary.Arguments[0], table);
 			break;
+		case ListCall listCall:
+			writer.Write((byte)ExpressionKind.ListCallExpr);
+			writer.Write7BitEncodedInt(table[listCall.ReturnType.FullName]);
+			WriteExpression(writer, listCall.List, table);
+			WriteExpression(writer, listCall.Index, table);
+			writer.Write(listCall.SecondIndex != null);
+			if (listCall.SecondIndex != null)
+				WriteExpression(writer, listCall.SecondIndex, table);
+			break;
 		case MethodCall methodCall:
 			writer.Write((byte)ExpressionKind.MethodCallExpr);
-			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.Method.Type.FullName]);
 			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
 			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
 			foreach (var parameter in methodCall.Method.Parameters)
@@ -506,7 +604,7 @@ public sealed class BinaryExecutable(Package basePackage)
 				writer.Write7BitEncodedInt(table[parameter.Name]);
 				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
 			}
-			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.ReturnType.FullName]);
 			writer.Write(methodCall.Instance != null);
 			if (methodCall.Instance != null)
 				WriteExpression(writer, methodCall.Instance, table);
@@ -517,7 +615,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		default:
 			writer.Write((byte)ExpressionKind.VariableRef);
 			writer.Write7BitEncodedInt(table[expr.ToString()]);
-			writer.Write7BitEncodedInt(table[expr.ReturnType.Name]);
+			writer.Write7BitEncodedInt(table[expr.ReturnType.FullName]);
 			break;
 		}
 	}
@@ -528,7 +626,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		writer.Write(methodCall != null);
 		if (methodCall != null)
 		{
-			writer.Write7BitEncodedInt(table[methodCall.Method.Type.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.Method.Type.FullName]);
 			writer.Write7BitEncodedInt(table[methodCall.Method.Name]);
 			writer.Write7BitEncodedInt(methodCall.Method.Parameters.Count);
 			foreach (var parameter in methodCall.Method.Parameters)
@@ -536,7 +634,7 @@ public sealed class BinaryExecutable(Package basePackage)
 				writer.Write7BitEncodedInt(table[parameter.Name]);
 				writer.Write7BitEncodedInt(table[parameter.Type.FullName]);
 			}
-			writer.Write7BitEncodedInt(table[methodCall.ReturnType.Name]);
+			writer.Write7BitEncodedInt(table[methodCall.ReturnType.FullName]);
 			writer.Write(methodCall.Instance != null);
 			if (methodCall.Instance != null)
 				WriteExpression(writer, methodCall.Instance, table);

@@ -1,4 +1,5 @@
 using Strict.Bytecode.Instructions;
+using Strict.Expressions;
 
 namespace Strict.Optimizers.Tests;
 
@@ -143,4 +144,58 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 			new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3, Register.R4),
 			new ReturnInstruction(Register.R4)
 		], 3)[^1], Is.InstanceOf<ReturnInstruction>());
+
+	[Test]
+	public void InlineOneLineMethodInsideLoop()
+	{
+		var binary = CreateLoopInliningBinary();
+		new AllInstructionOptimizers().Optimize(binary);
+		Assert.That(binary.EntryPoint.instructions.OfType<Invoke>().Any(), Is.False);
+		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(20000));
+	}
+
+	internal BinaryExecutable CreateLoopInliningBinary() =>
+		GenerateBinary("LoopInlining",
+		// @formatter:off
+		"has number Number",
+		"Run Number",
+		"\tmutable temp = number",
+		"\tfor 10000",
+		"\t\ttemp = AddToNumber(temp, 2)",
+		"\ttemp",
+		"AddToNumber(temp Number, increase Number) Number",
+		"\ttemp + increase");
+	// @formatter: on
+
+	[Test]
+	public async Task InlineColorAdjustmentInsideLoopRemovesInvoke()
+	{
+		var repos = new Repositories(new MethodExpressionParser());
+		var package = await repos.LoadStrictPackage("Strict/ImageProcessing");
+		var binary = CreateColorAdjustmentBinary(package);
+		new AllInstructionOptimizers().Optimize(binary);
+		var remainingNames = binary.EntryPoint.instructions.OfType<Invoke>()
+			.Select(i => i.MethodInfo.MethodName).ToList();
+		Assert.That(remainingNames, Does.Not.Contain("GetBrightnessAdjustedColor"));
+		var oldOld = Console.Out;
+		try
+		{
+			var logWriter = new StringWriter();
+			Console.SetOut(logWriter);
+			new VirtualMachine(binary).Execute();
+			Assert.That(logWriter.ToString(),
+				Is.EqualTo("Brightness adjustment successful: (0.25, 0.25, 0.25)\r\n"));
+		}
+		finally
+		{
+			Console.SetOut(oldOld);
+		}
+	}
+
+	internal BinaryExecutable CreateColorAdjustmentBinary(Package package)
+	{
+		var brightnerType = package.FindDirectType("AdjustBrightness")!;
+		var runMethod = brightnerType.Methods.Single(m => m.Name == "Run");
+		return new BinaryGenerator(new MethodCall(runMethod)).Generate();
+	}
 }

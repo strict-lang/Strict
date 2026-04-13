@@ -1,4 +1,5 @@
 has iterator
+constant Epsilon = 0.00001
 to Text
 	5 to Text is "5"
 	10.1 to Text is "10.1"
@@ -19,6 +20,33 @@ Floor Number
 	1.Floor is 1
 	2.4.Floor is 2
 	value - value % 1
+Ceiling Number
+	1.Ceiling is 1
+	2.4.Ceiling is 3
+	value - (value + 1 - Epsilon) % 1
+Round Number
+	2.4.Round is 2
+	2.6.Round is 3
+	3.5.Round is 4
+	value - (value + 0.5) % 1
+Absolute Number
+	-1.Absolute is 1
+	1.Absolute is 1
+	value < 0 then 0 - value else value
+IsNearlyEqual(other, difference = Epsilon) Boolean
+	2.30000001.IsNearlyEqual(2.3)
+	(value - other).Absolute < difference
+Clamp(minimum = 0, maximum = 1) Number
+	1.7.Clamp(0.5, 1.5) is 1.5
+	0.3.Clamp is 0.3
+	-0.8.Clamp(-0.5, 0.5) is -0.5
+	value > maximum then maximum else value < minimum then minimum else value
+Lerp(other, percentage Number) Number
+	1.Lerp(3, 0) is 1
+	0.Lerp(1, 0.2) is 0.2
+	-1.Lerp(1, 0.5) is 0
+	-4.Lerp(-1, 1.5) is 0.5
+	value * (1 - percentage) + other * percentage
 and(other) Number
 	2 and 6 is 6
 	1 and 8 is 9
