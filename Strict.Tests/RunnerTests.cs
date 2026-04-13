@@ -344,7 +344,7 @@ public sealed class RunnerTests
 			var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 			const int Width = 128;
 			const int Height = 72;
-			// Allocation budget accounts for Color/Byte type overhead; the ColorValueToColor
+			// Allocation budget accounts for Color/Byte type overhead; the CompactType
 			// optimizer will reduce this further once all ColorValue usages are converted
 			Assert.That(allocatedAfter - allocatedBefore, Is.LessThan(Width * Height * 4 * 4 * 4));
 		}
