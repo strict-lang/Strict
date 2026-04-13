@@ -1,4 +1,4 @@
-using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Strict.Tests;
 
@@ -18,38 +18,59 @@ public sealed class NativePluginLoaderTests
 				Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())),
 			Throws.TypeOf<NativePluginLoader.NativeMethodNotFound>());
 
-	/*
+	[Test]
+	public void TryLoadNativeLifecycleReturnsNullWhenNoLibraryFound() =>
+		Assert.That(
+			NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", "any.png",
+				Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())),
+			Is.Null);
+
 	[Test]
 	[Category("Slow")]
-	//TODO: wrong anyway, remove
-	public void LoadImageLoaderPluginAndCallLoad()
+	public void LoadNativeImageLoaderPluginAndGetRgbaBytes()
 	{
-		var pluginDllPath = FindImageLoaderDll();
-		if (pluginDllPath == null)
+		var libPath = FindBuiltNativeLibrary();
+		if (libPath == null)
 		{
-			Assert.Ignore("ImageLoader plugin DLL not found — build NativePlugins/ImageLoader first");
+			Assert.Ignore(
+				"Native ImageLoader library not found — build NativePlugins/ImageLoader first:\n" +
+				"  Linux:  gcc -shared -fPIC -O2 -o ImageLoader.so src/imageloader.c -Isrc -lm\n" +
+				"  macOS:  gcc -dynamiclib -O2 -o ImageLoader.dylib src/imageloader.c -Isrc\n" +
+				"  Win:    gcc -shared -O2 -o ImageLoader.dll src/imageloader.c -Isrc");
 			return;
 		}
-		var assembly = Assembly.LoadFrom(pluginDllPath);
-		var imageType = assembly.GetExportedTypes().First(type =>
-			type.Name.Equals("Image", StringComparison.OrdinalIgnoreCase));
-		Assert.That(imageType, Is.Not.Null);
-		var loadMethod = imageType.GetMethod("Load", BindingFlags.Public | BindingFlags.Static);
-		Assert.That(loadMethod, Is.Not.Null);
-		Assert.That(loadMethod!.GetParameters().Length, Is.EqualTo(1));
-		Assert.That(loadMethod.ReturnType, Is.EqualTo(typeof(byte[])));
+		var testImage = CreateMinimalPng();
+		var imageFile = Path.GetTempFileName() + ".png";
+		File.WriteAllBytes(imageFile, testImage);
+		try
+		{
+			var tempDir = Path.GetDirectoryName(imageFile)!;
+			// Copy the library next to the temp image so the loader finds it
+			var libDest = Path.Combine(tempDir, Path.GetFileName(libPath));
+			File.Copy(libPath, libDest, overwrite: true);
+			var bytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", imageFile, tempDir);
+			Assert.That(bytes, Is.Not.Null);
+			Assert.That(bytes!.Length, Is.EqualTo(4), "1×1 RGBA image = 4 bytes");
+		}
+		finally
+		{
+			File.Delete(imageFile);
+		}
 	}
 
-	private static string? FindImageLoaderDll()
+	private static string? FindBuiltNativeLibrary()
 	{
 		var repoRoot = FindRepoRoot();
 		if (repoRoot == null)
 			return null;
-		var dllPath = Path.Combine(repoRoot, "NativePlugins", "ImageLoader", "bin", "Debug",
-			"net10.0", "ImageLoader.dll");
-		return File.Exists(dllPath)
-			? dllPath
-			: null;
+		var pluginDir = Path.Combine(repoRoot, "NativePlugins", "ImageLoader");
+		var candidates = new[]
+		{
+			Path.Combine(pluginDir, "ImageLoader.so"),
+			Path.Combine(pluginDir, "ImageLoader.dylib"),
+			Path.Combine(pluginDir, "ImageLoader.dll")
+		};
+		return candidates.FirstOrDefault(File.Exists);
 	}
 
 	private static string? FindRepoRoot()
@@ -63,5 +84,9 @@ public sealed class NativePluginLoaderTests
 		}
 		return null;
 	}
-	*/
+
+	// Minimal valid 1×1 white PNG with an alpha channel (RGBA)
+	private static byte[] CreateMinimalPng() =>
+		Convert.FromBase64String(
+			"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI6QAAAABJRU5ErkJggg==");
 }

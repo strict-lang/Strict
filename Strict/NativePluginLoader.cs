@@ -1,20 +1,119 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Strict.Expressions;
 using Strict.Language;
 
 namespace Strict;
 
 /// <summary>
-/// Searches for native implementations of trait methods in DLLs located in the same directory
-/// as the .strict file being executed. When a .strict type declares a trait method (no body),
-/// the runtime can search loaded DLLs for a matching type and method name to invoke natively.
+/// Searches for native implementations of trait methods.
+/// Supports two modes:
+/// 1. Lifecycle-based native plugins (C/C++/Rust shared libraries) via NativeLibrary.Load.
+///    Convention: {TypeName}_Create(path) → handle, {TypeName}_Colors(handle, &count) → bytes,
+///    {TypeName}_Delete(handle). The shared library file must be named ImageLoader.so /
+///    ImageLoader.dll / ImageLoader.dylib and live in the working directory.
+/// 2. Managed .NET assemblies via Assembly.LoadFrom (legacy / fallback path).
 /// </summary>
 public static class NativePluginLoader
 {
+	// Delegate types for the three-step native lifecycle: Create → Colors → Delete
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	private delegate IntPtr CreateDelegate([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	private delegate IntPtr ColorsDelegate(IntPtr handle, out int outCount);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	private delegate void DeleteDelegate(IntPtr handle);
+
+	private static readonly Dictionary<string, IntPtr> LoadedNativeLibraries = new();
+
+	/// <summary>
+	/// Tries to call the native Create → Colors → Delete lifecycle for a trait type that has a
+	/// matching native shared library. Returns the RGBA byte data as managed bytes, or null if
+	/// no native library was found for the type.
+	/// </summary>
+	public static byte[]? TryLoadNativeLifecycle(string typeName, string path,
+		string searchDirectory)
+	{
+		var libPath = FindNativeLibraryPath(typeName, searchDirectory);
+		if (libPath == null)
+			return null;
+		var libHandle = GetOrLoadNativeLibrary(libPath);
+		var createFn = GetNativeFunction<CreateDelegate>(libHandle, typeName + "_Create");
+		var colorsFn = GetNativeFunction<ColorsDelegate>(libHandle, typeName + "_Colors");
+		var deleteFn = GetNativeFunction<DeleteDelegate>(libHandle, typeName + "_Delete");
+		var imageHandle = createFn(path);
+		if (imageHandle == IntPtr.Zero)
+			throw new NativeCreateFailed(typeName, path);
+		try
+		{
+			var dataPtr = colorsFn(imageHandle, out var count);
+			if (dataPtr == IntPtr.Zero || count <= 0)
+				return [];
+			var result = new byte[count];
+			Marshal.Copy(dataPtr, result, 0, count);
+			return result;
+		}
+		finally
+		{
+			deleteFn(imageHandle);
+		}
+	}
+
+	private static string? FindNativeLibraryPath(string typeName, string searchDirectory)
+	{
+		if (!Directory.Exists(searchDirectory))
+			return null;
+		foreach (var candidate in GetNativeLibraryCandidates(typeName))
+		{
+			var fullPath = Path.Combine(searchDirectory, candidate);
+			if (File.Exists(fullPath))
+				return fullPath;
+		}
+		return null;
+	}
+
+	private static IEnumerable<string> GetNativeLibraryCandidates(string typeName)
+	{
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			yield return typeName + ".dll";
+		else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+		{
+			yield return typeName + ".dylib";
+			yield return "lib" + typeName + ".dylib";
+		}
+		else
+		{
+			yield return typeName + ".so";
+			yield return "lib" + typeName + ".so";
+		}
+	}
+
+	private static IntPtr GetOrLoadNativeLibrary(string libPath)
+	{
+		if (LoadedNativeLibraries.TryGetValue(libPath, out var existing))
+			return existing;
+		var handle = NativeLibrary.Load(libPath);
+		LoadedNativeLibraries[libPath] = handle;
+		return handle;
+	}
+
+	private static TDelegate GetNativeFunction<TDelegate>(IntPtr libHandle, string functionName)
+		where TDelegate : Delegate
+	{
+		var exportPtr = NativeLibrary.GetExport(libHandle, functionName);
+		return Marshal.GetDelegateForFunctionPointer<TDelegate>(exportPtr);
+	}
+
+	/// <summary>
+	/// Legacy: searches .NET assemblies in the given directory for a class and method matching
+	/// typeName/methodName by reflection.  Kept for managed plugin scenarios.
+	/// </summary>
 	public static object? TryCallNativeMethod(string typeName, string methodName,
 		object?[] arguments, string searchDirectory)
 	{
-		var matchingMethod = FindNativeMethod(typeName, methodName, arguments.Length,
+		var matchingMethod = FindManagedMethod(typeName, methodName, arguments.Length,
 			searchDirectory);
 		return matchingMethod == null
 			? throw new NativeMethodNotFound(typeName, methodName, searchDirectory)
@@ -29,7 +128,7 @@ public static class NativePluginLoader
 		return method.Invoke(instance, arguments);
 	}
 
-	private static MethodInfo? FindNativeMethod(string typeName, string methodName,
+	private static MethodInfo? FindManagedMethod(string typeName, string methodName,
 		int argumentCount, string searchDirectory)
 	{
 		foreach (var dllPath in GetDllFiles(searchDirectory))
@@ -91,7 +190,7 @@ public static class NativePluginLoader
 		return new ValueInstance(returnType, Convert.ToDouble(result));
 	}
 
-	private static ValueInstance ConvertBytesToValueInstance(byte[] bytes, Language.Type returnType)
+	public static ValueInstance ConvertBytesToValueInstance(byte[] bytes, Language.Type returnType)
 	{
 		var elementType = returnType is GenericTypeImplementation generic
 			? generic.ImplementationTypes[0]
@@ -105,4 +204,8 @@ public static class NativePluginLoader
 	public sealed class NativeMethodNotFound(string typeName, string methodName,
 		string searchDirectory) : Exception(
 		$"No native implementation found for {typeName}.{methodName} in DLLs in {searchDirectory}");
+
+	public sealed class NativeCreateFailed(string typeName, string path) : Exception(
+		$"Native {typeName}_Create returned null for path: {path}");
 }
+

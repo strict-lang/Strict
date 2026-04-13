@@ -72,8 +72,21 @@ public sealed partial class VirtualMachine
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
 			"StartsWith" or "IndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
+			"Colors" => info.InstanceRegister.HasValue && TryHandleNativeColors(invoke),
 			_ => false
 		};
+	}
+
+	private bool TryHandleNativeColors(Invoke invoke)
+	{
+		var instanceValue = Memory.Registers[invoke.MethodInfo.InstanceRegister!.Value];
+		var typeInstance = instanceValue.TryGetValueTypeInstance();
+		if (typeInstance == null || !instanceValue.GetType().IsTrait)
+			return false;
+		if (typeInstance.Values.Length != 1 || !typeInstance.Values[0].IsList)
+			return false;
+		Memory.Registers[invoke.Register] = typeInstance.Values[0];
+		return true;
 	}
 
 	private bool ExecuteFromInvoke(Invoke invoke, Type returnType)
@@ -93,7 +106,31 @@ public sealed partial class VirtualMachine
 				: CreateDefaultValue(returnType);
 			return true;
 		}
+		if (returnType.IsTrait && TryCallNativeFromPlugin(invoke, returnType))
+			return true;
 		return TryHandleFromConstructor(invoke, returnType);
+	}
+
+	private bool TryCallNativeFromPlugin(Invoke invoke, Type returnType)
+	{
+		var info = invoke.MethodInfo;
+		if (info.ArgumentRegisters.Length == 0)
+			return false;
+		var pathArg = Memory.Registers[info.ArgumentRegisters[0]];
+		if (!pathArg.IsText)
+			return false;
+		var searchDirectory = Directory.GetCurrentDirectory();
+		var bytes = NativePluginLoader.TryLoadNativeLifecycle(returnType.Name, pathArg.Text,
+			searchDirectory);
+		if (bytes == null)
+			return false;
+		var bytesType = returnType.FindType("Bytes") ?? returnType.FindType("Byte") ??
+			executable.basePackage.FindType("Bytes") ?? executable.basePackage.FindType("Byte");
+		if (bytesType == null)
+			return false;
+		Memory.Registers[invoke.Register] =
+			new ValueInstance(returnType, [NativePluginLoader.ConvertBytesToValueInstance(bytes, bytesType)]);
+		return true;
 	}
 
 	private bool TryHandleToConversion(Invoke invoke)

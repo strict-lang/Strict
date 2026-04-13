@@ -1,48 +1,83 @@
 # Native Image Loader Plugin
 
-Example .NET plugin for the Strict `NativePluginLoader`. Implements the `Image.strict` trait method `Load(path Text) Bytes` using SkiaSharp for cross-platform JPG/PNG/BMP/GIF/WebP decoding.
+A **true native C plugin** for the Strict `NativePluginLoader`. Implements `ImageLoader.strict`'s
+`from(path)` / `Colors Bytes` trait using [stb_image](https://github.com/nothings/stb) for
+cross-platform JPG / PNG / BMP / GIF / TGA decoding. No .NET or JVM dependency.
 
 ## How It Works
 
-`Image.strict` declares a trait method (no body):
+`ImageLoader.strict` declares a trait:
 ```
-Load(path Text) Bytes
+from(path)
+Colors Bytes
 ```
 
-When the VM encounters this trait call, `NativePluginLoader` searches DLLs in the current directory for a class named `Image` with a method named `Load` taking one argument. This plugin provides exactly that — an `Image.Load(string path)` method returning raw RGB `byte[]`.
+`NativePluginLoader` looks for a platform-native shared library (`ImageLoader.dll` /
+`ImageLoader.so` / `ImageLoader.dylib`) in the working directory and resolves three C-ABI
+functions by name:
+
+| C function | Called when |
+|---|---|
+| `ImageLoader_Create(path)` | `ImageLoader.from(path)` in Strict |
+| `ImageLoader_Colors(handle, &count)` | `.Colors` on an ImageLoader instance |
+| `ImageLoader_Delete(handle)` | automatically after Colors to free native memory |
+
+The pixel data is returned as RGBA8888 bytes — 4 bytes per pixel (R, G, B, A) in row-major
+order. The Strict runtime copies the bytes and then immediately calls `Delete` so you never
+need to manage the native memory from Strict code.
 
 ## Build
 
+### One-command build (Linux / macOS)
+
 ```bash
 cd NativePlugins/ImageLoader
-dotnet build
+sh build.sh          # produces ImageLoader.so or ImageLoader.dylib
+```
+
+### Windows (cmd)
+
+```bat
+cd NativePlugins\ImageLoader
+build.bat            # uses cl.exe (MSVC) or gcc (MinGW)
+```
+
+### Cross-platform via CMake
+
+```bash
+cmake -B build
+cmake --build build
+# output: build/ImageLoader.{so,dll,dylib}
 ```
 
 ## Deploy
 
-Copy the output DLL and its SkiaSharp dependencies to the directory where you run `.strict` files:
+Copy the built shared library to the directory where you run `.strict` files from.
+`NativePluginLoader` searches the current working directory.
 
 ```bash
-cp bin/Debug/net10.0/ImageLoader.dll /path/to/working/dir/
-cp bin/Debug/net10.0/SkiaSharp.dll /path/to/working/dir/
-cp bin/Debug/net10.0/libSkiaSharp.* /path/to/working/dir/  # native library
+cp ImageLoader.so /path/to/working/dir/   # Linux
+# or
+cp ImageLoader.dylib /path/to/working/dir/  # macOS
+# or
+copy ImageLoader.dll C:\path\to\working\dir\  # Windows
 ```
 
-Or publish as self-contained:
-```bash
-dotnet publish -c Release
-cp bin/Release/net10.0/publish/*.dll /path/to/working/dir/
+## Writing Your Own Native Plugin
+
+The convention is straightforward:
+
+```c
+// Create is called for from(path) — return NULL on error
+void* MyType_Create(const char* path);
+
+// Colors is called to retrieve bytes — set *outCount to byte count
+const uint8_t* MyType_Colors(void* handle, int* outCount);
+
+// Delete is called automatically after Colors to free native memory
+void MyType_Delete(void* handle);
 ```
 
-## Output Format
-
-`Image.Load` returns raw RGB bytes — 3 bytes per pixel (Red, Green, Blue) in row-major order. This is compatible with `ColorImage.BytesToColors` which divides each byte by 255 to get normalized 0–1 color values.
-
-## Writing Your Own Plugin
-
-Any .NET class library can serve as a plugin. The rules are:
-1. Class name must match the Strict type name (case-insensitive)
-2. Method name must match the Strict method name (case-insensitive)
-3. Parameter count must match
-4. Arguments arrive as `string` (for Text), `double` (for Number), or `object?[]` (for Lists)
-5. Return `byte[]`, `string`, `double`, `bool`, or `null`
+Compile to a shared library named `MyType.dll` / `MyType.so` / `MyType.dylib` and place it
+next to your `.strict` files.  Strict will find and call it automatically when encountering
+`MyType.from(path)` and `.Colors` in the source.
