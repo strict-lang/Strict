@@ -1,1 +1,2 @@
-Load(path Text) Bytes
+has Math/Size
+mutable Colors Colors where Length is Size.Length

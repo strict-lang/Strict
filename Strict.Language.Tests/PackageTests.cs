@@ -157,7 +157,7 @@ public class PackageTests
 
 	[Test]
 	[Category("Slow")]
-	public async Task LoadingStrictPackagesInParallelDoesNotFail()
+	public void LoadingStrictPackagesInParallelDoesNotFail()
 	{
 		var tasks = Enumerable.Range(0, 8).Select(async index =>
 		{
@@ -167,11 +167,19 @@ public class PackageTests
 			using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
 			using var testType = new Type(package,
 				new TypeLines(nameof(LoadingStrictPackagesInParallelDoesNotFail) + typeSuffix,
-					"has number", "Run Number", "\tconstant width = 80", "\tconstant height = 45",
-					"\tmutable image = ColorImage(Size(width, height))", "\tfor image.Size",
-					"\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)", "\tmutable count = 0",
-					"\tfor image.Size", "\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",
+					// @formatter: off
+					"has number",
+					"Run Number",
+					"\tconstant width = 80",
+					"\tconstant height = 45",
+					"\tmutable image = Image(Size(width, height))",
+					"\tfor image.Size",
+					"\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)",
+					"\tmutable count = 0",
+					"\tfor image.Size",
+					"\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",
 					"\t\t\tcount = count + 1", "\tcount")).ParseMembersAndMethods(parser);
+			// @formatter: on
 			var runMethod = testType.Methods.Single(method => method.Name == Method.Run);
 			return runMethod.GetBodyAndParseIfNeeded().ToString();
 		});

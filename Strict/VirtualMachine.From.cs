@@ -4,6 +4,7 @@ using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
+using Strict.HighLevelRuntime;
 
 namespace Strict;
 
@@ -108,10 +109,12 @@ public sealed partial class VirtualMachine
 		var members = targetType.Members;
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 		{
-			if (!values[memberIndex].IsList || values[memberIndex].List.Count > 0 ||
-				members[memberIndex].Constraints == null)
+			if (!values[memberIndex].IsList || values[memberIndex].List.Count > 0)
 				continue;
-			var length = TryGetConstrainedLength(targetType, values, members[memberIndex]);
+			var length = members[memberIndex].Constraints != null
+				? TryGetConstrainedLength(targetType, values, members[memberIndex])
+				: null;
+			length ??= TryGetLengthFromSizeLikeMember(targetType, values);
 			if (length is not > 0)
 				continue;
 			var elementType = members[memberIndex].Type is GenericTypeImplementation genericList
@@ -201,21 +204,57 @@ public sealed partial class VirtualMachine
 			var typeInstance = memberValue.TryGetValueTypeInstance();
 			var method = typeInstance?.ReturnType.FindMethod(methodName, []);
 			if (method == null)
+			{
+				var fallbackLength = TryResolveLengthFromTypeMembers(typeInstance, methodName);
+				if (fallbackLength.HasValue)
+					return fallbackLength;
 				continue;
+			}
 			var methodInstructions = GetPrecompiledMethodInstructions(method);
-			if (methodInstructions == null)
+			if (methodInstructions != null)
+			{
+				var childScope = InitializeChildScope();
+				Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
+				TrySetScopeMembersFromTypeMembers(typeInstance!);
+				RunInstructions(methodInstructions);
+				var result = Returns;
+				CleanupChildScope(childScope);
+				if (result.HasValue)
+					return (int)result.Value.Number;
 				continue;
-			var childScope = InitializeChildScope();
-			Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
-			TrySetScopeMembersFromTypeMembers(typeInstance!);
-			RunInstructions(methodInstructions);
-			var result = Returns;
-			CleanupChildScope(childScope);
-			if (result.HasValue)
-				return (int)result.Value.Number;
+			}
+			var interpretedLength = TryResolveLengthByInterpreter(method, memberValue);
+			if (interpretedLength.HasValue)
+				return interpretedLength;
 		}
 		return null;
 	}
+
+	private static int? TryResolveLengthFromTypeMembers(ValueTypeInstance? typeInstance,
+		string methodName)
+	{
+		if (typeInstance == null || !methodName.Equals("Length", StringComparison.OrdinalIgnoreCase))
+			return null;
+		return typeInstance.TryGetValue("Width", out var width) &&
+			typeInstance.TryGetValue("Height", out var height)
+			? (int)(width.Number * height.Number)
+			: null;
+	}
+
+	private int? TryResolveLengthByInterpreter(Method method, ValueInstance memberValue)
+	{
+		constraintLengthInterpreter ??= new Interpreter(executable.basePackage, TestBehavior.Disabled);
+		try
+		{
+			return (int)constraintLengthInterpreter.Execute(method, memberValue, []).Number;
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private Interpreter? constraintLengthInterpreter;
 
 	private static int? TryResolveLengthFromFrameVariable(Type targetType, ValueInstance[] values,
 		string variableName)
@@ -244,5 +283,22 @@ public sealed partial class VirtualMachine
 		return index >= 0
 			? fullTypeName[(index + 1)..]
 			: fullTypeName;
+	}
+
+	private static int? TryGetLengthFromSizeLikeMember(Type targetType, ValueInstance[] values)
+	{
+		for (var memberIndex = 0; memberIndex < targetType.Members.Count; memberIndex++)
+		{
+			if (!values[memberIndex].HasValue)
+				continue;
+			var typeInstance = values[memberIndex].TryGetValueTypeInstance();
+			if (typeInstance == null)
+				continue;
+			if (!typeInstance.TryGetValue("Width", out var width) ||
+				!typeInstance.TryGetValue("Height", out var height))
+				continue;
+			return (int)(width.Number * height.Number);
+		}
+		return null;
 	}
 }

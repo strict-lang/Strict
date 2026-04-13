@@ -345,10 +345,9 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		if (dotIndex < 0)
 			return (null, "");
 		var typeFullName = currentMethodContext[..dotIndex];
-		var type = executable.basePackage.FindFullType(typeFullName) ??
-			executable.basePackage.FindType(typeFullName.Contains('/')
-				? typeFullName[(typeFullName.LastIndexOf('/') + 1)..]
-				: typeFullName);
+		var type = typeFullName.Contains('/')
+			? executable.basePackage.FindFullType(typeFullName)
+			: executable.basePackage.FindType(typeFullName);
 		if (type == null)
 			return (null, "");
 		var filePath = type.FilePath;
@@ -426,6 +425,9 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		if (!collectionValue.IsList)
 			throw Fail("Cannot index non-list variable \"" +
 				listCallInstruction.Identifier + "\" of type " + collectionValue.GetType().Name);
+		if (indexValue < 0 || indexValue >= collectionValue.List.Count)
+			throw Fail("List index out of range for \"" + listCallInstruction.Identifier +
+				"\": " + indexValue + " (count=" + collectionValue.List.Count + ")");
 		var variableListElement = collectionValue.List[indexValue];
 		Memory.Registers[listCallInstruction.Register] = variableListElement;
 	}

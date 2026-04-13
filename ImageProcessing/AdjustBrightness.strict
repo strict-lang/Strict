@@ -1,10 +1,10 @@
 has brightness Number with value is not 0
 has logger
 constant testColor = Color(0.25, 0.5, 0.25)
-Process(mutable image ColorImage) ColorImage
-	constant testImage = ColorImage(Size(1, 1), (testColor))
-	AdjustBrightness(0.25).Process(testImage) is ColorImage(Size(1, 1), (Color(0.5, 0.75, 0.5)))
-	AdjustBrightness(0.5).Process(testImage) is ColorImage(Size(1, 1), (Color(0.75, 1, 0.75)))
+Process(mutable image) Image
+	constant testImage = Image(Size(1, 1), (testColor))
+	AdjustBrightness(0.25).Process(testImage) is Image(Size(1, 1), (Color(0.5, 0.75, 0.5)))
+	AdjustBrightness(0.5).Process(testImage) is Image(Size(1, 1), (Color(0.75, 1, 0.75)))
 	for image.Size
 		image.Colors(index) = GetBrightnessAdjustedColor(image.Colors(index))
 	image
@@ -17,7 +17,7 @@ Run
 	constant speedUpCalculationsDivisor = 80
 	constant width = 1280 / speedUpCalculationsDivisor
 	constant height = 720 / speedUpCalculationsDivisor
-	mutable image = ColorImage(Size(width, height))
+	mutable image = Image(Size(width, height))
 	AdjustBrightness(0.25).Process(image)
 	logger.Log("Brightness adjustment successful: " + image.Colors(width / 2, height / 2))
 	image.Colors(width / 2, height / 2) is Color(0.25, 0.25, 0.25)

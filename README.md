@@ -430,22 +430,18 @@ If you look at the source code of Dictionary.strict you might be confused how si
 
 ## Image processing
 ```
-has brightness Number
-Process(mutable image ColorImage) ColorImage
-	mutable testImage = ColorImage(Size(1, 1), (Color(0, 1, 2)))
-	AdjustBrightness(0).Process(testImage) is ColorImage(Size(1, 1), (Color(0, 1, 2)))
-	AdjustBrightness(5).Process(testImage) is ColorImage(Size(1, 1), (Color(5, 6, 7)))
-	if brightness is 0
-		return image
-	for row, column in image.Size
-		GetBrightnessAdjustedColor(image.Colors(column * image.Size.Width + row))
+has brightness Number where value is not 0
+Process(mutable image) Image
+	mutable testImage = Image(Size(1, 1), (Color(0, 1, 2)))
+	AdjustBrightness(0).Process(testImage) is Image(Size(1, 1), (Color(0, 1, 2)))
+	AdjustBrightness(5).Process(testImage) is Image(Size(1, 1), (Color(5, 6, 7)))
+	for image.Size
+		image.Colors(index) = GetBrightnessAdjustedColor(image.Colors(index))
 GetBrightnessAdjustedColor(currentColor Color) Color
 	AdjustBrightness(0).GetBrightnessAdjustedColor(Color(0, 1, 2)) is Color(0, 1, 2)
 	AdjustBrightness(5).GetBrightnessAdjustedColor(Color(0, 0, 0)) is Color(5, 5, 5)
 	AdjustBrightness(-5).GetBrightnessAdjustedColor(Color(0, 0, 0)) is Color(0, 0, 0)
-	Color((currentColor.Red + brightness).Clamp(0, 255),
-	(currentColor.Green + brightness).Clamp(0, 255),
-	(currentColor.Blue + brightness).Clamp(0, 255))
+	Color(current.Red + brightness, current.Green + brightness, current.Blue + brightness)
 ```
 
 If the iterator is multidimensional like Size, it can be used in a for loop and multiple variables can be named (value would here be a list of 2 values like for Dictionary):
@@ -453,8 +449,8 @@ If the iterator is multidimensional like Size, it can be used in a for loop and 
 has Width Number with value > 0
 has Height Number with value > 0
 for Iterator(Vector2)
-	for x in Range(0, Width)
-	for y in Range(0, Height)
+	for Height
+	for Width
 		Vector2(x, y)
 ...
 ```

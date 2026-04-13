@@ -121,16 +121,16 @@ public class Package : Context, IDisposable
 	{
 		if (fullName.Contains(' ') || fullName.Contains('"'))
 			return null; //ncrunch: no coverage
-		var parts = fullName.Split(Context.ParentSeparator);
+		var parts = fullName.Split(ParentSeparator);
 		if (parts.Length < 2)
 			throw new FullNameMustContainPackageAndTypeNames(fullName);
 		if (IsPrivateName(parts[^1]))
 			throw new PrivateTypesAreOnlyAvailableInItsPackage(fullName);
-		if (!fullName.StartsWith(FullName + Context.ParentSeparator, StringComparison.Ordinal))
+		if (!fullName.StartsWith(FullName + ParentSeparator, StringComparison.Ordinal))
 			return (Parent as Package)?.FindFullType(fullName);
-		var subName = fullName.Replace(FullName + Context.ParentSeparator, "");
-		return subName.Contains(Context.ParentSeparator)
-			? FindSubPackage(subName.Split(Context.ParentSeparator)[0])?.FindFullType(fullName)
+		var subName = fullName.Replace(FullName + ParentSeparator, "");
+		return subName.Contains(ParentSeparator)
+			? FindSubPackage(subName.Split(ParentSeparator)[0])?.FindFullType(fullName)
 			: FindDirectType(subName);
 	}
 

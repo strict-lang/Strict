@@ -56,8 +56,14 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	/// Creates a flat numeric backing for a type where all members are numbers.
 	/// No individual ValueInstances are created for each member.
 	/// </summary>
-	public static ValueArrayInstance CreateForTypeBacking(Type type, float[] numbers) =>
-		new(type, numbers, type, numbers.Length, 0);
+	public static ValueArrayInstance CreateForTypeBacking(Type type, float[] numbers)
+	{
+		var memberCount = type.Members.Count;
+		var width = memberCount > 0
+			? Math.Min(numbers.Length, memberCount)
+			: numbers.Length;
+		return new ValueArrayInstance(type, numbers, type, width, 0);
+	}
 
 	public static ValueArrayInstance CreateForTypeBacking(Type type, float[] parentNumbers,
 		int offset, int width) =>
@@ -84,13 +90,15 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			return false;
 		}
 		var memberIndex = GetMemberIndex(name);
-		if (memberIndex < 0 || memberIndex >= FlatWidth)
+		var flatIndex = offset + memberIndex;
+		if (memberIndex < 0 || memberIndex >= FlatWidth || memberIndex >= flatElementType.Members.Count ||
+			flatIndex < 0 || flatIndex >= flatNumbers.Length)
 		{
 			memberValue = default;
 			return false;
 		}
 		memberValue = new ValueInstance(flatElementType.Members[memberIndex].Type,
-			flatNumbers[offset + memberIndex]);
+			flatNumbers[flatIndex]);
 		return true;
 	}
 
@@ -99,10 +107,12 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		if (flatNumbers == null || flatElementType == null)
 			return false;
 		var memberIndex = GetMemberIndex(name);
-		if (memberIndex < 0 || memberIndex >= FlatWidth)
+		var flatIndex = offset + memberIndex;
+		if (memberIndex < 0 || memberIndex >= FlatWidth || memberIndex >= flatElementType.Members.Count ||
+			flatIndex < 0 || flatIndex >= flatNumbers.Length)
 			return false;
 		EnsureWritableFlatNumbers();
-		flatNumbers[offset + memberIndex] = (float)memberValue.Number;
+		flatNumbers[flatIndex] = (float)memberValue.Number;
 		return true;
 	}
 
@@ -134,16 +144,25 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	/// </summary>
 	public ValueTypeInstance MaterializeAsType()
 	{
-		var values = new ValueInstance[FlatWidth];
-		for (var memberIndex = 0; memberIndex < FlatWidth; memberIndex++)
-			values[memberIndex] = new ValueInstance(flatElementType!.Members[memberIndex].Type,
-				flatNumbers![offset + memberIndex]);
-		return new ValueTypeInstance(flatElementType!, values);
+		var maxMaterializedMembers = Math.Min(FlatWidth, flatElementType!.Members.Count);
+		if (flatNumbers == null)
+			return new ValueTypeInstance(flatElementType, []);
+		if (offset < 0 || offset >= flatNumbers.Length)
+			maxMaterializedMembers = 0;
+		else if (offset + maxMaterializedMembers > flatNumbers.Length)
+			maxMaterializedMembers = flatNumbers.Length - offset;
+		var values = new ValueInstance[maxMaterializedMembers];
+		for (var memberIndex = 0; memberIndex < maxMaterializedMembers; memberIndex++)
+			values[memberIndex] = new ValueInstance(flatElementType.Members[memberIndex].Type,
+				flatNumbers[offset + memberIndex]);
+		return new ValueTypeInstance(flatElementType, values);
 	}
 
 	public readonly Type ReturnType;
 	public List<ValueInstance> Items => items ??= MaterializeItems();
-	public int Count => items?.Count ?? (flatNumbers?.Length ?? 0) / FlatWidth;
+	public int Count => items?.Count ?? (FlatWidth > 0
+		? (flatNumbers?.Length ?? 0) / FlatWidth
+		: 0);
 /*obs, this is not the way we should call any of this!
 	public static ValueArrayInstance CreateWithCapacity(Type returnType, int capacity)
 	{

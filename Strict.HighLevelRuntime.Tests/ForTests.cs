@@ -18,13 +18,13 @@ public sealed class ForTests
 			new MethodExpressionParser());
 
 	[Test]
-	public async Task SizeIterationOrderMatchesTwoDimensionalColorImageIndexing()
+	public async Task SizeIterationOrderMatchesTwoDimensionalImageIndexing()
 	{
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
 		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
 		using var testType = new Type(package,
-			new TypeLines("ColorImageIndexing",
+			new TypeLines("ImageIndexing",
 				"has number",
 				"CenterIsExpectedColor Boolean",
 				"\tconstant width = 2",
@@ -33,7 +33,7 @@ public sealed class ForTests
 				"\tColor(0.25, 0.25, 0.25),",
 				"\tColor(0.5, 0.5, 0.5),",
 				"\tColor(0.75, 0.75, 0.75))",
-				"\tconstant image = ColorImage(Size(width, height), colors)",
+				"\tconstant image = Image(Size(width, height), colors)",
 				"\timage.Colors(width / 2, height / 2) is Color(0.75, 0.75, 0.75)",
 				"Indices Numbers",
 				"\tfor Size(2, 2)",

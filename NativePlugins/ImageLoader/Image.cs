@@ -2,11 +2,12 @@ using SkiaSharp;
 
 namespace ImageLoader;
 
+//TODO: remove, we need a native plugin, not some .NET dll
 /// <summary>
 /// Native plugin implementation for Image.strict's Load(path Text) Bytes trait method.
 /// The NativePluginLoader matches class name "Image" and method name "Load" by reflection.
 /// Returns raw RGB byte triplets (3 bytes per pixel: R, G, B) suitable for
-/// ColorImage.BytesToColors conversion in Strict.
+/// Image.BytesToColors conversion in Strict.
 /// Build: dotnet build, then copy ImageLoader.dll + SkiaSharp*.dll to the working directory
 /// where you run your .strict files from.
 /// </summary>

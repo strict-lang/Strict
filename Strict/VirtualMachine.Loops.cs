@@ -174,14 +174,8 @@ public sealed partial class VirtualMachine
 			"' into variables - expected a list or a type instance with a list member");
 	}
 
-	private static int GetLength(ValueInstance iterableInstance)
-	{
-		if (iterableInstance.IsText)
-			return iterableInstance.Text.Length;
-		if (iterableInstance.IsList)
-			return iterableInstance.List.Count;
-		return (int)iterableInstance.Number;
-	}
+	private static int GetLength(ValueInstance iterableInstance) =>
+		iterableInstance.GetIteratorLength();
 
 	private void AlterValueVariable(ValueInstance iterableVariable,
 		LoopBeginInstruction loopBegin)
