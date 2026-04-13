@@ -1,3 +1,4 @@
+#define DISABLE_DISPOSING
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Strict.Transpiler.Cuda")]
@@ -24,11 +25,14 @@ public class Package : Context, IDisposable
 		[CallerMemberName] string callerMemberName = "") : base(parentPackage,
 		Path.GetFileName(packagePath), callerFilePath, callerLineNumber, callerMemberName)
 #else
+	// ReSharper disable once UnusedParameter.Local
 	public Package(Package? parentPackage, string packagePath, Repositories? createdFromRepos = null)
 		: base(parentPackage, Path.GetFileName(packagePath))
 #endif
 	{
+#if !DISABLE_DISPOSING
 		this.createdFromRepos = createdFromRepos;
+#endif
 		FolderPath = Path.IsPathRooted(packagePath)
 			? packagePath
 			: Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg,
@@ -39,11 +43,16 @@ public class Package : Context, IDisposable
 		{
 			var existing = parentPackage.children.FirstOrDefault(existing => existing.Name == Name);
 			if (existing != null)
-				return;//TODO? throw new PackageAlreadyExists(Name, parentPackage, existing); //ncrunch: no coverage
+#if DISABLE_DISPOSING
+				return;
+#else
+				throw new PackageAlreadyExists(Name, parentPackage, existing);
+#endif
 			parentPackage.children.Add(this);
 		}
 	}
 
+#if !DISABLE_DISPOSING
 	public class PackageAlreadyExists(string name, Package parentPackage, Package existing)
 		: Exception(name + " in " + (parentPackage.Name == "" //ncrunch: no coverage
 				? nameof(Root)
@@ -53,9 +62,9 @@ public class Package : Context, IDisposable
 			existing.callerLineNumber + " from method " + existing.callerMemberName
 #endif
 		);
-
-	private static readonly Root RootForPackages = new();
 	private readonly Repositories? createdFromRepos;
+#endif
+	private static readonly Root RootForPackages = new();
 	public string FolderPath { get; }
 
 	/// <summary>
@@ -213,18 +222,19 @@ public class Package : Context, IDisposable
 				types.Remove(type.Name);
 	}
 
+#if !DISABLE_DISPOSING
 	internal void Remove(Package package)
 	{
 		lock (syncRoot)
 			children.Remove(package);
 	}
-
+#endif
 	public IReadOnlyDictionary<string, Type> Types => types;
 	internal List<Package> automaticallyLoadedDependencyPackages = new();
 
 	public void Dispose()
 	{
-		/*
+#if !DISABLE_DISPOSING
 		GC.SuppressFinalize(this);
 		while (children.Count > 0)
 			children[0].Dispose();
@@ -236,6 +246,6 @@ public class Package : Context, IDisposable
 		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		((Package)Parent)?.Remove(this);
 		createdFromRepos?.Remove(this);
-		*/
+#endif
 	}
 }

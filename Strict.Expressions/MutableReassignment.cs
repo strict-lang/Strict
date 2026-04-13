@@ -59,7 +59,9 @@ public sealed class MutableReassignment : ConcreteExpression
 
 	public sealed class ValueTypeNotMatchingWithAssignmentType(Body body,
 		Language.Type currentValueType, Language.Type newValueType) : ParsingFailed(body,
-		$"Cannot assign {newValueType} value type to {currentValueType} (Package="+newValueType.Package+" == Package="+currentValueType.Package+": "+(newValueType.Package==currentValueType.Package)+") member or variable");
+		$"Cannot assign {newValueType} value type to {currentValueType} (" + newValueType.Package +
+		"packages are equal: " + (newValueType.Package == currentValueType.Package) +
+		") member or variable");
 
 	public override bool IsConstant => false;
 	public override string ToString() => Name + " = " + Value;

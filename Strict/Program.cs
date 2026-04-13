@@ -1,6 +1,5 @@
 using Strict.Bytecode;
 using Strict.Compiler;
-using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -71,13 +70,13 @@ Notes:
 			new HashSet<string>(args.Skip(1).Where(arg => arg.StartsWith("-", StringComparison.Ordinal)),
 				StringComparer.OrdinalIgnoreCase);
 		if (options.Contains("-decompile"))
-			{
-				var outputFolder = Path.GetFileNameWithoutExtension(filePath);
-				var bytecodeTypes = new BinaryExecutable(filePath);
-				new Decompiler().Decompile(bytecodeTypes, outputFolder);
-				Console.WriteLine("Decompilation complete, written partial .strict files (no tests, only " +
-					"bytecode reconstruction) to folder:" + Environment.NewLine + outputFolder);
-			}
+		{
+			var outputFolder = Path.GetFileNameWithoutExtension(filePath);
+			var bytecodeTypes = new BinaryExecutable(filePath);
+			new Decompiler().Decompile(bytecodeTypes, outputFolder);
+			Console.WriteLine("Decompilation complete, written partial .strict files (no tests, only " +
+				"bytecode reconstruction) to folder:" + Environment.NewLine + outputFolder);
+		}
 		else
 		{
 			var nonFlagArgs = args.Skip(1).Where(arg => !arg.StartsWith("-", StringComparison.Ordinal)).

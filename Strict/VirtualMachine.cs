@@ -7,7 +7,6 @@ using Type = Strict.Language.Type;
 
 namespace Strict;
 
-//nocrunch: no coverage start, performance is very bad when NCrunch is tracking every line
 public sealed partial class VirtualMachine(BinaryExecutable executable)
 {
 	public VirtualMachine(Package basePackage) : this(new BinaryExecutable(basePackage)) { }
@@ -31,8 +30,8 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 
 	private bool conditionFlag;
 	private int instructionIndex;
-	//TODO: find all IReadOnlyList here and remove, also why do we copy so many lists around, use BinaryMethod!
-	private IReadOnlyList<Instruction> instructions = [];
+	//TODO: why do we copy so many lists around, use BinaryMethod!
+	private List<Instruction> instructions = [];
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 	private string currentMethodContext = "";
@@ -82,7 +81,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		return this;
 	}
 
-	private void CacheInstructionAccessPaths(IReadOnlyList<Instruction> blockInstructions)
+	private void CacheInstructionAccessPaths(List<Instruction> blockInstructions)
 	{
 		identifierAccessPaths.EnsureCapacity(
 			identifierAccessPaths.Count + blockInstructions.Count * 2);
@@ -326,9 +325,9 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private string ResolveMethodContext(BinaryMethod method)
 	{
 		foreach (var (typeFullName, typeData) in executable.MethodsPerType)
-			foreach (var overloads in typeData.MethodGroups.Values)
-				if (overloads.Contains(method))
-					return typeFullName + "." + method.Name;
+		foreach (var overloads in typeData.MethodGroups.Values)
+			if (overloads.Contains(method))
+				return typeFullName + "." + method.Name;
 		return method.Name;
 	}
 
@@ -409,13 +408,12 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	{
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
 		var collectionValue = Memory.Frame.Get(listCallInstruction.Identifier);
-		if (!collectionValue.IsList && !collectionValue.IsText)
+		if (collectionValue is { IsList: false, IsText: false })
 		{
 			if (listCallInstruction.Identifier == Type.OuterLowercase &&
 				TryGetFrameValue(ValueSymbolId, out var currentValue))
 				collectionValue = currentValue;
-			else if ((listCallInstruction.Identifier == "characters" ||
-				listCallInstruction.Identifier == Type.ElementsLowercase) &&
+			else if (listCallInstruction.Identifier is "characters" or Type.ElementsLowercase &&
 				TryGetFrameValue(OuterSymbolId, out var outerValue) && outerValue.IsText)
 				collectionValue = outerValue;
 		}

@@ -157,8 +157,6 @@ public sealed class BinaryExecutable(Package basePackage)
 
 	public List<Instruction> ToInstructions() => EntryPoint.instructions;
 	public const string Extension = ".strictbinary";
-	internal static int hasSourceLines = 0;
-	internal static int hasNoSourceLines = 0;
 
 	public Instruction ReadInstruction(BinaryReader reader, NameTable table)
 	{
@@ -173,12 +171,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		var hasSourceLine = (rawByte & (byte)InstructionType.IncludesSourceLine) != 0;
 		var type = (InstructionType)(rawByte & ((byte)InstructionType.IncludesSourceLine - 1));
 		if (hasSourceLine)
-		{
-			prevSourceLine = reader.Read7BitEncodedInt();
-			hasSourceLines++;
-		}
-		else
-			hasNoSourceLines++;
+			prevSourceLine = reader.Read7BitEncodedInt(); // 20-40% of instructions have source lines
 		Instruction instruction = type switch
 		{
 			InstructionType.LoadConstantToRegister => new LoadConstantInstruction(reader, table, this),

@@ -96,7 +96,7 @@ public sealed class Runner
 	private async Task<BinaryExecutable> GetBinary()
 	{
 		if (Path.GetExtension(strictFilePath) == BinaryExecutable.Extension)
-			return LogTiming("Loading " + strictFilePath,	() => new BinaryExecutable(strictFilePath));
+			return LogTiming("Loading " + strictFilePath, () => new BinaryExecutable(strictFilePath));
 #if !DISABLE_BINARY_CACHE
 		var cachedBinaryFilePath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
 		if (File.Exists(cachedBinaryFilePath))
@@ -138,16 +138,16 @@ public sealed class Runner
 			string.Equals(sourceDir, strictRoot, StringComparison.OrdinalIgnoreCase) ||
 			IsExamplesDir(sourceDir))
 			return basePackage;
-		var relative = Path.GetRelativePath(strictRoot, sourceDir)
-			.Replace(Path.DirectorySeparatorChar, Context.ParentSeparator)
-			.Replace(Path.AltDirectorySeparatorChar, Context.ParentSeparator);
+		var relative = Path.GetRelativePath(strictRoot, sourceDir).
+			Replace(Path.DirectorySeparatorChar, Context.ParentSeparator).
+			Replace(Path.AltDirectorySeparatorChar, Context.ParentSeparator);
 		return await repositories.LoadStrictPackage(
 			nameof(Strict) + Context.ParentSeparator + relative);
 	}
 
 	private static bool IsExamplesDir(string dir) =>
-	dir.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar])
-		.Any(part => part.Equals("Examples", StringComparison.OrdinalIgnoreCase));
+		dir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part =>
+			part.Equals("Examples", StringComparison.OrdinalIgnoreCase));
 
 	private async Task<BinaryExecutable> LoadFromSourceAndSaveBinary(Package package)
 	{
@@ -302,8 +302,8 @@ public sealed class Runner
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
 		var package = await LoadBasePackage();
 		var sourceLines = await File.ReadAllLinesAsync(strictFilePath);
-		var targetType = new Type(package, new TypeLines(typeName, sourceLines))
-			.ParseMembersAndMethods(parser);
+		var targetType =
+			new Type(package, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
 		try
 		{
 			var method = new Method(targetType, 0, parser,
@@ -327,7 +327,7 @@ public sealed class Runner
 	{
 		var runMethods = binary.GetRunMethods();
 		return runMethods.FirstOrDefault(method =>
-			method.parameters.Count == ProgramArguments.Length) ??
+				method.parameters.Count == ProgramArguments.Length) ??
 			runMethods.FirstOrDefault(method => method.parameters.Count == 1 &&
 				ResolveType(binary, method.parameters[0].FullTypeName).IsList) ??
 			throw new NotSupportedException("No Run method accepts " + ProgramArguments.Length +

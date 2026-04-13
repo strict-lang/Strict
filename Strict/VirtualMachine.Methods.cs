@@ -176,7 +176,7 @@ public sealed partial class VirtualMachine
 		var strictPrefix = nameof(Strict) + Context.ParentSeparator;
 		if (info.TypeFullName.StartsWith(strictPrefix, StringComparison.Ordinal))
 			return executable.FindInstructions(info.TypeFullName[strictPrefix.Length..],
-				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName) ??
+					info.MethodName, info.ParameterNames.Length, info.ReturnTypeName) ??
 				FindInstructionsByTypeSuffix(info);
 		return executable.FindInstructions(strictPrefix + info.TypeFullName,
 				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName) ??
@@ -192,21 +192,21 @@ public sealed partial class VirtualMachine
 				separatorIndex + 1))
 		{
 			var strippedTypeName = typeFullName[(separatorIndex + 1)..];
-			var instructions = executable.FindInstructions(strippedTypeName, info.MethodName,
-				info.ParameterNames.Length, info.ReturnTypeName) ??
-				executable.FindInstructions(strictPrefix + strippedTypeName, info.MethodName,
-					info.ParameterNames.Length, info.ReturnTypeName);
-			if (instructions != null)
-				return instructions;
+			var foundInstructions =
+				executable.FindInstructions(strippedTypeName, info.MethodName, info.ParameterNames.Length,
+					info.ReturnTypeName) ?? executable.FindInstructions(strictPrefix + strippedTypeName,
+					info.MethodName, info.ParameterNames.Length, info.ReturnTypeName);
+			if (foundInstructions != null)
+				return foundInstructions;
 		}
 		return null;
 	}
 
 	private void InitializeMethodCallScope(InvokeMethodInfo info,
-		IReadOnlyList<ValueInstance> evaluatedArguments, ValueInstance? evaluatedInstance)
+		ValueInstance[] evaluatedArguments, ValueInstance? evaluatedInstance)
 	{
 		for (var parameterIndex = 0; parameterIndex < info.ParameterNames.Length &&
-			parameterIndex < evaluatedArguments.Count; parameterIndex++)
+			parameterIndex < evaluatedArguments.Length; parameterIndex++)
 			Memory.Frame.Set(info.ParameterNames[parameterIndex],
 				evaluatedArguments[parameterIndex]);
 		if (!evaluatedInstance.HasValue)
@@ -268,7 +268,7 @@ public sealed partial class VirtualMachine
 		return true;
 	}
 
-	private bool TryGetBinaryMembers(Type type, out IReadOnlyList<BinaryMember> members)
+	private bool TryGetBinaryMembers(Type type, out List<BinaryMember> members)
 	{
 		foreach (var (typeName, typeData) in executable.MethodsPerType)
 			if (typeData.Members.Count > 0 && (typeName == type.FullName || typeName == type.Name ||
@@ -318,7 +318,7 @@ public sealed partial class VirtualMachine
 		Returns = state.SavedReturns;
 	}
 
-	private readonly record struct ChildScopeState(IReadOnlyList<Instruction> SavedInstructions,
+	private readonly record struct ChildScopeState(List<Instruction> SavedInstructions,
 		int SavedInstructionIndex, bool SavedConditionFlag, ValueInstance? SavedReturns,
 		CallFrame SavedFrame, int StackDepth, CallFrame Frame);
 

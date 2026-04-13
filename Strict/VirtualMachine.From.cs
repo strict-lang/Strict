@@ -53,7 +53,7 @@ public sealed partial class VirtualMachine
 	}
 
 	private static ValueInstance GetMemberInitialOrDefaultValue(Member member,
-		bool hasBinaryMembers, IReadOnlyList<BinaryMember> binaryMembers, int memberIndex) =>
+		bool hasBinaryMembers, List<BinaryMember> binaryMembers, int memberIndex) =>
 		member.InitialValue is Value initialValue
 			? initialValue.Data
 			: hasBinaryMembers && TryGetBinaryMemberInitialValue(binaryMembers, memberIndex,
@@ -61,7 +61,7 @@ public sealed partial class VirtualMachine
 				? binaryInitialValue
 				: CreateDefaultValue(member.Type);
 
-	private static bool TryGetBinaryMemberInitialValue(IReadOnlyList<BinaryMember> binaryMembers,
+	private static bool TryGetBinaryMemberInitialValue(List<BinaryMember> binaryMembers,
 		int memberIndex, out ValueInstance value)
 	{
 		if (memberIndex < binaryMembers.Count &&
@@ -74,7 +74,7 @@ public sealed partial class VirtualMachine
 		return false;
 	}
 
-	private static int FindMemberIndex(IReadOnlyList<Member> members, string name)
+	private static int FindMemberIndex(List<Member> members, string name)
 	{
 		for (var index = 0; index < members.Count; index++)
 			if (members[index].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
@@ -83,7 +83,7 @@ public sealed partial class VirtualMachine
 	}
 
 	private ValueInstance[] CreateConstructorValuesFromBinaryMembers(Type targetType,
-		Register[] argumentRegisters, IReadOnlyList<BinaryMember> binaryMembers)
+		Register[] argumentRegisters, List<BinaryMember> binaryMembers)
 	{
 		var values = new ValueInstance[binaryMembers.Count];
 		var argumentIndex = 0;

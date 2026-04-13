@@ -161,7 +161,7 @@ public sealed partial class VirtualMachine
 			Memory.Frame.Set(loopBegin.CustomVariableNames[index], loopValues[index]);
 	}
 
-	private IReadOnlyList<ValueInstance> GetLoopVariableValues(ValueInstance value)
+	private List<ValueInstance> GetLoopVariableValues(ValueInstance value)
 	{
 		if (value.IsList)
 			return value.List.Items;
@@ -170,7 +170,8 @@ public sealed partial class VirtualMachine
 			for (var index = 0; index < typeInstance.Values.Length; index++)
 				if (!typeInstance.ReturnType.Members[index].IsConstant && typeInstance.Values[index].IsList)
 					return typeInstance.Values[index].List.Items;
-		throw Fail("Cannot split loop value '" + value + "' into variables - expected a list or a type instance with a list member");
+		throw Fail("Cannot split loop value '" + value +
+			"' into variables - expected a list or a type instance with a list member");
 	}
 
 	private static int GetLength(ValueInstance iterableInstance)

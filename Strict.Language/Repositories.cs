@@ -10,7 +10,7 @@ namespace Strict.Language;
 /// Loads packages from url (like GitHub) and caches it to disc for the current and later runs.
 /// Next time Repositories is created, we will check for outdated cache and delete the zip files
 /// to allow redownloading fresh files. All locally cached packages and all types in them are
-/// always available for any .strict file in the Editor. If a type is not found, we check on github
+/// always available for any .strict file in the Editor. If a type is not found, we check on GitHub
 /// </summary>
 /// <remarks>Everything in here is async, you can load many packages in parallel</remarks>
 public sealed class Repositories(ExpressionParser parser)
@@ -125,11 +125,11 @@ public sealed class Repositories(ExpressionParser parser)
 			var parent = await LoadParentPackage(fullName);
 			var files = Directory.GetFiles(packagePath, "*" + Type.Extension);
 			var dependencyPackages = await LoadDependencyPackages(fullName, files);
-			var package = await CreatePackageFromFiles(packagePath, files
+			var package = CreatePackageFromFiles(packagePath, files
 #if DEBUG
 				, parent, callerFilePath, callerLineNumber, callerMemberName);
 #else
-		, parent);
+				, parent);
 #endif
 			package.automaticallyLoadedDependencyPackages = dependencyPackages;
 			return package;
@@ -167,21 +167,24 @@ public sealed class Repositories(ExpressionParser parser)
 			: fullName[..separatorIndex];
 	}
 
-	private IEnumerable<string> FindDependencyPackages(string fullName, string rootPackageName,
+	private static IEnumerable<string> FindDependencyPackages(string fullName, string rootPackageName,
 		IReadOnlyCollection<string> files)
 	{
 		var dependencies = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var file in files)
-			foreach (Match match in TypeFullNamePattern.Matches(File.ReadAllText(file)))
+		foreach (Match match in TypeFullNamePattern.Matches(File.ReadAllText(file)))
+		{
+			var typeFullName = match.Value;
+			var lastSeparatorIndex = typeFullName.LastIndexOf(Context.ParentSeparator);
+			if (lastSeparatorIndex <= 0)
+				continue;
+			var packageName = NormalizePackageName(typeFullName[..lastSeparatorIndex], rootPackageName);
+			lock (LoadedPackages)
 			{
-				var typeFullName = match.Value;
-				var lastSeparatorIndex = typeFullName.LastIndexOf(Context.ParentSeparator);
-				if (lastSeparatorIndex <= 0)
-					continue;
-				var packageName = NormalizePackageName(typeFullName[..lastSeparatorIndex], rootPackageName);
 				if (packageName != fullName && LoadedPackages.Find(p => p.FullName == packageName) == null)
 					dependencies.Add(packageName);
 			}
+		}
 		return dependencies;
 	}
 
@@ -197,7 +200,7 @@ public sealed class Repositories(ExpressionParser parser)
 		"(?<![A-Za-z0-9/])[A-Z][A-Za-z0-9]*(?:/[A-Z][A-Za-z0-9]*)+(?![A-Za-z0-9/])",
 		RegexOptions.Compiled);
 
-	private Package? FindParentPackage(string fullName)
+	private static Package? FindParentPackage(string fullName)
 	{
 		var separatorIndex = fullName.LastIndexOf(Context.ParentSeparator);
 		if (separatorIndex < 0)
@@ -212,8 +215,8 @@ public sealed class Repositories(ExpressionParser parser)
 	/// we will fill and load them, otherwise we could not use types within the package context.
 	/// Constraint parsing is deferred to a second pass so all type methods are available.
 	/// </summary>
-	private async Task<Package> CreatePackageFromFiles(string packagePath,
-		IReadOnlyCollection<string> files, Package? parent = null
+	private Package CreatePackageFromFiles(string packagePath, IReadOnlyCollection<string> files,
+		Package? parent = null
 #if DEBUG
 		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = ""
@@ -243,7 +246,7 @@ public sealed class Repositories(ExpressionParser parser)
 		return package;
 	}
 
-	private void InvalidateAllAvailableMethodsCaches()
+	private static void InvalidateAllAvailableMethodsCaches()
 	{
 		Package[] loadedPackagesSnapshot;
 		lock (LoadedPackages)

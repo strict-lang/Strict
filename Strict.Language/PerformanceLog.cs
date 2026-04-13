@@ -41,7 +41,7 @@ public static class PerformanceLog
 
 	public static TextWriter LogWriter
 	{
-		get	
+		get
 		{
 			if (field != null)
 				return field;

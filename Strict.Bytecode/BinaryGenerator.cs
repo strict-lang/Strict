@@ -799,7 +799,7 @@ public sealed class BinaryGenerator
 			var methodExpressions = body is Body methodBody
 				? methodBody.Expressions
 				: [body];
-				var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
+			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
 				method.ReturnType);
 			var methodInstructions = childGenerator.GenerateInstructionList();
 			var parameters = CreateBinaryMembers(method.Parameters, entryType);
@@ -1007,8 +1007,8 @@ public sealed class BinaryGenerator
 		HashSet<string> compiledMethodKeys)
 	{
 		foreach (var type in dependencyTypes.Values)
-			foreach (var member in type.Members)
-				EnqueueConstraintMethods(type, member, methodsToCompile, compiledMethodKeys);
+		foreach (var member in type.Members)
+			EnqueueConstraintMethods(type, member, methodsToCompile, compiledMethodKeys);
 	}
 
 	private static void EnqueueConstraintMethods(Type type, Member member,

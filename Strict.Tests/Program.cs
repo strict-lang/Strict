@@ -1,6 +1,4 @@
 using Strict.Bytecode;
-using Strict.Expressions;
-using Strict.Language;
 
 namespace Strict.Tests;
 
