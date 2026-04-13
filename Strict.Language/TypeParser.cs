@@ -460,7 +460,7 @@ public sealed class TypeParser(Type type, string[] lines)
 						? throw new MemberWithTypeAnyIsNotAllowed(type, LineNumber, nameAndType)
 						: GetMemberWithConstraints(parser, remainingLine, usedKeyword, nameAndType);
 			if (nameAndExpression.Current[0] == EqualCharacter)
-				throw new NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithType(nameAndType);
+				return ParseTypedMemberWithInitialValue(parser, remainingLine, usedKeyword, nameAndType);
 		}
 		return IsMemberTypeAny(nameAndType, nameAndExpression)
 			? throw new MemberWithTypeAnyIsNotAllowed(type, LineNumber, nameAndType)
@@ -501,6 +501,34 @@ public sealed class TypeParser(Type type, string[] lines)
 	}
 
 	private Dictionary<Member, string>? rememberToInitializeMemberInitialValues;
+
+	/// <summary>
+	/// Handles "has Name Type = value" syntax where both explicit type and initial value are given.
+	/// </summary>
+	private Member ParseTypedMemberWithInitialValue(ExpressionParser parser,
+		ReadOnlySpan<char> remainingLine, string usedKeyword, string nameAndType)
+	{
+		var equalIndex = remainingLine.IndexOf(" = ");
+		var constantValue = remainingLine[(equalIndex + 3)..];
+		var withIndex = constantValue.IndexOf(" " + Keyword.With + " ", StringComparison.Ordinal);
+		var valueOnly = withIndex >= 0
+			? constantValue[..withIndex]
+			: constantValue;
+		var member = new Member(type, nameAndType, null, LineNumber, usedKeyword)
+		{
+			InitialValueText = valueOnly.ToString()
+		};
+		rememberToInitializeMemberInitialValues ??= new Dictionary<Member, string>();
+		rememberToInitializeMemberInitialValues.Add(member, valueOnly.ToString());
+		if (withIndex >= 0)
+		{
+			var constraintsSpan = constantValue[(withIndex + Keyword.With.Length + 2)..];
+			pendingConstraints ??= new List<(Member, string[])>();
+			pendingConstraints.Add((member,
+				constraintsSpan.ToString().Split(BinaryOperator.And, StringSplitOptions.TrimEntries)));
+		}
+		return member;
+	}
 
 	private Member GetMemberWithConstraints(ExpressionParser parser, ReadOnlySpan<char> remainingLine,
 		string usedKeyword, string nameAndType)

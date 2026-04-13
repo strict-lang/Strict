@@ -20,9 +20,15 @@ public sealed class Member : NamedType
 	private void CheckForNameWithDifferentTypeUsage(Type definedIn)
 	{
 		var nameType = definedIn.Package.FindType(Name.MakeFirstLetterUppercase());
-		if (nameType != null && nameType != Type)
+		if (nameType != null && nameType != Type &&
+			!AreBothListTypesInSamePackage(nameType, Type))
 			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
 	}
+
+	private static bool AreBothListTypesInSamePackage(Type nameImpliedType, Type memberType) =>
+		nameImpliedType is GenericTypeImplementation { Generic.IsList: true } nameList &&
+		memberType is GenericTypeImplementation { Generic.IsList: true } memberList &&
+		nameList.ImplementationTypes[0].Package == memberList.ImplementationTypes[0].Package;
 
 	public Type DefinedIn { get; }
 	public Expression? InitialValue { get; internal set; }

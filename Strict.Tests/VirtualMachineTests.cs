@@ -610,10 +610,10 @@ public sealed class VirtualMachineTests : TestBytecode
 				"\tconstant height = 9",
 				"\tmutable image = Image(Size(width, height))",
 				"\tfor image.Size",
-				"\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)",
+				"\t\timage.Colors(index) = ColorValue(0.25, 0.25, 0.25)",
 				"\tmutable count = 0",
 				"\tfor image.Size",
-				"\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",
+				"\t\tif image.Colors(index) is ColorValue(0.25, 0.25, 0.25)",
 				"\t\t\tcount = count + 1",
 				"\tcount")).ParseMembersAndMethods(parser);
 		// @formatter: on
@@ -842,10 +842,10 @@ public sealed class VirtualMachineTests : TestBytecode
 		using var package = await repositories.LoadStrictPackage(nameof(Strict) +
 			Context.ParentSeparator + "ImageProcessing");
 		var adjustBrightness = package.GetType("AdjustBrightness");
-		var color = package.GetType("Color");
+		var colorValue = package.GetType("ColorValue");
 		var zero = new Number(package, 0);
 		var brightness = new Number(package, 0.25);
-		var colorCall = new MethodCall(color.FindMethod(Method.From, [zero, zero, zero])!, null,
+		var colorCall = new MethodCall(colorValue.FindMethod(Method.From, [zero, zero, zero])!, null,
 			[zero, zero, zero]);
 		var adjustBrightnessCall = new MethodCall(
 			adjustBrightness.FindMethod(Method.From, [brightness])!, null, [brightness]);
