@@ -1,2 +1,2 @@
-has number = 0 with value >= 0 and value <= 255
+has number with value >= 0 and value <= 255
 constant Max = 255

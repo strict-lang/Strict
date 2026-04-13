@@ -92,6 +92,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StrictFiles", "StrictFiles"
 		TextWriter.strict = TextWriter.strict
 		Type.strict = Type.strict
 		Variable.strict = Variable.strict
+		Byte.strict = Byte.strict
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Strict", "Strict\Strict.csproj", "{4F9E13DD-52AA-5923-2207-40EE4E0E8879}"
@@ -113,6 +114,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Language", "Language\Language.csproj", "{3F15AC2A-18E5-4CC0-6232-44946661D054}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Expressions", "Expressions\Expressions.csproj", "{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageLoader", "NativePlugins\ImageLoader\ImageLoader.csproj", "{5AD28B30-F0EC-46AC-B391-4942F74C1D31}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -256,6 +259,10 @@ Global
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5AD28B30-F0EC-46AC-B391-4942F74C1D31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AD28B30-F0EC-46AC-B391-4942F74C1D31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5AD28B30-F0EC-46AC-B391-4942F74C1D31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5AD28B30-F0EC-46AC-B391-4942F74C1D31}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

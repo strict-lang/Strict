@@ -7,7 +7,7 @@
 
 Strict is a simple-to-understand programming language that not only humans can read and understand, but also computers are able to understand, modify and write it.
 
-The long-term goal is NOT to create just another programming language, but use Strict as the foundation for a higher level language for computers to understand and write code. This is the first step towards a future where computers can write their own code, which is the ultimate goal of Strict. Again, this is very different from other programming languages that are designed for humans to write code but not for computers to understand it. Even though LLMs can be trained to repeat and imitate, which is amazing to see, they still don't understand anything really and make the most ridiculous mistakes on any project bigger than a handful of files.) Strict needs to be very fast, both in execution and writing code (much faster than any existing system), so millions of lines of code can be thought of by computers and be evaluated in real time (seconds).
+The long-term goal is NOT to create just another programming language, but use Strict as the foundation for a higher level language for computers to understand and write code. This is the first step towards a future where computers can write their own code, which is the ultimate goal of Strict. Again, this is very different from other programming languages that are designed for humans to write code but not for computers to understand it. Even though LLMs can be trained to repeat and imitate, which is amazing to see, they still don't understand anything really and make the most ridiculous mistakes on any project bigger than a handful of files. Strict needs to be very fast, both in execution and writing code (much faster than any existing system), so millions of lines of code can be thought of by computers and be evaluated in real time (seconds).
 
 More at https://strict-lang.org
 
@@ -17,7 +17,7 @@ More at https://strict-lang.org
 
 # Strict library
 
-This repository is not just the runtime, but contains the standard library. It is one and the same. Any folder or github repository folder that contains .strict files is a package. The main folder contains all types that have special language treatment and are required to build strict packages. It is imported by default in every source file, here are the most used types:
+This repository is not just the runtime, but contains the standard library. It is one and the same. Any folder or GitHub repository folder that contains .strict files is a package. The main folder contains all types that have special language treatment and are required to build strict packages. It is imported by default in every source file, here are the most used types:
 - Boolean
 - Number
 - Text
@@ -28,9 +28,9 @@ This repository is not just the runtime, but contains the standard library. It i
 - Log
 - common traits like Any (applies to all types), App, Generic (replaced by concrete type in implementation), Mutable, File, Directory, FileReader, FileWriter, etc.
 
-That is pretty much it, there are not many more things needed to write code. For more specific things see the Math folder, ImageProcessing, Examples, etc. here in this repository. Keep in mind that Strict is NOT a general purpose language. It is supposed to be writeable, readable and understandable by computers. If you want to build a website, a complex app, database code, a game, etc. you should use external code for that (you can keep the logic in Strict, but it is unlikely that Strict will have those things unless some people work on it and need it). It is quite easy to interface with external code, you can use any web api, C++, C#, Java, Python, etc. libraries. Those are threated as black boxes (thus not longer computer understandable, here we would be limited to LLMs) and will not follow the strict rules in Strict. The main issue here would be if an external library changes, then all your calls to it also have to change, which is less of a problem with Strict code calling Strict code as any changes can be fixed in a more automated manner.
+That is pretty much it, there are not many more things needed to write code. For more specific things see the Math folder, ImageProcessing, Examples, etc. here in this repository. Keep in mind that Strict is NOT a general purpose language (but if you really want to you can plug in any other code via dlls and call external code). It is supposed to be writeable, readable and understandable by computers. If you want to build a website, a complex app, database code, a game, etc. you should use external code for that (you can keep the logic in Strict, but it is unlikely that Strict will have those things unless some people work on it and need it). It is quite easy to interface with external code, you can use any web api, C++, C#, Java, Python, etc. libraries. Those are threated as black boxes (thus not longer computer understandable, here we would be limited to LLMs) and will not follow the strict rules in Strict. The main issue here would be if an external library changes, then all your calls to it also have to change, which is less of a problem with Strict code calling Strict code as any changes can be fixed in a more automated manner.
 
-In the rare case you need an optional value you can specify it with the or None type constraint (any other type also works). Keep in mind you still cannot assign None to anything, but we can check if something is None and simply not assigning it will keep it at the None state.
+In the rare case you need an optional value you can specify it with the "or None" type constraint (any other type also works). Keep in mind you still cannot assign None to anything, but we can check if something is None and simply not assigning it will keep it at the None state.
 
 Context.strict
 ```
@@ -41,7 +41,7 @@ if Parent is None
   logger.Log("This is the root")
 ```
 
-Parent can just be used as Context and as any derived type (anything that uses Context), but if it was not set and thus is still None, an error will be thrown. You can of course always check for None, but this is a very rare pattern in Strict. An error is also thrown when using a type as a higher level type, which it is not. Let's say our Context is a Package, but we try to use it as a Type (which also is a Context, but clearly not a Package), an Error is thrown telling us we can't use it as a type (like a cast in any c like language would do).
+Parent can just be used as Context and as any derived type (anything that uses Context), but if it was not set and thus is still None, an error will be thrown. You can of course always check for None, but this is a very rare pattern in Strict. An error is also thrown when using a type as a higher level type, which it is not. Let's say our Context is a Package, but we try to use it as a Type (which also is a Context, but clearly not a Package), an Error is thrown telling us we can't use it as a type, like a cast in any c like language would do.
 
 # How to use
 The best way to learn how any expression or base type works is to look at the code, it is very compact and every single method starts with tests on how to use it. This base library is not just defining how the language works, but the documentation in source code form. All tests use the is comparsion (similar to == in c style languages, = is used for assignments), "is true" at the end of any expression is never used. All expressions (not just tests) must evaluate to true, otherwise the execution stops with an error. If an expression is constant (like all tests, but also many other expressions), it will be removed and optimized out after the first run.
@@ -53,16 +53,16 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 
 ## Architecture at a Glance (from low to high level)
 
-| Layer | Responsibility | When It Runs | Rejects / Optimises |
-|-------|----------------|-------------|---------------------|
-| **Strict.Language** | Load *.strict* files, package handling, core type parsing (structure only) | File load | Bad formatting & package errors |
-| **Strict.Expressions** | Lazy-parse method bodies into an immutable tree of `if`, `for`, assignments, calls… | First method call | Structural/semantic violations |
-| **Strict.Validators** | Visitor-based static analysis & constant folding | After expression parsing | Duplicate code remover, impossible casts, unused mutables, foldable constants |
-| **Strict.HighLevelRuntime** | Execute expressions directly in interpreter mode for fast checks and tests | On demand during test execution | Value/type errors, side-effects |
-| **Strict.TestRunner** | Run in-code tests via HighLevelRuntime (`method must start with a test`) | First call to a method | Failing test expressions, the central verification point |
-| **Strict.Bytecode** | Generate register-based bytecode instructions from expression trees | After tests succeed | Unsupported expression patterns |
-| **Strict.Optimizers** | Remove passed tests and other provably dead code from bytecode | After bytecode generation | Dead instructions, test artefacts, constant folds |
-| **Strict** (exe) | Execute optimized bytecode in the VirtualMachine; orchestrate the full pipeline | Final step | Value/type errors, side-effects |
+| Layer                       | Responsibility                                                                      | When It Runs                    | Rejects / Optimises                                                           |
+|-----------------------------|-------------------------------------------------------------------------------------|---------------------------------|-------------------------------------------------------------------------------|
+| **Strict.Language**         | Load *.strict* files, package handling, core type parsing (structure only)          | File load                       | Bad formatting & package errors                                               |
+| **Strict.Expressions**      | Lazy-parse method bodies into an immutable tree of `if`, `for`, assignments, calls… | First method call               | Structural/semantic violations                                                |
+| **Strict.Validators**       | Visitor-based static analysis & constant folding                                    | After expression parsing        | Duplicate code remover, impossible casts, unused mutables, foldable constants |
+| **Strict.HighLevelRuntime** | Execute expressions directly in interpreter mode for fast checks and tests          | On demand during test execution | Value/type errors, side-effects                                               |
+| **Strict.TestRunner**       | Run in-code tests via HighLevelRuntime (`method must start with a test`)            | First call to a method          | Failing test expressions, the central verification point                      |
+| **Strict.Bytecode**         | Generate register-based bytecode instructions from expression trees                 | After tests succeed             | Unsupported expression patterns                                               |
+| **Strict.Optimizers**       | Remove passed tests and other provably dead code from bytecode                      | After bytecode generation       | Dead instructions, test artefacts, constant folds                             |
+| **Strict** (exe)            | Execute optimized bytecode in the VirtualMachine; orchestrate the full pipeline     | Final step                      | Value/type errors, side-effects                                               |
 
 ## 1 · Strict.Language
 * Parses package headers and type signatures only.
@@ -79,15 +79,15 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 * Runs constant folding & simple propagation (e.g. `"5" to Number → 5`). This doesn't affect tests code, but for execution (any step after this) it still uses the folded expressions. Production is always folded and collapsed to the simplest form (in an IDE via a warning that needs to be fixed).
 * TODO: finds all duplicate code and removes it (reinventing the wheel over and over), e.g.
 	* Reimplenting GetElementsText like the example below will be replaced with existing code: Text.Combine
-	* This will affect ALL new code and make it much faster to write code, as you can just write the most straightforward code and Strict will figure out if there is already an existing implementation for it and replace it with that, which is also a great way to learn how to do things in Strict by just writing the most straightforward code and then looking at the optimized version of it.
-	* Implemented like ReSharper/Jetbrains warning issues: Since there is no warnings in Strict, everything is an error and thus this needs to be fixed before it can be used.
-	* Also removes verbose code that can be shorter, like Text.characters.Length -> Text.Length
+	* This will affect ALL new code and make it much faster to write code, as you can just write the most straightforward code and Strict will figure out if there is already an existing implementation for it. Then it will replace it with that, which is also a great way to learn how to do things in Strict by just writing the most straightforward code and then looking at the optimized version of it.
+	* Implemented like ReSharper/JetBrains warning issues: Since there is no warnings in Strict, everything is an error and thus this needs to be fixed before it can be used.
+	* Also removes verbose code that can be shorter, like Text.characters.Length → Text.Length
 * Separation of concerns: validation without touching runtime state.
 
 ## 4 · Strict.HighLevelRuntime
 * Interpreter-style execution for quick feedback during editing, mostly for test execution.
 * Drives tests and advanced checks without bytecode generation (which is also fast, but not needed, we can stay in memory for most work)
-* Fast enough for most validation and dev workflows. All non external code is always executed and tested immediately like NCrunch (see SCrunch).
+* Fast enough for most validation and dev workflows. All non-external code is always executed and tested immediately like NCrunch (see SCrunch).
 
 ## 5 · Strict.TestRunner
 * Every method must open with a self-contained test (one line methods can be excluded if they are simple enough, e.g. just returning a value or doing a comparison).
@@ -106,14 +106,14 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 * Preserve original line numbers for precise error reporting.
 
 ## 8. Strict.Compiler
-* Compiles bytecode into actual executables for any supported platform (Windows, Linux, MacOS).
-* Currently can utilize MLIR (for the most optimized output, supporting parallization and GPU execution), LLVM (for a more general approach) or direct NASM code generation (low level assembly).
+* Compiles bytecode into actual executables for any supported platform (Windows, Linux, macOS).
+* Currently, can utilize MLIR (for the most optimized output, supporting parallization and GPU execution), LLVM (for a more general approach) or direct NASM code generation (low level assembly).
 * Executables are very tiny and do not require any runtime, the Strict executable contains everything needed to do all these steps, parsing, validation, testing, bytecode generation, optimization and execution. External libraries used or needed for compilation (like MLIR) are not included and need to be on the executing machine. Same for any content used of course (but maybe we include them into the bytecode .strictbinary files like .apk packages).
 
 ## 9 · Strict (exe) — Runner + VirtualMachine
 * The `Runner` orchestrates the full pipeline: load → parse → validate → test → generate → optimize → execute.
 * The `VirtualMachine` executes optimized bytecode via a register file, call frames and a program counter.
-* Only the VM sees real values and side-effects — this is where programs actually run.
+* Only the VM sees real values and side effects — this is where programs actually run.
 
 ## 10 · Strict.Transpiler
 * Optional: Transpiles Strict into C# or CUDA for execution on existing runtimes.
@@ -122,7 +122,7 @@ The LSP (Language Server Protocol) implementation here adds support for VSCode, 
 
 ## 11 · Strict.LanguageServer
 * VS Code-first LSP implementation for daily Strict development.
-* Solid as all Strict work happens with it directly.
+* Solid as all Strict work happens to it directly.
 * Shows all parsing and validation errors, warnings to automatically fix, tests results, code navigation, refactoring support, etc. in real time.
 
 Note: Peripheral projects kept around for specific purposes: `Strict.Grammar` + `Strict.Grammar.Tests` (syntax highlighters from `Grammar.ebnf`), `Strict.PackageManager` (github-based packages, optional for now).
@@ -138,7 +138,7 @@ Note: Peripheral projects kept around for specific purposes: `Strict.Grammar` + 
 	 Catch the trivial stuff early, let the VM handle the hard parts.
 
 3. **VM Is King**
-	 Only the VirtualMachine sees real values and side-effects — everything before it is compilation.
+	 Only the VirtualMachine sees real values and side effects — everything before it is compilation.
 
 4. **One-Time Tests**
 	 Tests live where the code lives, run once, then disappear from the bytecode.
@@ -225,7 +225,7 @@ List.strict usage (all lists are simply surrounded by brackets, basically any me
 ```
 
 ## Members, variables, constants, let, mutable
-Members are always defined at the top of any type file. Members are basically fields in other languages, but can do much more. For example almost all strict types are composed from more basic types and can be used as such. This kind of allows multiple inheritence (as you can have multiple members) and also gives you any feature from another type you want by just adding it is a member. If a member type is a trait (kind of interface, traits have no implementation), the type must implement all of the trait methods.
+Members are always defined at the top of any type file. Members are basically fields in other languages, but can do much more. For example almost all strict types are composed of more basic types and can be used as such. This kind of allows multiple inheritence (as you can have multiple members) and also gives you any feature from another type you want by just adding it is a member. If a member type is a trait (kind of interface, traits have no implementation), the type must implement all the trait methods.
 
 Members can be either `has` (default), `constant` (for anything that does not change, think of static readonly, this includes way more than other programming languages and propagates upward, anything composed out of constants is a constant too, constants are always precomputed and optimized away, even if this is a complex operation) or `mutable` (rarely used, this means the value is allowed to change, mostly for optimization purposes, should be avoided otherwise as parallization will struggle with mutables).
 
@@ -240,7 +240,7 @@ to HashCode
 is(other) Boolean
 ```
 
-A character is just a number, but can be created from a single letter text or specifying an UTF value:
+A character is just a number, but can be created from a single letter text or specifying a UTF value:
 ```
 has number
 from(text)
@@ -294,7 +294,7 @@ if value > 0
 	value
 ```
 
-Single-line conditional are pretty much the same (like '?' in C, C# or Java, just using "then" like in F# or Haskell). This is often used to return or assign simple expressions based on a condition, it all must fit in a line (as always max. length is 100).
+Single-line conditional are pretty much the same (as '?' in C, C# or Java, just using "then" like in F# or Haskell). This is often used to return or assign simple expressions based on a condition, it all must fit in a line (as always max. length is 100).
 ```
 value > 0 then value else 0
 ```
@@ -307,7 +307,7 @@ Scala or Haskell:
 val result = if value > 0 then value else 0
 ```
 
-Finally we have the selector `if`, it starts pretty much the same as above and also uses "then". The if line ends with "is" or "is not" (and other keywords or expressions that can be compared). It works like a switch or match expression in other languages, but is more powerful as you can use any expression and aretmetic or comparison operator or type check here.
+Finally, we have the selector `if`, it starts pretty much the same as above and also uses "then". The if line ends with "is" or "is not" (and other keywords or expressions that can be compared). It works like a switch or match expression in other languages, but is more powerful as you can use any expression and aretmetic or comparison operator or type check here.
 ```
 if operation is
 	"add" then value
@@ -343,9 +343,9 @@ let result = case operation of
 It is important to note that if there is no fallback else case at the end an Error is automatically generated and thrown at runtime if no case above it matches.
 
 # for
-The only iterator in Strict is the "for" expression, it is usually used to enumerate through lists, but anything that implements Iterator can be enumerated (Enum, List, Number, Range and anything that implements List like Dictionary). The syntax for "for" is quite powerful and not much like c-style languages, it is more like functional languages. A for loop is also usually the only spot where mutable variables are used and make sense, so a lot of optimizations are done here to avoid actual mutable usage at runtime and thus allowing almost all code to be executed without side effects and in parallel. Remember that you don't have to write any parallel code, threads, processes, async, etc. it is all done automatically be the runtime and way more powerful than any other programming language could provide. All of the following examples are automatically executed in parallel and even on the GPU if available and if it would be faster to do so.
+The only iterator in Strict is the "for" expression, it is usually used to enumerate through lists, but anything that implements Iterator can be enumerated (Enum, List, Number, Range and anything that implements List like Dictionary). The syntax for "for" is quite powerful and not much like c-style languages, it is more like functional languages. A for loop is also usually the only spot where mutable variables are used and make sense, so a lot of optimizations are done here to avoid actual mutable usage at runtime and thus allowing almost all code to be executed without side effects and in parallel. Remember that you don't have to write any parallel code, threads, processes, async, etc. it is all done automatically be the runtime and way more powerful than any other programming language could provide. All the following examples are automatically executed in parallel and even on the GPU if available and if it would be faster to do so.
 
-Unlike the above examples or any other code in strict for expressions are not as self explanatory, so each use case is explained here in a bit more detail.
+Unlike the above examples or any other code in strict for expressions are not as self-explanatory, so each use case is explained here in a bit more detail.
 
 ## Normal iteration
 ```
@@ -360,9 +360,9 @@ Outputs this into the logger (defaults to the console):
 1: 2
 2: 3
 
-The for expression requires an iterator to go through each element, which is what someList is. There is no need to specify an enumerator index or value as this is done automatically and you can access these via "index" (0, 1, 2, 3, etc.) and "value" (whatever value is at this index). If you need to access the outer value you can type "outer.value".
+The for expression requires an iterator to go through each element, which is what someList is. There is no need to specify an enumerator index or value as this is done automatically, and you can access these via "index" (0, 1, 2, 3, etc.) and "value" (whatever value is at this index). If you need to access the outer value you can type "outer.value".
 
-You can iterate over a number if you just want a quick for loop for lets say 10 iterations. This outputs 10 lines starting from 0 to 9, index and value are identical here:
+You can iterate over a number if you just want a quick for loop for let's say 10 iterations. This outputs 10 lines starting from 0 to 9, index and value are identical here:
 ```
   for 10
     logger.Log(value)
@@ -406,14 +406,14 @@ for x in Range(1, 10)
 which would output 100 values starting at (0, 0) ending at (10, 10). Notice that Strict will evaluate the fastest execution, so for image processing it is not needed to iterate y first. Here it makes no difference. Since output logging is a side effect this can't be executed fully in parallel (the logger will still get all values at once, but in order and output them at once as pretty much no time will have passed from start to finish).
 
 ## Dictionaries
-For dictionaries you might want to use index, key and value variables, but again: you don't have to. This works fine:
+For dictionaries, you might want to use index, key and value variables, but again: you don't have to. This works fine:
 ```
 for someDictionary
   if value.Key is "Apple"
     return value.Value
 ```
 
-Dictionaries are just Lists of key+value pairs, so each enumeration just returns one of these pairs and we can grab the first value as the key with value(0), which is exactly what value.Key will do. Same goes for value(1) for value.Value.
+Dictionaries are just Lists of key+value pairs, so each enumeration just returns one of these pairs, and we can grab the first value as the key with value(0), which is exactly what value.Key will do. Same goes for value(1) for value.Value.
 
 ```
 Index(other Generic) Number
@@ -594,7 +594,7 @@ Let's look at a more complex example (not really useful, but is shows how we can
 			4 + value * 3
 			to Text
 ```
-Here we start iterating through a list of numbers, then we convert each value to Text (value is always used by default on any call, no matter if we are in a method were it defaults to our type instance or in a for loop, where it is the current iteration value).Then we use Length on the new value inside the for body, which is now a Text, so that would be the length of that Text and multiply it by itself. That length is a number again, the if expression now checks if that value is above 3. If so we go into the inner if body and do a quick calculation and finally we convert the resulting number to Text, which is then added to the for expression result. If the return value is a List of Text that would be returned, if it is a Text, then everything is concatenated. Otherwise an error is given with the incompatible type. Also note that some of these things could be done in one line like (value to Text).Length * (value to Text).Length, but that would be longer and is not prefered. (4 + value * 3) to Text is probably slightly shorter and would be prefered, but the point here is you can call whatever code you like to transform any Iterator.
+Here we start iterating through a list of numbers, then we convert each value to Text (value is always used by default on any call, no matter if we are in a method were it defaults to our type instance or in a for loop, where it is the current iteration value).Then we use Length on the new value inside the for body, which is now a Text, so that would be the length of that Text and multiply it by itself. That length is a number again, the if expression now checks if that value is above 3. If so we go into the inner if body and do a quick calculation, and finally we convert the resulting number to Text, which is then added to the for expression result. If the return value is a List of Text that would be returned, if it is a Text, then everything is concatenated. Otherwise, an error is given with the incompatible type. Also note that some of these things could be done in one line like (value to Text).Length * (value to Text).Length, but that would be longer and is not prefered. (4 + value * 3) to Text is probably slightly shorter and would be prefered, but the point here is you can call whatever code you like to transform any Iterator.
 
 Here is the final example from Strict.Examples/RemoveParentheses.strict
 ```
