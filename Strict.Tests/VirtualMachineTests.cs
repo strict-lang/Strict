@@ -729,7 +729,7 @@ public sealed class VirtualMachineTests : TestBytecode
 		{
 			new Type(type.Package, new TypeLines("Color", "has red Number",
 				"GetZero Number", "\t0")).ParseMembersAndMethods(new MethodExpressionParser());
-			new Type(type.Package, new TypeLines("HolderWithColors", "mutable colors Colors",
+			new Type(type.Package, new TypeLines("HolderWithColors", "mutable colors",
 				"GetFirst Number", "\tcolors(0).red")).ParseMembersAndMethods(
 				new MethodExpressionParser());
 		}

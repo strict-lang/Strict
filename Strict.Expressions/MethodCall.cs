@@ -166,7 +166,8 @@ public class MethodCall : ConcreteExpression
 			var parameterType = method.Parameters[index].Type;
 			if (parameterType is GenericTypeImplementation { Generic.Name: Type.Mutable } mutableType)
 				parameterType = mutableType.ImplementationTypes[0];
-			if (!arguments[index].ReturnType.IsSameOrCanBeUsedAs(parameterType))
+			if (!arguments[index].ReturnType.IsSameOrCanBeUsedAs(parameterType) &&
+				!arguments[index].ReturnType.CanBeConvertedTo(parameterType))
 				return false;
 		}
 		return true;

@@ -71,7 +71,7 @@ public sealed partial class VirtualMachine
 			"Length" or "Count" => info.InstanceRegister.HasValue && TryHandleNativeLength(invoke),
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
-			"StartsWith" or "IndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
+			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
 			_ => info.InstanceRegister.HasValue
 				? TryHandleNativeTraitInstanceMethod(invoke)
 				: TryHandleNativeTraitStaticMethod(invoke)
@@ -213,10 +213,13 @@ public sealed partial class VirtualMachine
 		if (info.ArgumentRegisters.Length == 0)
 			return false;
 		var pathArg = Memory.Registers[info.ArgumentRegisters[0]];
-		if (!pathArg.IsText)
+		var pathText = pathArg.IsText
+			? pathArg.Text
+			: TryExtractTextFromPathType(pathArg);
+		if (pathText == null)
 			return false;
 		var searchDirectory = AppContext.BaseDirectory;
-		var bytes = NativePluginLoader.TryLoadNativeLifecycle(returnType.Name, pathArg.Text,
+		var bytes = NativePluginLoader.TryLoadNativeLifecycle(returnType.Name, pathText,
 			searchDirectory, out var width, out var height);
 		if (bytes == null)
 			return false;
@@ -225,6 +228,16 @@ public sealed partial class VirtualMachine
 			return false;
 		Memory.Registers[invoke.Register] = new ValueInstance(returnType, traitValues);
 		return true;
+	}
+
+	private static string? TryExtractTextFromPathType(ValueInstance value)
+	{
+		var typeInstance = value.TryGetValueTypeInstance();
+		if (typeInstance == null || typeInstance.Values.Length == 0)
+			return null;
+		return typeInstance.Values[0].IsText
+			? typeInstance.Values[0].Text
+			: null;
 	}
 
 	private ValueInstance[]? BuildNativePluginValues(Type traitType, byte[] bytes, int width,
@@ -518,6 +531,8 @@ public sealed partial class VirtualMachine
 			"StartsWith" => EvaluateStartsWith(text, args),
 			"IndexOf" => new ValueInstance(executable.numberType,
 				text.IndexOf(args[0].Text, StringComparison.Ordinal)),
+			"LastIndexOf" => new ValueInstance(executable.numberType,
+				text.LastIndexOf(args[0].Text, StringComparison.Ordinal)),
 			"Substring" => new ValueInstance(
 				text.Substring((int)args[0].Number, (int)args[1].Number)),
 			_ => throw new InvalidOperationException("Unhandled native text method: " + info.MethodName)

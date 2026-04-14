@@ -272,7 +272,8 @@ internal class TypeMethodFinder(Type type)
 		if (argumentType.IsError)
 			return true;
 		if (!methodParameterType.IsGeneric)
-			return argumentType.IsSameOrCanBeUsedAs(methodParameterType);
+			return argumentType.IsSameOrCanBeUsedAs(methodParameterType) ||
+				argumentType.CanBeConvertedTo(methodParameterType);
 		if (argumentType.IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType, //ncrunch: no coverage
 				"(parameter " + index + ") is not usable with argument " + argumentType + " in " + method);

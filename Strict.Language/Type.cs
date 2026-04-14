@@ -514,7 +514,9 @@ public class Type : Context, IDisposable
 	{
 		if (IsSameOrCanBeUsedAs(targetType, false))
 			return true;
-   if (IsBaseTypeExcludedFromImplicitListConversion() ||
+		if (CanConvertBetweenByteListAndCompositeByteList(targetType))
+			return true;
+		if (IsBaseTypeExcludedFromImplicitListConversion() ||
 			targetType.IsBaseTypeExcludedFromImplicitListConversion())
 			return false;
 		if (AvailableMethods.TryGetValue(BinaryOperator.To, out var toMethods) &&
@@ -528,6 +530,21 @@ public class Type : Context, IDisposable
 
 	private bool IsBaseTypeExcludedFromImplicitListConversion() =>
 		typeKind < TypeKind.List || Name == "Byte";
+
+	private bool CanConvertBetweenByteListAndCompositeByteList(Type targetType)
+	{
+		if (this is not GenericTypeImplementation { Generic.IsList: true } sourceList ||
+			targetType is not GenericTypeImplementation { Generic.IsList: true } targetList)
+			return false;
+		var sourceElement = sourceList.ImplementationTypes[0];
+		var targetElement = targetList.ImplementationTypes[0];
+		return IsTypeComposedOfBytesOnly(sourceElement) && targetElement.Name == "Byte" ||
+			IsTypeComposedOfBytesOnly(targetElement) && sourceElement.Name == "Byte";
+	}
+
+	private static bool IsTypeComposedOfBytesOnly(Type type) =>
+		type.Members.Count > 0 &&
+		type.Members.All(member => member.Type.Name is "Byte" or "Number");
 
 	/// <summary>
 	/// Returns true when this type explicitly declares "for Iterator(T)" and the target is that
