@@ -382,7 +382,7 @@ public sealed class RunnerTests
 		CopyNativePluginsToDirectory(repoRoot, searchDirectory);
 		var originalBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", testImagePath,
 			searchDirectory, out var width, out var height);
-		Assert.That(originalBytes, Is.Not.Null);
+		Assert.That(originalBytes, Is.Not.Null, "Plugin is missing at " + searchDirectory);
 		Assert.That(width, Is.EqualTo(4));
 		Assert.That(height, Is.EqualTo(4));
 		Assert.That(originalBytes!.Length, Is.EqualTo(4 * 4 * 4));
@@ -463,6 +463,10 @@ public sealed class RunnerTests
 		var saverSource = Path.Combine(repoRoot, "NativePlugins", "ImageSaver", "ImageSaver.so");
 		CopyIfNewerOrMissing(loaderSource, Path.Combine(targetDirectory, "ImageLoader.so"));
 		CopyIfNewerOrMissing(saverSource, Path.Combine(targetDirectory, "ImageSaver.so"));
+		CopyIfNewerOrMissing(loaderSource.Replace(".so", ".dll"),
+			Path.Combine(targetDirectory, "ImageLoader.dll"));
+		CopyIfNewerOrMissing(saverSource.Replace(".so", ".dll"),
+			Path.Combine(targetDirectory, "ImageSaver.dll"));
 	}
 
 	private static void CopyIfNewerOrMissing(string source, string target)
