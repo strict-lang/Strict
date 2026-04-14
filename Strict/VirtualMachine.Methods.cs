@@ -73,6 +73,7 @@ public sealed partial class VirtualMachine
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
 			"StartsWith" or "IndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
 			"Colors" => info.InstanceRegister.HasValue && TryHandleNativeColors(invoke),
+			"Save" => TryHandleNativeSave(invoke),
 			_ => false
 		};
 	}
@@ -87,6 +88,36 @@ public sealed partial class VirtualMachine
 			return false;
 		Memory.Registers[invoke.Register] = typeInstance.Values[0];
 		return true;
+	}
+
+	private bool TryHandleNativeSave(Invoke invoke)
+	{
+		var info = invoke.MethodInfo;
+		if (info.ArgumentRegisters.Length < 4)
+			return false;
+		var pathArg = Memory.Registers[info.ArgumentRegisters[0]];
+		if (!pathArg.IsText)
+			return false;
+		var colorsArg = Memory.Registers[info.ArgumentRegisters[1]];
+		if (!colorsArg.IsList)
+			return false;
+		var widthArg = Memory.Registers[info.ArgumentRegisters[2]];
+		var heightArg = Memory.Registers[info.ArgumentRegisters[3]];
+		var width = (int)widthArg.Number;
+		var height = (int)heightArg.Number;
+		var pixelData = ExtractBytesFromList(colorsArg);
+		var searchDirectory = Directory.GetCurrentDirectory();
+		return NativePluginLoader.TrySaveNativeImage(info.TypeFullName.Split('/').Last(),
+			pathArg.Text, pixelData, width, height, searchDirectory);
+	}
+
+	private static byte[] ExtractBytesFromList(ValueInstance listValue)
+	{
+		var items = listValue.List.Items;
+		var bytes = new byte[items.Count];
+		for (var byteIndex = 0; byteIndex < items.Count; byteIndex++)
+			bytes[byteIndex] = (byte)Math.Clamp(items[byteIndex].Number, 0, 255);
+		return bytes;
 	}
 
 	private bool ExecuteFromInvoke(Invoke invoke, Type returnType)

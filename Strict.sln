@@ -119,6 +119,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NativePlugins", "NativePlug
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageLoader", "NativePlugins\ImageLoader\ImageLoader.vcxproj", "{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImageSaver", "NativePlugins\ImageSaver\ImageSaver.vcxproj", "{A1C2D3E4-F5A6-B7C8-D9E0-F1A2B3C4D5E6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -265,6 +267,10 @@ Global
 		{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1}.Debug|Any CPU.Build.0 = Debug|x64
 		{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1}.Release|Any CPU.ActiveCfg = Release|x64
 		{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1}.Release|Any CPU.Build.0 = Release|x64
+		{A1C2D3E4-F5A6-B7C8-D9E0-F1A2B3C4D5E6}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{A1C2D3E4-F5A6-B7C8-D9E0-F1A2B3C4D5E6}.Debug|Any CPU.Build.0 = Debug|x64
+		{A1C2D3E4-F5A6-B7C8-D9E0-F1A2B3C4D5E6}.Release|Any CPU.ActiveCfg = Release|x64
+		{A1C2D3E4-F5A6-B7C8-D9E0-F1A2B3C4D5E6}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -276,6 +282,7 @@ Global
 		{3F15AC2A-18E5-4CC0-6232-44946661D054} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 		{A5D4EAE2-FB48-BFE9-3288-58EB56EA21D7} = {CAF602EA-BA64-4818-B27E-4A757B4D2259}
 		{B0A49FE9-1E93-4AFD-B7B5-2C4761D5F0C1} = {5AD28B30-F0EC-46AC-B391-4942F74C1D31}
+		{A1C2D3E4-F5A6-B7C8-D9E0-F1A2B3C4D5E6} = {5AD28B30-F0EC-46AC-B391-4942F74C1D31}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEA35D12-F095-424A-8A50-6D7EBE08D917}

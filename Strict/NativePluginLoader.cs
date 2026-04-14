@@ -21,7 +21,7 @@ public static class NativePluginLoader
 	private delegate IntPtr CreateDelegate([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	private delegate IntPtr ColorsDelegate(IntPtr handle, out int outCount);
+	private delegate IntPtr ColorsDelegate(IntPtr handle, out int outWidth, out int outHeight);
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	private delegate void DeleteDelegate(IntPtr handle);
@@ -34,8 +34,14 @@ public static class NativePluginLoader
 	/// no native library was found for the type.
 	/// </summary>
 	public static byte[]? TryLoadNativeLifecycle(string typeName, string path,
-		string searchDirectory)
+		string searchDirectory) =>
+		TryLoadNativeLifecycle(typeName, path, searchDirectory, out _, out _);
+
+	public static byte[]? TryLoadNativeLifecycle(string typeName, string path,
+		string searchDirectory, out int width, out int height)
 	{
+		width = 0;
+		height = 0;
 		var libPath = FindNativeLibraryPath(typeName, searchDirectory);
 		if (libPath == null)
 			return null;
@@ -48,7 +54,8 @@ public static class NativePluginLoader
 			throw new NativeCreateFailed(typeName, path);
 		try
 		{
-			var dataPtr = colorsFn(imageHandle, out var count);
+			var dataPtr = colorsFn(imageHandle, out width, out height);
+			var count = width * height * 4;
 			if (dataPtr == IntPtr.Zero || count <= 0)
 				return [];
 			var result = new byte[count];
@@ -58,6 +65,37 @@ public static class NativePluginLoader
 		finally
 		{
 			deleteFn(imageHandle);
+		}
+	}
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	private delegate int SaveDelegate(
+		[MarshalAs(UnmanagedType.LPUTF8Str)] string path, IntPtr data, int dataLength,
+		int width, int height);
+
+	/// <summary>
+	/// Calls {TypeName}_Save(path, data, len, width, height) on a native shared library.
+	/// Returns true on success, false if no native library was found.
+	/// </summary>
+	public static bool TrySaveNativeImage(string typeName, string path, byte[] data,
+		int width, int height, string searchDirectory)
+	{
+		var libPath = FindNativeLibraryPath(typeName, searchDirectory);
+		if (libPath == null)
+			return false;
+		var libHandle = GetOrLoadNativeLibrary(libPath);
+		var saveFn = GetNativeFunction<SaveDelegate>(libHandle, typeName + "_Save");
+		var pinnedData = GCHandle.Alloc(data, GCHandleType.Pinned);
+		try
+		{
+			var result = saveFn(path, pinnedData.AddrOfPinnedObject(), data.Length, width, height);
+			if (result == 0)
+				throw new NativeSaveFailed(typeName, path);
+			return true;
+		}
+		finally
+		{
+			pinnedData.Free();
 		}
 	}
 
@@ -207,5 +245,8 @@ public static class NativePluginLoader
 
 	public sealed class NativeCreateFailed(string typeName, string path) : Exception(
 		$"Native {typeName}_Create returned null for path: {path}");
+
+	public sealed class NativeSaveFailed(string typeName, string path) : Exception(
+		$"Native {typeName}_Save failed for path: {path}");
 }
 
