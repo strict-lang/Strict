@@ -31,13 +31,11 @@ static const char* GetExtension(const char* path)
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-int ImageSaver_Save(const char* path, const unsigned char* data, int dataLength,
-	int width, int height)
+int ImageSaver_Save(const char* path, const unsigned char* data, int width, int height)
 {
 	if (path == NULL || data == NULL || width <= 0 || height <= 0)
 		return 0;
-	if (dataLength < width * height * 4)
-		return 0;
+	int dataLength = width * height * 4;
 	const char* ext = GetExtension(path);
 	if (ext == NULL)
 		return 0;

@@ -32,6 +32,9 @@ typedef struct ImageHandle
 
 /* Creates a loader for the image at the given path.
  * Returns a non-null handle on success, NULL if the file cannot be read or decoded. */
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
 void* ImageLoader_Create(const char* path)
 {
 	int width, height, channels;
@@ -48,22 +51,28 @@ void* ImageLoader_Create(const char* path)
 
 /* Returns a pointer to the RGBA8888 pixel bytes and width, height.
  * The caller must NOT free this pointer — call ImageLoader_Delete to release it. */
-const unsigned char* ImageLoader_Colors(void* opaqueHandle, int* outWidth, int* outHeight)
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+const unsigned char* ImageLoader_Colors(void* imageHandle, int* outWidth, int* outHeight)
 {
-	if (opaqueHandle == NULL || outWidth == NULL || outHeight == NULL)
+	if (imageHandle == NULL || outWidth == NULL || outHeight == NULL)
 		return NULL;
-	ImageHandle* handle = (ImageHandle*)opaqueHandle;
+	ImageHandle* handle = (ImageHandle*)imageHandle;
 	*outWidth = handle->width;
 	*outHeight = handle->height;
 	return handle->data;
 }
 
-/* Frees the native image memory.  Must be called exactly once after ImageLoader_Colors. */
-void ImageLoader_Delete(void* opaqueHandle)
+/* Frees the native image memory. Must be called exactly once after ImageLoader_Colors. */
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
+void ImageLoader_Delete(void* imageHandle)
 {
-	if (opaqueHandle == NULL)
+	if (imageHandle == NULL)
 		return;
-	ImageHandle* handle = (ImageHandle*)opaqueHandle;
+	ImageHandle* handle = (ImageHandle*)imageHandle;
 	stbi_image_free(handle->data);
 	free(handle);
 }

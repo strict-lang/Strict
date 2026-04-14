@@ -70,8 +70,7 @@ public static class NativePluginLoader
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	private delegate int SaveDelegate(
-		[MarshalAs(UnmanagedType.LPUTF8Str)] string path, IntPtr data, int dataLength,
-		int width, int height);
+		[MarshalAs(UnmanagedType.LPUTF8Str)] string path, IntPtr data, int width, int height);
 
 	/// <summary>
 	/// Calls {TypeName}_Save(path, data, len, width, height) on a native shared library.
@@ -88,7 +87,7 @@ public static class NativePluginLoader
 		var pinnedData = GCHandle.Alloc(data, GCHandleType.Pinned);
 		try
 		{
-			var result = saveFn(path, pinnedData.AddrOfPinnedObject(), data.Length, width, height);
+			var result = saveFn(path, pinnedData.AddrOfPinnedObject(), width, height);
 			if (result == 0)
 				throw new NativeSaveFailed(typeName, path);
 			return true;

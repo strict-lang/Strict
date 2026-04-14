@@ -2,7 +2,7 @@
 
 A **native C plugin** for the Strict `NativePluginLoader`. Implements `ImageSaver.strict`'s
 `Save(path, bytes, width, height)` trait using [stb_image_write](https://github.com/nothings/stb)
-for cross-platform PNG / JPG encoding. No .NET or JVM dependency.
+for cross-platform PNG / JPG encoding. No dependencies.
 
 ## How It Works
 
