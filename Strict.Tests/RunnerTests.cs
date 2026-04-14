@@ -371,22 +371,17 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void NativeImageLoadProcessSavePipeline()
+	public async Task NativeImageLoadProcessSavePipeline()
 	{
 		var repoRoot = FindRepoRoot();
 		var testImagePath = Path.Combine(repoRoot, "ImageProcessing", "test_image.jpg");
-		var searchDirectory = AppContext.BaseDirectory;
-		CopyNativePluginsToDirectory(repoRoot, searchDirectory);
-		var originalBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", testImagePath,
-			searchDirectory, out var width, out var height);
-		Assert.That(originalBytes, Is.Not.Null);
-		const double BrightnessIncrease = 0.25;
-		//TODO: use .strict, this is wrong!
-		var processedBytes = AdjustBrightnessOnRawBytes(originalBytes!, BrightnessIncrease);
-		var outputPath = Path.Combine(repoRoot, "ImageProcessing", "test_image_output.jpg");
-		NativePluginLoader.TrySaveNativeImage("ImageSaver", outputPath, processedBytes,
-			width, height, searchDirectory);
-		Assert.That(File.Exists(outputPath), Is.True);
+		CopyNativePluginsToDirectory(repoRoot, AppContext.BaseDirectory);
+		var processImagePath =
+			Path.Combine(repoRoot, "ImageProcessing", "ProcessImage" + Language.Type.Extension);
+		await new Runner(processImagePath, testImagePath).Run();
+		Assert.That(File.Exists(testImagePath + "_processed.jpg"), Is.True);
+		var output = consoleWriter.ToString();
+		Assert.That(output, Does.Contain("Processed image saved to:"));
 	}
 
 	//ncrunch: no coverage start
@@ -433,20 +428,4 @@ public sealed class RunnerTests
 		}
 	}
 
-	//TODO: wtf is this, this is supposed to happen in strict!
-	private static byte[] AdjustBrightnessOnRawBytes(byte[] rgba, double brightness)
-	{
-		var result = new byte[rgba.Length];
-		for (var pixelIndex = 0; pixelIndex < rgba.Length; pixelIndex += 4)
-		{
-			result[pixelIndex] = ClampToByte(rgba[pixelIndex] + brightness * 255);
-			result[pixelIndex + 1] = ClampToByte(rgba[pixelIndex + 1] + brightness * 255);
-			result[pixelIndex + 2] = ClampToByte(rgba[pixelIndex + 2] + brightness * 255);
-			result[pixelIndex + 3] = rgba[pixelIndex + 3];
-		}
-		return result;
-	}
-
-	private static byte ClampToByte(double value) =>
-		(byte)Math.Clamp(Math.Round(value), 0, 255);
 }

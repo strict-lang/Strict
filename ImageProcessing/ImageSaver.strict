@@ -1,1 +1,1 @@
-Save(path, colors Bytes, width Number, height Number)
+Save(path Text, colors ColorValues, width Number, height Number)

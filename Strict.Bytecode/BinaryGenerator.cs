@@ -793,6 +793,8 @@ public sealed class BinaryGenerator
 		while (methodsToCompile.Count > 0)
 		{
 			var method = methodsToCompile.Dequeue();
+			if (method.Type.IsTrait)
+				continue;
 			CollectMethodDependencies(method);
 			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 			var body = method.GetBodyAndParseIfNeeded();

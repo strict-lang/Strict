@@ -27,7 +27,18 @@ public static class NativePluginLoader
 	private delegate void DeleteDelegate(IntPtr handle);
 
 	private static readonly Dictionary<string, IntPtr> LoadedNativeLibraries = new();
+	private static readonly HashSet<string> MissingNativeLibraries = new();
 
+	public static bool HasNativeLibrary(string typeName, string searchDirectory)
+	{
+		var cacheKey = typeName + "|" + searchDirectory;
+		if (MissingNativeLibraries.Contains(cacheKey))
+			return false;
+		var found = FindNativeLibraryPath(typeName, searchDirectory) != null;
+		if (!found)
+			MissingNativeLibraries.Add(cacheKey);
+		return found;
+	}
 	/// <summary>
 	/// Tries to call the native Create → Colors → Delete lifecycle for a trait type that has a
 	/// matching native shared library. Returns the RGBA byte data as managed bytes, or null if

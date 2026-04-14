@@ -72,27 +72,49 @@ public sealed partial class VirtualMachine
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
 			"StartsWith" or "IndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
-			"Colors" => info.InstanceRegister.HasValue && TryHandleNativeColors(invoke),
-			"Save" => TryHandleNativeSave(invoke),
-			_ => false
+			_ => info.InstanceRegister.HasValue
+				? TryHandleNativeTraitInstanceMethod(invoke)
+				: TryHandleNativeTraitStaticMethod(invoke)
 		};
 	}
 
-	private bool TryHandleNativeColors(Invoke invoke)
+	private bool TryHandleNativeTraitInstanceMethod(Invoke invoke)
 	{
-		var instanceValue = Memory.Registers[invoke.MethodInfo.InstanceRegister!.Value];
+		var info = invoke.MethodInfo;
+		var instanceValue = Memory.Registers[info.InstanceRegister!.Value];
+		if (!instanceValue.GetType().IsTrait)
+			return false;
 		var typeInstance = instanceValue.TryGetValueTypeInstance();
-		if (typeInstance == null || !instanceValue.GetType().IsTrait)
+		if (typeInstance == null)
 			return false;
-		if (typeInstance.Values.Length != 1 || !typeInstance.Values[0].IsList)
+		var methodIndex = GetTraitDataMethodIndex(instanceValue.GetType(), info.MethodName);
+		if (methodIndex < 0 || methodIndex >= typeInstance.Values.Length)
 			return false;
-		Memory.Registers[invoke.Register] = typeInstance.Values[0];
+		Memory.Registers[invoke.Register] = typeInstance.Values[methodIndex];
 		return true;
 	}
 
-	private bool TryHandleNativeSave(Invoke invoke)
+	private static int GetTraitDataMethodIndex(Type traitType, string methodName)
+	{
+		var dataIndex = 0;
+		foreach (var method in traitType.Methods)
+		{
+			if (string.Equals(method.Name, Method.From, StringComparison.OrdinalIgnoreCase))
+				continue;
+			if (string.Equals(method.Name, methodName, StringComparison.OrdinalIgnoreCase))
+				return dataIndex;
+			dataIndex++;
+		}
+		return -1;
+	}
+
+	private bool TryHandleNativeTraitStaticMethod(Invoke invoke)
 	{
 		var info = invoke.MethodInfo;
+		var typeName = info.TypeFullName.Split('/').Last();
+		var searchDirectory = AppContext.BaseDirectory;
+		if (!NativePluginLoader.HasNativeLibrary(typeName, searchDirectory))
+			return false;
 		if (info.ArgumentRegisters.Length < 4)
 			return false;
 		var pathArg = Memory.Registers[info.ArgumentRegisters[0]];
@@ -101,24 +123,51 @@ public sealed partial class VirtualMachine
 		var colorsArg = Memory.Registers[info.ArgumentRegisters[1]];
 		if (!colorsArg.IsList)
 			return false;
-		var widthArg = Memory.Registers[info.ArgumentRegisters[2]];
-		var heightArg = Memory.Registers[info.ArgumentRegisters[3]];
-		var width = (int)widthArg.Number;
-		var height = (int)heightArg.Number;
-		var pixelData = ExtractBytesFromList(colorsArg);
-		var searchDirectory = Directory.GetCurrentDirectory();
-		return NativePluginLoader.TrySaveNativeImage(info.TypeFullName.Split('/').Last(),
-			pathArg.Text, pixelData, width, height, searchDirectory);
+		var width = (int)Memory.Registers[info.ArgumentRegisters[2]].Number;
+		var height = (int)Memory.Registers[info.ArgumentRegisters[3]].Number;
+		var pixelData = ExtractRgbaBytes(colorsArg);
+		return NativePluginLoader.TrySaveNativeImage(typeName, pathArg.Text, pixelData, width,
+			height, searchDirectory);
 	}
 
-	private static byte[] ExtractBytesFromList(ValueInstance listValue)
+	private static byte[] ExtractRgbaBytes(ValueInstance listValue)
 	{
 		var items = listValue.List.Items;
+		if (items.Count == 0)
+			return [];
+		return items[0].TryGetValueTypeInstance() != null
+			? ExtractBytesFromColorValueList(items)
+			: ExtractBytesFromNumberList(items);
+	}
+
+	private static byte[] ExtractBytesFromNumberList(IReadOnlyList<ValueInstance> items)
+	{
 		var bytes = new byte[items.Count];
 		for (var byteIndex = 0; byteIndex < items.Count; byteIndex++)
 			bytes[byteIndex] = (byte)Math.Clamp(items[byteIndex].Number, 0, 255);
 		return bytes;
 	}
+
+	private static byte[] ExtractBytesFromColorValueList(IReadOnlyList<ValueInstance> items)
+	{
+		var bytes = new byte[items.Count * 4];
+		for (var colorIndex = 0; colorIndex < items.Count; colorIndex++)
+		{
+			var typeInst = items[colorIndex].TryGetValueTypeInstance();
+			if (typeInst is null || typeInst.Values.Length < 3)
+				continue;
+			bytes[colorIndex * 4] = ClampToByte(typeInst.Values[0].Number * 255);
+			bytes[colorIndex * 4 + 1] = ClampToByte(typeInst.Values[1].Number * 255);
+			bytes[colorIndex * 4 + 2] = ClampToByte(typeInst.Values[2].Number * 255);
+			bytes[colorIndex * 4 + 3] = typeInst.Values.Length >= 4
+				? ClampToByte(typeInst.Values[3].Number * 255)
+				: (byte)255;
+		}
+		return bytes;
+	}
+
+	private static byte ClampToByte(double value) =>
+		(byte)Math.Clamp(Math.Round(value), 0, 255);
 
 	private bool ExecuteFromInvoke(Invoke invoke, Type returnType)
 	{
@@ -150,18 +199,66 @@ public sealed partial class VirtualMachine
 		var pathArg = Memory.Registers[info.ArgumentRegisters[0]];
 		if (!pathArg.IsText)
 			return false;
-		var searchDirectory = Directory.GetCurrentDirectory();
+		var searchDirectory = AppContext.BaseDirectory;
 		var bytes = NativePluginLoader.TryLoadNativeLifecycle(returnType.Name, pathArg.Text,
-			searchDirectory);
+			searchDirectory, out var width, out var height);
 		if (bytes == null)
 			return false;
-		var bytesType = returnType.FindType("Bytes") ?? returnType.FindType("Byte") ??
-			executable.basePackage.FindType("Bytes") ?? executable.basePackage.FindType("Byte");
-		if (bytesType == null)
+		var traitValues = BuildNativePluginValues(returnType, bytes, width, height);
+		if (traitValues == null)
 			return false;
-		Memory.Registers[invoke.Register] =
-			new ValueInstance(returnType, [NativePluginLoader.ConvertBytesToValueInstance(bytes, bytesType)]);
+		Memory.Registers[invoke.Register] = new ValueInstance(returnType, traitValues);
 		return true;
+	}
+
+	private ValueInstance[]? BuildNativePluginValues(Type traitType, byte[] bytes, int width,
+		int height)
+	{
+		var dataMethods = traitType.Methods
+			.Where(m => !string.Equals(m.Name, Method.From, StringComparison.OrdinalIgnoreCase))
+			.ToList();
+		if (dataMethods.Count == 0)
+			return null;
+		var values = new ValueInstance[dataMethods.Count];
+		for (var methodIndex = 0; methodIndex < dataMethods.Count; methodIndex++)
+		{
+			var method = dataMethods[methodIndex];
+			var returnType = method.ReturnType;
+			if (returnType.IsList)
+				values[methodIndex] = BuildListValueFromBytes(bytes, returnType);
+			else if (returnType.IsNumber)
+				values[methodIndex] = new ValueInstance(returnType,
+					string.Equals(method.Name, "Width", StringComparison.OrdinalIgnoreCase)
+						? width
+						: height);
+			else
+				return null;
+		}
+		return values;
+	}
+
+	private ValueInstance BuildListValueFromBytes(byte[] bytes, Type listType)
+	{
+		var elementType = listType is GenericTypeImplementation generic
+			? generic.ImplementationTypes[0]
+			: listType;
+		if (elementType.IsNumber || string.Equals(elementType.Name, "Byte",
+			StringComparison.OrdinalIgnoreCase))
+			return NativePluginLoader.ConvertBytesToValueInstance(bytes, listType);
+		var numberType = executable.basePackage.FindType("Number")!;
+		var colorCount = bytes.Length / 4;
+		var colorValues = new ValueInstance[colorCount];
+		for (var colorIndex = 0; colorIndex < colorCount; colorIndex++)
+		{
+			var r = bytes[colorIndex * 4] / 255.0;
+			var g = bytes[colorIndex * 4 + 1] / 255.0;
+			var b = bytes[colorIndex * 4 + 2] / 255.0;
+			var a = bytes[colorIndex * 4 + 3] / 255.0;
+			colorValues[colorIndex] = new ValueInstance(elementType,
+				[new ValueInstance(numberType, r), new ValueInstance(numberType, g),
+				 new ValueInstance(numberType, b), new ValueInstance(numberType, a)]);
+		}
+		return new ValueInstance(listType, colorValues);
 	}
 
 	private bool TryHandleToConversion(Invoke invoke)

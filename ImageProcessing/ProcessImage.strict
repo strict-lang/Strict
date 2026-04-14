@@ -1,9 +1,8 @@
 has logger
-has inputPath Text
-Run
+Run(inputPath Text)
 	mutable loader = ImageLoader.from(inputPath)
-	mutable image = Image(Size(1, 1), loader.Colors)
+	mutable image = Image(Size(loader.Width, loader.Height), loader.Colors)
 	AdjustBrightness(0.25).Process(image)
-	constant outputPath = inputPath + "_processed.png"
+	let outputPath = inputPath + "_processed.jpg"
 	ImageSaver.Save(outputPath, image.Colors, image.Size.Width, image.Size.Height)
 	logger.Log("Processed image saved to: " + outputPath)

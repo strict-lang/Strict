@@ -1,2 +1,4 @@
-from(path)
-Colors Bytes
+from(path Text)
+Colors ColorValues
+Width Number
+Height Number
