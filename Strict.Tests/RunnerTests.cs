@@ -302,7 +302,7 @@ public sealed class RunnerTests
 		}
 #endif
 	}
-	
+
 	[Test]
 	[Category("Slow")] //TODO: still need to test this once optimizations are done, flatArrays!
 	public async Task RunAdjustBrightnessAllocatesBelowHalfMegabytePerRun()
@@ -350,7 +350,7 @@ public sealed class RunnerTests
 		Assert.That(reloadedHeight, Is.EqualTo(height));
 		Assert.That(reloadedBytes, Is.EqualTo(originalBytes));
 	}
-	
+
 	private static void CopyNativePluginsToDirectory(string repoRoot, string targetDirectory)
 	{
 		var loaderSource = Path.Combine(repoRoot, "NativePlugins", "ImageLoader", "ImageLoader.so");
@@ -379,7 +379,7 @@ public sealed class RunnerTests
 		var processImagePath =
 			Path.Combine(repoRoot, "ImageProcessing", "ProcessImage" + Language.Type.Extension);
 		await new Runner(processImagePath, testImagePath).Run();
-		Assert.That(File.Exists(testImagePath + "_processed.jpg"), Is.True);
+		Assert.That(File.Exists(testImagePath.Replace(".jpg", "_output.jpg")), Is.True);
 		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Processed image saved to:"));
 	}

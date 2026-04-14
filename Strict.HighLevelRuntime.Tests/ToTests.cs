@@ -24,18 +24,18 @@ public sealed class ToTests
 		var repositories = new Repositories(parser);
 		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
 		using var program = new Type(package,
-			new TypeLines("ColorToText",
-				"has color",
-				"Run Text",
-				"\tcolor to Text")).ParseMembersAndMethods(parser);
+				new TypeLines("ColorToText", "has color", "Run Text", "\tcolor to Text")).
+			ParseMembersAndMethods(parser);
 		var fullInterpreter = new Interpreter(package, TestBehavior.Disabled);
-    var colorType = package.FindType("Color")!;
-		Assert.That(fullInterpreter.Execute(program.Methods.Single(method => method.Name == Method.Run),
-     new ValueInstance(program, [new ValueInstance(colorType,
-				[new ValueInstance(package.GetType(Type.Number), 0),
+		var colorType = package.FindType("Color")!;
+		Assert.That(fullInterpreter.Execute(
+			program.Methods.Single(method => method.Name == Method.Run), new ValueInstance(program, [
+				new ValueInstance(colorType, [
 					new ValueInstance(package.GetType(Type.Number), 0),
-					new ValueInstance(package.GetType(Type.Number), 0)])]), []).Text,
-			Is.EqualTo("(0, 0, 0)"));
+					new ValueInstance(package.GetType(Type.Number), 0),
+					new ValueInstance(package.GetType(Type.Number), 0)
+				])
+			]), []).Text, Is.EqualTo("(0, 0, 0)"));
 	}
 
 	[Test]
