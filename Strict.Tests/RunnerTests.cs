@@ -366,4 +366,110 @@ public sealed class RunnerTests
 		}
 		throw new DirectoryNotFoundException("Cannot find repository root (Strict.sln not found)");
 	}
+
+	private static string GetImageProcessingFilePath(string filename) =>
+		GetExamplesFilePath("../ImageProcessing/" + filename);
+
+	[Test]
+	[Category("Slow")]
+	public void NativeImageRoundTripIsPixelIdenticalForPng()
+	{
+		var repoRoot = FindRepoRoot();
+		var testImagePath = Path.Combine(repoRoot, "ImageProcessing", "test_image.png");
+		if (!File.Exists(testImagePath))
+			Assert.Ignore("test_image.png not found in ImageProcessing/");
+		var searchDirectory = AppContext.BaseDirectory;
+		CopyNativePluginsToDirectory(repoRoot, searchDirectory);
+		var originalBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", testImagePath,
+			searchDirectory, out var width, out var height);
+		Assert.That(originalBytes, Is.Not.Null);
+		Assert.That(width, Is.EqualTo(4));
+		Assert.That(height, Is.EqualTo(4));
+		Assert.That(originalBytes!.Length, Is.EqualTo(4 * 4 * 4));
+		var outputPath = Path.Combine(Path.GetTempPath(), "strict_roundtrip_test.png");
+		try
+		{
+			NativePluginLoader.TrySaveNativeImage("ImageSaver", outputPath, originalBytes,
+				width, height, searchDirectory);
+			Assert.That(File.Exists(outputPath), Is.True);
+			var reloadedBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", outputPath,
+				searchDirectory, out var reloadedWidth, out var reloadedHeight);
+			Assert.That(reloadedBytes, Is.Not.Null);
+			Assert.That(reloadedWidth, Is.EqualTo(width));
+			Assert.That(reloadedHeight, Is.EqualTo(height));
+			Assert.That(reloadedBytes, Is.EqualTo(originalBytes));
+		}
+		finally
+		{
+			if (File.Exists(outputPath))
+				File.Delete(outputPath);
+		}
+	}
+
+	[Test]
+	[Category("Slow")]
+	public void NativeImageLoadProcessSavePipeline()
+	{
+		var repoRoot = FindRepoRoot();
+		var testImagePath = Path.Combine(repoRoot, "ImageProcessing", "test_image.png");
+		if (!File.Exists(testImagePath))
+			Assert.Ignore("test_image.png not found in ImageProcessing/");
+		var searchDirectory = AppContext.BaseDirectory;
+		CopyNativePluginsToDirectory(repoRoot, searchDirectory);
+		var originalBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", testImagePath,
+			searchDirectory, out var width, out var height);
+		Assert.That(originalBytes, Is.Not.Null);
+		const double BrightnessIncrease = 0.25;
+		var processedBytes = AdjustBrightnessOnRawBytes(originalBytes!, BrightnessIncrease);
+		var outputPath = Path.Combine(Path.GetTempPath(), "strict_processed_test.png");
+		try
+		{
+			NativePluginLoader.TrySaveNativeImage("ImageSaver", outputPath, processedBytes,
+				width, height, searchDirectory);
+			Assert.That(File.Exists(outputPath), Is.True);
+			var savedBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", outputPath,
+				searchDirectory, out var savedWidth, out var savedHeight);
+			Assert.That(savedBytes, Is.Not.Null);
+			Assert.That(savedWidth, Is.EqualTo(width));
+			Assert.That(savedHeight, Is.EqualTo(height));
+			Assert.That(savedBytes, Is.EqualTo(processedBytes));
+		}
+		finally
+		{
+			if (File.Exists(outputPath))
+				File.Delete(outputPath);
+		}
+	}
+
+	private static byte[] AdjustBrightnessOnRawBytes(byte[] rgba, double brightness)
+	{
+		var result = new byte[rgba.Length];
+		for (var pixelIndex = 0; pixelIndex < rgba.Length; pixelIndex += 4)
+		{
+			result[pixelIndex] = ClampToByte(rgba[pixelIndex] + brightness * 255);
+			result[pixelIndex + 1] = ClampToByte(rgba[pixelIndex + 1] + brightness * 255);
+			result[pixelIndex + 2] = ClampToByte(rgba[pixelIndex + 2] + brightness * 255);
+			result[pixelIndex + 3] = rgba[pixelIndex + 3];
+		}
+		return result;
+	}
+
+	private static byte ClampToByte(double value) =>
+		(byte)Math.Clamp(Math.Round(value), 0, 255);
+
+	private static void CopyNativePluginsToDirectory(string repoRoot, string targetDirectory)
+	{
+		var loaderSource = Path.Combine(repoRoot, "NativePlugins", "ImageLoader", "ImageLoader.so");
+		var saverSource = Path.Combine(repoRoot, "NativePlugins", "ImageSaver", "ImageSaver.so");
+		CopyIfNewerOrMissing(loaderSource, Path.Combine(targetDirectory, "ImageLoader.so"));
+		CopyIfNewerOrMissing(saverSource, Path.Combine(targetDirectory, "ImageSaver.so"));
+	}
+
+	private static void CopyIfNewerOrMissing(string source, string target)
+	{
+		if (!File.Exists(source))
+			return;
+		if (!File.Exists(target) || File.GetLastWriteTimeUtc(source) > File.GetLastWriteTimeUtc(target))
+			File.Copy(source, target, overwrite: true);
+	}
 }
