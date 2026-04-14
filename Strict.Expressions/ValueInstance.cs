@@ -231,22 +231,42 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 #endif
 	}
 
-	public sealed class InvalidTypeValue(Type returnType, object value) : ParsingFailed(returnType,
-		0, value switch
+ public sealed class InvalidTypeValue(Type returnType, object value) : ParsingFailed(returnType,
+		0, BuildInvalidTypeValueMessage(returnType, value));
+
+	private static string BuildInvalidTypeValueMessage(Type returnType, object value)
+	{
+		if (value is string text)
+			return $"Cannot use runtime text '{text}' as {returnType}. " +
+				$"This usually means code tried to read member data from missing or wrong instance.";
+		return $"Cannot use runtime {DescribeStoredValueKind(value)} as {returnType}. " +
+			$"Stored value={DescribeStoredValue(value)} ({value?.GetType()})";
+	}
+
+	private static string DescribeStoredValueKind(object value) =>
+		value switch
 		{
 			null => "null",
-			Expression => "Expression " + value + " needs to be evaluated!",
+			Expression => "unevaluated expression",
 			double valueDouble => valueDouble switch
 			{
-				TextId => "IsText",
-				ListId => "IsList",
-				DictionaryId => "IsDictionary",
-				TypeId => "IsType",
-				FlatNumericId => "IsFlatNumeric",
-				_ => value + ""
+				TextId => "text marker",
+				ListId => "list marker",
+				DictionaryId => "dictionary marker",
+				TypeId => "type marker",
+				FlatNumericId => "flat numeric marker",
+				_ => "number " + value
 			},
-			_ => value + ""
-		} + " (" + value?.GetType() + ") for " + returnType.Name);
+			_ => value.GetType().Name
+		};
+
+	private static string DescribeStoredValue(object value) =>
+		value switch
+		{
+			null => "null",
+			Expression expression => expression.ToString(),
+			_ => value.ToString() ?? value.GetType().Name
+		};
 
 	public ValueInstance(string text)
 	{

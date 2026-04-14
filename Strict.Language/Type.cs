@@ -508,6 +508,28 @@ public class Type : Context, IDisposable
 	}
 
 	/// <summary>
+	/// Checks whether this type can be adapted to targetType via existing to/from conversions.
+	/// </summary>
+	public bool CanBeConvertedTo(Type targetType)
+	{
+		if (IsSameOrCanBeUsedAs(targetType, false))
+			return true;
+   if (IsBaseTypeExcludedFromImplicitListConversion() ||
+			targetType.IsBaseTypeExcludedFromImplicitListConversion())
+			return false;
+		if (AvailableMethods.TryGetValue(BinaryOperator.To, out var toMethods) &&
+			toMethods.Any(method => method.ReturnType == targetType ||
+				method.ReturnType.IsSameOrCanBeUsedAs(targetType, false)))
+			return true;
+		return targetType.AvailableMethods.TryGetValue(Method.From, out var fromMethods) &&
+			fromMethods.Any(method => method.Parameters.Count == 1 &&
+				IsSameOrCanBeUsedAs(method.Parameters[0].Type, false));
+	}
+
+	private bool IsBaseTypeExcludedFromImplicitListConversion() =>
+		typeKind < TypeKind.List || Name == "Byte";
+
+	/// <summary>
 	/// Returns true when this type explicitly declares "for Iterator(T)" and the target is that
 	/// same Iterator(T). This is used to recognize that Range IS an Iterator(Number) because Range
 	/// declares "for Iterator(Number)" in its method list.
@@ -537,8 +559,8 @@ public class Type : Context, IDisposable
 		for (var implementationIndex = 0;
 			implementationIndex < sourceImplementation.ImplementationTypes.Count;
 			implementationIndex++)
-			if (!sourceImplementation.ImplementationTypes[implementationIndex].IsSameOrCanBeUsedAs(
-				targetImplementation.ImplementationTypes[implementationIndex], false))
+     if (!sourceImplementation.ImplementationTypes[implementationIndex].CanBeConvertedTo(
+				targetImplementation.ImplementationTypes[implementationIndex]))
 				return false;
 		return true;
 	}

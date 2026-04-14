@@ -119,6 +119,7 @@ public class Interpreter
 		ValueInstance[] args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
 	{
 		Statistics.MethodCount++;
+    args = NormalizeArguments(method, args, parentContext);
 		ValidateInstanceAndArguments(method, instance, args, parentContext);
 		if (method is { Name: Method.From, Type.IsGeneric: false })
 			return instance.Equals(noneInstance)
@@ -207,11 +208,79 @@ public class Interpreter
 		return context;
 	}
 
+	private ValueInstance[] NormalizeArguments(Method method, ValueInstance[] args,
+		ExecutionContext? parentContext)
+	{
+		if (args.Length == 0)
+			return args;
+		ValueInstance[]? normalizedArgs = null;
+		for (var index = 0; index < args.Length && index < method.Parameters.Count; index++)
+		{
+			var parameterType = method.Parameters[index].Type;
+     var shouldNormalizeListArgument = args[index].IsList && parameterType.IsList &&
+				args[index].GetType() != parameterType;
+			if (!shouldNormalizeListArgument &&
+				(args[index].IsSameOrCanBeUsedAs(parameterType) || parameterType.IsIterator ||
+					IsSingleCharacterTextArgument(parameterType, args[index])))
+				continue;
+			var normalizedArgument = TryConvertListArgument(args[index], parameterType, parentContext);
+      if (normalizedArgument is not { } convertedArgument)
+				continue;
+			normalizedArgs ??= (ValueInstance[])args.Clone();
+     normalizedArgs[index] = convertedArgument;
+		}
+		return normalizedArgs ?? args;
+	}
+
+	private ValueInstance? TryConvertListArgument(ValueInstance argument, Type parameterType,
+		ExecutionContext? parentContext)
+	{
+		if (!argument.IsList || !parameterType.IsList)
+			return null;
+		var targetItemType = parameterType.GetFirstImplementation();
+		var items = argument.List.Items;
+		var convertedItems = new ValueInstance[items.Count];
+		for (var index = 0; index < items.Count; index++)
+		{
+			var convertedItem = TryConvertListItem(items[index], targetItemType, parentContext);
+      if (convertedItem is not { } convertedListItem)
+				return null;
+      convertedItems[index] = convertedListItem;
+		}
+		return new ValueInstance(parameterType, convertedItems);
+	}
+
+	private ValueInstance? TryConvertListItem(ValueInstance item, Type targetType,
+		ExecutionContext? parentContext)
+	{
+		if (item.IsSameOrCanBeUsedAs(targetType))
+			return item;
+		if (item.IsList && targetType.IsList)
+			return TryConvertListArgument(item, targetType, parentContext);
+		var sourceType = item.TryGetValueTypeInstance()?.ReturnType ?? item.GetType();
+		if (!sourceType.CanBeConvertedTo(targetType))
+			return null;
+		if (sourceType.AvailableMethods.TryGetValue(BinaryOperator.To, out var toMethods))
+		{
+			var toMethod = toMethods.FirstOrDefault(method => method.ReturnType == targetType ||
+				method.ReturnType.IsSameOrCanBeUsedAs(targetType, false));
+			if (toMethod != null)
+				return Execute(toMethod, item, [], parentContext);
+		}
+		if (!targetType.AvailableMethods.TryGetValue(Method.From, out var fromMethods))
+			return null;
+		var fromMethod = fromMethods.FirstOrDefault(method => method.Parameters.Count == 1 &&
+			sourceType.IsSameOrCanBeUsedAs(method.Parameters[0].Type, false));
+		return fromMethod != null
+			? Execute(fromMethod, noneInstance, [item], parentContext)
+			: null;
+	}
+
 	private void ValidateInstanceAndArguments(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
 	{
 		if (!instance.IsPrimitiveType(noneType) && !instance.IsSameOrCanBeUsedAs(method.Type))
-			throw new CannotCallMethodWithWrongInstance(method, instance);
+			throw new CannotCallMethodWithWrongInstance(method, instance, method.Type);
 		if (args.Count > method.Parameters.Count)
 			throw new TooManyArguments(method, args[method.Parameters.Count].ToString(), args);
 		for (var index = 0; index < args.Count; index++)
@@ -527,11 +596,13 @@ public class Interpreter
 		value is { IsText: true, Text.Length: 1 } && (targetType.IsNumber || targetType.IsCharacter);
 
 	public sealed class InvalidTypeForArgument(Type type, IReadOnlyList<ValueInstance> args,
-		int index) : InterpreterExecutionFailed(type, args[index] + " at index=" + index + " does not match " +
-		"type=" + type + " Member=" + type.Members[index]);
+		int index) : InterpreterExecutionFailed(type, args[index] + " at index=" + index +
+			" does not match type=" + type + " Member=" + type.Members[index]);
 
-	public sealed class CannotCallMethodWithWrongInstance(Method method, ValueInstance instance)
-		: InterpreterExecutionFailed(method, instance.ToString()); //ncrunch: no coverage
+	public sealed class CannotCallMethodWithWrongInstance(Method method, ValueInstance instance,
+		Type expectedInstanceType)
+		: InterpreterExecutionFailed(method, instance.ToString() + " is wrong, expected: " +
+			expectedInstanceType);
 
 	public sealed class TooManyArguments(Method method, string argument,
 		IReadOnlyList<ValueInstance> args) : InterpreterExecutionFailed(method,

@@ -88,8 +88,10 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 				FormatValue(member.Value, false))) + ")";
 	}
 
-	private static string FormatValue(ValueInstance value, bool limitCollectionEntries) =>
-		value.IsList
+  private static string FormatValue(ValueInstance value, bool limitCollectionEntries) =>
+		!value.HasValue
+			? "(unset)"
+			: value.IsList
 			? FormatList(value.List.Items, limitCollectionEntries)
 			: value.ToExpressionCodeString();
 
@@ -129,8 +131,8 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 		return totalValueCount;
 	}
 
-	private static bool ShouldIncludeMember(Strict.Language.Member member, ValueInstance value) =>
-		!member.IsConstant && !member.Type.IsTrait && !HasSameValueAsDefault(member, value);
+  private static bool ShouldIncludeMember(Strict.Language.Member member, ValueInstance value) =>
+		value.HasValue && !member.IsConstant && !member.Type.IsTrait && !HasSameValueAsDefault(member, value);
 
 	private static bool HasSameValueAsDefault(Strict.Language.Member member, ValueInstance value)
 	{

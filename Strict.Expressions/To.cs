@@ -17,6 +17,8 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 		var conversionType = body.ReturnType.FindType(text.ToString());
 		if (conversionType == null)
 			throw new ConversionTypeNotFound(body, text.ToString());
+    if (conversionType.IsText)
+			return ConvertToText(left, conversionType);
 		var method = left.ReturnType.GetMethod(BinaryOperator.To, []);
 		// Special case for lists, which automatically use the implementation type To method
 		if (conversionType.IsList && left.ReturnType.IsList &&
@@ -42,8 +44,10 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 
 	private static Method? FindConversionMethod(Type type, Type conversionType) =>
 		type.AvailableMethods.TryGetValue(BinaryOperator.To, out var methods)
-			? methods.FirstOrDefault(m => m.ReturnType.Name == conversionType.Name ||
-				m.ReturnType.IsSameOrCanBeUsedAs(conversionType))
+     ? methods.FirstOrDefault(method => method.ReturnType == conversionType ||
+				method.ReturnType.Name == conversionType.Name) ??
+				methods.FirstOrDefault(method =>
+				method.ReturnType.IsSameOrCanBeUsedAs(conversionType, false))
 			: null;
 
 	/// <summary>

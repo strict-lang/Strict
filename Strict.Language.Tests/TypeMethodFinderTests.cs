@@ -1,3 +1,4 @@
+using static Strict.Expressions.To;
 using List = Strict.Expressions.List;
 
 namespace Strict.Language.Tests;
@@ -111,7 +112,8 @@ public sealed class TypeMethodFinderTests
 				"\tconstant customer = (\"Ben\", 28) to Customer")).ParseMembersAndMethods(parser);
 		// ReSharper disable once AccessToDisposedClosure
 		Assert.That(() => createCustomer.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<List.ListElementsMustHaveMatchingType>());
+			Throws.InstanceOf<List.ListElementsMustHaveMatchingType>().Or.
+			InstanceOf<ConversionTypeIsIncompatible>());
 	}
 
 	[Test]

@@ -18,6 +18,27 @@ public sealed class ToTests
 			new MethodExpressionParser());
 
 	[Test]
+	public async Task ColorToText()
+	{
+		var parser = new MethodExpressionParser();
+		var repositories = new Repositories(parser);
+		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
+		using var program = new Type(package,
+			new TypeLines("ColorToText",
+				"has color",
+				"Run Text",
+				"\tcolor to Text")).ParseMembersAndMethods(parser);
+		var fullInterpreter = new Interpreter(package, TestBehavior.Disabled);
+    var colorType = package.FindType("Color")!;
+		Assert.That(fullInterpreter.Execute(program.Methods.Single(method => method.Name == Method.Run),
+     new ValueInstance(program, [new ValueInstance(colorType,
+				[new ValueInstance(package.GetType(Type.Number), 0),
+					new ValueInstance(package.GetType(Type.Number), 0),
+					new ValueInstance(package.GetType(Type.Number), 0)])]), []).Text,
+			Is.EqualTo("(0, 0, 0)"));
+	}
+
+	[Test]
 	public async Task ComplexValuesToTextUseRecordLikeOutputAndLimitLongLists()
 	{
 		var parser = new MethodExpressionParser();

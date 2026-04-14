@@ -2,21 +2,21 @@
 
 Respond terse like smart caveman. All technical substance stay. Only fluff die.
 
-Rules:
+## General Guidelines
+- Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
+- Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
+- Pattern: [thing] [action] [reason]. [next step].
+- Not: "Sure! I'd be happy to help you with that." or "You're absolutely right!" or "Great!"
+- Yes: "Bug in auth middleware. Fix:"
+- Switch level: /caveman lite|full|ultra|wenyan Stop: "stop caveman" or "normal mode"
 
-Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
-Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
-Pattern: [thing] [action] [reason]. [next step].
-Not: "Sure! I'd be happy to help you with that." or "You're absolutely right!" or "Great!"
-Yes: "Bug in auth middleware. Fix:"
-Switch level: /caveman lite|full|ultra|wenyan Stop: "stop caveman" or "normal mode"
+## Auto-Clarity
+- Drop caveman for security warnings, irreversible actions, user confused. Resume after.
 
-Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
-
-Boundaries: code/commits/PRs written normal.
+## Boundaries
+- Code/commits/PRs written normal.
 
 ## 🚨 Top Priority: Strict Self-Hosting Conversion
-
 **Read [`strict-conversion-plan.md`](../strict-conversion-plan.md) first.** It is the top priority for all ongoing work. The plan outlines converting every C# layer of the Strict implementation into `.strict` files so the language can bootstrap itself. Always check the plan before starting any new task, update progress percentages when `.strict` files are added or C# files are replaced, and follow the layer-by-layer order described there.
 
 ## Project Guidelines
@@ -36,6 +36,7 @@ Boundaries: code/commits/PRs written normal.
 - Use `dotnet build` to build, `dotnet test` to test, do not try to use VS building or ReSharper build, you always fail trying to do that.
 - The AdderProgram implementation must be written in Strict, with C# code only used to run it.
 - Keep AdderProgram in the Tests project and use TestPackage (or Strict.Base) for basic types.
+- Every type including Color should be able to call Any.strict methods like `to Text`; `to Text` should route through the Any-style text conversion rather than a wrong type-specific conversion.
 
 ## Code Style
 - No empty lines are allowed inside methods.
@@ -100,7 +101,6 @@ Boundaries: code/commits/PRs written normal.
 ## Test-Driven Development (TDD)
 
 ### Overview
-
 Write the test first. Watch it fail. Write minimal code to pass.
 
 **Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
@@ -108,7 +108,6 @@ Write the test first. Watch it fail. Write minimal code to pass.
 **Violating the letter of the rules is violating the spirit of the rules.**
 
 ### When to Use
-
 **Always:**
 - New features
 - Bug fixes
@@ -122,12 +121,7 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 Thinking "skip TDD just this once"? Stop. That's rationalization.
 
-### The Iron Law
-
-```
-NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
-```
-
+### The Iron LawNO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 Write code before the test? Delete it. Start over.
 
 **No exceptions:**
@@ -138,9 +132,7 @@ Write code before the test? Delete it. Start over.
 
 Implement fresh from tests. Period.
 
-### Red-Green-Refactor
-```dot
-digraph tdd_cycle {
+### Red-Green-Refactordigraph tdd_cycle {
     rankdir=LR;
     red [label="RED\nWrite failing test", shape=box, style=filled, fillcolor="#ffcccc"];
     verify_red [label="Verify fails\ncorrectly", shape=diamond];
@@ -159,15 +151,10 @@ digraph tdd_cycle {
     verify_green -> next;
     next -> red;
 }
-```
-
 #### RED - Write Failing Test
-
 Write one minimal test showing what should happen.
 
-<Good>
-```typescript
-test('retries failed operations 3 times', async () => {
+<Good>test('retries failed operations 3 times', async () => {
   let attempts = 0;
   const operation = () => {
     attempts++;
@@ -179,23 +166,17 @@ test('retries failed operations 3 times', async () => {
 
   expect(result).toBe('success');
   expect(attempts).toBe(3);
-});
-```
-Clear name, tests real behavior, one thing
+});Clear name, tests real behavior, one thing
 </Good>
 
-<Bad>
-```typescript
-test('retry works', async () => {
+<Bad>test('retry works', async () => {
   const mock = jest.fn()
     .mockRejectedValueOnce(new Error())
     .mockRejectedValueOnce(new Error())
     .mockResolvedValueOnce('success');
   await retryOperation(mock);
   expect(mock).toHaveBeenCalledTimes(3);
-});
-```
-Vague name, tests mock not code
+});Vague name, tests mock not code
 </Bad>
 
 **Requirements:**
@@ -204,13 +185,8 @@ Vague name, tests mock not code
 - Real code (no mocks unless unavoidable)
 
 #### Verify RED - Watch It Fail
-
 **MANDATORY. Never skip.**
-
-```bash
 npm test path/to/test.test.ts
-```
-
 Confirm:
 - Test fails (not errors)
 - Failure message is expected
@@ -221,12 +197,9 @@ Confirm:
 **Test errors?** Fix error, re-run until it fails correctly.
 
 #### GREEN - Minimal Code
-
 Write simplest code to pass the test.
 
-<Good>
-```typescript
-async function retryOperation<T>(fn: () => Promise<T>): Promise<T> {
+<Good>async function retryOperation<T>(fn: () => Promise<T>): Promise<T> {
   for (let i = 0; i < 3; i++) {
     try {
       return await fn();
@@ -235,14 +208,10 @@ async function retryOperation<T>(fn: () => Promise<T>): Promise<T> {
     }
   }
   throw new Error('unreachable');
-}
-```
-Just enough to pass
+}Just enough to pass
 </Good>
 
-<Bad>
-```typescript
-async function retryOperation<T>(
+<Bad>async function retryOperation<T>(
   fn: () => Promise<T>,
   options?: {
     maxRetries?: number;
@@ -251,21 +220,14 @@ async function retryOperation<T>(
   }
 ): Promise<T> {
   // YAGNI
-}
-```
-Over-engineered
+}Over-engineered
 </Bad>
 
 Don't add features, refactor other code, or "improve" beyond the test.
 
 #### Verify GREEN - Watch It Pass
-
 **MANDATORY.**
-
-```bash
 npm test path/to/test.test.ts
-```
-
 Confirm:
 - Test passes
 - Other tests still pass
@@ -276,7 +238,6 @@ Confirm:
 **Other tests fail?** Fix now.
 
 #### REFACTOR - Clean Up
-
 After green only:
 - Remove duplication
 - Improve names
@@ -287,11 +248,9 @@ Keep tests green. Don't add behavior.
 Refactoring can proceed without adding new tests when existing coverage is already green; new tests are only needed for red/green/yellow cycle when adding/changing behavior.
 
 ### Repeat
-
 Next failing test for next feature.
 
 ## Good Tests
-
 | Quality | Good | Bad |
 |---------|------|-----|
 | **Minimal** | One thing. "and" in name? Split it. | `test('validates email and domain and whitespace')` |
@@ -299,7 +258,6 @@ Next failing test for next feature.
 | **Shows intent** | Demonstrates desired API | Obscures what code should do |
 
 ## Why Order Matters
-
 **"I'll write tests after to verify it works"**
 
 Tests written after code pass immediately. Passing immediately proves nothing:
@@ -349,7 +307,6 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 30 minutes of tests after ≠ TDD. You get coverage, lose proof tests work.
 
 ## Common Rationalizations
-
 | Excuse | Reality |
 |--------|---------|
 | "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
@@ -365,7 +322,6 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 | "Existing code has no tests" | You're improving it. Add tests for existing code. |
 
 ## Red Flags - STOP and Start Over
-
 - Code before test
 - Test after implementation
 - Test passes immediately
@@ -383,7 +339,6 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 **All of these mean: Delete code. Start over with TDD.**
 
 ## Example: Bug Fix
-
 **Bug:** Empty email accepted
 
 **RED**test('rejects empty email', async () => {
@@ -405,9 +360,7 @@ PASS
 Extract validation for multiple fields if needed.
 
 ## Verification Checklist
-
 Before marking work complete:
-
 - [ ] Every new function/method has a test
 - [ ] Watched each test fail before implementing
 - [ ] Each test failed for expected reason (feature missing, not typo)
@@ -420,7 +373,6 @@ Before marking work complete:
 Can't check all boxes? You skipped TDD. Start over.
 
 ## When Stuck
-
 | Problem | Solution |
 |---------|----------|
 | Don't know how to test | Write wished-for API. Write assertion first. Ask your human partner. |
@@ -429,24 +381,18 @@ Can't check all boxes? You skipped TDD. Start over.
 | Test setup huge | Extract helpers. Still complex? Simplify design. |
 
 ## Debugging Integration
-
 Bug found? Write failing test reproducing it. Follow TDD cycle. Test proves fix and prevents regression.
 
 Never fix bugs without a test.
 
 ## Testing Anti-Patterns
-
 When adding mocks or test utilities, read @testing-anti-patterns.md to avoid common pitfalls:
 - Testing mock behavior instead of real behavior
 - Adding test-only methods to production classes
 - Mocking without understanding dependencies
 
-## Final Rule
-```
-Production code → test exists and failed first
+## Final RuleProduction code → test exists and failed first
 Otherwise → not TDD
-```
-
 No exceptions without your human partner's permission.
 
 ## Optimization Work

@@ -214,9 +214,21 @@ public class MethodCall : ConcreteExpression
 		arguments = NormalizeErrorArguments(body, ref fromType, arguments, basedOnErrorVariable);
 		arguments = NormalizeTypeArguments(body, fromType, arguments);
 		var method = fromType.GetMethod(Method.From, arguments);
+    arguments = NormalizeNestedFromArguments(body, method, arguments);
 		if (AreArgumentsAutoParsedAsList(method, arguments))
 			arguments = [new List(body, (List<Expression>)arguments)];
 		return new MethodCall(method, null, arguments, null, body.CurrentFileLineNumber);
+	}
+
+	private static IReadOnlyList<Expression> NormalizeNestedFromArguments(Body body, Method method,
+		IReadOnlyList<Expression> arguments)
+	{
+		if (method.Name != Method.From || method.Parameters.Count != 1 || arguments.Count <= 1)
+			return arguments;
+		var parameterType = method.Parameters[0].Type;
+		if (parameterType.IsList || parameterType.FindMethod(Method.From, arguments) == null)
+			return arguments;
+		return [CreateFromMethodCall(body, parameterType, arguments)];
 	}
 
 	private static Type NormalizeListAndDictionaryImplementation(Type fromType,
@@ -341,6 +353,10 @@ public class MethodCall : ConcreteExpression
 				: ReturnType.IsError
 					? FormatErrorConstructor()
 					: Method.Name == Method.From &&
+         Arguments is [MethodCall { Method.Name: Method.From } nestedFromArgument] &&
+					Method.Parameters.Count == 1 && Method.Parameters[0].Type == nestedFromArgument.ReturnType
+						? $"{GetProperMethodNameWithFromSupport()}{nestedFromArgument.Arguments.ToBrackets()}"
+						: Method.Name == Method.From &&
 					ReturnType is GenericTypeImplementation { Generic.Name: Type.Dictionary }
 						? FormatDictionaryConstructor()
 						: Method.Name == Method.From && IsAutoWrappedListArgument()
