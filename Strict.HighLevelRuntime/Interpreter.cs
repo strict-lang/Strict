@@ -217,11 +217,8 @@ public class Interpreter
 		for (var index = 0; index < args.Length && index < method.Parameters.Count; index++)
 		{
 			var parameterType = method.Parameters[index].Type;
-     var shouldNormalizeListArgument = args[index].IsList && parameterType.IsList &&
-				args[index].GetType() != parameterType;
-			if (!shouldNormalizeListArgument &&
-				(args[index].IsSameOrCanBeUsedAs(parameterType) || parameterType.IsIterator ||
-					IsSingleCharacterTextArgument(parameterType, args[index])))
+      if (args[index].IsSameOrCanBeUsedAs(parameterType) || parameterType.IsIterator ||
+				IsSingleCharacterTextArgument(parameterType, args[index]))
 				continue;
 			var normalizedArgument = TryConvertListArgument(args[index], parameterType, parentContext);
       if (normalizedArgument is not { } convertedArgument)

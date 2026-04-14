@@ -48,30 +48,6 @@ public sealed class List : Value
 				if (members[j].Type == values[i].ReturnType)
 					return values[i].ReturnType; //ncrunch: no coverage
 		}
-    var bestMatchType = firstType;
-		var bestMatchConversions = int.MaxValue;
-		for (var candidateIndex = 0; candidateIndex < values.Count; candidateIndex++)
-		{
-			var candidateType = values[candidateIndex].ReturnType;
-			var conversionCount = 0;
-			var canUseCandidate = true;
-			for (var valueIndex = 0; valueIndex < values.Count; valueIndex++)
-				if (values[valueIndex].ReturnType != candidateType)
-					if (values[valueIndex].ReturnType.CanBeConvertedTo(candidateType))
-						conversionCount++;
-					else
-					{
-						canUseCandidate = false;
-						break;
-					}
-			if (canUseCandidate && conversionCount < bestMatchConversions)
-			{
-				bestMatchType = candidateType;
-				bestMatchConversions = conversionCount;
-			}
-		}
-		if (bestMatchConversions != int.MaxValue)
-			return bestMatchType;
 		throw new ListElementsMustHaveMatchingType(bodyForErrorMessage, values);
 	}
 
