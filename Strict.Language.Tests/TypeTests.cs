@@ -420,6 +420,15 @@ public sealed class TypeTests
 			Throws.InstanceOf<MethodExpressionParser.CannotAccessMemberBeforeTypeIsParsed>().Or.
 				InstanceOf<MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>());
 
+	[TestCase("has number Number")]
+	[TestCase("has Numbers Numbers")]
+	[TestCase("mutable Colors Colors")]
+	public void RedundantExplicitMemberTypeIsNotAllowed(string memberDefinition) =>
+		Assert.That(
+			() => CreateType(nameof(RedundantExplicitMemberTypeIsNotAllowed), memberDefinition,
+				"Unused", "\t1"),
+			Throws.InstanceOf<TypeParser.RedundantExplicitMemberTypeName>());
+
 	[TestCase(Type.Number, false)]
 	[TestCase(Type.Number + "s", true)]
 	[TestCase(Type.Character, false)]
@@ -473,11 +482,11 @@ public sealed class TypeTests
 	{
 		using var traitType = CreateType("UnionTrait", "Run");
 		using var memberType = CreateType("UnionMember",
-			"has unionTrait " + traitType.Name, "Run", "\t1");
+			"has unionTrait", "Run", "\t1");
 		using var firstType = CreateType("UnionFirst",
-			"has unionTrait " + traitType.Name, "Run", "\t1");
+			"has unionTrait", "Run", "\t1");
 		using var secondType = CreateType("UnionSecond",
-			"has unionMember " + memberType.Name, "Run", "\t1");
+			"has unionMember", "Run", "\t1");
 		Assert.That(firstType.FindFirstUnionType(secondType), Is.EqualTo(traitType));
 		Assert.That(secondType.FindFirstUnionType(firstType), Is.EqualTo(traitType));
 	}

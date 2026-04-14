@@ -451,8 +451,16 @@ public sealed class TypeParser(Type type, string[] lines)
 				}
 				return member;
 			}
-			if (wordAfterName != Keyword.With)
-				nameAndType += " " + GetMemberType(nameAndExpression);
+			if (wordAfterName != Keyword.With && wordAfterName != Keyword.Where)
+			{
+				var explicitType = GetMemberType(nameAndExpression);
+				if (string.Equals(nameAndType, explicitType, StringComparison.Ordinal) ||
+					string.Equals(nameAndType.MakeFirstLetterUppercase(), explicitType,
+						StringComparison.Ordinal))
+					throw new RedundantExplicitMemberTypeName(type, LineNumber, nameAndType,
+						explicitType);
+				nameAndType += " " + explicitType;
+			}
 			if (HasConstraints(wordAfterName, ref nameAndExpression))
 				return !nameAndExpression.MoveNext()
 					? throw new MemberMissingConstraintExpression(type, LineNumber, nameAndType)
@@ -594,16 +602,25 @@ public sealed class TypeParser(Type type, string[] lines)
 		ReadOnlySpan<char> remainingLine, string nameAndType,
 		out ReadOnlySpan<char> constraintsSpan, out string initialValueSpan)
 	{
+		var constraintKeywordLength = GetConstraintKeywordLength(remainingLine, nameAndType.Length);
 		var equalIndex = FindStandaloneEqualIndex(remainingLine);
 		if (equalIndex > 0)
 		{
-			constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..(equalIndex - 1)];
+			constraintsSpan = remainingLine[(nameAndType.Length + 1 + constraintKeywordLength + 1)..(equalIndex - 1)];
 			initialValueSpan = remainingLine[(equalIndex + 2)..].ToString();
 			return GetInitialValueType(parser, nameAndType, initialValueSpan);
 		}
-		constraintsSpan = remainingLine[(nameAndType.Length + 1 + Keyword.With.Length + 1)..];
+		constraintsSpan = remainingLine[(nameAndType.Length + 1 + constraintKeywordLength + 1)..];
 		initialValueSpan = "";
 		return null;
+	}
+
+	private static int GetConstraintKeywordLength(ReadOnlySpan<char> remainingLine, int nameLength)
+	{
+		var afterName = remainingLine[(nameLength + 1)..];
+		if (afterName.StartsWith(Keyword.Where))
+			return Keyword.Where.Length;
+		return Keyword.With.Length;
 	}
 
 	private static int FindStandaloneEqualIndex(ReadOnlySpan<char> line)
@@ -652,11 +669,16 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	private static bool
 		HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) =>
-		wordAfterName == Keyword.With || nameAndExpression.MoveNext() &&
-		nameAndExpression.Current.ToString() == Keyword.With;
+		wordAfterName is Keyword.With or Keyword.Where || nameAndExpression.MoveNext() &&
+		nameAndExpression.Current.ToString() is Keyword.With or Keyword.Where;
 
 	public sealed class MemberMissingConstraintExpression(Type type, int lineNumber,
 		string memberName) : ParsingFailed(type, lineNumber, memberName);
+
+	public sealed class RedundantExplicitMemberTypeName(Type type, int lineNumber,
+		string memberName, string typeName) : ParsingFailed(type, lineNumber,
+		$"Member '{memberName}' already infers type '{typeName}' from its name, remove the " +
+		"redundant explicit type");
 
 	private static bool
 		IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) =>

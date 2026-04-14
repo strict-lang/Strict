@@ -26,9 +26,10 @@ public static class Keyword
 	public const string Else = "else";
 	public const string For = "for";
 	public const string With = "with";
+	public const string Where = "where";
 	public const string Return = "return";
 	public static readonly string[] GetAllKeywords =
 	[
-		Has, Constant, Let, Mutable, If, Else, For, With, Return
+		Has, Constant, Let, Mutable, If, Else, For, With, Where, Return
 	];
 }

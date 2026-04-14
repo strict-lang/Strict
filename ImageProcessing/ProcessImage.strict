@@ -1,7 +1,8 @@
 has logger
 Run(path)
-	mutable image = Image(ImageLoader.from(path))
+	mutable loader = ImageLoader.from(path)
+	mutable image = Image(Size(loader.Width, loader.Height), loader.Colors)
 	AdjustBrightness(0.25).Process(image)
-	let outputPath = inputPath.ChangeExtension("_output.jpg")
+	let outputPath = path.RemoveExtension.text + "_output.jpg"
 	ImageSaver.Save(outputPath, image.Colors, image.Size.Width, image.Size.Height)
 	logger.Log("Processed image saved to: " + outputPath)

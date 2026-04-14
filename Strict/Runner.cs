@@ -387,10 +387,12 @@ public sealed class Runner
 			return new ValueInstance(targetType, double.Parse(argument, CultureInfo.InvariantCulture));
 		if (targetType.IsText)
 			return new ValueInstance(argument);
-		return targetType.IsBoolean
-			? new ValueInstance(targetType, bool.Parse(argument))
-			: throw new NotSupportedException(
-				"Only Number, Text, Boolean and List arguments are supported.");
+		if (targetType.IsBoolean)
+			return new ValueInstance(targetType, bool.Parse(argument));
+		if (targetType.Name == "Path")
+			return new ValueInstance(targetType, [new ValueInstance(argument)]);
+		throw new NotSupportedException(
+			"Only Number, Text, Boolean, Path and List arguments are supported.");
 	}
 
 	private string CreateManagedLauncher(Platform platform)

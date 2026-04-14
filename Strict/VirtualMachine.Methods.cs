@@ -136,7 +136,7 @@ public sealed partial class VirtualMachine
 		if (items.Count == 0)
 			return [];
 		return items[0].TryGetValueTypeInstance() != null
-			? ExtractBytesFromColorValueList(items)
+			? ExtractBytesFromColorList(items)
 			: ExtractBytesFromNumberList(items);
 	}
 
@@ -148,23 +148,39 @@ public sealed partial class VirtualMachine
 		return bytes;
 	}
 
-	private static byte[] ExtractBytesFromColorValueList(IReadOnlyList<ValueInstance> items)
+	private static byte[] ExtractBytesFromColorList(IReadOnlyList<ValueInstance> items)
 	{
 		var bytes = new byte[items.Count * 4];
+		var isColorType = IsColorByteType(items[0]);
 		for (var colorIndex = 0; colorIndex < items.Count; colorIndex++)
 		{
 			var typeInst = items[colorIndex].TryGetValueTypeInstance();
 			if (typeInst is null || typeInst.Values.Length < 3)
 				continue;
-			bytes[colorIndex * 4] = ClampToByte(typeInst.Values[0].Number * 255);
-			bytes[colorIndex * 4 + 1] = ClampToByte(typeInst.Values[1].Number * 255);
-			bytes[colorIndex * 4 + 2] = ClampToByte(typeInst.Values[2].Number * 255);
-			bytes[colorIndex * 4 + 3] = typeInst.Values.Length >= 4
-				? ClampToByte(typeInst.Values[3].Number * 255)
-				: (byte)255;
+			if (isColorType)
+			{
+				bytes[colorIndex * 4] = ClampToByte(typeInst.Values[0].Number);
+				bytes[colorIndex * 4 + 1] = ClampToByte(typeInst.Values[1].Number);
+				bytes[colorIndex * 4 + 2] = ClampToByte(typeInst.Values[2].Number);
+				bytes[colorIndex * 4 + 3] = typeInst.Values.Length >= 4
+					? ClampToByte(typeInst.Values[3].Number)
+					: (byte)255;
+			}
+			else
+			{
+				bytes[colorIndex * 4] = ClampToByte(typeInst.Values[0].Number * 255);
+				bytes[colorIndex * 4 + 1] = ClampToByte(typeInst.Values[1].Number * 255);
+				bytes[colorIndex * 4 + 2] = ClampToByte(typeInst.Values[2].Number * 255);
+				bytes[colorIndex * 4 + 3] = typeInst.Values.Length >= 4
+					? ClampToByte(typeInst.Values[3].Number * 255)
+					: (byte)255;
+			}
 		}
 		return bytes;
 	}
+
+	private static bool IsColorByteType(ValueInstance colorInstance) =>
+		colorInstance.GetType().Name.Equals("Color", StringComparison.OrdinalIgnoreCase);
 
 	private static byte ClampToByte(double value) =>
 		(byte)Math.Clamp(Math.Round(value), 0, 255);

@@ -49,8 +49,56 @@ public sealed partial class VirtualMachine
 					: GetMemberInitialOrDefaultValue(members[memberIndex], hasBinaryMembers, binaryMembers,
 						memberIndex);
 		TryPreFillConstrainedListMembers(targetType, values);
+		ConvertBytesToColorsIfNeeded(members, values);
 		Memory.Registers[invoke.Register] = new ValueInstance(targetType, values);
 		return true;
+	}
+
+	private void ConvertBytesToColorsIfNeeded(List<Member> members, ValueInstance[] values)
+	{
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+		{
+			if (!values[memberIndex].HasValue || !values[memberIndex].IsList)
+				continue;
+			var memberType = members[memberIndex].Type;
+			if (memberType is not GenericTypeImplementation memberGeneric ||
+				!memberGeneric.ImplementationTypes[0].Name.Equals("Color",
+					StringComparison.OrdinalIgnoreCase))
+				continue;
+			var argValue = values[memberIndex];
+			var argItems = argValue.List.Items;
+			if (argItems.Count == 0 || argItems[0].TryGetValueTypeInstance() != null)
+				continue;
+			var colorType = memberGeneric.ImplementationTypes[0];
+			var byteType = executable.basePackage.FindType("Byte") ??
+				executable.basePackage.GetType(Language.Type.Number);
+			values[memberIndex] = ConvertByteListToColorList(argItems, memberType, colorType,
+				byteType);
+		}
+	}
+
+	private static ValueInstance ConvertByteListToColorList(IReadOnlyList<ValueInstance> bytes,
+		Type listType, Type colorType, Type byteType)
+	{
+		var colorCount = bytes.Count / 4;
+		var colors = new ValueInstance[colorCount];
+		for (var colorIndex = 0; colorIndex < colorCount; colorIndex++)
+		{
+			var red = (byte)Math.Clamp(bytes[colorIndex * 4].Number, 0, 255);
+			var green = (byte)Math.Clamp(bytes[colorIndex * 4 + 1].Number, 0, 255);
+			var blue = (byte)Math.Clamp(bytes[colorIndex * 4 + 2].Number, 0, 255);
+			var alpha = colorIndex * 4 + 3 < bytes.Count
+				? (byte)Math.Clamp(bytes[colorIndex * 4 + 3].Number, 0, 255)
+				: (byte)255;
+			colors[colorIndex] = new ValueInstance(colorType,
+			[
+				new ValueInstance(byteType, (double)red),
+				new ValueInstance(byteType, (double)green),
+				new ValueInstance(byteType, (double)blue),
+				new ValueInstance(byteType, (double)alpha)
+			]);
+		}
+		return new ValueInstance(listType, colors);
 	}
 
 	private static ValueInstance GetMemberInitialOrDefaultValue(Member member,
