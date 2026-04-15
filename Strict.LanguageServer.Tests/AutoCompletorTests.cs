@@ -27,7 +27,7 @@ public sealed class AutoCompletorTests : LanguageServerTests
 		"Log(message Text)",
 		"\tlog.")]
 	[TestCase("for", 2,
-		"has range Range",
+		"has range",
 		"Bla",
 		"\trange.")]
 	[TestCase("to", 2,

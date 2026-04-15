@@ -92,7 +92,7 @@ public sealed class CompactTypeOptimizerTests : TestOptimizers
 	public async Task ConvertsNumberHolderToByteHolderForSingleMember()
 	{
 		var repos = new Repositories(new MethodExpressionParser());
-		var package = await repos.LoadStrictPackage("Strict/CompactTypeTest");
+		var package = await repos.LoadStrictPackage("Strict/Examples/CompactTypeTest");
 		var numberHolderType = package.GetType("NumberHolder");
 		var byteHolderType = package.GetType("ByteHolder");
 		var binary = BinaryExecutable.CreateForEntryInstructions(package, [

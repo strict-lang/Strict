@@ -33,7 +33,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 	public void GenerateIfWithInstanceValueOnRightSide()
 	{
 		var methodCall = GenerateMethodCallFromSource("ValueComparison", "ValueComparison(5).IsSame",
-			"has number Number", "IsSame Boolean", "\tif value is value", "\t\treturn true", "\tfalse");
+			"has number", "IsSame Boolean", "\tif value is value", "\t\treturn true", "\tfalse");
 		var instructions = new BinaryGenerator(methodCall).Generate();
 		Assert.That(instructions.ToInstructions().OfType<LoadVariableToRegister>().Any(load => load.Identifier == "value"),
 			Is.True);

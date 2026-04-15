@@ -157,7 +157,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 	internal BinaryExecutable CreateLoopInliningBinary() =>
 		GenerateBinary("LoopInlining",
 		// @formatter:off
-		"has number Number",
+		"has number",
 		"Run Number",
 		"\tmutable temp = number",
 		"\tfor 10000",

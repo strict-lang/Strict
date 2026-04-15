@@ -248,9 +248,7 @@ public class TestInterpreterTests
 	[Benchmark]
 	public void RunAllTestsInPackage() => interpreter.RunAllTestsInPackage(TestPackage.Instance);
 
-	//ncrunch: no coverage start
 	[Test]
-	[Category("Slow")]
 	[Benchmark]
 	public async Task RunAllTestsForAllStrictFilesInThisRepo()
 	{
@@ -259,9 +257,10 @@ public class TestInterpreterTests
 		var math = await repos.LoadStrictPackage("Strict/Math");
 		var imageProcessing = await repos.LoadStrictPackage("Strict/ImageProcessing");
 		var language = await repos.LoadStrictPackage("Strict/Language");
+		var expressions = await repos.LoadStrictPackage("Strict/Expressions");
 		var examples = await repos.LoadStrictPackage("Strict/Examples");
 		var fullInterpreter = new TestInterpreter(strict);
-		var packages = new[] { strict, math, imageProcessing, language, examples };
+		var packages = new[] { strict, math, imageProcessing, language, expressions, examples };
 		var tasks = new List<Task>();
 		foreach (var packageToTest in packages)
 			tasks.Add(Task.Run(() => fullInterpreter.RunAllTestsInPackage(packageToTest)));
@@ -269,6 +268,7 @@ public class TestInterpreterTests
 		Console.WriteLine("All tests ran: " + fullInterpreter.Statistics);
 	}
 
+	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
 	public void AllocatesLessThan40KbPerRunAfterWarmup()
