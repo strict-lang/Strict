@@ -223,36 +223,6 @@ public sealed class MemberCallTests : TestExpressions
 	}
 
 	[Test]
-	public void MemberNameWithDifferentTypeNamesThanOwnNotAllowed() =>
-		Assert.That(
-			() =>
-			{
-				using var _ = new Type(TestPackage.Instance,
-				new TypeLines(nameof(MemberNameWithDifferentTypeNamesThanOwnNotAllowed),
-					"has numbers Boolean",
-					"Run",
-					"\t5")).ParseMembersAndMethods(parser);
-			}, //ncrunch: no coverage
-			Throws.InstanceOf<Member.MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed>().With.
-				Message.Contains("numbers"));
-
-	[Test]
-	public void VariableNameCannotHaveDifferentTypeNameThanValue() =>
-		Assert.That(
-			() =>
-			{
-				using var dummy = new Type(TestPackage.Instance,
-					new TypeLines(nameof(VariableNameCannotHaveDifferentTypeNameThanValue),
-						"has text",
-						"Run",
-						"\tconstant numbers = \"5\"")).ParseMembersAndMethods(parser);
-				dummy.Methods[0].GetBodyAndParseIfNeeded();
-			}, //ncrunch: no coverage
-			Throws.InstanceOf<Body.VariableNameCannotHaveDifferentTypeNameThanValue>().With.Message.
-				Contains("Variable name numbers is reserved and denotes different type than its value "+
-					"type Text. Prefer using a different name for this variable."));
-
-	[Test]
 	public void CannotAccessMemberInSameTypeBeforeTypeIsParsed() =>
 		Assert.That(
 			() =>

@@ -1,4 +1,4 @@
 has Value
-has text Text
+has text
 to Text
 	"\"" + text + "\""

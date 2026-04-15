@@ -1,4 +1,4 @@
 has Value
-has number Number
+has number
 to Text
 	number to Text

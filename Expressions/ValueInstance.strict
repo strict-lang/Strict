@@ -1,6 +1,6 @@
 has typeName Text
-has number Number
-has text Text
+has number
+has text
 has kind Text
 HasValue Boolean
 	(not typeName is "None") or number is not 0

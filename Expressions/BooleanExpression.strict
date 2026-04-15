@@ -1,5 +1,5 @@
 has Value
-has boolean Boolean
+has boolean
 to Text
 	if boolean
 		return "true"

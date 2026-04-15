@@ -11,24 +11,7 @@ public sealed class Member : NamedType
 			IsMutable = true;
 		else if (usedKeyword == Keyword.Constant)
 			IsConstant = true;
-		if (Name != Type.ValueLowercase &&
-			!Name.StartsWith("Is", StringComparison.OrdinalIgnoreCase) &&
-			!Type.Name.StartsWith(Name.MakeFirstLetterUppercase(), StringComparison.Ordinal))
-			CheckForNameWithDifferentTypeUsage(definedIn);
 	}
-
-	private void CheckForNameWithDifferentTypeUsage(Type definedIn)
-	{
-		var nameType = definedIn.Package.FindType(Name.MakeFirstLetterUppercase());
-		if (nameType != null && nameType != Type &&
-			!AreBothListTypesInSamePackage(nameType, Type))
-			throw new MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(definedIn, Name, Type.Name);
-	}
-
-	private static bool AreBothListTypesInSamePackage(Type nameImpliedType, Type memberType) =>
-		nameImpliedType is GenericTypeImplementation { Generic.IsList: true } nameList &&
-		memberType is GenericTypeImplementation { Generic.IsList: true } memberList &&
-		nameList.ImplementationTypes[0].Package == memberList.ImplementationTypes[0].Package;
 
 	public Type DefinedIn { get; }
 	public Expression? InitialValue { get; internal set; }
@@ -87,11 +70,6 @@ public sealed class Member : NamedType
 	public sealed class	InvalidConstraintExpression(Type type, string memberName,
 		string constraintText) : ParsingFailed(type, 0,
 		$"Constraint: {constraintText} Member: {memberName}");
-
-	public sealed class MemberNameWithDifferentTypeNamesThanOwnAreNotAllowed(Type type,
-		string nameType, string typeName)
-		: ParsingFailed(type, 0, $"Name {nameType} and type {typeName} are not matching, it is not " +
-			$"allowed to use reserved types as member names if the type is completely different!");
 
 	public void CheckIfWeCouldUpdateValue(Expression newExpression, Body bodyForErrorMessage)
 	{

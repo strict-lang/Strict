@@ -69,6 +69,9 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 			}
 			ctx.CurrentExpressionLineNumber = e.LineNumber;
 			last = interpreter.RunExpression(e, ctx);
+			if (runOnlyTests && e is Declaration executedDecl && last.Equals(interpreter.noneInstance) &&
+				executedDecl.ReturnType.Members.Count == 0)
+				(skippedVariables ??= []).Add(executedDecl.Name);
 			if (ctx.ExitMethodAndReturnValue.HasValue)
 				return ctx.ExitMethodAndReturnValue.Value;
 			if (runOnlyTests && ctx.IsTestAtCurrentLine && !last.Boolean)

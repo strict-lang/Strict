@@ -206,8 +206,6 @@ public sealed class Body : Expression
 			throw new NamedType.CannotUseKeywordsAsName(name);
 		if (!name.Length.IsNameLengthWithinLimit())
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
-		if (!value.ToString().StartsWith(Type.Error, StringComparison.InvariantCulture))
-			CheckForNameWithDifferentTypeUsage(name, value);
 		if (FindVariable(name.AsSpan(), name != Type.IndexLowercase && name != Type.ValueLowercase) is
 			not null)
 			throw new VariableNameIsAlreadyInUse(this, FindVariable(name.AsSpan())!, value);
@@ -227,22 +225,9 @@ public sealed class Body : Expression
 		return variable;
 	}
 
-	private void CheckForNameWithDifferentTypeUsage(string name, Expression value)
-	{
-		var nameType = value.ReturnType.FindType(name.MakeFirstLetterUppercase());
-		if (nameType != null && nameType != value.ReturnType && nameType.Name != Type.Error)
-			throw new VariableNameCannotHaveDifferentTypeNameThanValue(this, name,
-				value.ReturnType.Name);
-	}
-
 	public class VariableNameIsAlreadyInUse(Body body, Variable oldVariable, Expression newValue)
 		: ParsingFailed(body, $"Variable {oldVariable} was already declared before and cannot be " +
 			$"re-declared here with: {newValue}");
-
-	public class VariableNameCannotHaveDifferentTypeNameThanValue(Body body,
-		string variableNameType, string valueType) : ParsingFailed(body,
-		$"Variable name {variableNameType} is reserved and denotes different type than its value " +
-		$"type {valueType}. Prefer using a different name for this variable.");
 
 	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
 		: ParsingFailed(body, name);

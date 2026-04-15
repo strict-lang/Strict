@@ -381,6 +381,8 @@ public class Interpreter
 				? args[0]
 				: new ValueInstance(method.Type, FillDictionaryFromListKeyAndValues(args[0]));
 		var typeMembers = method.Type.Members;
+		if (typeMembers.Count == 0)
+			return noneInstance;
 		var values = new ValueInstance[typeMembers.Count];
 		for (var index = 0; index < args.Count; index++)
 		{
