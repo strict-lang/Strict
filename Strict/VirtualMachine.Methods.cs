@@ -296,13 +296,19 @@ public sealed partial class VirtualMachine
 		var conversionType = info.ResolveReturnType(executable.basePackage);
 		var rawValue = Memory.Registers[info.InstanceRegister!.Value];
 		if (conversionType.IsText)
+		{
 			Memory.Registers[invoke.Register] = ConvertToText(rawValue);
-		else if (conversionType.IsNumber)
+			return true;
+		}
+		if (conversionType.IsNumber)
+		{
 			Memory.Registers[invoke.Register] =
 				rawValue.IsText
 					? new ValueInstance(conversionType, Convert.ToDouble(rawValue.Text))
 					: rawValue;
-		return true;
+			return true;
+		}
+		return false;
 	}
 
 	private bool TryHandleNativeLength(Invoke invoke)

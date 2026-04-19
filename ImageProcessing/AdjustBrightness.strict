@@ -6,7 +6,8 @@ Process(mutable image) Image
 	AdjustBrightness(0.25).Process(testImage) is Image(Size(1, 1), (ColorValue(0.5, 0.75, 0.5)))
 	AdjustBrightness(0.5).Process(testImage) is Image(Size(1, 1), (ColorValue(0.75, 1, 0.75)))
 	for image.Size
-		image.Colors(index) = GetBrightnessAdjustedColor(image.Colors(index))
+		let normalized = image.Colors(index) to ColorValue
+		image.Colors(index) = GetBrightnessAdjustedColor(normalized)
 	image
 GetBrightnessAdjustedColor(current ColorValue) ColorValue
 	AdjustBrightness(0.25).GetBrightnessAdjustedColor(testColor) is ColorValue(0.5, 0.75, 0.5)
