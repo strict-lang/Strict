@@ -427,5 +427,4 @@ public sealed class RunnerTests
 				File.Delete(binaryPath);
 		}
 	}
-
 }

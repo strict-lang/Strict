@@ -243,8 +243,8 @@ public sealed class ForTests : TestExpressions
 		Assert.That(parsedExpression.ToString(), Does.StartWith(expected));
 	}
 
-	[TestCase("WithNumbers", "for row, column in listOfNumbers", "has logger",
-		"LogAllNumbers(listOfNumbers List(Numbers))", "\tfor row, column in listOfNumbers",
+	[TestCase("WithNumbers", "for row, column in numbersOfNumbers", "has logger",
+		"LogAllNumbers(numbersOfNumbers List(Numbers))", "\tfor row, column in numbersOfNumbers",
 		"\t\tlogger.Log(column)")]
 	[TestCase("WithTexts", "for row, column in texts", "has logger", "LogTexts(texts)",
 		"\tfor row, column in texts", "\t\tlogger.Log(column)")]

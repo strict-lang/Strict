@@ -20,6 +20,9 @@ public abstract class NamedType
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
 			if (Name.IsKeyword())
 				throw new CannotUseKeywordsAsName(Name);
+			if ((Name.StartsWith("List", StringComparison.Ordinal) ||
+					Name.StartsWith("list", StringComparison.Ordinal)) && Name.Length > 4 && Name[4] != '(')
+				throw new Context.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(Name);
 			Type = definedIn.GetType(parts.MoveNext()
 				? nameAndType[(rawName.Length + 1)..].ToString()
 				: fullTypePath ?? (Name.StartsWith("is", StringComparison.OrdinalIgnoreCase)

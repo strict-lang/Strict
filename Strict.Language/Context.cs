@@ -89,7 +89,8 @@ public abstract class Context
 			if (this is Type self && (self.Name == name ||
 				self.IsGeneric && name == self.Name + GenericImplementationPostfix))
 				return self;
-			if (name.StartsWith("List", StringComparison.Ordinal) && name.Length > 4 && name[4] != '(')
+			if ((name.StartsWith("List", StringComparison.Ordinal) ||
+					name.StartsWith("list", StringComparison.Ordinal)) && name.Length > 4 && name[4] != '(')
 				throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(name);
 			if (name.EndsWith('s'))
 				return TryGetTypeFromPluralNameAsListWithSingularName(name);
