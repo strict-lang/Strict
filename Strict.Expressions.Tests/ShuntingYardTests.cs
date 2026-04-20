@@ -46,6 +46,8 @@ public sealed class ShuntingYardTests
 		"Path(\"/dir/file.txt\").FileName, Path(\"file.txt\"), is")]
 	[TestCase("index > 0 and value is not numbers(index - 1) + 1",
 		"index, 0, >, value, numbers(index - 1), 1, +, is, not, and")]
+	[TestCase("typeName is not \"None\" or number is not 0",
+		"typeName, \"None\", is, not, number, 0, is, not, or")]
 	public void Parse(string input, string expected) =>
 		Assert.That(
 			string.Join(", ",

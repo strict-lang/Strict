@@ -3,7 +3,7 @@ has number
 has text
 has kind Text
 HasValue Boolean
-	(not typeName is "None") or number is not 0
+	typeName is not "None" or number is not 0
 IsText Boolean
 	text is not ""
 IsList Boolean

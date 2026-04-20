@@ -1,5 +1,5 @@
-has listExpression Text
+has expression Text
 has indexExpression Text
 has elementTypeName Text
 to Text
-	listExpression + "(" + indexExpression + ")"
+	expression + "(" + indexExpression + ")"
