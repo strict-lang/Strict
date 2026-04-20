@@ -3,10 +3,10 @@ has Green Byte
 has Blue Byte
 has Alpha Byte = 255
 from(colorValue)
-	Red = colorValue.Red * 255
-	Green = colorValue.Green * 255
-	Blue = colorValue.Blue * 255
-	Alpha = colorValue.Alpha * 255
+	Red = Byte(colorValue.Red * 255)
+	Green = Byte(colorValue.Green * 255)
+	Blue = Byte(colorValue.Blue * 255)
+	Alpha = Byte(colorValue.Alpha * 255)
 to ColorValue
-	Color(255, 0, 0) to ColorValue is ColorValue(1, 0, 0)
+	Color(1, 0, 0) to ColorValue is ColorValue(1, 0, 0)
 	ColorValue(Red / 255, Green / 255, Blue / 255, Alpha / 255)
