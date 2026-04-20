@@ -532,6 +532,22 @@ public class Interpreter
 	private ValueInstance? TryAutoCreateInstance(Type type, HashSet<string>? creating = null)
 	{
 		creating ??= [];
+		if (type.IsText)
+		{
+			return new ValueInstance("");
+		}
+		if (type.IsNumber)
+		{
+			return new ValueInstance(numberType, 0);
+		}
+		if (type.IsBoolean)
+		{
+			return new ValueInstance(booleanType, false);
+		}
+		if (type.IsCharacter)
+		{
+			return new ValueInstance(characterType, 0);
+		}
 		if (type.IsTrait)
 		{
 			if (!TraitImplementationRegistry.TryGetValue(type.Name, out var concreteName))

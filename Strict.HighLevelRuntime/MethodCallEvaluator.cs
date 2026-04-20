@@ -24,9 +24,18 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 						return typeInst.Values[i].
 							GetIteratorValue(interpreter.characterType, (int)indexValue.Number);
 		}
+		var listInstanceText = listInstance.GetType().Name;
+		try
+		{
+			listInstanceText = listInstance.ToString();
+		}
+		catch (Exception ex)
+		{
+			listInstanceText += ".ToString failed: " + ex;
+		}
 		throw new InterpreterExecutionFailed(ctx.Method, call.LineNumber,
 			InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-				"List call needs a list, got: " + listInstance), null, false);
+				"List call needs a list, got: " + listInstanceText), null, false);
 	}
 
 	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx)

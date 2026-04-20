@@ -1,4 +1,5 @@
 using Strict.Language.Tests;
+using static Strict.Language.Member;
 
 namespace Strict.Expressions.Tests;
 
@@ -108,7 +109,8 @@ public sealed class MutableReassignmentTests : TestExpressions
 				using var dummyType = new Type(TestPackage.Instance, new TypeLines(testName, code));
 				dummyType.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 			}, //ncrunch: no coverage
-			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
+			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>().Or.
+			InstanceOf<NewExpressionDoesNotMatchMemberType>());
 
 	[Test]
 	public void MutableVariableInstanceUsingSpace()

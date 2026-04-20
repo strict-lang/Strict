@@ -8,4 +8,5 @@ from(colorValue)
 	Blue = colorValue.Blue * 255
 	Alpha = colorValue.Alpha * 255
 to ColorValue
+	Color(255, 0, 0) to ColorValue is ColorValue(1, 0, 0)
 	ColorValue(Red / 255, Green / 255, Blue / 255, Alpha / 255)

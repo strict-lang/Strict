@@ -8,6 +8,8 @@ namespace Strict.Expressions;
 /// </summary>
 public sealed class ShuntingYard
 {
+	private const int IsNotPrecedence = 7;
+
 	public ShuntingYard(string input)
 	{
 		this.input = input;
@@ -89,12 +91,12 @@ public sealed class ShuntingYard
 	private int GetTopOperatorPrecedence()
 	{
 		var token = input.AsSpan()[operators.Peek()];
-		return token.IsNot() && IsNotPartOfIsNot
-			? BinaryOperator.GetPrecedence(token)
+		return token.IsNot() && IsTopOperatorPartOfIsNot
+			? IsNotPrecedence
 			: GetPrecedence(token);
 	}
 
-	private bool IsNotPartOfIsNot
+	private bool IsTopOperatorPartOfIsNot
 	{
 		get
 		{
@@ -116,17 +118,18 @@ public sealed class ShuntingYard
 	private void AddOperatorToOutput()
 	{
 		var newOperator = operators.Pop();
-		// If "is not" or "is not in" was parsed, flip them to make BinaryExpression parsing easier
+		if (input.AsSpan()[newOperator].IsNot() && operators.Count > 0 &&
+			input.AsSpan()[operators.Peek()].Compare(BinaryOperator.Is))
+		{
+			var isOperator = operators.Pop();
+			if (Output.Count == 0 || !input.AsSpan()[Output.Peek()].Compare(BinaryOperator.In))
+				Output.Push(isOperator);
+			Output.Push(newOperator);
+			return;
+		}
 		if (input.AsSpan()[newOperator].Compare(BinaryOperator.Is))
 		{
-			if (input.AsSpan()[Output.Peek()].Compare(UnaryOperator.Not))
-			{
-				var notRange = Output.Pop();
-				if (!input.AsSpan()[Output.Peek()].Compare(BinaryOperator.In))
-					Output.Push(newOperator);
-				Output.Push(notRange);
-			}
-			else if (!input.AsSpan()[Output.Peek()].Compare(BinaryOperator.In))
+			if (Output.Count == 0 || !input.AsSpan()[Output.Peek()].Compare(BinaryOperator.In))
 				Output.Push(newOperator);
 		}
 		else
