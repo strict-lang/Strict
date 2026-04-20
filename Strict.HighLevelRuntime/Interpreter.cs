@@ -123,9 +123,7 @@ public class Interpreter
 		ValidateInstanceAndArguments(method, instance, args, parentContext);
 		if (method is { Name: Method.From, Type.IsGeneric: false })
 			return instance.Equals(noneInstance)
-				? HasOnlyMemberAssignmentsInBody(method)
-					? ExecuteFromWithMemberAssignmentBody(method, args, parentContext, runOnlyTests)
-					: GetFromConstructorValue(method, args)
+				? GetFromConstructorValue(method, args)
 				: throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
 		if (instance.TryGetValueTypeInstance()?.ReturnType.Name == Type.System)
 		{ //ncrunch: no coverage start
@@ -425,42 +423,6 @@ public class Interpreter
 					Array.Empty<ValueInstance>());
 		TryPreFillConstrainedListMembers(method.Type, values, method);
 		return new ValueInstance(method.Type, values);
-	}
-
-	private bool HasOnlyMemberAssignmentsInBody(Method method)
-	{
-		if (method.lines.Count <= 1)
-			return false;
-		var body = method.GetBodyAndParseIfNeeded(false);
-		if (body is not Body bodyBlock)
-			return false;
-		var typeMembers = new HashSet<string>(method.Type.Members.Where(m => !m.IsConstant)
-			.Select(m => m.Name), StringComparer.OrdinalIgnoreCase);
-		foreach (var expr in bodyBlock.Expressions)
-		{
-			if (expr.ReturnType.IsBoolean)
-				continue;
-			if (expr is not MutableReassignment mr || !typeMembers.Contains(mr.Name))
-				return false;
-		}
-		return typeMembers.Count > 0;
-	}
-
-	private ValueInstance ExecuteFromWithMemberAssignmentBody(Method method, ValueInstance[] args,
-		ExecutionContext? parentContext, bool runOnlyTests)
-	{
-		var defaultInstance = CreateFullInstance(method.Type);
-		var context = CreateExecutionContext(method, defaultInstance, args, parentContext, runOnlyTests);
-		try
-		{
-			var body = method.GetBodyAndParseIfNeeded(false);
-			RunExpression(body, context, runOnlyTests);
-			return context.ExitMethodAndReturnValue ?? defaultInstance;
-		}
-		finally
-		{
-			ReturnContext(context);
-		}
 	}
 
 	private void TryPreFillConstrainedListMembers(Type targetType, ValueInstance[] values,

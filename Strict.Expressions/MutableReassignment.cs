@@ -19,7 +19,7 @@ public sealed class MutableReassignment : ConcreteExpression
 		Target = target;
 		Value = newValue;
 		var contextType = (target as MemberCall)?.Instance?.ReturnType ?? scope.Method.Type;
-		if (target is not ListCall && scope.Method.Name != Method.From)
+		if (target is not ListCall)
 			scope.CheckIfWeCouldUpdateMutableParameterOrVariable(contextType, Name, Value);
 	}
 
