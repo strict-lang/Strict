@@ -245,6 +245,32 @@ public class TestInterpreterTests
 	}
 
 	[Test]
+	public void RunColorToColorValueTest()
+	{
+		using var colorValueType = new Type(TestPackage.Instance,
+			new TypeLines("ColorValue", "has Red Number", "has Green Number", "has Blue Number",
+				"has Alpha = 1")).ParseMembersAndMethods(new MethodExpressionParser());
+		using var colorType = new Type(TestPackage.Instance,
+				new TypeLines("Color", "has Red Byte", "has Green Byte", "has Blue Byte",
+					"has Alpha Byte = 255", "to ColorValue",
+					"\tColor(255, 0, 0) to ColorValue is ColorValue(1, 0, 0)",
+					"\tColorValue(Red / 255, Green / 255, Blue / 255, Alpha / 255)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var numberType = colorType.GetType(Type.Number);
+		interpreter.RunAllTestsInType(colorType);
+		var result = interpreter.Execute(colorType.GetMethod("to", []),
+			new ValueInstance(colorType,
+			[
+				new ValueInstance(numberType, 0), new ValueInstance(numberType, 127),
+				new ValueInstance(numberType, 255)
+			]), []);
+		Assert.That(result, Is.EqualTo(new ValueInstance(colorValueType, [
+			new ValueInstance(numberType, 0), new ValueInstance(numberType, 0.5),
+			new ValueInstance(numberType, 1)
+		])));
+	}
+
+	[Test]
 	[Benchmark]
 	public void RunAllTestsInPackage() => interpreter.RunAllTestsInPackage(TestPackage.Instance);
 

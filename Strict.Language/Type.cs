@@ -92,6 +92,7 @@ public class Type : Context, IDisposable
 	/// optimize this away into anything that makes sense in the current context.
 	/// </summary>
 	public const string Number = nameof(Number);
+	public const string Byte = nameof(Byte);
 	public const string Character = nameof(Character);
 	public const string HashCode = nameof(HashCode);
 	public const string Range = nameof(Range);
@@ -116,6 +117,7 @@ public class Type : Context, IDisposable
 			None => TypeKind.None,
 			Boolean => TypeKind.Boolean,
 			Number => TypeKind.Number,
+			Byte => TypeKind.Number,
 			Text => TypeKind.Text,
 			Character => TypeKind.Character,
 			List => TypeKind.List,
@@ -392,7 +394,7 @@ public class Type : Context, IDisposable
 		throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
 	}
 
-	private bool HasMatchingConstructor(IReadOnlyList<Type> implementationTypes) =>
+	private bool HasMatchingConstructor(Type[] implementationTypes) =>
 		typeMethodFinder.FindFromMethodImplementation(implementationTypes) != null;
 
 	public sealed class CannotGetGenericImplementationOnNonGeneric(string name, string key)
@@ -490,7 +492,7 @@ public class Type : Context, IDisposable
 			return true;
 		if (IsGenericTypeCompatible(sameOrUsableType))
 			return true;
-		if (allowImplicitConversion && IsImplicitToConversion(sameOrUsableType))
+		if (allowImplicitConversion && IsImplicitAnyToConversion(sameOrUsableType))
 			return true;
 		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
 			return true;
@@ -510,9 +512,9 @@ public class Type : Context, IDisposable
 	/// <summary>
 	/// Checks whether this type can be adapted to targetType via existing to/from conversions.
 	/// </summary>
-	public bool CanBeConvertedTo(Type targetType)
+	public bool CanBeConvertedTo(Type targetType, bool allowImplicitConversion = false)
 	{
-		if (IsSameOrCanBeUsedAs(targetType, false))
+		if (IsSameOrCanBeUsedAs(targetType, allowImplicitConversion))
 			return true;
 		if (CanConvertBetweenByteListAndCompositeByteList(targetType))
 			return true;
@@ -521,11 +523,11 @@ public class Type : Context, IDisposable
 			return false;
 		if (AvailableMethods.TryGetValue(BinaryOperator.To, out var toMethods) &&
 			toMethods.Any(method => method.ReturnType == targetType ||
-				method.ReturnType.IsSameOrCanBeUsedAs(targetType, false)))
+				method.ReturnType.IsSameOrCanBeUsedAs(targetType, allowImplicitConversion)))
 			return true;
 		return targetType.AvailableMethods.TryGetValue(Method.From, out var fromMethods) &&
 			fromMethods.Any(method => method.Parameters.Count == 1 &&
-				IsSameOrCanBeUsedAs(method.Parameters[0].Type, false));
+				IsSameOrCanBeUsedAs(method.Parameters[0].Type, allowImplicitConversion));
 	}
 
 	private bool IsBaseTypeExcludedFromImplicitListConversion() =>
@@ -576,7 +578,7 @@ public class Type : Context, IDisposable
 		for (var implementationIndex = 0;
 			implementationIndex < sourceImplementation.ImplementationTypes.Count;
 			implementationIndex++)
-     if (!sourceImplementation.ImplementationTypes[implementationIndex].CanBeConvertedTo(
+			if (!sourceImplementation.ImplementationTypes[implementationIndex].CanBeConvertedTo(
 				targetImplementation.ImplementationTypes[implementationIndex]))
 				return false;
 		return true;
@@ -619,7 +621,7 @@ public class Type : Context, IDisposable
 	/// <summary>
 	/// Only allow implicit conversions as defined in Any.strict (to Text, to Type, to HashCode)
 	/// </summary>
-	private static bool IsImplicitToConversion(Context targetType) =>
+	private static bool IsImplicitAnyToConversion(Context targetType) =>
 		targetType.Name is Text or nameof(Type) or HashCode;
 
 	private bool IsCompatibleOneOfType(Type sameOrBaseType)
@@ -698,7 +700,8 @@ public class Type : Context, IDisposable
 					if (Name == Any)
 						return cachedAvailableMethods = built;
 					foreach (var member in Members.Where(m =>
-						m is { IsPublic: false, InitialValue: null } && !IsTraitImplementation(m.Type)))
+						m is { IsPublic: false, IsConstant: false, InitialValue: null } &&
+						!IsTraitImplementation(m.Type)))
 						AddNonGenericMethods(member.Type, built);
 					if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
 						methods.All(m => m.Name != Method.From))

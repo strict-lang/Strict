@@ -7,12 +7,12 @@ internal class TypeMethodFinder(Type type)
 {
 	public Type Type { get; } = type;
 
-	public Method? FindFromMethodImplementation(IReadOnlyList<Type> implementationTypes) =>
+	public Method? FindFromMethodImplementation(Type[] implementationTypes) =>
 		Type.AvailableMethods.TryGetValue(Method.From, out var methods)
 			? FindFromMethod(implementationTypes, methods)
 			: null;
 
-	private Method? FindFromMethod(IReadOnlyList<Type> implementationTypes, List<Method> methods)
+	private Method? FindFromMethod(Type[] implementationTypes, List<Method> methods)
 	{
 		for (var index = 0; index < methods.Count; index++)
 			if (IsMethodWithMatchingParametersType(methods[index], implementationTypes,
@@ -55,22 +55,28 @@ internal class TypeMethodFinder(Type type)
 	{
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
-		var lookupKey = (Type, methodName,
-			string.Join(", ", arguments.Select(argument => argument.ReturnType.FullName)));
+		if (arguments is [{ ReturnType.IsError: true }, _])
+			return matchingMethods[0];
+		var typesOfArguments = arguments.Count == 0
+			? Array.Empty<Type>()
+			: new Type[arguments.Count];
+		for (var index = 0; index < arguments.Count; index++)
+			typesOfArguments[index] = arguments[index].ReturnType;
+		var lookupKey = (Type, methodName, typesOfArguments);
 		var activeLookups = activeMethodLookups ??= [];
 		if (!activeLookups.Add(lookupKey))
 			return null;
 		try
 		{
-			if (arguments is [{ ReturnType.IsError: true }, _])
-				return matchingMethods[0];
-			var typesOfArguments = arguments.Select(argument => argument.ReturnType).ToList();
-			var commonTypeOfArguments = TryGetSingleElementType(typesOfArguments);
+			var commonArgumentType = TryGetSingleElementType(typesOfArguments);
 			foreach (var method in matchingMethods)
-				if (IsMethodWithMatchingParametersType(method, typesOfArguments, commonTypeOfArguments, Type) ||
-					commonTypeOfArguments != null && commonTypeOfArguments ==
-					GetListElementTypeIfHasSingleParameter(method, arguments.Count))
+				if (IsMethodWithMatchingParametersType(method, typesOfArguments, commonArgumentType, Type))
 					return method;
+			if (commonArgumentType != null)
+				foreach (var method in matchingMethods)
+					if (commonArgumentType ==
+						GetListElementTypeIfHasSingleParameter(method, arguments.Count))
+						return method;
 			// Single character text can always be used as a character (thus number)
 			if (arguments.Count == 1 && matchingMethods.Count > 0 &&
 				matchingMethods[0].Parameters.Count > 0 &&
@@ -100,7 +106,7 @@ internal class TypeMethodFinder(Type type)
 	}
 
 	[ThreadStatic]
-	private static HashSet<(Type Type, string MethodName, string ArgumentTypes)>? activeMethodLookups;
+	private static HashSet<(Type Type, string MethodName, Type[] ArgumentTypes)>? activeMethodLookups;
 
 	private static string GetTextValue(Expression argument)
 	{
@@ -110,17 +116,22 @@ internal class TypeMethodFinder(Type type)
 			return value; //ncrunch: no coverage
 		var text = data?.ToString() ?? argument.ToString();
 		const string ValueInstanceTextPrefix = "Text: \"";
-		if (text.StartsWith(ValueInstanceTextPrefix, StringComparison.Ordinal) && text.EndsWith("\"", StringComparison.Ordinal))
+		if (text.StartsWith(ValueInstanceTextPrefix, StringComparison.Ordinal) && text.EndsWith("\"",
+			StringComparison.Ordinal))
 			return text[ValueInstanceTextPrefix.Length..^1];
 		return text.Length >= 2 && text[0] == '"' && text[^1] == '"' //ncrunch: no coverage
 			? text[1..^1]
 			: text;
 	}
 
-	private static T? TryGetSingleElementType<T>(IReadOnlyList<T> argumentTypes) where T : class
+	private static T? TryGetSingleElementType<T>(T[] argumentTypes) where T : class
 	{
 		T? firstType = null;
-		for (var i = 0; i < argumentTypes.Count; i++)
+		if (argumentTypes.Length == 0)
+			return firstType;
+		if (argumentTypes.Length == 1)
+			return argumentTypes[0];
+		for (var i = 0; i < argumentTypes.Length; i++)
 			if (firstType == null)
 				firstType = argumentTypes[i];
 			else if (firstType != argumentTypes[i])
@@ -212,6 +223,7 @@ internal class TypeMethodFinder(Type type)
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
 			return true; //ncrunch: no coverage
 		if (typesOfArguments.Count > method.Parameters.Count ||
+			typesOfArguments.Count < method.Parameters.Count &&
 			typesOfArguments.Count < GetRequiredMethodParametersCount(method))
 			return false;
 		for (var index = 0; index < typesOfArguments.Count; index++)
@@ -272,8 +284,7 @@ internal class TypeMethodFinder(Type type)
 		if (argumentType.IsError)
 			return true;
 		if (!methodParameterType.IsGeneric)
-			return argumentType.IsSameOrCanBeUsedAs(methodParameterType) ||
-				argumentType.CanBeConvertedTo(methodParameterType);
+			return argumentType.CanBeConvertedTo(methodParameterType, true);
 		if (argumentType.IsGeneric)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType, //ncrunch: no coverage
 				"(parameter " + index + ") is not usable with argument " + argumentType + " in " + method);

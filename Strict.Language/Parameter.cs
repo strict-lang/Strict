@@ -45,5 +45,10 @@ public sealed class Parameter : NamedType
 		Parameter parameter) : ParsingFailed(body, newExpression.ToStringWithType() +
 		" cannot be assigned to " + parameter, parameter.Type);
 
-	public string ToStringWithInnerMembers() => Name + " " + Type + " " + Type.Members.ToBrackets();
+	public override string ToString() =>
+		base.ToString() + (DefaultValue != null
+			? " = " + DefaultValue
+			: "");
+
+	public string ToStringWithInnerMembers() => ToString() + " " + Type.Members.ToBrackets();
 }

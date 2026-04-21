@@ -119,7 +119,8 @@ public sealed class TestPackage : Package
 			"\t\treturn Character(number + 32)",
 			"\tCharacter(number)"));
 		var byteType = new Type(this, new TypeLines("Byte",
-			"has number = 0 with value >= 0 and value <= 255",
+			"has number with value >= Min and value <= Max",
+			"constant Min = 0",
 			"constant Max = 255"));
 		var mutable = new Type(this, new TypeLines(Type.Mutable,
 			"has generic"));
