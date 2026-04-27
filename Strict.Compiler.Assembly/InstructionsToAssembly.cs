@@ -299,6 +299,11 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			registerInstances[invoke.Register] = invoke.MethodInfo.ArgumentRegisters;
 			return;
 		}
+		if (IsFileRuntimeInvoke(invoke.MethodInfo))
+		{
+			EmitFileRuntimeInvoke(invoke.MethodInfo, lines);
+			return;
+		}
 		var methodKey = BuildMethodHeaderKeyInternal(invoke.MethodInfo);
 		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
 			throw new NotSupportedException( //ncrunch: no coverage
@@ -324,6 +329,23 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		if (destination != "xmm0")
 			lines.Add("    movsd " + destination + ", xmm0");
 	}
+
+	private static bool IsFileRuntimeInvoke(InvokeMethodInfo info) =>
+		(info.TypeFullName == Strict.Language.Type.File ||
+			info.TypeFullName.EndsWith(Context.ParentSeparator + Strict.Language.Type.File,
+				StringComparison.Ordinal)) &&
+		info.MethodName is "Write" or "ReadText" or "ReadBytes";
+
+	private static void EmitFileRuntimeInvoke(InvokeMethodInfo info, List<string> lines) =>
+		lines.Add("    call strict_file_" + (info.MethodName switch
+		{
+			"Write" when info.ParameterNames.Length > 0 &&
+				info.ParameterNames[0].Contains("bytes", StringComparison.OrdinalIgnoreCase) =>
+				"write_bytes",
+			"Write" => "write_text",
+			"ReadText" => "read_text",
+			_ => "read_bytes"
+		}));
 
 	private static string GetOrAddConstantLabel(double number,
 		List<(string Label, double Value)> dataConstants)

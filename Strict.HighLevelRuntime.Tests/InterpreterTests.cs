@@ -223,6 +223,65 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public async Task StrictFileCompilerParsesExistingTextStrictFile()
+	{
+		var repos = new Repositories(new MethodExpressionParser());
+		using var strict = await repos.LoadStrictPackage();
+		using var language = await repos.LoadStrictPackage("Strict/Language");
+		var compiler = language.GetType("StrictFileCompiler");
+		var compilerInstance = new ValueInstance(compiler, [new ValueInstance(compiler.Members[0].Type, 0)]);
+		var textSource = await File.ReadAllTextAsync(Path.Combine(FindRepoRoot(), "Text.strict"));
+		var interpreterForStrict = new Interpreter(language, TestBehavior.Disabled);
+		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "TypeName", "Text.strict"),
+			Is.EqualTo("Text"));
+		Assert.That(ExecuteTexts(compiler, compilerInstance, interpreterForStrict, "MemberNames", textSource),
+			Is.EqualTo(new[] { "characters" }));
+		var methodHeaders = ExecuteTexts(compiler, compilerInstance, interpreterForStrict,
+			"MethodHeaders", textSource);
+		Assert.That(methodHeaders, Does.Contain("+(other) Text"));
+		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "MethodName",
+				"+(other) Text"),
+			Is.EqualTo("+"));
+		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "ReturnTypeName",
+				"+(other) Text"),
+			Is.EqualTo("Text"));
+		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "ParameterText",
+				"+(other) Text"),
+			Is.EqualTo("other"));
+	}
+
+	private static string ExecuteText(Type type, ValueInstance instance,
+		Interpreter interpreterForStrict, string methodName, string argument) =>
+		interpreterForStrict.Execute(type.Methods.Single(method => method.Name == methodName),
+			instance, [new ValueInstance(argument)]).Text;
+
+	private static string[] ExecuteTexts(Type type, ValueInstance instance,
+		Interpreter interpreterForStrict, string methodName, string source, string? methodArgument = null)
+	{
+		var method = type.Methods.Single(candidate => candidate.Name == methodName);
+		var args = methodArgument == null
+			? new[] { new ValueInstance(source) }
+			: [new ValueInstance(source), new ValueInstance(methodArgument)];
+		return interpreterForStrict.Execute(method, instance, args).
+			List.Items.Select(item => item.Text).ToArray();
+	}
+
+	private static string FindRepoRoot()
+	{
+		var directory = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
+		if (File.Exists(Path.Combine(directory, "Strict.sln")))
+			return directory;
+		directory = AppContext.BaseDirectory;
+		while (directory != null)
+		{
+			if (File.Exists(Path.Combine(directory, "Strict.sln")))
+				return directory;
+			directory = Path.GetDirectoryName(directory);
+		}
+		throw new DirectoryNotFoundException("Cannot find repository root (Strict.sln not found)");
+	}
+
+	[Test]
 	public async Task TextTrimWorksInsideCharacterLoop()
 	{
 		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();

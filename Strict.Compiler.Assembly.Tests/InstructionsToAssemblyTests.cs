@@ -602,6 +602,18 @@ public sealed class InstructionsToAssemblyTests
 	}
 
 	[Test]
+	public void FileWriteTextInvokeEmitsNativeRuntimeCall()
+	{
+		var instructions = new List<Instruction>
+		{
+			new Invoke(Register.R0, new InvokeMethodInfo("Strict/File", "Write",
+				["text"], Type.None, [Register.R1], Register.R2))
+		};
+		var assembly = Compile(instructions, Platform.Linux);
+		Assert.That(assembly, Does.Contain("strict_file_write_text"));
+	}
+
+	[Test]
 	public void LinuxOutputCheckOnWindowsAcceptsExeFallback()
 	{
 		if (!OperatingSystem.IsWindows())

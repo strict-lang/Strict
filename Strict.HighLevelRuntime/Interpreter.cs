@@ -260,7 +260,8 @@ public class Interpreter
 			method.Type.Name == Type.Number &&
 			(method.Name == "digits" || method.Name == BinaryOperator.To && method.ReturnType.IsText) ||
 			method.Type.IsText && method.Name == "Split" ||
-			method.Type.Name == Type.File);
+			method.Type.Name == Type.File ||
+			method.Type.Name == "StrictFileCompiler");
 
 	private ExecutionContext CreateExecutionContext(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)
