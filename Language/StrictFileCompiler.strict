@@ -8,9 +8,9 @@ Run
 	logger.Log("Parameters: other Number")
 	logger.Log("Method: IsReady returns Boolean")
 	logger.Log("Body lines for Add: 1")
-SampleLines Texts
-	("has logger", "has count Number", "has Name Text", "Run", "\tlogger.Log(\"Hi\")") + MoreSampleLines
-MoreSampleLines Texts
+TypeParsingInput Texts
+	("has logger Logger", "has count Number", "has Name Text", "Run", "\tlogger.Log(\"Hi\")") + MoreInput
+MoreInput Texts
 	("Add(other Number) Number", "\treturn count + other", "IsReady Boolean", "\treturn count > 0")
 TypeName(sourcePath Text) Text
 	TypeName("Examples/Parsing/CompilerSubject.strict") is "CompilerSubject"
@@ -50,17 +50,15 @@ KeywordLength(line Text) Number
 		return "constant ".Length
 	"has ".Length
 MemberType(line Text) Text
-	MemberType("has logger") is "Logger"
+	MemberType("has logger Logger") is "Logger"
 	MemberType("has count Number") is "Number"
 	let memberName = MemberName(line)
 	let typeStart = line.IndexOf(memberName) + memberName.Length + 1
 	if typeStart >= line.Length
-		if memberName is "logger"
-			return "Logger"
-		return memberName
+		return ""
 	line.Substring(typeStart, line.Length - typeStart)
 MethodHeaders(lines Texts) Texts
-	MethodHeaders(SampleLines) is ("Run", "Add(other Number) Number", "IsReady Boolean")
+	MethodHeaders(TypeParsingInput) is ("Run", "Add(other Number) Number", "IsReady Boolean")
 	for lines
 		if IsMethodHeader(value)
 			value
@@ -95,7 +93,7 @@ ReturnTypeName(header Text) Text
 		return header.Substring(spaceIndex + 1, header.Length - spaceIndex - 1)
 	""
 BodyLineCount(methodName Text, lines Texts) Number
-	BodyLineCount("Add", SampleLines) is 1
+	BodyLineCount("Add", TypeParsingInput) is 1
 	mutable foundMethod = false
 	mutable count = 0
 	for lines
