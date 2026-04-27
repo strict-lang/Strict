@@ -146,12 +146,12 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
-- ✅ **20 Language types converted in `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, Method, Context, Package, Type, Body + 5 pure constants
+- ✅ **21 Language types converted in `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, Method, Context, Package, Type, Body, StrictFileCompiler + 5 pure constants
 - ✅ **29 Expression types in `.strict` form (Phase 2 complete)** — Value, TextExpression, NumberExpression, BooleanExpression, MethodCall, MemberCall, ParameterCall, VariableCall, Binary, Return, IfExpression, ForExpression, Declaration, ListExpression, NotExpression, MutableReassignment, DictionaryExpression, ListCall, Instance, To, TypeComparison, SelectorIf, TypePattern, ValueInstance, ValueListInstance, ValueTypeInstance, ValueDictionaryInstance, PhraseTokenizer, ShuntingYard
 - ✅ **TypeFinder.strict** — Shared type registry with `Find`/`Get`/`Has`/`Count`/`FindPlural` methods. Replaces per-type `typeNames` approach; types reference a common TypeFinder instead of each carrying their own type list.
 - ✅ **Type.strict has 12 methods** — `IsMember`, `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`, `MethodName`, `HasReturnType`, `ReturnTypeName`
 - ✅ **VM fixes** — characters.Length works via recursive EvaluateMemberCall + TryGetNativeLength. BinaryGenerator emits LoadVariableToRegister for member calls with instance. Register save/restore for for-loop bodies.
-- ✅ **3 end-to-end examples** — ParseHelloLogger (type line classification), ParseExpressions (expression classification + Substring/characters.Length), ParseMethodHeaders (method header parsing + reassignment detection)
+- ✅ **4 end-to-end examples** — ParseHelloLogger (type line classification), ParseExpressions (expression classification + Substring/characters.Length), ParseMethodHeaders (method header parsing + reassignment detection), StrictFileCompiler (minimum type structure parsing surface)
 - ✅ **ExpressionParser.strict expanded** — Parse + IsAssignment/IsBinaryExpression/IsReassignment + extract helpers
 - ✅ **Body.strict expanded** — IsMethodCallLine/IsReturnLine/IsIfLine/IsForLine/IsDeclarationLine/IsReassignment/IsBinaryExpression/IsNotExpression
 - 🚧 **Known PhraseTokenizer limitation** — `IndexOf("(")` fails in VM/bytecode path because PhraseTokenizer interprets `(` as expression grouping. Works fine in C# HighLevelRuntime expression parsing. Workaround: use space-based parsing for method headers in VM examples.
@@ -159,7 +159,7 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 - 🚧 **Operator precedence note** — `is` has lowest precedence (1), `and` is 6, so `A is false and B is false` parses as `A is (false and B is false)`. Use parenthesized `(not A) and (not B)` or helper methods instead.
 
 **Target metrics for Phase 1:**
-- `.strict` files to generate: ~22 (excluding deferred files)
+- `.strict` files to generate: ~23 (excluding deferred files)
 - Test methods to write: ~335 (matching existing C# test count)
 - Estimated Strict LOC: ~3,000–4,000
 
@@ -167,7 +167,7 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 22 | 22 | 100% |
+| `.strict` files created | 23 | 23 | 100% |
 | Test methods written | 335 | 36 | 11% |
 | C# files replaced | 32 | 0 | 0% |
 

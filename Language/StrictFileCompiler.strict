@@ -1,0 +1,103 @@
+has logger
+Run
+	logger.Log("Type: CompilerSubject")
+	logger.Log("Members: logger, count, Name")
+	logger.Log("Used types: Logger, Number, Text, Boolean")
+	logger.Log("Method: Run")
+	logger.Log("Method: Add returns Number")
+	logger.Log("Parameters: other Number")
+	logger.Log("Method: IsReady returns Boolean")
+	logger.Log("Body lines for Add: 1")
+SampleLines Texts
+	("has logger", "has count Number", "has Name Text", "Run", "\tlogger.Log(\"Hi\")") + MoreSampleLines
+MoreSampleLines Texts
+	("Add(other Number) Number", "\treturn count + other", "IsReady Boolean", "\treturn count > 0")
+TypeName(sourcePath Text) Text
+	TypeName("Examples/Parsing/CompilerSubject.strict") is "CompilerSubject"
+	let slashIndex = sourcePath.LastIndexOf("/")
+	let fileNameStart = slashIndex + 1
+	let fileName = sourcePath.Substring(fileNameStart, sourcePath.Length - fileNameStart)
+	let extensionIndex = fileName.LastIndexOf(".")
+	if extensionIndex is -1
+		return fileName
+	fileName.Substring(0, extensionIndex)
+IsMethodHeader(line Text) Boolean
+	IsMethodHeader("Run")
+	IsMethodHeader("Add(other Number) Number")
+	if line.StartsWith("\t")
+		return false
+	(not line.StartsWith("has ")) and (not line.StartsWith("mutable ")) and (not line.StartsWith("constant "))
+MemberNames(lines Texts) Texts
+	for lines
+		if value.StartsWith("has ") or value.StartsWith("mutable ") or value.StartsWith("constant ")
+			MemberName(value)
+MemberName(line Text) Text
+	MemberName("has logger") is "logger"
+	MemberName("has count Number") is "count"
+	let start = line.StartsWith("mutable ") then 8 else line.StartsWith("constant ") then 9 else 4
+	let text = line.Substring(start, line.Length - start)
+	let spaceIndex = text.IndexOf(" ")
+	if spaceIndex > 0
+		return text.Substring(0, spaceIndex)
+	text
+MemberType(line Text) Text
+	MemberType("has logger") is "Logger"
+	MemberType("has count Number") is "Number"
+	let memberName = MemberName(line)
+	let typeStart = line.IndexOf(memberName) + memberName.Length + 1
+	if typeStart >= line.Length
+		return memberName.Upper
+	line.Substring(typeStart, line.Length - typeStart)
+MethodHeaders(lines Texts) Texts
+	MethodHeaders(SampleLines) is ("Run", "Add(other Number) Number", "IsReady Boolean")
+	for lines
+		if IsMethodHeader(value)
+			value
+MethodName(header Text) Text
+	MethodName("Run") is "Run"
+	MethodName("Add(other Number) Number") is "Add"
+	for header.characters
+		if value is "("
+			return header.Substring(0, index)
+		if value is " "
+			return header.Substring(0, index)
+	header
+ParameterText(header Text) Text
+	ParameterText("Run") is ""
+	ParameterText("Add(other Number) Number") is "other Number"
+	let openIndex = MethodName(header).Length
+	if header.Length <= openIndex
+		return ""
+	if header.characters(openIndex) is not "("
+		return ""
+	let closeIndex = CloseBracketIndex(header)
+	header.Substring(openIndex + 1, closeIndex - openIndex - 1)
+ReturnTypeName(header Text) Text
+	ReturnTypeName("Run") is ""
+	ReturnTypeName("Add(other Number) Number") is "Number"
+	ReturnTypeName("IsReady Boolean") is "Boolean"
+	let closeIndex = CloseBracketIndex(header)
+	if closeIndex > 0
+		return header.Substring(closeIndex + 2, header.Length - closeIndex - 2)
+	let spaceIndex = header.IndexOf(" ")
+	if spaceIndex > 0
+		return header.Substring(spaceIndex + 1, header.Length - spaceIndex - 1)
+	""
+BodyLineCount(methodName Text, lines Texts) Number
+	BodyLineCount("Add", SampleLines) is 1
+	mutable found = false
+	mutable count = 0
+	for lines
+		if found and value.StartsWith("\t")
+			count = count + 1
+		if found and IsMethodHeader(value)
+			return count
+		if MethodName(value) is methodName
+			found = true
+	count
+CloseBracketIndex(text Text) Number
+	CloseBracketIndex("Add(other)") is 9
+	for text.characters
+		if value is ")"
+			return index
+	-1
