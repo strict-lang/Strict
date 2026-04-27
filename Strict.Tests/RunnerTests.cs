@@ -194,6 +194,21 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task RunStrictFileCompilerParsesTypeStructure()
+	{
+		await new Runner(Path.Combine(FindRepoRoot(), "Language", "StrictFileCompiler.strict")).Run();
+		var output = consoleWriter.ToString();
+		Assert.That(output, Does.Contain("Type: CompilerSubject"));
+		Assert.That(output, Does.Contain("Members: logger, count, Name"));
+		Assert.That(output, Does.Contain("Used types: Logger, Number, Text, Boolean"));
+		Assert.That(output, Does.Contain("Method: Run"));
+		Assert.That(output, Does.Contain("Method: Add returns Number"));
+		Assert.That(output, Does.Contain("Parameters: other Number"));
+		Assert.That(output, Does.Contain("Method: IsReady returns Boolean"));
+		Assert.That(output, Does.Contain("Body lines for Add: 1"));
+	}
+
+	[Test]
 	public async Task RunFibonacci()
 	{
 		await new Runner(GetExamplesFilePath("Fibonacci")).Run();
