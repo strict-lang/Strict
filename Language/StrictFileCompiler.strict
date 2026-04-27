@@ -14,6 +14,9 @@ MoreSampleLines Texts
 	("Add(other Number) Number", "\treturn count + other", "IsReady Boolean", "\treturn count > 0")
 TypeName(sourcePath Text) Text
 	TypeName("Examples/Parsing/CompilerSubject.strict") is "CompilerSubject"
+	TypeName("CompilerSubject.strict") is "CompilerSubject"
+	TypeName("Archive.CompilerSubject.strict") is "Archive.CompilerSubject"
+	TypeName("CompilerSubject") is "CompilerSubject"
 	let slashIndex = sourcePath.LastIndexOf("/")
 	let fileNameStart = slashIndex + 1
 	let fileName = sourcePath.Substring(fileNameStart, sourcePath.Length - fileNameStart)
@@ -34,12 +37,18 @@ MemberNames(lines Texts) Texts
 MemberName(line Text) Text
 	MemberName("has logger") is "logger"
 	MemberName("has count Number") is "count"
-	let start = line.StartsWith("mutable ") then 8 else line.StartsWith("constant ") then 9 else 4
+	let start = KeywordLength(line)
 	let text = line.Substring(start, line.Length - start)
 	let spaceIndex = text.IndexOf(" ")
 	if spaceIndex > 0
 		return text.Substring(0, spaceIndex)
 	text
+KeywordLength(line Text) Number
+	if line.StartsWith("mutable ")
+		return "mutable ".Length
+	if line.StartsWith("constant ")
+		return "constant ".Length
+	"has ".Length
 MemberType(line Text) Text
 	MemberType("has logger") is "Logger"
 	MemberType("has count Number") is "Number"
@@ -85,15 +94,15 @@ ReturnTypeName(header Text) Text
 	""
 BodyLineCount(methodName Text, lines Texts) Number
 	BodyLineCount("Add", SampleLines) is 1
-	mutable found = false
+	mutable foundMethod = false
 	mutable count = 0
 	for lines
-		if found and value.StartsWith("\t")
+		if foundMethod and value.StartsWith("\t")
 			count = count + 1
-		if found and IsMethodHeader(value)
+		if foundMethod and IsMethodHeader(value)
 			return count
 		if MethodName(value) is methodName
-			found = true
+			foundMethod = true
 	count
 CloseBracketIndex(text Text) Number
 	CloseBracketIndex("Add(other)") is 9
