@@ -294,14 +294,14 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	{
 		if (invoke.MethodInfo == null)
 			throw new NotSupportedException("Invoke instruction is missing method metadata"); //ncrunch: no coverage
-		if (invoke.MethodInfo.MethodName == Method.From && !invoke.MethodInfo.InstanceRegister.HasValue)
-		{
-			registerInstances[invoke.Register] = invoke.MethodInfo.ArgumentRegisters;
-			return;
-		}
 		if (IsFileRuntimeInvoke(invoke.MethodInfo))
 		{
 			EmitFileRuntimeInvoke(invoke.MethodInfo, lines);
+			return;
+		}
+		if (invoke.MethodInfo.MethodName == Method.From && !invoke.MethodInfo.InstanceRegister.HasValue)
+		{
+			registerInstances[invoke.Register] = invoke.MethodInfo.ArgumentRegisters;
 			return;
 		}
 		var methodKey = BuildMethodHeaderKeyInternal(invoke.MethodInfo);
@@ -334,17 +334,21 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		(info.TypeFullName == Strict.Language.Type.File ||
 			info.TypeFullName.EndsWith(Context.ParentSeparator + Strict.Language.Type.File,
 				StringComparison.Ordinal)) &&
-		info.MethodName is "Write" or "ReadText" or "ReadBytes";
+		info.MethodName is Method.From or "Write" or "ReadText" or "ReadBytes" or "Close" or "Length" or "Exists";
 
 	private static void EmitFileRuntimeInvoke(InvokeMethodInfo info, List<string> lines) =>
 		lines.Add("    call strict_file_" + (info.MethodName switch
 		{
+			Method.From => "open",
 			"Write" when info.ParameterNames.Length > 0 &&
 				info.ParameterNames[0].Contains("bytes", StringComparison.OrdinalIgnoreCase) =>
 				"write_bytes",
 			"Write" => "write_text",
 			"ReadText" => "read_text",
-			_ => "read_bytes"
+			"ReadBytes" => "read_bytes",
+			"Close" => "close",
+			"Length" => "length",
+			_ => "exists"
 		}));
 
 	private static string GetOrAddConstantLabel(double number,

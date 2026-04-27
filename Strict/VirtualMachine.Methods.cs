@@ -69,7 +69,7 @@ public sealed partial class VirtualMachine
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.basePackage)),
 			BinaryOperator.To => info.InstanceRegister.HasValue && TryHandleToConversion(invoke),
 			"Length" or "Count" => info.InstanceRegister.HasValue && TryHandleNativeLength(invoke),
-			"ReadText" or "ReadBytes" or "Write" or "Delete" or "Exists" =>
+			"ReadText" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" =>
 				info.InstanceRegister.HasValue && TryHandleNativeFileMethod(invoke),
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
@@ -99,48 +99,69 @@ public sealed partial class VirtualMachine
 	private bool TryHandleNativeFileMethod(Invoke invoke)
 	{
 		var info = invoke.MethodInfo;
+		if (info.MethodName == Method.From)
+		{
+			if (info.ArgumentRegisters.Length != 1)
+				return false;
+			var pathValue = Memory.Registers[info.ArgumentRegisters[0]];
+			if (!pathValue.IsText)
+				return false;
+			var fileInstance = NativeFileRegistry.Open(executable.basePackage.GetType(Type.File),
+				pathValue.Text);
+			Memory.Frame.TrackDisposable(fileInstance);
+			Memory.Registers[invoke.Register] = fileInstance;
+			return true;
+		}
 		var instance = Memory.Registers[info.InstanceRegister!.Value];
 		if (!IsFileInstance(instance))
 			return false;
-		var path = GetFilePath(instance);
+		var handle = GetFileHandle(instance);
 		switch (info.MethodName)
 		{
 		case "ReadText":
-			Memory.Registers[invoke.Register] = new ValueInstance(File.ReadAllText(path));
+			Memory.Registers[invoke.Register] = new ValueInstance(NativeFileRegistry.ReadText(handle));
 			return true;
 		case "ReadBytes":
-			Memory.Registers[invoke.Register] = CreateBytesValue(File.ReadAllBytes(path));
+			Memory.Registers[invoke.Register] = CreateBytesValue(NativeFileRegistry.ReadBytes(handle));
 			return true;
 		case "Write":
-			WriteFile(path, Memory.Registers[info.ArgumentRegisters[0]]);
+			WriteFile(handle, Memory.Registers[info.ArgumentRegisters[0]]);
 			Memory.Registers[invoke.Register] = new ValueInstance(executable.noneType);
 			return true;
 		case "Delete":
-			File.Delete(path);
+			NativeFileRegistry.Delete(handle);
+			Memory.Registers[invoke.Register] = new ValueInstance(executable.noneType);
+			return true;
+		case "Close":
+			NativeFileRegistry.Close(handle);
 			Memory.Registers[invoke.Register] = new ValueInstance(executable.noneType);
 			return true;
 		case "Exists":
 			Memory.Registers[invoke.Register] =
-				new ValueInstance(executable.booleanType, File.Exists(path));
+				new ValueInstance(executable.booleanType, NativeFileRegistry.Exists(handle));
+			return true;
+		case "Length":
+			Memory.Registers[invoke.Register] =
+				new ValueInstance(executable.numberType, NativeFileRegistry.Length(handle));
 			return true;
 		default:
 			return false;
 		}
 	}
 
-	private string GetFilePath(ValueInstance instance)
+	private long GetFileHandle(ValueInstance instance)
 	{
-		if (!FileValue.TryGetPath(instance, out var path))
-			throw Fail("File instance has no path Text member");
-		return path;
+		if (!FileValue.TryGetHandle(instance, executable.basePackage.GetType(Type.File), out var handle))
+			throw Fail("File instance has no native handle");
+		return handle;
 	}
 
-	private void WriteFile(string path, ValueInstance value)
+	private void WriteFile(long handle, ValueInstance value)
 	{
 		if (value.IsText)
-			File.WriteAllText(path, value.Text);
+			NativeFileRegistry.WriteText(handle, value.Text);
 		else if (value.IsList)
-			File.WriteAllBytes(path, FileValue.GetBytes(value));
+			NativeFileRegistry.WriteBytes(handle, FileValue.GetBytes(value));
 		else
 			throw Fail("File.Write needs Text or Bytes");
 	}
@@ -245,6 +266,16 @@ public sealed partial class VirtualMachine
 
 	private bool ExecuteFromInvoke(Invoke invoke, Type returnType)
 	{
+		if (returnType.Name == Type.File)
+		{
+			var pathValue = Memory.Registers[invoke.MethodInfo.ArgumentRegisters[0]];
+			if (!pathValue.IsText)
+				return false;
+			var fileInstance = NativeFileRegistry.Open(returnType, pathValue.Text);
+			Memory.Frame.TrackDisposable(fileInstance);
+			Memory.Registers[invoke.Register] = fileInstance;
+			return true;
+		}
 		if (returnType.IsDictionary)
 		{
 			Memory.Registers[invoke.Register] = new ValueInstance(returnType,
@@ -564,6 +595,7 @@ public sealed partial class VirtualMachine
 
 	private void CleanupChildScope(ChildScopeState state)
 	{
+		DisposeTrackedValues(state.Frame, Returns, state.SavedFrame);
 		state.Frame.Reset(null);
 		if (framePoolDepth < MaxCallDepth)
 			framePool[framePoolDepth++] = state.Frame;
@@ -632,7 +664,7 @@ public sealed partial class VirtualMachine
 			if (IsFileInstance(instance))
 			{
 				result = new ValueInstance(executable.numberType,
-					new FileInfo(GetFilePath(instance)).Length);
+					NativeFileRegistry.Length(GetFileHandle(instance)));
 				return true;
 			}
 		}
@@ -642,6 +674,21 @@ public sealed partial class VirtualMachine
 
 	private bool IsFileInstance(ValueInstance instance) =>
 		instance.GetType().IsSameOrCanBeUsedAs(executable.basePackage.GetType(Type.File));
+
+	private void DisposeTrackedValues(CallFrame frame, ValueInstance? returnValue, CallFrame? parentFrame)
+	{
+		foreach (var value in frame.DisposableValues.ToArray())
+			if (returnValue.HasValue && value.Equals(returnValue.Value))
+			{
+				if (parentFrame != null)
+				{
+					parentFrame.TrackDisposable(value);
+					frame.RemoveDisposable(value);
+				}
+			}
+			else if (FileValue.TryGetHandle(value, executable.basePackage.GetType(Type.File), out var handle))
+				NativeFileRegistry.Close(handle);
+	}
 
 	internal static ValueInstance ConvertToText(ValueInstance rawValue)
 	{

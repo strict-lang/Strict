@@ -20,6 +20,7 @@ public class Interpreter
 		trueInstance = new ValueInstance(booleanType, true);
 		falseInstance = new ValueInstance(booleanType, false);
 		numberType = initialPackage.GetType(Type.Number);
+		fileType = initialPackage.GetType(Type.File);
 		characterType = initialPackage.GetType(Type.Character);
 		textType = initialPackage.GetType(Type.Text);
 		rangeType = initialPackage.GetType(Type.Range);
@@ -39,6 +40,7 @@ public class Interpreter
 	internal readonly ValueInstance trueInstance;
 	internal readonly ValueInstance falseInstance;
 	internal readonly Type numberType;
+	internal readonly Type fileType;
 	internal readonly Type characterType;
 	internal readonly Type textType;
 	internal readonly Type rangeType;
@@ -63,6 +65,12 @@ public class Interpreter
 	}
 
 	internal void ReturnContext(ExecutionContext ctx) => contextPool.Push(ctx);
+
+	internal void ResetIteration(ExecutionContext ctx)
+	{
+		DisposeTrackedValues(ctx);
+		ctx.ResetIteration();
+	}
 
 	public ValueInstance Execute(Method method)
 	{
@@ -121,6 +129,8 @@ public class Interpreter
 		Statistics.MethodCount++;
     args = NormalizeArguments(method, args, parentContext);
 		ValidateInstanceAndArguments(method, instance, args, parentContext);
+		if (TryExecuteNativeFileConstructor(method, instance, args, parentContext, out var fileConstructor))
+			return fileConstructor;
 		if (method is { Name: Method.From, Type.IsGeneric: false })
 			return instance.Equals(noneInstance)
 				? GetFromConstructorValue(method, args)
@@ -168,57 +178,73 @@ public class Interpreter
 		}
 		finally
 		{
+			DisposeTrackedValues(context);
 			ReturnContext(context);
 		}
+	}
+
+	private bool TryExecuteNativeFileConstructor(Method method, ValueInstance instance,
+		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, out ValueInstance result)
+	{
+		result = noneInstance;
+		if (method.Type != fileType || method.Name != Method.From ||
+			!instance.Equals(noneInstance) || args.Count != 1 || !args[0].IsText)
+			return false;
+		result = NativeFileRegistry.Open(method.Type, args[0].Text);
+		parentContext?.TrackDisposable(result);
+		return true;
 	}
 
 	private bool TryExecuteNativeFileMethod(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, out ValueInstance result)
 	{
 		result = noneInstance;
-		if (method.Type.Name != Type.File)
+		if (method.Type != fileType)
 			return false;
-		var path = GetFilePath(instance, method);
+		var handle = GetFileHandle(instance, method);
 		switch (method.Name)
 		{
 		case "ReadText":
-			result = new ValueInstance(File.ReadAllText(path));
+			result = new ValueInstance(NativeFileRegistry.ReadText(handle));
 			return true;
 		case "ReadBytes":
-			result = CreateBytesValue(method, File.ReadAllBytes(path));
+			result = CreateBytesValue(method, NativeFileRegistry.ReadBytes(handle));
 			return true;
 		case "Write":
-			WriteFile(path, args, method);
+			WriteFile(handle, args, method);
 			return true;
 		case "Delete":
-			File.Delete(path);
+			NativeFileRegistry.Delete(handle);
+			return true;
+		case "Close":
+			NativeFileRegistry.Close(handle);
 			return true;
 		case "Exists":
-			result = ToBoolean(File.Exists(path));
+			result = ToBoolean(NativeFileRegistry.Exists(handle));
 			return true;
 		case "Length":
-			result = new ValueInstance(numberType, new FileInfo(path).Length);
+			result = new ValueInstance(numberType, NativeFileRegistry.Length(handle));
 			return true;
 		default:
 			return false;
 		}
 	}
 
-	private static string GetFilePath(ValueInstance instance, Method method)
+	private long GetFileHandle(ValueInstance instance, Method method)
 	{
-		if (!FileValue.TryGetPath(instance, out var path))
-			throw new InterpreterExecutionFailed(method, "File instance has no path Text member");
-		return path;
+		if (!FileValue.TryGetHandle(instance, fileType, out var handle))
+			throw new InterpreterExecutionFailed(method, "File instance has no native handle");
+		return handle;
 	}
 
-	private static void WriteFile(string path, IReadOnlyList<ValueInstance> args, Method method)
+	private static void WriteFile(long handle, IReadOnlyList<ValueInstance> args, Method method)
 	{
 		if (args.Count == 0)
 			throw new MissingArgument(method, "text", args);
 		if (args[0].IsText)
-			File.WriteAllText(path, args[0].Text);
+			NativeFileRegistry.WriteText(handle, args[0].Text);
 		else if (args[0].IsList)
-			File.WriteAllBytes(path, FileValue.GetBytes(args[0]));
+			NativeFileRegistry.WriteBytes(handle, FileValue.GetBytes(args[0]));
 		else
 			throw new InvalidTypeForArgument(method.Type, args, 0);
 	}
@@ -248,8 +274,30 @@ public class Interpreter
 			method.Type.Name == Type.Number &&
 			(method.Name == "digits" || method.Name == BinaryOperator.To && method.ReturnType.IsText) ||
 			method.Type.IsText && method.Name == "Split" ||
-			method.Type.Name == Type.File ||
 			method.Type.Name == "StrictFileCompiler");
+
+	private void DisposeTrackedValues(ExecutionContext ctx)
+	{
+		var returnValue = ctx.ExitMethodAndReturnValue;
+		foreach (var value in ctx.DisposableValues.ToArray())
+			if (returnValue.HasValue && value.Equals(returnValue.Value))
+			{
+				if (ctx.Parent != null)
+				{
+					ctx.Parent.TrackDisposable(value);
+					ctx.RemoveDisposable(value);
+				}
+			}
+			else
+				DisposeTrackedValue(value);
+	}
+
+	private void DisposeTrackedValue(ValueInstance value)
+	{
+		if (!FileValue.TryGetHandle(value, fileType, out var handle))
+			return;
+		NativeFileRegistry.Close(handle);
+	}
 
 	private ExecutionContext CreateExecutionContext(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)

@@ -21,11 +21,14 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		Memory.Frame = new CallFrame(initialVariables);
 		InitializeEntryPointMembers(method);
 		currentMethodContext = ResolveMethodContext(method);
-		return RunInstructions(method.instructions
+		RunInstructions(method.instructions
 #if DEBUG
 			, method.Name
 #endif
 		);
+		DisposeTrackedValues(Memory.Frame, Returns, null);
+		Memory.Frame.Reset(null);
+		return this;
 	}
 
 	private bool conditionFlag;

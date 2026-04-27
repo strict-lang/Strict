@@ -43,6 +43,18 @@ Split(separator Text) Texts
 	let restStart = separatorIndex + separator.characters.Length
 	let restLength = Length - restStart
 	(Substring(0, separatorIndex)) + Substring(restStart, restLength).Split(separator)
+Lines Texts
+	"a\nb".Lines is ("a", "b")
+	constant unixText = Replace("\r", "")
+	if unixText is ""
+		return Texts
+	constant separatorIndex = unixText.IndexOf("\n")
+	if separatorIndex is -1
+		return (unixText)
+	constant rest = unixText.Substring(separatorIndex + 1, unixText.Length - separatorIndex - 1)
+	if rest is ""
+		return (unixText.Substring(0, separatorIndex))
+	(unixText.Substring(0, separatorIndex)) + rest.Lines
 Trim Text
 	" hi ".Trim is "hi"
 	"noSpaces".Trim is "noSpaces"

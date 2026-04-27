@@ -1,15 +1,9 @@
-has path Text
+from(path Text)
 Length Number
-	0
 ReadText Text
-	""
 ReadBytes Bytes
-	Bytes
 Write(text Text)
-	text is text
 Write(bytes Bytes)
-	bytes is bytes
 Delete
-	path is path
+Close
 Exists Boolean
-	false

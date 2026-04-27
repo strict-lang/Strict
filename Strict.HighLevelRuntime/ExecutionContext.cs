@@ -21,6 +21,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 		variables ??= new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
 	public ValueInstance? ExitMethodAndReturnValue { get; internal set; }
 	public int CurrentExpressionLineNumber { get; internal set; } = -1;
+	private List<ValueInstance>? disposableValues;
 
 	public ValueInstance Get(string name, Statistics statistics) =>
 		Find(name, statistics) ?? throw new VariableNotFound(name, Type, This);
@@ -59,6 +60,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 	public void ResetIteration()
 	{
 		variables?.Clear();
+		disposableValues?.Clear();
 		ExitMethodAndReturnValue = null;
 		CurrentExpressionLineNumber = -1;
 	}
@@ -74,9 +76,17 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 		This = instance;
 		Parent = newParent;
 		variables?.Clear();
+		disposableValues?.Clear();
 		ExitMethodAndReturnValue = null;
 		CurrentExpressionLineNumber = -1;
 	}
+
+	internal void TrackDisposable(ValueInstance value) =>
+		(disposableValues ??= []).Add(value);
+
+	internal IReadOnlyList<ValueInstance> DisposableValues => disposableValues ?? [];
+
+	internal void RemoveDisposable(ValueInstance value) => disposableValues?.Remove(value);
 
 	public ValueInstance Set(string name, ValueInstance value)
 	{

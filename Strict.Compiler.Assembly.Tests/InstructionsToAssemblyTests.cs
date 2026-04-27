@@ -606,11 +606,17 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var instructions = new List<Instruction>
 		{
+			new Invoke(Register.R0, new InvokeMethodInfo("Strict/File", Method.From,
+				["path"], Type.File, [Register.R1], null)),
 			new Invoke(Register.R0, new InvokeMethodInfo("Strict/File", "Write",
-				["text"], Type.None, [Register.R1], Register.R2))
+				["text"], Type.None, [Register.R1], Register.R2)),
+			new Invoke(Register.R0, new InvokeMethodInfo("Strict/File", "Close",
+				[], Type.None, [], Register.R2))
 		};
 		var assembly = Compile(instructions, Platform.Linux);
+		Assert.That(assembly, Does.Contain("strict_file_open"));
 		Assert.That(assembly, Does.Contain("strict_file_write_text"));
+		Assert.That(assembly, Does.Contain("strict_file_close"));
 	}
 
 	[Test]

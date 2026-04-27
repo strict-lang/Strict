@@ -4,16 +4,15 @@ namespace Strict.Expressions;
 
 public static class FileValue
 {
-	public static bool TryGetPath(ValueInstance instance, out string path)
+	public static bool TryGetHandle(ValueInstance instance, Type fileType, out long handle)
 	{
-		var typeInstance = instance.TryGetValueTypeInstance();
-		if (typeInstance != null && typeInstance.TryGetValue("path", out var pathValue) &&
-			pathValue.IsText)
+		if (instance.IsSameOrCanBeUsedAs(fileType) && !instance.IsText && !instance.IsList &&
+			!instance.IsDictionary && instance.TryGetValueTypeInstance() == null)
 		{
-			path = pathValue.Text;
+			handle = (long)instance.Number;
 			return true;
 		}
-		path = "";
+		handle = 0;
 		return false;
 	}
 

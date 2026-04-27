@@ -3,8 +3,6 @@ Run
 	placeholderNumber is placeholderNumber
 Sample Text
 	"has logger Logger\nRun\nAdd(other Number) Number\n\treturn count"
-Lines(source Text) Texts
-	source.Split("\n")
 TypeName(path Text) Text
 	TypeName("Examples/Parsing/ParseMethodHeaders.strict") is "ParseMethodHeaders"
 	TypeName("Text.strict") is "Text"
@@ -24,7 +22,7 @@ IsBodyLine(line Text) Boolean
 	line.StartsWith("\t")
 MemberNames(source Text) Texts
 	MemberNames(Sample) is ("logger")
-	for Lines(source)
+	for source.Lines
 		index is index
 		if IsMember(value)
 			MemberName(value)
@@ -46,7 +44,7 @@ KeywordLength(line Text) Number
 	4
 MethodHeaders(source Text) Texts
 	MethodHeaders(Sample) is ("Run", "Add(other Number) Number")
-	for Lines(source)
+	for source.Lines
 		index is index
 		if (not IsMember(value)) and (not IsBodyLine(value)) and value is not ""
 			value

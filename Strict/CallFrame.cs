@@ -33,6 +33,7 @@ internal sealed class CallFrame
 
 	private CallFrame? parent;
 	private Dictionary<string, ValueInstance>? variables;
+	private List<ValueInstance>? disposableValues;
 	private ValueInstance[] slots = [];
 	private bool[] memberSlots = [];
 	private int highestAssignedSymbolId = -1;
@@ -241,6 +242,7 @@ internal sealed class CallFrame
 			highestAssignedSymbolId = -1;
 		}
 		variables?.Clear();
+		disposableValues?.Clear();
 	}
 
 	/// <summary>
@@ -257,6 +259,13 @@ internal sealed class CallFrame
 		Clear();
 		parent = newParent;
 	}
+
+	internal void TrackDisposable(ValueInstance value) =>
+		(disposableValues ??= []).Add(value);
+
+	internal IReadOnlyList<ValueInstance> DisposableValues => disposableValues ?? [];
+
+	internal void RemoveDisposable(ValueInstance value) => disposableValues?.Remove(value);
 
 	private void EnsureCapacity(int symbolId)
 	{
