@@ -172,6 +172,56 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public async Task FileWriteTextAndReadTextRoundTrip()
+	{
+		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".txt");
+		try
+		{
+			var fileType = strict.GetType(Type.File);
+			var fileInstance = new ValueInstance(fileType, [new ValueInstance(tempFilePath)]);
+			var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
+			interpreterForStrict.Execute(fileType.Methods.Single(method => method.Name == "Write"),
+				fileInstance, [new ValueInstance("Strict text")]);
+			var result = interpreterForStrict.Execute(
+				fileType.Methods.Single(method => method.Name == "ReadText"), fileInstance, []);
+			Assert.That(result.Text, Is.EqualTo("Strict text"));
+		}
+		finally
+		{
+			if (File.Exists(tempFilePath))
+				File.Delete(tempFilePath);
+		}
+	}
+
+	[Test]
+	public async Task FileWriteBytesAndReadBytesRoundTrip()
+	{
+		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".bin");
+		try
+		{
+			var fileType = strict.GetType(Type.File);
+			var byteType = strict.GetType(Type.Byte);
+			var bytesType = strict.GetListImplementationType(byteType);
+			var fileInstance = new ValueInstance(fileType, [new ValueInstance(tempFilePath)]);
+			var bytes = new ValueInstance(bytesType,
+				[new ValueInstance(byteType, 3), new ValueInstance(byteType, 5)]);
+			var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
+			interpreterForStrict.Execute(fileType.Methods.Single(method =>
+					method.Name == "Write" && method.Parameters[0].Type.IsList), fileInstance, [bytes]);
+			var result = interpreterForStrict.Execute(
+				fileType.Methods.Single(method => method.Name == "ReadBytes"), fileInstance, []);
+			Assert.That(result.List.Items.Select(item => item.Number), Is.EqualTo(new[] { 3.0, 5.0 }));
+		}
+		finally
+		{
+			if (File.Exists(tempFilePath))
+				File.Delete(tempFilePath);
+		}
+	}
+
+	[Test]
 	public async Task TextTrimWorksInsideCharacterLoop()
 	{
 		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
