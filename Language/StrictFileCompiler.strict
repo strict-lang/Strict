@@ -55,7 +55,9 @@ MemberType(line Text) Text
 	let memberName = MemberName(line)
 	let typeStart = line.IndexOf(memberName) + memberName.Length + 1
 	if typeStart >= line.Length
-		return memberName.Upper
+		if memberName is "logger"
+			return "Logger"
+		return memberName
 	line.Substring(typeStart, line.Length - typeStart)
 MethodHeaders(lines Texts) Texts
 	MethodHeaders(SampleLines) is ("Run", "Add(other Number) Number", "IsReady Boolean")
@@ -79,13 +81,13 @@ ParameterText(header Text) Text
 		return ""
 	if header.characters(openIndex) is not "("
 		return ""
-	let closeIndex = CloseBracketIndex(header)
+	let closeIndex = CloseParenIndex(header)
 	header.Substring(openIndex + 1, closeIndex - openIndex - 1)
 ReturnTypeName(header Text) Text
 	ReturnTypeName("Run") is ""
 	ReturnTypeName("Add(other Number) Number") is "Number"
 	ReturnTypeName("IsReady Boolean") is "Boolean"
-	let closeIndex = CloseBracketIndex(header)
+	let closeIndex = CloseParenIndex(header)
 	if closeIndex > 0
 		return header.Substring(closeIndex + 2, header.Length - closeIndex - 2)
 	let spaceIndex = header.IndexOf(" ")
@@ -104,8 +106,8 @@ BodyLineCount(methodName Text, lines Texts) Number
 		if MethodName(value) is methodName
 			foundMethod = true
 	count
-CloseBracketIndex(text Text) Number
-	CloseBracketIndex("Add(other)") is 9
+CloseParenIndex(text Text) Number
+	CloseParenIndex("Add(other)") is 9
 	for text.characters
 		if value is ")"
 			return index
