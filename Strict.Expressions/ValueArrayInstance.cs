@@ -60,7 +60,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	{
 		var memberCount = type.Members.Count;
 		var width = memberCount > 0
-			? Math.Min(numbers.Length, memberCount)
+			? memberCount
 			: numbers.Length;
 		return new ValueArrayInstance(type, numbers, type, width, 0);
 	}

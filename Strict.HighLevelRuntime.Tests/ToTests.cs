@@ -35,7 +35,7 @@ public sealed class ToTests
 					new ValueInstance(package.GetType(Type.Number), 0),
 					new ValueInstance(package.GetType(Type.Number), 0)
 				])
-			]), []).Text, Is.EqualTo("(0, 0, 0)"));
+			]), []).Text, Is.EqualTo("(0, 0, 0, 255)"));
 	}
 
 	[Test]

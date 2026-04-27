@@ -319,9 +319,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		*/
 		if (ValueArrayInstance.IsAllNumericType(returnType))
 		{
-			var flatNumbers = new float[values.Length];
+			var flatNumbers = CreateFlatNumbers(returnType, values);
 			for (var flatIndex = 0; flatIndex < values.Length; flatIndex++)
-				flatNumbers[flatIndex] = (float)values[flatIndex].Number;
+				if (values[flatIndex].HasValue)
+					flatNumbers[flatIndex] = (float)values[flatIndex].GetArithmeticNumber();
 			value = ValueArrayInstance.CreateForTypeBacking(returnType, flatNumbers);
 			number = FlatNumericId;
 #if DEBUG
@@ -337,6 +338,25 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		if (PerformanceLog.IsEnabled)
 			LogCreated("ctor(Type=" + returnType + ", values=" + DescribeValues(values) + ")");
 #endif
+	}
+
+	private static float[] CreateFlatNumbers(Type returnType, IReadOnlyList<ValueInstance> values)
+	{
+		var members = returnType.Members;
+		var flatNumbers = new float[Math.Max(values.Count, members.Count)];
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+		{
+			if (memberIndex < values.Count && values[memberIndex].HasValue)
+				continue;
+			if (members[memberIndex].InitialValue is Value initialValue)
+				flatNumbers[memberIndex] = (float)initialValue.Data.Number;
+			else if (members[memberIndex].InitialValue is MethodCall { Method.Name: Method.From } methodCall &&
+				methodCall.Arguments.Count > 0 && methodCall.Arguments[0] is Value methodCallValue)
+				flatNumbers[memberIndex] = (float)methodCallValue.Data.Number;
+			else if (members[memberIndex].InitialValue != null)
+				flatNumbers[memberIndex] = 1;
+		}
+		return flatNumbers;
 	}
 
 	/*TODO, this is not the way this should be called!
@@ -912,7 +932,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 					flatArray.FlatWidth != otherFlatArray.FlatWidth)
 					return false;
 				for (var flatIndex = 0; flatIndex < flatArray.FlatWidth; flatIndex++)
-					if (flatArray.GetFlat(flatIndex) != otherFlatArray.GetFlat(flatIndex))
+					if (!AreSameFlatNumbers(flatArray.ReturnType, flatArray.GetFlat(flatIndex),
+						otherFlatArray.GetFlat(flatIndex)))
 						return false;
 				return true;
 			}
@@ -949,6 +970,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			? ((ValueDictionaryInstance)value).Equals((ValueDictionaryInstance)other.value)
 			: ((Type)other.value).IsSameOrCanBeUsedAs((Type)value);
 	}
+
+	private static bool AreSameFlatNumbers(Type returnType, float number, float otherNumber) =>
+		number == otherNumber || returnType.Name == "ColorValue" &&
+			Math.Abs(number - otherNumber) <= 1.0 / 255.0;
 
 	public static int ComplexEqualsCalls;
 	public override int GetHashCode() => HashCode.Combine(number, value);
