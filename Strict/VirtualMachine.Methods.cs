@@ -130,10 +130,9 @@ public sealed partial class VirtualMachine
 
 	private string GetFilePath(ValueInstance instance)
 	{
-		var typeInstance = instance.TryGetValueTypeInstance();
-		if (typeInstance == null || !typeInstance.TryGetValue("path", out var path) || !path.IsText)
+		if (!FileValue.TryGetPath(instance, out var path))
 			throw Fail("File instance has no path Text member");
-		return path.Text;
+		return path;
 	}
 
 	private void WriteFile(string path, ValueInstance value)
@@ -141,7 +140,7 @@ public sealed partial class VirtualMachine
 		if (value.IsText)
 			File.WriteAllText(path, value.Text);
 		else if (value.IsList)
-			File.WriteAllBytes(path, GetBytes(value));
+			File.WriteAllBytes(path, FileValue.GetBytes(value));
 		else
 			throw Fail("File.Write needs Text or Bytes");
 	}
@@ -150,18 +149,7 @@ public sealed partial class VirtualMachine
 	{
 		var byteType = executable.basePackage.GetType(Type.Byte);
 		var bytesType = executable.listType.GetGenericImplementation(byteType);
-		var values = new ValueInstance[bytes.Length];
-		for (var index = 0; index < bytes.Length; index++)
-			values[index] = new ValueInstance(byteType, bytes[index]);
-		return new ValueInstance(bytesType, values);
-	}
-
-	private static byte[] GetBytes(ValueInstance bytes)
-	{
-		var result = new byte[bytes.List.Items.Count];
-		for (var index = 0; index < result.Length; index++)
-			result[index] = (byte)Math.Clamp(bytes.List.Items[index].Number, 0, 255);
-		return result;
+		return FileValue.CreateBytes(bytesType, byteType, bytes);
 	}
 
 	private static int GetTraitDataMethodIndex(Type traitType, string methodName)

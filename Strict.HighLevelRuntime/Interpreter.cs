@@ -206,10 +206,9 @@ public class Interpreter
 
 	private static string GetFilePath(ValueInstance instance, Method method)
 	{
-		var typeInstance = instance.TryGetValueTypeInstance();
-		if (typeInstance == null || !typeInstance.TryGetValue("path", out var path) || !path.IsText)
+		if (!FileValue.TryGetPath(instance, out var path))
 			throw new InterpreterExecutionFailed(method, "File instance has no path Text member");
-		return path.Text;
+		return path;
 	}
 
 	private static void WriteFile(string path, IReadOnlyList<ValueInstance> args, Method method)
@@ -219,7 +218,7 @@ public class Interpreter
 		if (args[0].IsText)
 			File.WriteAllText(path, args[0].Text);
 		else if (args[0].IsList)
-			File.WriteAllBytes(path, GetBytes(args[0]));
+			File.WriteAllBytes(path, FileValue.GetBytes(args[0]));
 		else
 			throw new InvalidTypeForArgument(method.Type, args, 0);
 	}
@@ -228,18 +227,7 @@ public class Interpreter
 	{
 		var byteType = method.GetType(Type.Byte);
 		var bytesType = method.GetListImplementationType(byteType);
-		var values = new ValueInstance[bytes.Length];
-		for (var index = 0; index < bytes.Length; index++)
-			values[index] = new ValueInstance(byteType, bytes[index]);
-		return new ValueInstance(bytesType, values);
-	}
-
-	private static byte[] GetBytes(ValueInstance bytes)
-	{
-		var result = new byte[bytes.List.Items.Count];
-		for (var index = 0; index < result.Length; index++)
-			result[index] = (byte)Math.Clamp(bytes.List.Items[index].Number, 0, 255);
-		return result;
+		return FileValue.CreateBytes(bytesType, byteType, bytes);
 	}
 
 	private static bool ShouldIgnoreGenericListTestParseFailure(Method method, Exception inner) =>
