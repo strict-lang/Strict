@@ -1,3 +1,5 @@
+# Before changing any `.strict` file, build `Strict` and use the Strict executable to parse, compile, run tests, and execute the changed Strict code.
+
 # Strict Self-Hosting Conversion Plan
 
 **Top priority.** The goal is to progressively convert all C# implementation of Strict into `.strict`

@@ -1,6 +1,15 @@
-from(path)
+has path Text
 Length Number
-Read Text
-Write(text)
+	0
+ReadText Text
+	""
+ReadBytes Bytes
+	Bytes
+Write(text Text)
+	text is text
+Write(bytes Bytes)
+	bytes is bytes
 Delete
+	path is path
 Exists Boolean
+	false

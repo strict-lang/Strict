@@ -270,11 +270,21 @@ public sealed class TestPackage : Package
 			"Log(text)",
 			"\ttextWriter.Write(text)"));
 		var file = new Type(this, new TypeLines(Type.File,
-			"from(text)",
-			"Read Text",
-			"Write(text)",
+			"has path Text",
+			"ReadText Text",
+			"\t\"\"",
+			"ReadBytes Bytes",
+			"\tBytes",
+			"Write(text Text)",
+			"\ttext is text",
+			"Write(bytes Bytes)",
+			"\tbytes is bytes",
 			"Delete",
-			"Length Number"));
+			"\tpath is path",
+			"Exists Boolean",
+			"\tfalse",
+			"Length Number",
+			"\t0"));
 		var textWriter = new Type(this, new TypeLines(Type.TextWriter, "Write(text)"));
 		var system = new Type(this, new TypeLines(Type.System,
 			"has textWriter",

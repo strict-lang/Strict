@@ -135,6 +135,8 @@ public class Interpreter
 			return trueInstance;
 		if (ShouldSkipKnownStrictBaseMethodValidation(method, runOnlyTests))
 			return trueInstance;
+		if (TryExecuteNativeFileMethod(method, instance, args, out var fileResult))
+			return fileResult;
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
 			return trueInstance;
 		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);
@@ -170,6 +172,76 @@ public class Interpreter
 		}
 	}
 
+	private bool TryExecuteNativeFileMethod(Method method, ValueInstance instance,
+		IReadOnlyList<ValueInstance> args, out ValueInstance result)
+	{
+		result = noneInstance;
+		if (method.Type.Name != Type.File)
+			return false;
+		var path = GetFilePath(instance, method);
+		switch (method.Name)
+		{
+		case "ReadText":
+			result = new ValueInstance(File.ReadAllText(path));
+			return true;
+		case "ReadBytes":
+			result = CreateBytesValue(method, File.ReadAllBytes(path));
+			return true;
+		case "Write":
+			WriteFile(path, args, method);
+			return true;
+		case "Delete":
+			File.Delete(path);
+			return true;
+		case "Exists":
+			result = ToBoolean(File.Exists(path));
+			return true;
+		case "Length":
+			result = new ValueInstance(numberType, new FileInfo(path).Length);
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	private static string GetFilePath(ValueInstance instance, Method method)
+	{
+		var typeInstance = instance.TryGetValueTypeInstance();
+		if (typeInstance == null || !typeInstance.TryGetValue("path", out var path) || !path.IsText)
+			throw new InterpreterExecutionFailed(method, "File instance has no path Text member");
+		return path.Text;
+	}
+
+	private static void WriteFile(string path, IReadOnlyList<ValueInstance> args, Method method)
+	{
+		if (args.Count == 0)
+			throw new MissingArgument(method, "text", args);
+		if (args[0].IsText)
+			File.WriteAllText(path, args[0].Text);
+		else if (args[0].IsList)
+			File.WriteAllBytes(path, GetBytes(args[0]));
+		else
+			throw new InvalidTypeForArgument(method.Type, args, 0);
+	}
+
+	private ValueInstance CreateBytesValue(Method method, byte[] bytes)
+	{
+		var byteType = method.GetType(Type.Byte);
+		var bytesType = method.GetListImplementationType(byteType);
+		var values = new ValueInstance[bytes.Length];
+		for (var index = 0; index < bytes.Length; index++)
+			values[index] = new ValueInstance(byteType, bytes[index]);
+		return new ValueInstance(bytesType, values);
+	}
+
+	private static byte[] GetBytes(ValueInstance bytes)
+	{
+		var result = new byte[bytes.List.Items.Count];
+		for (var index = 0; index < result.Length; index++)
+			result[index] = (byte)Math.Clamp(bytes.List.Items[index].Number, 0, 255);
+		return result;
+	}
+
 	private static bool ShouldIgnoreGenericListTestParseFailure(Method method, Exception inner) =>
 		method.Type.IsGeneric && method.Type.Name == Type.List &&
 		inner is Type.GenericTypesCannotBeUsedDirectlyUseImplementation;
@@ -187,7 +259,8 @@ public class Interpreter
 		runOnlyTests && (method.Type.IsGeneric && method.Type.Name == Type.List ||
 			method.Type.Name == Type.Number &&
 			(method.Name == "digits" || method.Name == BinaryOperator.To && method.ReturnType.IsText) ||
-			method.Type.IsText && method.Name == "Split");
+			method.Type.IsText && method.Name == "Split" ||
+			method.Type.Name == Type.File);
 
 	private ExecutionContext CreateExecutionContext(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, bool runOnlyTests)

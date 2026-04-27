@@ -181,8 +181,9 @@ public sealed class InterpreterTests
 			var fileType = strict.GetType(Type.File);
 			var fileInstance = new ValueInstance(fileType, [new ValueInstance(tempFilePath)]);
 			var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
-			interpreterForStrict.Execute(fileType.Methods.Single(method => method.Name == "Write"),
-				fileInstance, [new ValueInstance("Strict text")]);
+			interpreterForStrict.Execute(fileType.Methods.Single(method =>
+					method.Name == "Write" && method.Parameters[0].Type.IsText), fileInstance,
+				[new ValueInstance("Strict text")]);
 			var result = interpreterForStrict.Execute(
 				fileType.Methods.Single(method => method.Name == "ReadText"), fileInstance, []);
 			Assert.That(result.Text, Is.EqualTo("Strict text"));

@@ -69,6 +69,8 @@ public sealed partial class VirtualMachine
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.basePackage)),
 			BinaryOperator.To => info.InstanceRegister.HasValue && TryHandleToConversion(invoke),
 			"Length" or "Count" => info.InstanceRegister.HasValue && TryHandleNativeLength(invoke),
+			"ReadText" or "ReadBytes" or "Write" or "Delete" or "Exists" =>
+				info.InstanceRegister.HasValue && TryHandleNativeFileMethod(invoke),
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
 			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
@@ -92,6 +94,74 @@ public sealed partial class VirtualMachine
 			return false;
 		Memory.Registers[invoke.Register] = typeInstance.Values[methodIndex];
 		return true;
+	}
+
+	private bool TryHandleNativeFileMethod(Invoke invoke)
+	{
+		var info = invoke.MethodInfo;
+		var instance = Memory.Registers[info.InstanceRegister!.Value];
+		if (instance.GetType().Name != Type.File)
+			return false;
+		var path = GetFilePath(instance);
+		switch (info.MethodName)
+		{
+		case "ReadText":
+			Memory.Registers[invoke.Register] = new ValueInstance(File.ReadAllText(path));
+			return true;
+		case "ReadBytes":
+			Memory.Registers[invoke.Register] = CreateBytesValue(File.ReadAllBytes(path));
+			return true;
+		case "Write":
+			WriteFile(path, Memory.Registers[info.ArgumentRegisters[0]]);
+			Memory.Registers[invoke.Register] = new ValueInstance(executable.noneType);
+			return true;
+		case "Delete":
+			File.Delete(path);
+			Memory.Registers[invoke.Register] = new ValueInstance(executable.noneType);
+			return true;
+		case "Exists":
+			Memory.Registers[invoke.Register] =
+				new ValueInstance(executable.booleanType, File.Exists(path));
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	private string GetFilePath(ValueInstance instance)
+	{
+		var typeInstance = instance.TryGetValueTypeInstance();
+		if (typeInstance == null || !typeInstance.TryGetValue("path", out var path) || !path.IsText)
+			throw Fail("File instance has no path Text member");
+		return path.Text;
+	}
+
+	private void WriteFile(string path, ValueInstance value)
+	{
+		if (value.IsText)
+			File.WriteAllText(path, value.Text);
+		else if (value.IsList)
+			File.WriteAllBytes(path, GetBytes(value));
+		else
+			throw Fail("File.Write needs Text or Bytes");
+	}
+
+	private ValueInstance CreateBytesValue(byte[] bytes)
+	{
+		var byteType = executable.basePackage.GetType(Type.Byte);
+		var bytesType = executable.listType.GetGenericImplementation(byteType);
+		var values = new ValueInstance[bytes.Length];
+		for (var index = 0; index < bytes.Length; index++)
+			values[index] = new ValueInstance(byteType, bytes[index]);
+		return new ValueInstance(bytesType, values);
+	}
+
+	private static byte[] GetBytes(ValueInstance bytes)
+	{
+		var result = new byte[bytes.List.Items.Count];
+		for (var index = 0; index < result.Length; index++)
+			result[index] = (byte)Math.Clamp(bytes.List.Items[index].Number, 0, 255);
+		return result;
 	}
 
 	private static int GetTraitDataMethodIndex(Type traitType, string methodName)
@@ -569,6 +639,12 @@ public sealed partial class VirtualMachine
 			if (instance.IsList)
 			{
 				result = new ValueInstance(executable.numberType, instance.List.Count);
+				return true;
+			}
+			if (instance.GetType().Name == Type.File)
+			{
+				result = new ValueInstance(executable.numberType,
+					new FileInfo(GetFilePath(instance)).Length);
 				return true;
 			}
 		}
