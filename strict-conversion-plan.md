@@ -1,6 +1,7 @@
-# Before changing any `.strict` file, build `Strict` and use the Strict executable to parse, compile, run tests, and execute the changed Strict code.
-
 # Strict Self-Hosting Conversion Plan
+
+Before changing any `.strict` file, build `Strict` and use the Strict executable to parse, compile,
+run tests, and execute the changed Strict code.
 
 **Top priority.** The goal is to progressively convert all C# implementation of Strict into `.strict`
 files, using the current C# bootstrap (`Strict.exe` on .NET 10) to compile and run the new Strict

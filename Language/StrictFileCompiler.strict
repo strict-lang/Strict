@@ -1,6 +1,6 @@
-has dummy Number
+has placeholderNumber Number
 Run
-	dummy is dummy
+	placeholderNumber is placeholderNumber
 Sample Text
 	"has logger Logger\nRun\nAdd(other Number) Number\n\treturn count"
 Lines(source Text) Texts
@@ -10,7 +10,8 @@ TypeName(path Text) Text
 	TypeName("Text.strict") is "Text"
 	TypeName("Text") is "Text"
 	let slashIndex = path.LastIndexOf("/")
-	let fileName = slashIndex is -1 then path else path.Substring(slashIndex + 1, path.Length - slashIndex - 1)
+	let fileNameLength = path.Length - slashIndex - 1
+	let fileName = slashIndex is -1 then path else path.Substring(slashIndex + 1, fileNameLength)
 	let extensionIndex = fileName.LastIndexOf(".")
 	extensionIndex is -1 then fileName else fileName.Substring(0, extensionIndex)
 IsMember(line Text) Boolean

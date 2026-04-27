@@ -100,7 +100,7 @@ public sealed partial class VirtualMachine
 	{
 		var info = invoke.MethodInfo;
 		var instance = Memory.Registers[info.InstanceRegister!.Value];
-		if (instance.GetType().Name != Type.File)
+		if (!IsFileInstance(instance))
 			return false;
 		var path = GetFilePath(instance);
 		switch (info.MethodName)
@@ -629,7 +629,7 @@ public sealed partial class VirtualMachine
 				result = new ValueInstance(executable.numberType, instance.List.Count);
 				return true;
 			}
-			if (instance.GetType().Name == Type.File)
+			if (IsFileInstance(instance))
 			{
 				result = new ValueInstance(executable.numberType,
 					new FileInfo(GetFilePath(instance)).Length);
@@ -639,6 +639,9 @@ public sealed partial class VirtualMachine
 		result = default;
 		return false;
 	}
+
+	private bool IsFileInstance(ValueInstance instance) =>
+		instance.GetType().IsSameOrCanBeUsedAs(executable.basePackage.GetType(Type.File));
 
 	internal static ValueInstance ConvertToText(ValueInstance rawValue)
 	{

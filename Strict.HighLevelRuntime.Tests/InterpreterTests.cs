@@ -271,13 +271,6 @@ public sealed class InterpreterTests
 		var directory = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
 		if (File.Exists(Path.Combine(directory, "Strict.sln")))
 			return directory;
-		directory = AppContext.BaseDirectory;
-		while (directory != null)
-		{
-			if (File.Exists(Path.Combine(directory, "Strict.sln")))
-				return directory;
-			directory = Path.GetDirectoryName(directory);
-		}
 		throw new DirectoryNotFoundException("Cannot find repository root (Strict.sln not found)");
 	}
 
