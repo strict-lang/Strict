@@ -18,12 +18,13 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 	public override List<Instruction> Optimize(List<Instruction> instructions) => instructions;
 
 	private List<Instruction> InlineInstructions(Bytecode.BinaryExecutable binary,
-		string currentTypeName, string currentMethodName, List<Instruction> instructions)
+		string currentTypeName, string currentMethodName, List<Instruction> instructions,
+		HashSet<string>? beingInlined = null)
 	{
 		var optimized = new List<Instruction>(instructions.Count);
 		foreach (var instruction in instructions)
 			if (instruction is Invoke invoke && TryInline(binary, currentTypeName, currentMethodName,
-				invoke, out var inlinedInstructions))
+				invoke, out var inlinedInstructions, beingInlined ??= []))
 				optimized.AddRange(inlinedInstructions);
 			else
 				optimized.Add(instruction);
@@ -31,7 +32,8 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 	}
 
 	private bool TryInline(Bytecode.BinaryExecutable binary, string currentTypeName,
-		string currentMethodName, Invoke invoke, out List<Instruction> inlinedInstructions)
+		string currentMethodName, Invoke invoke, out List<Instruction> inlinedInstructions,
+		HashSet<string> beingInlined)
 	{
 		inlinedInstructions = [];
 		if (!CanInline(binary, currentTypeName, currentMethodName, invoke))
@@ -39,8 +41,11 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		var compiledMethod = FindCompiledMethod(binary, currentTypeName, invoke.MethodInfo);
 		if (compiledMethod == null || !IsInlineBlock(compiledMethod.instructions))
 			return false;
+		if (!beingInlined.Add(compiledMethod.Name))
+			return false;
 		var recursivelyInlinedInstructions = InlineInstructions(binary, currentTypeName,
-			currentMethodName, compiledMethod.instructions);
+			currentMethodName, compiledMethod.instructions, beingInlined);
+		beingInlined.Remove(compiledMethod.Name);
 		if (!IsInlineBlock(recursivelyInlinedInstructions))
 			return false;
 		inlinedInstructions = RemapInstructions(recursivelyInlinedInstructions, compiledMethod,

@@ -7,3 +7,42 @@ HasOperators Boolean
 	operators.Length > 0
 to Text
 	input
+Tokens Texts
+	ShuntingYard("abc").Tokens is ("abc")
+	ShuntingYard("a + b").Tokens is ("a", "b", "+")
+	ShuntingYard("a + b * c").Tokens is ("a", "b", "c", "*", "+")
+	ShuntingYard("a + b * c - d").Tokens is ("a", "b", "c", "*", "+", "d", "-")
+	ProcessTokens(input.Split(" "), Texts, Texts)
+ProcessTokens(tokens Texts, result Texts, ops Texts) Texts
+	if tokens.Length is 0
+		return result + ops.Reverse
+	let token = tokens.First
+	let remaining = tokens - token
+	let prec = OperatorPrecedence(token)
+	if prec is 0
+		return ProcessTokens(remaining, result + token, ops)
+	let poppedResult = result + CollectPoppable(ops, prec)
+	let newOps = RemoveHigherOrEqual(ops, prec) + token
+	ProcessTokens(remaining, poppedResult, newOps)
+CollectPoppable(ops Texts, prec Number) Texts
+	if ops.Length is 0
+		return Texts
+	if OperatorPrecedence(ops.Last) < prec
+		return Texts
+	(ops.Last) + CollectPoppable(ops - ops.Last, prec)
+RemoveHigherOrEqual(ops Texts, prec Number) Texts
+	if ops.Length is 0
+		return ops
+	if OperatorPrecedence(ops.Last) < prec
+		return ops
+	RemoveHigherOrEqual(ops - ops.Last, prec)
+OperatorPrecedence(token Text) Number
+	OperatorPrecedence("+") is 1
+	OperatorPrecedence("-") is 1
+	OperatorPrecedence("*") is 2
+	OperatorPrecedence("/") is 2
+	if token is "+" or token is "-"
+		return 1
+	if token is "*" or token is "/"
+		return 2
+	0

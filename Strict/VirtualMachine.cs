@@ -37,7 +37,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	public ValueInstance? Returns { get; private set; }
 	public Memory Memory { get; } = new();
 	private string currentMethodContext = "";
-	private const int MaxCallDepth = 64;
+	private const int MaxCallDepth = 128;
 	private readonly ValueInstance[][] registerStack = new ValueInstance[MaxCallDepth][];
 	private int registerStackDepth;
 	private readonly CallFrame[] framePool = new CallFrame[MaxCallDepth];

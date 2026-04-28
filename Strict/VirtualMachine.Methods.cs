@@ -73,7 +73,7 @@ public sealed partial class VirtualMachine
 				info.InstanceRegister.HasValue && TryHandleNativeFileMethod(invoke),
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
-			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" =>
+			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" or "Upper" or "Lower" =>
 				info.InstanceRegister.HasValue && TryHandleNativeTextMethod(invoke),
 			_ => info.InstanceRegister.HasValue
 				? TryHandleNativeTraitInstanceMethod(invoke)
@@ -635,6 +635,8 @@ public sealed partial class VirtualMachine
 				text.LastIndexOf(args[0].Text, StringComparison.Ordinal)),
 			"Substring" => new ValueInstance(
 				text.Substring((int)args[0].Number, (int)args[1].Number)),
+			"Upper" => new ValueInstance(text.ToUpperInvariant()),
+			"Lower" => new ValueInstance(text.ToLowerInvariant()),
 			_ => throw new InvalidOperationException("Unhandled native text method: " + info.MethodName)
 		};
 		return true;

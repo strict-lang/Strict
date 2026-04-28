@@ -784,7 +784,7 @@ public sealed class BinaryGenerator
 			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 			var methodBody = runMethod.GetBodyAndParseIfNeeded();
 			var methodExpressions = methodBody is Body body
-				? body.Expressions
+				? body.Expressions.Where(expr => !runMethod.Tests.Contains(expr)).ToList()
 				: [methodBody];
 			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
 				runMethod.ReturnType);
@@ -806,7 +806,7 @@ public sealed class BinaryGenerator
 			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
 			var body = method.GetBodyAndParseIfNeeded();
 			var methodExpressions = body is Body methodBody
-				? methodBody.Expressions
+				? methodBody.Expressions.Where(expr => !method.Tests.Contains(expr)).ToList()
 				: [body];
 			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
 				method.ReturnType);
