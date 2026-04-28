@@ -27,7 +27,6 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 #endif
 		);
 		DisposeTrackedValues(Memory.Frame, Returns, null);
-		Memory.Frame.Reset(null);
 		return this;
 	}
 
