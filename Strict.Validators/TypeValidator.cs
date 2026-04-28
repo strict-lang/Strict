@@ -10,7 +10,7 @@ public sealed class TypeValidator : Visitor
 {
 	public override void Visit(Type type, object? context = null)
 	{
-		if (!type.IsDataType)
+		if (!type.IsDataType && !type.IsTrait)
 			foreach (var member in type.Members)
 				if (!IsReservedName(member.Name) && !member.IsPublic &&
 					type.CountMemberUsage(member.Name) < 2)

@@ -610,7 +610,9 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	private static Expression? TryParseGenericTypeEnum(Body body, Type type, Expression? instance,
 		IReadOnlyList<Expression> arguments, ReadOnlySpan<char> input) =>
-		instance is null && type.IsGeneric && input.IsWordOrWordWithNumberAtEnd(out _)
+		instance is null && type.IsGeneric && input.IsWordOrWordWithNumberAtEnd(out _) &&
+		(arguments.Count > 0 || MemberCall.TryParse(body, type, null, input) == null &&
+			!type.AvailableMethods.ContainsKey(input.ToString()))
 			? MethodCall.TryParseFromOrEnum(body, arguments, input.ToString())
 			: null;
 

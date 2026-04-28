@@ -51,7 +51,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 	}
 
 	//ncrunch: no coverage start
-	private static IEnumerable<TestCaseData> ByteCodeCases
+	public static IEnumerable<TestCaseData> ByteCodeCases
 	{
 		get
 		{

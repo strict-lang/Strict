@@ -27,7 +27,7 @@ public sealed class TestPackage : Package
 			"\ttrue xor false",
 			"\tfalse xor false is false",
 			"\tvalue and other or (not value) and (not other) then false else true"));
-		var hasLength = new Type(this, new TypeLines("HasLength","Length Number"));
+		var length = new Type(this, new TypeLines("Length", "Length Number"));
 		var number = new Type(this, new TypeLines(Type.Number,
 			"to Character",
 			"\t5 to Character is \"5\"",
@@ -125,9 +125,9 @@ public sealed class TestPackage : Package
 		var mutable = new Type(this, new TypeLines(Type.Mutable,
 			"has generic"));
 		var iterator = new Type(this, new TypeLines(Type.Iterator,
+			"has length",
 			"for Iterator(Generic)",
-			"in(element Generic) Boolean",
-			"Length Number"));
+			"in(element Generic) Boolean"));
 		var list = new Type(this, new TypeLines(Type.List,
 			"has iterator",
 			"has elements Generics",
@@ -269,22 +269,21 @@ public sealed class TestPackage : Package
 			"has textWriter",
 			"Log(text)",
 			"\ttextWriter.Write(text)"));
-		var file = new Type(this, new TypeLines(Type.File,
-			"from(path Text)",
-			"Length Number",
-			"ReadText Text",
-			"ReadBytes Bytes",
-			"Write(text Text)",
-			"Write(bytes Bytes)",
-			"Delete",
-			"Close",
-			"Exists Boolean"));
 		var textWriter = new Type(this, new TypeLines(Type.TextWriter, "Write(text)"));
-		var system = new Type(this, new TypeLines(Type.System,
+		var textReader = new Type(this, new TypeLines(Type.TextReader, "ReadText Text"));
+		var closeable = new Type(this, new TypeLines("Closeable", "Close"));
+		var bytesWriter = new Type(this, new TypeLines("BytesWriter", "Write(bytes Bytes)"));
+		var bytesReader = new Type(this, new TypeLines("BytesReader", "ReadBytes Bytes"));
+		var file = new Type(this, new TypeLines(Type.File,
+			"has length",
+			"has closeable",
 			"has textWriter",
-			"Write(text)",
-			"\ttextWriter.Write(text)"));
-		var textReader = new Type(this, new TypeLines(Type.TextReader, "Read Text"));
+			"has textReader",
+			"has bytesWriter",
+			"has bytesReader",
+			"from(path Text)",
+			"Exists Boolean",
+			"Delete"));
 		var name = new Type(this, new TypeLines(nameof(Name), "has text"));
 		var error = new Type(this, new TypeLines(Type.Error, "has Name", "has Stacktraces",
 			"Text Text", "\tName to Text"));
@@ -311,9 +310,9 @@ public sealed class TestPackage : Package
 		// @formatter:on
 		foreach (var type in new[]
 			{
-				any, boolean, hasLength, number, range, character, byteType, mutable, iterator, list, text,
-				baseType, generic, logger, file, textWriter, system, textReader, name, error,
-				errorWithValue, method, stacktrace, dictionary
+				any, boolean, length, number, range, character, byteType, mutable, iterator, list, text,
+				baseType, generic, logger, file, textWriter, textReader, closeable, bytesWriter, bytesReader,
+				name, error, errorWithValue, method, stacktrace, dictionary
 			})
 			type.ParseMembersAndMethods(parser);
 	}

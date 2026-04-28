@@ -199,9 +199,9 @@ public class Interpreter
 		IReadOnlyList<ValueInstance> args, out ValueInstance result)
 	{
 		result = noneInstance;
-		if (method.Type != fileType)
+		if (!FileValue.TryGetHandle(instance, fileType, out var handle) ||
+			!IsNativeFileMethod(method.Name))
 			return false;
-		var handle = GetFileHandle(instance, method);
 		switch (method.Name)
 		{
 		case "ReadText":
@@ -229,6 +229,10 @@ public class Interpreter
 			return false;
 		}
 	}
+
+	private static bool IsNativeFileMethod(string methodName) =>
+		methodName is "ReadText" or "ReadBytes" or "Write" or "Delete" or "Close" or "Exists"
+			or "Length";
 
 	private long GetFileHandle(ValueInstance instance, Method method)
 	{

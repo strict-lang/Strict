@@ -183,14 +183,19 @@ public sealed class InterpreterTests
 			var fileInstance = interpreterForStrict.Execute(
 				fileType.Methods.Single(method => method.Name == Method.From),
 				interpreterForStrict.noneInstance, [new ValueInstance(tempFilePath)]);
-			interpreterForStrict.Execute(fileType.Methods.Single(method =>
+			interpreterForStrict.Execute(fileType.AvailableMethods["Write"].Single(method =>
 					method.Name == "Write" && method.Parameters[0].Type.IsText), fileInstance,
 				[new ValueInstance("Strict text")]);
 			var result = interpreterForStrict.Execute(
-				fileType.Methods.Single(method => method.Name == "ReadText"), fileInstance, []);
-			Assert.That(result.Text, Is.EqualTo("Strict text"));
-			interpreterForStrict.Execute(fileType.Methods.Single(method => method.Name == "Close"),
+				fileType.AvailableMethods["ReadText"].Single(method => method.Name == "ReadText"),
 				fileInstance, []);
+			Assert.That(result.Text, Is.EqualTo("Strict text"));
+			interpreterForStrict.Execute(fileType.AvailableMethods["Close"].Single(method => method.Name == "Close"),
+				fileInstance, []);
+		}
+		catch (Exception ex)
+		{
+			Assert.Fail(ex.ToString());
 		}
 		finally
 		{
@@ -215,12 +220,13 @@ public sealed class InterpreterTests
 			var fileInstance = interpreterForStrict.Execute(
 				fileType.Methods.Single(method => method.Name == Method.From),
 				interpreterForStrict.noneInstance, [new ValueInstance(tempFilePath)]);
-			interpreterForStrict.Execute(fileType.Methods.Single(method =>
+			interpreterForStrict.Execute(fileType.AvailableMethods["Write"].Single(method =>
 					method.Name == "Write" && method.Parameters[0].Type.IsList), fileInstance, [bytes]);
 			var result = interpreterForStrict.Execute(
-				fileType.Methods.Single(method => method.Name == "ReadBytes"), fileInstance, []);
+				fileType.AvailableMethods["ReadBytes"].Single(method => method.Name == "ReadBytes"),
+				fileInstance, []);
 			Assert.That(result.List.Items.Select(item => item.Number), Is.EqualTo(new[] { 3.0, 5.0 }));
-			interpreterForStrict.Execute(fileType.Methods.Single(method => method.Name == "Close"),
+			interpreterForStrict.Execute(fileType.AvailableMethods["Close"].Single(method => method.Name == "Close"),
 				fileInstance, []);
 		}
 		finally

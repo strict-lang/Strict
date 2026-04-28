@@ -233,7 +233,7 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		using var _ = new Type(TestPackage.Instance,
 			new TypeLines("HasLengthImplementation",
-				"has HasLength",
+				"has Length",
 				"has boolean",
 				"from(boolean)",
 				"\tboolean = boolean",
@@ -241,7 +241,7 @@ public sealed class MethodCallTests : TestExpressions
 				"\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
 		using var program = new Type(TestPackage.Instance,
 				new TypeLines(nameof(TypeImplementsGenericTypeWithLength), "has logger",
-					"GetLengthSquare(type HasLength) Number", "\ttype.Length * type.Length", "Dummy",
+					"GetLengthSquare(type Length) Number", "\ttype.Length * type.Length", "Dummy",
 					"\tconstant countOfFive = HasLengthImplementation(true)",
 					"\tconstant lengthSquare = GetLengthSquare(countOfFive)")).
 			ParseMembersAndMethods(new MethodExpressionParser());

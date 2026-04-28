@@ -695,7 +695,7 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	private string[] GetAllMethodLines(int methodFirstLineNumber)
 	{
-		if (type.IsTrait && IsNextLineValidMethodBody())
+		if (type.MustUseBodylessTraitMethods && IsNextLineValidMethodBody())
 			throw new Type.TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(type);
 		if (!type.IsTrait && !IsNextLineValidMethodBody())
 			throw new MethodMustBeImplementedInNonTrait(type, lines[LineNumber], LineNumber);

@@ -1,9 +1,9 @@
+has Length
+has Closeable
+has TextWriter
+has TextReader
+has BytesWriter
+has BytesReader
 from(path Text)
-Length Number
-ReadText Text
-ReadBytes Bytes
-Write(text Text)
-Write(bytes Bytes)
-Delete
-Close
 Exists Boolean
+Delete

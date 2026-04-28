@@ -293,19 +293,48 @@ public class Type : Context, IDisposable
 
 	private void CheckIfTraitIsImplementedFullyOrNone(Type trait)
 	{
-		var nonImplementedTraitMethods = trait.Methods.Where(traitMethod =>
+		var traitMethods = GetRequiredTraitMethods(trait).
+			Where(traitMethod => traitMethod.Name != Method.From).ToList();
+		var nonImplementedTraitMethods = traitMethods.Where(traitMethod =>
 			traitMethod.Name != Method.From &&
 			methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
-		if (nonImplementedTraitMethods.Count > 0 && nonImplementedTraitMethods.Count !=
-			trait.Methods.Count(traitMethod => traitMethod.Name != Method.From))
+		if (nonImplementedTraitMethods.Count > 0 && nonImplementedTraitMethods.Count != traitMethods.Count)
 			throw new MustImplementAllTraitMethodsOrNone(this, trait.Name, nonImplementedTraitMethods);
+	}
+
+	private static IEnumerable<Method> GetRequiredTraitMethods(Type trait)
+	{
+		foreach (var method in trait.Methods)
+			yield return method;
+		foreach (var member in trait.Members)
+			if (IsTraitRequirementMember(member))
+				foreach (var method in GetRequiredTraitMethods(member.Type))
+					yield return method;
 	}
 
 	public List<Member> Members => members;
 	protected readonly List<Member> members = [];
 	public List<Method> Methods => methods;
 	protected readonly List<Method> methods = [];
-	public bool IsTrait => !IsNumber && !IsBoolean && CheckIfParsed() && Members.Count == 0;
+	public bool IsTrait => !IsNumber && !IsBoolean && CheckIfParsed() &&
+		CanBeTraitBasedOnMembers && Methods.All(IsTraitMethodDeclaration);
+
+	internal bool CanBeTraitBasedOnMembers => !IsNumber && !IsBoolean &&
+		(Members.Count == 0 || Members.All(IsTraitRequirementMember) &&
+		(Members.Any(member => !member.IsPublic) || Members.Count > 1));
+
+	internal bool MustUseBodylessTraitMethods => !IsNumber && !IsBoolean && (Members.Count == 0 ||
+		Members.Count > 1 && Members.All(IsTraitCompositionMember));
+
+	internal static bool IsTraitMethodDeclaration(Method method) => method.lines.Count == 1;
+
+	private static bool IsTraitRequirementMember(Member member) =>
+		member.Type != member.DefinedIn && member.Type.IsTrait;
+
+	private static bool IsTraitCompositionMember(Member member) =>
+		member.IsPublic && member.Name == member.Type.Name && member.Type != member.DefinedIn &&
+		member.Type.IsTrait;
+
 	public Dictionary<string, Type> AvailableMemberTypes
 	{
 		get
@@ -470,7 +499,7 @@ public class Type : Context, IDisposable
 			if (cachedEvaluatedMemberTypes.TryGetValue(member.Type.Name, out var result))
 				return result; //ncrunch: no coverage
 			var isIterator = member is { IsPublic: false, Type.IsIterator: true };
-			cachedEvaluatedMemberTypes.Add(member.Type.Name, isIterator);
+			cachedEvaluatedMemberTypes[member.Type.Name] = isIterator;
 			if (isIterator)
 				return true;
 		}
@@ -700,10 +729,10 @@ public class Type : Context, IDisposable
 					if (Name == Any)
 						return cachedAvailableMethods = built;
 					foreach (var member in Members.Where(m =>
-						m is { IsPublic: false, IsConstant: false, InitialValue: null } &&
-						!IsTraitImplementation(m.Type)))
+						(m is { IsPublic: false, IsConstant: false, InitialValue: null } &&
+						!IsTraitImplementation(m.Type)) || IsTraitCompositionMember(m)))
 						AddNonGenericMethods(member.Type, built);
-					if (members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
+					if (!IsTrait && members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
 						methods.All(m => m.Name != Method.From))
 					{
 						var fromParser = methods.Count > 0
