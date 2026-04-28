@@ -73,7 +73,8 @@ public sealed partial class VirtualMachine
 				info.InstanceRegister.HasValue && TryHandleNativeFileMethod(invoke),
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
-			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" => TryHandleNativeTextMethod(invoke),
+			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" =>
+				info.InstanceRegister.HasValue && TryHandleNativeTextMethod(invoke),
 			_ => info.InstanceRegister.HasValue
 				? TryHandleNativeTraitInstanceMethod(invoke)
 				: TryHandleNativeTraitStaticMethod(invoke)
@@ -84,6 +85,9 @@ public sealed partial class VirtualMachine
 	{
 		var info = invoke.MethodInfo;
 		var instanceValue = Memory.Registers[info.InstanceRegister!.Value];
+		if (instanceValue.IsText || instanceValue.IsList || instanceValue.IsDictionary ||
+			instanceValue.IsFlatNumeric)
+			return false;
 		if (!instanceValue.GetType().IsTrait)
 			return false;
 		var typeInstance = instanceValue.TryGetValueTypeInstance();
@@ -642,7 +646,7 @@ public sealed partial class VirtualMachine
 		var start = args.Length > 1
 			? (int)args[1].Number
 			: 0;
-		var matches = start + prefix.Length <= text.Length &&
+		var matches = start >= 0 && start + prefix.Length <= text.Length &&
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
 		return new ValueInstance(executable.booleanType, matches);
 	}

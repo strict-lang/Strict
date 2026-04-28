@@ -500,6 +500,13 @@ public sealed class BinaryGenerator
 				argumentMethodCall.ReturnType.IsText));
 			return true;
 		}
+		if (argument is ParameterCall or VariableCall or MemberCall or ListCall)
+		{
+			GenerateInstructionFromExpression(argument);
+			instructions.Add(new PrintInstruction("", registry.PreviousRegister,
+				argument.ReturnType.IsText));
+			return true;
+		}
 		instructions.Add(new PrintInstruction(argument.ToString()));
 		return true;
 	}

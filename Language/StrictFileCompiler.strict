@@ -1,6 +1,7 @@
-has placeholderNumber Number
-Run
-	placeholderNumber is placeholderNumber
+has logger
+Run(filePath Text)
+	let source = File.from(filePath).ReadText
+	logger.Log(source)
 Sample Text
 	"has logger Logger\nRun\nAdd(other Number) Number\n\treturn count"
 TypeName(path Text) Text
@@ -26,6 +27,26 @@ MemberNames(source Text) Texts
 		index is index
 		if IsMember(value)
 			MemberName(value)
+MemberHeaders(source Text) Texts
+	MemberHeaders(Sample) is ("logger Logger")
+	for source.Lines
+		index is index
+		if IsMember(value)
+			MemberHeader(value)
+MemberHeader(line Text) Text
+	MemberHeader("has logger Logger") is "logger Logger"
+	MemberHeader("has width Number") is "width Number"
+	MemberHeader("has logger") is "logger Logger"
+	let start = KeywordLength(line)
+	let text = line.Substring(start, line.Length - start)
+	let spaceIndex = text.IndexOf(" ", 0)
+	if spaceIndex is not -1
+		return text
+	text + " " + Capitalize(text)
+Capitalize(text Text) Text
+	Capitalize("logger") is "Logger"
+	Capitalize("a") is "A"
+	text.Substring(0, 1).Upper + text.Substring(1, text.Length - 1)
 MemberName(line Text) Text
 	MemberName("has logger Logger") is "logger"
 	MemberName("has count Number") is "count"
