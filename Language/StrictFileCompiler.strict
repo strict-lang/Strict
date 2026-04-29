@@ -1,10 +1,7 @@
 has logger
 Run(filePath Text)
 	let source = File.from(filePath).ReadText
-	for MemberHeaders(source)
-		logger.Log("Member: " + value)
-	for MethodHeaders(source)
-		logger.Log("Method: " + value)
+	logger.Log(source)
 Sample Text
 	"has logger Logger\nRun\nAdd(other Number) Number\n\treturn count"
 TypeName(path Text) Text

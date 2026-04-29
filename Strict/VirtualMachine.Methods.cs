@@ -502,6 +502,10 @@ public sealed partial class VirtualMachine
 			parameterIndex < evaluatedArguments.Length; parameterIndex++)
 			Memory.Frame.Set(info.ParameterNames[parameterIndex],
 				evaluatedArguments[parameterIndex]);
+		for (var parameterIndex = evaluatedArguments.Length;
+			parameterIndex < info.ParameterNames.Length; parameterIndex++)
+			Memory.Frame.Set(info.ParameterNames[parameterIndex],
+				new ValueInstance(executable.numberType, 0.0));
 		if (!evaluatedInstance.HasValue)
 			return;
 		var instance = evaluatedInstance.Value;
