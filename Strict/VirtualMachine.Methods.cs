@@ -10,7 +10,8 @@ public sealed partial class VirtualMachine
 {
 	private void ExecuteInvoke(Invoke invoke)
 	{
-		if (TryExecuteSpecialInvoke(invoke))
+		var implicitInstance = TryGetImplicitInstance(invoke);
+		if (TryExecuteSpecialInvoke(invoke, implicitInstance))
 			return;
 		var info = invoke.MethodInfo;
 		var evaluatedArgs = info.ArgumentRegisters.Length == 0
@@ -20,7 +21,7 @@ public sealed partial class VirtualMachine
 			evaluatedArgs[argIndex] = Memory.Registers[info.ArgumentRegisters[argIndex]];
 		var evaluatedInstance = info.InstanceRegister.HasValue
 			? Memory.Registers[info.InstanceRegister.Value]
-			: (ValueInstance?)null;
+			: implicitInstance;
 		var invokeInstructions = invoke.CachedInstructions ??=
 			GetPrecompiledMethodInstructions(invoke) ??
 			throw Fail("No precompiled method instructions found for '" +
@@ -42,6 +43,24 @@ public sealed partial class VirtualMachine
 			Memory.Registers[invoke.Register] = result.Value;
 	}
 
+	/// <summary>
+	/// Mirrors HighLevelRuntime semantics: when a method call has no explicit instance
+	/// (and is not a `from` constructor), use the surrounding frame's `value` as the
+	/// implicit instance. Without this, sibling instance calls inside base-type methods
+	/// like <c>Text.Replace</c> calling <c>IndexOf</c> would lose their `value` and
+	/// recurse forever because the bail-out `if separatorIndex is -1 return value` never
+	/// fires (IndexOf returns 0 instead of -1 for an empty/missing instance).
+	/// </summary>
+	private ValueInstance? TryGetImplicitInstance(Invoke invoke)
+	{
+		var info = invoke.MethodInfo;
+		if (info.InstanceRegister.HasValue || info.MethodName == Method.From)
+			return null;
+		return Memory.Frame.TryGet(ValueSymbolId, out var implicitInstance)
+			? implicitInstance
+			: null;
+	}
+
 	private static ValueInstance? TryFlattenNestedIteratorList(InvokeMethodInfo info,
 		ValueInstance? result)
 	{
@@ -61,30 +80,38 @@ public sealed partial class VirtualMachine
 			flattenedItems.ToArray());
 	}
 
-	private bool TryExecuteSpecialInvoke(Invoke invoke)
+	private bool TryExecuteSpecialInvoke(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
+		var hasInstance = info.InstanceRegister.HasValue || implicitInstance != null;
 		return info.MethodName switch
 		{
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.basePackage)),
-			BinaryOperator.To => info.InstanceRegister.HasValue && TryHandleToConversion(invoke),
-			"Length" or "Count" => info.InstanceRegister.HasValue && TryHandleNativeLength(invoke),
+			BinaryOperator.To => hasInstance && TryHandleToConversion(invoke, implicitInstance),
+			"Length" or "Count" => hasInstance && TryHandleNativeLength(invoke, implicitInstance),
 			"ReadText" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" =>
-				info.InstanceRegister.HasValue && TryHandleNativeFileMethod(invoke),
-			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true),
-			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false),
+				hasInstance && TryHandleNativeFileMethod(invoke, implicitInstance),
+			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true, implicitInstance),
+			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false, implicitInstance),
 			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" or "Upper" or "Lower" =>
-				info.InstanceRegister.HasValue && TryHandleNativeTextMethod(invoke),
-			_ => info.InstanceRegister.HasValue
-				? TryHandleNativeTraitInstanceMethod(invoke)
+				hasInstance && TryHandleNativeTextMethod(invoke, implicitInstance),
+			_ => hasInstance
+				? TryHandleNativeTraitInstanceMethod(invoke, implicitInstance)
 				: TryHandleNativeTraitStaticMethod(invoke)
 		};
 	}
 
-	private bool TryHandleNativeTraitInstanceMethod(Invoke invoke)
+	private ValueInstance ResolveInvokeInstance(InvokeMethodInfo info,
+		ValueInstance? implicitInstance) =>
+		info.InstanceRegister.HasValue
+			? Memory.Registers[info.InstanceRegister.Value]
+			: implicitInstance!.Value;
+
+	private bool TryHandleNativeTraitInstanceMethod(Invoke invoke,
+		ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
-		var instanceValue = Memory.Registers[info.InstanceRegister!.Value];
+		var instanceValue = ResolveInvokeInstance(info, implicitInstance);
 		if (instanceValue.IsText || instanceValue.IsList || instanceValue.IsDictionary ||
 			instanceValue.IsFlatNumeric)
 			return false;
@@ -100,7 +127,7 @@ public sealed partial class VirtualMachine
 		return true;
 	}
 
-	private bool TryHandleNativeFileMethod(Invoke invoke)
+	private bool TryHandleNativeFileMethod(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
 		if (info.MethodName == Method.From)
@@ -116,7 +143,7 @@ public sealed partial class VirtualMachine
 			Memory.Registers[invoke.Register] = fileInstance;
 			return true;
 		}
-		var instance = Memory.Registers[info.InstanceRegister!.Value];
+		var instance = ResolveInvokeInstance(info, implicitInstance);
 		if (!IsFileInstance(instance))
 			return false;
 		var handle = GetFileHandle(instance);
@@ -383,11 +410,11 @@ public sealed partial class VirtualMachine
 		return new ValueInstance(listType, colorValues);
 	}
 
-	private bool TryHandleToConversion(Invoke invoke)
+	private bool TryHandleToConversion(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
 		var conversionType = info.ResolveReturnType(executable.basePackage);
-		var rawValue = Memory.Registers[info.InstanceRegister!.Value];
+		var rawValue = ResolveInvokeInstance(info, implicitInstance);
 		if (conversionType.IsText)
 		{
 			Memory.Registers[invoke.Register] = ConvertToText(rawValue);
@@ -404,18 +431,19 @@ public sealed partial class VirtualMachine
 		return false;
 	}
 
-	private bool TryHandleNativeLength(Invoke invoke)
+	private bool TryHandleNativeLength(Invoke invoke, ValueInstance? implicitInstance)
 	{
-		var instanceValue = Memory.Registers[invoke.MethodInfo.InstanceRegister!.Value];
+		var instanceValue = ResolveInvokeInstance(invoke.MethodInfo, implicitInstance);
 		if (!TryGetNativeLength(instanceValue, invoke.MethodInfo.MethodName, out var lengthValue))
 			return false;
 		Memory.Registers[invoke.Register] = lengthValue;
 		return true;
 	}
 
-	private bool TryHandleIncrementDecrement(Invoke invoke, bool isIncrement)
+	private bool TryHandleIncrementDecrement(Invoke invoke, bool isIncrement,
+		ValueInstance? implicitInstance)
 	{
-		var current = Memory.Registers[invoke.MethodInfo.InstanceRegister!.Value];
+		var current = ResolveInvokeInstance(invoke.MethodInfo, implicitInstance);
 		var delta = isIncrement
 			? 1.0
 			: -1.0;
@@ -622,10 +650,10 @@ public sealed partial class VirtualMachine
 		int SavedInstructionIndex, bool SavedConditionFlag, ValueInstance? SavedReturns,
 		CallFrame SavedFrame, int StackDepth, CallFrame Frame);
 
-	private bool TryHandleNativeTextMethod(Invoke invoke)
+	private bool TryHandleNativeTextMethod(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
-		var instance = Memory.Registers[info.InstanceRegister!.Value];
+		var instance = ResolveInvokeInstance(info, implicitInstance);
 		if (!instance.IsText)
 			return false;
 		var text = instance.Text;
