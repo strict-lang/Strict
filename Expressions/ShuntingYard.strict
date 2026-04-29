@@ -26,3 +26,31 @@ IsOperator(token Text) Boolean
 	IsOperator("+")
 	IsOperator("*")
 	OperatorPrecedence(token) > 0
+OperandTokens Texts
+	ShuntingYard("a").OperandTokens is ("a")
+	ShuntingYard("a + b").OperandTokens is ("a", "b")
+	ShuntingYard("a * b + c").OperandTokens is ("a", "b", "c")
+	mutable operands = List(Mutable(Text))
+	for input.Split(" ")
+		if not IsOperator(value)
+			operands.Add(value)
+	operands
+OperatorTokens Texts
+	ShuntingYard("a").OperatorTokens is List(Text)
+	ShuntingYard("a + b").OperatorTokens is ("+")
+	ShuntingYard("a * b + c").OperatorTokens is ("*", "+")
+	mutable ops = List(Mutable(Text))
+	for input.Split(" ")
+		if IsOperator(value)
+			ops.Add(value)
+	ops
+Postfix Texts
+	ShuntingYard("a").Postfix is ("a")
+	ShuntingYard("a + b").Postfix is ("a", "b", "+")
+	ShuntingYard("a + b * c").Postfix is ("a", "b", "c", "*", "+")
+	mutable result = List(Mutable(Text))
+	for OperandTokens
+		result.Add(value)
+	for OperatorTokens
+		result.Add(OperatorTokens(OperatorTokens.Length - 1 - index))
+	result
