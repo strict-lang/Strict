@@ -294,7 +294,7 @@ public class Interpreter
 			method.Type.Name == Type.Number &&
 			(method.Name == "digits" || method.Name == BinaryOperator.To && method.ReturnType.IsText) ||
 			method.Type.IsText && method.Name == "Split" ||
-			method.Type.Name == "StrictFileCompiler");
+			method.Type.Name == "Parser");
 
 	private void DisposeTrackedValues(ExecutionContext ctx)
 	{

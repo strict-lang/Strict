@@ -237,12 +237,12 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
-	public async Task StrictFileCompilerParsesExistingTextStrictFile()
+	public async Task ParserParsesExistingTextStrictFile()
 	{
 		var repos = new Repositories(new MethodExpressionParser());
 		using var strict = await repos.LoadStrictPackage();
 		using var language = await repos.LoadStrictPackage("Strict/Language");
-		var compiler = language.GetType("StrictFileCompiler");
+		var compiler = language.GetType("Parser");
 		var compilerInstance = new ValueInstance(compiler, [new ValueInstance(compiler.Members[0].Type, 0)]);
 		var textSource = await File.ReadAllTextAsync(Path.Combine(FindRepoRoot(), "Text.strict"));
 		var interpreterForStrict = new Interpreter(language, TestBehavior.Disabled);
