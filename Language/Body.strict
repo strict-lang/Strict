@@ -5,18 +5,29 @@ LineCount Number
 Line(number Number) Text
 	lines(number)
 IsMethodCallLine(line Text) Boolean
+	IsMethodCallLine("logger.Log(\"hi\")")
+	IsMethodCallLine("plain") is false
 	line.IndexOf(".") > 0
 IsReturnLine(line Text) Boolean
+	IsReturnLine("return 1")
 	line.StartsWith("return ")
 IsIfLine(line Text) Boolean
+	IsIfLine("if x is 0")
 	line.StartsWith("if ")
 IsForLine(line Text) Boolean
+	IsForLine("for items")
 	line.StartsWith("for ")
 IsDeclarationLine(line Text) Boolean
+	IsDeclarationLine("let x = 1")
+	IsDeclarationLine("mutable x = 1")
+	IsDeclarationLine("constant Max = 9")
 	line.StartsWith("let ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
 IsReassignment(line Text) Boolean
+	IsReassignment("x = 1")
 	line.IndexOf(" = ") > 0
 IsArithmeticExpression(line Text) Boolean
+	IsArithmeticExpression("a + b")
 	line.IndexOf(" + ") > 0
 IsNotExpression(line Text) Boolean
+	IsNotExpression("not ready")
 	line.StartsWith("not ")

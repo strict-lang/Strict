@@ -324,6 +324,9 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private sealed class InvalidInstruction(Instruction instruction)
 		: Exception(instruction.ToString()); //ncrunch: no coverage
 
+	public sealed class StackOverflow(int maxDepth)
+		: Exception("VM call depth exceeded limit: " + maxDepth);
+
 	private string ResolveMethodContext(BinaryMethod method)
 	{
 		foreach (var (typeFullName, typeData) in executable.MethodsPerType)

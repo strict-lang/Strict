@@ -585,6 +585,8 @@ public sealed partial class VirtualMachine
 		var savedConditionFlag = conditionFlag;
 		var savedReturns = Returns;
 		var savedFrame = Memory.Frame;
+		if (registerStackDepth >= MaxCallDepth)
+			throw new StackOverflow(MaxCallDepth);
 		var depth = registerStackDepth++;
 		// ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
 		// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
