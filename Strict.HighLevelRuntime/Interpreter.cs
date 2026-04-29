@@ -124,7 +124,8 @@ public class Interpreter
 	} //ncrunch: no coverage end
 
 	public ValueInstance Execute(Method method, ValueInstance instance,
-		ValueInstance[] args, ExecutionContext? parentContext = null, bool runOnlyTests = false)
+		ValueInstance[] args, ExecutionContext? parentContext = null, bool runOnlyTests = false,
+		ValueInstance[]? capturedMutableParameters = null)
 	{
 		Statistics.MethodCount++;
     args = NormalizeArguments(method, args, parentContext);
@@ -173,6 +174,8 @@ public class Interpreter
 						? trueInstance
 						: throw new MethodRequiresTest(method, body.ToString());
 			var result = RunExpression(body, context, runOnlyTests);
+			if (capturedMutableParameters != null)
+				CaptureMutableParameterValues(method, context, capturedMutableParameters);
 			return context.ExitMethodAndReturnValue ??
 				result.ApplyMethodReturnTypeMutable(method.ReturnType);
 		}
@@ -180,6 +183,19 @@ public class Interpreter
 		{
 			DisposeTrackedValues(context);
 			ReturnContext(context);
+		}
+	}
+
+	private static void CaptureMutableParameterValues(Method method, ExecutionContext context,
+		ValueInstance[] capturedMutableParameters)
+	{
+		for (var index = 0; index < method.Parameters.Count &&
+			index < capturedMutableParameters.Length; index++)
+		{
+			var parameter = method.Parameters[index];
+			if (parameter.IsMutable &&
+				context.Variables.TryGetValue(parameter.Name, out var finalValue))
+				capturedMutableParameters[index] = finalValue;
 		}
 	}
 

@@ -488,12 +488,40 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (instance.HasValue &&
 			TryExecuteBuiltInMathMethod(call, instance.Value, out var mathResult))
 			return mathResult;
+		var capturedMutableParameters = TryRentMutableParameterCapture(call);
 		var result =
-			interpreter.Execute(call.Method, instance ?? interpreter.noneInstance, args, ctx);
-		if (call.Method.ReturnType.IsMutable && call.Instance is VariableCall variableCall &&
-			!instance.Equals(interpreter.noneInstance))
-			ctx.Set(variableCall.Variable.Name, result);
+			interpreter.Execute(call.Method, instance ?? interpreter.noneInstance, args, ctx,
+				capturedMutableParameters: capturedMutableParameters);
+		if (capturedMutableParameters != null)
+			WriteBackMutableParameterValues(call, ctx, capturedMutableParameters);
+		if (call.Method.ReturnType.IsMutable && !instance.Equals(interpreter.noneInstance))
+		{
+			if (call.Instance is VariableCall variableCall)
+				ctx.Set(variableCall.Variable.Name, result);
+			else if (call.Instance is ParameterCall parameterCall && parameterCall.Parameter.IsMutable)
+				ctx.Set(parameterCall.Parameter.Name, result);
+		}
 		return result;
+	}
+
+	private static ValueInstance[]? TryRentMutableParameterCapture(MethodCall call)
+	{
+		for (var index = 0; index < call.Arguments.Count &&
+			index < call.Method.Parameters.Count; index++)
+			if (call.Method.Parameters[index].IsMutable &&
+				call.Arguments[index] is VariableCall { Variable.IsMutable: true })
+				return new ValueInstance[call.Method.Parameters.Count];
+		return null;
+	}
+
+	private static void WriteBackMutableParameterValues(MethodCall call, ExecutionContext ctx,
+		ValueInstance[] capturedMutableParameters)
+	{
+		for (var index = 0; index < call.Arguments.Count &&
+			index < call.Method.Parameters.Count; index++)
+			if (call.Method.Parameters[index].IsMutable &&
+				call.Arguments[index] is VariableCall { Variable.IsMutable: true } callerVariable)
+				ctx.Set(callerVariable.Variable.Name, capturedMutableParameters[index]);
 	}
 
 	private bool TryExecuteBuiltInMathMethod(MethodCall call, ValueInstance instance,

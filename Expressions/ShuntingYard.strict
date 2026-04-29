@@ -48,9 +48,28 @@ Postfix Texts
 	ShuntingYard("a").Postfix is ("a")
 	ShuntingYard("a + b").Postfix is ("a", "b", "+")
 	ShuntingYard("a + b * c").Postfix is ("a", "b", "c", "*", "+")
+	ShuntingYard("a * b + c").Postfix is ("a", "b", "*", "c", "+")
+	ShuntingYard("a + b - c").Postfix is ("a", "b", "+", "c", "-")
 	mutable result = List(Mutable(Text))
-	for OperandTokens
-		result.Add(value)
-	for OperatorTokens
-		result.Add(OperatorTokens(OperatorTokens.Length - 1 - index))
+	mutable opsStack = List(Mutable(Text))
+	for input.Split(" ")
+		ProcessToken(value, result, opsStack)
+	for opsStack
+		result.Add(opsStack(opsStack.Length - 1 - index))
 	result
+ProcessToken(token Text, mutable result Texts, mutable opsStack Texts) Mutable(Texts)
+	IsOperator(token) is OperatorPrecedence(token) > 0
+	let prec = OperatorPrecedence(token)
+	if prec is 0
+		return result.Add(token)
+	if prec > 0
+		AddOperator(prec, result, opsStack)
+	opsStack.Add(token)
+AddOperator(prec Number, mutable result Texts, mutable opsStack Texts) Mutable(Texts)
+	OperatorPrecedence("+") is 1
+	if opsStack.Length is 0
+		return opsStack
+	if OperatorPrecedence(opsStack.Last) >= prec
+		result.Add(opsStack.Last)
+		opsStack.Remove(opsStack.Last)
+	opsStack
