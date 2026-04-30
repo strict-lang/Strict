@@ -71,7 +71,7 @@ public sealed class StrictLanguageConversionTests
 	{
 		var root = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
 		Assert.That(File.ReadAllText(Path.Combine(root, "Method.strict")),
-			Is.EqualTo("has Name\nhas Type\nhas Parameters\n"));
+			Is.EqualTo("has Name\nhas Type\nhas Parameters Variables\n"));
 		Assert.That(File.Exists(Path.Combine(GetLanguagePath(), "Method.strict")), Is.False);
 		var parserSource = File.ReadAllText(Path.Combine(GetLanguagePath(), "MethodParser.strict"));
 		Assert.That(parserSource, Does.Contain("Parse(header Text, lines Texts, lineIndex Number) Method"));

@@ -1,25 +1,10 @@
-has Name
-has Result Type
-has Parameters
-has Body
-ParameterCount Number
-	Parameters.Length
-BodyLineCount Number
-	Body.Length
-IsTrait Boolean
-	Body.Length is 0
-HasReturnType Boolean
-	Result.Name is not "None"
-HasParameters Boolean
-	Parameters.Length > 0
-IsRunMethod Boolean
-	Name is ("Run" to Name)
-to Text
-	Name
+has Method
 Parse(header Text, lines Texts, lineIndex Number) Method
+	Method
+Body(header Text, lines Texts, lineIndex Number) Body
 	let bodyStart = lineIndex + 1
 	let bodyLength = BodyLength(lines, bodyStart)
-	Method(ExtractName(header), ExtractResult(header), ExtractParameters(header), Body(lines, bodyStart, bodyLength))
+	Body(lines, bodyStart, bodyLength)
 IsHeader(line Text) Boolean
 	line is not "" and (not Member.Kind(line).StartsWith("has")) and (not line.StartsWith("\t"))
 ExtractName(header Text) Name
@@ -27,19 +12,25 @@ ExtractName(header Text) Name
 	let spaceIndex = header.IndexOf(" ")
 	let endIndex = FirstPositiveIndex(parenIndex, spaceIndex)
 	((endIndex is -1 then header else header.Substring(0, endIndex)) to Name)
-ExtractResult(header Text) Type
+ExtractType(header Text) Type
 	let parts = header.Split(" ")
 	Type(parts.Length is 1 then "None" else parts.Last)
-ExtractParameters(header Text) Parameters
+ExtractParameters(header Text) Variables
 	let openIndex = header.IndexOf("(")
 	if openIndex is -1
-		return Parameters
+		return Variables
 	let closeIndex = header.IndexOf(")")
 	let text = header.Substring(openIndex + 1, closeIndex - openIndex - 1).Trim
 	if text is ""
-		return Parameters
+		return Variables
 	for text.Split(",")
-		Parameter.Parse(value.Trim)
+		ExtractParameter(value.Trim)
+ExtractParameter(text Text) Variable
+	let isMutable = text.StartsWith("mutable ")
+	let normalized = isMutable then text.Substring(8, text.Length - 8).Trim else text
+	let parts = normalized.Split(" ")
+	let typeName = parts.Length > 1 then parts.Last else "Any"
+	Variable((parts.First to Name), Type(typeName), None, isMutable, false)
 FirstPositiveIndex(first Number, second Number) Number
 	if first is -1
 		return second

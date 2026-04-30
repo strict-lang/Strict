@@ -26,10 +26,8 @@ Methods(lines Texts) Methods
 IsMethodLine(line Text) Boolean
 	line is not "" and (not IsMemberLine(line)) and (not line.StartsWith("\t"))
 ParseMethodLine(line Text, lines Texts, lineIndex Number) Method
-	let bodyStart = lineIndex + 1
-	let bodyLength = BodyLength(lines, bodyStart)
-	let methodName = ExtractName(line) to Name
-	Method(methodName, MethodResult(line), Parameters, Body(lines, bodyStart, bodyLength))
+	let method = Method((ExtractName(line) to Name), MethodResult(line), Variables)
+	MethodParser(method).Parse(line, lines, lineIndex)
 ExtractName(text Text) Text
 	for text.characters
 		if value is "("
@@ -59,8 +57,3 @@ MethodResult(header Text) Type
 	let parts = header.Split(" ")
 	let resultName = parts.Length is 1 then "None" else parts.Last
 	Type(resultName)
-BodyLength(lines Texts, bodyStart Number) Number
-	for Range(bodyStart, lines.Length)
-		if not lines(index).StartsWith("\t")
-			return index - bodyStart
-	lines.Length - bodyStart

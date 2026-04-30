@@ -264,9 +264,9 @@ public sealed class InterpreterTests
 		var methods = interpreterForStrict.Execute(type.Methods.Single(method => method.Name == "Methods" &&
 			method.Parameters.Count == 0), typeInstance, []).List.Items;
 		var plusMethod = methods.First(method => GetTextMember(method, "Name") == "+" &&
-			GetTextMember(GetTypeMember(method, "Result"), "Name") == "Text");
+			GetTextMember(GetTypeMember(method, "Type"), "Name") == "Text");
 		Assert.That(plusMethod.TryGetValueTypeInstance()!.ReturnType.Name, Is.EqualTo("Method"));
-		Assert.That(GetTextMember(GetTypeMember(plusMethod, "Result"), "Name"), Is.EqualTo("Text"));
+		Assert.That(GetTextMember(GetTypeMember(plusMethod, "Type"), "Name"), Is.EqualTo("Text"));
 		Assert.That(plusMethod.TryGetValueTypeInstance()!["Parameters"].GetType().IsList, Is.True);
 	}
 
