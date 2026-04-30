@@ -248,26 +248,39 @@ public sealed class InterpreterTests
 		var interpreterForStrict = new Interpreter(language, TestBehavior.Disabled);
 		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "TypeName", "Text.strict"),
 			Is.EqualTo("Text"));
-		Assert.That(ExecuteTexts(compiler, compilerInstance, interpreterForStrict, "MemberNames", textSource),
-			Is.EqualTo(new[] { "characters" }));
-		var methodHeaders = ExecuteTexts(compiler, compilerInstance, interpreterForStrict,
-			"MethodHeaders", textSource);
-		Assert.That(methodHeaders, Does.Contain("+(other) Text"));
-		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "MethodName",
-				"+(other) Text"),
-			Is.EqualTo("+"));
-		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "ReturnTypeName",
-				"+(other) Text"),
-			Is.EqualTo("Text"));
-		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "ParameterText",
-				"+(other) Text"),
-			Is.EqualTo("other"));
+		var members = ExecuteValue(compiler, compilerInstance, interpreterForStrict, "Members",
+			textSource, "Text").List.Items;
+		Assert.That(members[0].TryGetValueTypeInstance()!.ReturnType.Name, Is.EqualTo("Member"));
+		Assert.That(GetTextMember(members[0], "Name"), Is.EqualTo("characters"));
+		Assert.That(GetTextMember(GetTypeMember(members[0], "Type"), "Name"), Is.EqualTo("Character"));
+		var methods = ExecuteValue(compiler, compilerInstance, interpreterForStrict, "Methods",
+			textSource).List.Items;
+		var plusMethod = methods.Single(method => GetTextMember(method, "Name") == "+");
+		Assert.That(plusMethod.TryGetValueTypeInstance()!.ReturnType.Name, Is.EqualTo("Method"));
+		Assert.That(GetTextMember(GetTypeMember(plusMethod, "Result"), "Name"), Is.EqualTo("Text"));
+		var parameters = plusMethod.TryGetValueTypeInstance()!["Parameters"].List.Items;
+		Assert.That(GetTextMember(parameters[0], "Name"), Is.EqualTo("other"));
+		Assert.That(GetTextMember(GetTypeMember(parameters[0], "Type"), "Name"), Is.EqualTo("Text"));
 	}
+
+	private static string GetTextMember(ValueInstance instance, string memberName) =>
+		instance.TryGetValueTypeInstance()![memberName].TryGetValueTypeInstance()!["text"].Text;
+
+	private static ValueInstance GetTypeMember(ValueInstance instance, string memberName) =>
+		instance.TryGetValueTypeInstance()![memberName];
 
 	private static string ExecuteText(Type type, ValueInstance instance,
 		Interpreter interpreterForStrict, string methodName, string argument) =>
 		interpreterForStrict.Execute(type.Methods.Single(method => method.Name == methodName),
 			instance, [new ValueInstance(argument)]).Text;
+
+	private static ValueInstance ExecuteValue(Type type, ValueInstance instance,
+		Interpreter interpreterForStrict, string methodName, params string[] arguments)
+	{
+		var method = type.Methods.Single(candidate => candidate.Name == methodName);
+		return interpreterForStrict.Execute(method, instance,
+			arguments.Select(argument => new ValueInstance(argument)).ToArray());
+	}
 
 	private static string[] ExecuteTexts(Type type, ValueInstance instance,
 		Interpreter interpreterForStrict, string methodName, string source, string? methodArgument = null)

@@ -428,6 +428,12 @@ public sealed class TypeTests
 				"Unused", "\t1"),
 			Throws.InstanceOf<TypeParser.RedundantExplicitMemberTypeName>());
 
+	[Test]
+	public void MemberNameMustNotStartWithTypeName() =>
+		Assert.That(() => CreateType("Method", "has methodName Text", "Unused", "\t1"),
+			Throws.InstanceOf<TypeParser.MemberNameMustNotStartWithTypeName>().With.Message.
+				Contains("methodName"));
+
 	[TestCase(Type.Number, false)]
 	[TestCase(Type.Number + "s", true)]
 	[TestCase(Type.Character, false)]
