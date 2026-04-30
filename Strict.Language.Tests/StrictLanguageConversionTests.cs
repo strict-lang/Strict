@@ -52,6 +52,20 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(bodySource, Does.Contain("ExpressionKind"));
 	}
 
+	[Test]
+	public void LanguageStrictFilesAvoidLegacyTextNameFields()
+	{
+		var forbidden = new[] { "elementName", "typeName", "resultTypeName", "expressionText",
+			"typeNames" };
+		var offenders = GetLanguageStrictFiles().
+			SelectMany(file => File.ReadAllLines(file).Select((line, lineIndex) =>
+				new { file, line, LineNumber = lineIndex + 1 })).
+			Where(item => item.line.StartsWith("has ", StringComparison.Ordinal) &&
+				forbidden.Any(item.line.Contains)).
+			Select(item => $"{Path.GetFileName(item.file)}:{item.LineNumber}: {item.line.Trim()}");
+		Assert.That(offenders, Is.Empty);
+	}
+
 	private static IEnumerable<string> GetLanguageStrictFiles() =>
 		Directory.GetFiles(GetLanguagePath(), "*.strict");
 
