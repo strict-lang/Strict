@@ -66,6 +66,29 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(offenders, Is.Empty);
 	}
 
+	[Test]
+	public void MethodParsingIsSplitFromBaseMethodSignature()
+	{
+		var root = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
+		Assert.That(File.ReadAllText(Path.Combine(root, "Method.strict")),
+			Is.EqualTo("has Name\nhas Type\nhas Parameters\n"));
+		Assert.That(File.Exists(Path.Combine(GetLanguagePath(), "Method.strict")), Is.False);
+		var parserSource = File.ReadAllText(Path.Combine(GetLanguagePath(), "MethodParser.strict"));
+		Assert.That(parserSource, Does.Contain("Parse(header Text, lines Texts, lineIndex Number) Method"));
+		Assert.That(parserSource, Does.Contain("Body(header Text, lines Texts, lineIndex Number) Body"));
+	}
+
+	[Test]
+	public void ExpressionsParserStartsWithBooleanStrictMethodLines()
+	{
+		var expressionParserSource = File.ReadAllText(Path.Combine(GetExpressionsPath(),
+			"ExpressionParser.strict"));
+		Assert.That(expressionParserSource, Does.Contain("ParseLine(\"not true is false\") is TypeComparison"));
+		Assert.That(expressionParserSource, Does.Contain("ParseLine(\"value then false else true\") is IfExpression"));
+		Assert.That(expressionParserSource, Does.Contain("ParseLine(\"not (false xor false)\") is NotExpression"));
+		Assert.That(expressionParserSource, Does.Contain("ParseLine(\"value is other\") is TypeComparison"));
+	}
+
 	private static IEnumerable<string> GetLanguageStrictFiles() =>
 		Directory.GetFiles(GetLanguagePath(), "*.strict");
 
@@ -98,6 +121,10 @@ public sealed class StrictLanguageConversionTests
 	private static string GetLanguagePath() =>
 		Path.Combine(Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
 			"Language");
+
+	private static string GetExpressionsPath() =>
+		Path.Combine(Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
+			"Expressions");
 
 	[Test]
 	public void LoadKeywordTypeFromLanguageDirectory()
