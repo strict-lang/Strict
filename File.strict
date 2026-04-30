@@ -7,3 +7,4 @@ has BytesReader
 from(path)
 Exists Boolean
 Delete
+ReadLines Texts

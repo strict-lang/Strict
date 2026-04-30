@@ -20,15 +20,17 @@ TypeName(path Text) Text
 Members(lines Texts, containingType Name) Members
 	for lines
 		if IsMemberLine(value)
-			ParseMemberLine(value)
+			ParseMemberLine(value, containingType)
 IsMemberLine(line Text) Boolean
 	line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
-ParseMemberLine(line Text) Member
+ParseMemberLine(line Text, containingType Name) Member
 	let kind = line.StartsWith("mutable ") then "mutable" else line.StartsWith("constant ") then "constant" else "has"
 	let body = line.Substring(kind.Length + 1, line.Length - kind.Length - 1).Trim
 	let memberName = ExtractName(body) to Name
 	let typeName = MemberTypeName(body)
 	let memberType = Type(typeName)
+	if memberName is containingType
+		return Member(memberName, memberType, kind, MemberInitialValue(body))
 	Member(memberName, memberType, kind, MemberInitialValue(body))
 Members(source Text, containingType Text) Members
 	Members(source.Lines, (containingType to Name))
@@ -57,11 +59,10 @@ ExtractName(text Text) Text
 MemberTypeName(text Text) Text
 	let name = ExtractName(text)
 	let rest = text.Substring(name.Length, text.Length - name.Length).Trim
-	mutable inferred = name.Capitalize
-	if name.Substring(name.Length - 1, 1) is "s"
-		inferred = name.Substring(0, name.Length - 1).Capitalize
 	if rest is ""
-		return inferred
+		if name.Substring(name.Length - 1, 1) is "s"
+			return name.Substring(0, name.Length - 1).Capitalize
+		return name.Capitalize
 	let spaceIndex = rest.IndexOf(" ")
 	if spaceIndex is -1
 		return rest
