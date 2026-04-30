@@ -305,7 +305,7 @@ public class MethodCall : ConcreteExpression
 
 	private static IReadOnlyList<Expression> NormalizeTypeArguments(Body body, Type fromType,
 		IReadOnlyList<Expression> arguments) =>
-		fromType.Name == nameof(Type) && arguments.Count == 1
+		fromType.Name == nameof(Type) && HasPackageMember(fromType) && arguments.Count == 1
 			? [
 				arguments[0].ReturnType.IsText
 					? new Value(body.Method.GetType(nameof(Type.Name)), ((Value)arguments[0]).Data)
@@ -313,6 +313,9 @@ public class MethodCall : ConcreteExpression
 				new Text(body.Method, body.Method.Type.Package.FullName)
 			]
 			: arguments;
+
+	private static bool HasPackageMember(Type fromType) =>
+		fromType.Members.Any(member => member.Name == nameof(Type.Package));
 
 	private static Expression CreateListFromMethodCall(Body body, string listElementTypeName,
 		IReadOnlyList<Expression> arguments) =>

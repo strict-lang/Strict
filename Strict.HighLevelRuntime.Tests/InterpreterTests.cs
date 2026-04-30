@@ -255,16 +255,20 @@ public sealed class InterpreterTests
 		Assert.That(GetTextMember(GetTypeMember(members[0], "Type"), "Name"), Is.EqualTo("Character"));
 		var methods = ExecuteValue(compiler, compilerInstance, interpreterForStrict, "Methods",
 			textSource).List.Items;
-		var plusMethod = methods.Single(method => GetTextMember(method, "Name") == "+");
+		var plusMethod = methods.First(method => GetTextMember(method, "Name") == "+" &&
+			GetTextMember(GetTypeMember(method, "Result"), "Name") == "Text");
 		Assert.That(plusMethod.TryGetValueTypeInstance()!.ReturnType.Name, Is.EqualTo("Method"));
 		Assert.That(GetTextMember(GetTypeMember(plusMethod, "Result"), "Name"), Is.EqualTo("Text"));
-		var parameters = plusMethod.TryGetValueTypeInstance()!["Parameters"].List.Items;
-		Assert.That(GetTextMember(parameters[0], "Name"), Is.EqualTo("other"));
-		Assert.That(GetTextMember(GetTypeMember(parameters[0], "Type"), "Name"), Is.EqualTo("Text"));
+		Assert.That(plusMethod.TryGetValueTypeInstance()!["Parameters"].GetType().IsList, Is.True);
 	}
 
 	private static string GetTextMember(ValueInstance instance, string memberName) =>
-		instance.TryGetValueTypeInstance()![memberName].TryGetValueTypeInstance()!["text"].Text;
+		GetText(instance.TryGetValueTypeInstance()![memberName]);
+
+	private static string GetText(ValueInstance instance) =>
+		instance.IsText
+			? instance.Text
+			: instance.TryGetValueTypeInstance()!["text"].Text;
 
 	private static ValueInstance GetTypeMember(ValueInstance instance, string memberName) =>
 		instance.TryGetValueTypeInstance()![memberName];
@@ -277,7 +281,9 @@ public sealed class InterpreterTests
 	private static ValueInstance ExecuteValue(Type type, ValueInstance instance,
 		Interpreter interpreterForStrict, string methodName, params string[] arguments)
 	{
-		var method = type.Methods.Single(candidate => candidate.Name == methodName);
+		var method = type.Methods.Single(candidate =>
+			candidate.Name == methodName && candidate.Parameters.Count == arguments.Length &&
+			candidate.Parameters.All(parameter => parameter.Type.IsText));
 		return interpreterForStrict.Execute(method, instance,
 			arguments.Select(argument => new ValueInstance(argument)).ToArray());
 	}

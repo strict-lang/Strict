@@ -1,5 +1,3 @@
-has lines Texts
-IsMember(line Text) Boolean
-	line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
-IsMethodHeader(line Text) Boolean
-	(not IsMember(line)) and (not line.StartsWith("\t"))
+has Name Text
+to Text
+	Name

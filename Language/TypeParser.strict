@@ -1,2 +1,2 @@
-has packageName Text
-has typeName Text
+has Package
+has Type

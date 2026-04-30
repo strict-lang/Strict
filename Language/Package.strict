@@ -1,2 +1,2 @@
-has packageName Text
-has children Packages
+has Name
+has Children Packages

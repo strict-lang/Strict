@@ -1,18 +1,53 @@
-has methodName Text
-has resultTypeName Text
-has parameterNames Texts
-has bodyLines Texts
+has Name
+has Result Type
+has Parameters
+has Body
 ParameterCount Number
-	parameterNames.Length
+	Parameters.Length
 BodyLineCount Number
-	bodyLines.Length
+	Body.Length
 IsTrait Boolean
-	bodyLines.Length is 0
+	Body.Length is 0
 HasReturnType Boolean
-	resultTypeName is not ""
+	(Result.Name to Text) is not "None"
 HasParameters Boolean
-	parameterNames.Length > 0
+	Parameters.Length > 0
 IsRunMethod Boolean
-	methodName is "Run"
+	Name is ("Run" to Name)
 to Text
-	methodName
+	Name to Text
+Parse(header Text, lines Texts, lineIndex Number) Method
+	let bodyStart = lineIndex + 1
+	let bodyLength = BodyLength(lines, bodyStart)
+	Method(ExtractName(header), ExtractResult(header), ExtractParameters(header), Body(lines, bodyStart, bodyLength))
+IsHeader(line Text) Boolean
+	line is not "" and (not Member.Kind(line).StartsWith("has")) and (not line.StartsWith("\t"))
+ExtractName(header Text) Name
+	let parenIndex = header.IndexOf("(")
+	let spaceIndex = header.IndexOf(" ")
+	let endIndex = FirstPositiveIndex(parenIndex, spaceIndex)
+	((endIndex is -1 then header else header.Substring(0, endIndex)) to Name)
+ExtractResult(header Text) Type
+	let parts = header.Split(" ")
+	Type(parts.Length is 1 then "None" else parts.Last)
+ExtractParameters(header Text) Parameters
+	let openIndex = header.IndexOf("(")
+	if openIndex is -1
+		return Parameters
+	let closeIndex = header.IndexOf(")")
+	let text = header.Substring(openIndex + 1, closeIndex - openIndex - 1).Trim
+	if text is ""
+		return Parameters
+	for text.Split(",")
+		Parameter.Parse(value.Trim)
+FirstPositiveIndex(first Number, second Number) Number
+	if first is -1
+		return second
+	if second is -1
+		return first
+	first < second then first else second
+BodyLength(lines Texts, bodyStart Number) Number
+	for Range(bodyStart, lines.Length)
+		if not lines(index).StartsWith("\t")
+			return index - bodyStart
+	lines.Length - bodyStart

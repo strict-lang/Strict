@@ -1,6 +1,6 @@
-has typeName Text
-has lines Texts
+has Name
+has Lines Texts
 LineCount Number
-	lines.Length
+	Lines.Length
 to Text
-	typeName
+	Name to Text

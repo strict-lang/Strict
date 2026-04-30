@@ -1,8 +1,26 @@
-has parameterName Text
-has typeName Text
-has isMutable Boolean
-has defaultValue Text
+has Name
+has Type
+has IsMutable Boolean
+has DefaultValue Text
 HasDefault Boolean
-	defaultValue is not ""
+	DefaultValue is not ""
 to Text
-	parameterName + " " + typeName
+	Name to Text + " " + Type to Text
+Parse(text Text) Parameter
+	let trimmed = text.Trim
+	let isMutable = trimmed.StartsWith("mutable" + " ")
+	let withoutMutable = WithoutMutableKeyword(trimmed, isMutable)
+	let equalsIndex = withoutMutable.IndexOf(" = ")
+	let beforeDefault = equalsIndex is -1 then withoutMutable else withoutMutable.Substring(0, equalsIndex)
+	let parts = beforeDefault.Split(" ")
+	let typeName = parts.Length > 1 then parts.Last else "Any"
+	Parameter((parts.First to Name), Type(typeName), isMutable, DefaultValue(withoutMutable, equalsIndex))
+WithoutMutableKeyword(text Text, isMutable Boolean) Text
+	if not isMutable
+		return text
+	let start = "mutable".Length + 1
+	text.Substring(start, text.Length - start)
+DefaultValue(text Text, equalsIndex Number) Text
+	if equalsIndex is -1
+		return ""
+	text.Substring(equalsIndex + 3, text.Length - equalsIndex - 3)

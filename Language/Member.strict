@@ -1,12 +1,56 @@
-has memberName Text
-has typeName Text
-has memberKind Text
-has initialValue Text
+has Name
+has Type
+has Kind Text
+has InitialValue Text
 IsMutable Boolean
-	memberKind is "mutable"
+	Kind is "mutable"
 IsConstant Boolean
-	memberKind is "constant"
+	Kind is "constant"
 IsPublic Boolean
-	memberName.StartsWith("A")
+	(Name to Text).StartsWith("A")
 to Text
-	memberKind + " " + memberName
+	Kind + " " + Name to Text
+Parse(line Text, containingType Name) Member
+	let kind = Kind(line)
+	let text = line.Substring(KeywordLength(kind), line.Length - KeywordLength(kind)).Trim
+	let memberName = ExtractName(text) to Name
+	if memberName is containingType
+		return Error("Member name must not start with type name " + containingType to Text)
+	Member(memberName, Type(ExtractTypeName(text, memberName to Text)), kind, ExtractInitialValue(text))
+Kind(line Text) Text
+	if line.StartsWith("mutable" + " ")
+		return "mutable"
+	if line.StartsWith("constant" + " ")
+		return "constant"
+	"has"
+KeywordLength(kind Text) Number
+	kind.Length + 1
+ExtractName(text Text) Text
+	let spaceIndex = text.IndexOf(" ")
+	let equalsIndex = text.IndexOf("=")
+	let endIndex = FirstPositiveIndex(spaceIndex, equalsIndex)
+	endIndex is -1 then text else text.Substring(0, endIndex).Trim
+FirstPositiveIndex(first Number, second Number) Number
+	if first is -1
+		return second
+	if second is -1
+		return first
+	first < second then first else second
+ExtractTypeName(text Text, memberName Text) Text
+	let rest = text.Substring(memberName.Length, text.Length - memberName.Length).Trim
+	if rest is ""
+		return TypeNameFromMemberName(memberName)
+	if rest.StartsWith("=")
+		return TypeNameFromMemberName(memberName)
+	let endIndex = FirstPositiveIndex(rest.IndexOf(" "), rest.IndexOf("="))
+	let explicitType = endIndex is -1 then rest else rest.Substring(0, endIndex).Trim
+	explicitType is "" then TypeNameFromMemberName(memberName) else explicitType
+TypeNameFromMemberName(memberName Text) Text
+	if memberName.Substring(memberName.Length - 1, 1) is "s"
+		return memberName.Substring(0, memberName.Length - 1).Capitalize
+	memberName.Capitalize
+ExtractInitialValue(text Text) Text
+	let equalsIndex = text.IndexOf("= ")
+	if equalsIndex is -1
+		return ""
+	text.Substring(equalsIndex + 2, text.Length - equalsIndex - 2).Trim

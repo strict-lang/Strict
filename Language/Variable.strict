@@ -1,6 +1,6 @@
-has variableName Text
-has typeName Text
-has isMutable Boolean
-has initialValue Text
+has Name
+has Type
+has IsMutable Boolean
+has InitialValue Text
 to Text
-	variableName + " " + typeName
+	Name to Text + " " + Type to Text
