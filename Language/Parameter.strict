@@ -5,7 +5,7 @@ has DefaultValue Text
 HasDefault Boolean
 	DefaultValue is not ""
 to Text
-	Name to Text + " " + Type to Text
+	Name + " " + Type
 Parse(text Text) Parameter
 	let trimmed = text.Trim
 	let isMutable = trimmed.StartsWith("mutable" + " ")

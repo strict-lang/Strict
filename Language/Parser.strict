@@ -1,13 +1,14 @@
 has logger
 Run(path)
-	let lines = File(path).ReadLines
-	logger.Log("Parsing " + TypeName(path))
+	let lines = File(path).TextReader.ReadLines
+	let type = Type(TypeName(path), lines)
+	logger.Log("Parsing " + type.Name)
 	logger.Log("Members:")
-	for Members(lines, (TypeName(path) to Name))
-		logger.Log("> " + value to Text)
+	for type.Members
+		logger.Log("> " + value)
 	logger.Log("Methods:")
-	for Methods(lines)
-		logger.Log("> " + value to Text)
+	for type.Methods
+		logger.Log("> " + value)
 TypeName(path Text) Text
 	TypeName("Examples/Parsing/ParseMethodHeaders.strict") is "ParseMethodHeaders"
 	TypeName("Text.strict") is "Text"
@@ -17,67 +18,3 @@ TypeName(path Text) Text
 	let fileName = slashIndex is -1 then path else path.Substring(slashIndex + 1, fileNameLength)
 	let extensionIndex = fileName.LastIndexOf(".")
 	extensionIndex is -1 then fileName else fileName.Substring(0, extensionIndex)
-Members(lines Texts, containingType Name) Members
-	for lines
-		if IsMemberLine(value)
-			ParseMemberLine(value, containingType)
-IsMemberLine(line Text) Boolean
-	line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
-ParseMemberLine(line Text, containingType Name) Member
-	let kind = line.StartsWith("mutable ") then "mutable" else line.StartsWith("constant ") then "constant" else "has"
-	let body = line.Substring(kind.Length + 1, line.Length - kind.Length - 1).Trim
-	let memberName = ExtractName(body) to Name
-	let typeName = MemberTypeName(body)
-	let memberType = Type(typeName)
-	if memberName is containingType
-		return Member(memberName, memberType, kind, MemberInitialValue(body))
-	Member(memberName, memberType, kind, MemberInitialValue(body))
-Members(source Text, containingType Text) Members
-	Members(source.Lines, (containingType to Name))
-Methods(lines Texts) Methods
-	for lines
-		if IsMethodLine(value)
-			ParseMethodLine(value, lines, index)
-IsMethodLine(line Text) Boolean
-	line is not "" and (not IsMemberLine(line)) and (not line.StartsWith("\t"))
-Methods(source Text) Methods
-	Methods(source.Lines)
-ParseMethodLine(line Text, lines Texts, lineIndex Number) Method
-	let bodyStart = lineIndex + 1
-	let bodyLength = BodyLength(lines, bodyStart)
-	let methodName = ExtractName(line) to Name
-	Method(methodName, MethodResult(line), Parameters, Body(lines, bodyStart, bodyLength))
-ExtractName(text Text) Text
-	for text.characters
-		if value is "("
-			return text.Substring(0, index).Trim
-		if value is " "
-			return text.Substring(0, index).Trim
-		if value is "="
-			return text.Substring(0, index).Trim
-	text
-MemberTypeName(text Text) Text
-	let name = ExtractName(text)
-	let rest = text.Substring(name.Length, text.Length - name.Length).Trim
-	if rest is ""
-		if name.Substring(name.Length - 1, 1) is "s"
-			return name.Substring(0, name.Length - 1).Capitalize
-		return name.Capitalize
-	let spaceIndex = rest.IndexOf(" ")
-	if spaceIndex is -1
-		return rest
-	rest.Substring(0, spaceIndex).Trim
-MemberInitialValue(text Text) Text
-	let equalsIndex = text.IndexOf("= ")
-	if equalsIndex is -1
-		return ""
-	text.Substring(equalsIndex + 2, text.Length - equalsIndex - 2).Trim
-MethodResult(header Text) Type
-	let parts = header.Split(" ")
-	let resultName = parts.Length is 1 then "None" else parts.Last
-	Type(resultName)
-BodyLength(lines Texts, bodyStart Number) Number
-	for Range(bodyStart, lines.Length)
-		if not lines(index).StartsWith("\t")
-			return index - bodyStart
-	lines.Length - bodyStart

@@ -3,4 +3,4 @@ has Lines Texts
 LineCount Number
 	Lines.Length
 to Text
-	Name to Text
+	Name

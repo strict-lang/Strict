@@ -248,13 +248,21 @@ public sealed class InterpreterTests
 		var interpreterForStrict = new Interpreter(language, TestBehavior.Disabled);
 		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "TypeName", "Text.strict"),
 			Is.EqualTo("Text"));
-		var members = ExecuteValue(compiler, compilerInstance, interpreterForStrict, "Members",
-			textSource, "Text").List.Items;
+		var type = language.GetType("Type");
+		var typeInstance = new ValueInstance(type,
+		[
+			new ValueInstance("Text"),
+			new ValueInstance(type.Members[1].Type,
+				textSource.Replace("\r", "").Split('\n').Where(line => line.Length > 0).
+					Select(line => new ValueInstance(line)).ToArray())
+		]);
+		var members = interpreterForStrict.Execute(type.Methods.Single(method => method.Name == "Members" &&
+			method.Parameters.Count == 0), typeInstance, []).List.Items;
 		Assert.That(members[0].TryGetValueTypeInstance()!.ReturnType.Name, Is.EqualTo("Member"));
 		Assert.That(GetTextMember(members[0], "Name"), Is.EqualTo("characters"));
 		Assert.That(GetTextMember(GetTypeMember(members[0], "Type"), "Name"), Is.EqualTo("Character"));
-		var methods = ExecuteValue(compiler, compilerInstance, interpreterForStrict, "Methods",
-			textSource).List.Items;
+		var methods = interpreterForStrict.Execute(type.Methods.Single(method => method.Name == "Methods" &&
+			method.Parameters.Count == 0), typeInstance, []).List.Items;
 		var plusMethod = methods.First(method => GetTextMember(method, "Name") == "+" &&
 			GetTextMember(GetTypeMember(method, "Result"), "Name") == "Text");
 		Assert.That(plusMethod.TryGetValueTypeInstance()!.ReturnType.Name, Is.EqualTo("Method"));

@@ -9,13 +9,13 @@ BodyLineCount Number
 IsTrait Boolean
 	Body.Length is 0
 HasReturnType Boolean
-	(Result.Name to Text) is not "None"
+	Result.Name is not "None"
 HasParameters Boolean
 	Parameters.Length > 0
 IsRunMethod Boolean
 	Name is ("Run" to Name)
 to Text
-	Name to Text
+	Name
 Parse(header Text, lines Texts, lineIndex Number) Method
 	let bodyStart = lineIndex + 1
 	let bodyLength = BodyLength(lines, bodyStart)

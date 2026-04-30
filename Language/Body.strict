@@ -1,3 +1,30 @@
 has Lines Texts
 has Start Number
 has Length Number
+BodyLines Texts
+	for Range(Start, Start + Length)
+		Lines(index)
+Expressions ConcreteExpressions
+	for BodyLines
+		ParseLine(value)
+ParseLine(line Text) ConcreteExpression
+	let trimmed = line.Trim
+	ConcreteExpression(Expression(ExpressionKind(trimmed), Start, false), trimmed)
+ExpressionKind(line Text) Text
+	if line.StartsWith("return ")
+		return "Return"
+	if line.StartsWith("if ")
+		return "If"
+	if line.StartsWith("for ")
+		return "For"
+	if line.StartsWith("let ")
+		return "Declaration"
+	TailExpressionKind(line)
+TailExpressionKind(line Text) Text
+	if line.IndexOf(" = ") > 0
+		return "Reassignment"
+	if line.IndexOf(".") > 0
+		return "MethodCall"
+	if line.IndexOf(" is ") > 0
+		return "Binary"
+	"Expression"

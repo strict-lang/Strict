@@ -43,6 +43,15 @@ public sealed class StrictLanguageConversionTests
 			Does.Not.Contain("Members(lines Texts"));
 	}
 
+	[Test]
+	public void BodyStrictParsesLinesIntoConcreteExpressions()
+	{
+		var bodySource = File.ReadAllText(Path.Combine(GetLanguagePath(), "Body.strict"));
+		Assert.That(bodySource, Does.Contain("Expressions ConcreteExpressions"));
+		Assert.That(bodySource, Does.Contain("ConcreteExpression"));
+		Assert.That(bodySource, Does.Contain("ExpressionKind"));
+	}
+
 	private static IEnumerable<string> GetLanguageStrictFiles() =>
 		Directory.GetFiles(GetLanguagePath(), "*.strict");
 
@@ -96,13 +105,15 @@ public sealed class StrictLanguageConversionTests
 	}
 
 	[Test]
-	public void LoadTypeParserFromLanguageDirectory()
+	public async Task LoadTypeParserFromLanguageDirectory()
 	{
-		using var languagePackage = new Package(TestPackage.Instance, "Language");
-		using var typeParser = CreateLanguageType(languagePackage, "Type");
-		Assert.That(typeParser.Members.Count, Is.EqualTo(1));
+		using var languagePackage =
+			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Language");
+		var typeParser = languagePackage.GetType("Type");
+		Assert.That(typeParser.Members.Count, Is.EqualTo(2));
 		Assert.That(typeParser.Members[0].Name, Is.EqualTo("Name"));
-		Assert.That(typeParser.Methods.Count, Is.EqualTo(1));
+		Assert.That(typeParser.Members[1].Name, Is.EqualTo("Lines"));
+		Assert.That(typeParser.Methods.Count, Is.GreaterThan(10));
 		Assert.That(typeParser.Methods[0].Name, Is.EqualTo("to"));
 	}
 

@@ -7,16 +7,16 @@ IsMutable Boolean
 IsConstant Boolean
 	Kind is "constant"
 IsPublic Boolean
-	(Name to Text).StartsWith("A")
+	Name.StartsWith("A")
 to Text
-	Kind + " " + Name to Text
+	Kind + " " + Name
 Parse(line Text, containingType Name) Member
 	let kind = Kind(line)
 	let text = line.Substring(KeywordLength(kind), line.Length - KeywordLength(kind)).Trim
 	let memberName = ExtractName(text) to Name
 	if memberName is containingType
-		return Error("Member name must not start with type name " + containingType to Text)
-	Member(memberName, Type(ExtractTypeName(text, memberName to Text)), kind, ExtractInitialValue(text))
+		return Error("Member name must not start with type name " + containingType)
+	Member(memberName, Type(ExtractTypeName(text, memberName)), kind, ExtractInitialValue(text))
 Kind(line Text) Text
 	if line.StartsWith("mutable" + " ")
 		return "mutable"

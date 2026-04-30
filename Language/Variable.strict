@@ -3,4 +3,4 @@ has Type
 has IsMutable Boolean
 has InitialValue Text
 to Text
-	Name to Text + " " + Type to Text
+	Name + " " + Type
