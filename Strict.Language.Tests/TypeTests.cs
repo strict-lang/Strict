@@ -430,9 +430,9 @@ public sealed class TypeTests
 
 	[Test]
 	public void MemberNameMustNotStartWithTypeName() =>
-		Assert.That(() => CreateType("Method", "has methodName Text", "Unused", "\t1"),
+		Assert.That(() => CreateType("Widget", "has widgetName Text", "Unused", "\t1"),
 			Throws.InstanceOf<TypeParser.MemberNameMustNotStartWithTypeName>().With.Message.
-				Contains("methodName"));
+				Contains("widgetName"));
 
 	[TestCase(Type.Number, false)]
 	[TestCase(Type.Number + "s", true)]

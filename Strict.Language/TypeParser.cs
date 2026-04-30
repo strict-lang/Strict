@@ -333,6 +333,10 @@ public sealed class TypeParser(Type type, string[] lines)
 		long span, long limit) : ParsingFailed(type, lineNumber,
 		$"Range size {span} exceeds limit {limit}: " + line);
 
+	public sealed class MemberNameMustNotStartWithTypeName(Type type, int lineNumber,
+		string memberName) : ParsingFailed(type, lineNumber,
+		$"Member name {memberName} must not start with type name {type.Name}");
+
 	private void DetectRedundantReturn(IReadOnlyList<string> checkLines, Method method)
 	{
 		if (checkLines[^1].StartsWith("\treturn ", StringComparison.Ordinal))
@@ -422,6 +426,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		var nameAndExpression = remainingLine.Split();
 		nameAndExpression.MoveNext();
 		var nameAndType = nameAndExpression.Current.ToString();
+		if (nameAndType.StartsWith(type.Name.MakeFirstLetterLowercase(), StringComparison.Ordinal))
+			throw new MemberNameMustNotStartWithTypeName(type, LineNumber, nameAndType);
 		if (nameAndExpression.MoveNext())
 		{
 			var wordAfterName = nameAndExpression.Current.ToString();
