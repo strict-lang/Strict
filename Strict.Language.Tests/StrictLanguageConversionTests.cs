@@ -11,6 +11,42 @@ namespace Strict.Language.Tests;
 public sealed class StrictLanguageConversionTests
 {
 	[Test]
+	public void LanguageStrictFilesMustNotForceToTextInTextContexts()
+	{
+		var offenders = GetLanguageStrictFiles().
+			SelectMany(file => File.ReadAllLines(file).Select((line, lineIndex) =>
+				new { file, line, LineNumber = lineIndex + 1 })).
+			Where(item => item.line.Contains(" to Text + ", StringComparison.Ordinal) ||
+				item.line.Contains("+ ") && item.line.Contains(" to Text", StringComparison.Ordinal) ||
+				item.line.Contains(".Log(") && item.line.Contains(" to Text", StringComparison.Ordinal)).
+			Select(item => $"{Path.GetFileName(item.file)}:{item.LineNumber}: {item.line.Trim()}");
+		Assert.That(offenders, Is.Empty);
+	}
+
+	[Test]
+	public void ReadLinesBelongsToTextReaderNotFileTrait()
+	{
+		var root = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
+		Assert.That(File.ReadAllText(Path.Combine(root, "File.strict")),
+			Does.Not.Contain("ReadLines"));
+		Assert.That(File.ReadAllText(Path.Combine(root, "TextReader.strict")),
+			Does.Contain("ReadLines Texts"));
+	}
+
+	[Test]
+	public void TypeStrictOwnsTypeParsingSurface()
+	{
+		var typeSource = File.ReadAllText(Path.Combine(GetLanguagePath(), "Type.strict"));
+		Assert.That(typeSource, Does.Contain("Members(lines Texts) Members"));
+		Assert.That(typeSource, Does.Contain("Methods(lines Texts) Methods"));
+		Assert.That(File.ReadAllText(Path.Combine(GetLanguagePath(), "Parser.strict")),
+			Does.Not.Contain("Members(lines Texts"));
+	}
+
+	private static IEnumerable<string> GetLanguageStrictFiles() =>
+		Directory.GetFiles(GetLanguagePath(), "*.strict");
+
+	[Test]
 	public void LoadLimitTypeFromLanguageDirectory()
 	{
 		using var limitType = CreateLanguageType(TestPackage.Instance, "Limit");
