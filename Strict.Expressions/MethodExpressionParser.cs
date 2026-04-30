@@ -519,6 +519,8 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		if (input.IsKeyword())
 			throw new KeywordNotAllowedAsMemberOrMethod(body, input.ToString(), type);
+		if (instance is null && type != body.Method.Type && input.Equals(Method.From, StringComparison.Ordinal))
+			throw new DirectFromConstructorCallIsForbidden(body, type);
 		var parse = MemberCall.TryParse(body, type, instance, input) ??
 			MethodCall.TryParse(instance, body, arguments, type, input.ToString());
 		if (parse == null && instance is null)
@@ -618,6 +620,9 @@ public class MethodExpressionParser : ExpressionParser
 
 	public sealed class CannotAccessMemberBeforeTypeIsParsed(Body body, string input, Type type)
 		: ParsingFailed(body, input, type);
+
+	public sealed class DirectFromConstructorCallIsForbidden(Body body, Type type)
+		: ParsingFailed(body, "Use " + type.Name + "(...) instead of " + type.Name + ".from(...)", type);
 
 	public sealed class KeywordNotAllowedAsMemberOrMethod(Body body, string input, Type type)
 		: ParsingFailed(body, input, type);

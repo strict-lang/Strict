@@ -1,7 +1,13 @@
 has logger
-Run(filePath Text)
-	let source = File.from(filePath).ReadText
-	logger.Log(source)
+Run(path)
+	let lines = File(path).ReadLines
+	logger.Log("Parsing " + TypeName(path))
+	logger.Log("Members:")
+	for MemberHeaders(lines)
+		logger.Log("> " + value)
+	logger.Log("Methods:")
+	for MethodHeaders(lines)
+		logger.Log("> " + value)
 Sample Text
 	"has logger Logger\nRun\nAdd(other Number) Number\n\treturn count"
 TypeName(path Text) Text
@@ -21,18 +27,22 @@ IsMember(line Text) Boolean
 IsBodyLine(line Text) Boolean
 	IsBodyLine("\treturn count")
 	line.StartsWith("\t")
-MemberNames(source Text) Texts
+MemberNames(lines Texts) Texts
 	MemberNames(Sample) is ("logger")
-	for source.Lines
+	for lines
 		index is index
 		if IsMember(value)
 			MemberName(value)
-MemberHeaders(source Text) Texts
+MemberNames(source Text) Texts
+	MemberNames(source.Lines)
+MemberHeaders(lines Texts) Texts
 	MemberHeaders(Sample) is ("logger Logger")
-	for source.Lines
+	for lines
 		index is index
 		if IsMember(value)
 			MemberHeader(value)
+MemberHeaders(source Text) Texts
+	MemberHeaders(source.Lines)
 MemberHeader(line Text) Text
 	MemberHeader("has logger Logger") is "logger Logger"
 	MemberHeader("has width Number") is "width Number"
@@ -63,12 +73,14 @@ KeywordLength(line Text) Number
 	if line.StartsWith("constant ")
 		return 9
 	4
-MethodHeaders(source Text) Texts
+MethodHeaders(lines Texts) Texts
 	MethodHeaders(Sample) is ("Run", "Add(other Number) Number")
-	for source.Lines
+	for lines
 		index is index
 		if (not IsMember(value)) and (not IsBodyLine(value)) and value is not ""
 			value
+MethodHeaders(source Text) Texts
+	MethodHeaders(source.Lines)
 MethodName(header Text) Text
 	MethodName("Run") is "Run"
 	MethodName("Add(other Number) Number") is "Add"

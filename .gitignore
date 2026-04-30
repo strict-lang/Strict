@@ -142,3 +142,4 @@ test_output.txt
 temp_inspect.csx
 *.exp
 *.lib
+.continue/rules/*.md

@@ -36,6 +36,10 @@ public static class NativeFileRegistry
 		return text;
 	}
 
+	public static string[] ReadLines(long handle) =>
+		ReadText(handle).Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n',
+			StringSplitOptions.None);
+
 	public static byte[] ReadBytes(long handle)
 	{
 		var state = Get(handle);

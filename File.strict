@@ -4,6 +4,6 @@ has TextWriter
 has TextReader
 has BytesWriter
 has BytesReader
-from(path Text)
+from(path)
 Exists Boolean
 Delete

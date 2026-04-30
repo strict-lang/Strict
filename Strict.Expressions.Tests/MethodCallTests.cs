@@ -150,6 +150,10 @@ public sealed class MethodCallTests : TestExpressions
 		Assert.That(ParseExpression(fromMethodCall).ToString(), Is.EqualTo(fromMethodCall));
 
 	[Test]
+	public void DirectFromConstructorCallThrows() =>
+		Assert.That(() => ParseExpression("File.from(\"test.txt\")"), Throws.InstanceOf<ParsingFailed>());
+
+	[Test]
 	public void MakeSureMutableTypeMethodsAreNotModified()
 	{
 		var body = (Body)ParseExpression("mutable number = 7", "number = number + 1");
