@@ -1,3 +1,3 @@
-has typeNames Texts
+has names
 Count Number
-	typeNames.Length
+	names.Length

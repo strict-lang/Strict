@@ -132,12 +132,13 @@ public sealed class StrictLanguageConversionTests
 	}
 
 	[Test]
-	public void LoadTypeFinderFromLanguageDirectory()
+	public async Task LoadTypeFinderFromLanguageDirectory()
 	{
-		using var languagePackage = new Package(TestPackage.Instance, "Language");
-		using var typeFinder = CreateLanguageType(languagePackage, "TypeFinder");
+		using var languagePackage =
+			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Language");
+		var typeFinder = languagePackage.GetType("TypeFinder");
 		Assert.That(typeFinder.Members.Count, Is.EqualTo(1));
-		Assert.That(typeFinder.Members[0].Name, Is.EqualTo("typeNames"));
+		Assert.That(typeFinder.Members[0].Name, Is.EqualTo("names"));
 		Assert.That(typeFinder.Methods.Count, Is.EqualTo(1));
 		Assert.That(typeFinder.Methods[0].Name, Is.EqualTo("Count"));
 	}

@@ -1,8 +1,8 @@
-has elementName Text
-has typeName Text
-has isMutable Boolean
-has isConstant Boolean
+has Name
+has Type
+has IsMutable Boolean
+has IsConstant Boolean
 IsPublic Boolean
-	elementName.StartsWith("A")
+	Name.text.StartsWith("A")
 to Text
-	elementName + " " + typeName
+	Name + " " + Type

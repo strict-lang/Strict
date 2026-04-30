@@ -1,6 +1,6 @@
 has Expression
-has expressionText Text
+has Text
 IsConstant Boolean
-	false
+	Expression.IsConstant
 to Text
-	expressionText
+	Text

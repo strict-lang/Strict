@@ -1,7 +1,7 @@
-has resultTypeName Text
-has lineNumber Number
-has isMutable Boolean
+has result Text
+has line Number
+has IsMutable Boolean
 IsConstant Boolean
 	false
 to Text
-	resultTypeName
+	result
