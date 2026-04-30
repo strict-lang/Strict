@@ -114,8 +114,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		var program =
 			new Type(package,
 				new TypeLines(Computer, "has number", "has file = \"test.txt\"", "Run",
-					"\tfile.Write(number)",
-					"\t6")).ParseMembersAndMethods(parser);
+					"\tfile.Write(number)")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));

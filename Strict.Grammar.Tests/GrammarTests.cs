@@ -87,7 +87,7 @@ public sealed class GrammarTests
 		{
 			// If the last line fails, check the .strict file if there is an extra empty line at the end
 			var result = BuildGrammar().Match(File.ReadAllText(file).Replace("\r\n", "\n") + "\n");
-			Assert.That(result.Success, Is.True, file + ": " + GetErrorDetails("", result));
+			Assert.That(result.Success, Is.True, file + ": Check if the last line is not empty. " + GetErrorDetails("", result));
 		}
 	}
 }

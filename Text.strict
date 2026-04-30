@@ -80,9 +80,7 @@ TrimEnd Text
 Capitalize Text
 	"logger".Capitalize is "Logger"
 	"a".Capitalize is "A"
-	if Length is 0
-		return ""
-	Substring(0, 1).Upper + Substring(1, Length - 1)
+	Length is 0 then "" else Substring(0, 1).Upper + Substring(1, Length - 1)
 IndexOf(text Text, startIndex = 0) Number
 	"hello".IndexOf("he") is 0
 	"hello".IndexOf("ll") is 2

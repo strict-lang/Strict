@@ -186,8 +186,7 @@ public sealed class InterpreterTests
 			interpreterForStrict.Execute(fileType.AvailableMethods["Write"].Single(method =>
 					method.Name == "Write" && method.Parameters[0].Type.IsText), fileInstance,
 				[new ValueInstance("Strict text")]);
-			var result = interpreterForStrict.Execute(
-				fileType.AvailableMethods["ReadText"].Single(method => method.Name == "ReadText"),
+			var result = interpreterForStrict.Execute(fileType.AvailableMethods["ReadLines"][0],
 				fileInstance, []);
 			Assert.That(result.Text, Is.EqualTo("Strict text"));
 			interpreterForStrict.Execute(fileType.AvailableMethods["Close"].Single(method => method.Name == "Close"),

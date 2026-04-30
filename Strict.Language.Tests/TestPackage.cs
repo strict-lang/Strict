@@ -269,8 +269,8 @@ public sealed class TestPackage : Package
 			"has textWriter",
 			"Log(text)",
 			"\ttextWriter.Write(text)"));
-		var textWriter = new Type(this, new TypeLines(Type.TextWriter, "Write(text)"));
-		var textReader = new Type(this, new TypeLines(Type.TextReader, "ReadText Text"));
+		var textWriter = new Type(this, new TypeLines(Type.TextWriter, "Write(lines Texts)"));
+		var textReader = new Type(this, new TypeLines(Type.TextReader, "ReadLines Texts"));
 		var closeable = new Type(this, new TypeLines("Closeable", "Close"));
 		var bytesWriter = new Type(this, new TypeLines("BytesWriter", "Write(bytes Bytes)"));
 		var bytesReader = new Type(this, new TypeLines("BytesReader", "ReadBytes Bytes"));

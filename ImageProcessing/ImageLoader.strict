@@ -1,4 +1,4 @@
-from(path Text)
+from(path)
 Colors Bytes
 Width Number
 Height Number

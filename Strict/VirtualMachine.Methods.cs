@@ -89,7 +89,7 @@ public sealed partial class VirtualMachine
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.basePackage)),
 			BinaryOperator.To => hasInstance && TryHandleToConversion(invoke, implicitInstance),
 			"Length" or "Count" => hasInstance && TryHandleNativeLength(invoke, implicitInstance),
-			"ReadText" or "ReadLines" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" =>
+			"ReadLines" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" =>
 				hasInstance && TryHandleNativeFileMethod(invoke, implicitInstance),
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true, implicitInstance),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false, implicitInstance),
@@ -149,9 +149,6 @@ public sealed partial class VirtualMachine
 		var handle = GetFileHandle(instance);
 		switch (info.MethodName)
 		{
-		case "ReadText":
-			Memory.Registers[invoke.Register] = new ValueInstance(NativeFileRegistry.ReadText(handle));
-			return true;
 		case "ReadLines":
 			Memory.Registers[invoke.Register] = CreateTextListValue(NativeFileRegistry.ReadLines(handle));
 			return true;

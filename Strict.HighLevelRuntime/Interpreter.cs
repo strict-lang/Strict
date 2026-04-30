@@ -220,8 +220,8 @@ public class Interpreter
 			return false;
 		switch (method.Name)
 		{
-		case "ReadText":
-			result = new ValueInstance(NativeFileRegistry.ReadText(handle));
+		case "ReadLines":
+			result = CreateTexts(method, NativeFileRegistry.ReadLines(handle));
 			return true;
 		case "ReadBytes":
 			result = CreateBytesValue(method, NativeFileRegistry.ReadBytes(handle));
@@ -247,8 +247,8 @@ public class Interpreter
 	}
 
 	private static bool IsNativeFileMethod(string methodName) =>
-		methodName is "ReadText" or "ReadBytes" or "Write" or "Delete" or "Close" or "Exists"
-			or "Length";
+		methodName is "ReadLines" or "ReadBytes" or "Write" or "Delete" or "Close" or "Exists" or
+		"Length";
 
 	private long GetFileHandle(ValueInstance instance, Method method)
 	{
@@ -267,6 +267,15 @@ public class Interpreter
 			NativeFileRegistry.WriteBytes(handle, FileValue.GetBytes(args[0]));
 		else
 			throw new InvalidTypeForArgument(method.Type, args, 0);
+	}
+	
+	private ValueInstance CreateTexts(Method method, string[] lines)
+	{
+		var textsType = method.GetListImplementationType(method.GetType(Type.Text));
+		var values = new ValueInstance[lines.Length];
+		for (var index = 0; index < lines.Length; index++)
+			values[index] = new ValueInstance(lines[index]);
+		return new ValueInstance(textsType, values);
 	}
 
 	private ValueInstance CreateBytesValue(Method method, byte[] bytes)

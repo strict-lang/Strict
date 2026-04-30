@@ -4,15 +4,10 @@ ParseLine(line Text) Type
 	ParseLine("value then false else true") is IfExpression
 	ParseLine("not (false xor false)") is NotExpression
 	ParseLine("value is other") is TypeComparison
-	let trimmed = line.Trim
-	if trimmed.StartsWith("not ")
-		return Type("NotExpression")
-	if trimmed.IndexOf(" then ") > 0
-		return Type("IfExpression")
-	if trimmed.IndexOf(" is ") > 0
-		return Type("TypeComparison")
-	if trimmed.IndexOf(" and ") > 0 or trimmed.IndexOf(" or ") > 0 or trimmed.IndexOf(" xor ") > 0
-		return Type("Binary")
-	if trimmed is "true" or trimmed is "false"
-		return Type("BooleanExpression")
-	Type("VariableCall")
+	if line.Trim
+		StartsWith("not ") then Type("NotExpression")
+		IndexOf(" then ") > 0 then Type("IfExpression")
+		IndexOf(" is ") > 0 then Type("TypeComparison")
+		IndexOf(" and ") > 0 or IndexOf(" or ") > 0 or IndexOf(" xor ") > 0 then Type("Binary")
+		"true" or "false" then Type("BooleanExpression")
+		else Type("VariableCall")

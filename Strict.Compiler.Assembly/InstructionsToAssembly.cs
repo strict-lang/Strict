@@ -334,7 +334,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		(info.TypeFullName == Strict.Language.Type.File ||
 			info.TypeFullName.EndsWith(Context.ParentSeparator + Strict.Language.Type.File,
 				StringComparison.Ordinal)) &&
-		info.MethodName is Method.From or "Write" or "ReadText" or "ReadBytes" or "Close" or "Length" or "Exists";
+		info.MethodName is Method.From or "Write" or "ReadLines" or "ReadBytes" or "Close" or "Length" or "Exists";
 
 	private static void EmitFileRuntimeInvoke(InvokeMethodInfo info, List<string> lines) =>
 		lines.Add("    call strict_file_" + (info.MethodName switch
@@ -344,7 +344,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				info.ParameterNames[0].Contains("bytes", StringComparison.OrdinalIgnoreCase) =>
 				"write_bytes",
 			"Write" => "write_text",
-			"ReadText" => "read_text",
+			"ReadLines" => "read_lines",
 			"ReadBytes" => "read_bytes",
 			"Close" => "close",
 			"Length" => "length",

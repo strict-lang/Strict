@@ -18,6 +18,7 @@ public static class FileValue
 
 	public static ValueInstance CreateBytes(Type bytesType, Type byteType, byte[] bytes)
 	{
+		//TODO: horrible way to create byte array!
 		var values = new ValueInstance[bytes.Length];
 		for (var index = 0; index < bytes.Length; index++)
 			values[index] = new ValueInstance(byteType, bytes[index]);
