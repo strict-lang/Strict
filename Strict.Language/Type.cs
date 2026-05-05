@@ -442,8 +442,9 @@ public class Type : Context, IDisposable
 		return Members.FirstOrDefault(member => member.Name == name);
 	}
 
-	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments) =>
-		typeMethodFinder.FindMethod(methodName, arguments);
+	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
+		string? callText = null) =>
+		typeMethodFinder.FindMethod(methodName, arguments, callText);
 
 	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
 		typeMethodFinder.GetMethod(methodName, arguments);
@@ -869,12 +870,21 @@ public class Type : Context, IDisposable
 		"\" not found for " + type + ", available methods: " + string.Join(", ", availableMethods.Keys));
 
 	public sealed class ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments,
-		Type type, IEnumerable<Method> allMethods) : Exception((arguments.Count == 0
-			? "No arguments does "
+		Type type, IEnumerable<Method> allMethods, string? callText = null) : Exception(
+		CreateArgumentsDoNotMatchMessage(arguments, type, allMethods, callText));
+
+	private static string CreateArgumentsDoNotMatchMessage(IReadOnlyList<Expression> arguments,
+		Type type, IEnumerable<Method> allMethods, string? callText) =>
+		(callText == null
+			? ""
+			: "Call " + callText + " with ") + (arguments.Count == 0
+			? (callText == null
+				? "No"
+				: "no") + " arguments does "
 			: (arguments.Count == 1
 				? "Argument: "
 				: "Arguments: ") + string.Join(", ", arguments.Select(a => a.ToStringWithType())) + " do ") +
-		"not match these " + type + " method(s):\n" + string.Join("\n", allMethods));
+		"not match these " + type + " method(s):\n" + string.Join("\n", allMethods);
 
 	public bool IsUpcastable(Type otherType) =>
 		IsEnum && otherType.IsEnum && otherType.Members.Any(member =>

@@ -409,9 +409,10 @@ public sealed class BinaryGenerator
 
 	private void GenerateMemberCallInstruction(MemberCall memberCall)
 	{
-		if (memberCall.Member.InitialValue != null && memberCall.Member.DefinedIn.IsEnum)
+		if (memberCall.IsConstant && memberCall.Member.InitialValue != null)
 		{
-			TryGenerateForEnum(memberCall.Member.DefinedIn, memberCall.Member.InitialValue);
+			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
+				GetValueInstanceFromExpression(memberCall)));
 			return;
 		}
 		if (memberCall.Instance == null)

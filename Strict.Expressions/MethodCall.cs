@@ -91,7 +91,8 @@ public class MethodCall : ConcreteExpression
 		Method? method;
 		try
 		{
-			method = type.FindMethod(inputAsString, arguments) ??
+			method = type.FindMethod(inputAsString, arguments,
+				GetCallText(instance, inputAsString, arguments)) ??
 				(type == body.Method.Type
 					? FindPrivateMethod(type, inputAsString, arguments)
 					: null);
@@ -105,9 +106,19 @@ public class MethodCall : ConcreteExpression
 		}
 		if (method == null)
 			return null;
-		return new MethodCall(method, instance, AreArgumentsAutoParsedAsList(method, arguments)
-			? [new List(body, (List<Expression>)arguments)]
-			: arguments, null, body.CurrentFileLineNumber);
+		return new MethodCall(method, instance, NormalizeListArguments(body, method, arguments),
+			null, body.CurrentFileLineNumber);
+	}
+
+	private static string GetCallText(Expression? instance, string inputAsString,
+		IReadOnlyList<Expression> arguments)
+	{
+		var callText = instance == null
+			? inputAsString
+			: instance + "." + inputAsString;
+		return arguments.Count == 0
+			? callText
+			: callText + "(" + string.Join(", ", arguments) + ")";
 	}
 
 	private static Method? TryFindMethodOnCurrentGenericType(Body body, Type type,
@@ -159,7 +170,8 @@ public class MethodCall : ConcreteExpression
 	private static bool AreArgumentsCompatible(Method method, IReadOnlyList<Expression> arguments)
 	{
 		if (arguments.Count > method.Parameters.Count || arguments.Count <
-			method.Parameters.Count(p => p.DefaultValue == null))
+			method.Parameters.Count(parameter => parameter.DefaultValue == null &&
+				(method.Name != Method.From || !parameter.Type.IsList)))
 			return false;
 		for (var index = 0; index < arguments.Count; index++)
 		{
@@ -177,6 +189,25 @@ public class MethodCall : ConcreteExpression
 		AreArgumentsAutoParsedAsList(Method method, IReadOnlyCollection<Expression> arguments) =>
 		method.Parameters.Count != arguments.Count && method.Parameters.Count is 1 &&
 		arguments.Count > 1;
+
+	private static IReadOnlyList<Expression> NormalizeListArguments(Body body, Method method,
+		IReadOnlyList<Expression> arguments)
+	{
+		if (AreArgumentsAutoParsedAsList(method, arguments))
+			return [new List(body, (List<Expression>)arguments)];
+		if (arguments.Count >= method.Parameters.Count)
+			return arguments;
+		List<Expression>? normalizedArguments = null;
+		for (var index = arguments.Count; index < method.Parameters.Count; index++)
+		{
+			var parameterType = method.Parameters[index].Type;
+			if (!parameterType.IsList || method.Name != Method.From)
+				break;
+			normalizedArguments ??= arguments.ToList();
+			normalizedArguments.Add(new List(parameterType, body.CurrentFileLineNumber));
+		}
+		return normalizedArguments ?? arguments;
+	}
 
 	public static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,
 		string methodName)
@@ -215,9 +246,8 @@ public class MethodCall : ConcreteExpression
 		arguments = NormalizeErrorArguments(body, ref fromType, arguments, basedOnErrorVariable);
 		arguments = NormalizeTypeArguments(body, fromType, arguments);
 		var method = fromType.GetMethod(Method.From, arguments);
-    arguments = NormalizeNestedFromArguments(body, method, arguments);
-		if (AreArgumentsAutoParsedAsList(method, arguments))
-			arguments = [new List(body, (List<Expression>)arguments)];
+		arguments = NormalizeNestedFromArguments(body, method, arguments);
+		arguments = NormalizeListArguments(body, method, arguments);
 		return new MethodCall(method, null, arguments, null, body.CurrentFileLineNumber);
 	}
 

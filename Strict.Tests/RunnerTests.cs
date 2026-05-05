@@ -4,6 +4,7 @@ using Strict.Compiler;
 using Strict.Expressions;
 using Strict.Language;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 
 namespace Strict.Tests;
 
@@ -353,14 +354,22 @@ public sealed class RunnerTests
 
 	private static void CopyNativePluginsToDirectory(string repoRoot, string targetDirectory)
 	{
-		var loaderSource = Path.Combine(repoRoot, "NativePlugins", "ImageLoader", "ImageLoader.so");
-		var saverSource = Path.Combine(repoRoot, "NativePlugins", "ImageSaver", "ImageSaver.so");
-		CopyIfNewerOrMissing(loaderSource, Path.Combine(targetDirectory, "ImageLoader.so"));
-		CopyIfNewerOrMissing(saverSource, Path.Combine(targetDirectory, "ImageSaver.so"));
-		CopyIfNewerOrMissing(loaderSource.Replace(".so", ".dll"),
-			Path.Combine(targetDirectory, "ImageLoader.dll"));
-		CopyIfNewerOrMissing(saverSource.Replace(".so", ".dll"),
-			Path.Combine(targetDirectory, "ImageSaver.dll"));
+		var extension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+			? ".dll"
+			: RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+				? ".dylib"
+				: ".so";
+		var loaderSource = Path.Combine(repoRoot, "NativePlugins", "ImageLoader", "ImageLoader" + extension);
+		var saverSource = Path.Combine(repoRoot, "NativePlugins", "ImageSaver", "ImageSaver" + extension);
+		CopyIfNewerOrMissing(loaderSource, Path.Combine(targetDirectory, "ImageLoader" + extension));
+		CopyIfNewerOrMissing(saverSource, Path.Combine(targetDirectory, "ImageSaver" + extension));
+		if (extension != ".so")
+		{
+			CopyIfNewerOrMissing(loaderSource.Replace(extension, ".so"),
+				Path.Combine(targetDirectory, "ImageLoader.so"));
+			CopyIfNewerOrMissing(saverSource.Replace(extension, ".so"),
+				Path.Combine(targetDirectory, "ImageSaver.so"));
+		}
 	}
 
 	private static void CopyIfNewerOrMissing(string source, string target)

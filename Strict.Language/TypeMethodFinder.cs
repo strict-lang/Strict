@@ -25,7 +25,8 @@ internal class TypeMethodFinder(Type type)
 		FindMethod(methodName, arguments) ??
 		throw new NoMatchingMethodFound(Type, methodName, Type.AvailableMethods);
 
-	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments)
+	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
+		string? callText = null)
 	{
 		if (Type.IsGeneric && Type is not GenericTypeImplementation)
 			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(Type, Type.IsMutable
@@ -35,23 +36,24 @@ internal class TypeMethodFinder(Type type)
 		{
 			foreach (var subType in oneOfType.Types)
 			{
-				var foundSubTypeMethod = subType.FindMethod(methodName, arguments);
+				var foundSubTypeMethod = subType.FindMethod(methodName, arguments, callText);
 				if (foundSubTypeMethod != null)
 					return foundSubTypeMethod;
 			} //ncrunch: no coverage
 			return null; //ncrunch: no coverage
 		}
-		var found = FindMethodWithType(methodName, arguments);
+		var found = FindMethodWithType(methodName, arguments, callText);
 		if (found != null)
 			return found;
 		if (Type.IsEnum && Type.Members.Count > 0 && Type.Members[0].Type.IsNumber)
-			return Type.Members[0].Type.FindMethod(methodName, arguments);
+			return Type.Members[0].Type.FindMethod(methodName, arguments, callText);
 		return Type.Name == "Enum"
-			? Type.GetType(Number).FindMethod(methodName, arguments)
+			? Type.GetType(Number).FindMethod(methodName, arguments, callText)
 			: null;
 	}
 
-	private Method? FindMethodWithType(string methodName, IReadOnlyList<Expression> arguments)
+	private Method? FindMethodWithType(string methodName, IReadOnlyList<Expression> arguments,
+		string? callText = null)
 	{
 		if (!Type.AvailableMethods.TryGetValue(methodName, out var matchingMethods))
 			return null;
@@ -95,7 +97,7 @@ internal class TypeMethodFinder(Type type)
 					IsFromConstructorWithMatchingConstraints(matchingMethods[0], arguments.Count))
 					return matchingMethods[0];
 			}
-			throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods);
+			throw new ArgumentsDoNotMatchMethodParameters(arguments, Type, matchingMethods, callText);
 		}
 		finally
 		{
@@ -237,7 +239,7 @@ internal class TypeMethodFinder(Type type)
 		var count = 0;
 		for (var index = 0; index < method.Parameters.Count; index++)
 			if (method.Parameters[index].DefaultValue == null &&
-				!CanAutoCreateType(method.Parameters[index].Type))
+				!CanAutoCreateType(method, method.Parameters[index].Type))
 				count++;
 		return count;
 	}
@@ -247,11 +249,11 @@ internal class TypeMethodFinder(Type type)
 	/// via the runtime's trait-implementation registry) or if it is a concrete type all of whose
 	/// members are themselves auto-creatable. Logger whose only member is the TextWriter trait.
 	/// </summary>
-	private static bool CanAutoCreateType(Type type, HashSet<Type>? visiting = null)
+	private static bool CanAutoCreateType(Method method, Type type, HashSet<Type>? visiting = null)
 	{
 		if (type.IsNumber || type.IsBoolean || type.IsCharacter || type.IsText)
 			return false;
-		if (type.IsList || type.IsDictionary)
+		if (type.IsList && method.Name == Method.From)
 			return true;
 		if (type.IsTrait)
 			return true;
@@ -260,7 +262,7 @@ internal class TypeMethodFinder(Type type)
 		visiting ??= [];
 		if (!visiting.Add(type))
 			return false;
-		var result = type.Members.All(m => CanAutoCreateType(m.Type, visiting));
+		var result = type.Members.All(member => CanAutoCreateType(method, member.Type, visiting));
 		visiting.Remove(type);
 		return result;
 	}

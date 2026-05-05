@@ -64,13 +64,14 @@ public sealed class NativePluginLoaderTests
 		if (repoRoot == null)
 			return null;
 		var pluginDir = Path.Combine(repoRoot, "NativePlugins", "ImageLoader");
-		var candidates = new[]
-		{
-			Path.Combine(pluginDir, "ImageLoader.so"),
-			Path.Combine(pluginDir, "ImageLoader.dylib"),
-			Path.Combine(pluginDir, "ImageLoader.dll")
-		};
-		return candidates.FirstOrDefault(File.Exists);
+		var path = Path.Combine(pluginDir, "ImageLoader" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+			? ".dll"
+			: RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+				? ".dylib"
+				: ".so"));
+		return File.Exists(path)
+			? path
+			: null;
 	}
 
 	private static string? FindRepoRoot()

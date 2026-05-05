@@ -95,9 +95,9 @@ public sealed partial class VirtualMachine
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false, implicitInstance),
 			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" or "Upper" or "Lower" =>
 				hasInstance && TryHandleNativeTextMethod(invoke, implicitInstance),
-			_ => hasInstance
-				? TryHandleNativeTraitInstanceMethod(invoke, implicitInstance)
-				: TryHandleNativeTraitStaticMethod(invoke)
+			_ => (info.InstanceRegister.HasValue || implicitInstance != null) &&
+				TryHandleNativeTraitInstanceMethod(invoke, implicitInstance) ||
+				TryHandleNativeTraitStaticMethod(invoke)
 		};
 	}
 
@@ -231,15 +231,27 @@ public sealed partial class VirtualMachine
 		var typeName = info.TypeFullName.Split('/').Last();
 		var searchDirectory = AppContext.BaseDirectory;
 		if (!NativePluginLoader.HasNativeLibrary(typeName, searchDirectory))
+		{
+			Console.WriteLine($"[DEBUG_LOG] HasNativeLibrary failed for {typeName} in {searchDirectory}");
 			return false;
+		}
 		if (info.ArgumentRegisters.Length < 4)
+		{
+			Console.WriteLine($"[DEBUG_LOG] Not enough arguments: {info.ArgumentRegisters.Length}");
 			return false;
+		}
 		var pathArg = Memory.Registers[info.ArgumentRegisters[0]];
 		if (!pathArg.IsText)
+		{
+			Console.WriteLine($"[DEBUG_LOG] pathArg is not text: {pathArg}");
 			return false;
+		}
 		var colorsArg = Memory.Registers[info.ArgumentRegisters[1]];
 		if (!colorsArg.IsList)
+		{
+			Console.WriteLine($"[DEBUG_LOG] colorsArg is not list: {colorsArg}");
 			return false;
+		}
 		var width = (int)Memory.Registers[info.ArgumentRegisters[2]].Number;
 		var height = (int)Memory.Registers[info.ArgumentRegisters[3]].Number;
 		var pixelData = ExtractRgbaBytes(colorsArg);
