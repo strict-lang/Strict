@@ -2,6 +2,7 @@ using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
+using System.Globalization;
 using Type = Strict.Language.Type;
 
 namespace Strict;
@@ -84,6 +85,8 @@ public sealed partial class VirtualMachine
 	{
 		var info = invoke.MethodInfo;
 		var hasInstance = info.InstanceRegister.HasValue || implicitInstance != null;
+		if (!hasInstance && TryHandleNativeTraitStaticMethod(invoke))
+			return true;
 		return info.MethodName switch
 		{
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.basePackage)),
@@ -96,8 +99,7 @@ public sealed partial class VirtualMachine
 			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" or "Upper" or "Lower" =>
 				hasInstance && TryHandleNativeTextMethod(invoke, implicitInstance),
 			_ => (info.InstanceRegister.HasValue || implicitInstance != null) &&
-				TryHandleNativeTraitInstanceMethod(invoke, implicitInstance) ||
-				TryHandleNativeTraitStaticMethod(invoke)
+				TryHandleNativeTraitInstanceMethod(invoke, implicitInstance)
 		};
 	}
 
@@ -228,34 +230,27 @@ public sealed partial class VirtualMachine
 	private bool TryHandleNativeTraitStaticMethod(Invoke invoke)
 	{
 		var info = invoke.MethodInfo;
+		if (info.MethodName != "Save")
+			return false;
 		var typeName = info.TypeFullName.Split('/').Last();
 		var searchDirectory = AppContext.BaseDirectory;
 		if (!NativePluginLoader.HasNativeLibrary(typeName, searchDirectory))
-		{
-			Console.WriteLine($"[DEBUG_LOG] HasNativeLibrary failed for {typeName} in {searchDirectory}");
 			return false;
-		}
 		if (info.ArgumentRegisters.Length < 4)
-		{
-			Console.WriteLine($"[DEBUG_LOG] Not enough arguments: {info.ArgumentRegisters.Length}");
 			return false;
-		}
 		var pathArg = Memory.Registers[info.ArgumentRegisters[0]];
-		if (!pathArg.IsText)
-		{
-			Console.WriteLine($"[DEBUG_LOG] pathArg is not text: {pathArg}");
+		var pathText = pathArg.IsText
+			? pathArg.Text
+			: TryExtractTextFromPathType(pathArg);
+		if (pathText == null)
 			return false;
-		}
 		var colorsArg = Memory.Registers[info.ArgumentRegisters[1]];
 		if (!colorsArg.IsList)
-		{
-			Console.WriteLine($"[DEBUG_LOG] colorsArg is not list: {colorsArg}");
 			return false;
-		}
 		var width = (int)Memory.Registers[info.ArgumentRegisters[2]].Number;
 		var height = (int)Memory.Registers[info.ArgumentRegisters[3]].Number;
 		var pixelData = ExtractRgbaBytes(colorsArg);
-		return NativePluginLoader.TrySaveNativeImage(typeName, pathArg.Text, pixelData, width,
+		return NativePluginLoader.TrySaveNativeImage(typeName, pathText, pixelData, width,
 			height, searchDirectory);
 	}
 
@@ -443,7 +438,8 @@ public sealed partial class VirtualMachine
 		{
 			Memory.Registers[invoke.Register] =
 				rawValue.IsText
-					? new ValueInstance(conversionType, Convert.ToDouble(rawValue.Text))
+					? new ValueInstance(conversionType,
+						Convert.ToDouble(rawValue.Text, CultureInfo.InvariantCulture))
 					: rawValue;
 			return true;
 		}

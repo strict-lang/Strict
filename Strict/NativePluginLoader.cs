@@ -36,14 +36,7 @@ public static class NativePluginLoader
 			return false;
 		var found = FindNativeLibraryPath(typeName, searchDirectory) != null;
 		if (!found)
-		{
-			Console.WriteLine($"[DEBUG_LOG] Native library NOT found for {typeName} in {searchDirectory}");
 			MissingNativeLibraries.Add(cacheKey);
-		}
-		else
-		{
-			Console.WriteLine($"[DEBUG_LOG] Native library found for {typeName} in {searchDirectory}");
-		}
 		return found;
 	}
 
