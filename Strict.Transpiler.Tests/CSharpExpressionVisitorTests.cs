@@ -70,6 +70,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 	[TestCase("true", "true")]
 	[TestCase("\"Hey\"", "\"Hey\"")]
 	[TestCase("42", "42")]
+	[TestCase("5 to Text", "5.ToString()")]
 	[TestCase("logger.Log(\"Hey\")", "Console.WriteLine(\"Hey\")")]
 	public void ConvertStrictToCSharp(string strictCode, string expectedCSharpCode) =>
 		Assert.That(visitor.Visit(ParseExpression(strictCode)), Is.EqualTo(expectedCSharpCode));

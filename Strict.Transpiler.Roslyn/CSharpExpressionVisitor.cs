@@ -80,6 +80,8 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 
 	protected override string Visit(MethodCall methodCall)
 	{
+		if (methodCall is To { ConversionType.IsText: true } conversion)
+			return Visit(conversion.Instance!) + ".ToString()";
 		var result = VisitMethodCallInstance(methodCall);
 		if (methodCall.Method.Name != Method.From && methodCall.Instance != null)
 			result += ".";
@@ -129,8 +131,12 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	//ncrunch: no coverage start
 	protected override IReadOnlyList<string> VisitFor(For forExpression)
 	{
-		var block = new List<string> { "foreach (var index in " + Visit(forExpression.Iterator) + ")" };
-		block.AddRange(Indent(VisitBody(forExpression.Body)));
+		var body = Indent(VisitBody(forExpression.Body));
+		var variableName = body.Any(line => line.Contains(Type.ValueLowercase, StringComparison.Ordinal))
+			? Type.ValueLowercase
+			: Type.IndexLowercase;
+		var block = new List<string> { "foreach (var " + variableName + " in " + Visit(forExpression.Iterator) + ")" };
+		block.AddRange(body);
 		return block;
 	}
 }

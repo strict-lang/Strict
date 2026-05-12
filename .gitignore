@@ -143,3 +143,6 @@ temp_inspect.csx
 *.exp
 *.lib
 .continue/rules/*.md
+/.junie
+.output.txt
+transpiler-test-output.txt

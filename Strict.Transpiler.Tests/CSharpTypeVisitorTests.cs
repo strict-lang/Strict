@@ -71,25 +71,27 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 				"Program",
 				"has textReader",
 				"has system",
-				"Read Text",
+				"ReadLines Texts",
 				"\tsystem.Write(\"implementing system trait\")",
-				"\tRead is \"Read successfully\"",
-				"\t\"Read successfully\"",
-				"Write(text)",
+				"\tReadLines is \"ReadLines successfully\"",
+				"\t\"ReadLines successfully\"",
+				"Write(lines Texts)",
 				"\tconstant stringBuilder = \"printed successfully\"",
-				"\tsystem.Write(text)")).
+				"\tfor lines",
+				"\t\tsystem.Write(value)")).
 			// @formatter.on
 			ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
-		Assert.That(visitor.FileContent, Contains.Substring(@"	public string Read()
+		Assert.That(visitor.FileContent, Contains.Substring(@"	public List<string> ReadLines()
 	{
 		Console.WriteLine(""implementing system trait"");
 	"));
-		Assert.That(visitor.FileContent, Contains.Substring(@"	public void Write(string text)
+		Assert.That(visitor.FileContent, Contains.Substring(@"	public void Write(List<string> lines)
 	{
 		var stringBuilder = ""printed successfully"";
-		Console.WriteLine(text);
+		foreach (var value in lines)
+			Console.WriteLine(value);
 	}"));
 	}
 
@@ -114,7 +116,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		var program =
 			new Type(package,
 				new TypeLines(Computer, "has number", "has file = \"test.txt\"", "Run",
-					"\tfile.Write(number)")).ParseMembersAndMethods(parser);
+					"\tfile.Write(number to Text)")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("public class " + Computer));
@@ -144,9 +146,9 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
 	[TestCase(@"	constant file = File(""test.txt"")
-	file.Write(number)", "\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
-	[TestCase(@"	File(""test"").Write(number)",
-		"\tnew FileStream(\"test\", FileMode.OpenOrCreate).Write(number);")]
+	file.Write(number to Text)", "\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
+	[TestCase(@"	File(""test"").Write(number to Text)",
+		"\tnew FileStream(\"test\", FileMode.OpenOrCreate).Write(number.ToString());")]
 	public void InitializeValueUsingConstructorInsideMethod(string code, string expected) =>
 		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer, (@"has number
 Run
