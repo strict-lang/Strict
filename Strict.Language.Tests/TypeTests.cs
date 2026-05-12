@@ -151,6 +151,16 @@ public sealed class TypeTests
 	}
 
 	[Test]
+	public void TraitCanComposeMultipleTraitsWithoutImplementingTheirMethods()
+	{
+		using var textReader = CreateType("ReaderForTraitComposition", "ReadLines Texts", "ReadText Text");
+		using var textWriter = CreateType("WriterForTraitComposition", "Write(lines Texts)");
+		Assert.That(() => CreateType("ComposedIoTrait",
+			"has ReaderForTraitComposition", "has WriterForTraitComposition", "ReadText Text"),
+			Throws.Nothing);
+	}
+
+	[Test]
 	public void Trait()
 	{
 		var app = CreateType(nameof(Trait) + "DummyApp", "Run");

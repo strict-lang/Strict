@@ -146,3 +146,6 @@ temp_inspect.csx
 /.junie
 .output.txt
 transpiler-test-output.txt
+ImageProcessing/test_image_output.jpg
+ImageProcessing/test_image_output.jpg
+ImageProcessing/test_image_output.jpg

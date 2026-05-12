@@ -175,7 +175,7 @@ public class Type : Context, IDisposable
 		for (var index = 0; index < members.Count; index++)
 		{
 			var trait = members[index].Type;
-			if (trait.typeParser.LineNumber > 0 && trait.IsTrait)
+			if (!IsTrait && trait.typeParser.LineNumber > 0 && trait.IsTrait)
 				CheckIfTraitIsImplementedFullyOrNone(trait);
 		}
 		return this;
@@ -194,7 +194,7 @@ public class Type : Context, IDisposable
 		for (var index = 0; index < members.Count; index++)
 		{
 			var trait = members[index].Type;
-			if (trait.typeParser.LineNumber > 0 && trait.IsTrait)
+			if (!IsTrait && trait.typeParser.LineNumber > 0 && trait.IsTrait)
 				CheckIfTraitIsImplementedFullyOrNone(trait);
 		}
 		return this;
