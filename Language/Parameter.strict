@@ -14,13 +14,20 @@ Parse(text Text) Parameter
 	let beforeDefault = equalsIndex is -1 then withoutMutable else withoutMutable.Substring(0, equalsIndex)
 	let parts = beforeDefault.Split(" ")
 	let typeName = parts.Length > 1 then parts.Last else "Any"
-	Parameter((parts.First to Name), Type(typeName), isMutable, DefaultValue(withoutMutable, equalsIndex))
+	let name = parts.First to Name
+	let parameterType = typeName to Type
+	let defaultValue = ExtractDefaultValue(withoutMutable, equalsIndex)
+	Parameter(name, parameterType, isMutable, defaultValue)
 WithoutMutableKeyword(text Text, isMutable Boolean) Text
+	WithoutMutableKeyword("name Text", false) is "name Text"
+	WithoutMutableKeyword("mutable name Text", true) is "name Text"
 	if not isMutable
 		return text
-	let start = "mutable".Length + 1
+	constant start = "mutable".Length + 1
 	text.Substring(start, text.Length - start)
-DefaultValue(text Text, equalsIndex Number) Text
+ExtractDefaultValue(text Text, equalsIndex Number) Text
+	ExtractDefaultValue("name Text", -1) is ""
+	ExtractDefaultValue("name Text = hi", 9) is "hi"
 	if equalsIndex is -1
 		return ""
 	text.Substring(equalsIndex + 3, text.Length - equalsIndex - 3)

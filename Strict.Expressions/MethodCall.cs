@@ -13,7 +13,7 @@ namespace Strict.Expressions;
 public class MethodCall : ConcreteExpression
 {
 	public MethodCall(Method method, Expression? instance = null, IReadOnlyList<Expression>? arguments = null,
-		Type? toReturnType = null, int lineNumber = 0) :
+		Type? toReturnType = null, int lineNumber = 0, int? argumentsToShowCount = null) :
 		base(GetMethodReturnType(method, toReturnType, instance), lineNumber, method.ReturnType.IsMutable)
 	{
 		if (method.Name == Method.From && instance != null)
@@ -21,7 +21,10 @@ public class MethodCall : ConcreteExpression
 		Instance = instance;
 		Method = method;
 		Arguments = arguments ?? [];
+		this.argumentsToShowCount = argumentsToShowCount;
 	}
+
+	private readonly int? argumentsToShowCount;
 
 	public sealed class CannotCallFromConstructorWithExistingInstance : Exception;
 
@@ -110,8 +113,11 @@ public class MethodCall : ConcreteExpression
 		}
 		if (method == null)
 			return null;
-		return new MethodCall(method, instance, NormalizeListArguments(body, method, arguments),
-			null, body.CurrentFileLineNumber);
+		var normalizedArguments = NormalizeListArguments(body, method, arguments);
+		return new MethodCall(method, instance, normalizedArguments,
+			null, body.CurrentFileLineNumber, normalizedArguments.Count == arguments.Count
+				? null
+				: arguments.Count);
 	}
 
 	private static string GetCallText(Expression? instance, string inputAsString,
@@ -251,8 +257,12 @@ public class MethodCall : ConcreteExpression
 		arguments = NormalizeTypeArguments(body, fromType, arguments);
 		var method = fromType.GetMethod(Method.From, arguments);
 		arguments = NormalizeNestedFromArguments(body, method, arguments);
+		var argumentsBeforeListNormalization = arguments.Count;
 		arguments = NormalizeListArguments(body, method, arguments);
-		return new MethodCall(method, null, arguments, null, body.CurrentFileLineNumber);
+		return new MethodCall(method, null, arguments, null, body.CurrentFileLineNumber,
+			arguments.Count == argumentsBeforeListNormalization
+				? null
+				: argumentsBeforeListNormalization);
 	}
 
 	private static IReadOnlyList<Expression> NormalizeNestedFromArguments(Body body, Method method,
@@ -385,7 +395,7 @@ public class MethodCall : ConcreteExpression
 		Instance is not null && Instance.ToString() != Type.ValueLowercase
 			? (Instance is Binary
 				? $"({Instance})"
-				: $"{Instance}") + $".{Method.Name}{Arguments.ToBrackets()}"
+				: $"{Instance}") + $".{Method.Name}{DisplayArguments.ToBrackets()}"
 			: ReturnType is GenericTypeImplementation { Generic.Name: Type.ErrorWithValue }
 				? Arguments[0] + "(" + Arguments[1] + ")"
 				: ReturnType.IsError
@@ -399,7 +409,12 @@ public class MethodCall : ConcreteExpression
 						? FormatDictionaryConstructor()
 						: Method.Name == Method.From && IsAutoWrappedListArgument()
 							? $"{GetProperMethodNameWithFromSupport()}({string.Join(", ", ((List)Arguments[0]).Values)})"
-							: $"{GetProperMethodNameWithFromSupport()}{Arguments.ToBrackets()}";
+						: $"{GetProperMethodNameWithFromSupport()}{DisplayArguments.ToBrackets()}";
+
+	private IReadOnlyList<Expression> DisplayArguments =>
+		argumentsToShowCount == null
+			? Arguments
+			: Arguments.Take(argumentsToShowCount.Value).ToArray();
 
 	private string FormatErrorConstructor()
 	{

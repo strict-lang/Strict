@@ -382,7 +382,12 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 
 	public bool Equals(ValueArrayInstance? other) =>
 		other is not null && (ReferenceEquals(this, other) ||
-			other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) && HasSameItems(other));
+			AreCompatibleListTypes(other) && HasSameItems(other));
+
+	private bool AreCompatibleListTypes(ValueArrayInstance other) =>
+		ReturnType.FullName == other.ReturnType.FullName ||
+		other.ReturnType.IsSameOrCanBeUsedAs(ReturnType) ||
+		ReturnType.IsSameOrCanBeUsedAs(other.ReturnType);
 
 	private bool HasSameItems(ValueArrayInstance other)
 	{

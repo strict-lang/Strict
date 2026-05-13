@@ -262,6 +262,10 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				right.GetType().IsNumber)
 				return interpreter.ToBoolean(Math.Abs(left.Number - right.Number) <
 					TestComparisonEpsilon);
+			if (HasListType(left) && HasListType(right) && IsEmptyListTypeCheck(left, right))
+				return interpreter.ToBoolean(left.GetType().FullName == right.GetType().FullName ||
+					left.GetType().IsSameOrCanBeUsedAs(right.GetType()) ||
+					right.GetType().IsSameOrCanBeUsedAs(left.GetType()));
 			return interpreter.ToBoolean(left.Equals(right));
 		}
 		var l = left.Number;
@@ -281,6 +285,12 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	}
 
 	private const double TestComparisonEpsilon = 0.00001;
+
+	private static bool HasListType(ValueInstance value) =>
+		!value.IsText && value.GetType().IsList;
+
+	private static bool IsEmptyListTypeCheck(ValueInstance left, ValueInstance right) =>
+		(!left.IsList || left.List.Count == 0) && (!right.IsList || right.List.Count == 0);
 
 	private ValueInstance ExecuteLogicalBinaryOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance left, ValueInstance right)

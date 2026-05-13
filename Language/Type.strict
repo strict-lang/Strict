@@ -26,6 +26,7 @@ Methods(lines Texts) Methods
 IsMethodLine(line Text) Boolean
 	line is not "" and (not IsMemberLine(line)) and (not line.StartsWith("\t"))
 ParseMethodLine(line Text, lines Texts, lineIndex Number) Method
+	ParseMethodLine("Run Text", ("Run Text", "\t\"ok\""), 0).Name is "Run"
 	let method = Method((ExtractName(line) to Name), MethodResult(line), Variables)
 	MethodParser(method).Parse(line, lines, lineIndex)
 ExtractName(text Text) Text
@@ -38,6 +39,8 @@ ExtractName(text Text) Text
 			return text.Substring(0, index).Trim
 	text
 MemberTypeName(text Text) Text
+	MemberTypeName("logger") is "Logger"
+	MemberTypeName("lines Texts") is "Texts"
 	let name = ExtractName(text)
 	let rest = text.Substring(name.Length, text.Length - name.Length).Trim
 	if rest is ""

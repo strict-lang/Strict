@@ -36,7 +36,7 @@ OperandTokens Texts
 			operands.Add(value)
 	operands
 OperatorTokens Texts
-	ShuntingYard("a").OperatorTokens is List(Text)
+	ShuntingYard("a").OperatorTokens.Length is 0
 	ShuntingYard("a + b").OperatorTokens is ("+")
 	ShuntingYard("a * b + c").OperatorTokens is ("*", "+")
 	mutable ops = List(Mutable(Text))

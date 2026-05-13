@@ -1,13 +1,22 @@
 has Method
 ParseLine(line Text) Type
 	ParseLine("not true is false") is TypeComparison
-	ParseLine("value then false else true") is IfExpression
 	ParseLine("not (false xor false)") is NotExpression
 	ParseLine("value is other") is TypeComparison
-	if line.Trim
-		StartsWith("not ") then Type("NotExpression")
-		IndexOf(" then ") > 0 then Type("IfExpression")
-		IndexOf(" is ") > 0 then Type("TypeComparison")
-		IndexOf(" and ") > 0 or IndexOf(" or ") > 0 or IndexOf(" xor ") > 0 then Type("Binary")
-		"true" or "false" then Type("BooleanExpression")
-		else Type("VariableCall")
+	ParseTrimmedLine(line.Trim)
+ParseTrimmedLine(trimmed Text) Type
+	ParseTrimmedLine("not true") is NotExpression
+	let thenIndex = trimmed.IndexOf(" " + "then" + " ")
+	let isIndex = trimmed.IndexOf(" " + "is" + " ")
+	if trimmed.StartsWith("not ")
+		return Type("NotExpression")
+	if thenIndex > 0
+		return Type("IfExpression")
+	if isIndex > 0
+		return Type("TypeComparison")
+	if IsBinary(trimmed)
+		return Type("Binary")
+	trimmed is "true" or trimmed is "false" then Type("BooleanExpression") else Type("VariableCall")
+IsBinary(trimmed Text) Boolean
+	IsBinary("left and right") is true
+	trimmed.IndexOf(" and ") > 0 or trimmed.IndexOf(" or ") > 0 or trimmed.IndexOf(" xor ") > 0

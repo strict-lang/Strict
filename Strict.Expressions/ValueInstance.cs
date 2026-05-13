@@ -607,6 +607,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	/// </summary>
 	public ValueInstance ApplyMethodReturnTypeMutable(Type methodReturnType)
 	{
+		if (IsList && methodReturnType.IsList && GetType() != methodReturnType &&
+			IsSameOrCanBeUsedAs(methodReturnType))
+			return new ValueInstance(this, methodReturnType);
 		var isInstanceMutable = IsMutable;
 		if (isInstanceMutable == methodReturnType.IsMutable)
 			return this;

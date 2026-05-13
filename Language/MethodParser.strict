@@ -6,7 +6,8 @@ Body(header Text, lines Texts, lineIndex Number) Body
 	let bodyLength = BodyLength(lines, bodyStart)
 	Body(lines, bodyStart, bodyLength)
 IsHeader(line Text) Boolean
-	line is not "" and (not Member.Kind(line).StartsWith("has")) and (not line.StartsWith("\t"))
+	let kind = Member.Kind(line)
+	line is not "" and (not kind.StartsWith("has")) and (not line.StartsWith("\t"))
 ExtractName(header Text) Name
 	let parenIndex = header.IndexOf("(")
 	let spaceIndex = header.IndexOf(" ")
