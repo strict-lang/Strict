@@ -548,6 +548,8 @@ public class Type : Context, IDisposable
 			return true;
 		if (CanConvertBetweenByteListAndCompositeByteList(targetType))
 			return true;
+		if (targetType.CanBeCreatedFromSingleMember(this, allowImplicitConversion))
+			return true;
 		if (IsBaseTypeExcludedFromImplicitListConversion() ||
 			targetType.IsBaseTypeExcludedFromImplicitListConversion())
 			return false;
@@ -626,6 +628,27 @@ public class Type : Context, IDisposable
 				found = true;
 			}
 		return found;
+	}
+
+	internal bool CanBeCreatedFromSingleMember(Type sourceType, bool allowImplicitConversion = false) =>
+		TryGetSingleValueMemberType(out var memberType) &&
+			sourceType.IsSameOrCanBeUsedAs(memberType, allowImplicitConversion, 1);
+
+	internal bool CanUseInheritedSingleMemberReturn(Type methodType, Type returnType) =>
+		TryGetSingleValueMemberType(out var memberType) && methodType == memberType &&
+			returnType.IsSameOrCanBeUsedAs(memberType, false, 1);
+
+	private bool TryGetSingleValueMemberType(out Type memberType)
+	{
+		memberType = null!;
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			if (!members[memberIndex].IsConstant)
+			{
+				if (memberType != null)
+					return false;
+				memberType = members[memberIndex].Type;
+			}
+		return memberType != null;
 	}
 
 	private bool HasExactlyOneUsableMember(Type targetType, bool allowImplicitConversion, int maxDepth)

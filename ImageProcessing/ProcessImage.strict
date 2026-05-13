@@ -3,6 +3,6 @@ Run(path)
 	mutable loader = ImageLoader(path)
 	mutable image = Image(Size(loader.Width, loader.Height), loader.Colors)
 	AdjustBrightness(0.25).Process(image)
-	let outputPath = path.ChangeExtension("_output.jpg")
+	let outputPath = path.RemoveExtension + "_output.jpg"
 	ImageSaver.Save(outputPath, image.Colors, image.Size.Width, image.Size.Height)
 	logger.Log("Processed image saved to: " + outputPath)

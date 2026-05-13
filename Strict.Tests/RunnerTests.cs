@@ -388,7 +388,8 @@ public sealed class RunnerTests
 		var processImagePath =
 			Path.Combine(repoRoot, "ImageProcessing", "ProcessImage" + Language.Type.Extension);
 		await new Runner(processImagePath, testImagePath).Run();
-		Assert.That(File.Exists(testImagePath.Replace(".jpg", "_output.jpg")), Is.True);
+		var outputImagePath = testImagePath.Replace(".jpg", "_output.jpg");
+		Assert.That(File.Exists(outputImagePath), Is.True, outputImagePath);
 		var output = consoleWriter.ToString();
 		Assert.That(output, Does.Contain("Processed image saved to:"));
 	}

@@ -263,6 +263,8 @@ public class Interpreter
 			throw new MissingArgument(method, "text", args);
 		if (args[0].IsText)
 			NativeFileRegistry.WriteText(handle, args[0].Text);
+		else if (method.Type.Name == Type.TextWriter && args[0].IsList)
+			NativeFileRegistry.WriteLines(handle, args[0].List.Items.Select(item => item.Text));
 		else if (args[0].IsList)
 			NativeFileRegistry.WriteBytes(handle, FileValue.GetBytes(args[0]));
 		else

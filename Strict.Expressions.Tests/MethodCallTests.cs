@@ -350,6 +350,19 @@ public sealed class MethodCallTests : TestExpressions
 	}
 
 	[Test]
+	public void InheritedSingleMemberMethodKeepsWrapperReturnType()
+	{
+		using var type = new Type(TestPackage.Instance,
+				new TypeLines(nameof(InheritedSingleMemberMethodKeepsWrapperReturnType),
+					"has byte",
+					"Run Byte",
+					"\tbyte + 1")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var body = type.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(body.ReturnType.Name, Is.EqualTo("Byte"));
+	}
+
+	[Test]
 	public void TypeCannotBeAutoInitialized()
 	{
 		using var _ = new Type(TestPackage.Instance,

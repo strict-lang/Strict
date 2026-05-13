@@ -249,6 +249,22 @@ public sealed class TypeMethodFinderTests
 	}
 
 	[Test]
+	public void NumberCanBePassedInAsByte()
+	{
+		using var type = CreateType(nameof(NumberCanBePassedInAsByte), "has byte",
+			"Use(byte Byte) Number", "\tbyte", "Run Number", "\tUse(5)");
+		type.GetMethod("Run", []).GetBodyAndParseIfNeeded();
+	}
+
+	[Test]
+	public void TextCanBePassedInAsName()
+	{
+		using var type = CreateType(nameof(TextCanBePassedInAsName), "has name",
+			"Use(name Name) Text", "\tname", "Run Text", "\tUse(\"Strict\")");
+		type.GetMethod("Run", []).GetBodyAndParseIfNeeded();
+	}
+
+	[Test]
 	public void SingleCharacterTextIsAlwaysValidAsCharacter()
 	{
 		using var type = CreateType(nameof(SingleCharacterTextIsAlwaysValidAsCharacter), "has logger",

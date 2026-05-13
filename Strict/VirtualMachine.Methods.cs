@@ -158,7 +158,9 @@ public sealed partial class VirtualMachine
 			Memory.Registers[invoke.Register] = CreateBytesValue(NativeFileRegistry.ReadBytes(handle));
 			return true;
 		case "Write":
-			WriteFile(handle, Memory.Registers[info.ArgumentRegisters[0]]);
+			WriteFile(handle, Memory.Registers[info.ArgumentRegisters[0]],
+				info.TypeFullName.EndsWith(Context.ParentSeparator + Type.TextWriter,
+					StringComparison.Ordinal));
 			Memory.Registers[invoke.Register] = new ValueInstance(executable.noneType);
 			return true;
 		case "Delete":
@@ -189,10 +191,12 @@ public sealed partial class VirtualMachine
 		return handle;
 	}
 
-	private void WriteFile(long handle, ValueInstance value)
+	private void WriteFile(long handle, ValueInstance value, bool writesTextLines)
 	{
 		if (value.IsText)
 			NativeFileRegistry.WriteText(handle, value.Text);
+		else if (writesTextLines && value.IsList)
+			NativeFileRegistry.WriteLines(handle, value.List.Items.Select(item => item.Text));
 		else if (value.IsList)
 			NativeFileRegistry.WriteBytes(handle, FileValue.GetBytes(value));
 		else
@@ -750,7 +754,30 @@ public sealed partial class VirtualMachine
 		if (rawValue.IsText)
 			return rawValue;
 		if (rawValue.TryGetValueTypeInstance() is { } typeInstance)
+		{
+			if (TryGetSingleTextMemberValue(typeInstance, out var value))
+				return value;
 			return new ValueInstance(typeInstance.ToAutomaticText());
+		}
 		return new ValueInstance(rawValue.ToExpressionCodeString());
+	}
+
+	private static bool TryGetSingleTextMemberValue(ValueTypeInstance typeInstance,
+		out ValueInstance textValue)
+	{
+		var found = false;
+		textValue = default;
+		var members = typeInstance.ReturnType.Members;
+		for (var memberIndex = 0; memberIndex < members.Count &&
+			memberIndex < typeInstance.Values.Length; memberIndex++)
+			if (!members[memberIndex].IsConstant)
+			{
+				var memberValue = typeInstance.Values[memberIndex];
+				if (!memberValue.IsText || found)
+					return false;
+				textValue = memberValue;
+				found = true;
+			}
+		return found;
 	}
 }

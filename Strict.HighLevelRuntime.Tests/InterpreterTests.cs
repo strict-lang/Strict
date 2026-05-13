@@ -172,32 +172,38 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
-	public async Task FileWriteTextAndReadTextRoundTrip()
+	public async Task FileWriteLinesAndReadLinesRoundTrip()
 	{
 		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		var tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".txt");
+		var fileInstance = default(ValueInstance);
+		Method? closeMethod = null;
+		Interpreter? interpreterForStrict = null;
 		try
 		{
 			var fileType = strict.GetType(Type.File);
-			var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
-			var fileInstance = interpreterForStrict.Execute(
+			var textType = strict.GetType(Type.Text);
+			var textsType = strict.GetListImplementationType(textType);
+			var textWriterType = strict.GetType(Type.TextWriter);
+			var textReaderType = strict.GetType(Type.TextReader);
+			closeMethod = fileType.AvailableMethods["Close"].Single(method => method.Name == "Close");
+			interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
+			fileInstance = interpreterForStrict.Execute(
 				fileType.Methods.Single(method => method.Name == Method.From),
 				interpreterForStrict.noneInstance, [new ValueInstance(tempFilePath)]);
-			interpreterForStrict.Execute(fileType.AvailableMethods["Write"].Single(method =>
-					method.Name == "Write" && method.Parameters[0].Type.IsText), fileInstance,
-				[new ValueInstance("Strict text")]);
-			var result = interpreterForStrict.Execute(fileType.AvailableMethods["ReadLines"][0],
+			var lines = new ValueInstance(textsType,
+				[new ValueInstance("Strict"), new ValueInstance("text")]);
+			interpreterForStrict.Execute(textWriterType.Methods.Single(method => method.Name == "Write"),
+				fileInstance, [lines]);
+			var result = interpreterForStrict.Execute(
+				textReaderType.Methods.Single(method => method.Name == "ReadLines"),
 				fileInstance, []);
-			Assert.That(result.Text, Is.EqualTo("Strict text"));
-			interpreterForStrict.Execute(fileType.AvailableMethods["Close"].Single(method => method.Name == "Close"),
-				fileInstance, []);
-		}
-		catch (Exception ex)
-		{
-			Assert.Fail(ex.ToString());
+			Assert.That(result.List.Items.Select(item => item.Text), Is.EqualTo(new[] { "Strict", "text" }));
 		}
 		finally
 		{
+			if (fileInstance.HasValue && closeMethod != null && interpreterForStrict != null)
+				interpreterForStrict.Execute(closeMethod, fileInstance, []);
 			if (File.Exists(tempFilePath))
 				File.Delete(tempFilePath);
 		}
@@ -208,28 +214,34 @@ public sealed class InterpreterTests
 	{
 		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		var tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".bin");
+		var fileInstance = default(ValueInstance);
+		Method? closeMethod = null;
+		Interpreter? interpreterForStrict = null;
 		try
 		{
 			var fileType = strict.GetType(Type.File);
+			var bytesWriterType = strict.GetType("BytesWriter");
+			var bytesReaderType = strict.GetType("BytesReader");
+			closeMethod = strict.GetType("Closeable").Methods.Single(method => method.Name == "Close");
 			var byteType = strict.GetType(Type.Byte);
 			var bytesType = strict.GetListImplementationType(byteType);
 			var bytes = new ValueInstance(bytesType,
 				[new ValueInstance(byteType, 3), new ValueInstance(byteType, 5)]);
-			var interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
-			var fileInstance = interpreterForStrict.Execute(
+			interpreterForStrict = new Interpreter(strict, TestBehavior.Disabled);
+			fileInstance = interpreterForStrict.Execute(
 				fileType.Methods.Single(method => method.Name == Method.From),
 				interpreterForStrict.noneInstance, [new ValueInstance(tempFilePath)]);
-			interpreterForStrict.Execute(fileType.AvailableMethods["Write"].Single(method =>
-					method.Name == "Write" && method.Parameters[0].Type.IsList), fileInstance, [bytes]);
+			interpreterForStrict.Execute(bytesWriterType.Methods.Single(method => method.Name == "Write"),
+				fileInstance, [bytes]);
 			var result = interpreterForStrict.Execute(
-				fileType.AvailableMethods["ReadBytes"].Single(method => method.Name == "ReadBytes"),
+				bytesReaderType.Methods.Single(method => method.Name == "ReadBytes"),
 				fileInstance, []);
 			Assert.That(result.List.Items.Select(item => item.Number), Is.EqualTo(new[] { 3.0, 5.0 }));
-			interpreterForStrict.Execute(fileType.AvailableMethods["Close"].Single(method => method.Name == "Close"),
-				fileInstance, []);
 		}
 		finally
 		{
+			if (fileInstance.HasValue && closeMethod != null && interpreterForStrict != null)
+				interpreterForStrict.Execute(closeMethod, fileInstance, []);
 			if (File.Exists(tempFilePath))
 				File.Delete(tempFilePath);
 		}

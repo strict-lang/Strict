@@ -31,7 +31,11 @@ public class MethodCall : ConcreteExpression
 			return toReturnType;
 		var returnType = method.ReturnType;
 		var instanceType = instance?.ReturnType;
-		if (instanceType == null || !IsConcreteListShape(instanceType))
+		if (instanceType == null)
+			return returnType;
+		if (instanceType.CanUseInheritedSingleMemberReturn(method.Type, returnType))
+			return instanceType;
+		if (!IsConcreteListShape(instanceType))
 			return returnType;
 		if (returnType.IsList && returnType.IsGeneric)
 			return instanceType;

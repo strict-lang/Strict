@@ -61,6 +61,9 @@ public static class NativeFileRegistry
 		state.Stream.Position = 0;
 	}
 
+	public static void WriteLines(long handle, IEnumerable<string> lines) =>
+		WriteText(handle, string.Join('\n', lines));
+
 	public static void WriteBytes(long handle, byte[] bytes)
 	{
 		var state = Get(handle);
