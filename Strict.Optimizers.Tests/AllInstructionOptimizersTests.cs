@@ -194,8 +194,8 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 
 	internal BinaryExecutable CreateColorAdjustmentBinary(Package package)
 	{
-		var brightnerType = package.FindDirectType("AdjustBrightness")!;
-		var runMethod = brightnerType.Methods.Single(m => m.Name == "Run");
+		var brightnessType = package.FindDirectType("AdjustBrightness")!;
+		var runMethod = brightnessType.Methods.Single(m => m.Name == "Run");
 		return new BinaryGenerator(new MethodCall(runMethod)).Generate();
 	}
 }
