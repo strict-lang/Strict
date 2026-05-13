@@ -38,6 +38,12 @@ internal sealed class ToEvaluator(Interpreter interpreter)
 				convertedValue = new ValueInstance(conversionType, parsedNumber);
 				return true;
 			}
+			if (conversionType.Name == nameof(Type) && conversionType.FindType(value.Text) is { } foundType)
+			{
+				convertedValue = new ValueInstance(conversionType,
+					MethodCallEvaluator.CreateTypeValue(foundType));
+				return true;
+			}
 		}
 		if (value.IsList && conversionType.IsList)
 		{

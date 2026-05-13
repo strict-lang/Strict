@@ -3,7 +3,12 @@ has number
 has text
 has kind Text
 HasValue Boolean
-	typeName is not "None" or number is not 0
+	ValueInstance("None", 0, "", "").HasValue is false
+	if typeName is not "None"
+		return true
+	if number is not 0
+		return true
+	false
 IsText Boolean
 	text is not ""
 IsList Boolean

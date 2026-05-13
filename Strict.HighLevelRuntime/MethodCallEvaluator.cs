@@ -641,7 +641,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		return values;
 	}
 
-	private static ValueInstance[] CreateTypeValue(Type type)
+	internal static ValueInstance[] CreateTypeValue(Type type)
 	{
 		var typeType = type.GetType(nameof(Type));
 		var values = new ValueInstance[typeType.Members.Count];

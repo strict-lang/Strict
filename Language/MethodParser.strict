@@ -6,16 +6,22 @@ Body(header Text, lines Texts, lineIndex Number) Body
 	let bodyLength = BodyLength(lines, bodyStart)
 	Body(lines, bodyStart, bodyLength)
 IsHeader(line Text) Boolean
-	let kind = Member.Kind(line)
-	line is not "" and (not kind.StartsWith("has")) and (not line.StartsWith("\t"))
+	IsHeader("has Name Text") is false
+	let kind = Member.ExtractKind(line)
+	if line is ""
+		return false
+	(not kind.StartsWith("has")) and (not line.StartsWith("\t"))
 ExtractName(header Text) Name
 	let parenIndex = header.IndexOf("(")
 	let spaceIndex = header.IndexOf(" ")
 	let endIndex = FirstPositiveIndex(parenIndex, spaceIndex)
 	((endIndex is -1 then header else header.Substring(0, endIndex)) to Name)
 ExtractType(header Text) Type
+	ExtractType("Run Text") is Type("Text")
 	let parts = header.Split(" ")
-	Type(parts.Length is 1 then "None" else parts.Last)
+	if parts.Length is 1
+		return Type("None")
+	Type(parts.Last)
 ExtractParameters(header Text) Variables
 	let openIndex = header.IndexOf("(")
 	if openIndex is -1
@@ -27,17 +33,23 @@ ExtractParameters(header Text) Variables
 	for text.Split(",")
 		ExtractParameter(value.Trim)
 ExtractParameter(text Text) Variable
+	ExtractParameter("value Text").Type is Type("Text")
 	let isMutable = text.StartsWith("mutable ")
 	let normalized = isMutable then text.Substring(8, text.Length - 8).Trim else text
 	let parts = normalized.Split(" ")
-	let typeName = parts.Length > 1 then parts.Last else "Any"
-	Variable((parts.First to Name), Type(typeName), None, isMutable, false)
+	let parameterName = parts.First to Name
+	if parts.Length is 1
+		return Variable(parameterName, Type("Any"), None, isMutable, false)
+	Variable(parameterName, Type(parts.Last), None, isMutable, false)
 FirstPositiveIndex(first Number, second Number) Number
+	FirstPositiveIndex(-1, 4) is 4
 	if first is -1
 		return second
 	if second is -1
 		return first
-	first < second then first else second
+	if first < second
+		return first
+	second
 BodyLength(lines Texts, bodyStart Number) Number
 	for Range(bodyStart, lines.Length)
 		if not lines(index).StartsWith("\t")

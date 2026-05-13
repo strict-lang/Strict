@@ -285,13 +285,12 @@ public class TestInterpreterTests
 		var language = await repos.LoadStrictPackage("Strict/Language");
 		var expressions = await repos.LoadStrictPackage("Strict/Expressions");
 		var examples = await repos.LoadStrictPackage("Strict/Examples");
-		var fullInterpreter = new TestInterpreter(strict);
 		var packages = new[] { strict, math, imageProcessing, language, expressions, examples };
 		var tasks = new List<Task>();
 		foreach (var packageToTest in packages)
-			tasks.Add(Task.Run(() => fullInterpreter.RunAllTestsInPackage(packageToTest)));
+			tasks.Add(Task.Run(() => new TestInterpreter(strict).RunAllTestsInPackage(packageToTest)));
 		await Task.WhenAll(tasks);
-		Console.WriteLine("All tests ran: " + fullInterpreter.Statistics);
+		Console.WriteLine("All tests ran");
 	}
 
 	//ncrunch: no coverage start

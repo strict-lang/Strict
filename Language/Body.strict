@@ -11,6 +11,7 @@ ParseLine(line Text) ConcreteExpression
 	let trimmed = line.Trim
 	ConcreteExpression(Expression(ExpressionKind(trimmed), Start, false), trimmed)
 ExpressionKind(line Text) Text
+	ExpressionKind("return value") is "Return"
 	if line.StartsWith("return ")
 		return "Return"
 	if line.StartsWith("if ")
@@ -21,10 +22,11 @@ ExpressionKind(line Text) Text
 		return "Declaration"
 	TailExpressionKind(line)
 TailExpressionKind(line Text) Text
-	if line.IndexOf(" = ") > 0
+	TailExpressionKind("value.ToText") is "MethodCall"
+	if line.IndexOf(" = ") is not -1
 		return "Reassignment"
-	if line.IndexOf(".") > 0
+	if line.IndexOf(".") is not -1
 		return "MethodCall"
-	if line.IndexOf(" is ") > 0
+	if line.IndexOf(" is ") is not -1
 		return "Binary"
 	"Expression"

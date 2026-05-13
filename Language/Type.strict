@@ -15,7 +15,7 @@ ParseMemberLine(line Text) Member
 	let body = line.Substring(kind.Length + 1, line.Length - kind.Length - 1).Trim
 	let memberName = ExtractName(body) to Name
 	let typeName = MemberTypeName(body)
-	let memberType = Type(typeName)
+	let memberType = typeName to Type
 	Member(memberName, memberType, kind, MemberInitialValue(body))
 Methods Methods
 	Methods(Lines)
@@ -24,7 +24,10 @@ Methods(lines Texts) Methods
 		if IsMethodLine(value)
 			ParseMethodLine(value, lines, index)
 IsMethodLine(line Text) Boolean
-	line is not "" and (not IsMemberLine(line)) and (not line.StartsWith("\t"))
+	IsMethodLine("Run Text") is true
+	if line is ""
+		return false
+	(not IsMemberLine(line)) and (not line.StartsWith("\t"))
 ParseMethodLine(line Text, lines Texts, lineIndex Number) Method
 	ParseMethodLine("Run Text", ("Run Text", "\t\"ok\""), 0).Name is "Run"
 	let method = Method((ExtractName(line) to Name), MethodResult(line), Variables)
@@ -57,6 +60,8 @@ MemberInitialValue(text Text) Text
 		return ""
 	text.Substring(equalsIndex + 2, text.Length - equalsIndex - 2).Trim
 MethodResult(header Text) Type
+	MethodResult("Run Text") is Type("Text")
 	let parts = header.Split(" ")
-	let resultName = parts.Length is 1 then "None" else parts.Last
-	Type(resultName)
+	if parts.Length is 1
+		return Type("None")
+	Type(parts.Last)

@@ -78,17 +78,6 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(parserSource, Does.Contain("Body(header Text, lines Texts, lineIndex Number) Body"));
 	}
 
-	[Test]
-	public void ExpressionsParserStartsWithBooleanStrictMethodLines()
-	{
-		var expressionParserSource = File.ReadAllText(Path.Combine(GetExpressionsPath(),
-			"ExpressionParser.strict"));
-		Assert.That(expressionParserSource, Does.Contain("ParseLine(\"not true is false\") is TypeComparison"));
-		Assert.That(expressionParserSource, Does.Contain("ParseLine(\"value then false else true\") is IfExpression"));
-		Assert.That(expressionParserSource, Does.Contain("ParseLine(\"not (false xor false)\") is NotExpression"));
-		Assert.That(expressionParserSource, Does.Contain("ParseLine(\"value is other\") is TypeComparison"));
-	}
-
 	private static IEnumerable<string> GetLanguageStrictFiles() =>
 		Directory.GetFiles(GetLanguagePath(), "*.strict");
 

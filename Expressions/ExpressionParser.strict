@@ -1,22 +1,35 @@
 has Method
 ParseLine(line Text) Type
-	ParseLine("not true is false") is TypeComparison
-	ParseLine("not (false xor false)") is NotExpression
-	ParseLine("value is other") is TypeComparison
+	ParseLine("not true is false").Name is "TypeComparison"
+	ParseLine("not (false xor false)").Name is "NotExpression"
+	ParseLine("value is other").Name is "TypeComparison"
 	ParseTrimmedLine(line.Trim)
 ParseTrimmedLine(trimmed Text) Type
-	ParseTrimmedLine("not true") is NotExpression
+	ParseTrimmedLine("not true").Name is "NotExpression"
 	let thenIndex = trimmed.IndexOf(" " + "then" + " ")
 	let isIndex = trimmed.IndexOf(" " + "is" + " ")
+	if thenIndex is not -1
+		return Type("IfExpression")
+	if isIndex is not -1
+		return Type("TypeComparison")
 	if trimmed.StartsWith("not ")
 		return Type("NotExpression")
-	if thenIndex > 0
-		return Type("IfExpression")
-	if isIndex > 0
-		return Type("TypeComparison")
 	if IsBinary(trimmed)
 		return Type("Binary")
-	trimmed is "true" or trimmed is "false" then Type("BooleanExpression") else Type("VariableCall")
+	IsBooleanLiteral(trimmed) then Type("BooleanExpression") else Type("VariableCall")
+IsBooleanLiteral(trimmed Text) Boolean
+	IsBooleanLiteral("true") is true
+	if trimmed is "true"
+		return true
+	if trimmed is "false"
+		return true
+	false
 IsBinary(trimmed Text) Boolean
 	IsBinary("left and right") is true
-	trimmed.IndexOf(" and ") > 0 or trimmed.IndexOf(" or ") > 0 or trimmed.IndexOf(" xor ") > 0
+	if trimmed.IndexOf(" and ") is not -1
+		return true
+	if trimmed.IndexOf(" or ") is not -1
+		return true
+	if trimmed.IndexOf(" xor ") is not -1
+		return true
+	false
