@@ -83,16 +83,14 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 			ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
-		Assert.That(visitor.FileContent, Contains.Substring(@"	public List<string> ReadLines()
-	{
-		Console.WriteLine(""implementing system trait"");
-	"));
-		Assert.That(visitor.FileContent, Contains.Substring(@"	public void Write(List<string> lines)
-	{
-		var stringBuilder = ""printed successfully"";
-		foreach (var value in lines)
-			Console.WriteLine(value);
-	}"));
+		Assert.That(visitor.FileContent, Contains.Substring("\tpublic List<string> ReadLines()"));
+		Assert.That(visitor.FileContent,
+			Contains.Substring("\t\tConsole.WriteLine(\"implementing system trait\");"));
+		Assert.That(visitor.FileContent, Contains.Substring("\tpublic void Write(List<string> lines)"));
+		Assert.That(visitor.FileContent,
+			Contains.Substring("\t\tvar stringBuilder = \"printed successfully\";"));
+		Assert.That(visitor.FileContent, Contains.Substring("\t\tforeach (var value in lines)"));
+		Assert.That(visitor.FileContent, Contains.Substring("\t\t\tConsole.WriteLine(value);"));
 	}
 
 	[Test]
@@ -145,29 +143,27 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 						"\tlogger.Log(random)")).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
-	[TestCase(@"	constant file = File(""test.txt"")
-	file.Write(number to Text)", "\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);")]
-	[TestCase(@"	File(""test"").Write(number to Text)",
-		"\tnew FileStream(\"test\", FileMode.OpenOrCreate).Write(number.ToString());")]
-	public void InitializeValueUsingConstructorInsideMethod(string code, string expected) =>
-		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer, (@"has number
-Run
-" + code).Split(Environment.NewLine))).ParseMembersAndMethods(parser)).FileContent,
-			Contains.Substring(expected));
+	[TestCase("\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);",
+		"has number", "Run", "\tconstant file = File(\"test.txt\")","\tfile.Write(number to Text)")]
+	[TestCase("\tnew FileStream(\"test\", FileMode.OpenOrCreate).Write(number.ToString());",
+		"has number", "Run", "\tFile(\"test\").Write(number to Text)")]
+	public void InitializeValueUsingConstructorInsideMethod(string expected, params string[] code) =>
+		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer, code)).
+			ParseMembersAndMethods(parser)).FileContent, Contains.Substring(expected));
 
 	[TestCase("ll + mm", "ll + mm")]
 	[TestCase("ll - mm", "ll - mm")]
 	[TestCase("ll * mm", "ll * mm")]
 	public void ListsBinaryOperation(string code, string expected) =>
 		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer,
-				@$"has logger
-Run
-	constant ll = (1, 2) + (3, 4)
-	constant mm = (5, 6)
-	constant rr = {
-		code
-	}".Split(Environment.NewLine))).ParseMembersAndMethods(parser)).FileContent,
+			//@formatter:off
+			"has logger",
+			"Run",
+			"\tconstant ll = (1, 2) + (3, 4)",
+			"\tconstant mm = (5, 6)",
+			"\tconstant rr = " + code)).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring($"\tvar rr = {expected};"));
+				//@formatter:on
 
 	[Test]
 	public void GenerateListTypeProgram()
@@ -190,21 +186,16 @@ Run
 				"		if 5 is not 6", "			constant aa = 5", "		else", "			constant bb = 5")).
 			// @formatter.on
 			ParseMembersAndMethods(parser);
-		Assert.That(new CSharpTypeVisitor(program).FileContent, Contains.Substring(
-			@"namespace SourceGeneratorTests;
-
-public class Program
-{
-	private System system;
-	public int NestedMethod()
-	{
-		NestedMethod() == 5;
-		if (5 == 5)
-			if (5 is not 6)
-				var aa = 5;
-			else
-				var bb = 5;
-	}
-}"));
+		var fileContent = new CSharpTypeVisitor(program).FileContent;
+		Assert.That(fileContent, Contains.Substring("namespace SourceGeneratorTests;"));
+		Assert.That(fileContent, Contains.Substring("public class Program"));
+		Assert.That(fileContent, Contains.Substring("\tprivate System system;"));
+		Assert.That(fileContent, Contains.Substring("\tpublic int NestedMethod()"));
+		Assert.That(fileContent, Contains.Substring("\t\tNestedMethod() == 5;"));
+		Assert.That(fileContent, Contains.Substring("\t\tif (5 == 5)"));
+		Assert.That(fileContent, Contains.Substring("\t\t\tif (5 is not 6)"));
+		Assert.That(fileContent, Contains.Substring("\t\t\t\tvar aa = 5;"));
+		Assert.That(fileContent, Contains.Substring("\t\t\telse"));
+		Assert.That(fileContent, Contains.Substring("\t\t\t\tvar bb = 5;"));
 	}
 }
