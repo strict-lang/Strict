@@ -1,6 +1,7 @@
 has elements Texts
 has elementTypeName Text
 to Text
+	ListExpression(("1", "2", "3"), "Number") to Text is "(1, 2, 3)"
 	"(" + JoinElements + ")"
 JoinElements Text
 	mutable result = ""
@@ -9,3 +10,5 @@ JoinElements Text
 			result = result + ", "
 		result = result + value
 	result
+Count Number
+	elements.Length

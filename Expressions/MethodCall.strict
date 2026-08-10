@@ -3,6 +3,8 @@ has instance Text
 has arguments Texts
 has resultTypeName Text
 to Text
+	MethodCall("Log", "logger", ("\"Hi\""), "None") to Text is "logger.Log(\"Hi\")"
+	MethodCall("Run", "", (), "None") to Text is "Run()"
 	if instance is ""
 		return methodName + "(" + JoinArguments + ")"
 	instance + "." + methodName + "(" + JoinArguments + ")"
@@ -13,3 +15,5 @@ JoinArguments Text
 			result = result + ", "
 		result = result + value
 	result
+ArgumentCount Number
+	arguments.Length

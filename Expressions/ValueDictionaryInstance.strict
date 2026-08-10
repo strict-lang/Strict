@@ -2,6 +2,7 @@ has resultTypeName Text
 has keys Texts
 has values Texts
 Count Number
+	ValueDictionaryInstance("Map", ("a", "b"), ("1", "2")).Count is 2
 	keys.Length
 to Text
 	resultTypeName + "(" + JoinEntries + ")"

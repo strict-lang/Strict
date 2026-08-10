@@ -1,4 +1,13 @@
 has variableName Text
 has newValue Text
 to Text
+	MutableReassignment("count", "count + 1") to Text is "count = count + 1"
 	variableName + " = " + newValue
+Parse(text Text) MutableReassignment
+	Parse("total = 0").variableName is "total"
+	let equalsIndex = text.IndexOf(" = ")
+	if equalsIndex is -1
+		return MutableReassignment(text, "")
+	let name = text.Substring(0, equalsIndex).Trim
+	let value = text.Substring(equalsIndex + 3, text.Length - equalsIndex - 3).Trim
+	MutableReassignment(name, value)

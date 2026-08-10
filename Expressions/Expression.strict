@@ -1,0 +1,11 @@
+has resultTypeName Text
+has line Number
+has IsMutable Boolean
+IsConstant Boolean
+	false
+LineNumber Number
+	line
+ResultTypeName Text
+	resultTypeName
+to Text
+	resultTypeName

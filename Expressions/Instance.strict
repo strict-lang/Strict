@@ -1,6 +1,7 @@
 has typeName Text
 has arguments Texts
 to Text
+	Instance("Range", ("0", "10")) to Text is "Range(0, 10)"
 	typeName + "(" + JoinArguments + ")"
 JoinArguments Text
 	mutable result = ""

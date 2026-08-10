@@ -2,4 +2,5 @@ has expression Text
 has indexExpression Text
 has elementTypeName Text
 to Text
+	ListCall("items", "0", "Number") to Text is "items(0)"
 	expression + "(" + indexExpression + ")"

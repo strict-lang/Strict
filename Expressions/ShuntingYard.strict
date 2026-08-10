@@ -1,37 +1,35 @@
 has input Text
-has output Texts
-has operators Texts
-OutputCount Number
-	output.Length
-HasOperators Boolean
-	operators.Length > 0
-to Text
-	input
 Tokens Texts
 	ShuntingYard("a").Tokens is ("a")
 	ShuntingYard("a + b").Tokens is ("a", "+", "b")
 	input.Split(" ")
 OperatorPrecedence(token Text) Number
 	OperatorPrecedence("+") is 1
-	OperatorPrecedence("-") is 1
 	OperatorPrecedence("*") is 2
-	OperatorPrecedence("/") is 2
+	OperatorPrecedence("and") is 3
 	OperatorPrecedence("a") is 0
+	ArithmeticPrecedence(token)
+ArithmeticPrecedence(token Text) Number
 	if (token is "+") or (token is "-")
 		return 1
 	if (token is "*") or (token is "/")
 		return 2
+	LogicalPrecedence(token)
+LogicalPrecedence(token Text) Number
+	if (token is "and") or (token is "or") or (token is "xor")
+		return 3
 	0
 IsOperator(token Text) Boolean
-	IsOperator("+")
-	IsOperator("*")
+	IsOperator("+") is true
+	IsOperator("and") is true
+	IsOperator("a") is false
 	OperatorPrecedence(token) > 0
 OperandTokens Texts
 	ShuntingYard("a").OperandTokens is ("a")
 	ShuntingYard("a + b").OperandTokens is ("a", "b")
 	ShuntingYard("a * b + c").OperandTokens is ("a", "b", "c")
 	mutable operands = List(Mutable(Text))
-	for input.Split(" ")
+	for Tokens
 		if not IsOperator(value)
 			operands.Add(value)
 	operands
@@ -40,7 +38,7 @@ OperatorTokens Texts
 	ShuntingYard("a + b").OperatorTokens is ("+")
 	ShuntingYard("a * b + c").OperatorTokens is ("*", "+")
 	mutable ops = List(Mutable(Text))
-	for input.Split(" ")
+	for Tokens
 		if IsOperator(value)
 			ops.Add(value)
 	ops
@@ -52,24 +50,31 @@ Postfix Texts
 	ShuntingYard("a + b - c").Postfix is ("a", "b", "+", "c", "-")
 	mutable result = List(Mutable(Text))
 	mutable opsStack = List(Mutable(Text))
-	for input.Split(" ")
+	for Tokens
 		ProcessToken(value, result, opsStack)
-	for opsStack
-		result.Add(opsStack(opsStack.Length - 1 - index))
+	FlushOperators(result, opsStack)
 	result
+FlushOperators(mutable result Texts, mutable opsStack Texts) Mutable(Texts)
+	if opsStack.Length is 0
+		return result
+	let top = opsStack(opsStack.Length - 1)
+	result.Add(top)
+	opsStack.Remove(top)
+	FlushOperators(result, opsStack)
 ProcessToken(token Text, mutable result Texts, mutable opsStack Texts) Mutable(Texts)
-	IsOperator(token) is OperatorPrecedence(token) > 0
 	let prec = OperatorPrecedence(token)
 	if prec is 0
 		return result.Add(token)
-	if prec > 0
-		AddOperator(prec, result, opsStack)
+	AddOperator(prec, result, opsStack)
 	opsStack.Add(token)
 AddOperator(prec Number, mutable result Texts, mutable opsStack Texts) Mutable(Texts)
-	OperatorPrecedence("+") is 1
 	if opsStack.Length is 0
 		return opsStack
-	if OperatorPrecedence(opsStack.Last) >= prec
-		result.Add(opsStack.Last)
-		opsStack.Remove(opsStack.Last)
+	let top = opsStack(opsStack.Length - 1)
+	if OperatorPrecedence(top) >= prec
+		result.Add(top)
+		opsStack.Remove(top)
+		return AddOperator(prec, result, opsStack)
 	opsStack
+to Text
+	input

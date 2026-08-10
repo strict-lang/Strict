@@ -3,8 +3,30 @@ has variableTypeName Text
 has initialValue Text
 has kind Text
 to Text
+	Declaration("count", "Number", "0", "let") to Text is "let count = 0"
+	Declaration("pi", "Number", "3.14", "constant") to Text is "constant pi = 3.14"
 	if kind is "constant"
 		return "constant " + variableName + " = " + initialValue
 	if kind is "mutable"
 		return "mutable " + variableName + " = " + initialValue
 	"let " + variableName + " = " + initialValue
+Parse(text Text) Declaration
+	Parse("let count = 1").variableName is "count"
+	Parse("mutable total = 0").kind is "mutable"
+	let kind = ExtractKind(text)
+	let rest = text.Substring(kind.Length + 1, text.Length - kind.Length - 1)
+	let equalsIndex = rest.IndexOf(" = ")
+	if equalsIndex is -1
+		return Declaration(rest.Trim, "Any", "", kind)
+	let name = rest.Substring(0, equalsIndex).Trim
+	let value = rest.Substring(equalsIndex + 3, rest.Length - equalsIndex - 3).Trim
+	Declaration(name, "Any", value, kind)
+ExtractKind(text Text) Text
+	ExtractKind("constant x = 1") is "constant"
+	if text.StartsWith("constant ")
+		return "constant"
+	if text.StartsWith("mutable ")
+		return "mutable"
+	if text.StartsWith("let ")
+		return "let"
+	"let"

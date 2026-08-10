@@ -1,35 +1,86 @@
-has Method
-ParseLine(line Text) Type
-	ParseLine("not true is false").Name is "TypeComparison"
-	ParseLine("not (false xor false)").Name is "NotExpression"
-	ParseLine("value is other").Name is "TypeComparison"
-	ParseTrimmedLine(line.Trim)
-ParseTrimmedLine(trimmed Text) Type
-	ParseTrimmedLine("not true").Name is "NotExpression"
-	let thenIndex = trimmed.IndexOf(" " + "then" + " ")
-	let isIndex = trimmed.IndexOf(" " + "is" + " ")
-	if thenIndex is not -1
-		return Type("IfExpression")
-	if isIndex is not -1
-		return Type("TypeComparison")
-	if trimmed.StartsWith("not ")
-		return Type("NotExpression")
-	if IsBinary(trimmed)
-		return Type("Binary")
-	IsBooleanLiteral(trimmed) then Type("BooleanExpression") else Type("VariableCall")
-IsBooleanLiteral(trimmed Text) Boolean
-	IsBooleanLiteral("true") is true
+has text
+ParseLine Text
+	ExpressionParser("not true").ParseLine is "NotExpression"
+	ExpressionParser("return 1").ParseLine is "Return"
+	ExpressionParser("let x = 1").ParseLine is "Declaration"
+	ExpressionParser("a + b").ParseLine is "Binary"
+	ExpressionParser("true").ParseLine is "BooleanExpression"
+	ExpressionParser("value is Number").ParseLine is "TypeComparison"
+	ParseTrimmed(text.Trim)
+ParseTrimmed(trimmed Text) Text
 	if trimmed is "true"
-		return true
+		return "BooleanExpression"
 	if trimmed is "false"
+		return "BooleanExpression"
+	if trimmed.StartsWith("return ")
+		return "Return"
+	if trimmed.StartsWith("if ")
+		return "IfExpression"
+	if trimmed.StartsWith("for ")
+		return "ForExpression"
+	KeywordOrTail(trimmed)
+KeywordOrTail(trimmed Text) Text
+	if IsAssignment(trimmed)
+		return "Declaration"
+	if IsReassignment(trimmed)
+		return "MutableReassignment"
+	if trimmed.StartsWith("not ")
+		return "NotExpression"
+	OperatorOrLiteral(trimmed)
+OperatorOrLiteral(trimmed Text) Text
+	if IsBinary(trimmed)
+		return "Binary"
+	if trimmed.IndexOf(" to ") is not -1
+		return "To"
+	if IsTypeCompare(trimmed)
+		return "TypeComparison"
+	if trimmed.IndexOf(".") is not -1
+		return "MemberCall"
+	LiteralOrVariable(trimmed)
+LiteralOrVariable(trimmed Text) Text
+	if IsNumberLiteral(trimmed)
+		return "NumberExpression"
+	if trimmed.StartsWith("\"")
+		return "TextExpression"
+	"VariableCall"
+IsAssignment(line Text) Boolean
+	ExpressionParser("let x = 1").IsAssignment("let x = 1") is true
+	if line.StartsWith("let ")
 		return true
-	false
-IsBinary(trimmed Text) Boolean
-	IsBinary("left and right") is true
-	if trimmed.IndexOf(" and ") is not -1
+	if line.StartsWith("mutable ")
 		return true
-	if trimmed.IndexOf(" or ") is not -1
+	line.StartsWith("constant ")
+IsReassignment(line Text) Boolean
+	ExpressionParser("x = 1").IsReassignment("x = 1") is true
+	if IsAssignment(line)
+		return false
+	line.IndexOf(" = ") is not -1
+IsBinary(line Text) Boolean
+	ExpressionParser("a and b").IsBinary("a and b") is true
+	ExpressionParser("a + b").IsBinary("a + b") is true
+	if HasLogicalOp(line)
 		return true
-	if trimmed.IndexOf(" xor ") is not -1
+	HasArithmeticOp(line)
+HasLogicalOp(line Text) Boolean
+	if line.IndexOf("and") is not -1
 		return true
-	false
+	if line.IndexOf("or") is not -1
+		return true
+	line.IndexOf("xor") is not -1
+HasArithmeticOp(line Text) Boolean
+	if line.IndexOf("+") is not -1
+		return true
+	if line.IndexOf("-") is not -1
+		return true
+	if line.IndexOf("*") is not -1
+		return true
+	line.IndexOf("/") is not -1
+IsTypeCompare(line Text) Boolean
+	ExpressionParser("value is Number").IsTypeCompare("value is Number") is true
+	line.IndexOf(" is ") is not -1
+IsNumberLiteral(line Text) Boolean
+	ExpressionParser("42").IsNumberLiteral("42") is true
+	ExpressionParser("x").IsNumberLiteral("x") is false
+	NumberChars("").StartsWithDigit(line)
+to Text
+	text

@@ -4,12 +4,14 @@ has text
 has kind Text
 HasValue Boolean
 	ValueInstance("None", 0, "", "").HasValue is false
+	ValueInstance("Number", 5, "", "").HasValue is true
 	if typeName is not "None"
 		return true
 	if number is not 0
 		return true
 	false
 IsText Boolean
+	ValueInstance("Text", 0, "hi", "").IsText is true
 	text is not ""
 IsList Boolean
 	kind is "list"
@@ -27,3 +29,9 @@ to Text
 	if IsTypeInstance
 		return typeName
 	number to Text
+FromNumber(number Number) ValueInstance
+	FromNumber(3).number is 3
+	ValueInstance("Number", number, "", "")
+FromText(text Text) ValueInstance
+	FromText("hi").text is "hi"
+	ValueInstance("Text", 0, text, "")

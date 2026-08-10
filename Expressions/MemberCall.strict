@@ -2,6 +2,16 @@ has instance Text
 has memberName Text
 has memberTypeName Text
 to Text
+	MemberCall("image", "Width", "Number") to Text is "image.Width"
+	MemberCall("", "value", "Any") to Text is "value"
 	if instance is ""
 		return memberName
 	instance + "." + memberName
+Parse(text Text) MemberCall
+	Parse("image.Width").memberName is "Width"
+	let dotIndex = text.IndexOf(".")
+	if dotIndex is -1
+		return MemberCall("", text, "Any")
+	let left = text.Substring(0, dotIndex)
+	let right = text.Substring(dotIndex + 1, text.Length - dotIndex - 1)
+	MemberCall(left, right, "Any")

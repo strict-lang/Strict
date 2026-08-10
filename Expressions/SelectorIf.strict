@@ -3,4 +3,5 @@ has cases Texts
 to Text
 	expression + " is"
 CaseCount Number
+	SelectorIf("value", ("Number then 1", "Text then 0")).CaseCount is 2
 	cases.Length

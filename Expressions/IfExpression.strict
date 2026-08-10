@@ -2,6 +2,9 @@ has condition Text
 has thenExpression Text
 has elseExpression Text
 to Text
+	IfExpression("count > 0", "count", "") to Text is "if count > 0\n\tcount"
 	if elseExpression is ""
 		return "if " + condition + "\n\t" + thenExpression
 	"if " + condition + "\n\t" + thenExpression + "\nelse\n\t" + elseExpression
+HasElse Boolean
+	elseExpression is not ""

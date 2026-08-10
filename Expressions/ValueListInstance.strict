@@ -1,6 +1,7 @@
 has resultTypeName Text
 has items Texts
 Count Number
+	ValueListInstance("Numbers", ("1", "2")).Count is 2
 	items.Length
 to Text
 	"(" + JoinItems + ")"

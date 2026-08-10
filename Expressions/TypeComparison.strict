@@ -1,4 +1,13 @@
-has expression Text
+has subject Text
 has matchTypeName Text
 to Text
-	expression + " is " + matchTypeName
+	TypeComparison("value", "Number") to Text is "value is Number"
+	subject + " is " + matchTypeName
+Parse(text Text) TypeComparison
+	Parse("value is Number").matchTypeName is "Number"
+	let isIndex = text.IndexOf(" is ")
+	if isIndex is -1
+		return TypeComparison(text, "Any")
+	let left = text.Substring(0, isIndex).Trim
+	let right = text.Substring(isIndex + 4, text.Length - isIndex - 4).Trim
+	TypeComparison(left, right)

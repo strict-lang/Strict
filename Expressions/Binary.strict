@@ -3,4 +3,17 @@ has operatorName Text
 has right Text
 has resultTypeName Text
 to Text
+	Binary("a", "+", "b", "Number") to Text is "a + b"
 	left + " " + operatorName + " " + right
+Parse(text Text) Binary
+	Parse("a + b").operatorName is "+"
+	let tokens = text.Split(" ")
+	if tokens.Length < 3
+		return Binary(text, "", "", "Any")
+	Binary(tokens.First, tokens(1), tokens.Last, "Any")
+IsArithmetic Boolean
+	IsArithmetic(Binary("a", "+", "b", "Number")) is true
+	(operatorName is "+") or (operatorName is "-") or (operatorName is "*") or (operatorName is "/")
+IsLogical Boolean
+	IsLogical(Binary("a", "and", "b", "Boolean")) is true
+	(operatorName is "and") or (operatorName is "or") or (operatorName is "xor")

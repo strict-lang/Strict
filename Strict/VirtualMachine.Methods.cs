@@ -615,7 +615,21 @@ public sealed partial class VirtualMachine
 		var typeInstance = instance.TryGetValueTypeInstance();
 		if (typeInstance != null && TrySetScopeMembersFromTypeMembers(typeInstance))
 			return;
-		var firstNonTraitMember = instance.GetType().Members.FirstOrDefault(member =>
+		// Boolean/Number/None primitives: only `value` is needed (already set above).
+		if (instance.IsPrimitiveType(executable.booleanType) ||
+			instance.IsPrimitiveType(executable.numberType) ||
+			instance.IsPrimitiveType(executable.noneType))
+			return;
+		Type instanceType;
+		try
+		{
+			instanceType = instance.GetType();
+		}
+		catch (InvalidCastException)
+		{
+			return;
+		}
+		var firstNonTraitMember = instanceType.Members.FirstOrDefault(member =>
 			!member.Type.IsTrait);
 		if (firstNonTraitMember != null)
 			Memory.Frame.Set(firstNonTraitMember.Name, instance, isMember: true);
@@ -710,7 +724,12 @@ public sealed partial class VirtualMachine
 	{
 		var info = invoke.MethodInfo;
 		var instance = ResolveInvokeInstance(info, implicitInstance);
-		if (instance.GetType().Name != Type.Boolean && !instance.IsPrimitiveType(executable.booleanType))
+		// Only true Boolean primitives (value pointer is boolean Type; number is 0/1).
+		// Text/list/struct markers must not enter this path (avoids GetType cast failures).
+		if (instance.IsText || instance.IsList || instance.IsDictionary ||
+			instance.TryGetValueTypeInstance() != null)
+			return false;
+		if (!instance.IsPrimitiveType(executable.booleanType))
 			return false;
 		var left = instance.Boolean;
 		switch (info.MethodName)

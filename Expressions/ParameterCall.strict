@@ -1,4 +1,8 @@
 has parameterName Text
 has parameterTypeName Text
 to Text
+	ParameterCall("value", "Text") to Text is "value"
 	parameterName
+Parse(name Text, typeName Text) ParameterCall
+	Parse("value", "Text").parameterName is "value"
+	ParameterCall(name, typeName)

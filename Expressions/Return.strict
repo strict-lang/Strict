@@ -1,3 +1,9 @@
 has valueExpression Text
 to Text
+	Return("count") to Text is "return count"
 	"return " + valueExpression
+Parse(text Text) Return
+	Parse("return 1").valueExpression is "1"
+	if text.StartsWith("return ")
+		return Return(text.Substring(7, text.Length - 7))
+	Return(text)

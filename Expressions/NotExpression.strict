@@ -1,3 +1,9 @@
 has operand Text
 to Text
+	NotExpression("true") to Text is "not true"
 	"not " + operand
+Parse(text Text) NotExpression
+	Parse("not false").operand is "false"
+	if text.StartsWith("not ")
+		return NotExpression(text.Substring(4, text.Length - 4))
+	NotExpression(text)

@@ -1,6 +1,7 @@
 has elements Texts
 has valueTypeName Text
 to Text
+	DictionaryExpression(("a=1", "b=2"), "Number") to Text is "Dictionary(a=1, b=2)"
 	"Dictionary(" + JoinElements + ")"
 JoinElements Text
 	mutable result = ""

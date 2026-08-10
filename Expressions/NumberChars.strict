@@ -1,0 +1,40 @@
+has text
+IsOk(character Character) Boolean
+	NumberChars("").IsOk("5") is true
+	NumberChars("").IsOk("x") is false
+	if character is "."
+		return true
+	if character is "-"
+		return true
+	IsDigit(character)
+IsDigit(character Character) Boolean
+	let digit = character to Number
+	digit is in Range(0, 10)
+StartsWithDigit(line Text) Boolean
+	NumberChars("").StartsWithDigit("42") is true
+	NumberChars("").StartsWithDigit("x") is false
+	if line is ""
+		return false
+	StartsWithDigitLow(line) or StartsWithDigitHigh(line)
+StartsWithDigitLow(line Text) Boolean
+	if line.StartsWith("0")
+		return true
+	if line.StartsWith("1")
+		return true
+	if line.StartsWith("2")
+		return true
+	if line.StartsWith("3")
+		return true
+	if line.StartsWith("4")
+		return true
+	line.StartsWith("-")
+StartsWithDigitHigh(line Text) Boolean
+	if line.StartsWith("5")
+		return true
+	if line.StartsWith("6")
+		return true
+	if line.StartsWith("7")
+		return true
+	if line.StartsWith("8")
+		return true
+	line.StartsWith("9")

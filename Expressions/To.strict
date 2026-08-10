@@ -1,4 +1,13 @@
 has expression Text
 has targetTypeName Text
 to Text
+	To("\"5\"", "Number") to Text is "\"5\" to Number"
 	expression + " to " + targetTypeName
+Parse(text Text) To
+	Parse("x to Number").targetTypeName is "Number"
+	let toIndex = text.IndexOf(" to ")
+	if toIndex is -1
+		return To(text, "Any")
+	let left = text.Substring(0, toIndex).Trim
+	let right = text.Substring(toIndex + 4, text.Length - toIndex - 4).Trim
+	To(left, right)

@@ -1,4 +1,11 @@
-has Value
 has text
+IsConstant Boolean
+	true
 to Text
+	TextExpression("hi") to Text is "\"hi\""
 	"\"" + text + "\""
+Parse(text Text) TextExpression
+	Parse("\"hi\"").text is "hi"
+	if text.Length >= 2 and text.StartsWith("\"")
+		return TextExpression(text.Substring(1, text.Length - 2))
+	TextExpression(text)

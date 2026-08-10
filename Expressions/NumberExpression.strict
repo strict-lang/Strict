@@ -1,4 +1,9 @@
-has Value
 has number
+IsConstant Boolean
+	true
 to Text
+	NumberExpression(5) to Text is "5"
 	number to Text
+Parse(text Text) NumberExpression
+	Parse("42").number is 42
+	NumberExpression(text to Number)

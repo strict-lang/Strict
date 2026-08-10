@@ -1,6 +1,15 @@
-has Value
 has boolean
+IsConstant Boolean
+	true
 to Text
-	if boolean
-		return "true"
-	"false"
+	BooleanExpression(true) to Text is "true"
+	BooleanExpression(false) to Text is "false"
+	boolean then "true" else "false"
+Parse(text Text) BooleanExpression
+	Parse("true").boolean is true
+	Parse("false").boolean is false
+	if text is "true"
+		return BooleanExpression(true)
+	if text is "false"
+		return BooleanExpression(false)
+	BooleanExpression(false)

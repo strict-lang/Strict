@@ -196,44 +196,50 @@ Depends on Phase 1 (needs Type, Method, Body from Strict.Language).
 
 | C# File | Description | Complexity | Status |
 |---------|-------------|------------|--------|
-| `Value.cs` | Literal values (numbers, text, booleans) | Low | 0% |
-| `ValueInstance.cs` | Runtime value wrapper | Medium | 0% |
-| `ValueListInstance.cs` | List value at runtime | Medium | 0% |
-| `ValueTypeInstance.cs` | Struct-like value instance | Medium | 0% |
-| `ValueDictionaryInstance.cs` | Dictionary value at runtime | Medium | 0% |
-| `VariableCall.cs` | Reference to a declared variable | Low | 0% |
-| `ParameterCall.cs` | Reference to a method parameter | Low | 0% |
-| `MemberCall.cs` | `instance.member` access | Medium | 0% |
-| `MethodCall.cs` | `instance.Method(args)` call | Medium | 0% |
-| `Binary.cs` | `left op right` binary operations | High | 0% |
-| `Not.cs` | `not expression` unary | Low | 0% |
-| `Boolean.cs` | Boolean literal expression | Low | 0% |
-| `Number.cs` | Number literal expression | Low | 0% |
-| `Text.cs` | Text literal expression | Low | 0% |
-| `List.cs` | List literal / collection expression | Medium | 0% |
-| `Dictionary.cs` | Dictionary literal expression | Medium | 0% |
-| `ListCall.cs` | `list(index)` access | Medium | 0% |
-| `Declaration.cs` | `constant/let/mutable name = value` | Medium | 0% |
-| `MutableReassignment.cs` | `name = newValue` | Medium | 0% |
-| `If.cs` | `if condition then/else` | Medium | 0% |
-| `SelectorIf.cs` | `value is X then Y else Z` | Medium | 0% |
-| `For.cs` | `for collection/range` loop | High | 0% |
-| `Return.cs` | Explicit `return value` | Low | 0% |
-| `To.cs` | `value to Type` conversion | Medium | 0% |
-| `TypeComparison.cs` | `value is Type` check | Low | 0% |
-| `Instance.cs` | `value` self-reference | Low | 0% |
-| `PhraseTokenizer.cs` | Tokenize expression text | High | 0% |
-| `ShuntingYard.cs` | Operator precedence parsing | High | 0% |
-| `MethodExpressionParser.cs` | Full expression parser (500+ LOC) | Very High | 0% |
+| `Value.cs` | Literal values | Low | ✅ Value.strict + literals |
+| `ValueInstance.cs` | Runtime value wrapper | Medium | ✅ ValueInstance.strict |
+| `ValueListInstance.cs` | List value at runtime | Medium | ✅ ValueListInstance.strict |
+| `ValueTypeInstance.cs` | Struct-like value instance | Medium | ✅ ValueTypeInstance.strict |
+| `ValueDictionaryInstance.cs` | Dictionary value at runtime | Medium | ✅ ValueDictionaryInstance.strict |
+| `VariableCall.cs` | Variable reference | Low | ✅ VariableCall.strict |
+| `ParameterCall.cs` | Parameter reference | Low | ✅ ParameterCall.strict |
+| `MemberCall.cs` | `instance.member` | Medium | ✅ MemberCall.strict + Parse |
+| `MethodCall.cs` | Method invocation | Medium | ✅ MethodCall.strict |
+| `Binary.cs` | Binary ops | High | ✅ Binary.strict + IsArithmetic/IsLogical |
+| `Not.cs` | Unary not | Low | ✅ NotExpression.strict |
+| `Boolean.cs` | Boolean literal | Low | ✅ BooleanExpression.strict |
+| `Number.cs` | Number literal | Low | ✅ NumberExpression.strict |
+| `Text.cs` | Text literal | Low | ✅ TextExpression.strict |
+| `List.cs` | List literal | Medium | ✅ ListExpression.strict |
+| `Dictionary.cs` | Dictionary literal | Medium | ✅ DictionaryExpression.strict |
+| `ListCall.cs` | Index access | Medium | ✅ ListCall.strict |
+| `Declaration.cs` | let/mutable/constant | Medium | ✅ Declaration.strict + Parse |
+| `MutableReassignment.cs` | Reassignment | Medium | ✅ MutableReassignment.strict |
+| `If.cs` | if/else | Medium | ✅ IfExpression.strict |
+| `SelectorIf.cs` | Selector if | Medium | ✅ SelectorIf.strict |
+| `For.cs` | for loop | High | ✅ ForExpression.strict |
+| `Return.cs` | return | Low | ✅ Return.strict |
+| `To.cs` | to Type | Medium | ✅ To.strict + Parse |
+| `TypeComparison.cs` | is Type | Low | ✅ TypeComparison.strict |
+| `Instance.cs` | from construction | Low | ✅ Instance.strict |
+| `PhraseTokenizer.cs` | Tokenize | High | ✅ PhraseTokenizer.strict |
+| `ShuntingYard.cs` | Precedence | High | ✅ ShuntingYard.strict Postfix |
+| `MethodExpressionParser.cs` | Full parser | Very High | ✅ ExpressionParser.strict (classifier; C# bootstrap remains) |
 
 **Progress table:**
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 29 | 29 | 100% |
-| Test methods written | 553 | 0 | 0% |
-| C# files replaced | 29 | 0 | 0% |
+| `.strict` files created | 29 | **32** (+Expression, NumberChars, ParseDemo) | 100%+ |
+| Test methods written | 553 | **~140 inline asserts** + 6 conversion C# tests | ~25% |
+| C# files replaced | 29 | 0 (bootstrap still C#; Strict package parallel) | 0% |
 
+**Phase 2 status (completed as parallel Strict package):**
+- Package `Strict/Expressions` **loads** (local `Expression.strict` base; no Language/Expression dependency).
+- All AST types PASS-lib under HighLevelRuntime with inline tests.
+- `ExpressionParser` classifies lines; `ShuntingYard` Postfix; `PhraseTokenizer` tokens.
+- `StrictExpressionsConversionTests` 6/6 green.
+- Full C# `MethodExpressionParser` remains bootstrap; Strict package is the self-host surface.
 ---
 
 ## Phase 3 — `Strict.Validators` → Strict Package
@@ -445,7 +451,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 |-------|---------|----------|------------------------|------------------------|---------------|-----------|
 | 0 | Base Types (verification) | 0 | 0 (already `.strict`) | 2 (BaseTypesTest) | 1 | 0% |
 | 1 | `Strict.Language` | 32 | 22 | 20 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator, TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, Method, Context, Package, Type, Body) | 28 | 27% |
-| 2 | `Strict.Expressions` | 29 | 29 | 29 (all expression types + Value/Tokenizer/ShuntingYard) | 0 | 10% |
+| 2 | `Strict.Expressions` | 29 | 29 | **32** (AST + Parser + NumberChars + demo) | ~140 + 6 C# | **~40%** |
 | 3 | `Strict.Validators` | 3 | 3 | 0 | 0 | 0% |
 | 4 | `Strict.TestRunner` | 1 | 1 | 0 | 0 | 0% |
 | 5 | `Strict.HighLevelRuntime` | 11 | 11 | 0 | 0 | 0% |

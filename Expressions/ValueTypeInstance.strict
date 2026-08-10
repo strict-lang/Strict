@@ -2,6 +2,7 @@ has resultTypeName Text
 has memberNames Texts
 has memberValues Texts
 MemberCount Number
+	ValueTypeInstance("Point", ("x", "y"), ("1", "2")).MemberCount is 2
 	memberNames.Length
 to Text
 	resultTypeName + ": " + JoinMembers
