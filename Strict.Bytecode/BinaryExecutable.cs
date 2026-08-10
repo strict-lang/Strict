@@ -195,6 +195,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			InstructionType.InvokeRemove => new RemoveInstruction(reader, table),
 			InstructionType.ListCall => new ListCallInstruction(reader, table),
 			InstructionType.Print => new PrintInstruction(reader, table),
+			InstructionType.FieldLoad => new FieldLoadInstruction(reader, table),
 			_ when IsBinaryOp(type) => new BinaryInstruction(reader, type),
 			_ => throw new InvalidFile("Unknown instruction type: " + type) //ncrunch: no coverage
 		};

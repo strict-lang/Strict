@@ -12,6 +12,12 @@ ParseLine(line Text) ConcreteExpression
 	ConcreteExpression(Expression(ExpressionKind(trimmed), Start, false), trimmed)
 ExpressionKind(line Text) Text
 	ExpressionKind("return value") is "Return"
+	ExpressionKind("if count > 0") is "If"
+	ExpressionKind("for items") is "For"
+	ExpressionKind("let total = 0") is "Declaration"
+	KeywordExpressionKind(line)
+KeywordExpressionKind(line Text) Text
+	KeywordExpressionKind("return value") is "Return"
 	if line.StartsWith("return ")
 		return "Return"
 	if line.StartsWith("if ")
@@ -23,6 +29,8 @@ ExpressionKind(line Text) Text
 	TailExpressionKind(line)
 TailExpressionKind(line Text) Text
 	TailExpressionKind("value.ToText") is "MethodCall"
+	TailExpressionKind("total = total + value") is "Reassignment"
+	TailExpressionKind("count is 0") is "Binary"
 	if line.IndexOf(" = ") is not -1
 		return "Reassignment"
 	if line.IndexOf(".") is not -1

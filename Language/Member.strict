@@ -44,14 +44,23 @@ FirstPositiveIndex(first Number, second Number) Number
 		return first
 	second
 ExtractTypeName(text Text, memberName Text) Text
+	ExtractTypeName("Age Number", "Age") is "Number"
+	ExtractTypeName("Age", "Age") is "Age"
+	ExtractTypeName("Age = 5", "Age") is "Age"
 	let rest = text.Substring(memberName.Length, text.Length - memberName.Length).Trim
-	if rest is ""
+	if (rest is "") or rest.StartsWith("=")
 		return TypeNameFromMemberName(memberName)
-	if rest.StartsWith("=")
-		return TypeNameFromMemberName(memberName)
+	ExplicitTypeFromRest(rest, memberName)
+ExplicitTypeFromRest(rest Text, memberName Text) Text
+	ExplicitTypeFromRest("Number", "Age") is "Number"
+	ExplicitTypeFromRest("Number = 5", "Age") is "Number"
 	let endIndex = FirstPositiveIndex(rest.IndexOf(" "), rest.IndexOf("="))
-	let explicitType = endIndex is -1 then rest else rest.Substring(0, endIndex).Trim
-	explicitType is "" then TypeNameFromMemberName(memberName) else explicitType
+	if endIndex is -1
+		return rest
+	let typePart = rest.Substring(0, endIndex).Trim
+	if typePart is ""
+		return TypeNameFromMemberName(memberName)
+	typePart
 TypeNameFromMemberName(memberName Text) Text
 	TypeNameFromMemberName("lines") is "Line"
 	if memberName.Substring(memberName.Length - 1, 1) is "s"

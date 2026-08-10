@@ -22,8 +22,10 @@ public sealed class BinaryGenerator
 		AddMethodParameterVariables(methodCall);
 		//TODO: this randomly crashes VirtualMachineTests.Enum stuff .. bad anyway
 		var methodBody = methodCall.Method.GetBodyAndParseIfNeeded();
+		// Never emit test assertions into production bytecode (was previously "working"
+		// only because Binary `is` expressions were silently dropped).
 		Expressions = methodBody is Body body
-			? body.Expressions
+			? body.Expressions.Where(expr => !methodCall.Method.Tests.Contains(expr)).ToList()
 			: [methodBody];
 		ReturnType = methodCall.Method.ReturnType;
 		binary = new BinaryExecutable(GetBasePackage(methodCall));
@@ -346,8 +348,6 @@ public sealed class BinaryGenerator
 			GenerateInstructions(body.Expressions);
 			return;
 		case Binary binaryExpression:
-			if (binaryExpression.Method.Name == BinaryOperator.Is)
-				return;
 			if (!CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
 			{
 				GenerateMethodCallInstruction(binaryExpression);
@@ -416,15 +416,44 @@ public sealed class BinaryGenerator
 			return;
 		}
 		if (memberCall.Instance == null)
+		{
 			instructions.Add(
 				new LoadVariableToRegister(registry.AllocateRegister(), memberCall.ToString()));
-		//TODO: no tests exist for any of this yet:
-		else if (memberCall.Member.InitialValue != null)
+			return;
+		}
+		if (memberCall.Member.InitialValue != null &&
+			memberCall.Member.DefinedIn.IsEnum)
+		{
 			TryGenerateForEnum(memberCall.Member.DefinedIn, memberCall.Member.InitialValue);
-		else
-			instructions.Add(
-				new LoadVariableToRegister(registry.AllocateRegister(), memberCall.ToString()));
+			return;
+		}
+		GenerateInstructionFromExpression(memberCall.Instance);
+		var objectRegister = registry.PreviousRegister;
+		// Struct / value-type fields (Language Type, Member, Path, …). Not Text/List primitives.
+		if (IsStructFieldAccess(memberCall.Instance.ReturnType))
+		{
+			instructions.Add(new FieldLoadInstruction(registry.AllocateRegister(), objectRegister,
+				memberCall.Member.Name));
+			return;
+		}
+		// Length/Count on Text/List → Invoke so native VM handlers run
+		if (memberCall.Member.Name is "Length" or "Count")
+		{
+			var lengthInfo = new InvokeMethodInfo(GetBinaryTypeName(memberCall.Instance.ReturnType,
+					memberCall.Instance.ReturnType), memberCall.Member.Name, [],
+				GetBinaryTypeName(memberCall.ReturnType, memberCall.Instance.ReturnType), [],
+				objectRegister);
+			instructions.Add(new Invoke(registry.AllocateRegister(), lengthInfo));
+			return;
+		}
+		// Fallback: keep identifier for frame-relative member loads (e.g. text.characters)
+		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(),
+			memberCall.Member.Name));
 	}
+
+	private static bool IsStructFieldAccess(Type type) =>
+		!type.IsText && !type.IsNumber && !type.IsBoolean && !type.IsCharacter && !type.IsList &&
+		!type.IsNone && !type.IsAny && !type.IsEnum && type is not GenericTypeImplementation;
 
 	private void GenerateMethodCallInstruction(MethodCall methodCall)
 	{
@@ -612,6 +641,13 @@ public sealed class BinaryGenerator
 			GenerateLoopInstructions(directNestedFor, aggregationTarget, aggregation);
 			return true;
 		}
+		// for x; if cond; value  → only append when the if-then branch runs
+		if (aggregation == LoopAggregation.List && !string.IsNullOrWhiteSpace(aggregationTarget) &&
+			forExpression.Body is If ifInLoop)
+		{
+			GenerateIfThenListAggregation(ifInLoop, aggregationTarget!);
+			return true;
+		}
 		if (forExpression.Body is Body forExpressionBody)
 		{
 			for (var expressionIndex = 0; expressionIndex < forExpressionBody.Expressions.Count;
@@ -625,12 +661,37 @@ public sealed class BinaryGenerator
 					GenerateLoopInstructions(nestedFor, aggregationTarget, aggregation);
 					return true;
 				}
+				if (aggregation == LoopAggregation.List &&
+					expressionIndex == forExpressionBody.Expressions.Count - 1 &&
+					expression is If ifExpression && !string.IsNullOrWhiteSpace(aggregationTarget))
+				{
+					GenerateIfThenListAggregation(ifExpression, aggregationTarget!);
+					return true;
+				}
 				GenerateInstructionFromExpression(expression);
 			}
 		}
 		else
 			GenerateInstructionFromExpression(forExpression.Body);
 		return false;
+	}
+
+	/// <summary>
+	/// Emits if-condition + then-body + WriteToList only on the then path, so filtered
+	/// collection loops (`for xs; if cond; map(value)`) do not append on false branches.
+	/// </summary>
+	private void GenerateIfThenListAggregation(If ifExpression, string aggregationTarget)
+	{
+		GenerateCodeForIfCondition(ifExpression.Condition);
+		GenerateCodeForThen(ifExpression);
+		AddListAggregation(aggregationTarget);
+		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
+		if (ifExpression.OptionalElse == null)
+			return;
+		idStack.Push(conditionalId);
+		instructions.Add(new JumpToId(conditionalId++, InstructionType.JumpToIdIfTrue));
+		GenerateInstructions([ifExpression.OptionalElse]);
+		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
 	}
 
 	private void GenerateIfInstructions(If ifExpression)
@@ -663,7 +724,8 @@ public sealed class BinaryGenerator
 
 	private static bool CanGenerateDirectBinaryInstruction(string methodName) =>
 		methodName is BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply
-			or BinaryOperator.Divide or BinaryOperator.Modulate;
+			or BinaryOperator.Divide or BinaryOperator.Modulate or BinaryOperator.Is ||
+		methodName.StartsWith("is not", StringComparison.Ordinal);
 
 	private static InstructionType GetInstructionBasedOnBinaryOperationName(string binaryOperator) =>
 		binaryOperator switch
@@ -673,6 +735,9 @@ public sealed class BinaryGenerator
 			BinaryOperator.Minus => InstructionType.Subtract,
 			BinaryOperator.Divide => InstructionType.Divide,
 			BinaryOperator.Modulate => InstructionType.Modulo,
+			BinaryOperator.Is => InstructionType.Equal,
+			_ when binaryOperator.StartsWith("is not", StringComparison.Ordinal) =>
+				InstructionType.NotEqual,
 			_ => throw new NotImplementedException() //ncrunch: no coverage
 		};
 
@@ -995,7 +1060,7 @@ public sealed class BinaryGenerator
 			CollectMethodDependencies(method);
 			var body = method.GetBodyAndParseIfNeeded();
 			var methodExpressions = body is Body methodBody
-				? methodBody.Expressions
+				? methodBody.Expressions.Where(expr => !method.Tests.Contains(expr)).ToList()
 				: [body];
 			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
 				method.ReturnType);

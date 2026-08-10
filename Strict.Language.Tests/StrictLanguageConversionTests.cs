@@ -75,7 +75,7 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(File.Exists(Path.Combine(GetLanguagePath(), "Method.strict")), Is.False);
 		var parserSource = File.ReadAllText(Path.Combine(GetLanguagePath(), "MethodParser.strict"));
 		Assert.That(parserSource, Does.Contain("Parse(header Text, lines Texts, lineIndex Number) Method"));
-		Assert.That(parserSource, Does.Contain("Body(header Text, lines Texts, lineIndex Number) Body"));
+		Assert.That(parserSource, Does.Contain("ParseBody(header Text, sourceLines Texts, lineIndex Number) Body"));
 	}
 
 	private static IEnumerable<string> GetLanguageStrictFiles() =>

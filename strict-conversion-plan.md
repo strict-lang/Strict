@@ -116,30 +116,31 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 
 | Priority | C# File | Description | Strict equivalent plan | Status |
 |----------|---------|-------------|------------------------|--------|
-| 1 | `Keyword.cs` | String constants for keywords | `Language/Keyword.strict` — 9 text constants (MutableKeyword for Mutable conflict) | ✅ 100% |
-| 2 | `BinaryOperator.cs` | 16 operator string constants | `Language/BinaryOperator.strict` — 16 text constants, no conflicts | ✅ 100% |
-| 3 | `UnaryOperator.cs` | 1 unary operator constant | `Language/UnaryOperator.strict` — `constant Not = "not"` | ✅ 100% |
-| 4 | `TypeKind.cs` | Enum: None/Boolean/Number/etc. | `Language/TypeKind.strict` — 12 constants with Kind prefix | ✅ 100% |
-| 5 | `Limit.cs` | Size limit constants | `Language/Limit.strict` — 11 numeric constants | ✅ 100% |
-| 6 | `TypeLines.cs` | Raw lines of a type file | `Language/TypeLines.strict` — `has typeName Text`, `has lines Texts`, `to Text` | ✅ 100% |
-| 7 | `NamedType.cs` | Name + Type pair (abstract base) | `Language/NamedType.strict` — concrete simplification with `elementName`, `typeName`, `isMutable`, `isConstant`, `IsPublic`, `to Text` | ✅ 70% |
-| 8 | `NumberExtensions.cs` | Simple number helpers | Methods on Number — needs method body support | 🚧 Deferred |
-| 9 | `StringExtensions.cs` | `MakeFirstLetterUppercase`, etc. | Methods on Text — complex C# spans/strings | 🚧 Deferred |
-| 10 | `SpanExtensions.cs` | `IsWord`, `IsKeyword`, etc. | Performance-critical span methods | 🚧 Deferred |
-| 11 | `Variable.cs` | Variable: name, type, isMutable | `Language/Variable.strict` — `variableName`, `typeName`, `isMutable`, `initialValue`, `to Text` | ✅ 75% |
-| 12 | `Parameter.cs` | Method parameter | `Language/Parameter.strict` — `parameterName`, `typeName`, `isMutable`, `defaultValue`, `HasDefault`, `to Text` with mutable prefix | ✅ 75% |
-| 13 | `Member.cs` | Type member definition | `Language/Member.strict` — `memberName`, `typeName`, `isMutable`, `isConstant`, `initialValue`, `IsPublic`, `Keyword`, `to Text` with keyword-aware formatting | ✅ 75% |
-| 14 | `Expression.cs` | Abstract expression base | `Language/Expression.strict` — expanded simplified metadata (`returnTypeName`, `lineNumber`, `isMutable`) plus parser-safe `IsConstant`/`to` methods | ✅ 50% |
-| 15 | `ConcreteExpression.cs` | Concrete expression with type | `Language/ConcreteExpression.strict` — de-duplicated via `has Expression` + `expressionText` with parser-safe methods | ✅ 50% |
-| 16 | `ExpressionParser.cs` | Abstract parser interface | `Language/ExpressionParser.strict` — `Parse` classifies expression types, `IsAssignment`/`IsBinaryExpression`/`IsReassignment`/`ExtractReturnExpression`/`ExtractCondition`/`ExtractIterator` helpers | ✅ 60% |
-| 17 | `TypeParser.cs` | Parse member/method headers | `Language/TypeParser.strict` — simplified parse signature trait | ✅ 25% |
-| 18 | `Method.cs` (partial) | Method definition, no body parse | `Language/Method.strict` — `methodName`, `returnTypeName`, params/public/trait flags, `HasReturnType`, `HasParameters`, `IsRunMethod` | ✅ 60% |
-| 19 | `Context.cs` | Base for Package/Type lookup | `Language/Context.strict` — parser-safe lookup surface (`FindType`, `TryGetType`, `GetType`) | ✅ 40% |
-| 20 | `Package.cs` | Package = directory of types | `Language/Package.strict` — parser-safe package metadata + lookup/add methods | ✅ 45% |
-| 21 | `Type.cs` | Type definition | `Language/Type.strict` — 12 methods: `IsMember`, `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`, `MethodName`, `HasReturnType`, `ReturnTypeName`. Verified via Runner/VM pipeline. | ✅ 80% |
-| 22 | `Body.cs` | Method body, lazy parse | `Language/Body.strict` — line classification: `IsMethodCallLine`, `IsReturnLine`, `IsIfLine`, `IsForLine`, `IsDeclarationLine`, `IsReassignment`, `IsBinaryExpression`, `IsNotExpression` | ✅ 55% |
-| 23 | `Repositories.cs` | Load packages from GitHub/disk | Needs async/HTTP — defer | 🚧 Deferred |
-| 24 | `GitHubStrictDownloader.cs` | HTTP download — defer | Needs HTTP client | 🚧 Deferred |
+| 1 | `Keyword.cs` | String constants for keywords | `Language/Keyword.strict` | ✅ 100% |
+| 2 | `BinaryOperator.cs` | 16 operator string constants | `Language/BinaryOperator.strict` | ✅ 100% |
+| 3 | `UnaryOperator.cs` | 1 unary operator constant | `Language/UnaryOperator.strict` | ✅ 100% |
+| 4 | `TypeKind.cs` | Enum: None/Boolean/Number/etc. | `Language/TypeKind.strict` | ✅ 100% |
+| 5 | `Limit.cs` | Size limit constants | `Language/Limit.strict` | ✅ 100% |
+| 6 | `TypeLines.cs` | Raw lines of a type file | `Language/TypeLines.strict` | ✅ 100% |
+| 7 | `NamedType.cs` | Name + Type pair | `Language/NamedType.strict` | ✅ 70% |
+| 8 | `NumberExtensions.cs` | Simple number helpers | Methods on Number | 🚧 Deferred |
+| 9 | `StringExtensions.cs` | String helpers | Methods on Text | 🚧 Deferred |
+| 10 | `SpanExtensions.cs` | Span helpers | Performance-critical | 🚧 Deferred |
+| 11 | `Variable.cs` | Variable | `Language/Variable.strict` + root `Variable.strict` | ✅ 75% |
+| 12 | `Parameter.cs` | Method parameter | `Language/Parameter.strict` | ✅ 75% |
+| 13 | `Member.cs` | Type member definition | `Language/Member.strict` — `Parse`, kind/name/type extract | ✅ 80% |
+| 14 | `Expression.cs` | Expression base | `Language/Expression.strict` | ✅ 50% |
+| 15 | `ConcreteExpression.cs` | Concrete expression | `Language/ConcreteExpression.strict` | ✅ 50% |
+| 16 | `ExpressionParser.cs` | Parser interface | `Language/ExpressionParser.strict` — assignment/compare/reassign classifiers | ✅ 55% |
+| 17 | `TypeParser.cs` | Parse member/method headers | Split across `Type.strict` + `MethodParser.strict` | ✅ 50% |
+| 18 | `Method.cs` (partial) | Method definition | Root `Method.strict` data + `Language/MethodParser.strict` | ✅ 70% |
+| 19 | `Context.cs` | Package/Type lookup base | `Language/Context.strict` | ✅ 40% |
+| 20 | `Package.cs` | Package = directory of types | `Language/Package.strict` | ✅ 45% |
+| 21 | `Type.cs` | Type definition | `Language/Type.strict` — Members/Methods/line classifiers; HLR tests green | ✅ 80% |
+| 22 | `Body.cs` | Method body | `Language/Body.strict` — ExpressionKind classification | ✅ 60% |
+| 23 | `Repositories.cs` | Load packages | Needs async/HTTP | 🚧 Deferred |
+| 24 | `GitHubStrictDownloader.cs` | HTTP download | Needs HTTP client | 🚧 Deferred |
+| — | *(driver)* | File → Type dump | `Language/Parser.strict` — VM file read works | ✅ 40% |
 
 **Naming convention in Strict Language/ files:**
 Strict enforces that a member named `x` (where `X` is an existing type) must have type `X`.
@@ -149,17 +150,26 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
-- ✅ **21 Language types converted in `.strict` form** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, Method, Context, Package, Type, Body, Parser + 5 pure constants
-- ✅ **29 Expression types in `.strict` form (Phase 2 complete)** — Value, TextExpression, NumberExpression, BooleanExpression, MethodCall, MemberCall, ParameterCall, VariableCall, Binary, Return, IfExpression, ForExpression, Declaration, ListExpression, NotExpression, MutableReassignment, DictionaryExpression, ListCall, Instance, To, TypeComparison, SelectorIf, TypePattern, ValueInstance, ValueListInstance, ValueTypeInstance, ValueDictionaryInstance, PhraseTokenizer, ShuntingYard
-- ✅ **TypeFinder.strict** — Shared type registry with `Find`/`Get`/`Has`/`Count`/`FindPlural` methods. Replaces per-type `typeNames` approach; types reference a common TypeFinder instead of each carrying their own type list.
-- ✅ **Type.strict has 12 methods** — `IsMember`, `IsMethodHeader`, `MemberCount`, `MethodCount`, `MemberKind`, `ExtractAfterKeyword`, `MemberNames`, `MethodHeaders`, `BodyLines`, `MethodName`, `HasReturnType`, `ReturnTypeName`
-- ✅ **VM fixes** — characters.Length works via recursive EvaluateMemberCall + TryGetNativeLength. BinaryGenerator emits LoadVariableToRegister for member calls with instance. Register save/restore for for-loop bodies.
-- ✅ **4 end-to-end examples** — ParseHelloLogger (type line classification), ParseExpressions (expression classification + Substring/characters.Length), ParseMethodHeaders (method header parsing + reassignment detection), Parser (minimum type structure parsing surface)
-- ✅ **ExpressionParser.strict expanded** — Parse + IsAssignment/IsBinaryExpression/IsReassignment + extract helpers
-- ✅ **Body.strict expanded** — IsMethodCallLine/IsReturnLine/IsIfLine/IsForLine/IsDeclarationLine/IsReassignment/IsBinaryExpression/IsNotExpression
-- 🚧 **Known PhraseTokenizer limitation** — `IndexOf("(")` fails in VM/bytecode path because PhraseTokenizer interprets `(` as expression grouping. Works fine in C# HighLevelRuntime expression parsing. Workaround: use space-based parsing for method headers in VM examples.
+- ✅ **Language package `.strict` files** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, MethodParser, Context, Package, Type, Body, Parser + constants. Root `Method.strict` is data-only (`Name`/`Type`/`Parameters`); parsing lives in `MethodParser.strict`.
+- ✅ **Object-model cleanup** — Language types use `Name`/`Type` (not legacy `elementName`/`typeName`/`expressionText`). Guarded by `StrictLanguageConversionTests` (11 tests).
+- ✅ **Type.strict** — real member/method line parse under **HighLevelRuntime** (inline tests green). `Members`/`Methods` + `MethodParser.Parse` for headers/params/body span.
+- ✅ **MethodParser.strict** — `Parse` / `ParseBody` / parameter extraction; avoids `IndexOf("(")` via `OpenParen`/`CloseParen` constants + character scan.
+- ✅ **Parser.Run** — reads a real file via `File(path).ReadLines` under the **VM** (Path CLI args work after VM `File.from` Path fix). Logs path + ok when non-empty.
+- ✅ **29 Expression types in `.strict` form (scaffold)** — files exist; many still stringly; package load of `Expressions/` alone is fragile (e.g. `Value` → `Expression` cross-package).
+- 🚧 **VM gaps (do not block HLR TDD)** — `Type` method invokes can stack-overflow under VM; `BinaryGenerator` still stringifies some member chains (`file.TextReader`); prefer HLR tests for Language library logic.
+- 🚧 **Known PhraseTokenizer limitation** — bare `IndexOf("(")` fails (paren as grouping). Workaround: constants + character loops (see MethodParser).
 - 🚧 **Deferred from Phase 1** — Number/String/Span extension parity plus Repositories and GitHub downloader (deferred by design)
 - 🚧 **Operator precedence note** — `is` has lowest precedence (1), `and` is 6, so `A is false and B is false` parses as `A is (false and B is false)`. Use parenthesized `(not A) and (not B)` or helper methods instead.
+
+**Baseline health (updated):**
+| File | Status |
+|------|--------|
+| Type, Body, Parameter, Member, MethodParser, Expression, ExpressionParser | PASS-lib (parse + HLR tests) |
+| Parser | **VM dumps Members + Methods** for real files (`HelloLogger` → member `logger`, method `Run`) |
+| Boolean.and/or/xor | Non-recursive `.strict` bodies + native VM handlers (fixed Type stack-overflow root cause) |
+| BinaryGenerator | `is` → Equal; struct `instance.field` → FieldLoad; for-if list aggregate only on then; filter tests from bytecode |
+| Expressions package | Scaffold; next focus (Phase 2) |
+| C# bootstrap | Still production pipeline; Language parsers now usable under VM |
 
 **Target metrics for Phase 1:**
 - `.strict` files to generate: ~23 (excluding deferred files)
@@ -461,7 +471,7 @@ These C# / .NET features need to be added to the Strict runtime before each phas
 | `Directory.Exists` | 1 (Language) | 🔴 Critical | ✅ Added |
 | `Directory.GetFiles(path, pattern)` | 1 (Language) | 🔴 Critical | ✅ Added (`Directory.Files`) |
 | `Directory.CreateDirectory` | 1 (Language) | 🟠 High | ✅ Added (`Directory.Create`) |
-| `File.ReadAllLines` | 1 (Language) | 🔴 Critical | ❌ Missing |
+| `File.ReadAllLines` | 1 (Language) | 🔴 Critical | ✅ Via `File(...).ReadLines` (`TextReader` trait; VM accepts Path or Text) |
 | `File.WriteAllText` | 1 (Language) | 🟠 High | ✅ Covered by `File.Write` |
 | `File.Exists` | 1 (Language) | 🟠 High | ✅ Added |
 | `Text.Split(separator)` | 1 (Language) | 🔴 Critical | ✅ Added |

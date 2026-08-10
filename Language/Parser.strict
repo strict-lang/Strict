@@ -1,14 +1,14 @@
 has logger
 Run(path)
-	let lines = File(path).TextReader.ReadLines
-	let type = Type(TypeName(path), lines)
-	logger.Log("Parsing " + type.Name)
+	let file = File(path)
+	let lines = file.ReadLines
+	let type = Type(TypeName(path.text), lines)
 	logger.Log("Members:")
 	for type.Members
-		logger.Log("> " + value)
+		logger.Log(value.Name)
 	logger.Log("Methods:")
 	for type.Methods
-		logger.Log("> " + value)
+		logger.Log(value.Name)
 TypeName(path Text) Text
 	TypeName("Examples/Parsing/ParseMethodHeaders.strict") is "ParseMethodHeaders"
 	TypeName("Text.strict") is "Text"

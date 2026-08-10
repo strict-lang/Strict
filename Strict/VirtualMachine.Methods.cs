@@ -96,8 +96,13 @@ public sealed partial class VirtualMachine
 				hasInstance && TryHandleNativeFileMethod(invoke, implicitInstance),
 			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true, implicitInstance),
 			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false, implicitInstance),
-			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" or "Upper" or "Lower" =>
+			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" or "Upper" or "Lower"
+				or "Capitalize" or "Trim" or "TrimStart" or "TrimEnd" =>
 				hasInstance && TryHandleNativeTextMethod(invoke, implicitInstance),
+			// Avoid infinite recursion when Boolean.strict operators are compiled as Invoke
+			// (their .strict bodies historically used the same operators recursively).
+			BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor or "not" =>
+				hasInstance && TryHandleNativeBooleanMethod(invoke, implicitInstance),
 			_ => (info.InstanceRegister.HasValue || implicitInstance != null) &&
 				TryHandleNativeTraitInstanceMethod(invoke, implicitInstance)
 		};
@@ -136,11 +141,10 @@ public sealed partial class VirtualMachine
 		{
 			if (info.ArgumentRegisters.Length != 1)
 				return false;
-			var pathValue = Memory.Registers[info.ArgumentRegisters[0]];
-			if (!pathValue.IsText)
+			if (!TryGetPathText(Memory.Registers[info.ArgumentRegisters[0]], out var pathText))
 				return false;
 			var fileInstance = NativeFileRegistry.Open(executable.basePackage.GetType(Type.File),
-				pathValue.Text);
+				pathText);
 			Memory.Frame.TrackDisposable(fileInstance);
 			Memory.Registers[invoke.Register] = fileInstance;
 			return true;
@@ -317,10 +321,12 @@ public sealed partial class VirtualMachine
 	{
 		if (returnType.Name == Type.File)
 		{
-			var pathValue = Memory.Registers[invoke.MethodInfo.ArgumentRegisters[0]];
-			if (!pathValue.IsText)
+			if (invoke.MethodInfo.ArgumentRegisters.Length != 1)
 				return false;
-			var fileInstance = NativeFileRegistry.Open(returnType, pathValue.Text);
+			if (!TryGetPathText(Memory.Registers[invoke.MethodInfo.ArgumentRegisters[0]],
+				out var pathText))
+				return false;
+			var fileInstance = NativeFileRegistry.Open(returnType, pathText);
 			Memory.Frame.TrackDisposable(fileInstance);
 			Memory.Registers[invoke.Register] = fileInstance;
 			return true;
@@ -447,7 +453,38 @@ public sealed partial class VirtualMachine
 					: rawValue;
 			return true;
 		}
+		// "name to Type" / "name to Name" used heavily by Language parsers
+		if (conversionType.Name is "Type" or "Name")
+		{
+			var text = rawValue.IsText
+				? rawValue.Text
+				: ConvertToText(rawValue).Text;
+			Memory.Registers[invoke.Register] = CreateNamedValueType(conversionType, text);
+			return true;
+		}
 		return false;
+	}
+
+	private ValueInstance CreateNamedValueType(Type conversionType, string text)
+	{
+		var members = conversionType.Members;
+		if (members.Count == 0)
+			return new ValueInstance(text);
+		// Prefer a single Text/Name-like member (Type.Name Text, Name itself, etc.)
+		var values = new ValueInstance[members.Count];
+		for (var index = 0; index < members.Count; index++)
+		{
+			var memberType = members[index].Type;
+			if (memberType.IsText || memberType.Name is "Name" or "Text")
+				values[index] = memberType.IsText
+					? new ValueInstance(text)
+					: CreateNamedValueType(memberType, text);
+			else if (memberType.IsList)
+				values[index] = new ValueInstance(memberType, Array.Empty<ValueInstance>());
+			else
+				values[index] = CreateDefaultValue(memberType);
+		}
+		return new ValueInstance(conversionType, values);
 	}
 
 	private bool TryHandleNativeLength(Invoke invoke, ValueInstance? implicitInstance)
@@ -669,6 +706,39 @@ public sealed partial class VirtualMachine
 		int SavedInstructionIndex, bool SavedConditionFlag, ValueInstance? SavedReturns,
 		CallFrame SavedFrame, int StackDepth, CallFrame Frame);
 
+	private bool TryHandleNativeBooleanMethod(Invoke invoke, ValueInstance? implicitInstance)
+	{
+		var info = invoke.MethodInfo;
+		var instance = ResolveInvokeInstance(info, implicitInstance);
+		if (instance.GetType().Name != Type.Boolean && !instance.IsPrimitiveType(executable.booleanType))
+			return false;
+		var left = instance.Boolean;
+		switch (info.MethodName)
+		{
+		case "not":
+			Memory.Registers[invoke.Register] =
+				new ValueInstance(executable.booleanType, !left);
+			return true;
+		case BinaryOperator.And:
+		case BinaryOperator.Or:
+		case BinaryOperator.Xor:
+			if (info.ArgumentRegisters.Length != 1)
+				return false;
+			var right = Memory.Registers[info.ArgumentRegisters[0]].Boolean;
+			var result = info.MethodName switch
+			{
+				BinaryOperator.And => left && right,
+				BinaryOperator.Or => left || right,
+				_ => left ^ right
+			};
+			Memory.Registers[invoke.Register] =
+				new ValueInstance(executable.booleanType, result);
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	private bool TryHandleNativeTextMethod(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
@@ -686,10 +756,15 @@ public sealed partial class VirtualMachine
 				text.IndexOf(args[0].Text, StringComparison.Ordinal)),
 			"LastIndexOf" => new ValueInstance(executable.numberType,
 				text.LastIndexOf(args[0].Text, StringComparison.Ordinal)),
-			"Substring" => new ValueInstance(
-				text.Substring((int)args[0].Number, (int)args[1].Number)),
+			"Substring" => EvaluateSubstring(text, args),
 			"Upper" => new ValueInstance(text.ToUpperInvariant()),
 			"Lower" => new ValueInstance(text.ToLowerInvariant()),
+			"Capitalize" => new ValueInstance(text.Length == 0
+				? ""
+				: char.ToUpperInvariant(text[0]) + text[1..]),
+			"Trim" => new ValueInstance(text.Trim()),
+			"TrimStart" => new ValueInstance(text.TrimStart()),
+			"TrimEnd" => new ValueInstance(text.TrimEnd()),
 			_ => throw new InvalidOperationException("Unhandled native text method: " + info.MethodName)
 		};
 		return true;
@@ -704,6 +779,19 @@ public sealed partial class VirtualMachine
 		var matches = start >= 0 && start + prefix.Length <= text.Length &&
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
 		return new ValueInstance(executable.booleanType, matches);
+	}
+
+	private static ValueInstance EvaluateSubstring(string text, ValueInstance[] args)
+	{
+		var start = (int)args[0].Number;
+		var length = args.Length > 1
+			? (int)args[1].Number
+			: text.Length - start;
+		if (start < 0 || start > text.Length || length <= 0)
+			return new ValueInstance("");
+		if (start + length > text.Length)
+			length = text.Length - start;
+		return new ValueInstance(text.Substring(start, length));
 	}
 
 	private bool TryGetNativeLength(ValueInstance instance, string memberName, out ValueInstance result)
@@ -733,6 +821,31 @@ public sealed partial class VirtualMachine
 
 	private bool IsFileInstance(ValueInstance instance) =>
 		instance.GetType().IsSameOrCanBeUsedAs(executable.basePackage.GetType(Type.File));
+
+	/// <summary>
+	/// File.from accepts Text or Path. CLI Run(path) parameters are Path value instances
+	/// (has text), not bare Text — extract the underlying path string for native I/O.
+	/// </summary>
+	private static bool TryGetPathText(ValueInstance pathValue, out string pathText)
+	{
+		if (pathValue.IsText)
+		{
+			pathText = pathValue.Text;
+			return true;
+		}
+		var pathInstance = pathValue.TryGetValueTypeInstance();
+		if (pathInstance != null && pathInstance.ReturnType.Name == "Path")
+		{
+			var textMember = pathInstance["text"];
+			if (textMember.IsText)
+			{
+				pathText = textMember.Text;
+				return true;
+			}
+		}
+		pathText = "";
+		return false;
+	}
 
 	private void DisposeTrackedValues(CallFrame frame, ValueInstance? returnValue, CallFrame? parentFrame)
 	{

@@ -3,5 +3,7 @@ has line Number
 has IsMutable Boolean
 IsConstant Boolean
 	false
+LineNumber Number
+	line
 to Text
 	result

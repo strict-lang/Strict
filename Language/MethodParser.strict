@@ -1,57 +1,92 @@
-has Method
+has source Method
+constant OpenParen = "("
+constant CloseParen = ")"
+Source Method
+	source
 Parse(header Text, lines Texts, lineIndex Number) Method
-	Method
-Body(header Text, lines Texts, lineIndex Number) Body
+	Parse("Run Text", ("Run Text", "\t\"ok\""), 0).Name is "Run"
+	Parse("Add(number Number) Number", ("Add(number Number) Number", "\tnumber"), 0).Name is "Add"
+	let name = ExtractName(header)
+	let returnType = ExtractType(header)
+	let parameters = ExtractParameters(header)
+	if lineIndex < 0
+		return source
+	if lines.Length < 0
+		return source
+	Method(name, returnType, parameters)
+ParseBody(header Text, sourceLines Texts, lineIndex Number) Body
+	ParseBody("Run", ("Run", "\t\"ok\"", "Add Number"), 0).Length is 1
+	if header is ""
+		return Body(sourceLines, 0, 0)
 	let bodyStart = lineIndex + 1
-	let bodyLength = BodyLength(lines, bodyStart)
-	Body(lines, bodyStart, bodyLength)
+	let bodyLength = BodyLength(sourceLines, bodyStart)
+	Body(sourceLines, bodyStart, bodyLength)
 IsHeader(line Text) Boolean
 	IsHeader("has Name Text") is false
-	let kind = Member.ExtractKind(line)
-	if line is ""
+	IsHeader("Run Text") is true
+	if (line is "") or line.StartsWith("\t")
 		return false
-	(not kind.StartsWith("has")) and (not line.StartsWith("\t"))
+	IsNonMemberHeader(line)
+IsNonMemberHeader(line Text) Boolean
+	IsNonMemberHeader("mutable count Number") is false
+	(not line.StartsWith("has ")) and (not line.StartsWith("mutable ")) and (not line.StartsWith("constant "))
 ExtractName(header Text) Name
-	let parenIndex = header.IndexOf("(")
-	let spaceIndex = header.IndexOf(" ")
-	let endIndex = FirstPositiveIndex(parenIndex, spaceIndex)
-	((endIndex is -1 then header else header.Substring(0, endIndex)) to Name)
+	ExtractName("Run Text") is "Run"
+	ExtractName("Add(number Number) Number") is "Add"
+	for header.characters
+		if (value is OpenParen) or (value is " ")
+			return header.Substring(0, index).Trim to Name
+	header to Name
 ExtractType(header Text) Type
 	ExtractType("Run Text") is Type("Text")
+	ExtractType("Run") is Type("None")
 	let parts = header.Split(" ")
 	if parts.Length is 1
 		return Type("None")
 	Type(parts.Last)
 ExtractParameters(header Text) Variables
-	let openIndex = header.IndexOf("(")
-	if openIndex is -1
-		return Variables
-	let closeIndex = header.IndexOf(")")
-	let text = header.Substring(openIndex + 1, closeIndex - openIndex - 1).Trim
+	ExtractParameters("Run").Length is 0
+	ExtractParameters("Add(number Number) Number").Length is 1
+	ExtractParameters("Combine(a Text, b Text) Text").Length is 2
+	let text = ParameterText(header)
 	if text is ""
 		return Variables
 	for text.Split(",")
 		ExtractParameter(value.Trim)
+ParameterText(header Text) Text
+	ParameterText("Run") is ""
+	ParameterText("Add(number Number) Number") is "number Number"
+	let openIndex = FindCharacter(header, OpenParen)
+	if openIndex is -1
+		return ""
+	let closeIndex = FindCharacter(header, CloseParen)
+	if closeIndex is -1
+		return ""
+	header.Substring(openIndex + 1, closeIndex - openIndex - 1).Trim
+FindCharacter(text Text, search Text) Number
+	FindCharacter("hello", "e") is 1
+	for text.characters
+		if value is search
+			return index
+	-1
 ExtractParameter(text Text) Variable
 	ExtractParameter("value Text").Type is Type("Text")
+	ExtractParameter("mutable count Number").IsMutable is true
 	let isMutable = text.StartsWith("mutable ")
 	let normalized = isMutable then text.Substring(8, text.Length - 8).Trim else text
 	let parts = normalized.Split(" ")
 	let parameterName = parts.First to Name
 	if parts.Length is 1
-		return Variable(parameterName, Type("Any"), None, isMutable, false)
-	Variable(parameterName, Type(parts.Last), None, isMutable, false)
-FirstPositiveIndex(first Number, second Number) Number
-	FirstPositiveIndex(-1, 4) is 4
-	if first is -1
-		return second
-	if second is -1
-		return first
-	if first < second
-		return first
-	second
-BodyLength(lines Texts, bodyStart Number) Number
-	for Range(bodyStart, lines.Length)
-		if not lines(index).StartsWith("\t")
+		return Variable(parameterName, Type("Any"), isMutable, "")
+	Variable(parameterName, Type(parts.Last), isMutable, "")
+BodyLength(sourceLines Texts, bodyStart Number) Number
+	BodyLength(("Run", "\t\"ok\"", "Add Number"), 1) is 1
+	for sourceLines
+		if IsBodyEnd(index, bodyStart, value)
 			return index - bodyStart
-	lines.Length - bodyStart
+	sourceLines.Length - bodyStart
+IsBodyEnd(index Number, bodyStart Number, line Text) Boolean
+	IsBodyEnd(1, 1, "Run") is true
+	if index < bodyStart
+		return false
+	not line.StartsWith("\t")

@@ -9,8 +9,13 @@ Members(lines Texts) Members
 		if IsMemberLine(value)
 			ParseMemberLine(value)
 IsMemberLine(line Text) Boolean
+	IsMemberLine("has logger") is true
+	IsMemberLine("mutable count Number") is true
+	IsMemberLine("Run Text") is false
 	line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
 ParseMemberLine(line Text) Member
+	ParseMemberLine("has Age Number").Name is "Age"
+	ParseMemberLine("mutable count Number").Kind is "mutable"
 	let kind = line.StartsWith("mutable ") then "mutable" else line.StartsWith("constant ") then "constant" else "has"
 	let body = line.Substring(kind.Length + 1, line.Length - kind.Length - 1).Trim
 	let memberName = ExtractName(body) to Name
@@ -25,11 +30,15 @@ Methods(lines Texts) Methods
 			ParseMethodLine(value, lines, index)
 IsMethodLine(line Text) Boolean
 	IsMethodLine("Run Text") is true
+	IsMethodLine("\tlogger.Log") is false
 	if line is ""
 		return false
-	(not IsMemberLine(line)) and (not line.StartsWith("\t"))
+	if line.StartsWith("\t")
+		return false
+	not IsMemberLine(line)
 ParseMethodLine(line Text, lines Texts, lineIndex Number) Method
 	ParseMethodLine("Run Text", ("Run Text", "\t\"ok\""), 0).Name is "Run"
+	ParseMethodLine("Add(number Number) Number", ("Add(number Number) Number", "\tnumber"), 0).Name is "Add"
 	let method = Method((ExtractName(line) to Name), MethodResult(line), Variables)
 	MethodParser(method).Parse(line, lines, lineIndex)
 ExtractName(text Text) Text

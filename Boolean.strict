@@ -1,22 +1,27 @@
 not Boolean
 	not true is false
+	not false is true
 	value then false else true
 and(other) Boolean
 	true and false is false
 	true and true
-	value and other then true else false
+	false and true is false
+	value then other else false
 or(other) Boolean
 	true or false
 	false or false is false
-	value or other then false else true
+	false or true
+	value then true else other
 xor(other) Boolean
 	true xor true is false
 	false xor true
-	not (false xor false)
-	value and other or (not value) and (not other) then false else true
+	true xor false
+	false xor false is false
+	value then (not other) else other
 is(other) Boolean
-	not false
 	false is not true
+	true is true
+	true is not false
 	value is other
 to Text
 	true to Text is "true"

@@ -1,9 +1,15 @@
-has input Text
-IsAssignment(input Text) Boolean
-	input.StartsWith("let ") or input.StartsWith("mutable ") or input.StartsWith("constant ")
-IsArithmeticExpression(input Text) Boolean
-	input.IndexOf(" + ") > 0
-IsComparisonExpression(input Text) Boolean
-	input.IndexOf(" is ") > 0
-IsReassignment(input Text) Boolean
-	input.IndexOf(" = ") > 0
+has text
+IsAssignment Boolean
+	ExpressionParser("let count = 1").IsAssignment is true
+	ExpressionParser("count = 1").IsAssignment is false
+	text.StartsWith("let ") or text.StartsWith("mutable ") or text.StartsWith("constant ")
+IsArithmeticExpression Boolean
+	ExpressionParser("a + b").IsArithmeticExpression is true
+	text.IndexOf(" + ") > 0
+IsComparisonExpression Boolean
+	ExpressionParser("a is b").IsComparisonExpression is true
+	text.IndexOf(" is ") > 0
+IsReassignment Boolean
+	ExpressionParser("count = 1").IsReassignment is true
+	ExpressionParser("let count = 1").IsReassignment is true
+	text.IndexOf(" = ") > 0

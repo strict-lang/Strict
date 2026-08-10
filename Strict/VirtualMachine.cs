@@ -363,7 +363,18 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 
 	private void ExecuteFieldLoad(FieldLoadInstruction instr)
 	{
-		var typeInstance = Memory.Registers[instr.ObjectRegister].TryGetValueTypeInstance()!;
+		var objectValue = Memory.Registers[instr.ObjectRegister];
+		var typeInstance = objectValue.TryGetValueTypeInstance();
+		if (typeInstance == null)
+		{
+			// Path/Text primitives store data differently — Path has a single text field
+			if (objectValue.IsText && instr.FieldName.Equals("text", StringComparison.OrdinalIgnoreCase))
+			{
+				Memory.Registers[instr.Register] = objectValue;
+				return;
+			}
+			throw Fail("FieldLoad on non-struct value for field '" + instr.FieldName + "'");
+		}
 		var members = typeInstance.ReturnType.Members;
 		for (var index = 0; index < members.Count; index++)
 			if (members[index].Name.Equals(instr.FieldName, StringComparison.OrdinalIgnoreCase))
@@ -371,6 +382,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 				Memory.Registers[instr.Register] = typeInstance.Values[index];
 				return;
 			}
+		throw Fail("Field '" + instr.FieldName + "' not found on " + typeInstance.ReturnType.Name);
 	}
 
 	private void ExecuteConstructValueType(ConstructValueTypeInstruction instr)
