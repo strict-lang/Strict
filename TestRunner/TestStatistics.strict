@@ -1,0 +1,17 @@
+has packagesTested Number
+has typesTested Number
+has methodsTested Number
+has testExpressions Number
+IncrementPackages TestStatistics
+	TestStatistics(packagesTested + 1, typesTested, methodsTested, testExpressions)
+IncrementTypes TestStatistics
+	TestStatistics(packagesTested, typesTested + 1, methodsTested, testExpressions)
+IncrementMethods TestStatistics
+	TestStatistics(packagesTested, typesTested, methodsTested + 1, testExpressions)
+IncrementExpressions TestStatistics
+	TestStatistics(packagesTested, typesTested, methodsTested, testExpressions + 1)
+to Text
+	"packages=" + packagesTested + " types=" + typesTested + " methods=" + methodsTested + " tests=" + testExpressions
+Empty TestStatistics
+	Empty.packagesTested is 0
+	TestStatistics(0, 0, 0, 0)

@@ -1,0 +1,10 @@
+has typeName Text
+has methods MethodUnderTests
+ShouldSkip Boolean
+	if typeName is "Number"
+		return true
+	false
+MethodCount Number
+	methods.Length
+to Text
+	typeName

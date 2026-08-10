@@ -1,0 +1,22 @@
+has methodName Text
+has assertion Text
+has passed Boolean
+has message Text
+to Text
+	if passed
+		return "PASS " + methodName + ": " + assertion
+	"FAIL " + methodName + ": " + message
+IsPass Boolean
+	if passed
+		return true
+	false
+IsFail Boolean
+	if passed
+		return false
+	true
+Pass(methodName Text, assertion Text) TestResult
+	Pass("Run", "5 is 5").passed is true
+	TestResult(methodName, assertion, true, "")
+Fail(methodName Text, assertion Text, message Text) TestResult
+	Fail("Run", "5 is 6", "expected true").passed is false
+	TestResult(methodName, assertion, false, message)

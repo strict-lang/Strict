@@ -250,17 +250,23 @@ Depends on Phases 1 & 2.
 
 | C# File | Description | Status |
 |---------|-------------|--------|
-| `Visitor.cs` | Abstract visitor base | 0% |
-| `TypeValidator.cs` | Check unused expressions, type errors | 0% |
-| `ConstantCollapser.cs` | Collapse constant expressions | 0% |
+| `Visitor.cs` | Abstract visitor base | ✅ Visitor.strict (type/member/method/body line surface) |
+| `TypeValidator.cs` | Unused members/vars, mutable, hide checks | ✅ TypeValidator.strict + DeclarationRules.strict |
+| `ConstantCollapser.cs` | Collapse constant expressions | ✅ ConstantCollapser.strict (binary + to fold helpers) |
+
+**Phase 3 status (parallel Strict package):**
+- Package `Strict/Validators` loads with ValidationIssue, Visitor, TypeValidator, DeclarationRules, ConstantCollapser, ValidateDemo.
+- Line-level analysis mirrors C# rules (unused member/variable, mutable never reassigned, parameter hides member, constant fold).
+- `StrictValidatorsConversionTests` 4/4 green.
+- C# TypeValidator/ConstantCollapser remain bootstrap for production Runner pipeline.
 
 **Progress table:**
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 3 | 0 | 0% |
-| Test methods written | 45 | 0 | 0% |
-| C# files replaced | 3 | 0 | 0% |
+| `.strict` files created | 3 | **6** (+DeclarationRules, ValidationIssue, ValidateDemo) | 100%+ |
+| Test methods written | 45 | inline asserts + 4 conversion C# tests | ~20% |
+| C# files replaced | 3 | 0 (bootstrap still C#; Strict package parallel) | 0% |
 
 ---
 
@@ -272,15 +278,23 @@ Depends on Phases 1, 2, 3 (needs HighLevelRuntime internally).
 
 | C# File | Description | Status |
 |---------|-------------|--------|
-| `TestInterpreter.cs` | Run `is` assertions in method bodies | 0% |
+| `TestInterpreter.cs` | Run `is` assertions in method bodies | ✅ Line-level TestInterpreter.strict over MethodUnderTest/TypeUnderTest |
+
+**Phase 4 status (parallel Strict package):**
+- Package `Strict/TestRunner` loads: TestStatistics, TestResult, Assertion, MethodUnderTest, TypeUnderTest, TestInterpreter, TestDemo.
+- Line-level models evaluate simple text `is` / `is not` assertions (not full HLR expression eval yet).
+- `TestDemo` runs under VM: 2 methods, 5 assertions, pass/fail results logged.
+- `StrictTestRunnerConversionTests` 4/4 green.
+- C# `TestInterpreter` remains bootstrap for production Runner (uses HLR).
+- VM fixes landed while unblocking: assignment store uses `PreviousRegister`; `IsFileInstance` null-safe.
 
 **Progress table:**
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 1 | 0 | 0% |
-| Test methods written | 20 | 0 | 0% |
-| C# files replaced | 1 | 0 | 0% |
+| `.strict` files created | 1 | **7** (interpreter + models + demo) | 100%+ |
+| Test methods written | 20 | inline asserts + 4 conversion C# tests | ~25% |
+| C# files replaced | 1 | 0 (bootstrap still C#; Strict package parallel) | 0% |
 
 ---
 
@@ -452,8 +466,8 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 0 | Base Types (verification) | 0 | 0 (already `.strict`) | 2 (BaseTypesTest) | 1 | 0% |
 | 1 | `Strict.Language` | 32 | 22 | 20 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator, TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, Method, Context, Package, Type, Body) | 28 | 27% |
 | 2 | `Strict.Expressions` | 29 | 29 | **32** (AST + Parser + NumberChars + demo) | ~140 + 6 C# | **~40%** |
-| 3 | `Strict.Validators` | 3 | 3 | 0 | 0 | 0% |
-| 4 | `Strict.TestRunner` | 1 | 1 | 0 | 0 | 0% |
+| 3 | `Strict.Validators` | 3 | 3 | **6** | ~4 C# + inline | **~40%** |
+| 4 | `Strict.TestRunner` | 1 | 1 | **7** | ~4 C# + inline | **~40%** |
 | 5 | `Strict.HighLevelRuntime` | 11 | 11 | 0 | 0 | 0% |
 | 6 | `Strict.Bytecode` | 37 | 37 | 0 | 0 | 0% |
 | 7 | `Strict.Optimizers` | 9 | 9 | 0 | 0 | 0% |

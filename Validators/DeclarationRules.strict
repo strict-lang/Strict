@@ -1,0 +1,31 @@
+has text
+ExtractDeclaredName(line Text) Text
+	DeclarationRules("").ExtractDeclaredName("let count = 1") is "count"
+	DeclarationRules("").ExtractDeclaredName("mutable total = 0") is "total"
+	let withoutKeyword = StripKeyword(line)
+	let equalsIndex = withoutKeyword.IndexOf(" = ")
+	if equalsIndex is -1
+		return withoutKeyword.Trim
+	withoutKeyword.Substring(0, equalsIndex).Trim
+StripKeyword(line Text) Text
+	if line.StartsWith("let ")
+		return line.Substring(4, line.Length - 4)
+	if line.StartsWith("constant ")
+		return line.Substring(9, line.Length - 9)
+	if line.StartsWith("mutable ")
+		return line.Substring(8, line.Length - 8).Trim
+	line
+IsDeclaration(line Text) Boolean
+	DeclarationRules("").IsDeclaration("let x = 1") is true
+	if line.StartsWith("let ")
+		return true
+	if line.StartsWith("constant ")
+		return true
+	line.StartsWith("mutable ")
+IsMutableDeclaration(line Text) Boolean
+	line.StartsWith("mutable ")
+IsReassignmentOf(line Text, name Text) Boolean
+	DeclarationRules("").IsReassignmentOf("count = 1", "count") is true
+	if IsDeclaration(line)
+		return false
+	line.StartsWith(name + " = ")

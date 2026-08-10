@@ -1236,8 +1236,7 @@ public sealed class BinaryGenerator
 		else
 		{
 			GenerateInstructionFromExpression(declarationOrAssignment);
-			instructions.Add(new StoreFromRegisterInstruction(registers[registry.NextRegister - 1],
-				name));
+			instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, name));
 		}
 	}
 

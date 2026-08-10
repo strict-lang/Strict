@@ -838,8 +838,14 @@ public sealed partial class VirtualMachine
 		return false;
 	}
 
-	private bool IsFileInstance(ValueInstance instance) =>
-		instance.GetType().IsSameOrCanBeUsedAs(executable.basePackage.GetType(Type.File));
+	private bool IsFileInstance(ValueInstance instance)
+	{
+		if (!instance.HasValue)
+			return false;
+		var instanceType = instance.GetType();
+		return instanceType != null &&
+			instanceType.IsSameOrCanBeUsedAs(executable.basePackage.GetType(Type.File));
+	}
 
 	/// <summary>
 	/// File.from accepts Text or Path. CLI Run(path) parameters are Path value instances

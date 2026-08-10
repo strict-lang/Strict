@@ -1,0 +1,57 @@
+has text
+IsAssertion Boolean
+	Assertion("5 is 5").IsAssertion is true
+	Assertion("return 1").IsAssertion is false
+	if IsStatementLine
+		return false
+	if text.IndexOf(" is ") is -1
+		return false
+	true
+IsStatementLine Boolean
+	if text.StartsWith("return ")
+		return true
+	if text.StartsWith("if ")
+		return true
+	if text.StartsWith("for ")
+		return true
+	IsDeclarationLine
+IsDeclarationLine Boolean
+	if text.StartsWith("let ")
+		return true
+	if text.StartsWith("mutable ")
+		return true
+	if text.StartsWith("constant ")
+		return true
+	false
+Left Text
+	let index = text.IndexOf(" is ")
+	if index is -1
+		return text
+	text.Substring(0, index).Trim
+Right Text
+	let index = text.IndexOf(" is ")
+	if index is -1
+		return ""
+	text.Substring(index + 4, 200).Trim
+IsNotAssertion Boolean
+	Assertion("5 is not 6").IsNotAssertion is true
+	if Right.StartsWith("not ")
+		return true
+	false
+ExpectedRight Text
+	if IsNotAssertion
+		return Right.Substring(4, 200).Trim
+	Right
+Evaluate Boolean
+	Assertion("5 is 5").Evaluate is true
+	Assertion("5 is 6").Evaluate is false
+	Assertion("5 is not 6").Evaluate is true
+	if IsNotAssertion
+		if Left is ExpectedRight
+			return false
+		return true
+	if Left is ExpectedRight
+		return true
+	false
+to Text
+	text

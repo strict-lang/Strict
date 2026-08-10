@@ -1,0 +1,82 @@
+has collapsedCount Number
+CollapseBinary(left Text, operatorName Text, right Text) Text
+	ConstantCollapser(0).CollapseBinary("2", "+", "3") is "5"
+	ConstantCollapser(0).CollapseBinary("Hi", "+", "yo") is "Hiyo"
+	if operatorName is "+"
+		return CollapseAdd(left, right)
+	if operatorName is "-"
+		return CollapseNumberOp(left, right, "-")
+	if operatorName is "*"
+		return CollapseNumberOp(left, right, "*")
+	if operatorName is "/"
+		return CollapseNumberOp(left, right, "/")
+	left + " " + operatorName + " " + right
+CollapseAdd(left Text, right Text) Text
+	if IsNumberText(left) and IsNumberText(right)
+		return ((left to Number) + (right to Number)) to Text
+	left + right
+CollapseNumberOp(left Text, right Text, operatorName Text) Text
+	if not IsNumberText(left) or not IsNumberText(right)
+		return left + " " + operatorName + " " + right
+	if operatorName is "-"
+		return ((left to Number) - (right to Number)) to Text
+	if operatorName is "*"
+		return ((left to Number) * (right to Number)) to Text
+	if operatorName is "/"
+		return ((left to Number) / (right to Number)) to Text
+	left
+CollapseTo(expression Text, targetType Text) Text
+	ConstantCollapser(0).CollapseTo("\"5\"", "Number") is "5"
+	ConstantCollapser(0).CollapseTo("5", "Text") is "5"
+	if targetType is "Number"
+		return CollapseTextToNumber(expression)
+	if targetType is "Text"
+		return expression
+	expression
+CollapseTextToNumber(expression Text) Text
+	if expression.StartsWith("\"") and expression.Length > 1
+		return expression.Substring(1, expression.Length - 2)
+	expression
+IsNumberText(text Text) Boolean
+	IsNumberText("12") is true
+	IsNumberText("Hi") is false
+	if text is ""
+		return false
+	StartsWithNumber(text)
+StartsWithNumber(text Text) Boolean
+	if text.StartsWith("0")
+		return true
+	if text.StartsWith("1")
+		return true
+	if text.StartsWith("2")
+		return true
+	if text.StartsWith("3")
+		return true
+	if text.StartsWith("4")
+		return true
+	StartsWithNumberHigh(text)
+StartsWithNumberHigh(text Text) Boolean
+	if text.StartsWith("5")
+		return true
+	if text.StartsWith("6")
+		return true
+	if text.StartsWith("7")
+		return true
+	if text.StartsWith("8")
+		return true
+	if text.StartsWith("9")
+		return true
+	text.StartsWith("-")
+ShouldUseConstant(memberIsConstant Boolean, initialValueIsConstant Boolean) Boolean
+	ShouldUseConstant(false, true) is true
+	ShouldUseConstant(true, true) is false
+	(not memberIsConstant) and initialValueIsConstant
+CanRemoveDeclaration(name Text, remainingLines Texts) Boolean
+	CanRemoveDeclaration("x", ("x + 1",)) is false
+	CanRemoveDeclaration("x", ("5",)) is true
+	for remainingLines
+		if value.IndexOf(name) is not -1
+			return false
+	true
+to Text
+	collapsedCount to Text

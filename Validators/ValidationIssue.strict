@@ -1,0 +1,16 @@
+has ruleName Text
+has target Text
+has message Text
+to Text
+	ValidationIssue("UnusedMember", "count", "unused").to Text is "UnusedMember: count"
+	ruleName + ": " + target
+IsUnusedMember Boolean
+	ruleName is "UnusedMember"
+IsUnusedVariable Boolean
+	ruleName is "UnusedVariable"
+IsUnusedParameter Boolean
+	ruleName is "UnusedParameter"
+IsMutableNeverChanged Boolean
+	ruleName is "MutableNeverChanged"
+IsUseConstant Boolean
+	ruleName is "UseConstant"

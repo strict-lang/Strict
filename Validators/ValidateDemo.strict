@@ -1,0 +1,13 @@
+has logger
+Run
+	constant members = ("logger", "unused")
+	constant methods = ("Run", "Add")
+	constant body = ("logger.Log(1)", "let dead = 5", "mutable total = 0")
+	constant visitor = Visitor("Demo", members, methods, body)
+	constant validator = TypeValidator(visitor)
+	logger.Log(validator.Validate.Length)
+	for validator.Validate
+		logger.Log(value)
+	constant collapser = ConstantCollapser(0)
+	logger.Log(collapser.CollapseBinary("2", "+", "3"))
+	logger.Log(collapser.CollapseBinary("10", "-", "4"))

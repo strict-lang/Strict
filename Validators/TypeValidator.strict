@@ -1,0 +1,89 @@
+has Visitor
+constant ReservedValue = "value"
+constant ReservedIterator = "iterator"
+constant ReservedElements = "elements"
+Sample Visitor
+	Visitor("T", ("logger", "unused"), ("Run", "Add"), ("logger.Log(1)", "ok"))
+IsReservedName(name Text) Boolean
+	IsReservedName("value") is true
+	IsReservedName("count") is false
+	if name is ReservedValue
+		return true
+	if name is ReservedIterator
+		return true
+	name is ReservedElements
+FindUnusedMembers ValidationIssues
+	TypeValidator(Sample).FindUnusedMembers.Length is 1
+	mutable issues = List(Mutable(ValidationIssue))
+	for Visitor.memberNames
+		if ShouldReportUnusedMember(value)
+			issues.Add(ValidationIssue("UnusedMember", value, "Member is never used"))
+	issues
+ShouldReportUnusedMember(name Text) Boolean
+	if IsReservedName(name)
+		return false
+	if IsPublicName(name)
+		return false
+	not IsNameUsedInBody(name)
+IsPublicName(name Text) Boolean
+	if name.Length is 0
+		return false
+	name.Substring(0, 1) is name.Substring(0, 1).Upper
+IsNameUsedInBody(name Text) Boolean
+	for Visitor.bodyLines
+		if value.IndexOf(name) is not -1
+			return true
+	false
+FindUnusedVariables ValidationIssues
+	mutable issues = List(Mutable(ValidationIssue))
+	for Visitor.bodyLines
+		CheckDeclarationUsage(value, issues)
+	issues
+CheckDeclarationUsage(line Text, mutable issues ValidationIssues) Mutable(ValidationIssues)
+	if not DeclarationRules("").IsDeclaration(line)
+		return issues
+	if DeclarationRules("").IsMutableDeclaration(line)
+		return issues
+	let name = DeclarationRules("").ExtractDeclaredName(line)
+	if name is ""
+		return issues
+	if IsNameUsedInBody(name)
+		return issues
+	issues.Add(ValidationIssue("UnusedVariable", name, "Variable is never used"))
+FindMutableNeverChanged ValidationIssues
+	mutable issues = List(Mutable(ValidationIssue))
+	for Visitor.bodyLines
+		CheckMutableUsage(value, issues)
+	issues
+CheckMutableUsage(line Text, mutable issues ValidationIssues) Mutable(ValidationIssues)
+	if not DeclarationRules("").IsMutableDeclaration(line)
+		return issues
+	let name = DeclarationRules("").ExtractDeclaredName(line)
+	if name is ""
+		return issues
+	if IsReassigned(name)
+		return issues
+	issues.Add(ValidationIssue("MutableNeverChanged", name, "mutable never reassigned"))
+IsReassigned(name Text) Boolean
+	for Visitor.bodyLines
+		if DeclarationRules("").IsReassignmentOf(value, name)
+			return true
+	false
+FindParameterHidesMember(parameterName Text) ValidationIssues
+	TypeValidator(Sample).FindParameterHidesMember("logger").Length is 1
+	mutable issues = List(Mutable(ValidationIssue))
+	if Visitor.ContainsMember(parameterName)
+		issues.Add(ValidationIssue("ParameterHidesMember", parameterName, "Parameter hides member"))
+	issues
+Validate ValidationIssues
+	TypeValidator(Sample).Validate.Length is 1
+	mutable issues = List(Mutable(ValidationIssue))
+	for FindUnusedMembers
+		issues.Add(value)
+	for FindUnusedVariables
+		issues.Add(value)
+	for FindMutableNeverChanged
+		issues.Add(value)
+	issues
+to Text
+	Visitor.typeName

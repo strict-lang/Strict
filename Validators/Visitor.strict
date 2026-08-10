@@ -1,0 +1,31 @@
+has typeName Text
+has memberNames Texts
+has methodHeaders Texts
+has bodyLines Texts
+MemberCount Number
+	Visitor("Demo", ("logger",), ("Run",), ()).MemberCount is 1
+	memberNames.Length
+MethodCount Number
+	methodHeaders.Length
+BodyLineCount Number
+	bodyLines.Length
+VisitMembers Texts
+	Visitor("Demo", ("a", "b"), (), ()).VisitMembers is ("a", "b")
+	memberNames
+VisitMethods Texts
+	methodHeaders
+VisitBodyLines Texts
+	bodyLines
+ContainsMember(name Text) Boolean
+	Visitor("Demo", ("logger",), (), ()).ContainsMember("logger") is true
+	for memberNames
+		if value is name
+			return true
+	false
+ContainsMethod(name Text) Boolean
+	for methodHeaders
+		if value.StartsWith(name)
+			return true
+	false
+to Text
+	typeName

@@ -1,0 +1,27 @@
+has methodName Text
+has bodyLines Texts
+IsTrait Boolean
+	if bodyLines.Length is 0
+		return true
+	false
+Assertions Assertions
+	mutable result = List(Mutable(Assertion))
+	for bodyLines
+		let candidate = Assertion(value)
+		if candidate.IsAssertion
+			result.Add(candidate)
+	result
+AssertionCount Number
+	MethodUnderTest("Run", ("5 is 5", "10")).AssertionCount is 1
+	mutable count = 0
+	for Assertions
+		count = count + 1
+	count
+ShouldSkip Boolean
+	if methodName is "digits"
+		return true
+	if methodName is "to"
+		return true
+	false
+to Text
+	methodName

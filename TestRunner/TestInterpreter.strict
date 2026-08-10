@@ -1,0 +1,59 @@
+has statistics TestStatistics
+has results TestResults
+RunAssertion(methodName Text, assertion Assertion) TestResult
+	RunAssertion("Run", Assertion("5 is 5")).passed is true
+	RunAssertion("Run", Assertion("5 is 6")).passed is false
+	if assertion.Evaluate
+		return TestResult.Pass(methodName, assertion.text)
+	TestResult.Fail(methodName, assertion.text, methodName + " failed: " + assertion.text)
+RunMethod(method MethodUnderTest) TestInterpreter
+	RunMethod(MethodUnderTest("Run", ("5 is 5", "2 is 2"))).results.Length is 2
+	if method.ShouldSkip
+		return TestInterpreter(statistics, results)
+	mutable nextStats = statistics.IncrementMethods
+	mutable nextResults = List(Mutable(TestResult))
+	for results
+		nextResults.Add(value)
+	for method.Assertions
+		nextStats = nextStats.IncrementExpressions
+		nextResults.Add(RunAssertion(method.methodName, value))
+	TestInterpreter(nextStats, nextResults)
+RunAllTestsInType(type TypeUnderTest) TestInterpreter
+	if type.ShouldSkip
+		return TestInterpreter(statistics, results)
+	mutable next = TestInterpreter(statistics.IncrementTypes, results)
+	for type.methods
+		if not value.IsTrait
+			next = next.RunMethod(value)
+	next
+RunAllTestsInPackage(types TypeUnderTests) TestInterpreter
+	mutable next = TestInterpreter(statistics.IncrementPackages, results)
+	for types
+		next = next.RunAllTestsInType(value)
+	next
+PassedCount Number
+	mutable count = 0
+	for results
+		if value.passed
+			count = count + 1
+	count
+FailedCount Number
+	mutable count = 0
+	for results
+		if value.IsFail
+			count = count + 1
+	count
+AllPassed Boolean
+	if FailedCount is 0
+		return true
+	false
+EmptyResults TestResults
+	mutable values = List(Mutable(TestResult))
+	for 0
+		values.Add(TestResult.Pass("x", "y"))
+	values
+Empty TestInterpreter
+	Empty.statistics.packagesTested is 0
+	TestInterpreter(TestStatistics.Empty, EmptyResults)
+to Text
+	"passed=" + PassedCount + " failed=" + FailedCount
