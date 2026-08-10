@@ -1,0 +1,29 @@
+has conversionCount Number
+Convert(expression Text, targetType Text) RuntimeValue
+	if targetType is "Number"
+		return ToNumber(expression)
+	if targetType is "Boolean"
+		return ToBoolean(expression)
+	if targetType is "Text"
+		return RuntimeValue("Text", 0, expression, false)
+	RuntimeValue("Error", 0, "unsupported", false)
+ToNumber(expression Text) RuntimeValue
+	if expression is "true"
+		return RuntimeValue("Error", 0, "not a number", false)
+	if expression is "false"
+		return RuntimeValue("Error", 0, "not a number", false)
+	if expression is ""
+		return RuntimeValue("Error", 0, "empty", false)
+	RuntimeValue("Number", expression to Number, "", false)
+ToBoolean(expression Text) RuntimeValue
+	if expression is "true"
+		return RuntimeValue("Boolean", 0, "", true)
+	if expression is "false"
+		return RuntimeValue("Boolean", 0, "", false)
+	if expression is "0"
+		return RuntimeValue("Boolean", 0, "", false)
+	if expression is ""
+		return RuntimeValue("Boolean", 0, "", false)
+	RuntimeValue("Boolean", 0, "", true)
+to Text
+	conversionCount to Text

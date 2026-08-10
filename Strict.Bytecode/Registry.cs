@@ -11,15 +11,22 @@ public sealed class Registry()
 		PreviousRegister = prev;
 	}
 
-	private readonly Register[] registers = Enum.GetValues<Register>();
 	public int NextRegister { get; private set; }
 	public Register PreviousRegister { get; set; }
 
 	public Register AllocateRegister()
 	{
-		if (NextRegister == registers.Length)
-			NextRegister = 0;
-		PreviousRegister = registers[NextRegister];
-		return registers[NextRegister++];
+		if (NextRegister >= Registers.Count)
+			throw new OutOfRegisters(Registers.Count);
+		PreviousRegister = (Register)NextRegister;
+		return (Register)NextRegister++;
 	}
+
+	/// <summary>
+	/// Thrown when a single method body needs more virtual registers than available.
+	/// Prefer splitting the method over silent wrap-around (which corrupts live values).
+	/// </summary>
+	public sealed class OutOfRegisters(int limit) : Exception(
+		"Bytecode method exhausted all " + limit +
+		" virtual registers; simplify the method or increase Registers.Count");
 }

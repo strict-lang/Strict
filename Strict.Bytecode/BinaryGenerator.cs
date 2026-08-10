@@ -46,7 +46,6 @@ public sealed class BinaryGenerator
 	private readonly Dictionary<string, Type> dependencyTypes = new(StringComparer.Ordinal);
 	private readonly Registry registry = new();
 	private readonly Stack<int> idStack = new();
-	private readonly Register[] registers = Enum.GetValues<Register>();
 	private readonly List<Method> discoveredInvokeMethods = [];
 	internal IReadOnlyList<Method> DiscoveredInvokeMethods => discoveredInvokeMethods;
 	private IReadOnlyList<Expression> Expressions { get; } //TODO: stupid, remove
@@ -393,6 +392,8 @@ public sealed class BinaryGenerator
 			GenerateMethodCallInstruction(methodCall);
 			break;
 		case ListCall listCall:
+			// Always emit index load then ListCall. Consecutive indexes (kinds(i), numbers(i))
+			// each need their own index materialization — never reuse a prior list element register.
 			GenerateInstructionFromExpression(listCall.Index);
 			var indexRegister = registry.PreviousRegister;
 			instructions.Add(new ListCallInstruction(registry.AllocateRegister(), indexRegister,
@@ -1289,6 +1290,9 @@ public sealed class BinaryGenerator
 		{
 			BinaryOperator.Greater => InstructionType.GreaterThan,
 			BinaryOperator.Smaller => InstructionType.LessThan,
+			_ when condition.Name.StartsWith("is not", StringComparison.Ordinal) =>
+				InstructionType.NotEqual,
+			BinaryOperator.Is => InstructionType.Equal,
 			_ => InstructionType.Equal
 		};
 

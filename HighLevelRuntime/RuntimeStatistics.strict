@@ -1,0 +1,17 @@
+has expressionCount Number
+has ifCount Number
+has forCount Number
+has methodCallCount Number
+IncrementExpressions RuntimeStatistics
+	RuntimeStatistics(expressionCount + 1, ifCount, forCount, methodCallCount)
+IncrementIfs RuntimeStatistics
+	RuntimeStatistics(expressionCount, ifCount + 1, forCount, methodCallCount)
+IncrementFors RuntimeStatistics
+	RuntimeStatistics(expressionCount, ifCount, forCount + 1, methodCallCount)
+IncrementMethodCalls RuntimeStatistics
+	RuntimeStatistics(expressionCount, ifCount, forCount, methodCallCount + 1)
+to Text
+	"expr=" + expressionCount + " if=" + ifCount + " for=" + forCount
+Empty RuntimeStatistics
+	Empty.expressionCount is 0
+	RuntimeStatistics(0, 0, 0, 0)

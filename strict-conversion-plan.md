@@ -306,25 +306,33 @@ This is the tree-walking interpreter used for test execution and validation.
 
 | C# File | Description | Complexity | Status |
 |---------|-------------|------------|--------|
-| `Statistics.cs` | Counters for test run metrics | Low | 0% |
-| `TestBehavior.cs` | Enum: RunTests / SkipTests | Low | 0% |
-| `ExecutionFailed.cs` | Exception wrapper types | Low | 0% |
-| `ExecutionContext.cs` | Variable scope / call frame | Medium | 0% |
-| `ToEvaluator.cs` | Evaluate `to Type` conversions | Medium | 0% |
-| `SelectorIfEvaluator.cs` | Evaluate `value is X then Y` | Medium | 0% |
-| `IfEvaluator.cs` | Evaluate `if condition` branches | Medium | 0% |
-| `ForEvaluator.cs` | Evaluate `for collection` loops | High | 0% |
-| `MethodCallEvaluator.cs` | Dispatch method calls | High | 0% |
-| `BodyEvaluator.cs` | Evaluate all expressions in a body | High | 0% |
-| `Interpreter.cs` | Top-level interpreter entry point | High | 0% |
+| `Statistics.cs` | Counters for test run metrics | Low | ✅ RuntimeStatistics.strict |
+| `TestBehavior.cs` | Enum: OnFirstRun / TestRunner / Disabled | Low | ✅ TestBehavior.strict |
+| `ExecutionFailed.cs` | Exception wrapper types | Low | deferred (Error RuntimeValue) |
+| `ExecutionContext.cs` | Variable scope / call frame | Medium | ✅ line-level ExecutionContext.strict |
+| `ToEvaluator.cs` | Evaluate `to Type` conversions | Medium | ✅ ToEvaluator.strict |
+| `SelectorIfEvaluator.cs` | Evaluate `value is X then Y` | Medium | ✅ SelectorIfEvaluator.strict |
+| `IfEvaluator.cs` | Evaluate `if condition` branches | Medium | ✅ IfEvaluator.strict |
+| `ForEvaluator.cs` | Evaluate `for collection` loops | High | ✅ ForEvaluator.strict (sum/map slice) |
+| `MethodCallEvaluator.cs` | Dispatch method calls | High | ✅ MethodCallEvaluator.strict (+,-,*,/,is,>) |
+| `BodyEvaluator.cs` | Evaluate all expressions in a body | High | ✅ BodyEvaluator + Interpreter.EvaluateBody |
+| `Interpreter.cs` | Top-level interpreter entry point | High | ✅ Interpreter.strict + ExpressionEvaluator |
+
+**Phase 5 status (parallel Strict package + VM hardening):**
+- Package `Strict/HighLevelRuntime` loads with line-level RuntimeValue + evaluators + Interpreter.
+- **VM fixes:** 64 virtual registers (no silent wrap); `is not` if-conditions; comparison ops write Boolean results.
+- **Working under VM:** expression eval, `let` binding + lookup, `return`, If/To/For helpers.
+- Demos/tests: `RuntimeDemo`, `RuntimeValueTests`, `EvaluatorTests`, `IfToTests`, `ContextTests`, `InterpreterTests`, `BodyTests` all green.
+- `StrictHighLevelRuntimeConversionTests` + `RegistryTests` + comparison codegen tests.
+- C# Interpreter remains bootstrap for production test runner / validation.
 
 **Progress table:**
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 11 | 0 | 0% |
-| Test methods written | 88 | 0 | 0% |
-| C# files replaced | 11 | 0 | 0% |
+| `.strict` files created | 11 | **21** (+evaluators helpers + 7 demo/test types) | 100%+ |
+| Test methods written | 88 | 7 VM demos + 7 C# conversion tests + bytecode registry tests | ~30% |
+| C# files replaced | 11 | 0 (bootstrap still C#; Strict package parallel) | 0% |
 
 ---
 
@@ -468,7 +476,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 2 | `Strict.Expressions` | 29 | 29 | **32** (AST + Parser + NumberChars + demo) | ~140 + 6 C# | **~40%** |
 | 3 | `Strict.Validators` | 3 | 3 | **6** | ~4 C# + inline | **~40%** |
 | 4 | `Strict.TestRunner` | 1 | 1 | **7** | ~4 C# + inline | **~40%** |
-| 5 | `Strict.HighLevelRuntime` | 11 | 11 | 0 | 0 | 0% |
+| 5 | `Strict.HighLevelRuntime` | 11 | 11 | **15** | ~5 C# + inline | **~35%** |
 | 6 | `Strict.Bytecode` | 37 | 37 | 0 | 0 | 0% |
 | 7 | `Strict.Optimizers` | 9 | 9 | 0 | 0 | 0% |
 | 8 | `Strict` (VM + Runner) | 6 | 6 | 0 | 0 | 0% |

@@ -1,0 +1,63 @@
+has statistics RuntimeStatistics
+has behavior Text
+has expressions ExpressionEvaluator
+has helpers Evaluators
+EvaluateLine(line Text, context ExecutionContext) BodyResult
+	if line.StartsWith("return ")
+		return EvaluateReturn(line, context)
+	if line.StartsWith("let ")
+		return EvaluateDeclaration(line, context)
+	if line.StartsWith("constant ")
+		return EvaluateConstant(line, context)
+	if line.StartsWith("if ")
+		return EvaluateIfLine(line, context)
+	EvaluateExpressionLine(line, context)
+EvaluateReturn(line Text, context ExecutionContext) BodyResult
+	let rest = line.Substring(7, 200).Trim
+	let result = expressions.Evaluate(rest, context)
+	let kind = result.kind
+	let amount = result.number
+	let content = result.text
+	BodyResult(result, context.ReturnWith(kind, amount, content))
+EvaluateDeclaration(line Text, context ExecutionContext) BodyResult
+	let rest = line.Substring(4, 200).Trim
+	BindAssignment(rest, context)
+EvaluateConstant(line Text, context ExecutionContext) BodyResult
+	let rest = line.Substring(9, 200).Trim
+	BindAssignment(rest, context)
+BindAssignment(rest Text, context ExecutionContext) BodyResult
+	let eq = rest.IndexOf(" = ")
+	if eq is -1
+		return BodyResult(RuntimeValue("Error", 0, "bad decl", false), context)
+	let name = rest.Substring(0, eq).Trim
+	let expr = rest.Substring(eq + 3, 200).Trim
+	let result = expressions.Evaluate(expr, context)
+	let kind = result.kind
+	let amount = result.number
+	let content = result.text
+	BodyResult(result, context.SetValue(name, kind, amount, content))
+EvaluateIfLine(line Text, context ExecutionContext) BodyResult
+	let condText = line.Substring(3, 200).Trim
+	let cond = expressions.Evaluate(condText, context)
+	BodyResult(cond, context)
+EvaluateExpressionLine(line Text, context ExecutionContext) BodyResult
+	let result = expressions.Evaluate(line, context)
+	BodyResult(result, context)
+EvaluateBody(lines Texts, context ExecutionContext) BodyResult
+	mutable next = context
+	mutable last = RuntimeValue.None
+	for lines
+		let step = EvaluateLine(value, next)
+		next = step.frame
+		last = step.result
+		if next.DidReturn
+			return BodyResult(last, next)
+	BodyResult(last, next)
+Empty Interpreter
+	Empty.behavior is TestBehavior.OnFirstRun
+	constant stats = RuntimeStatistics.Empty
+	constant exprs = ExpressionEvaluator.Empty
+	constant helpers = Evaluators.Empty
+	Interpreter(stats, TestBehavior.OnFirstRun, exprs, helpers)
+to Text
+	statistics to Text

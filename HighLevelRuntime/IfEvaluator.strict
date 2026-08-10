@@ -1,0 +1,11 @@
+has ifCount Number
+Evaluate(condition RuntimeValue, thenValue RuntimeValue, elseValue RuntimeValue) RuntimeValue
+	if condition.IsTrue
+		return thenValue
+	elseValue
+EvaluateOptionalElse(condition RuntimeValue, thenValue RuntimeValue) RuntimeValue
+	if condition.IsTrue
+		return thenValue
+	RuntimeValue.None
+to Text
+	ifCount to Text

@@ -1,0 +1,89 @@
+has callCount Number
+EvaluateBinary(left RuntimeValue, operatorName Text, right RuntimeValue) RuntimeValue
+	if operatorName is "+"
+		return Add(left, right)
+	if operatorName is "-"
+		return Subtract(left, right)
+	if operatorName is "*"
+		return Multiply(left, right)
+	if operatorName is "/"
+		return Divide(left, right)
+	EvaluateCompare(left, operatorName, right)
+Add(left RuntimeValue, right RuntimeValue) RuntimeValue
+	if left.kind is "Number"
+		if right.kind is "Number"
+			return RuntimeValue("Number", left.number + right.number, "", false)
+	if left.kind is "Text"
+		return RuntimeValue("Text", 0, left to Text + right to Text, false)
+	RuntimeValue("Error", 0, "add", false)
+Subtract(left RuntimeValue, right RuntimeValue) RuntimeValue
+	if left.kind is "Number"
+		if right.kind is "Number"
+			return RuntimeValue("Number", left.number - right.number, "", false)
+	RuntimeValue("Error", 0, "subtract", false)
+Multiply(left RuntimeValue, right RuntimeValue) RuntimeValue
+	if left.kind is "Number"
+		if right.kind is "Number"
+			return RuntimeValue("Number", left.number * right.number, "", false)
+	RuntimeValue("Error", 0, "multiply", false)
+Divide(left RuntimeValue, right RuntimeValue) RuntimeValue
+	if left.kind is "Number"
+		if right.kind is "Number"
+			return RuntimeValue("Number", left.number / right.number, "", false)
+	RuntimeValue("Error", 0, "divide", false)
+EvaluateCompare(left RuntimeValue, operatorName Text, right RuntimeValue) RuntimeValue
+	if operatorName is "is"
+		return CompareIs(left, right)
+	if operatorName is "is not"
+		return NotEqual(left, right)
+	if operatorName is ">"
+		return Greater(left, right)
+	if operatorName is "<"
+		return Less(left, right)
+	RuntimeValue("Error", 0, "op", false)
+CompareIs(left RuntimeValue, right RuntimeValue) RuntimeValue
+	if left.kind is not right.kind
+		return RuntimeValue("Boolean", 0, "", false)
+	if left.kind is "Number"
+		return NumberEqual(left, right)
+	TextOrBoolEqual(left, right)
+NumberEqual(left RuntimeValue, right RuntimeValue) RuntimeValue
+	if left.number is right.number
+		return RuntimeValue("Boolean", 0, "", true)
+	RuntimeValue("Boolean", 0, "", false)
+TextOrBoolEqual(left RuntimeValue, right RuntimeValue) RuntimeValue
+	if left.kind is "Boolean"
+		if left.flag is right.flag
+			return RuntimeValue("Boolean", 0, "", true)
+		return RuntimeValue("Boolean", 0, "", false)
+	if left.text is right.text
+		return RuntimeValue("Boolean", 0, "", true)
+	RuntimeValue("Boolean", 0, "", false)
+NotEqual(left RuntimeValue, right RuntimeValue) RuntimeValue
+	let same = CompareIs(left, right)
+	if same.flag
+		return RuntimeValue("Boolean", 0, "", false)
+	RuntimeValue("Boolean", 0, "", true)
+Greater(left RuntimeValue, right RuntimeValue) RuntimeValue
+	if left.kind is not "Number"
+		return RuntimeValue("Error", 0, ">", false)
+	if right.kind is not "Number"
+		return RuntimeValue("Error", 0, ">", false)
+	if left.number > right.number
+		return RuntimeValue("Boolean", 0, "", true)
+	RuntimeValue("Boolean", 0, "", false)
+Less(left RuntimeValue, right RuntimeValue) RuntimeValue
+	if left.kind is not "Number"
+		return RuntimeValue("Error", 0, "<", false)
+	if right.kind is not "Number"
+		return RuntimeValue("Error", 0, "<", false)
+	if left.number < right.number
+		return RuntimeValue("Boolean", 0, "", true)
+	RuntimeValue("Boolean", 0, "", false)
+EvaluateNot(operand RuntimeValue) RuntimeValue
+	if operand.kind is "Boolean"
+		if operand.flag
+			return RuntimeValue("Boolean", 0, "", false)
+	RuntimeValue("Boolean", 0, "", true)
+to Text
+	callCount to Text

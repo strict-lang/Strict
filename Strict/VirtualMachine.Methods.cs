@@ -1,3 +1,4 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
@@ -689,7 +690,7 @@ public sealed partial class VirtualMachine
 		// ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
 		// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 		if (registerStack[depth] == null)
-			registerStack[depth] = new ValueInstance[16];
+			registerStack[depth] = new ValueInstance[Registers.Count];
 		Memory.Registers.SaveTo(registerStack[depth]);
 		var frame = framePoolDepth > 0
 			? framePool[--framePoolDepth]

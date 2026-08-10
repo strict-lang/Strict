@@ -1,0 +1,25 @@
+constant OnFirstRun = "OnFirstRun"
+constant TestRunner = "TestRunner"
+constant Disabled = "Disabled"
+IsOnFirstRun(name Text) Boolean
+	if name is OnFirstRun
+		return true
+	false
+IsTestRunner(name Text) Boolean
+	if name is TestRunner
+		return true
+	false
+IsDisabled(name Text) Boolean
+	if name is Disabled
+		return true
+	false
+ShouldRunTests(name Text) Boolean
+	if name is Disabled
+		return false
+	true
+ShouldRunOnlyTests(name Text) Boolean
+	if name is TestRunner
+		return true
+	false
+to Text
+	OnFirstRun

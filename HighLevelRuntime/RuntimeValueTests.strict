@@ -1,0 +1,11 @@
+has logger
+Run
+	constant five = RuntimeValue.FromNumber(5)
+	logger.Log(five.IsNumber)
+	logger.Log(five.number)
+	constant flag = RuntimeValue.FromBoolean(true)
+	logger.Log(flag.IsTrue)
+	constant text = RuntimeValue.FromText("hi")
+	logger.Log(text.text)
+	logger.Log(five.EqualsValue(RuntimeValue.FromNumber(5)))
+	logger.Log(five.EqualsValue(RuntimeValue.FromNumber(6)))

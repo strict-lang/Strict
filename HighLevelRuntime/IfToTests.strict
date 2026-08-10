@@ -1,0 +1,9 @@
+has logger
+Run
+	constant yes = RuntimeValue.FromBoolean(true)
+	constant one = RuntimeValue.FromNumber(1)
+	constant zero = RuntimeValue.FromNumber(0)
+	logger.Log(IfEvaluator(0).Evaluate(yes, one, zero))
+	logger.Log(ToEvaluator(0).Convert("7", "Number"))
+	logger.Log(ToEvaluator(0).Convert("true", "Boolean"))
+	logger.Log(ForEvaluator(0).SumNumbers((one, RuntimeValue.FromNumber(2))))

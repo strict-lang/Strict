@@ -1,0 +1,92 @@
+has callers MethodCallEvaluator
+Evaluate(text Text, context ExecutionContext) RuntimeValue
+	if text is "true"
+		return RuntimeValue("Boolean", 0, "", true)
+	if text is "false"
+		return RuntimeValue("Boolean", 0, "", false)
+	if text is "none"
+		return RuntimeValue.None
+	EvaluateRest(text, context)
+EvaluateRest(text Text, context ExecutionContext) RuntimeValue
+	if IsNumberLiteral(text)
+		return RuntimeValue("Number", text to Number, "", false)
+	if context.Has(text)
+		return context.GetValue(text)
+	EvaluateBinaryText(text, context)
+IsNumberLiteral(text Text) Boolean
+	if text is ""
+		return false
+	if text.IndexOf(" ") is -1
+		return IsPureNumber(text)
+	false
+IsPureNumber(text Text) Boolean
+	if text.StartsWith("-")
+		return IsDigitStart(text.Substring(1, 200))
+	IsDigitStart(text)
+IsDigitStart(text Text) Boolean
+	if text.StartsWith("0")
+		return true
+	if text.StartsWith("1")
+		return true
+	if text.StartsWith("2")
+		return true
+	if text.StartsWith("3")
+		return true
+	if text.StartsWith("4")
+		return true
+	IsDigitHigh(text)
+IsDigitHigh(text Text) Boolean
+	if text.StartsWith("5")
+		return true
+	if text.StartsWith("6")
+		return true
+	if text.StartsWith("7")
+		return true
+	if text.StartsWith("8")
+		return true
+	if text.StartsWith("9")
+		return true
+	false
+EvaluateBinaryText(text Text, context ExecutionContext) RuntimeValue
+	let plus = text.IndexOf(" + ")
+	if plus is not -1
+		return BinaryAt(text, plus, "+", context)
+	let minus = text.IndexOf(" - ")
+	if minus is not -1
+		return BinaryAt(text, minus, "-", context)
+	EvaluateCompareText(text, context)
+EvaluateCompareText(text Text, context ExecutionContext) RuntimeValue
+	let isNot = text.IndexOf(" is not ")
+	if isNot is not -1
+		return BinaryAt(text, isNot, "is not", context)
+	let isOp = text.IndexOf(" is ")
+	if isOp is not -1
+		return BinaryAt(text, isOp, "is", context)
+	let gt = text.IndexOf(" > ")
+	if gt is not -1
+		return BinaryAt(text, gt, ">", context)
+	EvaluateMulText(text, context)
+EvaluateMulText(text Text, context ExecutionContext) RuntimeValue
+	let mul = text.IndexOf(" * ")
+	if mul is not -1
+		return BinaryAt(text, mul, "*", context)
+	let div = text.IndexOf(" / ")
+	if div is not -1
+		return BinaryAt(text, div, "/", context)
+	if text.StartsWith("not ")
+		return NotText(text, context)
+	RuntimeValue("Text", 0, text, false)
+NotText(text Text, context ExecutionContext) RuntimeValue
+	let rest = text.Substring(4, 200).Trim
+	callers.EvaluateNot(Evaluate(rest, context))
+BinaryAt(text Text, index Number, operatorName Text, context ExecutionContext) RuntimeValue
+	let leftText = text.Substring(0, index).Trim
+	let left = Evaluate(leftText, context)
+	let rightStart = index + operatorName.Length + 2
+	let rightText = text.Substring(rightStart, 200).Trim
+	let right = Evaluate(rightText, context)
+	callers.EvaluateBinary(left, operatorName, right)
+Empty ExpressionEvaluator
+	ExpressionEvaluator(MethodCallEvaluator(0))
+to Text
+	"ExpressionEvaluator"

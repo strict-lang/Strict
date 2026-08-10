@@ -1,0 +1,7 @@
+has logger
+Run
+	constant runtime = Interpreter.Empty
+	constant context = ExecutionContext.Empty
+	constant body = runtime.EvaluateBody(("let n = 2", "return n"), context)
+	logger.Log(body.result)
+	logger.Log(body.frame.DidReturn)

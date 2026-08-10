@@ -1,0 +1,12 @@
+has logger
+Run
+	constant runtime = Interpreter.Empty
+	constant context = ExecutionContext.Empty
+	logger.Log(runtime.EvaluateLine("1 + 2", context).result)
+	logger.Log(runtime.EvaluateLine("8 / 2", context).result)
+	constant first = runtime.EvaluateLine("let total = 4 + 1", context)
+	logger.Log(first.result)
+	let second = runtime.EvaluateLine("total * 3", first.frame)
+	logger.Log(second.result)
+	let third = runtime.EvaluateLine("total is 5", first.frame)
+	logger.Log(third.result)

@@ -368,6 +368,10 @@ public sealed partial class VirtualMachine
 			InstructionType.NotEqual => !left.Equals(right),
 			_ => throw Fail("Unsupported conditional operation: " + instruction.InstructionType) //ncrunch: no coverage
 		};
+		// When used as a value expression (not only as if-condition), write a Boolean result.
+		if (instruction.Registers.Length >= 3)
+			Memory.Registers[instruction.Registers[^1]] =
+				new ValueInstance(executable.booleanType, conditionFlag);
 	}
 
 	private void TryJumpOperation(Jump instruction)

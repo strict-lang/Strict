@@ -1,0 +1,11 @@
+has logger
+Run
+	constant callers = MethodCallEvaluator(0)
+	constant left = RuntimeValue.FromNumber(10)
+	constant right = RuntimeValue.FromNumber(3)
+	logger.Log(callers.EvaluateBinary(left, "+", right))
+	logger.Log(callers.EvaluateBinary(left, "-", right))
+	logger.Log(callers.EvaluateBinary(left, "*", right))
+	logger.Log(callers.EvaluateBinary(left, "/", right))
+	logger.Log(callers.EvaluateBinary(left, ">", right))
+	logger.Log(callers.EvaluateNot(RuntimeValue.FromBoolean(false)))

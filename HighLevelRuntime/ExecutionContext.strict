@@ -1,0 +1,78 @@
+has names Texts
+has kinds Texts
+has numbers
+has texts
+Has(name Text) Boolean
+	for names
+		if value is name
+			return true
+	false
+GetValue(name Text) RuntimeValue
+	mutable index = 0
+	for names
+		if value is name
+			return ValueAt(index)
+		index = index + 1
+	RuntimeValue.None
+ValueAt(index Number) RuntimeValue
+	let kind = KindAt(index)
+	if kind is "Number"
+		return NumberAt(index)
+	if kind is "Text"
+		return TextAt(index)
+	if kind is "Boolean"
+		return BoolAt(index)
+	RuntimeValue.None
+KindAt(index Number) Text
+	kinds(index)
+NumberAt(index Number) RuntimeValue
+	RuntimeValue("Number", numbers(index), "", false)
+TextAt(index Number) RuntimeValue
+	RuntimeValue("Text", 0, texts(index), false)
+BoolAt(index Number) RuntimeValue
+	let content = texts(index)
+	if content is "true"
+		return RuntimeValue("Boolean", 0, "true", true)
+	RuntimeValue("Boolean", 0, "false", false)
+SetValue(name Text, kind Text, amount Number, content Text) ExecutionContext
+	if Has(name)
+		return ExecutionContext(names, kinds, numbers, texts)
+	Append(name, kind, amount, content)
+Append(name Text, kind Text, amount Number, content Text) ExecutionContext
+	mutable nextNames = List(Mutable(Text))
+	mutable nextKinds = List(Mutable(Text))
+	mutable nextNumbers = List(Mutable(Number))
+	mutable nextTexts = List(Mutable(Text))
+	FillCopies(nextNames, nextKinds, nextNumbers, nextTexts)
+	nextNames.Add(name)
+	nextKinds.Add(kind)
+	nextNumbers.Add(amount)
+	nextTexts.Add(content)
+	ExecutionContext(nextNames, nextKinds, nextNumbers, nextTexts)
+FillCopies(nextNames Texts, nextKinds Texts, nextNumbers Numbers, nextTexts Texts) Mutable(Texts)
+	for names
+		nextNames.Add(value)
+	for kinds
+		nextKinds.Add(value)
+	for numbers
+		nextNumbers.Add(value)
+	for texts
+		nextTexts.Add(value)
+	nextNames
+ReturnWith(kind Text, amount Number, content Text) ExecutionContext
+	SetValue("__return__", kind, amount, content)
+DidReturn Boolean
+	Has("__return__")
+Empty ExecutionContext
+	mutable emptyNames = List(Mutable(Text))
+	mutable emptyKinds = List(Mutable(Text))
+	mutable emptyNumbers = List(Mutable(Number))
+	mutable emptyTexts = List(Mutable(Text))
+	for 0
+		emptyNames.Add("x")
+		emptyKinds.Add("None")
+		emptyNumbers.Add(0)
+		emptyTexts.Add("")
+	ExecutionContext(emptyNames, emptyKinds, emptyNumbers, emptyTexts)
+to Text
+	"vars=" + names.Length to Text

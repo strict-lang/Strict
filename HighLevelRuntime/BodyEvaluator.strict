@@ -1,0 +1,21 @@
+has bodyCount Number
+IsTestLine(line Text) Boolean
+	if line.IndexOf(" is ") is -1
+		return false
+	if IsStatement(line)
+		return false
+	true
+IsStatement(line Text) Boolean
+	if line.StartsWith("if ")
+		return true
+	if line.StartsWith("return ")
+		return true
+	if line.StartsWith("let ")
+		return true
+	if line.StartsWith("mutable ")
+		return true
+	if line.StartsWith("constant ")
+		return true
+	false
+to Text
+	bodyCount to Text

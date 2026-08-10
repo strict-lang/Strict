@@ -1,0 +1,14 @@
+has selectorCount Number
+Evaluate(condition RuntimeValue, thenValue RuntimeValue, elseValue RuntimeValue) RuntimeValue
+	if condition.IsTrue
+		return thenValue
+	elseValue
+EvaluateFirstMatch(conditions RuntimeValues, thens RuntimeValues, elseValue RuntimeValue) RuntimeValue
+	mutable index = 0
+	for conditions
+		if value.IsTrue
+			return thens(index)
+		index = index + 1
+	elseValue
+to Text
+	selectorCount to Text

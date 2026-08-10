@@ -1,0 +1,22 @@
+has forCount Number
+SumNumbers(items RuntimeValues) RuntimeValue
+	mutable total = 0
+	for items
+		if value.IsNumber
+			total = total + value.number
+	RuntimeValue.FromNumber(total)
+CountItems(items RuntimeValues) RuntimeValue
+	mutable count = 0
+	for items
+		count = count + 1
+	RuntimeValue.FromNumber(count)
+MapAdd(items RuntimeValues, amount Number) RuntimeValues
+	mutable result = List(Mutable(RuntimeValue))
+	for items
+		if value.IsNumber
+			result.Add(RuntimeValue.FromNumber(value.number + amount))
+		else
+			result.Add(value)
+	result
+to Text
+	forCount to Text

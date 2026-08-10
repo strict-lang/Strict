@@ -1,0 +1,11 @@
+has logger
+Run
+	constant empty = ExecutionContext.Empty
+	logger.Log(empty.Has("count"))
+	constant filled = empty.SetValue("count", "Number", 5, "")
+	logger.Log(filled.Has("count"))
+	logger.Log(filled.GetValue("count"))
+	constant withText = filled.SetValue("name", "Text", 0, "demo")
+	logger.Log(withText.GetValue("name"))
+	constant withFlag = withText.SetValue("ok", "Boolean", 0, "true")
+	logger.Log(withFlag.GetValue("ok"))

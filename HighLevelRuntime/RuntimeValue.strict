@@ -1,0 +1,72 @@
+has kind Text
+has number
+has text
+has flag Boolean
+IsNone Boolean
+	if kind is "None"
+		return true
+	false
+IsNumber Boolean
+	if kind is "Number"
+		return true
+	false
+IsBoolean Boolean
+	if kind is "Boolean"
+		return true
+	false
+IsTrue Boolean
+	if kind is "Boolean"
+		if flag
+			return true
+	false
+to Text
+	if kind is "Number"
+		return number to Text
+	if kind is "Boolean"
+		return FlagText
+	if kind is "Text"
+		return text
+	if kind is "Error"
+		return "Error(" + text + ")"
+	"none"
+FlagText Text
+	if flag
+		return "true"
+	"false"
+None RuntimeValue
+	RuntimeValue("None", 0, "", false)
+FromNumber(amount Number) RuntimeValue
+	FromNumber(5).number is 5
+	RuntimeValue("Number", amount, "", false)
+FromBoolean(flagValue Boolean) RuntimeValue
+	FromBoolean(true).flag is true
+	RuntimeValue("Boolean", 0, "", flagValue)
+FromText(content Text) RuntimeValue
+	FromText("hi").text is "hi"
+	RuntimeValue("Text", 0, content, false)
+Error(message Text) RuntimeValue
+	RuntimeValue("Error", 0, message, false)
+EqualsValue(other RuntimeValue) Boolean
+	if kind is not other.kind
+		return false
+	EqualsSameKind(other)
+EqualsSameKind(other RuntimeValue) Boolean
+	if kind is "Number"
+		if number is other.number
+			return true
+		return false
+	if kind is "Boolean"
+		if flag is other.flag
+			return true
+		return false
+	EqualsTextKind(other)
+EqualsTextKind(other RuntimeValue) Boolean
+	if kind is "Text"
+		if text is other.text
+			return true
+		return false
+	if kind is "None"
+		return true
+	if text is other.text
+		return true
+	false
