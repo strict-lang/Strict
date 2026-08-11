@@ -1,0 +1,28 @@
+has dummy Number
+constant Extension = ".asm"
+Compile(ops CompList, methodName Text, platform Number) Text
+	let body = EmitBody(ops, methodName)
+	let entry = EntryPoint.Empty.Build(methodName, platform)
+	body + entry
+EmitBody(ops CompList, methodName Text) Text
+	MethodHeader(methodName) + EmitAll(ops, 0, "") + MethodFooter
+MethodHeader(methodName Text) Text
+	"section .text / global " + methodName + " / " + methodName + ": / push rbp / "
+MethodFooter Text
+	" / pop rbp / ret / "
+EmitAll(ops CompList, index Number, result Text) Text
+	if index >= ops.Count
+		return result
+	let line = InstrToAsm.Empty.Emit(ops.At(index))
+	EmitAll(ops, index + 1, result + line + " / ")
+CompileSimpleAdd(platform Number) Text
+	Compile(BuildSimpleAdd, "Run", platform)
+BuildSimpleAdd CompList
+	let step1 = CompList.Empty.Append(CompBuilder.LoadConstant(0, 2))
+	let step2 = step1.Append(CompBuilder.LoadConstant(1, 3))
+	let step3 = step2.Append(CompBuilder.BinaryOp("Add", 0, 1, 2))
+	step3.Append(CompBuilder.ReturnOp(2))
+Empty InstructionsToNasm
+	InstructionsToNasm(0)
+to Text
+	"nasm"

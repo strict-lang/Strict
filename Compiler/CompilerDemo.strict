@@ -1,0 +1,10 @@
+has logger
+Run
+	logger.Log(Platform.NameOf(Platform.Windows))
+	logger.Log(NasmFormat.Empty.FormatFor(Platform.Windows))
+	logger.Log(RegisterMap.Empty.XmmName(0))
+	logger.Log(RegisterMap.Empty.XmmName(2))
+	constant load = CompBuilder.LoadConstant(0, 2)
+	logger.Log(InstrToAsm.Empty.Emit(load))
+	constant plan = LinkerPlan.ForWindows("out.asm")
+	logger.Log(plan.nasmCommand)

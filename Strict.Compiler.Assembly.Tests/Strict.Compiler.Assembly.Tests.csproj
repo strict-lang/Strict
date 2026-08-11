@@ -18,7 +18,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Strict.Compiler.Assembly\Strict.Compiler.Assembly.csproj" />
+    <ProjectReference Include="..\Strict.Expressions\Strict.Expressions.csproj" />
     <ProjectReference Include="..\Strict.Language.Tests\Strict.Language.Tests.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
 </Project>
+

@@ -1,0 +1,29 @@
+has dummy Number
+NasmName Text
+	"nasm"
+GccName Text
+	"gcc"
+ClangName Text
+	"clang"
+NasmDownload Text
+	"https://nasm.us"
+GccDownload Text
+	"https://gcc.gnu.org"
+MingwDownload Text
+	"https://www.mingw-w64.org"
+XcodeDownload Text
+	"https://developer.apple.com/xcode"
+LinkerName(platform Number) Text
+	if platform is Platform.MacOS
+		return ClangName
+	GccName
+LinkerDownload(platform Number) Text
+	if platform is Platform.Windows
+		return MingwDownload
+	if platform is Platform.MacOS
+		return XcodeDownload
+	GccDownload
+ToolMissingMessage(toolName Text, download Text) Text
+	"Required tool '" + toolName + "' was not found. Download: " + download
+Empty ToolInfo
+	ToolInfo(0)

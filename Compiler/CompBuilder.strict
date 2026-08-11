@@ -1,0 +1,19 @@
+has dummy Number
+LoadConstant(reg Number, value Number) CompInstruction
+	LoadConstant(0, 5).IsLoadConstant is true
+	CompInstruction("LoadConstantToRegister", reg, value, "")
+LoadVariable(reg Number, name Text) CompInstruction
+	LoadVariable(0, "x").label is "x"
+	CompInstruction("LoadVariableToRegister", reg, 0, name)
+StoreRegister(reg Number, name Text) CompInstruction
+	CompInstruction("StoreRegisterToVariable", reg, 0, name)
+StoreConstant(name Text, value Number) CompInstruction
+	CompInstruction("StoreConstantToVariable", 0, value, name)
+BinaryOp(name Text, left Number, right Number, result Number) CompInstruction
+	BinaryOp("Add", 0, 1, 2).IsBinary is true
+	CompInstruction(name, left, right, result to Text)
+ReturnOp(reg Number) CompInstruction
+	ReturnOp(0).IsReturn is true
+	CompInstruction("Return", reg, 0, "")
+Empty CompBuilder
+	CompBuilder(0)

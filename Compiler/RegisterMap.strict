@@ -1,0 +1,31 @@
+has dummy Number
+XmmName(reg Number) Text
+	XmmName(0) is "xmm0"
+	XmmName(1) is "xmm1"
+	if reg is 0
+		return "xmm0"
+	if reg is 1
+		return "xmm1"
+	if reg is 2
+		return "xmm2"
+	if reg is 3
+		return "xmm3"
+	XmmMore(reg)
+XmmMore(reg Number) Text
+	if reg is 4
+		return "xmm4"
+	if reg is 5
+		return "xmm5"
+	if reg is 6
+		return "xmm6"
+	if reg is 7
+		return "xmm7"
+	"xmm" + reg to Text
+IsValidReg(reg Number) Boolean
+	if reg < 0
+		return false
+	if reg < 16
+		return true
+	false
+Empty RegisterMap
+	RegisterMap(0)

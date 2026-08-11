@@ -479,19 +479,27 @@ This is the execution engine — the capstone of the self-hosting effort.
 
 | C# File | Description | Status |
 |---------|-------------|--------|
-| `Strict.Compiler/Platform.cs` | Enum: Windows/Linux/MacOS | 0% |
-| `Strict.Compiler/ToolNotFoundException.cs` | Exception for missing NASM/gcc | 0% |
-| `Strict.Compiler/InstructionsCompiler.cs` | Abstract compiler interface | 0% |
-| `Strict.Compiler.Assembly/InstructionsToAssembly.cs` | Bytecode → NASM x64 assembly (900+ LOC) | 0% |
-| `Strict.Compiler.Assembly/NativeExecutableLinker.cs` | Invoke NASM + gcc/clang | 0% |
+| `Strict.Compiler/Platform.cs` | Enum: Windows/Linux/MacOS | ✅ `Platform.strict` |
+| `Strict.Compiler/ToolNotFoundException.cs` | Exception for missing NASM/gcc | ✅ `ToolInfo.strict` (messages/URLs; no throw) |
+| `Strict.Compiler/InstructionsCompiler.cs` | Abstract compiler interface | ✅ `CompilerPipeline` + `InstructionsToNasm` |
+| `Strict.Compiler.Assembly/InstructionsToAssembly.cs` | Bytecode → NASM x64 assembly | ✅ `InstrToAsm` + `InstructionsToNasm` + `EntryPoint` (line-level) |
+| `Strict.Compiler.Assembly/NativeExecutableLinker.cs` | Invoke NASM + gcc/clang | ✅ `LinkerPlan` / `NasmFormat` (command text; **process exec deferred**) |
+
+**Phase 9 status (parallel Strict package `Compiler/`):**
+- Package `Strict/Compiler` loads with platform, register map (R→xmm), instruction emit, NASM body/entry, linker command plans.
+- **Emits:** load const/var, store, return, add/sub/mul/div, compare (text form; brackets/`then` avoided for parser).
+- **Plans:** `nasm -f win64|elf64|macho64` + gcc/clang link command strings (does not spawn processes).
+- Demos green: `CompilerDemo`, `PlatformTests`, `EmitTests`, `LinkerTests`.
+- `StrictCompilerConversionTests` 6/6 green.
+- C# NASM/MLIR/LLVM compilers + ToolRunner remain production bootstrap (`Process.Start` still required for real native builds).
 
 **Progress table:**
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 5 | 0 | 0% |
-| Test methods written | 49 | 0 | 0% |
-| C# files replaced | 5 | 0 | 0% |
+| `.strict` files created | 5 | **17** (core + helpers + 4 demos) | 100%+ |
+| Test methods written | 49 | 4 VM demos + 6 C# conversion tests | ~20% |
+| C# files replaced | 5 | 0 (bootstrap still C#; Strict package parallel) | 0% |
 
 ---
 
@@ -508,7 +516,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 6 | `Strict.Bytecode` | 37 | 37 | **30** | 8 demos + 8 C# | **~40%** |
 | 7 | `Strict.Optimizers` | 9 | 9 | **19** | 6 demos + 6 C# | **~40%** |
 | 8 | `Strict` (VM + Runner) | 6 | 6 | **17** | 5 demos + 6 C# | **~35%** |
-| 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | 0 | 0 | 0% |
+| 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | **17** | 4 demos + 6 C# | **~35%** |
 | **Total** | | **133** | **123** | **51** (2 BaseTypesTest + 20 Language + 29 Expressions) | **28** | **12%** |
 
 ---
@@ -544,7 +552,7 @@ These C# / .NET features need to be added to the Strict runtime before each phas
 | Reflection / Attributes | Test infra | 🟢 Defer | ⏸ Deferred |
 | `ZipArchive` / ZIP handling | 6 (Bytecode serial.) | 🟡 Medium | ⏸ Deferred |
 | Binary I/O (`BinaryReader`/`BinaryWriter`) | 6 (Bytecode serial.) | 🟡 Medium | ⏸ Deferred |
-| Process execution (`Process.Start`) | 9 (Compiler) | 🟡 Medium | ⏸ Deferred |
+| Process execution (`Process.Start`) | 9 (Compiler) | 🟡 Medium | ⏸ Deferred — `LinkerPlan` emits command text only |
 
 ---
 

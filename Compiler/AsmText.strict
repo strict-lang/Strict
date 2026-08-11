@@ -1,0 +1,29 @@
+has lines Texts
+Count Number
+	lines.Length
+Append(line Text) AsmText
+	mutable next = List(Mutable(Text))
+	for lines
+		next.Add(value)
+	next.Add(line)
+	AsmText(next)
+Join Text
+	mutable result = ""
+	mutable first = true
+	for lines
+		result = AppendLine(result, first, value)
+		first = false
+	result
+AppendLine(result Text, first Boolean, line Text) Text
+	if first
+		return line
+	result + NewLine + line
+NewLine Text
+	"" + Character.NewLine
+Empty AsmText
+	mutable empty = List(Mutable(Text))
+	for 0
+		empty.Add("x")
+	AsmText(empty)
+to Text
+	Join

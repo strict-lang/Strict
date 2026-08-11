@@ -1,0 +1,29 @@
+has nasmCommand Text
+has linkerCommand Text
+has objectPath Text
+has exePath Text
+to Text
+	nasmCommand + " | " + linkerCommand
+ForAsm(asmPath Text, platform Number) LinkerPlan
+	if platform is Platform.Windows
+		return ForWindows(asmPath)
+	if platform is Platform.MacOS
+		return ForMac(asmPath)
+	ForLinux(asmPath)
+ForWindows(asmPath Text) LinkerPlan
+	let objPath = asmPath + ".obj"
+	let exePath = asmPath + ".exe"
+	let nasm = "nasm -f win64 " + asmPath + " -o " + objPath
+	LinkerPlan(nasm, WindowsLink(objPath, exePath), objPath, exePath)
+ForLinux(asmPath Text) LinkerPlan
+	let objPath = asmPath + ".o"
+	let nasm = "nasm -f elf64 " + asmPath + " -o " + objPath
+	LinkerPlan(nasm, "gcc " + objPath + " to " + asmPath, objPath, asmPath)
+ForMac(asmPath Text) LinkerPlan
+	let objPath = asmPath + ".o"
+	let nasm = "nasm -f macho64 " + asmPath + " -o " + objPath
+	LinkerPlan(nasm, "clang " + objPath + " to " + asmPath, objPath, asmPath)
+WindowsLink(objPath Text, exePath Text) Text
+	"gcc " + objPath + " to " + exePath + " with kernel32"
+Empty LinkerPlan
+	LinkerPlan("", "", "", "")

@@ -1,8 +1,8 @@
 {
   "profiles": {
-		"Strict": {
-			"commandName": "Project",
-			"commandLineArgs": "c:/code/GitHub/strict-lang/Strict/Examples/SimpleCalculator.strict"
-		}
+    "Strict": {
+      "commandName": "Project",
+      "commandLineArgs": "c:/code/GitHub/strict-lang/Strict/Compiler/CompilerDemo.strict"
+    }
   }
 }

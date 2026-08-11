@@ -1,0 +1,38 @@
+has dummy Number
+Build(methodName Text, platform Number) Text
+	if platform is Platform.Windows
+		return WindowsMain(methodName)
+	if platform is Platform.Linux
+		return LinuxStart(methodName)
+	if platform is Platform.MacOS
+		return MacMain(methodName)
+	LinuxStart(methodName)
+WindowsMain(methodName Text) Text
+	let nl = AsmText.Empty.NewLine
+	WinA(nl) + WinB(nl) + methodName + WinC(nl)
+WinA(nl Text) Text
+	nl + "extern ExitProcess" + nl + nl + "global main" + nl
+WinB(nl Text) Text
+	nl + "main:" + nl + "    push rbp" + nl + "    mov rbp, rsp" + nl + "    sub rsp, 32" + nl + "    call "
+WinC(nl Text) Text
+	nl + "    xor rcx, rcx" + nl + "    call ExitProcess" + nl + "    ret"
+LinuxStart(methodName Text) Text
+	let nl = AsmText.Empty.NewLine
+	LinA(nl) + LinB(nl) + methodName + LinC(nl)
+LinA(nl Text) Text
+	nl + "global _start" + nl
+LinB(nl Text) Text
+	nl + "_start:" + nl + "    push rbp" + nl + "    mov rbp, rsp" + nl + "    call "
+LinC(nl Text) Text
+	nl + "    mov rdi, 0" + nl + "    mov rax, 60" + nl + "    syscall"
+MacMain(methodName Text) Text
+	let nl = AsmText.Empty.NewLine
+	MacA(nl) + MacB(nl) + methodName + MacC(nl)
+MacA(nl Text) Text
+	nl + "global _main" + nl
+MacB(nl Text) Text
+	nl + "_main:" + nl + "    push rbp" + nl + "    mov rbp, rsp" + nl + "    call _"
+MacC(nl Text) Text
+	nl + "    xor rdi, rdi" + nl + "    mov rax, 0x2000001" + nl + "    syscall"
+Empty EntryPoint
+	EntryPoint(0)

@@ -1,0 +1,26 @@
+has instructions CompInstructions
+Count Number
+	instructions.Length
+At(index Number) CompInstruction
+	if index < 0
+		return Dummy
+	if instructions.Length is 0
+		return Dummy
+	if index >= instructions.Length
+		return Dummy
+	instructions(index)
+Dummy CompInstruction
+	CompInstruction("Return", 0, 0, "")
+Append(instruction CompInstruction) CompList
+	mutable next = List(Mutable(CompInstruction))
+	for instructions
+		next.Add(value)
+	next.Add(instruction)
+	CompList(next)
+Empty CompList
+	mutable ops = List(Mutable(CompInstruction))
+	for 0
+		ops.Add(CompInstruction("Return", 0, 0, ""))
+	CompList(ops)
+to Text
+	"ops=" + Count to Text

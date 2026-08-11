@@ -1,0 +1,57 @@
+has dummy Number
+Emit(instruction CompInstruction) Text
+	if instruction.IsLoadConstant
+		return EmitLoadConst(instruction)
+	if instruction.IsLoadVariable
+		return EmitLoadVar(instruction)
+	if instruction.IsReturn
+		return EmitReturn(instruction)
+	EmitRest(instruction)
+EmitRest(instruction CompInstruction) Text
+	if instruction.IsStoreConstant
+		return EmitStoreConst(instruction)
+	if instruction.IsStoreRegister
+		return EmitStoreReg(instruction)
+	if instruction.IsBinary
+		return EmitBinary(instruction)
+	if instruction.IsCompare
+		return EmitCompare(instruction)
+	"unknown " + instruction.typeName
+EmitLoadConst(instruction CompInstruction) Text
+	let dest = RegisterMap.Empty.XmmName(instruction.register)
+	let amount = instruction.amount to Text
+	"movsd " + dest + ", const_" + amount
+EmitLoadVar(instruction CompInstruction) Text
+	let dest = RegisterMap.Empty.XmmName(instruction.register)
+	"movsd " + dest + ", var_" + instruction.label
+EmitStoreConst(instruction CompInstruction) Text
+	"store const " + instruction.label
+EmitStoreReg(instruction CompInstruction) Text
+	let source = RegisterMap.Empty.XmmName(instruction.register)
+	"movsd var_" + instruction.label + ", " + source
+EmitReturn(instruction CompInstruction) Text
+	let source = RegisterMap.Empty.XmmName(instruction.register)
+	"movsd xmm0, " + source
+EmitBinary(instruction CompInstruction) Text
+	let left = RegisterMap.Empty.XmmName(instruction.register)
+	let right = RegisterMap.Empty.XmmName(instruction.amount)
+	let result = RegisterMap.Empty.XmmName(instruction.ResultRegister)
+	EmitBinaryOp(instruction.typeName, left, right, result)
+EmitBinaryOp(opName Text, left Text, right Text, result Text) Text
+	if opName is "Add"
+		return TwoOp(result, left, "addsd", right)
+	if opName is "Subtract"
+		return TwoOp(result, left, "subsd", right)
+	if opName is "Multiply"
+		return TwoOp(result, left, "mulsd", right)
+	if opName is "Divide"
+		return TwoOp(result, left, "divsd", right)
+	"binary " + opName
+TwoOp(result Text, left Text, opCode Text, right Text) Text
+	"movsd " + result + ", " + left + " ; " + opCode + " " + result + ", " + right
+EmitCompare(instruction CompInstruction) Text
+	let left = RegisterMap.Empty.XmmName(instruction.register)
+	let right = RegisterMap.Empty.XmmName(instruction.amount)
+	"ucomisd " + left + ", " + right
+Empty InstrToAsm
+	InstrToAsm(0)

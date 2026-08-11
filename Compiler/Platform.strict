@@ -1,0 +1,24 @@
+constant Windows
+constant Linux
+constant MacOS
+NameOf(code Number) Text
+	NameOf(Windows) is "Windows"
+	if code is Windows
+		return "Windows"
+	if code is Linux
+		return "Linux"
+	if code is MacOS
+		return "MacOS"
+	"Unknown"
+IsWindows(code Number) Boolean
+	if code is Windows
+		return true
+	false
+IsLinux(code Number) Boolean
+	if code is Linux
+		return true
+	false
+IsMacOS(code Number) Boolean
+	if code is MacOS
+		return true
+	false

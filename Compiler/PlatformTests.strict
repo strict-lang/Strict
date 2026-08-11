@@ -1,0 +1,10 @@
+has logger
+Run
+	logger.Log(Platform.NameOf(Platform.Windows))
+	logger.Log(Platform.NameOf(Platform.Linux))
+	logger.Log(Platform.NameOf(Platform.MacOS))
+	logger.Log(Platform.IsWindows(Platform.Windows))
+	logger.Log(NasmFormat.Empty.FormatFor(Platform.Linux))
+	logger.Log(NasmFormat.Empty.FormatFor(Platform.MacOS))
+	logger.Log(ToolInfo.Empty.NasmName)
+	logger.Log(ToolInfo.Empty.LinkerName(Platform.Windows))

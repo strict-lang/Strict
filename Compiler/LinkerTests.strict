@@ -1,0 +1,5 @@
+has logger
+Run
+	constant plan = LinkerPlan.ForWindows("out.asm")
+	logger.Log(plan.nasmCommand)
+	logger.Log(plan.linkerCommand)
