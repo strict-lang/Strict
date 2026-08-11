@@ -1,0 +1,24 @@
+has dummy Number
+LoadConstant(reg Number, value Number) VmInstruction
+	LoadConstant(0, 5).IsLoadConstant is true
+	VmInstruction("LoadConstantToRegister", reg, value, "")
+LoadVariable(reg Number, name Text) VmInstruction
+	LoadVariable(0, "x").label is "x"
+	VmInstruction("LoadVariableToRegister", reg, 0, name)
+StoreRegister(reg Number, name Text) VmInstruction
+	StoreRegister(1, "result").IsStoreRegister is true
+	VmInstruction("StoreRegisterToVariable", reg, 0, name)
+StoreConstant(name Text, value Number) VmInstruction
+	StoreConstant("n", 5).IsStoreConstant is true
+	VmInstruction("StoreConstantToVariable", 0, value, name)
+BinaryOp(name Text, left Number, right Number, result Number) VmInstruction
+	BinaryOp("Add", 0, 1, 2).IsBinary is true
+	VmInstruction(name, left, right, result to Text)
+ReturnOp(reg Number) VmInstruction
+	ReturnOp(0).IsReturn is true
+	VmInstruction("Return", reg, 0, "")
+JumpOp(name Text, steps Number) VmInstruction
+	JumpOp("JumpIfFalse", 1).IsJump is true
+	VmInstruction(name, 0, steps, "")
+Empty InstrBuilder
+	InstrBuilder(0)

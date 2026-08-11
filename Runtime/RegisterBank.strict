@@ -1,0 +1,16 @@
+has frame CallFrame
+constant Capacity = 64
+Get(reg Number) VmValue
+	if reg < 0
+		return VmValue.None
+	frame.Get(RegName(reg))
+Set(reg Number, slot VmValue) RegisterBank
+	if reg < 0
+		return RegisterBank(frame)
+	RegisterBank(frame.Set(RegName(reg), slot))
+RegName(reg Number) Text
+	"R" + reg to Text
+Empty RegisterBank
+	RegisterBank(CallFrame.Empty)
+to Text
+	frame to Text

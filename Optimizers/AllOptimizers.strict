@@ -1,0 +1,19 @@
+has dummy Number
+constant OptimizerCount = 7
+Optimize(ops OpList) OpList
+	let afterTests = TestCodeRemove.Empty.Optimize(ops)
+	let afterFold = ConstantFolder.Empty.Optimize(afterTests)
+	let afterStrength = StrengthReduce.Empty.Optimize(afterFold)
+	ContinueChain(afterStrength)
+ContinueChain(ops OpList) OpList
+	let afterDead = DeadStore.Empty.Optimize(ops)
+	let afterLoad = RedundantLoad.Empty.Optimize(afterDead)
+	let afterJump = JumpThread.Empty.Optimize(afterLoad)
+	UnreachableCode.Empty.Optimize(afterJump)
+OptimizeWithStats(ops OpList) OptimizerStats
+	let optimized = Optimize(ops)
+	OptimizerStats.Create(ops.Count, optimized.Count)
+Empty AllOptimizers
+	AllOptimizers(0)
+to Text
+	"optimizers=" + OptimizerCount to Text

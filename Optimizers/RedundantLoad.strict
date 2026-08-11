@@ -1,0 +1,31 @@
+has dummy Number
+Optimize(ops OpList) OpList
+	if ops.Count < 2
+		return ops
+	RemoveDuplicateLoads(ops)
+RemoveDuplicateLoads(ops OpList) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	mutable lastName = ""
+	for 0
+		next.Add(OptimInstruction("Return", 0, 0, ""))
+	for ops.instructions
+		if ShouldAddLoad(value, lastName)
+			next.Add(value)
+			lastName = NextName(value, lastName)
+	OpList(next)
+ShouldAddLoad(instruction OptimInstruction, lastName Text) Boolean
+	if not instruction.IsLoadVariable
+		return true
+	if instruction.label is lastName
+		return false
+	true
+NextName(instruction OptimInstruction, lastName Text) Text
+	if instruction.IsLoadVariable
+		return instruction.label
+	if instruction.IsStoreRegister
+		return ""
+	if instruction.IsBlockBoundary
+		return ""
+	lastName
+Empty RedundantLoad
+	RedundantLoad(0)

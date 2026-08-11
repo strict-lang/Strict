@@ -1,0 +1,64 @@
+has instructions OptimInstructions
+Count Number
+	instructions.Length
+IsEmpty Boolean
+	if instructions.Length is 0
+		return true
+	false
+At(index Number) OptimInstruction
+	if index < 0
+		return Dummy
+	if instructions.Length is 0
+		return Dummy
+	if index >= instructions.Length
+		return Dummy
+	instructions(index)
+Dummy OptimInstruction
+	OptimInstruction("Return", 0, 0, "")
+Append(instruction OptimInstruction) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	for instructions
+		next.Add(value)
+	next.Add(instruction)
+	OpList(next)
+WithoutIndex(index Number) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	mutable current = 0
+	for instructions
+		if current is not index
+			next.Add(value)
+		current = current + 1
+	OpList(next)
+WithoutTwo(first Number, second Number) OpList
+	WithoutIndex(first).WithoutIndex(AdjustSecond(first, second))
+AdjustSecond(first Number, second Number) Number
+	if second > first
+		return second - 1
+	second
+ReplaceAt(index Number, instruction OptimInstruction) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	mutable current = 0
+	for instructions
+		next.Add(PickAt(current, index, instruction, value))
+		current = current + 1
+	OpList(next)
+PickAt(current Number, index Number, replacement OptimInstruction, original OptimInstruction) OptimInstruction
+	if current is index
+		return replacement
+	original
+KeepPrefix(length Number) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	mutable current = 0
+	for instructions
+		if current < length
+			next.Add(value)
+		current = current + 1
+	OpList(next)
+Empty OpList
+	Empty.IsEmpty is true
+	mutable ops = List(Mutable(OptimInstruction))
+	for 0
+		ops.Add(OptimInstruction("Return", 0, 0, ""))
+	OpList(ops)
+to Text
+	"ops=" + Count to Text

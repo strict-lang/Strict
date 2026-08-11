@@ -1,0 +1,10 @@
+has logger
+Run
+	constant empty = CallFrame.Empty
+	logger.Log(empty.Count)
+	constant filled = empty.Set("count", VmValue.FromNumber(5))
+	logger.Log(filled.Has("count"))
+	logger.Log(filled.Get("count"))
+	constant updated = filled.Set("count", VmValue.FromNumber(9))
+	logger.Log(updated.Get("count"))
+	logger.Log(updated.Has("missing"))

@@ -1,0 +1,13 @@
+has logger
+Run
+	logger.Log(AllOptimizers.Empty)
+	logger.Log(AllOptimizers.OptimizerCount)
+	constant left = OpBuilder.LoadConstant(0, 10)
+	constant right = OpBuilder.LoadConstant(1, 2)
+	constant div = OpBuilder.BinaryOp("Divide", 0, 1, 2)
+	constant ret = OpBuilder.ReturnOp(2)
+	constant ops = OpList.Empty.Append(left).Append(right).Append(div).Append(ret)
+	constant optimized = AllOptimizers.Empty.Optimize(ops)
+	logger.Log(ops.Count)
+	logger.Log(optimized.Count)
+	logger.Log(optimized.At(0))

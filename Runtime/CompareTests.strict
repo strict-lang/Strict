@@ -1,0 +1,9 @@
+has logger
+Run
+	constant left = InstrBuilder.LoadConstant(0, 5)
+	constant right = InstrBuilder.LoadConstant(1, 5)
+	constant eq = InstrBuilder.BinaryOp("Equal", 0, 1, 2)
+	constant ret = InstrBuilder.ReturnOp(2)
+	constant ops = InstrList.Empty.Append(left).Append(right).Append(eq).Append(ret)
+	constant state = VirtualMachine.Empty.Run(ops)
+	logger.Log(state.returnValue)

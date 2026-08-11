@@ -1,0 +1,62 @@
+has typeName Text
+has register Number
+has amount Number
+has label Text
+to Text
+	typeName + " r" + register to Text + " " + amount to Text + " " + label
+IsLoadConstant Boolean
+	if typeName is "LoadConstantToRegister"
+		return true
+	false
+IsLoadVariable Boolean
+	if typeName is "LoadVariableToRegister"
+		return true
+	false
+IsStoreRegister Boolean
+	if typeName is "StoreRegisterToVariable"
+		return true
+	false
+IsStoreConstant Boolean
+	if typeName is "StoreConstantToVariable"
+		return true
+	false
+IsReturn Boolean
+	if typeName is "Return"
+		return true
+	false
+IsBinary Boolean
+	if typeName is "Add"
+		return true
+	if typeName is "Subtract"
+		return true
+	if typeName is "Multiply"
+		return true
+	if typeName is "Divide"
+		return true
+	if typeName is "Modulo"
+		return true
+	IsCompare
+IsCompare Boolean
+	if typeName is "Equal"
+		return true
+	if typeName is "NotEqual"
+		return true
+	if typeName is "LessThan"
+		return true
+	if typeName is "GreaterThan"
+		return true
+	false
+IsJump Boolean
+	if typeName is "Jump"
+		return true
+	if typeName is "JumpIfTrue"
+		return true
+	if typeName is "JumpIfFalse"
+		return true
+	false
+ResultRegister Number
+	if IsBinary
+		return label to Number
+	register
+Empty VmInstruction
+	VmInstruction("Return", 0, 0, "")

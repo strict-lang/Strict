@@ -1,0 +1,27 @@
+has instructions VmInstructions
+Count Number
+	instructions.Length
+At(index Number) VmInstruction
+	if index < 0
+		return Dummy
+	if instructions.Length is 0
+		return Dummy
+	if index >= instructions.Length
+		return Dummy
+	instructions(index)
+Dummy VmInstruction
+	VmInstruction("Return", 0, 0, "")
+Append(instruction VmInstruction) InstrList
+	mutable next = List(Mutable(VmInstruction))
+	for instructions
+		next.Add(value)
+	next.Add(instruction)
+	InstrList(next)
+Empty InstrList
+	Empty.Count is 0
+	mutable ops = List(Mutable(VmInstruction))
+	for 0
+		ops.Add(VmInstruction("Return", 0, 0, ""))
+	InstrList(ops)
+to Text
+	"ops=" + Count to Text

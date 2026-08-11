@@ -1,0 +1,11 @@
+has logger
+Run
+	constant load = OpBuilder.LoadVariable(0, "x")
+	constant one = OpBuilder.LoadConstant(1, 1)
+	constant mul = OpBuilder.BinaryOp("Multiply", 0, 1, 2)
+	constant ret = OpBuilder.ReturnOp(2)
+	constant ops = OpList.Empty.Append(load).Append(one).Append(mul).Append(ret)
+	logger.Log(ops.Count)
+	constant reduced = StrengthReduce.Empty.Optimize(ops)
+	logger.Log(reduced.Count)
+	logger.Log(reduced.At(0))

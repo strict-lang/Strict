@@ -1,0 +1,23 @@
+has dummy Number
+Optimize(ops OpList) OpList
+	if ops.Count < 2
+		return ops
+	RemoveEmptyPair(ops)
+RemoveEmptyPair(ops OpList) OpList
+	if not ops.At(0).IsJump
+		return ops
+	if not ops.At(1).IsJumpEnd
+		return ops
+	DropTwo(ops)
+DropTwo(ops OpList) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	mutable current = 0
+	for 0
+		next.Add(OptimInstruction("Return", 0, 0, ""))
+	for ops.instructions
+		if current > 1
+			next.Add(value)
+		current = current + 1
+	OpList(next)
+Empty JumpThread
+	JumpThread(0)

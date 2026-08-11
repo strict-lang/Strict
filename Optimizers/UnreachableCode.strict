@@ -1,0 +1,26 @@
+has dummy Number
+Optimize(ops OpList) OpList
+	CutAfterFirstReturn(ops)
+CutAfterFirstReturn(ops OpList) OpList
+	let cutAt = FindReturn(ops, 0)
+	if cutAt is -1
+		return ops
+	KeepUntil(ops, cutAt + 1)
+FindReturn(ops OpList, index Number) Number
+	if index >= ops.Count
+		return -1
+	if ops.At(index).IsReturn
+		return index
+	FindReturn(ops, index + 1)
+KeepUntil(ops OpList, length Number) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	mutable current = 0
+	for 0
+		next.Add(OptimInstruction("Return", 0, 0, ""))
+	for ops.instructions
+		if current < length
+			next.Add(value)
+		current = current + 1
+	OpList(next)
+Empty UnreachableCode
+	UnreachableCode(0)

@@ -1,0 +1,15 @@
+has before Number
+has after Number
+Removed Number
+	before - after
+HasRemoved Boolean
+	if before > after
+		return true
+	false
+to Text
+	"before=" + before to Text + " after=" + after to Text + " removed=" + Removed to Text
+Create(beforeCount Number, afterCount Number) OptimizerStats
+	Create(5, 2).Removed is 3
+	OptimizerStats(beforeCount, afterCount)
+Empty OptimizerStats
+	OptimizerStats(0, 0)

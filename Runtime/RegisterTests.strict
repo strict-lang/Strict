@@ -1,0 +1,9 @@
+has logger
+Run
+	constant empty = RegisterBank.Empty
+	logger.Log(empty)
+	constant withZero = empty.Set(0, VmValue.FromNumber(42))
+	logger.Log(withZero.Get(0))
+	constant withOne = withZero.Set(1, VmValue.FromBoolean(true))
+	logger.Log(withOne.Get(1))
+	logger.Log(withOne.Get(0))

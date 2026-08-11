@@ -1,0 +1,78 @@
+has names Texts
+has kinds Texts
+has numbers
+has texts
+Has(name Text) Boolean
+	for names
+		if value is name
+			return true
+	false
+Get(name Text) VmValue
+	mutable found = -1
+	mutable index = 0
+	for names
+		if value is name
+			found = index
+		index = index + 1
+	ValueFromFound(found)
+ValueFromFound(found Number) VmValue
+	if found is -1
+		return VmValue.None
+	ValueAt(found)
+ValueAt(index Number) VmValue
+	let kind = kinds(index)
+	if kind is "Number"
+		return VmValue("Number", numbers(index), "", false)
+	if kind is "Boolean"
+		return BoolAt(index)
+	if kind is "Text"
+		return VmValue("Text", 0, texts(index), false)
+	VmValue.None
+BoolAt(index Number) VmValue
+	if texts(index) is "true"
+		return VmValue("Boolean", 0, "true", true)
+	VmValue("Boolean", 0, "false", false)
+Set(name Text, slot VmValue) CallFrame
+	Append(name, slot.kind, slot.number, TextSlot(slot))
+Append(name Text, kind Text, amount Number, content Text) CallFrame
+	mutable nextNames = List(Mutable(Text))
+	mutable nextKinds = List(Mutable(Text))
+	mutable nextNumbers = List(Mutable(Number))
+	mutable nextTexts = List(Mutable(Text))
+	FillCopies(nextNames, nextKinds, nextNumbers, nextTexts)
+	nextNames.Add(name)
+	nextKinds.Add(kind)
+	nextNumbers.Add(amount)
+	nextTexts.Add(content)
+	CallFrame(nextNames, nextKinds, nextNumbers, nextTexts)
+FillCopies(nextNames Texts, nextKinds Texts, nextNumbers Numbers, nextTexts Texts) Mutable(Texts)
+	for names
+		nextNames.Add(value)
+	for kinds
+		nextKinds.Add(value)
+	for numbers
+		nextNumbers.Add(value)
+	for texts
+		nextTexts.Add(value)
+	nextNames
+TextSlot(slot VmValue) Text
+	if slot.kind is "Boolean"
+		return slot.FlagText
+	if slot.kind is "Text"
+		return slot.text
+	""
+Count Number
+	names.Length
+Empty CallFrame
+	mutable emptyNames = List(Mutable(Text))
+	mutable emptyKinds = List(Mutable(Text))
+	mutable emptyNumbers = List(Mutable(Number))
+	mutable emptyTexts = List(Mutable(Text))
+	for 0
+		emptyNames.Add("x")
+		emptyKinds.Add("None")
+		emptyNumbers.Add(0)
+		emptyTexts.Add("")
+	CallFrame(emptyNames, emptyKinds, emptyNumbers, emptyTexts)
+to Text
+	"vars=" + Count to Text

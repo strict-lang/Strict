@@ -1,0 +1,58 @@
+has kind Text
+has number
+has text
+has flag Boolean
+IsNone Boolean
+	if kind is "None"
+		return true
+	false
+IsNumber Boolean
+	if kind is "Number"
+		return true
+	false
+IsBoolean Boolean
+	if kind is "Boolean"
+		return true
+	false
+IsText Boolean
+	if kind is "Text"
+		return true
+	false
+IsTrue Boolean
+	if kind is "Boolean"
+		if flag
+			return true
+	false
+to Text
+	if kind is "Number"
+		return number to Text
+	if kind is "Boolean"
+		return FlagText
+	if kind is "Text"
+		return text
+	"none"
+FlagText Text
+	if flag
+		return "true"
+	"false"
+None VmValue
+	VmValue("None", 0, "", false)
+FromNumber(amount Number) VmValue
+	FromNumber(5).number is 5
+	VmValue("Number", amount, "", false)
+FromBoolean(flagValue Boolean) VmValue
+	FromBoolean(true).flag is true
+	VmValue("Boolean", 0, "", flagValue)
+FromText(content Text) VmValue
+	FromText("hi").text is "hi"
+	VmValue("Text", 0, content, false)
+EqualsValue(other VmValue) Boolean
+	if kind is not other.kind
+		return false
+	if kind is "Number"
+		return number is other.number
+	if kind is "Boolean"
+		return flag is other.flag
+	if kind is "Text"
+		return text is other.text
+	true

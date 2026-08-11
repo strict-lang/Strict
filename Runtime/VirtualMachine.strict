@@ -1,0 +1,22 @@
+has dummy Number
+constant MaxSteps = 1000
+Run(ops InstrList) VmState
+	RunFrom(ops, VmState.Empty, 0)
+RunFrom(ops InstrList, state VmState, steps Number) VmState
+	if state.didReturn
+		return state
+	if steps >= MaxSteps
+		return state
+	if state.pc >= ops.Count
+		return state
+	let instruction = ops.At(state.pc)
+	let next = InstructionExec.Empty.Execute(state, instruction)
+	RunFrom(ops, next, steps + 1)
+RunWithFrame(ops InstrList, frame CallFrame) VmState
+	let memory = VmMemory(RegisterBank.Empty, frame)
+	let start = VmState(memory, 0, false, VmValue.None)
+	RunFrom(ops, start, 0)
+Empty VirtualMachine
+	VirtualMachine(0)
+to Text
+	"vm"

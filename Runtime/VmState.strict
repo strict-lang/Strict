@@ -1,0 +1,16 @@
+has memory VmMemory
+has pc Number
+has didReturn Boolean
+has returnValue VmValue
+Advance VmState
+	VmState(memory, pc + 1, didReturn, returnValue)
+JumpBy(steps Number) VmState
+	VmState(memory, pc + 1 + steps, didReturn, returnValue)
+WithMemory(next VmMemory) VmState
+	VmState(next, pc, didReturn, returnValue)
+WithReturn(slot VmValue) VmState
+	VmState(memory, pc, true, slot)
+Empty VmState
+	VmState(VmMemory.Empty, 0, false, VmValue.None)
+to Text
+	"pc=" + pc to Text + " done=" + didReturn to Text

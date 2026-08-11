@@ -411,23 +411,32 @@ Includes the instruction set, bytecode generator, and serializer.
 
 | C# File | Description | Status |
 |---------|-------------|--------|
-| `InstructionOptimizer.cs` | Abstract base + optimizer chain | 0% |
-| `TestCodeRemover.cs` | Remove test-only instructions | 0% |
-| `ConstantFoldingOptimizer.cs` | Fold constant binary ops | 0% |
-| `StrengthReducer.cs` | Replace expensive ops with cheaper | 0% |
-| `DeadStoreEliminator.cs` | Remove never-loaded stores | 0% |
-| `RedundantLoadEliminator.cs` | Remove duplicate loads | 0% |
-| `JumpThreadingOptimizer.cs` | Simplify redundant jumps | 0% |
-| `UnreachableCodeEliminator.cs` | Remove code after unconditional jumps | 0% |
-| `AllInstructionOptimizers.cs` | Compose all optimizers in order | 0% |
+| `InstructionOptimizer.cs` | Abstract base + optimizer chain | ✅ `OptimInstruction` + `OpList` surface |
+| `TestCodeRemover.cs` | Remove test-only instructions | ✅ `TestCodeRemove.strict` |
+| `ConstantFoldingOptimizer.cs` | Fold constant binary ops | ✅ `ConstantFolder.strict` (simple prefix pattern) |
+| `StrengthReducer.cs` | Replace expensive ops with cheaper | ✅ `StrengthReduce` + `IdentityRules` |
+| `DeadStoreEliminator.cs` | Remove never-loaded stores | ✅ `DeadStore.strict` |
+| `RedundantLoadEliminator.cs` | Remove duplicate loads | ✅ `RedundantLoad.strict` |
+| `JumpThreadingOptimizer.cs` | Simplify redundant jumps | ✅ `JumpThread.strict` |
+| `UnreachableCodeEliminator.cs` | Remove code after unconditional jumps | ✅ `UnreachableCode.strict` |
+| `AllInstructionOptimizers.cs` | Compose all optimizers in order | ✅ `AllOptimizers.strict` (7-pass pipeline) |
+
+**Also in C# (beyond plan's original 9):** CompactType, MethodInlining, ConstructorToField, LoopInvariant, MutableFieldMutation — deferred; C# chain still runs those for production.
+
+**Phase 7 status (parallel Strict package):**
+- Package `Strict/Optimizers` loads with line-level instruction list optimizers over `OptimInstruction` / `OpList`.
+- Pipeline: TestCodeRemove → ConstantFolder → StrengthReduce → DeadStore → RedundantLoad → JumpThread → UnreachableCode.
+- Demos green under VM: `OptimizerDemo`, `FolderTests`, `StrengthTests`, `DeadStoreTests`, `UnreachableTests`, `PipelineTests`.
+- `StrictOptimizersConversionTests` 6/6 green.
+- C# `AllInstructionOptimizers` remains bootstrap for production Runner (full instruction graph + advanced optimizers).
 
 **Progress table:**
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 9 | 0 | 0% |
-| Test methods written | 59 | 0 | 0% |
-| C# files replaced | 9 | 0 | 0% |
+| `.strict` files created | 9 | **19** (core optimizers + helpers + 6 demos) | 100%+ |
+| Test methods written | 59 | 6 VM demos + 6 C# conversion tests | ~20% |
+| C# files replaced | 9 | 0 (bootstrap still C#; Strict package parallel) | 0% |
 
 ---
 
@@ -439,20 +448,28 @@ This is the execution engine — the capstone of the self-hosting effort.
 
 | C# File | Description | Status |
 |---------|-------------|--------|
-| `RegisterFile.cs` | Fixed-size register array | 0% |
-| `CallFrame.cs` | Variable scope per method call | 0% |
-| `Memory.cs` | Registers + frame per VM | 0% |
-| `VirtualMachine.cs` | Execute bytecode instructions (750+ LOC) | 0% |
-| `Runner.cs` | Orchestrate parse→validate→compile→run (570+ LOC) | 0% |
-| `Program.cs` | CLI entry point — keep in C# or convert last | 0% |
+| `RegisterFile.cs` | Fixed-size register array | ✅ `RegisterBank.strict` (via CallFrame named slots R0..) |
+| `CallFrame.cs` | Variable scope per method call | ✅ `CallFrame.strict` (names/kinds/numbers/texts) |
+| `Memory.cs` | Registers + frame per VM | ✅ `VmMemory.strict` |
+| `VirtualMachine.cs` | Execute bytecode instructions | ✅ `VirtualMachine` + `InstructionExec` + `ArithmeticExec` (line-level) |
+| `Runner.cs` | Orchestrate parse→validate→compile→run | ✅ `RunnerPipeline.strict` (run expression/stored helpers) |
+| `Program.cs` | CLI entry point — keep in C# or convert last | 🚧 Deferred (C# CLI stays) |
+
+**Phase 8 status (parallel Strict package `Runtime/`):**
+- Package `Strict/Runtime` loads with VmValue, RegisterBank, CallFrame, VmMemory, instruction model, VM, pipeline.
+- **Executes:** LoadConstant/Variable, StoreConstant/Register, arithmetic (+−*/%), comparisons, Return, simple jumps.
+- **Working under VM:** register set/get, frame bind/lookup, full binary expression run, store-then-load.
+- Demos: `VmDemo`, `RegisterTests`, `FrameTests`, `VmTests`, `CompareTests` green.
+- `StrictRuntimeConversionTests` 6/6 green.
+- C# VirtualMachine + Runner remain production bootstrap (full instruction set, invoke, loops, plugins, binary cache).
 
 **Progress table:**
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 6 | 0 | 0% |
-| Test methods written | 107 | 0 | 0% |
-| C# files replaced | 6 | 0 | 0% |
+| `.strict` files created | 6 | **17** (core + helpers + 5 demos) | 100%+ |
+| Test methods written | 107 | 5 VM demos + 6 C# conversion tests | ~15% |
+| C# files replaced | 6 | 0 (bootstrap still C#; Strict package parallel) | 0% |
 
 ---
 
@@ -489,8 +506,8 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 4 | `Strict.TestRunner` | 1 | 1 | **7** | ~4 C# + inline | **~40%** |
 | 5 | `Strict.HighLevelRuntime` | 11 | 11 | **21** | ~7 C# + demos | **~35%** |
 | 6 | `Strict.Bytecode` | 37 | 37 | **30** | 8 demos + 8 C# | **~40%** |
-| 7 | `Strict.Optimizers` | 9 | 9 | 0 | 0 | 0% |
-| 8 | `Strict` (VM + Runner) | 6 | 6 | 0 | 0 | 0% |
+| 7 | `Strict.Optimizers` | 9 | 9 | **19** | 6 demos + 6 C# | **~40%** |
+| 8 | `Strict` (VM + Runner) | 6 | 6 | **17** | 5 demos + 6 C# | **~35%** |
 | 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | 0 | 0 | 0% |
 | **Total** | | **133** | **123** | **51** (2 BaseTypesTest + 20 Language + 29 Expressions) | **28** | **12%** |
 

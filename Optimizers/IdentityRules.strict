@@ -1,0 +1,33 @@
+has dummy Number
+IsIdentityConst(opName Text, instruction OptimInstruction) Boolean
+	if not instruction.IsLoadConstant
+		return false
+	IsIdentityValue(opName, instruction.amount)
+IsIdentityValue(opName Text, amount Number) Boolean
+	if opName is "Add"
+		return amount is 0
+	if opName is "Subtract"
+		return amount is 0
+	if opName is "Multiply"
+		return amount is 1
+	if opName is "Divide"
+		return amount is 1
+	false
+IsMultiplyZero(binary OptimInstruction, left OptimInstruction, right OptimInstruction) Boolean
+	if binary.typeName is not "Multiply"
+		return false
+	if left.IsLoadConstant
+		if left.amount is 0
+			return true
+	if right.IsLoadConstant
+		if right.amount is 0
+			return true
+	false
+RewriteReg(instruction OptimInstruction, reg Number) OptimInstruction
+	if instruction.IsLoadConstant
+		return OpBuilder.LoadConstant(reg, instruction.amount)
+	if instruction.IsLoadVariable
+		return OpBuilder.LoadVariable(reg, instruction.label)
+	instruction
+Empty IdentityRules
+	IdentityRules(0)

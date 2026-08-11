@@ -1,0 +1,16 @@
+has bank RegisterBank
+has frame CallFrame
+GetRegister(reg Number) VmValue
+	bank.Get(reg)
+SetRegister(reg Number, slot VmValue) VmMemory
+	VmMemory(bank.Set(reg, slot), frame)
+GetVariable(name Text) VmValue
+	frame.Get(name)
+SetVariable(name Text, slot VmValue) VmMemory
+	VmMemory(bank, frame.Set(name, slot))
+HasVariable(name Text) Boolean
+	frame.Has(name)
+Empty VmMemory
+	VmMemory(RegisterBank.Empty, CallFrame.Empty)
+to Text
+	bank to Text + " " + frame to Text

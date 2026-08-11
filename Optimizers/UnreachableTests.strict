@@ -1,0 +1,11 @@
+has logger
+Run
+	constant load = OpBuilder.LoadConstant(0, 1)
+	constant ret = OpBuilder.ReturnOp(0)
+	constant dead = OpBuilder.LoadConstant(1, 99)
+	constant more = OpBuilder.ReturnOp(1)
+	constant ops = OpList.Empty.Append(load).Append(ret).Append(dead).Append(more)
+	logger.Log(ops.Count)
+	constant cleaned = UnreachableCode.Empty.Optimize(ops)
+	logger.Log(cleaned.Count)
+	logger.Log(cleaned.At(1))

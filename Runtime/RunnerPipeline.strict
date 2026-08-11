@@ -1,0 +1,23 @@
+has dummy Number
+RunSimple(ops InstrList) VmValue
+	let state = VirtualMachine.Empty.Run(ops)
+	state.returnValue
+BuildBinary(left Number, opName Text, right Number) InstrList
+	let loadLeft = InstrBuilder.LoadConstant(0, left)
+	let loadRight = InstrBuilder.LoadConstant(1, right)
+	let binary = InstrBuilder.BinaryOp(opName, 0, 1, 2)
+	InstrList.Empty.Append(loadLeft).Append(loadRight).Append(binary).Append(InstrBuilder.ReturnOp(2))
+RunExpression(left Number, opName Text, right Number) VmValue
+	RunSimple(BuildBinary(left, opName, right))
+BuildStored(name Text, amount Number) InstrList
+	let store = InstrBuilder.StoreConstant(name, amount)
+	let load = InstrBuilder.LoadVariable(0, name)
+	InstrList.Empty.Append(store).Append(load).Append(InstrBuilder.ReturnOp(0))
+RunStored(name Text, amount Number) VmValue
+	RunSimple(BuildStored(name, amount))
+StageCount Number
+	4
+Empty RunnerPipeline
+	RunnerPipeline(0)
+to Text
+	"pipeline"

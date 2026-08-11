@@ -1,0 +1,35 @@
+has dummy Number
+constant OpenParen = "("
+Optimize(ops OpList) OpList
+	RemoveDeadStores(ops)
+RemoveDeadStores(ops OpList) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	for 0
+		next.Add(OptimInstruction("Return", 0, 0, ""))
+	for ops.instructions
+		if ShouldKeep(value, ops)
+			next.Add(value)
+	OpList(next)
+ShouldKeep(instruction OptimInstruction, ops OpList) Boolean
+	if instruction.IsStoreConstant
+		return IsLoaded(instruction.label, ops)
+	if instruction.IsStoreRegister
+		return KeepStoreRegister(instruction, ops)
+	true
+KeepStoreRegister(instruction OptimInstruction, ops OpList) Boolean
+	if instruction.label.IndexOf(OpenParen) is not -1
+		return true
+	IsLoaded(instruction.label, ops)
+IsLoaded(name Text, ops OpList) Boolean
+	for ops.instructions
+		if IsLoadOf(value, name)
+			return true
+	false
+IsLoadOf(instruction OptimInstruction, name Text) Boolean
+	if not instruction.IsLoadVariable
+		return false
+	if instruction.label is name
+		return true
+	false
+Empty DeadStore
+	DeadStore(0)

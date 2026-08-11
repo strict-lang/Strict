@@ -1,0 +1,64 @@
+has dummy Number
+Compute(opName Text, left VmValue, right VmValue) VmValue
+	if opName is "Add"
+		return Add(left, right)
+	if opName is "Subtract"
+		return Sub(left, right)
+	if opName is "Multiply"
+		return Mul(left, right)
+	if opName is "Divide"
+		return Div(left, right)
+	Compare(opName, left, right)
+Add(left VmValue, right VmValue) VmValue
+	if left.IsNumber
+		if right.IsNumber
+			return VmValue.FromNumber(left.number + right.number)
+	VmValue.None
+Sub(left VmValue, right VmValue) VmValue
+	if left.IsNumber
+		if right.IsNumber
+			return VmValue.FromNumber(left.number - right.number)
+	VmValue.None
+Mul(left VmValue, right VmValue) VmValue
+	if left.IsNumber
+		if right.IsNumber
+			return VmValue.FromNumber(left.number * right.number)
+	VmValue.None
+Div(left VmValue, right VmValue) VmValue
+	if left.IsNumber
+		if right.IsNumber
+			return VmValue.FromNumber(left.number / right.number)
+	VmValue.None
+Compare(opName Text, left VmValue, right VmValue) VmValue
+	if opName is "Equal"
+		return VmValue.FromBoolean(left.EqualsValue(right))
+	if opName is "NotEqual"
+		return NotEqual(left, right)
+	if opName is "GreaterThan"
+		return Greater(left, right)
+	if opName is "LessThan"
+		return Less(left, right)
+	if opName is "Modulo"
+		return Mod(left, right)
+	VmValue.None
+NotEqual(left VmValue, right VmValue) VmValue
+	if left.EqualsValue(right)
+		return VmValue.FromBoolean(false)
+	VmValue.FromBoolean(true)
+Greater(left VmValue, right VmValue) VmValue
+	if left.IsNumber
+		if right.IsNumber
+			return VmValue.FromBoolean(left.number > right.number)
+	VmValue.None
+Less(left VmValue, right VmValue) VmValue
+	if left.IsNumber
+		if right.IsNumber
+			return VmValue.FromBoolean(left.number < right.number)
+	VmValue.None
+Mod(left VmValue, right VmValue) VmValue
+	if left.IsNumber
+		if right.IsNumber
+			return VmValue.FromNumber(left.number % right.number)
+	VmValue.None
+Empty ArithmeticExec
+	ArithmeticExec(0)

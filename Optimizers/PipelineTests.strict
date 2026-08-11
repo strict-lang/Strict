@@ -1,0 +1,12 @@
+has logger
+Run
+	constant left = OpBuilder.LoadConstant(0, 2)
+	constant right = OpBuilder.LoadConstant(1, 3)
+	constant add = OpBuilder.BinaryOp("Add", 0, 1, 2)
+	constant ret = OpBuilder.ReturnOp(2)
+	constant dead = OpBuilder.LoadConstant(3, 9)
+	constant ops = OpList.Empty.Append(left).Append(right).Append(add).Append(ret).Append(dead)
+	logger.Log(ops.Count)
+	constant stats = AllOptimizers.Empty.OptimizeWithStats(ops)
+	logger.Log(stats)
+	logger.Log(stats.HasRemoved)

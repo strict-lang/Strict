@@ -1,0 +1,11 @@
+has logger
+Run
+	constant dead = OpBuilder.StoreConstant("unused", 42)
+	constant live = OpBuilder.StoreConstant("count", 1)
+	constant load = OpBuilder.LoadVariable(0, "count")
+	constant ret = OpBuilder.ReturnOp(0)
+	constant ops = OpList.Empty.Append(dead).Append(live).Append(load).Append(ret)
+	logger.Log(ops.Count)
+	constant cleaned = DeadStore.Empty.Optimize(ops)
+	logger.Log(cleaned.Count)
+	logger.Log(cleaned.At(0))

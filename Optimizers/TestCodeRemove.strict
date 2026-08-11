@@ -1,0 +1,35 @@
+has dummy Number
+Optimize(ops OpList) OpList
+	if ops.Count < 5
+		return ops
+	RemoveIfPassed(ops)
+RemoveIfPassed(ops OpList) OpList
+	if not IsPassedTest(ops)
+		return ops
+	DropFive(ops)
+IsPassedTest(ops OpList) Boolean
+	if not ops.At(0).IsLoadConstant
+		return false
+	if not ops.At(1).IsLoadConstant
+		return false
+	if ops.At(2).typeName is not "Equal"
+		return false
+	CheckJumpTail(ops)
+CheckJumpTail(ops OpList) Boolean
+	if ops.At(3).typeName is not "JumpIfFalse"
+		return false
+	if not ops.At(4).IsJumpEnd
+		return false
+	ops.At(0).amount is ops.At(1).amount
+DropFive(ops OpList) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	mutable current = 0
+	for 0
+		next.Add(OptimInstruction("Return", 0, 0, ""))
+	for ops.instructions
+		if current > 4
+			next.Add(value)
+		current = current + 1
+	OpList(next)
+Empty TestCodeRemove
+	TestCodeRemove(0)

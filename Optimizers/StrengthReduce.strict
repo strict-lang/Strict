@@ -1,0 +1,44 @@
+has dummy Number
+Optimize(ops OpList) OpList
+	if ops.Count < 3
+		return ops
+	ReduceIfSimple(ops)
+ReduceIfSimple(ops OpList) OpList
+	let first = ops.At(0)
+	let second = ops.At(1)
+	let third = ops.At(2)
+	if not third.IsBinary
+		return ops
+	if third.IsCompare
+		return ops
+	TryReduce(ops, first, second, third)
+TryReduce(ops OpList, first OptimInstruction, second OptimInstruction, third OptimInstruction) OpList
+	if IdentityRules.Empty.IsMultiplyZero(third, first, second)
+		return FoldZero(ops, third)
+	if IdentityRules.Empty.IsIdentityConst(third.typeName, second)
+		return KeepFirst(ops, first, third)
+	if IdentityRules.Empty.IsIdentityConst(third.typeName, first)
+		return KeepSecond(ops, second, third)
+	ops
+FoldZero(ops OpList, third OptimInstruction) OpList
+	let zero = OpBuilder.LoadConstant(third.ResultRegister, 0)
+	KeepRest(ops, zero)
+KeepFirst(ops OpList, first OptimInstruction, third OptimInstruction) OpList
+	let rewritten = IdentityRules.Empty.RewriteReg(first, third.ResultRegister)
+	KeepRest(ops, rewritten)
+KeepSecond(ops OpList, second OptimInstruction, third OptimInstruction) OpList
+	let rewritten = IdentityRules.Empty.RewriteReg(second, third.ResultRegister)
+	KeepRest(ops, rewritten)
+KeepRest(ops OpList, first OptimInstruction) OpList
+	mutable next = List(Mutable(OptimInstruction))
+	mutable current = 0
+	for 0
+		next.Add(OptimInstruction("Return", 0, 0, ""))
+	next.Add(first)
+	for ops.instructions
+		if current > 2
+			next.Add(value)
+		current = current + 1
+	OpList(next)
+Empty StrengthReduce
+	StrengthReduce(0)
