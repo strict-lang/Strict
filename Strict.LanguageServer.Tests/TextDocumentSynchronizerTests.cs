@@ -96,6 +96,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 	}
 
 	[TestCase("has number\r\nAdd(num Number) Number\r\n\tnum + number")]
+	[TestCase("has number\nAdd(num Number) Number\n\tnum + number")]
 	public async Task HandleOpenTextDocumentAsync(string text)
 	{
 		await textDocumentHandler.Handle(
@@ -106,5 +107,41 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 		var subPackage = TestPackage.Instance.FindSubPackage(MultiLineURI.Path.GetFolderName());
 		Assert.That(subPackage, Is.Not.Null);
 		Assert.That(subPackage?.GetType(MultiLineURI.Path.GetFileName()), Is.Not.Null);
+		// No trailing newline ⇒ no empty last line
+		var lines = textDocumentHandler.Document.Get(MultiLineURI);
+		Assert.That(lines, Is.EqualTo(new[]
+		{
+			"has number", "Add(num Number) Number", "\tnum + number"
+		}));
+	}
+
+	[Test]
+	public async Task OpeningWithTrailingNewlineKeepsPreviousTypeOnParseFailureAsync()
+	{
+		// Valid source (no trailing newline)
+		await textDocumentHandler.Handle(
+			new DidOpenTextDocumentParams
+			{
+				TextDocument = new TextDocumentItem
+				{
+					Uri = MultiLineURI,
+					Text = "has number\nAdd(num Number) Number\n\tnum + number"
+				}
+			}, CancellationToken.None);
+		var subPackage = TestPackage.Instance.FindSubPackage(MultiLineURI.Path.GetFolderName());
+		Assert.That(subPackage?.FindDirectType(MultiLineURI.Path.GetFileName()), Is.Not.Null);
+
+		// Trailing newline is an empty last line — parse fails, previous type restored
+		await textDocumentHandler.Handle(
+			new DidOpenTextDocumentParams
+			{
+				TextDocument = new TextDocumentItem
+				{
+					Uri = MultiLineURI,
+					Text = "has number\nAdd(num Number) Number\n\tnum + number\n"
+				}
+			}, CancellationToken.None);
+		Assert.That(subPackage?.FindDirectType(MultiLineURI.Path.GetFileName()), Is.Not.Null);
+		Assert.That(textDocumentHandler.Document.Get(MultiLineURI)[^1], Is.EqualTo(""));
 	}
 }

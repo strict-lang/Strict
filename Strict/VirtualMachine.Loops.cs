@@ -89,16 +89,19 @@ public sealed partial class VirtualMachine
 		var nextIndex = (loopBegin.CurrentIndexValue ?? -1) + 1;
 		loopBegin.CurrentIndexValue = nextIndex;
 		frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType, nextIndex));
-		frame.Set(OuterSymbolId,
-			loopBegin.SavedOuterValue.HasValue
-				? loopBegin.SavedOuterValue
-				: loopBegin.SavedValue,
-			false, Type.OuterLowercase);
-		frame.Set(OuterIndexSymbolId,
-			loopBegin.SavedOuterIndexValue.HasValue
-				? loopBegin.SavedOuterIndexValue
-				: loopBegin.SavedIndexValue,
-			false, Type.OuterLowercase + "." + Type.IndexLowercase);
+		if (loopBegin.SavedIndexValue.HasValue)
+		{
+			frame.Set(OuterSymbolId,
+				loopBegin.SavedOuterValue.HasValue
+					? loopBegin.SavedOuterValue
+					: loopBegin.SavedValue,
+				false, Type.OuterLowercase);
+			frame.Set(OuterIndexSymbolId,
+				loopBegin.SavedOuterIndexValue.HasValue
+					? loopBegin.SavedOuterIndexValue
+					: loopBegin.SavedIndexValue,
+				false, Type.OuterLowercase + "." + Type.IndexLowercase);
+		}
 		AlterValueVariable(iterableVariable, loopBegin);
 		AssignCustomLoopVariables(loopBegin, frame.Get(ValueSymbolId));
 		if (loopBegin.LoopCount <= 0)
@@ -134,16 +137,19 @@ public sealed partial class VirtualMachine
 		var currentIndexValue = new ValueInstance(executable.numberType, currentIndex);
 		frame.Set(IndexSymbolId, currentIndexValue, false, Type.IndexLowercase);
 		frame.Set(ValueSymbolId, currentIndexValue, true, Type.ValueLowercase);
-		frame.Set(OuterSymbolId,
-			loopBegin.SavedOuterValue.HasValue
-				? loopBegin.SavedOuterValue
-				: loopBegin.SavedValue,
-			false, Type.OuterLowercase);
-		frame.Set(OuterIndexSymbolId,
-			loopBegin.SavedOuterIndexValue.HasValue
-				? loopBegin.SavedOuterIndexValue
-				: loopBegin.SavedIndexValue,
-			false, Type.OuterLowercase + "." + Type.IndexLowercase);
+		if (loopBegin.SavedIndexValue.HasValue)
+		{
+			frame.Set(OuterSymbolId,
+				loopBegin.SavedOuterValue.HasValue
+					? loopBegin.SavedOuterValue
+					: loopBegin.SavedValue,
+				false, Type.OuterLowercase);
+			frame.Set(OuterIndexSymbolId,
+				loopBegin.SavedOuterIndexValue.HasValue
+					? loopBegin.SavedOuterIndexValue
+					: loopBegin.SavedIndexValue,
+				false, Type.OuterLowercase + "." + Type.IndexLowercase);
+		}
 		AssignCustomLoopVariables(loopBegin, currentIndexValue);
 	}
 

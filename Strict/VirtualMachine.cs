@@ -357,7 +357,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 			return (null, "");
 		var filePath = type.FilePath;
 		return File.Exists(filePath)
-			? (File.ReadAllLines(filePath), filePath)
+			? (TypeLines.FromFile(filePath), filePath)
 			: (null, filePath);
 	}
 

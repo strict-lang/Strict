@@ -13,6 +13,54 @@ public sealed class TypeParserTests
 		Assert.That(() => CreateType(nameof(EmptyLineIsNotAllowed), ""),
 			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>());
 
+	[Test]
+	public void EmptyLineAtEndOfFileIsNotAllowed() =>
+		Assert.That(
+			() => CreateType(nameof(EmptyLineAtEndOfFileIsNotAllowed), "has logger", "Run", "\t5",
+				""), Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>());
+
+	[Test]
+	public void EmptyLineBetweenMethodsIsNotAllowed() =>
+		Assert.That(
+			() => CreateType(nameof(EmptyLineBetweenMethodsIsNotAllowed), "has logger", "Run", "\t5",
+				"", "Other", "\t1"), Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>());
+
+	[Test]
+	public void TrailingNewlineAtEndOfFileIsEmptyLineAndNotAllowed()
+	{
+		// File.ReadAllLines would drop this; Strict keeps "" so TypeParser rejects EOF newline.
+		var lines = TypeLines.SplitLines("has logger\r\nRun\r\n\t5\r\n");
+		Assert.That(lines, Is.EqualTo(new[] { "has logger", "Run", "\t5", "" }));
+		Assert.That(
+			() => new Type(package,
+					new TypeLines(nameof(TrailingNewlineAtEndOfFileIsEmptyLineAndNotAllowed), lines)).
+				ParseMembersAndMethods(parser),
+			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>());
+	}
+
+	[Test]
+	public void DoubleTrailingNewlineIsAlsoRejected()
+	{
+		var lines = TypeLines.SplitLines("has logger\nRun\n\t5\n\n");
+		Assert.That(lines[^1], Is.EqualTo(""));
+		Assert.That(
+			() => new Type(package,
+					new TypeLines(nameof(DoubleTrailingNewlineIsAlsoRejected), lines)).
+				ParseMembersAndMethods(parser),
+			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>());
+	}
+
+	[Test]
+	public void SourceWithoutTrailingNewlineParses()
+	{
+		var lines = TypeLines.SplitLines("has logger\nRun\n\t5");
+		Assert.That(lines, Is.EqualTo(new[] { "has logger", "Run", "\t5" }));
+		using var type = new Type(package,
+			new TypeLines(nameof(SourceWithoutTrailingNewlineParses), lines)).
+			ParseMembersAndMethods(parser);
+		Assert.That(type.Methods, Has.Count.EqualTo(1));
+	}
+
 	private void CreateType(string name, params string[] lines) =>
 		new Type(package, new TypeLines(name, lines)).ParseMembersAndMethods(parser).Dispose();
 

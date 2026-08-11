@@ -5,7 +5,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using Strict.Language;
-using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Strict.LanguageServer;
 
@@ -45,7 +44,7 @@ public sealed class StrictDocument(Package package)
 	private void AddSingleOrMultiLineNewText(TextDocumentContentChangeEvent change)
 	{
 		if (change.Text.Contains('\n'))
-			content.AddRange(change.Text.Split('\n'));
+			content.AddRange(TypeLines.SplitLines(change.Text));
 		else
 			content.Add(change.Text);
 	}
@@ -55,7 +54,7 @@ public sealed class StrictDocument(Package package)
 		if (change.Range is null)
 			return; //ncrunch: no coverage
 		if (change.Text.Contains('\n'))
-			content.Add(change.Text.Split('\n')[^1]); //ncrunch: no coverage
+			content.Add(TypeLines.SplitLines(change.Text)[^1]); //ncrunch: no coverage
 		else if (change.Range.End.Character - change.Range.Start.Character > 0)
 			content[change.Range.Start.Line] = content[change.Range.Start.Line].
 				Remove(change.Range.Start.Character,
@@ -110,15 +109,7 @@ public sealed class StrictDocument(Package package)
 		catch (Exception exception)
 		{
 			languageServer.Window.LogError(exception.Message);
-			diagnostics.Add(new Diagnostic
-			{
-				Code = exception.GetType().Name,
-				Severity = DiagnosticSeverity.Error,
-				Message = exception.GetType().Name + ": " + exception.Message,
-				Range = GetErrorTextRange(exception.Message),
-				Source = exception.Source,
-				Tags = new Container<DiagnosticTag>(DiagnosticTag.Unnecessary)
-			});
+			diagnostics.Add(DiagnosticFormatter.FromException(exception, content));
 		}
 		return diagnostics;
 	}
@@ -146,14 +137,6 @@ public sealed class StrictDocument(Package package)
 		foreach (var method in methods.Where(method => !method.IsGeneric))
 			if (method.GetBodyAndParseIfNeeded() is Body body)
 				yield return body.Method; //ncrunch: no coverage
-	}
-
-	private Range GetErrorTextRange(string errorMessage)
-	{
-		int.TryParse(errorMessage.Split(' ')[^1], out var lineNumber);
-		lineNumber = int.Clamp(lineNumber - 1, 0, content.Count - 1);
-		return new Range(lineNumber, content[lineNumber].TrimStart().Length, lineNumber,
-			content[lineNumber].Length);
 	}
 
 	public void InitializeContent(DocumentUri uri) => content = strictDocuments[uri].ToList();

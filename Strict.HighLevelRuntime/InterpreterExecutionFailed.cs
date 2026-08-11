@@ -11,18 +11,14 @@ public class InterpreterExecutionFailed : ParsingFailed
 	internal InterpreterExecutionFailed(Method method, int fileLineNumber, string message,
 		Exception? inner = null, bool appendClickableLine = true) : base(appendClickableLine
 		? message + GetClickableStacktraceLine(method.Type, fileLineNumber, "")
-		: message, inner)
-	{
+		: message, fileLineNumber, inner) =>
 		MethodName = method.ToString();
-		FileLineNumber = fileLineNumber;
-	}
 
 	protected InterpreterExecutionFailed(Type returnType, string message) : base(returnType, 0,
 		message) =>
 		MethodName = string.Empty;
 
 	internal string MethodName { get; }
-	internal int FileLineNumber { get; }
 	internal string Headline =>
 		(InnerException != null && InnerException is not InterpreterExecutionFailed
 			? InnerException.GetType().Name + ": "

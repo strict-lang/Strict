@@ -268,7 +268,7 @@ public sealed class Repositories(ExpressionParser parser)
 		foreach (var filePath in files)
 		{
 			var lines = new TypeLines(Path.GetFileNameWithoutExtension(filePath),
-				File.ReadAllLines(filePath));
+				TypeLines.FromFile(filePath));
 			if (lines.Name != Type.Mutable && lines.DependentTypes.Count > 0)
 				filesWithMembers.Add(lines.Name, lines);
 			else

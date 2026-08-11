@@ -1,0 +1,11 @@
+{
+  "inputs": [],
+  "servers": {
+    "NCrunch": {
+      "type": "stdio",
+      "command": "C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\Common7\\IDE\\Extensions\\Remco Software\\NCrunch for Visual Studio 2026\\NCrunch.MCP.exe",
+      "args": [],
+      "env": {}
+    }
+  }
+}

@@ -45,7 +45,9 @@ public sealed class TextDocumentSynchronizer(ILanguageServerFacade languageServe
 		//currentPackage ??=
 		//	await new Repositories(new MethodExpressionParser()).LoadFromPath(string.Join("/",
 		//		request.TextDocument.Uri.Path.Split('/')[..^1]));
-		Document.AddOrUpdate(request.TextDocument.Uri, request.TextDocument.Text.Split("\r\n"));
+		// TypeLines.SplitLines keeps a trailing "" when the buffer ends with a newline so
+		// EmptyLineIsNotAllowed is raised (Strict files must not end with \n / \r\n).
+		Document.AddOrUpdate(request.TextDocument.Uri, TypeLines.SplitLines(request.TextDocument.Text));
 		Document.InitializeContent(request.TextDocument.Uri);
 		ParseUpdatedCodeAndPublishDiagnostics(request.TextDocument.Uri);
 		return Unit.Task;

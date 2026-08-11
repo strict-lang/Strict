@@ -431,7 +431,7 @@ public sealed class BinaryGenerator
 		GenerateInstructionFromExpression(memberCall.Instance);
 		var objectRegister = registry.PreviousRegister;
 		// Struct / value-type fields (Language Type, Member, Path, …). Not Text/List primitives.
-		if (IsStructFieldAccess(memberCall.Instance.ReturnType))
+		if (memberCall.Member.Name != Type.IndexLowercase && IsStructFieldAccess(memberCall.Instance.ReturnType))
 		{
 			instructions.Add(new FieldLoadInstruction(registry.AllocateRegister(), objectRegister,
 				memberCall.Member.Name));
@@ -449,7 +449,7 @@ public sealed class BinaryGenerator
 		}
 		// Fallback: keep identifier for frame-relative member loads (e.g. text.characters)
 		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(),
-			memberCall.Member.Name));
+			memberCall.ToString()));
 	}
 
 	private static bool IsStructFieldAccess(Type type) =>

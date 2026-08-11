@@ -23,6 +23,24 @@ public class TypeLines
 		AnyMustImplement(2, "to " + Type.Text);
 #endif
 	}
+
+	/// <summary>
+	/// Strict source must not end with a newline (no trailing empty line). Unlike
+	/// <see cref="File.ReadAllLines(string)"/>, which silently drops a final newline, this keeps
+	/// a trailing "" when the text ends with \n or \r\n so
+	/// <see cref="TypeParser.EmptyLineIsNotAllowed"/> is raised at EOF.
+	/// </summary>
+	public static string[] SplitLines(string text)
+	{
+		if (text.Length == 0)
+			return [""];
+		// Normalize all line endings, then split while preserving a trailing empty entry.
+		var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+		return normalized.Split('\n');
+	}
+
+	/// <summary>Load a .strict file; trailing newline becomes an empty last line (illegal).</summary>
+	public static string[] FromFile(string filePath) => SplitLines(File.ReadAllText(filePath));
 #if DEBUG
 	private void AnyMustImplement(int line, string name)
 	{

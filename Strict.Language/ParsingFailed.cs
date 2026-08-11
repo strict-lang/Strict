@@ -7,12 +7,20 @@ namespace Strict.Language;
 /// </summary>
 public class ParsingFailed : Exception
 {
-	protected ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "")
-		: base(message + GetClickableStacktraceLine(type, fileLineNumber == 0 && type.LineNumber > 0
-			? type.LineNumber - 1
-			: fileLineNumber, method)) { }
+	/// <summary>Zero-based line index in the type file where the error occurred.</summary>
+	public int FileLineNumber { get; }
 
-	protected ParsingFailed(string message, Exception? inner = null) : base(message, inner) { }
+	protected ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "")
+		: base(message + GetClickableStacktraceLine(type, ResolveLineNumber(type, fileLineNumber),
+			method)) =>
+		FileLineNumber = ResolveLineNumber(type, fileLineNumber);
+
+	protected ParsingFailed(string message, Exception? inner = null) : base(message, inner) =>
+		FileLineNumber = 0;
+
+	protected ParsingFailed(string message, int fileLineNumber, Exception? inner = null) : base(
+		message, inner) =>
+		FileLineNumber = fileLineNumber;
 
 	public static string GetClickableStacktraceLocation(Type type, int fileLineNumber,
 		string method) =>
@@ -28,7 +36,8 @@ public class ParsingFailed : Exception
 			: "");
 
 	public ParsingFailed(Type type, int fileLineNumber, string message, Exception? inner) : base(
-		message + GetClickableStacktraceLine(type, fileLineNumber, ""), inner) { }
+		message + GetClickableStacktraceLine(type, fileLineNumber, ""), inner) =>
+		FileLineNumber = fileLineNumber;
 
 	protected ParsingFailed(Body body, string? message = null, Type? referencingOtherType = null) :
 		this(body.Method.Type, body.CurrentFileLineNumber, (string.IsNullOrEmpty(message)
@@ -36,4 +45,9 @@ public class ParsingFailed : Exception
 			: message) + (referencingOtherType != null
 			? " in " + referencingOtherType
 			: ""), body.Method.ToString()) { }
+
+	private static int ResolveLineNumber(Type type, int fileLineNumber) =>
+		fileLineNumber == 0 && type.LineNumber > 0
+			? type.LineNumber - 1
+			: fileLineNumber;
 }

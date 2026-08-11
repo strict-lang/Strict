@@ -17,7 +17,8 @@ var server = await LanguageServer.From(options => options.WithInput(input).WithO
 	WithLoggerFactory(new LoggerFactory()).AddDefaultLoggingProvider().
 	WithServices(services => ConfigureServices(services, strictBase)).
 	WithHandler<TextDocumentSynchronizer>().WithHandler<AutoCompletor>().
-	WithHandler<CommandExecutor>().WithHandler<DocumentHighlighter>());
+	WithHandler<CommandExecutor>().WithHandler<DocumentHighlighter>().
+	WithHandler<CodeActionHandler>());
 await server.WaitForExit;
 await Task.WhenAny(Task.Run(async () =>
 {

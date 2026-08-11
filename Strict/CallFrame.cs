@@ -166,7 +166,7 @@ internal sealed class CallFrame
 	private bool TryGetSlotValue(int symbolId, bool requireMember, out ValueInstance value)
 	{
 		if (!requireMember && symbolId == OuterSymbolId && parent != null &&
-			parent.TryGet(ValueSymbolId, out value))
+			parent.TryGet(IndexSymbolId, out _) && parent.TryGet(ValueSymbolId, out value))
 			return true;
 		if (!requireMember && symbolId == OuterIndexSymbolId && parent != null &&
 			parent.TryGet(IndexSymbolId, out value))

@@ -156,7 +156,7 @@ public sealed class Runner
 		Type mainType;
 		if (existingType == null)
 		{
-			var typeLines = new TypeLines(typeName, await File.ReadAllLinesAsync(strictFilePath));
+			var typeLines = new TypeLines(typeName, TypeLines.FromFile(strictFilePath));
 			mainType = new Type(package, typeLines).ParseMembersAndMethods(parser);
 		}
 		else if (existingType.Methods.Any(method => !method.IsTrait))
@@ -165,7 +165,7 @@ public sealed class Runner
 		{
 			//TODO: this seems a bit strange
 			package.Remove(existingType);
-			var typeLines = new TypeLines(typeName, await File.ReadAllLinesAsync(strictFilePath));
+			var typeLines = new TypeLines(typeName, TypeLines.FromFile(strictFilePath));
 			mainType = new Type(package, typeLines).ParseMembersAndMethods(parser);
 		}
 		if (enableDetailedOutput)
@@ -301,7 +301,7 @@ public sealed class Runner
 	{
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
 		var package = await LoadBasePackage();
-		var sourceLines = await File.ReadAllLinesAsync(strictFilePath);
+		var sourceLines = TypeLines.FromFile(strictFilePath);
 		var targetType =
 			new Type(package, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
 		try

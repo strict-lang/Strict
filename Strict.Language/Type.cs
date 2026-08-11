@@ -45,7 +45,8 @@ public class Type : Context, IDisposable
 #endif
 		);
 
-	internal string[] Lines { get; }
+	/// <summary>Source lines of this type (no trailing final-newline artifact).</summary>
+	public string[] Lines { get; }
 	/// <summary>
 	/// Generic types cannot be used directly as we don't know the implementation to be used (e.g.,
 	/// a list, we need to know the type of the elements), you must them from
