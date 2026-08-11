@@ -5,23 +5,35 @@ Compile(ops CompList, methodName Text, platform Number) Text
 	let entry = EntryPoint.Empty.Build(methodName, platform)
 	body + entry
 EmitBody(ops CompList, methodName Text) Text
-	MethodHeader(methodName) + EmitAll(ops, 0, "") + MethodFooter
+	let head = MethodHeader(methodName)
+	let opsText = EmitAll(ops, 0, "")
+	DataSection + head + opsText + MethodFooter
+DataSection Text
+	constant nl = "\n"
+	"section .data" + nl + "const_2: dq 2.0" + nl + "const_3: dq 3.0" + nl + nl
 MethodHeader(methodName Text) Text
-	"section .text / global " + methodName + " / " + methodName + ": / push rbp / "
+	constant nl = "\n"
+	constant prefix = "section .text" + nl + "global "
+	let named = prefix + methodName
+	named + nl + nl + methodName + ":" + nl + "push rbp" + nl + "mov rbp, rsp" + nl
 MethodFooter Text
-	" / pop rbp / ret / "
+	constant nl = "\n"
+	"pop rbp" + nl + "ret" + nl
 EmitAll(ops CompList, index Number, result Text) Text
 	if index >= ops.Count
 		return result
 	let line = InstrToAsm.Empty.Emit(ops.At(index))
-	EmitAll(ops, index + 1, result + line + " / ")
+	constant nl = "\n"
+	EmitAll(ops, index + 1, result + line + nl)
 CompileSimpleAdd(platform Number) Text
-	Compile(BuildSimpleAdd, "Run", platform)
-BuildSimpleAdd CompList
-	let step1 = CompList.Empty.Append(CompBuilder.LoadConstant(0, 2))
-	let step2 = step1.Append(CompBuilder.LoadConstant(1, 3))
-	let step3 = step2.Append(CompBuilder.BinaryOp("Add", 0, 1, 2))
-	step3.Append(CompBuilder.ReturnOp(2))
+	Compile(MakeSimpleAdd(platform), "Run", platform)
+MakeSimpleAdd(seed Number) CompList
+	let left = 2 + seed
+	let right = 3 + seed
+	let first = CompList.Empty.Append(CompInstruction("LoadConstantToRegister", 0, left, "2"))
+	let second = first.Append(CompInstruction("LoadConstantToRegister", 1, right, "3"))
+	let third = second.Append(CompInstruction("Add", 0, 1, "2"))
+	third.Append(CompInstruction("Return", 2, 0, ""))
 Empty InstructionsToNasm
 	InstructionsToNasm(0)
 to Text

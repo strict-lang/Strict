@@ -1,0 +1,15 @@
+has exitCode Number
+has output Text
+has error Text
+Succeeded Boolean
+	if exitCode is 0
+		return true
+	false
+Failed Boolean
+	if exitCode is 0
+		return false
+	true
+to Text
+	if Succeeded
+		return "ok exit=0"
+	"fail exit=" + exitCode to Text + " " + error

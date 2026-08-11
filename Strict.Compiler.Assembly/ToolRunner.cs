@@ -1,71 +1,28 @@
-using System.Diagnostics;
-
 namespace Strict.Compiler.Assembly;
 
 /// <summary>
 /// Shared helpers for finding external tools on PATH and running processes.
-/// Used by both NativeExecutableLinker (NASM+gcc) and LlvmLinker (clang).
+/// Delegates to <see cref="Strict.Expressions.NativeProcessRunner"/> so C# linkers and
+/// Strict Process.strict share one implementation.
 /// </summary>
 public static class ToolRunner
 {
-	public static string? FindTool(string name)
-	{
-		if (!OperatingSystem.IsWindows())
-		{ //ncrunch: no coverage start
-			try
-			{
-				var result = RunProcess("which", name);
-				if (result.Trim().Length > 0 && File.Exists(result.Trim()))
-					return result.Trim();
-			}
-			catch (InvalidOperationException ex) when (ex.Message.Contains("exit code"))
-			{
-				// `which` exits non-zero when the tool is not found; fall through to PATH search
-			}
-		} //ncrunch: no coverage end
-		var executableName = OperatingSystem.IsWindows()
-			? name + ".exe"
-			: name;
-		foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(
-			Path.PathSeparator))
-		{
-			var candidate = Path.Combine(dir, executableName);
-			if (File.Exists(candidate))
-				return candidate; //ncrunch: no coverage
-		}
-		return null; //ncrunch: no coverage
-	}
+	public static string? FindTool(string name) =>
+		Strict.Expressions.NativeProcessRunner.FindTool(name);
 
-	//ncrunch: no coverage start
 	public static string RunProcess(string executable, string arguments,
-		int timeoutMs = DefaultTimeoutMilliseconds)
+		int timeoutMs = Strict.Expressions.NativeProcessRunner.DefaultTimeoutMilliseconds)
 	{
-		using var process = new Process();
-		process.StartInfo = new ProcessStartInfo(executable, arguments)
-		{
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = true
-		};
-		process.Start();
-		var output = process.StandardOutput.ReadToEnd();
-		var error = process.StandardError.ReadToEnd();
-		if (!process.WaitForExit(timeoutMs))
-		{
-			process.Kill();
-			throw new InvalidOperationException(
-				$"Process '{executable} {arguments}' timed out after {timeoutMs} ms");
-		}
-		if (process.ExitCode == 0)
-			return output;
-		var details = string.IsNullOrWhiteSpace(error)
-			? output
-			: string.IsNullOrWhiteSpace(output)
-				? error
-				: output + Environment.NewLine + error;
+		var result = Strict.Expressions.NativeProcessRunner.Run(executable, arguments, timeoutMs);
+		if (result.Succeeded)
+			return result.Output;
+		var details = string.IsNullOrWhiteSpace(result.Error)
+			? result.Output
+			: string.IsNullOrWhiteSpace(result.Output)
+				? result.Error
+				: result.Output + Environment.NewLine + result.Error;
 		throw new InvalidOperationException(
-			$"Process '{executable} {arguments}' failed with exit code {process.ExitCode}: {details}");
+			$"Process '{executable} {arguments}' failed with exit code {result.ExitCode}: {details}");
 	}
 
 	public static void EnsureOutputFileExists(string outputFilePath, string toolName,
@@ -77,16 +34,17 @@ public static class ToolRunner
 	{
 		if (File.Exists(outputFilePath))
 			return outputFilePath;
-		if (platform == Platform.Linux && OperatingSystem.IsWindows() &&
+		if (platform == Platform.Windows ||
+			platform == Platform.Linux && OperatingSystem.IsWindows() &&
 			string.Equals(toolName, "gcc", StringComparison.OrdinalIgnoreCase))
 		{
-			var windowsExecutablePath = outputFilePath + ".exe";
+			var windowsExecutablePath = outputFilePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+				? outputFilePath
+				: outputFilePath + ".exe";
 			if (File.Exists(windowsExecutablePath))
 				return windowsExecutablePath;
 		}
 		throw new InvalidOperationException(toolName + " reported success for " + platform +
 			" output but did not create file: " + outputFilePath);
 	}
-
-	private const int DefaultTimeoutMilliseconds = 30000;
 }

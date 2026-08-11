@@ -1,0 +1,18 @@
+has executable Text
+Find(name Text) Process
+	Process("")
+IsAvailable Boolean
+	if executable is ""
+		return false
+	true
+Run(arguments Text) ProcessResult
+	ProcessResult(1, "", "Process.Run is not available")
+RunTool(name Text, arguments Text) ProcessResult
+	let tool = Find(name)
+	if not tool.IsAvailable
+		return ProcessResult(127, "", "tool not found: " + name)
+	tool.Run(arguments)
+to Text
+	if executable is ""
+		return "Process(missing)"
+	"Process(" + executable + ")"

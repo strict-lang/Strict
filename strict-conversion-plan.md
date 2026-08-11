@@ -483,15 +483,15 @@ This is the execution engine — the capstone of the self-hosting effort.
 | `Strict.Compiler/ToolNotFoundException.cs` | Exception for missing NASM/gcc | ✅ `ToolInfo.strict` (messages/URLs; no throw) |
 | `Strict.Compiler/InstructionsCompiler.cs` | Abstract compiler interface | ✅ `CompilerPipeline` + `InstructionsToNasm` |
 | `Strict.Compiler.Assembly/InstructionsToAssembly.cs` | Bytecode → NASM x64 assembly | ✅ `InstrToAsm` + `InstructionsToNasm` + `EntryPoint` (line-level) |
-| `Strict.Compiler.Assembly/NativeExecutableLinker.cs` | Invoke NASM + gcc/clang | ✅ `LinkerPlan` / `NasmFormat` (command text; **process exec deferred**) |
+| `Strict.Compiler.Assembly/NativeExecutableLinker.cs` | Invoke NASM + gcc/clang | ✅ `LinkerPlan` / `NativeBuild` + Strict `Process.RunTool` |
 
 **Phase 9 status (parallel Strict package `Compiler/`):**
-- Package `Strict/Compiler` loads with platform, register map (R→xmm), instruction emit, NASM body/entry, linker command plans.
-- **Emits:** load const/var, store, return, add/sub/mul/div, compare (text form; brackets/`then` avoided for parser).
-- **Plans:** `nasm -f win64|elf64|macho64` + gcc/clang link command strings (does not spawn processes).
-- Demos green: `CompilerDemo`, `PlatformTests`, `EmitTests`, `LinkerTests`.
-- `StrictCompilerConversionTests` 6/6 green.
-- C# NASM/MLIR/LLVM compilers + ToolRunner remain production bootstrap (`Process.Start` still required for real native builds).
+- Package `Strict/Compiler` loads with platform, register map (R→xmm), instruction emit, NASM body/entry, linker plans, **native tool spawn**.
+- **Emits:** load const/var, store, return, add/sub/mul/div, compare with NASM `[rel …]` memory operands and real `\n` line breaks.
+- **Process/Directory natives:** `Process.strict` + `ProcessResult.strict` + VM hooks via shared `NativeProcessRunner`; C# `ToolRunner` delegates to the same runner.
+- **CompilerDemo end-to-end:** generate `add.asm` → `nasm` → `add.obj` → `gcc` → `add.exe` entirely from Strict.
+- Demos green: `CompilerDemo`, `ProcessProbe`, `PlatformTests`, `EmitTests`, `LinkerTests`.
+- C# NASM/MLIR/LLVM compilers remain production bootstrap for full pipelines; tool invocation is no longer C#-only.
 
 **Progress table:**
 
@@ -552,7 +552,7 @@ These C# / .NET features need to be added to the Strict runtime before each phas
 | Reflection / Attributes | Test infra | 🟢 Defer | ⏸ Deferred |
 | `ZipArchive` / ZIP handling | 6 (Bytecode serial.) | 🟡 Medium | ⏸ Deferred |
 | Binary I/O (`BinaryReader`/`BinaryWriter`) | 6 (Bytecode serial.) | 🟡 Medium | ⏸ Deferred |
-| Process execution (`Process.Start`) | 9 (Compiler) | 🟡 Medium | ⏸ Deferred — `LinkerPlan` emits command text only |
+| Process execution (`Process.Start`) | 9 (Compiler) | 🟡 Medium | ✅ `Process.Find` / `Process.RunTool` + `NativeProcessRunner` (shared with C# ToolRunner) |
 
 ---
 

@@ -19,7 +19,7 @@ AppendLine(result Text, first Boolean, line Text) Text
 		return line
 	result + NewLine + line
 NewLine Text
-	"" + Character.NewLine
+	"\n"
 Empty AsmText
 	mutable empty = List(Mutable(Text))
 	for 0

@@ -1,0 +1,24 @@
+has dummy Number
+WriteAsm(path Text, asmText Text) Text
+	File(path).Write(asmText)
+	path
+Assemble(asmPath Text, platform Number) ProcessResult
+	let fmt = NasmFormat.Empty.FormatFor(platform)
+	let objPath = asmPath + NasmFormat.Empty.ObjectExtension(platform)
+	let args = "-f " + fmt + " " + asmPath + " -o " + objPath
+	ToolRunner.Empty.Run("nasm", args)
+Link(objPath Text, exePath Text, platform Number) ProcessResult
+	if platform is Platform.Windows
+		return ToolRunner.Empty.Run("gcc", objPath + " -o " + exePath + " -s")
+	if platform is Platform.MacOS
+		return ToolRunner.Empty.Run("clang", objPath + " -o " + exePath + " -s")
+	ToolRunner.Empty.Run("gcc", objPath + " -o " + exePath + " -s")
+BuildSimpleAdd(outputDir Text, platform Number) Text
+	let asm = InstructionsToNasm.Empty.CompileSimpleAdd(platform)
+	let asmPath = outputDir + "/add.asm"
+	WriteAsm(asmPath, asm)
+	asmPath
+Empty NativeBuild
+	NativeBuild(0)
+to Text
+	"native-build"

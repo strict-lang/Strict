@@ -8,31 +8,31 @@ Build(methodName Text, platform Number) Text
 		return MacMain(methodName)
 	LinuxStart(methodName)
 WindowsMain(methodName Text) Text
-	let nl = AsmText.Empty.NewLine
-	WinA(nl) + WinB(nl) + methodName + WinC(nl)
-WinA(nl Text) Text
-	nl + "extern ExitProcess" + nl + nl + "global main" + nl
-WinB(nl Text) Text
-	nl + "main:" + nl + "    push rbp" + nl + "    mov rbp, rsp" + nl + "    sub rsp, 32" + nl + "    call "
-WinC(nl Text) Text
-	nl + "    xor rcx, rcx" + nl + "    call ExitProcess" + nl + "    ret"
+	WinHead + methodName + WinTail
+WinHead Text
+	constant nl = "\n"
+	constant top = nl + "extern ExitProcess" + nl + nl + "global main" + nl
+	top + nl + "main:" + nl + "push rbp" + nl + "mov rbp, rsp" + nl + "sub rsp, 32" + nl + "call "
+WinTail Text
+	constant nl = "\n"
+	nl + "xor rcx, rcx" + nl + "call ExitProcess" + nl + "ret"
 LinuxStart(methodName Text) Text
-	let nl = AsmText.Empty.NewLine
-	LinA(nl) + LinB(nl) + methodName + LinC(nl)
-LinA(nl Text) Text
-	nl + "global _start" + nl
-LinB(nl Text) Text
-	nl + "_start:" + nl + "    push rbp" + nl + "    mov rbp, rsp" + nl + "    call "
-LinC(nl Text) Text
-	nl + "    mov rdi, 0" + nl + "    mov rax, 60" + nl + "    syscall"
+	LinHead + methodName + LinTail
+LinHead Text
+	constant nl = "\n"
+	constant top = nl + "global _start" + nl + nl + "_start:" + nl
+	top + "push rbp" + nl + "mov rbp, rsp" + nl + "call "
+LinTail Text
+	constant nl = "\n"
+	nl + "mov rdi, 0" + nl + "mov rax, 60" + nl + "syscall"
 MacMain(methodName Text) Text
-	let nl = AsmText.Empty.NewLine
-	MacA(nl) + MacB(nl) + methodName + MacC(nl)
-MacA(nl Text) Text
-	nl + "global _main" + nl
-MacB(nl Text) Text
-	nl + "_main:" + nl + "    push rbp" + nl + "    mov rbp, rsp" + nl + "    call _"
-MacC(nl Text) Text
-	nl + "    xor rdi, rdi" + nl + "    mov rax, 0x2000001" + nl + "    syscall"
+	MacHead + methodName + MacTail
+MacHead Text
+	constant nl = "\n"
+	constant top = nl + "global _main" + nl + nl + "_main:" + nl
+	top + "push rbp" + nl + "mov rbp, rsp" + nl + "call "
+MacTail Text
+	constant nl = "\n"
+	nl + "xor rdi, rdi" + nl + "mov rax, 0x2000001" + nl + "syscall"
 Empty EntryPoint
 	EntryPoint(0)

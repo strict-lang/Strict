@@ -19,16 +19,20 @@ EmitRest(instruction CompInstruction) Text
 	"unknown " + instruction.typeName
 EmitLoadConst(instruction CompInstruction) Text
 	let dest = RegisterMap.Empty.XmmName(instruction.register)
-	let amount = instruction.amount to Text
-	"movsd " + dest + ", const_" + amount
+	let amount = ConstLabel(instruction)
+	"movsd " + dest + ", [rel const_" + amount + "]"
+ConstLabel(instruction CompInstruction) Text
+	if instruction.label is ""
+		return instruction.amount to Text
+	instruction.label
 EmitLoadVar(instruction CompInstruction) Text
 	let dest = RegisterMap.Empty.XmmName(instruction.register)
-	"movsd " + dest + ", var_" + instruction.label
+	"movsd " + dest + ", [rel var_" + instruction.label + "]"
 EmitStoreConst(instruction CompInstruction) Text
 	"store const " + instruction.label
 EmitStoreReg(instruction CompInstruction) Text
 	let source = RegisterMap.Empty.XmmName(instruction.register)
-	"movsd var_" + instruction.label + ", " + source
+	"movsd [rel var_" + instruction.label + "], " + source
 EmitReturn(instruction CompInstruction) Text
 	let source = RegisterMap.Empty.XmmName(instruction.register)
 	"movsd xmm0, " + source
@@ -48,7 +52,8 @@ EmitBinaryOp(opName Text, left Text, right Text, result Text) Text
 		return TwoOp(result, left, "divsd", right)
 	"binary " + opName
 TwoOp(result Text, left Text, opCode Text, right Text) Text
-	"movsd " + result + ", " + left + " ; " + opCode + " " + result + ", " + right
+	constant nl = "\n"
+	"movsd " + result + ", " + left + nl + opCode + " " + result + ", " + right
 EmitCompare(instruction CompInstruction) Text
 	let left = RegisterMap.Empty.XmmName(instruction.register)
 	let right = RegisterMap.Empty.XmmName(instruction.amount)

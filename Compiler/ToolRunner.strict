@@ -1,0 +1,16 @@
+has dummy Number
+Find(name Text) Text
+	let tool = Process.Find(name)
+	tool.executable
+IsAvailable(name Text) Boolean
+	Process.Find(name).IsAvailable
+Run(name Text, arguments Text) ProcessResult
+	Process.RunTool(name, arguments)
+NasmAvailable Boolean
+	IsAvailable("nasm")
+GccAvailable Boolean
+	IsAvailable("gcc")
+Empty ToolRunner
+	ToolRunner(0)
+to Text
+	"tools"
