@@ -1,0 +1,11 @@
+has logger
+Run
+	logger.Log(Registry.Empty.Advance.Advance)
+	logger.Log(Register.Count)
+	logger.Log(InstructionNames.NameOf(InstructionType.Add))
+	logger.Log(NameTable.BuiltIn.Add("MyType"))
+	constant addOps = LineGenerator.Empty.GenerateLine("2 + 3")
+	logger.Log(addOps.Count)
+	for addOps.instructions
+		logger.Log(value)
+	logger.Log(addOps.LastRegister)

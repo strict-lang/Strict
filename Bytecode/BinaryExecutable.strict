@@ -1,0 +1,58 @@
+has types BinaryTypeDatas
+has entryTypeName Text
+has entryMethodName Text
+to Text
+	"types=" + TypeCount to Text + " entry=" + entryTypeName + "." + entryMethodName
+TypeCount Number
+	types.Length
+FindType(fullName Text) BinaryTypeData
+	for types
+		if value.typeFullName is fullName
+			return value
+	BinaryTypeData.Create(fullName)
+HasType(fullName Text) Boolean
+	for types
+		if value.typeFullName is fullName
+			return true
+	false
+AddType(typeData BinaryTypeData) BinaryExecutable
+	mutable next = List(Mutable(BinaryTypeData))
+	for types
+		next.Add(value)
+	next.Add(typeData)
+	BinaryExecutable(next, entryTypeName, entryMethodName)
+SetEntry(typeName Text, methodName Text) BinaryExecutable
+	BinaryExecutable(types, typeName, methodName)
+EntryMethod BinaryMethod
+	if entryTypeName is ""
+		return FirstRunMethod
+	let typeData = FindType(entryTypeName)
+	typeData.FindMethod(entryMethodName)
+FirstRunMethod BinaryMethod
+	for types
+		if value.HasMethod("Run")
+			return value.FindMethod("Run")
+	BinaryMethod.Create("Run", "None")
+InstructionCount Number
+	mutable total = 0
+	for types
+		total = total + CountTypeInstructions(value)
+	total
+CountTypeInstructions(typeData BinaryTypeData) Number
+	mutable total = 0
+	for typeData.methods
+		total = total + value.InstructionCount
+	total
+Empty BinaryExecutable
+	Empty.TypeCount is 0
+	BinaryExecutable(EmptyTypes, "", "Run")
+DummyType BinaryTypeData
+	BinaryTypeData("x", BinaryMethod.EmptyParams, BinaryTypeData.EmptyMethods)
+EmptyTypes BinaryTypeDatas
+	mutable emptyTypes = List(Mutable(BinaryTypeData))
+	for 0
+		emptyTypes.Add(DummyType)
+	emptyTypes
+FromMethod(typeName Text, method BinaryMethod) BinaryExecutable
+	let typeData = BinaryTypeData.CreateWithMethod(typeName, method)
+	Empty.AddType(typeData).SetEntry(typeName, method.methodName)

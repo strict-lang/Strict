@@ -1,0 +1,13 @@
+has logger
+Run
+	constant method = BinaryMethod.Create("Calc", "Number")
+	logger.Log(method.methodName)
+	constant op = InstructionBuilder.BinaryOp(InstructionType.Add, 0, 1, 2)
+	constant withAdd = method.WithInstruction(op)
+	logger.Log(withAdd.InstructionCount)
+	logger.Log(withAdd.UsesBinary)
+	constant typeData = BinaryTypeData.CreateWithMethod("Strict/Calc", withAdd)
+	logger.Log(typeData.JustTypeName)
+	logger.Log(typeData.HasMethod("Calc"))
+	constant executable = BinaryExecutable.FromMethod("Strict/Calc", withAdd)
+	logger.Log(executable.TypeCount)

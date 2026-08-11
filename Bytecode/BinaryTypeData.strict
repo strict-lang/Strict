@@ -1,0 +1,51 @@
+has typeFullName Text
+has members BinaryMembers
+has methods BinaryMethods
+constant BytecodeEntryExtension = ".bytecode"
+constant Version = 1
+constant MagicByte = 83
+JustTypeName Text
+	let slash = typeFullName.LastIndexOf("/")
+	if slash is -1
+		return typeFullName
+	typeFullName.Substring(slash + 1, 200)
+to Text
+	JustTypeName + " members=" + members.Length to Text + " methods=" + methods.Length to Text
+MethodCount Number
+	methods.Length
+MemberCount Number
+	members.Length
+FindMethod(name Text) BinaryMethod
+	for methods
+		if value.methodName is name
+			return value
+	BinaryMethod.Create(name, "None")
+HasMethod(name Text) Boolean
+	for methods
+		if value.methodName is name
+			return true
+	false
+AddMethod(method BinaryMethod) BinaryTypeData
+	mutable next = List(Mutable(BinaryMethod))
+	for methods
+		next.Add(value)
+	next.Add(method)
+	BinaryTypeData(typeFullName, members, next)
+AddMember(member BinaryMember) BinaryTypeData
+	mutable next = List(Mutable(BinaryMember))
+	for members
+		next.Add(value)
+	next.Add(member)
+	BinaryTypeData(typeFullName, next, methods)
+Create(fullName Text) BinaryTypeData
+	Create("Strict/Number").JustTypeName is "Number"
+	BinaryTypeData(fullName, BinaryMethod.EmptyParams, EmptyMethods)
+DummyMethod BinaryMethod
+	BinaryMethod("Run", "None", BinaryMethod.EmptyParams, BinaryMethod.EmptyOps)
+EmptyMethods BinaryMethods
+	mutable emptyMethods = List(Mutable(BinaryMethod))
+	for 0
+		emptyMethods.Add(DummyMethod)
+	emptyMethods
+CreateWithMethod(fullName Text, method BinaryMethod) BinaryTypeData
+	Create(fullName).AddMethod(method)

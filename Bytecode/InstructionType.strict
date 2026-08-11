@@ -1,0 +1,36 @@
+constant LoadConstantToRegister
+constant LoadVariableToRegister
+constant StoreConstantToVariable
+constant StoreRegisterToVariable
+constant Set
+constant IndexCall
+constant StoreSeparator = 10
+constant Add
+constant Subtract
+constant Multiply
+constant Divide
+constant Modulo
+constant ArithmeticSeparator = 20
+constant Equal
+constant NotEqual
+constant LessThan
+constant GreaterThan
+constant BinaryOperatorsSeparator = 30
+constant Invoke
+constant Return
+constant LoopBegin
+constant LoopEnd
+constant Jump
+constant JumpIfTrue
+constant JumpIfFalse
+constant JumpIfNotZero
+constant JumpEnd
+constant JumpToIdIfFalse
+constant JumpToIdIfTrue
+constant InvokeWriteToList
+constant InvokeWriteToTable
+constant InvokeRemove
+constant Print
+constant FieldLoad
+constant ConstructValueType
+constant IncludesSourceLine = 128

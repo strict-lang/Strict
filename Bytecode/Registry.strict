@@ -1,0 +1,43 @@
+has next Number
+has previous Number
+Allocate Number
+	Empty.Allocate is 0
+	if next >= Register.Count
+		return -1
+	next
+CanAllocate Boolean
+	Empty.CanAllocate is true
+	if next < Register.Count
+		return true
+	false
+Remaining Number
+	Empty.Remaining is 64
+	Register.Count - next
+Advance Registry
+	Empty.Advance.next is 1
+	Empty.Advance.previous is 0
+	if next >= Register.Count
+		return Registry(next, previous)
+	Registry(next + 1, next)
+AdvanceMany(count Number) Registry
+	AdvanceMany(3).next is 3
+	mutable current = Registry(next, previous)
+	for count
+		current = current.Advance
+	current
+AllocatePair Registry
+	let first = Advance
+	first.Advance
+WithPrevious(reg Number) Registry
+	Registry(next, reg)
+Empty Registry
+	Empty.next is 0
+	Empty.previous is 0
+	Registry(0, 0)
+IsExhausted Boolean
+	Empty.IsExhausted is false
+	if next >= Register.Count
+		return true
+	false
+to Text
+	"next=" + next to Text + " prev=" + previous to Text

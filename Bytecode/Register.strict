@@ -1,0 +1,16 @@
+constant Count = 64
+IsValid(index Number) Boolean
+	IsValid(0) is true
+	IsValid(63) is true
+	IsValid(64) is false
+	IsValid(-1) is false
+	if index < 0
+		return false
+	if index < Count
+		return true
+	false
+NameOf(index Number) Text
+	NameOf(0) is "R0"
+	NameOf(1) is "R1"
+	NameOf(63) is "R63"
+	"R" + index to Text

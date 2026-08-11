@@ -1,0 +1,53 @@
+constant SmallNumberValue
+constant IntegerNumberValue
+constant NumberValue
+constant TextValue
+constant BooleanValue
+constant VariableRef
+constant MemberRef
+constant BinaryExpr
+constant MethodCallExpr
+constant SequenceExpr
+constant IndexExpr
+NameOf(code Number) Text
+	NameOf(NumberValue) is "NumberValue"
+	if code is SmallNumberValue
+		return "SmallNumberValue"
+	if code is IntegerNumberValue
+		return "IntegerNumberValue"
+	if code is NumberValue
+		return "NumberValue"
+	if code is TextValue
+		return "TextValue"
+	NameOfRest(code)
+NameOfRest(code Number) Text
+	if code is BooleanValue
+		return "BooleanValue"
+	if code is VariableRef
+		return "VariableRef"
+	if code is MemberRef
+		return "MemberRef"
+	if code is BinaryExpr
+		return "BinaryExpr"
+	if code is MethodCallExpr
+		return "MethodCallExpr"
+	NameOfMore(code)
+NameOfMore(code Number) Text
+	if code is SequenceExpr
+		return "ListExpr"
+	if code is IndexExpr
+		return "ListCallExpr"
+	"Unknown"
+IsValueKind(code Number) Boolean
+	IsValueKind(NumberValue) is true
+	if code is SmallNumberValue
+		return true
+	if code is IntegerNumberValue
+		return true
+	if code is NumberValue
+		return true
+	if code is TextValue
+		return true
+	if code is BooleanValue
+		return true
+	false

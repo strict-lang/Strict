@@ -1,0 +1,48 @@
+constant KindNone
+constant KindSmallNumber
+constant KindIntegerNumber
+constant KindNumber
+constant KindText
+constant KindBoolean
+constant KindSequence
+constant KindCharacter
+constant KindName
+constant KindDictionary
+NameOf(code Number) Text
+	NameOf(KindNone) is "None"
+	NameOf(KindNumber) is "Number"
+	if code is KindNone
+		return "None"
+	if code is KindSmallNumber
+		return "SmallNumber"
+	if code is KindIntegerNumber
+		return "IntegerNumber"
+	NameOfRest(code)
+NameOfRest(code Number) Text
+	if code is KindNumber
+		return "Number"
+	if code is KindText
+		return "Text"
+	if code is KindBoolean
+		return "Boolean"
+	if code is KindSequence
+		return "List"
+	NameOfMore(code)
+NameOfMore(code Number) Text
+	if code is KindCharacter
+		return "Character"
+	if code is KindName
+		return "Name"
+	if code is KindDictionary
+		return "Dictionary"
+	"Unknown"
+IsNumberKind(code Number) Boolean
+	IsNumberKind(KindNumber) is true
+	IsNumberKind(KindText) is false
+	if code is KindSmallNumber
+		return true
+	if code is KindIntegerNumber
+		return true
+	if code is KindNumber
+		return true
+	false

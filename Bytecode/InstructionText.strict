@@ -1,0 +1,61 @@
+has typeName Text
+has register Number
+has amount Number
+has label Text
+Format Text
+	if typeName is "Set"
+		return FormatSet
+	if typeName is "LoadConstantToRegister"
+		return FormatLoadConst
+	if typeName is "LoadVariableToRegister"
+		return FormatLoadVar
+	FormatRest
+FormatSet Text
+	let regName = Register.NameOf(register)
+	"Set " + regName + " " + amount to Text
+FormatLoadConst Text
+	let regName = Register.NameOf(register)
+	"LoadConstant " + regName + " " + amount to Text
+FormatLoadVar Text
+	let regName = Register.NameOf(register)
+	"LoadVariable " + label + " " + regName
+FormatRest Text
+	if typeName is "StoreConstantToVariable"
+		return "StoreConstant " + label + " " + amount to Text
+	if typeName is "StoreRegisterToVariable"
+		return FormatStoreReg
+	if typeName is "Return"
+		return FormatReturn
+	if typeName is "Print"
+		return "Print " + label
+	FormatBinary
+FormatStoreReg Text
+	let regName = Register.NameOf(register)
+	"StoreRegister " + regName + " " + label
+FormatReturn Text
+	let regName = Register.NameOf(register)
+	"Return " + regName
+FormatBinary Text
+	if typeName is "Add"
+		return typeName + " " + ThreeRegs
+	if typeName is "Subtract"
+		return typeName + " " + ThreeRegs
+	if typeName is "Multiply"
+		return typeName + " " + ThreeRegs
+	if typeName is "Divide"
+		return typeName + " " + ThreeRegs
+	FormatMore
+FormatMore Text
+	if typeName is "Modulo"
+		return typeName + " " + ThreeRegs
+	if typeName is "Equal"
+		return typeName + " " + ThreeRegs
+	if typeName is "NotEqual"
+		return typeName + " " + ThreeRegs
+	if typeName is "Invoke"
+		return "Invoke " + label
+	typeName + " " + amount to Text
+ThreeRegs Text
+	let left = Register.NameOf(register)
+	let right = Register.NameOf(amount)
+	left + " " + right + " " + label

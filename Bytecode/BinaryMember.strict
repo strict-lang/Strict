@@ -1,0 +1,21 @@
+has memberName Text
+has justTypeName Text
+has hasInitialValue Boolean
+has initialNumber Number
+to Text
+	if hasInitialValue
+		return "const " + memberName + " = " + initialNumber to Text
+	"has " + memberName + " " + justTypeName
+HasMember(name Text, typeName Text) BinaryMember
+	HasMember("logger", "Logger").memberName is "logger"
+	BinaryMember(name, typeName, false, 0)
+HasNumber(name Text, amount Number) BinaryMember
+	HasNumber("count", 0).justTypeName is "Number"
+	BinaryMember(name, "Number", true, amount)
+Parameter(name Text, typeName Text) BinaryMember
+	Parameter("first", "Number").memberName is "first"
+	BinaryMember(name, typeName, false, 0)
+IsNamed(name Text) Boolean
+	if memberName is name
+		return true
+	false

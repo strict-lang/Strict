@@ -1,0 +1,64 @@
+has kind Text
+has number
+has text
+has flag Boolean
+IsNone Boolean
+	if kind is "None"
+		return true
+	false
+IsNumber Boolean
+	if kind is "Number"
+		return true
+	false
+IsBoolean Boolean
+	if kind is "Boolean"
+		return true
+	false
+IsText Boolean
+	if kind is "Text"
+		return true
+	false
+to Text
+	if kind is "Number"
+		return number to Text
+	if kind is "Boolean"
+		return FlagText
+	if kind is "Text"
+		return "\"" + text + "\""
+	"none"
+FlagText Text
+	if flag
+		return "true"
+	"false"
+None BytecodeValue
+	BytecodeValue("None", 0, "", false)
+FromNumber(amount Number) BytecodeValue
+	FromNumber(5).number is 5
+	FromNumber(5).IsNumber is true
+	BytecodeValue("Number", amount, "", false)
+FromBoolean(flagValue Boolean) BytecodeValue
+	FromBoolean(true).flag is true
+	BytecodeValue("Boolean", 0, "", flagValue)
+FromText(content Text) BytecodeValue
+	FromText("hi").text is "hi"
+	BytecodeValue("Text", 0, content, false)
+EqualsValue(other BytecodeValue) Boolean
+	if kind is not other.kind
+		return false
+	if kind is "Number"
+		if number is other.number
+			return true
+		return false
+	EqualsRest(other)
+EqualsRest(other BytecodeValue) Boolean
+	if kind is "Boolean"
+		if flag is other.flag
+			return true
+		return false
+	if kind is "Text"
+		if text is other.text
+			return true
+		return false
+	if kind is "None"
+		return true
+	false

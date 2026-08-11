@@ -1,0 +1,160 @@
+has dummy Number
+NameOf(code Number) Text
+	NameOf(InstructionType.Add) is "Add"
+	if code is InstructionType.LoadConstantToRegister
+		return "LoadConstantToRegister"
+	if code is InstructionType.LoadVariableToRegister
+		return "LoadVariableToRegister"
+	if code is InstructionType.StoreConstantToVariable
+		return "StoreConstantToVariable"
+	if code is InstructionType.Set
+		return "Set"
+	NameOfRest(code)
+NameOfRest(code Number) Text
+	if code is InstructionType.IndexCall
+		return "ListCall"
+	if code is InstructionType.Add
+		return "Add"
+	if code is InstructionType.Subtract
+		return "Subtract"
+	if code is InstructionType.Multiply
+		return "Multiply"
+	if code is InstructionType.Divide
+		return "Divide"
+	NameOfMore(code)
+NameOfMore(code Number) Text
+	if code is InstructionType.Modulo
+		return "Modulo"
+	if code is InstructionType.Equal
+		return "Equal"
+	if code is InstructionType.NotEqual
+		return "NotEqual"
+	if code is InstructionType.LessThan
+		return "LessThan"
+	if code is InstructionType.GreaterThan
+		return "GreaterThan"
+	NameOfControl(code)
+NameOfControl(code Number) Text
+	if code is InstructionType.Invoke
+		return "Invoke"
+	if code is InstructionType.Return
+		return "Return"
+	if code is InstructionType.LoopBegin
+		return "LoopBegin"
+	if code is InstructionType.LoopEnd
+		return "LoopEnd"
+	if code is InstructionType.Jump
+		return "Jump"
+	NameOfJump(code)
+NameOfJump(code Number) Text
+	if code is InstructionType.JumpIfTrue
+		return "JumpIfTrue"
+	if code is InstructionType.JumpIfFalse
+		return "JumpIfFalse"
+	if code is InstructionType.JumpIfNotZero
+		return "JumpIfNotZero"
+	if code is InstructionType.Print
+		return "Print"
+	if code is InstructionType.FieldLoad
+		return "FieldLoad"
+	"Unknown"
+IsArithmetic(code Number) Boolean
+	IsArithmetic(InstructionType.Add) is true
+	if code is InstructionType.Add
+		return true
+	if code is InstructionType.Subtract
+		return true
+	if code is InstructionType.Multiply
+		return true
+	if code is InstructionType.Divide
+		return true
+	if code is InstructionType.Modulo
+		return true
+	false
+IsComparison(code Number) Boolean
+	IsComparison(InstructionType.Equal) is true
+	if code is InstructionType.Equal
+		return true
+	if code is InstructionType.NotEqual
+		return true
+	if code is InstructionType.LessThan
+		return true
+	if code is InstructionType.GreaterThan
+		return true
+	false
+IsJump(code Number) Boolean
+	IsJump(InstructionType.JumpIfFalse) is true
+	if code is InstructionType.Jump
+		return true
+	if code is InstructionType.JumpIfTrue
+		return true
+	if code is InstructionType.JumpIfFalse
+		return true
+	if code is InstructionType.JumpIfNotZero
+		return true
+	IsJumpId(code)
+IsJumpId(code Number) Boolean
+	if code is InstructionType.JumpToIdIfFalse
+		return true
+	if code is InstructionType.JumpToIdIfTrue
+		return true
+	false
+CodeOf(name Text) Number
+	CodeOf("Add") is InstructionType.Add
+	if name is "LoadConstantToRegister"
+		return InstructionType.LoadConstantToRegister
+	if name is "LoadVariableToRegister"
+		return InstructionType.LoadVariableToRegister
+	if name is "StoreConstantToVariable"
+		return InstructionType.StoreConstantToVariable
+	if name is "Set"
+		return InstructionType.Set
+	CodeOfRest(name)
+CodeOfRest(name Text) Number
+	if name is "ListCall"
+		return InstructionType.IndexCall
+	if name is "Add"
+		return InstructionType.Add
+	if name is "Subtract"
+		return InstructionType.Subtract
+	if name is "Multiply"
+		return InstructionType.Multiply
+	if name is "Divide"
+		return InstructionType.Divide
+	CodeOfMore(name)
+CodeOfMore(name Text) Number
+	if name is "Modulo"
+		return InstructionType.Modulo
+	if name is "Equal"
+		return InstructionType.Equal
+	if name is "NotEqual"
+		return InstructionType.NotEqual
+	if name is "LessThan"
+		return InstructionType.LessThan
+	if name is "GreaterThan"
+		return InstructionType.GreaterThan
+	CodeOfControl(name)
+CodeOfControl(name Text) Number
+	if name is "Invoke"
+		return InstructionType.Invoke
+	if name is "Return"
+		return InstructionType.Return
+	if name is "LoopBegin"
+		return InstructionType.LoopBegin
+	if name is "LoopEnd"
+		return InstructionType.LoopEnd
+	if name is "Jump"
+		return InstructionType.Jump
+	CodeOfJump(name)
+CodeOfJump(name Text) Number
+	if name is "JumpIfTrue"
+		return InstructionType.JumpIfTrue
+	if name is "JumpIfFalse"
+		return InstructionType.JumpIfFalse
+	if name is "JumpIfNotZero"
+		return InstructionType.JumpIfNotZero
+	if name is "Print"
+		return InstructionType.Print
+	if name is "FieldLoad"
+		return InstructionType.FieldLoad
+	-1

@@ -1,0 +1,55 @@
+has methodName Text
+has returnTypeName Text
+has parameters BinaryMembers
+has instructions BytecodeInstructions
+to Text
+	methodName + " " + returnTypeName + " #" + InstructionCount to Text
+InstructionCount Number
+	instructions.Length
+ParameterCount Number
+	parameters.Length
+UsesPrint Boolean
+	for instructions
+		if value.typeName is "Print"
+			return true
+	false
+UsesReturn Boolean
+	for instructions
+		if value.IsReturn
+			return true
+	false
+UsesBinary Boolean
+	for instructions
+		if value.IsBinary
+			return true
+	false
+LastInstruction BytecodeInstruction
+	if instructions.Length is 0
+		return BytecodeInstruction("Return", 0, 0, "")
+	instructions(instructions.Length - 1)
+WithInstruction(instruction BytecodeInstruction) BinaryMethod
+	mutable next = List(Mutable(BytecodeInstruction))
+	for instructions
+		next.Add(value)
+	next.Add(instruction)
+	BinaryMethod(methodName, returnTypeName, parameters, next)
+WithInstructions(more BytecodeInstructions) BinaryMethod
+	mutable next = List(Mutable(BytecodeInstruction))
+	for instructions
+		next.Add(value)
+	for more
+		next.Add(value)
+	BinaryMethod(methodName, returnTypeName, parameters, next)
+Create(name Text, returnType Text) BinaryMethod
+	Create("Run", "Number").methodName is "Run"
+	BinaryMethod(name, returnType, EmptyParams, EmptyOps)
+EmptyParams BinaryMembers
+	mutable emptyParams = List(Mutable(BinaryMember))
+	for 0
+		emptyParams.Add(BinaryMember("x", "Number", false, 0))
+	emptyParams
+EmptyOps BytecodeInstructions
+	mutable emptyOps = List(Mutable(BytecodeInstruction))
+	for 0
+		emptyOps.Add(BytecodeInstruction("Return", 0, 0, ""))
+	emptyOps

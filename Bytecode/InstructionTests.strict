@@ -1,0 +1,12 @@
+has logger
+Run
+	constant set = InstructionBuilder.SetNumber(0, 42)
+	logger.Log(set)
+	logger.Log(set.IsLoad)
+	constant add = InstructionBuilder.BinaryOp(InstructionType.Add, 0, 1, 2)
+	logger.Log(add)
+	logger.Log(add.IsBinary)
+	constant ret = InstructionBuilder.ReturnOp(2)
+	logger.Log(ret)
+	logger.Log(ret.IsReturn)
+	logger.Log(InstructionNames.CodeOf("Multiply"))

@@ -1,0 +1,12 @@
+has logger
+Run
+	constant num = LineGenerator.Empty.GenerateLine("42")
+	logger.Log(num.Count)
+	for num.instructions
+		logger.Log(value)
+	constant add = LineGenerator.Empty.GenerateLine("2 + 3")
+	logger.Log(add.Count)
+	for add.instructions
+		logger.Log(value)
+	constant ret = LineGenerator.Empty.GenerateLine("return 7")
+	logger.Log(ret.Count)

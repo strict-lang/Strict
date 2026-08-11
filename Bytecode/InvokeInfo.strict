@@ -1,0 +1,15 @@
+has typeFullName Text
+has methodName Text
+has returnTypeName Text
+has instanceRegister Number
+to Text
+	typeFullName + "." + methodName + "->" + returnTypeName
+Simple(typeName Text, method Text, returnType Text) InvokeInfo
+	Simple("Number", "Add", "Number").methodName is "Add"
+	InvokeInfo(typeName, method, returnType, -1)
+WithInstance(typeName Text, method Text, returnType Text, instance Number) InvokeInfo
+	InvokeInfo(typeName, method, returnType, instance)
+HasInstance Boolean
+	if instanceRegister < 0
+		return false
+	true

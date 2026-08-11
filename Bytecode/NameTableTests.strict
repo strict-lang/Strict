@@ -1,0 +1,14 @@
+has logger
+Run
+	constant empty = NameTable.Empty
+	logger.Log(empty.Count)
+	constant one = empty.Add("hello")
+	logger.Log(one.Has("hello"))
+	logger.Log(one.IndexOf("hello"))
+	constant two = one.Add("world")
+	logger.Log(two.Count)
+	logger.Log(two.Add("hello").Count)
+	constant built = NameTable.BuiltIn
+	logger.Log(built.Has("Number"))
+	logger.Log(built.Has("Run"))
+	logger.Log(NameTable.ForType("MyType").Has("MyType"))

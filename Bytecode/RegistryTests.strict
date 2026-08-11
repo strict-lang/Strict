@@ -1,0 +1,13 @@
+has logger
+Run
+	constant empty = Registry.Empty
+	logger.Log(empty.next)
+	logger.Log(empty.Remaining)
+	constant first = empty.Advance
+	logger.Log(first.next)
+	logger.Log(first.previous)
+	constant many = empty.AdvanceMany(5)
+	logger.Log(many.next)
+	logger.Log(Register.IsValid(63))
+	logger.Log(Register.IsValid(64))
+	logger.Log(Register.NameOf(0))

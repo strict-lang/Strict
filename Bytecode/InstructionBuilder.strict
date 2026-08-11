@@ -1,0 +1,45 @@
+has dummy Number
+SetNumber(reg Number, value Number) BytecodeInstruction
+	SetNumber(0, 5).typeName is "Set"
+	BytecodeInstruction("Set", reg, value, "")
+LoadConstant(reg Number, value Number) BytecodeInstruction
+	LoadConstant(1, 10).typeName is "LoadConstantToRegister"
+	BytecodeInstruction("LoadConstantToRegister", reg, value, "")
+LoadVariable(reg Number, name Text) BytecodeInstruction
+	LoadVariable(0, "x").label is "x"
+	BytecodeInstruction("LoadVariableToRegister", reg, 0, name)
+StoreConstant(name Text, value Number) BytecodeInstruction
+	StoreConstant("n", 5).label is "n"
+	BytecodeInstruction("StoreConstantToVariable", 0, value, name)
+StoreRegister(reg Number, name Text) BytecodeInstruction
+	StoreRegister(2, "result").label is "result"
+	BytecodeInstruction("StoreRegisterToVariable", reg, 0, name)
+BinaryOp(code Number, left Number, right Number, result Number) BytecodeInstruction
+	BinaryOp(InstructionType.Add, 0, 1, 2).typeName is "Add"
+	let name = InstructionNames.NameOf(code)
+	BytecodeInstruction(name, left, right, result to Text)
+ReturnOp(reg Number) BytecodeInstruction
+	ReturnOp(3).IsReturn is true
+	BytecodeInstruction("Return", reg, 0, "")
+JumpOp(code Number, steps Number) BytecodeInstruction
+	JumpOp(InstructionType.JumpIfFalse, 2).amount is 2
+	let name = InstructionNames.NameOf(code)
+	BytecodeInstruction(name, 0, steps, "")
+InvokeOp(reg Number, methodName Text) BytecodeInstruction
+	InvokeOp(0, "Add").label is "Add"
+	BytecodeInstruction("Invoke", reg, 0, methodName)
+PrintOp(prefix Text) BytecodeInstruction
+	PrintOp("hello").label is "hello"
+	BytecodeInstruction("Print", 0, 0, prefix)
+ListCallOp(reg Number, indexReg Number, name Text) BytecodeInstruction
+	ListCallOp(0, 1, "items").label is "items"
+	BytecodeInstruction("ListCall", reg, indexReg, name)
+FieldLoadOp(reg Number, instanceReg Number, field Text) BytecodeInstruction
+	FieldLoadOp(0, 1, "count").label is "count"
+	BytecodeInstruction("FieldLoad", reg, instanceReg, field)
+LoopBeginOp BytecodeInstruction
+	BytecodeInstruction("LoopBegin", 0, 0, "")
+LoopEndOp BytecodeInstruction
+	BytecodeInstruction("LoopEnd", 0, 0, "")
+Empty InstructionBuilder
+	InstructionBuilder(0)

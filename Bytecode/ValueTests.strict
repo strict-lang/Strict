@@ -1,0 +1,12 @@
+has logger
+Run
+	constant five = BytecodeValue.FromNumber(5)
+	logger.Log(five)
+	logger.Log(five.IsNumber)
+	constant flag = BytecodeValue.FromBoolean(true)
+	logger.Log(flag.IsBoolean)
+	constant hi = BytecodeValue.FromText("hi")
+	logger.Log(hi.IsText)
+	constant none = BytecodeValue.None
+	logger.Log(none.IsNone)
+	logger.Log(five.EqualsValue(BytecodeValue.FromNumber(5)))

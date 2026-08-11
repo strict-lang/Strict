@@ -344,53 +344,64 @@ Includes the instruction set, bytecode generator, and serializer.
 
 ### Sub-layers
 
-#### Instructions (24 files)
+#### Instructions (24 files) — unified line-level model
 
 | C# File | Description | Status |
 |---------|-------------|--------|
-| `Instruction.cs` | Abstract base instruction | 0% |
-| `RegisterInstruction.cs` | Instruction with a register | 0% |
-| `InstanceInstruction.cs` | Instruction with instance | 0% |
-| `SetInstruction.cs` | Load literal into register | 0% |
-| `LoadConstantInstruction.cs` | Load named constant | 0% |
-| `LoadVariableToRegister.cs` | Load variable into register | 0% |
-| `StoreVariableInstruction.cs` | Store value as variable | 0% |
-| `StoreFromRegisterInstruction.cs` | Store register into variable | 0% |
-| `BinaryInstruction.cs` | Binary operation (add, mul, etc.) | 0% |
-| `Invoke.cs` | Method invocation | 0% |
-| `PrintInstruction.cs` | Output to console | 0% |
-| `ReturnInstruction.cs` | Return from method | 0% |
-| `Jump.cs` / `JumpIf.cs` / `JumpIfTrue.cs` / `JumpIfFalse.cs` | Conditional/unconditional jumps | 0% |
-| `JumpIfNotZero.cs` / `JumpToId.cs` | More jump variants | 0% |
-| `LoopBeginInstruction.cs` / `IterationEnd.cs` | Loop control | 0% |
-| `ListCallInstruction.cs` | List index access | 0% |
-| `WriteToListInstruction.cs` / `WriteToTableInstruction.cs` | Mutation | 0% |
-| `RemoveInstruction.cs` | Remove from list | 0% |
+| `Instruction.cs` | Abstract base instruction | ✅ `BytecodeInstruction.strict` (4-field data model) |
+| `RegisterInstruction.cs` | Instruction with a register | ✅ via `register` field |
+| `InstanceInstruction.cs` | Instruction with instance | ✅ via factories |
+| `SetInstruction.cs` | Load literal into register | ✅ `InstructionBuilder.SetNumber` |
+| `LoadConstantInstruction.cs` | Load named constant | ✅ `InstructionBuilder.LoadConstant` |
+| `LoadVariableToRegister.cs` | Load variable into register | ✅ `InstructionBuilder.LoadVariable` |
+| `StoreVariableInstruction.cs` | Store value as variable | ✅ `InstructionBuilder.StoreConstant` |
+| `StoreFromRegisterInstruction.cs` | Store register into variable | ✅ `InstructionBuilder.StoreRegister` |
+| `BinaryInstruction.cs` | Binary operation (add, mul, etc.) | ✅ `InstructionBuilder.BinaryOp` |
+| `Invoke.cs` | Method invocation | ✅ `InstructionBuilder.InvokeOp` + `InvokeInfo` |
+| `PrintInstruction.cs` | Output to console | ✅ `InstructionBuilder.PrintOp` |
+| `ReturnInstruction.cs` | Return from method | ✅ `InstructionBuilder.ReturnOp` |
+| `Jump.cs` / `JumpIfTrue` / `JumpIfFalse` | Conditional/unconditional jumps | ✅ `InstructionBuilder.JumpOp` |
+| `JumpIfNotZero.cs` / `JumpToId.cs` | More jump variants | ✅ codes in `InstructionType` + `IsJump` |
+| `LoopBeginInstruction.cs` / `IterationEnd.cs` | Loop control | ✅ `LoopBeginOp` / `LoopEndOp` |
+| `ListCallInstruction.cs` | List index access | ✅ `ListCallOp` (`IndexCall` const; List* prefix banned) |
+| `WriteToListInstruction.cs` / `WriteToTableInstruction.cs` | Mutation | ✅ codes on `InstructionType` |
+| `RemoveInstruction.cs` | Remove from list | ✅ codes on `InstructionType` |
 
 #### Generator & Serialization (13 files)
 
 | C# File | Description | Status |
 |---------|-------------|--------|
-| `Register.cs` | Register enum (R0–R7) | 0% |
-| `Registry.cs` | Register allocator | 0% |
-| `InstructionType.cs` | Instruction type enum | 0% |
-| `InvokedMethod.cs` / `InstanceInvokedMethod.cs` | Method call wrappers | 0% |
-| `BytecodeGenerator.cs` | Expression → instructions (700+ LOC) | 0% |
-| `BytecodeDecompiler.cs` | Bytecode → partial .strict source | 0% |
-| `Serialization/ExpressionKind.cs` | Enum for expression serialization | 0% |
-| `Serialization/ValueKind.cs` | Enum for value serialization | 0% |
-| `Serialization/NameTable.cs` | String table for bytecode | 0% |
-| `Serialization/TypeBytecodeData.cs` | Type + method bytecode bundle | 0% |
-| `Serialization/BytecodeSerializer.cs` | Write `.strictbinary` ZIP files | 0% |
-| `Serialization/BytecodeDeserializer.cs` | Read `.strictbinary` ZIP files | 0% |
+| `Register.cs` | Register slots + count | ✅ `Register.strict` (`Count=64`, `NameOf`, `IsValid`) |
+| `Registry.cs` | Register allocator | ✅ `Registry.strict` (no wrap; returns -1 when exhausted) |
+| `InstructionType.cs` | Instruction type enum | ✅ `InstructionType.strict` + `InstructionNames.strict` |
+| `InvokedMethod.cs` / `InvokeMethodInfo` | Method call wrappers | ✅ `InvokeInfo.strict` |
+| `BinaryGenerator.cs` | Expression → instructions | ✅ `LineGenerator` + `ExpressionCodegen` (line-level) |
+| `Decompiler.cs` | Bytecode → partial .strict source | ✅ `Decompiler.strict` |
+| `Serialization/ExpressionKind.cs` | Enum for expression serialization | ✅ `ExpressionKind.strict` |
+| `Serialization/ValueKind.cs` | Enum for value serialization | ✅ `ValueKind.strict` |
+| `Serialization/NameTable.cs` | String table for bytecode | ✅ `NameTable.strict` (+ BuiltIn names) |
+| `Serialization/BinaryType` / `BinaryMethod` / `BinaryMember` | Type + method bytecode bundle | ✅ `BinaryTypeData` / `BinaryMethod` / `BinaryMember` |
+| `BinaryExecutable.cs` | Methods-per-type + entry | ✅ `BinaryExecutable.strict` |
+| `Serialization/BytecodeSerializer.cs` | Write `.strictbinary` ZIP | 🚧 Deferred (ZIP/binary I/O still C#) |
+| `Serialization/BytecodeDeserializer.cs` | Read `.strictbinary` ZIP | 🚧 Deferred (ZIP/binary I/O still C#) |
+
+**Phase 6 status (parallel Strict package):**
+- Package `Strict/Bytecode` loads with instruction model, registry, line generator, decompiler, name table, and binary metadata types.
+- **Instruction model:** 4-field `BytecodeInstruction` (`typeName`, `register`, `amount`, `label`) + `InstructionBuilder` factories + `InstructionText` formatting (Strict member/param limits).
+- **Line-level codegen:** `LineGenerator` / `ExpressionCodegen` emit load/store/binary/return/jump from simple expression lines (same style as HighLevelRuntime evaluators).
+- **Working under VM:** Registry, instruction factories, name table, generator, decompiler, values, executable assembly.
+- Demos/tests: `BytecodeDemo`, `RegistryTests`, `InstructionTests`, `NameTableTests`, `GeneratorTests`, `DecompilerTests`, `ValueTests`, `ExecutableTests` all green.
+- `StrictBytecodeConversionTests` 8/8 green.
+- C# `BinaryGenerator` / ZIP serializer remain bootstrap for production Runner pipeline.
+- ZIP serialize/deserialize remain deferred (see Missing Runtime Features).
 
 **Progress table:**
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 37 | 0 | 0% |
-| Test methods written | 55 | 0 | 0% |
-| C# files replaced | 37 | 0 | 0% |
+| `.strict` files created | 37 | **30** (core + demos; ZIP ser/deser deferred) | ~80% |
+| Test methods written | 55 | 8 VM demos + 8 C# conversion tests + inline asserts | ~30% |
+| C# files replaced | 37 | 0 (bootstrap still C#; Strict package parallel) | 0% |
 
 ---
 
@@ -476,8 +487,8 @@ This is the execution engine — the capstone of the self-hosting effort.
 | 2 | `Strict.Expressions` | 29 | 29 | **32** (AST + Parser + NumberChars + demo) | ~140 + 6 C# | **~40%** |
 | 3 | `Strict.Validators` | 3 | 3 | **6** | ~4 C# + inline | **~40%** |
 | 4 | `Strict.TestRunner` | 1 | 1 | **7** | ~4 C# + inline | **~40%** |
-| 5 | `Strict.HighLevelRuntime` | 11 | 11 | **15** | ~5 C# + inline | **~35%** |
-| 6 | `Strict.Bytecode` | 37 | 37 | 0 | 0 | 0% |
+| 5 | `Strict.HighLevelRuntime` | 11 | 11 | **21** | ~7 C# + demos | **~35%** |
+| 6 | `Strict.Bytecode` | 37 | 37 | **30** | 8 demos + 8 C# | **~40%** |
 | 7 | `Strict.Optimizers` | 9 | 9 | 0 | 0 | 0% |
 | 8 | `Strict` (VM + Runner) | 6 | 6 | 0 | 0 | 0% |
 | 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | 0 | 0 | 0% |

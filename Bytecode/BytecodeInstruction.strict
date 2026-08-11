@@ -1,0 +1,62 @@
+has typeName Text
+has register Number
+has amount Number
+has label Text
+to Text
+	InstructionText(typeName, register, amount, label).Format
+ResultRegister Number
+	if label is ""
+		return 0
+	label to Number
+IsBinary Boolean
+	if typeName is "Add"
+		return true
+	if typeName is "Subtract"
+		return true
+	if typeName is "Multiply"
+		return true
+	if typeName is "Divide"
+		return true
+	if typeName is "Modulo"
+		return true
+	IsCompare
+IsCompare Boolean
+	if typeName is "Equal"
+		return true
+	if typeName is "NotEqual"
+		return true
+	if typeName is "LessThan"
+		return true
+	if typeName is "GreaterThan"
+		return true
+	false
+IsJump Boolean
+	if typeName is "Jump"
+		return true
+	if typeName is "JumpIfTrue"
+		return true
+	if typeName is "JumpIfFalse"
+		return true
+	if typeName is "JumpIfNotZero"
+		return true
+	false
+IsLoad Boolean
+	if typeName is "LoadConstantToRegister"
+		return true
+	if typeName is "LoadVariableToRegister"
+		return true
+	if typeName is "Set"
+		return true
+	false
+IsStore Boolean
+	if typeName is "StoreConstantToVariable"
+		return true
+	if typeName is "StoreRegisterToVariable"
+		return true
+	false
+IsReturn Boolean
+	if typeName is "Return"
+		return true
+	false
+Empty BytecodeInstruction
+	BytecodeInstruction("Return", 0, 0, "")

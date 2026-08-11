@@ -1,0 +1,82 @@
+has registerExprs Texts
+ReconstructInstruction(instruction BytecodeInstruction) Text
+	if instruction.typeName is "Set"
+		return FormatAssign(instruction)
+	if instruction.typeName is "LoadConstantToRegister"
+		return FormatAssign(instruction)
+	if instruction.typeName is "LoadVariableToRegister"
+		return FormatLoadVar(instruction)
+	ReconstructRest(instruction)
+FormatAssign(instruction BytecodeInstruction) Text
+	let regName = Register.NameOf(instruction.register)
+	regName + " = " + instruction.amount to Text
+FormatLoadVar(instruction BytecodeInstruction) Text
+	let regName = Register.NameOf(instruction.register)
+	regName + " = " + instruction.label
+ReconstructRest(instruction BytecodeInstruction) Text
+	if instruction.typeName is "StoreConstantToVariable"
+		return FormatStoreConst(instruction)
+	if instruction.typeName is "StoreRegisterToVariable"
+		return FormatStoreReg(instruction)
+	if instruction.typeName is "Return"
+		return FormatReturn(instruction)
+	if instruction.typeName is "Print"
+		return "logger.Log(" + instruction.label + ")"
+	ReconstructBinary(instruction)
+FormatStoreConst(instruction BytecodeInstruction) Text
+	"constant " + instruction.label + " = " + instruction.amount to Text
+FormatStoreReg(instruction BytecodeInstruction) Text
+	let regName = Register.NameOf(instruction.register)
+	"constant " + instruction.label + " = " + regName
+FormatReturn(instruction BytecodeInstruction) Text
+	let regName = Register.NameOf(instruction.register)
+	"return " + regName
+ReconstructBinary(instruction BytecodeInstruction) Text
+	if instruction.typeName is "Add"
+		return BinaryLine(instruction, "+")
+	if instruction.typeName is "Subtract"
+		return BinaryLine(instruction, "-")
+	if instruction.typeName is "Multiply"
+		return BinaryLine(instruction, "*")
+	if instruction.typeName is "Divide"
+		return BinaryLine(instruction, "/")
+	if instruction.typeName is "Modulo"
+		return BinaryLine(instruction, "%")
+	ReconstructCompare(instruction)
+ReconstructCompare(instruction BytecodeInstruction) Text
+	if instruction.typeName is "Equal"
+		return BinaryLine(instruction, "is")
+	if instruction.typeName is "NotEqual"
+		return BinaryLine(instruction, "is not")
+	if instruction.typeName is "GreaterThan"
+		return BinaryLine(instruction, ">")
+	if instruction.typeName is "LessThan"
+		return BinaryLine(instruction, "<")
+	ReconstructJump(instruction)
+ReconstructJump(instruction BytecodeInstruction) Text
+	if instruction.typeName is "JumpIfFalse"
+		return "jumpIfFalse " + instruction.amount to Text
+	if instruction.typeName is "JumpIfTrue"
+		return "jumpIfTrue " + instruction.amount to Text
+	if instruction.typeName is "Invoke"
+		return "call " + instruction.label
+	instruction to Text
+BinaryLine(instruction BytecodeInstruction, operatorName Text) Text
+	let result = Register.NameOf(instruction.ResultRegister)
+	let left = Register.NameOf(instruction.register)
+	let right = Register.NameOf(instruction.amount)
+	result + " = " + left + " " + operatorName + " " + right
+ReconstructMethod(method BinaryMethod) Texts
+	mutable lines = List(Mutable(Text))
+	for 0
+		lines.Add("x")
+	for method.instructions
+		lines.Add("	" + ReconstructInstruction(value))
+	lines
+Empty Decompiler
+	mutable empty = List(Mutable(Text))
+	for 0
+		empty.Add("x")
+	Decompiler(empty)
+to Text
+	"decompiler"

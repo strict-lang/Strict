@@ -1,0 +1,39 @@
+has instructions BytecodeInstructions
+has registry
+LastRegister Number
+	if instructions.Length is 0
+		return 0
+	let last = instructions(instructions.Length - 1)
+	if last.IsBinary
+		return last.ResultRegister
+	last.register
+Count Number
+	instructions.Length
+Append(instruction BytecodeInstruction) GenerationResult
+	mutable next = List(Mutable(BytecodeInstruction))
+	for instructions
+		next.Add(value)
+	next.Add(instruction)
+	GenerationResult(next, registry)
+AppendWithRegistry(instruction BytecodeInstruction, nextRegistry Registry) GenerationResult
+	mutable next = List(Mutable(BytecodeInstruction))
+	for instructions
+		next.Add(value)
+	next.Add(instruction)
+	GenerationResult(next, nextRegistry)
+Concat(other GenerationResult) GenerationResult
+	mutable next = List(Mutable(BytecodeInstruction))
+	for instructions
+		next.Add(value)
+	for other.instructions
+		next.Add(value)
+	GenerationResult(next, other.registry)
+Empty GenerationResult
+	mutable ops = List(Mutable(BytecodeInstruction))
+	for 0
+		ops.Add(BytecodeInstruction("Return", 0, 0, ""))
+	GenerationResult(ops, Registry.Empty)
+WithRegistry(reg Registry) GenerationResult
+	GenerationResult(instructions, reg)
+to Text
+	"ops=" + Count to Text + " " + registry to Text

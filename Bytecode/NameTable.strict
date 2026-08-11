@@ -1,0 +1,78 @@
+has names Texts
+Has(name Text) Boolean
+	for names
+		if value is name
+			return true
+	false
+IndexOf(name Text) Number
+	mutable index = 0
+	for names
+		if value is name
+			return index
+		index = index + 1
+	-1
+Get(index Number) Text
+	if index < 0
+		return ""
+	if index >= names.Length
+		return ""
+	names(index)
+Add(name Text) NameTable
+	if Has(name)
+		return NameTable(names)
+	Append(name)
+Append(name Text) NameTable
+	mutable next = List(Mutable(Text))
+	for names
+		next.Add(value)
+	next.Add(name)
+	NameTable(next)
+Count Number
+	names.Length
+CollectMany(items Texts) NameTable
+	mutable table = NameTable(names)
+	for items
+		table = table.Add(value)
+	table
+BuiltIn NameTable
+	BuiltIn.Has("Number") is true
+	BuiltIn.Has("Boolean") is true
+	AddCoreNames(EmptyList)
+AddCoreNames(built Texts) NameTable
+	built.Add("")
+	built.Add("None")
+	built.Add("Boolean")
+	built.Add("Number")
+	built.Add("Character")
+	built.Add("Range")
+	built.Add("Text")
+	built.Add("Error")
+	AddMoreNames(built)
+AddMoreNames(built Texts) NameTable
+	built.Add("List")
+	built.Add("Logger")
+	built.Add("File")
+	built.Add("Directory")
+	built.Add("Mutable")
+	built.Add("Dictionary")
+	built.Add("Run")
+	AddLowerNames(built)
+AddLowerNames(built Texts) NameTable
+	built.Add("from")
+	built.Add("value")
+	built.Add("number")
+	built.Add("text")
+	built.Add("boolean")
+	NameTable(built)
+EmptyList Texts
+	mutable built = List(Mutable(Text))
+	for 0
+		built.Add("x")
+	built
+Empty NameTable
+	Empty.Count is 0
+	NameTable(EmptyList)
+ForType(typeName Text) NameTable
+	BuiltIn.Add(typeName)
+to Text
+	"names=" + Count to Text

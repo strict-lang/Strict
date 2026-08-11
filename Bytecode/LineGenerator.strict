@@ -1,0 +1,49 @@
+has state GenerationResult
+GenerateLine(line Text) GenerationResult
+	if line.StartsWith("return ")
+		return GenerateReturn(line)
+	if line.StartsWith("constant ")
+		return GenerateConstant(line)
+	if line.StartsWith("let ")
+		return GenerateLet(line)
+	if line.StartsWith("if ")
+		return GenerateIf(line)
+	ExpressionCodegen(state).GenerateExpression(line)
+GenerateReturn(line Text) GenerationResult
+	let rest = line.Substring(7, 200).Trim
+	let expr = ExpressionCodegen(state).GenerateExpression(rest)
+	expr.Append(InstructionBuilder.ReturnOp(expr.LastRegister))
+GenerateConstant(line Text) GenerationResult
+	let rest = line.Substring(9, 200).Trim
+	GenerateAssignment(rest)
+GenerateLet(line Text) GenerationResult
+	let rest = line.Substring(4, 200).Trim
+	GenerateAssignment(rest)
+GenerateAssignment(rest Text) GenerationResult
+	let eq = rest.IndexOf(" = ")
+	if eq is -1
+		return state
+	let name = rest.Substring(0, eq).Trim
+	let exprText = rest.Substring(eq + 3, 200).Trim
+	AssignValue(name, exprText)
+AssignValue(name Text, exprText Text) GenerationResult
+	if NumberLiteral.Empty.IsNumberLiteral(exprText)
+		return state.Append(InstructionBuilder.StoreConstant(name, exprText to Number))
+	let expr = ExpressionCodegen(state).GenerateExpression(exprText)
+	expr.Append(InstructionBuilder.StoreRegister(expr.LastRegister, name))
+GenerateIf(line Text) GenerationResult
+	let cond = line.Substring(3, 200).Trim
+	let expr = ExpressionCodegen(state).GenerateExpression(cond)
+	expr.Append(InstructionBuilder.JumpOp(InstructionType.JumpIfFalse, 1))
+GenerateBody(lines Texts) GenerationResult
+	mutable current = GenerationResult.Empty
+	for lines
+		current = LineGenerator(current).GenerateLine(value)
+	current
+GenerateMethod(name Text, returnType Text, lines Texts) BinaryMethod
+	let result = GenerateBody(lines)
+	BinaryMethod.Create(name, returnType).WithInstructions(result.instructions)
+Empty LineGenerator
+	LineGenerator(GenerationResult.Empty)
+to Text
+	state to Text

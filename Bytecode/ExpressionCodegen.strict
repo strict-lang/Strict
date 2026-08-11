@@ -1,0 +1,79 @@
+has state GenerationResult
+GenerateExpression(text Text) GenerationResult
+	if text is "true"
+		return LoadNumber(1)
+	if text is "false"
+		return LoadNumber(0)
+	if NumberLiteral.Empty.IsNumberLiteral(text)
+		return LoadNumber(text to Number)
+	GenerateBinaryOrVar(text)
+GenerateBinaryOrVar(text Text) GenerationResult
+	let plus = text.IndexOf(" + ")
+	if plus is not -1
+		return BinaryAt(text, plus, InstructionType.Add)
+	let minus = text.IndexOf(" - ")
+	if minus is not -1
+		return BinaryAt(text, minus, InstructionType.Subtract)
+	GenerateCompareOrMul(text)
+GenerateCompareOrMul(text Text) GenerationResult
+	let isNot = text.IndexOf(" is not ")
+	if isNot is not -1
+		return BinaryAt(text, isNot, InstructionType.NotEqual)
+	let isOp = text.IndexOf(" is ")
+	if isOp is not -1
+		return BinaryAt(text, isOp, InstructionType.Equal)
+	let gt = text.IndexOf(" > ")
+	if gt is not -1
+		return BinaryAt(text, gt, InstructionType.GreaterThan)
+	GenerateMulOrVar(text)
+GenerateMulOrVar(text Text) GenerationResult
+	let mul = text.IndexOf(" * ")
+	if mul is not -1
+		return BinaryAt(text, mul, InstructionType.Multiply)
+	let div = text.IndexOf(" / ")
+	if div is not -1
+		return BinaryAt(text, div, InstructionType.Divide)
+	LoadVariable(text)
+BinaryAt(text Text, index Number, code Number) GenerationResult
+	let left = text.Substring(0, index).Trim
+	let right = text.Substring(index + OperatorWidth(code), 200).Trim
+	CombineBinary(GenerateOperand(left), right, code)
+CombineBinary(leftResult GenerationResult, right Text, code Number) GenerationResult
+	let rightResult = ExpressionCodegen(leftResult).GenerateOperand(right)
+	let combined = leftResult.Concat(rightResult)
+	EmitBinary(combined, leftResult.LastRegister, rightResult.LastRegister, code)
+EmitBinary(combined GenerationResult, leftReg Number, rightReg Number, code Number) GenerationResult
+	let resultReg = combined.registry.Allocate
+	let advanced = combined.registry.Advance
+	let op = InstructionBuilder.BinaryOp(code, leftReg, rightReg, resultReg)
+	combined.AppendWithRegistry(op, advanced)
+OperatorWidth(code Number) Number
+	if code is InstructionType.NotEqual
+		return 8
+	if code is InstructionType.Equal
+		return 4
+	if code is InstructionType.GreaterThan
+		return 3
+	3
+GenerateOperand(text Text) GenerationResult
+	if NumberLiteral.Empty.IsNumberLiteral(text)
+		return LoadNumber(text to Number)
+	if text is "true"
+		return LoadNumber(1)
+	if text is "false"
+		return LoadNumber(0)
+	LoadVariable(text)
+LoadNumber(amount Number) GenerationResult
+	let reg = state.registry.Allocate
+	if reg is -1
+		return state
+	let advanced = state.registry.Advance
+	state.AppendWithRegistry(InstructionBuilder.LoadConstant(reg, amount), advanced)
+LoadVariable(name Text) GenerationResult
+	let reg = state.registry.Allocate
+	if reg is -1
+		return state
+	let advanced = state.registry.Advance
+	state.AppendWithRegistry(InstructionBuilder.LoadVariable(reg, name), advanced)
+Empty ExpressionCodegen
+	ExpressionCodegen(GenerationResult.Empty)

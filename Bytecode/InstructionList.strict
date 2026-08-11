@@ -1,0 +1,70 @@
+has instructions BytecodeInstructions
+Count Number
+	instructions.Length
+IsEmpty Boolean
+	if instructions.Length is 0
+		return true
+	false
+First BytecodeInstruction
+	if instructions.Length is 0
+		return BytecodeInstruction("Return", 0, 0, "")
+	instructions(0)
+Last BytecodeInstruction
+	if instructions.Length is 0
+		return BytecodeInstruction("Return", 0, 0, "")
+	instructions(instructions.Length - 1)
+HasType(typeName Text) Boolean
+	for instructions
+		if value.typeName is typeName
+			return true
+	false
+CountType(typeName Text) Number
+	mutable total = 0
+	for instructions
+		if value.typeName is typeName
+			total = total + 1
+	total
+HasBinary Boolean
+	for instructions
+		if value.IsBinary
+			return true
+	false
+HasReturn Boolean
+	for instructions
+		if value.IsReturn
+			return true
+	false
+Append(instruction BytecodeInstruction) InstructionList
+	mutable next = List(Mutable(BytecodeInstruction))
+	for instructions
+		next.Add(value)
+	next.Add(instruction)
+	InstructionList(next)
+Concat(other InstructionList) InstructionList
+	mutable next = List(Mutable(BytecodeInstruction))
+	for instructions
+		next.Add(value)
+	for other.instructions
+		next.Add(value)
+	InstructionList(next)
+ToTexts Texts
+	mutable lines = List(Mutable(Text))
+	for 0
+		lines.Add("x")
+	for instructions
+		lines.Add(value to Text)
+	lines
+FromSingle(instruction BytecodeInstruction) InstructionList
+	mutable ops = List(Mutable(BytecodeInstruction))
+	for 0
+		ops.Add(BytecodeInstruction("Return", 0, 0, ""))
+	ops.Add(instruction)
+	InstructionList(ops)
+Empty InstructionList
+	Empty.IsEmpty is true
+	mutable ops = List(Mutable(BytecodeInstruction))
+	for 0
+		ops.Add(BytecodeInstruction("Return", 0, 0, ""))
+	InstructionList(ops)
+to Text
+	"ops=" + Count to Text
