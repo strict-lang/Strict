@@ -13,6 +13,11 @@ public class Fibonacci
 				second = next;
 		second;
 	}
+	public static void Main()
+	{
+		Console.WriteLine("Fibonacci(10) = " + new Fibonacci(10).GetNthFibonacci());
+		Console.WriteLine("Fibonacci(5) = " + new Fibonacci(5).GetNthFibonacci());
+	}
 
 	[Test]
 	public void GetNthFibonacciTest()

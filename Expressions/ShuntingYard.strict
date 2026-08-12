@@ -10,12 +10,21 @@ OperatorPrecedence(token Text) Number
 	OperatorPrecedence("a") is 0
 	ArithmeticPrecedence(token)
 ArithmeticPrecedence(token Text) Number
+	ArithmeticPrecedence("+") is 1
+	ArithmeticPrecedence("-") is 1
+	ArithmeticPrecedence("*") is 2
+	ArithmeticPrecedence("/") is 2
+	ArithmeticPrecedence("and") is 3
 	if (token is "+") or (token is "-")
 		return 1
 	if (token is "*") or (token is "/")
 		return 2
 	LogicalPrecedence(token)
 LogicalPrecedence(token Text) Number
+	LogicalPrecedence("and") is 3
+	LogicalPrecedence("or") is 3
+	LogicalPrecedence("xor") is 3
+	LogicalPrecedence("+") is 0
 	if (token is "and") or (token is "or") or (token is "xor")
 		return 3
 	0

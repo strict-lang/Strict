@@ -180,4 +180,20 @@ public sealed class TypeParserTests
 		Assert.That(simpleType.Members[1].Type,
 			Is.EqualTo(TestPackage.Instance.GetType(Type.Boolean)));
 	}
+
+	[Test]
+	public void AutoNumberedEnumConstantDoesNotWrapExistingTwoArgType()
+	{
+		using var localPackage = new Package(package, "EnumAddConst");
+		using var add = new Type(localPackage,
+			new TypeLines("Add", "has first Number", "has second Number",
+				"from(first Number, second Number)", "\tfirst + second")).
+			ParseMembersAndMethods(parser);
+		using var instruction = new Type(localPackage,
+			new TypeLines("InstructionAddConst",
+				"constant StoreSeparator = 10", "constant Add")).ParseMembersAndMethods(parser);
+		var addConstant = instruction.Members.Single(member => member.Name == "Add");
+		Assert.That(addConstant.Type.Name, Is.EqualTo(Type.Number));
+		Assert.That(addConstant.InitialValue?.ToString(), Is.EqualTo("11"));
+	}
 }

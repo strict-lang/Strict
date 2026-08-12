@@ -29,7 +29,8 @@ public sealed class ListCall(Expression list, Expression index, Expression? seco
 						: throw new MethodExpressionParser.InvalidArgumentItIsNotMethodOrListCall(body,
 							variable, arguments);
 		if (arguments.Count > 2)
-			throw new OnlyOneOrTwoArgumentsAreSupported(body, variable, arguments.Count);
+			return TryParseShadowedTypeConstructor(body, variable, arguments) ??
+				throw new OnlyOneOrTwoArgumentsAreSupported(body, variable, arguments.Count);
 		var flattenedIndex = arguments.Count == 1
 			? arguments[0]
 			: CreateFlattenedIndex(body, variable, arguments[0], arguments[1]);
@@ -37,6 +38,14 @@ public sealed class ListCall(Expression list, Expression index, Expression? seco
 		return arguments.Count == 1
 			? listCall
 			: new ListCall(listCall.List, listCall.Index, arguments[1], arguments[0]);
+	}
+
+	private static Expression? TryParseShadowedTypeConstructor(Body body, Expression variable,
+		IReadOnlyList<Expression> arguments)
+	{
+		if (variable is not MemberCall { Instance: null } memberCall)
+			return null;
+		return MethodCall.TryParseFromOrEnum(body, arguments, memberCall.Member.Name);
 	}
 
 	private static Expression CreateFlattenedIndex(Body body, Expression listVariable,

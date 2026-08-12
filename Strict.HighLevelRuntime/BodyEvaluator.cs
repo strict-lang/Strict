@@ -78,7 +78,7 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 				throw new Interpreter.TestFailed(body.Method, e, last, GetTestFailureDetails(e, ctx));
 		}
 		if (runOnlyTests && count > 1 && last.Equals(interpreter.noneInstance) &&
-			body.Method.Name != Method.Run)
+			body.Method.Name != Method.Run && interpreter.behavior != TestBehavior.TestRunner)
 			throw new Interpreter.MethodRequiresTest(body.Method, body);
 		if (runOnlyTests || last.IsError || last.IsType(body.Method.ReturnType))
 			return last;

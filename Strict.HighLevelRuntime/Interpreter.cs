@@ -33,7 +33,7 @@ public class Interpreter
 		toEvaluator = new ToEvaluator(this);
 	}
 
-	private readonly TestBehavior behavior;
+	internal readonly TestBehavior behavior;
 	internal readonly Type noneType;
 	internal readonly ValueInstance noneInstance;
 	internal readonly Type booleanType;
@@ -305,7 +305,7 @@ public class Interpreter
 			method.Type.Name == Type.Number &&
 			(method.Name == "digits" || method.Name == BinaryOperator.To && method.ReturnType.IsText) ||
 			method.Type.IsText && method.Name == "Split" ||
-			method.Type.Name == "Parser");
+			method.Type.Name is "Parser" or "ShuntingYard");
 
 	private void DisposeTrackedValues(ExecutionContext ctx)
 	{

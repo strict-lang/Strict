@@ -233,11 +233,11 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 
 	public static bool CanTryParseConditional(Body body, ReadOnlySpan<char> input)
 	{
-		var thenIndex = input.IndexOf(ThenSeparator, StringComparison.Ordinal);
+		var thenIndex = IndexOfOutsideText(input, ThenSeparator);
 		var firstBracket = input.IndexOf('(');
 		if (thenIndex > 0 && NoFirstBracketOrSurroundedByIt(input, firstBracket, thenIndex))
 		{
-			var firstElseIndex = input.IndexOf(ElseSeparator, StringComparison.Ordinal);
+			var firstElseIndex = IndexOfOutsideText(input, ElseSeparator);
 			var partBeforeFirstElse = firstElseIndex > 0
 				? input[..firstElseIndex]
 				: input;
@@ -248,10 +248,43 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 		return false;
 	}
 
+	private static int IndexOfOutsideText(ReadOnlySpan<char> input, string token)
+	{
+		var insideText = false;
+		for (var index = 0; index <= input.Length - token.Length; index++)
+		{
+			if (input[index] == '"' && (index == 0 || input[index - 1] != '\\'))
+				insideText = !insideText;
+			if (!insideText && input[index..].StartsWith(token, StringComparison.Ordinal))
+				return index;
+		}
+		return -1;
+	}
+
 	private static bool NoFirstBracketOrSurroundedByIt(ReadOnlySpan<char> input, int firstBracket,
 		int separatorIndex) =>
-		firstBracket == -1 || firstBracket > separatorIndex || input.IndexOf(')') < separatorIndex ||
-		firstBracket == 0 && input[^1] == ')';
+		firstBracket == -1 || firstBracket > separatorIndex ||
+		firstBracket == 0 && input[^1] == ')' ||
+		IsThenOutsideParentheses(input, separatorIndex);
+
+	private static bool IsThenOutsideParentheses(ReadOnlySpan<char> input, int thenIndex)
+	{
+		var depth = 0;
+		var insideText = false;
+		for (var index = 0; index < thenIndex; index++)
+		{
+			var character = input[index];
+			if (character == '"' && (index == 0 || input[index - 1] != '\\'))
+				insideText = !insideText;
+			if (insideText)
+				continue;
+			if (character == '(')
+				depth++;
+			else if (character == ')')
+				depth--;
+		}
+		return depth == 0;
+	}
 
 	public sealed class ConditionalExpressionsCannotBeNested(Body body) : ParsingFailed(body);
 
@@ -274,12 +307,17 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	private static int CountThenSeparators(ReadOnlySpan<char> input)
 	{
 		var count = 0;
+		var insideText = false;
 		for (var index = 0; index <= input.Length - ThenSeparator.Length; index++)
-			if (input[index..].StartsWith(ThenSeparator, StringComparison.Ordinal))
+		{
+			if (input[index] == '"' && (index == 0 || input[index - 1] != '\\'))
+				insideText = !insideText;
+			if (!insideText && input[index..].StartsWith(ThenSeparator, StringComparison.Ordinal))
 			{
 				count++;
 				index += ThenSeparator.Length - 1;
 			}
+		}
 		return count;
 	}
 

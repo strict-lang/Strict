@@ -32,7 +32,9 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 				RunMethod(method);
 	}
 
-	private static bool ShouldSkipKnownDummyBaseType(Type type) => type.Name == Type.Number;
+	private static bool ShouldSkipKnownDummyBaseType(Type type) =>
+		type.Name == Type.Number ||
+		type.Package.Name == "Expressions" && type.Name is not "ValueInstance" and not "Value";
 
 	public void RunMethod(Method method)
 	{

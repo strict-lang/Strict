@@ -112,7 +112,7 @@ public sealed class LanguageTypeVmTests
 		var binary = BinaryGenerator.GenerateFromRunMethods(run, [run]);
 		DumpBinary(binary);
 		var typeBinaryName = binary.MethodsPerType.Keys.First(name =>
-			name == "Type" || name.EndsWith("/Type", StringComparison.Ordinal));
+			name == "Type" || name.Contains("Language/Type", StringComparison.Ordinal));
 		Assert.That(binary.MethodsPerType[typeBinaryName].MethodGroups.ContainsKey("Members"),
 			Is.True, "Members should be compiled");
 		var membersGroup = binary.MethodsPerType[typeBinaryName].MethodGroups["Members"];

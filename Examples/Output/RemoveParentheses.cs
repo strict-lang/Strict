@@ -6,7 +6,7 @@ public class RemoveParentheses
 	public string Remove()
 	{
 		var parentheses = 0;
-		foreach (var index in text)
+		foreach (var value in text)
 			if (value == "(")
 				parentheses = parentheses.Increment;
 			else

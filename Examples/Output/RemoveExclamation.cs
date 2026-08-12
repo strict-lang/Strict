@@ -5,7 +5,7 @@ public class RemoveExclamation
 	private string text = new string();
 	public string Remove()
 	{
-		foreach (var index in text)
+		foreach (var value in text)
 			if (value is not "!")
 				value;
 	}

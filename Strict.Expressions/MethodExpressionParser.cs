@@ -508,7 +508,10 @@ public class MethodExpressionParser : ExpressionParser
 		return !input.IsWord() && !input.Contains(' ') && !input.Contains('(')
 			? TryParseStandaloneToken(body, arguments, input)
 			: TryParseOuterVariable(body, input, instance) ??
-			TryParseLocalVariableOrParameter(body, input) ??
+			// Instance members must win over same-named parameters (FromNumber(3).number).
+			(instance is null
+				? TryParseLocalVariableOrParameter(body, input)
+				: null) ??
 			TryParseDictionaryElementsAlias(body, type, instance, input) ??
 			TryParseGenericTypeEnum(body, type, instance, arguments, input) ??
 			TryParseMemberOrMethodCall(instance, body, input, arguments, type);

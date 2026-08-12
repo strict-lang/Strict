@@ -2,17 +2,17 @@ namespace SourceGeneratorTests;
 
 public class ArithmeticFunction
 {
-	private List<int> numbers = new List<int>();
+	private int first;
+	private int second;
 	public int Calculate(string operation)
 	{
-		foreach (var index in numbers)
-			switch (operation)
-			{
-				case "add": return value;
-				case "subtract": return value;
-				case "multiply": return value;
-				case "divide": return value;
-			}
+		switch (operation)
+		{
+			case "add": return first + second;
+			case "subtract": return first - second;
+			case "multiply": return first * second;
+			case "divide": return first / second;
+		}
 	}
 
 	[Test]

@@ -1,4 +1,5 @@
 global using Type = Strict.Language.Type;
+using Strict.Language.Tests;
 
 namespace Strict.Expressions.Tests;
 
@@ -173,4 +174,22 @@ public sealed class BinaryTests : TestExpressions
 		ParseAndCheckOutputMatchesInput("\"100C in Fahrenheit: \" + \"212\"",
 			CreateBinary(new Text(method, "100C in Fahrenheit: "), BinaryOperator.Plus,
 				new Text(method, "212")));
+
+	[Test]
+	public void MethodCallMemberIsLiteralRoundTripsInDebug()
+	{
+		using var valueInstance = new Type(TestPackage.Instance,
+			new TypeLines(nameof(MethodCallMemberIsLiteralRoundTripsInDebug),
+				"has typeName Text",
+				"has number",
+				"has text",
+				"has kind Text",
+				"FromNumber(number Number) " + nameof(MethodCallMemberIsLiteralRoundTripsInDebug),
+				"\tFromNumber(3).number is 3",
+				"\t" + nameof(MethodCallMemberIsLiteralRoundTripsInDebug) +
+				"(\"Number\", number, \"\", \"\")")).ParseMembersAndMethods(this);
+		var fromNumber = valueInstance.Methods.Single(method => method.Name == "FromNumber");
+		var body = (Body)fromNumber.GetBodyAndParseIfNeeded();
+		Assert.That(body.Expressions[0].ToString(), Is.EqualTo("FromNumber(3).number is 3"));
+	}
 }

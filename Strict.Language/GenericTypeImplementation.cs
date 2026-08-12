@@ -78,7 +78,7 @@ public sealed class GenericTypeImplementation : Type
 	internal void ReimplementMembers()
 	{
 		members.Clear();
-		cachedIteratorResult = null;
+		cachedIteratorState = 0;
 		cachedEvaluatedMemberTypes.Clear();
 		ImplementMembers();
 	}

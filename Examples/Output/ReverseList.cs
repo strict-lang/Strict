@@ -12,6 +12,6 @@ public class ReverseList
 	[Test]
 	public void ReverseTest()
 	{
-		Assert.That(() => new ReverseList(1, 2, 3, 4).Reverse() == (4, 3, 2, 1)));
+		Assert.That(() => new ReverseList((1, 2, 3, 4)).Reverse() == (4, 3, 2, 1)));
 	}
 }

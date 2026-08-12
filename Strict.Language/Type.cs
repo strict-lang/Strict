@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 #if DEBUG
 using System.Runtime.CompilerServices;
 #endif
@@ -487,10 +488,14 @@ public class Type : Context, IDisposable
 
 	private bool HasAnyIteratorMember()
 	{
-		if (cachedIteratorResult != null)
-			return cachedIteratorResult.Value;
-		cachedIteratorResult = ExecuteIsIteratorCheck();
-		return (bool)cachedIteratorResult;
+		var cached = Volatile.Read(ref cachedIteratorState);
+		if (cached != 0)
+			return cached == IteratorTrue;
+		var computed = ExecuteIsIteratorCheck();
+		Volatile.Write(ref cachedIteratorState, computed
+			? IteratorTrue
+			: IteratorFalse);
+		return computed;
 	}
 
 	private bool ExecuteIsIteratorCheck()
@@ -508,8 +513,10 @@ public class Type : Context, IDisposable
 		return false;
 	}
 
-	protected bool? cachedIteratorResult;
-	protected readonly Dictionary<string, bool> cachedEvaluatedMemberTypes = new();
+	protected int cachedIteratorState;
+	private const int IteratorFalse = 1;
+	private const int IteratorTrue = 2;
+	protected readonly ConcurrentDictionary<string, bool> cachedEvaluatedMemberTypes = new();
 
 	/// <summary>
 	/// Can OUR type be converted to sameOrUsableType and be used as such? Be careful how this is

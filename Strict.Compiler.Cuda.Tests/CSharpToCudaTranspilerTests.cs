@@ -93,7 +93,8 @@ public sealed class CSharpToCudaTranspilerTests
 		// see http://docs.nvidia.com/cuda/nvrtc/index.html for usage and options
 		//https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 		//nvcc .\vectorAdd.cu -use_fast_math -ptx -m 64 -arch compute_61 -code sm_61 -o .\vectorAdd.ptx
-		rtc.Compile(["--gpu-architecture=compute_75"]);
+		// GTX 970 is sm_52; PTX is forward-compatible so older compute is safer than 75.
+		rtc.Compile(["--gpu-architecture=compute_52"]);
 		return rtc;
 	}
 

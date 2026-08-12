@@ -95,7 +95,7 @@ public class Program
 			CreateFolderOnceByCreatingDotnetProject(folder, generatedCode);
 		File.WriteAllText(Path.Combine(folder, "Program.cs"), generatedCode);
 		var actualText = RunDotnetAndReturnOutput(folder, "run", out var error);
-		return error.Length > 0
+		return IsRealDotnetFailure(error)
 			? throw new CSharpCompilationFailed(error, actualText, generatedCode)
 			: actualText;
 	}
@@ -106,7 +106,8 @@ public class Program
 		var creationOutput = RunDotnetAndReturnOutput("",
 			"new console --force --name " + projectName + " --output \"" + folder + "\"",
 			out var creationError);
-		if (!creationOutput.Contains("successful"))
+		var projectFilePath = Path.Combine(folder, projectName + ".csproj");
+		if (!File.Exists(projectFilePath) && !creationOutput.Contains("successful"))
 			throw new CSharpCompilationFailed(creationError, creationOutput, generatedCode);
 	}
 
@@ -124,10 +125,25 @@ public class Program
 				RedirectStandardError = true
 			}
 		};
+		process.StartInfo.Environment["DOTNET_NOLOGO"] = "1";
+		process.StartInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
+		process.StartInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
+		process.StartInfo.Environment["DOTNET_CLI_UI_LANGUAGE"] = "en";
 		process.Start();
 		error = process.StandardError.ReadToEnd();
-		return process.StandardOutput.ReadToEnd();
+		var output = process.StandardOutput.ReadToEnd();
+		process.WaitForExit();
+		if (process.ExitCode != 0 && error.Length == 0)
+			error = output;
+		if (process.ExitCode == 0 && !IsRealDotnetFailure(error))
+			error = "";
+		return output;
 	}
+
+	private static bool IsRealDotnetFailure(string error) =>
+		error.Length > 0 &&
+		(error.Contains("error ", StringComparison.OrdinalIgnoreCase) ||
+			error.Contains("The build failed", StringComparison.OrdinalIgnoreCase));
 
 	public sealed class
 		CSharpCompilationFailed(string error, string actualText, string generatedCode) : Exception(

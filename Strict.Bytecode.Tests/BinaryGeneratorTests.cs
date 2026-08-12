@@ -202,8 +202,8 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					new StoreFromRegisterInstruction(Register.R15, "count"),
 					new JumpToId(2, InstructionType.JumpEnd),
 					new LoopEndInstruction(29),
-					new LoadVariableToRegister(Register.R0, "result"),
-					new ReturnInstruction(Register.R0)
+					new LoadVariableToRegister(Register.R16, "result"),
+					new ReturnInstruction(Register.R16)
 				],
 				(string[])
 				[
@@ -251,13 +251,13 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					new BinaryInstruction(InstructionType.Multiply, Register.R12, Register.R13, Register.R14),
 					new ReturnInstruction(Register.R14), new JumpToId(2, InstructionType.JumpEnd),
 					new LoadVariableToRegister(Register.R15, "operation"),
-					new LoadConstantInstruction(Register.R0, Text("divide")),
-					new BinaryInstruction(InstructionType.Equal, Register.R15, Register.R0),
+					new LoadConstantInstruction(Register.R16, Text("divide")),
+					new BinaryInstruction(InstructionType.Equal, Register.R15, Register.R16),
 					new JumpToId(3, InstructionType.JumpToIdIfFalse),
-					new LoadVariableToRegister(Register.R1, "First"),
-					new LoadVariableToRegister(Register.R2, "Second"),
-					new BinaryInstruction(InstructionType.Divide, Register.R1, Register.R2, Register.R3),
-					new ReturnInstruction(Register.R3), new JumpToId(3, InstructionType.JumpEnd)
+					new LoadVariableToRegister(Register.R17, "First"),
+					new LoadVariableToRegister(Register.R18, "Second"),
+					new BinaryInstruction(InstructionType.Divide, Register.R17, Register.R18, Register.R19),
+					new ReturnInstruction(Register.R19), new JumpToId(3, InstructionType.JumpEnd)
 				],
 				(string[])
 				[
