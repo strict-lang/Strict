@@ -1,0 +1,9 @@
+[mcp_servers.scrunch]
+command = "dotnet"
+args = [
+	"Strict.LanguageServer/bin/Debug/net10.0/Strict.LanguageServer.dll",
+	"--mcp"
+]
+enabled = true
+startup_timeout_sec = 45
+tool_timeouts = { check = 300, status = 30 }

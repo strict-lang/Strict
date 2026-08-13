@@ -959,7 +959,12 @@ public class Interpreter
 		$"\"{method.Name}\" method failed: {expression}, result: {result}" + (details.Length > 0
 			? $", evaluated: {details}"
 			: "") + " in" + Environment.NewLine +
-		$"{method.Type.FilePath}:line {expression.LineNumber + 1}");
+		$"{method.Type.FilePath}:line {expression.LineNumber + 1}")
+	{
+		public Expression FailedExpression { get; } = expression;
+		public ValueInstance Result { get; } = result;
+		public string Details { get; } = details;
+	}
 
 	private ValueInstance EvaluateMutableListElementAssignment(ListCall target, Expression value,
 		ExecutionContext ctx)

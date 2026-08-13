@@ -1,39 +1,112 @@
+using System.Diagnostics;
+using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
+using Strict.HighLevelRuntime;
 using Strict.Language;
-using Strict.Expressions;
-using Strict.Bytecode;
 
 namespace Strict.LanguageServer;
 
 //ncrunch: no coverage start
-public sealed class TestRunner(Package package, ILanguageServerFacade languageServer,
-	IEnumerable<Method> methods) : RunnerService(package), RunnableService
+public sealed class TestRunner(Package package, ILanguageServerFacade? languageServer,
+	IEnumerable<Method> methods, DocumentUri? documentUri = null,
+	ICollection<TestNotificationMessage>? sink = null) : RunnerService(package),
+	RunnableService
 {
 	private IEnumerable<Method> Methods { get; } = methods;
+	private readonly string? uri = documentUri?.ToString();
 	private const string NotificationName = "testRunnerNotification";
 
 	public void Run(VirtualMachine vm)
 	{
-		foreach (var test in Methods.SelectMany(method => method.Tests))
-			if (test is MethodCall { Instance: { } } methodCall)
-			{
-				var binary = new BinaryGenerator((MethodCall)methodCall.Instance).Generate();
-				var output = new VirtualMachine(binary).Execute().Returns;
-				languageServer?.SendNotification(NotificationName, new TestNotificationMessage(
-					GetLineNumber(test), Equals(output, ((Value)methodCall.Arguments[0]).Data)
-						? TestState.Green
-						: TestState.Red));
-			}
+		var methodList = Methods.ToList();
+		if (methodList.Count == 0)
+			return;
+		var interpreter = new Interpreter(methodList[0].Type.Package, TestBehavior.TestRunner);
+		var allPassed = true;
+		foreach (var method in methodList)
+			if (!RunMethodTests(interpreter, method))
+				allPassed = false;
+		if (allPassed)
+			StrictBinaryCache.TrySaveAfterPassingTests(methodList[0].Type);
 	}
 
-	private int GetLineNumber(Expression test)
+	private bool RunMethodTests(Interpreter interpreter, Method method)
 	{
-		foreach (var method in Methods)
+		var tests = method.Tests;
+		if (tests.Count == 0)
+			return true;
+		var watch = Stopwatch.StartNew();
+		try
 		{
-			var line = method.Tests.FindIndex(testToFind => testToFind.ToString() == test.ToString());
-			if (line != -1)
-				return method.TypeLineNumber + line + 1;
+			interpreter.Execute(method);
+			watch.Stop();
+			foreach (var test in tests)
+				Notify(test, method, TestState.Green, null, null, watch.Elapsed.TotalMilliseconds);
+			return true;
 		}
-		throw new KeyNotFoundException();
+		catch (Interpreter.TestFailed failed)
+		{
+			watch.Stop();
+			var failedText = failed.FailedExpression.ToString();
+			var seenFailed = false;
+			var durationMs = watch.Elapsed.TotalMilliseconds;
+			var stack = StackFrom(failed.Message);
+			foreach (var test in tests)
+			{
+				if (!seenFailed && test.ToString() == failedText)
+				{
+					Notify(test, method, TestState.Red, failed.Message, failed.Details, durationMs,
+						stack);
+					seenFailed = true;
+					continue;
+				}
+				Notify(test, method, seenFailed
+					? TestState.Red
+					: TestState.Green, seenFailed
+					? failed.Message
+					: null, null, durationMs, seenFailed
+					? stack
+					: null);
+			}
+			return false;
+		}
+		catch (Exception exception)
+		{
+			watch.Stop();
+			var text = DiagnosticFormatter.BuildExceptionText(exception);
+			foreach (var test in tests)
+				Notify(test, method, TestState.Red, text, null, watch.Elapsed.TotalMilliseconds,
+					StackFrom(text));
+			return false;
+		}
+	}
+
+	private void Notify(Expression test, Method method, TestState state, string? message,
+		string? details, double durationMs, string? stackTrace = null)
+	{
+		var notification = new TestNotificationMessage(GetLineNumber(test, method), state, uri,
+			test.ToString(), method.Name, message, details, durationMs, stackTrace, method.Type.Name);
+		sink?.Add(notification);
+		languageServer?.SendNotification(NotificationName, notification);
+	}
+
+	private static string? StackFrom(string? message)
+	{
+		if (string.IsNullOrEmpty(message))
+			return null;
+		var atIndex = message.IndexOf("\n   at ", StringComparison.Ordinal);
+		return atIndex >= 0
+			? message[atIndex..].Trim()
+			: null;
+	}
+
+	private static int GetLineNumber(Expression test, Method method)
+	{
+		if (test.LineNumber > 0)
+			return test.LineNumber;
+		var index = method.Tests.FindIndex(candidate => candidate.ToString() == test.ToString());
+		return index == -1
+			? method.TypeLineNumber
+			: method.TypeLineNumber + index + 1;
 	}
 }

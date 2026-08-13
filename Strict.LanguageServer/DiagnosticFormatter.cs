@@ -17,19 +17,42 @@ public static class DiagnosticFormatter
 		{
 			Code = code,
 			Severity = DiagnosticSeverity.Error,
-			Message = FormatMessage(code, exception.Message),
+			Message = FormatMessage(code, BuildExceptionText(exception)),
 			Range = GetErrorTextRange(content, lineNumber),
 			Source = "strict"
 		};
+	}
+
+	public static string BuildExceptionText(Exception exception)
+	{
+		var text = exception.Message ?? "";
+		var extra = FormatExtraInfo(exception);
+		return extra.Length == 0
+			? text
+			: text + "\n" + extra;
+	}
+
+	public static string FormatExtraInfo(Exception exception)
+	{
+		var parts = new List<string>();
+		var type = exception.GetType();
+		if (!string.IsNullOrEmpty(type.Namespace))
+			parts.Add(type.Namespace + "." + type.Name);
+		if (exception.InnerException != null)
+			parts.Add("Caused by " + exception.InnerException.GetType().Name + ": " +
+				FirstLine(exception.InnerException.Message));
+		return string.Join('\n', parts);
 	}
 
 	public static string FormatMessage(string errorCode, string exceptionMessage)
 	{
 		var humanized = HumanizePascalCase(errorCode);
 		var detail = ExtractDetail(exceptionMessage);
-		return detail.Length == 0
-			? humanized
-			: humanized + ": " + detail;
+		if (detail.Length == 0)
+			return humanized;
+		if (detail.StartsWith(humanized + ":", StringComparison.OrdinalIgnoreCase))
+			return detail;
+		return humanized + ": " + detail;
 	}
 
 	public static string HumanizePascalCase(string name)
@@ -65,22 +88,62 @@ public static class DiagnosticFormatter
 		if (string.IsNullOrWhiteSpace(exceptionMessage))
 			return "";
 		var atIndex = exceptionMessage.IndexOf("\n   at ", StringComparison.Ordinal);
-		var detail = (atIndex >= 0
+		var withoutStack = (atIndex >= 0
 			? exceptionMessage[..atIndex]
 			: exceptionMessage).Trim();
-		// Drop pure path/location lines that only repeat file context the editor already shows
-		if (detail.StartsWith("at ", StringComparison.Ordinal) ||
-			detail.Contains(":line ", StringComparison.Ordinal))
+		var useful = new List<string>();
+		foreach (var rawLine in withoutStack.Split('\n'))
+		{
+			var line = rawLine.Trim().TrimEnd('\r');
+			if (line.Length == 0)
+				continue;
+			if (line.StartsWith("at ", StringComparison.Ordinal) &&
+				line.Contains(":line ", StringComparison.Ordinal))
+			{
+				if (useful.Count == 0)
+					return "";
+				continue;
+			}
+			if (line.Contains(":line ", StringComparison.Ordinal))
+				break;
+			if (line.StartsWith("Instructions ", StringComparison.Ordinal) ||
+				line.StartsWith(">>>", StringComparison.Ordinal) ||
+				line.Length > 0 && char.IsDigit(line[0]) && line.Contains(':'))
+				break;
+			var cleaned = StripTypePrefix(line);
+			if (cleaned.Length > 0)
+				useful.Add(cleaned);
+		}
+		return string.Join('\n', useful);
+	}
+
+	private static string StripTypePrefix(string text)
+	{
+		var colon = text.IndexOf(':');
+		if (colon <= 0 || text[..colon].Contains(' '))
+			return text;
+		var after = text[(colon + 1)..].Trim();
+		return after.Length > 0 && !after.StartsWith("at ", StringComparison.Ordinal)
+			? after
+			: "";
+	}
+
+	private static string FirstLine(string? text)
+	{
+		if (string.IsNullOrEmpty(text))
 			return "";
-		return detail;
+		var newline = text.IndexOf('\n');
+		return (newline < 0
+			? text
+			: text[..newline]).Trim();
 	}
 
 	public static int GetLineNumber(Exception exception, int lineCount)
 	{
 		if (exception is ParsingFailed parsingFailed)
 			return int.Clamp(parsingFailed.FileLineNumber, 0, Math.Max(0, lineCount - 1));
-		var match = LineNumberRegex.Match(exception.Message);
-		if (match.Success && int.TryParse(match.Groups[1].Value, out var oneBased))
+		var matches = LineNumberRegex.Matches(exception.Message);
+		if (matches.Count > 0 && int.TryParse(matches[^1].Groups[1].Value, out var oneBased))
 			return int.Clamp(oneBased - 1, 0, Math.Max(0, lineCount - 1));
 		return 0;
 	}
