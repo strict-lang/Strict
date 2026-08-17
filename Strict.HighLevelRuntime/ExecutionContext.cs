@@ -33,13 +33,17 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 			return v;
 		if (This == null)
 			return Parent?.Find(name, statistics);
-		if (name == Type.ValueLowercase)
-			return This;
 		var members = Type.Members;
 		for (var i = 0; i < members.Count; i++)
 			if (!members[i].IsConstant && members[i].Type.Name != Type.Iterator &&
 				members[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-        return TryGetMemberValue(This.Value, members[i]) ?? new ValueInstance(This.Value, members[i].Type);
+			{
+				var memberValue = TryGetMemberValue(This.Value, members[i]);
+				if (memberValue.HasValue)
+					return memberValue;
+			}
+		if (name == Type.ValueLowercase)
+			return This;
 		return Parent?.Find(name, statistics);
 	}
 

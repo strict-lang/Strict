@@ -25,8 +25,12 @@ public static class DiagnosticFormatter
 
 	public static string FormatMessage(string errorCode, string exceptionMessage)
 	{
-		var humanized = HumanizePascalCase(errorCode);
 		var detail = ExtractDetail(exceptionMessage);
+		if (errorCode is "InterpreterExecutionFailed" or "TestFailed")
+			return detail.Length == 0
+				? HumanizePascalCase(errorCode)
+				: detail;
+		var humanized = HumanizePascalCase(errorCode);
 		return detail.Length == 0
 			? humanized
 			: humanized + ": " + detail;
@@ -68,11 +72,18 @@ public static class DiagnosticFormatter
 		var detail = (atIndex >= 0
 			? exceptionMessage[..atIndex]
 			: exceptionMessage).Trim();
-		// Drop pure path/location lines that only repeat file context the editor already shows
-		if (detail.StartsWith("at ", StringComparison.Ordinal) ||
-			detail.Contains(":line ", StringComparison.Ordinal))
-			return "";
-		return detail;
+		var useful = new List<string>();
+		foreach (var rawLine in detail.Split('\n'))
+		{
+			var line = rawLine.Trim();
+			if (line.Length == 0)
+				continue;
+			if (line.StartsWith("at ", StringComparison.Ordinal) ||
+				line.Contains(":line ", StringComparison.Ordinal))
+				break;
+			useful.Add(line);
+		}
+		return string.Join('\n', useful);
 	}
 
 	public static int GetLineNumber(Exception exception, int lineCount)

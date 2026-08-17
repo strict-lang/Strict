@@ -148,6 +148,8 @@ public class Interpreter
 			return trueInstance;
 		if (TryExecuteNativeFileMethod(method, instance, args, out var fileResult))
 			return fileResult;
+		if (TryExecuteTextWriterWrite(method, args))
+			return noneInstance;
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
 			return trueInstance;
 		var context = CreateExecutionContext(method, instance, args, parentContext, runOnlyTests);
@@ -249,6 +251,23 @@ public class Interpreter
 	private static bool IsNativeFileMethod(string methodName) =>
 		methodName is "ReadLines" or "ReadBytes" or "Write" or "Delete" or "Close" or "Exists" or
 		"Length";
+
+	private static bool TryExecuteTextWriterWrite(Method method, ValueInstance[] args)
+	{
+		if (method.Name != "Write" || method.Type.Name != Type.TextWriter || args.Length == 0)
+			return false;
+		Console.WriteLine(FormatWriteArgument(args[0]));
+		return true;
+	}
+
+	private static string FormatWriteArgument(ValueInstance value)
+	{
+		if (value.IsText)
+			return value.Text;
+		if (value.IsList)
+			return string.Join(Environment.NewLine, value.List.Items.Select(FormatWriteArgument));
+		return value.ToExpressionCodeString();
+	}
 
 	private long GetFileHandle(ValueInstance instance, Method method)
 	{
@@ -959,7 +978,12 @@ public class Interpreter
 		$"\"{method.Name}\" method failed: {expression}, result: {result}" + (details.Length > 0
 			? $", evaluated: {details}"
 			: "") + " in" + Environment.NewLine +
-		$"{method.Type.FilePath}:line {expression.LineNumber + 1}");
+		$"{method.Type.FilePath}:line {expression.LineNumber + 1}")
+	{
+		public Expression FailedExpression { get; } = expression;
+		public string Details { get; } = details;
+		public ValueInstance Result { get; } = result;
+	}
 
 	private ValueInstance EvaluateMutableListElementAssignment(ListCall target, Expression value,
 		ExecutionContext ctx)

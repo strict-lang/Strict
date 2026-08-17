@@ -522,7 +522,8 @@ public sealed class Method : Context
 			: [expression]);
 
 	public event Func<Expression, Expression>? BodyParsed;
-	public class CannotCallBodyOnTraitMethod(Type type, string name) : Exception(type + "." + name);
+	public class CannotCallBodyOnTraitMethod(Type type, string name) : Exception(
+		type.Name + "." + name + " is a trait method and has no implementation");
 
 	public override string ToString() =>
 		Name + parameters.ToBrackets() + (ReturnType.IsNone

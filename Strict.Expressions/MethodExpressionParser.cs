@@ -51,7 +51,7 @@ public class MethodExpressionParser : ExpressionParser
 			? throw new InvalidOperatorHere(body, input.ToString())
 			: input.IsWord()
 				? throw new Body.IdentifierNotFound(body, input.ToString())
-				: throw new UnknownExpression(body, input.ToString()));
+				: throw new UnknownExpression(body, DescribeUnknown(body, input.ToString())));
 
 	private static Expression? TryParseForBodyValueMethodCall(Body body, ReadOnlySpan<char> input)
 	{
@@ -802,6 +802,18 @@ public class MethodExpressionParser : ExpressionParser
 
 	protected sealed class InvalidOperatorHere(Body body, string message)
 		: ParsingFailed(body, message);
+
+	private static string DescribeUnknown(Body body, string input)
+	{
+		var open = input.IndexOf('(');
+		if (open <= 0 || !input.EndsWith(')') || !char.IsUpper(input[0]))
+			return input;
+		var typeName = input[..open];
+		return body.Method.FindType(typeName) != null
+			? input
+			: "Type \"" + typeName + "\" is not in this package. Add " + typeName +
+			".strict next to " + body.Method.Type.Name + ".strict or check the spelling.";
+	}
 
 	protected sealed class UnknownExpression(Body body, string error = "")
 		: ParsingFailed(body, error);

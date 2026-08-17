@@ -36,4 +36,18 @@ public static class PackageSynchronizationExtension
 			throw;
 		}
 	}
+
+	public static void LoadSiblingTypes(this Package package, string localPath, string skipType)
+	{
+		var folder = Path.GetDirectoryName(localPath);
+		if (folder == null || !Directory.Exists(folder))
+			return;
+		foreach (var file in Directory.GetFiles(folder, "*" + Type.Extension))
+		{
+			var name = Path.GetFileNameWithoutExtension(file);
+			if (name == skipType)
+				continue;
+			package.SynchronizeAndGetType(name, File.ReadAllLines(file));
+		}
+	}
 }

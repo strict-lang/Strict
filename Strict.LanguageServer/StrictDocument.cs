@@ -118,14 +118,16 @@ public sealed class StrictDocument(Package package)
 	{
 		var folderName = uri.Path.GetFolderName();
 		var subPackage = package.Find(folderName) ?? new Package(package, folderName);
-		var type = subPackage.SynchronizeAndGetType(uri.Path.GetFileName(), content);
+		var typeName = uri.Path.GetFileName();
+		subPackage.LoadSiblingTypes(uri.ToLocalFile(), typeName);
+		var type = subPackage.SynchronizeAndGetType(typeName, content);
 		if (type is { IsTrait: false })
 		{
 			var methods = ParseTypeMethods(type.Methods);
 			if (methods != null)
 				// @formatter:off
 				new RunnerService(package)
-					.AddService(new TestRunner(package, languageServer,methods))
+					.AddService(new TestRunner(package, languageServer, methods, uri.ToString()))
 					.AddService(new VariableValueEvaluator(package, languageServer, Get(uri)))
 					.RunAllServices();
 			// @formatter:on
@@ -134,9 +136,37 @@ public sealed class StrictDocument(Package package)
 
 	private static IEnumerable<Method>? ParseTypeMethods(IEnumerable<Method> methods)
 	{
-		foreach (var method in methods.Where(method => !method.IsGeneric))
+		foreach (var method in methods.Where(method => !method.IsGeneric && !IsManualRun(method)))
 			if (method.GetBodyAndParseIfNeeded() is Body body)
 				yield return body.Method; //ncrunch: no coverage
+	}
+
+	private static bool IsManualRun(Method method) =>
+		method.Name == Method.Run &&
+		method.Parameters.All(parameter => parameter.DefaultValue != null) &&
+		!HasInlineTests(method);
+
+	private static bool HasInlineTests(Method method)
+	{
+		var lines = method.Type.Lines;
+		for (var index = method.TypeLineNumber + 1; index < lines.Length; index++)
+		{
+			var line = lines[index];
+			if (line.Length == 0 || line[0] != '\t')
+				break;
+			if (line.StartsWith("\t\t", StringComparison.Ordinal))
+				continue;
+			var body = line[1..];
+			if (body.StartsWith("for ", StringComparison.Ordinal) ||
+				body.StartsWith("if ", StringComparison.Ordinal) ||
+				body.StartsWith("return ", StringComparison.Ordinal) ||
+				body.StartsWith("constant ", StringComparison.Ordinal) ||
+				body.StartsWith("mutable ", StringComparison.Ordinal))
+				break;
+			if (body.Contains(" is ", StringComparison.Ordinal))
+				return true;
+		}
+		return false;
 	}
 
 	public void InitializeContent(DocumentUri uri) => content = strictDocuments[uri].ToList();

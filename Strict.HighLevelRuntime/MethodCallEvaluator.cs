@@ -197,11 +197,25 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			return AddToList(leftList.Value, right);
 		if (leftList.HasValue && op == BinaryOperator.Minus)
 			return RemoveFromList(leftList.Value, right);
+		var unwrappedLeft = UnwrapValueMember(left);
+		var unwrappedRight = UnwrapValueMember(right);
+		if (!unwrappedLeft.Equals(left) || !unwrappedRight.Equals(right))
+			return ExecuteArithmeticOperation(call, ctx, unwrappedLeft, unwrappedRight);
 		if (IsCoreRuntimeType(call.Method.Type))
 			throw new InterpreterExecutionFailed(ctx.Method,
 				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-					BuildCoreTypeFallbackMessage("Arithmetic", call, ctx, left, right)));
+					BuildCoreTypeFallbackMessage(call, ctx, left, right)));
 		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
+	}
+
+	private static ValueInstance UnwrapValueMember(ValueInstance value)
+	{
+		if (value.TryGetValueTypeInstance() is not { } typeInstance)
+			return value;
+		return typeInstance.TryGetValue(Type.ValueLowercase, out var inner) &&
+			(inner.IsText || inner.GetType().IsNumber || inner.GetType().IsBoolean)
+			? inner
+			: value;
 	}
 
 	private static bool IsCoreRuntimeType(Type type) =>
@@ -279,7 +293,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			_ when IsCoreRuntimeType(call.Method.Type) => throw new InterpreterExecutionFailed(
 				ctx.Method,
 				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-					BuildCoreTypeFallbackMessage("Comparison", call, ctx, left, right))),
+					BuildCoreTypeFallbackMessage(call, ctx, left, right))),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
 	}
@@ -304,25 +318,52 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			_ when IsCoreRuntimeType(call.Method.Type) => throw new InterpreterExecutionFailed(
 				ctx.Method,
 				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-					BuildCoreTypeFallbackMessage("Logical", call, ctx, left, right))),
+					BuildCoreTypeFallbackMessage(call, ctx, left, right))),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
 	}
 
-	private static string BuildCoreTypeFallbackMessage(string category, MethodCall call,
-		ExecutionContext ctx, ValueInstance left, ValueInstance right) =>
-		$"{category} fallback is not allowed for core type {call.Method.Type.Name} operator " +
-		$"{call.Method.Name} with left={left}, right={right}, method={ctx.Method}, call={call}, " +
-		$"caller={GetCallerContext(ctx.Parent)}";
+	private static string BuildCoreTypeFallbackMessage(MethodCall call, ExecutionContext ctx,
+		ValueInstance left, ValueInstance right)
+	{
+		var message = "Cannot " + call.Method.Name + " left=" + FormatOperand(left) + " right=" +
+			FormatOperand(right) + ", method=" + ctx.Method + ", call=" + call;
+		var caller = GetCallerDisplay(ctx.Parent);
+		return caller.Length == 0 || caller == ctx.Method.ToString() || caller == ctx.Method.Name
+			? message
+			: message + ", caller=" + caller;
+	}
 
-	private static string GetCallerContext(ExecutionContext? ctx)
+	private static string FormatOperand(ValueInstance value)
+	{
+		if (value.IsText)
+			return Quote(value.Text);
+		if (value.GetType().IsNumber)
+			return value.GetCachedNumberString();
+		if (value.GetType().IsBoolean)
+			return value.Boolean
+				? "true"
+				: "false";
+		if (value.TryGetValueTypeInstance() is { } typeInstance &&
+			typeInstance.TryGetValue(Type.ValueLowercase, out var inner))
+			return FormatOperand(inner) + " (" + typeInstance.ReturnType.Name + ")";
+		return value.ToExpressionCodeString();
+	}
+
+	private static string Quote(string text) => "\"" + text + "\"";
+
+	private static string GetCallerDisplay(ExecutionContext? ctx)
 	{
 		if (ctx == null)
-			return "(none)";
-		var caller = ctx.Method.ToString();
-		return ctx.Parent == null
-			? caller
-			: caller + " <- " + GetCallerContext(ctx.Parent);
+			return "";
+		var lineNumber = ctx.CurrentExpressionLineNumber;
+		if (lineNumber >= 0 && ctx.Type.Lines != null && lineNumber < ctx.Type.Lines.Length)
+		{
+			var line = ctx.Type.Lines[lineNumber].Trim();
+			if (line.Length > 0)
+				return line;
+		}
+		return ctx.Method.ToString();
 	}
 
 	private ValueInstance CombineLists(ValueInstance leftList, List<ValueInstance> rightList,

@@ -681,6 +681,36 @@ public sealed class InterpreterTests
 			"\tnumber"));
 
 	[Test]
+	public void ExecuteRunMethodCanConstructSiblingType()
+	{
+		using var helper = CreateType(nameof(ExecuteRunMethodCanConstructSiblingType) + "Helper",
+			"has value Text", "Greet Text", "\t\"Hello, \" + value + \"!\"");
+		using var app = CreateType(nameof(ExecuteRunMethodCanConstructSiblingType), "has number",
+			"Run Text", "\tconstant worldHelper = " + helper.Name + "(\"World\")",
+			"\tworldHelper.Greet");
+		Assert.That(() => interpreter.ExecuteRunMethod(app), Throws.Nothing);
+	}
+
+	[Test]
+	public void ExecuteRunMethodWithLoggerWritesToConsole()
+	{
+		using var app = CreateType(nameof(ExecuteRunMethodWithLoggerWritesToConsole), "has logger",
+			"Run", "\tlogger.Log(\"Hi\")");
+		var output = new StringWriter();
+		var previous = Console.Out;
+		Console.SetOut(output);
+		try
+		{
+			Assert.That(() => interpreter.ExecuteRunMethod(app), Throws.Nothing);
+		}
+		finally
+		{
+			Console.SetOut(previous);
+		}
+		Assert.That(output.ToString(), Does.Contain("Hi"));
+	}
+
+	[Test]
 	public void ExecuteRunMethodWillFailIfThereIsNoRunMethod() =>
 		Assert.That(
 			() => interpreter.ExecuteRunMethod(CreateType(
@@ -698,6 +728,16 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void ValueMemberIsUsedForTextConcatenation()
+	{
+		using var helper = CreateType(nameof(ValueMemberIsUsedForTextConcatenation), "has value Text",
+			"Greet Text", "\t\"Hello, \" + value + \"!\"");
+		var greet = helper.Methods.Single(method => method.Name == "Greet");
+		var instance = new ValueInstance(helper, [new ValueInstance("World")]);
+		Assert.That(interpreter.Execute(greet, instance, []).Text, Is.EqualTo("Hello, World!"));
+	}
+
+	[Test]
 	public void ArithmeticFallbackErrorShowsMethodAndCallerContext()
 	{
 		using var type = CreateType(nameof(ArithmeticFallbackErrorShowsMethodAndCallerContext),
@@ -708,11 +748,11 @@ public sealed class InterpreterTests
 		var instance = new ValueInstance(type, [new ValueInstance(texts, [new ValueInstance("x")])]);
 		var exception = Assert.Throws<InterpreterExecutionFailed>(() =>
 			interpreter.Execute(runMethod, instance, []));
-		Assert.That(exception!.Message,
-			Does.Contain("Arithmetic fallback is not allowed for core type Text operator +"));
+		Assert.That(exception!.Message, Does.Contain("Cannot +"));
+		Assert.That(exception.Message, Does.Not.Contain("Arithmetic fallback is not allowed"));
+		Assert.That(exception.Message, Does.Not.Contain("Interpreter execution failed"));
 		Assert.That(exception.Message, Does.Contain("method=Combine("));
 		Assert.That(exception.Message, Does.Contain("call=value + (\"b\")"));
-		Assert.That(exception.Message, Does.Contain("Run Text"));
 		Assert.That(exception.Message, Does.Contain(":line "));
 	}
 
