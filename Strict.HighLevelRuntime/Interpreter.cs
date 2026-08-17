@@ -981,8 +981,8 @@ public class Interpreter
 		$"{method.Type.FilePath}:line {expression.LineNumber + 1}")
 	{
 		public Expression FailedExpression { get; } = expression;
+public ValueInstance Result { get; } = result;
 		public string Details { get; } = details;
-		public ValueInstance Result { get; } = result;
 	}
 
 	private ValueInstance EvaluateMutableListElementAssignment(ListCall target, Expression value,

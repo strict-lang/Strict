@@ -108,7 +108,7 @@ public sealed class StrictDocument(Package package)
 		}
 		catch (Exception exception)
 		{
-			languageServer.Window.LogError(exception.Message);
+			languageServer.Window.LogError(DiagnosticFormatter.BuildExceptionText(exception));
 			diagnostics.Add(DiagnosticFormatter.FromException(exception, content));
 		}
 		return diagnostics;
@@ -116,21 +116,24 @@ public sealed class StrictDocument(Package package)
 
 	private void ParseCurrentFile(Package package, DocumentUri uri, ILanguageServerFacade languageServer)
 	{
-		var folderName = uri.Path.GetFolderName();
-		var subPackage = package.Find(folderName) ?? new Package(package, folderName);
-		var typeName = uri.Path.GetFileName();
-		subPackage.LoadSiblingTypes(uri.ToLocalFile(), typeName);
-		var type = subPackage.SynchronizeAndGetType(typeName, content);
-		if (type is { IsTrait: false })
+var folderPackage = PackageResolver.Resolve(package, uri.Path.ToFileSystemPath());
+		var type = folderPackage.SynchronizeAndGetType(uri.Path.GetFileName(), content);
+		if (type is not { IsTrait: false })
+			return;
+		var methods = ParseTypeMethods(type.Methods);
+		if (methods == null)
+			return;
+		try
 		{
-			var methods = ParseTypeMethods(type.Methods);
-			if (methods != null)
-				// @formatter:off
-				new RunnerService(package)
-					.AddService(new TestRunner(package, languageServer, methods, uri.ToString()))
-					.AddService(new VariableValueEvaluator(package, languageServer, Get(uri)))
-					.RunAllServices();
-			// @formatter:on
+			new RunnerService(package)
+				.AddService(new TestRunner(package, languageServer, methods, uri))
+				.AddService(new VariableValueEvaluator(package, languageServer, Get(uri)))
+				.RunAllServices();
+		}
+		catch (Exception exception)
+		{
+			languageServer.Window.LogError(DiagnosticFormatter.BuildExceptionText(exception));
+		}
 		}
 	}
 

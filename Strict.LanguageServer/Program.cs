@@ -11,6 +11,12 @@ using Strict.LanguageServer;
 using PipeOptions = System.IO.Pipes.PipeOptions;
 
 //ncrunch: no coverage start
+if (args.Any(argument => argument == "--mcp"))
+{
+	var mcpPackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+	await McpServer.RunAsync(mcpPackage);
+	return;
+}
 var (input, output) = await CreateAndGetPipeline();
 var strictBase = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 var server = await LanguageServer.From(options => options.WithInput(input).WithOutput(output).

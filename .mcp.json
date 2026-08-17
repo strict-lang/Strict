@@ -6,6 +6,15 @@
       "command": "C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\Common7\\IDE\\Extensions\\Remco Software\\NCrunch for Visual Studio 2026\\NCrunch.MCP.exe",
       "args": [],
       "env": {}
+    },
+    "scrunch": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": [
+        "Strict.LanguageServer/bin/Debug/net10.0/Strict.LanguageServer.dll",
+        "--mcp"
+      ],
+      "env": {}
     }
   }
 }
