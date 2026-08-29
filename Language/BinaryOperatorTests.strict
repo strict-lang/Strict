@@ -1,0 +1,28 @@
+has logger
+Run
+	ArithmeticSymbols is "+"
+	ComparisonSymbols is "<"
+	LogicalSymbols is "and"
+	logger.Log(ArithmeticSymbols)
+ArithmeticSymbols Text
+	BinaryOperator.Plus is "+"
+	BinaryOperator.Minus is "-"
+	BinaryOperator.Multiply is "*"
+	BinaryOperator.Divide is "/"
+	BinaryOperator.Power is "^"
+	BinaryOperator.Modulate is "%"
+	BinaryOperator.Plus
+ComparisonSymbols Text
+	BinaryOperator.Smaller is "<"
+	BinaryOperator.Greater is ">"
+	BinaryOperator.SmallerOrEqual is "<="
+	BinaryOperator.GreaterOrEqual is ">="
+	BinaryOperator.Is is "is"
+	BinaryOperator.In is "in"
+	BinaryOperator.Smaller
+LogicalSymbols Text
+	BinaryOperator.And is "and"
+	BinaryOperator.Or is "or"
+	BinaryOperator.Xor is "xor"
+	BinaryOperator.To is "to"
+	BinaryOperator.And

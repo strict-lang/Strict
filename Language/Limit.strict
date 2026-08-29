@@ -9,3 +9,20 @@ constant MemberCount = 15
 constant MemberCountForEnums = 40
 constant NameMaxLimit = 50
 constant NameMinLimit = 2
+HasExpectedMethodLimits Boolean
+	MethodLength is 13
+	ParameterCount is 4
+	MethodCount is 15
+	true
+HasExpectedFileLimits Boolean
+	LineCount is 256
+	NestingLevel is 5
+	CharacterCount is 120
+	MultiLineCharacterCount is 100
+	true
+HasExpectedNameLimits Boolean
+	MemberCount is 15
+	MemberCountForEnums is 40
+	NameMaxLimit is 50
+	NameMinLimit is 2
+	true

@@ -116,11 +116,11 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 
 | Priority | C# File | Description | Strict equivalent plan | Status |
 |----------|---------|-------------|------------------------|--------|
-| 1 | `Keyword.cs` | String constants for keywords | `Language/Keyword.strict` | ✅ 100% |
-| 2 | `BinaryOperator.cs` | 16 operator string constants | `Language/BinaryOperator.strict` | ✅ 100% |
-| 3 | `UnaryOperator.cs` | 1 unary operator constant | `Language/UnaryOperator.strict` | ✅ 100% |
-| 4 | `TypeKind.cs` | Enum: None/Boolean/Number/etc. | `Language/TypeKind.strict` | ✅ 100% |
-| 5 | `Limit.cs` | Size limit constants | `Language/Limit.strict` | ✅ 100% |
+| 1 | `Keyword.cs` | String constants for keywords | `Language/Keyword.strict` | ✅ 100% + `IsKeyword` inline tests |
+| 2 | `BinaryOperator.cs` | 16 operator string constants | `Language/BinaryOperator.strict` + `BinaryOperatorTests.strict` | ✅ 100% + inline symbol tests |
+| 3 | `UnaryOperator.cs` | 1 unary operator constant | `Language/UnaryOperator.strict` | ✅ 100% + `IsNot` inline tests |
+| 4 | `TypeKind.cs` | Enum: None/Boolean/Number/etc. | `Language/TypeKind.strict` | ✅ 100% + `NameOf` inline tests |
+| 5 | `Limit.cs` | Size limit constants | `Language/Limit.strict` | ✅ 100% + C# value inline tests |
 | 6 | `TypeLines.cs` | Raw lines of a type file | `Language/TypeLines.strict` | ✅ 100% |
 | 7 | `NamedType.cs` | Name + Type pair | `Language/NamedType.strict` | ✅ 70% |
 | 8 | `NumberExtensions.cs` | Simple number helpers | Methods on Number | 🚧 Deferred |
@@ -149,9 +149,9 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 - Uses a name with no matching type: `has typeName Text`, `has elementName Text`
 
 **Summary of what's done vs what's next:**
-- ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
-- ✅ **Language package `.strict` files** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, MethodParser, Context, Package, Type, Body, Parser + constants. Root `Method.strict` is data-only (`Name`/`Type`/`Parameters`); parsing lives in `MethodParser.strict`.
-- ✅ **Object-model cleanup** — Language types use `Name`/`Type` (not legacy `elementName`/`typeName`/`expressionText`). Guarded by `StrictLanguageConversionTests` (11 tests).
+- ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator now have inline `is` tests. `StrictLanguageConversionTests` parses those method bodies and asserts `Tests.Count` plus C# constant/ordinal parity. BinaryOperator stays an enum (16 members > `MemberCount` 15), so symbol tests live in `BinaryOperatorTests.strict`. Keyword/Limit/TypeKind/UnaryOperator gained small helper methods (`IsKeyword`, limit checks, `NameOf`, `IsNot`) and are therefore no longer classified as enums.
+- ✅ **Language package `.strict` files** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, MethodParser, Context, Package, Type, Body, Parser, BinaryOperatorTests + constants. Root `Method.strict` is data-only (`Name`/`Type`/`Parameters`); parsing lives in `MethodParser.strict`.
+- ✅ **Object-model cleanup** — Language types use `Name`/`Type` (not legacy `elementName`/`typeName`/`expressionText`). Guarded by `StrictLanguageConversionTests` (14 tests).
 - ✅ **Type.strict** — real member/method line parse under **HighLevelRuntime** (inline tests green). `Members`/`Methods` + `MethodParser.Parse` for headers/params/body span.
 - ✅ **MethodParser.strict** — `Parse` / `ParseBody` / parameter extraction; avoids `IndexOf("(")` via `OpenParen`/`CloseParen` constants + character scan.
 - ✅ **Parser.Run** — reads a real file via `File(path).ReadLines` under the **VM** (Path CLI args work after VM `File.from` Path fix). Logs path + ok when non-empty.
@@ -180,8 +180,8 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 | Metric | Target | Actual | % |
 |--------|--------|--------|---|
-| `.strict` files created | 23 | 23 | 100% |
-| Test methods written | 335 | 36 | 11% |
+| `.strict` files created | 23 | 21 | 91% |
+| Test methods written | 335 | 50 | 15% |
 | C# files replaced | 32 | 0 | 0% |
 
 ---
@@ -508,7 +508,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 | Phase | Project | C# Files | Target `.strict` Files | Actual `.strict` Files | Tests Written | C# % Done |
 |-------|---------|----------|------------------------|------------------------|---------------|-----------|
 | 0 | Base Types (verification) | 0 | 0 (already `.strict`) | 2 (BaseTypesTest) | 1 | 0% |
-| 1 | `Strict.Language` | 32 | 22 | 20 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator, TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, Method, Context, Package, Type, Body) | 28 | 27% |
+| 1 | `Strict.Language` | 32 | 22 | 21 (same as before + BinaryOperatorTests; Keyword/Limit/TypeKind/UnaryOperator now have inline tests) | 50 | 27% |
 | 2 | `Strict.Expressions` | 29 | 29 | **32** (AST + Parser + NumberChars + demo) | ~140 + 6 C# | **~40%** |
 | 3 | `Strict.Validators` | 3 | 3 | **6** | ~4 C# + inline | **~40%** |
 | 4 | `Strict.TestRunner` | 1 | 1 | **7** | ~4 C# + inline | **~40%** |
