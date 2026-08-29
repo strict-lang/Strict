@@ -10,3 +10,43 @@ constant KindEnum
 constant KindIterator
 constant KindAny
 constant KindUnknown
+NameOf(kind Number) Text
+	NameOf(KindNone) is "None"
+	NameOf(KindList) is "List"
+	if kind < KindList
+		return NameOfScalar(kind)
+	NameOfComposite(kind)
+NameOfScalar(kind Number) Text
+	NameOfScalar(KindBoolean) is "Boolean"
+	if kind is KindNone
+		return "None"
+	if kind is KindBoolean
+		return "Boolean"
+	if kind is KindNumber
+		return "Number"
+	if kind is KindText
+		return "Text"
+	if kind is KindCharacter
+		return "Character"
+	"Unknown"
+NameOfComposite(kind Number) Text
+	NameOfComposite(KindError) is "Error"
+	if kind is KindList
+		return "List"
+	if kind is KindDictionary
+		return "Dictionary"
+	if kind is KindError
+		return "Error"
+	if kind is KindEnum
+		return "Enum"
+	if kind is KindIterator
+		return "Iterator"
+	NameOfAny(kind)
+NameOfAny(kind Number) Text
+	NameOfAny(KindAny) is "Any"
+	NameOfAny(KindUnknown) is "Unknown"
+	if kind is KindAny
+		return "Any"
+	if kind is KindUnknown
+		return "Unknown"
+	"Unknown"

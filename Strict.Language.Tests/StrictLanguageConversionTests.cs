@@ -86,7 +86,6 @@ public sealed class StrictLanguageConversionTests
 	{
 		using var limitType = CreateLanguageType(TestPackage.Instance, "Limit");
 		Assert.That(limitType.Members.Count, Is.EqualTo(11));
-		Assert.That(limitType.IsEnum, Is.True);
 		Assert.That(limitType.FindMember(nameof(Limit.MethodLength))!.InitialValue!.ToString(),
 			Is.EqualTo(Limit.MethodLength.ToString()));
 		Assert.That(limitType.FindMember(nameof(Limit.CharacterCount))!.InitialValue!.ToString(),
@@ -99,6 +98,9 @@ public sealed class StrictLanguageConversionTests
 			Is.EqualTo(Limit.NestingLevel.ToString()));
 		Assert.That(limitType.FindMember(nameof(Limit.ParameterCount))!.InitialValue!.ToString(),
 			Is.EqualTo(Limit.ParameterCount.ToString()));
+		AssertInlineTests(limitType, "HasExpectedMethodLimits", 3);
+		AssertInlineTests(limitType, "HasExpectedFileLimits", 4);
+		AssertInlineTests(limitType, "HasExpectedNameLimits", 4);
 	}
 
 	private static Type CreateLanguageType(Package package, string typeName) =>
@@ -115,12 +117,18 @@ public sealed class StrictLanguageConversionTests
 		Path.Combine(Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)),
 			"Expressions");
 
+	private static void AssertInlineTests(Type type, string methodName, int testCount)
+	{
+		var method = type.Methods.First(candidate => candidate.Name == methodName);
+		method.GetBodyAndParseIfNeeded();
+		Assert.That(method.Tests.Count, Is.EqualTo(testCount), methodName);
+	}
+
 	[Test]
 	public void LoadKeywordTypeFromLanguageDirectory()
 	{
 		using var keywordType = CreateLanguageType(TestPackage.Instance, "Keyword");
 		Assert.That(keywordType.Members.Count, Is.EqualTo(9));
-		Assert.That(keywordType.IsEnum, Is.True);
 		Assert.That(keywordType.FindMember(nameof(Keyword.Constant))!.InitialValue!.ToString(),
 			Is.EqualTo("\"" + Keyword.Constant + "\""));
 		Assert.That(keywordType.FindMember(nameof(Keyword.For))!.InitialValue!.ToString(),
@@ -132,6 +140,53 @@ public sealed class StrictLanguageConversionTests
 		Assert.That(
 			keywordType.FindMember(nameof(Keyword.Mutable) + "Keyword")!.InitialValue!.ToString(),
 			Is.EqualTo("\"" + Keyword.Mutable + "\""));
+		AssertInlineTests(keywordType, "IsKeyword", 4);
+		AssertInlineTests(keywordType, "IsDeclarationKeyword", 2);
+		AssertInlineTests(keywordType, "IsControlKeyword", 2);
+	}
+
+	[Test]
+	public void LoadTypeKindFromLanguageDirectory()
+	{
+		using var typeKind = CreateLanguageType(TestPackage.Instance, "TypeKind");
+		Assert.That(typeKind.Members.Count, Is.EqualTo(12));
+		Assert.That(typeKind.FindMember("KindNone")!.InitialValue!.ToString(), Is.EqualTo("0"));
+		Assert.That(typeKind.FindMember("KindBoolean")!.InitialValue!.ToString(),
+			Is.EqualTo(((int)TypeKind.Boolean).ToString()));
+		Assert.That(typeKind.FindMember("KindUnknown")!.InitialValue!.ToString(),
+			Is.EqualTo(((int)TypeKind.Unknown).ToString()));
+		AssertInlineTests(typeKind, "NameOf", 2);
+		AssertInlineTests(typeKind, "NameOfScalar", 1);
+		AssertInlineTests(typeKind, "NameOfComposite", 1);
+		AssertInlineTests(typeKind, "NameOfAny", 2);
+	}
+
+	[Test]
+	public void LoadUnaryOperatorFromLanguageDirectory()
+	{
+		using var unaryOperator = CreateLanguageType(TestPackage.Instance, "UnaryOperator");
+		Assert.That(unaryOperator.Members.Count, Is.EqualTo(1));
+		Assert.That(unaryOperator.FindMember(nameof(UnaryOperator.Not))!.InitialValue!.ToString(),
+			Is.EqualTo("\"" + UnaryOperator.Not + "\""));
+		AssertInlineTests(unaryOperator, "IsNot", 2);
+	}
+
+	[Test]
+	public void LoadBinaryOperatorFromLanguageDirectory()
+	{
+		using var package = new Package(TestPackage.Instance, "BinaryOperatorCheck");
+		using var binaryOperator = CreateLanguageType(package, "BinaryOperator");
+		Assert.That(binaryOperator.Members.Count, Is.EqualTo(16));
+		Assert.That(binaryOperator.IsEnum, Is.True);
+		Assert.That(binaryOperator.FindMember(nameof(BinaryOperator.Plus))!.InitialValue!.ToString(),
+			Is.EqualTo("\"" + BinaryOperator.Plus + "\""));
+		Assert.That(binaryOperator.FindMember(nameof(BinaryOperator.Is))!.InitialValue!.ToString(),
+			Is.EqualTo("\"" + BinaryOperator.Is + "\""));
+		using var tests = CreateLanguageType(package, "BinaryOperatorTests");
+		AssertInlineTests(tests, "Run", 3);
+		AssertInlineTests(tests, "ArithmeticSymbols", 6);
+		AssertInlineTests(tests, "ComparisonSymbols", 6);
+		AssertInlineTests(tests, "LogicalSymbols", 4);
 	}
 
 	[Test]

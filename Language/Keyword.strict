@@ -7,3 +7,33 @@ constant Else = "else"
 constant For = "for"
 constant With = "with"
 constant Return = "return"
+IsKeyword(name Text) Boolean
+	IsKeyword("has") is true
+	IsKeyword("mutable") is true
+	IsKeyword("return") is true
+	IsKeyword("foo") is false
+	IsDeclarationKeyword(name) or IsControlKeyword(name)
+IsDeclarationKeyword(name Text) Boolean
+	IsDeclarationKeyword("mutable") is true
+	IsDeclarationKeyword("if") is false
+	if name is Has
+		return true
+	if name is Constant
+		return true
+	if name is Let
+		return true
+	if name is MutableKeyword
+		return true
+	false
+IsControlKeyword(name Text) Boolean
+	IsControlKeyword("if") is true
+	IsControlKeyword("has") is false
+	if name is If
+		return true
+	if name is Else
+		return true
+	if name is For
+		return true
+	if (name is With) or (name is Return)
+		return true
+	false
