@@ -13,14 +13,35 @@ public static class DiagnosticFormatter
 	{
 		var code = exception.GetType().Name;
 		var lineNumber = GetLineNumber(exception, content.Count);
+		var text = BuildExceptionText(exception);
+		var message = FormatMessage(code, text);
+		var stack = ExtractStack(text);
+		if (stack.Length > 0 && !message.Contains(stack, StringComparison.Ordinal))
+			message += "\n" + stack;
 		return new Diagnostic
 		{
 			Code = code,
 			Severity = DiagnosticSeverity.Error,
-			Message = FormatMessage(code, BuildExceptionText(exception)),
+			Message = message,
 			Range = GetErrorTextRange(content, lineNumber),
 			Source = "strict"
 		};
+	}
+
+	public static string ExtractStack(string exceptionMessage)
+	{
+		if (string.IsNullOrEmpty(exceptionMessage))
+			return "";
+		var frames = new List<string>();
+		var pattern = new Regex(@"at (.+?) in (.+):line (\d+)");
+		foreach (Match match in pattern.Matches(exceptionMessage))
+		{
+			var line = "at " + match.Groups[1].Value.Trim() + " in " + match.Groups[2].Value.Trim() +
+				":line " + match.Groups[3].Value;
+			if (!frames.Contains(line))
+				frames.Add(line);
+		}
+		return string.Join('\n', frames);
 	}
 
 	public static string BuildExceptionText(Exception exception)
