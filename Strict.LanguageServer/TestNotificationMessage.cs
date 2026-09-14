@@ -19,6 +19,7 @@ public sealed class TestNotificationMessage
 		DurationMs = durationMs;
 		StackTrace = stackTrace;
 	}
+	public TestNotificationMessage() : this(0, TestState.Red) { }
 	public int LineNumber { get; init; }
 	public TestState State { get; init; }
 	public string? Uri { get; init; }
@@ -35,8 +36,7 @@ public sealed class TestNotificationMessage
 	public int? MethodsCalled { get; init; }
 	public int? LinesCalled { get; init; }
 	public int? CallCount { get; init; }
-}
-}
+	}
 
 public enum TestState
 {

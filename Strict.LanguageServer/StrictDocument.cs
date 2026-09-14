@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -133,7 +133,6 @@ var folderPackage = PackageResolver.Resolve(package, uri.Path.ToFileSystemPath()
 		catch (Exception exception)
 		{
 			languageServer.Window.LogError(DiagnosticFormatter.BuildExceptionText(exception));
-		}
 		}
 	}
 

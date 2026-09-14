@@ -1,5 +1,4 @@
-using System.Diagnostics;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Strict.HighLevelRuntime;
@@ -119,7 +118,7 @@ var methodList = Methods.ToList();
 		var line = method.Tests.Count > 0
 			? method.Tests[0].LineNumber
 			: method.TypeLineNumber;
-		languageServer.SendNotification(NotificationName, new TestNotificationMessage
+		languageServer?.SendNotification(NotificationName, new TestNotificationMessage
 		{
 			LineNumber = line,
 			State = TestState.Red,
@@ -157,7 +156,7 @@ var methodList = Methods.ToList();
 				break;
 			var test = tests[index];
 			var isFailed = index == failedIndex;
-			languageServer.SendNotification(NotificationName, new TestNotificationMessage
+			languageServer?.SendNotification(NotificationName, new TestNotificationMessage
 			{
 				LineNumber = test.LineNumber,
 				State = isFailed
