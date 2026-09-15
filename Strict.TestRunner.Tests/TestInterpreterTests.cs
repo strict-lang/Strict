@@ -291,7 +291,6 @@ public class TestInterpreterTests
 		foreach (var packageToTest in packages)
 			tasks.Add(Task.Run(() => new TestInterpreter(packages[0]).RunAllTestsInPackage(packageToTest)));
 		await Task.WhenAll(tasks);
-		Console.WriteLine("All tests ran");
 	}
 
 	//ncrunch: no coverage start
