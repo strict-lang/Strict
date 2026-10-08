@@ -16,6 +16,27 @@ public static class FileValue
 		return false;
 	}
 
+	/// <summary>
+	/// Native I/O accepts Text or Path; Path (or bytecode-rebuilt types without Members) store their
+	/// text as first value, so this is read positionally.
+	/// </summary>
+	public static bool TryGetPathText(ValueInstance pathValue, out string pathText)
+	{
+		if (pathValue.IsText)
+		{
+			pathText = pathValue.Text;
+			return true;
+		}
+		var pathInstance = pathValue.TryGetValueTypeInstance();
+		if (pathInstance is { Values: [{ IsText: true } textMember, ..] })
+		{
+			pathText = textMember.Text;
+			return true;
+		}
+		pathText = "";
+		return false;
+	}
+
 	public static ValueInstance CreateBytes(Type bytesType, Type byteType, byte[] bytes)
 	{
 		//TODO: horrible way to create byte array!

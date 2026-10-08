@@ -31,6 +31,7 @@ public class Interpreter
 		forEvaluator = new ForEvaluator(this);
 		methodCallEvaluator = new MethodCallEvaluator(this);
 		toEvaluator = new ToEvaluator(this);
+		directoryEvaluator = new DirectoryEvaluator(this);
 	}
 
 	internal readonly TestBehavior behavior;
@@ -51,6 +52,7 @@ public class Interpreter
 	private readonly ForEvaluator forEvaluator;
 	internal readonly MethodCallEvaluator methodCallEvaluator;
 	private readonly ToEvaluator toEvaluator;
+	private readonly DirectoryEvaluator directoryEvaluator;
 	private readonly ConcurrentStack<ExecutionContext> contextPool = new();
 
 	internal ExecutionContext RentContext(Type type, Method method, ValueInstance? instance,
@@ -150,6 +152,8 @@ public class Interpreter
 			return trueInstance;
 		if (TryExecuteNativeFileMethod(method, instance, args, out var fileResult))
 			return fileResult;
+		if (directoryEvaluator.TryEvaluate(method, args, out var directoryResult))
+			return directoryResult;
 		if (TryExecuteTextWriterWrite(method, args))
 			return noneInstance;
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))
@@ -291,7 +295,7 @@ public class Interpreter
 			throw new InvalidTypeForArgument(method.Type, args, 0);
 	}
 
-	private ValueInstance CreateTexts(Method method, string[] lines)
+	internal ValueInstance CreateTexts(Method method, string[] lines)
 	{
 		var textsType = method.GetListImplementationType(method.GetType(Type.Text));
 		var values = new ValueInstance[lines.Length];

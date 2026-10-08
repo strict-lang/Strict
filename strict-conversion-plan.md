@@ -12,6 +12,27 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
+## Verified checkpoint — 2026-10-09
+
+Native Directory now works in both HighLevelRuntime (inline tests) and VM, from source and
+from cached `.strictbinary`. `RunDirectoryTestsUsesNativeDirectoryInTestsAndVirtualMachine` covers it.
+Four root causes fixed:
+- Parser: a Boolean MethodCall on the last top-level body line was classified as a test
+  (`Method.IsTestExpression`), so `Directory.Exists(path)` was dropped from bytecode.
+- VM: static native Directory/Process calls were skipped when an implicit `value` instance
+  existed (any call from inside an instance method); now only an explicit instance blocks them.
+- VM: types rebuilt from bytecode ignored serialized constant initial values and treated Text
+  members as traits (Path construction crashed).
+- HLR: new `DirectoryEvaluator` (Exists/Create/Files) on shared `NativeDirectory`; Path/Text
+  argument extraction unified in `FileValue.TryGetPathText` (VM duplicate removed).
+
+Pre-existing failures (unchanged, verified without these changes): 6 Transpiler tests and
+`RunAdjustBrightnessAllocatesBelowHalfMegabytePerRun`.
+
+Next: Phase 0 explicit base-type assertions (Boolean, Number, Text, List, Dictionary, File, Range,
+Error, Character) in `Examples/BaseTypesTest`, then local package loading in Strict
+(`Language/Package.strict` loading `.strict` files via `Directory.Files` + `File.ReadLines`).
+
 ## Verified checkpoint — 2026-10-08
 
 The conversion is **not functionally complete**. Parallel Strict implementations exist, but
@@ -74,7 +95,7 @@ end-to-end testing via the `Examples/BaseTypesTest/` multi-file package.
 | `List` | `List.strict` | ☐ | 0% |
 | `Dictionary` | `Dictionary.strict` | ☐ | 0% |
 | `File` | `File.strict` | ☐ | 0% |
-| `Directory` | `Directory.strict` | ☐ | 0% |
+| `Directory` | `Directory.strict` | ✅ `DirectoryTests.strict` (Exists, HLR + VM) | 50% |
 | `Range` | `Range.strict` | ☐ | 0% |
 | `Error` / `ErrorWithValue` | `Error.strict`, `ErrorWithValue.strict` | ☐ | 0% |
 | `Character` | `Character(strict)` | ☐ | 0% |
@@ -84,9 +105,9 @@ end-to-end testing via the `Examples/BaseTypesTest/` multi-file package.
 | `Iterator` | `Iterator(strict)` | ☐ | 0% |
 
 **Current state:**
-- `Examples/BaseTypesTest/` exists with 2 `.strict` files (`BaseTypesTest.strict`, `TextHelper.strict`)
-- Tests: `RunBaseTypesTestPackageFromDirectory` in `Strict.Tests` passes
-- Still to add: explicit tests for Boolean, Number, Text, List, Dictionary, File, Directory, Range, Error, Character
+- `Examples/BaseTypesTest/` exists with 3 `.strict` files (`BaseTypesTest.strict`, `TextHelper.strict`, `DirectoryTests.strict`)
+- Tests: `RunBaseTypesTestPackageFromDirectory` and `RunDirectoryTestsUsesNativeDirectoryInTestsAndVirtualMachine` in `Strict.Tests` pass
+- Still to add: explicit tests for Boolean, Number, Text, List, Dictionary, File, Directory.Files/Create, Range, Error, Character
 
 **Target:** 14+ test methods in `BaseTypesTest.strict`, one per base type, covering all key operations.
 
@@ -563,9 +584,9 @@ These C# / .NET features need to be added to the Strict runtime before each phas
 | `Path.GetFileNameWithoutExtension` | 1 (Language) | 🔴 Critical | ✅ Added (`Path.RemoveExtension`) |
 | `Path.GetDirectoryName` | 1 (Language) | 🔴 Critical | ✅ Added (`Path.PathOnly`) |
 | `Path.ChangeExtension` | 1 (Language) | 🟠 High | ✅ Added (`Path.ChangeExtension`) |
-| `Directory.Exists` | 1 (Language) | 🔴 Critical | ✅ Added |
-| `Directory.GetFiles(path, pattern)` | 1 (Language) | 🔴 Critical | ✅ Added (`Directory.Files`) |
-| `Directory.CreateDirectory` | 1 (Language) | 🟠 High | ✅ Added (`Directory.Create`) |
+| `Directory.Exists` | 1 (Language) | 🔴 Critical | ✅ Added (VM + HLR verified 2026-10-09) |
+| `Directory.GetFiles(path, pattern)` | 1 (Language) | 🔴 Critical | ✅ Added (`Directory.Files`, VM + HLR; Strict-level test pending) |
+| `Directory.CreateDirectory` | 1 (Language) | 🟠 High | ✅ Added (`Directory.Create`, VM + HLR; Strict-level test pending) |
 | `File.ReadAllLines` | 1 (Language) | 🔴 Critical | ✅ Via `File(...).ReadLines` (`TextReader` trait; VM accepts Path or Text) |
 | `File.WriteAllText` | 1 (Language) | 🟠 High | ✅ Covered by `File.Write` |
 | `File.Exists` | 1 (Language) | 🟠 High | ✅ Added |

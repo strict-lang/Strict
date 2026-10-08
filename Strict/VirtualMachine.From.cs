@@ -138,7 +138,9 @@ public sealed partial class VirtualMachine
 				name => name.Equals(binaryMembers[memberIndex].Name, StringComparison.OrdinalIgnoreCase));
 			if (argumentIndex >= 0 && argumentIndex < info.ArgumentRegisters.Length)
 				values[memberIndex] = Memory.Registers[info.ArgumentRegisters[argumentIndex]];
-			else if (memberType is { IsTrait: true })
+			else if (TryGetBinaryMemberInitialValue(binaryMembers, memberIndex, out var initialValue))
+				values[memberIndex] = initialValue;
+			else if (memberType is { IsTrait: true, IsText: false, IsNumber: false, IsBoolean: false })
 				values[memberIndex] = CreateTraitInstance(memberType);
 			else if (memberType != null)
 				values[memberIndex] = CreateDefaultComplexValue(memberType);

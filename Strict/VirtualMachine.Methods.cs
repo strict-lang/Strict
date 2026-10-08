@@ -86,7 +86,7 @@ public sealed partial class VirtualMachine
 		var hasInstance = info.InstanceRegister.HasValue || implicitInstance != null;
 		if (!hasInstance && TryHandleNativeTraitStaticMethod(invoke))
 			return true;
-		if (!hasInstance && TryHandleNativeStaticTypeMethod(invoke))
+		if (!info.InstanceRegister.HasValue && TryHandleNativeStaticTypeMethod(invoke))
 			return true;
 		if (hasInstance && TryHandleNativeProcessInstanceMethod(invoke, implicitInstance))
 			return true;
@@ -143,7 +143,7 @@ public sealed partial class VirtualMachine
 		{
 			if (info.ArgumentRegisters.Length != 1)
 				return false;
-			if (!TryGetPathText(Memory.Registers[info.ArgumentRegisters[0]], out var pathText))
+			if (!FileValue.TryGetPathText(Memory.Registers[info.ArgumentRegisters[0]], out var pathText))
 				return false;
 			var fileInstance = NativeFileRegistry.Open(executable.basePackage.GetType(Type.File),
 				pathText);
@@ -374,14 +374,10 @@ public sealed partial class VirtualMachine
 		return false;
 	}
 
-	private static string GetArgumentText(ValueInstance value)
-	{
-		if (value.IsText)
-			return value.Text;
-		return TryGetPathText(value, out var pathText)
+	private static string GetArgumentText(ValueInstance value) =>
+		FileValue.TryGetPathText(value, out var pathText)
 			? pathText
 			: value.ToExpressionCodeString();
-	}
 
 	private bool TryHandleNativeTraitStaticMethod(Invoke invoke)
 	{
@@ -394,11 +390,7 @@ public sealed partial class VirtualMachine
 			return false;
 		if (info.ArgumentRegisters.Length < 4)
 			return false;
-		var pathArg = Memory.Registers[info.ArgumentRegisters[0]];
-		var pathText = pathArg.IsText
-			? pathArg.Text
-			: TryExtractTextFromPathType(pathArg);
-		if (pathText == null)
+		if (!FileValue.TryGetPathText(Memory.Registers[info.ArgumentRegisters[0]], out var pathText))
 			return false;
 		var colorsArg = Memory.Registers[info.ArgumentRegisters[1]];
 		if (!colorsArg.IsList)
@@ -470,7 +462,7 @@ public sealed partial class VirtualMachine
 		{
 			if (invoke.MethodInfo.ArgumentRegisters.Length != 1)
 				return false;
-			if (!TryGetPathText(Memory.Registers[invoke.MethodInfo.ArgumentRegisters[0]],
+			if (!FileValue.TryGetPathText(Memory.Registers[invoke.MethodInfo.ArgumentRegisters[0]],
 				out var pathText))
 				return false;
 			var fileInstance = NativeFileRegistry.Open(returnType, pathText);
@@ -503,11 +495,7 @@ public sealed partial class VirtualMachine
 		var info = invoke.MethodInfo;
 		if (info.ArgumentRegisters.Length == 0)
 			return false;
-		var pathArg = Memory.Registers[info.ArgumentRegisters[0]];
-		var pathText = pathArg.IsText
-			? pathArg.Text
-			: TryExtractTextFromPathType(pathArg);
-		if (pathText == null)
+		if (!FileValue.TryGetPathText(Memory.Registers[info.ArgumentRegisters[0]], out var pathText))
 			return false;
 		var searchDirectory = AppContext.BaseDirectory;
 		var bytes = NativePluginLoader.TryLoadNativeLifecycle(returnType.Name, pathText,
@@ -519,16 +507,6 @@ public sealed partial class VirtualMachine
 			return false;
 		Memory.Registers[invoke.Register] = new ValueInstance(returnType, traitValues);
 		return true;
-	}
-
-	private static string? TryExtractTextFromPathType(ValueInstance value)
-	{
-		var typeInstance = value.TryGetValueTypeInstance();
-		if (typeInstance == null || typeInstance.Values.Length == 0)
-			return null;
-		return typeInstance.Values[0].IsText
-			? typeInstance.Values[0].Text
-			: null;
 	}
 
 	private ValueInstance[]? BuildNativePluginValues(Type traitType, byte[] bytes, int width,
@@ -979,31 +957,6 @@ public sealed partial class VirtualMachine
 			return false;
 		return instance.GetType().
 			IsSameOrCanBeUsedAs(executable.basePackage.GetType(Type.File));
-	}
-
-	/// <summary>
-	/// File.from accepts Text or Path. CLI Run(path) parameters are Path value instances
-	/// (has text), not bare Text — extract the underlying path string for native I/O.
-	/// </summary>
-	private static bool TryGetPathText(ValueInstance pathValue, out string pathText)
-	{
-		if (pathValue.IsText)
-		{
-			pathText = pathValue.Text;
-			return true;
-		}
-		var pathInstance = pathValue.TryGetValueTypeInstance();
-		if (pathInstance != null && pathInstance.ReturnType.Name == "Path")
-		{
-			var textMember = pathInstance["text"];
-			if (textMember.IsText)
-			{
-				pathText = textMember.Text;
-				return true;
-			}
-		}
-		pathText = "";
-		return false;
 	}
 
 	private void DisposeTrackedValues(CallFrame frame, ValueInstance? returnValue,

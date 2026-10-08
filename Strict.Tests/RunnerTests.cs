@@ -67,6 +67,13 @@ public sealed class RunnerTests
 	public void RestoreConsole() => Console.SetOut(rememberConsole);
 
 	[Test]
+	public async Task RunDirectoryTestsUsesNativeDirectoryInTestsAndVirtualMachine()
+	{
+		await new Runner(GetExamplesFilePath("BaseTypesTest/DirectoryTests")).Run();
+		Assert.That(consoleWriter.ToString(), Does.Contain("Directory exists: true"));
+	}
+
+	[Test]
 	public async Task RunSimpleCalculator()
 	{
 		var asmFilePath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
