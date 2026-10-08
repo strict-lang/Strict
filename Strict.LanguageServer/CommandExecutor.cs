@@ -83,14 +83,10 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 			languageServer.Window.LogInfo(consoleOutput);
 		if (error != null)
 			languageServer.Window.LogError(error.Message);
-		languageServer.SendNotification(NotificationName, new TestNotificationMessage
+		languageServer.SendNotification(NotificationName, new TestNotificationMessage(
+			error is ParsingFailed parsing ? parsing.FileLineNumber : method?.TypeLineNumber ?? 0,
+			error == null ? TestState.Green : TestState.Red)
 		{
-			LineNumber = error is ParsingFailed parsing
-				? parsing.FileLineNumber
-				: method?.TypeLineNumber ?? 0,
-			State = error == null
-				? TestState.Green
-				: TestState.Red,
 			Uri = documentUri.ToString(),
 			MethodName = method?.Name ?? methodName,
 			TypeName = type.Name,
