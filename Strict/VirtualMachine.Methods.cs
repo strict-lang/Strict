@@ -746,10 +746,11 @@ public sealed partial class VirtualMachine
 			return;
 		var instance = evaluatedInstance.Value;
 		Memory.Frame.Set(Type.ValueLowercase, instance, isMember: true);
-		if (instance.IsText)
+		if (instance.IsText || instance.IsList)
 		{
-			Memory.Frame.Set("elements", instance, isMember: true);
-			Memory.Frame.Set("characters", instance, isMember: true);
+			Memory.Frame.Set(CallFrame.ElementsSymbolId, instance, isMember: true);
+			if (instance.IsText)
+				Memory.Frame.Set("characters", instance, isMember: true);
 			return;
 		}
 		var flatNumeric = instance.TryGetFlatNumericArrayInstance();
