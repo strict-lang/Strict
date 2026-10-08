@@ -10,9 +10,9 @@ public class ParsingFailed : Exception
 	/// <summary>Zero-based line index in the type file where the error occurred.</summary>
 	public int FileLineNumber { get; }
 
-	protected ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "")
-		: base(message + GetClickableStacktraceLine(type, ResolveLineNumber(type, fileLineNumber),
-			method)) =>
+	protected ParsingFailed(Type type, int fileLineNumber, string message = "", string method = "") :
+		base(message +
+			GetClickableStacktraceLine(type, ResolveLineNumber(type, fileLineNumber), method)) =>
 		FileLineNumber = ResolveLineNumber(type, fileLineNumber);
 
 	protected ParsingFailed(string message, Exception? inner = null) : base(message, inner) =>

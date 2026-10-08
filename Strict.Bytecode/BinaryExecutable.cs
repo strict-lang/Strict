@@ -19,12 +19,18 @@ namespace Strict.Bytecode;
 public sealed class BinaryExecutable(Package basePackage)
 {
 	internal readonly Package basePackage = basePackage;
-	internal Type noneType = basePackage.FindType(Type.None) ?? new Type(basePackage, new TypeLines(Type.None));
-	internal Type booleanType = basePackage.FindType(Type.Boolean) ?? new Type(basePackage, new TypeLines(Type.Boolean));
-	internal Type numberType = basePackage.FindType(Type.Number) ?? new Type(basePackage, new TypeLines(Type.Number));
-	internal Type characterType = basePackage.FindType(Type.Character) ?? new Type(basePackage, new TypeLines(Type.Character));
-	internal Type rangeType = basePackage.FindType(Type.Range) ?? new Type(basePackage, new TypeLines(Type.Range));
-	internal Type listType = basePackage.FindType(Type.List) ?? new Type(basePackage, new TypeLines(Type.List, Type.HasWithSpaceAtEnd + Type.GenericUppercase));
+	internal Type noneType = basePackage.FindType(Type.None) ??
+		new Type(basePackage, new TypeLines(Type.None));
+	internal Type booleanType = basePackage.FindType(Type.Boolean) ??
+		new Type(basePackage, new TypeLines(Type.Boolean));
+	internal Type numberType = basePackage.FindType(Type.Number) ??
+		new Type(basePackage, new TypeLines(Type.Number));
+	internal Type characterType = basePackage.FindType(Type.Character) ??
+		new Type(basePackage, new TypeLines(Type.Character));
+	internal Type rangeType = basePackage.FindType(Type.Range) ??
+		new Type(basePackage, new TypeLines(Type.Range));
+	internal Type listType = basePackage.FindType(Type.List) ?? new Type(basePackage,
+		new TypeLines(Type.List, Type.HasWithSpaceAtEnd + Type.GenericUppercase));
 
 	/// <summary>
 	/// Loads a fully self-contained .strictbinary without needing any external package.
@@ -41,6 +47,10 @@ public sealed class BinaryExecutable(Package basePackage)
 	{
 		try
 		{
+			if (basePackage.FindType(Type.Any) == null)
+				new Type(basePackage,
+					new TypeLines(Type.Any, Method.From, BinaryOperator.To + " Type",
+						BinaryOperator.To + " " + Type.Text));
 			using var zip = ZipFile.OpenRead(filePath);
 			foreach (var entry in zip.Entries)
 				if (entry.FullName.EndsWith(BinaryType.BytecodeEntryExtension,
@@ -51,7 +61,7 @@ public sealed class BinaryExecutable(Package basePackage)
 					var reader = new BinaryReader(bytecode);
 					MethodsPerType.Add(typeFullName, new BinaryType(reader, this, typeFullName));
 				}
-			if (basePackage.Parent == null)
+			if (basePackage.Parent is not Package)
 				PopulateStubTypesFromEmbeddedEntries();
 		}
 		catch (InvalidDataException ex)
@@ -113,8 +123,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	private BinaryMethod ResolveEntryPoint()
 	{
 		foreach (var typeData in MethodsPerType.Values)
-			if (typeData.MethodGroups.TryGetValue(Method.Run, out var runMethods) &&
-				runMethods.Count > 0)
+			if (typeData.MethodGroups.TryGetValue(Method.Run, out var runMethods) && runMethods.Count > 0)
 				return runMethods[0];
 		throw new InvalidOperationException("No Run entry point found in binary executable");
 	}
@@ -144,7 +153,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	public void Serialize(string filePath)
 	{
 		using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.ReadWrite);
-		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: false);
+		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, false);
 		foreach (var (fullTypeName, membersAndMethods) in MethodsPerType)
 		{
 			var entry = zip.CreateEntry(fullTypeName + BinaryType.BytecodeEntryExtension,
@@ -164,8 +173,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		return ReadInstruction(reader, table, ref prevSourceLine);
 	}
 
-	internal Instruction ReadInstruction(BinaryReader reader, NameTable table,
-		ref int prevSourceLine)
+	internal Instruction ReadInstruction(BinaryReader reader, NameTable table, ref int prevSourceLine)
 	{
 		var rawByte = reader.ReadByte();
 		var hasSourceLine = (rawByte & (byte)InstructionType.IncludesSourceLine) != 0;
@@ -244,7 +252,9 @@ public sealed class BinaryExecutable(Package basePackage)
 			writer.Write(val.Boolean);
 		}
 		else if (type.IsNone)
+		{
 			writer.Write((byte)ValueKind.None);
+		}
 		else if (type.IsNumber)
 		{
 			if (IsSmallNumber(val.Number))
@@ -264,7 +274,9 @@ public sealed class BinaryExecutable(Package basePackage)
 			}
 		}
 		else
+		{
 			throw new ValueInstanceNotSupported(val); //ncrunch: no coverage
+		}
 	}
 
 	public static bool IsSmallNumber(double value) =>
@@ -347,12 +359,11 @@ public sealed class BinaryExecutable(Package basePackage)
 		return new MethodCall(method, instance, args, methodReturnType);
 	}
 
-	private static Method FindMethod(Type type, string methodName,
-		BinaryMember[] parameters, Type returnType)
+	private static Method FindMethod(Type type, string methodName, BinaryMember[] parameters,
+		Type returnType)
 	{
 		var method = type.Methods.FirstOrDefault(existingMethod =>
-			existingMethod.Name == methodName &&
-			existingMethod.Parameters.Count == parameters.Length);
+			existingMethod.Name == methodName && existingMethod.Parameters.Count == parameters.Length);
 		if (method != null)
 			return method;
 		if (type.AvailableMethods.TryGetValue(methodName, out var availableMethods))
@@ -381,8 +392,8 @@ public sealed class BinaryExecutable(Package basePackage)
 		return createdMethod;
 	}
 
-	public static string BuildMethodHeader(string methodName,
-		BinaryMember[] parameters, Type returnType) =>
+	public static string BuildMethodHeader(string methodName, BinaryMember[] parameters,
+		Type returnType) =>
 		parameters.Length == 0
 			? returnType.IsNone
 				? methodName
@@ -411,7 +422,8 @@ public sealed class BinaryExecutable(Package basePackage)
 
 	private List ReadListExpr(BinaryReader reader, NameTable table)
 	{
-		var concreteListType = EnsureResolvedType(basePackage, table.names[reader.Read7BitEncodedInt()]);
+		var concreteListType =
+			EnsureResolvedType(basePackage, table.names[reader.Read7BitEncodedInt()]);
 		var itemCount = reader.Read7BitEncodedInt();
 		var values = new List<Expression>(itemCount);
 		for (var index = 0; index < itemCount; index++)
@@ -676,8 +688,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		var binary = new BinaryExecutable(basePackage);
 		var runMethod = new BinaryMethod(Method.Run, [], Type.None, instructions);
 		return binary.AddType("EntryPoint", new List<BinaryMember>(),
-			new Dictionary<string, List<BinaryMethod>> { [Method.Run] = [runMethod] },
-			isEntryType: true);
+			new Dictionary<string, List<BinaryMethod>> { [Method.Run] = [runMethod] }, true);
 	}
 
 	internal void SetEntryPoint(string typeFullName, string methodName, int parameterCount,
@@ -687,9 +698,10 @@ public sealed class BinaryExecutable(Package basePackage)
 			throw new InvalidOperationException("Entry point type not found: " + typeFullName);
 		if (!typeData.MethodGroups.TryGetValue(methodName, out var overloads))
 			throw new InvalidOperationException("Entry point method not found: " + methodName);
-		entryPoint = overloads.FirstOrDefault(method => method.parameters.Count == parameterCount &&
-			method.ReturnTypeName == returnTypeName) ?? throw new InvalidOperationException(
-			"Entry point overload not found: " + methodName);
+		entryPoint =
+			overloads.FirstOrDefault(method =>
+				method.parameters.Count == parameterCount && method.ReturnTypeName == returnTypeName) ??
+			throw new InvalidOperationException("Entry point overload not found: " + methodName);
 	}
 
 	public List<TResult> ConvertAll<TResult>(Converter<Instruction, TResult> converter) =>

@@ -10,8 +10,8 @@ namespace Strict.Expressions;
 /// </summary>
 public class Declaration : ConcreteExpression
 {
-	public Declaration(Body scope, string name, Expression value, bool isMutable = false) :
-		base(value.ReturnType, value.LineNumber, isMutable)
+	public Declaration(Body scope, string name, Expression value, bool isMutable = false) : base(
+		value.ReturnType, value.LineNumber, isMutable)
 	{
 		if (!name.IsWord())
 			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(name);

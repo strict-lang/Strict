@@ -43,8 +43,7 @@ public sealed class StrengthReducerTests : TestOptimizers
 			new ReturnInstruction(Register.R2)
 		], 2);
 		Assert.That(optimizedInstructions[0], Is.InstanceOf<LoadConstantInstruction>());
-		Assert.That(((LoadConstantInstruction)optimizedInstructions[0]).Constant.Number,
-			Is.EqualTo(0));
+		Assert.That(((LoadConstantInstruction)optimizedInstructions[0]).Constant.Number, Is.EqualTo(0));
 	}
 
 	[Test]

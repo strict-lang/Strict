@@ -25,8 +25,8 @@ public sealed class ConstantCollapserTests
 	public void ComplainWhenAConstantIsUsedInANormalMember()
 	{
 		using var simpleType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(FoldMemberInitialValueExpressions),
-				"has number = 17 + 4", "Run", "\tnumber"));
+			new TypeLines(nameof(FoldMemberInitialValueExpressions), "has number = 17 + 4", "Run",
+				"\tnumber"));
 		simpleType.ParseMembersAndMethods(parser);
 		Assert.That(() => collapser.Visit(simpleType, true),
 			Throws.InstanceOf<ConstantCollapser.UseConstantHere>());
@@ -72,10 +72,7 @@ public sealed class ConstantCollapserTests
 	public void FoldTwoMembers()
 	{
 		using var foldType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(FoldTwoMembers),
-				"has one = 1",
-				"has two = 2",
-				"Run Number",
+			new TypeLines(nameof(FoldTwoMembers), "has one = 1", "has two = 2", "Run Number",
 				"\tone + two"));
 		foldType.ParseMembersAndMethods(parser);
 		collapser.Visit(foldType.Methods[0], true);
@@ -121,8 +118,8 @@ public sealed class ConstantCollapserTests
 	public void FoldMemberInitialValueExpressions()
 	{
 		using var simpleType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(FoldMemberInitialValueExpressions),
-				"constant number = 17 + 4", "Run", "\tnumber"));
+			new TypeLines(nameof(FoldMemberInitialValueExpressions), "constant number = 17 + 4", "Run",
+				"\tnumber"));
 		simpleType.ParseMembersAndMethods(parser);
 		collapser.Visit(simpleType, true);
 		Assert.That(((Number)simpleType.Members[0].InitialValue!).Data.Number, Is.EqualTo(21));
@@ -224,39 +221,32 @@ public sealed class ConstantCollapserTests
 	public void FoldsMemberWithBinaryInitialValueOnLeftSide()
 	{
 		using var testType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(FoldsMemberWithBinaryInitialValueOnLeftSide),
-				"constant one = 2 + 3",
-				"Run Number",
-				"\tone * 2"));
+			new TypeLines(nameof(FoldsMemberWithBinaryInitialValueOnLeftSide), "constant one = 2 + 3",
+				"Run Number", "\tone * 2"));
 		testType.ParseMembersAndMethods(parser);
 		collapser.Visit(testType.Methods[0], true);
-		Assert.That(((Number)testType.Methods[0].GetBodyAndParseIfNeeded()).Data.Number, Is.EqualTo(10));
+		Assert.That(((Number)testType.Methods[0].GetBodyAndParseIfNeeded()).Data.Number,
+			Is.EqualTo(10));
 	}
 
 	[Test]
 	public void FoldsMemberWithBinaryInitialValueOnRightSide()
 	{
 		using var testType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(FoldsMemberWithBinaryInitialValueOnRightSide),
-				"constant one = 2 + 3",
-				"Run Number",
-				"\t2 * one"));
+			new TypeLines(nameof(FoldsMemberWithBinaryInitialValueOnRightSide), "constant one = 2 + 3",
+				"Run Number", "\t2 * one"));
 		testType.ParseMembersAndMethods(parser);
 		collapser.Visit(testType.Methods[0], true);
-		Assert.That(((Number)testType.Methods[0].GetBodyAndParseIfNeeded()).Data.Number, Is.EqualTo(10));
+		Assert.That(((Number)testType.Methods[0].GetBodyAndParseIfNeeded()).Data.Number,
+			Is.EqualTo(10));
 	}
 
 	[Test]
 	public void SubstitutesConstantMemberCallInBinaryWhenOtherSideIsNonConstant()
 	{
 		using var testType = new Type(TestPackage.Instance,
-			new TypeLines("PartialBinaryCollapse",
-				"constant one = 1",
-				"has number",
-				"AddConstant Number",
-				"\tone + number",
-				"Run",
-				"\tnumber"));
+			new TypeLines("PartialBinaryCollapse", "constant one = 1", "has number", "AddConstant Number",
+				"\tone + number", "Run", "\tnumber"));
 		testType.ParseMembersAndMethods(parser);
 		collapser.Visit(testType.Methods[0], true);
 		Assert.That(((Binary)testType.Methods[0].GetBodyAndParseIfNeeded()).Instance,
@@ -267,9 +257,7 @@ public sealed class ConstantCollapserTests
 	public void UsedConstantComplexExpressionShouldNotBeFolded()
 	{
 		using var testType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(UsedConstantComplexExpressionShouldNotBeFolded),
-				"has logger",
-				"Run",
+			new TypeLines(nameof(UsedConstantComplexExpressionShouldNotBeFolded), "has logger", "Run",
 				"\tconstant program = " + nameof(UsedConstantComplexExpressionShouldNotBeFolded),
 				"\tlogger.Log(program)"));
 		testType.ParseMembersAndMethods(parser);

@@ -1,6 +1,7 @@
 using Eto.Parse;
 using Eto.Parse.Grammars;
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 //ncrunch: no coverage start, just for testing and debugging if all grammar rules work
 var g = new EbnfGrammar(EbnfStyle.CharacterSets | EbnfStyle.CardinalityFlags |
@@ -25,11 +26,18 @@ var localPath = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nam
 var basePath = Directory.Exists(localPath)
 	? localPath
 	: Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..");
-foreach (var file in Directory.GetFiles(basePath, "*" + Strict.Language.Type.Extension))
+foreach (var file in Directory.GetFiles(basePath, "*" + Type.Extension))
 	ShowResult(Path.GetFileName(file), built.Match(File.ReadAllText(file)));
 
-static void ShowResult(string filename, GrammarMatch result)
-{
-	Console.WriteLine(
-		$"{filename}: Success={result.Success}, Length={result.Length}, Errors={result.Errors.Count<object>()}, ErrorIndex={result.ErrorIndex}");
-}
+static void ShowResult(string filename, GrammarMatch result) =>
+	Console.WriteLine($"{
+		filename
+	}: Success={
+		result.Success
+	}, Length={
+		result.Length
+	}, Errors={
+		result.Errors.Count<object>()
+	}, ErrorIndex={
+		result.ErrorIndex
+	}");

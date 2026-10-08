@@ -11,17 +11,16 @@ public static class PackageResolver
 		var directory = Path.GetDirectoryName(filePath);
 		if (string.IsNullOrEmpty(directory))
 			return FromFolderName(root, Path.GetFileName(Path.GetDirectoryName(filePath) ?? root.Name));
-		if (!string.IsNullOrEmpty(root.FolderPath) &&
-			string.Equals(Path.GetFullPath(directory), Path.GetFullPath(root.FolderPath),
-				StringComparison.OrdinalIgnoreCase))
+		if (!string.IsNullOrEmpty(root.FolderPath) && string.Equals(Path.GetFullPath(directory),
+			Path.GetFullPath(root.FolderPath), StringComparison.OrdinalIgnoreCase))
 			return root;
 		var folders = new Stack<string>();
 		var current = directory;
 		while (!string.IsNullOrEmpty(current))
 		{
-			if (!string.IsNullOrEmpty(root.FolderPath) &&
-				string.Equals(Path.GetFullPath(current), Path.GetFullPath(root.FolderPath),
-					StringComparison.OrdinalIgnoreCase) || File.Exists(Path.Combine(current, "Boolean.strict")))
+			if ((!string.IsNullOrEmpty(root.FolderPath) && string.Equals(Path.GetFullPath(current),
+					Path.GetFullPath(root.FolderPath), StringComparison.OrdinalIgnoreCase)) ||
+				File.Exists(Path.Combine(current, "Boolean.strict")))
 			{
 				var resolved = root;
 				var pathSoFar = current;
@@ -58,8 +57,8 @@ public static class PackageResolver
 				continue;
 			try
 			{
-				new Type(created, new TypeLines(typeName, TypeLines.FromFile(file))).
-					ParseMembersAndMethods(new MethodExpressionParser());
+				new Type(created, new TypeLines(typeName, TypeLines.FromFile(file))).ParseMembersAndMethods(
+					new MethodExpressionParser());
 			}
 			catch (Exception)
 			{

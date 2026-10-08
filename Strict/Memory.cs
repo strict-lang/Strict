@@ -1,4 +1,5 @@
 using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict;
 
@@ -13,8 +14,8 @@ public sealed class Memory
 		get
 		{
 #if DEBUG
-			if (Language.PerformanceLog.IsEnabled)
-				Language.PerformanceLog.Write("Memory.Registers get", "callers=" + Language.PerformanceLog.GetCallers(1));
+			if (PerformanceLog.IsEnabled)
+				PerformanceLog.Write("Memory.Registers get", "callers=" + PerformanceLog.GetCallers(1));
 #endif
 			return registers;
 		}
@@ -28,16 +29,16 @@ public sealed class Memory
 		get
 		{
 #if DEBUG
-			if (Language.PerformanceLog.IsEnabled)
-				Language.PerformanceLog.Write("Memory.Frame get", "access");
+			if (PerformanceLog.IsEnabled)
+				PerformanceLog.Write("Memory.Frame get", "access");
 #endif
 			return frame;
 		}
 		set
 		{
 #if DEBUG
-			if (Language.PerformanceLog.IsEnabled)
-				Language.PerformanceLog.Write("Memory.Frame set", "frame=" + value.GetHashCode());
+			if (PerformanceLog.IsEnabled)
+				PerformanceLog.Write("Memory.Frame set", "frame=" + value.GetHashCode());
 #endif
 			frame = value;
 		}
@@ -51,8 +52,8 @@ public sealed class Memory
 		get
 		{
 #if DEBUG
-			if (Language.PerformanceLog.IsEnabled)
-				Language.PerformanceLog.Write("Memory.Variables get", "access");
+			if (PerformanceLog.IsEnabled)
+				PerformanceLog.Write("Memory.Variables get", "access");
 #endif
 			return Frame.Variables;
 		}
@@ -61,9 +62,9 @@ public sealed class Memory
 	public void AddToCollection(int symbolId, ValueInstance element)
 	{
 #if DEBUG
-		if (Language.PerformanceLog.IsEnabled)
-			Language.PerformanceLog.Write("Memory.AddToCollection", "key=" + CallFrame.GetSymbolName(symbolId) +
-				", element=" + Describe(element));
+		if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("Memory.AddToCollection",
+				"key=" + CallFrame.GetSymbolName(symbolId) + ", element=" + Describe(element));
 #endif
 		Frame.TryGet(symbolId, out var collection);
 		if (!collection.IsList)
@@ -92,9 +93,10 @@ public sealed class Memory
 	public void AddToDictionary(int symbolId, ValueInstance keyToAddTo, ValueInstance value)
 	{
 #if DEBUG
-		if (Language.PerformanceLog.IsEnabled)
-			Language.PerformanceLog.Write("Memory.AddToDictionary", "key=" + CallFrame.GetSymbolName(symbolId) +
-				", itemKey=" + Describe(keyToAddTo) + ", value=" + Describe(value));
+		if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("Memory.AddToDictionary",
+				"key=" + CallFrame.GetSymbolName(symbolId) + ", itemKey=" + Describe(keyToAddTo) +
+				", value=" + Describe(value));
 #endif
 		Frame.TryGet(symbolId, out var collection);
 		if (collection.IsDictionary)
@@ -113,7 +115,8 @@ public sealed class Memory
 			return "Dictionary(count=" + value.GetDictionaryItems().Count + ")";
 		var typeInstance = value.TryGetValueTypeInstance();
 		return typeInstance != null
-			? "TypeInstance(type=" + typeInstance.ReturnType.Name + ", members=" + typeInstance.Values.Length + ")"
+			? "TypeInstance(type=" + typeInstance.ReturnType.Name + ", members=" +
+			typeInstance.Values.Length + ")"
 			: value.GetType().Name + "(" + value.Number + ")";
 	}
 #endif

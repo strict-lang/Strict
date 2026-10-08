@@ -5,9 +5,9 @@ namespace Strict.Bytecode.Instructions;
 public sealed class WriteToTableInstruction(Register key, Register value, string identifier)
 	: RegisterInstruction(InstructionType.InvokeWriteToTable, key)
 {
-	public WriteToTableInstruction(BinaryReader reader, NameTable table)
-		: this((Register)reader.ReadByte(), (Register)reader.ReadByte(),
-			table.names[reader.Read7BitEncodedInt()]) { }
+	public WriteToTableInstruction(BinaryReader reader, NameTable table) : this(
+		(Register)reader.ReadByte(), (Register)reader.ReadByte(),
+		table.names[reader.Read7BitEncodedInt()]) { }
 
 	public Register Value { get; } = value;
 	public string Identifier { get; } = identifier;

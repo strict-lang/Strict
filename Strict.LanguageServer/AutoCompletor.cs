@@ -27,8 +27,8 @@ public sealed class AutoCompletor(StrictDocument documentManager, Package packag
 	{
 		var type = package.SynchronizeAndGetType(typeName, code);
 		var typeToFind = GetTypeToFind(code[request.Position.Line]);
-		return FindMemberTypeName(type, typeToFind) ?? FindMethod(request, code, type)?.Parameters.
-				FirstOrDefault(p => p.Name == typeToFind)?.Type ??
+		return FindMemberTypeName(type, typeToFind) ??
+			FindMethod(request, code, type)?.Parameters.FirstOrDefault(p => p.Name == typeToFind)?.Type ??
 			FindVariable(FindLine(code, typeToFind, request.Position.Line - 1), type);
 	}
 
@@ -40,15 +40,17 @@ public sealed class AutoCompletor(StrictDocument documentManager, Package packag
 			: splitText[^1];
 	}
 
-	private static Type? FindMemberTypeName(Type type, string typeToFind) => type.Members.FirstOrDefault(m => m.Name == typeToFind)?.Type;
+	private static Type? FindMemberTypeName(Type type, string typeToFind) =>
+		type.Members.FirstOrDefault(m => m.Name == typeToFind)?.Type;
 
-	private static Method? FindMethod(TextDocumentPositionParams request,
-		IReadOnlyList<string> code, Type type) =>
+	private static Method? FindMethod(TextDocumentPositionParams request, IReadOnlyList<string> code,
+		Type type) =>
 		type.Methods.Count == 1
 			? type.Methods[0]
 			: FindMethodFromLine(request, code, type);
 
-	private static Method? FindMethodFromLine(TextDocumentPositionParams request, IReadOnlyList<string> code, Type type)
+	private static Method? FindMethodFromLine(TextDocumentPositionParams request,
+		IReadOnlyList<string> code, Type type)
 	{
 		var methodName = FindMethodName(code, request.Position.Line - 1);
 		return type.Methods.FirstOrDefault(method => method.Name == methodName);
@@ -99,7 +101,8 @@ public sealed class AutoCompletor(StrictDocument documentManager, Package packag
 		Task.FromResult(new CompletionList(
 			CreateCompletionItems(GetCompletionItemsForMembersAndMethods(completionType))));
 
-	private static List<StrictCompletionItem> GetCompletionItemsForMembersAndMethods(Type completionType)
+	private static List<StrictCompletionItem> GetCompletionItemsForMembersAndMethods(
+		Type completionType)
 	{
 		var completionItems = CreateCompletionItemsForMethods(completionType.Methods);
 		completionItems.AddRange(CreateCompletionItemsForMembers(completionType.Members));
@@ -116,10 +119,14 @@ public sealed class AutoCompletor(StrictDocument documentManager, Package packag
 		members.Where(member => member.IsPublic).Select(member => member.Name).Select(name =>
 			new StrictCompletionItem(name, CompletionItemKind.Method));
 
-	private static IEnumerable<CompletionItem> CreateCompletionItems(IEnumerable<StrictCompletionItem> completionItems) =>
+	private static IEnumerable<CompletionItem>
+		CreateCompletionItems(IEnumerable<StrictCompletionItem> completionItems) =>
 		completionItems.Select(item => new CompletionItem
 		{
-			InsertText = item.Name, FilterText = item.Name, Label = item.Name, Kind = item.CompletionKind
+			InsertText = item.Name,
+			FilterText = item.Name,
+			Label = item.Name,
+			Kind = item.CompletionKind
 		});
 
 	//ncrunch: no coverage start

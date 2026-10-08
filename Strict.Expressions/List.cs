@@ -9,13 +9,12 @@ namespace Strict.Expressions;
 public sealed class List : Value
 {
 	public List(Body bodyForErrorMessage, List<Expression> values, bool isMutable = false) : base(
-		values[0].ReturnType.
-			GetListImplementationType(GetCommonBaseType(values, bodyForErrorMessage)), [],
-		values[0].LineNumber, isMutable) =>
+		values[0].ReturnType.GetListImplementationType(GetCommonBaseType(values, bodyForErrorMessage)),
+		[], values[0].LineNumber, isMutable) =>
 		Values = values;
 
-	internal List(Type type, List<Expression> values, int lineNumber, bool isMutable) :
-		base(type, [], lineNumber, isMutable) =>
+	internal List(Type type, List<Expression> values, int lineNumber, bool isMutable) : base(type, [],
+		lineNumber, isMutable) =>
 		Values = values;
 
 	public List(Type type, int lineNumber = 0) : base(type, [], lineNumber, true) => Values = [];
@@ -67,8 +66,8 @@ public sealed class List : Value
 	}
 
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) || other is List list && ReturnType == list.ReturnType &&
-		Values.Count == list.Values.Count && ValuesEqual(list);
+		ReferenceEquals(this, other) || (other is List list && ReturnType == list.ReturnType &&
+			Values.Count == list.Values.Count && ValuesEqual(list));
 
 	private bool ValuesEqual(List other)
 	{
@@ -100,9 +99,13 @@ public sealed class List : Value
 				valueInstances[i] = innerData.Value;
 			}
 			else if (Values[i] is Value constantValue)
+			{
 				valueInstances[i] = constantValue.Data;
+			}
 			else
+			{
 				return null;
+			}
 		cachedData = new ValueInstance(ReturnType, valueInstances);
 		return cachedData;
 	}

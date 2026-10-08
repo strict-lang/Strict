@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -5,8 +7,7 @@ namespace Strict.Expressions;
 public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 	: IEquatable<ValueTypeInstance>
 {
-	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Type,
-		Dictionary<string, int>> MemberIndexes = new();
+	private static readonly ConditionalWeakTable<Type, Dictionary<string, int>> MemberIndexes = new();
 	public readonly Type ReturnType = returnType;
 	public readonly ValueInstance[] Values = values;
 
@@ -69,7 +70,7 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 		var members = ReturnType.Members;
 		if (Values.Length == 0)
 			return ReturnType.Name;
-		var visibleMembers = new List<(Strict.Language.Member Member, ValueInstance Value)>(Values.Length);
+		var visibleMembers = new List<(Member Member, ValueInstance Value)>(Values.Length);
 		var totalValueCount = 0;
 		var containsCollection = false;
 		for (var index = 0; index < Values.Length && index < members.Count; index++)
@@ -82,18 +83,19 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 		if (visibleMembers.Count == 0)
 			return ReturnType.Name;
 		return containsCollection || totalValueCount > 4
-			? ReturnType.Name + "(" + string.Join(", ", visibleMembers.Select(member =>
-				member.Member.Name + "=" + FormatValue(member.Value, true))) + ")"
-			: "(" + string.Join(", ", visibleMembers.Select(member =>
-				FormatValue(member.Value, false))) + ")";
+			? ReturnType.Name + "(" + string.Join(", ",
+				visibleMembers.Select(member =>
+					member.Member.Name + "=" + FormatValue(member.Value, true))) + ")"
+			: "(" + string.Join(", ", visibleMembers.Select(member => FormatValue(member.Value, false))) +
+			")";
 	}
 
-  private static string FormatValue(ValueInstance value, bool limitCollectionEntries) =>
+	private static string FormatValue(ValueInstance value, bool limitCollectionEntries) =>
 		!value.HasValue
 			? "(unset)"
 			: value.IsList
-			? FormatList(value.List.Items, limitCollectionEntries)
-			: value.ToExpressionCodeString();
+				? FormatList(value.List.Items, limitCollectionEntries)
+				: value.ToExpressionCodeString();
 
 	private static string FormatList(IReadOnlyList<ValueInstance> items, bool limitEntries)
 	{
@@ -131,10 +133,11 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 		return totalValueCount;
 	}
 
-  private static bool ShouldIncludeMember(Strict.Language.Member member, ValueInstance value) =>
-		value.HasValue && !member.IsConstant && !member.Type.IsTrait && !HasSameValueAsDefault(member, value);
+	private static bool ShouldIncludeMember(Member member, ValueInstance value) =>
+		value.HasValue && !member.IsConstant && !member.Type.IsTrait &&
+		!HasSameValueAsDefault(member, value);
 
-	private static bool HasSameValueAsDefault(Strict.Language.Member member, ValueInstance value)
+	private static bool HasSameValueAsDefault(Member member, ValueInstance value)
 	{
 		if (member.InitialValue == null)
 			return false;
@@ -143,8 +146,7 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 			: value.ToExpressionCodeString() == member.InitialValue.ToString();
 	}
 
-	private static bool TryCreateDefaultValue(Strict.Language.Expression expression,
-		out ValueInstance value)
+	private static bool TryCreateDefaultValue(Expression expression, out ValueInstance value)
 	{
 		switch (expression)
 		{
@@ -161,7 +163,7 @@ public sealed class ValueTypeInstance(Type returnType, ValueInstance[] values)
 		case MemberCall memberCall when memberCall.Member.InitialValue != null:
 			// ReSharper disable once TailRecursiveCall
 			return TryCreateDefaultValue(memberCall.Member.InitialValue, out value);
-		case MethodCall { Method.Name: Strict.Language.Method.From, Instance: null } methodCall:
+		case MethodCall { Method.Name: Method.From, Instance: null } methodCall:
 			if (methodCall.ReturnType.IsNumber || methodCall.ReturnType.IsText ||
 				methodCall.ReturnType.IsBoolean || methodCall.ReturnType.IsCharacter ||
 				methodCall.ReturnType.IsEnum || methodCall.ReturnType.IsNone)

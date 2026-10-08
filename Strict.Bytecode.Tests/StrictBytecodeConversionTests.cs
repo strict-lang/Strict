@@ -10,13 +10,13 @@ public sealed class StrictBytecodeConversionTests
 	{
 		var path = GetBytecodePath();
 		foreach (var typeName in new[]
-		{
-			"InstructionType", "InstructionNames", "Register", "Registry", "ValueKind",
-			"ExpressionKind", "BytecodeValue", "BytecodeInstruction", "InstructionBuilder",
-			"InstructionText", "InvokeInfo", "NameTable", "BinaryMember", "BinaryMethod",
-			"BinaryTypeData", "BinaryExecutable", "GenerationResult", "ExpressionCodegen",
-			"LineGenerator", "NumberLiteral", "Decompiler", "InstructionList"
-		})
+			{
+				"InstructionType", "InstructionNames", "Register", "Registry", "ValueKind",
+				"ExpressionKind", "BytecodeValue", "BytecodeInstruction", "InstructionBuilder",
+				"InstructionText", "InvokeInfo", "NameTable", "BinaryMember", "BinaryMethod",
+				"BinaryTypeData", "BinaryExecutable", "GenerationResult", "ExpressionCodegen",
+				"LineGenerator", "NumberLiteral", "Decompiler", "InstructionList"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 
@@ -25,10 +25,10 @@ public sealed class StrictBytecodeConversionTests
 	{
 		var path = GetBytecodePath();
 		foreach (var typeName in new[]
-		{
-			"BytecodeDemo", "RegistryTests", "InstructionTests", "NameTableTests",
-			"GeneratorTests", "DecompilerTests", "ValueTests", "ExecutableTests"
-		})
+			{
+				"BytecodeDemo", "RegistryTests", "InstructionTests", "NameTableTests", "GeneratorTests",
+				"DecompilerTests", "ValueTests", "ExecutableTests"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 
@@ -50,10 +50,10 @@ public sealed class StrictBytecodeConversionTests
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Bytecode");
 		var builder = package.GetType("InstructionBuilder");
 		foreach (var name in new[]
-		{
-			"SetNumber", "LoadConstant", "LoadVariable", "StoreConstant", "StoreRegister",
-			"BinaryOp", "ReturnOp", "JumpOp", "InvokeOp", "PrintOp"
-		})
+			{
+				"SetNumber", "LoadConstant", "LoadVariable", "StoreConstant", "StoreRegister", "BinaryOp",
+				"ReturnOp", "JumpOp", "InvokeOp", "PrintOp"
+			})
 			Assert.That(builder.Methods.Any(method => method.Name == name), Is.True, name);
 	}
 
@@ -75,8 +75,7 @@ public sealed class StrictBytecodeConversionTests
 		using var package =
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Bytecode");
 		var decompiler = package.GetType("Decompiler");
-		Assert.That(decompiler.Methods.Any(method => method.Name == "ReconstructInstruction"),
-			Is.True);
+		Assert.That(decompiler.Methods.Any(method => method.Name == "ReconstructInstruction"), Is.True);
 		Assert.That(decompiler.Methods.Any(method => method.Name == "ReconstructMethod"), Is.True);
 		var table = package.GetType("NameTable");
 		Assert.That(table.Methods.Any(method => method.Name == "Add"), Is.True);

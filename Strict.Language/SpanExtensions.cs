@@ -23,8 +23,7 @@ public static class SpanExtensions
 	public class EmptyInputIsNotAllowed : Exception { }
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static SpanSplitEnumerator SplitLines(this ReadOnlySpan<char> input) =>
-		Split(input, '\n');
+	public static SpanSplitEnumerator SplitLines(this ReadOnlySpan<char> input) => input.Split('\n');
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static ReadOnlySpan<char> GetSpanFromRange(this string input, Range range)
@@ -91,7 +90,7 @@ public static class SpanExtensions
 	public static bool IsWord(this ReadOnlySpan<char> input)
 	{
 		foreach (var c in input)
-			if (!IsLetter(c))
+			if (!c.IsLetter())
 				return false;
 		return true;
 	}
@@ -105,8 +104,8 @@ public static class SpanExtensions
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsFalseText(this ReadOnlySpan<char> input) =>
-		input.Length == 5 && input[0] == 'f' && input[1] == 'a' && input[2] == 'l' &&
-		input[3] == 's' && input[4] == 'e';
+		input.Length == 5 && input[0] == 'f' && input[1] == 'a' && input[2] == 'l' && input[3] == 's' &&
+		input[4] == 'e';
 
 	/// <summary>
 	/// Heavily optimized number parsing, which can be 10 times faster than int.TryParse and 50
@@ -119,7 +118,7 @@ public static class SpanExtensions
 	{
 		if (input[0] == '-')
 		{
-			if (!TryParseNumber(input[1..], out number))
+			if (!input[1..].TryParseNumber(out number))
 				return false;
 			number = -number;
 			return true;
@@ -134,9 +133,13 @@ public static class SpanExtensions
 			var letter = input[index];
 			var digit = (uint)(letter - '0');
 			if (digit <= 9)
+			{
 				number = number * 10 + digit;
+			}
 			else if (letter == '.')
+			{
 				decimalPosition = index + 1;
+			}
 			else if (letter == 'e' && index + 1 < input.Length)
 			{
 				var existingExponent = decimalPosition == input.Length
@@ -152,7 +155,7 @@ public static class SpanExtensions
 					exponentSign = 1;
 				else
 					index++;
-				if (!TryParseNumber(input[index..], out var exponent))
+				if (!input[index..].TryParseNumber(out var exponent))
 					return false;
 				exponent = exponentSign * exponent - existingExponent;
 				number *= Math.Pow(10, exponent);
@@ -160,14 +163,17 @@ public static class SpanExtensions
 			}
 			// Ignore any extra letter after number, abort if this is not the very end and parsing failed
 			else if (index + 1 < input.Length)
+			{
 				return false;
+			}
 		}
 		if (decimalPosition < input.Length)
 			number /= Math.Pow(10, input.Length - decimalPosition);
 		return true;
 	}
 
-	public static IEnumerable<string> GetTextsFromRanges(this ReadOnlySpan<char> input, IEnumerable<Range> ranges)
+	public static IEnumerable<string> GetTextsFromRanges(this ReadOnlySpan<char> input,
+		IEnumerable<Range> ranges)
 	{
 		var count = ranges.Count();
 		var texts = new string[count];

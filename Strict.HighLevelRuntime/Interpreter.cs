@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Strict.Expressions;
 using Strict.Language;
-using System.Runtime.CompilerServices;
 using Type = Strict.Language.Type;
 
 [assembly: InternalsVisibleTo("Strict.HighLevelRuntime.Tests")]
@@ -109,7 +109,8 @@ public class Interpreter
 		return new ValueInstance(type, values);
 	}
 
-	public class MethodNotFound(Type type, string methodName) : InterpreterExecutionFailed(type, methodName);
+	public class MethodNotFound(Type type, string methodName)
+		: InterpreterExecutionFailed(type, methodName);
 
 	private ValueInstance GetDefaultValue(Type type)
 	{
@@ -123,14 +124,15 @@ public class Interpreter
 			: noneInstance;
 	} //ncrunch: no coverage end
 
-	public ValueInstance Execute(Method method, ValueInstance instance,
-		ValueInstance[] args, ExecutionContext? parentContext = null, bool runOnlyTests = false,
+	public ValueInstance Execute(Method method, ValueInstance instance, ValueInstance[] args,
+		ExecutionContext? parentContext = null, bool runOnlyTests = false,
 		ValueInstance[]? capturedMutableParameters = null)
 	{
 		Statistics.MethodCount++;
-    args = NormalizeArguments(method, args, parentContext);
+		args = NormalizeArguments(method, args, parentContext);
 		ValidateInstanceAndArguments(method, instance, args, parentContext);
-		if (TryExecuteNativeFileConstructor(method, instance, args, parentContext, out var fileConstructor))
+		if (TryExecuteNativeFileConstructor(method, instance, args, parentContext,
+			out var fileConstructor))
 			return fileConstructor;
 		if (method is { Name: Method.From, Type.IsGeneric: false })
 			return instance.Equals(noneInstance)
@@ -191,12 +193,11 @@ public class Interpreter
 	private static void CaptureMutableParameterValues(Method method, ExecutionContext context,
 		ValueInstance[] capturedMutableParameters)
 	{
-		for (var index = 0; index < method.Parameters.Count &&
-			index < capturedMutableParameters.Length; index++)
+		for (var index = 0; index < method.Parameters.Count && index < capturedMutableParameters.Length;
+			index++)
 		{
 			var parameter = method.Parameters[index];
-			if (parameter.IsMutable &&
-				context.Variables.TryGetValue(parameter.Name, out var finalValue))
+			if (parameter.IsMutable && context.Variables.TryGetValue(parameter.Name, out var finalValue))
 				capturedMutableParameters[index] = finalValue;
 		}
 	}
@@ -205,8 +206,8 @@ public class Interpreter
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, out ValueInstance result)
 	{
 		result = noneInstance;
-		if (method.Type != fileType || method.Name != Method.From ||
-			!instance.Equals(noneInstance) || args.Count != 1 || !args[0].IsText)
+		if (method.Type != fileType || method.Name != Method.From || !instance.Equals(noneInstance) ||
+			args.Count != 1 || !args[0].IsText)
 			return false;
 		result = NativeFileRegistry.Open(method.Type, args[0].Text);
 		parentContext?.TrackDisposable(result);
@@ -249,8 +250,8 @@ public class Interpreter
 	}
 
 	private static bool IsNativeFileMethod(string methodName) =>
-		methodName is "ReadLines" or "ReadBytes" or "Write" or "Delete" or "Close" or "Exists" or
-		"Length";
+		methodName is "ReadLines" or "ReadBytes" or "Write" or "Delete" or "Close" or "Exists"
+			or "Length";
 
 	private static bool TryExecuteTextWriterWrite(Method method, ValueInstance[] args)
 	{
@@ -264,16 +265,16 @@ public class Interpreter
 	{
 		if (value.IsText)
 			return value.Text;
-		if (value.IsList)
-			return string.Join(Environment.NewLine, value.List.Items.Select(FormatWriteArgument));
-		return value.ToExpressionCodeString();
+		return value.IsList
+			? string.Join(Environment.NewLine, value.List.Items.Select(FormatWriteArgument))
+			: value.ToExpressionCodeString();
 	}
 
 	private long GetFileHandle(ValueInstance instance, Method method)
 	{
-		if (!FileValue.TryGetHandle(instance, fileType, out var handle))
-			throw new InterpreterExecutionFailed(method, "File instance has no native handle");
-		return handle;
+		return FileValue.TryGetHandle(instance, fileType, out var handle)
+			? handle
+			: throw new InterpreterExecutionFailed(method, "File instance has no native handle");
 	}
 
 	private static void WriteFile(long handle, IReadOnlyList<ValueInstance> args, Method method)
@@ -289,7 +290,7 @@ public class Interpreter
 		else
 			throw new InvalidTypeForArgument(method.Type, args, 0);
 	}
-	
+
 	private ValueInstance CreateTexts(Method method, string[] lines)
 	{
 		var textsType = method.GetListImplementationType(method.GetType(Type.Text));
@@ -320,10 +321,10 @@ public class Interpreter
 		runOnlyTests && method.Type is { IsGeneric: true, Name: Type.List or Type.Dictionary };
 
 	private static bool ShouldSkipKnownStrictBaseMethodValidation(Method method, bool runOnlyTests) =>
-		runOnlyTests && (method.Type.IsGeneric && method.Type.Name == Type.List ||
-			method.Type.Name == Type.Number &&
-			(method.Name == "digits" || method.Name == BinaryOperator.To && method.ReturnType.IsText) ||
-			method.Type.IsText && method.Name == "Split" ||
+		runOnlyTests && ((method.Type.IsGeneric && method.Type.Name == Type.List) ||
+			(method.Type.Name == Type.Number && (method.Name == "digits" ||
+				(method.Name == BinaryOperator.To && method.ReturnType.IsText))) ||
+			(method.Type.IsText && method.Name == "Split") ||
 			method.Type.Name is "Parser" or "ShuntingYard");
 
 	private void DisposeTrackedValues(ExecutionContext ctx)
@@ -339,7 +340,9 @@ public class Interpreter
 				}
 			}
 			else
+			{
 				DisposeTrackedValue(value);
+			}
 	}
 
 	private void DisposeTrackedValue(ValueInstance value)
@@ -377,14 +380,14 @@ public class Interpreter
 		for (var index = 0; index < args.Length && index < method.Parameters.Count; index++)
 		{
 			var parameterType = method.Parameters[index].Type;
-      if (args[index].IsSameOrCanBeUsedAs(parameterType) || parameterType.IsIterator ||
+			if (args[index].IsSameOrCanBeUsedAs(parameterType) || parameterType.IsIterator ||
 				IsSingleCharacterTextArgument(parameterType, args[index]))
 				continue;
 			var normalizedArgument = TryConvertListArgument(args[index], parameterType, parentContext);
-      if (normalizedArgument is not { } convertedArgument)
+			if (normalizedArgument is not { } convertedArgument)
 				continue;
 			normalizedArgs ??= (ValueInstance[])args.Clone();
-     normalizedArgs[index] = convertedArgument;
+			normalizedArgs[index] = convertedArgument;
 		}
 		return normalizedArgs ?? args;
 	}
@@ -400,9 +403,9 @@ public class Interpreter
 		for (var index = 0; index < items.Count; index++)
 		{
 			var convertedItem = TryConvertListItem(items[index], targetItemType, parentContext);
-      if (convertedItem is not { } convertedListItem)
+			if (convertedItem is not { } convertedListItem)
 				return null;
-      convertedItems[index] = convertedListItem;
+			convertedItems[index] = convertedListItem;
 		}
 		return new ValueInstance(parameterType, convertedItems);
 	}
@@ -455,8 +458,7 @@ public class Interpreter
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
 	{
 		for (var current = parentContext; current != null; current = current.Parent)
-			if (current.Method == method &&
-				AreSameInstanceForRecursionCheck(current.This, instance) &&
+			if (current.Method == method && AreSameInstanceForRecursionCheck(current.This, instance) &&
 				DoArgumentsMatch(method, args, current.Variables))
 				throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
 					current);
@@ -484,10 +486,11 @@ public class Interpreter
 	}
 
 	public sealed class StackOverflowCallingItselfWithSameInstanceAndArguments(Method method,
-		ValueInstance? instance, IReadOnlyList<ValueInstance> args, ExecutionContext parentContext)
-		: InterpreterExecutionFailed(method, "Stack overflow detected while calling " +
-			FormatCall(method, instance, args) + ". Matching parent call chain: " +
-			FormatParentChain(parentContext))
+		ValueInstance? instance,
+		IReadOnlyList<ValueInstance> args,
+		ExecutionContext parentContext) : InterpreterExecutionFailed(method,
+		"Stack overflow detected while calling " + FormatCall(method, instance, args) +
+		". Matching parent call chain: " + FormatParentChain(parentContext))
 	{
 		private static string FormatCall(Method method, ValueInstance? instance,
 			IReadOnlyList<ValueInstance> args) =>
@@ -547,8 +550,8 @@ public class Interpreter
 		for (var index = 0; index < args.Count; index++)
 		{
 			var parameter = method.Parameters[index];
-			if (!args[index].IsSameOrCanBeUsedAs(parameter.Type) &&
-				!parameter.Type.IsIterator && !IsSingleCharacterTextArgument(parameter.Type, args[index]))
+			if (!args[index].IsSameOrCanBeUsedAs(parameter.Type) && !parameter.Type.IsIterator &&
+				!IsSingleCharacterTextArgument(parameter.Type, args[index]))
 				throw new InvalidTypeForArgument(method.Type, args, index);
 			var memberIndex = GetMemberIndexForParameter(typeMembers, parameter, index);
 			values[memberIndex] = IsSingleCharacterTextArgument(parameter.Type, args[index])
@@ -693,21 +696,13 @@ public class Interpreter
 	{
 		creating ??= [];
 		if (type.IsText)
-		{
 			return new ValueInstance("");
-		}
 		if (type.IsNumber)
-		{
 			return new ValueInstance(numberType, 0);
-		}
 		if (type.IsBoolean)
-		{
 			return new ValueInstance(booleanType, false);
-		}
 		if (type.IsCharacter)
-		{
 			return new ValueInstance(characterType, 0);
-		}
 		if (type.IsTrait)
 		{
 			if (!TraitImplementationRegistry.TryGetValue(type.Name, out var concreteName))
@@ -770,27 +765,31 @@ public class Interpreter
 	private static bool IsSingleCharacterTextArgument(Type targetType, ValueInstance value) =>
 		value is { IsText: true, Text.Length: 1 } && (targetType.IsNumber || targetType.IsCharacter);
 
-	public sealed class InvalidTypeForArgument(Type type, IReadOnlyList<ValueInstance> args,
-		int index) : InterpreterExecutionFailed(type, args[index] + " at index=" + index +
-			" does not match type=" + type + " Member=" + type.Members[index]);
+	public sealed class
+		InvalidTypeForArgument(Type type, IReadOnlyList<ValueInstance> args, int index)
+		: InterpreterExecutionFailed(type,
+			args[index] + " at index=" + index + " does not match type=" + type + " Member=" +
+			type.Members[index]);
 
-	public sealed class CannotCallMethodWithWrongInstance(Method method, ValueInstance instance,
-		Type expectedInstanceType)
-		: InterpreterExecutionFailed(method, instance.ToString() + " is wrong, expected: " +
-			expectedInstanceType);
+	public sealed class CannotCallMethodWithWrongInstance(Method method,
+		ValueInstance instance,
+		Type expectedInstanceType) : InterpreterExecutionFailed(method,
+		instance + " is wrong, expected: " + expectedInstanceType);
 
-	public sealed class TooManyArguments(Method method, string argument,
-		IReadOnlyList<ValueInstance> args) : InterpreterExecutionFailed(method,
-		argument + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
-		" requires these parameters: " + string.Join(", ", method.Parameters));
+	public sealed class
+		TooManyArguments(Method method, string argument, IReadOnlyList<ValueInstance> args)
+		: InterpreterExecutionFailed(method,
+			argument + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
+			" requires these parameters: " + string.Join(", ", method.Parameters));
 
 	public sealed class ArgumentDoesNotMapToMethodParameters(Method method, string message)
 		: InterpreterExecutionFailed(method, message);
 
-	public sealed class MissingArgument(Method method, string paramName,
-		IReadOnlyList<ValueInstance> args) : InterpreterExecutionFailed(method,
-		paramName + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
-		" requires these parameters: " + string.Join(", ", method.Parameters));
+	public sealed class
+		MissingArgument(Method method, string paramName, IReadOnlyList<ValueInstance> args)
+		: InterpreterExecutionFailed(method,
+			paramName + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
+			" requires these parameters: " + string.Join(", ", method.Parameters));
 
 	public ValueInstance RunExpression(Expression expr, ExecutionContext context,
 		bool runOnlyTests = false)
@@ -883,9 +882,10 @@ public class Interpreter
 	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
 		: Exception(member + ", context " + ctx); //ncrunch: no coverage
 
-	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last) : InterpreterExecutionFailed(
-		body.Method, "Return value " + last + " does not match method " + body.Method.Name +
-		" ReturnType=" + body.Method.ReturnType);
+	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last)
+		: InterpreterExecutionFailed(body.Method,
+			"Return value " + last + " does not match method " + body.Method.Name + " ReturnType=" +
+			body.Method.ReturnType);
 
 	private readonly ConcurrentDictionary<Method, bool> simpleMethodCache = new();
 
@@ -905,8 +905,8 @@ public class Interpreter
 			return false;
 		var thenCount = CountThenSeparators(bodyLine);
 		var operatorCount = CountOperatorWords(bodyLine);
-		return thenCount == 0 && operatorCount <= 1 || thenCount == 1 && operatorCount <= 2 ||
-			thenCount == 2 && operatorCount == 0;
+		return (thenCount == 0 && operatorCount <= 1) || (thenCount == 1 && operatorCount <= 2) ||
+			(thenCount == 2 && operatorCount == 0);
 	}
 
 	private static int CountOperatorWords(string input)
@@ -973,7 +973,9 @@ public class Interpreter
 			body + " ({CountExpressionComplexity(body)} expressions)") { }
 	}
 
-	public sealed class TestFailed(Method method,	Expression expression, ValueInstance result,
+	public sealed class TestFailed(Method method,
+		Expression expression,
+		ValueInstance result,
 		string details) : InterpreterExecutionFailed(method,
 		$"\"{method.Name}\" method failed: {expression}, result: {result}" + (details.Length > 0
 			? $", evaluated: {details}"
@@ -981,7 +983,7 @@ public class Interpreter
 		$"{method.Type.FilePath}:line {expression.LineNumber + 1}")
 	{
 		public Expression FailedExpression { get; } = expression;
-public ValueInstance Result { get; } = result;
+		public ValueInstance Result { get; } = result;
 		public string Details { get; } = details;
 	}
 

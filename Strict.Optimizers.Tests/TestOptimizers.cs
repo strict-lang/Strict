@@ -1,6 +1,6 @@
+using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Expressions.Tests;
-using Strict.Bytecode.Instructions;
 
 namespace Strict.Optimizers.Tests;
 

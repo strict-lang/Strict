@@ -1,5 +1,5 @@
-using Strict.Language;
 using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict.Transpiler.Roslyn;
 
@@ -64,7 +64,8 @@ public abstract class ExpressionVisitor
 	protected abstract string Visit(Declaration declaration);
 
 	protected string Visit(Binary binary) =>
-		Visit(binary.Instance!) + " " + GetBinaryOperator(binary.Method.Name) + " " + Visit(binary.Arguments[0]);
+		Visit(binary.Instance!) + " " + GetBinaryOperator(binary.Method.Name) + " " +
+		Visit(binary.Arguments[0]);
 
 	protected abstract string GetBinaryOperator(string methodName);
 	protected abstract string Visit(Return returnExpression);

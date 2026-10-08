@@ -12,7 +12,6 @@ public static class TypeExtensions
 		methodLines[0] = "Run";
 		for (var index = 0; index < lines.Length; index++)
 			methodLines[index + 1] = '\t' + lines[index];
-		return new Method(type, 0, new MethodExpressionParser(), methodLines).
-			GetBodyAndParseIfNeeded();
+		return new Method(type, 0, new MethodExpressionParser(), methodLines).GetBodyAndParseIfNeeded();
 	}
 }

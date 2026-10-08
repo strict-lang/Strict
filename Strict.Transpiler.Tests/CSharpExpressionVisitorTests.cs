@@ -1,9 +1,9 @@
 using NUnit.Framework;
-using Strict.Transpiler.Roslyn;
-using Strict.Language;
 using Strict.Expressions;
 using Strict.Expressions.Tests;
+using Strict.Language;
 using Strict.Language.Tests;
+using Strict.Transpiler.Roslyn;
 using Boolean = Strict.Expressions.Boolean;
 using List = Strict.Expressions.List;
 
@@ -53,8 +53,7 @@ public sealed class CSharpExpressionVisitorTests : TestExpressions
 
 	[Test]
 	public void GenerateMethodCall() =>
-		Assert.That(visitor.Visit(new MethodCall(member.Type.Methods[0], new MemberCall(null, member),
-		[
+		Assert.That(visitor.Visit(new MethodCall(member.Type.Methods[0], new MemberCall(null, member), [
 			new Text(type, "Hi")
 		])), Is.EqualTo("Console.WriteLine(\"Hi\")"));
 

@@ -44,7 +44,9 @@ public sealed class ConstantCollapser : Visitor
 							rewritten.Add(body.Expressions[j]);
 				}
 				else
+				{
 					rewritten.Remove(body.Expressions[i]);
+				}
 			}
 		return rewritten;
 	}
@@ -64,7 +66,7 @@ public sealed class ConstantCollapser : Visitor
 			VariableCall vc => vc.Variable.Name == name,
 			Binary b => ContainsVariableCall(b.Instance!, name) ||
 				ContainsVariableCall(b.Arguments[0], name),
-			MethodCall mc => mc.Instance != null && ContainsVariableCall(mc.Instance, name) ||
+			MethodCall mc => (mc.Instance != null && ContainsVariableCall(mc.Instance, name)) ||
 				mc.Arguments.Any(a => ContainsVariableCall(a, name)),
 			//ncrunch: no coverage end
 			Declaration d => ContainsVariableCall(d.Value, name),
@@ -98,7 +100,8 @@ public sealed class ConstantCollapser : Visitor
 			{
 				CollapsedCount++;
 				var arguments = new[] { right };
-				return new Binary(left, left.ReturnType.GetMethod(binary.Method.Name, arguments), arguments);
+				return new Binary(left, left.ReturnType.GetMethod(binary.Method.Name, arguments),
+					arguments);
 			}
 		}
 		if (!expression.IsConstant)
@@ -116,7 +119,8 @@ public sealed class ConstantCollapser : Visitor
 		return expression;
 	}
 
-	public class UnsupportedToExpression(string toStringWithType) : Exception(toStringWithType); //ncrunch: no coverage
+	public class UnsupportedToExpression(string toStringWithType)
+		: Exception(toStringWithType); //ncrunch: no coverage
 
 	private static Expression? TryCollapseBinaryExpression(Expression left, Expression right,
 		Context method)
@@ -142,11 +146,17 @@ public sealed class ConstantCollapser : Visitor
 				return new Text(method, leftText.Data.Text + rightBool.Data.Boolean);
 		}
 		else if (method.Name == BinaryOperator.Minus && leftNumber != null && rightNumber != null)
+		{
 			return new Number(method, leftNumber.Data.Number - rightNumber.Data.Number);
+		}
 		else if (method.Name == BinaryOperator.Multiply && leftNumber != null && rightNumber != null)
+		{
 			return new Number(method, leftNumber.Data.Number * rightNumber.Data.Number);
+		}
 		else if (method.Name == BinaryOperator.Divide && leftNumber != null && rightNumber != null)
+		{
 			return new Number(method, leftNumber.Data.Number / rightNumber.Data.Number);
+		}
 		if (left is Boolean leftBoolean && right is Boolean rightBoolean)
 		{
 			if (method.Name == BinaryOperator.And)

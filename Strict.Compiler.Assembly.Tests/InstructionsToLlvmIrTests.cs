@@ -1,4 +1,4 @@
-using NUnit.Framework;
+using System.Reflection;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
@@ -239,20 +239,24 @@ public sealed class InstructionsToLlvmIrTests
 
 	[Test]
 	public void BinaryExecutableUsesConsolePrintReturnsTrueForPrintInstructions() =>
-		Assert.That(BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, new List<Instruction>
-		{
-			new PrintInstruction("Hello"),
-			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
-			new ReturnInstruction(Register.R0)
-		}).UsesConsolePrint, Is.True);
+		Assert.That(
+			BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance,
+				new List<Instruction>
+				{
+					new PrintInstruction("Hello"),
+					new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
+					new ReturnInstruction(Register.R0)
+				}).UsesConsolePrint, Is.True);
 
 	[Test]
 	public void BinaryExecutableUsesConsolePrintReturnsFalseWithoutPrint() =>
-		Assert.That(BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, new List<Instruction>
-		{
-			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
-			new ReturnInstruction(Register.R0)
-		}).UsesConsolePrint, Is.False);
+		Assert.That(
+			BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance,
+				new List<Instruction>
+				{
+					new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
+					new ReturnInstruction(Register.R0)
+				}).UsesConsolePrint, Is.False);
 
 	[Test]
 	public void PrintInstructionDeclaressprintfAndUsesGep()
@@ -320,9 +324,10 @@ public sealed class InstructionsToLlvmIrTests
 	public void CompileForPlatformSupportsConstructorAndInstanceMethodCalls()
 	{
 		var type = new Type(TestPackage.Instance,
-			new TypeLines("LlvmSimpleCalc", "has first Number", "has second Number", "Add Number",
-				"\tfirst + second", "Run Number", "\tconstant calc = LlvmSimpleCalc(2, 3)",
-				"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines("LlvmSimpleCalc", "has first Number", "has second Number", "Add Number",
+					"\tfirst + second", "Run Number", "\tconstant calc = LlvmSimpleCalc(2, 3)",
+					"\tcalc.Add")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var ir = Compile(binary, Platform.Windows);
@@ -392,13 +397,11 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void PureAdderStyleTypeGeneratesIrWithReturnConstant()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("LlvmPureAdder",
-			"has first Number",
-			"has second Number",
-			"Add Number",
-			"\tfirst + second",
-			"Run Number",
-			"\t42")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type =
+			new Type(TestPackage.Instance,
+					new TypeLines("LlvmPureAdder", "has first Number", "has second Number", "Add Number",
+						"\tfirst + second", "Run Number", "\t42")).
+				ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var ir = Compile(binary, Platform.Linux);
@@ -539,17 +542,11 @@ public sealed class InstructionsToLlvmIrTests
 	[Test]
 	public void PixelStyleTypeWithThreeMembersAndDivide()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("LlvmPixel",
-			"has red Number",
-			"has green Number",
-			"has blue Number",
-			"Brighten Number",
-			"\tred + green",
-			"Darken Number",
-			"\tred / 2",
-			"Run Number",
-			"\tconstant pixel = LlvmPixel(100, 150, 200)",
-			"\tpixel.Brighten")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+				new TypeLines("LlvmPixel", "has red Number", "has green Number", "has blue Number",
+					"Brighten Number", "\tred + green", "Darken Number", "\tred / 2", "Run Number",
+					"\tconstant pixel = LlvmPixel(100, 150, 200)", "\tpixel.Brighten")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var ir = Compile(binary, Platform.Linux);
@@ -571,8 +568,9 @@ public sealed class InstructionsToLlvmIrTests
 	}
 
 	private string Compile(List<Instruction> instructions, Platform platform) =>
-		compiler.Compile(BinaryExecutable.CreateForEntryInstructions(
-			TestPackage.Instance, instructions), platform).GetAwaiter().GetResult();
+		compiler.Compile(
+				BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions), platform).
+			GetAwaiter().GetResult();
 
 	private string Compile(BinaryExecutable binary, Platform platform) =>
 		compiler.Compile(binary, platform).GetAwaiter().GetResult();
@@ -640,8 +638,9 @@ public sealed class InstructionsToLlvmIrTests
 
 	private static string GetLlvmClangArgs(Platform platform, bool hasPrintCalls = false)
 	{
-		var method = typeof(LlvmLinker).GetMethod("BuildClangArgs",
-				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ??
+		var method =
+			typeof(LlvmLinker).GetMethod("BuildClangArgs",
+				BindingFlags.NonPublic | BindingFlags.Static) ??
 			throw new InvalidOperationException("BuildClangArgs method not found");
 		var parameters = method.GetParameters();
 		var args = parameters.Length == 4

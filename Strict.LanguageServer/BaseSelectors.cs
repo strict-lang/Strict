@@ -1,4 +1,5 @@
 ﻿using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer;
 
@@ -6,5 +7,5 @@ namespace Strict.LanguageServer;
 public static class BaseSelectors
 {
 	public static readonly TextDocumentSelector StrictDocumentSelector =
-		new(new TextDocumentFilter { Pattern = "**/*" + Language.Type.Extension });
+		new(new TextDocumentFilter { Pattern = "**/*" + Type.Extension });
 }

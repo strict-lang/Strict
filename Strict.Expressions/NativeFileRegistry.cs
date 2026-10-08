@@ -37,8 +37,7 @@ public static class NativeFileRegistry
 	}
 
 	public static string[] ReadLines(long handle) =>
-		ReadText(handle).Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n',
-			StringSplitOptions.None);
+		ReadText(handle).Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n');
 
 	public static byte[] ReadBytes(long handle)
 	{
@@ -91,9 +90,7 @@ public static class NativeFileRegistry
 
 	public static bool Exists(long handle)
 	{
-		if (!OpenFiles.TryGetValue(handle, out var state))
-			return false;
-		return File.Exists(state.Path);
+		return OpenFiles.TryGetValue(handle, out var state) && File.Exists(state.Path);
 	}
 
 	public static long Length(long handle) => Get(handle).Stream.Length;

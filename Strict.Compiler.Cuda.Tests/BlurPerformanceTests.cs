@@ -72,7 +72,8 @@ public class BlurPerformanceTests
 
 	private static string? FindImagePath()
 	{
-		const string FileName = "TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png";
+		const string FileName =
+			"TexturedMeshTests.RenderTexturedBoxPlaneAndSphereWithImage.approved.png";
 		var directory = AppContext.BaseDirectory;
 		while (!string.IsNullOrEmpty(directory))
 		{
@@ -108,7 +109,8 @@ public class BlurPerformanceTests
 	public void CompileKernel()
 	{
 		//generate as output language obviously from strict code
-		const string Code = @"extern ""C"" __global__ void blur(unsigned char* image, unsigned char* output, size_t width, size_t height)
+		const string Code =
+			@"extern ""C"" __global__ void blur(unsigned char* image, unsigned char* output, size_t width, size_t height)
 {
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid > width && tid < width*height-width) {

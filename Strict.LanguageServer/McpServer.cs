@@ -54,12 +54,13 @@ public static class McpServer
 		{
 			return method switch
 			{
-				"initialize" => Result(id, new
-				{
-					protocolVersion = ProtocolVersion,
-					capabilities = new { tools = new { } },
-					serverInfo = new { name = "scrunch", version = "0.1.0" }
-				}),
+				"initialize" => Result(id,
+					new
+					{
+						protocolVersion = ProtocolVersion,
+						capabilities = new { tools = new { } },
+						serverInfo = new { name = "scrunch", version = "0.1.0" }
+					}),
 				"ping" => Result(id, new { }),
 				"tools/list" => Result(id, new { tools = Tools }),
 				"tools/call" => CallTool(id, request["params"], package),
@@ -125,7 +126,7 @@ public static class McpServer
 		if (string.IsNullOrWhiteSpace(path))
 			path = Environment.CurrentDirectory;
 		var force = arguments?["force"]?.GetValue<bool>() ?? false;
-		object payload = name switch
+		var payload = name switch
 		{
 			"check" => Summarize(ScrunchAnalyzer.AnalyzePath(package, path, force)),
 			"status" => Summarize(ScrunchAnalyzer.Status(path)),
@@ -138,8 +139,13 @@ public static class McpServer
 	private static object Summarize(FolderReport report) =>
 		new
 		{
-			ok = report.Ok, path = report.Path, files = report.Files, cached = report.Cached,
-			failed = report.Failed, testsPassed = report.TestsPassed, testsFailed = report.TestsFailed,
+			ok = report.Ok,
+			path = report.Path,
+			files = report.Files,
+			cached = report.Cached,
+			failed = report.Failed,
+			testsPassed = report.TestsPassed,
+			testsFailed = report.TestsFailed,
 			problems = report.FilesReports.SelectMany(file => file.Problems.Select(problem => new
 			{
 				file = file.Path, line = problem.Line, kind = problem.Kind, message = problem.Message
@@ -147,17 +153,20 @@ public static class McpServer
 		};
 
 	private static string Result(JsonNode? id, object result) =>
-		JsonSerializer.Serialize(new Dictionary<string, object?>
-		{
-			["jsonrpc"] = "2.0", ["id"] = ReadId(id), ["result"] = result
-		}, JsonOptions);
+		JsonSerializer.Serialize(
+			new Dictionary<string, object?>
+			{
+				["jsonrpc"] = "2.0", ["id"] = ReadId(id), ["result"] = result
+			}, JsonOptions);
 
 	private static string Error(JsonNode? id, int code, string message) =>
-		JsonSerializer.Serialize(new Dictionary<string, object?>
-		{
-			["jsonrpc"] = "2.0", ["id"] = ReadId(id),
-			["error"] = new Dictionary<string, object> { ["code"] = code, ["message"] = message }
-		}, JsonOptions);
+		JsonSerializer.Serialize(
+			new Dictionary<string, object?>
+			{
+				["jsonrpc"] = "2.0",
+				["id"] = ReadId(id),
+				["error"] = new Dictionary<string, object> { ["code"] = code, ["message"] = message }
+			}, JsonOptions);
 
 	private static object? ReadId(JsonNode? id)
 	{

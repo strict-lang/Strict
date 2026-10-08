@@ -35,14 +35,17 @@ public abstract class InstructionsCompiler
 			? BinaryMemberJustTypeName(method.ReturnTypeName) == Type.None
 				? methodName
 				: methodName + " " + BinaryMemberJustTypeName(method.ReturnTypeName)
-			: methodName + "(" + string.Join(", ", method.parameters.Select(parameter => parameter.Name)) +
-			") " + BinaryMemberJustTypeName(method.ReturnTypeName);
+			: methodName + "(" +
+			string.Join(", ", method.parameters.Select(parameter => parameter.Name)) + ") " +
+			BinaryMemberJustTypeName(method.ReturnTypeName);
 
 	private static string BinaryMemberJustTypeName(string fullTypeName) =>
 		fullTypeName.Split(Context.ParentSeparator)[^1];
 
 	protected sealed class CompiledMethodInfo(string symbol,
-		List<Instruction> instructions, List<string> parameterNames, List<string> memberNames)
+		List<Instruction> instructions,
+		List<string> parameterNames,
+		List<string> memberNames)
 	{
 		public string Symbol { get; } = symbol;
 		public List<Instruction> Instructions { get; } = instructions;
@@ -85,18 +88,22 @@ public abstract class InstructionsCompiler
 		return methods;
 	}
 
-	private static List<string> GetMemberNamesFromBinary(BinaryExecutable? binary, string typeFullName)
+	private static List<string> GetMemberNamesFromBinary(BinaryExecutable? binary,
+		string typeFullName)
 	{
 		if (binary == null)
 			return [];
 		if (binary.MethodsPerType.TryGetValue(typeFullName, out var typeData))
-			return typeData.Members.Where(member => !member.FullTypeName.EndsWith("Trait",
-				StringComparison.OrdinalIgnoreCase)).Select(member => member.Name).ToList();
+			return typeData.Members.
+				Where(member => !member.FullTypeName.EndsWith("Trait", StringComparison.OrdinalIgnoreCase)).
+				Select(member => member.Name).ToList();
 		var justTypeName = BinaryMemberJustTypeName(typeFullName);
 		foreach (var (key, data) in binary.MethodsPerType)
 			if (BinaryMemberJustTypeName(key) == justTypeName)
-				return data.Members.Where(member => !member.FullTypeName.EndsWith("Trait",
-					StringComparison.OrdinalIgnoreCase)).Select(member => member.Name).ToList();
+				return data.Members.
+					Where(member =>
+						!member.FullTypeName.EndsWith("Trait", StringComparison.OrdinalIgnoreCase)).
+					Select(member => member.Name).ToList();
 		return [];
 	}
 
@@ -109,7 +116,8 @@ public abstract class InstructionsCompiler
 	}
 
 	protected static bool HasNumericPrint(IEnumerable<Instruction> instructions) =>
-		instructions.OfType<PrintInstruction>().Any(print => print.ValueRegister.HasValue && !print.ValueIsText);
+		instructions.OfType<PrintInstruction>().
+			Any(print => print.ValueRegister.HasValue && !print.ValueIsText);
 
 	public abstract Task<string> Compile(BinaryExecutable binary, Platform platform);
 	public abstract string Extension { get; }

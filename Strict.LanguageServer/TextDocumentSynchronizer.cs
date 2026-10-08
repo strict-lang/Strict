@@ -11,30 +11,31 @@ using Strict.Language;
 namespace Strict.LanguageServer;
 
 public sealed class TextDocumentSynchronizer(ILanguageServerFacade languageServer,
-	StrictDocument document, Package strictBase) : ITextDocumentSyncHandler
+	StrictDocument document,
+	Package strictBase) : ITextDocumentSyncHandler
 {
 	public StrictDocument Document { get; } = document;
-	public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) => new(uri, "strict"); //ncrunch: no coverage
 
-	public Task<Unit> Handle(DidChangeTextDocumentParams request,
-		CancellationToken cancellationToken)
+	public TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) =>
+		new(uri, "strict"); //ncrunch: no coverage
+
+	public Task<Unit> Handle(DidChangeTextDocumentParams request, CancellationToken cancellationToken)
 	{
 		var uri = request.TextDocument.Uri.ToString();
 		if (!Document.Contains(uri))
-			Document.AddOrUpdate(uri, request.ContentChanges.ToArray().Select(x => x.Text).ToArray()); //ncrunch: no coverage
+			Document.AddOrUpdate(uri,
+				request.ContentChanges.ToArray().Select(x => x.Text).ToArray()); //ncrunch: no coverage
 		Document.Update(uri, request.ContentChanges.ToArray());
 		languageServer.Window.LogInfo($"Updated document: {uri}\n{Document.Get(uri)[^1]}");
 		ParseUpdatedCodeAndPublishDiagnostics(request.TextDocument.Uri);
 		return Unit.Task;
 	}
 
-	private void
-		ParseUpdatedCodeAndPublishDiagnostics(DocumentUri uri) =>
+	private void ParseUpdatedCodeAndPublishDiagnostics(DocumentUri uri) =>
 		languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
 		{
 			Diagnostics =
-				new Container<Diagnostic>(Document.GetDiagnostics(strictBase, uri,
-					languageServer)),
+				new Container<Diagnostic>(Document.GetDiagnostics(strictBase, uri, languageServer)),
 			Uri = uri,
 			Version = 1
 		});
@@ -57,8 +58,7 @@ public sealed class TextDocumentSynchronizer(ILanguageServerFacade languageServe
 		CancellationToken cancellationToken) =>
 		Unit.Task; //ncrunch: no coverage
 
-	public Task<Unit>
-		Handle(DidSaveTextDocumentParams request, CancellationToken cancellationToken)
+	public Task<Unit> Handle(DidSaveTextDocumentParams request, CancellationToken cancellationToken)
 	{
 		ParseUpdatedCodeAndPublishDiagnostics(request.TextDocument.Uri);
 		return Unit.Task;
@@ -76,7 +76,10 @@ public sealed class TextDocumentSynchronizer(ILanguageServerFacade languageServe
 		IRegistration<TextDocumentSaveRegistrationOptions, TextSynchronizationCapability>.
 		GetRegistrationOptions(TextSynchronizationCapability capability,
 			ClientCapabilities clientCapabilities) =>
-		new() { DocumentSelector = BaseSelectors.StrictDocumentSelector, IncludeText = true }; //ncrunch: no coverage
+		new()
+		{
+			DocumentSelector = BaseSelectors.StrictDocumentSelector, IncludeText = true
+		}; //ncrunch: no coverage
 
 	TextDocumentOpenRegistrationOptions
 		IRegistration<TextDocumentOpenRegistrationOptions, TextSynchronizationCapability>.

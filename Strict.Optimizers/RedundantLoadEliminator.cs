@@ -37,7 +37,9 @@ public sealed class RedundantLoadEliminator : InstructionOptimizer
 					toRemove.Add(i);
 				}
 				else
+				{
 					variableToRegister[load.Identifier] = load.Register;
+				}
 				break;
 			}
 		}
@@ -72,9 +74,13 @@ public sealed class RedundantLoadEliminator : InstructionOptimizer
 			}
 			else if (instructions[i] is StoreFromRegisterInstruction store &&
 				remapping.TryGetValue(store.Register, out var mappedStore))
+			{
 				instructions[i] = new StoreFromRegisterInstruction(mappedStore, store.Identifier);
+			}
 			else if (instructions[i] is ReturnInstruction ret &&
 				remapping.TryGetValue(ret.Register, out var mappedReturn))
+			{
 				instructions[i] = new ReturnInstruction(mappedReturn); //ncrunch: no coverage
+			}
 	}
 }

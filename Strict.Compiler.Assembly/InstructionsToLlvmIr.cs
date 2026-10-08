@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Language;
@@ -25,8 +27,9 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildFunction(methodName, [], instructions, Platform.Linux);
 
-	private static string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
-		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null,
+	private static string CompileForPlatform(string methodName,
+		IReadOnlyList<Instruction> instructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null,
 		BinaryExecutable? binary = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
@@ -60,7 +63,8 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			Platform.Windows => "x86_64-pc-windows-msvc",
 			Platform.Linux => "x86_64-unknown-linux-gnu",
 			Platform.MacOS => "x86_64-apple-macosx",
-			_ => throw new NotSupportedException("Unsupported platform: " + platform) //ncrunch: no coverage
+			_ => throw new NotSupportedException("Unsupported platform: " +
+				platform) //ncrunch: no coverage
 		};
 		var header = $"target triple = \"{targetTriple}\"\n";
 		if (platform == Platform.Windows)
@@ -92,11 +96,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			ToDictionary(x => x.name, x => x.index);
 		var paramSignature =
 			string.Join(", ", parameterList.Select((_, index) => $"double %param{index}"));
-		var lines = new List<string>
-		{
-			$"define double @{methodName}({paramSignature}) {{",
-			"entry:"
-		};
+		var lines = new List<string> { $"define double @{methodName}({paramSignature}) {{", "entry:" };
 		var context = new EmitContext(paramIndexByName, instructions, compiledMethods, platform);
 		for (var index = 0; index < instructions.Count; index++)
 		{
@@ -116,7 +116,8 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	}
 
 	private sealed class EmitContext(Dictionary<string, int> paramIndexByName,
-		List<Instruction> instructions, Dictionary<string, CompiledMethodInfo>? compiledMethods,
+		List<Instruction> instructions,
+		Dictionary<string, CompiledMethodInfo>? compiledMethods,
 		Platform platform)
 	{
 		public Dictionary<string, int> ParamIndexByName { get; } = paramIndexByName;
@@ -252,8 +253,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		lines.Add($"  store double {value}, ptr {context.VariablePointers[store.Identifier]}");
 	} //ncrunch: no coverage end
 
-	private static void EnsureVariableAllocated(string name, List<string> lines,
-		EmitContext context)
+	private static void EnsureVariableAllocated(string name, List<string> lines, EmitContext context)
 	{
 		if (context.AllocatedVariables.Add(name))
 		{
@@ -350,8 +350,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		lines.Add($"  store double {value}, ptr {context.VariablePointers[storeReg.Identifier]}");
 	}
 
-	private static void EmitReturn(ReturnInstruction ret, List<string> lines,
-		EmitContext context)
+	private static void EmitReturn(ReturnInstruction ret, List<string> lines, EmitContext context)
 	{
 		var value = GetRegisterValue(ret.Register, context);
 		lines.Add($"  ret double {value}");
@@ -359,39 +358,50 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		context.TerminatedBlocks.Add(context.CurrentBlock);
 	}
 
-	private static void EmitPrint(PrintInstruction print, List<string> lines,
-		EmitContext context)
+	private static void EmitPrint(PrintInstruction print, List<string> lines, EmitContext context)
 	{
 		var printKey = BuildPrintKey(print, context.Platform);
 		var stringLabel = "@str." + BuildPrintLabel(printKey);
 		var strGep = context.NextTemp();
-		lines.Add(
-			$"  {strGep} = getelementptr inbounds [0 x i8], ptr {stringLabel}, i64 0, i64 0");
+		lines.Add($"  {strGep} = getelementptr inbounds [0 x i8], ptr {stringLabel}, i64 0, i64 0");
 		if (context.Platform == Platform.Windows)
 		{
 			var stdoutHandle = context.NextTemp();
 			lines.Add($"  {stdoutHandle} = call ptr @GetStdHandle(i32 -11)");
 			if (print.ValueRegister.HasValue && !print.ValueIsText)
 			{
-				var prefixLength = System.Text.Encoding.UTF8.GetByteCount(print.TextPrefix);
+				var prefixLength = Encoding.UTF8.GetByteCount(print.TextPrefix);
 				if (prefixLength > 0)
 				{
 					var writtenPrefix = context.NextTemp();
 					lines.Add($"  {writtenPrefix} = alloca i32");
-					lines.Add(
-						$"  call i32 @WriteFile(ptr {stdoutHandle}, ptr {strGep}, i32 {prefixLength}, ptr {writtenPrefix}, ptr null)");
+					lines.Add($"  call i32 @WriteFile(ptr {
+						stdoutHandle
+					}, ptr {
+						strGep
+					}, i32 {
+						prefixLength
+					}, ptr {
+						writtenPrefix
+					}, ptr null)");
 				}
 				var numValue = GetRegisterValue(print.ValueRegister.Value, context);
-				lines.Add(
-					$"  call void @print_number_from_double(ptr {stdoutHandle}, double {numValue})");
+				lines.Add($"  call void @print_number_from_double(ptr {stdoutHandle}, double {numValue})");
 			}
 			else
 			{ //ncrunch: no coverage start
-				var textLength = System.Text.Encoding.UTF8.GetByteCount(print.TextPrefix) + 1;
+				var textLength = Encoding.UTF8.GetByteCount(print.TextPrefix) + 1;
 				var writtenText = context.NextTemp();
 				lines.Add($"  {writtenText} = alloca i32");
-				lines.Add(
-					$"  call i32 @WriteFile(ptr {stdoutHandle}, ptr {strGep}, i32 {textLength}, ptr {writtenText}, ptr null)");
+				lines.Add($"  call i32 @WriteFile(ptr {
+					stdoutHandle
+				}, ptr {
+					strGep
+				}, i32 {
+					textLength
+				}, ptr {
+					writtenText
+				}, ptr null)");
 			} //ncrunch: no coverage end
 			return;
 		}
@@ -403,11 +413,17 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			var castPtr = context.NextTemp();
 			lines.Add($"  {castPtr} = getelementptr [64 x i8], ptr {bufPtr}, i64 0, i64 0");
 			var snprintfResult = context.NextTemp();
-			lines.Add(
-				$"  {snprintfResult} = call i32 (ptr, i64, ptr, ...) @snprintf(ptr {castPtr}, i64 64, ptr {strGep}, double {numValue})");
+			lines.Add($"  {
+				snprintfResult
+			} = call i32 (ptr, i64, ptr, ...) @snprintf(ptr {
+				castPtr
+			}, i64 64, ptr {
+				strGep
+			}, double {
+				numValue
+			})");
 			var safeFmt = context.NextTemp();
-			lines.Add(
-				$"  {safeFmt} = call i32 (ptr, ...) @printf(ptr @str.safe_s, ptr {castPtr})");
+			lines.Add($"  {safeFmt} = call i32 (ptr, ...) @printf(ptr @str.safe_s, ptr {castPtr})");
 		}
 		else
 		{
@@ -439,60 +455,38 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 
 	private static string BuildWindowsPrintNumberHelper() =>
 		string.Join("\n", "define void @print_number_from_double(ptr %stdout, double %value) {",
-			"entry:",
-			"  %buffer = alloca [64 x i8]",
+			"entry:", "  %buffer = alloca [64 x i8]",
 			"  %bufferStart = getelementptr [64 x i8], ptr %buffer, i64 0, i64 0",
-			"  %remainingPtr = alloca i64",
-			"  %writeIndexPtr = alloca i64",
-			"  %writtenPtr = alloca i32",
-			"  %number = fptosi double %value to i64",
-			"  %isNegative = icmp slt i64 %number, 0",
+			"  %remainingPtr = alloca i64", "  %writeIndexPtr = alloca i64", "  %writtenPtr = alloca i32",
+			"  %number = fptosi double %value to i64", "  %isNegative = icmp slt i64 %number, 0",
 			"  %negated = sub i64 0, %number",
 			"  %absolute = select i1 %isNegative, i64 %negated, i64 %number",
-			"  store i64 %absolute, ptr %remainingPtr",
-			"  store i64 62, ptr %writeIndexPtr",
+			"  store i64 %absolute, ptr %remainingPtr", "  store i64 62, ptr %writeIndexPtr",
 			"  %newlinePtr = getelementptr i8, ptr %bufferStart, i64 62",
-			"  store i8 10, ptr %newlinePtr",
-			"  %isZero = icmp eq i64 %absolute, 0",
-			"  br i1 %isZero, label %storeZero, label %digitLoop",
-			"storeZero:",
-			"  %zeroIndex = load i64, ptr %writeIndexPtr",
-			"  %zeroStoreIndex = sub i64 %zeroIndex, 1",
+			"  store i8 10, ptr %newlinePtr", "  %isZero = icmp eq i64 %absolute, 0",
+			"  br i1 %isZero, label %storeZero, label %digitLoop", "storeZero:",
+			"  %zeroIndex = load i64, ptr %writeIndexPtr", "  %zeroStoreIndex = sub i64 %zeroIndex, 1",
 			"  store i64 %zeroStoreIndex, ptr %writeIndexPtr",
 			"  %zeroPtr = getelementptr i8, ptr %bufferStart, i64 %zeroStoreIndex",
-			"  store i8 48, ptr %zeroPtr",
-			"  br label %afterDigits",
-			"digitLoop:",
-			"  %current = load i64, ptr %remainingPtr",
-			"  %remainder = urem i64 %current, 10",
-			"  %quotient = udiv i64 %current, 10",
-			"  store i64 %quotient, ptr %remainingPtr",
-			"  %digitValue = add i64 %remainder, 48",
-			"  %digitByte = trunc i64 %digitValue to i8",
-			"  %loopIndex = load i64, ptr %writeIndexPtr",
-			"  %digitStoreIndex = sub i64 %loopIndex, 1",
+			"  store i8 48, ptr %zeroPtr", "  br label %afterDigits", "digitLoop:",
+			"  %current = load i64, ptr %remainingPtr", "  %remainder = urem i64 %current, 10",
+			"  %quotient = udiv i64 %current, 10", "  store i64 %quotient, ptr %remainingPtr",
+			"  %digitValue = add i64 %remainder, 48", "  %digitByte = trunc i64 %digitValue to i8",
+			"  %loopIndex = load i64, ptr %writeIndexPtr", "  %digitStoreIndex = sub i64 %loopIndex, 1",
 			"  store i64 %digitStoreIndex, ptr %writeIndexPtr",
 			"  %digitPtr = getelementptr i8, ptr %bufferStart, i64 %digitStoreIndex",
-			"  store i8 %digitByte, ptr %digitPtr",
-			"  %hasMoreDigits = icmp ne i64 %quotient, 0",
-			"  br i1 %hasMoreDigits, label %digitLoop, label %afterDigits",
-			"afterDigits:",
-			"  br i1 %isNegative, label %storeSign, label %prepareWrite",
-			"storeSign:",
-			"  %signIndex = load i64, ptr %writeIndexPtr",
-			"  %signStoreIndex = sub i64 %signIndex, 1",
+			"  store i8 %digitByte, ptr %digitPtr", "  %hasMoreDigits = icmp ne i64 %quotient, 0",
+			"  br i1 %hasMoreDigits, label %digitLoop, label %afterDigits", "afterDigits:",
+			"  br i1 %isNegative, label %storeSign, label %prepareWrite", "storeSign:",
+			"  %signIndex = load i64, ptr %writeIndexPtr", "  %signStoreIndex = sub i64 %signIndex, 1",
 			"  store i64 %signStoreIndex, ptr %writeIndexPtr",
 			"  %signPtr = getelementptr i8, ptr %bufferStart, i64 %signStoreIndex",
-			"  store i8 45, ptr %signPtr",
-			"  br label %prepareWrite",
-			"prepareWrite:",
+			"  store i8 45, ptr %signPtr", "  br label %prepareWrite", "prepareWrite:",
 			"  %startIndex = load i64, ptr %writeIndexPtr",
 			"  %outputPtr = getelementptr i8, ptr %bufferStart, i64 %startIndex",
-			"  %length64 = sub i64 63, %startIndex",
-			"  %length32 = trunc i64 %length64 to i32",
+			"  %length64 = sub i64 63, %startIndex", "  %length32 = trunc i64 %length64 to i32",
 			"  call i32 @WriteFile(ptr %stdout, ptr %outputPtr, i32 %length32, ptr %writtenPtr, ptr null)",
-			"  ret void",
-			"}");
+			"  ret void", "}");
 
 	private static void EmitJump(Jump jump, List<string> lines, EmitContext context, int index)
 	{
@@ -552,7 +546,8 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	private static void EmitInvoke(Invoke invoke, List<string> lines, EmitContext context)
 	{
 		if (invoke.MethodInfo == null)
-			throw new NotSupportedException("Invoke instruction is missing method metadata"); //ncrunch: no coverage
+			throw new NotSupportedException(
+				"Invoke instruction is missing method metadata"); //ncrunch: no coverage
 		if (invoke.MethodInfo.MethodName == Method.From && !invoke.MethodInfo.InstanceRegister.HasValue)
 		{
 			context.RegisterInstances[invoke.Register] = invoke.MethodInfo.ArgumentRegisters;
@@ -581,15 +576,13 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		string.Join("\n",
 			new[]
 			{
-				"define i32 @main() {",
-				"entry:",
-				$"  %result = call double @{methodName}()",
+				"define i32 @main() {", "entry:", $"  %result = call double @{methodName}()",
 				"  ret i32 0", "}"
 			});
 
 	private static string BuildPrintLabel(string text)
 	{
-		var result = new System.Text.StringBuilder(text.Length * 2);
+		var result = new StringBuilder(text.Length * 2);
 		foreach (var character in text)
 			if (char.IsLetterOrDigit(character))
 				result.Append(character);
@@ -612,7 +605,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 
 	private static string EscapeForLlvm(string text)
 	{
-		var result = new System.Text.StringBuilder();
+		var result = new StringBuilder();
 		foreach (var character in text)
 			if (character == '\n')
 				result.Append("\\0A");
@@ -649,5 +642,5 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			? "0.0"
 			: value == (long)value
 				? $"{value:F1}"
-				: value.ToString("G17", System.Globalization.CultureInfo.InvariantCulture);
+				: value.ToString("G17", CultureInfo.InvariantCulture);
 }

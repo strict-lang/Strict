@@ -1,5 +1,6 @@
 using Strict.Expressions;
 using Strict.Language.Tests;
+using Type = Strict.Language.Type;
 
 namespace Strict.Tests;
 
@@ -19,13 +20,13 @@ public sealed class CallFrameTests
 	}
 
 	private static readonly ValueInstance SomeNumber =
-		new(TestPackage.Instance.GetType(Language.Type.Number), 42);
+		new(TestPackage.Instance.GetType(Type.Number), 42);
 
 	[Test]
 	public void TryGetFindsMemberVariableFromParent()
 	{
 		var parent = new CallFrame();
-		parent.Set("count", SomeNumber, isMember: true);
+		parent.Set("count", SomeNumber, true);
 		var child = new CallFrame(parent);
 		Assert.That(child.TryGet("count", out _), Is.True);
 	}
@@ -43,7 +44,7 @@ public sealed class CallFrameTests
 	public void ClearRemovesMemberVariablesFromChildVisibility()
 	{
 		var parent = new CallFrame();
-		parent.Set("count", SomeNumber, isMember: true);
+		parent.Set("count", SomeNumber, true);
 		parent.Clear();
 		var child = new CallFrame(parent);
 		Assert.That(child.TryGet("count", out _), Is.False);

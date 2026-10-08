@@ -1,3 +1,5 @@
+using Strict.Expressions;
+
 namespace Strict.Compiler.Assembly;
 
 /// <summary>
@@ -7,13 +9,12 @@ namespace Strict.Compiler.Assembly;
 /// </summary>
 public static class ToolRunner
 {
-	public static string? FindTool(string name) =>
-		Strict.Expressions.NativeProcessRunner.FindTool(name);
+	public static string? FindTool(string name) => NativeProcessRunner.FindTool(name);
 
 	public static string RunProcess(string executable, string arguments,
-		int timeoutMs = Strict.Expressions.NativeProcessRunner.DefaultTimeoutMilliseconds)
+		int timeoutMs = NativeProcessRunner.DefaultTimeoutMilliseconds)
 	{
-		var result = Strict.Expressions.NativeProcessRunner.Run(executable, arguments, timeoutMs);
+		var result = NativeProcessRunner.Run(executable, arguments, timeoutMs);
 		if (result.Succeeded)
 			return result.Output;
 		var details = string.IsNullOrWhiteSpace(result.Error)
@@ -21,8 +22,15 @@ public static class ToolRunner
 			: string.IsNullOrWhiteSpace(result.Output)
 				? result.Error
 				: result.Output + Environment.NewLine + result.Error;
-		throw new InvalidOperationException(
-			$"Process '{executable} {arguments}' failed with exit code {result.ExitCode}: {details}");
+		throw new InvalidOperationException($"Process '{
+			executable
+		} {
+			arguments
+		}' failed with exit code {
+			result.ExitCode
+		}: {
+			details
+		}");
 	}
 
 	public static void EnsureOutputFileExists(string outputFilePath, string toolName,
@@ -34,13 +42,14 @@ public static class ToolRunner
 	{
 		if (File.Exists(outputFilePath))
 			return outputFilePath;
-		if (platform == Platform.Windows ||
-			platform == Platform.Linux && OperatingSystem.IsWindows() &&
-			string.Equals(toolName, "gcc", StringComparison.OrdinalIgnoreCase))
+		if (platform == Platform.Windows || (platform == Platform.Linux &&
+			OperatingSystem.IsWindows() &&
+			string.Equals(toolName, "gcc", StringComparison.OrdinalIgnoreCase)))
 		{
-			var windowsExecutablePath = outputFilePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-				? outputFilePath
-				: outputFilePath + ".exe";
+			var windowsExecutablePath =
+				outputFilePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+					? outputFilePath
+					: outputFilePath + ".exe";
 			if (File.Exists(windowsExecutablePath))
 				return windowsExecutablePath;
 		}

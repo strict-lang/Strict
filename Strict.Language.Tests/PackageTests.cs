@@ -102,8 +102,7 @@ public class PackageTests
 		Assert.That(() => new Type(mainPackage, new TypeLines("MyClass123")),
 			Throws.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 		Assert.That(() => new Package(mainPackage, "$%"),
-			Throws.InstanceOf<
-				Context.PackageNameMustBeAWordWithoutSpecialCharacters>());
+			Throws.InstanceOf<Context.PackageNameMustBeAWordWithoutSpecialCharacters>());
 	}
 
 	[TestCase("Hello-World")]
@@ -130,8 +129,7 @@ public class PackageTests
 			expressionParser.CreateType();
 			using var strictPackage = await new Repositories(expressionParser).LoadStrictPackage();
 			Assert.That(mainPackage.GetType(Type.Number),
-				Is.EqualTo(strictPackage.GetType(Type.Number)).Or.
-					EqualTo(subPackage.GetType(Type.Number)));
+				Is.EqualTo(strictPackage.GetType(Type.Number)).Or.EqualTo(subPackage.GetType(Type.Number)));
 			Assert.That(mainPackage.GetType(Type.Character),
 				Is.Not.EqualTo(mainPackage.FindType(Type.Any)));
 		}
@@ -147,8 +145,7 @@ public class PackageTests
 	[Test]
 	public void LoadingTypesOverAndOverWillAlwaysQuicklyReturnSame()
 	{
-		var otherMainPackage =
-			new Package(nameof(LoadingTypesOverAndOverWillAlwaysQuicklyReturnSame));
+		var otherMainPackage = new Package(nameof(LoadingTypesOverAndOverWillAlwaysQuicklyReturnSame));
 		for (var index = 0; index < 1000; index++)
 			if (otherMainPackage.FindType(mainType.Name)!.Name != mainType.Name)
 				throw new AssertionException("FindType=" + //ncrunch: no coverage
@@ -165,20 +162,14 @@ public class PackageTests
 			var parser = new MethodExpressionParser();
 			var repositories = new Repositories(parser);
 			using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
-			using var testType = new Type(package,
-				new TypeLines(nameof(LoadingStrictPackagesInParallelDoesNotFail) + typeSuffix,
-					// @formatter: off
-					"has number",
-					"Run Number",
-					"\tconstant width = 80",
-					"\tconstant height = 45",
-					"\tmutable image = Image(Size(width, height))",
-					"\tfor image.Size",
-					"\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)",
-					"\tmutable count = 0",
-					"\tfor image.Size",
-					"\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",
-					"\t\t\tcount = count + 1", "\tcount")).ParseMembersAndMethods(parser);
+			using var testType = new Type(package, new TypeLines(
+				nameof(LoadingStrictPackagesInParallelDoesNotFail) + typeSuffix,
+				// @formatter: off
+				"has number", "Run Number", "\tconstant width = 80", "\tconstant height = 45",
+				"\tmutable image = Image(Size(width, height))", "\tfor image.Size",
+				"\t\timage.Colors(index) = Color(0.25, 0.25, 0.25)", "\tmutable count = 0",
+				"\tfor image.Size", "\t\tif image.Colors(index) is Color(0.25, 0.25, 0.25)",
+				"\t\t\tcount = count + 1", "\tcount")).ParseMembersAndMethods(parser);
 			// @formatter: on
 			var runMethod = testType.Methods.Single(method => method.Name == Method.Run);
 			return runMethod.GetBodyAndParseIfNeeded().ToString();

@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -91,8 +92,9 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		}
 		var memberIndex = GetMemberIndex(name);
 		var flatIndex = offset + memberIndex;
-		if (memberIndex < 0 || memberIndex >= FlatWidth || memberIndex >= flatElementType.Members.Count ||
-			flatIndex < 0 || flatIndex >= flatNumbers.Length)
+		if (memberIndex < 0 || memberIndex >= FlatWidth ||
+			memberIndex >= flatElementType.Members.Count || flatIndex < 0 ||
+			flatIndex >= flatNumbers.Length)
 		{
 			memberValue = default;
 			return false;
@@ -108,8 +110,9 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			return false;
 		var memberIndex = GetMemberIndex(name);
 		var flatIndex = offset + memberIndex;
-		if (memberIndex < 0 || memberIndex >= FlatWidth || memberIndex >= flatElementType.Members.Count ||
-			flatIndex < 0 || flatIndex >= flatNumbers.Length)
+		if (memberIndex < 0 || memberIndex >= FlatWidth ||
+			memberIndex >= flatElementType.Members.Count || flatIndex < 0 ||
+			flatIndex >= flatNumbers.Length)
 			return false;
 		EnsureWritableFlatNumbers();
 		flatNumbers[flatIndex] = (float)memberValue.Number;
@@ -127,8 +130,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	private static Dictionary<string, int> CreateMemberIndexes(Type type)
 	{
 		var members = type.Members;
-		var indexes = new Dictionary<string, int>(members.Count,
-			StringComparer.OrdinalIgnoreCase);
+		var indexes = new Dictionary<string, int>(members.Count, StringComparer.OrdinalIgnoreCase);
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 			if (!members[memberIndex].IsConstant && members[memberIndex].Type.IsNumber)
 				indexes.TryAdd(members[memberIndex].Name, memberIndex);
@@ -160,48 +162,49 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 
 	public readonly Type ReturnType;
 	public List<ValueInstance> Items => items ??= MaterializeItems();
-	public int Count => items?.Count ?? (FlatWidth > 0
-		? (flatNumbers?.Length ?? 0) / FlatWidth
-		: 0);
-/*obs, this is not the way we should call any of this!
-	public static ValueArrayInstance CreateWithCapacity(Type returnType, int capacity)
-	{
-		var instance = new ValueArrayInstance(returnType, Array.Empty<ValueInstance>());
-		instance.flatNumbers = null;
-		instance.flatElementType = null;
-		instance.FlatWidth = 0;
-		instance.items = new List<ValueInstance>(Math.Max(capacity, MinimumCapacity));
-		return instance;
-	}
+	public int Count =>
+		items?.Count ?? (FlatWidth > 0
+			? (flatNumbers?.Length ?? 0) / FlatWidth
+			: 0);
+	/*obs, this is not the way we should call any of this!
+		public static ValueArrayInstance CreateWithCapacity(Type returnType, int capacity)
+		{
+			var instance = new ValueArrayInstance(returnType, Array.Empty<ValueInstance>());
+			instance.flatNumbers = null;
+			instance.flatElementType = null;
+			instance.FlatWidth = 0;
+			instance.items = new List<ValueInstance>(Math.Max(capacity, MinimumCapacity));
+			return instance;
+		}
 
-	/// <summary>
-	/// Creates a flat-backed list from a pre-built float[] without creating individual
-	/// ValueInstances. Element access returns slices sharing the same backing array.
-	/// </summary>
-	public static ValueArrayInstance CreateFlatList(Type listType, Type elementType,
-		float[] flatNumbers, int elementWidth) =>
-		new(listType, flatNumbers, elementType, elementWidth, 0);
+		/// <summary>
+		/// Creates a flat-backed list from a pre-built float[] without creating individual
+		/// ValueInstances. Element access returns slices sharing the same backing array.
+		/// </summary>
+		public static ValueArrayInstance CreateFlatList(Type listType, Type elementType,
+			float[] flatNumbers, int elementWidth) =>
+			new(listType, flatNumbers, elementType, elementWidth, 0);
 
-	public void Add(ValueInstance item)
-	{
-		if (flatNumbers != null)
-			MaterializeItems();
-		var currentItems = items ??= new List<ValueInstance>(MinimumCapacity);
-		if (currentItems.Count == currentItems.Capacity)
-			currentItems.Capacity = GetExpandedCapacity(currentItems.Capacity);
-		currentItems.Add(item);
-	}
+		public void Add(ValueInstance item)
+		{
+			if (flatNumbers != null)
+				MaterializeItems();
+			var currentItems = items ??= new List<ValueInstance>(MinimumCapacity);
+			if (currentItems.Count == currentItems.Capacity)
+				currentItems.Capacity = GetExpandedCapacity(currentItems.Capacity);
+			currentItems.Add(item);
+		}
 
-	private static int GetExpandedCapacity(int currentCapacity)
-	{
-		if (currentCapacity < MinimumCapacity)
-			return MinimumCapacity;
-		return currentCapacity < LargeGrowthChunk
-			? currentCapacity * 2
-			: currentCapacity + LargeGrowthChunk;
-	}
-	public void SetFlat(int index, float flatValue) => flatNumbers![offset + index] = flatValue;
-*/
+		private static int GetExpandedCapacity(int currentCapacity)
+		{
+			if (currentCapacity < MinimumCapacity)
+				return MinimumCapacity;
+			return currentCapacity < LargeGrowthChunk
+				? currentCapacity * 2
+				: currentCapacity + LargeGrowthChunk;
+		}
+		public void SetFlat(int index, float flatValue) => flatNumbers![offset + index] = flatValue;
+	*/
 	public ValueInstance this[int index]
 	{
 		get =>
@@ -253,7 +256,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 
 	private bool TryGetFlatElementLayout(out Type elementType, out int elementWidth)
 	{
-		if (ReturnType.IsGeneric || ReturnType is not Strict.Language.GenericTypeImplementation)
+		if (ReturnType.IsGeneric || ReturnType is not GenericTypeImplementation)
 		{
 			elementType = ReturnType;
 			elementWidth = 0;
@@ -360,9 +363,8 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			return new ValueInstance(flatElementType, flatNumbers[elementOffset]);
 		if (IsAllNumericType(flatElementType))
 		{
-			var slice = CreateForTypeBacking(flatElementType, flatNumbers,
-				elementOffset, FlatWidth);
-			return new ValueInstance(slice, isFlatNumericType: true);
+			var slice = CreateForTypeBacking(flatElementType, flatNumbers, elementOffset, FlatWidth);
+			return new ValueInstance(slice, true);
 		}
 		var values = new ValueInstance[FlatWidth];
 		for (var memberIndex = 0; memberIndex < FlatWidth; memberIndex++)
@@ -382,7 +384,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 
 	public bool Equals(ValueArrayInstance? other) =>
 		other is not null && (ReferenceEquals(this, other) ||
-			AreCompatibleListTypes(other) && HasSameItems(other));
+			(AreCompatibleListTypes(other) && HasSameItems(other)));
 
 	private bool AreCompatibleListTypes(ValueArrayInstance other) =>
 		ReturnType.FullName == other.ReturnType.FullName ||

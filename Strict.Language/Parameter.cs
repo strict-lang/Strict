@@ -5,8 +5,7 @@ public sealed class Parameter : NamedType
 	public Parameter(Type parentType, string name, Expression defaultValue) : base(parentType,
 		IsNameStartsWithMutable(name)
 			? name[Type.MutableWithSpaceAtEnd.Length..]
-			: name,
-		defaultValue.ReturnType)
+			: name, defaultValue.ReturnType)
 	{
 		DefaultValue = defaultValue;
 		IsMutable = name.Contains(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal);
@@ -41,9 +40,10 @@ public sealed class Parameter : NamedType
 			throw new NewExpressionDoesNotMatchParameterType(bodyForErrorMessage, newExpression, this);
 	}
 
-	public class NewExpressionDoesNotMatchParameterType(Body body, Expression newExpression,
-		Parameter parameter) : ParsingFailed(body, newExpression.ToStringWithType() +
-		" cannot be assigned to " + parameter, parameter.Type);
+	public class
+		NewExpressionDoesNotMatchParameterType(Body body, Expression newExpression, Parameter parameter)
+		: ParsingFailed(body, newExpression.ToStringWithType() + " cannot be assigned to " + parameter,
+			parameter.Type);
 
 	public override string ToString() =>
 		base.ToString() + (DefaultValue != null

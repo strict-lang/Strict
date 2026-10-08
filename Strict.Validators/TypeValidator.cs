@@ -71,8 +71,9 @@ public sealed class TypeValidator : Visitor
 	//ncrunch: no coverage start
 	private static bool IsVariableValueUnchanged(Body body, Variable mutableVariable,
 		IEnumerable<MutableReassignment> mutableReassignments) =>
-		mutableReassignments.FirstOrDefault(reassignment => reassignment.Name == mutableVariable.Name) ==
-		null && !IsVariablePassedToMutableParameter(body, mutableVariable.Name);
+		mutableReassignments.FirstOrDefault(reassignment =>
+			reassignment.Name == mutableVariable.Name) == null &&
+		!IsVariablePassedToMutableParameter(body, mutableVariable.Name);
 
 	private static bool IsVariablePassedToMutableParameter(Body body, string variableName)
 	{
@@ -82,8 +83,7 @@ public sealed class TypeValidator : Visitor
 		return false;
 	}
 
-	private static bool IsVariablePassedToMutableParameter(Expression expression,
-		string variableName)
+	private static bool IsVariablePassedToMutableParameter(Expression expression, string variableName)
 	{
 		if (expression is MethodCall methodCall)
 			for (var argumentIndex = 0; argumentIndex < methodCall.Arguments.Count &&
@@ -110,9 +110,13 @@ public sealed class TypeValidator : Visitor
 		if (context is not VariableUsages variables)
 			return expression;
 		if (expression is ParameterCall parameterCall)
+		{
 			variables.used.Add(parameterCall.Parameter.Name);
+		}
 		else if (expression is VariableCall variableCall)
+		{
 			variables.used.Add(variableCall.Variable.Name);
+		}
 		else if (expression is MutableReassignment reassignment)
 		{
 			variables.reassignedMutables.Add(reassignment.Name);
@@ -120,7 +124,9 @@ public sealed class TypeValidator : Visitor
 				variables.reassignedMutables.Add(rootName);
 		}
 		else if (expression is MethodCall methodCall)
+		{
 			TrackMutableArgumentsPassedByReference(methodCall, variables);
+		}
 		return base.Visit(expression, body, context);
 	}
 
@@ -159,7 +165,9 @@ public sealed class TypeValidator : Visitor
 				throw new VariableHidesMemberUseDifferentName(body, body.Method.Name, member.Name);
 	}
 
-	public class VariableHidesMemberUseDifferentName(Body body, string methodName, string variableName)
+	public class VariableHidesMemberUseDifferentName(Body body,
+		string methodName,
+		string variableName)
 		: ParsingFailed(body, $"Method name {methodName}, Variable name {variableName}");
 
 	public override void Visit(Method method, bool forceParsingBody = false, object? context = null)
@@ -178,14 +186,16 @@ public sealed class TypeValidator : Visitor
 
 	private static void ValidateUnusedParameter(Method method, string name)
 	{
-		if (method.Name != Method.From && !method.Type.IsTrait && method.GetParameterUsageCount(name) < 2)
+		if (method.Name != Method.From && !method.Type.IsTrait &&
+			method.GetParameterUsageCount(name) < 2)
 			throw new UnusedMethodParameterMustBeRemoved(method, name);
 	}
 
 	public sealed class UnusedMethodParameterMustBeRemoved(Method method, string name)
 		: ParsingFailed(method.Type, method.TypeLineNumber, name);
 
-	private static void ValidateUnchangedMutableParameter(Method method, Parameter parameter, object? context)
+	private static void ValidateUnchangedMutableParameter(Method method, Parameter parameter,
+		object? context)
 	{
 		if (context is VariableUsages variables && parameter is { IsMutable: true } &&
 			!variables.reassignedMutables.Contains(parameter.Name))
@@ -197,10 +207,12 @@ public sealed class TypeValidator : Visitor
 
 	private static void ValidateMethodParameterHidesAnyTypeMember(string parameterName, Method method)
 	{
-		if (method.Name != Method.From && method.Type.Members.Any(member => member.Name == parameterName))
+		if (method.Name != Method.From &&
+			method.Type.Members.Any(member => member.Name == parameterName))
 			throw new ParameterHidesMemberUseDifferentName(method.Type, method.Name, parameterName);
 	}
 
-	public sealed class ParameterHidesMemberUseDifferentName(Type type, string methodName, string parameterName)
+	public sealed class
+		ParameterHidesMemberUseDifferentName(Type type, string methodName, string parameterName)
 		: ParsingFailed(type, 0, $"Method name {methodName}, Parameter name {parameterName}");
 }

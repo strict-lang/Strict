@@ -27,8 +27,7 @@ public sealed class MethodTests
 
 	[Test]
 	public void InvalidMethodParameters() =>
-		Assert.Throws<Method.InvalidMethodParameters>(
-			() => new Method(type, 0, null!, ["ab("]));
+		Assert.Throws<Method.InvalidMethodParameters>(() => new Method(type, 0, null!, ["ab("]));
 
 	[Test]
 	public void ParametersMustNotBeEmpty() =>
@@ -135,12 +134,9 @@ public sealed class MethodTests
 	public void SplitTestExpressions()
 	{
 		var customType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(SplitTestExpressions),
-				"has logger",
-				"AddFive(variable Text) Text",
-				"\tAddFive(\"5\") is \"55\"",
-				"\tAddFive(\"6\") is \"65\"",
-				"\tvariable + \"5\"")).ParseMembersAndMethods(parser);
+				new TypeLines(nameof(SplitTestExpressions), "has logger", "AddFive(variable Text) Text",
+					"\tAddFive(\"5\") is \"55\"", "\tAddFive(\"6\") is \"65\"", "\tvariable + \"5\"")).
+			ParseMembersAndMethods(parser);
 		customType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(2));
 	}
@@ -149,27 +145,23 @@ public sealed class MethodTests
 	public void ParseTestsOnlyForGenericShouldReparseFullBody()
 	{
 		var customType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ParseTestsOnlyForGenericShouldReparseFullBody),
-				"has generic",
-				"Length Number",
-				"\t(1, 2).Length is 2",
-				"\t1")).ParseMembersAndMethods(parser);
+			new TypeLines(nameof(ParseTestsOnlyForGenericShouldReparseFullBody), "has generic",
+				"Length Number", "\t(1, 2).Length is 2", "\t1")).ParseMembersAndMethods(parser);
 		customType.Methods[0].GetBodyAndParseIfNeeded(true);
 		var expression = customType.Methods[0].GetBodyAndParseIfNeeded();
 		var body = expression as Body;
-		Assert.That(body != null && body.Expressions.Any(e =>
-			e.GetType().Name == nameof(Method.PlaceholderExpression)), Is.False);
+		Assert.That(
+			body != null &&
+			body.Expressions.Any(e => e.GetType().Name == nameof(Method.PlaceholderExpression)),
+			Is.False);
 	}
 
 	[Test]
 	public void ParseTestsOnlyForGenericSkipsFinalImplementationLine()
 	{
 		var customType = new Type(TestPackage.Instance,
-			new TypeLines("SkipLastGenericIsLine",
-				"has elements Generics",
-				"is(other) Boolean",
-				"\t(1, 2) is (1, 2)",
-				"\telements is other.elements")).ParseMembersAndMethods(parser);
+			new TypeLines("SkipLastGenericIsLine", "has elements Generics", "is(other) Boolean",
+				"\t(1, 2) is (1, 2)", "\telements is other.elements")).ParseMembersAndMethods(parser);
 		customType.Methods[0].GetBodyAndParseIfNeeded(true);
 		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(1));
 	}
@@ -178,10 +170,9 @@ public sealed class MethodTests
 	public void ConditionalExpressionIsNotTest()
 	{
 		var customType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ConditionalExpressionIsNotTest),
-				"has logger",
-				"ConditionalExpressionIsNotTest Boolean",
-				"	5 is 5 then true else false")).ParseMembersAndMethods(parser);
+				new TypeLines(nameof(ConditionalExpressionIsNotTest), "has logger",
+					"ConditionalExpressionIsNotTest Boolean", "	5 is 5 then true else false")).
+			ParseMembersAndMethods(parser);
 		customType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(0));
 	}
@@ -245,14 +236,12 @@ public sealed class MethodTests
 
 	[Test]
 	public void MissingParameterDefaultValue() =>
-		Assert.That(
-			() => new Method(type, 0, parser, ["Run(input =)", "	5"]),
+		Assert.That(() => new Method(type, 0, parser, ["Run(input =)", "	5"]),
 			Throws.InstanceOf<Method.MissingParameterDefaultValue>());
 
 	[Test]
 	public void ParameterWithTypeNameAndInitializerIsForbidden() =>
-		Assert.That(
-			() => new Method(type, 0, parser, ["Run(input Number = 5)", "	5"]),
+		Assert.That(() => new Method(type, 0, parser, ["Run(input Number = 5)", "	5"]),
 			Throws.InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithSameType>());
 
 	[Test]
@@ -280,7 +269,7 @@ public sealed class MethodTests
 			"\tif progress > 0",
 			"\t\treturn false",
 			"\t\"Work not started yet\""));
-			// @formatter:on
+		// @formatter:on
 		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
 		multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(multipleReturnTypeMethod.Methods[0].ReturnType, Is.InstanceOf<OneOfType>());
@@ -302,7 +291,7 @@ public sealed class MethodTests
 			"\tif progress > 0",
 			"\t\treturn false",
 			"\t\"Work not started yet\""));
-			// @formatter:on
+		// @formatter:on
 		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
 		multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded();
 	}
@@ -330,7 +319,7 @@ public sealed class MethodTests
 			"\t\treturn Error",
 			"\telse",
 			"\t\t\"Job is in progress\""));
-			// @formatter:on
+		// @formatter:on
 		multipleReturnTypeMethod.ParseMembersAndMethods(parser);
 		Assert.That(() => multipleReturnTypeMethod.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.Nothing);
@@ -365,8 +354,8 @@ public sealed class MethodTests
 	{
 		using var typeToCheck = new Type(TestPackage.Instance,
 			new TypeLines(nameof(MutablePassedToMutableParameter), "has logger",
-				"Mutate(mutable number Number)", "\tnumber = number + 1",
-				"Run Number", "\tmutable number = 5", "\tMutate(number)", "\tnumber"));
+				"Mutate(mutable number Number)", "\tnumber = number + 1", "Run Number",
+				"\tmutable number = 5", "\tMutate(number)", "\tnumber"));
 		typeToCheck.ParseMembersAndMethods(parser);
 		Assert.That(() => typeToCheck.Methods[1].GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
@@ -381,8 +370,8 @@ public sealed class MethodTests
 	public void ReverseRange()
 	{
 		using var typeToCheck = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ReverseRange), "has logger",
-				"Run", "\tRange(-5, -10).Reverse is Range(-9, -4)"));
+			new TypeLines(nameof(ReverseRange), "has logger", "Run",
+				"\tRange(-5, -10).Reverse is Range(-9, -4)"));
 		typeToCheck.ParseMembersAndMethods(parser);
 		typeToCheck.Methods[0].GetBodyAndParseIfNeeded();
 	}

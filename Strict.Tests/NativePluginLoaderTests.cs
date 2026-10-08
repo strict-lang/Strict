@@ -7,8 +7,7 @@ public sealed class NativePluginLoaderTests
 	[Test]
 	public void ThrowsWhenNoDllFound() =>
 		Assert.That(
-			() => NativePluginLoader.TryCallNativeMethod("Image", "Load", ["test.png"],
-				"/nonexistent"),
+			() => NativePluginLoader.TryCallNativeMethod("Image", "Load", ["test.png"], "/nonexistent"),
 			Throws.TypeOf<NativePluginLoader.NativeMethodNotFound>());
 
 	[Test]
@@ -22,8 +21,7 @@ public sealed class NativePluginLoaderTests
 	public void TryLoadNativeLifecycleReturnsNullWhenNoLibraryFound() =>
 		Assert.That(
 			NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", "any.png",
-				Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())),
-			Is.Null);
+				Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())), Is.Null);
 
 	[Test]
 	[Category("Slow")]
@@ -47,7 +45,7 @@ public sealed class NativePluginLoaderTests
 			var tempDir = Path.GetDirectoryName(imageFile)!;
 			// Copy the library next to the temp image so the loader finds it
 			var libDest = Path.Combine(tempDir, Path.GetFileName(libPath));
-			File.Copy(libPath, libDest, overwrite: true);
+			File.Copy(libPath, libDest, true);
 			var bytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", imageFile, tempDir);
 			Assert.That(bytes, Is.Not.Null);
 			Assert.That(bytes!.Length, Is.EqualTo(4), "1×1 RGBA image = 4 bytes");
@@ -64,11 +62,12 @@ public sealed class NativePluginLoaderTests
 		if (repoRoot == null)
 			return null;
 		var pluginDir = Path.Combine(repoRoot, "NativePlugins", "ImageLoader");
-		var path = Path.Combine(pluginDir, "ImageLoader" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-			? ".dll"
-			: RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
-				? ".dylib"
-				: ".so"));
+		var path = Path.Combine(pluginDir, "ImageLoader" +
+			(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+				? ".dll"
+				: RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+					? ".dylib"
+					: ".so"));
 		return File.Exists(path)
 			? path
 			: null;

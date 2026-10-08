@@ -311,8 +311,8 @@ public sealed class TestPackage : Package
 		foreach (var type in new[]
 			{
 				any, boolean, length, number, range, character, byteType, mutable, iterator, list, text,
-				baseType, generic, logger, file, textWriter, textReader, closeable, bytesWriter, bytesReader,
-				name, error, errorWithValue, method, stacktrace, dictionary
+				baseType, generic, logger, file, textWriter, textReader, closeable, bytesWriter,
+				bytesReader, name, error, errorWithValue, method, stacktrace, dictionary
 			})
 			type.ParseMembersAndMethods(parser);
 	}

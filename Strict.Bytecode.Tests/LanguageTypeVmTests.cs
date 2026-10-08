@@ -1,5 +1,4 @@
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Tests;
@@ -22,12 +21,9 @@ public sealed class LanguageTypeVmTests
 		TestContext.WriteLine("IsMemberLine expressions:");
 		foreach (var expression in bodyExpr.Expressions)
 			TestContext.WriteLine("  " + expression.GetType().Name + ": " + expression);
-
 		var lines = new[]
 		{
-			"has logger",
-			"Run",
-			"\tconstant type = Type(\"HelloLogger\", (\"has logger\", \"Run\"))",
+			"has logger", "Run", "\tconstant type = Type(\"HelloLogger\", (\"has logger\", \"Run\"))",
 			"\ttype.IsMemberLine(\"has logger\")"
 		};
 		var package = language;
@@ -56,10 +52,10 @@ public sealed class LanguageTypeVmTests
 				TestContext.WriteLine("  " + instruction);
 				if (instruction is Invoke invoke)
 					TestContext.WriteLine("    => " + invoke.MethodInfo.TypeFullName + "." +
-						invoke.MethodInfo.MethodName + " ret=" + invoke.MethodInfo.ReturnTypeName +
-						" args=" + invoke.MethodInfo.ArgumentRegisters.Length +
-						" instance=" + invoke.MethodInfo.InstanceRegister +
-						" params=[" + string.Join(",", invoke.MethodInfo.ParameterNames) + "]");
+						invoke.MethodInfo.MethodName + " ret=" + invoke.MethodInfo.ReturnTypeName + " args=" +
+						invoke.MethodInfo.ArgumentRegisters.Length + " instance=" +
+						invoke.MethodInfo.InstanceRegister + " params=[" +
+						string.Join(",", invoke.MethodInfo.ParameterNames) + "]");
 			}
 			var recursiveInvokes = method.instructions.OfType<Invoke>().Where(invoke =>
 				invoke.MethodInfo.MethodName == "IsMemberLine").ToList();
@@ -87,8 +83,7 @@ public sealed class LanguageTypeVmTests
 				TestContext.WriteLine("  " + instruction);
 				if (instruction is Invoke invoke)
 					TestContext.WriteLine("    => " + invoke.MethodInfo.TypeFullName + "." +
-						invoke.MethodInfo.MethodName + " instance=" +
-						invoke.MethodInfo.InstanceRegister);
+						invoke.MethodInfo.MethodName + " instance=" + invoke.MethodInfo.InstanceRegister);
 			}
 		}
 	}
@@ -100,9 +95,7 @@ public sealed class LanguageTypeVmTests
 		using var language = await repos.LoadStrictPackage("Strict/Language");
 		var lines = new[]
 		{
-			"has logger",
-			"Run",
-			"\tconstant type = Type(\"HelloLogger\", (\"has logger\", \"Run\"))",
+			"has logger", "Run", "\tconstant type = Type(\"HelloLogger\", (\"has logger\", \"Run\"))",
 			"\ttype.Members.Length"
 		};
 		using var repro = new Type(language, new TypeLines("TypeMembersVm", lines)).
@@ -113,13 +106,13 @@ public sealed class LanguageTypeVmTests
 		DumpBinary(binary);
 		var typeBinaryName = binary.MethodsPerType.Keys.First(name =>
 			name == "Type" || name.Contains("Language/Type", StringComparison.Ordinal));
-		Assert.That(binary.MethodsPerType[typeBinaryName].MethodGroups.ContainsKey("Members"),
-			Is.True, "Members should be compiled");
+		Assert.That(binary.MethodsPerType[typeBinaryName].MethodGroups.ContainsKey("Members"), Is.True,
+			"Members should be compiled");
 		var membersGroup = binary.MethodsPerType[typeBinaryName].MethodGroups["Members"];
 		foreach (var method in membersGroup)
 		{
-			TestContext.WriteLine("Members overload params=" + method.parameters.Count +
-				" instr=" + method.instructions.Count);
+			TestContext.WriteLine("Members overload params=" + method.parameters.Count + " instr=" +
+				method.instructions.Count);
 			foreach (var instruction in method.instructions.Take(30))
 				TestContext.WriteLine("  " + instruction);
 			// Filtered for-if must not always-WriteToList after the if without a then-only path

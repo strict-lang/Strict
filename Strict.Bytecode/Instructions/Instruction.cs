@@ -27,7 +27,9 @@ public abstract class Instruction(InstructionType instructionType)
 			prevSourceLine = SourceLine;
 		}
 		else
+		{
 			writer.Write((byte)InstructionType);
+		}
 		WritePayload(writer, table);
 	}
 

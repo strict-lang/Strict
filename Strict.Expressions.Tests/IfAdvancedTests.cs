@@ -26,8 +26,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ParseSelectorIf()
 	{
-		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ParseSelectorIf),
+		using var program = new Type(TestPackage.Instance, new TypeLines(nameof(ParseSelectorIf),
 				// @formatter:off
 				"has operation Text",
 				"Run Number",
@@ -38,19 +37,16 @@ public sealed class IfAdvancedTests : TestExpressions
 				"\t\t\"divide\" then 4")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(expression.ToString(), Is.EqualTo(string.Join(Environment.NewLine,
-			"if operation is",
-			"\t\"add\" then 1",
-			"\t\"subtract\" then 2",
-			"\t\"multiply\" then 3",
-			"\t\"divide\" then 4")));
+		Assert.That(expression.ToString(),
+			Is.EqualTo(string.Join(Environment.NewLine, "if operation is", "\t\"add\" then 1",
+				"\t\"subtract\" then 2", "\t\"multiply\" then 3", "\t\"divide\" then 4")));
 	}
 
 	[Test]
 	public void ParseSelectorIfWithElse()
 	{
-		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ParseSelectorIfWithElse),
+		using var program = new Type(TestPackage.Instance, new TypeLines(
+			nameof(ParseSelectorIfWithElse),
 				// @formatter:off
 				"has operation Text",
 				"Run Number",
@@ -60,11 +56,9 @@ public sealed class IfAdvancedTests : TestExpressions
 				"\t\telse 3")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(expression.ToString(), Is.EqualTo(string.Join(Environment.NewLine,
-			"if operation is",
-			"\t\"add\" then 1",
-			"\t\"subtract\" then 2",
-			"\telse 3")));
+		Assert.That(expression.ToString(),
+			Is.EqualTo(string.Join(Environment.NewLine, "if operation is", "\t\"add\" then 1",
+				"\t\"subtract\" then 2", "\telse 3")));
 	}
 
 	[TestCase("constant result = true then true else false")]
@@ -81,7 +75,8 @@ public sealed class IfAdvancedTests : TestExpressions
 
 	[Test]
 	public void ConditionalExpressionsCannotBeNested() =>
-		Assert.That(() => ParseExpression("constant result = true then (5 is 5 then false else true) else false"),
+		Assert.That(
+			() => ParseExpression("constant result = true then (5 is 5 then false else true) else false"),
 			Throws.InstanceOf<If.ConditionalExpressionsCannotBeNested>());
 
 	[TestCase("logger.Log(true then \"Yes\" else \"No\")")]
@@ -98,11 +93,8 @@ public sealed class IfAdvancedTests : TestExpressions
 	public void ReturnTypeOfThenMustMatchMethodReturnType()
 	{
 		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ReturnTypeOfThenMustMatchMethodReturnType),
-				"has logger",
-				"InvalidRun Number",
-				"	if 5 is 5",
-				"		constant file = File(\"test.txt\")",
+			new TypeLines(nameof(ReturnTypeOfThenMustMatchMethodReturnType), "has logger",
+				"InvalidRun Number", "	if 5 is 5", "		constant file = File(\"test.txt\")",
 				"		return \"5\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.ChildBodyReturnTypeMustMatchMethod>().With.Message.Contains(
@@ -113,8 +105,8 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ReturnTypeOfElseMustMatchMethodReturnType()
 	{
-		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ReturnTypeOfElseMustMatchMethodReturnType),
+		using var program = new Type(TestPackage.Instance, new TypeLines(
+			nameof(ReturnTypeOfElseMustMatchMethodReturnType),
 				// @formatter:off
 				"has logger",
 				"InvalidRun Number",
@@ -133,8 +125,8 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ThenReturnsImplementedTypeOfMethodReturnType()
 	{
-		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ThenReturnsImplementedTypeOfMethodReturnType),
+		using var program = new Type(TestPackage.Instance, new TypeLines(
+			nameof(ThenReturnsImplementedTypeOfMethodReturnType),
 				// @formatter:off
 				"has logger",
 				"InvalidRun Number",
@@ -152,8 +144,8 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void MultiLineThenAndElseWithMatchingMethodReturnType()
 	{
-		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(MultiLineThenAndElseWithMatchingMethodReturnType),
+		using var program = new Type(TestPackage.Instance, new TypeLines(
+			nameof(MultiLineThenAndElseWithMatchingMethodReturnType),
 				// @formatter:off
 				"has logger",
 				"Run Text",
@@ -191,8 +183,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ValidMultipleElseIf()
 	{
-		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ValidMultipleElseIf),
+		using var program = new Type(TestPackage.Instance, new TypeLines(nameof(ValidMultipleElseIf),
 				// @formatter:off
 				"has logger",
 				"Run Text",
@@ -207,16 +198,10 @@ public sealed class IfAdvancedTests : TestExpressions
 				"	\"don't matter\"")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(body.ToString(), Is.EqualTo(string.Join(Environment.NewLine,
-			"if 5 is 5",
-			"	return \"Hello\"",
-			"else if 6 is 6",
-			"	logger.Log(\"Hi\")",
-			"	return \"Hi\"",
-			"else if 7 is 7",
-			"	logger.Log(\"Hello\")",
-			"	return \"Hello\"",
-			"\"don't matter\"")), body.ToString());
+		Assert.That(body.ToString(),
+			Is.EqualTo(string.Join(Environment.NewLine, "if 5 is 5", "	return \"Hello\"",
+				"else if 6 is 6", "	logger.Log(\"Hi\")", "	return \"Hi\"", "else if 7 is 7",
+				"	logger.Log(\"Hello\")", "	return \"Hello\"", "\"don't matter\"")), body.ToString());
 		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
 		Assert.That(body.children.Count, Is.EqualTo(3));
 	}
@@ -224,8 +209,7 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ElseIfMissingThen()
 	{
-		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ElseIfMissingThen),
+		using var program = new Type(TestPackage.Instance, new TypeLines(nameof(ElseIfMissingThen),
 				// @formatter:off
 				"has logger",
 				"ValidRun Text",
@@ -262,8 +246,8 @@ public sealed class IfAdvancedTests : TestExpressions
 	[Test]
 	public void ParseIsNotIn() =>
 		Assert.That(ParseExpression("if five is not in (5)", "\tlogger.Log(\"Hey\")"),
-			Is.EqualTo(new If(CreateNot(CreateBinary(list, BinaryOperator.In, new MemberCall(null, five))),
-				GetThen())));
+			Is.EqualTo(new If(
+				CreateNot(CreateBinary(list, BinaryOperator.In, new MemberCall(null, five))), GetThen())));
 
 	[Test]
 	public void ParseIsIn() =>

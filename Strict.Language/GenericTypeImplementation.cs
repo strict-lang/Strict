@@ -2,8 +2,8 @@ namespace Strict.Language;
 
 public sealed class GenericTypeImplementation : Type
 {
-	public GenericTypeImplementation(Type generic, Type[] implementationTypes, string typeName)
-		: base(generic.Package, new TypeLines(typeName, CreateHasLines(generic, implementationTypes)))
+	public GenericTypeImplementation(Type generic, Type[] implementationTypes, string typeName) :
+		base(generic.Package, new TypeLines(typeName, CreateHasLines(generic, implementationTypes)))
 	{
 		Generic = generic;
 		ImplementationTypes = implementationTypes;

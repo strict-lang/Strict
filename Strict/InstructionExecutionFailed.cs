@@ -8,10 +8,16 @@ namespace Strict;
 /// the failing instruction with a surrounding window, source lines with line numbers from the
 /// .strict file, and a clickable stack trace entry (same format as ParsingFailed).
 /// </summary>
-public sealed class InstructionExecutionFailed(string message, List<Instruction> instructions,
-	int failingIndex, string methodContext, string[]? sourceLines = null, string sourceFilePath = "",
-	Exception? inner = null) : Exception(BuildMessage(message, instructions, failingIndex,
-	methodContext, sourceLines, sourceFilePath), inner)
+public sealed class InstructionExecutionFailed(string message,
+	List<Instruction> instructions,
+	int failingIndex,
+	string methodContext,
+	string[]? sourceLines = null,
+	string sourceFilePath = "",
+	Exception? inner = null)
+	: Exception(
+		BuildMessage(message, instructions, failingIndex, methodContext, sourceLines, sourceFilePath),
+		inner)
 {
 	private static string BuildMessage(string message, IReadOnlyList<Instruction> instructions,
 		int failingIndex, string methodContext, string[]? sourceLines, string sourceFilePath)

@@ -19,7 +19,8 @@ public class DeclarationTests : TestExpressions
 	{
 		var body = (Body)ParseExpression("constant numberFive = 5", "numberFive");
 		var assignment = (Declaration)body.Expressions[0];
-		Assert.That(assignment, Is.EqualTo(new Declaration(new Body(method), nameof(numberFive), numberFive)));
+		Assert.That(assignment,
+			Is.EqualTo(new Declaration(new Body(method), nameof(numberFive), numberFive)));
 		Assert.That(assignment.Value.ReturnType, Is.EqualTo(numberFive.ReturnType));
 		Assert.That(((Number)assignment.Value).ToString(), Is.EqualTo("5"));
 		Assert.That(body.Expressions[1], Is.InstanceOf<VariableCall>());
@@ -62,12 +63,10 @@ public class DeclarationTests : TestExpressions
 		var body = (Body)ParseExpression("constant numbers = (1, 2, 3) + 6", "numbers");
 		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Name, Is.EqualTo("numbers"));
-		Assert.That(expression.ReturnType.Name,
-			Is.EqualTo(Type.List + "(" + Type.Number + ")"));
+		Assert.That(expression.ReturnType.Name, Is.EqualTo(Type.List + "(" + Type.Number + ")"));
 		Assert.That(expression.Value, Is.InstanceOf<Binary>());
 		var leftExpression = ((Binary)expression.Value).Instance!;
-		Assert.That(leftExpression.ReturnType.Name,
-			Is.EqualTo(Type.List + "(" + Type.Number + ")"));
+		Assert.That(leftExpression.ReturnType.Name, Is.EqualTo(Type.List + "(" + Type.Number + ")"));
 	}
 
 	[Test]
@@ -100,7 +99,8 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void IdentifierMustBeValidWord() =>
 		Assert.That(() => ParseExpression("constant number5 = 5"),
-			Throws.InnerException.InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
+			Throws.InnerException.
+				InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
 	public void AssignmentGetHashCode()
@@ -129,8 +129,8 @@ public class DeclarationTests : TestExpressions
 	[Test]
 	public void AssignmentWithMethodCall()
 	{
-		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(AssignmentWithMethodCall),
+		using var program = new Type(TestPackage.Instance, new TypeLines(
+			nameof(AssignmentWithMethodCall),
 				// @formatter:off
 				"has logger",
 				"MethodToCall Text",

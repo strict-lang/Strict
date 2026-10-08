@@ -20,21 +20,27 @@ public sealed class ShuntingYard
 			throw new NothingFound(input); //ncrunch: no coverage
 	}
 
-	public sealed class NothingFound(string input) : Exception("Nothing found! Should never happen. " + input);
+	public sealed class NothingFound(string input)
+		: Exception("Nothing found! Should never happen. " + input);
+
 	private readonly string input;
 
 	private void PutTokenIntoStacks(Range tokenRange)
 	{
 		var (_, length) = tokenRange.GetOffsetAndLength(input.Length);
 		if (length == 1)
+		{
 			PutSingleCharacterTokenIntoStacks(tokenRange);
+		}
 		else if (input.AsSpan()[tokenRange].IsMultiCharacterOperator())
 		{
 			ApplyHigherOrEqualPrecedenceOperators(GetOperatorPrecedence(tokenRange));
 			operators.Push(tokenRange);
 		}
 		else
+		{
 			Output.Push(tokenRange);
+		}
 	}
 
 	private int GetOperatorPrecedence(Range tokenRange)
@@ -48,24 +54,29 @@ public sealed class ShuntingYard
 	private bool IsFollowedByNot(Range tokenRange)
 	{
 		var endIndex = tokenRange.End.Value;
-		return endIndex + 5 <= input.Length &&
-			input.AsSpan(endIndex, 5).Compare(" not ");
+		return endIndex + 5 <= input.Length && input.AsSpan(endIndex, 5).Compare(" not ");
 	}
 
 	private void PutSingleCharacterTokenIntoStacks(Range tokenRange)
 	{
 		var firstCharacter = input[tokenRange.Start.Value];
 		if (firstCharacter == PhraseTokenizer.OpenBracket)
+		{
 			operators.Push(tokenRange);
+		}
 		else if (firstCharacter == PhraseTokenizer.CloseBracket)
+		{
 			ApplyHigherOrEqualPrecedenceOperators();
+		}
 		else if (firstCharacter.IsSingleCharacterOperator())
 		{
 			ApplyHigherOrEqualPrecedenceOperators(BinaryOperator.GetPrecedence(firstCharacter));
 			operators.Push(tokenRange);
 		}
 		else
+		{
 			FlushCommaList(tokenRange, firstCharacter);
+		}
 	}
 
 	private void FlushCommaList(Range tokenRange, char firstCharacter)
@@ -133,7 +144,9 @@ public sealed class ShuntingYard
 				Output.Push(newOperator);
 		}
 		else
+		{
 			Output.Push(newOperator);
+		}
 	}
 
 	private bool IsOpeningBracket(int precedence)

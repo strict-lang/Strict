@@ -27,9 +27,13 @@ public sealed class StrictDocument(Package package)
 		if (change.Range is not null &&
 			change.Text.StartsWith(Environment.NewLine, StringComparison.Ordinal) &&
 			change.Range.Start.Line == change.Range.End.Line)
+		{
 			content.Insert(change.Range.Start.Line + 1, change.Text[Environment.NewLine.Length..]);
+		}
 		else if (change.Range is not null && content.Count - 1 < change.Range.Start.Line)
+		{
 			AddSingleOrMultiLineNewText(change);
+		}
 		else if (change.Range is not null && change.Range.Start.Line < change.Range.End.Line)
 		{
 			HandleForMultiLineDeletion(change.Range.Start, change.Range.End);
@@ -38,7 +42,9 @@ public sealed class StrictDocument(Package package)
 					Insert(change.Range.Start.Character, change.Text);
 		}
 		else
+		{
 			HandleForDocumentChange(change);
+		}
 	}
 
 	private void AddSingleOrMultiLineNewText(TextDocumentContentChangeEvent change)
@@ -144,8 +150,7 @@ public sealed class StrictDocument(Package package)
 
 	private static bool IsManualRun(Method method) =>
 		method.Name == Method.Run &&
-		method.Parameters.All(parameter => parameter.DefaultValue != null) &&
-		!HasInlineTests(method);
+		method.Parameters.All(parameter => parameter.DefaultValue != null) && !HasInlineTests(method);
 
 	private static bool HasInlineTests(Method method)
 	{

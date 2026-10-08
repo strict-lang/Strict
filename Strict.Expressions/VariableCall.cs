@@ -19,6 +19,6 @@ public sealed class VariableCall(Variable variable, int lineNumber = 0)
 	public override int GetHashCode() => Variable.GetHashCode(); //ncrunch: no coverage
 
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) || other is VariableCall vc &&
-		Variable.Name == vc.Variable.Name && Variable.Type == vc.Variable.Type;
+		ReferenceEquals(this, other) || (other is VariableCall vc &&
+			Variable.Name == vc.Variable.Name && Variable.Type == vc.Variable.Type);
 }

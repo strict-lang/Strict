@@ -45,8 +45,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (operatorType != OperatorCategory.None)
 			return EvaluateArithmeticOrCompareOrLogical(call, ctx, operatorType);
 		var instance = call.Instance != null
-			? TryGetDirectOuterValue(call.Instance, ctx) ??
-			interpreter.RunExpression(call.Instance, ctx)
+			? TryGetDirectOuterValue(call.Instance, ctx) ?? interpreter.RunExpression(call.Instance, ctx)
 			: call.Method.Name != Method.From
 				? ctx.This.HasValue && !ctx.This.Value.Equals(interpreter.noneInstance)
 					? ctx.This
@@ -90,8 +89,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			_ => OperatorCategory.None
 		};
 
-	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call,
-		ExecutionContext ctx, OperatorCategory operatorType)
+	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call, ExecutionContext ctx,
+		OperatorCategory operatorType)
 	{
 		interpreter.Statistics.BinaryCount++;
 		if (call.Instance == null || call.Arguments.Count != 1)
@@ -117,95 +116,101 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	private ValueInstance ExecuteArithmeticOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance left, ValueInstance right)
 	{
-		interpreter.Statistics.ArithmeticCount++;
-		var op = call.Method.Name;
-		if (op == BinaryOperator.Plus && left.IsPrimitiveType(interpreter.characterType) &&
-			right.IsPrimitiveType(interpreter.characterType))
-			return new ValueInstance(left.ToExpressionCodeString() + right.ToExpressionCodeString());
-		if (op == BinaryOperator.Plus && left.IsPrimitiveType(interpreter.characterType) &&
-			right.IsText)
-			return new ValueInstance(left.ToExpressionCodeString() + right.Text);
-		if (IsNumberLike(left) && IsNumberLike(right))
+		while (true)
 		{
-			var l = left.GetArithmeticNumber();
-			var r = right.GetArithmeticNumber();
-			return op switch
+			interpreter.Statistics.ArithmeticCount++;
+			var op = call.Method.Name;
+			if (op == BinaryOperator.Plus && left.IsPrimitiveType(interpreter.characterType) &&
+				right.IsPrimitiveType(interpreter.characterType))
+				return new ValueInstance(left.ToExpressionCodeString() + right.ToExpressionCodeString());
+			if (op == BinaryOperator.Plus && left.IsPrimitiveType(interpreter.characterType) &&
+				right.IsText)
+				return new ValueInstance(left.ToExpressionCodeString() + right.Text);
+			if (IsNumberLike(left) && IsNumberLike(right))
 			{
-				BinaryOperator.Plus => new ValueInstance(interpreter.numberType, l + r),
-				BinaryOperator.Minus => new ValueInstance(interpreter.numberType, l - r),
-				BinaryOperator.Multiply => new ValueInstance(interpreter.numberType, l * r),
-				BinaryOperator.Divide => new ValueInstance(interpreter.numberType, l / r),
-				BinaryOperator.Modulate => new ValueInstance(interpreter.numberType, l % r),
-				BinaryOperator.Power => new ValueInstance(interpreter.numberType, Math.Pow(l, r)),
-				_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
-			};
-		}
-		if (left.IsText && right.IsText)
-			return op == BinaryOperator.Plus
-				? new ValueInstance(left.Text + right.Text)
-				: throw new InterpreterExecutionFailed(ctx.Method,
-					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-						"Only + operator is supported for Text, got: " + op));
-		if (left.IsText && IsNumberLike(right))
-		{
-			return op == BinaryOperator.Plus
-				? right.IsPrimitiveType(interpreter.characterType)
-					? new ValueInstance(left.Text + right.ToExpressionCodeString())
-					: new ValueInstance(left.Text + right.Number)
-				: throw new InterpreterExecutionFailed(ctx.Method,
-					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-						"Only + operator is supported for Text+Number, got: " + op));
-		}
-		var leftList = ConvertToListValue(left);
-		var rightList = ConvertToListValue(right);
-		if (leftList.HasValue && rightList.HasValue)
-		{
-			if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
-				leftList.Value.List.Items.Count != rightList.Value.List.Items.Count)
-				return Error(ListsHaveDifferentDimensions, ctx, call);
-			return op switch
+				var l = left.GetArithmeticNumber();
+				var r = right.GetArithmeticNumber();
+				return op switch
+				{
+					BinaryOperator.Plus => new ValueInstance(interpreter.numberType, l + r),
+					BinaryOperator.Minus => new ValueInstance(interpreter.numberType, l - r),
+					BinaryOperator.Multiply => new ValueInstance(interpreter.numberType, l * r),
+					BinaryOperator.Divide => new ValueInstance(interpreter.numberType, l / r),
+					BinaryOperator.Modulate => new ValueInstance(interpreter.numberType, l % r),
+					BinaryOperator.Power => new ValueInstance(interpreter.numberType, Math.Pow(l, r)),
+					_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
+				};
+			}
+			if (left.IsText && right.IsText)
+				return op == BinaryOperator.Plus
+					? new ValueInstance(left.Text + right.Text)
+					: throw new InterpreterExecutionFailed(ctx.Method,
+						InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+							"Only + operator is supported for Text, got: " + op));
+			if (left.IsText && IsNumberLike(right))
+				return op == BinaryOperator.Plus
+					? right.IsPrimitiveType(interpreter.characterType)
+						? new ValueInstance(left.Text + right.ToExpressionCodeString())
+						: new ValueInstance(left.Text + right.Number)
+					: throw new InterpreterExecutionFailed(ctx.Method,
+						InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+							"Only + operator is supported for Text+Number, got: " + op));
+			var leftList = ConvertToListValue(left);
+			var rightList = ConvertToListValue(right);
+			if (leftList.HasValue && rightList.HasValue)
 			{
-				BinaryOperator.Plus => CombineLists(leftList.Value, rightList.Value.List.Items, ctx,
-					call),
-				BinaryOperator.Minus => SubtractLists(leftList.Value, rightList.Value.List.Items),
-				BinaryOperator.Multiply => MultiplyLists(leftList.Value.List.ReturnType,
-					interpreter.numberType, leftList.Value.List.Items, rightList.Value.List.Items),
-				BinaryOperator.Divide => DivideLists(leftList.Value.List.ReturnType,
-					interpreter.numberType, leftList.Value.List.Items, rightList.Value.List.Items),
-				_ => throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
+				if (op is BinaryOperator.Multiply or BinaryOperator.Divide &&
+					leftList.Value.List.Items.Count != rightList.Value.List.Items.Count)
+					return Error(ListsHaveDifferentDimensions, ctx, call);
+				return op switch
+				{
+					BinaryOperator.Plus => CombineLists(leftList.Value,
+						rightList.Value.List.Items, ctx, call),
+					BinaryOperator.Minus => SubtractLists(leftList.Value, rightList.Value.List.Items),
+					BinaryOperator.Multiply => MultiplyLists(leftList.Value.List.ReturnType,
+						interpreter.numberType, leftList.Value.List.Items, rightList.Value.List.Items),
+					BinaryOperator.Divide => DivideLists(leftList.Value.List.ReturnType,
+						interpreter.numberType, leftList.Value.List.Items,
+						rightList.Value.List.Items),
+					_ => throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
+						InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+							"Only +, -, *, / operators are supported for Lists, got: " + op))
+				};
+			}
+			if (leftList.HasValue && right.IsPrimitiveType(interpreter.numberType))
+			{
+				if (op == BinaryOperator.Plus)
+					return AddToList(leftList.Value, right);
+				if (op == BinaryOperator.Minus)
+					return RemoveFromList(leftList.Value, right);
+				if (op == BinaryOperator.Multiply)
+					return MultiplyList(leftList.Value.List.ReturnType, leftList.Value.List.Items,
+						right.Number);
+				if (op == BinaryOperator.Divide)
+					return DivideList(leftList.Value.List.ReturnType,
+						leftList.Value.List.Items, right.Number);
+				throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
 					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-						"Only +, -, *, / operators are supported for Lists, got: " + op))
-			};
-		}
-		if (leftList.HasValue && right.IsPrimitiveType(interpreter.numberType))
-		{
-			if (op == BinaryOperator.Plus)
+						"Only +, -, *, / operators are supported for List and Number, got: " + op));
+			}
+			if (leftList.HasValue && op == BinaryOperator.Plus)
 				return AddToList(leftList.Value, right);
-			if (op == BinaryOperator.Minus)
+			if (leftList.HasValue && op == BinaryOperator.Minus)
 				return RemoveFromList(leftList.Value, right);
-			if (op == BinaryOperator.Multiply)
-				return MultiplyList(leftList.Value.List.ReturnType, leftList.Value.List.Items,
-					right.Number);
-			if (op == BinaryOperator.Divide)
-				return DivideList(leftList.Value.List.ReturnType, leftList.Value.List.Items,
-					right.Number);
-			throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
-				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-					"Only +, -, *, / operators are supported for List and Number, got: " + op));
+			var unwrappedLeft = UnwrapValueMember(left);
+			var unwrappedRight = UnwrapValueMember(right);
+			if (!unwrappedLeft.Equals(left) || !unwrappedRight.Equals(right))
+			{
+				left = unwrappedLeft;
+				right = unwrappedRight;
+				continue;
+			}
+			if (IsCoreRuntimeType(call.Method.Type))
+				throw new InterpreterExecutionFailed(ctx.Method,
+					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
+						BuildCoreTypeFallbackMessage(call, ctx, left, right)));
+			return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
 		}
-		if (leftList.HasValue && op == BinaryOperator.Plus)
-			return AddToList(leftList.Value, right);
-		if (leftList.HasValue && op == BinaryOperator.Minus)
-			return RemoveFromList(leftList.Value, right);
-		var unwrappedLeft = UnwrapValueMember(left);
-		var unwrappedRight = UnwrapValueMember(right);
-		if (!unwrappedLeft.Equals(left) || !unwrappedRight.Equals(right))
-			return ExecuteArithmeticOperation(call, ctx, unwrappedLeft, unwrappedRight);
-		if (IsCoreRuntimeType(call.Method.Type))
-			throw new InterpreterExecutionFailed(ctx.Method,
-				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-					BuildCoreTypeFallbackMessage(call, ctx, left, right)));
-		return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
 	}
 
 	private static ValueInstance UnwrapValueMember(ValueInstance value)
@@ -214,8 +219,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			return value;
 		return typeInstance.TryGetValue(Type.ValueLowercase, out var inner) &&
 			(inner.IsText || inner.GetType().IsNumber || inner.GetType().IsBoolean)
-			? inner
-			: value;
+				? inner
+				: value;
 	}
 
 	private static bool IsCoreRuntimeType(Type type) =>
@@ -274,8 +279,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				right = new ValueInstance(right.ToExpressionCodeString());
 			if (ctx.IsTestAtCurrentLine && !left.IsText && left.GetType().IsNumber && !right.IsText &&
 				right.GetType().IsNumber)
-				return interpreter.ToBoolean(Math.Abs(left.Number - right.Number) <
-					TestComparisonEpsilon);
+				return interpreter.ToBoolean(Math.Abs(left.Number - right.Number) < TestComparisonEpsilon);
 			if (HasListType(left) && HasListType(right) && IsEmptyListTypeCheck(left, right))
 				return interpreter.ToBoolean(left.GetType().FullName == right.GetType().FullName ||
 					left.GetType().IsSameOrCanBeUsedAs(right.GetType()) ||
@@ -290,8 +294,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			BinaryOperator.Smaller => interpreter.ToBoolean(l < r),
 			BinaryOperator.GreaterOrEqual => interpreter.ToBoolean(l >= r),
 			BinaryOperator.SmallerOrEqual => interpreter.ToBoolean(l <= r),
-			_ when IsCoreRuntimeType(call.Method.Type) => throw new InterpreterExecutionFailed(
-				ctx.Method,
+			_ when IsCoreRuntimeType(call.Method.Type) => throw new InterpreterExecutionFailed(ctx.Method,
 				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
 					BuildCoreTypeFallbackMessage(call, ctx, left, right))),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
@@ -300,8 +303,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 
 	private const double TestComparisonEpsilon = 0.00001;
 
-	private static bool HasListType(ValueInstance value) =>
-		!value.IsText && value.GetType().IsList;
+	private static bool HasListType(ValueInstance value) => !value.IsText && value.GetType().IsList;
 
 	private static bool IsEmptyListTypeCheck(ValueInstance left, ValueInstance right) =>
 		(!left.IsList || left.List.Count == 0) && (!right.IsList || right.List.Count == 0);
@@ -315,8 +317,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 			BinaryOperator.And => interpreter.ToBoolean(left.Boolean && right.Boolean),
 			BinaryOperator.Or => interpreter.ToBoolean(left.Boolean || right.Boolean),
 			BinaryOperator.Xor => interpreter.ToBoolean(left.Boolean ^ right.Boolean),
-			_ when IsCoreRuntimeType(call.Method.Type) => throw new InterpreterExecutionFailed(
-				ctx.Method,
+			_ when IsCoreRuntimeType(call.Method.Type) => throw new InterpreterExecutionFailed(ctx.Method,
 				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
 					BuildCoreTypeFallbackMessage(call, ctx, left, right))),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
@@ -357,7 +358,7 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (ctx == null)
 			return "";
 		var lineNumber = ctx.CurrentExpressionLineNumber;
-		if (lineNumber >= 0 && ctx.Type.Lines != null && lineNumber < ctx.Type.Lines.Length)
+		if (lineNumber >= 0 && lineNumber < ctx.Type.Lines.Length)
 		{
 			var line = ctx.Type.Lines[lineNumber].Trim();
 			if (line.Length > 0)
@@ -401,13 +402,13 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		if (leftItemType.IsNumber && (item.IsText || item.IsPrimitiveType(interpreter.characterType)))
 			return double.TryParse(item.ToExpressionCodeString(), out var itemNumber)
 				? new ValueInstance(leftItemType, itemNumber)
-				: Error("Cannot downcast Text to Number for list: " +
+				: Error(
+					"Cannot downcast Text to Number for list: " +
 					item.ToString().Replace("\"", "\\\"", StringComparison.Ordinal), ctx, call);
 		return item;
 	}
 
-	private static ValueInstance SubtractLists(ValueInstance leftList,
-		List<ValueInstance> rightList)
+	private static ValueInstance SubtractLists(ValueInstance leftList, List<ValueInstance> rightList)
 	{
 		if (leftList.IsMutable)
 		{
@@ -523,7 +524,9 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	{
 		ValueInstance[] args;
 		if (call.Arguments.Count == 0)
+		{
 			args = [];
+		}
 		else
 		{
 			args = new ValueInstance[call.Arguments.Count];
@@ -536,13 +539,11 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 				instance.Value.GetDictionaryItems()[args[0]] = args[1];
 			return instance.Value;
 		}
-		if (instance.HasValue &&
-			TryExecuteBuiltInMathMethod(call, instance.Value, out var mathResult))
+		if (instance.HasValue && TryExecuteBuiltInMathMethod(call, instance.Value, out var mathResult))
 			return mathResult;
 		var capturedMutableParameters = TryRentMutableParameterCapture(call);
-		var result =
-			interpreter.Execute(call.Method, instance ?? interpreter.noneInstance, args, ctx,
-				capturedMutableParameters: capturedMutableParameters);
+		var result = interpreter.Execute(call.Method, instance ?? interpreter.noneInstance, args, ctx,
+			capturedMutableParameters: capturedMutableParameters);
 		if (capturedMutableParameters != null)
 			WriteBackMutableParameterValues(call, ctx, capturedMutableParameters);
 		if (call.Method.ReturnType.IsMutable && !instance.Equals(interpreter.noneInstance))
@@ -557,8 +558,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 
 	private static ValueInstance[]? TryRentMutableParameterCapture(MethodCall call)
 	{
-		for (var index = 0; index < call.Arguments.Count &&
-			index < call.Method.Parameters.Count; index++)
+		for (var index = 0; index < call.Arguments.Count && index < call.Method.Parameters.Count;
+			index++)
 			if (call.Method.Parameters[index].IsMutable &&
 				call.Arguments[index] is VariableCall { Variable.IsMutable: true })
 				return new ValueInstance[call.Method.Parameters.Count];
@@ -568,10 +569,12 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 	private static void WriteBackMutableParameterValues(MethodCall call, ExecutionContext ctx,
 		ValueInstance[] capturedMutableParameters)
 	{
-		for (var index = 0; index < call.Arguments.Count &&
-			index < call.Method.Parameters.Count; index++)
-			if (call.Method.Parameters[index].IsMutable &&
-				call.Arguments[index] is VariableCall { Variable.IsMutable: true } callerVariable)
+		for (var index = 0; index < call.Arguments.Count && index < call.Method.Parameters.Count;
+			index++)
+			if (call.Method.Parameters[index].IsMutable && call.Arguments[index] is VariableCall
+				{
+					Variable.IsMutable: true
+				} callerVariable)
 				ctx.Set(callerVariable.Variable.Name, capturedMutableParameters[index]);
 	}
 

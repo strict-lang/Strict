@@ -21,12 +21,10 @@ public sealed class BinaryGeneratorTests : TestBytecode
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("TemperatureConverter",
 			"TemperatureConverter(100).ToFahrenheit", "has celsius Number", "ToFahrenheit Number",
 			"\tcelsius * 9 / 5 + 32")).Generate();
-		var binaryInstructionTypes = instructions.ToInstructions().OfType<BinaryInstruction>().Select(binary =>
-			binary.InstructionType).ToList();
-		Assert.That(binaryInstructionTypes, Is.EqualTo(new[]
-		{
-			InstructionType.Multiply, InstructionType.Divide, InstructionType.Add
-		}));
+		var binaryInstructionTypes = instructions.ToInstructions().OfType<BinaryInstruction>().
+			Select(binary => binary.InstructionType).ToList();
+		Assert.That(binaryInstructionTypes,
+			Is.EqualTo(new[] { InstructionType.Multiply, InstructionType.Divide, InstructionType.Add }));
 	}
 
 	[Test]
@@ -35,16 +33,16 @@ public sealed class BinaryGeneratorTests : TestBytecode
 		var methodCall = GenerateMethodCallFromSource("ValueComparison", "ValueComparison(5).IsSame",
 			"has number", "IsSame Boolean", "\tif value is value", "\t\treturn true", "\tfalse");
 		var instructions = new BinaryGenerator(methodCall).Generate();
-		Assert.That(instructions.ToInstructions().OfType<LoadVariableToRegister>().Any(load => load.Identifier == "value"),
-			Is.True);
+		Assert.That(
+			instructions.ToInstructions().OfType<LoadVariableToRegister>().
+				Any(load => load.Identifier == "value"), Is.True);
 	}
 
 	[Test]
 	public void LoggerLogWithTextLiteralGeneratesPrintInstruction()
 	{
 		var methodCall = GenerateMethodCallFromSource("NumValue", "NumValue(5).GetValue",
-			"has value Number",
-			"GetValue Number", "\tNumValue(5).GetValue is 5", "\tvalue");
+			"has value Number", "GetValue Number", "\tNumValue(5).GetValue is 5", "\tvalue");
 		var instructions = new BinaryGenerator(methodCall).Generate();
 		Assert.That(instructions.ToInstructions().OfType<PrintInstruction>().Any(), Is.False,
 			"Method without logger.Log does not produce PrintInstruction");
@@ -55,7 +53,8 @@ public sealed class BinaryGeneratorTests : TestBytecode
 	{
 		get
 		{
-			yield return new TestCaseData("Test(5).Assign", "Test", new Instruction[]
+			yield return new TestCaseData("Test(5).Assign", "Test",
+				new Instruction[]
 				{
 					new StoreVariableInstruction(Number(5), "number"),
 					new StoreVariableInstruction(Number(5), "five"),
@@ -70,10 +69,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 				},
 				new[]
 				{
-					"has number",
-					"Assign Number",
-					"\tconstant five = 5",
-					"\tconstant something = five + 5",
+					"has number", "Assign Number", "\tconstant five = 5", "\tconstant something = five + 5",
 					"\tsomething + 10"
 				});
 			yield return new TestCaseData("Add(10, 5).Calculate", "Add",
@@ -88,11 +84,8 @@ public sealed class BinaryGeneratorTests : TestBytecode
 				},
 				new[]
 				{
-					"has First Number",
-					"has Second Number",
-					"Calculate Number",
-					"\tAdd(10, 5).Calculate is 15",
-					"\tFirst + Second"
+					"has First Number", "has Second Number", "Calculate Number",
+					"\tAdd(10, 5).Calculate is 15", "\tFirst + Second"
 				});
 			yield return new TestCaseData("AddOne(10, 5).Calculate", "AddOne",
 				new Instruction[]
@@ -108,11 +101,8 @@ public sealed class BinaryGeneratorTests : TestBytecode
 				},
 				new[]
 				{
-					"has First Number",
-					"has Second Number",
-					"Calculate Number",
-					"\tAddOne(10, 5).Calculate is 15",
-					"\tFirst + Second + 1"
+					"has First Number", "has Second Number", "Calculate Number",
+					"\tAddOne(10, 5).Calculate is 15", "\tFirst + Second + 1"
 				});
 			yield return new TestCaseData("Multiply(10).By(2)", "Multiply",
 				new Instruction[]
@@ -138,7 +128,8 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					new LoadVariableToRegister(Register.R1, "number"),
 					new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
 					new ReturnInstruction(Register.R2)
-				}, new[] { "has number", "SomeFunction Number", "\tconstant blaa = 5", "\tblaa + number" });
+				},
+				new[] { "has number", "SomeFunction Number", "\tconstant blaa = 5", "\tblaa + number" });
 			yield return new TestCaseData("SimpleLoopExample(10).GetMultiplicationOfNumbers",
 				"SimpleLoopExample",
 				new Instruction[]
@@ -151,10 +142,8 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					new LoadVariableToRegister(Register.R1, "result"),
 					new LoadVariableToRegister(Register.R2, "multiplier"),
 					new BinaryInstruction(InstructionType.Multiply, Register.R1, Register.R2, Register.R3),
-					new StoreFromRegisterInstruction(Register.R3, "result"),
-					new LoopEndInstruction(7),
-					new LoadVariableToRegister(Register.R4, "result"),
-					new ReturnInstruction(Register.R4)
+					new StoreFromRegisterInstruction(Register.R3, "result"), new LoopEndInstruction(7),
+					new LoadVariableToRegister(Register.R4, "result"), new ReturnInstruction(Register.R4)
 				}, (string[])
 				[
 					"has number",
@@ -166,8 +155,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					"\tresult"
 				]);
 			yield return new TestCaseData("RemoveParentheses(\"some(thing)\").Remove",
-				"RemoveParentheses",
-				(Instruction[])
+				"RemoveParentheses", (Instruction[])
 				[
 					new StoreVariableInstruction(Text("some(thing)"), "text"),
 					new StoreVariableInstruction(Text(""), "result"),
@@ -204,8 +192,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					new LoopEndInstruction(29),
 					new LoadVariableToRegister(Register.R16, "result"),
 					new ReturnInstruction(Register.R16)
-				],
-				(string[])
+				], (string[])
 				[
 					"has text",
 					"Remove Text",
@@ -258,8 +245,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					new LoadVariableToRegister(Register.R18, "Second"),
 					new BinaryInstruction(InstructionType.Divide, Register.R17, Register.R18, Register.R19),
 					new ReturnInstruction(Register.R19), new JumpToId(3, InstructionType.JumpEnd)
-				],
-				(string[])
+				], (string[])
 				[
 					"has First Number",
 					"has Second Number",
@@ -276,21 +262,19 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					"\tif operation is \"divide\"",
 					"\t\treturn First / Second"
 				]);
-			yield return new TestCaseData("SimpleListDeclaration(5).Declare",
-				"SimpleListDeclaration", (Instruction[])
+			yield return new TestCaseData("SimpleListDeclaration(5).Declare", "SimpleListDeclaration",
+				(Instruction[])
 				[
 					new StoreVariableInstruction(Number(5), "number"),
 					new LoadConstantInstruction(Register.R0,
 						new ValueInstance(ListType.GetGenericImplementation(NumberType),
 							[Number(1), Number(2), Number(3), Number(4), Number(5)])),
 					new ReturnInstruction(Register.R0)
-				],
-				(string[])
+				], (string[])
 				[
 					"has number", "Declare Numbers", "\t(1, 2, 3, 4, 5)"
 				]);
-			yield return new TestCaseData("Invertor((1, 2, 3, 4)).Invert",
-				"Invertor", (Instruction[])
+			yield return new TestCaseData("Invertor((1, 2, 3, 4)).Invert", "Invertor", (Instruction[])
 				[
 					new StoreVariableInstruction(
 						new ValueInstance(ListType.GetGenericImplementation(NumberType),
@@ -307,8 +291,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					new LoopEndInstruction(8),
 					new LoadVariableToRegister(Register.R6, "result"),
 					new ReturnInstruction(Register.R6)
-				],
-				(string[])
+				], (string[])
 				[
 					"has numbers",
 					"Invert Text",
@@ -317,8 +300,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					"\t\tresult = result + value * -1",
 					"\tresult"
 				]);
-			yield return new TestCaseData("AddNumbers(2, 5).GetSum",
-				"AddNumbers", (Instruction[])
+			yield return new TestCaseData("AddNumbers(2, 5).GetSum", "AddNumbers", (Instruction[])
 				[
 					new StoreVariableInstruction(Number(2), "firstNumber"),
 					new StoreVariableInstruction(Number(5), "secondNumber"),
@@ -326,8 +308,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					new LoadVariableToRegister(Register.R1, "secondNumber"),
 					new Invoke(Register.R2, null!),
 					new ReturnInstruction(Register.R2)
-				],
-				(string[])
+				], (string[])
 				[
 					"has firstNumber Number",
 					"has secondNumber Number",
@@ -339,8 +320,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 			yield return new TestCaseData("IfWithMethodCallLeft(5).Check", "IfWithMethodCallLeft",
 				new Instruction[]
 				{
-					new StoreVariableInstruction(Number(5), "number"),
-					new Invoke(Register.R0, null!),
+					new StoreVariableInstruction(Number(5), "number"), new Invoke(Register.R0, null!),
 					new LoadConstantInstruction(Register.R1, Number(0)),
 					new BinaryInstruction(InstructionType.GreaterThan, Register.R0, Register.R1),
 					new JumpToId(0, InstructionType.JumpToIdIfFalse),
@@ -376,8 +356,7 @@ public sealed class BinaryGeneratorTests : TestBytecode
 					new JumpToId(1, InstructionType.JumpEnd),
 					new LoadConstantInstruction(Register.R6, Number(3)),
 					new ReturnInstruction(Register.R6)
-				],
-				(string[])
+				], (string[])
 				[
 					"has operation Text",
 					"GetResult Number",

@@ -3,7 +3,9 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public sealed class ListCall(Expression list, Expression index, Expression? secondIndex = null,
+public sealed class ListCall(Expression list,
+	Expression index,
+	Expression? secondIndex = null,
 	Expression? originalIndex = null) : ConcreteExpression(
 	list.ReturnType is GenericTypeImplementation listReturnType
 		? listReturnType.ImplementationTypes[0]
@@ -43,9 +45,9 @@ public sealed class ListCall(Expression list, Expression index, Expression? seco
 	private static Expression? TryParseShadowedTypeConstructor(Body body, Expression variable,
 		IReadOnlyList<Expression> arguments)
 	{
-		if (variable is not MemberCall { Instance: null } memberCall)
-			return null;
-		return MethodCall.TryParseFromOrEnum(body, arguments, memberCall.Member.Name);
+		return variable is not MemberCall { Instance: null } memberCall
+			? null
+			: MethodCall.TryParseFromOrEnum(body, arguments, memberCall.Member.Name);
 	}
 
 	private static Expression CreateFlattenedIndex(Body body, Expression listVariable,
@@ -54,8 +56,8 @@ public sealed class ListCall(Expression list, Expression index, Expression? seco
 		var sizeWidth = GetSizeWidthAccess(body, listVariable);
 		var multipliedHeight = new Binary(sizeWidth,
 			sizeWidth.ReturnType.GetMethod(BinaryOperator.Multiply, [yIndex]), [yIndex]);
-		return new Binary(xIndex, xIndex.ReturnType.GetMethod(BinaryOperator.Plus,
-			[multipliedHeight]), [multipliedHeight]);
+		return new Binary(xIndex, xIndex.ReturnType.GetMethod(BinaryOperator.Plus, [multipliedHeight]),
+			[multipliedHeight]);
 	}
 
 	private static Expression GetSizeWidthAccess(Body body, Expression listVariable)
@@ -143,20 +145,28 @@ public sealed class ListCall(Expression list, Expression index, Expression? seco
 			? (int)lengthNumber.Data.number
 			: null;
 
-	public sealed class OnlyOneOrTwoArgumentsAreSupported(Body body, Expression list,
-		int argumentCount) : ParsingFailed(body, list + " only supports 1 or 2 arguments, got " +
-		argumentCount, list.ReturnType);
+	public sealed class
+		OnlyOneOrTwoArgumentsAreSupported(Body body, Expression list, int argumentCount)
+		: ParsingFailed(body, list + " only supports 1 or 2 arguments, got " + argumentCount,
+			list.ReturnType);
 
 	public sealed class TwoDimensionalListAccessRequiresSizeMember(Body body, Expression list)
 		: ParsingFailed(body, list + " needs a sibling Size member for 2D indexing", list.ReturnType);
 
 	public sealed class IndexAboveConstantListLength(Body body, int index, List list) : ParsingFailed(
-		body, $"Index {index} is out of range for list {list} with length {list.Values.Count}. " +
-		$"Valid indices are 0 to {list.Values.Count - 1} and negative indices down to {-list.Values.Count}.", list.ReturnType);
+		body,
+		$"Index {index} is out of range for list {list} with length {list.Values.Count}. " +
+		$"Valid indices are 0 to {
+			list.Values.Count - 1
+		} and negative indices down to {
+			-list.Values.Count
+		}.", list.ReturnType);
 
-	public sealed class IndexViolatesListConstraint(Body body, int index, Expression list,
-		Expression constraint) : ParsingFailed(body, $"Index {index} is not allowed based on the " +
-		$"constraint on the {list} definition: {constraint}.", list.ReturnType);
+	public sealed class
+		IndexViolatesListConstraint(Body body, int index, Expression list, Expression constraint)
+		: ParsingFailed(body,
+			$"Index {index} is not allowed based on the " +
+			$"constraint on the {list} definition: {constraint}.", list.ReturnType);
 
 	public override bool IsConstant => List.IsConstant && Index.IsConstant;
 
@@ -167,9 +177,9 @@ public sealed class ListCall(Expression list, Expression index, Expression? seco
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		other is ListCall listCall && List.Equals(listCall.List) && Index.Equals(listCall.Index) &&
-		OriginalIndex.Equals(listCall.OriginalIndex) && Equals(SecondIndex, listCall.SecondIndex);
+		ReferenceEquals(this, other) || (other is ListCall listCall && List.Equals(listCall.List) &&
+			Index.Equals(listCall.Index) && OriginalIndex.Equals(listCall.OriginalIndex) &&
+			Equals(SecondIndex, listCall.SecondIndex));
 
 	public override int GetHashCode() =>
 		List.GetHashCode() ^ Index.GetHashCode() ^ OriginalIndex.GetHashCode() ^

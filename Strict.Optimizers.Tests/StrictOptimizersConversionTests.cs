@@ -12,11 +12,11 @@ public sealed class StrictOptimizersConversionTests
 	{
 		var path = GetOptimizersPath();
 		foreach (var typeName in new[]
-		{
-			"OptimInstruction", "OpBuilder", "OpList", "OptimizerStats", "ConstantFolder",
-			"StrengthReduce", "IdentityRules", "DeadStore", "RedundantLoad", "JumpThread",
-			"UnreachableCode", "TestCodeRemove", "AllOptimizers"
-		})
+			{
+				"OptimInstruction", "OpBuilder", "OpList", "OptimizerStats", "ConstantFolder",
+				"StrengthReduce", "IdentityRules", "DeadStore", "RedundantLoad", "JumpThread",
+				"UnreachableCode", "TestCodeRemove", "AllOptimizers"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 
@@ -25,10 +25,10 @@ public sealed class StrictOptimizersConversionTests
 	{
 		var path = GetOptimizersPath();
 		foreach (var typeName in new[]
-		{
-			"OptimizerDemo", "FolderTests", "StrengthTests", "DeadStoreTests",
-			"UnreachableTests", "PipelineTests"
-		})
+			{
+				"OptimizerDemo", "FolderTests", "StrengthTests", "DeadStoreTests", "UnreachableTests",
+				"PipelineTests"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 

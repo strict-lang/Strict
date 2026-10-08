@@ -76,7 +76,9 @@ public abstract class Visitor
 				rewritten.Add(replaced!);
 			}
 			else
+			{
 				rewritten?.Add(current);
+			}
 		}
 		if (rewritten != null)
 			body.SetExpressions(rewritten);
@@ -87,7 +89,9 @@ public abstract class Visitor
 		if (expression == null)
 			return expression;
 		if (expression is Body innerBody)
+		{
 			Visit(innerBody, context); //ncrunch: no coverage
+		}
 		else if (expression is Binary binary)
 		{
 			var changedInstance = Visit(binary.Instance, body, context)!;
@@ -106,7 +110,9 @@ public abstract class Visitor
 			}
 		}
 		else if (expression is MutableReassignment reassignment)
+		{
 			Visit(reassignment.Value, body, context);
+		}
 		else if (expression is For forExpression)
 		{
 			Visit(forExpression.Iterator, body, context);
@@ -134,7 +140,9 @@ public abstract class Visitor
 			Visit(listCall.Index, body, context);
 		}
 		else if (expression is MemberCall memberCall)
+		{
 			Visit(memberCall.Instance, body, context);
+		}
 		else if (expression is MethodCall methodCall)
 		{
 			Visit(methodCall.Instance, body, context);

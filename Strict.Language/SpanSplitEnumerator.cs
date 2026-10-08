@@ -1,6 +1,7 @@
 namespace Strict.Language;
 
-public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
+public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input,
+	char splitter,
 	StringSplitOptions options)
 {
 	//ncrunch: no coverage start, for performance reasons disabled here
@@ -36,12 +37,17 @@ public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
 					isInsideText = !isInsideText;
 			}
 			else if (!isInsideText && input[index] == '(')
+			{
 				bracketDepth++;
+			}
 			else if (!isInsideText && input[index] == ')')
+			{
 				bracketDepth--;
-			else if (!isInsideText && input[index] == splitter &&
-				(splitter != ',' || bracketDepth == 0))
+			}
+			else if (!isInsideText && input[index] == splitter && (splitter != ',' || bracketDepth == 0))
+			{
 				return GetWordBeforeSplitter(index);
+			}
 		return null;
 	}
 
@@ -50,7 +56,8 @@ public ref struct SpanSplitEnumerator(ReadOnlySpan<char> input, char splitter,
 		if (quoteIndex == 0 || input[quoteIndex - 1] != '\\')
 			return false;
 		var slashCount = 0;
-		for (var slashIndex = quoteIndex - 1; slashIndex >= 0 && input[slashIndex] == '\\'; slashIndex--)
+		for (var slashIndex = quoteIndex - 1; slashIndex >= 0 && input[slashIndex] == '\\';
+			slashIndex--)
 			slashCount++;
 		return slashCount % 2 == 1;
 	}

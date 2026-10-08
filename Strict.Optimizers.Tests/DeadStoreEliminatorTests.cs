@@ -27,7 +27,7 @@ public sealed class DeadStoreEliminatorTests : TestOptimizers
 	[Test]
 	public void KeepMemberVariables() =>
 		Optimize([
-			new StoreVariableInstruction(Num(5), "member", isMember: true),
+			new StoreVariableInstruction(Num(5), "member", true),
 			new LoadConstantInstruction(Register.R0, Num(10)),
 			new ReturnInstruction(Register.R0)
 		], 3);

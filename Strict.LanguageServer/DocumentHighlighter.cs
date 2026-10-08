@@ -9,7 +9,8 @@ namespace Strict.LanguageServer;
 public class DocumentHighlighter(TextDocumentSynchronizer documentSynchronizer)
 	: IDocumentHighlightHandler
 {
-	public async Task<DocumentHighlightContainer?> Handle(DocumentHighlightParams request, CancellationToken cancellationToken)
+	public async Task<DocumentHighlightContainer?> Handle(DocumentHighlightParams request,
+		CancellationToken cancellationToken)
 	{
 		await Task.Yield();
 		if (!documentSynchronizer.Document.Contains(request.TextDocument.Uri))
@@ -19,7 +20,8 @@ public class DocumentHighlighter(TextDocumentSynchronizer documentSynchronizer)
 		{
 			new DocumentHighlight
 			{
-				Kind = DocumentHighlightKind.Write, Range = new Range(request.Position.Line, 0, request.Position.Line,
+				Kind = DocumentHighlightKind.Write,
+				Range = new Range(request.Position.Line, 0, request.Position.Line,
 					document[request.Position.Line].Length)
 			}
 		};

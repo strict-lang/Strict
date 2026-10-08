@@ -140,10 +140,9 @@ public sealed class Body : Expression
 		var lastExpression = Expressions[^1];
 		var isLastExpressionReturn = lastExpression.GetType().Name == "Return";
 		if (Method.ReturnType.Name != Type.None && (isLastExpressionReturn || IsMethodReturn()) &&
-			Method.Name != Run && Method.Name != From && !ChildHasMatchingMethodReturnType(
-				Parent == null
-					? Method.ReturnType
-					: Parent.ReturnType, lastExpression))
+			Method.Name != Run && Method.Name != From && !ChildHasMatchingMethodReturnType(Parent == null
+				? Method.ReturnType
+				: Parent.ReturnType, lastExpression))
 			throw new ChildBodyReturnTypeMustMatchMethod(this, lastExpression);
 		return !isLastExpressionReturn
 			? this
@@ -163,13 +162,13 @@ public sealed class Body : Expression
 	/// </summary>
 	private static bool
 		ChildHasMatchingMethodReturnType(Type parentType, Expression lastExpression) =>
-		lastExpression.GetType().Name == Declaration && parentType.IsNone ||
+		(lastExpression.GetType().Name == Declaration && parentType.IsNone) ||
 		lastExpression.ReturnType.IsError ||
 		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType) ||
 		CanWrapReturnType(parentType, lastExpression.ReturnType) ||
 		// Allow automatically converting an item to a list if the method requires a list
-		parentType.IsIterator && parentType.GetListImplementationType(lastExpression.ReturnType) ==
-		parentType;
+		(parentType.IsIterator && parentType.GetListImplementationType(lastExpression.ReturnType) ==
+			parentType);
 
 	private static bool CanWrapReturnType(Type parentType, Type expressionType)
 	{
@@ -226,13 +225,15 @@ public sealed class Body : Expression
 	}
 
 	public class VariableNameIsAlreadyInUse(Body body, Variable oldVariable, Expression newValue)
-		: ParsingFailed(body, $"Variable {oldVariable} was already declared before and cannot be " +
+		: ParsingFailed(body,
+			$"Variable {oldVariable} was already declared before and cannot be " +
 			$"re-declared here with: {newValue}");
 
 	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
 		: ParsingFailed(body, name);
 
-	public void CheckIfWeCouldUpdateMutableParameterOrVariable(Type contextType, string name, Expression value)
+	public void CheckIfWeCouldUpdateMutableParameterOrVariable(Type contextType, string name,
+		Expression value)
 	{
 		foreach (var member in contextType.Members)
 			if (member.Name == name)
@@ -276,8 +277,8 @@ public sealed class Body : Expression
 	public override string ToString() => string.Join(Environment.NewLine, Expressions);
 
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		other is Body b && Expressions.Count == b.Expressions.Count && ExpressionsEqual(b);
+		ReferenceEquals(this, other) || (other is Body b && Expressions.Count == b.Expressions.Count &&
+			ExpressionsEqual(b));
 
 	private bool ExpressionsEqual(Body other)
 	{

@@ -32,8 +32,7 @@ public class ExpressionParserTests : ExpressionParser
 		public override int GetHashCode() => ReturnType.GetHashCode();
 
 		public override bool Equals(Expression? other) =>
-			ReferenceEquals(this, other) ||
-			other is TestExpression t && ReturnType == t.ReturnType;
+			ReferenceEquals(this, other) || (other is TestExpression t && ReturnType == t.ReturnType);
 	}
 
 	public override Expression ParseLineExpression(Body body, ReadOnlySpan<char> line)
@@ -100,7 +99,8 @@ public class ExpressionParserTests : ExpressionParser
 	[Test]
 	public void GetMultipleLines()
 	{
-		var method = new Method(type, 0, this, ["Run", MethodTests.ConstantNumber, MethodTests.ConstantOther]);
+		var method = new Method(type, 0, this,
+			["Run", MethodTests.ConstantNumber, MethodTests.ConstantOther]);
 		Assert.That(method.lines, Has.Count.EqualTo(3));
 		Assert.That(method.lines[1], Is.EqualTo(MethodTests.ConstantNumber));
 		Assert.That(method.lines[2], Is.EqualTo(MethodTests.ConstantOther));

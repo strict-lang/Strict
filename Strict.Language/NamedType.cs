@@ -2,8 +2,7 @@ namespace Strict.Language;
 
 public abstract class NamedType
 {
-	protected NamedType(Context definedIn, ReadOnlySpan<char> nameAndType,
-		Type? typeFromValue = null)
+	protected NamedType(Context definedIn, ReadOnlySpan<char> nameAndType, Type? typeFromValue = null)
 	{
 		if (typeFromValue == null)
 		{

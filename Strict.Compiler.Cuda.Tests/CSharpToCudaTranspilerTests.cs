@@ -9,8 +9,7 @@ namespace Strict.Compiler.Cuda.Tests;
 public sealed class CSharpToCudaTranspilerTests
 {
 	[SetUp]
-	public void CreateTranspiler() =>
-		transpiler = new CSharpToCudaTranspiler(TestPackage.Instance);
+	public void CreateTranspiler() => transpiler = new CSharpToCudaTranspiler(TestPackage.Instance);
 
 	private CSharpToCudaTranspiler transpiler = null!;
 
@@ -36,8 +35,7 @@ public sealed class CSharpToCudaTranspilerTests
 		Assert.That(type.Methods[0].Name, Is.EqualTo("Add"));
 		Assert.That(type.Methods[0].Parameters[1].Type, Is.EqualTo(type.FindType(Type.Number)));
 		Assert.That(type.Methods[0].ReturnType, Is.EqualTo(type.FindType(Type.Number)));
-		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
-			Is.EqualTo("first + second"));
+		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(), Is.EqualTo("first + second"));
 	}
 
 	private Type GetParsedCSharpType(string fileName) =>
@@ -77,7 +75,8 @@ public sealed class CSharpToCudaTranspilerTests
 		kernel?.Run(first.DevicePointer, second.DevicePointer, output.DevicePointer, count);
 	}
 
-	private static void RunKernelForProcessMethod(CudaKernel? kernel, CudaDeviceVariable<float> output)
+	private static void RunKernelForProcessMethod(CudaKernel? kernel,
+		CudaDeviceVariable<float> output)
 	{
 		CudaDeviceVariable<float> input = new[] { 1f };
 		const int Width = 1;

@@ -54,14 +54,14 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 				pastTestBlock = true;
 			if (ctx.IsTestAtCurrentLine)
 				interpreter.Statistics.TestExpressions++;
-			if (ctx.IsTestAtCurrentLine == !runOnlyTests && e is not Declaration && e is not MutableReassignment &&
-				e is not For ||
-				runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
-					skippedVariables != null &&
-					ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)) ||
-				runOnlyTests && skippedVariables != null && e is not Declaration &&
-				ExpressionReferencesSkippedVariable(e, skippedVariables) || runOnlyTests &&
-				e is For forExpr && ForExpressionReferencesAnyMember(body, forExpr))
+			if ((ctx.IsTestAtCurrentLine == !runOnlyTests && e is not Declaration &&
+					e is not MutableReassignment && e is not For) ||
+				(runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
+					(skippedVariables != null &&
+						ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)))) ||
+				(runOnlyTests && skippedVariables != null && e is not Declaration &&
+					ExpressionReferencesSkippedVariable(e, skippedVariables)) || (runOnlyTests &&
+					e is For forExpr && ForExpressionReferencesAnyMember(body, forExpr)))
 			{
 				if (runOnlyTests && e is Declaration skippedDecl)
 					(skippedVariables ??= []).Add(skippedDecl.Name);
@@ -95,12 +95,11 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		{
 			MemberCall m => m.Member.Name == memberName && m.Instance == null,
 			ListCall lc => ExpressionReferencesMember(lc.List, memberName),
-			MethodCall call => call.Instance == null && call.Method.Name != Method.From ||
-				call.Instance != null && ExpressionReferencesMember(call.Instance, memberName) ||
+			MethodCall call => (call.Instance == null && call.Method.Name != Method.From) ||
+				(call.Instance != null && ExpressionReferencesMember(call.Instance, memberName)) ||
 				call.Arguments.Any(a => ExpressionReferencesMember(a, memberName)),
 			List list => list.Values.Any(v => ExpressionReferencesMember(v, memberName)),
-			Dictionary dict =>
-				dict.KeyType.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase) ||
+			Dictionary dict => dict.KeyType.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase) ||
 				dict.MappedValueType.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase),
 			_ => false
 		};
@@ -111,8 +110,8 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		{
 			VariableCall v => skippedVariables.Contains(v.Variable.Name),
 			ParameterCall p => skippedVariables.Contains(p.Parameter.Name),
-			MethodCall call => call.Instance != null &&
-				ExpressionReferencesSkippedVariable(call.Instance, skippedVariables) ||
+			MethodCall call => (call.Instance != null &&
+					ExpressionReferencesSkippedVariable(call.Instance, skippedVariables)) ||
 				call.Arguments.Any(a => ExpressionReferencesSkippedVariable(a, skippedVariables)),
 			MemberCall m => m.Instance != null &&
 				ExpressionReferencesSkippedVariable(m.Instance, skippedVariables),
@@ -121,10 +120,9 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 				BodyExpressionsReferenceSkippedVariable(f.Body, skippedVariables),
 			If iff => ExpressionReferencesSkippedVariable(iff.Condition, skippedVariables) ||
 				BodyExpressionsReferenceSkippedVariable(iff.Then, skippedVariables) ||
-				iff.OptionalElse != null &&
-				BodyExpressionsReferenceSkippedVariable(iff.OptionalElse, skippedVariables),
-			MutableReassignment mr =>
-				ExpressionReferencesSkippedVariable(mr.Target, skippedVariables) ||
+				(iff.OptionalElse != null &&
+					BodyExpressionsReferenceSkippedVariable(iff.OptionalElse, skippedVariables)),
+			MutableReassignment mr => ExpressionReferencesSkippedVariable(mr.Target, skippedVariables) ||
 				ExpressionReferencesSkippedVariable(mr.Value, skippedVariables),
 			Body body => body.Expressions.Any(e =>
 				ExpressionReferencesSkippedVariable(e, skippedVariables)),

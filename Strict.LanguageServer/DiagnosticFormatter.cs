@@ -46,7 +46,7 @@ public static class DiagnosticFormatter
 
 	public static string BuildExceptionText(Exception exception)
 	{
-		var text = exception.Message ?? "";
+		var text = exception.Message;
 		var extra = FormatExtraInfo(exception);
 		return extra.Length == 0
 			? text
@@ -68,9 +68,11 @@ public static class DiagnosticFormatter
 	public static string FormatMessage(string errorCode, string exceptionMessage)
 	{
 		var detail = ExtractDetail(exceptionMessage);
-var humanized = HumanizePascalCase(errorCode);
+		var humanized = HumanizePascalCase(errorCode);
 		if (errorCode is "InterpreterExecutionFailed" or "TestFailed")
-			return detail.Length == 0 ? humanized : detail;
+			return detail.Length == 0
+				? humanized
+				: detail;
 		if (detail.Length == 0)
 			return humanized;
 		if (detail.StartsWith(humanized + ":", StringComparison.OrdinalIgnoreCase))
@@ -88,9 +90,8 @@ var humanized = HumanizePascalCase(errorCode);
 		{
 			var previous = name[i - 1];
 			var current = name[i];
-			var splitBeforeCurrent =
-				char.IsUpper(current) && (char.IsLower(previous) ||
-					i + 1 < name.Length && char.IsLower(name[i + 1]) && char.IsUpper(previous));
+			var splitBeforeCurrent = char.IsUpper(current) && (char.IsLower(previous) ||
+				(i + 1 < name.Length && char.IsLower(name[i + 1]) && char.IsUpper(previous)));
 			if (!splitBeforeCurrent)
 				continue;
 			words.Add(name[start..i]);
@@ -115,7 +116,7 @@ var humanized = HumanizePascalCase(errorCode);
 			? exceptionMessage[..atIndex]
 			: exceptionMessage).Trim();
 		var useful = new List<string>();
-foreach (var rawLine in withoutStack.Split('\n'))
+		foreach (var rawLine in withoutStack.Split('\n'))
 		{
 			var line = rawLine.Trim().TrimEnd('\r');
 			if (line.Length == 0)
@@ -131,7 +132,7 @@ foreach (var rawLine in withoutStack.Split('\n'))
 				break;
 			if (line.StartsWith("Instructions ", StringComparison.Ordinal) ||
 				line.StartsWith(">>>", StringComparison.Ordinal) ||
-				line.Length > 0 && char.IsDigit(line[0]) && line.Contains(':'))
+				(line.Length > 0 && char.IsDigit(line[0]) && line.Contains(':')))
 				break;
 			var cleaned = StripTypePrefix(line);
 			if (cleaned.Length > 0)
@@ -185,8 +186,8 @@ foreach (var rawLine in withoutStack.Split('\n'))
 		var start = 0;
 		while (start < line.Length && char.IsWhiteSpace(line[start]))
 			start++;
-		if (start >= line.Length)
-			return new Range(lineNumber, 0, lineNumber, line.Length);
-		return new Range(lineNumber, start, lineNumber, line.Length);
+		return start >= line.Length
+			? new Range(lineNumber, 0, lineNumber, line.Length)
+			: new Range(lineNumber, start, lineNumber, line.Length);
 	}
 }

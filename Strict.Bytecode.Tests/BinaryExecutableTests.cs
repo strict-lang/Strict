@@ -1,6 +1,7 @@
+using System.IO.Compression;
+using System.Text;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
-using System.IO.Compression;
 using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode.Tests;
@@ -16,7 +17,8 @@ public sealed class BinaryExecutableTests : TestBytecode
 		var filePath = CreateTempFilePath();
 		sourceBinary.Serialize(filePath);
 		var loadedBinary = new BinaryExecutable(filePath, TestPackage.Instance);
-		Assert.That(loadedBinary.MethodsPerType[Type.Number].MethodGroups[Method.Run][0].instructions.Count,
+		Assert.That(
+			loadedBinary.MethodsPerType[Type.Number].MethodGroups[Method.Run][0].instructions.Count,
 			Is.EqualTo(1));
 	}
 
@@ -46,8 +48,8 @@ public sealed class BinaryExecutableTests : TestBytecode
 				["Compute"] =
 				[
 					new BinaryMethod("", [], Type.None, [new ReturnInstruction(Register.R0)]),
-					new BinaryMethod("", [new BinaryMember("value", Type.Number, null)],
-						Type.Number, [new ReturnInstruction(Register.R1)])
+					new BinaryMethod("", [new BinaryMember("value", Type.Number, null)], Type.Number,
+						[new ReturnInstruction(Register.R1)])
 				]
 			});
 		var found = binary.FindInstructions(Type.Number, "Compute", 1, Type.Number);
@@ -61,7 +63,8 @@ public sealed class BinaryExecutableTests : TestBytecode
 		using var stream = new MemoryStream([105]);
 		using var reader = new BinaryReader(stream);
 		Assert.That(() => binary.ReadInstruction(reader, new NameTable(Type.Number)),
-			Throws.TypeOf<BinaryExecutable.InvalidFile>().With.Message.Contains("Unknown instruction type"));
+			Throws.TypeOf<BinaryExecutable.InvalidFile>().With.Message.
+				Contains("Unknown instruction type"));
 	}
 
 	[Test]
@@ -75,13 +78,15 @@ public sealed class BinaryExecutableTests : TestBytecode
 
 	private static BinaryType CreateMethods(BinaryExecutable executable, string typeFullName,
 		List<Instruction> instructions) =>
-		new(executable, typeFullName, [], new Dictionary<string, List<BinaryMethod>>
-		{
-			[Method.Run] = [new BinaryMethod("", [], Type.None, instructions)]
-		});
+		new(executable, typeFullName, [],
+			new Dictionary<string, List<BinaryMethod>>
+			{
+				[Method.Run] = [new BinaryMethod("", [], Type.None, instructions)]
+			});
 
 	private static string CreateTempFilePath() =>
-		Path.Combine(Path.GetTempPath(), "strictbinary-tests-" + Guid.NewGuid() + BinaryExecutable.Extension);
+		Path.Combine(Path.GetTempPath(),
+			"strictbinary-tests-" + Guid.NewGuid() + BinaryExecutable.Extension);
 
 	[Test]
 	public void ZipWithNoBytecodeEntriesCreatesEmptyStrictBinary()
@@ -178,10 +183,9 @@ public sealed class BinaryExecutableTests : TestBytecode
 	[Test]
 	public void RoundTripSimpleArithmeticBytecode()
 	{
-		var binary = new BinaryGenerator(
-			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
-				"has First Number", "has Second Number", "Calculate Number",
-				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
+			"has First Number", "has Second Number", "Calculate Number", "\tAdd(10, 5).Calculate is 15",
+			"\tFirst + Second")).Generate();
 		AssertRoundTripToString([.. binary.ToInstructions()]);
 	}
 
@@ -253,11 +257,11 @@ public sealed class BinaryExecutableTests : TestBytecode
 	[Test]
 	public void RoundTripDictionaryValue()
 	{
-		var dictionaryType = TestPackage.Instance.GetDictionaryImplementationType(NumberType, NumberType);
+		var dictionaryType =
+			TestPackage.Instance.GetDictionaryImplementationType(NumberType, NumberType);
 		var items = new Dictionary<ValueInstance, ValueInstance>
 		{
-			{ Number(1), Number(10) },
-			{ Number(2), Number(20) }
+			{ Number(1), Number(10) }, { Number(2), Number(20) }
 		};
 		var loaded = RoundTripInstructions([
 			new LoadConstantInstruction(Register.R0, new ValueInstance(dictionaryType, items)),
@@ -277,7 +281,8 @@ public sealed class BinaryExecutableTests : TestBytecode
 	}
 
 	private static void AssertRoundTripToString(IList<Instruction> instructions) =>
-		Assert.That(RoundTripInstructions(instructions).ConvertAll(instruction => instruction.ToString()),
+		Assert.That(
+			RoundTripInstructions(instructions).ConvertAll(instruction => instruction.ToString()),
 			Is.EqualTo(instructions.ToList().ConvertAll(instruction => instruction.ToString())));
 
 	private static List<Instruction> RoundTripInstructions(IList<Instruction> instructions)
@@ -306,10 +311,8 @@ public sealed class BinaryExecutableTests : TestBytecode
 	[Test]
 	public void BinaryTypeHeaderUsesSingleMagicByteAndVersion()
 	{
-		var binary = new BinaryGenerator(
-			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
-				"has First Number", "has Second Number", "Calculate Number",
-				"\tFirst + Second")).Generate();
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
+			"has First Number", "has Second Number", "Calculate Number", "\tFirst + Second")).Generate();
 		var typeToWrite = binary.MethodsPerType.Values.First();
 		using var stream = new MemoryStream();
 		using var writer = new BinaryWriter(stream);
@@ -326,10 +329,12 @@ public sealed class BinaryExecutableTests : TestBytecode
 		var table = new NameTable(Type.Number);
 		table.Add("CustomIdentifier");
 		using var stream = new MemoryStream();
-		using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+		using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
+		{
 			table.Write(writer);
+		}
 		stream.Position = 0;
-		using var headerReader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+		using var headerReader = new BinaryReader(stream, Encoding.UTF8, true);
 		Assert.That(headerReader.Read7BitEncodedInt(), Is.EqualTo(1));
 		stream.Position = 0;
 		using var reader = new BinaryReader(stream);
@@ -341,15 +346,16 @@ public sealed class BinaryExecutableTests : TestBytecode
 	[Test]
 	public void EntryNameTableDoesNotStoreBaseFullNamesOrEntryTypeName()
 	{
-		var binary = new BinaryGenerator(
-			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
-				"has First Number", "has Second Number", "Calculate Number", "\tFirst + Second")).Generate();
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
+			"has First Number", "has Second Number", "Calculate Number", "\tFirst + Second")).Generate();
 		var addTypeKey = binary.MethodsPerType.Keys.First(typeName => !typeName.StartsWith("Strict/",
 			StringComparison.Ordinal));
 		var addType = binary.MethodsPerType[addTypeKey];
 		using var stream = new MemoryStream();
-		using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+		using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
+		{
 			addType.Write(writer);
+		}
 		stream.Position = 2;
 		using var reader = new BinaryReader(stream);
 		var customNamesCount = reader.Read7BitEncodedInt();
@@ -367,7 +373,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 	{
 		var table = new NameTable(Type.Number);
 		using var stream = new MemoryStream();
-		using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+		using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
 		{
 			table.Add("index");
 			table.Add("value");

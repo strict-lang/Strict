@@ -6,8 +6,8 @@ namespace Strict.Expressions;
 public sealed class Dictionary : Value
 {
 	public Dictionary(IReadOnlyList<Type> types, Type dictionaryImplementationType) : base(
-		dictionaryImplementationType, new ValueInstance(dictionaryImplementationType,
-			new Dictionary<ValueInstance, ValueInstance>()))
+		dictionaryImplementationType,
+		new ValueInstance(dictionaryImplementationType, new Dictionary<ValueInstance, ValueInstance>()))
 	{
 		if (types.Count != 2)
 			throw new DictionaryMustBeInitializedWithTwoTypeParameters(dictionaryImplementationType,
@@ -47,13 +47,13 @@ public sealed class Dictionary : Value
 
 	public sealed class DictionaryMustBeInitializedWithTwoTypeParameters : ParsingFailed
 	{
-		public DictionaryMustBeInitializedWithTwoTypeParameters(Type type, IReadOnlyCollection<Type> types)
-			: base(type, 0,
-				$"Expected Type Parameters: 2, Given type parameters: {
-					types.Count
-				} and they are {
-					string.Join(", ", types)
-				}") { }
+		public DictionaryMustBeInitializedWithTwoTypeParameters(Type type,
+			IReadOnlyCollection<Type> types) : base(type, 0,
+			$"Expected Type Parameters: 2, Given type parameters: {
+				types.Count
+			} and they are {
+				string.Join(", ", types)
+			}") { }
 
 		public DictionaryMustBeInitializedWithTwoTypeParameters(Body body, string expressionText) :
 			base(body, expressionText) { }

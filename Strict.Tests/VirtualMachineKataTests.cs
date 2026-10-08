@@ -45,7 +45,8 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 			"\t\t\tcount = count - 1",
 			"\tresult")).Generate();
 		// @formatter:on
-		Assert.That(new VirtualMachine(instructions).Execute().Returns!.Value.Text, Is.EqualTo(expectedResult));
+		Assert.That(new VirtualMachine(instructions).Execute().Returns!.Value.Text,
+			Is.EqualTo(expectedResult));
 	}
 
 	[TestCase("Invertor(1, 2, 3, 4, 5).Invert", "-1-2-3-4-5")]
@@ -60,7 +61,8 @@ public sealed class BytecodeInterpreterKataTests : TestBytecode
 			"\t\tresult = result + value * -1",
 			"\tresult")).Generate();
 		// @formatter:on
-		Assert.That(new VirtualMachine(instructions).Execute().Returns!.Value.Text, Is.EqualTo(expectedResult));
+		Assert.That(new VirtualMachine(instructions).Execute().Returns!.Value.Text,
+			Is.EqualTo(expectedResult));
 	}
 
 	[Test]

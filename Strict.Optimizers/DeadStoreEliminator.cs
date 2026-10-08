@@ -88,10 +88,9 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 			WriteToListInstruction writeList => writeList.Register == register,
 			FieldLoadInstruction fieldLoad => fieldLoad.ObjectRegister == register,
 			ConstructValueTypeInstruction construct => construct.FieldRegisters.Contains(register),
-			WriteToTableInstruction writeTable =>
-				writeTable.Register == register || writeTable.Value == register,
-			LoopBeginInstruction loop => loop.Register == register ||
-				loop.EndIndex == register,
+			WriteToTableInstruction writeTable => writeTable.Register == register ||
+				writeTable.Value == register,
+			LoopBeginInstruction loop => loop.Register == register || loop.EndIndex == register,
 			_ => false
 		};
 
@@ -102,8 +101,8 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 		{
 			if (instructions[index] is RegisterInstruction reg && reg.Register == targetRegister)
 				return index;
-			if (instructions[index] is BinaryInstruction bin &&
-				bin.Registers.Length >= 3 && bin.Registers[2] == targetRegister)
+			if (instructions[index] is BinaryInstruction bin && bin.Registers.Length >= 3 &&
+				bin.Registers[2] == targetRegister)
 				return index;
 		}
 		return -1;

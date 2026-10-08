@@ -7,8 +7,11 @@ namespace Strict.Expressions;
 /// If expressions are used for branching, can also be used as an input for any other expression
 /// like method arguments, other conditions, etc. like conditional operators.
 /// </summary>
-public sealed class If(Expression condition, Expression then, int lineNumber = 0,
-	Expression? optionalElse = null, Body? bodyForErrorMessage = null) : Expression(
+public sealed class If(Expression condition,
+	Expression then,
+	int lineNumber = 0,
+	Expression? optionalElse = null,
+	Body? bodyForErrorMessage = null) : Expression(
 	CheckExpressionAndGetMatchingType(then, optionalElse, bodyForErrorMessage), lineNumber)
 {
 	private const string IfPrefix = "if ";
@@ -40,9 +43,11 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 				throw new ReturnTypeOfThenAndElseMustHaveMatchingType(
 					bodyForErrorMessage ?? new Body(thenType.Methods[0]), thenType, elseType);
 
-	public class ReturnTypeOfThenAndElseMustHaveMatchingType(Body body, Type thenReturnType,
-		Type optionalElseReturnType) : ParsingFailed(body, "The Then type: " + thenReturnType +
-		" is not same as the Else type: " + optionalElseReturnType);
+	public class ReturnTypeOfThenAndElseMustHaveMatchingType(Body body,
+		Type thenReturnType,
+		Type optionalElseReturnType) : ParsingFailed(body,
+		"The Then type: " + thenReturnType + " is not same as the Else type: " +
+		optionalElseReturnType);
 
 	public Expression Condition { get; } = condition;
 	public Expression Then { get; } = then;
@@ -65,9 +70,9 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 				: "");
 
 	private bool RendersAsInlineConditional =>
-		OptionalElse != null && (OptionalElse.ReturnType.IsSameOrCanBeUsedAs(Then.ReturnType) ||
-			Then.ReturnType.IsError || OptionalElse.ReturnType.IsError) && Then is not Body &&
-		OptionalElse is not Body &&
+		OptionalElse != null &&
+		(OptionalElse.ReturnType.IsSameOrCanBeUsedAs(Then.ReturnType) || Then.ReturnType.IsError ||
+			OptionalElse.ReturnType.IsError) && Then is not Body && OptionalElse is not Body &&
 		(OptionalElse is not If elseIf || elseIf.RendersAsInlineConditional);
 	public override bool IsConstant =>
 		Condition.IsConstant && Then.IsConstant && (OptionalElse?.IsConstant ?? true);
@@ -198,10 +203,9 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 		throw new InvalidCondition(body, condition.ReturnType);
 	}
 
-	public sealed class InvalidCondition(Body body, Type? conditionReturnType = null)
-		: ParsingFailed(body, conditionReturnType != null
-			? body.Method.FullName + "\n Return type " + conditionReturnType + " is not " +
-			Type.Boolean
+	public sealed class InvalidCondition(Body body, Type? conditionReturnType = null) : ParsingFailed(
+		body, conditionReturnType != null
+			? body.Method.FullName + "\n Return type " + conditionReturnType + " is not " + Type.Boolean
 			: null);
 
 	public sealed class MissingThen(Body body) : ParsingFailed(body);
@@ -264,8 +268,7 @@ public sealed class If(Expression condition, Expression then, int lineNumber = 0
 	private static bool NoFirstBracketOrSurroundedByIt(ReadOnlySpan<char> input, int firstBracket,
 		int separatorIndex) =>
 		firstBracket == -1 || firstBracket > separatorIndex ||
-		firstBracket == 0 && input[^1] == ')' ||
-		IsThenOutsideParentheses(input, separatorIndex);
+		(firstBracket == 0 && input[^1] == ')') || IsThenOutsideParentheses(input, separatorIndex);
 
 	private static bool IsThenOutsideParentheses(ReadOnlySpan<char> input, int thenIndex)
 	{

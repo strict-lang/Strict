@@ -23,8 +23,8 @@ public sealed class Member : NamedType
 	public Member CloneWithImplementation(Type implementationType) =>
 		new(Name, implementationType, IsMutable, IsConstant);
 
-	private Member(string name, Type newType, bool isMutable, bool isConstant)
-		: base(newType, name, newType)
+	private Member(string name, Type newType, bool isMutable, bool isConstant) : base(newType, name,
+		newType)
 	{
 		DefinedIn = newType;
 		IsMutable = isMutable;
@@ -49,7 +49,8 @@ public sealed class Member : NamedType
 	{
 		foreach (var member in DefinedIn.Members)
 			if (Type.FindMember(member.Name) == null)
-				body.AddVariable(member.Name, new ConstraintMemberReference(member.Name, member.Type), false);
+				body.AddVariable(member.Name, new ConstraintMemberReference(member.Name, member.Type),
+					false);
 	}
 
 	private sealed class ConstraintMemberReference(string memberName, Type returnType)
@@ -59,15 +60,16 @@ public sealed class Member : NamedType
 		public override string ToString() => memberName;
 
 		public override bool Equals(Expression? other) =>
-			ReferenceEquals(this, other) || other is ConstraintMemberReference reference &&
-			reference.ReturnType == ReturnType && reference.ToString() == memberName;
+			ReferenceEquals(this, other) || (other is ConstraintMemberReference reference &&
+				reference.ReturnType == ReturnType && reference.ToString() == memberName);
 
 		public override int GetHashCode() => HashCode.Combine(memberName, ReturnType);
 	}
 
 	public const string ConstraintsBody = nameof(ConstraintsBody);
 
-	public sealed class	InvalidConstraintExpression(Type type, string memberName,
+	public sealed class InvalidConstraintExpression(Type type,
+		string memberName,
 		string constraintText) : ParsingFailed(type, 0,
 		$"Constraint: {constraintText} Member: {memberName}");
 
@@ -79,9 +81,10 @@ public sealed class Member : NamedType
 			throw new NewExpressionDoesNotMatchMemberType(bodyForErrorMessage, newExpression, this);
 	}
 
-	public class NewExpressionDoesNotMatchMemberType(Body body, Expression newExpression,
-		Member member) : ParsingFailed(body, newExpression.ToStringWithType() +
-		" cannot be assigned to " + member, member.Type);
+	public class
+		NewExpressionDoesNotMatchMemberType(Body body, Expression newExpression, Member member)
+		: ParsingFailed(body, newExpression.ToStringWithType() + " cannot be assigned to " + member,
+			member.Type);
 
 	public override string ToString() =>
 		(IsMutable

@@ -10,9 +10,9 @@ public sealed class StrictValidatorsConversionTests
 	{
 		var path = GetValidatorsPath();
 		foreach (var typeName in new[]
-		{
-			"ValidationIssue", "Visitor", "TypeValidator", "ConstantCollapser", "DeclarationRules"
-		})
+			{
+				"ValidationIssue", "Visitor", "TypeValidator", "ConstantCollapser", "DeclarationRules"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 

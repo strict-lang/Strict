@@ -5,8 +5,8 @@ namespace Strict.Bytecode.Instructions;
 public sealed class WriteToListInstruction(Register register, string identifier)
 	: RegisterInstruction(InstructionType.InvokeWriteToList, register)
 {
-	public WriteToListInstruction(BinaryReader reader, NameTable table)
-		: this((Register)reader.ReadByte(), table.names[reader.Read7BitEncodedInt()]) { }
+	public WriteToListInstruction(BinaryReader reader, NameTable table) : this(
+		(Register)reader.ReadByte(), table.names[reader.Read7BitEncodedInt()]) { }
 
 	public string Identifier { get; } = identifier;
 

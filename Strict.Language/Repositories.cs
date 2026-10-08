@@ -236,7 +236,9 @@ public sealed class Repositories(ExpressionParser parser)
 			: new Package(packagePath, this);
 #endif
 		lock (LoadedPackages)
+		{
 			LoadedPackages.Add(package);
+		}
 		var types = GetTypes(files, package);
 		foreach (var type in types)
 			type.ParseMembersAndMethodsForPackage(parser);
@@ -250,7 +252,9 @@ public sealed class Repositories(ExpressionParser parser)
 	{
 		Package[] loadedPackagesSnapshot;
 		lock (LoadedPackages)
+		{
 			loadedPackagesSnapshot = LoadedPackages.ToArray();
+		}
 		foreach (var loadedPackage in loadedPackagesSnapshot)
 		foreach (var type in loadedPackage.Types.Values.ToArray())
 			type.InvalidateAvailableMethodsCache();
@@ -338,8 +342,8 @@ public sealed class Repositories(ExpressionParser parser)
 	{
 		foreach (var unresolvedType in inDegree.Where(x => x.Value > 0))
 			if (files.TryGetValue(unresolvedType.Key, out var lines))
-				if (reversedDependencies.All(
-					alreadyAddedType => alreadyAddedType.Name != unresolvedType.Key))
+				if (reversedDependencies.All(alreadyAddedType =>
+					alreadyAddedType.Name != unresolvedType.Key))
 					reversedDependencies.Push(lines);
 	}
 
@@ -375,19 +379,21 @@ public sealed class Repositories(ExpressionParser parser)
 	{
 		CacheService.Remove(result.FullName);
 		lock (LoadedPackages)
+		{
 			LoadedPackages.Remove(result);
+		}
 	}
 
 	public bool ContainsPackageNameInCache(string fullName) =>
 		CacheService.TryGetValue<AsyncLazy<Package>>(fullName, out _);
 
 	public async Task<string> ToDebugString() =>
-		nameof(Repositories) +
-		"\nStrict: " + (CacheService.TryGetValue<AsyncLazy<Package>>(nameof(Strict),
-			out var lazyPackage)
+		nameof(Repositories) + "\nStrict: " +
+		(CacheService.TryGetValue<AsyncLazy<Package>>(nameof(Strict), out var lazyPackage)
 			? (await lazyPackage.Value).ToDebugString()
 			: "") +
 		// ReSharper disable once InconsistentlySynchronizedField
 		"\nLoadedPackages: " + string.Join("\n  ", LoadedPackages) +
-		"\nPreviouslyCheckedDirectories: " + string.Join<string>(", ", PreviouslyCheckedDirectories.ToList());
+		"\nPreviouslyCheckedDirectories: " +
+		string.Join<string>(", ", PreviouslyCheckedDirectories.ToList());
 }

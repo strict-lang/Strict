@@ -28,14 +28,15 @@ public sealed class ScrunchAnalyzerTests
 		var report = ScrunchAnalyzer.AnalyzeFile(TestPackage.Instance, file);
 		Assert.That(report.Ok, Is.False);
 		Assert.That(report.Problems, Is.Not.Empty);
-		Assert.That(report.Problems[0].Message, Does.Contain("Empty line").IgnoreCase.Or.
-			Contain("EmptyLine"));
+		Assert.That(report.Problems[0].Message,
+			Does.Contain("Empty line").IgnoreCase.Or.Contain("EmptyLine"));
 	}
 
 	[Test]
 	public void AnalyzePassingFileIsOk()
 	{
-		var file = Write("Adder.strict", "has number\nAdd(num Number) Number\n\t5 is 5\n\tnum + number");
+		var file = Write("Adder.strict",
+			"has number\nAdd(num Number) Number\n\t5 is 5\n\tnum + number");
 		var report = ScrunchAnalyzer.AnalyzeFile(TestPackage.Instance, file);
 		Assert.That(report.Ok, Is.True);
 		Assert.That(report.Cached, Is.False);
@@ -45,7 +46,8 @@ public sealed class ScrunchAnalyzerTests
 	[Test]
 	public void FreshBinaryIsCachedPassWithoutRerun()
 	{
-		var file = Write("Cached.strict", "has number\nAdd(num Number) Number\n\t5 is 5\n\tnum + number");
+		var file = Write("Cached.strict",
+			"has number\nAdd(num Number) Number\n\t5 is 5\n\tnum + number");
 		File.WriteAllBytes(Path.ChangeExtension(file, ".strictbinary"), [1, 2, 3]);
 		File.SetLastWriteTimeUtc(Path.ChangeExtension(file, ".strictbinary"),
 			File.GetLastWriteTimeUtc(file).AddSeconds(1));

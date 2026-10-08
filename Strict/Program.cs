@@ -27,41 +27,41 @@ public static class Program
 
 	private static void DisplayUsageInformation() =>
 		Console.WriteLine("""
-Usage: Strict <file.strict|.strictbinary> [-options] [args...]
+											Usage: Strict <file.strict|.strictbinary> [-options] [args...]
 
-Options (default if nothing specified: build .strictbinary cache and execute in VM)
-  -Windows     Compile to a native Windows x64 optimized executable (.exe)
-  -Linux       Compile to a native Linux x64 optimized executable
-  -MacOS       Compile to a native macOS x64 optimized executable
-  -mlir        Force MLIR backend (default, requires mlir-opt + mlir-translate + clang)
-               MLIR is the default, best optimized, uses parallel CPU and GPU (Cuda) execution
-  -llvm        Force LLVM IR backend (fallback, requires clang: https://releases.llvm.org)
-  -nasm        Force NASM backend (fallback, less optimized, requires nasm + gcc/clang)
-  -diagnostics Output detailed step-by-step logs and timing for each pipeline stage
-               (automatically enabled in Debug builds)
-  -decompile   Decompile a .strictbinary into partial .strict source files
-               (creates a folder with one .strict per type; no tests, optimized)
+											Options (default if nothing specified: build .strictbinary cache and execute in VM)
+											  -Windows     Compile to a native Windows x64 optimized executable (.exe)
+											  -Linux       Compile to a native Linux x64 optimized executable
+											  -MacOS       Compile to a native macOS x64 optimized executable
+											  -mlir        Force MLIR backend (default, requires mlir-opt + mlir-translate + clang)
+											               MLIR is the default, best optimized, uses parallel CPU and GPU (Cuda) execution
+											  -llvm        Force LLVM IR backend (fallback, requires clang: https://releases.llvm.org)
+											  -nasm        Force NASM backend (fallback, less optimized, requires nasm + gcc/clang)
+											  -diagnostics Output detailed step-by-step logs and timing for each pipeline stage
+											               (automatically enabled in Debug builds)
+											  -decompile   Decompile a .strictbinary into partial .strict source files
+											               (creates a folder with one .strict per type; no tests, optimized)
 
-Arguments:
-  args...      Optional text or numbers passed to called method
-               Example to call Run method: Strict Sum.strict 5 10 20 => prints 35
-               Example to call any expression, must contain brackets: (1, 2, 3).Length => 3
+											Arguments:
+											  args...      Optional text or numbers passed to called method
+											               Example to call Run method: Strict Sum.strict 5 10 20 => prints 35
+											               Example to call any expression, must contain brackets: (1, 2, 3).Length => 3
 
-Examples:
-  Strict Examples/SimpleCalculator.strict
-  Strict Examples/SimpleCalculator.strict -Windows
-  Strict Examples/SimpleCalculator.strict -diagnostics
-  Strict Examples/SimpleCalculator.strictbinary
-  Strict Examples/SimpleCalculator.strictbinary -decompile
-  Strict Examples/Sum.strict 5 10 20
-  Strict List.strict (1, 2, 3).Length
+											Examples:
+											  Strict Examples/SimpleCalculator.strict
+											  Strict Examples/SimpleCalculator.strict -Windows
+											  Strict Examples/SimpleCalculator.strict -diagnostics
+											  Strict Examples/SimpleCalculator.strictbinary
+											  Strict Examples/SimpleCalculator.strictbinary -decompile
+											  Strict Examples/Sum.strict 5 10 20
+											  Strict List.strict (1, 2, 3).Length
 
-Notes:
-	Only .strict files contain the full actual code, everything after that is stripped,
-	optimized, and just includes what is actually executed (.strictbinary is much smaller).
-  Always caches bytecode into a .strictbinary for fast subsequent execution.
-  .strictbinary files are reused when they are newer than all of the used source files.
-""");
+											Notes:
+												Only .strict files contain the full actual code, everything after that is stripped,
+												optimized, and just includes what is actually executed (.strictbinary is much smaller).
+											  Always caches bytecode into a .strictbinary for fast subsequent execution.
+											  .strictbinary files are reused when they are newer than all of the used source files.
+											""");
 
 	private static async Task ParseArgumentsAndRun(IReadOnlyList<string> args)
 	{

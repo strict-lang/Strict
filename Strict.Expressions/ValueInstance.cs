@@ -1,3 +1,4 @@
+using System.Globalization;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -201,7 +202,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public static ValueInstance CreateFlatNumericType(Type type, float[] numbers)
 	{
 		var backing = ValueArrayInstance.CreateForTypeBacking(type, numbers);
-		return new ValueInstance(backing, isFlatNumericType: true);
+		return new ValueInstance(backing, true);
 	}
 
 	internal ValueInstance(ValueArrayInstance backing, bool isFlatNumericType)
@@ -231,10 +232,10 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 #endif
 	}
 
- public sealed class InvalidTypeValue(Type returnType, object value) : ParsingFailed(returnType,
+	public sealed class InvalidTypeValue(Type returnType, object value) : ParsingFailed(returnType,
 		0, BuildInvalidTypeValueMessage(returnType, value));
 
-	private static string BuildInvalidTypeValueMessage(Type returnType, object value)
+	private static string BuildInvalidTypeValueMessage(Type returnType, object? value)
 	{
 		if (value is string text)
 			return $"Cannot use runtime text '{text}' as {returnType}. " +
@@ -243,7 +244,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			$"Stored value={DescribeStoredValue(value)} ({value?.GetType()})";
 	}
 
-	private static string DescribeStoredValueKind(object value) =>
+	private static string DescribeStoredValueKind(object? value) =>
 		value switch
 		{
 			null => "null",
@@ -260,7 +261,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			_ => value.GetType().Name
 		};
 
-	private static string DescribeStoredValue(object value) =>
+	private static string DescribeStoredValue(object? value) =>
 		value switch
 		{
 			null => "null",
@@ -327,8 +328,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			number = FlatNumericId;
 #if DEBUG
 			if (PerformanceLog.IsEnabled)
-				LogCreated("ctor(FlatNumeric=" + returnType + ", values=" +
-					DescribeValues(values) + ")");
+				LogCreated("ctor(FlatNumeric=" + returnType + ", values=" + DescribeValues(values) + ")");
 #endif
 			return;
 		}
@@ -350,8 +350,11 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				continue;
 			if (members[memberIndex].InitialValue is Value initialValue)
 				flatNumbers[memberIndex] = (float)initialValue.Data.Number;
-			else if (members[memberIndex].InitialValue is MethodCall { Method.Name: Method.From } methodCall &&
-				methodCall.Arguments.Count > 0 && methodCall.Arguments[0] is Value methodCallValue)
+			else if (members[memberIndex].InitialValue is MethodCall
+				{
+					Method.Name: Method.From
+				} methodCall && methodCall.Arguments.Count > 0 &&
+				methodCall.Arguments[0] is Value methodCallValue)
 				flatNumbers[memberIndex] = (float)methodCallValue.Data.Number;
 			else if (members[memberIndex].InitialValue != null)
 				flatNumbers[memberIndex] = 1;
@@ -400,7 +403,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		number = ListId;
 	}
 
-	public class ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(Language.Type returnType)
+	public class ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(Type returnType)
 		: Exception(returnType.ToString()) { }
 
 	/// <summary>
@@ -456,7 +459,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 				textValues[elementsMemberIndex] = textValue;
 			}
 			else
+			{
 				textValues[0] = textValue;
+			}
 			value = new ValueTypeInstance(newType, textValues);
 			number = TypeId;
 			break;
@@ -516,14 +521,14 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			: /*TODO: IsPackedRgba
 				? type == RgbaType.ReturnType
 				:*/ number switch
-				{
-					TextId => type.IsText,
-					ListId => type == ((ValueArrayInstance)value).ReturnType,
-					DictionaryId => type == ((ValueDictionaryInstance)value).ReturnType,
-					TypeId => type == ((ValueTypeInstance)value).ReturnType,
-					FlatNumericId => type == ((ValueArrayInstance)value).ReturnType,
-					_ => IsPrimitiveType(type)
-				};
+			{
+				TextId => type.IsText,
+				ListId => type == ((ValueArrayInstance)value).ReturnType,
+				DictionaryId => type == ((ValueDictionaryInstance)value).ReturnType,
+				TypeId => type == ((ValueTypeInstance)value).ReturnType,
+				FlatNumericId => type == ((ValueArrayInstance)value).ReturnType,
+				_ => IsPrimitiveType(type)
+			};
 
 	public bool IsPrimitiveType(Type noneBoolOrNumberType) => value == noneBoolOrNumberType;
 	public bool HasValue => value != null;
@@ -536,8 +541,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	public bool IsDictionary => number is DictionaryId;
 
 	public bool IsNumberLike(Type numberType) =>
-		IsPrimitiveType(numberType) || !IsText && !IsList && !IsDictionary &&
-		GetType().IsSameOrCanBeUsedAs(numberType);
+		IsPrimitiveType(numberType) || (!IsText && !IsList && !IsDictionary &&
+			GetType().IsSameOrCanBeUsedAs(numberType));
 
 	public double GetArithmeticNumber()
 	{
@@ -560,19 +565,17 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		IsPackedRgba
 			? RgbaType.ReturnType.IsSameOrCanBeUsedAs(otherType)
 			: */number switch
+		{
+			TextId => otherType.IsText || (otherType.IsList && otherType is GenericTypeImplementation
 			{
-				TextId => otherType.IsText || otherType.IsList && otherType is GenericTypeImplementation
-				{
-					ImplementationTypes: [{ IsCharacter: true }]
-				},
-				ListId => ((ValueArrayInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
-				DictionaryId =>
-					((ValueDictionaryInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
-				TypeId => ((ValueTypeInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
-				FlatNumericId =>
-					((ValueArrayInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
-				_ => ((Type)value).IsSameOrCanBeUsedAs(otherType)
-			};
+				ImplementationTypes: [{ IsCharacter: true }]
+			}),
+			ListId => ((ValueArrayInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
+			DictionaryId => ((ValueDictionaryInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
+			TypeId => ((ValueTypeInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
+			FlatNumericId => ((ValueArrayInstance)value).ReturnType.IsSameOrCanBeUsedAs(otherType),
+			_ => ((Type)value).IsSameOrCanBeUsedAs(otherType)
+		};
 
 	public bool IsValueTypeInstanceType =>
 		number == TypeId && value is ValueTypeInstance { ReturnType.Name: nameof(Type) };
@@ -581,11 +584,12 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		/*TODO: this is not the way, should be general!
 		IsPackedRgba
 			? MaterializePackedRgba()
-			: */number == TypeId
-				? (ValueTypeInstance)value
-				: number == FlatNumericId
-					? ((ValueArrayInstance)value).MaterializeAsType()
-					: null;
+			: */number switch
+		{
+			TypeId => (ValueTypeInstance)value,
+			FlatNumericId => ((ValueArrayInstance)value).MaterializeAsType(),
+			_ => null
+		};
 
 	public bool IsFlatNumeric => number is FlatNumericId;
 
@@ -629,13 +633,13 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		/*TODO: IsPackedRgba
 			? RgbaType.ReturnType
 			: */number switch
-			{
-				ListId => ((ValueArrayInstance)value).ReturnType,
-				DictionaryId => ((ValueDictionaryInstance)value).ReturnType,
-				TypeId => ((ValueTypeInstance)value).ReturnType,
-				FlatNumericId => ((ValueArrayInstance)value).ReturnType,
-				_ => (Type)value
-			};
+		{
+			ListId => ((ValueArrayInstance)value).ReturnType,
+			DictionaryId => ((ValueDictionaryInstance)value).ReturnType,
+			TypeId => ((ValueTypeInstance)value).ReturnType,
+			FlatNumericId => ((ValueArrayInstance)value).ReturnType,
+			_ => (Type)value
+		};
 
 	public int GetIteratorLength()
 	{
@@ -649,11 +653,9 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		{
 			var typeInstance = (ValueTypeInstance)value;
 			if (typeInstance.ReturnType.IsList)
-			{
 				for (var i = 0; i < typeInstance.Values.Length; i++)
 					if (typeInstance.Values[i].IsText)
-						return typeInstance.Values[i].Text.Length;
-			} //ncrunch: no coverage
+						return typeInstance.Values[i].Text.Length; //ncrunch: no coverage
 			if (typeInstance.TryGetValue("keysAndValues", out var elementsMember) &&
 				elementsMember.IsList)
 				return elementsMember.List.Count;
@@ -711,49 +713,49 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		IsPackedRgba
 			? RgbaType.ReturnType.IsMutable
 			: */number switch
-			{
-				TextId => false,
-				ListId => ((ValueArrayInstance)value).ReturnType.IsMutable,
-				DictionaryId => ((ValueDictionaryInstance)value).ReturnType.IsMutable,
-				TypeId => ((ValueTypeInstance)value).ReturnType.IsMutable,
-				FlatNumericId => ((ValueArrayInstance)value).ReturnType.IsMutable,
-				_ => ((Type)value).IsMutable
-			};
+		{
+			TextId => false,
+			ListId => ((ValueArrayInstance)value).ReturnType.IsMutable,
+			DictionaryId => ((ValueDictionaryInstance)value).ReturnType.IsMutable,
+			TypeId => ((ValueTypeInstance)value).ReturnType.IsMutable,
+			FlatNumericId => ((ValueArrayInstance)value).ReturnType.IsMutable,
+			_ => ((Type)value).IsMutable
+		};
 	public bool IsError =>
 		/*TODO: IsPackedRgba
 			? RgbaType.ReturnType.IsError
-			: */number is TypeId && ((ValueTypeInstance)value).ReturnType.IsError ||
-			number is FlatNumericId && ((ValueArrayInstance)value).ReturnType.IsError;
+			: */(number is TypeId && ((ValueTypeInstance)value).ReturnType.IsError) ||
+		(number is FlatNumericId && ((ValueArrayInstance)value).ReturnType.IsError);
 	public override string ToString() => GetTypeName() + ": " + ToExpressionCodeString(true);
 
 	private string GetTypeName() =>
 		/*TODO: IsPackedRgba
 			? RgbaType.ReturnType.Name
 			: */number switch
-			{
-				TextId => Type.Text,
-				ListId => ((ValueArrayInstance)value).ReturnType.Name,
-				DictionaryId => ((ValueDictionaryInstance)value).ReturnType.Name,
-				TypeId => ((ValueTypeInstance)value).ReturnType.Name,
-				FlatNumericId => ((ValueArrayInstance)value).ReturnType.Name,
-				_ => ((Type)value).Name
-			};
+		{
+			TextId => Type.Text,
+			ListId => ((ValueArrayInstance)value).ReturnType.Name,
+			DictionaryId => ((ValueDictionaryInstance)value).ReturnType.Name,
+			TypeId => ((ValueTypeInstance)value).ReturnType.Name,
+			FlatNumericId => ((ValueArrayInstance)value).ReturnType.Name,
+			_ => ((Type)value).Name
+		};
 
 	public string ToExpressionCodeString(bool escapeText = false)
 	{
 		var generatedText = /*TODO: IsPackedRgba
 			? ToPackedRgbaText()
 			: */number switch
-			{
-				TextId => escapeText
-					? "\"" + EscapeText((string)value) + "\""
-					: (string)value,
-				ListId => BuildListString((ValueArrayInstance)value, escapeText),
-				DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
-				TypeId => ((ValueTypeInstance)value).ToAutomaticText(),
-				FlatNumericId => ((ValueArrayInstance)value).MaterializeAsType().ToAutomaticText(),
-				_ => GetPrimitiveCodeString((Type)value)
-			};
+		{
+			TextId => escapeText
+				? "\"" + EscapeText((string)value) + "\""
+				: (string)value,
+			ListId => BuildListString((ValueArrayInstance)value, escapeText),
+			DictionaryId => BuildDictionaryString(((ValueDictionaryInstance)value).Items, escapeText),
+			TypeId => ((ValueTypeInstance)value).ToAutomaticText(),
+			FlatNumericId => ((ValueArrayInstance)value).MaterializeAsType().ToAutomaticText(),
+			_ => GetPrimitiveCodeString((Type)value)
+		};
 #if DEBUG
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("ValueInstance.ToExpressionCodeString",
@@ -784,30 +786,28 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		/*TODO: instance.IsPackedRgba
 			? "PackedRgba(type=" + instance.RgbaType.ReturnType.Name + ")"
 			: */instance.number switch
-			{
-				TextId => "Text(" + instance.Text + ")",
-				ListId => "List(type=" + instance.List.ReturnType.Name + ", count=" +
-					instance.List.Count + ")",
-				DictionaryId => "Dictionary(type=" +
-					((ValueDictionaryInstance)instance.value).ReturnType.Name + ", count=" +
-					((ValueDictionaryInstance)instance.value).Items.Count + ")",
-				TypeId => "TypeInstance(type=" + ((ValueTypeInstance)instance.value).ReturnType.Name +
-					", members=" + ((ValueTypeInstance)instance.value).Values.Length + ")",
-				FlatNumericId => "FlatNumeric(type=" +
-					((ValueArrayInstance)instance.value).ReturnType.Name + ", width=" +
-					((ValueArrayInstance)instance.value).FlatWidth + ")",
-				_ => ((Type)instance.value).IsBoolean
-					? "Boolean(" + (instance.number != 0) + ")"
-					: ((Type)instance.value).IsNumber
-						? "Number(" + instance.number + ")"
-						: ((Type)instance.value).Name
-			};
+		{
+			TextId => "Text(" + instance.Text + ")",
+			ListId => "List(type=" + instance.List.ReturnType.Name + ", count=" + instance.List.Count +
+				")",
+			DictionaryId => "Dictionary(type=" +
+				((ValueDictionaryInstance)instance.value).ReturnType.Name + ", count=" +
+				((ValueDictionaryInstance)instance.value).Items.Count + ")",
+			TypeId => "TypeInstance(type=" + ((ValueTypeInstance)instance.value).ReturnType.Name +
+				", members=" + ((ValueTypeInstance)instance.value).Values.Length + ")",
+			FlatNumericId => "FlatNumeric(type=" + ((ValueArrayInstance)instance.value).ReturnType.Name +
+				", width=" + ((ValueArrayInstance)instance.value).FlatWidth + ")",
+			_ => ((Type)instance.value).IsBoolean
+				? "Boolean(" + (instance.number != 0) + ")"
+				: ((Type)instance.value).IsNumber
+					? "Number(" + instance.number + ")"
+					: ((Type)instance.value).Name
+		};
 #endif
 
 	private static string EscapeText(string text) =>
 		text.Replace("\\", @"\\", StringComparison.Ordinal).
-			Replace("\n", "\\n", StringComparison.Ordinal).
-			Replace("\r", "\\r", StringComparison.Ordinal).
+			Replace("\n", "\\n", StringComparison.Ordinal).Replace("\r", "\\r", StringComparison.Ordinal).
 			Replace("\t", "\\t", StringComparison.Ordinal).
 			Replace("\"", "\\\"", StringComparison.Ordinal);
 
@@ -868,8 +868,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 		}
 		var absoluteValue = Math.Abs(number);
 		return absoluteValue is >= 10_000_000 or > 0 and <= 1e-9
-			? number.ToString("0.################e0", System.Globalization.CultureInfo.InvariantCulture)
-			: number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+			? number.ToString("0.################e0", CultureInfo.InvariantCulture)
+			: number.ToString(CultureInfo.InvariantCulture);
 	}
 
 	private static readonly string[] CachedIntegerStrings = CreateIntegerStringCache();
@@ -878,7 +878,7 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	{
 		var cache = new string[101];
 		for (var i = 0; i < cache.Length; i++)
-			cache[i] = i.ToString(System.Globalization.CultureInfo.InvariantCulture);
+			cache[i] = i.ToString(CultureInfo.InvariantCulture);
 		return cache;
 	}
 
@@ -954,15 +954,16 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 			if (other.number == TypeId)
 				return instance.Equals((ValueTypeInstance)other.value);
 			if (other.number != ListId && other.number != DictionaryId && other.number != TextId &&
-				instance.TryGetValue("number", out var numberMember) &&
-				numberMember.number == other.number)
+				instance.TryGetValue("number", out var numberMember) && numberMember.number == other.number)
 				return true;
 		}
 		else if (other.number == TypeId && number != ListId && number != DictionaryId &&
 			number != TextId &&
 			((ValueTypeInstance)other.value).TryGetValue("number", out var otherNumberMember) &&
 			otherNumberMember.number == number)
+		{
 			return true;
+		}
 		if (number != other.number)
 			return false;
 		if (number == TextId)
@@ -975,8 +976,8 @@ public readonly struct ValueInstance : IEquatable<ValueInstance>
 	}
 
 	private static bool AreSameFlatNumbers(Type returnType, float number, float otherNumber) =>
-		number == otherNumber || returnType.Name == "ColorValue" &&
-			Math.Abs(number - otherNumber) <= 1.0 / 255.0;
+		number == otherNumber || (returnType.Name == "ColorValue" &&
+			Math.Abs(number - otherNumber) <= 1.0 / 255.0);
 
 	public static int ComplexEqualsCalls;
 	public override int GetHashCode() => HashCode.Combine(number, value);

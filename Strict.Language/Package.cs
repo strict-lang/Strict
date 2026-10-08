@@ -20,6 +20,7 @@ public class Package : Context, IDisposable
 		: this(RootForPackages, packagePath, createdFromRepos) { }
 #endif
 #if DEBUG
+	// ReSharper disable once UnusedParameter.Local
 	public Package(Package? parentPackage, string packagePath, Repositories? createdFromRepos = null,
 		[CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = "") : base(parentPackage,
@@ -76,7 +77,8 @@ public class Package : Context, IDisposable
 	private sealed class Root : Package
 	{
 #if DEBUG
-		public Root([CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
+		public Root([CallerFilePath] string callerFilePath = "",
+			[CallerLineNumber] int callerLineNumber = 0,
 			[CallerMemberName] string callerMemberName = "") : base(null, string.Empty, null,
 			callerFilePath, callerLineNumber, callerMemberName) =>
 #else
@@ -92,7 +94,9 @@ public class Package : Context, IDisposable
 		private bool TryGetCachedType(string name, out Type? type)
 		{
 			lock (syncRoot)
+			{
 				return cachedFoundTypes.TryGetValue(name, out type);
+			}
 		}
 
 		private Type? FindTypeInChildrenAndCache(string name, Context? searchingFrom)
@@ -112,7 +116,9 @@ public class Package : Context, IDisposable
 	internal void Add(Type type)
 	{
 		lock (syncRoot)
+		{
 			types.Add(type.Name, type);
+		}
 	}
 
 	private readonly Dictionary<string, Type> types = new();
@@ -150,8 +156,10 @@ public class Package : Context, IDisposable
 	public override Type? FindTypeCore(string name, Context? searchingFrom = null)
 	{
 		lock (syncRoot)
+		{
 			if (name == lastName && lastType != null)
 				return lastType;
+		}
 		if (IsPrivateName(name))
 			return null;
 		var type = FindDirectType(name) ?? FindTypeInChildrenOrParentPackages(name, searchingFrom);
@@ -168,8 +176,11 @@ public class Package : Context, IDisposable
 	{
 		Type? type = null;
 		lock (syncRoot)
+		{
 			if (children.Count > 0)
 				type = FindTypeInChildrenPackages(name, searchingFrom ?? this);
+		}
+		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		type ??= Parent?.FindTypeCore(name, this);
 		return type;
 	}
@@ -181,14 +192,18 @@ public class Package : Context, IDisposable
 	public Type? FindDirectType(string name)
 	{
 		lock (syncRoot)
+		{
 			return types.GetValueOrDefault(name);
+		}
 	}
 
 	private Type? FindTypeInChildrenPackages(string name, Context? searchingFromPackage)
 	{
 		Package[] childrenSnapshot;
 		lock (syncRoot)
+		{
 			childrenSnapshot = children.ToArray();
+		}
 		foreach (var t in childrenSnapshot)
 			if (t != searchingFromPackage)
 			{
@@ -205,21 +220,24 @@ public class Package : Context, IDisposable
 	{
 		Package[] childrenSnapshot;
 		lock (syncRoot)
+		{
 			childrenSnapshot = children.ToArray();
+		}
 		foreach (var child in childrenSnapshot)
 			if (child.Name == name || child.FullName == name)
 				return child;
 		return null;
 	}
 
-	public Package? Find(string name) =>
-		FindSubPackage(name) ?? RootForPackages.FindSubPackage(name);
+	public Package? Find(string name) => FindSubPackage(name) ?? RootForPackages.FindSubPackage(name);
 
 	public void Remove(Type? type)
 	{
 		if (type != null)
 			lock (syncRoot)
+			{
 				types.Remove(type.Name);
+			}
 	}
 
 #if !DISABLE_DISPOSING

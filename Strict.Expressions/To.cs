@@ -17,7 +17,7 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 		var conversionType = body.ReturnType.FindType(text.ToString());
 		if (conversionType == null)
 			throw new ConversionTypeNotFound(body, text.ToString());
-    if (conversionType.IsText)
+		if (conversionType.IsText)
 			return ConvertToText(left, conversionType);
 		var method = left.ReturnType.GetMethod(BinaryOperator.To, []);
 		// Special case for lists, which automatically use the implementation type To method
@@ -36,7 +36,11 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 			!left.ReturnType.IsUpcastable(conversionType) &&
 			!left.ReturnType.IsSameOrCanBeUsedAs(conversionType))
 			throw new ConversionTypeIsIncompatible(body,
-				$"Conversion for {left.ReturnType.ToCodeString()} to {conversionType.ToCodeString()} does " +
+				$"Conversion for {
+					left.ReturnType.ToCodeString()
+				} to {
+					conversionType.ToCodeString()
+				} does " +
 				$"not exist, underlying list elements don't support it and no member is compatible (method " +
 				$"returns {method.ReturnType.ToCodeString()}, token '{text.ToString()}')", conversionType);
 		return new To(left, method, conversionType);
@@ -44,9 +48,8 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 
 	private static Method? FindConversionMethod(Type type, Type conversionType) =>
 		type.AvailableMethods.TryGetValue(BinaryOperator.To, out var methods)
-     ? methods.FirstOrDefault(method => method.ReturnType == conversionType ||
-				method.ReturnType.Name == conversionType.Name) ??
-				methods.FirstOrDefault(method =>
+			? methods.FirstOrDefault(method => method.ReturnType == conversionType ||
+				method.ReturnType.Name == conversionType.Name) ?? methods.FirstOrDefault(method =>
 				method.ReturnType.IsSameOrCanBeUsedAs(conversionType, false))
 			: null;
 
@@ -70,9 +73,9 @@ public sealed class To(Expression left, Method operatorMethod, Type conversionTy
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) || other is To to &&
-		Method.IsSameMethodNameReturnTypeAndParameters(to.Method) && Equals(Instance, to.Instance) &&
-		ConversionType == to.ConversionType;
+		ReferenceEquals(this, other) || (other is To to &&
+			Method.IsSameMethodNameReturnTypeAndParameters(to.Method) && Equals(Instance, to.Instance) &&
+			ConversionType == to.ConversionType);
 
 	public override int GetHashCode() => Method.GetHashCode() ^ ConversionType.GetHashCode();
 }

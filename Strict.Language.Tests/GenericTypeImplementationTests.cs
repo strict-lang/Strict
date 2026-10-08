@@ -31,8 +31,7 @@ public sealed class GenericTypeImplementationTests
 
 	[Test]
 	public void TypeArgumentsDoNotMatchGenericTypeConstructor() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var type = new Type(TestPackage.Instance,
 					new TypeLines("SimpleProgram", "has something Comparer(Text)", "Invoke",
@@ -49,20 +48,17 @@ public sealed class GenericTypeImplementationTests
 	public void GenericTypeWithMultipleImplementations()
 	{
 		using var usingGenericType = new Type(TestPackage.Instance,
-			new TypeLines("SimpleProgram",
-				"has something Comparer(Text, Number)",
-				"Invoke",
-				"\tconstant result = something.Compare")).ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(usingGenericType.Members[0].Type.Name,
-			Is.EqualTo("Comparer(Text, Number)"));
+				new TypeLines("SimpleProgram", "has something Comparer(Text, Number)", "Invoke",
+					"\tconstant result = something.Compare")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(usingGenericType.Members[0].Type.Name, Is.EqualTo("Comparer(Text, Number)"));
 		var genericComparer = ((GenericTypeImplementation)usingGenericType.Members[0].Type).Generic;
 		Assert.That(genericComparer.Name, Is.EqualTo("Comparer"));
 	}
 
 	[Test]
 	public void CannotGetGenericImplementationOnNonGeneric() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var type = new Type(TestPackage.Instance,
 					new TypeLines(nameof(CannotGetGenericImplementationOnNonGeneric),
@@ -74,8 +70,7 @@ public sealed class GenericTypeImplementationTests
 
 	[Test]
 	public void TypeArgumentsDoNotMatchGenericType() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var type = new Type(TestPackage.Instance,
 					new TypeLines(nameof(TypeArgumentsDoNotMatchGenericType), "has custom Comparer(Number)",

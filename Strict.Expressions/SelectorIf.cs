@@ -3,9 +3,13 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Case> cases,
-	int lineNumber, Expression? optionalElse = null, Body? bodyForErrorMessage = null)
-	: Expression(GetMatchingReturnType(cases, selector, optionalElse, bodyForErrorMessage), lineNumber)
+public sealed class SelectorIf(Expression selector,
+	IReadOnlyList<SelectorIf.Case> cases,
+	int lineNumber,
+	Expression? optionalElse = null,
+	Body? bodyForErrorMessage = null)
+	: Expression(GetMatchingReturnType(cases, selector, optionalElse, bodyForErrorMessage),
+		lineNumber)
 {
 	public Expression Selector { get; } = selector;
 	public IReadOnlyList<Case> Cases { get; } = cases;
@@ -25,7 +29,8 @@ public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Cas
 	{
 		var thenText = @case.Then.ToString();
 		if (thenText.Contains(Environment.NewLine, StringComparison.Ordinal))
-			thenText = thenText.Replace(Environment.NewLine, Environment.NewLine + "\t"); //ncrunch: no coverage
+			thenText =
+				thenText.Replace(Environment.NewLine, Environment.NewLine + "\t"); //ncrunch: no coverage
 		return "\t" + @case.Pattern + ThenSeparator + thenText;
 	}
 
@@ -33,7 +38,8 @@ public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Cas
 	{
 		var elseText = optionalElse.ToString();
 		if (elseText.Contains(Environment.NewLine, StringComparison.Ordinal))
-			elseText = elseText.Replace(Environment.NewLine, Environment.NewLine + "\t"); //ncrunch: no coverage
+			elseText =
+				elseText.Replace(Environment.NewLine, Environment.NewLine + "\t"); //ncrunch: no coverage
 		return "\telse " + elseText;
 	}
 
@@ -68,15 +74,15 @@ public sealed class SelectorIf(Expression selector, IReadOnlyList<SelectorIf.Cas
 
 	private const string ThenSeparator = " then ";
 
-	public sealed class MissingCase(Expression selector, Body? body)
-		: ParsingFailed(body ?? new Body(selector.ReturnType.Methods[0]),
-			$"SelectorIf requires at least one case for selector {selector}");
+	public sealed class MissingCase(Expression selector, Body? body) : ParsingFailed(
+		body ?? new Body(selector.ReturnType.Methods[0]),
+		$"SelectorIf requires at least one case for selector {selector}");
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) || other is SelectorIf si && Selector.Equals(si.Selector) &&
-		Cases.Count == si.Cases.Count && CasesEqual(si) &&
-		(OptionalElse?.Equals(si.OptionalElse) ?? si.OptionalElse == null);
+		ReferenceEquals(this, other) || (other is SelectorIf si && Selector.Equals(si.Selector) &&
+			Cases.Count == si.Cases.Count && CasesEqual(si) &&
+			(OptionalElse?.Equals(si.OptionalElse) ?? si.OptionalElse == null));
 
 	private bool CasesEqual(SelectorIf other)
 	{

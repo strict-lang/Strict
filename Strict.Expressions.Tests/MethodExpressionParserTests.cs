@@ -63,12 +63,10 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	[Test]
 	public void ParseInlineTextLiteralMethodCallAssertion()
 	{
-		using var parsingType = new Type(TestPackage.Instance, new TypeLines(
-			nameof(ParseInlineTextLiteralMethodCallAssertion),
-			"has number",
-			"LastIndexOf(text Text) Number",
-			"\t\"hello\".LastIndexOf(\"l\") is 3",
-			"\t-1")).ParseMembersAndMethods(this);
+		using var parsingType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ParseInlineTextLiteralMethodCallAssertion), "has number",
+					"LastIndexOf(text Text) Number", "\t\"hello\".LastIndexOf(\"l\") is 3", "\t-1")).
+			ParseMembersAndMethods(this);
 		Assert.That(() => parsingType.Methods.Single().GetBodyAndParseIfNeeded(), Throws.Nothing);
 	}
 
@@ -177,8 +175,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 		]).GetBodyAndParseIfNeeded();
 		var declaration = (Declaration)body.Expressions[0];
 		Assert.That(declaration.Value, Is.InstanceOf<List>());
-		Assert.That(declaration.Value.ToString(),
-			Is.EqualTo("(\"3\", \"4\", \"(1, 2)\")"));
+		Assert.That(declaration.Value.ToString(), Is.EqualTo("(\"3\", \"4\", \"(1, 2)\")"));
 	}
 
 	[Test]

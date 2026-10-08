@@ -76,16 +76,15 @@ internal class TypeMethodFinder(Type type)
 					return method;
 			if (commonArgumentType != null)
 				foreach (var method in matchingMethods)
-					if (commonArgumentType ==
-						GetListElementTypeIfHasSingleParameter(method, arguments.Count))
+					if (commonArgumentType == GetListElementTypeIfHasSingleParameter(method, arguments.Count))
 						return method;
 			// Single character text can always be used as a character (thus number)
 			if (arguments.Count == 1 && matchingMethods.Count > 0 &&
 				matchingMethods[0].Parameters.Count > 0 &&
 				(matchingMethods[0].Parameters[0].Type.IsNumber ||
-					matchingMethods[0].Parameters[0].Type.IsCharacter) &&
-				arguments[0].ReturnType.IsText && arguments[0].IsConstant &&
-				arguments[0].GetType().Name == Text && GetTextValue(arguments[0]).Length == 1)
+					matchingMethods[0].Parameters[0].Type.IsCharacter) && arguments[0].ReturnType.IsText &&
+				arguments[0].IsConstant && arguments[0].GetType().Name == Text &&
+				GetTextValue(arguments[0]).Length == 1)
 				return matchingMethods[0];
 			// If this is a from constructor, we can call the methodParameterType constructor to pass
 			// along the argument and make it work if it wasn't matching yet.
@@ -112,8 +111,8 @@ internal class TypeMethodFinder(Type type)
 
 	private static string GetTextValue(Expression argument)
 	{
-		var data = argument.GetType().
-			GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.GetValue(argument);
+		var data = argument.GetType().GetProperty("Data", BindingFlags.Instance | BindingFlags.Public)?.
+			GetValue(argument);
 		if (data is string value)
 			return value; //ncrunch: no coverage
 		var text = data?.ToString() ?? argument.ToString();
@@ -164,7 +163,8 @@ internal class TypeMethodFinder(Type type)
 			ConstraintCouldBeSatisfiedByArgumentCount(member.Constraints[0], numberOfArguments);
 	}
 
-	private static bool ConstraintCouldBeSatisfiedByArgumentCount(Expression constraint, int numberOfArguments)
+	private static bool ConstraintCouldBeSatisfiedByArgumentCount(Expression constraint,
+		int numberOfArguments)
 	{
 		var constraintText = constraint.ToString();
 		// Check for "Length is N" pattern
@@ -189,7 +189,8 @@ internal class TypeMethodFinder(Type type)
 		return true;
 	}
 
-	private static bool TryExtractNumberAndCompare(string constraintText, string op, int numberOfArguments)
+	private static bool TryExtractNumberAndCompare(string constraintText, string op,
+		int numberOfArguments)
 	{
 		var opIndex = constraintText.IndexOf(op, StringComparison.Ordinal);
 		if (opIndex < 0)
@@ -225,8 +226,8 @@ internal class TypeMethodFinder(Type type)
 			method.ReturnType.IsSameOrCanBeUsedAs(typesOfArguments[0], false))
 			return true; //ncrunch: no coverage
 		if (typesOfArguments.Count > method.Parameters.Count ||
-			typesOfArguments.Count < method.Parameters.Count &&
-			typesOfArguments.Count < GetRequiredMethodParametersCount(method))
+			(typesOfArguments.Count < method.Parameters.Count &&
+				typesOfArguments.Count < GetRequiredMethodParametersCount(method)))
 			return false;
 		for (var index = 0; index < typesOfArguments.Count; index++)
 			if (!IsMethodParameterMatchingArgument(method, index, typesOfArguments[index]))
@@ -288,7 +289,8 @@ internal class TypeMethodFinder(Type type)
 		if (!methodParameterType.IsGeneric)
 			return argumentType.CanBeConvertedTo(methodParameterType, true);
 		if (argumentType.IsGeneric)
-			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(methodParameterType, //ncrunch: no coverage
+			throw new GenericTypesCannotBeUsedDirectlyUseImplementation(
+				methodParameterType, //ncrunch: no coverage
 				"(parameter " + index + ") is not usable with argument " + argumentType + " in " + method);
 		return false;
 	}
@@ -303,7 +305,8 @@ internal class TypeMethodFinder(Type type)
 		if (argumentType is not GenericTypeImplementation argumentImplementation ||
 			parameterType is not GenericTypeImplementation parameterImplementation ||
 			argumentImplementation.Generic != parameterImplementation.Generic ||
-			argumentImplementation.ImplementationTypes.Count != parameterImplementation.ImplementationTypes.Count)
+			argumentImplementation.ImplementationTypes.Count !=
+			parameterImplementation.ImplementationTypes.Count)
 			return false;
 		for (var index = 0; index < argumentImplementation.ImplementationTypes.Count; index++)
 			if (!argumentImplementation.ImplementationTypes[index].IsSameOrCanBeUsedAs(

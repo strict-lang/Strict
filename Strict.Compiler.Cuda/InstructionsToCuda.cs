@@ -1,7 +1,8 @@
-using Strict.Expressions;
-using Strict.Language;
+using System.Globalization;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
+using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict.Compiler.Cuda;
 
@@ -17,14 +18,14 @@ public sealed class InstructionsToCuda : InstructionsCompiler
 	public override string Extension => ".cu";
 
 	public string Compile(Method method) =>
-		BuildCudaKernel(method, new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions);
+		BuildCudaKernel(method,
+			new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions);
 
 	private static string BuildCudaKernel(Method method, IReadOnlyList<Instruction> instructions) =>
 		BuildCudaKernel(method.Name, instructions, method.Parameters, NeedsCountParameter(method));
 
-	private static string BuildCudaKernel(string methodName,
-		IReadOnlyList<Instruction> instructions, IReadOnlyList<Parameter> parameters,
-		bool addCountParameter)
+	private static string BuildCudaKernel(string methodName, IReadOnlyList<Instruction> instructions,
+		IReadOnlyList<Parameter> parameters, bool addCountParameter)
 	{
 		var registers = new Dictionary<Register, string>();
 		var outputExpression = "0.0f";
@@ -32,14 +33,13 @@ public sealed class InstructionsToCuda : InstructionsCompiler
 			switch (instruction)
 			{
 			case LoadVariableToRegister load:
-				registers[load.Register] = load.Identifier +
-					(IsScalarParameter(parameters, load.Identifier)
-						? ""
-						: "[idx]");
+				registers[load.Register] = load.Identifier + (IsScalarParameter(parameters, load.Identifier)
+					? ""
+					: "[idx]");
 				break;
 			case LoadConstantInstruction constant:
 				registers[constant.Register] =
-					constant.Constant.Number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+					constant.Constant.Number.ToString(CultureInfo.InvariantCulture);
 				break;
 			case BinaryInstruction binary when !binary.IsConditional() && binary.Registers.Length > 2:
 				registers[binary.Registers[2]] =

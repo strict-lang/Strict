@@ -67,7 +67,7 @@ public static class StringExtensions
 		{
 			for (var index = 0; index < text.Length; index++)
 				if (!char.IsAsciiLetter(text[index]) &&
-					(index == 0 || text[index] != '-' && !char.IsNumber(text[index])))
+					(index == 0 || (text[index] != '-' && !char.IsNumber(text[index]))))
 					return false;
 			return true;
 		}
@@ -110,7 +110,7 @@ public static class StringExtensions
 					: "s");
 
 		public bool IsOperatorOrAllowedMethodName() =>
-			text.Length == 1 && text[0].IsSingleCharacterOperator() ||
+			(text.Length == 1 && text[0].IsSingleCharacterOperator()) ||
 			text[0] is 'X' or 'Y' or 'Z' or 'W';
 
 		public bool StartsWith(params string[] partialNames) =>

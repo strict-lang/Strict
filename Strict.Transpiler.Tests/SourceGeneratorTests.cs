@@ -11,7 +11,8 @@ public sealed class SourceGeneratorTests : TestCSharpGenerator
 	[Test]
 	public void GenerateCSharpInterface()
 	{
-		using var app = new Type(package, new TypeLines("DummyApp", "Run")).ParseMembersAndMethods(parser);
+		using var app =
+			new Type(package, new TypeLines("DummyApp", "Run")).ParseMembersAndMethods(parser);
 		var file = generator.Generate(app);
 		Assert.That(file.ToString(), Is.EqualTo(@"namespace SourceGeneratorTests;
 
@@ -56,8 +57,7 @@ public class Program
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(projectFolder, generatedCode),
 			Is.EqualTo("Logged Hello" + Environment.NewLine));
 		Assert.That(File.Exists(Path.Combine(projectFolder, TemporaryFile)), Is.True);
-		Assert.That(File.ReadAllText(Path.Combine(projectFolder, TemporaryFile)),
-			Is.EqualTo("Hello"));
+		Assert.That(File.ReadAllText(Path.Combine(projectFolder, TemporaryFile)), Is.EqualTo("Hello"));
 	}
 
 	private const string TemporaryFile = "temp.txt";
@@ -72,9 +72,8 @@ public class Program
 		File.WriteAllText(Path.Combine(projectFolder, TestTxt), ExpectedText);
 		using var program =
 			new Type(package,
-					new TypeLines(nameof(GenerateFileReadProgram), "has App",
-						"has file = \"" + TestTxt + "\"", "has logger", "Run", "\tlogger.Log(file.Read)")).
-				ParseMembersAndMethods(parser);
+				new TypeLines(nameof(GenerateFileReadProgram), "has App", "has file = \"" + TestTxt + "\"",
+					"has logger", "Run", "\tlogger.Log(file.Read)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(projectFolder, generatedCode),
 			Is.EqualTo(ExpectedText + Environment.NewLine));
@@ -141,14 +140,12 @@ public class Program
 	}
 
 	private static bool IsRealDotnetFailure(string error) =>
-		error.Length > 0 &&
-		(error.Contains("error ", StringComparison.OrdinalIgnoreCase) ||
+		error.Length > 0 && (error.Contains("error ", StringComparison.OrdinalIgnoreCase) ||
 			error.Contains("The build failed", StringComparison.OrdinalIgnoreCase));
 
-	public sealed class
-		CSharpCompilationFailed(string error, string actualText, string generatedCode) : Exception(
-		error + Environment.NewLine + actualText + Environment.NewLine + nameof(generatedCode) + ":" +
-		Environment.NewLine + generatedCode);
+	public sealed class CSharpCompilationFailed(string error, string actualText, string generatedCode)
+		: Exception(error + Environment.NewLine + actualText + Environment.NewLine +
+			nameof(generatedCode) + ":" + Environment.NewLine + generatedCode);
 
 	[Test]
 	[Category("Slow")]
@@ -164,9 +161,9 @@ public class Program
 	{
 		var projectFolder = GetProjectFolder(nameof(GenerateDirectoryGetFilesProgram));
 		using var program = new Type(package,
-			new TypeLines(nameof(GenerateDirectoryGetFilesProgram), "has App", "has logger", "Run",
-				"\tconstant directory = (\"Program.cs\")", "\tfor directory",
-				"\t\tlogger.Log(index)")).ParseMembersAndMethods(parser);
+				new TypeLines(nameof(GenerateDirectoryGetFilesProgram), "has App", "has logger", "Run",
+					"\tconstant directory = (\"Program.cs\")", "\tfor directory", "\t\tlogger.Log(index)")).
+			ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(projectFolder, generatedCode),
 			Is.EqualTo("Program.cs" + Environment.NewLine));
@@ -190,8 +187,8 @@ public class Program
 			await File.WriteAllTextAsync(outputFilePath, generatedCode);
 		}
 		Assert.That(generatedCode,
-			Is.EqualTo(string.Join(Environment.NewLine,
-				await File.ReadAllLinesAsync(outputFilePath))), generatedCode);
+			Is.EqualTo(string.Join(Environment.NewLine, await File.ReadAllLinesAsync(outputFilePath))),
+			generatedCode);
 	}
 
 	private async Task<Type>
@@ -240,8 +237,7 @@ public class Program
 		using var register = await ReadStrictFileAndCreateType("Register", TestPackage.Instance);
 		using var instructionType =
 			await ReadStrictFileAndCreateType("InstructionType", TestPackage.Instance);
-		using var instruction =
-			await ReadStrictFileAndCreateType("Instruction", TestPackage.Instance);
+		using var instruction = await ReadStrictFileAndCreateType("Instruction", TestPackage.Instance);
 		await GenerateCSharpByReadingStrictProgramAndCompareWithOutput(nameof(ExecuteOperation),
 			TestPackage.Instance);
 	}

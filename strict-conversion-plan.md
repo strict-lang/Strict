@@ -12,6 +12,34 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
+## Verified checkpoint — 2026-10-08
+
+The conversion is **not functionally complete**. Parallel Strict implementations exist, but
+many are line-level subsets. No production C# layer has been replaced; native I/O alone will
+not bring all ten phases to 100%. File-count completion is not self-hosting completion.
+
+- Restored directory entry points: `Examples/BaseTypesTest` resolves its same-named source
+  file and loads sibling types through the existing package loader (including trailing slash).
+- Fixed standalone bytecode execution of this package: preserve generic List identity,
+  initialize intrinsic Any before generic reconstruction, bind constructor arguments by
+  serialized parameter names, and restore collection/text member scopes from stored values.
+- `RunBaseTypesTestPackageFromDirectory` covers both directory spellings and launches a fresh
+  process for `.strictbinary` execution. Fresh-process checking caught an Any lookup failure
+  hidden by shared parser caches in the test process.
+- Verified `Language/Parser.strict Examples/HelloLogger.strict`: file read and console output
+  work under the bootstrap VM; Members contains logger and Methods contains Run.
+- Resolved LanguageServer notification merge remnants: use required constructor arguments,
+  remove unused duplicate notification helpers, retain extended payload fields and TestState.
+  All 44 LanguageServer tests passed; no unresolved Git entries remained after resolution.
+- No new Strict files or replaced C# files in this checkpoint. Phase 0 still needs explicit
+  base-type assertions; its greeting/arithmetic/list smoke test is not full base-type coverage.
+
+Next: verify native Directory/File behavior in both interpreter and VM, then implement local
+package loading in Strict. `Language/Package.strict` currently only declares Name/Children.
+Full AST parsing, evaluator/codegen parity, binary serialization, and pipeline integration
+remain substantive work after the base features; async/HTTP/reflection remain deferred.
+
+---
 ## Architecture Overview (10 phases, bottom to top)
 
 | # | C# Project | Purpose | C# Files | C# Lines | Test Methods |
@@ -505,22 +533,25 @@ This is the execution engine — the capstone of the self-hosting effort.
 
 ## Overall Progress Dashboard
 
-| Phase | Project | C# Files | Target `.strict` Files | Actual `.strict` Files | Tests Written | C# % Done |
-|-------|---------|----------|------------------------|------------------------|---------------|-----------|
-| 0 | Base Types (verification) | 0 | 0 (already `.strict`) | 2 (BaseTypesTest) | 1 | 0% |
-| 1 | `Strict.Language` | 32 | 22 | 20 (Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator, TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, Method, Context, Package, Type, Body) | 28 | 27% |
-| 2 | `Strict.Expressions` | 29 | 29 | **32** (AST + Parser + NumberChars + demo) | ~140 + 6 C# | **~40%** |
-| 3 | `Strict.Validators` | 3 | 3 | **6** | ~4 C# + inline | **~40%** |
-| 4 | `Strict.TestRunner` | 1 | 1 | **7** | ~4 C# + inline | **~40%** |
-| 5 | `Strict.HighLevelRuntime` | 11 | 11 | **21** | ~7 C# + demos | **~35%** |
-| 6 | `Strict.Bytecode` | 37 | 37 | **30** | 8 demos + 8 C# | **~40%** |
-| 7 | `Strict.Optimizers` | 9 | 9 | **19** | 6 demos + 6 C# | **~40%** |
-| 8 | `Strict` (VM + Runner) | 6 | 6 | **17** | 5 demos + 6 C# | **~35%** |
-| 9 | `Strict.Compiler(.Assembly)` | 5 | 5 | **17** | 4 demos + 6 C# | **~35%** |
-| **Total** | | **133** | **123** | **51** (2 BaseTypesTest + 20 Language + 29 Expressions) | **28** | **12%** |
+Counts verified on 2026-10-08. Counts include demos/tests and exclude root base types;
+Language's root Method.strict is also excluded. Earlier totals of 51 files and 12% were stale.
+The percentage below measures production C# replacement, not existence of parallel files.
+
+| Phase | Project | Actual `.strict` Files | Current scope | C# replaced |
+|-------|---------|------------------------|---------------|-------------|
+| 0 | Base types verification | 2 | Package smoke test restored; full coverage pending | N/A |
+| 1 | Language | 21 | Partial parsing; Package is data only; repository loader pending | 0% |
+| 2 | Expressions | 33 | AST models, classifier/tokenizer subset | 0% |
+| 3 | Validators | 6 | Line-level validation subset | 0% |
+| 4 | TestRunner | 7 | Simple assertion evaluator | 0% |
+| 5 | HighLevelRuntime | 21 | Line-level evaluator subset | 0% |
+| 6 | Bytecode | 30 | Line-level generation; ZIP serialization pending | 0% |
+| 7 | Optimizers | 19 | Simplified instruction passes | 0% |
+| 8 | Runtime | 17 | Partial VM; production orchestration remains C# | 0% |
+| 9 | Compiler | 19 | NASM subset and tool invocation | 0% |
+| **Total** | | **175** | **No phase verified fully self-hosted** | **0%** |
 
 ---
-
 ## Missing Runtime Features Tracker
 
 These C# / .NET features need to be added to the Strict runtime before each phase can proceed.

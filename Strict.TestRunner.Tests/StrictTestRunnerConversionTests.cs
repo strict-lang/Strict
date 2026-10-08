@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using Strict.Language.Tests;
 
 namespace Strict.TestRunner.Tests;
 
@@ -14,10 +13,10 @@ public sealed class StrictTestRunnerConversionTests
 	{
 		var path = GetTestRunnerPath();
 		foreach (var typeName in new[]
-		{
-			"TestStatistics", "TestResult", "Assertion", "MethodUnderTest", "TypeUnderTest",
-			"TestInterpreter"
-		})
+			{
+				"TestStatistics", "TestResult", "Assertion", "MethodUnderTest", "TypeUnderTest",
+				"TestInterpreter"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 

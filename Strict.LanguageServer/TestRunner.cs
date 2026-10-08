@@ -7,10 +7,11 @@ using Strict.Language;
 namespace Strict.LanguageServer;
 
 //ncrunch: no coverage start
-public sealed class TestRunner(Package package, ILanguageServerFacade? languageServer,
-	IEnumerable<Method> methods, DocumentUri? documentUri = null,
-	ICollection<TestNotificationMessage>? sink = null) : RunnerService(package),
-	RunnableService
+public sealed class TestRunner(Package package,
+	ILanguageServerFacade? languageServer,
+	IEnumerable<Method> methods,
+	DocumentUri? documentUri = null,
+	ICollection<TestNotificationMessage>? sink = null) : RunnerService(package), RunnableService
 {
 	private IEnumerable<Method> Methods { get; } = methods;
 	private readonly string? uri = documentUri?.ToString();
@@ -55,8 +56,7 @@ public sealed class TestRunner(Package package, ILanguageServerFacade? languageS
 			{
 				if (!seenFailed && test.ToString() == failedText)
 				{
-					Notify(test, method, TestState.Red, failed.Message, failed.Details, durationMs,
-						stack);
+					Notify(test, method, TestState.Red, failed.Message, failed.Details, durationMs, stack);
 					seenFailed = true;
 					continue;
 				}

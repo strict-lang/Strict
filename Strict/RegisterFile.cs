@@ -1,5 +1,6 @@
 using Strict.Bytecode;
 using Strict.Expressions;
+using Strict.Language;
 
 namespace Strict;
 
@@ -16,18 +17,16 @@ public sealed class RegisterFile
 		{
 			var value = data[(int)r];
 #if DEBUG
-			if (Language.PerformanceLog.IsEnabled)
-				Language.PerformanceLog.Write("RegisterFile.get",
-					"register=" + r + ", value=" + Describe(value));
+			if (PerformanceLog.IsEnabled)
+				PerformanceLog.Write("RegisterFile.get", "register=" + r + ", value=" + Describe(value));
 #endif
 			return value;
 		}
 		set
 		{
 #if DEBUG
-			if (Language.PerformanceLog.IsEnabled)
-				Language.PerformanceLog.Write("RegisterFile.set",
-					"register=" + r + ", value=" + Describe(value));
+			if (PerformanceLog.IsEnabled)
+				PerformanceLog.Write("RegisterFile.set", "register=" + r + ", value=" + Describe(value));
 #endif
 			data[(int)r] = value;
 		}
@@ -40,9 +39,8 @@ public sealed class RegisterFile
 	{
 		value = data[(int)r];
 #if DEBUG
-		if (Language.PerformanceLog.IsEnabled)
-			Language.PerformanceLog.Write("RegisterFile.TryGet",
-				"register=" + r + ", value=" + Describe(value));
+		if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("RegisterFile.TryGet", "register=" + r + ", value=" + Describe(value));
 #endif
 		return value.HasValue;
 	}
@@ -50,9 +48,8 @@ public sealed class RegisterFile
 	public void SaveTo(ValueInstance[] snapshot)
 	{
 #if DEBUG
-		if (Language.PerformanceLog.IsEnabled)
-			Language.PerformanceLog.Write("RegisterFile.SaveTo",
-				"snapshotLength=" + snapshot.Length);
+		if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("RegisterFile.SaveTo", "snapshotLength=" + snapshot.Length);
 #endif
 		Array.Copy(data, snapshot, Math.Min(data.Length, snapshot.Length));
 	}
@@ -60,9 +57,8 @@ public sealed class RegisterFile
 	public void RestoreFrom(ValueInstance[] snapshot)
 	{
 #if DEBUG
-		if (Language.PerformanceLog.IsEnabled)
-			Language.PerformanceLog.Write("RegisterFile.RestoreFrom",
-				"snapshotLength=" + snapshot.Length);
+		if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("RegisterFile.RestoreFrom", "snapshotLength=" + snapshot.Length);
 #endif
 		Array.Copy(snapshot, data, Math.Min(data.Length, snapshot.Length));
 	}
@@ -70,9 +66,8 @@ public sealed class RegisterFile
 	public void Clear()
 	{
 #if DEBUG
-		if (Language.PerformanceLog.IsEnabled)
-			Language.PerformanceLog.Write("RegisterFile.Clear",
-				"registerCount=" + Registers.Count);
+		if (PerformanceLog.IsEnabled)
+			PerformanceLog.Write("RegisterFile.Clear", "registerCount=" + Registers.Count);
 #endif
 		Array.Clear(data, 0, data.Length);
 	}
@@ -84,8 +79,7 @@ public sealed class RegisterFile
 		if (value.IsText)
 			return "Text(length=" + value.Text.Length + ")";
 		if (value.IsList)
-			return "List(type=" + value.List.ReturnType.Name + ", count=" + value.List.Items.Count +
-				")";
+			return "List(type=" + value.List.ReturnType.Name + ", count=" + value.List.Items.Count + ")";
 		if (value.IsDictionary)
 			return "Dictionary(count=" + value.GetDictionaryItems().Count + ")";
 		var typeInstance = value.TryGetValueTypeInstance();

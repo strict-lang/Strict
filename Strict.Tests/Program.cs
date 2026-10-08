@@ -12,12 +12,11 @@ internal class Program
 	private static async Task RunSimpleCalculator()
 	{
 		var binaryFilePath = Path.ChangeExtension(
-			Path.Combine(GetExamplesFolder(), "SimpleCalculator.strict"),
-			BinaryExecutable.Extension);
+			Path.Combine(GetExamplesFolder(), "SimpleCalculator.strict"), BinaryExecutable.Extension);
 		// First, ensure the .strictbinary file exists by compiling from source
 		if (!File.Exists(binaryFilePath))
-			await new Runner(Path.Combine(AppContext.BaseDirectory, "Examples",
-				"SimpleCalculator.strict")).Run();
+			await new Runner(
+				Path.Combine(AppContext.BaseDirectory, "Examples", "SimpleCalculator.strict")).Run();
 		// Warm up: one full binary execution to JIT and cache everything (also populates the binary cache)
 		await RunBinaryOnce(binaryFilePath);
 		Console.WriteLine("Warmup complete. Starting performance measurement...");
@@ -53,7 +52,8 @@ internal class Program
 
 	private static string GetExamplesFolder()
 	{
-		var path = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Examples"));
+		var path = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..",
+			"..", "..", "Examples"));
 		return Directory.Exists(path)
 			? path
 			: @"c:\code\GitHub\strict-lang\Strict\Examples";

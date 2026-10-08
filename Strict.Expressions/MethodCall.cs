@@ -12,9 +12,10 @@ namespace Strict.Expressions;
 /// </summary>
 public class MethodCall : ConcreteExpression
 {
-	public MethodCall(Method method, Expression? instance = null, IReadOnlyList<Expression>? arguments = null,
-		Type? toReturnType = null, int lineNumber = 0, int? argumentsToShowCount = null) :
-		base(GetMethodReturnType(method, toReturnType, instance), lineNumber, method.ReturnType.IsMutable)
+	public MethodCall(Method method, Expression? instance = null,
+		IReadOnlyList<Expression>? arguments = null, Type? toReturnType = null, int lineNumber = 0,
+		int? argumentsToShowCount = null) : base(GetMethodReturnType(method, toReturnType, instance),
+		lineNumber, method.ReturnType.IsMutable)
 	{
 		if (method.Name == Method.From && instance != null)
 			throw new CannotCallFromConstructorWithExistingInstance(); //ncrunch: no coverage
@@ -56,9 +57,10 @@ public class MethodCall : ConcreteExpression
 			type is GenericTypeImplementation { Generic.Name: Type.List }) && !type.IsGeneric;
 
 	private static bool IsGenericListShape(Type type) =>
-		type is GenericType { Generic.Name: Type.List } ||
-		type is GenericTypeImplementation { Generic.Name: Type.List, IsGeneric: true } ||
-		type.IsList && type.IsGeneric;
+		type is GenericType { Generic.Name: Type.List } || type is GenericTypeImplementation
+		{
+			Generic.Name: Type.List, IsGeneric: true
+		} || (type.IsList && type.IsGeneric);
 
 	public Method Method { get; }
 	public Expression? Instance { get; }
@@ -79,15 +81,17 @@ public class MethodCall : ConcreteExpression
 	protected string AddNestedBracketsIfNeeded(Expression child, int addPrecedenceForNot = 0) =>
 		ShouldKeepUnwrappedIsNotComparison(child)
 			? child.ToString()
-			: child is MethodCall binaryOrUnary &&
-			BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
-			BinaryOperator.GetPrecedence(Method.Name) + addPrecedenceForNot || child is If
+			: (child is MethodCall binaryOrUnary &&
+				BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
+				BinaryOperator.GetPrecedence(Method.Name) + addPrecedenceForNot) || child is If
 				? $"({child})"
 				: child.ToString();
 
 	private bool ShouldKeepUnwrappedIsNotComparison(Expression child) =>
-		Method.Name is BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor &&
-		child is Not { Instance: Binary { Method.Name: BinaryOperator.Is or BinaryOperator.In } };
+		Method.Name is BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor && child is Not
+		{
+			Instance: Binary { Method.Name: BinaryOperator.Is or BinaryOperator.In }
+		};
 
 	// ReSharper disable once TooManyArguments
 	public static Expression? TryParse(Expression? instance, Body body,
@@ -99,10 +103,9 @@ public class MethodCall : ConcreteExpression
 		try
 		{
 			method = type.FindMethod(inputAsString, arguments,
-				GetCallText(instance, inputAsString, arguments)) ??
-				(type == body.Method.Type
-					? FindPrivateMethod(type, inputAsString, arguments)
-					: null);
+				GetCallText(instance, inputAsString, arguments)) ?? (type == body.Method.Type
+				? FindPrivateMethod(type, inputAsString, arguments)
+				: null);
 		}
 		catch (Type.GenericTypesCannotBeUsedDirectlyUseImplementation exception)
 		{
@@ -114,8 +117,8 @@ public class MethodCall : ConcreteExpression
 		if (method == null)
 			return null;
 		var normalizedArguments = NormalizeListArguments(body, method, arguments);
-		return new MethodCall(method, instance, normalizedArguments,
-			null, body.CurrentFileLineNumber, normalizedArguments.Count == arguments.Count
+		return new MethodCall(method, instance, normalizedArguments, null, body.CurrentFileLineNumber,
+			normalizedArguments.Count == arguments.Count
 				? null
 				: arguments.Count);
 	}
@@ -134,7 +137,7 @@ public class MethodCall : ConcreteExpression
 	private static Method? TryFindMethodOnCurrentGenericType(Body body, Type type,
 		Expression? instance, string inputAsString, IReadOnlyList<Expression> arguments) =>
 		!type.IsGeneric || type is GenericTypeImplementation ||
-		type != body.Method.Type && instance?.ReturnType != type
+		(type != body.Method.Type && instance?.ReturnType != type)
 			? null
 			: FindPrivateMethod(type, inputAsString, arguments);
 
@@ -143,12 +146,10 @@ public class MethodCall : ConcreteExpression
 	{
 		var context = body.Method.Type + "." + body.Method.Name + " at line " +
 			(body.CurrentFileLineNumber + 1) + ", source: " + body.CurrentLine.Trim() +
-			", lookup instance: " + (instance?.ToString() ?? "none") +
-			", lookup method: " + inputAsString +
-			", lookup arguments: " + (arguments.Count == 0
+			", lookup instance: " + (instance?.ToString() ?? "none") + ", lookup method: " +
+			inputAsString + ", lookup arguments: " + (arguments.Count == 0
 				? "none"
-				: string.Join(", ", arguments.Select(argument =>
-					argument + " => " + argument.ReturnType)));
+				: string.Join(", ", arguments.Select(argument => argument + " => " + argument.ReturnType)));
 		var line = body.CurrentLine.Trim();
 		var plusIndex = line.IndexOf(" + ", StringComparison.Ordinal);
 		var isIndex = line.IndexOf(" is ", StringComparison.Ordinal);
@@ -159,8 +160,8 @@ public class MethodCall : ConcreteExpression
 			var plusInstance = body.Method.ParseExpression(body, line.AsSpan(0, plusIndex));
 			var plusArgument = body.Method.ParseExpression(body,
 				line.AsSpan(plusIndex + 3, isIndex - plusIndex - 3));
-			return context + ", + instance type: " + plusInstance.ReturnType +
-				", + argument[0] type: " + plusArgument.ReturnType;
+			return context + ", + instance type: " + plusInstance.ReturnType + ", + argument[0] type: " +
+				plusArgument.ReturnType;
 		}
 		catch (ParsingFailed)
 		{
@@ -321,14 +322,15 @@ public class MethodCall : ConcreteExpression
 		if (arguments.Count == 0)
 			return
 			[
-				new Value(body.Method.GetType(nameof(Type.Name)),
-					basedOnErrorVariable?.ToString() ?? (fromType.IsError
+				new Value(body.Method.GetType(nameof(Type.Name)), basedOnErrorVariable?.ToString() ??
+					(fromType.IsError
 						? body.CurrentDeclarationNameForErrorText ?? body.Method.Name
 						: fromType.Name)),
 				CreateListFromMethodCall(body, Type.Stacktrace, CreateStacktraces(body))
 			];
 		if (arguments.Count > 1)
-			throw new Type.ArgumentsDoNotMatchMethodParameters(arguments, fromType, fromType.Methods); //ncrunch: no coverage
+			throw new Type.ArgumentsDoNotMatchMethodParameters(arguments, fromType,
+				fromType.Methods); //ncrunch: no coverage
 		if (basedOnErrorVariable != null)
 		{
 			fromType = fromType.GetType(Type.ErrorWithValue).
@@ -350,7 +352,8 @@ public class MethodCall : ConcreteExpression
 	private static IReadOnlyList<Expression> NormalizeTypeArguments(Body body, Type fromType,
 		IReadOnlyList<Expression> arguments) =>
 		fromType.Name == nameof(Type) && HasPackageMember(fromType) && arguments.Count == 1
-			? [
+			?
+			[
 				arguments[0].ReturnType.IsText
 					? new Value(body.Method.GetType(nameof(Type.Name)), ((Value)arguments[0]).Data)
 					: arguments[0],
@@ -366,8 +369,7 @@ public class MethodCall : ConcreteExpression
 		CreateFromMethodCall(body,
 			body.Method.GetListImplementationType(body.Method.GetType(listElementTypeName)), arguments);
 
-	private static IReadOnlyList<Expression> CreateStacktraces(Body body) =>
-		[CreateStacktrace(body)];
+	private static IReadOnlyList<Expression> CreateStacktraces(Body body) => [CreateStacktrace(body)];
 
 	private static Expression CreateStacktrace(Body body) =>
 		CreateFromMethodCall(body, body.Method.GetType(Type.Stacktrace), [
@@ -383,13 +385,13 @@ public class MethodCall : ConcreteExpression
 	private static bool
 		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>
 		arguments.Count is 1 && (fromType == arguments[0].ReturnType ||
-			arguments[0].ReturnType is GenericTypeImplementation genericType &&
-			fromType == genericType.Generic);
+			(arguments[0].ReturnType is GenericTypeImplementation genericType &&
+				fromType == genericType.Generic));
 
 	public sealed class ConstructorForSameTypeArgumentIsNotAllowed(Body body,
-		IReadOnlyList<Expression> arguments, Type fromType) : ParsingFailed(body,
-		"Don't construct this type " + fromType + " with itself, arguments: " +
-		arguments.ToBrackets());
+		IReadOnlyList<Expression> arguments,
+		Type fromType) : ParsingFailed(body,
+		"Don't construct this type " + fromType + " with itself, arguments: " + arguments.ToBrackets());
 
 	public override string ToString() =>
 		Instance is not null && Instance.ToString() != Type.ValueLowercase
@@ -401,15 +403,21 @@ public class MethodCall : ConcreteExpression
 				: ReturnType.IsError
 					? FormatErrorConstructor()
 					: Method.Name == Method.From &&
-         Arguments is [MethodCall { Method.Name: Method.From } nestedFromArgument] &&
+					Arguments is [MethodCall { Method.Name: Method.From } nestedFromArgument] &&
 					Method.Parameters.Count == 1 && Method.Parameters[0].Type == nestedFromArgument.ReturnType
 						? $"{GetProperMethodNameWithFromSupport()}{nestedFromArgument.Arguments.ToBrackets()}"
-						: Method.Name == Method.From &&
-					ReturnType is GenericTypeImplementation { Generic.Name: Type.Dictionary }
-						? FormatDictionaryConstructor()
-						: Method.Name == Method.From && IsAutoWrappedListArgument()
-							? $"{GetProperMethodNameWithFromSupport()}({string.Join(", ", ((List)Arguments[0]).Values)})"
-						: $"{GetProperMethodNameWithFromSupport()}{DisplayArguments.ToBrackets()}";
+						: Method.Name == Method.From && ReturnType is GenericTypeImplementation
+						{
+							Generic.Name: Type.Dictionary
+						}
+							? FormatDictionaryConstructor()
+							: Method.Name == Method.From && IsAutoWrappedListArgument()
+								? $"{
+									GetProperMethodNameWithFromSupport()
+								}({
+									string.Join(", ", ((List)Arguments[0]).Values)
+								})"
+								: $"{GetProperMethodNameWithFromSupport()}{DisplayArguments.ToBrackets()}";
 
 	private IReadOnlyList<Expression> DisplayArguments =>
 		argumentsToShowCount == null
@@ -428,10 +436,8 @@ public class MethodCall : ConcreteExpression
 	}
 
 	private bool IsAutoWrappedListArgument() =>
-		Arguments is [List { Values.Count: > 1 }] &&
-		Method.Parameters.Count == 1 &&
-		Method.Parameters[0].Type.IsList &&
-		!ReturnType.IsList;
+		Arguments is [List { Values.Count: > 1 }] && Method.Parameters.Count == 1 &&
+		Method.Parameters[0].Type.IsList && !ReturnType.IsList;
 
 	private string GetProperMethodNameWithFromSupport() =>
 		Method.Name == Method.From
@@ -441,10 +447,9 @@ public class MethodCall : ConcreteExpression
 			: Method.Name;
 
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		other is MethodCall mc && other.GetType() == GetType() &&
-		Method.IsSameMethodNameReturnTypeAndParameters(mc.Method) &&
-		Equals(Instance, mc.Instance) && ArgumentsEqual(mc.Arguments);
+		ReferenceEquals(this, other) || (other is MethodCall mc && other.GetType() == GetType() &&
+			Method.IsSameMethodNameReturnTypeAndParameters(mc.Method) && Equals(Instance, mc.Instance) &&
+			ArgumentsEqual(mc.Arguments));
 
 	private bool ArgumentsEqual(IReadOnlyList<Expression> otherArguments)
 	{
@@ -466,7 +471,6 @@ public class MethodCall : ConcreteExpression
 			: throw new InvalidDictionaryArgumentsForFormatting(Method, Arguments);
 
 	private sealed class InvalidDictionaryArgumentsForFormatting(Method method,
-		IReadOnlyList<Expression> arguments)
-		: ParsingFailed(method.Type, method.TypeLineNumber,
-			"Invalid Dictionary arguments: " + arguments.ToBrackets(), method.ToString());
+		IReadOnlyList<Expression> arguments) : ParsingFailed(method.Type, method.TypeLineNumber,
+		"Invalid Dictionary arguments: " + arguments.ToBrackets(), method.ToString());
 }

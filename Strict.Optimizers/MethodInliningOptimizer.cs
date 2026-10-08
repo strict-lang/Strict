@@ -1,3 +1,4 @@
+using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Language;
@@ -6,7 +7,7 @@ namespace Strict.Optimizers;
 
 public sealed class MethodInliningOptimizer : InstructionOptimizer
 {
-	public override void Optimize(Bytecode.BinaryExecutable binary)
+	public override void Optimize(BinaryExecutable binary)
 	{
 		foreach (var typeEntry in binary.MethodsPerType)
 		foreach (var methodGroup in typeEntry.Value.MethodGroups.Values)
@@ -17,9 +18,8 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 
 	public override List<Instruction> Optimize(List<Instruction> instructions) => instructions;
 
-	private List<Instruction> InlineInstructions(Bytecode.BinaryExecutable binary,
-		string currentTypeName, string currentMethodName, List<Instruction> instructions,
-		HashSet<string>? beingInlined = null)
+	private List<Instruction> InlineInstructions(BinaryExecutable binary, string currentTypeName,
+		string currentMethodName, List<Instruction> instructions, HashSet<string>? beingInlined = null)
 	{
 		var optimized = new List<Instruction>(instructions.Count);
 		foreach (var instruction in instructions)
@@ -31,9 +31,8 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		return optimized;
 	}
 
-	private bool TryInline(Bytecode.BinaryExecutable binary, string currentTypeName,
-		string currentMethodName, Invoke invoke, out List<Instruction> inlinedInstructions,
-		HashSet<string> beingInlined)
+	private bool TryInline(BinaryExecutable binary, string currentTypeName, string currentMethodName,
+		Invoke invoke, out List<Instruction> inlinedInstructions, HashSet<string> beingInlined)
 	{
 		inlinedInstructions = [];
 		if (!CanInline(binary, currentTypeName, currentMethodName, invoke))
@@ -48,12 +47,11 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		beingInlined.Remove(compiledMethod.Name);
 		if (!IsInlineBlock(recursivelyInlinedInstructions))
 			return false;
-		inlinedInstructions = RemapInstructions(recursivelyInlinedInstructions, compiledMethod,
-			invoke);
+		inlinedInstructions = RemapInstructions(recursivelyInlinedInstructions, compiledMethod, invoke);
 		return inlinedInstructions.Count > 0;
 	}
 
-	private static bool CanInline(Bytecode.BinaryExecutable binary, string currentTypeName,
+	private static bool CanInline(BinaryExecutable binary, string currentTypeName,
 		string currentMethodName, Invoke invoke)
 	{
 		if (invoke.MethodInfo.InstanceRegister.HasValue ||
@@ -71,8 +69,8 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		invokedTypeFullName.EndsWith(Context.ParentSeparator + currentTypeName,
 			StringComparison.Ordinal);
 
-	private static BinaryMethod? FindCompiledMethod(Bytecode.BinaryExecutable binary,
-		string currentTypeName, InvokeMethodInfo methodInfo)
+	private static BinaryMethod? FindCompiledMethod(BinaryExecutable binary, string currentTypeName,
+		InvokeMethodInfo methodInfo)
 	{
 		if (binary.MethodsPerType.TryGetValue(currentTypeName, out var typeData) &&
 			typeData.MethodGroups.TryGetValue(methodInfo.MethodName, out var overloads))
@@ -97,24 +95,18 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		BinaryMethod compiledMethod, Invoke invoke)
 	{
 		var returnRegister = ((ReturnInstruction)instructions[^1]).Register;
-		var registerMap = new Dictionary<Bytecode.Register, Bytecode.Register>
-		{
-			[returnRegister] = invoke.Register
-		};
+		var registerMap = new Dictionary<Register, Register> { [returnRegister] = invoke.Register };
 		if (!TryMapParameterRegisters(instructions, compiledMethod, invoke, returnRegister,
 			registerMap))
 			return [];
-		var nextRegister = ((int)invoke.Register + 1) %
-			Enum.GetValues<Bytecode.Register>().Length;
+		var nextRegister = ((int)invoke.Register + 1) % Enum.GetValues<Register>().Length;
 		foreach (var register in instructions.SelectMany(GetRegisters))
 			if (!registerMap.ContainsKey(register))
 			{
-				while (RegisterMapContainsValue(registerMap, (Bytecode.Register)nextRegister))
-					nextRegister = (nextRegister + 1) %
-						Enum.GetValues<Bytecode.Register>().Length;
-				registerMap[register] = (Bytecode.Register)nextRegister;
-				nextRegister = (nextRegister + 1) %
-					Enum.GetValues<Bytecode.Register>().Length;
+				while (RegisterMapContainsValue(registerMap, (Register)nextRegister))
+					nextRegister = (nextRegister + 1) % Enum.GetValues<Register>().Length;
+				registerMap[register] = (Register)nextRegister;
+				nextRegister = (nextRegister + 1) % Enum.GetValues<Register>().Length;
 			}
 		var remapped = new List<Instruction>(instructions.Count - 1);
 		for (var index = 0; index < instructions.Count - 1; index++)
@@ -128,8 +120,8 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 	}
 
 	private static bool TryMapParameterRegisters(IReadOnlyList<Instruction> instructions,
-		BinaryMethod compiledMethod, Invoke invoke, Bytecode.Register returnRegister,
-		IDictionary<Bytecode.Register, Bytecode.Register> registerMap)
+		BinaryMethod compiledMethod, Invoke invoke, Register returnRegister,
+		IDictionary<Register, Register> registerMap)
 	{
 		for (var index = 0; index < instructions.Count - 1; index++)
 			switch (instructions[index])
@@ -143,7 +135,9 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 					registerMap[loadVariable.Register] = argumentRegister;
 				}
 				else if (UsesParameterAccessPath(compiledMethod, loadVariable.Identifier))
+				{
 					return false;
+				}
 				break;
 			case ListCallInstruction listCall when UsesParameterAccessPath(compiledMethod,
 				listCall.Identifier):
@@ -171,12 +165,11 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		return false;
 	}
 
-	private static bool RegisterMapContainsValue(
-		IReadOnlyDictionary<Bytecode.Register, Bytecode.Register> registerMap,
-		Bytecode.Register register) =>
+	private static bool RegisterMapContainsValue(IReadOnlyDictionary<Register, Register> registerMap,
+		Register register) =>
 		registerMap.Any(pair => pair.Value == register);
 
-	private static IEnumerable<Bytecode.Register> GetRegisters(Instruction instruction) =>
+	private static IEnumerable<Register> GetRegisters(Instruction instruction) =>
 		instruction switch
 		{
 			ListCallInstruction listCall => [listCall.Register, listCall.IndexValueRegister],
@@ -186,7 +179,7 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 		};
 
 	private static Instruction Clone(Instruction instruction,
-		IReadOnlyDictionary<Bytecode.Register, Bytecode.Register> registerMap) =>
+		IReadOnlyDictionary<Register, Register> registerMap) =>
 		instruction switch
 		{
 			LoadVariableToRegister loadVariable => new LoadVariableToRegister(
@@ -197,15 +190,13 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 				binary.Registers.Select(register => registerMap[register]).ToArray()),
 			ListCallInstruction listCall => new ListCallInstruction(registerMap[listCall.Register],
 				registerMap[listCall.IndexValueRegister], listCall.Identifier),
-			Invoke nestedInvoke => new Invoke(registerMap[nestedInvoke.Register],
-				new InvokeMethodInfo(nestedInvoke.MethodInfo.TypeFullName,
-					nestedInvoke.MethodInfo.MethodName,
-					nestedInvoke.MethodInfo.ParameterNames,
-					nestedInvoke.MethodInfo.ReturnTypeName,
-					nestedInvoke.MethodInfo.ArgumentRegisters.Select(register => registerMap[register]).ToArray(),
-					nestedInvoke.MethodInfo.InstanceRegister.HasValue
-						? registerMap[nestedInvoke.MethodInfo.InstanceRegister.Value]
-						: null)),
+			Invoke nestedInvoke => new Invoke(registerMap[nestedInvoke.Register], new InvokeMethodInfo(
+				nestedInvoke.MethodInfo.TypeFullName, nestedInvoke.MethodInfo.MethodName,
+				nestedInvoke.MethodInfo.ParameterNames, nestedInvoke.MethodInfo.ReturnTypeName,
+				nestedInvoke.MethodInfo.ArgumentRegisters.Select(register => registerMap[register]).
+					ToArray(), nestedInvoke.MethodInfo.InstanceRegister.HasValue
+					? registerMap[nestedInvoke.MethodInfo.InstanceRegister.Value]
+					: null)),
 			SetInstruction set => new SetInstruction(set.ValueInstance, registerMap[set.Register]),
 			_ => instruction
 		};

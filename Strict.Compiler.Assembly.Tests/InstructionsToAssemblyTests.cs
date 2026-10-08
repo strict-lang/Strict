@@ -1,4 +1,3 @@
-using NUnit.Framework;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
@@ -41,8 +40,7 @@ public sealed class InstructionsToAssemblyTests
 	public void FunctionHasTextSectionAndEpilogue()
 	{
 		var method = CreateSingleMethod("FunctionFrameType", "has dummy Number",
-			"Sum(first Number, second Number) Number", "\tlet result = first + second",
-			"\tresult + 1");
+			"Sum(first Number, second Number) Number", "\tlet result = first + second", "\tresult + 1");
 		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("section .text"));
 		Assert.That(assembly, Does.Contain("push rbp"));
@@ -68,8 +66,7 @@ public sealed class InstructionsToAssemblyTests
 	public void FunctionWithLocalVariableHasTextSectionAndEpilogue()
 	{
 		var method = CreateSingleMethod("LocalFrameType", "has dummy Number",
-			"Sum(first Number, second Number) Number", "\tlet result = first + second",
-			"\tresult + 1");
+			"Sum(first Number, second Number) Number", "\tlet result = first + second", "\tresult + 1");
 		var assembly = CompileMethod(method);
 		Assert.That(assembly, Does.Contain("section .text"));
 		Assert.That(assembly, Does.Contain("push rbp"));
@@ -416,8 +413,7 @@ public sealed class InstructionsToAssemblyTests
 			new ReturnInstruction(Register.R0)
 		};
 		var assembly = Compile(instructions, Platform.Windows);
-		Assert.That(assembly, Does.Contain("sub rsp, 32"),
-			"Windows ABI requires 32-byte shadow space");
+		Assert.That(assembly, Does.Contain("sub rsp, 32"), "Windows ABI requires 32-byte shadow space");
 		Assert.That(assembly, Does.Contain("add rsp, 32"));
 	}
 
@@ -491,12 +487,11 @@ public sealed class InstructionsToAssemblyTests
 	[Test]
 	public void CompileForPlatformSupportsInvokeWithPrecompiledMethodBytecode()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("InvokeCompileType",
-			"has dummy Number",
-			"Add(first Number, second Number) Number",
-			"\tfirst + second",
-			"Run Number",
-			"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type =
+			new Type(TestPackage.Instance,
+				new TypeLines("InvokeCompileType", "has dummy Number",
+					"Add(first Number, second Number) Number", "\tfirst + second", "Run Number",
+					"\tAdd(2, 3)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var assembly = Compile(binary, Platform.Windows);
@@ -506,18 +501,12 @@ public sealed class InstructionsToAssemblyTests
 	[Test]
 	public void CompileForPlatformSupportsSimpleCalculatorStyleConstructorAndInstanceMethodCalls()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("AssemblySimpleCalculator",
-			"has first Number",
-			"has second Number",
-			"Add Number",
-			"\tfirst + second",
-			"Multiply Number",
-			"\tfirst * second",
-			"Run Number",
-			"\tconstant calc = AssemblySimpleCalculator(2, 3)",
-			"\tconstant added = calc.Add",
-			"\tconstant multiplied = calc.Multiply",
-			"\tadded + multiplied")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+				new TypeLines("AssemblySimpleCalculator", "has first Number", "has second Number",
+					"Add Number", "\tfirst + second", "Multiply Number", "\tfirst * second", "Run Number",
+					"\tconstant calc = AssemblySimpleCalculator(2, 3)", "\tconstant added = calc.Add",
+					"\tconstant multiplied = calc.Multiply", "\tadded + multiplied")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var assembly = Compile(binary, Platform.Linux);
@@ -568,14 +557,10 @@ public sealed class InstructionsToAssemblyTests
 	[Test]
 	public void PlatformCompiledMemberCallsDoNotEmitDeadXmmInitialization()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("DeadRegisterInitType",
-			"has first Number",
-			"has second Number",
-			"Add Number",
-			"\tfirst + second",
-			"Run Number",
-			"\tconstant calc = DeadRegisterInitType(2, 3)",
-			"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+			new TypeLines("DeadRegisterInitType", "has first Number", "has second Number", "Add Number",
+				"\tfirst + second", "Run Number", "\tconstant calc = DeadRegisterInitType(2, 3)",
+				"\tcalc.Add")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var assembly = Compile(binary, Platform.Linux);
@@ -595,10 +580,8 @@ public sealed class InstructionsToAssemblyTests
 		};
 		var assembly = Compile(instructions, Platform.Windows);
 		Assert.That(assembly, Does.Contain("print_number_from_xmm:"));
-		Assert.That(assembly.Split("call print_number_from_xmm").Length - 1,
-			Is.EqualTo(2));
-		Assert.That(assembly.Split("cvttsd2si rax, xmm0").Length - 1,
-			Is.EqualTo(1));
+		Assert.That(assembly.Split("call print_number_from_xmm").Length - 1, Is.EqualTo(2));
+		Assert.That(assembly.Split("cvttsd2si rax, xmm0").Length - 1, Is.EqualTo(1));
 	}
 
 	[Test]
@@ -606,12 +589,14 @@ public sealed class InstructionsToAssemblyTests
 	{
 		var instructions = new List<Instruction>
 		{
-			new Invoke(Register.R0, new InvokeMethodInfo("Strict/File", Method.From,
-				["path"], Type.File, [Register.R1], null)),
-			new Invoke(Register.R0, new InvokeMethodInfo("Strict/File", "Write",
-				["text"], Type.None, [Register.R1], Register.R2)),
-			new Invoke(Register.R0, new InvokeMethodInfo("Strict/File", "Close",
-				[], Type.None, [], Register.R2))
+			new Invoke(Register.R0,
+				new InvokeMethodInfo("Strict/File", Method.From, ["path"], Type.File, [Register.R1],
+					null)),
+			new Invoke(Register.R0,
+				new InvokeMethodInfo("Strict/File", "Write", ["text"], Type.None, [Register.R1],
+					Register.R2)),
+			new Invoke(Register.R0,
+				new InvokeMethodInfo("Strict/File", "Close", [], Type.None, [], Register.R2))
 		};
 		var assembly = Compile(instructions, Platform.Linux);
 		Assert.That(assembly, Does.Contain("strict_file_open"));
@@ -635,7 +620,8 @@ public sealed class InstructionsToAssemblyTests
 	[Test]
 	public void MissingNativeOutputFileThrowsDetailedInvalidOperationException()
 	{
-		var missingFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "PureAdder");
+		var missingFilePath =
+			Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "PureAdder");
 		var exception = Assert.Throws<InvalidOperationException>(() =>
 			ToolRunner.EnsureOutputFileExists(missingFilePath, "gcc", Platform.Linux))!;
 		Assert.That(exception.Message, Does.Contain(missingFilePath));
@@ -647,8 +633,9 @@ public sealed class InstructionsToAssemblyTests
 			[.. new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions]);
 
 	private string Compile(List<Instruction> instructions, Platform platform) =>
-		compiler.Compile(BinaryExecutable.CreateForEntryInstructions(
-			TestPackage.Instance, instructions), platform).GetAwaiter().GetResult();
+		compiler.Compile(
+				BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions), platform).
+			GetAwaiter().GetResult();
 
 	private string Compile(BinaryExecutable binary, Platform platform) =>
 		compiler.Compile(binary, platform).GetAwaiter().GetResult();

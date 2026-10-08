@@ -1,16 +1,16 @@
 // When things are in flux, force generating a new .strictbinary every time by disabling the cache
 //#define DISABLE_BINARY_CACHE
+using System.Globalization;
 using Strict.Bytecode;
+using Strict.Bytecode.Serialization;
 using Strict.Compiler;
 using Strict.Compiler.Assembly;
-using System.Globalization;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Optimizers;
 using Strict.TestRunner;
 using Strict.Validators;
 using Type = Strict.Language.Type;
-using Strict.Bytecode.Serialization;
 
 namespace Strict;
 
@@ -110,7 +110,6 @@ public sealed class Runner
 			var binaryTime = new FileInfo(cachedBinaryFilePath).LastWriteTimeUtc;
 			var sourceTime = new FileInfo(strictFilePath).LastWriteTimeUtc;
 			if (binaryTime >= sourceTime)
-			{
 				try
 				{
 					var binary = LogTiming("Loading cached " + cachedBinaryFilePath,
@@ -118,15 +117,14 @@ public sealed class Runner
 					Log("Using cached " + cachedBinaryFilePath + " from " + binaryTime);
 					return binary;
 				}
-				catch (Exception ex) when (ex is BinaryType.InvalidVersion
-					or BinaryExecutable.InvalidFile or BinaryExecutable.TypeNotFoundForBytecode
-					or ParsingFailed or Type.TypeAlreadyExistsInPackage
-					or Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers
-					or Context.TypeNotFound or EndOfStreamException)
+				catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile
+					or BinaryExecutable.TypeNotFoundForBytecode or ParsingFailed
+					or Type.TypeAlreadyExistsInPackage
+					or Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers or Context.TypeNotFound
+					or EndOfStreamException)
 				{
 					Log("Cached binary incompatible: " + ex.Message + ", regenerating ..");
 				}
-			}
 			else
 				Log("Cached binary outdated (" + binaryTime + " < " + sourceTime + "), regenerating ..");
 		}
@@ -140,7 +138,8 @@ public sealed class Runner
 		var basePackage = await repositories.LoadStrictPackage();
 		if (packageDirectory != null)
 			return await repositories.LoadFromPath(
-				nameof(Strict) + Context.ParentSeparator + Path.GetFileName(packageDirectory), packageDirectory);
+				nameof(Strict) + Context.ParentSeparator + Path.GetFileName(packageDirectory),
+				packageDirectory);
 		var sourceDir = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
 		var strictRoot = Path.GetFullPath(basePackage.FolderPath);
 		if (!sourceDir.StartsWith(strictRoot, StringComparison.OrdinalIgnoreCase) ||
@@ -150,8 +149,8 @@ public sealed class Runner
 		var relative = Path.GetRelativePath(strictRoot, sourceDir).
 			Replace(Path.DirectorySeparatorChar, Context.ParentSeparator).
 			Replace(Path.AltDirectorySeparatorChar, Context.ParentSeparator);
-		return await repositories.LoadStrictPackage(
-			nameof(Strict) + Context.ParentSeparator + relative);
+		return await repositories.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator +
+			relative);
 	}
 
 	private static bool IsExamplesDir(string dir) =>
@@ -169,7 +168,9 @@ public sealed class Runner
 			mainType = new Type(package, typeLines).ParseMembersAndMethods(parser);
 		}
 		else if (existingType.Methods.Any(method => !method.IsTrait))
+		{
 			mainType = existingType;
+		}
 		else
 		{
 			//TODO: this seems a bit strange
@@ -243,8 +244,8 @@ public sealed class Runner
 			var allOptimizers = new AllInstructionOptimizers();
 			allOptimizers.Optimize(executable);
 			var removed = beforeCount - executable.TotalInstructionsCount;
-			return "Removed instructions: " + removed + " (" + removed * 100 / beforeCount +
-				"%) with " + allOptimizers.NumberOfOptimizers + " optimizers.";
+			return "Removed instructions: " + removed + " (" + removed * 100 / beforeCount + "%) with " +
+				allOptimizers.NumberOfOptimizers + " optimizers.";
 		}));
 
 	private BinaryExecutable CacheStrictExecutable(BinaryExecutable binary)
@@ -293,14 +294,15 @@ public sealed class Runner
 			binary.SetEntryPoint(
 				binary.MethodsPerType.First(typeData =>
 					typeData.Value.MethodGroups.TryGetValue(Method.Run, out var overloads) &&
-					overloads.Contains(runMethod)).Key,
-				Method.Run, runMethod.parameters.Count, runMethod.ReturnTypeName);
+					overloads.Contains(runMethod)).Key, Method.Run, runMethod.parameters.Count,
+				runMethod.ReturnTypeName);
 			var arguments = BuildProgramArguments(binary, runMethod);
-			LogTiming(nameof(Run),
-				() => new VirtualMachine(binary).Execute(initialVariables: arguments));
+			LogTiming(nameof(Run), () => new VirtualMachine(binary).Execute(initialVariables: arguments));
 		}
 		else
+		{
 			LogTiming(nameof(Run), () => new VirtualMachine(binary).Execute());
+		}
 		Console.WriteLine("Executed " + strictFilePath + " via " + nameof(VirtualMachine) + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
 		stepTimes.Clear();
@@ -335,16 +337,16 @@ public sealed class Runner
 	private BinaryMethod FindRunMethodForArguments(BinaryExecutable binary)
 	{
 		var runMethods = binary.GetRunMethods();
-		return runMethods.FirstOrDefault(method =>
-				method.parameters.Count == ProgramArguments.Length) ??
+		return
+			runMethods.FirstOrDefault(method => method.parameters.Count == ProgramArguments.Length) ??
 			runMethods.FirstOrDefault(method => method.parameters.Count == 1 &&
 				ResolveType(binary, method.parameters[0].FullTypeName).IsList) ??
 			throw new NotSupportedException("No Run method accepts " + ProgramArguments.Length +
 				" arguments.");
 	}
 
-	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(
-		BinaryExecutable binary, BinaryMethod runMethod)
+	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(BinaryExecutable binary,
+		BinaryMethod runMethod)
 	{
 		if (runMethod.parameters.Count == 0)
 			return null;
@@ -369,9 +371,8 @@ public sealed class Runner
 		for (var index = 0; index < runMethod.parameters.Count; index++)
 		{
 			var parameter = runMethod.parameters[index];
-			values[parameter.Name] =
-				CreateValueInstance(ResolveType(binary, parameter.FullTypeName),
-					ProgramArguments[index]);
+			values[parameter.Name] = CreateValueInstance(ResolveType(binary, parameter.FullTypeName),
+				ProgramArguments[index]);
 		}
 		return values;
 	}
@@ -406,9 +407,9 @@ public sealed class Runner
 
 	private string CreateManagedLauncher(Platform platform)
 	{
-		if (platform == Platform.Windows && !OperatingSystem.IsWindows() ||
-			platform == Platform.Linux && !OperatingSystem.IsLinux() ||
-			platform == Platform.MacOS && !OperatingSystem.IsMacOS())
+		if ((platform == Platform.Windows && !OperatingSystem.IsWindows()) ||
+			(platform == Platform.Linux && !OperatingSystem.IsLinux()) ||
+			(platform == Platform.MacOS && !OperatingSystem.IsMacOS()))
 			throw new NotSupportedException(
 				"Runtime launcher builds require building on the target platform.");
 		var runtimeDirectory = Path.GetDirectoryName(typeof(Program).Assembly.Location) ??
@@ -438,8 +439,8 @@ public sealed class Runner
 		Console.WriteLine("Created " + platform + " executable launcher of " +
 			new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
 
-	private void PrintCompilationSummary(CompilerBackend backend, Platform platform,
-		string exeFilePath) =>
+	private void
+		PrintCompilationSummary(CompilerBackend backend, Platform platform, string exeFilePath) =>
 		Console.WriteLine("Compiled " + strictFilePath + " via " + backend + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
 			" executable of " + new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);

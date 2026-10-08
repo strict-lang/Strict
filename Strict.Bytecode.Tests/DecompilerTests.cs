@@ -7,10 +7,9 @@ public sealed class DecompilerTests : TestBytecode
 	[Test]
 	public void DecompileSimpleArithmeticBytecodeCreatesStrictFile()
 	{
-		var instructions = new BinaryGenerator(
-			GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
-				"has First Number", "has Second Number", "Calculate Number",
-				"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("Add",
+			"Add(10, 5).Calculate", "has First Number", "has Second Number", "Calculate Number",
+			"\tAdd(10, 5).Calculate is 15", "\tFirst + Second")).Generate();
 		var outputFolder = DecompileToTemp(instructions, "Add");
 		try
 		{
@@ -20,23 +19,17 @@ public sealed class DecompilerTests : TestBytecode
 		finally
 		{
 			if (Directory.Exists(outputFolder))
-				Directory.Delete(outputFolder, recursive: true);
+				Directory.Delete(outputFolder, true);
 		}
 	}
 
 	[Test]
 	public void DecompileRunMethodReconstructsConstantDeclarationFromMethodCall()
 	{
-		var instructions = new BinaryGenerator(
-			GenerateMethodCallFromSource("Counter", "Counter(5).Calculate",
-				"has count Number",
-				"Double Number",
-				"\tCounter(3).Double is 6",
-				"\tcount * 2",
-				"Calculate Number",
-				"\tCounter(5).Calculate is 10",
-				"\tconstant doubled = Counter(3).Double",
-				"\tdoubled * 2")).Generate();
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("Counter",
+			"Counter(5).Calculate", "has count Number", "Double Number", "\tCounter(3).Double is 6",
+			"\tcount * 2", "Calculate Number", "\tCounter(5).Calculate is 10",
+			"\tconstant doubled = Counter(3).Double", "\tdoubled * 2")).Generate();
 		var outputFolder = DecompileToTemp(instructions, "Counter");
 		try
 		{
@@ -47,7 +40,7 @@ public sealed class DecompilerTests : TestBytecode
 		finally
 		{
 			if (Directory.Exists(outputFolder))
-				Directory.Delete(outputFolder, recursive: true);
+				Directory.Delete(outputFolder, true);
 		}
 	}
 
@@ -63,7 +56,7 @@ public sealed class DecompilerTests : TestBytecode
 		finally
 		{
 			if (Directory.Exists(outputFolder))
-				Directory.Delete(outputFolder, recursive: true);
+				Directory.Delete(outputFolder, true);
 		}
 	}
 
@@ -89,7 +82,7 @@ public sealed class DecompilerTests : TestBytecode
 		finally
 		{
 			if (Directory.Exists(outputFolder))
-				Directory.Delete(outputFolder, recursive: true);
+				Directory.Delete(outputFolder, true);
 		}
 	}
 
@@ -98,9 +91,10 @@ public sealed class DecompilerTests : TestBytecode
 	{
 		var parser = new MethodExpressionParser();
 		var package = new Package(TestPackage.Instance, "BConstTest");
-		var scoreType = new Type(package, new TypeLines("Score",
-			"constant Minimum = 0", "constant Maximum = 100", "has value Number", "Run", "\tMinimum " +
-			"is 0", "\tMaximum is 100")).ParseMembersAndMethods(parser);
+		var scoreType =
+			new Type(package,
+				new TypeLines("Score", "constant Minimum = 0", "constant Maximum = 100", "has value Number",
+					"Run", "\tMinimum " + "is 0", "\tMaximum is 100")).ParseMembersAndMethods(parser);
 		var runMethods = scoreType.Methods.Where(m => m.Name == Method.Run).ToArray();
 		var binary = BinaryGenerator.GenerateFromRunMethods(runMethods[0], runMethods);
 		var outputFolder = DecompileToTemp(binary, "Score");
@@ -115,7 +109,7 @@ public sealed class DecompilerTests : TestBytecode
 		finally
 		{
 			if (Directory.Exists(outputFolder))
-				Directory.Delete(outputFolder, recursive: true);
+				Directory.Delete(outputFolder, true);
 		}
 	}
 
@@ -132,7 +126,7 @@ public sealed class DecompilerTests : TestBytecode
 		finally
 		{
 			if (Directory.Exists(outputFolder))
-				Directory.Delete(outputFolder, recursive: true);
+				Directory.Delete(outputFolder, true);
 		}
 	}
 
@@ -142,13 +136,15 @@ public sealed class DecompilerTests : TestBytecode
 	private static BinaryExecutable GenerateBinaryFromExample(string typeName)
 	{
 		var parser = new MethodExpressionParser();
-		var package = new Package(TestPackage.Instance, "B" + typeName[..Math.Min(typeName.Length, 10)]);
+		var package =
+			new Package(TestPackage.Instance, "B" + typeName[..Math.Min(typeName.Length, 10)]);
 		var strictFilePath = Path.Combine(GetExamplesFolder(), typeName + Type.Extension);
 		var sourceLines = File.ReadAllLines(strictFilePath);
 		if (typeName == "RemoveParentheses")
 			sourceLines = sourceLines.Select(line => line.Replace(".Increase", ".Increment").
 				Replace(".Decrease", ".Decrement")).ToArray();
-		var type = new Type(package, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
+		var type =
+			new Type(package, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
 		var runMethods = type.Methods.Where(method => method.Name == Method.Run).ToArray();
 		if (runMethods.Length > 0)
 			return BinaryGenerator.GenerateFromRunMethods(runMethods[0], runMethods);
@@ -165,7 +161,8 @@ public sealed class DecompilerTests : TestBytecode
 
 	private static string GetExamplesFolder()
 	{
-		var path = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Examples"));
+		var path = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..",
+			"..", "..", "Examples"));
 		return Directory.Exists(path)
 			? path
 			: @"c:\code\GitHub\strict-lang\Strict\Examples";

@@ -15,10 +15,10 @@ public sealed class StrictLanguageConversionTests
 	{
 		var offenders = GetLanguageStrictFiles().
 			SelectMany(file => File.ReadAllLines(file).Select((line, lineIndex) =>
-				new { file, line, LineNumber = lineIndex + 1 })).
-			Where(item => item.line.Contains(" to Text + ", StringComparison.Ordinal) ||
-				item.line.Contains("+ ") && item.line.Contains(" to Text", StringComparison.Ordinal) ||
-				item.line.Contains(".Log(") && item.line.Contains(" to Text", StringComparison.Ordinal)).
+				new { file, line, LineNumber = lineIndex + 1 })).Where(item =>
+				item.line.Contains(" to Text + ", StringComparison.Ordinal) ||
+				(item.line.Contains("+ ") && item.line.Contains(" to Text", StringComparison.Ordinal)) ||
+				(item.line.Contains(".Log(") && item.line.Contains(" to Text", StringComparison.Ordinal))).
 			Select(item => $"{Path.GetFileName(item.file)}:{item.LineNumber}: {item.line.Trim()}");
 		Assert.That(offenders, Is.Empty);
 	}
@@ -27,8 +27,7 @@ public sealed class StrictLanguageConversionTests
 	public void ReadLinesBelongsToTextReaderNotFileTrait()
 	{
 		var root = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
-		Assert.That(File.ReadAllText(Path.Combine(root, "File.strict")),
-			Does.Not.Contain("ReadLines"));
+		Assert.That(File.ReadAllText(Path.Combine(root, "File.strict")), Does.Not.Contain("ReadLines"));
 		Assert.That(File.ReadAllText(Path.Combine(root, "TextReader.strict")),
 			Does.Contain("ReadLines Texts"));
 	}
@@ -55,14 +54,16 @@ public sealed class StrictLanguageConversionTests
 	[Test]
 	public void LanguageStrictFilesAvoidLegacyTextNameFields()
 	{
-		var forbidden = new[] { "elementName", "typeName", "resultTypeName", "expressionText",
-			"typeNames" };
+		var forbidden = new[]
+		{
+			"elementName", "typeName", "resultTypeName", "expressionText", "typeNames"
+		};
 		var offenders = GetLanguageStrictFiles().
 			SelectMany(file => File.ReadAllLines(file).Select((line, lineIndex) =>
 				new { file, line, LineNumber = lineIndex + 1 })).
 			Where(item => item.line.StartsWith("has ", StringComparison.Ordinal) &&
-				forbidden.Any(item.line.Contains)).
-			Select(item => $"{Path.GetFileName(item.file)}:{item.LineNumber}: {item.line.Trim()}");
+				forbidden.Any(item.line.Contains)).Select(item =>
+				$"{Path.GetFileName(item.file)}:{item.LineNumber}: {item.line.Trim()}");
 		Assert.That(offenders, Is.Empty);
 	}
 
@@ -74,8 +75,10 @@ public sealed class StrictLanguageConversionTests
 			Is.EqualTo(new[] { "has Name", "has Type", "has Parameters Variables" }));
 		Assert.That(File.Exists(Path.Combine(GetLanguagePath(), "Method.strict")), Is.False);
 		var parserSource = File.ReadAllText(Path.Combine(GetLanguagePath(), "MethodParser.strict"));
-		Assert.That(parserSource, Does.Contain("Parse(header Text, lines Texts, lineIndex Number) Method"));
-		Assert.That(parserSource, Does.Contain("ParseBody(header Text, sourceLines Texts, lineIndex Number) Body"));
+		Assert.That(parserSource,
+			Does.Contain("Parse(header Text, lines Texts, lineIndex Number) Method"));
+		Assert.That(parserSource,
+			Does.Contain("ParseBody(header Text, sourceLines Texts, lineIndex Number) Body"));
 	}
 
 	private static IEnumerable<string> GetLanguageStrictFiles() =>

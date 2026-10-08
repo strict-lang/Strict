@@ -55,7 +55,8 @@ public sealed class AutoCompletorTests : LanguageServerTests
 		"\tconstant result = true",
 		"\tconstant another = result.")]
 	// @formatter:on
-	public async Task HandleLogAutoCompleteAsync(string completionName, int lineNumber, params string[] code)
+	public async Task HandleLogAutoCompleteAsync(string completionName, int lineNumber,
+		params string[] code)
 	{
 		var documentUri = GetDocumentUri(completionName == "+"
 			? "Plus"
@@ -77,7 +78,8 @@ public sealed class AutoCompletorTests : LanguageServerTests
 
 	[TestCase(2, "Write", "has logger", "Log(message Text)", "\trandom.")]
 	[TestCase(1, "Write", "has logger", "has some Text", "Log(message Text)", "\trandom.")]
-	public async Task HandleInvalidAutoCompleteAsync(int triggerLine, string completionName, params string[] code)
+	public async Task HandleInvalidAutoCompleteAsync(int triggerLine, string completionName,
+		params string[] code)
 	{
 		var documentUri = GetDocumentUri(completionName);
 		strictDocument.AddOrUpdate(documentUri, code);
@@ -100,7 +102,8 @@ public sealed class AutoCompletorTests : LanguageServerTests
 				{
 					Context = new CompletionContext { TriggerCharacter = "/" },
 					TextDocument =
-						new TextDocumentIdentifier(GetDocumentUri(nameof(HandleInvalidTriggerCharacterAsync))),
+						new TextDocumentIdentifier(
+							GetDocumentUri(nameof(HandleInvalidTriggerCharacterAsync))),
 					Position = new Position { Character = 8, Line = 0 }
 				}, CancellationToken.None)).Items.Count(), Is.EqualTo(0));
 }

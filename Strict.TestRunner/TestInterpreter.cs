@@ -33,8 +33,8 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 	}
 
 	private static bool ShouldSkipKnownDummyBaseType(Type type) =>
-		type.Name == Type.Number ||
-		type.Package.Name == "Expressions" && type.Name is not "ValueInstance" and not "Value";
+		type.Name == Type.Number || (type.Package.Name == "Expressions" &&
+			type.Name is not "ValueInstance" and not "Value");
 
 	public void RunMethod(Method method)
 	{
@@ -46,5 +46,5 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 
 	private static bool ShouldSkipKnownDummyBaseMethod(Method method) =>
 		method.Name.Equals("digits", StringComparison.Ordinal) ||
-		method.Name.Equals("to", StringComparison.Ordinal) && method.ReturnType.IsText;
+		(method.Name.Equals("to", StringComparison.Ordinal) && method.ReturnType.IsText);
 }

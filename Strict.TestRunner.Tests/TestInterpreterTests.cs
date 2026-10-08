@@ -19,11 +19,8 @@ public class TestInterpreterTests
 	public void RunMethod()
 	{
 		using var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunMethod),
-				"has number",
-				"Run Number",
-				"	5 is 5",
-				"	10")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines(nameof(RunMethod), "has number", "Run Number", "	5 is 5", "	10")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		interpreter.RunMethod(type.Methods.First(m => m.Name == "Run"));
 	}
 
@@ -31,10 +28,7 @@ public class TestInterpreterTests
 	public void RunMethodWithFailingTest()
 	{
 		using var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunMethodWithFailingTest),
-				"has number",
-				"Run Number",
-				"	5 is 6",
+			new TypeLines(nameof(RunMethodWithFailingTest), "has number", "Run Number", "	5 is 6",
 				"	10")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => interpreter.RunMethod(type.Methods.First(m => m.Name == "Run")),
 			Throws.InstanceOf<InterpreterExecutionFailed>().With.InnerException.With.Message.
@@ -45,14 +39,8 @@ public class TestInterpreterTests
 	public void RunAllTestsInType()
 	{
 		using var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunAllTestsInType),
-				"has number",
-				"Run Number",
-				"	5 is 5",
-				"	10",
-				"Other Number",
-				"	2 is 2",
-				"	5")).ParseMembersAndMethods(new MethodExpressionParser());
+			new TypeLines(nameof(RunAllTestsInType), "has number", "Run Number", "	5 is 5", "	10",
+				"Other Number", "	2 is 2", "	5")).ParseMembersAndMethods(new MethodExpressionParser());
 		interpreter.RunAllTestsInType(type);
 	}
 
@@ -60,14 +48,9 @@ public class TestInterpreterTests
 	public void RunAllTestsInTypeWithFailure()
 	{
 		using var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunAllTestsInTypeWithFailure),
-				"has number",
-				"Run Number",
-				"	5 is 5",
-				"	10",
-				"Other Number",
-				"	2 is 3",
-				"	5")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines(nameof(RunAllTestsInTypeWithFailure), "has number", "Run Number", "	5 is 5",
+					"	10", "Other Number", "	2 is 3", "	5")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => interpreter.RunAllTestsInType(type),
 			Throws.InstanceOf<InterpreterExecutionFailed>().With.InnerException.With.Message.
 				Contains("\"Other\" method failed: 2 is 3, result: Boolean: false"));
@@ -77,10 +60,8 @@ public class TestInterpreterTests
 	public void RunListCreation()
 	{
 		using var type = new Type(TestPackage.Instance,
-				new TypeLines(nameof(RunListCreation), "has number", "Run",
-					"	constant numberList = List(5)",
-					"	numberList(0) is number")).
-			ParseMembersAndMethods(new MethodExpressionParser());
+			new TypeLines(nameof(RunListCreation), "has number", "Run", "	constant numberList = List(5)",
+				"	numberList(0) is number")).ParseMembersAndMethods(new MethodExpressionParser());
 		interpreter.RunAllTestsInType(type);
 	}
 
@@ -108,8 +89,8 @@ public class TestInterpreterTests
 	[Test]
 	public void RunNumberToCharacterBody()
 	{
-		using var type = new Type(TestPackage.Instance,
-				new TypeLines(nameof(RunNumberToCharacterBody), "has number",
+		using var type = new Type(TestPackage.Instance, new TypeLines(nameof(RunNumberToCharacterBody),
+				"has number",
 					// @formatter:off
 					"to Character",
 					"\t5 to Character is \"5\"",
@@ -132,8 +113,8 @@ public class TestInterpreterTests
 	[Test]
 	public void RunRangeSum()
 	{
-		using var type = new Type(TestPackage.Instance,
-				new TypeLines(nameof(RunNumberToCharacterBody), "has number",
+		using var type = new Type(TestPackage.Instance, new TypeLines(nameof(RunNumberToCharacterBody),
+				"has number",
 					// @formatter:off
 					"SumRange(range) Number",
 					"\tSumRange(Range(2, 5)) is 2 + 3 + 4",
@@ -156,8 +137,8 @@ public class TestInterpreterTests
 	[Test]
 	public void RunListLength()
 	{
-		using var type = new Type(TestPackage.Instance,
-				new TypeLines(nameof(RunNumberToCharacterBody), "has numbers",
+		using var type = new Type(TestPackage.Instance, new TypeLines(nameof(RunNumberToCharacterBody),
+				"has numbers",
 					// @formatter:off
 					"Length Number",
 					"\tfor numbers",
@@ -177,11 +158,9 @@ public class TestInterpreterTests
 	public void RunAddLists()
 	{
 		using var type = new Type(TestPackage.Instance,
-				new TypeLines(nameof(RunNumberToCharacterBody), "has number",
-					"Run Number",
+				new TypeLines(nameof(RunNumberToCharacterBody), "has number", "Run Number",
 					"\t(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)",
-					"\t(\"Hello\", \"World\") + (1, 2) is (\"Hello\", \"World\", \"1\", \"2\")",
-					"\tnumber")).
+					"\t(\"Hello\", \"World\") + (1, 2) is (\"Hello\", \"World\", \"1\", \"2\")", "\tnumber")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(type.Methods[0].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)" + Environment.NewLine +
@@ -205,10 +184,9 @@ public class TestInterpreterTests
 	public void RunTextCompare()
 	{
 		using var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunNumberToCharacterBody), "has number", "Run",
-				"\t\"Hey\" is \"Hey\"",
-				"\t\"Hi\" is not \"Hey\"",
-				"\tnumber")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines(nameof(RunNumberToCharacterBody), "has number", "Run", "\t\"Hey\" is \"Hey\"",
+					"\t\"Hi\" is not \"Hey\"", "\tnumber")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		interpreter.RunAllTestsInType(type);
 	}
 
@@ -226,13 +204,10 @@ public class TestInterpreterTests
 	public void RunAllTestsInTypeWithLoggerAutoInjected()
 	{
 		using var type = new Type(TestPackage.Instance,
-			new TypeLines(nameof(RunAllTestsInTypeWithLoggerAutoInjected),
-				"has first Number",
-				"has second Number",
-				"has logger",
-				"Add Number",
-				"\tRunAllTestsInTypeWithLoggerAutoInjected(2, 3).Add is 5",
-				"\tfirst + second")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines(nameof(RunAllTestsInTypeWithLoggerAutoInjected), "has first Number",
+					"has second Number", "has logger", "Add Number",
+					"\tRunAllTestsInTypeWithLoggerAutoInjected(2, 3).Add is 5", "\tfirst + second")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		interpreter.RunAllTestsInType(type);
 	}
 
@@ -258,12 +233,10 @@ public class TestInterpreterTests
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var numberType = colorType.GetType(Type.Number);
 		interpreter.RunAllTestsInType(colorType);
-		var result = interpreter.Execute(colorType.GetMethod("to", []),
-			new ValueInstance(colorType,
-			[
-				new ValueInstance(numberType, 0), new ValueInstance(numberType, 127),
-				new ValueInstance(numberType, 255)
-			]), []);
+		var result = interpreter.Execute(colorType.GetMethod("to", []), new ValueInstance(colorType, [
+			new ValueInstance(numberType, 0), new ValueInstance(numberType, 127),
+			new ValueInstance(numberType, 255)
+		]), []);
 		Assert.That(result, Is.EqualTo(new ValueInstance(colorValueType, [
 			new ValueInstance(numberType, 0), new ValueInstance(numberType, 0.5),
 			new ValueInstance(numberType, 1)
@@ -280,16 +253,14 @@ public class TestInterpreterTests
 	{
 		var repos = new Repositories(new MethodExpressionParser());
 		var strict = await repos.LoadStrictPackage();
-		var packages = await Task.WhenAll(
-			Task.FromResult(strict),
-			repos.LoadStrictPackage("Strict/Math"),
-			repos.LoadStrictPackage("Strict/ImageProcessing"),
-			repos.LoadStrictPackage("Strict/Language"),
-			repos.LoadStrictPackage("Strict/Expressions"),
+		var packages = await Task.WhenAll(Task.FromResult(strict),
+			repos.LoadStrictPackage("Strict/Math"), repos.LoadStrictPackage("Strict/ImageProcessing"),
+			repos.LoadStrictPackage("Strict/Language"), repos.LoadStrictPackage("Strict/Expressions"),
 			repos.LoadStrictPackage("Strict/Examples"));
 		var tasks = new List<Task>();
 		foreach (var packageToTest in packages)
-			tasks.Add(Task.Run(() => new TestInterpreter(packages[0]).RunAllTestsInPackage(packageToTest)));
+			tasks.Add(
+				Task.Run(() => new TestInterpreter(packages[0]).RunAllTestsInPackage(packageToTest)));
 		await Task.WhenAll(tasks);
 	}
 

@@ -1,9 +1,9 @@
 using NUnit.Framework;
-using Strict.Transpiler.Roslyn;
-using Strict.Language;
 using Strict.Expressions;
 using Strict.Expressions.Tests;
+using Strict.Language;
 using Strict.Language.Tests;
+using Strict.Transpiler.Roslyn;
 using Type = Strict.Language.Type;
 
 namespace Strict.Transpiler.Tests;
@@ -35,6 +35,6 @@ public class TestCSharpGenerator : NoConsoleWriteLineAllowed
 
 	protected Type CreateHelloWorldProgramType() =>
 		new Type(package,
-			new TypeLines("Program", "has App", "has logger", "Run",
-				"\tlogger.Log(\"Hello World\")")).ParseMembersAndMethods(parser);
+				new TypeLines("Program", "has App", "has logger", "Run", "\tlogger.Log(\"Hello World\")")).
+			ParseMembersAndMethods(parser);
 }

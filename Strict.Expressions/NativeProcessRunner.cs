@@ -16,7 +16,6 @@ public static class NativeProcessRunner
 		if (string.IsNullOrWhiteSpace(name))
 			return null;
 		if (!OperatingSystem.IsWindows())
-		{
 			try
 			{
 				var whichResult = RunCaptured("which", name, 5000);
@@ -31,14 +30,13 @@ public static class NativeProcessRunner
 			{
 				// fall through to PATH scan
 			}
-		}
 		var executableName = OperatingSystem.IsWindows()
 			? name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
 				? name
 				: name + ".exe"
 			: name;
-		foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(
-			Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+		foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator,
+			StringSplitOptions.RemoveEmptyEntries))
 		{
 			var candidate = Path.Combine(dir.Trim('"'), executableName);
 			if (File.Exists(candidate))
@@ -54,7 +52,7 @@ public static class NativeProcessRunner
 			return new ProcessRunResult(127, "", "executable is empty");
 		try
 		{
-			return RunCaptured(executable, arguments ?? "", timeoutMs);
+			return RunCaptured(executable, arguments, timeoutMs);
 		}
 		catch (Exception ex)
 		{
@@ -91,17 +89,17 @@ public static class NativeProcessRunner
 		{
 			try
 			{
-				process.Kill(entireProcessTree: true);
+				process.Kill(true);
 			}
 			catch
 			{
 				// ignore kill failures
 			}
-			return new ProcessRunResult(124, output.ToString(),
-				"timed out after " + timeoutMs + " ms");
+			// ponytail: 2s drain; a grandchild can hold the redirected pipe open forever
+			process.WaitForExit(2000);
+			return new ProcessRunResult(124, output.ToString(), "timed out after " + timeoutMs + " ms");
 		}
-		// Ensure async readers finish
-		process.WaitForExit();
+		process.WaitForExit(2000);
 		return new ProcessRunResult(process.ExitCode, output.ToString(), error.ToString());
 	}
 

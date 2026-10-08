@@ -66,8 +66,7 @@ public sealed class TypeTests
 	public void NoMatchingMethodFound() =>
 		Assert.That(
 			() => CreateType(nameof(NoMatchingMethodFound), "has logger", "Run", "\tconstant a = 5").
-				GetMethod("UnknownMethod", []),
-			Throws.InstanceOf<Type.NoMatchingMethodFound>());
+				GetMethod("UnknownMethod", []), Throws.InstanceOf<Type.NoMatchingMethodFound>());
 
 	[Test]
 	public void TypeNameMustBeWord() =>
@@ -76,9 +75,7 @@ public sealed class TypeTests
 
 	[Test]
 	public void TraitMethodsMustBeImplemented() =>
-		Assert.That(() => CreateType(nameof(TraitMethodsMustBeImplemented),
-				"has App",
-				"Run"),
+		Assert.That(() => CreateType(nameof(TraitMethodsMustBeImplemented), "has App", "Run"),
 			Throws.InstanceOf<TypeParser.MethodMustBeImplementedInNonTrait>());
 
 	[TestCase("has logger", "Run", "\tconstant result = Any")]
@@ -86,7 +83,9 @@ public sealed class TypeTests
 	[TestCase("has logger", "Run", "\tconstant result = 5 + Any(5)")]
 	public void VariableWithTypeAnyIsNotAllowed(params string[] lines)
 	{
-		using var type = new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).ParseMembersAndMethods(parser);
+		using var type =
+			new Type(package, new TypeLines(nameof(VariableWithTypeAnyIsNotAllowed), lines)).
+				ParseMembersAndMethods(parser);
 		// ReSharper disable once AccessToDisposedClosure
 		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MethodExpressionParser.ExpressionWithTypeAnyIsNotAllowed>().With.Message.
@@ -110,10 +109,7 @@ public sealed class TypeTests
 
 	[Test]
 	public void SimpleApp() =>
-		CheckApp(CreateType(nameof(SimpleApp),
-			"has App",
-			"has logger",
-			"Run",
+		CheckApp(CreateType(nameof(SimpleApp), "has App", "has logger", "Run",
 			"\tlogger.Log(\"Hello World!\")"));
 
 	private static void CheckApp(Type program)
@@ -126,26 +122,21 @@ public sealed class TypeTests
 
 	[Test]
 	public void AnotherApp() =>
-		CheckApp(CreateType(nameof(AnotherApp),
-			"has App",
-			"has logger",
-			"Run",
-			"\tfor number in Range(0, 10)",
-			"\t\tlogger.Log(\"Counting: \" + number)"));
+		CheckApp(CreateType(nameof(AnotherApp), "has App", "has logger", "Run",
+			"\tfor number in Range(0, 10)", "\t\tlogger.Log(\"Counting: \" + number)"));
 
 	[Test]
 	public void NotImplementingAnyTraitMethodsAreAllowed() =>
-		Assert.That(() => CreateType(nameof(NotImplementingAnyTraitMethodsAreAllowed),
-			"has App",
-			"add(number)",
-			"\tone + 1"), Is.Not.Null);
+		Assert.That(
+			() => CreateType(nameof(NotImplementingAnyTraitMethodsAreAllowed), "has App", "add(number)",
+				"\tone + 1"), Is.Not.Null);
 
 	[Test]
 	public void CannotImplementFewTraitMethodsAndLeaveOthers()
 	{
 		var type = new Type(package,
-			new TypeLines(nameof(CannotImplementFewTraitMethodsAndLeaveOthers),
-				"has file = \"test.txt\"", "Write(text)", "\tfile.Write(text)"));
+			new TypeLines(nameof(CannotImplementFewTraitMethodsAndLeaveOthers), "has file = \"test.txt\"",
+				"Write(text)", "\tfile.Write(text)"));
 		Assert.That(() => type.ParseMembersAndMethods(parser),
 			Throws.InstanceOf<Type.MustImplementAllTraitMethodsOrNone>());
 	}
@@ -153,11 +144,12 @@ public sealed class TypeTests
 	[Test]
 	public void TraitCanComposeMultipleTraitsWithoutImplementingTheirMethods()
 	{
-		using var textReader = CreateType("ReaderForTraitComposition", "ReadLines Texts", "ReadText Text");
+		using var textReader =
+			CreateType("ReaderForTraitComposition", "ReadLines Texts", "ReadText Text");
 		using var textWriter = CreateType("WriterForTraitComposition", "Write(lines Texts)");
-		Assert.That(() => CreateType("ComposedIoTrait",
-			"has ReaderForTraitComposition", "has WriterForTraitComposition", "ReadText Text"),
-			Throws.Nothing);
+		Assert.That(
+			() => CreateType("ComposedIoTrait", "has ReaderForTraitComposition",
+				"has WriterForTraitComposition", "ReadText Text"), Throws.Nothing);
 	}
 
 	[Test]
@@ -170,10 +162,12 @@ public sealed class TypeTests
 	}
 
 	[TestCase(Type.Number, "has number", "Run", "\tmutable result = 2", "\tresult = result + 2")]
-	[TestCase(Type.Text, "has number", "Run", "\tmutable result = \"2\"", "\tresult = result + \"!\"")]
+	[TestCase(Type.Text, "has number", "Run", "\tmutable result = \"2\"",
+		"\tresult = result + \"!\"")]
 	public void MutableTypesHaveProperDataReturnType(string expected, params string[] code)
 	{
-		using var type = new Type(package, new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code));
+		using var type = new Type(package,
+			new TypeLines(nameof(MutableTypesHaveProperDataReturnType), code));
 		var body = (Body)type.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 		var expression = (Declaration)body.Expressions[0];
 		Assert.That(expression.Value.ReturnType.Name, Is.EqualTo(expected));
@@ -182,10 +176,10 @@ public sealed class TypeTests
 	[TestCase("has inputValue = 5", "Run", "\tinputValue = 1 + 1")]
 	[TestCase("has number", "Run", "\tconstant result = 5", "\tresult = 6")]
 	public void ImmutableTypesCannotBeChanged(params string[] code) =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
-				using var type = new Type(package, new TypeLines(nameof(ImmutableTypesCannotBeChanged), code));
+				using var type = new Type(package,
+					new TypeLines(nameof(ImmutableTypesCannotBeChanged), code));
 				return type.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
@@ -203,13 +197,11 @@ public sealed class TypeTests
 	[Test]
 	public void MutableMemberWithoutInitialValueIsAutofilled()
 	{
-		using var type = new Type(package, new TypeLines("AutofilledTextMember",
-			"has number",
-			"mutable text",
-			"TotalLength Number",
-			"\tAutofilledTextMember(5).TotalLength is 5",
-			"\tAutofilledTextMember(5, \"abc\").TotalLength is 8",
-			"\tnumber + text.Length")).ParseMembersAndMethods(parser);
+		using var type = new Type(package,
+				new TypeLines("AutofilledTextMember", "has number", "mutable text", "TotalLength Number",
+					"\tAutofilledTextMember(5).TotalLength is 5",
+					"\tAutofilledTextMember(5, \"abc\").TotalLength is 8", "\tnumber + text.Length")).
+			ParseMembersAndMethods(parser);
 		type.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(type.Members[0].Name, Is.EqualTo("number"));
 		Assert.That(type.Members[1].Name, Is.EqualTo("text"));
@@ -219,11 +211,10 @@ public sealed class TypeTests
 	[Test]
 	public void MutableVariableCanBeChangedButNotChangeAtParseTime()
 	{
-		using var type = new Type(package, new TypeLines(nameof(MutableVariableCanBeChangedButNotChangeAtParseTime), "has number",
-				"Run",
-				"\tmutable result = 2",
-				"\tresult = 5")).
-			ParseMembersAndMethods(parser);
+		using var type =
+			new Type(package,
+				new TypeLines(nameof(MutableVariableCanBeChangedButNotChangeAtParseTime), "has number",
+					"Run", "\tmutable result = 2", "\tresult = 5")).ParseMembersAndMethods(parser);
 		var body = (Body)type.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.FindVariable("result")!.InitialValue.ToString(), Is.EqualTo("2"));
 	}
@@ -246,8 +237,7 @@ public sealed class TypeTests
 		using var type = new Type(package,
 			new TypeLines(nameof(MakeSureGenericTypeIsProperlyGenerated), "has numbers",
 				"GetNumbers Numbers", "\tnumbers"));
-		var getNumbersBody = type.ParseMembersAndMethods(parser).Methods[0].
-			GetBodyAndParseIfNeeded();
+		var getNumbersBody = type.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 		var numbersType = package.GetListImplementationType(package.GetType(Type.Number));
 		Assert.That(getNumbersBody.ReturnType, Is.EqualTo(numbersType));
 		Assert.That(numbersType.Generic, Is.EqualTo(package.GetType(Type.List)));
@@ -339,7 +329,7 @@ public sealed class TypeTests
 		Assert.That(
 			() => CreateType(nameof(ConstraintsWithOtherThanBooleanReturnTypeIsInvalid),
 				"mutable numbers with Length + 2", "AddNumbers Number", "\tnumbers(0) + numbers(1)"),
-			Throws.InstanceOf<Member.InvalidConstraintExpression>());
+			Throws.InstanceOf<InvalidConstraintExpression>());
 
 	[Test]
 	public void TypeNameCanHaveOneNumberAtEnd()
@@ -410,7 +400,8 @@ public sealed class TypeTests
 	[Test]
 	public void AccountantIsNotCompatibleWithFile()
 	{
-		using var accountant = CreateType("Accountant", "has taxFile File", "has assetFile File", "Calculate Number", "\tvalue");
+		using var accountant = CreateType("Accountant", "has taxFile File", "has assetFile File",
+			"Calculate Number", "\tvalue");
 		Assert.That(accountant.IsSameOrCanBeUsedAs(package.GetType(Type.File)), Is.False);
 	}
 
@@ -434,9 +425,8 @@ public sealed class TypeTests
 	[TestCase("mutable Colors Colors")]
 	public void RedundantExplicitMemberTypeIsNotAllowed(string memberDefinition) =>
 		Assert.That(
-			() => CreateType(nameof(RedundantExplicitMemberTypeIsNotAllowed), memberDefinition,
-				"Unused", "\t1"),
-			Throws.InstanceOf<TypeParser.RedundantExplicitMemberTypeName>());
+			() => CreateType(nameof(RedundantExplicitMemberTypeIsNotAllowed), memberDefinition, "Unused",
+				"\t1"), Throws.InstanceOf<TypeParser.RedundantExplicitMemberTypeName>());
 
 	[Test]
 	public void MemberNameMustNotStartWithTypeName() =>
@@ -488,20 +478,16 @@ public sealed class TypeTests
 			"has number", "Run", "\t1");
 		using var secondType = CreateType(nameof(FindFirstUnionTypeReturnsSharedMemberType) + "Second",
 			"has number", "Run", "\t1");
-		Assert.That(firstType.FindFirstUnionType(secondType),
-			Is.EqualTo(package.GetType(Type.Number)));
+		Assert.That(firstType.FindFirstUnionType(secondType), Is.EqualTo(package.GetType(Type.Number)));
 	}
 
 	[Test]
 	public void FindFirstUnionTypeReturnsUnionFromTypeMember()
 	{
 		using var traitType = CreateType("UnionTrait", "Run");
-		using var memberType = CreateType("UnionMember",
-			"has unionTrait", "Run", "\t1");
-		using var firstType = CreateType("UnionFirst",
-			"has unionTrait", "Run", "\t1");
-		using var secondType = CreateType("UnionSecond",
-			"has unionMember", "Run", "\t1");
+		using var memberType = CreateType("UnionMember", "has unionTrait", "Run", "\t1");
+		using var firstType = CreateType("UnionFirst", "has unionTrait", "Run", "\t1");
+		using var secondType = CreateType("UnionSecond", "has unionMember", "Run", "\t1");
 		Assert.That(firstType.FindFirstUnionType(secondType), Is.EqualTo(traitType));
 		Assert.That(secondType.FindFirstUnionType(firstType), Is.EqualTo(traitType));
 	}

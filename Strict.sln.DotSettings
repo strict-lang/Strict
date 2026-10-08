@@ -13,6 +13,8 @@
 	<s:Boolean x:Key="/Default/CodeInspection/ExcludedFiles/FileMasksToSkip/=Microsoft_002ENET_002ETest_002ESdk_002EProgram_002Ecs/@EntryIndexedValue">True</s:Boolean>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/GeneratedFilesAndFolders/=CF19BD64_002DF752_002D47EC_002DB929_002D77F57CC5AE90_002Fd_003AContent/@EntryIndexedValue">CF19BD64-F752-47EC-B929-77F57CC5AE90/d:Content</s:String>
 	<s:String x:Key="/Default/CodeInspection/GeneratedCode/GeneratedFileMasks/=Annotations_002Ecs/@EntryIndexedValue">Annotations.cs</s:String>
+	<s:String x:Key="/Default/CodeInspection/GeneratedCode/GeneratedFileMasks/=stb_005Fimage_002Eh/@EntryIndexedValue">stb_image.h</s:String>
+	<s:String x:Key="/Default/CodeInspection/GeneratedCode/GeneratedFileMasks/=stb_005Fimage_005Fwrite_002Eh/@EntryIndexedValue">stb_image_write.h</s:String>
 	<s:String x:Key="/Default/CodeInspection/GeneratedCode/GeneratedFileMasks/=DefaultSettings_002Exml/@EntryIndexedValue">DefaultSettings.xml</s:String>
 	<s:String x:Key="/Default/CodeInspection/Highlighting/AnalysisEnabled/@EntryValue">SOLUTION</s:String>
 	<s:String x:Key="/Default/CodeInspection/Highlighting/InspectionSeverities/=ArrangeAccessorOwnerBody/@EntryIndexedValue">WARNING</s:String>

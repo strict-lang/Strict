@@ -23,8 +23,7 @@ public sealed class PhraseTokenizerTests
 	[TestCase("5 +  2")]
 	[TestCase("\"hello \"  + 2")]
 	public void InvalidSpacing(string code) =>
-		Assert.That(() => GetTokens(code).Count,
-			Throws.InstanceOf<PhraseTokenizer.InvalidSpacing>());
+		Assert.That(() => GetTokens(code).Count, Throws.InstanceOf<PhraseTokenizer.InvalidSpacing>());
 
 	[TestCase("()")]
 	[TestCase("Run()")]

@@ -35,12 +35,11 @@ public sealed class Decompiler
 		var lines = new List<string>();
 		foreach (var member in typeData.Members)
 			if (member.InitialValueExpression is SetInstruction setValue)
-				lines.Add("const " + member.Name + " = " +
-					setValue.ValueInstance.ToExpressionCodeString());
+				lines.Add("const " + member.Name + " = " + setValue.ValueInstance.ToExpressionCodeString());
 			else
 				lines.Add("has " + member.Name + " " + member.JustTypeName);
-		foreach (var (methodName, methods) in typeData.MethodGroups.OrderBy(
-			group => group.Key == Method.Run
+		foreach (var (methodName, methods) in typeData.MethodGroups.OrderBy(group =>
+			group.Key == Method.Run
 				? 1
 				: 0))
 		foreach (var method in methods)
@@ -59,8 +58,7 @@ public sealed class Decompiler
 		registerExpressions.Clear();
 		assignedVariables.Clear();
 		var bodyLines = new List<string>();
-		for (var instructionIndex = 0; instructionIndex < method.instructions.Count;
-			instructionIndex++)
+		for (var instructionIndex = 0; instructionIndex < method.instructions.Count; instructionIndex++)
 		{
 			var instruction = method.instructions[instructionIndex];
 			if (TryDeserializeInstruction(method, bodyLines, instruction, instructionIndex))
@@ -157,8 +155,8 @@ public sealed class Decompiler
 		}
 		if (instruction is RemoveInstruction remove)
 		{
-			bodyLines.Add("\t" + remove.Identifier + ".Remove(" +
-				GetRegisterExpression(remove.Register) + ")");
+			bodyLines.Add("\t" + remove.Identifier + ".Remove(" + GetRegisterExpression(remove.Register) +
+				")");
 			return true;
 		}
 		return false;

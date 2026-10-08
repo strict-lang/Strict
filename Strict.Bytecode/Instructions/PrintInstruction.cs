@@ -6,12 +6,12 @@ namespace Strict.Bytecode.Instructions;
 /// Emits a line of text to standard output, optionally appending a value from a register.
 /// Replaces the runtime-only Invoke(logger.Log) pattern so the assembly backend can emit printf.
 /// </summary>
-public sealed class PrintInstruction(string textPrefix, Register? valueRegister = null,
-	bool valueIsText = false)
-	: Instruction(InstructionType.Print)
+public sealed class PrintInstruction(string textPrefix,
+	Register? valueRegister = null,
+	bool valueIsText = false) : Instruction(InstructionType.Print)
 {
-	public PrintInstruction(BinaryReader reader, NameTable table)
-		: this(table.names[reader.Read7BitEncodedInt()])
+	public PrintInstruction(BinaryReader reader, NameTable table) : this(
+		table.names[reader.Read7BitEncodedInt()])
 	{
 		if (!reader.ReadBoolean())
 			return;

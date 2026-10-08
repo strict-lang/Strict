@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using Strict.Language.Tests;
 
 namespace Strict.Compiler.Assembly.Tests;
 
@@ -14,11 +13,11 @@ public sealed class StrictCompilerConversionTests
 	{
 		var path = GetCompilerPath();
 		foreach (var typeName in new[]
-		{
-			"Platform", "ToolInfo", "RegisterMap", "CompInstruction", "CompBuilder", "CompList",
-			"AsmText", "InstrToAsm", "EntryPoint", "NasmFormat", "LinkerPlan",
-			"InstructionsToNasm", "CompilerPipeline", "ToolRunner", "NativeBuild"
-		})
+			{
+				"Platform", "ToolInfo", "RegisterMap", "CompInstruction", "CompBuilder", "CompList",
+				"AsmText", "InstrToAsm", "EntryPoint", "NasmFormat", "LinkerPlan", "InstructionsToNasm",
+				"CompilerPipeline", "ToolRunner", "NativeBuild"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 
@@ -26,10 +25,7 @@ public sealed class StrictCompilerConversionTests
 	public void CompilerPackageHasDemoAndTestEntryPoints()
 	{
 		var path = GetCompilerPath();
-		foreach (var typeName in new[]
-		{
-			"CompilerDemo", "PlatformTests", "EmitTests", "LinkerTests"
-		})
+		foreach (var typeName in new[] { "CompilerDemo", "PlatformTests", "EmitTests", "LinkerTests" })
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 

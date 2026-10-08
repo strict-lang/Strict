@@ -24,15 +24,12 @@ public sealed class ConstructorToFieldMutationsOptimizer : InstructionOptimizer
 
 	public override List<Instruction> Optimize(List<Instruction> instructions) => instructions;
 
-	private static List<Instruction> Optimize(List<Instruction> instructions,
-		BinaryExecutable binary)
+	private static List<Instruction> Optimize(List<Instruction> instructions, BinaryExecutable binary)
 	{
 		for (var index = 0; index < instructions.Count; index++)
-		{
 			if (instructions[index] is Invoke invoke &&
 				TryBuildConstructValueType(invoke, instructions, index, binary, out var replacement))
 				instructions[index] = replacement;
-		}
 		return instructions;
 	}
 

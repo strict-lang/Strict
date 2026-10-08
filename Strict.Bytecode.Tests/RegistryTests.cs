@@ -1,5 +1,3 @@
-using Strict.Bytecode;
-
 namespace Strict.Bytecode.Tests;
 
 public sealed class RegistryTests

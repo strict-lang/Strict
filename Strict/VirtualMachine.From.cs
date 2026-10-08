@@ -1,10 +1,9 @@
-using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
+using Strict.HighLevelRuntime;
 using Strict.Language;
 using Type = Strict.Language.Type;
-using Strict.HighLevelRuntime;
 
 namespace Strict;
 
@@ -20,8 +19,7 @@ public sealed partial class VirtualMachine
 		if (members.Count == 0 && hasBinaryMembers)
 		{
 			Memory.Registers[invoke.Register] = new ValueInstance(targetType,
-				CreateConstructorValuesFromBinaryMembers(targetType, info,
-					binaryMembers));
+				CreateConstructorValuesFromBinaryMembers(targetType, info, binaryMembers));
 			return true;
 		}
 		var values = new ValueInstance[members.Count];
@@ -61,9 +59,8 @@ public sealed partial class VirtualMachine
 			if (!values[memberIndex].HasValue || !values[memberIndex].IsList)
 				continue;
 			var memberType = members[memberIndex].Type;
-			if (memberType is not GenericTypeImplementation memberGeneric ||
-				!memberGeneric.ImplementationTypes[0].Name.Equals("Color",
-					StringComparison.OrdinalIgnoreCase))
+			if (memberType is not GenericTypeImplementation memberGeneric || !memberGeneric.
+				ImplementationTypes[0].Name.Equals("Color", StringComparison.OrdinalIgnoreCase))
 				continue;
 			var argValue = values[memberIndex];
 			var argItems = argValue.List.Items;
@@ -71,9 +68,8 @@ public sealed partial class VirtualMachine
 				continue;
 			var colorType = memberGeneric.ImplementationTypes[0];
 			var byteType = executable.basePackage.FindType("Byte") ??
-				executable.basePackage.GetType(Language.Type.Number);
-			values[memberIndex] = ConvertByteListToColorList(argItems, memberType, colorType,
-				byteType);
+				executable.basePackage.GetType(Type.Number);
+			values[memberIndex] = ConvertByteListToColorList(argItems, memberType, colorType, byteType);
 		}
 	}
 
@@ -90,19 +86,18 @@ public sealed partial class VirtualMachine
 			var alpha = colorIndex * 4 + 3 < bytes.Count
 				? (byte)Math.Clamp(bytes[colorIndex * 4 + 3].Number, 0, 255)
 				: (byte)255;
-			colors[colorIndex] = new ValueInstance(colorType,
-			[
-				new ValueInstance(byteType, (double)red),
-				new ValueInstance(byteType, (double)green),
-				new ValueInstance(byteType, (double)blue),
-				new ValueInstance(byteType, (double)alpha)
+			colors[colorIndex] = new ValueInstance(colorType, [
+				new ValueInstance(byteType, red),
+				new ValueInstance(byteType, green),
+				new ValueInstance(byteType, blue),
+				new ValueInstance(byteType, alpha)
 			]);
 		}
 		return new ValueInstance(listType, colors);
 	}
 
-	private static ValueInstance GetMemberInitialOrDefaultValue(Member member,
-		bool hasBinaryMembers, List<BinaryMember> binaryMembers, int memberIndex) =>
+	private static ValueInstance GetMemberInitialOrDefaultValue(Member member, bool hasBinaryMembers,
+		List<BinaryMember> binaryMembers, int memberIndex) =>
 		member.InitialValue is Value initialValue
 			? initialValue.Data
 			: hasBinaryMembers && TryGetBinaryMemberInitialValue(binaryMembers, memberIndex,
@@ -139,8 +134,8 @@ public sealed partial class VirtualMachine
 		{
 			var memberType = targetType.FindType(binaryMembers[memberIndex].FullTypeName) ??
 				targetType.FindType(GetShortTypeName(binaryMembers[memberIndex].FullTypeName));
-			var argumentIndex = Array.FindIndex(info.ParameterNames, name =>
-				name.Equals(binaryMembers[memberIndex].Name, StringComparison.OrdinalIgnoreCase));
+			var argumentIndex = Array.FindIndex(info.ParameterNames,
+				name => name.Equals(binaryMembers[memberIndex].Name, StringComparison.OrdinalIgnoreCase));
 			if (argumentIndex >= 0 && argumentIndex < info.ArgumentRegisters.Length)
 				values[memberIndex] = Memory.Registers[info.ArgumentRegisters[argumentIndex]];
 			else if (memberType is { IsTrait: true })
@@ -169,8 +164,8 @@ public sealed partial class VirtualMachine
 			var elementType = members[memberIndex].Type is GenericTypeImplementation genericList
 				? genericList.ImplementationTypes[0]
 				: members[memberIndex].Type;
-			if (elementType.Members.FirstOrDefault(member => member.Name == Type.ElementsLowercase)?.
-					Type is GenericTypeImplementation nestedElementsList)
+			if (elementType.Members.FirstOrDefault(member => member.Name == Type.ElementsLowercase)?.Type
+				is GenericTypeImplementation nestedElementsList)
 				elementType = nestedElementsList.ImplementationTypes[0];
 			var defaultElement = CreateDefaultComplexValue(elementType);
 			values[memberIndex] = new ValueInstance(members[memberIndex].Type, defaultElement,
@@ -235,8 +230,7 @@ public sealed partial class VirtualMachine
 		return null;
 	}
 
-	private int? TryResolveMemberMethodLength(Type targetType, ValueInstance[] values,
-		Expression rhs)
+	private int? TryResolveMemberMethodLength(Type targetType, ValueInstance[] values, Expression rhs)
 	{
 		var rhsText = rhs.ToString();
 		var dotIndex = rhsText.IndexOf('.');
@@ -263,7 +257,7 @@ public sealed partial class VirtualMachine
 			if (methodInstructions != null)
 			{
 				var childScope = InitializeChildScope();
-				Memory.Frame.Set(Type.ValueLowercase, memberValue, isMember: true);
+				Memory.Frame.Set(Type.ValueLowercase, memberValue, true);
 				TrySetScopeMembersFromTypeMembers(typeInstance!);
 				RunInstructions(methodInstructions);
 				var result = Returns;
@@ -286,8 +280,8 @@ public sealed partial class VirtualMachine
 			return null;
 		return typeInstance.TryGetValue("Width", out var width) &&
 			typeInstance.TryGetValue("Height", out var height)
-			? (int)(width.Number * height.Number)
-			: null;
+				? (int)(width.Number * height.Number)
+				: null;
 	}
 
 	private int? TryResolveLengthByInterpreter(Method method, ValueInstance memberValue)

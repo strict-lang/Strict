@@ -23,7 +23,8 @@ public sealed class CodeActionHandler(StrictDocument document) : ICodeActionHand
 			if (fix != null)
 				actions.Add(fix);
 		}
-		return Task.FromResult<CommandOrCodeActionContainer?>(new CommandOrCodeActionContainer(actions));
+		return Task.FromResult<CommandOrCodeActionContainer?>(
+			new CommandOrCodeActionContainer(actions));
 	}
 
 	private static CodeAction? CreateFix(DocumentUri uri, string[] lines, Diagnostic diagnostic,
@@ -34,8 +35,8 @@ public sealed class CodeActionHandler(StrictDocument document) : ICodeActionHand
 				"Remove empty line"),
 			nameof(TypeParser.ExtraWhitespacesFoundAtEndOfLine) => CreateTrimEndAction(uri, lines,
 				diagnostic),
-			nameof(TypeParser.ExtraWhitespacesFoundAtBeginningOfLine) => CreateLeadingWhitespaceFix(
-				uri, lines, diagnostic),
+			nameof(TypeParser.ExtraWhitespacesFoundAtBeginningOfLine) => CreateLeadingWhitespaceFix(uri,
+				lines, diagnostic),
 			_ => null
 		};
 
@@ -78,7 +79,9 @@ public sealed class CodeActionHandler(StrictDocument document) : ICodeActionHand
 		while (index < text.Length && (text[index] == '\t' || text[index] == ' '))
 		{
 			if (text[index] == '\t')
+			{
 				tabCount++;
+			}
 			else if (text[index] == ' ')
 			{
 				// Convert each group of leading spaces into tabs (4 spaces → 1 tab)

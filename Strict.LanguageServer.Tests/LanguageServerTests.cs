@@ -3,13 +3,13 @@ using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Strict.Language.Tests;
+using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer.Tests;
 
 public class LanguageServerTests
 {
-	protected static readonly DocumentUri URI = new("", "", "Test/Test" + Language.Type.Extension,
-		"", "");
+	protected static readonly DocumentUri URI = new("", "", "Test/Test" + Type.Extension, "", "");
 	protected TextDocumentSynchronizer textDocumentHandler = null!;
 	protected Mock<ILanguageServer> languageServer = null!;
 
@@ -22,8 +22,8 @@ public class LanguageServerTests
 		languageServer.Setup(expression => expression.Window).Returns(window.Object);
 		languageServer.Setup(expression => expression.TextDocument).
 			Returns(new Mock<ITextDocumentLanguageServer>().Object);
-		textDocumentHandler =
-			new TextDocumentSynchronizer(languageServer.Object, new StrictDocument(TestPackage.Instance), TestPackage.Instance);
+		textDocumentHandler = new TextDocumentSynchronizer(languageServer.Object,
+			new StrictDocument(TestPackage.Instance), TestPackage.Instance);
 		textDocumentHandler.Document.AddOrUpdate(URI, "constant bla = 5");
 	}
 }

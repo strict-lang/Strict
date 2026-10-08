@@ -17,7 +17,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		try
 		{
 			foreach (var pair in rememberToInitializeMemberInitialValues!)
-				pair.Key.InitialValue = GetMemberExpression(parser, pair.Key.Name, pair.Value, pair.Key.LineNumber);
+				pair.Key.InitialValue =
+					GetMemberExpression(parser, pair.Key.Name, pair.Value, pair.Key.LineNumber);
 		}
 		catch (ParsingFailed)
 		{
@@ -57,10 +58,9 @@ public sealed class TypeParser(Type type, string[] lines)
 		catch (Exception ex)
 		{
 			type.Dispose();
-			throw new ParsingFailed(type, rememberStartMethodLineNumber,
-				string.IsNullOrEmpty(ex.Message)
-					? ex.GetType().Name
-					: ex.Message, ex);
+			throw new ParsingFailed(type, rememberStartMethodLineNumber, string.IsNullOrEmpty(ex.Message)
+				? ex.GetType().Name
+				: ex.Message, ex);
 		}
 	}
 
@@ -68,12 +68,18 @@ public sealed class TypeParser(Type type, string[] lines)
 	{
 		var line = ValidateCurrentLineIsNonEmptyAndTrimmed();
 		if (line.StartsWith(Type.HasWithSpaceAtEnd, StringComparison.Ordinal))
+		{
 			type.Members.Add(GetNewMember(parser));
+		}
 		else if (line.StartsWith(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal) &&
 			!(LineNumber + 1 < lines.Length && lines[LineNumber + 1].StartsWith('\t')))
+		{
 			type.Members.Add(GetNewMember(parser, Keyword.Mutable));
+		}
 		else if (line.StartsWith(Type.ConstantWithSpaceAtEnd, StringComparison.Ordinal))
+		{
 			type.Members.Add(GetNewMember(parser, Keyword.Constant));
+		}
 		else
 		{
 			var methodFirstLineNumber = LineNumber;
@@ -94,8 +100,11 @@ public sealed class TypeParser(Type type, string[] lines)
 	}
 
 	public sealed class MethodWithSameNameAndParameterCountAlreadyExists(Type type,
-		int lineNumber, Method method, Method existingMethod)
-		: ParsingFailed(type, lineNumber, method.ToString(), existingMethod.ToString()); //ncrunch: no coverage
+		int lineNumber,
+		Method method,
+		Method existingMethod)
+		: ParsingFailed(type, lineNumber, method.ToString(),
+			existingMethod.ToString()); //ncrunch: no coverage
 
 	/// <summary>
 	/// If a from(...) method contains a same-type constructor call like TypeName(constant) and the
@@ -147,7 +156,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		if (closeParen > openParen + 1)
 		{
 			var inside = signature[(openParen + 1)..closeParen];
-			foreach (var param in inside.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+			foreach (var param in inside.Split(',',
+				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
 			{
 				// the param format is "name Type" or just "name"
 				var parts = param.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -193,7 +203,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		return paramNames;
 	}
 
-	private void SearchForMethodCalls(string methodName, string signature, string line, IReadOnlyList<string> paramNames)
+	private void SearchForMethodCalls(string methodName, string signature, string line,
+		IReadOnlyList<string> paramNames)
 	{
 		var searchStart = 0;
 		var directPattern = methodName + "(";
@@ -219,7 +230,8 @@ public sealed class TypeParser(Type type, string[] lines)
 			{
 				var argText = line[(argsStartDirect + 1)..argsEndDirect];
 				if (AreParametersEqual(argText, paramNames))
-					throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, signature, argText, line.Trim());
+					throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, signature, argText,
+						line.Trim());
 			}
 			searchStart = directIdx + directPattern.Length;
 		}
@@ -238,7 +250,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		return true;
 	}
 
-	private void SearchForMemberMethodCalls(string methodName, string signature, string line, IReadOnlyList<string> paramNames)
+	private void SearchForMemberMethodCalls(string methodName, string signature, string line,
+		IReadOnlyList<string> paramNames)
 	{
 		var searchStart = 0;
 		var dotPattern = "." + methodName + "(";
@@ -263,7 +276,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		}
 	}
 
-	private void CheckRecursionCallingThisMethod(string signature, string line, IReadOnlyList<string> paramNames, int dotIdx, string dotPattern)
+	private void CheckRecursionCallingThisMethod(string signature, string line,
+		IReadOnlyList<string> paramNames, int dotIdx, string dotPattern)
 	{
 		var argsStart = dotIdx + dotPattern.Length - 1;
 		var argsEnd = line.IndexOf(')', argsStart + 1);
@@ -271,7 +285,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		{
 			var argText = line[(argsStart + 1)..argsEnd];
 			if (AreParametersEqual(argText, paramNames))
-				throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, signature, argText, line.Trim());
+				throw new SelfRecursiveCallWithSameArgumentsDetected(type, LineNumber, signature, argText,
+					line.Trim());
 		} //ncrunch: no coverage
 	} //ncrunch: no coverage
 
@@ -292,9 +307,8 @@ public sealed class TypeParser(Type type, string[] lines)
 			var args = line[startArgs..endArgs].Split(',',
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 			if (args.Length == 2 &&
-				long.TryParse(args[0], NumberStyles.Integer, CultureInfo.InvariantCulture,
-					out var start) && long.TryParse(args[1], NumberStyles.Integer,
-					CultureInfo.InvariantCulture, out var end))
+				long.TryParse(args[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var start) &&
+				long.TryParse(args[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var end))
 			{
 				var span = Math.Abs(end - start);
 				if (span > MaximumRangeAllowed)
@@ -308,8 +322,11 @@ public sealed class TypeParser(Type type, string[] lines)
 		: ParsingFailed(type, lineNumber,
 			"Endless recursion via self-constructor call in from: " + line);
 
-	public sealed class SelfRecursiveCallWithSameArgumentsDetected(Type type, int lineNumber,
-		string signature, string argumentNames, string line) : ParsingFailed(type, lineNumber,
+	public sealed class SelfRecursiveCallWithSameArgumentsDetected(Type type,
+		int lineNumber,
+		string signature,
+		string argumentNames,
+		string line) : ParsingFailed(type, lineNumber,
 		$"Self-recursive call with same arguments detected in {
 			signature
 		} with arguments=({
@@ -325,17 +342,21 @@ public sealed class TypeParser(Type type, string[] lines)
 				signature[(signature.IndexOf('(') + 1)..signature.IndexOf(')')].
 					Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).
 					Select(parameter =>
-						parameter.Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(1).
-							FirstOrDefault() ?? Type.Any));
+						parameter.Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(1).FirstOrDefault() ??
+						Type.Any));
 	}
 
-	public sealed class HugeConstantRangeNotAllowed(Type type, int lineNumber, string line,
-		long span, long limit) : ParsingFailed(type, lineNumber,
-		$"Range size {span} exceeds limit {limit}: " + line);
+	public sealed class HugeConstantRangeNotAllowed(Type type,
+		int lineNumber,
+		string line,
+		long span,
+		long limit)
+		: ParsingFailed(type, lineNumber, $"Range size {span} exceeds limit {limit}: " + line);
 
-	public sealed class MemberNameMustNotStartWithTypeName(Type type, int lineNumber,
-		string memberName) : ParsingFailed(type, lineNumber,
-		$"Member name {memberName} must not start with type name {type.Name}");
+	public sealed class
+		MemberNameMustNotStartWithTypeName(Type type, int lineNumber, string memberName)
+		: ParsingFailed(type, lineNumber,
+			$"Member name {memberName} must not start with type name {type.Name}");
 
 	private void DetectRedundantReturn(IReadOnlyList<string> checkLines, Method method)
 	{
@@ -345,11 +366,7 @@ public sealed class TypeParser(Type type, string[] lines)
 			return;
 
 		//TODO: way to complicated and slow just to check for /t at the beginning of a line
-		static int GetIndent(string line)
-		{
-			return line.TakeWhile(c => c == '\t').Count();
-		}
-
+		static int GetIndent(string line) => line.TakeWhile(c => c == '\t').Count();
 		if (GetIndent(checkLines[^1]) != GetIndent(checkLines[^2]))
 			return;
 		var prevAssignmentIndex = checkLines[^2].IndexOf(" = ", StringComparison.Ordinal);
@@ -367,8 +384,10 @@ public sealed class TypeParser(Type type, string[] lines)
 				variableName);
 	}
 
-	public sealed class RedundantReturnPreviousLineContainsValueAlready(Type type, int lineNumber,
-		string prevLine, string variableName) : ParsingFailed(type, lineNumber, prevLine, variableName);
+	public sealed class RedundantReturnPreviousLineContainsValueAlready(Type type,
+		int lineNumber,
+		string prevLine,
+		string variableName) : ParsingFailed(type, lineNumber, prevLine, variableName);
 
 	private string ValidateCurrentLineIsNonEmptyAndTrimmed()
 	{
@@ -385,17 +404,20 @@ public sealed class TypeParser(Type type, string[] lines)
 	public sealed class EmptyLineIsNotAllowed(Type type, int lineNumber)
 		: ParsingFailed(type, lineNumber);
 
-	public sealed class ExtraWhitespacesFoundAtBeginningOfLine(Type type, int lineNumber,
-		string message, string method = "") : ParsingFailed(type, lineNumber,
+	public sealed class ExtraWhitespacesFoundAtBeginningOfLine(Type type,
+		int lineNumber,
+		string message,
+		string method = "") : ParsingFailed(type, lineNumber,
 		message + " (strict always requires tab for indentation)", method);
 
-	public sealed class ExtraWhitespacesFoundAtEndOfLine(Type type, int lineNumber,
-		string message, string method = "") : ParsingFailed(type, lineNumber, message, method);
+	public sealed class ExtraWhitespacesFoundAtEndOfLine(Type type,
+		int lineNumber,
+		string message,
+		string method = "") : ParsingFailed(type, lineNumber, message, method);
 
 	private Member GetNewMember(ExpressionParser parser, string usedKeyword = Keyword.Has)
 	{
-		var member = ParseMember(parser, lines[LineNumber].AsSpan(usedKeyword.Length + 1),
-			usedKeyword);
+		var member = ParseMember(parser, lines[LineNumber].AsSpan(usedKeyword.Length + 1), usedKeyword);
 		return type.Members.Any(m => m.Name == member.Name)
 			? throw new DuplicateMembersAreNotAllowed(type, LineNumber, member.Name)
 			: member;
@@ -459,8 +481,7 @@ public sealed class TypeParser(Type type, string[] lines)
 					var constraintsSpan = constantValue[(withIndex + Keyword.With.Length + 2)..];
 					pendingConstraints ??= new List<(Member, string[])>();
 					pendingConstraints.Add((member,
-						constraintsSpan.ToString().
-							Split(BinaryOperator.And, StringSplitOptions.TrimEntries)));
+						constraintsSpan.ToString().Split(BinaryOperator.And, StringSplitOptions.TrimEntries)));
 				}
 				return member;
 			}
@@ -470,8 +491,7 @@ public sealed class TypeParser(Type type, string[] lines)
 				if (string.Equals(nameAndType, explicitType, StringComparison.Ordinal) ||
 					string.Equals(nameAndType.MakeFirstLetterUppercase(), explicitType,
 						StringComparison.Ordinal))
-					throw new RedundantExplicitMemberTypeName(type, LineNumber, nameAndType,
-						explicitType);
+					throw new RedundantExplicitMemberTypeName(type, LineNumber, nameAndType, explicitType);
 				nameAndType += " " + explicitType;
 			}
 			if (HasConstraints(wordAfterName, ref nameAndExpression))
@@ -575,7 +595,8 @@ public sealed class TypeParser(Type type, string[] lines)
 		fromMethods.Any(fromMethod => fromMethod.Parameters.Count == 1 &&
 			valueType.IsSameOrCanBeUsedAs(fromMethod.Parameters[0].Type));
 
-	private static bool StartsWithConstructorCall(ReadOnlySpan<char> valueOnly, string declaredTypeName) =>
+	private static bool
+		StartsWithConstructorCall(ReadOnlySpan<char> valueOnly, string declaredTypeName) =>
 		valueOnly.StartsWith(declaredTypeName, StringComparison.Ordinal) &&
 		valueOnly.Length > declaredTypeName.Length && valueOnly[declaredTypeName.Length] == '(';
 
@@ -617,14 +638,15 @@ public sealed class TypeParser(Type type, string[] lines)
 	}
 
 	private Type? ExtractConstraintsSpanAndValueType(ExpressionParser parser,
-		ReadOnlySpan<char> remainingLine, string nameAndType,
-		out ReadOnlySpan<char> constraintsSpan, out string initialValueSpan)
+		ReadOnlySpan<char> remainingLine, string nameAndType, out ReadOnlySpan<char> constraintsSpan,
+		out string initialValueSpan)
 	{
 		var constraintKeywordLength = Keyword.With.Length;
 		var equalIndex = FindStandaloneEqualIndex(remainingLine);
 		if (equalIndex > 0)
 		{
-			constraintsSpan = remainingLine[(nameAndType.Length + 1 + constraintKeywordLength + 1)..(equalIndex - 1)];
+			constraintsSpan =
+				remainingLine[(nameAndType.Length + 1 + constraintKeywordLength + 1)..(equalIndex - 1)];
 			initialValueSpan = remainingLine[(equalIndex + 2)..].ToString();
 			return GetInitialValueType(parser, nameAndType, initialValueSpan);
 		}
@@ -670,7 +692,8 @@ public sealed class TypeParser(Type type, string[] lines)
 	}
 
 	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType(Type type,
-		int lineNumber, string typeName) : ParsingFailed(type, lineNumber, typeName);
+		int lineNumber,
+		string typeName) : ParsingFailed(type, lineNumber, typeName);
 
 	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
 	{
@@ -685,19 +708,20 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	private static bool
 		HasConstraints(string wordAfterName, ref SpanSplitEnumerator nameAndExpression) =>
-		wordAfterName is Keyword.With || nameAndExpression.MoveNext() &&
-		nameAndExpression.Current.ToString() is Keyword.With;
+		wordAfterName is Keyword.With || (nameAndExpression.MoveNext() &&
+			nameAndExpression.Current.ToString() is Keyword.With);
 
-	public sealed class MemberMissingConstraintExpression(Type type, int lineNumber,
+	public sealed class MemberMissingConstraintExpression(Type type,
+		int lineNumber,
 		string memberName) : ParsingFailed(type, lineNumber, memberName);
 
-	public sealed class RedundantExplicitMemberTypeName(Type type, int lineNumber,
-		string memberName, string typeName) : ParsingFailed(type, lineNumber,
-		$"Member '{memberName}' already infers type '{typeName}' from its name, remove the " +
-		"redundant explicit type");
+	public sealed class
+		RedundantExplicitMemberTypeName(Type type, int lineNumber, string memberName, string typeName)
+		: ParsingFailed(type, lineNumber,
+			$"Member '{memberName}' already infers type '{typeName}' from its name, remove the " +
+			"redundant explicit type");
 
-	private static bool
-		IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) =>
+	private static bool IsMemberTypeAny(string nameAndType, SpanSplitEnumerator nameAndExpression) =>
 		nameAndType == Type.AnyLowercase ||
 		nameAndExpression.Current.Equals(Type.Any, StringComparison.Ordinal);
 
@@ -753,15 +777,11 @@ public sealed class TypeParser(Type type, string[] lines)
 
 	public sealed class CharacterCountMustBeWithinLimit(Type type, int lineLength, int lineNumber)
 		: ParsingFailed(type, lineNumber,
-			$"Type {
-				type.Name
-			} has character count {
-				lineLength
-			} in line: {
-				lineNumber + 1
-			} but limit is " + $"{Limit.CharacterCount}");
+			$"Type {type.Name} has character count {lineLength} in line: {lineNumber + 1} but limit is " +
+			$"{Limit.CharacterCount}");
 
-	public sealed class MethodMustBeImplementedInNonTrait(Type type, string definitionLine,
+	public sealed class MethodMustBeImplementedInNonTrait(Type type,
+		string definitionLine,
 		int lineNumber) : ParsingFailed(type, lineNumber, definitionLine);
 
 	private void IncrementLineNumberTillMethodEnd()
@@ -795,8 +815,11 @@ public sealed class TypeParser(Type type, string[] lines)
 	private int listEndLineNumber = -1;
 
 	public sealed class MultiLineExpressionsAllowedOnlyWhenLengthIsMoreThanHundred(Type type,
-		int lineNumber, int length) : ParsingFailed(type, lineNumber, "Current length: " + length +
-		$", Minimum Length for Multi line expressions: {Limit.MultiLineCharacterCount}");
+		int lineNumber,
+		int length) : ParsingFailed(type, lineNumber,
+		"Current length: " + length + $", Minimum Length for Multi line expressions: {
+			Limit.MultiLineCharacterCount
+		}");
 
 	private void SetNewLinesAndLineNumbersAfterMerge()
 	{

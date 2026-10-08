@@ -83,8 +83,7 @@ public sealed class LimitTests
 
 	[Test]
 	public void LinesCountMustNotExceedTwoHundredFiftySix() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var _ = CreateType(nameof(LinesCountMustNotExceedTwoHundredFiftySix),
 					CreateDuplicateLines(257, "has logger").ToArray()).ParseMembersAndMethods(parser);
@@ -133,8 +132,7 @@ public sealed class LimitTests
 
 	[Test]
 	public void MemberCountShouldNotExceedLimit() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var _ = CreateType(nameof(MemberCountShouldNotExceedLimit),
 					CreateRandomMemberLines(Limit.MemberCountForEnums + 1)).ParseMembersAndMethods(parser);
@@ -166,11 +164,9 @@ public sealed class LimitTests
 	[TestCase("Parameter", "parameterNameGreaterThanFiftyExceedsLimitNotAllowed", "has number",
 		"Run(parameterNameGreaterThanFiftyExceedsLimitNotAllowed Number)", "	5")]
 	[TestCase("ParameterMinimum", "p", "has number", "Run(p Number)", "	5")]
-	public void
-		NameShouldBeWithinTheLimit(string testName, string memberOrParameterName,
-			params string[] code) =>
-		Assert.That(
-			() =>
+	public void NameShouldBeWithinTheLimit(string testName, string memberOrParameterName,
+		params string[] code) =>
+		Assert.That(() =>
 			{
 				using var _ = CreateType(testName + nameof(NameShouldBeWithinTheLimit), code).
 					ParseMembersAndMethods(parser);
@@ -184,18 +180,17 @@ public sealed class LimitTests
 	[TestCase("TypeNameWithLengthGreaterThanFiftyIsNotAllowedUseWithinLimit")]
 	[TestCase("T")]
 	public void TypeNameShouldNotExceedTheLimit(string typeName) =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
-				using var _ = CreateType(typeName, ["has number", "Run", "\t5"]).ParseMembersAndMethods(parser);
+				using var _ = CreateType(typeName, ["has number", "Run", "\t5"]).
+					ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
 				$"Name {typeName} length is {typeName.Length} but allowed limit is between 2 and 50"));
 
 	[Test]
 	public void VariableNameShouldNotExceedTheLimit() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var type = CreateType(nameof(VariableNameShouldNotExceedTheLimit), [
 					"has number", "Run",
@@ -209,8 +204,7 @@ public sealed class LimitTests
 
 	[Test]
 	public void VariableNameShouldNotBeBelowTheLimit() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var type = CreateType(nameof(VariableNameShouldNotBeBelowTheLimit),
 					["has number", "Run", "\tconstant v = 5"]);
@@ -237,10 +231,9 @@ public sealed class LimitTests
 				]).ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
-				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains(
-					$"Name {
-						methodName
-					} length is {
-						methodName.Length
-					} but allowed limit is between 2 and 50"));
+				InstanceOf<NamedType.NameLengthIsNotWithinTheAllowedLimit>().With.Message.Contains($"Name {
+					methodName
+				} length is {
+					methodName.Length
+				} but allowed limit is between 2 and 50"));
 }

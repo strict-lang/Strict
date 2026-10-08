@@ -1,10 +1,11 @@
+using System.IO.Compression;
+using System.Runtime.InteropServices;
 using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
 using Strict.Expressions;
 using Strict.Language;
-using System.IO.Compression;
-using System.Runtime.InteropServices;
+using Type = Strict.Language.Type;
 
 namespace Strict.Tests;
 
@@ -26,8 +27,40 @@ public sealed class RunnerTests
 	public async Task RunBaseTypesTestPackageFromDirectory(string suffix)
 	{
 		await new Runner(Path.Combine(FindRepoRoot(), "Examples", "BaseTypesTest") + suffix).Run();
-		Assert.That(consoleWriter.ToString(), Does.StartWith(string.Join(Environment.NewLine,
-			"Hello, World!", "Hello, Strict!", "3 + 4 = 7", "10 * 3 = 30", "(1, 2, 3).Sum = 6", "")));
+		var expected = string.Join(Environment.NewLine, "Hello, World!", "Hello, Strict!", "3 + 4 = 7",
+			"10 * 3 = 30", "(1, 2, 3).Sum = 6", "");
+		Assert.That(consoleWriter.ToString(), Does.StartWith(expected));
+		var binaryPath = Path.ChangeExtension(GetExamplesFilePath("BaseTypesTest/BaseTypesTest"),
+			BinaryExecutable.Extension);
+		var standalone = NativeProcessRunner.Run("dotnet",
+			"\"" + StrictAssemblyForFreshProcess() + "\" \"" + binaryPath + "\"", 120000);
+		Assert.That(standalone.ExitCode, Is.Zero, standalone.Output + standalone.Error);
+		Assert.That(standalone.Output, Does.Contain(expected));
+	}
+
+	private static readonly object FreshAssemblyGate = new();
+	private static string? freshStrictAssembly;
+
+	private static string StrictAssemblyForFreshProcess()
+	{
+		var location = typeof(Strict.Program).Assembly.Location;
+		if (Environment.GetEnvironmentVariable("NCrunch") != "1")
+			return location;
+		lock (FreshAssemblyGate)
+		{
+			if (freshStrictAssembly != null)
+				return freshStrictAssembly;
+			var artifacts = Path.Combine(Path.GetTempPath(), "StrictFreshProcess");
+			var projectFile = Path.Combine(FindRepoRoot(), "Strict", "Strict.csproj");
+			var build = NativeProcessRunner.Run("dotnet",
+				"build \"" + projectFile + "\" --artifacts-path \"" + artifacts +
+				"\" --verbosity quiet --nologo", 120000);
+			Assert.That(build.ExitCode, Is.Zero, build.Output + build.Error);
+			var built = Directory.GetFiles(Path.Combine(artifacts, "bin"), "Strict.dll",
+				SearchOption.AllDirectories);
+			Assert.That(built, Has.Length.EqualTo(1), string.Join(Environment.NewLine, built));
+			return freshStrictAssembly = built[0];
+		}
 	}
 
 	[TearDown]
@@ -228,14 +261,13 @@ public sealed class RunnerTests
 		Directory.CreateDirectory(tempDirectory);
 		try
 		{
-			var sourceCopyPath =
-				Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
+			var sourceCopyPath = Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
 			File.Copy(SimpleCalculatorFilePath, sourceCopyPath);
 			await new Runner(sourceCopyPath).Run();
 			var binaryPath = Path.ChangeExtension(sourceCopyPath, BinaryExecutable.Extension);
 			await using var archive = await ZipFile.OpenReadAsync(binaryPath);
 			var entry = archive.Entries.First(file => file.FullName == "SimpleCalculator.bytecode");
-			using var reader = new BinaryReader(entry.Open());
+			using var reader = new BinaryReader(await entry.OpenAsync());
 			Assert.That(reader.ReadByte(), Is.EqualTo((byte)'S'));
 			Assert.That(reader.ReadByte(), Is.EqualTo(BinaryType.Version));
 			var customNamesCount = reader.Read7BitEncodedInt();
@@ -270,10 +302,10 @@ public sealed class RunnerTests
 	{
 		var localPath = Path.Combine(
 			Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)), "Examples",
-			filename + Language.Type.Extension);
+			filename + Type.Extension);
 		return File.Exists(localPath)
 			? localPath
-			: Path.Combine(FindRepoRoot(), "Examples", filename + Language.Type.Extension);
+			: Path.Combine(FindRepoRoot(), "Examples", filename + Type.Extension);
 	}
 
 	private static string FindRepoRoot()
@@ -301,9 +333,9 @@ public sealed class RunnerTests
 		{
 			PerformanceLog.IsEnabled = true;
 #endif
-		await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness")).Run();
-		var output = consoleWriter.ToString();
-		Assert.That(output, Does.Contain("Brightness adjustment successful: (0.25, 0.25, 0.25)"));
+			await new Runner(GetExamplesFilePath("../ImageProcessing/AdjustBrightness")).Run();
+			var output = consoleWriter.ToString();
+			Assert.That(output, Does.Contain("Brightness adjustment successful: (0.25, 0.25, 0.25)"));
 #if DEBUG
 		}
 		finally
@@ -350,8 +382,8 @@ public sealed class RunnerTests
 		Assert.That(height, Is.EqualTo(4));
 		Assert.That(originalBytes!.Length, Is.EqualTo(4 * 4 * 4));
 		var outputPath = Path.Combine(repoRoot, "ImageProcessing", "4x4_output.png");
-		NativePluginLoader.TrySaveNativeImage("ImageSaver", outputPath, originalBytes,
-			width, height, searchDirectory);
+		NativePluginLoader.TrySaveNativeImage("ImageSaver", outputPath, originalBytes, width, height,
+			searchDirectory);
 		Assert.That(File.Exists(outputPath), Is.True);
 		var reloadedBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", outputPath,
 			searchDirectory, out var reloadedWidth, out var reloadedHeight);
@@ -368,8 +400,10 @@ public sealed class RunnerTests
 			: RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
 				? ".dylib"
 				: ".so";
-		var loaderSource = Path.Combine(repoRoot, "NativePlugins", "ImageLoader", "ImageLoader" + extension);
-		var saverSource = Path.Combine(repoRoot, "NativePlugins", "ImageSaver", "ImageSaver" + extension);
+		var loaderSource =
+			Path.Combine(repoRoot, "NativePlugins", "ImageLoader", "ImageLoader" + extension);
+		var saverSource =
+			Path.Combine(repoRoot, "NativePlugins", "ImageSaver", "ImageSaver" + extension);
 		CopyIfNewerOrMissing(loaderSource, Path.Combine(targetDirectory, "ImageLoader" + extension));
 		CopyIfNewerOrMissing(saverSource, Path.Combine(targetDirectory, "ImageSaver" + extension));
 		if (extension != ".so")
@@ -383,9 +417,9 @@ public sealed class RunnerTests
 
 	private static void CopyIfNewerOrMissing(string source, string target)
 	{
-		if (File.Exists(source) &&
-			(!File.Exists(target) || File.GetLastWriteTimeUtc(source) > File.GetLastWriteTimeUtc(target)))
-			File.Copy(source, target, overwrite: true);
+		if (File.Exists(source) && (!File.Exists(target) ||
+			File.GetLastWriteTimeUtc(source) > File.GetLastWriteTimeUtc(target)))
+			File.Copy(source, target, true);
 	}
 
 	[Test]
@@ -395,7 +429,7 @@ public sealed class RunnerTests
 		var testImagePath = Path.Combine(repoRoot, "ImageProcessing", "test_image.jpg");
 		CopyNativePluginsToDirectory(repoRoot, AppContext.BaseDirectory);
 		var processImagePath =
-			Path.Combine(repoRoot, "ImageProcessing", "ProcessImage" + Language.Type.Extension);
+			Path.Combine(repoRoot, "ImageProcessing", "ProcessImage" + Type.Extension);
 		await new Runner(processImagePath, testImagePath).Run();
 		var outputImagePath = testImagePath.Replace(".jpg", "_output.jpg");
 		Assert.That(File.Exists(outputImagePath), Is.True, outputImagePath);
@@ -443,7 +477,9 @@ public sealed class RunnerTests
 				File.SetLastWriteTimeUtc(binaryPath, originalBinaryTimestamp);
 			}
 			else if (File.Exists(binaryPath))
+			{
 				File.Delete(binaryPath);
+			}
 		}
 	}
 }

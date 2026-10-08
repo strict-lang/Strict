@@ -44,8 +44,8 @@ public sealed partial class VirtualMachine
 		RestoreLoopVariable(frame, IndexSymbolId, Type.IndexLowercase, loopBegin.SavedIndexValue);
 		RestoreLoopVariable(frame, ValueSymbolId, Type.ValueLowercase, loopBegin.SavedValue);
 		RestoreLoopVariable(frame, OuterSymbolId, Type.OuterLowercase, loopBegin.SavedOuterValue);
-		RestoreLoopVariable(frame, OuterIndexSymbolId,
-			Type.OuterLowercase + "." + Type.IndexLowercase, loopBegin.SavedOuterIndexValue);
+		RestoreLoopVariable(frame, OuterIndexSymbolId, Type.OuterLowercase + "." + Type.IndexLowercase,
+			loopBegin.SavedOuterIndexValue);
 		for (var variableIndex = 0; variableIndex < loopBegin.CustomVariableNames.Length;
 			variableIndex++)
 		{
@@ -91,16 +91,12 @@ public sealed partial class VirtualMachine
 		frame.Set(Type.IndexLowercase, new ValueInstance(executable.numberType, nextIndex));
 		if (loopBegin.SavedIndexValue.HasValue)
 		{
-			frame.Set(OuterSymbolId,
-				loopBegin.SavedOuterValue.HasValue
-					? loopBegin.SavedOuterValue
-					: loopBegin.SavedValue,
-				false, Type.OuterLowercase);
-			frame.Set(OuterIndexSymbolId,
-				loopBegin.SavedOuterIndexValue.HasValue
-					? loopBegin.SavedOuterIndexValue
-					: loopBegin.SavedIndexValue,
-				false, Type.OuterLowercase + "." + Type.IndexLowercase);
+			frame.Set(OuterSymbolId, loopBegin.SavedOuterValue.HasValue
+				? loopBegin.SavedOuterValue
+				: loopBegin.SavedValue, false, Type.OuterLowercase);
+			frame.Set(OuterIndexSymbolId, loopBegin.SavedOuterIndexValue.HasValue
+				? loopBegin.SavedOuterIndexValue
+				: loopBegin.SavedIndexValue, false, Type.OuterLowercase + "." + Type.IndexLowercase);
 		}
 		AlterValueVariable(iterableVariable, loopBegin);
 		AssignCustomLoopVariables(loopBegin, frame.Get(ValueSymbolId));
@@ -139,16 +135,12 @@ public sealed partial class VirtualMachine
 		frame.Set(ValueSymbolId, currentIndexValue, true, Type.ValueLowercase);
 		if (loopBegin.SavedIndexValue.HasValue)
 		{
-			frame.Set(OuterSymbolId,
-				loopBegin.SavedOuterValue.HasValue
-					? loopBegin.SavedOuterValue
-					: loopBegin.SavedValue,
-				false, Type.OuterLowercase);
-			frame.Set(OuterIndexSymbolId,
-				loopBegin.SavedOuterIndexValue.HasValue
-					? loopBegin.SavedOuterIndexValue
-					: loopBegin.SavedIndexValue,
-				false, Type.OuterLowercase + "." + Type.IndexLowercase);
+			frame.Set(OuterSymbolId, loopBegin.SavedOuterValue.HasValue
+				? loopBegin.SavedOuterValue
+				: loopBegin.SavedValue, false, Type.OuterLowercase);
+			frame.Set(OuterIndexSymbolId, loopBegin.SavedOuterIndexValue.HasValue
+				? loopBegin.SavedOuterIndexValue
+				: loopBegin.SavedIndexValue, false, Type.OuterLowercase + "." + Type.IndexLowercase);
 		}
 		AssignCustomLoopVariables(loopBegin, currentIndexValue);
 	}
@@ -183,16 +175,14 @@ public sealed partial class VirtualMachine
 	private static int GetLength(ValueInstance iterableInstance) =>
 		iterableInstance.GetIteratorLength();
 
-	private void AlterValueVariable(ValueInstance iterableVariable,
-		LoopBeginInstruction loopBegin)
+	private void AlterValueVariable(ValueInstance iterableVariable, LoopBeginInstruction loopBegin)
 	{
 		var frame = Memory.Frame;
 		var index = (int)frame.Get(IndexSymbolId).Number;
 		if (iterableVariable.IsText)
 		{
 			if (index < iterableVariable.Text.Length)
-				frame.Set(ValueSymbolId,
-					new ValueInstance(iterableVariable.Text[index].ToString()), true,
+				frame.Set(ValueSymbolId, new ValueInstance(iterableVariable.Text[index].ToString()), true,
 					Type.ValueLowercase);
 			return;
 		}
@@ -205,8 +195,8 @@ public sealed partial class VirtualMachine
 				loopBegin.LoopCount = 0;
 			return;
 		}
-		frame.Set(ValueSymbolId,
-			new ValueInstance(executable.numberType, index + 1), true, Type.ValueLowercase);
+		frame.Set(ValueSymbolId, new ValueInstance(executable.numberType, index + 1), true,
+			Type.ValueLowercase);
 	}
 
 	private void TryStoreInstructions(Instruction instruction)
@@ -236,8 +226,7 @@ public sealed partial class VirtualMachine
 		if (instruction.InstructionType == InstructionType.LoadVariableToRegister)
 		{
 			var loadVariable = (LoadVariableToRegister)instruction;
-			if (!GetIdentifierAccessPath(loadVariable.Identifier).TryResolve(this,
-				out var registerValue))
+			if (!GetIdentifierAccessPath(loadVariable.Identifier).TryResolve(this, out var registerValue))
 				throw Fail("Could not resolve variable '" + loadVariable.Identifier + //ncrunch: no coverage
 					"' - check that the variable is defined and in scope");
 			Memory.Registers[loadVariable.Register] = registerValue;
@@ -253,8 +242,8 @@ public sealed partial class VirtualMachine
 		value.IsList
 			? new ValueInstance(value.List.Clone(value.List.ReturnType))
 			: value.IsDictionary
-				? new ValueInstance(value.GetType(), new Dictionary<ValueInstance, ValueInstance>(
-					value.GetDictionaryItems()))
+				? new ValueInstance(value.GetType(),
+					new Dictionary<ValueInstance, ValueInstance>(value.GetDictionaryItems()))
 				: value;
 
 	private IdentifierAccessPath GetIdentifierAccessPath(string identifier) =>
@@ -316,13 +305,11 @@ public sealed partial class VirtualMachine
 		{
 			InstructionType.Add => AddValueInstances(left, right),
 			InstructionType.Subtract => SubtractValueInstances(left, right),
-			InstructionType.Multiply => new ValueInstance(right.GetType(),
-				left.Number * right.Number),
-			InstructionType.Divide => new ValueInstance(right.GetType(),
-				left.Number / right.Number),
-			InstructionType.Modulo => new ValueInstance(right.GetType(),
-				left.Number % right.Number),
-			_ => throw Fail("Unsupported binary operation: " + instruction.InstructionType) //ncrunch: no coverage
+			InstructionType.Multiply => new ValueInstance(right.GetType(), left.Number * right.Number),
+			InstructionType.Divide => new ValueInstance(right.GetType(), left.Number / right.Number),
+			InstructionType.Modulo => new ValueInstance(right.GetType(), left.Number % right.Number),
+			_ => throw Fail("Unsupported binary operation: " +
+				instruction.InstructionType) //ncrunch: no coverage
 		};
 	}
 
@@ -354,7 +341,8 @@ public sealed partial class VirtualMachine
 			return new ValueInstance(left.List.ReturnType, items.ToArray());
 		}
 		if (left.IsText || right.IsText)
-			throw Fail("Text subtraction is not supported: '" + left + "' - '" + right + "'"); //ncrunch: no coverage
+			throw Fail("Text subtraction is not supported: '" + left + "' - '" + right +
+				"'"); //ncrunch: no coverage
 		return new ValueInstance(left.GetType(), left.Number - right.Number);
 	}
 
@@ -372,7 +360,8 @@ public sealed partial class VirtualMachine
 			InstructionType.LessThan => left.Number < right.Number,
 			InstructionType.Equal => left.Equals(right),
 			InstructionType.NotEqual => !left.Equals(right),
-			_ => throw Fail("Unsupported conditional operation: " + instruction.InstructionType) //ncrunch: no coverage
+			_ => throw Fail("Unsupported conditional operation: " +
+				instruction.InstructionType) //ncrunch: no coverage
 		};
 		// When used as a value expression (not only as if-condition), write a Boolean result.
 		if (instruction.Registers.Length >= 3)
@@ -382,8 +371,8 @@ public sealed partial class VirtualMachine
 
 	private void TryJumpOperation(Jump instruction)
 	{
-		if (conditionFlag && instruction.InstructionType is InstructionType.JumpIfTrue ||
-			!conditionFlag && instruction.InstructionType is InstructionType.JumpIfFalse)
+		if ((conditionFlag && instruction.InstructionType is InstructionType.JumpIfTrue) ||
+			(!conditionFlag && instruction.InstructionType is InstructionType.JumpIfFalse))
 			instructionIndex += instruction.InstructionsToSkip;
 	}
 
@@ -395,8 +384,8 @@ public sealed partial class VirtualMachine
 
 	private void TryJumpToIdOperation(JumpToId instruction)
 	{
-		if (!conditionFlag && instruction.InstructionType is InstructionType.JumpToIdIfFalse ||
-			conditionFlag && instruction.InstructionType is InstructionType.JumpToIdIfTrue)
+		if ((!conditionFlag && instruction.InstructionType is InstructionType.JumpToIdIfFalse) ||
+			(conditionFlag && instruction.InstructionType is InstructionType.JumpToIdIfTrue))
 		{
 			var endIndex = FindJumpEndInstructionIndex(instruction.Id);
 			if (endIndex != -1)
@@ -538,7 +527,8 @@ public sealed partial class VirtualMachine
 				: new IdentifierAccessPath(RootSymbolId, MemberNames[..^1]);
 	}
 
-	private readonly record struct IndexedElementAccessPath(string ListPath, string IndexExpression,
+	private readonly record struct IndexedElementAccessPath(string ListPath,
+		string IndexExpression,
 		bool IsValid)
 	{
 		public static IndexedElementAccessPath Parse(string identifier)

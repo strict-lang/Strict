@@ -1,5 +1,6 @@
-using Strict.Language;
 using System.Runtime.CompilerServices;
+using System.Text;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
@@ -25,7 +26,7 @@ public class MethodExpressionParser : ExpressionParser
 		bool makeMutable = false)
 	{
 		CheckIfEmptyOrAny(body, input);
-		return input.Length < 3 || !input.Contains(' ') && !input.Contains(',')
+		return input.Length < 3 || (!input.Contains(' ') && !input.Contains(','))
 			? TryParseCommon(body, input, makeMutable)
 			: TryParseErrorOrTextOrListOrConditionalExpression(body, input, makeMutable) ??
 			TryParseMethodOrMember(body, input);
@@ -75,7 +76,8 @@ public class MethodExpressionParser : ExpressionParser
 			return null;
 		}
 		if (method is { IsTrait: false })
-			return new MethodCall(method, valueCall, [], null, body.CurrentFileLineNumber); //ncrunch: no coverage
+			return new MethodCall(method, valueCall, [], null,
+				body.CurrentFileLineNumber); //ncrunch: no coverage
 		var member = FindMember(valueType, inputName);
 		return member != null
 			? new MemberCall(valueCall, member, body.CurrentFileLineNumber)
@@ -84,7 +86,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	private static Expression? TryParseConstraintBodyMethodCall(Body body, ReadOnlySpan<char> input)
 	{
-		if (body.Method.Name != Language.Member.ConstraintsBody || !input.IsWord())
+		if (body.Method.Name != Member.ConstraintsBody || !input.IsWord())
 			return null;
 		var constraintType = body.Method.Type;
 		var inputName = input.ToString();
@@ -134,7 +136,9 @@ public class MethodExpressionParser : ExpressionParser
 					topLevelOpenBracketCount++;
 			}
 			else if (input[index] == ')')
+			{
 				nestedBracketDepth--;
+			}
 		}
 		return topLevelOpenBracketCount == 1 && nestedBracketDepth == 0;
 	}
@@ -163,9 +167,10 @@ public class MethodExpressionParser : ExpressionParser
 				input[postfix.Output.Peek()].ToString() + " in " + inputText);
 	}
 #if DEBUG
-	private static bool AreEquivalentExpressionTexts(Body body, string inputText, string generatedText) =>
-		inputText == generatedText ||
-		NormalizeExpressionText(body, inputText) == NormalizeExpressionText(body, generatedText);
+	private static bool
+		AreEquivalentExpressionTexts(Body body, string inputText, string generatedText) =>
+		inputText == generatedText || NormalizeExpressionText(body, inputText) ==
+		NormalizeExpressionText(body, generatedText);
 
 	//TODO: this is a hack and should be removed! we really want same input = output!
 	private static string NormalizeExpressionText(Body body, string expressionText) =>
@@ -176,7 +181,7 @@ public class MethodExpressionParser : ExpressionParser
 
 	private static string CanonicalizeTextLiteralEscapes(string expressionText)
 	{
-		var builder = new System.Text.StringBuilder(expressionText.Length);
+		var builder = new StringBuilder(expressionText.Length);
 		var insideText = false;
 		for (var index = 0; index < expressionText.Length; index++)
 		{
@@ -225,8 +230,8 @@ public class MethodExpressionParser : ExpressionParser
 		var normalizedText = expressionText;
 		foreach (var typeEntry in body.Method.Type.Package.Types)
 		{
-			normalizedText = normalizedText.Replace($"{Type.List}({typeEntry.Key})",
-				typeEntry.Key + "s", StringComparison.Ordinal);
+			normalizedText = normalizedText.Replace($"{Type.List}({typeEntry.Key})", typeEntry.Key + "s",
+				StringComparison.Ordinal);
 			normalizedText = normalizedText.Replace(typeEntry.Key + "s.",
 				string.Empty, StringComparison.Ordinal);
 		}
@@ -234,7 +239,9 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	private sealed class GeneratedBinaryExpressionDoesNotMatchInputExactly(Body body,
-		Expression binary, string inputText) : ParsingFailed(body, binary + ", inputText=" + inputText); //ncrunch: no coverage
+		Expression binary,
+		string inputText)
+		: ParsingFailed(body, binary + ", inputText=" + inputText); //ncrunch: no coverage
 #endif
 	private Expression ParseMethodCallWithArguments(Body body, ReadOnlySpan<char> input,
 		ShuntingYard postfix)
@@ -242,8 +249,9 @@ public class MethodExpressionParser : ExpressionParser
 		var argumentsRange = postfix.Output.Pop();
 		var methodRange = postfix.Output.Pop();
 		return input[argumentsRange.Start.Value] == '('
-			? ParseInContext(body, input[methodRange], ParseListArguments(body,
-				input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ??
+			? ParseInContext(body, input[methodRange],
+				ParseListArguments(body,
+					input[(argumentsRange.Start.Value + 1)..(argumentsRange.End.Value - 1)])) ??
 			throw new MemberOrMethodNotFound(body, body.Method.Type, input[methodRange].ToString())
 			: input[argumentsRange.Start.Value] == '.'
 				? ParseInContext(body, input, []) ??
@@ -252,8 +260,7 @@ public class MethodExpressionParser : ExpressionParser
 					? Not.Parse(body, input, methodRange)
 					: input[0].IsSingleCharacterOperator() && IsContextInForExpression(body)
 						? ParseExpression(body, input[2..])
-						: input[argumentsRange].IsMultiCharacterOperator() &&
-						IsContextInForExpression(body)
+						: input[argumentsRange].IsMultiCharacterOperator() && IsContextInForExpression(body)
 							? ParseExpression(body, "value " + input.ToString())
 							: throw new InvalidOperatorHere(body, input[methodRange].ToString());
 	}
@@ -348,8 +355,8 @@ public class MethodExpressionParser : ExpressionParser
 	}
 
 	//TODO: this method is way too long
-	private Expression? ParseNestedExpressionInContext(Body body,
-		ReadOnlySpan<char> input, IReadOnlyList<Expression> arguments)
+	private Expression? ParseNestedExpressionInContext(Body body, ReadOnlySpan<char> input,
+		IReadOnlyList<Expression> arguments)
 	{
 		var nestedInput = input;
 		if (nestedInput.StartsWith(Type.ValueLowercase + ".", StringComparison.Ordinal) &&
@@ -369,7 +376,9 @@ public class MethodExpressionParser : ExpressionParser
 					nestedInput = nestedInput[1..];
 				}
 				else
+				{
 					throw new InvalidOperatorHere(body, nestedInput.ToString());
+				}
 			}
 		var members = new RangeEnumerator(nestedInput, '.', 0);
 		while (members.MoveNext())
@@ -385,10 +394,10 @@ public class MethodExpressionParser : ExpressionParser
 				}
 				current ??= Text.TryParse(body, inputText) ??
 					List.TryParseWithMultipleOrNestedElements(body, inputText, false) ??
-					Dictionary.TryParse(body, inputText) ??
-					(inputText.Length > 0 && (char.IsDigit(inputText[0]) || inputText[0] == '-')
-						? Number.TryParse(body, inputText)
-						: null);
+					Dictionary.TryParse(body, inputText) ?? (inputText.Length > 0 &&
+						(char.IsDigit(inputText[0]) || inputText[0] == '-')
+							? Number.TryParse(body, inputText)
+							: null);
 				if (current is not null)
 				{
 					context = current.ReturnType;
@@ -421,8 +430,7 @@ public class MethodExpressionParser : ExpressionParser
 			var expression = nestedInput[members.Current].Contains('(')
 				? current != null || context != body.Method.Type
 					? ParseMethodCallOnContext(body, nestedInput[members.Current], context, current)
-					: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body,
-						nestedInput[members.Current])
+					: TryParseMemberOrZeroOrOneArgumentMethodOrNestedCall(body, nestedInput[members.Current])
 				: TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
 					nestedInput[members.Current], members.IsAtEnd
 						? callArguments
@@ -434,8 +442,9 @@ public class MethodExpressionParser : ExpressionParser
 		return ListCall.TryParse(body, current, callArguments);
 	}
 
-	private Expression? TryParseConstraintRoot(Body body, Type context, ReadOnlySpan<char> inputText) =>
-		body.Method.Name == Language.Member.ConstraintsBody
+	private Expression?
+		TryParseConstraintRoot(Body body, Type context, ReadOnlySpan<char> inputText) =>
+		body.Method.Name == Member.ConstraintsBody
 			? TryVariableOrValueOrParameterOrMemberOrMethodCall(context, null, body, inputText, [])
 			: null;
 
@@ -477,8 +486,8 @@ public class MethodExpressionParser : ExpressionParser
 		return index;
 	}
 
-	private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input,
-		Context context, Expression? current)
+	private Expression? ParseMethodCallOnContext(Body body, ReadOnlySpan<char> input, Context context,
+		Expression? current)
 	{
 		var argStart = input.IndexOf('(');
 		var argEnd = input.FindMatchingBracketIndex(argStart);
@@ -511,8 +520,7 @@ public class MethodExpressionParser : ExpressionParser
 			// Instance members must win over same-named parameters (FromNumber(3).number).
 			(instance is null
 				? TryParseLocalVariableOrParameter(body, input)
-				: null) ??
-			TryParseDictionaryElementsAlias(body, type, instance, input) ??
+				: null) ?? TryParseDictionaryElementsAlias(body, type, instance, input) ??
 			TryParseGenericTypeEnum(body, type, instance, arguments, input) ??
 			TryParseMemberOrMethodCall(instance, body, input, arguments, type);
 	}
@@ -522,7 +530,8 @@ public class MethodExpressionParser : ExpressionParser
 	{
 		if (input.IsKeyword())
 			throw new KeywordNotAllowedAsMemberOrMethod(body, input.ToString(), type);
-		if (instance is null && type != body.Method.Type && input.Equals(Method.From, StringComparison.Ordinal))
+		if (instance is null && type != body.Method.Type &&
+			input.Equals(Method.From, StringComparison.Ordinal))
 			throw new DirectFromConstructorCallIsForbidden(body, type);
 		var parse = MemberCall.TryParse(body, type, instance, input) ??
 			MethodCall.TryParse(instance, body, arguments, type, input.ToString());
@@ -551,8 +560,8 @@ public class MethodExpressionParser : ExpressionParser
 			: null;
 	}
 
-	private static Expression? TryParseStandaloneToken(Body body,
-		IReadOnlyList<Expression> arguments, ReadOnlySpan<char> input) =>
+	private static Expression? TryParseStandaloneToken(Body body, IReadOnlyList<Expression> arguments,
+		ReadOnlySpan<char> input) =>
 		input.IsWordOrWordWithNumberAtEnd(out _)
 			? MethodCall.TryParseFromOrEnum(body, arguments, input.ToString())
 			: null;
@@ -564,7 +573,7 @@ public class MethodExpressionParser : ExpressionParser
 		{
 			var methodType = body.Method.Type;
 			var outerInstanceType = methodType.IsGeneric && methodType is not GenericTypeImplementation
-				? body.Method.GetType(Strict.Language.Type.Any)
+				? body.Method.GetType(Type.Any)
 				: methodType;
 			return new VariableCall(
 				new Variable(Type.OuterLowercase, false,
@@ -583,7 +592,8 @@ public class MethodExpressionParser : ExpressionParser
 				body.CurrentFileLineNumber);
 	}
 
-	private static Expression? TryParseLocalVariableOrParameter(Body body, ReadOnlySpan<char> input) =>
+	private static Expression?
+		TryParseLocalVariableOrParameter(Body body, ReadOnlySpan<char> input) =>
 		VariableCall.TryParse(body, input) ??
 		(input.Equals(Type.ValueLowercase, StringComparison.Ordinal)
 			? Instance.Parse(body, body.Method)
@@ -616,8 +626,8 @@ public class MethodExpressionParser : ExpressionParser
 	private static Expression? TryParseGenericTypeEnum(Body body, Type type, Expression? instance,
 		IReadOnlyList<Expression> arguments, ReadOnlySpan<char> input) =>
 		instance is null && type.IsGeneric && input.IsWordOrWordWithNumberAtEnd(out _) &&
-		(arguments.Count > 0 || MemberCall.TryParse(body, type, null, input) == null &&
-			!type.AvailableMethods.ContainsKey(input.ToString()))
+		(arguments.Count > 0 || (MemberCall.TryParse(body, type, null, input) == null &&
+			!type.AvailableMethods.ContainsKey(input.ToString())))
 			? MethodCall.TryParseFromOrEnum(body, arguments, input.ToString())
 			: null;
 
@@ -625,7 +635,8 @@ public class MethodExpressionParser : ExpressionParser
 		: ParsingFailed(body, input, type);
 
 	public sealed class DirectFromConstructorCallIsForbidden(Body body, Type type)
-		: ParsingFailed(body, "Use " + type.Name + "(...) instead of " + type.Name + ".from(...)", type);
+		: ParsingFailed(body, "Use " + type.Name + "(...) instead of " + type.Name + ".from(...)",
+			type);
 
 	public sealed class KeywordNotAllowedAsMemberOrMethod(Body body, string input, Type type)
 		: ParsingFailed(body, input, type);
@@ -637,8 +648,8 @@ public class MethodExpressionParser : ExpressionParser
 	/// </summary>
 	public override List<Expression> ParseListArguments(Body body, ReadOnlySpan<char> innerSpan)
 	{
-		if (innerSpan.Contains('(') || innerSpan.Contains('"') &&
-			(innerSpan.Contains(',') || innerSpan.Contains(' ')))
+		if (innerSpan.Contains('(') || (innerSpan.Contains('"') &&
+			(innerSpan.Contains(',') || innerSpan.Contains(' '))))
 			return If.CanTryParseConditional(body, innerSpan)
 				? [If.ParseConditional(body, innerSpan)]
 				: new ExpressionListParser(this, innerSpan.ToString()).GetAll(body);
@@ -652,16 +663,15 @@ public class MethodExpressionParser : ExpressionParser
 		foreach (var expression in body.Expressions)
 		{
 			if (IsMutationOfVariable(expression, variableName) ||
-				expression is If ifExpression &&
-				CheckForVariableMutationInIf(variableName, ifExpression) ||
-				expression is For forExpression &&
-				(IsForCustomVariableMutation(forExpression, variableName) ||
-					forExpression.Body is MutableReassignment ||
-					IsMutableMethodCallOnVariable(forExpression.Body, variableName) ||
-					forExpression.Body is Body forBody &&
-					IsVariableMutated(forBody, variableName) ||
-					forExpression.Body is If forIfBody &&
-					CheckForVariableMutationInIf(variableName, forIfBody)))
+				(expression is If ifExpression &&
+					CheckForVariableMutationInIf(variableName, ifExpression)) ||
+				(expression is For forExpression &&
+					(IsForCustomVariableMutation(forExpression, variableName) ||
+						forExpression.Body is MutableReassignment ||
+						IsMutableMethodCallOnVariable(forExpression.Body, variableName) ||
+						(forExpression.Body is Body forBody && IsVariableMutated(forBody, variableName)) ||
+						(forExpression.Body is If forIfBody &&
+							CheckForVariableMutationInIf(variableName, forIfBody)))))
 				return true;
 			if (IsMutableMethodCallOnVariable(expression, variableName))
 				return true;
@@ -680,27 +690,26 @@ public class MethodExpressionParser : ExpressionParser
 
 	private static bool IsMutationOfVariable(Expression expression, string variableName) =>
 		expression is MutableReassignment reassignment && (reassignment.Name == variableName ||
-			reassignment.Target is ListCall { List: VariableCall listCall } &&
-			listCall.Variable.Name == variableName);
+			(reassignment.Target is ListCall { List: VariableCall listCall } &&
+				listCall.Variable.Name == variableName));
 
 	private bool CheckForVariableMutationInIf(string variableName, If ifExpression)
 	{
 		if (IsMutationOfVariable(ifExpression.Then, variableName) ||
-			ifExpression.Then is Body thenBody && IsVariableMutated(thenBody, variableName) ||
-			ifExpression.Then is If ifBody && CheckForVariableMutationInIf(variableName, ifBody) ||
+			(ifExpression.Then is Body thenBody && IsVariableMutated(thenBody, variableName)) ||
+			(ifExpression.Then is If ifBody && CheckForVariableMutationInIf(variableName, ifBody)) ||
 			IsMutableMethodCallOnVariable(ifExpression.Then, variableName))
 			return true;
 		return ifExpression.OptionalElse != null &&
 			(IsMutationOfVariable(ifExpression.OptionalElse, variableName) ||
-				ifExpression.OptionalElse is Body elseBody && IsVariableMutated(elseBody, variableName) ||
-				ifExpression.OptionalElse is If elseIfBody &&
-				CheckForVariableMutationInIf(variableName, elseIfBody) ||
+				(ifExpression.OptionalElse is Body elseBody && IsVariableMutated(elseBody, variableName)) ||
+				(ifExpression.OptionalElse is If elseIfBody &&
+					CheckForVariableMutationInIf(variableName, elseIfBody)) ||
 				IsMutableMethodCallOnVariable(ifExpression.OptionalElse, variableName));
 	}
 
 	private static bool IsMutableMethodCallOnVariable(Expression expression, string variableName) =>
-		expression is MethodCall methodCall &&
-		(IsMutableInstanceMethodCall(methodCall, variableName) ||
+		expression is MethodCall methodCall && (IsMutableInstanceMethodCall(methodCall, variableName) ||
 			IsVariablePassedToMutableParameter(methodCall, variableName));
 
 	private static bool IsMutableInstanceMethodCall(MethodCall methodCall, string variableName) =>
@@ -710,8 +719,7 @@ public class MethodExpressionParser : ExpressionParser
 	private static bool IsVariablePassedToMutableParameter(MethodCall methodCall, string variableName)
 	{
 		for (var index = 0;
-			index < methodCall.Arguments.Count && index < methodCall.Method.Parameters.Count;
-			index++)
+			index < methodCall.Arguments.Count && index < methodCall.Method.Parameters.Count; index++)
 			if (methodCall.Method.Parameters[index].IsMutable &&
 				GetRootVariableName(methodCall.Arguments[index]) == variableName)
 				return true;
@@ -747,10 +755,12 @@ public class MethodExpressionParser : ExpressionParser
 				expressions.Push(parser.ParseTextWithSpacesOrListWithMultipleOrNestedElements(body,
 					inner[postfix.Output.Pop()]));
 			else if (postfix.Output.Count == 2)
-				expressions.Push(parser.ParseMethodCallWithArguments(body, inner.AsSpan(), postfix)); //ncrunch: no coverage
+				expressions.Push(
+					parser.ParseMethodCallWithArguments(body, inner.AsSpan(),
+						postfix)); //ncrunch: no coverage
 			else
 				ParseBinaryOrNormalExpressionsIntoList(body, expressions);
-			return [..expressions];
+			return [.. expressions];
 		}
 
 		private void ParseBinaryOrNormalExpressionsIntoList(Body body, Stack<Expression> expressions)
@@ -761,7 +771,7 @@ public class MethodExpressionParser : ExpressionParser
 				try
 				{
 					// Is this a binary expression we have to put into the list (tokenized and postfixed)?
-					expressions.Push(span.Length == 1 && span[0].IsSingleCharacterOperator() ||
+					expressions.Push((span.Length == 1 && span[0].IsSingleCharacterOperator()) ||
 						span.IsMultiCharacterOperator()
 							? Binary.Parse(body, inner.AsSpan(), postfix.Output)
 							: body.Method.ParseExpression(body, inner[postfix.Output.Pop()]));
@@ -811,8 +821,8 @@ public class MethodExpressionParser : ExpressionParser
 		var typeName = input[..open];
 		return body.Method.FindType(typeName) != null
 			? input
-			: "Type \"" + typeName + "\" is not in this package. Add " + typeName +
-			".strict next to " + body.Method.Type.Name + ".strict or check the spelling.";
+			: "Type \"" + typeName + "\" is not in this package. Add " + typeName + ".strict next to " +
+			body.Method.Type.Name + ".strict or check the spelling.";
 	}
 
 	protected sealed class UnknownExpression(Body body, string error = "")
@@ -838,6 +848,7 @@ public class MethodExpressionParser : ExpressionParser
 		: ParsingFailed(body, message); //ncrunch: no coverage
 
 	public sealed class InvalidArgumentItIsNotMethodOrListCall(Body body,
-		Expression variable, IReadOnlyList<Expression> arguments)
+		Expression variable,
+		IReadOnlyList<Expression> arguments)
 		: ParsingFailed(body, string.Join(", ", arguments), variable.ReturnType);
 }

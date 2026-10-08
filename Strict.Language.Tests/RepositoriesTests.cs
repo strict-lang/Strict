@@ -55,7 +55,8 @@ public class RepositoriesTests
 	[Test]
 	public async Task MakeSureParsingFailedErrorMessagesAreClickable()
 	{
-		using var strictPackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		using var strictPackage =
+			await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		Assert.That(() =>
 			{
 				using var _ = new Type(strictPackage, new TypeLines("Invalid", "has 1")).
@@ -230,7 +231,8 @@ public class RepositoriesTests
 		Assert.That(pathType.Methods.Any(method => method.Name == "RemoveExtension"), Is.True);
 		Assert.That(pathType.Methods.Any(method => method.Name == "ChangeExtension"), Is.True);
 		Assert.That(pathType.Methods.Any(method => method.Name == "PathOnly"), Is.True);
-		Assert.That(pathType.Methods.Any(method => method.Name == "FileNameWithoutExtension"), Is.False);
+		Assert.That(pathType.Methods.Any(method => method.Name == "FileNameWithoutExtension"),
+			Is.False);
 		Assert.That(pathType.Methods.Any(method => method.Name == "DirectoryName"), Is.False);
 		Assert.That(pathType.Methods.Single(method => method.Name == "FileName").ReturnType.Name,
 			Is.EqualTo("Path"));

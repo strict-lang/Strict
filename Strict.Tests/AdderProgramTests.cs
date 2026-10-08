@@ -25,8 +25,9 @@ public class AdderProgramTests : TestBytecode
 	private List<decimal> ExecuteAddTotals(string methodCall)
 	{
 		var result = new VirtualMachine(
-			new BinaryGenerator(GenerateMethodCallFromSource("AdderProgram", methodCall,
-				AdderProgramCode)).Generate()).Execute().Returns!.Value;
+				new BinaryGenerator(
+					GenerateMethodCallFromSource("AdderProgram", methodCall, AdderProgramCode)).Generate()).
+			Execute().Returns!.Value;
 		return result.List.Items.Select(item => (decimal)item.Number).ToList();
 	}
 
@@ -36,16 +37,14 @@ public class AdderProgramTests : TestBytecode
 
 	[Test]
 	public void AddTotalsForTwoNumbers() =>
-		Assert.That(ExecuteAddTotals("AdderProgram(1, 2).AddTotals"),
-			Is.EqualTo(new[] { 1m, 3m }));
+		Assert.That(ExecuteAddTotals("AdderProgram(1, 2).AddTotals"), Is.EqualTo(new[] { 1m, 3m }));
 
 	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
 	[Benchmark]
 	public void AddTotalsForThreeNumbers() =>
-		Assert.That(ExecuteAddTotals("AdderProgram(1, 2, 3).AddTotals"),
-			Is.EqualTo(new[] { 1, 3, 6 }));
+		Assert.That(ExecuteAddTotals("AdderProgram(1, 2, 3).AddTotals"), Is.EqualTo(new[] { 1, 3, 6 }));
 
 	[Test]
 	[Category("Manual")]

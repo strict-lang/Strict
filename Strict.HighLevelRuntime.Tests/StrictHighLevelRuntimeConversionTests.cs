@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using Strict.Language.Tests;
 
 namespace Strict.HighLevelRuntime.Tests;
 
@@ -14,11 +13,11 @@ public sealed class StrictHighLevelRuntimeConversionTests
 	{
 		var path = GetHighLevelRuntimePath();
 		foreach (var typeName in new[]
-		{
-			"RuntimeStatistics", "TestBehavior", "RuntimeValue", "ExecutionContext", "BodyResult",
-			"IfEvaluator", "ForEvaluator", "ToEvaluator", "SelectorIfEvaluator", "MethodCallEvaluator",
-			"ExpressionEvaluator", "BodyEvaluator", "Evaluators", "Interpreter"
-		})
+			{
+				"RuntimeStatistics", "TestBehavior", "RuntimeValue", "ExecutionContext", "BodyResult",
+				"IfEvaluator", "ForEvaluator", "ToEvaluator", "SelectorIfEvaluator", "MethodCallEvaluator",
+				"ExpressionEvaluator", "BodyEvaluator", "Evaluators", "Interpreter"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 
@@ -78,10 +77,10 @@ public sealed class StrictHighLevelRuntimeConversionTests
 	{
 		var path = GetHighLevelRuntimePath();
 		foreach (var typeName in new[]
-		{
-			"RuntimeDemo", "RuntimeValueTests", "EvaluatorTests", "IfToTests", "ContextTests",
-			"InterpreterTests", "BodyTests"
-		})
+			{
+				"RuntimeDemo", "RuntimeValueTests", "EvaluatorTests", "IfToTests", "ContextTests",
+				"InterpreterTests", "BodyTests"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 

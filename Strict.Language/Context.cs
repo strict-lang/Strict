@@ -53,9 +53,9 @@ public abstract class Context
 		string name)
 	{
 		var lastLetterNumber = -1;
-		return context is not Method && context is not Package &&
-			!name.IsWordOrWordWithNumberAtEnd(out lastLetterNumber) ||
-			lastLetterNumber != -1 && parent.FindTypeCore(name[..^1]) != null;
+		return (context is not Method && context is not Package &&
+				!name.IsWordOrWordWithNumberAtEnd(out lastLetterNumber)) ||
+			(lastLetterNumber != -1 && parent.FindTypeCore(name[..^1]) != null);
 	}
 
 	public sealed class NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(string name)
@@ -87,7 +87,7 @@ public abstract class Context
 		Type? GuessTypeFromName()
 		{
 			if (this is Type self && (self.Name == name ||
-				self.IsGeneric && name == self.Name + GenericImplementationPostfix))
+				(self.IsGeneric && name == self.Name + GenericImplementationPostfix)))
 				return self;
 			if ((name.StartsWith("List", StringComparison.Ordinal) ||
 					name.StartsWith("list", StringComparison.Ordinal)) && name.Length > 4 && name[4] != '(')
@@ -213,8 +213,8 @@ public abstract class Context
 	//ncrunch: no coverage start
 	public string ToDebugString() =>
 #if DEBUG
-		FullName + " Parent+" + Parent +
-		", created from " + callerMemberName + " in " + callerFilePath + ":line " + callerLineNumber;
+		FullName + " Parent+" + Parent + ", created from " + callerMemberName + " in " +
+		callerFilePath + ":line " + callerLineNumber;
 #else
 		FullName + " Parent+" + Parent;
 #endif
@@ -233,8 +233,8 @@ public abstract class Context
 	{
 		private static string WriteContextTypes(Context context)
 		{
-			var result = context.GetType().Name + " " + context.FullName + ", " +
-				"available types: " + string.Join(", ", context.types.Keys);
+			var result = context.GetType().Name + " " + context.FullName + ", " + "available types: " +
+				string.Join(", ", context.types.Keys);
 			// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 			if (context.Parent != null && context.Parent.Name != string.Empty)
 				result += "\n\tParent " + WriteContextTypes(context.Parent);

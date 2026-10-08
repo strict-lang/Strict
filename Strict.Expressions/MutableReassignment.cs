@@ -1,4 +1,5 @@
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
@@ -59,7 +60,8 @@ public sealed class MutableReassignment : ConcreteExpression
 	}
 
 	public sealed class ValueTypeNotMatchingWithAssignmentType(Body body,
-		Language.Type currentValueType, Language.Type newValueType) : ParsingFailed(body,
+		Type currentValueType,
+		Type newValueType) : ParsingFailed(body,
 		$"Cannot assign {newValueType} value type to {currentValueType} (" + newValueType.Package +
 		"packages are equal: " + (newValueType.Package == currentValueType.Package) +
 		") member or variable");
@@ -69,8 +71,8 @@ public sealed class MutableReassignment : ConcreteExpression
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) || other is MutableReassignment mr && Name == mr.Name &&
-		Target.Equals(mr.Target) && Value.Equals(mr.Value);
+		ReferenceEquals(this, other) || (other is MutableReassignment mr && Name == mr.Name &&
+			Target.Equals(mr.Target) && Value.Equals(mr.Value));
 
 	public override int GetHashCode() => Name.GetHashCode() ^ Value.GetHashCode();
 }

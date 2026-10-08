@@ -31,8 +31,7 @@ public sealed class VisitorTests
 			base.Visit(body, context);
 		}
 
-		protected override Expression? Visit(Expression? expression, Body? body,
-			object? context = null)
+		protected override Expression? Visit(Expression? expression, Body? body, object? context = null)
 		{
 			switch (expression)
 			{

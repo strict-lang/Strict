@@ -12,8 +12,7 @@ public sealed class ListAdvancedTests : TestExpressions
 
 	[Test]
 	public void ListPrefixIsNotAllowed() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var _ = new Type(TestPackage.Instance,
 						new TypeLines(nameof(ListPrefixIsNotAllowed), "has listOne Numbers")).
@@ -69,8 +68,7 @@ public sealed class ListAdvancedTests : TestExpressions
 
 	[Test]
 	public void UnknownExpressionForArgumentInList() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var dummy = new Type(TestPackage.Instance,
 						new TypeLines(nameof(UnknownExpressionForArgumentInList), "has logger",
@@ -98,8 +96,7 @@ public sealed class ListAdvancedTests : TestExpressions
 				"CreateMutableList Numbers", "\tmutable result = Numbers", "\tfor numbers",
 				"\t\tresult = result - value", "\tresult")).ParseMembersAndMethods(parser);
 		var expression = (Body)typeWithMutableList.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(expression.Expressions[0].ToString(),
-			Is.EqualTo("mutable result = List(Number)"));
+		Assert.That(expression.Expressions[0].ToString(), Is.EqualTo("mutable result = List(Number)"));
 		Assert.That(((Declaration)expression.Expressions[0]).Value.ReturnType.FullName,
 			Is.EqualTo("TestPackage/List(Number)"));
 	}
@@ -117,13 +114,13 @@ public sealed class ListAdvancedTests : TestExpressions
 
 	[Test]
 	public void CheckIfInvalidArgumentIsNotMethodOrListCall() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var dummy = new Type(TestPackage.Instance,
-					new TypeLines(nameof(CheckIfInvalidArgumentIsNotMethodOrListCall), "has booleans",
-						"AccessZeroIndexElement Boolean", "\tlet firstValue = booleans(0)",
-						"\tfirstValue(0)")).ParseMembersAndMethods(parser);
+						new TypeLines(nameof(CheckIfInvalidArgumentIsNotMethodOrListCall), "has booleans",
+							"AccessZeroIndexElement Boolean", "\tlet firstValue = booleans(0)",
+							"\tfirstValue(0)")).
+					ParseMembersAndMethods(parser);
 				dummy.Methods[0].GetBodyAndParseIfNeeded();
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<InvalidArgumentItIsNotMethodOrListCall>());
@@ -157,7 +154,8 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void UnterminatedMultiLineListFound() =>
 		Assert.That(() =>
 			{
-				using var dummy = new Type(TestPackage.Instance, new TypeLines(nameof(UnterminatedMultiLineListFound),
+				using var dummy = new Type(TestPackage.Instance, new TypeLines(
+						nameof(UnterminatedMultiLineListFound),
 					// @formatter:off
 					"has logger",
 					"Run",
@@ -220,8 +218,8 @@ public sealed class ListAdvancedTests : TestExpressions
 	public void ParseMultiLineExpressionAndPrintSameAsInput(string testName, string expected,
 		params string[] code)
 	{
-		using var program =
-			new Type(TestPackage.Instance, new TypeLines(testName, code)).ParseMembersAndMethods(parser);
+		using var program = new Type(TestPackage.Instance, new TypeLines(testName, code)).
+			ParseMembersAndMethods(parser);
 		var expression = program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(expression, Is.InstanceOf<List>());
 		Assert.That(expression.ToString(), Is.EqualTo(expected));
@@ -267,7 +265,7 @@ public sealed class ListAdvancedTests : TestExpressions
 					"has numbers with Length is 2",
 					"Length Number",
 					"\t(X * X + Y * Y).SquareRoot")).ParseMembersAndMethods(parser);
-					// @formatter:on
+				// @formatter:on
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());

@@ -36,9 +36,12 @@ public sealed class DiagnosticFormatterTests
 	{
 		var exception = new InvalidOperationException(
 			"FieldLoad on non-struct value for field 'value'\n   in Strict/Boolean.not\n   at Strict/Boolean.not in C:\\repo\\Boolean.strict:line 4");
-		var diagnostic = DiagnosticFormatter.FromException(exception, ["not Boolean",
-			"\tnot true is false", "\tvalue then false else true"]);
-		Assert.That(diagnostic.Message, Does.Contain("FieldLoad on non-struct value for field 'value'"));
+		var diagnostic = DiagnosticFormatter.FromException(exception, [
+			"not Boolean",
+			"\tnot true is false", "\tvalue then false else true"
+		]);
+		Assert.That(diagnostic.Message,
+			Does.Contain("FieldLoad on non-struct value for field 'value'"));
 		Assert.That(diagnostic.Message,
 			Does.Contain("at Strict/Boolean.not in C:\\repo\\Boolean.strict:line 4"));
 	}

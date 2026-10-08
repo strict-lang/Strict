@@ -5,8 +5,8 @@ namespace Strict.Bytecode.Instructions;
 public sealed class BinaryInstruction(InstructionType instructionType, params Register[] registers)
 	: Instruction(instructionType)
 {
-	public BinaryInstruction(BinaryReader reader, InstructionType instructionType)
-		: this(instructionType, ReadRegisters(reader)) { }
+	public BinaryInstruction(BinaryReader reader, InstructionType instructionType) : this(
+		instructionType, ReadRegisters(reader)) { }
 
 	private static Register[] ReadRegisters(BinaryReader reader)
 	{

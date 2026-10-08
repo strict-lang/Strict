@@ -5,8 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Nerdbank.Streams;
 using OmniSharp.Extensions.LanguageServer.Server;
-using Strict.Language;
 using Strict.Expressions;
+using Strict.Language;
 using Strict.LanguageServer;
 using PipeOptions = System.IO.Pipes.PipeOptions;
 

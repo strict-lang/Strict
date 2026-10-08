@@ -25,15 +25,13 @@ public sealed class TypeComparison(Type returnType, Type targetType, int lineNum
 				? body.ReturnType.FindType(input[nextTokenRange].ToString())
 				: null;
 		return foundType != null
-			? new TypeComparison(body.Method.GetType(nameof(Type)), foundType,
-				body.CurrentFileLineNumber)
+			? new TypeComparison(body.Method.GetType(nameof(Type)), foundType, body.CurrentFileLineNumber)
 			: body.Method.ParseExpression(body, input[nextTokenRange]);
 	}
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) ||
-		other is TypeComparison tc && TargetType == tc.TargetType;
+		ReferenceEquals(this, other) || (other is TypeComparison tc && TargetType == tc.TargetType);
 
 	public override int GetHashCode() => TargetType.GetHashCode();
 }

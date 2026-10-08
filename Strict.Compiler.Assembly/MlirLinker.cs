@@ -17,10 +17,9 @@ public sealed class MlirLinker : Linker
 	public override async Task<string> CreateExecutable(string asmFilePath, Platform platform,
 		bool hasPrintCalls = false)
 	{
-		var mlirOptPath = ToolRunner.FindTool("mlir-opt") ??
-			throw new ToolNotFoundException("mlir-opt",
-				"https://github.com/llvm/llvm-project/releases (install MLIR tools or " +
-				"on Windows use Msys2 and 'pacman -S mingw-w64-x86_64-mlir')");
+		var mlirOptPath = ToolRunner.FindTool("mlir-opt") ?? throw new ToolNotFoundException("mlir-opt",
+			"https://github.com/llvm/llvm-project/releases (install MLIR tools or " +
+			"on Windows use Msys2 and 'pacman -S mingw-w64-x86_64-mlir')");
 		var mlirTranslatePath = ToolRunner.FindTool("mlir-translate") ??
 			throw new ToolNotFoundException("mlir-translate",
 				"https://github.com/llvm/llvm-project/releases (install MLIR tools or " +
@@ -54,7 +53,9 @@ public sealed class MlirLinker : Linker
 	}
 
 	private static string BuildMlirOptArgs(string inputPath, string outputPath) =>
-		$"\"{inputPath}\" --canonicalize --cse --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm " +
+		$"\"{
+			inputPath
+		}\" --canonicalize --cse --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm " +
 		$"--convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts -o \"{outputPath}\"";
 
 	private static string BuildMlirOptArgsWithGpu(string inputPath, string outputPath) =>
@@ -86,16 +87,29 @@ public sealed class MlirLinker : Linker
 			"/OPT:ICF -Wl,/INCREMENTAL:NO -Wl,/DEBUG:NONE";
 		return platform switch
 		{
-			Platform.Windows =>
-				$"{quotedInputPath} -o {quotedOutputPath} {WindowsSizeFlags} -Wno-override-module",
-			Platform.Linux when OperatingSystem.IsWindows() =>
-				$"{quotedInputPath} -o {quotedOutputPath} -Oz -Wno-override-module",
+			Platform.Windows => $"{
+				quotedInputPath
+			} -o {
+				quotedOutputPath
+			} {
+				WindowsSizeFlags
+			} -Wno-override-module",
+			Platform.Linux when OperatingSystem.IsWindows() => $"{
+				quotedInputPath
+			} -o {
+				quotedOutputPath
+			} -Oz -Wno-override-module",
 			//ncrunch: no coverage start
 			Platform.Linux => hasPrintCalls
 				? $"{quotedInputPath} -o {quotedOutputPath} {LinuxSizeFlags} -Wno-override-module"
-				: $"{quotedInputPath} -o {quotedOutputPath} {LinuxSizeFlags} -nostdlib -Wl,-e,main -Wno-override-module",
-			Platform.MacOS =>
-				$"{quotedInputPath} -o {quotedOutputPath} -Oz -Wl,-dead_strip " +
+				: $"{
+					quotedInputPath
+				} -o {
+					quotedOutputPath
+				} {
+					LinuxSizeFlags
+				} -nostdlib -Wl,-e,main -Wno-override-module",
+			Platform.MacOS => $"{quotedInputPath} -o {quotedOutputPath} -Oz -Wl,-dead_strip " +
 				$"-Wno-override-module",
 			_ => throw new NotSupportedException("Unsupported platform: " + platform)
 		}; //ncrunch: no coverage end
@@ -107,10 +121,11 @@ public sealed class MlirLinker : Linker
 			return EnsureWindowsPrintRuntimeSupport(llvmIr); //ncrunch: no coverage
 		var stringLengths = ParseStringLengths(llvmIr);
 		var replacementIndex = 0;
-		var rewritten = PrintWithNumberRegex.Replace(llvmIr, match =>
-			BuildNumericPrintReplacement(match, stringLengths, replacementIndex++));
-		rewritten = PrintTextRegex.Replace(rewritten, match =>
-			BuildTextPrintReplacement(match, stringLengths, replacementIndex++)); //ncrunch: no coverage
+		var rewritten = PrintWithNumberRegex.Replace(llvmIr,
+			match => BuildNumericPrintReplacement(match, stringLengths, replacementIndex++));
+		rewritten = PrintTextRegex.Replace(rewritten,
+			match => BuildTextPrintReplacement(match, stringLengths,
+				replacementIndex++)); //ncrunch: no coverage
 		rewritten = rewritten.Replace("declare i32 @printf(ptr, ...)\r\n\r\n", string.Empty,
 			StringComparison.Ordinal);
 		rewritten = rewritten.Replace("declare i32 @printf(ptr, ...)\n\n", string.Empty,
@@ -126,8 +141,19 @@ public sealed class MlirLinker : Linker
 		var prefixLength = stringLengths[label].PrefixLength;
 		return $"  %stdout_{replacementIndex} = call ptr @GetStdHandle(i32 -11)\n" +
 			$"  %written_{replacementIndex} = alloca i32\n" +
-			$"  call i32 @WriteFile(ptr %stdout_{replacementIndex}, ptr {label}, i32 {prefixLength}, ptr %written_{replacementIndex}, ptr null)\n" +
-			$"  call void @print_number_from_double(ptr %stdout_{replacementIndex}, double {value})";
+			$"  call i32 @WriteFile(ptr %stdout_{
+				replacementIndex
+			}, ptr {
+				label
+			}, i32 {
+				prefixLength
+			}, ptr %written_{
+				replacementIndex
+			}, ptr null)\n" + $"  call void @print_number_from_double(ptr %stdout_{
+				replacementIndex
+			}, double {
+				value
+			})";
 	}
 
 	//ncrunch: no coverage start
@@ -137,8 +163,15 @@ public sealed class MlirLinker : Linker
 		var label = match.Groups["label"].Value;
 		var textLength = stringLengths[label].TextLength;
 		return $"  %stdout_{replacementIndex} = call ptr @GetStdHandle(i32 -11)\n" +
-			$"  %written_{replacementIndex} = alloca i32\n" +
-			$"  call i32 @WriteFile(ptr %stdout_{replacementIndex}, ptr {label}, i32 {textLength}, ptr %written_{replacementIndex}, ptr null)";
+			$"  %written_{replacementIndex} = alloca i32\n" + $"  call i32 @WriteFile(ptr %stdout_{
+				replacementIndex
+			}, ptr {
+				label
+			}, i32 {
+				textLength
+			}, ptr %written_{
+				replacementIndex
+			}, ptr null)";
 	} //ncrunch: no coverage end
 
 	private static Dictionary<string, (int TextLength, int PrefixLength)> ParseStringLengths(
@@ -156,8 +189,8 @@ public sealed class MlirLinker : Linker
 			var printablePrefix = placeholderIndex > -1
 				? encodedText[..placeholderIndex]
 				: printableText;
-			result[match.Groups["label"].Value] =
-				(CountEncodedBytes(printableText), CountEncodedBytes(printablePrefix));
+			result[match.Groups["label"].Value] = (CountEncodedBytes(printableText),
+				CountEncodedBytes(printablePrefix));
 		}
 		return result;
 	}
@@ -166,15 +199,17 @@ public sealed class MlirLinker : Linker
 	{
 		var byteCount = 0;
 		for (var index = 0; index < encodedText.Length; index++)
-			if (encodedText[index] == '\\' && index + 2 < encodedText.Length &&
-				byte.TryParse(encodedText.AsSpan(index + 1, 2), NumberStyles.HexNumber,
-					CultureInfo.InvariantCulture, out _))
+			if (encodedText[index] == '\\' && index + 2 < encodedText.Length && byte.TryParse(
+				encodedText.AsSpan(index + 1, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture,
+				out _))
 			{
 				byteCount++;
 				index += 2;
 			}
 			else
+			{
 				byteCount++;
+			}
 		return byteCount;
 	}
 
@@ -208,72 +243,50 @@ public sealed class MlirLinker : Linker
 
 	private static string BuildWindowsPrintNumberHelper() =>
 		string.Join("\n", "define void @print_number_from_double(ptr %stdout, double %value) {",
-			"entry:",
-			"  %buffer = alloca [64 x i8]",
+			"entry:", "  %buffer = alloca [64 x i8]",
 			"  %bufferStart = getelementptr [64 x i8], ptr %buffer, i64 0, i64 0",
-			"  %remainingPtr = alloca i64",
-			"  %writeIndexPtr = alloca i64",
-			"  %writtenPtr = alloca i32",
-			"  %number = fptosi double %value to i64",
-			"  %isNegative = icmp slt i64 %number, 0",
+			"  %remainingPtr = alloca i64", "  %writeIndexPtr = alloca i64", "  %writtenPtr = alloca i32",
+			"  %number = fptosi double %value to i64", "  %isNegative = icmp slt i64 %number, 0",
 			"  %negated = sub i64 0, %number",
 			"  %absolute = select i1 %isNegative, i64 %negated, i64 %number",
-			"  store i64 %absolute, ptr %remainingPtr",
-			"  store i64 62, ptr %writeIndexPtr",
+			"  store i64 %absolute, ptr %remainingPtr", "  store i64 62, ptr %writeIndexPtr",
 			"  %newlinePtr = getelementptr i8, ptr %bufferStart, i64 62",
-			"  store i8 10, ptr %newlinePtr",
-			"  %isZero = icmp eq i64 %absolute, 0",
-			"  br i1 %isZero, label %storeZero, label %digitLoop",
-			"storeZero:",
-			"  %zeroIndex = load i64, ptr %writeIndexPtr",
-			"  %zeroStoreIndex = sub i64 %zeroIndex, 1",
+			"  store i8 10, ptr %newlinePtr", "  %isZero = icmp eq i64 %absolute, 0",
+			"  br i1 %isZero, label %storeZero, label %digitLoop", "storeZero:",
+			"  %zeroIndex = load i64, ptr %writeIndexPtr", "  %zeroStoreIndex = sub i64 %zeroIndex, 1",
 			"  store i64 %zeroStoreIndex, ptr %writeIndexPtr",
 			"  %zeroPtr = getelementptr i8, ptr %bufferStart, i64 %zeroStoreIndex",
-			"  store i8 48, ptr %zeroPtr",
-			"  br label %afterDigits",
-			"digitLoop:",
-			"  %current = load i64, ptr %remainingPtr",
-			"  %remainder = urem i64 %current, 10",
-			"  %quotient = udiv i64 %current, 10",
-			"  store i64 %quotient, ptr %remainingPtr",
-			"  %digitValue = add i64 %remainder, 48",
-			"  %digitByte = trunc i64 %digitValue to i8",
-			"  %loopIndex = load i64, ptr %writeIndexPtr",
-			"  %digitStoreIndex = sub i64 %loopIndex, 1",
+			"  store i8 48, ptr %zeroPtr", "  br label %afterDigits", "digitLoop:",
+			"  %current = load i64, ptr %remainingPtr", "  %remainder = urem i64 %current, 10",
+			"  %quotient = udiv i64 %current, 10", "  store i64 %quotient, ptr %remainingPtr",
+			"  %digitValue = add i64 %remainder, 48", "  %digitByte = trunc i64 %digitValue to i8",
+			"  %loopIndex = load i64, ptr %writeIndexPtr", "  %digitStoreIndex = sub i64 %loopIndex, 1",
 			"  store i64 %digitStoreIndex, ptr %writeIndexPtr",
 			"  %digitPtr = getelementptr i8, ptr %bufferStart, i64 %digitStoreIndex",
-			"  store i8 %digitByte, ptr %digitPtr",
-			"  %hasMoreDigits = icmp ne i64 %quotient, 0",
-			"  br i1 %hasMoreDigits, label %digitLoop, label %afterDigits",
-			"afterDigits:",
-			"  br i1 %isNegative, label %storeSign, label %prepareWrite",
-			"storeSign:",
-			"  %signIndex = load i64, ptr %writeIndexPtr",
-			"  %signStoreIndex = sub i64 %signIndex, 1",
+			"  store i8 %digitByte, ptr %digitPtr", "  %hasMoreDigits = icmp ne i64 %quotient, 0",
+			"  br i1 %hasMoreDigits, label %digitLoop, label %afterDigits", "afterDigits:",
+			"  br i1 %isNegative, label %storeSign, label %prepareWrite", "storeSign:",
+			"  %signIndex = load i64, ptr %writeIndexPtr", "  %signStoreIndex = sub i64 %signIndex, 1",
 			"  store i64 %signStoreIndex, ptr %writeIndexPtr",
 			"  %signPtr = getelementptr i8, ptr %bufferStart, i64 %signStoreIndex",
-			"  store i8 45, ptr %signPtr",
-			"  br label %prepareWrite",
-			"prepareWrite:",
+			"  store i8 45, ptr %signPtr", "  br label %prepareWrite", "prepareWrite:",
 			"  %startIndex = load i64, ptr %writeIndexPtr",
 			"  %outputPtr = getelementptr i8, ptr %bufferStart, i64 %startIndex",
-			"  %length64 = sub i64 63, %startIndex",
-			"  %length32 = trunc i64 %length64 to i32",
+			"  %length64 = sub i64 63, %startIndex", "  %length32 = trunc i64 %length64 to i32",
 			"  call i32 @WriteFile(ptr %stdout, ptr %outputPtr, i32 %length32, ptr %writtenPtr, ptr null)",
-			"  ret void",
-			"}");
+			"  ret void", "}");
 
 	private static readonly Regex StringConstantRegex =
 		new(@"^(?<label>@[\w\.]+) = internal constant \[\d+ x i8\] c""(?<text>(?:[^""\\]|\\.)*)""",
 			RegexOptions.Multiline);
 	private static readonly Regex PrintWithNumberRegex =
-		new(@"^\s*%[\w\.]+ = call i32 \(ptr, \.\.\.\) @printf\(ptr (?<label>@[\w\.]+), double (?<value>[^)]+)\)\s*$",
+		new(
+			@"^\s*%[\w\.]+ = call i32 \(ptr, \.\.\.\) @printf\(ptr (?<label>@[\w\.]+), double (?<value>[^)]+)\)\s*$",
 			RegexOptions.Multiline);
 	private static readonly Regex PrintTextRegex =
 		new(@"^\s*%[\w\.]+ = call i32 \(ptr, \.\.\.\) @printf\(ptr (?<label>@[\w\.]+)\)\s*$",
 			RegexOptions.Multiline);
 	public static bool IsAvailable =>
-		ToolRunner.FindTool("mlir-opt") != null &&
-		ToolRunner.FindTool("mlir-translate") != null &&
+		ToolRunner.FindTool("mlir-opt") != null && ToolRunner.FindTool("mlir-translate") != null &&
 		ToolRunner.FindTool("clang") != null;
 }

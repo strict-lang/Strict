@@ -56,7 +56,9 @@ public sealed class BinaryType
 			fileVersion = reader.ReadByte();
 		}
 		else
+		{
 			fileVersion = secondByte;
+		}
 		if (fileVersion is 0 or > Version)
 			throw new InvalidVersion(fileVersion);
 	}
@@ -66,8 +68,8 @@ public sealed class BinaryType
 	public sealed class InvalidBytecodeEntry(string message) : Exception(message);
 	public const byte Version = 1;
 
-	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " +
-		fileVersion + ", this runtime only supports up to version " + Version);
+	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " + fileVersion +
+		", this runtime only supports up to version " + Version);
 
 	internal void ReadMembers(BinaryReader reader, List<BinaryMember> members)
 	{

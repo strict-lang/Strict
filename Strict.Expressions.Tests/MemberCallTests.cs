@@ -54,8 +54,10 @@ public sealed class MemberCallTests : TestExpressions
 	public void MemberWithArgumentsInitializerShouldNotHaveSameType() =>
 		Assert.That(() =>
 			{
-				using var _ = new Type(TestPackage.Instance, new TypeLines(Body.Declaration,
-					"has input Text = Text(5)")).ParseMembersAndMethods(parser);
+				using var _ =
+					new Type(TestPackage.Instance,
+							new TypeLines(Body.Declaration, "has input Text = Text(5)")).
+						ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
 				InstanceOf<NamedType.AssignmentWithInitializerTypeShouldNotHaveNameWithSameType>());
@@ -74,20 +76,17 @@ public sealed class MemberCallTests : TestExpressions
 
 	[Test]
 	public void UnknownExpressionInMemberInitializer() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var _ = new Type(TestPackage.Instance,
-						new TypeLines(nameof(UnknownExpressionInMemberInitializer),
-							"has input Text = random")).
+						new TypeLines(nameof(UnknownExpressionInMemberInitializer), "has input Text = random")).
 					ParseMembersAndMethods(parser);
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<ParsingFailed>());
 
 	[Test]
 	public void NameMustBeAWordWithoutAnySpecialCharacterOrNumber() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var _ = new Type(TestPackage.Instance,
 					new TypeLines(nameof(NameMustBeAWordWithoutAnySpecialCharacterOrNumber),

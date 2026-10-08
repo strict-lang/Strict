@@ -3,8 +3,9 @@ using Strict.Language;
 
 namespace Strict.LanguageServer;
 
-public sealed class VariableValueEvaluator(Package package, ILanguageServerFacade languageServer, string[] lines)
-	: RunnerService(package), RunnableService
+public sealed class VariableValueEvaluator(Package package,
+	ILanguageServerFacade languageServer,
+	string[] lines) : RunnerService(package), RunnableService
 {
 	private const string NotificationName = "valueEvaluationNotification";
 

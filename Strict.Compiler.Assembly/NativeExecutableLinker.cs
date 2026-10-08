@@ -49,17 +49,25 @@ public sealed class NativeExecutableLinker : Linker
 			_ => throw new NotSupportedException("Unsupported platform: " + platform)
 		}; //ncrunch: no coverage end
 
-	private static string BuildLinkerArgs(string objPath, string exePath, Platform platform, bool hasPrintCalls = false)
+	private static string BuildLinkerArgs(string objPath, string exePath, Platform platform,
+		bool hasPrintCalls = false)
 	{
 		const string SizeFlags = "-s -Wl,--gc-sections -Wl,--strip-all";
 		return platform switch
 		{
-			Platform.Windows => $"\"{objPath}\" -o \"{exePath}\" {SizeFlags} -nostdlib -Wl,-e,main -lkernel32",
+			Platform.Windows => $"\"{
+				objPath
+			}\" -o \"{
+				exePath
+			}\" {
+				SizeFlags
+			} -nostdlib -Wl,-e,main -lkernel32",
 			Platform.Linux => hasPrintCalls //ncrunch: no coverage
 				? $"\"{objPath}\" -o \"{exePath}\" {SizeFlags}"
 				: $"\"{objPath}\" -o \"{exePath}\" {SizeFlags} -nostdlib -Wl,-e,_start",
 			Platform.MacOS => $"\"{objPath}\" -o \"{exePath}\" {SizeFlags}", //ncrunch: no coverage
-			_ => throw new NotSupportedException("Unsupported platform: " + platform) //ncrunch: no coverage
+			_ => throw new NotSupportedException("Unsupported platform: " +
+				platform) //ncrunch: no coverage
 		};
 	}
 

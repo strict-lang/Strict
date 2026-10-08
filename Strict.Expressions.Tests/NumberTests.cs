@@ -166,15 +166,13 @@ public class NumberTests : TestExpressions
 	private static int IntTryParseCase1To5() =>
 		(int.TryParse(Case1, out var result1) && result1 == 1
 			? 1
-			: throw new NotSupportedException(Case1)) +
-		(!int.TryParse(Case2, out _) &&
+			: throw new NotSupportedException(Case1)) + (!int.TryParse(Case2, out _) &&
 			double.TryParse(Case2, NumberFormatInfo.InvariantInfo, out var result2) && result2 == 7.59
 				? 1
 				: throw new NotSupportedException(Case2)) +
 		(int.TryParse(Case3, out var result3) && result3 == 10
 			? 1
-			: throw new NotSupportedException(Case3)) +
-		(!int.TryParse(Case4, out _) &&
+			: throw new NotSupportedException(Case3)) + (!int.TryParse(Case4, out _) &&
 			double.TryParse(Case4, NumberFormatInfo.InvariantInfo, out var result4) && result4 == 0.5
 				? 1
 				: throw new NotSupportedException(Case4)) +
@@ -221,8 +219,7 @@ public class NumberTests : TestExpressions
 			: throw new NotSupportedException(Case8)) +
 		(double.TryParse(Case9, out var result9) && result9 == 7e-100
 			? 1
-			: throw new NotSupportedException(Case9)) +
-		(!double.TryParse(NoNumberCase, out _)
+			: throw new NotSupportedException(Case9)) + (!double.TryParse(NoNumberCase, out _)
 			? 1
 			: throw new NotSupportedException(NoNumberCase));
 

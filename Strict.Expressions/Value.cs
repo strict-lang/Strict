@@ -11,18 +11,17 @@ namespace Strict.Expressions;
 public class Value(Type valueType, ValueInstance data, int lineNumber = 0, bool isMutable = false)
 	: ConcreteExpression(valueType, lineNumber, isMutable)
 {
-	protected Value(Type valueType, bool value, int lineNumber = 0, bool isMutable = false)
-		: this(valueType, new ValueInstance(valueType, value), lineNumber, isMutable) { }
+	protected Value(Type valueType, bool value, int lineNumber = 0, bool isMutable = false) : this(
+		valueType, new ValueInstance(valueType, value), lineNumber, isMutable) { }
 
-	protected Value(Type valueType, double value, int lineNumber = 0, bool isMutable = false)
-		: this(valueType, new ValueInstance(valueType, value), lineNumber, isMutable) { }
+	protected Value(Type valueType, double value, int lineNumber = 0, bool isMutable = false) : this(
+		valueType, new ValueInstance(valueType, value), lineNumber, isMutable) { }
 
-	public Value(Type valueType, string text, int lineNumber = 0, bool isMutable = false)
-		: this(valueType, new ValueInstance(text), lineNumber, isMutable) { }
+	public Value(Type valueType, string text, int lineNumber = 0, bool isMutable = false) : this(
+		valueType, new ValueInstance(text), lineNumber, isMutable) { }
 
-	protected Value(Type valueType, ValueInstance[] items, int lineNumber = 0,
-		bool isMutable = false) : this(valueType, new ValueInstance(valueType, items), lineNumber,
-		isMutable) { }
+	protected Value(Type valueType, ValueInstance[] items, int lineNumber = 0, bool isMutable = false)
+		: this(valueType, new ValueInstance(valueType, items), lineNumber, isMutable) { }
 
 	public ValueInstance Data { get; } = data;
 	public override string ToString() => Data.ToExpressionCodeString(true);

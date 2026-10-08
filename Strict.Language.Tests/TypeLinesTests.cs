@@ -31,9 +31,7 @@ public sealed class TypeLinesTests
 	[Test]
 	public void MethodReturnTypeShouldBeExtractedIntoDependentTypes()
 	{
-		var typeLines = new TypeLines(Type.Directory,
-			"GetFile Text",
-			"GetFiles Texts",
+		var typeLines = new TypeLines(Type.Directory, "GetFile Text", "GetFiles Texts",
 			"GetDirectories Texts");
 		Assert.That(typeLines.DependentTypes.Count, Is.EqualTo(2),
 			string.Join(",", typeLines.DependentTypes));

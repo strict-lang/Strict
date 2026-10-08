@@ -14,14 +14,17 @@ public sealed class UnreachableCodeEliminator : InstructionOptimizer
 	{
 		var depth = 0;
 		for (var i = 0; i < instructions.Count - 1; i++)
-		{
 			if (instructions[i] is JumpToId
 				{
 					InstructionType: InstructionType.JumpToIdIfFalse or InstructionType.JumpToIdIfTrue
 				})
+			{
 				depth++;
+			}
 			else if (instructions[i] is JumpToId { InstructionType: InstructionType.JumpEnd })
+			{
 				depth = Math.Max(0, depth - 1);
+			}
 			else if (depth == 0 && instructions[i] is ReturnInstruction or Jump
 				{
 					InstructionType: InstructionType.Jump
@@ -30,7 +33,6 @@ public sealed class UnreachableCodeEliminator : InstructionOptimizer
 				instructions.RemoveRange(i + 1, instructions.Count - i - 1);
 				break;
 			}
-		}
 		return instructions;
 	}
 }

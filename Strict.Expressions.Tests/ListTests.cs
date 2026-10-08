@@ -39,8 +39,7 @@ public sealed class ListTests : TestExpressions
 		return expressions;
 	}
 
-	private void AddElementExpression(ICollection<Expression> expressions, string element,
-		Body body)
+	private void AddElementExpression(ICollection<Expression> expressions, string element, Body body)
 	{
 		if (element.Length > 3)
 			new PhraseTokenizer(element).ProcessEachToken(tokenRange =>
@@ -78,8 +77,7 @@ public sealed class ListTests : TestExpressions
 
 	[TestCase("(1, 2, 3, 4, 5) + 4", 4, "1, 2, 3, 4, 5", "+")]
 	[TestCase("(1, 2, 3, 4, 5) - 4", 4, "1, 2, 3, 4, 5", "-")]
-	public void
-		ParseListsWithNumber(string input, double expectedRight, params string[] expected) =>
+	public void ParseListsWithNumber(string input, double expectedRight, params string[] expected) =>
 		ParseAndCheckOutputMatchesInput(input,
 			CreateBinary(new List(new Body(method), GetListExpressions(expected[0].Split(","))),
 				expected[1], new Number(method, expectedRight)));
@@ -128,8 +126,7 @@ public sealed class ListTests : TestExpressions
 		ParseAndCheckOutputMatchesInput("(1, 2, 3, 4, 5) + (1) + 4",
 			CreateBinary(
 				CreateBinary(new List(new Body(method), GetListExpressions("1, 2, 3, 4, 5".Split(", "))),
-					BinaryOperator.Plus,
-					new List(new Body(method), GetListExpressions("1".Split(", ")))),
+					BinaryOperator.Plus, new List(new Body(method), GetListExpressions("1".Split(", ")))),
 				BinaryOperator.Plus, new Number(method, 4)));
 
 	[Test]
@@ -143,21 +140,16 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void ParseComplexLists() =>
 		ParseAndCheckOutputMatchesInput(
-			"((\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")) + (\"7\")",
-			CreateBinary(
-				new List(new Body(method),
-					GetListExpressions([
-						"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"
-					])), BinaryOperator.Plus,
-				new List(new Body(method), [new Text(method, "7")])));
+			"((\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")) + (\"7\")", CreateBinary(
+				new List(new Body(method), GetListExpressions([
+					"(\"Hello, World\", \"Yoyo (it is my secret + 1)\"), (\"4\")"
+				])), BinaryOperator.Plus, new List(new Body(method), [new Text(method, "7")])));
 
 	[Test]
 	public void ContainsMethodCallOnNumbersList()
 	{
 		var ifExpression = ParseExpression(
-			"if 2 is in (1, 2, 3)",
-			"\tconstant abc = \"abc\"",
-			"\tlogger.Log(abc)") as If;
+			"if 2 is in (1, 2, 3)", "\tconstant abc = \"abc\"", "\tlogger.Log(abc)") as If;
 		var numbers = (ifExpression?.Condition as MethodCall)?.Instance as List;
 		Assert.That(numbers?.ToString(), Is.EqualTo("(1, 2, 3)"));
 	}
@@ -166,10 +158,8 @@ public sealed class ListTests : TestExpressions
 	public void MethodsAndMembersOfListShouldHaveImplementationTypeAsParent()
 	{
 		var numbers = type.GetListImplementationType(type.GetType(Type.Number));
-		Assert.That(numbers.Members[1].ToString(),
-			Is.EqualTo("elements TestPackage/List(Number)"));
-		Assert.That(numbers.Methods[1].Parent.ToString(),
-			Is.EqualTo("TestPackage/List(Number)"));
+		Assert.That(numbers.Members[1].ToString(), Is.EqualTo("elements TestPackage/List(Number)"));
+		Assert.That(numbers.Methods[1].Parent.ToString(), Is.EqualTo("TestPackage/List(Number)"));
 	}
 
 	[Test]

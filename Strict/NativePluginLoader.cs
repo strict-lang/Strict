@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Strict.Expressions;
 using Strict.Language;
+using Type = System.Type;
 
 namespace Strict;
 
@@ -9,7 +10,7 @@ namespace Strict;
 /// Searches for native implementations of trait methods.
 /// Supports two modes:
 /// 1. Lifecycle-based native plugins (C/C++/Rust shared libraries) via NativeLibrary.Load.
-///    Convention: {TypeName}_Create(path) → handle, {TypeName}_Colors(handle, &count) → bytes,
+///    Convention: {TypeName}_Create(path) → handle, {TypeName}_Colors(handle, count) → bytes,
 ///    {TypeName}_Delete(handle). The shared library file must be named ImageLoader.so /
 ///    ImageLoader.dll / ImageLoader.dylib and live in the working directory.
 /// 2. Managed .NET assemblies via Assembly.LoadFrom (legacy / fallback path).
@@ -45,12 +46,12 @@ public static class NativePluginLoader
 	/// matching native shared library. Returns the RGBA byte data as managed bytes, or null if
 	/// no native library was found for the type.
 	/// </summary>
-	public static byte[]? TryLoadNativeLifecycle(string typeName, string path,
-		string searchDirectory) =>
+	public static byte[]?
+		TryLoadNativeLifecycle(string typeName, string path, string searchDirectory) =>
 		TryLoadNativeLifecycle(typeName, path, searchDirectory, out _, out _);
 
-	public static byte[]? TryLoadNativeLifecycle(string typeName, string path,
-		string searchDirectory, out int width, out int height)
+	public static byte[]? TryLoadNativeLifecycle(string typeName, string path, string searchDirectory,
+		out int width, out int height)
 	{
 		width = 0;
 		height = 0;
@@ -81,15 +82,15 @@ public static class NativePluginLoader
 	}
 
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-	private delegate int SaveDelegate(
-		[MarshalAs(UnmanagedType.LPUTF8Str)] string path, IntPtr data, int width, int height);
+	private delegate int SaveDelegate([MarshalAs(UnmanagedType.LPUTF8Str)] string path, IntPtr data,
+		int width, int height);
 
 	/// <summary>
 	/// Calls {TypeName}_Save(path, data, len, width, height) on a native shared library.
 	/// Returns true on success, false if no native library was found.
 	/// </summary>
-	public static bool TrySaveNativeImage(string typeName, string path, byte[] data,
-		int width, int height, string searchDirectory)
+	public static bool TrySaveNativeImage(string typeName, string path, byte[] data, int width,
+		int height, string searchDirectory)
 	{
 		var libPath = FindNativeLibraryPath(typeName, searchDirectory);
 		if (libPath == null)
@@ -100,9 +101,9 @@ public static class NativePluginLoader
 		try
 		{
 			var result = saveFn(path, pinnedData.AddrOfPinnedObject(), width, height);
-			if (result == 0)
-				throw new NativeSaveFailed(typeName, path);
-			return true;
+			return result == 0
+				? throw new NativeSaveFailed(typeName, path)
+				: true;
 		}
 		finally
 		{
@@ -159,11 +160,10 @@ public static class NativePluginLoader
 	/// Legacy: searches .NET assemblies in the given directory for a class and method matching
 	/// typeName/methodName by reflection.  Kept for managed plugin scenarios.
 	/// </summary>
-	public static object? TryCallNativeMethod(string typeName, string methodName,
-		object?[] arguments, string searchDirectory)
+	public static object? TryCallNativeMethod(string typeName, string methodName, object?[] arguments,
+		string searchDirectory)
 	{
-		var matchingMethod = FindManagedMethod(typeName, methodName, arguments.Length,
-			searchDirectory);
+		var matchingMethod = FindManagedMethod(typeName, methodName, arguments.Length, searchDirectory);
 		return matchingMethod == null
 			? throw new NativeMethodNotFound(typeName, methodName, searchDirectory)
 			: matchingMethod.IsStatic
@@ -181,7 +181,6 @@ public static class NativePluginLoader
 		int argumentCount, string searchDirectory)
 	{
 		foreach (var dllPath in GetDllFiles(searchDirectory))
-		{
 			try
 			{
 				var assembly = Assembly.LoadFrom(dllPath);
@@ -196,7 +195,6 @@ public static class NativePluginLoader
 			{
 				// Skip DLLs that can't be loaded (bad format, missing deps, etc.)
 			}
-		}
 		return null;
 	}
 
@@ -205,7 +203,7 @@ public static class NativePluginLoader
 			? Directory.GetFiles(directory, "*.dll")
 			: [];
 
-	private static System.Type? FindTypeByName(Assembly assembly, string typeName)
+	private static Type? FindTypeByName(Assembly assembly, string typeName)
 	{
 		foreach (var type in assembly.GetExportedTypes())
 			if (type.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
@@ -213,8 +211,7 @@ public static class NativePluginLoader
 		return null;
 	}
 
-	private static MethodInfo? FindMethodByName(System.Type type, string methodName,
-		int argumentCount)
+	private static MethodInfo? FindMethodByName(Type type, string methodName, int argumentCount)
 	{
 		foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance |
 			BindingFlags.Static))
@@ -246,12 +243,12 @@ public static class NativePluginLoader
 			: returnType;
 		var elements = new ValueInstance[bytes.Length];
 		for (var byteIndex = 0; byteIndex < bytes.Length; byteIndex++)
-			elements[byteIndex] = new ValueInstance(elementType, (double)bytes[byteIndex]);
+			elements[byteIndex] = new ValueInstance(elementType, bytes[byteIndex]);
 		return new ValueInstance(returnType, elements);
 	}
 
-	public sealed class NativeMethodNotFound(string typeName, string methodName,
-		string searchDirectory) : Exception(
+	public sealed class
+		NativeMethodNotFound(string typeName, string methodName, string searchDirectory) : Exception(
 		$"No native implementation found for {typeName}.{methodName} in DLLs in {searchDirectory}");
 
 	public sealed class NativeCreateFailed(string typeName, string path) : Exception(
@@ -260,4 +257,3 @@ public static class NativePluginLoader
 	public sealed class NativeSaveFailed(string typeName, string path) : Exception(
 		$"Native {typeName}_Save failed for path: {path}");
 }
-

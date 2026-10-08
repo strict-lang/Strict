@@ -1,9 +1,11 @@
+using System.Reflection;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Tests;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
+using Strict.Optimizers;
 using Type = Strict.Language.Type;
 
 namespace Strict.Tests;
@@ -136,8 +138,9 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\tif operation is \"divide\"",
 			"\t\treturn First / Second")).Generate();
 		// @formatter:on
-		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.
-			Value.Number, Is.EqualTo(expectedResult));
+		Assert.That(
+			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(expectedResult));
 	}
 
 	[Test]
@@ -146,8 +149,9 @@ public sealed class VirtualMachineTests : TestBytecode
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(AccessListByIndex),
 			nameof(AccessListByIndex) + "(1, 2, 3, 4, 5).Get(2)", "has numbers",
 			"Get(index Number) Number", "\tnumbers(index)")).Generate();
-		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.
-			Value.Number, Is.EqualTo(3));
+		Assert.That(
+			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(3));
 	}
 
 	[Test]
@@ -157,16 +161,16 @@ public sealed class VirtualMachineTests : TestBytecode
 			nameof(AccessListByIndexNonNumberType),
 			nameof(AccessListByIndexNonNumberType) + "(\"1\", \"2\", \"3\", \"4\", \"5\").Get(2)",
 			"has texts", "Get(index Number) Text", "\ttexts(index)")).Generate();
-		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.
-			Value.Text, Is.EqualTo("3"));
+		Assert.That(
+			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Text,
+			Is.EqualTo("3"));
 	}
 
 	[Test]
 	public void FlatBackedListLengthDoesNotMaterializeItems()
 	{
 		using var pointType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(FlatBackedListLengthDoesNotMaterializeItems),
-				"has xValue Number",
+			new TypeLines(nameof(FlatBackedListLengthDoesNotMaterializeItems), "has xValue Number",
 				"has yValue Number")).ParseMembersAndMethods(new MethodExpressionParser());
 		var numberType = TestPackage.Instance.GetType(Type.Number);
 		var listType = TestPackage.Instance.GetListImplementationType(pointType);
@@ -174,12 +178,12 @@ public sealed class VirtualMachineTests : TestBytecode
 			[new ValueInstance(numberType, 1), new ValueInstance(numberType, 2)]);
 		var backedList = new ValueInstance(listType, point, 3);
 		var itemsField = typeof(ValueArrayInstance).GetField("items",
-			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+			BindingFlags.Instance | BindingFlags.NonPublic);
 		Assert.That(itemsField, Is.Not.Null);
 		Assert.That(itemsField!.GetValue(backedList.List), Is.Null);
 		var vm = new VirtualMachine(TestPackage.Instance);
 		var tryGetNativeLength = typeof(VirtualMachine).GetMethod("TryGetNativeLength",
-			System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+			BindingFlags.Instance | BindingFlags.NonPublic);
 		Assert.That(tryGetNativeLength, Is.Not.Null);
 		object?[] arguments = [backedList, "Length", null];
 		Assert.That(tryGetNativeLength!.Invoke(vm, arguments), Is.EqualTo(true));
@@ -197,8 +201,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			new LoopBeginInstruction(Register.R0),
 			new LoadVariableToRegister(Register.R2, "result"),
 			new LoadVariableToRegister(Register.R3, "multiplier"),
-			new BinaryInstruction(InstructionType.Multiply, Register.R2, Register.R3,
-				Register.R4),
+			new BinaryInstruction(InstructionType.Multiply, Register.R2, Register.R3, Register.R4),
 			new StoreFromRegisterInstruction(Register.R4, "result"),
 			new LoopEndInstruction(5),
 			new LoadVariableToRegister(Register.R5, "result"),
@@ -225,11 +228,12 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void AutoTypeTextSkipsDefaultAndConstant()
 	{
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
-			nameof(AutoTypeTextSkipsDefaultAndConstant),
-			nameof(AutoTypeTextSkipsDefaultAndConstant) + "(0.25, 0.25, 0.25, 1).Format",
-			"has red Number", "has green Number", "has blue Number", "has alpha = 1",
-			"constant max = 1", "Format Text",
-			"\tAutoTypeTextSkipsDefaultAndConstant(red, green, blue, alpha) to Text")).Generate();
+				nameof(AutoTypeTextSkipsDefaultAndConstant),
+				nameof(AutoTypeTextSkipsDefaultAndConstant) + "(0.25, 0.25, 0.25, 1).Format",
+				"has red Number", "has green Number", "has blue Number", "has alpha = 1",
+				"constant max = 1",
+				"Format Text", "\tAutoTypeTextSkipsDefaultAndConstant(red, green, blue, alpha) to Text")).
+			Generate();
 		Assert.That(
 			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Text,
 			Is.EqualTo("(0.25, 0.25, 0.25)"));
@@ -277,20 +281,21 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void MethodCall(string programName, string methodCall, string[] source, object expected)
 	{
 		var instructions =
-			new BinaryGenerator(GenerateMethodCallFromSource(programName, methodCall, source)).
-				Generate();
-		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number, Is.EqualTo(expected));
+			new BinaryGenerator(GenerateMethodCallFromSource(programName, methodCall, source)).Generate();
+		Assert.That(
+			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(expected));
 	}
 
 	[Test]
 	public void IfAndElseTest()
 	{
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("IfAndElseTest",
-				"IfAndElseTest(3).IsEven", "has number", "IsEven Text", "\tmutable result = \"\"",
-				"\tif number > 10", "\t\tresult = \"Number is more than 10\"", "\t\treturn result",
-				"\telse", "\t\tresult = \"Number is less or equal than 10\"", "\t\treturn result")).
-			Generate();
-		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Text,
+			"IfAndElseTest(3).IsEven", "has number", "IsEven Text", "\tmutable result = \"\"",
+			"\tif number > 10", "\t\tresult = \"Number is more than 10\"", "\t\treturn result", "\telse",
+			"\t\tresult = \"Number is less or equal than 10\"", "\t\treturn result")).Generate();
+		Assert.That(
+			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Text,
 			Is.EqualTo("Number is less or equal than 10"));
 	}
 
@@ -355,13 +360,12 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ExecuteOptimizedRunMethodWithProgramArguments()
 	{
 		var programType = new Type(type.Package,
-			new TypeLines(nameof(ExecuteOptimizedRunMethodWithProgramArguments),
-				"has logger",
-				"Run(numbers)",
-				"\tlogger.Log(numbers.Sum)")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines(nameof(ExecuteOptimizedRunMethodWithProgramArguments), "has logger",
+					"Run(numbers)", "\tlogger.Log(numbers.Sum)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = programType.Methods.Single(m => m.Name == Method.Run);
 		var binary = BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod]);
-		new Optimizers.AllInstructionOptimizers().Optimize(binary);
+		new AllInstructionOptimizers().Optimize(binary);
 		using var consoleWriter = new StringWriter();
 		var rememberConsole = Console.Out;
 		Console.SetOut(consoleWriter);
@@ -410,8 +414,9 @@ public sealed class VirtualMachineTests : TestBytecode
 		];
 		Assert.That(
 			new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryAdd),
-					"DictionaryAdd(5).RemoveFromDictionary", code)).Generate()).Execute(initialVariables: null).Memory.Variables["values"].
-				GetDictionaryItems().Count, Is.EqualTo(1));
+					"DictionaryAdd(5).RemoveFromDictionary", code)).Generate()).
+				Execute(initialVariables: null).
+				Memory.Variables["values"].GetDictionaryItems().Count, Is.EqualTo(1));
 	}
 
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
@@ -420,8 +425,9 @@ public sealed class VirtualMachineTests : TestBytecode
 		var parameterNames = fromMethod != null
 			? fromMethod.Parameters.Select(parameter => parameter.Name).ToArray()
 			: Array.Empty<string>();
-		return new Invoke(register, new InvokeMethodInfo(targetType.FullName, Method.From,
-			parameterNames, targetType.Name, [], null));
+		return new Invoke(register,
+			new InvokeMethodInfo(targetType.FullName, Method.From, parameterNames, targetType.Name, [],
+				null));
 	}
 
 	[Test]
@@ -448,7 +454,8 @@ public sealed class VirtualMachineTests : TestBytecode
 		];
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(DictionaryGet),
 			"DictionaryGet(5).AddToDictionary", code)).Generate();
-		var values = new VirtualMachine(instructions).Execute(initialVariables: null).Memory.Variables["values"].GetDictionaryItems();
+		var values = new VirtualMachine(instructions).Execute(initialVariables: null).Memory.
+			Variables["values"].GetDictionaryItems();
 		Assert.That(GetDictionaryValue(values, 1), Is.EqualTo("5"));
 	}
 
@@ -481,8 +488,9 @@ public sealed class VirtualMachineTests : TestBytecode
 		var source = new[] { "has number", "GetAll Number", "\tfor number", "\t\tvalue" };
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(ReturnWithinALoop),
 			"ReturnWithinALoop(5).GetAll", source)).Generate();
-		Assert.That(() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.
-			Value.Number, Is.EqualTo(1 + 2 + 3 + 4 + 5));
+		Assert.That(
+			() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(1 + 2 + 3 + 4 + 5));
 	}
 
 	[Test]
@@ -580,18 +588,14 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var source = new[]
 		{
-			"has numbers",
-			"CountItems Number",
-			"\tmutable count = 0",
-			"\tfor numbers",
-			"\t\tcount = count + 1",
-			"\tcount"
+			"has numbers", "CountItems Number", "\tmutable count = 0", "\tfor numbers",
+			"\t\tcount = count + 1", "\tcount"
 		};
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(LoopOverListStopsWhenIndexExceedsCount),
 			$"{nameof(LoopOverListStopsWhenIndexExceedsCount)}(1, 2, 3).CountItems", source)).Generate();
-		var result =
-			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.
+			Number;
 		Assert.That(result, Is.EqualTo(3));
 	}
 
@@ -601,24 +605,18 @@ public sealed class VirtualMachineTests : TestBytecode
 		var parser = new MethodExpressionParser();
 		var repositories = new Repositories(parser);
 		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
-		using var testType = new Type(package,
-			new TypeLines(nameof(LoopOverSizeIteratesWidthTimesHeight),
-				// @formatter: off
-				"has number",
-				"Run Number",
-				"\tconstant width = 16",
-				"\tconstant height = 9",
-				"\tmutable image = Image(Size(width, height))",
-				"\tfor image.Size",
-				"\t\timage.Colors(index) = ColorValue(0.25, 0.25, 0.25)",
-				"\tmutable count = 0",
-				"\tfor image.Size",
-				"\t\tif image.Colors(index) is ColorValue(0.25, 0.25, 0.25)",
-				"\t\t\tcount = count + 1",
-				"\tcount")).ParseMembersAndMethods(parser);
+		using var testType = new Type(package, new TypeLines(
+			nameof(LoopOverSizeIteratesWidthTimesHeight),
+			// @formatter: off
+			"has number", "Run Number", "\tconstant width = 16", "\tconstant height = 9",
+			"\tmutable image = Image(Size(width, height))", "\tfor image.Size",
+			"\t\timage.Colors(index) = ColorValue(0.25, 0.25, 0.25)", "\tmutable count = 0",
+			"\tfor image.Size", "\t\tif image.Colors(index) is ColorValue(0.25, 0.25, 0.25)",
+			"\t\t\tcount = count + 1", "\tcount")).ParseMembersAndMethods(parser);
 		// @formatter: on
 		var runMethod = testType.Methods.Single(m => m.Name == Method.Run);
-		var executable = BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod]); //TODO: extremely slow
+		var executable =
+			BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod]); //TODO: extremely slow
 		var result = new VirtualMachine(executable).Execute().Returns!.Value.Number;
 		Assert.That(result, Is.EqualTo(16 * 9));
 	}
@@ -628,17 +626,14 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var source = new[]
 		{
-			"has letter Text",
-			"CountChars Number",
-			"\tmutable count = 0",
-			"\tfor letter",
-			"\t\tcount = count + 1",
-			"\tcount"
+			"has letter Text", "CountChars Number", "\tmutable count = 0", "\tfor letter",
+			"\t\tcount = count + 1", "\tcount"
 		};
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(LoopOverSingleCharTextStopsAtEnd),
 			$"{nameof(LoopOverSingleCharTextStopsAtEnd)}(\"X\").CountChars", source)).Generate();
-		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number;
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.
+			Number;
 		Assert.That(result, Is.EqualTo(1));
 	}
 
@@ -668,12 +663,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(NestedForLoopCanReturnListInBytecode),
-			$"{nameof(NestedForLoopCanReturnListInBytecode)}.Coordinates",
-			"has number",
-			"Coordinates Numbers",
-			"\tfor 2",
-			"\t\tfor 2",
-			"\t\t\tindex + outer.index * 10")).Generate();
+			$"{nameof(NestedForLoopCanReturnListInBytecode)}.Coordinates", "has number",
+			"Coordinates Numbers", "\tfor 2", "\t\tfor 2", "\t\t\tindex + outer.index * 10")).Generate();
 		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
 		Assert.That(result.ToExpressionCodeString(), Is.EqualTo("(0, 1, 10, 11)"));
 	}
@@ -701,11 +692,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	[Test]
 	public void RoundTripInvokeWithDoubleNumberArgument()
 	{
-		var instructions = new BinaryGenerator(
-			GenerateMethodCallFromSource("DoubleCalc", "DoubleCalc(3.14).GetHalf",
-				"has number",
-				"GetHalf Number",
-				"\tnumber / 2")).Generate();
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("DoubleCalc",
+			"DoubleCalc(3.14).GetHalf", "has number", "GetHalf Number", "\tnumber / 2")).Generate();
 		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!;
 		Assert.That(result.Value.Number, Is.EqualTo(3.14 / 2));
 	}
@@ -714,8 +702,9 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void CreateInstanceWithLoggerTraitMember()
 	{
 		if (type.Package.FindDirectType("TypeWithLogger") == null)
-			new Type(type.Package, new TypeLines("TypeWithLogger", "has logger",
-				"GetZero Number", "\t0")).ParseMembersAndMethods(new MethodExpressionParser());
+			new Type(type.Package,
+					new TypeLines("TypeWithLogger", "has logger", "GetZero Number", "\t0")).
+				ParseMembersAndMethods(new MethodExpressionParser());
 		var typeWithLogger = type.Package.FindDirectType("TypeWithLogger")!;
 		var instructions = new List<Instruction> { CreateFromInvoke(typeWithLogger, Register.R0) };
 		var result = ExecuteVm(instructions).Memory.Registers[Register.R0];
@@ -727,11 +716,12 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		if (type.Package.FindDirectType("HolderWithColors") == null)
 		{
-			new Type(type.Package, new TypeLines("Color", "has red Number",
-				"GetZero Number", "\t0")).ParseMembersAndMethods(new MethodExpressionParser());
-			new Type(type.Package, new TypeLines("HolderWithColors", "mutable colors",
-				"GetFirst Number", "\tcolors(0).red")).ParseMembersAndMethods(
-				new MethodExpressionParser());
+			new Type(type.Package, new TypeLines("Color", "has red Number", "GetZero Number", "\t0")).
+				ParseMembersAndMethods(new MethodExpressionParser());
+			new Type(type.Package,
+					new TypeLines("HolderWithColors", "mutable colors", "GetFirst Number",
+						"\tcolors(0).red")).
+				ParseMembersAndMethods(new MethodExpressionParser());
 		}
 		var holderType = type.Package.FindDirectType("HolderWithColors")!;
 		var fromMethod = holderType.FindMethod(Method.From, []);
@@ -752,17 +742,12 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var source = new[]
 		{
-			"has count Number",
-			"AddMany Numbers",
-			"\tmutable myList = (0)",
-			"\tfor count",
-			"\t\tmyList = myList + value",
-			"\tmyList"
+			"has count Number", "AddMany Numbers", "\tmutable myList = (0)", "\tfor count",
+			"\t\tmyList = myList + value", "\tmyList"
 		};
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(AddHundredElementsToMutableList),
-			$"{nameof(AddHundredElementsToMutableList)}(100).AddMany",
-			source)).Generate();
+			$"{nameof(AddHundredElementsToMutableList)}(100).AddMany", source)).Generate();
 		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
 		Assert.That(result.List.Items.Count, Is.EqualTo(101));
 	}
@@ -771,11 +756,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ExecuteRunUsesBinaryEntryPoint()
 	{
 		var binary = new BinaryGenerator(GenerateMethodCallFromSource("VmExecuteExpressionMethodType",
-			"VmExecuteExpressionMethodType(10, 5).Calculate",
-			"has First Number",
-			"has Second Number",
-			"Calculate Number",
-			"\tFirst + Second")).Generate();
+			"VmExecuteExpressionMethodType(10, 5).Calculate", "has First Number", "has Second Number",
+			"Calculate Number", "\tFirst + Second")).Generate();
 		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(15));
 	}
 
@@ -785,14 +767,8 @@ public sealed class VirtualMachineTests : TestBytecode
 		var binary = new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(ExecuteLoadedBinaryPreservesNestedForLoopBehavior),
 			$"{nameof(ExecuteLoadedBinaryPreservesNestedForLoopBehavior)}(3, 2).CountAll",
-			"has Width Number",
-			"has Height Number",
-			"CountAll Number",
-			"\tmutable total = Width - Width",
-			"\tfor Height",
-			"\t\tfor Width",
-			"\t\t\ttotal = total + 1",
-			"\ttotal")).Generate();
+			"has Width Number", "has Height Number", "CountAll Number", "\tmutable total = Width - Width",
+			"\tfor Height", "\t\tfor Width", "\t\t\ttotal = total + 1", "\ttotal")).Generate();
 		var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + BinaryExecutable.Extension);
 		try
 		{
@@ -811,21 +787,16 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ExecuteLoadedBinaryPreservesNestedIteratorAggregation()
 	{
 		const string ProgramName = "NestedIteratorAggregation";
-		var binary = new BinaryGenerator(GenerateMethodCallFromSource(
-			ProgramName,
-			$"{ProgramName}(3, 2).All",
-			"has Width Number",
-			"has Height Number",
-			"All Numbers",
-			"\tfor Height",
-			"\t\tfor Width",
-			"\t\t\tindex")).Generate();
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource(ProgramName,
+			$"{ProgramName}(3, 2).All", "has Width Number", "has Height Number", "All Numbers",
+			"\tfor Height", "\t\tfor Width", "\t\t\tindex")).Generate();
 		var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + BinaryExecutable.Extension);
 		try
 		{
 			binary.Serialize(filePath);
 			var loadedBinary = new BinaryExecutable(filePath, TestPackage.Instance);
-			Assert.That(new VirtualMachine(loadedBinary).Execute().Returns!.Value.ToExpressionCodeString(),
+			Assert.That(
+				new VirtualMachine(loadedBinary).Execute().Returns!.Value.ToExpressionCodeString(),
 				Is.EqualTo("(0, 1, 2, 0, 1, 2)"));
 		}
 		finally
@@ -849,8 +820,8 @@ public sealed class VirtualMachineTests : TestBytecode
 			[zero, zero, zero]);
 		var adjustBrightnessCall = new MethodCall(
 			adjustBrightness.FindMethod(Method.From, [brightness])!, null, [brightness]);
-		var getBrightnessAdjustedColor = adjustBrightness.FindMethod(
-			"GetBrightnessAdjustedColor", [colorCall])!;
+		var getBrightnessAdjustedColor =
+			adjustBrightness.FindMethod("GetBrightnessAdjustedColor", [colorCall])!;
 		var methodCall = new MethodCall(getBrightnessAdjustedColor, adjustBrightnessCall, [colorCall]);
 		var binary = new BinaryGenerator(methodCall).Generate();
 		var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + BinaryExecutable.Extension);
@@ -858,7 +829,8 @@ public sealed class VirtualMachineTests : TestBytecode
 		{
 			binary.Serialize(filePath);
 			var loadedBinary = new BinaryExecutable(filePath, package);
-			Assert.That(new VirtualMachine(loadedBinary).Execute().Returns!.Value.ToExpressionCodeString(),
+			Assert.That(
+				new VirtualMachine(loadedBinary).Execute().Returns!.Value.ToExpressionCodeString(),
 				Is.EqualTo("(0.25, 0.25, 0.25)"));
 		}
 		finally
@@ -872,11 +844,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ExecuteExpressionRunsProvidedBinaryMethod()
 	{
 		var binary = new BinaryGenerator(GenerateMethodCallFromSource("VmExecuteExpressionMethodType",
-			"VmExecuteExpressionMethodType(10, 5).Calculate",
-			"has First Number",
-			"has Second Number",
-			"Calculate Number",
-			"\tFirst + Second")).Generate();
+			"VmExecuteExpressionMethodType(10, 5).Calculate", "has First Number", "has Second Number",
+			"Calculate Number", "\tFirst + Second")).Generate();
 		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(15));
 	}
 
@@ -884,11 +853,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void InvokeUsesPrecompiledMethodInstructionsFromBinaryExecutable()
 	{
 		var binary = new BinaryGenerator(GenerateMethodCallFromSource("InvokePrecompiledCall",
-			"InvokePrecompiledCall(10, 5).Calculate",
-			"has First Number",
-			"has Second Number",
-			"Calculate Number",
-			"\tFirst + Second")).Generate();
+			"InvokePrecompiledCall(10, 5).Calculate", "has First Number", "has Second Number",
+			"Calculate Number", "\tFirst + Second")).Generate();
 		var vm = new VirtualMachine(binary);
 		Assert.That(vm.Execute().Returns!.Value.Number, Is.EqualTo(15));
 	}
@@ -897,17 +863,12 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void RunFibonacciVm()
 	{
 		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("Fibonacci",
-			"Fibonacci(10).GetNthFibonacci",
-			"has number",
-			"GetNthFibonacci Number",
-			"\tmutable first = 1",
-			"\tmutable second = 1",
-			"\tfor Range(2, number)",
-			"\t\tlet next = first + second",
-			"\t\tfirst = second",
-			"\t\tsecond = next",
-			"\tsecond")).Generate();
-		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+				"Fibonacci(10).GetNthFibonacci", "has number", "GetNthFibonacci Number",
+				"\tmutable first = 1", "\tmutable second = 1", "\tfor Range(2, number)",
+				"\t\tlet next = first + second", "\t\tfirst = second", "\t\tsecond = next", "\tsecond")).
+			Generate();
+		Assert.That(
+			new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
 			Is.EqualTo(55));
 	}
 
@@ -915,9 +876,9 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ExecuteFieldLoadInstruction()
 	{
 		using var pointType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ExecuteFieldLoadInstruction),
-				"has xValue Number",
-				"has yValue Number")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines(nameof(ExecuteFieldLoadInstruction), "has xValue Number",
+					"has yValue Number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var point = new ValueInstance(pointType,
 			[new ValueInstance(NumberType, 3), new ValueInstance(NumberType, 7)]);
 		var result = ExecuteVm([
@@ -932,8 +893,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ExecuteConstructValueTypeInstruction()
 	{
 		using var pointType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ExecuteConstructValueTypeInstruction),
-				"has xValue Number",
+			new TypeLines(nameof(ExecuteConstructValueTypeInstruction), "has xValue Number",
 				"has yValue Number")).ParseMembersAndMethods(new MethodExpressionParser());
 		var result = ExecuteVm([
 			new SetInstruction(Number(3), Register.R0),

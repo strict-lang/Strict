@@ -67,8 +67,8 @@ public class Type : Context, IDisposable
 	private bool OneOfFirstThreeLinesContainsGeneric()
 	{
 		for (var line = 0; line < Lines.Length && line < 3; line++)
-			if (HasGenericMember(Lines[line]) || HasGenericMethodHeader(Lines[line]) &&
-				line + 1 < Lines.Length && !Lines[line + 1].StartsWith('\t'))
+			if (HasGenericMember(Lines[line]) || (HasGenericMethodHeader(Lines[line]) &&
+				line + 1 < Lines.Length && !Lines[line + 1].StartsWith('\t')))
 				return true;
 		return false;
 	}
@@ -246,7 +246,8 @@ public class Type : Context, IDisposable
 
 	public class TypeWasAlreadyParsed(Type type) : Exception(type.ToString()); //ncrunch: no coverage
 
-	public sealed class MustImplementAllTraitMethodsOrNone(Type type, string traitName,
+	public sealed class MustImplementAllTraitMethodsOrNone(Type type,
+		string traitName,
 		IEnumerable<Method> missingTraitMethods) : ParsingFailed(type, type.typeParser.LineNumber,
 		"Trait Type:" + traitName + " Missing methods: " + string.Join(", ", missingTraitMethods));
 
@@ -261,8 +262,9 @@ public class Type : Context, IDisposable
 			return;
 		if (typeKind == TypeKind.Unknown && methods.Count == 0 && members.Count < 2)
 			throw new NoMethodsFound(this, typeParser.LineNumber);
-		if (methods.Count > Limit.MethodCount && (Package.Name != nameof(Strict) &&
-			Package.Name != "TestPackage" || Name == "MethodCountMustNotExceedFifteen"))
+		if (methods.Count > Limit.MethodCount &&
+			((Package.Name != nameof(Strict) && Package.Name != "TestPackage") ||
+				Name == "MethodCountMustNotExceedFifteen"))
 			throw new MethodCountMustNotExceedLimit(this);
 	}
 
@@ -273,8 +275,8 @@ public class Type : Context, IDisposable
 	/// have data (like Color, which has 4 Numbers) are actually pure Data types!
 	/// </summary>
 	public bool IsDataType =>
-		CheckIfParsed() && methods.Count == 0 &&
-		(members.Count > 1 || members is [{ InitialValue: not null }]) || Name == Number ||
+		(CheckIfParsed() && methods.Count == 0 &&
+			(members.Count > 1 || members is [{ InitialValue: not null }])) || Name == Number ||
 		Name == nameof(Name);
 
 	private bool CheckIfParsed()
@@ -287,8 +289,8 @@ public class Type : Context, IDisposable
 	private sealed class TypeIsNotParsedCallParseMembersAndMethods(Type type)
 		: Exception(type.ToString()); //ncrunch: no coverage
 
-	public sealed class MemberCountShouldNotExceedLimit(Type type, int limit) : ParsingFailed(type,
-		0, $"{type.Name} type has {type.members.Count} members, max: {limit}");
+	public sealed class MemberCountShouldNotExceedLimit(Type type, int limit) : ParsingFailed(type, 0,
+		$"{type.Name} type has {type.members.Count} members, max: {limit}");
 
 	public sealed class NoMethodsFound(Type type, int lineNumber) : ParsingFailed(type, lineNumber,
 		"Each type must have at least two members (datatypes and enums) or at least one method, " +
@@ -306,7 +308,8 @@ public class Type : Context, IDisposable
 		var nonImplementedTraitMethods = traitMethods.Where(traitMethod =>
 			traitMethod.Name != Method.From &&
 			methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
-		if (nonImplementedTraitMethods.Count > 0 && nonImplementedTraitMethods.Count != traitMethods.Count)
+		if (nonImplementedTraitMethods.Count > 0 &&
+			nonImplementedTraitMethods.Count != traitMethods.Count)
 			throw new MustImplementAllTraitMethodsOrNone(this, trait.Name, nonImplementedTraitMethods);
 	}
 
@@ -324,15 +327,17 @@ public class Type : Context, IDisposable
 	protected readonly List<Member> members = [];
 	public List<Method> Methods => methods;
 	protected readonly List<Method> methods = [];
-	public bool IsTrait => !IsNumber && !IsBoolean && CheckIfParsed() &&
-		CanBeTraitBasedOnMembers && Methods.All(IsTraitMethodDeclaration);
+	public bool IsTrait =>
+		!IsNumber && !IsBoolean && CheckIfParsed() && CanBeTraitBasedOnMembers &&
+		Methods.All(IsTraitMethodDeclaration);
 
-	internal bool CanBeTraitBasedOnMembers => !IsNumber && !IsBoolean &&
-		(Members.Count == 0 || Members.All(IsTraitRequirementMember) &&
-		(Members.Any(member => !member.IsPublic) || Members.Count > 1));
+	internal bool CanBeTraitBasedOnMembers =>
+		!IsNumber && !IsBoolean && (Members.Count == 0 || (Members.All(IsTraitRequirementMember) &&
+			(Members.Any(member => !member.IsPublic) || Members.Count > 1)));
 
-	internal bool MustUseBodylessTraitMethods => !IsNumber && !IsBoolean && (Members.Count == 0 ||
-		Members.Count > 1 && Members.All(IsTraitCompositionMember));
+	internal bool MustUseBodylessTraitMethods =>
+		!IsNumber && !IsBoolean && (Members.Count == 0 ||
+			(Members.Count > 1 && Members.All(IsTraitCompositionMember)));
 
 	internal static bool IsTraitMethodDeclaration(Method method) => method.lines.Count == 1;
 
@@ -382,7 +387,9 @@ public class Type : Context, IDisposable
 	{
 		var key = GetImplementationName(implementationTypes);
 		lock (genericImplementationLock)
+		{
 			return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
+		}
 	}
 
 	internal string GetImplementationName(Type[] implementationTypes)
@@ -409,7 +416,8 @@ public class Type : Context, IDisposable
 	{
 		if (!IsGeneric)
 			throw new CannotGetGenericImplementationOnNonGeneric(Name, key);
-		cachedGenericTypes ??= new Dictionary<string, GenericTypeImplementation>(StringComparer.Ordinal);
+		cachedGenericTypes ??=
+			new Dictionary<string, GenericTypeImplementation>(StringComparer.Ordinal);
 		return cachedGenericTypes.GetValueOrDefault(key);
 	}
 
@@ -422,7 +430,7 @@ public class Type : Context, IDisposable
 	private GenericTypeImplementation CreateGenericImplementation(string key,
 		Type[] implementationTypes)
 	{
-		if ((IsList || IsIterator || IsMutable) && implementationTypes.Length == 1 ||
+		if (((IsList || IsIterator || IsMutable) && implementationTypes.Length == 1) ||
 			GetGenericTypeArguments().Count == implementationTypes.Length ||
 			HasMatchingConstructor(implementationTypes))
 		{
@@ -440,10 +448,9 @@ public class Type : Context, IDisposable
 		: Exception("Type: " + name + ", Generic Implementation: " + key);
 
 	public string FilePath =>
-		Path.GetFullPath(Path.Combine(Package.FolderPath,
-			(this is GenericTypeImplementation genericType
-				? genericType.Generic.Name
-				: Name) + Extension));
+		Path.GetFullPath(Path.Combine(Package.FolderPath, (this is GenericTypeImplementation genericType
+			? genericType.Generic.Name
+			: Name) + Extension));
 	public const string Extension = ".strict";
 
 	public Member? FindMember(string name)
@@ -462,12 +469,12 @@ public class Type : Context, IDisposable
 	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
 	{
 		public GenericTypesCannotBeUsedDirectlyUseImplementation(Type type, string extraInformation,
-			string? methodName = null, IReadOnlyList<Expression>? arguments = null)
-			: base(BuildMessage(type, extraInformation, methodName, arguments)) { }
+			string? methodName = null, IReadOnlyList<Expression>? arguments = null) : base(
+			BuildMessage(type, extraInformation, methodName, arguments)) { }
 
 		public GenericTypesCannotBeUsedDirectlyUseImplementation(
-			GenericTypesCannotBeUsedDirectlyUseImplementation innerException, string calledFrom)
-			: base(innerException.Message + ", Called from: " + calledFrom, innerException) { }
+			GenericTypesCannotBeUsedDirectlyUseImplementation innerException, string calledFrom) : base(
+			innerException.Message + ", Called from: " + calledFrom, innerException) { }
 
 		private static string BuildMessage(Type type, string extraInformation, string? methodName,
 			IReadOnlyCollection<Expression>? arguments)
@@ -491,8 +498,8 @@ public class Type : Context, IDisposable
 	/// private iterators, pick the first member automatically. List and number are also iterable.
 	/// </summary>
 	public bool IsIterator =>
-		typeKind == TypeKind.Iterator ||
-		Name.StartsWith(Iterator + "(", StringComparison.Ordinal) || HasAnyIteratorMember();
+		typeKind == TypeKind.Iterator || Name.StartsWith(Iterator + "(", StringComparison.Ordinal) ||
+		HasAnyIteratorMember();
 
 	private bool HasAnyIteratorMember()
 	{
@@ -533,8 +540,8 @@ public class Type : Context, IDisposable
 	public bool IsSameOrCanBeUsedAs(Type sameOrUsableType, bool allowImplicitConversion = true,
 		int maxDepth = 2)
 	{
-		if (this == sameOrUsableType || sameOrUsableType.IsAny || typeKind < TypeKind.List &&
-			typeKind == sameOrUsableType.typeKind)
+		if (this == sameOrUsableType || sameOrUsableType.IsAny || (typeKind < TypeKind.List &&
+			typeKind == sameOrUsableType.typeKind))
 			return true;
 		if (IsGenericTypeCompatible(sameOrUsableType))
 			return true;
@@ -542,8 +549,9 @@ public class Type : Context, IDisposable
 			return true;
 		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
 			return true;
-		if (IsMutable && GetFirstImplementation().IsSameOrCanBeUsedAs(sameOrUsableType) ||
-			sameOrUsableType.IsMutable && IsSameOrCanBeUsedAs(sameOrUsableType.GetFirstImplementation()))
+		if ((IsMutable && GetFirstImplementation().IsSameOrCanBeUsedAs(sameOrUsableType)) ||
+			(sameOrUsableType.IsMutable &&
+				IsSameOrCanBeUsedAs(sameOrUsableType.GetFirstImplementation())))
 			return true;
 		if (HasExactlyOneMemberOfType(sameOrUsableType))
 			return true;
@@ -588,13 +596,12 @@ public class Type : Context, IDisposable
 			return false;
 		var sourceElement = sourceList.ImplementationTypes[0];
 		var targetElement = targetList.ImplementationTypes[0];
-		return IsTypeComposedOfBytesOnly(sourceElement) && targetElement.Name == "Byte" ||
-			IsTypeComposedOfBytesOnly(targetElement) && sourceElement.Name == "Byte";
+		return (IsTypeComposedOfBytesOnly(sourceElement) && targetElement.Name == "Byte") ||
+			(IsTypeComposedOfBytesOnly(targetElement) && sourceElement.Name == "Byte");
 	}
 
 	private static bool IsTypeComposedOfBytesOnly(Type type) =>
-		type.Members.Count > 0 &&
-		type.Members.All(member => member.Type.Name is "Byte" or "Number");
+		type.Members.Count > 0 && type.Members.All(member => member.Type.Name is "Byte" or "Number");
 
 	/// <summary>
 	/// Returns true when this type explicitly declares "for Iterator(T)" and the target is that
@@ -621,11 +628,11 @@ public class Type : Context, IDisposable
 			return true;
 		if (sameOrUsableType is not GenericTypeImplementation targetImplementation ||
 			sourceImplementation.Generic != targetImplementation.Generic ||
-			sourceImplementation.ImplementationTypes.Count != targetImplementation.ImplementationTypes.Count)
+			sourceImplementation.ImplementationTypes.Count !=
+			targetImplementation.ImplementationTypes.Count)
 			return false;
 		for (var implementationIndex = 0;
-			implementationIndex < sourceImplementation.ImplementationTypes.Count;
-			implementationIndex++)
+			implementationIndex < sourceImplementation.ImplementationTypes.Count; implementationIndex++)
 			if (!sourceImplementation.ImplementationTypes[implementationIndex].CanBeConvertedTo(
 				targetImplementation.ImplementationTypes[implementationIndex]))
 				return false;
@@ -646,13 +653,14 @@ public class Type : Context, IDisposable
 		return found;
 	}
 
-	internal bool CanBeCreatedFromSingleMember(Type sourceType, bool allowImplicitConversion = false) =>
+	internal bool
+		CanBeCreatedFromSingleMember(Type sourceType, bool allowImplicitConversion = false) =>
 		TryGetSingleValueMemberType(out var memberType) &&
-			sourceType.IsSameOrCanBeUsedAs(memberType, allowImplicitConversion, 1);
+		sourceType.IsSameOrCanBeUsedAs(memberType, allowImplicitConversion, 1);
 
 	internal bool CanUseInheritedSingleMemberReturn(Type methodType, Type returnType) =>
 		TryGetSingleValueMemberType(out var memberType) && methodType == memberType &&
-			returnType.IsSameOrCanBeUsedAs(memberType, false, 1);
+		returnType.IsSameOrCanBeUsedAs(memberType, false, 1);
 
 	private bool TryGetSingleValueMemberType(out Type memberType)
 	{
@@ -660,23 +668,25 @@ public class Type : Context, IDisposable
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 			if (!members[memberIndex].IsConstant)
 			{
+				// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 				if (memberType != null)
 					return false;
 				memberType = members[memberIndex].Type;
 			}
+		// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 		return memberType != null;
 	}
 
-	private bool HasExactlyOneUsableMember(Type targetType, bool allowImplicitConversion, int maxDepth)
+	private bool HasExactlyOneUsableMember(Type targetType, bool allowImplicitConversion,
+		int maxDepth)
 	{
 		var key = (targetType, allowImplicitConversion, maxDepth);
 		if (usableMemberCache.TryGetValue(key, out var cached))
 			return cached;
 		var found = false;
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-			if (!members[memberIndex].IsConstant &&
-				members[memberIndex].Type.IsSameOrCanBeUsedAs(targetType, allowImplicitConversion,
-					maxDepth - 1))
+			if (!members[memberIndex].IsConstant && members[memberIndex].Type.
+				IsSameOrCanBeUsedAs(targetType, allowImplicitConversion, maxDepth - 1))
 			{
 				if (found)
 					return usableMemberCache[key] = false;
@@ -757,6 +767,7 @@ public class Type : Context, IDisposable
 			if (!activeBuilds.Add(this))
 				return EmptyAvailableMethods;
 			lock (availableMethodsLock)
+			{
 				try
 				{
 					cached = cachedAvailableMethods;
@@ -770,9 +781,10 @@ public class Type : Context, IDisposable
 						return cachedAvailableMethods = built;
 					foreach (var member in Members.Where(m =>
 						(m is { IsPublic: false, IsConstant: false, InitialValue: null } &&
-						!IsTraitImplementation(m.Type)) || IsTraitCompositionMember(m)))
+							!IsTraitImplementation(m.Type)) || IsTraitCompositionMember(m)))
 						AddNonGenericMethods(member.Type, built);
-					if (!IsTrait && members.Count > 0 && members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
+					if (!IsTrait && members.Count > 0 &&
+						members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
 						methods.All(m => m.Name != Method.From))
 					{
 						var fromParser = methods.Count > 0
@@ -782,7 +794,8 @@ public class Type : Context, IDisposable
 							AddFromConstructorWithMembersAsArguments(fromParser, built);
 					}
 					if (this is GenericTypeImplementation { Generic.IsDictionary: true } dictImpl &&
-						dictImpl.Generic.AvailableMethods.TryGetValue(Method.From, out var genericFromMethods) &&
+						dictImpl.Generic.AvailableMethods.TryGetValue(Method.From,
+							out var genericFromMethods) &&
 						built.TryGetValue(Method.From, out var existingFromMethods))
 						foreach (var fromMethod in genericFromMethods)
 							existingFromMethods.Add(new Method(fromMethod, dictImpl));
@@ -795,6 +808,7 @@ public class Type : Context, IDisposable
 					if (activeBuilds.Count == 0)
 						activeAvailableMethodBuilds = null;
 				}
+			}
 		}
 	}
 	private ExpressionParser? savedParser;
@@ -825,7 +839,9 @@ public class Type : Context, IDisposable
 			methodsWithThisName.Add(method);
 		}
 		else
+		{
 			cache.Add(method.Name, [method]);
+		}
 	}
 
 	protected void AddFromConstructorWithMembersAsArguments(ExpressionParser parser,
@@ -888,9 +904,11 @@ public class Type : Context, IDisposable
 						AddAvailableMethod(otherMethod, cache);
 			}
 			else
+			{
 				foreach (var otherMethod in otherMethods)
 					if (otherMethod.Name != Method.From)
 						AddAvailableMethod(otherMethod, cache);
+			}
 	}
 
 	private void AddAnyMethods(Dictionary<string, List<Method>> cache)
@@ -904,13 +922,17 @@ public class Type : Context, IDisposable
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
 
-	public sealed class NoMatchingMethodFound(Type type, string methodName,
+	public sealed class NoMatchingMethodFound(Type type,
+		string methodName,
 		IReadOnlyDictionary<string, List<Method>> availableMethods) : Exception("\"" + methodName +
-		"\" not found for " + type + ", available methods: " + string.Join(", ", availableMethods.Keys));
+		"\" not found for " + type + ", available methods: " +
+		string.Join(", ", availableMethods.Keys));
 
 	public sealed class ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments,
-		Type type, IEnumerable<Method> allMethods, string? callText = null) : Exception(
-		CreateArgumentsDoNotMatchMessage(arguments, type, allMethods, callText));
+		Type type,
+		IEnumerable<Method> allMethods,
+		string? callText = null)
+		: Exception(CreateArgumentsDoNotMatchMessage(arguments, type, allMethods, callText));
 
 	private static string CreateArgumentsDoNotMatchMessage(IReadOnlyList<Expression> arguments,
 		Type type, IEnumerable<Method> allMethods, string? callText) =>
@@ -922,8 +944,8 @@ public class Type : Context, IDisposable
 				: "no") + " arguments does "
 			: (arguments.Count == 1
 				? "Argument: "
-				: "Arguments: ") + string.Join(", ", arguments.Select(a => a.ToStringWithType())) + " do ") +
-		"not match these " + type + " method(s):\n" + string.Join("\n", allMethods);
+				: "Arguments: ") + string.Join(", ", arguments.Select(a => a.ToStringWithType())) +
+			" do ") + "not match these " + type + " method(s):\n" + string.Join("\n", allMethods);
 
 	public bool IsUpcastable(Type otherType) =>
 		IsEnum && otherType.IsEnum && otherType.Members.Any(member =>

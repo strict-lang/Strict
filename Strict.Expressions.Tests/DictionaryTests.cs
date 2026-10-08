@@ -111,8 +111,7 @@ public sealed class DictionaryTests : TestExpressions
 				"\tinput")).ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => dictionary.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InnerException.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>().With.
-				InnerException.Message.Contains(
-					"Arguments: 4 Number, \"10\" Text do not match these " +
+				InnerException.Message.Contains("Arguments: 4 Number, \"10\" Text do not match these " +
 					"TestPackage/Dictionary(Text, Boolean) method(s):\nAdd(key TestPackage/Text, " +
 					"mappedValue TestPackage/Boolean) Mutable(Dictionary(Text, Boolean))"));
 	}
@@ -146,12 +145,11 @@ public sealed class DictionaryTests : TestExpressions
 	{
 		using var testType = new Type(TestPackage.Instance,
 				new TypeLines(nameof(DictionaryMustBeInitializedWithTwoTypeParameters), "has logger",
-					"DummyInitialization",
-					"\tmutable studentsRegister = Dictionary(Number, Text, Number)")).
+					"DummyInitialization", "\tmutable studentsRegister = Dictionary(Number, Text, Number)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => testType.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
-				Message.StartsWith("Dictionary(Number, Text, Number)"));
+			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.Message.
+				StartsWith("Dictionary(Number, Text, Number)"));
 	}
 
 	[Test]
@@ -175,7 +173,7 @@ public sealed class DictionaryTests : TestExpressions
 				{
 					type.GetType(Type.Number), type.GetType(Type.Text), type.GetType(Type.Boolean)
 				}, type),
-			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.
-				Message.StartsWith("Expected Type Parameters: 2, Given type parameters: 3 and they are " +
+			Throws.InstanceOf<Dictionary.DictionaryMustBeInitializedWithTwoTypeParameters>().With.Message.
+				StartsWith("Expected Type Parameters: 2, Given type parameters: 3 and they are " +
 					"TestPackage/Number, TestPackage/Text, TestPackage/Boolean"));
 }

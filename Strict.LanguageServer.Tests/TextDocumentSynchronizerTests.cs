@@ -3,6 +3,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using Strict.Language.Tests;
 using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
+using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer.Tests;
 
@@ -17,7 +18,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 	}
 
 	private static readonly DocumentUri MultiLineURI =
-		new("", "", "Test/MultiLine" + Language.Type.Extension, "", "");
+		new("", "", "Test/MultiLine" + Type.Extension, "", "");
 	private static IEnumerable<TestCaseData> TextDocumentChangeCases
 	{
 		//ncrunch: no coverage start
@@ -41,13 +42,12 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 				new[] { "has number", "Add(num Number) Number" });
 			yield return new TestCaseData(new Range(1, 12, 2, 13), "",
 				new[] { "has number", "Add(num Numb" });
-			yield return new TestCaseData(new Range(0, 0, 2, 13), "",
-				new[] { "" });
-			yield return new TestCaseData(new Range(0, 1, 2, 13), "",
-				new[] { "h" });
+			yield return new TestCaseData(new Range(0, 0, 2, 13), "", new[] { "" });
+			yield return new TestCaseData(new Range(0, 1, 2, 13), "", new[] { "h" });
 			yield return new TestCaseData(new Range(1, 1, 2, 13), "", new[] { "has number", "A" });
 			yield return new TestCaseData(new Range(1, 3, 2, 14), "", new[] { "has number", "Add" });
-			yield return new TestCaseData(new Range(0, 3, 1, 3), "", new[] { "has(num Number) Number", "\tnum + number" });
+			yield return new TestCaseData(new Range(0, 3, 1, 3), "",
+				new[] { "has(num Number) Number", "\tnum + number" });
 			yield return new TestCaseData(new Range(0, 3, 2, 3), "", new[] { "hasm + number" });
 			yield return new TestCaseData(new Range(3, 0, 4, 2), "NextMethod\n\t5",
 				new[] { "has number", "Add(num Number) Number", "\tnum + number", "NextMethod", "\t5" });
@@ -70,7 +70,8 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 	}
 
 	[TestCaseSource(nameof(MultiLineTextDocumentChanges))]
-	public async Task HandleMultiLineChangeTextDocumentAsync(Range range, string text, string[] expected)
+	public async Task HandleMultiLineChangeTextDocumentAsync(Range range, string text,
+		string[] expected)
 	{
 		await textDocumentHandler.Handle(
 			new DidChangeTextDocumentParams
@@ -109,10 +110,8 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 		Assert.That(subPackage?.GetType(MultiLineURI.Path.GetFileName()), Is.Not.Null);
 		// No trailing newline ⇒ no empty last line
 		var lines = textDocumentHandler.Document.Get(MultiLineURI);
-		Assert.That(lines, Is.EqualTo(new[]
-		{
-			"has number", "Add(num Number) Number", "\tnum + number"
-		}));
+		Assert.That(lines,
+			Is.EqualTo(new[] { "has number", "Add(num Number) Number", "\tnum + number" }));
 	}
 
 	[Test]
@@ -124,8 +123,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 			{
 				TextDocument = new TextDocumentItem
 				{
-					Uri = MultiLineURI,
-					Text = "has number\nAdd(num Number) Number\n\tnum + number"
+					Uri = MultiLineURI, Text = "has number\nAdd(num Number) Number\n\tnum + number"
 				}
 			}, CancellationToken.None);
 		var subPackage = TestPackage.Instance.FindSubPackage(MultiLineURI.Path.GetFolderName());
@@ -137,8 +135,7 @@ public sealed class TextDocumentSynchronizerTests : LanguageServerTests
 			{
 				TextDocument = new TextDocumentItem
 				{
-					Uri = MultiLineURI,
-					Text = "has number\nAdd(num Number) Number\n\tnum + number\n"
+					Uri = MultiLineURI, Text = "has number\nAdd(num Number) Number\n\tnum + number\n"
 				}
 			}, CancellationToken.None);
 		Assert.That(subPackage?.FindDirectType(MultiLineURI.Path.GetFileName()), Is.Not.Null);

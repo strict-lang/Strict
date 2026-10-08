@@ -1,5 +1,4 @@
 using System.Reflection;
-using NUnit.Framework;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
@@ -262,7 +261,9 @@ public sealed class InstructionsToMlirTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		Assert.That(BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions).UsesConsolePrint, Is.True);
+		Assert.That(
+			BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions).
+				UsesConsolePrint, Is.True);
 	}
 
 	[Test]
@@ -273,7 +274,9 @@ public sealed class InstructionsToMlirTests
 			new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
 			new ReturnInstruction(Register.R0)
 		};
-		Assert.That(BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions).UsesConsolePrint, Is.False);
+		Assert.That(
+			BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions).
+				UsesConsolePrint, Is.False);
 	}
 
 	[Test]
@@ -296,13 +299,11 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void PureAdderStyleTypeGeneratesMlirWithReturnConstant()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("MlirPureAdder",
-			"has first Number",
-			"has second Number",
-			"Add Number",
-			"\tfirst + second",
-			"Run Number",
-			"\t42")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type =
+			new Type(TestPackage.Instance,
+					new TypeLines("MlirPureAdder", "has first Number", "has second Number", "Add Number",
+						"\tfirst + second", "Run Number", "\t42")).
+				ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var mlir = Compile(binary, Platform.Linux);
@@ -314,18 +315,12 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void SimpleCalculatorStyleTypeGeneratesAddAndMultiply()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("MlirCalc",
-			"has first Number",
-			"has second Number",
-			"Add Number",
-			"\tfirst + second",
-			"Multiply Number",
-			"\tfirst * second",
-			"Run Number",
-			"\tconstant calc = MlirCalc(2, 3)",
-			"\tconstant added = calc.Add",
-			"\tconstant multiplied = calc.Multiply",
-			"\tadded + multiplied")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+				new TypeLines("MlirCalc", "has first Number", "has second Number", "Add Number",
+					"\tfirst + second", "Multiply Number", "\tfirst * second", "Run Number",
+					"\tconstant calc = MlirCalc(2, 3)", "\tconstant added = calc.Add",
+					"\tconstant multiplied = calc.Multiply", "\tadded + multiplied")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var mlir = Compile(binary, Platform.Linux);
@@ -339,14 +334,10 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void AreaCalculatorStyleTypeWithMultiplyComputation()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("MlirArea",
-			"has width Number",
-			"has height Number",
-			"Area Number",
-			"\twidth * height",
-			"Run Number",
-			"\tconstant rect = MlirArea(5, 3)",
-			"\trect.Area")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+				new TypeLines("MlirArea", "has width Number", "has height Number", "Area Number",
+					"\twidth * height", "Run Number", "\tconstant rect = MlirArea(5, 3)", "\trect.Area")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var mlir = Compile(binary, Platform.Linux);
@@ -358,13 +349,10 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void TemperatureConverterStyleTypeWithArithmeticChain()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("MlirTempConv",
-			"has celsius Number",
-			"ToFahrenheit Number",
-			"\tcelsius * 1.8 + 32",
-			"Run Number",
-			"\tconstant conv = MlirTempConv(100)",
-			"\tconv.ToFahrenheit")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+			new TypeLines("MlirTempConv", "has celsius Number", "ToFahrenheit Number",
+				"\tcelsius * 1.8 + 32", "Run Number", "\tconstant conv = MlirTempConv(100)",
+				"\tconv.ToFahrenheit")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var mlir = Compile(binary, Platform.Linux);
@@ -376,17 +364,11 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void PixelStyleTypeWithDivideComputation()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("MlirPixel",
-			"has red Number",
-			"has green Number",
-			"has blue Number",
-			"Brighten Number",
-			"\tred + green",
-			"Darken Number",
-			"\tred / 2",
-			"Run Number",
-			"\tconstant pixel = MlirPixel(100, 150, 200)",
-			"\tpixel.Brighten")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+				new TypeLines("MlirPixel", "has red Number", "has green Number", "has blue Number",
+					"Brighten Number", "\tred + green", "Darken Number", "\tred / 2", "Run Number",
+					"\tconstant pixel = MlirPixel(100, 150, 200)", "\tpixel.Brighten")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var mlir = Compile(binary, Platform.Linux);
@@ -398,12 +380,11 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void ParameterizedMethodGeneratesParamSignature()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("MlirArithFunc",
-			"has dummy Number",
-			"Add(first Number, second Number) Number",
-			"\tfirst + second",
-			"Run Number",
-			"\tAdd(10, 20)")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type =
+			new Type(TestPackage.Instance,
+				new TypeLines("MlirArithFunc", "has dummy Number",
+					"Add(first Number, second Number) Number", "\tfirst + second", "Run Number",
+					"\tAdd(10, 20)")).ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		var mlir = Compile(binary, Platform.Linux);
@@ -455,7 +436,8 @@ public sealed class InstructionsToMlirTests
 		};
 		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);
 		var mlir = Compile(binary, Platform.Linux);
-		var nasm = new InstructionsToAssembly().Compile(binary, Platform.Linux).GetAwaiter().GetResult();
+		var nasm = new InstructionsToAssembly().Compile(binary, Platform.Linux).GetAwaiter().
+			GetResult();
 		Assert.That(mlir.Length, Is.LessThan(nasm.Length),
 			"MLIR should be more compact than NASM assembly");
 	}
@@ -524,16 +506,16 @@ public sealed class InstructionsToMlirTests
 	public void MlirLinkerRewriteWindowsPrintRuntimeRemovesPrintf()
 	{
 		const string LlvmIr = """
-			@str_PrintRun_0 = internal constant [12 x i8] c"Result: %g\0A\00"
+													@str_PrintRun_0 = internal constant [12 x i8] c"Result: %g\0A\00"
 
-			declare i32 @printf(ptr, ...)
+													declare i32 @printf(ptr, ...)
 
-			define double @PrintRun() {
-			  %1 = call i32 (ptr, ...) @printf(ptr @str_PrintRun_0, double 4.200000e+01)
-			  ret double 4.200000e+01
-			}
+													define double @PrintRun() {
+													  %1 = call i32 (ptr, ...) @printf(ptr @str_PrintRun_0, double 4.200000e+01)
+													  ret double 4.200000e+01
+													}
 
-			""";
+													""";
 		var rewritten = RewriteWindowsPrintRuntime(LlvmIr);
 		Assert.That(rewritten, Does.Contain("@_fltused = global i32 0"));
 		Assert.That(rewritten, Does.Contain("declare ptr @GetStdHandle(i32)"));
@@ -547,8 +529,9 @@ public sealed class InstructionsToMlirTests
 	}
 
 	private string Compile(List<Instruction> instructions, Platform platform) =>
-		compiler.Compile(BinaryExecutable.CreateForEntryInstructions(
-			TestPackage.Instance, instructions), platform).GetAwaiter().GetResult();
+		compiler.Compile(
+				BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions), platform).
+			GetAwaiter().GetResult();
 
 	private string Compile(BinaryExecutable binary, Platform platform) =>
 		compiler.Compile(binary, platform).GetAwaiter().GetResult();
@@ -699,7 +682,8 @@ public sealed class InstructionsToMlirTests
 	{
 		var rewriteMethod = typeof(MlirLinker).GetMethod("RewriteWindowsPrintRuntime",
 			BindingFlags.Static | BindingFlags.NonPublic);
-		Assert.That(rewriteMethod, Is.Not.Null, "MlirLinker should expose a private " +
+		Assert.That(rewriteMethod, Is.Not.Null,
+			"MlirLinker should expose a private " +
 			"RewriteWindowsPrintRuntime helper for Windows no-CRT print rewriting");
 		var result = rewriteMethod!.Invoke(null, [llvmIr]);
 		return result as string ??
@@ -780,8 +764,7 @@ public sealed class InstructionsToMlirTests
 		var mlir = compiler.CompileInstructions("GpuBoundsTest", instructions);
 		Assert.That(mlir, Does.Contain("arith.cmpi ult"),
 			"GPU kernel must bounds-check: globalId < numElements");
-		Assert.That(mlir, Does.Contain("scf.if"),
-			"Body must be guarded by bounds check scf.if");
+		Assert.That(mlir, Does.Contain("scf.if"), "Body must be guarded by bounds check scf.if");
 		Assert.That(mlir, Does.Contain("gpu.terminator"),
 			"GPU launch body must end with gpu.terminator");
 	}
@@ -806,10 +789,8 @@ public sealed class InstructionsToMlirTests
 		instructions.Add(new LoopEndInstruction(30) { Begin = loopBegin });
 		instructions.Add(new ReturnInstruction(Register.R2));
 		var mlir = compiler.CompileInstructions("GpuMemoryTest", instructions);
-		Assert.That(mlir, Does.Contain("memref.alloc"),
-			"GPU pipeline must allocate host buffer");
-		Assert.That(mlir, Does.Contain("gpu.alloc"),
-			"GPU pipeline must allocate device buffer");
+		Assert.That(mlir, Does.Contain("memref.alloc"), "GPU pipeline must allocate host buffer");
+		Assert.That(mlir, Does.Contain("gpu.alloc"), "GPU pipeline must allocate device buffer");
 		Assert.That(mlir, Does.Contain("gpu.memcpy"),
 			"GPU pipeline must copy data between host and device");
 		Assert.That(mlir, Does.Contain("gpu.dealloc"),
@@ -876,8 +857,8 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void GpuThresholdConstantIsExposed()
 	{
-		Assert.That(InstructionsToMlir.GpuComplexityThreshold, Is.GreaterThan(
-				InstructionsToMlir.ComplexityThreshold),
+		Assert.That(InstructionsToMlir.GpuComplexityThreshold,
+			Is.GreaterThan(InstructionsToMlir.ComplexityThreshold),
 			"GPU threshold must be higher than CPU parallel threshold");
 		Assert.That(InstructionsToMlir.GpuComplexityThreshold, Is.EqualTo(10_000_000),
 			"GPU threshold is 10M complexity (e.g., 1280x720 image × 10+ body instructions)");
@@ -950,18 +931,12 @@ public sealed class InstructionsToMlirTests
 	[Test]
 	public void CompileForPlatformFromBinaryGeneratorOutputSupportsRuntimeMethodCalls()
 	{
-		var type = new Type(TestPackage.Instance, new TypeLines("MlirBinaryCalc",
-			"has first Number",
-			"has second Number",
-			"Add Number",
-			"\tfirst + second",
-			"Multiply Number",
-			"\tfirst * second",
-			"Run Number",
-			"\tconstant calc = MlirBinaryCalc(2, 3)",
-			"\tconstant added = calc.Add",
-			"\tconstant multiplied = calc.Multiply",
-			"\tadded + multiplied")).ParseMembersAndMethods(new MethodExpressionParser());
+		var type = new Type(TestPackage.Instance,
+				new TypeLines("MlirBinaryCalc", "has first Number", "has second Number", "Add Number",
+					"\tfirst + second", "Multiply Number", "\tfirst * second", "Run Number",
+					"\tconstant calc = MlirBinaryCalc(2, 3)", "\tconstant added = calc.Add",
+					"\tconstant multiplied = calc.Multiply", "\tadded + multiplied")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var runMethod = type.Methods.First(method => method.Name == Method.Run);
 		var binary = new BinaryGenerator(new MethodCall(runMethod)).Generate();
 		Assert.DoesNotThrow(() => Compile(binary, Platform.Linux));

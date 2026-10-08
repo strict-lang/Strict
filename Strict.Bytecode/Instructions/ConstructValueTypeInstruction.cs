@@ -8,9 +8,9 @@ namespace Strict.Bytecode.Instructions;
 /// From-constructor to avoid method-dispatch overhead in hot loops after inlining.
 /// Holds the actual Type reference to avoid a name-lookup at execution time.
 /// </summary>
-public sealed class ConstructValueTypeInstruction(Register outRegister, StrictType returnType,
-	Register[] fieldRegisters)
-	: RegisterInstruction(InstructionType.ConstructValueType, outRegister)
+public sealed class ConstructValueTypeInstruction(Register outRegister,
+	StrictType returnType,
+	Register[] fieldRegisters) : RegisterInstruction(InstructionType.ConstructValueType, outRegister)
 {
 	public StrictType ReturnType { get; } = returnType;
 	public Register[] FieldRegisters { get; } = fieldRegisters;

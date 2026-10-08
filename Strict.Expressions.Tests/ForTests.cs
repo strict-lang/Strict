@@ -16,8 +16,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void VariableOutOfScope() =>
 		Assert.That(
-			() => ParseExpression("for Range(2, 5)", "\tconstant num = 5", "for 10",
-				"\tlogger.Log(num)"),
+			() => ParseExpression("for Range(2, 5)", "\tconstant num = 5", "for 10", "\tlogger.Log(num)"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("num"));
 
 	[Test]
@@ -40,7 +39,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void IndexIsReserved() =>
 		Assert.That(() => ParseExpression("for index in 5", "\tlogger.Log(index)"),
-			Throws.InstanceOf<For.IndexIsReservedDoNotUseItExplicitly>());
+			Throws.InstanceOf<IndexIsReservedDoNotUseItExplicitly>());
 
 	[Test]
 	public void ForVariableMatchingMemberIsNotAddedAsVariable() =>
@@ -55,8 +54,8 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void ImmutableVariableNotAllowedToBeAnIterator() =>
 		Assert.That(
-			() => ParseExpression("constant myIndex = 0", "for myIndex in 10",
-				"\tlogger.Log(myIndex)"), Throws.InstanceOf<For.ImmutableIterator>());
+			() => ParseExpression("constant myIndex = 0", "for myIndex in 10", "\tlogger.Log(myIndex)"),
+			Throws.InstanceOf<ImmutableIterator>());
 
 	[Test]
 	public void IteratorTypeDoesNotMatchWithIterable() =>
@@ -96,7 +95,8 @@ public sealed class ForTests : TestExpressions
 	[TestCase("for rowIndex in Range(0, 2)", "\tlogger.Log(rowIndex)")]
 	[TestCase("constant elements = (1, 2)", "for Range(0, elements.Length)", "\tlogger.Log(index)")]
 	public void RangeStartingAtZeroMustUseNumberIterator(params string[] lines) =>
-		Assert.That(() => ParseExpression(lines), Throws.InstanceOf<ZeroBasedRangeMustUseNumberIterator>());
+		Assert.That(() => ParseExpression(lines),
+			Throws.InstanceOf<ZeroBasedRangeMustUseNumberIterator>());
 
 	[Test]
 	public void ParseForDictionaryElementsExpression()
@@ -119,8 +119,7 @@ public sealed class ForTests : TestExpressions
 				"\tlogger.Log(myIndex)")).Expressions[1]).ToString(),
 			Is.EqualTo("for myIndex in 5" + Environment.NewLine + "\tlogger.Log(myIndex)"));
 
-	[TestCase("for myIndex in 5", "\tlogger.Log(myIndex)",
-		"for myIndex in 5\n\tlogger.Log(myIndex)")]
+	[TestCase("for myIndex in 5", "\tlogger.Log(myIndex)", "for myIndex in 5\n\tlogger.Log(myIndex)")]
 	[TestCase("for (1, 2, 3)", "\tlogger.Log(index)", "for (1, 2, 3)\n\tlogger.Log(index)")]
 	[TestCase("for (1, 2, 3)", "\tlogger.Log(value)", "for (1, 2, 3)\n\tlogger.Log(value)")]
 	[TestCase("for myIndex in Range(2, 5)", "\tlogger.Log(myIndex)", "\tfor 10",
@@ -150,8 +149,8 @@ public sealed class ForTests : TestExpressions
 
 	[TestCase("constant elements = (1, 2, 3)", "for elements", "\tlogger.Log(index)",
 		"for elements\n\tlogger.Log(index)")]
-	[TestCase("constant elements = (1, 2, 3)", "for elements.Length",
-		"\tlogger.Log(index)", "for elements.Length\n\tlogger.Log(index)")]
+	[TestCase("constant elements = (1, 2, 3)", "for elements.Length", "\tlogger.Log(index)",
+		"for elements.Length\n\tlogger.Log(index)")]
 	[TestCase("mutable element = 0", "for element in (1, 2, 3)", "\tlogger.Log(element)",
 		"for element in (1, 2, 3)\n\tlogger.Log(element)")]
 	[TestCase("constant iterationCount = 10", "for iterationCount", "\tlogger.Log(index)",
@@ -165,23 +164,21 @@ public sealed class ForTests : TestExpressions
 
 	[Test]
 	public void ValidIteratorReturnTypeForRange() =>
-		Assert.That(
-			((MethodCall)((For)ParseExpression("for 10", "\tlogger.Log(index)")).Body).
+		Assert.That(((MethodCall)((For)ParseExpression("for 10", "\tlogger.Log(index)")).Body).
 			Arguments[0].ReturnType.IsNumber);
 
 	[Test]
 	public void ValidIteratorReturnTypeTextForList() =>
-		Assert.That(
-			((VariableCall)((MethodCall)((For)((Body)ParseExpression("mutable element = \"1\"",
-					"for element in (\"1\", \"2\", \"3\")", "\tlogger.Log(element)")).Expressions[1]).Body).
-				Arguments[0]).Variable.Type.IsText);
+		Assert.That(((VariableCall)((MethodCall)((For)((Body)ParseExpression("mutable element = \"1\"",
+				"for element in (\"1\", \"2\", \"3\")", "\tlogger.Log(element)")).Expressions[1]).Body).
+			Arguments[0]).Variable.Type.IsText);
 
 	[Test]
 	public void ValidLoopProgram()
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ValidLoopProgram), "has number", "CountNumber Number",
-				"\tfor number", "\t\t1")).ParseMembersAndMethods(new MethodExpressionParser());
+			new TypeLines(nameof(ValidLoopProgram), "has number", "CountNumber Number", "\tfor number",
+				"\t\t1")).ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Iterator.ToString(), Is.EqualTo("number"));
 	}
@@ -194,7 +191,7 @@ public sealed class ForTests : TestExpressions
 					"\tconstant error = Error(\"Process Failed\")", "\tfor error", "\t\tvalue")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(() => programType.Methods[0].GetBodyAndParseIfNeeded(),
-			Throws.InstanceOf<For.ExpressionTypeIsNotAnIterator>());
+			Throws.InstanceOf<ExpressionTypeIsNotAnIterator>());
 	}
 
 	[TestCase("error.Stacktraces", nameof(IterateErrorTypeMembers) + "StackTrace")]
@@ -202,9 +199,10 @@ public sealed class ForTests : TestExpressions
 	public void IterateErrorTypeMembers(string forExpressionText, string testName)
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(testName, "has number", "LogError Number",
-				"\tconstant error = Error(\"Process Failed\")", $"\tfor {forExpressionText}",
-				"\t\tvalue")).ParseMembersAndMethods(new MethodExpressionParser());
+				new TypeLines(testName, "has number", "LogError Number",
+					"\tconstant error = Error(\"Process Failed\")", $"\tfor {forExpressionText}",
+					"\t\tvalue")).
+			ParseMembersAndMethods(new MethodExpressionParser());
 		var parsedExpression = (Body)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(parsedExpression.Expressions[1], Is.TypeOf(typeof(For)));
 		Assert.That(((For)parsedExpression.Expressions[1]).Iterator.ToString(),
@@ -226,7 +224,7 @@ public sealed class ForTests : TestExpressions
 	[Test]
 	public void MissingBodyInNestedFor() =>
 		Assert.That(() => ParseExpression("for Range(2, 5)", "for index in Range(1, 10)"),
-			Throws.InstanceOf<For.MissingInnerBody>());
+			Throws.InstanceOf<MissingInnerBody>());
 
 	[TestCase("WithParameter", "for element in (1, 2, 3, 4)", "has logger", "LogError Number",
 		"\tfor element in (1, 2, 3, 4)", "\t\tlogger.Log(element)")]
@@ -315,7 +313,7 @@ public sealed class ForTests : TestExpressions
 
 	[Test]
 	public void ParseForExpressionWithMultiplicationShortcut() =>
-		Assert.That(((For)((Body)ParseExpression("constant numbers = (2, 3, 4)", "for numbers",
-				"\t* value")).Expressions[1]).ToString(),
-			Is.EqualTo("for numbers" + Environment.NewLine + "\t* value"));
+		Assert.That(
+			((For)((Body)ParseExpression("constant numbers = (2, 3, 4)", "for numbers", "\t* value")).
+				Expressions[1]).ToString(), Is.EqualTo("for numbers" + Environment.NewLine + "\t* value"));
 }

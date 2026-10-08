@@ -22,13 +22,11 @@ public sealed class BinaryTests : TestExpressions
 
 	[Test]
 	public void MissingLeftExpression() =>
-		Assert.That(() => ParseExpression("unknown + 5"),
-			Throws.InstanceOf<Body.IdentifierNotFound>());
+		Assert.That(() => ParseExpression("unknown + 5"), Throws.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
 	public void MissingRightExpression() =>
-		Assert.That(() => ParseExpression("5 + unknown"),
-			Throws.InstanceOf<Body.IdentifierNotFound>());
+		Assert.That(() => ParseExpression("5 + unknown"), Throws.InstanceOf<Body.IdentifierNotFound>());
 
 	[Test]
 	public void ArgumentsDoNotMatchBinaryOperatorParameters() =>
@@ -73,9 +71,10 @@ public sealed class BinaryTests : TestExpressions
 
 	[Test]
 	public void NestedBinary() =>
-		ParseAndCheckOutputMatchesInput("2 * 5 + 3", CreateBinary(
-			CreateBinary(new Number(method, 2), BinaryOperator.Multiply, new Number(method, 5)),
-			BinaryOperator.Plus, new Number(method, 3)));
+		ParseAndCheckOutputMatchesInput("2 * 5 + 3",
+			CreateBinary(
+				CreateBinary(new Number(method, 2), BinaryOperator.Multiply, new Number(method, 5)),
+				BinaryOperator.Plus, new Number(method, 3)));
 
 	[TestCase("1 + 2")]
 	[TestCase("1 is 1")]
@@ -123,8 +122,7 @@ public sealed class BinaryTests : TestExpressions
 	[Test]
 	public void NestedBinaryExpressionsWithGrouping() =>
 		ParseAndCheckOutputMatchesInput("(2 + 5) * 3",
-			CreateBinary(
-				CreateBinary(new Number(method, 2), BinaryOperator.Plus, new Number(method, 5)),
+			CreateBinary(CreateBinary(new Number(method, 2), BinaryOperator.Plus, new Number(method, 5)),
 				BinaryOperator.Multiply, new Number(method, 3)));
 
 	[Test]
@@ -179,16 +177,13 @@ public sealed class BinaryTests : TestExpressions
 	public void MethodCallMemberIsLiteralRoundTripsInDebug()
 	{
 		using var valueInstance = new Type(TestPackage.Instance,
-			new TypeLines(nameof(MethodCallMemberIsLiteralRoundTripsInDebug),
-				"has typeName Text",
-				"has number",
-				"has text",
-				"has kind Text",
+			new TypeLines(nameof(MethodCallMemberIsLiteralRoundTripsInDebug), "has typeName Text",
+				"has number", "has text", "has kind Text",
 				"FromNumber(number Number) " + nameof(MethodCallMemberIsLiteralRoundTripsInDebug),
 				"\tFromNumber(3).number is 3",
 				"\t" + nameof(MethodCallMemberIsLiteralRoundTripsInDebug) +
 				"(\"Number\", number, \"\", \"\")")).ParseMembersAndMethods(this);
-		var fromNumber = valueInstance.Methods.Single(method => method.Name == "FromNumber");
+		var fromNumber = valueInstance.Methods.Single(candidate => candidate.Name == "FromNumber");
 		var body = (Body)fromNumber.GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0].ToString(), Is.EqualTo("FromNumber(3).number is 3"));
 	}

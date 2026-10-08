@@ -56,7 +56,8 @@ public sealed class PhraseTokenizer
 		if (quoteIndex == 0 || input[quoteIndex - 1] != '\\')
 			return false;
 		var slashCount = 0;
-		for (var slashIndex = quoteIndex - 1; slashIndex >= 0 && input[slashIndex] == '\\'; slashIndex--)
+		for (var slashIndex = quoteIndex - 1; slashIndex >= 0 && input[slashIndex] == '\\';
+			slashIndex--)
 			slashCount++;
 		return slashCount % 2 == 1;
 	}
@@ -64,9 +65,13 @@ public sealed class PhraseTokenizer
 	private void GetSingleTokenTillEndOfText(Action<Range> processToken)
 	{
 		if (textStart == -1)
+		{
 			textStart = index;
+		}
 		else if (index + 1 < input.Length && input[index + 1] == '"')
+		{
 			index++;
+		}
 		else
 		{
 			var tokenRangeStart = textStart;
@@ -79,21 +84,27 @@ public sealed class PhraseTokenizer
 				{
 					var nextCharacter = input[scanIndex];
 					if (nextCharacter == OpenBracket)
+					{
 						bracketCount++;
+					}
 					else if (nextCharacter == CloseBracket)
 					{
 						if (bracketCount > 0)
 							bracketCount--;
 					}
 					else if (nextCharacter == ' ' && bracketCount == 0)
+					{
 						break;
+					}
 					scanIndex++;
 				}
 				processToken(tokenRangeStart..scanIndex);
 				index = scanIndex - 1;
 			}
 			else
+			{
 				processToken(tokenRangeStart..tokenEnd);
+			}
 			textStart = -1;
 			tokenStart = -1;
 		}
@@ -106,8 +117,10 @@ public sealed class PhraseTokenizer
 	private void ProcessNormalToken(char character, Action<Range> processToken)
 	{
 		if (character == OpenBracket)
+		{
 			foreach (var token in new TokensTillMatchingBracketGrabber(this).GetRanges())
 				processToken(token);
+		}
 		else if (character == ' ')
 		{
 			if (tokenStart >= 0)
@@ -115,7 +128,9 @@ public sealed class PhraseTokenizer
 			tokenStart = -1;
 		}
 		else if (tokenStart == -1)
+		{
 			tokenStart = index;
+		}
 	}
 
 	private void ProcessTokenAfterSpace(Action<Range> processToken)
@@ -129,7 +144,9 @@ public sealed class PhraseTokenizer
 			processToken((index - 1)..index);
 		}
 		else
+		{
 			processToken(tokenStart..index);
+		}
 	}
 
 	internal const char OpenBracket = '(';
@@ -199,7 +216,9 @@ public sealed class PhraseTokenizer
 				{
 					var nextCharacter = tokens.input[tokens.index + 1];
 					if (nextCharacter == OpenBracket)
+					{
 						additionalBrackets++;
+					}
 					else if (nextCharacter == CloseBracket)
 					{
 						if (additionalBrackets == 0)
@@ -207,7 +226,9 @@ public sealed class PhraseTokenizer
 						additionalBrackets--;
 					}
 					else if (nextCharacter == ' ' && additionalBrackets == 0)
+					{
 						break;
+					}
 					tokens.index++;
 				}
 			}
@@ -231,18 +252,18 @@ public sealed class PhraseTokenizer
 
 		private bool IsThenOrElseSeparator() =>
 			tokens.index > 0 && tokens.input[tokens.index - 1] == ' ' &&
-			(tokens.input.AsSpan(tokens.index).StartsWith("then ", StringComparison.Ordinal) ||
-				tokens.input.AsSpan(tokens.index).StartsWith("else ", StringComparison.Ordinal));
+			(tokens.input.AsSpan(tokens.index).StartsWith("then ", StringComparison.Ordinal) || tokens.
+				input.AsSpan(tokens.index).StartsWith("else ", StringComparison.Ordinal));
 
 		private bool HandleMethodCall()
 		{
 			HandleMethodCallStates();
 			var currentChar = tokens.input[tokens.index];
 			tokens.ProcessNormalToken(currentChar, result.Add);
-			return isInMethodCall && (tokens.index + 1 < tokens.input.Length &&
-				currentChar == CloseBracket &&
-				(tokens.input[tokens.index + 1] != '.' || foundBinaryOperationInMethodCall) ||
-				tokens.MemberOrMethodCallWithNoArguments() && !foundBinaryOperationInMethodCall);
+			return isInMethodCall && ((tokens.index + 1 < tokens.input.Length &&
+					currentChar == CloseBracket &&
+					(tokens.input[tokens.index + 1] != '.' || foundBinaryOperationInMethodCall)) ||
+				(tokens.MemberOrMethodCallWithNoArguments() && !foundBinaryOperationInMethodCall));
 		}
 
 		private void HandleMethodCallStates()

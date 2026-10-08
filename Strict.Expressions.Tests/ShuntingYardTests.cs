@@ -32,7 +32,8 @@ public sealed class ShuntingYardTests
 	[TestCase("Colors(Width * 5 + 1)", "Colors(Width * 5 + 1)")]
 	[TestCase("Colors(Width * number.Length + 1)", "Colors(Width * number.Length + 1)")]
 	[TestCase("Foo(a.Bar(x) + b)", "Foo(a.Bar(x) + b)")]
-	[TestCase("Path(text.Substring(0, idx) + \".\" + ext)", "Path(text.Substring(0, idx) + \".\" + ext)")]
+	[TestCase("Path(text.Substring(0, idx) + \".\" + ext)",
+		"Path(text.Substring(0, idx) + \".\" + ext)")]
 	[TestCase("Math.Add(5)", "Math.Add(5)")]
 	[TestCase("not true is false", "true, not, false, is")]
 	[TestCase("not (true xor false)", "true, false, xor, not")]
@@ -50,8 +51,7 @@ public sealed class ShuntingYardTests
 		"typeName, \"None\", is, not, number, 0, is, not, or")]
 	public void Parse(string input, string expected) =>
 		Assert.That(
-			string.Join(", ",
-				new ShuntingYard(input).Output.Reverse().Select(range => input[range])),
+			string.Join(", ", new ShuntingYard(input).Output.Reverse().Select(range => input[range])),
 			Is.EqualTo(expected));
 
 	[Test]

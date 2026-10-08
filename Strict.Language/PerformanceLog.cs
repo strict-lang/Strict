@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 #if DEBUG
 namespace Strict.Language;
 
@@ -20,7 +22,7 @@ public static class PerformanceLog
 
 	public static string GetCallers(int skipFrames = 0, int methodCount = 8)
 	{
-		var stackTrace = new System.Diagnostics.StackTrace(skipFrames + 1, false);
+		var stackTrace = new StackTrace(skipFrames + 1, false);
 		var frames = stackTrace.GetFrames();
 		if (frames.Length == 0)
 			return "unknown";
@@ -45,7 +47,8 @@ public static class PerformanceLog
 		{
 			if (field != null)
 				return field;
-			var logFile = new FileStream("Strict.txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+			var logFile = new FileStream("Strict.txt", FileMode.Create, FileAccess.Write,
+				FileShare.ReadWrite);
 			field = new StreamWriter(logFile);
 			return field;
 		}

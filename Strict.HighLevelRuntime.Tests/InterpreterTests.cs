@@ -107,8 +107,7 @@ public sealed class InterpreterTests
 		Assert.That(
 			interpreter.Execute(GetBinaryOperator(BinaryOperator.Multiply), N(6), [N(7)]).Number,
 			Is.EqualTo(42));
-		Assert.That(
-			interpreter.Execute(GetBinaryOperator(BinaryOperator.Divide), N(8), [N(2)]).Number,
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Divide), N(8), [N(2)]).Number,
 			Is.EqualTo(4));
 		Assert.That(
 			interpreter.Execute(GetBinaryOperator(BinaryOperator.Modulate), N(8), [N(3)]).Number,
@@ -196,9 +195,9 @@ public sealed class InterpreterTests
 			interpreterForStrict.Execute(textWriterType.Methods.Single(method => method.Name == "Write"),
 				fileInstance, [lines]);
 			var result = interpreterForStrict.Execute(
-				textReaderType.Methods.Single(method => method.Name == "ReadLines"),
-				fileInstance, []);
-			Assert.That(result.List.Items.Select(item => item.Text), Is.EqualTo(new[] { "Strict", "text" }));
+				textReaderType.Methods.Single(method => method.Name == "ReadLines"), fileInstance, []);
+			Assert.That(result.List.Items.Select(item => item.Text),
+				Is.EqualTo(new[] { "Strict", "text" }));
 		}
 		finally
 		{
@@ -234,8 +233,7 @@ public sealed class InterpreterTests
 			interpreterForStrict.Execute(bytesWriterType.Methods.Single(method => method.Name == "Write"),
 				fileInstance, [bytes]);
 			var result = interpreterForStrict.Execute(
-				bytesReaderType.Methods.Single(method => method.Name == "ReadBytes"),
-				fileInstance, []);
+				bytesReaderType.Methods.Single(method => method.Name == "ReadBytes"), fileInstance, []);
 			Assert.That(result.List.Items.Select(item => item.Number), Is.EqualTo(new[] { 3.0, 5.0 }));
 		}
 		finally
@@ -254,26 +252,31 @@ public sealed class InterpreterTests
 		using var strict = await repos.LoadStrictPackage();
 		using var language = await repos.LoadStrictPackage("Strict/Language");
 		var compiler = language.GetType("Parser");
-		var compilerInstance = new ValueInstance(compiler, [new ValueInstance(compiler.Members[0].Type, 0)]);
+		var compilerInstance =
+			new ValueInstance(compiler, [new ValueInstance(compiler.Members[0].Type, 0)]);
 		var textSource = await File.ReadAllTextAsync(Path.Combine(FindRepoRoot(), "Text.strict"));
 		var interpreterForStrict = new Interpreter(language, TestBehavior.Disabled);
-		Assert.That(ExecuteText(compiler, compilerInstance, interpreterForStrict, "TypeName", "Text.strict"),
+		Assert.That(
+			ExecuteText(compiler, compilerInstance, interpreterForStrict, "TypeName", "Text.strict"),
 			Is.EqualTo("Text"));
 		var type = language.GetType("Type");
-		var typeInstance = new ValueInstance(type,
-		[
+		var typeInstance = new ValueInstance(type, [
 			new ValueInstance("Text"),
 			new ValueInstance(type.Members[1].Type,
 				textSource.Replace("\r", "").Split('\n').Where(line => line.Length > 0).
 					Select(line => new ValueInstance(line)).ToArray())
 		]);
-		var members = interpreterForStrict.Execute(type.Methods.Single(method => method.Name == "Members" &&
-			method.Parameters.Count == 0), typeInstance, []).List.Items;
+		var members = interpreterForStrict.
+			Execute(
+				type.Methods.Single(method => method.Name == "Members" && method.Parameters.Count == 0),
+				typeInstance, []).List.Items;
 		Assert.That(members[0].TryGetValueTypeInstance()!.ReturnType.Name, Is.EqualTo("Member"));
 		Assert.That(GetTextMember(members[0], "Name"), Is.EqualTo("characters"));
 		Assert.That(GetTextMember(GetTypeMember(members[0], "Type"), "Name"), Is.EqualTo("Character"));
-		var methods = interpreterForStrict.Execute(type.Methods.Single(method => method.Name == "Methods" &&
-			method.Parameters.Count == 0), typeInstance, []).List.Items;
+		var methods = interpreterForStrict.
+			Execute(
+				type.Methods.Single(method => method.Name == "Methods" && method.Parameters.Count == 0),
+				typeInstance, []).List.Items;
 		var plusMethod = methods.First(method => GetTextMember(method, "Name") == "+" &&
 			GetTextMember(GetTypeMember(method, "Type"), "Name") == "Text");
 		Assert.That(plusMethod.TryGetValueTypeInstance()!.ReturnType.Name, Is.EqualTo("Method"));
@@ -294,8 +297,8 @@ public sealed class InterpreterTests
 
 	private static string ExecuteText(Type type, ValueInstance instance,
 		Interpreter interpreterForStrict, string methodName, string argument) =>
-		interpreterForStrict.Execute(type.Methods.Single(method => method.Name == methodName),
-			instance, [new ValueInstance(argument)]).Text;
+		interpreterForStrict.Execute(type.Methods.Single(method => method.Name == methodName), instance,
+			[new ValueInstance(argument)]).Text;
 
 	private static ValueInstance ExecuteValue(Type type, ValueInstance instance,
 		Interpreter interpreterForStrict, string methodName, params string[] arguments)
@@ -308,22 +311,23 @@ public sealed class InterpreterTests
 	}
 
 	private static string[] ExecuteTexts(Type type, ValueInstance instance,
-		Interpreter interpreterForStrict, string methodName, string source, string? methodArgument = null)
+		Interpreter interpreterForStrict, string methodName, string source,
+		string? methodArgument = null)
 	{
 		var method = type.Methods.Single(candidate => candidate.Name == methodName);
 		var args = methodArgument == null
 			? new[] { new ValueInstance(source) }
 			: [new ValueInstance(source), new ValueInstance(methodArgument)];
-		return interpreterForStrict.Execute(method, instance, args).
-			List.Items.Select(item => item.Text).ToArray();
+		return interpreterForStrict.Execute(method, instance, args).List.Items.
+			Select(item => item.Text).ToArray();
 	}
 
 	private static string FindRepoRoot()
 	{
 		var directory = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
-		if (File.Exists(Path.Combine(directory, "Strict.sln")))
-			return directory;
-		throw new DirectoryNotFoundException("Cannot find repository root (Strict.sln not found)");
+		return File.Exists(Path.Combine(directory, "Strict.sln"))
+			? directory
+			: throw new DirectoryNotFoundException("Cannot find repository root (Strict.sln not found)");
 	}
 
 	[Test]
@@ -363,17 +367,13 @@ public sealed class InterpreterTests
 			Is.EqualTo(interpreter.trueInstance));
 		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Smaller), N(2), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
-		Assert.That(
-			interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(3)]),
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
-		Assert.That(
-			interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(5)]),
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.GreaterOrEqual), N(5), [N(5)]),
 			Is.EqualTo(interpreter.trueInstance));
-		Assert.That(
-			interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(2), [N(3)]),
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(2), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
-		Assert.That(
-			interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(3), [N(3)]),
+		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.SmallerOrEqual), N(3), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
 		Assert.That(interpreter.Execute(GetBinaryOperator(BinaryOperator.Is), N(3), [N(3)]),
 			Is.EqualTo(interpreter.trueInstance));
@@ -437,8 +437,8 @@ public sealed class InterpreterTests
 		using var t = CreateType(nameof(EvaluateRangeEquality), "has number", "Compare Boolean",
 			"\tRange(0, 5) is Range(0, 5)");
 		Assert.That(
-			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance,
-				[]), Is.EqualTo(interpreter.trueInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []),
+			Is.EqualTo(interpreter.trueInstance));
 	}
 
 	[Test]
@@ -447,8 +447,7 @@ public sealed class InterpreterTests
 		using var t = CreateType(nameof(MultilineMethodRequiresTests), "has number", "GetText Text",
 			"\tif number is 0", "\t\treturn \"\"", "\tnumber to Text");
 		var instance = new ValueInstance(t, [new ValueInstance(interpreter.numberType, 5.0)]);
-		Assert.That(
-			interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
 			Is.EqualTo("5"));
 	}
 
@@ -502,11 +501,10 @@ public sealed class InterpreterTests
 	[Test]
 	public void CompareNumberToText()
 	{
-		using var t = CreateType(nameof(CompareNumberToText), "has number", "Compare",
-			"\t\"5\" is 5");
+		using var t = CreateType(nameof(CompareNumberToText), "has number", "Compare", "\t\"5\" is 5");
 		Assert.That(
-			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance,
-				[]), Is.EqualTo(interpreter.trueInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []),
+			Is.EqualTo(interpreter.trueInstance));
 	}
 
 	[Test]
@@ -515,8 +513,8 @@ public sealed class InterpreterTests
 		using var t = CreateType(nameof(CompareTextToCharacterTab), "has number", "Compare Boolean",
 			"\t\"7\" is Character.Tab");
 		Assert.That(
-			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance,
-				[]), Is.EqualTo(interpreter.falseInstance));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []),
+			Is.EqualTo(interpreter.falseInstance));
 	}
 
 	[Test]
@@ -686,8 +684,7 @@ public sealed class InterpreterTests
 		using var helper = CreateType(nameof(ExecuteRunMethodCanConstructSiblingType) + "Helper",
 			"has value Text", "Greet Text", "\t\"Hello, \" + value + \"!\"");
 		using var app = CreateType(nameof(ExecuteRunMethodCanConstructSiblingType), "has number",
-			"Run Text", "\tconstant worldHelper = " + helper.Name + "(\"World\")",
-			"\tworldHelper.Greet");
+			"Run Text", "\tconstant worldHelper = " + helper.Name + "(\"World\")", "\tworldHelper.Greet");
 		Assert.That(() => interpreter.ExecuteRunMethod(app), Throws.Nothing);
 	}
 
@@ -759,8 +756,8 @@ public sealed class InterpreterTests
 	[Test]
 	public void BuildContextMessageSkipsDuplicateCallerFrames()
 	{
-		using var type = CreateType(nameof(BuildContextMessageSkipsDuplicateCallerFrames),
-			"has number", "Inner Number", "\t1 is 1", "\t1", "Outer Number", "\tInner");
+		using var type = CreateType(nameof(BuildContextMessageSkipsDuplicateCallerFrames), "has number",
+			"Inner Number", "\t1 is 1", "\t1", "Outer Number", "\tInner");
 		var innerMethod = type.Methods.Single(method => method.Name == "Inner");
 		var outerMethod = type.Methods.Single(method => method.Name == "Outer");
 		var expression = ((Body)innerMethod.GetBodyAndParseIfNeeded()).Expressions[0];

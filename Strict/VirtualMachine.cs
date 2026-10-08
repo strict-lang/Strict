@@ -57,7 +57,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private readonly Dictionary<string, IndexedElementAccessPath> indexedElementAccessPaths =
 		new(StringComparer.Ordinal);
 
-	private VirtualMachine RunInstructions(List<Instruction> blockInstructions
+	private void RunInstructions(List<Instruction> blockInstructions
 #if DEBUG
 		, string context = "body"
 #endif
@@ -80,13 +80,11 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		var instructionsLength = instructions.Count;
 		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
 			ExecuteInstruction(instructions[instructionIndex]);
-		return this;
 	}
 
 	private void CacheInstructionAccessPaths(List<Instruction> blockInstructions)
 	{
-		identifierAccessPaths.EnsureCapacity(
-			identifierAccessPaths.Count + blockInstructions.Count * 2);
+		identifierAccessPaths.EnsureCapacity(identifierAccessPaths.Count + blockInstructions.Count * 2);
 		indexedElementAccessPaths.EnsureCapacity(indexedElementAccessPaths.Count +
 			blockInstructions.Count);
 		for (var cachedInstructionIndex = 0; cachedInstructionIndex < blockInstructions.Count;
@@ -123,7 +121,9 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 			GetIdentifierAccessPath(indexedAccessPath.IndexExpression);
 		}
 		else
+		{
 			GetIdentifierAccessPath(identifier);
+		}
 	}
 
 	private void InitializeEntryPointMembers(BinaryMethod method)
@@ -136,8 +136,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 					Memory.Frame.Set(member.Name,
 						member.InitialValueExpression is SetInstruction setInstruction
 							? CloneConstantValue(setInstruction.ValueInstance)
-							: CreateDefaultComplexValue(ResolveBinaryMemberType(member, type.Key)),
-						isMember: true);
+							: CreateDefaultComplexValue(ResolveBinaryMemberType(member, type.Key)), true);
 				return;
 			}
 	}
@@ -268,8 +267,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 				", Register=" + loadVariable.Register,
 			LoadConstantInstruction loadConstant => ", Constant=" +
 				DescribeValueInstance(loadConstant.Constant) + ", Register=" + loadConstant.Register,
-			Invoke invoke => ", Method=" + invoke.MethodInfo + ", Register=" +
-				invoke.Register,
+			Invoke invoke => ", Method=" + invoke.MethodInfo + ", Register=" + invoke.Register,
 			PrintInstruction print => ", TextPrefix=" + print.TextPrefix + ", ValueRegister=" +
 				print.ValueRegister + ", ValueIsText=" + print.ValueIsText,
 			LoopBeginInstruction loopBegin => ", Register=" + loopBegin.Register + ", IsRange=" +
@@ -285,8 +283,8 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 				", KeyRegister=" + writeToTable.Register + ", ValueRegister=" + writeToTable.Value,
 			RemoveInstruction remove => ", Identifier=" + remove.Identifier + ", Register=" +
 				remove.Register,
-			FieldLoadInstruction fieldLoad => ", FieldName=" + fieldLoad.FieldName +
-				", ObjectRegister=" + fieldLoad.ObjectRegister + ", Register=" + fieldLoad.Register,
+			FieldLoadInstruction fieldLoad => ", FieldName=" + fieldLoad.FieldName + ", ObjectRegister=" +
+				fieldLoad.ObjectRegister + ", Register=" + fieldLoad.Register,
 			ConstructValueTypeInstruction construct => ", ReturnType=" + construct.ReturnType.Name +
 				", Register=" + construct.Register + ", Fields=" +
 				DescribeRegisters(construct.FieldRegisters),
@@ -440,25 +438,27 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 			return;
 		}
 		if (!collectionValue.IsList)
-			throw Fail("Cannot index non-list variable \"" +
-				listCallInstruction.Identifier + "\" of type " + collectionValue.GetType().Name);
+			throw Fail("Cannot index non-list variable \"" + listCallInstruction.Identifier +
+				"\" of type " + collectionValue.GetType().Name);
 		if (indexValue < 0 || indexValue >= collectionValue.List.Count)
-			throw Fail("List index out of range for \"" + listCallInstruction.Identifier +
-				"\": " + indexValue + " (count=" + collectionValue.List.Count + ")");
+			throw Fail("List index out of range for \"" + listCallInstruction.Identifier + "\": " +
+				indexValue + " (count=" + collectionValue.List.Count + ")");
 		var variableListElement = collectionValue.List[indexValue];
 		Memory.Registers[listCallInstruction.Register] = variableListElement;
 	}
 
 	private void ExecuteWriteToList(WriteToListInstruction writeToListInstruction)
 	{
-		if (!GetIdentifierAccessPath(writeToListInstruction.Identifier).TryResolve(this, out var collection))
+		if (!GetIdentifierAccessPath(writeToListInstruction.Identifier).
+			TryResolve(this, out var collection))
 			throw Fail("Cannot resolve list variable \"" + writeToListInstruction.Identifier + "\"");
 		collection.List.Items.Add(Memory.Registers[writeToListInstruction.Register]);
 	}
 
 	private void ExecuteWriteToTable(WriteToTableInstruction writeToTableInstruction)
 	{
-		if (!GetIdentifierAccessPath(writeToTableInstruction.Identifier).TryResolve(this, out var collection))
+		if (!GetIdentifierAccessPath(writeToTableInstruction.Identifier).
+			TryResolve(this, out var collection))
 			throw Fail("Cannot resolve table variable \"" + writeToTableInstruction.Identifier + "\"");
 		collection.GetDictionaryItems()[Memory.Registers[writeToTableInstruction.Register]] =
 			Memory.Registers[writeToTableInstruction.Value];

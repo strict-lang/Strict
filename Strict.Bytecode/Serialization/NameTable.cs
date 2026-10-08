@@ -202,8 +202,8 @@ public sealed class NameTable
 			Binary binary => Add(binary.Method.Name).CollectExpressionStrings(binary.Instance).
 				CollectExpressionStrings(binary.Arguments[0]),
 			MethodCall mc => CollectMethodCallStrings(mc),
-			ListCall listCall => Add(listCall.ReturnType.FullName).CollectExpressionStrings(listCall.List).
-				CollectExpressionStrings(listCall.Index),
+			ListCall listCall => Add(listCall.ReturnType.FullName).
+				CollectExpressionStrings(listCall.List).CollectExpressionStrings(listCall.Index),
 			_ => Add(expr.ToString()).Add(expr.ReturnType.FullName)
 		};
 

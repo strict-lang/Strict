@@ -1,5 +1,5 @@
-using Strict.Expressions;
 using System.Globalization;
+using Strict.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
@@ -38,7 +38,8 @@ internal sealed class ToEvaluator(Interpreter interpreter)
 				convertedValue = new ValueInstance(conversionType, parsedNumber);
 				return true;
 			}
-			if (conversionType.Name == nameof(Type) && conversionType.FindType(value.Text) is { } foundType)
+			if (conversionType.Name == nameof(Type) &&
+				conversionType.FindType(value.Text) is { } foundType)
 			{
 				convertedValue = new ValueInstance(conversionType,
 					MethodCallEvaluator.CreateTypeValue(foundType));
@@ -90,6 +91,6 @@ internal sealed class ToEvaluator(Interpreter interpreter)
 			: new ValueInstance(value.ToExpressionCodeString());
 
 	public sealed class ToMethodNotImplemented(ValueInstance left, Type toConversionType)
-		: InterpreterExecutionFailed(toConversionType, "Conversion from " + left + " to " +
-			toConversionType.Name + " not supported");
+		: InterpreterExecutionFailed(toConversionType,
+			"Conversion from " + left + " to " + toConversionType.Name + " not supported");
 }

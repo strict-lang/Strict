@@ -77,9 +77,11 @@ internal sealed class CallFrame
 	internal static string GetSymbolName(int symbolId)
 	{
 		lock (SymbolLock)
+		{
 			return symbolId >= 0 && symbolId < SymbolNames.Count
 				? SymbolNames[symbolId]
 				: symbolId.ToString();
+		}
 	}
 
 	//TODO: called 4 million times, needs to be avoided. it doesn't even make sense to call this that often, we have many 5 lookups in AdjustBrightness, rest is just repeating the same stuff over and over
@@ -172,7 +174,7 @@ internal sealed class CallFrame
 			parent.TryGet(IndexSymbolId, out value))
 			return true;
 		if (symbolId >= 0 && symbolId < slots.Length && slots[symbolId].HasValue &&
-			(!requireMember || symbolId < memberSlots.Length && memberSlots[symbolId]))
+			(!requireMember || (symbolId < memberSlots.Length && memberSlots[symbolId])))
 		{
 			value = slots[symbolId];
 			return true;
@@ -260,8 +262,7 @@ internal sealed class CallFrame
 		parent = newParent;
 	}
 
-	internal void TrackDisposable(ValueInstance value) =>
-		(disposableValues ??= []).Add(value);
+	internal void TrackDisposable(ValueInstance value) => (disposableValues ??= []).Add(value);
 
 	internal IReadOnlyList<ValueInstance> DisposableValues => disposableValues ?? [];
 
@@ -281,7 +282,8 @@ internal sealed class CallFrame
 	private int CountMembers()
 	{
 		var count = 0;
-		for (var symbolId = 0; symbolId <= highestAssignedSymbolId && symbolId < memberSlots.Length; symbolId++)
+		for (var symbolId = 0; symbolId <= highestAssignedSymbolId && symbolId < memberSlots.Length;
+			symbolId++)
 			if (memberSlots[symbolId] && slots[symbolId].HasValue)
 				count++;
 		return count;
@@ -299,7 +301,8 @@ internal sealed class CallFrame
 			return "Dictionary(count=" + value.GetDictionaryItems().Count + ")";
 		var typeInstance = value.TryGetValueTypeInstance();
 		return typeInstance != null
-			? "TypeInstance(type=" + typeInstance.ReturnType.Name + ", members=" + typeInstance.Values.Length + ")"
+			? "TypeInstance(type=" + typeInstance.ReturnType.Name + ", members=" +
+			typeInstance.Values.Length + ")"
 			: value.GetType().Name + "(" + value.Number + ")";
 	}
 #endif

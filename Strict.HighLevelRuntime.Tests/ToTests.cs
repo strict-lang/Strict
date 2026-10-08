@@ -28,8 +28,8 @@ public sealed class ToTests
 			ParseMembersAndMethods(parser);
 		var fullInterpreter = new Interpreter(package, TestBehavior.Disabled);
 		var colorType = package.FindType("Color")!;
-		Assert.That(fullInterpreter.Execute(
-			program.Methods.Single(method => method.Name == Method.Run), new ValueInstance(program, [
+		Assert.That(fullInterpreter.Execute(program.Methods.Single(method => method.Name == Method.Run),
+			new ValueInstance(program, [
 				new ValueInstance(colorType, [
 					new ValueInstance(package.GetType(Type.Number), 0),
 					new ValueInstance(package.GetType(Type.Number), 0),
@@ -45,16 +45,15 @@ public sealed class ToTests
 		var repositories = new Repositories(parser);
 		using var package = await repositories.LoadStrictPackage("Strict/ImageProcessing");
 		using var program = new Type(package,
-			new TypeLines("ImageToText",
-				"has number",
-				"Run Text",
-        "\tconstant pixels = (ColorValue(0, 0, 0), ColorValue(0, 0, 0),",
+			new TypeLines("ImageToText", "has number", "Run Text",
+				"\tconstant pixels = (ColorValue(0, 0, 0), ColorValue(0, 0, 0),",
 				"\tColorValue(0, 0, 0), ColorValue(0.25, 0.25, 0.25))",
 				"\tImage(Size(2, 2), pixels) to Text")).ParseMembersAndMethods(parser);
 		var fullInterpreter = new Interpreter(package, TestBehavior.Disabled);
-		Assert.That(fullInterpreter.Execute(program.Methods.Single(method => method.Name == Method.Run),
-			fullInterpreter.noneInstance, []).Text, Is.EqualTo(
-			"Image(Size=(2, 2), Colors=((0, 0, 0), (0, 0, 0), (0, 0, 0), ...))"));
+		Assert.That(
+			fullInterpreter.Execute(program.Methods.Single(method => method.Name == Method.Run),
+				fullInterpreter.noneInstance, []).Text,
+			Is.EqualTo("Image(Size=(2, 2), Colors=((0, 0, 0), (0, 0, 0), (0, 0, 0), ...))"));
 	}
 
 	[Test]
@@ -65,7 +64,8 @@ public sealed class ToTests
 		var instance = new ValueInstance(t, 5);
 		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), instance, []).Text,
 			Is.EqualTo("5"));
-		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Number,
+		Assert.That(
+			interpreter.Execute(t.Methods.Single(m => m.Name == "GetNumber"), instance, []).Number,
 			Is.EqualTo(5));
 	}
 
@@ -90,8 +90,8 @@ public sealed class ToTests
 		using var t = CreateType(nameof(ToCharacterComparison), "has number", "Compare",
 			"\t5 to Character is \"5\"");
 		Assert.That(
-			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []).Boolean,
-			Is.EqualTo(true));
+			interpreter.Execute(t.Methods.Single(m => m.Name == "Compare"), interpreter.noneInstance, []).
+				Boolean, Is.EqualTo(true));
 	}
 
 	[Test]
@@ -99,10 +99,12 @@ public sealed class ToTests
 	{
 		using var type = new Type(TestPackage.Instance,
 				new TypeLines(nameof(ConvertCharacterToNumberAndMultiply), "has character",
-					"Convert(number)", "\tcharacter to Number * 10 ^ number")).
+					"Convert(number)",
+					"\tcharacter to Number * 10 ^ number")).
 			ParseMembersAndMethods(new MethodExpressionParser());
-		Assert.That(interpreter.Execute(type.Methods[0], new ValueInstance(type, '5'),
-			[new ValueInstance(type.GetType(Type.Number), 3)]).Number, Is.EqualTo(5 * 1000));
+		Assert.That(
+			interpreter.Execute(type.Methods[0], new ValueInstance(type, '5'),
+				[new ValueInstance(type.GetType(Type.Number), 3)]).Number, Is.EqualTo(5 * 1000));
 	}
 
 	[Test]
@@ -111,14 +113,15 @@ public sealed class ToTests
 		using var pointType = CreateType(nameof(ComplexTypeToTextDisplaysMemberValues) + "Point",
 			"has x Number", "has y Number");
 		using var t = CreateType(nameof(ComplexTypeToTextDisplaysMemberValues),
-			"has point " + nameof(ComplexTypeToTextDisplaysMemberValues) + "Point",
-			"GetText Text", "\tpoint to Text");
+			"has point " + nameof(ComplexTypeToTextDisplaysMemberValues) + "Point", "GetText Text",
+			"\tpoint to Text");
 		var pointInstance = new ValueInstance(pointType, [
 			new ValueInstance(interpreter.numberType, 10),
 			new ValueInstance(interpreter.numberType, 20)
 		]);
 		var typeInstance = new ValueInstance(t, [pointInstance]);
-		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), typeInstance, []).Text,
+		Assert.That(
+			interpreter.Execute(t.Methods.Single(m => m.Name == "GetText"), typeInstance, []).Text,
 			Is.EqualTo("(10, 20)"));
 	}
 
@@ -127,8 +130,9 @@ public sealed class ToTests
 	{
 		using var type = CreateType(nameof(UpperConvertsTextToUppercase), "has number", "Run Text",
 			"\t\"HeLlo\".Upper");
-		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
-			interpreter.noneInstance, []).Text, Is.EqualTo("HELLO"));
+		Assert.That(
+			interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+				interpreter.noneInstance, []).Text, Is.EqualTo("HELLO"));
 	}
 
 	[Test]
@@ -136,8 +140,9 @@ public sealed class ToTests
 	{
 		using var type = CreateType(nameof(LowerConvertsTextToLowercase), "has number", "Run Text",
 			"\t\"HeLlo\".Lower");
-		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
-			interpreter.noneInstance, []).Text, Is.EqualTo("hello"));
+		Assert.That(
+			interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+				interpreter.noneInstance, []).Text, Is.EqualTo("hello"));
 	}
 
 	[Test]
@@ -145,8 +150,9 @@ public sealed class ToTests
 	{
 		using var type = CreateType(nameof(TextCharactersLengthMatchesSourceTextLength), "has number",
 			"Run Number", "\t\"hello\".characters.Length");
-		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
-			interpreter.noneInstance, []).Number, Is.EqualTo(5));
+		Assert.That(
+			interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+				interpreter.noneInstance, []).Number, Is.EqualTo(5));
 	}
 
 	[TestCase("hello", "l", 3)]
@@ -156,8 +162,9 @@ public sealed class ToTests
 	{
 		using var type = CreateType(nameof(LastIndexOfFindsLastMatchOrMissingValue), "has number",
 			"Run Number", "\t\"" + text + "\".LastIndexOf(\"" + searchText + "\")");
-		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
-			interpreter.noneInstance, []).Number, Is.EqualTo(expected));
+		Assert.That(
+			interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+				interpreter.noneInstance, []).Number, Is.EqualTo(expected));
 	}
 
 	[TestCase("hello", "hel", true)]
@@ -168,7 +175,8 @@ public sealed class ToTests
 	{
 		using var type = CreateType(nameof(StartsWithReturnsTrueWhenTextStartsWithPrefix), "has number",
 			"Run Boolean", "\t\"" + text + "\".StartsWith(\"" + prefix + "\")");
-		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
-			interpreter.noneInstance, []).Boolean, Is.EqualTo(expected));
+		Assert.That(
+			interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+				interpreter.noneInstance, []).Boolean, Is.EqualTo(expected));
 	}
 }

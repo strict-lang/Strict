@@ -1,7 +1,9 @@
+using System.Text;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Assembly;
 
@@ -26,8 +28,9 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	public string CompileInstructions(string methodName, List<Instruction> instructions) =>
 		BuildAssembly(methodName, [], instructions);
 
-	private static string CompileForPlatform(string methodName, IReadOnlyList<Instruction> instructions,
-		Platform platform, IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null,
+	private static string CompileForPlatform(string methodName,
+		IReadOnlyList<Instruction> instructions, Platform platform,
+		IReadOnlyDictionary<string, List<Instruction>>? precompiledMethods = null,
 		BinaryExecutable? binary = null)
 	{
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
@@ -43,13 +46,15 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		return functionAsm + "\n" + BuildEntryPoint(methodName, platform, hasPrint);
 	}
 
-	private static string BuildEntryPoint(string methodName, Platform platform, bool hasPrint = false) =>
+	private static string
+		BuildEntryPoint(string methodName, Platform platform, bool hasPrint = false) =>
 		platform switch
 		{
 			Platform.Windows => BuildWindowsEntryPoint(methodName, hasPrint),
 			Platform.Linux => BuildLinuxEntryPoint(methodName, hasPrint),
 			Platform.MacOS => BuildMacOsEntryPoint(methodName, hasPrint),
-			_ => throw new NotSupportedException("Unsupported platform: " + platform) //ncrunch: no coverage
+			_ => throw new NotSupportedException("Unsupported platform: " +
+				platform) //ncrunch: no coverage
 		};
 
 	private static string BuildWindowsEntryPoint(string methodName, bool hasPrint) =>
@@ -57,16 +62,17 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				? "extern GetStdHandle"
 				: "", hasPrint
 				? "extern WriteFile"
-				: "", "", "global main", "", "main:", "    push rbp", "    mov rbp, rsp",
-			"    sub rsp, 32", $"    call {methodName}", "    xor rcx, rcx", "    call ExitProcess",
-			"    add rsp, 32", "    pop rbp", "    ret");
+				: "", "", "global main", "", "main:", "    push rbp", "    mov rbp, rsp", "    sub rsp, 32",
+			$"    call {methodName}", "    xor rcx, rcx", "    call ExitProcess", "    add rsp, 32",
+			"    pop rbp", "    ret");
 
 	private static string BuildLinuxEntryPoint(string methodName, bool hasPrint)
 	{
 		if (hasPrint)
-			return string.Join("\n", "extern printf", "", "global main", "", "main:", //ncrunch: no coverage
-				"    push rbp", "    mov rbp, rsp",
-				$"    call {methodName}", "    mov rdi, 0", "    mov rax, 60", "    syscall");
+			return string.Join("\n", "extern printf", "", "global main", "",
+				"main:", //ncrunch: no coverage
+				"    push rbp", "    mov rbp, rsp", $"    call {methodName}", "    mov rdi, 0",
+				"    mov rax, 60", "    syscall");
 		return string.Join("\n", "", "global _start", "", "_start:", "    push rbp", "    mov rbp, rsp",
 			$"    call {methodName}", "    mov rdi, 0", "    mov rax, 60", "    syscall");
 	}
@@ -76,8 +82,9 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		var printExtern = hasPrint
 			? "extern _printf\n"
 			: "";
-		return printExtern + string.Join("\n", "", "global _main", "", "_main:", "    push rbp", "    mov rbp, rsp",
-			$"    call _{methodName}", "    xor rdi, rdi", "    mov rax, 0x2000001", "    syscall");
+		return printExtern + string.Join("\n", "", "global _main", "", "_main:", "    push rbp",
+			"    mov rbp, rsp", $"    call _{methodName}", "    xor rdi, rdi", "    mov rax, 0x2000001",
+			"    syscall");
 	}
 
 	private static string BuildAssembly(string methodName, IEnumerable<string> paramNames,
@@ -158,8 +165,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		return slots;
 	}
 
-	private static List<(string Label, double Value)> CollectConstants(
-		List<Instruction> instructions)
+	private static List<(string Label, double Value)> CollectConstants(List<Instruction> instructions)
 	{
 		var constants = new List<(string, double)>();
 		var seenValues = new HashSet<double>();
@@ -169,7 +175,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			var value = instruction switch
 			{
 				LoadConstantInstruction load when !load.Constant.IsText => (double?)load.Constant.Number,
-				StoreVariableInstruction store when !store.ValueInstance.IsText => store.ValueInstance.Number,
+				StoreVariableInstruction store when !store.ValueInstance.IsText => store.ValueInstance.
+					Number,
 				_ => null
 			};
 			if (value is { } constantValue && constantValue != 0.0 && seenValues.Add(constantValue))
@@ -185,7 +192,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		var jumpEndPositions = new Dictionary<int, int>();
 		var labelIndex = 0;
 		for (var index = 0; index < instructions.Count; index++)
-		{
 			switch (instructions[index])
 			{
 			case JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd:
@@ -196,7 +202,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				AddLabelAt(labels, index + jump.InstructionsToSkip + 1, ref labelIndex);
 				break;
 			}
-		}
 		return (labels, jumpEndPositions);
 	}
 
@@ -209,11 +214,9 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	private static void EmitInstruction(Instruction instruction, List<string> lines,
 		Dictionary<string, int> paramIndexByName, Dictionary<string, int> variableSlots,
 		List<(string Label, double Value)> dataConstants,
-		List<(string Label, string Text)> printStrings,
-		Dictionary<int, string> jumpLabels,
+		List<(string Label, string Text)> printStrings, Dictionary<int, string> jumpLabels,
 		Dictionary<int, int> jumpEndPositions, List<Instruction> allInstructions, int index,
-		Platform platform = Platform.Linux,
-		Dictionary<Register, Register[]> registerInstances = null!,
+		Platform platform = Platform.Linux, Dictionary<Register, Register[]> registerInstances = null!,
 		Dictionary<string, Register[]> variableInstances = null!,
 		Dictionary<string, CompiledMethodInfo>? compiledMethods = null,
 		HashSet<int>? optimizedReturns = null)
@@ -277,8 +280,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			EmitJump(jump, jumpLabels, index, lines);
 			break;
 		case Invoke invoke:
-			EmitInvoke(invoke, lines,
-				registerInstances, compiledMethods);
+			EmitInvoke(invoke, lines, registerInstances, compiledMethods);
 			break;
 		case JumpToId { InstructionType: InstructionType.JumpEnd }:
 			break;
@@ -293,7 +295,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		Dictionary<string, CompiledMethodInfo>? compiledMethods)
 	{
 		if (invoke.MethodInfo == null)
-			throw new NotSupportedException("Invoke instruction is missing method metadata"); //ncrunch: no coverage
+			throw new NotSupportedException(
+				"Invoke instruction is missing method metadata"); //ncrunch: no coverage
 		if (IsFileRuntimeInvoke(invoke.MethodInfo))
 		{
 			EmitFileRuntimeInvoke(invoke.MethodInfo, lines);
@@ -311,7 +314,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				"Use the interpreted runner for programs with complex runtime method calls.");
 		var sourceRegisters = new List<Register>();
 		if (methodInfo.MemberNames.Count > 0 && invoke.MethodInfo.InstanceRegister.HasValue &&
-			registerInstances.TryGetValue(invoke.MethodInfo.InstanceRegister.Value, out var memberRegisters))
+			registerInstances.TryGetValue(invoke.MethodInfo.InstanceRegister.Value,
+				out var memberRegisters))
 			sourceRegisters.AddRange(memberRegisters);
 		sourceRegisters.AddRange(invoke.MethodInfo.ArgumentRegisters);
 		if (sourceRegisters.Count > 8)
@@ -331,25 +335,24 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	}
 
 	private static bool IsFileRuntimeInvoke(InvokeMethodInfo info) =>
-		(info.TypeFullName == Strict.Language.Type.File ||
-			info.TypeFullName.EndsWith(Context.ParentSeparator + Strict.Language.Type.File,
-				StringComparison.Ordinal)) &&
-		info.MethodName is Method.From or "Write" or "ReadLines" or "ReadBytes" or "Close" or "Length" or "Exists";
+		(info.TypeFullName == Type.File ||
+			info.TypeFullName.EndsWith(Context.ParentSeparator + Type.File, StringComparison.Ordinal)) &&
+		info.MethodName is Method.From or "Write" or "ReadLines" or "ReadBytes" or "Close" or "Length"
+			or "Exists";
 
 	private static void EmitFileRuntimeInvoke(InvokeMethodInfo info, List<string> lines) =>
-		lines.Add("    call strict_file_" + (info.MethodName switch
+		lines.Add("    call strict_file_" + info.MethodName switch
 		{
 			Method.From => "open",
-			"Write" when info.ParameterNames.Length > 0 &&
-				info.ParameterNames[0].Contains("bytes", StringComparison.OrdinalIgnoreCase) =>
-				"write_bytes",
+			"Write" when info.ParameterNames.Length > 0 && info.ParameterNames[0].
+				Contains("bytes", StringComparison.OrdinalIgnoreCase) => "write_bytes",
 			"Write" => "write_text",
 			"ReadLines" => "read_lines",
 			"ReadBytes" => "read_bytes",
 			"Close" => "close",
 			"Length" => "length",
 			_ => "exists"
-		}));
+		});
 
 	private static string GetOrAddConstantLabel(double number,
 		List<(string Label, double Value)> dataConstants)
@@ -364,8 +367,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 	} //ncrunch: no coverage end
 
 	private static void EmitPrint(PrintInstruction print,
-		List<(string Label, string Text)> printStrings,
-		List<string> lines, Platform platform)
+		List<(string Label, string Text)> printStrings, List<string> lines, Platform platform)
 	{
 		var (strLabel, _) = printStrings.First(p => p.Text == BuildPrintKey(print));
 		if (print.ValueRegister.HasValue && !print.ValueIsText)
@@ -383,7 +385,9 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 					EmitWindowsWriteNumberFromXmm("xmm0", lines);
 				}
 				else
+				{
 					EmitWindowsWriteNumberFromXmm(numXmm, lines); //ncrunch: no coverage
+				}
 				return;
 			}
 			//ncrunch: no coverage start
@@ -432,24 +436,24 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			"    mov rbp, rsp", "    sub rsp, 96", "    movsd [rsp], xmm0", "    mov ecx, -11",
 			"    call GetStdHandle", "    mov rcx, rax", "    lea r10, [rsp+79]",
 			"    mov byte [r10], 10", "    mov r11, r10", "    movsd xmm0, [rsp]",
-			"    cvttsd2si rax, xmm0", "    xor r9d, r9d", "    test rax, rax",
-			"    jge .print_abs_done", "    mov r9d, 1", "    neg rax", ".print_abs_done:",
-			"    test rax, rax", "    jne .print_digits_loop", "    dec r11",
-			"    mov byte [r11], '0'", "    jmp .print_digits_done", ".print_digits_loop:",
-			"    xor edx, edx", "    mov r8, 10", "    div r8", "    add dl, '0'", "    dec r11",
-			"    mov [r11], dl", "    test rax, rax", "    jne .print_digits_loop",
-			".print_digits_done:", "    test r9d, r9d", "    je .print_sign_done",
-			"    dec r11", "    mov byte [r11], '-'", ".print_sign_done:", "    mov rdx, r11",
-			"    mov r8, r10", "    sub r8, r11", "    inc r8", "    lea r9, [rsp+40]",
-			"    mov qword [rsp+32], 0", "    call WriteFile", "    add rsp, 96", "    pop rbp",
-			"    ret");
+			"    cvttsd2si rax, xmm0", "    xor r9d, r9d", "    test rax, rax", "    jge .print_abs_done",
+			"    mov r9d, 1", "    neg rax", ".print_abs_done:", "    test rax, rax",
+			"    jne .print_digits_loop", "    dec r11", "    mov byte [r11], '0'",
+			"    jmp .print_digits_done", ".print_digits_loop:", "    xor edx, edx", "    mov r8, 10",
+			"    div r8", "    add dl, '0'", "    dec r11", "    mov [r11], dl", "    test rax, rax",
+			"    jne .print_digits_loop", ".print_digits_done:", "    test r9d, r9d",
+			"    je .print_sign_done", "    dec r11", "    mov byte [r11], '-'", ".print_sign_done:",
+			"    mov rdx, r11", "    mov r8, r10", "    sub r8, r11", "    inc r8",
+			"    lea r9, [rsp+40]", "    mov qword [rsp+32], 0", "    call WriteFile", "    add rsp, 96",
+			"    pop rbp", "    ret");
 
 	private static string BuildPrintKey(PrintInstruction print) =>
 		print.ValueRegister.HasValue && !print.ValueIsText
 			? print.TextPrefix + "%g"
 			: print.TextPrefix;
 
-	private static List<(string Label, string Text)> CollectPrintStrings(List<Instruction> instructions)
+	private static List<(string Label, string Text)> CollectPrintStrings(
+		List<Instruction> instructions)
 	{
 		var strings = new List<(string, string)>();
 		var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -471,11 +475,12 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		if (text.Length == 0)
 			return ""; //ncrunch: no coverage
 		var parts = new List<string>();
-		var ascii = new System.Text.StringBuilder();
+		var ascii = new StringBuilder();
 		foreach (var c in text)
-		{
 			if (c is >= ' ' and <= '~' && c != '"' && c != '\\')
+			{
 				ascii.Append(c);
+			}
 			else
 			{ //ncrunch: no coverage start
 				if (ascii.Length > 0)
@@ -485,7 +490,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 				}
 				parts.Add(((int)c).ToString());
 			} //ncrunch: no coverage end
-		}
 		if (ascii.Length > 0)
 			parts.Add($"\"{ascii}\"");
 		return string.Join(", ", parts);
@@ -518,7 +522,9 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		if (value.IsText)
 			return;
 		if (value.Number == 0.0)
+		{
 			lines.Add($"    xorpd {dest}, {dest}");
+		}
 		else
 		{
 			var constLabel = dataConstants.First(c => c.Value == value.Number).Label;
@@ -593,7 +599,8 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		var op = jumpToId.InstructionType switch
 		{
 			InstructionType.JumpToIdIfFalse => GetFalseJumpOp(prevComparison?.InstructionType),
-			InstructionType.JumpToIdIfTrue => GetTrueJumpOp(prevComparison?.InstructionType), //ncrunch: no coverage
+			InstructionType.JumpToIdIfTrue =>
+				GetTrueJumpOp(prevComparison?.InstructionType), //ncrunch: no coverage
 			_ => "jmp" //ncrunch: no coverage
 		};
 		lines.Add($"    {op} .{label}");

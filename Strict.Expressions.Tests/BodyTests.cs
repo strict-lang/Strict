@@ -19,7 +19,8 @@ public sealed class BodyTests : TestExpressions
 
 	[Test]
 	public void CannotUseVariableFromLowerScope() =>
-		Assert.That(() => ParseExpression("if five is 5", "\tconstant abc = \"abc\"", "logger.Log(abc)"),
+		Assert.That(
+			() => ParseExpression("if five is 5", "\tconstant abc = \"abc\"", "logger.Log(abc)"),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("abc"));
 
 	[Test]
@@ -30,8 +31,8 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void CannotAccessAnotherMethodVariable()
 	{
-		var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(CannotAccessAnotherMethodVariable),
+		var program = new Type(TestPackage.Instance, new TypeLines(
+			nameof(CannotAccessAnotherMethodVariable),
 				// @formatter:off
 				"has logger",
 				"Run",
@@ -39,8 +40,7 @@ public sealed class BodyTests : TestExpressions
 				"Add",
 				"\tlogger.Log(number)")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
-		Assert.That(
-			() => program.Methods[1].GetBodyAndParseIfNeeded(),
+		Assert.That(() => program.Methods[1].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("number"));
 	}
 
@@ -82,15 +82,13 @@ public sealed class BodyTests : TestExpressions
 				"\tlogger.Log(ifText)",
 				"else",
 				"\tlogger.Log(ifText)"),
-				// @formatter:on
+			// @formatter:on
 			Throws.InstanceOf<Body.IdentifierNotFound>().With.Message.StartWith("ifText"));
 
 	[Test]
 	public void MissingThenDueToIncorrectChildBodyStart() =>
-		Assert.That(() => ParseExpression(
-				"if five is 5",
-				"constant abc = \"abc\"",
-				"\tlogger.Log(abc)"),
+		Assert.That(
+			() => ParseExpression("if five is 5", "constant abc = \"abc\"", "\tlogger.Log(abc)"),
 			Throws.InstanceOf<If.MissingThen>());
 
 	[Test]
@@ -102,9 +100,7 @@ public sealed class BodyTests : TestExpressions
 	public void CheckVariableCallCurrentValue()
 	{
 		var ifExpression = ParseExpression(
-			"if five is 5",
-			"\tconstant abc = \"abc\"",
-			"\tlogger.Log(abc)") as If;
+			"if five is 5", "\tconstant abc = \"abc\"", "\tlogger.Log(abc)") as If;
 		var variableCall =
 			((ifExpression?.Then as Body)?.Expressions[1] as MethodCall)?.Arguments[0] as VariableCall;
 		Assert.That(variableCall?.Variable.InitialValue.ToString(), Is.EqualTo("\"abc\""));
@@ -135,8 +131,8 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void ChildBodyReturnsFromThreeTabsToOneDirectly()
 	{
-		var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ChildBodyReturnsFromThreeTabsToOneDirectly),
+		var program = new Type(TestPackage.Instance, new TypeLines(
+			nameof(ChildBodyReturnsFromThreeTabsToOneDirectly),
       // @formatter:off
       "has logger",
       "Run",
@@ -159,8 +155,8 @@ public sealed class BodyTests : TestExpressions
 	[Test]
 	public void CannotUpdateNonMutableVariable() =>
 		Assert.That(
-			() => new Variable("yo", false, numberFive, new Body(method)).CheckIfWeCouldUpdateValue(numberFive),
-			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
+			() => new Variable("yo", false, numberFive, new Body(method)).CheckIfWeCouldUpdateValue(
+				numberFive), Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
 
 	[Test]
 	public void CannotUpdateNumberToList() =>

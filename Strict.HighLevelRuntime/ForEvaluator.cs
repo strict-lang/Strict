@@ -1,6 +1,6 @@
+using System.Text;
 using Strict.Expressions;
 using Strict.Language;
-using System.Text;
 using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
@@ -53,15 +53,15 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 			flattenedItems.ToArray());
 	}
 
-	private ValueInstance TryEvaluate(For f, ExecutionContext ctx, ValueInstance iterator, ExecutionContext loop)
+	private ValueInstance TryEvaluate(For f, ExecutionContext ctx, ValueInstance iterator,
+		ExecutionContext loop)
 	{
 		List<ValueInstance>? results = null;
 		var itemType = GetForValueType(iterator);
 		var iteratorInstance = iterator.TryGetValueTypeInstance();
 		var isRangeIterator = iteratorInstance?.ReturnType == interpreter.rangeType;
 		var bodyAsBody = f.Body as Body;
-		if (isRangeIterator &&
-			iteratorInstance!.TryGetValue("Start", out var startValue) &&
+		if (isRangeIterator && iteratorInstance!.TryGetValue("Start", out var startValue) &&
 			iteratorInstance.TryGetValue("ExclusiveEnd", out var endValue))
 		{
 			var start = (int)startValue.Number;
@@ -70,7 +70,8 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 				for (var index = start; index < end; index++)
 				{
 					interpreter.ResetIteration(loop);
-					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator, bodyAsBody);
+					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator,
+						bodyAsBody);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
 						return ctx.ExitMethodAndReturnValue.Value;
 				}
@@ -78,7 +79,8 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 				for (var index = start; index > end; index--)
 				{
 					interpreter.ResetIteration(loop);
-					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator, bodyAsBody);
+					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator,
+						bodyAsBody);
 					if (ctx.ExitMethodAndReturnValue.HasValue)
 						return ctx.ExitMethodAndReturnValue.Value;
 				}
@@ -89,7 +91,8 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
 			{
 				interpreter.ResetIteration(loop);
-				ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator, bodyAsBody);
+				ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator,
+					bodyAsBody);
 				if (ctx.ExitMethodAndReturnValue.HasValue)
 					return ctx.ExitMethodAndReturnValue.Value;
 			}
@@ -117,7 +120,9 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 			? EvaluateBody(bodyAsBody, loop)
 			: interpreter.RunExpression(f.Body, loop);
 		if (loop.ExitMethodAndReturnValue.HasValue)
+		{
 			ctx.ExitMethodAndReturnValue = loop.ExitMethodAndReturnValue;
+		}
 		else if (!itemResult.IsPrimitiveType(interpreter.noneType) && !itemResult.IsMutable)
 		{
 			results ??= new List<ValueInstance>();
@@ -154,8 +159,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 					return typeInstance.Values[index].List.Items;
 		throw new InterpreterExecutionFailed(ctx.Method,
 			InterpreterExecutionFailed.BuildContextMessage(ctx.Method, f.LineNumber, ctx,
-				"Cannot split loop value " + value + " into " + f.CustomVariables.Length +
-				" variables"));
+				"Cannot split loop value " + value + " into " + f.CustomVariables.Length + " variables"));
 	}
 
 	private ValueInstance EvaluateBody(Body body, ExecutionContext ctx)
@@ -195,15 +199,23 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		var text = new StringBuilder();
 		foreach (var value in results)
 			if (value.IsPrimitiveType(interpreter.characterType))
+			{
 				text.Append((char)value.Number);
+			}
 			else if (value.IsText)
+			{
 				text.Append(value.Text);
+			}
 			else if (value.IsPrimitiveType(interpreter.numberType))
+			{
 				text.Append(value.GetCachedNumberString());
+			}
 			else if (value.IsPrimitiveType(interpreter.booleanType))
+			{
 				text.Append(value.Boolean //ncrunch: no coverage
 					? "true"
 					: "false");
+			}
 			else if (value.IsList || value.IsDictionary)
 			{
 				if (text.Length > 0)
@@ -213,13 +225,16 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 				text.Append(')');
 			}
 			else
+			{
 				throw new InterpreterExecutionFailed(ctx.Method,
-					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, ctx.Method.TypeLineNumber,
-						ctx, "For text return type cannot consolidate value " + value));
+					InterpreterExecutionFailed.BuildContextMessage(ctx.Method, ctx.Method.TypeLineNumber, ctx,
+						"For text return type cannot consolidate value " + value));
+			}
 		return new ValueInstance(text.ToString());
 	}
 
-	private static double ConsolidateNumberResult(List<ValueInstance>? results, string shorthandOperator)
+	private static double ConsolidateNumberResult(List<ValueInstance>? results,
+		string shorthandOperator)
 	{
 		if (results == null || results.Count == 0)
 			return 0.0;

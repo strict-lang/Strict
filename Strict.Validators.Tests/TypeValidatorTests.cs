@@ -22,24 +22,20 @@ public sealed class TypeValidatorTests
 	[TearDown]
 	public void TearDown() => type.Dispose();
 
-	[TestCase("unused", "Run", "\tconstant unused = 5",
-		"\t\"Run method executed\"")]
-	[TestCase("secondIsUnused", "Run(input Number)",
-		"\tlet secondIsUnused = input + 5",
+	[TestCase("unused", "Run", "\tconstant unused = 5", "\t\"Run method executed\"")]
+	[TestCase("secondIsUnused", "Run(input Number)", "\tlet secondIsUnused = input + 5",
 		"\t\"Run method executed\" + input")]
 	public void ValidateUnusedMethodVariables(string expectedOutput, params string[] methodLines) =>
-		Assert.That(
-			() => validator.Visit(new Method(type, 1, parser, methodLines), true),
+		Assert.That(() => validator.Visit(new Method(type, 1, parser, methodLines), true),
 			Throws.InstanceOf<TypeValidator.UnusedMethodVariableMustBeRemoved>().With.Message.
 				Contains(expectedOutput));
 
 	[Test]
 	public void ErrorOnlyIfVariablesAreUnused() =>
-		Assert.DoesNotThrow(() => validator.Visit(
-			new Method(type, 1, parser, [
-				"Run(methodInput Number)",
-				"\t\"Run method executed with input\" + methodInput"
-			]), true));
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Run(methodInput Number)",
+			"\t\"Run method executed with input\" + methodInput"
+		]), true));
 
 	[Test]
 	public void ExceptionShouldOccurOnlyForUnchangedMutableVariable() =>
@@ -50,39 +46,35 @@ public sealed class TypeValidatorTests
 				"\tinputOne + inputTwo + inputThree"
 			]), true),
 			Throws.InstanceOf<TypeValidator.ParameterDeclaredAsMutableButValueNeverChanged>().With.
-				Message.Contains("inputThree"));
+				Message.
+				Contains("inputThree"));
 
 	[Test]
 	public void ConstantVariablesShouldBeAllowedToPass() =>
-		Assert.DoesNotThrow(() => validator.Visit(
-			new Method(type, 1, parser, [
-				"Run",
-				"\t10 + 5"
-			]), true));
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Run",
+			"\t10 + 5"
+		]), true));
 
 	[Test]
 	public void MutatedVariablesShouldBeAllowedToPass() =>
-		Assert.DoesNotThrow(() => validator.Visit(
-			new Method(type, 1, parser, [
-				"Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5"
-			]), true));
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5"
+		]), true));
 
 	[TestCase("methodInput", "Run(methodInput Number)", "\t\"Run method executed\"")]
-	[TestCase("second", "Run(first Number, second Text)",
-		"\t\"Run method executed\" + first")]
+	[TestCase("second", "Run(first Number, second Text)", "\t\"Run method executed\" + first")]
 	public void ValidateUnusedMethodParameter(string expectedOutput, params string[] methodLines) =>
-		Assert.That(
-			() => validator.Visit(new Method(type, 1, parser, methodLines), true),
+		Assert.That(() => validator.Visit(new Method(type, 1, parser, methodLines), true),
 			Throws.InstanceOf<TypeValidator.UnusedMethodParameterMustBeRemoved>().With.Message.
 				Contains(expectedOutput));
 
 	[Test]
 	public void ErrorOnlyIfParametersAreUnused() =>
-		Assert.DoesNotThrow(() => validator.Visit(
-			new Method(type, 1, parser, [
-				"Run(methodInput Number)",
-				"\t\"Run method executed with input\" + methodInput"
-			]), true));
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Run(methodInput Number)",
+			"\t\"Run method executed with input\" + methodInput"
+		]), true));
 
 	[TestCase("Run(mutable parameter Number)", "\tparameter")]
 	[TestCase("Run(mutable otherMutatedParameter Number, mutable parameter Number)",
@@ -94,18 +86,17 @@ public sealed class TypeValidatorTests
 
 	[Test]
 	public void MutatedParametersShouldBeAllowed() =>
-		Assert.DoesNotThrow(() => validator.Visit(
-			new Method(type, 1, parser, [
-				"Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5"
-			]), true));
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Run(mutable parameter Number)", "\tparameter = 5 + parameter", "\t5"
+		]), true));
 
 	[Test]
 	public void ListArgumentCanBeAutoParsedWithoutDoubleBrackets()
 	{
 		using var typeWithListParameterMethod = new Type(TestPackage.Instance,
 			new TypeLines(nameof(ListArgumentCanBeAutoParsedWithoutDoubleBrackets), "has logger",
-				"CheckInputLengthAndGetResult(numbers) Number", "\tif numbers.Length is 2",
-				"\t\treturn 2", "\t0")).ParseMembersAndMethods(parser);
+				"CheckInputLengthAndGetResult(numbers) Number", "\tif numbers.Length is 2", "\t\treturn 2",
+				"\t0")).ParseMembersAndMethods(parser);
 		Assert.That(() => validator.Visit(new Method(typeWithListParameterMethod, 1, parser, [
 				"InvokeTestMethod(numbers) Number",
 				"\tif numbers.Length is 2",
@@ -126,8 +117,7 @@ public sealed class TypeValidatorTests
 				]);
 				validator.Visit(typeWithUnusedMember);
 			}, //ncrunch: no coverage
-			Throws.InstanceOf<TypeValidator.UnusedMemberMustBeRemoved>().With.Message.
-				Contains("unused"));
+			Throws.InstanceOf<TypeValidator.UnusedMemberMustBeRemoved>().With.Message.Contains("unused"));
 
 	private Type CreateType(string typeName, string[] code) =>
 		new Type(type.Package, new TypeLines(typeName, code)).ParseMembersAndMethods(parser);

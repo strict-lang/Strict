@@ -1,6 +1,6 @@
-using Strict.Expressions;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
+using Strict.Expressions;
 
 namespace Strict.Optimizers;
 

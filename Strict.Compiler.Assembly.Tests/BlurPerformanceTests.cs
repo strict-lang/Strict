@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using NUnit.Framework;
 
 namespace Strict.Compiler.Assembly.Tests;
 
@@ -56,12 +55,10 @@ public sealed class BlurPerformanceTests
 		var stride = width * 3;
 		for (var row = 0; row < height; row++)
 		for (var column = 0; column < width; column++)
-		{
 			if (row >= 2 && row < height - 2 && column >= 2 && column < width - 2)
 				BlurInteriorPixel(pixels, output, row, column, stride);
 			else
 				BlurEdgePixel(pixels, output, row, column, width, height, stride);
-		}
 		Buffer.BlockCopy(output, 0, pixels, 0, pixels.Length);
 	}
 
@@ -72,12 +69,10 @@ public sealed class BlurPerformanceTests
 		Parallel.For(0, height, row =>
 		{
 			for (var column = 0; column < width; column++)
-			{
 				if (row >= 2 && row < height - 2 && column >= 2 && column < width - 2)
 					BlurInteriorPixel(pixels, output, row, column, stride);
 				else
 					BlurEdgePixel(pixels, output, row, column, width, height, stride);
-			}
 		});
 		Buffer.BlockCopy(output, 0, pixels, 0, pixels.Length);
 	}
@@ -88,38 +83,26 @@ public sealed class BlurPerformanceTests
 		var baseIndex = row * stride + column * 3;
 		for (var channel = 0; channel < 3; channel++)
 		{
-			var sum =
-				source[baseIndex - 2 * stride - 6 + channel] +
-				source[baseIndex - 2 * stride - 3 + channel] +
-				source[baseIndex - 2 * stride + channel] +
+			var sum = source[baseIndex - 2 * stride - 6 + channel] +
+				source[baseIndex - 2 * stride - 3 + channel] + source[baseIndex - 2 * stride + channel] +
 				source[baseIndex - 2 * stride + 3 + channel] +
-				source[baseIndex - 2 * stride + 6 + channel] +
-				source[baseIndex - stride - 6 + channel] +
-				source[baseIndex - stride - 3 + channel] +
-				source[baseIndex - stride + channel] +
-				source[baseIndex - stride + 3 + channel] +
-				source[baseIndex - stride + 6 + channel] +
-				source[baseIndex - 6 + channel] +
-				source[baseIndex - 3 + channel] +
-				source[baseIndex + channel] +
-				source[baseIndex + 3 + channel] +
-				source[baseIndex + 6 + channel] +
-				source[baseIndex + stride - 6 + channel] +
-				source[baseIndex + stride - 3 + channel] +
-				source[baseIndex + stride + channel] +
-				source[baseIndex + stride + 3 + channel] +
-				source[baseIndex + stride + 6 + channel] +
+				source[baseIndex - 2 * stride + 6 + channel] + source[baseIndex - stride - 6 + channel] +
+				source[baseIndex - stride - 3 + channel] + source[baseIndex - stride + channel] +
+				source[baseIndex - stride + 3 + channel] + source[baseIndex - stride + 6 + channel] +
+				source[baseIndex - 6 + channel] + source[baseIndex - 3 + channel] +
+				source[baseIndex + channel] + source[baseIndex + 3 + channel] +
+				source[baseIndex + 6 + channel] + source[baseIndex + stride - 6 + channel] +
+				source[baseIndex + stride - 3 + channel] + source[baseIndex + stride + channel] +
+				source[baseIndex + stride + 3 + channel] + source[baseIndex + stride + 6 + channel] +
 				source[baseIndex + 2 * stride - 6 + channel] +
-				source[baseIndex + 2 * stride - 3 + channel] +
-				source[baseIndex + 2 * stride + channel] +
-				source[baseIndex + 2 * stride + 3 + channel] +
-				source[baseIndex + 2 * stride + 6 + channel];
+				source[baseIndex + 2 * stride - 3 + channel] + source[baseIndex + 2 * stride + channel] +
+				source[baseIndex + 2 * stride + 3 + channel] + source[baseIndex + 2 * stride + 6 + channel];
 			output[baseIndex + channel] = (byte)(sum / 25);
 		}
 	}
 
-	private static void BlurEdgePixel(byte[] source, byte[] output, int row, int column,
-		int width, int height, int stride)
+	private static void BlurEdgePixel(byte[] source, byte[] output, int row, int column, int width,
+		int height, int stride)
 	{
 		var baseIndex = row * stride + column * 3;
 		for (var channel = 0; channel < 3; channel++)
@@ -159,8 +142,8 @@ public sealed class BlurPerformanceTests
 		const int Height = 320;
 		const int TotalPixels = Width * Height;
 		var blurComplexity = EstimateComplexity(TotalPixels, BlurBodyInstructionCount);
-		Assert.That(ShouldParallelize(TotalPixels, BlurBodyInstructionCount),
-			Is.True, $"{Width}x{Height} blur ({blurComplexity} complexity) should parallelize, " +
+		Assert.That(ShouldParallelize(TotalPixels, BlurBodyInstructionCount), Is.True,
+			$"{Width}x{Height} blur ({blurComplexity} complexity) should parallelize, " +
 			"complex body compensates for moderate pixel count");
 	}
 
@@ -168,8 +151,7 @@ public sealed class BlurPerformanceTests
 		iterations * Math.Max(bodyInstructionCount, 1);
 
 	public static bool ShouldParallelize(long iterations, int bodyInstructionCount) =>
-		EstimateComplexity(iterations, bodyInstructionCount) >
-		InstructionsToMlir.ComplexityThreshold;
+		EstimateComplexity(iterations, bodyInstructionCount) > InstructionsToMlir.ComplexityThreshold;
 
 	/// <summary>
 	/// Brightness: 3 channels × (read + add + clamp) ≈ 6 instructions per pixel.
@@ -216,7 +198,15 @@ public sealed class BlurPerformanceTests
 		var singleTime = MeasureSingleThread(pixels, Width, Height, Iterations);
 		var parallelTime = MeasureParallelCpu(pixels, Width, Height, Iterations);
 		var speedup = singleTime / parallelTime;
-		Console.WriteLine($"2K image blur ({Width}x{Height} = {Width * Height} pixels, {Iterations} iterations):");
+		Console.WriteLine($"2K image blur ({
+			Width
+		}x{
+			Height
+		} = {
+			Width * Height
+		} pixels, {
+			Iterations
+		} iterations):");
 		Console.WriteLine($"  SingleThread: {singleTime.TotalMilliseconds:F2}ms");
 		Console.WriteLine($"  ParallelCpu:  {parallelTime.TotalMilliseconds:F2}ms");
 		Console.WriteLine($"  Speedup:      {speedup:F2}x");
@@ -235,11 +225,23 @@ public sealed class BlurPerformanceTests
 		var parallelTime = MeasureParallelCpu(pixels, Width, Height, Iterations);
 		var cpuSpeedup = singleTime / parallelTime;
 		var projectedGpuMs = singleTime.TotalMilliseconds / ExpectedGpuSpeedupOverSingleThread;
-		Console.WriteLine($"4K image blur ({Width}x{Height} = {Width * Height} pixels, {Iterations} iterations):");
+		Console.WriteLine($"4K image blur ({
+			Width
+		}x{
+			Height
+		} = {
+			Width * Height
+		} pixels, {
+			Iterations
+		} iterations):");
 		Console.WriteLine($"  SingleThread: {singleTime.TotalMilliseconds:F2}ms");
 		Console.WriteLine($"  ParallelCpu:  {parallelTime.TotalMilliseconds:F2}ms");
 		Console.WriteLine($"  CPU Speedup:  {cpuSpeedup:F2}x");
-		Console.WriteLine($"  Projected GPU: ~{projectedGpuMs:F2}ms ({ExpectedGpuSpeedupOverSingleThread:F0}x from CUDA reference)");
+		Console.WriteLine($"  Projected GPU: ~{
+			projectedGpuMs
+			:F2}ms ({
+			ExpectedGpuSpeedupOverSingleThread
+			:F0}x from CUDA reference)");
 		Assert.That(cpuSpeedup, Is.GreaterThan(1.5),
 			"CPU parallel should provide at least 1.5x speedup for 4K blur");
 		Assert.That(projectedGpuMs, Is.LessThan(parallelTime.TotalMilliseconds),

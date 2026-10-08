@@ -1,5 +1,6 @@
 //#define LOG_OPERATORS_PARSING
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
@@ -25,7 +26,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 						? to.Instance!
 						: Instance!)
 			} {
-				(Method.Name is UnaryOperator.Not || Method.Name is BinaryOperator.Is && isNot
+				(Method.Name is UnaryOperator.Not || (Method.Name is BinaryOperator.Is && isNot)
 					? "is "
 					: "")
 			}{
@@ -45,7 +46,8 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		Console.WriteLine("Binary.Parse " + input.ToString() + ", postfixTokens=" + postfixTokens.Count);
 #endif
 		if (postfixTokens.Count < 3)
-			throw new IncompleteTokensForBinaryExpression(body, input, postfixTokens); //ncrunch: no coverage
+			throw new IncompleteTokensForBinaryExpression(body, input,
+				postfixTokens); //ncrunch: no coverage
 		ValidateInOperatorUsage(input);
 		return BuildBinaryExpression(body, input, postfixTokens.Pop(), postfixTokens);
 	}
@@ -70,7 +72,8 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		return false;
 	}
 
-	public sealed class IncompleteTokensForBinaryExpression(Body body, ReadOnlySpan<char> input,
+	public sealed class IncompleteTokensForBinaryExpression(Body body,
+		ReadOnlySpan<char> input,
 		IEnumerable<Range> postfixTokens) : ParsingFailed(body, //ncrunch: no coverage
 		string.Join(", ", input.GetTextsFromRanges(postfixTokens).Reverse()));
 
@@ -124,23 +127,22 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			return new Binary(right, right.ReturnType.GetMethod(BinaryOperator.In, [left]), [left]);
 		if (operatorToken is BinaryOperator.Is && left.ReturnType.IsGeneric &&
 			left.ReturnType is not GenericTypeImplementation)
-			return new Binary(left,
-				body.Method.GetType(Strict.Language.Type.Any).GetMethod(operatorToken, [right]),
+			return new Binary(left, body.Method.GetType(Type.Any).GetMethod(operatorToken, [right]),
 				[right]);
 		if (operatorToken is BinaryOperator.Plus && !left.ReturnType.IsText &&
-			!left.ReturnType.IsList && !left.ReturnType.IsDictionary &&
-			right.ReturnType.IsText && !HasMatchingPlusForText(left, right))
+			!left.ReturnType.IsList && !left.ReturnType.IsDictionary && right.ReturnType.IsText &&
+			!HasMatchingPlusForText(left, right))
 			return BuildTextConcatenation(left, right);
 		if (operatorToken is BinaryOperator.Plus && left.ReturnType.IsList && right.ReturnType.IsList)
 			try
 			{
 				return new Binary(left, left.ReturnType.GetMethod(operatorToken, [right]), [right]);
 			}
-			catch (Language.Type.ArgumentsDoNotMatchMethodParameters)
+			catch (Type.ArgumentsDoNotMatchMethodParameters)
 			{
 				return new Binary(left,
-					left.ReturnType.AvailableMethods[operatorToken].First(method => method.Parameters.Count == 1 &&
-						method.Parameters[0].Type.IsList), [right]);
+					left.ReturnType.AvailableMethods[operatorToken].First(method =>
+						method.Parameters.Count == 1 && method.Parameters[0].Type.IsList), [right]);
 			}
 		return new Binary(left, left.ReturnType.GetMethod(operatorToken, [right]), [right]);
 	}
@@ -151,7 +153,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		{
 			return left.ReturnType.FindMethod(BinaryOperator.Plus, [right]) != null;
 		}
-		catch (Language.Type.ArgumentsDoNotMatchMethodParameters)
+		catch (Type.ArgumentsDoNotMatchMethodParameters)
 		{
 			return false;
 		}
@@ -171,8 +173,8 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 #endif
 		return input[nextTokenRange].IsNot()
 			? BuildNot(GetUnaryOrBuildNestedBinary(body, input, tokens, checkRightForIsTypeComparison))
-			: nextTokenRange.End.Value == nextTokenRange.Start.Value + 1 &&
-			input[nextTokenRange.Start.Value].IsSingleCharacterOperator() ||
+			: (nextTokenRange.End.Value == nextTokenRange.Start.Value + 1 &&
+				input[nextTokenRange.Start.Value].IsSingleCharacterOperator()) ||
 			input[nextTokenRange].IsMultiCharacterOperator()
 				? BuildBinaryExpression(body, input, nextTokenRange, tokens)
 				: checkRightForIsTypeComparison

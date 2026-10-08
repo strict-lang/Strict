@@ -2,6 +2,7 @@ using Eto.Parse;
 using Eto.Parse.Grammars;
 using NUnit.Framework;
 using Strict.Language;
+using Type = Strict.Language.Type;
 
 namespace Strict.Grammar.Tests;
 
@@ -28,11 +29,15 @@ public sealed class GrammarTests
 	[TestCase("Run\n\tresult is in Range(0, 10) then result else notANumber(value)")]
 	[TestCase("Run\n\tCharacter(\"A\") to Number is notANumber")]
 	[TestCase("not Boolean\n\tnot true is false\n\tvalue then false else true")]
-	[TestCase("and(other) Boolean\n\ttrue and false is false\n\ttrue and true\n\tvalue and other then true else false")]
-	[TestCase("or(other) Boolean\n\ttrue or false\n\tfalse or false is false\n\tvalue or other then false else true")]
-	[TestCase("xor(other) Boolean\n\ttrue xor true is false\n\tfalse xor true\n\tnot (false xor false)\n\t(value and other) or (not value and not other) then false else true")]
+	[TestCase(
+		"and(other) Boolean\n\ttrue and false is false\n\ttrue and true\n\tvalue and other then true else false")]
+	[TestCase(
+		"or(other) Boolean\n\ttrue or false\n\tfalse or false is false\n\tvalue or other then false else true")]
+	[TestCase(
+		"xor(other) Boolean\n\ttrue xor true is false\n\tfalse xor true\n\tnot (false xor false)\n\t(value and other) or (not value and not other) then false else true")]
 	[TestCase("is(other) Boolean\n\tnot false\n\tfalse is not true\n\tvalue is other")]
-	[TestCase("to Text\n\ttrue to Text is \"true\"\n\tnot true to Text is \"false\"\n\tvalue then \"true\" else \"false\"")]
+	[TestCase(
+		"to Text\n\ttrue to Text is \"true\"\n\tnot true to Text is \"false\"\n\tvalue then \"true\" else \"false\"")]
 	[TestCase("method(arg Number, argTwo Number)")]
 	[TestCase("has keysAndValues List(key Generic, mappedValue Generic)")]
 	[TestCase("Run\n\tError(\"Key \" + key + \" not found\")")]
@@ -41,22 +46,26 @@ public sealed class GrammarTests
 	[TestCase("Get(key Generic) Generic\n\tfor keysAndValues\n\t\tif value.Key is key\n" +
 		"\t\t\treturn value.Value")]
 	[TestCase("Add(key Generic, mappedValue Generic) Mutable(Dictionary)\n" +
-		"\tconstant DuplicateKey = Error\n" +
-		"\tDictionary((1, 1)).Add(1, 1) is DuplicateKey")]
-	[TestCase("CompareTo(member) Number\n\tvalue > member.Value then 1 else value < member.Value then -1 else 0")]
+		"\tconstant DuplicateKey = Error\n" + "\tDictionary((1, 1)).Add(1, 1) is DuplicateKey")]
+	[TestCase(
+		"CompareTo(member) Number\n\tvalue > member.Value then 1 else value < member.Value then -1 else 0")]
 	[TestCase("Run\n\tsomeList(1) = 5")]
 	[TestCase("has text with Length > 1 and \" \" is not in value")]
 	[TestCase("digits Numbers\n\t1.digits is (1)")]
 	[TestCase(">=(other) Boolean\n\t0 >= 0\n\tvalue >= other")]
-	[TestCase("Reverse Range\n\tLength > 0 then Range(ExclusiveEnd - 1, Start - 1) else Range(ExclusiveEnd + 1, Start + 1)")]
+	[TestCase(
+		"Reverse Range\n\tLength > 0 then Range(ExclusiveEnd - 1, Start - 1) else Range(ExclusiveEnd + 1, Start + 1)")]
 	[TestCase("to Text\n\tto Text is \"\tat Stacktrace.to in Base\\Stacktrace.strict:line 7\"")]
 	[TestCase("+(other) Text\n\t+(\"more\") is \"more\"")]
-	[TestCase("+(other) List\n\t(1) + (\"Hi\") is Error(\"Cannot downcast Text to Number for list: \\\"Hi\\\"\")")]
+	[TestCase(
+		"+(other) List\n\t(1) + (\"Hi\") is Error(\"Cannot downcast Text to Number for list: \\\"Hi\\\"\")")]
 	[TestCase("to Number\n\t\"1e10\" to Number is 1e10")]
 	[TestCase("has InitialValue Generic or None")]
-	[TestCase("from(generic)\n\tif generic is\n\t\tNumber then generic\n\t\tIterator then generic.Length\n\t\telse 0")]
+	[TestCase(
+		"from(generic)\n\tif generic is\n\t\tNumber then generic\n\t\tIterator then generic.Length\n\t\telse 0")]
 	[TestCase("Run\n\t(\"3\", \"4\") + (1, 2) to Text is (\"3\", \"4\", \"(1, 2)\")")]
-	[TestCase("Run\n\t(1) + (\"Hi\") is Error(\"Cannot downcast Text to Number for list: Text \\\"Hi\\\"\")")]
+	[TestCase(
+		"Run\n\t(1) + (\"Hi\") is Error(\"Cannot downcast Text to Number for list: Text \\\"Hi\\\"\")")]
 	public void ParsesValidStrictCode(string code)
 	{
 		var result = BuildGrammar().Match(code + "\n");
@@ -83,11 +92,12 @@ public sealed class GrammarTests
 		var basePath = Directory.Exists(localPath)
 			? localPath
 			: Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..");
-		foreach (var file in Directory.GetFiles(basePath, "*" + Language.Type.Extension))
+		foreach (var file in Directory.GetFiles(basePath, "*" + Type.Extension))
 		{
 			// If the last line fails, check the .strict file if there is an extra empty line at the end
 			var result = BuildGrammar().Match(File.ReadAllText(file).Replace("\r\n", "\n") + "\n");
-			Assert.That(result.Success, Is.True, file + ": Check if the last line is not empty. " + GetErrorDetails("", result));
+			Assert.That(result.Success, Is.True,
+				file + ": Check if the last line is not empty. " + GetErrorDetails("", result));
 		}
 	}
 }

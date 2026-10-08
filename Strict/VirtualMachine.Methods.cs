@@ -1,9 +1,9 @@
+using System.Globalization;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
-using System.Globalization;
 using Type = Strict.Language.Type;
 
 namespace Strict;
@@ -25,10 +25,9 @@ public sealed partial class VirtualMachine
 			? Memory.Registers[info.InstanceRegister.Value]
 			: implicitInstance;
 		var invokeInstructions = invoke.CachedInstructions ??=
-			GetPrecompiledMethodInstructions(invoke) ??
-			throw Fail("No precompiled method instructions found for '" +
-				info.TypeFullName + "." + info.MethodName +
-				"' with return type " + info.ReturnTypeName);
+			GetPrecompiledMethodInstructions(invoke) ?? throw Fail(
+				"No precompiled method instructions found for '" + info.TypeFullName + "." +
+				info.MethodName + "' with return type " + info.ReturnTypeName);
 		var childScope = InitializeChildScope();
 		var previousMethodContext = currentMethodContext;
 		currentMethodContext = info.TypeFullName + "." + info.MethodName;
@@ -69,8 +68,7 @@ public sealed partial class VirtualMachine
 		if (result == null || info.MethodName != Keyword.For || !result.Value.IsList)
 			return result;
 		var materialized = result.Value;
-		if (materialized.List.Items.Count == 0 ||
-			!materialized.List.Items.All(item => item.IsList))
+		if (materialized.List.Items.Count == 0 || !materialized.List.Items.All(item => item.IsList))
 			return result;
 		var flattenedItems = new List<ValueInstance>();
 		foreach (var nested in materialized.List.Items)
@@ -97,17 +95,17 @@ public sealed partial class VirtualMachine
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.basePackage)),
 			BinaryOperator.To => hasInstance && TryHandleToConversion(invoke, implicitInstance),
 			"Length" or "Count" => hasInstance && TryHandleNativeLength(invoke, implicitInstance),
-			"ReadLines" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" =>
-				hasInstance && TryHandleNativeFileMethod(invoke, implicitInstance),
-			"Increment" => TryHandleIncrementDecrement(invoke, isIncrement: true, implicitInstance),
-			"Decrement" => TryHandleIncrementDecrement(invoke, isIncrement: false, implicitInstance),
+			"ReadLines" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" => hasInstance &&
+				TryHandleNativeFileMethod(invoke, implicitInstance),
+			"Increment" => TryHandleIncrementDecrement(invoke, true, implicitInstance),
+			"Decrement" => TryHandleIncrementDecrement(invoke, false, implicitInstance),
 			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" or "Upper" or "Lower"
-				or "Capitalize" or "Trim" or "TrimStart" or "TrimEnd" =>
-				hasInstance && TryHandleNativeTextMethod(invoke, implicitInstance),
+				or "Capitalize" or "Trim" or "TrimStart"
+				or "TrimEnd" => hasInstance && TryHandleNativeTextMethod(invoke, implicitInstance),
 			// Avoid infinite recursion when Boolean.strict operators are compiled as Invoke
 			// (their .strict bodies historically used the same operators recursively).
-			BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor or "not" =>
-				hasInstance && TryHandleNativeBooleanMethod(invoke, implicitInstance),
+			BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor or "not" => hasInstance &&
+				TryHandleNativeBooleanMethod(invoke, implicitInstance),
 			_ => (info.InstanceRegister.HasValue || implicitInstance != null) &&
 				TryHandleNativeTraitInstanceMethod(invoke, implicitInstance)
 		};
@@ -119,8 +117,7 @@ public sealed partial class VirtualMachine
 			? Memory.Registers[info.InstanceRegister.Value]
 			: implicitInstance!.Value;
 
-	private bool TryHandleNativeTraitInstanceMethod(Invoke invoke,
-		ValueInstance? implicitInstance)
+	private bool TryHandleNativeTraitInstanceMethod(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
 		var instanceValue = ResolveInvokeInstance(info, implicitInstance);
@@ -195,9 +192,10 @@ public sealed partial class VirtualMachine
 
 	private long GetFileHandle(ValueInstance instance)
 	{
-		if (!FileValue.TryGetHandle(instance, executable.basePackage.GetType(Type.File), out var handle))
-			throw Fail("File instance has no native handle");
-		return handle;
+		return FileValue.TryGetHandle(instance, executable.basePackage.GetType(Type.File),
+			out var handle)
+			? handle
+			: throw Fail("File instance has no native handle");
 	}
 
 	private void WriteFile(long handle, ValueInstance value, bool writesTextLines)
@@ -275,8 +273,7 @@ public sealed partial class VirtualMachine
 		return false;
 	}
 
-	private bool TryHandleNativeProcessInstanceMethod(Invoke invoke,
-		ValueInstance? implicitInstance)
+	private bool TryHandleNativeProcessInstanceMethod(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
 		if (GetShortTypeName(info.TypeFullName) != "Process" &&
@@ -285,8 +282,8 @@ public sealed partial class VirtualMachine
 		if (info.MethodName == "IsAvailable")
 		{
 			var instance = ResolveInvokeInstance(info, implicitInstance);
-			Memory.Registers[invoke.Register] =
-				new ValueInstance(executable.booleanType, GetProcessExecutable(instance).Length > 0);
+			Memory.Registers[invoke.Register] = new ValueInstance(executable.booleanType,
+				GetProcessExecutable(instance).Length > 0);
 			return true;
 		}
 		if (info.MethodName == "Run" && info.ArgumentRegisters.Length == 1)
@@ -340,11 +337,10 @@ public sealed partial class VirtualMachine
 	{
 		var resultType = executable.basePackage.GetType("ProcessResult");
 		var numberType = executable.numberType;
-		return new ValueInstance(resultType,
-		[
+		return new ValueInstance(resultType, [
 			new ValueInstance(numberType, exitCode),
-			new ValueInstance(output ?? ""),
-			new ValueInstance(error ?? "")
+			new ValueInstance(output),
+			new ValueInstance(error)
 		]);
 	}
 
@@ -382,9 +378,9 @@ public sealed partial class VirtualMachine
 	{
 		if (value.IsText)
 			return value.Text;
-		if (TryGetPathText(value, out var pathText))
-			return pathText;
-		return value.ToExpressionCodeString();
+		return TryGetPathText(value, out var pathText)
+			? pathText
+			: value.ToExpressionCodeString();
 	}
 
 	private bool TryHandleNativeTraitStaticMethod(Invoke invoke)
@@ -410,8 +406,8 @@ public sealed partial class VirtualMachine
 		var width = (int)Memory.Registers[info.ArgumentRegisters[2]].Number;
 		var height = (int)Memory.Registers[info.ArgumentRegisters[3]].Number;
 		var pixelData = ExtractRgbaBytes(colorsArg);
-		return NativePluginLoader.TrySaveNativeImage(typeName, pathText, pixelData, width,
-			height, searchDirectory);
+		return NativePluginLoader.TrySaveNativeImage(typeName, pathText, pixelData, width, height,
+			searchDirectory);
 	}
 
 	private static byte[] ExtractRgbaBytes(ValueInstance listValue)
@@ -466,8 +462,7 @@ public sealed partial class VirtualMachine
 	private static bool IsColorByteType(ValueInstance colorInstance) =>
 		colorInstance.GetType().Name.Equals("Color", StringComparison.OrdinalIgnoreCase);
 
-	private static byte ClampToByte(double value) =>
-		(byte)Math.Clamp(Math.Round(value), 0, 255);
+	private static byte ClampToByte(double value) => (byte)Math.Clamp(Math.Round(value), 0, 255);
 
 	private bool ExecuteFromInvoke(Invoke invoke, Type returnType)
 	{
@@ -539,9 +534,8 @@ public sealed partial class VirtualMachine
 	private ValueInstance[]? BuildNativePluginValues(Type traitType, byte[] bytes, int width,
 		int height)
 	{
-		var dataMethods = traitType.Methods
-			.Where(m => !string.Equals(m.Name, Method.From, StringComparison.OrdinalIgnoreCase))
-			.ToList();
+		var dataMethods = traitType.Methods.
+			Where(m => !string.Equals(m.Name, Method.From, StringComparison.OrdinalIgnoreCase)).ToList();
 		if (dataMethods.Count == 0)
 			return null;
 		var values = new ValueInstance[dataMethods.Count];
@@ -579,9 +573,10 @@ public sealed partial class VirtualMachine
 			var g = bytes[colorIndex * 4 + 1] / 255.0;
 			var b = bytes[colorIndex * 4 + 2] / 255.0;
 			var a = bytes[colorIndex * 4 + 3] / 255.0;
-			colorValues[colorIndex] = new ValueInstance(elementType,
-				[new ValueInstance(numberType, r), new ValueInstance(numberType, g),
-				 new ValueInstance(numberType, b), new ValueInstance(numberType, a)]);
+			colorValues[colorIndex] = new ValueInstance(elementType, [
+				new ValueInstance(numberType, r), new ValueInstance(numberType, g),
+				new ValueInstance(numberType, b), new ValueInstance(numberType, a)
+			]);
 		}
 		return new ValueInstance(listType, colorValues);
 	}
@@ -598,11 +593,10 @@ public sealed partial class VirtualMachine
 		}
 		if (conversionType.IsNumber)
 		{
-			Memory.Registers[invoke.Register] =
-				rawValue.IsText
-					? new ValueInstance(conversionType,
-						Convert.ToDouble(rawValue.Text, CultureInfo.InvariantCulture))
-					: rawValue;
+			Memory.Registers[invoke.Register] = rawValue.IsText
+				? new ValueInstance(conversionType,
+					Convert.ToDouble(rawValue.Text, CultureInfo.InvariantCulture))
+				: rawValue;
 			return true;
 		}
 		// "name to Type" / "name to Name" used heavily by Language parsers
@@ -662,11 +656,10 @@ public sealed partial class VirtualMachine
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
 		executable.FindInstructions(method.Type, method) ??
-		executable.FindInstructions(method.Type.Name, method.Name,
-			method.Parameters.Count, method.ReturnType.Name) ??
-		executable.FindInstructions(
-			nameof(Strict) + Context.ParentSeparator + method.Type.Name, method.Name,
-			method.Parameters.Count, method.ReturnType.Name) ??
+		executable.FindInstructions(method.Type.Name, method.Name, method.Parameters.Count,
+			method.ReturnType.Name) ??
+		executable.FindInstructions(nameof(Strict) + Context.ParentSeparator + method.Type.Name,
+			method.Name, method.Parameters.Count, method.ReturnType.Name) ??
 		FindInstructionsWithMissingRootPackagePrefix(method) ??
 		FindInstructionsWithStrippedPackagePrefix(method);
 
@@ -694,9 +687,8 @@ public sealed partial class VirtualMachine
 		var info = invoke.MethodInfo;
 		return executable.FindInstructions(info.TypeFullName, info.MethodName,
 				info.ParameterNames.Length, info.ReturnTypeName) ??
-			executable.FindInstructions(
-				nameof(Strict) + Context.ParentSeparator + info.TypeFullName, info.MethodName,
-				info.ParameterNames.Length, info.ReturnTypeName) ??
+			executable.FindInstructions(nameof(Strict) + Context.ParentSeparator + info.TypeFullName,
+				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName) ??
 			FindInstructionsFromInvokeInfo(info);
 	}
 
@@ -704,21 +696,18 @@ public sealed partial class VirtualMachine
 	{
 		var strictPrefix = nameof(Strict) + Context.ParentSeparator;
 		if (info.TypeFullName.StartsWith(strictPrefix, StringComparison.Ordinal))
-			return executable.FindInstructions(info.TypeFullName[strictPrefix.Length..],
-					info.MethodName, info.ParameterNames.Length, info.ReturnTypeName) ??
-				FindInstructionsByTypeSuffix(info);
-		return executable.FindInstructions(strictPrefix + info.TypeFullName,
-				info.MethodName, info.ParameterNames.Length, info.ReturnTypeName) ??
-			FindInstructionsByTypeSuffix(info);
+			return executable.FindInstructions(info.TypeFullName[strictPrefix.Length..], info.MethodName,
+				info.ParameterNames.Length, info.ReturnTypeName) ?? FindInstructionsByTypeSuffix(info);
+		return executable.FindInstructions(strictPrefix + info.TypeFullName, info.MethodName,
+			info.ParameterNames.Length, info.ReturnTypeName) ?? FindInstructionsByTypeSuffix(info);
 	}
 
 	private List<Instruction>? FindInstructionsByTypeSuffix(InvokeMethodInfo info)
 	{
 		var typeFullName = info.TypeFullName;
 		var strictPrefix = nameof(Strict) + Context.ParentSeparator;
-		for (var separatorIndex = typeFullName.IndexOf(Context.ParentSeparator);
-			separatorIndex >= 0; separatorIndex = typeFullName.IndexOf(Context.ParentSeparator,
-				separatorIndex + 1))
+		for (var separatorIndex = typeFullName.IndexOf(Context.ParentSeparator); separatorIndex >= 0;
+			separatorIndex = typeFullName.IndexOf(Context.ParentSeparator, separatorIndex + 1))
 		{
 			var strippedTypeName = typeFullName[(separatorIndex + 1)..];
 			var foundInstructions =
@@ -731,13 +720,12 @@ public sealed partial class VirtualMachine
 		return null;
 	}
 
-	private void InitializeMethodCallScope(InvokeMethodInfo info,
-		ValueInstance[] evaluatedArguments, ValueInstance? evaluatedInstance)
+	private void InitializeMethodCallScope(InvokeMethodInfo info, ValueInstance[] evaluatedArguments,
+		ValueInstance? evaluatedInstance)
 	{
 		for (var parameterIndex = 0; parameterIndex < info.ParameterNames.Length &&
 			parameterIndex < evaluatedArguments.Length; parameterIndex++)
-			Memory.Frame.Set(info.ParameterNames[parameterIndex],
-				evaluatedArguments[parameterIndex]);
+			Memory.Frame.Set(info.ParameterNames[parameterIndex], evaluatedArguments[parameterIndex]);
 		for (var parameterIndex = evaluatedArguments.Length;
 			parameterIndex < info.ParameterNames.Length; parameterIndex++)
 			Memory.Frame.Set(info.ParameterNames[parameterIndex],
@@ -745,12 +733,12 @@ public sealed partial class VirtualMachine
 		if (!evaluatedInstance.HasValue)
 			return;
 		var instance = evaluatedInstance.Value;
-		Memory.Frame.Set(Type.ValueLowercase, instance, isMember: true);
+		Memory.Frame.Set(Type.ValueLowercase, instance, true);
 		if (instance.IsText || instance.IsList)
 		{
-			Memory.Frame.Set(CallFrame.ElementsSymbolId, instance, isMember: true);
+			Memory.Frame.Set(CallFrame.ElementsSymbolId, instance, true);
 			if (instance.IsText)
-				Memory.Frame.Set("characters", instance, isMember: true);
+				Memory.Frame.Set("characters", instance, true);
 			return;
 		}
 		var flatNumeric = instance.TryGetFlatNumericArrayInstance();
@@ -762,7 +750,7 @@ public sealed partial class VirtualMachine
 				if (!flatMembers[memberIndex].Type.IsTrait)
 					Memory.Frame.Set(flatMembers[memberIndex].Name,
 						new ValueInstance(flatMembers[memberIndex].Type, flatNumeric.GetFlat(memberIndex)),
-						isMember: true);
+						true);
 			return;
 		}
 		var typeInstance = instance.TryGetValueTypeInstance();
@@ -782,10 +770,9 @@ public sealed partial class VirtualMachine
 		{
 			return;
 		}
-		var firstNonTraitMember = instanceType.Members.FirstOrDefault(member =>
-			!member.Type.IsTrait);
+		var firstNonTraitMember = instanceType.Members.FirstOrDefault(member => !member.Type.IsTrait);
 		if (firstNonTraitMember != null)
-			Memory.Frame.Set(firstNonTraitMember.Name, instance, isMember: true);
+			Memory.Frame.Set(firstNonTraitMember.Name, instance, true);
 	}
 
 	private bool TrySetScopeMembersFromTypeMembers(ValueTypeInstance typeInstance)
@@ -796,8 +783,7 @@ public sealed partial class VirtualMachine
 			for (var memberIndex = 0; memberIndex < members.Count &&
 				memberIndex < typeInstance.Values.Length; memberIndex++)
 				if (!members[memberIndex].Type.IsTrait)
-					Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex],
-						isMember: true);
+					Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex], true);
 			return true;
 		}
 		if (!TryGetBinaryMembers(typeInstance.ReturnType, out var binaryMembers) ||
@@ -805,14 +791,7 @@ public sealed partial class VirtualMachine
 			return false;
 		for (var memberIndex = 0; memberIndex < binaryMembers.Count &&
 			memberIndex < typeInstance.Values.Length; memberIndex++)
-		{
-			var memberType = typeInstance.ReturnType.FindType(binaryMembers[memberIndex].FullTypeName) ??
-				typeInstance.ReturnType.FindType(GetShortTypeName(binaryMembers[memberIndex].FullTypeName));
-			if (memberType is { IsTrait: true })
-				continue;
-			Memory.Frame.Set(binaryMembers[memberIndex].Name, typeInstance.Values[memberIndex],
-				isMember: true);
-		}
+			Memory.Frame.Set(binaryMembers[memberIndex].Name, typeInstance.Values[memberIndex], true);
 		return true;
 	}
 
@@ -870,8 +849,12 @@ public sealed partial class VirtualMachine
 	}
 
 	private readonly record struct ChildScopeState(List<Instruction> SavedInstructions,
-		int SavedInstructionIndex, bool SavedConditionFlag, ValueInstance? SavedReturns,
-		CallFrame SavedFrame, int StackDepth, CallFrame Frame);
+		int SavedInstructionIndex,
+		bool SavedConditionFlag,
+		ValueInstance? SavedReturns,
+		CallFrame SavedFrame,
+		int StackDepth,
+		CallFrame Frame);
 
 	private bool TryHandleNativeBooleanMethod(Invoke invoke, ValueInstance? implicitInstance)
 	{
@@ -888,8 +871,7 @@ public sealed partial class VirtualMachine
 		switch (info.MethodName)
 		{
 		case "not":
-			Memory.Registers[invoke.Register] =
-				new ValueInstance(executable.booleanType, !left);
+			Memory.Registers[invoke.Register] = new ValueInstance(executable.booleanType, !left);
 			return true;
 		case BinaryOperator.And:
 		case BinaryOperator.Or:
@@ -903,8 +885,7 @@ public sealed partial class VirtualMachine
 				BinaryOperator.Or => left || right,
 				_ => left ^ right
 			};
-			Memory.Registers[invoke.Register] =
-				new ValueInstance(executable.booleanType, result);
+			Memory.Registers[invoke.Register] = new ValueInstance(executable.booleanType, result);
 			return true;
 		default:
 			return false;
@@ -966,7 +947,8 @@ public sealed partial class VirtualMachine
 		return new ValueInstance(text.Substring(start, length));
 	}
 
-	private bool TryGetNativeLength(ValueInstance instance, string memberName, out ValueInstance result)
+	private bool TryGetNativeLength(ValueInstance instance, string memberName,
+		out ValueInstance result)
 	{
 		if (memberName is "Length" or "Count")
 		{
@@ -995,9 +977,8 @@ public sealed partial class VirtualMachine
 	{
 		if (!instance.HasValue)
 			return false;
-		var instanceType = instance.GetType();
-		return instanceType != null &&
-			instanceType.IsSameOrCanBeUsedAs(executable.basePackage.GetType(Type.File));
+		return instance.GetType().
+			IsSameOrCanBeUsedAs(executable.basePackage.GetType(Type.File));
 	}
 
 	/// <summary>
@@ -1025,7 +1006,8 @@ public sealed partial class VirtualMachine
 		return false;
 	}
 
-	private void DisposeTrackedValues(CallFrame frame, ValueInstance? returnValue, CallFrame? parentFrame)
+	private void DisposeTrackedValues(CallFrame frame, ValueInstance? returnValue,
+		CallFrame? parentFrame)
 	{
 		foreach (var value in frame.DisposableValues.ToArray())
 			if (returnValue.HasValue && value.Equals(returnValue.Value))
@@ -1036,8 +1018,11 @@ public sealed partial class VirtualMachine
 					frame.RemoveDisposable(value);
 				}
 			}
-			else if (FileValue.TryGetHandle(value, executable.basePackage.GetType(Type.File), out var handle))
+			else if (FileValue.TryGetHandle(value, executable.basePackage.GetType(Type.File),
+				out var handle))
+			{
 				NativeFileRegistry.Close(handle);
+			}
 	}
 
 	internal static ValueInstance ConvertToText(ValueInstance rawValue)
@@ -1045,11 +1030,9 @@ public sealed partial class VirtualMachine
 		if (rawValue.IsText)
 			return rawValue;
 		if (rawValue.TryGetValueTypeInstance() is { } typeInstance)
-		{
-			if (TryGetSingleTextMemberValue(typeInstance, out var value))
-				return value;
-			return new ValueInstance(typeInstance.ToAutomaticText());
-		}
+			return TryGetSingleTextMemberValue(typeInstance, out var value)
+				? value
+				: new ValueInstance(typeInstance.ToAutomaticText());
 		return new ValueInstance(rawValue.ToExpressionCodeString());
 	}
 

@@ -20,8 +20,8 @@ public sealed class ParameterCall(Parameter parameter, int lineNumber = 0)
 
 	//ncrunch: no coverage start
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) || other is ParameterCall pc &&
-		Parameter.Name == pc.Parameter.Name && Parameter.Type == pc.Parameter.Type;
+		ReferenceEquals(this, other) || (other is ParameterCall pc &&
+			Parameter.Name == pc.Parameter.Name && Parameter.Type == pc.Parameter.Type);
 
 	public override int GetHashCode() => Parameter.GetHashCode();
 }

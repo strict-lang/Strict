@@ -13,11 +13,11 @@ public sealed class StrictExpressionsConversionTests
 		{
 			"Expression", "Value", "BooleanExpression", "NumberExpression", "TextExpression",
 			"NotExpression", "Return", "VariableCall", "ParameterCall", "Instance", "MemberCall",
-			"MethodCall", "Binary", "Declaration", "MutableReassignment", "ListExpression",
-			"ListCall", "DictionaryExpression", "IfExpression", "ForExpression", "SelectorIf",
-			"To", "TypeComparison", "TypePattern", "ValueInstance", "ValueListInstance",
-			"ValueTypeInstance", "ValueDictionaryInstance", "PhraseTokenizer", "ShuntingYard",
-			"ExpressionParser", "NumberChars"
+			"MethodCall", "Binary", "Declaration", "MutableReassignment", "ListExpression", "ListCall",
+			"DictionaryExpression", "IfExpression", "ForExpression", "SelectorIf", "To",
+			"TypeComparison", "TypePattern", "ValueInstance", "ValueListInstance", "ValueTypeInstance",
+			"ValueDictionaryInstance", "PhraseTokenizer", "ShuntingYard", "ExpressionParser",
+			"NumberChars"
 		};
 		foreach (var typeName in expected)
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True,
@@ -34,8 +34,8 @@ public sealed class StrictExpressionsConversionTests
 			SelectMany(file => File.ReadAllLines(file).Select((line, lineIndex) =>
 				new { file, line, LineNumber = lineIndex + 1 })).
 			Where(item => item.line.StartsWith("has ", StringComparison.Ordinal) &&
-				forbidden.Any(name => item.line.Contains(name, StringComparison.Ordinal))).
-			Select(item => Path.GetFileName(item.file) + ":" + item.LineNumber + ": " + item.line.Trim());
+				forbidden.Any(name => item.line.Contains(name, StringComparison.Ordinal))).Select(item =>
+				Path.GetFileName(item.file) + ":" + item.LineNumber + ": " + item.line.Trim());
 		Assert.That(offenders, Is.Empty);
 	}
 

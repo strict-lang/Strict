@@ -7,8 +7,9 @@ namespace Strict.Language;
 /// </summary>
 public sealed class GenericType : Type
 {
-	public GenericType(Type generic, IReadOnlyList<NamedType> genericImplementations) :
-		base(generic.Package, new TypeLines(generic.GetImplementationName(genericImplementations),
+	public GenericType(Type generic, IReadOnlyList<NamedType> genericImplementations) : base(
+		generic.Package,
+		new TypeLines(generic.GetImplementationName(genericImplementations),
 			HasWithSpaceAtEnd + generic.Name))
 	{
 		Generic = generic;

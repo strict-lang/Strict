@@ -5,9 +5,9 @@ using NUnit.Framework;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
-using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using Strict.Language;
 using Strict.Language.Tests;
+using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer.Tests;
 
@@ -39,8 +39,7 @@ public sealed class CommandExecutorTests
 	[Test]
 	public void OpeningRunDoesNotParseOrExecuteManualRun()
 	{
-		var uri = new DocumentUri("", "", "BaseTypesTest/BaseTypesTest" + Language.Type.Extension,
-			"", "");
+		var uri = new DocumentUri("", "", "BaseTypesTest/BaseTypesTest" + Type.Extension, "", "");
 		document.AddOrUpdate(uri, "has logger", "Run",
 			"\tconstant worldHelper = MissingSibling(\"World\")", "\tlogger.Log(\"hi\")");
 		document.InitializeContent(uri);
@@ -55,13 +54,13 @@ public sealed class CommandExecutorTests
 	[Test]
 	public void OpeningRunWithInlineTestsStillRunsThem()
 	{
-		var uri = new DocumentUri("", "", "HasTests/HasTests" + Language.Type.Extension, "", "");
+		var uri = new DocumentUri("", "", "HasTests/HasTests" + Type.Extension, "", "");
 		document.AddOrUpdate(uri, "has number", "Run", "\t5 is 5");
 		document.InitializeContent(uri);
 		var diagnostics = document.GetDiagnostics(TestPackage.Instance, uri, languageServer.Object);
 		Assert.That(diagnostics.Select(item => item.Message), Is.Empty);
-		var parsed = TestPackage.Instance.Find("HasTests")?.FindDirectType("HasTests")?.
-			Methods.Single(method => method.Name == Method.Run);
+		var parsed = TestPackage.Instance.Find("HasTests")?.FindDirectType("HasTests")?.Methods.
+			Single(method => method.Name == Method.Run);
 		Assert.That(parsed?.WasParsedAlready, Is.True);
 	}
 
@@ -69,10 +68,9 @@ public sealed class CommandExecutorTests
 	public void ToLocalFileAcceptsVsCodeEncodedWindowsUri()
 	{
 		var path = Path.Combine(Path.GetTempPath(), "StrictUri" + Guid.NewGuid().ToString("N"),
-			"BaseTypesTest" + Language.Type.Extension);
+			"BaseTypesTest" + Type.Extension);
 		var encoded = "file:///" + path.Replace('\\', '/').Replace(":", "%3A");
-		Assert.That(DocumentUri.From(encoded).ToLocalFile(),
-			Is.EqualTo(path).IgnoreCase);
+		Assert.That(DocumentUri.From(encoded).ToLocalFile(), Is.EqualTo(path).IgnoreCase);
 	}
 
 	[Test]
@@ -82,11 +80,10 @@ public sealed class CommandExecutorTests
 		Directory.CreateDirectory(folder);
 		try
 		{
-			await File.WriteAllTextAsync(Path.Combine(folder, "TextHelper" + Language.Type.Extension),
+			await File.WriteAllTextAsync(Path.Combine(folder, "TextHelper" + Type.Extension),
 				"has value Text\nGreet Text\n\t\"Hello, \" + value + \"!\"");
-			var runPath = Path.Combine(folder, "BaseTypesTest" + Language.Type.Extension);
-			await File.WriteAllTextAsync(runPath,
-				"has number\nRun Text\n\tTextHelper(\"World\").Greet");
+			var runPath = Path.Combine(folder, "BaseTypesTest" + Type.Extension);
+			await File.WriteAllTextAsync(runPath, "has number\nRun Text\n\tTextHelper(\"World\").Greet");
 			var encoded = "file:///" + runPath.Replace('\\', '/').Replace(":", "%3A");
 			var uri = DocumentUri.From(encoded);
 			document.AddOrUpdate(uri, await File.ReadAllLinesAsync(runPath));

@@ -1,8 +1,8 @@
 using NUnit.Framework;
-using Strict.Transpiler.Roslyn;
-using Strict.Language;
 using Strict.Expressions;
+using Strict.Language;
 using Strict.Language.Tests;
+using Strict.Transpiler.Roslyn;
 using Type = Strict.Language.Type;
 
 namespace Strict.Transpiler.Tests;
@@ -17,8 +17,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		AssertProgramClass(visitor);
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\tpublic static void Main()" + Environment.NewLine + "\t{"));
-		Assert.That(visitor.FileContent,
-			Contains.Substring("\t\tConsole.WriteLine(\"Hello World\");"));
+		Assert.That(visitor.FileContent, Contains.Substring("\t\tConsole.WriteLine(\"Hello World\");"));
 	}
 
 	private static void AssertProgramClass(CSharpTypeVisitor visitor)
@@ -32,9 +31,8 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	[Test]
 	public void GenerateAppWithImplementingAnotherType()
 	{
-		using var _ = new Type(package,
-				new TypeLines("BaseProgram", "Run")).
-			ParseMembersAndMethods(parser);
+		using var _ =
+			new Type(package, new TypeLines("BaseProgram", "Run")).ParseMembersAndMethods(parser);
 		using var program = new Type(package,
 			new TypeLines("DerivedProgram", "has BaseProgram", "has logger", "Run",
 				"\tlogger.Log(\"Hello World\")")).ParseMembersAndMethods(parser);
@@ -43,8 +41,7 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(visitor.FileContent, Contains.Substring("public class DerivedProgram"));
 		Assert.That(visitor.FileContent,
 			Contains.Substring("\tpublic static void Main()" + Environment.NewLine + "\t{"));
-		Assert.That(visitor.FileContent,
-			Contains.Substring("\t\tConsole.WriteLine(\"Hello World\");"));
+		Assert.That(visitor.FileContent, Contains.Substring("\t\tConsole.WriteLine(\"Hello World\");"));
 	}
 
 	[TestCase("number", "int")]
@@ -52,8 +49,8 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	[TestCase("file", "FileStream")]
 	public void GenerateInterface(string parameter, string expectedType)
 	{
-		using var interfaceType =
-			new Type(package, new TypeLines(Computer, $"Compute({parameter})")).ParseMembersAndMethods(parser);
+		using var interfaceType = new Type(package, new TypeLines(Computer, $"Compute({parameter})")).
+			ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("public interface " + Computer));
@@ -68,16 +65,10 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	{
 		using var program = new Type(package, new TypeLines(
 				// @formatter.off
-				"Program",
-				"has textReader",
-				"has system",
-				"ReadLines Texts",
+				"Program", "has textReader", "has system", "ReadLines Texts",
 				"\tsystem.Write(\"implementing system trait\")",
-				"\tReadLines is \"ReadLines successfully\"",
-				"\t\"ReadLines successfully\"",
-				"Write(lines Texts)",
-				"\tconstant stringBuilder = \"printed successfully\"",
-				"\tfor lines",
+				"\tReadLines is \"ReadLines successfully\"", "\t\"ReadLines successfully\"",
+				"Write(lines Texts)", "\tconstant stringBuilder = \"printed successfully\"", "\tfor lines",
 				"\t\tsystem.Write(value)")).
 			// @formatter.on
 			ParseMembersAndMethods(parser);
@@ -98,8 +89,8 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 	{
 		var interfaceType =
 			new Type(package,
-					new TypeLines(Computer, "has inputValue = 5", "has logger", "Run", "\tlogger.Log(inputValue)")).
-				ParseMembersAndMethods(parser);
+				new TypeLines(Computer, "has inputValue = 5", "has logger", "Run",
+					"\tlogger.Log(inputValue)")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(interfaceType);
 		Assert.That(visitor.Name, Is.EqualTo(Computer));
 		Assert.That(visitor.FileContent, Contains.Substring("namespace " + package.Name + ";"));
@@ -131,7 +122,8 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 		Assert.That(
 			() => new CSharpTypeVisitor(
 				new Type(package,
-					new TypeLines(Computer, "has logger", "Run", "\tconstant random = logger.unknown")).ParseMembersAndMethods(parser)),
+						new TypeLines(Computer, "has logger", "Run", "\tconstant random = logger.unknown")).
+					ParseMembersAndMethods(parser)),
 			Throws.InstanceOf<MethodExpressionParser.MemberOrMethodNotFound>());
 
 	[Test]
@@ -143,35 +135,34 @@ public sealed class CSharpTypeVisitorTests : TestCSharpGenerator
 						"\tlogger.Log(random)")).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring("\tConsole.WriteLine(random);"));
 
-	[TestCase("\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);",
-		"has number", "Run", "\tconstant file = File(\"test.txt\")","\tfile.Write(number to Text)")]
+	[TestCase("\tvar file = new FileStream(\"test.txt\", FileMode.OpenOrCreate);", "has number",
+		"Run", "\tconstant file = File(\"test.txt\")", "\tfile.Write(number to Text)")]
 	[TestCase("\tnew FileStream(\"test\", FileMode.OpenOrCreate).Write(number.ToString());",
 		"has number", "Run", "\tFile(\"test\").Write(number to Text)")]
 	public void InitializeValueUsingConstructorInsideMethod(string expected, params string[] code) =>
-		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer, code)).
-			ParseMembersAndMethods(parser)).FileContent, Contains.Substring(expected));
+		Assert.That(
+			new CSharpTypeVisitor(
+					new Type(package, new TypeLines(Computer, code)).ParseMembersAndMethods(parser)).
+				FileContent, Contains.Substring(expected));
 
 	[TestCase("ll + mm", "ll + mm")]
 	[TestCase("ll - mm", "ll - mm")]
 	[TestCase("ll * mm", "ll * mm")]
 	public void ListsBinaryOperation(string code, string expected) =>
 		Assert.That(new CSharpTypeVisitor(new Type(package, new TypeLines(Computer,
-			//@formatter:off
-			"has logger",
-			"Run",
-			"\tconstant ll = (1, 2) + (3, 4)",
-			"\tconstant mm = (5, 6)",
-			"\tconstant rr = " + code)).ParseMembersAndMethods(parser)).FileContent,
+				//@formatter:off
+				"has logger", "Run", "\tconstant ll = (1, 2) + (3, 4)", "\tconstant mm = (5, 6)",
+				"\tconstant rr = " + code)).ParseMembersAndMethods(parser)).FileContent,
 			Contains.Substring($"\tvar rr = {expected};"));
-				//@formatter:on
+	//@formatter:on
 
 	[Test]
 	public void GenerateListTypeProgram()
 	{
 		var program =
 			new Type(TestPackage.Instance,
-				new TypeLines("Program", "has numbers", "TestListsMethod Numbers",
-					"\t(1, 2, 3) + 5", "\tnumbers")).ParseMembersAndMethods(parser);
+				new TypeLines("Program", "has numbers", "TestListsMethod Numbers", "\t(1, 2, 3) + 5",
+					"\tnumbers")).ParseMembersAndMethods(parser);
 		var visitor = new CSharpTypeVisitor(program);
 		AssertProgramClass(visitor);
 		Assert.That(visitor.FileContent, Contains.Substring(@"	private List<int> numbers"));

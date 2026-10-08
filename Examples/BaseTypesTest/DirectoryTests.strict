@@ -1,0 +1,7 @@
+has logger
+Run
+	logger.Log("Directory exists: " + Exists(Path(".")))
+Exists(path) Boolean
+	Exists(Path(".")) is true
+	Exists(Path("")) is false
+	Directory.Exists(path)

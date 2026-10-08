@@ -36,12 +36,18 @@ public sealed class LlvmLinker : Linker
 		var quotedOutputPath = $"\"{outputPath}\"";
 		return platform switch
 		{
-			Platform.Windows =>
-				$"{quotedInputPath} -o {quotedOutputPath} -Oz -nostdlib -lkernel32 -Wl,/ENTRY:main " +
+			Platform.Windows => $"{
+				quotedInputPath
+			} -o {
+				quotedOutputPath
+			} -Oz -nostdlib -lkernel32 -Wl,/ENTRY:main " +
 				$"-Wl,/SUBSYSTEM:CONSOLE -Wl,/OPT:REF -Wl,/OPT:ICF -Wl,/INCREMENTAL:NO -Wl,/DEBUG:NONE " +
 				$"-Wno-override-module",
-			Platform.Linux when OperatingSystem.IsWindows() =>
-				$"{quotedInputPath} -o {quotedOutputPath} -Oz -Wno-override-module",
+			Platform.Linux when OperatingSystem.IsWindows() => $"{
+				quotedInputPath
+			} -o {
+				quotedOutputPath
+			} -Oz -Wno-override-module",
 			//ncrunch: no coverage start
 			Platform.Linux => hasPrintCalls
 				? $"{quotedInputPath} -o {quotedOutputPath} -Oz -s -Wl,--gc-sections -Wl,--strip-all " +

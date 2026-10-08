@@ -1,7 +1,7 @@
 namespace Strict.Bytecode;
 
 /// <summary>
-/// Virtual registers for bytecode. The VM uses a fixed file of <see cref="Count"/> slots.
+/// Virtual registers for bytecode. The VM uses a fixed file of register slots.
 /// Nested expressions and multi-arg calls need more than a handful; silent wrap-around
 /// used to corrupt live values, so allocation must never reuse a live slot within a method.
 /// </summary>

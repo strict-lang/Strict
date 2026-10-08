@@ -8,7 +8,8 @@ namespace Strict.HighLevelRuntime.Tests;
 public sealed class IfTests
 {
 	[SetUp]
-	public void CreateExecutor() => interpreter = new Interpreter(TestPackage.Instance, TestBehavior.Disabled);
+	public void CreateExecutor() =>
+		interpreter = new Interpreter(TestPackage.Instance, TestBehavior.Disabled);
 
 	private Interpreter interpreter = null!;
 

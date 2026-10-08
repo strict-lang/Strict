@@ -39,8 +39,8 @@ public sealed class MutableReassignmentTests : TestExpressions
 	public void MutableListType()
 	{
 		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(MutableListType), "has numbers",
-				"Run Mutable(List(Number))", "\tnumbers.Add(5)"));
+			new TypeLines(nameof(MutableListType), "has numbers", "Run Mutable(List(Number))",
+				"\tnumbers.Add(5)"));
 		program.ParseMembersAndMethods(parser);
 		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ReturnType,
 			Is.EqualTo(type.GetType(Type.Mutable).
@@ -61,8 +61,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 
 	[Test]
 	public void IncompleteMutableMethodParameter() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var dummy = new Type(TestPackage.Instance,
 					new TypeLines(nameof(IncompleteMutableMethodParameter), "has something Number",
@@ -86,11 +85,8 @@ public sealed class MutableReassignmentTests : TestExpressions
 	{
 		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(MutableVariablesUsingSameValueTypeMustBeEqual), "has unused Number",
-				"UnusedMethod Number",
-				"\tmutable first = 5",
-				"\tconstant second = 6",
-				"\tfirst = first + 1",
-				"\tfirst + second"));
+				"UnusedMethod Number", "\tmutable first = 5", "\tconstant second = 6",
+				"\tfirst = first + 1", "\tfirst + second"));
 		program.ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Expressions[0].IsMutable, Is.True);
@@ -103,14 +99,13 @@ public sealed class MutableReassignmentTests : TestExpressions
 	[TestCase("AssignNumbersToTexts", "mutable something Numbers", "TryChangeMutableDataType Text",
 		"\tsomething = (true, false)")]
 	public void ValueTypeNotMatchingWithAssignmentType(string testName, params string[] code) =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var dummyType = new Type(TestPackage.Instance, new TypeLines(testName, code));
 				dummyType.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>().Or.
-			InstanceOf<NewExpressionDoesNotMatchMemberType>());
+				InstanceOf<NewExpressionDoesNotMatchMemberType>());
 
 	[Test]
 	public void MutableVariableInstanceUsingSpace()
@@ -125,8 +120,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 
 	[Test]
 	public void MissingMutableArgument() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var dummy = new Type(TestPackage.Instance,
 					new TypeLines(nameof(MissingMutableArgument), "has logger", "Add(input Number) Number",
@@ -144,8 +138,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 				$"\tmutable result = {code}", "\tresult = result + input"));
 		program.ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(((Declaration)body.Expressions[0]).Value.ToString(),
-			Is.EqualTo(code));
+		Assert.That(((Declaration)body.Expressions[0]).Value.ToString(), Is.EqualTo(code));
 		Assert.That(body.Expressions[^1].IsConstant, Is.False);
 	}
 
@@ -158,10 +151,8 @@ public sealed class MutableReassignmentTests : TestExpressions
 				"\t\tcounter = counter + 1", "\tcounter"));
 		program.ParseMembersAndMethods(parser);
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
-		Assert.That(body.ReturnType,
-			Is.EqualTo(type.GetType(Type.Number)));
-		Assert.That(body.Expressions[0].ReturnType.Name,
-			Is.EqualTo("Number"));
+		Assert.That(body.ReturnType, Is.EqualTo(type.GetType(Type.Number)));
+		Assert.That(body.Expressions[0].ReturnType.Name, Is.EqualTo("Number"));
 	}
 
 	[Test]
@@ -180,8 +171,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 	{
 		using var program = new Type(TestPackage.Instance,
 			new TypeLines(nameof(GenericTypesCannotBeUsedDirectlyUseImplementation),
-				"has unused Character", "DummyCount Number", "\tconstant result = List",
-				"\tresult(0)"));
+				"has unused Character", "DummyCount Number", "\tconstant result = List", "\tresult(0)"));
 		program.ParseMembersAndMethods(parser);
 		Assert.That(() => program.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.
@@ -205,8 +195,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 	[TestCase("Mutable", "Mutable(Number)")]
 	[TestCase("Count", "Count")]
 	public void MutableTypesUsageInMembersAreForbidden(string testName, string code) =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var dummy = new Type(TestPackage.Instance,
 					new TypeLines(testName + nameof(MutableTypesUsageInMembersAreForbidden),
@@ -222,12 +211,11 @@ public sealed class MutableReassignmentTests : TestExpressions
 		using var dummy = new Type(TestPackage.Instance,
 			new TypeLines("BaseClever", "mutable Number", "Compute Number", "\t5 + Number"));
 		dummy.ParseMembersAndMethods(parser);
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var innerDummy = new Type(TestPackage.Instance,
-					new TypeLines(nameof(CannotReassignValuesToImmutableMember),
-						"has input = BaseClever(3)", "Run", "\tinput.Compute", "\tinput = BaseClever(5)"));
+					new TypeLines(nameof(CannotReassignValuesToImmutableMember), "has input = BaseClever(3)",
+						"Run", "\tinput.Compute", "\tinput = BaseClever(5)"));
 				innerDummy.ParseMembersAndMethods(parser).Methods[0].GetBodyAndParseIfNeeded();
 			}, //ncrunch: no coverage
 			Throws.InstanceOf<Body.ValueIsNotMutableAndCannotBeChanged>());
@@ -253,8 +241,8 @@ public sealed class MutableReassignmentTests : TestExpressions
 			new TypeLines("Computer", "mutable Number", "Compute Number", "\t5 + Number"));
 		computer.ParseMembersAndMethods(parser);
 		using var cleverConsumerType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ModifyMutableMembersMultipleTimes), "has computer = Computer(3)",
-				"Run", "\tconstant five = 5", "\tmutable blub = Compute", "\tconstant number = five + 1",
+			new TypeLines(nameof(ModifyMutableMembersMultipleTimes), "has computer = Computer(3)", "Run",
+				"\tconstant five = 5", "\tmutable blub = Compute", "\tconstant number = five + 1",
 				"\tmutable swappedBlub = blub", "\tblub = 49", "\tmutable temporary = swappedBlub",
 				"\tswappedBlub = 50", "\ttemporary is 9", "\ttemporary is 10", "Compute Number",
 				"\tcomputer.Number.Increment", "\tcomputer.Compute"));
@@ -262,8 +250,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 		var body = (Body)cleverConsumerType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.FindVariable("blub")?.InitialValue.ToString(), Is.EqualTo("Compute"));
 		Assert.That(body.FindVariable("swappedBlub")?.InitialValue.ToString(), Is.EqualTo("blub"));
-		Assert.That(body.FindVariable("temporary")?.InitialValue.ToString(),
-			Is.EqualTo("swappedBlub"));
+		Assert.That(body.FindVariable("temporary")?.InitialValue.ToString(), Is.EqualTo("swappedBlub"));
 	}
 
 	[Test]
@@ -273,24 +260,22 @@ public sealed class MutableReassignmentTests : TestExpressions
 			new TypeLines("Dummy", "mutable Number", "Run", "\tNumber = 3", "\tNumber = 5"));
 		dummyType.ParseMembersAndMethods(parser);
 		using var badType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(NewExpressionDoesNotMatchMemberType), "mutable Number",
-				"Compute Number", "\tNumber = \"Hi\""));
+			new TypeLines(nameof(NewExpressionDoesNotMatchMemberType), "mutable Number", "Compute Number",
+				"\tNumber = \"Hi\""));
 		badType.ParseMembersAndMethods(parser);
 		Assert.That(() => badType.Methods[0].GetBodyAndParseIfNeeded(),
 			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
 		Assert.That(
 			() => badType.Members[0].CheckIfWeCouldUpdateValue(new Text(badType, "Hi"),
 				(Body)dummyType.Methods[0].GetBodyAndParseIfNeeded()),
-			Throws.InstanceOf<Member.NewExpressionDoesNotMatchMemberType>());
+			Throws.InstanceOf<NewExpressionDoesNotMatchMemberType>());
 	}
 
 	[Test]
 	public void CannotReassignNonMutableMember()
 	{
-		using var dummyType =
-			new Type(TestPackage.Instance,
-				new TypeLines("DummyAgain", "mutable Number", "Run",
-					"\tNumber = 3", "\tNumber = 5"));
+		using var dummyType = new Type(TestPackage.Instance,
+			new TypeLines("DummyAgain", "mutable Number", "Run", "\tNumber = 3", "\tNumber = 5"));
 		dummyType.ParseMembersAndMethods(parser);
 		using var badType = new Type(TestPackage.Instance,
 			new TypeLines(nameof(CannotReassignNonMutableMember), "constant something = 7",
@@ -304,8 +289,7 @@ public sealed class MutableReassignmentTests : TestExpressions
 
 	[Test]
 	public void NotAllowedToReassignMethodCall() =>
-		Assert.That(
-			() =>
+		Assert.That(() =>
 			{
 				using var dummy = new Type(TestPackage.Instance,
 					new TypeLines(nameof(NotAllowedToReassignMethodCall), "mutable Number",

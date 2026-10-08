@@ -13,17 +13,20 @@ namespace Strict.LanguageServer;
 
 //ncrunch: no coverage start
 public class CommandExecutor(ILanguageServerFacade languageServer,
-	StrictDocument document, Package package) : IExecuteCommandHandler
+	StrictDocument document,
+	Package package) : IExecuteCommandHandler
 {
 	private const string CommandName = "strict-vscode-client.run";
 	private const string NotificationName = "testRunnerNotification";
 
-	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(
-		ExecuteCommandParams request, CancellationToken cancellationToken)
+	Task<Unit> IRequestHandler<ExecuteCommandParams, Unit>.Handle(ExecuteCommandParams request,
+		CancellationToken cancellationToken)
 	{
+		// ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		var methodCall = request.Arguments?[0]?["label"]?.ToString() ??
 			request.Arguments?[0]?.ToString();
 		var uriText = request.Arguments?[1]?.ToString();
+		// ReSharper restore ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		try
 		{
 			var documentUri = DocumentUri.From(uriText ?? throw new PathCanNotBeEmpty());
@@ -35,8 +38,8 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 		catch (Exception exception)
 		{
 			languageServer.Window.LogError(exception.Message);
-			languageServer.SendNotification(NotificationName, new TestNotificationMessage(lineNumber: 0,
-				state: TestState.Red, uri: uriText, methodName: string.IsNullOrWhiteSpace(methodCall)
+			languageServer.SendNotification(NotificationName, new TestNotificationMessage(0,
+				TestState.Red, uriText, methodName: string.IsNullOrWhiteSpace(methodCall)
 					? Method.Run
 					: methodCall,
 				message: DiagnosticFormatter.FormatMessage(exception.GetType().Name, exception.Message),
@@ -84,8 +87,11 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 		if (error != null)
 			languageServer.Window.LogError(error.Message);
 		languageServer.SendNotification(NotificationName, new TestNotificationMessage(
-			error is ParsingFailed parsing ? parsing.FileLineNumber : method?.TypeLineNumber ?? 0,
-			error == null ? TestState.Green : TestState.Red)
+			error is ParsingFailed parsing
+				? parsing.FileLineNumber
+				: method?.TypeLineNumber ?? 0, error == null
+				? TestState.Green
+				: TestState.Red)
 		{
 			Uri = documentUri.ToString(),
 			MethodName = method?.Name ?? methodName,
@@ -105,7 +111,7 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 	private string[] LinesFor(DocumentUri documentUri, string localPath)
 	{
 		var code = document.Get(documentUri);
-		if ((code.Length > 1 || code[0].Length > 0) || !File.Exists(localPath))
+		if (code.Length > 1 || code[0].Length > 0 || !File.Exists(localPath))
 			return code;
 		return File.ReadAllLines(localPath);
 	}

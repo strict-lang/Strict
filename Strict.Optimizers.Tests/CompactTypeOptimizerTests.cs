@@ -39,10 +39,9 @@ public sealed class CompactTypeOptimizerTests : TestOptimizers
 			new LoadConstantInstruction(Register.R0, Num(1)),
 			new LoadConstantInstruction(Register.R1, Num(0)),
 			new LoadConstantInstruction(Register.R2, Num(0.5)),
-			new Invoke(Register.R3, new InvokeMethodInfo(
-				"Strict/ImageProcessing/ColorValue", Method.From,
-				["red", "green", "blue"], "ColorValue",
-				[Register.R0, Register.R1, Register.R2], null)),
+			new Invoke(Register.R3,
+				new InvokeMethodInfo("Strict/ImageProcessing/ColorValue", Method.From,
+					["red", "green", "blue"], "ColorValue", [Register.R0, Register.R1, Register.R2], null)),
 			new ReturnInstruction(Register.R3)
 		]);
 		new CompactTypeOptimizer().Optimize(binary);
@@ -79,11 +78,9 @@ public sealed class CompactTypeOptimizerTests : TestOptimizers
 	{
 		var instructions = new List<Instruction>
 		{
-			new LoadConstantInstruction(Register.R0, Num(5)),
-			new ReturnInstruction(Register.R0)
+			new LoadConstantInstruction(Register.R0, Num(5)), new ReturnInstruction(Register.R0)
 		};
-		var binary = BinaryExecutable.CreateForEntryInstructions(
-			TestPackage.Instance, instructions);
+		var binary = BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions);
 		new CompactTypeOptimizer().Optimize(binary);
 		Assert.That(binary.EntryPoint.instructions, Has.Count.EqualTo(2));
 	}

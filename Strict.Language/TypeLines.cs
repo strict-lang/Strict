@@ -84,16 +84,20 @@ public class TypeLines
 		if (dependentTypes.Count == 0)
 			dependentTypes = new List<string>();
 		if (remainingLine.Contains('('))
+		{
 			foreach (var part in remainingLine.Split(['(', ')', ','],
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
 				AddIfNotExisting(dependentTypes, part);
+		}
 		else if (remainingLine.EndsWith('s'))
 		{
 			AddIfNotExisting(dependentTypes, Type.List);
 			AddIfNotExisting(dependentTypes, remainingLine[..^1].MakeFirstLetterUppercase());
 		}
 		else
+		{
 			AddIfNotExisting(dependentTypes, remainingLine.MakeFirstLetterUppercase());
+		}
 	}
 
 	private void AddIfNotExisting(ICollection<string> dependentTypes, string typeName)
@@ -103,8 +107,8 @@ public class TypeLines
 		else if (typeName.Contains(' '))
 			typeName = typeName[(typeName.IndexOf(' ') + 1)..];
 		var upperTypeName = typeName.MakeFirstLetterUppercase();
-		if (!dependentTypes.Contains(upperTypeName) && Name != typeName &&
-			!typeName.IsKeyword() && typeName != Type.GenericUppercase)
+		if (!dependentTypes.Contains(upperTypeName) && Name != typeName && !typeName.IsKeyword() &&
+			typeName != Type.GenericUppercase)
 			dependentTypes.Add(upperTypeName);
 	}
 

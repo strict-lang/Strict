@@ -12,8 +12,7 @@ public class BooleanTests : TestExpressions
 	public void ParseTrue() => ParseAndCheckOutputMatchesInput("true", new Boolean(method, true));
 
 	[Test]
-	public void ParseFalse() =>
-		ParseAndCheckOutputMatchesInput("false", new Boolean(method, false));
+	public void ParseFalse() => ParseAndCheckOutputMatchesInput("false", new Boolean(method, false));
 
 	//ncrunch: no coverage start
 	/// <summary>

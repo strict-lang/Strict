@@ -26,7 +26,6 @@ public sealed class Registry()
 	/// Thrown when a single method body needs more virtual registers than available.
 	/// Prefer splitting the method over silent wrap-around (which corrupts live values).
 	/// </summary>
-	public sealed class OutOfRegisters(int limit) : Exception(
-		"Bytecode method exhausted all " + limit +
-		" virtual registers; simplify the method or increase Registers.Count");
+	public sealed class OutOfRegisters(int limit) : Exception("Bytecode method exhausted all " +
+		limit + " virtual registers; simplify the method or increase Registers.Count");
 }

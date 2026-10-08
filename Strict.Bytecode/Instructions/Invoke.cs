@@ -9,12 +9,12 @@ namespace Strict.Bytecode.Instructions;
 /// </summary>
 public sealed class Invoke : RegisterInstruction
 {
-	public Invoke(Register register, InvokeMethodInfo methodInfo) : base(
-		InstructionType.Invoke, register) =>
+	public Invoke(Register register, InvokeMethodInfo methodInfo) : base(InstructionType.Invoke,
+		register) =>
 		MethodInfo = methodInfo;
 
-	public Invoke(BinaryReader reader, NameTable table) : base(
-		InstructionType.Invoke, (Register)reader.ReadByte()) =>
+	public Invoke(BinaryReader reader, NameTable table) : base(InstructionType.Invoke,
+		(Register)reader.ReadByte()) =>
 		MethodInfo = new InvokeMethodInfo(reader, table);
 
 	public InvokeMethodInfo MethodInfo { get; }

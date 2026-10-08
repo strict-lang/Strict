@@ -3,7 +3,8 @@ using Strict.Language;
 
 namespace Strict.Bytecode.Serialization;
 
-public sealed record BinaryMember(string Name, string FullTypeName,
+public sealed record BinaryMember(string Name,
+	string FullTypeName,
 	Instruction? InitialValueExpression)
 {
 	public BinaryMember(BinaryReader reader, NameTable table, BinaryExecutable binary) : this(

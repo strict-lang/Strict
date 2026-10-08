@@ -4,7 +4,9 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public sealed class ExecutionContext(Type type, Method method, ValueInstance? thisInstance = null,
+public sealed class ExecutionContext(Type type,
+	Method method,
+	ValueInstance? thisInstance = null,
 	ExecutionContext? parent = null)
 {
 	public Type Type { get; private set; } = type;
@@ -42,12 +44,12 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 				if (memberValue.HasValue)
 					return memberValue;
 			}
-		if (name == Type.ValueLowercase)
-			return This;
-		return Parent?.Find(name, statistics);
+		return name == Type.ValueLowercase
+			? This
+			: Parent?.Find(name, statistics);
 	}
 
-	private static ValueInstance? TryGetMemberValue(ValueInstance instance, Language.Member member)
+	private static ValueInstance? TryGetMemberValue(ValueInstance instance, Member member)
 	{
 		if (instance.TryGetFlatNumericMember(member.Name, out var flatMemberValue))
 			return flatMemberValue;
@@ -85,8 +87,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 		CurrentExpressionLineNumber = -1;
 	}
 
-	internal void TrackDisposable(ValueInstance value) =>
-		(disposableValues ??= []).Add(value);
+	internal void TrackDisposable(ValueInstance value) => (disposableValues ??= []).Add(value);
 
 	internal IReadOnlyList<ValueInstance> DisposableValues => disposableValues ?? [];
 
@@ -99,7 +100,7 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 		{
 			if (ctx.variables != null && ctx.variables.ContainsKey(name))
 				return ctx.variables[name] = value;
-     if (ctx.TrySetThisMemberValue(name, value))
+			if (ctx.TrySetThisMemberValue(name, value))
 				return value;
 			ctx = ctx.Parent;
 		}
@@ -116,8 +117,8 @@ public sealed class ExecutionContext(Type type, Method method, ValueInstance? th
 		return This.Value.TryGetValueTypeInstance()?.TrySetValue(name, value) == true;
 	}
 
-	public sealed class VariableNotFound(string name, Type type, ValueInstance? instance)
-		: Exception($"Variable '{name}' or member '{name}' of this type '{type}'" + (instance != null
+	public sealed class VariableNotFound(string name, Type type, ValueInstance? instance) : Exception(
+		$"Variable '{name}' or member '{name}' of this type '{type}'" + (instance != null
 			? $" (instance='{instance}')"
 			: "") + " (or its parents) not found");
 

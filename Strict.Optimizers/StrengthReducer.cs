@@ -1,6 +1,6 @@
-using Strict.Expressions;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
+using Strict.Expressions;
 
 namespace Strict.Optimizers;
 
@@ -84,7 +84,8 @@ public sealed class StrengthReducer : InstructionOptimizer
 		return true;
 	}
 
-	private static void RewriteRegister(List<Instruction> instructions, int index, Register newRegister)
+	private static void RewriteRegister(List<Instruction> instructions, int index,
+		Register newRegister)
 	{
 		if (instructions[index] is LoadVariableToRegister load1)
 			instructions[index] = new LoadVariableToRegister(newRegister, load1.Identifier);
@@ -127,8 +128,8 @@ public sealed class StrengthReducer : InstructionOptimizer
 		Register register)
 	{
 		for (var i = beforeIndex - 1; i >= 0; i--)
-			if (instructions[i] is LoadConstantInstruction load && load.Register == register ||
-				instructions[i] is LoadVariableToRegister varLoad && varLoad.Register == register)
+			if ((instructions[i] is LoadConstantInstruction load && load.Register == register) ||
+				(instructions[i] is LoadVariableToRegister varLoad && varLoad.Register == register))
 				return i;
 		return -1; //ncrunch: no coverage
 	}

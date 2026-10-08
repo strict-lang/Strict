@@ -40,7 +40,8 @@ public static class ScrunchAnalyzer
 		if (!File.Exists(filePath))
 			return new FileReport
 			{
-				Path = filePath, Ok = false,
+				Path = filePath,
+				Ok = false,
 				Problems = [new Problem { Line = 0, Kind = "error", Message = "File not found" }]
 			};
 		if (!force && StrictBinaryCache.IsFresh(filePath))
@@ -71,14 +72,17 @@ public static class ScrunchAnalyzer
 		foreach (var test in tests.Where(test => test.State == TestState.Red))
 			problems.Add(new Problem
 			{
-				Line = test.LineNumber + 1, Kind = "test",
+				Line = test.LineNumber + 1,
+				Kind = "test",
 				Message = test.Message ?? test.Details ?? test.Expression ?? "test failed"
 			});
 		return new FileReport
 		{
-			Path = filePath, Ok = problems.Count == 0,
+			Path = filePath,
+			Ok = problems.Count == 0,
 			TestsPassed = tests.Count(test => test.State == TestState.Green),
-			TestsFailed = tests.Count(test => test.State == TestState.Red), Problems = problems
+			TestsFailed = tests.Count(test => test.State == TestState.Red),
+			Problems = problems
 		};
 	}
 
@@ -93,18 +97,23 @@ public static class ScrunchAnalyzer
 		if (!Directory.Exists(path))
 			return new FolderReport
 			{
-				Path = path, Ok = false, Files = 0, Failed = 1,
+				Path = path,
+				Ok = false,
+				Files = 0,
+				Failed = 1,
 				FilesReports =
 				[
 					new FileReport
 					{
-						Path = path, Ok = false,
+						Path = path,
+						Ok = false,
 						Problems = [new Problem { Line = 0, Kind = "error", Message = "Path not found" }]
 					}
 				]
 			};
 		var reports = new List<FileReport>();
-		foreach (var file in Directory.GetFiles(path, "*" + Type.Extension, SearchOption.AllDirectories))
+		foreach (var file in
+			Directory.GetFiles(path, "*" + Type.Extension, SearchOption.AllDirectories))
 			if (!IsIgnored(file))
 				reports.Add(AnalyzeFile(root, file, force));
 		return ToFolder(path, reports);
@@ -121,8 +130,7 @@ public static class ScrunchAnalyzer
 				: [];
 		var reports = files.Select(file => new FileReport
 		{
-			Path = file, Cached = StrictBinaryCache.IsFresh(file),
-			Ok = StrictBinaryCache.IsFresh(file)
+			Path = file, Cached = StrictBinaryCache.IsFresh(file), Ok = StrictBinaryCache.IsFresh(file)
 		}).ToList();
 		return ToFolder(path, reports);
 	}
@@ -130,11 +138,14 @@ public static class ScrunchAnalyzer
 	private static FolderReport ToFolder(string path, List<FileReport> reports) =>
 		new()
 		{
-			Path = path, Files = reports.Count, Cached = reports.Count(report => report.Cached),
+			Path = path,
+			Files = reports.Count,
+			Cached = reports.Count(report => report.Cached),
 			Failed = reports.Count(report => !report.Ok),
 			TestsPassed = reports.Sum(report => report.TestsPassed),
 			TestsFailed = reports.Sum(report => report.TestsFailed),
-			Ok = reports.Count > 0 && reports.All(report => report.Ok), FilesReports = reports
+			Ok = reports.Count > 0 && reports.All(report => report.Ok),
+			FilesReports = reports
 		};
 
 	private static bool IsIgnored(string file)

@@ -1,6 +1,5 @@
 using Strict.Expressions;
 using Strict.Language;
-using Strict.Language.Tests;
 
 namespace Strict.Tests;
 
@@ -14,11 +13,11 @@ public sealed class StrictRuntimeConversionTests
 	{
 		var path = GetRuntimePath();
 		foreach (var typeName in new[]
-		{
-			"VmValue", "RegisterBank", "CallFrame", "VmMemory", "VmInstruction", "InstrBuilder",
-			"InstrList", "VmState", "ArithmeticExec", "InstructionExec", "VirtualMachine",
-			"RunnerPipeline"
-		})
+			{
+				"VmValue", "RegisterBank", "CallFrame", "VmMemory", "VmInstruction", "InstrBuilder",
+				"InstrList", "VmState", "ArithmeticExec", "InstructionExec", "VirtualMachine",
+				"RunnerPipeline"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 
@@ -27,9 +26,9 @@ public sealed class StrictRuntimeConversionTests
 	{
 		var path = GetRuntimePath();
 		foreach (var typeName in new[]
-		{
-			"VmDemo", "RegisterTests", "FrameTests", "VmTests", "CompareTests"
-		})
+			{
+				"VmDemo", "RegisterTests", "FrameTests", "VmTests", "CompareTests"
+			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
 

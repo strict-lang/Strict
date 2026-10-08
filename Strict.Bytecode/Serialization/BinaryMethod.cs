@@ -4,8 +4,8 @@ namespace Strict.Bytecode.Serialization;
 
 public sealed class BinaryMethod
 {
-	public BinaryMethod(string methodName, List<BinaryMember> methodParameters,
-		string returnTypeName, List<Instruction> methodInstructions)
+	public BinaryMethod(string methodName, List<BinaryMember> methodParameters, string returnTypeName,
+		List<Instruction> methodInstructions)
 	{
 		Name = methodName;
 		ReturnTypeName = returnTypeName;

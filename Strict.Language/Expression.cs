@@ -36,7 +36,7 @@ public abstract class Expression(Type returnType, int lineNumber = 0, bool isMut
 
 	public override bool Equals(object? obj) =>
 		!ReferenceEquals(null, obj) && (ReferenceEquals(this, obj) ||
-			obj.GetType() == GetType() && Equals((Expression)obj));
+			(obj.GetType() == GetType() && Equals((Expression)obj)));
 
 	public abstract bool Equals(Expression? other);
 	public abstract override int GetHashCode();

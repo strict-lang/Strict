@@ -4,7 +4,8 @@ public class SpanExtensionsTests
 {
 	[Test]
 	public void EmptyInputIsNotAllowed() =>
-		Assert.That(() => "".AsSpan().Split(), Throws.InstanceOf<SpanExtensions.EmptyInputIsNotAllowed>());
+		Assert.That(() => "".AsSpan().Split(),
+			Throws.InstanceOf<SpanExtensions.EmptyInputIsNotAllowed>());
 
 	[Test]
 	public void GetOuterRange()
@@ -17,7 +18,8 @@ public class SpanExtensionsTests
 
 	[Test]
 	public void RemoveEmptyEntriesIsNotSupported() =>
-		Assert.That(() => "as ".AsSpan().Split(options: StringSplitOptions.RemoveEmptyEntries), Throws.InstanceOf<NotSupportedException>());
+		Assert.That(() => "as ".AsSpan().Split(options: StringSplitOptions.RemoveEmptyEntries),
+			Throws.InstanceOf<NotSupportedException>());
 
 	[TestCase(" ")]
 	[TestCase("  ")]
@@ -125,8 +127,7 @@ GetComplicatedSequenceTexts returns Texts
 		Assert.That(input.AsSpan().ContainsAnyItem(["+", "-", "*"]), Is.False);
 
 	[TestCase(@"""hello"" is Text")]
-	public void Count(string input) =>
-		Assert.That(input.AsSpan().Count('\"'), Is.EqualTo(2));
+	public void Count(string input) => Assert.That(input.AsSpan().Count('\"'), Is.EqualTo(2));
 
 	[TestCase("word", true)]
 	[TestCase("someNumber", true)]
@@ -141,6 +142,5 @@ GetComplicatedSequenceTexts returns Texts
 	[TestCase('5', false)]
 	[TestCase('.', false)]
 	[TestCase(' ', false)]
-	public void IsLetter(char c, bool expected) =>
-		Assert.That(c.IsLetter(), Is.EqualTo(expected));
+	public void IsLetter(char c, bool expected) => Assert.That(c.IsLetter(), Is.EqualTo(expected));
 }

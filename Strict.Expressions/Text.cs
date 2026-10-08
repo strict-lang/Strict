@@ -19,8 +19,7 @@ public sealed class Text(Context context, string value, int lineNumber = 0)
 
 	private static string Unescape(ReadOnlySpan<char> input) =>
 		input.ToString().Replace("\\n", "\n", StringComparison.Ordinal).
-			Replace("\\r", "\r", StringComparison.Ordinal).
-			Replace("\\t", "\t", StringComparison.Ordinal).
+			Replace("\\r", "\r", StringComparison.Ordinal).Replace("\\t", "\t", StringComparison.Ordinal).
 			Replace("\\\"", "\"", StringComparison.Ordinal).
 			Replace(@"\\", @"\", StringComparison.Ordinal);
 }

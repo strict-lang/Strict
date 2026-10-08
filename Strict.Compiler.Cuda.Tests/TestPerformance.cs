@@ -7,8 +7,11 @@ namespace Strict.Compiler.Cuda.Tests;
 /// is almost no benefit.
 /// </summary>
 //ncrunch: no coverage start
-public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> RunChunk,
-	Action<int> RunGpu, Action<string> Done)
+public record TestPerformance(int Iterations,
+	int ChunkSize,
+	Action<int, int> RunChunk,
+	Action<int> RunGpu,
+	Action<string> Done)
 {
 	public void Run()
 	{
@@ -26,8 +29,8 @@ public record TestPerformance(int Iterations, int ChunkSize, Action<int, int> Ru
 		watch.Restart();
 		runCode();
 		watch.Stop();
-		Console.WriteLine(runCode.Method.Name + " * " + Iterations + ": " +
-			watch.ElapsedMilliseconds + "ms");
+		Console.WriteLine(runCode.Method.Name + " * " + Iterations + ": " + watch.ElapsedMilliseconds +
+			"ms");
 		Done(runCode.Method.Name);
 	}
 

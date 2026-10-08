@@ -6,8 +6,8 @@ namespace Strict.Language;
 /// </summary>
 public abstract class ConcreteExpression : Expression
 {
-	protected ConcreteExpression(Type returnType, int lineNumber = 0, bool isMutable = false)
-		: base(returnType, lineNumber, isMutable)
+	protected ConcreteExpression(Type returnType, int lineNumber = 0, bool isMutable = false) : base(
+		returnType, lineNumber, isMutable)
 	{
 		if (returnType.IsGeneric && returnType.Name != Type.GenericUppercase)
 			throw new Type.GenericTypesCannotBeUsedDirectlyUseImplementation(returnType, GetType().Name);

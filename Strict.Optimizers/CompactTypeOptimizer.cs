@@ -63,12 +63,10 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 		return pairs;
 	}
 
-	private static IEnumerable<Type> GetAllTypesInPackage(Package package) =>
-		package.Types.Values;
+	private static IEnumerable<Type> GetAllTypesInPackage(Package package) => package.Types.Values;
 
 	private static bool HasToConversion(Type compactType, Type largerType) =>
-		compactType.Methods.Any(method =>
-			method.Name == "to" && method.ReturnType == largerType);
+		compactType.Methods.Any(method => method.Name == "to" && method.ReturnType == largerType);
 
 	/// <summary>
 	/// Estimates the in-memory byte size of a type based on its members.
@@ -83,7 +81,6 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 			"Byte" => 1,
 			Type.Boolean => 1,
 			Type.Character => 2,
-			_ when memberType.IsNumber => 8,
 			_ => 8
 		};
 
@@ -130,8 +127,8 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 			return null;
 		return typePairs.FirstOrDefault(pair =>
 			methodInfo.TypeFullName == pair.LargerType.Name ||
-			methodInfo.TypeFullName.EndsWith(
-				Context.ParentSeparator + pair.LargerType.Name, StringComparison.Ordinal));
+			methodInfo.TypeFullName.EndsWith(Context.ParentSeparator + pair.LargerType.Name,
+				StringComparison.Ordinal));
 	}
 
 	private TypeConversionPair? FindMatchingPairForConstruct(Type returnType) =>
@@ -159,12 +156,12 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 		var constantArgs = FindConstantArguments(instructions, constructIndex, fieldRegisters);
 		if (constantArgs == null)
 			return;
-		ReplaceWithCompactConstruction(instructions, constructIndex, construct.Register,
-			constantArgs, fieldRegisters, pair);
+		ReplaceWithCompactConstruction(instructions, constructIndex, construct.Register, constantArgs,
+			fieldRegisters, pair);
 	}
 
-	private static double[]? FindConstantArguments(List<Instruction> instructions,
-		int beforeIndex, Register[] registers)
+	private static double[]? FindConstantArguments(List<Instruction> instructions, int beforeIndex,
+		Register[] registers)
 	{
 		var values = new double[registers.Length];
 		for (var argIndex = 0; argIndex < registers.Length; argIndex++)
@@ -196,16 +193,15 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 		{
 			LoadVariableToRegister load => load.Register == register,
 			LoadConstantInstruction load => load.Register == register,
-			BinaryInstruction binary when binary.Registers.Length >= 3 =>
-				binary.Registers[2] == register,
+			BinaryInstruction binary when binary.Registers.Length >= 3 => binary.Registers[2] == register,
 			Invoke invoke => invoke.Register == register,
 			ConstructValueTypeInstruction construct => construct.Register == register,
 			_ => false
 		};
 
 	private static void ReplaceWithCompactConstruction(List<Instruction> instructions,
-		int targetIndex, Register outputRegister, double[] sourceValues,
-		Register[] argRegisters, TypeConversionPair pair)
+		int targetIndex, Register outputRegister, double[] sourceValues, Register[] argRegisters,
+		TypeConversionPair pair)
 	{
 		var convertedValues = ConvertValues(sourceValues, pair.ConversionFactor);
 		for (var argIndex = 0; argIndex < argRegisters.Length; argIndex++)
@@ -213,8 +209,7 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 			var loadIndex = FindLoadConstantIndex(instructions, targetIndex, argRegisters[argIndex]);
 			if (loadIndex >= 0)
 				instructions[loadIndex] = new LoadConstantInstruction(argRegisters[argIndex],
-					new ValueInstance(pair.CompactType.GetType(Type.Number),
-						convertedValues[argIndex]));
+					new ValueInstance(pair.CompactType.GetType(Type.Number), convertedValues[argIndex]));
 		}
 		instructions[targetIndex] =
 			new ConstructValueTypeInstruction(outputRegister, pair.CompactType, argRegisters);
@@ -228,6 +223,7 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 		return converted;
 	}
 
-	private sealed record TypeConversionPair(
-		Type CompactType, Type LargerType, double ConversionFactor);
+	private sealed record TypeConversionPair(Type CompactType,
+		Type LargerType,
+		double ConversionFactor);
 }

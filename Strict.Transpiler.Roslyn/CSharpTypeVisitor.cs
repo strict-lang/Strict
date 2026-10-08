@@ -65,8 +65,8 @@ public sealed class CSharpTypeVisitor : Visitor
 		var csharpTypeName = expressionVisitor.GetCSharpTypeName(member.Type);
 		var initializationExpression =
 			BuildInitializationExpression(member, csharpTypeName, ref accessModifier);
-		FileContent += "\t" + accessModifier + " " + csharpTypeName + " " +
-			member.Name + initializationExpression + SemicolonAndLineBreak;
+		FileContent += "\t" + accessModifier + " " + csharpTypeName + " " + member.Name +
+			initializationExpression + SemicolonAndLineBreak;
 	}
 
 	private string BuildInitializationExpression(Member member, string csharpTypeName,
@@ -91,7 +91,8 @@ public sealed class CSharpTypeVisitor : Visitor
 			BuildMethodBody(method);
 	}
 
-	private void VisitMethodHeader(Method method) => FileContent += "\t" + expressionVisitor.VisitMethodHeader(method, isInterface);
+	private void VisitMethodHeader(Method method) =>
+		FileContent += "\t" + expressionVisitor.VisitMethodHeader(method, isInterface);
 
 	private void BuildMethodBody(Method method)
 	{

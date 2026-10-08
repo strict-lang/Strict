@@ -16,8 +16,8 @@ public sealed class IfTests : TestExpressions
 	[Test]
 	public void ReturnTypeOfThenAndElseMustHaveMatchingType() =>
 		Assert.That(
-			() => ParseExpression("if 5 is 6", "\treturn \"hello\"", "else", "\treturn true").
-				ReturnType, Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
+			() => ParseExpression("if 5 is 6", "\treturn \"hello\"", "else", "\treturn true").ReturnType,
+			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
 
 	[Test]
 	public void ReturnTypeOfThenAndElseIsNumberAndCharacterIsValid() =>

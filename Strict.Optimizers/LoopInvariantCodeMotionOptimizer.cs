@@ -54,25 +54,24 @@ public sealed class LoopInvariantCodeMotionOptimizer : InstructionOptimizer
 	{
 		var depth = 0;
 		for (var index = loopBeginIndex; index < instructions.Count; index++)
-		{
 			if (instructions[index] is LoopBeginInstruction)
+			{
 				depth++;
+			}
 			else if (instructions[index] is LoopEndInstruction)
 			{
 				depth--;
 				if (depth == 0)
 					return index;
 			}
-		}
 		return -1;
 	}
 
-	private static HashSet<string> CollectWrittenVariables(List<Instruction> instructions,
-		int start, int end)
+	private static HashSet<string> CollectWrittenVariables(List<Instruction> instructions, int start,
+		int end)
 	{
 		var written = new HashSet<string>(StringComparer.Ordinal);
 		for (var index = start; index < end; index++)
-		{
 			switch (instructions[index])
 			{
 			case StoreFromRegisterInstruction store:
@@ -82,7 +81,6 @@ public sealed class LoopInvariantCodeMotionOptimizer : InstructionOptimizer
 				written.Add(storeVar.Identifier);
 				break;
 			}
-		}
 		return written;
 	}
 

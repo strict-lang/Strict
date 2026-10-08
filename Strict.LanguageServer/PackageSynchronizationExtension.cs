@@ -1,5 +1,5 @@
-﻿using Strict.Language;
-using Strict.Expressions;
+﻿using Strict.Expressions;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.LanguageServer;
@@ -13,21 +13,21 @@ public static class PackageSynchronizationExtension
 		var outdatedType = package.FindDirectType(typeName);
 		// Keep a restore copy: parse failure must not leave the package without this type
 		// (opening Boolean.strict with a bad buffer used to wipe Boolean for the whole session).
-		string[]? restoreLines = outdatedType?.Lines;
+		var restoreLines = outdatedType?.Lines;
 		if (outdatedType != null)
 			package.Remove(outdatedType);
 		try
 		{
-			return new Type(package, new TypeLines(typeName, lines)).
-				ParseMembersAndMethods(new MethodExpressionParser());
+			return new Type(package, new TypeLines(typeName, lines)).ParseMembersAndMethods(
+				new MethodExpressionParser());
 		}
 		catch
 		{
 			if (restoreLines != null && package.FindDirectType(typeName) == null)
 				try
 				{
-					new Type(package, new TypeLines(typeName, restoreLines)).
-						ParseMembersAndMethods(new MethodExpressionParser());
+					new Type(package, new TypeLines(typeName, restoreLines)).ParseMembersAndMethods(
+						new MethodExpressionParser());
 				}
 				catch
 				{

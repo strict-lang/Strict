@@ -20,8 +20,8 @@
 #define STBI_ONLY_PNG
 #include "stb_image.h"
 
+// ReSharper disable once CppUnusedIncludeDirective
 #include <stdlib.h>
-#include <string.h>
 
 typedef struct ImageHandle
 {

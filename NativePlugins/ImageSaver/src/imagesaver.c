@@ -2,7 +2,7 @@
  * imagesaver.c — native plugin for Strict ImageSaver.strict
  *
  * Exports a single C function that NativePluginLoader calls:
- *   ImageSaver_Save(path, data, dataLength, width, height) — writes RGBA8888 pixels to file
+ *   ImageSaver_Save(path, data, width, height) — writes RGBA8888 pixels to file
  *
  * Format (PNG or JPG) is determined by the file extension.
  * Uses stb_image_write (single-header, public domain) for cross-platform encoding.
@@ -35,7 +35,6 @@ int ImageSaver_Save(const char* path, const unsigned char* data, int width, int 
 {
 	if (path == NULL || data == NULL || width <= 0 || height <= 0)
 		return 0;
-	int dataLength = width * height * 4;
 	const char* ext = GetExtension(path);
 	if (ext == NULL)
 		return 0;

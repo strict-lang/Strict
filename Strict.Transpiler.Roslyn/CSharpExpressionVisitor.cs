@@ -1,5 +1,5 @@
-using Strict.Language;
 using Strict.Expressions;
+using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Transpiler.Roslyn;
@@ -60,8 +60,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	}
 
 	private string WriteParameters(Method method) =>
-		string.Join(", ",
-			method.Parameters.Select(p => GetCSharpTypeName(p.Type) + " " + p.Name));
+		string.Join(", ", method.Parameters.Select(p => GetCSharpTypeName(p.Type) + " " + p.Name));
 
 	private static readonly string NewLine = Environment.NewLine;
 
@@ -132,10 +131,14 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 	protected override IReadOnlyList<string> VisitFor(For forExpression)
 	{
 		var body = Indent(VisitBody(forExpression.Body));
-		var variableName = body.Any(line => line.Contains(Type.ValueLowercase, StringComparison.Ordinal))
-			? Type.ValueLowercase
-			: Type.IndexLowercase;
-		var block = new List<string> { "foreach (var " + variableName + " in " + Visit(forExpression.Iterator) + ")" };
+		var variableName =
+			body.Any(line => line.Contains(Type.ValueLowercase, StringComparison.Ordinal))
+				? Type.ValueLowercase
+				: Type.IndexLowercase;
+		var block = new List<string>
+		{
+			"foreach (var " + variableName + " in " + Visit(forExpression.Iterator) + ")"
+		};
 		block.AddRange(body);
 		return block;
 	}

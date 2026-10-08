@@ -104,12 +104,11 @@ public sealed class For(Expression[] customVariables,
 		else
 			AddImplicitVariables(body, line, innerBody);
 		if (!CanIterate(iterator))
-			throw new ExpressionTypeIsNotAnIterator(body, iterator.ReturnType.Name,
-				line[4..].ToString());
+			throw new ExpressionTypeIsNotAnIterator(body, iterator.ReturnType.Name, line[4..].ToString());
 		var innerLines = body.Method.GetLinesAndStripTabs(innerBody.LineRange, body);
 		var shorthandOperator = GetForBodyShorthandOperator(innerLines);
-		var forExpression = new For(variables, iterator, innerBody.Parse(),
-			body.CurrentFileLineNumber, shorthandOperator);
+		var forExpression = new For(variables, iterator, innerBody.Parse(), body.CurrentFileLineNumber,
+			shorthandOperator);
 #if DEBUG
 		var originalLines = line.ToString() + Environment.NewLine + innerLines.ToLines();
 		var generatedLines = forExpression.ToString();
@@ -120,8 +119,7 @@ public sealed class For(Expression[] customVariables,
 		if (generatedLines != originalLines && normalizedGenerated != normalizedOriginal &&
 			!innerLines.Any(loopLine => loopLine.TrimStart().
 				StartsWith(BinaryOperator.To + " ", StringComparison.Ordinal)))
-			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression,
-				originalLines);
+			throw new GeneratedForExpressionDoesNotMatchInputExactly(body, forExpression, originalLines);
 #endif
 		return forExpression;
 	}
@@ -207,8 +205,7 @@ public sealed class For(Expression[] customVariables,
 	private static Type? TryGetIteratorYieldType(Body body, ReadOnlySpan<char> iteratorText)
 	{
 		var iteratorType = GetIteratorSourceType(body, iteratorText);
-		var iteratorMethod =
-			iteratorType?.Methods.FirstOrDefault(method => method.Name == Keyword.For);
+		var iteratorMethod = iteratorType?.Methods.FirstOrDefault(method => method.Name == Keyword.For);
 		return iteratorMethod?.ReturnType.IsIterator == true &&
 			iteratorMethod.ReturnType is GenericTypeImplementation generic
 				? generic.ImplementationTypes[0]
@@ -256,8 +253,8 @@ public sealed class For(Expression[] customVariables,
 		if (variable is { IsIterator: true })
 		{
 			var isGenericIterator = variable.IsGeneric ||
-				variable is GenericTypeImplementation { ImplementationTypes.Count: > 0 } implementation &&
-				implementation.ImplementationTypes[0].IsGeneric;
+				(variable is GenericTypeImplementation { ImplementationTypes.Count: > 0 } implementation &&
+					implementation.ImplementationTypes[0].IsGeneric);
 			return isGenericIterator
 				? iterableName.ToString()
 				: $"{iterableName}(0)";
@@ -308,8 +305,7 @@ public sealed class For(Expression[] customVariables,
 		return variables.ToArray();
 	}
 
-	private static Expression GetVariableValue(Body body, ReadOnlySpan<char> line,
-		int variableIndex)
+	private static Expression GetVariableValue(Body body, ReadOnlySpan<char> line, int variableIndex)
 	{
 		var forIteratorText = GetForIteratorText(line);
 		var iteratorYieldType = TryGetIteratorYieldType(body, forIteratorText);
@@ -344,8 +340,7 @@ public sealed class For(Expression[] customVariables,
 	public sealed class MoreThanTwoVariablesAreNotSupportedYet(Body body)
 		: ParsingFailed(body, "More than 2 for variables are not supported yet");
 
-	private static Expression
-		GetVariableValueFromRange(Expression iterator, MethodCall methodCall) =>
+	private static Expression GetVariableValueFromRange(Expression iterator, MethodCall methodCall) =>
 		methodCall.Arguments.Count > 0
 			? methodCall.Arguments[0]
 			: methodCall.Instance is MethodCall
@@ -364,8 +359,7 @@ public sealed class For(Expression[] customVariables,
 
 	private static ReadOnlySpan<char> GetForExpressionText(ReadOnlySpan<char> line) =>
 		FindVariableNames(line).Contains(',') && line.Contains(InWithSpaces, StringComparison.Ordinal)
-			? line[4..line.IndexOf(',')].ToString() +
-			line[(line.IndexOf(InWithSpaces) - 1)..].ToString()
+			? line[4..line.IndexOf(',')].ToString() + line[(line.IndexOf(InWithSpaces) - 1)..].ToString()
 			: line[4..];
 
 	private static void CheckForIncorrectMatchingTypes(Body innerBody,

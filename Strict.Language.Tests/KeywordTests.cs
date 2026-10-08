@@ -35,11 +35,13 @@ public class KeywordTests
 
 	[TestCaseSource(nameof(KeywordsList))]
 	public void CannotUseKeywordsAsMethodParameterName(string name) =>
-		Assert.That(() => new Type(TestPackage.Instance,
-			new TypeLines(name + nameof(CannotUseKeywordsAsMethodParameterName),
-				"has Number",
-				$"Run(mutable {name} Number)",
-				"\t5")).ParseMembersAndMethods(parser), Throws.InstanceOf<ParsingFailed>().With.InnerException.InstanceOf<NamedType.CannotUseKeywordsAsName>().With.Message.Contains($"{name} is a keyword and cannot be used as a identifier name"));
+		Assert.That(
+			() => new Type(TestPackage.Instance,
+				new TypeLines(name + nameof(CannotUseKeywordsAsMethodParameterName), "has Number",
+					$"Run(mutable {name} Number)", "\t5")).ParseMembersAndMethods(parser),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<NamedType.CannotUseKeywordsAsName>().With.Message.
+				Contains($"{name} is a keyword and cannot be used as a identifier name"));
 
 	[TestCaseSource(nameof(KeywordsList))]
 	public void CannotUseKeywordsAsMemberOrMethodExpressions(string name) =>
