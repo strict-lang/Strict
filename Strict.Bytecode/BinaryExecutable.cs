@@ -24,7 +24,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	internal Type numberType = basePackage.FindType(Type.Number) ?? new Type(basePackage, new TypeLines(Type.Number));
 	internal Type characterType = basePackage.FindType(Type.Character) ?? new Type(basePackage, new TypeLines(Type.Character));
 	internal Type rangeType = basePackage.FindType(Type.Range) ?? new Type(basePackage, new TypeLines(Type.Range));
-	internal Type listType = basePackage.FindType(Type.List) ?? new Type(basePackage, new TypeLines(Type.List));
+	internal Type listType = basePackage.FindType(Type.List) ?? new Type(basePackage, new TypeLines(Type.List, Type.HasWithSpaceAtEnd + Type.GenericUppercase));
 
 	/// <summary>
 	/// Loads a fully self-contained .strictbinary without needing any external package.

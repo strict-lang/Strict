@@ -21,6 +21,15 @@ public sealed class RunnerTests
 	private StringWriter consoleWriter = null!;
 	private TextWriter rememberConsole = null!;
 
+	[TestCase("")]
+	[TestCase("/")]
+	public async Task RunBaseTypesTestPackageFromDirectory(string suffix)
+	{
+		await new Runner(Path.Combine(FindRepoRoot(), "Examples", "BaseTypesTest") + suffix).Run();
+		Assert.That(consoleWriter.ToString(), Does.StartWith(string.Join(Environment.NewLine,
+			"Hello, World!", "Hello, Strict!", "3 + 4 = 7", "10 * 3 = 30", "(1, 2, 3).Sum = 6", "")));
+	}
+
 	[TearDown]
 	public void RestoreConsole() => Console.SetOut(rememberConsole);
 

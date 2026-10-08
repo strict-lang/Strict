@@ -114,9 +114,10 @@ public sealed class StrictDocument(Package package)
 		return diagnostics;
 	}
 
-	private void ParseCurrentFile(Package package, DocumentUri uri, ILanguageServerFacade languageServer)
+	private void ParseCurrentFile(Package package, DocumentUri uri,
+		ILanguageServerFacade languageServer)
 	{
-var folderPackage = PackageResolver.Resolve(package, uri.Path.ToFileSystemPath());
+		var folderPackage = PackageResolver.Resolve(package, uri.Path.ToFileSystemPath());
 		var type = folderPackage.SynchronizeAndGetType(uri.Path.GetFileName(), content);
 		if (type is not { IsTrait: false })
 			return;
@@ -125,15 +126,12 @@ var folderPackage = PackageResolver.Resolve(package, uri.Path.ToFileSystemPath()
 			return;
 		try
 		{
-			new RunnerService(package)
-				.AddService(new TestRunner(package, languageServer, methods, uri))
-				.AddService(new VariableValueEvaluator(package, languageServer, Get(uri)))
-				.RunAllServices();
+			new RunnerService(package).AddService(new TestRunner(package, languageServer, methods, uri)).
+				AddService(new VariableValueEvaluator(package, languageServer, Get(uri))).RunAllServices();
 		}
 		catch (Exception exception)
 		{
 			languageServer.Window.LogError(DiagnosticFormatter.BuildExceptionText(exception));
-		}
 		}
 	}
 

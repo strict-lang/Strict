@@ -35,18 +35,12 @@ public class CommandExecutor(ILanguageServerFacade languageServer,
 		catch (Exception exception)
 		{
 			languageServer.Window.LogError(exception.Message);
-			languageServer.SendNotification(NotificationName, new TestNotificationMessage
-			{
-				LineNumber = 0,
-				State = TestState.Red,
-				Uri = uriText,
-				MethodName = string.IsNullOrWhiteSpace(methodCall)
+			languageServer.SendNotification(NotificationName, new TestNotificationMessage(lineNumber: 0,
+				state: TestState.Red, uri: uriText, methodName: string.IsNullOrWhiteSpace(methodCall)
 					? Method.Run
 					: methodCall,
-				Message = DiagnosticFormatter.FormatMessage(exception.GetType().Name,
-					exception.Message),
-				StackTrace = exception.ToString()
-			});
+				message: DiagnosticFormatter.FormatMessage(exception.GetType().Name, exception.Message),
+				stackTrace: exception.ToString()));
 		}
 		return Unit.Task;
 	}

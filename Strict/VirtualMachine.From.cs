@@ -20,7 +20,7 @@ public sealed partial class VirtualMachine
 		if (members.Count == 0 && hasBinaryMembers)
 		{
 			Memory.Registers[invoke.Register] = new ValueInstance(targetType,
-				CreateConstructorValuesFromBinaryMembers(targetType, info.ArgumentRegisters,
+				CreateConstructorValuesFromBinaryMembers(targetType, info,
 					binaryMembers));
 			return true;
 		}
@@ -132,18 +132,19 @@ public sealed partial class VirtualMachine
 	}
 
 	private ValueInstance[] CreateConstructorValuesFromBinaryMembers(Type targetType,
-		Register[] argumentRegisters, List<BinaryMember> binaryMembers)
+		InvokeMethodInfo info, List<BinaryMember> binaryMembers)
 	{
 		var values = new ValueInstance[binaryMembers.Count];
-		var argumentIndex = 0;
 		for (var memberIndex = 0; memberIndex < binaryMembers.Count; memberIndex++)
 		{
 			var memberType = targetType.FindType(binaryMembers[memberIndex].FullTypeName) ??
 				targetType.FindType(GetShortTypeName(binaryMembers[memberIndex].FullTypeName));
-			if (memberType is { IsTrait: true })
+			var argumentIndex = Array.FindIndex(info.ParameterNames, name =>
+				name.Equals(binaryMembers[memberIndex].Name, StringComparison.OrdinalIgnoreCase));
+			if (argumentIndex >= 0 && argumentIndex < info.ArgumentRegisters.Length)
+				values[memberIndex] = Memory.Registers[info.ArgumentRegisters[argumentIndex]];
+			else if (memberType is { IsTrait: true })
 				values[memberIndex] = CreateTraitInstance(memberType);
-			else if (argumentIndex < argumentRegisters.Length)
-				values[memberIndex] = Memory.Registers[argumentRegisters[argumentIndex++]];
 			else if (memberType != null)
 				values[memberIndex] = CreateDefaultComplexValue(memberType);
 			else

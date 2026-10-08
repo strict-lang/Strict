@@ -24,7 +24,12 @@ public sealed class Runner
 	public Runner(string strictFilePath, string expressionToRun = Method.Run,
 		bool enableDetailedOutput = false)
 	{
-		this.strictFilePath = strictFilePath;
+		packageDirectory = Directory.Exists(strictFilePath)
+			? Path.TrimEndingDirectorySeparator(Path.GetFullPath(strictFilePath))
+			: null;
+		this.strictFilePath = packageDirectory == null
+			? strictFilePath
+			: Path.Combine(packageDirectory, Path.GetFileName(packageDirectory) + Type.Extension);
 		this.expressionToRun = expressionToRun;
 		this.enableDetailedOutput = enableDetailedOutput;
 		parser = new MethodExpressionParser();
@@ -33,6 +38,7 @@ public sealed class Runner
 	}
 
 	private readonly string strictFilePath;
+	private readonly string? packageDirectory;
 	private readonly string expressionToRun;
 	private readonly bool enableDetailedOutput;
 	private readonly MethodExpressionParser parser;
@@ -132,6 +138,9 @@ public sealed class Runner
 	private async Task<Package> LoadBasePackage()
 	{
 		var basePackage = await repositories.LoadStrictPackage();
+		if (packageDirectory != null)
+			return await repositories.LoadFromPath(
+				nameof(Strict) + Context.ParentSeparator + Path.GetFileName(packageDirectory), packageDirectory);
 		var sourceDir = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
 		var strictRoot = Path.GetFullPath(basePackage.FolderPath);
 		if (!sourceDir.StartsWith(strictRoot, StringComparison.OrdinalIgnoreCase) ||

@@ -1,11 +1,9 @@
 using System.Diagnostics;
-using System.Diagnostics;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Strict.HighLevelRuntime;
 using Strict.Language;
 using Strict.TestRunner;
-using VirtualMachine = Strict.VirtualMachine;
 
 namespace Strict.LanguageServer;
 
@@ -21,7 +19,7 @@ public sealed class TestRunner(Package package, ILanguageServerFacade? languageS
 
 	public void Run(VirtualMachine vm)
 	{
-var methodList = Methods.ToList();
+		var methodList = Methods.ToList();
 		if (methodList.Count == 0)
 			return;
 		var interpreter = new Interpreter(methodList[0].Type.Package, TestBehavior.TestRunner);
