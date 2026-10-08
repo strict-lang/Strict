@@ -210,20 +210,26 @@ public class Type : Context, IDisposable
 		if (Package.Name is nameof(Strict) or "TestPackage")
 			cachedAnyMethods = null;
 		cachedAvailableMethods = null;
-		if (cachedGenericTypes == null)
-			return;
-		foreach (var genericType in cachedGenericTypes.Values)
-			genericType.cachedAvailableMethods = null;
+		lock (genericImplementationLock)
+		{
+			if (cachedGenericTypes == null)
+				return;
+			foreach (var genericType in cachedGenericTypes.Values)
+				genericType.cachedAvailableMethods = null;
+		}
 	}
 
 	internal void ReimplementGenericTypeMethods()
 	{
-		if (cachedGenericTypes == null)
-			return;
-		foreach (var genericType in cachedGenericTypes.Values)
+		lock (genericImplementationLock)
 		{
-			genericType.ReimplementMembers();
-			genericType.ReimplementMethods();
+			if (cachedGenericTypes == null)
+				return;
+			foreach (var genericType in cachedGenericTypes.Values)
+			{
+				genericType.ReimplementMembers();
+				genericType.ReimplementMethods();
+			}
 		}
 	}
 
@@ -375,7 +381,8 @@ public class Type : Context, IDisposable
 	public GenericTypeImplementation GetGenericImplementation(params Type[] implementationTypes)
 	{
 		var key = GetImplementationName(implementationTypes);
-		return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
+		lock (genericImplementationLock)
+			return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
 	}
 
 	internal string GetImplementationName(Type[] implementationTypes)
@@ -407,6 +414,7 @@ public class Type : Context, IDisposable
 	}
 
 	private Dictionary<string, GenericTypeImplementation>? cachedGenericTypes;
+	private readonly object genericImplementationLock = new();
 
 	/// <summary>
 	/// Most often called for List (or the Iterator trait), which we want to optimize for
