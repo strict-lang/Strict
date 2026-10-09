@@ -21,6 +21,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		Memory.Frame = new CallFrame(initialVariables);
 		InitializeEntryPointMembers(method);
 		currentMethodContext = ResolveMethodContext(method);
+		runningBlocks.Add(method.instructions);
 		RunInstructions(method.instructions
 #if DEBUG
 			, method.Name

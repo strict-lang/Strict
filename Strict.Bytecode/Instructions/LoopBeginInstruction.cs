@@ -67,6 +67,35 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 		IsInitialized = true;
 	}
 
+	/// <summary>
+	/// ponytail: runtime loop state lives on the shared instruction, a re-entrant call of the same
+	/// method saves and restores it. Upgrade path: keep the loop state per call frame in the VM.
+	/// </summary>
+	public State SaveState() => new(IsInitialized, LoopCount, InstructionIndex, StartIndexValue,
+		EndIndexValue, IsDecreasing, CurrentIndexValue, SavedIndexValue, SavedValue, SavedOuterValue,
+		SavedOuterIndexValue, SavedCustomValues);
+
+	public void RestoreState(State state)
+	{
+		IsInitialized = state.IsInitialized;
+		LoopCount = state.LoopCount;
+		InstructionIndex = state.InstructionIndex;
+		StartIndexValue = state.StartIndexValue;
+		EndIndexValue = state.EndIndexValue;
+		IsDecreasing = state.IsDecreasing;
+		CurrentIndexValue = state.CurrentIndexValue;
+		SavedIndexValue = state.SavedIndexValue;
+		SavedValue = state.SavedValue;
+		SavedOuterValue = state.SavedOuterValue;
+		SavedOuterIndexValue = state.SavedOuterIndexValue;
+		SavedCustomValues = state.SavedCustomValues;
+	}
+
+	public readonly record struct State(bool IsInitialized, int LoopCount, int InstructionIndex,
+		int? StartIndexValue, int? EndIndexValue, bool? IsDecreasing, int? CurrentIndexValue,
+		ValueInstance SavedIndexValue, ValueInstance SavedValue, ValueInstance SavedOuterValue,
+		ValueInstance SavedOuterIndexValue, Dictionary<string, ValueInstance>? SavedCustomValues);
+
 	public void Reset()
 	{
 		IsInitialized = false;

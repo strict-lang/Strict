@@ -34,11 +34,20 @@ public sealed partial class VirtualMachine
 		currentMethodContext = info.FullName;
 		currentInstance = evaluatedInstance;
 		InitializeMethodCallScope(info, evaluatedArgs, evaluatedInstance);
+		var isReentrant = !runningBlocks.Add(invokeInstructions);
+		var savedLoops = isReentrant
+			? SaveLoopStates(invokeInstructions)
+			: null;
 		RunInstructions(invokeInstructions
 #if DEBUG
 			, info.MethodName
 #endif
 		);
+		if (savedLoops == null)
+			runningBlocks.Remove(invokeInstructions);
+		else
+			foreach (var (loopBegin, state) in savedLoops)
+				loopBegin.RestoreState(state);
 		var result = TryFlattenNestedIteratorList(info, Returns);
 		currentMethodContext = previousMethodContext;
 		currentInstance = previousInstance;
@@ -316,6 +325,18 @@ public sealed partial class VirtualMachine
 	}
 
 	private readonly Dictionary<Type, bool> isTraitPerType = new();
+
+	private readonly HashSet<List<Instruction>> runningBlocks = new(ReferenceEqualityComparer.Instance);
+
+	private static List<(LoopBeginInstruction, LoopBeginInstruction.State)>? SaveLoopStates(
+		List<Instruction> blockInstructions)
+	{
+		List<(LoopBeginInstruction, LoopBeginInstruction.State)>? states = null;
+		foreach (var instruction in blockInstructions)
+			if (instruction is LoopBeginInstruction loopBegin)
+				(states ??= []).Add((loopBegin, loopBegin.SaveState()));
+		return states ?? [];
+	}
 
 	private bool TryGetBinaryMembers(Type type, out List<BinaryMember> members)
 	{

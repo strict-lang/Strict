@@ -709,6 +709,22 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void RecursiveCallInsideLoopKeepsOuterLoop()
+	{
+		var source = new[]
+		{
+			"has number", "Leaves Number", "	if number is 0", "		return 1", "	mutable total = 0",
+			"	for 3", $"		total = total + {nameof(RecursiveCallInsideLoopKeepsOuterLoop)}(number - 1).Leaves",
+			"	total"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(RecursiveCallInsideLoopKeepsOuterLoop),
+			$"{nameof(RecursiveCallInsideLoopKeepsOuterLoop)}(2).Leaves", source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(9));
+	}
+
+	[Test]
 	public void TextIndexOfUsesStartIndex()
 	{
 		var source = new[] { "has letters Text", "SecondQuote Number", "	letters.IndexOf(\"a\", 1)" };
