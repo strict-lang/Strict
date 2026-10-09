@@ -8,6 +8,8 @@ Precedence Number
 	SyntaxNode("Binary", "is not").Precedence is 7
 	SyntaxNode("Number", "1").Precedence is 0
 	SyntaxNode("Binary", "x").Precedence is 0
+	if Kind is "Not"
+		return 3
 	if Kind is not "Binary" or text is not in operators
 		return 0
 	precedences(operators.Index(text))
@@ -16,10 +18,17 @@ to Text
 	SyntaxNode("Binary", "+", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))) to Text is "1 + 2"
 	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))) to Text is "(1, 2)"
 	if Kind is "Binary"
-		return ChildText(0, Precedence) + " " + text + " " + ChildText(1, Precedence + 1)
+		return BinaryText
 	if Kind is "List"
 		return "(" + ArgumentsText(0) + ")"
 	CallText
+BinaryText Text
+	SyntaxNode("Binary", "*", (SyntaxNode("Missing", ""), SyntaxNode("Number", "2"))).BinaryText is "* 2"
+	constant left = ChildText(0, Precedence)
+	constant right = ChildText(1, Precedence + 1)
+	if left is ""
+		return right is "" then text else text + " " + right
+	right is "" then left + " " + text else left + " " + text + " " + right
 CallText Text
 	SyntaxNode("Call", "Add", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))).CallText is "Add(1, 2)"
 	SyntaxNode("Member", "Length", (SyntaxNode("Identifier", "x"), SyntaxNode("Identifier", "x"))).CallText is "x.Length"
@@ -33,7 +42,7 @@ CallText Text
 UnaryText Text
 	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).UnaryText is "not a"
 	if Kind is "Not"
-		return "not " + ChildText(0, 15)
+		return "not " + ChildText(0, 13)
 	if Kind is "Negate"
 		return "-" + ChildText(0, 15)
 	StatementText
@@ -46,10 +55,10 @@ StatementText Text
 	if Kind is "Reassignment"
 		return ChildText(0, 0) + " = " + ChildText(1, 0)
 	if Kind is in ("Return", "If", "For")
-		return Kind.Lower + " " + ChildText(0, 0)
+		return children.Length is 0 then text else Kind.Lower + " " + ChildText(0, 0)
 	if Kind is "ElseIf"
 		return "else if " + ChildText(0, 0)
-	text
+	Kind is "ElseValue" then "else " + ChildText(0, 0) else text
 ChildText(childIndex Number, minimumPrecedence Number) Text
 	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).ChildText(0, 15) is "a"
 	let child = children(childIndex)

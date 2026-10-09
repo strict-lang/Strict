@@ -4,7 +4,7 @@ Parse SyntaxNode
 	SyntaxParser(Tokenizer("(a + b) * c").Tokens).Parse to Text is "(a + b) * c"
 	SyntaxParser(Tokenizer("a - b - c").Tokens).Parse to Text is "a - b - c"
 	SyntaxParser(Tokenizer("Add(5, x.y).Length").Tokens).Parse to Text is "Add(5, x.y).Length"
-	SyntaxParser(Tokenizer("not a and b").Tokens).Parse to Text is "not a and b"
+	SyntaxParser(Tokenizer("(not a) and b").Tokens).Parse to Text is "(not a) and b"
 	SyntaxParser(Tokenizer("x is not 5").Tokens).Parse to Text is "x is not 5"
 	SyntaxParser(Tokenizer("(1, 2, 3)").Tokens).Parse to Text is "(1, 2, 3)"
 	SyntaxParser(Tokenizer("list.Add(-1)").Tokens).Parse to Text is "list.Add(-1)"
@@ -72,10 +72,19 @@ OperatorPrecedence(position Number, start Number) Number
 	SyntaxParser("-", "b").OperatorPrecedence(0, 0) is 0
 	SyntaxParser("a", "*", "-", "b").OperatorPrecedence(2, 0) is 0
 	if position is start
-		return 0
+		return LeadingPrecedence(position)
 	if SyntaxNode("Binary", tokens(position - 1)).Precedence > 0 or (tokens(position - 1) is in ("(", ",", "not"))
 		return 0
 	SyntaxNode("Binary", OperatorText(position)).Precedence
+LeadingPrecedence(position Number) Number
+	SyntaxParser("*", "a").LeadingPrecedence(0) is 13
+	SyntaxParser("-", "a").LeadingPrecedence(0) is 0
+	SyntaxParser("in", "(", "a", ")").LeadingPrecedence(0) is 0
+	if tokens(position) is in ("-", "not")
+		return 0
+	if position + 1 < tokens.Length and (tokens(position + 1) is "(")
+		return 0
+	SyntaxNode("Binary", tokens(position)).Precedence
 OperatorText(position Number) Text
 	SyntaxParser("a", "is", "not", "b").OperatorText(1) is "is not"
 	SyntaxParser("a", "is", "b").OperatorText(1) is "is"
@@ -102,7 +111,12 @@ ParseCallOrMember(start Number, end Number) SyntaxNode
 	if tokens(start) is not "("
 		return SyntaxNode("Call", tokens(start), Arguments(start + 1, end))
 	let arguments = Arguments(start, end)
-	end - start > 3 and (arguments.Length is 1) then arguments(0) else SyntaxNode("List", "", arguments)
+	IsGrouping(arguments) then arguments(0) else SyntaxNode("List", "", arguments)
+IsGrouping(arguments SyntaxNodes) Boolean
+	SyntaxParser("1").IsGrouping(SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "b")) is false
+	if arguments.Length is not 1
+		return false
+	arguments(0).Kind is in ("Binary", "Not", "Negate")
 LastDotIndex(start Number, end Number) Number
 	SyntaxParser("a", ".", "b", ".", "c").LastDotIndex(0, 5) is 3
 	SyntaxParser("f", "(", "a", ".", "b", ")").LastDotIndex(0, 6) is -1

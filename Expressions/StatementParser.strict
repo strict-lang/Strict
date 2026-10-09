@@ -11,7 +11,7 @@ ParseStatement SyntaxNode
 	if first is in ("let", "constant", "mutable")
 		return SyntaxNode("Declaration", first + " " + tokens(1), Rest(3))
 	if first is in ("return", "if", "for")
-		return SyntaxNode(first.Capitalize, "", Rest(1))
+		return tokens.Length is 1 then SyntaxNode(first.Capitalize, first) else SyntaxNode(first.Capitalize, "", Rest(1))
 	if first is "else"
 		return ParseElse
 	ParseAssignmentOrExpression
@@ -21,9 +21,10 @@ Rest(start Number) SyntaxNodes
 ParseElse SyntaxNode
 	StatementParser(Tokenizer("else").Tokens).ParseElse.Kind is "Else"
 	StatementParser("else", "if", "a").ParseElse.Kind is "ElseIf"
+	StatementParser("else", "0").ParseElse.Kind is "ElseValue"
 	if tokens.Length is 1
 		return SyntaxNode("Else", "else")
-	SyntaxNode("ElseIf", "", Rest(2))
+	tokens(1) is "if" then SyntaxNode("ElseIf", "", Rest(2)) else SyntaxNode("ElseValue", "", Rest(1))
 ParseAssignmentOrExpression SyntaxNode
 	StatementParser("a", "=", "1").ParseAssignmentOrExpression.Kind is "Reassignment"
 	StatementParser(Tokenizer("a").Tokens).ParseAssignmentOrExpression.Kind is "Identifier"
