@@ -27,6 +27,7 @@ TokenLength(start Number) Number
 	1
 TextEnd(position Number) Number
 	Tokenizer("\"a\"").TextEnd(1) is 2
+	Tokenizer("\"\\\"\"").TextEnd(1) is 3
 	let character = line.Substring(position, 1)
 	if character is "\\"
 		return TextEnd(position + 2)
