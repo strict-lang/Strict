@@ -176,6 +176,27 @@ D7 Bootstrap: Strict compiler compiles all packages (equal to C# output); Runner
    its differential test is green; finally the Strict compiler compiles itself natively and the
    produced exe compiles Examples (stage-2 bootstrap). Dashboard "C# replaced" tracked per phase.
 
+D1 progress (2026-10-09): syntax layer done. `Expressions/Tokenizer` (character level, escaped
+quotes), `SyntaxNode` (tree, C# precedences, canonical printing incl. `(not x) and y`),
+`SyntaxParser` (operators incl. `is not`, `is in`, `is not in`, then/else, unary, member and call
+chains, lists vs grouping), `StatementParser` (let/constant/mutable, reassignment, return, if,
+else if, selector if lines, for). `RoundTrip.strict` re-prints every method line; the Slow test
+`StrictParserRoundTripsEveryLine` asserts 0 mismatches for all 18 folders (runs on the VM). Still
+missing for D1: type/member/method model and package lookup in Strict, typed nodes (resolving
+which call is a method, member, variable or parameter), multi-line bodies as trees.
+Bugs found and fixed on the way (each with a test): parser stack overflow on `.`/`)` inside text,
+text-unaware member splitting, interpreter return type check on nested bodies, VM IndexOf
+startIndex, list to Text truncation at 10 items, register reuse per statement (64 register limit),
+constant folding / strength reduction / LICM / inlining assumptions broken by register reuse, VM
+and interpreter short-circuit and/or, negative and out of range list indexes, VM list constants and
+own `to Text`, VM endless recursion as StackOverflow, test lines with ` then ` in text, VM loop
+state on re-entrant calls, inline conditional values on the VM.
+Known C# parser issues to fix next: a call with several arguments containing `\"` fails
+(UnterminatedString), a text literal with `\\` before `\"` fails, a line starting with a bracketed
+comparison followed by `and` or `+` is misparsed, redundant brackets in arguments and then/else
+are accepted although the printer drops them. VM: `FindJumpEndInstructionIndex` scans linearly on
+every jump, `DeadStoreEliminator.FindProducerInstruction` may pick a side effecting producer.
+
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
    `-Windows/-Linux/-MacOS`, diagnostics flag shows stage times + instruction reduction.
