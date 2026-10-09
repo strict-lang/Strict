@@ -12,6 +12,9 @@ RunTool(name Text, arguments Text) ProcessResult
 	if not tool.IsAvailable
 		return ProcessResult(127, "", "tool not found: " + name)
 	tool.Run(arguments)
+OperatingSystem Text
+	Process.OperatingSystem is in ("Windows", "Linux", "MacOS")
+	"Unknown"
 to Text
 	if executable is ""
 		return "Process(missing)"

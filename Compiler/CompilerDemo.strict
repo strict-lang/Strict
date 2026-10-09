@@ -2,8 +2,10 @@ has logger
 Run
 	logger.Log("=== Strict native compiler demo ===")
 	Directory.Create("Compiler/output")
-	constant build = NativeBuild("Compiler/output/add.asm", Platform.Windows)
-	logger.Log(build.WriteAsm(InstructionsToNasm.SimpleAdd(Platform.Windows).Compile))
+	constant platform = Platform.Current
+	constant build = NativeBuild("Compiler/output/add.asm", platform)
+	logger.Log(build.WriteAsm(InstructionsToNasm.SimpleAdd(platform).Compile))
 	logger.Log(build.Assemble)
-	logger.Log(build.Link("Compiler/output/add.exe"))
-	logger.Log(Process("Compiler/output/add.exe").Run(""))
+	constant exePath = "Compiler/output/add" + NasmFormat(platform).ExeExtension
+	logger.Log(build.Link(exePath))
+	logger.Log(Process(exePath).Run(""))

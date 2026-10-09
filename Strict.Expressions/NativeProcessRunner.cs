@@ -10,6 +10,13 @@ namespace Strict.Expressions;
 public static class NativeProcessRunner
 {
 	public const int DefaultTimeoutMilliseconds = 30000;
+	public const string OperatingSystemMethod = "OperatingSystem";
+	public static string OperatingSystemName =>
+		OperatingSystem.IsWindows()
+			? "Windows"
+			: OperatingSystem.IsMacOS()
+				? "MacOS"
+				: "Linux";
 
 	public static string? FindTool(string name)
 	{

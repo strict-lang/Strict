@@ -4,10 +4,11 @@ Run(path)
 	let body = LineGenerator.Empty.GenerateReturningBody(ConstantLines(lines) + RunBodyLines(lines))
 	let optimizer = Optimizer(body)
 	logger.Log(optimizer.OptimizeWithStats)
-	let build = NativeBuild(path.RemoveExtension.text + ".asm", Platform.Windows)
-	build.WriteAsm(InstructionsToNasm(optimizer.Optimize.instructions, "Run", Platform.Windows).Compile)
+	constant platform = Platform.Current
+	let build = NativeBuild(path.RemoveExtension.text + ".asm", platform)
+	build.WriteAsm(InstructionsToNasm(optimizer.Optimize.instructions, "Run", platform).Compile)
 	logger.Log(build.Assemble)
-	let exePath = path.RemoveExtension.text + ".exe"
+	let exePath = path.RemoveExtension.text + NasmFormat(platform).ExeExtension
 	logger.Log(build.Link(exePath))
 	logger.Log("Run returned " + Process(exePath).Run("").exitCode)
 Optimizer(body GenerationResult) Optimizers/AllOptimizers

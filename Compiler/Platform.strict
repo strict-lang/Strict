@@ -10,6 +10,15 @@ NameOf(code Number) Text
 	if code is MacOS
 		return "MacOS"
 	"Unknown"
+Current Number
+	Platform.Current is in (Windows, Linux, MacOS)
+	FromName(Process.OperatingSystem)
+FromName(name Text) Number
+	FromName("Linux") is Linux
+	FromName("MacOS") is MacOS
+	if name is "Windows"
+		return Windows
+	name is "MacOS" then MacOS else Linux
 IsWindows(code Number) Boolean
 	if code is Windows
 		return true

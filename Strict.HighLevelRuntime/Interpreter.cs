@@ -154,6 +154,8 @@ public class Interpreter
 			return fileResult;
 		if (directoryEvaluator.TryEvaluate(method, args, out var directoryResult))
 			return directoryResult;
+		if (method is { Name: NativeProcessRunner.OperatingSystemMethod, Type.Name: "Process" })
+			return new ValueInstance(NativeProcessRunner.OperatingSystemName);
 		if (TryExecuteTextWriterWrite(method, args))
 			return noneInstance;
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))

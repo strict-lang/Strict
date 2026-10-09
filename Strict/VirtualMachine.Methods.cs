@@ -265,6 +265,11 @@ public sealed partial class VirtualMachine
 			Memory.Registers[invoke.Register] = CreateProcessValue(path);
 			return true;
 		}
+		if (info.MethodName == NativeProcessRunner.OperatingSystemMethod)
+		{
+			Memory.Registers[invoke.Register] = new ValueInstance(NativeProcessRunner.OperatingSystemName);
+			return true;
+		}
 		if (info.MethodName == "RunTool" && info.ArgumentRegisters.Length == 2)
 		{
 			var name = GetArgumentText(Memory.Registers[info.ArgumentRegisters[0]]);

@@ -22,6 +22,9 @@ written in Strict, and what C# features are still missing from the Strict runtim
   load into a different register and broke later reads; upgrade path: remap reads like the C# one).
 - Runner treats a cached binary as outdated when a used package (`Strict/Optimizers`, base types, ..)
   has a newer `.strict` file, not just files next to the entry file.
+- `Process.OperatingSystem` (native in interpreter and VM) feeds `Platform.Current`; SourceCompiler
+  and CompilerDemo no longer hard-code Windows. NativeBuild uses the same link flags as the C#
+  NativeExecutableLinker (no CRT, own entry point): NativeArithmetic.exe 17,408 → 3,072 bytes.
 - Runtime uses the shared model too (`VmInstruction`/`InstrList` removed): Bytecode, Optimizers,
   Runtime and Compiler now all work on `Bytecode/BytecodeInstruction` + `Bytecode/InstructionList`.
 
