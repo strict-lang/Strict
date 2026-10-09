@@ -1,16 +1,16 @@
-has ops InstrList
+has ops Bytecode/InstructionList
 constant MaxSteps = 1000
 Run VmState
-	VirtualMachine(InstrList.Binary(6, "Multiply", 7)).Run.returnValue.number is 42
+	VirtualMachine(InstructionList.Returning("Multiply", 7)).Run.returnValue.number is 35
 	RunFrom(VmState.Empty, 0)
 RunFrom(state VmState, steps Number) VmState
-	VirtualMachine(InstrList.Empty).RunFrom(VmState.Empty, 0).pc is 0
+	VirtualMachine(InstructionList.Empty).RunFrom(VmState.Empty, 0).pc is 0
 	if state.didReturn or steps >= MaxSteps or state.pc >= ops.Count
 		return state
 	let next = InstructionExec(state, ops.At(state.pc)).Execute
 	RunFrom(next, steps + 1)
 RunWithFrame(frame CallFrame) VmState
-	VirtualMachine(InstrList.Binary(2, "Add", 3)).RunWithFrame(CallFrame.Empty).returnValue.number is 5
+	VirtualMachine(InstructionList.Returning("Add", 3)).RunWithFrame(CallFrame.Empty).returnValue.number is 8
 	RunFrom(VmState(VmMemory(RegisterBank.Empty, frame), 0, false, VmValue.None), 0)
 to Text
 	"vm"

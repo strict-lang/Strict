@@ -1,11 +1,11 @@
-has ops InstrList
+has ops Bytecode/InstructionList
 constant StageCount = 4
 Run VmValue
-	RunnerPipeline(InstrList.Binary(2, "Add", 3)).Run.number is 5
+	RunnerPipeline(InstructionList.Returning("Add", 3)).Run.number is 8
 	VirtualMachine(ops).Run.returnValue
 Stored(name Text, amount Number) RunnerPipeline
 	RunnerPipeline.Stored("n", 7).Run.number is 7
-	let store = InstrList.Empty.Append(VmInstruction.StoreConstant(name, amount))
-	RunnerPipeline(store.Append(VmInstruction.LoadVariable(0, name)).Append(VmInstruction.ReturnOp(0)))
+	let store = InstructionList.Empty.Append(BytecodeInstruction.StoreConstant(name, amount))
+	RunnerPipeline(store.Append(BytecodeInstruction.LoadVariable(0, name)).Append(BytecodeInstruction.ReturnOp(0)))
 to Text
 	"pipeline"

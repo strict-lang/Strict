@@ -42,5 +42,8 @@ Sample(binaryName Text, right Number) InstructionList
 	InstructionList.Sample("Add", 3).Count is 3
 	constant first = InstructionList.Empty.Append(BytecodeInstruction.LoadConstant(0, 5))
 	first.Append(BytecodeInstruction.LoadConstant(1, right)).Append(BytecodeInstruction(binaryName, 0, 1, "2"))
+Returning(binaryName Text, right Number) InstructionList
+	InstructionList.Returning("Add", 3).Count is 4
+	Sample(binaryName, right).Append(BytecodeInstruction.ReturnOp(2))
 to Text
 	"ops=" + Count to Text

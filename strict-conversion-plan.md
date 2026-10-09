@@ -22,7 +22,8 @@ written in Strict, and what C# features are still missing from the Strict runtim
   load into a different register and broke later reads; upgrade path: remap reads like the C# one).
 - Runner treats a cached binary as outdated when a used package (`Strict/Optimizers`, base types, ..)
   has a newer `.strict` file, not just files next to the entry file.
-- Remaining duplicate instruction model: Runtime (`VmInstruction`/`InstrList`).
+- Runtime uses the shared model too (`VmInstruction`/`InstrList` removed): Bytecode, Optimizers,
+  Runtime and Compiler now all work on `Bytecode/BytecodeInstruction` + `Bytecode/InstructionList`.
 
 ## Strict compiles Strict source to a native exe — 2026-10-09 (late night)
 

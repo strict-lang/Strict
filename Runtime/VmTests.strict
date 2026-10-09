@@ -1,10 +1,10 @@
 has logger
 Run
-	constant left = VmInstruction.LoadConstant(0, 6)
-	constant right = VmInstruction.LoadConstant(1, 7)
-	constant mul = VmInstruction.BinaryOp("Multiply", 0, 1, 2)
-	constant ret = VmInstruction.ReturnOp(2)
-	constant ops = InstrList.Empty.Append(left).Append(right).Append(mul).Append(ret)
+	constant left = BytecodeInstruction.LoadConstant(0, 6)
+	constant right = BytecodeInstruction.LoadConstant(1, 7)
+	constant mul = BytecodeInstruction("Multiply", 0, 1, "2")
+	constant ret = BytecodeInstruction.ReturnOp(2)
+	constant ops = InstructionList.Empty.Append(left).Append(right).Append(mul).Append(ret)
 	constant state = VirtualMachine(ops).Run
 	logger.Log(state.didReturn)
 	logger.Log(state.returnValue)

@@ -14,7 +14,7 @@ public sealed class StrictRuntimeConversionTests
 		var path = GetRuntimePath();
 		foreach (var typeName in new[]
 			{
-				"VmValue", "RegisterBank", "CallFrame", "VmMemory", "VmInstruction", "InstrList",
+				"VmValue", "RegisterBank", "CallFrame", "VmMemory",
 				"VmState", "ArithmeticExec", "InstructionExec", "VirtualMachine", "RunnerPipeline"
 			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);

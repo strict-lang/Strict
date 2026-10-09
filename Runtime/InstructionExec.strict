@@ -1,39 +1,39 @@
 has state VmState
-has instruction VmInstruction
+has instruction Bytecode/BytecodeInstruction
 Execute VmState
-	InstructionExec(VmState.Empty, VmInstruction.LoadConstant(0, 5)).Execute.pc is 1
+	InstructionExec(VmState.Empty, BytecodeInstruction.LoadConstant(0, 5)).Execute.pc is 1
 	if instruction.IsReturn
 		return state.WithReturn(state.memory.GetRegister(instruction.register))
-	if instruction.IsLoadConstant
+	if instruction.typeName is "LoadConstantToRegister"
 		return SetRegister(VmValue.FromNumber(instruction.amount))
-	if instruction.IsLoadVariable
+	if instruction.typeName is "LoadVariableToRegister"
 		return SetRegister(state.memory.GetVariable(instruction.label))
 	ExecuteStoreOrJump
 ExecuteStoreOrJump VmState
-	InstructionExec(VmState.Empty, VmInstruction("Invoke", 0, 0, "")).ExecuteStoreOrJump.pc is 1
-	if instruction.IsStoreConstant
+	InstructionExec(VmState.Empty, BytecodeInstruction("Invoke", 0, 0, "")).ExecuteStoreOrJump.pc is 1
+	if instruction.typeName is "StoreConstantToVariable"
 		return SetVariable(VmValue.FromNumber(instruction.amount))
-	if instruction.IsStoreRegister
+	if instruction.typeName is "StoreRegisterToVariable"
 		return SetVariable(state.memory.GetRegister(instruction.register))
 	if instruction.IsBinary
 		return ExecuteBinary
-	if instruction.IsJump
+	if instruction.typeName is in ("Jump", "JumpIfTrue", "JumpIfFalse")
 		return ExecuteJump
 	state.Advance
 SetRegister(slot VmValue) VmState
-	InstructionExec(VmState.Empty, VmInstruction.ReturnOp(1)).SetRegister(VmValue.FromNumber(3)).pc is 1
+	InstructionExec(VmState.Empty, BytecodeInstruction.ReturnOp(1)).SetRegister(VmValue.FromNumber(3)).pc is 1
 	state.WithMemory(state.memory.SetRegister(instruction.register, slot)).Advance
 SetVariable(slot VmValue) VmState
-	InstructionExec(VmState.Empty, VmInstruction.StoreConstant("n", 1)).SetVariable(VmValue.FromNumber(3)).pc is 1
+	InstructionExec(VmState.Empty, BytecodeInstruction.StoreConstant("n", 1)).SetVariable(VmValue.FromNumber(3)).pc is 1
 	state.WithMemory(state.memory.SetVariable(instruction.label, slot)).Advance
 ExecuteBinary VmState
-	InstructionExec(VmState.Empty, VmInstruction.BinaryOp("Add", 0, 1, 2)).ExecuteBinary.pc is 1
+	InstructionExec(VmState.Empty, BytecodeInstruction("Add", 0, 1, "2")).ExecuteBinary.pc is 1
 	let left = state.memory.GetRegister(instruction.register)
 	let right = state.memory.GetRegister(instruction.amount)
 	let result = ArithmeticExec(left, right).Compute(instruction.typeName)
 	state.WithMemory(state.memory.SetRegister(instruction.ResultRegister, result)).Advance
 ExecuteJump VmState
-	InstructionExec(VmState.Empty, VmInstruction("Jump", 0, 2, "")).ExecuteJump.pc is 3
+	InstructionExec(VmState.Empty, BytecodeInstruction("Jump", 0, 2, "")).ExecuteJump.pc is 3
 	if instruction.typeName is "Jump"
 		return state.JumpBy(instruction.amount)
 	let isTrue = state.memory.GetRegister(0).IsTrue
