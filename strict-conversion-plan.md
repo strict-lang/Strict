@@ -52,6 +52,12 @@ Open (found while verifying): 5 Slow Strict.Transpiler tests (ExecuteOperation,
 GenerateFileReadProgram, LinkedListAnalyzer, ReduceButGrow, RemoveDuplicateWords) already failed
 before 2026-10-09 (expected C# output out of date with the converted Examples) → fix in Phase B.
 
+Phase B result (2026-10-09): B1 done (no production C# file above 504 lines except
+ValueInstance.cs with its commented-out packed RGBA experiment, all splits audited line by line),
+B2 test skips removed except generic List/Dictionary, parser-limitation ignore removed, B4
+compiler exception/platform duplicates unified, 5 stale transpiler tests fixed, 3 TODOs resolved.
+Moved to Phase D: AST based replacements for Body value piping and validator double-bracket scan.
+
 Phase B notes (2026-10-09): skipped base tests now run (Number, Expressions package, to Text,
 digits, Text.Split, Parser, ShuntingYard). Still skipped: generic List/Dictionary methods (need a
 concrete implementation to run, e.g. List.Length parsed for List(Generic) fails). Follow-ups found:
