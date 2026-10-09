@@ -84,8 +84,8 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		if (runOnlyTests && count > 1 && last.Equals(interpreter.noneInstance) &&
 			body.Method.Name != Method.Run && interpreter.behavior != TestBehavior.TestRunner)
 			throw new Interpreter.MethodRequiresTest(body.Method, body);
-		if (runOnlyTests || last.IsError || last.IsType(body.Method.ReturnType) ||
-			body.Method.Name == Method.From)
+		if (runOnlyTests || body.Parent != null || last.IsError ||
+			last.IsType(body.Method.ReturnType) || body.Method.Name == Method.From)
 			return last;
 		if (body.Method.ReturnType.IsSameOrCanBeUsedAs(last.GetType()))
 			return last;

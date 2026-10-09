@@ -468,6 +468,18 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void IfBodyEndingWithReassignmentInLoopNoReturn()
+	{
+		using var t = CreateType(nameof(IfBodyEndingWithReassignmentInLoopNoReturn),
+			"has number", "Collect Numbers", "	mutable values = List(Mutable(Number))",
+			"	mutable next = 0", "	for number", "		if index >= next", "			values.Add(index)",
+			"			next = index + 1", "	values");
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Collect"),
+			new ValueInstance(t, [new ValueInstance(interpreter.numberType, 2)]), []).List.Count,
+			Is.EqualTo(2));
+	}
+
+	[Test]
 	public void EvaluateRangeEquality()
 	{
 		using var t = CreateType(nameof(EvaluateRangeEquality), "has number", "Compare Boolean",
