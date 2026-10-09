@@ -106,6 +106,7 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("not (true xor false)")]
 	[TestCase("true and false or (not true) and (not false)")]
 	[TestCase("(1 is 1) and (1 is in (1, 2))")]
+	[TestCase("5 - (3 - 1)")]
 	public void ParseGroupExpressionProducesSameCode(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 

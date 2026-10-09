@@ -64,8 +64,8 @@ internal class TypeMethodFinder(Type type)
 			: new Type[arguments.Count];
 		for (var index = 0; index < arguments.Count; index++)
 			typesOfArguments[index] = arguments[index].ReturnType;
-		var lookupKey = (Type, methodName, typesOfArguments);
-		var activeLookups = activeMethodLookups ??= [];
+		var lookupKey = new MethodLookup(Type, methodName, typesOfArguments);
+		var activeLookups = activeMethodLookups ??= new HashSet<MethodLookup>(MethodLookup.Comparer);
 		if (!activeLookups.Add(lookupKey))
 			return null;
 		try
@@ -107,7 +107,26 @@ internal class TypeMethodFinder(Type type)
 	}
 
 	[ThreadStatic]
-	private static HashSet<(Type Type, string MethodName, Type[] ArgumentTypes)>? activeMethodLookups;
+	private static HashSet<MethodLookup>? activeMethodLookups;
+
+	/// <summary>
+	/// Argument types are compared by content, a cycle like List(Fruit).from(Texts) → List(Fruit)
+	/// creates a new array on every lookup and must still be detected.
+	/// </summary>
+	private readonly record struct MethodLookup(Type Type, string MethodName, Type[] ArgumentTypes)
+	{
+		public static readonly IEqualityComparer<MethodLookup> Comparer = new LookupComparer();
+
+		private sealed class LookupComparer : IEqualityComparer<MethodLookup>
+		{
+			public bool Equals(MethodLookup first, MethodLookup second) =>
+				first.Type == second.Type && first.MethodName == second.MethodName &&
+				first.ArgumentTypes.AsSpan().SequenceEqual(second.ArgumentTypes);
+
+			public int GetHashCode(MethodLookup lookup) =>
+				System.HashCode.Combine(lookup.Type, lookup.MethodName, lookup.ArgumentTypes.Length);
+		}
+	}
 
 	private static string GetTextValue(Expression argument)
 	{

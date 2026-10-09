@@ -87,6 +87,8 @@ public partial class Interpreter
 		var typeInstance = instance?.TryGetValueTypeInstance();
 		if (typeInstance != null && typeInstance.TryGetValue(member.Member.Name, out var value))
 			return value;
+		if (instance != null && instance.Value.Equals(noneInstance))
+			return CreateDefaultMemberValue(member.Member.Type);
 		if (instance != null && !member.IsConstant && member.Member.Type.Name != Type.Iterator)
 			return new ValueInstance(instance.Value, member.Member.Type);
 		return ctx.Get(member.Member.Name, Statistics);

@@ -43,6 +43,18 @@ public sealed class ConstantCollapserTests
 	}
 
 	[Test]
+	public void KeepDeclarationUsedThroughMemberCall()
+	{
+		var method = new Method(type, 1, parser, [
+			"Run(ranges) Number",
+			"\tlet first = ranges(0)",
+			"\tfirst.Start + 1"
+		]);
+		collapser.Visit(method, true);
+		Assert.That(method.GetBodyAndParseIfNeeded(), Is.InstanceOf<Body>());
+	}
+
+	[Test]
 	public void FoldTextToNumberToJustNumber()
 	{
 		var method = new Method(type, 1, parser, [

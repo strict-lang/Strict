@@ -69,6 +69,10 @@ public sealed class ConstantCollapser : Visitor
 		{
 			//ncrunch: no coverage start
 			VariableCall variableCall => variableCall.Variable.Name == name,
+			MemberCall memberCall => memberCall.Instance != null &&
+				ContainsVariableCall(memberCall.Instance, name),
+			ListCall listCall => ContainsVariableCall(listCall.List, name) ||
+				ContainsVariableCall(listCall.Index, name),
 			MethodCall methodCall => (methodCall.Instance != null &&
 					ContainsVariableCall(methodCall.Instance, name)) ||
 				methodCall.Arguments.Any(argument => ContainsVariableCall(argument, name)),

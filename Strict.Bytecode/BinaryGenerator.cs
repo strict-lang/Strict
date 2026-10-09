@@ -222,10 +222,8 @@ public sealed partial class BinaryGenerator
 		case Value constantValue:
 			value = constantValue.Data;
 			return true;
-		case MemberCall memberCall when memberCall.Member.InitialValue != null:
-			value = memberCall.Member.InitialValue is Value enumValue
-				? enumValue.Data
-				: new ValueInstance(memberCall.Member.InitialValue.ToString());
+		case MemberCall { Member.InitialValue: Value enumValue }:
+			value = enumValue.Data;
 			return true;
 		}
 		value = default;
@@ -388,10 +386,15 @@ public sealed partial class BinaryGenerator
 
 	private void GenerateMemberCallInstruction(MemberCall memberCall)
 	{
-		if (memberCall.IsConstant && memberCall.Member.InitialValue != null)
+		if (memberCall.IsConstant && memberCall.Member.InitialValue is Value constantValue)
 		{
 			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
-				GetValueInstanceFromExpression(memberCall)));
+				constantValue.Data));
+			return;
+		}
+		if (memberCall.IsConstant && memberCall.Member.InitialValue != null)
+		{
+			GenerateInstructionFromExpression(memberCall.Member.InitialValue);
 			return;
 		}
 		if (memberCall.Instance == null)

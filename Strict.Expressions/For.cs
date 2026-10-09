@@ -42,19 +42,22 @@ public sealed class For(Expression[] customVariables,
 		if (!line.StartsWith(Keyword.For, StringComparison.Ordinal) ||
 			line.Length > Keyword.For.Length && line[Keyword.For.Length] != ' ')
 			return null;
-		if (line.Length <= Keyword.For.Length)
-			return ParseForImplicitIteratorOfThis(body);
+		var forLineNumber = body.ParsingLineNumber;
 		var innerBody = body.FindCurrentChild() ??
 			TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body);
-		return line.Contains(Type.IndexLowercase, StringComparison.Ordinal)
-			? throw new IndexIsReservedDoNotUseItExplicitly(body)
-			: ParseFor(body, line, innerBody);
+		var bodyEndLineNumber = body.ParsingLineNumber;
+		body.ParsingLineNumber = forLineNumber;
+		var forExpression = line.Length <= Keyword.For.Length
+			? ParseForImplicitIteratorOfThis(body, innerBody)
+			: line.Contains(Type.IndexLowercase, StringComparison.Ordinal)
+				? throw new IndexIsReservedDoNotUseItExplicitly(body)
+				: ParseFor(body, line, innerBody);
+		body.ParsingLineNumber = bodyEndLineNumber;
+		return forExpression;
 	}
 
-	private static Expression ParseForImplicitIteratorOfThis(Body body)
+	private static Expression ParseForImplicitIteratorOfThis(Body body, Body innerBody)
 	{
-		var innerBody = body.FindCurrentChild() ??
-			TryGetInnerForAsBody(body) ?? throw new MissingInnerBody(body);
 		if (body.FindVariable(Type.ValueLowercase.AsSpan(), false) == null)
 			Instance.Parse(body, body.Method);
 		var implicitIteratorName = body.Method.Type.IsText

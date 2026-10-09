@@ -113,6 +113,10 @@ public abstract class Visitor
 		{
 			Visit(reassignment.Value, body, context);
 		}
+		else if (expression is Return returnExpression)
+		{
+			Visit(returnExpression.Value, body, context);
+		}
 		else if (expression is For forExpression)
 		{
 			Visit(forExpression.Iterator, body, context);

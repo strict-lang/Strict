@@ -36,7 +36,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 			} {
 				AddNestedBracketsIfNeeded(Arguments[0], isNot
 					? 10
-					: 0)
+					: 1)
 			}";
 
 	public static Expression Parse(Body body, ReadOnlySpan<char> input, Stack<Range> postfixTokens)

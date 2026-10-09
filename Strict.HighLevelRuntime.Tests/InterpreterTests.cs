@@ -685,6 +685,27 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void TestOnImplicitInstanceHasEmptyListMember()
+	{
+		using var t = CreateType(nameof(TestOnImplicitInstanceHasEmptyListMember), "has known Texts",
+			"Count(extra Texts) Number", "\tCount(\"a\", \"b\") is 2", "\t(known + extra).Length");
+		Assert.That(() => new Interpreter(TestPackage.Instance, TestBehavior.TestRunner).Execute(
+			t.Methods.Single(m => m.Name == "Count")), Throws.Nothing);
+	}
+
+	[Test]
+	public void ImplicitInstanceSkipsConstantsOfMemberTypes()
+	{
+		using var inner = CreateType("InnerWithSample", "has names Texts",
+			"constant Sample = InnerWithSample(\"a\", \"b\")", "Count Number", "\tSample.Count is 2",
+			"\tnames.Length");
+		using var outer = CreateType(nameof(ImplicitInstanceSkipsConstantsOfMemberTypes),
+			"has inner InnerWithSample", "Count Number", "\tCount is 0", "\tinner.Count");
+		Assert.That(() => new Interpreter(TestPackage.Instance, TestBehavior.TestRunner).Execute(
+			outer.Methods.Single(m => m.Name == "Count")), Throws.Nothing);
+	}
+
+	[Test]
 	public void ShrinkingMutableListRecursionIsNoStackOverflow()
 	{
 		using var t = CreateType(nameof(ShrinkingMutableListRecursionIsNoStackOverflow), "has logger",

@@ -41,6 +41,22 @@ public sealed class TypeValidatorTests
 		]), true));
 
 	[Test]
+	public void VariableUsedOnlyInReturnIsNotUnused()
+	{
+		using var typeWithReturn = CreateType(nameof(VariableUsedOnlyInReturnIsNotUnused), [
+			"has prefix Text",
+			"Pick(name Text) Text",
+			"\tPick(\"a\") is \"b\"",
+			"\tif name is \"y\"",
+			"\t\tlet type = name + \"b\"",
+			"\t\treturn type is \"Unknown\" then \"\" else type",
+			"\tlet other = prefix + name",
+			"\tother is \"d\" then \"e\" else other"
+		]);
+		Assert.That(() => validator.Visit(typeWithReturn.Methods[0], true), Throws.Nothing);
+	}
+
+	[Test]
 	public void ImplicitValueInstanceIsNotAnUnusedVariable()
 	{
 		var method = new Method(TestPackage.Instance.GetType(Type.Number), 1, parser,

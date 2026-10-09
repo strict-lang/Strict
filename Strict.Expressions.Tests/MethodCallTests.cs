@@ -109,6 +109,17 @@ public sealed class MethodCallTests : TestExpressions
 			Throws.InstanceOf<MemberOrMethodNotFound>());
 
 	[Test]
+	public void TextListAsEnumListEndsLookup()
+	{
+		using var fruit = new Type(TestPackage.Instance,
+			new TypeLines("Fruit", "constant Apple = \"apple\"", "constant Pear = \"pear\"")).
+			ParseMembersAndMethods(this);
+		Assert.That(() => type.GetType("Fruits").FindMethod(Method.From,
+				[ParseExpression("(\"a\", \"b\")")]),
+			Throws.InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
+	}
+
+	[Test]
 	public void ArgumentsDoNotMatchMethodParameters() =>
 		Assert.That(() => ParseExpression("Character(\"Hi\")"),
 			Throws.InstanceOf<ParsingFailed>().With.InnerException.

@@ -80,6 +80,7 @@ public sealed class Body : Expression
 	private void UpdateValueTypeForPiping(Expression lastExpression, string line)
 	{
 		if (lastExpression.ReturnType.IsNone || lastExpression.IsMutable || IsControlFlow(line) ||
+			lastExpression.GetType().Name == "Declaration" ||
 			line.Contains(Type.ValueLowercase, StringComparison.Ordinal))
 			return;
 		var valueVar = FindVariable(Type.ValueLowercase.AsSpan(), false);

@@ -36,6 +36,21 @@ public sealed class IfTests : TestExpressions
 			Throws.InstanceOf<TypeParser.ExtraWhitespacesFoundAtEndOfLine>());
 
 	[Test]
+	public void ConditionalStartingAndEndingWithDifferentBrackets() =>
+		Assert.That(ParseExpression("(five is 5) and five > 3 then five else \"abc\".IndexOf(\"b\")"),
+			Is.InstanceOf<If>());
+
+	[Test]
+	public void IfAndBranchesKeepTheirLineNumbers()
+	{
+		var body = (Body)ParseExpression("mutable count = 0", "for (1, 2)", "	if value is 1",
+			"		count = count + 1", "	else", "		return count", "count");
+		var ifExpression = (If)((For)body.Expressions[1]).Body;
+		Assert.That((ifExpression.LineNumber, ifExpression.Then.LineNumber,
+			ifExpression.OptionalElse!.LineNumber), Is.EqualTo((3, 4, 6)));
+	}
+
+	[Test]
 	public void ParseJustElseIsNotAllowed() =>
 		Assert.That(() => ParseExpression("else"),
 			Throws.InstanceOf<If.UnexpectedElse>().With.Message.Contains("at Run in "));

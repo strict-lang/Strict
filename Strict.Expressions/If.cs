@@ -100,11 +100,12 @@ public sealed class If(Expression condition,
 		if (trimmedLine.EndsWith(SelectorSuffix, StringComparison.Ordinal))
 			return ParseSelectorIf(body, trimmedLine);
 		var condition = GetConditionExpression(body, line[3..]);
+		var ifLineNumber = body.CurrentFileLineNumber;
 		var thenBody = body.FindCurrentChild();
 		if (thenBody == null)
 			throw new MissingThen(body);
 		var then = thenBody.Parse();
-		return new If(condition, then, body.CurrentFileLineNumber, HasRemainingBody(body)
+		return new If(condition, then, ifLineNumber, HasRemainingBody(body)
 			? CreateElseIfOrElse(body, body.GetLine(body.ParsingLineNumber + 1).AsSpan(body.Tabs))
 			: null, body);
 	}
@@ -116,11 +117,12 @@ public sealed class If(Expression condition,
 		if (selectorText.IsEmpty)
 			throw new MissingCondition(body); //ncrunch: no coverage
 		var selector = body.Method.ParseExpression(body, selectorText);
+		var selectorLineNumber = body.CurrentFileLineNumber;
 		var thenBody = body.FindCurrentChild();
 		if (thenBody == null)
 			throw new MissingThen(body); //ncrunch: no coverage
 		var cases = ParseSelectorCases(thenBody, selector, out var optionalElse);
-		return new SelectorIf(selector, cases, body.CurrentFileLineNumber, optionalElse, body);
+		return new SelectorIf(selector, cases, selectorLineNumber, optionalElse, body);
 	}
 
 	private static IReadOnlyList<SelectorIf.Case> ParseSelectorCases(Body body, Expression selector,
@@ -268,7 +270,28 @@ public sealed class If(Expression condition,
 	private static bool NoFirstBracketOrSurroundedByIt(ReadOnlySpan<char> input, int firstBracket,
 		int separatorIndex) =>
 		firstBracket == -1 || firstBracket > separatorIndex ||
-		(firstBracket == 0 && input[^1] == ')') || IsThenOutsideParentheses(input, separatorIndex);
+		(firstBracket == 0 && IsInsideOneBracket(input)) ||
+		IsThenOutsideParentheses(input, separatorIndex);
+
+	private static bool IsInsideOneBracket(ReadOnlySpan<char> input) =>
+		input[0] == '(' && ClosingBracketIndex(input) == input.Length - 1;
+
+	private static int ClosingBracketIndex(ReadOnlySpan<char> input)
+	{
+		var depth = 0;
+		var isInText = false;
+		for (var index = 0; index < input.Length; index++)
+		{
+			isInText = TextLiteral.Advance(input, ref index, isInText);
+			if (isInText)
+				continue;
+			if (input[index] == '(')
+				depth++;
+			else if (input[index] == ')' && --depth == 0)
+				return index;
+		}
+		return -1;
+	}
 
 	private static bool IsThenOutsideParentheses(ReadOnlySpan<char> input, int thenIndex)
 	{
@@ -293,7 +316,7 @@ public sealed class If(Expression condition,
 
 	public static Expression ParseConditional(Body body, ReadOnlySpan<char> input)
 	{
-		if (input[0] == '(' && input[^1] == ')')
+		if (IsInsideOneBracket(input))
 			input = input[1..^1];
 		var thenIndex = input.IndexOf(ThenSeparator, StringComparison.Ordinal);
 		if (thenIndex < 1)

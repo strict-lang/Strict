@@ -557,6 +557,22 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void ConstantCreatedByConstructor()
+	{
+		var source = new[]
+		{
+			"has number", "constant Window = Range(2, 5)", "WindowStart Number",
+			"\tWindow.Start + number"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ConstantCreatedByConstructor), nameof(ConstantCreatedByConstructor) + "(3).WindowStart",
+			source)).Generate();
+		Assert.That(
+			() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(5));
+	}
+
+	[Test]
 	public void NegativeListIndexCountsFromEnd()
 	{
 		var source = new[] { "has numbers", "LastNumber Number", "\tnumbers(-1)" };

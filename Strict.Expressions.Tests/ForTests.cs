@@ -308,6 +308,29 @@ public sealed class ForTests : TestExpressions
 	}
 
 	[Test]
+	public void NestedForKeepsItsLineNumber()
+	{
+		using var programType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(NestedForKeepsItsLineNumber), "has logger", "Run", "\tfor 3",
+					"\t\tfor 4", "\t\t\tlogger.Log(index)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		var outer = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That((outer.LineNumber, ((For)outer.Body).LineNumber), Is.EqualTo((2, 3)));
+	}
+
+	[Test]
+	public void DeclarationDoesNotPipeValue()
+	{
+		using var programType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(DeclarationDoesNotPipeValue), "has texts", "Lengths Number",
+					"\tmutable total = 0", "\tfor texts", "\t\tlet offset = index + 1",
+					"\t\ttotal = total + value.IndexOf(\"a\") + offset", "\ttotal")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Does.Contain("total + IndexOf(\"a\") + offset"));
+	}
+
+	[Test]
 	public void ExplicitValueUsageDoesNotPipeValue()
 	{
 		using var programType = new Type(TestPackage.Instance,

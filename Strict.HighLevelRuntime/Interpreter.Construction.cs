@@ -260,6 +260,11 @@ public partial class Interpreter
 				values[memberIndex] = initialValue.Data;
 				continue;
 			}
+			if (member.IsConstant)
+			{
+				values[memberIndex] = noneInstance;
+				continue;
+			}
 			if (member.Type.IsList)
 			{
 				values[memberIndex] = new ValueInstance(member.Type, Array.Empty<ValueInstance>());
