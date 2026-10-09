@@ -434,17 +434,23 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private void ExecuteRemove(RemoveInstruction removeInstruction)
 	{
 		var item = Memory.Registers[removeInstruction.Register];
-		var items = Memory.Frame.Get(removeInstruction.Identifier).List.Items;
+		var items = GetFrameValue(removeInstruction.Identifier).List.Items;
 		//TODO: is there actually a need for this loop? or is there always 1 entry anyway?
 		for (var itemIndex = items.Count - 1; itemIndex >= 0; itemIndex--)
 			if (items[itemIndex].Equals(item))
 				items.RemoveAt(itemIndex);
 	}
 
+	private ValueInstance GetFrameValue(string identifier) =>
+		Memory.Frame.TryGet(identifier, out var value)
+			? value
+			: throw Fail("Could not resolve variable '" + identifier +
+				"' - check that the variable is defined and in scope");
+
 	private void ExecuteListCall(ListCallInstruction listCallInstruction)
 	{
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
-		var collectionValue = Memory.Frame.Get(listCallInstruction.Identifier);
+		var collectionValue = GetFrameValue(listCallInstruction.Identifier);
 		if (collectionValue is { IsList: false, IsText: false })
 		{
 			if (listCallInstruction.Identifier == Type.OuterLowercase &&
