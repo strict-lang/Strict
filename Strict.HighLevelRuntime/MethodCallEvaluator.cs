@@ -4,7 +4,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public sealed class MethodCallEvaluator(Interpreter interpreter)
+public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 {
 	public ValueInstance EvaluateListCall(ListCall call, ExecutionContext ctx)
 	{
@@ -235,34 +235,8 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		type.IsList || type.IsDictionary || type.IsNumber || type.IsText || type.IsBoolean ||
 		type.IsCharacter || type.Name == Type.Range;
 
-	private static ValueInstance? ConvertToListValue(ValueInstance value)
-	{
-		if (value.IsList)
-			return value;
-		var typeInstance = value.TryGetValueTypeInstance();
-		if (typeInstance == null)
-			return null;
-		if (typeInstance.TryGetValue(Type.ElementsLowercase, out var elements))
-			return elements.IsList
-				? elements
-				// ReSharper disable TailRecursiveCall
-				: ConvertToListValue(elements);
-		if (typeInstance.TryGetValue(Type.IteratorLowercase, out var iterator))
-			return iterator.IsList
-				? iterator
-				: ConvertToListValue(iterator);
-		if (!typeInstance.ReturnType.IsList)
-			return null;
-		var length = value.GetIteratorLength();
-		var iteratorValues = new ValueInstance[length];
-		var listItemType = typeInstance.ReturnType.GetFirstImplementation();
-		var characterType = listItemType.GetType(Type.Character);
-		for (var index = 0; index < length; index++)
-			iteratorValues[index] = value.GetIteratorValue(characterType, index);
-		return new ValueInstance(typeInstance.ReturnType, iteratorValues);
-	}
-
 	private bool IsNumberLike(ValueInstance value) => value.IsNumberLike(interpreter.numberType);
+
 	public const string ListsHaveDifferentDimensions = "listsHaveDifferentDimensions";
 
 	private ValueInstance ExecuteComparisonOperation(MethodCall call, ExecutionContext ctx,
@@ -311,11 +285,6 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 
 	private const double TestComparisonEpsilon = 0.00001;
 
-	private static bool HasListType(ValueInstance value) => !value.IsText && value.GetType().IsList;
-
-	private static bool IsEmptyListTypeCheck(ValueInstance left, ValueInstance right) =>
-		(!left.IsList || left.List.Count == 0) && (!right.IsList || right.List.Count == 0);
-
 	private ValueInstance ExecuteLogicalBinaryOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance left, ValueInstance right)
 	{
@@ -330,201 +299,6 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 					BuildCoreTypeFallbackMessage(call, ctx, left, right))),
 			_ => ExecuteMethodCall(call, left, ctx) //ncrunch: no coverage
 		};
-	}
-
-	private static string BuildCoreTypeFallbackMessage(MethodCall call, ExecutionContext ctx,
-		ValueInstance left, ValueInstance right)
-	{
-		var message = "Cannot " + call.Method.Name + " left=" + FormatOperand(left) + " right=" +
-			FormatOperand(right) + ", method=" + ctx.Method + ", call=" + call;
-		var caller = GetCallerDisplay(ctx.Parent);
-		return caller.Length == 0 || caller == ctx.Method.ToString() || caller == ctx.Method.Name
-			? message
-			: message + ", caller=" + caller;
-	}
-
-	private static string FormatOperand(ValueInstance value)
-	{
-		if (value.IsText)
-			return Quote(value.Text);
-		if (value.GetType().IsNumber)
-			return value.GetCachedNumberString();
-		if (value.GetType().IsBoolean)
-			return value.Boolean
-				? "true"
-				: "false";
-		if (value.TryGetValueTypeInstance() is { } typeInstance &&
-			typeInstance.TryGetValue(Type.ValueLowercase, out var inner))
-			return FormatOperand(inner) + " (" + typeInstance.ReturnType.Name + ")";
-		return value.ToExpressionCodeString();
-	}
-
-	private static string Quote(string text) => "\"" + text + "\"";
-
-	private static string GetCallerDisplay(ExecutionContext? ctx)
-	{
-		if (ctx == null)
-			return "";
-		var lineNumber = ctx.CurrentExpressionLineNumber;
-		if (lineNumber >= 0 && lineNumber < ctx.Type.Lines.Length)
-		{
-			var line = ctx.Type.Lines[lineNumber].Trim();
-			if (line.Length > 0)
-				return line;
-		}
-		return ctx.Method.ToString();
-	}
-
-	private ValueInstance CombineLists(ValueInstance leftList, List<ValueInstance> rightList,
-		ExecutionContext ctx, MethodCall call)
-	{
-		var leftItemType = leftList.List.ReturnType.GetFirstImplementation();
-		var convertedRightItems = new ValueInstance[rightList.Count];
-		for (var rightItemIndex = 0; rightItemIndex < rightList.Count; rightItemIndex++)
-		{
-			convertedRightItems[rightItemIndex] = RightItemForCombineLists(leftItemType,
-				rightList[rightItemIndex], ctx, call);
-			if (convertedRightItems[rightItemIndex].IsError)
-				return convertedRightItems[rightItemIndex];
-		}
-		if (leftList.IsMutable)
-		{
-			foreach (var item in convertedRightItems)
-				leftList.List.Items.Add(item);
-			return leftList;
-		}
-		var combined = new ValueInstance[leftList.List.Items.Count + rightList.Count];
-		var itemIndex = 0;
-		foreach (var item in leftList.List.Items)
-			combined[itemIndex++] = item;
-		foreach (var item in convertedRightItems)
-			combined[itemIndex++] = item;
-		return new ValueInstance(leftList.List.ReturnType, combined);
-	}
-
-	private ValueInstance RightItemForCombineLists(Type leftItemType, ValueInstance item,
-		ExecutionContext ctx, MethodCall call)
-	{
-		if (leftItemType.IsText && !item.IsText)
-			return new ValueInstance(item.ToExpressionCodeString());
-		if (leftItemType.IsNumber && (item.IsText || item.IsPrimitiveType(interpreter.characterType)))
-			return double.TryParse(item.ToExpressionCodeString(), out var itemNumber)
-				? new ValueInstance(leftItemType, itemNumber)
-				: Error(
-					"Cannot downcast Text to Number for list: " +
-					item.ToString().Replace("\"", "\\\"", StringComparison.Ordinal), ctx, call);
-		return item;
-	}
-
-	private static ValueInstance SubtractLists(ValueInstance leftList, List<ValueInstance> rightList)
-	{
-		if (leftList.IsMutable)
-		{
-			foreach (var rightItem in rightList)
-			{
-				var removeIndex = leftList.List.Items.FindIndex(leftItem => leftItem.Equals(rightItem));
-				if (removeIndex >= 0)
-					leftList.List.Items.RemoveAt(removeIndex);
-			}
-			return leftList;
-		}
-		var removed = new bool[rightList.Count];
-		var temp = new ValueInstance[leftList.List.Items.Count];
-		var itemCount = 0;
-		for (var leftIndex = 0; leftIndex < leftList.List.Items.Count; leftIndex++)
-		{
-			var shouldKeep = true;
-			for (var rightIndex = 0; rightIndex < rightList.Count; rightIndex++)
-				if (!removed[rightIndex] && leftList.List.Items[leftIndex].Equals(rightList[rightIndex]))
-				{
-					removed[rightIndex] = true;
-					shouldKeep = false;
-					break;
-				}
-			if (shouldKeep)
-				temp[itemCount++] = leftList.List.Items[leftIndex];
-		}
-		var result = new ValueInstance[itemCount];
-		Array.Copy(temp, result, itemCount);
-		return new ValueInstance(leftList.List.ReturnType, result);
-	}
-
-	private static ValueInstance AddToList(ValueInstance leftList, ValueInstance right)
-	{
-		var isLeftText = leftList.List.ReturnType is GenericTypeImplementation
-		{
-			Generic.Name: Type.List
-		} list && list.ImplementationTypes[0].IsText;
-		var rightItem = isLeftText && !right.IsText
-			? new ValueInstance(right.ToExpressionCodeString())
-			: right;
-		if (leftList.IsMutable)
-		{
-			leftList.List.Items.Add(rightItem);
-			return leftList;
-		}
-		var combined = new ValueInstance[leftList.List.Items.Count + 1];
-		for (var itemIndex = 0; itemIndex < leftList.List.Items.Count; itemIndex++)
-			combined[itemIndex] = leftList.List.Items[itemIndex];
-		combined[leftList.List.Items.Count] = rightItem;
-		return new ValueInstance(leftList.List.ReturnType, combined);
-	}
-
-	private static ValueInstance RemoveFromList(ValueInstance leftList, ValueInstance right)
-	{
-		if (leftList.IsMutable)
-		{
-			leftList.List.Items.RemoveAll(item => item.Equals(right));
-			return leftList;
-		}
-		var count = 0;
-		for (var index = 0; index < leftList.List.Items.Count; index++)
-			if (!leftList.List.Items[index].Equals(right))
-				count++;
-		var result = new ValueInstance[count];
-		var resultIndex = 0;
-		for (var index = 0; index < leftList.List.Items.Count; index++)
-			if (!leftList.List.Items[index].Equals(right))
-				result[resultIndex++] = leftList.List.Items[index];
-		return new ValueInstance(leftList.List.ReturnType, result);
-	}
-
-	private static ValueInstance MultiplyLists(Type leftListType, Type numberType,
-		List<ValueInstance> leftList, List<ValueInstance> rightList)
-	{
-		var result = new ValueInstance[leftList.Count];
-		for (var index = 0; index < leftList.Count; index++)
-			result[index] =
-				new ValueInstance(numberType, leftList[index].Number * rightList[index].Number);
-		return new ValueInstance(leftListType, result);
-	}
-
-	private static ValueInstance DivideLists(Type leftListType, Type numberType,
-		List<ValueInstance> leftList, List<ValueInstance> rightList)
-	{
-		var result = new ValueInstance[leftList.Count];
-		for (var index = 0; index < leftList.Count; index++)
-			result[index] =
-				new ValueInstance(numberType, leftList[index].Number / rightList[index].Number);
-		return new ValueInstance(leftListType, result);
-	}
-
-	private static ValueInstance MultiplyList(Type leftListType, List<ValueInstance> leftList,
-		double rightNumber)
-	{
-		var result = new ValueInstance[leftList.Count];
-		for (var i = 0; i < leftList.Count; i++)
-			result[i] = new ValueInstance(leftList[i].GetType(), leftList[i].Number * rightNumber);
-		return new ValueInstance(leftListType, result);
-	}
-
-	private static ValueInstance DivideList(Type leftListType, List<ValueInstance> leftList,
-		double rightNumber)
-	{
-		var result = new ValueInstance[leftList.Count];
-		for (var i = 0; i < leftList.Count; i++)
-			result[i] = new ValueInstance(leftList[i].GetType(), leftList[i].Number / rightNumber);
-		return new ValueInstance(leftListType, result);
 	}
 
 	private ValueInstance ExecuteMethodCall(MethodCall call, ValueInstance? instance,
@@ -641,70 +415,5 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		return Math.Abs(value - rounded) < 1e-10
 			? rounded
 			: value;
-	}
-
-	private ValueInstance Error(string name, ExecutionContext ctx, Expression? source = null)
-	{
-		var errorType = ctx.Method.GetType(Type.Error);
-		var errorValues = new ValueInstance[errorType.Members.Count];
-		for (var i = 0; i < errorType.Members.Count; i++)
-			errorValues[i] = errorType.Members[i].Type.Name switch
-			{
-				nameof(Type.Name) or Type.Text => new ValueInstance(name),
-				_ when errorType.Members[i].Type.IsList => CreateStacktrace(ctx, source),
-				_ => throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
-					"Error member not supported: " + errorType.Members[i])
-			};
-		return new ValueInstance(errorType, errorValues);
-	}
-
-	private ValueInstance CreateStacktrace(ExecutionContext ctx, Expression? source)
-	{
-		var stacktraceType = ctx.Method.GetType(Type.Stacktrace);
-		var stackValues = new ValueInstance[stacktraceType.Members.Count];
-		for (var i = 0; i < stacktraceType.Members.Count; i++)
-			stackValues[i] = stacktraceType.Members[i].Type.Name switch
-			{
-				nameof(Method) => new ValueInstance(ctx.Method.GetType(nameof(Method)),
-					CreateMethodValue(ctx.Method)),
-				Type.Text or nameof(Type.Name) => new ValueInstance(ctx.Method.Type.FilePath),
-				Type.Number => new ValueInstance(interpreter.numberType,
-					source?.LineNumber ?? ctx.Method.TypeLineNumber),
-				_ => throw new InterpreterExecutionFailed(ctx.Method, //ncrunch: no coverage
-					"Stacktrace member not supported: " + stacktraceType.Members[i])
-			};
-		return new ValueInstance(interpreter.listType.GetGenericImplementation(stacktraceType),
-			[new ValueInstance(stacktraceType, stackValues)]);
-	}
-
-	private static ValueInstance[] CreateMethodValue(Method method)
-	{
-		var methodType = method.GetType(nameof(Method));
-		var values = new ValueInstance[methodType.Members.Count];
-		for (var i = 0; i < methodType.Members.Count; i++)
-			values[i] = methodType.Members[i].Type.Name switch
-			{
-				nameof(Type.Name) or Type.Text => new ValueInstance(method.Name),
-				nameof(Type) => new ValueInstance(method.GetType(nameof(Type)),
-					CreateTypeValue(method.Type)),
-				_ => throw new InterpreterExecutionFailed(method, //ncrunch: no coverage
-					"Method member not supported: " + methodType.Members[i])
-			};
-		return values;
-	}
-
-	internal static ValueInstance[] CreateTypeValue(Type type)
-	{
-		var typeType = type.GetType(nameof(Type));
-		var values = new ValueInstance[typeType.Members.Count];
-		for (var i = 0; i < typeType.Members.Count; i++)
-			values[i] = typeType.Members[i].Type.Name switch
-			{
-				nameof(Type.Name) => new ValueInstance(type.Name),
-				Type.Text => new ValueInstance(type.Package.FullName),
-				_ => throw new InterpreterExecutionFailed(type.Methods[0], //ncrunch: no coverage
-					"Type member not supported: " + typeType.Members[i])
-			};
-		return values;
 	}
 }
