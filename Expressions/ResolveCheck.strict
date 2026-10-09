@@ -1,10 +1,15 @@
 has logger
 Run(folder Text, root Text)
-	let types = TypeNames(folder) + TypeNames(root)
+	let types = TypeNames(folder) + PackageTypeNames(root)
 	mutable unresolved = 0
 	for Directory.Files(folder, "*.strict")
 		unresolved = unresolved + CheckFile(value, types)
 	logger.Log("Unresolved names: " + unresolved)
+PackageTypeNames(root Text) Texts
+	mutable types = TypeNames(root)
+	for Directory.Directories(root)
+		types = types + TypeNames(value)
+	types
 TypeNames(folder Text) Texts
 	for Directory.Files(folder, "*.strict")
 		Path(value).FileName.RemoveExtension.text
@@ -24,10 +29,18 @@ CheckLine(line Text, scope Texts, path Text) Number
 	CheckLine("a + 1", ("a", "b"), "test") is 0
 	mutable unknown = 0
 	for StatementParser(Tokenizer(line).Tokens).ParseStatement.HeadNames
-		if value is not in scope
+		if not IsKnown(value, scope)
 			logger.Log(path + ": " + value + " in " + line)
 			unknown = unknown + 1
 	unknown
+IsKnown(name Text, scope Texts) Boolean
+	IsKnown("Numbers", ("Number", "a")) is true
+	IsKnown("b", ("Number", "a")) is false
+	if name is in scope
+		return true
+	if name.Substring(name.Length - 1, 1) is not "s"
+		return false
+	name.Substring(0, name.Length - 1) is in scope
 DeclaredNames(line Text) Texts
 	DeclaredNames("let a = 1").Length is 1
 	let tokens = Tokenizer(line).Tokens
