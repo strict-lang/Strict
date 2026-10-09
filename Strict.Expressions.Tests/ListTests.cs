@@ -11,6 +11,14 @@ public sealed class ListTests : TestExpressions
 		Assert.That(((Value)ParseExpression("(1, 2, 3)")).Data.List.Count, Is.EqualTo(3));
 
 	[Test]
+	public void ListElementCanBeBracketedConditional()
+	{
+		var list = (List)ParseExpression("(1, (true then 2 else 3))");
+		Assert.That(list.Values[1], Is.InstanceOf<If>());
+		Assert.That(list.ToString(), Is.EqualTo("(1, (true then 2 else 3))"));
+	}
+
+	[Test]
 	public void CompareList() =>
 		Assert.That(new List(new Body(method), GetListExpressions(["\"1\"", "\"2\""])),
 			Is.EqualTo(new List(new Body(method), GetListExpressions(["\"1\"", "\"2\""]))));

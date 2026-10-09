@@ -1,0 +1,68 @@
+has values ValueCodegen
+constant Plain = MethodCodegen(ValueCodegen.Plain)
+constant NoNode = SyntaxNode("Identifier", "x")
+constant One = SyntaxNode("Number", "1")
+constant NoScope = Scope(List(Text), List(Text))
+Generate(body SyntaxNode, scope Scope) CodeBlock
+	Plain.Generate(BodyParser("Run Number", "\t1 + 2").Block(1, 1), NoScope).instructions.Length is 4
+	Plain.Generate(BodyParser("Run Number", "\treturn 1").Block(1, 1), NoScope).instructions.Length is 2
+	let block = Body(WithoutTests(body), CodeBlock(List(InstructionEntry), 0, 0, scope))
+	if block.instructions.Last.kind is InstructionType.Return
+		return block
+	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
+WithoutTests(body SyntaxNode) SyntaxNode
+	Plain.WithoutTests(BodyParser("Run Number", "	1 is 1", "	2 is not 3", "	2").Block(1, 1)).children.Length is 1
+	mutable code = List(Mutable(SyntaxNode))
+	for body.children
+		if (index is body.children.Length - 1) or value.Kind is not "Binary" or value.text is not in ("is", "is not")
+			code.Add(value)
+	SyntaxNode("Body", "", code)
+Body(body SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
+	mutable result = block
+	for body.children
+		result = Statement(value, result.At(block.register))
+	result
+Statement(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Statement(SyntaxNode("Return", "", One), CodeBlock.Empty).instructions.Length is 2
+	if node.Kind is in ("Declaration", "Reassignment")
+		return Assignment(node, block)
+	if node.Kind is "If"
+		return Conditional(node, block)
+	if node.Kind is "For"
+		return Loop(node, block)
+	if (node.Kind is "MethodCall") and (node.text is "Log")
+		return Log(node.children(1), block)
+	let expression = node.Kind is "Return" then node.children(0) else node
+	let value = values.Expression(expression, block)
+	node.Kind is "Return" then value.Add(InstructionEntry.Return(value.Result)) else value
+Assignment(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
+	Plain.Assignment(SyntaxNode("Reassignment", "", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 2
+	let isDeclaration = node.Kind is "Declaration"
+	let name = isDeclaration then Tokenizer(node.text).Tokens.Last else node.children(0).text
+	let assigned = node.children(isDeclaration then 0 else 1)
+	let value = values.Expression(assigned, block)
+	let stored = value.Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, value.Result, name))
+	isDeclaration then stored.Declare(name, values.TypeOf(assigned, block)) else stored
+Conditional(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Generate(BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\t4").Block(1, 1), NoScope).instructions.Length is 9
+	let body = Body(node.children.Last, values.Condition(node.children(0), block))
+	body.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
+Loop(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Generate(BodyParser("Run Number", "\tfor 3", "\t\tindex", "\t0").Block(1, 1), NoScope).instructions.Length is 6
+	let iterator = values.Expression(node.children(0), block)
+	let element = values.ElementType(values.TypeOf(node.children(0), block))
+	let begin = iterator.Add(InstructionEntry.LoopBegin(iterator.Result)).Declare("index", "Number")
+	let body = Body(node.children.Last, begin.Declare("value", element))
+	body.Add(InstructionEntry.Jump(InstructionType.LoopEnd, body.instructions.Length - block.instructions.Length))
+Log(argument SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Log(SyntaxNode("Text", "\"Hi\""), CodeBlock.Empty).instructions(0).texts is ("Hi")
+	Plain.Log(SyntaxNode("Number", "1"), CodeBlock.Empty).instructions.Length is 2
+	if argument.Kind is "Text"
+		return block.Add(InstructionEntry.Print(values.Unquoted(argument.text)))
+	let hasPrefix = (argument.Kind is "Binary") and (argument.text is "+") and (argument.children(0).Kind is "Text")
+	let printed = hasPrefix then argument.children(1) else argument
+	let value = values.Expression(printed, block)
+	let prefix = hasPrefix then values.Unquoted(argument.children(0).text) else ""
+	value.Add(InstructionEntry.PrintValue(prefix, value.Result, values.TypeOf(printed, value) is "Text"))

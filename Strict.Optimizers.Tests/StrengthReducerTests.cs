@@ -30,8 +30,17 @@ public sealed class StrengthReducerTests : TestOptimizers
 		Assert.That(optimizedInstructions[1], Is.InstanceOf<ReturnInstruction>());
 	}
 
+	[Test]
+	public void ListVariablePlusZeroAppendsAndIsKept() =>
+		Optimize([
+			new LoadVariableToRegister(Register.R0, "numbers"),
+			new LoadConstantInstruction(Register.R1, Num(0)),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
+			new ReturnInstruction(Register.R2)
+		], 4);
+
 	private List<Instruction> Optimize(List<Instruction> instructions, int expectedCount) =>
-		Optimize(new StrengthReducer(), instructions, expectedCount);
+		Optimize(new StrengthReducer("x"), instructions, expectedCount);
 
 	[Test]
 	public void MultiplyByOneOnLeftBecomesLoad()

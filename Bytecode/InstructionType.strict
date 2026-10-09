@@ -10,6 +10,7 @@ constant Subtract
 constant Multiply
 constant Divide
 constant Modulo
+constant Power
 constant ArithmeticSeparator = 20
 constant Equal
 constant NotEqual

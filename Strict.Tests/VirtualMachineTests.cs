@@ -454,6 +454,17 @@ public sealed class VirtualMachineTests : TestBytecode
 				Memory.Variables["values"].GetDictionaryItems().Count, Is.EqualTo(1));
 	}
 
+	[Test]
+	public void ErrorConstantInMethodBodyRunsOnVirtualMachine() =>
+		Assert.That(
+			new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+				nameof(ErrorConstantInMethodBodyRunsOnVirtualMachine),
+				nameof(ErrorConstantInMethodBodyRunsOnVirtualMachine) + "(5).Checked",
+				[
+					"has number", "Checked Number", "\tconstant Invalid = Error",
+					"\tnumber is 0 then Invalid else number"
+				])).Generate()).Execute().Returns!.Value.Number, Is.EqualTo(5));
+
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
 	{
 		var fromMethod = targetType.FindMethod(Method.From, []);

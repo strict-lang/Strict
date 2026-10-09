@@ -167,7 +167,7 @@ public sealed class Repositories(ExpressionParser parser)
 			: fullName[..separatorIndex];
 	}
 
-	private static IEnumerable<string> FindDependencyPackages(string fullName, string rootPackageName,
+	internal static IEnumerable<string> FindDependencyPackages(string fullName, string rootPackageName,
 		IReadOnlyCollection<string> files)
 	{
 		var dependencies = new HashSet<string>(StringComparer.Ordinal);
@@ -176,7 +176,7 @@ public sealed class Repositories(ExpressionParser parser)
 		{
 			var typeFullName = match.Value;
 			var lastSeparatorIndex = typeFullName.LastIndexOf(Context.ParentSeparator);
-			if (lastSeparatorIndex <= 0)
+			if (typeFullName[0] == '"' || lastSeparatorIndex <= 0)
 				continue;
 			var packageName = NormalizePackageName(typeFullName[..lastSeparatorIndex], rootPackageName);
 			lock (LoadedPackages)
@@ -196,9 +196,13 @@ public sealed class Repositories(ExpressionParser parser)
 		return rootPackageName + Context.ParentSeparator + packageName;
 	}
 
+	/// <summary>
+	/// Text literals are matched too (and skipped), "Examples/Sum.strict" is no dependency.
+	/// </summary>
 	private static readonly Regex TypeFullNamePattern = new(
-		"(?<![A-Za-z0-9/])[A-Z][A-Za-z0-9]*(?:/[A-Z][A-Za-z0-9]*)+(?![A-Za-z0-9/])",
-		RegexOptions.Compiled);
+		"""
+		"(?:[^"\\\n]|\\.)*"|(?<![A-Za-z0-9/])[A-Z][A-Za-z0-9]*(?:/[A-Z][A-Za-z0-9]*)+(?![A-Za-z0-9/])
+		""", RegexOptions.Compiled);
 
 	private static Package? FindParentPackage(string fullName)
 	{

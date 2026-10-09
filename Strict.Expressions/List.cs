@@ -129,7 +129,7 @@ public sealed class List : Value
 	{
 		if (Values.Count == 0)
 			return ReturnType.Name;
-		var result = Values.ToBrackets();
+		var result = If.ToBrackets(Values);
 		return result.Length > Limit.MultiLineCharacterCount
 			? result.Replace(", ", ",\n\t")
 			: result;

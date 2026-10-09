@@ -253,7 +253,28 @@ test `StrictWrittenBinaryRunsOnTheVirtualMachine`: a Hello program written by St
 C# VM. Single elements are now also wrapped for constructors with more parameters
 (`SingleElementForListParameterAmongOthersIsWrapped`), as a fallback after normal overload
 resolution so operators like `list + element` keep their own overloads.
-Next: all instruction payloads, then tree codegen with the VM output differential.
+All instruction kinds encode through one payload rule (bytes, negative numbers point at names),
+`MemberEntry` writes members/parameters with `Set` initializers; the HelloLogger type entry is byte
+identical to C# except the source line flag. Tree codegen in Strict: `CodeBlock` (instructions, next
+register, next jump id, scope), `ValueCodegen` (literals, variables, binary operators, if
+conditions, types), `MethodCodegen` (declarations, reassignments, return, if, for, logger.Log,
+inline tests removed), `TypeCodegen` (members, constants, parameters, methods) and the program
+`FileCompiler` (source file to `.strictbinary` bytes). Slow differential
+`StrictCompiledExampleRunsLikeCSharp`: HelloLogger, NativeArithmetic, NativeConditions and
+NativeLoop compiled by Strict give the same output and return value on the C# VM as the C#
+compiled binaries. Fixed on the way (each with a test): constants could not call methods of other
+types (`constant X = Other.Make(1)`), a list element could not be a bracketed conditional,
+`constant Invalid = Error` failed on the VM (`List(Stacktrace).from(list)` invoke), constant
+folding and strength reduction treated `list + 0` as number math (`x + 0`, `x - 0`, `x * 0` now
+need proven numbers), package dependency detection took `"Examples/Sum.strict"` inside a text as
+a package reference (Compiler then resolved `InstructionType` to Examples/InstructionType), and
+both printers dropped the brackets a conditional needs among several arguments or list elements
+(`f(1, (a then b else c))`). Open: source lines in Strict written instructions, method overload groups,
+else/else if, method calls (Invoke), lists, member access, `Optimizers/StrengthReduce.strict`
+parity, and parser papercuts found while writing the codegen (a parameter named `value` silently
+collides with the implicit value, `Method(0)` on a parameterless method result is parsed as a call
+argument, `x to Number` two calls deep and `a then b else c` followed by more arguments fail).
+Next: Invoke/member calls/lists/else in the codegen, then more Examples in the differential.
 Flaky once in a full parallel solution run (passes alone and in reruns):
 `InterpreterTests.ParserParsesExistingTextStrictFile` and
 `LoadStrictExamplesPackageAndUseBasePackageTypes`, likely package files changing while

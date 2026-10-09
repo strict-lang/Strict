@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using Strict.Bytecode;
 using Strict.Language;
+using Strict.Language.Tests;
 using Type = Strict.Language.Type;
 
 namespace Strict.Tests;
@@ -28,29 +29,40 @@ public sealed class StrictBytecodeTests
 	[Test]
 	public async Task StrictZipWriterOutputOpensWithZipArchive()
 	{
-		var root = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
-		await new Runner(Path.Combine(root, "Bytecode", "ZipWriter" + Type.Extension),
+		await new Runner(Path.Combine(Root, "Bytecode", "ZipWriter" + Type.Extension),
 			"ZipWriter(ZipEntry(\"hello.txt\", (104, 105)), ZipEntry(\"data.bin\", (1, 2, 3))).Bytes").Run();
 		using var zip = new ZipArchive(new MemoryStream(LastNumbersLine()));
 		Assert.That(zip.Entries.Select(entry => entry.FullName + "=" + string.Join(",", Read(entry))),
 			Is.EqualTo(new[] { "hello.txt=104,105", "data.bin=1,2,3" }));
 	}
 
-	[Test]
-	public async Task StrictWrittenBinaryRunsOnTheVirtualMachine()
+	[TestCase("HelloLogger")]
+	[TestCase("NativeArithmetic")]
+	[TestCase("NativeConditions")]
+	[TestCase("NativeLoop")]
+	public async Task StrictCompiledExampleRunsLikeCSharp(string example)
 	{
-		var root = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
-		await new Runner(Path.Combine(root, "Bytecode", "BinaryFile" + Type.Extension),
-			"BinaryFile(TypeEntry(\"Hello\", List(MemberEntry), " +
-			"MethodEntry(\"Run\", List(MemberEntry), \"None\", " +
-			"InstructionEntry.Print(\"Hello from a Strict written binary\")))).Bytes").Run();
+		var source = Root + "/Examples/" + example + Type.Extension;
+		await new Runner(source).Run();
+		var expected = Execute(Path.ChangeExtension(source, BinaryExecutable.Extension));
+		await new Runner(Root + "/Bytecode/FileCompiler" + Type.Extension, source + " " + Root).Run();
 		var binaryPath = Path.Combine(Path.GetTempPath(), nameof(StrictBytecodeTests),
-			"Hello" + BinaryExecutable.Extension);
+			example + BinaryExecutable.Extension);
 		Directory.CreateDirectory(Path.GetDirectoryName(binaryPath)!);
 		await File.WriteAllBytesAsync(binaryPath, LastNumbersLine());
+		Assert.That(Execute(binaryPath), Is.EqualTo(expected));
+	}
+
+	private static string Root =>
+		Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)).Replace('\\', '/');
+
+	private string Execute(string binaryPath)
+	{
 		consoleWriter.GetStringBuilder().Clear();
-		await new Runner(binaryPath).Run();
-		Assert.That(consoleWriter.ToString(), Does.Contain("Hello from a Strict written binary"));
+		var machine = new VirtualMachine(new BinaryExecutable(binaryPath, TestPackage.Instance));
+		return consoleWriter + (machine.Execute().Returns is { HasValue: true } returns
+			? "Returns " + returns
+			: "");
 	}
 
 	private byte[] LastNumbersLine() =>

@@ -453,6 +453,12 @@ public sealed partial class BinaryGenerator
 			return;
 		if (TryGeneratePrintInstruction(methodCall))
 			return;
+		if (methodCall is { Method.Name: Method.From, ReturnType.IsList: true, Arguments: [{ } list] } &&
+			list.ReturnType.IsSameOrCanBeUsedAs(methodCall.ReturnType))
+		{
+			GenerateInstructionFromExpression(list);
+			return;
+		}
 		if (methodCall.Method.Name != Method.From)
 			discoveredInvokeMethods.Add(methodCall.Method);
 		Register? instanceRegister = null;

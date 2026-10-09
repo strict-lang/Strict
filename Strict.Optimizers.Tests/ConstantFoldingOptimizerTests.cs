@@ -24,6 +24,16 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 	}
 
 	[Test]
+	public void ListConstantPlusNumberIsNotFolded() =>
+		Optimize([
+			new LoadConstantInstruction(Register.R0,
+				new ValueInstance(TestPackage.Instance.GetListImplementationType(numberType), [Num(1)])),
+			new LoadConstantInstruction(Register.R1, Num(3)),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
+			new ReturnInstruction(Register.R2)
+		], 4);
+
+	[Test]
 	public void ConstantOverwrittenByFieldLoadIsNotFolded() =>
 		Optimize([
 			new LoadConstantInstruction(Register.R1, Num(3)),

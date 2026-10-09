@@ -77,6 +77,7 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 		ValueInstance right) =>
 		operation switch
 		{
+			_ when left.IsList || right.IsList || left.IsDictionary || right.IsDictionary => null,
 			InstructionType.Add when left.IsText || right.IsText => new ValueInstance((left.IsText
 				? left.Text
 				: left.ToExpressionCodeString()) + (right.IsText

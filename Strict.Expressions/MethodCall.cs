@@ -435,8 +435,8 @@ public class MethodCall : ConcreteExpression
 
 	private string FormatArguments() =>
 		IsAutoWrappedListArgument()
-			? "(" + string.Join(", ", ((List)Arguments[0]).Values) + ")"
-			: DisplayArguments.ToBrackets();
+			? If.ToBrackets(((List)Arguments[0]).Values)
+			: If.ToBrackets(DisplayArguments);
 
 	private IReadOnlyList<Expression> DisplayArguments =>
 		(argumentsToShowCount == null

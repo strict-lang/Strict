@@ -110,18 +110,21 @@ public partial class MethodExpressionParser : ExpressionParser
 		ReadOnlySpan<char> input, bool makeMutable) =>
 		input[0] == '"' && input[^1] == '"' && MemoryExtensions.Count(input, '"') == 2
 			? Text.TryParse(body, input)
-			: input[0] == '(' && input[^1] == ')' && input.Contains(',') &&
-			HasSingleTopLevelBracketPair(input) &&
-			!input.Contains(If.ThenSeparator, StringComparison.Ordinal)
+			: input[0] == '(' && input[^1] == ')' && IsSingleBracketedList(input)
 				? new List(body, body.Method.ParseListArguments(body, input[1..^1]), makeMutable)
 				: If.CanTryParseConditional(body, input)
 					? If.ParseConditional(body, input)
 					: null;
 
-	private static bool HasSingleTopLevelBracketPair(ReadOnlySpan<char> input)
+	/// <summary>
+	/// A comma directly inside the outer bracket makes a list: (1, (a then 2 else 3)) is a list,
+	/// (a then (1, 2) else (3, 4)) is a conditional.
+	/// </summary>
+	private static bool IsSingleBracketedList(ReadOnlySpan<char> input)
 	{
 		var nestedBracketDepth = 0;
 		var topLevelOpenBracketCount = 0;
+		var hasTopLevelComma = false;
 		var isInsideText = false;
 		for (var index = 0; index < input.Length; index++)
 		{
@@ -135,11 +138,11 @@ public partial class MethodExpressionParser : ExpressionParser
 					topLevelOpenBracketCount++;
 			}
 			else if (input[index] == ')')
-			{
 				nestedBracketDepth--;
-			}
+			else if (input[index] == ',' && nestedBracketDepth == 1)
+				hasTopLevelComma = true;
 		}
-		return topLevelOpenBracketCount == 1 && nestedBracketDepth == 0;
+		return topLevelOpenBracketCount == 1 && nestedBracketDepth == 0 && hasTopLevelComma;
 	}
 
 	private Expression TryParseMethodOrMember(Body body, ReadOnlySpan<char> input)

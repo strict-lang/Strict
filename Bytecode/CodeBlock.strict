@@ -1,0 +1,23 @@
+has instructions List(InstructionEntry)
+has register Number
+has nextId Number
+has scope Expressions/Scope
+constant Empty = CodeBlock(List(InstructionEntry), 0, 0, Scope(List(Text), List(Text)))
+Add(entry InstructionEntry) CodeBlock
+	CodeBlock.Empty.Add(InstructionEntry.Return(0)).instructions.Length is 1
+	CodeBlock(instructions + entry, register, nextId, scope)
+Load(entry InstructionEntry) CodeBlock
+	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 5)).register is 1
+	CodeBlock(instructions + entry, register + 1, nextId, scope)
+Result Number
+	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 5)).Result is 0
+	register - 1
+At(start Number) CodeBlock
+	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 5)).At(0).register is 0
+	CodeBlock(instructions, start, nextId, scope)
+Declare(name Text, type Text) CodeBlock
+	CodeBlock.Empty.Declare("a", "Number").scope.TypeOf("a") is "Number"
+	CodeBlock(instructions, register, nextId, scope.With(name, type))
+WithNextId CodeBlock
+	CodeBlock.Empty.WithNextId.nextId is 1
+	CodeBlock(instructions, register, nextId + 1, scope)

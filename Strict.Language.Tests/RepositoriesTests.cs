@@ -155,6 +155,17 @@ public class RepositoriesTests
 				new Repositories(null!).SortFilesByMemberUsage(CreateComplexImplementsDependencies()).
 					Select(file => file.Name)), Is.EqualTo("File5, File6, File4, File3, File2, File1"));
 
+	[Test]
+	public void TypeNamesInsideTextsAreNoDependencies()
+	{
+		var file = Path.Combine(Path.GetTempPath(), nameof(TypeNamesInsideTextsAreNoDependencies) +
+			Type.Extension);
+		File.WriteAllText(file,
+			"has vector NeverLoaded/Vector2\nRun\n\tvector.Log(\"Examples/Sum.strict\")");
+		Assert.That(Repositories.FindDependencyPackages("Strict/Bytecode", nameof(Strict), [file]),
+			Is.EquivalentTo(new[] { "Strict/NeverLoaded" }));
+	}
+
 	private static Dictionary<string, TypeLines> CreateComplexImplementsDependencies()
 	{
 		var file1 = new TypeLines("File1", "has File2");

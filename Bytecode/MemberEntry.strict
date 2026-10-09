@@ -16,4 +16,4 @@ Bytes(names BinaryNames) Numbers
 	mutable encoder = ByteEncoder.Empty.SevenBit(names.Index(Name)).SevenBit(names.Index(typeName)).UInt(initial.Length, 1)
 	for initial
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
-	encoder.UInt(IsConstant then 1 else 0, 1).bytes
+	encoder.UInt((IsConstant then 1 else 0), 1).bytes

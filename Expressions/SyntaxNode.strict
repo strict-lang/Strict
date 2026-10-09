@@ -67,12 +67,14 @@ ChildText(childIndex Number, minimumPrecedence Number) Text
 	childText
 ArgumentsText(firstIndex Number) Text
 	SyntaxNode("Call", "Add", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))).ArgumentsText(1) is "2"
+	StatementParser(Tokenizer("f(1, (a then b else c))").Tokens).ParseStatement to Text is "f(1, (a then b else c))"
+	StatementParser(Tokenizer("f(a then b else c)").Tokens).ParseStatement to Text is "f(a then b else c)"
+	let minimumPrecedence = children.Length - firstIndex > 1 then 2 else 0
 	mutable result = ""
 	for children.Length - firstIndex
 		if index > 0
 			result = result + ", "
-		let argument = children(firstIndex + index) to Text
-		result = result + argument
+		result = result + ChildText(firstIndex + index, minimumPrecedence)
 	result
 HeadNames Texts
 	StatementParser(Tokenizer("let a = b.Length + Add(c)").Tokens).ParseStatement.HeadNames is ("b", "Add", "c")

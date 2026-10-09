@@ -69,6 +69,15 @@ public sealed class If(Expression condition,
 					: Environment.NewLine + ElseKeyword + Environment.NewLine + IndentExpression(OptionalElse)
 				: "");
 
+	/// <summary>
+	/// Inline conditionals among several arguments or list elements need brackets to parse again.
+	/// </summary>
+	public static string ToBrackets(IReadOnlyList<Expression> arguments) =>
+		arguments.Select(argument => arguments.Count > 1 &&
+			argument is If { RendersAsInlineConditional: true }
+				? "(" + argument + ")"
+				: argument.ToString()).ToList().ToBrackets();
+
 	private bool RendersAsInlineConditional =>
 		OptionalElse != null &&
 		(OptionalElse.ReturnType.IsSameOrCanBeUsedAs(Then.ReturnType) || Then.ReturnType.IsError ||

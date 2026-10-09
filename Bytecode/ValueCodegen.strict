@@ -1,0 +1,56 @@
+has inference Expressions/TypeInference
+has methods Expressions/Scope
+constant NoScope = Scope(("x", "z"), ("y", "w"))
+constant NoNode = SyntaxNode("Identifier", "x")
+constant Plain = ValueCodegen(TypeInference(KnownTypes(("A", "B"), (NoScope, NoScope), (NoScope, NoScope))), NoScope)
+Expression(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Expression(SyntaxNode("Identifier", "a"), CodeBlock.Empty).register is 1
+	Plain.Expression(SyntaxNode("Binary", "+", (NoNode, NoNode)), CodeBlock.Empty).Result is 2
+	constant UnsupportedExpression = Error
+	if node.Kind is "Identifier"
+		return block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
+	if node.Kind is in ("Number", "Text", "Boolean")
+		return Literal(node, block)
+	if node.Kind is not "Binary"
+		return UnsupportedExpression
+	let left = Expression(node.children(0), block)
+	let right = Expression(node.children(1), left)
+	right.Load(InstructionEntry.Binary(OperatorType(node.text), (left.Result, right.Result, right.register)))
+Literal(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Literal(SyntaxNode("Number", "7"), CodeBlock.Empty).instructions(0).payload is (0, 1, 7)
+	Plain.Literal(SyntaxNode("Text", "\"a\""), CodeBlock.Empty).instructions(0).texts is ("a")
+	Plain.Literal(SyntaxNode("Boolean", "true"), CodeBlock.Empty).instructions(0).payload is (0, 5, 1)
+	if node.Kind is "Number"
+		return block.Load(InstructionEntry.LoadNumber(block.register, node.text to Number))
+	if node.Kind is "Text"
+		return block.Load(InstructionEntry.LoadText(block.register, Unquoted(node.text)))
+	block.Load(InstructionEntry.LoadBoolean(block.register, node.text is "true"))
+Condition(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Condition(SyntaxNode("Boolean", "true"), CodeBlock.Empty).nextId is 1
+	Plain.Condition(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 4
+	let isComparison = (node.Kind is "Binary") and (node.text is in ("is", "is not", "<", ">"))
+	let operand = isComparison then node.children(0) else node
+	let left = Expression(operand, block)
+	let truth = InstructionEntry.LoadBoolean(left.register, true)
+	let right = isComparison then Expression(node.children(1), left) else left.Load(truth)
+	let type = isComparison then OperatorType(node.text) else InstructionType.Equal
+	let compared = right.Add(InstructionEntry.Binary(type, (left.Result, right.Result)))
+	compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, block.nextId)).WithNextId
+OperatorType(operator Text) Number
+	Plain.OperatorType("*") is InstructionType.Multiply
+	Plain.OperatorType("is not") is InstructionType.NotEqual
+	constant arithmetic = ("+", "-", "*", "/", "%", "^")
+	constant comparisons = ("is", "is not", "<", ">")
+	constant UnsupportedOperator = Error
+	if operator is in arithmetic
+		return InstructionType.Add + arithmetic.Index(operator)
+	operator is in comparisons then InstructionType.Equal + comparisons.Index(operator) else UnsupportedOperator
+TypeOf(node SyntaxNode, block CodeBlock) Text
+	Plain.TypeOf(SyntaxNode("Number", "1"), CodeBlock.Empty) is "Number"
+	inference.TypeOf(node, block.scope, methods)
+ElementType(iterated Text) Text
+	Plain.ElementType("Number") is "Number"
+	iterated is "Number" then iterated else inference.types.ElementType(iterated)
+Unquoted(text Text) Text
+	Plain.Unquoted("\"a\"") is "a"
+	text.Substring(1, text.Length - 2)

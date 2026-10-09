@@ -20,3 +20,37 @@ Print(text Text) InstructionEntry
 Return(register Number) InstructionEntry
 	InstructionEntry.Return(3).Bytes(BinaryNames("a")) is (32, 3)
 	InstructionEntry(InstructionType.Return, List(Text), register)
+PrintValue(prefix Text, register Number, isText Boolean) InstructionEntry
+	InstructionEntry.PrintValue("a", 2, true).Bytes(BinaryNames("a")) is (45, 0, 1, 2, 1)
+	InstructionEntry(InstructionType.Print, prefix, (-1, 1, register, (isText then 1 else 0)))
+LoadNumber(register Number, number Number) InstructionEntry
+	InstructionEntry.LoadNumber(2, 7).Bytes(BinaryNames("a")) is (0, 2, 1, 7)
+	InstructionEntry.LoadNumber(0, 1.5).Bytes(BinaryNames("a")) is (0, 0, 3, 0, 0, 0, 0, 0, 0, 248, 63)
+	InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), List(Number) + register + NumberValue(number))
+NumberValue(number Number) Numbers
+	InstructionEntry.NumberValue(7) is (1, 7)
+	InstructionEntry.NumberValue(-1).Length is 9
+	if (number is number.Floor) and number >= 0 and number < 256
+		return (1, number)
+	List(Number) + 3 + ByteEncoder.Empty.Double(number).bytes
+Set(names Texts, content Numbers) InstructionEntry
+	InstructionEntry.Set(List(Text), (1, 7)).Bytes(BinaryNames("a")) is (4, 1, 7, 0)
+	InstructionEntry(InstructionType.Set, names, content + 0)
+LoadText(register Number, text Text) InstructionEntry
+	InstructionEntry.LoadText(1, "a").Bytes(BinaryNames("a")) is (0, 1, 4, 0)
+	InstructionEntry(InstructionType.LoadConstantToRegister, text, (register, 4, -1))
+LoadBoolean(register Number, condition Boolean) InstructionEntry
+	InstructionEntry.LoadBoolean(1, true).Bytes(BinaryNames("a")) is (0, 1, 5, 1)
+	InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (register, 5, (condition then 1 else 0)))
+Named(type Number, register Number, name Text) InstructionEntry
+	InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "a").Bytes(BinaryNames("a")) is (3, 1, 0)
+	InstructionEntry(type, name, (register, -1))
+Binary(type Number, registers Numbers) InstructionEntry
+	InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)).Bytes(BinaryNames("a")) is (11, 3, 0, 1, 2)
+	InstructionEntry(type, List(Text), List(Number) + registers.Length + registers)
+Jump(type Number, number Number) InstructionEntry
+	InstructionEntry.Jump(InstructionType.LoopEnd, 300).Bytes(BinaryNames("a")) is (34, 172, 2)
+	InstructionEntry(type, List(Text), ByteEncoder.Empty.SevenBit(number).bytes)
+LoopBegin(register Number) InstructionEntry
+	InstructionEntry.LoopBegin(1).Bytes(BinaryNames("a")) is (33, 1, 0, 0)
+	InstructionEntry(InstructionType.LoopBegin, List(Text), (register, 0, 0))

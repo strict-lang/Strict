@@ -110,6 +110,7 @@ public sealed class RunnerTests
 		["Expressions/RoundTrip.strict"] = "Expressions",
 		["Expressions/ResolveCheck.strict"] = "Expressions .",
 		["Expressions/TypeReport.strict"] = "Expressions .",
+		["Bytecode/FileCompiler.strict"] = "Examples/HelloLogger.strict .",
 		["Validators/ValidateCheck.strict"] = "Validators ."
 	};
 
