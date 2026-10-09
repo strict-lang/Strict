@@ -190,10 +190,7 @@ public static class SpanExtensions
 		var isInText = false;
 		for (var index = startIndex + 1; index < input.Length; index++)
 		{
-			if (isInText && input[index] == '\\')
-				index++;
-			else if (input[index] == '"')
-				isInText = !isInText;
+			isInText = TextLiteral.Advance(input, ref index, isInText);
 			if (isInText)
 				continue;
 			bracketCount = CountBrackets(input, index, bracketCount);

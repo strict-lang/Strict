@@ -64,9 +64,9 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		var isInsideText = false;
 		for (var index = 0; index <= input.Length - token.Length; index++)
 		{
-			if (input[index] == '"' && (index == 0 || input[index - 1] != '\\'))
-				isInsideText = !isInsideText;
-			if (!isInsideText && input.Slice(index, token.Length).Compare(token))
+			isInsideText = TextLiteral.Advance(input, ref index, isInsideText);
+			if (!isInsideText && index <= input.Length - token.Length &&
+				input.Slice(index, token.Length).Compare(token))
 				return true;
 		}
 		return false;

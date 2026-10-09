@@ -36,12 +36,12 @@ public partial class MethodExpressionParser
 	{
 		var bracketCount = 0;
 		var inText = false;
-		foreach (var current in input)
+		for (var index = 0; index < input.Length; index++)
 		{
-			if (current == '"')
-				inText = !inText;
+			inText = TextLiteral.Advance(input, ref index, inText);
 			if (inText)
 				continue;
+			var current = input[index];
 			if (current == '(')
 				bracketCount++;
 			else if (current == ')')

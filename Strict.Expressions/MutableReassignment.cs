@@ -36,11 +36,10 @@ public sealed class MutableReassignment : ConcreteExpression
 	private static bool ContainsAssignmentOutsideString(ReadOnlySpan<char> input)
 	{
 		var inText = false;
-		for (var i = 0; i < input.Length - 2; i++)
+		for (var index = 0; index < input.Length - 2; index++)
 		{
-			if (input[i] == '"')
-				inText = !inText;
-			if (!inText && input[i] == ' ' && input[i + 1] == '=' && input[i + 2] == ' ')
+			inText = TextLiteral.Advance(input, ref index, inText);
+			if (!inText && input[index] == ' ' && input[index + 1] == '=' && input[index + 2] == ' ')
 				return true;
 		}
 		return false;

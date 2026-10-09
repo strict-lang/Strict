@@ -296,10 +296,11 @@ public sealed class PhraseTokenizer
 	{
 		var isInText = false;
 		for (var index = 0; index < part.Length - 1; index++)
-			if (part[index] == '"')
-				isInText = !isInText;
-			else if (!isInText && part[index] == '(' && part[index + 1] == ')')
+		{
+			isInText = TextLiteral.Advance(part, ref index, isInText);
+			if (!isInText && part[index] == '(' && index + 1 < part.Length && part[index + 1] == ')')
 				return true;
+		}
 		return false;
 	}
 

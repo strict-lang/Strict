@@ -20,6 +20,11 @@ public sealed class MemberCallTests : TestExpressions
 			Is.EqualTo("Type(\"Hi\", \"TestPackage\").Name.IndexOf(\")\") is -1"));
 
 	[Test]
+	public void EscapedQuoteInOneOfSeveralArguments() =>
+		Assert.That(ParseExpression("Type(\"\\\"\", \"TestPackage\").Name").ToString(),
+			Is.EqualTo("Type(\"\\\"\", \"TestPackage\").Name"));
+
+	[Test]
 	public void UnknownMember() =>
 		Assert.That(() => ParseExpression("unknown"), Throws.InstanceOf<Body.IdentifierNotFound>());
 

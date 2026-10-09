@@ -125,8 +125,7 @@ public partial class MethodExpressionParser : ExpressionParser
 		var isInsideText = false;
 		for (var index = 0; index < input.Length; index++)
 		{
-			if (input[index] == '"' && (index == 0 || input[index - 1] != '\\'))
-				isInsideText = !isInsideText;
+			isInsideText = TextLiteral.Advance(input, ref index, isInsideText);
 			if (isInsideText)
 				continue;
 			if (input[index] == '(')

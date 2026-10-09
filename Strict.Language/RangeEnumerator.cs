@@ -31,13 +31,10 @@ public ref struct RangeEnumerator
 		var isInText = false;
 		for (var index = offset; index < input.Length; index++)
 		{
-			var current = input[index];
-			if (isInText && current == '\\')
-				index++;
-			else if (current == '"')
-				isInText = !isInText;
+			isInText = TextLiteral.Advance(input, ref index, isInText);
 			if (isInText)
 				continue;
+			var current = input[index];
 			if (current == '(')
 				bracketCount++;
 			else if (current == ')')
