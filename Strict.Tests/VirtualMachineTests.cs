@@ -649,6 +649,16 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void TextIndexOfUsesStartIndex()
+	{
+		var source = new[] { "has letters Text", "SecondQuote Number", "	letters.IndexOf(\"a\", 1)" };
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(TextIndexOfUsesStartIndex),
+			$"{nameof(TextIndexOfUsesStartIndex)}(\"abca\").SecondQuote", source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(3));
+	}
+
+	[Test]
 	public void LoopOverNumberValueStartsAtZero()
 	{
 		var source = new[]

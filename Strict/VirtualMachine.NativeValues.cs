@@ -133,7 +133,9 @@ public sealed partial class VirtualMachine
 		{
 			"StartsWith" => EvaluateStartsWith(text, args),
 			"IndexOf" => new ValueInstance(executable.numberType,
-				text.IndexOf(args[0].Text, StringComparison.Ordinal)),
+				text.IndexOf(args[0].Text, args.Length > 1
+					? (int)args[1].Number
+					: 0, StringComparison.Ordinal)),
 			"LastIndexOf" => new ValueInstance(executable.numberType,
 				text.LastIndexOf(args[0].Text, StringComparison.Ordinal)),
 			"Substring" => EvaluateSubstring(text, args),
