@@ -127,10 +127,15 @@ public sealed class StrengthReducer : InstructionOptimizer
 	private static int FindInstructionIndex(List<Instruction> instructions, int beforeIndex,
 		Register register)
 	{
-		for (var i = beforeIndex - 1; i >= 0; i--)
-			if ((instructions[i] is LoadConstantInstruction load && load.Register == register) ||
-				(instructions[i] is LoadVariableToRegister varLoad && varLoad.Register == register))
-				return i;
+		for (var index = beforeIndex - 1; index >= 0; index--)
+		{
+			var instruction = instructions[index];
+			if (instruction is LoadConstantInstruction or LoadVariableToRegister &&
+				((RegisterInstruction)instruction).Register == register)
+				return index;
+			if (GetWrittenRegister(instruction) == register || IsControlFlow(instruction))
+				return -1;
+		}
 		return -1; //ncrunch: no coverage
 	}
 

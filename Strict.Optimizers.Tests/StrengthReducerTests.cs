@@ -5,6 +5,19 @@ namespace Strict.Optimizers.Tests;
 public sealed class StrengthReducerTests : TestOptimizers
 {
 	[Test]
+	public void ZeroOverwrittenBySumIsNotAnIdentity() =>
+		Optimize(new StrengthReducer(), [
+			new LoadConstantInstruction(Register.R2, Num(0)),
+			new JumpToId(0, InstructionType.JumpEnd),
+			new LoadVariableToRegister(Register.R0, "path"),
+			new LoadVariableToRegister(Register.R1, "separator"),
+			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
+			new LoadVariableToRegister(Register.R3, "line"),
+			new BinaryInstruction(InstructionType.Add, Register.R2, Register.R3, Register.R4),
+			new ReturnInstruction(Register.R4)
+		], 8);
+
+	[Test]
 	public void MultiplyByOneBecomesLoad()
 	{
 		var optimizedInstructions = Optimize([

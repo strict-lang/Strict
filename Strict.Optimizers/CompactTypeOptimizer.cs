@@ -182,22 +182,12 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 			if (instructions[scanIndex] is LoadConstantInstruction loadConstant &&
 				loadConstant.Register == register)
 				return scanIndex;
-			if (WritesToRegister(instructions[scanIndex], register))
+			if (GetWrittenRegister(instructions[scanIndex]) == register ||
+				IsControlFlow(instructions[scanIndex]))
 				return -1;
 		}
 		return -1;
 	}
-
-	private static bool WritesToRegister(Instruction instruction, Register register) =>
-		instruction switch
-		{
-			LoadVariableToRegister load => load.Register == register,
-			LoadConstantInstruction load => load.Register == register,
-			BinaryInstruction binary when binary.Registers.Length >= 3 => binary.Registers[2] == register,
-			Invoke invoke => invoke.Register == register,
-			ConstructValueTypeInstruction construct => construct.Register == register,
-			_ => false
-		};
 
 	private static void ReplaceWithCompactConstruction(List<Instruction> instructions,
 		int targetIndex, Register outputRegister, double[] sourceValues, Register[] argRegisters,
