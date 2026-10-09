@@ -703,8 +703,8 @@ These C# / .NET features need to be added to the Strict runtime before each phas
 8. **Update this file** after each new `.strict` file is created or each C# file is replaced.
 9. **No static-like types.** Never add `has dummy Number` (or any unused member) to get past
    "types without members must be traits". See the guide below. Enforced when files are loaded:
-   `Type.ValidateMembersAreUsed` (Repositories and Runner) rejects private members never used in
-   the type; single member value wrappers using `value` or `from` (Degrees, HashCode) are fine.
+   `Type.ValidateMembersAndVariablesAreUsed` (Repositories and Runner) rejects private members
+   and declared variables never used; single member value wrappers using `value` or `from` (Degrees, HashCode) are fine.
 
 ### Converting C# static classes and helpers
 

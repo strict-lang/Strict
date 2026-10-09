@@ -46,6 +46,25 @@ public class RepositoriesTests
 	}
 
 	[Test]
+	public void LoadingTypeWithUnusedVariableFails()
+	{
+		var directory = Path.Combine(Path.GetTempPath(), "StrictUnused" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(directory);
+		try
+		{
+			File.WriteAllText(Path.Combine(directory, "Tripler.strict"), string.Join("\n",
+				"has number", "Triple Number", "\tTripler(2).Triple is 6", "\tlet unused = number + 1",
+				"\tnumber * 3"));
+			Assert.That(async () => await repos.LoadFromPath("Strict/" + Path.GetFileName(directory), directory),
+				Throws.InstanceOf<Type.UnusedMethodVariableMustBeRemoved>().With.Message.Contains("unused"));
+		}
+		finally
+		{
+			Directory.Delete(directory, true);
+		}
+	}
+
+	[Test]
 	public void LoadingNonGithubPackageWontWork() =>
 		Assert.ThrowsAsync<Repositories.OnlyGithubDotComUrlsAreAllowedForNow>(() =>
 			repos.LoadFromUrl(new Uri("https://google.com")));

@@ -180,7 +180,7 @@ public sealed class Runner
 		{
 			var typeLines = new TypeLines(typeName, TypeLines.FromFile(strictFilePath));
 			mainType = new Type(package, typeLines).ParseMembersAndMethods(parser);
-			mainType.ValidateMembersAreUsed();
+			mainType.ValidateMembersAndVariablesAreUsed();
 		}
 		else if (existingType.Methods.Any(method => !method.IsTrait))
 		{
@@ -192,7 +192,7 @@ public sealed class Runner
 			package.Remove(existingType);
 			var typeLines = new TypeLines(typeName, TypeLines.FromFile(strictFilePath));
 			mainType = new Type(package, typeLines).ParseMembersAndMethods(parser);
-			mainType.ValidateMembersAreUsed();
+			mainType.ValidateMembersAndVariablesAreUsed();
 		}
 		if (enableDetailedOutput)
 		{

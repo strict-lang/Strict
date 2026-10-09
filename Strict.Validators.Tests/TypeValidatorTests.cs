@@ -27,7 +27,7 @@ public sealed class TypeValidatorTests
 		"\t\"Run method executed\" + input")]
 	public void ValidateUnusedMethodVariables(string expectedOutput, params string[] methodLines) =>
 		Assert.That(() => validator.Visit(new Method(type, 1, parser, methodLines), true),
-			Throws.InstanceOf<TypeValidator.UnusedMethodVariableMustBeRemoved>().With.Message.
+			Throws.InstanceOf<Type.UnusedMethodVariableMustBeRemoved>().With.Message.
 				Contains(expectedOutput));
 
 	[Test]

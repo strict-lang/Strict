@@ -10,7 +10,7 @@ public sealed class TypeValidator : Visitor
 {
 	public override void Visit(Type type, object? context = null)
 	{
-		type.ValidateMembersAreUsed();
+		type.ValidateMembersAndVariablesAreUsed();
 		base.Visit(type, context);
 	}
 
@@ -81,7 +81,7 @@ public sealed class TypeValidator : Visitor
 			return; //ncrunch: no coverage
 		foreach (var variable in body.Variables!)
 			if (!variable.IsImplicit && !variables.used.Contains(variable.Name))
-				throw new UnusedMethodVariableMustBeRemoved(body.Method.Type, variable.Name);
+				throw new Type.UnusedMethodVariableMustBeRemoved(body.Method.Type, variable.Name);
 		//ncrunch: no coverage start
 		var mutableReassignments = body.Expressions.OfType<MutableReassignment>().ToList();
 		foreach (var mutableVariable in body.Variables.Where(variable => variable.IsMutable))
@@ -91,8 +91,6 @@ public sealed class TypeValidator : Visitor
 				throw new VariableDeclaredAsMutableButValueNeverChanged(body, mutableVariable);
 	} //ncrunch: no coverage end
 
-	public sealed class UnusedMethodVariableMustBeRemoved(Type type, string name)
-		: ParsingFailed(type, 0, name);
 
 	//ncrunch: no coverage start
 	private static bool IsVariableValueUnchanged(Body body, Variable mutableVariable,

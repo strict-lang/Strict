@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 #if DEBUG
 using System.Runtime.CompilerServices;
 #endif
@@ -952,11 +953,13 @@ public class Type : Context, IDisposable
 			member.Name.Equals(Name, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
-	/// Every private member must be used, dummy members only satisfying "types without members
-	/// must be traits" are forbidden. Checked when loading files, see conversion plan guide.
+	/// Every private member and every declared variable must be used, dummies only satisfying
+	/// "types without members must be traits" are forbidden. Checked when loading files.
 	/// </summary>
-	public void ValidateMembersAreUsed()
+	public void ValidateMembersAndVariablesAreUsed()
 	{
+		foreach (var method in methods)
+			ValidateVariablesAreUsed(method);
 		if (IsDataType || IsTrait || IsSingleMemberValueType)
 			return;
 		foreach (var member in members)
@@ -964,6 +967,25 @@ public class Type : Context, IDisposable
 				CountMemberUsage(member.Name) < 2)
 				throw new UnusedMemberMustBeRemoved(this, member.Name);
 	}
+
+	private void ValidateVariablesAreUsed(Method method)
+	{
+		for (var index = 1; index < method.lines.Count; index++)
+		{
+			var declaration = DeclarationPattern.Match(method.lines[index]);
+			if (!declaration.Success)
+				continue;
+			var usage = new Regex(@"\b" + declaration.Groups[1].Value + @"\b");
+			if (!method.lines.Where((line, lineIndex) => lineIndex != index).Any(usage.IsMatch))
+				throw new UnusedMethodVariableMustBeRemoved(this, declaration.Groups[1].Value);
+		}
+	}
+
+	private static readonly Regex DeclarationPattern = new(@"^\t+(?:let|constant|mutable) (\w+) = ",
+		RegexOptions.Compiled);
+
+	public sealed class UnusedMethodVariableMustBeRemoved(Type type, string name)
+		: ParsingFailed(type, 0, name);
 
 	/// <summary>
 	/// Wrappers like Degrees with a single "has number" use that member through value or from.
