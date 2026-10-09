@@ -96,8 +96,21 @@ public sealed partial class VirtualMachine
 		return new ValueInstance(listType, colors);
 	}
 
-	private static ValueInstance GetMemberInitialOrDefaultValue(Member member, bool hasBinaryMembers,
-		List<BinaryMember> binaryMembers, int memberIndex) =>
+	private ValueInstance GetMemberInitialOrDefaultValue(Member member, bool hasBinaryMembers,
+		List<BinaryMember> binaryMembers, int memberIndex)
+	{
+		if (!member.IsConstant)
+			return CreateMemberInitialOrDefaultValue(member, hasBinaryMembers, binaryMembers, memberIndex);
+		if (!constantMemberValues.TryGetValue(member, out var constantValue))
+			constantMemberValues[member] = constantValue =
+				CreateMemberInitialOrDefaultValue(member, hasBinaryMembers, binaryMembers, memberIndex);
+		return constantValue;
+	}
+
+	private readonly Dictionary<Member, ValueInstance> constantMemberValues = new();
+
+	private static ValueInstance CreateMemberInitialOrDefaultValue(Member member,
+		bool hasBinaryMembers, List<BinaryMember> binaryMembers, int memberIndex) =>
 		member.InitialValue is Value initialValue
 			? initialValue.Data
 			: hasBinaryMembers && TryGetBinaryMemberInitialValue(binaryMembers, memberIndex,
