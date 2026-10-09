@@ -25,7 +25,7 @@ public sealed partial class BinaryGenerator
 				: [methodBody];
 			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
 				runMethod.ReturnType);
-			var methodInstructions = childGenerator.GenerateInstructionList();
+			var methodInstructions = childGenerator.GenerateInstructions(childGenerator.Expressions);
 			var parameters = CreateBinaryMembers(runMethod.Parameters, entryType);
 			AddCompiledMethod(methodsByType, runMethod.Type.FullName, runMethod.Name, parameters,
 				GetBinaryTypeName(runMethod.ReturnType, entryType), methodInstructions);
@@ -47,7 +47,7 @@ public sealed partial class BinaryGenerator
 				: [body];
 			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
 				method.ReturnType);
-			var methodInstructions = childGenerator.GenerateInstructionList();
+			var methodInstructions = childGenerator.GenerateInstructions(childGenerator.Expressions);
 			var parameters = CreateBinaryMembers(method.Parameters, entryType);
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
 				GetBinaryTypeName(method.ReturnType, entryType), methodInstructions);
@@ -257,7 +257,7 @@ public sealed partial class BinaryGenerator
 				: [body];
 			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
 				method.ReturnType);
-			var methodInstructions = childGenerator.GenerateInstructionList();
+			var methodInstructions = childGenerator.GenerateInstructions(childGenerator.Expressions);
 			var parameters = method.Parameters.Select(parameter =>
 				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList();
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
@@ -267,9 +267,6 @@ public sealed partial class BinaryGenerator
 		}
 		return methodsByType;
 	}
-
-	//TODO: remove
-	private List<Instruction> GenerateInstructionList() => GenerateInstructions(Expressions);
 
 	private void EnqueueConstraintMethods(Queue<Method> methodsToCompile,
 		HashSet<string> compiledMethodKeys)

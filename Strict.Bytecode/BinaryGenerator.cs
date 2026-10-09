@@ -91,7 +91,7 @@ public sealed partial class BinaryGenerator
 
 	public static List<Instruction> GenerateInlineInstructions(Package basePackage,
 		Expression expression) =>
-		new BinaryGenerator(basePackage, [expression], expression.ReturnType).GenerateInstructionList();
+		new BinaryGenerator(basePackage, [expression], expression.ReturnType).GenerateInstructions([expression]);
 
 	private BinaryExecutable Generate(Method preferredEntryMethod, IReadOnlyList<Method> runMethods)
 	{

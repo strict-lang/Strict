@@ -48,11 +48,6 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private static readonly int OuterSymbolId = CallFrame.OuterSymbolId;
 	private static readonly int OuterIndexSymbolId =
 		CallFrame.ResolveSymbolId(Type.OuterLowercase + "." + Type.IndexLowercase);
-	/*TODO: remove, unused
-	private static readonly int ElementsSymbolId = CallFrame.ElementsSymbolId;
-	private static readonly int CharactersSymbolId = CallFrame.CharactersSymbolId;
-	private readonly int noneSymbolId = CallFrame.ResolveSymbolId(Type.None);
-	*/
 	private readonly Dictionary<string, IdentifierAccessPath> identifierAccessPaths =
 		new(StringComparer.Ordinal);
 	private readonly Dictionary<string, IndexedElementAccessPath> indexedElementAccessPaths =

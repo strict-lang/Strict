@@ -208,7 +208,6 @@ public sealed class NameTable
 			_ => Add(expr.ToString()).Add(expr.ReturnType.FullName)
 		};
 
-	//TODO: never called, even needed?
 	private NameTable CollectListExpressionStrings(List list)
 	{
 		foreach (var value in list.Values)
