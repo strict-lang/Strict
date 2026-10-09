@@ -13,17 +13,17 @@ CollapseBinary(left Text, operatorName Text, right Text) Text
 	left + " " + operatorName + " " + right
 CollapseAdd(left Text, right Text) Text
 	if IsNumberText(left) and IsNumberText(right)
-		return ((left to Number) + (right to Number)) to Text
+		return (left to Number + right to Number) to Text
 	left + right
 CollapseNumberOp(left Text, right Text, operatorName Text) Text
-	if not IsNumberText(left) or not IsNumberText(right)
+	if (not IsNumberText(left)) or (not IsNumberText(right))
 		return left + " " + operatorName + " " + right
 	if operatorName is "-"
-		return ((left to Number) - (right to Number)) to Text
+		return (left to Number - right to Number) to Text
 	if operatorName is "*"
-		return ((left to Number) * (right to Number)) to Text
+		return (left to Number * right to Number) to Text
 	if operatorName is "/"
-		return ((left to Number) / (right to Number)) to Text
+		return (left to Number / right to Number) to Text
 	left
 CollapseTo(expression Text, targetType Text) Text
 	ConstantCollapser(0).CollapseTo("\"5\"", "Number") is "5"

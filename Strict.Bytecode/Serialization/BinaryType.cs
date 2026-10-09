@@ -66,7 +66,7 @@ public sealed class BinaryType
 	public const string BytecodeEntryExtension = ".bytecode";
 	internal const byte StrictMagicByte = (byte)'S';
 	public sealed class InvalidBytecodeEntry(string message) : Exception(message);
-	public const byte Version = 2;
+	public const byte Version = 4;
 
 	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " + fileVersion +
 		", this runtime requires version " + Version);

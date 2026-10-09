@@ -105,14 +105,112 @@ public sealed class BinaryExecutable(Package basePackage)
 			if (type.Members.Count > 0)
 				continue;
 			foreach (var member in binaryType.Members)
-				type.Members.Add(new Member(type, member.Name,
-					EnsureResolvedType(basePackage, member.FullTypeName))
+			{
+				var memberType = EnsureResolvedType(basePackage, member.FullTypeName);
+				type.Members.Add(new Member(type, member.Name, memberType,
+					usedKeyword: member.IsConstant
+						? Keyword.Constant
+						: Keyword.Has)
 				{
 					InitialValue = member.InitialValueExpression is SetInstruction constant
-						? new Value(EnsureResolvedType(basePackage, member.FullTypeName), constant.ValueInstance)
+						? new Value(memberType, constant.ValueInstance)
 						: null
 				});
+			}
+			RestoreTraitMethods(type, binaryType);
 		}
+	}
+
+	private void RestoreTraitMethods(Type type, BinaryType binaryType)
+	{
+		if (type.Methods.Count > 0 || !type.IsTrait || !IsSignatureOnly(binaryType))
+			return;
+		var parser = new MethodExpressionParser();
+		var lineNumber = 1;
+		foreach (var overloads in binaryType.MethodGroups.Values)
+			foreach (var method in overloads)
+			{
+				if (!CanResolveTraitMethod(method))
+					continue;
+				type.Methods.Add(new Method(type, lineNumber++, parser, [BuildTraitMethodHeader(method)]));
+			}
+	}
+
+	private static bool IsSignatureOnly(BinaryType binaryType)
+	{
+		var sawMethod = false;
+		foreach (var overloads in binaryType.MethodGroups.Values)
+			foreach (var method in overloads)
+			{
+				sawMethod = true;
+				if (method.instructions.Count > 0)
+					return false;
+			}
+		return sawMethod;
+	}
+
+	private bool CanResolveTraitMethod(BinaryMethod method)
+	{
+		if (method.Name != Method.From && !CanResolveStoredType(method.ReturnTypeName))
+			return false;
+		foreach (var parameter in method.parameters)
+			if (!CanResolveStoredType(parameter.FullTypeName))
+				return false;
+		return true;
+	}
+
+	private bool CanResolveStoredType(string typeName)
+	{
+		var simple = GetSimpleTypeName(typeName);
+		if (simple.Length == 0 || simple == Type.None)
+			return true;
+		if (simple.Contains("Generic", StringComparison.Ordinal))
+			return false;
+		try
+		{
+			EnsureTypePieces(simple);
+			EnsureResolvedType(basePackage, simple);
+			return true;
+		}
+		catch (Context.TypeNotFound)
+		{
+			return false;
+		}
+	}
+
+	private void EnsureTypePieces(string simple)
+	{
+		var open = simple.IndexOf('(');
+		if (open > 0 && simple.EndsWith(')'))
+		{
+			foreach (var part in simple[(open + 1)..^1].Split(',',
+				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+				EnsureTypePieces(GetSimpleTypeName(part));
+			return;
+		}
+		if (basePackage.FindType(simple) != null)
+			return;
+		if (simple.EndsWith('s') && simple.Length > 1)
+		{
+			var singular = simple[..^1];
+			if (char.IsUpper(singular[0]) && basePackage.FindDirectType(singular) == null)
+				new Type(basePackage, new TypeLines(singular));
+			return;
+		}
+		if (basePackage.FindDirectType(simple) == null)
+			new Type(basePackage, new TypeLines(simple));
+	}
+
+	private static string BuildTraitMethodHeader(BinaryMethod method)
+	{
+		var header = method.Name;
+		if (method.parameters.Count > 0)
+			header += "(" + string.Join(", ", method.parameters.Select(parameter =>
+				parameter.Name + " " + GetSimpleTypeName(parameter.FullTypeName))) + ")";
+		var returnTypeName = GetSimpleTypeName(method.ReturnTypeName);
+		if (method.Name != Method.From && returnTypeName.Length > 0 && returnTypeName != Type.None)
+			header += " " + returnTypeName;
+		return header;
 	}
 
 	private static string GetEntryNameWithoutExtension(string fullName)

@@ -164,7 +164,7 @@ public sealed class For(Expression[] customVariables,
 		if (innerBody.FindVariable(Type.IndexLowercase) != null &&
 			innerBody.FindVariable(Type.ValueLowercase) != null)
 			return;
-		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), true);
+		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), true, true);
 		var iteratorText = GetForIteratorText(line);
 		if (IsNumberOrRangeOnlyIteration(body, iteratorText))
 			return;
@@ -172,7 +172,7 @@ public sealed class For(Expression[] customVariables,
 		if (iteratorYieldType != null)
 		{
 			innerBody.AddVariable(Type.ValueLowercase,
-				new Instance(iteratorYieldType, body.CurrentFileLineNumber), true);
+				new Instance(iteratorYieldType, body.CurrentFileLineNumber), true, true);
 			return;
 		}
 		var valueExpression = body.Method.ParseExpression(body,
@@ -187,7 +187,7 @@ public sealed class For(Expression[] customVariables,
 				? new Instance(listElementType, body.CurrentFileLineNumber)
 				: new ListCall(valueExpression, new Number(body.Method, 0));
 		}
-		innerBody.AddVariable(Type.ValueLowercase, valueExpression, true);
+		innerBody.AddVariable(Type.ValueLowercase, valueExpression, true, true);
 	}
 
 	/// <summary>

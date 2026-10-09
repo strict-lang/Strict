@@ -31,6 +31,16 @@ public sealed class TypeValidatorTests
 				Contains(expectedOutput));
 
 	[Test]
+	public void VariableUsedOnlyInsideListIsNotUnused() =>
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Run",
+			"\tconstant method = 5",
+			"\tconstant other = 2",
+			"\tconstant pair = (method, other)",
+			"\tlogger.Log(pair)"
+		]), true));
+
+	[Test]
 	public void ErrorOnlyIfVariablesAreUnused() =>
 		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
 			"Run(methodInput Number)",

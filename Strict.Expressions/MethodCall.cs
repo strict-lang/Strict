@@ -14,8 +14,8 @@ public class MethodCall : ConcreteExpression
 {
 	public MethodCall(Method method, Expression? instance = null,
 		IReadOnlyList<Expression>? arguments = null, Type? toReturnType = null, int lineNumber = 0,
-		int? argumentsToShowCount = null) : base(GetMethodReturnType(method, toReturnType, instance),
-		lineNumber, method.ReturnType.IsMutable)
+		int? argumentsToShowCount = null, bool useTypePrefix = false) : base(
+		GetMethodReturnType(method, toReturnType, instance), lineNumber, method.ReturnType.IsMutable)
 	{
 		if (method.Name == Method.From && instance != null)
 			throw new CannotCallFromConstructorWithExistingInstance(); //ncrunch: no coverage
@@ -23,9 +23,11 @@ public class MethodCall : ConcreteExpression
 		Method = method;
 		Arguments = arguments ?? [];
 		this.argumentsToShowCount = argumentsToShowCount;
+		this.useTypePrefix = useTypePrefix;
 	}
 
 	private readonly int? argumentsToShowCount;
+	private readonly bool useTypePrefix;
 
 	public sealed class CannotCallFromConstructorWithExistingInstance : Exception;
 
@@ -120,7 +122,8 @@ public class MethodCall : ConcreteExpression
 		return new MethodCall(method, instance, normalizedArguments, null, body.CurrentFileLineNumber,
 			normalizedArguments.Count == arguments.Count
 				? null
-				: arguments.Count);
+				: arguments.Count,
+			instance == null && type != body.Method.Type && method.Name != Method.From);
 	}
 
 	private static string GetCallText(Expression? instance, string inputAsString,
@@ -444,7 +447,9 @@ public class MethodCall : ConcreteExpression
 			? ReturnType is GenericTypeImplementation { Generic.Name: Type.Mutable }
 				? Type.Mutable
 				: Method.ReturnType.Name
-			: Method.Name;
+			: (useTypePrefix
+				? Method.Type.Name + "."
+				: "") + Method.Name;
 
 	public override bool Equals(Expression? other) =>
 		ReferenceEquals(this, other) || (other is MethodCall mc && other.GetType() == GetType() &&

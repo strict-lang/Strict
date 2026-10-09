@@ -199,7 +199,7 @@ public sealed class Body : Expression
 	public sealed class ReturnAsLastExpressionIsNotNeeded(Body body) : ParsingFailed(body);
 	public List<Variable>? Variables { get; private set; }
 
-	public Body AddVariable(string name, Expression value, bool isMutable)
+	public Body AddVariable(string name, Expression value, bool isMutable, bool isImplicit = false)
 	{
 		if (name.IsKeyword())
 			throw new NamedType.CannotUseKeywordsAsName(name);
@@ -208,7 +208,8 @@ public sealed class Body : Expression
 		if (FindVariable(name.AsSpan(), name != Type.IndexLowercase && name != Type.ValueLowercase) is
 			not null)
 			throw new VariableNameIsAlreadyInUse(this, FindVariable(name.AsSpan())!, value);
-		(Variables ??= new List<Variable>()).Add(new Variable(name, isMutable, value, this));
+		(Variables ??= new List<Variable>()).Add(
+			new Variable(name, isMutable, value, this, isImplicit));
 		return this;
 	}
 

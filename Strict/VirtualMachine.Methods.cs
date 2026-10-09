@@ -476,6 +476,12 @@ public sealed partial class VirtualMachine
 				new Dictionary<ValueInstance, ValueInstance>());
 			return true;
 		}
+		if (returnType.IsList && invoke.MethodInfo.ArgumentRegisters.Length == 0)
+		{
+			Memory.Registers[invoke.Register] =
+				new ValueInstance(returnType, Array.Empty<ValueInstance>());
+			return true;
+		}
 		if (!returnType.IsMutable && (returnType.IsNumber || returnType.IsText ||
 			returnType.IsCharacter || returnType.IsEnum || returnType.IsBoolean || returnType.IsNone))
 		{
@@ -748,6 +754,8 @@ public sealed partial class VirtualMachine
 		{
 			return;
 		}
+		if (instanceType == null)
+			return;
 		var firstNonTraitMember = instanceType.Members.FirstOrDefault(member => !member.Type.IsTrait);
 		if (firstNonTraitMember != null)
 			Memory.Frame.Set(firstNonTraitMember.Name, instance, true);

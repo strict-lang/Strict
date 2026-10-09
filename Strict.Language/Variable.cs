@@ -6,12 +6,14 @@
 public sealed class Variable(string name,
 	bool isMutable,
 	Expression initialValue,
-	Body createdInScope)
+	Body createdInScope,
+	bool isImplicit = false)
 {
 	public string Name { get; } = name;
 	public bool IsMutable { get; } = isMutable;
 	public Expression InitialValue { get; internal set; } = initialValue;
 	public Body CreatedInScope { get; } = createdInScope;
+	public bool IsImplicit { get; } = isImplicit;
 	public Type Type => InitialValue.ReturnType;
 
 	public void CheckIfWeCouldUpdateValue(Expression value)

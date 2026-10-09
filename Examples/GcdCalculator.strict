@@ -6,7 +6,7 @@ GCD Number
 	GcdCalculator(12, 8).GCD is 4
 	mutable current = first
 	mutable modulo = second
-	for Range(0, 100)
+	for 100
 		if modulo is 0
 			return current
 		let temp = modulo

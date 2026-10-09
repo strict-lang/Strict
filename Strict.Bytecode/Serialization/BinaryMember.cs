@@ -7,11 +7,16 @@ public sealed record BinaryMember(string Name,
 	string FullTypeName,
 	Instruction? InitialValueExpression)
 {
+	public bool IsConstant { get; init; }
+
 	public BinaryMember(BinaryReader reader, NameTable table, BinaryExecutable binary) : this(
 		table.names[reader.Read7BitEncodedInt()], table.names[reader.Read7BitEncodedInt()],
 		reader.ReadBoolean()
 			? binary.ReadInstruction(reader, table)
-			: null) { }
+			: null)
+	{
+		IsConstant = reader.ReadBoolean();
+	}
 
 	public string JustTypeName => FullTypeName.Split(Context.ParentSeparator)[^1];
 
@@ -26,5 +31,6 @@ public sealed record BinaryMember(string Name,
 		writer.Write7BitEncodedInt(table[FullTypeName]);
 		writer.Write(InitialValueExpression != null);
 		InitialValueExpression?.Write(writer, table);
+		writer.Write(IsConstant);
 	}
 }

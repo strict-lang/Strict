@@ -109,7 +109,7 @@ public sealed class Runner
 		{
 			var binaryTime = new FileInfo(cachedBinaryFilePath).LastWriteTimeUtc;
 			var sourceTime = new FileInfo(strictFilePath).LastWriteTimeUtc;
-			if (binaryTime >= sourceTime)
+			if (binaryTime >= sourceTime && !DirectoryHasNewerStrictFile(binaryTime))
 				try
 				{
 					var binary = LogTiming("Loading cached " + cachedBinaryFilePath,
@@ -151,6 +151,17 @@ public sealed class Runner
 			Replace(Path.AltDirectorySeparatorChar, Context.ParentSeparator);
 		return await repositories.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator +
 			relative);
+	}
+
+	private bool DirectoryHasNewerStrictFile(DateTime binaryTime)
+	{
+		var directory = Path.GetDirectoryName(Path.GetFullPath(strictFilePath));
+		if (string.IsNullOrEmpty(directory))
+			return false;
+		foreach (var file in Directory.EnumerateFiles(directory, "*" + Type.Extension))
+			if (File.GetLastWriteTimeUtc(file) > binaryTime)
+				return true;
+		return false;
 	}
 
 	private static bool IsExamplesDir(string dir) =>

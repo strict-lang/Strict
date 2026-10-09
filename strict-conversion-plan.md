@@ -21,26 +21,26 @@ written in Strict, and what C# features are still missing from the Strict runtim
   concatenation (only literal prefixes use the optimized Print instruction).
 - Fresh-process source/binary loader regression passes. Fixed declaration order for generic
   constants, ConstructValueType payload serialization, and reconstructed embedded member layouts.
-- Bytecode format is now version 2; version 1 artifacts require rebuilding. Source caches regenerate.
-- Broader runtime check: 120 passed, 2 failed (excluding Manual/Slow/Nightly and documented allocation
-  failure). Remaining cached-image failures: NativeImageLoadProcessSavePipeline loses trait method
-  metadata; RunAdjustBrightness loses member-default metadata used by automatic text conversion.
-  These are active blockers, not completed work. No production C# layer has been replaced.
+- Bytecode format is version 4. Version 3 stored signature-only trait methods so cached
+  ImageLoader width/height dispatch works, and restored primitive constructor defaults such as
+  `Byte(255)`. Version 4 also stores `IsConstant` on members. Cached Path concatenation uses that
+  flag so `path.RemoveExtension + "_output.jpg"` stays a path instead of `(path)_output.jpg`.
+  Runner invalidates a cache when any sibling `.strict` file in the entry directory is newer.
+- `NativeImageLoadProcessSavePipeline` passes for a fresh compile and for the cached binary.
+  Non-slow `Strict.Tests`: 122 passed. `RunAdjustBrightness` passes. The Slow allocation budget
+  test is still over its limit and is not a functional blocker.
+- Validator walks list elements, counts mutable reassignment nested in `for`/`if`, and ignores
+  implicit loop `index`/`value`. Double parentheses are rejected only when the called method has
+  a single list parameter, so `NumberSummer((1, 2, 3))` stays valid (`from` also takes `logger`).
+  `ConstantCollapser` keeps locals that are used inside `for`/`if`. `GcdCalculator` uses `for 100`.
+  `Pixel.blue` is used. `MemoryPressure` assigns `values = values.Add(index)`. Empty `List` `from`
+  builds a real list. Calls written as `Type.Method(...)` keep that prefix in expression text.
+- CLI runs that now pass: `GcdCalculator`, `NumberSummer`, `NumberStats`, `Pixel`,
+  `MemoryPressure` (`allocated numbers: 20000`), `Validators/ValidateDemo`, `TestRunner/TestDemo`.
+  Non-slow validator tests: 51 passed. No production C# layer has been replaced.
 
-Stopped at AGENTS.md five-edit limit on `RunAdjustBrightness`. Fresh source passes; cached output
-prints `(0.25, 0.25, 0.25, 1)` instead of `(0.25, 0.25, 0.25)`. Embedded Color.Alpha loses its
-`Byte(255)` initializer: CreateInitialValueInstruction handles Value/List but drops primitive
-constructor expressions. Last attempted guard used nonexistent ValueInstance.IsNumber (CS0117);
-that failed edit was reverted. Final bootstrap build: zero warnings/errors. Proposed next fix:
-match `MethodCall { Method.Name: Method.From, ReturnType.IsNumber: true,
-Arguments: [Value { ReturnType.IsNumber: true } number] }`, then serialize a SetInstruction
-with `new ValueInstance(constructor.ReturnType, number.Data.Number)`. Verify fresh source AND
-cached execution. Stored SetInstruction defaults are now restored into Member.InitialValue.
-A separate existing test, RunAdjustBrightnessRegeneratesCachedBinaryWhenColorChanges, also fails
-because Runner only compares entry-source timestamp; dependency invalidation remains pending.
-
-Next: preserve primitive-constructor defaults/native trait metadata, rerun affected suites, then continue
-Phase 1 package lookup and parsing. Package loading alone does not complete self-hosting.
+Next: rerun the example suite, then Phase 1 package children and lookup. Package loading alone
+does not complete self-hosting. The Slow allocation budget test is still over its limit.
 ## Verified checkpoint — 2026-10-09
 
 Phase 0 base types are 100% verified across all base types (`Boolean`, `Number`, `Text`, `List`,

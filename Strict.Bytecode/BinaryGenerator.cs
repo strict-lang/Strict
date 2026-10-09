@@ -910,13 +910,35 @@ public sealed class BinaryGenerator
 			: GetBinaryTypeName(type, entryType), StringComparer.Ordinal);
 		foreach (var type in orderedTypes)
 		{
+			AddTraitMethodSignatures(methodsByType, type, entryType);
 			var members = type.Members.Where(member => !member.IsConstant || member.InitialValue != null).
 				Select(member => new BinaryMember(member.Name, GetBinaryTypeName(member.Type, entryType),
-					CreateInitialValueInstruction(member.InitialValue))).ToList();
+					CreateInitialValueInstruction(member.InitialValue))
+				{
+					IsConstant = member.IsConstant
+				}).ToList();
 			binary.AddType(GetBinaryTypeName(type, entryType), members,
 				methodsByType.TryGetValue(type.FullName, out var methodGroups)
 					? methodGroups
 					: new Dictionary<string, List<BinaryMethod>>(StringComparer.Ordinal), type == entryType);
+		}
+	}
+
+	private static void AddTraitMethodSignatures(
+		Dictionary<string, Dictionary<string, List<BinaryMethod>>> methodsByType, Type type,
+		Type entryType)
+	{
+		if (!type.IsTrait)
+			return;
+		foreach (var method in type.Methods)
+		{
+			if (method.lines.Count != 1)
+				continue;
+			if (methodsByType.TryGetValue(type.FullName, out var groups) && groups.ContainsKey(method.Name))
+				continue;
+			AddCompiledMethod(methodsByType, type.FullName, method.Name,
+				CreateBinaryMembers(method.Parameters, entryType),
+				GetBinaryTypeName(method.ReturnType, entryType), []);
 		}
 	}
 
@@ -1220,8 +1242,9 @@ public sealed class BinaryGenerator
 		if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
 			return;
 		GenerateInstructionFromExpression(methodCall.Arguments[0]);
-		instructions.Add(new WriteToListInstruction(registry.PreviousRegister,
-			methodCall.Instance.ToString()));
+		var listName = methodCall.Instance.ToString();
+		instructions.Add(new WriteToListInstruction(registry.PreviousRegister, listName));
+		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), listName));
 	}
 
 	private bool TryGenerateAddForTable(MethodCall methodCall)

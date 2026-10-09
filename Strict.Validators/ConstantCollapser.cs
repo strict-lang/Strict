@@ -63,14 +63,26 @@ public sealed class ConstantCollapser : Visitor
 		expression switch
 		{
 			//ncrunch: no coverage start
-			VariableCall vc => vc.Variable.Name == name,
-			Binary b => ContainsVariableCall(b.Instance!, name) ||
-				ContainsVariableCall(b.Arguments[0], name),
-			MethodCall mc => (mc.Instance != null && ContainsVariableCall(mc.Instance, name)) ||
-				mc.Arguments.Any(a => ContainsVariableCall(a, name)),
+			VariableCall variableCall => variableCall.Variable.Name == name,
+			MethodCall methodCall => (methodCall.Instance != null &&
+					ContainsVariableCall(methodCall.Instance, name)) ||
+				methodCall.Arguments.Any(argument => ContainsVariableCall(argument, name)),
+			Declaration declaration => ContainsVariableCall(declaration.Value, name),
+			MutableReassignment reassignment => ContainsVariableCall(reassignment.Target, name) ||
+				ContainsVariableCall(reassignment.Value, name),
+			For loop => ContainsVariableCall(loop.Iterator, name) || ContainsVariableCall(loop.Body, name),
+			If branch => ContainsVariableCall(branch.Condition, name) ||
+				ContainsVariableCall(branch.Then, name) || (branch.OptionalElse != null &&
+					ContainsVariableCall(branch.OptionalElse, name)),
+			Return returnExpression => ContainsVariableCall(returnExpression.Value, name),
+			Body nested => nested.Expressions.Any(nestedExpression =>
+				ContainsVariableCall(nestedExpression, name)),
+			SelectorIf selector => ContainsVariableCall(selector.Selector, name) ||
+				selector.Cases.Any(selectorCase => ContainsVariableCall(selectorCase.Pattern, name) ||
+					ContainsVariableCall(selectorCase.Then, name)) || (selector.OptionalElse != null &&
+					ContainsVariableCall(selector.OptionalElse, name)),
+			List list => list.Values.Any(value => ContainsVariableCall(value, name)),
 			//ncrunch: no coverage end
-			Declaration d => ContainsVariableCall(d.Value, name),
-			MutableReassignment mr => ContainsVariableCall(mr.Value, name), //ncrunch: no coverage
 			_ => false
 		};
 

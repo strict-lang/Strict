@@ -139,6 +139,11 @@ public abstract class Visitor
 			Visit(listCall.List, body, context);
 			Visit(listCall.Index, body, context);
 		}
+		else if (expression is Strict.Expressions.List list)
+		{
+			foreach (var value in list.Values)
+				Visit(value, body, context);
+		}
 		else if (expression is MemberCall memberCall)
 		{
 			Visit(memberCall.Instance, body, context);

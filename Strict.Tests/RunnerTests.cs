@@ -465,6 +465,7 @@ public sealed class RunnerTests
 		var processImagePath =
 			Path.Combine(repoRoot, "ImageProcessing", "ProcessImage" + Type.Extension);
 		await new Runner(processImagePath, testImagePath).Run();
+		await new Runner(processImagePath, testImagePath).Run();
 		var outputImagePath = testImagePath.Replace(".jpg", "_output.jpg");
 		Assert.That(File.Exists(outputImagePath), Is.True, outputImagePath);
 		var output = consoleWriter.ToString();

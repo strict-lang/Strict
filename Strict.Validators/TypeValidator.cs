@@ -30,7 +30,8 @@ public sealed class TypeValidator : Visitor
 		for (var index = body.LineRange.Start.Value; index < body.LineRange.End.Value; index++)
 		{
 			var line = body.GetLine(index);
-			if (line.Contains("((") && line.Contains("))") && line.Count(t => t == '(') < 3)
+			if (line.Contains("((") && line.Contains("))") && line.Count(character => character == '(') < 3 &&
+				IsSingleListParameterCall(body, line))
 				throw new ListArgumentCanBeAutoParsedWithoutDoubleBrackets(body, line);
 		}
 		if (body.Variables is null)
@@ -45,6 +46,40 @@ public sealed class TypeValidator : Visitor
 		ValidateUnusedVariables(body, context);
 	}
 
+	private static bool IsSingleListParameterCall(Body body, string line)
+	{
+		var callName = NameBeforeDoubleParenthesis(line);
+		if (callName.Length == 0)
+			return true;
+		var type = body.Method.Type;
+		if (callName == type.Name)
+			callName = Method.From;
+		var matches = FindNamedMethods(type, callName);
+		if (matches.Count == 0)
+			return true;
+		foreach (var method in matches)
+			if (method.Parameters.Count != 1 || !method.Parameters[0].Type.IsList)
+				return false;
+		return true;
+	}
+
+	private static List<Method> FindNamedMethods(Type type, string name)
+	{
+		var matches = type.Methods.FindAll(candidate => candidate.Name == name);
+		if (matches.Count == 0 && type.AvailableMethods.TryGetValue(name, out var available))
+			matches.AddRange(available);
+		return matches;
+	}
+
+	private static string NameBeforeDoubleParenthesis(string line)
+	{
+		var openIndex = line.IndexOf("((", StringComparison.Ordinal);
+		var nameStart = openIndex;
+		while (nameStart > 0 && char.IsLetterOrDigit(line[nameStart - 1]))
+			nameStart--;
+		return line[nameStart..openIndex];
+	}
+
 	private sealed class VariableUsages
 	{
 		public readonly HashSet<string> used = new();
@@ -56,12 +91,14 @@ public sealed class TypeValidator : Visitor
 		if (context is not VariableUsages variables)
 			return; //ncrunch: no coverage
 		foreach (var variable in body.Variables!)
-			if (!variables.used.Contains(variable.Name))
+			if (!variable.IsImplicit && !variables.used.Contains(variable.Name))
 				throw new UnusedMethodVariableMustBeRemoved(body.Method.Type, variable.Name);
 		//ncrunch: no coverage start
 		var mutableReassignments = body.Expressions.OfType<MutableReassignment>().ToList();
 		foreach (var mutableVariable in body.Variables.Where(variable => variable.IsMutable))
-			if (IsVariableValueUnchanged(body, mutableVariable, mutableReassignments))
+			if (!mutableVariable.IsImplicit &&
+				!variables.reassignedMutables.Contains(mutableVariable.Name) &&
+				IsVariableValueUnchanged(body, mutableVariable, mutableReassignments))
 				throw new VariableDeclaredAsMutableButValueNeverChanged(body, mutableVariable);
 	} //ncrunch: no coverage end
 

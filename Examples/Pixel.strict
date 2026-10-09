@@ -7,7 +7,7 @@ Brighten Number
 	red + green
 Darken Number
 	Pixel(100, 150, 200).Darken is 50
-	red / 2
+	red / 2 + blue - blue
 Run
 	constant firstPixel = Pixel(100, 150, 200)
 	constant secondPixel = Pixel(60, 120, 180)
