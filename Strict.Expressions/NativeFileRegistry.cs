@@ -102,5 +102,7 @@ public static class NativeFileRegistry
 	private static FileState Get(long handle) =>
 		OpenFiles.TryGetValue(handle, out var state)
 			? state
-			: throw new InvalidOperationException("File handle not open: " + handle);
+			: throw new FileHandleNotOpen(handle);
+
+	public sealed class FileHandleNotOpen(long handle) : Exception("File handle not open: " + handle);
 }

@@ -283,6 +283,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	private BinaryMethod? entryPoint;
 	public BinaryMethod EntryPoint => entryPoint ??= ResolveEntryPoint();
 	public sealed class InvalidFile(string message) : Exception(message);
+	public sealed class EntryPointNotFound(string what) : Exception("Entry point not found: " + what);
 
 	public List<BinaryMethod> GetRunMethods()
 	{
@@ -298,7 +299,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		foreach (var typeData in MethodsPerType.Values)
 			if (typeData.MethodGroups.TryGetValue(Method.Run, out var runMethods) && runMethods.Count > 0)
 				return runMethods[0];
-		throw new InvalidOperationException("No Run entry point found in binary executable");
+		throw new EntryPointNotFound("Run method in any type");
 	}
 
 	public List<Instruction>? FindInstructions(Type type, Method method) =>
@@ -783,7 +784,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			}
 			break;
 		case Value val:
-			throw new NotSupportedException("WriteExpression not supported value: " + val);
+			throw new ValueInstanceNotSupported(val.Data);
 		case MemberCall memberCall:
 			writer.Write((byte)ExpressionKind.MemberRef);
 			writer.Write7BitEncodedInt(table[memberCall.Member.Name]);
@@ -896,13 +897,14 @@ public sealed class BinaryExecutable(Package basePackage)
 		string returnTypeName)
 	{
 		if (!MethodsPerType.TryGetValue(typeFullName, out var typeData))
-			throw new InvalidOperationException("Entry point type not found: " + typeFullName);
+			throw new EntryPointNotFound("type " + typeFullName);
 		if (!typeData.MethodGroups.TryGetValue(methodName, out var overloads))
-			throw new InvalidOperationException("Entry point method not found: " + methodName);
+			throw new EntryPointNotFound("method " + methodName);
 		entryPoint =
 			overloads.FirstOrDefault(method =>
 				method.parameters.Count == parameterCount && method.ReturnTypeName == returnTypeName) ??
-			throw new InvalidOperationException("Entry point overload not found: " + methodName);
+			throw new EntryPointNotFound("overload of " + methodName + " with " + parameterCount +
+				" parameters returning " + returnTypeName);
 	}
 
 	public List<TResult> ConvertAll<TResult>(Converter<Instruction, TResult> converter) =>

@@ -11,7 +11,7 @@ public sealed class MemoryTests
 	{
 		var memory = new Memory { Variables = { ["count"] = new ValueInstance(NumberType, 5) } };
 		Assert.That(() => memory.AddToCollection("count", new ValueInstance(NumberType, 1)),
-			Throws.InvalidOperationException);
+			Throws.InstanceOf<Memory.CannotAddToNonList>());
 	}
 
 	private static readonly Type NumberType = TestPackage.Instance.GetType(Type.Number);

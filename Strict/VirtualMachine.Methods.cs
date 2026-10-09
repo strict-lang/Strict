@@ -920,7 +920,7 @@ public sealed partial class VirtualMachine
 			"Trim" => new ValueInstance(text.Trim()),
 			"TrimStart" => new ValueInstance(text.TrimStart()),
 			"TrimEnd" => new ValueInstance(text.TrimEnd()),
-			_ => throw new InvalidOperationException("Unhandled native text method: " + info.MethodName)
+			_ => throw Fail("Unhandled native text method: " + info.MethodName)
 		};
 		return true;
 	}

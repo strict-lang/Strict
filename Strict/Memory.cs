@@ -68,8 +68,7 @@ public sealed class Memory
 #endif
 		Frame.TryGet(symbolId, out var collection);
 		if (!collection.IsList)
-			throw new InvalidOperationException("Cannot add to non-list variable \"" +
-				CallFrame.GetSymbolName(symbolId) + "\" of type " + collection.GetType().Name);
+			throw new CannotAddToNonList(CallFrame.GetSymbolName(symbolId), collection.GetType().Name);
 		collection.List.Items.Add(element);
 	}
 
@@ -83,10 +82,9 @@ public sealed class Memory
 		}
 		var hasCollection = Variables.TryGetValue(key, out var collection);
 		if (!hasCollection || !collection.IsList)
-			throw new InvalidOperationException("Cannot add to non-list variable \"" + key +
-				"\" of type " + (hasCollection
-					? collection.GetType().Name
-					: "unset"));
+			throw new CannotAddToNonList(key, hasCollection
+				? collection.GetType().Name
+				: "unset");
 		collection.List.Items.Add(element);
 	}
 
@@ -120,4 +118,7 @@ public sealed class Memory
 			: value.GetType().Name + "(" + value.Number + ")";
 	}
 #endif
+
+	public sealed class CannotAddToNonList(string name, string typeName)
+		: Exception("Cannot add to non-list variable \"" + name + "\" of type " + typeName);
 }

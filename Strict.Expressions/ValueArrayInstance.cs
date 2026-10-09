@@ -359,7 +359,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	private ValueInstance CreateFlatItem(int index)
 	{
 		if (flatNumbers == null || flatElementType == null)
-			throw new InvalidOperationException(FlatNumbersFieldName + " not initialized");
+			throw new FlatNumbersNotInitialized();
 		var elementOffset = offset + index * FlatWidth;
 		if (FlatWidth == 1)
 			return new ValueInstance(flatElementType, flatNumbers[elementOffset]);
@@ -405,4 +405,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 
 	public override bool Equals(object? other) => Equals(other as ValueArrayInstance);
 	public override int GetHashCode() => HashCode.Combine(ReturnType, Items);
+
+	public sealed class FlatNumbersNotInitialized()
+		: Exception(FlatNumbersFieldName + " not initialized");
 }

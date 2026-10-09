@@ -167,8 +167,7 @@ public sealed class BinaryGenerator
 	private static ValueInstance GetValueInstanceFromExpression(Expression expression) =>
 		expression switch
 		{
-			List list => list.TryGetConstantData() ?? throw new NotSupportedException(
-				"Dynamic lists (mutable or containing any non constant expression) are not supported yet"),
+			List list => list.TryGetConstantData() ?? throw new ListIsNotConstant(list),
 			Value val => val.Data,
 			MemberCall memberCall when memberCall.Member.InitialValue != null => memberCall.Member.
 				InitialValue is Value enumValue
@@ -354,7 +353,7 @@ public sealed class BinaryGenerator
 
 	private Type GetListType(Type elementType) =>
 		binary.basePackage.FindType(Type.List)?.GetGenericImplementation(elementType) ??
-		throw new InvalidOperationException("List type not found for loop aggregation");
+		throw new ListTypeNotFound(elementType);
 
 	private enum LoopAggregation
 	{
@@ -429,7 +428,7 @@ public sealed class BinaryGenerator
 				listCall.List.ToString()));
 			break;
 		default:
-			throw new NotSupportedException(expression.ToString()); //ncrunch: no coverage
+			throw new ExpressionNotSupported(expression); //ncrunch: no coverage
 		}
 		var sourceLine = expression.LineNumber;
 		for (var instructionIndex = countBefore; instructionIndex < instructions.Count;
@@ -806,7 +805,7 @@ public sealed class BinaryGenerator
 			BinaryOperator.Is => InstructionType.Equal,
 			_ when binaryOperator.StartsWith("is not", StringComparison.Ordinal) => InstructionType.
 				NotEqual,
-			_ => throw new NotImplementedException() //ncrunch: no coverage
+			_ => throw new OperatorNotSupported(binaryOperator) //ncrunch: no coverage
 		};
 
 	private void GenerateCodeForIfCondition(Expression condition)
@@ -1394,4 +1393,17 @@ public sealed class BinaryGenerator
 			GenerateInstructionFromExpression(condition.Instance);
 		return registry.PreviousRegister;
 	}
+
+	public sealed class ListTypeNotFound(Type elementType)
+		: Exception("List type not found for loop aggregation of " + elementType);
+
+	public sealed class ExpressionNotSupported(Expression expression)
+		: Exception("Bytecode generation does not support " + expression.GetType().Name + ": " +
+			expression);
+
+	public sealed class OperatorNotSupported(string binaryOperator)
+		: Exception("Bytecode generation does not support operator " + binaryOperator);
+
+	public sealed class ListIsNotConstant(List list)
+		: Exception("Only constant lists can be stored as constant data: " + list);
 }

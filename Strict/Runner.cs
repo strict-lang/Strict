@@ -268,7 +268,7 @@ public sealed class Runner
 		{
 			var runMethods = mainType.Methods.Where(method => method.Name == Method.Run).ToArray();
 			if (runMethods.Length == 0)
-				throw new NotSupportedException("No Run method found in " + mainType.Name);
+				throw new NoRunMethodFound(mainType.Name);
 			var preferredEntryMethod =
 				runMethods.FirstOrDefault(method => method.Parameters.Count == 0) ?? runMethods[0];
 			return BinaryGenerator.GenerateFromRunMethods(preferredEntryMethod, runMethods);
@@ -294,7 +294,7 @@ public sealed class Runner
 			Log("Saving " + new FileInfo(outputFilePath).Length + " bytes of bytecode to: " +
 				outputFilePath);
 		}
-		catch (NotSupportedException ex)
+		catch (BinaryExecutable.ValueInstanceNotSupported ex)
 		{
 			Log("Bytecode serialization not yet supported for this program: " + ex.Message);
 		}
@@ -384,8 +384,7 @@ public sealed class Runner
 			runMethods.FirstOrDefault(method => method.parameters.Count == ProgramArguments.Length) ??
 			runMethods.FirstOrDefault(method => method.parameters.Count == 1 &&
 				ResolveType(binary, method.parameters[0].FullTypeName).IsList) ??
-			throw new NotSupportedException("No Run method accepts " + ProgramArguments.Length +
-				" arguments.");
+			throw new NoRunMethodAcceptsArguments(ProgramArguments.Length);
 	}
 
 	private IReadOnlyDictionary<string, ValueInstance>? BuildProgramArguments(BinaryExecutable binary,
@@ -408,8 +407,7 @@ public sealed class Runner
 			}
 		}
 		if (runMethod.parameters.Count != ProgramArguments.Length)
-			throw new NotSupportedException("Run expects " + runMethod.parameters.Count +
-				" arguments, but got " + ProgramArguments.Length + ".");
+			throw new RunArgumentCountMismatch(runMethod.parameters.Count, ProgramArguments.Length);
 		var values = new Dictionary<string, ValueInstance>(runMethod.parameters.Count);
 		for (var index = 0; index < runMethod.parameters.Count; index++)
 		{
@@ -444,8 +442,7 @@ public sealed class Runner
 			return new ValueInstance(targetType, bool.Parse(argument));
 		if (targetType.Name == "Path")
 			return new ValueInstance(targetType, [new ValueInstance(argument)]);
-		throw new NotSupportedException(
-			"Only Number, Text, Boolean, Path and List arguments are supported.");
+		throw new UnsupportedRunArgumentType(targetType.Name);
 	}
 
 	private string CreateManagedLauncher(Platform platform)
@@ -453,8 +450,7 @@ public sealed class Runner
 		if ((platform == Platform.Windows && !OperatingSystem.IsWindows()) ||
 			(platform == Platform.Linux && !OperatingSystem.IsLinux()) ||
 			(platform == Platform.MacOS && !OperatingSystem.IsMacOS()))
-			throw new NotSupportedException(
-				"Runtime launcher builds require building on the target platform.");
+			throw new BuildRequiresTargetPlatform(platform);
 		var runtimeDirectory = Path.GetDirectoryName(typeof(Program).Assembly.Location) ??
 			throw new DirectoryNotFoundException("Strict runtime output directory not found.");
 		var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(strictFilePath)) ??
@@ -487,4 +483,19 @@ public sealed class Runner
 		Console.WriteLine("Compiled " + strictFilePath + " via " + backend + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
 			" executable of " + new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
+
+	public sealed class NoRunMethodFound(string typeName)
+		: Exception("No Run method found in " + typeName);
+
+	public sealed class NoRunMethodAcceptsArguments(int count)
+		: Exception("No Run method accepts " + count + " arguments.");
+
+	public sealed class RunArgumentCountMismatch(int expected, int given)
+		: Exception("Run expects " + expected + " arguments, but got " + given + ".");
+
+	public sealed class UnsupportedRunArgumentType(string typeName) : Exception(typeName +
+		" is not supported, only Number, Text, Boolean, Path and List arguments are supported.");
+
+	public sealed class BuildRequiresTargetPlatform(Platform platform)
+		: Exception("Runtime launcher builds for " + platform + " require building on that platform.");
 }

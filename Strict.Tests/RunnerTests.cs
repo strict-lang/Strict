@@ -75,7 +75,7 @@ public sealed class RunnerTests
 			if (hasRun)
 				Assert.That(result.ExitCode, Is.Zero, inputPath + Environment.NewLine + result.Output + result.Error);
 			else
-				Assert.That(result.Output, Does.Contain("NotSupportedException: No Run method found in " +
+				Assert.That(result.Output, Does.Contain("NoRunMethodFound: No Run method found in " +
 					Path.GetFileNameWithoutExtension(relativePath)), result.Output + result.Error);
 		}
 	}
