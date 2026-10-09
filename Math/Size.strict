@@ -6,7 +6,9 @@ for Iterator(Vector2)
 		for Width
 			Vector2(index, outer.index)
 in(element Vector2) Boolean
-	true
+	Vector2(1, 1) is in Size(2, 2)
+	Vector2(2, 0) is not in Size(2, 2)
+	element.X >= 0 and element.X < Width and element.Y >= 0 and element.Y < Height
 Area Number
 	Size(1, 1).Area is 1
 	Size(2, 3).Area is 6

@@ -154,6 +154,9 @@ public partial class Interpreter
 			return directoryResult;
 		if (method is { Name: NativeProcessRunner.OperatingSystemMethod, Type.Name: "Process" })
 			return new ValueInstance(NativeProcessRunner.OperatingSystemName);
+		if (method is { Name: "Find", Type.Name: "Process" } && args.Length == 1)
+			return new ValueInstance(method.Type,
+				[new ValueInstance(NativeProcessRunner.FindTool(args[0].Text) ?? "")]);
 		if (TryExecuteTextWriterWrite(method, args))
 			return noneInstance;
 		if (runOnlyTests && IsSimpleSingleLineMethod(method))

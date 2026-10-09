@@ -1,6 +1,6 @@
 has logger
 Run(path)
-	mutable loader = ImageLoader(path)
+	let loader = ImageLoader(path)
 	mutable image = Image(Size(loader.Width, loader.Height), loader.Colors)
 	AdjustBrightness(0.25).Process(image)
 	let outputPath = path.RemoveExtension + "_output.jpg"

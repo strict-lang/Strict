@@ -12,12 +12,17 @@ public sealed class ConstantCollapser : Visitor
 {
 	protected override void Visit(Member member, object? context = null)
 	{
+		var isComputedConstant = member.InitialValue is { IsConstant: true } and not Value and not
+			MethodCall { Method.Name: Method.From, Arguments: [Value] };
 		base.Visit(member, context);
-		if (member.InitialValue is { IsConstant: true } && !member.IsConstant)
-			throw new UseConstantHere(member.Type,
-				member.Type.FindLineNumber(Type.HasWithSpaceAtEnd + member.Name));
+		if (isComputedConstant && !member.IsConstant)
+			throw new UseConstantHere(member.DefinedIn,
+				member.DefinedIn.FindLineNumber(Type.HasWithSpaceAtEnd + member.Name));
 	}
 
+	/// <summary>
+	/// A literal default is an optional constructor argument, a computed constant should be constant.
+	/// </summary>
 	public class UseConstantHere(Type type, int lineNumber) : ParsingFailed(type, lineNumber);
 
 	protected override void Visit(Body body, object? context = null)

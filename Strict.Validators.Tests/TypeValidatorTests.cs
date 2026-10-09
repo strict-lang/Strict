@@ -41,6 +41,15 @@ public sealed class TypeValidatorTests
 		]), true));
 
 	[Test]
+	public void ImplicitValueInstanceIsNotAnUnusedVariable()
+	{
+		var method = new Method(TestPackage.Instance.GetType(Type.Number), 1, parser,
+			["Rounded Number", "	1.4.Floor is 1", "	(value + 0.5).Floor"]);
+		method.GetBodyAndParseIfNeeded();
+		Assert.DoesNotThrow(() => validator.Visit(method, true));
+	}
+
+	[Test]
 	public void ErrorOnlyIfVariablesAreUnused() =>
 		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
 			"Run(methodInput Number)",

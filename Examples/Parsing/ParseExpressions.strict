@@ -20,6 +20,7 @@ ClassifyMember(line Text) Text
 		return "mutable member: " + ExtractAfterKeyword(line, 8)
 	"constant member: " + ExtractAfterKeyword(line, 9)
 ExtractAfterKeyword(line Text, keywordLength Number) Text
+	ExtractAfterKeyword("has logger", 4) is "logger"
 	line.Substring(keywordLength, line.characters.Length - keywordLength)
 ClassifyExpression(line Text) Text
 	if line.IndexOf(".") > 0

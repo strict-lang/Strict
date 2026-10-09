@@ -33,6 +33,16 @@ public sealed class ConstantCollapserTests
 	}
 
 	[Test]
+	public void LiteralMemberDefaultIsOptionalArgument()
+	{
+		using var defaultedType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(LiteralMemberDefaultIsOptionalArgument),
+				"has number", "has scale = 1", "Run", "	number * scale"));
+		defaultedType.ParseMembersAndMethods(parser);
+		Assert.That(() => collapser.Visit(defaultedType, true), Throws.Nothing);
+	}
+
+	[Test]
 	public void FoldTextToNumberToJustNumber()
 	{
 		var method = new Method(type, 1, parser, [

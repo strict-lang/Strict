@@ -1,12 +1,12 @@
 has executable Text
 Find(name Text) Process
-	Process("")
+	Process(name)
 IsAvailable Boolean
 	if executable is ""
 		return false
 	true
 Run(arguments Text) ProcessResult
-	ProcessResult(1, "", "Process.Run is not available")
+	ProcessResult(1, "", "Process.Run is not available for: " + arguments)
 RunTool(name Text, arguments Text) ProcessResult
 	let tool = Find(name)
 	if not tool.IsAvailable

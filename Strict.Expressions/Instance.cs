@@ -11,7 +11,7 @@ public sealed class Instance(Type type, int lineNumber = 0, bool isMutable = fal
 		var isMutable = method.ReturnType.IsMutable;
 		var valueInstance = new Instance(GetUsableType((Type)method.Parent), body.CurrentFileLineNumber,
 			isMutable);
-		body.AddVariable(Type.ValueLowercase, valueInstance, isMutable);
+		body.AddVariable(Type.ValueLowercase, valueInstance, isMutable, true);
 		return valueInstance;
 	}
 
