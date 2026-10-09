@@ -323,9 +323,27 @@ public sealed class BinaryExecutable(Package basePackage)
 		int parametersCount, Type returnType) =>
 		FindInstructions(fullTypeName, methodName, parametersCount, returnType.Name);
 
+	/// <summary>
+	/// Writes to a temporary file first, so readers never see a partially written binary.
+	/// </summary>
 	public void Serialize(string filePath)
 	{
-		using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.ReadWrite);
+		var temporaryPath = filePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+		try
+		{
+			WriteZip(temporaryPath);
+			File.Move(temporaryPath, filePath, true);
+		}
+		finally
+		{
+			if (File.Exists(temporaryPath))
+				File.Delete(temporaryPath);
+		}
+	}
+
+	private void WriteZip(string filePath)
+	{
+		using var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.ReadWrite);
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create, false);
 		foreach (var (fullTypeName, membersAndMethods) in MethodsPerType)
 		{

@@ -269,6 +269,26 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task RunSucceedsWhileCachedBinaryIsOpenedByAnotherReader()
+	{
+		var source = Path.Combine(FindRepoRoot(), "Examples", "HelloLogger.strict");
+		var binaryPath = Path.ChangeExtension(source, BinaryExecutable.Extension);
+		await new Runner(source).Run();
+		File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddMinutes(1));
+		try
+		{
+			using var reader = new FileStream(binaryPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+			consoleWriter.GetStringBuilder().Clear();
+			await new Runner(source).Run();
+			Assert.That(consoleWriter.ToString(), Does.Contain("Hi"));
+		}
+		finally
+		{
+			File.SetLastWriteTimeUtc(source, DateTime.UtcNow);
+		}
+	}
+
+	[Test]
 	public async Task CachedBinaryIsOutdatedWhenUsedPackageChanged()
 	{
 		var entry = Path.Combine(FindRepoRoot(), "Compiler", "EmitTests.strict");

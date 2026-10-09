@@ -298,6 +298,10 @@ public sealed class Runner
 		{
 			Log("Bytecode serialization not yet supported for this program: " + ex.Message);
 		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			Log("Cached binary not saved, it is in use: " + ex.Message);
+		}
 		return binary;
 	}
 
