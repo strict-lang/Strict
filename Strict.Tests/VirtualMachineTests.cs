@@ -694,6 +694,21 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void EndlessRecursionIsAStackOverflowError()
+	{
+		var source = new[]
+		{
+			"has number", "Deeper Number", "	if number < 0", "		return 0",
+			$"	{nameof(EndlessRecursionIsAStackOverflowError)}(number + 1).Deeper"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(EndlessRecursionIsAStackOverflowError),
+			$"{nameof(EndlessRecursionIsAStackOverflowError)}(1).Deeper", source)).Generate();
+		Assert.That(() => new VirtualMachine(instructions).Execute(initialVariables: null),
+			Throws.InstanceOf<VirtualMachine.StackOverflow>());
+	}
+
+	[Test]
 	public void TextIndexOfUsesStartIndex()
 	{
 		var source = new[] { "has letters Text", "SecondQuote Number", "	letters.IndexOf(\"a\", 1)" };

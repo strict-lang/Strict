@@ -160,10 +160,9 @@ internal sealed class CallFrame
 		if (PerformanceLog.IsEnabled)
 			PerformanceLog.Write("CallFrame.TryGetMember", "name=" + GetSymbolName(symbolId));
 #endif
-		if (TryGetSlotValue(symbolId, true, out value))
-			return true;
-		if (parent != null)
-			return parent.TryGetMember(symbolId, out value);
+		for (var frame = this; frame != null; frame = frame.parent)
+			if (frame.TryGetSlotValue(symbolId, true, out value))
+				return true;
 		value = default;
 		return false;
 	}
