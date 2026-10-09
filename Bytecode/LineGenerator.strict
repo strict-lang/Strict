@@ -1,32 +1,32 @@
 has state GenerationResult
 GenerateLine(line Text) GenerationResult
+	LineGenerator.Empty.GenerateLine("mutable sum = 0").instructions(0).label is "sum"
+	LineGenerator.Empty.GenerateLine("sum = sum + 1").Count is 4
 	if line.StartsWith("return ")
 		return GenerateReturn(line)
-	if line.StartsWith("constant ")
-		return GenerateConstant(line)
-	if line.StartsWith("let ")
-		return GenerateLet(line)
 	if line.StartsWith("if ")
 		return GenerateIf(line)
+	if line.StartsWith("for ")
+		return GenerateFor(line)
+	if line.IndexOf(" = ") is not -1
+		return GenerateAssignment(WithoutDeclarationKeyword(line))
 	ExpressionCodegen(state).GenerateExpression(line)
+WithoutDeclarationKeyword(line Text) Text
+	WithoutDeclarationKeyword("mutable a = 1") is "a = 1"
+	WithoutDeclarationKeyword("a = 1") is "a = 1"
+	for ("constant ", "let ", "mutable ")
+		if line.StartsWith(value)
+			return line.Substring(value.Length, line.Length - value.Length)
+	line
 GenerateReturn(line Text) GenerationResult
-	let rest = line.Substring(7, 200).Trim
-	let expr = ExpressionCodegen(state).GenerateExpression(rest)
+	LineGenerator.Empty.GenerateReturn("return 7").Count is 2
+	let expr = ExpressionCodegen(state).GenerateExpression(line.Substring(7, line.Length - 7).Trim)
 	expr.Append(BytecodeInstruction.ReturnOp(expr.LastRegister))
-GenerateConstant(line Text) GenerationResult
-	let rest = line.Substring(9, 200).Trim
-	GenerateAssignment(rest)
-GenerateLet(line Text) GenerationResult
-	let rest = line.Substring(4, 200).Trim
-	GenerateAssignment(rest)
 GenerateAssignment(rest Text) GenerationResult
+	LineGenerator.Empty.GenerateAssignment("a = 1").Count is 1
 	let eq = rest.IndexOf(" = ")
-	if eq is -1
-		return state
 	let name = rest.Substring(0, eq).Trim
-	let exprText = rest.Substring(eq + 3, 200).Trim
-	AssignValue(name, exprText)
-AssignValue(name Text, exprText Text) GenerationResult
+	let exprText = rest.Substring(eq + 3, rest.Length - eq - 3).Trim
 	if NumberLiteral(exprText).IsNumber
 		return state.Append(BytecodeInstruction.StoreConstant(name, exprText to Number))
 	let expr = ExpressionCodegen(state).GenerateExpression(exprText)
@@ -35,20 +35,38 @@ GenerateIf(line Text) GenerationResult
 	LineGenerator.Empty.GenerateIf("if 1 > 0").instructions(3).label is "if0"
 	let expr = ExpressionCodegen(state).GenerateExpression(line.Substring(3, line.Length - 3).Trim)
 	expr.Append(BytecodeInstruction("JumpToIdIfFalse", expr.LastRegister, 0, "if" + state.Count))
+GenerateFor(line Text) GenerationResult
+	LineGenerator.Empty.GenerateFor("for 3").instructions(1).label is "loop0"
+	LineGenerator.Empty.GenerateFor("for 3").instructions(5).label is "loop0End"
+	let id = "loop" + state.Count
+	let indexStart = state.Append(BytecodeInstruction.StoreConstant("index", 0))
+	let started = indexStart.Append(BytecodeInstruction("JumpEnd", 0, 0, id))
+	let condition = ExpressionCodegen(started).GenerateExpression("index < " + line.Substring(4, line.Length - 4).Trim)
+	condition.Append(BytecodeInstruction("JumpToIdIfFalse", condition.LastRegister, 0, id + "End"))
+CloseBlock(openId Text) GenerationResult
+	LineGenerator.Empty.CloseBlock("if0").instructions(0).typeName is "JumpEnd"
+	LineGenerator.Empty.CloseBlock("loop0End").Count is 6
+	if not openId.StartsWith("loop")
+		return state.Append(BlockEnd(openId))
+	constant increment = GenerateAssignment("index = index + 1")
+	let backJump = increment.Append(BytecodeInstruction("Jump", 0, 0, openId.Substring(0, openId.Length - 3)))
+	backJump.Append(BlockEnd(openId))
+BlockEnd(id Text) BytecodeInstruction
+	BlockEnd("if0").typeName is "JumpEnd"
+	BytecodeInstruction("JumpEnd", 0, 0, id)
 GenerateBodyLine(line Text, openId Text) GenerationResult
 	LineGenerator.Empty.GenerateBodyLine("1", "if0").instructions(0).typeName is "JumpEnd"
 	if line.StartsWith("\t")
 		return GenerateLine(line.Trim)
 	if openId is ""
 		return GenerateLine(line)
-	let blockEnd = BytecodeInstruction("JumpEnd", 0, 0, openId)
 	if line is "else"
-		return state.Append(BytecodeInstruction("Jump", 0, 0, openId + "End")).Append(blockEnd)
-	LineGenerator(state.Append(blockEnd)).GenerateLine(line)
+		return state.Append(BytecodeInstruction("Jump", 0, 0, openId + "End")).Append(BlockEnd(openId))
+	LineGenerator(CloseBlock(openId)).GenerateLine(line)
 OpenIdAfter(line Text, openId Text, result GenerationResult) Text
 	OpenIdAfter("\treturn 1", "if0", GenerationResult.Empty) is "if0"
 	OpenIdAfter("2", "if0", GenerationResult.Empty) is ""
-	if line.StartsWith("if ")
+	if line.StartsWith("if ") or line.StartsWith("for ")
 		return result.instructions(result.Count - 1).label
 	if line is "else"
 		return openId + "End"
@@ -64,7 +82,7 @@ GenerateBody(lines Texts) GenerationResult
 		openId = OpenIdAfter(value, openId, current)
 	if openId is ""
 		return current
-	current.Append(BytecodeInstruction("JumpEnd", 0, 0, openId))
+	LineGenerator(current.WithRegistry(Registry.Empty)).CloseBlock(openId)
 GenerateReturningBody(lines Texts) GenerationResult
 	LineGenerator.Empty.GenerateReturningBody("constant a = 2", "a * 3").Count is 5
 	LineGenerator.Empty.GenerateReturningBody(("return 7")).Count is 2
@@ -73,9 +91,6 @@ GenerateReturningBody(lines Texts) GenerationResult
 		if body.instructions(body.Count - 1).IsReturn
 			return body
 	body.Append(BytecodeInstruction.ReturnOp(body.LastRegister))
-GenerateMethod(name Text, returnType Text, lines Texts) BinaryMethod
-	let result = GenerateBody(lines)
-	BinaryMethod.Create(name, returnType).WithInstructions(result.instructions)
 Empty LineGenerator
 	LineGenerator(GenerationResult.Empty)
 to Text

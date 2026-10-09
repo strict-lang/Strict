@@ -43,6 +43,19 @@ public sealed class RunnerTests
 		Assert.That(NativeProcessRunner.ResolveExecutable("Compiler/output/add.exe"),
 			Is.EqualTo(Path.GetFullPath("Compiler/output/add.exe")));
 
+	[TestCase("NativeArithmetic", 20)]
+	[TestCase("NativeConditions", 30)]
+	[TestCase("NativeLoop", 45)]
+	[Category("Slow")]
+	public void StrictSourceCompilerBuildsAndRunsNativeExecutable(string example, int expected)
+	{
+		var root = FindRepoRoot();
+		var result = NativeProcessRunner.Run("dotnet", "\"" + StrictAssemblyForFreshProcess() + "\" \"" +
+			Path.Combine(root, "Compiler", "SourceCompiler.strict") + "\" \"" +
+			Path.Combine(root, "Examples", example + Type.Extension) + "\"", 120000);
+		Assert.That(result.Output, Does.Contain("Run returned " + expected), result.Output + result.Error);
+	}
+
 	[TestCaseSource(nameof(StrictProgramPaths))]
 	[Category("Slow")]
 	public void RunStrictProgramFromSourceAndCachedBinaryInFreshProcess(string relativePath)

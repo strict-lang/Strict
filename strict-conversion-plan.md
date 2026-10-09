@@ -12,6 +12,16 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
+## Native loops — 2026-10-09 (late night, part 4)
+
+- LineGenerator handles `mutable` declarations, plain reassignments and `for N` loops (`index`
+  store, start label, `index < N` check, body, increment, back jump, end label). Blocks close
+  through `CloseBlock` for if, else and loops (one nesting level, `index` only, ponytail).
+- `Examples/NativeLoop` (sum of 0..9) compiles natively and returns 45.
+- Slow test `StrictSourceCompilerBuildsAndRunsNativeExecutable` compiles NativeArithmetic (20),
+  NativeConditions (30) and NativeLoop (45) with the Strict compiler and checks the exe results.
+- Not yet compiled natively: method calls, parameters, lists, text, nested blocks, `for list`.
+
 ## Native if blocks — 2026-10-09 (late night, part 3)
 
 - LineGenerator: `if` emits the condition + `JumpToIdIfFalse ifN`, the block end emits `JumpEnd ifN`

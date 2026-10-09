@@ -1,0 +1,6 @@
+constant count = 10
+Run Number
+	mutable sum = 0
+	for count
+		sum = sum + index
+	sum

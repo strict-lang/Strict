@@ -65,7 +65,7 @@ public sealed class StrictBytecodeConversionTests
 		var generator = package.GetType("LineGenerator");
 		Assert.That(generator.Methods.Any(method => method.Name == "GenerateLine"), Is.True);
 		Assert.That(generator.Methods.Any(method => method.Name == "GenerateBody"), Is.True);
-		Assert.That(generator.Methods.Any(method => method.Name == "GenerateMethod"), Is.True);
+		Assert.That(generator.Methods.Any(method => method.Name == "GenerateReturningBody"), Is.True);
 		Assert.That(generator.Methods.Any(method => method.Name == "Empty"), Is.True);
 	}
 
