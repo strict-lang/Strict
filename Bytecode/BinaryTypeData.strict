@@ -26,23 +26,16 @@ HasMethod(name Text) Boolean
 			return true
 	false
 AddMethod(method BinaryMethod) BinaryTypeData
-	mutable next = List(Mutable(BinaryMethod))
-	for methods
-		next.Add(value)
-	next.Add(method)
-	BinaryTypeData(typeFullName, members, next)
+	BinaryTypeData.Create("A").AddMethod(BinaryMethod.Create("Run", "None")).MethodCount is 1
+	BinaryTypeData(typeFullName, members, methods + method)
 AddMember(member BinaryMember) BinaryTypeData
-	mutable next = List(Mutable(BinaryMember))
-	for members
-		next.Add(value)
-	next.Add(member)
-	BinaryTypeData(typeFullName, next, methods)
+	BinaryTypeData.Create("A").AddMember(BinaryMember("x", "Number", false, 0)).MemberCount is 1
+	BinaryTypeData(typeFullName, members + member, methods)
 Create(fullName Text) BinaryTypeData
 	Create("Strict/Number").JustTypeName is "Number"
 	BinaryTypeData(fullName, BinaryMethod.EmptyParams, EmptyMethods)
-DummyMethod BinaryMethod
-	BinaryMethod("Run", "None", BinaryMethod.EmptyParams, BinaryMethod.EmptyOps)
 EmptyMethods BinaryMethods
 	List(BinaryMethod)
 CreateWithMethod(fullName Text, method BinaryMethod) BinaryTypeData
+	BinaryTypeData.CreateWithMethod("A", BinaryMethod.Create("Run", "None")).HasMethod("Run") is true
 	Create(fullName).AddMethod(method)

@@ -26,9 +26,10 @@ AdvanceMany(count Number) Registry
 		current = current.Advance
 	current
 AllocatePair Registry
-	let first = Advance
-	first.Advance
+	Registry.Empty.AllocatePair.next is 2
+	Advance.Advance
 WithPrevious(reg Number) Registry
+	Registry.Empty.WithPrevious(5).previous is 5
 	Registry(next, reg)
 Empty Registry
 	Empty.next is 0

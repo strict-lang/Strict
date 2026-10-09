@@ -12,6 +12,18 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
+## All Strict projects run — 2026-10-09 (night)
+
+- `RunStrictProgramFromSourceAndCachedBinaryInFreshProcess` passes for every `.strict` file in
+  Examples, Language, Expressions, Validators, TestRunner, HighLevelRuntime, Bytecode, Optimizers,
+  Runtime and Compiler (source run with validation and inline tests, then the cached binary).
+  Only the Slow allocation budget test (`RunAdjustBrightnessAllocatesBelowHalfMegabytePerRun`) fails.
+- Unused members and variables are rejected when files are loaded (Repositories, Runner).
+- VM sets every valued instance member in the call frame, a stubbed `List(T)` from a binary looked
+  like a trait and its members were skipped (`parameters` unresolved in cached ExecutableTests).
+- This is "every file parses, validates, passes its tests and runs", not self-hosting: the Strict
+  implementations are still line-level subsets and no C# layer is replaced (see dashboard).
+
 ## Static-like types removed — 2026-10-09 (evening)
 
 - All `has dummy Number` types are gone (see "Converting C# static classes" under Rules for the

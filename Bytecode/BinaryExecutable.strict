@@ -16,12 +16,10 @@ HasType(fullName Text) Boolean
 			return true
 	false
 AddType(typeData BinaryTypeData) BinaryExecutable
-	mutable next = List(Mutable(BinaryTypeData))
-	for types
-		next.Add(value)
-	next.Add(typeData)
-	BinaryExecutable(next, entryTypeName, entryMethodName)
+	BinaryExecutable.Empty.AddType(BinaryTypeData.Create("A")).TypeCount is 1
+	BinaryExecutable(types + typeData, entryTypeName, entryMethodName)
 SetEntry(typeName Text, methodName Text) BinaryExecutable
+	BinaryExecutable.Empty.SetEntry("A", "Run").entryMethodName is "Run"
 	BinaryExecutable(types, typeName, methodName)
 EntryMethod BinaryMethod
 	if entryTypeName is ""
@@ -46,8 +44,6 @@ CountTypeInstructions(typeData BinaryTypeData) Number
 Empty BinaryExecutable
 	Empty.TypeCount is 0
 	BinaryExecutable(EmptyTypes, "", "Run")
-DummyType BinaryTypeData
-	BinaryTypeData("x", BinaryMethod.EmptyParams, BinaryTypeData.EmptyMethods)
 EmptyTypes BinaryTypeDatas
 	List(BinaryTypeData)
 FromMethod(typeName Text, method BinaryMethod) BinaryExecutable

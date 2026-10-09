@@ -58,7 +58,7 @@ FromSingle(instruction BytecodeInstruction) InstructionList
 	InstructionList(ops)
 Empty InstructionList
 	Empty.IsEmpty is true
-	mutable ops = List(Mutable(BytecodeInstruction))
-	InstructionList(ops)
+	constant noInstructions = List(BytecodeInstruction)
+	InstructionList(noInstructions)
 to Text
 	"ops=" + Count to Text

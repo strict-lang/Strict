@@ -78,13 +78,6 @@ FindParameterHidesMember(parameterName Text) ValidationIssues
 	issues
 Validate ValidationIssues
 	TypeValidator(Sample).Validate.Length is 1
-	mutable issues = List(Mutable(ValidationIssue))
-	for FindUnusedMembers
-		issues.Add(value)
-	for FindUnusedVariables
-		issues.Add(value)
-	for FindMutableNeverChanged
-		issues.Add(value)
-	issues
+	FindUnusedMembers + FindUnusedVariables + FindMutableNeverChanged
 to Text
 	Visitor.typeName

@@ -768,7 +768,7 @@ public sealed partial class VirtualMachine
 		{
 			for (var memberIndex = 0; memberIndex < members.Count &&
 				memberIndex < typeInstance.Values.Length; memberIndex++)
-				if (!members[memberIndex].Type.IsTrait)
+				if (!members[memberIndex].Type.IsTrait || typeInstance.Values[memberIndex].HasValue)
 					Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex], true);
 			return true;
 		}
