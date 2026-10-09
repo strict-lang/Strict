@@ -1,10 +1,10 @@
 has methodName Text
 has instance Text
 has arguments Texts
-has resultTypeName Text
+has ResultTypeName Text
 to Text
 	MethodCall("Log", "logger", ("\"Hi\""), "None") to Text is "logger.Log(\"Hi\")"
-	MethodCall("Run", "", (), "None") to Text is "Run()"
+	MethodCall("Run", "", List(Text), "None") to Text is "Run()"
 	if instance is ""
 		return methodName + "(" + JoinArguments + ")"
 	instance + "." + methodName + "(" + JoinArguments + ")"

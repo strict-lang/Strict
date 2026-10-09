@@ -38,6 +38,50 @@ public sealed class RunnerTests
 		Assert.That(standalone.Output, Does.Contain(expected));
 	}
 
+	[TestCaseSource(nameof(StrictProgramPaths))]
+	[Category("Slow")]
+	public void RunStrictProgramFromSourceAndCachedBinaryInFreshProcess(string relativePath)
+	{
+		var root = FindRepoRoot();
+		var sourcePath = Path.Combine(root, relativePath);
+		var hasRun = HasRunMethod(sourcePath);
+		var arguments = ProgramArguments.TryGetValue(relativePath, out var argument)
+			? " \"" + Path.Combine(root, argument) + "\""
+			: "";
+		foreach (var inputPath in hasRun
+			? [sourcePath, Path.ChangeExtension(sourcePath, BinaryExecutable.Extension)]
+			: new[] { sourcePath })
+		{
+			var result = NativeProcessRunner.Run("dotnet",
+				"\"" + StrictAssemblyForFreshProcess() + "\" \"" + inputPath + "\"" + arguments, 120000);
+			if (hasRun)
+				Assert.That(result.ExitCode, Is.Zero, inputPath + Environment.NewLine + result.Output + result.Error);
+			else
+				Assert.That(result.Output, Does.Contain("NotSupportedException: No Run method found in " +
+					Path.GetFileNameWithoutExtension(relativePath)), result.Output + result.Error);
+		}
+	}
+
+	private static bool HasRunMethod(string filePath) =>
+		File.ReadLines(filePath).Any(line => line == Method.Run || line.StartsWith(Method.Run + "(",
+			StringComparison.Ordinal) || line.StartsWith(Method.Run + " ", StringComparison.Ordinal));
+
+	private static readonly Dictionary<string, string> ProgramArguments = new()
+	{
+		["Language/Parser.strict"] = "Examples/HelloLogger.strict",
+		["Language/PackageTests.strict"] = "Examples/BaseTypesTest"
+	};
+
+	private static IEnumerable<string> StrictProgramPaths()
+	{
+		var root = FindRepoRoot();
+		string[] projects = ["Language", "Expressions", "Validators", "TestRunner", "HighLevelRuntime",
+			"Bytecode", "Optimizers", "Runtime", "Compiler"];
+		return Directory.GetFiles(Path.Combine(root, "Examples"), "*" + Type.Extension).Concat(projects.
+				SelectMany(project => Directory.GetFiles(Path.Combine(root, project), "*" + Type.Extension))).
+			Select(file => Path.GetRelativePath(root, file).Replace('\\', '/')).Order();
+	}
+
 	[Test]
 	public void RunStrictPackageLoaderPreservesTypeNamesAndLines()
 	{
@@ -131,6 +175,29 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task CachedBinaryOlderThanRuntimeIsRegenerated()
+	{
+		var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(tempDirectory);
+		var sourcePath = Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
+		var binaryPath = Path.ChangeExtension(sourcePath, BinaryExecutable.Extension);
+		try
+		{
+			File.Copy(SimpleCalculatorFilePath, sourcePath);
+			await new Runner(sourcePath).Run();
+			var runtimeTime = File.GetLastWriteTimeUtc(typeof(Runner).Assembly.Location);
+			File.SetLastWriteTimeUtc(sourcePath, runtimeTime.AddMinutes(-2));
+			File.SetLastWriteTimeUtc(binaryPath, runtimeTime.AddMinutes(-1));
+			await new Runner(sourcePath).Run();
+			Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(runtimeTime));
+		}
+		finally
+		{
+			Directory.Delete(tempDirectory, true);
+		}
+	}
+
+	[Test]
 	public async Task RunFromBytecodeFileWithoutStrictSourceFile()
 	{
 		var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
@@ -163,6 +230,29 @@ public sealed class RunnerTests
 		var runner = new Runner(SimpleCalculatorFilePath, "(1, 2, 3).Length");
 		Assert.That(async () => await runner.Build(Platform.Windows),
 			Throws.TypeOf<Runner.CannotBuildExecutableWithCustomExpression>());
+	}
+
+	[Test]
+	public async Task RunExpressionOnTypeInsidePackageDirectory()
+	{
+		await new Runner(GetExamplesFilePath("FizzBuzz"), "FizzBuzz(15).Classify").Run();
+		Assert.That(consoleWriter.ToString(), Does.StartWith("FizzBuzz"));
+	}
+
+	[Test]
+	public async Task AppendAfterLoopKeepsElementInVirtualMachine()
+	{
+		await new Runner(Path.Combine(FindRepoRoot(), "Optimizers", "OpList.strict"),
+			"OpList.Empty.Append(OptimInstruction.ReturnOp(1)).Count").Run();
+		Assert.That(consoleWriter.ToString(), Does.StartWith("1"));
+	}
+
+	[Test]
+	public async Task OpListAtOutOfRangeInVirtualMachine()
+	{
+		await new Runner(Path.Combine(FindRepoRoot(), "Optimizers", "OpList.strict"), "OpList.Empty.At(0)").
+			Run();
+		Assert.That(consoleWriter.ToString(), Does.StartWith("(Return, 0, 0, )"));
 	}
 
 	[Test]
@@ -214,7 +304,7 @@ public sealed class RunnerTests
 	[Test]
 	public async Task RunSumWithNoArgumentsUsesEmptyList()
 	{
-		await new Runner(SumFilePath, "0").Run();
+		await new Runner(SumFilePath).Run();
 		Assert.That(consoleWriter.ToString(), Does.Contain("0"));
 	}
 

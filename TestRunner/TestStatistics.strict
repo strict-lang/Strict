@@ -3,12 +3,16 @@ has typesTested Number
 has methodsTested Number
 has testExpressions Number
 IncrementPackages TestStatistics
+	TestStatistics(0, 0, 0, 0).IncrementPackages.packagesTested is 1
 	TestStatistics(packagesTested + 1, typesTested, methodsTested, testExpressions)
 IncrementTypes TestStatistics
+	TestStatistics(0, 0, 0, 0).IncrementTypes.typesTested is 1
 	TestStatistics(packagesTested, typesTested + 1, methodsTested, testExpressions)
 IncrementMethods TestStatistics
+	TestStatistics(0, 0, 0, 0).IncrementMethods.methodsTested is 1
 	TestStatistics(packagesTested, typesTested, methodsTested + 1, testExpressions)
 IncrementExpressions TestStatistics
+	TestStatistics(0, 0, 0, 0).IncrementExpressions.testExpressions is 1
 	TestStatistics(packagesTested, typesTested, methodsTested, testExpressions + 1)
 to Text
 	"packages=" + packagesTested + " types=" + typesTested + " methods=" + methodsTested + " tests=" + testExpressions

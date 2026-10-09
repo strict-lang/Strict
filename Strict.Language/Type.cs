@@ -29,7 +29,7 @@ public class Type : Context, IDisposable
 		package.Add(this);
 		Lines = file.Lines;
 		IsGeneric = Name == GenericUppercase || OneOfFirstThreeLinesContainsGeneric();
-		IsMutable = Name.StartsWith(Mutable, StringComparison.Ordinal);
+		IsMutable = Name == Mutable || Name.StartsWith(Mutable + "(", StringComparison.Ordinal);
 		typeMethodFinder = new TypeMethodFinder(this);
 		typeParser = new TypeParser(this, Lines);
 		typeKind = GetTypeKindFromName();
@@ -695,7 +695,7 @@ public class Type : Context, IDisposable
 		return usableMemberCache[key] = found;
 	}
 
-	private readonly Dictionary<(Type, bool, int), bool> usableMemberCache = [];
+	private readonly ConcurrentDictionary<(Type, bool, int), bool> usableMemberCache = new();
 
 	/// <summary>
 	/// Only allow implicit conversions as defined in Any.strict (to Text, to Type, to HashCode)

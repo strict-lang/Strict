@@ -1,20 +1,15 @@
-has dummy Number
-FormatFor(platform Number) Text
-	FormatFor(Platform.Windows) is "win64"
+has platform Number
+Format Text
+	NasmFormat(Platform.Windows).Format is "win64"
+	NasmFormat(Platform.MacOS).Format is "macho64"
 	if platform is Platform.Windows
 		return "win64"
-	if platform is Platform.Linux
-		return "elf64"
 	if platform is Platform.MacOS
 		return "macho64"
 	"elf64"
-ObjectExtension(platform Number) Text
-	if platform is Platform.Windows
-		return ".obj"
-	".o"
-ExeExtension(platform Number) Text
-	if platform is Platform.Windows
-		return ".exe"
-	""
-Empty NasmFormat
-	NasmFormat(0)
+ObjectExtension Text
+	NasmFormat(Platform.Linux).ObjectExtension is ".o"
+	platform is Platform.Windows then ".obj" else ".o"
+ExeExtension Text
+	NasmFormat(Platform.Windows).ExeExtension is ".exe"
+	platform is Platform.Windows then ".exe" else ""

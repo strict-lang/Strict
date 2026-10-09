@@ -3,6 +3,7 @@ constant ReservedValue = "value"
 constant ReservedIterator = "iterator"
 constant ReservedElements = "elements"
 Sample Visitor
+	Sample.MemberCount is 2
 	Visitor("T", ("logger", "unused"), ("Run", "Add"), ("logger.Log(1)", "ok"))
 IsReservedName(name Text) Boolean
 	IsReservedName("value") is true
@@ -40,11 +41,11 @@ FindUnusedVariables ValidationIssues
 		CheckDeclarationUsage(value, issues)
 	issues
 CheckDeclarationUsage(line Text, mutable issues ValidationIssues) Mutable(ValidationIssues)
-	if not DeclarationRules("").IsDeclaration(line)
+	if not DeclarationRules(line).IsDeclaration
 		return issues
-	if DeclarationRules("").IsMutableDeclaration(line)
+	if DeclarationRules(line).IsMutableDeclaration
 		return issues
-	let name = DeclarationRules("").ExtractDeclaredName(line)
+	let name = DeclarationRules(line).DeclaredName
 	if name is ""
 		return issues
 	if IsNameUsedInBody(name)
@@ -56,9 +57,9 @@ FindMutableNeverChanged ValidationIssues
 		CheckMutableUsage(value, issues)
 	issues
 CheckMutableUsage(line Text, mutable issues ValidationIssues) Mutable(ValidationIssues)
-	if not DeclarationRules("").IsMutableDeclaration(line)
+	if not DeclarationRules(line).IsMutableDeclaration
 		return issues
-	let name = DeclarationRules("").ExtractDeclaredName(line)
+	let name = DeclarationRules(line).DeclaredName
 	if name is ""
 		return issues
 	if IsReassigned(name)
@@ -66,7 +67,7 @@ CheckMutableUsage(line Text, mutable issues ValidationIssues) Mutable(Validation
 	issues.Add(ValidationIssue("MutableNeverChanged", name, "mutable never reassigned"))
 IsReassigned(name Text) Boolean
 	for Visitor.bodyLines
-		if DeclarationRules("").IsReassignmentOf(value, name)
+		if DeclarationRules(value).IsReassignmentOf(name)
 			return true
 	false
 FindParameterHidesMember(parameterName Text) ValidationIssues

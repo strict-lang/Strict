@@ -23,6 +23,13 @@ public sealed class TypeTests
 	public void TearDown() => appType.Dispose();
 
 	[Test]
+	public void TypeNameStartingWithMutableIsNotMutable()
+	{
+		using var type = CreateType("MutableReassignment", "has text", "Length Number", "\ttext.Length");
+		Assert.That(type.IsMutable, Is.False);
+	}
+
+	[Test]
 	public void AddingTheSameNameIsNotAllowed() =>
 		Assert.That(() => CreateType("App", Method.Run),
 			Throws.InstanceOf<Type.TypeAlreadyExistsInPackage>());

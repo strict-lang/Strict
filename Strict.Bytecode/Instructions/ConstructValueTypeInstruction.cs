@@ -15,7 +15,7 @@ public sealed class ConstructValueTypeInstruction(Register outRegister,
 {
 	public ConstructValueTypeInstruction(BinaryReader reader, NameTable table, BinaryExecutable binary)
 		: this((Register)reader.ReadByte(),
-			BinaryExecutable.EnsureResolvedType(binary.basePackage, table.names[reader.Read7BitEncodedInt()]),
+			binary.ResolveType(table.names[reader.Read7BitEncodedInt()]),
 			new Register[reader.Read7BitEncodedInt()])
 	{
 		for (var index = 0; index < FieldRegisters.Length; index++)

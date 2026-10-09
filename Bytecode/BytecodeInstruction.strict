@@ -5,58 +5,44 @@ has label Text
 to Text
 	InstructionText(typeName, register, amount, label).Format
 ResultRegister Number
+	BytecodeInstruction.BinaryOp(InstructionType.Add, 0, 1, 2).ResultRegister is 2
 	if label is ""
 		return 0
 	label to Number
 IsBinary Boolean
-	if typeName is "Add"
-		return true
-	if typeName is "Subtract"
-		return true
-	if typeName is "Multiply"
-		return true
-	if typeName is "Divide"
-		return true
-	if typeName is "Modulo"
+	BytecodeInstruction.BinaryOp(InstructionType.Modulo, 0, 1, 2).IsBinary is true
+	if typeName is in ("Add", "Subtract", "Multiply", "Divide", "Modulo")
 		return true
 	IsCompare
 IsCompare Boolean
-	if typeName is "Equal"
-		return true
-	if typeName is "NotEqual"
-		return true
-	if typeName is "LessThan"
-		return true
-	if typeName is "GreaterThan"
-		return true
-	false
-IsJump Boolean
-	if typeName is "Jump"
-		return true
-	if typeName is "JumpIfTrue"
-		return true
-	if typeName is "JumpIfFalse"
-		return true
-	if typeName is "JumpIfNotZero"
-		return true
-	false
+	BytecodeInstruction("LessThan", 0, 1, "2").IsCompare is true
+	typeName is in ("Equal", "NotEqual", "LessThan", "GreaterThan")
 IsLoad Boolean
-	if typeName is "LoadConstantToRegister"
-		return true
-	if typeName is "LoadVariableToRegister"
-		return true
-	if typeName is "Set"
-		return true
-	false
-IsStore Boolean
-	if typeName is "StoreConstantToVariable"
-		return true
-	if typeName is "StoreRegisterToVariable"
-		return true
-	false
+	BytecodeInstruction.SetNumber(0, 1).IsLoad is true
+	typeName is in ("LoadConstantToRegister", "LoadVariableToRegister", "Set")
 IsReturn Boolean
-	if typeName is "Return"
-		return true
-	false
-Empty BytecodeInstruction
-	BytecodeInstruction("Return", 0, 0, "")
+	typeName is "Return"
+SetNumber(reg Number, number Number) BytecodeInstruction
+	BytecodeInstruction.SetNumber(0, 5).typeName is "Set"
+	BytecodeInstruction("Set", reg, number, "")
+LoadConstant(reg Number, number Number) BytecodeInstruction
+	BytecodeInstruction.LoadConstant(1, 10).typeName is "LoadConstantToRegister"
+	BytecodeInstruction("LoadConstantToRegister", reg, number, "")
+LoadVariable(reg Number, name Text) BytecodeInstruction
+	BytecodeInstruction.LoadVariable(0, "x").label is "x"
+	BytecodeInstruction("LoadVariableToRegister", reg, 0, name)
+StoreConstant(name Text, number Number) BytecodeInstruction
+	BytecodeInstruction.StoreConstant("n", 5).label is "n"
+	BytecodeInstruction("StoreConstantToVariable", 0, number, name)
+StoreRegister(reg Number, name Text) BytecodeInstruction
+	BytecodeInstruction.StoreRegister(2, "result").label is "result"
+	BytecodeInstruction("StoreRegisterToVariable", reg, 0, name)
+BinaryOp(code Number, left Number, right Number, result Number) BytecodeInstruction
+	BytecodeInstruction.BinaryOp(InstructionType.Add, 0, 1, 2).typeName is "Add"
+	BytecodeInstruction(InstructionNames(code).Name, left, right, result to Text)
+JumpOp(code Number, steps Number) BytecodeInstruction
+	BytecodeInstruction.JumpOp(InstructionType.JumpIfFalse, 2).amount is 2
+	BytecodeInstruction(InstructionNames(code).Name, 0, steps, "")
+ReturnOp(reg Number) BytecodeInstruction
+	BytecodeInstruction.ReturnOp(3).IsReturn is true
+	BytecodeInstruction("Return", reg, 0, "")

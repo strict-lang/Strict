@@ -1,5 +1,5 @@
 has variableName Text
-has variableTypeName Text
+has VariableTypeName Text
 to Text
 	VariableCall("count", "Number") to Text is "count"
 	variableName

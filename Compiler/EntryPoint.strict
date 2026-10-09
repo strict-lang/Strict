@@ -1,38 +1,20 @@
-has dummy Number
-Build(methodName Text, platform Number) Text
+has methodName Text
+has platform Number
+Build Text
+	EntryPoint("Run", Platform.MacOS).Build is EntryPoint("Run", Platform.MacOS).MacMain
 	if platform is Platform.Windows
-		return WindowsMain(methodName)
-	if platform is Platform.Linux
-		return LinuxStart(methodName)
+		return WindowsMain
 	if platform is Platform.MacOS
-		return MacMain(methodName)
-	LinuxStart(methodName)
-WindowsMain(methodName Text) Text
-	WinHead + methodName + WinTail
-WinHead Text
-	constant nl = "\n"
-	constant top = nl + "extern ExitProcess" + nl + nl + "global main" + nl
-	top + nl + "main:" + nl + "push rbp" + nl + "mov rbp, rsp" + nl + "sub rsp, 32" + nl + "call "
-WinTail Text
-	constant nl = "\n"
-	nl + "xor rcx, rcx" + nl + "call ExitProcess" + nl + "ret"
-LinuxStart(methodName Text) Text
-	LinHead + methodName + LinTail
-LinHead Text
-	constant nl = "\n"
-	constant top = nl + "global _start" + nl + nl + "_start:" + nl
-	top + "push rbp" + nl + "mov rbp, rsp" + nl + "call "
-LinTail Text
-	constant nl = "\n"
-	nl + "mov rdi, 0" + nl + "mov rax, 60" + nl + "syscall"
-MacMain(methodName Text) Text
-	MacHead + methodName + MacTail
-MacHead Text
-	constant nl = "\n"
-	constant top = nl + "global _main" + nl + nl + "_main:" + nl
-	top + "push rbp" + nl + "mov rbp, rsp" + nl + "call "
-MacTail Text
-	constant nl = "\n"
-	nl + "xor rdi, rdi" + nl + "mov rax, 0x2000001" + nl + "syscall"
-Empty EntryPoint
-	EntryPoint(0)
+		return MacMain
+	LinuxStart
+WindowsMain Text
+	EntryPoint("Run", Platform.Windows).WindowsMain.StartsWith("\nextern ExitProcess") is true
+	constant top = "\nextern ExitProcess\n\nglobal main\n\nmain:\npush rbp\nmov rbp, rsp\nsub rsp, 32\ncall "
+	top + methodName + "\nxor rcx, rcx\ncall ExitProcess\nret"
+LinuxStart Text
+	EntryPoint("Run", Platform.Linux).LinuxStart.StartsWith("\nglobal _start") is true
+	"\nglobal _start\n\n_start:\npush rbp\nmov rbp, rsp\ncall " + methodName + "\nmov rdi, 0\nmov rax, 60\nsyscall"
+MacMain Text
+	EntryPoint("Run", Platform.MacOS).MacMain.StartsWith("\nglobal _main") is true
+	constant top = "\nglobal _main\n\n_main:\npush rbp\nmov rbp, rsp\ncall "
+	top + methodName + "\nxor rdi, rdi\nmov rax, 0x2000001\nsyscall"

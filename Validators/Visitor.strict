@@ -3,21 +3,21 @@ has memberNames Texts
 has methodHeaders Texts
 has bodyLines Texts
 MemberCount Number
-	Visitor("Demo", ("logger",), ("Run",), ()).MemberCount is 1
+	Visitor("Demo", ("logger"), ("Run"), List(Text)).MemberCount is 1
 	memberNames.Length
 MethodCount Number
 	methodHeaders.Length
 BodyLineCount Number
 	bodyLines.Length
 VisitMembers Texts
-	Visitor("Demo", ("a", "b"), (), ()).VisitMembers is ("a", "b")
+	Visitor("Demo", ("a", "b"), List(Text), List(Text)).VisitMembers is ("a", "b")
 	memberNames
 VisitMethods Texts
 	methodHeaders
 VisitBodyLines Texts
 	bodyLines
 ContainsMember(name Text) Boolean
-	Visitor("Demo", ("logger",), (), ()).ContainsMember("logger") is true
+	Visitor("Demo", ("logger"), List(Text), List(Text)).ContainsMember("logger") is true
 	for memberNames
 		if value is name
 			return true

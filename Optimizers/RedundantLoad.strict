@@ -1,31 +1,19 @@
-has dummy Number
-Optimize(ops OpList) OpList
-	if ops.Count < 2
-		return ops
-	RemoveDuplicateLoads(ops)
-RemoveDuplicateLoads(ops OpList) OpList
+has ops OpList
+Optimize OpList
+	RedundantLoad(OpList.Empty.With("LoadVariableToRegister", "x").With("LoadVariableToRegister", "x")).Optimize.Count is 1
 	mutable next = List(Mutable(OptimInstruction))
 	mutable lastName = ""
-	for 0
-		next.Add(OptimInstruction("Return", 0, 0, ""))
 	for ops.instructions
-		if ShouldAddLoad(value, lastName)
+		if (not value.IsLoadVariable) or value.label is not lastName
 			next.Add(value)
-			lastName = NextName(value, lastName)
+		lastName = NextName(value, lastName)
 	OpList(next)
-ShouldAddLoad(instruction OptimInstruction, lastName Text) Boolean
-	if not instruction.IsLoadVariable
-		return true
-	if instruction.label is lastName
-		return false
-	true
 NextName(instruction OptimInstruction, lastName Text) Text
+	RedundantLoad(OpList.Empty).NextName(OptimInstruction("Invoke", 0, 0, ""), "x") is ""
 	if instruction.IsLoadVariable
 		return instruction.label
-	if instruction.IsStoreRegister
+	if instruction.IsStoreRegister or instruction.IsJump
 		return ""
-	if instruction.IsBlockBoundary
+	if instruction.typeName is in ("Invoke", "LoopBegin", "LoopEnd")
 		return ""
 	lastName
-Empty RedundantLoad
-	RedundantLoad(0)

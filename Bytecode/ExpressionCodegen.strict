@@ -4,7 +4,7 @@ GenerateExpression(text Text) GenerationResult
 		return LoadNumber(1)
 	if text is "false"
 		return LoadNumber(0)
-	if NumberLiteral.Empty.IsNumberLiteral(text)
+	if NumberLiteral(text).IsNumber
 		return LoadNumber(text to Number)
 	GenerateBinaryOrVar(text)
 GenerateBinaryOrVar(text Text) GenerationResult
@@ -45,7 +45,7 @@ CombineBinary(leftResult GenerationResult, right Text, code Number) GenerationRe
 EmitBinary(combined GenerationResult, leftReg Number, rightReg Number, code Number) GenerationResult
 	let resultReg = combined.registry.Allocate
 	let advanced = combined.registry.Advance
-	let op = InstructionBuilder.BinaryOp(code, leftReg, rightReg, resultReg)
+	let op = BytecodeInstruction.BinaryOp(code, leftReg, rightReg, resultReg)
 	combined.AppendWithRegistry(op, advanced)
 OperatorWidth(code Number) Number
 	if code is InstructionType.NotEqual
@@ -56,7 +56,7 @@ OperatorWidth(code Number) Number
 		return 3
 	3
 GenerateOperand(text Text) GenerationResult
-	if NumberLiteral.Empty.IsNumberLiteral(text)
+	if NumberLiteral(text).IsNumber
 		return LoadNumber(text to Number)
 	if text is "true"
 		return LoadNumber(1)
@@ -68,12 +68,12 @@ LoadNumber(amount Number) GenerationResult
 	if reg is -1
 		return state
 	let advanced = state.registry.Advance
-	state.AppendWithRegistry(InstructionBuilder.LoadConstant(reg, amount), advanced)
+	state.AppendWithRegistry(BytecodeInstruction.LoadConstant(reg, amount), advanced)
 LoadVariable(name Text) GenerationResult
 	let reg = state.registry.Allocate
 	if reg is -1
 		return state
 	let advanced = state.registry.Advance
-	state.AppendWithRegistry(InstructionBuilder.LoadVariable(reg, name), advanced)
+	state.AppendWithRegistry(BytecodeInstruction.LoadVariable(reg, name), advanced)
 Empty ExpressionCodegen
 	ExpressionCodegen(GenerationResult.Empty)

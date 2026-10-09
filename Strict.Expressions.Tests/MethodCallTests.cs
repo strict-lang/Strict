@@ -261,6 +261,97 @@ public sealed class MethodCallTests : TestExpressions
 	}
 
 	[Test]
+	public void OwnTypeNameCallIsConstructorEvenIfMemberTypeHasSameNamedMethod()
+	{
+		using var program = new Type(TestPackage.Instance,
+				new TypeLines("Value", "has data Text", "FromText(content Text) Value",
+					"\tFromText(\"hi\").data is \"hi\"", "\tValue(content)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(), Does.EndWith("Value(content)"));
+	}
+
+	[Test]
+	public void TypeMethodNamedLikeBaseTypeIsCalled()
+	{
+		using var program = new Type(TestPackage.Instance,
+				new TypeLines("NoneHolder", "has number", "None NoneHolder", "\tNoneHolder(0)",
+					"Zero Number", "\tNoneHolder.None.number")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(), Is.EqualTo("None.number"));
+	}
+
+	[Test]
+	public void ThreeLetterMethodCallInsideTextConcatenationIsNotBracketed()
+	{
+		using var program = new Type(TestPackage.Instance,
+				new TypeLines("XmmNamer", "has number", "Xmm(reg Number) Text", "\t\"xmm\" + reg to Text",
+					"Pair Text", "\t\"a\" + Xmm(number) + \"b\"")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("\"a\" + Xmm(number) + \"b\""));
+	}
+
+	[Test]
+	public void ConstructorWithLoopValueArgumentIsNotGenericType()
+	{
+		using var rule = new Type(TestPackage.Instance,
+				new TypeLines("LineRule", "has line Text", "IsLet Boolean", "\tline.StartsWith(\"let \")")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		using var counter = new Type(TestPackage.Instance,
+				new TypeLines("LetCounter", "has texts", "CountLets Number", "\tmutable count = 0",
+					"\tfor texts", "\t\tif LineRule(value).IsLet", "\t\t\tcount = count + 1", "\tcount")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(counter.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Does.Contain("if LineRule(value).IsLet"));
+	}
+
+	[Test]
+	public void ConstructorArgumentWithMemberCallOnNestedConstructor()
+	{
+		using var holder = new Type(TestPackage.Instance,
+				new TypeLines("NameHolder", "has number", "Name Text", "\tnumber to Text")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		using var maker = new Type(TestPackage.Instance,
+				new TypeLines("PairMaker", "has text", "has number", "Make(code Number) PairMaker",
+					"\tPairMaker(NameHolder(code).Name, code)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(maker.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("PairMaker(NameHolder(code).Name, code)"));
+	}
+
+	[Test]
+	public void LastLineComparisonIsBodyNotTest()
+	{
+		using var program = new Type(TestPackage.Instance,
+				new TypeLines("ShortText", "has text", "IsShort Boolean", "\tShortText(\"a\").IsShort is true",
+					"\ttext.Length is 1")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		program.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(program.Methods[0].Tests, Has.Count.EqualTo(1));
+	}
+
+	[Test]
+	public void CallingSameNamedMethodOnMemberIsNotRecursive()
+	{
+		using var program = new Type(TestPackage.Instance,
+				new TypeLines(nameof(CallingSameNamedMethodOnMemberIsNotRecursive), "has numbers",
+					"Length Number", "\tnumbers.Length")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(), Is.EqualTo("numbers.Length"));
+	}
+
+	[Test]
+	public void CallingSameNamedMethodOnOtherTypeIsNotRecursive()
+	{
+		using var program = new Type(TestPackage.Instance,
+				new TypeLines(nameof(CallingSameNamedMethodOnOtherTypeIsNotRecursive), "has number",
+					"Length Number", "\tRange(0, number).Length")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("Range(0, number).Length"));
+	}
+
+	[Test]
 	public void RecursiveStackOverflow()
 	{
 		using var program = new Type(TestPackage.Instance,

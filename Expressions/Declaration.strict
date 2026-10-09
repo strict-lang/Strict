@@ -1,5 +1,5 @@
 has variableName Text
-has variableTypeName Text
+has VariableTypeName Text
 has initialValue Text
 has kind Text
 to Text
@@ -13,14 +13,14 @@ to Text
 Parse(text Text) Declaration
 	Parse("let count = 1").variableName is "count"
 	Parse("mutable total = 0").kind is "mutable"
-	let kind = ExtractKind(text)
-	let rest = text.Substring(kind.Length + 1, text.Length - kind.Length - 1)
+	let declarationKind = ExtractKind(text)
+	let rest = text.Substring(declarationKind.Length + 1, text.Length - declarationKind.Length - 1)
 	let equalsIndex = rest.IndexOf(" = ")
 	if equalsIndex is -1
-		return Declaration(rest.Trim, "Any", "", kind)
+		return Declaration(rest.Trim, "Any", "", declarationKind)
 	let name = rest.Substring(0, equalsIndex).Trim
 	let value = rest.Substring(equalsIndex + 3, rest.Length - equalsIndex - 3).Trim
-	Declaration(name, "Any", value, kind)
+	Declaration(name, "Any", value, declarationKind)
 ExtractKind(text Text) Text
 	ExtractKind("constant x = 1") is "constant"
 	if text.StartsWith("constant ")

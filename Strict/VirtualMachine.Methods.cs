@@ -92,7 +92,7 @@ public sealed partial class VirtualMachine
 			return true;
 		return info.MethodName switch
 		{
-			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.basePackage)),
+			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.TypeResolver)),
 			BinaryOperator.To => hasInstance && TryHandleToConversion(invoke, implicitInstance),
 			"Length" or "Count" => hasInstance && TryHandleNativeLength(invoke, implicitInstance),
 			"ReadLines" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" => hasInstance &&
@@ -145,7 +145,7 @@ public sealed partial class VirtualMachine
 				return false;
 			if (!FileValue.TryGetPathText(Memory.Registers[info.ArgumentRegisters[0]], out var pathText))
 				return false;
-			var fileInstance = NativeFileRegistry.Open(executable.basePackage.GetType(Type.File),
+			var fileInstance = NativeFileRegistry.Open(executable.TypeResolver.GetType(Type.File),
 				pathText);
 			Memory.Frame.TrackDisposable(fileInstance);
 			Memory.Registers[invoke.Register] = fileInstance;
@@ -192,7 +192,7 @@ public sealed partial class VirtualMachine
 
 	private long GetFileHandle(ValueInstance instance)
 	{
-		return FileValue.TryGetHandle(instance, executable.basePackage.GetType(Type.File),
+		return FileValue.TryGetHandle(instance, executable.TypeResolver.GetType(Type.File),
 			out var handle)
 			? handle
 			: throw Fail("File instance has no native handle");
@@ -212,14 +212,14 @@ public sealed partial class VirtualMachine
 
 	private ValueInstance CreateBytesValue(byte[] bytes)
 	{
-		var byteType = executable.basePackage.GetType(Type.Byte);
+		var byteType = executable.TypeResolver.GetType(Type.Byte);
 		var bytesType = executable.listType.GetGenericImplementation(byteType);
 		return FileValue.CreateBytes(bytesType, byteType, bytes);
 	}
 
 	private ValueInstance CreateTextListValue(string[] lines)
 	{
-		var textType = executable.basePackage.GetType(Type.Text);
+		var textType = executable.TypeResolver.GetType(Type.Text);
 		var textsType = executable.listType.GetGenericImplementation(textType);
 		return new ValueInstance(textsType, lines.Select(line => new ValueInstance(line)).ToArray());
 	}
@@ -326,7 +326,7 @@ public sealed partial class VirtualMachine
 
 	private ValueInstance CreateProcessValue(string executablePath)
 	{
-		var processType = executable.basePackage.GetType("Process");
+		var processType = executable.TypeResolver.GetType("Process");
 		return new ValueInstance(processType, [new ValueInstance(executablePath)]);
 	}
 
@@ -335,7 +335,7 @@ public sealed partial class VirtualMachine
 
 	private ValueInstance CreateProcessResultValue(int exitCode, string output, string error)
 	{
-		var resultType = executable.basePackage.GetType("ProcessResult");
+		var resultType = executable.TypeResolver.GetType("ProcessResult");
 		var numberType = executable.numberType;
 		return new ValueInstance(resultType, [
 			new ValueInstance(numberType, exitCode),
@@ -548,7 +548,7 @@ public sealed partial class VirtualMachine
 		if (elementType.IsNumber || string.Equals(elementType.Name, "Byte",
 			StringComparison.OrdinalIgnoreCase))
 			return NativePluginLoader.ConvertBytesToValueInstance(bytes, listType);
-		var numberType = executable.basePackage.FindType("Number")!;
+		var numberType = executable.TypeResolver.FindType("Number")!;
 		var colorCount = bytes.Length / 4;
 		var colorValues = new ValueInstance[colorCount];
 		for (var colorIndex = 0; colorIndex < colorCount; colorIndex++)
@@ -568,7 +568,7 @@ public sealed partial class VirtualMachine
 	private bool TryHandleToConversion(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
-		var conversionType = info.ResolveReturnType(executable.basePackage);
+		var conversionType = info.ResolveReturnType(executable.TypeResolver);
 		var rawValue = ResolveInvokeInstance(info, implicitInstance);
 		if (conversionType.IsText)
 		{
@@ -963,8 +963,8 @@ public sealed partial class VirtualMachine
 	{
 		if (!instance.HasValue)
 			return false;
-		return instance.GetType().
-			IsSameOrCanBeUsedAs(executable.basePackage.GetType(Type.File));
+		var fileType = executable.TypeResolver.FindType(Type.File);
+		return fileType != null && instance.GetType().IsSameOrCanBeUsedAs(fileType);
 	}
 
 	private void DisposeTrackedValues(CallFrame frame, ValueInstance? returnValue,
@@ -979,7 +979,7 @@ public sealed partial class VirtualMachine
 					frame.RemoveDisposable(value);
 				}
 			}
-			else if (FileValue.TryGetHandle(value, executable.basePackage.GetType(Type.File),
+			else if (FileValue.TryGetHandle(value, executable.TypeResolver.GetType(Type.File),
 				out var handle))
 			{
 				NativeFileRegistry.Close(handle);

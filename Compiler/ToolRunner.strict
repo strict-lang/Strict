@@ -1,16 +1,12 @@
-has dummy Number
-Find(name Text) Text
-	let tool = Process.Find(name)
-	tool.executable
-IsAvailable(name Text) Boolean
+has name Text
+Executable Text
+	ToolRunner("noSuchStrictTool").Executable is ""
+	Process.Find(name).executable
+IsAvailable Boolean
+	ToolRunner("noSuchStrictTool").IsAvailable is false
 	Process.Find(name).IsAvailable
-Run(name Text, arguments Text) ProcessResult
+Execute(arguments Text) ProcessResult
+	ToolRunner("noSuchStrictTool").Execute("").Failed is true
 	Process.RunTool(name, arguments)
-NasmAvailable Boolean
-	IsAvailable("nasm")
-GccAvailable Boolean
-	IsAvailable("gcc")
-Empty ToolRunner
-	ToolRunner(0)
 to Text
-	"tools"
+	name

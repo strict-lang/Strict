@@ -1,5 +1,5 @@
 has parameterName Text
-has parameterTypeName Text
+has ParameterTypeName Text
 to Text
 	ParameterCall("value", "Text") to Text is "value"
 	parameterName

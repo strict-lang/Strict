@@ -170,6 +170,9 @@ public sealed class TypeValidator : Visitor
 	private static void TrackMutableArgumentsPassedByReference(MethodCall methodCall,
 		VariableUsages variables)
 	{
+		if (methodCall.Method.ReturnType.IsMutable && methodCall.Instance != null &&
+			GetRootName(methodCall.Instance) is { } instanceName)
+			variables.reassignedMutables.Add(instanceName);
 		for (var argumentIndex = 0; argumentIndex < methodCall.Arguments.Count &&
 			argumentIndex < methodCall.Method.Parameters.Count; argumentIndex++)
 			if (methodCall.Method.Parameters[argumentIndex].IsMutable &&

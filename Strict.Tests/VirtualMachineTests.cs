@@ -287,6 +287,41 @@ public sealed class VirtualMachineTests : TestBytecode
 			Is.EqualTo(expected));
 	}
 
+	[TestCase(3, true)]
+	[TestCase(5, false)]
+	[TestCase(2, false)]
+	public void ComparisonsAsValuesInLogicalExpression(int number, bool expected)
+	{
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("InRangeCheck",
+			"InRangeCheck(" + number + ").Check", "has number", "Check Boolean",
+			"\tnumber >= 3 and number < 5")).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Boolean,
+			Is.EqualTo(expected));
+	}
+
+	[TestCase(4, "big")]
+	[TestCase(2, "small")]
+	[TestCase(7, "listed")]
+	public void IfConditionsWithGreaterOrEqualAndIn(int number, string expected)
+	{
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("IfCompareCheck",
+			"IfCompareCheck(" + number + ").Check", "has number", "Check Text", "\tif number is in (7, 8)",
+			"\t\treturn \"listed\"", "\tif number >= 3", "\t\treturn \"big\"", "\t\"small\"")).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Text,
+			Is.EqualTo(expected));
+	}
+
+	[TestCase(1, "\"one\"")]
+	[TestCase(2, "\"other\"")]
+	public void ConditionalTextExpressionHasTextType(int number, string expected)
+	{
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource("TextPicker",
+			"TextPicker(" + number + ").Pick", "has number", "Pick Text",
+			"\tnumber is 1 then \"one\" else \"other\"")).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.
+			ToExpressionCodeString(true), Is.EqualTo(expected));
+	}
+
 	[Test]
 	public void IfAndElseTest()
 	{

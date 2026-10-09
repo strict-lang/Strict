@@ -27,7 +27,7 @@ public sealed class PhraseTokenizer
 		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||
 			part.Contains("  ", StringComparison.Ordinal))
 			throw new InvalidSpacing(input);
-		if (part.Contains("()", StringComparison.Ordinal))
+		if (HasEmptyBracketsOutsideText(part))
 			throw new InvalidEmptyOrUnmatchedBrackets(input);
 		this.input = input;
 	}
@@ -225,7 +225,7 @@ public sealed class PhraseTokenizer
 							break;
 						additionalBrackets--;
 					}
-					else if (nextCharacter == ' ' && additionalBrackets == 0)
+					else if (nextCharacter is ' ' or ',' && additionalBrackets == 0)
 					{
 						break;
 					}
@@ -260,16 +260,11 @@ public sealed class PhraseTokenizer
 			HandleMethodCallStates();
 			var currentChar = tokens.input[tokens.index];
 			tokens.ProcessNormalToken(currentChar, result.Add);
-			return isInMethodCall && ((tokens.index + 1 < tokens.input.Length &&
-					currentChar == CloseBracket &&
-					(tokens.input[tokens.index + 1] != '.' || foundBinaryOperationInMethodCall)) ||
-				(tokens.MemberOrMethodCallWithNoArguments() && !foundBinaryOperationInMethodCall));
+			return false;
 		}
 
 		private void HandleMethodCallStates()
 		{
-			if (tokens.input[tokens.index - 1] == '.')
-				isInMethodCall = true;
 			if (tokens.input[tokens.index] == ' ')
 				foundSpace = true;
 			if (hasPrecedingMethodName && tokens.input[tokens.index].IsSingleCharacterOperator())
@@ -277,9 +272,19 @@ public sealed class PhraseTokenizer
 		}
 
 		private bool foundListSeparator;
-		private bool isInMethodCall;
 		private bool foundSpace;
 		private bool foundBinaryOperationInMethodCall;
+	}
+
+	private static bool HasEmptyBracketsOutsideText(ReadOnlySpan<char> part)
+	{
+		var isInText = false;
+		for (var index = 0; index < part.Length - 1; index++)
+			if (part[index] == '"')
+				isInText = !isInText;
+			else if (!isInText && part[index] == '(' && part[index + 1] == ')')
+				return true;
+		return false;
 	}
 
 	private bool MemberOrMethodCallWithNoArguments() =>

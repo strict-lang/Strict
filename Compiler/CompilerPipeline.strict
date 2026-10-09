@@ -1,15 +1,6 @@
-has dummy Number
-CompileToAsm(ops CompList, methodName Text, platform Number) Text
-	InstructionsToNasm.Empty.Compile(ops, methodName, platform)
-PlanLink(asmPath Text, platform Number) LinkerPlan
-	LinkerPlan.ForAsm(asmPath, platform)
-CompileAndPlan(ops CompList, methodName Text, platform Number, asmPath Text) Text
-	let asm = CompileToAsm(ops, methodName, platform)
-	let plan = PlanLink(asmPath, platform)
-	asm + AsmText.Empty.NewLine + "; LINK: " + plan to Text
-SimpleAddFor(platform Number) Text
-	InstructionsToNasm.Empty.CompileSimpleAdd(platform)
-Empty CompilerPipeline
-	CompilerPipeline(0)
+has compiler InstructionsToNasm
+CompileAndPlan(asmPath Text) Text
+	"; LINK: " is in CompilerPipeline(InstructionsToNasm.SimpleAdd(Platform.Linux)).CompileAndPlan("a.asm")
+	compiler.Compile + "\n; LINK: " + LinkerPlan.ForAsm(asmPath, compiler.platform) to Text
 to Text
 	"compiler"

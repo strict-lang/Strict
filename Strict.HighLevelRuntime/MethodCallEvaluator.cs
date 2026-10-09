@@ -47,11 +47,19 @@ public sealed class MethodCallEvaluator(Interpreter interpreter)
 		var instance = call.Instance != null
 			? TryGetDirectOuterValue(call.Instance, ctx) ?? interpreter.RunExpression(call.Instance, ctx)
 			: call.Method.Name != Method.From
-				? ctx.This.HasValue && !ctx.This.Value.Equals(interpreter.noneInstance)
-					? ctx.This
-					: ctx.Parent?.Get(Type.ValueLowercase, interpreter.Statistics)
+				? GetImplicitInstance(call.Method.Type, ctx)
 				: null;
 		return ExecuteMethodCall(call, instance, ctx);
+	}
+
+	private ValueInstance? GetImplicitInstance(Type methodType, ExecutionContext ctx)
+	{
+		var instance = ctx.This.HasValue && !ctx.This.Value.Equals(interpreter.noneInstance)
+			? ctx.This
+			: ctx.Parent?.Get(Type.ValueLowercase, interpreter.Statistics);
+		return instance?.IsSameOrCanBeUsedAs(methodType) == true
+			? instance
+			: null;
 	}
 
 	private ValueInstance? TryGetDirectOuterValue(Expression expression, ExecutionContext ctx) =>

@@ -12,7 +12,7 @@ GenerateLine(line Text) GenerationResult
 GenerateReturn(line Text) GenerationResult
 	let rest = line.Substring(7, 200).Trim
 	let expr = ExpressionCodegen(state).GenerateExpression(rest)
-	expr.Append(InstructionBuilder.ReturnOp(expr.LastRegister))
+	expr.Append(BytecodeInstruction.ReturnOp(expr.LastRegister))
 GenerateConstant(line Text) GenerationResult
 	let rest = line.Substring(9, 200).Trim
 	GenerateAssignment(rest)
@@ -27,14 +27,14 @@ GenerateAssignment(rest Text) GenerationResult
 	let exprText = rest.Substring(eq + 3, 200).Trim
 	AssignValue(name, exprText)
 AssignValue(name Text, exprText Text) GenerationResult
-	if NumberLiteral.Empty.IsNumberLiteral(exprText)
-		return state.Append(InstructionBuilder.StoreConstant(name, exprText to Number))
+	if NumberLiteral(exprText).IsNumber
+		return state.Append(BytecodeInstruction.StoreConstant(name, exprText to Number))
 	let expr = ExpressionCodegen(state).GenerateExpression(exprText)
-	expr.Append(InstructionBuilder.StoreRegister(expr.LastRegister, name))
+	expr.Append(BytecodeInstruction.StoreRegister(expr.LastRegister, name))
 GenerateIf(line Text) GenerationResult
 	let cond = line.Substring(3, 200).Trim
 	let expr = ExpressionCodegen(state).GenerateExpression(cond)
-	expr.Append(InstructionBuilder.JumpOp(InstructionType.JumpIfFalse, 1))
+	expr.Append(BytecodeInstruction.JumpOp(InstructionType.JumpIfFalse, 1))
 GenerateBody(lines Texts) GenerationResult
 	mutable current = GenerationResult.Empty
 	for lines

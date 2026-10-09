@@ -1,40 +1,23 @@
-has dummy Number
+has ops CompList
+has methodName Text
+has platform Number
 constant Extension = ".asm"
-Compile(ops CompList, methodName Text, platform Number) Text
-	let body = EmitBody(ops, methodName)
-	let entry = EntryPoint.Empty.Build(methodName, platform)
-	body + entry
-EmitBody(ops CompList, methodName Text) Text
-	let head = MethodHeader(methodName)
-	let opsText = EmitAll(ops, 0, "")
-	DataSection + head + opsText + MethodFooter
+Compile Text
+	InstructionsToNasm.SimpleAdd(Platform.Linux).Compile.StartsWith("section .data") is true
+	DataSection + MethodHeader + EmitAll(0, "") + "pop rbp\nret\n" + EntryPoint(methodName, platform).Build
 DataSection Text
-	constant nl = "\n"
-	"section .data" + nl + "const_2: dq 2.0" + nl + "const_3: dq 3.0" + nl + nl
-MethodHeader(methodName Text) Text
-	constant nl = "\n"
-	constant prefix = "section .text" + nl + "global "
-	let named = prefix + methodName
-	named + nl + nl + methodName + ":" + nl + "push rbp" + nl + "mov rbp, rsp" + nl
-MethodFooter Text
-	constant nl = "\n"
-	"pop rbp" + nl + "ret" + nl
-EmitAll(ops CompList, index Number, result Text) Text
+	"const_3: dq 3.0" is in InstructionsToNasm.SimpleAdd(Platform.Linux).DataSection
+	"section .data\nconst_2: dq 2.0\nconst_3: dq 3.0\n\n"
+MethodHeader Text
+	InstructionsToNasm.SimpleAdd(Platform.Linux).MethodHeader.StartsWith("section .text") is true
+	"section .text\nglobal " + methodName + "\n\n" + methodName + ":\npush rbp\nmov rbp, rsp\n"
+EmitAll(index Number, result Text) Text
+	InstructionsToNasm.SimpleAdd(Platform.Linux).EmitAll(3, "") is "movsd xmm0, xmm2\n"
 	if index >= ops.Count
 		return result
-	let line = InstrToAsm.Empty.Emit(ops.At(index))
-	constant nl = "\n"
-	EmitAll(ops, index + 1, result + line + nl)
-CompileSimpleAdd(platform Number) Text
-	Compile(MakeSimpleAdd(platform), "Run", platform)
-MakeSimpleAdd(seed Number) CompList
-	let left = 2 + seed
-	let right = 3 + seed
-	let first = CompList.Empty.Append(CompInstruction("LoadConstantToRegister", 0, left, "2"))
-	let second = first.Append(CompInstruction("LoadConstantToRegister", 1, right, "3"))
-	let third = second.Append(CompInstruction("Add", 0, 1, "2"))
-	third.Append(CompInstruction("Return", 2, 0, ""))
-Empty InstructionsToNasm
-	InstructionsToNasm(0)
+	EmitAll(index + 1, result + InstrToAsm(ops.At(index)).Emit + "\n")
+SimpleAdd(target Number) InstructionsToNasm
+	InstructionsToNasm.SimpleAdd(Platform.Windows).ops.Count is 4
+	InstructionsToNasm(CompList.SimpleAdd(target), "Run", target)
 to Text
 	"nasm"

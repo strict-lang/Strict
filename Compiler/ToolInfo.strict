@@ -1,29 +1,16 @@
-has dummy Number
-NasmName Text
-	"nasm"
-GccName Text
-	"gcc"
-ClangName Text
-	"clang"
-NasmDownload Text
-	"https://nasm.us"
-GccDownload Text
-	"https://gcc.gnu.org"
-MingwDownload Text
-	"https://www.mingw-w64.org"
-XcodeDownload Text
-	"https://developer.apple.com/xcode"
-LinkerName(platform Number) Text
-	if platform is Platform.MacOS
-		return ClangName
-	GccName
-LinkerDownload(platform Number) Text
+has platform Number
+constant NasmName = "nasm"
+constant NasmDownload = "https://nasm.us"
+LinkerName Text
+	ToolInfo(Platform.MacOS).LinkerName is "clang"
+	platform is Platform.MacOS then "clang" else "gcc"
+LinkerDownload Text
+	ToolInfo(Platform.Windows).LinkerDownload is "https://www.mingw-w64.org"
 	if platform is Platform.Windows
-		return MingwDownload
+		return "https://www.mingw-w64.org"
 	if platform is Platform.MacOS
-		return XcodeDownload
-	GccDownload
-ToolMissingMessage(toolName Text, download Text) Text
-	"Required tool '" + toolName + "' was not found. Download: " + download
-Empty ToolInfo
-	ToolInfo(0)
+		return "https://developer.apple.com/xcode"
+	"https://gcc.gnu.org"
+LinkerMissingMessage Text
+	ToolInfo(Platform.Linux).LinkerMissingMessage.StartsWith("Required tool 'gcc'") is true
+	"Required tool '" + LinkerName + "' was not found. Download: " + LinkerDownload

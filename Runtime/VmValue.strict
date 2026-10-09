@@ -36,6 +36,7 @@ FlagText Text
 		return "true"
 	"false"
 None VmValue
+	VmValue.None.IsNone is true
 	VmValue("None", 0, "", false)
 FromNumber(amount Number) VmValue
 	FromNumber(5).number is 5

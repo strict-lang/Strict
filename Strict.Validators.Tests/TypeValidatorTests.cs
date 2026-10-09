@@ -207,4 +207,25 @@ public sealed class TypeValidatorTests
 			"\tUseMutable(source)",
 			"\t5"
 		]), true));
+
+	[Test]
+	public void MutableListChangedByAddIsConsideredChanged() =>
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Run Numbers",
+			"\tmutable numbers = List(Mutable(Number))",
+			"\tnumbers.Add(5)",
+			"\tnumbers"
+		]), true));
+
+	[Test]
+	public void ImplicitValueStaysImplicitAfterNumberLineInTextLoop() =>
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Run Number",
+			"\tmutable count = 0",
+			"\tfor (\"a\", \"b\")",
+			"\t\tif value is \"b\"",
+			"\t\t\treturn count",
+			"\t\tcount = count + 1",
+			"\tcount"
+		]), true));
 }

@@ -1,64 +1,43 @@
-has dummy Number
-Execute(state VmState, instruction VmInstruction) VmState
+has state VmState
+has instruction VmInstruction
+Execute VmState
+	InstructionExec(VmState.Empty, VmInstruction.LoadConstant(0, 5)).Execute.pc is 1
 	if instruction.IsReturn
-		return ExecReturn(state, instruction)
+		return state.WithReturn(state.memory.GetRegister(instruction.register))
 	if instruction.IsLoadConstant
-		return ExecLoadConst(state, instruction)
+		return SetRegister(VmValue.FromNumber(instruction.amount))
 	if instruction.IsLoadVariable
-		return ExecLoadVar(state, instruction)
-	ExecRest(state, instruction)
-ExecRest(state VmState, instruction VmInstruction) VmState
+		return SetRegister(state.memory.GetVariable(instruction.label))
+	ExecuteStoreOrJump
+ExecuteStoreOrJump VmState
+	InstructionExec(VmState.Empty, VmInstruction("Invoke", 0, 0, "")).ExecuteStoreOrJump.pc is 1
 	if instruction.IsStoreConstant
-		return ExecStoreConst(state, instruction)
+		return SetVariable(VmValue.FromNumber(instruction.amount))
 	if instruction.IsStoreRegister
-		return ExecStoreReg(state, instruction)
+		return SetVariable(state.memory.GetRegister(instruction.register))
 	if instruction.IsBinary
-		return ExecBinary(state, instruction)
+		return ExecuteBinary
 	if instruction.IsJump
-		return ExecJump(state, instruction)
+		return ExecuteJump
 	state.Advance
-ExecReturn(state VmState, instruction VmInstruction) VmState
-	let slot = state.memory.GetRegister(instruction.register)
-	state.WithReturn(slot)
-ExecLoadConst(state VmState, instruction VmInstruction) VmState
-	let slot = VmValue.FromNumber(instruction.amount)
-	let next = state.memory.SetRegister(instruction.register, slot)
-	state.WithMemory(next).Advance
-ExecLoadVar(state VmState, instruction VmInstruction) VmState
-	let slot = state.memory.GetVariable(instruction.label)
-	let next = state.memory.SetRegister(instruction.register, slot)
-	state.WithMemory(next).Advance
-ExecStoreConst(state VmState, instruction VmInstruction) VmState
-	let slot = VmValue.FromNumber(instruction.amount)
-	let next = state.memory.SetVariable(instruction.label, slot)
-	state.WithMemory(next).Advance
-ExecStoreReg(state VmState, instruction VmInstruction) VmState
-	let slot = state.memory.GetRegister(instruction.register)
-	let next = state.memory.SetVariable(instruction.label, slot)
-	state.WithMemory(next).Advance
-ExecBinary(state VmState, instruction VmInstruction) VmState
+SetRegister(slot VmValue) VmState
+	InstructionExec(VmState.Empty, VmInstruction.ReturnOp(1)).SetRegister(VmValue.FromNumber(3)).pc is 1
+	state.WithMemory(state.memory.SetRegister(instruction.register, slot)).Advance
+SetVariable(slot VmValue) VmState
+	InstructionExec(VmState.Empty, VmInstruction.StoreConstant("n", 1)).SetVariable(VmValue.FromNumber(3)).pc is 1
+	state.WithMemory(state.memory.SetVariable(instruction.label, slot)).Advance
+ExecuteBinary VmState
+	InstructionExec(VmState.Empty, VmInstruction.BinaryOp("Add", 0, 1, 2)).ExecuteBinary.pc is 1
 	let left = state.memory.GetRegister(instruction.register)
 	let right = state.memory.GetRegister(instruction.amount)
-	let result = ArithmeticExec.Empty.Compute(instruction.typeName, left, right)
-	let next = state.memory.SetRegister(instruction.ResultRegister, result)
-	state.WithMemory(next).Advance
-ExecJump(state VmState, instruction VmInstruction) VmState
+	let result = ArithmeticExec(left, right).Compute(instruction.typeName)
+	state.WithMemory(state.memory.SetRegister(instruction.ResultRegister, result)).Advance
+ExecuteJump VmState
+	InstructionExec(VmState.Empty, VmInstruction("Jump", 0, 2, "")).ExecuteJump.pc is 3
 	if instruction.typeName is "Jump"
 		return state.JumpBy(instruction.amount)
-	if instruction.typeName is "JumpIfFalse"
-		return JumpIfFalse(state, instruction)
-	if instruction.typeName is "JumpIfTrue"
-		return JumpIfTrue(state, instruction)
-	state.Advance
-JumpIfFalse(state VmState, instruction VmInstruction) VmState
-	let flag = state.memory.GetRegister(0)
-	if flag.IsTrue
-		return state.Advance
-	state.JumpBy(instruction.amount)
-JumpIfTrue(state VmState, instruction VmInstruction) VmState
-	let flag = state.memory.GetRegister(0)
-	if flag.IsTrue
+	let isTrue = state.memory.GetRegister(0).IsTrue
+	let isJumpIfTrue = instruction.typeName is "JumpIfTrue"
+	if isJumpIfTrue is isTrue
 		return state.JumpBy(instruction.amount)
 	state.Advance
-Empty InstructionExec
-	InstructionExec(0)

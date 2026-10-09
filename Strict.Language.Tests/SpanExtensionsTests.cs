@@ -8,6 +8,14 @@ public class SpanExtensionsTests
 			Throws.InstanceOf<SpanExtensions.EmptyInputIsNotAllowed>());
 
 	[Test]
+	public void FindMatchingBracketIndexIgnoresBracketsInText() =>
+		Assert.That("IndexOf(\"(\") is -1".AsSpan().FindMatchingBracketIndex(7), Is.EqualTo(11));
+
+	[Test]
+	public void FindMatchingBracketIndexHandlesEscapedQuoteInText() =>
+		Assert.That("StartsWith(\"\\\"\") and x".AsSpan().FindMatchingBracketIndex(10), Is.EqualTo(15));
+
+	[Test]
 	public void GetOuterRange()
 	{
 		const string Text = "Hello 1234";

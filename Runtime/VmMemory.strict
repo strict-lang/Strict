@@ -3,14 +3,17 @@ has frame CallFrame
 GetRegister(reg Number) VmValue
 	bank.Get(reg)
 SetRegister(reg Number, slot VmValue) VmMemory
+	VmMemory.Empty.SetRegister(1, VmValue.FromNumber(5)).GetRegister(1).number is 5
 	VmMemory(bank.Set(reg, slot), frame)
 GetVariable(name Text) VmValue
 	frame.Get(name)
 SetVariable(name Text, slot VmValue) VmMemory
+	VmMemory.Empty.SetVariable("x", VmValue.FromNumber(2)).HasVariable("x") is true
 	VmMemory(bank, frame.Set(name, slot))
 HasVariable(name Text) Boolean
 	frame.Has(name)
 Empty VmMemory
+	VmMemory.Empty.HasVariable("x") is false
 	VmMemory(RegisterBank.Empty, CallFrame.Empty)
 to Text
-	bank to Text + " " + frame to Text
+	bank + " " + frame to Text

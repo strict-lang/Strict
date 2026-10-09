@@ -83,7 +83,7 @@ public class MethodCall : ConcreteExpression
 	protected string AddNestedBracketsIfNeeded(Expression child, int addPrecedenceForNot = 0) =>
 		ShouldKeepUnwrappedIsNotComparison(child)
 			? child.ToString()
-			: (child is MethodCall binaryOrUnary &&
+			: (child is MethodCall binaryOrUnary && binaryOrUnary.Method.Name.AsSpan().IsOperator() &&
 				BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
 				BinaryOperator.GetPrecedence(Method.Name) + addPrecedenceForNot) || child is If
 				? $"({child})"
@@ -239,8 +239,6 @@ public class MethodCall : ConcreteExpression
 		}
 		if (fromType == null)
 			return null;
-		if (fromType.IsList && arguments.Count == 0)
-			return new List(fromType, body.CurrentFileLineNumber);
 		return IsConstructorUsedWithSameArgumentType(arguments, fromType)
 			? body.IsFakeBodyForMemberInitialization && arguments.Count == 1
 				? arguments[0]
@@ -251,6 +249,8 @@ public class MethodCall : ConcreteExpression
 	internal static Expression CreateFromMethodCall(Body body, Type fromType,
 		IReadOnlyList<Expression> arguments, Expression? basedOnErrorVariable = null)
 	{
+		if (fromType.IsList && arguments.Count == 0)
+			return new List(fromType, body.CurrentFileLineNumber);
 		fromType = NormalizeListAndDictionaryImplementation(fromType, arguments);
 		if (fromType.IsMutable && arguments.Count == 1 && fromType.IsGeneric &&
 			fromType is not GenericTypeImplementation)

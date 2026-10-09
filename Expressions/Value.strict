@@ -6,12 +6,12 @@ Data Text
 	data
 to Text
 	data
-FromText(data Text) Value
+FromText(content Text) Value
 	FromText("hello").Data is "hello"
-	Value(Expression("Text", 0, false), data)
+	Value(Expression("Text", 0, false), content)
 FromNumber(number Number) Value
 	FromNumber(5).Data is "5"
 	Value(Expression("Number", 0, false), number to Text)
 FromBoolean(flag Boolean) Value
 	FromBoolean(true).Data is "true"
-	Value(Expression("Boolean", 0, false), flag then "true" else "false")
+	Value(Expression("Boolean", 0, false), flag to Text)

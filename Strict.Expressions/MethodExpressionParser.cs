@@ -109,7 +109,7 @@ public class MethodExpressionParser : ExpressionParser
 	private static Expression? TryParseErrorOrTextOrListOrConditionalExpression(Body body,
 		ReadOnlySpan<char> input, bool makeMutable) =>
 		input[0] == '"' && input[^1] == '"' && MemoryExtensions.Count(input, '"') == 2
-			? new Text(body.Method, input.Slice(1, input.Length - 2).ToString())
+			? Text.TryParse(body, input)
 			: input[0] == '(' && input[^1] == ')' && input.Contains(',') &&
 			HasSingleTopLevelBracketPair(input) &&
 			!input.Contains(If.ThenSeparator, StringComparison.Ordinal)
@@ -410,7 +410,8 @@ public class MethodExpressionParser : ExpressionParser
 					continue;
 				}
 				var foundType = body.Method.FindType(inputText.ToString());
-				if (foundType != null && !members.IsAtEnd &&
+				if (foundType != null && !members.IsAtEnd && members.Current.Start.Value == 0 &&
+					body.Method.Type.FindMember(inputText.ToString()) == null &&
 					!inputText.Equals(Type.ValueLowercase, StringComparison.Ordinal) &&
 					!inputText.Equals(Type.OuterLowercase, StringComparison.Ordinal))
 				{
@@ -533,7 +534,9 @@ public class MethodExpressionParser : ExpressionParser
 		if (instance is null && type != body.Method.Type &&
 			input.Equals(Method.From, StringComparison.Ordinal))
 			throw new DirectFromConstructorCallIsForbidden(body, type);
-		var parse = MemberCall.TryParse(body, type, instance, input) ??
+		var parse = (instance is null && input.Equals(body.Method.Type.Name, StringComparison.Ordinal)
+				? MethodCall.TryParseFromOrEnum(body, arguments, input.ToString())
+				: null) ?? MemberCall.TryParse(body, type, instance, input) ??
 			MethodCall.TryParse(instance, body, arguments, type, input.ToString());
 		if (parse == null && instance is null)
 			parse = MethodCall.TryParseFromOrEnum(body, arguments, input.ToString()) ??

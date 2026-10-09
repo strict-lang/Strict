@@ -1,5 +1,5 @@
 has elements Texts
-has elementTypeName Text
+has ElementTypeName Text
 to Text
 	ListExpression(("1", "2", "3"), "Number") to Text is "(1, 2, 3)"
 	"(" + JoinElements + ")"

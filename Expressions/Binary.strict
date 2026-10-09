@@ -1,7 +1,7 @@
 has left Text
 has operatorName Text
 has right Text
-has resultTypeName Text
+has ResultTypeName Text
 to Text
 	Binary("a", "+", "b", "Number") to Text is "a + b"
 	left + " " + operatorName + " " + right
@@ -12,8 +12,8 @@ Parse(text Text) Binary
 		return Binary(text, "", "", "Any")
 	Binary(tokens.First, tokens(1), tokens.Last, "Any")
 IsArithmetic Boolean
-	IsArithmetic(Binary("a", "+", "b", "Number")) is true
+	Binary("a", "+", "b", "Number").IsArithmetic is true
 	(operatorName is "+") or (operatorName is "-") or (operatorName is "*") or (operatorName is "/")
 IsLogical Boolean
-	IsLogical(Binary("a", "and", "b", "Boolean")) is true
+	Binary("a", "and", "b", "Boolean").IsLogical is true
 	(operatorName is "and") or (operatorName is "or") or (operatorName is "xor")

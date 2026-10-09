@@ -118,23 +118,27 @@ public sealed class ConstantCollapser : Visitor
 		}
 		if (!expression.IsConstant)
 			return expression;
-		if (expression is To to)
-		{
-			CollapsedCount++;
-			var value = to.Instance as Value;
-			if (to.ConversionType.IsNumber && value is Text textValue)
-				return new Number(to.Method.Type, double.Parse(textValue.Data.Text));
-			if (to.ConversionType.IsText && value is Number numberValue)
-				return new Text(to.Method.Type, numberValue.Data.ToExpressionCodeString());
-			if (to.ConversionType.IsText && value is Boolean boolValue)
-				return new Text(to.Method.Type, boolValue.Data.Boolean ? "true" : "false");
-			throw new UnsupportedToExpression(to.ToStringWithType()); //ncrunch: no coverage
-		}
-		return expression;
+		return expression is To to && TryCollapseTo(to) is { } collapsed
+			? collapsed
+			: expression;
 	}
 
-	public class UnsupportedToExpression(string toStringWithType)
-		: Exception(toStringWithType); //ncrunch: no coverage
+	private Expression? TryCollapseTo(To to)
+	{
+		Expression? collapsed = to.Instance switch
+		{
+			Text textValue when to.ConversionType.IsNumber =>
+				new Number(to.Method.Type, double.Parse(textValue.Data.Text)),
+			Number numberValue when to.ConversionType.IsText =>
+				new Text(to.Method.Type, numberValue.Data.ToExpressionCodeString()),
+			Boolean boolValue when to.ConversionType.IsText =>
+				new Text(to.Method.Type, boolValue.Data.Boolean ? "true" : "false"),
+			_ => null
+		};
+		if (collapsed != null)
+			CollapsedCount++;
+		return collapsed;
+	}
 
 	private static Expression? TryCollapseBinaryExpression(Expression left, Expression right,
 		Context method)

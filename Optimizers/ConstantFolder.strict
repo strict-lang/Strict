@@ -1,41 +1,21 @@
-has dummy Number
-Optimize(ops OpList) OpList
+has ops OpList
+Optimize OpList
+	ConstantFolder(OpList.Sample("Add", 3)).Optimize.At(0).amount is 8
+	ConstantFolder(OpList.Sample("Equal", 3)).Optimize.Count is 3
 	if ops.Count < 3
 		return ops
-	FoldIfSimple(ops)
-FoldIfSimple(ops OpList) OpList
-	let first = ops.At(0)
-	let second = ops.At(1)
-	let third = ops.At(2)
-	if not first.IsLoadConstant
+	FoldIfSimple(ops.At(0), ops.At(1), ops.At(2))
+FoldIfSimple(first OptimInstruction, second OptimInstruction, third OptimInstruction) OpList
+	if (not first.IsLoadConstant) or (not second.IsLoadConstant)
 		return ops
-	if not second.IsLoadConstant
+	if (not third.IsBinary) or third.IsCompare
 		return ops
-	if not third.IsBinary
-		return ops
-	if third.IsCompare
-		return ops
-	FoldSimple(ops, first, second, third)
-FoldSimple(ops OpList, first OptimInstruction, second OptimInstruction, third OptimInstruction) OpList
-	if third.register is not first.register
-		return ops
-	if third.amount is not second.register
+	if third.register is not first.register or third.amount is not second.register
 		return ops
 	let result = Compute(third.typeName, first.amount, second.amount)
-	let folded = OpBuilder.LoadConstant(third.ResultRegister, result)
-	BuildFolded(ops, folded)
-BuildFolded(ops OpList, folded OptimInstruction) OpList
-	mutable next = List(Mutable(OptimInstruction))
-	mutable current = 0
-	for 0
-		next.Add(OptimInstruction("Return", 0, 0, ""))
-	next.Add(folded)
-	for ops.instructions
-		if current > 2
-			next.Add(value)
-		current = current + 1
-	OpList(next)
+	ops.Skip(3).Prepend(OptimInstruction.LoadConstant(third.ResultRegister, result))
 Compute(opName Text, left Number, right Number) Number
+	ConstantFolder(OpList.Empty).Compute("Multiply", 4, 3) is 12
 	if opName is "Add"
 		return left + right
 	if opName is "Subtract"
@@ -47,5 +27,3 @@ Compute(opName Text, left Number, right Number) Number
 	if opName is "Modulo"
 		return left % right
 	left
-Empty ConstantFolder
-	ConstantFolder(0)

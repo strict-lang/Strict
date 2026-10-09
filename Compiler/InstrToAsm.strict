@@ -1,62 +1,44 @@
-has dummy Number
-Emit(instruction CompInstruction) Text
+has instruction CompInstruction
+Emit Text
+	InstrToAsm(CompInstruction.ReturnOp(2)).Emit is "movsd xmm0, xmm2"
 	if instruction.IsLoadConstant
-		return EmitLoadConst(instruction)
+		return "movsd " + Xmm(instruction.register) + ", [rel const_" + ConstLabel + "]"
 	if instruction.IsLoadVariable
-		return EmitLoadVar(instruction)
+		return "movsd " + Xmm(instruction.register) + ", [rel var_" + instruction.label + "]"
 	if instruction.IsReturn
-		return EmitReturn(instruction)
-	EmitRest(instruction)
-EmitRest(instruction CompInstruction) Text
+		return "movsd xmm0, " + Xmm(instruction.register)
+	EmitStoreOrOperation
+EmitStoreOrOperation Text
+	InstrToAsm("Jump", 0, 0, "").EmitStoreOrOperation is "unknown Jump"
 	if instruction.IsStoreConstant
-		return EmitStoreConst(instruction)
+		return "store const " + instruction.label
 	if instruction.IsStoreRegister
-		return EmitStoreReg(instruction)
+		return "movsd [rel var_" + instruction.label + "], " + Xmm(instruction.register)
 	if instruction.IsBinary
-		return EmitBinary(instruction)
+		return EmitBinary
 	if instruction.IsCompare
-		return EmitCompare(instruction)
+		return "ucomisd " + Xmm(instruction.register) + ", " + Xmm(instruction.Amount)
 	"unknown " + instruction.typeName
-EmitLoadConst(instruction CompInstruction) Text
-	let dest = RegisterMap.Empty.XmmName(instruction.register)
-	let amount = ConstLabel(instruction)
-	"movsd " + dest + ", [rel const_" + amount + "]"
-ConstLabel(instruction CompInstruction) Text
+ConstLabel Text
+	InstrToAsm(CompInstruction.LoadConstant(0, 5)).ConstLabel is "5"
 	if instruction.label is ""
-		return instruction.amount to Text
+		return instruction.Amount to Text
 	instruction.label
-EmitLoadVar(instruction CompInstruction) Text
-	let dest = RegisterMap.Empty.XmmName(instruction.register)
-	"movsd " + dest + ", [rel var_" + instruction.label + "]"
-EmitStoreConst(instruction CompInstruction) Text
-	"store const " + instruction.label
-EmitStoreReg(instruction CompInstruction) Text
-	let source = RegisterMap.Empty.XmmName(instruction.register)
-	"movsd [rel var_" + instruction.label + "], " + source
-EmitReturn(instruction CompInstruction) Text
-	let source = RegisterMap.Empty.XmmName(instruction.register)
-	"movsd xmm0, " + source
-EmitBinary(instruction CompInstruction) Text
-	let left = RegisterMap.Empty.XmmName(instruction.register)
-	let right = RegisterMap.Empty.XmmName(instruction.amount)
-	let result = RegisterMap.Empty.XmmName(instruction.ResultRegister)
-	EmitBinaryOp(instruction.typeName, left, right, result)
-EmitBinaryOp(opName Text, left Text, right Text, result Text) Text
-	if opName is "Add"
-		return TwoOp(result, left, "addsd", right)
-	if opName is "Subtract"
-		return TwoOp(result, left, "subsd", right)
-	if opName is "Multiply"
-		return TwoOp(result, left, "mulsd", right)
-	if opName is "Divide"
-		return TwoOp(result, left, "divsd", right)
-	"binary " + opName
-TwoOp(result Text, left Text, opCode Text, right Text) Text
-	constant nl = "\n"
-	"movsd " + result + ", " + left + nl + opCode + " " + result + ", " + right
-EmitCompare(instruction CompInstruction) Text
-	let left = RegisterMap.Empty.XmmName(instruction.register)
-	let right = RegisterMap.Empty.XmmName(instruction.amount)
-	"ucomisd " + left + ", " + right
-Empty InstrToAsm
-	InstrToAsm(0)
+EmitBinary Text
+	InstrToAsm(CompInstruction.BinaryOp("Modulo", 0, 1, 2)).EmitBinary is "binary Modulo"
+	if instruction.typeName is "Add"
+		return TwoOperands("addsd")
+	if instruction.typeName is "Subtract"
+		return TwoOperands("subsd")
+	if instruction.typeName is "Multiply"
+		return TwoOperands("mulsd")
+	if instruction.typeName is "Divide"
+		return TwoOperands("divsd")
+	"binary " + instruction.typeName
+TwoOperands(opCode Text) Text
+	InstrToAsm(CompInstruction.BinaryOp("Add", 0, 1, 2)).TwoOperands("addsd") is "movsd xmm2, xmm0\naddsd xmm2, xmm1"
+	let result = Xmm(instruction.ResultRegister)
+	"movsd " + result + ", " + Xmm(instruction.register) + "\n" + opCode + " " + result + ", " + Xmm(instruction.Amount)
+Xmm(reg Number) Text
+	InstrToAsm(CompInstruction.ReturnOp(0)).Xmm(7) is "xmm7"
+	"xmm" + reg to Text

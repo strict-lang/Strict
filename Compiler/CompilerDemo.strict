@@ -3,7 +3,7 @@ Run
 	logger.Log("=== Strict native compiler demo ===")
 	logger.Log(Process.Find("nasm"))
 	Directory.Create("Compiler/output")
-	constant asm = InstructionsToNasm.Empty.CompileSimpleAdd(Platform.Windows)
+	constant asm = InstructionsToNasm.SimpleAdd(Platform.Windows).Compile
 	logger.Log(asm)
 	File("Compiler/output/add.asm").Write(asm)
 	logger.Log("wrote Compiler/output/add.asm")

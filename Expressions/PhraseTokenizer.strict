@@ -8,7 +8,8 @@ TokenCount Number
 	Tokens.Length
 Token(index Number) Text
 	PhraseTokenizer("a + b").Token(1) is "+"
-	Tokens(index)
+	constant tokens = Tokens
+	tokens(index)
 IsValidInput Boolean
 	PhraseTokenizer("a + b").IsValidInput is true
 	PhraseTokenizer("").IsValidInput is false

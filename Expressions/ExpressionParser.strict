@@ -81,6 +81,6 @@ IsTypeCompare(line Text) Boolean
 IsNumberLiteral(line Text) Boolean
 	ExpressionParser("42").IsNumberLiteral("42") is true
 	ExpressionParser("x").IsNumberLiteral("x") is false
-	NumberChars("").StartsWithDigit(line)
+	NumberChars(line).StartsWithDigit
 to Text
 	text

@@ -1,7 +1,9 @@
 has maxCount Number
 AnalyzeList(steps Number) Number
 	LinkedListAnalyzer(5).AnalyzeList(3) is 3
+	LinkedListAnalyzer(2).AnalyzeList(3) is 2
 	mutable result = 0
-	for Range(0, steps)
-		result = result + 1
+	for steps
+		if result < maxCount
+			result = result + 1
 	result

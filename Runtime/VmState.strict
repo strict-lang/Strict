@@ -3,14 +3,19 @@ has pc Number
 has didReturn Boolean
 has returnValue VmValue
 Advance VmState
+	VmState.Empty.Advance.pc is 1
 	VmState(memory, pc + 1, didReturn, returnValue)
 JumpBy(steps Number) VmState
+	VmState.Empty.JumpBy(2).pc is 3
 	VmState(memory, pc + 1 + steps, didReturn, returnValue)
 WithMemory(next VmMemory) VmState
+	VmState.Empty.WithMemory(VmMemory.Empty).pc is 0
 	VmState(next, pc, didReturn, returnValue)
 WithReturn(slot VmValue) VmState
+	VmState.Empty.WithReturn(VmValue.FromNumber(1)).didReturn is true
 	VmState(memory, pc, true, slot)
 Empty VmState
+	VmState.Empty.didReturn is false
 	VmState(VmMemory.Empty, 0, false, VmValue.None)
 to Text
 	"pc=" + pc to Text + " done=" + didReturn to Text

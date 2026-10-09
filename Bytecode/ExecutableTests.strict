@@ -2,7 +2,7 @@ has logger
 Run
 	constant method = BinaryMethod.Create("Calc", "Number")
 	logger.Log(method.methodName)
-	constant op = InstructionBuilder.BinaryOp(InstructionType.Add, 0, 1, 2)
+	constant op = BytecodeInstruction.BinaryOp(InstructionType.Add, 0, 1, 2)
 	constant withAdd = method.WithInstruction(op)
 	logger.Log(withAdd.InstructionCount)
 	logger.Log(withAdd.UsesBinary)

@@ -257,11 +257,17 @@ public class TestInterpreterTests
 			repos.LoadStrictPackage("Strict/Math"), repos.LoadStrictPackage("Strict/ImageProcessing"),
 			repos.LoadStrictPackage("Strict/Language"), repos.LoadStrictPackage("Strict/Expressions"),
 			repos.LoadStrictPackage("Strict/Examples"));
-		var tasks = new List<Task>();
-		foreach (var packageToTest in packages)
-			tasks.Add(
-				Task.Run(() => new TestInterpreter(packages[0]).RunAllTestsInPackage(packageToTest)));
-		await Task.WhenAll(tasks);
+		var previousDirectory = Environment.CurrentDirectory;
+		Environment.CurrentDirectory = strict.FolderPath;
+		try
+		{
+			await Task.WhenAll(packages.Select(packageToTest =>
+				Task.Run(() => new TestInterpreter(packages[0]).RunAllTestsInPackage(packageToTest))));
+		}
+		finally
+		{
+			Environment.CurrentDirectory = previousDirectory;
+		}
 	}
 
 	//ncrunch: no coverage start

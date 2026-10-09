@@ -12,7 +12,7 @@ public sealed class StrictBytecodeConversionTests
 		foreach (var typeName in new[]
 			{
 				"InstructionType", "InstructionNames", "Register", "Registry", "ValueKind",
-				"ExpressionKind", "BytecodeValue", "BytecodeInstruction", "InstructionBuilder",
+				"ExpressionKind", "BytecodeValue", "BytecodeInstruction",
 				"InstructionText", "InvokeInfo", "NameTable", "BinaryMember", "BinaryMethod",
 				"BinaryTypeData", "BinaryExecutable", "GenerationResult", "ExpressionCodegen",
 				"LineGenerator", "NumberLiteral", "Decompiler", "InstructionList"
@@ -44,15 +44,15 @@ public sealed class StrictBytecodeConversionTests
 	}
 
 	[Test]
-	public async Task LoadInstructionBuilderFromBytecodePackage()
+	public async Task LoadInstructionFactoriesFromBytecodePackage()
 	{
 		using var package =
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Bytecode");
-		var builder = package.GetType("InstructionBuilder");
+		var builder = package.GetType("BytecodeInstruction");
 		foreach (var name in new[]
 			{
 				"SetNumber", "LoadConstant", "LoadVariable", "StoreConstant", "StoreRegister", "BinaryOp",
-				"ReturnOp", "JumpOp", "InvokeOp", "PrintOp"
+				"ReturnOp", "JumpOp"
 			})
 			Assert.That(builder.Methods.Any(method => method.Name == name), Is.True, name);
 	}

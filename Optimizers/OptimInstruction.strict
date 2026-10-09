@@ -5,72 +5,42 @@ has label Text
 to Text
 	typeName + " r" + register to Text + " " + amount to Text + " " + label
 IsLoadConstant Boolean
-	if typeName is "LoadConstantToRegister"
-		return true
-	false
+	typeName is "LoadConstantToRegister"
 IsLoadVariable Boolean
-	if typeName is "LoadVariableToRegister"
-		return true
-	false
+	typeName is "LoadVariableToRegister"
 IsStoreRegister Boolean
-	if typeName is "StoreRegisterToVariable"
-		return true
-	false
+	typeName is "StoreRegisterToVariable"
 IsStoreConstant Boolean
-	if typeName is "StoreConstantToVariable"
-		return true
-	false
+	typeName is "StoreConstantToVariable"
 IsReturn Boolean
-	if typeName is "Return"
-		return true
-	false
+	typeName is "Return"
 IsBinary Boolean
-	if typeName is "Add"
-		return true
-	if typeName is "Subtract"
-		return true
-	if typeName is "Multiply"
-		return true
-	if typeName is "Divide"
-		return true
-	if typeName is "Modulo"
+	OptimInstruction.BinaryOp("Modulo", 0, 1, 2).IsBinary is true
+	if typeName is in ("Add", "Subtract", "Multiply", "Divide", "Modulo")
 		return true
 	IsCompare
 IsCompare Boolean
-	if typeName is "Equal"
-		return true
-	if typeName is "NotEqual"
-		return true
-	if typeName is "LessThan"
-		return true
-	if typeName is "GreaterThan"
-		return true
-	false
+	OptimInstruction("LessThan", 0, 1, "2").IsCompare is true
+	typeName is in ("Equal", "NotEqual", "LessThan", "GreaterThan")
 IsJump Boolean
-	if typeName is "Jump"
-		return true
-	if typeName is "JumpIfTrue"
-		return true
-	if typeName is "JumpIfFalse"
-		return true
-	if typeName is "JumpIfNotZero"
-		return true
-	false
+	OptimInstruction("JumpIfFalse", 0, 1, "").IsJump is true
+	typeName is in ("Jump", "JumpIfTrue", "JumpIfFalse", "JumpIfNotZero")
 IsJumpEnd Boolean
-	if typeName is "JumpEnd"
-		return true
-	false
-IsBlockBoundary Boolean
-	if typeName is "Invoke"
-		return true
-	if typeName is "LoopBegin"
-		return true
-	if typeName is "LoopEnd"
-		return true
-	IsJump
+	typeName is "JumpEnd"
 ResultRegister Number
+	OptimInstruction.BinaryOp("Add", 0, 1, 2).ResultRegister is 2
 	if IsBinary
 		return label to Number
 	register
-Empty OptimInstruction
-	OptimInstruction("Return", 0, 0, "")
+LoadConstant(reg Number, number Number) OptimInstruction
+	OptimInstruction.LoadConstant(0, 5).IsLoadConstant is true
+	OptimInstruction("LoadConstantToRegister", reg, number, "")
+StoreConstant(name Text, number Number) OptimInstruction
+	OptimInstruction.StoreConstant("n", 5).IsStoreConstant is true
+	OptimInstruction("StoreConstantToVariable", 0, number, name)
+BinaryOp(name Text, left Number, right Number, result Number) OptimInstruction
+	OptimInstruction.BinaryOp("Add", 0, 1, 2).IsBinary is true
+	OptimInstruction(name, left, right, result to Text)
+ReturnOp(reg Number) OptimInstruction
+	OptimInstruction.ReturnOp(0).IsReturn is true
+	OptimInstruction("Return", reg, 0, "")

@@ -72,8 +72,8 @@ ShouldUseConstant(memberIsConstant Boolean, initialValueIsConstant Boolean) Bool
 	ShouldUseConstant(true, true) is false
 	(not memberIsConstant) and initialValueIsConstant
 CanRemoveDeclaration(name Text, remainingLines Texts) Boolean
-	CanRemoveDeclaration("x", ("x + 1",)) is false
-	CanRemoveDeclaration("x", ("5",)) is true
+	CanRemoveDeclaration("x", ("x + 1")) is false
+	CanRemoveDeclaration("x", ("5")) is true
 	for remainingLines
 		if value.IndexOf(name) is not -1
 			return false

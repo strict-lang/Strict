@@ -22,6 +22,16 @@ public sealed class ListAdvancedTests : TestExpressions
 				InstanceOf<Context.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural>());
 
 	[Test]
+	public void ExistingTypeWithListPrefixCanBeUsed()
+	{
+		using var listCall = new Type(TestPackage.Instance,
+			new TypeLines("ListCall", "has text", "Length Number", "\tListCall(\"ab\").Length is 2",
+				"\ttext.Length")).ParseMembersAndMethods(parser);
+		Assert.That(listCall.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Does.StartWith("ListCall(\"ab\").Length is 2"));
+	}
+
+	[Test]
 	public void ListGenericLengthAddition()
 	{
 		using var program = new Type(TestPackage.Instance,

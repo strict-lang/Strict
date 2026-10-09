@@ -1,13 +1,14 @@
-has text
-ExtractDeclaredName(line Text) Text
-	DeclarationRules("").ExtractDeclaredName("let count = 1") is "count"
-	DeclarationRules("").ExtractDeclaredName("mutable total = 0") is "total"
-	let withoutKeyword = StripKeyword(line)
-	let equalsIndex = withoutKeyword.IndexOf(" = ")
+has line Text
+DeclaredName Text
+	DeclarationRules("let count = 1").DeclaredName is "count"
+	DeclarationRules("mutable total = 0").DeclaredName is "total"
+	constant withoutKeyword = WithoutKeyword
+	constant equalsIndex = withoutKeyword.IndexOf(" = ")
 	if equalsIndex is -1
 		return withoutKeyword.Trim
 	withoutKeyword.Substring(0, equalsIndex).Trim
-StripKeyword(line Text) Text
+WithoutKeyword Text
+	DeclarationRules("constant x = 1").WithoutKeyword is "x = 1"
 	if line.StartsWith("let ")
 		return line.Substring(4, line.Length - 4)
 	if line.StartsWith("constant ")
@@ -15,17 +16,15 @@ StripKeyword(line Text) Text
 	if line.StartsWith("mutable ")
 		return line.Substring(8, line.Length - 8).Trim
 	line
-IsDeclaration(line Text) Boolean
-	DeclarationRules("").IsDeclaration("let x = 1") is true
-	if line.StartsWith("let ")
-		return true
-	if line.StartsWith("constant ")
-		return true
+IsDeclaration Boolean
+	DeclarationRules("let x = 1").IsDeclaration is true
+	DeclarationRules("x = 1").IsDeclaration is false
+	line.StartsWith("let ") or line.StartsWith("constant ") or IsMutableDeclaration
+IsMutableDeclaration Boolean
 	line.StartsWith("mutable ")
-IsMutableDeclaration(line Text) Boolean
-	line.StartsWith("mutable ")
-IsReassignmentOf(line Text, name Text) Boolean
-	DeclarationRules("").IsReassignmentOf("count = 1", "count") is true
-	if IsDeclaration(line)
+IsReassignmentOf(name Text) Boolean
+	DeclarationRules("count = 1").IsReassignmentOf("count") is true
+	DeclarationRules("let count = 1").IsReassignmentOf("count") is false
+	if IsDeclaration
 		return false
 	line.StartsWith(name + " = ")

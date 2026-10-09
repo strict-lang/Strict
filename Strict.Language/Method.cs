@@ -279,9 +279,25 @@ public sealed class Method : Context
 			(currentLine == body.Method.GetNameWithParameters() ||
 				currentLine.EndsWith("." + body.Method.GetNameWithParameters(), StringComparison.Ordinal) ||
 				currentLine.Contains("." + body.Method.GetNameWithParameters() + " ") ||
-				currentLine.Contains(body.Method.GetNameWithParameters() + ".")))
+				currentLine.Contains(body.Method.GetNameWithParameters() + ".")) &&
+			!IsCallOnOtherTypedInstance(body, currentLine))
 			throw new RecursiveCallCausesStackOverflow(body);
 		return expression;
+	}
+
+	private bool IsCallOnOtherTypedInstance(Body body, string currentLine)
+	{
+		var line = currentLine.AsSpan().TrimStart();
+		var nameEnd = line.IndexOfAny('.', '(');
+		if (nameEnd <= 0)
+			return false;
+		var instanceName = line[..nameEnd].ToString();
+		var instanceType = Type.FindMember(instanceName)?.Type ?? body.FindVariable(instanceName)?.Type ??
+			parameters.FirstOrDefault(parameter => parameter.Name == instanceName)?.Type ??
+			(char.IsUpper(instanceName[0])
+				? Type.FindType(instanceName)
+				: null);
+		return instanceType != null && instanceType != Type;
 	}
 
 	private string GetNameWithParameters()
@@ -299,11 +315,15 @@ public sealed class Method : Context
 	public sealed class RecursiveCallCausesStackOverflow(Body body) : ParsingFailed(body);
 
 	private static bool IsTestExpression(Body body, string currentLine, Expression expression) =>
+		!IsLastMethodLine(body) &&
 		(currentLine.Contains($" {BinaryOperator.Is} ") || (expression.GetType().Name == "MethodCall" &&
 			body.ParsingLineNumber == body.Method.Tests.Count + 1 &&
 			(body.Parent != null || body.ParsingLineNumber < body.LineRange.End.Value - 1))) &&
 		!currentLine.Trim().StartsWith("if ", StringComparison.Ordinal) &&
 		!currentLine.Contains(" then ") && expression.ReturnType.IsBoolean;
+
+	private static bool IsLastMethodLine(Body body) =>
+		body.Parent == null && body.ParsingLineNumber == body.LineRange.End.Value - 1;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Expression ParseExpression(Body body, ReadOnlySpan<char> text, bool makeMutable = false) =>

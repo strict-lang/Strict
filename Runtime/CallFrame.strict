@@ -33,28 +33,11 @@ BoolAt(index Number) VmValue
 		return VmValue("Boolean", 0, "true", true)
 	VmValue("Boolean", 0, "false", false)
 Set(name Text, slot VmValue) CallFrame
+	CallFrame.Empty.Set("n", VmValue.FromNumber(3)).Count is 1
 	Append(name, slot.kind, slot.number, TextSlot(slot))
 Append(name Text, kind Text, amount Number, content Text) CallFrame
-	mutable nextNames = List(Mutable(Text))
-	mutable nextKinds = List(Mutable(Text))
-	mutable nextNumbers = List(Mutable(Number))
-	mutable nextTexts = List(Mutable(Text))
-	FillCopies(nextNames, nextKinds, nextNumbers, nextTexts)
-	nextNames.Add(name)
-	nextKinds.Add(kind)
-	nextNumbers.Add(amount)
-	nextTexts.Add(content)
-	CallFrame(nextNames, nextKinds, nextNumbers, nextTexts)
-FillCopies(nextNames Texts, nextKinds Texts, nextNumbers Numbers, nextTexts Texts) Mutable(Texts)
-	for names
-		nextNames.Add(value)
-	for kinds
-		nextKinds.Add(value)
-	for numbers
-		nextNumbers.Add(value)
-	for texts
-		nextTexts.Add(value)
-	nextNames
+	CallFrame.Empty.Append("a", "Number", 1, "").Append("b", "Number", 2, "").Count is 2
+	CallFrame(names + name, kinds + kind, numbers + amount, texts + content)
 TextSlot(slot VmValue) Text
 	if slot.kind is "Boolean"
 		return slot.FlagText

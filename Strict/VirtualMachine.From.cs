@@ -67,8 +67,8 @@ public sealed partial class VirtualMachine
 			if (argItems.Count == 0 || argItems[0].TryGetValueTypeInstance() != null)
 				continue;
 			var colorType = memberGeneric.ImplementationTypes[0];
-			var byteType = executable.basePackage.FindType("Byte") ??
-				executable.basePackage.GetType(Type.Number);
+			var byteType = executable.TypeResolver.FindType("Byte") ??
+				executable.TypeResolver.GetType(Type.Number);
 			values[memberIndex] = ConvertByteListToColorList(argItems, memberType, colorType, byteType);
 		}
 	}

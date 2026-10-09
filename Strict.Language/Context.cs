@@ -90,7 +90,8 @@ public abstract class Context
 				(self.IsGeneric && name == self.Name + GenericImplementationPostfix)))
 				return self;
 			if ((name.StartsWith("List", StringComparison.Ordinal) ||
-					name.StartsWith("list", StringComparison.Ordinal)) && name.Length > 4 && name[4] != '(')
+					name.StartsWith("list", StringComparison.Ordinal)) && name.Length > 4 && name[4] != '(' &&
+				FindTypeCore(name.Split('(')[0], this) == null)
 				throw new ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(name);
 			if (name.EndsWith('s'))
 				return TryGetTypeFromPluralNameAsListWithSingularName(name);
@@ -141,6 +142,9 @@ public abstract class Context
 			return null;
 		var rest = name[(mainType.Name.Length + 1)..^1];
 		var arguments = rest.Split(',', StringSplitOptions.TrimEntries);
+		if (arguments.Any(argument => argument.Length == 0 || !char.IsUpper(argument[0]) &&
+			!argument.Contains(' ')))
+			return null;
 		if (rest.Contains(Type.GenericUppercase))
 		{
 			var namedTypes = GetNamedTypes(mainType, arguments);

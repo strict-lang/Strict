@@ -14,9 +14,8 @@ public sealed class StrictRuntimeConversionTests
 		var path = GetRuntimePath();
 		foreach (var typeName in new[]
 			{
-				"VmValue", "RegisterBank", "CallFrame", "VmMemory", "VmInstruction", "InstrBuilder",
-				"InstrList", "VmState", "ArithmeticExec", "InstructionExec", "VirtualMachine",
-				"RunnerPipeline"
+				"VmValue", "RegisterBank", "CallFrame", "VmMemory", "VmInstruction", "InstrList",
+				"VmState", "ArithmeticExec", "InstructionExec", "VirtualMachine", "RunnerPipeline"
 			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
@@ -40,7 +39,7 @@ public sealed class StrictRuntimeConversionTests
 		var vm = package.GetType("VirtualMachine");
 		Assert.That(vm.Methods.Any(method => method.Name == "Run"), Is.True);
 		Assert.That(vm.Methods.Any(method => method.Name == "RunFrom"), Is.True);
-		Assert.That(vm.Methods.Any(method => method.Name == "Empty"), Is.True);
+		Assert.That(vm.Members.Any(member => member.Name == "ops"), Is.True);
 	}
 
 	[Test]
@@ -66,9 +65,8 @@ public sealed class StrictRuntimeConversionTests
 		var exec = package.GetType("InstructionExec");
 		Assert.That(exec.Methods.Any(method => method.Name == "Execute"), Is.True);
 		var pipeline = package.GetType("RunnerPipeline");
-		Assert.That(pipeline.Methods.Any(method => method.Name == "RunSimple"), Is.True);
-		Assert.That(pipeline.Methods.Any(method => method.Name == "RunExpression"), Is.True);
-		Assert.That(pipeline.Methods.Any(method => method.Name == "RunStored"), Is.True);
+		Assert.That(pipeline.Methods.Any(method => method.Name == "Run"), Is.True);
+		Assert.That(pipeline.Methods.Any(method => method.Name == "Stored"), Is.True);
 	}
 
 	[Test]
@@ -81,7 +79,7 @@ public sealed class StrictRuntimeConversionTests
 		Assert.That(value.Methods.Any(method => method.Name == "EqualsValue"), Is.True);
 		var arith = package.GetType("ArithmeticExec");
 		Assert.That(arith.Methods.Any(method => method.Name == "Compute"), Is.True);
-		Assert.That(arith.Methods.Any(method => method.Name == "Add"), Is.True);
+		Assert.That(arith.Methods.Any(method => method.Name == "Calculate"), Is.True);
 	}
 
 	private static string GetRuntimePath() =>

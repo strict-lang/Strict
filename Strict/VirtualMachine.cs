@@ -146,10 +146,10 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		var fullTypeName = member.FullTypeName;
 		var contextualTypeName = GetBinaryMemberContextualTypeName(entryTypeName, fullTypeName);
 		return (fullTypeName.Contains(Context.ParentSeparator)
-				? executable.basePackage.FindFullType(fullTypeName)
-				: null) ?? executable.basePackage.FindType(fullTypeName) ??
-			executable.basePackage.FindType(member.JustTypeName) ??
-			executable.basePackage.FindType(contextualTypeName) ?? executable.numberType;
+				? executable.TypeResolver.FindFullType(fullTypeName)
+				: null) ?? executable.TypeResolver.FindType(fullTypeName) ??
+			executable.TypeResolver.FindType(member.JustTypeName) ??
+			executable.TypeResolver.FindType(contextualTypeName) ?? executable.numberType;
 	}
 
 	private static string GetBinaryMemberContextualTypeName(string entryTypeName,
@@ -349,8 +349,8 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 			return (null, "");
 		var typeFullName = currentMethodContext[..dotIndex];
 		var type = typeFullName.Contains('/')
-			? executable.basePackage.FindFullType(typeFullName)
-			: executable.basePackage.FindType(typeFullName);
+			? executable.TypeResolver.FindFullType(typeFullName)
+			: executable.TypeResolver.FindType(typeFullName);
 		if (type == null)
 			return (null, "");
 		var filePath = type.FilePath;

@@ -298,6 +298,18 @@ public sealed class ForTests : TestExpressions
 	}
 
 	[Test]
+	public void ExplicitValueUsageDoesNotPipeValue()
+	{
+		using var programType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ExplicitValueUsageDoesNotPipeValue), "has numbers", "Sum Number",
+					"\tmutable total = 0", "\tmutable seen = List(Mutable(Number))", "\tfor numbers",
+					"\t\tseen.Add(value)", "\t\ttotal = total + value", "\ttotal + seen.Length")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Does.Contain("total = total + value"));
+	}
+
+	[Test]
 	public void DirectOuterIndexerPreservesSourceShape()
 	{
 		using var programType = new Type(TestPackage.Instance,

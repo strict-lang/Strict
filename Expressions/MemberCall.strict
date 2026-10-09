@@ -1,6 +1,6 @@
 has instance Text
 has memberName Text
-has memberTypeName Text
+has MemberTypeName Text
 to Text
 	MemberCall("image", "Width", "Number") to Text is "image.Width"
 	MemberCall("", "value", "Any") to Text is "value"

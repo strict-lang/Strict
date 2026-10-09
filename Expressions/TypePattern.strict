@@ -1,4 +1,4 @@
-has concreteTypeName Text
+has ConcreteTypeName Text
 has displayName Text
 IsConstant Boolean
 	true

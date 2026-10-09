@@ -1,8 +1,8 @@
 has ruleName Text
 has target Text
-has message Text
+has Message Text
 to Text
-	ValidationIssue("UnusedMember", "count", "unused").to Text is "UnusedMember: count"
+	ValidationIssue("UnusedMember", "count", "unused") to Text is "UnusedMember: count"
 	ruleName + ": " + target
 IsUnusedMember Boolean
 	ruleName is "UnusedMember"

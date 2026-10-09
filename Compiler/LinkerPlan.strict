@@ -1,7 +1,7 @@
 has nasmCommand Text
 has linkerCommand Text
-has objectPath Text
-has exePath Text
+has ObjectPath Text
+has ExePath Text
 to Text
 	nasmCommand + " | " + linkerCommand
 ForAsm(asmPath Text, platform Number) LinkerPlan
@@ -12,9 +12,9 @@ ForAsm(asmPath Text, platform Number) LinkerPlan
 	ForLinux(asmPath)
 ForWindows(asmPath Text) LinkerPlan
 	let objPath = asmPath + ".obj"
-	let exePath = asmPath + ".exe"
+	let executable = asmPath + ".exe"
 	let nasm = "nasm -f win64 " + asmPath + " -o " + objPath
-	LinkerPlan(nasm, WindowsLink(objPath, exePath), objPath, exePath)
+	LinkerPlan(nasm, WindowsLink(objPath, executable), objPath, executable)
 ForLinux(asmPath Text) LinkerPlan
 	let objPath = asmPath + ".o"
 	let nasm = "nasm -f elf64 " + asmPath + " -o " + objPath
@@ -23,7 +23,6 @@ ForMac(asmPath Text) LinkerPlan
 	let objPath = asmPath + ".o"
 	let nasm = "nasm -f macho64 " + asmPath + " -o " + objPath
 	LinkerPlan(nasm, "clang " + objPath + " to " + asmPath, objPath, asmPath)
-WindowsLink(objPath Text, exePath Text) Text
-	"gcc " + objPath + " to " + exePath + " with kernel32"
-Empty LinkerPlan
-	LinkerPlan("", "", "", "")
+WindowsLink(objPath Text, executable Text) Text
+	LinkerPlan.ForWindows("out.asm").linkerCommand is "gcc out.asm.obj to out.asm.exe with kernel32"
+	"gcc " + objPath + " to " + executable + " with kernel32"

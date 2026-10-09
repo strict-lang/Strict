@@ -12,6 +12,56 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
+## Static-like types removed — 2026-10-09 (evening)
+
+- All `has dummy Number` types are gone (see "Converting C# static classes" under Rules for the
+  guide). Builders became factories on the built type (`OptimInstruction.LoadConstant`,
+  `VmInstruction.ReturnOp`, `CompInstruction.BinaryOp`, `BytecodeInstruction.SetNumber`); passes and
+  executors own their data (`ConstantFolder(ops).Optimize`, `VirtualMachine(ops).Run`,
+  `InstructionExec(state, instruction).Execute`, `ArithmeticExec(left, right).Compute(op)`,
+  `NasmFormat(platform).Format`, `EntryPoint(name, platform).Build`, `ToolRunner(name).Execute`,
+  `DeclarationRules(line).IsDeclaration`, `NumberLiteral(text).IsNumber`). Removed OpBuilder,
+  IdentityRules, InstrBuilder, CompBuilder, RegisterMap, InstructionBuilder.
+- Optimizers, Runtime and Compiler folders pass fully from source and binary; demo outputs now
+  compute correct results (constant folding `5 + 3` → `8` in r2, Windows linker command).
+- Runtime fixes found on the way (each with a test): VM number comparisons used as values
+  (`<`, `>=` in `and`/`or` recursed forever), `>=`/`<=`/`in` in if conditions compiled to Equal,
+  Boolean `for` loops return true when any iteration is true, inline `a then b else c` as last
+  expression returns its value, RedundantLoadEliminator only remaps reads until the register is
+  rewritten (and remaps Invoke/FieldLoad/ConstructValueType/WriteToList), `value = ...` inside a
+  method no longer leaks into the caller's loop `value`, type-qualified calls never borrow an
+  unrelated caller instance, method last line is never a test, `Type.None` resolves to the type's
+  method, constructor args like `Holder(code).Name, x` tokenize, text brackets are ignored when
+  matching brackets, `TypeName(value)` is a constructor not a generic type, cached binaries older
+  than the runtime regenerate.
+- Remaining standalone failures (16): HighLevelRuntime (BodyResult, Evaluators, ExecutionContext,
+  ForEvaluator, Interpreter, RuntimeStatistics, RuntimeValue), Bytecode (BinaryExecutable,
+  BinaryTypeData, BytecodeValue, Decompiler, ExecutableTests, InvokeInfo, NameTable, Registry) and
+  Validators/TypeValidator: unused data members, methods without tests, for-loop round trips and a
+  few logic bugs in the generated code.
+
+## Example and project suite — 2026-10-09 (later)
+
+- New Slow test `RunStrictProgramFromSourceAndCachedBinaryInFreshProcess` runs every `Examples/*.strict`
+  and every `.strict` in the nine project folders in a fresh process (source, then cached binary for
+  programs with `Run`; library types must parse, validate and pass tests up to "No Run method").
+- All 37 examples pass from source and binary. All `Language` files pass. Every demo/test program
+  passes except `Bytecode/ExecutableTests` (VM: unresolved `parameters`).
+- Runtime fixes: `Run(numbers)` without args uses an empty list; binaries stub generic bases
+  (`ErrorWithValue(Number)`) and nested generic args (`List(Mutable(Text))`) on demand; entry-package
+  types load into their own child package so `Language/Type` no longer merges with `Strict/Type`;
+  `IsFileInstance` no longer needs File in the binary; Examples is loaded as a package (sibling types);
+  RunExpression reuses an already loaded type.
+- Language/validator fixes: `Type.IsMutable` only for `Mutable`/`Mutable(...)`; existing `List*` types
+  resolve; same-named method on another typed member is not recursion; own type name call is the
+  constructor; an uppercase member wins over a same-named type in `Member.x`; text literals with
+  spaces are unescaped; `()` inside text is allowed; `Mutable(...)`-returning calls (`list.Add`)
+  count as mutation; implicit loop `value` stays implicit; ConstantCollapser leaves non-literal `to`
+  alone; test lines calling their own method are no stack overflow; `Type` usable-member cache is
+  thread safe; Text.Substring clamps like the VM.
+- Remaining standalone failures (~80): ~30 `has dummy Number` helper types (design decision pending),
+  data members never read, methods missing tests, and a few interpreter/VM issues.
+
 ## Phase 1 continuation — 2026-10-09
 
 - Added `Package.Load`, `ReadTypes`, and `ReadType` in Strict plus `Language/PackageTests.strict`.
@@ -651,6 +701,25 @@ These C# / .NET features need to be added to the Strict runtime before each phas
 6. **Start with the simplest files** (constants, enums, small data types) before tackling parsers/VMs.
 7. **Deferred items** (async, HTTP, reflection) will remain in C# thin wrappers until the runtime supports them.
 8. **Update this file** after each new `.strict` file is created or each C# file is replaced.
+9. **No static-like types.** Never add `has dummy Number` (or any unused member) to get past
+   "types without members must be traits". See the guide below.
+
+### Converting C# static classes and helpers
+
+Strict has no static methods: every method runs on an instance whose members are its data. A 1:1
+port of a C# static class gives a member-less type, which only traits may be. Decide per helper:
+
+| C# shape | Strict shape | Example |
+|----------|--------------|---------|
+| Static class whose methods all take the same argument `X` | Type with `has x X`, methods drop that parameter; call `Pass(x).Run` | `ConstantFolder.Optimize(ops)` → `ConstantFolder(ops).Optimize` |
+| Factory/builder creating instances of `T` | Methods on `T` itself, called type-qualified (`T.Create(...)`), no members used | `OpBuilder.LoadConstant(0, 5)` → `OptimInstruction.LoadConstant(0, 5)` |
+| Helper used by only one type | Private method of that user type | `IdentityRules` → inside `StrengthReduce` |
+| Pure function on a base value (Number/Text) | Method on the type that owns the data it needs, or the caller | `Compute(op, left, right)` stays in the pass that owns the ops |
+| Pipeline/orchestrator calling several passes | Type holding the input (`has ops OpList`), chaining `Pass(ops).Optimize` | `AllOptimizers(ops).Optimize` |
+| Constants-only class | `constant` members on the type that uses them | `InstructionNames` → constants on the instruction type |
+
+Also drop the `Empty` = `X(0)` factory that only existed for the dummy member, and the
+`for 0 / list.Add(...)` workaround: `mutable list = List(Mutable(T))` is an empty list.
 
 ---
 

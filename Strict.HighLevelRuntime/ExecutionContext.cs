@@ -102,6 +102,8 @@ public sealed class ExecutionContext(Type type,
 				return ctx.variables[name] = value;
 			if (ctx.TrySetThisMemberValue(name, value))
 				return value;
+			if (name == Type.ValueLowercase && ctx.This.HasValue)
+				return ctx.Variables[name] = value;
 			ctx = ctx.Parent;
 		}
 		return Variables[name] = value;

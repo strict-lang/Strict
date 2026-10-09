@@ -187,8 +187,15 @@ public static class SpanExtensions
 		if (startIndex < 0)
 			return -1;
 		var bracketCount = 1;
+		var isInText = false;
 		for (var index = startIndex + 1; index < input.Length; index++)
 		{
+			if (isInText && input[index] == '\\')
+				index++;
+			else if (input[index] == '"')
+				isInText = !isInText;
+			if (isInText)
+				continue;
 			bracketCount = CountBrackets(input, index, bracketCount);
 			if (bracketCount == 0)
 				return index;

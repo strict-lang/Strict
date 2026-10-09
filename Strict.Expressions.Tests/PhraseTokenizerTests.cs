@@ -41,6 +41,8 @@ public sealed class PhraseTokenizerTests
 	[TestCase("5 + 2 + 3 + 5 * 5", 9)]
 	[TestCase("\"5 + 2\"", 1)]
 	[TestCase("\"5 + 2\" + 5", 3)]
+	[TestCase("\"Run()\" + 5", 3)]
+	[TestCase("(first.amount is 5) or done", 7)]
 	[TestCase("\"5 + 2\" + \"6 + 3\"", 3)]
 	[TestCase("\"hello \"\"Ben\"\"\"", 1)]
 	[TestCase("\"hello + \"\"Ben\"\"\"", 1)]

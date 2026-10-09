@@ -527,6 +527,77 @@ public sealed class InterpreterTests
 			Throws.InstanceOf<TypeParser.SelfRecursiveCallWithSameArgumentsDetected>());
 
 	[Test]
+	public void ListMemberOfUppercaseTypeMemberCanBeIterated()
+	{
+		using var holder = CreateType("TextsHolder", "has texts", "Length Number", "\ttexts.Length");
+		using var counter = CreateType("HolderCounter", "has TextsHolder", "Count Number",
+			"\tmutable count = 0", "\tfor TextsHolder.texts", "\t\tcount = count + 1", "\tcount");
+		var texts = new ValueInstance(TestPackage.Instance.GetListImplementationType(
+			TestPackage.Instance.GetType(Type.Text)), [new ValueInstance("a"), new ValueInstance("b")]);
+		var instance = new ValueInstance(counter, [new ValueInstance(holder, [texts])]);
+		Assert.That(interpreter.Execute(counter.Methods[0], instance, []).Number, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void ConstantEmptyListHasNoElements()
+	{
+		using var t = CreateType("EmptyConstant", "has number", "Count Number",
+			"\tconstant none = List(Text)", "\tnone.Length");
+		Assert.That(interpreter.Execute(t.Methods[0]).Number, Is.Zero);
+	}
+
+	[Test]
+	public void TypeQualifiedCallToOtherTypeDoesNotUseCurrentInstance()
+	{
+		using var maker = CreateType("Maker", "has number", "Make(amount Number) Maker", "\tMaker(amount)");
+		using var user = CreateType("MakerUser", "has text", "Use Number", "\tMaker.Make(3).number");
+		Assert.That(interpreter.Execute(user.Methods[0], new ValueInstance(user, [new ValueInstance("x")]),
+			[]).Number, Is.EqualTo(3));
+	}
+
+	[Test]
+	public async Task ListAddInsideLoopKeepsLoopValue()
+	{
+		using var strict = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var parser = new MethodExpressionParser();
+		using var item = new Type(strict, new TypeLines("AddItem", "has number", "Double Number",
+			"	number * 2")).ParseMembersAndMethods(parser);
+		using var adder = new Type(strict, new TypeLines("LoopAdder", "has addItems", "Sum Number",
+			"	mutable seen = List(Mutable(AddItem))", "	mutable total = 0", "	for addItems",
+			"		seen.Add(value)", "		total = total + value.number", "	total + seen.Length")).
+			ParseMembersAndMethods(parser);
+		var strictInterpreter = new Interpreter(strict, TestBehavior.Disabled);
+		var items = new ValueInstance(strict.GetListImplementationType(item), [
+			new ValueInstance(item, [new ValueInstance(strictInterpreter.numberType, 1)]),
+			new ValueInstance(item, [new ValueInstance(strictInterpreter.numberType, 2)])
+		]);
+		Assert.That(strictInterpreter.Execute(adder.Methods[0], new ValueInstance(adder, [items]), []).
+			Number, Is.EqualTo(5));
+	}
+
+	[Test]
+	public void NestedTypeQualifiedCallDoesNotUseCallerInstance()
+	{
+		using var inner = CreateType("InnerMaker", "has number", "Create InnerMaker", "\tInnerMaker(4)");
+		using var middle = CreateType("MiddleMaker", "has text", "Make Number",
+			"\tInnerMaker.Create.number");
+		using var user = CreateType("MakerCaller", "has numbers", "Use Number", "\tMiddleMaker.Make");
+		var numbers = new ValueInstance(TestPackage.Instance.GetListImplementationType(
+			TestPackage.Instance.GetType(Type.Number)), [new ValueInstance(interpreter.numberType, 1)]);
+		Assert.That(interpreter.Execute(user.Methods[0], new ValueInstance(user, [numbers]), []).Number,
+			Is.EqualTo(4));
+	}
+
+	[Test]
+	public void TestCallingItsOwnParameterlessMethodIsNoStackOverflow()
+	{
+		using var t = CreateType("ZeroHolder", "has number", "Zero ZeroHolder", "\tZero.number is 0",
+			"\tZeroHolder(0)");
+		Assert.That(() => new Interpreter(TestPackage.Instance, TestBehavior.TestRunner).Execute(
+			t.Methods.Single(m => m.Name == "Zero")), Throws.Nothing);
+	}
+
+	[Test]
 	public void StackOverflowCallingYourselfWithSameInstanceMember()
 	{
 		using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameInstanceMember),

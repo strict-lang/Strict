@@ -1,8 +1,5 @@
 has logger
 Run
-	constant load = CompBuilder.LoadConstant(0, 5)
-	logger.Log(InstrToAsm.Empty.Emit(load))
-	constant add = CompBuilder.BinaryOp("Add", 0, 1, 2)
-	logger.Log(InstrToAsm.Empty.Emit(add))
-	constant ret = CompBuilder.ReturnOp(2)
-	logger.Log(InstrToAsm.Empty.Emit(ret))
+	logger.Log(InstrToAsm(CompInstruction.LoadConstant(0, 5)).Emit)
+	logger.Log(InstrToAsm(CompInstruction.BinaryOp("Add", 0, 1, 2)).Emit)
+	logger.Log(InstrToAsm(CompInstruction.ReturnOp(2)).Emit)

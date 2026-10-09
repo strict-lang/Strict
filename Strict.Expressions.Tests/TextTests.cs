@@ -12,6 +12,10 @@ public sealed class TextTests : TestExpressions
 		Assert.That(((Text)ParseExpression("\"hi\\nthere\"")).Data.Text, Is.EqualTo("hi\nthere"));
 
 	[Test]
+	public void ParseTextWithNewLineAndTabEscapesRoundTrips() =>
+		ParseAndCheckOutputMatchesInput("\"for x\\n\\ty\"", new Text(method, "for x\n\ty"));
+
+	[Test]
 	public void TextToStringEscapesNewLine() =>
 		Assert.That(new Text(method, "hi\nthere").ToString(), Is.EqualTo("\"hi\\nthere\""));
 

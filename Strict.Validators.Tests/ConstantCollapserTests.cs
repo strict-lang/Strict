@@ -57,6 +57,17 @@ public sealed class ConstantCollapserTests
 	}
 
 	[Test]
+	public void KeepConstantInstanceToTextForRuntime()
+	{
+		var method = new Method(type, 1, parser, [
+			"Run Text",
+			"\tRange(0, 10) to Text"
+		]);
+		collapser.Visit(method, true);
+		Assert.That(method.GetBodyAndParseIfNeeded().ToString(), Is.EqualTo("Range(0, 10) to Text"));
+	}
+
+	[Test]
 	public void FoldTwoConstants()
 	{
 		var method = new Method(type, 1, parser, [

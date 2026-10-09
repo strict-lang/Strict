@@ -13,9 +13,9 @@ public sealed class StrictOptimizersConversionTests
 		var path = GetOptimizersPath();
 		foreach (var typeName in new[]
 			{
-				"OptimInstruction", "OpBuilder", "OpList", "OptimizerStats", "ConstantFolder",
-				"StrengthReduce", "IdentityRules", "DeadStore", "RedundantLoad", "JumpThread",
-				"UnreachableCode", "TestCodeRemove", "AllOptimizers"
+				"OptimInstruction", "OpList", "OptimizerStats", "ConstantFolder", "StrengthReduce",
+				"DeadStore", "RedundantLoad", "JumpThread", "UnreachableCode", "TestCodeRemove",
+				"AllOptimizers"
 			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
@@ -53,8 +53,7 @@ public sealed class StrictOptimizersConversionTests
 		Assert.That(folder.Methods.Any(method => method.Name == "FoldIfSimple"), Is.True);
 		var strength = package.GetType("StrengthReduce");
 		Assert.That(strength.Methods.Any(method => method.Name == "Optimize"), Is.True);
-		var rules = package.GetType("IdentityRules");
-		Assert.That(rules.Methods.Any(method => method.Name == "IsIdentityConst"), Is.True);
+		Assert.That(strength.Methods.Any(method => method.Name == "IsIdentity"), Is.True);
 	}
 
 	[Test]
@@ -67,7 +66,7 @@ public sealed class StrictOptimizersConversionTests
 		Assert.That(dead.Methods.Any(method => method.Name == "IsLoaded"), Is.True);
 		var unreachable = package.GetType("UnreachableCode");
 		Assert.That(unreachable.Methods.Any(method => method.Name == "Optimize"), Is.True);
-		Assert.That(unreachable.Methods.Any(method => method.Name == "CutAfterFirstReturn"), Is.True);
+		Assert.That(unreachable.Methods.Any(method => method.Name == "FindReturn"), Is.True);
 	}
 
 	[Test]
@@ -76,12 +75,13 @@ public sealed class StrictOptimizersConversionTests
 		using var package =
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Optimizers");
 		var list = package.GetType("OpList");
-		Assert.That(list.Methods.Any(method => method.Name == "WithoutIndex"), Is.True);
-		Assert.That(list.Methods.Any(method => method.Name == "ReplaceAt"), Is.True);
+		Assert.That(list.Methods.Any(method => method.Name == "Skip"), Is.True);
+		Assert.That(list.Methods.Any(method => method.Name == "Prepend"), Is.True);
 		Assert.That(list.Methods.Any(method => method.Name == "Empty"), Is.True);
 		var instruction = package.GetType("OptimInstruction");
 		Assert.That(instruction.Methods.Any(method => method.Name == "IsBinary"), Is.True);
 		Assert.That(instruction.Methods.Any(method => method.Name == "IsReturn"), Is.True);
+		Assert.That(instruction.Methods.Any(method => method.Name == "LoadConstant"), Is.True);
 	}
 
 	private static string GetOptimizersPath() =>

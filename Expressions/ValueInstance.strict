@@ -29,9 +29,9 @@ to Text
 	if IsTypeInstance
 		return typeName
 	number to Text
-FromNumber(number Number) ValueInstance
+FromNumber(amount Number) ValueInstance
 	FromNumber(3).number is 3
-	ValueInstance("Number", number, "", "")
-FromText(text Text) ValueInstance
+	ValueInstance("Number", amount, "", "")
+FromText(content Text) ValueInstance
 	FromText("hi").text is "hi"
-	ValueInstance("Text", 0, text, "")
+	ValueInstance("Text", 0, content, "")

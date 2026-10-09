@@ -109,7 +109,8 @@ public sealed class Runner
 		{
 			var binaryTime = new FileInfo(cachedBinaryFilePath).LastWriteTimeUtc;
 			var sourceTime = new FileInfo(strictFilePath).LastWriteTimeUtc;
-			if (binaryTime >= sourceTime && !DirectoryHasNewerStrictFile(binaryTime))
+			if (binaryTime >= sourceTime && binaryTime >= RuntimeBuildTime &&
+				!DirectoryHasNewerStrictFile(binaryTime))
 				try
 				{
 					var binary = LogTiming("Loading cached " + cachedBinaryFilePath,
@@ -143,8 +144,7 @@ public sealed class Runner
 		var sourceDir = Path.GetDirectoryName(Path.GetFullPath(strictFilePath))!;
 		var strictRoot = Path.GetFullPath(basePackage.FolderPath);
 		if (!sourceDir.StartsWith(strictRoot, StringComparison.OrdinalIgnoreCase) ||
-			string.Equals(sourceDir, strictRoot, StringComparison.OrdinalIgnoreCase) ||
-			IsExamplesDir(sourceDir))
+			string.Equals(sourceDir, strictRoot, StringComparison.OrdinalIgnoreCase))
 			return basePackage;
 		var relative = Path.GetRelativePath(strictRoot, sourceDir).
 			Replace(Path.DirectorySeparatorChar, Context.ParentSeparator).
@@ -152,6 +152,13 @@ public sealed class Runner
 		return await repositories.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator +
 			relative);
 	}
+
+	/// <summary>
+	/// A cache compiled by an older parser, generator or optimizer is outdated as well.
+	/// </summary>
+	private static readonly DateTime RuntimeBuildTime = Directory.
+		EnumerateFiles(AppContext.BaseDirectory, nameof(Strict) + "*.dll").
+		Select(File.GetLastWriteTimeUtc).DefaultIfEmpty(DateTime.MinValue).Max();
 
 	private bool DirectoryHasNewerStrictFile(DateTime binaryTime)
 	{
@@ -163,10 +170,6 @@ public sealed class Runner
 				return true;
 		return false;
 	}
-
-	private static bool IsExamplesDir(string dir) =>
-		dir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part =>
-			part.Equals("Examples", StringComparison.OrdinalIgnoreCase));
 
 	private async Task<BinaryExecutable> LoadFromSourceAndSaveBinary(Package package)
 	{
@@ -299,7 +302,8 @@ public sealed class Runner
 			return;
 		}
 		var binary = await GetBinary();
-		if (ProgramArguments.Length > 0)
+		if (ProgramArguments.Length > 0 ||
+			binary.GetRunMethods().All(method => method.parameters.Count > 0))
 		{
 			var runMethod = FindRunMethodForArguments(binary);
 			binary.SetEntryPoint(
@@ -323,9 +327,9 @@ public sealed class Runner
 	{
 		var typeName = Path.GetFileNameWithoutExtension(strictFilePath);
 		var package = await LoadBasePackage();
-		var sourceLines = TypeLines.FromFile(strictFilePath);
-		var targetType =
-			new Type(package, new TypeLines(typeName, sourceLines)).ParseMembersAndMethods(parser);
+		var existingType = package.FindDirectType(typeName);
+		var targetType = existingType ?? new Type(package,
+			new TypeLines(typeName, TypeLines.FromFile(strictFilePath))).ParseMembersAndMethods(parser);
 		try
 		{
 			var method = new Method(targetType, 0, parser,
@@ -341,7 +345,8 @@ public sealed class Runner
 		}
 		finally
 		{
-			targetType.Dispose();
+			if (existingType == null)
+				targetType.Dispose();
 		}
 	}
 
@@ -392,14 +397,14 @@ public sealed class Runner
 	{
 		if (fullTypeName.Contains(Context.ParentSeparator))
 		{
-			var found = binary.basePackage.FindFullType(fullTypeName);
+			var found = binary.TypeResolver.FindFullType(fullTypeName);
 			if (found != null)
 				return found;
 		}
-		return binary.basePackage.FindType(fullTypeName) ??
-			binary.basePackage.FindType(
+		return binary.TypeResolver.FindType(fullTypeName) ??
+			binary.TypeResolver.FindType(
 				fullTypeName[(fullTypeName.LastIndexOf(Context.ParentSeparator) + 1)..]) ??
-			binary.basePackage.GetType(fullTypeName);
+			binary.TypeResolver.GetType(fullTypeName);
 	}
 
 	private static ValueInstance CreateValueInstance(Type targetType, string argument)

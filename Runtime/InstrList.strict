@@ -2,26 +2,24 @@ has instructions VmInstructions
 Count Number
 	instructions.Length
 At(index Number) VmInstruction
-	if index < 0
-		return Dummy
-	if instructions.Length is 0
-		return Dummy
-	if index >= instructions.Length
-		return Dummy
+	InstrList.Empty.At(3).IsReturn is true
+	if index < 0 or index >= instructions.Length
+		return VmInstruction.ReturnOp(0)
 	instructions(index)
-Dummy VmInstruction
-	VmInstruction("Return", 0, 0, "")
 Append(instruction VmInstruction) InstrList
+	InstrList.Empty.Append(VmInstruction.ReturnOp(1)).Count is 1
 	mutable next = List(Mutable(VmInstruction))
 	for instructions
 		next.Add(value)
 	next.Add(instruction)
 	InstrList(next)
+Binary(left Number, opName Text, right Number) InstrList
+	InstrList.Binary(2, "Add", 3).Count is 4
+	let loads = InstrList.Empty.Append(VmInstruction.LoadConstant(0, left)).Append(VmInstruction.LoadConstant(1, right))
+	loads.Append(VmInstruction.BinaryOp(opName, 0, 1, 2)).Append(VmInstruction.ReturnOp(2))
 Empty InstrList
-	Empty.Count is 0
-	mutable ops = List(Mutable(VmInstruction))
-	for 0
-		ops.Add(VmInstruction("Return", 0, 0, ""))
-	InstrList(ops)
+	InstrList.Empty.Count is 0
+	constant noInstructions = List(VmInstruction)
+	InstrList(noInstructions)
 to Text
 	"ops=" + Count to Text

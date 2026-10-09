@@ -75,15 +75,17 @@ public sealed class Body : Expression
 			: this;
 	}
 
+	//ponytail: substring check, a line mentioning value anywhere (even in a longer name) is no pipe
 	private void UpdateValueTypeForPiping(Expression lastExpression)
 	{
-		if (lastExpression.ReturnType.IsNone)
+		if (lastExpression.ReturnType.IsNone ||
+			CurrentLine.Contains(Type.ValueLowercase, StringComparison.Ordinal))
 			return;
 		var valueVar = FindVariable(Type.ValueLowercase.AsSpan(), false);
 		if (valueVar == null || valueVar.Type == lastExpression.ReturnType || !valueVar.IsMutable)
 			return;
 		Variables!.Remove(valueVar);
-		AddVariable(Type.ValueLowercase, lastExpression, true);
+		AddVariable(Type.ValueLowercase, lastExpression, true, valueVar.IsImplicit);
 	}
 
 	public Range LineRange { get; internal set; }

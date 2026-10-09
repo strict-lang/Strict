@@ -3,6 +3,7 @@ GoToMatchingLoopBracket(direction Number, startAt Number) Number
 	MatchingLoopFinder(5).GoToMatchingLoopBracket(1, 0) is 1
 	mutable loopDepth = direction
 	for Range(startAt + direction, instructionCount)
+		loopDepth = loopDepth - direction
 		if loopDepth is 0
-			return 0
+			return value
 	loopDepth

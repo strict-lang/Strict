@@ -14,9 +14,9 @@ public sealed class StrictCompilerConversionTests
 		var path = GetCompilerPath();
 		foreach (var typeName in new[]
 			{
-				"Platform", "ToolInfo", "RegisterMap", "CompInstruction", "CompBuilder", "CompList",
-				"AsmText", "InstrToAsm", "EntryPoint", "NasmFormat", "LinkerPlan", "InstructionsToNasm",
-				"CompilerPipeline", "ToolRunner", "NativeBuild"
+				"Platform", "ToolInfo", "CompInstruction", "CompList", "AsmText", "InstrToAsm",
+				"EntryPoint", "NasmFormat", "LinkerPlan", "InstructionsToNasm", "CompilerPipeline",
+				"ToolRunner", "NativeBuild"
 			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
@@ -39,7 +39,7 @@ public sealed class StrictCompilerConversionTests
 		Assert.That(platform.Members.Any(member => member.Name == "Linux"), Is.True);
 		Assert.That(platform.Methods.Any(method => method.Name == "NameOf"), Is.True);
 		var format = package.GetType("NasmFormat");
-		Assert.That(format.Methods.Any(method => method.Name == "FormatFor"), Is.True);
+		Assert.That(format.Methods.Any(method => method.Name == "Format"), Is.True);
 	}
 
 	[Test]
@@ -49,7 +49,7 @@ public sealed class StrictCompilerConversionTests
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Compiler");
 		var nasm = package.GetType("InstructionsToNasm");
 		Assert.That(nasm.Methods.Any(method => method.Name == "Compile"), Is.True);
-		Assert.That(nasm.Methods.Any(method => method.Name == "CompileSimpleAdd"), Is.True);
+		Assert.That(nasm.Methods.Any(method => method.Name == "SimpleAdd"), Is.True);
 		Assert.That(nasm.Members.Any(member => member.Name == "Extension"), Is.True);
 		var emit = package.GetType("InstrToAsm");
 		Assert.That(emit.Methods.Any(method => method.Name == "Emit"), Is.True);
@@ -70,16 +70,15 @@ public sealed class StrictCompilerConversionTests
 	}
 
 	[Test]
-	public async Task LoadToolInfoAndRegisterMap()
+	public async Task LoadToolInfoAndInstrToAsmRegisters()
 	{
 		using var package =
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Compiler");
 		var tools = package.GetType("ToolInfo");
-		Assert.That(tools.Methods.Any(method => method.Name == "NasmName"), Is.True);
+		Assert.That(tools.Members.Any(member => member.Name == "NasmName"), Is.True);
 		Assert.That(tools.Methods.Any(method => method.Name == "LinkerName"), Is.True);
-		var map = package.GetType("RegisterMap");
-		Assert.That(map.Methods.Any(method => method.Name == "XmmName"), Is.True);
-		Assert.That(map.Methods.Any(method => method.Name == "IsValidReg"), Is.True);
+		var emit = package.GetType("InstrToAsm");
+		Assert.That(emit.Methods.Any(method => method.Name == "Xmm"), Is.True);
 	}
 
 	[Test]
@@ -88,8 +87,8 @@ public sealed class StrictCompilerConversionTests
 		using var package =
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Compiler");
 		var runner = package.GetType("ToolRunner");
-		Assert.That(runner.Methods.Any(method => method.Name == "Find"), Is.True);
-		Assert.That(runner.Methods.Any(method => method.Name == "Run"), Is.True);
+		Assert.That(runner.Methods.Any(method => method.Name == "Executable"), Is.True);
+		Assert.That(runner.Methods.Any(method => method.Name == "Execute"), Is.True);
 		var build = package.GetType("NativeBuild");
 		Assert.That(build.Methods.Any(method => method.Name == "WriteAsm"), Is.True);
 		Assert.That(build.Methods.Any(method => method.Name == "Assemble"), Is.True);

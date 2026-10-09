@@ -1,4 +1,4 @@
-has resultTypeName Text
+has ResultTypeName Text
 has items Texts
 Count Number
 	ValueListInstance("Numbers", ("1", "2")).Count is 2

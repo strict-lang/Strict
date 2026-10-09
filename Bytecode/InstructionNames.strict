@@ -1,6 +1,6 @@
-has dummy Number
-NameOf(code Number) Text
-	NameOf(InstructionType.Add) is "Add"
+has code Number
+Name Text
+	InstructionNames(InstructionType.Add).Name is "Add"
 	if code is InstructionType.LoadConstantToRegister
 		return "LoadConstantToRegister"
 	if code is InstructionType.LoadVariableToRegister
@@ -9,8 +9,8 @@ NameOf(code Number) Text
 		return "StoreConstantToVariable"
 	if code is InstructionType.Set
 		return "Set"
-	NameOfRest(code)
-NameOfRest(code Number) Text
+	NameRest
+NameRest Text
 	if code is InstructionType.IndexCall
 		return "ListCall"
 	if code is InstructionType.Add
@@ -21,8 +21,8 @@ NameOfRest(code Number) Text
 		return "Multiply"
 	if code is InstructionType.Divide
 		return "Divide"
-	NameOfMore(code)
-NameOfMore(code Number) Text
+	NameMore
+NameMore Text
 	if code is InstructionType.Modulo
 		return "Modulo"
 	if code is InstructionType.Equal
@@ -33,8 +33,8 @@ NameOfMore(code Number) Text
 		return "LessThan"
 	if code is InstructionType.GreaterThan
 		return "GreaterThan"
-	NameOfControl(code)
-NameOfControl(code Number) Text
+	NameControl
+NameControl Text
 	if code is InstructionType.Invoke
 		return "Invoke"
 	if code is InstructionType.Return
@@ -45,8 +45,8 @@ NameOfControl(code Number) Text
 		return "LoopEnd"
 	if code is InstructionType.Jump
 		return "Jump"
-	NameOfJump(code)
-NameOfJump(code Number) Text
+	NameJump
+NameJump Text
 	if code is InstructionType.JumpIfTrue
 		return "JumpIfTrue"
 	if code is InstructionType.JumpIfFalse
@@ -58,8 +58,8 @@ NameOfJump(code Number) Text
 	if code is InstructionType.FieldLoad
 		return "FieldLoad"
 	"Unknown"
-IsArithmetic(code Number) Boolean
-	IsArithmetic(InstructionType.Add) is true
+IsArithmetic Boolean
+	InstructionNames(InstructionType.Add).IsArithmetic is true
 	if code is InstructionType.Add
 		return true
 	if code is InstructionType.Subtract
@@ -71,8 +71,8 @@ IsArithmetic(code Number) Boolean
 	if code is InstructionType.Modulo
 		return true
 	false
-IsComparison(code Number) Boolean
-	IsComparison(InstructionType.Equal) is true
+IsComparison Boolean
+	InstructionNames(InstructionType.Equal).IsComparison is true
 	if code is InstructionType.Equal
 		return true
 	if code is InstructionType.NotEqual
@@ -82,8 +82,8 @@ IsComparison(code Number) Boolean
 	if code is InstructionType.GreaterThan
 		return true
 	false
-IsJump(code Number) Boolean
-	IsJump(InstructionType.JumpIfFalse) is true
+IsJump Boolean
+	InstructionNames(InstructionType.JumpIfFalse).IsJump is true
 	if code is InstructionType.Jump
 		return true
 	if code is InstructionType.JumpIfTrue
@@ -92,15 +92,15 @@ IsJump(code Number) Boolean
 		return true
 	if code is InstructionType.JumpIfNotZero
 		return true
-	IsJumpId(code)
-IsJumpId(code Number) Boolean
+	IsJumpId
+IsJumpId Boolean
 	if code is InstructionType.JumpToIdIfFalse
 		return true
 	if code is InstructionType.JumpToIdIfTrue
 		return true
 	false
 CodeOf(name Text) Number
-	CodeOf("Add") is InstructionType.Add
+	InstructionNames.CodeOf("Add") is InstructionType.Add
 	if name is "LoadConstantToRegister"
 		return InstructionType.LoadConstantToRegister
 	if name is "LoadVariableToRegister"

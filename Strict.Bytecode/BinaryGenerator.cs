@@ -272,12 +272,23 @@ public sealed class BinaryGenerator
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)
 	{
 		for (var i = 0; i < expressions.Count; i++)
-			if ((ReferenceEquals(expressions[i], Expressions[^1]) || expressions[i] is Return) &&
+			if (ReferenceEquals(expressions[i], Expressions[^1]) &&
+				expressions[i] is If { OptionalElse: not null, Then: not Body } inlineConditional)
+				GenerateReturningInlineConditional(inlineConditional);
+			else if ((ReferenceEquals(expressions[i], Expressions[^1]) || expressions[i] is Return) &&
 				expressions[i] is not If && expressions[i] is not SelectorIf)
 				GenerateReturnInstruction(expressions[i]);
 			else
 				GenerateInstructionFromExpression(expressions[i]);
 		return instructions;
+	}
+
+	private void GenerateReturningInlineConditional(If inlineConditional)
+	{
+		GenerateCodeForIfCondition(inlineConditional.Condition);
+		GenerateReturnInstruction(inlineConditional.Then);
+		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
+		GenerateReturnInstruction(inlineConditional.OptionalElse!);
 	}
 
 	private void GenerateReturnInstruction(Expression expression)
@@ -288,6 +299,14 @@ public sealed class BinaryGenerator
 			return;
 		if (TryGenerateListForLoopReturn(expression))
 			return;
+		if (expression is For anyLoop && ReturnType.IsBoolean)
+		{
+			GenerateLoopInstructions(anyLoop, nameof(LoopAggregation.Any), LoopAggregation.Any);
+			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
+				new ValueInstance(ReturnType, false)));
+			instructions.Add(new ReturnInstruction(registry.PreviousRegister));
+			return;
+		}
 		GenerateInstructionFromExpression(expression);
 		instructions.Add(new ReturnInstruction(registry.PreviousRegister));
 	}
@@ -341,7 +360,8 @@ public sealed class BinaryGenerator
 	{
 		None,
 		Number,
-		List
+		List,
+		Any
 	}
 
 	//TODO: try optimize into a expression switch
@@ -354,6 +374,8 @@ public sealed class BinaryGenerator
 			GenerateInstructions(body.Expressions);
 			return;
 		case Binary binaryExpression:
+			if (TryGenerateNumberComparisonValue(binaryExpression))
+				break;
 			if (!CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
 			{
 				GenerateMethodCallInstruction(binaryExpression);
@@ -597,7 +619,21 @@ public sealed class BinaryGenerator
 		case LoopAggregation.List:
 			AddListAggregation(aggregationTarget);
 			break;
+		case LoopAggregation.Any:
+			ReturnTrueIfIterationIsTrue();
+			break;
 		}
+	}
+
+	private void ReturnTrueIfIterationIsTrue()
+	{
+		var iterationRegister = registry.PreviousRegister;
+		instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
+			new ValueInstance(ReturnType, true)));
+		var trueRegister = registry.PreviousRegister;
+		GenerateInstructionsFromIfCondition(InstructionType.Equal, iterationRegister, trueRegister);
+		instructions.Add(new ReturnInstruction(trueRegister));
+		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
 	}
 
 	private void AddNumberAggregation(string aggregationTarget)
@@ -720,6 +756,33 @@ public sealed class BinaryGenerator
 			GenerateInstructions([ifExpression.Then]);
 	}
 
+	/// <summary>
+	/// Number comparisons used as values (outside if conditions) become direct compare instructions,
+	/// invoking Number.strict would recurse as its body is the same comparison. a >= b is not a < b.
+	/// </summary>
+	private bool TryGenerateNumberComparisonValue(Binary comparison)
+	{
+		var name = comparison.Method.Name;
+		if (name is not (BinaryOperator.Smaller or BinaryOperator.Greater or BinaryOperator.SmallerOrEqual
+				or BinaryOperator.GreaterOrEqual) || !comparison.Instance!.ReturnType.IsNumber)
+			return false;
+		GenerateInstructionFromExpression(comparison.Instance);
+		var leftRegister = registry.PreviousRegister;
+		GenerateInstructionFromExpression(comparison.Arguments[0]);
+		instructions.Add(new BinaryInstruction(name is BinaryOperator.Greater or BinaryOperator.SmallerOrEqual
+			? InstructionType.GreaterThan
+			: InstructionType.LessThan, leftRegister, registry.PreviousRegister,
+			registry.AllocateRegister()));
+		if (name is BinaryOperator.Smaller or BinaryOperator.Greater)
+			return true;
+		var comparedRegister = registry.PreviousRegister;
+		instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
+			new ValueInstance(comparison.ReturnType, false)));
+		instructions.Add(new BinaryInstruction(InstructionType.Equal, comparedRegister,
+			registry.PreviousRegister, registry.AllocateRegister()));
+		return true;
+	}
+
 	private void GenerateCodeForBinary(MethodCall binaryExpression)
 	{
 		if (CanGenerateDirectBinaryInstruction(binaryExpression.Method.Name))
@@ -755,8 +818,7 @@ public sealed class BinaryGenerator
 	}
 
 	private static bool IsBinaryComparison(MethodCall call) =>
-		call.Method.Name is BinaryOperator.Is or BinaryOperator.Greater or BinaryOperator.GreaterOrEqual
-			or BinaryOperator.Smaller or BinaryOperator.SmallerOrEqual or BinaryOperator.In ||
+		call.Method.Name is BinaryOperator.Is or BinaryOperator.Greater or BinaryOperator.Smaller ||
 		call.Method.Name.StartsWith("is not", StringComparison.Ordinal);
 
 	private void GenerateForBinaryIfConditionalExpression(MethodCall condition)

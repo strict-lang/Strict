@@ -462,7 +462,8 @@ public class Interpreter
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
 	{
 		for (var current = parentContext; current != null; current = current.Parent)
-			if (current.Method == method && AreSameInstanceForRecursionCheck(current.This, instance) &&
+			if (current.Method == method && !current.IsTestAtCurrentLine &&
+				AreSameInstanceForRecursionCheck(current.This, instance) &&
 				DoArgumentsMatch(method, args, current.Variables))
 				throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
 					current);
