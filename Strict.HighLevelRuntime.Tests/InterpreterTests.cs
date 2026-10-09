@@ -480,6 +480,16 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void NegativeLoopCountIsAnError()
+	{
+		using var t = CreateType(nameof(NegativeLoopCountIsAnError), "has number", "Count Number",
+			"	mutable total = 0", "	for number - 5", "		total = total + 1", "	total");
+		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Count"),
+				new ValueInstance(t, [new ValueInstance(interpreter.numberType, 2)]), []),
+			Throws.InstanceOf<InterpreterExecutionFailed>().With.Message.Contains("Loop count -3 is negative"));
+	}
+
+	[Test]
 	public void EvaluateRangeEquality()
 	{
 		using var t = CreateType(nameof(EvaluateRangeEquality), "has number", "Compare Boolean",

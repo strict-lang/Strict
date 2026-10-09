@@ -87,7 +87,10 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		}
 		else
 		{
-			var loopRange = new Range(0, iterator.GetIteratorLength());
+			var loopCount = iterator.GetIteratorLength();
+			if (loopCount < 0)
+				throw new Interpreter.NegativeLoopCount(ctx.Method, loopCount);
+			var loopRange = new Range(0, loopCount);
 			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
 			{
 				interpreter.ResetIteration(loop);

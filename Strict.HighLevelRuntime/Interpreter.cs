@@ -457,6 +457,9 @@ public partial class Interpreter
 	/// </summary>
 	private const int MaxCallDepth = 128;
 
+	public sealed class NegativeLoopCount(Method method, int count)
+		: InterpreterExecutionFailed(method, "Loop count " + count + " is negative");
+
 	public sealed class CallDepthExceeded(Method method, int depth) : InterpreterExecutionFailed(method,
 		"Call depth " + depth + " exceeded " + MaxCallDepth + ", endless recursion?");
 
