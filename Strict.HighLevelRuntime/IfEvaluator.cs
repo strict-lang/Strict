@@ -24,7 +24,10 @@ internal sealed class IfEvaluator(Interpreter interpreter)
 	}
 
 	private static bool IsMutableInstanceCall(Expression expression) =>
-		expression is MethodCall { Instance: VariableCall { IsMutable: true } } ||
+		expression is MethodCall
+		{
+			Instance: VariableCall { IsMutable: true }, Method.ReturnType.IsMutable: true
+		} ||
 		(expression is Body { Expressions.Count: 1 } body &&
 			IsMutableInstanceCall(body.Expressions[0]));
 }

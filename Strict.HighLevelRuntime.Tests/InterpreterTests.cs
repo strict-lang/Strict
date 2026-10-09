@@ -432,6 +432,17 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void InlineConditionalAfterLoopReturnsValue()
+	{
+		using var t = CreateType(nameof(InlineConditionalAfterLoopReturnsValue), "has number",
+			"Pick(name Text) Number", "\tmutable current = number", "\tfor 2",
+			"\t\tcurrent = current + 1", "\tname is \"\" then current else current + 10");
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Pick"),
+			new ValueInstance(t, [new ValueInstance(interpreter.numberType, 1)]),
+			[new ValueInstance("x")]).Number, Is.EqualTo(13));
+	}
+
+	[Test]
 	public void EvaluateRangeEquality()
 	{
 		using var t = CreateType(nameof(EvaluateRangeEquality), "has number", "Compare Boolean",
