@@ -1,50 +1,22 @@
 has logger
 Run(folder Text, root Text)
-	let types = TypeNames(folder) + PackageTypeNames(root)
+	let files = AllFiles(root) + Directory.Files(folder, "*.strict")
+	let known = TypeNames(files) + ("value", "index", "outer")
 	mutable unresolved = 0
 	for Directory.Files(folder, "*.strict")
-		unresolved = unresolved + CheckFile(value, types)
+		unresolved = unresolved + CheckFile(value, files, known)
 	logger.Log("Unresolved names: " + unresolved)
-PackageTypeNames(root Text) Texts
-	mutable types = TypeNames(root)
-	for Directory.Directories(root)
-		types = types + TypeNames(value)
-	types
-TypeNames(folder Text) Texts
-	for Directory.Files(folder, "*.strict")
-		Path(value).FileName.RemoveExtension.text
-CheckFile(path Text, types Texts) Number
+CheckFile(path Text, files Texts, known Texts) Number
 	let shape = TypeShape(File(path).ReadLines)
-	let known = shape.MemberNames + shape.MethodNames + types + ("value", "index", "outer")
-	mutable scope = known
-	mutable unresolved = 0
-	for shape.lines
-		if shape.IsMethodHeader(value)
-			scope = known + shape.ParameterNames(value)
-		if StartsWith("\t")
-			unresolved = unresolved + CheckLine(Trim, scope, path)
-			scope = scope + DeclaredNames(Trim)
-	unresolved
-CheckLine(line Text, scope Texts, path Text) Number
-	CheckLine("a + 1", ("a", "b"), "test") is 0
-	mutable unknown = 0
-	for StatementParser(Tokenizer(line).Tokens).ParseStatement.HeadNames
-		if not IsKnown(value, scope)
-			logger.Log(path + ": " + value + " in " + line)
-			unknown = unknown + 1
-	unknown
-IsKnown(name Text, scope Texts) Boolean
-	IsKnown("Numbers", ("Number", "a")) is true
-	IsKnown("b", ("Number", "a")) is false
-	if name is in scope
-		return true
-	if name.Substring(name.Length - 1, 1) is not "s"
-		return false
-	name.Substring(0, name.Length - 1) is in scope
-DeclaredNames(line Text) Texts
-	DeclaredNames("let a = 1").Length is 1
-	let tokens = Tokenizer(line).Tokens
-	mutable names = List(Mutable(Text))
-	if tokens(0) is in ("let", "constant", "mutable")
-		names.Add(tokens(1))
-	names
+	let unresolved = FileCheck(shape, TypeInference(files), known + shape.MemberNames + shape.MethodNames).Unresolved
+	for unresolved
+		logger.Log(path + ": " + value)
+	unresolved.Length
+AllFiles(root Text) Texts
+	mutable files = Directory.Files(root, "*.strict")
+	for Directory.Directories(root)
+		files = files + Directory.Files(value, "*.strict")
+	files
+TypeNames(files Texts) Texts
+	for files
+		Path(value).FileName.RemoveExtension.text

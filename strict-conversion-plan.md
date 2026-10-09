@@ -181,9 +181,22 @@ quotes), `SyntaxNode` (tree, C# precedences, canonical printing incl. `(not x) a
 `SyntaxParser` (operators incl. `is not`, `is in`, `is not in`, then/else, unary, member and call
 chains, lists vs grouping), `StatementParser` (let/constant/mutable, reassignment, return, if,
 else if, selector if lines, for). `RoundTrip.strict` re-prints every method line; the Slow test
-`StrictParserRoundTripsEveryLine` asserts 0 mismatches for all 18 folders (runs on the VM). Still
-missing for D1: type/member/method model and package lookup in Strict, typed nodes (resolving
-which call is a method, member, variable or parameter), multi-line bodies as trees.
+`StrictParserRoundTripsEveryLine` asserts 0 mismatches for all 18 folders (runs on the VM).
+Name resolution layer: `TypeShape` (members, methods, parameter and return types from lines),
+`Scope` (names with types), `TypeInference` (types of literals, identifiers, calls, members and
+operators, list element types, methods reached through trait members like File → TextReader),
+`FileCheck`/`ResolveCheck` (every name in a method line is a member, method, parameter, variable,
+type or a method of the enclosing loop value). Slow test `StrictResolvesEveryName` asserts 0
+unresolved names for all 18 folders. Still missing for D1: typed nodes (each call resolved to a
+method, member, variable or parameter), generics and package parent/child lookup, multi-line
+bodies as trees.
+Bugs found by ResolveCheck (each with a test): VM loop over a Range returned by a method,
+ConstructorToFieldMutations mapped `from` arguments to the wrong members (Range's iterator trait
+first), VM negative list index (`List.Last`), Boolean `let` lines were taken as inline tests and
+dropped from the body, VM list call on a computed list (`node.children(0)` on a method result).
+Flaky once in a full parallel solution run (passes alone and in reruns):
+`InterpreterTests.ParserParsesExistingTextStrictFile`, likely Language package files changing while
+Strict.Tests runs programs there (Phase F thread safety item).
 Bugs found and fixed on the way (each with a test): parser stack overflow on `.`/`)` inside text,
 text-unaware member splitting, interpreter return type check on nested bodies, VM IndexOf
 startIndex, list to Text truncation at 10 items, register reuse per statement (64 register limit),

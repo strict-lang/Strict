@@ -94,3 +94,9 @@ ParameterType(tokens Texts, position Number) Text
 	if next is "="
 		return SyntaxParser(tokens).Leaf(tokens(position + 2)).Kind
 	next is in (",", ")") then DeclaredType(("has", tokens(position))) else next
+MemberScope Scope
+	TypeShape("has count Number", "Run").MemberScope.TypeOf("count") is "Number"
+	mutable types = List(Mutable(Text))
+	for MemberNames
+		types.Add(MemberType(value))
+	Scope(MemberNames, types)

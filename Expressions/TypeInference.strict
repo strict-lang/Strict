@@ -1,0 +1,70 @@
+has files Texts
+constant NoScope = Scope(("x", "z"), ("y", "w"))
+constant NoShape = TypeShape("x", "y")
+ShapeOf(typeName Text) TypeShape
+	TypeInference("Text.strict", "Number.strict").ShapeOf("Missing").MethodNames.Length is 0
+	for files
+		if Path(value).FileName.RemoveExtension.text is typeName
+			return TypeShape(File(value).ReadLines)
+	TypeShape("has unknown", "has nothing")
+ElementType(typeName Text) Text
+	TypeInference("a", "b").ElementType("Texts") is "Text"
+	TypeInference("a", "b").ElementType("Range") is "Number"
+	if typeName is in ("Number", "Range")
+		return "Number"
+	if typeName is "Text"
+		return "Character"
+	typeName.Substring(typeName.Length - 1, 1) is "s" then typeName.Substring(0, typeName.Length - 1) else "Unknown"
+TypeOf(node SyntaxNode, scope Scope, current TypeShape) Text
+	TypeInference("a", "b").TypeOf(SyntaxNode("Number", "1"), NoScope, NoShape) is "Number"
+	if node.Kind is in ("Number", "Text", "Boolean")
+		return node.Kind
+	if node.Kind is "Identifier"
+		return IdentifierType(node.text, scope, current)
+	if node.Kind is "Call"
+		return CallType(node.text, scope, current)
+	if node.Kind is in ("Member", "MethodCall")
+		return MemberType(TypeOf(node.children(0), scope, current), node.text)
+	OperatorType(node, scope, current)
+IdentifierType(name Text, scope Scope, current TypeShape) Text
+	TypeInference("a", "b").IdentifierType("x", Scope(("x", "y"), ("Number", "Text")), NoShape) is "Number"
+	if scope.TypeOf(name) is not ""
+		return scope.TypeOf(name)
+	if current.MethodReturnType(name) is not ""
+		return current.MethodReturnType(name)
+	name
+CallType(name Text, scope Scope, current TypeShape) Text
+	TypeInference("a", "b").CallType("Vector2", NoScope, NoShape) is "Vector2"
+	if current.MethodReturnType(name) is not ""
+		return current.MethodReturnType(name)
+	scope.TypeOf(name) is "" then name else ElementType(scope.TypeOf(name))
+MemberType(instanceType Text, name Text) Text
+	TypeInference("a", "b").MemberType("Unknown", "Length") is "Unknown"
+	let isList = instanceType.Substring(instanceType.Length - 1, 1) is "s"
+	let type = DeclaredType(ShapeOf(isList then "List" else instanceType), name)
+	if type is ""
+		return "Unknown"
+	type is "Generic" then ElementType(instanceType) else type
+DeclaredType(shape TypeShape, name Text) Text
+	TypeInference("a", "b").DeclaredType(TypeShape("has count Number", "Run"), "count") is "Number"
+	TypeInference("a", "b").DeclaredType(TypeShape("has unknown", "Run"), "ReadLines") is ""
+	if shape.MemberType(name) is not ""
+		return shape.MemberType(name)
+	if shape.MethodReturnType(name) is not ""
+		return shape.MethodReturnType(name)
+	for shape.MemberNames
+		let type = ShapeOf(shape.MemberType(value)).MethodReturnType(name)
+		if type is not ""
+			return type
+	""
+OperatorType(node SyntaxNode, scope Scope, current TypeShape) Text
+	TypeInference("a", "b").OperatorType(SyntaxNode("Not", ""), NoScope, NoShape) is "Boolean"
+	if node.Kind is "Not"
+		return "Boolean"
+	if (node.Kind is "Binary") and node.Precedence < 11
+		return "Boolean"
+	if node.Kind is "List"
+		return TypeOf(node.children(0), scope, current) + "s"
+	if node.Kind is in ("Binary", "Negate")
+		return TypeOf(node.children(0), scope, current)
+	"Unknown"

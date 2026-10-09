@@ -131,12 +131,21 @@ public sealed class RunnerTests
 
 	[TestCaseSource(nameof(StrictFolders))]
 	[Category("Slow")]
-	public async Task StrictParserRoundTripsEveryLine(string folder)
+	public Task StrictParserRoundTripsEveryLine(string folder) =>
+		RunExpressionsProgram("RoundTrip", Path.Combine(FindRepoRoot(), folder),
+			"Round trip mismatches: 0");
+
+	[TestCaseSource(nameof(StrictFolders))]
+	[Category("Slow")]
+	public Task StrictResolvesEveryName(string folder) =>
+		RunExpressionsProgram("ResolveCheck", Path.Combine(FindRepoRoot(), folder) + " " +
+			FindRepoRoot(), "Unresolved names: 0");
+
+	private async Task RunExpressionsProgram(string program, string arguments, string expectedOutput)
 	{
-		var root = FindRepoRoot();
-		await new Runner(Path.Combine(root, "Expressions", "RoundTrip" + Type.Extension),
-			Path.Combine(root, folder)).Run();
-		Assert.That(consoleWriter.ToString(), Does.Contain("Round trip mismatches: 0"));
+		await new Runner(Path.Combine(FindRepoRoot(), "Expressions", program + Type.Extension),
+			arguments).Run();
+		Assert.That(consoleWriter.ToString(), Does.Contain(expectedOutput));
 	}
 
 	[Test]

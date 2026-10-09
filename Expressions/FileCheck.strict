@@ -1,0 +1,56 @@
+has shape TypeShape
+has inference TypeInference
+has known Texts
+constant NoInference = TypeInference("x", "y")
+constant NoShape = TypeShape("a", "b")
+Unresolved Texts
+	FileCheck(TypeShape("has a Number", "Run", "\ta + b"), NoInference, ("Number", "Run")).Unresolved.Length is 1
+	mutable unresolved = List(Mutable(Text))
+	mutable scope = shape.MemberScope
+	for shape.lines
+		if shape.IsMethodHeader(value)
+			scope = shape.MemberScope.WithAll(shape.ParameterNames(value), shape.ParameterTypes(value))
+		if StartsWith("\t")
+			let statement = StatementParser(Tokenizer(Trim).Tokens).ParseStatement
+			unresolved = unresolved + UnknownNames(statement, known + scope.names + LoopNames(index, scope))
+			scope = Declare(statement, scope)
+	unresolved
+UnknownNames(statement SyntaxNode, names Texts) Texts
+	FileCheck(NoShape, NoInference, ("N", "R")).UnknownNames(SyntaxNode("Identifier", "c"), ("a", "b")).Length is 1
+	mutable unknown = List(Mutable(Text))
+	for statement.HeadNames
+		if not IsKnown(value, names)
+			unknown.Add(value + " in " + statement to Text)
+	unknown
+Declare(statement SyntaxNode, scope Scope) Scope
+	if statement.Kind is not "Declaration"
+		return scope
+	scope.With(Tokenizer(statement.text).Tokens.Last, inference.TypeOf(statement.children(0), scope, shape))
+LoopNames(lineIndex Number, scope Scope) Texts
+	let loop = EnclosingLoop(lineIndex)
+	if loop is -1
+		return List(Text)
+	let iterator = StatementParser(Tokenizer(shape.lines(loop).Trim).Tokens).ParseStatement.children(0)
+	let elementShape = inference.ShapeOf(inference.ElementType(inference.TypeOf(iterator, scope, shape)))
+	elementShape.MethodNames + elementShape.MemberNames
+EnclosingLoop(lineIndex Number) Number
+	mutable minimum = Indent(shape.lines(lineIndex))
+	mutable loop = -1
+	for Range(0, lineIndex).Reverse
+		let indent = Indent(shape.lines(value))
+		if (loop is -1) and indent < minimum and shape.lines(value).Trim.StartsWith("for ")
+			loop = value
+		if indent < minimum
+			minimum = indent
+	loop
+Indent(line Text) Number
+	Indent("\t\ta") is 2
+	line.Length - line.TrimStart.Length
+IsKnown(name Text, names Texts) Boolean
+	IsKnown("Numbers", ("Number", "a")) is true
+	IsKnown("b", ("Number", "a")) is false
+	if name is in names
+		return true
+	if name.Substring(name.Length - 1, 1) is not "s"
+		return false
+	name.Substring(0, name.Length - 1) is in names
