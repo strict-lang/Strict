@@ -130,7 +130,8 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 				if (TryGetParameterIndex(compiledMethod, loadVariable.Identifier, out var parameterIndex))
 				{
 					var argumentRegister = invoke.MethodInfo.ArgumentRegisters[parameterIndex];
-					if (loadVariable.Register == returnRegister && argumentRegister != invoke.Register)
+					if (loadVariable.Register == returnRegister && argumentRegister != invoke.Register ||
+						IsWrittenElsewhere(instructions, index, loadVariable.Register))
 						return false;
 					registerMap[loadVariable.Register] = argumentRegister;
 				}
@@ -144,6 +145,18 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 				return false;
 			}
 		return true;
+	}
+
+	/// <summary>
+	/// Registers are reused, mapping a parameter register to the argument would redirect other writes.
+	/// </summary>
+	private static bool IsWrittenElsewhere(IReadOnlyList<Instruction> instructions, int loadIndex,
+		Register register)
+	{
+		for (var index = 0; index < instructions.Count; index++)
+			if (index != loadIndex && GetWrittenRegister(instructions[index]) == register)
+				return true;
+		return false;
 	}
 
 	private static bool TryGetParameterIndex(BinaryMethod compiledMethod, string identifier,

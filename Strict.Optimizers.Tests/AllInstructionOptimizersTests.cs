@@ -154,6 +154,23 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(20000));
 	}
 
+	[Test]
+	public void InliningKeepsParameterWhenItsRegisterIsReused()
+	{
+		var binary = GenerateBinary("ReusedParameterRegister",
+			// @formatter:off
+			"has number",
+			"Run Number",
+			"	Pick(5)",
+			"Pick(start Number) Number",
+			"	Doubled + Doubled + start",
+			"Doubled Number",
+			"	number * 2");
+		// @formatter:on
+		new AllInstructionOptimizers().Optimize(binary);
+		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(5));
+	}
+
 	internal BinaryExecutable CreateLoopInliningBinary() =>
 		GenerateBinary("LoopInlining",
 		// @formatter:off
