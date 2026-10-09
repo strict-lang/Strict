@@ -42,6 +42,12 @@ A1 Open bugs found so far, each with one regression test:
     check in BinaryGenerator). A one-off `Y` vs `y` output difference was seen only with such an
     invalid Name; recheck determinism after constraints are enforced.
 
+A1.11 status: interpreter checks member constraints on construction (also runs custom `from`
+bodies that assign members, which it skipped before; Color's test relied on Byte clamping of an
+invalid ColorValue(255, 0, 0)). The VM does not check constraints yet: generating the checks in
+BinaryGenerator costs time in hot loops (ColorValue per pixel), decide together with Phase C
+(compile time check for constant arguments + optional VM checks).
+
 Done so far (2026-10-09): A1.1 inline then/else on mutables, A1.2 `is` comparison type check and
 `is in` brackets, A1.3 subfolder examples + `from` member initialization, A1.5 no longer
 reproducible (fixed by value piping fix), A1.6 `value` in number/Range loops is the current number

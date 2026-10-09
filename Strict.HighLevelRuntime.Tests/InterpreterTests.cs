@@ -432,6 +432,31 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void FromBodyInitializesMembers()
+	{
+		using var t = CreateType(nameof(FromBodyInitializesMembers), "has amount Number", "has scale Number",
+			"from(number)", "\tamount = number * 2", "\tscale = number + 1");
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == Method.From), interpreter.noneInstance,
+			[new ValueInstance(interpreter.numberType, 3)]);
+		Assert.That(result.TryGetValueTypeInstance()!.Values.Select(value => value.Number),
+			Is.EqualTo(new[] { 6.0, 4.0 }));
+	}
+
+	[Test]
+	public void ConstructionChecksMemberConstraints()
+	{
+		using var t = CreateType(nameof(ConstructionChecksMemberConstraints), "has number with value > 0",
+			"has text", $"Create(input Number) {nameof(ConstructionChecksMemberConstraints)}",
+			$"\t{nameof(ConstructionChecksMemberConstraints)}(input, text)");
+		var create = t.Methods.Single(m => m.Name == "Create");
+		var instance = new ValueInstance(t, [new ValueInstance(interpreter.numberType, 1), new ValueInstance("a")]);
+		Assert.That(() => interpreter.Execute(create, instance, [new ValueInstance(interpreter.numberType, 2)]),
+			Throws.Nothing);
+		Assert.That(() => interpreter.Execute(create, instance, [new ValueInstance(interpreter.numberType, 0)]),
+			Throws.InstanceOf<InterpreterExecutionFailed>().With.Message.Contains("value > 0"));
+	}
+
+	[Test]
 	public void InlineConditionalAfterLoopReturnsValue()
 	{
 		using var t = CreateType(nameof(InlineConditionalAfterLoopReturnsValue), "has number",

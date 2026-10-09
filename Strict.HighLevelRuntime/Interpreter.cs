@@ -137,9 +137,11 @@ public class Interpreter
 			out var fileConstructor))
 			return fileConstructor;
 		if (method is { Name: Method.From, Type.IsGeneric: false })
-			return instance.Equals(noneInstance)
-				? GetFromConstructorValue(method, args)
-				: throw new MethodCall.CannotCallFromConstructorWithExistingInstance();
+			return !instance.Equals(noneInstance)
+				? throw new MethodCall.CannotCallFromConstructorWithExistingInstance()
+				: !runOnlyTests && InitializesMembers(method)
+					? ExecuteMemberInitializingFrom(method, args, parentContext)
+					: GetFromConstructorValue(method, args);
 		if (instance.TryGetValueTypeInstance()?.ReturnType.Name == Type.System)
 		{ //ncrunch: no coverage start
 			if (method.Name == "Write" && args.Length > 0)
@@ -530,6 +532,36 @@ public class Interpreter
 		}
 	}
 
+	private static bool InitializesMembers(Method method) =>
+		method.lines.Skip(1).Any(line => method.Type.Members.Any(member =>
+			line.StartsWith("\t" + member.Name + " = ", StringComparison.Ordinal)));
+
+	/// <summary>
+	/// A custom from(..) assigns members, start from default member values and run its body.
+	/// </summary>
+	private ValueInstance ExecuteMemberInitializingFrom(Method method, ValueInstance[] args,
+		ExecutionContext? parentContext)
+	{
+		Statistics.FromCreationsCount++;
+		var members = method.Type.Members;
+		var values = new ValueInstance[members.Count];
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			values[memberIndex] = CreateDefaultMemberValue(members[memberIndex].Type);
+		var newInstance = new ValueInstance(method.Type, values);
+		var context = CreateExecutionContext(method, newInstance, args, parentContext, false);
+		try
+		{
+			RunExpression(method.GetBodyAndParseIfNeeded(), context);
+		}
+		finally
+		{
+			DisposeTrackedValues(context);
+			ReturnContext(context);
+		}
+		ValidateMemberConstraints(method, newInstance.TryGetValueTypeInstance()!.Values);
+		return newInstance;
+	}
+
 	private ValueInstance GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
 	{
 		Statistics.FromCreationsCount++;
@@ -591,11 +623,42 @@ public class Interpreter
 			if (!values[memberIndex].HasValue && typeMembers[memberIndex].Type.IsList)
 				values[memberIndex] = new ValueInstance(typeMembers[memberIndex].Type,
 					Array.Empty<ValueInstance>());
+		ValidateMemberConstraints(method, values);
 		if (!method.Type.IsMutable && values.Length == 1 &&
 			values[0].IsSameOrCanBeUsedAs(method.Type))
 			return values[0];
 		TryPreFillConstrainedListMembers(method.Type, values, method);
 		return new ValueInstance(method.Type, values);
+	}
+
+	private void ValidateMemberConstraints(Method method, ValueInstance[] values)
+	{
+		var members = method.Type.Members;
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			if (members[memberIndex].Constraints is { } constraints && values[memberIndex].HasValue &&
+				!members[memberIndex].Type.IsList)
+				foreach (var constraint in constraints)
+					if (!EvaluateConstraint(method, values, memberIndex, constraint))
+						throw new InterpreterExecutionFailed(method, "Constraint " + constraint + " of member " +
+							members[memberIndex].Name + " failed for value " + values[memberIndex]);
+	}
+
+	private bool EvaluateConstraint(Method method, ValueInstance[] values, int memberIndex,
+		Expression constraint)
+	{
+		var members = method.Type.Members;
+		var context = RentContext(members[memberIndex].Type, method, values[memberIndex], null);
+		try
+		{
+			for (var index = 0; index < members.Count; index++)
+				if (values[index].HasValue)
+					context.Variables[members[index].Name] = values[index];
+			return RunExpression(constraint, context).Boolean;
+		}
+		finally
+		{
+			ReturnContext(context);
+		}
 	}
 
 	private void TryPreFillConstrainedListMembers(Type targetType, ValueInstance[] values,
