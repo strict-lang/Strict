@@ -19,12 +19,18 @@ TokenLength(start Number) Number
 	Tokenizer("1.5)").TokenLength(0) is 3
 	let character = line.Substring(start, 1)
 	if character is "\""
-		return line.IndexOf("\"", start + 1) - start + 1
+		return TextEnd(start + 1) - start + 1
 	if IsWordCharacter(character)
 		return WordLength(start)
 	if start + 1 < line.Length and (line.Substring(start, 2) is in ("<=", ">="))
 		return 2
 	1
+TextEnd(position Number) Number
+	Tokenizer("\"a\"").TextEnd(1) is 2
+	let character = line.Substring(position, 1)
+	if character is "\\"
+		return TextEnd(position + 2)
+	character is "\"" then position else TextEnd(position + 1)
 WordLength(start Number) Number
 	Tokenizer("abc d").WordLength(0) is 3
 	Tokenizer("12.5").WordLength(0) is 4

@@ -79,9 +79,12 @@ OperatorPrecedence(position Number, start Number) Number
 OperatorText(position Number) Text
 	SyntaxParser("a", "is", "not", "b").OperatorText(1) is "is not"
 	SyntaxParser("a", "is", "b").OperatorText(1) is "is"
-	if (tokens(position) is "is") and position + 1 < tokens.Length and (tokens(position + 1) is in ("not", "in"))
-		return "is " + tokens(position + 1)
-	tokens(position)
+	SyntaxParser("a", "is", "not", "in", "b").OperatorText(1) is "is not in"
+	if tokens(position) is not "is" or position + 1 >= tokens.Length
+		return tokens(position)
+	if position + 2 < tokens.Length and (tokens(position + 1) is "not") and (tokens(position + 2) is "in")
+		return "is not in"
+	tokens(position + 1) is in ("not", "in") then "is " + tokens(position + 1) else "is"
 ParseOperator(operatorIndex Number, start Number, end Number) SyntaxNode
 	SyntaxParser("a", "is", "not", "b").ParseOperator(1, 0, 4) to Text is "a is not b"
 	let operatorText = OperatorText(operatorIndex)
@@ -89,7 +92,8 @@ ParseOperator(operatorIndex Number, start Number, end Number) SyntaxNode
 	SyntaxNode("Binary", operatorText, (ParseRange(start, operatorIndex), ParseRange(rightStart, end)))
 ParseCallOrMember(start Number, end Number) SyntaxNode
 	SyntaxParser("x", ".", "y").ParseCallOrMember(0, 3) to Text is "x.y"
-	SyntaxParser("(", "a", ")").ParseCallOrMember(0, 3) to Text is "a"
+	SyntaxParser("(", "a", ")").ParseCallOrMember(0, 3) to Text is "(a)"
+	SyntaxParser("(", "a", "+", "b", ")").ParseCallOrMember(0, 5) to Text is "a + b"
 	let dot = LastDotIndex(start, end)
 	if dot is not -1 and dot + 2 < end
 		return SyntaxNode("MethodCall", tokens(dot + 1), Single(ParseRange(start, dot)) + Arguments(dot + 2, end))
@@ -98,7 +102,7 @@ ParseCallOrMember(start Number, end Number) SyntaxNode
 	if tokens(start) is not "("
 		return SyntaxNode("Call", tokens(start), Arguments(start + 1, end))
 	let arguments = Arguments(start, end)
-	arguments.Length is 1 then arguments(0) else SyntaxNode("List", "", arguments)
+	end - start > 3 and (arguments.Length is 1) then arguments(0) else SyntaxNode("List", "", arguments)
 LastDotIndex(start Number, end Number) Number
 	SyntaxParser("a", ".", "b", ".", "c").LastDotIndex(0, 5) is 3
 	SyntaxParser("f", "(", "a", ".", "b", ")").LastDotIndex(0, 6) is -1
