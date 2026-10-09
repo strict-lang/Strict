@@ -134,6 +134,23 @@ C7 Strict-on-Strict speed (needed for self-hosting): time to run the Strict pars
    lines evaluated in real time).
 Verification: each item shows measured improvement (AGENTS: real numbers, not flag changes).
 
+Phase C1–C4 result (2026-10-09), AdjustBrightness, Release unless noted:
+- C1 16x9 Debug run allocations 405 KB → 170 KB, cached binary loading 417 KB → 374 KB; the Slow
+  allocation test is green (measures a warmed-up run, cache regeneration is compile cost).
+  Fixes: flat numeric FieldLoad/ConstructValueType without materializing, binary members and invoke
+  names cached, no development path probing when loading binaries.
+- C2 320x180 VM run (min of 7, noisy machine): 525 ms → ~390 ms. Lock-free symbol ids, access paths
+  cached once per block, Type.IsTrait and constant member values cached in the VM. Register
+  save/restore was measured at ~7 ms total, not worth changing. Still ~7 µs and 850 B per pixel:
+  remaining cost is per-invoke scope setup (name based Frame.Set), the `for image.Size` iterator
+  materializing every Vector2 although the body only uses `index`, and ~50 ns per variable load.
+- C3 `list = list + element` compiles to the in-place append of List.Add: 40000 appends 19069 ms /
+  65 GB → 22 ms / 2 MB.
+- C4 Context.FindType already caches hits; package loading is now logged (Compiler package
+  ~105 ms, 5.8 MB). ReadyToRun publishing only saved ~10% on source runs, nothing cached, skipped.
+Follow-ups: parameter/member symbol ids precomputed per invoke and type, lazy custom iterators,
+per-instruction cached access paths, VM constraint checks (from Phase A).
+
 ### Phase D — Self-hosting milestones (≈15–25 sessions)
 D1 Real front end in Strict (Language + Expressions): full Type/Member/Method model, Package/Context
    lookup (parent + children, generics, plural types, traits), tokenizer + shunting-yard producing an
