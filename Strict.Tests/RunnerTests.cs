@@ -113,13 +113,29 @@ public sealed class RunnerTests
 	private static IEnumerable<string> StrictProgramPaths()
 	{
 		var root = FindRepoRoot();
+		return StrictFolders().SelectMany(folder =>
+				Directory.GetFiles(Path.Combine(root, folder), "*" + Type.Extension)).
+			Select(file => Path.GetRelativePath(root, file).Replace('\\', '/')).Order();
+	}
+
+	private static IEnumerable<string> StrictFolders()
+	{
+		var root = FindRepoRoot();
 		string[] projects = [".", "Math", "ImageProcessing", "Language", "Expressions", "Validators",
-			"TestRunner", "HighLevelRuntime", "Bytecode", "Optimizers", "Runtime", "Compiler"];
-		return Directory.GetFiles(Path.Combine(root, "Examples"), "*" + Type.Extension,
-				SearchOption.AllDirectories).Concat(projects.SelectMany(project =>
-				Directory.GetFiles(Path.Combine(root, project), "*" + Type.Extension))).
-			Select(file => Path.GetRelativePath(root, file).Replace('\\', '/')).
-			Where(file => !file.Contains("/bin/") && !file.Contains("/obj/")).Order();
+			"TestRunner", "HighLevelRuntime", "Bytecode", "Optimizers", "Runtime", "Compiler", "Examples"];
+		return projects.Concat(Directory.GetDirectories(Path.Combine(root, "Examples")).
+			Select(folder => Path.GetRelativePath(root, folder).Replace('\\', '/')).
+			Where(folder => !folder.EndsWith("/bin") && !folder.EndsWith("/obj")));
+	}
+
+	[TestCaseSource(nameof(StrictFolders))]
+	[Category("Slow")]
+	public async Task StrictParserRoundTripsEveryLine(string folder)
+	{
+		var root = FindRepoRoot();
+		await new Runner(Path.Combine(root, "Expressions", "RoundTrip" + Type.Extension),
+			Path.Combine(root, folder)).Run();
+		Assert.That(consoleWriter.ToString(), Does.Contain("Round trip mismatches: 0"));
 	}
 
 	[Test]
