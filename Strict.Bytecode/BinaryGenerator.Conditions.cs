@@ -20,6 +20,8 @@ public sealed partial class BinaryGenerator
 	{
 		GenerateCodeForIfCondition(ifExpression.Condition);
 		GenerateCodeForThen(ifExpression);
+		if (ifExpression.OptionalElse != null)
+			SetConditionFlagToSkipElse();
 		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
 		if (ifExpression.OptionalElse == null)
 			return;
@@ -27,6 +29,35 @@ public sealed partial class BinaryGenerator
 		instructions.Add(new JumpToId(conditionalId++, InstructionType.JumpToIdIfTrue));
 		GenerateInstructions([ifExpression.OptionalElse]);
 		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
+	}
+
+	/// <summary>
+	/// The else branch is skipped by the condition flag, comparisons inside then may have changed it.
+	/// </summary>
+	private void SetConditionFlagToSkipElse()
+	{
+		var trueRegister = registry.AllocateRegister();
+		instructions.Add(new LoadConstantInstruction(trueRegister, new ValueInstance(binary.booleanType, true)));
+		instructions.Add(new BinaryInstruction(InstructionType.Equal, trueRegister, trueRegister));
+	}
+
+	/// <summary>
+	/// cond then a else b used as a value, both branches store into the same result variable.
+	/// </summary>
+	private void GenerateInlineConditionalValue(If inlineConditional)
+	{
+		var resultName = "conditional" + conditionalId;
+		GenerateCodeForIfCondition(inlineConditional.Condition);
+		GenerateInstructionFromExpression(inlineConditional.Then);
+		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, resultName));
+		SetConditionFlagToSkipElse();
+		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
+		var elseId = conditionalId++;
+		instructions.Add(new JumpToId(elseId, InstructionType.JumpToIdIfTrue));
+		GenerateInstructionFromExpression(inlineConditional.OptionalElse!);
+		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, resultName));
+		instructions.Add(new JumpToId(elseId, InstructionType.JumpEnd));
+		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultName));
 	}
 
 	private void GenerateCodeForThen(If ifExpression)

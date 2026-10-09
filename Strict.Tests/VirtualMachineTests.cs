@@ -725,6 +725,21 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void ReturnedInlineConditionalUsesThenValue()
+	{
+		var source = new[]
+		{
+			"has number", "Pick Number", "	if number > 5", "		return number is 6 then Twice(1) else Twice(2)",
+			"	0", "Twice(value Number) Number", "	value * 2"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ReturnedInlineConditionalUsesThenValue),
+			$"{nameof(ReturnedInlineConditionalUsesThenValue)}(6).Pick", source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(2));
+	}
+
+	[Test]
 	public void TextIndexOfUsesStartIndex()
 	{
 		var source = new[] { "has letters Text", "SecondQuote Number", "	letters.IndexOf(\"a\", 1)" };

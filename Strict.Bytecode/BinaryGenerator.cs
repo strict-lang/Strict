@@ -232,6 +232,9 @@ public sealed partial class BinaryGenerator
 		return false;
 	}
 
+	private static bool IsStatement(Expression expression) =>
+		expression is Body or Return or Declaration or MutableReassignment or For;
+
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)
 	{
 		for (var i = 0; i < expressions.Count; i++)
@@ -301,6 +304,11 @@ public sealed partial class BinaryGenerator
 				break;
 			}
 			GenerateCodeForBinary(binaryExpression);
+			break;
+		case If { OptionalElse: { } elseValue, Then: var thenValue } inlineConditional
+			when !inlineConditional.ReturnType.IsNone && !IsStatement(thenValue) &&
+			!IsStatement(elseValue):
+			GenerateInlineConditionalValue(inlineConditional);
 			break;
 		case If ifExpression:
 			GenerateIfInstructions(ifExpression);
