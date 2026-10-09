@@ -39,7 +39,7 @@ IsMethodLine(line Text) Boolean
 ParseMethodLine(line Text, lines Texts, lineIndex Number) Method
 	ParseMethodLine("Run Text", ("Run Text", "\t\"ok\""), 0).Name is "Run"
 	ParseMethodLine("Add(number Number) Number", ("Add(number Number) Number", "\tnumber"), 0).Name is "Add"
-	let method = Method((ExtractName(line) to Name), MethodResult(line), Variables)
+	let method = Method(ExtractName(line) to Name, MethodResult(line), Variables)
 	MethodParser(method).Parse(line, lines, lineIndex)
 ExtractName(text Text) Text
 	for text.characters

@@ -17,7 +17,7 @@ xor(other) Boolean
 	false xor true
 	true xor false
 	false xor false is false
-	value then (not other) else other
+	value then not other else other
 is(other) Boolean
 	false is not true
 	true is true
