@@ -15,12 +15,6 @@ public partial class Interpreter
 		method.Type.IsGeneric && method.Type.Name == Type.List &&
 		inner is Type.GenericTypesCannotBeUsedDirectlyUseImplementation;
 
-	private static bool IsKnownParserLimitation(Exception inner) =>
-		inner is ParsingFailed &&
-		(inner.InnerException is Type.NoMatchingMethodFound
-				or Type.ArgumentsDoNotMatchMethodParameters ||
-			inner.Message.Contains("Use number iteration"));
-
 	private static bool ShouldSkipGenericListTestValidation(Method method, bool runOnlyTests) =>
 		runOnlyTests && method.Type is { IsGeneric: true, Name: Type.List or Type.Dictionary };
 

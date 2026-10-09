@@ -168,8 +168,7 @@ public partial class Interpreter
 			}
 			catch (Exception inner) when (runOnlyTests)
 			{
-				if (ShouldIgnoreGenericListTestParseFailure(method, inner) ||
-					IsKnownParserLimitation(inner))
+				if (ShouldIgnoreGenericListTestParseFailure(method, inner))
 					return trueInstance;
 				throw new MethodRequiresTest(method,
 					$"Test execution failed: {method.Parent.FullName}.{method.Name}\n" +
