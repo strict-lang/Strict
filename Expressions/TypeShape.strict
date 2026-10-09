@@ -1,0 +1,81 @@
+has lines Texts
+IsMemberLine(line Text) Boolean
+	TypeShape("has a").IsMemberLine("mutable count Number") is true
+	TypeShape("has a").IsMemberLine("Run") is false
+	line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
+IsMethodHeader(line Text) Boolean
+	TypeShape("has a").IsMethodHeader("Run Number") is true
+	TypeShape("has a").IsMethodHeader("\tlogger.Log(1)") is false
+	if (line is "") or line.StartsWith("\t")
+		return false
+	not IsMemberLine(line)
+MemberNames Texts
+	TypeShape("has number", "mutable count Number", "Run").MemberNames is ("number", "count")
+	for lines
+		if IsMemberLine(value)
+			TokenAt(value, 1)
+MemberType(name Text) Text
+	TypeShape("has number", "has logger").MemberType("logger") is "Logger"
+	TypeShape("has count Number", "Run").MemberType("count") is "Number"
+	for lines
+		if IsMemberLine(value) and (TokenAt(value, 1) is name)
+			return DeclaredType(Tokenizer(value).Tokens)
+	""
+DeclaredType(tokens Texts) Text
+	TypeShape("has a").DeclaredType("has", "texts") is "Texts"
+	TypeShape("has a").DeclaredType("has", "count", "=", "0") is "Count"
+	if tokens.Length > 2 and tokens(2) is not "=" and tokens(2) is not "with"
+		return tokens(2)
+	tokens(1).Substring(0, 1).Upper + tokens(1).Substring(1, tokens(1).Length - 1)
+MethodNames Texts
+	TypeShape("has number", "Run", "\t1", "Add(other Number) Number", "\tother").MethodNames is ("Run", "Add")
+	for lines
+		if IsMethodHeader(value)
+			TokenAt(value, 0)
+MethodReturnType(name Text) Text
+	TypeShape("Add(other Number) Number", "\tother").MethodReturnType("Add") is "Number"
+	TypeShape("Run", "\t1").MethodReturnType("Run") is "None"
+	for lines
+		if IsMethodHeader(value) and (TokenAt(value, 0) is name)
+			return HeaderReturnType(Tokenizer(value).Tokens)
+	""
+HeaderReturnType(tokens Texts) Text
+	TypeShape("has a").HeaderReturnType("Run", "Number") is "Number"
+	TypeShape("has a").HeaderReturnType("Add", "(", "x", ")") is "None"
+	if tokens.Length is 1
+		return "None"
+	let last = tokens(tokens.Length - 1)
+	last is ")" then "None" else last
+TokenAt(line Text, position Number) Text
+	TypeShape("has a").TokenAt("has count Number", 1) is "count"
+	let tokens = Tokenizer(line).Tokens
+	tokens(position)
+ParameterNames(header Text) Texts
+	TypeShape("has a").ParameterNames("Add(other Number, mutable count Number) Mutable(List)") is ("other", "count")
+	TypeShape("has a").ParameterNames("Run").Length is 0
+	let tokens = Tokenizer(header).Tokens
+	mutable names = List(Mutable(Text))
+	let end = ParametersEnd(tokens)
+	for end
+		if index > 1 and IsParameterStart(tokens, index)
+			names.Add(tokens(index))
+	names
+ParametersEnd(tokens Texts) Number
+	TypeShape("has a").ParametersEnd("Add", "(", "x", ")", "Number") is 3
+	TypeShape("has a").ParametersEnd("Add", "(", "x", "Iterator", "(", "Text", ")", ")") is 7
+	if tokens.Length < 2 or tokens(1) is not "("
+		return 0
+	let brackets = SyntaxParser(tokens)
+	mutable depth = 0
+	mutable end = 0
+	for tokens
+		depth = depth + brackets.BracketDelta(value)
+		if (depth is 0) and (end is 0) and index > 0
+			end = index
+	end
+IsParameterStart(tokens Texts, position Number) Boolean
+	TypeShape("has a").IsParameterStart(("Add", "(", "x", ")"), 2) is true
+	let previous = tokens(position - 1)
+	if previous is "mutable"
+		return true
+	(previous is in ("(", ",")) and tokens(position) is not "mutable"

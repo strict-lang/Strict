@@ -1,0 +1,37 @@
+has logger
+Run(folder Text, root Text)
+	let types = TypeNames(folder) + TypeNames(root)
+	mutable unresolved = 0
+	for Directory.Files(folder, "*.strict")
+		unresolved = unresolved + CheckFile(value, types)
+	logger.Log("Unresolved names: " + unresolved)
+TypeNames(folder Text) Texts
+	for Directory.Files(folder, "*.strict")
+		Path(value).FileName.RemoveExtension.text
+CheckFile(path Text, types Texts) Number
+	let shape = TypeShape(File(path).ReadLines)
+	let known = shape.MemberNames + shape.MethodNames + types + ("value", "index", "outer")
+	mutable scope = known
+	mutable unresolved = 0
+	for shape.lines
+		if shape.IsMethodHeader(value)
+			scope = known + shape.ParameterNames(value)
+		if StartsWith("\t")
+			unresolved = unresolved + CheckLine(Trim, scope, path)
+			scope = scope + DeclaredNames(Trim)
+	unresolved
+CheckLine(line Text, scope Texts, path Text) Number
+	CheckLine("a + 1", ("a", "b"), "test") is 0
+	mutable unknown = 0
+	for StatementParser(Tokenizer(line).Tokens).ParseStatement.HeadNames
+		if value is not in scope
+			logger.Log(path + ": " + value + " in " + line)
+			unknown = unknown + 1
+	unknown
+DeclaredNames(line Text) Texts
+	DeclaredNames("let a = 1").Length is 1
+	let tokens = Tokenizer(line).Tokens
+	mutable names = List(Mutable(Text))
+	if tokens(0) is in ("let", "constant", "mutable")
+		names.Add(tokens(1))
+	names

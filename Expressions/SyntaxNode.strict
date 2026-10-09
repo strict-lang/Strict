@@ -75,3 +75,13 @@ ArgumentsText(firstIndex Number) Text
 		let argument = children(firstIndex + index) to Text
 		result = result + argument
 	result
+HeadNames Texts
+	StatementParser(Tokenizer("let a = b.Length + Add(c)").Tokens).ParseStatement.HeadNames is ("b", "Add", "c")
+	if Kind is "Identifier"
+		return Tokenizer(text).Tokens
+	mutable names = List(Mutable(Text))
+	if Kind is "Call"
+		names.Add(text)
+	for children
+		names = names + HeadNames
+	names

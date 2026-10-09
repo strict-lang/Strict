@@ -69,7 +69,7 @@ public sealed class RunnerTests
 		var sourcePath = Path.Combine(root, relativePath);
 		var hasRun = HasRunMethod(sourcePath);
 		var arguments = ProgramArguments.TryGetValue(relativePath, out var argument)
-			? " \"" + Path.Combine(root, argument) + "\""
+			? string.Concat(argument.Split(' ').Select(part => " \"" + Path.Combine(root, part) + "\""))
 			: "";
 		File.Delete(Path.ChangeExtension(sourcePath, BinaryExecutable.Extension));
 		var testDirectory = Directory.GetCurrentDirectory();
@@ -107,7 +107,8 @@ public sealed class RunnerTests
 		["Compiler/SourceCompiler.strict"] = "Examples/NativeArithmetic.strict",
 		["ImageProcessing/ProcessImage.strict"] = "ImageProcessing/test_image.jpg",
 		["Process.strict"] = "Examples/HelloLogger.strict",
-		["Expressions/RoundTrip.strict"] = "Expressions"
+		["Expressions/RoundTrip.strict"] = "Expressions",
+		["Expressions/ResolveCheck.strict"] = "Expressions ."
 	};
 
 	private static IEnumerable<string> StrictProgramPaths()
