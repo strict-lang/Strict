@@ -1,0 +1,15 @@
+has Name Text
+has returnType Text
+has instructions List(InstructionEntry)
+Names(names BinaryNames) BinaryNames
+	MethodEntry("Run", "None", InstructionEntry(45, "Hi", List(Number))).Names(BinaryNames("a", "b")).names.Length is 5
+	mutable result = names.With(Name).With(returnType)
+	for instructions
+		result = value.Names(result)
+	result
+Bytes(names BinaryNames) Numbers
+	MethodEntry("Run", "None", InstructionEntry(45, "a", List(Number))).Bytes(BinaryNames("a", "None")).Length is 6
+	mutable encoder = ByteEncoder.Empty.SevenBit(0).SevenBit(names.Index(returnType)).SevenBit(instructions.Length)
+	for instructions
+		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
+	encoder.bytes

@@ -246,10 +246,17 @@ A single element for a list parameter (`ZipWriter(ZipEntry(..))`, `GenerateRetur
 is now wrapped into a list by the parser, the old `(("x"))` workaround is gone (A1.7); the
 ConvertingNumbers example passed only because `ConvertingNumbers(3)` stored a Number in its
 `numbers` member and iterated it as a count, it now passes the list `(0, 1, 2)`.
-Next: the C# binary format in Strict (NameTable, type entries, instruction payloads), then tree
-codegen with the VM output differential.
+The `.strictbinary` format in Strict: `BinaryNames` (69 prefilled names like the C# NameTable plus
+custom names), `InstructionEntry` (Print payload), `MethodEntry`, `TypeEntry` (magic byte, version,
+name table, members, method groups) and `BinaryFile` (one `.bytecode` ZIP entry per type). Slow
+test `StrictWrittenBinaryRunsOnTheVirtualMachine`: a Hello program written by Strict runs on the
+C# VM. Single elements are now also wrapped for constructors with more parameters
+(`SingleElementForListParameterAmongOthersIsWrapped`), as a fallback after normal overload
+resolution so operators like `list + element` keep their own overloads.
+Next: all instruction payloads, then tree codegen with the VM output differential.
 Flaky once in a full parallel solution run (passes alone and in reruns):
-`InterpreterTests.ParserParsesExistingTextStrictFile`, likely Language package files changing while
+`InterpreterTests.ParserParsesExistingTextStrictFile` and
+`LoadStrictExamplesPackageAndUseBasePackageTypes`, likely package files changing while
 Strict.Tests runs programs there (Phase F thread safety item).
 Bugs found and fixed on the way (each with a test): parser stack overflow on `.`/`)` inside text,
 text-unaware member splitting, interpreter return type check on nested bodies, VM IndexOf

@@ -12,20 +12,17 @@ Bytes Numbers
 	local + central + EndRecord(central.Length, local.Length)
 LocalHeader(entry ZipEntry, checksum Number) Numbers
 	Sample.LocalHeader(ZipEntry("a", (104, 105)), 0).Length is 31
-	let name = Empty.UnicodeBytes(entry.Name)
-	constant start = Empty.UInt(6.7324752e7, 4).UInt(20, 2).UInt(0, 4).UInt(0, 2).UInt(DosDate, 2)
+	let name = ByteEncoder.Empty.UnicodeBytes(entry.Name)
+	constant start = ByteEncoder.Empty.UInt(6.7324752e7, 4).UInt(20, 2).UInt(0, 4).UInt(0, 2).UInt(DosDate, 2)
 	let sizes = start.UInt(checksum, 4).UInt(entry.content.Length, 4).UInt(entry.content.Length, 4)
 	sizes.UInt(name.Length, 2).UInt(0, 2).bytes + name
 CentralHeader(entry ZipEntry, checksum Number, offset Number) Numbers
 	Sample.CentralHeader(ZipEntry("a", (104, 105)), 0, 0).Length is 47
-	let name = Empty.UnicodeBytes(entry.Name)
-	constant start = Empty.UInt(3.3639248e7, 4).UInt(20, 2).UInt(20, 2).UInt(0, 4).UInt(0, 2).UInt(DosDate, 2)
+	let name = ByteEncoder.Empty.UnicodeBytes(entry.Name)
+	constant start = ByteEncoder.Empty.UInt(3.3639248e7, 4).UInt(20, 2).UInt(20, 2).UInt(0, 4).UInt(0, 2).UInt(DosDate, 2)
 	let sizes = start.UInt(checksum, 4).UInt(entry.content.Length, 4).UInt(entry.content.Length, 4)
 	sizes.UInt(name.Length, 2).UInt(0, 8).UInt(0, 4).UInt(offset, 4).bytes + name
 EndRecord(centralSize Number, centralOffset Number) Numbers
 	Sample.EndRecord(94, 66).Length is 22
-	let counts = Empty.UInt(1.01010256e8, 4).UInt(0, 4).UInt(entries.Length, 2).UInt(entries.Length, 2)
+	let counts = ByteEncoder.Empty.UInt(1.01010256e8, 4).UInt(0, 4).UInt(entries.Length, 2).UInt(entries.Length, 2)
 	counts.UInt(centralSize, 4).UInt(centralOffset, 4).UInt(0, 2).bytes
-Empty ByteEncoder
-	Empty.bytes.Length is 0
-	ByteEncoder(List(Number))

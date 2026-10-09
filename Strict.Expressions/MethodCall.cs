@@ -209,20 +209,14 @@ public class MethodCall : ConcreteExpression
 
 	private static bool
 		AreArgumentsAutoParsedAsList(Method method, IReadOnlyList<Expression> arguments) =>
-		method.Parameters.Count is 1 && (arguments.Count > 1 ||
-			arguments.Count is 1 && IsSingleListElement(method.Parameters[0].Type, arguments[0]));
-
-	private static bool IsSingleListElement(Type parameterType, Expression argument) =>
-		parameterType is GenericTypeImplementation
-		{
-			Generic.IsList: true, ImplementationTypes: [var elementType]
-		} && !argument.ReturnType.IsList && argument.ReturnType.IsSameOrCanBeUsedAs(elementType);
+		method.Parameters.Count is 1 && arguments.Count > 1;
 
 	private static IReadOnlyList<Expression> NormalizeListArguments(Body body, Method method,
 		IReadOnlyList<Expression> arguments)
 	{
 		if (AreArgumentsAutoParsedAsList(method, arguments))
 			return [new List(body, arguments.ToList())];
+		arguments = WrapSingleListElements(body, method, arguments);
 		if (arguments.Count >= method.Parameters.Count)
 			return arguments;
 		List<Expression>? normalizedArguments = null;
@@ -235,6 +229,17 @@ public class MethodCall : ConcreteExpression
 			normalizedArguments.Add(new List(parameterType, body.CurrentFileLineNumber));
 		}
 		return normalizedArguments ?? arguments;
+	}
+
+	private static IReadOnlyList<Expression> WrapSingleListElements(Body body, Method method,
+		IReadOnlyList<Expression> arguments)
+	{
+		List<Expression>? wrapped = null;
+		for (var index = 0; index < arguments.Count && index < method.Parameters.Count; index++)
+			if (TypeMethodFinder.IsSingleListElement(method.Parameters[index].Type,
+				arguments[index].ReturnType))
+				(wrapped ??= arguments.ToList())[index] = List.WrapElement(body, arguments[index]);
+		return wrapped ?? arguments;
 	}
 
 	public static Expression? TryParseFromOrEnum(Body body, IReadOnlyList<Expression> arguments,
@@ -436,9 +441,12 @@ public class MethodCall : ConcreteExpression
 			: DisplayArguments.ToBrackets();
 
 	private IReadOnlyList<Expression> DisplayArguments =>
-		argumentsToShowCount == null
+		(argumentsToShowCount == null
 			? Arguments
-			: Arguments.Take(argumentsToShowCount.Value).ToArray();
+			: Arguments.Take(argumentsToShowCount.Value)).Select(argument =>
+			argument is List { IsWrappedElement: true } wrapped
+				? wrapped.Values[0]
+				: argument).ToArray();
 
 	private string FormatErrorConstructor()
 	{

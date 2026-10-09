@@ -74,6 +74,9 @@ internal class TypeMethodFinder(Type type)
 			foreach (var method in matchingMethods)
 				if (IsMethodWithMatchingParametersType(method, typesOfArguments, commonArgumentType, Type))
 					return method;
+			foreach (var method in matchingMethods)
+				if (IsMethodWithSingleElementsForLists(method, typesOfArguments))
+					return method;
 			if (commonArgumentType != null)
 				foreach (var method in matchingMethods)
 					if (commonArgumentType == GetListElementTypeIfHasSingleParameter(method, arguments.Count))
@@ -285,6 +288,32 @@ internal class TypeMethodFinder(Type type)
 		var result = type.Members.All(member => CanAutoCreateType(method, member.Type, visiting));
 		visiting.Remove(type);
 		return result;
+	}
+
+	/// <summary>
+	/// One element where a list is expected, the parser wraps it into a list of that element.
+	/// </summary>
+	public static bool IsSingleListElement(Type parameterType, Type argumentType) =>
+		parameterType is GenericTypeImplementation
+		{
+			Generic.IsList: true, ImplementationTypes: [var elementType]
+		} && !argumentType.IsList && argumentType.IsSameOrCanBeUsedAs(elementType, false);
+
+	private static bool IsMethodWithSingleElementsForLists(Method method,
+		IReadOnlyList<Type> typesOfArguments)
+	{
+		if (method.Name != Method.From && method.Name.AsSpan().IsOperator() ||
+			typesOfArguments.Count > method.Parameters.Count ||
+			typesOfArguments.Count < GetRequiredMethodParametersCount(method) ||
+			!IsFromConstructorWithMatchingConstraints(method, 1))
+			return false;
+		var hasSingleElement = false;
+		for (var index = 0; index < typesOfArguments.Count; index++)
+			if (IsSingleListElement(method.Parameters[index].Type, typesOfArguments[index]))
+				hasSingleElement = true;
+			else if (!IsMethodParameterMatchingArgument(method, index, typesOfArguments[index]))
+				return false;
+		return hasSingleElement;
 	}
 
 	private static bool IsMethodParameterMatchingArgument(Method method, int index, Type argumentType)

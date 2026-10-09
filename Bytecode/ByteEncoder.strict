@@ -1,4 +1,5 @@
 has bytes Numbers
+constant Empty = ByteEncoder(List(Number))
 UInt(number Number, size Number) ByteEncoder
 	ByteEncoder(1, 2).UInt(258, 2).bytes is (1, 2, 2, 1)
 	mutable result = bytes

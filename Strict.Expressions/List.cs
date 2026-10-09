@@ -19,6 +19,14 @@ public sealed class List : Value
 
 	public List(Type type, int lineNumber = 0) : base(type, [], lineNumber, true) => Values = [];
 
+	/// <summary>
+	/// One element passed where a list is expected, printed without list brackets.
+	/// </summary>
+	public static List WrapElement(Body body, Expression element) =>
+		new(body, [element]) { IsWrappedElement = true };
+
+	public bool IsWrappedElement { get; private init; }
+
 	private static Type GetCommonBaseType(IReadOnlyList<Expression> values, Body bodyForErrorMessage)
 	{
 		var firstType = values[0].ReturnType;

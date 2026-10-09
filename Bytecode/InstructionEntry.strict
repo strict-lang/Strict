@@ -1,0 +1,17 @@
+has kind Number
+has texts
+has numbers
+constant Print = 45
+Names(names BinaryNames) BinaryNames
+	InstructionEntry(Print, "Hi", List(Number)).Names(BinaryNames("a", "b")).names.Length is 3
+	mutable result = names
+	for texts
+		result = result.With(value)
+	result
+Bytes(names BinaryNames) Numbers
+	InstructionEntry(Print, "b", List(Number)).Bytes(BinaryNames("a", "b")) is (45, 1, 0)
+	ByteEncoder(kind).bytes + Payload(names)
+Payload(names BinaryNames) Numbers
+	InstructionEntry(Print, "b", (2, 1)).Payload(BinaryNames("a", "b")) is (1, 1, 2, 1)
+	let text = ByteEncoder.Empty.SevenBit(names.Index(texts(0)))
+	numbers.Length is 0 then text.UInt(0, 1).bytes else text.UInt(1, 1).bytes + numbers

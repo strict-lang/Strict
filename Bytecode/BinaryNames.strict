@@ -1,0 +1,32 @@
+has names Texts
+constant PrefilledCount = 69
+constant Empty = BinaryNames(List(Text))
+Predefined(typeName Text) BinaryNames
+	BinaryNames("a", "b").Predefined("Hello").names.Length is 69
+	constant types = ("None", "Boolean", "Number", "Character", "Range", "Text", "Error", "ErrorWithValue")
+	constant moreTypes = ("Iterator", "List", "Logger", "File", "Directory", "TextWriter", "TextReader")
+	constant allTypes = types + moreTypes + ("Stacktrace", "Mutable", "Dictionary")
+	constant extras = ("index", "value", "Run", "from", "first", "second", "numbers", "characters", "texts")
+	constant lists = ("NewLine", "Tab", "Strict/List(Number)", "List(Number)", "Strict/List(Text)", "List(Text)")
+	BinaryNames(List(Text) + "" + allTypes + Prefixed(allTypes) + Lowercased(allTypes) + extras + lists + typeName)
+Prefixed(typeNames Texts) Texts
+	BinaryNames("a", "b").Prefixed("A", "B") is ("Strict/A", "Strict/B")
+	for typeNames
+		"Strict/" + value
+Lowercased(typeNames Texts) Texts
+	BinaryNames("a", "b").Lowercased("None", "TextWriter") is ("textWriter")
+	for typeNames
+		if value is not in ("None", "ErrorWithValue")
+			value.Substring(0, 1).Lower + value.Substring(1, value.Length - 1)
+With(name Text) BinaryNames
+	BinaryNames("a", "b").With("b").names.Length is 2
+	name is in names then BinaryNames(names) else BinaryNames(names + name)
+Index(name Text) Number
+	BinaryNames("a", "b").Index("b") is 1
+	names.Index(name)
+Bytes Numbers
+	BinaryNames("a", "b").Predefined("Hello").With("Hi").Bytes is (1, 2, 72, 105)
+	mutable encoder = ByteEncoder.Empty.SevenBit(names.Length - PrefilledCount)
+	for names.Length - PrefilledCount
+		encoder = encoder.Text(names(PrefilledCount + index))
+	encoder.bytes

@@ -1,0 +1,19 @@
+has Name Text
+has methods List(MethodEntry)
+constant MagicByte = 83
+constant FormatVersion = 4
+Names BinaryNames
+	TypeEntry("Hello", MethodEntry("Run", "None", InstructionEntry(45, "Hi", List(Number)))).Names.names.Length is 70
+	mutable result = BinaryNames.Empty.Predefined(Name)
+	for methods
+		result = value.Names(result)
+	result
+Bytes Numbers
+	TypeEntry("Hello", MethodEntry("Run", "None", InstructionEntry(45, "Hi", List(Number)))).Bytes.Length is 16
+	constant names = Names
+	mutable encoder = ByteEncoder(MagicByte, FormatVersion)
+	encoder = ByteEncoder(encoder.bytes + names.Bytes).SevenBit(0).SevenBit(methods.Length)
+	for methods
+		encoder = ByteEncoder(encoder.bytes).SevenBit(names.Index(value.Name)).SevenBit(1)
+		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
+	encoder.bytes
