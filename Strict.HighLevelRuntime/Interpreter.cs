@@ -457,6 +457,10 @@ public partial class Interpreter
 	/// </summary>
 	private const int MaxCallDepth = 128;
 
+	public sealed class ListIndexOutOfRange(Method method, string listCall, int index, int length)
+		: InterpreterExecutionFailed(method, listCall + " index " + index + " is outside of " +
+			-length + ".." + (length - 1));
+
 	public sealed class NegativeLoopCount(Method method, int count)
 		: InterpreterExecutionFailed(method, "Loop count " + count + " is negative");
 

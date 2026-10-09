@@ -490,6 +490,25 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void ListIndexOutOfRangeIsAnError()
+	{
+		using var t = CreateType(nameof(ListIndexOutOfRangeIsAnError), "has number", "Pick Number",
+			"	constant numbers = (1, 2)", "	numbers(number)");
+		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Pick"),
+				new ValueInstance(t, [new ValueInstance(interpreter.numberType, 5)]), []),
+			Throws.InstanceOf<InterpreterExecutionFailed>().With.Message.Contains("5"));
+	}
+
+	[Test]
+	public void AndSkipsRightSideWhenLeftIsFalse()
+	{
+		using var t = CreateType(nameof(AndSkipsRightSideWhenLeftIsFalse), "has number", "Has Boolean",
+			"	constant numbers = (1, 2)", "	number < numbers.Length and (numbers(number) is 1)");
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Has"),
+			new ValueInstance(t, [new ValueInstance(interpreter.numberType, 5)]), []).Boolean, Is.False);
+	}
+
+	[Test]
 	public void EvaluateRangeEquality()
 	{
 		using var t = CreateType(nameof(EvaluateRangeEquality), "has number", "Compare Boolean",

@@ -31,6 +31,9 @@ StartsWith(text, start = 0) Boolean
 	"hello".StartsWith("hel")
 	"hello".StartsWith("hel", 1) is false
 	"yo mama".StartsWith("mama") is false
+	"hi".StartsWith("hello") is false
+	if start < 0 or start + text.Length > Length
+		return false
 	for Range(start, start + text.Length)
 		if outer(index) is not text(index - start)
 			return false
@@ -96,6 +99,7 @@ LastIndexOf(text Text) Number
 	"hello".LastIndexOf("l") is 3
 	"hello".LastIndexOf("x") is -1
 	"hello".LastIndexOf("o") is 4
+	"a".LastIndexOf("abc") is -1
 	for Range(0, Length - text.Length + 1).Reverse
 		if StartsWith(text, index)
 			return index

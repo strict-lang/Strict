@@ -14,7 +14,13 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 		var indexValue = interpreter.RunExpression(call.Index, ctx);
 		if (listInstance.IsList || listInstance.IsText ||
 			listInstance.TryGetValueTypeInstance()?.ReturnType.IsList == true)
-			return listInstance.GetIteratorValue(interpreter.characterType, (int)indexValue.Number);
+		{
+			var index = (int)indexValue.Number;
+			var length = listInstance.GetIteratorLength();
+			if (index < -length || index >= length)
+				throw new Interpreter.ListIndexOutOfRange(ctx.Method, call.ToString(), index, length);
+			return listInstance.GetIteratorValue(interpreter.characterType, index);
+		}
 		if (directOuter != null)
 		{
 			var typeInst = listInstance.TryGetValueTypeInstance();
@@ -106,6 +112,8 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 				InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
 					"Binary call must have instance and 1 argument"));
 		var leftInstance = interpreter.RunExpression(call.Instance, ctx);
+		if (IsDecidedByLeftSide(call.Method.Name, leftInstance))
+			return leftInstance;
 		var rightInstance = interpreter.RunExpression(call.Arguments[0], ctx);
 		return operatorType switch
 		{
@@ -120,6 +128,13 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 					"Unknown operator category"))
 		};
 	}
+
+	/// <summary>
+	/// "and" is false when the left side is false, "or" true when it is true, the right is skipped.
+	/// </summary>
+	private static bool IsDecidedByLeftSide(string operatorName, ValueInstance left) =>
+		operatorName is BinaryOperator.And or BinaryOperator.Or && left.GetType().IsBoolean &&
+		left.Boolean == (operatorName == BinaryOperator.Or);
 
 	private ValueInstance ExecuteArithmeticOperation(MethodCall call, ExecutionContext ctx,
 		ValueInstance left, ValueInstance right)
