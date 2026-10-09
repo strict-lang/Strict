@@ -196,7 +196,7 @@ public sealed partial class VirtualMachine
 				loopBegin.LoopCount = 0;
 			return;
 		}
-		frame.Set(ValueSymbolId, new ValueInstance(executable.numberType, index + 1), true,
+		frame.Set(ValueSymbolId, new ValueInstance(executable.numberType, index), true,
 			Type.ValueLowercase);
 	}
 

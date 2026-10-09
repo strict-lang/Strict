@@ -1,0 +1,17 @@
+has number
+Collect Numbers
+	Collector(3).Collect.Length is 5
+	mutable issues = List(Mutable(Number))
+	for Values
+		issues.Add(value)
+	for Others
+		issues.Add(value)
+	issues
+Values Numbers
+	Collector(2).Values.Length is 2
+	for number
+		index
+Others Numbers
+	Collector(2).Others.Length is 2
+	for 2
+		index + number

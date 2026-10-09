@@ -11,6 +11,15 @@ public sealed class ListCallTests : TestExpressions
 			Is.EqualTo(string.Join(Environment.NewLine, lines)));
 
 	[Test]
+	public void RangeLoopValueIsTheCurrentNumber()
+	{
+		using var type = new Type(TestPackage.Instance, new TypeLines(
+			nameof(RangeLoopValueIsTheCurrentNumber), "has texts", "Doubled Numbers",
+			"\tfor Range(2, texts.Length)", "\t\tvalue.Floor")).ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+	}
+
+	[Test]
 	public void MutableReassignmentInsideLoopKeepsValueType()
 	{
 		using var type = new Type(TestPackage.Instance, new TypeLines(

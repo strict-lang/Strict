@@ -168,7 +168,10 @@ public sealed class For(Expression[] customVariables,
 		innerBody.AddVariable(Type.IndexLowercase, new Number(body.Method, 0), true, true);
 		var iteratorText = GetForIteratorText(line);
 		if (IsNumberOrRangeOnlyIteration(body, iteratorText))
+		{
+			innerBody.AddVariable(Type.ValueLowercase, new Number(body.Method, 0), true, true);
 			return;
+		}
 		var iteratorYieldType = TryGetIteratorYieldType(body, iteratorText);
 		if (iteratorYieldType != null)
 		{
@@ -192,8 +195,8 @@ public sealed class For(Expression[] customVariables,
 	}
 
 	/// <summary>
-	/// Returns true when the for loop iterates over a plain number count or a Range,
-	/// meaning only <c>index</c> is auto-generated — no <c>value</c> variable is created.
+	/// Returns true when the for loop iterates over a plain number count or a Range, value is then
+	/// the current number like index (README: "for Range(2, 5)" logs 2, 3, 4).
 	/// </summary>
 	private static bool IsNumberOrRangeOnlyIteration(Body body, ReadOnlySpan<char> iteratorText)
 	{

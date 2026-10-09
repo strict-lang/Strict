@@ -1,0 +1,5 @@
+has Name
+has number
+WithName(other Text) Holder
+	Holder("x", 2).WithName("y").Name is "y"
+	Holder(other, number)

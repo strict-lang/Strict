@@ -37,6 +37,15 @@ A1 Open bugs found so far, each with one regression test:
 9. Cache: include OS/runtime build in binary cache validity (Platform.Current is folded as constant).
 10. VM `list + element` now copies: verify no regressions in Mutable list semantics (List.Add uses
     `value = value + element`), add test for `mutable list` growing in a loop on VM + interpreter.
+11. Member constraints (`has text with Length > 1 ...`) are never checked at construction (only used
+    to pre-fill list lengths): `Name("y")` is accepted. Enforce in interpreter and VM (generate the
+    check in BinaryGenerator). A one-off `Y` vs `y` output difference was seen only with such an
+    invalid Name; recheck determinism after constraints are enforced.
+
+Done so far (2026-10-09): A1.1 inline then/else on mutables, A1.2 `is` comparison type check and
+`is in` brackets, A1.3 subfolder examples + `from` member initialization, A1.5 no longer
+reproducible (fixed by value piping fix), A1.6 `value` in number/Range loops is the current number
+in parser and VM (VM used index + 1, README says `for 10` logs 0..9).
 A2 Error quality: every failure path uses `ParsingFailed` / `InterpreterExecutionFailed` /
    `RuntimeError` with clickable `file:line` stack traces back to `.strict` source; remove remaining
    `NotSupportedException` / `InvalidOperationException` throws (AGENTS rule). One test per type.

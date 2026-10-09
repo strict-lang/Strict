@@ -1,0 +1,3 @@
+has logger
+Run
+	logger.Log(Holder("y", 1).Name)

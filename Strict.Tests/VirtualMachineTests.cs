@@ -525,7 +525,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			"ReturnWithinALoop(5).GetAll", source)).Generate();
 		Assert.That(
 			() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
-			Is.EqualTo(1 + 2 + 3 + 4 + 5));
+			Is.EqualTo(0 + 1 + 2 + 3 + 4));
 	}
 
 	[Test]
@@ -632,6 +632,19 @@ public sealed class VirtualMachineTests : TestBytecode
 		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.
 			Number;
 		Assert.That(result, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void LoopOverNumberValueStartsAtZero()
+	{
+		var source = new[]
+		{
+			"has number", "Sum Number", "\tmutable sum = 0", "\tfor number", "\t\tsum = sum + value", "\tsum"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(LoopOverNumberValueStartsAtZero),
+			$"{nameof(LoopOverNumberValueStartsAtZero)}(3).Sum", source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(3));
 	}
 
 	[Test]
