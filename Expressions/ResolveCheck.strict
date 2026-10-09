@@ -1,14 +1,16 @@
 has logger
 Run(folder Text, root Text)
-	let files = AllFiles(root) + Directory.Files(folder, "*.strict")
-	let known = TypeNames(files) + ("value", "index", "outer")
+	let inference = Inference(Directory.Files(folder, "*.strict") + AllFiles(root))
+	let known = inference.types.names + ("value", "index", "outer")
 	mutable unresolved = 0
 	for Directory.Files(folder, "*.strict")
-		unresolved = unresolved + CheckFile(value, files, known)
+		unresolved = unresolved + CheckFile(value, inference, known)
 	logger.Log("Unresolved names: " + unresolved)
-CheckFile(path Text, files Texts, known Texts) Number
+CheckFile(path Text, inference TypeInference, known Texts) Number
 	let shape = TypeShape(File(path).ReadLines)
-	let unresolved = FileCheck(shape, TypeInference(files), known + shape.MemberNames + shape.MethodNames).Unresolved
+	let statements = MethodBodies(TypeName(path), shape, inference).Statements
+	let typeNames = inference.types.ShapeScope(TypeName(path)).names
+	let unresolved = FileCheck(inference, known + typeNames).Unresolved(statements)
 	for unresolved
 		logger.Log(path + ": " + value)
 	unresolved.Length
@@ -19,4 +21,15 @@ AllFiles(root Text) Texts
 	files
 TypeNames(files Texts) Texts
 	for files
-		Path(value).FileName.RemoveExtension.text
+		TypeName(value)
+Inference(files Texts) TypeInference
+	mutable members = List(Mutable(Scope))
+	mutable methods = List(Mutable(Scope))
+	for files
+		let shape = TypeShape(File(value).ReadLines)
+		members.Add(shape.MemberScope)
+		methods.Add(shape.MethodScope)
+	TypeInference(KnownTypes(TypeNames(files), members, methods))
+TypeName(path Text) Text
+	TypeName("Examples/Sum.strict") is "Sum"
+	Path(path).FileName.RemoveExtension.text

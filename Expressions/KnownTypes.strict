@@ -1,0 +1,77 @@
+has names Texts
+has members Scopes
+has methods Scopes
+constant NoMembers = Scope(List(Text), List(Text))
+constant CountMembers = Scope(("number", "unused"), ("Number", "Unused"))
+constant CountMethods = Scope(("Increment", "Twice"), ("Count", "Count"))
+constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers))
+IsKnown(typeName Text) Boolean
+	Sample.IsKnown("Count") is true
+	Sample.IsKnown("Missing") is false
+	typeName is in names
+IsPlural(typeName Text) Boolean
+	Sample.IsPlural("Counts") is true
+	Sample.IsPlural("Text") is false
+	(not IsKnown(typeName)) and IsPluralName(typeName)
+IsPluralName(name Text) Boolean
+	Sample.IsPluralName("Counts") is true
+	Sample.IsPluralName("") is false
+	name.Length > 1 and (name.Substring(name.Length - 1, 1) is "s")
+MembersOf(typeName Text) Scope
+	Sample.MembersOf("Count").TypeOf("number") is "Number"
+	let index = names.Index(IsPlural(typeName) then "List" else typeName)
+	index is -1 then NoMembers else members(index)
+MethodsOf(typeName Text) Scope
+	Sample.MethodsOf("Count").TypeOf("Increment") is "Count"
+	let index = names.Index(IsPlural(typeName) then "List" else typeName)
+	index is -1 then NoMembers else methods(index)
+ShapeScope(typeName Text) Scope
+	Sample.ShapeScope("Count").TypeOf("Increment") is "Count"
+	let typeMethods = MethodsOf(typeName)
+	MembersOf(typeName).WithAll(typeMethods.names, typeMethods.types)
+ElementType(typeName Text) Text
+	Sample.ElementType("Texts") is "Text"
+	Sample.ElementType("Range") is "Number"
+	if typeName is in ("Number", "Range", "Text")
+		return typeName is "Range" then "Number" else typeName
+	if typeName is "List"
+		return "Generics"
+	IsPluralName(typeName) then typeName.Substring(0, typeName.Length - 1) else "Unknown"
+MemberType(instanceType Text, name Text) Text
+	Sample.MemberType("Count", "Increment") is "Count"
+	Sample.MemberType("Unknown", "Length") is "Unknown"
+	ResolvedType(instanceType, name, 3)
+ResolvedType(instanceType Text, name Text, depth Number) Text
+	Sample.ResolvedType("Count", "Twice", 1) is "Count"
+	let type = DeclaredType(instanceType, name, depth)
+	if type is ""
+		return "Unknown"
+	if type is "Generic"
+		return ElementType(instanceType)
+	let isInherited = (MembersOf(instanceType).TypeOf(name) is "") and (MethodsOf(instanceType).TypeOf(name) is "")
+	(type is "List") or isInherited and (type is ValueOf(instanceType)) then instanceType else type
+ValueOf(typeName Text) Text
+	Sample.ValueOf("Text") is ""
+	let typeMembers = MembersOf(typeName)
+	typeMembers.types.Length is 1 then typeMembers.types(0) else ""
+DeclaredType(typeName Text, name Text, depth Number) Text
+	Sample.DeclaredType("Count", "number", 0) is "Number"
+	let typeMembers = MembersOf(typeName)
+	if typeMembers.TypeOf(name) is not ""
+		return typeMembers.TypeOf(name)
+	if MethodsOf(typeName).TypeOf(name) is not "" or (depth is 0)
+		return MethodsOf(typeName).TypeOf(name)
+	for typeMembers.types
+		let type = MemberMethodType(value, name, depth - 1)
+		if type is not ""
+			return type
+	""
+MemberMethodType(memberType Text, name Text, depth Number) Text
+	Sample.MemberMethodType("Texts", "Missing", 1) is ""
+	if IsKnown(memberType)
+		let type = ResolvedType(memberType, name, depth)
+		return type is "Unknown" then "" else type
+	let listType = IsPlural(memberType) then MethodsOf("List").TypeOf(name) else ""
+	if listType is "Generic"
+		return ElementType(memberType)
+	listType is "List" then memberType else listType

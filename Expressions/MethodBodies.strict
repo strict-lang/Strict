@@ -1,0 +1,79 @@
+has typeName Text
+has shape TypeShape
+has inference TypeInference
+constant NoInference = TypeInference(KnownTypes(("A", "B"), (NoScope, NoScope), (NoScope, NoScope)))
+constant NoScope = Scope(("x", "z"), ("y", "w"))
+constant Sample = TypeShape("has a Number", "Run", "\tlet b = a", "\tb")
+Statements ScopedStatements
+	MethodBodies("Demo", Sample, NoInference).Statements.Length is 2
+	MethodBodies("Demo", Sample, NoInference).Statements.Last.line is 3
+	mutable statements = List(Mutable(ScopedStatement))
+	for shape.lines
+		if shape.IsMethodHeader(value)
+			let parameters = HeaderScope(HeaderTokens(Tokenizer(value).Tokens))
+			statements = statements + Flatten(BodyParser(shape.lines).Block(index + 1, 1), parameters, index + 1)
+	statements
+HeaderScope(header HeaderTokens) Scope
+	MethodBodies("Demo", Sample, NoInference).HeaderScope(HeaderTokens("Add", "(", "other", ")")).TypeOf("other") is "Demo"
+	mutable types = List(Mutable(Text))
+	for header.ParameterTypes
+		types.Add(value is "Other" then typeName else value)
+	shape.MemberScope.With("value", InstanceType).WithAll(header.ParameterNames, types)
+InstanceType Text
+	MethodBodies("List", Sample, NoInference).InstanceType is "Generics"
+	typeName is "List" then "Generics" else typeName
+IteratedType Text
+	MethodBodies("Text", Sample, NoInference).IteratedType is "Characters"
+	typeName is "Text" then "Characters" else InstanceType
+Flatten(body SyntaxNode, outerScope Scope, start Number) ScopedStatements
+	MethodBodies("Demo", Sample, NoInference).Statements.Last.scope.TypeOf("b") is "Number"
+	mutable statements = List(Mutable(ScopedStatement))
+	mutable scope = outerScope
+	for body.children
+		let line = start + statements.Length
+		statements.Add(ScopedStatement(value, scope, line))
+		if value.HasBody
+			statements = statements + Flatten(value.children.Last, LoopScope(value, scope), line + 1)
+		scope = Declare(value, scope)
+	statements
+Methods Scope
+	MethodBodies("Demo", Sample, NoInference).Methods.names.Length is 0
+	inference.types.MethodsOf(typeName)
+LoopScope(statement SyntaxNode, scope Scope) Scope
+	MethodBodies("Range", Sample, NoInference).LoopScope(SyntaxNode("For", "for"), NoScope).TypeOf("value") is "Number"
+	if statement.Kind is not "For"
+		return scope
+	let iterated = statement.HasValue then inference.TypeOf(statement.children(0), scope, Methods) else IteratedType
+	let nested = scope.With("outer", scope.TypeOf("value"))
+	nested.With("value", inference.types.ElementType(iterated)).With("index", "Number")
+Declare(statement SyntaxNode, scope Scope) Scope
+	if statement.Kind is not "Declaration"
+		return scope
+	scope.With(Tokenizer(statement.text).Tokens.Last, inference.TypeOf(statement.children(0), scope, Methods))
+StatementType(scoped ScopedStatement) Text
+	StatementType(ScopedStatement(SyntaxNode("Number", "1"), NoScope, 0)) is "Number"
+	let statement = scoped.statement
+	if statement.Kind is in ("If", "For")
+		return BlockType(statement, scoped.scope)
+	if (statement.Kind is in ("ElseIf", "Else", "ElseValue")) or (statement.Kind is "Return") and (not statement.HasValue)
+		return ""
+	if statement.Kind is "Reassignment"
+		return inference.TypeOf(statement.children(1), scoped.scope, Methods)
+	let value = statement.Kind is in ("Declaration", "Return") then statement.children(0) else statement
+	inference.TypeOf(value, scoped.scope, Methods)
+BlockType(statement SyntaxNode, scope Scope) Text
+	BlockType(SyntaxNode("For", "for"), NoScope) is ""
+	if statement.Kind is "For"
+		return statement.HasValue then inference.TypeOf(statement.children(0), scope, Methods) else typeName
+	if not IsSelector(statement)
+		return ""
+	let lastCase = statement.children.Last.children.Last
+	let value = lastCase.Kind is "ElseValue" then lastCase.children(0) else lastCase.children(1)
+	inference.TypeOf(value, scope, Methods)
+IsSelector(statement SyntaxNode) Boolean
+	IsSelector(BodyParser("Run", "\tif a is", "\t\t1 then 2").Block(1, 1).children(0)) is true
+	IsSelector(StatementParser(Tokenizer("if a is b").Tokens).ParseStatement) is false
+	if not (statement.HasValue and statement.HasBody)
+		return false
+	let condition = statement.children(0)
+	(condition.Kind is "Binary") and (condition.children(1).Kind is "Missing")

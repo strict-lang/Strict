@@ -1,0 +1,87 @@
+has tokens Texts
+DeclaredType(nameIndex Number) Text
+	HeaderTokens("has", "texts").DeclaredType(1) is "Texts"
+	HeaderTokens("has", "count", "=", "0").DeclaredType(1) is "Number"
+	HeaderTokens("has", "ops", "Bytecode", "/", "InstructionList").DeclaredType(1) is "InstructionList"
+	let next = nameIndex + 1
+	if next < tokens.Length and (tokens(next) is "/")
+		return TypeName(nameIndex)
+	if next + 1 < tokens.Length and (tokens(next) is "=")
+		return ValueType(next + 1)
+	next < tokens.Length and tokens(next) is not in ("with", ",", ")") then TypeName(next) else ImplicitType(nameIndex)
+ImplicitType(nameIndex Number) Text
+	HeaderTokens("constant", "Add").ImplicitType(1) is "Number"
+	HeaderTokens("has", "texts").ImplicitType(1) is "Texts"
+	if (tokens(0) is "constant") and (nameIndex + 1 is tokens.Length)
+		return "Number"
+	tokens(nameIndex).Substring(0, 1).Upper + tokens(nameIndex).Substring(1, tokens(nameIndex).Length - 1)
+ValueType(start Number) Text
+	HeaderTokens("constant", "a", "=", "(", "1", ",", "2", ")").ValueType(3) is "Numbers"
+	HeaderTokens("constant", "a", "=", "-", "1").ValueType(3) is "Number"
+	let first = tokens(start)
+	if first is "("
+		return ValueType(start + 1) + "s"
+	if first is "-"
+		return "Number"
+	let kind = SyntaxParser(tokens).Leaf(first).Kind
+	kind is "Identifier" then first else kind
+MemberName Text
+	HeaderTokens("has", "Math", "/", "Size").MemberName is "Size"
+	HeaderTokens("has", "count", "Number").MemberName is "count"
+	tokens.Length > 3 and (tokens(2) is "/") then tokens(3) else tokens(1)
+TypeName(start Number) Text
+	HeaderTokens("Mutable", "(", "List", ")").TypeName(0) is "List"
+	HeaderTokens("List", "(", "Mutable", "(", "Text", ")", ")").TypeName(0) is "Texts"
+	HeaderTokens("Bytecode", "/", "InstructionList").TypeName(0) is "InstructionList"
+	HeaderTokens("List", "(", "key", "Generic", ")").TypeName(0) is "List"
+	if start + 2 >= tokens.Length or tokens(start + 1) is not in ("/", "(")
+		return tokens(start)
+	let inner = TypeName(start + 2)
+	if (tokens(start + 1) is "/") or (tokens(start) is "Mutable")
+		return inner
+	let isNamedElement = inner.Lower is inner
+	(tokens(start) is "List") and (not isNamedElement) then inner + "s" else tokens(start)
+ReturnType Text
+	HeaderTokens("Run", "Number").ReturnType is "Number"
+	HeaderTokens("Add", "(", "x", ")").ReturnType is "None"
+	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnType is "List"
+	constant start = ParametersEnd + 1
+	start >= tokens.Length then "None" else TypeName(start)
+ParametersEnd Number
+	HeaderTokens("Add", "(", "x", ")", "Number").ParametersEnd is 3
+	HeaderTokens("Add", "(", "x", "Iterator", "(", "Text", ")", ")").ParametersEnd is 7
+	if tokens.Length < 2 or tokens(1) is not "("
+		return 0
+	let brackets = SyntaxParser(tokens)
+	mutable depth = 0
+	mutable end = 0
+	for tokens
+		depth = depth + brackets.BracketDelta(value)
+		if (depth is 0) and (end is 0) and index > 0
+			end = index
+	end
+IsParameterStart(position Number) Boolean
+	HeaderTokens("Add", "(", "x", ")").IsParameterStart(2) is true
+	let previous = tokens(position - 1)
+	if previous is "mutable"
+		return true
+	(previous is in ("(", ",")) and tokens(position) is not "mutable"
+ParameterNames Texts
+	HeaderTokens(Tokenizer("Add(other Number, mutable count) Mutable(List)").Tokens).ParameterNames is ("other", "count")
+	HeaderTokens("Run", "Number").ParameterNames.Length is 0
+	mutable names = List(Mutable(Text))
+	for ParametersEnd
+		if index > 1 and IsParameterStart(index)
+			names.Add(tokens(index))
+	names
+ParameterTypes Texts
+	HeaderTokens(Tokenizer("Add(x Number, mutable count, t = \"a\")").Tokens).ParameterTypes is ("Number", "Count", "Text")
+	mutable types = List(Mutable(Text))
+	for ParametersEnd
+		if index > 1 and IsParameterStart(index)
+			types.Add(ParameterType(index))
+	types
+ParameterType(position Number) Text
+	HeaderTokens("Add", "(", "x", "Number", ")").ParameterType(2) is "Number"
+	HeaderTokens("Add", "(", "x", "=", "\"a\"", ")").ParameterType(2) is "Text"
+	DeclaredType(position)

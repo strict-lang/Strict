@@ -1,45 +1,26 @@
-has shape TypeShape
 has inference TypeInference
 has known Texts
-constant NoInference = TypeInference("x", "y")
-constant NoShape = TypeShape("a", "b")
 constant NoScope = Scope(("x", "z"), ("y", "w"))
-Unresolved Texts
-	FileCheck(TypeShape("has a Number", "Run", "\ta + b"), NoInference, ("Number", "Run")).Unresolved.Length is 1
+constant NoInference = TypeInference(KnownTypes(("A", "B"), (NoScope, NoScope), (NoScope, NoScope)))
+Unresolved(statements ScopedStatements) Texts
+	Unresolved(MethodBodies("A", TypeShape("has a Number", "Run", "\ta + b"), NoInference).Statements).Length is 1
 	mutable unresolved = List(Mutable(Text))
-	for shape.lines
-		if shape.IsMethodHeader(value)
-			let scope = shape.MemberScope.WithAll(shape.ParameterNames(value), shape.ParameterTypes(value))
-			unresolved = unresolved + CheckBody(BodyParser(shape.lines).Block(index + 1, 1), scope, known)
+	for statements
+		unresolved = unresolved + UnknownNames(value.statement, known + value.scope.names + ValueNames(value.scope))
 	unresolved
-CheckBody(body SyntaxNode, outerScope Scope, names Texts) Texts
-	FileCheck(NoShape, NoInference, ("N", "R")).CheckBody(SyntaxNode("Body", ""), NoScope, ("a", "b")).Length is 0
-	mutable unresolved = List(Mutable(Text))
-	mutable scope = outerScope
-	for body.children
-		unresolved = unresolved + UnknownNames(value, names + scope.names)
-		if value.HasBody
-			unresolved = unresolved + CheckBody(value.children.Last, scope, names + LoopNames(value, scope))
-		scope = Declare(value, scope)
-	unresolved
+ValueNames(scope Scope) Texts
+	FileCheck(NoInference, ("N", "R")).ValueNames(NoScope).Length is 0
+	if scope.TypeOf("value") is ""
+		return List(Text)
+	let valueScope = inference.types.ShapeScope(scope.TypeOf("value"))
+	valueScope.names
 UnknownNames(statement SyntaxNode, names Texts) Texts
-	FileCheck(NoShape, NoInference, ("N", "R")).UnknownNames(SyntaxNode("Identifier", "c"), ("a", "b")).Length is 1
+	FileCheck(NoInference, ("N", "R")).UnknownNames(SyntaxNode("Identifier", "c"), ("a", "b")).Length is 1
 	mutable unknown = List(Mutable(Text))
 	for statement.HeadNames
 		if not IsKnown(value, names)
 			unknown.Add(value + " in " + statement to Text)
 	unknown
-Declare(statement SyntaxNode, scope Scope) Scope
-	if statement.Kind is not "Declaration"
-		return scope
-	scope.With(Tokenizer(statement.text).Tokens.Last, inference.TypeOf(statement.children(0), scope, shape))
-LoopNames(statement SyntaxNode, scope Scope) Texts
-	FileCheck(NoShape, NoInference, ("N", "R")).LoopNames(SyntaxNode("If", ""), NoScope).Length is 0
-	if statement.Kind is not "For"
-		return List(Text)
-	let iterator = inference.TypeOf(statement.children(0), scope, shape)
-	let elementShape = inference.ShapeOf(inference.ElementType(iterator))
-	elementShape.MethodNames + elementShape.MemberNames
 IsKnown(name Text, names Texts) Boolean
 	IsKnown("Numbers", ("Number", "a")) is true
 	IsKnown("b", ("Number", "a")) is false

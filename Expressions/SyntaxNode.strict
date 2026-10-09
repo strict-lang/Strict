@@ -4,7 +4,7 @@ has children SyntaxNodes
 constant operators = ("then", "else", "is", "is in", "is not", "is not in", "or", "xor", "and", "<", ">", "<=", ">=", "in", "+", "-", "%", "*", "/", "^", "to")
 constant precedences = (1, 1, 2, 2, 7, 7, 4, 5, 6, 7, 7, 7, 7, 9, 11, 11, 12, 13, 13, 14, 20)
 constant keywordKinds = ("Return", "If", "For", "ElseIf", "ElseValue")
-constant keywords = ("return", "if", "for", "else if", "else")
+constant keywordTexts = ("return", "if", "for", "else if", "else")
 Precedence Number
 	SyntaxNode("Binary", "+").Precedence is 11
 	SyntaxNode("Binary", "is not").Precedence is 7
@@ -57,8 +57,7 @@ StatementText Text
 		return text + " = " + ChildText(0, 0)
 	if Kind is "Reassignment"
 		return ChildText(0, 0) + " = " + ChildText(1, 0)
-	let hasValue = children.Length > 0 and children(0).Kind is not "Body"
-	hasValue and (Kind is in keywordKinds) then keywords(keywordKinds.Index(Kind)) + " " + ChildText(0, 0) else text
+	HasValue and (Kind is in keywordKinds) then keywordTexts(keywordKinds.Index(Kind)) + " " + ChildText(0, 0) else text
 ChildText(childIndex Number, minimumPrecedence Number) Text
 	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).ChildText(0, 15) is "a"
 	let child = children(childIndex)
@@ -92,6 +91,9 @@ HasBody Boolean
 	SyntaxNode("For", "", (SyntaxNode("Number", "3"), SyntaxNode("Body", ""))).HasBody is true
 	SyntaxNode("Number", "3").HasBody is false
 	children.Length > 0 and (children.Last.Kind is "Body")
+HasValue Boolean
+	SyntaxNode("For", "", (SyntaxNode("Body", ""), SyntaxNode("Body", ""))).HasValue is false
+	children.Length > 0 and children(0).Kind is not "Body"
 Lines(indentation Text) Texts
 	SyntaxNode("Body", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "b"))).Lines("\t") is ("\ta", "\tb")
 	mutable lines = List(Mutable(Text))

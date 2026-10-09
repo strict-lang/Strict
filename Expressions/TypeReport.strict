@@ -1,0 +1,12 @@
+has logger
+Run(folder Text, root Text)
+	let check = ResolveCheck(logger)
+	let inference = check.Inference(Directory.Files(folder, "*.strict") + check.AllFiles(root))
+	for Directory.Files(folder, "*.strict")
+		Report(check.TypeName(value), TypeShape(File(value).ReadLines), inference)
+Report(typeName Text, shape TypeShape, inference TypeInference)
+	let bodies = MethodBodies(typeName, shape, inference)
+	for bodies.Statements
+		let type = bodies.StatementType(value)
+		if type is not ""
+			logger.Log(typeName + ":" + (value.line + 1) + " " + type)

@@ -182,19 +182,40 @@ quotes), `SyntaxNode` (tree, C# precedences, canonical printing incl. `(not x) a
 chains, lists vs grouping), `StatementParser` (let/constant/mutable, reassignment, return, if,
 else if, selector if lines, for). `RoundTrip.strict` re-prints every method line; the Slow test
 `StrictParserRoundTripsEveryLine` asserts 0 mismatches for all 18 folders (runs on the VM).
-Name resolution layer: `TypeShape` (members, methods, parameter and return types from lines),
-`Scope` (names with types), `TypeInference` (types of literals, identifiers, calls, members and
-operators, list element types, methods reached through trait members like File → TextReader),
-`FileCheck`/`ResolveCheck` (every name in a method line is a member, method, parameter, variable,
-type or a method of the enclosing loop value). Slow test `StrictResolvesEveryName` asserts 0
-unresolved names for all 18 folders. `BodyParser` builds method bodies as trees (nested `Body`
-nodes for if/else/for blocks); `RoundTrip` now re-prints whole bodies from the tree and FileCheck
-scopes variables and loop values per block. Still missing for D1: typed nodes (each call resolved
-to a method, member, variable or parameter), generics and package parent/child lookup.
+Name resolution and type layer: `HeaderTokens` (member and method header tokens: names, declared,
+value, parameter and return types incl. `Mutable(T)`, `List(T)`, `Package/Type`), `TypeShape`
+(member scope and method/constant scope of a type, one tokenizer pass each), `KnownTypes` (all
+package types with their scopes: plural lists, element types, members reached through member types
+like File → TextReader or RegisterBank → CallFrame → Texts, single value member wrappers like
+Degrees keep their type), `TypeInference` (types of literals, identifiers, calls, list calls,
+members, operators, conversions, conditionals, implicit `value` calls), `MethodBodies` (flattens
+the body trees into statements with the scope valid at each line: members, `value`, parameters,
+declarations, loop `value`/`index`/`outer`), `FileCheck`/`ResolveCheck` (every name in a method
+line resolves) and `TypeReport` (type of every statement line). Slow tests for all 18 folders:
+`StrictParserRoundTripsEveryLine` (0 mismatches, whole bodies re-printed from the tree),
+`StrictResolvesEveryName` (0 unresolved) and the differential test
+`StrictInfersSameTypesAsCSharp` (every line the C# parser types gets the same type from the
+Strict front end; dictionary key/value types are compared by generic name only). ResolveCheck on
+Expressions runs in 2.7s on the VM (precomputed type scopes, iterative tokenizer).
+Still missing for D1: typed nodes (each call resolved to a method, member, variable or parameter
+in the tree itself), generic arguments beyond list element types.
 Bugs found by ResolveCheck (each with a test): VM loop over a Range returned by a method,
 ConstructorToFieldMutations mapped `from` arguments to the wrong members (Range's iterator trait
 first), VM negative list index (`List.Last`), Boolean `let` lines were taken as inline tests and
 dropped from the body, VM list call on a computed list (`node.children(0)` on a method result).
+Bugs found by the type differential test (each with a test): `let` lines piped their value into
+the loop `value`, implicit test instances got number 0 for list members, the C# printer dropped
+brackets of an equal precedence right operand (`5 - (3 - 1)` could not be written), For, If and
+selector if line numbers pointed to the end of their body (also wrong VM loop source lines), the
+validator did not visit `return` values, constants created by a constructor were compiled to their
+source text, a method lookup cycle (`List(Keyword).from(Texts)`) overflowed the stack because the
+cycle guard compared argument type arrays by reference, a conditional line starting with `(a) and`
+and ending with `)` lost its brackets, the constant collapser deleted declarations only used through
+a member or list call (`let condition = x.children(0)` + `condition.Kind`).
+Open C# issues: constants of another type (`KnownTypes.Sample`) in member initializers fail when
+that type is parsed later; a constant named like a type (`keywords` → `Keyword`) is typed by its
+name instead of its value; unused variables in nested bodies are only checked when the method body
+itself has variables.
 Flaky once in a full parallel solution run (passes alone and in reruns):
 `InterpreterTests.ParserParsesExistingTextStrictFile`, likely Language package files changing while
 Strict.Tests runs programs there (Phase F thread safety item).

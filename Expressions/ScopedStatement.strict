@@ -1,0 +1,3 @@
+has statement SyntaxNode
+has scope
+has line Number

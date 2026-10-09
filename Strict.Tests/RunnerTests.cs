@@ -108,7 +108,8 @@ public sealed class RunnerTests
 		["ImageProcessing/ProcessImage.strict"] = "ImageProcessing/test_image.jpg",
 		["Process.strict"] = "Examples/HelloLogger.strict",
 		["Expressions/RoundTrip.strict"] = "Expressions",
-		["Expressions/ResolveCheck.strict"] = "Expressions ."
+		["Expressions/ResolveCheck.strict"] = "Expressions .",
+		["Expressions/TypeReport.strict"] = "Expressions ."
 	};
 
 	private static IEnumerable<string> StrictProgramPaths()
@@ -140,6 +141,19 @@ public sealed class RunnerTests
 	public Task StrictResolvesEveryName(string folder) =>
 		RunExpressionsProgram("ResolveCheck", Path.Combine(FindRepoRoot(), folder) + " " +
 			FindRepoRoot(), "Unresolved names: 0");
+
+	[TestCaseSource(nameof(StrictFolders))]
+	[Category("Slow")]
+	public async Task StrictInfersSameTypesAsCSharp(string folder)
+	{
+		var root = FindRepoRoot();
+		await RunExpressionsProgram("TypeReport", Path.Combine(root, folder) + " " + root, "");
+		var strictTypes = consoleWriter.ToString().Split('\n').Select(line => line.Trim()).ToHashSet();
+		var mismatches = (await CSharpStatementTypes.Collect(root, folder)).Except(strictTypes).
+			Select(line => line + " <> Strict: " + strictTypes.FirstOrDefault(strictLine =>
+				strictLine.StartsWith(line[..(line.IndexOf(' ') + 1)], StringComparison.Ordinal))).ToList();
+		Assert.That(mismatches, Is.Empty, string.Join(Environment.NewLine, mismatches.Order()));
+	}
 
 	private async Task RunExpressionsProgram(string program, string arguments, string expectedOutput)
 	{

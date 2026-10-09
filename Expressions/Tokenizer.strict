@@ -28,22 +28,27 @@ TokenLength(start Number) Number
 TextEnd(position Number) Number
 	Tokenizer("\"a\"").TextEnd(1) is 2
 	Tokenizer("\"\\\"\"").TextEnd(1) is 3
-	let character = line.Substring(position, 1)
-	if character is "\\"
-		return TextEnd(position + 2)
-	character is "\"" then position else TextEnd(position + 1)
+	mutable escaped = false
+	for Range(position, line.Length)
+		let character = line.Substring(value, 1)
+		if (not escaped) and (character is "\"")
+			return value
+		escaped = (not escaped) and (character is "\\")
+	line.Length - 1
 WordLength(start Number) Number
 	Tokenizer("abc d").WordLength(0) is 3
 	Tokenizer("12.5").WordLength(0) is 4
 	Tokenizer("x.y").WordLength(0) is 1
 	Tokenizer("1.Lerp").WordLength(0) is 1
 	Tokenizer("Vector2.One").WordLength(0) is 7
-	if start >= line.Length
-		return 0
-	let character = line.Substring(start, 1)
-	if IsWordCharacter(character) or (character is ".") and IsDecimalPoint(start)
-		return 1 + WordLength(start + 1)
-	0
+	for Range(start, line.Length)
+		if not IsWordPart(value)
+			return value - start
+	line.Length - start
+IsWordPart(position Number) Boolean
+	Tokenizer("a.5").IsWordPart(1) is false
+	let character = line.Substring(position, 1)
+	IsWordCharacter(character) or (character is ".") and IsDecimalPoint(position)
 IsDecimalPoint(position Number) Boolean
 	Tokenizer("1.5").IsDecimalPoint(1) is true
 	Tokenizer("a2.b").IsDecimalPoint(2) is false

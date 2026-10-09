@@ -9,5 +9,8 @@ WithAll(otherNames Texts, otherTypes Texts) Scope
 TypeOf(name Text) Text
 	Scope(("a", "b"), ("A", "B")).TypeOf("b") is "B"
 	Scope(("a", "b"), ("A", "B")).TypeOf("c") is ""
-	let position = names.Index(name)
-	position is -1 then "" else types(position)
+	Scope(("a", "a"), ("A", "B")).TypeOf("a") is "B"
+	for Range(0, names.Length).Reverse
+		if names(value) is name
+			return types(value)
+	""
