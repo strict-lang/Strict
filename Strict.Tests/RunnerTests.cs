@@ -106,7 +106,8 @@ public sealed class RunnerTests
 		["Language/PackageTests.strict"] = "Examples/BaseTypesTest",
 		["Compiler/SourceCompiler.strict"] = "Examples/NativeArithmetic.strict",
 		["ImageProcessing/ProcessImage.strict"] = "ImageProcessing/test_image.jpg",
-		["Process.strict"] = "Examples/HelloLogger.strict"
+		["Process.strict"] = "Examples/HelloLogger.strict",
+		["Expressions/RoundTrip.strict"] = "Expressions"
 	};
 
 	private static IEnumerable<string> StrictProgramPaths()

@@ -1,0 +1,20 @@
+has logger
+Run(folder Text)
+	mutable mismatches = 0
+	for Directory.Files(folder, "*.strict")
+		mismatches = mismatches + CheckFile(value)
+	logger.Log("Round trip mismatches: " + mismatches)
+CheckFile(path Text) Number
+	mutable mismatches = 0
+	for File(path).ReadLines
+		if StartsWith("\t")
+			mismatches = mismatches + CheckLine(Trim, path)
+	mismatches
+CheckLine(line Text, path Text) Number
+	CheckLine("a + b * c", "test") is 0
+	CheckLine("let x = (1, 2)", "test") is 0
+	let parsed = StatementParser(Tokenizer(line).Tokens).ParseStatement to Text
+	if parsed is line
+		return 0
+	logger.Log(path + ": " + line + " => " + parsed)
+	1

@@ -11,11 +11,18 @@ Parse SyntaxNode
 	ParseRange(0, tokens.Length)
 ParseRange(start Number, end Number) SyntaxNode
 	SyntaxParser("a", "+", "b").ParseRange(0, 3).Kind is "Binary"
+	SyntaxParser("a", "+", "b").ParseRange(3, 3).Kind is "Missing"
+	if end <= start
+		return SyntaxNode("Missing", "")
 	if end - start is 1
 		return Leaf(tokens(start))
 	let operatorIndex = LowestOperatorIndex(start, end)
 	if operatorIndex is not -1
 		return ParseOperator(operatorIndex, start, end)
+	ParseUnaryOrCall(start, end)
+ParseUnaryOrCall(start Number, end Number) SyntaxNode
+	SyntaxParser("not", "a").ParseUnaryOrCall(0, 2).Kind is "Not"
+	SyntaxParser("-", "a").ParseUnaryOrCall(0, 2).Kind is "Negate"
 	if tokens(start) is "not"
 		return SyntaxNode("Not", "", Single(ParseRange(start + 1, end)))
 	if tokens(start) is "-"

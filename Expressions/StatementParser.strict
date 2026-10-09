@@ -1,0 +1,44 @@
+has tokens Texts
+Syntax SyntaxParser
+	StatementParser("a", "b").Syntax.tokens.Length is 2
+	SyntaxParser(tokens)
+ParseStatement SyntaxNode
+	StatementParser(Tokenizer("let a = b + 1").Tokens).ParseStatement to Text is "let a = b + 1"
+	StatementParser(Tokenizer("x.y = 2").Tokens).ParseStatement to Text is "x.y = 2"
+	StatementParser(Tokenizer("return a then b else c").Tokens).ParseStatement to Text is "return a then b else c"
+	StatementParser(Tokenizer("else if a is 1").Tokens).ParseStatement to Text is "else if a is 1"
+	let first = tokens(0)
+	if first is in ("let", "constant", "mutable")
+		return SyntaxNode("Declaration", first + " " + tokens(1), Rest(3))
+	if first is in ("return", "if", "for")
+		return SyntaxNode(first.Capitalize, "", Rest(1))
+	if first is "else"
+		return ParseElse
+	ParseAssignmentOrExpression
+Rest(start Number) SyntaxNodes
+	StatementParser("return", "1").Rest(1).Length is 1
+	Syntax.Single(Syntax.ParseRange(start, tokens.Length))
+ParseElse SyntaxNode
+	StatementParser(Tokenizer("else").Tokens).ParseElse.Kind is "Else"
+	StatementParser("else", "if", "a").ParseElse.Kind is "ElseIf"
+	if tokens.Length is 1
+		return SyntaxNode("Else", "else")
+	SyntaxNode("ElseIf", "", Rest(2))
+ParseAssignmentOrExpression SyntaxNode
+	StatementParser("a", "=", "1").ParseAssignmentOrExpression.Kind is "Reassignment"
+	StatementParser(Tokenizer("a").Tokens).ParseAssignmentOrExpression.Kind is "Identifier"
+	constant assignment = AssignmentIndex
+	if assignment is -1
+		return Syntax.Parse
+	constant target = Syntax.ParseRange(0, assignment)
+	SyntaxNode("Reassignment", "", (target, Syntax.ParseRange(assignment + 1, tokens.Length)))
+AssignmentIndex Number
+	StatementParser("a", "=", "1").AssignmentIndex is 1
+	StatementParser("f", "(", "a", ")").AssignmentIndex is -1
+	mutable depth = 0
+	mutable assignment = -1
+	for tokens
+		depth = depth + Syntax.BracketDelta(value)
+		if (depth is 0) and (value is "=")
+			assignment = index
+	assignment
