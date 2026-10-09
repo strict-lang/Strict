@@ -635,6 +635,20 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void MutableListGrowsInsideLoop()
+	{
+		var source = new[]
+		{
+			"has number", "Collect Numbers", "\tmutable result = List(Mutable(Number))", "\tfor number",
+			"\t\tresult.Add(value * 2)", "\tresult"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(MutableListGrowsInsideLoop),
+			$"{nameof(MutableListGrowsInsideLoop)}(3).Collect", source)).Generate();
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
+		Assert.That(result.List.Items.Select(item => item.Number), Is.EqualTo(new[] { 0.0, 2.0, 4.0 }));
+	}
+
+	[Test]
 	public void LoopOverNumberValueStartsAtZero()
 	{
 		var source = new[]
