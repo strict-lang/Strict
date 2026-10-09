@@ -189,6 +189,12 @@ public sealed class ValueInstanceTests
 	}
 
 	[Test]
+	public void ListTextContainsAllItems() =>
+		Assert.That(new ValueInstance(TestPackage.Instance.GetListImplementationType(numberType),
+				Enumerable.Range(0, 12).Select(number => new ValueInstance(numberType, number)).ToArray()).
+			ToExpressionCodeString(), Is.EqualTo("(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)"));
+
+	[Test]
 	public void ThrowsInvalidTypeValueWhenUsingReservedNumberForText() =>
 		Assert.Throws<ValueInstance.InvalidTypeValue>(() =>
 			_ = new ValueInstance(numberType, -7.90897526e307));

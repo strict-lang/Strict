@@ -132,10 +132,8 @@ public readonly partial struct ValueInstance : IEquatable<ValueInstance>
 			return "";
 		if (list.Count == 1)
 			return list[0].ToExpressionCodeString(escapeText);
-		const int MaxItems = 10;
-		var itemsToAdd = Math.Min(list.Count, MaxItems);
-		var parts = new string[itemsToAdd];
-		for (var itemIndex = 0; itemIndex < itemsToAdd; itemIndex++)
+		var parts = new string[list.Count];
+		for (var itemIndex = 0; itemIndex < list.Count; itemIndex++)
 			parts[itemIndex] = list[itemIndex].ToExpressionCodeString(escapeText);
 		return parts.ToBrackets();
 	}
