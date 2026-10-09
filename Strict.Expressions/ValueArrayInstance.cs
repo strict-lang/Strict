@@ -71,14 +71,14 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		new(type, parentNumbers, type, width, offset);
 
 	/// <summary>
-	/// Returns true when all non-constant members of the type are numeric.
+	/// Returns true when all members, constants included, are numbers and fit into flat numbers.
 	/// </summary>
 	public static bool IsAllNumericType(Type type)
 	{
 		if (type.Members.Count == 0)
 			return false;
 		for (var memberIndex = 0; memberIndex < type.Members.Count; memberIndex++)
-			if (!type.Members[memberIndex].IsConstant && !type.Members[memberIndex].Type.IsNumber)
+			if (!type.Members[memberIndex].Type.IsNumber)
 				return false;
 		return true;
 	}

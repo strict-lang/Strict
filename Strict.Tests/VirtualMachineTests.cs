@@ -664,6 +664,36 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void ListConstantOfConstructedInstanceKeepsItsValues()
+	{
+		var source = new[]
+		{
+			"has number", "constant primes = (2, 3, 5)", "Pick Number",
+			$"	{nameof(ListConstantOfConstructedInstanceKeepsItsValues)}(number).Prime",
+			"Prime Number", "	primes(number)"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ListConstantOfConstructedInstanceKeepsItsValues),
+			$"{nameof(ListConstantOfConstructedInstanceKeepsItsValues)}(1).Pick", source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(3));
+	}
+
+	[Test]
+	public void ToTextUsesOwnToTextMethod()
+	{
+		var source = new[]
+		{
+			"has number", "Show Text", $"	{nameof(ToTextUsesOwnToTextMethod)}(number + 1) to Text",
+			"to Text", "	\"number \" + number"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(ToTextUsesOwnToTextMethod),
+			$"{nameof(ToTextUsesOwnToTextMethod)}(2).Show", source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Text,
+			Is.EqualTo("number 3"));
+	}
+
+	[Test]
 	public void TextIndexOfUsesStartIndex()
 	{
 		var source = new[] { "has letters Text", "SecondQuote Number", "	letters.IndexOf(\"a\", 1)" };

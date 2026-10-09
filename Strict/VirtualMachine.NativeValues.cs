@@ -10,11 +10,26 @@ namespace Strict;
 
 public sealed partial class VirtualMachine
 {
+	/// <summary>
+	/// A type with its own "to Text" uses it, like the interpreter, instead of the generic formatting.
+	/// </summary>
+	private bool HasOwnCompiledToText(Invoke invoke, ValueInstance rawValue)
+	{
+		if (rawValue.IsText || rawValue.IsList || rawValue.IsDictionary)
+			return false;
+		var type = rawValue.GetType();
+		return type is { IsNumber: false, IsBoolean: false, IsCharacter: false, IsNone: false } &&
+			invoke.MethodInfo.TypeFullName.EndsWith(type.FullName, StringComparison.Ordinal) &&
+			(invoke.CachedInstructions ??= GetPrecompiledMethodInstructions(invoke)) != null;
+	}
+
 	private bool TryHandleToConversion(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
 		var conversionType = info.ResolveReturnType(executable.TypeResolver);
 		var rawValue = ResolveInvokeInstance(info, implicitInstance);
+		if (conversionType.IsText && HasOwnCompiledToText(invoke, rawValue))
+			return false;
 		if (conversionType.IsText)
 		{
 			Memory.Registers[invoke.Register] = ConvertToText(rawValue);
