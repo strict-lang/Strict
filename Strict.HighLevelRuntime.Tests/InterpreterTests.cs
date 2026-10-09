@@ -694,6 +694,16 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void TestsDoNotEvaluateDeclarationsUsingNestedMembers()
+	{
+		using var t = CreateType(nameof(TestsDoNotEvaluateDeclarationsUsingNestedMembers), "has text",
+			"First Text", "\tTestsDoNotEvaluateDeclarationsUsingNestedMembers(\"ab\").First is \"a\"",
+			"\tlet first = text.characters(0)", "\tfirst + \"\"");
+		Assert.That(() => new Interpreter(TestPackage.Instance, TestBehavior.TestRunner).Execute(
+			t.Methods.Single(m => m.Name == "First")), Throws.Nothing);
+	}
+
+	[Test]
 	public void ImplicitInstanceSkipsConstantsOfMemberTypes()
 	{
 		using var inner = CreateType("InnerWithSample", "has names Texts",

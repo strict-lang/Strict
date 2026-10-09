@@ -98,7 +98,9 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 	private static bool ExpressionReferencesMember(Expression expr, string memberName) =>
 		expr switch
 		{
-			MemberCall m => m.Member.Name == memberName && m.Instance == null,
+			MemberCall m => m.Instance == null
+				? m.Member.Name == memberName
+				: ExpressionReferencesMember(m.Instance, memberName),
 			ListCall lc => ExpressionReferencesMember(lc.List, memberName),
 			MethodCall call => (call.Instance == null && call.Method.Name != Method.From) ||
 				(call.Instance != null && ExpressionReferencesMember(call.Instance, memberName)) ||

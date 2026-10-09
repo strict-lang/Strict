@@ -12,7 +12,7 @@ Validate ValidationIssues
 			let header = HeaderTokens(Tokenizer(value).Tokens)
 			let statements = BodyParser(shape.lines).Block(index + 1, 1).Statements
 			issues = issues + UsageRules(header, statements, shape.MemberScope.names, mutations).Issues
-	MemberIssues + issues
+	MemberIssues + ConstantIssues + issues
 MemberIssues ValidationIssues
 	Sample.MemberIssues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
@@ -53,3 +53,24 @@ HasMethodBody Boolean
 		if value.StartsWith("\t")
 			return true
 	false
+ConstantIssues ValidationIssues
+	TypeValidator(TypeShape("has number = 17 + 4", "Run", "\tnumber"), ("Add", "Remove")).ConstantIssues.Length is 1
+	mutable issues = List(Mutable(ValidationIssue))
+	for shape.lines
+		if IsComputedMember(value)
+			issues.Add(ValidationIssue("UseConstantHere", HeaderTokens(Tokenizer(value).Tokens).MemberName, "Use constant"))
+	issues
+IsComputedMember(line Text) Boolean
+	Sample.IsComputedMember("has number = 17 + 4") is true
+	Sample.IsComputedMember("has scale = 1") is false
+	let tokens = Tokenizer(line).Tokens
+	let equals = tokens.Index("=")
+	if (not shape.IsMemberLine(line)) or line.StartsWith("constant ") or (equals is -1)
+		return false
+	let initial = SyntaxParser(tokens).ParseRange(equals + 1, tokens.Length)
+	(initial.Kind is "Binary") and IsConstantNode(initial)
+IsConstantNode(node SyntaxNode) Boolean
+	Sample.IsConstantNode(SyntaxNode("Number", "1")) is true
+	if node.Kind is in ("Number", "Text", "Boolean")
+		return true
+	(node.Kind is "Binary") and IsConstantNode(node.children(0)) and IsConstantNode(node.children(1))

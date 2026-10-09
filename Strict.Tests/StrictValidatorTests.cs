@@ -7,8 +7,8 @@ using Type = Strict.Language.Type;
 namespace Strict.Tests;
 
 /// <summary>
-/// Validators/ValidateCheck.strict reports the same rule as the C# TypeValidator, rule names are
-/// the C# exception names, and finds nothing in all valid Strict folders.
+/// Validators/ValidateCheck.strict reports the same rule as the C# TypeValidator and
+/// ConstantCollapser (rule names are the C# exception names) and nothing in all Strict folders.
 /// </summary>
 [Category("Slow")]
 public sealed class StrictValidatorTests
@@ -39,6 +39,7 @@ public sealed class StrictValidatorTests
 		"\tlet count = input + 1", "\tcount * 2")]
 	[TestCase("UnusedMemberMustBeRemoved", "has unused Number", "has logger", "Run",
 		"\tlogger.Log(1)")]
+	[TestCase("UseConstantHere", "has number = 17 + 4", "Run Number", "	number")]
 	[TestCase("ParameterDeclaredAsMutableButValueNeverChanged", "has logger",
 		"Run(mutable count Number)", "\tlogger.Log(count)")]
 	public async Task StrictValidatorReportsSameRuleAsCSharp(string rule, params string[] lines)
@@ -62,6 +63,7 @@ public sealed class StrictValidatorTests
 			foreach (var method in type.Methods)
 				method.GetBodyAndParseIfNeeded();
 			new TypeValidator().Visit(type);
+			new ConstantCollapser().Visit(type, true);
 			return "";
 		}
 		catch (ParsingFailed failed)

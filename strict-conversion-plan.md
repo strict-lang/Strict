@@ -227,8 +227,12 @@ exception names. `ValidateCheck` runs over a folder; Slow tests: `StrictValidate
 issues in all 18 folders) and `StrictValidatorReportsSameRuleAsCSharp` (7 invalid samples, C#
 TypeValidator and the Strict validator report the same rule). The old text based Visitor,
 DeclarationRules and ValidateDemo are deleted. Fixed on the way: a `constant` line mentioning
-"generic" made its type generic. Still missing for D2: constant folding over the tree
-(ConstantCollapser.strict is still text based) and the double bracket list argument rule.
+"generic" made its type generic. `ConstantCollapser` now folds over the tree like C# (number arithmetic, text
+concatenation, `to Number`/`to Text` of literals, boolean and/or) and TypeValidator reports
+`UseConstantHere` for members computed from constants (8 rules in the differential). Also fixed:
+the interpreter test mode evaluated declarations using a member reached through another member
+(`node.children(0)`) on the empty implicit instance. Still missing for D2: the double bracket
+list argument rule (C# checks it on the line text).
 Flaky once in a full parallel solution run (passes alone and in reruns):
 `InterpreterTests.ParserParsesExistingTextStrictFile`, likely Language package files changing while
 Strict.Tests runs programs there (Phase F thread safety item).

@@ -33,9 +33,9 @@ public sealed class StrictValidatorsConversionTests
 		using var package =
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Validators");
 		var collapser = package.GetType("ConstantCollapser");
-		Assert.That(collapser.Methods.Any(method => method.Name == "CollapseBinary"), Is.True);
-		Assert.That(collapser.Methods.Any(method => method.Name == "CollapseTo"), Is.True);
-		Assert.That(collapser.Methods.Any(method => method.Name == "ShouldUseConstant"), Is.True);
+		Assert.That(collapser.Methods.Any(method => method.Name == "Collapsed"), Is.True);
+		Assert.That(collapser.Methods.Any(method => method.Name == "Folded"), Is.True);
+		Assert.That(collapser.Methods.Any(method => method.Name == "Converted"), Is.True);
 	}
 
 	[Test]
