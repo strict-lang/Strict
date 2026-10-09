@@ -1,0 +1,54 @@
+has Kind Text
+has text
+has children SyntaxNodes
+constant operators = ("is", "is in", "is not", "or", "xor", "and", "<", ">", "<=", ">=", "in", "+", "-", "%", "*", "/", "^", "to")
+constant precedences = (1, 1, 7, 4, 5, 6, 7, 7, 7, 7, 9, 11, 11, 12, 13, 13, 14, 20)
+Precedence Number
+	SyntaxNode("Binary", "+").Precedence is 11
+	SyntaxNode("Binary", "is not").Precedence is 7
+	SyntaxNode("Number", "1").Precedence is 0
+	if Kind is not "Binary"
+		return 0
+	precedences(operators.Index(text))
+to Text
+	SyntaxNode("Number", "1") to Text is "1"
+	SyntaxNode("Binary", "+", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))) to Text is "1 + 2"
+	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))) to Text is "(1, 2)"
+	if Kind is "Binary"
+		return ChildText(0, Precedence) + " " + text + " " + ChildText(1, Precedence + 1)
+	if Kind is "List"
+		return "(" + ArgumentsText(0) + ")"
+	CallText
+CallText Text
+	SyntaxNode("Call", "Add", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))).CallText is "Add(1, 2)"
+	SyntaxNode("Member", "Length", (SyntaxNode("Identifier", "x"), SyntaxNode("Identifier", "x"))).CallText is "x.Length"
+	if Kind is "Call"
+		return text + "(" + ArgumentsText(0) + ")"
+	if Kind is "MethodCall"
+		return ChildText(0, 21) + "." + text + "(" + ArgumentsText(1) + ")"
+	if Kind is "Member"
+		return ChildText(0, 21) + "." + text
+	UnaryText
+UnaryText Text
+	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).UnaryText is "not a"
+	if Kind is "Not"
+		return "not " + ChildText(0, 15)
+	if Kind is "Negate"
+		return "-" + ChildText(0, 15)
+	text
+ChildText(childIndex Number, minimumPrecedence Number) Text
+	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).ChildText(0, 15) is "a"
+	let child = children(childIndex)
+	let childText = child to Text
+	if child.Precedence > 0 and child.Precedence < minimumPrecedence
+		return "(" + childText + ")"
+	childText
+ArgumentsText(firstIndex Number) Text
+	SyntaxNode("Call", "Add", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))).ArgumentsText(1) is "2"
+	mutable result = ""
+	for children.Length - firstIndex
+		if index > 0
+			result = result + ", "
+		let argument = children(firstIndex + index) to Text
+		result = result + argument
+	result
