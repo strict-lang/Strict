@@ -244,7 +244,10 @@ public sealed class Repositories(ExpressionParser parser)
 			type.ParseMembersAndMethodsForPackage(parser);
 		InvalidateAllAvailableMethodsCaches();
 		foreach (var type in types)
+		{
 			type.ParseDeferredConstraints(parser);
+			type.ValidateMembersAreUsed();
+		}
 		return package;
 	}
 

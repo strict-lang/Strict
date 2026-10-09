@@ -28,6 +28,24 @@ public class RepositoriesTests
 			repos.LoadFromPath(nameof(InvalidPathWontWork), nameof(InvalidPathWontWork)));
 
 	[Test]
+	public void LoadingTypeWithDummyMemberFails()
+	{
+		var directory = Path.Combine(Path.GetTempPath(), "StrictDummy" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(directory);
+		try
+		{
+			File.WriteAllText(Path.Combine(directory, "Doubler.strict"), string.Join("\n",
+				"has dummy Number", "Double(number Number) Number", "\tDoubler(0).Double(2) is 4", "\tnumber * 2"));
+			Assert.That(async () => await repos.LoadFromPath("Strict/" + Path.GetFileName(directory), directory),
+				Throws.InstanceOf<Type.UnusedMemberMustBeRemoved>().With.Message.Contains("dummy"));
+		}
+		finally
+		{
+			Directory.Delete(directory, true);
+		}
+	}
+
+	[Test]
 	public void LoadingNonGithubPackageWontWork() =>
 		Assert.ThrowsAsync<Repositories.OnlyGithubDotComUrlsAreAllowedForNow>(() =>
 			repos.LoadFromUrl(new Uri("https://google.com")));

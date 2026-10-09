@@ -2,12 +2,12 @@ has logger
 Run
 	constant runtime = Interpreter.Empty
 	constant context = ExecutionContext.Empty
-	logger.Log(runtime.EvaluateLine("2 + 3", context).result)
-	logger.Log(runtime.EvaluateLine("4 * 5", context).result)
-	logger.Log(runtime.EvaluateLine("3 is 3", context).result)
+	logger.Log(runtime.EvaluateLine("2 + 3", context).Result)
+	logger.Log(runtime.EvaluateLine("4 * 5", context).Result)
+	logger.Log(runtime.EvaluateLine("3 is 3", context).Result)
 	constant first = runtime.EvaluateLine("let count = 2 + 3", context)
-	logger.Log(first.result)
-	let second = runtime.EvaluateLine("count * 2", first.frame)
-	logger.Log(second.result)
-	let third = runtime.EvaluateLine("count is 5", first.frame)
-	logger.Log(third.result)
+	logger.Log(first.Result)
+	let second = runtime.EvaluateLine("count * 2", first.Frame)
+	logger.Log(second.Result)
+	let third = runtime.EvaluateLine("count is 5", first.Frame)
+	logger.Log(third.Result)

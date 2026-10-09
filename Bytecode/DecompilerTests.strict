@@ -1,11 +1,6 @@
 has logger
 Run
-	constant decompiler = Decompiler.Empty
-	constant set = BytecodeInstruction.SetNumber(0, 5)
-	logger.Log(decompiler.ReconstructInstruction(set))
-	constant load = BytecodeInstruction.LoadVariable(1, "x")
-	logger.Log(decompiler.ReconstructInstruction(load))
-	constant add = BytecodeInstruction.BinaryOp(InstructionType.Add, 0, 1, 2)
-	logger.Log(decompiler.ReconstructInstruction(add))
-	constant ret = BytecodeInstruction.ReturnOp(2)
-	logger.Log(decompiler.ReconstructInstruction(ret))
+	logger.Log(Decompiler(BytecodeInstruction.SetNumber(0, 5)).Reconstruct)
+	logger.Log(Decompiler(BytecodeInstruction.LoadVariable(1, "x")).Reconstruct)
+	logger.Log(Decompiler(BytecodeInstruction.BinaryOp(InstructionType.Add, 0, 1, 2)).Reconstruct)
+	logger.Log(Decompiler(BytecodeInstruction.ReturnOp(2)).Reconstruct)

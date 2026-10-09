@@ -127,7 +127,7 @@ public sealed class TypeValidatorTests
 				]);
 				validator.Visit(typeWithUnusedMember);
 			}, //ncrunch: no coverage
-			Throws.InstanceOf<TypeValidator.UnusedMemberMustBeRemoved>().With.Message.Contains("unused"));
+			Throws.InstanceOf<Type.UnusedMemberMustBeRemoved>().With.Message.Contains("unused"));
 
 	private Type CreateType(string typeName, string[] code) =>
 		new Type(type.Package, new TypeLines(typeName, code)).ParseMembersAndMethods(parser);

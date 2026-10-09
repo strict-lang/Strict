@@ -1,5 +1,5 @@
 has exitCode Number
-has output Text
+has Output Text
 has error Text
 Succeeded Boolean
 	if exitCode is 0

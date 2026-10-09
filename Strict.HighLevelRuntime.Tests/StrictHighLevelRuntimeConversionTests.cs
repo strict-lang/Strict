@@ -16,7 +16,7 @@ public sealed class StrictHighLevelRuntimeConversionTests
 			{
 				"RuntimeStatistics", "TestBehavior", "RuntimeValue", "ExecutionContext", "BodyResult",
 				"IfEvaluator", "ForEvaluator", "ToEvaluator", "SelectorIfEvaluator", "MethodCallEvaluator",
-				"ExpressionEvaluator", "BodyEvaluator", "Evaluators", "Interpreter"
+				"ExpressionEvaluator", "BodyEvaluator", "Interpreter"
 			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}

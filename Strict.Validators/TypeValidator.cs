@@ -10,20 +10,9 @@ public sealed class TypeValidator : Visitor
 {
 	public override void Visit(Type type, object? context = null)
 	{
-		if (!type.IsDataType && !type.IsTrait)
-			foreach (var member in type.Members)
-				if (!IsReservedName(member.Name) && !member.IsPublic &&
-					type.CountMemberUsage(member.Name) < 2)
-					throw new UnusedMemberMustBeRemoved(type, member.Name);
+		type.ValidateMembersAreUsed();
 		base.Visit(type, context);
 	}
-
-	private static bool IsReservedName(string name) =>
-		name is Type.ValueLowercase or Type.IteratorLowercase or Type.ElementsLowercase
-			or Type.GenericLowercase;
-
-	public sealed class UnusedMemberMustBeRemoved(Type type, string memberName)
-		: ParsingFailed(type, 0, memberName);
 
 	protected override void Visit(Body body, object? context = null)
 	{

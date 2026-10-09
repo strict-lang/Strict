@@ -951,6 +951,33 @@ public class Type : Context, IDisposable
 		IsEnum && otherType.IsEnum && otherType.Members.Any(member =>
 			member.Name.Equals(Name, StringComparison.OrdinalIgnoreCase));
 
+	/// <summary>
+	/// Every private member must be used, dummy members only satisfying "types without members
+	/// must be traits" are forbidden. Checked when loading files, see conversion plan guide.
+	/// </summary>
+	public void ValidateMembersAreUsed()
+	{
+		if (IsDataType || IsTrait || IsSingleMemberValueType)
+			return;
+		foreach (var member in members)
+			if (!IsReservedMemberName(member.Name) && !member.IsPublic &&
+				CountMemberUsage(member.Name) < 2)
+				throw new UnusedMemberMustBeRemoved(this, member.Name);
+	}
+
+	/// <summary>
+	/// Wrappers like Degrees with a single "has number" use that member through value or from.
+	/// </summary>
+	private bool IsSingleMemberValueType =>
+		members.Count(member => !member.IsConstant) == 1 && (CountMemberUsage(ValueLowercase) > 0 ||
+			methods.Any(method => method.Name == Method.From));
+
+	private static bool IsReservedMemberName(string name) =>
+		name is ValueLowercase or IteratorLowercase or ElementsLowercase or GenericLowercase;
+
+	public sealed class UnusedMemberMustBeRemoved(Type type, string memberName)
+		: ParsingFailed(type, 0, memberName);
+
 	public int CountMemberUsage(string memberName) =>
 		Lines.Count(line => line.Contains(' ' + memberName) || line.Contains('\t' + memberName) ||
 			line.Contains('(' + memberName));

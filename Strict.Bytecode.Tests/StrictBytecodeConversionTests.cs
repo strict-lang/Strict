@@ -75,7 +75,7 @@ public sealed class StrictBytecodeConversionTests
 		using var package =
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Bytecode");
 		var decompiler = package.GetType("Decompiler");
-		Assert.That(decompiler.Methods.Any(method => method.Name == "ReconstructInstruction"), Is.True);
+		Assert.That(decompiler.Methods.Any(method => method.Name == "Reconstruct"), Is.True);
 		Assert.That(decompiler.Methods.Any(method => method.Name == "ReconstructMethod"), Is.True);
 		var table = package.GetType("NameTable");
 		Assert.That(table.Methods.Any(method => method.Name == "Add"), Is.True);

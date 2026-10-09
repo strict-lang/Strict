@@ -1,7 +1,6 @@
 has statistics RuntimeStatistics
-has behavior Text
+has Behavior Text
 has expressions ExpressionEvaluator
-has helpers Evaluators
 EvaluateLine(line Text, context ExecutionContext) BodyResult
 	if line.StartsWith("return ")
 		return EvaluateReturn(line, context)
@@ -48,16 +47,15 @@ EvaluateBody(lines Texts, context ExecutionContext) BodyResult
 	mutable last = RuntimeValue.None
 	for lines
 		let step = EvaluateLine(value, next)
-		next = step.frame
-		last = step.result
+		next = step.Frame
+		last = step.Result
 		if next.DidReturn
 			return BodyResult(last, next)
 	BodyResult(last, next)
 Empty Interpreter
-	Empty.behavior is TestBehavior.OnFirstRun
+	Empty.Behavior is TestBehavior.OnFirstRun
 	constant stats = RuntimeStatistics.Empty
 	constant exprs = ExpressionEvaluator.Empty
-	constant helpers = Evaluators.Empty
-	Interpreter(stats, TestBehavior.OnFirstRun, exprs, helpers)
+	Interpreter(stats, TestBehavior.OnFirstRun, exprs)
 to Text
 	statistics to Text
