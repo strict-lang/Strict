@@ -48,6 +48,11 @@ invalid ColorValue(255, 0, 0)). The VM does not check constraints yet: generatin
 BinaryGenerator costs time in hot loops (ColorValue per pixel), decide together with Phase C
 (compile time check for constant arguments + optional VM checks).
 
+Phase A result (2026-10-09): A1.1–A1.11 done except VM constraint checks (moved to Phase C), A1.4
+`Y`/`y` not reproducible, A1.5/A1.7/A1.9 no longer issues. A1.8 binaries are written atomically
+and a busy cache file no longer fails a run. A2 specific exception types in runtime/bytecode
+(compiler backends follow in B4). A3 binaries byte-identical across runs (fixed zip timestamps).
+
 Done so far (2026-10-09): A1.1 inline then/else on mutables, A1.2 `is` comparison type check and
 `is in` brackets, A1.3 subfolder examples + `from` member initialization, A1.5 no longer
 reproducible (fixed by value piping fix), A1.6 `value` in number/Range loops is the current number

@@ -181,6 +181,22 @@ public sealed class BinaryExecutableTests : TestBytecode
 	}
 
 	[Test]
+	[Category("Slow")]
+	public void SerializingTheSameBinaryTwiceGivesIdenticalBytes()
+	{
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",
+			"has First Number", "has Second Number", "Calculate Number", "\tAdd(10, 5).Calculate is 15",
+			"\tFirst + Second")).Generate();
+		var firstPath = Path.Combine(Path.GetTempPath(), nameof(SerializingTheSameBinaryTwiceGivesIdenticalBytes) +
+			"1" + BinaryExecutable.Extension);
+		var secondPath = firstPath.Replace("1" + BinaryExecutable.Extension, "2" + BinaryExecutable.Extension);
+		binary.Serialize(firstPath);
+		Thread.Sleep(2100);
+		binary.Serialize(secondPath);
+		Assert.That(File.ReadAllBytes(secondPath), Is.EqualTo(File.ReadAllBytes(firstPath)));
+	}
+
+	[Test]
 	public void RoundTripSimpleArithmeticBytecode()
 	{
 		var binary = new BinaryGenerator(GenerateMethodCallFromSource("Add", "Add(10, 5).Calculate",

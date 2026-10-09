@@ -342,6 +342,12 @@ public sealed class BinaryExecutable(Package basePackage)
 		}
 	}
 
+	/// <summary>
+	/// Same input gives byte-identical binaries, caches and comparisons do not depend on time.
+	/// </summary>
+	private static readonly DateTimeOffset DeterministicEntryTime = new(2020, 1, 1, 0, 0, 0,
+		TimeSpan.Zero);
+
 	private void WriteZip(string filePath)
 	{
 		using var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.ReadWrite);
@@ -350,6 +356,7 @@ public sealed class BinaryExecutable(Package basePackage)
 		{
 			var entry = zip.CreateEntry(fullTypeName + BinaryType.BytecodeEntryExtension,
 				CompressionLevel.Optimal);
+			entry.LastWriteTime = DeterministicEntryTime;
 			using var entryStream = entry.Open();
 			using var writer = new BinaryWriter(entryStream);
 			membersAndMethods.Write(writer);
