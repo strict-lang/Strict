@@ -96,6 +96,18 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 
 	public sealed class InMustAlwaysBePrecededByIsOrIsNot(string input) : Exception(input);
 
+	private static bool AreComparable(Type left, Type right) =>
+		left.IsBoolean == right.IsBoolean || right.Name == nameof(Type) ||
+		left.IsSameOrCanBeUsedAs(right) || right.IsSameOrCanBeUsedAs(left) ||
+		left.IsAny || right.IsAny || left.IsGeneric || right.IsGeneric || left.IsError || right.IsError;
+
+	/// <summary>
+	/// "a is b and c is d" parses as "(a is (b and c)) is d", use brackets: "(a is b) and (c is d)".
+	/// </summary>
+	public sealed class ComparisonTypesDoNotMatch(Body body, Expression left, Expression right)
+		: ParsingFailed(body, "Cannot compare " + left + " (" + left.ReturnType.Name + ") with " + right +
+			" (" + right.ReturnType.Name + "), use brackets for comparisons in and/or/xor expressions");
+
 	private static Expression BuildNotBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens) =>
 		BuildNot(tokens.Count == 1
@@ -122,6 +134,8 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 				? input[tokens.Peek()].ToString()
 				: "<empty>") + ", remaining tokens=" + tokens.Count);
 #endif
+		if (operatorToken is BinaryOperator.Is && !AreComparable(left.ReturnType, right.ReturnType))
+			throw new ComparisonTypesDoNotMatch(body, left, right);
 		// Any incompatibility is checked at runtime when the Executor runs on this
 		if (operatorToken is BinaryOperator.In)
 			return new Binary(right, right.ReturnType.GetMethod(BinaryOperator.In, [left]), [left]);

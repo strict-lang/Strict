@@ -84,10 +84,18 @@ public class MethodCall : ConcreteExpression
 		ShouldKeepUnwrappedIsNotComparison(child)
 			? child.ToString()
 			: (child is MethodCall binaryOrUnary && binaryOrUnary.Method.Name.AsSpan().IsOperator() &&
-				BinaryOperator.GetPrecedence(binaryOrUnary.Method.Name) <
+				GetPrintedPrecedence(binaryOrUnary.Method.Name) <
 				BinaryOperator.GetPrecedence(Method.Name) + addPrecedenceForNot) || child is If
 				? $"({child})"
 				: child.ToString();
+
+	/// <summary>
+	/// "x is in list" is split at "is" by the parser, so it needs the brackets an "is" would need.
+	/// </summary>
+	private static int GetPrintedPrecedence(string operatorName) =>
+		BinaryOperator.GetPrecedence(operatorName is BinaryOperator.In
+			? BinaryOperator.Is
+			: operatorName);
 
 	private bool ShouldKeepUnwrappedIsNotComparison(Expression child) =>
 		Method.Name is BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor && child is Not

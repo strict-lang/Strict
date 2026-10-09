@@ -35,6 +35,11 @@ public sealed class BinaryTests : TestExpressions
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[Test]
+	public void ComparingBooleanWithNumberNeedsBrackets() =>
+		Assert.That(() => ParseExpression("(1 is 1) is 2"),
+			Throws.InstanceOf<Binary.ComparisonTypesDoNotMatch>());
+
+	[Test]
 	public void NoMatchingMethodFound() =>
 		Assert.That(() => ParseExpression("true - \"text\""),
 			Throws.Exception.InnerException.InstanceOf<Type.NoMatchingMethodFound>().With.InnerException.
@@ -100,6 +105,7 @@ public sealed class BinaryTests : TestExpressions
 	[TestCase("(not true) and (not false)")]
 	[TestCase("not (true xor false)")]
 	[TestCase("true and false or (not true) and (not false)")]
+	[TestCase("(1 is 1) and (1 is in (1, 2))")]
 	public void ParseGroupExpressionProducesSameCode(string code) =>
 		Assert.That(ParseExpression(code).ToString(), Is.EqualTo(code));
 
