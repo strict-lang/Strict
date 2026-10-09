@@ -460,15 +460,17 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 				TryGetFrameValue(OuterSymbolId, out var outerValue) && outerValue.IsText)
 				collectionValue = outerValue;
 		}
+		if (collectionValue is { IsList: false, IsText: false })
+			throw Fail("Cannot index non-list variable \"" + listCallInstruction.Identifier +
+				"\" of type " + collectionValue.GetType().Name);
+		if (indexValue < 0)
+			indexValue += collectionValue.GetIteratorLength();
 		if (collectionValue.IsText)
 		{
 			Memory.Registers[listCallInstruction.Register] =
 				new ValueInstance(collectionValue.Text[indexValue].ToString());
 			return;
 		}
-		if (!collectionValue.IsList)
-			throw Fail("Cannot index non-list variable \"" + listCallInstruction.Identifier +
-				"\" of type " + collectionValue.GetType().Name);
 		if (indexValue < 0 || indexValue >= collectionValue.List.Count)
 			throw Fail("List index out of range for \"" + listCallInstruction.Identifier + "\": " +
 				indexValue + " (count=" + collectionValue.List.Count + ")");

@@ -46,11 +46,20 @@ public sealed class ConstructorToFieldMutationsOptimizer : InstructionOptimizer
 		if (returnType.IsNumber || returnType.IsText || returnType.IsBoolean || returnType.IsList ||
 			returnType.IsDictionary || returnType.IsTrait || returnType.Members.Count == 0)
 			return false;
-		if (argRegisters.Length > returnType.Members.Count)
+		if (argRegisters.Length > returnType.Members.Count ||
+			!ArgumentsMatchLeadingMembers(invoke.MethodInfo.ParameterNames, returnType.Members))
 			return false;
 		if (!AllPrecedingArgsAreBinaryInstructions(instructions, invokeIndex, argRegisters.Length))
 			return false;
 		replacement = new ConstructValueTypeInstruction(invoke.Register, returnType, argRegisters);
+		return true;
+	}
+
+	private static bool ArgumentsMatchLeadingMembers(string[] parameterNames, List<Member> members)
+	{
+		for (var index = 0; index < parameterNames.Length; index++)
+			if (!members[index].Name.Equals(parameterNames[index], StringComparison.OrdinalIgnoreCase))
+				return false;
 		return true;
 	}
 

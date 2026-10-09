@@ -178,6 +178,17 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void BooleanDeclarationIsNotTest()
+	{
+		var customType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(BooleanDeclarationIsNotTest), "has logger", "Check(number) Boolean",
+					"	Check(5) is true", "	let isFive = number is 5", "	isFive or number > 6")).
+			ParseMembersAndMethods(parser);
+		customType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(1));
+	}
+
+	[Test]
 	public void ThenInsideTextDoesNotHideTest()
 	{
 		var customType = new Type(TestPackage.Instance,

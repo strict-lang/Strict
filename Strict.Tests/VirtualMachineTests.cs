@@ -543,6 +543,62 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void LoopOverRangeReturnedByMethod()
+	{
+		var source = new[]
+		{
+			"has number", "Down Numbers", "\tmutable result = Numbers", "\tfor Range(0, number).Reverse",
+			"\t\tresult.Add(index)", "\tresult"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(LoopOverRangeReturnedByMethod), nameof(LoopOverRangeReturnedByMethod) + "(3).Down",
+			source)).Generate();
+		Assert.That(() => ExpressionListToSpaceSeparatedString(instructions), Is.EqualTo("2 1 0 "));
+	}
+
+	[Test]
+	public void NegativeListIndexCountsFromEnd()
+	{
+		var source = new[] { "has numbers", "LastNumber Number", "\tnumbers(-1)" };
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(NegativeListIndexCountsFromEnd),
+			nameof(NegativeListIndexCountsFromEnd) + "(1, 2, 3).LastNumber", source)).Generate();
+		Assert.That(
+			() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(3));
+	}
+
+	[Test]
+	public void ListCallOnComputedList()
+	{
+		var source = new[]
+		{
+			"has numbers", "Doubled Number", "\tListCallOnComputedList(numbers + numbers).numbers(4)"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ListCallOnComputedList), nameof(ListCallOnComputedList) + "(1, 2, 3).Doubled",
+			source)).Generate();
+		Assert.That(
+			() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(2));
+	}
+
+	[Test]
+	public void OptimizedRangeFromComputedArguments()
+	{
+		var source = new[]
+		{
+			"has number", "Bounds Numbers", "\tlet range = Range(number - 1, number - 2)",
+			"\t(range.Start, range.ExclusiveEnd)"
+		};
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(OptimizedRangeFromComputedArguments),
+			nameof(OptimizedRangeFromComputedArguments) + "(5).Bounds", source)).Generate();
+		new AllInstructionOptimizers().Optimize(binary);
+		Assert.That(() => ExpressionListToSpaceSeparatedString(binary), Is.EqualTo("4 3 "));
+	}
+
+	[Test]
 	public void ConditionalJump() =>
 		Assert.That(ExecuteVm([
 			new SetInstruction(Number(5), Register.R0),

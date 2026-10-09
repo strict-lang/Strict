@@ -62,10 +62,9 @@ public sealed partial class BinaryGenerator
 			forExpression.CustomVariables.Select(variable => variable.ToString()).ToArray();
 		var iterator = GetLoopIteratorExpression(forExpression.Iterator);
 		LoopBeginInstruction loopBegin;
-		if (iterator is MethodCall rangeExpression && iterator.ReturnType.Name == Type.Range &&
-			rangeExpression.Method.Name == Method.From)
+		if (iterator.ReturnType.Name == Type.Range)
 		{
-			loopBegin = GenerateInstructionForRangeLoopInstruction(rangeExpression, customVariableNames);
+			loopBegin = GenerateInstructionForRangeLoopInstruction(iterator, customVariableNames);
 			loopBegin.SourceLine = forSourceLine;
 		}
 		else
@@ -134,7 +133,7 @@ public sealed partial class BinaryGenerator
 	private static Expression GetLoopIteratorExpression(Expression iterator)
 	{
 		if (iterator.ReturnType.IsList || iterator.ReturnType.IsText || iterator.ReturnType.IsNumber ||
-			iterator is MethodCall { ReturnType.Name: Type.Range, Method.Name: Method.From })
+			iterator.ReturnType.Name == Type.Range)
 			return iterator;
 		var iteratorMethod = iterator.ReturnType.Methods.FirstOrDefault(method =>
 			method.Name == Keyword.For && method.ReturnType.IsIterator);
@@ -144,16 +143,32 @@ public sealed partial class BinaryGenerator
 	}
 
 	private LoopBeginInstruction GenerateInstructionForRangeLoopInstruction(
-		MethodCall rangeExpression, params string[] customVariableNames)
+		Expression range, params string[] customVariableNames)
 	{
-		GenerateInstructionFromExpression(rangeExpression.Arguments[0]);
-		var startIndexRegister = registry.PreviousRegister;
-		GenerateInstructionFromExpression(rangeExpression.Arguments[1]);
-		var endIndexRegister = registry.PreviousRegister;
+		var (startIndexRegister, endIndexRegister) =
+			range is MethodCall { Method.Name: Method.From } creation
+				? (GenerateRegister(creation.Arguments[0]), GenerateRegister(creation.Arguments[1]))
+				: GenerateRangeFieldLoads(GenerateRegister(range));
 		var loopBegin = new LoopBeginInstruction(startIndexRegister, endIndexRegister,
 			customVariableNames);
 		instructions.Add(loopBegin);
 		return loopBegin;
+	}
+
+	private Register GenerateRegister(Expression expression)
+	{
+		GenerateInstructionFromExpression(expression);
+		return registry.PreviousRegister;
+	}
+
+	private (Register Start, Register End) GenerateRangeFieldLoads(Register rangeRegister)
+	{
+		instructions.Add(new FieldLoadInstruction(registry.AllocateRegister(), rangeRegister,
+			"Start"));
+		var startRegister = registry.PreviousRegister;
+		instructions.Add(new FieldLoadInstruction(registry.AllocateRegister(), rangeRegister,
+			"ExclusiveEnd"));
+		return (startRegister, registry.PreviousRegister);
 	}
 
 	private bool GenerateInstructionsForLoopBody(For forExpression, string? aggregationTarget,

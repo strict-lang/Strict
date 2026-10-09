@@ -353,10 +353,11 @@ public sealed partial class BinaryGenerator
 		case ListCall listCall:
 			// Always emit index load then ListCall. Consecutive indexes (kinds(i), numbers(i))
 			// each need their own index materialization — never reuse a prior list element register.
+			var listName = GetListName(listCall.List);
 			GenerateInstructionFromExpression(listCall.Index);
 			var indexRegister = registry.PreviousRegister;
 			instructions.Add(new ListCallInstruction(registry.AllocateRegister(), indexRegister,
-				listCall.List.ToString()));
+				listName));
 			break;
 		default:
 			throw new ExpressionNotSupported(expression); //ncrunch: no coverage
@@ -367,6 +368,23 @@ public sealed partial class BinaryGenerator
 			if (instructions[instructionIndex].SourceLine == 0)
 				instructions[instructionIndex].SourceLine = sourceLine;
 	}
+
+	/// <summary>
+	/// ListCall resolves lists by name, a computed list is stored in a temporary variable first.
+	/// </summary>
+	private string GetListName(Expression list)
+	{
+		if (IsNamedValue(list))
+			return list.ToString();
+		GenerateInstructionFromExpression(list);
+		var listName = "list" + conditionalId++;
+		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, listName));
+		return listName;
+	}
+
+	private static bool IsNamedValue(Expression expression) =>
+		expression is VariableCall or ParameterCall || expression is MemberCall memberCall &&
+		(memberCall.Instance == null || IsNamedValue(memberCall.Instance));
 
 	private void GenerateMemberCallInstruction(MemberCall memberCall)
 	{
