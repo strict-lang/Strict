@@ -111,8 +111,8 @@ public sealed partial class VirtualMachine
 
 	private static ValueInstance CreateMemberInitialOrDefaultValue(Member member,
 		bool hasBinaryMembers, List<BinaryMember> binaryMembers, int memberIndex) =>
-		member.InitialValue is Value initialValue
-			? initialValue.Data
+		member.InitialValue is Value { ConstantData: { } initialValue }
+			? initialValue
 			: hasBinaryMembers && TryGetBinaryMemberInitialValue(binaryMembers, memberIndex,
 				out var binaryInitialValue)
 				? binaryInitialValue
@@ -225,8 +225,8 @@ public sealed partial class VirtualMachine
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 			values[memberIndex] = IsTrait(members[memberIndex].Type)
 				? CreateTraitInstance(members[memberIndex].Type)
-				: members[memberIndex].InitialValue is Value initialValue
-					? initialValue.Data
+				: members[memberIndex].InitialValue is Value { ConstantData: { } initialValue }
+					? initialValue
 					: CreateDefaultValue(members[memberIndex].Type);
 		return new ValueInstance(type, values);
 	}

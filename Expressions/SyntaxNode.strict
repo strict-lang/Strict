@@ -112,3 +112,6 @@ Statements SyntaxNodes
 		if value.HasBody
 			statements = statements + value.children.Last.Statements
 	statements
+Unquoted Text
+	SyntaxNode("Text", "\"a\"").Unquoted is "a"
+	text.Substring(1, text.Length - 2)

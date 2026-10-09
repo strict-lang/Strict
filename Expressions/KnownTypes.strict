@@ -1,10 +1,13 @@
 has names Texts
 has members Scopes
 has methods Scopes
+has parameters Scopes
 constant NoMembers = Scope(List(Text), List(Text))
 constant CountMembers = Scope(("number", "unused"), ("Number", "Unused"))
 constant CountMethods = Scope(("Increment", "Twice"), ("Count", "Count"))
-constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers))
+constant CountParameters = Scope(("Increment", "Twice"), ("", "times,offset"))
+constant SampleParameters = (CountParameters, NoMembers)
+constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers), SampleParameters)
 IsKnown(typeName Text) Boolean
 	Sample.IsKnown("Count") is true
 	Sample.IsKnown("Missing") is false
@@ -25,6 +28,12 @@ MethodsOf(typeName Text) Scope
 	Sample.MethodsOf("Count").TypeOf("Increment") is "Count"
 	let index = names.Index(IsPlural(typeName) then "List" else typeName)
 	index is -1 then NoMembers else methods(index)
+ParametersOf(typeName Text, method Text) Texts
+	Sample.ParametersOf("Count", "Twice") is ("times", "offset")
+	Sample.ParametersOf("Count", "Increment").Length is 0
+	let index = names.Index(typeName)
+	let joined = index is -1 then "" else parameters(index).TypeOf(method)
+	joined is "" then List(Text) else joined.Split(",")
 ShapeScope(typeName Text) Scope
 	Sample.ShapeScope("Count").TypeOf("Increment") is "Count"
 	let typeMethods = MethodsOf(typeName)

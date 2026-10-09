@@ -6,7 +6,7 @@ constant FormatVersion = 4
 constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
 Names BinaryNames
 	HelloLogger.Names.names.Length is 70
-	mutable result = BinaryNames.Empty.Predefined(Name)
+	mutable result = BinaryNames.Empty.Predefined(JustName)
 	for members
 		result = value.Names(result)
 	for methods
@@ -15,7 +15,8 @@ Names BinaryNames
 Bytes Numbers
 	HelloLogger.Bytes is (83, 4, 1, 2, 72, 105, 1, 45, 29, 0, 0, 1, 55, 1, 0, 1, 2, 45, 69, 0, 32, 0)
 	constant names = Names
-	mutable encoder = ByteEncoder(ByteEncoder(MagicByte, FormatVersion).bytes + names.Bytes).SevenBit(members.Length)
+	let header = ByteEncoder(MagicByte, FormatVersion).bytes + names.Bytes(JustName)
+	mutable encoder = ByteEncoder(header).SevenBit(members.Length)
 	for members
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
 	encoder = encoder.SevenBit(methods.Length)
@@ -23,3 +24,13 @@ Bytes Numbers
 		encoder = ByteEncoder(encoder.bytes).SevenBit(names.Index(value.Name)).SevenBit(1)
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
 	encoder.bytes
+JustName Text
+	TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry)).JustName is "Process"
+	HelloLogger.JustName is "HelloLogger"
+	Name.Substring(Name.LastIndexOf("/") + 1, Name.Length - Name.LastIndexOf("/") - 1)
+Invoked Texts
+	TypeEntry("A", List(MemberEntry), MethodEntry.GoRun).Invoked is ("Strict/B.Go")
+	mutable targets = List(Mutable(Text))
+	for methods
+		targets = targets + value.Invoked
+	targets

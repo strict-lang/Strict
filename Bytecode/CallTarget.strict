@@ -1,0 +1,44 @@
+has types Expressions/KnownTypes
+has shape Expressions/TypeShape
+has fullName Text
+constant NoScope = Scope(("x", "z"), ("y", "w"))
+constant Greeter = TypeShape("has text", "Greet Text", "\t\"Hi \" + text", "Run", "\tGreeter(\"a\").Greet")
+constant NoTypes = KnownTypes(("A", "B"), (NoScope, NoScope), (NoScope, NoScope), (NoScope, NoScope))
+constant Plain = CallTarget(NoTypes, Greeter, "Strict/Examples/Greeter")
+Signature(name Text, type Text, returnType Text) Texts
+	Plain.Signature("Greeter", "Greeter", "Greeter") is ("Strict/Examples/Greeter", "from", "Greeter", "text")
+	Plain.Signature("Greet", "Greeter", "Text") is ("Strict/Examples/Greeter", "Greet", "Strict/Text")
+	Plain.Signature("Length", "Text", "Number") is ("Strict/Text", "Length", "Strict/Number")
+	if type is not TypeName
+		return OtherSignature(name, type, returnType)
+	if name is TypeName
+		return (fullName, "from", name) + shape.MemberScope.names
+	(fullName, name, FullName(returnType)) + Header(name).ParameterNames
+OtherSignature(name Text, type Text, returnType Text) Texts
+	Plain.OtherSignature("C", "C", "C") is ("Strict/C", "from", "C")
+	Plain.OtherSignature("Length", "Text", "Number") is ("Strict/Text", "Length", "Strict/Number")
+	if name is type
+		return (FullName(type), "from", type) + types.MembersOf(type).names
+	(FullName(type), name, FullName(returnType)) + types.ParametersOf(type, name)
+Header(name Text) HeaderTokens
+	Plain.Header("Greet").ReturnType is "Text"
+	Plain.Header("Missing").tokens.Length is 0
+	for shape.lines
+		if shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
+			return HeaderTokens(Tokenizer(value).Tokens)
+	HeaderTokens(List(Text))
+IsMember(type Text, name Text) Boolean
+	Plain.IsMember("Greeter", "text") is true
+	Plain.IsMember("Greeter", "Greet") is false
+	type is TypeName then shape.MemberScope.TypeOf(name) is not "" else types.MembersOf(type).TypeOf(name) is not ""
+FullName(type Text) Text
+	Plain.FullName("Logger") is "Strict/Logger"
+	Plain.FullName("Numbers") is "Strict/List(Number)"
+	Plain.FullName("Greeter") is "Strict/Examples/Greeter"
+	Plain.FullName("None") is "None"
+	if type is in ("None", TypeName)
+		return type is "None" then type else fullName
+	types.IsPlural(type) then "Strict/List(" + types.ElementType(type) + ")" else "Strict/" + type
+TypeName Text
+	Plain.TypeName is "Greeter"
+	fullName.Substring(fullName.LastIndexOf("/") + 1, fullName.Length - fullName.LastIndexOf("/") - 1)

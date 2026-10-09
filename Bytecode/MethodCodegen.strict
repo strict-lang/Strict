@@ -6,8 +6,9 @@ constant NoScope = Scope(List(Text), List(Text))
 Generate(body SyntaxNode, scope Scope) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\t1 + 2").Block(1, 1), NoScope).instructions.Length is 4
 	Plain.Generate(BodyParser("Run Number", "\treturn 1").Block(1, 1), NoScope).instructions.Length is 2
+	Plain.Generate(BodyParser("Exists Boolean").Block(1, 1), NoScope).instructions.Length is 0
 	let block = Body(WithoutTests(body), CodeBlock(List(InstructionEntry), 0, 0, scope))
-	if block.instructions.Last.kind is InstructionType.Return
+	if (body.children.Length is 0) or (block.instructions.Last.kind is InstructionType.Return)
 		return block
 	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
 WithoutTests(body SyntaxNode) SyntaxNode
@@ -65,9 +66,9 @@ Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Log(SyntaxNode("Text", "\"Hi\""), CodeBlock.Empty).instructions(0).texts is ("Hi")
 	Plain.Log(SyntaxNode("Number", "1"), CodeBlock.Empty).instructions.Length is 2
 	if argument.Kind is "Text"
-		return block.Add(InstructionEntry.Print(values.Unquoted(argument.text)))
+		return block.Add(InstructionEntry.Print(argument.Unquoted))
 	let hasPrefix = (argument.Kind is "Binary") and (argument.text is "+") and (argument.children(0).Kind is "Text")
 	let printed = hasPrefix then argument.children(1) else argument
 	let value = values.Expression(printed, block)
-	let prefix = hasPrefix then values.Unquoted(argument.children(0).text) else ""
+	let prefix = hasPrefix then argument.children(0).Unquoted else ""
 	value.Add(InstructionEntry.PrintValue(prefix, value.Result, values.TypeOf(printed, value) is "Text"))

@@ -474,6 +474,15 @@ public sealed class VirtualMachineTests : TestBytecode
 				["has number", "Scaled(other Number) Number", "\tother.Floor / 2 ^ 2"])).Generate()).
 				Execute().Returns!.Value.Number, Is.EqualTo(2));
 
+	[Test]
+	public void TextReturningLoopConcatenatesValues() =>
+		Assert.That(
+			new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+				nameof(TextReturningLoopConcatenatesValues),
+				nameof(TextReturningLoopConcatenatesValues) + "(\"a\").Joined",
+				["has text", "Joined Text", "\tfor (text, \"b\")", "\t\tvalue + \",\""])).Generate()).
+				Execute().Returns!.Value.Text, Is.EqualTo("a,b,"));
+
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
 	{
 		var fromMethod = targetType.FindMethod(Method.From, []);

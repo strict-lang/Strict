@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using Strict.Bytecode;
 using Strict.Language;
-using Strict.Language.Tests;
+using Strict.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Tests;
@@ -48,26 +48,30 @@ public sealed class StrictBytecodeTests
 	[TestCase("GcdCalculator")]
 	[TestCase("FizzBuzz")]
 	[TestCase("AutofilledMutable")]
+	[TestCase("Pixel")]
+	[TestCase("DirProbe")]
+	[TestCase("ProcessProbe")]
 	public async Task StrictCompiledExampleRunsLikeCSharp(string example)
 	{
 		var source = Root + "/Examples/" + example + Type.Extension;
 		await new Runner(source).Run();
-		var expected = Execute(Path.ChangeExtension(source, BinaryExecutable.Extension));
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		var expected = Execute(Path.ChangeExtension(source, BinaryExecutable.Extension), basePackage);
 		await new Runner(Root + "/Bytecode/FileCompiler" + Type.Extension, source + " " + Root).Run();
 		var binaryPath = Path.Combine(Path.GetTempPath(), nameof(StrictBytecodeTests),
 			example + BinaryExecutable.Extension);
 		Directory.CreateDirectory(Path.GetDirectoryName(binaryPath)!);
 		await File.WriteAllBytesAsync(binaryPath, LastNumbersLine());
-		Assert.That(Execute(binaryPath), Is.EqualTo(expected));
+		Assert.That(Execute(binaryPath, basePackage), Is.EqualTo(expected));
 	}
 
 	private static string Root =>
 		Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)).Replace('\\', '/');
 
-	private string Execute(string binaryPath)
+	private string Execute(string binaryPath, Package basePackage)
 	{
 		consoleWriter.GetStringBuilder().Clear();
-		var machine = new VirtualMachine(new BinaryExecutable(binaryPath, TestPackage.Instance));
+		var machine = new VirtualMachine(new BinaryExecutable(binaryPath, basePackage));
 		return consoleWriter + (machine.Execute().Returns is { HasValue: true } returns
 			? "Returns " + returns
 			: "");

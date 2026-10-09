@@ -24,6 +24,10 @@ public class Value(Type valueType, ValueInstance data, int lineNumber = 0, bool 
 		: this(valueType, new ValueInstance(valueType, items), lineNumber, isMutable) { }
 
 	public virtual ValueInstance Data { get; } = data;
+	/// <summary>
+	/// Data known at compile time, a list of computed elements has none.
+	/// </summary>
+	public virtual ValueInstance? ConstantData => Data;
 	public override string ToString() => Data.ToExpressionCodeString(true);
 	public override bool IsConstant => true;
 	public override bool Equals(Expression? other) => other is Value v && Data.Equals(v.Data);

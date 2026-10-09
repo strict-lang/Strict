@@ -3,6 +3,8 @@ has parameters List(MemberEntry)
 has returnType Text
 has instructions List(InstructionEntry)
 constant PrintHi = InstructionEntry.Print("Hi")
+constant GoCall = InstructionEntry.Invoke(0, ("Strict/B", "Go", "None"), List(Number), -1)
+constant GoRun = MethodEntry("Run", List(MemberEntry), "None", GoCall)
 constant HelloRun = MethodEntry("Run", List(MemberEntry), "None", (PrintHi, InstructionEntry.Return(0)))
 Names(names BinaryNames) BinaryNames
 	HelloRun.Names(BinaryNames("a", "b")).names.Length is 5
@@ -24,3 +26,11 @@ Bytes(names BinaryNames) Numbers
 	for instructions
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
 	encoder.bytes
+Invoked Texts
+	GoRun.Invoked is ("Strict/B.Go")
+	HelloRun.Invoked.Length is 0
+	mutable targets = List(Mutable(Text))
+	for instructions
+		if value.kind is InstructionType.Invoke
+			targets.Add(value.texts(0) + "." + value.texts(1))
+	targets

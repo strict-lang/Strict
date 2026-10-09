@@ -1,6 +1,42 @@
 has logger
+constant Go = TypeEntry("A", List(MemberEntry), MethodEntry.GoRun)
 Run(path Text, root Text)
 	let inference = ResolveCheck.Inference(Directory.Files(root, "*.strict") + path)
 	let fullName = "Strict/" + path.Substring(root.Length + 1, path.Length - root.Length - 8)
-	let type = TypeCodegen(fullName, File(path).ReadLines, inference)
-	logger.Log(BinaryFile(type.Entry).Bytes)
+	let main = TypeCodegen(fullName, File(path).ReadLines, inference).Entry
+	logger.Log(BinaryFile(Linked(main, root, inference, 3)).Bytes)
+Linked(entries List(TypeEntry), root Text, inference TypeInference, depth Number) List(TypeEntry)
+	Linked(TypeEntry.HelloLogger, ".", ValueCodegen.NoTypes, 3).Length is 1
+	if depth is 0
+		return entries
+	mutable linked = List(Mutable(TypeEntry))
+	linked.Add(entries.First)
+	for BaseTypes(entries)
+		let lines = File(root + "/" + value.Substring(7, value.Length - 7) + ".strict").ReadLines
+		linked.Add(TypeCodegen(value, lines, inference).Selected(UsedMethods(entries, value)))
+	Linked(linked, root, inference, depth - 1)
+BaseTypes(entries List(TypeEntry)) Texts
+	BaseTypes(Go) is ("Strict/B")
+	mutable types = List(Mutable(Text))
+	for Targets(entries)
+		let type = value.Substring(0, value.LastIndexOf("."))
+		if type is not in types and IsLinkable(entries, type)
+			types.Add(type)
+	types
+IsLinkable(entries List(TypeEntry), type Text) Boolean
+	IsLinkable(Go, "Strict/B") is true
+	IsLinkable(Go, "Strict/List(Number)") is false
+	(type.LastIndexOf("/") is 6) and (type.IndexOf("(") is -1) and UsedMethods(entries, type).Length > 0
+UsedMethods(entries List(TypeEntry), type Text) Texts
+	UsedMethods(Go, "Strict/B") is ("Go")
+	constant natives = ("from", "to", "Length", "Count", "not", "and", "or", "xor", "Exists", "ReadLines")
+	for Targets(entries)
+		let method = value.Substring(value.LastIndexOf(".") + 1, value.Length - value.LastIndexOf(".") - 1)
+		if value.StartsWith(type + ".") and method is not in natives
+			method
+Targets(entries List(TypeEntry)) Texts
+	Targets(Go) is ("Strict/B.Go")
+	mutable targets = List(Mutable(Text))
+	for entries
+		targets = targets + value.Invoked
+	targets

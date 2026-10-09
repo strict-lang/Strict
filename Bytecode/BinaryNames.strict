@@ -1,14 +1,15 @@
 has names Texts
-constant PrefilledCount = 69
+constant BuiltInCount = 68
 constant Empty = BinaryNames(List(Text))
 Predefined(typeName Text) BinaryNames
 	BinaryNames("a", "b").Predefined("Hello").names.Length is 69
+	BinaryNames("a", "b").Predefined("Text").names.Length is 68
 	constant types = ("None", "Boolean", "Number", "Character", "Range", "Text", "Error", "ErrorWithValue")
 	constant moreTypes = ("Iterator", "List", "Logger", "File", "Directory", "TextWriter", "TextReader")
 	constant allTypes = types + moreTypes + ("Stacktrace", "Mutable", "Dictionary")
 	constant extras = ("index", "value", "Run", "from", "first", "second", "numbers", "characters", "texts")
 	constant lists = ("NewLine", "Tab", "Strict/List(Number)", "List(Number)", "Strict/List(Text)", "List(Text)")
-	BinaryNames(List(Text) + "" + allTypes + Prefixed(allTypes) + Lowercased(allTypes) + extras + lists + typeName)
+	BinaryNames(List(Text) + "" + allTypes + Prefixed(allTypes) + Lowercased(allTypes) + extras + lists).With(typeName)
 Prefixed(typeNames Texts) Texts
 	BinaryNames("a", "b").Prefixed("A", "B") is ("Strict/A", "Strict/B")
 	for typeNames
@@ -24,9 +25,11 @@ With(name Text) BinaryNames
 Index(name Text) Number
 	BinaryNames("a", "b").Index("b") is 1
 	names.Index(name)
-Bytes Numbers
-	BinaryNames("a", "b").Predefined("Hello").With("Hi").Bytes is (1, 2, 72, 105)
-	mutable encoder = ByteEncoder.Empty.SevenBit(names.Length - PrefilledCount)
-	for names.Length - PrefilledCount
-		encoder = encoder.Text(names(PrefilledCount + index))
+Bytes(typeName Text) Numbers
+	BinaryNames("a", "b").Predefined("Hello").With("Hi").Bytes("Hello") is (1, 2, 72, 105)
+	BinaryNames("a", "b").Predefined("Text").With("Hi").Bytes("Text") is (1, 2, 72, 105)
+	let prefilled = names.Index(typeName) < BuiltInCount then BuiltInCount else BuiltInCount + 1
+	mutable encoder = ByteEncoder.Empty.SevenBit(names.Length - prefilled)
+	for names.Length - prefilled
+		encoder = encoder.Text(names(prefilled + index))
 	encoder.bytes

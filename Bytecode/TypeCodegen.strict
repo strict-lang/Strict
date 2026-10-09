@@ -5,12 +5,15 @@ constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogg
 constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number", "\tlimit"), ValueCodegen.NoTypes)
 Entry TypeEntry
 	Hello.Entry.Bytes is (83, 4, 1, 2, 72, 105, 1, 45, 29, 0, 0, 1, 55, 1, 0, 1, 2, 45, 69, 0, 32, 0)
-	TypeEntry(Generator.TypeName, Members, Methods)
+	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
+Selected(names Texts) TypeEntry
+	Limit.Selected("Run").Name is "Strict/Limit"
+	Limit.Selected("Missing").methods.Length is 0
+	TypeEntry(fullName, Members, Methods(names))
 Generator ValueCodegen
-	Limit.Generator.TypeName is "Limit"
-	let shape = TypeShape(lines)
-	let named = ValueCodegen(inference, Scope(List(Text), List(Text)), shape, fullName)
-	ValueCodegen(inference, inference.types.MethodsOf(named.TypeName), shape, fullName)
+	Limit.Generator.target.TypeName is "Limit"
+	let target = CallTarget(inference.types, TypeShape(lines), fullName)
+	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target)
 Members List(MemberEntry)
 	Limit.Members.First.initial.First.payload is (1, 10, 0)
 	mutable members = List(Mutable(MemberEntry))
@@ -20,7 +23,7 @@ Members List(MemberEntry)
 	members
 Member(header HeaderTokens) MemberEntry
 	Hello.Member(HeaderTokens("has", "logger")).typeName is "Strict/Logger"
-	let type = Generator.FullName(header.DeclaredType(1))
+	let type = Generator.target.FullName(header.DeclaredType(1))
 	if header.tokens(0) is not "constant"
 		return MemberEntry(header.MemberName, type, List(InstructionEntry), false)
 	MemberEntry(header.MemberName, type, Initial(SyntaxParser(header.tokens).ParseRange(3, header.tokens.Length)), true)
@@ -31,28 +34,28 @@ Initial(node SyntaxNode) InstructionEntry
 		let number = node.text to Number
 		return InstructionEntry.Set(List(Text), InstructionEntry.NumberValue(number))
 	if node.Kind is "Text"
-		return InstructionEntry.Set(ValueCodegen.Plain.Unquoted(node.text), (4, -1))
+		return InstructionEntry.Set(node.Unquoted, (4, -1))
 	if node.Kind is not "Boolean"
 		return UnsupportedConstant
 	InstructionEntry.Set(List(Text), (5, (node.text is "true" then 1 else 0)))
-Methods List(MethodEntry)
-	Limit.Methods.First.instructions.Length is 2
+Methods(names Texts) List(MethodEntry)
+	Limit.Methods(List(Text)).First.instructions.Length is 2
 	mutable methods = List(Mutable(MethodEntry))
 	for lines
-		if TypeShape(lines).IsMethodHeader(value)
+		if TypeShape(lines).IsMethodHeader(value) and ((names.Length is 0) or (Tokenizer(value).Tokens.First is in names))
 			methods.Add(Method(index))
 	methods
 Method(start Number) MethodEntry
 	Hello.Method(1).returnType is "None"
 	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
-	let scope = MethodBodies(generator.TypeName, generator.shape, inference).HeaderScope(header)
+	let scope = MethodBodies(generator.target.TypeName, generator.target.shape, inference).HeaderScope(header)
 	let code = MethodCodegen(generator).Generate(BodyParser(lines).Block(start + 1, 1), scope)
-	MethodEntry(header.tokens(0), Parameters(header), generator.FullName(header.ReturnType), code.instructions)
+	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(header.ReturnType), code.instructions)
 Parameters(header HeaderTokens) List(MemberEntry)
 	Hello.Parameters(HeaderTokens("Add", "(", "first", "Number", ")")).Length is 1
 	let types = header.ParameterTypes
 	mutable parameters = List(Mutable(MemberEntry))
 	for header.ParameterNames
-		parameters.Add(MemberEntry(value, Generator.FullName(types(index)), List(InstructionEntry), false))
+		parameters.Add(MemberEntry(value, Generator.target.FullName(types(index)), List(InstructionEntry), false))
 	parameters

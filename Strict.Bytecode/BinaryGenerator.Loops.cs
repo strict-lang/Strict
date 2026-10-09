@@ -8,11 +8,11 @@ namespace Strict.Bytecode;
 
 public sealed partial class BinaryGenerator
 {
-	private bool TryGenerateNumberForLoopReturn(Expression expression)
+	private bool TryGenerateSumForLoopReturn(Expression expression)
 	{
-		if (expression is not For forExpression || !ReturnType.IsNumber)
+		if (expression is not For forExpression || !ReturnType.IsNumber && !ReturnType.IsText)
 			return false;
-		GenerateInstructionForNumberAggregation(forExpression);
+		GenerateInstructionForSumAggregation(forExpression);
 		return true;
 	}
 
@@ -25,11 +25,13 @@ public sealed partial class BinaryGenerator
 		return true;
 	}
 
-	private void GenerateInstructionForNumberAggregation(For forExpression)
+	private void GenerateInstructionForSumAggregation(For forExpression)
 	{
 		var resultVariable = $"forResult{forResultId++}";
 		instructions.Add(
-			new StoreVariableInstruction(new ValueInstance(ReturnType, 0), resultVariable));
+			new StoreVariableInstruction(ReturnType.IsText
+				? new ValueInstance("")
+				: new ValueInstance(ReturnType, 0), resultVariable));
 		GenerateLoopInstructions(forExpression, resultVariable, LoopAggregation.Number);
 		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultVariable));
 		instructions.Add(new ReturnInstruction(registry.PreviousRegister));

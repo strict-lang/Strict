@@ -255,9 +255,9 @@ public partial class Interpreter
 				values[memberIndex] = traitValue ?? noneInstance;
 				continue;
 			}
-			if (member.InitialValue is Value initialValue)
+			if (member.InitialValue is Value { ConstantData: { } initialValue })
 			{
-				values[memberIndex] = initialValue.Data;
+				values[memberIndex] = initialValue;
 				continue;
 			}
 			if (member.IsConstant)

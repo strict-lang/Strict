@@ -256,7 +256,7 @@ public sealed partial class BinaryGenerator
 	{
 		if (expression is Return returnExpression)
 			expression = returnExpression.Value;
-		if (TryGenerateNumberForLoopReturn(expression))
+		if (TryGenerateSumForLoopReturn(expression))
 			return;
 		if (TryGenerateListForLoopReturn(expression))
 			return;
@@ -386,10 +386,10 @@ public sealed partial class BinaryGenerator
 
 	private void GenerateMemberCallInstruction(MemberCall memberCall)
 	{
-		if (memberCall.IsConstant && memberCall.Member.InitialValue is Value constantValue)
+		if (memberCall.IsConstant &&
+			memberCall.Member.InitialValue is Value { ConstantData: { } constantData })
 		{
-			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
-				constantValue.Data));
+			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(), constantData));
 			return;
 		}
 		if (memberCall.IsConstant && memberCall.Member.InitialValue != null)

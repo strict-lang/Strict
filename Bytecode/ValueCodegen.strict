@@ -1,12 +1,10 @@
 has inference Expressions/TypeInference
 has methods Expressions/Scope
-has shape Expressions/TypeShape
-has fullName Text
-constant NoScope = Scope(("x", "z"), ("y", "w"))
+has target CallTarget
 constant NoNode = SyntaxNode("Identifier", "x")
-constant NoTypes = TypeInference(KnownTypes(("A", "B"), (NoScope, NoScope), (NoScope, NoScope)))
-constant Greeter = TypeShape("has text", "Greet Text", "\t\"Hi \" + text", "Run", "\tGreeter(\"a\").Greet")
-constant Plain = ValueCodegen(NoTypes, Scope(("Greet", "Run"), ("Text", "None")), Greeter, "Strict/Examples/Greeter")
+constant NewGreeter = SyntaxNode("Call", "Greeter")
+constant NoTypes = TypeInference(CallTarget.Plain.types)
+constant Plain = ValueCodegen(NoTypes, Scope(("Greet", "Run"), ("Text", "None")), CallTarget.Plain)
 Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Identifier", "a"), CodeBlock.Empty).register is 1
 	Plain.Expression(SyntaxNode("Binary", "+", (NoNode, NoNode)), CodeBlock.Empty).Result is 2
@@ -14,7 +12,7 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 		return Literal(node, block)
 	if node.Kind is "Identifier"
 		return Variable(node, block)
-	if (node.Kind is in ("Call", "Member", "MethodCall")) or (node.text is "to")
+	if (node.Kind is in ("Call", "Member", "MethodCall", "Not")) or (node.text is "to")
 		return Call(node, block)
 	let left = Expression(node.children(0), block)
 	let right = Expression(node.children(1), left)
@@ -22,7 +20,7 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Variable(SyntaxNode("Identifier", "a"), CodeBlock.Empty).instructions(0).texts is ("a")
 	Plain.Variable(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty).instructions(0).kind is InstructionType.Invoke
-	if (block.scope.TypeOf(node.text) is "") and Header(node.text).tokens.Length > 0
+	if (block.scope.TypeOf(node.text) is "") and target.Header(node.text).tokens.Length > 0
 		return Invoke(node, block, -1, TypeOf(node, block))
 	block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
 Literal(node SyntaxNode, block CodeBlock) CodeBlock
@@ -32,43 +30,41 @@ Literal(node SyntaxNode, block CodeBlock) CodeBlock
 	if node.Kind is "Number"
 		return block.Load(InstructionEntry.LoadNumber(block.register, node.text to Number))
 	if node.Kind is "Text"
-		return block.Load(InstructionEntry.LoadText(block.register, Unquoted(node.text)))
+		return block.Load(InstructionEntry.LoadText(block.register, node.Unquoted))
 	block.Load(InstructionEntry.LoadBoolean(block.register, node.text is "true"))
 Call(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Call(SyntaxNode("Call", "Greeter", SyntaxNode("Text", "\"a\"")), CodeBlock.Empty).Result is 1
 	Plain.Call(SyntaxNode("Member", "Greet", NoNode), CodeBlock.Empty).instructions(1).payload.Last is 0
 	Plain.Call(SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "Text"))), CodeBlock.Empty).Result is 1
-	if node.Kind is "Call"
+	Plain.Call(SyntaxNode("Member", "text", NewGreeter), CodeBlock.Empty).instructions(1).kind is InstructionType.FieldLoad
+	if (node.Kind is "Call") or IsTypeName(node.children(0), block)
 		return Invoke(node, block, -1, TypeOf(node, block))
 	let instance = Expression(node.children(0), block)
-	let target = node.Kind is "Binary" then SyntaxNode("Member", "to", node.children(0)) else node
-	Invoke(target, instance, instance.Result, TypeOf(node, block))
+	if (node.Kind is "Member") and target.IsMember(TypeOf(node.children(0), block), node.text)
+		return instance.Load(InstructionEntry(InstructionType.FieldLoad, node.text, (instance.register, instance.Result, -1)))
+	let method = node.Kind is "Not" then "not" else "to"
+	let call = node.Kind is in ("Binary", "Not") then SyntaxNode("Member", method, node.children(0)) else node
+	Invoke(call, instance, instance.Result, TypeOf(node, block))
+IsTypeName(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is true
+	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false
+	(node.Kind is "Identifier") and (block.scope.TypeOf(node.text) is "") and inference.types.IsKnown(node.text)
 Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeBlock
 	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1, "Text").instructions(0).texts.Last is "Strict/Text"
 	mutable result = block
 	mutable arguments = List(Mutable(Number))
-	for Range((instance < 0 then 0 else 1), node.children.Length)
+	let first = node.Kind is in ("Member", "MethodCall") then 1 else 0
+	for Range(first, node.children.Length)
 		result = Expression(node.children(value), result)
 		arguments.Add(result.Result)
-	let type = instance < 0 then TypeName else TypeOf(node.children(0), block)
-	let signature = Signature(node.text, type, returnType)
+	let owner = Owner(node, block)
+	let signature = target.Signature(node.text, owner, returnType)
 	result.Load(InstructionEntry.Invoke(result.register, signature, arguments, instance))
-Signature(name Text, type Text, returnType Text) Texts
-	Plain.Signature("Greeter", "Greeter", "Greeter") is ("Strict/Examples/Greeter", "from", "Greeter", "text")
-	Plain.Signature("Greet", "Greeter", "Text") is ("Strict/Examples/Greeter", "Greet", "Strict/Text")
-	Plain.Signature("Length", "Text", "Number") is ("Strict/Text", "Length", "Strict/Number")
-	if type is not TypeName
-		return (FullName(type), name, FullName(returnType))
-	if name is TypeName
-		return (fullName, "from", name) + shape.MemberScope.names
-	(fullName, name, FullName(returnType)) + Header(name).ParameterNames
-Header(name Text) HeaderTokens
-	Plain.Header("Greet").ReturnType is "Text"
-	Plain.Header("Missing").tokens.Length is 0
-	for shape.lines
-		if shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
-			return HeaderTokens(Tokenizer(value).Tokens)
-	HeaderTokens(List(Text))
+Owner(node SyntaxNode, block CodeBlock) Text
+	Plain.Owner(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is "Greeter"
+	if node.Kind is in ("Member", "MethodCall")
+		return TypeOf(node.children(0), block)
+	inference.types.IsKnown(node.text) then node.text else target.TypeName
 Condition(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Condition(SyntaxNode("Boolean", "true"), CodeBlock.Empty).nextId is 1
 	Plain.Condition(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 4
@@ -95,20 +91,3 @@ TypeOf(node SyntaxNode, block CodeBlock) Text
 ElementType(iterated Text) Text
 	Plain.ElementType("Number") is "Number"
 	iterated is "Number" then iterated else inference.types.ElementType(iterated)
-FullName(type Text) Text
-	Plain.FullName("Logger") is "Strict/Logger"
-	Plain.FullName("Numbers") is "Strict/List(Number)"
-	Plain.FullName("Greeter") is "Strict/Examples/Greeter"
-	constant baseTypes = ("Boolean", "Number", "Character", "Range", "Text", "Logger", "File", "Directory", "Error")
-	let singular = type.Substring(0, type.Length - 1)
-	if type is in baseTypes
-		return "Strict/" + type
-	if singular is in baseTypes
-		return "Strict/List(" + singular + ")"
-	type is TypeName then fullName else type
-TypeName Text
-	Plain.TypeName is "Greeter"
-	fullName.Substring(fullName.LastIndexOf("/") + 1, fullName.Length - fullName.LastIndexOf("/") - 1)
-Unquoted(text Text) Text
-	Plain.Unquoted("\"a\"") is "a"
-	text.Substring(1, text.Length - 2)

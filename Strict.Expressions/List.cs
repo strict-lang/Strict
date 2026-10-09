@@ -106,9 +106,9 @@ public sealed class List : Value
 					return null; //ncrunch: no coverage, only when we have mutable items
 				valueInstances[i] = innerData.Value;
 			}
-			else if (Values[i] is Value constantValue)
+			else if (Values[i] is Value { ConstantData: { } constantData })
 			{
-				valueInstances[i] = constantValue.Data;
+				valueInstances[i] = constantData;
 			}
 			else
 			{
@@ -121,6 +121,7 @@ public sealed class List : Value
 	private ValueInstance? cachedData;
 	public override ValueInstance Data =>
 		TryGetConstantData() ?? throw new DataAccessRequiresConstantList(ReturnType);
+	public override ValueInstance? ConstantData => TryGetConstantData();
 
 	public sealed class DataAccessRequiresConstantList(Type returnType)
 		: ParsingFailed(returnType, 0, "Use TryGetConstantData instead!");

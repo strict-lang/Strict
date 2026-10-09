@@ -107,9 +107,7 @@ public sealed partial class BinaryGenerator
 	private static Instruction? CreateInitialValueInstruction(Expression? initialValue) =>
 		initialValue switch
 		{
-			List list when list.TryGetConstantData() is { } listValue => new SetInstruction(listValue,
-				Register.R0),
-			Value value => new SetInstruction(value.Data, Register.R0),
+			Value { ConstantData: { } constantData } => new SetInstruction(constantData, Register.R0),
 			MethodCall { Method.Name: Method.From, ReturnType.IsNumber: true,
 				Arguments: [Value { ReturnType.IsNumber: true } number] } constructor =>
 				new SetInstruction(new ValueInstance(constructor.ReturnType, number.Data.Number), Register.R0),

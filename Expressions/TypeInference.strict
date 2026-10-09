@@ -1,7 +1,7 @@
 has types KnownTypes
 constant NoScope = Scope(("x", "z"), ("y", "w"))
 constant NoShape = Scope(("x", "z"), ("y", "w"))
-constant NoInference = TypeInference(KnownTypes(("A", "B"), (NoShape, NoShape), (NoShape, NoShape)))
+constant NoInference = TypeInference(KnownTypes(("A", "B"), (NoShape, NoShape), (NoShape, NoShape), (NoShape, NoShape)))
 constant NoNode = SyntaxNode("Identifier", "x")
 constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "Text")))
 constant MutableText = SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "Text"), NoNode))

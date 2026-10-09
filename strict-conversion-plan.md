@@ -274,7 +274,24 @@ else/else if, method calls (Invoke), lists, member access, `Optimizers/StrengthR
 parity, and parser papercuts found while writing the codegen (a parameter named `value` silently
 collides with the implicit value, `Method(0)` on a parameterless method result is parsed as a call
 argument, `x to Number` two calls deep and `a then b else c` followed by more arguments fail).
-Next: Invoke/member calls/lists/else in the codegen, then more Examples in the differential.
+Then: Invoke for own methods, constructors, static calls (`Directory.Exists`), base type methods
+(`text.Length`, `number to Text`, `not`), field loads (`where.exitCode`), Range loops; `CallTarget`
+builds the invoke signatures (full type names, parameter names from `KnownTypes.parameters`).
+`FileCompiler` links used base types like C# does: invoked `Strict/X.Method`s that the VM does not
+handle natively are compiled from `X.strict` into `Strict/X` entries (3 rounds deep). 15 of the 19
+runnable Examples compiled by Strict run like the C# binaries (HelloLogger, NativeArithmetic,
+NativeConditions, NativeLoop, Greeter, Fibonacci, AreaCalculator, SimpleCalculator,
+TemperatureConverter, GcdCalculator, FizzBuzz, AutofilledMutable, Pixel, DirProbe, ProcessProbe).
+Missing: generic list methods (Sum, Add, Length on List(Number) for Sum, NumberStats, NumberSummer,
+MemoryPressure), list literals, else/else if. C# fixes found on the way (each with a test): a
+method call left of a nested binary was loaded as a variable named after its text, a `for` loop
+ending a Text method returned a list instead of the concatenated text, and constant lists of
+computed elements (`(Range(0, 1), Range(1, 3))`) were read as constant data (new
+`Value.ConstantData`). The name table of a type entry prefills the short type name (deduplicated)
+like the C# NameTable. Error quality gaps seen: VM errors show only the innermost Strict frame,
+codegen errors in Strict (Error values) silently become garbage bytes, and the C# generator
+inlines whole constant trees (`ValueCodegen.Plain`) until it runs out of 64 registers.
+Next: generic List(T) method linking, list literals and else, then the remaining 4 Examples.
 Flaky once in a full parallel solution run (passes alone and in reruns):
 `InterpreterTests.ParserParsesExistingTextStrictFile` and
 `LoadStrictExamplesPackageAndUseBasePackageTypes`, likely package files changing while

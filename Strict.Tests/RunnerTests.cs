@@ -416,6 +416,19 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task ListConstantOfConstructedValuesRunsFromSource()
+	{
+		var folder = Path.Combine(Path.GetTempPath(),
+			nameof(ListConstantOfConstructedValuesRunsFromSource));
+		Directory.CreateDirectory(folder);
+		var path = Path.Combine(folder, "RangePair" + Type.Extension);
+		await File.WriteAllTextAsync(path, string.Join('\n',
+			"has number", "constant Ranges = (Range(0, 1), Range(1, 3))", "Total Number",
+			"\tRangePair(0).Total is 2", "\tRanges.Length + number", "Run Number", "\tRangePair(1).Total"));
+		Assert.That(async () => await new Runner(path).Run(), Throws.Nothing);
+	}
+
+	[Test]
 	public async Task RunSumWithProgramArguments()
 	{
 		await new Runner(SumFilePath, "5 10 20").Run();

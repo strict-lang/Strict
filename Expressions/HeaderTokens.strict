@@ -65,9 +65,18 @@ IsParameterStart(position Number) Boolean
 	let previous = tokens(position - 1)
 	if previous is "mutable"
 		return true
-	(previous is in ("(", ",")) and tokens(position) is not "mutable"
+	let isAfterComma = (previous is ",") and (Depth(position) is 1)
+	((position is 2) or isAfterComma) and tokens(position) is not "mutable"
+Depth(position Number) Number
+	HeaderTokens(Tokenizer("Link(entries List(Entry), depth Number)").Tokens).Depth(5) is 2
+	let brackets = SyntaxParser(tokens)
+	mutable depth = 0
+	for position
+		depth = depth + brackets.BracketDelta(tokens(index))
+	depth
 ParameterNames Texts
 	HeaderTokens(Tokenizer("Add(other Number, mutable count) Mutable(List)").Tokens).ParameterNames is ("other", "count")
+	HeaderTokens(Tokenizer("Link(entries List(Entry), depth Number)").Tokens).ParameterNames is ("entries", "depth")
 	HeaderTokens("Run", "Number").ParameterNames.Length is 0
 	mutable names = List(Mutable(Text))
 	for ParametersEnd
