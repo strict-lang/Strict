@@ -298,7 +298,9 @@ All 19 runnable Examples compiled by Strict now give the same output and return 
 VM as the C# compiled binaries (Slow `StrictCompiledExampleRunsLikeCSharp`, Sum with program
 numbers). C# fix on the way: a member constant like `BodyParser(..).Block(1, 1)` was typed by its
 first call (BodyParser) instead of the whole expression.
-Next for D3: else/else if, source lines in instructions, loud codegen errors (Error values),
+else/else if work like C# (condition flag set after the then body, JumpToIdIfTrue over the else
+body), the new Examples/Grade.strict covers them in the differential (20 Examples).
+Next for D3: source lines in instructions, loud codegen errors (Error values),
 compiling non-example packages (the Strict compiler itself) and comparing with the C# output.
 Flaky once in a full parallel solution run (passes alone and in reruns):
 `InterpreterTests.ParserParsesExistingTextStrictFile` and

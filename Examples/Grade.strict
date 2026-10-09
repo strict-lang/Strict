@@ -1,0 +1,24 @@
+has score Number
+has logger
+Letter Text
+	Grade(95).Letter is "A"
+	Grade(85).Letter is "B"
+	Grade(50).Letter is "F"
+	if score > 90
+		return "A"
+	else if score > 80
+		return "B"
+	"F"
+Passed Boolean
+	Grade(95).Passed is true
+	Grade(50).Passed is false
+	if score > 60
+		return true
+	else
+		return false
+Run
+	logger.Log("95: " + Grade(95).Letter)
+	logger.Log("85: " + Grade(85).Letter)
+	logger.Log("50: " + Grade(50).Letter)
+	logger.Log("95 passed: " + Grade(95).Passed)
+	logger.Log("50 passed: " + Grade(50).Passed)

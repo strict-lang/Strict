@@ -56,6 +56,7 @@ public sealed class StrictBytecodeTests
 	[TestCase("NumberSummer")]
 	[TestCase("MemoryPressure")]
 	[TestCase("NumberStats")]
+	[TestCase("Grade")]
 	[TestCase("Sum", 5, 10, 20)]
 	public async Task StrictCompiledExampleRunsLikeCSharp(string example, params double[] numbers)
 	{
