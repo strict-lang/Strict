@@ -25,6 +25,11 @@ public sealed class MemberCallTests : TestExpressions
 			Is.EqualTo("Type(\"\\\"\", \"TestPackage\").Name"));
 
 	[Test]
+	public void BracketsCommasAndEscapedQuotesInsideTextArgument() =>
+		Assert.That(ParseExpression("Type(\"x\", \"TestPackage\").Name.StartsWith(\"A(x B, y = \\\"a\\\")\") is true").ToString(),
+			Is.EqualTo("Type(\"x\", \"TestPackage\").Name.StartsWith(\"A(x B, y = \\\"a\\\")\") is true"));
+
+	[Test]
 	public void UnknownMember() =>
 		Assert.That(() => ParseExpression("unknown"), Throws.InstanceOf<Body.IdentifierNotFound>());
 

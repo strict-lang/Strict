@@ -12,16 +12,29 @@ public partial class MethodExpressionParser
 	{
 		if (!IsNestedMethodCallWithParentMethodParameter(input, argumentsStart, argumentsEnd))
 			return;
-		argumentsStart = input.LastIndexOf('(');
+		argumentsStart = LastOpenBracketOutsideText(input);
 		argumentsEnd = input.FindMatchingBracketIndex(argumentsStart);
 	}
 
 	private static bool IsNestedMethodCallWithParentMethodParameter(ReadOnlySpan<char> input,
 		int argumentsStart, int argumentsEnd)
 	{
-		var innerArgumentStart = input.LastIndexOf('(');
+		var innerArgumentStart = LastOpenBracketOutsideText(input);
 		return argumentsStart != innerArgumentStart && argumentsEnd < innerArgumentStart &&
 			input.IndexOf('.') < innerArgumentStart;
+	}
+
+	private static int LastOpenBracketOutsideText(ReadOnlySpan<char> input)
+	{
+		var lastOpenBracket = -1;
+		var isInText = false;
+		for (var index = 0; index < input.Length; index++)
+		{
+			isInText = TextLiteral.Advance(input, ref index, isInText);
+			if (!isInText && input[index] == '(')
+				lastOpenBracket = index;
+		}
+		return lastOpenBracket;
 	}
 
 	private Expression? ParseInContext(Body body, ReadOnlySpan<char> input,
