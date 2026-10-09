@@ -19,7 +19,7 @@ namespace Strict;
 /// Caches .strictbinary bytecode for later runs, regenerating when source is newer.
 /// Loading a .strictbinary is fully self-contained and needs no source packages at all.
 /// </summary>
-public sealed class Runner
+public sealed partial class Runner
 {
 	public Runner(string strictFilePath, string expressionToRun = Method.Run,
 		bool enableDetailedOutput = false)
@@ -38,14 +38,22 @@ public sealed class Runner
 	}
 
 	private readonly string strictFilePath;
+
 	private readonly string? packageDirectory;
+
 	private readonly string expressionToRun;
+
 	private readonly bool enableDetailedOutput;
+
 	private readonly MethodExpressionParser parser;
+
 	private readonly Repositories repositories;
+
 	private readonly List<long> stepTimes = [];
+
 	private bool IsExpressionInvocation =>
 		expressionToRun != Method.Run && expressionToRun.Contains('(');
+
 	private string[] ProgramArguments =>
 		expressionToRun == Method.Run || IsExpressionInvocation
 			? []
@@ -56,40 +64,6 @@ public sealed class Runner
 	{
 		if (enableDetailedOutput)
 			Console.WriteLine(message);
-	}
-
-	/// <summary>
-	/// Generates a platform-specific executable from the compiled instructions. Uses MLIR when
-	/// -mlir is specified, LLVM IR when -llvm is specified, otherwise NASM + gcc/clang pipeline.
-	/// Throws <see cref="ToolNotFoundException"/> if required tools are missing.
-	/// </summary>
-	public async Task Build(Platform platform, CompilerBackend backend = CompilerBackend.MlirDefault)
-	{
-		if (IsExpressionInvocation)
-			throw new CannotBuildExecutableWithCustomExpression();
-		var binary = await GetBinary();
-		if (binary.GetRunMethods().Any(method => method.parameters.Count > 0))
-		{
-			var launcherPath = CreateManagedLauncher(platform);
-			PrintLauncherSummary(platform, launcherPath);
-			return;
-		}
-		InstructionsCompiler compiler = backend switch
-		{
-			CompilerBackend.Llvm => new InstructionsToLlvmIr(),
-			CompilerBackend.Nasm => new InstructionsToAssembly(),
-			_ => new InstructionsToMlir()
-		};
-		Linker linker = backend switch
-		{
-			CompilerBackend.Llvm => new LlvmLinker(),
-			CompilerBackend.Nasm => new NativeExecutableLinker(),
-			_ => new MlirLinker()
-		};
-		var irFilePath = Path.ChangeExtension(strictFilePath, compiler.Extension);
-		await File.WriteAllTextAsync(irFilePath, await compiler.Compile(binary, platform));
-		var exeFilePath = await linker.CreateExecutable(irFilePath, platform, binary.UsesConsolePrint);
-		PrintCompilationSummary(backend, platform, exeFilePath);
 	}
 
 	public class CannotBuildExecutableWithCustomExpression : Exception;
@@ -164,33 +138,6 @@ public sealed class Runner
 	private static readonly DateTime RuntimeBuildTime = Directory.
 		EnumerateFiles(AppContext.BaseDirectory, nameof(Strict) + "*.dll").
 		Select(File.GetLastWriteTimeUtc).DefaultIfEmpty(DateTime.MinValue).Max();
-
-	private static bool UsedPackageHasNewerStrictFile(BinaryExecutable binary, DateTime binaryTime)
-	{
-		var strictRoot = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
-		return binary.MethodsPerType.Keys.Select(GetPackageName).Where(name => name.Length > 0).
-			Distinct().Any(packageName => DirectoryHasNewerStrictFile(Path.Combine(strictRoot,
-				Path.GetRelativePath(nameof(Strict), packageName)), binaryTime));
-	}
-
-	private static string GetPackageName(string typeFullName)
-	{
-		var nonGenericName = typeFullName.Split('(')[0];
-		var separatorIndex = nonGenericName.LastIndexOf(Context.ParentSeparator);
-		return separatorIndex > 0 && nonGenericName.StartsWith(nameof(Strict), StringComparison.Ordinal)
-			? nonGenericName[..separatorIndex]
-			: "";
-	}
-
-	private static bool DirectoryHasNewerStrictFile(string? directory, DateTime binaryTime)
-	{
-		if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
-			return false;
-		foreach (var file in Directory.EnumerateFiles(directory, "*" + Type.Extension))
-			if (File.GetLastWriteTimeUtc(file) > binaryTime)
-				return true;
-		return false;
-	}
 
 	private async Task<BinaryExecutable> LoadFromSourceAndSaveBinary(Package package)
 	{
@@ -284,26 +231,6 @@ public sealed class Runner
 			return "Removed instructions: " + removed + " (" + removed * 100 / beforeCount + "%) with " +
 				allOptimizers.NumberOfOptimizers + " optimizers.";
 		}));
-
-	private BinaryExecutable CacheStrictExecutable(BinaryExecutable binary)
-	{
-		var outputFilePath = Path.ChangeExtension(strictFilePath, BinaryExecutable.Extension);
-		try
-		{
-			binary.Serialize(outputFilePath);
-			Log("Saving " + new FileInfo(outputFilePath).Length + " bytes of bytecode to: " +
-				outputFilePath);
-		}
-		catch (BinaryExecutable.ValueInstanceNotSupported ex)
-		{
-			Log("Bytecode serialization not yet supported for this program: " + ex.Message);
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-		{
-			Log("Cached binary not saved, it is in use: " + ex.Message);
-		}
-		return binary;
-	}
 
 	private T LogTiming<T>(string message, Func<T> callToTime)
 	{
@@ -445,39 +372,6 @@ public sealed class Runner
 		throw new UnsupportedRunArgumentType(targetType.Name);
 	}
 
-	private string CreateManagedLauncher(Platform platform)
-	{
-		if ((platform == Platform.Windows && !OperatingSystem.IsWindows()) ||
-			(platform == Platform.Linux && !OperatingSystem.IsLinux()) ||
-			(platform == Platform.MacOS && !OperatingSystem.IsMacOS()))
-			throw new BuildRequiresTargetPlatform(platform);
-		var runtimeDirectory = Path.GetDirectoryName(typeof(Program).Assembly.Location) ??
-			throw new DirectoryNotFoundException("Strict runtime output directory not found.");
-		var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(strictFilePath)) ??
-			throw new DirectoryNotFoundException("Output directory not found.");
-		var runtimeExecutableName = OperatingSystem.IsWindows()
-			? "Strict.exe"
-			: "Strict";
-		var outputExecutablePath = Path.Combine(outputDirectory, OperatingSystem.IsWindows()
-			? Path.GetFileNameWithoutExtension(strictFilePath) + ".exe"
-			: Path.GetFileNameWithoutExtension(strictFilePath));
-		File.Copy(Path.Combine(runtimeDirectory, runtimeExecutableName), outputExecutablePath, true);
-		foreach (var filePath in Directory.GetFiles(runtimeDirectory, "*.dll"))
-			File.Copy(filePath, Path.Combine(outputDirectory, Path.GetFileName(filePath)), true);
-		foreach (var filePath in Directory.GetFiles(runtimeDirectory, "*.json"))
-			File.Copy(filePath, Path.Combine(outputDirectory, Path.GetFileName(filePath)), true);
-		if (!OperatingSystem.IsWindows())
-			File.SetUnixFileMode(outputExecutablePath,
-				UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-				UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead |
-				UnixFileMode.OtherExecute);
-		return outputExecutablePath;
-	}
-
-	private static void PrintLauncherSummary(Platform platform, string exeFilePath) =>
-		Console.WriteLine("Created " + platform + " executable launcher of " +
-			new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
-
 	private void
 		PrintCompilationSummary(CompilerBackend backend, Platform platform, string exeFilePath) =>
 		Console.WriteLine("Compiled " + strictFilePath + " via " + backend + " in " +
@@ -495,7 +389,4 @@ public sealed class Runner
 
 	public sealed class UnsupportedRunArgumentType(string typeName) : Exception(typeName +
 		" is not supported, only Number, Text, Boolean, Path and List arguments are supported.");
-
-	public sealed class BuildRequiresTargetPlatform(Platform platform)
-		: Exception("Runtime launcher builds for " + platform + " require building on that platform.");
 }
