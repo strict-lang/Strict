@@ -79,3 +79,18 @@ IsParameterStart(tokens Texts, position Number) Boolean
 	if previous is "mutable"
 		return true
 	(previous is in ("(", ",")) and tokens(position) is not "mutable"
+ParameterTypes(header Text) Texts
+	TypeShape("has a").ParameterTypes("Add(x Number, mutable count, text = \"a\")") is ("Number", "Count", "Text")
+	let tokens = Tokenizer(header).Tokens
+	mutable types = List(Mutable(Text))
+	let end = ParametersEnd(tokens)
+	for end
+		if index > 1 and IsParameterStart(tokens, index)
+			types.Add(ParameterType(tokens, index))
+	types
+ParameterType(tokens Texts, position Number) Text
+	TypeShape("has a").ParameterType(("Add", "(", "x", "Number", ")"), 2) is "Number"
+	let next = tokens(position + 1)
+	if next is "="
+		return SyntaxParser(tokens).Leaf(tokens(position + 2)).Kind
+	next is in (",", ")") then DeclaredType(("has", tokens(position))) else next

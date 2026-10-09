@@ -1,0 +1,13 @@
+has names Texts
+has types Texts
+With(name Text, type Text) Scope
+	Scope(("a", "b"), ("A", "B")).With("c", "C").TypeOf("c") is "C"
+	Scope(names + name, types + type)
+WithAll(otherNames Texts, otherTypes Texts) Scope
+	Scope(("a", "b"), ("A", "B")).WithAll(("c", "d"), ("C", "D")).TypeOf("d") is "D"
+	Scope(names + otherNames, types + otherTypes)
+TypeOf(name Text) Text
+	Scope(("a", "b"), ("A", "B")).TypeOf("b") is "B"
+	Scope(("a", "b"), ("A", "B")).TypeOf("c") is ""
+	let position = names.Index(name)
+	position is -1 then "" else types(position)
