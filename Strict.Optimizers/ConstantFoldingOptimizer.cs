@@ -87,6 +87,7 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 			InstructionType.Multiply => new ValueInstance(left.GetType(), left.Number * right.Number),
 			InstructionType.Divide => new ValueInstance(left.GetType(), left.Number / right.Number),
 			InstructionType.Modulo => new ValueInstance(left.GetType(), left.Number % right.Number),
+			InstructionType.Power => new ValueInstance(left.GetType(), Math.Pow(left.Number, right.Number)),
 			_ => null //ncrunch: no coverage
 		};
 }

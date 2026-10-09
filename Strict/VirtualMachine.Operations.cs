@@ -25,6 +25,7 @@ public sealed partial class VirtualMachine
 			InstructionType.Multiply => new ValueInstance(right.GetType(), left.Number * right.Number),
 			InstructionType.Divide => new ValueInstance(right.GetType(), left.Number / right.Number),
 			InstructionType.Modulo => new ValueInstance(right.GetType(), left.Number % right.Number),
+			InstructionType.Power => new ValueInstance(right.GetType(), Math.Pow(left.Number, right.Number)),
 			_ => throw Fail("Unsupported binary operation: " +
 				instruction.InstructionType) //ncrunch: no coverage
 		};

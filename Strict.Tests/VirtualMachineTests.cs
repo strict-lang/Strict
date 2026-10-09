@@ -557,6 +557,29 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void PowerOfNumbers()
+	{
+		var source = new[] { "has number", "Squared Number", "\tnumber ^ 2" };
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(nameof(PowerOfNumbers),
+			nameof(PowerOfNumbers) + "(3).Squared", source)).Generate();
+		Assert.That(
+			() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(9));
+	}
+
+	[Test]
+	public void MemberOfComputedInstance()
+	{
+		var source = new[] { "has text", "Code Number", "\tCharacter(text.Length + 64).number + 1" };
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(MemberOfComputedInstance), nameof(MemberOfComputedInstance) + "(\"A\").Code",
+			source)).Generate();
+		Assert.That(
+			() => new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(66));
+	}
+
+	[Test]
 	public void ConstantCreatedByConstructor()
 	{
 		var source = new[]

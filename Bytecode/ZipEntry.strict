@@ -1,0 +1,5 @@
+has Name Text
+has content Numbers
+Checksum Number
+	ZipEntry("a", (104, 105)).Checksum is 3.633523372e9
+	ByteEncoder(content).Checksum

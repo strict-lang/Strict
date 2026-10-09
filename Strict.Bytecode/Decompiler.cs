@@ -273,6 +273,7 @@ public sealed class Decompiler
 			InstructionType.Multiply => "*",
 			InstructionType.Divide => "/",
 			InstructionType.Modulo => "%",
+			InstructionType.Power => "^",
 			_ => instructionType.ToString()
 		};
 

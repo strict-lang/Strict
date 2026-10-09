@@ -1,0 +1,75 @@
+has bytes Numbers
+UInt(number Number, size Number) ByteEncoder
+	ByteEncoder(1, 2).UInt(258, 2).bytes is (1, 2, 2, 1)
+	mutable result = bytes
+	mutable rest = number
+	for size
+		result = result + rest % 256
+		rest = (rest / 256).Floor
+	ByteEncoder(result)
+SevenBit(number Number) ByteEncoder
+	ByteEncoder(1, 2).SevenBit(300).bytes is (1, 2, 172, 2)
+	mutable result = bytes
+	mutable rest = number
+	for (rest / 128).Floor > 0 then SevenBitLength(rest) else 1
+		let isLast = rest < 128
+		result = result + (isLast then rest else rest % 128 + 128)
+		rest = (rest / 128).Floor
+	ByteEncoder(result)
+SevenBitLength(number Number) Number
+	ByteEncoder(1, 2).SevenBitLength(300) is 2
+	number < 128 then 1 else 1 + SevenBitLength((number / 128).Floor)
+Text(text Text) ByteEncoder
+	ByteEncoder(1, 2).Text("ä").bytes is (1, 2, 2, 195, 164)
+	let unicode = UnicodeBytes(text)
+	ByteEncoder(SevenBit(unicode.Length).bytes + unicode)
+UnicodeBytes(text Text) Numbers
+	ByteEncoder(1, 2).UnicodeBytes("aä€") is (97, 195, 164, 226, 130, 172)
+	mutable result = List(Mutable(Number))
+	for text
+		result = result + CharacterBytes(Character(value).number)
+	result
+CharacterBytes(code Number) Numbers
+	ByteEncoder(1, 2).CharacterBytes(8364) is (226, 130, 172)
+	if code < 128
+		return List(Number) + code
+	if code < 2048
+		return (192 + (code / 64).Floor, 128 + code % 64)
+	(224 + (code / 4096).Floor, 128 + (code / 64).Floor % 64, 128 + code % 64)
+Double(number Number) ByteEncoder
+	ByteEncoder(1, 2).Double(1.5).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 248, 63)
+	ByteEncoder(1, 2).Double(-2).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 0, 192)
+	if number is 0
+		return UInt(0, 8)
+	let exponent = Exponent(number.Absolute)
+	let mantissa = (number.Absolute / 2 ^ exponent - 1) * 2 ^ 52
+	let low = UInt(mantissa % 2 ^ 48, 6)
+	let high = (mantissa / 2 ^ 48).Floor + ((exponent + 1023) % 16) * 16
+	low.UInt(high, 1).UInt(((exponent + 1023) / 16).Floor + (number < 0 then 128 else 0), 1)
+Exponent(positive Number) Number
+	ByteEncoder(1, 2).Exponent(10) is 3
+	ByteEncoder(1, 2).Exponent(0.25) is -2
+	if positive >= 2
+		return 1 + Exponent(positive / 2)
+	positive < 1 then Exponent(positive * 2) - 1 else 0
+Checksum Number
+	ByteEncoder(49, 50, 51, 52, 53, 54, 55, 56, 57).Checksum is 3.421780262e9
+	mutable crc = 4.294967295e9
+	for bytes
+		crc = Xor(ChecksumEntry(Xor(crc % 256, value)), (crc / 256).Floor)
+	Xor(crc, 4.294967295e9)
+ChecksumEntry(index Number) Number
+	ByteEncoder(1, 2).ChecksumEntry(1) is 1.996959894e9
+	mutable entry = index
+	for 8
+		entry = entry % 2 is 1 then Xor(3.988292384e9, (entry / 2).Floor) else (entry / 2).Floor
+	entry
+Xor(left Number, right Number) Number
+	ByteEncoder(1, 2).Xor(12, 10) is 6
+	mutable result = 0
+	mutable bit = 1
+	for 32
+		if (left / bit).Floor % 2 is not (right / bit).Floor % 2
+			result = result + bit
+		bit = bit * 2
+	result

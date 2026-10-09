@@ -429,10 +429,19 @@ public sealed partial class BinaryGenerator
 			instructions.Add(new Invoke(registry.AllocateRegister(), lengthInfo));
 			return;
 		}
+		// The member of a computed Character or Text is its value (character code or text)
+		if (!IsNamedValue(memberCall.Instance) && IsPrimitive(memberCall.Instance.ReturnType))
+		{
+			instructions.Add(new FieldLoadInstruction(registry.AllocateRegister(), objectRegister,
+				memberCall.Member.Name));
+			return;
+		}
 		// Fallback: keep identifier for frame-relative member loads (e.g. text.characters)
 		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(),
 			memberCall.ToString()));
 	}
+
+	private static bool IsPrimitive(Type type) => type.IsCharacter || type.IsText;
 
 	private static bool IsStructFieldAccess(Type type) =>
 		!type.IsText && !type.IsNumber && !type.IsBoolean && !type.IsCharacter && !type.IsList &&

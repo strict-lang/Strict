@@ -245,6 +245,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		case InstructionType.Multiply:
 		case InstructionType.Divide:
 		case InstructionType.Modulo:
+		case InstructionType.Power:
 		case InstructionType.Equal:
 		case InstructionType.NotEqual:
 		case InstructionType.LessThan:
@@ -372,9 +373,15 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		if (typeInstance == null)
 		{
 			// Path/Text primitives store data differently — Path has a single text field
-			if (objectValue.IsText && instr.FieldName.Equals("text", StringComparison.OrdinalIgnoreCase))
+			if (objectValue.IsText)
 			{
 				Memory.Registers[instr.Register] = objectValue;
+				return;
+			}
+			if (objectValue is { IsList: false, IsDictionary: false })
+			{
+				Memory.Registers[instr.Register] = new ValueInstance(executable.numberType,
+					objectValue.Number);
 				return;
 			}
 			throw Fail("FieldLoad on non-struct value for field '" + instr.FieldName + "'");
@@ -468,7 +475,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		if (collectionValue.IsText)
 		{
 			Memory.Registers[listCallInstruction.Register] =
-				new ValueInstance(collectionValue.Text[indexValue].ToString());
+				collectionValue.GetIteratorValue(executable.characterType, indexValue);
 			return;
 		}
 		if (indexValue < 0 || indexValue >= collectionValue.List.Count)

@@ -233,6 +233,17 @@ concatenation, `to Number`/`to Text` of literals, boolean and/or) and TypeValida
 the interpreter test mode evaluated declarations using a member reached through another member
 (`node.children(0)`) on the empty implicit instance. Still missing for D2: the double bracket
 list argument rule (C# checks it on the line text).
+
+D3 progress (2026-10-09): binary primitives in Strict. `Bytecode/ByteEncoder` writes little
+endian integers, 7 bit encoded integers, UTF-8 texts with length prefix, IEEE 754 doubles and
+CRC32 (arithmetic XOR, Strict has no bit operators), `ZipEntry`/`ZipWriter` write a stored ZIP.
+Slow test `StrictZipWriterOutputOpensWithZipArchive`: the bytes produced on the VM open with the
+.NET ZipArchive (CRC checked) and give back the entry contents. VM fixes found on the way (each
+with a test): `^` compiled to an endless `Number.^` invoke (new Power instruction), `text(index)`
+gave a Text instead of a Character, `Character("h")` stayed a Text, members of a computed
+Character/Text (`Character(value).number`) were loaded as a variable named after the expression.
+Next: the C# binary format in Strict (NameTable, type entries, instruction payloads), then tree
+codegen with the VM output differential.
 Flaky once in a full parallel solution run (passes alone and in reruns):
 `InterpreterTests.ParserParsesExistingTextStrictFile`, likely Language package files changing while
 Strict.Tests runs programs there (Phase F thread safety item).

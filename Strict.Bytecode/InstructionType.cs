@@ -20,6 +20,7 @@ public enum InstructionType : byte
 	Multiply,
 	Divide,
 	Modulo,
+	Power,
 	ArithmeticSeparator = 20,
 	Equal,
 	NotEqual,

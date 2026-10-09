@@ -162,7 +162,7 @@ public sealed partial class VirtualMachine
 		{
 			var info = invoke.MethodInfo;
 			Memory.Registers[invoke.Register] = info.ArgumentRegisters.Length > 0
-				? Memory.Registers[info.ArgumentRegisters[0]]
+				? ToConstructedValue(returnType, Memory.Registers[info.ArgumentRegisters[0]])
 				: CreateDefaultValue(returnType);
 			return true;
 		}
@@ -170,6 +170,13 @@ public sealed partial class VirtualMachine
 			return true;
 		return TryHandleFromConstructor(invoke, returnType);
 	}
+
+	private ValueInstance ToConstructedValue(Type returnType, ValueInstance argument) =>
+		returnType.IsCharacter
+			? new ValueInstance(executable.characterType, argument.IsText
+				? argument.Text[0]
+				: argument.Number)
+			: argument;
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>
 		executable.FindInstructions(method.Type, method) ??

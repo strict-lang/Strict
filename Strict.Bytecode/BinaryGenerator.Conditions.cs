@@ -104,7 +104,8 @@ public sealed partial class BinaryGenerator
 
 	private static bool CanGenerateDirectBinaryInstruction(string methodName) =>
 		methodName is BinaryOperator.Plus or BinaryOperator.Minus or BinaryOperator.Multiply
-			or BinaryOperator.Divide or BinaryOperator.Modulate or BinaryOperator.Is ||
+			or BinaryOperator.Divide or BinaryOperator.Modulate or BinaryOperator.Power or
+			BinaryOperator.Is ||
 		methodName.StartsWith("is not", StringComparison.Ordinal);
 
 	private static InstructionType GetInstructionBasedOnBinaryOperationName(string binaryOperator) =>
@@ -115,6 +116,7 @@ public sealed partial class BinaryGenerator
 			BinaryOperator.Minus => InstructionType.Subtract,
 			BinaryOperator.Divide => InstructionType.Divide,
 			BinaryOperator.Modulate => InstructionType.Modulo,
+			BinaryOperator.Power => InstructionType.Power,
 			BinaryOperator.Is => InstructionType.Equal,
 			_ when binaryOperator.StartsWith("is not", StringComparison.Ordinal) => InstructionType.
 				NotEqual,
