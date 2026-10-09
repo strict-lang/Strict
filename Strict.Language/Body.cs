@@ -56,8 +56,9 @@ public sealed class Body : Expression
 			ParsingLineNumber++)
 			try
 			{
-				expressions.Add(Method.ParseLine(this, CurrentLine));
-				UpdateValueTypeForPiping(expressions[^1]);
+				var line = CurrentLine;
+				expressions.Add(Method.ParseLine(this, line));
+				UpdateValueTypeForPiping(expressions[^1], line);
 			}
 			catch (ParsingFailed)
 			{
@@ -76,16 +77,24 @@ public sealed class Body : Expression
 	}
 
 	//ponytail: substring check, a line mentioning value anywhere (even in a longer name) is no pipe
-	private void UpdateValueTypeForPiping(Expression lastExpression)
+	private void UpdateValueTypeForPiping(Expression lastExpression, string line)
 	{
-		if (lastExpression.ReturnType.IsNone ||
-			CurrentLine.Contains(Type.ValueLowercase, StringComparison.Ordinal))
+		if (lastExpression.ReturnType.IsNone || lastExpression.IsMutable || IsControlFlow(line) ||
+			line.Contains(Type.ValueLowercase, StringComparison.Ordinal))
 			return;
 		var valueVar = FindVariable(Type.ValueLowercase.AsSpan(), false);
 		if (valueVar == null || valueVar.Type == lastExpression.ReturnType || !valueVar.IsMutable)
 			return;
 		Variables!.Remove(valueVar);
 		AddVariable(Type.ValueLowercase, lastExpression, true, valueVar.IsImplicit);
+	}
+
+	private static bool IsControlFlow(string line)
+	{
+		var trimmed = line.TrimStart('\t');
+		return trimmed.StartsWith(Keyword.If + " ", StringComparison.Ordinal) ||
+			trimmed.StartsWith(Keyword.For + " ", StringComparison.Ordinal) ||
+			trimmed.StartsWith(Keyword.Else, StringComparison.Ordinal);
 	}
 
 	public Range LineRange { get; internal set; }

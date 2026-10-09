@@ -1,14 +1,14 @@
 has ops Bytecode/InstructionList
 Optimize InstructionList
 	UnreachableCode(InstructionList.Empty.With("Return", "").With("Return", "")).Optimize.Count is 1
-	constant cutAt = FindReturn(0)
-	if cutAt is -1
-		return ops
-	ops.KeepPrefix(cutAt + 1)
-FindReturn(index Number) Number
-	UnreachableCode(InstructionList.Empty).FindReturn(0) is -1
-	if index >= ops.Count
-		return -1
-	if ops.At(index).IsReturn
-		return index
-	FindReturn(index + 1)
+	UnreachableCode(InstructionList.Empty.With("Return", "").With("JumpEnd", "if0").With("Return", "")).Optimize.Count is 3
+	mutable next = List(Mutable(BytecodeInstruction))
+	mutable isReachable = true
+	for ops.instructions
+		if value.typeName is "JumpEnd"
+			isReachable = true
+		if isReachable
+			next.Add(value)
+		if value.IsReturn
+			isReachable = false
+	InstructionList(next)

@@ -11,6 +11,18 @@ public sealed class ListCallTests : TestExpressions
 			Is.EqualTo(string.Join(Environment.NewLine, lines)));
 
 	[Test]
+	public void MutableReassignmentInsideLoopKeepsValueType()
+	{
+		using var type = new Type(TestPackage.Instance, new TypeLines(
+			nameof(MutableReassignmentInsideLoopKeepsValueType), "has texts", "Lengths Number",
+			"\tmutable sum = 0", "\tmutable names = List(Mutable(Text))", "\tmutable isCounting = false", "\tfor texts",
+			"\t\tif value is \"a\"", "\t\t\tisCounting = true", "\t\tif isCounting",
+			"\t\t\tnames.Add(value)", "\t\tsum = sum + value.IndexOf(\"a\")", "\tsum + names.Length")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+	}
+
+	[Test]
 	public void ListCallOnMemberInsideMemberChain()
 	{
 		using var type = new Type(TestPackage.Instance, new TypeLines(nameof(ListCallOnMemberInsideMemberChain),

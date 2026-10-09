@@ -21,9 +21,10 @@ ConstantLines(lines Texts) Texts
 			value
 RunBodyLines(lines Texts) Texts
 	RunBodyLines("Other", "Run Number", "\tconstant a = 1", "\ta", "Next") is ("constant a = 1", "a")
+	RunBodyLines("Run Number", "\tif a", "\t\treturn 1", "\t2") is ("if a", "\treturn 1", "2")
 	let start = RunHeaderIndex(lines) + 1
 	for Range(start, RunBodyEnd(lines, start))
-		lines(index).Trim
+		lines(index).Substring(1, lines(index).Length - 1)
 RunHeaderIndex(lines Texts) Number
 	RunHeaderIndex("has logger", "Run Number") is 1
 	for lines

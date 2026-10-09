@@ -12,6 +12,16 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
+## Native if blocks — 2026-10-09 (late night, part 3)
+
+- LineGenerator: `if` emits the condition + `JumpToIdIfFalse ifN`, the block end emits `JumpEnd ifN`
+  (id based, so optimizers removing instructions keep jumps valid; one nesting level, no else yet).
+- NASM: comparisons produce 1.0/0.0 via ucomisd + setcc, `JumpToIdIfFalse` tests against zero,
+  `JumpEnd` is a label, every `Return` emits its own `ret`. UnreachableCode keeps code after a
+  `JumpEnd`. `Examples/NativeConditions` compiles natively and returns 30 (1 with limit 3).
+- Parser fix: Body value piping retyped `value` after control flow lines and mutable reassignments
+  (`if flag` / `next.Add(value)` inside a loop saw value as the list), now only plain lines pipe.
+
 ## Strict optimizers in the native pipeline — 2026-10-09 (late night, part 2)
 
 - Optimizers use `Bytecode/BytecodeInstruction` + `Bytecode/InstructionList` (OpList/OptimInstruction

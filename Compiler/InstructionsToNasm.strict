@@ -4,7 +4,7 @@ has platform Number
 constant Extension = ".asm"
 Compile Text
 	InstructionsToNasm.SimpleAdd(Platform.Linux).Compile.StartsWith("section .data") is true
-	DataSection + MethodHeader + Body + "pop rbp\nret\n" + EntryPoint(methodName, platform).Build
+	DataSection + MethodHeader + Body + EntryPoint(methodName, platform).Build
 DataSection Text
 	"const_1: dq 3.0" is in InstructionsToNasm.SimpleAdd(Platform.Linux).DataSection
 	"var_sum: dq 0.0" is in InstructionsToNasm.SimpleAdd(Platform.Linux).DataSection

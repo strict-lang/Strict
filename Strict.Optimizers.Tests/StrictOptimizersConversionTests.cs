@@ -67,7 +67,7 @@ public sealed class StrictOptimizersConversionTests
 		Assert.That(dead.Methods.Any(method => method.Name == "IsLoaded"), Is.True);
 		var unreachable = package.GetType("UnreachableCode");
 		Assert.That(unreachable.Methods.Any(method => method.Name == "Optimize"), Is.True);
-		Assert.That(unreachable.Methods.Any(method => method.Name == "FindReturn"), Is.True);
+		Assert.That(unreachable.Methods.Any(method => method.Name == "Optimize"), Is.True);
 	}
 
 	[Test]

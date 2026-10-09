@@ -32,15 +32,31 @@ AssignValue(name Text, exprText Text) GenerationResult
 	let expr = ExpressionCodegen(state).GenerateExpression(exprText)
 	expr.Append(BytecodeInstruction.StoreRegister(expr.LastRegister, name))
 GenerateIf(line Text) GenerationResult
-	let cond = line.Substring(3, 200).Trim
-	let expr = ExpressionCodegen(state).GenerateExpression(cond)
-	expr.Append(BytecodeInstruction.JumpOp(InstructionType.JumpIfFalse, 1))
+	LineGenerator.Empty.GenerateIf("if 1 > 0").instructions(3).label is "if0"
+	let expr = ExpressionCodegen(state).GenerateExpression(line.Substring(3, line.Length - 3).Trim)
+	expr.Append(BytecodeInstruction("JumpToIdIfFalse", expr.LastRegister, 0, "if" + state.Count))
+GenerateBodyLine(line Text, openId Text) GenerationResult
+	LineGenerator.Empty.GenerateBodyLine("1", "if0").instructions(0).typeName is "JumpEnd"
+	if line.StartsWith("\t")
+		return GenerateLine(line.Trim)
+	if openId is ""
+		return GenerateLine(line)
+	LineGenerator(state.Append(BytecodeInstruction("JumpEnd", 0, 0, openId))).GenerateLine(line)
+OpenIdAfter(line Text, openId Text, result GenerationResult) Text
+	OpenIdAfter("\treturn 1", "if0", GenerationResult.Empty) is "if0"
+	OpenIdAfter("2", "if0", GenerationResult.Empty) is ""
+	if line.StartsWith("if ")
+		return result.instructions(result.Count - 1).label
+	line.StartsWith("\t") then openId else ""
 GenerateBody(lines Texts) GenerationResult
 	LineGenerator.Empty.GenerateBody("constant a = 2", "a * 3").LastRegister is 2
+	LineGenerator.Empty.GenerateBody("if 1 > 0", "\treturn 1", "2").instructions(6).typeName is "JumpEnd"
 	mutable current = GenerationResult.Empty
+	mutable openId = ""
 	for lines
-		current = LineGenerator(current.WithRegistry(Registry.Empty)).GenerateLine(value)
-	current
+		current = LineGenerator(current.WithRegistry(Registry.Empty)).GenerateBodyLine(value, openId)
+		openId = OpenIdAfter(value, openId, current)
+	openId is "" then current else current.Append(BytecodeInstruction("JumpEnd", 0, 0, openId))
 GenerateReturningBody(lines Texts) GenerationResult
 	LineGenerator.Empty.GenerateReturningBody("constant a = 2", "a * 3").Count is 5
 	LineGenerator.Empty.GenerateReturningBody(("return 7")).Count is 2

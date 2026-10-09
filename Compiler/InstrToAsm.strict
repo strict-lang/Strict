@@ -1,7 +1,7 @@
 has instruction Bytecode/BytecodeInstruction
 has position Number
 Emit Text
-	InstrToAsm(BytecodeInstruction.ReturnOp(2), 0).Emit is "movsd xmm0, xmm2"
+	InstrToAsm(BytecodeInstruction.ReturnOp(2), 0).Emit is "movsd xmm0, xmm2\npop rbp\nret"
 	InstrToAsm(BytecodeInstruction.LoadConstant(1, 5), 3).Emit is "movsd xmm1, [rel const_3]"
 	InstrToAsm(BytecodeInstruction.LoadVariable(0, "x"), 0).Emit is "movsd xmm0, [rel var_x]"
 	if instruction.typeName is "LoadConstantToRegister"
@@ -9,19 +9,40 @@ Emit Text
 	if instruction.typeName is "LoadVariableToRegister"
 		return "movsd " + Xmm(instruction.register) + ", [rel var_" + instruction.label + "]"
 	if instruction.IsReturn
-		return "movsd xmm0, " + Xmm(instruction.register)
+		return "movsd xmm0, " + Xmm(instruction.register) + "\npop rbp\nret"
 	EmitStoreOrOperation
 EmitStoreOrOperation Text
 	InstrToAsm(BytecodeInstruction.StoreRegister(2, "sum"), 0).EmitStoreOrOperation is "movsd [rel var_sum], xmm2"
 	"[rel var_n], xmm15" is in InstrToAsm(BytecodeInstruction.StoreConstant("n", 4), 1).EmitStoreOrOperation
-	InstrToAsm(BytecodeInstruction("Jump", 0, 0, ""), 0).EmitStoreOrOperation is "unknown Jump"
 	if instruction.typeName is "StoreConstantToVariable"
 		return "movsd xmm15, [rel " + ConstantLabel + "]\nmovsd [rel var_" + instruction.label + "], xmm15"
 	if instruction.typeName is "StoreRegisterToVariable"
 		return "movsd [rel var_" + instruction.label + "], " + Xmm(instruction.register)
-	if instruction.IsBinary and (not instruction.IsCompare)
+	EmitOperation
+EmitOperation Text
+	InstrToAsm(BytecodeInstruction("Jump", 0, 0, ""), 0).EmitOperation is "unknown Jump"
+	InstrToAsm(BytecodeInstruction("JumpEnd", 0, 0, "if3"), 0).EmitOperation is "label_if3:"
+	"je label_if3" is in InstrToAsm(BytecodeInstruction("JumpToIdIfFalse", 2, 0, "if3"), 0).EmitOperation
+	if instruction.IsCompare
+		return EmitCompare
+	if instruction.typeName is "JumpToIdIfFalse"
+		return "xorpd xmm15, xmm15\nucomisd " + Xmm(instruction.register) + ", xmm15\nje label_" + instruction.label
+	if instruction.typeName is "JumpEnd"
+		return "label_" + instruction.label + ":"
+	if instruction.IsBinary
 		return EmitBinary
 	"unknown " + instruction.typeName
+EmitCompare Text
+	"setb al" is in InstrToAsm(BytecodeInstruction("LessThan", 0, 1, "2"), 0).EmitCompare
+	let compare = "xor eax, eax\nucomisd " + Xmm(instruction.register) + ", " + Xmm(instruction.amount)
+	compare + "\n" + SetCondition + " al\ncvtsi2sd " + Xmm(instruction.ResultRegister) + ", eax"
+SetCondition Text
+	InstrToAsm(BytecodeInstruction("LessThan", 0, 1, "2"), 0).SetCondition is "setb"
+	if instruction.typeName is "GreaterThan"
+		return "seta"
+	if instruction.typeName is "LessThan"
+		return "setb"
+	instruction.typeName is "Equal" then "sete" else "setne"
 ConstantLabel Text
 	InstrToAsm(BytecodeInstruction.LoadConstant(0, 5), 7).ConstantLabel is "const_7"
 	"const_" + position
