@@ -30,6 +30,8 @@ public sealed partial class Runner
 		this.strictFilePath = packageDirectory == null
 			? strictFilePath
 			: Path.Combine(packageDirectory, Path.GetFileName(packageDirectory) + Type.Extension);
+		if (packageDirectory == null && !File.Exists(strictFilePath))
+			throw new StrictFileNotFound(strictFilePath);
 		this.expressionToRun = expressionToRun;
 		this.enableDetailedOutput = enableDetailedOutput;
 		parser = new MethodExpressionParser();
@@ -379,6 +381,9 @@ public sealed partial class Runner
 		Console.WriteLine("Compiled " + strictFilePath + " via " + backend + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
 			" executable of " + new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
+
+	public sealed class StrictFileNotFound(string filePath)
+		: Exception(Path.GetFullPath(filePath) + " does not exist");
 
 	public sealed class NoRunMethodFound(string typeName)
 		: Exception("No Run method found in " + typeName);

@@ -39,6 +39,11 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public void MissingStrictFileGivesClearError() =>
+		Assert.That(async () => await new Runner("ImageProcessing/Missing.strict").Run(),
+			Throws.InstanceOf<Runner.StrictFileNotFound>().With.Message.Contains("Missing.strict"));
+
+	[Test]
 	public void RelativeExecutableIsResolvedAgainstCurrentDirectory() =>
 		Assert.That(NativeProcessRunner.ResolveExecutable("Compiler/output/add.exe"),
 			Is.EqualTo(Path.GetFullPath("Compiler/output/add.exe")));
