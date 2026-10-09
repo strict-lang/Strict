@@ -644,6 +644,18 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void ShrinkingMutableListRecursionIsNoStackOverflow()
+	{
+		using var t = CreateType(nameof(ShrinkingMutableListRecursionIsNoStackOverflow), "has logger",
+			"Drain(mutable numbers) Number", "\tif numbers.Length is 0", "\t\treturn 0",
+			"\tnumbers.Remove(numbers(0))", "\tDrain(numbers) + 1");
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Drain"), interpreter.noneInstance,
+				[new ValueInstance(interpreter.listType.GetGenericImplementation(interpreter.numberType),
+					[new ValueInstance(interpreter.numberType, 1), new ValueInstance(interpreter.numberType, 2)])]).
+			Number, Is.EqualTo(2));
+	}
+
+	[Test]
 	public void StackOverflowCallingYourselfWithSameInstanceMember()
 	{
 		using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameInstanceMember),

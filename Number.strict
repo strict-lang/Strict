@@ -19,16 +19,18 @@ to Character
 Floor Number
 	1.Floor is 1
 	2.4.Floor is 2
-	value - value % 1
+	(0 - 2.4).Floor is -3
+	value - (value % 1 + 1) % 1
 Ceiling Number
 	1.Ceiling is 1
 	2.4.Ceiling is 3
-	value - (value + 1 - Epsilon) % 1
+	(0 - 2.4).Ceiling is -2
+	value + (1 - value % 1) % 1
 Round Number
 	2.4.Round is 2
 	2.6.Round is 3
 	3.5.Round is 4
-	value - (value + 0.5) % 1
+	(value + 0.5).Floor
 Absolute Number
 	-1.Absolute is 1
 	1.Absolute is 1
@@ -47,19 +49,6 @@ Lerp(other, percentage Number) Number
 	-1.Lerp(1, 0.5) is 0
 	-4.Lerp(-1, 1.5) is 0.5
 	value * (1 - percentage) + other * percentage
-and(other) Number
-	2 and 6 is 6
-	1 and 8 is 9
-	9 and 1 is 9
-	value
-or(other) Number
-	2 or 3 is 3
-	16 or 8 is 16
-	value
-xor(other) Number
-	1 xor 1 is 0
-	3 xor 2 is 1
-	value
 is(other) Boolean
 	1 is 1
 	2 is not 3
@@ -79,7 +68,8 @@ is(other) Boolean
 	3 * 4 is 12
 	value * other
 %(other) Number
-	100 % 10 is 1
+	100 % 10 is 0
+	7 % 4 is 3
 	value % other
 ^(other) Number
 	2 ^ 2 is 4
@@ -104,7 +94,7 @@ Increment(amount = 1) Mutable(Number)
 	value = value + amount
 Decrement(amount = 1) Mutable(Number)
 	Mutable(3).Decrement is 2
-	Mutable(-2).Decrement(-7) is -9
+	Mutable(-2).Decrement(-7) is 5
 	value = value - amount
 SquareRoot Number
 	4.SquareRoot is 2

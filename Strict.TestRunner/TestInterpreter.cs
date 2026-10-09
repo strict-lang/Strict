@@ -24,27 +24,15 @@ public sealed class TestInterpreter(Package package) : Interpreter(package, Test
 
 	public void RunAllTestsInType(Type type)
 	{
-		if (ShouldSkipKnownDummyBaseType(type))
-			return;
 		Statistics.IncrementTypesTested();
 		foreach (var method in type.Methods)
 			if (!method.IsTrait)
 				RunMethod(method);
 	}
 
-	private static bool ShouldSkipKnownDummyBaseType(Type type) =>
-		type.Name == Type.Number || (type.Package.Name == "Expressions" &&
-			type.Name is not "ValueInstance" and not "Value");
-
 	public void RunMethod(Method method)
 	{
-		if (ShouldSkipKnownDummyBaseMethod(method))
-			return;
 		Statistics.IncrementMethodsTested();
 		Execute(method);
 	}
-
-	private static bool ShouldSkipKnownDummyBaseMethod(Method method) =>
-		method.Name.Equals("digits", StringComparison.Ordinal) ||
-		(method.Name.Equals("to", StringComparison.Ordinal) && method.ReturnType.IsText);
 }

@@ -3,6 +3,7 @@ has register Number
 has amount Number
 has label Text
 to Text
+	BytecodeInstruction.ReturnOp(2) to Text is "Return R2"
 	InstructionText(typeName, register, amount, label).Format
 ResultRegister Number
 	BytecodeInstruction.BinaryOp(InstructionType.Add, 0, 1, 2).ResultRegister is 2

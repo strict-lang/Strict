@@ -25,11 +25,7 @@ public partial class Interpreter
 		runOnlyTests && method.Type is { IsGeneric: true, Name: Type.List or Type.Dictionary };
 
 	private static bool ShouldSkipKnownStrictBaseMethodValidation(Method method, bool runOnlyTests) =>
-		runOnlyTests && ((method.Type.IsGeneric && method.Type.Name == Type.List) ||
-			(method.Type.Name == Type.Number && (method.Name == "digits" ||
-				(method.Name == BinaryOperator.To && method.ReturnType.IsText))) ||
-			(method.Type.IsText && method.Name == "Split") ||
-			method.Type.Name is "Parser" or "ShuntingYard");
+		runOnlyTests && method.Type.IsGeneric && method.Type.Name == Type.List;
 
 	/// <summary>
 	/// Skip parsing for trivially simple methods during validation to avoid missing-instance errors.

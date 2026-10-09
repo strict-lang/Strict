@@ -17,7 +17,7 @@ is(other) Boolean
 	(1, 2, 3) + (4, 5) is (1, 2, 3, 4, 5)
 	("Hello", "World") + (1, 2) is ("Hello", "World", "1", "2")
 	("1", "2") + (3, 4) is ("1", "2", "3", "4")
-	("1", "2") to Numbers + (3, 4) is ("1", "2", "3", "4")
+	("1", "2") to Numbers + (3, 4) is (1, 2, 3, 4)
 	("3", "4") + (1, 2) to Text is ("3", "4", "(1, 2)")
 	("3", "4") + (1, 2) to Texts is ("3", "4", "1", "2")
 	(1 + 2) * 3 is not 1 + 2 * 3
@@ -53,7 +53,7 @@ is(other) Boolean
 	elements * generic
 /(generic) List
 	(2, 4, 6) / 2 is (1, 2, 3)
-	(20, 10) / 1 is (0.05, 0.1)
+	(20, 10) / 2 is (10, 5)
 	elements / generic
 Sum Generic
 	(1, 2, 3).Sum is 6

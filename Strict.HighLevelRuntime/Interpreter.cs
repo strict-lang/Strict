@@ -309,12 +309,26 @@ public partial class Interpreter
 	private void ThrowIfSameMethodCallExistsInParentChain(Method method, ValueInstance instance,
 		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext)
 	{
+		if (HasMutableParameter(method))
+			return;
 		for (var current = parentContext; current != null; current = current.Parent)
 			if (current.Method == method && !current.IsTestAtCurrentLine &&
 				AreSameInstanceForRecursionCheck(current.This, instance) &&
 				DoArgumentsMatch(method, args, current.Variables))
 				throw new StackOverflowCallingItselfWithSameInstanceAndArguments(method, instance, args,
 					current);
+	}
+
+	/// <summary>
+	/// Mutable arguments are the same objects in every call but change in between (e.g. shrinking a
+	/// list), equal arguments do not mean endless recursion then.
+	/// </summary>
+	private static bool HasMutableParameter(Method method)
+	{
+		for (var index = 0; index < method.Parameters.Count; index++)
+			if (method.Parameters[index].IsMutable)
+				return true;
+		return false;
 	}
 
 	private bool AreSameInstanceForRecursionCheck(ValueInstance? parentThis,
