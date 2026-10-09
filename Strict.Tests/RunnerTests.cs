@@ -38,6 +38,33 @@ public sealed class RunnerTests
 		Assert.That(standalone.Output, Does.Contain(expected));
 	}
 
+	[Test]
+	public void RunStrictPackageLoaderPreservesTypeNamesAndLines()
+	{
+		var root = FindRepoRoot();
+		var packagePath = Path.Combine(root, "Examples", "BaseTypesTest");
+		var sourcePath = Path.Combine(root, "Language", "PackageTests.strict");
+		foreach (var inputPath in new[] { sourcePath, Path.ChangeExtension(sourcePath, BinaryExecutable.Extension) })
+		{
+			using var process = new System.Diagnostics.Process();
+			process.StartInfo = new System.Diagnostics.ProcessStartInfo("dotnet")
+			{
+				WorkingDirectory = root,
+				UseShellExecute = false,
+				RedirectStandardOutput = true,
+				CreateNoWindow = true,
+				ArgumentList = { StrictAssemblyForFreshProcess(), inputPath, packagePath }
+			};
+			process.Start();
+			var output = process.StandardOutput.ReadToEnd();
+			Assert.That(process.WaitForExit(30000), Is.True, output);
+			Assert.That(process.ExitCode, Is.Zero, output);
+			foreach (var file in Directory.GetFiles(packagePath, "*.strict"))
+				Assert.That(output, Does.Contain(
+					Environment.NewLine + Path.GetFileNameWithoutExtension(file) + ":" +
+					File.ReadAllLines(file).Length + Environment.NewLine));
+		}
+	}
 	private static readonly object FreshAssemblyGate = new();
 	private static string? freshStrictAssembly;
 

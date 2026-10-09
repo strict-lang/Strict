@@ -1,3 +1,4 @@
+using Strict.Bytecode.Serialization;
 using StrictType = Strict.Language.Type;
 
 namespace Strict.Bytecode.Instructions;
@@ -12,6 +13,24 @@ public sealed class ConstructValueTypeInstruction(Register outRegister,
 	StrictType returnType,
 	Register[] fieldRegisters) : RegisterInstruction(InstructionType.ConstructValueType, outRegister)
 {
+	public ConstructValueTypeInstruction(BinaryReader reader, NameTable table, BinaryExecutable binary)
+		: this((Register)reader.ReadByte(),
+			BinaryExecutable.EnsureResolvedType(binary.basePackage, table.names[reader.Read7BitEncodedInt()]),
+			new Register[reader.Read7BitEncodedInt()])
+	{
+		for (var index = 0; index < FieldRegisters.Length; index++)
+			FieldRegisters[index] = (Register)reader.ReadByte();
+	}
+
+	protected override void WritePayload(BinaryWriter writer, NameTable table)
+	{
+		base.WritePayload(writer, table);
+		writer.Write7BitEncodedInt(table[ReturnType.FullName]);
+		writer.Write7BitEncodedInt(FieldRegisters.Length);
+		foreach (var register in FieldRegisters)
+			writer.Write((byte)register);
+	}
+
 	public StrictType ReturnType { get; } = returnType;
 	public Register[] FieldRegisters { get; } = fieldRegisters;
 

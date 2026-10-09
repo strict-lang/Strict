@@ -386,15 +386,14 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private void ExecuteConstructValueType(ConstructValueTypeInstruction instr)
 	{
 		var members = instr.ReturnType.Members;
+		var hasBinaryMembers = TryGetBinaryMembers(instr.ReturnType, out var binaryMembers);
 		var values = new ValueInstance[members.Count];
 		for (var index = 0; index < instr.FieldRegisters.Length && index < members.Count; index++)
 			values[index] = Memory.Registers[instr.FieldRegisters[index]];
 		for (var index = instr.FieldRegisters.Length; index < members.Count; index++)
 			values[index] = members[index].Type.IsTrait
 				? CreateTraitInstance(members[index].Type)
-				: members[index].InitialValue is Value initialValue
-					? initialValue.Data
-					: CreateDefaultValue(members[index].Type);
+				: GetMemberInitialOrDefaultValue(members[index], hasBinaryMembers, binaryMembers, index);
 		TryPreFillConstrainedListMembers(instr.ReturnType, values);
 		Memory.Registers[instr.Register] = new ValueInstance(instr.ReturnType, values);
 	}

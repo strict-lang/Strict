@@ -84,14 +84,14 @@ public sealed class ConstantCollapser : Visitor
 		if (expression is Binary binary)
 		{
 			var left = binary.Instance!;
-			if (left is VariableCall { Variable.InitialValue.IsConstant: true } leftCall)
+			if (left is VariableCall { Variable: { IsMutable: false, InitialValue.IsConstant: true } } leftCall)
 				left = leftCall.Variable.InitialValue;
-			if (left is MemberCall { Member.InitialValue.IsConstant: true } leftMember)
+			if (left is MemberCall { Member: { IsMutable: false, InitialValue.IsConstant: true } } leftMember)
 				left = leftMember.Member.InitialValue;
 			var right = binary.Arguments[0];
-			if (right is VariableCall { Variable.InitialValue.IsConstant: true } rightCall)
+			if (right is VariableCall { Variable: { IsMutable: false, InitialValue.IsConstant: true } } rightCall)
 				right = rightCall.Variable.InitialValue;
-			if (right is MemberCall { Member.InitialValue.IsConstant: true } rightMember)
+			if (right is MemberCall { Member: { IsMutable: false, InitialValue.IsConstant: true } } rightMember)
 				right = rightMember.Member.InitialValue;
 			var collapsedExpression = TryCollapseBinaryExpression(left, right, binary.Method);
 			if (collapsedExpression != null)
@@ -114,6 +114,8 @@ public sealed class ConstantCollapser : Visitor
 				return new Number(to.Method.Type, double.Parse(textValue.Data.Text));
 			if (to.ConversionType.IsText && value is Number numberValue)
 				return new Text(to.Method.Type, numberValue.Data.ToExpressionCodeString());
+			if (to.ConversionType.IsText && value is Boolean boolValue)
+				return new Text(to.Method.Type, boolValue.Data.Boolean ? "true" : "false");
 			throw new UnsupportedToExpression(to.ToStringWithType()); //ncrunch: no coverage
 		}
 		return expression;

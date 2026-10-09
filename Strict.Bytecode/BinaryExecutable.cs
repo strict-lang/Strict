@@ -52,6 +52,10 @@ public sealed class BinaryExecutable(Package basePackage)
 					new TypeLines(Type.Any, Method.From, BinaryOperator.To + " Type",
 						BinaryOperator.To + " " + Type.Text));
 			using var zip = ZipFile.OpenRead(filePath);
+			if (basePackage.Parent is not Package)
+				PopulateStubTypesFromEmbeddedEntries(zip.Entries.Where(entry =>
+					entry.FullName.EndsWith(BinaryType.BytecodeEntryExtension,
+						StringComparison.OrdinalIgnoreCase)).Select(entry => GetEntryNameWithoutExtension(entry.FullName)));
 			foreach (var entry in zip.Entries)
 				if (entry.FullName.EndsWith(BinaryType.BytecodeEntryExtension,
 					StringComparison.OrdinalIgnoreCase))
@@ -62,7 +66,7 @@ public sealed class BinaryExecutable(Package basePackage)
 					MethodsPerType.Add(typeFullName, new BinaryType(reader, this, typeFullName));
 				}
 			if (basePackage.Parent is not Package)
-				PopulateStubTypesFromEmbeddedEntries();
+				RestoreEmbeddedMembers();
 		}
 		catch (InvalidDataException ex)
 		{
@@ -71,15 +75,15 @@ public sealed class BinaryExecutable(Package basePackage)
 	}
 
 	/// <summary>
-	/// After loading all entries, create stub types for every embedded type so the VM
-	/// can resolve IsNumber, IsList, etc. via the package without loading any source.
+	/// Before reading instructions, create embedded type stubs so generic constants
+	/// can resolve their element types without loading any source.
 	/// </summary>
-	private void PopulateStubTypesFromEmbeddedEntries()
+	private void PopulateStubTypesFromEmbeddedEntries(IEnumerable<string> typeNames)
 	{
-		foreach (var typeFullName in MethodsPerType.Keys)
+		foreach (var typeFullName in typeNames)
 		{
 			var simpleName = typeFullName.Split(Context.ParentSeparator)[^1];
-			if (basePackage.FindDirectType(simpleName) == null)
+			if (!simpleName.Contains('(') && basePackage.FindDirectType(simpleName) == null)
 				new Type(basePackage, new TypeLines(simpleName));
 		}
 		noneType = basePackage.GetType(Type.None);
@@ -91,6 +95,24 @@ public sealed class BinaryExecutable(Package basePackage)
 			rangeType = basePackage.GetType(Type.Range);
 		if (basePackage.FindDirectType(Type.List) != null)
 			listType = basePackage.GetType(Type.List);
+	}
+
+	private void RestoreEmbeddedMembers()
+	{
+		foreach (var (typeName, binaryType) in MethodsPerType)
+		{
+			var type = EnsureResolvedType(basePackage, typeName);
+			if (type.Members.Count > 0)
+				continue;
+			foreach (var member in binaryType.Members)
+				type.Members.Add(new Member(type, member.Name,
+					EnsureResolvedType(basePackage, member.FullTypeName))
+				{
+					InitialValue = member.InitialValueExpression is SetInstruction constant
+						? new Value(EnsureResolvedType(basePackage, member.FullTypeName), constant.ValueInstance)
+						: null
+				});
+		}
 	}
 
 	private static string GetEntryNameWithoutExtension(string fullName)
@@ -203,6 +225,7 @@ public sealed class BinaryExecutable(Package basePackage)
 			InstructionType.InvokeRemove => new RemoveInstruction(reader, table),
 			InstructionType.ListCall => new ListCallInstruction(reader, table),
 			InstructionType.Print => new PrintInstruction(reader, table),
+			InstructionType.ConstructValueType => new ConstructValueTypeInstruction(reader, table, this),
 			InstructionType.FieldLoad => new FieldLoadInstruction(reader, table),
 			_ when IsBinaryOp(type) => new BinaryInstruction(reader, type),
 			_ => throw new InvalidFile("Unknown instruction type: " + type) //ncrunch: no coverage
@@ -451,7 +474,7 @@ public sealed class BinaryExecutable(Package basePackage)
 	}
 
 	//TODO: avoid! remove!
-	private static Type EnsureResolvedType(Package package, string typeName)
+	internal static Type EnsureResolvedType(Package package, string typeName)
 	{
 		var resolved = package.FindType(typeName) ?? (typeName.Contains(Context.ParentSeparator)
 			? package.FindFullType(typeName) ?? package.FindType(GetSimpleTypeName(typeName))

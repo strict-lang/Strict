@@ -2,5 +2,5 @@ from(text)
 GetFiles Texts
 GetDirectories Texts
 Exists(path) Boolean
-Files(path, pattern = "") Files
+Files(path, pattern = "") Texts
 Create(path)

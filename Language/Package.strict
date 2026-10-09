@@ -1,2 +1,13 @@
 has Name
 has Children Packages
+has Types
+Load(path) Package
+	let packageName = path.FileName.text to Name
+	let types = ReadTypes(path)
+	Package(packageName, Packages, types)
+ReadTypes(path) Types
+	for Directory.Files(path, "*.strict")
+		ReadType(Path(value))
+ReadType(path) Type
+	let file = File(path)
+	Type(path.FileName.RemoveExtension.text, file.ReadLines)

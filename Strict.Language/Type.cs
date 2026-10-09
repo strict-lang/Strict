@@ -328,7 +328,7 @@ public class Type : Context, IDisposable
 	public List<Method> Methods => methods;
 	protected readonly List<Method> methods = [];
 	public bool IsTrait =>
-		!IsNumber && !IsBoolean && CheckIfParsed() && CanBeTraitBasedOnMembers &&
+		!IsNumber && !IsBoolean && !IsText && CheckIfParsed() && CanBeTraitBasedOnMembers &&
 		Methods.All(IsTraitMethodDeclaration);
 
 	internal bool CanBeTraitBasedOnMembers =>

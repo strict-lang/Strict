@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Strict.Language.Tests")]
 [assembly: InternalsVisibleTo("Strict.Validators")]
 [assembly: InternalsVisibleTo("Strict.HighLevelRuntime")]
+[assembly: InternalsVisibleTo("Strict.Bytecode")]
 
 namespace Strict.Language;
 

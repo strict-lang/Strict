@@ -9,3 +9,49 @@ Run
 	constant numbers = (1, 2, 3)
 	constant numbersSum = numbers.Sum
 	logger.Log("(1, 2, 3).Sum = " + numbersSum)
+TestBoolean Boolean
+	not false is true
+	false or true is true
+	true and true is true
+	true
+TestNumber Number
+	5 + 3 is 8
+	10 - 4 is 6
+	6 * 7 is 42
+	20 / 4 is 5
+	8
+TestText Text
+	"Strict" + "Lang" is "StrictLang"
+	"Strict".Length is 6
+	"Strict"
+TestList List
+	(1, 2, 3).Length is 3
+	(1, 2, 3).Sum is 6
+	(1, 2) + (3, 4) is (1, 2, 3, 4)
+	(1, 2, 3)
+TestRange Range
+	Range(1, 5).Length is 4
+	3 is in Range(1, 5)
+	Range(1, 5)
+TestCharacter Character
+	Character("a").Upper is "A"
+	Character("A")
+TestDictionary Dictionary(Text, Text)
+	Dictionary(("a", "apple"), ("b", "banana")).Length is 2
+	Dictionary(("a", "apple"), ("b", "banana"))
+TestFile Boolean
+	File("README.md").Exists is true
+	File("NonExistentFile.xyz").Exists is false
+	true
+TestError Error
+	Error(Name("Boom")) is Error(Name("Boom"))
+	Error(Name("Boom"))
+TestAny Text
+	5 to Text is "5"
+	true to Text is "true"
+	"Strict"
+TestMutable Number
+	mutable counter = 0
+	counter = counter + 1
+	counter is 1
+	1

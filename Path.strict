@@ -7,7 +7,7 @@ FileName Path
 	Path("/dir/file.txt").FileName is Path("file.txt")
 	Path("c:/code/file.txt").FileName is Path("file.txt")
 	Path("noSlash").FileName is Path("noSlash")
-	let separatorIndex = text.LastIndexOf(PathSeparator)
+	let separatorIndex = text.Replace("\\", PathSeparator).LastIndexOf(PathSeparator)
 	if separatorIndex is -1
 		return Path(text)
 	let fileNameStart = separatorIndex + 1

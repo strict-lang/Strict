@@ -522,7 +522,8 @@ public sealed class BinaryGenerator
 			instructions.Add(new PrintInstruction(textValue.Data.Text));
 			return true;
 		}
-		if (argument is Binary binaryExpression)
+		if (argument is Binary { Method.Name: BinaryOperator.Plus, Instance: { } left } binaryExpression &&
+			UnwrapToConversion(left) is Value { Data.IsText: true })
 		{
 			var prefix = ExtractTextPrefix(binaryExpression.Instance);
 			var valueExpression = UnwrapToConversion(binaryExpression.Arguments[0]);
@@ -925,6 +926,9 @@ public sealed class BinaryGenerator
 			List list when list.TryGetConstantData() is { } listValue => new SetInstruction(listValue,
 				Register.R0),
 			Value value => new SetInstruction(value.Data, Register.R0),
+			MethodCall { Method.Name: Method.From, ReturnType.IsNumber: true,
+				Arguments: [Value { ReturnType.IsNumber: true } number] } constructor =>
+				new SetInstruction(new ValueInstance(constructor.ReturnType, number.Data.Number), Register.R0),
 			_ => null
 		};
 

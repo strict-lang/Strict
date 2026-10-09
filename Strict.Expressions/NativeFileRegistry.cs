@@ -8,10 +8,16 @@ public static class NativeFileRegistry
 {
 	private static readonly UTF8Encoding Utf8WithoutBom = new(false);
 
-	private sealed class FileState(string path, FileStream stream)
+	private sealed class FileState(string path) : IDisposable
 	{
 		public readonly string Path = path;
-		public readonly FileStream Stream = stream;
+		private FileStream? stream;
+
+		public FileStream Stream =>
+			stream ??= new FileStream(Path, FileMode.OpenOrCreate, FileAccess.ReadWrite,
+				FileShare.ReadWrite);
+
+		public void Dispose() => stream?.Dispose();
 	}
 
 	private static long nextHandle = 1;
@@ -20,9 +26,7 @@ public static class NativeFileRegistry
 	public static ValueInstance Open(Type fileType, string path)
 	{
 		var handle = Interlocked.Increment(ref nextHandle);
-		var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite,
-			FileShare.ReadWrite);
-		OpenFiles[handle] = new FileState(path, stream);
+		OpenFiles[handle] = new FileState(path);
 		return new ValueInstance(fileType, handle);
 	}
 
@@ -85,7 +89,7 @@ public static class NativeFileRegistry
 	{
 		if (!OpenFiles.TryRemove(handle, out var state))
 			return;
-		state.Stream.Dispose();
+		state.Dispose();
 	}
 
 	public static bool Exists(long handle)

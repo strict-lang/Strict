@@ -291,6 +291,8 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			target[offset] = (float)item.Number;
 			return true;
 		}
+		if (item.GetType() != elementType)
+			return false;
 		if (item.IsFlatNumeric)
 		{
 			var arrayBacking = item.TryGetFlatNumericArrayInstance()!;

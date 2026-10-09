@@ -59,17 +59,17 @@ public sealed class BinaryType
 		{
 			fileVersion = secondByte;
 		}
-		if (fileVersion is 0 or > Version)
+		if (fileVersion != Version)
 			throw new InvalidVersion(fileVersion);
 	}
 
 	public const string BytecodeEntryExtension = ".bytecode";
 	internal const byte StrictMagicByte = (byte)'S';
 	public sealed class InvalidBytecodeEntry(string message) : Exception(message);
-	public const byte Version = 1;
+	public const byte Version = 2;
 
 	public sealed class InvalidVersion(byte fileVersion) : Exception("File version: " + fileVersion +
-		", this runtime only supports up to version " + Version);
+		", this runtime requires version " + Version);
 
 	internal void ReadMembers(BinaryReader reader, List<BinaryMember> members)
 	{

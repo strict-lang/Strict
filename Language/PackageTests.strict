@@ -1,0 +1,9 @@
+has logger
+Run(path)
+	let loaded = Package.Load(path)
+	logger.Log("Package: " + loaded.Name)
+	for loaded.Types
+		logger.Log(value.Name + ":" + value.Lines.Length)
+LoadCount(path) Number
+	LoadCount(Path("Examples/BaseTypesTest")) is 3
+	Package.Load(path).Types.Length

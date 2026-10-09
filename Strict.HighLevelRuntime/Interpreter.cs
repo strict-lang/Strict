@@ -211,9 +211,9 @@ public class Interpreter
 	{
 		result = noneInstance;
 		if (method.Type != fileType || method.Name != Method.From || !instance.Equals(noneInstance) ||
-			args.Count != 1 || !args[0].IsText)
+			args.Count != 1 || !FileValue.TryGetPathText(args[0], out var path))
 			return false;
-		result = NativeFileRegistry.Open(method.Type, args[0].Text);
+		result = NativeFileRegistry.Open(method.Type, path);
 		parentContext?.TrackDisposable(result);
 		return true;
 	}
@@ -588,6 +588,9 @@ public class Interpreter
 			if (!values[memberIndex].HasValue && typeMembers[memberIndex].Type.IsList)
 				values[memberIndex] = new ValueInstance(typeMembers[memberIndex].Type,
 					Array.Empty<ValueInstance>());
+		if (!method.Type.IsMutable && values.Length == 1 &&
+			values[0].IsSameOrCanBeUsedAs(method.Type))
+			return values[0];
 		TryPreFillConstrainedListMembers(method.Type, values, method);
 		return new ValueInstance(method.Type, values);
 	}

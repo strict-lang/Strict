@@ -5,3 +5,8 @@ Exists(path) Boolean
 	Exists(Path(".")) is true
 	Exists(Path("")) is false
 	Directory.Exists(path)
+Files(path) Texts
+	Files(Path(".")).Length > 0 is true
+	Directory.Files(path)
+Create(path)
+	Directory.Create(path)
