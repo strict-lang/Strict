@@ -546,6 +546,7 @@ public sealed class RunnerTests
 		ValueInstance.SetCreationLimit(int.MaxValue);
 		try
 		{
+			await runner.Run();
 			var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
 			await runner.Run();
 			var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();

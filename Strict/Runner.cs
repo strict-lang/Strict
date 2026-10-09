@@ -235,6 +235,7 @@ public sealed partial class Runner
 	private T LogTiming<T>(string message, Func<T> callToTime)
 	{
 		var startTicks = DateTime.UtcNow.Ticks;
+		var startAllocations = GC.GetAllocatedBytesForCurrentThread();
 		try
 		{
 			return callToTime();
@@ -243,7 +244,8 @@ public sealed partial class Runner
 		{
 			var endTicks = DateTime.UtcNow.Ticks;
 			Log(message + " Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
-				" ms");
+				" ms, allocated: " +
+				(GC.GetAllocatedBytesForCurrentThread() - startAllocations) / 1024 + " KB");
 			stepTimes.Add(endTicks - startTicks);
 		}
 	}

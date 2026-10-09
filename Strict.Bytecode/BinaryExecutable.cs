@@ -60,8 +60,7 @@ public sealed partial class BinaryExecutable(Package basePackage)
 			using var zip = ZipFile.OpenRead(filePath);
 			if (basePackage.Parent is not Package)
 			{
-				entryPackage = new Package(basePackage,
-					Path.GetFileName(Path.GetDirectoryName(Path.GetFullPath(filePath)))!);
+				entryPackage = new Package(basePackage, Path.GetDirectoryName(Path.GetFullPath(filePath))!);
 				PopulateStubTypesFromEmbeddedEntries(zip.Entries.Where(entry =>
 					entry.FullName.EndsWith(BinaryType.BytecodeEntryExtension,
 						StringComparison.OrdinalIgnoreCase)).Select(entry => GetEntryNameWithoutExtension(entry.FullName)));

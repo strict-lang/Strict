@@ -13,8 +13,7 @@ public sealed partial class VirtualMachine
 	private bool TryHandleNativeStaticTypeMethod(Invoke invoke)
 	{
 		var info = invoke.MethodInfo;
-		var typeName = GetShortTypeName(info.TypeFullName);
-		return typeName switch
+		return info.ShortTypeName switch
 		{
 			"Process" => TryHandleProcessStatic(invoke),
 			"Directory" => TryHandleDirectoryStatic(invoke),
@@ -53,7 +52,7 @@ public sealed partial class VirtualMachine
 	private bool TryHandleNativeProcessInstanceMethod(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var info = invoke.MethodInfo;
-		if (GetShortTypeName(info.TypeFullName) != "Process" &&
+		if (info.ShortTypeName != "Process" &&
 			!IsProcessInstance(ResolveInvokeInstanceSafe(info, implicitInstance)))
 			return false;
 		if (info.MethodName == "IsAvailable")
@@ -86,7 +85,7 @@ public sealed partial class VirtualMachine
 
 	private bool IsProcessInstance(ValueInstance? instance)
 	{
-		if (instance is not { HasValue: true })
+		if (instance is not { HasValue: true, IsFlatNumeric: false })
 			return false;
 		var typeInstance = instance.Value.TryGetValueTypeInstance();
 		return typeInstance != null && typeInstance.ReturnType.Name == "Process";

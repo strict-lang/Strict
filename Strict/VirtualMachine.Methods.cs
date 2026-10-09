@@ -31,7 +31,7 @@ public sealed partial class VirtualMachine
 		var childScope = InitializeChildScope();
 		var previousMethodContext = currentMethodContext;
 		var previousInstance = currentInstance;
-		currentMethodContext = info.TypeFullName + "." + info.MethodName;
+		currentMethodContext = info.FullName;
 		currentInstance = evaluatedInstance;
 		InitializeMethodCallScope(info, evaluatedArgs, evaluatedInstance);
 		RunInstructions(invokeInstructions
@@ -307,15 +307,21 @@ public sealed partial class VirtualMachine
 
 	private bool TryGetBinaryMembers(Type type, out List<BinaryMember> members)
 	{
+		if (!binaryMembersPerType.TryGetValue(type, out var cached))
+			binaryMembersPerType[type] = cached = FindBinaryMembers(type);
+		members = cached ?? [];
+		return cached != null;
+	}
+
+	private readonly Dictionary<Type, List<BinaryMember>?> binaryMembersPerType = new();
+
+	private List<BinaryMember>? FindBinaryMembers(Type type)
+	{
 		foreach (var (typeName, typeData) in executable.MethodsPerType)
 			if (typeData.Members.Count > 0 && (typeName == type.FullName || typeName == type.Name ||
 				typeName.EndsWith(Context.ParentSeparator + type.Name, StringComparison.Ordinal)))
-			{
-				members = typeData.Members;
-				return true;
-			}
-		members = [];
-		return false;
+				return typeData.Members;
+		return null;
 	}
 
 	private ChildScopeState InitializeChildScope()

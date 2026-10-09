@@ -23,6 +23,11 @@ public sealed class InvokeMethodInfo
 		InstanceRegister = instanceRegister;
 	}
 
+	public string FullName => fullName ??= TypeFullName + "." + MethodName;
+	private string? fullName;
+	public string ShortTypeName => shortTypeName ??= GetSimpleTypeName(TypeFullName);
+	private string? shortTypeName;
+
 	public InvokeMethodInfo(BinaryReader reader, NameTable table)
 	{
 		TypeFullName = table.names[reader.Read7BitEncodedInt()];

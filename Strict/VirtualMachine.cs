@@ -358,6 +358,11 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private void ExecuteFieldLoad(FieldLoadInstruction instr)
 	{
 		var objectValue = Memory.Registers[instr.ObjectRegister];
+		if (objectValue.TryGetFlatNumericMember(instr.FieldName, out var flatMember))
+		{
+			Memory.Registers[instr.Register] = flatMember;
+			return;
+		}
 		var typeInstance = objectValue.TryGetValueTypeInstance();
 		if (typeInstance == null)
 		{
@@ -383,6 +388,12 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	{
 		var members = instr.ReturnType.Members;
 		var hasBinaryMembers = TryGetBinaryMembers(instr.ReturnType, out var binaryMembers);
+		if (ValueArrayInstance.IsAllNumericType(instr.ReturnType))
+		{
+			Memory.Registers[instr.Register] = ValueInstance.CreateFlatNumericType(instr.ReturnType,
+				CreateFlatNumbers(instr, members, hasBinaryMembers, binaryMembers));
+			return;
+		}
 		var values = new ValueInstance[members.Count];
 		for (var index = 0; index < instr.FieldRegisters.Length && index < members.Count; index++)
 			values[index] = Memory.Registers[instr.FieldRegisters[index]];
@@ -392,6 +403,18 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 				: GetMemberInitialOrDefaultValue(members[index], hasBinaryMembers, binaryMembers, index);
 		TryPreFillConstrainedListMembers(instr.ReturnType, values);
 		Memory.Registers[instr.Register] = new ValueInstance(instr.ReturnType, values);
+	}
+
+	private float[] CreateFlatNumbers(ConstructValueTypeInstruction instr, List<Member> members,
+		bool hasBinaryMembers, List<BinaryMember> binaryMembers)
+	{
+		var numbers = new float[members.Count];
+		for (var index = 0; index < members.Count; index++)
+			numbers[index] = (float)(index < instr.FieldRegisters.Length
+				? Memory.Registers[instr.FieldRegisters[index]]
+				: GetMemberInitialOrDefaultValue(members[index], hasBinaryMembers, binaryMembers, index)).
+				GetArithmeticNumber();
+		return numbers;
 	}
 
 	private void ExecutePrint(PrintInstruction print)
