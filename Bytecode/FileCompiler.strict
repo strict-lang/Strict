@@ -1,5 +1,6 @@
 has logger
 Run(path Text, root Text)
 	let inference = ResolveCheck.Inference(Directory.Files(root, "*.strict") + path)
-	let type = TypeCodegen(ResolveCheck.TypeName(path), File(path).ReadLines, inference)
+	let fullName = "Strict/" + path.Substring(root.Length + 1, path.Length - root.Length - 8)
+	let type = TypeCodegen(fullName, File(path).ReadLines, inference)
 	logger.Log(BinaryFile(type.Entry).Bytes)

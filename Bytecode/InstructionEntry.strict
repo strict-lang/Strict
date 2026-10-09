@@ -51,6 +51,16 @@ Binary(type Number, registers Numbers) InstructionEntry
 Jump(type Number, number Number) InstructionEntry
 	InstructionEntry.Jump(InstructionType.LoopEnd, 300).Bytes(BinaryNames("a")) is (34, 172, 2)
 	InstructionEntry(type, List(Text), ByteEncoder.Empty.SevenBit(number).bytes)
-LoopBegin(register Number) InstructionEntry
-	InstructionEntry.LoopBegin(1).Bytes(BinaryNames("a")) is (33, 1, 0, 0)
-	InstructionEntry(InstructionType.LoopBegin, List(Text), (register, 0, 0))
+LoopBegin(start Number, end Number) InstructionEntry
+	InstructionEntry.LoopBegin(1, -1).Bytes(BinaryNames("a")) is (33, 1, 0, 0)
+	InstructionEntry.LoopBegin(0, 1).Bytes(BinaryNames("a")) is (33, 0, 1, 1, 0)
+	let range = end < 0 then (0) else (1, end)
+	InstructionEntry(InstructionType.LoopBegin, List(Text), List(Number) + start + range + 0)
+Invoke(register Number, names Texts, arguments Numbers, instance Number) InstructionEntry
+	InstructionEntry.Invoke(1, ("T", "Run", "N"), List(Number), -1).payload is (1, -1, -2, 0, -3, 0, 0)
+	InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1).payload is (2, -1, -2, 1, -4, -3, 1, 0, 1, 1)
+	mutable content = List(Number) + register + -1 + -2 + (names.Length - 3)
+	for Range(3, names.Length)
+		content = content + (-1 - value)
+	content = content + -3 + arguments.Length + arguments
+	InstructionEntry(InstructionType.Invoke, names, (instance < 0 then content + 0 else content + 1 + instance))

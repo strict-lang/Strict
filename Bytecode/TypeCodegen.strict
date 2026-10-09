@@ -1,11 +1,16 @@
-has name Text
+has fullName Text
 has lines Texts
 has inference Expressions/TypeInference
-constant Hello = TypeCodegen("HelloLogger", ("has logger", "Run", "\tlogger.Log(\"Hi\")"), ValueCodegen.Plain.inference)
-constant Limit = TypeCodegen("Limit", ("constant limit = 10", "Run Number", "\tlimit"), ValueCodegen.Plain.inference)
+constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogger.Log(\"Hi\")"), ValueCodegen.NoTypes)
+constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number", "\tlimit"), ValueCodegen.NoTypes)
 Entry TypeEntry
 	Hello.Entry.Bytes is (83, 4, 1, 2, 72, 105, 1, 45, 29, 0, 0, 1, 55, 1, 0, 1, 2, 45, 69, 0, 32, 0)
-	TypeEntry(name, Members, Methods)
+	TypeEntry(Generator.TypeName, Members, Methods)
+Generator ValueCodegen
+	Limit.Generator.TypeName is "Limit"
+	let shape = TypeShape(lines)
+	let named = ValueCodegen(inference, Scope(List(Text), List(Text)), shape, fullName)
+	ValueCodegen(inference, inference.types.MethodsOf(named.TypeName), shape, fullName)
 Members List(MemberEntry)
 	Limit.Members.First.initial.First.payload is (1, 10, 0)
 	mutable members = List(Mutable(MemberEntry))
@@ -15,7 +20,7 @@ Members List(MemberEntry)
 	members
 Member(header HeaderTokens) MemberEntry
 	Hello.Member(HeaderTokens("has", "logger")).typeName is "Strict/Logger"
-	let type = FullName(header.DeclaredType(1))
+	let type = Generator.FullName(header.DeclaredType(1))
 	if header.tokens(0) is not "constant"
 		return MemberEntry(header.MemberName, type, List(InstructionEntry), false)
 	MemberEntry(header.MemberName, type, Initial(SyntaxParser(header.tokens).ParseRange(3, header.tokens.Length)), true)
@@ -40,24 +45,14 @@ Methods List(MethodEntry)
 Method(start Number) MethodEntry
 	Hello.Method(1).returnType is "None"
 	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
-	let bodies = MethodBodies(name, TypeShape(lines), inference)
-	let generator = MethodCodegen(ValueCodegen(inference, bodies.Methods))
-	let code = generator.Generate(BodyParser(lines).Block(start + 1, 1), bodies.HeaderScope(header))
-	let returnType = header.ReturnType is "None" then "None" else FullName(header.ReturnType)
-	MethodEntry(header.tokens(0), Parameters(header), returnType, code.instructions)
+	constant generator = Generator
+	let scope = MethodBodies(generator.TypeName, generator.shape, inference).HeaderScope(header)
+	let code = MethodCodegen(generator).Generate(BodyParser(lines).Block(start + 1, 1), scope)
+	MethodEntry(header.tokens(0), Parameters(header), generator.FullName(header.ReturnType), code.instructions)
 Parameters(header HeaderTokens) List(MemberEntry)
 	Hello.Parameters(HeaderTokens("Add", "(", "first", "Number", ")")).Length is 1
 	let types = header.ParameterTypes
 	mutable parameters = List(Mutable(MemberEntry))
 	for header.ParameterNames
-		parameters.Add(MemberEntry(value, FullName(types(index)), List(InstructionEntry), false))
+		parameters.Add(MemberEntry(value, Generator.FullName(types(index)), List(InstructionEntry), false))
 	parameters
-FullName(type Text) Text
-	Hello.FullName("Logger") is "Strict/Logger"
-	Hello.FullName("Numbers") is "Strict/List(Number)"
-	Hello.FullName("HelloLogger") is "HelloLogger"
-	constant baseTypes = ("Boolean", "Number", "Character", "Range", "Text", "Logger", "File", "Directory", "Error")
-	let singular = type.Substring(0, type.Length - 1)
-	if type is in baseTypes
-		return "Strict/" + type
-	singular is in baseTypes then "Strict/List(" + singular + ")" else type

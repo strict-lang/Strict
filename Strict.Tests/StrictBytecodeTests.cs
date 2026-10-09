@@ -40,6 +40,8 @@ public sealed class StrictBytecodeTests
 	[TestCase("NativeArithmetic")]
 	[TestCase("NativeConditions")]
 	[TestCase("NativeLoop")]
+	[TestCase("Greeter")]
+	[TestCase("Fibonacci")]
 	public async Task StrictCompiledExampleRunsLikeCSharp(string example)
 	{
 		var source = Root + "/Examples/" + example + Type.Extension;

@@ -51,10 +51,15 @@ Conditional(node SyntaxNode, block CodeBlock) CodeBlock
 	body.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
 Loop(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tfor 3", "\t\tindex", "\t0").Block(1, 1), NoScope).instructions.Length is 6
-	let iterator = values.Expression(node.children(0), block)
-	let element = values.ElementType(values.TypeOf(node.children(0), block))
-	let begin = iterator.Add(InstructionEntry.LoopBegin(iterator.Result)).Declare("index", "Number")
-	let body = Body(node.children.Last, begin.Declare("value", element))
+	let iterator = node.children(0)
+	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
+	let first = isRange then iterator.children(0) else iterator
+	let start = values.Expression(first, block)
+	let end = isRange then values.Expression(iterator.children(1), start) else start
+	let endRegister = isRange then end.Result else -1
+	let begin = end.Add(InstructionEntry.LoopBegin(start.Result, endRegister))
+	let element = isRange then "Number" else values.ElementType(values.TypeOf(iterator, block))
+	let body = Body(node.children.Last, begin.Declare("index", "Number").Declare("value", element))
 	body.Add(InstructionEntry.Jump(InstructionType.LoopEnd, body.instructions.Length - block.instructions.Length))
 Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Log(SyntaxNode("Text", "\"Hi\""), CodeBlock.Empty).instructions(0).texts is ("Hi")
