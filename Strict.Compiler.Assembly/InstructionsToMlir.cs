@@ -10,7 +10,7 @@ namespace Strict.Compiler.Assembly;
 /// and MLIR's pass pipeline handles lowering to LLVM dialect then to LLVM IR automatically.
 /// Pipeline: bytecode → .mlir text → mlir-opt (lower to LLVM) → mlir-translate (to .ll) → clang → executable
 /// </summary>
-public sealed class InstructionsToMlir : InstructionsCompiler
+public sealed partial class InstructionsToMlir : InstructionsCompiler
 {
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
@@ -274,260 +274,21 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 				FormatDouble(storeVar.ValueInstance.Number);
 	}
 
-	private static void EmitJump(Jump jump, List<string> lines, EmitContext context, int currentIndex)
-	{
-		var targetIndex = currentIndex + 1 + jump.InstructionsToSkip;
-		context.JumpTargets.Add(targetIndex);
-		if (jump.InstructionType is InstructionType.JumpIfFalse or InstructionType.JumpIfTrue)
-		{
-			var condTemp = context.LastConditionTemp ?? "%cond_fallback";
-			var fallthroughIndex = currentIndex + 1;
-			context.JumpTargets.Add(fallthroughIndex);
-			lines.Add(jump.InstructionType == InstructionType.JumpIfFalse
-				? $"    cf.cond_br {condTemp}, ^bb{fallthroughIndex}, ^bb{targetIndex}"
-				: $"    cf.cond_br {condTemp}, ^bb{targetIndex}, ^bb{fallthroughIndex}");
-		}
-		else
-		{
-			lines.Add($"    cf.br ^bb{targetIndex}");
-		}
-	}
-
-	//ncrunch: no coverage start
-	private static void EmitPrint(PrintInstruction print, List<string> lines, EmitContext context)
-	{
-		var constName = $"@str_{context.FunctionName}_{context.StringConstants.Count}";
-		var text = print.TextPrefix + (print.ValueRegister.HasValue
-			? "%g\\0A"
-			: "\\0A");
-		var nullTerminated = text + "\\00";
-		var byteLen = CountStringBytes(nullTerminated);
-		context.StringConstants.Add((constName, nullTerminated, byteLen));
-		if (!print.ValueRegister.HasValue)
-		{
-			var gepTemp = context.NextTemp();
-			lines.Add($"    {gepTemp} = llvm.mlir.addressof {constName}" + $" : !llvm.ptr");
-			lines.Add($"    %print_{context.TempCounter++} = " + $"llvm.call @printf({
-				gepTemp
-			}) {
-				PrintfVarargSignature
-			} : (!llvm.ptr) -> i32");
-		}
-		else
-		{
-			var value = context.RegisterValues.GetValueOrDefault(print.ValueRegister.Value, "%zero");
-			var gepTemp = context.NextTemp();
-			lines.Add($"    {gepTemp} = llvm.mlir.addressof {constName} : !llvm.ptr");
-			lines.Add($"    %print_{context.TempCounter++} = " + $"llvm.call @printf({
-				gepTemp
-			}, {
-				value
-			}) {
-				PrintfVarargSignature
-			} : (!llvm.ptr, f64) -> i32");
-		}
-	} //ncrunch: no coverage end
-
 	private const string PrintfVarargSignature = "vararg(!llvm.func<i32 (ptr, ...)>)";
-
-	private static void EmitInvoke(Invoke invoke, List<string> lines, EmitContext context,
-		Dictionary<string, CompiledMethodInfo>? compiledMethods)
-	{
-		if (invoke.MethodInfo == null)
-			throw new NotSupportedByBackend( //ncrunch: no coverage
-				"Invoke instruction is missing method metadata");
-		if (invoke.MethodInfo.MethodName == Method.From && !invoke.MethodInfo.InstanceRegister.HasValue)
-		{
-			context.RegisterInstances[invoke.Register] = invoke.MethodInfo.ArgumentRegisters;
-			return;
-		}
-		var methodKey = BuildMethodHeaderKeyInternal(invoke.MethodInfo);
-		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
-			throw new NotSupportedByBackend( //ncrunch: no coverage
-				//TODO: wtf? why is this still here, support it!
-				"Non-print method calls cannot be compiled to MLIR. " +
-				"Use the interpreted runner for programs with complex runtime method calls.");
-		var arguments = new List<string>();
-		if (methodInfo.MemberNames.Count > 0 && invoke.MethodInfo.InstanceRegister.HasValue &&
-			context.RegisterInstances.TryGetValue(invoke.MethodInfo.InstanceRegister.Value,
-				out var memberRegisters))
-			foreach (var reg in memberRegisters)
-				arguments.Add(context.RegisterValues.GetValueOrDefault(reg, "0.0"));
-		foreach (var argReg in invoke.MethodInfo.ArgumentRegisters)
-			arguments.Add(context.RegisterValues.GetValueOrDefault(argReg, "0.0"));
-		var constLines = new List<string>();
-		var callArgs = new List<string>();
-		foreach (var arg in arguments)
-			if (arg.StartsWith('%'))
-			{
-				callArgs.Add(arg);
-			}
-			//ncrunch: no coverage
-			else
-			{
-				var constTemp = context.NextTemp();
-				constLines.Add($"    {constTemp} = arith.constant {arg} : f64");
-				callArgs.Add(constTemp);
-			}
-		foreach (var constLine in constLines)
-			lines.Add(constLine);
-		var result = context.NextTemp();
-		var argSignature = string.Join(", ", callArgs);
-		var typeSignature = string.Join(", ", Enumerable.Repeat("f64", callArgs.Count));
-		lines.Add($"    {
-			result
-		} = func.call @{
-			methodInfo.Symbol
-		}({
-			argSignature
-		}) : ({
-			typeSignature
-		}) -> f64");
-		context.RegisterValues[invoke.Register] = result;
-	}
 
 	private static string BuildEntryPoint(string methodName) =>
 		"  func.func @main() -> i32 {\n" + $"    %result = func.call @{methodName}() : () -> f64\n" +
 		"    %exitCode = arith.constant 0 : i32\n" + "    return %exitCode : i32\n" + "  }";
 
-	private static void EmitJumpToId(JumpToId jumpToId, List<string> lines, EmitContext context,
-		int currentIndex)
-	{
-		var condTemp = context.LastConditionTemp ?? "%cond_fallback";
-		var targetIndex = jumpToId.Id;
-		var fallthroughIndex = currentIndex + 1;
-		context.JumpTargets.Add(targetIndex);
-		context.JumpTargets.Add(fallthroughIndex);
-		lines.Add($"    cf.cond_br {condTemp}, ^bb{targetIndex}, ^bb{fallthroughIndex}");
-	}
-
-	private static void EmitLoopBegin(LoopBeginInstruction loopBegin, List<string> lines,
-		EmitContext context, List<Instruction> instructions, int loopBeginIndex)
-	{
-		if (!loopBegin.IsRange)
-			return;
-		var startValue = context.RegisterValues.GetValueOrDefault(loopBegin.Register, "%zero");
-		var endValue = context.RegisterValues.GetValueOrDefault(loopBegin.EndIndex!.Value, "%zero");
-		var startIndex = context.NextTemp();
-		var endIndex = context.NextTemp();
-		var step = context.NextTemp();
-		var inductionVar = context.NextTemp();
-		lines.Add($"    {startIndex} = arith.fptosi {startValue} : f64 to index");
-		lines.Add($"    {endIndex} = arith.fptosi {endValue} : f64 to index");
-		lines.Add($"    {step} = arith.constant 1 : index");
-		var iterationCount =
-			context.RegisterConstants.TryGetValue(loopBegin.EndIndex.Value, out var endConst)
-				? (long)endConst
-				: 0L;
-		var bodyCount = CountLoopBodyInstructions(instructions, loopBeginIndex, loopBegin);
-		var complexity = iterationCount * Math.Max(bodyCount, 1);
-		context.ActiveLoopCount++;
-		if (complexity > GpuComplexityThreshold)
-			EmitGpuLaunch(lines, context, startIndex, endIndex);
-		else if (complexity > ComplexityThreshold)
-			lines.Add($"    scf.parallel ({
-				inductionVar
-			}) = ({
-				startIndex
-			}) to ({
-				endIndex
-			}) step ({
-				step
-			}) {{");
-		else
-			lines.Add($"    scf.for {inductionVar} = {startIndex} to {endIndex} step {step} {{");
-	}
-
 	/// <summary>
 	/// Minimum iteration×body-instruction complexity to emit scf.parallel instead of scf.for.
 	/// </summary>
 	public const int ComplexityThreshold = 100_000;
+
 	/// <summary>
 	/// Minimum complexity to offload to GPU via gpu.launch instead of scf.parallel.
 	/// </summary>
 	public const int GpuComplexityThreshold = 10_000_000;
-
-	private static int CountLoopBodyInstructions(List<Instruction> instructions, int loopBeginIndex,
-		LoopBeginInstruction loopBegin)
-	{
-		var count = 0;
-		for (var index = loopBeginIndex + 1; index < instructions.Count; index++)
-		{
-			if (instructions[index] is LoopEndInstruction loopEnd &&
-				ReferenceEquals(loopEnd.Begin, loopBegin))
-				return count;
-			count++;
-		}
-		return count;
-	}
-
-	private static void EmitGpuLaunch(List<string> lines, EmitContext context, string startIndex,
-		string endIndex)
-	{
-		context.SetGpuActive();
-		var numElements = context.NextTemp();
-		var hostBuf = context.NextTemp();
-		var devBuf = context.NextTemp();
-		var gridX = context.NextTemp();
-		var gridY = context.NextTemp();
-		var gridZ = context.NextTemp();
-		var blockY = context.NextTemp();
-		var blockZ = context.NextTemp();
-		lines.Add($"    {numElements} = arith.subi {endIndex}, {startIndex} : index");
-		lines.Add($"    {hostBuf} = memref.alloc({numElements}) : memref<?xf64>");
-		lines.Add($"    {devBuf}, %stream = gpu.alloc({numElements}) : memref<?xf64>");
-		lines.Add($"    gpu.memcpy %stream {devBuf}, {hostBuf} : memref<?xf64>, memref<?xf64>");
-		context.GpuBufferState = new GpuBufferInfo(hostBuf, devBuf);
-		lines.Add("    %block_x = arith.constant 256 : index");
-		lines.Add($"    {gridX} = arith.ceildivui {numElements}, %block_x : index");
-		lines.Add($"    {gridY} = arith.constant 1 : index");
-		lines.Add($"    {gridZ} = arith.constant 1 : index");
-		lines.Add($"    {blockY} = arith.constant 1 : index");
-		lines.Add($"    {blockZ} = arith.constant 1 : index");
-		lines.Add($"    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = {
-			gridX
-		}, %grid_y = {
-			gridY
-		}, %grid_z = {
-			gridZ
-		})");
-		lines.Add($"               threads(%tx, %ty, %tz) in (%block_x = %block_x, %block_y = {
-			blockY
-		}, %block_z = {
-			blockZ
-		}) {{");
-		var globalId = context.NextTemp();
-		var blockOffset = context.NextTemp();
-		var cond = context.NextTemp();
-		lines.Add($"        {blockOffset} = arith.muli %bx, %block_x : index");
-		lines.Add($"        {globalId} = arith.addi {blockOffset}, %tx : index");
-		lines.Add($"        {cond} = arith.cmpi ult, {globalId}, {numElements} : index");
-		lines.Add($"        scf.if {cond} {{");
-	}
-
-	private static void EmitLoopEnd(List<string> lines, EmitContext context)
-	{
-		if (context.ActiveLoopCount == 0)
-			return;
-		context.ActiveLoopCount--;
-		if (context.UsesGpu)
-		{
-			lines.Add("        }");
-			lines.Add("    gpu.terminator");
-			lines.Add("    }");
-			if (context.GpuBufferState != null)
-			{
-				lines.Add($"    gpu.dealloc {context.GpuBufferState.DeviceBuffer} : memref<?xf64>");
-				lines.Add($"    memref.dealloc {context.GpuBufferState.HostBuffer} : memref<?xf64>");
-				context.GpuBufferState = null;
-			}
-			context.UsesGpu = false;
-		}
-		else
-		{
-			lines.Add("    }");
-		}
-	}
 
 	private static string FormatDouble(double value)
 	{
@@ -541,8 +302,6 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 
 	private static int CountStringBytes(string text) =>
 		text.Replace("\\0A", "\n").Replace("\\00", "\0").Length;
-
-	private sealed record GpuBufferInfo(string HostBuffer, string DeviceBuffer);
 
 	private sealed class EmitContext(string functionName)
 	{

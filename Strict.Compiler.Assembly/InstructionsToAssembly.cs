@@ -13,7 +13,7 @@ namespace Strict.Compiler.Assembly;
 /// Follows the System V AMD64 ABI: first 8 float/double parameters in xmm0–xmm7, return in xmm0.
 /// The generated NASM text can be assembled with: nasm -f win64 output.asm -o output.obj
 /// </summary>
-public sealed class InstructionsToAssembly : InstructionsCompiler
+public sealed partial class InstructionsToAssembly : InstructionsCompiler
 {
 	public override Task<string> Compile(BinaryExecutable binary, Platform platform)
 	{
@@ -204,12 +204,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		return (labels, jumpEndPositions);
 	}
 
-	private static void AddLabelAt(Dictionary<int, string> labels, int target, ref int labelIndex)
-	{
-		if (target >= 0 && !labels.ContainsKey(target))
-			labels[target] = $"L{labelIndex++}";
-	}
-
 	private static void EmitInstruction(Instruction instruction, List<string> lines,
 		Dictionary<string, int> paramIndexByName, Dictionary<string, int> variableSlots,
 		List<(string Label, double Value)> dataConstants,
@@ -289,70 +283,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		}
 	}
 
-	private static void EmitInvoke(Invoke invoke, List<string> lines,
-		Dictionary<Register, Register[]> registerInstances,
-		Dictionary<string, CompiledMethodInfo>? compiledMethods)
-	{
-		if (invoke.MethodInfo == null)
-			throw new NotSupportedByBackend(
-				"Invoke instruction is missing method metadata"); //ncrunch: no coverage
-		if (IsFileRuntimeInvoke(invoke.MethodInfo))
-		{
-			EmitFileRuntimeInvoke(invoke.MethodInfo, lines);
-			return;
-		}
-		if (invoke.MethodInfo.MethodName == Method.From && !invoke.MethodInfo.InstanceRegister.HasValue)
-		{
-			registerInstances[invoke.Register] = invoke.MethodInfo.ArgumentRegisters;
-			return;
-		}
-		var methodKey = BuildMethodHeaderKeyInternal(invoke.MethodInfo);
-		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
-			throw new NotSupportedByBackend( //ncrunch: no coverage
-				"Non-print method calls cannot be compiled to native assembly. " +
-				"Use the interpreted runner for programs with complex runtime method calls.");
-		var sourceRegisters = new List<Register>();
-		if (methodInfo.MemberNames.Count > 0 && invoke.MethodInfo.InstanceRegister.HasValue &&
-			registerInstances.TryGetValue(invoke.MethodInfo.InstanceRegister.Value,
-				out var memberRegisters))
-			sourceRegisters.AddRange(memberRegisters);
-		sourceRegisters.AddRange(invoke.MethodInfo.ArgumentRegisters);
-		if (sourceRegisters.Count > 8)
-			throw new NotSupportedByBackend( //ncrunch: no coverage
-				"Native assembly compiler currently supports up to 8 call arguments");
-		for (var argumentIndex = 0; argumentIndex < sourceRegisters.Count; argumentIndex++)
-		{
-			var sourceXmm = ToXmm(sourceRegisters[argumentIndex]);
-			var destinationXmm = "xmm" + argumentIndex;
-			if (sourceXmm != destinationXmm)
-				lines.Add("    movsd " + destinationXmm + ", " + sourceXmm);
-		}
-		lines.Add("    call " + methodInfo.Symbol);
-		var destination = ToXmm(invoke.Register);
-		if (destination != "xmm0")
-			lines.Add("    movsd " + destination + ", xmm0");
-	}
-
-	private static bool IsFileRuntimeInvoke(InvokeMethodInfo info) =>
-		(info.TypeFullName == Type.File ||
-			info.TypeFullName.EndsWith(Context.ParentSeparator + Type.File, StringComparison.Ordinal)) &&
-		info.MethodName is Method.From or "Write" or "ReadLines" or "ReadBytes" or "Close" or "Length"
-			or "Exists";
-
-	private static void EmitFileRuntimeInvoke(InvokeMethodInfo info, List<string> lines) =>
-		lines.Add("    call strict_file_" + info.MethodName switch
-		{
-			Method.From => "open",
-			"Write" when info.ParameterNames.Length > 0 && info.ParameterNames[0].
-				Contains("bytes", StringComparison.OrdinalIgnoreCase) => "write_bytes",
-			"Write" => "write_text",
-			"ReadLines" => "read_lines",
-			"ReadBytes" => "read_bytes",
-			"Close" => "close",
-			"Length" => "length",
-			_ => "exists"
-		});
-
 	private static string GetOrAddConstantLabel(double number,
 		List<(string Label, double Value)> dataConstants)
 	{
@@ -364,135 +294,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		dataConstants.Add((label, number));
 		return label;
 	} //ncrunch: no coverage end
-
-	private static void EmitPrint(PrintInstruction print,
-		List<(string Label, string Text)> printStrings, List<string> lines, Platform platform)
-	{
-		var (strLabel, _) = printStrings.First(p => p.Text == BuildPrintKey(print));
-		if (print.ValueRegister.HasValue && !print.ValueIsText)
-		{
-			var numXmm = ToXmm(print.ValueRegister.Value);
-			if (platform == Platform.Windows)
-			{
-				if (print.TextPrefix.Length > 0)
-				{
-					lines.Add("    sub rsp, 16");
-					lines.Add("    movsd [rsp], " + numXmm);
-					EmitWindowsWriteFromLabel(strLabel, print.TextPrefix.Length, lines);
-					lines.Add("    movsd xmm0, [rsp]");
-					lines.Add("    add rsp, 16");
-					EmitWindowsWriteNumberFromXmm("xmm0", lines);
-				}
-				else
-				{
-					EmitWindowsWriteNumberFromXmm(numXmm, lines); //ncrunch: no coverage
-				}
-				return;
-			}
-			//ncrunch: no coverage start
-			lines.Add($"    lea rdi, [rel {strLabel}]");
-			if (numXmm != "xmm0")
-				lines.Add($"    movsd xmm0, {numXmm}");
-			lines.Add("    mov eax, 1");
-			lines.Add("    call printf");
-			return;
-		}
-		if (platform == Platform.Windows)
-		{
-			EmitWindowsWriteFromLabel(strLabel, BuildPrintKey(print).Length + 1, lines);
-			return;
-		}
-		lines.Add($"    lea rdi, [rel {strLabel}]");
-		lines.Add("    xor eax, eax");
-		lines.Add("    call printf");
-	} //ncrunch: no coverage end
-
-	private static void EmitWindowsWriteFromLabel(string label, int length, List<string> lines)
-	{
-		if (length <= 0)
-			return; //ncrunch: no coverage
-		lines.Add("    sub rsp, 48");
-		lines.Add("    mov ecx, -11");
-		lines.Add("    call GetStdHandle");
-		lines.Add("    mov rcx, rax");
-		lines.Add("    lea rdx, [rel " + label + "]");
-		lines.Add("    mov r8d, " + length);
-		lines.Add("    lea r9, [rsp+40]");
-		lines.Add("    mov qword [rsp+32], 0");
-		lines.Add("    call WriteFile");
-		lines.Add("    add rsp, 48");
-	}
-
-	private static void EmitWindowsWriteNumberFromXmm(string sourceXmm, List<string> lines)
-	{
-		if (sourceXmm != "xmm0")
-			lines.Add("    movsd xmm0, " + sourceXmm); //ncrunch: no coverage
-		lines.Add("    call print_number_from_xmm");
-	}
-
-	private static string BuildWindowsPrintNumberHelper() =>
-		string.Join("\n", "", "section .text", "print_number_from_xmm:", "    push rbp",
-			"    mov rbp, rsp", "    sub rsp, 96", "    movsd [rsp], xmm0", "    mov ecx, -11",
-			"    call GetStdHandle", "    mov rcx, rax", "    lea r10, [rsp+79]",
-			"    mov byte [r10], 10", "    mov r11, r10", "    movsd xmm0, [rsp]",
-			"    cvttsd2si rax, xmm0", "    xor r9d, r9d", "    test rax, rax", "    jge .print_abs_done",
-			"    mov r9d, 1", "    neg rax", ".print_abs_done:", "    test rax, rax",
-			"    jne .print_digits_loop", "    dec r11", "    mov byte [r11], '0'",
-			"    jmp .print_digits_done", ".print_digits_loop:", "    xor edx, edx", "    mov r8, 10",
-			"    div r8", "    add dl, '0'", "    dec r11", "    mov [r11], dl", "    test rax, rax",
-			"    jne .print_digits_loop", ".print_digits_done:", "    test r9d, r9d",
-			"    je .print_sign_done", "    dec r11", "    mov byte [r11], '-'", ".print_sign_done:",
-			"    mov rdx, r11", "    mov r8, r10", "    sub r8, r11", "    inc r8",
-			"    lea r9, [rsp+40]", "    mov qword [rsp+32], 0", "    call WriteFile", "    add rsp, 96",
-			"    pop rbp", "    ret");
-
-	private static string BuildPrintKey(PrintInstruction print) =>
-		print.ValueRegister.HasValue && !print.ValueIsText
-			? print.TextPrefix + "%g"
-			: print.TextPrefix;
-
-	private static List<(string Label, string Text)> CollectPrintStrings(
-		List<Instruction> instructions)
-	{
-		var strings = new List<(string, string)>();
-		var seen = new HashSet<string>(StringComparer.Ordinal);
-		var labelIndex = 0;
-		for (var instructionIndex = 0; instructionIndex < instructions.Count; instructionIndex++)
-		{
-			if (instructions[instructionIndex].InstructionType != InstructionType.Print)
-				continue;
-			var instruction = (PrintInstruction)instructions[instructionIndex];
-			var key = BuildPrintKey(instruction);
-			if (seen.Add(key))
-				strings.Add(($"str_{labelIndex++}", key));
-		}
-		return strings;
-	}
-
-	private static string BuildStringBytes(string text)
-	{
-		if (text.Length == 0)
-			return ""; //ncrunch: no coverage
-		var parts = new List<string>();
-		var ascii = new StringBuilder();
-		foreach (var c in text)
-			if (c is >= ' ' and <= '~' && c != '"' && c != '\\')
-			{
-				ascii.Append(c);
-			}
-			else
-			{ //ncrunch: no coverage start
-				if (ascii.Length > 0)
-				{
-					parts.Add($"\"{ascii}\"");
-					ascii.Clear();
-				}
-				parts.Add(((int)c).ToString());
-			} //ncrunch: no coverage end
-		if (ascii.Length > 0)
-			parts.Add($"\"{ascii}\"");
-		return string.Join(", ", parts);
-	}
 
 	//ncrunch: no coverage start
 	private static void EmitStoreConstantToSlot(ValueInstance value, int slot,
@@ -568,63 +369,6 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		var src1 = ToXmm(binary.Registers[1]);
 		lines.Add($"    ucomisd {src0}, {src1}");
 	}
-
-	private static void EmitJump(Jump jump, Dictionary<int, string> jumpLabels, int index,
-		List<string> lines)
-	{
-		var target = index + jump.InstructionsToSkip + 1;
-		var label = jumpLabels.TryGetValue(target, out var lbl)
-			? $".{lbl}"
-			: $".unknown_{target}";
-		var op = jump.InstructionType switch
-		{
-			InstructionType.JumpIfTrue => "je",
-			InstructionType.JumpIfFalse => "jne",
-			_ => "jmp"
-		};
-		lines.Add($"    {op} {label}");
-	}
-
-	private static void EmitJumpToId(JumpToId jumpToId, Dictionary<int, int> jumpEndPositions,
-		Dictionary<int, string> jumpLabels, List<Instruction> allInstructions, int index,
-		List<string> lines)
-	{
-		if (!jumpEndPositions.TryGetValue(jumpToId.Id, out var endIndex) ||
-			!jumpLabels.TryGetValue(endIndex, out var label))
-			return; //ncrunch: no coverage
-		var prevComparison = index > 0
-			? allInstructions[index - 1] as BinaryInstruction
-			: null;
-		var op = jumpToId.InstructionType switch
-		{
-			InstructionType.JumpToIdIfFalse => GetFalseJumpOp(prevComparison?.InstructionType),
-			InstructionType.JumpToIdIfTrue =>
-				GetTrueJumpOp(prevComparison?.InstructionType), //ncrunch: no coverage
-			_ => "jmp" //ncrunch: no coverage
-		};
-		lines.Add($"    {op} .{label}");
-	}
-
-	private static string GetFalseJumpOp(InstructionType? comparisonType) =>
-		comparisonType switch
-		{
-			InstructionType.Equal => "jne",
-			InstructionType.NotEqual => "je", //ncrunch: no coverage
-			InstructionType.LessThan => "jae", //ncrunch: no coverage
-			InstructionType.GreaterThan => "jbe",
-			_ => "jne" //ncrunch: no coverage
-		};
-
-	//ncrunch: no coverage start
-	private static string GetTrueJumpOp(InstructionType? comparisonType) =>
-		comparisonType switch
-		{
-			InstructionType.Equal => "je",
-			InstructionType.NotEqual => "jne",
-			InstructionType.LessThan => "jb",
-			InstructionType.GreaterThan => "ja",
-			_ => "je"
-		}; //ncrunch: no coverage end
 
 	private static string ToXmm(Register register) => $"xmm{(int)register}";
 }
