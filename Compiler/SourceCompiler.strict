@@ -1,0 +1,33 @@
+has logger
+Run(path)
+	let lines = File(path).ReadLines
+	let body = LineGenerator.Empty.GenerateReturningBody(ConstantLines(lines) + RunBodyLines(lines))
+	let build = NativeBuild(path.RemoveExtension.text + ".asm", Platform.Windows)
+	build.WriteAsm(InstructionsToNasm(body.instructions, "Run", Platform.Windows).Compile)
+	logger.Log(build.Assemble)
+	let exePath = path.RemoveExtension.text + ".exe"
+	logger.Log(build.Link(exePath))
+	logger.Log("Run returned " + Process(exePath).Run("").exitCode)
+ConstantLines(lines Texts) Texts
+	ConstantLines("constant a = 1", "Run Number", "\tconstant b = 2") is ("constant a = 1")
+	for lines
+		if value.StartsWith("constant ")
+			value
+RunBodyLines(lines Texts) Texts
+	RunBodyLines("Other", "Run Number", "\tconstant a = 1", "\ta", "Next") is ("constant a = 1", "a")
+	let start = RunHeaderIndex(lines) + 1
+	for Range(start, RunBodyEnd(lines, start))
+		lines(index).Trim
+RunHeaderIndex(lines Texts) Number
+	RunHeaderIndex("has logger", "Run Number") is 1
+	for lines
+		if value.StartsWith("Run ")
+			return index
+	-1
+RunBodyEnd(lines Texts, start Number) Number
+	RunBodyEnd(("Run", "\ta", "Next"), 1) is 2
+	RunBodyEnd(("Run", "\ta"), 1) is 2
+	for Range(start, lines.Length)
+		if not lines(index).StartsWith("\t")
+			return index
+	lines.Length

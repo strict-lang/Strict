@@ -12,6 +12,30 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
+## Strict compiles Strict source to a native exe — 2026-10-09 (late night)
+
+- `Compiler/SourceCompiler.strict Examples/NativeArithmetic.strict` runs entirely in Strict:
+  read file → Run body + constant members → `Bytecode/LineGenerator` → `Compiler/InstructionsToNasm`
+  → nasm + gcc → runs the exe and logs `Run returned 20`. The compiled exe exits with the result.
+- Compiler package shares `Bytecode/BytecodeInstruction` (cross package via full name in one member
+  or parameter type). `CompInstruction`/`CompList` removed. Data section is generated from constant
+  loads/stores and stored variables. Optimizers and Runtime still have their own instruction copies
+  (`OptimInstruction`/`OpList`, `VmInstruction`/`InstrList`), next to unify.
+- `ExpressionCodegen` has precedence levels (compare < additive < multiplicative), left associativity
+  and recursive operands, no more duplicated instructions. `LineGenerator` resets registers per line
+  and `GenerateReturningBody` returns the last value.
+- `Package.Load` loads child packages (Directory.Directories), `HasType`/`FindType` search children.
+- Runtime/parser fixes found on the way (all with regression tests): Text.in/IndexOf/LastIndexOf missed
+  a match at the end, Text.Trim only trimmed spaces, VM list + list concatenates without mutating the
+  left list, VM skips loops over empty lists, dynamic list literals in declarations, implicit calls in
+  loops use the method instance, relative process paths resolve against the current directory,
+  `x.member(index).y` keeps the index, auto-wrapped list arguments print without double brackets
+  (matches the validator), single-element lists may keep double brackets, test-only runs skip
+  declarations that use parameters.
+- Limits (ponytail): numbers only, no if/for/calls in compiled code, Windows entry point hard-coded,
+  virtual registers map 1:1 to xmm0..xmm14 (registers reset per line). Subfolder examples
+  (Examples/Parsing, Examples/CompactTypeTest) are not in the program suite and still fail.
+
 ## All Strict projects run — 2026-10-09 (night)
 
 - `RunStrictProgramFromSourceAndCachedBinaryInFreshProcess` passes for every `.strict` file in

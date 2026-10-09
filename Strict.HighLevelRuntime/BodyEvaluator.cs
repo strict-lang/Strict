@@ -44,7 +44,9 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 	{
 		var last = interpreter.noneInstance;
 		var count = body.Expressions.Count;
-		HashSet<string>? skippedVariables = null;
+		var skippedVariables = runOnlyTests && body.Method.Parameters.Count > 0
+			? body.Method.Parameters.Select(parameter => parameter.Name).ToHashSet()
+			: null;
 		var pastTestBlock = false;
 		for (var index = 0; index < count; index++)
 		{
@@ -110,6 +112,8 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		{
 			VariableCall v => skippedVariables.Contains(v.Variable.Name),
 			ParameterCall p => skippedVariables.Contains(p.Parameter.Name),
+			ListCall listCall => ExpressionReferencesSkippedVariable(listCall.List, skippedVariables) ||
+				ExpressionReferencesSkippedVariable(listCall.Index, skippedVariables),
 			MethodCall call => (call.Instance != null &&
 					ExpressionReferencesSkippedVariable(call.Instance, skippedVariables)) ||
 				call.Arguments.Any(a => ExpressionReferencesSkippedVariable(a, skippedVariables)),

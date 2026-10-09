@@ -1,61 +1,62 @@
 has state GenerationResult
 GenerateExpression(text Text) GenerationResult
-	if text is "true"
-		return LoadNumber(1)
-	if text is "false"
-		return LoadNumber(0)
-	if NumberLiteral(text).IsNumber
-		return LoadNumber(text to Number)
-	GenerateBinaryOrVar(text)
-GenerateBinaryOrVar(text Text) GenerationResult
-	let plus = text.IndexOf(" + ")
-	if plus is not -1
-		return BinaryAt(text, plus, InstructionType.Add)
-	let minus = text.IndexOf(" - ")
-	if minus is not -1
-		return BinaryAt(text, minus, InstructionType.Subtract)
-	GenerateCompareOrMul(text)
-GenerateCompareOrMul(text Text) GenerationResult
+	ExpressionCodegen.Empty.GenerateExpression("1 + 2 * 3").Count is 5
+	ExpressionCodegen.Empty.GenerateExpression("8 - 2 - 1").instructions(2).typeName is "Subtract"
+	ExpressionCodegen.Empty.GenerateExpression("1 + 2 is 3").instructions(4).typeName is "Equal"
 	let isNot = text.IndexOf(" is not ")
 	if isNot is not -1
 		return BinaryAt(text, isNot, InstructionType.NotEqual)
 	let isOp = text.IndexOf(" is ")
 	if isOp is not -1
 		return BinaryAt(text, isOp, InstructionType.Equal)
-	let gt = text.IndexOf(" > ")
-	if gt is not -1
-		return BinaryAt(text, gt, InstructionType.GreaterThan)
-	GenerateMulOrVar(text)
-GenerateMulOrVar(text Text) GenerationResult
-	let mul = text.IndexOf(" * ")
-	if mul is not -1
-		return BinaryAt(text, mul, InstructionType.Multiply)
-	let div = text.IndexOf(" / ")
-	if div is not -1
-		return BinaryAt(text, div, InstructionType.Divide)
-	LoadVariable(text)
+	GenerateOrdering(text)
+GenerateOrdering(text Text) GenerationResult
+	ExpressionCodegen.Empty.GenerateOrdering("1 < 2").instructions(2).typeName is "LessThan"
+	let greater = text.IndexOf(" > ")
+	if greater is not -1
+		return BinaryAt(text, greater, InstructionType.GreaterThan)
+	let smaller = text.IndexOf(" < ")
+	if smaller is not -1
+		return BinaryAt(text, smaller, InstructionType.LessThan)
+	GenerateAdditive(text)
+GenerateAdditive(text Text) GenerationResult
+	ExpressionCodegen.Empty.GenerateAdditive("5 - 1").instructions(2).typeName is "Subtract"
+	let plus = text.LastIndexOf(" + ")
+	let minus = text.LastIndexOf(" - ")
+	if plus > minus
+		return BinaryAt(text, plus, InstructionType.Add)
+	if minus is not -1
+		return BinaryAt(text, minus, InstructionType.Subtract)
+	GenerateMultiplicative(text)
+GenerateMultiplicative(text Text) GenerationResult
+	ExpressionCodegen.Empty.GenerateMultiplicative("6 / 2").instructions(2).typeName is "Divide"
+	let times = text.LastIndexOf(" * ")
+	let divide = text.LastIndexOf(" / ")
+	if times > divide
+		return BinaryAt(text, times, InstructionType.Multiply)
+	if divide is not -1
+		return BinaryAt(text, divide, InstructionType.Divide)
+	GenerateOperand(text)
 BinaryAt(text Text, index Number, code Number) GenerationResult
-	let left = text.Substring(0, index).Trim
-	let right = text.Substring(index + OperatorWidth(code), 200).Trim
-	CombineBinary(GenerateOperand(left), right, code)
-CombineBinary(leftResult GenerationResult, right Text, code Number) GenerationResult
-	let rightResult = ExpressionCodegen(leftResult).GenerateOperand(right)
-	let combined = leftResult.Concat(rightResult)
-	EmitBinary(combined, leftResult.LastRegister, rightResult.LastRegister, code)
+	ExpressionCodegen.Empty.BinaryAt("a is b", 1, InstructionType.Equal).Count is 3
+	let leftResult = GenerateExpression(text.Substring(0, index).Trim)
+	let rightText = text.Substring(index + OperatorWidth(code), text.Length - index - OperatorWidth(code)).Trim
+	let rightResult = ExpressionCodegen(leftResult).GenerateExpression(rightText)
+	EmitBinary(rightResult, leftResult.LastRegister, rightResult.LastRegister, code)
 EmitBinary(combined GenerationResult, leftReg Number, rightReg Number, code Number) GenerationResult
 	let resultReg = combined.registry.Allocate
 	let advanced = combined.registry.Advance
 	let op = BytecodeInstruction.BinaryOp(code, leftReg, rightReg, resultReg)
 	combined.AppendWithRegistry(op, advanced)
 OperatorWidth(code Number) Number
+	ExpressionCodegen.Empty.OperatorWidth(InstructionType.Add) is 3
 	if code is InstructionType.NotEqual
 		return 8
 	if code is InstructionType.Equal
 		return 4
-	if code is InstructionType.GreaterThan
-		return 3
 	3
 GenerateOperand(text Text) GenerationResult
+	ExpressionCodegen.Empty.GenerateOperand("true").instructions(0).amount is 1
 	if NumberLiteral(text).IsNumber
 		return LoadNumber(text to Number)
 	if text is "true"

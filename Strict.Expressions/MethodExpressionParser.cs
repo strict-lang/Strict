@@ -495,8 +495,8 @@ public class MethodExpressionParser : ExpressionParser
 		var args = argEnd > argStart + 1
 			? ParseListArguments(body, input[(argStart + 1)..argEnd])
 			: (IReadOnlyList<Expression>)[];
-		return TryVariableOrValueOrParameterOrMemberOrMethodCall(context, current, body,
-			input[..argStart], args);
+		return ListCall.TryParse(body, TryVariableOrValueOrParameterOrMemberOrMethodCall(context,
+			current, body, input[..argStart], args), args);
 	}
 
 	private static Exception CheckErrorTypeAndThrowException(Body body, ReadOnlySpan<char> input,

@@ -74,7 +74,8 @@ public sealed class RunnerTests
 	private static readonly Dictionary<string, string> ProgramArguments = new()
 	{
 		["Language/Parser.strict"] = "Examples/HelloLogger.strict",
-		["Language/PackageTests.strict"] = "Examples/BaseTypesTest"
+		["Language/PackageTests.strict"] = "Examples/BaseTypesTest",
+		["Compiler/SourceCompiler.strict"] = "Examples/NativeArithmetic.strict"
 	};
 
 	private static IEnumerable<string> StrictProgramPaths()

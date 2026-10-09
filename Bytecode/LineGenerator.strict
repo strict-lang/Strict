@@ -36,10 +36,19 @@ GenerateIf(line Text) GenerationResult
 	let expr = ExpressionCodegen(state).GenerateExpression(cond)
 	expr.Append(BytecodeInstruction.JumpOp(InstructionType.JumpIfFalse, 1))
 GenerateBody(lines Texts) GenerationResult
+	LineGenerator.Empty.GenerateBody("constant a = 2", "a * 3").LastRegister is 2
 	mutable current = GenerationResult.Empty
 	for lines
-		current = LineGenerator(current).GenerateLine(value)
+		current = LineGenerator(current.WithRegistry(Registry.Empty)).GenerateLine(value)
 	current
+GenerateReturningBody(lines Texts) GenerationResult
+	LineGenerator.Empty.GenerateReturningBody("constant a = 2", "a * 3").Count is 5
+	LineGenerator.Empty.GenerateReturningBody(("return 7")).Count is 2
+	let body = GenerateBody(lines)
+	if body.Count > 0
+		if body.instructions(body.Count - 1).IsReturn
+			return body
+	body.Append(BytecodeInstruction.ReturnOp(body.LastRegister))
 GenerateMethod(name Text, returnType Text, lines Texts) BinaryMethod
 	let result = GenerateBody(lines)
 	BinaryMethod.Create(name, returnType).WithInstructions(result.instructions)

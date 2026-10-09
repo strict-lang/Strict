@@ -20,7 +20,7 @@ public sealed class TypeValidator : Visitor
 		{
 			var line = body.GetLine(index);
 			if (line.Contains("((") && line.Contains("))") && line.Count(character => character == '(') < 3 &&
-				IsSingleListParameterCall(body, line))
+				HasMultipleElementsInDoubleBrackets(line) && IsSingleListParameterCall(body, line))
 				throw new ListArgumentCanBeAutoParsedWithoutDoubleBrackets(body, line);
 		}
 		if (body.Variables is null)
@@ -33,6 +33,13 @@ public sealed class TypeValidator : Visitor
 		// Check name hiding first to provide a clearer, more specific error than unused-variable
 		ValidateMethodVariablesHidesAnyTypeMember(body, body.Method.Type.Members);
 		ValidateUnusedVariables(body, context);
+	}
+
+	private static bool HasMultipleElementsInDoubleBrackets(string line)
+	{
+		var openIndex = line.IndexOf("((", StringComparison.Ordinal);
+		var closeIndex = line.IndexOf("))", openIndex, StringComparison.Ordinal);
+		return closeIndex > openIndex && line[openIndex..closeIndex].Contains(',');
 	}
 
 	private static bool IsSingleListParameterCall(Body body, string line)

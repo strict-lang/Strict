@@ -400,7 +400,7 @@ public class MethodCall : ConcreteExpression
 		Instance is not null && Instance.ToString() != Type.ValueLowercase
 			? (Instance is Binary
 				? $"({Instance})"
-				: $"{Instance}") + $".{Method.Name}{DisplayArguments.ToBrackets()}"
+				: $"{Instance}") + $".{Method.Name}{FormatArguments()}"
 			: ReturnType is GenericTypeImplementation { Generic.Name: Type.ErrorWithValue }
 				? Arguments[0] + "(" + Arguments[1] + ")"
 				: ReturnType.IsError
@@ -414,13 +414,12 @@ public class MethodCall : ConcreteExpression
 							Generic.Name: Type.Dictionary
 						}
 							? FormatDictionaryConstructor()
-							: Method.Name == Method.From && IsAutoWrappedListArgument()
-								? $"{
-									GetProperMethodNameWithFromSupport()
-								}({
-									string.Join(", ", ((List)Arguments[0]).Values)
-								})"
-								: $"{GetProperMethodNameWithFromSupport()}{DisplayArguments.ToBrackets()}";
+							: $"{GetProperMethodNameWithFromSupport()}{FormatArguments()}";
+
+	private string FormatArguments() =>
+		IsAutoWrappedListArgument()
+			? "(" + string.Join(", ", ((List)Arguments[0]).Values) + ")"
+			: DisplayArguments.ToBrackets();
 
 	private IReadOnlyList<Expression> DisplayArguments =>
 		argumentsToShowCount == null
@@ -440,7 +439,7 @@ public class MethodCall : ConcreteExpression
 
 	private bool IsAutoWrappedListArgument() =>
 		Arguments is [List { Values.Count: > 1 }] && Method.Parameters.Count == 1 &&
-		Method.Parameters[0].Type.IsList && !ReturnType.IsList;
+		Method.Parameters[0].Type.IsList && (Method.Name != Method.From || !ReturnType.IsList);
 
 	private string GetProperMethodNameWithFromSupport() =>
 		Method.Name == Method.From

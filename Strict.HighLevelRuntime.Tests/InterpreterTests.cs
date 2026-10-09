@@ -598,6 +598,16 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void TestsDoNotEvaluateDeclarationsUsingParameters()
+	{
+		using var t = CreateType(nameof(TestsDoNotEvaluateDeclarationsUsingParameters), "has logger",
+			"First(texts) Text", "\tFirst(\"a\", \"b\") is \"aa\"", "\tlet first = texts(0)",
+			"\tfirst + first");
+		Assert.That(() => new Interpreter(TestPackage.Instance, TestBehavior.TestRunner).Execute(
+			t.Methods.Single(m => m.Name == "First")), Throws.Nothing);
+	}
+
+	[Test]
 	public void StackOverflowCallingYourselfWithSameInstanceMember()
 	{
 		using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameInstanceMember),

@@ -59,12 +59,13 @@ Lines Texts
 Trim Text
 	" hi ".Trim is "hi"
 	"noSpaces".Trim is "noSpaces"
+	"\thi\n".Trim is "hi"
 	TrimStart.TrimEnd
 TrimStart Text
 	" hi ".TrimStart is "hi "
 	mutable startIndex = 0
 	for characters
-		if value is " "
+		if value is in (" ", "\t", "\n", "\r")
 			startIndex = startIndex + 1
 		else
 			return Substring(startIndex, Length - startIndex)
@@ -73,7 +74,7 @@ TrimEnd Text
 	" hi ".TrimEnd is " hi"
 	mutable endIndex = characters.Length
 	for characters.Reverse
-		if value is " "
+		if value is in (" ", "\t", "\n", "\r")
 			endIndex = endIndex - 1
 		else
 			return Substring(0, endIndex)

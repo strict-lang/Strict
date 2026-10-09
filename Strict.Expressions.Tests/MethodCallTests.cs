@@ -169,12 +169,25 @@ public sealed class MethodCallTests : TestExpressions
 				InstanceOf<Type.ArgumentsDoNotMatchMethodParameters>());
 
 	[TestCase("ComplexMethod((1), 2)")]
-	[TestCase("ComplexMethod((1, 2, 3))")]
+	[TestCase("ComplexMethod(1, 2, 3)")]
 	[TestCase("ComplexMethod((1, 2, 3) + (4, 5), 7)")]
 	[TestCase("ComplexMethod((1, 2, 3) + (4, 5), ComplexMethod((1, 2, 3), 4))")]
-	[TestCase("ComplexMethod((\"1 + 5\", \"5 + 5\"))")]
+	[TestCase("ComplexMethod(\"1 + 5\", \"5 + 5\")")]
 	public void FindRightMethodCall(string methodCall) =>
 		Assert.That(ParseExpression(methodCall).ToString(), Is.EqualTo(methodCall));
+
+	[Test]
+	public void AutoWrappedListArgumentHasNoDoubleBrackets()
+	{
+		using var program = new Type(TestPackage.Instance,
+			new TypeLines(nameof(AutoWrappedListArgumentHasNoDoubleBrackets), "has number",
+				"Sum(numbers) Number", "\tnumbers.Length + number",
+				$"Twice(other {nameof(AutoWrappedListArgumentHasNoDoubleBrackets)}) Number",
+				"\tlet first = other.Sum(1, 2)", "\tfirst + Sum(3, 4)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("let first = other.Sum(1, 2)" + Environment.NewLine + "first + Sum(3, 4)"));
+	}
 
 	[Test]
 	public void IsMethodPublic() =>
