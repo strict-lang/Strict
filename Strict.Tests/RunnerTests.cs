@@ -66,17 +66,28 @@ public sealed class RunnerTests
 		var arguments = ProgramArguments.TryGetValue(relativePath, out var argument)
 			? " \"" + Path.Combine(root, argument) + "\""
 			: "";
-		foreach (var inputPath in hasRun
-			? [sourcePath, Path.ChangeExtension(sourcePath, BinaryExecutable.Extension)]
-			: new[] { sourcePath })
+		File.Delete(Path.ChangeExtension(sourcePath, BinaryExecutable.Extension));
+		var testDirectory = Directory.GetCurrentDirectory();
+		Directory.SetCurrentDirectory(root);
+		try
 		{
-			var result = NativeProcessRunner.Run("dotnet",
-				"\"" + StrictAssemblyForFreshProcess() + "\" \"" + inputPath + "\"" + arguments, 120000);
-			if (hasRun)
-				Assert.That(result.ExitCode, Is.Zero, inputPath + Environment.NewLine + result.Output + result.Error);
-			else
-				Assert.That(result.Output, Does.Contain("NoRunMethodFound: No Run method found in " +
-					Path.GetFileNameWithoutExtension(relativePath)), result.Output + result.Error);
+			foreach (var inputPath in hasRun
+				? [sourcePath, Path.ChangeExtension(sourcePath, BinaryExecutable.Extension)]
+				: new[] { sourcePath })
+			{
+				var result = NativeProcessRunner.Run("dotnet",
+					"\"" + StrictAssemblyForFreshProcess() + "\" \"" + inputPath + "\"" + arguments, 120000);
+				if (hasRun)
+					Assert.That(result.ExitCode, Is.Zero,
+						inputPath + Environment.NewLine + result.Output + result.Error);
+				else
+					Assert.That(result.Output, Does.Contain("NoRunMethodFound: No Run method found in " +
+						Path.GetFileNameWithoutExtension(relativePath)), result.Output + result.Error);
+			}
+		}
+		finally
+		{
+			Directory.SetCurrentDirectory(testDirectory);
 		}
 	}
 
@@ -88,14 +99,16 @@ public sealed class RunnerTests
 	{
 		["Language/Parser.strict"] = "Examples/HelloLogger.strict",
 		["Language/PackageTests.strict"] = "Examples/BaseTypesTest",
-		["Compiler/SourceCompiler.strict"] = "Examples/NativeArithmetic.strict"
+		["Compiler/SourceCompiler.strict"] = "Examples/NativeArithmetic.strict",
+		["ImageProcessing/ProcessImage.strict"] = "ImageProcessing/test_image.jpg",
+		["Process.strict"] = "Examples/HelloLogger.strict"
 	};
 
 	private static IEnumerable<string> StrictProgramPaths()
 	{
 		var root = FindRepoRoot();
-		string[] projects = ["Language", "Expressions", "Validators", "TestRunner", "HighLevelRuntime",
-			"Bytecode", "Optimizers", "Runtime", "Compiler"];
+		string[] projects = [".", "Math", "ImageProcessing", "Language", "Expressions", "Validators",
+			"TestRunner", "HighLevelRuntime", "Bytecode", "Optimizers", "Runtime", "Compiler"];
 		return Directory.GetFiles(Path.Combine(root, "Examples"), "*" + Type.Extension,
 				SearchOption.AllDirectories).Concat(projects.SelectMany(project =>
 				Directory.GetFiles(Path.Combine(root, project), "*" + Type.Extension))).
