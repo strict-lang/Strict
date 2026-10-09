@@ -178,6 +178,17 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void ThenInsideTextDoesNotHideTest()
+	{
+		var customType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ThenInsideTextDoesNotHideTest), "has logger", "Check Boolean",
+					"	\"a then b\" is \"a then b\"", "	true")).
+			ParseMembersAndMethods(parser);
+		customType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(1));
+	}
+
+	[Test]
 	public void MethodParameterWithGenericTypeImplementations()
 	{
 		var method = new Method(type, 0, parser,

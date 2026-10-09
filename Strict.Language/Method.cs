@@ -250,7 +250,7 @@ public sealed partial class Method : Context
 			body.ParsingLineNumber == body.Method.Tests.Count + 1 &&
 			(body.Parent != null || body.ParsingLineNumber < body.LineRange.End.Value - 1))) &&
 		!currentLine.Trim().StartsWith("if ", StringComparison.Ordinal) &&
-		!currentLine.Contains(" then ") && expression.ReturnType.IsBoolean;
+		expression.GetType().Name != "If" && expression.ReturnType.IsBoolean;
 
 	private static bool IsLastMethodLine(Body body) =>
 		body.Parent == null && body.ParsingLineNumber == body.LineRange.End.Value - 1;
