@@ -44,9 +44,7 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 	{
 		var last = interpreter.noneInstance;
 		var count = body.Expressions.Count;
-		var skippedVariables = runOnlyTests && body.Method.Parameters.Count > 0
-			? body.Method.Parameters.Select(parameter => parameter.Name).ToHashSet()
-			: null;
+		HashSet<string>? skippedVariables = null;
 		var pastTestBlock = false;
 		for (var index = 0; index < count; index++)
 		{
@@ -56,13 +54,17 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 				pastTestBlock = true;
 			if (ctx.IsTestAtCurrentLine)
 				interpreter.Statistics.TestExpressions++;
+			if (runOnlyTests && !ctx.IsTestAtCurrentLine && skippedVariables == null &&
+				e is Declaration or MutableReassignment or For)
+				skippedVariables = CreateVariablesUnavailableInTests(body.Method);
 			if ((ctx.IsTestAtCurrentLine == !runOnlyTests && e is not Declaration &&
 					e is not MutableReassignment && e is not For) ||
 				(runOnlyTests && e is Declaration decl && (DeclarationReferencesAnyMember(body, decl) ||
 					(skippedVariables != null &&
 						ExpressionReferencesSkippedVariable(decl.Value, skippedVariables)))) ||
-				(runOnlyTests && skippedVariables != null && e is not Declaration &&
-					ExpressionReferencesSkippedVariable(e, skippedVariables)) || (runOnlyTests &&
+				(runOnlyTests && !ctx.IsTestAtCurrentLine && skippedVariables != null &&
+					e is not Declaration && ExpressionReferencesSkippedVariable(e, skippedVariables)) ||
+				(runOnlyTests &&
 					e is For forExpr && ForExpressionReferencesAnyMember(body, forExpr)))
 			{
 				if (runOnlyTests && e is Declaration skippedDecl)
@@ -113,6 +115,7 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		{
 			VariableCall v => skippedVariables.Contains(v.Variable.Name),
 			ParameterCall p => skippedVariables.Contains(p.Parameter.Name),
+			Instance => skippedVariables.Contains(Strict.Language.Type.ValueLowercase),
 			ListCall listCall => ExpressionReferencesSkippedVariable(listCall.List, skippedVariables) ||
 				ExpressionReferencesSkippedVariable(listCall.Index, skippedVariables),
 			MethodCall call => (call.Instance != null &&
@@ -143,6 +146,17 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 	private static bool IsStandaloneInlineTest(Expression e) =>
 		e.ReturnType.IsBoolean && e is not If && e is not Return && e is not Declaration &&
 		e is not MutableReassignment;
+
+	/// <summary>
+	/// Inline tests run without an instance or arguments, declarations using them are skipped.
+	/// </summary>
+	private static HashSet<string> CreateVariablesUnavailableInTests(Method method)
+	{
+		var names = new HashSet<string>(StringComparer.Ordinal) { Strict.Language.Type.ValueLowercase };
+		foreach (var parameter in method.Parameters)
+			names.Add(parameter.Name);
+		return names;
+	}
 
 	private static bool DeclarationReferencesAnyMember(Body body, Declaration decl)
 	{

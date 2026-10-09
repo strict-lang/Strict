@@ -75,7 +75,7 @@ public partial class Interpreter
 		Statistics.FromCreationsCount++;
 		if (args.Count == 0 && method.Type.IsText)
 			return new ValueInstance("");
-		if (args.Count == 0 && method.Type.IsCharacter)
+		if (args.Count == 0 && (method.Type.IsCharacter || method.Type.IsNumber))
 			return new ValueInstance(method.Type, 0);
 		if ((method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum) && args.Count == 1)
 		{

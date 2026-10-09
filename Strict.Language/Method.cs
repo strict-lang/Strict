@@ -301,7 +301,7 @@ public sealed partial class Method : Context
 			if (methodBody.Expressions.Count > 0)
 				return !parseTestsOnlyForGeneric && methodBody.Expressions.Any(expression =>
 					expression.GetType().Name == nameof(PlaceholderExpression))
-					? methodBody.Parse()
+					? methodBody.ClearVariables().Parse()
 					: methodBody.Expressions.Count == 1
 						? methodBody.Expressions[0]
 						: methodBody;

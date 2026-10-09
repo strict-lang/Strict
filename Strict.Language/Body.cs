@@ -34,7 +34,7 @@ public sealed class Body : Expression
 	public Method Method { get; private set; }
 	public int Tabs { get; }
 	public Body? Parent { get; private set; }
-	public readonly List<Body> children = new();
+	public List<Body> children { get; private set; } = new();
 	/// <summary>
 	/// If an Error is declared, remember the name of the constant variable declared to use as the
 	/// Error.Text itself. When showing the error it outputs clearly what went wrong where.
@@ -210,6 +210,17 @@ public sealed class Body : Expression
 	public sealed class ReturnAsLastExpressionIsNotNeeded(Body body) : ParsingFailed(body);
 	public List<Variable>? Variables { get; private set; }
 
+	/// <summary>
+	/// A body only parsed for its tests is parsed again fully, variables of the first parse must go.
+	/// </summary>
+	internal Body ClearVariables()
+	{
+		Variables?.Clear();
+		foreach (var child in children)
+			child.ClearVariables();
+		return this;
+	}
+
 	public Body AddVariable(string name, Expression value, bool isMutable, bool isImplicit = false)
 	{
 		if (name.IsKeyword())
@@ -332,18 +343,24 @@ public sealed class Body : Expression
 	/// children bodies to link to the new cloned method and not longer the original method.
 	/// Like the base from-method or generic method.
 	/// </summary>
-	public Body CloneAndUpdateMethod(Method newClonedMethod)
+	public Body CloneAndUpdateMethod(Method newClonedMethod) => CloneWithParent(newClonedMethod, Parent);
+
+	/// <summary>
+	/// Children and variables are copied, a shallow clone shared them with the original method and
+	/// parsing one left variables (e.g. for index) in the other.
+	/// </summary>
+	private Body CloneWithParent(Method newClonedMethod, Body? newParent)
 	{
 		var clone = (Body)MemberwiseClone();
-		clone.UpdateCurrentAndChildrenMethod(newClonedMethod);
-		return clone;
-	}
-
-	private void UpdateCurrentAndChildrenMethod(Method newClonedMethod)
-	{
-		Method = newClonedMethod;
+		clone.Method = newClonedMethod;
+		clone.Parent = newParent;
+		clone.Variables = Variables == null
+			? null
+			: [.. Variables];
+		clone.children = new List<Body>(children.Count);
 		foreach (var child in children)
-			child.UpdateCurrentAndChildrenMethod(newClonedMethod);
+			clone.children.Add(child.CloneWithParent(newClonedMethod, clone));
+		return clone;
 	}
 
 	public Body GetInnerBodyAndUpdateHierarchy(int currentLineNumber, Body child)

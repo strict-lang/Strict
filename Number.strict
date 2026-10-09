@@ -10,7 +10,7 @@ digits Numbers
 	123.digits is (1, 2, 3)
 	let nextPart = (value / 10).Floor
 	let currentDigit = value % 10
-	nextPart is 0 then currentDigit else nextPart.digits + currentDigit
+	nextPart is 0 then (currentDigit) else nextPart.digits + currentDigit
 to Character
 	5 to Character is "5"
 	constant canOnlyConvertSingleDigit = Error
@@ -20,12 +20,15 @@ Floor Number
 	1.Floor is 1
 	2.4.Floor is 2
 	(0 - 2.4).Floor is -3
-	value - (value % 1 + 1) % 1
+	0.1.Floor is 0
+	let fraction = value % 1
+	fraction < 0 then value - fraction - 1 else value - fraction
 Ceiling Number
 	1.Ceiling is 1
 	2.4.Ceiling is 3
 	(0 - 2.4).Ceiling is -2
-	value + (1 - value % 1) % 1
+	let fraction = value % 1
+	fraction > 0 then value - fraction + 1 else value - fraction
 Round Number
 	2.4.Round is 2
 	2.6.Round is 3

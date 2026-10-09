@@ -117,7 +117,10 @@ public partial class Interpreter
 				Statistics.MutableDeclarationCount++;
 			Statistics.MutableUsageCount++;
 		}
-		return ctx.Set(name, RunExpression(value, ctx));
+		var result = RunExpression(value, ctx);
+		return isDeclaration
+			? ctx.Variables[name] = result
+			: ctx.Set(name, result);
 	}
 
 	private ValueInstance EvaluateReturn(Return r, ExecutionContext ctx)

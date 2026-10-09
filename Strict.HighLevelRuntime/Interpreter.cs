@@ -125,6 +125,8 @@ public partial class Interpreter
 		ValueInstance[]? capturedMutableParameters = null)
 	{
 		Statistics.MethodCount++;
+		if (parentContext is { Depth: > MaxCallDepth })
+			throw new CallDepthExceeded(method, parentContext.Depth);
 		args = NormalizeArguments(method, args, parentContext);
 		ValidateInstanceAndArguments(method, instance, args, parentContext);
 		if (TryExecuteNativeFileConstructor(method, instance, args, parentContext,
@@ -447,6 +449,14 @@ public partial class Interpreter
 			_ => throw new ExpressionNotSupported(expr, context) //ncrunch: no coverage
 		};
 	}
+
+	/// <summary>
+	/// Endless recursion must fail with a Strict error, not crash the process with a stack overflow.
+	/// </summary>
+	private const int MaxCallDepth = 128;
+
+	public sealed class CallDepthExceeded(Method method, int depth) : InterpreterExecutionFailed(method,
+		"Call depth " + depth + " exceeded " + MaxCallDepth + ", endless recursion?");
 
 	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
 		: InterpreterExecutionFailed(context.Type, expr.GetType().Name); //ncrunch: no coverage

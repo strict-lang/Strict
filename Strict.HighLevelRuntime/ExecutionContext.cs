@@ -12,6 +12,7 @@ public sealed class ExecutionContext(Type type,
 	public Type Type { get; private set; } = type;
 	public Method Method { get; private set; } = method;
 	public ExecutionContext? Parent { get; private set; } = parent;
+	public int Depth { get; private set; } = (parent?.Depth ?? 0) + 1;
 	public ValueInstance? This { get; private set; } = thisInstance;
 	public bool IsTestAtCurrentLine { get; set; }
 	private Dictionary<string, ValueInstance>? variables;
@@ -30,23 +31,34 @@ public sealed class ExecutionContext(Type type,
 
 	public ValueInstance? Find(string name, Statistics statistics)
 	{
-		statistics.FindVariableCount++;
-		if (variables != null && variables.TryGetValue(name, out var v))
-			return v;
-		if (This == null)
-			return Parent?.Find(name, statistics);
+		for (var context = this; context != null; context = context.Parent)
+		{
+			statistics.FindVariableCount++;
+			if (context.variables != null && context.variables.TryGetValue(name, out var v))
+				return v;
+			if (context.This == null)
+				continue;
+			var memberValue = context.TryGetThisMemberValue(name);
+			if (memberValue.HasValue)
+				return memberValue;
+			if (name == Type.ValueLowercase)
+				return context.This;
+		}
+		return null;
+	}
+
+	private ValueInstance? TryGetThisMemberValue(string name)
+	{
 		var members = Type.Members;
 		for (var i = 0; i < members.Count; i++)
 			if (!members[i].IsConstant && members[i].Type.Name != Type.Iterator &&
 				members[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
-				var memberValue = TryGetMemberValue(This.Value, members[i]);
+				var memberValue = TryGetMemberValue(This!.Value, members[i]);
 				if (memberValue.HasValue)
 					return memberValue;
 			}
-		return name == Type.ValueLowercase
-			? This
-			: Parent?.Find(name, statistics);
+		return null;
 	}
 
 	private static ValueInstance? TryGetMemberValue(ValueInstance instance, Member member)
@@ -81,6 +93,7 @@ public sealed class ExecutionContext(Type type,
 		Method = newMethod;
 		This = instance;
 		Parent = newParent;
+		Depth = (newParent?.Depth ?? 0) + 1;
 		variables?.Clear();
 		disposableValues?.Clear();
 		ExitMethodAndReturnValue = null;

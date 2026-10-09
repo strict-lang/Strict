@@ -656,6 +656,27 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void EndlessMutableRecursionFailsInsteadOfCrashing()
+	{
+		using var t = CreateType(nameof(EndlessMutableRecursionFailsInsteadOfCrashing), "has logger",
+			"Endless(mutable numbers) Number", "\tnumbers.Length + Endless(numbers)");
+		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Endless"), interpreter.noneInstance,
+				[new ValueInstance(interpreter.listType.GetGenericImplementation(interpreter.numberType),
+					[new ValueInstance(interpreter.numberType, 1)])]),
+			Throws.InstanceOf<InterpreterExecutionFailed>());
+	}
+
+	[Test]
+	public void RecursiveDeclarationKeepsCallerVariable()
+	{
+		using var t = CreateType(nameof(RecursiveDeclarationKeepsCallerVariable), "has logger",
+			"Total(number Number) Number", "\tlet current = number", "\tif number is 0", "\t\treturn 0",
+			"\tTotal(number - 1) + current");
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Total"), interpreter.noneInstance,
+			[new ValueInstance(interpreter.numberType, 3)]).Number, Is.EqualTo(6));
+	}
+
+	[Test]
 	public void StackOverflowCallingYourselfWithSameInstanceMember()
 	{
 		using var t = CreateType(nameof(StackOverflowCallingYourselfWithSameInstanceMember),

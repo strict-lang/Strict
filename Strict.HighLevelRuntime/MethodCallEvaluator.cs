@@ -163,6 +163,8 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 					: throw new InterpreterExecutionFailed(ctx.Method,
 						InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
 							"Only + operator is supported for Text+Number, got: " + op));
+			if (op == BinaryOperator.Plus && left.IsText && right.TryGetValueTypeInstance() != null)
+				return new ValueInstance(left.Text + ConvertToTextWithOwnToMethod(right, ctx));
 			var leftList = ConvertToListValue(left);
 			var rightList = ConvertToListValue(right);
 			if (leftList.HasValue && rightList.HasValue)
@@ -219,6 +221,17 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 						BuildCoreTypeFallbackMessage(call, ctx, left, right)));
 			return ExecuteMethodCall(call, left, ctx); //ncrunch: no coverage
 		}
+	}
+
+	/// <summary>
+	/// Text + any typed value uses that type's own "to Text" when it has one.
+	/// </summary>
+	private string ConvertToTextWithOwnToMethod(ValueInstance value, ExecutionContext ctx)
+	{
+		foreach (var method in value.GetType().Methods)
+			if (method.Name == BinaryOperator.To && method.ReturnType.IsText)
+				return interpreter.Execute(method, value, [], ctx).Text;
+		return value.ToExpressionCodeString();
 	}
 
 	private static ValueInstance UnwrapValueMember(ValueInstance value)

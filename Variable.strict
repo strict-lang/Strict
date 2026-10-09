@@ -4,5 +4,5 @@ has InitialValue Generic or None
 has IsMutable = false
 has IsConstant = false
 to Text
-	Variable("count", Number) to Text is "count Number"
+	Variable("count", "Number" to Type) to Text is "count Strict.Number"
 	Name + " " + Type

@@ -52,6 +52,17 @@ Open (found while verifying): 5 Slow Strict.Transpiler tests (ExecuteOperation,
 GenerateFileReadProgram, LinkedListAnalyzer, ReduceButGrow, RemoveDuplicateWords) already failed
 before 2026-10-09 (expected C# output out of date with the converted Examples) → fix in Phase B.
 
+Phase B notes (2026-10-09): skipped base tests now run (Number, Expressions package, to Text,
+digits, Text.Split, Parser, ShuntingYard). Still skipped: generic List/Dictionary methods (need a
+concrete implementation to run, e.g. List.Length parsed for List(Generic) fails). Follow-ups found:
+- a bare type name as value (`Variable("count", Number)`) parses as `Number()`, needs type values;
+- a `constant` passed to a `mutable` parameter is mutated in place (AdjustBrightness test images),
+  the validator should reject it or the call should copy;
+- AdjustBrightness should clamp channels (Number.Clamp) but that adds calls to the hot loop and
+  breaks inlining tests, do it together with Phase C inlining work;
+- interpreter call depth is limited to 128 (thread-pool stacks overflow at ~60–200 nested Strict
+  calls), run interpreter work on threads with bigger stacks or make evaluation iterative (Phase C).
+
 Phase A result (2026-10-09): A1.1–A1.11 done except VM constraint checks (moved to Phase C), A1.4
 `Y`/`y` not reproducible, A1.5/A1.7/A1.9 no longer issues. A1.8 binaries are written atomically
 and a busy cache file no longer fails a run. A2 specific exception types in runtime/bytecode
