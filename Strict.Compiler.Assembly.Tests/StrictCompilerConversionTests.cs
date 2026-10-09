@@ -14,7 +14,7 @@ public sealed class StrictCompilerConversionTests
 		var path = GetCompilerPath();
 		foreach (var typeName in new[]
 			{
-				"Platform", "ToolInfo", "CompInstruction", "CompList", "AsmText", "InstrToAsm",
+				"Platform", "ToolInfo", "AsmText", "InstrToAsm",
 				"EntryPoint", "NasmFormat", "LinkerPlan", "InstructionsToNasm", "CompilerPipeline",
 				"ToolRunner", "NativeBuild"
 			})

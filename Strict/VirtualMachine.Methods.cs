@@ -30,7 +30,9 @@ public sealed partial class VirtualMachine
 				info.MethodName + "' with return type " + info.ReturnTypeName);
 		var childScope = InitializeChildScope();
 		var previousMethodContext = currentMethodContext;
+		var previousInstance = currentInstance;
 		currentMethodContext = info.TypeFullName + "." + info.MethodName;
+		currentInstance = evaluatedInstance;
 		InitializeMethodCallScope(info, evaluatedArgs, evaluatedInstance);
 		RunInstructions(invokeInstructions
 #if DEBUG
@@ -39,6 +41,7 @@ public sealed partial class VirtualMachine
 		);
 		var result = TryFlattenNestedIteratorList(info, Returns);
 		currentMethodContext = previousMethodContext;
+		currentInstance = previousInstance;
 		CleanupChildScope(childScope);
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
@@ -57,6 +60,8 @@ public sealed partial class VirtualMachine
 		var info = invoke.MethodInfo;
 		if (info.InstanceRegister.HasValue || info.MethodName == Method.From)
 			return null;
+		if (currentInstance.HasValue)
+			return currentInstance;
 		return Memory.Frame.TryGet(ValueSymbolId, out var implicitInstance)
 			? implicitInstance
 			: null;

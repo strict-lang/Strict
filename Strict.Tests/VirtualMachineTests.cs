@@ -650,6 +650,35 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void ListOfDynamicValuesInDeclaration()
+	{
+		var source = new[]
+		{
+			"has number", "Second Number", "\tlet pair = (number + 1, number + 2)", "\tpair(1)"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ListOfDynamicValuesInDeclaration), $"{nameof(ListOfDynamicValuesInDeclaration)}(5).Second",
+			source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.
+			Number, Is.EqualTo(7));
+	}
+
+	[Test]
+	public void AddingListsConcatenatesWithoutChangingLeftList()
+	{
+		var source = new[]
+		{
+			"has number", "Combined Number", "\tlet first = (number, number + 1)",
+			"\tlet both = first + (number + 2, number + 3)", "\tboth(3) + first.Length"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(AddingListsConcatenatesWithoutChangingLeftList),
+			$"{nameof(AddingListsConcatenatesWithoutChangingLeftList)}(5).Combined", source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.
+			Number, Is.EqualTo(10));
+	}
+
+	[Test]
 	public async Task LoopOverSizeIteratesWidthTimesHeight()
 	{
 		var parser = new MethodExpressionParser();

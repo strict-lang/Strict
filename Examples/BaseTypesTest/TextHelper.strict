@@ -1,5 +1,5 @@
-has value Text
+has text
 Greet Text
 	TextHelper("World").Greet is "Hello, World!"
 	TextHelper("Strict").Greet is "Hello, Strict!"
-	"Hello, " + value + "!"
+	"Hello, " + text + "!"

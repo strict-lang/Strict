@@ -1,23 +1,44 @@
-has ops CompList
+has instructions Bytecode/BytecodeInstructions
 has methodName Text
 has platform Number
 constant Extension = ".asm"
 Compile Text
 	InstructionsToNasm.SimpleAdd(Platform.Linux).Compile.StartsWith("section .data") is true
-	DataSection + MethodHeader + EmitAll(0, "") + "pop rbp\nret\n" + EntryPoint(methodName, platform).Build
+	DataSection + MethodHeader + Body + "pop rbp\nret\n" + EntryPoint(methodName, platform).Build
 DataSection Text
-	"const_3: dq 3.0" is in InstructionsToNasm.SimpleAdd(Platform.Linux).DataSection
-	"section .data\nconst_2: dq 2.0\nconst_3: dq 3.0\n\n"
+	"const_1: dq 3.0" is in InstructionsToNasm.SimpleAdd(Platform.Linux).DataSection
+	"var_sum: dq 0.0" is in InstructionsToNasm.SimpleAdd(Platform.Linux).DataSection
+	mutable data = "section .data\n"
+	for instructions
+		data = data + InstrToAsm(value, index).ConstantData
+	for VariableNames
+		data = data + "var_" + value + ": dq 0.0\n"
+	data + "\n"
+VariableNames Texts
+	InstructionsToNasm.SimpleAdd(Platform.Linux).VariableNames is ("sum")
+	mutable names = List(Mutable(Text))
+	for instructions
+		if IsNewVariable(value, names)
+			names.Add(value.label)
+	names
+IsNewVariable(instruction BytecodeInstruction, names Texts) Boolean
+	if instruction.typeName is in ("StoreConstantToVariable", "StoreRegisterToVariable")
+		return instruction.label is not in names
+	false
 MethodHeader Text
 	InstructionsToNasm.SimpleAdd(Platform.Linux).MethodHeader.StartsWith("section .text") is true
 	"section .text\nglobal " + methodName + "\n\n" + methodName + ":\npush rbp\nmov rbp, rsp\n"
-EmitAll(index Number, result Text) Text
-	InstructionsToNasm.SimpleAdd(Platform.Linux).EmitAll(3, "") is "movsd xmm0, xmm2\n"
-	if index >= ops.Count
-		return result
-	EmitAll(index + 1, result + InstrToAsm(ops.At(index)).Emit + "\n")
+Body Text
+	"addsd xmm2, xmm1" is in InstructionsToNasm.SimpleAdd(Platform.Linux).Body
+	mutable body = ""
+	for instructions
+		body = body + InstrToAsm(value, index).Emit + "\n"
+	body
 SimpleAdd(target Number) InstructionsToNasm
-	InstructionsToNasm.SimpleAdd(Platform.Windows).ops.Count is 4
-	InstructionsToNasm(CompList.SimpleAdd(target), "Run", target)
+	InstructionsToNasm.SimpleAdd(Platform.Windows).instructions.Length is 6
+	constant loads = (BytecodeInstruction.LoadConstant(0, 2), BytecodeInstruction.LoadConstant(1, 3))
+	constant add = BytecodeInstruction.BinaryOp(InstructionType.Add, 0, 1, 2)
+	constant store = (BytecodeInstruction.StoreRegister(2, "sum"), BytecodeInstruction.LoadVariable(3, "sum"))
+	InstructionsToNasm(loads + add + store + BytecodeInstruction.ReturnOp(3), "Run", target)
 to Text
 	"nasm"

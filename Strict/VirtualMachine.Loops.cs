@@ -318,14 +318,15 @@ public sealed partial class VirtualMachine
 	{
 		if (left.IsList)
 		{
-			left.List.Items.Add(right);
-			return left;
+			var items = new List<ValueInstance>(left.List.Items);
+			if (right.IsList && !left.List.ReturnType.GetFirstImplementation().IsList)
+				items.AddRange(right.List.Items);
+			else
+				items.Add(right);
+			return new ValueInstance(left.List.ReturnType, items.ToArray());
 		}
 		if (right.IsList)
-		{
-			right.List.Items.Add(left);
-			return right;
-		}
+			return new ValueInstance(right.List.ReturnType, [left, .. right.List.Items]);
 		if (left.IsText || right.IsText)
 			return new ValueInstance(ConvertToText(left).Text + ConvertToText(right).Text);
 		return new ValueInstance(right.GetType(), left.Number + right.Number);

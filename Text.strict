@@ -18,7 +18,8 @@ to Number
 in(text) Boolean
 	"hi" is not in "hello there"
 	"lo" is in "hello there"
-	for Length - text.Length
+	"re" is in "hello there"
+	for Length - text.Length + 1
 		StartsWith(text, index)
 Combine(texts Texts, separator = ", ") Text
 	Combine(("a", "b", "c")) is "a, b, c"
@@ -84,15 +85,17 @@ Capitalize Text
 IndexOf(text Text, startIndex = 0) Number
 	"hello".IndexOf("he") is 0
 	"hello".IndexOf("ll") is 2
+	"hello".IndexOf("lo") is 3
 	"hello".IndexOf("no") is -1
-	for Range(startIndex, Length - text.Length)
+	for Range(startIndex, Length - text.Length + 1)
 		if StartsWith(text, index)
 			return index
 	-1
 LastIndexOf(text Text) Number
 	"hello".LastIndexOf("l") is 3
 	"hello".LastIndexOf("x") is -1
-	for Range(0, Length - text.Length).Reverse
+	"hello".LastIndexOf("o") is 4
+	for Range(0, Length - text.Length + 1).Reverse
 		if StartsWith(text, index)
 			return index
 	-1

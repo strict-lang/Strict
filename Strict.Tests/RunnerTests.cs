@@ -38,6 +38,11 @@ public sealed class RunnerTests
 		Assert.That(standalone.Output, Does.Contain(expected));
 	}
 
+	[Test]
+	public void RelativeExecutableIsResolvedAgainstCurrentDirectory() =>
+		Assert.That(NativeProcessRunner.ResolveExecutable("Compiler/output/add.exe"),
+			Is.EqualTo(Path.GetFullPath("Compiler/output/add.exe")));
+
 	[TestCaseSource(nameof(StrictProgramPaths))]
 	[Category("Slow")]
 	public void RunStrictProgramFromSourceAndCachedBinaryInFreshProcess(string relativePath)
@@ -237,6 +242,14 @@ public sealed class RunnerTests
 	{
 		await new Runner(GetExamplesFilePath("FizzBuzz"), "FizzBuzz(15).Classify").Run();
 		Assert.That(consoleWriter.ToString(), Does.StartWith("FizzBuzz"));
+	}
+
+	[Test]
+	public async Task ImplicitCallInsideLoopUsesMethodInstanceInVirtualMachine()
+	{
+		await new Runner(Path.Combine(FindRepoRoot(), "Compiler", "InstrToAsm.strict"),
+			"InstrToAsm(BytecodeInstruction.ReturnOp(0), 0).FloatText(-3)").Run();
+		Assert.That(consoleWriter.ToString(), Does.StartWith("-3.0"));
 	}
 
 	[Test]

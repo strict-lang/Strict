@@ -52,13 +52,21 @@ public static class NativeProcessRunner
 			return new ProcessRunResult(127, "", "executable is empty");
 		try
 		{
-			return RunCaptured(executable, arguments, timeoutMs);
+			return RunCaptured(ResolveExecutable(executable), arguments, timeoutMs);
 		}
 		catch (Exception ex)
 		{
 			return new ProcessRunResult(1, "", ex.Message);
 		}
 	}
+
+	/// <summary>
+	/// Windows searches the application directory before the current one for relative paths.
+	/// </summary>
+	public static string ResolveExecutable(string executable) =>
+		Path.IsPathRooted(executable) || Path.GetFileName(executable) == executable
+			? executable
+			: Path.GetFullPath(executable);
 
 	private static ProcessRunResult RunCaptured(string executable, string arguments, int timeoutMs)
 	{

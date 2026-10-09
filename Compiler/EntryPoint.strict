@@ -10,11 +10,13 @@ Build Text
 WindowsMain Text
 	EntryPoint("Run", Platform.Windows).WindowsMain.StartsWith("\nextern ExitProcess") is true
 	constant top = "\nextern ExitProcess\n\nglobal main\n\nmain:\npush rbp\nmov rbp, rsp\nsub rsp, 32\ncall "
-	top + methodName + "\nxor rcx, rcx\ncall ExitProcess\nret"
+	top + methodName + "\ncvttsd2si rcx, xmm0\ncall ExitProcess\nret"
 LinuxStart Text
 	EntryPoint("Run", Platform.Linux).LinuxStart.StartsWith("\nglobal _start") is true
-	"\nglobal _start\n\n_start:\npush rbp\nmov rbp, rsp\ncall " + methodName + "\nmov rdi, 0\nmov rax, 60\nsyscall"
+	"cvttsd2si rdi, xmm0" is in EntryPoint("Run", Platform.Linux).LinuxStart
+	constant top = "\nglobal _start\n\n_start:\npush rbp\nmov rbp, rsp\ncall "
+	top + methodName + "\ncvttsd2si rdi, xmm0\nmov rax, 60\nsyscall"
 MacMain Text
 	EntryPoint("Run", Platform.MacOS).MacMain.StartsWith("\nglobal _main") is true
 	constant top = "\nglobal _main\n\n_main:\npush rbp\nmov rbp, rsp\ncall "
-	top + methodName + "\nxor rdi, rdi\nmov rax, 0x2000001\nsyscall"
+	top + methodName + "\ncvttsd2si rdi, xmm0\nmov rax, 0x2000001\nsyscall"

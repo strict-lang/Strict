@@ -1323,7 +1323,8 @@ public sealed class BinaryGenerator
 
 	private void GenerateForAssignmentOrDeclaration(Expression declarationOrAssignment, string name)
 	{
-		if (declarationOrAssignment is Value declarationOrAssignmentValue)
+		if (declarationOrAssignment is Value declarationOrAssignmentValue &&
+			(declarationOrAssignment is not List list || list.TryGetConstantData() != null))
 		{
 			TryGenerateInstructionsForAssignmentValue(declarationOrAssignmentValue, name);
 		}

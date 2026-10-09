@@ -1,5 +1,5 @@
 has logger
 Run
-	logger.Log(InstrToAsm(CompInstruction.LoadConstant(0, 5)).Emit)
-	logger.Log(InstrToAsm(CompInstruction.BinaryOp("Add", 0, 1, 2)).Emit)
-	logger.Log(InstrToAsm(CompInstruction.ReturnOp(2)).Emit)
+	logger.Log(InstrToAsm(BytecodeInstruction.LoadConstant(0, 5), 0).Emit)
+	logger.Log(InstrToAsm(BytecodeInstruction("Add", 0, 1, "2"), 2).Emit)
+	logger.Log(InstrToAsm(BytecodeInstruction.ReturnOp(2), 3).Emit)
