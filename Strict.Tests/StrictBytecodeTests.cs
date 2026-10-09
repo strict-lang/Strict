@@ -42,6 +42,12 @@ public sealed class StrictBytecodeTests
 	[TestCase("NativeLoop")]
 	[TestCase("Greeter")]
 	[TestCase("Fibonacci")]
+	[TestCase("AreaCalculator")]
+	[TestCase("SimpleCalculator")]
+	[TestCase("TemperatureConverter")]
+	[TestCase("GcdCalculator")]
+	[TestCase("FizzBuzz")]
+	[TestCase("AutofilledMutable")]
 	public async Task StrictCompiledExampleRunsLikeCSharp(string example)
 	{
 		var source = Root + "/Examples/" + example + Type.Extension;

@@ -14,7 +14,7 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 		return Literal(node, block)
 	if node.Kind is "Identifier"
 		return Variable(node, block)
-	if node.Kind is in ("Call", "Member", "MethodCall")
+	if (node.Kind is in ("Call", "Member", "MethodCall")) or (node.text is "to")
 		return Call(node, block)
 	let left = Expression(node.children(0), block)
 	let right = Expression(node.children(1), left)
@@ -23,7 +23,7 @@ Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Variable(SyntaxNode("Identifier", "a"), CodeBlock.Empty).instructions(0).texts is ("a")
 	Plain.Variable(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty).instructions(0).kind is InstructionType.Invoke
 	if (block.scope.TypeOf(node.text) is "") and Header(node.text).tokens.Length > 0
-		return Invoke(node, block, -1)
+		return Invoke(node, block, -1, TypeOf(node, block))
 	block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
 Literal(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Literal(SyntaxNode("Number", "7"), CodeBlock.Empty).instructions(0).payload is (0, 1, 7)
@@ -37,29 +37,31 @@ Literal(node SyntaxNode, block CodeBlock) CodeBlock
 Call(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Call(SyntaxNode("Call", "Greeter", SyntaxNode("Text", "\"a\"")), CodeBlock.Empty).Result is 1
 	Plain.Call(SyntaxNode("Member", "Greet", NoNode), CodeBlock.Empty).instructions(1).payload.Last is 0
+	Plain.Call(SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "Text"))), CodeBlock.Empty).Result is 1
 	if node.Kind is "Call"
-		return Invoke(node, block, -1)
+		return Invoke(node, block, -1, TypeOf(node, block))
 	let instance = Expression(node.children(0), block)
-	Invoke(node, instance, instance.Result)
-Invoke(node SyntaxNode, block CodeBlock, instance Number) CodeBlock
-	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1).instructions(0).texts.Last is "Strict/Text"
+	let target = node.Kind is "Binary" then SyntaxNode("Member", "to", node.children(0)) else node
+	Invoke(target, instance, instance.Result, TypeOf(node, block))
+Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeBlock
+	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1, "Text").instructions(0).texts.Last is "Strict/Text"
 	mutable result = block
 	mutable arguments = List(Mutable(Number))
 	for Range((instance < 0 then 0 else 1), node.children.Length)
 		result = Expression(node.children(value), result)
 		arguments.Add(result.Result)
 	let type = instance < 0 then TypeName else TypeOf(node.children(0), block)
-	result.Load(InstructionEntry.Invoke(result.register, Signature(node.text, type), arguments, instance))
-Signature(name Text, type Text) Texts
-	Plain.Signature("Greeter", "Greeter") is ("Strict/Examples/Greeter", "from", "Greeter", "text")
-	Plain.Signature("Greet", "Greeter") is ("Strict/Examples/Greeter", "Greet", "Strict/Text")
-	constant UnsupportedType = Error
+	let signature = Signature(node.text, type, returnType)
+	result.Load(InstructionEntry.Invoke(result.register, signature, arguments, instance))
+Signature(name Text, type Text, returnType Text) Texts
+	Plain.Signature("Greeter", "Greeter", "Greeter") is ("Strict/Examples/Greeter", "from", "Greeter", "text")
+	Plain.Signature("Greet", "Greeter", "Text") is ("Strict/Examples/Greeter", "Greet", "Strict/Text")
+	Plain.Signature("Length", "Text", "Number") is ("Strict/Text", "Length", "Strict/Number")
 	if type is not TypeName
-		return UnsupportedType
+		return (FullName(type), name, FullName(returnType))
 	if name is TypeName
 		return (fullName, "from", name) + shape.MemberScope.names
-	let header = Header(name)
-	(fullName, name, FullName(header.ReturnType)) + header.ParameterNames
+	(fullName, name, FullName(returnType)) + Header(name).ParameterNames
 Header(name Text) HeaderTokens
 	Plain.Header("Greet").ReturnType is "Text"
 	Plain.Header("Missing").tokens.Length is 0

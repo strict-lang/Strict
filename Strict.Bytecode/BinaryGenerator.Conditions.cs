@@ -198,10 +198,8 @@ public sealed partial class BinaryGenerator
 	{
 		var right = GenerateValueBinaryInstructions(binaryArgument,
 			GetInstructionBasedOnBinaryOperationName(binaryArgument.Method.Name));
-		var left = registry.AllocateRegister();
-		if (binaryExpression.Instance != null)
-			instructions.Add(new LoadVariableToRegister(left, binaryExpression.Instance.ToString()));
-		instructions.Add(new BinaryInstruction(operationInstruction, left, right,
+		GenerateInstructionFromExpression(binaryExpression.Instance!);
+		instructions.Add(new BinaryInstruction(operationInstruction, registry.PreviousRegister, right,
 			registry.AllocateRegister()));
 	}
 

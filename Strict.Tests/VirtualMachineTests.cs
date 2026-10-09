@@ -465,6 +465,15 @@ public sealed class VirtualMachineTests : TestBytecode
 					"\tnumber is 0 then Invalid else number"
 				])).Generate()).Execute().Returns!.Value.Number, Is.EqualTo(5));
 
+	[Test]
+	public void MethodCallLeftOfNestedBinaryIsInvoked() =>
+		Assert.That(
+			new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+				nameof(MethodCallLeftOfNestedBinaryIsInvoked),
+				nameof(MethodCallLeftOfNestedBinaryIsInvoked) + "(0).Scaled(8.5)",
+				["has number", "Scaled(other Number) Number", "\tother.Floor / 2 ^ 2"])).Generate()).
+				Execute().Returns!.Value.Number, Is.EqualTo(2));
+
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
 	{
 		var fromMethod = targetType.FindMethod(Method.From, []);
