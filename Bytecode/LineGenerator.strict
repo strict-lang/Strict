@@ -41,22 +41,30 @@ GenerateBodyLine(line Text, openId Text) GenerationResult
 		return GenerateLine(line.Trim)
 	if openId is ""
 		return GenerateLine(line)
-	LineGenerator(state.Append(BytecodeInstruction("JumpEnd", 0, 0, openId))).GenerateLine(line)
+	let blockEnd = BytecodeInstruction("JumpEnd", 0, 0, openId)
+	if line is "else"
+		return state.Append(BytecodeInstruction("Jump", 0, 0, openId + "End")).Append(blockEnd)
+	LineGenerator(state.Append(blockEnd)).GenerateLine(line)
 OpenIdAfter(line Text, openId Text, result GenerationResult) Text
 	OpenIdAfter("\treturn 1", "if0", GenerationResult.Empty) is "if0"
 	OpenIdAfter("2", "if0", GenerationResult.Empty) is ""
 	if line.StartsWith("if ")
 		return result.instructions(result.Count - 1).label
+	if line is "else"
+		return openId + "End"
 	line.StartsWith("\t") then openId else ""
 GenerateBody(lines Texts) GenerationResult
 	LineGenerator.Empty.GenerateBody("constant a = 2", "a * 3").LastRegister is 2
 	LineGenerator.Empty.GenerateBody("if 1 > 0", "\treturn 1", "2").instructions(6).typeName is "JumpEnd"
+	LineGenerator.Empty.GenerateBody("if 1 > 0", "\treturn 1", "else", "\treturn 2").Count is 11
 	mutable current = GenerationResult.Empty
 	mutable openId = ""
 	for lines
 		current = LineGenerator(current.WithRegistry(Registry.Empty)).GenerateBodyLine(value, openId)
 		openId = OpenIdAfter(value, openId, current)
-	openId is "" then current else current.Append(BytecodeInstruction("JumpEnd", 0, 0, openId))
+	if openId is ""
+		return current
+	current.Append(BytecodeInstruction("JumpEnd", 0, 0, openId))
 GenerateReturningBody(lines Texts) GenerationResult
 	LineGenerator.Empty.GenerateReturningBody("constant a = 2", "a * 3").Count is 5
 	LineGenerator.Empty.GenerateReturningBody(("return 7")).Count is 2

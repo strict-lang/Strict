@@ -20,18 +20,23 @@ EmitStoreOrOperation Text
 		return "movsd [rel var_" + instruction.label + "], " + Xmm(instruction.register)
 	EmitOperation
 EmitOperation Text
-	InstrToAsm(BytecodeInstruction("Jump", 0, 0, ""), 0).EmitOperation is "unknown Jump"
+	InstrToAsm(BytecodeInstruction("Invoke", 0, 0, ""), 0).EmitOperation is "unknown Invoke"
 	InstrToAsm(BytecodeInstruction("JumpEnd", 0, 0, "if3"), 0).EmitOperation is "label_if3:"
-	"je label_if3" is in InstrToAsm(BytecodeInstruction("JumpToIdIfFalse", 2, 0, "if3"), 0).EmitOperation
 	if instruction.IsCompare
 		return EmitCompare
-	if instruction.typeName is "JumpToIdIfFalse"
-		return "xorpd xmm15, xmm15\nucomisd " + Xmm(instruction.register) + ", xmm15\nje label_" + instruction.label
-	if instruction.typeName is "JumpEnd"
-		return "label_" + instruction.label + ":"
+	if instruction.typeName.StartsWith("Jump")
+		return EmitJump
 	if instruction.IsBinary
 		return EmitBinary
 	"unknown " + instruction.typeName
+EmitJump Text
+	"je label_if3" is in InstrToAsm(BytecodeInstruction("JumpToIdIfFalse", 2, 0, "if3"), 0).EmitJump
+	InstrToAsm(BytecodeInstruction("Jump", 0, 0, "if3End"), 0).EmitJump is "jmp label_if3End"
+	if instruction.typeName is "JumpToIdIfFalse"
+		return "xorpd xmm15, xmm15\nucomisd " + Xmm(instruction.register) + ", xmm15\nje label_" + instruction.label
+	if instruction.typeName is "Jump"
+		return "jmp label_" + instruction.label
+	"label_" + instruction.label + ":"
 EmitCompare Text
 	"setb al" is in InstrToAsm(BytecodeInstruction("LessThan", 0, 1, "2"), 0).EmitCompare
 	let compare = "xor eax, eax\nucomisd " + Xmm(instruction.register) + ", " + Xmm(instruction.amount)

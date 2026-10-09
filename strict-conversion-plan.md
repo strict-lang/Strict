@@ -15,7 +15,10 @@ written in Strict, and what C# features are still missing from the Strict runtim
 ## Native if blocks — 2026-10-09 (late night, part 3)
 
 - LineGenerator: `if` emits the condition + `JumpToIdIfFalse ifN`, the block end emits `JumpEnd ifN`
-  (id based, so optimizers removing instructions keep jumps valid; one nesting level, no else yet).
+  (id based, so optimizers removing instructions keep jumps valid; one nesting level). `else`
+  emits `Jump ifNEnd` + `JumpEnd ifN` and closes with `JumpEnd ifNEnd` (NASM `jmp`).
+- Open bug: the interpreter returned None for `openId is "" then current else current.Append(..)`
+  in LineGenerator.GenerateBody (rewritten as if/return); needs a minimal repro and root fix.
 - NASM: comparisons produce 1.0/0.0 via ucomisd + setcc, `JumpToIdIfFalse` tests against zero,
   `JumpEnd` is a label, every `Return` emits its own `ret`. UnreachableCode keeps code after a
   `JumpEnd`. `Examples/NativeConditions` compiles natively and returns 30 (1 with limit 3).
