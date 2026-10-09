@@ -108,12 +108,26 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 		return -1;
 	}
 
+	private static string? GetReadIdentifier(Instruction instruction) =>
+		instruction switch
+		{
+			LoadVariableToRegister load => load.Identifier,
+			ListCallInstruction listCall => listCall.Identifier,
+			WriteToListInstruction writeToList => writeToList.Identifier,
+			WriteToTableInstruction writeToTable => writeToTable.Identifier,
+			RemoveInstruction remove => remove.Identifier,
+			_ => null
+		};
+
 	private static HashSet<string> CollectLoadedVariables(List<Instruction> instructions)
 	{
 		var loaded = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var instruction in instructions)
-			if (instruction.InstructionType == InstructionType.LoadVariableToRegister)
-				loaded.Add(((LoadVariableToRegister)instruction).Identifier);
+			if (GetReadIdentifier(instruction) is { } identifier)
+			{
+				loaded.Add(identifier);
+				loaded.Add(identifier.Split('.', '(')[0]);
+			}
 		return loaded;
 	}
 }

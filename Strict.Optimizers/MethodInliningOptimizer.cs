@@ -140,8 +140,9 @@ public sealed class MethodInliningOptimizer : InstructionOptimizer
 					return false;
 				}
 				break;
-			case ListCallInstruction listCall when UsesParameterAccessPath(compiledMethod,
-				listCall.Identifier):
+			case ListCallInstruction listCall when
+				TryGetParameterIndex(compiledMethod, listCall.Identifier, out _) ||
+				UsesParameterAccessPath(compiledMethod, listCall.Identifier):
 				return false;
 			}
 		return true;

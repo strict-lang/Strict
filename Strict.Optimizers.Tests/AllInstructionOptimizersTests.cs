@@ -171,6 +171,21 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(5));
 	}
 
+	[Test]
+	public void InliningSkipsCalleeIndexingItsListParameter()
+	{
+		var binary = GenerateBinary("IndexedListParameter",
+			// @formatter:off
+			"has number",
+			"Run Number",
+			"	Second((number, 7))",
+			"Second(numbers Numbers) Number",
+			"	numbers(1)");
+		// @formatter:on
+		new AllInstructionOptimizers().Optimize(binary);
+		Assert.That(new VirtualMachine(binary).Execute().Returns!.Value.Number, Is.EqualTo(7));
+	}
+
 	internal BinaryExecutable CreateLoopInliningBinary() =>
 		GenerateBinary("LoopInlining",
 		// @formatter:off

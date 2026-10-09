@@ -5,6 +5,16 @@ namespace Strict.Optimizers.Tests;
 public sealed class DeadStoreEliminatorTests : TestOptimizers
 {
 	[Test]
+	public void StoreReadByListCallIsKept() =>
+		Optimize(new DeadStoreEliminator(), [
+			new LoadVariableToRegister(Register.R0, "text"),
+			new StoreFromRegisterInstruction(Register.R0, "tokens"),
+			new LoadConstantInstruction(Register.R1, Num(0)),
+			new ListCallInstruction(Register.R2, Register.R1, "tokens"),
+			new ReturnInstruction(Register.R2)
+		], 5);
+
+	[Test]
 	public void RemoveUnusedVariable() =>
 		Assert.That(((StoreVariableInstruction)Optimize([
 			new StoreVariableInstruction(Num(5), "unused"),
