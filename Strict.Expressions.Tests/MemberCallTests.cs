@@ -10,6 +10,11 @@ public sealed class MemberCallTests : TestExpressions
 			Is.EqualTo("Type(\"Hello\", \"TestPackage\").Name"));
 
 	[Test]
+	public void DotAndBracketInsideTextArgumentAreNotMemberSeparators() =>
+		Assert.That(ParseExpression("Type(\"Hello.)\").Name").ToString(),
+			Is.EqualTo("Type(\"Hello.)\", \"TestPackage\").Name"));
+
+	[Test]
 	public void UnknownMember() =>
 		Assert.That(() => ParseExpression("unknown"), Throws.InstanceOf<Body.IdentifierNotFound>());
 

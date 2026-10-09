@@ -28,9 +28,16 @@ public ref struct RangeEnumerator
 		if (IsAtEnd)
 			return false;
 		var bracketCount = 0;
+		var isInText = false;
 		for (var index = offset; index < input.Length; index++)
 		{
 			var current = input[index];
+			if (isInText && current == '\\')
+				index++;
+			else if (current == '"')
+				isInText = !isInText;
+			if (isInText)
+				continue;
 			if (current == '(')
 				bracketCount++;
 			else if (current == ')')
