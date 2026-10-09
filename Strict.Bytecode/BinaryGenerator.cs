@@ -288,6 +288,10 @@ public sealed partial class BinaryGenerator
 		case Body body:
 			GenerateInstructions(body.Expressions);
 			return;
+		case Binary { Method.Name: BinaryOperator.And or BinaryOperator.Or, ReturnType.IsBoolean: true }
+			logical:
+			GenerateShortCircuit(logical);
+			break;
 		case Binary binaryExpression:
 			if (TryGenerateNumberComparisonValue(binaryExpression))
 				break;

@@ -649,6 +649,21 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void AndSkipsRightSideWhenLeftIsFalse()
+	{
+		var source = new[]
+		{
+			"has numbers", "Has(position Number) Boolean",
+			"	position < numbers.Length and (numbers(position) is 1)"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(AndSkipsRightSideWhenLeftIsFalse),
+			$"{nameof(AndSkipsRightSideWhenLeftIsFalse)}((1, 2)).Has(5)", source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Boolean,
+			Is.False);
+	}
+
+	[Test]
 	public void TextIndexOfUsesStartIndex()
 	{
 		var source = new[] { "has letters Text", "SecondQuote Number", "	letters.IndexOf(\"a\", 1)" };

@@ -203,6 +203,29 @@ public sealed partial class BinaryGenerator
 		}
 	}
 
+	/// <summary>
+	/// Like the interpreter, "and" skips its right side when the left is false, "or" when it is true.
+	/// </summary>
+	private void GenerateShortCircuit(Binary logical)
+	{
+		var resultName = "logical" + conditionalId;
+		GenerateInstructionFromExpression(logical.Instance!);
+		var leftRegister = registry.PreviousRegister;
+		instructions.Add(new StoreFromRegisterInstruction(leftRegister, resultName));
+		instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
+			new ValueInstance(logical.ReturnType, true)));
+		instructions.Add(new BinaryInstruction(InstructionType.Equal, leftRegister,
+			registry.PreviousRegister));
+		var skipId = conditionalId++;
+		instructions.Add(new JumpToId(skipId, logical.Method.Name == BinaryOperator.And
+			? InstructionType.JumpToIdIfFalse
+			: InstructionType.JumpToIdIfTrue));
+		GenerateInstructionFromExpression(logical.Arguments[0]);
+		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, resultName));
+		instructions.Add(new JumpToId(skipId, InstructionType.JumpEnd));
+		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), resultName));
+	}
+
 	private void GenerateForBooleanCallIfCondition(Expression condition)
 	{
 		GenerateInstructionFromExpression(condition);
