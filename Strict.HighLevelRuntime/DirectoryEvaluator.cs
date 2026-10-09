@@ -30,6 +30,9 @@ internal sealed class DirectoryEvaluator(Interpreter interpreter)
 					? pattern
 					: ""));
 			return true;
+		case "Directories":
+			result = interpreter.CreateTexts(method, NativeDirectory.GetDirectories(path));
+			return true;
 		default:
 			return false;
 		}

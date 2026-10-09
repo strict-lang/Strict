@@ -7,3 +7,14 @@ Run(path)
 LoadCount(path) Number
 	LoadCount(Path("Examples/BaseTypesTest")) is 3
 	Package.Load(path).Types.Length
+ChildCount(path) Number
+	ChildCount(Path("Examples")) > 0 is true
+	ChildCount(Path("Examples/BaseTypesTest")) is 0
+	Package.Load(path).Children.Length
+HasType(path, typeName Text) Boolean
+	HasType(Path("Examples"), "TextHelper") is true
+	HasType(Path("Examples"), "Unknown") is false
+	Package.Load(path).HasType(typeName)
+FoundLineCount(path, typeName Text) Number
+	FoundLineCount(Path("Examples"), "TextHelper") is 5
+	Package.Load(path).FindType(typeName).Lines.Length

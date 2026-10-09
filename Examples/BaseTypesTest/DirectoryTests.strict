@@ -8,5 +8,8 @@ Exists(path) Boolean
 Files(path) Texts
 	Files(Path(".")).Length > 0 is true
 	Directory.Files(path)
+Directories(path) Texts
+	Directories(Path("..")).Length > 0 is true
+	Directory.Directories(path)
 Create(path)
 	Directory.Create(path)

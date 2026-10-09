@@ -22,4 +22,9 @@ public static class NativeDirectory
 			? Directory.GetFiles(path)
 			: Directory.GetFiles(path, pattern);
 	}
+
+	public static string[] GetDirectories(string path) =>
+		Directory.Exists(path)
+			? Directory.GetDirectories(path)
+			: [];
 }

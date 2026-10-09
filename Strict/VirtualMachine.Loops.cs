@@ -99,12 +99,13 @@ public sealed partial class VirtualMachine
 				: loopBegin.SavedIndexValue, false, Type.OuterLowercase + "." + Type.IndexLowercase);
 		}
 		AlterValueVariable(iterableVariable, loopBegin);
-		AssignCustomLoopVariables(loopBegin, frame.Get(ValueSymbolId));
 		if (loopBegin.LoopCount <= 0)
 		{
 			RestoreLoopState(loopBegin, frame);
 			SkipLoopBody();
 		}
+		else
+			AssignCustomLoopVariables(loopBegin, frame.Get(ValueSymbolId));
 	}
 
 	private void ProcessRangeLoopIteration(LoopBeginInstruction loopBegin)

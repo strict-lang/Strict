@@ -3,11 +3,30 @@ has Children Packages
 has Types
 Load(path) Package
 	let packageName = path.FileName.text to Name
-	let types = ReadTypes(path)
-	Package(packageName, Packages, types)
+	Package(packageName, ReadChildren(path), ReadTypes(path))
+ReadChildren(path) Packages
+	for Directory.Directories(path)
+		if Directory.Files(Path(value), "*.strict").Length > 0
+			Load(Path(value))
 ReadTypes(path) Types
 	for Directory.Files(path, "*.strict")
 		ReadType(Path(value))
 ReadType(path) Type
 	let file = File(path)
 	Type(path.FileName.RemoveExtension.text, file.ReadLines)
+HasType(typeName Text) Boolean
+	for Types
+		if value.Name is typeName
+			return true
+	for Children
+		if value.HasType(typeName)
+			return true
+	false
+FindType(typeName Text) Type
+	for Types
+		if value.Name is typeName
+			return value
+	for Children
+		if value.HasType(typeName)
+			return value.FindType(typeName)
+	Error("Type " + typeName + " not found in package " + Name)

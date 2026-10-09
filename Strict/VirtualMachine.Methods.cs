@@ -371,6 +371,12 @@ public sealed partial class VirtualMachine
 				CreateTextListValue(NativeDirectory.GetFiles(path, pattern));
 			return true;
 		}
+		if (info.MethodName == "Directories" && info.ArgumentRegisters.Length == 1)
+		{
+			Memory.Registers[invoke.Register] = CreateTextListValue(
+				NativeDirectory.GetDirectories(GetArgumentText(Memory.Registers[info.ArgumentRegisters[0]])));
+			return true;
+		}
 		return false;
 	}
 

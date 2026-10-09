@@ -635,6 +635,21 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void LoopOverEmptyListSkipsBody()
+	{
+		var source = new[]
+		{
+			"has number", "Mapped Texts", "	constant none = List(Text)", "	for none",
+			"		value + number"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(LoopOverEmptyListSkipsBody), $"{nameof(LoopOverEmptyListSkipsBody)}(1).Mapped",
+			source)).Generate();
+		var result = new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value;
+		Assert.That(result.List.Count, Is.EqualTo(0));
+	}
+
+	[Test]
 	public async Task LoopOverSizeIteratesWidthTimesHeight()
 	{
 		var parser = new MethodExpressionParser();
