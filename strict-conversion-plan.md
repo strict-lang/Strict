@@ -291,7 +291,15 @@ computed elements (`(Range(0, 1), Range(1, 3))`) were read as constant data (new
 like the C# NameTable. Error quality gaps seen: VM errors show only the innermost Strict frame,
 codegen errors in Strict (Error values) silently become garbage bytes, and the C# generator
 inlines whole constant trees (`ValueCodegen.Plain`) until it runs out of 64 registers.
-Next: generic List(T) method linking, list literals and else, then the remaining 4 Examples.
+Then: constant list literals, empty `List(T)` construction, `list.Add(x)` as WriteToList, a
+trailing `for` in a Number/Text method sums its values (`forResult`, like C#), and the linker
+instantiates generic base types (`Strict/List(Number)` from List.strict with Generic → Number).
+All 19 runnable Examples compiled by Strict now give the same output and return value on the C#
+VM as the C# compiled binaries (Slow `StrictCompiledExampleRunsLikeCSharp`, Sum with program
+numbers). C# fix on the way: a member constant like `BodyParser(..).Block(1, 1)` was typed by its
+first call (BodyParser) instead of the whole expression.
+Next for D3: else/else if, source lines in instructions, loud codegen errors (Error values),
+compiling non-example packages (the Strict compiler itself) and comparing with the C# output.
 Flaky once in a full parallel solution run (passes alone and in reruns):
 `InterpreterTests.ParserParsesExistingTextStrictFile` and
 `LoadStrictExamplesPackageAndUseBasePackageTypes`, likely package files changing while

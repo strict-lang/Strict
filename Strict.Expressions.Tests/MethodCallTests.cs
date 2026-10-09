@@ -267,16 +267,19 @@ public sealed class MethodCallTests : TestExpressions
 	{
 		using var maker = new Type(TestPackage.Instance,
 				new TypeLines("ConstantMaker", "has text", "Make(input Text) ConstantMaker",
-					"\tConstantMaker.Make(\"a\").text is \"a\"", "\tConstantMaker(input)")).
+					"\tConstantMaker.Make(\"a\").text is \"a\"", "\tConstantMaker(input)",
+					"Size(extra Number) Number", "\ttext.Length + extra")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		using var user = new Type(TestPackage.Instance,
 				new TypeLines(nameof(ConstantMemberCallsMethodOfOtherType), "has maker ConstantMaker",
 					"constant Made = ConstantMemberCallsMethodOfOtherType(ConstantMaker.Make(\"Hi\"))",
-					"constant Direct = ConstantMaker.Make(\"Hi\")", "Get Text", "\tmaker.text")).
+					"constant Direct = ConstantMaker.Make(\"Hi\")",
+					"constant Chained = ConstantMaker(\"Hi\").Size(1)", "Get Text", "\tmaker.text")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(user.Members[1].InitialValue!.ToString(),
 			Is.EqualTo("ConstantMemberCallsMethodOfOtherType(ConstantMaker.Make(\"Hi\"))"));
 		Assert.That(user.Members[2].Type, Is.EqualTo(maker));
+		Assert.That(user.Members[3].Type.Name, Is.EqualTo(Type.Number));
 	}
 
 	[Test]
