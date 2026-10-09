@@ -12,6 +12,132 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
+## Roadmap — remaining work (2026-10-09)
+
+Phases: A stabilize, B clean C#, C performance, D self-hosting, E usability, F hardening.
+Order: A → B → C1–C4 → D1–D3 → C5–C7 → D4–D6 → E → D7 → F.
+
+### Phase A — Stabilize what exists (≈3 sessions)
+A1 Open bugs found so far, each with one regression test:
+1. Interpreter returns None for `cond then x else obj.Method(Type(...))` (seen in
+   LineGenerator.GenerateBody); minimal repro in InterpreterTests, fix HLR conditional evaluation.
+2. Printer emits `(a is b) and c is in (...)` which the parser rejects; `a is b and c is d` silently
+   parses as `a is (b and c) is d`. Fix printer/parser to agree; add validator error
+   `AmbiguousComparisonPrecedence` for unbracketed mixes.
+3. `Examples/Parsing/*`, `Examples/CompactTypeTest/*` fail standalone (MethodRequiresTest,
+   ValueTypeNotMatchingWithAssignmentType, UseConstantHere); fix and include subfolders in
+   `StrictProgramPaths`.
+4. Source vs binary mismatch `holder.WithName("y").Name` ("Y" vs "y": member `Name` vs type Name).
+5. Interpreter `for MethodCall / list.Add(value)` copy returned 0 (seen in TypeValidator.Validate).
+6. `Range` loops only define `index`; `value` silently becomes the instance → validator error
+   `ValueIsNotDefinedInRangeLoop`.
+7. Single-element list double brackets vs validator (fixed for calls; verify for constructors).
+8. Flaky `NativeImageLoadProcessSavePipeline` first run after build (shared output paths) → unique
+   output dirs per test.
+9. Cache: include OS/runtime build in binary cache validity (Platform.Current is folded as constant).
+10. VM `list + element` now copies: verify no regressions in Mutable list semantics (List.Add uses
+    `value = value + element`), add test for `mutable list` growing in a loop on VM + interpreter.
+A2 Error quality: every failure path uses `ParsingFailed` / `InterpreterExecutionFailed` /
+   `RuntimeError` with clickable `file:line` stack traces back to `.strict` source; remove remaining
+   `NotSupportedException` / `InvalidOperationException` throws (AGENTS rule). One test per type.
+A3 Determinism: binaries byte-identical for same input (sorted type/method order), so caches and
+   differential tests are stable.
+
+### Phase B — C# code cleanup (≈4 sessions, before porting so we port clean code)
+Porting messy C# to Strict multiplies the mess; clean first, then mirror.
+B1 Split files >500 lines per AGENTS (2x Limit rule), keeping high-level flow in the main file:
+   - `BinaryGenerator.cs` → generator core + `ExpressionCodegen`, `LoopCodegen`, `ConditionCodegen`,
+     `ListCodegen` (similar to Executor split rule).
+   - `VirtualMachine.Methods.cs` → invoke core + `NativeTextMethods`, `NativeProcessMethods`,
+     `NativeDirectoryMethods`, `NativeFileMethods` (one table-driven dispatcher instead of
+     `MethodName ==` chains; interpreter reuses the same native table → one implementation of
+     Directory/Process/Text natives instead of two).
+   - `Interpreter.cs`, `MethodCallEvaluator.cs`, `Type.cs`, `TypeParser.cs`,
+     `MethodExpressionParser.cs`, `ValueInstance.cs`, `BinaryExecutable.cs`.
+B2 Remove special cases: `TestInterpreter.ShouldSkipKnownDummyBaseType/Method`,
+   `Interpreter.ShouldSkipKnownStrictBaseMethodValidation`, VM "historical" Boolean native hacks,
+   `IsFakeBodyForMemberInitialization`, text-based heuristics (`Body` value piping substring check,
+   `TypeValidator` double-bracket line scan, `Method` IsTestExpression line checks) → AST based.
+B3 Resolve the 73 TODOs (fix or delete with reason), review the 413 `ncrunch: no coverage`
+   markers: either cover with a test or delete the dead code. Delete unused methods
+   (`//TODO: unused again?` in BinaryGenerator etc.).
+B4 Duplicate code: one `Registry`, one operator table, one platform/tool table shared by
+   Compiler.Assembly, LlvmLinker, MlirLinker, NativeExecutableLinker; one cache-validity helper.
+B5 Strict code cleanup (current `.strict` packages): delete demo-only types that duplicate tests
+   (`*Demo.strict`, `*Tests.strict` that only log) once real inline tests cover them; consistent
+   naming (no `C#`-style getters), every method with tests (MethodRequiresTest), apply the static-like
+   type guide everywhere.
+Verification: all suites green, file size report (no C# file >500 lines), TODO count 0 or justified.
+
+### Phase C — Performance (≈5 sessions, measured before/after, numbers go into the plan file)
+Baseline first: a `Benchmarks` Slow test set (BenchmarkDotNet already referenced) recording
+parse time/package, test-run time, bytecode gen, optimize, VM run, allocations, exe size.
+C1 Allocation budget (`RunAdjustBrightness` failing): allocation profiling of ValueInstance,
+   CallFrame, list copies; flat float32/double backing for numeric-only types (AGENTS VM collection
+   rules), preallocated register arrays, remove string/dictionary frame lookups (CallFrame symbol
+   ids everywhere, no FrameKey fallbacks). Goal: test green with margin.
+C2 VM hot paths: table dispatch instead of `switch` on method names, cached method instruction
+   lookup (`GetPrecompiledMethodInstructions` tries 5 lookups per call), no per-call frame
+   allocation (pool exists, verify), loop state without dictionaries (`SavedCustomValues`).
+C3 Lists: copy-on-write or in-place `Mutable(List)` Add so Strict loops building lists are O(n)
+   (now `list + x` copies → O(n²), visible in all Strict packages).
+C4 Parser/loader: `FindTypeCount = 1069` for a tiny demo → cache by name per Context, avoid
+   regex scans for dependency detection per file, parallel package loading (package level only,
+   per AGENTS), lazy method body parsing kept.
+C5 Interpreter (inline tests): avoid re-running tests for already validated methods across runs
+   (cache test results keyed by source hash), faster value equality.
+C6 Native output: register allocation (no spilling bugs beyond xmm14), keep values in registers
+   across lines, constant data dedup, measured exe size/speed vs C# `InstructionsToAssembly`.
+C7 Strict-on-Strict speed (needed for self-hosting): time to run the Strict parser over the whole
+   repo and SourceCompiler on all Examples; target seconds, not minutes (Strict goal: millions of
+   lines evaluated in real time).
+Verification: each item shows measured improvement (AGENTS: real numbers, not flag changes).
+
+### Phase D — Self-hosting milestones (≈15–25 sessions)
+D1 Real front end in Strict (Language + Expressions): full Type/Member/Method model, Package/Context
+   lookup (parent + children, generics, plural types, traits), tokenizer + shunting-yard producing an
+   expression tree (Number, Text, Boolean, List, Dictionary, MemberCall, MethodCall, ListCall, Binary,
+   Not, To, If/then-else, For, Return, Declaration, MutableReassignment, Variable/Parameter calls,
+   value/index/outer) and canonical `ToString` round trip. Differential Slow test: Strict parser
+   output == C# parser output for every `.strict` file.
+D2 Validators in Strict over the tree (TypeValidator, ConstantCollapser). Differential test:
+   same diagnostics as C#.
+D3 Bytecode generation from the tree (mirror cleaned BinaryGenerator): Invoke with params/instance,
+   fields, constructors, lists, text, nested blocks (label ids), for over lists, return types;
+   `.strictbinary` writing via `BytesWriter.strict` (stored zip first). Differential test:
+   Strict-generated binaries run in C# VM with identical output for all Examples.
+D4 Optimizer parity: CompactType, MethodInlining, ConstructorToFieldMutations,
+   LoopInvariantCodeMotion, JumpThreading over labels, RedundantLoad with register remap
+   (like `Strict.Optimizers/RedundantLoadEliminator.cs`). Measured reduction per example vs C#.
+D5 VM in Strict (Runtime/): full instruction set, frames, loops, lists, text, natives via host hooks.
+   Differential test: same output as C# VM for all Examples.
+D6 Native compiler for the full subset: calling convention + stack frames, Run(numbers) from argv,
+   lists, text + printing, Linux/macOS/Windows entry points verified in CI.
+D7 Bootstrap: Strict compiler compiles all packages (equal to C# output); Runner stages switch one
+   at a time to Strict (parse → validate → test → bytecode → optimize → run), C# stage deleted once
+   its differential test is green; finally the Strict compiler compiles itself natively and the
+   produced exe compiles Examples (stage-2 bootstrap). Dashboard "C# replaced" tracked per phase.
+
+### Phase E — Usability and product quality (≈4 sessions)
+E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
+   `-Windows/-Linux/-MacOS`, diagnostics flag shows stage times + instruction reduction.
+E2 Errors: human-readable messages (AGENTS error guidelines), suggestions for common mistakes
+   (double brackets, `value` in Range loops, precedence), source excerpts with caret.
+E3 Docs: README sections for language rules discovered here (Range loops use `index`, `is`
+   precedence, cross-package `Package/Type` references only in declarations, no static-like types),
+   updated conversion guide, examples for native compilation.
+E4 Tooling: LanguageServer diagnostics use the same validators; VS Code extension smoke test;
+   `strict check` used by CI.
+E5 CI: Windows + Linux runs of all suites incl. Slow and native compile tests; nightly benchmarks
+   with regression thresholds (fail on >10% slowdown or allocation growth).
+
+### Phase F — Hardening (continuous, ≈2 sessions final pass)
+- Fuzz the parser with mutated `.strict` files (no crashes, only ParsingFailed).
+- Thread safety of Repositories/package cache under parallel tests (AGENTS multithreading rules).
+- Memory/time limits in VM (stack overflow detection, step limits) with clear RuntimeErrors.
+- Binary format versioning + compatibility tests (old cache → clean regenerate).
+
+
 ## Native loops — 2026-10-09 (late night, part 4)
 
 - LineGenerator handles `mutable` declarations, plain reassignments and `for N` loops (`index`
