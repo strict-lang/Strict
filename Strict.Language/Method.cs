@@ -11,13 +11,14 @@ namespace Strict.Language;
 /// Methods are parsed lazily, which speeds up type and package parsing enormously and
 /// also provides us with all methods in a type usable in any other method if needed.
 /// </summary>
-public sealed class Method : Context
+public sealed partial class Method : Context
 {
 #if DEBUG
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines,
 		[CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = "") : base(type, GetName(lines[0]), callerFilePath,
 		callerLineNumber, callerMemberName)
+
 #else
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines)
 		: base(type, GetName(lines[0]))
@@ -76,9 +77,13 @@ public sealed class Method : Context
 	}
 
 	public int TypeLineNumber { get; }
+
 	public ExpressionParser Parser { get; }
+
 	internal readonly IReadOnlyList<string> lines;
+
 	private readonly Body? methodBody;
+
 	public bool WasParsedAlready => methodBody is { Expressions.Count: > 0 };
 
 	private Type ParseReturnType(Context type, string returnTypeText)
@@ -114,81 +119,6 @@ public sealed class Method : Context
 		headerLine.Contains(Type.GenericLowercase, StringComparison.Ordinal);
 
 	public bool IsGeneric { get; }
-
-	private void ParseParameters(Type type, ReadOnlySpan<char> parametersSpan)
-	{
-		foreach (var nameAndType in SplitParameters(parametersSpan))
-		{
-			if (char.IsUpper(nameAndType[0]))
-				throw new ParametersMustStartWithLowerCase(this, nameAndType.ToString());
-			var nameAndTypeAsString = nameAndType.ToString();
-			if (IsParameterTypeAny(nameAndTypeAsString))
-				throw new ParametersWithTypeAnyIsNotAllowed(this, nameAndTypeAsString);
-			parameters.Add(nameAndTypeAsString.Contains('=')
-				? GetParameterByExtractingNameAndDefaultValue(type, nameAndTypeAsString, Parser)
-				: new Parameter(type, nameAndTypeAsString));
-		}
-		if (parameters.Count > Limit.ParameterCount)
-			throw new MethodParameterCountMustNotExceedLimit(this, TypeLineNumber + methodLineNumber - 1);
-	}
-
-	private static SpanSplitEnumerator SplitParameters(ReadOnlySpan<char> parametersSpan) =>
-		parametersSpan.Contains('(') && (!parametersSpan.Contains(',') ||
-			IsCommaInsideBrackets(parametersSpan, parametersSpan.IndexOf(',')))
-			? new SpanSplitEnumerator(parametersSpan, char.MaxValue, StringSplitOptions.None)
-			: parametersSpan.Split(',', StringSplitOptions.TrimEntries);
-
-	private static bool IsCommaInsideBrackets(ReadOnlySpan<char> parametersSpan, int commaIndex) =>
-		parametersSpan.IndexOf(')') > commaIndex && parametersSpan.LastIndexOf('(') < commaIndex;
-
-	public sealed class ParametersMustStartWithLowerCase(Method method, string message)
-		: ParsingFailed(method.Type, 0, message, method.Name);
-
-	private static bool IsParameterTypeAny(string nameAndTypeString) =>
-		nameAndTypeString == Type.AnyLowercase || nameAndTypeString.Contains(" " + Type.Any);
-
-	public sealed class ParametersWithTypeAnyIsNotAllowed(Method method, string name)
-		: ParsingFailed(method.Type, 0, name);
-
-	private Parameter GetParameterByExtractingNameAndDefaultValue(Type type,
-		string nameAndTypeAsString, ExpressionParser parser)
-	{
-		var nameAndDefaultValue = nameAndTypeAsString.Split(" = ");
-		if (nameAndDefaultValue.Length < 2)
-			throw new MissingParameterDefaultValue(this, TypeLineNumber + methodLineNumber - 1,
-				nameAndTypeAsString);
-		var defaultValue = methodBody != null
-			? ParseExpression(methodBody, nameAndDefaultValue[1])
-			: type.GetMemberExpression(parser, nameAndDefaultValue[0], nameAndDefaultValue[1],
-				TypeLineNumber);
-		return new Parameter(type, nameAndDefaultValue[0], defaultValue);
-	}
-
-	public sealed class MissingParameterDefaultValue(Method method,
-		int lineNumber,
-		string nameAndType) : ParsingFailed(method.Type, lineNumber, nameAndType);
-
-	public sealed class MethodParameterCountMustNotExceedLimit(Method method, int lineNumber)
-		: ParsingFailed(method.Type, lineNumber,
-			$"{
-				GetMethodName(method)
-			} has parameters count {
-				method.Parameters.Count
-			} but limit is {
-				Limit.ParameterCount
-			}")
-	{
-		private static string GetMethodName(Method method) =>
-			method.Name == From
-				? "Type " + method.Type.FullName + " " + From + " constructor method"
-				: "Method " + method.Name;
-	}
-
-	public sealed class InvalidMethodParameters(Method method, string rest)
-		: ParsingFailed(method.Type, 0, rest, method.Name);
-
-	public sealed class EmptyParametersMustBeRemoved(Method method)
-		: ParsingFailed(method.Type, 0, "", method.Name);
 
 	internal Method(Method cloneFrom, Type newReturnType) : base(newReturnType, cloneFrom.Name
 #if DEBUG
@@ -334,72 +264,25 @@ public sealed class Method : Context
 		Parser.ParseListArguments(body, text);
 
 	public const string From = "from";
+
 	public const string Run = nameof(Run);
 
-	/// <summary>
-	/// Skips the first method declaration line, then counts, and removes the tabs from each line.
-	/// Also groups all expressions on the same tabs level into bodies. In case a body has only
-	/// a single line (which is most often the case), that only expression is used directly.
-	/// </summary>
-	private Body PreParseBody(int parentTabs = 1, Body? parent = null)
-	{
-		var body = new Body(this, parentTabs, parent);
-		var startLine = methodLineNumber;
-		for (; methodLineNumber < lines.Count; methodLineNumber++)
-			if (CheckBodyLine(lines[methodLineNumber], body))
-				break;
-		body.LineRange = new Range(startLine, Math.Min(methodLineNumber, lines.Count));
-		return body;
-	}
-
 	private int methodLineNumber = 1;
+
 	private readonly object parseLock = new();
 
-	private bool CheckBodyLine(string line, Body body)
-	{
-		if (line.Length == 0)
-			throw new TypeParser.EmptyLineIsNotAllowed(Type, TypeLineNumber + methodLineNumber);
-		var tabs = GetTabs(line);
-		if (tabs > body.Tabs)
-			PreParseBody(tabs, body);
-		CheckIndentation(line, TypeLineNumber + methodLineNumber, tabs);
-		return IsCurrentLineInBodyScope(body.Tabs);
-	}
-
-	private static int GetTabs(string line)
-	{
-		var tabs = 0;
-		// ReSharper disable once ForCanBeConvertedToForeach, would consume too much memory!
-		for (var index = 0; index < line.Length; index++)
-			if (line[index] == '\t')
-				tabs++;
-			else
-				break;
-		return tabs;
-	}
-
-	private void CheckIndentation(string line, int lineNumber, int tabs)
-	{
-		if (tabs is 0 or > 3)
-			throw new InvalidIndentation(Type, lineNumber, line, Name);
-		if (char.IsWhiteSpace(line[tabs]))
-			throw new TypeParser.ExtraWhitespacesFoundAtBeginningOfLine(Type, lineNumber, line, Name);
-		if (char.IsWhiteSpace(line[^1]))
-			throw new TypeParser.ExtraWhitespacesFoundAtEndOfLine(Type, lineNumber, line, Name);
-	}
-
-	public sealed class InvalidIndentation(Type type, int lineNumber, string line, string method)
-		: ParsingFailed(type, lineNumber, method, line);
-
-	private bool IsCurrentLineInBodyScope(int bodyTabs) =>
-		methodLineNumber < lines.Count && GetTabs(lines[methodLineNumber]) != bodyTabs;
-
 	public Type Type => (Type)Parent;
+
 	public IReadOnlyList<Parameter> Parameters => parameters;
+
 	private readonly List<Parameter> parameters = new();
+
 	public Type ReturnType { get; }
+
 	public bool IsPublic => char.IsUpper(Name[0]);
+
 	public List<Expression> Tests { get; } = new();
+
 	public bool IsTrait => methodBody == null;
 
 	public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
@@ -432,93 +315,6 @@ public sealed class Method : Context
 						throw new MutableUsesConstantValue(methodBody, variable.Name, variable.InitialValue);
 			return BodyParsed?.Invoke(expression) ?? expression;
 		}
-	}
-
-	private Expression ParseTestsOnlyForGeneric()
-	{
-		if (methodBody == null)
-			throw new CannotCallBodyOnTraitMethod(Type, Name); //ncrunch: no coverage
-		if (methodBody.Expressions.Count > 0)
-			return methodBody.Expressions.Count == 1
-				? methodBody.Expressions[0]
-				: methodBody;
-		var expressions = new List<Expression>();
-		var lastExecutableLineIndex = GetLastExecutableLineIndex();
-		for (var index = 1; index < lines.Count; index++)
-		{
-			var line = lines[index];
-			methodBody.ParsingLineNumber = index;
-			if (IsDeclarationLine(line))
-			{
-				var declaration = Parser.ParseLineExpression(methodBody, line.AsSpan(methodBody.Tabs));
-				expressions.Add(declaration);
-				continue;
-			}
-			if (index == lastExecutableLineIndex || !IsPotentialTestLine(line) || IsControlFlowLine(line))
-				continue;
-			Expression expression;
-			try
-			{
-				expression = Parser.ParseLineExpression(methodBody, line.AsSpan(methodBody.Tabs));
-			}
-			catch (Type.GenericTypesCannotBeUsedDirectlyUseImplementation)
-			{
-				continue;
-			}
-			if (IsStandaloneInlineTestExpression(expression))
-			{
-				Tests.Add(expression);
-				expressions.Add(expression);
-			}
-		}
-		expressions.Add(new PlaceholderExpression(ReturnType));
-		methodBody.SetExpressions(expressions);
-		return methodBody;
-	}
-
-	private int GetLastExecutableLineIndex()
-	{
-		var lastExecutableLineIndex = -1;
-		for (var index = 1; index < lines.Count; index++)
-		{
-			var line = lines[index];
-			if (!line.StartsWith("\t", StringComparison.Ordinal) || line.Length <= 1 ||
-				IsControlFlowLine(line))
-				continue;
-			lastExecutableLineIndex = index;
-		}
-		return lastExecutableLineIndex;
-	}
-
-	private static bool IsPotentialTestLine(string line) =>
-		line.Contains($" {BinaryOperator.Is} ", StringComparison.Ordinal) && !line.Contains("?");
-
-	private static bool IsDeclarationLine(string line) =>
-		line.StartsWith("\t" + Keyword.Constant + " ", StringComparison.Ordinal) ||
-		line.StartsWith("\t" + Keyword.Let + " ", StringComparison.Ordinal) ||
-		line.StartsWith("\t" + Keyword.Mutable + " ", StringComparison.Ordinal);
-
-	private static bool IsControlFlowLine(string line) =>
-		line.StartsWith("\tif ", StringComparison.Ordinal) ||
-		line.StartsWith("\tfor ", StringComparison.Ordinal) ||
-		line.StartsWith("\treturn ", StringComparison.Ordinal) ||
-		line.StartsWith("\t\t", StringComparison.Ordinal);
-
-	private static bool IsStandaloneInlineTestExpression(Expression expression) =>
-		expression.ReturnType.IsBoolean && expression.GetType().Name is not "If" &&
-		expression.GetType().Name is not "Return" &&
-		expression.GetType().Name is not Body.Declaration &&
-		expression.GetType().Name is not Body.MutableReassignment;
-
-	internal sealed class PlaceholderExpression(Type returnType) : Expression(returnType)
-	{
-		public override bool IsConstant => true; //ncrunch: no coverage
-		public override string ToString() => ReturnType.Name;
-		public override int GetHashCode() => ReturnType.GetHashCode(); //ncrunch: no coverage
-
-		public override bool Equals(Expression? other) =>
-			ReferenceEquals(this, other) || //ncrunch: no coverage
-			(other is PlaceholderExpression p && ReturnType == p.ReturnType);
 	}
 
 	public sealed class DeclarationIsNeverUsedAndMustBeRemoved(Type type,
@@ -582,14 +378,5 @@ public sealed class Method : Context
 			if (parameters[index].Type != other.Parameters[index].Type)
 				return false;
 		return true;
-	}
-
-	public string[] GetLinesAndStripTabs(Range innerBodyRange, Body bodyForTabs)
-	{
-		var result = new string[innerBodyRange.End.Value - innerBodyRange.Start.Value];
-		for (var lineNumber = innerBodyRange.Start.Value; lineNumber < innerBodyRange.End.Value;
-			lineNumber++)
-			result[lineNumber - innerBodyRange.Start.Value] = lines[lineNumber][bodyForTabs.Tabs..];
-		return result;
 	}
 }
