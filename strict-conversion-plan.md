@@ -191,10 +191,10 @@ constant folding / strength reduction / LICM / inlining assumptions broken by re
 and interpreter short-circuit and/or, negative and out of range list indexes, VM list constants and
 own `to Text`, VM endless recursion as StackOverflow, test lines with ` then ` in text, VM loop
 state on re-entrant calls, inline conditional values on the VM.
-Known C# parser issues to fix next: a call with several arguments containing `\"` fails
-(UnterminatedString), a text literal with `\\` before `\"` fails, a line starting with a bracketed
-comparison followed by `and` or `+` is misparsed, redundant brackets in arguments and then/else
-are accepted although the printer drops them. VM: `FindJumpEndInstructionIndex` scans linearly on
+Fixed C# parser issues: escaped quotes in one of several arguments, `\\` before `\"` and bracketed
+comparisons at the start of a line all came from seven text literal scans, now one
+`TextLiteral.Advance`. Still open: redundant brackets in arguments and then/else are accepted
+although the printer drops them. VM: `FindJumpEndInstructionIndex` scans linearly on
 every jump, `DeadStoreEliminator.FindProducerInstruction` may pick a side effecting producer.
 
 ### Phase E — Usability and product quality (≈4 sessions)
