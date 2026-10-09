@@ -109,7 +109,8 @@ public sealed class RunnerTests
 		["Process.strict"] = "Examples/HelloLogger.strict",
 		["Expressions/RoundTrip.strict"] = "Expressions",
 		["Expressions/ResolveCheck.strict"] = "Expressions .",
-		["Expressions/TypeReport.strict"] = "Expressions ."
+		["Expressions/TypeReport.strict"] = "Expressions .",
+		["Validators/ValidateCheck.strict"] = "Validators ."
 	};
 
 	private static IEnumerable<string> StrictProgramPaths()
@@ -120,7 +121,7 @@ public sealed class RunnerTests
 			Select(file => Path.GetRelativePath(root, file).Replace('\\', '/')).Order();
 	}
 
-	private static IEnumerable<string> StrictFolders()
+	internal static IEnumerable<string> StrictFolders()
 	{
 		var root = FindRepoRoot();
 		string[] projects = [".", "Math", "ImageProcessing", "Language", "Expressions", "Validators",

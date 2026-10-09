@@ -212,10 +212,23 @@ source text, a method lookup cycle (`List(Keyword).from(Texts)`) overflowed the 
 cycle guard compared argument type arrays by reference, a conditional line starting with `(a) and`
 and ending with `)` lost its brackets, the constant collapser deleted declarations only used through
 a member or list call (`let condition = x.children(0)` + `condition.Kind`).
-Open C# issues: constants of another type (`KnownTypes.Sample`) in member initializers fail when
-that type is parsed later; a constant named like a type (`keywords` → `Keyword`) is typed by its
-name instead of its value; unused variables in nested bodies are only checked when the method body
-itself has variables.
+Open C# issues: constants of another type (`KnownTypes.Sample`) or calling methods of another
+package's type in member initializers fail when that type is parsed later; a constant named like a
+type (`keywords` → `Keyword`) is typed by its name instead of its value; `mutable x = MethodNames`
+looks for a plural type `MethodNames` instead of calling the method; unused variables in nested
+bodies are only checked when the method body itself has variables.
+
+D2 progress (2026-10-09): `Validators/` rewritten over the tree. `UsageRules` checks one method
+(unused, hidden and never changed variables and parameters; a mutable counts as changed when it
+is reassigned, called with a method returning `Mutable(...)` or passed to a `mutable` parameter,
+`HeaderTokens.Mutations` lists those per header), `TypeValidator` adds unused private members
+(same exemptions as C#: data types, traits, single value member types). Rule names are the C#
+exception names. `ValidateCheck` runs over a folder; Slow tests: `StrictValidatesEveryFile` (0
+issues in all 18 folders) and `StrictValidatorReportsSameRuleAsCSharp` (7 invalid samples, C#
+TypeValidator and the Strict validator report the same rule). The old text based Visitor,
+DeclarationRules and ValidateDemo are deleted. Fixed on the way: a `constant` line mentioning
+"generic" made its type generic. Still missing for D2: constant folding over the tree
+(ConstantCollapser.strict is still text based) and the double bracket list argument rule.
 Flaky once in a full parallel solution run (passes alone and in reruns):
 `InterpreterTests.ParserParsesExistingTextStrictFile`, likely Language package files changing while
 Strict.Tests runs programs there (Phase F thread safety item).

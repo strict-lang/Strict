@@ -85,3 +85,24 @@ ParameterType(position Number) Text
 	HeaderTokens("Add", "(", "x", "Number", ")").ParameterType(2) is "Number"
 	HeaderTokens("Add", "(", "x", "=", "\"a\"", ")").ParameterType(2) is "Text"
 	DeclaredType(position)
+ReturnsMutable Boolean
+	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnsMutable is true
+	HeaderTokens("Run", "Number").ReturnsMutable is false
+	constant start = ParametersEnd + 1
+	start < tokens.Length and (tokens(start) is "Mutable")
+Mutations Texts
+	HeaderTokens(Tokenizer("Add(x, mutable list) Mutable(List)").Tokens).Mutations is ("Add", "Add:1")
+	mutable mutations = List(Mutable(Text))
+	if ReturnsMutable
+		mutations.Add(tokens(0))
+	for ParametersEnd
+		if index > 1 and IsParameterStart(index) and (tokens(index - 1) is "mutable")
+			mutations.Add(tokens(0) + ":" + ParameterIndex(index))
+	mutations
+ParameterIndex(position Number) Number
+	HeaderTokens(Tokenizer("Add(x, mutable list)").Tokens).ParameterIndex(5) is 1
+	mutable count = 0
+	for position
+		if index > 1 and IsParameterStart(index)
+			count = count + 1
+	count

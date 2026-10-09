@@ -102,3 +102,11 @@ Lines(indentation Text) Texts
 		if value.HasBody
 			lines = lines + value.children.Last.Lines(indentation + "\t")
 	lines
+Statements SyntaxNodes
+	BodyParser("Run", "\tif a", "\t\tb", "\tc").Block(1, 1).Statements.Length is 3
+	mutable statements = List(Mutable(SyntaxNode))
+	for children
+		statements.Add(value)
+		if value.HasBody
+			statements = statements + value.children.Last.Statements
+	statements

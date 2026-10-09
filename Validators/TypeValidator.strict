@@ -1,83 +1,55 @@
-has Visitor
-constant ReservedValue = "value"
-constant ReservedIterator = "iterator"
-constant ReservedElements = "elements"
-Sample Visitor
-	Sample.MemberCount is 2
-	Visitor("T", ("logger", "unused"), ("Run", "Add"), ("logger.Log(1)", "ok"))
-IsReservedName(name Text) Boolean
-	IsReservedName("value") is true
-	IsReservedName("count") is false
-	if name is ReservedValue
-		return true
-	if name is ReservedIterator
-		return true
-	name is ReservedElements
-FindUnusedMembers ValidationIssues
-	TypeValidator(Sample).FindUnusedMembers.Length is 1
-	mutable issues = List(Mutable(ValidationIssue))
-	for Visitor.memberNames
-		if ShouldReportUnusedMember(value)
-			issues.Add(ValidationIssue("UnusedMember", value, "Member is never used"))
-	issues
-ShouldReportUnusedMember(name Text) Boolean
-	if IsReservedName(name)
-		return false
-	if IsPublicName(name)
-		return false
-	not IsNameUsedInBody(name)
-IsPublicName(name Text) Boolean
-	if name.Length is 0
-		return false
-	name.Substring(0, 1) is name.Substring(0, 1).Upper
-IsNameUsedInBody(name Text) Boolean
-	for Visitor.bodyLines
-		if value.IndexOf(name) is not -1
-			return true
-	false
-FindUnusedVariables ValidationIssues
-	mutable issues = List(Mutable(ValidationIssue))
-	for Visitor.bodyLines
-		CheckDeclarationUsage(value, issues)
-	issues
-CheckDeclarationUsage(line Text, mutable issues ValidationIssues) Mutable(ValidationIssues)
-	if not DeclarationRules(line).IsDeclaration
-		return issues
-	if DeclarationRules(line).IsMutableDeclaration
-		return issues
-	let name = DeclarationRules(line).DeclaredName
-	if name is ""
-		return issues
-	if IsNameUsedInBody(name)
-		return issues
-	issues.Add(ValidationIssue("UnusedVariable", name, "Variable is never used"))
-FindMutableNeverChanged ValidationIssues
-	mutable issues = List(Mutable(ValidationIssue))
-	for Visitor.bodyLines
-		CheckMutableUsage(value, issues)
-	issues
-CheckMutableUsage(line Text, mutable issues ValidationIssues) Mutable(ValidationIssues)
-	if not DeclarationRules(line).IsMutableDeclaration
-		return issues
-	let name = DeclarationRules(line).DeclaredName
-	if name is ""
-		return issues
-	if IsReassigned(name)
-		return issues
-	issues.Add(ValidationIssue("MutableNeverChanged", name, "mutable never reassigned"))
-IsReassigned(name Text) Boolean
-	for Visitor.bodyLines
-		if DeclarationRules(value).IsReassignmentOf(name)
-			return true
-	false
-FindParameterHidesMember(parameterName Text) ValidationIssues
-	TypeValidator(Sample).FindParameterHidesMember("logger").Length is 1
-	mutable issues = List(Mutable(ValidationIssue))
-	if Visitor.ContainsMember(parameterName)
-		issues.Add(ValidationIssue("ParameterHidesMember", parameterName, "Parameter hides member"))
-	issues
+has shape Expressions/TypeShape
+has mutations Texts
+constant ReservedNames = ("value", "iterator", "elements", "generic")
+Sample TypeValidator
+	Sample.mutations.Length is 2
+	TypeValidator(TypeShape("has unused Number", "has logger", "Run", "\tlogger.Log(1)"), ("Add", "Remove"))
 Validate ValidationIssues
-	TypeValidator(Sample).Validate.Length is 1
-	FindUnusedMembers + FindUnusedVariables + FindMutableNeverChanged
-to Text
-	Visitor.typeName
+	Sample.Validate.Length is 1
+	mutable issues = List(Mutable(ValidationIssue))
+	for shape.lines
+		if shape.IsMethodHeader(value)
+			let header = HeaderTokens(Tokenizer(value).Tokens)
+			let statements = BodyParser(shape.lines).Block(index + 1, 1).Statements
+			issues = issues + UsageRules(header, statements, shape.MemberScope.names, mutations).Issues
+	MemberIssues + issues
+MemberIssues ValidationIssues
+	Sample.MemberIssues.Length is 1
+	mutable issues = List(Mutable(ValidationIssue))
+	if IsExempt
+		return issues
+	for MemberNames
+		if value is not in ReservedNames and (not IsPublic(value)) and UsageCount(value) < 2
+			issues.Add(ValidationIssue("UnusedMemberMustBeRemoved", value, "Never used"))
+	issues
+MemberNames Texts
+	Sample.MemberNames is ("unused", "logger")
+	for shape.lines
+		if shape.IsMemberLine(value)
+			HeaderTokens(Tokenizer(value).Tokens).MemberName
+IsPublic(name Text) Boolean
+	Sample.IsPublic("Count") is true
+	Sample.IsPublic("count") is false
+	name.Substring(0, 1) is name.Substring(0, 1).Upper
+UsageCount(name Text) Number
+	Sample.UsageCount("logger") is 2
+	mutable count = 0
+	for shape.lines
+		if IsUsedIn(value, name)
+			count = count + 1
+	count
+IsUsedIn(line Text, name Text) Boolean
+	Sample.IsUsedIn("\tlogger.Log(1)", "logger") is true
+	line.IndexOf(" " + name) is not -1 or line.IndexOf("\t" + name) is not -1 or line.IndexOf("(" + name) is not -1
+IsExempt Boolean
+	Sample.IsExempt is false
+	if (shape.MethodScope.names.Length is MemberNames.Length) or (not HasMethodBody)
+		return true
+	let usesValue = UsageCount("value") > 0 or ("from" is in shape.MethodScope.names)
+	(shape.MemberScope.names.Length is 1) and usesValue
+HasMethodBody Boolean
+	Sample.HasMethodBody is true
+	for shape.lines
+		if value.StartsWith("\t")
+			return true
+	false

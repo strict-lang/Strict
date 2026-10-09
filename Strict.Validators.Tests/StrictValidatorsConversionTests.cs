@@ -11,7 +11,7 @@ public sealed class StrictValidatorsConversionTests
 		var path = GetValidatorsPath();
 		foreach (var typeName in new[]
 			{
-				"ValidationIssue", "Visitor", "TypeValidator", "ConstantCollapser", "DeclarationRules"
+				"ValidationIssue", "UsageRules", "TypeValidator", "ConstantCollapser", "ValidateCheck"
 			})
 			Assert.That(File.Exists(Path.Combine(path, typeName + ".strict")), Is.True, typeName);
 	}
@@ -23,8 +23,8 @@ public sealed class StrictValidatorsConversionTests
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Validators");
 		var typeValidator = package.GetType("TypeValidator");
 		Assert.That(typeValidator.Methods.Any(method => method.Name == "Validate"), Is.True);
-		Assert.That(typeValidator.Methods.Any(method => method.Name == "FindUnusedMembers"), Is.True);
-		Assert.That(typeValidator.Methods.Any(method => method.Name == "IsReservedName"), Is.True);
+		Assert.That(typeValidator.Methods.Any(method => method.Name == "MemberIssues"), Is.True);
+		Assert.That(typeValidator.Methods.Any(method => method.Name == "IsExempt"), Is.True);
 	}
 
 	[Test]
@@ -39,13 +39,13 @@ public sealed class StrictValidatorsConversionTests
 	}
 
 	[Test]
-	public async Task LoadVisitorFromValidatorsPackage()
+	public async Task LoadUsageRulesFromValidatorsPackage()
 	{
 		using var package =
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Validators");
-		var visitor = package.GetType("Visitor");
-		Assert.That(visitor.Members.Count, Is.EqualTo(4));
-		Assert.That(visitor.Methods.Any(method => method.Name == "VisitMembers"), Is.True);
+		var usageRules = package.GetType("UsageRules");
+		Assert.That(usageRules.Members.Count, Is.EqualTo(4));
+		Assert.That(usageRules.Methods.Any(method => method.Name == "IsChanged"), Is.True);
 	}
 
 	private static string GetValidatorsPath() =>

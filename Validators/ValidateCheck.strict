@@ -1,0 +1,24 @@
+has logger
+Run(folder Text, root Text)
+	let mutations = Mutations(Directory.Files(folder, "*.strict") + ResolveCheck(logger).AllFiles(root))
+	mutable issues = 0
+	for Directory.Files(folder, "*.strict")
+		issues = issues + CheckFile(value, mutations)
+	logger.Log("Validation issues: " + issues)
+CheckFile(path Text, mutations Texts) Number
+	let found = TypeValidator(TypeShape(File(path).ReadLines), mutations).Validate
+	for found
+		logger.Log(path + ": " + value)
+	found.Length
+Mutations(files Texts) Texts
+	mutable mutations = List(Mutable(Text))
+	for files
+		mutations = mutations + FileMutations(TypeShape(File(value).ReadLines))
+	mutations
+FileMutations(shape Expressions/TypeShape) Texts
+	FileMutations(TypeShape("Add(mutable list) Mutable(List)", "\tlist")) is ("Add", "Add:0")
+	mutable mutations = List(Mutable(Text))
+	for shape.lines
+		if shape.IsMethodHeader(value)
+			mutations = mutations + HeaderTokens(Tokenizer(value).Tokens).Mutations
+	mutations

@@ -236,6 +236,15 @@ public sealed class TypeTests
 			Throws.InstanceOf<MutableReassignment.ValueTypeNotMatchingWithAssignmentType>());
 
 	[Test]
+	public void ConstantMentioningGenericIsNoGenericType()
+	{
+		using var type = new Type(package,
+			new TypeLines(nameof(ConstantMentioningGenericIsNoGenericType), "has logger",
+				"constant Names = (\"value\", \"generic\")", "Run", "\tlogger.Log(Names)"));
+		Assert.That(type.ParseMembersAndMethods(parser).IsGeneric, Is.False);
+	}
+
+	[Test]
 	public void MakeSureGenericTypeIsProperlyGenerated()
 	{
 		var listType = package.GetType(Type.List);

@@ -1,0 +1,84 @@
+has header Expressions/HeaderTokens
+has statements Expressions/SyntaxNodes
+has memberNames Texts
+has mutations Texts
+Sample UsageRules
+	Sample.statements.Length is 4
+	constant lines = ("Run(count, mutable list)", "\tlet aa = 5", "\tmutable bb = 0", "\tRun(1, list)", "\tcount + bb")
+	constant runHeader = HeaderTokens(Tokenizer(lines(0)).Tokens)
+	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), ("Add", "Run:1"))
+Issues ValidationIssues
+	Sample.Issues.Length is 3
+	mutable issues = List(Mutable(ValidationIssue))
+	for statements
+		if value.Kind is "Declaration"
+			issues = issues + DeclarationIssues(value)
+	ParameterIssues + issues
+DeclarationIssues(declaration SyntaxNode) ValidationIssues
+	Sample.DeclarationIssues(Sample.statements(1)).Length is 1
+	let name = Tokenizer(declaration.text).Tokens.Last
+	mutable issues = List(Mutable(ValidationIssue))
+	if name is in memberNames
+		issues.Add(ValidationIssue("VariableHidesMemberUseDifferentName", name, "Use a different name"))
+	if not IsUsed(name)
+		issues.Add(ValidationIssue("UnusedMethodVariableMustBeRemoved", name, "Never used"))
+	if declaration.text.StartsWith("mutable ") and (not IsChanged(name))
+		issues.Add(ValidationIssue("VariableDeclaredAsMutableButValueNeverChanged", name, "Never changed"))
+	issues
+ParameterIssues ValidationIssues
+	Sample.ParameterIssues.Length is 1
+	mutable issues = List(Mutable(ValidationIssue))
+	if statements.Length is 0
+		return issues
+	for header.ParameterNames
+		if value is in memberNames
+			issues.Add(ValidationIssue("ParameterHidesMemberUseDifferentName", value, "Use a different name"))
+		if header.tokens(0) is not "from" and (not IsUsed(value))
+			issues.Add(ValidationIssue("UnusedMethodParameterMustBeRemoved", value, "Never used"))
+	issues + MutableParameterIssues
+MutableParameterIssues ValidationIssues
+	Sample.MutableParameterIssues.Length is 0
+	mutable issues = List(Mutable(ValidationIssue))
+	for header.ParameterNames
+		if (header.tokens(0) + ":" + index is in header.Mutations) and (not IsChanged(value))
+			issues.Add(ValidationIssue("ParameterDeclaredAsMutableButValueNeverChanged", value, "Never changed"))
+	issues
+IsUsed(name Text) Boolean
+	Sample.IsUsed("count") is true
+	Sample.IsUsed("aa") is false
+	for statements
+		if name is in UsedNames(value)
+			return true
+	false
+UsedNames(statement SyntaxNode) Texts
+	Sample.UsedNames(Sample.statements(3)).Length is 2
+	statement.Kind is "Reassignment" then statement.children(1).HeadNames else statement.HeadNames
+IsChanged(name Text) Boolean
+	Sample.IsChanged("bb") is false
+	for statements
+		if Changes(value, name)
+			return true
+	false
+Changes(node SyntaxNode, name Text) Boolean
+	Sample.Changes(Sample.statements(2), "list") is true
+	if (node.Kind is "Reassignment") and (RootName(node.children(0)) is name)
+		return true
+	if (node.Kind is in ("Call", "MethodCall")) and IsMutatingCall(node, name)
+		return true
+	for node.children
+		if value.Kind is not "Body" and Changes(value, name)
+			return true
+	false
+IsMutatingCall(call SyntaxNode, name Text) Boolean
+	Sample.IsMutatingCall(Sample.statements(2), "list") is true
+	let first = call.Kind is "MethodCall" then 1 else 0
+	if (first is 1) and (call.text is in mutations) and (RootName(call.children(0)) is name)
+		return true
+	for call.children.Length - first
+		if (call.text + ":" + index is in mutations) and (RootName(call.children(first + index)) is name)
+			return true
+	false
+RootName(node SyntaxNode) Text
+	Sample.RootName(Sample.statements(3)) is "count"
+	let names = node.HeadNames
+	names.Length is 0 then "" else names(0)

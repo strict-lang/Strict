@@ -37,6 +37,7 @@ public partial class Type : Context, IDisposable
 	private static bool HasGenericMethodHeader(string line) =>
 		!line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) &&
 		!line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal) &&
+		!line.StartsWith(ConstantWithSpaceAtEnd, StringComparison.Ordinal) &&
 		(line.Contains(GenericUppercase, StringComparison.Ordinal) ||
 			line.Contains(GenericLowercase, StringComparison.Ordinal));
 
