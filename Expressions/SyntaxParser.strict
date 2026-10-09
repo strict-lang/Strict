@@ -1,0 +1,116 @@
+has tokens Texts
+Parse SyntaxNode
+	SyntaxParser(Tokenizer("a + b * c").Tokens).Parse to Text is "a + b * c"
+	SyntaxParser(Tokenizer("(a + b) * c").Tokens).Parse to Text is "(a + b) * c"
+	SyntaxParser(Tokenizer("a - b - c").Tokens).Parse to Text is "a - b - c"
+	SyntaxParser(Tokenizer("Add(5, x.y).Length").Tokens).Parse to Text is "Add(5, x.y).Length"
+	SyntaxParser(Tokenizer("not a and b").Tokens).Parse to Text is "not a and b"
+	SyntaxParser(Tokenizer("x is not 5").Tokens).Parse to Text is "x is not 5"
+	SyntaxParser(Tokenizer("(1, 2, 3)").Tokens).Parse to Text is "(1, 2, 3)"
+	SyntaxParser(Tokenizer("list.Add(-1)").Tokens).Parse to Text is "list.Add(-1)"
+	ParseRange(0, tokens.Length)
+ParseRange(start Number, end Number) SyntaxNode
+	SyntaxParser("a", "+", "b").ParseRange(0, 3).Kind is "Binary"
+	if end - start is 1
+		return Leaf(tokens(start))
+	let operatorIndex = LowestOperatorIndex(start, end)
+	if operatorIndex is not -1
+		return ParseOperator(operatorIndex, start, end)
+	if tokens(start) is "not"
+		return SyntaxNode("Not", "", Single(ParseRange(start + 1, end)))
+	if tokens(start) is "-"
+		return SyntaxNode("Negate", "", Single(ParseRange(start + 1, end)))
+	ParseCallOrMember(start, end)
+Leaf(token Text) SyntaxNode
+	SyntaxParser("1").Leaf("1").Kind is "Number"
+	SyntaxParser("1").Leaf("\"a\"").Kind is "Text"
+	SyntaxParser("1").Leaf("true").Kind is "Boolean"
+	SyntaxParser("1").Leaf("x").Kind is "Identifier"
+	if Tokenizer(token).IsDigit(token.Substring(0, 1))
+		return SyntaxNode("Number", token)
+	if token.StartsWith("\"")
+		return SyntaxNode("Text", token)
+	if token is in ("true", "false")
+		return SyntaxNode("Boolean", token)
+	SyntaxNode("Identifier", token)
+Single(node SyntaxNode) SyntaxNodes
+	SyntaxParser("1").Single(SyntaxNode("Number", "1")).Length is 1
+	mutable nodes = List(Mutable(SyntaxNode))
+	nodes.Add(node)
+	nodes
+LowestOperatorIndex(start Number, end Number) Number
+	SyntaxParser("a", "+", "b", "*", "c").LowestOperatorIndex(0, 5) is 1
+	SyntaxParser("(", "a", "+", "b", ")").LowestOperatorIndex(0, 5) is -1
+	mutable depth = 0
+	mutable best = -1
+	mutable bestPrecedence = 100
+	for end - start
+		depth = depth + BracketDelta(tokens(start + index))
+		let precedence = OperatorPrecedence(start + index, start)
+		if (depth is 0) and precedence > 0 and precedence <= bestPrecedence
+			best = start + index
+			bestPrecedence = precedence
+	best
+BracketDelta(token Text) Number
+	SyntaxParser("1").BracketDelta("(") is 1
+	SyntaxParser("1").BracketDelta(")") is -1
+	SyntaxParser("1").BracketDelta("a") is 0
+	if token is "("
+		return 1
+	if token is ")"
+		return -1
+	0
+OperatorPrecedence(position Number, start Number) Number
+	SyntaxParser("a", "-", "b").OperatorPrecedence(1, 0) is 11
+	SyntaxParser("-", "b").OperatorPrecedence(0, 0) is 0
+	SyntaxParser("a", "*", "-", "b").OperatorPrecedence(2, 0) is 0
+	if position is start
+		return 0
+	if SyntaxNode("Binary", tokens(position - 1)).Precedence > 0 or (tokens(position - 1) is in ("(", ",", "not"))
+		return 0
+	SyntaxNode("Binary", OperatorText(position)).Precedence
+OperatorText(position Number) Text
+	SyntaxParser("a", "is", "not", "b").OperatorText(1) is "is not"
+	SyntaxParser("a", "is", "b").OperatorText(1) is "is"
+	if (tokens(position) is "is") and position + 1 < tokens.Length and (tokens(position + 1) is in ("not", "in"))
+		return "is " + tokens(position + 1)
+	tokens(position)
+ParseOperator(operatorIndex Number, start Number, end Number) SyntaxNode
+	SyntaxParser("a", "is", "not", "b").ParseOperator(1, 0, 4) to Text is "a is not b"
+	let operatorText = OperatorText(operatorIndex)
+	let rightStart = operatorIndex + operatorText.Split(" ").Length
+	SyntaxNode("Binary", operatorText, (ParseRange(start, operatorIndex), ParseRange(rightStart, end)))
+ParseCallOrMember(start Number, end Number) SyntaxNode
+	SyntaxParser("x", ".", "y").ParseCallOrMember(0, 3) to Text is "x.y"
+	SyntaxParser("(", "a", ")").ParseCallOrMember(0, 3) to Text is "a"
+	let dot = LastDotIndex(start, end)
+	if dot is not -1 and dot + 2 < end
+		return SyntaxNode("MethodCall", tokens(dot + 1), Single(ParseRange(start, dot)) + Arguments(dot + 2, end))
+	if dot is not -1
+		return SyntaxNode("Member", tokens(dot + 1), Single(ParseRange(start, dot)))
+	if tokens(start) is not "("
+		return SyntaxNode("Call", tokens(start), Arguments(start + 1, end))
+	let arguments = Arguments(start, end)
+	arguments.Length is 1 then arguments(0) else SyntaxNode("List", "", arguments)
+LastDotIndex(start Number, end Number) Number
+	SyntaxParser("a", ".", "b", ".", "c").LastDotIndex(0, 5) is 3
+	SyntaxParser("f", "(", "a", ".", "b", ")").LastDotIndex(0, 6) is -1
+	mutable depth = 0
+	mutable dot = -1
+	for end - start
+		depth = depth + BracketDelta(tokens(start + index))
+		if (depth is 0) and (tokens(start + index) is ".")
+			dot = start + index
+	dot
+Arguments(open Number, end Number) SyntaxNodes
+	SyntaxParser("(", "1", ",", "2", ")").Arguments(0, 5).Length is 2
+	mutable arguments = List(Mutable(SyntaxNode))
+	mutable depth = 0
+	mutable segmentStart = open + 1
+	for end - open - 1
+		depth = depth + BracketDelta(tokens(open + index))
+		if (depth is 1) and (tokens(open + index) is ",")
+			arguments.Add(ParseRange(segmentStart, open + index))
+			segmentStart = open + index + 1
+	arguments.Add(ParseRange(segmentStart, end - 1))
+	arguments

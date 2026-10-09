@@ -7,7 +7,8 @@ Precedence Number
 	SyntaxNode("Binary", "+").Precedence is 11
 	SyntaxNode("Binary", "is not").Precedence is 7
 	SyntaxNode("Number", "1").Precedence is 0
-	if Kind is not "Binary"
+	SyntaxNode("Binary", "x").Precedence is 0
+	if Kind is not "Binary" or text is not in operators
 		return 0
 	precedences(operators.Index(text))
 to Text
