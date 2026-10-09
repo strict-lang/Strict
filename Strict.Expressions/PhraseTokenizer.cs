@@ -51,6 +51,14 @@ public sealed class PhraseTokenizer
 			processToken(tokenStart..input.Length);
 	}
 
+	private int FindClosingQuote(int openingQuoteIndex)
+	{
+		for (var quoteIndex = openingQuoteIndex + 1; quoteIndex < input.Length; quoteIndex++)
+			if (input[quoteIndex] == '"' && !IsEscapedQuote(quoteIndex))
+				return quoteIndex;
+		throw new UnterminatedString(input);
+	}
+
 	private bool IsEscapedQuote(int quoteIndex)
 	{
 		if (quoteIndex == 0 || input[quoteIndex - 1] != '\\')
@@ -83,7 +91,11 @@ public sealed class PhraseTokenizer
 				while (scanIndex < input.Length)
 				{
 					var nextCharacter = input[scanIndex];
-					if (nextCharacter == OpenBracket)
+					if (nextCharacter == '"')
+					{
+						scanIndex = FindClosingQuote(scanIndex);
+					}
+					else if (nextCharacter == OpenBracket)
 					{
 						bracketCount++;
 					}
@@ -215,7 +227,11 @@ public sealed class PhraseTokenizer
 				while (tokens.index + 1 < tokens.input.Length)
 				{
 					var nextCharacter = tokens.input[tokens.index + 1];
-					if (nextCharacter == OpenBracket)
+					if (nextCharacter == '"')
+					{
+						tokens.index = tokens.FindClosingQuote(tokens.index + 1) - 1;
+					}
+					else if (nextCharacter == OpenBracket)
 					{
 						additionalBrackets++;
 					}

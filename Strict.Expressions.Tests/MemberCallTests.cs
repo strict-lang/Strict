@@ -15,6 +15,11 @@ public sealed class MemberCallTests : TestExpressions
 			Is.EqualTo("Type(\"Hello.)\", \"TestPackage\").Name"));
 
 	[Test]
+	public void ClosingBracketInsideTextArgumentDoesNotEndCall() =>
+		Assert.That(ParseExpression("Type(\"Hi\", \"TestPackage\").Name.IndexOf(\")\") is -1").ToString(),
+			Is.EqualTo("Type(\"Hi\", \"TestPackage\").Name.IndexOf(\")\") is -1"));
+
+	[Test]
 	public void UnknownMember() =>
 		Assert.That(() => ParseExpression("unknown"), Throws.InstanceOf<Body.IdentifierNotFound>());
 
