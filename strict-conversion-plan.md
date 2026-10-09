@@ -187,9 +187,10 @@ Name resolution layer: `TypeShape` (members, methods, parameter and return types
 operators, list element types, methods reached through trait members like File → TextReader),
 `FileCheck`/`ResolveCheck` (every name in a method line is a member, method, parameter, variable,
 type or a method of the enclosing loop value). Slow test `StrictResolvesEveryName` asserts 0
-unresolved names for all 18 folders. Still missing for D1: typed nodes (each call resolved to a
-method, member, variable or parameter), generics and package parent/child lookup, multi-line
-bodies as trees.
+unresolved names for all 18 folders. `BodyParser` builds method bodies as trees (nested `Body`
+nodes for if/else/for blocks); `RoundTrip` now re-prints whole bodies from the tree and FileCheck
+scopes variables and loop values per block. Still missing for D1: typed nodes (each call resolved
+to a method, member, variable or parameter), generics and package parent/child lookup.
 Bugs found by ResolveCheck (each with a test): VM loop over a Range returned by a method,
 ConstructorToFieldMutations mapped `from` arguments to the wrong members (Range's iterator trait
 first), VM negative list index (`List.Last`), Boolean `let` lines were taken as inline tests and

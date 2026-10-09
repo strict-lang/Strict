@@ -3,17 +3,24 @@ has inference TypeInference
 has known Texts
 constant NoInference = TypeInference("x", "y")
 constant NoShape = TypeShape("a", "b")
+constant NoScope = Scope(("x", "z"), ("y", "w"))
 Unresolved Texts
 	FileCheck(TypeShape("has a Number", "Run", "\ta + b"), NoInference, ("Number", "Run")).Unresolved.Length is 1
 	mutable unresolved = List(Mutable(Text))
-	mutable scope = shape.MemberScope
 	for shape.lines
 		if shape.IsMethodHeader(value)
-			scope = shape.MemberScope.WithAll(shape.ParameterNames(value), shape.ParameterTypes(value))
-		if StartsWith("\t")
-			let statement = StatementParser(Tokenizer(Trim).Tokens).ParseStatement
-			unresolved = unresolved + UnknownNames(statement, known + scope.names + LoopNames(index, scope))
-			scope = Declare(statement, scope)
+			let scope = shape.MemberScope.WithAll(shape.ParameterNames(value), shape.ParameterTypes(value))
+			unresolved = unresolved + CheckBody(BodyParser(shape.lines).Block(index + 1, 1), scope, known)
+	unresolved
+CheckBody(body SyntaxNode, outerScope Scope, names Texts) Texts
+	FileCheck(NoShape, NoInference, ("N", "R")).CheckBody(SyntaxNode("Body", ""), NoScope, ("a", "b")).Length is 0
+	mutable unresolved = List(Mutable(Text))
+	mutable scope = outerScope
+	for body.children
+		unresolved = unresolved + UnknownNames(value, names + scope.names)
+		if value.HasBody
+			unresolved = unresolved + CheckBody(value.children.Last, scope, names + LoopNames(value, scope))
+		scope = Declare(value, scope)
 	unresolved
 UnknownNames(statement SyntaxNode, names Texts) Texts
 	FileCheck(NoShape, NoInference, ("N", "R")).UnknownNames(SyntaxNode("Identifier", "c"), ("a", "b")).Length is 1
@@ -26,26 +33,13 @@ Declare(statement SyntaxNode, scope Scope) Scope
 	if statement.Kind is not "Declaration"
 		return scope
 	scope.With(Tokenizer(statement.text).Tokens.Last, inference.TypeOf(statement.children(0), scope, shape))
-LoopNames(lineIndex Number, scope Scope) Texts
-	let loop = EnclosingLoop(lineIndex)
-	if loop is -1
+LoopNames(statement SyntaxNode, scope Scope) Texts
+	FileCheck(NoShape, NoInference, ("N", "R")).LoopNames(SyntaxNode("If", ""), NoScope).Length is 0
+	if statement.Kind is not "For"
 		return List(Text)
-	let iterator = StatementParser(Tokenizer(shape.lines(loop).Trim).Tokens).ParseStatement.children(0)
-	let elementShape = inference.ShapeOf(inference.ElementType(inference.TypeOf(iterator, scope, shape)))
+	let iterator = inference.TypeOf(statement.children(0), scope, shape)
+	let elementShape = inference.ShapeOf(inference.ElementType(iterator))
 	elementShape.MethodNames + elementShape.MemberNames
-EnclosingLoop(lineIndex Number) Number
-	mutable minimum = Indent(shape.lines(lineIndex))
-	mutable loop = -1
-	for Range(0, lineIndex).Reverse
-		let indent = Indent(shape.lines(value))
-		if (loop is -1) and indent < minimum and shape.lines(value).Trim.StartsWith("for ")
-			loop = value
-		if indent < minimum
-			minimum = indent
-	loop
-Indent(line Text) Number
-	Indent("\t\ta") is 2
-	line.Length - line.TrimStart.Length
 IsKnown(name Text, names Texts) Boolean
 	IsKnown("Numbers", ("Number", "a")) is true
 	IsKnown("b", ("Number", "a")) is false

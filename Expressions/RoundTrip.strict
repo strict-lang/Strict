@@ -5,16 +5,17 @@ Run(folder Text)
 		mismatches = mismatches + CheckFile(value)
 	logger.Log("Round trip mismatches: " + mismatches)
 CheckFile(path Text) Number
+	let shape = TypeShape(File(path).ReadLines)
 	mutable mismatches = 0
-	for File(path).ReadLines
-		if StartsWith("\t")
-			mismatches = mismatches + CheckLine(Trim, path)
+	for shape.lines
+		if shape.IsMethodHeader(value)
+			mismatches = mismatches + CheckBody(shape.lines, index + 1, path)
 	mismatches
-CheckLine(line Text, path Text) Number
-	CheckLine("a + b * c", "test") is 0
-	CheckLine("let x = (1, 2)", "test") is 0
-	let parsed = StatementParser(Tokenizer(line).Tokens).ParseStatement to Text
-	if parsed is line
-		return 0
-	logger.Log(path + ": " + line + " => " + parsed)
-	1
+CheckBody(lines Texts, start Number, path Text) Number
+	CheckBody(("Run", "\tif a + b * c", "\t\tlet x = (1, 2)"), 1, "test") is 0
+	mutable mismatches = 0
+	for BodyParser(lines).Block(start, 1).Lines("\t")
+		if value is not lines(start + index)
+			logger.Log(path + ": " + lines(start + index) + " => " + value)
+			mismatches = mismatches + 1
+	mismatches

@@ -3,6 +3,8 @@ has text
 has children SyntaxNodes
 constant operators = ("then", "else", "is", "is in", "is not", "is not in", "or", "xor", "and", "<", ">", "<=", ">=", "in", "+", "-", "%", "*", "/", "^", "to")
 constant precedences = (1, 1, 2, 2, 7, 7, 4, 5, 6, 7, 7, 7, 7, 9, 11, 11, 12, 13, 13, 14, 20)
+constant keywordKinds = ("Return", "If", "For", "ElseIf", "ElseValue")
+constant keywords = ("return", "if", "for", "else if", "else")
 Precedence Number
 	SyntaxNode("Binary", "+").Precedence is 11
 	SyntaxNode("Binary", "is not").Precedence is 7
@@ -50,15 +52,13 @@ StatementText Text
 	SyntaxNode("Return", "", (SyntaxNode("Number", "1"), SyntaxNode("Number", "1"))).StatementText is "return 1"
 	SyntaxNode("Declaration", "let a", (SyntaxNode("Number", "1"), SyntaxNode("Number", "1"))).StatementText is "let a = 1"
 	SyntaxNode("Else", "else").StatementText is "else"
+	SyntaxNode("For", "for", (SyntaxNode("Body", ""), SyntaxNode("Body", ""))).StatementText is "for"
 	if Kind is "Declaration"
 		return text + " = " + ChildText(0, 0)
 	if Kind is "Reassignment"
 		return ChildText(0, 0) + " = " + ChildText(1, 0)
-	if Kind is in ("Return", "If", "For")
-		return children.Length is 0 then text else Kind.Lower + " " + ChildText(0, 0)
-	if Kind is "ElseIf"
-		return "else if " + ChildText(0, 0)
-	Kind is "ElseValue" then "else " + ChildText(0, 0) else text
+	let hasValue = children.Length > 0 and children(0).Kind is not "Body"
+	hasValue and (Kind is in keywordKinds) then keywords(keywordKinds.Index(Kind)) + " " + ChildText(0, 0) else text
 ChildText(childIndex Number, minimumPrecedence Number) Text
 	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).ChildText(0, 15) is "a"
 	let child = children(childIndex)
@@ -77,6 +77,9 @@ ArgumentsText(firstIndex Number) Text
 	result
 HeadNames Texts
 	StatementParser(Tokenizer("let a = b.Length + Add(c)").Tokens).ParseStatement.HeadNames is ("b", "Add", "c")
+	SyntaxNode("Body", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "b"))).HeadNames.Length is 0
+	if Kind is "Body"
+		return List(Text)
 	if Kind is "Identifier"
 		return Tokenizer(text).Tokens
 	mutable names = List(Mutable(Text))
@@ -85,3 +88,15 @@ HeadNames Texts
 	for children
 		names = names + HeadNames
 	names
+HasBody Boolean
+	SyntaxNode("For", "", (SyntaxNode("Number", "3"), SyntaxNode("Body", ""))).HasBody is true
+	SyntaxNode("Number", "3").HasBody is false
+	children.Length > 0 and (children.Last.Kind is "Body")
+Lines(indentation Text) Texts
+	SyntaxNode("Body", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "b"))).Lines("\t") is ("\ta", "\tb")
+	mutable lines = List(Mutable(Text))
+	for children
+		lines.Add(indentation + value to Text)
+		if value.HasBody
+			lines = lines + value.children.Last.Lines(indentation + "\t")
+	lines

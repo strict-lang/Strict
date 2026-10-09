@@ -1,0 +1,26 @@
+has lines Texts
+Block(start Number, depth Number) SyntaxNode
+	BodyParser("Run", "\tif a", "\t\tb", "\tc").Block(1, 1).children.Length is 2
+	BodyParser("Run", "\tif a", "\t\tb", "\tc").Block(1, 1).Lines("\t") is ("\tif a", "\t\tb", "\tc")
+	mutable statements = List(Mutable(SyntaxNode))
+	for Range(start, BlockEnd(start, depth))
+		if Indent(lines(value)) is depth
+			statements.Add(Statement(value, depth))
+	SyntaxNode("Body", "", statements)
+Statement(lineIndex Number, depth Number) SyntaxNode
+	BodyParser("Run", "\tfor 3", "\t\tvalue").Statement(1, 1).children.Length is 2
+	BodyParser("Run", "\ta", "\tb").Statement(1, 1).children.Length is 0
+	let statement = StatementParser(Tokenizer(lines(lineIndex).Trim).Tokens).ParseStatement
+	if (lineIndex + 1 is lines.Length) or Indent(lines(lineIndex + 1)) <= depth
+		return statement
+	SyntaxNode(statement.Kind, statement.text, statement.children + Block(lineIndex + 1, depth + 1))
+BlockEnd(start Number, depth Number) Number
+	BodyParser("Run", "\ta", "Other").BlockEnd(1, 1) is 2
+	BodyParser("Run", "\ta", "\t\tb").BlockEnd(1, 1) is 3
+	for Range(start, lines.Length)
+		if Indent(lines(value)) < depth
+			return value
+	lines.Length
+Indent(line Text) Number
+	Indent("\t\ta") is 2
+	line.Length - line.TrimStart.Length
