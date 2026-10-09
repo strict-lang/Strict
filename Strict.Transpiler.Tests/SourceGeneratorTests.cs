@@ -73,7 +73,7 @@ public class Program
 		using var program =
 			new Type(package,
 				new TypeLines(nameof(GenerateFileReadProgram), "has App", "has file = \"" + TestTxt + "\"",
-					"has logger", "Run", "\tlogger.Log(file.Read)")).ParseMembersAndMethods(parser);
+					"has logger", "Run", "\tlogger.Log(file.ReadLines)")).ParseMembersAndMethods(parser);
 		var generatedCode = generator.Generate(program).ToString()!;
 		Assert.That(GenerateNewConsoleAppAndReturnOutput(projectFolder, generatedCode),
 			Is.EqualTo(ExpectedText + Environment.NewLine));

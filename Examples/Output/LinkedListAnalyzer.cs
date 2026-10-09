@@ -2,31 +2,20 @@ namespace TestPackage;
 
 public class LinkedListAnalyzer
 {
-	private List<Node> visited = new List<Node>();
-	public Node GetChainedNode(int number)
+	private int maxCount;
+	public int AnalyzeList(int steps)
 	{
-		var head = new Node();
-		var current = head;
-		foreach (var index in new Range(1, number))
-				Next = Node;
-				current = current.Next;
-		Next = head;
+		var result = 0;
+		foreach (var index in steps)
+			if (result < maxCount)
+				result = result + 1;
+		result;
 	}
-	public int GetLoopLength(Node node)
+
+	[Test]
+	public void AnalyzeListTest()
 	{
-		var first = new Node();
-		var second = new Node();
-		Next = second;
-		Next = first;
-		GetLoopLength(first) == 2;
-		var third = new Node();
-		Next = third;
-		Next = first;
-		GetLoopLength(first) == 3;
-		visited.Add(node);
-		if (visited in node.Next)
-			visited.Length();
-		else
-			GetLoopLength(node.Next);
+		Assert.That(() => new LinkedListAnalyzer(5).AnalyzeList(3) == 3));
+		Assert.That(() => new LinkedListAnalyzer(2).AnalyzeList(3) == 2));
 	}
 }

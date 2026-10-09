@@ -84,7 +84,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 		var result = VisitMethodCallInstance(methodCall);
 		if (methodCall.Method.Name != Method.From && methodCall.Instance != null)
 			result += ".";
-		if (methodCall.Method.Name == "Read" && methodCall.Instance?.ToString() == "file")
+		if (IsFileRead(methodCall))
 			result += "ReadToEnd"; //ncrunch: no coverage
 		else if (methodCall.Method.Name is "Write" or "Log" &&
 			methodCall.Instance?.ReturnType.Name is Type.Logger or Type.System)
@@ -102,6 +102,9 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 		return result;
 	}
 
+	private static bool IsFileRead(MethodCall methodCall) =>
+		methodCall.Method.Name is "Read" or "ReadLines" && methodCall.Instance?.ToString() == "file";
+
 	private string VisitMethodCallInstance(MethodCall methodCall) =>
 		((methodCall.Arguments.FirstOrDefault() as MethodCall)?.Instance?.ToString() == "file"
 			? "using var reader = new StreamReader(file);"
@@ -110,7 +113,7 @@ public class CSharpExpressionVisitor : ExpressionVisitor
 			: "") + (methodCall.Instance != null
 			? methodCall.Instance.ToString() == "file" && methodCall.Method.Name == "Write"
 				? "using var writer = new StreamWriter(file); writer"
-				: methodCall.Instance.ToString() == "file" && methodCall.Method.Name == "Read"
+				: IsFileRead(methodCall)
 					? "reader"
 					: Visit(methodCall.Instance)
 			: "");
