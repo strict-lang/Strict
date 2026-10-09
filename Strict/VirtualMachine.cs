@@ -402,7 +402,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		for (var index = 0; index < instr.FieldRegisters.Length && index < members.Count; index++)
 			values[index] = Memory.Registers[instr.FieldRegisters[index]];
 		for (var index = instr.FieldRegisters.Length; index < members.Count; index++)
-			values[index] = members[index].Type.IsTrait
+			values[index] = IsTrait(members[index].Type)
 				? CreateTraitInstance(members[index].Type)
 				: GetMemberInitialOrDefaultValue(members[index], hasBinaryMembers, binaryMembers, index);
 		TryPreFillConstrainedListMembers(instr.ReturnType, values);

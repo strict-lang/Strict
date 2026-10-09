@@ -17,7 +17,7 @@ public sealed partial class VirtualMachine
 		if (instanceValue.IsText || instanceValue.IsList || instanceValue.IsDictionary ||
 			instanceValue.IsFlatNumeric)
 			return false;
-		if (!instanceValue.GetType().IsTrait)
+		if (!IsTrait(instanceValue.GetType()))
 			return false;
 		var typeInstance = instanceValue.TryGetValueTypeInstance();
 		if (typeInstance == null)

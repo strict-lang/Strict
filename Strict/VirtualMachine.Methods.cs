@@ -157,7 +157,7 @@ public sealed partial class VirtualMachine
 				: CreateDefaultValue(returnType);
 			return true;
 		}
-		if (returnType.IsTrait && TryCallNativeFromPlugin(invoke, returnType))
+		if (IsTrait(returnType) && TryCallNativeFromPlugin(invoke, returnType))
 			return true;
 		return TryHandleFromConstructor(invoke, returnType);
 	}
@@ -255,7 +255,7 @@ public sealed partial class VirtualMachine
 			var flatMembers = flatNumeric.ReturnType.Members;
 			for (var memberIndex = 0; memberIndex < flatMembers.Count &&
 				memberIndex < flatNumeric.FlatWidth; memberIndex++)
-				if (!flatMembers[memberIndex].Type.IsTrait)
+				if (!IsTrait(flatMembers[memberIndex].Type))
 					Memory.Frame.Set(flatMembers[memberIndex].Name,
 						new ValueInstance(flatMembers[memberIndex].Type, flatNumeric.GetFlat(memberIndex)),
 						true);
@@ -280,7 +280,7 @@ public sealed partial class VirtualMachine
 		}
 		if (instanceType == null)
 			return;
-		var firstNonTraitMember = instanceType.Members.FirstOrDefault(member => !member.Type.IsTrait);
+		var firstNonTraitMember = instanceType.Members.FirstOrDefault(member => !IsTrait(member.Type));
 		if (firstNonTraitMember != null)
 			Memory.Frame.Set(firstNonTraitMember.Name, instance, true);
 	}
@@ -292,7 +292,7 @@ public sealed partial class VirtualMachine
 		{
 			for (var memberIndex = 0; memberIndex < members.Count &&
 				memberIndex < typeInstance.Values.Length; memberIndex++)
-				if (!members[memberIndex].Type.IsTrait || typeInstance.Values[memberIndex].HasValue)
+				if (!IsTrait(members[memberIndex].Type) || typeInstance.Values[memberIndex].HasValue)
 					Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex], true);
 			return true;
 		}
@@ -304,6 +304,18 @@ public sealed partial class VirtualMachine
 			Memory.Frame.Set(binaryMembers[memberIndex].Name, typeInstance.Values[memberIndex], true);
 		return true;
 	}
+
+	/// <summary>
+	/// Type.IsTrait walks members and methods each time, types no longer change while executing.
+	/// </summary>
+	private bool IsTrait(Type type)
+	{
+		if (!isTraitPerType.TryGetValue(type, out var isTrait))
+			isTraitPerType[type] = isTrait = type.IsTrait;
+		return isTrait;
+	}
+
+	private readonly Dictionary<Type, bool> isTraitPerType = new();
 
 	private bool TryGetBinaryMembers(Type type, out List<BinaryMember> members)
 	{

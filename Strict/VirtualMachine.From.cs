@@ -42,7 +42,7 @@ public sealed partial class VirtualMachine
 				values[memberIndex] = Memory.Registers[info.ArgumentRegisters[memberIndex]];
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 			if (!values[memberIndex].HasValue)
-				values[memberIndex] = members[memberIndex].Type.IsTrait
+				values[memberIndex] = IsTrait(members[memberIndex].Type)
 					? CreateTraitInstance(members[memberIndex].Type)
 					: GetMemberInitialOrDefaultValue(members[memberIndex], hasBinaryMembers, binaryMembers,
 						memberIndex);
@@ -140,7 +140,8 @@ public sealed partial class VirtualMachine
 				values[memberIndex] = Memory.Registers[info.ArgumentRegisters[argumentIndex]];
 			else if (TryGetBinaryMemberInitialValue(binaryMembers, memberIndex, out var initialValue))
 				values[memberIndex] = initialValue;
-			else if (memberType is { IsTrait: true, IsText: false, IsNumber: false, IsBoolean: false })
+			else if (memberType is { IsText: false, IsNumber: false, IsBoolean: false } &&
+				IsTrait(memberType))
 				values[memberIndex] = CreateTraitInstance(memberType);
 			else if (memberType != null)
 				values[memberIndex] = CreateDefaultComplexValue(memberType);
@@ -199,7 +200,7 @@ public sealed partial class VirtualMachine
 			: new ValueInstance(memberType, 0);
 	}
 
-	private static ValueInstance CreateDefaultComplexValue(Type type)
+	private ValueInstance CreateDefaultComplexValue(Type type)
 	{
 		if (type.IsList || type.IsDictionary || type.IsText || type.IsBoolean || type.IsNumber ||
 			type.IsNone)
@@ -209,7 +210,7 @@ public sealed partial class VirtualMachine
 			return CreateDefaultValue(type);
 		var values = new ValueInstance[members.Count];
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-			values[memberIndex] = members[memberIndex].Type.IsTrait
+			values[memberIndex] = IsTrait(members[memberIndex].Type)
 				? CreateTraitInstance(members[memberIndex].Type)
 				: members[memberIndex].InitialValue is Value initialValue
 					? initialValue.Data
