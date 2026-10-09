@@ -64,7 +64,8 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 			PerformanceLog.Write("VirtualMachine.RunInstructions",
 				"context=" + context + ", count=" + blockInstructions.Count);
 #endif
-		CacheInstructionAccessPaths(blockInstructions);
+		if (blocksWithCachedAccessPaths.Add(blockInstructions))
+			CacheInstructionAccessPaths(blockInstructions);
 		for (var index = 0; index < blockInstructions.Count; index++)
 			if (blockInstructions[index].InstructionType == InstructionType.LoopBegin)
 			{
@@ -77,6 +78,9 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
 			ExecuteInstruction(instructions[instructionIndex]);
 	}
+
+	private readonly HashSet<List<Instruction>> blocksWithCachedAccessPaths =
+		new(ReferenceEqualityComparer.Instance);
 
 	private void CacheInstructionAccessPaths(List<Instruction> blockInstructions)
 	{

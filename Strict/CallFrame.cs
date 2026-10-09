@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -13,7 +14,7 @@ internal sealed class CallFrame
 {
 	internal CallFrame(CallFrame? parent = null) => this.parent = parent;
 	private static readonly Lock SymbolLock = new();
-	private static readonly Dictionary<string, int> SymbolIds = new(StringComparer.Ordinal);
+	private static readonly ConcurrentDictionary<string, int> SymbolIds = new(StringComparer.Ordinal);
 	private static readonly List<string> SymbolNames = [];
 	internal static readonly int ValueSymbolId = ResolveSymbolId(Type.ValueLowercase);
 	internal static readonly int IndexSymbolId = ResolveSymbolId(Type.IndexLowercase);
@@ -63,13 +64,15 @@ internal sealed class CallFrame
 
 	internal static int ResolveSymbolId(string name)
 	{
+		if (SymbolIds.TryGetValue(name, out var existingSymbolId))
+			return existingSymbolId;
 		lock (SymbolLock)
 		{
 			if (SymbolIds.TryGetValue(name, out var symbolId))
 				return symbolId;
 			symbolId = SymbolNames.Count;
-			SymbolIds.Add(name, symbolId);
 			SymbolNames.Add(name);
+			SymbolIds[name] = symbolId;
 			return symbolId;
 		}
 	}
