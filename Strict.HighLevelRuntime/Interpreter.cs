@@ -9,7 +9,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.HighLevelRuntime;
 
-public class Interpreter
+public partial class Interpreter
 {
 	public Interpreter(Package initialPackage, TestBehavior behavior = TestBehavior.OnFirstRun)
 	{
@@ -35,24 +35,43 @@ public class Interpreter
 	}
 
 	internal readonly TestBehavior behavior;
+
 	internal readonly Type noneType;
+
 	internal readonly ValueInstance noneInstance;
+
 	internal readonly Type booleanType;
+
 	internal readonly ValueInstance trueInstance;
+
 	internal readonly ValueInstance falseInstance;
+
 	internal readonly Type numberType;
+
 	internal readonly Type fileType;
+
 	internal readonly Type characterType;
+
 	internal readonly Type textType;
+
 	internal readonly Type rangeType;
+
 	internal readonly Type listType;
+
 	private readonly BodyEvaluator bodyEvaluator;
+
 	private readonly IfEvaluator ifEvaluator;
+
 	private readonly SelectorIfEvaluator selectorIfEvaluator;
+
 	private readonly ForEvaluator forEvaluator;
+
 	internal readonly MethodCallEvaluator methodCallEvaluator;
+
 	private readonly ToEvaluator toEvaluator;
+
 	private readonly DirectoryEvaluator directoryEvaluator;
+
 	private readonly ConcurrentStack<ExecutionContext> contextPool = new();
 
 	internal ExecutionContext RentContext(Type type, Method method, ValueInstance? instance,
@@ -86,6 +105,7 @@ public class Interpreter
 	}
 
 	private readonly ConcurrentDictionary<Method, byte> validatedMethods = new();
+
 	public readonly Statistics Statistics = new();
 
 	public void ExecuteRunMethod(Type type)
@@ -97,34 +117,8 @@ public class Interpreter
 		Execute(run, instance, []);
 	}
 
-	private ValueInstance CreateFullInstance(Type type)
-	{
-		var members = type.Members;
-		if (members.Count == 0)
-			return noneInstance; //ncrunch: no coverage
-		var values = new ValueInstance[members.Count];
-		for (var i = 0; i < members.Count; i++)
-		{
-			var autoValue = TryAutoCreateInstance(members[i].Type);
-			values[i] = autoValue ?? GetDefaultValue(members[i].Type);
-		}
-		return new ValueInstance(type, values);
-	}
-
 	public class MethodNotFound(Type type, string methodName)
 		: InterpreterExecutionFailed(type, methodName);
-
-	private ValueInstance GetDefaultValue(Type type)
-	{
-		if (type.IsNumber)
-			return new ValueInstance(numberType, 0);
-		//ncrunch: no coverage start
-		if (type.IsText)
-			return new ValueInstance("");
-		return type.IsBoolean
-			? new ValueInstance(booleanType, false)
-			: noneInstance;
-	} //ncrunch: no coverage end
 
 	public ValueInstance Execute(Method method, ValueInstance instance, ValueInstance[] args,
 		ExecutionContext? parentContext = null, bool runOnlyTests = false,
@@ -208,156 +202,6 @@ public class Interpreter
 			if (parameter.IsMutable && context.Variables.TryGetValue(parameter.Name, out var finalValue))
 				capturedMutableParameters[index] = finalValue;
 		}
-	}
-
-	private bool TryExecuteNativeFileConstructor(Method method, ValueInstance instance,
-		IReadOnlyList<ValueInstance> args, ExecutionContext? parentContext, out ValueInstance result)
-	{
-		result = noneInstance;
-		if (method.Type != fileType || method.Name != Method.From || !instance.Equals(noneInstance) ||
-			args.Count != 1 || !FileValue.TryGetPathText(args[0], out var path))
-			return false;
-		result = NativeFileRegistry.Open(method.Type, path);
-		parentContext?.TrackDisposable(result);
-		return true;
-	}
-
-	private bool TryExecuteNativeFileMethod(Method method, ValueInstance instance,
-		IReadOnlyList<ValueInstance> args, out ValueInstance result)
-	{
-		result = noneInstance;
-		if (!FileValue.TryGetHandle(instance, fileType, out var handle) ||
-			!IsNativeFileMethod(method.Name))
-			return false;
-		switch (method.Name)
-		{
-		case "ReadLines":
-			result = CreateTexts(method, NativeFileRegistry.ReadLines(handle));
-			return true;
-		case "ReadBytes":
-			result = CreateBytesValue(method, NativeFileRegistry.ReadBytes(handle));
-			return true;
-		case "Write":
-			WriteFile(handle, args, method);
-			return true;
-		case "Delete":
-			NativeFileRegistry.Delete(handle);
-			return true;
-		case "Close":
-			NativeFileRegistry.Close(handle);
-			return true;
-		case "Exists":
-			result = ToBoolean(NativeFileRegistry.Exists(handle));
-			return true;
-		case "Length":
-			result = new ValueInstance(numberType, NativeFileRegistry.Length(handle));
-			return true;
-		default:
-			return false;
-		}
-	}
-
-	private static bool IsNativeFileMethod(string methodName) =>
-		methodName is "ReadLines" or "ReadBytes" or "Write" or "Delete" or "Close" or "Exists"
-			or "Length";
-
-	private static bool TryExecuteTextWriterWrite(Method method, ValueInstance[] args)
-	{
-		if (method.Name != "Write" || method.Type.Name != Type.TextWriter || args.Length == 0)
-			return false;
-		Console.WriteLine(FormatWriteArgument(args[0]));
-		return true;
-	}
-
-	private static string FormatWriteArgument(ValueInstance value)
-	{
-		if (value.IsText)
-			return value.Text;
-		return value.IsList
-			? string.Join(Environment.NewLine, value.List.Items.Select(FormatWriteArgument))
-			: value.ToExpressionCodeString();
-	}
-
-	private long GetFileHandle(ValueInstance instance, Method method)
-	{
-		return FileValue.TryGetHandle(instance, fileType, out var handle)
-			? handle
-			: throw new InterpreterExecutionFailed(method, "File instance has no native handle");
-	}
-
-	private static void WriteFile(long handle, IReadOnlyList<ValueInstance> args, Method method)
-	{
-		if (args.Count == 0)
-			throw new MissingArgument(method, "text", args);
-		if (args[0].IsText)
-			NativeFileRegistry.WriteText(handle, args[0].Text);
-		else if (method.Type.Name == Type.TextWriter && args[0].IsList)
-			NativeFileRegistry.WriteLines(handle, args[0].List.Items.Select(item => item.Text));
-		else if (args[0].IsList)
-			NativeFileRegistry.WriteBytes(handle, FileValue.GetBytes(args[0]));
-		else
-			throw new InvalidTypeForArgument(method.Type, args, 0);
-	}
-
-	internal ValueInstance CreateTexts(Method method, string[] lines)
-	{
-		var textsType = method.GetListImplementationType(method.GetType(Type.Text));
-		var values = new ValueInstance[lines.Length];
-		for (var index = 0; index < lines.Length; index++)
-			values[index] = new ValueInstance(lines[index]);
-		return new ValueInstance(textsType, values);
-	}
-
-	private ValueInstance CreateBytesValue(Method method, byte[] bytes)
-	{
-		var byteType = method.GetType(Type.Byte);
-		var bytesType = method.GetListImplementationType(byteType);
-		return FileValue.CreateBytes(bytesType, byteType, bytes);
-	}
-
-	private static bool ShouldIgnoreGenericListTestParseFailure(Method method, Exception inner) =>
-		method.Type.IsGeneric && method.Type.Name == Type.List &&
-		inner is Type.GenericTypesCannotBeUsedDirectlyUseImplementation;
-
-	private static bool IsKnownParserLimitation(Exception inner) =>
-		inner is ParsingFailed &&
-		(inner.InnerException is Type.NoMatchingMethodFound
-				or Type.ArgumentsDoNotMatchMethodParameters ||
-			inner.Message.Contains("Use number iteration"));
-
-	private static bool ShouldSkipGenericListTestValidation(Method method, bool runOnlyTests) =>
-		runOnlyTests && method.Type is { IsGeneric: true, Name: Type.List or Type.Dictionary };
-
-	private static bool ShouldSkipKnownStrictBaseMethodValidation(Method method, bool runOnlyTests) =>
-		runOnlyTests && ((method.Type.IsGeneric && method.Type.Name == Type.List) ||
-			(method.Type.Name == Type.Number && (method.Name == "digits" ||
-				(method.Name == BinaryOperator.To && method.ReturnType.IsText))) ||
-			(method.Type.IsText && method.Name == "Split") ||
-			method.Type.Name is "Parser" or "ShuntingYard");
-
-	private void DisposeTrackedValues(ExecutionContext ctx)
-	{
-		var returnValue = ctx.ExitMethodAndReturnValue;
-		foreach (var value in ctx.DisposableValues.ToArray())
-			if (returnValue.HasValue && value.Equals(returnValue.Value))
-			{
-				if (ctx.Parent != null)
-				{
-					ctx.Parent.TrackDisposable(value);
-					ctx.RemoveDisposable(value);
-				}
-			}
-			else
-			{
-				DisposeTrackedValue(value);
-			}
-	}
-
-	private void DisposeTrackedValue(ValueInstance value)
-	{
-		if (!FileValue.TryGetHandle(value, fileType, out var handle))
-			return;
-		NativeFileRegistry.Close(handle);
 	}
 
 	private ExecutionContext CreateExecutionContext(Method method, ValueInstance instance,
@@ -532,314 +376,8 @@ public class Interpreter
 		}
 	}
 
-	private bool InitializesMembers(Method method) =>
-		memberInitializingFroms.GetOrAdd(method, static from =>
-			from.lines.Skip(1).Any(line => from.Type.Members.Any(member =>
-				line.StartsWith("\t" + member.Name + " = ", StringComparison.Ordinal))));
-
-	private readonly ConcurrentDictionary<Method, bool> memberInitializingFroms = new();
-
-	/// <summary>
-	/// A custom from(..) assigns members, start from default member values and run its body.
-	/// </summary>
-	private ValueInstance ExecuteMemberInitializingFrom(Method method, ValueInstance[] args,
-		ExecutionContext? parentContext)
-	{
-		Statistics.FromCreationsCount++;
-		var members = method.Type.Members;
-		var values = new ValueInstance[members.Count];
-		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-			values[memberIndex] = CreateDefaultMemberValue(members[memberIndex].Type);
-		var newInstance = new ValueInstance(method.Type, values);
-		var context = CreateExecutionContext(method, newInstance, args, parentContext, false);
-		try
-		{
-			RunExpression(method.GetBodyAndParseIfNeeded(), context);
-		}
-		finally
-		{
-			DisposeTrackedValues(context);
-			ReturnContext(context);
-		}
-		ValidateMemberConstraints(method, newInstance.TryGetValueTypeInstance()!.Values);
-		return newInstance;
-	}
-
-	private ValueInstance GetFromConstructorValue(Method method, IReadOnlyList<ValueInstance> args)
-	{
-		Statistics.FromCreationsCount++;
-		if (args.Count == 0 && method.Type.IsText)
-			return new ValueInstance("");
-		if (args.Count == 0 && method.Type.IsCharacter)
-			return new ValueInstance(method.Type, 0);
-		if ((method.Type.IsCharacter || method.Type.IsNumber || method.Type.IsEnum) && args.Count == 1)
-		{
-			if (IsSingleCharacterTextArgument(method.Type, args[0]))
-				return new ValueInstance(method.Type, args[0].Text[0]);
-			if (!args[0].IsText || args[0].IsSameOrCanBeUsedAs(method.Type))
-				return new ValueInstance(method.Type, args[0].Number);
-		}
-		if (method.Type.IsList)
-			return new ValueInstance(method.Type, args.ToArray());
-		if (method.Type.IsDictionary)
-			return args[0].IsDictionary
-				? args[0]
-				: new ValueInstance(method.Type, FillDictionaryFromListKeyAndValues(args[0]));
-		var typeMembers = method.Type.Members;
-		if (typeMembers.Count == 0)
-			return noneInstance;
-		var values = new ValueInstance[typeMembers.Count];
-		for (var index = 0; index < args.Count; index++)
-		{
-			var parameter = method.Parameters[index];
-			if (!args[index].IsSameOrCanBeUsedAs(parameter.Type) && !parameter.Type.IsIterator &&
-				!IsSingleCharacterTextArgument(parameter.Type, args[index]))
-				throw new InvalidTypeForArgument(method.Type, args, index);
-			var memberIndex = GetMemberIndexForParameter(typeMembers, parameter, index);
-			values[memberIndex] = IsSingleCharacterTextArgument(parameter.Type, args[index])
-				? new ValueInstance(characterType, args[index].Text[0])
-				: args[index];
-		}
-		for (var index = args.Count; index < method.Parameters.Count; index++)
-		{
-			var parameter = method.Parameters[index];
-			var memberIndex = GetMemberIndexForParameter(typeMembers, parameter, index);
-			if (memberIndex >= typeMembers.Count)
-				continue;
-			var memberType = typeMembers[memberIndex].Type;
-			if (parameter.DefaultValue != null)
-			{
-				var defaultVal = RunExpression(parameter.DefaultValue,
-					RentContext(method.Type, method, noneInstance, null));
-				values[memberIndex] = memberType.IsList && !defaultVal.IsSameOrCanBeUsedAs(memberType)
-					? new ValueInstance(memberType, Array.Empty<ValueInstance>())
-					: defaultVal;
-			}
-			else
-			{
-				var autoValue = TryAutoCreateInstance(memberType);
-				if (autoValue != null)
-					values[memberIndex] = autoValue.Value;
-			}
-		}
-		for (var memberIndex = 0; memberIndex < typeMembers.Count; memberIndex++)
-			if (!values[memberIndex].HasValue && typeMembers[memberIndex].Type.IsList)
-				values[memberIndex] = new ValueInstance(typeMembers[memberIndex].Type,
-					Array.Empty<ValueInstance>());
-		ValidateMemberConstraints(method, values);
-		if (!method.Type.IsMutable && values.Length == 1 &&
-			values[0].IsSameOrCanBeUsedAs(method.Type))
-			return values[0];
-		TryPreFillConstrainedListMembers(method.Type, values, method);
-		return new ValueInstance(method.Type, values);
-	}
-
-	private void ValidateMemberConstraints(Method method, ValueInstance[] values)
-	{
-		var members = method.Type.Members;
-		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-			if (members[memberIndex].Constraints is { } constraints && values[memberIndex].HasValue &&
-				!members[memberIndex].Type.IsList)
-				foreach (var constraint in constraints)
-					if (!EvaluateConstraint(method, values, memberIndex, constraint))
-						throw new InterpreterExecutionFailed(method, "Constraint " + constraint + " of member " +
-							members[memberIndex].Name + " failed for value " + values[memberIndex]);
-	}
-
-	private bool EvaluateConstraint(Method method, ValueInstance[] values, int memberIndex,
-		Expression constraint)
-	{
-		var members = method.Type.Members;
-		var context = RentContext(members[memberIndex].Type, method, values[memberIndex], null);
-		try
-		{
-			for (var index = 0; index < members.Count; index++)
-				if (values[index].HasValue)
-					context.Variables[members[index].Name] = values[index];
-			return RunExpression(constraint, context).Boolean;
-		}
-		finally
-		{
-			ReturnContext(context);
-		}
-	}
-
-	private void TryPreFillConstrainedListMembers(Type targetType, ValueInstance[] values,
-		Method method)
-	{
-		var members = targetType.Members;
-		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-		{
-			if (!values[memberIndex].IsList || values[memberIndex].List.Items.Count > 0 ||
-				members[memberIndex].Constraints == null)
-				continue;
-			var constrainedLength = TryGetConstrainedLength(targetType, values, members[memberIndex],
-				method);
-			if (constrainedLength is not > 0)
-				continue;
-			var elementType = members[memberIndex].Type is GenericTypeImplementation genericList
-				? genericList.ImplementationTypes[0]
-				: members[memberIndex].Type;
-			var elements = new ValueInstance[constrainedLength.Value];
-			for (var elementIndex = 0; elementIndex < constrainedLength.Value; elementIndex++)
-				elements[elementIndex] = CreateDefaultMemberValue(elementType);
-			values[memberIndex] = new ValueInstance(members[memberIndex].Type, elements);
-		}
-	}
-
-	private int? TryGetConstrainedLength(Type targetType, ValueInstance[] values, Member member,
-		Method method)
-	{
-		foreach (var constraint in member.Constraints!)
-		{
-			if (constraint is not Binary { Method.Name: BinaryOperator.Is } binary ||
-				binary.Instance?.ToString() != "Length")
-				continue;
-			if (binary.Arguments[0] is Value numberValue)
-				return (int)numberValue.Data.Number;
-			return TryEvaluateLengthInMemberScope(targetType, values, binary.Arguments[0], method);
-		}
-		return null;
-	}
-
-	private int? TryEvaluateLengthInMemberScope(Type targetType, ValueInstance[] values,
-		Expression lengthExpression, Method method)
-	{
-		var context = RentContext(targetType, method, noneInstance, null);
-		try
-		{
-			for (var memberIndex = 0; memberIndex < targetType.Members.Count; memberIndex++)
-				if (values[memberIndex].HasValue)
-					context.Variables[targetType.Members[memberIndex].Name] = values[memberIndex];
-			return (int)RunExpression(lengthExpression, context).Number;
-		}
-		catch
-		{
-			return null;
-		}
-		finally
-		{
-			ReturnContext(context);
-		}
-	}
-
-	private ValueInstance CreateDefaultMemberValue(Type type)
-	{
-		if (type.IsText)
-			return new ValueInstance("");
-		if (type.IsBoolean)
-			return new ValueInstance(type, false);
-		if (type.IsNumber || type.IsCharacter || type.IsEnum)
-			return new ValueInstance(type, 0);
-		if (type.IsNone)
-			return noneInstance;
-		if (type.IsList)
-			return new ValueInstance(type, Array.Empty<ValueInstance>());
-		if (type.IsDictionary)
-			return new ValueInstance(type, new Dictionary<ValueInstance, ValueInstance>());
-		var members = type.Members;
-		if (members.Count == 0)
-			return new ValueInstance(type, 0);
-		var values = new ValueInstance[members.Count];
-		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-		{
-			var member = members[memberIndex];
-			if (member.Type.IsTrait)
-			{
-				var traitValue = TryAutoCreateInstance(member.Type);
-				values[memberIndex] = traitValue ?? noneInstance;
-				continue;
-			}
-			if (member.InitialValue is Value initialValue)
-			{
-				values[memberIndex] = initialValue.Data;
-				continue;
-			}
-			if (member.Type.IsList)
-			{
-				values[memberIndex] = new ValueInstance(member.Type, Array.Empty<ValueInstance>());
-				continue;
-			}
-			values[memberIndex] = CreateDefaultMemberValue(member.Type);
-		}
-		return new ValueInstance(type, values);
-	}
-
 	private static readonly IReadOnlyDictionary<string, string> TraitImplementationRegistry =
 		new Dictionary<string, string> { { Type.TextWriter, Type.System } };
-
-	private ValueInstance? TryAutoCreateInstance(Type type, HashSet<string>? creating = null)
-	{
-		creating ??= [];
-		if (type.IsText)
-			return new ValueInstance("");
-		if (type.IsNumber)
-			return new ValueInstance(numberType, 0);
-		if (type.IsBoolean)
-			return new ValueInstance(booleanType, false);
-		if (type.IsCharacter)
-			return new ValueInstance(characterType, 0);
-		if (type.IsTrait)
-		{
-			if (!TraitImplementationRegistry.TryGetValue(type.Name, out var concreteName))
-				return null; //ncrunch: no coverage
-			var concreteType = type.FindType(concreteName);
-			return concreteType == null
-				? null
-				// ReSharper disable once TailRecursiveCall
-				: TryAutoCreateInstance(concreteType, creating);
-		}
-		if (!creating.Add(type.Name))
-		{
-			var dummyValues = new ValueInstance[type.Members.Count];
-			for (var i = 0; i < dummyValues.Length; i++)
-				dummyValues[i] = noneInstance;
-			return new ValueInstance(type, dummyValues);
-		}
-		var members = type.Members;
-		if (members.Count == 0)
-		{
-			creating.Remove(type.Name);
-			return null;
-		}
-		var values = new ValueInstance[members.Count];
-		for (var i = 0; i < members.Count; i++)
-		{
-			var memberValue = TryAutoCreateInstance(members[i].Type, creating);
-			if (memberValue == null)
-			{ //ncrunch: no coverage start
-				creating.Remove(type.Name);
-				return null;
-			} //ncrunch: no coverage end
-			values[i] = memberValue.Value;
-		}
-		creating.Remove(type.Name);
-		return new ValueInstance(type, values);
-	}
-
-	private static Dictionary<ValueInstance, ValueInstance> FillDictionaryFromListKeyAndValues(
-		ValueInstance value)
-	{
-		var dictionary = new Dictionary<ValueInstance, ValueInstance>();
-		foreach (var pair in value.List.Items)
-		{
-			var keyAndValue = pair.List.Items;
-			dictionary[keyAndValue[0]] = keyAndValue[1];
-		}
-		return dictionary;
-	}
-
-	private static int GetMemberIndexForParameter(IReadOnlyList<Member> typeMembers,
-		Parameter parameter, int fallbackIndex)
-	{
-		for (var i = 0; i < typeMembers.Count; i++)
-			if (typeMembers[i].Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase))
-				return i;
-		return fallbackIndex; //ncrunch: no coverage
-	}
-
-	private static bool IsSingleCharacterTextArgument(Type targetType, ValueInstance value) =>
-		value is { IsText: true, Text.Length: 1 } && (targetType.IsNumber || targetType.IsCharacter);
 
 	public sealed class
 		InvalidTypeForArgument(Type type, IReadOnlyList<ValueInstance> args, int index)
@@ -896,67 +434,8 @@ public class Interpreter
 		};
 	}
 
-	private ValueInstance EvaluateListExpression(List list, ExecutionContext context)
-	{
-		var constantData = list.TryGetConstantData();
-		if (constantData.HasValue)
-			return constantData.Value;
-		var count = list.Values.Count;
-		var values = new ValueInstance[count];
-		for (var i = 0; i < count; i++)
-			values[i] = RunExpression(list.Values[i], context);
-		return new ValueInstance(list.ReturnType, values);
-	}
-
 	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
 		: InterpreterExecutionFailed(context.Type, expr.GetType().Name); //ncrunch: no coverage
-
-	private ValueInstance EvaluateVariable(string name, ExecutionContext context)
-	{
-		Statistics.VariableCallCount++;
-		return context.Find(name, Statistics) ?? name switch
-		{
-			Type.ValueLowercase => context.This,
-			Type.OuterLowercase => context.Parent!.Get(Type.ValueLowercase, Statistics),
-			_ => null
-		} ?? throw new ExecutionContext.VariableNotFound(name, context.Type, context.This);
-	}
-
-	public ValueInstance EvaluateMemberCall(MemberCall member, ExecutionContext ctx)
-	{
-		Statistics.MemberCallCount++;
-		if (member.Instance is VariableCall { Variable.Name: Type.OuterLowercase })
-			return ctx.Parent!.Get(member.Member.Name, Statistics);
-		if (member.Member.InitialValue != null && member.IsConstant)
-			return RunExpression(member.Member.InitialValue, ctx);
-		var instance = member.Instance != null
-			? RunExpression(member.Instance, ctx)
-			: ctx.This;
-		if (instance == null && ctx.Type.Members.Contains(member.Member))
-			throw new UnableToCallMemberWithoutInstance(member, ctx); //ncrunch: no coverage
-		if (instance is { IsDictionary: true } &&
-			member.Member.Name.Equals(Type.ElementsLowercase, StringComparison.OrdinalIgnoreCase))
-		{
-			var dictionaryItems = instance.Value.GetDictionaryItems();
-			var pairs = new ValueInstance[dictionaryItems.Count];
-			var pairType = member.Member.Type is { IsList: true, IsGeneric: true }
-				? listType.GetFirstImplementation()
-				: member.Member.Type;
-			var index = 0;
-			foreach (var pair in dictionaryItems)
-				pairs[index++] = new ValueInstance(pairType, [pair.Key, pair.Value]);
-			return new ValueInstance(member.Member.Type, pairs);
-		}
-		var typeInstance = instance?.TryGetValueTypeInstance();
-		if (typeInstance != null && typeInstance.TryGetValue(member.Member.Name, out var value))
-			return value;
-		if (instance != null && !member.IsConstant && member.Member.Type.Name != Type.Iterator)
-			return new ValueInstance(instance.Value, member.Member.Type);
-		return ctx.Get(member.Member.Name, Statistics);
-	}
-
-	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
-		: Exception(member + ", context " + ctx); //ncrunch: no coverage
 
 	public sealed class ReturnTypeMustMatchMethod(Body body, ValueInstance last)
 		: InterpreterExecutionFailed(body.Method,
@@ -965,80 +444,7 @@ public class Interpreter
 
 	private readonly ConcurrentDictionary<Method, bool> simpleMethodCache = new();
 
-	/// <summary>
-	/// Skip parsing for trivially simple methods during validation to avoid missing-instance errors.
-	/// </summary>
-	private bool IsSimpleSingleLineMethod(Method method) =>
-		simpleMethodCache.GetOrAdd(method, CheckIsSimpleSingleLineMethod);
-
-	private static bool CheckIsSimpleSingleLineMethod(Method method)
-	{
-		if (method.lines.Count != 2)
-			return false;
-		var bodyLine = method.lines[1].Trim();
-		var hasMethodCalls = bodyLine.Contains('(') && !bodyLine.StartsWith('(');
-		if (hasMethodCalls)
-			return false;
-		var thenCount = CountThenSeparators(bodyLine);
-		var operatorCount = CountOperatorWords(bodyLine);
-		return (thenCount == 0 && operatorCount <= 1) || (thenCount == 1 && operatorCount <= 2) ||
-			(thenCount == 2 && operatorCount == 0);
-	}
-
-	private static int CountOperatorWords(string input)
-	{
-		var span = input.AsSpan();
-		var count = 0;
-		while (span.Length > 0)
-		{
-			var spaceIndex = span.IndexOf(' ');
-			var word = spaceIndex < 0
-				? span
-				: span[..spaceIndex];
-			if (word is "and" or "or" or "not" or "is")
-				count++;
-			if (spaceIndex < 0)
-				break;
-			span = span[(spaceIndex + 1)..];
-		}
-		return count;
-	}
-
-	private static int CountThenSeparators(string input)
-	{
-		var count = 0;
-		for (var index = 0; index <= input.Length - If.ThenSeparator.Length; index++)
-			if (input.AsSpan(index).StartsWith(If.ThenSeparator, StringComparison.Ordinal))
-			{
-				count++;
-				index += If.ThenSeparator.Length - 1;
-			}
-		return count;
-	}
-
-	/// <summary>
-	/// Simple expressions like "value is other" or "value" don't need tests as they are
-	/// essentially getters or trivial delegations. Complex expressions need tests.
-	/// </summary>
-	private static bool IsSimpleExpressionWithLessThanThreeSubExpressions(Expression expr) =>
-		CountExpressionComplexity(expr) <= MaxSimpleExpressionComplexity;
-
 	private const int MaxSimpleExpressionComplexity = 3;
-
-	private static int CountExpressionComplexity(Expression expr) =>
-		expr switch
-		{
-			Binary => 1,
-			Not n => 1 + CountExpressionComplexity(n.Instance!), //ncrunch: no coverage
-			MethodCall m => 1 + (m.Instance != null
-				? CountExpressionComplexity(m.Instance)
-				: 0) + m.Arguments.Sum(CountExpressionComplexity),
-			If i => CountExpressionComplexity(i.Condition) + CountExpressionComplexity(i.Then) +
-				(i.OptionalElse != null
-					? CountExpressionComplexity(i.OptionalElse)
-					: 0),
-			_ => 1
-		};
 
 	public class MethodRequiresTest(Method method, string body) : InterpreterExecutionFailed(method,
 		body.StartsWith("Test execution failed", StringComparison.Ordinal)
@@ -1061,45 +467,6 @@ public class Interpreter
 		public Expression FailedExpression { get; } = expression;
 		public ValueInstance Result { get; } = result;
 		public string Details { get; } = details;
-	}
-
-	private ValueInstance EvaluateMutableListElementAssignment(ListCall target, Expression value,
-		ExecutionContext ctx)
-	{
-		Statistics.MutableUsageCount++;
-		var newValue = RunExpression(value, ctx);
-		var index = (int)RunExpression(target.Index, ctx).Number;
-		var listInstance = RunExpression(target.List, ctx);
-		listInstance.List.Items[index] = newValue;
-		return newValue;
-	}
-
-	private ValueInstance EvaluateAndAssign(string name, Expression value, ExecutionContext ctx,
-		bool isDeclaration)
-	{
-		if (isDeclaration)
-			Statistics.VariableDeclarationCount++;
-		if (value.IsMutable)
-		{
-			if (isDeclaration)
-				Statistics.MutableDeclarationCount++;
-			Statistics.MutableUsageCount++;
-		}
-		return ctx.Set(name, RunExpression(value, ctx));
-	}
-
-	private ValueInstance EvaluateReturn(Return r, ExecutionContext ctx)
-	{
-		Statistics.ReturnCount++;
-		var result = RunExpression(r.Value, ctx);
-		ctx.ExitMethodAndReturnValue = result;
-		return result;
-	}
-
-	private ValueInstance EvaluateNot(Not not, ExecutionContext ctx)
-	{
-		Statistics.UnaryCount++;
-		return ToBoolean(!RunExpression(not.Instance!, ctx).Boolean);
 	}
 
 	public ValueInstance ToBoolean(bool isTrue) =>
