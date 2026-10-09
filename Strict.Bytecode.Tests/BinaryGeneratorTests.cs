@@ -39,6 +39,19 @@ public sealed class BinaryGeneratorTests : TestBytecode
 	}
 
 	[Test]
+	public void AppendingToSameMutableListWritesInPlace()
+	{
+		var methodCall = GenerateMethodCallFromSource("ListGrowth", "ListGrowth(3).Grow",
+			"has count Number", "Grow Numbers", "	ListGrowth(3).Grow is (0, 1, 2)",
+			"	mutable values = List(Mutable(Number))", "	for count", "		values = values + index",
+			"	values");
+		var instructions = new BinaryGenerator(methodCall).Generate().ToInstructions();
+		Assert.That(instructions.OfType<WriteToListInstruction>().Count(), Is.EqualTo(1));
+		Assert.That(instructions.OfType<BinaryInstruction>().
+			Any(binary => binary.InstructionType == InstructionType.Add), Is.False);
+	}
+
+	[Test]
 	public void LoggerLogWithTextLiteralGeneratesPrintInstruction()
 	{
 		var methodCall = GenerateMethodCallFromSource("NumValue", "NumValue(5).GetValue",

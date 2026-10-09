@@ -94,11 +94,25 @@ public sealed partial class BinaryGenerator
 	{
 		if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
 			return;
-		GenerateInstructionFromExpression(methodCall.Arguments[0]);
-		var listName = methodCall.Instance.ToString();
+		GenerateAppendToList(methodCall.Instance.ToString(), methodCall.Arguments[0]);
+	}
+
+	private void GenerateAppendToList(string listName, Expression element)
+	{
+		GenerateInstructionFromExpression(element);
 		instructions.Add(new WriteToListInstruction(registry.PreviousRegister, listName));
 		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), listName));
 	}
+
+	/// <summary>
+	/// list = list + element is what List.Add does, so it appends in place instead of copying.
+	/// </summary>
+	private static bool IsAppendToSameList(MutableReassignment reassignment) =>
+		reassignment.Value is Binary
+		{
+			Method.Name: BinaryOperator.Plus, Instance: VariableCall or ParameterCall
+		} binary && binary.Instance.ReturnType.IsList && binary.Instance.ToString() == reassignment.Name &&
+		!binary.Method.Parameters[0].Type.IsList;
 
 	private bool TryGenerateAddForTable(MethodCall methodCall)
 	{

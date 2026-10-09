@@ -308,6 +308,9 @@ public sealed partial class BinaryGenerator
 		case For forExpression:
 			GenerateLoopInstructions(forExpression);
 			return;
+		case MutableReassignment reassignment when IsAppendToSameList(reassignment):
+			GenerateAppendToList(reassignment.Name, ((Binary)reassignment.Value).Arguments[0]);
+			return;
 		case MutableReassignment reassignment:
 			GenerateForAssignmentOrDeclaration(reassignment.Value, reassignment.Name);
 			return;
