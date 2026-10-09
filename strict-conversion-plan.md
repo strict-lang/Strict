@@ -48,6 +48,10 @@ invalid ColorValue(255, 0, 0)). The VM does not check constraints yet: generatin
 BinaryGenerator costs time in hot loops (ColorValue per pixel), decide together with Phase C
 (compile time check for constant arguments + optional VM checks).
 
+Open (found while verifying): 5 Slow Strict.Transpiler tests (ExecuteOperation,
+GenerateFileReadProgram, LinkedListAnalyzer, ReduceButGrow, RemoveDuplicateWords) already failed
+before 2026-10-09 (expected C# output out of date with the converted Examples) → fix in Phase B.
+
 Phase A result (2026-10-09): A1.1–A1.11 done except VM constraint checks (moved to Phase C), A1.4
 `Y`/`y` not reproducible, A1.5/A1.7/A1.9 no longer issues. A1.8 binaries are written atomically
 and a busy cache file no longer fails a run. A2 specific exception types in runtime/bytecode

@@ -280,7 +280,7 @@ public sealed class InstructionsToMlirTests
 	}
 
 	[Test]
-	public void UnhandledInstructionThrowsNotSupportedException()
+	public void UnhandledInstructionThrowsNotSupportedByBackend()
 	{
 		var instructions = new List<Instruction>
 		{
@@ -288,7 +288,7 @@ public sealed class InstructionsToMlirTests
 			new SetInstruction(new ValueInstance(NumberType, 0.0), Register.R1),
 			new ReturnInstruction(Register.R0)
 		};
-		Assert.Throws<NotSupportedException>(() =>
+		Assert.Throws<InstructionsCompiler.NotSupportedByBackend>(() =>
 			compiler.CompileInstructions("BadInstr", instructions));
 	}
 

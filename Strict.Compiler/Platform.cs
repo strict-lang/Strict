@@ -6,3 +6,6 @@ public enum Platform
 	Linux,
 	MacOS
 }
+
+public sealed class UnsupportedPlatform(Platform platform)
+	: Exception("Unsupported platform: " + platform);

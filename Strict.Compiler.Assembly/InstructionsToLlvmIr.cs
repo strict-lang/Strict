@@ -63,8 +63,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			Platform.Windows => "x86_64-pc-windows-msvc",
 			Platform.Linux => "x86_64-unknown-linux-gnu",
 			Platform.MacOS => "x86_64-apple-macosx",
-			_ => throw new NotSupportedException("Unsupported platform: " +
-				platform) //ncrunch: no coverage
+			_ => throw new UnsupportedPlatform(platform) //ncrunch: no coverage
 		};
 		var header = $"target triple = \"{targetTriple}\"\n";
 		if (platform == Platform.Windows)
@@ -234,7 +233,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
 			break; //ncrunch: no coverage
 		default:
-			throw new NotSupportedException($"LLVM IR compilation does not support instruction: {
+			throw new NotSupportedByBackend($"LLVM IR compilation does not support instruction: {
 				instruction.GetType().Name
 			} ({
 				instruction.InstructionType
@@ -311,7 +310,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			InstructionType.Multiply => "fmul",
 			InstructionType.Divide => "fdiv",
 			InstructionType.Modulo => "frem",
-			_ => throw new NotSupportedException( //ncrunch: no coverage
+			_ => throw new NotSupportedByBackend( //ncrunch: no coverage
 				$"LLVM IR compilation of {binary.InstructionType} is not supported")
 		};
 		lines.Add($"  {dest} = {op} double {left}, {right}");
@@ -329,7 +328,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 			InstructionType.NotEqual => "one",
 			InstructionType.LessThan => "olt",
 			InstructionType.GreaterThan => "ogt",
-			_ => throw new NotSupportedException( //ncrunch: no coverage
+			_ => throw new NotSupportedByBackend( //ncrunch: no coverage
 				$"LLVM IR comparison {binary.InstructionType} is not supported")
 		};
 		var temp = context.NextTemp();
@@ -546,7 +545,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 	private static void EmitInvoke(Invoke invoke, List<string> lines, EmitContext context)
 	{
 		if (invoke.MethodInfo == null)
-			throw new NotSupportedException(
+			throw new NotSupportedByBackend(
 				"Invoke instruction is missing method metadata"); //ncrunch: no coverage
 		if (invoke.MethodInfo.MethodName == Method.From && !invoke.MethodInfo.InstanceRegister.HasValue)
 		{
@@ -556,7 +555,7 @@ public sealed class InstructionsToLlvmIr : InstructionsCompiler
 		var methodKey = BuildMethodHeaderKeyInternal(invoke.MethodInfo);
 		if (context.CompiledMethods == null ||
 			!context.CompiledMethods.TryGetValue(methodKey, out var methodInfo))
-			throw new NotSupportedException( //ncrunch: no coverage
+			throw new NotSupportedByBackend( //ncrunch: no coverage
 				"Non-print method calls cannot be compiled to LLVM IR. " +
 				"Use the interpreted runner for programs with complex runtime method calls.");
 		var arguments = new List<string>();

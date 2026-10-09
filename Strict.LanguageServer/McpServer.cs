@@ -130,7 +130,7 @@ public static class McpServer
 		{
 			"check" => Summarize(ScrunchAnalyzer.AnalyzePath(package, path, force)),
 			"status" => Summarize(ScrunchAnalyzer.Status(path)),
-			_ => throw new InvalidOperationException("Unknown tool: " + name)
+			_ => throw new UnknownTool(name)
 		};
 		var text = JsonSerializer.Serialize(payload, JsonOptions);
 		return Result(id, new { content = new[] { new { type = "text", text } }, isError = false });
@@ -216,4 +216,6 @@ public static class McpServer
 		await output.WriteAsync(bytes, cancellationToken);
 		await output.FlushAsync(cancellationToken);
 	}
+
+	public sealed class UnknownTool(string? name) : Exception("Unknown tool: " + name);
 }

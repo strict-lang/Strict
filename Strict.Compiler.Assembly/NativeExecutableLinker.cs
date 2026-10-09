@@ -10,7 +10,7 @@ public sealed class NativeExecutableLinker : Linker
 	/// <summary>
 	/// Assembles <paramref name="asmFilePath"/> with NASM and links it into an executable.
 	/// Throws <see cref="ToolNotFoundException"/> if NASM or the C compiler is not on PATH.
-	/// Throws <see cref="NotSupportedException"/> for platforms whose code generation is not yet
+	/// Throws <see cref="UnsupportedPlatform"/> for platforms whose code generation is not yet
 	/// implemented (e.g., LinuxArm requires a separate AArch64 code-generator).
 	/// </summary>
 	public override async Task<string> CreateExecutable(string asmFilePath, Platform platform,
@@ -46,7 +46,7 @@ public sealed class NativeExecutableLinker : Linker
 			Platform.Windows => "win64",
 			Platform.Linux => "elf64",
 			Platform.MacOS => "macho64",
-			_ => throw new NotSupportedException("Unsupported platform: " + platform)
+			_ => throw new UnsupportedPlatform(platform)
 		}; //ncrunch: no coverage end
 
 	private static string BuildLinkerArgs(string objPath, string exePath, Platform platform,
@@ -66,8 +66,7 @@ public sealed class NativeExecutableLinker : Linker
 				? $"\"{objPath}\" -o \"{exePath}\" {SizeFlags}"
 				: $"\"{objPath}\" -o \"{exePath}\" {SizeFlags} -nostdlib -Wl,-e,_start",
 			Platform.MacOS => $"\"{objPath}\" -o \"{exePath}\" {SizeFlags}", //ncrunch: no coverage
-			_ => throw new NotSupportedException("Unsupported platform: " +
-				platform) //ncrunch: no coverage
+			_ => throw new UnsupportedPlatform(platform) //ncrunch: no coverage
 		};
 	}
 

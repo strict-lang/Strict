@@ -336,7 +336,7 @@ public sealed class InstructionsToLlvmIrTests
 	}
 
 	[Test]
-	public void UnhandledInstructionThrowsNotSupportedException()
+	public void UnhandledInstructionThrowsNotSupportedByBackend()
 	{
 		var instructions = new List<Instruction>
 		{
@@ -344,7 +344,7 @@ public sealed class InstructionsToLlvmIrTests
 			new SetInstruction(new ValueInstance(NumberType, 0.0), Register.R1),
 			new ReturnInstruction(Register.R0)
 		};
-		Assert.Throws<NotSupportedException>(() =>
+		Assert.Throws<InstructionsCompiler.NotSupportedByBackend>(() =>
 			compiler.CompileInstructions("BadInstr", instructions));
 	}
 
@@ -563,7 +563,7 @@ public sealed class InstructionsToLlvmIrTests
 	public void ToolRunnerEnsureOutputFileExistsThrowsForMissingFile()
 	{
 		var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".missing");
-		Assert.Throws<InvalidOperationException>(() =>
+		Assert.Throws<ToolRunner.ToolOutputMissing>(() =>
 			ToolRunner.EnsureOutputFileExists(path, "test", Platform.Linux));
 	}
 

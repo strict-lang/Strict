@@ -105,6 +105,6 @@ public sealed class InstructionsToCuda : InstructionsCompiler
 			InstructionType.Subtract => "-",
 			InstructionType.Multiply => "*",
 			InstructionType.Divide => "/", //ncrunch: no coverage
-			_ => throw new NotSupportedException(instruction.ToString()) //ncrunch: no coverage
+			_ => throw new NotSupportedByBackend("CUDA: " + instruction) //ncrunch: no coverage
 		};
 }

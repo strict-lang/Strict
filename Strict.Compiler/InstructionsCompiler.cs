@@ -8,6 +8,8 @@ namespace Strict.Compiler;
 
 public abstract class InstructionsCompiler
 {
+	public sealed class NotSupportedByBackend(string message) : Exception(message);
+
 	protected static string BuildMethodHeaderKeyInternal(InvokeMethodInfo info) =>
 		info.ParameterNames.Length == 0
 			? BinaryMemberJustTypeName(info.ReturnTypeName) == Type.None

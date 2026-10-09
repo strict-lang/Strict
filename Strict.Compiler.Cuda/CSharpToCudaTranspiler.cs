@@ -93,8 +93,11 @@ public class CSharpType : Type
 					"input Number", "width Number", "height Number", "initialDepth Number"
 				]);
 			else if (parts[index] != "float")
-				throw new NotSupportedException(parts[index + 1]); //ncrunch: no coverage
+				throw new UnsupportedParameterType(parts[index], parts[index + 1]); //ncrunch: no coverage
 			else
 				parameters.Add(parts[index + 1] + " Number");
 	}
+
+	public sealed class UnsupportedParameterType(string type, string name)
+		: Exception("Only float and DepthImage parameters can be transpiled, " + name + " is " + type);
 }

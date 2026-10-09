@@ -618,11 +618,11 @@ public sealed class InstructionsToAssemblyTests
 	}
 
 	[Test]
-	public void MissingNativeOutputFileThrowsDetailedInvalidOperationException()
+	public void MissingNativeOutputFileThrowsDetailedToolOutputMissing()
 	{
 		var missingFilePath =
 			Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "PureAdder");
-		var exception = Assert.Throws<InvalidOperationException>(() =>
+		var exception = Assert.Throws<ToolRunner.ToolOutputMissing>(() =>
 			ToolRunner.EnsureOutputFileExists(missingFilePath, "gcc", Platform.Linux))!;
 		Assert.That(exception.Message, Does.Contain(missingFilePath));
 		Assert.That(exception.Message, Does.Contain("gcc"));

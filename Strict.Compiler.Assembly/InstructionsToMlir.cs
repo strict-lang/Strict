@@ -168,7 +168,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			EmitLoopEnd(lines, context);
 			break;
 		default:
-			throw new NotSupportedException($"MLIR compilation does not support instruction: {
+			throw new NotSupportedByBackend($"MLIR compilation does not support instruction: {
 				instruction.GetType().Name
 			} ({
 				instruction.InstructionType
@@ -205,7 +205,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 			InstructionType.Multiply => "arith.mulf",
 			InstructionType.Divide => "arith.divf",
 			InstructionType.Modulo => "arith.remf",
-			_ => throw new NotSupportedException( //ncrunch: no coverage
+			_ => throw new NotSupportedByBackend( //ncrunch: no coverage
 				"Unsupported binary op: " + binary.InstructionType)
 		};
 		lines.Add($"    {temp} = {op} {left}, {right} : f64");
@@ -334,7 +334,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		Dictionary<string, CompiledMethodInfo>? compiledMethods)
 	{
 		if (invoke.MethodInfo == null)
-			throw new NotSupportedException( //ncrunch: no coverage
+			throw new NotSupportedByBackend( //ncrunch: no coverage
 				"Invoke instruction is missing method metadata");
 		if (invoke.MethodInfo.MethodName == Method.From && !invoke.MethodInfo.InstanceRegister.HasValue)
 		{
@@ -343,7 +343,7 @@ public sealed class InstructionsToMlir : InstructionsCompiler
 		}
 		var methodKey = BuildMethodHeaderKeyInternal(invoke.MethodInfo);
 		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
-			throw new NotSupportedException( //ncrunch: no coverage
+			throw new NotSupportedByBackend( //ncrunch: no coverage
 				//TODO: wtf? why is this still here, support it!
 				"Non-print method calls cannot be compiled to MLIR. " +
 				"Use the interpreted runner for programs with complex runtime method calls.");

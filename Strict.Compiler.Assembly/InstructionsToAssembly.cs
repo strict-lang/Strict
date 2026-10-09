@@ -53,8 +53,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			Platform.Windows => BuildWindowsEntryPoint(methodName, hasPrint),
 			Platform.Linux => BuildLinuxEntryPoint(methodName, hasPrint),
 			Platform.MacOS => BuildMacOsEntryPoint(methodName, hasPrint),
-			_ => throw new NotSupportedException("Unsupported platform: " +
-				platform) //ncrunch: no coverage
+			_ => throw new UnsupportedPlatform(platform) //ncrunch: no coverage
 		};
 
 	private static string BuildWindowsEntryPoint(string methodName, bool hasPrint) =>
@@ -295,7 +294,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		Dictionary<string, CompiledMethodInfo>? compiledMethods)
 	{
 		if (invoke.MethodInfo == null)
-			throw new NotSupportedException(
+			throw new NotSupportedByBackend(
 				"Invoke instruction is missing method metadata"); //ncrunch: no coverage
 		if (IsFileRuntimeInvoke(invoke.MethodInfo))
 		{
@@ -309,7 +308,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 		}
 		var methodKey = BuildMethodHeaderKeyInternal(invoke.MethodInfo);
 		if (compiledMethods == null || !compiledMethods.TryGetValue(methodKey, out var methodInfo))
-			throw new NotSupportedException( //ncrunch: no coverage
+			throw new NotSupportedByBackend( //ncrunch: no coverage
 				"Non-print method calls cannot be compiled to native assembly. " +
 				"Use the interpreted runner for programs with complex runtime method calls.");
 		var sourceRegisters = new List<Register>();
@@ -319,7 +318,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			sourceRegisters.AddRange(memberRegisters);
 		sourceRegisters.AddRange(invoke.MethodInfo.ArgumentRegisters);
 		if (sourceRegisters.Count > 8)
-			throw new NotSupportedException( //ncrunch: no coverage
+			throw new NotSupportedByBackend( //ncrunch: no coverage
 				"Native assembly compiler currently supports up to 8 call arguments");
 		for (var argumentIndex = 0; argumentIndex < sourceRegisters.Count; argumentIndex++)
 		{
@@ -545,7 +544,7 @@ public sealed class InstructionsToAssembly : InstructionsCompiler
 			InstructionType.Multiply => "mulsd",
 			InstructionType.Divide => "divsd",
 			InstructionType.Modulo => null, //ncrunch: no coverage
-			_ => throw new NotSupportedException( //ncrunch: no coverage
+			_ => throw new NotSupportedByBackend( //ncrunch: no coverage
 				$"x64 compilation of {binary.InstructionType} is not supported")
 		};
 		if (op == null)

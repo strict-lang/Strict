@@ -22,7 +22,7 @@ public static class ToolRunner
 			: string.IsNullOrWhiteSpace(result.Output)
 				? result.Error
 				: result.Output + Environment.NewLine + result.Error;
-		throw new InvalidOperationException($"Process '{
+		throw new ToolFailed($"Process '{
 			executable
 		} {
 			arguments
@@ -53,7 +53,10 @@ public static class ToolRunner
 			if (File.Exists(windowsExecutablePath))
 				return windowsExecutablePath;
 		}
-		throw new InvalidOperationException(toolName + " reported success for " + platform +
+		throw new ToolOutputMissing(toolName + " reported success for " + platform +
 			" output but did not create file: " + outputFilePath);
 	}
+
+	public sealed class ToolFailed(string message) : Exception(message);
+	public sealed class ToolOutputMissing(string message) : Exception(message);
 }

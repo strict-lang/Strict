@@ -111,7 +111,7 @@ public sealed class MlirLinker : Linker
 				} -nostdlib -Wl,-e,main -Wno-override-module",
 			Platform.MacOS => $"{quotedInputPath} -o {quotedOutputPath} -Oz -Wl,-dead_strip " +
 				$"-Wno-override-module",
-			_ => throw new NotSupportedException("Unsupported platform: " + platform)
+			_ => throw new UnsupportedPlatform(platform)
 		}; //ncrunch: no coverage end
 	}
 

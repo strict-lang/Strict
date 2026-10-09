@@ -56,7 +56,7 @@ public sealed class LlvmLinker : Linker
 				$"-Wl,--gc-sections -Wl,--strip-all -Wno-override-module",
 			Platform.MacOS => $"{quotedInputPath} -o {quotedOutputPath} -Oz -Wl,-dead_strip " +
 				$"-Wno-override-module",
-			_ => throw new NotSupportedException("Unsupported platform: " + platform)
+			_ => throw new UnsupportedPlatform(platform)
 		}; //ncrunch: no coverage end
 	}
 
