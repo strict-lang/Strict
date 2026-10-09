@@ -32,7 +32,8 @@ public sealed class LoopInvariantCodeMotionOptimizer : InstructionOptimizer
 					if (result[bodyIndex] is not LoadVariableToRegister load)
 						continue;
 					if (writtenInLoop.Contains(load.Identifier) ||
-						IsLoopControlVariable(load.Identifier, loopBegin))
+						IsLoopControlVariable(load.Identifier, loopBegin) ||
+						IsRegisterWrittenElsewhere(result, index + 1, loopEnd, bodyIndex))
 						continue;
 					// Hoist: remove from loop body, insert just before LoopBegin
 					result.RemoveAt(bodyIndex);
@@ -82,6 +83,19 @@ public sealed class LoopInvariantCodeMotionOptimizer : InstructionOptimizer
 				break;
 			}
 		return written;
+	}
+
+	/// <summary>
+	/// Registers are reused per statement, a hoisted load must keep its register for the whole loop.
+	/// </summary>
+	private static bool IsRegisterWrittenElsewhere(List<Instruction> instructions, int start, int end,
+		int loadIndex)
+	{
+		var register = ((LoadVariableToRegister)instructions[loadIndex]).Register;
+		for (var index = start; index < end; index++)
+			if (index != loadIndex && GetWrittenRegister(instructions[index]) == register)
+				return true;
+		return false;
 	}
 
 	private static bool IsLoopControlVariable(string name, LoopBeginInstruction loopBegin) =>
