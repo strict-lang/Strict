@@ -1,10 +1,10 @@
 has logger
 Run
-	constant dead = OptimInstruction.StoreConstant("unused", 42)
-	constant live = OptimInstruction.StoreConstant("count", 1)
-	constant load = OptimInstruction("LoadVariableToRegister", 0, 0, "count")
-	constant ret = OptimInstruction.ReturnOp(0)
-	constant ops = OpList.Empty.Append(dead).Append(live).Append(load).Append(ret)
+	constant dead = BytecodeInstruction.StoreConstant("unused", 42)
+	constant live = BytecodeInstruction.StoreConstant("count", 1)
+	constant load = BytecodeInstruction("LoadVariableToRegister", 0, 0, "count")
+	constant ret = BytecodeInstruction.ReturnOp(0)
+	constant ops = InstructionList.Empty.Append(dead).Append(live).Append(load).Append(ret)
 	logger.Log(ops.Count)
 	constant cleaned = DeadStore(ops).Optimize
 	logger.Log(cleaned.Count)

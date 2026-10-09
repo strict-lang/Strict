@@ -1,21 +1,58 @@
-has ops OpList
-Optimize OpList
-	ConstantFolder(OpList.Sample("Add", 3)).Optimize.At(0).amount is 8
-	ConstantFolder(OpList.Sample("Equal", 3)).Optimize.Count is 3
-	if ops.Count < 3
+has ops Bytecode/InstructionList
+Optimize InstructionList
+	ConstantFolder(InstructionList.Sample("Add", 3)).Optimize.At(0).amount is 8
+	ConstantFolder(InstructionList.Sample("Equal", 3)).Optimize.Count is 3
+	ConstantFolder(InstructionList.Sample("Add", 3).Prepend(BytecodeInstruction.ReturnOp(9))).Optimize.At(1).amount is 8
+	ConstantFolder(Propagated).FoldFrom(0)
+FoldFrom(index Number) InstructionList
+	ConstantFolder(InstructionList.Sample("Add", 3)).FoldFrom(1).Count is 3
+	if index + 2 >= ops.Count
 		return ops
-	FoldIfSimple(ops.At(0), ops.At(1), ops.At(2))
-FoldIfSimple(first OptimInstruction, second OptimInstruction, third OptimInstruction) OpList
-	if (not first.IsLoadConstant) or (not second.IsLoadConstant)
-		return ops
+	if CanFold(ops.At(index), ops.At(index + 1), ops.At(index + 2))
+		return ConstantFolder(FoldAt(index)).FoldFrom(Previous(index))
+	FoldFrom(index + 1)
+Previous(index Number) Number
+	ConstantFolder(InstructionList.Empty).Previous(0) is 0
+	index > 1 then index - 2 else 0
+CanFold(first BytecodeInstruction, second BytecodeInstruction, third BytecodeInstruction) Boolean
+	CanFold(BytecodeInstruction.ReturnOp(0), BytecodeInstruction.ReturnOp(1), BytecodeInstruction.ReturnOp(2)) is false
+	if first.typeName is not "LoadConstantToRegister" or second.typeName is not "LoadConstantToRegister"
+		return false
 	if (not third.IsBinary) or third.IsCompare
-		return ops
+		return false
 	if third.register is not first.register or third.amount is not second.register
-		return ops
-	let result = Compute(third.typeName, first.amount, second.amount)
-	ops.Skip(3).Prepend(OptimInstruction.LoadConstant(third.ResultRegister, result))
+		return false
+	true
+FoldAt(index Number) InstructionList
+	ConstantFolder(InstructionList.Sample("Subtract", 3)).FoldAt(0).At(0).amount is 2
+	let third = ops.At(index + 2)
+	let result = Compute(third.typeName, ops.At(index).amount, ops.At(index + 1).amount)
+	let folded = BytecodeInstruction.LoadConstant(third.ResultRegister, result)
+	InstructionList(ops.KeepPrefix(index).instructions + folded + ops.Skip(index + 3).instructions)
+Propagated InstructionList
+	ConstantFolder.Stored("x", 4).Propagated.At(0).amount is 4
+	mutable next = List(Mutable(BytecodeInstruction))
+	for ops.instructions
+		next.Add(PropagatedLoad(value))
+	InstructionList(next)
+PropagatedLoad(instruction BytecodeInstruction) BytecodeInstruction
+	ConstantFolder.Stored("x", 4).PropagatedLoad(BytecodeInstruction.LoadVariable(0, "x")).amount is 4
+	ConstantFolder.Stored("x", 4).PropagatedLoad(BytecodeInstruction.ReturnOp(1)).typeName is "Return"
+	if instruction.typeName is not "LoadVariableToRegister" or StoreCount(instruction.label) is not 1
+		return instruction
+	for ops.instructions
+		if (value.typeName is "StoreConstantToVariable") and (value.label is instruction.label)
+			return BytecodeInstruction.LoadConstant(instruction.register, value.amount)
+	instruction
+StoreCount(name Text) Number
+	ConstantFolder.Stored("x", 4).StoreCount("x") is 1
+	mutable count = 0
+	for ops.instructions
+		if (value.label is name) and value.typeName.StartsWith("Store")
+			count = count + 1
+	count
 Compute(opName Text, left Number, right Number) Number
-	ConstantFolder(OpList.Empty).Compute("Multiply", 4, 3) is 12
+	ConstantFolder(InstructionList.Empty).Compute("Multiply", 4, 3) is 12
 	if opName is "Add"
 		return left + right
 	if opName is "Subtract"
@@ -27,3 +64,6 @@ Compute(opName Text, left Number, right Number) Number
 	if opName is "Modulo"
 		return left % right
 	left
+Stored(name Text, number Number) ConstantFolder
+	ConstantFolder.Stored("y", 2).ops.Count is 1
+	ConstantFolder(InstructionList.Empty.Append(BytecodeInstruction.StoreConstant(name, number)))

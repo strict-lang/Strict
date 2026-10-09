@@ -1,20 +1,20 @@
-has ops OpList
-Optimize OpList
-	DeadStore(OpList.Empty.With("StoreConstantToVariable", "x")).Optimize.Count is 0
-	DeadStore(OpList.Empty.With("StoreConstantToVariable", "x").With("LoadVariableToRegister", "x")).Optimize.Count is 2
-	mutable next = List(Mutable(OptimInstruction))
+has ops Bytecode/InstructionList
+Optimize InstructionList
+	DeadStore(InstructionList.Empty.With("StoreConstantToVariable", "x")).Optimize.Count is 0
+	mutable next = List(Mutable(BytecodeInstruction))
 	for ops.instructions
 		if ShouldKeep(value)
 			next.Add(value)
-	OpList(next)
-ShouldKeep(instruction OptimInstruction) Boolean
-	if instruction.IsStoreConstant
+	InstructionList(next)
+ShouldKeep(instruction BytecodeInstruction) Boolean
+	if instruction.typeName is "StoreConstantToVariable"
 		return IsLoaded(instruction.label)
-	if instruction.IsStoreRegister
+	if instruction.typeName is "StoreRegisterToVariable"
 		return instruction.label.IndexOf("(") is not -1 or IsLoaded(instruction.label)
 	true
 IsLoaded(name Text) Boolean
+	DeadStore(InstructionList.Empty.With("LoadVariableToRegister", "x")).IsLoaded("x") is true
 	for ops.instructions
-		if value.IsLoadVariable and (value.label is name)
+		if (value.typeName is "LoadVariableToRegister") and (value.label is name)
 			return true
 	false

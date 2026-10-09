@@ -12,6 +12,18 @@ written in Strict, and what C# features are still missing from the Strict runtim
 
 ---
 
+## Strict optimizers in the native pipeline — 2026-10-09 (late night, part 2)
+
+- Optimizers use `Bytecode/BytecodeInstruction` + `Bytecode/InstructionList` (OpList/OptimInstruction
+  removed, InstructionList took over the list API). SourceCompiler runs `AllOptimizers` before NASM:
+  `Examples/NativeArithmetic` goes from 10 to 2 instructions (`(10, 2)`), the exe still returns 20.
+- ConstantFolder propagates single-assignment constants and folds Load/Load/Binary anywhere in the
+  list (cascading). RedundantLoad only drops identical consecutive loads (the old version removed a
+  load into a different register and broke later reads; upgrade path: remap reads like the C# one).
+- Runner treats a cached binary as outdated when a used package (`Strict/Optimizers`, base types, ..)
+  has a newer `.strict` file, not just files next to the entry file.
+- Remaining duplicate instruction model: Runtime (`VmInstruction`/`InstrList`).
+
 ## Strict compiles Strict source to a native exe — 2026-10-09 (late night)
 
 - `Compiler/SourceCompiler.strict Examples/NativeArithmetic.strict` runs entirely in Strict:

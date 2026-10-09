@@ -13,7 +13,7 @@ public sealed class StrictOptimizersConversionTests
 		var path = GetOptimizersPath();
 		foreach (var typeName in new[]
 			{
-				"OptimInstruction", "OpList", "OptimizerStats", "ConstantFolder", "StrengthReduce",
+				"OptimizerStats", "ConstantFolder", "StrengthReduce",
 				"DeadStore", "RedundantLoad", "JumpThread", "UnreachableCode", "TestCodeRemove",
 				"AllOptimizers"
 			})
@@ -50,7 +50,8 @@ public sealed class StrictOptimizersConversionTests
 			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Optimizers");
 		var folder = package.GetType("ConstantFolder");
 		Assert.That(folder.Methods.Any(method => method.Name == "Optimize"), Is.True);
-		Assert.That(folder.Methods.Any(method => method.Name == "FoldIfSimple"), Is.True);
+		Assert.That(folder.Methods.Any(method => method.Name == "FoldFrom"), Is.True);
+		Assert.That(folder.Methods.Any(method => method.Name == "Propagated"), Is.True);
 		var strength = package.GetType("StrengthReduce");
 		Assert.That(strength.Methods.Any(method => method.Name == "Optimize"), Is.True);
 		Assert.That(strength.Methods.Any(method => method.Name == "IsIdentity"), Is.True);
@@ -70,15 +71,15 @@ public sealed class StrictOptimizersConversionTests
 	}
 
 	[Test]
-	public async Task LoadOpListAndInstructionSurface()
+	public async Task OptimizersUseSharedBytecodeInstructionList()
 	{
 		using var package =
-			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Optimizers");
-		var list = package.GetType("OpList");
+			await new Repositories(new MethodExpressionParser()).LoadStrictPackage("Strict/Bytecode");
+		var list = package.GetType("InstructionList");
 		Assert.That(list.Methods.Any(method => method.Name == "Skip"), Is.True);
 		Assert.That(list.Methods.Any(method => method.Name == "Prepend"), Is.True);
 		Assert.That(list.Methods.Any(method => method.Name == "Empty"), Is.True);
-		var instruction = package.GetType("OptimInstruction");
+		var instruction = package.GetType("BytecodeInstruction");
 		Assert.That(instruction.Methods.Any(method => method.Name == "IsBinary"), Is.True);
 		Assert.That(instruction.Methods.Any(method => method.Name == "IsReturn"), Is.True);
 		Assert.That(instruction.Methods.Any(method => method.Name == "LoadConstant"), Is.True);

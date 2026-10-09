@@ -1,12 +1,12 @@
-has ops OpList
-Optimize OpList
-	UnreachableCode(OpList.Empty.With("Return", "").With("Return", "")).Optimize.Count is 1
+has ops Bytecode/InstructionList
+Optimize InstructionList
+	UnreachableCode(InstructionList.Empty.With("Return", "").With("Return", "")).Optimize.Count is 1
 	constant cutAt = FindReturn(0)
 	if cutAt is -1
 		return ops
 	ops.KeepPrefix(cutAt + 1)
 FindReturn(index Number) Number
-	UnreachableCode(OpList.Empty).FindReturn(0) is -1
+	UnreachableCode(InstructionList.Empty).FindReturn(0) is -1
 	if index >= ops.Count
 		return -1
 	if ops.At(index).IsReturn

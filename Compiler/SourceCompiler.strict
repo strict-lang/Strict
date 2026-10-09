@@ -2,12 +2,17 @@ has logger
 Run(path)
 	let lines = File(path).ReadLines
 	let body = LineGenerator.Empty.GenerateReturningBody(ConstantLines(lines) + RunBodyLines(lines))
+	let optimizer = Optimizer(body)
+	logger.Log(optimizer.OptimizeWithStats)
 	let build = NativeBuild(path.RemoveExtension.text + ".asm", Platform.Windows)
-	build.WriteAsm(InstructionsToNasm(body.instructions, "Run", Platform.Windows).Compile)
+	build.WriteAsm(InstructionsToNasm(optimizer.Optimize.instructions, "Run", Platform.Windows).Compile)
 	logger.Log(build.Assemble)
 	let exePath = path.RemoveExtension.text + ".exe"
 	logger.Log(build.Link(exePath))
 	logger.Log("Run returned " + Process(exePath).Run("").exitCode)
+Optimizer(body GenerationResult) Optimizers/AllOptimizers
+	Optimizer(LineGenerator.Empty.GenerateReturningBody(("2 + 3"))).Optimize.Count is 2
+	AllOptimizers(InstructionList(body.instructions))
 ConstantLines(lines Texts) Texts
 	ConstantLines("constant a = 1", "Run Number", "\tconstant b = 2") is ("constant a = 1")
 	for lines

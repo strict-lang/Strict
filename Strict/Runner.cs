@@ -110,13 +110,18 @@ public sealed class Runner
 			var binaryTime = new FileInfo(cachedBinaryFilePath).LastWriteTimeUtc;
 			var sourceTime = new FileInfo(strictFilePath).LastWriteTimeUtc;
 			if (binaryTime >= sourceTime && binaryTime >= RuntimeBuildTime &&
-				!DirectoryHasNewerStrictFile(binaryTime))
+				!DirectoryHasNewerStrictFile(Path.GetDirectoryName(Path.GetFullPath(strictFilePath)),
+					binaryTime))
 				try
 				{
 					var binary = LogTiming("Loading cached " + cachedBinaryFilePath,
 						() => new BinaryExecutable(cachedBinaryFilePath));
-					Log("Using cached " + cachedBinaryFilePath + " from " + binaryTime);
-					return binary;
+					if (!UsedPackageHasNewerStrictFile(binary, binaryTime))
+					{
+						Log("Using cached " + cachedBinaryFilePath + " from " + binaryTime);
+						return binary;
+					}
+					Log("Cached binary outdated, a used package changed, regenerating ..");
 				}
 				catch (Exception ex) when (ex is BinaryType.InvalidVersion or BinaryExecutable.InvalidFile
 					or BinaryExecutable.TypeNotFoundForBytecode or ParsingFailed
@@ -160,10 +165,26 @@ public sealed class Runner
 		EnumerateFiles(AppContext.BaseDirectory, nameof(Strict) + "*.dll").
 		Select(File.GetLastWriteTimeUtc).DefaultIfEmpty(DateTime.MinValue).Max();
 
-	private bool DirectoryHasNewerStrictFile(DateTime binaryTime)
+	private static bool UsedPackageHasNewerStrictFile(BinaryExecutable binary, DateTime binaryTime)
 	{
-		var directory = Path.GetDirectoryName(Path.GetFullPath(strictFilePath));
-		if (string.IsNullOrEmpty(directory))
+		var strictRoot = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
+		return binary.MethodsPerType.Keys.Select(GetPackageName).Where(name => name.Length > 0).
+			Distinct().Any(packageName => DirectoryHasNewerStrictFile(Path.Combine(strictRoot,
+				Path.GetRelativePath(nameof(Strict), packageName)), binaryTime));
+	}
+
+	private static string GetPackageName(string typeFullName)
+	{
+		var nonGenericName = typeFullName.Split('(')[0];
+		var separatorIndex = nonGenericName.LastIndexOf(Context.ParentSeparator);
+		return separatorIndex > 0 && nonGenericName.StartsWith(nameof(Strict), StringComparison.Ordinal)
+			? nonGenericName[..separatorIndex]
+			: "";
+	}
+
+	private static bool DirectoryHasNewerStrictFile(string? directory, DateTime binaryTime)
+	{
+		if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
 			return false;
 		foreach (var file in Directory.EnumerateFiles(directory, "*" + Type.Extension))
 			if (File.GetLastWriteTimeUtc(file) > binaryTime)

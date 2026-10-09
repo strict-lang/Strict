@@ -2,63 +2,45 @@ has instructions BytecodeInstructions
 Count Number
 	instructions.Length
 IsEmpty Boolean
-	if instructions.Length is 0
-		return true
-	false
-First BytecodeInstruction
-	if instructions.Length is 0
-		return BytecodeInstruction("Return", 0, 0, "")
-	instructions(0)
-Last BytecodeInstruction
-	if instructions.Length is 0
-		return BytecodeInstruction("Return", 0, 0, "")
-	instructions(instructions.Length - 1)
-HasType(typeName Text) Boolean
-	for instructions
-		if value.typeName is typeName
-			return true
-	false
-CountType(typeName Text) Number
-	mutable total = 0
-	for instructions
-		if value.typeName is typeName
-			total = total + 1
-	total
-HasBinary Boolean
-	for instructions
-		if value.IsBinary
-			return true
-	false
-HasReturn Boolean
-	for instructions
-		if value.IsReturn
-			return true
-	false
+	InstructionList.Empty.IsEmpty is true
+	instructions.Length is 0
+At(index Number) BytecodeInstruction
+	InstructionList.Empty.At(3).IsReturn is true
+	if index < 0 or index >= instructions.Length
+		return BytecodeInstruction.ReturnOp(0)
+	instructions(index)
 Append(instruction BytecodeInstruction) InstructionList
+	InstructionList.Empty.Append(BytecodeInstruction.ReturnOp(1)).Count is 1
+	InstructionList(instructions + instruction)
+Prepend(instruction BytecodeInstruction) InstructionList
+	InstructionList.Sample("Add", 3).Prepend(BytecodeInstruction.ReturnOp(2)).At(0).register is 2
 	mutable next = List(Mutable(BytecodeInstruction))
-	for instructions
-		next.Add(value)
 	next.Add(instruction)
-	InstructionList(next)
-Concat(other InstructionList) InstructionList
+	InstructionList(next + instructions)
+Skip(count Number) InstructionList
+	InstructionList.Sample("Add", 3).Skip(1).At(0).amount is 3
 	mutable next = List(Mutable(BytecodeInstruction))
 	for instructions
-		next.Add(value)
-	for other.instructions
-		next.Add(value)
+		if index >= count
+			next.Add(value)
 	InstructionList(next)
-ToTexts Texts
-	mutable lines = List(Mutable(Text))
+KeepPrefix(length Number) InstructionList
+	InstructionList.Sample("Add", 3).KeepPrefix(1).Count is 1
+	mutable next = List(Mutable(BytecodeInstruction))
 	for instructions
-		lines.Add(value to Text)
-	lines
-FromSingle(instruction BytecodeInstruction) InstructionList
-	mutable ops = List(Mutable(BytecodeInstruction))
-	ops.Add(instruction)
-	InstructionList(ops)
+		if index < length
+			next.Add(value)
+	InstructionList(next)
 Empty InstructionList
-	Empty.IsEmpty is true
+	InstructionList.Empty.Count is 0
 	constant noInstructions = List(BytecodeInstruction)
 	InstructionList(noInstructions)
+With(typeName Text, label Text) InstructionList
+	InstructionList.Empty.With("JumpEnd", "").At(0).typeName is "JumpEnd"
+	Append(BytecodeInstruction(typeName, 0, 0, label))
+Sample(binaryName Text, right Number) InstructionList
+	InstructionList.Sample("Add", 3).Count is 3
+	constant first = InstructionList.Empty.Append(BytecodeInstruction.LoadConstant(0, 5))
+	first.Append(BytecodeInstruction.LoadConstant(1, right)).Append(BytecodeInstruction(binaryName, 0, 1, "2"))
 to Text
 	"ops=" + Count to Text

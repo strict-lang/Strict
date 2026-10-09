@@ -1,11 +1,11 @@
 has logger
 Run
 	logger.Log(AllOptimizers.OptimizerCount)
-	constant left = OptimInstruction.LoadConstant(0, 10)
-	constant right = OptimInstruction.LoadConstant(1, 2)
-	constant div = OptimInstruction.BinaryOp("Divide", 0, 1, 2)
-	constant ret = OptimInstruction.ReturnOp(2)
-	constant ops = OpList.Empty.Append(left).Append(right).Append(div).Append(ret)
+	constant left = BytecodeInstruction.LoadConstant(0, 10)
+	constant right = BytecodeInstruction.LoadConstant(1, 2)
+	constant div = BytecodeInstruction("Divide", 0, 1, "2")
+	constant ret = BytecodeInstruction.ReturnOp(2)
+	constant ops = InstructionList.Empty.Append(left).Append(right).Append(div).Append(ret)
 	constant optimized = AllOptimizers(ops).Optimize
 	logger.Log(ops.Count)
 	logger.Log(optimized.Count)

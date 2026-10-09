@@ -1,7 +1,10 @@
-has ops OpList
-Optimize OpList
-	JumpThread(OpList.Empty.With("Jump", "").With("JumpEnd", "")).Optimize.Count is 0
-	JumpThread(OpList.Sample("Add", 3)).Optimize.Count is 3
-	if ops.At(0).IsJump and ops.At(1).IsJumpEnd
+has ops Bytecode/InstructionList
+Optimize InstructionList
+	JumpThread(InstructionList.Empty.With("Jump", "").With("JumpEnd", "")).Optimize.Count is 0
+	JumpThread(InstructionList.Sample("Add", 3)).Optimize.Count is 3
+	if IsJump(ops.At(0)) and (ops.At(1).typeName is "JumpEnd")
 		return ops.Skip(2)
 	ops
+IsJump(instruction BytecodeInstruction) Boolean
+	JumpThread(InstructionList.Empty).IsJump(BytecodeInstruction("JumpIfFalse", 0, 1, "")) is true
+	instruction.typeName is in ("Jump", "JumpIfTrue", "JumpIfFalse", "JumpIfNotZero")

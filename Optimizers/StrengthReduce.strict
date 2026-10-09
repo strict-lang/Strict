@@ -1,35 +1,35 @@
-has ops OpList
-Optimize OpList
-	StrengthReduce(OpList.Sample("Multiply", 1)).Optimize.At(0).amount is 5
-	StrengthReduce(OpList.Sample("Multiply", 0)).Optimize.At(0).amount is 0
+has ops Bytecode/InstructionList
+Optimize InstructionList
+	StrengthReduce(InstructionList.Sample("Multiply", 1)).Optimize.At(0).amount is 5
+	StrengthReduce(InstructionList.Sample("Multiply", 0)).Optimize.At(0).amount is 0
 	if ops.Count < 3
 		return ops
 	Reduce(ops.At(0), ops.At(1), ops.At(2))
-Reduce(first OptimInstruction, second OptimInstruction, third OptimInstruction) OpList
+Reduce(first BytecodeInstruction, second BytecodeInstruction, third BytecodeInstruction) InstructionList
 	if (not third.IsBinary) or third.IsCompare
 		return ops
 	if (third.typeName is "Multiply") and (IsConstant(first, 0) or IsConstant(second, 0))
-		return KeepRest(OptimInstruction.LoadConstant(third.ResultRegister, 0))
+		return KeepRest(BytecodeInstruction.LoadConstant(third.ResultRegister, 0))
 	if IsIdentity(third.typeName, second)
 		return KeepRest(WithRegister(first, third.ResultRegister))
 	if IsIdentity(third.typeName, first)
 		return KeepRest(WithRegister(second, third.ResultRegister))
 	ops
-IsConstant(instruction OptimInstruction, number Number) Boolean
-	StrengthReduce(OpList.Empty).IsConstant(OptimInstruction.LoadConstant(0, 1), 1) is true
-	instruction.IsLoadConstant and (instruction.amount is number)
-IsIdentity(opName Text, instruction OptimInstruction) Boolean
-	StrengthReduce(OpList.Empty).IsIdentity("Add", OptimInstruction.LoadConstant(0, 0)) is true
+IsConstant(instruction BytecodeInstruction, number Number) Boolean
+	StrengthReduce(InstructionList.Empty).IsConstant(BytecodeInstruction.LoadConstant(0, 1), 1) is true
+	(instruction.typeName is "LoadConstantToRegister") and (instruction.amount is number)
+IsIdentity(opName Text, instruction BytecodeInstruction) Boolean
+	StrengthReduce(InstructionList.Empty).IsIdentity("Add", BytecodeInstruction.LoadConstant(0, 0)) is true
 	if opName is in ("Add", "Subtract")
 		return IsConstant(instruction, 0)
 	if opName is in ("Multiply", "Divide")
 		return IsConstant(instruction, 1)
 	false
-WithRegister(instruction OptimInstruction, reg Number) OptimInstruction
-	StrengthReduce(OpList.Empty).WithRegister(OptimInstruction.LoadConstant(0, 7), 3).register is 3
-	if instruction.IsLoadConstant or instruction.IsLoadVariable
-		return OptimInstruction(instruction.typeName, reg, instruction.amount, instruction.label)
+WithRegister(instruction BytecodeInstruction, reg Number) BytecodeInstruction
+	StrengthReduce(InstructionList.Empty).WithRegister(BytecodeInstruction.LoadConstant(0, 7), 3).register is 3
+	if instruction.typeName is in ("LoadConstantToRegister", "LoadVariableToRegister")
+		return BytecodeInstruction(instruction.typeName, reg, instruction.amount, instruction.label)
 	instruction
-KeepRest(first OptimInstruction) OpList
-	StrengthReduce(OpList.Sample("Add", 0)).KeepRest(OptimInstruction.ReturnOp(1)).Count is 1
+KeepRest(first BytecodeInstruction) InstructionList
+	StrengthReduce(InstructionList.Sample("Add", 0)).KeepRest(BytecodeInstruction.ReturnOp(1)).Count is 1
 	ops.Skip(3).Prepend(first)

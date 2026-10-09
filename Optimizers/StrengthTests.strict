@@ -1,10 +1,10 @@
 has logger
 Run
-	constant load = OptimInstruction("LoadVariableToRegister", 0, 0, "x")
-	constant one = OptimInstruction.LoadConstant(1, 1)
-	constant mul = OptimInstruction.BinaryOp("Multiply", 0, 1, 2)
-	constant ret = OptimInstruction.ReturnOp(2)
-	constant ops = OpList.Empty.Append(load).Append(one).Append(mul).Append(ret)
+	constant load = BytecodeInstruction("LoadVariableToRegister", 0, 0, "x")
+	constant one = BytecodeInstruction.LoadConstant(1, 1)
+	constant mul = BytecodeInstruction("Multiply", 0, 1, "2")
+	constant ret = BytecodeInstruction.ReturnOp(2)
+	constant ops = InstructionList.Empty.Append(load).Append(one).Append(mul).Append(ret)
 	logger.Log(ops.Count)
 	constant reduced = StrengthReduce(ops).Optimize
 	logger.Log(reduced.Count)

@@ -254,18 +254,38 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task CachedBinaryIsOutdatedWhenUsedPackageChanged()
+	{
+		var entry = Path.Combine(FindRepoRoot(), "Compiler", "EmitTests.strict");
+		await new Runner(entry).Run();
+		var dependency = Path.Combine(FindRepoRoot(), "Bytecode", "BytecodeInstruction.strict");
+		var originalTime = File.GetLastWriteTimeUtc(dependency);
+		File.SetLastWriteTimeUtc(dependency, DateTime.UtcNow.AddMinutes(1));
+		try
+		{
+			consoleWriter.GetStringBuilder().Clear();
+			await new Runner(entry, Method.Run, true).Run();
+			Assert.That(consoleWriter.ToString(), Does.Not.Contain("Using cached"));
+		}
+		finally
+		{
+			File.SetLastWriteTimeUtc(dependency, originalTime);
+		}
+	}
+
+	[Test]
 	public async Task AppendAfterLoopKeepsElementInVirtualMachine()
 	{
-		await new Runner(Path.Combine(FindRepoRoot(), "Optimizers", "OpList.strict"),
-			"OpList.Empty.Append(OptimInstruction.ReturnOp(1)).Count").Run();
+		await new Runner(Path.Combine(FindRepoRoot(), "Bytecode", "InstructionList.strict"),
+			"InstructionList.Empty.Append(BytecodeInstruction.ReturnOp(1)).Count").Run();
 		Assert.That(consoleWriter.ToString(), Does.StartWith("1"));
 	}
 
 	[Test]
-	public async Task OpListAtOutOfRangeInVirtualMachine()
+	public async Task InstructionListAtOutOfRangeInVirtualMachine()
 	{
-		await new Runner(Path.Combine(FindRepoRoot(), "Optimizers", "OpList.strict"), "OpList.Empty.At(0)").
-			Run();
+		await new Runner(Path.Combine(FindRepoRoot(), "Bytecode", "InstructionList.strict"),
+			"InstructionList.Empty.At(0)").Run();
 		Assert.That(consoleWriter.ToString(), Does.StartWith("(Return, 0, 0, )"));
 	}
 

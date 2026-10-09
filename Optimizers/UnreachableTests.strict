@@ -1,10 +1,10 @@
 has logger
 Run
-	constant load = OptimInstruction.LoadConstant(0, 1)
-	constant ret = OptimInstruction.ReturnOp(0)
-	constant dead = OptimInstruction.LoadConstant(1, 99)
-	constant more = OptimInstruction.ReturnOp(1)
-	constant ops = OpList.Empty.Append(load).Append(ret).Append(dead).Append(more)
+	constant load = BytecodeInstruction.LoadConstant(0, 1)
+	constant ret = BytecodeInstruction.ReturnOp(0)
+	constant dead = BytecodeInstruction.LoadConstant(1, 99)
+	constant more = BytecodeInstruction.ReturnOp(1)
+	constant ops = InstructionList.Empty.Append(load).Append(ret).Append(dead).Append(more)
 	logger.Log(ops.Count)
 	constant cleaned = UnreachableCode(ops).Optimize
 	logger.Log(cleaned.Count)

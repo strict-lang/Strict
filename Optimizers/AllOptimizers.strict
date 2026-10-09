@@ -1,7 +1,7 @@
-has ops OpList
+has ops Bytecode/InstructionList
 constant OptimizerCount = 7
-Optimize OpList
-	AllOptimizers(OpList.Sample("Add", 3).Append(OptimInstruction.ReturnOp(2))).Optimize.Count is 2
+Optimize InstructionList
+	AllOptimizers(InstructionList.Sample("Add", 3).Append(BytecodeInstruction.ReturnOp(2))).Optimize.Count is 2
 	let afterTests = TestCodeRemove(ops).Optimize
 	let afterFold = ConstantFolder(afterTests).Optimize
 	let afterStrength = StrengthReduce(afterFold).Optimize
@@ -9,7 +9,7 @@ Optimize OpList
 	let afterLoad = RedundantLoad(afterDead).Optimize
 	UnreachableCode(JumpThread(afterLoad).Optimize).Optimize
 OptimizeWithStats OptimizerStats
-	AllOptimizers(OpList.Sample("Add", 3)).OptimizeWithStats.Removed is 2
+	AllOptimizers(InstructionList.Sample("Add", 3)).OptimizeWithStats.Removed is 2
 	OptimizerStats(ops.Count, Optimize.Count)
 to Text
 	"optimizers=" + OptimizerCount to Text

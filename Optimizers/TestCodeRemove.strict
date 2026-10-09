@@ -1,13 +1,13 @@
-has ops OpList
-Optimize OpList
-	TestCodeRemove(OpList.Sample("Equal", 5).With("JumpIfFalse", "").With("JumpEnd", "")).Optimize.Count is 0
-	TestCodeRemove(OpList.Sample("Equal", 3).With("JumpIfFalse", "").With("JumpEnd", "")).Optimize.Count is 5
+has ops Bytecode/InstructionList
+Optimize InstructionList
+	TestCodeRemove(InstructionList.Sample("Equal", 5).With("JumpIfFalse", "").With("JumpEnd", "")).Optimize.Count is 0
+	TestCodeRemove(InstructionList.Sample("Equal", 3).With("JumpIfFalse", "").With("JumpEnd", "")).Optimize.Count is 5
 	if ops.Count >= 5 and IsPassedTest
 		return ops.Skip(5)
 	ops
 IsPassedTest Boolean
-	if (not ops.At(0).IsLoadConstant) or (not ops.At(1).IsLoadConstant)
+	if ops.At(0).typeName is not "LoadConstantToRegister" or ops.At(1).typeName is not "LoadConstantToRegister"
 		return false
 	if ops.At(2).typeName is not "Equal" or ops.At(3).typeName is not "JumpIfFalse"
 		return false
-	ops.At(4).IsJumpEnd and (ops.At(0).amount is ops.At(1).amount)
+	(ops.At(4).typeName is "JumpEnd") and (ops.At(0).amount is ops.At(1).amount)

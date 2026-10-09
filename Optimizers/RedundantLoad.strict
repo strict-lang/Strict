@@ -1,19 +1,16 @@
-has ops OpList
-Optimize OpList
-	RedundantLoad(OpList.Empty.With("LoadVariableToRegister", "x").With("LoadVariableToRegister", "x")).Optimize.Count is 1
-	mutable next = List(Mutable(OptimInstruction))
-	mutable lastName = ""
+has ops Bytecode/InstructionList
+Optimize InstructionList
+	RedundantLoad(InstructionList.Sample("Add", 5)).Optimize.Count is 3
+	mutable next = List(Mutable(BytecodeInstruction))
+	mutable previous = BytecodeInstruction.ReturnOp(-1)
 	for ops.instructions
-		if (not value.IsLoadVariable) or value.label is not lastName
+		if not IsRepeatedLoad(value, previous)
 			next.Add(value)
-		lastName = NextName(value, lastName)
-	OpList(next)
-NextName(instruction OptimInstruction, lastName Text) Text
-	RedundantLoad(OpList.Empty).NextName(OptimInstruction("Invoke", 0, 0, ""), "x") is ""
-	if instruction.IsLoadVariable
-		return instruction.label
-	if instruction.IsStoreRegister or instruction.IsJump
-		return ""
-	if instruction.typeName is in ("Invoke", "LoopBegin", "LoopEnd")
-		return ""
-	lastName
+		previous = value
+	InstructionList(next)
+IsRepeatedLoad(instruction BytecodeInstruction, previous BytecodeInstruction) Boolean
+	IsRepeatedLoad(BytecodeInstruction.LoadConstant(0, 5), BytecodeInstruction.LoadConstant(0, 5)) is true
+	IsRepeatedLoad(BytecodeInstruction.ReturnOp(1), BytecodeInstruction.ReturnOp(1)) is false
+	if instruction is not previous
+		return false
+	instruction.typeName is in ("LoadConstantToRegister", "LoadVariableToRegister")
