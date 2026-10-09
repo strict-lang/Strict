@@ -208,15 +208,21 @@ public class MethodCall : ConcreteExpression
 	}
 
 	private static bool
-		AreArgumentsAutoParsedAsList(Method method, IReadOnlyCollection<Expression> arguments) =>
-		method.Parameters.Count != arguments.Count && method.Parameters.Count is 1 &&
-		arguments.Count > 1;
+		AreArgumentsAutoParsedAsList(Method method, IReadOnlyList<Expression> arguments) =>
+		method.Parameters.Count is 1 && (arguments.Count > 1 ||
+			arguments.Count is 1 && IsSingleListElement(method.Parameters[0].Type, arguments[0]));
+
+	private static bool IsSingleListElement(Type parameterType, Expression argument) =>
+		parameterType is GenericTypeImplementation
+		{
+			Generic.IsList: true, ImplementationTypes: [var elementType]
+		} && !argument.ReturnType.IsList && argument.ReturnType.IsSameOrCanBeUsedAs(elementType);
 
 	private static IReadOnlyList<Expression> NormalizeListArguments(Body body, Method method,
 		IReadOnlyList<Expression> arguments)
 	{
 		if (AreArgumentsAutoParsedAsList(method, arguments))
-			return [new List(body, (List<Expression>)arguments)];
+			return [new List(body, arguments.ToList())];
 		if (arguments.Count >= method.Parameters.Count)
 			return arguments;
 		List<Expression>? normalizedArguments = null;
@@ -446,7 +452,7 @@ public class MethodCall : ConcreteExpression
 	}
 
 	private bool IsAutoWrappedListArgument() =>
-		Arguments is [List { Values.Count: > 1 }] && Method.Parameters.Count == 1 &&
+		Arguments is [List { Values.Count: > 0 }] && Method.Parameters.Count == 1 &&
 		Method.Parameters[0].Type.IsList && (Method.Name != Method.From || !ReturnType.IsList);
 
 	private string GetProperMethodNameWithFromSupport() =>

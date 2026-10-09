@@ -694,6 +694,15 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void SingleElementForListMemberIsWrapped()
+	{
+		using var t = CreateType(nameof(SingleElementForListMemberIsWrapped), "has numbers",
+			"Count Number", "\tSingleElementForListMemberIsWrapped(5).Count is 1", "\tnumbers.Length");
+		Assert.That(() => new Interpreter(TestPackage.Instance, TestBehavior.TestRunner).Execute(
+			t.Methods.Single(m => m.Name == "Count")), Throws.Nothing);
+	}
+
+	[Test]
 	public void TestsDoNotEvaluateDeclarationsUsingNestedMembers()
 	{
 		using var t = CreateType(nameof(TestsDoNotEvaluateDeclarationsUsingNestedMembers), "has text",

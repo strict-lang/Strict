@@ -1,5 +1,5 @@
 has numbers
 GetComplicatedSequenceTexts Texts
-	ConvertingNumbers(3).GetComplicatedSequenceTexts is ("0", "1", "2")
+	ConvertingNumbers(0, 1, 2).GetComplicatedSequenceTexts is ("0", "1", "2")
 	for numbers
 		value to Text

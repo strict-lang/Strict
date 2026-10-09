@@ -12,7 +12,7 @@ Run(path)
 	logger.Log(build.Link(exePath))
 	logger.Log("Run returned " + Process(exePath).Run("").exitCode)
 Optimizer(body GenerationResult) Optimizers/AllOptimizers
-	Optimizer(LineGenerator.Empty.GenerateReturningBody(("2 + 3"))).Optimize.Count is 2
+	Optimizer(LineGenerator.Empty.GenerateReturningBody("2 + 3")).Optimize.Count is 2
 	AllOptimizers(InstructionList(body.instructions))
 ConstantLines(lines Texts) Texts
 	ConstantLines("constant a = 1", "Run Number", "\tconstant b = 2") is ("constant a = 1")

@@ -85,7 +85,7 @@ GenerateBody(lines Texts) GenerationResult
 	LineGenerator(current.WithRegistry(Registry.Empty)).CloseBlock(openId)
 GenerateReturningBody(lines Texts) GenerationResult
 	LineGenerator.Empty.GenerateReturningBody("constant a = 2", "a * 3").Count is 5
-	LineGenerator.Empty.GenerateReturningBody(("return 7")).Count is 2
+	LineGenerator.Empty.GenerateReturningBody("return 7").Count is 2
 	let body = GenerateBody(lines)
 	if body.Count > 0
 		if body.instructions(body.Count - 1).IsReturn

@@ -242,6 +242,10 @@ Slow test `StrictZipWriterOutputOpensWithZipArchive`: the bytes produced on the 
 with a test): `^` compiled to an endless `Number.^` invoke (new Power instruction), `text(index)`
 gave a Text instead of a Character, `Character("h")` stayed a Text, members of a computed
 Character/Text (`Character(value).number`) were loaded as a variable named after the expression.
+A single element for a list parameter (`ZipWriter(ZipEntry(..))`, `GenerateReturningBody("x")`)
+is now wrapped into a list by the parser, the old `(("x"))` workaround is gone (A1.7); the
+ConvertingNumbers example passed only because `ConvertingNumbers(3)` stored a Number in its
+`numbers` member and iterated it as a count, it now passes the list `(0, 1, 2)`.
 Next: the C# binary format in Strict (NameTable, type entries, instruction payloads), then tree
 codegen with the VM output differential.
 Flaky once in a full parallel solution run (passes alone and in reruns):
