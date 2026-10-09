@@ -111,7 +111,7 @@ public sealed partial class Runner
 				Log("Cached binary outdated (" + binaryTime + " < " + sourceTime + "), regenerating ..");
 		}
 #endif
-		var package = await LoadBasePackage();
+		var package = await LogTimingAsync("Load packages", LoadBasePackage);
 		return await LoadFromSourceAndSaveBinary(package);
 	}
 
@@ -244,12 +244,34 @@ public sealed partial class Runner
 		}
 		finally
 		{
-			var endTicks = DateTime.UtcNow.Ticks;
-			Log(message + " Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
-				" ms, allocated: " +
-				(GC.GetAllocatedBytesForCurrentThread() - startAllocations) / 1024 + " KB");
-			stepTimes.Add(endTicks - startTicks);
+			LogElapsed(message, startTicks,
+				GC.GetAllocatedBytesForCurrentThread() - startAllocations);
 		}
+	}
+
+	/// <summary>
+	/// Package loading continues on other threads, so all allocations are counted.
+	/// </summary>
+	private async Task<T> LogTimingAsync<T>(string message, Func<Task<T>> callToTime)
+	{
+		var startTicks = DateTime.UtcNow.Ticks;
+		var startAllocations = GC.GetTotalAllocatedBytes(true);
+		try
+		{
+			return await callToTime();
+		}
+		finally
+		{
+			LogElapsed(message, startTicks, GC.GetTotalAllocatedBytes(true) - startAllocations);
+		}
+	}
+
+	private void LogElapsed(string message, long startTicks, long allocatedBytes)
+	{
+		var endTicks = DateTime.UtcNow.Ticks;
+		Log(message + " Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
+			" ms, allocated: " + allocatedBytes / 1024 + " KB");
+		stepTimes.Add(endTicks - startTicks);
 	}
 
 	public async Task Run()
