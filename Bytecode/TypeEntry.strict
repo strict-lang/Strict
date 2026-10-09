@@ -1,18 +1,24 @@
 has Name Text
+has members List(MemberEntry)
 has methods List(MethodEntry)
 constant MagicByte = 83
 constant FormatVersion = 4
+constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
 Names BinaryNames
-	TypeEntry("Hello", MethodEntry("Run", "None", InstructionEntry(45, "Hi", List(Number)))).Names.names.Length is 70
+	HelloLogger.Names.names.Length is 70
 	mutable result = BinaryNames.Empty.Predefined(Name)
+	for members
+		result = value.Names(result)
 	for methods
 		result = value.Names(result)
 	result
 Bytes Numbers
-	TypeEntry("Hello", MethodEntry("Run", "None", InstructionEntry(45, "Hi", List(Number)))).Bytes.Length is 16
+	HelloLogger.Bytes is (83, 4, 1, 2, 72, 105, 1, 45, 29, 0, 0, 1, 55, 1, 0, 1, 2, 45, 69, 0, 32, 0)
 	constant names = Names
-	mutable encoder = ByteEncoder(MagicByte, FormatVersion)
-	encoder = ByteEncoder(encoder.bytes + names.Bytes).SevenBit(0).SevenBit(methods.Length)
+	mutable encoder = ByteEncoder(ByteEncoder(MagicByte, FormatVersion).bytes + names.Bytes).SevenBit(members.Length)
+	for members
+		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
+	encoder = encoder.SevenBit(methods.Length)
 	for methods
 		encoder = ByteEncoder(encoder.bytes).SevenBit(names.Index(value.Name)).SevenBit(1)
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))

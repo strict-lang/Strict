@@ -1,0 +1,19 @@
+has Name Text
+has typeName Text
+has initial List(InstructionEntry)
+has IsConstant Boolean
+constant SevenMember = MemberEntry("a", "b", InstructionEntry(InstructionType.Set, List(Text), (1, 7, 0)), true)
+constant LoggerMember = MemberEntry("logger", "Strict/Logger", List(InstructionEntry), false)
+Names(names BinaryNames) BinaryNames
+	LoggerMember.Names(BinaryNames("a", "b")).names.Length is 4
+	mutable result = names.With(Name).With(typeName)
+	for initial
+		result = value.Names(result)
+	result
+Bytes(names BinaryNames) Numbers
+	LoggerMember.Bytes(BinaryNames.Empty.Predefined("A")) is (45, 29, 0, 0)
+	SevenMember.Bytes(BinaryNames("a", "b")) is (0, 1, 1, 4, 1, 7, 0, 1)
+	mutable encoder = ByteEncoder.Empty.SevenBit(names.Index(Name)).SevenBit(names.Index(typeName)).UInt(initial.Length, 1)
+	for initial
+		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
+	encoder.UInt(IsConstant then 1 else 0, 1).bytes

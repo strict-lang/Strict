@@ -263,6 +263,23 @@ public sealed class MethodCallTests : TestExpressions
 	}
 
 	[Test]
+	public void ConstantMemberCallsMethodOfOtherType()
+	{
+		using var maker = new Type(TestPackage.Instance,
+				new TypeLines("ConstantMaker", "has text", "Make(input Text) ConstantMaker",
+					"\tConstantMaker.Make(\"a\").text is \"a\"", "\tConstantMaker(input)")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		using var user = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ConstantMemberCallsMethodOfOtherType), "has maker ConstantMaker",
+					"constant Made = ConstantMemberCallsMethodOfOtherType(ConstantMaker.Make(\"Hi\"))",
+					"constant Direct = ConstantMaker.Make(\"Hi\")", "Get Text", "\tmaker.text")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(user.Members[1].InitialValue!.ToString(),
+			Is.EqualTo("ConstantMemberCallsMethodOfOtherType(ConstantMaker.Make(\"Hi\"))"));
+		Assert.That(user.Members[2].Type, Is.EqualTo(maker));
+	}
+
+	[Test]
 	public void MutableCanUseChildMethods()
 	{
 		using var program = new Type(TestPackage.Instance,

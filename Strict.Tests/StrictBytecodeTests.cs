@@ -41,8 +41,9 @@ public sealed class StrictBytecodeTests
 	{
 		var root = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
 		await new Runner(Path.Combine(root, "Bytecode", "BinaryFile" + Type.Extension),
-			"BinaryFile(TypeEntry(\"Hello\", MethodEntry(\"Run\", \"None\", " +
-			"InstructionEntry(45, \"Hello from a Strict written binary\", List(Number))))).Bytes").Run();
+			"BinaryFile(TypeEntry(\"Hello\", List(MemberEntry), " +
+			"MethodEntry(\"Run\", List(MemberEntry), \"None\", " +
+			"InstructionEntry.Print(\"Hello from a Strict written binary\")))).Bytes").Run();
 		var binaryPath = Path.Combine(Path.GetTempPath(), nameof(StrictBytecodeTests),
 			"Hello" + BinaryExecutable.Extension);
 		Directory.CreateDirectory(Path.GetDirectoryName(binaryPath)!);

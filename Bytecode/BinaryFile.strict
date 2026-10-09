@@ -1,6 +1,6 @@
 has types List(TypeEntry)
 Bytes Numbers
-	BinaryFile(TypeEntry("Hi", MethodEntry("Run", "None", InstructionEntry(45, "Hi", List(Number))))).Bytes.Length is 133
+	BinaryFile(TypeEntry.HelloLogger).Bytes.Length is 160
 	mutable entries = List(Mutable(ZipEntry))
 	for types
 		entries.Add(ZipEntry(value.Name + ".bytecode", value.Bytes))

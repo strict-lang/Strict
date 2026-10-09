@@ -107,8 +107,6 @@ public class MethodCall : ConcreteExpression
 	public static Expression? TryParse(Expression? instance, Body body,
 		IReadOnlyList<Expression> arguments, Type type, string inputAsString)
 	{
-		if (body.IsFakeBodyForMemberInitialization)
-			return null;
 		Method? method;
 		try
 		{

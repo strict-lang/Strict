@@ -131,7 +131,7 @@ public sealed partial class TypeParser
 		if (constantValue.EndsWith(')'))
 		{
 			var openBracketIndex = constantValue.IndexOf('(');
-			if (openBracketIndex > 0)
+			if (openBracketIndex > 0 && !constantValue[..openBracketIndex].Contains('.'))
 			{
 				var initialValueTypeName = constantValue[..openBracketIndex];
 				return initialValueTypeName == type.Name

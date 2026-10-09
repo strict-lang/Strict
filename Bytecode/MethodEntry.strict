@@ -1,15 +1,26 @@
 has Name Text
+has parameters List(MemberEntry)
 has returnType Text
 has instructions List(InstructionEntry)
+constant PrintHi = InstructionEntry.Print("Hi")
+constant HelloRun = MethodEntry("Run", List(MemberEntry), "None", (PrintHi, InstructionEntry.Return(0)))
 Names(names BinaryNames) BinaryNames
-	MethodEntry("Run", "None", InstructionEntry(45, "Hi", List(Number))).Names(BinaryNames("a", "b")).names.Length is 5
-	mutable result = names.With(Name).With(returnType)
+	HelloRun.Names(BinaryNames("a", "b")).names.Length is 5
+	MethodEntry("Add", MemberEntry.LoggerMember, "None", List(InstructionEntry)).Names(BinaryNames("a")).names.Length is 5
+	mutable result = names.With(Name)
+	for parameters
+		result = value.Names(result)
+	result = result.With(returnType)
 	for instructions
 		result = value.Names(result)
 	result
 Bytes(names BinaryNames) Numbers
-	MethodEntry("Run", "None", InstructionEntry(45, "a", List(Number))).Bytes(BinaryNames("a", "None")).Length is 6
-	mutable encoder = ByteEncoder.Empty.SevenBit(0).SevenBit(names.Index(returnType)).SevenBit(instructions.Length)
+	HelloRun.Bytes(BinaryNames("Hi", "None")) is (0, 1, 2, 45, 0, 0, 32, 0)
+	MethodEntry("Add", MemberEntry.LoggerMember, "None", List(InstructionEntry)).Bytes(BinaryNames("None")).Length is 7
+	mutable encoder = ByteEncoder.Empty.SevenBit(parameters.Length)
+	for parameters
+		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
+	encoder = encoder.SevenBit(names.Index(returnType)).SevenBit(instructions.Length)
 	for instructions
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
 	encoder.bytes

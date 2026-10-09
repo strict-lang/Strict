@@ -1,17 +1,22 @@
 has kind Number
 has texts
-has numbers
-constant Print = 45
+has payload Numbers
 Names(names BinaryNames) BinaryNames
-	InstructionEntry(Print, "Hi", List(Number)).Names(BinaryNames("a", "b")).names.Length is 3
+	InstructionEntry(InstructionType.Print, "Hi", (-1, 0)).Names(BinaryNames("a", "b")).names.Length is 3
 	mutable result = names
 	for texts
 		result = result.With(value)
 	result
 Bytes(names BinaryNames) Numbers
-	InstructionEntry(Print, "b", List(Number)).Bytes(BinaryNames("a", "b")) is (45, 1, 0)
-	ByteEncoder(kind).bytes + Payload(names)
-Payload(names BinaryNames) Numbers
-	InstructionEntry(Print, "b", (2, 1)).Payload(BinaryNames("a", "b")) is (1, 1, 2, 1)
-	let text = ByteEncoder.Empty.SevenBit(names.Index(texts(0)))
-	numbers.Length is 0 then text.UInt(0, 1).bytes else text.UInt(1, 1).bytes + numbers
+	InstructionEntry(InstructionType.Print, "b", (-1, 0)).Bytes(BinaryNames("a", "b")) is (45, 1, 0)
+	InstructionEntry(InstructionType.LoadVariableToRegister, "a", (2, -1)).Bytes(BinaryNames("a", "b")) is (1, 2, 0)
+	mutable encoder = ByteEncoder(kind)
+	for payload
+		encoder = value < 0 then encoder.SevenBit(names.Index(texts(-1 - value))) else encoder.UInt(value, 1)
+	encoder.bytes
+Print(text Text) InstructionEntry
+	InstructionEntry.Print("b").Bytes(BinaryNames("a", "b")) is (45, 1, 0)
+	InstructionEntry(InstructionType.Print, text, (-1, 0))
+Return(register Number) InstructionEntry
+	InstructionEntry.Return(3).Bytes(BinaryNames("a")) is (32, 3)
+	InstructionEntry(InstructionType.Return, List(Text), register)
