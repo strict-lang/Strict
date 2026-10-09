@@ -1,2 +1,2 @@
-has value Number
-has scale = 1
+has amount Number
+constant scale = 1

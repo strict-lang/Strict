@@ -196,6 +196,15 @@ public sealed class MemberCallTests : TestExpressions
 	}
 
 	[Test]
+	public void FromCanInitializeMembers()
+	{
+		using var type = new Type(TestPackage.Instance, new TypeLines(nameof(FromCanInitializeMembers),
+			"has amount Number", "has scale Number", "from(number)", "\tamount = number * 2",
+			"\tscale = number")).ParseMembersAndMethods(parser);
+		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(), Throws.Nothing);
+	}
+
+	[Test]
 	public void DuplicateMembersAreNotAllowed() =>
 		Assert.That(
 			() =>

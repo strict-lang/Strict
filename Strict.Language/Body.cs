@@ -250,7 +250,8 @@ public sealed class Body : Expression
 		foreach (var member in contextType.Members)
 			if (member.Name == name)
 			{
-				member.CheckIfWeCouldUpdateValue(value, this);
+				member.CheckIfWeCouldUpdateValue(value, this,
+					Method.Name == Method.From && contextType == Method.Type);
 				return;
 			}
 		foreach (var parameter in Method.Parameters)

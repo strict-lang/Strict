@@ -73,9 +73,10 @@ public sealed class Member : NamedType
 		string constraintText) : ParsingFailed(type, 0,
 		$"Constraint: {constraintText} Member: {memberName}");
 
-	public void CheckIfWeCouldUpdateValue(Expression newExpression, Body bodyForErrorMessage)
+	public void CheckIfWeCouldUpdateValue(Expression newExpression, Body bodyForErrorMessage,
+		bool isInitializedInFrom = false)
 	{
-		if (!IsMutable)
+		if (!IsMutable && !isInitializedInFrom)
 			throw new Body.ValueIsNotMutableAndCannotBeChanged(bodyForErrorMessage, Name);
 		if (!newExpression.ReturnType.IsSameOrCanBeUsedAs(Type))
 			throw new NewExpressionDoesNotMatchMemberType(bodyForErrorMessage, newExpression, this);

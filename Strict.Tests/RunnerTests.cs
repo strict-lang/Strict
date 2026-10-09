@@ -96,9 +96,11 @@ public sealed class RunnerTests
 		var root = FindRepoRoot();
 		string[] projects = ["Language", "Expressions", "Validators", "TestRunner", "HighLevelRuntime",
 			"Bytecode", "Optimizers", "Runtime", "Compiler"];
-		return Directory.GetFiles(Path.Combine(root, "Examples"), "*" + Type.Extension).Concat(projects.
-				SelectMany(project => Directory.GetFiles(Path.Combine(root, project), "*" + Type.Extension))).
-			Select(file => Path.GetRelativePath(root, file).Replace('\\', '/')).Order();
+		return Directory.GetFiles(Path.Combine(root, "Examples"), "*" + Type.Extension,
+				SearchOption.AllDirectories).Concat(projects.SelectMany(project =>
+				Directory.GetFiles(Path.Combine(root, project), "*" + Type.Extension))).
+			Select(file => Path.GetRelativePath(root, file).Replace('\\', '/')).
+			Where(file => !file.Contains("/bin/") && !file.Contains("/obj/")).Order();
 	}
 
 	[Test]
