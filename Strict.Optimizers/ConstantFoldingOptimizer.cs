@@ -64,22 +64,11 @@ public sealed class ConstantFoldingOptimizer : InstructionOptimizer
 			var instruction = instructions[instructionIndex];
 			if (instruction is LoadConstantInstruction loadConstant && loadConstant.Register == register)
 				return instructionIndex;
-			if (WritesToRegister(instruction, register))
+			if (GetWrittenRegister(instruction) == register || IsControlFlow(instruction))
 				return -1;
 		}
 		return -1; //ncrunch: no coverage
 	}
-
-	private static bool WritesToRegister(Instruction instruction, Register register) =>
-		instruction switch
-		{
-			LoadVariableToRegister loadVariable => loadVariable.Register == register,
-			ListCallInstruction listCall => listCall.Register == register, //ncrunch: no coverage
-			Invoke invoke => invoke.Register == register, //ncrunch: no coverage
-			BinaryInstruction binary when binary.Registers.Length >= 3 => binary.Registers[2] == register,
-			LoadConstantInstruction loadConstant => loadConstant.Register == register,
-			_ => false //ncrunch: no coverage
-		};
 
 	private static bool IsArithmetic(InstructionType instruction) =>
 		instruction is > InstructionType.StoreSeparator and < InstructionType.ArithmeticSeparator;

@@ -24,6 +24,16 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 	}
 
 	[Test]
+	public void ConstantOverwrittenByFieldLoadIsNotFolded() =>
+		Optimize([
+			new LoadConstantInstruction(Register.R1, Num(3)),
+			new FieldLoadInstruction(Register.R1, Register.R0, "label"),
+			new LoadConstantInstruction(Register.R2, Num(5)),
+			new BinaryInstruction(InstructionType.Add, Register.R2, Register.R1, Register.R3),
+			new ReturnInstruction(Register.R3)
+		], 5);
+
+	[Test]
 	public void FoldSubtractionOfTwoConstants() =>
 		Assert.That(((LoadConstantInstruction)Optimize([
 			new LoadConstantInstruction(Register.R0, Num(10)),

@@ -18,4 +18,18 @@ public abstract class InstructionOptimizer
 	}
 
 	public abstract List<Instruction> Optimize(List<Instruction> instructions);
+
+	protected static Register? GetWrittenRegister(Instruction instruction) =>
+		instruction switch
+		{
+			BinaryInstruction { Registers.Length: >= 3 } binary => binary.Registers[^1],
+			LoadVariableToRegister or LoadConstantInstruction or SetInstruction or Invoke
+				or FieldLoadInstruction or ConstructValueTypeInstruction or ListCallInstruction =>
+				((RegisterInstruction)instruction).Register,
+			_ => null
+		};
+
+	protected static bool IsControlFlow(Instruction instruction) =>
+		instruction.InstructionType is >= InstructionType.LoopBegin and
+			<= InstructionType.JumpToIdIfTrue;
 }

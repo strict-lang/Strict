@@ -43,10 +43,6 @@ public sealed class RedundantLoadEliminator : InstructionOptimizer
 	private static bool IsBlockBoundary(Instruction instruction) =>
 		instruction.InstructionType is InstructionType.Invoke or >= InstructionType.LoopBegin;
 
-	private static bool IsControlFlow(Instruction instruction) =>
-		instruction.InstructionType is >= InstructionType.LoopBegin and
-			<= InstructionType.JumpToIdIfTrue;
-
 	private static bool TryRemapReadsUntilOverwritten(List<Instruction> instructions, int start,
 		Register from, Register to)
 	{
@@ -91,16 +87,6 @@ public sealed class RedundantLoadEliminator : InstructionOptimizer
 			StoreFromRegisterInstruction or ReturnInstruction or WriteToListInstruction
 				or RemoveInstruction or LoopBeginInstruction => [((RegisterInstruction)instruction).Register],
 			_ => []
-		};
-
-	private static Register? GetWrittenRegister(Instruction instruction) =>
-		instruction switch
-		{
-			BinaryInstruction { Registers.Length: >= 3 } binary => binary.Registers[^1],
-			LoadVariableToRegister or LoadConstantInstruction or SetInstruction or Invoke
-				or FieldLoadInstruction or ConstructValueTypeInstruction or ListCallInstruction =>
-				((RegisterInstruction)instruction).Register,
-			_ => null
 		};
 
 	private static bool CanRemap(Instruction instruction) =>

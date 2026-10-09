@@ -235,6 +235,8 @@ public sealed partial class BinaryGenerator
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)
 	{
 		for (var i = 0; i < expressions.Count; i++)
+		{
+			var statementStartRegister = registry.NextRegister;
 			if (ReferenceEquals(expressions[i], Expressions[^1]) &&
 				expressions[i] is If { OptionalElse: not null, Then: not Body } inlineConditional)
 				GenerateReturningInlineConditional(inlineConditional);
@@ -243,6 +245,9 @@ public sealed partial class BinaryGenerator
 				GenerateReturnInstruction(expressions[i]);
 			else
 				GenerateInstructionFromExpression(expressions[i]);
+			if (i < expressions.Count - 1)
+				registry.ReleaseTo(statementStartRegister);
+		}
 		return instructions;
 	}
 

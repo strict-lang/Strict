@@ -23,6 +23,11 @@ public sealed class Registry()
 	}
 
 	/// <summary>
+	/// Values of finished statements live in variables, their registers can be used again.
+	/// </summary>
+	public void ReleaseTo(int nextRegister) => NextRegister = nextRegister;
+
+	/// <summary>
 	/// Thrown when a single method body needs more virtual registers than available.
 	/// Prefer splitting the method over silent wrap-around (which corrupts live values).
 	/// </summary>
