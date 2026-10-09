@@ -112,7 +112,7 @@ public sealed partial class VirtualMachine
 	private static ValueInstance CreateMemberInitialOrDefaultValue(Member member,
 		bool hasBinaryMembers, List<BinaryMember> binaryMembers, int memberIndex) =>
 		member.InitialValue is Value initialValue
-			? GetData(initialValue)
+			? initialValue.Data
 			: hasBinaryMembers && TryGetBinaryMemberInitialValue(binaryMembers, memberIndex,
 				out var binaryInitialValue)
 				? binaryInitialValue
@@ -226,18 +226,10 @@ public sealed partial class VirtualMachine
 			values[memberIndex] = IsTrait(members[memberIndex].Type)
 				? CreateTraitInstance(members[memberIndex].Type)
 				: members[memberIndex].InitialValue is Value initialValue
-					? GetData(initialValue)
+					? initialValue.Data
 					: CreateDefaultValue(members[memberIndex].Type);
 		return new ValueInstance(type, values);
 	}
-
-	/// <summary>
-	/// List expressions keep their elements as expressions, Data is only their empty placeholder.
-	/// </summary>
-	private static ValueInstance GetData(Value value) =>
-		value is List list && list.TryGetConstantData() is { } listData
-			? listData
-			: value.Data;
 
 	private int? TryGetConstrainedLength(Type targetType, ValueInstance[] values, Member member)
 	{

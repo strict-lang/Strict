@@ -23,7 +23,7 @@ public class Value(Type valueType, ValueInstance data, int lineNumber = 0, bool 
 	protected Value(Type valueType, ValueInstance[] items, int lineNumber = 0, bool isMutable = false)
 		: this(valueType, new ValueInstance(valueType, items), lineNumber, isMutable) { }
 
-	public ValueInstance Data { get; } = data;
+	public virtual ValueInstance Data { get; } = data;
 	public override string ToString() => Data.ToExpressionCodeString(true);
 	public override bool IsConstant => true;
 	public override bool Equals(Expression? other) => other is Value v && Data.Equals(v.Data);
