@@ -11,13 +11,14 @@ namespace Strict.Language;
 /// Strict code only contains optional implement, then has*, then methods*. No empty lines.
 /// There is no typical lexing/scoping/token splitting needed as Strict syntax is very strict.
 /// </summary>
-public class Type : Context, IDisposable
+public partial class Type : Context, IDisposable
 {
 #if DEBUG
 	public Type(Package package, TypeLines file, [CallerFilePath] string callerFilePath = "",
 		[CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = "") : base(package, file.Name, callerFilePath,
 		callerLineNumber, callerMemberName)
+
 #else
 	public Type(Package package, TypeLines file) : base(package, file.Name)
 #endif
@@ -49,69 +50,86 @@ public class Type : Context, IDisposable
 
 	/// <summary>Source lines of this type (no trailing final-newline artifact).</summary>
 	public string[] Lines { get; }
+
 	/// <summary>
 	/// Generic types cannot be used directly as we don't know the implementation to be used (e.g.,
 	/// a list, we need to know the type of the elements), you must them from
 	/// <see cref="GenericTypeImplementation"/>!
 	/// </summary>
 	public bool IsGeneric { get; }
+
 	/// <summary>
 	/// Mutable types should be avoided as they make code non parallel and slow. Mutable types have
 	/// always an inner type (e.g., Mutable(Text)), use GetFirstImplementation to get to that type.
 	/// The TypeKind of the inner type will be mirrored here to make comparisons fast.
 	/// </summary>
 	public bool IsMutable { get; }
-	private readonly TypeMethodFinder typeMethodFinder;
-	private readonly TypeParser typeParser;
-	internal TypeKind typeKind;
 
-	private bool OneOfFirstThreeLinesContainsGeneric()
-	{
-		for (var line = 0; line < Lines.Length && line < 3; line++)
-			if (HasGenericMember(Lines[line]) || (HasGenericMethodHeader(Lines[line]) &&
-				line + 1 < Lines.Length && !Lines[line + 1].StartsWith('\t')))
-				return true;
-		return false;
-	}
+	private readonly TypeMethodFinder typeMethodFinder;
+
+	private readonly TypeParser typeParser;
+
+	internal TypeKind typeKind;
 
 	/// <summary>
 	/// Has no implementation and is used for void, empty, or none, which is not valid to assign.
 	/// </summary>
 	public const string None = nameof(None);
+
 	/// <summary>
 	/// Defines all the methods available in any type (everything automatically implements **Any**).
 	/// These methods don't have to be implemented by any class, they are automatically implemented.
 	/// </summary>
 	public const string Any = nameof(Any);
+
 	/// <summary>
 	/// Most basic type: can only be true or false, any expression must either be None or return a
 	/// Boolean (anything else is a compiler error). Any expression returning false (like a failing
 	/// test) will also immediately cause an error at runtime or in the Editor via SCrunch.
 	/// </summary>
 	public const string Boolean = nameof(Boolean);
+
 	/// <summary>
 	/// Can be any floating point or integer number (think byte, short, int, long, float, or double
 	/// in other languages). Also, it can be a decimal or BigInteger, the compiler can decide and
 	/// optimize this away into anything that makes sense in the current context.
 	/// </summary>
 	public const string Number = nameof(Number);
+
 	public const string Byte = nameof(Byte);
+
 	public const string Character = nameof(Character);
+
 	public const string HashCode = nameof(HashCode);
+
 	public const string Range = nameof(Range);
+
 	public const string Text = nameof(Text);
+
 	public const string Error = nameof(Error);
+
 	public const string ErrorWithValue = nameof(ErrorWithValue);
+
 	public const string Iterator = nameof(Iterator);
+
 	public const string List = nameof(List);
+
 	public const string Logger = nameof(Logger);
+
 	public const string System = nameof(System);
+
 	public const string File = nameof(File);
+
 	public const string Directory = nameof(Directory);
+
 	public const string TextWriter = nameof(TextWriter);
+
 	public const string TextReader = nameof(TextReader);
+
 	public const string Stacktrace = nameof(Stacktrace);
+
 	public const string Mutable = nameof(Mutable);
+
 	public const string Dictionary = nameof(Dictionary);
 
 	private TypeKind GetTypeKindFromName() =>
@@ -133,32 +151,11 @@ public class Type : Context, IDisposable
 			_ => TypeKind.Unknown
 		};
 
-	private static bool HasGenericMember(string line) =>
-		(line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) ||
-			line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal)) &&
-		(line.Contains(GenericUppercase, StringComparison.Ordinal) ||
-			line.Contains(GenericLowercase, StringComparison.Ordinal)) &&
-		!IsNamedMemberWithAlternativeOrDefault(line);
-
-	// "has Name Generic or None" or "has Name Generic = default" have an alternative/default so the
-	// type is not parameterized by the generic member and should not be treated as IsGeneric.
-	// "has Generic" (unnamed) and "has Name Generic" (no alternative) still make the type generic.
-	private static bool IsNamedMemberWithAlternativeOrDefault(string line)
-	{
-		var parts = line.Split(' ');
-		return parts.Length > 3 && parts[2] is GenericUppercase or GenericLowercase &&
-			!line.Contains('(');
-	}
-
 	public const string HasWithSpaceAtEnd = Keyword.Has + " ";
-	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
-	public const string ConstantWithSpaceAtEnd = Keyword.Constant + " ";
 
-	private static bool HasGenericMethodHeader(string line) =>
-		!line.StartsWith(HasWithSpaceAtEnd, StringComparison.Ordinal) &&
-		!line.StartsWith(MutableWithSpaceAtEnd, StringComparison.Ordinal) &&
-		(line.Contains(GenericUppercase, StringComparison.Ordinal) ||
-			line.Contains(GenericLowercase, StringComparison.Ordinal));
+	public const string MutableWithSpaceAtEnd = Keyword.Mutable + " ";
+
+	public const string ConstantWithSpaceAtEnd = Keyword.Constant + " ";
 
 	/// <summary>
 	/// Parsing has to be done OUTSIDE the constructor as we first need all types and inside might not
@@ -247,11 +244,6 @@ public class Type : Context, IDisposable
 
 	public class TypeWasAlreadyParsed(Type type) : Exception(type.ToString()); //ncrunch: no coverage
 
-	public sealed class MustImplementAllTraitMethodsOrNone(Type type,
-		string traitName,
-		IEnumerable<Method> missingTraitMethods) : ParsingFailed(type, type.typeParser.LineNumber,
-		"Trait Type:" + traitName + " Missing methods: " + string.Join(", ", missingTraitMethods));
-
 	private void ValidateMethodAndMemberCountLimits()
 	{
 		var memberLimit = IsEnum
@@ -270,6 +262,7 @@ public class Type : Context, IDisposable
 	}
 
 	public bool IsEnum => typeKind == TypeKind.Enum;
+
 	/// <summary>
 	/// Data types have no methods and just some data. Number, Text, and most Base types are not
 	/// data types as they have functionality (which makes sense), only types higher up that only
@@ -302,52 +295,13 @@ public class Type : Context, IDisposable
 	public sealed class MethodCountMustNotExceedLimit(Type type) : ParsingFailed(type, 0,
 		$"Type {type.Name} has method count {type.methods.Count} but limit is {Limit.MethodCount}");
 
-	private void CheckIfTraitIsImplementedFullyOrNone(Type trait)
-	{
-		var traitMethods = GetRequiredTraitMethods(trait).
-			Where(traitMethod => traitMethod.Name != Method.From).ToList();
-		var nonImplementedTraitMethods = traitMethods.Where(traitMethod =>
-			traitMethod.Name != Method.From &&
-			methods.All(implementedMethod => traitMethod.Name != implementedMethod.Name)).ToList();
-		if (nonImplementedTraitMethods.Count > 0 &&
-			nonImplementedTraitMethods.Count != traitMethods.Count)
-			throw new MustImplementAllTraitMethodsOrNone(this, trait.Name, nonImplementedTraitMethods);
-	}
-
-	private static IEnumerable<Method> GetRequiredTraitMethods(Type trait)
-	{
-		foreach (var method in trait.Methods)
-			yield return method;
-		foreach (var member in trait.Members)
-			if (IsTraitRequirementMember(member))
-				foreach (var method in GetRequiredTraitMethods(member.Type))
-					yield return method;
-	}
-
 	public List<Member> Members => members;
+
 	protected readonly List<Member> members = [];
+
 	public List<Method> Methods => methods;
+
 	protected readonly List<Method> methods = [];
-	public bool IsTrait =>
-		!IsNumber && !IsBoolean && !IsText && CheckIfParsed() && CanBeTraitBasedOnMembers &&
-		Methods.All(IsTraitMethodDeclaration);
-
-	internal bool CanBeTraitBasedOnMembers =>
-		!IsNumber && !IsBoolean && (Members.Count == 0 || (Members.All(IsTraitRequirementMember) &&
-			(Members.Any(member => !member.IsPublic) || Members.Count > 1)));
-
-	internal bool MustUseBodylessTraitMethods =>
-		!IsNumber && !IsBoolean && (Members.Count == 0 ||
-			(Members.Count > 1 && Members.All(IsTraitCompositionMember)));
-
-	internal static bool IsTraitMethodDeclaration(Method method) => method.lines.Count == 1;
-
-	private static bool IsTraitRequirementMember(Member member) =>
-		member.Type != member.DefinedIn && member.Type.IsTrait;
-
-	private static bool IsTraitCompositionMember(Member member) =>
-		member.IsPublic && member.Name == member.Type.Name && member.Type != member.DefinedIn &&
-		member.Type.IsTrait;
 
 	public Dictionary<string, Type> AvailableMemberTypes
 	{
@@ -364,94 +318,45 @@ public class Type : Context, IDisposable
 			return field;
 		}
 	}
+
 	/// <summary>
 	/// Everything internally is Any, cannot be specified as member, parameter, or variable.
 	/// </summary>
 	public const string AnyLowercase = "any";
+
 	public const string GenericUppercase = "Generic";
+
 	public const string GenericLowercase = "generic";
+
 	public const string IteratorLowercase = "iterator";
+
 	public const string ElementsLowercase = "elements";
+
 	public const string ValueLowercase = "value";
+
 	public const string IndexLowercase = "index";
+
 	/// <summary>
 	/// Easy way to get another instance of the class type we are currently in.
 	/// </summary>
 	public const string Other = nameof(Other);
+
 	/// <summary>
 	/// In a for loop a different "value" is used, this way we can still get to the outer instance.
 	/// </summary>
 	public const string Outer = nameof(Outer);
+
 	public const string OuterLowercase = "outer";
 
-	public GenericTypeImplementation GetGenericImplementation(params Type[] implementationTypes)
-	{
-		var key = GetImplementationName(implementationTypes);
-		lock (genericImplementationLock)
-		{
-			return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
-		}
-	}
-
-	internal string GetImplementationName(Type[] implementationTypes)
-	{
-		var key = "";
-		for (var i = 0; i < implementationTypes.Length; i++)
-			key += (key == ""
-				? ""
-				: ", ") + implementationTypes[i].Name;
-		return Name + "(" + key + ")";
-	}
-
-	internal string GetImplementationName(IReadOnlyList<NamedType> implementationTypes)
-	{
-		var key = "";
-		for (var i = 0; i < implementationTypes.Count; i++)
-			key += (key == ""
-				? ""
-				: ", ") + implementationTypes[i];
-		return Name + "(" + key + ")";
-	}
-
-	private GenericTypeImplementation? GetGenericImplementation(string key)
-	{
-		if (!IsGeneric)
-			throw new CannotGetGenericImplementationOnNonGeneric(Name, key);
-		cachedGenericTypes ??=
-			new Dictionary<string, GenericTypeImplementation>(StringComparer.Ordinal);
-		return cachedGenericTypes.GetValueOrDefault(key);
-	}
-
 	private Dictionary<string, GenericTypeImplementation>? cachedGenericTypes;
+
 	private readonly object genericImplementationLock = new();
-
-	/// <summary>
-	/// Most often called for List (or the Iterator trait), which we want to optimize for
-	/// </summary>
-	private GenericTypeImplementation CreateGenericImplementation(string key,
-		Type[] implementationTypes)
-	{
-		if (((IsList || IsIterator || IsMutable) && implementationTypes.Length == 1) ||
-			GetGenericTypeArguments().Count == implementationTypes.Length ||
-			HasMatchingConstructor(implementationTypes))
-		{
-			var genericType = new GenericTypeImplementation(this, implementationTypes, key);
-			cachedGenericTypes!.Add(key, genericType);
-			return genericType;
-		}
-		throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
-	}
-
-	private bool HasMatchingConstructor(Type[] implementationTypes) =>
-		typeMethodFinder.FindFromMethodImplementation(implementationTypes) != null;
-
-	public sealed class CannotGetGenericImplementationOnNonGeneric(string name, string key)
-		: Exception("Type: " + name + ", Generic Implementation: " + key);
 
 	public string FilePath =>
 		Path.GetFullPath(Path.Combine(Package.FolderPath, (this is GenericTypeImplementation genericType
 			? genericType.Generic.Name
 			: Name) + Extension));
+
 	public const string Extension = ".strict";
 
 	public Member? FindMember(string name)
@@ -459,13 +364,6 @@ public class Type : Context, IDisposable
 		CheckIfParsed();
 		return Members.FirstOrDefault(member => member.Name == name);
 	}
-
-	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
-		string? callText = null) =>
-		typeMethodFinder.FindMethod(methodName, arguments, callText);
-
-	public Method GetMethod(string methodName, IReadOnlyList<Expression> arguments) =>
-		typeMethodFinder.GetMethod(methodName, arguments);
 
 	public class GenericTypesCannotBeUsedDirectlyUseImplementation : Exception
 	{
@@ -493,546 +391,44 @@ public class Type : Context, IDisposable
 		}
 	}
 
-	/// <summary>
-	/// Any non-public member is automatically iterable if it has Iterator, for example, Text.strict
-	/// or Error.strict have public members you have to iterate over yourself. If there are more
-	/// private iterators, pick the first member automatically. List and number are also iterable.
-	/// </summary>
-	public bool IsIterator =>
-		typeKind == TypeKind.Iterator || Name.StartsWith(Iterator + "(", StringComparison.Ordinal) ||
-		HasAnyIteratorMember();
-
-	private bool HasAnyIteratorMember()
-	{
-		var cached = Volatile.Read(ref cachedIteratorState);
-		if (cached != 0)
-			return cached == IteratorTrue;
-		var computed = ExecuteIsIteratorCheck();
-		Volatile.Write(ref cachedIteratorState, computed
-			? IteratorTrue
-			: IteratorFalse);
-		return computed;
-	}
-
-	private bool ExecuteIsIteratorCheck()
-	{
-		CheckIfParsed();
-		foreach (var member in members)
-		{
-			if (cachedEvaluatedMemberTypes.TryGetValue(member.Type.Name, out var result))
-				return result; //ncrunch: no coverage
-			var isIterator = member is { IsPublic: false, Type.IsIterator: true };
-			cachedEvaluatedMemberTypes[member.Type.Name] = isIterator;
-			if (isIterator)
-				return true;
-		}
-		return false;
-	}
-
 	protected int cachedIteratorState;
+
 	private const int IteratorFalse = 1;
+
 	private const int IteratorTrue = 2;
+
 	protected readonly ConcurrentDictionary<string, bool> cachedEvaluatedMemberTypes = new();
-
-	/// <summary>
-	/// Can OUR type be converted to sameOrUsableType and be used as such? Be careful how this is
-	/// called. A derived RedApple can be used as the base class Apple, but not the other way around.
-	/// </summary>
-	public bool IsSameOrCanBeUsedAs(Type sameOrUsableType, bool allowImplicitConversion = true,
-		int maxDepth = 2)
-	{
-		if (this == sameOrUsableType || sameOrUsableType.IsAny || (typeKind < TypeKind.List &&
-			typeKind == sameOrUsableType.typeKind))
-			return true;
-		if (IsGenericTypeCompatible(sameOrUsableType))
-			return true;
-		if (allowImplicitConversion && IsImplicitAnyToConversion(sameOrUsableType))
-			return true;
-		if (IsEnum && members[0].Type.IsSameOrCanBeUsedAs(sameOrUsableType))
-			return true;
-		if ((IsMutable && GetFirstImplementation().IsSameOrCanBeUsedAs(sameOrUsableType)) ||
-			(sameOrUsableType.IsMutable &&
-				IsSameOrCanBeUsedAs(sameOrUsableType.GetFirstImplementation())))
-			return true;
-		if (HasExactlyOneMemberOfType(sameOrUsableType))
-			return true;
-		if (IsCompatibleOneOfType(sameOrUsableType))
-			return true;
-		if (DeclaresForIterator(sameOrUsableType))
-			return true;
-		return maxDepth >= 0 &&
-			HasExactlyOneUsableMember(sameOrUsableType, allowImplicitConversion, maxDepth);
-	}
-
-	/// <summary>
-	/// Checks whether this type can be adapted to targetType via existing to/from conversions.
-	/// </summary>
-	public bool CanBeConvertedTo(Type targetType, bool allowImplicitConversion = false)
-	{
-		if (IsSameOrCanBeUsedAs(targetType, allowImplicitConversion))
-			return true;
-		if (CanConvertBetweenByteListAndCompositeByteList(targetType))
-			return true;
-		if (targetType.CanBeCreatedFromSingleMember(this, allowImplicitConversion))
-			return true;
-		if (IsBaseTypeExcludedFromImplicitListConversion() ||
-			targetType.IsBaseTypeExcludedFromImplicitListConversion())
-			return false;
-		if (AvailableMethods.TryGetValue(BinaryOperator.To, out var toMethods) &&
-			toMethods.Any(method => method.ReturnType == targetType ||
-				method.ReturnType.IsSameOrCanBeUsedAs(targetType, allowImplicitConversion)))
-			return true;
-		return targetType.AvailableMethods.TryGetValue(Method.From, out var fromMethods) &&
-			fromMethods.Any(method => method.Parameters.Count == 1 &&
-				IsSameOrCanBeUsedAs(method.Parameters[0].Type, allowImplicitConversion));
-	}
-
-	private bool IsBaseTypeExcludedFromImplicitListConversion() =>
-		typeKind < TypeKind.List || Name == "Byte";
-
-	private bool CanConvertBetweenByteListAndCompositeByteList(Type targetType)
-	{
-		if (this is not GenericTypeImplementation { Generic.IsList: true } sourceList ||
-			targetType is not GenericTypeImplementation { Generic.IsList: true } targetList)
-			return false;
-		var sourceElement = sourceList.ImplementationTypes[0];
-		var targetElement = targetList.ImplementationTypes[0];
-		return (IsTypeComposedOfBytesOnly(sourceElement) && targetElement.Name == "Byte") ||
-			(IsTypeComposedOfBytesOnly(targetElement) && sourceElement.Name == "Byte");
-	}
-
-	private static bool IsTypeComposedOfBytesOnly(Type type) =>
-		type.Members.Count > 0 && type.Members.All(member => member.Type.Name is "Byte" or "Number");
-
-	/// <summary>
-	/// Returns true when this type explicitly declares "for Iterator(T)" and the target is that
-	/// same Iterator(T). This is used to recognize that Range IS an Iterator(Number) because Range
-	/// declares "for Iterator(Number)" in its method list.
-	/// </summary>
-	private bool DeclaresForIterator(Type targetType) =>
-		targetType is GenericTypeImplementation { Generic.typeKind: TypeKind.Iterator } &&
-		methods.Any(m => m.Name == "for" && m.ReturnType == targetType);
-
-	private bool IsGenericTypeCompatible(Type sameOrUsableType)
-	{
-		if (this is GenericTypeImplementation sourceImplementation)
-			return IsSourceGenericImplementationCompatible(sourceImplementation, sameOrUsableType);
-		if (sameOrUsableType is GenericTypeImplementation targetImplementation)
-			return targetImplementation.Generic == this;
-		return false;
-	}
-
-	private static bool IsSourceGenericImplementationCompatible(
-		GenericTypeImplementation sourceImplementation, Type sameOrUsableType)
-	{
-		if (sourceImplementation.Generic == sameOrUsableType)
-			return true;
-		if (sameOrUsableType is not GenericTypeImplementation targetImplementation ||
-			sourceImplementation.Generic != targetImplementation.Generic ||
-			sourceImplementation.ImplementationTypes.Count !=
-			targetImplementation.ImplementationTypes.Count)
-			return false;
-		for (var implementationIndex = 0;
-			implementationIndex < sourceImplementation.ImplementationTypes.Count; implementationIndex++)
-			if (!sourceImplementation.ImplementationTypes[implementationIndex].CanBeConvertedTo(
-				targetImplementation.ImplementationTypes[implementationIndex]))
-				return false;
-		return true;
-	}
-
-	private bool HasExactlyOneMemberOfType(Type targetType)
-	{
-		// Basically members.Count(m => m.Type == targetType) == 1, but more performant
-		var found = false;
-		foreach (var m in members)
-			if (m.Type == targetType)
-			{
-				if (found)
-					return false;
-				found = true;
-			}
-		return found;
-	}
 
 	internal bool
 		CanBeCreatedFromSingleMember(Type sourceType, bool allowImplicitConversion = false) =>
 		TryGetSingleValueMemberType(out var memberType) &&
 		sourceType.IsSameOrCanBeUsedAs(memberType, allowImplicitConversion, 1);
 
-	internal bool CanUseInheritedSingleMemberReturn(Type methodType, Type returnType) =>
-		TryGetSingleValueMemberType(out var memberType) && methodType == memberType &&
-		returnType.IsSameOrCanBeUsedAs(memberType, false, 1);
-
-	private bool TryGetSingleValueMemberType(out Type memberType)
-	{
-		memberType = null!;
-		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-			if (!members[memberIndex].IsConstant)
-			{
-				// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
-				if (memberType != null)
-					return false;
-				memberType = members[memberIndex].Type;
-			}
-		// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
-		return memberType != null;
-	}
-
-	private bool HasExactlyOneUsableMember(Type targetType, bool allowImplicitConversion,
-		int maxDepth)
-	{
-		var key = (targetType, allowImplicitConversion, maxDepth);
-		if (usableMemberCache.TryGetValue(key, out var cached))
-			return cached;
-		var found = false;
-		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-			if (!members[memberIndex].IsConstant && members[memberIndex].Type.
-				IsSameOrCanBeUsedAs(targetType, allowImplicitConversion, maxDepth - 1))
-			{
-				if (found)
-					return usableMemberCache[key] = false;
-				found = true;
-			}
-		return usableMemberCache[key] = found;
-	}
-
-	private readonly ConcurrentDictionary<(Type, bool, int), bool> usableMemberCache = new();
-
-	/// <summary>
-	/// Only allow implicit conversions as defined in Any.strict (to Text, to Type, to HashCode)
-	/// </summary>
-	private static bool IsImplicitAnyToConversion(Context targetType) =>
-		targetType.Name is Text or nameof(Type) or HashCode;
-
-	private bool IsCompatibleOneOfType(Type sameOrBaseType)
-	{
-		if (sameOrBaseType is OneOfType oneOfType)
-			for (var index = 0; index < oneOfType.Types.Length; index++)
-				if (IsSameOrCanBeUsedAs(oneOfType.Types[index]))
-					return true;
-		return false;
-	}
-
 	public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
 		name == Name || name is Other or Outer || name == FullName
 			? this
 			: Package.FindTypeCore(name, searchingFrom ?? this);
 
-	/// <summary>
-	/// When two types are using in a conditional expression, i.e., then and else return types and
-	/// both are not based on each other, find the common base type that works for both.
-	/// </summary>
-	public Type? FindFirstUnionType(Type elseType)
-	{
-		if (elseType.IsError)
-			return this;
-		if (IsError)
-			return elseType;
-		// Allow number and iterators for return types
-		if (Name == Number && elseType.IsIterator)
-			return elseType;
-		if (elseType.IsNumber && IsIterator)
-			return this;
-		foreach (var member in members)
-			if (elseType.members.Any(otherMember => otherMember.Type == member.Type))
-				return member.Type;
-		foreach (var member in members)
-		{
-			if (member.Type == this)
-				continue;
-			var subUnionType = member.Type.FindFirstUnionType(elseType);
-			if (subUnionType != null)
-				return subUnionType;
-		}
-		foreach (var otherMember in elseType.members)
-		{
-			var otherSubUnionType = otherMember.Type.FindFirstUnionType(this);
-			if (otherSubUnionType != null)
-				return otherSubUnionType;
-		}
-		return null;
-	}
-
-	/// <summary>
-	/// Builds dictionary the first time we use it to access any method of this type or any of the
-	/// member types recursively (if not there yet). Filtering is done by <see cref="FindMethod"/>
-	/// </summary>
-	public IReadOnlyDictionary<string, List<Method>> AvailableMethods
-	{
-		get
-		{
-			var cached = cachedAvailableMethods;
-			if (cached != null)
-				return cached;
-			var activeBuilds = activeAvailableMethodBuilds ??= [];
-			if (!activeBuilds.Add(this))
-				return EmptyAvailableMethods;
-			lock (availableMethodsLock)
-			{
-				try
-				{
-					cached = cachedAvailableMethods;
-					if (cached != null)
-						return cached;
-					var built = new Dictionary<string, List<Method>>(StringComparer.Ordinal);
-					foreach (var method in methods)
-						if (method.IsPublic || method.Name == Method.From || method.Name.AsSpan().IsOperator())
-							AddAvailableMethod(method, built);
-					if (Name == Any)
-						return cachedAvailableMethods = built;
-					foreach (var member in Members.Where(m =>
-						(m is { IsPublic: false, IsConstant: false, InitialValue: null } &&
-							!IsTraitImplementation(m.Type)) || IsTraitCompositionMember(m)))
-						AddNonGenericMethods(member.Type, built);
-					if (!IsTrait && members.Count > 0 &&
-						members.Any(m => !m.Type.IsGeneric && !m.IsConstant) &&
-						methods.All(m => m.Name != Method.From))
-					{
-						var fromParser = methods.Count > 0
-							? methods[0].Parser
-							: savedParser ?? GetType(Any).Methods.FirstOrDefault()?.Parser;
-						if (fromParser != null)
-							AddFromConstructorWithMembersAsArguments(fromParser, built);
-					}
-					if (this is GenericTypeImplementation { Generic.IsDictionary: true } dictImpl &&
-						dictImpl.Generic.AvailableMethods.TryGetValue(Method.From,
-							out var genericFromMethods) &&
-						built.TryGetValue(Method.From, out var existingFromMethods))
-						foreach (var fromMethod in genericFromMethods)
-							existingFromMethods.Add(new Method(fromMethod, dictImpl));
-					AddAnyMethods(built);
-					return cachedAvailableMethods = built;
-				}
-				finally
-				{
-					activeBuilds.Remove(this);
-					if (activeBuilds.Count == 0)
-						activeAvailableMethodBuilds = null;
-				}
-			}
-		}
-	}
 	private ExpressionParser? savedParser;
+
 	public int AutogeneratedEnumValue { get; internal set; }
+
 	public int LineNumber => typeParser.LineNumber;
+
 	private static readonly IReadOnlyDictionary<string, List<Method>> EmptyAvailableMethods =
 		new Dictionary<string, List<Method>>(StringComparer.Ordinal);
+
 	[ThreadStatic]
 	private static HashSet<Type>? activeAvailableMethodBuilds;
+
 	private readonly object availableMethodsLock = new();
+
 	private volatile Dictionary<string, List<Method>>? cachedAvailableMethods;
-
-	private void AddAvailableMethod(Method method, Dictionary<string, List<Method>> cache)
-	{
-		// From constructor methods should return the type we are in, not the base type (like Any)
-		if (method.Name == Method.From && method.Type != this)
-		{
-			// If we already have a from constructor, do not add a default one from any base type (Any)
-			if (cache.ContainsKey(Method.From))
-				return;
-			method = new Method(method, this);
-		}
-		if (cache.TryGetValue(method.Name, out var methodsWithThisName))
-		{
-			foreach (var existingMethod in methodsWithThisName)
-				if (existingMethod.IsSameMethodNameReturnTypeAndParameters(method))
-					return;
-			methodsWithThisName.Add(method);
-		}
-		else
-		{
-			cache.Add(method.Name, [method]);
-		}
-	}
-
-	protected void AddFromConstructorWithMembersAsArguments(ExpressionParser parser,
-		Dictionary<string, List<Method>> cache) =>
-		AddAvailableMethod(new Method(this, 0, parser, [
-			"from(" + CreateFromMethodParameters() + ")",
-			"\tvalue"
-		]), cache);
-
-	private string CreateFromMethodParameters()
-	{
-		var parameters = "";
-		foreach (var member in members)
-			if (!member.Type.IsGeneric && !member.IsConstant)
-			{
-				var memberType = member.Type.IsMutable
-					? member.Type.GetFirstImplementation()
-					: member.Type;
-				parameters += (parameters == ""
-					? ""
-					: ", ") + member.Name.MakeFirstLetterLowercase() + (member.InitialValue != null
-					? " = " + member.InitialValue
-					: member.InitialValueText != null
-						? " = " + member.InitialValueText
-						: member.IsMutable && (memberType.IsNumber || memberType.IsBoolean || memberType.IsText)
-							? " = " + GetDefaultValueForType(memberType.Name)
-							: member.IsMutable
-								? " " + memberType.Name
-								: CanUseImplicitListParameterType(memberType, member.Name)
-									? ""
-									: " " + memberType.Name);
-			}
-		return parameters;
-	}
-
-	private static bool CanUseImplicitListParameterType(Type memberType, string memberName) =>
-		memberType.IsList && memberType.Name.StartsWith(memberName.MakeFirstLetterUppercase(),
-			StringComparison.Ordinal);
-
-	private static string GetDefaultValueForType(string typeName) =>
-		typeName switch
-		{
-			Number => "0",
-			Boolean => "false",
-			_ => "\"\""
-		};
-
-	public bool IsTraitImplementation(Type memberType) =>
-		memberType.IsTrait && methods.Count >= memberType.Methods.Count &&
-		memberType.Methods.All(typeMethod =>
-			methods.Any(method => method.HasEqualSignature(typeMethod)));
-
-	private void AddNonGenericMethods(Type implementType, Dictionary<string, List<Method>> cache)
-	{
-		foreach (var (_, otherMethods) in implementType.AvailableMethods)
-			if (implementType.IsGeneric)
-			{
-				foreach (var otherMethod in otherMethods)
-					if (!otherMethod.IsGeneric && !otherMethod.Parameters.Any(p => p.Type.IsGeneric))
-						AddAvailableMethod(otherMethod, cache);
-			}
-			else
-			{
-				foreach (var otherMethod in otherMethods)
-					if (otherMethod.Name != Method.From)
-						AddAvailableMethod(otherMethod, cache);
-			}
-	}
-
-	private void AddAnyMethods(Dictionary<string, List<Method>> cache)
-	{
-		cachedAnyMethods ??= GetType(Any).AvailableMethods;
-		if (!IsGeneric)
-			foreach (var (_, anyMethods) in cachedAnyMethods)
-			foreach (var anyMethod in anyMethods)
-				AddAvailableMethod(anyMethod, cache);
-	}
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
 
-	public sealed class NoMatchingMethodFound(Type type,
-		string methodName,
-		IReadOnlyDictionary<string, List<Method>> availableMethods) : Exception("\"" + methodName +
-		"\" not found for " + type + ", available methods: " +
-		string.Join(", ", availableMethods.Keys));
-
-	public sealed class ArgumentsDoNotMatchMethodParameters(IReadOnlyList<Expression> arguments,
-		Type type,
-		IEnumerable<Method> allMethods,
-		string? callText = null)
-		: Exception(CreateArgumentsDoNotMatchMessage(arguments, type, allMethods, callText));
-
-	private static string CreateArgumentsDoNotMatchMessage(IReadOnlyList<Expression> arguments,
-		Type type, IEnumerable<Method> allMethods, string? callText) =>
-		(callText == null
-			? ""
-			: "Call " + callText + " with ") + (arguments.Count == 0
-			? (callText == null
-				? "No"
-				: "no") + " arguments does "
-			: (arguments.Count == 1
-				? "Argument: "
-				: "Arguments: ") + string.Join(", ", arguments.Select(a => a.ToStringWithType())) +
-			" do ") + "not match these " + type + " method(s):\n" + string.Join("\n", allMethods);
-
-	public bool IsUpcastable(Type otherType) =>
-		IsEnum && otherType.IsEnum && otherType.Members.Any(member =>
-			member.Name.Equals(Name, StringComparison.OrdinalIgnoreCase));
-
-	/// <summary>
-	/// Every private member and every declared variable must be used, dummies only satisfying
-	/// "types without members must be traits" are forbidden. Checked when loading files.
-	/// </summary>
-	public void ValidateMembersAndVariablesAreUsed()
-	{
-		foreach (var method in methods)
-			ValidateVariablesAreUsed(method);
-		if (IsDataType || IsTrait || IsSingleMemberValueType)
-			return;
-		foreach (var member in members)
-			if (!IsReservedMemberName(member.Name) && !member.IsPublic &&
-				CountMemberUsage(member.Name) < 2)
-				throw new UnusedMemberMustBeRemoved(this, member.Name);
-	}
-
-	private void ValidateVariablesAreUsed(Method method)
-	{
-		for (var index = 1; index < method.lines.Count; index++)
-		{
-			var declaration = DeclarationPattern.Match(method.lines[index]);
-			if (!declaration.Success)
-				continue;
-			var usage = new Regex(@"\b" + declaration.Groups[1].Value + @"\b");
-			if (!method.lines.Where((line, lineIndex) => lineIndex != index).Any(usage.IsMatch))
-				throw new UnusedMethodVariableMustBeRemoved(this, declaration.Groups[1].Value);
-		}
-	}
-
 	private static readonly Regex DeclarationPattern = new(@"^\t+(?:let|constant|mutable) (\w+) = ",
 		RegexOptions.Compiled);
-
-	public sealed class UnusedMethodVariableMustBeRemoved(Type type, string name)
-		: ParsingFailed(type, 0, name);
-
-	/// <summary>
-	/// Wrappers like Degrees with a single "has number" use that member through value or from.
-	/// </summary>
-	private bool IsSingleMemberValueType =>
-		members.Count(member => !member.IsConstant) == 1 && (CountMemberUsage(ValueLowercase) > 0 ||
-			methods.Any(method => method.Name == Method.From));
-
-	private static bool IsReservedMemberName(string name) =>
-		name is ValueLowercase or IteratorLowercase or ElementsLowercase or GenericLowercase;
-
-	public sealed class UnusedMemberMustBeRemoved(Type type, string memberName)
-		: ParsingFailed(type, 0, memberName);
-
-	public int CountMemberUsage(string memberName) =>
-		Lines.Count(line => line.Contains(' ' + memberName) || line.Contains('\t' + memberName) ||
-			line.Contains('(' + memberName));
-
-	[Log]
-	public HashSet<NamedType> GetGenericTypeArguments()
-	{
-		if (!IsGeneric)
-			throw new TypeMustBeGenericToCallThis(this); //ncrunch: no coverage
-		var genericArguments = new HashSet<NamedType>();
-		foreach (var member in Members)
-			if (member.Type is GenericType genericType)
-				foreach (var namedType in genericType.GenericImplementations)
-					genericArguments.Add(namedType);
-			else if (member.Type.IsList || member.Type.IsIterator)
-				genericArguments.Add(new Parameter(this, GenericUppercase));
-			else if (member.Type.IsGeneric)
-				genericArguments.Add(member);
-		return genericArguments.Count == 0
-			? throw new InvalidGenericTypeWithoutGenericArguments(this)
-			: genericArguments;
-	}
-
-	//ncrunch: no coverage start
-	public sealed class TypeMustBeGenericToCallThis(Type type) : Exception(type.FullName);
-
-	public sealed class InvalidGenericTypeWithoutGenericArguments(Type type) : Exception(
-		"This type is broken and needs to be fixed, check the creation: " + type + ", Package: " +
-		type.Package + ", file=" + type.FilePath);
-	//ncrunch: no coverage end
-
-	public sealed class TypeHasNoMembersAndThusMustBeATraitWithoutMethodBodies(Type type)
-		: ParsingFailed(type, 0);
 
 	/// <summary>
 	/// Helper for method parameters default values, which don't have a methodBody to parse, but
@@ -1043,16 +439,24 @@ public class Type : Context, IDisposable
 		typeParser.GetMemberExpression(parser, memberName, remainingTextSpan, typeLineNumber);
 
 	public bool IsNone => typeKind == TypeKind.None;
+
 	/// <summary>
 	/// Is this a boolean or if OneOfType, is one of the types a boolean? Used to check for tests
 	/// </summary>
 	public virtual bool IsBoolean => typeKind == TypeKind.Boolean;
+
 	public bool IsText => typeKind == TypeKind.Text;
+
 	public bool IsNumber => typeKind == TypeKind.Number;
+
 	public bool IsCharacter => typeKind == TypeKind.Character;
+
 	public bool IsError => typeKind == TypeKind.Error;
+
 	public bool IsList => typeKind == TypeKind.List;
+
 	public bool IsDictionary => typeKind == TypeKind.Dictionary;
+
 	public bool IsAny => typeKind == TypeKind.Any;
 
 	public void Dispose()
@@ -1068,8 +472,6 @@ public class Type : Context, IDisposable
 				return lineNumber;
 		return -1;
 	}
-
-	public Type GetFirstImplementation() => ((GenericTypeImplementation)this).ImplementationTypes[0];
 
 	public string ToCodeString() =>
 		IsList
