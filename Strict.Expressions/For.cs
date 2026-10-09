@@ -39,7 +39,8 @@ public sealed class For(Expression[] customVariables,
 
 	public static Expression? TryParse(Body body, ReadOnlySpan<char> line)
 	{
-		if (!line.StartsWith(Keyword.For, StringComparison.Ordinal))
+		if (!line.StartsWith(Keyword.For, StringComparison.Ordinal) ||
+			line.Length > Keyword.For.Length && line[Keyword.For.Length] != ' ')
 			return null;
 		if (line.Length <= Keyword.For.Length)
 			return ParseForImplicitIteratorOfThis(body);

@@ -43,9 +43,6 @@ Create(fullName Text) BinaryTypeData
 DummyMethod BinaryMethod
 	BinaryMethod("Run", "None", BinaryMethod.EmptyParams, BinaryMethod.EmptyOps)
 EmptyMethods BinaryMethods
-	mutable emptyMethods = List(Mutable(BinaryMethod))
-	for 0
-		emptyMethods.Add(DummyMethod)
-	emptyMethods
+	List(BinaryMethod)
 CreateWithMethod(fullName Text, method BinaryMethod) BinaryTypeData
 	Create(fullName).AddMethod(method)

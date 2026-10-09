@@ -13,10 +13,7 @@ CountItems(items RuntimeValues) RuntimeValue
 MapAdd(items RuntimeValues, amount Number) RuntimeValues
 	mutable result = List(Mutable(RuntimeValue))
 	for items
-		if value.IsNumber
-			result.Add(RuntimeValue.FromNumber(value.number + amount))
-		else
-			result.Add(value)
+		result.Add(value.IsNumber then RuntimeValue.FromNumber(value.number + amount) else value)
 	result
 to Text
 	forCount to Text

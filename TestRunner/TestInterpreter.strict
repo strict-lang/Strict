@@ -48,10 +48,7 @@ AllPassed Boolean
 		return true
 	false
 EmptyResults TestResults
-	mutable values = List(Mutable(TestResult))
-	for 0
-		values.Add(TestResult.Pass("x", "y"))
-	values
+	List(TestResult)
 Empty TestInterpreter
 	Empty.statistics.packagesTested is 0
 	TestInterpreter(TestStatistics.Empty, EmptyResults)

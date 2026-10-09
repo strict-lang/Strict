@@ -3,12 +3,16 @@ has ifCount Number
 has forCount Number
 has methodCallCount Number
 IncrementExpressions RuntimeStatistics
+	RuntimeStatistics.Empty.IncrementExpressions.expressionCount is 1
 	RuntimeStatistics(expressionCount + 1, ifCount, forCount, methodCallCount)
 IncrementIfs RuntimeStatistics
+	RuntimeStatistics.Empty.IncrementIfs.ifCount is 1
 	RuntimeStatistics(expressionCount, ifCount + 1, forCount, methodCallCount)
 IncrementFors RuntimeStatistics
+	RuntimeStatistics.Empty.IncrementFors.forCount is 1
 	RuntimeStatistics(expressionCount, ifCount, forCount + 1, methodCallCount)
 IncrementMethodCalls RuntimeStatistics
+	RuntimeStatistics.Empty.IncrementMethodCalls.methodCallCount is 1
 	RuntimeStatistics(expressionCount, ifCount, forCount, methodCallCount + 1)
 to Text
 	"expr=" + expressionCount + " if=" + ifCount + " for=" + forCount

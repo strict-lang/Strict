@@ -21,9 +21,7 @@ AppendLine(result Text, first Boolean, line Text) Text
 NewLine Text
 	"\n"
 Empty AsmText
-	mutable empty = List(Mutable(Text))
-	for 0
-		empty.Add("x")
+	constant empty = List(Text)
 	AsmText(empty)
 to Text
 	Join

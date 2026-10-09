@@ -34,6 +34,7 @@ FlagText Text
 		return "true"
 	"false"
 None RuntimeValue
+	RuntimeValue.None.kind is "None"
 	RuntimeValue("None", 0, "", false)
 FromNumber(amount Number) RuntimeValue
 	FromNumber(5).number is 5
@@ -45,6 +46,7 @@ FromText(content Text) RuntimeValue
 	FromText("hi").text is "hi"
 	RuntimeValue("Text", 0, content, false)
 Error(message Text) RuntimeValue
+	RuntimeValue.Error("bad").text is "bad"
 	RuntimeValue("Error", 0, message, false)
 EqualsValue(other RuntimeValue) Boolean
 	if kind is not other.kind

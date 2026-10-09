@@ -29,9 +29,7 @@ Concat(other GenerationResult) GenerationResult
 		next.Add(value)
 	GenerationResult(next, other.registry)
 Empty GenerationResult
-	mutable ops = List(Mutable(BytecodeInstruction))
-	for 0
-		ops.Add(BytecodeInstruction("Return", 0, 0, ""))
+	constant ops = List(BytecodeInstruction)
 	GenerationResult(ops, Registry.Empty)
 WithRegistry(reg Registry) GenerationResult
 	GenerationResult(instructions, reg)

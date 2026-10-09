@@ -44,12 +44,6 @@ Create(name Text, returnType Text) BinaryMethod
 	Create("Run", "Number").methodName is "Run"
 	BinaryMethod(name, returnType, EmptyParams, EmptyOps)
 EmptyParams BinaryMembers
-	mutable emptyParams = List(Mutable(BinaryMember))
-	for 0
-		emptyParams.Add(BinaryMember("x", "Number", false, 0))
-	emptyParams
+	List(BinaryMember)
 EmptyOps BytecodeInstructions
-	mutable emptyOps = List(Mutable(BytecodeInstruction))
-	for 0
-		emptyOps.Add(BytecodeInstruction("Return", 0, 0, ""))
-	emptyOps
+	List(BytecodeInstruction)

@@ -47,15 +47,10 @@ TextSlot(slot VmValue) Text
 Count Number
 	names.Length
 Empty CallFrame
-	mutable emptyNames = List(Mutable(Text))
-	mutable emptyKinds = List(Mutable(Text))
-	mutable emptyNumbers = List(Mutable(Number))
-	mutable emptyTexts = List(Mutable(Text))
-	for 0
-		emptyNames.Add("x")
-		emptyKinds.Add("None")
-		emptyNumbers.Add(0)
-		emptyTexts.Add("")
+	constant emptyNames = List(Text)
+	constant emptyKinds = List(Text)
+	constant emptyNumbers = List(Number)
+	constant emptyTexts = List(Text)
 	CallFrame(emptyNames, emptyKinds, emptyNumbers, emptyTexts)
 to Text
 	"vars=" + Count to Text

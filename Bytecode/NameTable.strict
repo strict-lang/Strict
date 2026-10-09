@@ -65,10 +65,8 @@ AddLowerNames(built Texts) NameTable
 	built.Add("boolean")
 	NameTable(built)
 EmptyList Texts
-	mutable built = List(Mutable(Text))
-	for 0
-		built.Add("x")
-	built
+	NameTable.EmptyList.Length is 0
+	List(Text)
 Empty NameTable
 	Empty.Count is 0
 	NameTable(EmptyList)

@@ -49,22 +49,16 @@ Concat(other InstructionList) InstructionList
 	InstructionList(next)
 ToTexts Texts
 	mutable lines = List(Mutable(Text))
-	for 0
-		lines.Add("x")
 	for instructions
 		lines.Add(value to Text)
 	lines
 FromSingle(instruction BytecodeInstruction) InstructionList
 	mutable ops = List(Mutable(BytecodeInstruction))
-	for 0
-		ops.Add(BytecodeInstruction("Return", 0, 0, ""))
 	ops.Add(instruction)
 	InstructionList(ops)
 Empty InstructionList
 	Empty.IsEmpty is true
 	mutable ops = List(Mutable(BytecodeInstruction))
-	for 0
-		ops.Add(BytecodeInstruction("Return", 0, 0, ""))
 	InstructionList(ops)
 to Text
 	"ops=" + Count to Text

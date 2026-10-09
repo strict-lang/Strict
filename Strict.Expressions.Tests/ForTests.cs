@@ -298,6 +298,16 @@ public sealed class ForTests : TestExpressions
 	}
 
 	[Test]
+	public void IdentifierStartingWithForIsNoLoop()
+	{
+		using var programType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(IdentifierStartingWithForIsNoLoop), "has forCount Number",
+					"Next Number", "\tforCount + 1")).
+			ParseMembersAndMethods(new MethodExpressionParser());
+		Assert.That(programType.Methods[0].GetBodyAndParseIfNeeded().ToString(), Is.EqualTo("forCount + 1"));
+	}
+
+	[Test]
 	public void ExplicitValueUsageDoesNotPipeValue()
 	{
 		using var programType = new Type(TestPackage.Instance,

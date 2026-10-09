@@ -49,10 +49,7 @@ Empty BinaryExecutable
 DummyType BinaryTypeData
 	BinaryTypeData("x", BinaryMethod.EmptyParams, BinaryTypeData.EmptyMethods)
 EmptyTypes BinaryTypeDatas
-	mutable emptyTypes = List(Mutable(BinaryTypeData))
-	for 0
-		emptyTypes.Add(DummyType)
-	emptyTypes
+	List(BinaryTypeData)
 FromMethod(typeName Text, method BinaryMethod) BinaryExecutable
 	let typeData = BinaryTypeData.CreateWithMethod(typeName, method)
 	Empty.AddType(typeData).SetEntry(typeName, method.methodName)
