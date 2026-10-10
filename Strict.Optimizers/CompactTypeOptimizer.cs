@@ -1,5 +1,6 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -24,7 +25,8 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 		foreach (var typeEntry in binary.MethodsPerType)
 		foreach (var methodGroup in typeEntry.Value.MethodGroups.Values)
 		foreach (var method in methodGroup)
-			method.instructions = OptimizeInstructions(method.instructions);
+			for (var index = 0; index < method.instructions.Count; index++)
+				TryConvertConstruction(method, index);
 	}
 
 	private List<TypeConversionPair> typePairs = [];
@@ -100,25 +102,45 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 		return 0;
 	}
 
-	private List<Instruction> OptimizeInstructions(List<Instruction> instructions)
+	private void TryConvertConstruction(BinaryMethod method, int index)
 	{
-		for (var index = 0; index < instructions.Count; index++)
-			TryConvertConstruction(instructions, index);
-		return instructions;
-	}
-
-	private void TryConvertConstruction(List<Instruction> instructions, int index)
-	{
-		switch (instructions[index])
+		switch (method.instructions[index])
 		{
-		case Invoke invoke when FindMatchingPairForInvoke(invoke.MethodInfo) is { } pair:
-			TryConvertInvoke(instructions, index, invoke, pair);
+		case Invoke invoke when FindMatchingPairForInvoke(invoke.MethodInfo) is { } pair &&
+			IsOnlyReadAsCompactType(method, index, pair.CompactType):
+			TryConvertInvoke(method.instructions, index, invoke, pair);
 			break;
 		case ConstructValueTypeInstruction construct
-			when FindMatchingPairForConstruct(construct.ReturnType) is { } pair:
-			TryConvertConstruct(instructions, index, construct, pair);
+			when FindMatchingPairForConstruct(construct.ReturnType) is { } pair &&
+			IsOnlyReadAsCompactType(method, index, pair.CompactType):
+			TryConvertConstruct(method.instructions, index, construct, pair);
 			break;
 		}
+	}
+
+	/// <summary>
+	/// Compacting changes the value type, so every reader must expect the compact type. ponytail:
+	/// only returning it from a method declared with the compact type counts, typed stores,
+	/// parameters and list elements stay unsafe until their declared types are resolved here.
+	/// </summary>
+	private static bool IsOnlyReadAsCompactType(BinaryMethod method, int constructIndex,
+		Type compactType)
+	{
+		var register = ((RegisterInstruction)method.instructions[constructIndex]).Register;
+		for (var index = constructIndex + 1; index < method.instructions.Count; index++)
+		{
+			var instruction = method.instructions[index];
+			if (instruction is ReturnInstruction returnInstruction)
+				return returnInstruction.Register != register ||
+					method.ReturnTypeName == compactType.Name;
+			if (GetReadRegisters(instruction).Contains(register))
+				return false;
+			if (GetWrittenRegister(instruction) == register)
+				return true;
+			if (IsControlFlow(instruction))
+				return false;
+		}
+		return true;
 	}
 
 	private TypeConversionPair? FindMatchingPairForInvoke(InvokeMethodInfo methodInfo)

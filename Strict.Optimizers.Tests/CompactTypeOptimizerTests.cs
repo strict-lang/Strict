@@ -1,4 +1,5 @@
 using Strict.Bytecode.Instructions;
+using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 
 namespace Strict.Optimizers.Tests;
@@ -12,7 +13,7 @@ public sealed class CompactTypeOptimizerTests : TestOptimizers
 		var package = await repos.LoadStrictPackage("Strict/ImageProcessing");
 		var colorValueType = package.GetType("ColorValue");
 		var colorType = package.GetType("Color");
-		var binary = BinaryExecutable.CreateForEntryInstructions(package, [
+		var binary = CreateBinaryReturning(colorType, [
 			new LoadConstantInstruction(Register.R0, Num(0.5)),
 			new LoadConstantInstruction(Register.R1, Num(0.5)),
 			new LoadConstantInstruction(Register.R2, Num(0.25)),
@@ -35,7 +36,7 @@ public sealed class CompactTypeOptimizerTests : TestOptimizers
 		var repos = new Repositories(new MethodExpressionParser());
 		var package = await repos.LoadStrictPackage("Strict/ImageProcessing");
 		var colorType = package.GetType("Color");
-		var binary = BinaryExecutable.CreateForEntryInstructions(package, [
+		var binary = CreateBinaryReturning(colorType, [
 			new LoadConstantInstruction(Register.R0, Num(1)),
 			new LoadConstantInstruction(Register.R1, Num(0)),
 			new LoadConstantInstruction(Register.R2, Num(0.5)),
@@ -74,6 +75,28 @@ public sealed class CompactTypeOptimizerTests : TestOptimizers
 	}
 
 	[Test]
+	public async Task KeepsConstantColorValueComparedWithRuntimeColorValue()
+	{
+		var repos = new Repositories(new MethodExpressionParser());
+		var package = await repos.LoadStrictPackage("Strict/ImageProcessing");
+		var colorValueType = package.GetType("ColorValue");
+		var binary = BinaryExecutable.CreateForEntryInstructions(package, [
+			new LoadVariableToRegister(Register.R0, "pixel"),
+			new LoadConstantInstruction(Register.R1, Num(0.25)),
+			new LoadConstantInstruction(Register.R2, Num(0.25)),
+			new LoadConstantInstruction(Register.R3, Num(0.25)),
+			new ConstructValueTypeInstruction(Register.R4, colorValueType,
+				[Register.R1, Register.R2, Register.R3]),
+			new BinaryInstruction(InstructionType.Equal, Register.R0, Register.R4, Register.R5),
+			new ReturnInstruction(Register.R5)
+		]);
+		new CompactTypeOptimizer().Optimize(binary);
+		var construct = (ConstructValueTypeInstruction)binary.EntryPoint.instructions[4];
+		Assert.That(construct.ReturnType, Is.EqualTo(colorValueType),
+			"Equal reads a ColorValue, a compact Color would never be equal to the runtime pixel");
+	}
+
+	[Test]
 	public void SkipsWhenNoCompactableTypePairsExist()
 	{
 		var instructions = new List<Instruction>
@@ -92,7 +115,7 @@ public sealed class CompactTypeOptimizerTests : TestOptimizers
 		var package = await repos.LoadStrictPackage("Strict/Examples/CompactTypeTest");
 		var numberHolderType = package.GetType("NumberHolder");
 		var byteHolderType = package.GetType("ByteHolder");
-		var binary = BinaryExecutable.CreateForEntryInstructions(package, [
+		var binary = CreateBinaryReturning(byteHolderType, [
 			new LoadConstantInstruction(Register.R0, Num(0.5)),
 			new ConstructValueTypeInstruction(Register.R1, numberHolderType, [Register.R0]),
 			new ReturnInstruction(Register.R1)
@@ -103,5 +126,17 @@ public sealed class CompactTypeOptimizerTests : TestOptimizers
 		Assert.That(instructions[1], Is.InstanceOf<ConstructValueTypeInstruction>());
 		Assert.That(((ConstructValueTypeInstruction)instructions[1]).ReturnType,
 			Is.EqualTo(byteHolderType));
+	}
+
+	private static BinaryExecutable CreateBinaryReturning(Type returnType,
+		List<Instruction> instructions)
+	{
+		var binary = new BinaryExecutable(returnType.Package);
+		binary.MethodsPerType[returnType.FullName] = new BinaryType(binary, returnType.FullName, [],
+			new Dictionary<string, List<BinaryMethod>>
+			{
+				[Method.Run] = [new BinaryMethod(Method.Run, [], returnType.Name, instructions)]
+			});
+		return binary;
 	}
 }

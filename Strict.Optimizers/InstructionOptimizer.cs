@@ -29,6 +29,26 @@ public abstract class InstructionOptimizer
 			_ => null
 		};
 
+	protected static IEnumerable<Register> GetReadRegisters(Instruction instruction) =>
+		instruction switch
+		{
+			BinaryInstruction binary => binary.Registers.Length >= 3
+				? binary.Registers[..^1]
+				: binary.Registers,
+			Invoke invoke => invoke.MethodInfo.InstanceRegister is { } instance
+				? [.. invoke.MethodInfo.ArgumentRegisters, instance]
+				: invoke.MethodInfo.ArgumentRegisters,
+			FieldLoadInstruction fieldLoad => [fieldLoad.ObjectRegister],
+			ConstructValueTypeInstruction construct => construct.FieldRegisters,
+			ListCallInstruction listCall => [listCall.IndexValueRegister],
+			WriteToTableInstruction writeToTable => [writeToTable.Register, writeToTable.Value],
+			PrintInstruction { ValueRegister: { } printed } => [printed],
+			JumpIfNotZero jumpIfNotZero => [jumpIfNotZero.Register],
+			StoreFromRegisterInstruction or ReturnInstruction or WriteToListInstruction
+				or RemoveInstruction or LoopBeginInstruction => [((RegisterInstruction)instruction).Register],
+			_ => []
+		};
+
 	protected static bool IsControlFlow(Instruction instruction) =>
 		instruction.InstructionType is >= InstructionType.LoopBegin and
 			<= InstructionType.JumpToIdIfTrue;
