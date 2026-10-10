@@ -28,12 +28,15 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Variable(SyntaxNode("Identifier", "a"), CodeBlock.Empty).instructions(0).texts is ("a")
 	Plain.Variable(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty).instructions(0).kind is InstructionType.Invoke
+	Plain.Variable(SyntaxNode("Identifier", "Numbers"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	let isFree = block.scope.TypeOf(node.text) is ""
 	let owner = target.ImplicitOwner(node.text, block.scope)
 	if isFree and owner is not ""
 		return InstanceCall(SyntaxNode("Member", node.text, SyntaxNode("Identifier", owner)), block)
 	if isFree and target.Header(node.text).tokens.Length > 0
 		return Invoke(node, block, -1, TypeOf(node, block))
+	if isFree and inference.types.IsPlural(node.text)
+		return Elements.Empty(node.text, block)
 	block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
 Leaf(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Leaf(SyntaxNode("Number", "7"), CodeBlock.Empty).instructions(0).payload is (0, 1, 7)
@@ -52,8 +55,7 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Call(SyntaxNode("Call", "Greeter", SyntaxNode("Text", "\"a\"")), CodeBlock.Empty).Result is 1
 	Plain.Call(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	if (node.Kind is "Call") and (node.text is "List")
-		let listType = target.FullName(TypeOf(node, block))
-		return block.Load(InstructionEntry(InstructionType.LoadConstantToRegister, listType, (block.register, 6, -1, 0)))
+		return Elements.Empty(TypeOf(node, block), block)
 	if IsIndexing(node, block)
 		return Indexed(node, block)
 	if (node.Kind is "Call") or IsTypeName(node.children(0), block)
@@ -97,10 +99,10 @@ IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeBlock
 	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1, "Text").instructions(0).texts.Last is "Strict/Text"
 	let owner = Owner(node, block)
-	let signature = target.Signature(node.text, owner, returnType)
 	let first = node.Kind is in ("Member", "MethodCall") then 1 else 0
+	let signature = target.Signature(node.text, owner, returnType, node.children.Length - first)
 	let call = Elements.Grouped(node, first, signature.Length - 3)
-	let parameters = target.ParameterTypes(node.text, owner)
+	let parameters = target.ParameterTypes(node.text, owner, node.children.Length - first)
 	mutable result = block
 	mutable arguments = List(Mutable(Number))
 	for Range(first, call.children.Length)

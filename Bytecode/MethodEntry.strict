@@ -6,6 +6,7 @@ constant PrintHi = InstructionEntry.Print("Hi")
 constant GoCall = InstructionEntry.Invoke(0, ("Strict/B", "Go", "None"), List(Number), -1)
 constant GoRun = MethodEntry("Run", List(MemberEntry), "None", GoCall)
 constant CountingLoop = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))
+constant Logged = MethodEntry("Add", MemberEntry.LoggerMember, "Strict/Number", List(InstructionEntry))
 constant HelloRun = MethodEntry("Run", List(MemberEntry), "None", (PrintHi, InstructionEntry.Return(0)))
 Names(names BinaryNames) BinaryNames
 	HelloRun.Names(BinaryNames("a", "b")).names.Length is 5
@@ -27,6 +28,13 @@ Bytes(names BinaryNames) Numbers
 	for instructions
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
 	encoder.bytes
+SignatureTypes Texts
+	Logged.SignatureTypes is ("Strict/Number", "Strict/Logger")
+	mutable types = List(Mutable(Text))
+	types.Add(returnType)
+	for parameters
+		types.Add(value.typeName)
+	types
 Invoked Texts
 	GoRun.Invoked is ("Strict/B.Go")
 	HelloRun.Invoked.Length is 0

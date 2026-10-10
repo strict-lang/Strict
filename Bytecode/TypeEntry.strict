@@ -19,20 +19,42 @@ Bytes Numbers
 	mutable encoder = ByteEncoder(header).SevenBit(members.Length)
 	for members
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
-	encoder = encoder.SevenBit(methods.Length)
+	encoder = encoder.SevenBit(MethodNames.Length)
+	for MethodNames
+		encoder = ByteEncoder(encoder.bytes + MethodGroup(value, names))
+	encoder.bytes
+MethodNames Texts
+	TypeEntry("A", List(MemberEntry), (MethodEntry.GoRun, MethodEntry.HelloRun)).MethodNames is ("Run")
+	mutable names = List(Mutable(Text))
 	for methods
-		encoder = ByteEncoder(encoder.bytes).SevenBit(names.Index(value.Name)).SevenBit(1)
+		if value.Name is not in names
+			names.Add(value.Name)
+	names
+MethodGroup(methodName Text, names BinaryNames) Numbers
+	HelloLogger.MethodGroup("Run", HelloLogger.Names) is (55, 1, 0, 1, 2, 45, 69, 0, 32, 0)
+	mutable overloads = List(Mutable(MethodEntry))
+	for methods
+		if value.Name is methodName
+			overloads.Add(value)
+	mutable encoder = ByteEncoder.Empty.SevenBit(names.Index(methodName)).SevenBit(overloads.Length)
+	for overloads
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
 	encoder.bytes
 JustName Text
 	TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry)).JustName is "Process"
 	HelloLogger.JustName is "HelloLogger"
 	Name.Substring(Name.LastIndexOf("/") + 1, Name.Length - Name.LastIndexOf("/") - 1)
-MemberTypes Texts
-	TypeEntry("A", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry)).MemberTypes is ("Strict/Logger")
+UsedTypes Texts
+	TypeEntry("A", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry)).UsedTypes is ("Strict/Logger")
+	TypeEntry("A", List(MemberEntry), MethodEntry.Logged).UsedTypes is ("Strict/Number", "Strict/Logger")
+	mutable types = List(Mutable(Text))
 	for members
-		if value.typeName.StartsWith("Strict/")
-			value.typeName
+		types.Add(value.typeName)
+	for methods
+		types = types + value.SignatureTypes
+	for types
+		if value.StartsWith("Strict/")
+			value
 Invoked Texts
 	TypeEntry("A", List(MemberEntry), MethodEntry.GoRun).Invoked is ("Strict/B.Go")
 	mutable targets = List(Mutable(Text))

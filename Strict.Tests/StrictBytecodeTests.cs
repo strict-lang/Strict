@@ -86,6 +86,7 @@ public sealed class StrictBytecodeTests
 	[TestCase("Language/PackageTests", "Examples/BaseTypesTest")]
 	[TestCase("Validators/ValidateCheck", "Validators", ".")]
 	[TestCase("Expressions/RoundTrip", "Expressions")]
+	[TestCase("Language/Parser", "Examples/HelloLogger.strict")]
 	[TestCase("Compiler/SourceCompiler", "Examples/NativeArithmetic.strict")]
 	[TestCase("Compiler/CompilerDemo")]
 	[TestCase("Compiler/EmitTests")]

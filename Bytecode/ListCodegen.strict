@@ -54,3 +54,7 @@ Grouped(node SyntaxNode, first Number, parameters Number) SyntaxNode
 		arguments.Add(node.children(value))
 	let grouped = SyntaxNode("List", "", arguments)
 	SyntaxNode(node.Kind, node.text, (first is 1 then (node.children(0), grouped) else List(SyntaxNode) + grouped))
+Empty(type Text, block CodeBlock) CodeBlock
+	Plain.Empty("Numbers", CodeBlock.Empty).instructions(0).texts is ("Strict/List(Number)")
+	let listType = values.target.FullName(type)
+	block.Load(InstructionEntry(InstructionType.LoadConstantToRegister, listType, (block.register, 6, -1, 0)))

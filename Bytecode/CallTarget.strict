@@ -8,28 +8,29 @@ constant NoScopes = (NoScope, NoScope)
 constant NoTypes = KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes)
 constant Adder = CallTarget(NoTypes, TypeShape("Add(numbers) Number", "\t1"), "Strict/C", List(Text))
 constant Ranges = CallTarget(KnownTypes(List(Text) + "Range", NoScopes, NoScopes, (Scope(List(Text) + "from", List(Text) + "Start,ExclusiveEnd"), NoScope)), Greeter, "Strict/Range", List(Text))
+constant Overloaded = CallTarget(NoTypes, TypeShape("Members Number", "\tMembers(1)", "Members(lines Number) Number", "\tlines"), "Strict/C", List(Text))
 constant Plain = CallTarget(NoTypes, Greeter, "Strict/Examples/Greeter", ("Strict/Logger", "Strict/Examples/Helper"))
-Signature(name Text, type Text, returnType Text) Texts
-	Plain.Signature("Greeter", "Greeter", "Greeter") is ("Strict/Examples/Greeter", "from", "Greeter", "text")
-	Plain.Signature("Greet", "Greeter", "Text") is ("Strict/Examples/Greeter", "Greet", "Strict/Text")
-	Plain.Signature("Length", "Text", "Number") is ("Strict/Text", "Length", "Strict/Number")
+Signature(name Text, type Text, returnType Text, arguments Number) Texts
+	Plain.Signature("Greeter", "Greeter", "Greeter", 1) is ("Strict/Examples/Greeter", "from", "Greeter", "text")
+	Plain.Signature("Greet", "Greeter", "Text", 0) is ("Strict/Examples/Greeter", "Greet", "Strict/Text")
+	Plain.Signature("Length", "Text", "Number", 0) is ("Strict/Text", "Length", "Strict/Number")
 	if type is not TypeName
-		return OtherSignature(name, type, returnType)
+		return OtherSignature(name, type, returnType, arguments)
 	if name is TypeName
 		return (fullName, "from", name) + FromNames(name)
-	(fullName, name, FullName(returnType)) + Header(name).ParameterNames
-OtherSignature(name Text, type Text, returnType Text) Texts
-	Plain.OtherSignature("C", "C", "C") is ("Strict/C", "from", "C")
-	Plain.OtherSignature("Length", "Text", "Number") is ("Strict/Text", "Length", "Strict/Number")
+	(fullName, name, FullName(returnType)) + Overload(name, arguments).ParameterNames
+OtherSignature(name Text, type Text, returnType Text, arguments Number) Texts
+	Plain.OtherSignature("C", "C", "C", 0) is ("Strict/C", "from", "C")
+	Plain.OtherSignature("Length", "Text", "Number", 0) is ("Strict/Text", "Length", "Strict/Number")
 	if name is type
 		return (FullName(type), "from", type) + FromNames(type)
-	(FullName(type), name, FullName(returnType)) + types.ParametersOf(type, name)
-ParameterTypes(name Text, type Text) Texts
-	Plain.ParameterTypes("Greeter", "Greeter") is ("Text")
-	Adder.ParameterTypes("Add", "C") is ("Numbers")
-	Plain.ParameterTypes("Length", "Text").Length is 0
+	(FullName(type), name, FullName(returnType)) + types.ParametersOf(type, name, arguments)
+ParameterTypes(name Text, type Text, arguments Number) Texts
+	Plain.ParameterTypes("Greeter", "Greeter", 1) is ("Text")
+	Adder.ParameterTypes("Add", "C", 1) is ("Numbers")
+	Plain.ParameterTypes("Length", "Text", 0).Length is 0
 	if name is not type
-		return type is TypeName then Header(name).ParameterTypes else List(Text)
+		return type is TypeName then Overload(name, arguments).ParameterTypes else List(Text)
 	let members = type is TypeName then shape.MemberScope else types.MembersOf(type)
 	for FromNames(type)
 		members.TypeOf(value)
@@ -37,8 +38,16 @@ FromNames(type Text) Texts
 	Plain.FromNames("Greeter") is ("text")
 	Ranges.FromNames("Range") is ("Start", "ExclusiveEnd")
 	if types.IsKnown(type)
-		return types.ParametersOf(type, "from")
+		return types.ParametersOf(type, "from", -1)
 	type is TypeName then shape.MemberScope.names else List(Text)
+Overload(name Text, arguments Number) HeaderTokens
+	Overloaded.Overload("Members", 1).ParameterNames is ("lines")
+	Overloaded.Overload("Members", 0).ParameterNames.Length is 0
+	for shape.lines
+		let isNamed = shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
+		if isNamed and (HeaderTokens(Tokenizer(value).Tokens).ParameterNames.Length is arguments)
+			return HeaderTokens(Tokenizer(value).Tokens)
+	Header(name)
 Header(name Text) HeaderTokens
 	Plain.Header("Greet").ReturnType is "Text"
 	Plain.Header("Missing").tokens.Length is 0

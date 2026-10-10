@@ -50,7 +50,7 @@ IsValid(bytes Numbers) Boolean
 			return false
 	true
 Linked(entries List(TypeEntry), root Text, main TypeCodegen, depth Number) List(TypeEntry)
-	Linked(TypeEntry.HelloLogger, ".", TypeCodegen.Hello, 3).Length is 3
+	Linked(TypeEntry.HelloLogger, ".", TypeCodegen.Hello, 3).Length is 4
 	if depth is 0
 		return entries
 	mutable linked = List(Mutable(TypeEntry))
@@ -74,7 +74,7 @@ BaseTypes(entries List(TypeEntry), main Text) Texts
 		let type = value.Substring(0, value.LastIndexOf("."))
 		if type is not in types and type is not main
 			types.Add(type)
-	for MemberTypes(entries)
+	for UsedTypes(entries)
 		if value is not in types and value is not main
 			types.Add(value)
 	types
@@ -101,11 +101,11 @@ SourceName(type Text) Text
 	SourceName("Strict/Process") is "Process"
 	let name = type.Substring(7, type.Length - 7)
 	name.IndexOf("(") is -1 then name else name.Substring(0, name.IndexOf("("))
-MemberTypes(entries List(TypeEntry)) Texts
-	MemberTypes(Go) is List(Text)
+UsedTypes(entries List(TypeEntry)) Texts
+	UsedTypes(Go) is List(Text)
 	mutable types = List(Mutable(Text))
 	for entries
-		types = types + value.MemberTypes
+		types = types + value.UsedTypes
 	types
 Targets(entries List(TypeEntry)) Texts
 	Targets(Go) is ("Strict/B.Go")
