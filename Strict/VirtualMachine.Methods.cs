@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Globalization;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
@@ -317,7 +316,7 @@ public sealed partial class VirtualMachine
 		if (typeInstance != null && TrySetScopeMembersFromTypeMembers(typeInstance))
 			return;
 		// Boolean/Number/None primitives: only `value` is needed (already set above).
-		if (instance.IsPrimitiveType(executable.booleanType) ||
+		if (!instance.HasValue || instance.IsPrimitiveType(executable.booleanType) ||
 			instance.IsPrimitiveType(executable.numberType) ||
 			instance.IsPrimitiveType(executable.noneType))
 			return;
@@ -330,8 +329,6 @@ public sealed partial class VirtualMachine
 		{
 			return;
 		}
-		if (instanceType == null)
-			return;
 		var firstNonTraitMember = instanceType.Members.FirstOrDefault(member => !IsTrait(member.Type));
 		if (firstNonTraitMember != null)
 			Memory.Frame.Set(firstNonTraitMember.Name, instance, true);
@@ -371,7 +368,7 @@ public sealed partial class VirtualMachine
 
 	private readonly HashSet<List<Instruction>> runningBlocks = new(ReferenceEqualityComparer.Instance);
 
-	private static List<(LoopBeginInstruction, LoopBeginInstruction.State)>? SaveLoopStates(
+	private static List<(LoopBeginInstruction, LoopBeginInstruction.State)> SaveLoopStates(
 		List<Instruction> blockInstructions)
 	{
 		List<(LoopBeginInstruction, LoopBeginInstruction.State)>? states = null;

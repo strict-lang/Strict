@@ -9,7 +9,7 @@ namespace Strict.Bytecode;
 public sealed partial class BinaryGenerator
 {
 	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> GenerateRunMethods(
-		IReadOnlyList<Method> runMethods, Type entryType)
+		IEnumerable<Method> runMethods, Type entryType)
 	{
 		var methodsByType =
 			new Dictionary<string, Dictionary<string, List<BinaryMethod>>>(StringComparer.Ordinal);
@@ -46,7 +46,7 @@ public sealed partial class BinaryGenerator
 		return methodsByType;
 	}
 
-	private static List<BinaryMember> CreateBinaryMembers(IReadOnlyList<Parameter> parameters,
+	private static List<BinaryMember> CreateBinaryMembers(IEnumerable<Parameter> parameters,
 		Type entryType) =>
 		parameters.Select(parameter =>
 				new BinaryMember(parameter.Name, GetBinaryTypeName(parameter.Type, entryType), null)).
@@ -96,9 +96,12 @@ public sealed partial class BinaryGenerator
 		initialValue switch
 		{
 			Value { ConstantData: { } constantData } => new SetInstruction(constantData, Register.R0),
-			MethodCall { Method.Name: Method.From, ReturnType.IsNumber: true,
-				Arguments: [Value { ReturnType.IsNumber: true } number] } constructor =>
-				new SetInstruction(new ValueInstance(constructor.ReturnType, number.Data.Number), Register.R0),
+			MethodCall
+			{
+				Method.Name: Method.From, ReturnType.IsNumber: true,
+				Arguments: [Value { ReturnType.IsNumber: true } number]
+			} constructor => new SetInstruction(
+				new ValueInstance(constructor.ReturnType, number.Data.Number), Register.R0),
 			_ => null
 		};
 
@@ -220,7 +223,7 @@ public sealed partial class BinaryGenerator
 
 	private static bool IsStrictBaseType(Type type, Type entryType) =>
 		type.FullName != entryType.FullName && (type.Package.Name == nameof(Strict) ||
-			(entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage"));
+			entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage");
 
 	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> CompileMethodsFromExpressions(
 		string thisEntryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)
@@ -306,7 +309,7 @@ public sealed partial class BinaryGenerator
 				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToArray(),
 			method.ReturnType);
 
-	private static void EnqueueDiscoveredMethods(IReadOnlyList<Method> methods,
+	private static void EnqueueDiscoveredMethods(IEnumerable<Method> methods,
 		Queue<Method> methodsToCompile, HashSet<string> compiledMethodKeys)
 	{
 		foreach (var method in methods)

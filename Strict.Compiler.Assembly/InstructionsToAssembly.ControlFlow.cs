@@ -1,7 +1,5 @@
-using System.Text;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
 

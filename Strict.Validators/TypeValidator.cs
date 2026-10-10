@@ -98,7 +98,6 @@ public sealed class TypeValidator : Visitor
 				throw new VariableDeclaredAsMutableButValueNeverChanged(body, mutableVariable);
 	} //ncrunch: no coverage end
 
-
 	//ncrunch: no coverage start
 	private static bool IsVariableValueUnchanged(Body body, Variable mutableVariable,
 		IEnumerable<MutableReassignment> mutableReassignments) =>

@@ -23,10 +23,8 @@ public sealed class InvokeMethodInfo
 		InstanceRegister = instanceRegister;
 	}
 
-	public string FullName => fullName ??= TypeFullName + "." + MethodName;
-	private string? fullName;
-	public string ShortTypeName => shortTypeName ??= GetSimpleTypeName(TypeFullName);
-	private string? shortTypeName;
+	public string FullName => field ??= TypeFullName + "." + MethodName;
+	public string ShortTypeName => field ??= GetSimpleTypeName(TypeFullName);
 
 	public InvokeMethodInfo(BinaryReader reader, NameTable table)
 	{

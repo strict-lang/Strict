@@ -1,12 +1,6 @@
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-#if DEBUG
-using System.Runtime.CompilerServices;
-#endif
-
 namespace Strict.Language;
 
-public partial class Type : Context, IDisposable
+public partial class Type
 {
 	public sealed class MustImplementAllTraitMethodsOrNone(Type type,
 		string traitName,
@@ -40,12 +34,11 @@ public partial class Type : Context, IDisposable
 		Methods.All(IsTraitMethodDeclaration);
 
 	internal bool CanBeTraitBasedOnMembers =>
-		!IsNumber && !IsBoolean && (Members.Count == 0 || (Members.All(IsTraitRequirementMember) &&
-			(Members.Any(member => !member.IsPublic) || Members.Count > 1)));
-
+		!IsNumber && !IsBoolean && (Members.Count == 0 || Members.All(IsTraitRequirementMember) &&
+			(Members.Any(member => !member.IsPublic) || Members.Count > 1));
 	internal bool MustUseBodylessTraitMethods =>
 		!IsNumber && !IsBoolean && (Members.Count == 0 ||
-			(Members.Count > 1 && Members.All(IsTraitCompositionMember)));
+			Members.Count > 1 && Members.All(IsTraitCompositionMember));
 
 	internal static bool IsTraitMethodDeclaration(Method method) => method.lines.Count == 1;
 

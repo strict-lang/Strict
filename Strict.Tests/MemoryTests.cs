@@ -21,7 +21,7 @@ public sealed class MemoryTests
 	{
 		var memory = new Memory();
 		var listType = TestPackage.Instance.GetListImplementationType(NumberType);
-		memory.Variables["items"] = new ValueInstance(listType, [new(NumberType, 1)]);
+		memory.Variables["items"] = new ValueInstance(listType, [new ValueInstance(NumberType, 1)]);
 		memory.AddToCollection("items", new ValueInstance(NumberType, 2));
 		Assert.That(memory.Variables["items"].List.Items.Count, Is.EqualTo(2));
 	}

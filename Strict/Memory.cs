@@ -5,7 +5,6 @@ namespace Strict;
 
 public sealed class Memory
 {
-	private readonly RegisterFile registers = new();
 	/// <summary>
 	/// Array-backed register file — O(1) access with no hashing overhead.
 	/// </summary>
@@ -17,10 +16,9 @@ public sealed class Memory
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("Memory.Registers get", "callers=" + PerformanceLog.GetCallers(1));
 #endif
-			return registers;
+			return field;
 		}
-	}
-	private CallFrame frame = new();
+	} = new();
 	/// <summary>
 	/// Current variable scope; replaced via <see cref="VirtualMachine"/> call stack.
 	/// </summary>
@@ -32,7 +30,7 @@ public sealed class Memory
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("Memory.Frame get", "access");
 #endif
-			return frame;
+			return field;
 		}
 		set
 		{
@@ -40,9 +38,9 @@ public sealed class Memory
 			if (PerformanceLog.IsEnabled)
 				PerformanceLog.Write("Memory.Frame set", "frame=" + value.GetHashCode());
 #endif
-			frame = value;
+			field = value;
 		}
-	}
+	} = new();
 	/// <summary>
 	/// Exposes the current frame's local variable dict for backward-compatible test access.
 	/// Use <see cref="Frame"/> methods for scoped lookup inside the interpreter.

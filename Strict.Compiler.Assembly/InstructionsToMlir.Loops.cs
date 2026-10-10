@@ -1,6 +1,4 @@
-using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Assembly;
@@ -38,8 +36,8 @@ public sealed partial class InstructionsToMlir
 	/// <summary>
 	/// scf.for, scf.parallel and gpu.launch need a single block body counting up between constants.
 	/// </summary>
-	private static bool IsStructuredRange(LoopBeginInstruction loopBegin, List<Instruction> body,
-		EmitContext context) =>
+	private static bool IsStructuredRange(LoopBeginInstruction loopBegin,
+		IEnumerable<Instruction> body, EmitContext context) =>
 		loopBegin.IsRange &&
 		context.RegisterConstants.TryGetValue(loopBegin.Register, out var start) &&
 		context.RegisterConstants.TryGetValue(loopBegin.EndIndex!.Value, out var end) && start <= end &&

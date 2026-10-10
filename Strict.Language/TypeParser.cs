@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace Strict.Language;
 
 public sealed partial class TypeParser(Type type, string[] lines)

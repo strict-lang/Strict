@@ -1,9 +1,7 @@
-using System.Text;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
 using Strict.Language;
-using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Assembly;
 
@@ -140,7 +138,7 @@ public sealed partial class InstructionsToAssembly : InstructionsCompiler
 		return string.Join("\n", lines);
 	}
 
-	private static bool NeedsStackFrame(int frameSize, List<Instruction> instructions) =>
+	private static bool NeedsStackFrame(int frameSize, IEnumerable<Instruction> instructions) =>
 		frameSize > 0 || instructions.Any(instruction => instruction is Invoke or PrintInstruction);
 
 	private static int AlignTo16(int size) => (size + 15) / 16 * 16;
@@ -206,8 +204,8 @@ public sealed partial class InstructionsToAssembly : InstructionsCompiler
 
 	private static void EmitInstruction(Instruction instruction, List<string> lines,
 		Dictionary<string, int> paramIndexByName, Dictionary<string, int> variableSlots,
-		List<(string Label, double Value)> dataConstants,
-		List<(string Label, string Text)> printStrings, Dictionary<int, string> jumpLabels,
+		IEnumerable<(string Label, double Value)> dataConstants,
+		IEnumerable<(string Label, string Text)> printStrings, Dictionary<int, string> jumpLabels,
 		Dictionary<int, int> jumpEndPositions, List<Instruction> allInstructions, int index,
 		Platform platform = Platform.Linux, Dictionary<Register, Register[]> registerInstances = null!,
 		Dictionary<string, Register[]> variableInstances = null!,
@@ -297,7 +295,7 @@ public sealed partial class InstructionsToAssembly : InstructionsCompiler
 
 	//ncrunch: no coverage start
 	private static void EmitStoreConstantToSlot(ValueInstance value, int slot,
-		List<(string Label, double Value)> dataConstants, List<string> lines)
+		IEnumerable<(string Label, double Value)> dataConstants, List<string> lines)
 	{
 		if (value.IsText)
 			return;
@@ -316,7 +314,7 @@ public sealed partial class InstructionsToAssembly : InstructionsCompiler
 	} //ncrunch: no coverage end
 
 	private static void EmitLoadConstant(Register register, ValueInstance value,
-		List<(string Label, double Value)> dataConstants, List<string> lines)
+		IEnumerable<(string Label, double Value)> dataConstants, List<string> lines)
 	{
 		var dest = ToXmm(register);
 		if (value.IsText)

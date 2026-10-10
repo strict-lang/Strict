@@ -181,11 +181,15 @@ public sealed class RunnerTests
 	internal static IEnumerable<string> StrictFolders()
 	{
 		var root = FindRepoRoot();
-		string[] projects = [".", "Math", "ImageProcessing", "Language", "Expressions", "Validators",
-			"TestRunner", "HighLevelRuntime", "Bytecode", "Optimizers", "Runtime", "Compiler", "Examples"];
+		string[] projects =
+		[
+			".", "Math", "ImageProcessing", "Language", "Expressions", "Validators", "TestRunner",
+			"HighLevelRuntime", "Bytecode", "Optimizers", "Runtime", "Compiler", "Examples"
+		];
 		return projects.Concat(Directory.GetDirectories(Path.Combine(root, "Examples")).
 			Select(folder => Path.GetRelativePath(root, folder).Replace('\\', '/')).
-			Where(folder => !folder.EndsWith("/bin") && !folder.EndsWith("/obj")));
+			Where(folder => !folder.EndsWith("/bin", StringComparison.Ordinal) &&
+				!folder.EndsWith("/obj", StringComparison.Ordinal)));
 	}
 
 	[TestCaseSource(nameof(StrictFolders))]
@@ -247,7 +251,8 @@ public sealed class RunnerTests
 					File.ReadAllLines(file).Length + Environment.NewLine));
 		}
 	}
-	private static readonly object FreshAssemblyGate = new();
+
+	private static readonly Lock FreshAssemblyGate = new();
 	private static string? freshStrictAssembly;
 
 	private static string StrictAssemblyForFreshProcess()
@@ -313,25 +318,35 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public async Task CachedBinaryOlderThanRuntimeIsRegenerated()
-	{
-		var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(tempDirectory);
-		var sourcePath = Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
-		var binaryPath = Path.ChangeExtension(sourcePath, BinaryExecutable.Extension);
-		try
+	public Task CachedBinaryOlderThanRuntimeIsRegenerated() =>
+		InTemporaryCopy([SimpleCalculatorFilePath], async directory =>
 		{
-			File.Copy(SimpleCalculatorFilePath, sourcePath);
+			var sourcePath = Path.Combine(directory, Path.GetFileName(SimpleCalculatorFilePath));
+			var binaryPath = Path.ChangeExtension(sourcePath, BinaryExecutable.Extension);
 			await new Runner(sourcePath).Run();
 			var runtimeTime = File.GetLastWriteTimeUtc(typeof(Runner).Assembly.Location);
 			File.SetLastWriteTimeUtc(sourcePath, runtimeTime.AddMinutes(-2));
 			File.SetLastWriteTimeUtc(binaryPath, runtimeTime.AddMinutes(-1));
 			await new Runner(sourcePath).Run();
 			Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(runtimeTime));
+		});
+
+	/// <summary>
+	/// Tests changing sources or cached binaries use copies, parallel tests read the repo files.
+	/// </summary>
+	private static async Task InTemporaryCopy(IEnumerable<string> files, Func<string, Task> test)
+	{
+		var directory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(directory);
+		try
+		{
+			foreach (var file in files)
+				File.Copy(file, Path.Combine(directory, Path.GetFileName(file)));
+			await test(directory);
 		}
 		finally
 		{
-			Directory.Delete(tempDirectory, true);
+			Directory.Delete(directory, true);
 		}
 	}
 
@@ -368,7 +383,7 @@ public sealed class RunnerTests
 		var directory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(directory);
 		var path = Path.Combine(directory, "WrongTwice" + Type.Extension);
-		File.WriteAllText(path,
+		await File.WriteAllTextAsync(path,
 			"has logger\nTwice(number) Number\n\tTwice(2) is 5\n\tnumber * 2\nRun\n\tlogger.Log(Twice(2))");
 		try
 		{
@@ -387,10 +402,12 @@ public sealed class RunnerTests
 	{
 		var directory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(directory);
-		File.WriteAllText(Path.Combine(directory, "Maker" + Type.Extension), "has unit Number\n" +
-			"Made(number Number) Number\n\tMaker.Made(1) is 1\n\tnumber\nDoubled Number\n\tMaker(2).Doubled is 4\n\tunit * 2");
+		await File.WriteAllTextAsync(Path.Combine(directory, "Maker" + Type.Extension),
+			"has unit Number\nMade(number Number) Number\n\tMaker.Made(1) is 1\n\tnumber\n" +
+			"Doubled Number\n\tMaker(2).Doubled is 4\n\tunit * 2");
 		var path = Path.Combine(directory, "Counter" + Type.Extension);
-		File.WriteAllText(path, "has number\nhas logger\nShifted Number\n\tCounter(5).Shifted is 4\n" +
+		await File.WriteAllTextAsync(path,
+			"has number\nhas logger\nShifted Number\n\tCounter(5).Shifted is 4\n" +
 			"\tMaker.Made(number - 1)\nRun\n\tlogger.Log(Counter(5).Shifted)");
 		try
 		{
@@ -443,24 +460,19 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public async Task RunSucceedsWhileCachedBinaryIsOpenedByAnotherReader()
-	{
-		var source = Path.Combine(FindRepoRoot(), "Examples", "HelloLogger.strict");
-		var binaryPath = Path.ChangeExtension(source, BinaryExecutable.Extension);
-		await new Runner(source).Run();
-		File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddMinutes(1));
-		try
-		{
-			using var reader = new FileStream(binaryPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-			consoleWriter.GetStringBuilder().Clear();
-			await new Runner(source).Run();
-			Assert.That(consoleWriter.ToString(), Does.Contain("Hi"));
-		}
-		finally
-		{
-			File.SetLastWriteTimeUtc(source, DateTime.UtcNow);
-		}
-	}
+	public Task RunSucceedsWhileCachedBinaryIsOpenedByAnotherReader() =>
+		InTemporaryCopy([Path.Combine(FindRepoRoot(), "Examples", "HelloLogger.strict")],
+			async directory =>
+			{
+				var source = Path.Combine(directory, "HelloLogger.strict");
+				await new Runner(source).Run();
+				File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddMinutes(1));
+				await using var reader = new FileStream(Path.ChangeExtension(source,
+					BinaryExecutable.Extension), FileMode.Open, FileAccess.Read, FileShare.Read);
+				consoleWriter.GetStringBuilder().Clear();
+				await new Runner(source).Run();
+				Assert.That(consoleWriter.ToString(), Does.Contain("Hi"));
+			});
 
 	[Test]
 	public async Task CachedBinaryIsOutdatedWhenUsedPackageChanged()
@@ -822,46 +834,21 @@ public sealed class RunnerTests
 	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
-	public async Task RunAdjustBrightnessRegeneratesCachedBinaryWhenColorChanges()
-	{
-		var adjustBrightnessPath = GetExamplesFilePath("../ImageProcessing/AdjustBrightness");
-		var colorPath = Path.Combine(Path.GetDirectoryName(adjustBrightnessPath)!, "Color.strict");
-		var binaryPath = Path.ChangeExtension(adjustBrightnessPath, BinaryExecutable.Extension);
-		var originalColorCode = await File.ReadAllTextAsync(colorPath);
-		var originalColorTimestamp = File.GetLastWriteTimeUtc(colorPath);
-		var hadBinary = File.Exists(binaryPath);
-		var originalBinaryBytes = hadBinary
-			? await File.ReadAllBytesAsync(binaryPath)
-			: [];
-		var originalBinaryTimestamp = hadBinary
-			? File.GetLastWriteTimeUtc(binaryPath)
-			: DateTime.MinValue;
-		try
-		{
-			if (File.Exists(binaryPath))
-				File.Delete(binaryPath);
-			await new Runner(adjustBrightnessPath).Run();
-			var firstBinaryTimestamp = File.GetLastWriteTimeUtc(binaryPath);
-			consoleWriter.GetStringBuilder().Clear();
-			await File.WriteAllTextAsync(colorPath,
-				originalColorCode.Replace("has Alpha = 1", "has Alpha = 0.5"));
-			File.SetLastWriteTimeUtc(colorPath, DateTime.UtcNow.AddSeconds(2));
-			await new Runner(adjustBrightnessPath).Run();
-			Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(firstBinaryTimestamp));
-		}
-		finally
-		{
-			await File.WriteAllTextAsync(colorPath, originalColorCode);
-			File.SetLastWriteTimeUtc(colorPath, originalColorTimestamp);
-			if (hadBinary)
+	public Task RunAdjustBrightnessRegeneratesCachedBinaryWhenColorChanges() =>
+		InTemporaryCopy(
+			Directory.GetFiles(Path.Combine(FindRepoRoot(), "ImageProcessing"), "*" + Type.Extension),
+			async directory =>
 			{
-				await File.WriteAllBytesAsync(binaryPath, originalBinaryBytes);
-				File.SetLastWriteTimeUtc(binaryPath, originalBinaryTimestamp);
-			}
-			else if (File.Exists(binaryPath))
-			{
-				File.Delete(binaryPath);
-			}
-		}
-	}
+				var adjustBrightnessPath = Path.Combine(directory, "AdjustBrightness" + Type.Extension);
+				var colorPath = Path.Combine(directory, "Color" + Type.Extension);
+				var binaryPath = Path.ChangeExtension(adjustBrightnessPath, BinaryExecutable.Extension);
+				await new Runner(adjustBrightnessPath).Run();
+				var firstBinaryTimestamp = File.GetLastWriteTimeUtc(binaryPath);
+				consoleWriter.GetStringBuilder().Clear();
+				await File.WriteAllTextAsync(colorPath,
+					(await File.ReadAllTextAsync(colorPath)).Replace("has Alpha = 1", "has Alpha = 0.5"));
+				File.SetLastWriteTimeUtc(colorPath, DateTime.UtcNow.AddSeconds(2));
+				await new Runner(adjustBrightnessPath).Run();
+				Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(firstBinaryTimestamp));
+			});
 }

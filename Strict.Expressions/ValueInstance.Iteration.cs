@@ -1,10 +1,8 @@
-using System.Globalization;
-using Strict.Language;
 using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public readonly partial struct ValueInstance : IEquatable<ValueInstance>
+public readonly partial struct ValueInstance
 {
 	public int GetIteratorLength()
 	{

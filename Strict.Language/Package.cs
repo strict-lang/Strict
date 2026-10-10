@@ -260,6 +260,13 @@ public class Package : Context, IDisposable
 	}
 #endif
 	public IReadOnlyDictionary<string, Type> Types => types;
+
+	internal Type[] GetTypesSnapshot()
+	{
+		lock (syncRoot)
+			return types.Values.ToArray();
+	}
+
 	internal List<Package> automaticallyLoadedDependencyPackages = new();
 
 	public void Dispose()

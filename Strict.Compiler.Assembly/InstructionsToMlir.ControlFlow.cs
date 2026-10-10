@@ -50,12 +50,13 @@ public sealed partial class InstructionsToMlir
 		var fallthrough = $"^bb{currentIndex + 1}";
 		lines.Add(jump.InstructionType switch
 		{
-			InstructionType.JumpIfTrue => $"    cf.cond_br {Condition(lines, context)}, {target}, {fallthrough}",
+			InstructionType.JumpIfTrue =>
+				$"    cf.cond_br {Condition(lines, context)}, {target}, {fallthrough}",
 			InstructionType.JumpIfFalse =>
 				$"    cf.cond_br {Condition(lines, context)}, {fallthrough}, {target}",
-			InstructionType.JumpIfNotZero => $"    cf.cond_br {
-				IsPositive(((JumpIfNotZero)jump).Register, lines, context)
-			}, {target}, {fallthrough}",
+			InstructionType.JumpIfNotZero =>
+				$"    cf.cond_br {IsPositive(((JumpIfNotZero)jump).Register, lines, context)}, " +
+				$"{target}, {fallthrough}",
 			_ => $"    cf.br {target}"
 		});
 		context.IsTerminated = true;
@@ -108,13 +109,11 @@ public sealed partial class InstructionsToMlir
 		context.StringConstants.Add((constName, text, byteLen));
 		var gepTemp = context.NextTemp();
 		lines.Add($"    {gepTemp} = llvm.mlir.addressof {constName} : !llvm.ptr");
+		var printfCall = $"    %print_{context.TempCounter++} = llvm.call @printf({gepTemp}";
 		lines.Add(print.ValueRegister.HasValue
-			? $"    %print_{context.TempCounter++} = llvm.call @printf({gepTemp}, {
-				context.Value(print.ValueRegister.Value)
-			}) {PrintfVarargSignature} : (!llvm.ptr, f64) -> i32"
-			: $"    %print_{context.TempCounter++} = llvm.call @printf({gepTemp}) {
-				PrintfVarargSignature
-			} : (!llvm.ptr) -> i32");
+			? $"{printfCall}, {context.Value(print.ValueRegister.Value)}) {PrintfVarargSignature}" +
+			" : (!llvm.ptr, f64) -> i32"
+			: $"{printfCall}) {PrintfVarargSignature} : (!llvm.ptr) -> i32");
 	}
 
 	/// <summary>
@@ -159,9 +158,10 @@ public sealed partial class InstructionsToMlir
 		foreach (var argumentRegister in info.ArgumentRegisters)
 			arguments.Add(context.Value(argumentRegister));
 		var result = context.NextTemp();
-		lines.Add($"    {result} = func.call @{methodInfo.Symbol}({string.Join(", ", arguments)}) : ({
-			string.Join(", ", Enumerable.Repeat("f64", arguments.Count))
-		}) -> f64");
+		var argumentValues = string.Join(", ", arguments);
+		var argumentTypes = string.Join(", ", Enumerable.Repeat("f64", arguments.Count));
+		lines.Add($"    {result} = func.call @{methodInfo.Symbol}({argumentValues}) : " +
+			$"({argumentTypes}) -> f64");
 		context.SetRegister(invoke.Register, result, returnType == Type.Boolean);
 	}
 
@@ -186,10 +186,10 @@ public sealed partial class InstructionsToMlir
 			else
 			{
 				var temp = context.NextTemp();
-				lines.Add($"    {temp} = arith.constant {FormatDouble(
-					member.InitialValueExpression is SetInstruction initial
-						? initial.ValueInstance.Number
-						: 0)} : f64");
+				var initialValue = member.InitialValueExpression is SetInstruction initial
+					? initial.ValueInstance.Number
+					: 0;
+				lines.Add($"    {temp} = arith.constant {FormatDouble(initialValue)} : f64");
 				values.Add(temp);
 			}
 		}

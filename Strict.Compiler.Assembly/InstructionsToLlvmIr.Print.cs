@@ -1,8 +1,5 @@
-using System.Globalization;
 using System.Text;
-using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Language;
 
 namespace Strict.Compiler.Assembly;
 
@@ -90,7 +87,7 @@ public sealed partial class InstructionsToLlvmIr
 				: print.TextPrefix;
 
 	private static List<(string Label, string Text)> CollectPrintStrings(
-		List<Instruction> instructions, Platform platform)
+		IEnumerable<Instruction> instructions, Platform platform)
 	{
 		var strings = new List<(string, string)>();
 		var seen = new HashSet<string>(StringComparer.Ordinal);

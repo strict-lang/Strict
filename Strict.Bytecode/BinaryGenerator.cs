@@ -1,5 +1,4 @@
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -82,7 +81,7 @@ public sealed partial class BinaryGenerator
 
 	//TODO: this is convoluted and not good
 	public static BinaryExecutable GenerateFromRunMethods(Method preferredEntryMethod,
-		IReadOnlyList<Method> runMethods)
+		IEnumerable<Method> runMethods)
 	{
 		var generator = new BinaryGenerator(GetBasePackage(preferredEntryMethod), [],
 			preferredEntryMethod.ReturnType);
@@ -93,7 +92,7 @@ public sealed partial class BinaryGenerator
 		Expression expression) =>
 		new BinaryGenerator(basePackage, [expression], expression.ReturnType).GenerateInstructions([expression]);
 
-	private BinaryExecutable Generate(Method preferredEntryMethod, IReadOnlyList<Method> runMethods)
+	private BinaryExecutable Generate(Method preferredEntryMethod, IEnumerable<Method> runMethods)
 	{
 		var methodsByType = GenerateRunMethods(runMethods, preferredEntryMethod.Type);
 		AddGeneratedTypes(methodsByType, preferredEntryMethod.Type);
@@ -289,8 +288,10 @@ public sealed partial class BinaryGenerator
 		case Body body:
 			GenerateInstructions(body.Expressions);
 			return;
-		case Binary { Method.Name: BinaryOperator.And or BinaryOperator.Or, ReturnType.IsBoolean: true }
-			logical:
+		case Binary
+		{
+			Method.Name: BinaryOperator.And or BinaryOperator.Or, ReturnType.IsBoolean: true
+		} logical:
 			GenerateShortCircuit(logical);
 			break;
 		case Binary binaryExpression:

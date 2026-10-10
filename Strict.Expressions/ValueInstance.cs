@@ -1,4 +1,3 @@
-using System.Globalization;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -379,7 +378,7 @@ public readonly partial struct ValueInstance : IEquatable<ValueInstance>
 	}
 
 	public class ValueTypeInstanceShouldOnlyBeCreatedForComplexTypes(Type returnType)
-		: Exception(returnType.ToString()) { }
+		: Exception(returnType.ToString());
 
 	/// <summary>
 	/// Used by ApplyMethodReturnTypeMutable and TryEvaluate to flip if this is a mutable or not.

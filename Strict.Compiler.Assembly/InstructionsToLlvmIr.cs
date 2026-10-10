@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Language;
@@ -44,7 +43,7 @@ public sealed partial class InstructionsToLlvmIr : InstructionsCompiler
 		module += "\n" + BuildEntryPoint(methodName);
 		if (platform == Platform.Windows && hasNumericPrint)
 			module += "\n" + BuildWindowsPrintNumberHelper();
-		var stringConstants = CollectPrintStrings([.. instructions], platform);
+		var stringConstants = CollectPrintStrings(instructions, platform);
 		foreach (var methodInfo in methodInfos.Values)
 		foreach (var (label, text) in CollectPrintStrings(methodInfo.Instructions, platform))
 			//ncrunch: no coverage start

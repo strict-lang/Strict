@@ -21,10 +21,10 @@ public sealed class InstructionsToCuda : InstructionsCompiler
 		BuildCudaKernel(method,
 			new BinaryGenerator(new MethodCall(method)).Generate().EntryPoint.instructions);
 
-	private static string BuildCudaKernel(Method method, IReadOnlyList<Instruction> instructions) =>
+	private static string BuildCudaKernel(Method method, IEnumerable<Instruction> instructions) =>
 		BuildCudaKernel(method.Name, instructions, method.Parameters, NeedsCountParameter(method));
 
-	private static string BuildCudaKernel(string methodName, IReadOnlyList<Instruction> instructions,
+	private static string BuildCudaKernel(string methodName, IEnumerable<Instruction> instructions,
 		IReadOnlyList<Parameter> parameters, bool addCountParameter)
 	{
 		var registers = new Dictionary<Register, string>();
@@ -89,13 +89,13 @@ public sealed class InstructionsToCuda : InstructionsCompiler
 				: $"const float {parameter.Name}"
 			: $"const float *{parameter.Name}";
 
-	private static bool IsScalarParameter(IReadOnlyList<Parameter> parameters, string name) =>
+	private static bool IsScalarParameter(IEnumerable<Parameter> parameters, string name) =>
 		parameters.Any(parameter => parameter.Name == name && IsScalarParameter(name));
 
 	private static bool IsScalarParameter(string name) =>
 		name is "width" or "height" or "initialDepth";
 
-	private static bool HasParameter(IReadOnlyList<Parameter> parameters, string name) =>
+	private static bool HasParameter(IEnumerable<Parameter> parameters, string name) =>
 		parameters.Any(parameter => parameter.Name == name);
 
 	private static string GetOperatorSymbol(InstructionType instruction) =>

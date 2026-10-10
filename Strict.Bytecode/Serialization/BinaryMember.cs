@@ -13,10 +13,8 @@ public sealed record BinaryMember(string Name,
 		table.names[reader.Read7BitEncodedInt()], table.names[reader.Read7BitEncodedInt()],
 		reader.ReadBoolean()
 			? binary.ReadInstruction(reader, table)
-			: null)
-	{
+			: null) =>
 		IsConstant = reader.ReadBoolean();
-	}
 
 	public string JustTypeName => FullTypeName.Split(Context.ParentSeparator)[^1];
 

@@ -28,13 +28,13 @@ public sealed class Body : Expression
 		Method = method;
 		Tabs = tabs;
 		Parent = parent;
-		parent?.children.Add(this);
+		parent?.Children.Add(this);
 	}
 
 	public Method Method { get; private set; }
 	public int Tabs { get; }
 	public Body? Parent { get; private set; }
-	public List<Body> children { get; private set; } = new();
+	public List<Body> Children { get; private set; } = new();
 	/// <summary>
 	/// If an Error is declared, remember the name of the constant variable declared to use as the
 	/// Error.Text itself. When showing the error it outputs clearly what went wrong where.
@@ -179,8 +179,8 @@ public sealed class Body : Expression
 		lastExpression.ReturnType.IsSameOrCanBeUsedAs(parentType) ||
 		CanWrapReturnType(parentType, lastExpression.ReturnType) ||
 		// Allow automatically converting an item to a list if the method requires a list
-		(parentType.IsIterator && parentType.GetListImplementationType(lastExpression.ReturnType) ==
-			parentType);
+		parentType.IsIterator && parentType.GetListImplementationType(lastExpression.ReturnType) ==
+		parentType;
 
 	private static bool CanWrapReturnType(Type parentType, Type expressionType)
 	{
@@ -217,7 +217,7 @@ public sealed class Body : Expression
 	internal Body ClearVariables()
 	{
 		Variables?.Clear();
-		foreach (var child in children)
+		foreach (var child in Children)
 			child.ClearVariables();
 		return this;
 	}
@@ -269,7 +269,7 @@ public sealed class Body : Expression
 			if (member.Name == name)
 			{
 				member.CheckIfWeCouldUpdateValue(value, this,
-					Method.Name == Method.From && contextType == Method.Type);
+					Method.Name == From && contextType == Method.Type);
 				return;
 			}
 		foreach (var parameter in Method.Parameters)
@@ -308,8 +308,8 @@ public sealed class Body : Expression
 	public override string ToString() => string.Join(Environment.NewLine, Expressions);
 
 	public override bool Equals(Expression? other) =>
-		ReferenceEquals(this, other) || (other is Body b && Expressions.Count == b.Expressions.Count &&
-			ExpressionsEqual(b));
+		ReferenceEquals(this, other) ||
+		other is Body b && Expressions.Count == b.Expressions.Count && ExpressionsEqual(b);
 
 	private bool ExpressionsEqual(Body other)
 	{
@@ -330,9 +330,9 @@ public sealed class Body : Expression
 	public Body? FindCurrentChild()
 	{
 		// ReSharper disable once ForCanBeConvertedToForeach, not done for performance reasons
-		for (var index = 0; index < children.Count; index++)
+		for (var index = 0; index < Children.Count; index++)
 		{
-			var child = children[index];
+			var child = Children[index];
 			if (child.LineRange.Start.Value <= ParsingLineNumber)
 				continue;
 			if (child.LineRange.Start.Value > ParsingLineNumber + 1)
@@ -364,9 +364,9 @@ public sealed class Body : Expression
 		clone.Variables = Variables == null
 			? null
 			: [.. Variables];
-		clone.children = new List<Body>(children.Count);
-		foreach (var child in children)
-			clone.children.Add(child.CloneWithParent(newClonedMethod, clone));
+		clone.Children = new List<Body>(Children.Count);
+		foreach (var child in Children)
+			clone.Children.Add(child.CloneWithParent(newClonedMethod, clone));
 		return clone;
 	}
 
@@ -376,9 +376,9 @@ public sealed class Body : Expression
 		{
 			LineRange = new Range(currentLineNumber + 1, child.LineRange.End)
 		};
-		innerForBody.children.Add(child);
+		innerForBody.Children.Add(child);
 		child.Parent = innerForBody;
-		children.Remove(child);
+		Children.Remove(child);
 		return innerForBody;
 	}
 }

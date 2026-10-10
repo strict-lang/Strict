@@ -13,5 +13,7 @@ public sealed class OneOfType(Type definedInType, Type[] types, string combinedN
 
 	public Type[] Types { get; } = types;
 	public override bool IsBoolean => Types.Any(t => t.IsBoolean);
-	public static string BuildName(Type[] types) => string.Join("Or", types.Select(t => t.Name));
+
+	public static string BuildName(IEnumerable<Type> types) =>
+		string.Join("Or", types.Select(t => t.Name));
 }

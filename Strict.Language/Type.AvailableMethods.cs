@@ -1,12 +1,6 @@
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-#if DEBUG
-using System.Runtime.CompilerServices;
-#endif
-
 namespace Strict.Language;
 
-public partial class Type : Context, IDisposable
+public partial class Type
 {
 	public Method? FindMethod(string methodName, IReadOnlyList<Expression> arguments,
 		string? callText = null) =>
@@ -167,9 +161,9 @@ public partial class Type : Context, IDisposable
 
 	private void AddAnyMethods(Dictionary<string, List<Method>> cache)
 	{
-		cachedAnyMethods ??= GetType(Any).AvailableMethods;
+		var anyMethodsByName = cachedAnyMethods ??= GetType(Any).AvailableMethods;
 		if (!IsGeneric)
-			foreach (var (_, anyMethods) in cachedAnyMethods)
+			foreach (var (_, anyMethods) in anyMethodsByName)
 			foreach (var anyMethod in anyMethods)
 				AddAvailableMethod(anyMethod, cache);
 	}

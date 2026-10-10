@@ -148,4 +148,6 @@ transpiler-test-output.txt
 ImageProcessing/test_image_output.jpg
 ImageProcessing/test_image_output.jpg
 ImageProcessing/test_image_output.jpg
-.junie/memory/
+.junie/
+.grok/
+.claude/

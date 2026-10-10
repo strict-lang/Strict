@@ -1,7 +1,6 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
-using Type = Strict.Language.Type;
 
 namespace Strict;
 

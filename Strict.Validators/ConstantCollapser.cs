@@ -88,8 +88,8 @@ public sealed class ConstantCollapser : Visitor
 				ContainsVariableCall(nestedExpression, name)),
 			SelectorIf selector => ContainsVariableCall(selector.Selector, name) ||
 				selector.Cases.Any(selectorCase => ContainsVariableCall(selectorCase.Pattern, name) ||
-					ContainsVariableCall(selectorCase.Then, name)) || (selector.OptionalElse != null &&
-					ContainsVariableCall(selector.OptionalElse, name)),
+					ContainsVariableCall(selectorCase.Then, name)) ||
+				selector.OptionalElse != null && ContainsVariableCall(selector.OptionalElse, name),
 			List list => list.Values.Any(value => ContainsVariableCall(value, name)),
 			//ncrunch: no coverage end
 			_ => false
@@ -141,7 +141,9 @@ public sealed class ConstantCollapser : Visitor
 			Number numberValue when to.ConversionType.IsText =>
 				new Text(to.Method.Type, numberValue.Data.ToExpressionCodeString()),
 			Boolean boolValue when to.ConversionType.IsText =>
-				new Text(to.Method.Type, boolValue.Data.Boolean ? "true" : "false"),
+				new Text(to.Method.Type, boolValue.Data.Boolean
+					? "true"
+					: "false"),
 			_ => null
 		};
 		if (collapsed != null)

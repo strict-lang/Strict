@@ -4,7 +4,6 @@ using System.Globalization;
 using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
-using Strict.Compiler.Assembly;
 using Strict.Expressions;
 using Strict.Language;
 using Strict.Optimizers;
@@ -54,7 +53,12 @@ public sealed partial class Runner
 	private void Execute(BinaryExecutable binary,
 		IReadOnlyDictionary<string, ValueInstance>? arguments)
 	{
-		var machine = new VirtualMachine(binary) { Profile = Profile ? [] : null };
+		var machine = new VirtualMachine(binary)
+		{
+			Profile = Profile
+				? []
+				: null
+		};
 		LogTiming(nameof(Run), () => machine.Execute(initialVariables: arguments));
 		if (machine.Profile == null)
 			return;
@@ -129,7 +133,7 @@ public sealed partial class Runner
 		}
 #endif
 		var package = await LogTimingAsync("Load packages", LoadBasePackage);
-		return await LoadFromSourceAndSaveBinary(package);
+		return LoadFromSourceAndSaveBinary(package);
 	}
 
 	private async Task<Package> LoadBasePackage()
@@ -171,7 +175,7 @@ public sealed partial class Runner
 			RunTests(package, mainType);
 	}
 
-	private async Task<BinaryExecutable> LoadFromSourceAndSaveBinary(Package package)
+	private BinaryExecutable LoadFromSourceAndSaveBinary(Package package)
 	{
 		var mainType = ParseMainType(package);
 		if (enableDetailedOutput)
@@ -428,9 +432,9 @@ public sealed partial class Runner
 			return new ValueInstance(argument);
 		if (targetType.IsBoolean)
 			return new ValueInstance(targetType, bool.Parse(argument));
-		if (targetType.Name == "Path")
-			return new ValueInstance(targetType, [new ValueInstance(argument)]);
-		throw new UnsupportedRunArgumentType(targetType.Name);
+		return targetType.Name == "Path"
+			? new ValueInstance(targetType, [new ValueInstance(argument)])
+			: throw new UnsupportedRunArgumentType(targetType.Name);
 	}
 
 	private void

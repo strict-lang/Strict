@@ -459,28 +459,27 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(
 			new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
 				nameof(ErrorConstantInMethodBodyRunsOnVirtualMachine),
-				nameof(ErrorConstantInMethodBodyRunsOnVirtualMachine) + "(5).Checked",
-				[
-					"has number", "Checked Number", "\tconstant Invalid = Error",
-					"\tnumber is 0 then Invalid else number"
-				])).Generate()).Execute().Returns!.Value.Number, Is.EqualTo(5));
+				nameof(ErrorConstantInMethodBodyRunsOnVirtualMachine) + "(5).Checked", "has number",
+				"Checked Number", "\tconstant Invalid = Error",
+				"\tnumber is 0 then Invalid else number")).Generate()).Execute().Returns!.Value.Number,
+			Is.EqualTo(5));
 
 	[Test]
 	public void MethodCallLeftOfNestedBinaryIsInvoked() =>
 		Assert.That(
 			new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
-				nameof(MethodCallLeftOfNestedBinaryIsInvoked),
-				nameof(MethodCallLeftOfNestedBinaryIsInvoked) + "(0).Scaled(8.5)",
-				["has number", "Scaled(other Number) Number", "\tother.Floor / 2 ^ 2"])).Generate()).
+					nameof(MethodCallLeftOfNestedBinaryIsInvoked),
+					nameof(MethodCallLeftOfNestedBinaryIsInvoked) + "(0).Scaled(8.5)", "has number",
+					"Scaled(other Number) Number", "\tother.Floor / 2 ^ 2")).Generate()).
 				Execute().Returns!.Value.Number, Is.EqualTo(2));
 
 	[Test]
 	public void TextReturningLoopConcatenatesValues() =>
 		Assert.That(
 			new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
-				nameof(TextReturningLoopConcatenatesValues),
-				nameof(TextReturningLoopConcatenatesValues) + "(\"a\").Joined",
-				["has text", "Joined Text", "\tfor (text, \"b\")", "\t\tvalue + \",\""])).Generate()).
+					nameof(TextReturningLoopConcatenatesValues),
+					nameof(TextReturningLoopConcatenatesValues) + "(\"a\").Joined", "has text",
+					"Joined Text", "\tfor (text, \"b\")", "\t\tvalue + \",\"")).Generate()).
 				Execute().Returns!.Value.Text, Is.EqualTo("a,b,"));
 
 	[Test]
@@ -488,13 +487,11 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var machine = new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(ProfileCountsInvokedMethods), nameof(ProfileCountsInvokedMethods) + "(3).Twice",
-			[
-				"has number", "Twice Number", "\tDoubled(number) + Doubled(1)", "Doubled(amount Number) Number",
-				"\tamount * 2"
-			])).Generate()) { Profile = [] };
+			"has number", "Twice Number", "\tDoubled(number) + Doubled(1)",
+			"Doubled(amount Number) Number", "\tamount * 2")).Generate()) { Profile = [] };
 		machine.Execute();
-		Assert.That(machine.Profile!.Single(entry => entry.Key.EndsWith(".Doubled")).Value.Calls,
-			Is.EqualTo(2));
+		Assert.That(machine.Profile!.Single(entry =>
+			entry.Key.EndsWith(".Doubled", StringComparison.Ordinal)).Value.Calls, Is.EqualTo(2));
 	}
 
 	[Test]
@@ -502,7 +499,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var machine = new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(ListContainsRunsNatively), nameof(ListContainsRunsNatively) + "(\"b\").Known",
-			["has name Text", "Known Boolean", "\tname is in (\"a\", \"b\", name + \"c\")"])).Generate())
+			"has name Text", "Known Boolean", "\tname is in (\"a\", \"b\", name + \"c\")")).Generate())
 		{
 			Profile = []
 		};
@@ -515,7 +512,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var machine = new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(ListIndexRunsNatively), nameof(ListIndexRunsNatively) + "(\"b\").Position",
-			["has name Text", "Position Number", "\t(\"a\", name, name + \"c\").Index(name)"])).Generate())
+			"has name Text", "Position Number",
+			"\t(\"a\", name, name + \"c\").Index(name)")).Generate())
 		{
 			Profile = []
 		};
@@ -526,8 +524,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	[Test]
 	public void ListCountWithArgumentCountsMatches() =>
 		Assert.That(new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
-			nameof(ListCountWithArgumentCountsMatches), nameof(ListCountWithArgumentCountsMatches) +
-			"(1).Matches", ["has number", "Matches Number", "\t(number, 2, number).Count(number)"])).
+				nameof(ListCountWithArgumentCountsMatches), nameof(ListCountWithArgumentCountsMatches) +
+				"(1).Matches", "has number", "Matches Number", "\t(number, 2, number).Count(number)")).
 			Generate()).Execute().Returns!.Value.Number, Is.EqualTo(2));
 
 	[Test]
@@ -535,7 +533,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	{
 		var machine = new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
 			nameof(NumberFloorRunsNatively), nameof(NumberFloorRunsNatively) + "(-2.5).Rounded",
-			["has number", "Rounded Number", "	number.Floor"])).Generate())
+			"has number", "Rounded Number", "\tnumber.Floor")).Generate())
 		{
 			Profile = []
 		};

@@ -1,12 +1,8 @@
-using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-#if DEBUG
-using System.Runtime.CompilerServices;
-#endif
 
 namespace Strict.Language;
 
-public partial class Type : Context, IDisposable
+public partial class Type
 {
 	/// <summary>
 	/// Every private member and every declared variable must be used, dummies only satisfying
@@ -32,7 +28,7 @@ public partial class Type : Context, IDisposable
 			if (!declaration.Success)
 				continue;
 			var usage = new Regex(@"\b" + declaration.Groups[1].Value + @"\b");
-			if (!method.lines.Where((line, lineIndex) => lineIndex != index).Any(usage.IsMatch))
+			if (!method.lines.Where((_, lineIndex) => lineIndex != index).Any(usage.IsMatch))
 				throw new UnusedMethodVariableMustBeRemoved(this, declaration.Groups[1].Value);
 		}
 	}

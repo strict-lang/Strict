@@ -1,10 +1,5 @@
-using System.Globalization;
-using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
-using Strict.Language;
-using Type = Strict.Language.Type;
 
 namespace Strict;
 
@@ -83,7 +78,7 @@ public sealed partial class VirtualMachine
 		return implicitInstance;
 	}
 
-	private bool IsProcessInstance(ValueInstance? instance)
+	private static bool IsProcessInstance(ValueInstance? instance)
 	{
 		if (instance is not { HasValue: true, IsFlatNumeric: false })
 			return false;

@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Language;

@@ -100,9 +100,10 @@ public sealed class ForTests
 		using var t = CreateType(nameof(EmptyFilteredLoopWithDeclarationKeepsElementType), "has number",
 			"Long(names Texts) Texts", "\tfor names", "\t\tlet cut = value + \"!\"", "\t\tif value.Length > 2",
 			"\t\t\tcut");
+		var names = new ValueInstance(TestPackage.Instance.GetListImplementationType(
+			TestPackage.Instance.GetType(Type.Text)), Array.Empty<ValueInstance>());
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Long"),
-			interpreter.noneInstance, [new ValueInstance(TestPackage.Instance.GetListImplementationType(
-				TestPackage.Instance.GetType(Type.Text)), Array.Empty<ValueInstance>())]);
+			interpreter.noneInstance, [names]);
 		Assert.That(result.GetType().Name, Is.EqualTo("List(Text)"));
 	}
 

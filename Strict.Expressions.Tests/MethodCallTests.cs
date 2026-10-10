@@ -112,7 +112,7 @@ public sealed class MethodCallTests : TestExpressions
 	public void TextListAsEnumListEndsLookup()
 	{
 		using var fruit = new Type(TestPackage.Instance,
-			new TypeLines("Fruit", "constant Apple = \"apple\"", "constant Pear = \"pear\"")).
+				new TypeLines("Fruit", "constant Apple = \"apple\"", "constant Pear = \"pear\"")).
 			ParseMembersAndMethods(this);
 		Assert.That(() => type.GetType("Fruits").FindMethod(Method.From,
 				[ParseExpression("(\"a\", \"b\")")]),
@@ -191,10 +191,10 @@ public sealed class MethodCallTests : TestExpressions
 	public void AutoWrappedListArgumentHasNoDoubleBrackets()
 	{
 		using var program = new Type(TestPackage.Instance,
-			new TypeLines(nameof(AutoWrappedListArgumentHasNoDoubleBrackets), "has number",
-				"Sum(numbers) Number", "\tnumbers.Length + number",
-				$"Twice(other {nameof(AutoWrappedListArgumentHasNoDoubleBrackets)}) Number",
-				"\tlet first = other.Sum(1, 2)", "\tfirst + Sum(3, 4)")).
+				new TypeLines(nameof(AutoWrappedListArgumentHasNoDoubleBrackets), "has number",
+					"Sum(numbers) Number", "\tnumbers.Length + number",
+					$"Twice(other {nameof(AutoWrappedListArgumentHasNoDoubleBrackets)}) Number",
+					"\tlet first = other.Sum(1, 2)", "\tfirst + Sum(3, 4)")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		Assert.That(program.Methods[1].GetBodyAndParseIfNeeded().ToString(),
 			Is.EqualTo("let first = other.Sum(1, 2)" + Environment.NewLine + "first + Sum(3, 4)"));

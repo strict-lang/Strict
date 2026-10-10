@@ -1,16 +1,13 @@
 using System.Text;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Expressions;
-using Strict.Language;
-using Type = Strict.Language.Type;
 
 namespace Strict.Compiler.Assembly;
 
 public sealed partial class InstructionsToAssembly
 {
 	private static void EmitPrint(PrintInstruction print,
-		List<(string Label, string Text)> printStrings, List<string> lines, Platform platform)
+		IEnumerable<(string Label, string Text)> printStrings, List<string> lines, Platform platform)
 	{
 		var (strLabel, _) = printStrings.First(p => p.Text == BuildPrintKey(print));
 		if (print.ValueRegister.HasValue && !print.ValueIsText)

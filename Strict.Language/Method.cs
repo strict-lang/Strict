@@ -18,7 +18,6 @@ public sealed partial class Method : Context
 		[CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = "") : base(type, GetName(lines[0]), callerFilePath,
 		callerLineNumber, callerMemberName)
-
 #else
 	public Method(Type type, int typeLineNumber, ExpressionParser parser, IReadOnlyList<string> lines)
 		: base(type, GetName(lines[0]))
@@ -269,9 +268,7 @@ public sealed partial class Method : Context
 	public const string Run = nameof(Run);
 
 	private int methodLineNumber = 1;
-
-	private readonly object parseLock = new();
-
+	private readonly Lock parseLock = new();
 	public Type Type => (Type)Parent;
 
 	public IReadOnlyList<Parameter> Parameters => parameters;

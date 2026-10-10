@@ -48,9 +48,10 @@ public static class Program
 	}
 
 	private static readonly string[] Commands = ["run", "check", "test", "build", "decompile"];
-	private static readonly HashSet<string> KnownOptions = new(["-Windows", "-Linux", "-MacOS",
-		"-mlir", "-llvm", "-nasm", "-diagnostics", "-profile", "-decompile"],
-		StringComparer.OrdinalIgnoreCase);
+	private static readonly HashSet<string> KnownOptions = new([
+		"-Windows", "-Linux", "-MacOS", "-mlir", "-llvm", "-nasm", "-diagnostics", "-profile",
+		"-decompile"
+	], StringComparer.OrdinalIgnoreCase);
 	private const int UsageError = 2;
 
 	private static bool IsOption(string argument) =>
@@ -130,10 +131,7 @@ public static class Program
 				"bytecode reconstruction) to folder:" + Environment.NewLine + outputFolder);
 			return;
 		}
-		var diagnostics = options.Contains("-diagnostics");
-#if DEBUG
-		diagnostics = true;
-#endif
+		var diagnostics = IsDebugBuild || options.Contains("-diagnostics");
 		var runner = new Runner(filePath, programArguments.Length == 0
 			? Method.Run
 			: string.Join(" ", programArguments), diagnostics)
@@ -153,6 +151,12 @@ public static class Program
 			await runner.Run();
 	}
 
+	private static bool IsDebugBuild =>
+#if DEBUG
+		true;
+#else
+		false;
+#endif
 	private static Platform CurrentPlatform =>
 		OperatingSystem.IsWindows()
 			? Platform.Windows

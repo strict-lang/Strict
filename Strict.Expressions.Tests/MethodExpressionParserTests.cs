@@ -158,7 +158,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
-	public async Task GenericListPlusMethodShouldParseWithoutGenericLookupError()
+	public void GenericListPlusMethodShouldParseWithoutGenericLookupError()
 	{
 		var listPlus = TestPackage.Instance.GetType(Type.List).Methods.Single(m =>
 			m.Name == BinaryOperator.Plus && m.Parameters[0].Type.IsList);
@@ -191,7 +191,7 @@ public sealed class MethodExpressionParserTests : TestExpressions
 	}
 
 	[Test]
-	public async Task ParseListReverseMethod()
+	public void ParseListReverseMethod()
 	{
 		var listReverse = TestPackage.Instance.GetType(Type.List).Methods.Single(m =>
 			m.Name == "Reverse" && m.Parameters.Count == 0);

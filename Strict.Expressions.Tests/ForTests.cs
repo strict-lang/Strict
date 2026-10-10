@@ -366,8 +366,8 @@ public sealed class ForTests : TestExpressions
 	public void ParameterWinsOverSameNamedMemberOfLoopValue()
 	{
 		using var programType = new Type(TestPackage.Instance,
-			new TypeLines(nameof(ParameterWinsOverSameNamedMemberOfLoopValue), "has names",
-				"Has(text Text) Boolean", "\tfor names", "\t\tvalue.text is text")).
+				new TypeLines(nameof(ParameterWinsOverSameNamedMemberOfLoopValue), "has names",
+					"Has(text Text) Boolean", "\tfor names", "\t\tvalue.text is text")).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var forExpression = (For)programType.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(((Binary)forExpression.Body).Arguments[0], Is.TypeOf<ParameterCall>());

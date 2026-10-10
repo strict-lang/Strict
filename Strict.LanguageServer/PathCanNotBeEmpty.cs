@@ -1,3 +1,3 @@
 ﻿namespace Strict.LanguageServer;
 
-public class PathCanNotBeEmpty : Exception { }
+public class PathCanNotBeEmpty : Exception;

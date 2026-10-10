@@ -475,7 +475,7 @@ public sealed class InterpreterTests
 			"	mutable next = 0", "	for number", "		if index >= next", "			values.Add(index)",
 			"			next = index + 1", "	values");
 		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Collect"),
-			new ValueInstance(t, [new ValueInstance(interpreter.numberType, 2)]), []).List.Count,
+				new ValueInstance(t, [new ValueInstance(interpreter.numberType, 2)]), []).List.Count,
 			Is.EqualTo(2));
 	}
 
@@ -640,8 +640,8 @@ public sealed class InterpreterTests
 		using var item = new Type(strict, new TypeLines("AddItem", "has number", "Double Number",
 			"	number * 2")).ParseMembersAndMethods(parser);
 		using var adder = new Type(strict, new TypeLines("LoopAdder", "has addItems", "Sum Number",
-			"	mutable seen = List(Mutable(AddItem))", "	mutable total = 0", "	for addItems",
-			"		seen.Add(value)", "		total = total + value.number", "	total + seen.Length")).
+				"	mutable seen = List(Mutable(AddItem))", "	mutable total = 0", "	for addItems",
+				"		seen.Add(value)", "		total = total + value.number", "	total + seen.Length")).
 			ParseMembersAndMethods(parser);
 		var strictInterpreter = new Interpreter(strict, TestBehavior.Disabled);
 		var items = new ValueInstance(strict.GetListImplementationType(item), [
@@ -741,10 +741,10 @@ public sealed class InterpreterTests
 		using var t = CreateType(nameof(ShrinkingMutableListRecursionIsNoStackOverflow), "has logger",
 			"Drain(mutable numbers) Number", "\tif numbers.Length is 0", "\t\treturn 0",
 			"\tnumbers.Remove(numbers(0))", "\tDrain(numbers) + 1");
-		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Drain"), interpreter.noneInstance,
-				[new ValueInstance(interpreter.listType.GetGenericImplementation(interpreter.numberType),
-					[new ValueInstance(interpreter.numberType, 1), new ValueInstance(interpreter.numberType, 2)])]).
-			Number, Is.EqualTo(2));
+		var numbers = new ValueInstance(interpreter.listType.GetGenericImplementation(numberType),
+			[N(1), N(2)]);
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Drain"),
+			interpreter.noneInstance, [numbers]).Number, Is.EqualTo(2));
 	}
 
 	[Test]
@@ -752,10 +752,10 @@ public sealed class InterpreterTests
 	{
 		using var t = CreateType(nameof(EndlessMutableRecursionFailsInsteadOfCrashing), "has logger",
 			"Endless(mutable numbers) Number", "\tnumbers.Length + Endless(numbers)");
-		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Endless"), interpreter.noneInstance,
-				[new ValueInstance(interpreter.listType.GetGenericImplementation(interpreter.numberType),
-					[new ValueInstance(interpreter.numberType, 1)])]),
-			Throws.InstanceOf<InterpreterExecutionFailed>());
+		var numbers = new ValueInstance(interpreter.listType.GetGenericImplementation(numberType),
+			[N(1)]);
+		Assert.That(() => interpreter.Execute(t.Methods.Single(m => m.Name == "Endless"),
+			interpreter.noneInstance, [numbers]), Throws.InstanceOf<InterpreterExecutionFailed>());
 	}
 
 	[Test]

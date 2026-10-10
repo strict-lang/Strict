@@ -119,13 +119,8 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		return true;
 	}
 
-	private int GetMemberIndex(string name)
-	{
-		var indexes = MemberIndexes.GetValue(flatElementType!, CreateMemberIndexes);
-		return indexes.TryGetValue(name, out var index)
-			? index
-			: -1;
-	}
+	private int GetMemberIndex(string name) =>
+		MemberIndexes.GetValue(flatElementType!, CreateMemberIndexes).GetValueOrDefault(name, -1);
 
 	private static Dictionary<string, int> CreateMemberIndexes(Type type)
 	{

@@ -137,7 +137,7 @@ public sealed class IfAdvancedTests : TestExpressions
 				"	6")).ParseMembersAndMethods(new MethodExpressionParser());
 		// @formatter:on
 		Assert.That(
-			((Body)program.Methods[0].GetBodyAndParseIfNeeded()).children[0].ReturnType.ToString(),
+			((Body)program.Methods[0].GetBodyAndParseIfNeeded()).Children[0].ReturnType.ToString(),
 			Is.EqualTo("TestPackage/Number"));
 	}
 
@@ -158,8 +158,8 @@ public sealed class IfAdvancedTests : TestExpressions
 		// @formatter:on
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
-		Assert.That(body.children[0].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
-		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
+		Assert.That(body.Children[0].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
+		Assert.That(body.Children[1].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
 	}
 
 	[Test]
@@ -202,8 +202,8 @@ public sealed class IfAdvancedTests : TestExpressions
 			Is.EqualTo(string.Join(Environment.NewLine, "if 5 is 5", "	return \"Hello\"",
 				"else if 6 is 6", "	logger.Log(\"Hi\")", "	return \"Hi\"", "else if 7 is 7",
 				"	logger.Log(\"Hello\")", "	return \"Hello\"", "\"don't matter\"")), body.ToString());
-		Assert.That(body.children[1].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
-		Assert.That(body.children.Count, Is.EqualTo(3));
+		Assert.That(body.Children[1].ReturnType.ToString(), Is.EqualTo("TestPackage/Text"));
+		Assert.That(body.Children.Count, Is.EqualTo(3));
 	}
 
 	[Test]

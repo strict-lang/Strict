@@ -12,14 +12,14 @@ public sealed class TestNotificationMessage(int lineNumber,
 	string? stackTrace = null,
 	string? typeName = null)
 {
-	public int LineNumber { get; init; } = lineNumber;
-	public TestState State { get; init; } = state;
+	public int LineNumber { get; } = lineNumber;
+	public TestState State { get; } = state;
 	public string? Uri { get; init; } = uri;
-	public string? Expression { get; init; } = expression;
+	public string? Expression { get; } = expression;
 	public string? MethodName { get; init; } = methodName;
 	public string? TypeName { get; init; } = typeName;
 	public string? Message { get; init; } = message;
-	public string? Details { get; init; } = details;
+	public string? Details { get; } = details;
 	public double? DurationMs { get; init; } = durationMs;
 	public string? StackTrace { get; init; } = stackTrace;
 	public string? ConsoleOutput { get; init; }

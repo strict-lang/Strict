@@ -67,7 +67,7 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 	private static string BuildPrintfDeclarations() => "  llvm.func @printf(!llvm.ptr, ...) -> i32\n";
 
 	private static string BuildStringGlobals(
-		IReadOnlyList<(string Name, string Text, int ByteLen)> stringConstants) =>
+		IEnumerable<(string Name, string Text, int ByteLen)> stringConstants) =>
 		string.Join("\n",
 			stringConstants.Select(stringConstant => $"  llvm.mlir.global internal constant {
 				stringConstant.Name

@@ -1,8 +1,6 @@
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
-using Type = Strict.Language.Type;
 
 namespace Strict.Bytecode;
 
@@ -70,7 +68,8 @@ public sealed partial class BinaryGenerator
 
 	/// <summary>
 	/// Number comparisons used as values (outside if conditions) become direct compare instructions,
-	/// invoking Number.strict would recurse as its body is the same comparison. a >= b is not a < b.
+	/// invoking Number.strict would recurse as its body is the same comparison. a &gt;= b is
+	/// not a &lt; b.
 	/// </summary>
 	private bool TryGenerateNumberComparisonValue(Binary comparison)
 	{
@@ -81,10 +80,11 @@ public sealed partial class BinaryGenerator
 		GenerateInstructionFromExpression(comparison.Instance);
 		var leftRegister = registry.PreviousRegister;
 		GenerateInstructionFromExpression(comparison.Arguments[0]);
-		instructions.Add(new BinaryInstruction(name is BinaryOperator.Greater or BinaryOperator.SmallerOrEqual
+		var instructionType = name is BinaryOperator.Greater or BinaryOperator.SmallerOrEqual
 			? InstructionType.GreaterThan
-			: InstructionType.LessThan, leftRegister, registry.PreviousRegister,
-			registry.AllocateRegister()));
+			: InstructionType.LessThan;
+		instructions.Add(new BinaryInstruction(instructionType, leftRegister,
+			registry.PreviousRegister, registry.AllocateRegister()));
 		if (name is BinaryOperator.Smaller or BinaryOperator.Greater)
 			return true;
 		var comparedRegister = registry.PreviousRegister;

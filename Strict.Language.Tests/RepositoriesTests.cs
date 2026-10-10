@@ -28,16 +28,20 @@ public class RepositoriesTests
 			repos.LoadFromPath(nameof(InvalidPathWontWork), nameof(InvalidPathWontWork)));
 
 	[Test]
-	public void LoadingTypeWithDummyMemberFails()
+	public void LoadingTypeWithDummyMemberFails() =>
+		Assert.That(async () => await LoadTemporaryPackage("Doubler", "has dummy Number",
+				"Double(number Number) Number", "\tDoubler(0).Double(2) is 4", "\tnumber * 2"),
+			Throws.InstanceOf<Type.UnusedMemberMustBeRemoved>().With.Message.Contains("dummy"));
+
+	private async Task<Package> LoadTemporaryPackage(string typeName, params string[] lines)
 	{
-		var directory = Path.Combine(Path.GetTempPath(), "StrictDummy" + Guid.NewGuid().ToString("N"));
+		var directory = Path.Combine(Path.GetTempPath(), "Strict" + typeName + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(directory);
 		try
 		{
-			File.WriteAllText(Path.Combine(directory, "Doubler.strict"), string.Join("\n",
-				"has dummy Number", "Double(number Number) Number", "\tDoubler(0).Double(2) is 4", "\tnumber * 2"));
-			Assert.That(async () => await repos.LoadFromPath("Strict/" + Path.GetFileName(directory), directory),
-				Throws.InstanceOf<Type.UnusedMemberMustBeRemoved>().With.Message.Contains("dummy"));
+			await File.WriteAllTextAsync(Path.Combine(directory, typeName + Type.Extension),
+				string.Join("\n", lines));
+			return await repos.LoadFromPath("Strict/" + Path.GetFileName(directory), directory);
 		}
 		finally
 		{
@@ -46,22 +50,21 @@ public class RepositoriesTests
 	}
 
 	[Test]
-	public void LoadingTypeWithUnusedVariableFails()
+	public void LoadingTypeWithUnusedVariableFails() =>
+		Assert.That(async () => await LoadTemporaryPackage("Tripler", "has number", "Triple Number",
+				"\tTripler(2).Triple is 6", "\tlet unused = number + 1", "\tnumber * 3"),
+			Throws.InstanceOf<Type.UnusedMethodVariableMustBeRemoved>().With.Message.Contains("unused"));
+
+	[Test]
+	public async Task LoadingPackageDoesNotRebuildGenericTypesOfOtherPackages()
 	{
-		var directory = Path.Combine(Path.GetTempPath(), "StrictUnused" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(directory);
-		try
-		{
-			File.WriteAllText(Path.Combine(directory, "Tripler.strict"), string.Join("\n",
-				"has number", "Triple Number", "\tTripler(2).Triple is 6", "\tlet unused = number + 1",
-				"\tnumber * 3"));
-			Assert.That(async () => await repos.LoadFromPath("Strict/" + Path.GetFileName(directory), directory),
-				Throws.InstanceOf<Type.UnusedMethodVariableMustBeRemoved>().With.Message.Contains("unused"));
-		}
-		finally
-		{
-			Directory.Delete(directory, true);
-		}
+		using var basePackage = await repos.LoadStrictPackage();
+		using var numbersMethods = basePackage.GetListImplementationType(basePackage.GetType(Type.Number)).
+			Methods.GetEnumerator();
+		numbersMethods.MoveNext();
+		await LoadTemporaryPackage("Doubler", "has number", "Double Number", "\tDoubler(2).Double is 4",
+			"\tnumber * 2");
+		Assert.That(() => numbersMethods.MoveNext(), Throws.Nothing);
 	}
 
 	[Test]

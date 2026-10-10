@@ -60,7 +60,6 @@ public sealed class Repositories(ExpressionParser parser)
 	} //ncrunch: no coverage end
 
 	private static readonly IAppCache CacheService = new CachingService();
-	private readonly ExpressionParser parser = parser;
 
 	public static string GetLocalDevelopmentPath(string organization, string packageFullName)
 	{
@@ -244,6 +243,8 @@ public sealed class Repositories(ExpressionParser parser)
 			type.ParseMembersAndMethodsForPackage(parser);
 		InvalidateAllAvailableMethodsCaches();
 		foreach (var type in types)
+			type.ReimplementGenericTypeMethods();
+		foreach (var type in types)
 		{
 			type.ParseDeferredConstraints(parser);
 			type.ValidateMembersAndVariablesAreUsed();
@@ -259,11 +260,8 @@ public sealed class Repositories(ExpressionParser parser)
 			loadedPackagesSnapshot = LoadedPackages.ToArray();
 		}
 		foreach (var loadedPackage in loadedPackagesSnapshot)
-		foreach (var type in loadedPackage.Types.Values.ToArray())
+		foreach (var type in loadedPackage.GetTypesSnapshot())
 			type.InvalidateAvailableMethodsCache();
-		foreach (var loadedPackage in loadedPackagesSnapshot)
-		foreach (var type in loadedPackage.Types.Values.ToArray())
-			type.ReimplementGenericTypeMethods();
 	}
 
 	private static readonly List<Package> LoadedPackages = [];

@@ -146,14 +146,13 @@ public sealed class TypeValidatorTests
 	public void SingleElementListArgumentNeedsDoubleBrackets()
 	{
 		using var typeWithListParameterMethod = new Type(TestPackage.Instance,
-			new TypeLines(nameof(SingleElementListArgumentNeedsDoubleBrackets), "has logger",
-				"CheckInputLengthAndGetResult(texts) Number", "\ttexts.Length")).
+				new TypeLines(nameof(SingleElementListArgumentNeedsDoubleBrackets), "has logger",
+					"CheckInputLengthAndGetResult(texts) Number", "\ttexts.Length")).
 			ParseMembersAndMethods(parser);
-		Assert.DoesNotThrow(() => validator.Visit(new Method(typeWithListParameterMethod, 1, parser,
-			[
-				"InvokeTestMethod Number", "\tconstant result = CheckInputLengthAndGetResult((\"a\"))",
-				"\tresult"
-			]), true));
+		Assert.DoesNotThrow(() => validator.Visit(new Method(typeWithListParameterMethod, 1, parser, [
+			"InvokeTestMethod Number", "\tconstant result = CheckInputLengthAndGetResult((\"a\"))",
+			"\tresult"
+		]), true));
 	}
 
 	[Test]

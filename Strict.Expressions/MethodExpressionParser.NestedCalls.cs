@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-using System.Text;
 using Strict.Language;
 using Type = Strict.Language.Type;
 

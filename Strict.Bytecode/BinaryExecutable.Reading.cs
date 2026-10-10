@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;

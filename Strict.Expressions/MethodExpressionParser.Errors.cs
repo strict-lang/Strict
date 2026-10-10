@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-using System.Text;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -71,6 +69,6 @@ public partial class MethodExpressionParser
 
 	public sealed class InvalidArgumentItIsNotMethodOrListCall(Body body,
 		Expression variable,
-		IReadOnlyList<Expression> arguments)
+		IEnumerable<Expression> arguments)
 		: ParsingFailed(body, string.Join(", ", arguments), variable.ReturnType);
 }

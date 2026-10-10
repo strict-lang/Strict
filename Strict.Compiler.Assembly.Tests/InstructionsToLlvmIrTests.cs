@@ -241,22 +241,20 @@ public sealed class InstructionsToLlvmIrTests
 	public void BinaryExecutableUsesConsolePrintReturnsTrueForPrintInstructions() =>
 		Assert.That(
 			BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance,
-				new List<Instruction>
-				{
-					new PrintInstruction("Hello"),
-					new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
-					new ReturnInstruction(Register.R0)
-				}).UsesConsolePrint, Is.True);
+			[
+				new PrintInstruction("Hello"),
+				new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
+				new ReturnInstruction(Register.R0)
+			]).UsesConsolePrint, Is.True);
 
 	[Test]
 	public void BinaryExecutableUsesConsolePrintReturnsFalseWithoutPrint() =>
 		Assert.That(
 			BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance,
-				new List<Instruction>
-				{
-					new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
-					new ReturnInstruction(Register.R0)
-				}).UsesConsolePrint, Is.False);
+			[
+				new LoadConstantInstruction(Register.R0, new ValueInstance(NumberType, 0.0)),
+				new ReturnInstruction(Register.R0)
+			]).UsesConsolePrint, Is.False);
 
 	[Test]
 	public void PrintInstructionDeclaressprintfAndUsesGep()

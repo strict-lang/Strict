@@ -71,9 +71,10 @@ public sealed class LoopBeginInstruction : RegisterInstruction
 	/// ponytail: runtime loop state lives on the shared instruction, a re-entrant call of the same
 	/// method saves and restores it. Upgrade path: keep the loop state per call frame in the VM.
 	/// </summary>
-	public State SaveState() => new(IsInitialized, LoopCount, InstructionIndex, StartIndexValue,
-		EndIndexValue, IsDecreasing, CurrentIndexValue, SavedIndexValue, SavedValue, SavedOuterValue,
-		SavedOuterIndexValue, SavedCustomValues);
+	public State SaveState() =>
+		new(IsInitialized, LoopCount, InstructionIndex, StartIndexValue, EndIndexValue, IsDecreasing,
+			CurrentIndexValue, SavedIndexValue, SavedValue, SavedOuterValue, SavedOuterIndexValue,
+			SavedCustomValues);
 
 	public void RestoreState(State state)
 	{

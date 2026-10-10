@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Strict.Expressions;
 using Strict.Language;
@@ -79,13 +78,6 @@ public partial class Interpreter
 			: value.ToExpressionCodeString();
 	}
 
-	private long GetFileHandle(ValueInstance instance, Method method)
-	{
-		return FileValue.TryGetHandle(instance, fileType, out var handle)
-			? handle
-			: throw new InterpreterExecutionFailed(method, "File instance has no native handle");
-	}
-
 	private static void WriteFile(long handle, IReadOnlyList<ValueInstance> args, Method method)
 	{
 		if (args.Count == 0)
@@ -109,7 +101,7 @@ public partial class Interpreter
 		return new ValueInstance(textsType, values);
 	}
 
-	private ValueInstance CreateBytesValue(Method method, byte[] bytes)
+	private static ValueInstance CreateBytesValue(Method method, byte[] bytes)
 	{
 		var byteType = method.GetType(Type.Byte);
 		var bytesType = method.GetListImplementationType(byteType);

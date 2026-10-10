@@ -26,8 +26,7 @@ public sealed class LanguageTypeVmTests
 			"has logger", "Run", "\tconstant type = Type(\"HelloLogger\", (\"has logger\", \"Run\"))",
 			"\ttype.IsMemberLine(\"has logger\")"
 		};
-		var package = language;
-		using var repro = new Type(package, new TypeLines("TypeIsMemberLineVm", lines)).
+		using var repro = new Type(language, new TypeLines("TypeIsMemberLineVm", lines)).
 			ParseMembersAndMethods(new MethodExpressionParser());
 		var run = repro.Methods.Single(method => method.Name == Method.Run);
 		run.GetBodyAndParseIfNeeded();

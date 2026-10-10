@@ -41,10 +41,11 @@ public sealed class BinaryGeneratorTests : TestBytecode
 	[Test]
 	public void StatementsReuseRegisters()
 	{
-		var line = "\tsum = sum + number * 2 + number * 3 + number * 4 + number * 5 + number * 6";
+		const string Line =
+			"\tsum = sum + number * 2 + number * 3 + number * 4 + number * 5 + number * 6";
 		var methodCall = GenerateMethodCallFromSource("ManyStatements", "ManyStatements(1).Sum",
-			["has number", "Sum Number", "\tManyStatements(1).Sum is 200", "\tmutable sum = 0", line,
-				line, line, line, line, line, line, line, line, "\tsum * 2"]);
+			"has number", "Sum Number", "\tManyStatements(1).Sum is 200", "\tmutable sum = 0", Line,
+			Line, Line, Line, Line, Line, Line, Line, Line, "\tsum * 2");
 		Assert.That(new BinaryGenerator(methodCall).Generate().ToInstructions().
 			OfType<ReturnInstruction>().Count(), Is.EqualTo(1));
 	}

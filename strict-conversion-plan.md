@@ -1172,7 +1172,7 @@ Includes the instruction set, bytecode generator, and serializer.
 | `UnreachableCodeEliminator.cs` | Remove code after unconditional jumps | ✅ `UnreachableCode.strict` |
 | `AllInstructionOptimizers.cs` | Compose all optimizers in order | ✅ `AllOptimizers.strict` (7-pass pipeline) |
 
-**Also in C# (beyond plan's original 9):** CompactType, MethodInlining, ConstructorToField, LoopInvariant, MutableFieldMutation — deferred; C# chain still runs those for production.
+**Also in C# (beyond plan's original 9):** CompactType, MethodInlining, ConstructorToField, LoopInvariant — deferred; C# chain still runs those for production.
 
 **Phase 7 status (parallel Strict package):**
 - Package `Strict/Optimizers` loads with line-level instruction list optimizers over `OptimInstruction` / `OpList`.

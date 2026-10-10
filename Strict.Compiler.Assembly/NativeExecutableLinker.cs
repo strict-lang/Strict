@@ -13,7 +13,7 @@ public sealed class NativeExecutableLinker : Linker
 	/// Throws <see cref="UnsupportedPlatform"/> for platforms whose code generation is not yet
 	/// implemented (e.g., LinuxArm requires a separate AArch64 code-generator).
 	/// </summary>
-	public override async Task<string> CreateExecutable(string asmFilePath, Platform platform,
+	public override Task<string> CreateExecutable(string asmFilePath, Platform platform,
 		bool hasPrintCalls = false)
 	{
 		var nasmPath = ToolRunner.FindTool("nasm") ??
@@ -33,7 +33,7 @@ public sealed class NativeExecutableLinker : Linker
 		var exeFilePath = Path.ChangeExtension(asmFilePath, null) + exeExtension;
 		var linkerArgs = BuildLinkerArgs(objPath, exeFilePath, platform, hasPrintCalls);
 		ToolRunner.RunProcess(linkerPath, linkerArgs);
-		return ToolRunner.ResolveOutputFilePath(exeFilePath, linker, platform);
+		return Task.FromResult(ToolRunner.ResolveOutputFilePath(exeFilePath, linker, platform));
 	} //ncrunch: no coverage end
 
 	public static bool IsNasmAvailable => ToolRunner.FindTool("nasm") != null;

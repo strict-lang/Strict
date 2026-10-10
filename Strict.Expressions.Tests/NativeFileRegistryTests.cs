@@ -8,9 +8,29 @@ public sealed class NativeFileRegistryTests
 	public void ReadingMissingFileFailsWithoutCreatingIt()
 	{
 		var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".txt");
-		var file = NativeFileRegistry.Open(TestPackage.Instance.GetType(Type.File), path);
-		Assert.That(() => NativeFileRegistry.ReadLines((long)file.Number),
+		Assert.That(() => NativeFileRegistry.ReadLines(Open(path)),
 			Throws.InstanceOf<FileNotFoundException>());
 		Assert.That(File.Exists(path), Is.False);
+	}
+
+	private static long Open(string path) =>
+		(long)NativeFileRegistry.Open(TestPackage.Instance.GetType(Type.File), path).Number;
+
+	[Test]
+	public void ReadingDoesNotBlockOtherReaders()
+	{
+		var path = Path.GetTempFileName();
+		File.WriteAllText(path, "has number");
+		var handle = Open(path);
+		try
+		{
+			Assert.That(NativeFileRegistry.ReadLines(handle), Is.EqualTo(new[] { "has number" }));
+			Assert.That(() => File.ReadAllText(path), Throws.Nothing);
+		}
+		finally
+		{
+			NativeFileRegistry.Close(handle);
+			File.Delete(path);
+		}
 	}
 }

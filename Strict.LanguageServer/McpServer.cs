@@ -188,9 +188,9 @@ public static class McpServer
 				return null;
 			if (header.Length == 0)
 				break;
-			const string prefix = "Content-Length:";
-			if (header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
-				int.TryParse(header[prefix.Length..].Trim(), out var parsed))
+			const string Prefix = "Content-Length:";
+			if (header.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) &&
+				int.TryParse(header[Prefix.Length..].Trim(), out var parsed))
 				length = parsed;
 		}
 		if (length < 0)

@@ -12,7 +12,7 @@ public sealed class LlvmLinker : Linker
 	/// Compiles <paramref name="asmFilePath"/> (.ll file) directly to a native executable.
 	/// Clang runs LLVM optimization passes and handles platform-specific linking automatically.
 	/// </summary>
-	public override async Task<string> CreateExecutable(string asmFilePath, Platform platform,
+	public override Task<string> CreateExecutable(string asmFilePath, Platform platform,
 		bool hasPrintCalls = false)
 	{ //ncrunch: no coverage start
 		var clangPath = ToolRunner.FindTool("clang") ??
@@ -24,7 +24,7 @@ public sealed class LlvmLinker : Linker
 		var arguments = BuildClangArgs(asmFilePath, exeFilePath, platform, hasPrintCalls);
 		ToolRunner.RunProcess(clangPath, arguments);
 		ToolRunner.EnsureOutputFileExists(exeFilePath, "clang", platform);
-		return exeFilePath;
+		return Task.FromResult(exeFilePath);
 	} //ncrunch: no coverage end
 
 	public static bool IsClangAvailable => ToolRunner.FindTool("clang") != null;

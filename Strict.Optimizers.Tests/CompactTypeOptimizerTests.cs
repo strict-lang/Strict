@@ -74,7 +74,7 @@ public sealed class CompactTypeOptimizerTests : TestOptimizers
 	}
 
 	[Test]
-	public async Task SkipsWhenNoCompactableTypePairsExist()
+	public void SkipsWhenNoCompactableTypePairsExist()
 	{
 		var instructions = new List<Instruction>
 		{

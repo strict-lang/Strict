@@ -13,9 +13,9 @@ public sealed class ListTests : TestExpressions
 	[Test]
 	public void ListElementCanBeBracketedConditional()
 	{
-		var list = (List)ParseExpression("(1, (true then 2 else 3))");
-		Assert.That(list.Values[1], Is.InstanceOf<If>());
-		Assert.That(list.ToString(), Is.EqualTo("(1, (true then 2 else 3))"));
+		var listWithIf = (List)ParseExpression("(1, (true then 2 else 3))");
+		Assert.That(listWithIf.Values[1], Is.InstanceOf<If>());
+		Assert.That(listWithIf.ToString(), Is.EqualTo("(1, (true then 2 else 3))"));
 	}
 
 	[Test]

@@ -7,7 +7,7 @@ namespace Strict.Compiler.Cuda;
 public class Kernel : IDisposable
 {
 	public CudaContext Context { get; } = new(0);
-	public CudaBlas Handle => handle ??= new(); //ncrunch: no coverage
+	public CudaBlas Handle => handle ??= new CudaBlas(); //ncrunch: no coverage
 	private CudaBlas? handle;
 
 	public void Dispose()

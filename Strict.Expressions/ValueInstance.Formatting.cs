@@ -4,7 +4,7 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
-public readonly partial struct ValueInstance : IEquatable<ValueInstance>
+public readonly partial struct ValueInstance
 {
 	private static string BuildInvalidTypeValueMessage(Type returnType, object? value)
 	{

@@ -1,6 +1,6 @@
 namespace Strict.Optimizers.Tests;
 
-internal class Program
+internal static class Program
 {
 	//ncrunch: no coverage start
 	public static void Main()

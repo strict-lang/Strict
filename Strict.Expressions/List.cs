@@ -58,7 +58,7 @@ public sealed class List : Value
 		throw new ListElementsMustHaveMatchingType(bodyForErrorMessage, values);
 	}
 
-	public sealed class ListElementsMustHaveMatchingType(Body body, IReadOnlyList<Expression> values)
+	public sealed class ListElementsMustHaveMatchingType(Body body, IEnumerable<Expression> values)
 		: ParsingFailed(body, "List has one or many mismatching types " + string.Join(", ", values));
 
 	public List<Expression> Values { get; }

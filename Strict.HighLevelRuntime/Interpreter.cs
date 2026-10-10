@@ -409,7 +409,7 @@ public partial class Interpreter
 		instance + " is wrong, expected: " + expectedInstanceType);
 
 	public sealed class
-		TooManyArguments(Method method, string argument, IReadOnlyList<ValueInstance> args)
+		TooManyArguments(Method method, string argument, IEnumerable<ValueInstance> args)
 		: InterpreterExecutionFailed(method,
 			argument + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
 			" requires these parameters: " + string.Join(", ", method.Parameters));
@@ -418,7 +418,7 @@ public partial class Interpreter
 		: InterpreterExecutionFailed(method, message);
 
 	public sealed class
-		MissingArgument(Method method, string paramName, IReadOnlyList<ValueInstance> args)
+		MissingArgument(Method method, string paramName, IEnumerable<ValueInstance> args)
 		: InterpreterExecutionFailed(method,
 			paramName + ", given arguments: " + string.Join(", ", args) + ", method " + method.Name +
 			" requires these parameters: " + string.Join(", ", method.Parameters));

@@ -39,7 +39,9 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	public Memory Memory { get; } = new();
 	private string currentMethodContext = "";
 	private ValueInstance? currentInstance;
-	private const int MaxCallDepth = 1024;
+	// ponytail: each Strict call nests ~3 CLR frames, 256 calls stay below NCrunch's stack guard
+	// (throws with 480 KB left), deeper recursion needs iterative invokes instead of CLR recursion.
+	private const int MaxCallDepth = 256;
 	private readonly ValueInstance[][] registerStack = new ValueInstance[MaxCallDepth][];
 	private int registerStackDepth;
 	private readonly CallFrame[] framePool = new CallFrame[MaxCallDepth];
@@ -422,10 +424,12 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	{
 		var numbers = new float[members.Count];
 		for (var index = 0; index < members.Count; index++)
-			numbers[index] = (float)(index < instr.FieldRegisters.Length
+		{
+			var memberValue = index < instr.FieldRegisters.Length
 				? Memory.Registers[instr.FieldRegisters[index]]
-				: GetMemberInitialOrDefaultValue(members[index], hasBinaryMembers, binaryMembers, index)).
-				GetArithmeticNumber();
+				: GetMemberInitialOrDefaultValue(members[index], hasBinaryMembers, binaryMembers, index);
+			numbers[index] = (float)memberValue.GetArithmeticNumber();
+		}
 		return numbers;
 	}
 

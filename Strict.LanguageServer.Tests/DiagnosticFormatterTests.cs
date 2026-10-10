@@ -7,9 +7,9 @@ public sealed class DiagnosticFormatterTests
 	[Test]
 	public void ExtractDetailKeepsInstructionExecutionFailedReason()
 	{
-		const string message =
+		const string Message =
 			"FieldLoad on non-struct value for field 'value'\n   in Strict/Boolean.not\n   Instructions (0/3):\n   >>>    0: FieldLoad value  (:line 4)\n   at Strict/Boolean.not in C:\\repo\\Boolean.strict:line 4";
-		Assert.That(DiagnosticFormatter.ExtractDetail(message),
+		Assert.That(DiagnosticFormatter.ExtractDetail(Message),
 			Is.EqualTo("FieldLoad on non-struct value for field 'value'\nin Strict/Boolean.not"));
 	}
 
@@ -43,7 +43,7 @@ public sealed class DiagnosticFormatterTests
 		Assert.That(diagnostic.Message,
 			Does.Contain("FieldLoad on non-struct value for field 'value'"));
 		Assert.That(diagnostic.Message,
-			Does.Contain("at Strict/Boolean.not in C:\\repo\\Boolean.strict:line 4"));
+			Does.Contain(@"at Strict/Boolean.not in C:\repo\Boolean.strict:line 4"));
 	}
 
 	[Test]

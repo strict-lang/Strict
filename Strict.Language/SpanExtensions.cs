@@ -20,7 +20,7 @@ public static class SpanExtensions
 		return new SpanSplitEnumerator(input, splitter, options);
 	}
 
-	public class EmptyInputIsNotAllowed : Exception { }
+	public class EmptyInputIsNotAllowed : Exception;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static SpanSplitEnumerator SplitLines(this ReadOnlySpan<char> input) => input.Split('\n');

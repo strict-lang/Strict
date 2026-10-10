@@ -8,5 +8,6 @@
     </MetricsExclusionList>
     <RdiConfigured>True</RdiConfigured>
     <SolutionConfigured>True</SolutionConfigured>
+    <TestsToExecuteAutomatically>(DoesNotHaveCategory 'Slow' AND DoesNotHaveCategory 'Nightly' AND DoesNotHaveCategory 'Manual')</TestsToExecuteAutomatically>
   </Settings>
 </SolutionConfiguration>

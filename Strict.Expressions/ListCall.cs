@@ -43,12 +43,10 @@ public sealed class ListCall(Expression list,
 	}
 
 	private static Expression? TryParseShadowedTypeConstructor(Body body, Expression variable,
-		IReadOnlyList<Expression> arguments)
-	{
-		return variable is not MemberCall { Instance: null } memberCall
+		IReadOnlyList<Expression> arguments) =>
+		variable is not MemberCall { Instance: null } memberCall
 			? null
 			: MethodCall.TryParseFromOrEnum(body, arguments, memberCall.Member.Name);
-	}
 
 	private static Expression CreateFlattenedIndex(Body body, Expression listVariable,
 		Expression xIndex, Expression yIndex)

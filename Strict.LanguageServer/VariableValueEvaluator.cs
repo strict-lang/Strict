@@ -1,3 +1,4 @@
+using System.Globalization;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using Strict.Language;
 
@@ -18,7 +19,7 @@ public sealed class VariableValueEvaluator(Package package,
 				lines[i].Contains(variable.Key)))
 				lineValuePair[i] = variable.Value.IsText
 					? variable.Value.Text
-					: variable.Value.Number.ToString();
+					: variable.Value.Number.ToString(CultureInfo.InvariantCulture);
 		//ncrunch: no coverage end
 		languageServer.SendNotification(NotificationName,
 			new VariableStateNotificationMessage(lineValuePair));

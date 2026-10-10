@@ -82,8 +82,8 @@ public sealed class ConstantFoldingOptimizerTests : TestOptimizers
 	[Test]
 	public void FoldTextConcatenation() =>
 		Assert.That(((LoadConstantInstruction)Optimize([
-			new LoadConstantInstruction(Register.R0, new("Hello")),
-			new LoadConstantInstruction(Register.R1, new(" World")),
+			new LoadConstantInstruction(Register.R0, new ValueInstance("Hello")),
+			new LoadConstantInstruction(Register.R1, new ValueInstance(" World")),
 			new BinaryInstruction(InstructionType.Add, Register.R0, Register.R1, Register.R2),
 			new ReturnInstruction(Register.R2)
 		], 2)[0]).Constant.Text, Is.EqualTo("Hello World"));

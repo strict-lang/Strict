@@ -1,15 +1,7 @@
 // When things are in flux, force generating a new .strictbinary every time by disabling the cache
 //#define DISABLE_BINARY_CACHE
-using System.Globalization;
 using Strict.Bytecode;
-using Strict.Bytecode.Serialization;
-using Strict.Compiler;
-using Strict.Compiler.Assembly;
-using Strict.Expressions;
 using Strict.Language;
-using Strict.Optimizers;
-using Strict.TestRunner;
-using Strict.Validators;
 using Type = Strict.Language.Type;
 
 namespace Strict;

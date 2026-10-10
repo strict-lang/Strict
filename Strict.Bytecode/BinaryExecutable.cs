@@ -32,9 +32,6 @@ public sealed partial class BinaryExecutable(Package basePackage)
 	internal Type characterType = basePackage.FindType(Type.Character) ??
 		new Type(basePackage, new TypeLines(Type.Character));
 
-	internal Type rangeType = basePackage.FindType(Type.Range) ??
-		new Type(basePackage, new TypeLines(Type.Range));
-
 	internal Type listType = basePackage.FindType(Type.List) ?? new Type(basePackage,
 		new TypeLines(Type.List, Type.HasWithSpaceAtEnd + Type.GenericUppercase));
 
@@ -89,7 +86,7 @@ public sealed partial class BinaryExecutable(Package basePackage)
 	/// Types of the entry package are stored without package prefix and get their own child
 	/// package, so a local type like Language/Type does not merge with the base Strict/Type.
 	/// </summary>
-	private Package? entryPackage;
+	private readonly Package? entryPackage;
 
 	internal Package TypeResolver => entryPackage ?? basePackage;
 

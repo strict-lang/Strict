@@ -34,38 +34,40 @@ public static class CSharpStatementTypes
 
 	private static void Add(HashSet<string> lines, Method method, Expression expression)
 	{
-		switch (expression)
-		{
-		case Body body:
-			foreach (var child in body.Expressions)
-				Add(lines, method, child);
-			return;
-		case If ifExpression when ifExpression.Then is not Body &&
-			ifExpression.Then.LineNumber == ifExpression.LineNumber:
-			AddLine(lines, method, ifExpression.LineNumber, ifExpression.ReturnType);
-			return;
-		case If ifExpression:
-			Add(lines, method, ifExpression.Then);
-			if (ifExpression.OptionalElse != null)
-				Add(lines, method, ifExpression.OptionalElse);
-			return;
-		case For forExpression:
-			AddLine(lines, method, forExpression.LineNumber, forExpression.Iterator.ReturnType);
-			Add(lines, method, forExpression.Body);
-			return;
-		case Declaration declaration:
-			AddLine(lines, method, declaration.LineNumber, declaration.Value.ReturnType);
-			return;
-		case MutableReassignment reassignment:
-			AddLine(lines, method, reassignment.LineNumber, reassignment.Value.ReturnType);
-			return;
-		case Return returnExpression:
-			AddLine(lines, method, returnExpression.LineNumber, returnExpression.Value.ReturnType);
-			return;
-		default:
-			AddLine(lines, method, expression.LineNumber, expression.ReturnType);
-			return;
-		}
+		while (true)
+			switch (expression)
+			{
+			case Body body:
+				foreach (var child in body.Expressions)
+					Add(lines, method, child);
+				return;
+			case If ifExpression when ifExpression.Then is not Body &&
+				ifExpression.Then.LineNumber == ifExpression.LineNumber:
+				AddLine(lines, method, ifExpression.LineNumber, ifExpression.ReturnType);
+				return;
+			case If ifExpression:
+				Add(lines, method, ifExpression.Then);
+				if (ifExpression.OptionalElse == null)
+					return;
+				expression = ifExpression.OptionalElse;
+				continue;
+			case For forExpression:
+				AddLine(lines, method, forExpression.LineNumber, forExpression.Iterator.ReturnType);
+				expression = forExpression.Body;
+				continue;
+			case Declaration declaration:
+				AddLine(lines, method, declaration.LineNumber, declaration.Value.ReturnType);
+				return;
+			case MutableReassignment reassignment:
+				AddLine(lines, method, reassignment.LineNumber, reassignment.Value.ReturnType);
+				return;
+			case Return returnExpression:
+				AddLine(lines, method, returnExpression.LineNumber, returnExpression.Value.ReturnType);
+				return;
+			default:
+				AddLine(lines, method, expression.LineNumber, expression.ReturnType);
+				return;
+			}
 	}
 
 	private static void AddLine(HashSet<string> lines, Method method, int lineNumber, Type type)
@@ -74,16 +76,18 @@ public static class CSharpStatementTypes
 			lines.Add(method.Type.Name + ":" + (lineNumber + 1) + " " + StrictName(type));
 	}
 
-	private static string StrictName(Type type) =>
-		type.IsError
+	private static string StrictName(Type type)
+	{
+		while (type is GenericTypeImplementation { Generic.IsMutable: true, IsError: false } mutable)
+			type = mutable.ImplementationTypes[0];
+		return type.IsError
 			? Type.Error
 			: type is GenericTypeImplementation generic
-			? generic.Generic.IsMutable
-				? StrictName(generic.ImplementationTypes[0])
-				: generic.Generic.IsList
+				? generic.Generic.IsList
 					? StrictName(generic.ImplementationTypes[0]) + "s"
 					: generic.Generic.Name
 				: type is GenericType genericType
 					? genericType.Generic.Name
 					: type.Name;
+	}
 }

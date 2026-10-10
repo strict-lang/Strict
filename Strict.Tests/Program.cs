@@ -3,7 +3,7 @@ using Strict.Bytecode;
 namespace Strict.Tests;
 
 //ncrunch: no coverage start
-internal class Program
+internal static class Program
 {
 	public static async Task Main() =>
 		//await RunSimpleCalculator();

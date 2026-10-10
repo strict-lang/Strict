@@ -217,8 +217,8 @@ public sealed partial class VirtualMachine
 
 		public IdentifierAccessPath GetParentPath() =>
 			MemberNames.Length == 1
-				? new IdentifierAccessPath(RootSymbolId, [])
-				: new IdentifierAccessPath(RootSymbolId, MemberNames[..^1]);
+				? this with { MemberNames = [] }
+				: this with { MemberNames = MemberNames[..^1] };
 	}
 
 	private readonly record struct IndexedElementAccessPath(string ListPath,

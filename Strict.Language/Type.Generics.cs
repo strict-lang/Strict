@@ -1,12 +1,6 @@
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-#if DEBUG
-using System.Runtime.CompilerServices;
-#endif
-
 namespace Strict.Language;
 
-public partial class Type : Context, IDisposable
+public partial class Type
 {
 	private bool OneOfFirstThreeLinesContainsGeneric()
 	{

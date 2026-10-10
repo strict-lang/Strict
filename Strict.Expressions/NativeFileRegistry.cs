@@ -4,45 +4,33 @@ using Type = Strict.Language.Type;
 
 namespace Strict.Expressions;
 
+/// <summary>
+/// Strict File handles only remember their path, each operation opens the file just for itself, so
+/// other processes (parallel tests, editors) can always read the same files at the same time.
+/// </summary>
 public static class NativeFileRegistry
 {
 	private static readonly UTF8Encoding Utf8WithoutBom = new(false);
-
-	private sealed class FileState(string path) : IDisposable
-	{
-		public readonly string Path = path;
-		private FileStream? stream;
-
-		public FileStream Stream => stream ??= Open(FileMode.OpenOrCreate);
-		/// <summary>
-		/// Reading never creates a file, a missing one throws FileNotFoundException.
-		/// </summary>
-		public FileStream ExistingStream => stream ??= Open(FileMode.Open);
-
-		private FileStream Open(FileMode mode) =>
-			new(Path, mode, FileAccess.ReadWrite, FileShare.ReadWrite);
-
-		public void Dispose() => stream?.Dispose();
-	}
-
 	private static long nextHandle = 1;
-	private static readonly ConcurrentDictionary<long, FileState> OpenFiles = new();
+	private static readonly ConcurrentDictionary<long, string> OpenFiles = new();
 
 	public static ValueInstance Open(Type fileType, string path)
 	{
 		var handle = Interlocked.Increment(ref nextHandle);
-		OpenFiles[handle] = new FileState(path);
+		OpenFiles[handle] = path;
 		return new ValueInstance(fileType, handle);
 	}
 
+	/// <summary>
+	/// Reading never creates a file, a missing one throws FileNotFoundException.
+	/// </summary>
+	private static FileStream OpenForReading(long handle) =>
+		new(GetPath(handle), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
 	public static string ReadText(long handle)
 	{
-		var stream = Get(handle).ExistingStream;
-		stream.Position = 0;
-		using var reader = new StreamReader(stream, Utf8WithoutBom, true, 1024, true);
-		var text = reader.ReadToEnd();
-		stream.Position = 0;
-		return text;
+		using var reader = new StreamReader(OpenForReading(handle), Utf8WithoutBom, true);
+		return reader.ReadToEnd();
 	}
 
 	public static string[] ReadLines(long handle) =>
@@ -50,63 +38,39 @@ public static class NativeFileRegistry
 
 	public static byte[] ReadBytes(long handle)
 	{
-		var stream = Get(handle).ExistingStream;
-		stream.Position = 0;
-		var bytes = new byte[(int)stream.Length];
+		using var stream = OpenForReading(handle);
+		var bytes = new byte[stream.Length];
 		stream.ReadExactly(bytes);
-		stream.Position = 0;
 		return bytes;
 	}
 
-	public static void WriteText(long handle, string text)
-	{
-		var state = Get(handle);
-		state.Stream.SetLength(0);
-		state.Stream.Position = 0;
-		using var writer = new StreamWriter(state.Stream, Utf8WithoutBom, 1024, true);
-		writer.Write(text);
-		writer.Flush();
-		state.Stream.Position = 0;
-	}
+	public static void WriteText(long handle, string text) =>
+		File.WriteAllText(GetPath(handle), text, Utf8WithoutBom);
 
 	public static void WriteLines(long handle, IEnumerable<string> lines) =>
 		WriteText(handle, string.Join('\n', lines));
 
-	public static void WriteBytes(long handle, byte[] bytes)
-	{
-		var state = Get(handle);
-		state.Stream.SetLength(0);
-		state.Stream.Position = 0;
-		state.Stream.Write(bytes);
-		state.Stream.Flush();
-		state.Stream.Position = 0;
-	}
+	public static void WriteBytes(long handle, byte[] bytes) =>
+		File.WriteAllBytes(GetPath(handle), bytes);
 
 	public static void Delete(long handle)
 	{
-		var path = Get(handle).Path;
+		var path = GetPath(handle);
 		Close(handle);
 		if (File.Exists(path))
 			File.Delete(path);
 	}
 
-	public static void Close(long handle)
-	{
-		if (!OpenFiles.TryRemove(handle, out var state))
-			return;
-		state.Dispose();
-	}
+	public static void Close(long handle) => OpenFiles.TryRemove(handle, out _);
 
-	public static bool Exists(long handle)
-	{
-		return OpenFiles.TryGetValue(handle, out var state) && File.Exists(state.Path);
-	}
+	public static bool Exists(long handle) =>
+		OpenFiles.TryGetValue(handle, out var path) && File.Exists(path);
 
-	public static long Length(long handle) => Get(handle).Stream.Length;
+	public static long Length(long handle) => new FileInfo(GetPath(handle)).Length;
 
-	private static FileState Get(long handle) =>
-		OpenFiles.TryGetValue(handle, out var state)
-			? state
+	private static string GetPath(long handle) =>
+		OpenFiles.TryGetValue(handle, out var path)
+			? path
 			: throw new FileHandleNotOpen(handle);
 
 	public sealed class FileHandleNotOpen(long handle) : Exception("File handle not open: " + handle);

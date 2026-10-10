@@ -18,7 +18,6 @@ public partial class Type : Context, IDisposable
 		[CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = "") : base(package, file.Name, callerFilePath,
 		callerLineNumber, callerMemberName)
-
 #else
 	public Type(Package package, TypeLines file) : base(package, file.Name)
 #endif
@@ -349,9 +348,7 @@ public partial class Type : Context, IDisposable
 	public const string OuterLowercase = "outer";
 
 	private Dictionary<string, GenericTypeImplementation>? cachedGenericTypes;
-
-	private readonly object genericImplementationLock = new();
-
+	private readonly Lock genericImplementationLock = new();
 	public string FilePath =>
 		Path.GetFullPath(Path.Combine(Package.FolderPath, (this is GenericTypeImplementation genericType
 			? genericType.Generic.Name

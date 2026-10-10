@@ -137,10 +137,9 @@ public sealed class MlirLinker : Linker
 		Dictionary<string, (int TextLength, int PrefixLength)> stringLengths, int replacementIndex)
 	{
 		var label = match.Groups["label"].Value;
+		var value = match.Groups["value"].Value;
 		return BuildWriteFile(replacementIndex, label, stringLengths[label].PrefixLength) + "\n" +
-			$"  call void @print_number_from_double(ptr %stdout_{replacementIndex}, double {
-				match.Groups["value"].Value
-			})";
+			$"  call void @print_number_from_double(ptr %stdout_{replacementIndex}, double {value})";
 	}
 
 	//ncrunch: no coverage start
@@ -156,9 +155,8 @@ public sealed class MlirLinker : Linker
 	/// </summary>
 	private static string BuildWriteFile(int replacementIndex, string label, int length) =>
 		$"  %stdout_{replacementIndex} = call ptr @GetStdHandle(i32 -11)\n" +
-		$"  call i32 @WriteFile(ptr %stdout_{replacementIndex}, ptr {label}, i32 {length}, ptr {
-			WrittenSymbol
-		}, ptr null)";
+		$"  call i32 @WriteFile(ptr %stdout_{replacementIndex}, ptr {label}, i32 {length}, " +
+		$"ptr {WrittenSymbol}, ptr null)";
 
 	private const string WrittenSymbol = "@print_written";
 

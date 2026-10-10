@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
@@ -29,8 +28,6 @@ public sealed partial class BinaryExecutable
 		numberType = basePackage.GetType(Type.Number);
 		if (basePackage.FindDirectType(Type.Character) != null)
 			characterType = basePackage.GetType(Type.Character);
-		if (basePackage.FindDirectType(Type.Range) != null)
-			rangeType = basePackage.GetType(Type.Range);
 		if (basePackage.FindDirectType(Type.List) != null)
 			listType = basePackage.GetType(Type.List);
 	}
@@ -109,24 +106,24 @@ public sealed partial class BinaryExecutable
 		var parser = new MethodExpressionParser();
 		var lineNumber = 1;
 		foreach (var overloads in binaryType.MethodGroups.Values)
-			foreach (var method in overloads)
-			{
-				if (!CanResolveTraitMethod(method))
-					continue;
-				type.Methods.Add(new Method(type, lineNumber++, parser, [BuildTraitMethodHeader(method)]));
-			}
+		foreach (var method in overloads)
+		{
+			if (!CanResolveTraitMethod(method))
+				continue;
+			type.Methods.Add(new Method(type, lineNumber++, parser, [BuildTraitMethodHeader(method)]));
+		}
 	}
 
 	private static bool IsSignatureOnly(BinaryType binaryType)
 	{
 		var sawMethod = false;
 		foreach (var overloads in binaryType.MethodGroups.Values)
-			foreach (var method in overloads)
-			{
-				sawMethod = true;
-				if (method.instructions.Count > 0)
-					return false;
-			}
+		foreach (var method in overloads)
+		{
+			sawMethod = true;
+			if (method.instructions.Count > 0)
+				return false;
+		}
 		return sawMethod;
 	}
 

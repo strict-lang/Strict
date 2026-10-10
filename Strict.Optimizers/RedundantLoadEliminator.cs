@@ -94,32 +94,32 @@ public sealed class RedundantLoadEliminator : InstructionOptimizer
 			or ConstructValueTypeInstruction or StoreFromRegisterInstruction or ReturnInstruction
 			or WriteToListInstruction;
 
-	private static Instruction RemapReads(Instruction instruction, Register from, Register to)
-	{
-		Register Map(Register register) =>
-			register == from
-				? to
-				: register;
-		return instruction switch
+	private static Instruction RemapReads(Instruction instruction, Register from, Register to) =>
+		instruction switch
 		{
 			BinaryInstruction binary => new BinaryInstruction(binary.InstructionType, binary.Registers.
 				Select((register, index) => index < 2
-					? Map(register)
+					? Map(register, from, to)
 					: register).ToArray()),
 			Invoke invoke => new Invoke(invoke.Register, new InvokeMethodInfo(
 				invoke.MethodInfo.TypeFullName, invoke.MethodInfo.MethodName,
 				invoke.MethodInfo.ParameterNames, invoke.MethodInfo.ReturnTypeName,
-				invoke.MethodInfo.ArgumentRegisters.Select(Map).ToArray(),
+				invoke.MethodInfo.ArgumentRegisters.Select(register => Map(register, from, to)).ToArray(),
 				invoke.MethodInfo.InstanceRegister is { } instance
-					? Map(instance)
+					? Map(instance, from, to)
 					: null)),
 			FieldLoadInstruction fieldLoad => new FieldLoadInstruction(fieldLoad.Register, to,
 				fieldLoad.FieldName),
 			ConstructValueTypeInstruction construct => new ConstructValueTypeInstruction(
-				construct.Register, construct.ReturnType, construct.FieldRegisters.Select(Map).ToArray()),
+				construct.Register, construct.ReturnType,
+				construct.FieldRegisters.Select(register => Map(register, from, to)).ToArray()),
 			StoreFromRegisterInstruction store => new StoreFromRegisterInstruction(to, store.Identifier),
 			WriteToListInstruction writeToList => new WriteToListInstruction(to, writeToList.Identifier),
 			_ => new ReturnInstruction(to)
 		};
-	}
+
+	private static Register Map(Register register, Register from, Register to) =>
+		register == from
+			? to
+			: register;
 }

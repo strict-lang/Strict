@@ -1,7 +1,4 @@
-using System.Globalization;
-using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
-using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
 using Type = Strict.Language.Type;
@@ -64,13 +61,10 @@ public sealed partial class VirtualMachine
 		}
 	}
 
-	private long GetFileHandle(ValueInstance instance)
-	{
-		return FileValue.TryGetHandle(instance, executable.TypeResolver.GetType(Type.File),
-			out var handle)
+	private long GetFileHandle(ValueInstance instance) =>
+		FileValue.TryGetHandle(instance, executable.TypeResolver.GetType(Type.File), out var handle)
 			? handle
 			: throw Fail("File instance has no native handle");
-	}
 
 	private void WriteFile(long handle, ValueInstance value, bool writesTextLines)
 	{
@@ -91,7 +85,7 @@ public sealed partial class VirtualMachine
 		return FileValue.CreateBytes(bytesType, byteType, bytes);
 	}
 
-	private ValueInstance CreateTextListValue(string[] lines)
+	private ValueInstance CreateTextListValue(IEnumerable<string> lines)
 	{
 		var textType = executable.TypeResolver.GetType(Type.Text);
 		var textsType = executable.listType.GetGenericImplementation(textType);

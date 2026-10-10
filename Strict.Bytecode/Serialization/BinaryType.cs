@@ -6,12 +6,12 @@ namespace Strict.Bytecode.Serialization;
 /// <summary>
 /// Read or write parsed type data (members, method and the used instructions)
 /// </summary>
-public sealed class BinaryType
+public sealed class BinaryType(BinaryExecutable binary, string typeFullName,
+	List<BinaryMember> members, Dictionary<string, List<BinaryMethod>> methodGroups)
 {
-	public BinaryType(BinaryReader reader, BinaryExecutable binary, string typeFullName)
+	public BinaryType(BinaryReader reader, BinaryExecutable binary, string typeFullName) : this(
+		binary, typeFullName, [], [])
 	{
-		this.binary = binary;
-		this.typeFullName = typeFullName;
 		ValidateMagicAndVersion(reader);
 		table = new NameTable(reader, JustTypeName);
 		ReadMembers(reader, Members);
@@ -27,18 +27,8 @@ public sealed class BinaryType
 		}
 	}
 
-	public BinaryType(BinaryExecutable binary, string typeFullName, List<BinaryMember> members,
-		Dictionary<string, List<BinaryMethod>> methodGroups)
-	{
-		this.binary = binary;
-		this.typeFullName = typeFullName;
-		Members = members;
-		MethodGroups = methodGroups;
-	}
-
-	internal readonly BinaryExecutable? binary;
-	private readonly string typeFullName;
-	public string JustTypeName => typeFullName.Split(Context.ParentSeparator)[^1];
+	internal readonly BinaryExecutable? binary = binary;
+	public string JustTypeName { get; } = typeFullName.Split(Context.ParentSeparator)[^1];
 
 	private static void ValidateMagicAndVersion(BinaryReader reader)
 	{
@@ -78,8 +68,8 @@ public sealed class BinaryType
 			members.Add(new BinaryMember(reader, table!, binary!));
 	}
 
-	public List<BinaryMember> Members = [];
-	public Dictionary<string, List<BinaryMethod>> MethodGroups = [];
+	public List<BinaryMember> Members = members;
+	public Dictionary<string, List<BinaryMethod>> MethodGroups = methodGroups;
 	private NameTable? table;
 	public NameTable Table => table ?? CreateNameTable();
 	public bool UsesConsolePrint =>

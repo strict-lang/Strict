@@ -1,12 +1,8 @@
 using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-#if DEBUG
-using System.Runtime.CompilerServices;
-#endif
 
 namespace Strict.Language;
 
-public partial class Type : Context, IDisposable
+public partial class Type
 {
 	/// <summary>
 	/// Any non-public member is automatically iterable if it has Iterator, for example, Text.strict

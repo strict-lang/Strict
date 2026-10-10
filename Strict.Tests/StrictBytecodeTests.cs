@@ -1,7 +1,6 @@
 ﻿using System.IO.Compression;
 using Strict.Bytecode;
 using Strict.Language;
-using Strict.Expressions;
 using Type = Strict.Language.Type;
 
 namespace Strict.Tests;
@@ -32,7 +31,7 @@ public sealed class StrictBytecodeTests
 		await new Runner(Path.Combine(Root, "Bytecode", "ZipWriter" + Type.Extension),
 			"ZipWriter(ZipEntry(\"hello.txt\", (104, 105)), " +
 			"ZipEntry(\"data.bin\", (1, 2, 3))).Bytes").Run();
-		using var zip = new ZipArchive(new MemoryStream(LastNumbersLine()));
+		await using var zip = new ZipArchive(new MemoryStream(LastNumbersLine()));
 		Assert.That(
 			zip.Entries.Select(entry => entry.FullName + "=" + string.Join(",", Read(entry))),
 			Is.EqualTo(new[] { "hello.txt=104,105", "data.bin=1,2,3" }));

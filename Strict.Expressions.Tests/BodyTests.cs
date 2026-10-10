@@ -145,11 +145,11 @@ public sealed class BodyTests : TestExpressions
 		// @formatter:on
 		var body = (Body)program.Methods[0].GetBodyAndParseIfNeeded();
 		Assert.That(body.Tabs, Is.EqualTo(1));
-		Assert.That(body.children[0].Tabs, Is.EqualTo(2));
-		Assert.That(body.children[0].children[0].Tabs, Is.EqualTo(3));
+		Assert.That(body.Children[0].Tabs, Is.EqualTo(2));
+		Assert.That(body.Children[0].Children[0].Tabs, Is.EqualTo(3));
 		Assert.That(body.LineRange, Is.EqualTo(1..7));
-		Assert.That(body.children[0].LineRange, Is.EqualTo(3..6));
-		Assert.That(body.children[0].children[0].LineRange, Is.EqualTo(4..6));
+		Assert.That(body.Children[0].LineRange, Is.EqualTo(3..6));
+		Assert.That(body.Children[0].Children[0].LineRange, Is.EqualTo(4..6));
 	}
 
 	[Test]

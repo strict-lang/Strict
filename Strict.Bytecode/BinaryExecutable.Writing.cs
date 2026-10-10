@@ -1,10 +1,8 @@
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
-using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Serialization;
 using Strict.Expressions;
 using Strict.Language;
-using Type = Strict.Language.Type;
 
 [assembly: InternalsVisibleTo("Strict")]
 [assembly: InternalsVisibleTo("Strict.Optimizers")]
