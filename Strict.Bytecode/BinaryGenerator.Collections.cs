@@ -43,10 +43,10 @@ public sealed partial class BinaryGenerator
 		{
 		case "Add" when methodCall.Instance?.ReturnType.IsList == true ||
 			methodCall.Instance?.ReturnType.IsDictionary == true:
-			GenerateInstructionsForAddMethod(methodCall);
+			GenerateListChange(methodCall, false);
 			return true;
 		case "Remove" when methodCall.Instance?.ReturnType.IsList == true:
-			GenerateInstructionsForRemoveMethod(methodCall);
+			GenerateListChange(methodCall, true);
 			return true;
 		case "Increment":
 		case "Decrement":
@@ -78,38 +78,93 @@ public sealed partial class BinaryGenerator
 				methodCall.Instance.ToString()));
 	}
 
-	private void GenerateInstructionsForRemoveMethod(MethodCall methodCall)
+	private void GenerateListChange(MethodCall methodCall, bool isRemove)
 	{
-		if (methodCall.Instance == null)
+		if (TryGenerateAddForTable(methodCall))
 			return;
-		if (!OwnsList(methodCall.Instance))
-			GenerateCopyingListChange(InstructionType.Subtract, methodCall.Instance.ToString(),
-				methodCall.Arguments[0]);
-		else
-		{
-			GenerateInstructionFromExpression(methodCall.Arguments[0]);
-			instructions.Add(new RemoveInstruction(registry.PreviousRegister,
-				methodCall.Instance.ToString()));
-		}
-	}
-
-	private void GenerateInstructionsForAddMethod(MethodCall methodCall)
-	{
-		if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
-			return;
+		var listName = methodCall.Instance!.ToString();
 		if (OwnsList(methodCall.Instance))
-			GenerateAppendToList(methodCall.Instance.ToString(), methodCall.Arguments[0]);
+			GenerateInPlaceListChange(listName, methodCall.Arguments[0], isRemove);
 		else
-			GenerateCopyingListChange(InstructionType.Add, methodCall.Instance.ToString(),
-				methodCall.Arguments[0]);
+			GenerateCopyingListChange(isRemove
+				? InstructionType.Subtract
+				: InstructionType.Add, listName, methodCall.Arguments[0]);
 	}
 
 	/// <summary>
-	/// In place changes are only allowed on lists the variable created itself, a variable initialized
-	/// from another variable, parameter or member shares that list and gets a changed copy instead.
+	/// Lists are values: a variable only changes its list in place while it owns it, it was declared
+	/// with a new list that was not shared with any variable, member, argument or list since then.
 	/// </summary>
-	private static bool OwnsList(Expression list) =>
-		list is not VariableCall variableCall || !IsNamedValue(variableCall.Variable.InitialValue);
+	private readonly HashSet<string> ownedLists = new(StringComparer.Ordinal);
+
+	private bool OwnsList(Expression list) =>
+		list is not VariableCall variableCall || ownedLists.Contains(variableCall.Variable.Name);
+
+	private static bool IsNewList(Expression value) => value is Value or Binary;
+
+	/// <summary>
+	/// Called before each statement, sharing a list variable or assigning another list to it ends
+	/// its ownership. Loops are checked as a whole, their later lines run before earlier ones too.
+	/// </summary>
+	private void Disown(Expression expression, bool isValueUsed)
+	{
+		switch (expression)
+		{
+		case VariableCall variableCall when isValueUsed:
+			ownedLists.Remove(variableCall.Variable.Name);
+			break;
+		case Body body:
+			for (var index = 0; index < body.Expressions.Count; index++)
+				Disown(body.Expressions[index], isValueUsed && index == body.Expressions.Count - 1);
+			break;
+		case Declaration declaration:
+			ownedLists.Remove(declaration.Name);
+			Disown(declaration.Value, true);
+			break;
+		case MutableReassignment reassignment:
+			if (!IsNewList(reassignment.Value))
+				ownedLists.Remove(reassignment.Name);
+			Disown(reassignment.Value, true);
+			break;
+		case Return returnExpression:
+			Disown(returnExpression.Value, true);
+			break;
+		case For forExpression:
+			Disown(forExpression.Iterator, true);
+			Disown(forExpression.Body, isValueUsed);
+			break;
+		case If ifExpression:
+			Disown(ifExpression.Condition, false);
+			Disown(ifExpression.Then, isValueUsed);
+			if (ifExpression.OptionalElse != null)
+				Disown(ifExpression.OptionalElse, isValueUsed);
+			break;
+		case SelectorIf selectorIf:
+			Disown(selectorIf.Selector, false);
+			foreach (var selectorCase in selectorIf.Cases)
+				Disown(selectorCase.Then, isValueUsed);
+			if (selectorIf.OptionalElse != null)
+				Disown(selectorIf.OptionalElse, isValueUsed);
+			break;
+		case ListCall listCall:
+			Disown(listCall.List, false);
+			Disown(listCall.Index, false);
+			break;
+		case MemberCall { Instance: { } instance }:
+			Disown(instance, false);
+			break;
+		case MethodCall methodCall:
+			if (methodCall.Instance != null)
+				Disown(methodCall.Instance, isValueUsed && methodCall.Method.Name is "Add" or "Remove");
+			foreach (var argument in methodCall.Arguments)
+				Disown(argument, true);
+			break;
+		case List list:
+			foreach (var element in list.Values)
+				Disown(element, true);
+			break;
+		}
+	}
 
 	private void GenerateCopyingListChange(InstructionType operation, string listName,
 		Expression element)
@@ -122,10 +177,12 @@ public sealed partial class BinaryGenerator
 		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, listName));
 	}
 
-	private void GenerateAppendToList(string listName, Expression element)
+	private void GenerateInPlaceListChange(string listName, Expression element, bool isRemove)
 	{
 		GenerateInstructionFromExpression(element);
-		instructions.Add(new WriteToListInstruction(registry.PreviousRegister, listName));
+		instructions.Add(isRemove
+			? new RemoveInstruction(registry.PreviousRegister, listName)
+			: new WriteToListInstruction(registry.PreviousRegister, listName));
 		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), listName));
 	}
 
@@ -133,7 +190,7 @@ public sealed partial class BinaryGenerator
 	/// list = list + element is what List.Add does, so it appends in place instead of copying.
 	/// A list shared with another variable is never changed in place, see <see cref="OwnsList"/>.
 	/// </summary>
-	private static bool IsAppendToSameList(MutableReassignment reassignment) =>
+	private bool IsAppendToSameList(MutableReassignment reassignment) =>
 		reassignment.Value is Binary
 		{
 			Method.Name: BinaryOperator.Plus, Instance: VariableCall or ParameterCall

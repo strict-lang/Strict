@@ -831,19 +831,46 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
-	public void GrowingCopyOfListKeepsOriginal()
-	{
-		var source = new[]
-		{
-			"has numbers", "Grow Number", "\tmutable result = numbers", "\tresult = result + 3",
-			"\tresult.Add(4)", "\tnumbers.Length"
-		};
-		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
-			nameof(GrowingCopyOfListKeepsOriginal),
-			$"{nameof(GrowingCopyOfListKeepsOriginal)}((1, 2)).Grow", source)).Generate();
-		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+	public void GrowingCopyOfListKeepsOriginal() =>
+		Assert.That(RunSource(nameof(GrowingCopyOfListKeepsOriginal), "((1, 2)).Grow", "has numbers",
+			"Grow Number", "\tmutable result = numbers", "\tresult = result + 3", "\tresult.Add(4)",
+			"\tnumbers.Length").Number, Is.EqualTo(2));
+
+	private ValueInstance RunSource(string programName, string call, params string[] source) =>
+		new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(programName,
+			programName + call, source)).Generate()).Execute(initialVariables: null).Returns!.Value;
+
+	[Test]
+	public void ListReassignedFromMemberIsChangedAsCopy() =>
+		Assert.That(RunSource(nameof(ListReassignedFromMemberIsChangedAsCopy), "((1, 2)).Grow",
+			"has numbers", "Grow Number", "\tmutable result = numbers + 7", "\tresult = numbers",
+			"\tresult.Add(4)", "\tresult = numbers", "\tresult = result + 5", "\tnumbers.Length").Number,
 			Is.EqualTo(2));
-	}
+
+	[Test]
+	public void ListTakenFromNestedListIsChangedAsCopy() =>
+		Assert.That(RunSource(nameof(ListTakenFromNestedListIsChangedAsCopy), "(((1, 2), (3, 4))).Grow",
+			"has rows List(Numbers)", "Grow Number", "\tmutable row = rows(0)", "\trow.Add(5)",
+			"\trows(0).Length").Number, Is.EqualTo(2));
+
+	[Test]
+	public void SavedListKeepsLengthWhenOriginalGrows() =>
+		Assert.That(RunSource(nameof(SavedListKeepsLengthWhenOriginalGrows), "((1, 2)).Grow",
+			"has numbers", "Grow Number", "\tmutable result = numbers + 7", "\tlet saved = result",
+			"\tresult.Add(4)", "\tmutable other = numbers + 8", "\tmutable firsts = numbers", "\tfor 2",
+			"\t\tif index is 1", "\t\t\tother.Add(9)", "\t\tif index is 0", "\t\t\tfirsts = other",
+			"\tsaved.Length + firsts.Length * 10").Number, Is.EqualTo(33));
+
+	[Test]
+	public void RemoveAsLastLineReturnsList() =>
+		Assert.That(RunSource(nameof(RemoveAsLastLineReturnsList), "((1, 2)).Shrink", "has numbers",
+			"Shrink Numbers", "\tmutable result = numbers + 7", "\tresult.Remove(1)").List.Items.
+			Select(item => item.Number), Is.EqualTo(new[] { 2.0, 7.0 }));
+
+	[Test]
+	public void ListMinusListRemovesEachElementOnce() =>
+		Assert.That(RunSource(nameof(ListMinusListRemovesEachElementOnce), "((1, 2, 2, 3)).Shrink",
+			"has numbers", "Shrink Number", "\t(numbers - (2, 3)).Length").Number, Is.EqualTo(2));
 
 	[Test]
 	public void AndSkipsRightSideWhenLeftIsFalse()

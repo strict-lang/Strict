@@ -12,14 +12,14 @@ constant LoopBody = BodyParser("Run Number", "\tfor 3", "\t\tindex", "\t0").Bloc
 constant FilterBody = BodyParser("Count Number", "\tfor 3", "\t\tif index > 0", "\t\t\t1").Block(1, 1)
 constant ElseBody = BodyParser("Run", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1)
 constant ReturnElse = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\telse", "\t\treturn 4").Block(1, 1)
-constant CopiedBody = BodyParser("Run", "\tmutable copy = numbers", "\tcopy.Add(1)").Block(1, 1)
+constant CopiedBody = BodyParser("Run", "\tmutable copy = (1)", "\tlet saved = copy", "\tcopy.Add(1)").Block(1, 1)
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Length is 4
 	Plain.Generate(BodyParser("Run Number", "\treturn 1").Block(1, 1), NoScope, "None").instructions.Length is 2
 	Plain.Generate(BodyParser("Exists Boolean").Block(1, 1), NoScope, "None").instructions.Length is 0
 	Plain.Generate(SumBody, NoScope, "Number").instructions.Length is 11
 	Plain.Generate(FilterBody, NoScope, "Number").instructions(12).kind is InstructionType.JumpEnd
-	Plain.Generate(CopiedBody, NoScope.With("numbers", "Numbers"), "None").instructions(4).kind is InstructionType.Add
+	Plain.Generate(CopiedBody, NoScope, "None").instructions(5).kind is InstructionType.Add
 	let code = WithoutTests(body)
 	let start = CodeBlock(List(InstructionEntry), 0, 0, scope)
 	let block = LoopCodegen(MethodCodegen(values)).Aggregated(code, start, returnType)
@@ -44,8 +44,9 @@ HasElse(body SyntaxNode, position Number) Boolean
 	Plain.HasElse(ElseBody, 0) is true
 	Plain.HasElse(ElseBody, 1) is false
 	position + 1 < body.children.Length and (body.children(position + 1).Kind is in ("ElseIf", "Else"))
-Statement(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
+Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Statement(SyntaxNode("Return", "", One), CodeBlock.Empty, false).instructions.Length is 2
+	let block = ListCodegen(values).Disowned(node, previous, false)
 	if node.Kind is in ("Declaration", "Reassignment")
 		return Assignment(node, block)
 	if node.Kind is in ("If", "ElseIf", "Else")
@@ -54,8 +55,7 @@ Statement(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 		return LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
 	if (node.Kind is "MethodCall") and (node.text is "Log")
 		return Log(node.children(1), block)
-	let expression = node.Kind is "Return" then node.children(0) else node
-	let value = values.Expression(expression, block)
+	let value = values.Expression((node.Kind is "Return" then node.children(0) else node), block)
 	node.Kind is "Return" then value.Add(InstructionEntry.Return(value.Result)) else value
 Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
@@ -71,17 +71,8 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	let stored = assigned.IsLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else value.Add(store)
 	isDeclaration then Declared(stored, name, assigned) else stored
 Declared(block CodeBlock, name Text, assigned SyntaxNode) CodeBlock
-	Plain.Declared(CodeBlock.Empty, "a", One).scope.TypeOf("a") is "Number"
 	Plain.Declared(CodeBlock.Empty.Declare("x", "Numbers"), "a", NoNode).Owns("a") is false
-	block.Declare(name, values.TypeOf(assigned, block)).Sharing(name, IsNamed(assigned, block))
-IsNamed(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsNamed(SyntaxNode("Member", "text", NoNode), CodeBlock.Empty.Declare("x", "Greeter")) is true
-	Plain.IsNamed(SyntaxNode("Member", "text", One), CodeBlock.Empty) is false
-	if node.Kind is "Identifier"
-		return block.scope.TypeOf(node.text) is not ""
-	if node.Kind is not "Member"
-		return false
-	values.target.IsMember(values.TypeOf(node.children(0), block), node.text) and IsNamed(node.children(0), block)
+	block.Declare(name, values.TypeOf(assigned, block)).Sharing(name, ListCodegen(values).IsNew(assigned) is false)
 StoreConstant(load InstructionEntry, name Text) InstructionEntry
 	Plain.StoreConstant(InstructionEntry.LoadNumber(2, 7), "a").Bytes(BinaryNames("a")) is (2, 1, 7, 0, 0)
 	let texts = load.texts + name

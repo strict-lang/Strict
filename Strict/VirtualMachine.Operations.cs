@@ -53,7 +53,11 @@ public sealed partial class VirtualMachine
 		if (left.IsList)
 		{
 			var items = new List<ValueInstance>(left.List.Items);
-			items.RemoveAll(item => item.Equals(right));
+			if (right.IsList && !left.List.ReturnType.GetFirstImplementation().IsList)
+				foreach (var item in right.List.Items)
+					items.Remove(item);
+			else
+				items.RemoveAll(item => item.Equals(right));
 			return new ValueInstance(left.List.ReturnType, items.ToArray());
 		}
 		if (left.IsText || right.IsText)

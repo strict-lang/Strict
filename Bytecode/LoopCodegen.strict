@@ -7,6 +7,7 @@ constant Unscoped = (CallTarget.NoScope, CallTarget.NoScope, CallTarget.NoScope)
 constant Iterating = LoopCodegen(MethodCodegen(ValueCodegen(TypeInference(KnownTypes(("A", "List", "Range"), Unscoped, (ForIterator, ForIterator, ForIterator), Unscoped), Unscoped), ValueCodegen.Plain.methods, CallTarget.Plain)))
 constant NestedLoop = BodyParser("Pairs Numbers", "\tfor 2", "\t\tfor 3", "\t\t\tindex").Block(1, 1).children(0).children.Last
 constant ForA = BodyParser("Run", "\tfor a", "\t\tvalue").Block(1, 1).children(0)
+constant RowsBody = BodyParser("Rows List(Numbers)", "\tmutable row = (1)", "\tfor 2", "\t\trow.Add(index)", "\t\trow").Block(1, 1)
 Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
 	Plain.Aggregation(DoubledBody, "Numbers") is "list"
@@ -20,6 +21,7 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	Plain.Aggregated(MethodCodegen.SumBody, CodeBlock.Empty, "Number").Result is 0
 	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Numbers").instructions(0).texts.Last is "forResult"
 	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Boolean").instructions.Length is 6
+	Plain.Aggregated(RowsBody, CodeBlock.Empty, "List(Numbers)").instructions(6).kind is InstructionType.Add
 	let aggregation = Aggregation(body, returnType)
 	if aggregation is ""
 		return methods.Body(body, block)
@@ -58,10 +60,10 @@ Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
 	let element = isRange then "Number" else methods.values.ElementType(methods.values.TypeOf(iterator, block))
 	let nested = Begin(iterator, block).Declare("index", "Number").Declare("outer", block.scope.TypeOf("value"))
-	let declared = nested.Declare("value", element)
-	let plain = aggregation is ""
+	let declared = nested.Declare("value", element).Sharing("value", true).Sharing("outer", true)
+	let collected = aggregation is "" then declared else ListCodegen(methods.values).Disowned(node, declared, true)
 	let body = node.children.Last
-	let looped = plain then methods.Body(body, declared) else AggregatedLoop(body, declared, aggregation)
+	let looped = aggregation is "" then methods.Body(body, declared) else AggregatedLoop(body, collected, aggregation)
 	looped.Add(InstructionEntry.Jump(InstructionType.LoopEnd, looped.instructions.Length - block.instructions.Length))
 Iterated(iterator SyntaxNode, block CodeBlock) SyntaxNode
 	Iterating.Iterated(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "A")).text is "for"

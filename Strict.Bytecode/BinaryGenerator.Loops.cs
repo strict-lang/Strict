@@ -57,6 +57,8 @@ public sealed partial class BinaryGenerator
 	private void GenerateLoopInstructions(For forExpression, string? aggregationTarget = null,
 		LoopAggregation aggregation = LoopAggregation.None)
 	{
+		if (aggregation != LoopAggregation.None)
+			Disown(forExpression, true);
 		var forSourceLine = forExpression.LineNumber;
 		var instructionCountBeforeLoopStart = instructions.Count;
 		var customVariableNames =
@@ -209,6 +211,7 @@ public sealed partial class BinaryGenerator
 					GenerateIfThenAggregation(ifExpression, aggregationTarget, aggregation);
 					return true;
 				}
+				Disown(expression, false);
 				GenerateInstructionFromExpression(expression);
 			}
 		else

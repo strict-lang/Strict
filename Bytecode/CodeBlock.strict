@@ -21,10 +21,16 @@ Declare(name Text, type Text) CodeBlock
 	CodeBlock(instructions, register, nextId, scope.With(name, type))
 Sharing(name Text, shares Boolean) CodeBlock
 	CodeBlock.Empty.Sharing("a", true).Owns("a") is false
-	CodeBlock(instructions, register, nextId, scope.With(name + SharedMarker, (shares then "list" else "")))
+	CodeBlock(instructions, register, nextId, scope.With(name + SharedMarker, (shares then "shared" else "owned")))
 Owns(name Text) Boolean
 	CodeBlock.Empty.Sharing("a", false).Owns("a") is true
-	scope.TypeOf(name + SharedMarker) is ""
+	scope.TypeOf(name + SharedMarker) is not "shared"
+Disowned(name Text) CodeBlock
+	CodeBlock.Empty.Sharing("a", false).Disowned("a").Owns("a") is false
+	CodeBlock.Empty.Disowned("a").scope.names.Length is 0
+	if scope.TypeOf(name + SharedMarker) is "owned"
+		return Sharing(name, true)
+	CodeBlock(instructions, register, nextId, scope)
 Stored(name Text) CodeBlock
 	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)).Stored("a").instructions(1).payload is (0, -1)
 	Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, Result, name))

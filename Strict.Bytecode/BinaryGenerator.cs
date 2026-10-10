@@ -237,6 +237,7 @@ public sealed partial class BinaryGenerator
 		for (var i = 0; i < expressions.Count; i++)
 		{
 			var statementStartRegister = registry.NextRegister;
+			Disown(expressions[i], false);
 			if (ReferenceEquals(expressions[i], Expressions[^1]) &&
 				expressions[i] is If { OptionalElse: not null, Then: not Body } inlineConditional)
 				GenerateReturningInlineConditional(inlineConditional);
@@ -315,17 +316,17 @@ public sealed partial class BinaryGenerator
 		case SelectorIf selectorIf:
 			GenerateSelectorIfInstructions(selectorIf);
 			return;
-		case Declaration { IsMutable: true } mutableDeclaration:
-			GenerateForAssignmentOrDeclaration(mutableDeclaration.Value, mutableDeclaration.Name);
-			return;
 		case Declaration declaration:
 			GenerateForAssignmentOrDeclaration(declaration.Value, declaration.Name);
+			if (IsNewList(declaration.Value))
+				ownedLists.Add(declaration.Name);
 			return;
 		case For forExpression:
 			GenerateLoopInstructions(forExpression);
 			return;
 		case MutableReassignment reassignment when IsAppendToSameList(reassignment):
-			GenerateAppendToList(reassignment.Name, ((Binary)reassignment.Value).Arguments[0]);
+			GenerateInPlaceListChange(reassignment.Name, ((Binary)reassignment.Value).Arguments[0],
+				false);
 			return;
 		case MutableReassignment reassignment:
 			GenerateForAssignmentOrDeclaration(reassignment.Value, reassignment.Name);
