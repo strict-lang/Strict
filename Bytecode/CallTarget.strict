@@ -45,16 +45,13 @@ Overload(name Text, arguments Number) HeaderTokens
 	Overloaded.Overload("Members", 0).ParameterNames.Length is 0
 	for shape.lines
 		let isNamed = shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
-		if isNamed and (HeaderTokens(Tokenizer(value).Tokens).ParameterNames.Length is arguments)
+		if isNamed and ((arguments is -1) or (HeaderTokens(Tokenizer(value).Tokens).ParameterNames.Length is arguments))
 			return HeaderTokens(Tokenizer(value).Tokens)
-	Header(name)
+	arguments is -1 then HeaderTokens(List(Text)) else Header(name)
 Header(name Text) HeaderTokens
 	Plain.Header("Greet").ReturnType is "Text"
 	Plain.Header("Missing").tokens.Length is 0
-	for shape.lines
-		if shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
-			return HeaderTokens(Tokenizer(value).Tokens)
-	HeaderTokens(List(Text))
+	Overload(name, -1)
 ImplicitOwner(name Text, scope Scope) Text
 	Plain.ImplicitOwner("x", Scope(("value", "outer"), ("A", "A"))) is "value"
 	Plain.ImplicitOwner("x", Scope(List(Text) + "value", List(Text) + "A")) is ""
