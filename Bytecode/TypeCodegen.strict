@@ -64,7 +64,8 @@ Method(start Number) MethodEntry
 	Hello.Method(1).returnType is "None"
 	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
-	let scope = MethodBodies(generator.target.TypeName, generator.target.shape, inference).HeaderScope(header)
+	let shape = generator.target.shape
+	let scope = MethodBodies(generator.target.TypeName, shape, inference).HeaderScope(header, shape.MemberScope)
 	let returnType = Concrete(header.ReturnType)
 	let code = MethodCodegen(generator).Generate(BodyParser(lines).Block(start + 1, 1), scope, returnType)
 	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(returnType), code.instructions)

@@ -128,9 +128,10 @@ public sealed partial class VirtualMachine
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.TypeResolver)),
 			BinaryOperator.To => hasInstance && TryHandleToConversion(invoke, implicitInstance),
 			"Length" or "Count" => hasInstance && TryHandleNativeLength(invoke, implicitInstance),
-			BinaryOperator.In => hasInstance && TryHandleNativeListContains(invoke, implicitInstance),
+			BinaryOperator.In or "Index" => hasInstance && TryHandleNativeListSearch(invoke, implicitInstance),
 			"ReadLines" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" => hasInstance &&
 				TryHandleNativeFileMethod(invoke, implicitInstance),
+			"Floor" => hasInstance && TryHandleNativeFloor(invoke, implicitInstance),
 			"Increment" => TryHandleIncrementDecrement(invoke, true, implicitInstance),
 			"Decrement" => TryHandleIncrementDecrement(invoke, false, implicitInstance),
 			"StartsWith" or "IndexOf" or "LastIndexOf" or "Substring" or "Upper" or "Lower"

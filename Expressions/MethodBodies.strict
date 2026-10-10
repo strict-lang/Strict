@@ -4,21 +4,23 @@ has inference TypeInference
 constant NoInference = TypeInference(KnownTypes(("A", "B"), (NoScope, NoScope), (NoScope, NoScope), (NoScope, NoScope)))
 constant NoScope = Scope(("x", "z"), ("y", "w"))
 constant Sample = TypeShape("has a Number", "Run", "\tlet b = a", "\tb")
+constant AddOther = HeaderTokens("Add", "(", "other", ")")
 Statements ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Length is 2
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.line is 3
+	let members = shape.MemberScope
 	mutable statements = List(Mutable(ScopedStatement))
 	for shape.lines
 		if shape.IsMethodHeader(value)
-			let parameters = HeaderScope(HeaderTokens(Tokenizer(value).Tokens))
+			let parameters = HeaderScope(HeaderTokens(Tokenizer(value).Tokens), members)
 			statements = statements + Flatten(BodyParser(shape.lines).Block(index + 1, 1), parameters, index + 1)
 	statements
-HeaderScope(header HeaderTokens) Scope
-	MethodBodies("Demo", Sample, NoInference).HeaderScope(HeaderTokens("Add", "(", "other", ")")).TypeOf("other") is "Demo"
+HeaderScope(header HeaderTokens, members Scope) Scope
+	MethodBodies("Demo", Sample, NoInference).HeaderScope(AddOther, NoScope).TypeOf("other") is "Demo"
 	mutable types = List(Mutable(Text))
 	for header.ParameterTypes
 		types.Add(value is "Other" then typeName else value)
-	shape.MemberScope.With("value", InstanceType).WithAll(header.ParameterNames, types)
+	members.With("value", InstanceType).WithAll(header.ParameterNames, types)
 InstanceType Text
 	MethodBodies("List", Sample, NoInference).InstanceType is "Generics"
 	typeName is "List" then "Generics" else typeName

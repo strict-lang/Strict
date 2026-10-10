@@ -86,14 +86,25 @@ public sealed partial class VirtualMachine
 		return true;
 	}
 
-	private bool TryHandleNativeListContains(Invoke invoke, ValueInstance? implicitInstance)
+	private bool TryHandleNativeListSearch(Invoke invoke, ValueInstance? implicitInstance)
 	{
 		var list = ResolveInvokeInstance(invoke.MethodInfo, implicitInstance);
 		if (!list.IsList || invoke.MethodInfo.ArgumentRegisters.Length != 1)
 			return false;
-		var searched = Memory.Registers[invoke.MethodInfo.ArgumentRegisters[0]];
+		var index = list.List.Items.IndexOf(Memory.Registers[invoke.MethodInfo.ArgumentRegisters[0]]);
+		Memory.Registers[invoke.Register] = invoke.MethodInfo.MethodName == BinaryOperator.In
+			? new ValueInstance(executable.booleanType, index >= 0)
+			: new ValueInstance(executable.numberType, index);
+		return true;
+	}
+
+	private bool TryHandleNativeFloor(Invoke invoke, ValueInstance? implicitInstance)
+	{
+		var number = ResolveInvokeInstance(invoke.MethodInfo, implicitInstance);
+		if (!number.IsPrimitiveType(executable.numberType))
+			return false;
 		Memory.Registers[invoke.Register] =
-			new ValueInstance(executable.booleanType, list.List.Items.Contains(searched));
+			new ValueInstance(executable.numberType, Math.Floor(number.Number));
 		return true;
 	}
 

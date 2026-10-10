@@ -510,6 +510,32 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(machine.Profile!.Keys, Has.None.EndsWith(".in"));
 	}
 
+	[Test]
+	public void ListIndexRunsNatively()
+	{
+		var machine = new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ListIndexRunsNatively), nameof(ListIndexRunsNatively) + "(\"b\").Position",
+			["has name Text", "Position Number", "\t(\"a\", name, name + \"c\").Index(name)"])).Generate())
+		{
+			Profile = []
+		};
+		Assert.That(machine.Execute().Returns!.Value.Number, Is.EqualTo(1));
+		Assert.That(machine.Profile!.Keys, Has.None.EndsWith(".Index"));
+	}
+
+	[Test]
+	public void NumberFloorRunsNatively()
+	{
+		var machine = new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(NumberFloorRunsNatively), nameof(NumberFloorRunsNatively) + "(-2.5).Rounded",
+			["has number", "Rounded Number", "	number.Floor"])).Generate())
+		{
+			Profile = []
+		};
+		Assert.That(machine.Execute().Returns!.Value.Number, Is.EqualTo(-3));
+		Assert.That(machine.Profile!.Keys, Has.None.EndsWith(".Floor"));
+	}
+
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
 	{
 		var fromMethod = targetType.FindMethod(Method.From, []);
