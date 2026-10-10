@@ -400,8 +400,11 @@ both directions, lists, texts, index/value restored), `Invocation` (Invoke paylo
 the Strict VM. Slow test `StrictVirtualMachineRunsLikeCSharp`: 19 Examples print the same as on
 the C# VM, Process.Find/RunTool/Run/OperatingSystem are host hooks (the Strict VM calls the
 host's Process, native on the C# VM) and instances print their automatic text like the C# VM.
-Open: loading `.strictbinary` files (decoder per instruction kind, stored ZIP), program arguments
-(Sum), speed (the Strict VM runs inside the C# VM).
+Speed (Strict VM inside the C# VM, Debug, including the Strict compiler): Fibonacci 249 ms,
+FizzBuzz 292 ms, MemoryPressure 15.3 s, because every list append copies the immutable `items`
+(20,000 appends are O(n²), the C# VM appends in place). Open: in place list appends, program
+arguments (Sum), loading `.strictbinary` files (moved to D7, needed when the run stage switches to
+the Strict VM: stored ZIP, name table, members, methods and a slot spec per instruction kind).
 C# bugs found on the way (each with a test): `ValueInstance.Equals` treated a type instance whose
 `number` member is 0 as None, so the implicit instance of a method call was lost; the interpreter
 left constructor members without a from parameter (like `logger`) uninitialized
