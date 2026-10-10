@@ -1,0 +1,41 @@
+has bytes Numbers
+constant Polynomial = 3.988292384e9
+constant AllBits = 4.294967295e9
+Value Number
+	Crc(49, 50, 51, 52, 53, 54, 55, 56, 57).Value is 3.421780262e9
+	Crc(104, 105).Value is 3.633523372e9
+	constant xors = NibbleXors
+	mutable crc = 4.294967295e9
+	for bytes
+		crc = Xor(Entry(Xor(crc % 256, value, xors), xors), (crc / 256).Floor, xors)
+	Xor(crc, AllBits, xors)
+Entry(index Number, xors Numbers) Number
+	Crc(1).Entry(1, Crc(1).NibbleXors) is 1.996959894e9
+	Crc(1).Entry(255, Crc(1).NibbleXors) is 7.55167117e8
+	mutable entry = index
+	for 8
+		entry = entry % 2 is 1 then Xor(Polynomial, (entry / 2).Floor, xors) else (entry / 2).Floor
+	entry
+Xor(left Number, right Number, xors Numbers) Number
+	Crc(1).Xor(12, 10, Crc(1).NibbleXors) is 6
+	mutable result = 0
+	mutable scale = 1
+	for 8
+		let leftNibble = (left / scale).Floor % 16
+		let rightNibble = (right / scale).Floor % 16
+		result = result + xors(leftNibble * 16 + rightNibble) * scale
+		scale = scale * 16
+	result
+NibbleXors Numbers
+	Crc(1).NibbleXors.Length is 256
+	for 256
+		BitXor((index / 16).Floor, index % 16)
+BitXor(left Number, right Number) Number
+	Crc(1).BitXor(12, 10) is 6
+	mutable result = 0
+	mutable bit = 1
+	for 4
+		if (left / bit).Floor % 2 is not (right / bit).Floor % 2
+			result = result + bit
+		bit = bit * 2
+	result

@@ -27,6 +27,8 @@ Linked(entries List(TypeEntry), root Text, inference TypeInference, depth Number
 		let source = File(root + "/" + SourceName(value) + ".strict")
 		if source.Exists
 			linked.Add(TypeCodegen(value, source.ReadLines, inference).Selected(UsedMethods(entries, value)))
+	if (linked.Length is entries.Length) and (Targets(linked).Length is Targets(entries).Length)
+		return linked
 	Linked(linked, root, inference, depth - 1)
 BaseTypes(entries List(TypeEntry)) Texts
 	BaseTypes(Go) is ("Strict/B")

@@ -151,6 +151,19 @@ Phase C1–C4 result (2026-10-09), AdjustBrightness, Release unless noted:
 Follow-ups: parameter/member symbol ids precomputed per invoke and type, lazy custom iterators,
 per-instruction cached access paths, VM constraint checks (from Phase A).
 
+Phase C7 progress (2026-10-10), Strict compiler (Bytecode/FileCompiler on the C# VM, Debug):
+- Per Example run time: HelloLogger 130 → 111 ms, FizzBuzz 520 → 281 ms, ProcessProbe 850 →
+  457 ms; the Slow differential over 20 Examples 9 s → 4 s. ZIP CRC32 was 75% of FizzBuzz (402
+  bytes): bitwise XOR per bit (~320 loop iterations per byte) is replaced by nibble XORs with a
+  256 entry nibble table (`Bytecode/Crc`, ~80 per byte). Linking stops at a fixed point.
+- Remaining costs: inference over all base files (~100 ms per run, rebuilt for every file),
+  linking recompiles used base types each round (ProcessProbe ~200 ms), CRC still ~150 ms.
+- Finding, needs a decision: every `List(Number)` uses the flat float32 backing, so integers
+  above 2^24 change silently (a CRC table entry 1996959894 reads back as 1996959872 in the
+  interpreter, the VM path happened to differ). Crc avoids storing 32 bit values in lists; the
+  general fix (double backing, or float32 only for numeric data types like ColorValue) changes
+  memory numbers of the C1 work and is left for the user to decide.
+
 ### Phase D — Self-hosting milestones (≈15–25 sessions)
 D1 Real front end in Strict (Language + Expressions): full Type/Member/Method model, Package/Context
    lookup (parent + children, generics, plural types, traits), tokenizer + shunting-yard producing an

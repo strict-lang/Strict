@@ -53,24 +53,3 @@ Exponent(positive Number) Number
 	if positive >= 2
 		return 1 + Exponent(positive / 2)
 	positive < 1 then Exponent(positive * 2) - 1 else 0
-Checksum Number
-	ByteEncoder(49, 50, 51, 52, 53, 54, 55, 56, 57).Checksum is 3.421780262e9
-	mutable crc = 4.294967295e9
-	for bytes
-		crc = Xor(ChecksumEntry(Xor(crc % 256, value)), (crc / 256).Floor)
-	Xor(crc, 4.294967295e9)
-ChecksumEntry(index Number) Number
-	ByteEncoder(1, 2).ChecksumEntry(1) is 1.996959894e9
-	mutable entry = index
-	for 8
-		entry = entry % 2 is 1 then Xor(3.988292384e9, (entry / 2).Floor) else (entry / 2).Floor
-	entry
-Xor(left Number, right Number) Number
-	ByteEncoder(1, 2).Xor(12, 10) is 6
-	mutable result = 0
-	mutable bit = 1
-	for 32
-		if (left / bit).Floor % 2 is not (right / bit).Floor % 2
-			result = result + bit
-		bit = bit * 2
-	result
