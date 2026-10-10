@@ -1,0 +1,24 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      # Test projects one by one: Strict.sln also contains C++ plugin projects the dotnet CLI can't
+      # build. Cuda tests need an NVIDIA driver; Slow tests need mlir-opt, clang and nasm.
+      - name: Test
+        shell: bash
+        run: |
+          for project in *.Tests/*.Tests.csproj; do
+            [ "$project" = "Strict.Compiler.Cuda.Tests/Strict.Compiler.Cuda.Tests.csproj" ] && continue
+            dotnet test "$project" --filter "TestCategory!=Manual&TestCategory!=Slow&TestCategory!=Nightly" || failed=1
+          done
+          exit ${failed:-0}

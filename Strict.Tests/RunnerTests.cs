@@ -778,7 +778,7 @@ public sealed class RunnerTests
 	private static void CopyIfNewerOrMissing(string source, string target)
 	{
 		if (File.Exists(source) && (!File.Exists(target) ||
-			File.GetLastWriteTimeUtc(source) > File.GetLastWriteTimeUtc(target)))
+			!File.ReadAllBytes(source).AsSpan().SequenceEqual(File.ReadAllBytes(target))))
 			File.Copy(source, target, true);
 	}
 

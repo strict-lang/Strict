@@ -1,5 +1,5 @@
 using System.Reflection;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using Strict.Language.Tests;
 
 namespace Strict.Expressions.Tests;
@@ -13,7 +13,7 @@ public sealed class ValueInstanceTests
 
 	[Test]
 	public void ValueInstanceIsAlwaysJustTwoValuesAsStruct() =>
-		Assert.That(Marshal.SizeOf(typeof(ValueInstance)), Is.EqualTo(2 * sizeof(double)));
+		Assert.That(Unsafe.SizeOf<ValueInstance>(), Is.EqualTo(2 * sizeof(double)));
 
 	[Test]
 	public void ToStringShowsTypeAndValue() =>

@@ -216,7 +216,7 @@ public sealed class AllInstructionOptimizersTests : TestOptimizers
 			Console.SetOut(logWriter);
 			new VirtualMachine(binary).Execute();
 			Assert.That(logWriter.ToString(),
-				Is.EqualTo("Brightness adjustment successful: (0.25, 0.25, 0.25)\r\n"));
+				Is.EqualTo("Brightness adjustment successful: (0.25, 0.25, 0.25)" + Environment.NewLine));
 		}
 		finally
 		{

@@ -86,7 +86,7 @@ public static class NativePluginLoader
 		int width, int height);
 
 	/// <summary>
-	/// Calls {TypeName}_Save(path, data, len, width, height) on a native shared library.
+	/// Calls {TypeName}_Save(path, data, width, height) on a native shared library.
 	/// Returns true on success, false if no native library was found.
 	/// </summary>
 	public static bool TrySaveNativeImage(string typeName, string path, byte[] data, int width,

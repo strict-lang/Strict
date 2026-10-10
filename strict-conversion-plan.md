@@ -457,7 +457,18 @@ error links point to the real file instead of `<root>/<Type>.strict`. `a is 1 an
 `LogicalOperatorNeedsBooleans`, which explains the `is` precedence and the bracket fix. A package
 loaded earlier (Bytecode) was dropped from the declared dependencies of the next package (Runtime),
 so after a fresh build `InstructionType` resolved to `Examples/InstructionType` depending on test
-order; declared dependencies now always include loaded packages. The LanguageServer runs
+order; declared dependencies now always include loaded packages.
+E5: `.github/workflows/ci.yml` runs every test project except Cuda (needs an NVIDIA driver) with
+Manual/Slow/Nightly excluded on windows-latest and ubuntu-latest (Slow needs mlir-opt, clang and
+nasm, it stays a local run before commits). Verified on Ubuntu 26.04 (WSL): the checkout folder must
+be named `Strict` (the base package name comes from it). Linux fixes: the checked-in ImageSaver.so
+was built from the old 5 parameter `ImageSaver_Save` (rebuilt both .so files from the current
+sources, glibc 2.29 or newer); test helpers re-copied the loaded plugin .so on every test because
+Linux file copies truncate the write time to seconds, overwriting a mapped library crashed the test
+host (copy only when the content differs); `Marshal.SizeOf`, `
+` and `file:////tmp` URIs in
+three tests. Open: the rare `CachedBinaryOlderThanRuntimeIsRegenerated` failure (2 in about 180
+runs, regenerated cache not saved, cause not found yet). The LanguageServer runs
 TypeValidator and ConstantCollapser like `strict check`, so validator errors become diagnostics.
 README: "Command line" and "Rules worth knowing" sections (limits, `is` precedence, conditional
 arguments, single-element lists, reserved names, test lines, package references, constants).

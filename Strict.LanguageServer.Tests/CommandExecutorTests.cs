@@ -80,9 +80,11 @@ public sealed class CommandExecutorTests
 	{
 		var path = Path.Combine(Path.GetTempPath(), "StrictUri" + Guid.NewGuid().ToString("N"),
 			"BaseTypesTest" + Type.Extension);
-		var encoded = "file:///" + path.Replace('\\', '/').Replace(":", "%3A");
-		Assert.That(DocumentUri.From(encoded).ToLocalFile(), Is.EqualTo(path).IgnoreCase);
+		Assert.That(DocumentUri.From(VsCodeUri(path)).ToLocalFile(), Is.EqualTo(path).IgnoreCase);
 	}
+
+	private static string VsCodeUri(string path) =>
+		"file:///" + path.Replace('\\', '/').TrimStart('/').Replace(":", "%3A");
 
 	[Test]
 	public async Task ManualRunLoadsSiblingTypeFromTheSameFolderAsync()
@@ -95,7 +97,7 @@ public sealed class CommandExecutorTests
 				"has value Text\nGreet Text\n\t\"Hello, \" + value + \"!\"");
 			var runPath = Path.Combine(folder, "BaseTypesTest" + Type.Extension);
 			await File.WriteAllTextAsync(runPath, "has number\nRun Text\n\tTextHelper(\"World\").Greet");
-			var encoded = "file:///" + runPath.Replace('\\', '/').Replace(":", "%3A");
+			var encoded = VsCodeUri(runPath);
 			var uri = DocumentUri.From(encoded);
 			document.AddOrUpdate(uri, await File.ReadAllLinesAsync(runPath));
 			var executor = new CommandExecutor(languageServer.Object, document, TestPackage.Instance);
