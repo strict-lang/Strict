@@ -4,7 +4,19 @@ Run(path Text, root Text)
 	let inference = ResolveCheck.Inference(Directory.Files(root, "*.strict") + path)
 	let fullName = "Strict/" + path.Substring(root.Length + 1, path.Length - root.Length - 8)
 	let main = TypeCodegen(fullName, File(path).ReadLines, inference).Entry
-	logger.Log(BinaryFile(Linked(main, root, inference, 3)).Bytes)
+	let bytes = BinaryFile(Linked(main, root, inference, 3)).Bytes
+	if IsValid(bytes)
+		logger.Log(bytes)
+	else
+		logger.Log("Compilation failed, unsupported code in " + path)
+IsValid(bytes Numbers) Boolean
+	IsValid(0, 255) is true
+	IsValid(1, 256) is false
+	IsValid(1, -1) is false
+	for bytes
+		if value < 0 or value > 255 or value % 1 is not 0
+			return false
+	true
 Linked(entries List(TypeEntry), root Text, inference TypeInference, depth Number) List(TypeEntry)
 	Linked(TypeEntry.HelloLogger, ".", ValueCodegen.NoTypes, 3).Length is 1
 	if depth is 0
@@ -12,8 +24,9 @@ Linked(entries List(TypeEntry), root Text, inference TypeInference, depth Number
 	mutable linked = List(Mutable(TypeEntry))
 	linked.Add(entries.First)
 	for BaseTypes(entries)
-		let lines = File(root + "/" + SourceName(value) + ".strict").ReadLines
-		linked.Add(TypeCodegen(value, lines, inference).Selected(UsedMethods(entries, value)))
+		let source = File(root + "/" + SourceName(value) + ".strict")
+		if source.Exists
+			linked.Add(TypeCodegen(value, source.ReadLines, inference).Selected(UsedMethods(entries, value)))
 	Linked(linked, root, inference, depth - 1)
 BaseTypes(entries List(TypeEntry)) Texts
 	BaseTypes(Go) is ("Strict/B")

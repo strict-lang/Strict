@@ -13,9 +13,14 @@ public static class NativeFileRegistry
 		public readonly string Path = path;
 		private FileStream? stream;
 
-		public FileStream Stream =>
-			stream ??= new FileStream(Path, FileMode.OpenOrCreate, FileAccess.ReadWrite,
-				FileShare.ReadWrite);
+		public FileStream Stream => stream ??= Open(FileMode.OpenOrCreate);
+		/// <summary>
+		/// Reading never creates a file, a missing one throws FileNotFoundException.
+		/// </summary>
+		public FileStream ExistingStream => stream ??= Open(FileMode.Open);
+
+		private FileStream Open(FileMode mode) =>
+			new(Path, mode, FileAccess.ReadWrite, FileShare.ReadWrite);
 
 		public void Dispose() => stream?.Dispose();
 	}
@@ -32,11 +37,11 @@ public static class NativeFileRegistry
 
 	public static string ReadText(long handle)
 	{
-		var state = Get(handle);
-		state.Stream.Position = 0;
-		using var reader = new StreamReader(state.Stream, Utf8WithoutBom, true, 1024, true);
+		var stream = Get(handle).ExistingStream;
+		stream.Position = 0;
+		using var reader = new StreamReader(stream, Utf8WithoutBom, true, 1024, true);
 		var text = reader.ReadToEnd();
-		state.Stream.Position = 0;
+		stream.Position = 0;
 		return text;
 	}
 
@@ -45,11 +50,11 @@ public static class NativeFileRegistry
 
 	public static byte[] ReadBytes(long handle)
 	{
-		var state = Get(handle);
-		state.Stream.Position = 0;
-		var bytes = new byte[(int)state.Stream.Length];
-		state.Stream.ReadExactly(bytes);
-		state.Stream.Position = 0;
+		var stream = Get(handle).ExistingStream;
+		stream.Position = 0;
+		var bytes = new byte[(int)stream.Length];
+		stream.ReadExactly(bytes);
+		stream.Position = 0;
 		return bytes;
 	}
 

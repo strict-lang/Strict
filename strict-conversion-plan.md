@@ -300,8 +300,16 @@ numbers). C# fix on the way: a member constant like `BodyParser(..).Block(1, 1)`
 first call (BodyParser) instead of the whole expression.
 else/else if work like C# (condition flag set after the then body, JumpToIdIfTrue over the else
 body), the new Examples/Grade.strict covers them in the differential (20 Examples).
-Next for D3: source lines in instructions, loud codegen errors (Error values),
-compiling non-example packages (the Strict compiler itself) and comparing with the C# output.
+Unsupported code now fails loudly (`FileCompiler` refuses bytes outside 0..255, e.g. from codegen
+Error values), value-less enum constants (`constant Add`) get their numbers like C#. Codegen
+coverage over Examples (top folder): 34 of 41 files compile; open: selector if
+(`if operation is` cases), `* value` reductions, list-returning loops with a filter, if/else used
+as a value. Found on the way: reading a missing file through the VM or interpreter created an
+empty file (NativeFileRegistry opened reads with OpenOrCreate, now FileNotFoundException with a
+test), which let the linker litter the repo root with empty `.strict` files for same-package
+types; the linker now only links types whose source exists.
+Next for D3: compile the compiler packages themselves (same-package types need their package
+prefix and inference from the package folder, today they crash), source lines in instructions.
 Flaky once in a full parallel solution run (passes alone and in reruns):
 `InterpreterTests.ParserParsesExistingTextStrictFile` and
 `LoadStrictExamplesPackageAndUseBasePackageTypes`, likely package files changing while
