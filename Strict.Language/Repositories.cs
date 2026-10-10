@@ -375,15 +375,20 @@ public sealed partial class Repositories(ExpressionParser parser)
 	public static readonly Uri GitHubStrictUri = new("https://github.com/" + StrictOrg + "/");
 
 	/// <summary>
-	/// Called by Package.Dispose
+	/// A package loaded from a temporary folder must go with it, else every other package still finds
+	/// its types. Shared repository packages are never unloaded, all tests and programs use them.
 	/// </summary>
-	internal void Remove(Package result)
+	public static void Unload(string fullName)
 	{
-		CacheService.Remove(result.FullName);
+		CacheService.Remove(fullName);
+		Package? package;
 		lock (LoadedPackages)
 		{
-			LoadedPackages.Remove(result);
+			package = LoadedPackages.Find(loaded => loaded.FullName == fullName);
+			if (package != null)
+				LoadedPackages.Remove(package);
 		}
+		package?.Unload();
 	}
 
 	public bool ContainsPackageNameInCache(string fullName) =>

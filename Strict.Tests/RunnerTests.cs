@@ -416,6 +416,7 @@ public sealed class RunnerTests
 
 	/// <summary>
 	/// Tests changing sources or cached binaries use copies, parallel tests read the repo files.
+	/// The Runner loads a copy as package Strict/folder name, later tests must not find its types.
 	/// </summary>
 	private static async Task InTemporaryCopy(IEnumerable<string> files, Func<string, Task> test)
 	{
@@ -429,6 +430,7 @@ public sealed class RunnerTests
 		}
 		finally
 		{
+			Repositories.Unload(nameof(Strict) + Context.ParentSeparator + Path.GetFileName(directory));
 			Directory.Delete(directory, true);
 		}
 	}
@@ -552,6 +554,17 @@ public sealed class RunnerTests
 				await new Runner(path).Run();
 				Assert.That(consoleWriter.ToString(), Does.StartWith("4"));
 			});
+
+	[Test]
+	public async Task TemporaryPackageTypesAreGoneAfterTheTest()
+	{
+		await InTemporaryFile("Leftover", "has logger\nRun\n\tlogger.Log(\"left\")", async path =>
+		{
+			await new Runner(path).Run();
+			Assert.That(new Package("LeftoverFinder").FindType("Leftover"), Is.Not.Null);
+		});
+		Assert.That(new Package("LeftoverSeeker").FindType("Leftover"), Is.Null);
+	}
 
 	[Test]
 	public async Task DeclaredPackageTypesWinAfterExamplesWereLoaded()

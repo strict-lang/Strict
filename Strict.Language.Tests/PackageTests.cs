@@ -167,6 +167,7 @@ public class PackageTests
 		Assert.That(color.Methods[0].ReturnType.GetFirstImplementation(), Is.SameAs(color));
 		Assert.That(imageProcessing.GetType("Colors").FilePath,
 			Is.EqualTo(color.GetType(Type.List).FilePath));
+		color.Package.Unload();
 	}
 
 	/// <summary>

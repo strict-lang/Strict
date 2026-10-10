@@ -108,6 +108,14 @@ public class Package : Context, IDisposable
 		}
 
 		private readonly Dictionary<string, Type> cachedFoundTypes = new(StringComparer.Ordinal);
+
+		public void RemoveCachedTypes(Package package)
+		{
+			lock (syncRoot)
+				foreach (var (name, type) in cachedFoundTypes)
+					if (type.Package == package)
+						cachedFoundTypes.Remove(name);
+		}
 	}
 
 	private readonly List<Package> children = new();
@@ -252,13 +260,24 @@ public class Package : Context, IDisposable
 			}
 	}
 
-#if !DISABLE_DISPOSING
-	internal void Remove(Package package)
+	private void Remove(Package package)
 	{
 		lock (syncRoot)
 			children.Remove(package);
 	}
-#endif
+
+	/// <summary>
+	/// Removes this package with its types and their List(Type) implementations from its parent and
+	/// the root cache. ponytail: FindType caches of other contexts keep types they found before.
+	/// </summary>
+	internal void Unload()
+	{
+		foreach (var type in GetTypesSnapshot())
+			type.Dispose();
+		((Package)Parent).Remove(this);
+		RootForPackages.RemoveCachedTypes(this);
+	}
+
 	public IReadOnlyDictionary<string, Type> Types => types;
 
 	internal Type[] GetTypesSnapshot()
@@ -282,7 +301,8 @@ public class Package : Context, IDisposable
 		//Console.WriteLine("Package.Dispose " + FullName);
 		// ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 		((Package)Parent)?.Remove(this);
-		createdFromRepos?.Remove(this);
+		if (createdFromRepos != null)
+			Repositories.Unload(FullName);
 #endif
 	}
 }
