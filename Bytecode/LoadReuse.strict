@@ -4,9 +4,10 @@ constant ReloadA = InstructionEntry.Named(InstructionType.LoadVariableToRegister
 constant AddBoth = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Twice = LoadReuse((LoadA, ReloadA, AddBoth, InstructionEntry.Return(2)))
 constant Stored = LoadReuse((LoadA, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), ReloadA, AddBoth))
+constant Indexed = InstructionEntry(InstructionType.IndexCall, "a", (1, 0, -1))
 constant Printed = LoadReuse((LoadA, InstructionEntry.PrintValue("a", 0, false), ReloadA, AddBoth))
-constant WritingKinds = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.Invoke, InstructionType.FieldLoad)
-constant FirstRegisterKinds = (InstructionType.StoreRegisterToVariable, InstructionType.Return, InstructionType.InvokeWriteToList, InstructionType.LoopBegin)
+constant WritingKinds = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.Invoke, InstructionType.FieldLoad, InstructionType.IndexCall)
+constant FirstRegisterKinds = (InstructionType.StoreRegisterToVariable, InstructionType.Return, InstructionType.InvokeWriteToList, InstructionType.InvokeRemove, InstructionType.LoopBegin)
 Optimized List(InstructionEntry)
 	Twice.Optimized.Length is 3
 	Printed.Optimized.Length is 4
@@ -67,6 +68,7 @@ Reads(entry InstructionEntry) Numbers
 	registers
 ReadPositions(entry InstructionEntry) Numbers
 	Twice.ReadPositions(AddBoth) is (1, 2)
+	Twice.ReadPositions(Indexed) is List(Number) + 1
 	Twice.ReadPositions(InstructionEntry.PrintValue("a", 0, false)) is (2)
 	let kind = entry.kind
 	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
@@ -76,7 +78,7 @@ ReadPositions(entry InstructionEntry) Numbers
 	let leading = kind is in FirstRegisterKinds then List(Number) + 0 else List(Number)
 	let flagged = kind is in (InstructionType.Print, InstructionType.LoopBegin) then entry.payload(1) is 1 else false
 	let trailing = flagged then leading + 2 else leading
-	kind is InstructionType.FieldLoad then List(Number) + 1 else trailing
+	kind is in (InstructionType.FieldLoad, InstructionType.IndexCall) then List(Number) + 1 else trailing
 InvokeReads(entry InstructionEntry) Numbers
 	Twice.InvokeReads(InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1)) is (7, 9)
 	let argumentCountPosition = 5 + entry.payload(3)
@@ -88,6 +90,7 @@ InvokeReads(entry InstructionEntry) Numbers
 	entry.payload(instancePosition) is 1 then positions + (instancePosition + 1) else positions
 Written(entry InstructionEntry) Number
 	Twice.Written(AddBoth) is 2
+	Twice.Written(Indexed) is 1
 	Twice.Written(InstructionEntry.Return(2)) is -1
 	if entry.kind is in WritingKinds
 		return entry.payload(0)

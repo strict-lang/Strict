@@ -465,6 +465,13 @@ Bytecode tests, Linker/Platform tests, Evaluator/RuntimeValue tests), checked by
 Expressions, Validators, Language parser and ImageProcessing still hit unsupported code; some
 HighLevelRuntime and TestRunner programs fail at runtime (missing linked methods, recursion in
 Platform.Current, an unresolved implicit member).
+Then: built lists (`listResult{id}` with InvokeWriteToList), member types and traits linked like C#,
+inherited member methods (`Length` inside Text methods), list Remove, IndexCall-aware LoadReuse, and
+loops aggregating into lists (`Bytecode/LoopCodegen`, split from MethodCodegen: sum for Number/Text,
+list for plural and `List(...)` return types, filtered by a trailing `if`). Text literals are unescaped
+like C# `Text.Unescape`, and only Text/List/File `Length`/`Count` are left to VM natives
+(`Range.Length` is linked). Now 26 of the 41 programs run like C# (`StrictCompiledProgramRunsLikeCSharp`,
+46 cases, path arguments resolved from the repository root).
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

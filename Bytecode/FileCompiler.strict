@@ -3,7 +3,7 @@ constant Go = TypeEntry("A", List(MemberEntry), MethodEntry.GoRun)
 constant Invalid = InstructionEntry(Error, List(Text), List(Number))
 constant Broken = MethodEntry("Bad", List(MemberEntry), "None", List(InstructionEntry) + Invalid)
 constant Sample = TypeCodegen("Strict/Bytecode/FileCompiler", List(Text), ValueCodegen.NoTypes, List(Text))
-constant CountCall = InstructionEntry.Invoke(0, ("Strict/Bytecode/B", "Count", "Strict/Number"), List(Number), -1)
+constant CountCall = InstructionEntry.Invoke(0, ("Strict/Range", "Count", "Strict/Number"), List(Number), -1)
 constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
 constant Counted = TypeEntry("A", List(MemberEntry), List(MethodEntry) + CountRun)
 constant Bad = TypeEntry("A", List(MemberEntry), List(MethodEntry) + Broken)
@@ -70,7 +70,7 @@ BaseTypes(entries List(TypeEntry), main Text) Texts
 	mutable types = List(Mutable(Text))
 	for Targets(entries)
 		let type = value.Substring(0, value.LastIndexOf("."))
-		if type is not in types and type is not main and UsedMethods(entries, type).Length > 0
+		if type is not in types and type is not main
 			types.Add(type)
 	for MemberTypes(entries)
 		if value is not in types and value is not main
@@ -78,11 +78,13 @@ BaseTypes(entries List(TypeEntry), main Text) Texts
 	types
 UsedMethods(entries List(TypeEntry), type Text) Texts
 	UsedMethods(Go, "Strict/B") is ("Go")
-	UsedMethods(Counted, "Strict/Bytecode/B") is ("Count")
+	UsedMethods(Counted, "Strict/Range") is ("Count")
 	constant natives = ("from", "to", "Length", "Count", "not", "and", "or", "xor", "Exists", "ReadLines")
 	for Targets(entries)
 		let method = value.Substring(value.LastIndexOf(".") + 1, value.Length - value.LastIndexOf(".") - 1)
-		if value.StartsWith(type + ".") and (method is not in natives or type.LastIndexOf("/") > 6)
+		let isLength = method is in ("Length", "Count")
+		let isNative = isLength then SourceName(type) is in ("Text", "List", "File") else method is in natives
+		if value.StartsWith(type + ".") and ((not isNative) or type.LastIndexOf("/") > 6)
 			method
 SourceName(type Text) Text
 	SourceName("Strict/List(Number)") is "List"

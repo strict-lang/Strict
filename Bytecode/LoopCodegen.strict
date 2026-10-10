@@ -1,0 +1,69 @@
+has methods MethodCodegen
+constant Plain = LoopCodegen(MethodCodegen.Plain)
+constant DoubledBody = BodyParser("Doubled Numbers", "\tfor 3", "\t\tindex * 2").Block(1, 1)
+constant FilterLoop = MethodCodegen.FilterBody.children(0).children.Last
+Aggregation(body SyntaxNode, returnType Text) Text
+	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
+	Plain.Aggregation(DoubledBody, "Numbers") is "list"
+	Plain.Aggregation(DoubledBody, "Boolean") is ""
+	if (body.children.Length is 0) or body.children.Last.Kind is not "For"
+		return ""
+	if returnType is in ("Number", "Text")
+		return "sum"
+	methods.values.inference.types.IsPlural(returnType) or returnType.StartsWith("List(") then "list" else ""
+Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
+	Plain.Aggregated(MethodCodegen.SumBody, CodeBlock.Empty, "Number").Result is 0
+	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Numbers").instructions(0).texts.Last is "forResult"
+	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Boolean").instructions.Length is 6
+	let aggregation = Aggregation(body, returnType)
+	if aggregation is ""
+		return methods.Body(body, block)
+	let leading = Leading(body, Started(block, returnType).At(block.register))
+	let looped = Loop(body.children.Last, leading, aggregation).At(block.register)
+	looped.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, looped.register, "forResult"))
+Leading(body SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Leading(MethodCodegen.SumBody, CodeBlock.Empty).instructions.Length is 0
+	mutable result = block
+	for body.children.Length - 1
+		result = methods.Statement(body.children(index), result.At(block.register), methods.HasElse(body, index))
+	result.At(block.register)
+Started(block CodeBlock, returnType Text) CodeBlock
+	Plain.Started(CodeBlock.Empty, "Number").instructions.Length is 2
+	Plain.Started(CodeBlock.Empty, "Numbers").instructions.Length is 1
+	if returnType is "Text"
+		return block.Load(InstructionEntry.LoadText(block.register, "")).Stored("forResult")
+	if returnType is "Number"
+		return block.Load(InstructionEntry.LoadNumber(block.register, 0)).Stored("forResult")
+	let type = methods.values.target.FullName(returnType)
+	let empty = InstructionEntry(InstructionType.LoadConstantToRegister, type, (0, 6, -1, 0))
+	block.Add(MethodCodegen.StoreConstant(empty, "forResult"))
+Collected(block CodeBlock, aggregation Text) CodeBlock
+	Plain.Collected(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), "sum").instructions.Length is 4
+	Plain.Collected(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), "list").instructions.Length is 2
+	if aggregation is "list"
+		return block.Add(InstructionEntry.Named(InstructionType.InvokeWriteToList, block.Result, "forResult"))
+	let loaded = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "forResult"))
+	let added = InstructionEntry.Binary(InstructionType.Add, (loaded.Result, block.Result, loaded.register))
+	loaded.Load(added).Stored("forResult")
+Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
+	MethodCodegen.Plain.Generate(MethodCodegen.LoopBody, MethodCodegen.NoScope, "None").instructions.Length is 6
+	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.kind is InstructionType.LoopEnd
+	let iterator = node.children(0)
+	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
+	let element = isRange then "Number" else methods.values.ElementType(methods.values.TypeOf(iterator, block))
+	let declared = Begin(iterator, block).Declare("index", "Number").Declare("value", element)
+	let plain = aggregation is ""
+	let body = node.children.Last
+	let looped = plain then methods.Body(body, declared) else AggregatedLoop(body, declared, aggregation)
+	looped.Add(InstructionEntry.Jump(InstructionType.LoopEnd, looped.instructions.Length - block.instructions.Length))
+Begin(iterator SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Begin(SyntaxNode("Number", "3"), CodeBlock.Empty).instructions.Last.kind is InstructionType.LoopBegin
+	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
+	let start = methods.values.Expression((isRange then iterator.children(0) else iterator), block)
+	let end = isRange then methods.values.Expression(iterator.children(1), start) else start
+	end.Add(InstructionEntry.LoopBegin(start.Result, (isRange then end.Result else -1)))
+AggregatedLoop(body SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
+	Plain.AggregatedLoop(FilterLoop, CodeBlock.Empty, "sum").instructions.Last.kind is InstructionType.JumpEnd
+	if body.children.Last.Kind is not "If"
+		return Collected(methods.Body(body, block), aggregation)
+	methods.Conditional(body.children.Last, Leading(body, block), false, aggregation)

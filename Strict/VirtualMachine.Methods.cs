@@ -72,7 +72,7 @@ public sealed partial class VirtualMachine
 	private void AddToProfile(string methodName, TimeSpan elapsed)
 	{
 		var previous = Profile!.GetValueOrDefault(methodName);
-		Profile[methodName] = new MethodTime(previous.Time + elapsed, previous.Calls + 1);
+		Profile![methodName] = new MethodTime(previous.Time + elapsed, previous.Calls + 1);
 	}
 
 	/// <summary>

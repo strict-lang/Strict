@@ -126,4 +126,6 @@ IsLiteral Boolean
 	true
 Unquoted Text
 	SyntaxNode("Text", "\"a\"").Unquoted is "a"
-	text.Substring(1, text.Length - 2)
+	SyntaxNode("Text", "\"a\\\\b\"").Unquoted is "a\\b"
+	let unquoted = text.Substring(1, text.Length - 2).Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t")
+	unquoted.Replace("\\\"", "\"").Replace("\\\\", "\\")

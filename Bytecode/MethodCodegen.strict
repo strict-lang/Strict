@@ -8,7 +8,6 @@ constant SumBody = BodyParser("Sum Number", "\tfor 3", "\t\tindex").Block(1, 1)
 constant IfBody = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\t4").Block(1, 1)
 constant LoopBody = BodyParser("Run Number", "\tfor 3", "\t\tindex", "\t0").Block(1, 1)
 constant FilterBody = BodyParser("Count Number", "\tfor 3", "\t\tif index > 0", "\t\t\t1").Block(1, 1)
-constant FilterLoop = FilterBody.children(0).children.Last
 constant ElseBody = BodyParser("Run", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1)
 constant ReturnElse = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\telse", "\t\treturn 4").Block(1, 1)
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
@@ -19,8 +18,7 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(FilterBody, NoScope, "Number").instructions(12).kind is InstructionType.JumpEnd
 	let code = WithoutTests(body)
 	let start = CodeBlock(List(InstructionEntry), 0, 0, scope)
-	let isSum = (returnType is in ("Number", "Text")) and code.children.Length > 0 and (code.children.Last.Kind is "For")
-	let block = isSum then SummedBody(code, start, returnType) else Body(code, start)
+	let block = LoopCodegen(MethodCodegen(values)).Aggregated(code, start, returnType)
 	if (code.children.Length is 0) or (block.instructions.Last.kind is InstructionType.Return)
 		return block
 	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
@@ -41,31 +39,14 @@ HasElse(body SyntaxNode, position Number) Boolean
 	Plain.HasElse(ElseBody, 0) is true
 	Plain.HasElse(ElseBody, 1) is false
 	position + 1 < body.children.Length and (body.children(position + 1).Kind is in ("ElseIf", "Else"))
-SummedBody(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
-	Plain.SummedBody(SumBody, CodeBlock.Empty, "Number").Result is 0
-	let empty = InstructionEntry.LoadText(block.register, "")
-	let started = block.Load(returnType is "Text" then empty else InstructionEntry.LoadNumber(block.register, 0))
-	let store = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, started.Result, "forResult")
-	mutable result = started.Add(store)
-	for body.children
-		let isLast = index is body.children.Length - 1
-		let start = result.At(block.register)
-		result = isLast then Loop(value, start, true) else Statement(value, start, HasElse(body, index))
-	let total = result.At(block.register)
-	total.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, total.register, "forResult"))
-AddToSum(block CodeBlock) CodeBlock
-	Plain.AddToSum(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1))).instructions.Length is 4
-	let loaded = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "forResult"))
-	let added = loaded.Load(InstructionEntry.Binary(InstructionType.Add, (loaded.Result, block.Result, loaded.register)))
-	added.Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, added.Result, "forResult"))
 Statement(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Statement(SyntaxNode("Return", "", One), CodeBlock.Empty, false).instructions.Length is 2
 	if node.Kind is in ("Declaration", "Reassignment")
 		return Assignment(node, block)
 	if node.Kind is in ("If", "ElseIf", "Else")
-		return node.Kind is "If" then Conditional(node, block, hasElse, false) else Else(node, block, hasElse)
+		return node.Kind is "If" then Conditional(node, block, hasElse, "") else Else(node, block, hasElse)
 	if node.Kind is "For"
-		return Loop(node, block, false)
+		return LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
 	if (node.Kind is "MethodCall") and (node.text is "Log")
 		return Log(node.children(1), block)
 	let expression = node.Kind is "Return" then node.children(0) else node
@@ -91,11 +72,11 @@ StoreConstant(load InstructionEntry, name Text) InstructionEntry
 		content = content + load.payload(value)
 	let texts = load.texts + name
 	InstructionEntry(InstructionType.StoreConstantToVariable, texts, content + (-1 - load.texts.Length) + 0)
-Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, sums Boolean) CodeBlock
+Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text) CodeBlock
 	Plain.Generate(IfBody, NoScope, "None").instructions.Length is 9
 	let condition = OperatorCodegen(values).Condition(node.children(0), block)
 	let branch = Body(node.children.Last, condition)
-	let body = sums then AddToSum(branch) else branch
+	let body = aggregation is "" then branch else LoopCodegen(MethodCodegen(values)).Collected(branch, aggregation)
 	let skipsElse = hasElse and body.instructions.Last.kind is not InstructionType.Return
 	let flagged = skipsElse then SkipElse(body) else body
 	flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
@@ -107,33 +88,10 @@ Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Generate(ElseBody, NoScope, "None").instructions.Length is 12
 	Plain.Generate(ReturnElse, NoScope, "None").instructions.Length is 9
 	if block.instructions(block.instructions.Length - 2).kind is InstructionType.Return
-		return node.Kind is "ElseIf" then Conditional(node, block, hasElse, false) else Body(node.children.Last, block)
+		return node.Kind is "ElseIf" then Conditional(node, block, hasElse, "") else Body(node.children.Last, block)
 	let jumped = block.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, block.nextId)).WithNextId
-	let inner = node.Kind is "ElseIf" then Conditional(node, jumped, hasElse, false) else Body(node.children.Last, jumped)
+	let inner = node.Kind is "ElseIf" then Conditional(node, jumped, hasElse, "") else Body(node.children.Last, jumped)
 	inner.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
-Loop(node SyntaxNode, block CodeBlock, sums Boolean) CodeBlock
-	Plain.Generate(LoopBody, NoScope, "None").instructions.Length is 6
-	let iterator = node.children(0)
-	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
-	let first = isRange then iterator.children(0) else iterator
-	let start = values.Expression(first, block)
-	let end = isRange then values.Expression(iterator.children(1), start) else start
-	let endRegister = isRange then end.Result else -1
-	let begin = end.Add(InstructionEntry.LoopBegin(start.Result, endRegister))
-	let element = isRange then "Number" else values.ElementType(values.TypeOf(iterator, block))
-	let declared = begin.Declare("index", "Number").Declare("value", element)
-	let summed = sums then SummedLoop(node.children.Last, declared) else Body(node.children.Last, declared)
-	summed.Add(InstructionEntry.Jump(InstructionType.LoopEnd, summed.instructions.Length - block.instructions.Length))
-SummedLoop(body SyntaxNode, block CodeBlock) CodeBlock
-	Plain.SummedLoop(FilterLoop, CodeBlock.Empty).instructions.Last.kind is InstructionType.JumpEnd
-	if body.children.Last.Kind is not "If"
-		return AddToSum(Body(body, block))
-	mutable result = block
-	for body.children
-		let start = result.At(block.register)
-		let isLast = index is body.children.Length - 1
-		result = isLast then Conditional(value, start, false, true) else Statement(value, start, HasElse(body, index))
-	result
 Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Log(SyntaxNode("Text", "\"Hi\""), CodeBlock.Empty).instructions(0).texts is ("Hi")
 	Plain.Log(SyntaxNode("Number", "1"), CodeBlock.Empty).instructions.Length is 2

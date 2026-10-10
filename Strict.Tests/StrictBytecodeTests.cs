@@ -57,7 +57,7 @@ public sealed class StrictBytecodeTests
 	[TestCase("Examples/MemoryPressure")]
 	[TestCase("Examples/NumberStats")]
 	[TestCase("Examples/Grade")]
-	[TestCase("Examples/Sum", 5, 10, 20)]
+	[TestCase("Examples/Sum", "5", "10", "20")]
 	[TestCase("Bytecode/BytecodeDemo")]
 	[TestCase("Bytecode/DecompilerTests")]
 	[TestCase("Bytecode/ExecutableTests")]
@@ -70,6 +70,7 @@ public sealed class StrictBytecodeTests
 	[TestCase("Expressions/ParseDemo")]
 	[TestCase("Compiler/PlatformTests")]
 	[TestCase("HighLevelRuntime/BodyTests")]
+	[TestCase("HighLevelRuntime/ContextTests")]
 	[TestCase("HighLevelRuntime/EvaluatorTests")]
 	[TestCase("HighLevelRuntime/IfToTests")]
 	[TestCase("HighLevelRuntime/InterpreterTests")]
@@ -82,18 +83,24 @@ public sealed class StrictBytecodeTests
 	[TestCase("Optimizers/StrengthTests")]
 	[TestCase("Optimizers/UnreachableTests")]
 	[TestCase("TestRunner/TestDemo")]
-	public async Task StrictCompiledProgramRunsLikeCSharp(string program, params double[] numbers)
+	[TestCase("Language/PackageTests", "Examples/BaseTypesTest")]
+	public async Task StrictCompiledProgramRunsLikeCSharp(string program, params string[] arguments)
 	{
 		var source = Root + "/" + program + Type.Extension;
-		await new Runner(source).Run();
-		var expected = await Execute(Path.ChangeExtension(source, BinaryExecutable.Extension), numbers);
+		var programArguments = string.Join(" ", arguments.Select(argument =>
+			double.TryParse(argument, out _)
+				? argument
+				: Root + "/" + argument));
+		await new Runner(source, programArguments).Run();
+		var expected = await Execute(Path.ChangeExtension(source, BinaryExecutable.Extension),
+			programArguments);
 		await new Runner(Root + "/Bytecode/FileCompiler" + Type.Extension, source + " " + Root).
 			Run();
 		var binaryPath = Path.Combine(Path.GetTempPath(), nameof(StrictBytecodeTests),
 			Path.GetFileName(program) + BinaryExecutable.Extension);
 		Directory.CreateDirectory(Path.GetDirectoryName(binaryPath)!);
 		await File.WriteAllBytesAsync(binaryPath, LastNumbersLine());
-		Assert.That(await Execute(binaryPath, numbers), Is.EqualTo(expected));
+		Assert.That(await Execute(binaryPath, programArguments), Is.EqualTo(expected));
 	}
 
 	[TestCase("HelloLogger")]
@@ -137,12 +144,12 @@ public sealed class StrictBytecodeTests
 	/// <summary>
 	/// Binaries load self-contained like the CLI does, program arguments go through the Runner.
 	/// </summary>
-	private async Task<string> Execute(string binaryPath, double[] numbers)
+	private async Task<string> Execute(string binaryPath, string arguments)
 	{
 		consoleWriter.GetStringBuilder().Clear();
-		if (numbers.Length > 0)
+		if (arguments.Length > 0)
 		{
-			await new Runner(binaryPath, string.Join(" ", numbers)).Run();
+			await new Runner(binaryPath, arguments).Run();
 			var output = consoleWriter.ToString();
 			return output[..output.LastIndexOf("Executed ", StringComparison.Ordinal)];
 		}
