@@ -64,12 +64,20 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", MixedList), CodeBlock.Empty).instructions.Length is 7
 	Plain.Assignment(ElementAssignment, CodeBlock.Empty).instructions.Last.texts is ("x.a(1)")
 	let isDeclaration = node.Kind is "Declaration"
-	let name = isDeclaration then Tokenizer(node.text).Tokens.Last else node.children(0) to Text
+	let name = AssignedName(node)
 	let assigned = node.children(isDeclaration then 0 else 1)
 	let value = values.Expression(assigned, block)
 	let store = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, value.Result, name)
 	let stored = assigned.IsLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else value.Add(store)
 	isDeclaration then Declared(stored, name, assigned) else stored
+AssignedName(node SyntaxNode) Text
+	Plain.AssignedName(SyntaxNode("Declaration", "let a", One)) is "a"
+	Plain.AssignedName(ElementAssignment) is "x.a(1)"
+	Plain.AssignedName(SyntaxNode("Reassignment", "", (SyntaxNode("Member", "Y", NoNode), One))) is "Y"
+	if node.Kind is "Declaration"
+		return Tokenizer(node.text).Tokens.Last
+	let target = node.children(0)
+	target.Kind is "Member" then target.text else target to Text
 Declared(block CodeBlock, name Text, assigned SyntaxNode) CodeBlock
 	Plain.Declared(CodeBlock.Empty.Declare("x", "Numbers"), "a", NoNode).Owns("a") is false
 	block.Declare(name, values.TypeOf(assigned, block)).Sharing(name, ListCodegen(values).IsNew(assigned) is false)
