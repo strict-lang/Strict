@@ -47,7 +47,8 @@ InitialOf(header HeaderTokens) List(InstructionEntry)
 	let equals = header.tokens.Index("=")
 	if equals is -1
 		return List(InstructionEntry)
-	let end = header.tokens.Index("with") is -1 then header.tokens.Length else header.tokens.Index("with")
+	let constraints = header.tokens.Index("with")
+	let end = constraints is -1 then header.tokens.Length else constraints
 	Initial(SyntaxParser(header.tokens).ParseRange(equals + 1, end))
 Initial(node SyntaxNode) List(InstructionEntry)
 	Hello.Initial(SyntaxNode("Text", "\"a\"")).First.payload is (4, -1, 0)
