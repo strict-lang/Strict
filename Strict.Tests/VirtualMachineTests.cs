@@ -543,13 +543,21 @@ public sealed class VirtualMachineTests : TestBytecode
 
 	[Test]
 	public void NumberWrapperValueIsUsedAsNumberInArithmetic() =>
-		Assert.That(new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
-				nameof(NumberWrapperValueIsUsedAsNumberInArithmetic),
-				nameof(NumberWrapperValueIsUsedAsNumberInArithmetic) + "(0).Halved", "has number",
-				"Halved Number",
-				"\t" + nameof(NumberWrapperValueIsUsedAsNumberInArithmetic) + "(180).ValueHalved",
-				"ValueHalved Number", "\tvalue / 2")).Generate()).Execute().Returns!.Value.Number,
-			Is.EqualTo(90));
+		Assert.That(RunOnNumberWrapper(nameof(NumberWrapperValueIsUsedAsNumberInArithmetic),
+			"value / 2").Number, Is.EqualTo(90));
+
+	private ValueInstance RunOnNumberWrapper(string typeName, string calculation) =>
+		new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(typeName,
+			typeName + "(0).Run", "has number", "Run Number", "\t" + typeName + "(180).Calculate",
+			"Calculate Number", "\t" + calculation)).Generate()).Execute().Returns!.Value;
+
+	[TestCase("Plus", "90 + value", "270")]
+	[TestCase("Minus", "value - 90", "90")]
+	[TestCase("Times", "2 * value", "360")]
+	public void ArithmeticWithNumberWrapperGivesNumber(string operation, string calculation,
+		string expected) =>
+		Assert.That(RunOnNumberWrapper(nameof(ArithmeticWithNumberWrapperGivesNumber) + operation,
+			calculation).ToExpressionCodeString(), Is.EqualTo(expected));
 
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
 	{

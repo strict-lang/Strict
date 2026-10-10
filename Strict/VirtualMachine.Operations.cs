@@ -1,6 +1,7 @@
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Expressions;
+using Type = Strict.Language.Type;
 
 namespace Strict;
 
@@ -21,8 +22,8 @@ public sealed partial class VirtualMachine
 		{
 			InstructionType.Add => AddValueInstances(left, right),
 			InstructionType.Subtract => SubtractValueInstances(left, right),
-			_ => new ValueInstance(right.GetType(), CalculateNumber(instruction.InstructionType,
-				left.GetArithmeticNumber(), right.GetArithmeticNumber()))
+			_ => new ValueInstance(GetNumberResultType(right), CalculateNumber(
+				instruction.InstructionType, left.GetArithmeticNumber(), right.GetArithmeticNumber()))
 		};
 	}
 
@@ -39,7 +40,15 @@ public sealed partial class VirtualMachine
 			_ => throw Fail("Unsupported binary operation: " + operation) //ncrunch: no coverage
 		};
 
-	private static ValueInstance AddValueInstances(ValueInstance left, ValueInstance right)
+	/// <summary>
+	/// Calculating with a number wrapper like Degrees gives a plain Number, like the interpreter.
+	/// </summary>
+	private Type GetNumberResultType(ValueInstance operand) =>
+		operand.IsFlatNumeric || operand.TryGetValueTypeInstance() != null
+			? executable.numberType
+			: operand.GetType();
+
+	private ValueInstance AddValueInstances(ValueInstance left, ValueInstance right)
 	{
 		if (left.IsList)
 		{
@@ -54,7 +63,7 @@ public sealed partial class VirtualMachine
 			return new ValueInstance(right.List.ReturnType, [left, .. right.List.Items]);
 		if (left.IsText || right.IsText)
 			return new ValueInstance(ConvertToText(left).Text + ConvertToText(right).Text);
-		return new ValueInstance(right.GetType(),
+		return new ValueInstance(GetNumberResultType(right),
 			left.GetArithmeticNumber() + right.GetArithmeticNumber());
 	}
 
@@ -73,7 +82,7 @@ public sealed partial class VirtualMachine
 		if (left.IsText || right.IsText)
 			throw Fail("Text subtraction is not supported: '" + left + "' - '" + right +
 				"'"); //ncrunch: no coverage
-		return new ValueInstance(left.GetType(),
+		return new ValueInstance(GetNumberResultType(left),
 			left.GetArithmeticNumber() - right.GetArithmeticNumber());
 	}
 
