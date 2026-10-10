@@ -460,6 +460,7 @@ public partial class Type : Context, IDisposable
 	{
 		GC.SuppressFinalize(this);
 		((Package)Parent).Remove(this);
+		RemoveGenericImplementations();
 	}
 
 	public int FindLineNumber(string firstLineThatContains)

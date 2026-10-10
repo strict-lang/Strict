@@ -202,6 +202,8 @@ public sealed partial class TypeParser
 				continue;
 			var startArgs = idx + "Range(".Length;
 			var endArgs = line.IndexOf(')', startArgs);
+			if (endArgs < 0)
+				continue;
 			var args = line[startArgs..endArgs].Split(',',
 				StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 			if (args.Length == 2 &&

@@ -85,9 +85,33 @@ public sealed class TypeParserTests
 			Throws.InstanceOf<TypeParser.MemberWithTypeAnyIsNotAllowed>());
 
 	[Test]
+	public void MemberTypeMustCloseItsBracket() =>
+		Assert.That(
+			() => CreateType(nameof(MemberTypeMustCloseItsBracket), "has logger", "has values List(Text"),
+			Throws.InstanceOf<TypeParser.MemberTypeMustCloseItsBracket>());
+
+	[Test]
 	public void MembersMustComeBeforeMethods() =>
 		Assert.That(() => CreateType(nameof(MembersMustComeBeforeMethods), "Run", "has logger"),
 			Throws.InstanceOf<TypeParser.MembersMustComeBeforeMethods>());
+
+	[Test]
+	public void DuplicateMembersWithInitialValuesAreNotAllowed() =>
+		Assert.That(
+			() => CreateType(nameof(DuplicateMembersWithInitialValuesAreNotAllowed), "constant Max = 5",
+				"constant Max = 5", "Run", "\tMax"),
+			Throws.InstanceOf<TypeParser.DuplicateMembersAreNotAllowed>());
+
+	[Test]
+	public void MemberMissingInitialValue() =>
+		Assert.That(() => CreateType(nameof(MemberMissingInitialValue), "has number ="),
+			Throws.InstanceOf<TypeParser.MemberMissingInitialValue>());
+
+	[Test]
+	public void InvalidConstraintFailsAtMemberLine() =>
+		Assert.That(
+			() => CreateType(nameof(InvalidConstraintFailsAtMemberLine), "has number with .value > 0",
+				"Run", "\tnumber"), Throws.InstanceOf<ParsingFailed>().With.Message.Contains(":line 1"));
 
 	[Test]
 	public void MissingConstraintExpression() =>

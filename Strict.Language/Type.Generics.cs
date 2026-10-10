@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace Strict.Language;
 
 public partial class Type
@@ -85,9 +87,41 @@ public partial class Type
 		{
 			var genericType = new GenericTypeImplementation(this, implementationTypes, key);
 			cachedGenericTypes!.Add(key, genericType);
+			foreach (var implementationType in implementationTypes)
+				LazyInitializer.EnsureInitialized(ref implementationType.implementationsUsingThisType).
+					Enqueue(genericType);
 			return genericType;
 		}
 		throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
+	}
+
+	private ConcurrentQueue<GenericTypeImplementation>? implementationsUsingThisType;
+
+	/// <summary>
+	/// List(ThisType) or a generic type's own implementations must not outlive it, a type parsed again
+	/// under the same name would get them back. ponytail: own implementations stay queued in their
+	/// implementation types (tiny leak per re-parsed generic type), upgrade: remove them there too.
+	/// </summary>
+	private void RemoveGenericImplementations()
+	{
+		while (implementationsUsingThisType?.TryDequeue(out var implementation) == true)
+			implementation.Generic.RemoveGenericImplementation(implementation);
+		Dictionary<string, GenericTypeImplementation>? ownImplementations;
+		lock (genericImplementationLock)
+		{
+			ownImplementations = cachedGenericTypes;
+			cachedGenericTypes = null;
+		}
+		if (ownImplementations != null)
+			foreach (var implementation in ownImplementations.Values)
+				implementation.Dispose();
+	}
+
+	private void RemoveGenericImplementation(GenericTypeImplementation implementation)
+	{
+		lock (genericImplementationLock)
+			cachedGenericTypes?.Remove(implementation.Name);
+		implementation.Dispose();
 	}
 
 	private bool HasMatchingConstructor(Type[] implementationTypes) =>

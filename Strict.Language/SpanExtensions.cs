@@ -116,6 +116,11 @@ public static class SpanExtensions
 	// ReSharper disable once MethodTooLong
 	public static bool TryParseNumber(this ReadOnlySpan<char> input, out double number)
 	{
+		if (input.IsEmpty)
+		{
+			number = 0;
+			return false;
+		}
 		if (input[0] == '-')
 		{
 			if (!input[1..].TryParseNumber(out number))

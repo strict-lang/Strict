@@ -106,6 +106,27 @@ public sealed class GenericTypeImplementationTests
 	}
 
 	[Test]
+	public void DisposedTypeRemovesItsListImplementation()
+	{
+		string[] lines = ["has number", "Run Number", "\tnumber"];
+		var disposed = CreateType(nameof(DisposedTypeRemovesItsListImplementation), lines);
+		disposed.GetListImplementationType(disposed);
+		disposed.Dispose();
+		using var recreated = CreateType(nameof(DisposedTypeRemovesItsListImplementation), lines);
+		Assert.That(recreated.GetListImplementationType(recreated).ImplementationTypes[0],
+			Is.SameAs(recreated));
+	}
+
+	[Test]
+	public void TestsOnlyParsingOfGenericTypeFailsAtTheLine()
+	{
+		using var type = CreateType(nameof(TestsOnlyParsingOfGenericTypeFailsAtTheLine),
+			["has elements Generics", "Broken Number", "\tconstant broken = to", "\t5"]);
+		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(true),
+			Throws.InstanceOf<ParsingFailed>().With.Message.Contains("constant broken = to"));
+	}
+
+	[Test]
 	public void DictionaryImplementationUsesListMemberType()
 	{
 		var number = TestPackage.Instance.GetType(Type.Number);

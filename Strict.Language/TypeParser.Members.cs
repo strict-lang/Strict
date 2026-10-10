@@ -65,6 +65,8 @@ public sealed partial class TypeParser
 			if (nameAndExpression.Current[0] == EqualCharacter)
 			{
 				//TODO: this is almost the same code as below in line 520+
+				if (remainingLine.Length <= nameAndType.Length + 3)
+					throw new MemberMissingInitialValue(type, LineNumber, nameAndType);
 				var constantValue = remainingLine[(nameAndType.Length + 3)..];
 				var withIndex = constantValue.IndexOf(" " + Keyword.With + " ", StringComparison.Ordinal);
 				var valueOnly = withIndex >= 0
@@ -83,7 +85,7 @@ public sealed partial class TypeParser
 				if (!valueOnly.IsEmpty)
 				{
 					rememberToInitializeMemberInitialValues ??= new Dictionary<Member, string>();
-					rememberToInitializeMemberInitialValues.Add(member, valueOnly.ToString());
+					rememberToInitializeMemberInitialValues.TryAdd(member, valueOnly.ToString());
 				}
 				if (withIndex >= 0)
 				{
@@ -173,7 +175,7 @@ public sealed partial class TypeParser
 			InitialValueText = GetTypedMemberInitializerText(parser, nameAndType, valueOnly)
 		};
 		rememberToInitializeMemberInitialValues ??= new Dictionary<Member, string>();
-		rememberToInitializeMemberInitialValues.Add(member, member.InitialValueText);
+		rememberToInitializeMemberInitialValues.TryAdd(member, member.InitialValueText);
 		if (withIndex >= 0)
 		{
 			var constraintsSpan = constantValue[(withIndex + Keyword.With.Length + 2)..];
@@ -213,7 +215,7 @@ public sealed partial class TypeParser
 		{
 			member.InitialValueText = initialValueSpan;
 			rememberToInitializeMemberInitialValues ??= new Dictionary<Member, string>();
-			rememberToInitializeMemberInitialValues.Add(member, initialValueSpan);
+			rememberToInitializeMemberInitialValues.TryAdd(member, initialValueSpan);
 		}
 		if (!constraintsSpan.IsEmpty)
 		{
@@ -245,15 +247,17 @@ public sealed partial class TypeParser
 		out string initialValueSpan)
 	{
 		var constraintKeywordLength = Keyword.With.Length;
+		var constraintsStart = nameAndType.Length + 1 + constraintKeywordLength + 1;
 		var equalIndex = FindStandaloneEqualIndex(remainingLine);
-		if (equalIndex > 0)
+		if (equalIndex > constraintsStart)
 		{
-			constraintsSpan =
-				remainingLine[(nameAndType.Length + 1 + constraintKeywordLength + 1)..(equalIndex - 1)];
+			if (equalIndex + 2 > remainingLine.Length)
+				throw new MemberMissingInitialValue(type, LineNumber, nameAndType);
+			constraintsSpan = remainingLine[constraintsStart..(equalIndex - 1)];
 			initialValueSpan = remainingLine[(equalIndex + 2)..].ToString();
 			return GetInitialValueType(parser, nameAndType, initialValueSpan);
 		}
-		constraintsSpan = remainingLine[(nameAndType.Length + 1 + constraintKeywordLength + 1)..];
+		constraintsSpan = remainingLine[constraintsStart..];
 		initialValueSpan = "";
 		return null;
 	}
@@ -311,16 +315,21 @@ public sealed partial class TypeParser
 		int lineNumber,
 		string typeName) : ParsingFailed(type, lineNumber, typeName);
 
-	private static string GetMemberType(SpanSplitEnumerator nameAndExpression)
+	private string GetMemberType(SpanSplitEnumerator nameAndExpression)
 	{
 		var memberType = nameAndExpression.Current.ToString();
 		while (memberType.Contains('(') && !memberType.Contains(')'))
-		{
-			nameAndExpression.MoveNext();
-			memberType += " " + nameAndExpression.Current.ToString();
-		}
+			memberType += " " + (nameAndExpression.MoveNext()
+				? nameAndExpression.Current.ToString()
+				: throw new MemberTypeMustCloseItsBracket(type, LineNumber, memberType));
 		return memberType;
 	}
+
+	public sealed class MemberTypeMustCloseItsBracket(Type type, int lineNumber, string memberType)
+		: ParsingFailed(type, lineNumber, memberType + " is missing the closing bracket");
+
+	public sealed class MemberMissingInitialValue(Type type, int lineNumber, string memberName)
+		: ParsingFailed(type, lineNumber, memberName + " = must be followed by the initial value");
 
 	public sealed class MemberMissingConstraintExpression(Type type,
 		int lineNumber,

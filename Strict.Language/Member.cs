@@ -33,6 +33,19 @@ public sealed class Member : NamedType
 
 	public void ParseConstraints(ExpressionParser parser, string[] constraintsText)
 	{
+		try
+		{
+			Constraints = ParseConstraintExpressions(parser, constraintsText);
+		}
+		catch (Exception ex) when (ex is not ParsingFailed)
+		{
+			throw new ParsingFailed(DefinedIn, LineNumber, ex.Message, ex);
+		}
+	}
+
+	private Expression[] ParseConstraintExpressions(ExpressionParser parser,
+		string[] constraintsText)
+	{
 		var expressions = new Expression[constraintsText.Length];
 		var body = new Body(new Method(Type, 0, parser, [ConstraintsBody]));
 		AddContainingTypeMembersAsConstraintVariables(body);
@@ -42,7 +55,7 @@ public sealed class Member : NamedType
 			if (!expressions[index].ReturnType.IsBoolean)
 				throw new InvalidConstraintExpression(Type, Name, constraintsText[index]);
 		}
-		Constraints = expressions;
+		return expressions;
 	}
 
 	private void AddContainingTypeMembersAsConstraintVariables(Body body)

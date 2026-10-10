@@ -107,6 +107,11 @@ public class PackageTests
 		Assert.Throws<Package.FullNameMustContainPackageAndTypeNames>(() =>
 			mainPackage.FindFullType(publicSubType.Name));
 
+	[TestCase("/")]
+	[TestCase("Strict/")]
+	public void FullNameWithoutTypeNameIsNoType(string fullName) =>
+		Assert.That(mainPackage.FindFullType(fullName), Is.Null);
+
 	[Test]
 	public void ContextNameMustNotContainSpecialCharactersOrNumbers()
 	{

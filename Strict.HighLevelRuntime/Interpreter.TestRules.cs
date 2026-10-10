@@ -11,8 +11,10 @@ namespace Strict.HighLevelRuntime;
 public partial class Interpreter
 {
 	private static bool ShouldIgnoreGenericListTestParseFailure(Method method, Exception inner) =>
-		method.Type.IsGeneric && method.Type.Name == Type.List &&
-		inner is Type.GenericTypesCannotBeUsedDirectlyUseImplementation;
+		method.Type.IsGeneric && method.Type.Name == Type.List && inner is ParsingFailed
+		{
+			InnerException: Type.GenericTypesCannotBeUsedDirectlyUseImplementation
+		};
 
 	private static bool ShouldSkipGenericListTestValidation(Method method, bool runOnlyTests) =>
 		runOnlyTests && method.Type is { IsGeneric: true, Name: Type.List or Type.Dictionary };

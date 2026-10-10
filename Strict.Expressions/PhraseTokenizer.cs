@@ -193,7 +193,7 @@ public sealed class PhraseTokenizer
 					break;
 			if (tokens.textStart != -1)
 				throw new UnterminatedString(tokens.input);
-			if (result.Count < 3)
+			if (result.Count < 3 || tokens.index >= tokens.input.Length)
 				throw new InvalidEmptyOrUnmatchedBrackets(tokens.input);
 			if (result.Count == 3 || foundListSeparator || !foundSpace ||
 				tokens.input[tokens.index - 1] == ' ' || foundBinaryOperationInMethodCall)

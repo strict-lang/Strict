@@ -28,6 +28,12 @@ public sealed class BinaryTests : TestExpressions
 	public void MissingRightExpression() =>
 		Assert.That(() => ParseExpression("5 + unknown"), Throws.InstanceOf<Body.IdentifierNotFound>());
 
+	[TestCase("to < 5")]
+	[TestCase("5 to not is \"5\"")]
+	public void OperatorWithoutOperand(string code) =>
+		Assert.That(() => ParseExpression(code),
+			Throws.InstanceOf<Binary.IncompleteTokensForBinaryExpression>());
+
 	[Test]
 	public void ArgumentsDoNotMatchBinaryOperatorParameters() =>
 		Assert.That(() => ParseExpression("5 / \"text\""),

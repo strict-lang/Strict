@@ -31,6 +31,7 @@ public sealed class StringExtensionsTests
 	[TestCase("A$")]
 	[TestCase("$7")]
 	[TestCase("ranDomStringG.7")]
+	[TestCase("")]
 	public void NotWithNumberAtEnd(string text) =>
 		Assert.That(text.IsWordOrWordWithNumberAtEnd(out var number),
 			Is.False.And.Matches<bool>(_ => number is -1 or 0));

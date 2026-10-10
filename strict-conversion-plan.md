@@ -656,6 +656,13 @@ arguments, single-element lists, reserved names, test lines, package references,
 - Memory/time limits in VM (stack overflow detection, step limits) with clear RuntimeErrors.
 - Binary format versioning + compatibility tests (old cache → clean regenerate).
 
+Parser fuzzing (2026-10-10): Slow `ParserFuzzTests` mutates all 299 .strict files 40 times (seed 7,
+11960 parses, 3 s); a .NET exception (also inside ParsingFailed) or a parse over 5 s fails it.
+Found 1 hang and 19 crash classes at 100 mutations/file, 20 root causes fixed (GetMemberType endless
+loop, Stack empty in Binary, unwrapped constraint/generic test errors, Type.Dispose keeping
+List(Type) alive, index bounds); seeds 7/13/21 at 400/file are green. Open: UnterminatedString,
+CannotUseKeywordsAsName and other parse errors still only get wrapped into ParsingFailed.
+
 
 ## Native loops — 2026-10-09 (late night, part 4)
 

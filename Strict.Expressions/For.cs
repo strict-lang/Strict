@@ -273,8 +273,8 @@ public sealed class For(Expression[] customVariables,
 		line[line.LastIndexOf("Range")..(line.LastIndexOf(')') + 1)];
 
 	private static ReadOnlySpan<char> FindVariableNames(ReadOnlySpan<char> line) =>
-		line.Contains(InWithSpaces, StringComparison.Ordinal)
-			? line[4..line.LastIndexOf(InWithSpaces)]
+		line.LastIndexOf(InWithSpaces) is var inIndex and >= 4
+			? line[4..inIndex]
 			: "";
 
 	private static Expression[] AddVariablesIfTheyDoNotExistYet(Body body, ReadOnlySpan<char> line,

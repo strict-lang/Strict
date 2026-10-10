@@ -15,10 +15,7 @@ public abstract class NamedType
 			Name = fullTypePath != null
 				? rawName[(rawName.LastIndexOf(Context.ParentSeparator) + 1)..]
 				: rawName;
-			if (!Name.IsWord())
-				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
-			if (Name.IsKeyword() || Name.AsSpan().IsOperator())
-				throw new CannotUseKeywordsAsName(Name);
+			CheckNameIsWordAndNoKeyword();
 			if ((Name.StartsWith("List", StringComparison.Ordinal) ||
 					Name.StartsWith("list", StringComparison.Ordinal)) && Name.Length > 4 && Name[4] != '(')
 				throw new Context.ListPrefixIsNotAllowedUseImplementationTypeNameInPlural(Name);
@@ -34,11 +31,18 @@ public abstract class NamedType
 			Type = typeFromValue;
 			if (Name.Contains(' '))
 				throw new AssignmentWithInitializerTypeShouldNotHaveNameWithSameType(Name);
-			if (!Name.IsWord())
-				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
+			CheckNameIsWordAndNoKeyword();
 		}
 		if (!Name.Length.IsNameLengthWithinLimit() && Name != "x" && Name != "y" && Name != "z")
 			throw new NameLengthIsNotWithinTheAllowedLimit(Name);
+	}
+
+	private void CheckNameIsWordAndNoKeyword()
+	{
+		if (!Name.IsWord())
+			throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
+		if (Name.IsKeyword() || Name.AsSpan().IsOperator())
+			throw new CannotUseKeywordsAsName(Name);
 	}
 
 	public sealed class CannotUseKeywordsAsName(string name) : Exception(name +

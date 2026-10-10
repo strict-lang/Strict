@@ -125,8 +125,8 @@ public class Package : Context, IDisposable
 
 	public Type? FindFullType(string fullName)
 	{
-		if (fullName.Contains(' ') || fullName.Contains('"'))
-			return null; //ncrunch: no coverage
+		if (fullName.Contains(' ') || fullName.Contains('"') || fullName.EndsWith(ParentSeparator))
+			return null;
 		var parts = fullName.Split(ParentSeparator);
 		if (parts.Length < 2)
 			throw new FullNameMustContainPackageAndTypeNames(fullName);
