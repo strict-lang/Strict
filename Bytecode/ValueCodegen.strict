@@ -33,7 +33,7 @@ Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	let owner = target.ImplicitOwner(node.text, block.scope)
 	if isFree and owner is not ""
 		return InstanceCall(SyntaxNode("Member", node.text, SyntaxNode("Identifier", owner)), block)
-	if isFree and target.Header(node.text).tokens.Length > 0
+	if IsMethodCall(node, block)
 		return Invoke(node, block, -1, TypeOf(node, block))
 	if isFree and inference.types.IsPlural(node.text)
 		return Elements.Empty(node.text, block)
@@ -103,11 +103,24 @@ InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 	if (node.Kind is "Member") and (node.text is "index") and (node.children(0).text is "outer")
 		return block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "outer.index"))
 	let instance = Expression(node.children(0), block)
-	if (node.Kind is "Member") and target.IsMember(TypeOf(node.children(0), block), node.text)
+	if (node.Kind is "Member") and (IsMethodCall(node, block) is false)
 		return instance.Load(InstructionEntry(InstructionType.FieldLoad, node.text, (instance.register, instance.Result, -1)))
 	let method = node.Kind is "Not" then "not" else "to"
 	let call = node.Kind is in ("Binary", "Not") then SyntaxNode("Member", method, node.children(0)) else node
 	Invoke(call, instance, instance.Result, TypeOf(node, block))
+IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsMethodCall(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty) is true
+	Plain.IsMethodCall(SyntaxNode("Member", "Greet", NewGreeter), CodeBlock.Empty) is true
+	Plain.IsMethodCall(GreeterText, CodeBlock.Empty) is false
+	Plain.IsMethodCall(SyntaxNode("Call", "text", One), CodeBlock.Empty) is false
+	Plain.IsMethodCall(ToText, CodeBlock.Empty) is false
+	if node.Kind is "Binary"
+		return node.text is not in ("to", "then", "else")
+	if node.Kind is "Identifier"
+		return (block.scope.TypeOf(node.text) is "") and target.Header(node.text).tokens.Length > 0
+	if node.Kind is "Member"
+		return target.IsMember(TypeOf(node.children(0), block), node.text) is false
+	(node.Kind is in ("Call", "MethodCall")) and (IsIndexing(node, block) is false)
 IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is true
 	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false
