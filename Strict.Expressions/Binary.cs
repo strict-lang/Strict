@@ -160,16 +160,19 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		if (operatorToken is BinaryOperator.Plus && left.ReturnType.IsList && right.ReturnType.IsList)
 			try
 			{
-				return new Binary(left, left.ReturnType.GetMethod(operatorToken, [right]), [right]);
+				return Converted(body, left, left.ReturnType.GetMethod(operatorToken, [right]), right);
 			}
 			catch (Type.ArgumentsDoNotMatchMethodParameters)
 			{
-				return new Binary(left,
+				return Converted(body, left,
 					left.ReturnType.AvailableMethods[operatorToken].First(method =>
-						method.Parameters.Count == 1 && method.Parameters[0].Type.IsList), [right]);
+						method.Parameters.Count == 1 && method.Parameters[0].Type.IsList), right);
 			}
-		return new Binary(left, left.ReturnType.GetMethod(operatorToken, [right]), [right]);
+		return Converted(body, left, left.ReturnType.GetMethod(operatorToken, [right]), right);
 	}
+
+	private static Binary Converted(Body body, Expression left, Method method, Expression right) =>
+		new(left, method, [Conversion.ConvertIfNeeded(body, right, method.Parameters[0].Type)]);
 
 	private static bool HasMatchingPlusForText(Expression left, Expression right)
 	{

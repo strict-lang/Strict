@@ -215,7 +215,7 @@ public class MethodCall : ConcreteExpression
 		arguments = AreArgumentsAutoParsedAsList(method, arguments)
 			? [new List(body, arguments.ToList())]
 			: WrapSingleListElements(body, method, arguments);
-		arguments = Conversion.ConvertAll(arguments, index => index < method.Parameters.Count
+		arguments = Conversion.ConvertAll(body, arguments, index => index < method.Parameters.Count
 			? method.Parameters[index].Type
 			: null) ?? arguments;
 		if (arguments.Count >= method.Parameters.Count)

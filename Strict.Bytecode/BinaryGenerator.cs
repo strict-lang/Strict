@@ -347,6 +347,9 @@ public sealed partial class BinaryGenerator
 			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
 				GetValueInstanceFromExpression(value)));
 			break;
+		case Conversion { Elements: { } elements }:
+			GenerateInstructionForListAggregation(elements);
+			break;
 		case MethodCall methodCall:
 			GenerateMethodCallInstruction(methodCall);
 			break;

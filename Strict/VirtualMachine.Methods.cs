@@ -16,9 +16,10 @@ public sealed partial class VirtualMachine
 		if (TryExecuteSpecialInvoke(invoke, implicitInstance))
 			return;
 		var info = invoke.MethodInfo;
-		var invokeInstructions = invoke.CachedInstructions ??=
-			GetPrecompiledMethodInstructions(invoke) ?? throw Fail(
-				"No precompiled method instructions found for '" + info.TypeFullName + "." +
+		var invokeInstructions =
+			invoke.CachedInstructions ??= GetPrecompiledMethodInstructions(invoke);
+		if (invokeInstructions == null || ReferenceEquals(invokeInstructions, NoCompiledFrom))
+			throw Fail("No precompiled method instructions found for '" + info.TypeFullName + "." +
 				info.MethodName + "' with return type " + info.ReturnTypeName);
 		var result = RunInvokedMethod(invoke, invokeInstructions, info.InstanceRegister.HasValue
 			? Memory.Registers[info.InstanceRegister.Value]
@@ -317,12 +318,13 @@ public sealed partial class VirtualMachine
 		if (flatNumeric != null)
 		{
 			var flatMembers = flatNumeric.ReturnType.Members;
+			var symbolIds = GetMemberSymbolIds(flatNumeric.ReturnType);
 			for (var memberIndex = 0; memberIndex < flatMembers.Count &&
 				memberIndex < flatNumeric.FlatWidth; memberIndex++)
 				if (!IsTrait(flatMembers[memberIndex].Type))
-					Memory.Frame.Set(flatMembers[memberIndex].Name,
+					Memory.Frame.Set(symbolIds[memberIndex],
 						new ValueInstance(flatMembers[memberIndex].Type, flatNumeric.GetFlat(memberIndex)),
-						true);
+						true, flatMembers[memberIndex].Name);
 			return;
 		}
 		var typeInstance = instance.TryGetValueTypeInstance();
@@ -352,10 +354,12 @@ public sealed partial class VirtualMachine
 		var members = typeInstance.ReturnType.Members;
 		if (members.Count > 0)
 		{
+			var symbolIds = GetMemberSymbolIds(typeInstance.ReturnType);
 			for (var memberIndex = 0; memberIndex < members.Count &&
 				memberIndex < typeInstance.Values.Length; memberIndex++)
 				if (!IsTrait(members[memberIndex].Type) || typeInstance.Values[memberIndex].HasValue)
-					Memory.Frame.Set(members[memberIndex].Name, typeInstance.Values[memberIndex], true);
+					Memory.Frame.Set(symbolIds[memberIndex], typeInstance.Values[memberIndex], true,
+						members[memberIndex].Name);
 			return true;
 		}
 		if (!TryGetBinaryMembers(typeInstance.ReturnType, out var binaryMembers) ||
@@ -378,6 +382,19 @@ public sealed partial class VirtualMachine
 	}
 
 	private readonly Dictionary<Type, bool> isTraitPerType = new();
+
+	/// <summary>
+	/// Instance scopes set and read members per call, resolve their symbol ids only once per type.
+	/// </summary>
+	private int[] GetMemberSymbolIds(Type type)
+	{
+		if (!memberSymbolIdsPerType.TryGetValue(type, out var symbolIds))
+			memberSymbolIdsPerType[type] = symbolIds =
+				type.Members.Select(member => CallFrame.ResolveSymbolId(member.Name)).ToArray();
+		return symbolIds;
+	}
+
+	private readonly Dictionary<Type, int[]> memberSymbolIdsPerType = new();
 
 	private readonly HashSet<List<Instruction>> runningBlocks = new(ReferenceEqualityComparer.Instance);
 

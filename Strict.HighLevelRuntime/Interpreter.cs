@@ -248,6 +248,12 @@ public partial class Interpreter
 		return normalizedArgs ?? args;
 	}
 
+	private ValueInstance ConvertElements(Conversion conversion, ExecutionContext context) =>
+		TryConvertListArgument(RunExpression(conversion.Value, context), conversion.ReturnType,
+			context) ?? throw new InterpreterExecutionFailed(context.Method,
+			InterpreterExecutionFailed.BuildContextMessage(context.Method, conversion, context,
+				"Cannot convert the elements of " + conversion.Value + " to " + conversion.ReturnType));
+
 	private ValueInstance? TryConvertListArgument(ValueInstance argument, Type parameterType,
 		ExecutionContext? parentContext)
 	{
@@ -432,6 +438,7 @@ public partial class Interpreter
 			Return r => EvaluateReturn(r, context),
 			To t => toEvaluator.Evaluate(t, context),
 			Not n => EvaluateNot(n, context),
+			Conversion { Elements: not null } conversion => ConvertElements(conversion, context),
 			MethodCall call => methodCallEvaluator.Evaluate(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context, true),
 			MutableReassignment a => a.Target is ListCall listCallTarget

@@ -66,16 +66,30 @@ public sealed partial class VirtualMachine
 			GetPrecompiledMethodInstructions(invoke) ?? NoCompiledFrom;
 		if (fromInstructions.Count == 0)
 			return false;
+		Memory.Registers[invoke.Register] = RunInvokedMethod(invoke, fromInstructions,
+			new ValueInstance(targetType, GetFromDefaults(targetType)), targetType)!.Value;
+		return true;
+	}
+
+	/// <summary>
+	/// Flat numeric instances copy their values, their defaults are only computed once per type.
+	/// </summary>
+	private ValueInstance[] GetFromDefaults(Type targetType)
+	{
+		if (flatDefaultsPerType.TryGetValue(targetType, out var flatDefaults))
+			return flatDefaults;
 		var members = targetType.Members;
 		var hasBinaryMembers = TryGetBinaryMembers(targetType, out var binaryMembers);
 		var defaults = new ValueInstance[members.Count];
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 			defaults[memberIndex] =
 				GetDefaultMemberValue(members, memberIndex, hasBinaryMembers, binaryMembers);
-		Memory.Registers[invoke.Register] = RunInvokedMethod(invoke, fromInstructions,
-			new ValueInstance(targetType, defaults), targetType)!.Value;
-		return true;
+		if (ValueArrayInstance.IsAllNumericType(targetType))
+			flatDefaultsPerType[targetType] = defaults;
+		return defaults;
 	}
+
+	private readonly Dictionary<Type, ValueInstance[]> flatDefaultsPerType = new();
 
 	private static readonly List<Instruction> NoCompiledFrom = [];
 
@@ -84,10 +98,18 @@ public sealed partial class VirtualMachine
 	/// </summary>
 	private ValueInstance CollectInitializedMembers(Type type)
 	{
-		var members = type.Members;
-		var values = new ValueInstance[members.Count];
-		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
-			Memory.Frame.TryGet(members[memberIndex].Name, out values[memberIndex]);
+		var symbolIds = GetMemberSymbolIds(type);
+		if (ValueArrayInstance.IsAllNumericType(type))
+		{
+			var numbers = new float[symbolIds.Length];
+			for (var memberIndex = 0; memberIndex < symbolIds.Length; memberIndex++)
+				if (Memory.Frame.TryGet(symbolIds[memberIndex], out var member))
+					numbers[memberIndex] = (float)member.GetArithmeticNumber();
+			return ValueInstance.CreateFlatNumericType(type, numbers);
+		}
+		var values = new ValueInstance[symbolIds.Length];
+		for (var memberIndex = 0; memberIndex < symbolIds.Length; memberIndex++)
+			Memory.Frame.TryGet(symbolIds[memberIndex], out values[memberIndex]);
 		return new ValueInstance(type, values);
 	}
 

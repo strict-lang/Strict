@@ -582,6 +582,15 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void FromWithoutCompiledOrNativeConstructorFails() =>
+		Assert.That(() => ExecuteVm([
+				CreateFromInvoke(TestPackage.Instance.GetType(Type.Mutable).
+					GetGenericImplementation(NumberType), Register.R0)
+			]),
+			Throws.InstanceOf<InstructionExecutionFailed>().With.Message.
+				Contains("No precompiled method instructions found"));
+
+	[Test]
 	public void DictionaryGet()
 	{
 		string[] code =
@@ -1057,6 +1066,22 @@ public sealed class VirtualMachineTests : TestBytecode
 			$"{nameof(AddingListsConcatenatesWithoutChangingLeftList)}(5).Combined", source)).Generate();
 		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.
 			Number, Is.EqualTo(10));
+	}
+
+	[Test]
+	public async Task ListVariableIsConvertedElementByElement()
+	{
+		var parser = new MethodExpressionParser();
+		using var package =
+			await new Repositories(parser).LoadStrictPackage("Strict/ImageProcessing");
+		using var testType = new Type(package, new TypeLines(
+			nameof(ListVariableIsConvertedElementByElement), "has number", "Run Text",
+			"\tconstant colorValues = (ColorValue(0.25, 0.5, 0.25), ColorValue(1, 1, 1))",
+			"\tImage(Size(1, 2), colorValues).Colors to Text")).ParseMembersAndMethods(parser);
+		var runMethod = testType.Methods.Single(method => method.Name == Method.Run);
+		var executable = BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod]);
+		Assert.That(new VirtualMachine(executable).Execute().Returns!.Value.Text,
+			Is.EqualTo("((63.75, 127.5, 63.75, 255), (255, 255, 255, 255))"));
 	}
 
 	[Test]
