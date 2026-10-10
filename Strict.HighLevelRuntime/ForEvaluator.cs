@@ -10,7 +10,8 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 	public ValueInstance Evaluate(For f, ExecutionContext ctx)
 	{
 		interpreter.Statistics.ForCount++;
-		var iterator = MaterializeIteratorIfNeeded(interpreter.RunExpression(f.Iterator, ctx));
+		var iterator = MaterializeIteratorIfNeeded(
+			Interpreter.CopyIfMutableList(interpreter.RunExpression(f.Iterator, ctx)));
 		var loop = interpreter.RentContext(ctx.Type, ctx.Method, ctx.This, ctx);
 		try
 		{

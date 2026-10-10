@@ -253,6 +253,9 @@ public sealed class ListTests
 		"\tpairs(0).Length")]
 	[TestCase(4, "\tresult.Add(1)", "\tlet saved = SavedListKeepsValue(result)", "\tresult.Add(2)",
 		"\tsaved.Size")]
+	[TestCase(4, "\tresult.Add(1)", "\tmutable rows = (numbers, numbers)", "\trows(0) = result",
+		"\tresult.Add(2)", "\trows(0).Length")]
+	[TestCase(0, "\tresult.Add(0)", "\tfor result", "\t\tresult.Remove(value)", "\tresult.Length")]
 	public void SavedListKeepsValue(double expected, params string[] lines)
 	{
 		using var type = CreateType(nameof(SavedListKeepsValue),

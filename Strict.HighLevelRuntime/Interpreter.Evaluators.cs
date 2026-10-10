@@ -100,7 +100,7 @@ public partial class Interpreter
 		ExecutionContext ctx)
 	{
 		Statistics.MutableUsageCount++;
-		var newValue = RunExpression(value, ctx);
+		var newValue = CopyIfMutableList(RunExpression(value, ctx));
 		var index = (int)RunExpression(target.Index, ctx).Number;
 		var listInstance = RunExpression(target.List, ctx);
 		listInstance.List.Items[index] = newValue;

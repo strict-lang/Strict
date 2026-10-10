@@ -122,7 +122,7 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 		return operatorType switch
 		{
 			OperatorCategory.Arithmetic => ExecuteArithmeticOperation(call, ctx,
-				isAssignedToInstance || IsChangingOwnInstance(call, ctx)
+				isAssignedToInstance
 					? leftInstance
 					: Interpreter.CopyIfMutableList(leftInstance), rightInstance),
 			OperatorCategory.Comparison => ExecuteComparisonOperation(call, ctx, leftInstance,
@@ -134,12 +134,6 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 					"Unknown operator category"))
 		};
 	}
-
-	/// <summary>
-	/// A method returning Mutable like List.Add changes its instance, value + element is in place.
-	/// </summary>
-	private static bool IsChangingOwnInstance(MethodCall call, ExecutionContext ctx) =>
-		ctx.Method.ReturnType.IsMutable && call.Instance?.ToString() == Type.ValueLowercase;
 
 	/// <summary>
 	/// "and" is false when the left side is false, "or" true when it is true, the right is skipped.
