@@ -1,6 +1,7 @@
 has values ValueCodegen
 constant Plain = ListCodegen(ValueCodegen.Plain)
 constant Declared = CodeBlock.Empty.Declare("x", "Number")
+constant Shared = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", true)
 Of(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Of(ValueCodegen.Ones, CodeBlock.Empty).instructions.Length is 1
 	node.IsLiteral then Constant(node, block) else Built(node, block)
@@ -31,11 +32,21 @@ Built(node SyntaxNode, block CodeBlock) CodeBlock
 Added(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Added(ValueCodegen.AddOne, CodeBlock.Empty).register is 2
 	Plain.Added(ValueCodegen.RemoveOne, CodeBlock.Empty).instructions(1).kind is InstructionType.InvokeRemove
+	Plain.Added(ValueCodegen.AddOne, Shared).instructions.Last.kind is InstructionType.StoreRegisterToVariable
 	let name = node.children(0).text
+	if block.Owns(name) is false
+		return Copied(node, block)
 	let added = values.Expression(node.children(1), block)
 	let kind = node.text is "Add" then InstructionType.InvokeWriteToList else InstructionType.InvokeRemove
 	let written = added.Add(InstructionEntry.Named(kind, added.Result, name))
 	written.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, written.register, name))
+Copied(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Copied(ValueCodegen.RemoveOne, Shared).instructions(2).payload is (3, 0, 1, 2)
+	let list = values.Expression(node.children(0), block)
+	let element = values.Expression(node.children(1), list)
+	let operation = node.text is "Add" then InstructionType.Add else InstructionType.Subtract
+	let changed = element.Load(InstructionEntry.Binary(operation, (list.Result, element.Result, element.register)))
+	changed.Stored(node.children(0).text)
 Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) CodeBlock
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Numbers", Declared).instructions.Length is 4
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Number", Declared).instructions.Length is 1

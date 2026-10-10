@@ -496,8 +496,7 @@ Strict compiler compiled by itself produces byte-identical HelloLogger bytecode 
 Strict compiler (Nightly case, the heavy self-hosting cases take ~19 min). Open: Language/Parser
 (types only used as parameters, `Strict/Path`, are not linked), ImageProcessing (custom `for`
 iterators of `Size`, nested loop aggregation, `outer.index`), `outer` as a local name crashes the
-C# parser with a NullReferenceException, and the Strict compiler's in-place `Add` has no ownership
-check yet.
+C# parser with a NullReferenceException.
 Then: ImageProcessing/AdjustBrightness and ProcessImage run like C#. Loops over a type with its own
 `for Iterator(...)` method call it first (`LoopCodegen.Iterated`, C# `GetLoopIteratorExpression`),
 iterator methods aggregate into a list of their element type (`TypeCodegen.BodyType`), the inference
@@ -507,6 +506,9 @@ are not linked (C# never emits them), a nested `for` as the last statement aggre
 `outer.index` is a variable path load, assignments store to the full target text
 (`image.Colors(index)`), 2D list indexing flattens to `x + instance.Size.Width * y` like C#
 `ListCall.CreateFlattenedIndex`, and `has x = 1` members keep their initial value (`ColorValue.Alpha`).
+The Strict compiler's `Add`/`Remove` changes a list in place only when the variable owns it like C#
+`OwnsList` (a variable declared from another variable, parameter or member gets a changed copy,
+`CodeBlock.Sharing`/`Owns`).
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

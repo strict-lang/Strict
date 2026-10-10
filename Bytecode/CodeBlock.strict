@@ -3,6 +3,7 @@ has register Number
 has nextId Number
 has scope Expressions/Scope
 constant Empty = CodeBlock(List(InstructionEntry), 0, 0, Scope(List(Text), List(Text)))
+constant SharedMarker = " shares"
 Add(entry InstructionEntry) CodeBlock
 	CodeBlock.Empty.Add(InstructionEntry.Return(0)).instructions.Length is 1
 	CodeBlock(instructions + entry, register, nextId, scope)
@@ -18,6 +19,12 @@ At(start Number) CodeBlock
 Declare(name Text, type Text) CodeBlock
 	CodeBlock.Empty.Declare("a", "Number").scope.TypeOf("a") is "Number"
 	CodeBlock(instructions, register, nextId, scope.With(name, type))
+Sharing(name Text, shares Boolean) CodeBlock
+	CodeBlock.Empty.Sharing("a", true).Owns("a") is false
+	CodeBlock(instructions, register, nextId, scope.With(name + SharedMarker, (shares then "list" else "")))
+Owns(name Text) Boolean
+	CodeBlock.Empty.Sharing("a", false).Owns("a") is true
+	scope.TypeOf(name + SharedMarker) is ""
 Stored(name Text) CodeBlock
 	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)).Stored("a").instructions(1).payload is (0, -1)
 	Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, Result, name))
