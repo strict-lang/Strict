@@ -20,7 +20,7 @@ public class KeywordTests
 	//ncrunch: no coverage start
 	private static readonly IEnumerable<string> KeywordsList =
 	[
-		"has", "mutable", "constant", "if", "else", "for", "with", "return"
+		"has", "mutable", "constant", "if", "else", "for", "with", "return", "from", "and"
 	]; //ncrunch: no coverage end
 
 	[TestCaseSource(nameof(KeywordsList))]

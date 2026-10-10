@@ -383,8 +383,9 @@ Instruction level: `Bytecode/LoadReuse` mirrors RedundantLoadEliminator with reg
 decoding read/written registers per instruction kind. FileCompiler on FizzBuzz 206 → 185 ms
 (fewer bytes to write and checksum). Found on the way: package types were sorted without the types
 used in constant values (`constant A = Other.Create(Kind.X)`), the load order was random and a new
-Bytecode type broke the whole package; TypeLines now records them. Open: a local named `from`
-crashes the expression parser with "Stack empty" instead of a ParsingFailed error. The C#
+Bytecode type broke the whole package; TypeLines now records them. A local named `from` (or any
+operator word like `and`) crashed the expression parser with "Stack empty", such names are now
+rejected like keywords (CannotUseKeywordsAsName). The C#
 RedundantLoadEliminator ignores StoreConstantToVariable between two loads of the same variable
 (Strict's LoadReuse treats every store as a barrier).
 

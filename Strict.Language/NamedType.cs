@@ -17,7 +17,7 @@ public abstract class NamedType
 				: rawName;
 			if (!Name.IsWord())
 				throw new Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers(Name);
-			if (Name.IsKeyword())
+			if (Name.IsKeyword() || Name.AsSpan().IsOperator())
 				throw new CannotUseKeywordsAsName(Name);
 			if ((Name.StartsWith("List", StringComparison.Ordinal) ||
 					Name.StartsWith("list", StringComparison.Ordinal)) && Name.Length > 4 && Name[4] != '(')

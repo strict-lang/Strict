@@ -224,7 +224,7 @@ public sealed class Body : Expression
 
 	public Body AddVariable(string name, Expression value, bool isMutable, bool isImplicit = false)
 	{
-		if (name.IsKeyword())
+		if (name.IsKeyword() || name.AsSpan().IsOperator())
 			throw new NamedType.CannotUseKeywordsAsName(name);
 		if (!name.Length.IsNameLengthWithinLimit())
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
