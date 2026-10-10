@@ -114,12 +114,8 @@ Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text)
 	let branch = Body(node.children.Last, condition)
 	let body = aggregation is "" then branch else LoopCodegen(MethodCodegen(values)).Collected(branch, aggregation)
 	let skipsElse = hasElse and body.instructions.Last.kind is not InstructionType.Return
-	let flagged = skipsElse then SkipElse(body) else body
+	let flagged = skipsElse then body.ElseSkipped else body
 	flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
-SkipElse(block CodeBlock) CodeBlock
-	Plain.SkipElse(CodeBlock.Empty).instructions(1).payload is (2, 0, 0)
-	let truth = block.Load(InstructionEntry.LoadBoolean(block.register, true))
-	truth.Add(InstructionEntry.Binary(InstructionType.Equal, (truth.Result, truth.Result)))
 Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Generate(ElseBody, NoScope, "None").instructions.Length is 12
 	Plain.Generate(ReturnElse, NoScope, "None").instructions.Length is 9
