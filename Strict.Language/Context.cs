@@ -71,6 +71,10 @@ public abstract class Context
 	public abstract Type? FindTypeCore(string name, Context? searchingFrom = null);
 	public Type GetType(string name) => FindType(name) ?? throw new TypeNotFound(name, this);
 
+	/// <summary>
+	/// Guessing runs outside the lock, it creates generic implementations under their own lock and
+	/// other threads doing it the other way round would deadlock.
+	/// </summary>
 	public Type? FindType(string name)
 	{
 		lock (types)
@@ -78,11 +82,12 @@ public abstract class Context
 			FindTypeCount++;
 			if (types.TryGetValue(name, out var type))
 				return type;
-			var result = GuessTypeFromName();
-			if (result != null)
-				types[name] = result;
-			return result;
 		}
+		var result = GuessTypeFromName();
+		if (result != null)
+			lock (types)
+				types[name] = result;
+		return result;
 
 		Type? GuessTypeFromName()
 		{

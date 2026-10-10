@@ -41,6 +41,41 @@ public class PackageTests
 	}
 
 	[Test]
+	public void TypeAddedLaterWinsOverForeignTypeFoundBefore()
+	{
+		var foreign = new Type(new Package(mainPackage, "Foreign"), new TypeLines("Later", "Run"));
+		Assert.That(new Type(subPackage, new TypeLines("Asker", "Run")).FindType("Later"),
+			Is.EqualTo(foreign));
+		var later = new Type(subPackage, new TypeLines("Later", "Run"));
+		Assert.That(new Type(subPackage, new TypeLines("SecondAsker", "Run")).FindType("Later"),
+			Is.EqualTo(later));
+	}
+
+	[Test]
+	public void TypesCanBeEnumeratedWhileATypeIsAdded()
+	{
+		foreach (var _ in subPackage.Types)
+			if (subPackage.FindDirectType("Added") == null)
+				new Type(subPackage, new TypeLines("Added", "Run"));
+		Assert.That(subPackage.FindDirectType("Added"), Is.Not.Null);
+	}
+
+	[Test]
+	public void AnyMethodsComeFromTheAnyOfTheOwnPackageTree()
+	{
+		var parser = new MethodExpressionParser();
+		using var testPackageType = new Type(TestPackage.Instance, new TypeLines("AnyUser", "Run")).
+			ParseMembersAndMethods(parser);
+		Assert.That(testPackageType.AvailableMethods, Does.Not.ContainKey("Hello"));
+		var ownTree = new Package("OwnAnyTree");
+		new Type(ownTree, new TypeLines(Type.Any, "from", "to Type", "to Text", "Hello Number")).
+			ParseMembersAndMethods(parser);
+		Assert.That(new Type(ownTree, new TypeLines("Probe", "Run")).ParseMembersAndMethods(parser).
+			AvailableMethods, Does.ContainKey("Hello"));
+		ownTree.Unload();
+	}
+
+	[Test]
 	public void IsPrivateNameCheckShouldReturnNull() =>
 		Assert.That(new Package(nameof(IsPrivateNameCheckShouldReturnNull)).FindType("isPrivate"),
 			Is.Null);

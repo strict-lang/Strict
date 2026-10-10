@@ -25,7 +25,7 @@ public sealed class GenericTypeImplementation : Type
 	/// the generic's package, List(Number) stays Strict/List(Number), same named types never mix.
 	/// ponytail: List.strict code resolves names there, a Range there would shadow Strict/Range.
 	/// </summary>
-	private static Package GetPackage(Type generic, Type[] implementationTypes)
+	private static Package GetPackage(Type generic, IEnumerable<Type> implementationTypes)
 	{
 		foreach (var implementationType in implementationTypes)
 			for (var parent = implementationType.Package.Parent; parent is Package package;

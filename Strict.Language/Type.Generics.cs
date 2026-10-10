@@ -48,11 +48,14 @@ public partial class Type
 
 	/// <summary>
 	/// Full names keep List(Color) of two packages apart, both are still named List(Color).
+	/// Runtime list creation asks for List(Type) a lot, one implementation type allocates nothing.
 	/// </summary>
-	private static string GetImplementationKey(IEnumerable<Type> implementationTypes) =>
-		string.Join(", ", implementationTypes.Select(type => type.FullName));
+	private static string GetImplementationKey(IReadOnlyList<Type> implementationTypes) =>
+		implementationTypes.Count == 1
+			? implementationTypes[0].FullName
+			: string.Join(", ", implementationTypes.Select(type => type.FullName));
 
-	private string GetImplementationName(Type[] implementationTypes) =>
+	private string GetImplementationName(IEnumerable<Type> implementationTypes) =>
 		Name + "(" + string.Join(", ", implementationTypes.Select(type => type.Name)) + ")";
 
 	internal string GetImplementationName(IReadOnlyList<NamedType> implementationTypes)

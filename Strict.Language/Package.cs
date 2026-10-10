@@ -103,7 +103,8 @@ public class Package : Context, IDisposable
 		{
 			var type = FindTypeInChildrenPackages(name, searchingFrom as Package);
 			if (type != null)
-				cachedFoundTypes[name] = type;
+				lock (syncRoot)
+					cachedFoundTypes[name] = type;
 			return type;
 		}
 
@@ -125,11 +126,14 @@ public class Package : Context, IDisposable
 	{
 		lock (syncRoot)
 		{
-			types.Add(type.Name, type);
+			if (!types.TryAdd(type.Name, type))
+				throw new Type.TypeAlreadyExistsInPackage(type.Name, this, types[type.Name]);
+			typesSnapshot = null;
 		}
 	}
 
 	private readonly Dictionary<string, Type> types = new();
+	private IReadOnlyDictionary<string, Type>? typesSnapshot;
 
 	public Type? FindFullType(string fullName)
 	{
@@ -161,25 +165,11 @@ public class Package : Context, IDisposable
 	/// from simple binary searches or finding types in other languages because in Strict any public
 	/// type can be used at any place. https://strict-lang.org/img/FindType2020-07-01.png
 	/// </summary>
-	public override Type? FindTypeCore(string name, Context? searchingFrom = null)
-	{
-		lock (syncRoot)
-		{
-			if (name == lastName && lastType != null)
-				return lastType;
-		}
-		if (IsPrivateName(name))
-			return null;
-		var type = FindDirectType(name) ?? FindTypeInDependencyPackages(name) ??
+	public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
+		IsPrivateName(name)
+			? null
+			: FindDirectType(name) ?? FindTypeInDependencyPackages(name) ??
 			FindTypeInChildrenOrParentPackages(name, searchingFrom);
-		if (type != null)
-			lock (syncRoot)
-			{
-				lastName = name;
-				lastType = type;
-			}
-		return type;
-	}
 
 	/// <summary>
 	/// Packages this one declares (like Bytecode/MethodEntry) win over unrelated sibling packages.
@@ -204,9 +194,6 @@ public class Package : Context, IDisposable
 		type ??= Parent?.FindTypeCore(name, this);
 		return type;
 	}
-
-	private string lastName = "";
-	private Type? lastType;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public Type? FindDirectType(string name)
@@ -257,6 +244,7 @@ public class Package : Context, IDisposable
 			lock (syncRoot)
 			{
 				types.Remove(type.Name);
+				typesSnapshot = null;
 			}
 	}
 
@@ -272,18 +260,23 @@ public class Package : Context, IDisposable
 	/// </summary>
 	internal void Unload()
 	{
-		foreach (var type in GetTypesSnapshot())
+		foreach (var type in Types.Values)
 			type.Dispose();
 		((Package)Parent).Remove(this);
 		RootForPackages.RemoveCachedTypes(this);
 	}
 
-	public IReadOnlyDictionary<string, Type> Types => types;
-
-	internal Type[] GetTypesSnapshot()
+	/// <summary>
+	/// Snapshot kept until the next Add or Remove, callers enumerate it while generic
+	/// implementations are added to the package (List(Type) is created when first used).
+	/// </summary>
+	public IReadOnlyDictionary<string, Type> Types
 	{
-		lock (syncRoot)
-			return types.Values.ToArray();
+		get
+		{
+			lock (syncRoot)
+				return typesSnapshot ??= new Dictionary<string, Type>(types);
+		}
 	}
 
 	internal List<Package> automaticallyLoadedDependencyPackages = new();

@@ -161,9 +161,8 @@ public partial class Type
 
 	private void AddAnyMethods(Dictionary<string, List<Method>> cache)
 	{
-		var anyMethodsByName = cachedAnyMethods ??= GetType(Any).AvailableMethods;
 		if (!IsGeneric)
-			foreach (var (_, anyMethods) in anyMethodsByName)
+			foreach (var (_, anyMethods) in GetType(Any).AvailableMethods)
 			foreach (var anyMethod in anyMethods)
 				AddAvailableMethod(anyMethod, cache);
 	}

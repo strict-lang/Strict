@@ -691,6 +691,12 @@ Review fix: a failure 120 calls deep (legal, limit 128) still crashed Debug `Str
 (`ListsCallers`) and let it pass. `for 1e12` and `Range(3e9, 3e9 + 2)` silently ran int.MaxValue or 0
 times, `GetLoopBound` now fails in VM and interpreter naming value and line. The 256 KB thread test hit
 NCrunch's stack guard (<480 KB left) and is gone; NCrunch green (606 HighLevelRuntime, 1314 Strict.Tests).
+Type identity (2026-10-10): List(Color) was cached by simple names, a temp ImageProcessing copy's List(Color)
+replaced Strict/ImageProcessing/List(Color) for the whole process; now keyed by full names and living next
+to Color (List(Number) stays Strict/List(Number), binaries keep Strict/List(Color)). That exposed Language
+passing List(Language/Variable) to the base Method: Language got a data-only Method.strict. RunnerTests
+unload temp packages, Package.Types is a snapshot, no static Any methods or lastType cache. Medians of 7
+(plain folders): test TypeCodegen 1616 → 1590 ms, SyntaxParser 450 → 449 ms, Language.Tests 254 → 263 ms.
 
 
 ## Native loops — 2026-10-09 (late night, part 4)
@@ -1038,7 +1044,7 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
-- ✅ **Language package `.strict` files** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, MethodParser, Context, Package, Type, Body, Parser + constants. Root `Method.strict` is data-only (`Name`/`Type`/`Parameters`); parsing lives in `MethodParser.strict`.
+- ✅ **Language package `.strict` files** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, MethodParser, Context, Package, Type, Body, Parser + constants. Root `Method.strict` is data-only (`Name`/`Type`/`Parameters`), `Language/Method.strict` is the same signature with the Language `Type` and `Variable`; parsing lives in `MethodParser.strict`.
 - ✅ **Object-model cleanup** — Language types use `Name`/`Type` (not legacy `elementName`/`typeName`/`expressionText`). Guarded by `StrictLanguageConversionTests` (11 tests).
 - ✅ **Type.strict** — real member/method line parse under **HighLevelRuntime** (inline tests green). `Members`/`Methods` + `MethodParser.Parse` for headers/params/body span.
 - ✅ **MethodParser.strict** — `Parse` / `ParseBody` / parameter extraction; avoids `IndexOf("(")` via `OpenParen`/`CloseParen` constants + character scan.
