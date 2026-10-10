@@ -9,6 +9,14 @@ IsMethodHeader(line Text) Boolean
 	if (line is "") or line.StartsWith("\t")
 		return false
 	not IsMemberLine(line)
+IsTrait Boolean
+	TypeShape("Length Number").IsTrait is true
+	TypeShape("has length", "in(element) Boolean").IsTrait is true
+	TypeShape("Not Boolean", "\ttrue").IsTrait is false
+	for lines
+		if value.StartsWith("\t")
+			return false
+	true
 MemberScope Scope
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.TypeOf("count") is "Number"
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.names.Length is 1

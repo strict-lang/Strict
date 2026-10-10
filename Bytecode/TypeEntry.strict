@@ -28,6 +28,11 @@ JustName Text
 	TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry)).JustName is "Process"
 	HelloLogger.JustName is "HelloLogger"
 	Name.Substring(Name.LastIndexOf("/") + 1, Name.Length - Name.LastIndexOf("/") - 1)
+MemberTypes Texts
+	TypeEntry("A", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry)).MemberTypes is ("Strict/Logger")
+	for members
+		if value.typeName.StartsWith("Strict/")
+			value.typeName
 Invoked Texts
 	TypeEntry("A", List(MemberEntry), MethodEntry.GoRun).Invoked is ("Strict/B.Go")
 	mutable targets = List(Mutable(Text))

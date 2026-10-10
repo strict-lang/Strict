@@ -95,6 +95,18 @@ public sealed class ForTests
 	}
 
 	[Test]
+	public void EmptyFilteredLoopWithDeclarationKeepsElementType()
+	{
+		using var t = CreateType(nameof(EmptyFilteredLoopWithDeclarationKeepsElementType), "has number",
+			"Long(names Texts) Texts", "\tfor names", "\t\tlet cut = value + \"!\"", "\t\tif value.Length > 2",
+			"\t\t\tcut");
+		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "Long"),
+			interpreter.noneInstance, [new ValueInstance(TestPackage.Instance.GetListImplementationType(
+				TestPackage.Instance.GetType(Type.Text)), Array.Empty<ValueInstance>())]);
+		Assert.That(result.GetType().Name, Is.EqualTo("List(Text)"));
+	}
+
+	[Test]
 	public void TextReturnTypeConsolidatesTexts()
 	{
 		using var t = CreateType(nameof(TextReturnTypeConsolidatesTexts), "has number", "Join Text",

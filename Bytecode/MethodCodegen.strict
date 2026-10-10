@@ -2,6 +2,7 @@ has values ValueCodegen
 constant Plain = MethodCodegen(ValueCodegen.Plain)
 constant NoNode = SyntaxNode("Identifier", "x")
 constant One = SyntaxNode("Number", "1")
+constant MixedList = SyntaxNode("List", "", (NoNode, One))
 constant NoScope = Scope(List(Text), List(Text))
 constant SumBody = BodyParser("Sum Number", "\tfor 3", "\t\tindex").Block(1, 1)
 constant IfBody = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\t4").Block(1, 1)
@@ -74,12 +75,13 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).instructions.First.payload is (1, 1, -1, 0)
 	Plain.Assignment(SyntaxNode("Reassignment", "", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 2
+	Plain.Assignment(SyntaxNode("Declaration", "let a", MixedList), CodeBlock.Empty).instructions.Length is 7
 	let isDeclaration = node.Kind is "Declaration"
 	let name = isDeclaration then Tokenizer(node.text).Tokens.Last else node.children(0).text
 	let assigned = node.children(isDeclaration then 0 else 1)
 	let value = values.Expression(assigned, block)
 	let store = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, value.Result, name)
-	let isLiteral = assigned.Kind is in ("Number", "Text", "Boolean", "List")
+	let isLiteral = assigned.IsLiteral
 	let stored = isLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else value.Add(store)
 	isDeclaration then stored.Declare(name, values.TypeOf(assigned, block)) else stored
 StoreConstant(load InstructionEntry, name Text) InstructionEntry

@@ -103,7 +103,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		return ShouldConsolidateForResult(f, results, ctx) ?? new ValueInstance(
 			interpreter.listType.GetGenericImplementation(results is { Count: > 0 }
 				? GetResultElementType(results[0])
-				: f.Body.ReturnType), results?.ToArray() ?? []);
+				: bodyAsBody?.Expressions[^1].ReturnType ?? f.Body.ReturnType), results?.ToArray() ?? []);
 	}
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,

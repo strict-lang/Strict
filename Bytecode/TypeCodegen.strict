@@ -3,6 +3,7 @@ has lines Texts
 has inference Expressions/TypeInference
 has typeNames Texts
 constant NoTypes = ValueCodegen.NoTypes
+constant Sized = TypeCodegen("Strict/Size", ("Width Number", "Height Number"), NoTypes, List(Text))
 constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogger.Log(\"Hi\")"), NoTypes, List(Text))
 constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number", "\tlimit"), NoTypes, List(Text))
 Entry TypeEntry
@@ -11,7 +12,11 @@ Entry TypeEntry
 Selected(names Texts) TypeEntry
 	Limit.Selected("Run").Name is "Strict/Limit"
 	Limit.Selected("Missing").methods.Length is 0
-	TypeEntry(fullName, Members, Methods(names))
+	Limit.Selected(List(Text)).methods.Length is 0
+	Sized.Selected(List(Text)).methods.Length is 2
+	TypeCodegen("Strict/B", ("Not Boolean", "\ttrue"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 0
+	let membersOnly = (names.Length is 0) and (TypeShape(lines).IsTrait is false)
+	TypeEntry(fullName, Members, (membersOnly then List(MethodEntry) else Methods(names)))
 Sibling(type Text, source Texts) TypeCodegen
 	Hello.Sibling("Strict/Limit", Limit.lines).fullName is "Strict/Limit"
 	TypeCodegen(type, source, inference, typeNames)

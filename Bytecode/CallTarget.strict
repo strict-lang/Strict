@@ -33,6 +33,13 @@ IsMember(type Text, name Text) Boolean
 	Plain.IsMember("Greeter", "text") is true
 	Plain.IsMember("Greeter", "Greet") is false
 	type is TypeName then shape.MemberScope.TypeOf(name) is not "" else types.MembersOf(type).TypeOf(name) is not ""
+InheritingMember(name Text) Text
+	CallTarget(NoTypes, TypeShape("has a A"), "Strict/C", List(Text)).InheritingMember("x") is "a"
+	Plain.InheritingMember("x") is ""
+	for shape.MemberScope.names
+		if types.MethodsOf(shape.MemberScope.TypeOf(value)).TypeOf(name) is not ""
+			return value
+	""
 FullName(type Text) Text
 	Plain.FullName("Logger") is "Strict/Logger"
 	Plain.FullName("Numbers") is "Strict/List(Number)"

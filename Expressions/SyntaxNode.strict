@@ -112,6 +112,18 @@ Statements SyntaxNodes
 		if value.HasBody
 			statements = statements + value.children.Last.Statements
 	statements
+IsLiteral Boolean
+	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Text", "\"a\""))).IsLiteral is true
+	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Identifier", "a"))).IsLiteral is false
+	SyntaxNode("Boolean", "true").IsLiteral is true
+	if Kind is in ("Number", "Text", "Boolean")
+		return true
+	if Kind is not "List"
+		return false
+	for children
+		if value.Kind is not in ("Number", "Text")
+			return false
+	true
 Unquoted Text
 	SyntaxNode("Text", "\"a\"").Unquoted is "a"
 	text.Substring(1, text.Length - 2)
