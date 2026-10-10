@@ -14,10 +14,10 @@ constant Plain = ValueCodegen(NoTypes, Scope(("Greet", "Run"), ("Text", "None"))
 Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Identifier", "a"), CodeBlock.Empty).register is 1
 	Plain.Expression(SyntaxNode("Binary", "+", (NoNode, NoNode)), CodeBlock.Empty).Result is 2
-	if node.Kind is in ("Number", "Text", "Boolean", "List")
-		return Literal(node, block)
-	if node.Kind is "Identifier"
-		return Variable(node, block)
+	Plain.Expression(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty).instructions(0).payload is (0, 1, 2)
+	let folded = ConstantFolding(target.shape).Folded(node)
+	if folded.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
+		return Leaf(folded, block)
 	if (node.Kind is in ("Call", "Member", "MethodCall", "Not")) or (node.text is "to")
 		return Call(node, block)
 	let left = Expression(node.children(0), block)
@@ -29,10 +29,12 @@ Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	if (block.scope.TypeOf(node.text) is "") and target.Header(node.text).tokens.Length > 0
 		return Invoke(node, block, -1, TypeOf(node, block))
 	block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
-Literal(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Literal(SyntaxNode("Number", "7"), CodeBlock.Empty).instructions(0).payload is (0, 1, 7)
-	Plain.Literal(SyntaxNode("Text", "\"a\""), CodeBlock.Empty).instructions(0).texts is ("a")
-	Plain.Literal(SyntaxNode("Boolean", "true"), CodeBlock.Empty).instructions(0).payload is (0, 5, 1)
+Leaf(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Leaf(SyntaxNode("Number", "7"), CodeBlock.Empty).instructions(0).payload is (0, 1, 7)
+	Plain.Leaf(SyntaxNode("Text", "\"a\""), CodeBlock.Empty).instructions(0).texts is ("a")
+	Plain.Leaf(SyntaxNode("Boolean", "true"), CodeBlock.Empty).instructions(0).payload is (0, 5, 1)
+	if node.Kind is "Identifier"
+		return Variable(node, block)
 	if node.Kind is "List"
 		return ConstantList(node, block)
 	if node.Kind is "Number"

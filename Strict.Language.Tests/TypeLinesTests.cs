@@ -29,6 +29,11 @@ public sealed class TypeLinesTests
 	}
 
 	[Test]
+	public void TypesUsedInConstantValuesAreDependentTypes() =>
+		Assert.That(new TypeLines("Sample", "constant First = Other.Create(Kind.Value, \"Text(a)\")").
+			DependentTypes, Is.EqualTo(new[] { "Other", "Kind" }));
+
+	[Test]
 	public void MethodReturnTypeShouldBeExtractedIntoDependentTypes()
 	{
 		var typeLines = new TypeLines(Type.Directory, "GetFile Text", "GetFiles Texts",

@@ -1,0 +1,118 @@
+has instructions List(InstructionEntry)
+constant LoadA = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "a")
+constant ReloadA = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a")
+constant AddBoth = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
+constant Twice = LoadReuse((LoadA, ReloadA, AddBoth, InstructionEntry.Return(2)))
+constant Stored = LoadReuse((LoadA, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), ReloadA, AddBoth))
+constant Printed = LoadReuse((LoadA, InstructionEntry.PrintValue("a", 0, false), ReloadA, AddBoth))
+constant WritingKinds = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.Invoke, InstructionType.FieldLoad)
+constant FirstRegisterKinds = (InstructionType.StoreRegisterToVariable, InstructionType.Return, InstructionType.InvokeWriteToList, InstructionType.LoopBegin)
+Optimized List(InstructionEntry)
+	Twice.Optimized.Length is 3
+	Printed.Optimized.Length is 4
+	Stored.Optimized.Length is 4
+	mutable result = List(Mutable(InstructionEntry))
+	for instructions
+		if Source(index) < 0
+			result.Add(Remapped(value, index))
+	result
+Source(load Number) Number
+	Twice.Source(1) is 0
+	Twice.Source(2) is -1
+	if instructions(load).kind is not InstructionType.LoadVariableToRegister
+		return -1
+	let latest = EarlierLoad(load)
+	let earlier = latest < 0 then -1 else Source(latest)
+	let first = earlier < 0 then latest else earlier
+	if first < 0
+		return -1
+	let register = instructions(first).payload(0)
+	IsUnchanged(register, first, load) and CanRedirect(load, register) then first else -1
+EarlierLoad(load Number) Number
+	Twice.EarlierLoad(1) is 0
+	Stored.EarlierLoad(2) is -1
+	Printed.EarlierLoad(2) is -1
+	let name = instructions(load).texts(0)
+	for load
+		let position = load - 1 - index
+		let earlier = instructions(position)
+		let isSameName = name is in earlier.texts
+		if IsBoundary(earlier) or isSameName and earlier.kind <= InstructionType.StoreRegisterToVariable
+			return isSameName and (earlier.kind is InstructionType.LoadVariableToRegister) then position else -1
+	-1
+IsUnchanged(register Number, first Number, load Number) Boolean
+	Twice.IsUnchanged(0, 0, 1) is true
+	Twice.IsUnchanged(1, 0, 3) is false
+	for Range(first + 1, load)
+		if Written(instructions(value)) is register
+			return false
+	true
+CanRedirect(load Number, register Number) Boolean
+	Twice.CanRedirect(1, 0) is true
+	let reloaded = instructions(load).payload(0)
+	mutable isBlocked = false
+	for Range(load + 1, instructions.Length)
+		let entry = instructions(value)
+		if (reloaded is in Reads(entry)) and isBlocked
+			return false
+		if Written(entry) is reloaded
+			return true
+		isBlocked = isBlocked or (Written(entry) is register) or IsBoundary(entry)
+	true
+Reads(entry InstructionEntry) Numbers
+	Twice.Reads(AddBoth) is (0, 1)
+	mutable registers = List(Mutable(Number))
+	for ReadPositions(entry)
+		registers.Add(entry.payload(value))
+	registers
+ReadPositions(entry InstructionEntry) Numbers
+	Twice.ReadPositions(AddBoth) is (1, 2)
+	Twice.ReadPositions(InstructionEntry.PrintValue("a", 0, false)) is (2)
+	let kind = entry.kind
+	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
+		return (1, 2)
+	if kind is InstructionType.Invoke
+		return InvokeReads(entry)
+	let leading = kind is in FirstRegisterKinds then List(Number) + 0 else List(Number)
+	let flagged = kind is in (InstructionType.Print, InstructionType.LoopBegin) then entry.payload(1) is 1 else false
+	let trailing = flagged then leading + 2 else leading
+	kind is InstructionType.FieldLoad then List(Number) + 1 else trailing
+InvokeReads(entry InstructionEntry) Numbers
+	Twice.InvokeReads(InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1)) is (7, 9)
+	let argumentCountPosition = 5 + entry.payload(3)
+	let argumentCount = entry.payload(argumentCountPosition)
+	mutable positions = List(Mutable(Number))
+	for argumentCount
+		positions.Add(argumentCountPosition + 1 + index)
+	let instancePosition = argumentCountPosition + 1 + argumentCount
+	entry.payload(instancePosition) is 1 then positions + (instancePosition + 1) else positions
+Written(entry InstructionEntry) Number
+	Twice.Written(AddBoth) is 2
+	Twice.Written(InstructionEntry.Return(2)) is -1
+	if entry.kind is in WritingKinds
+		return entry.payload(0)
+	if entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
+		return entry.payload(0) is 3 then entry.payload(3) else -1
+	-1
+IsBoundary(entry InstructionEntry) Boolean
+	Twice.IsBoundary(InstructionEntry.Jump(InstructionType.JumpEnd, 1)) is true
+	Twice.IsBoundary(AddBoth) is false
+	(entry.kind is InstructionType.Invoke) or entry.kind >= InstructionType.LoopBegin
+Remapped(entry InstructionEntry, position Number) InstructionEntry
+	Twice.Remapped(AddBoth, 2).payload is (3, 0, 0, 2)
+	let reads = ReadPositions(entry)
+	if reads.Length is 0
+		return entry
+	mutable content = List(Mutable(Number))
+	for entry.payload
+		content.Add(index is in reads then Origin(value, position) else value)
+	InstructionEntry(entry.kind, entry.texts, content)
+Origin(register Number, position Number) Number
+	Twice.Origin(1, 2) is 0
+	Twice.Origin(0, 2) is 0
+	for position
+		let writer = position - 1 - index
+		if Written(instructions(writer)) is register
+			let source = Source(writer)
+			return source < 0 then register else instructions(source).payload(0)
+	register

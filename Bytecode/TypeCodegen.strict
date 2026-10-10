@@ -68,7 +68,8 @@ Method(start Number) MethodEntry
 	let scope = MethodBodies(generator.target.TypeName, shape, inference).HeaderScope(header, shape.MemberScope)
 	let returnType = Concrete(header.ReturnType)
 	let code = MethodCodegen(generator).Generate(BodyParser(lines).Block(start + 1, 1), scope, returnType)
-	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(returnType), code.instructions)
+	let optimized = LoadReuse(code.instructions).Optimized
+	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(returnType), optimized)
 Parameters(header HeaderTokens) List(MemberEntry)
 	Hello.Parameters(HeaderTokens("Add", "(", "first", "Number", ")")).Length is 1
 	let types = header.ParameterTypes

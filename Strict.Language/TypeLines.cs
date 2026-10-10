@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Strict.Language;
 
 /// <summary>
@@ -62,6 +64,8 @@ public class TypeLines
 				AddDependentType(line[Type.HasWithSpaceAtEnd.Length..], ref dependentTypes);
 			else if (line.StartsWith(Type.MutableWithSpaceAtEnd, StringComparison.Ordinal))
 				AddDependentType(line[Type.MutableWithSpaceAtEnd.Length..], ref dependentTypes);
+			else if (line.StartsWith(Type.ConstantWithSpaceAtEnd, StringComparison.Ordinal))
+				AddTypesUsedInConstantValue(line, ref dependentTypes);
 			else if (!line.StartsWith('\t'))
 				AddDependentTypesFromMethodParametersAndReturnType(line, ref dependentTypes);
 			else
@@ -78,6 +82,25 @@ public class TypeLines
 		if (startIndex > 0)
 			AddDependentType(line[startIndex..], ref dependentTypes);
 	}
+
+	/// <summary>
+	/// constant First = Other.Create(Kind.Value) needs Other and Kind parsed before this type.
+	/// </summary>
+	private void AddTypesUsedInConstantValue(string line, ref IList<string> dependentTypes)
+	{
+		foreach (Match match in TypeUsagePattern.Matches(line))
+			if (match.Groups[1].Success)
+			{
+				if (dependentTypes.Count == 0)
+					dependentTypes = new List<string>();
+				AddIfNotExisting(dependentTypes, match.Groups[1].Value);
+			}
+	}
+
+	private static readonly Regex TypeUsagePattern = new(
+		"""
+		"(?:[^"\\\n]|\\.)*"|(?<![A-Za-z0-9.])([A-Z][A-Za-z0-9]*)(?=[.(])
+		""", RegexOptions.Compiled);
 
 	private void AddDependentType(string remainingLine, ref IList<string> dependentTypes)
 	{

@@ -373,6 +373,21 @@ comparisons at the start of a line all came from seven text literal scans, now o
 although the printer drops them. VM: `FindJumpEndInstructionIndex` scans linearly on
 every jump, `DeadStoreEliminator.FindProducerInstruction` may pick a side effecting producer.
 
+D4 result (2026-10-10): Strict-compiled main types of the 20 differential Examples went from 429
+to 402 instructions, the C# optimizer pipeline produces 404 (all 11 C# passes run, only folding,
+constant stores, returning branches and redundant loads change these Examples). Done at the tree
+level where that is less code: literal assignments become `StoreConstantToVariable`, constant
+members with literal values are inlined and number arithmetic folds (`Bytecode/ConstantFolding`),
+a then branch ending in `return` needs no skip-else flag or JumpToIdIfTrue (Grade 55 → 46, C# 50).
+Instruction level: `Bytecode/LoadReuse` mirrors RedundantLoadEliminator with register remapping,
+decoding read/written registers per instruction kind. FileCompiler on FizzBuzz 206 → 185 ms
+(fewer bytes to write and checksum). Found on the way: package types were sorted without the types
+used in constant values (`constant A = Other.Create(Kind.X)`), the load order was random and a new
+Bytecode type broke the whole package; TypeLines now records them. Open: a local named `from`
+crashes the expression parser with "Stack empty" instead of a ParsingFailed error. The C#
+RedundantLoadEliminator ignores StoreConstantToVariable between two loads of the same variable
+(Strict's LoadReuse treats every store as a barrier).
+
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
    `-Windows/-Linux/-MacOS`, diagnostics flag shows stage times + instruction reduction.

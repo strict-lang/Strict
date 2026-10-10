@@ -1,0 +1,27 @@
+has shape Expressions/TypeShape
+constant Limits = ConstantFolding(TypeShape("constant Limit = 3", "Run"))
+constant Limit = SyntaxNode("Identifier", "Limit")
+constant Two = SyntaxNode("Number", "2")
+Folded(node SyntaxNode) SyntaxNode
+	Limits.Folded(Limit).text is "3"
+	Limits.Folded(SyntaxNode("Binary", "*", (Limit, Two))).text is "6"
+	Limits.Folded(SyntaxNode("Binary", "/", (Limit, SyntaxNode("Number", "0")))).Kind is "Binary"
+	Limits.Folded(SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), Two))).Kind is "Binary"
+	let value = node.Kind is "Identifier" then shape.ConstantLiteral(node.text) else node
+	if value.Kind is not "Binary" or value.text is not in ("+", "-", "*", "/", "%")
+		return value
+	let left = Folded(value.children(0))
+	let right = Folded(value.children(1))
+	if left.Kind is not "Number" or right.Kind is not "Number" or (right.text is "0")
+		return value
+	SyntaxNode("Number", Calculated(value.text, left.text to Number, right.text to Number) to Text)
+Calculated(operator Text, left Number, right Number) Number
+	Limits.Calculated("-", 7, 2) is 5
+	Limits.Calculated("%", 7, 2) is 1
+	if operator is "+"
+		return left + right
+	if operator is "-"
+		return left - right
+	if operator is "*"
+		return left * right
+	operator is "/" then left / right else left % right

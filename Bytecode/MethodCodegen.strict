@@ -7,8 +7,9 @@ constant SumBody = BodyParser("Sum Number", "\tfor 3", "\t\tindex").Block(1, 1)
 constant IfBody = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\t4").Block(1, 1)
 constant LoopBody = BodyParser("Run Number", "\tfor 3", "\t\tindex", "\t0").Block(1, 1)
 constant ElseBody = BodyParser("Run", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1)
+constant ReturnElse = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\telse", "\t\treturn 4").Block(1, 1)
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
-	Plain.Generate(BodyParser("Run Number", "\t1 + 2").Block(1, 1), NoScope, "None").instructions.Length is 4
+	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Length is 4
 	Plain.Generate(BodyParser("Run Number", "\treturn 1").Block(1, 1), NoScope, "None").instructions.Length is 2
 	Plain.Generate(BodyParser("Exists Boolean").Block(1, 1), NoScope, "None").instructions.Length is 0
 	Plain.Generate(SumBody, NoScope, "Number").instructions.Length is 11
@@ -68,17 +69,28 @@ Statement(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	node.Kind is "Return" then value.Add(InstructionEntry.Return(value.Result)) else value
 Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
+	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).instructions.First.payload is (1, 1, -1, 0)
 	Plain.Assignment(SyntaxNode("Reassignment", "", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 2
 	let isDeclaration = node.Kind is "Declaration"
 	let name = isDeclaration then Tokenizer(node.text).Tokens.Last else node.children(0).text
 	let assigned = node.children(isDeclaration then 0 else 1)
 	let value = values.Expression(assigned, block)
-	let stored = value.Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, value.Result, name))
+	let store = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, value.Result, name)
+	let isLiteral = assigned.Kind is in ("Number", "Text", "Boolean", "List")
+	let stored = isLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else value.Add(store)
 	isDeclaration then stored.Declare(name, values.TypeOf(assigned, block)) else stored
+StoreConstant(load InstructionEntry, name Text) InstructionEntry
+	Plain.StoreConstant(InstructionEntry.LoadNumber(2, 7), "a").Bytes(BinaryNames("a")) is (2, 1, 7, 0, 0)
+	mutable content = List(Number) + load.payload(1)
+	for Range(2, load.payload.Length)
+		content = content + load.payload(value)
+	let texts = load.texts + name
+	InstructionEntry(InstructionType.StoreConstantToVariable, texts, content + (-1 - load.texts.Length) + 0)
 Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Generate(IfBody, NoScope, "None").instructions.Length is 9
 	let body = Body(node.children.Last, values.Condition(node.children(0), block))
-	let flagged = hasElse then SkipElse(body) else body
+	let skipsElse = hasElse and body.instructions.Last.kind is not InstructionType.Return
+	let flagged = skipsElse then SkipElse(body) else body
 	flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
 SkipElse(block CodeBlock) CodeBlock
 	Plain.SkipElse(CodeBlock.Empty).instructions(1).payload is (2, 0, 0)
@@ -86,6 +98,9 @@ SkipElse(block CodeBlock) CodeBlock
 	truth.Add(InstructionEntry.Binary(InstructionType.Equal, (truth.Result, truth.Result)))
 Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Generate(ElseBody, NoScope, "None").instructions.Length is 12
+	Plain.Generate(ReturnElse, NoScope, "None").instructions.Length is 9
+	if block.instructions(block.instructions.Length - 2).kind is InstructionType.Return
+		return node.Kind is "ElseIf" then Conditional(node, block, hasElse) else Body(node.children.Last, block)
 	let jumped = block.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, block.nextId)).WithNextId
 	let inner = node.Kind is "ElseIf" then Conditional(node, jumped, hasElse) else Body(node.children.Last, jumped)
 	inner.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
