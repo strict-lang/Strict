@@ -655,6 +655,12 @@ arguments, single-element lists, reserved names, test lines, package references,
 - Thread safety of Repositories/package cache under parallel tests (AGENTS multithreading rules).
 - Memory/time limits in VM (stack overflow detection, step limits) with clear RuntimeErrors.
 - Binary format versioning + compatibility tests (old cache → clean regenerate).
+- 2026-10-10 test isolation: RunnerTests no longer write, delete or re-time repo files (Color.strict
+  rewrite, BytecodeInstruction.strict re-time, SimpleCalculator.asm and program-suite .strictbinary
+  deletes, 4x4_output.png/test_image_output.jpg). They use temp copies or a fresh process on a runtime
+  copy whose Strict*.dll write time decides cache freshness (used packages always map to repo folders).
+  `CachedBinaryWithOlderVersionIsRegenerated` covers the InvalidVersion catch (passed at once, fails
+  without it). C# Version 4 = TypeEntry.FormatVersion 4, BinaryTypeData.strict has unused Version 1.
 
 Parser fuzzing (2026-10-10): Slow `ParserFuzzTests` mutates all 299 .strict files 40 times (seed 7,
 11960 parses, 3 s); a .NET exception (also inside ParsingFailed) or a parse over 5 s fails it.

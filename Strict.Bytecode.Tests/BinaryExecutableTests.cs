@@ -147,7 +147,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 
 	private static string CreateEmptyZipWithDummyEntry()
 	{
-		var filePath = GetTempFilePath();
+		var filePath = CreateTempFilePath();
 		using var fileStream = new FileStream(filePath, FileMode.Create);
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create);
 		zip.CreateEntry("dummy.txt");
@@ -156,7 +156,7 @@ public sealed class BinaryExecutableTests : TestBytecode
 
 	private static string CreateZipWithSingleEntry(byte[] entryBytes)
 	{
-		var filePath = GetTempFilePath();
+		var filePath = CreateTempFilePath();
 		using var fileStream = new FileStream(filePath, FileMode.Create);
 		using var zip = new ZipArchive(fileStream, ZipArchiveMode.Create);
 		var entry = zip.CreateEntry("Number" + BinaryType.BytecodeEntryExtension);
@@ -165,10 +165,6 @@ public sealed class BinaryExecutableTests : TestBytecode
 		return filePath;
 	}
 
-	private static string GetTempFilePath() =>
-		Path.Combine(Path.GetTempPath(), "strictbinary" + fileCounter++ + BinaryExecutable.Extension);
-
-	private static int fileCounter;
 	private static readonly byte[] MagicBytes = [(byte)'S'];
 
 	private static byte[] BuildEntryBytes(Action<BinaryWriter> writeContent)
