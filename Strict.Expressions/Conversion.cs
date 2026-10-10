@@ -55,10 +55,10 @@ public sealed class Conversion : MethodCall
 			: value.ReturnType;
 		if (sourceType is not GenericTypeImplementation { Generic.IsList: true } sourceList)
 			return null;
-		var element = new VariableCall(new Variable(Type.ValueLowercase, true,
-			new Instance(sourceList.ImplementationTypes[0], value.LineNumber), body, true),
-			value.LineNumber);
-		return ConvertIfNeeded(body, element, listType.ImplementationTypes[0]) is Conversion converted
+		var element = new Variable(Type.ValueLowercase, true,
+			new Instance(sourceList.ImplementationTypes[0], value.LineNumber), body, true);
+		return ConvertIfNeeded(body, new VariableCall(element, value.LineNumber),
+			listType.ImplementationTypes[0]) is Conversion converted
 			? new Conversion(listType.AvailableMethods[Method.From][0], value, listType,
 				new For([], value, converted, value.LineNumber))
 			: null;

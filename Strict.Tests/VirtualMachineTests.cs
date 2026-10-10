@@ -1078,7 +1078,7 @@ public sealed class VirtualMachineTests : TestBytecode
 			nameof(ListVariableIsConvertedElementByElement), "has number", "Run Text",
 			"\tconstant colorValues = (ColorValue(0.25, 0.5, 0.25), ColorValue(1, 1, 1))",
 			"\tImage(Size(1, 2), colorValues).Colors to Text")).ParseMembersAndMethods(parser);
-		var runMethod = testType.Methods.Single(method => method.Name == Method.Run);
+		var runMethod = testType.Methods.Single(typeMethod => typeMethod.Name == Method.Run);
 		var executable = BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod]);
 		Assert.That(new VirtualMachine(executable).Execute().Returns!.Value.Text,
 			Is.EqualTo("((63.75, 127.5, 63.75, 255), (255, 255, 255, 255))"));
