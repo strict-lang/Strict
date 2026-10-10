@@ -80,12 +80,10 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		var step = start <= end
 			? 1
 			: -1;
-		ValueInstance? outer = null;
 		for (var index = start; index != end; index += step)
 		{
 			interpreter.ResetIteration(loop);
-			loop.Variables[Type.OuterLowercase] =
-				outer ??= ctx.Get(Type.ValueLowercase, interpreter.Statistics);
+			loop.Variables[Type.OuterLowercase] = ctx.Get(Type.ValueLowercase, interpreter.Statistics);
 			ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop,
 				isNumberOnlyIteration, bodyAsBody);
 			if (ctx.ExitMethodAndReturnValue.HasValue)

@@ -232,6 +232,15 @@ public sealed class ForTests
 	}
 
 	[Test]
+	public void OuterFollowsValueMemberChangedInsideLoop()
+	{
+		using var type = CreateType(nameof(OuterFollowsValueMemberChangedInsideLoop),
+			"mutable Value Number", "Sum Number", "\tfor 3", "\t\tValue = Value + 1", "\t\touter");
+		var instance = new ValueInstance(type, [new ValueInstance(type.GetType(Type.Number), 0)]);
+		Assert.That(interpreter.Execute(type.Methods[0], instance, []).Number, Is.EqualTo(3));
+	}
+
+	[Test]
 	public void TextReturnTypeWithNoResultsReturnsEmpty()
 	{
 		using var t = CreateType(nameof(TextReturnTypeWithNoResultsReturnsEmpty), "has number",

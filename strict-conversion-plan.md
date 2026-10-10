@@ -605,8 +605,8 @@ MethodCodegen 1041 ms / 222 MB → 754 ms / 50 MB. Bisect: the interpreter list 
 only ~150 short lists per run, the growth came from the Strict compiler running 2-3x more
 expressions (Grid test, ownership checks, Error positions) and from the number wrapper commit, which
 checked `IsNumberLike` (a type compatibility walk allocating a closure) on every loop iteration
-(+21-27% allocations). The check now runs once per loop, `outer` is looked up once per loop,
-`DisposableValues` no longer creates a List per iteration and Number loops fold each result instead
+(+21-27% allocations). The check now runs once per loop (`outer` is still read per iteration, a loop
+can change the member it resolves to), `DisposableValues` (interpreter and VM) no longer creates a List per call and Number loops fold each result instead
 of keeping all of them. Next: `Text.Length` runs `List.Length` (`for elements / 1`), 3.3M of the
 6.2M TypeCodegen expressions, the VM has native `Length`/`Count`; the context pool's
 ConcurrentStack allocates a node per returned context (17 MB per TypeCodegen run).
