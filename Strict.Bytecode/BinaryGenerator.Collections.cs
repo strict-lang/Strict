@@ -84,17 +84,44 @@ public sealed partial class BinaryGenerator
 	{
 		if (methodCall.Instance == null)
 			return;
-		GenerateInstructionFromExpression(methodCall.Arguments[0]);
-		if (methodCall.Instance.ReturnType.IsList)
+		if (!OwnsList(methodCall.Instance))
+			GenerateCopyingListChange(InstructionType.Subtract, methodCall.Instance.ToString(),
+				methodCall.Arguments[0]);
+		else
+		{
+			GenerateInstructionFromExpression(methodCall.Arguments[0]);
 			instructions.Add(new RemoveInstruction(registry.PreviousRegister,
 				methodCall.Instance.ToString()));
+		}
 	}
 
 	private void GenerateInstructionsForAddMethod(MethodCall methodCall)
 	{
 		if (TryGenerateAddForTable(methodCall) || methodCall.Instance == null)
 			return;
-		GenerateAppendToList(methodCall.Instance.ToString(), methodCall.Arguments[0]);
+		if (OwnsList(methodCall.Instance))
+			GenerateAppendToList(methodCall.Instance.ToString(), methodCall.Arguments[0]);
+		else
+			GenerateCopyingListChange(InstructionType.Add, methodCall.Instance.ToString(),
+				methodCall.Arguments[0]);
+	}
+
+	/// <summary>
+	/// In place changes are only allowed on lists the variable created itself, a variable initialized
+	/// from another variable, parameter or member shares that list and gets a changed copy instead.
+	/// </summary>
+	private static bool OwnsList(Expression list) =>
+		list is not VariableCall variableCall || !IsNamedValue(variableCall.Variable.InitialValue);
+
+	private void GenerateCopyingListChange(InstructionType operation, string listName,
+		Expression element)
+	{
+		instructions.Add(new LoadVariableToRegister(registry.AllocateRegister(), listName));
+		var list = registry.PreviousRegister;
+		GenerateInstructionFromExpression(element);
+		instructions.Add(new BinaryInstruction(operation, list, registry.PreviousRegister,
+			registry.AllocateRegister()));
+		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, listName));
 	}
 
 	private void GenerateAppendToList(string listName, Expression element)
@@ -106,13 +133,14 @@ public sealed partial class BinaryGenerator
 
 	/// <summary>
 	/// list = list + element is what List.Add does, so it appends in place instead of copying.
+	/// A list shared with another variable is never changed in place, see <see cref="OwnsList"/>.
 	/// </summary>
 	private static bool IsAppendToSameList(MutableReassignment reassignment) =>
 		reassignment.Value is Binary
 		{
 			Method.Name: BinaryOperator.Plus, Instance: VariableCall or ParameterCall
 		} binary && binary.Instance.ReturnType.IsList && binary.Instance.ToString() == reassignment.Name &&
-		!binary.Method.Parameters[0].Type.IsList;
+		!binary.Method.Parameters[0].Type.IsList && OwnsList(binary.Instance);
 
 	private bool TryGenerateAddForTable(MethodCall methodCall)
 	{

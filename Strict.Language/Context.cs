@@ -142,8 +142,8 @@ public abstract class Context
 			return null;
 		var rest = name[(mainType.Name.Length + 1)..^1];
 		var arguments = rest.Split(',', StringSplitOptions.TrimEntries);
-		if (arguments.Any(argument => argument.Length == 0 || !char.IsUpper(argument[0]) &&
-			!argument.Contains(' ')))
+		if (arguments.Any(argument => argument.Length == 0 || argument[0] == '"' ||
+			!char.IsUpper(argument[0]) && !argument.Contains(' ')))
 			return null;
 		if (rest.Contains(Type.GenericUppercase))
 		{

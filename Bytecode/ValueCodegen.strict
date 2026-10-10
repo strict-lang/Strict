@@ -11,6 +11,7 @@ constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "
 constant AddOne = SyntaxNode("MethodCall", "Add", (SyntaxNode("Identifier", "values"), One))
 constant RemoveOne = SyntaxNode("MethodCall", "Remove", (SyntaxNode("Identifier", "values"), One))
 constant NoTypes = TypeInference(CallTarget.Plain.types, CallTarget.NoScopes)
+constant OwnA = ValueCodegen(NoTypes, Scope(("A", "limits"), ("Text", "Numbers")), CallTarget.Plain)
 constant Plain = ValueCodegen(NoTypes, Scope(("Greet", "Run"), ("Text", "None")), CallTarget.Plain)
 Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Identifier", "a"), CodeBlock.Empty).register is 1
@@ -21,18 +22,18 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	let folded = ConstantFolding(target.TypeName, inference).Folded(node)
 	if folded.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
 		return Leaf(folded, block)
-	if (node.Kind is in ("Call", "Member", "MethodCall", "Not")) or (node.text is "to")
-		return Call(node, block)
-	OperatorCodegen(ValueCodegen(inference, methods, target)).Operation(node, block)
+	if (folded.Kind is in ("Call", "Member", "MethodCall", "Not")) or (folded.text is "to")
+		return Call(folded, block)
+	OperatorCodegen(ValueCodegen(inference, methods, target)).Operation(folded, block)
 Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Variable(SyntaxNode("Identifier", "a"), CodeBlock.Empty).instructions(0).texts is ("a")
 	Plain.Variable(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty).instructions(0).kind is InstructionType.Invoke
 	let isFree = block.scope.TypeOf(node.text) is ""
+	let owner = target.ImplicitOwner(node.text, block.scope)
+	if isFree and owner is not ""
+		return InstanceCall(SyntaxNode("Member", node.text, SyntaxNode("Identifier", owner)), block)
 	if isFree and target.Header(node.text).tokens.Length > 0
 		return Invoke(node, block, -1, TypeOf(node, block))
-	let member = target.InheritingMember(node.text)
-	if isFree and member is not ""
-		return InstanceCall(SyntaxNode("Member", node.text, SyntaxNode("Identifier", member)), block)
 	block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
 Leaf(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Leaf(SyntaxNode("Number", "7"), CodeBlock.Empty).instructions(0).payload is (0, 1, 7)
@@ -41,36 +42,12 @@ Leaf(node SyntaxNode, block CodeBlock) CodeBlock
 	if node.Kind is "Identifier"
 		return Variable(node, block)
 	if node.Kind is "List"
-		return node.IsLiteral then ConstantList(node, block) else BuiltList(node, block)
+		return Elements.Of(node, block)
 	if node.Kind is "Number"
 		return block.Load(InstructionEntry.LoadNumber(block.register, node.text to Number))
 	if node.Kind is "Text"
 		return block.Load(InstructionEntry.LoadText(block.register, node.Unquoted))
 	block.Load(InstructionEntry.LoadBoolean(block.register, node.text is "true"))
-ConstantList(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.ConstantList(Ones, CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 2, 1, 1, 1, 1)
-	Plain.ConstantList(SyntaxNode("List", "", Hi), CodeBlock.Empty).instructions(0).texts is ("Strict/List(Text)", "Hi")
-	mutable texts = List(Mutable(Text))
-	texts.Add(target.FullName(TypeOf(node, block)))
-	mutable content = List(Number) + block.register + 6 + -1 + node.children.Length
-	for node.children
-		if value.Kind is "Text"
-			texts.Add(value.Unquoted)
-		let number = value.Kind is "Number" then value.text to Number else 0
-		let element = value.Kind is "Text" then (4, 0 - texts.Length) else InstructionEntry.NumberValue(number)
-		content = content + element
-	block.Load(InstructionEntry(InstructionType.LoadConstantToRegister, texts, content))
-BuiltList(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.BuiltList(SyntaxNode("List", "", (NoNode, One)), CodeBlock.Empty).instructions.Length is 6
-	let name = "listResult" + block.nextId
-	let type = target.FullName(TypeOf(node, block))
-	let empty = InstructionEntry(InstructionType.LoadConstantToRegister, type, (0, 6, -1, 0))
-	mutable result = block.Add(MethodCodegen.StoreConstant(empty, name)).WithNextId
-	for node.children
-		let element = Expression(value, result)
-		let write = InstructionEntry.Named(InstructionType.InvokeWriteToList, element.Result, name)
-		result = element.Add(write).At(block.register)
-	result.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, name))
 Call(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Call(SyntaxNode("Call", "Greeter", SyntaxNode("Text", "\"a\"")), CodeBlock.Empty).Result is 1
 	Plain.Call(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
@@ -83,12 +60,14 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 		return Invoke(node, block, -1, TypeOf(node, block))
 	let first = node.children(0)
 	let isListVariable = (first.Kind is "Identifier") and inference.types.IsPlural(TypeOf(first, block))
-	(node.text is in ("Add", "Remove")) and isListVariable then AddToList(node, block) else InstanceCall(node, block)
+	(node.text is in ("Add", "Remove")) and isListVariable then Elements.Added(node, block) else InstanceCall(node, block)
 IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty) is true
 	Plain.IsIndexing(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is false
+	OwnA.IsIndexing(SyntaxNode("Call", "limits", One), CodeBlock.Empty) is true
 	if node.Kind is "Call"
-		let isNamed = block.scope.TypeOf(node.text) is not "" or target.IsMember(target.TypeName, node.text)
+		let isConstant = methods.TypeOf(node.text) is not "" and (target.Header(node.text).tokens.Length is 0)
+		let isNamed = block.scope.TypeOf(node.text) is not "" or target.IsMember(target.TypeName, node.text) or isConstant
 		return (node.children.Length is 1) and isNamed
 	let isMember = (node.Kind is "MethodCall") and (node.children.Length is 2)
 	isMember and target.IsMember(TypeOf(node.children(0), block), node.text)
@@ -111,34 +90,32 @@ InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 	let method = node.Kind is "Not" then "not" else "to"
 	let call = node.Kind is in ("Binary", "Not") then SyntaxNode("Member", method, node.children(0)) else node
 	Invoke(call, instance, instance.Result, TypeOf(node, block))
-AddToList(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.AddToList(AddOne, CodeBlock.Empty).register is 2
-	Plain.AddToList(RemoveOne, CodeBlock.Empty).instructions(1).kind is InstructionType.InvokeRemove
-	let name = node.children(0).text
-	let added = Expression(node.children(1), block)
-	let kind = node.text is "Add" then InstructionType.InvokeWriteToList else InstructionType.InvokeRemove
-	let written = added.Add(InstructionEntry.Named(kind, added.Result, name))
-	written.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, written.register, name))
 IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is true
 	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false
 	(node.Kind is "Identifier") and (block.scope.TypeOf(node.text) is "") and inference.types.IsKnown(node.text)
 Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeBlock
 	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1, "Text").instructions(0).texts.Last is "Strict/Text"
+	let owner = Owner(node, block)
+	let parameters = target.ParameterTypes(node.text, owner)
 	mutable result = block
 	mutable arguments = List(Mutable(Number))
 	let first = node.Kind is in ("Member", "MethodCall") then 1 else 0
 	for Range(first, node.children.Length)
-		result = Expression(node.children(value), result)
+		result = Elements.Argument(node.children(value), value - first, parameters, result)
 		arguments.Add(result.Result)
-	let owner = Owner(node, block)
 	let signature = target.Signature(node.text, owner, returnType)
 	result.Load(InstructionEntry.Invoke(result.register, signature, arguments, instance))
 Owner(node SyntaxNode, block CodeBlock) Text
 	Plain.Owner(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is "Greeter"
+	OwnA.Owner(SyntaxNode("Call", "A"), CodeBlock.Empty) is "Greeter"
 	if node.Kind is in ("Member", "MethodCall")
 		return TypeOf(node.children(0), block)
-	inference.types.IsKnown(node.text) then node.text else target.TypeName
+	let isOwnMethod = methods.TypeOf(node.text) is not ""
+	inference.types.IsKnown(node.text) and (not isOwnMethod) then node.text else target.TypeName
+Elements ListCodegen
+	Plain.Elements.values.target.TypeName is "Greeter"
+	ListCodegen(ValueCodegen(inference, methods, target))
 TypeOf(node SyntaxNode, block CodeBlock) Text
 	Plain.TypeOf(SyntaxNode("Number", "1"), CodeBlock.Empty) is "Number"
 	inference.TypeOf(node, block.scope, methods)

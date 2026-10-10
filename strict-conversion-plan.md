@@ -472,6 +472,23 @@ list for plural and `List(...)` return types, filtered by a trailing `if`). Text
 like C# `Text.Unescape`, and only Text/List/File `Length`/`Count` are left to VM natives
 (`Range.Length` is linked). Now 26 of the 41 programs run like C# (`StrictCompiledProgramRunsLikeCSharp`,
 46 cases, path arguments resolved from the repository root).
+Next round: all 41 programs now compile with the Strict compiler. Single elements passed to list
+parameters are wrapped (C# `WrapSingleListElements`), own methods win over type names, own
+constant lists are indexable, Range-typed loop iterators load Start/ExclusiveEnd, constants are
+inlined at use sites like C# (any constant expression, constant data also written as member Set
+values), `from` parameters skip generic members (C# `CreateFromMethodParameters`, generic types
+detected with the same first-three-lines rule), and a bare word inside a `for` body binds to the
+loop `value` first (C# `TryParseForBodyValueMethodCall`, loops declare `outer`). C# fixes found on
+the way: in-place list appends/removes only on lists the variable owns (`mutable copy = other`
+then `copy.Add(x)` changed `other` too, which cut `SourceFiles.Folders` after one level), the VM's
+list minus removed only the first match (interpreter removes all), text arguments mentioning
+`Generic` were parsed as generic type names, and VM errors now list the calling methods. 28 of
+41 programs run like C# (ValidateCheck and Runtime/Execute added, 48 differential cases); the
+Strict-compiled FileCompiler runs and writes a binary for HelloLogger. Open: C# `Text.Unescape`
+turns `"\t"` into backslash+tab (replaces before `\`), the VM's own-`to Text` check compares type
+full names that depend on the binary's folder, Path parameters from text arguments, custom
+iterators (`for size`), Platform.Current recursion, `outer` as a local name crashes the C# parser
+with a NullReferenceException, and the Strict compiler's in-place `Add` has no ownership check yet.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

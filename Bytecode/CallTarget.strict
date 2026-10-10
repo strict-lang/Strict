@@ -6,6 +6,8 @@ constant NoScope = Scope(("x", "z"), ("y", "w"))
 constant Greeter = TypeShape("has text", "Greet Text", "\t\"Hi \" + text", "Run", "\tGreeter(\"a\").Greet")
 constant NoScopes = (NoScope, NoScope)
 constant NoTypes = KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes)
+constant Adder = CallTarget(NoTypes, TypeShape("Add(numbers) Number", "\t1"), "Strict/C", List(Text))
+constant Ranges = CallTarget(KnownTypes(List(Text) + "Range", NoScopes, NoScopes, (Scope(List(Text) + "from", List(Text) + "Start,ExclusiveEnd"), NoScope)), Greeter, "Strict/Range", List(Text))
 constant Plain = CallTarget(NoTypes, Greeter, "Strict/Examples/Greeter", ("Strict/Logger", "Strict/Examples/Helper"))
 Signature(name Text, type Text, returnType Text) Texts
 	Plain.Signature("Greeter", "Greeter", "Greeter") is ("Strict/Examples/Greeter", "from", "Greeter", "text")
@@ -14,14 +16,29 @@ Signature(name Text, type Text, returnType Text) Texts
 	if type is not TypeName
 		return OtherSignature(name, type, returnType)
 	if name is TypeName
-		return (fullName, "from", name) + shape.MemberScope.names
+		return (fullName, "from", name) + FromNames(name)
 	(fullName, name, FullName(returnType)) + Header(name).ParameterNames
 OtherSignature(name Text, type Text, returnType Text) Texts
 	Plain.OtherSignature("C", "C", "C") is ("Strict/C", "from", "C")
 	Plain.OtherSignature("Length", "Text", "Number") is ("Strict/Text", "Length", "Strict/Number")
 	if name is type
-		return (FullName(type), "from", type) + types.MembersOf(type).names
+		return (FullName(type), "from", type) + FromNames(type)
 	(FullName(type), name, FullName(returnType)) + types.ParametersOf(type, name)
+ParameterTypes(name Text, type Text) Texts
+	Plain.ParameterTypes("Greeter", "Greeter") is ("Text")
+	Adder.ParameterTypes("Add", "C") is ("Numbers")
+	Plain.ParameterTypes("Length", "Text").Length is 0
+	if name is not type
+		return type is TypeName then Header(name).ParameterTypes else List(Text)
+	let members = type is TypeName then shape.MemberScope else types.MembersOf(type)
+	for FromNames(type)
+		members.TypeOf(value)
+FromNames(type Text) Texts
+	Plain.FromNames("Greeter") is ("text")
+	Ranges.FromNames("Range") is ("Start", "ExclusiveEnd")
+	if types.IsKnown(type)
+		return types.ParametersOf(type, "from")
+	type is TypeName then shape.MemberScope.names else List(Text)
 Header(name Text) HeaderTokens
 	Plain.Header("Greet").ReturnType is "Text"
 	Plain.Header("Missing").tokens.Length is 0
@@ -29,6 +46,12 @@ Header(name Text) HeaderTokens
 		if shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
 			return HeaderTokens(Tokenizer(value).Tokens)
 	HeaderTokens(List(Text))
+ImplicitOwner(name Text, scope Scope) Text
+	Plain.ImplicitOwner("x", Scope(("value", "outer"), ("A", "A"))) is "value"
+	Plain.ImplicitOwner("x", Scope(List(Text) + "value", List(Text) + "A")) is ""
+	if scope.TypeOf("outer") is not "" and types.MemberType(scope.TypeOf("value"), name) is not "Unknown"
+		return "value"
+	Header(name).tokens.Length > 0 then "" else InheritingMember(name)
 IsMember(type Text, name Text) Boolean
 	Plain.IsMember("Greeter", "text") is true
 	Plain.IsMember("Greeter", "Greet") is false

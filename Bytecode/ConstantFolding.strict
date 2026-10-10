@@ -2,6 +2,7 @@ has typeName Text
 has inference Expressions/TypeInference
 constant Counts = TypeInference(KnownTypes.Sample, TypeInference.Limits)
 constant Limits = ConstantFolding("Count", Counts)
+constant Calls = ConstantFolding("Count", TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Empty", List(Text) + "Count(1)"), TypeInference.NoShape)))
 constant Limit = SyntaxNode("Identifier", "Limit")
 constant Two = SyntaxNode("Number", "2")
 Folded(node SyntaxNode) SyntaxNode
@@ -19,14 +20,17 @@ Folded(node SyntaxNode) SyntaxNode
 	SyntaxNode("Number", Calculated(value.text, left.text to Number, right.text to Number) to Text)
 Constant(node SyntaxNode) SyntaxNode
 	Limits.Constant(SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count"))).text is "3"
-	Limits.Constant(Limit).text is "3"
 	Limits.Constant(Two).text is "2"
+	Calls.Constant(SyntaxNode("Identifier", "Empty")).Kind is "Call"
 	let isOther = (node.Kind is "Member") and (node.children(0).Kind is "Identifier")
 	if node.Kind is not "Identifier" and (isOther is false)
 		return node
 	let owner = isOther then node.children(0).text else typeName
-	let literal = inference.ConstantOf(owner, node.text)
-	literal is "" then node else SyntaxParser(List(Text) + literal).Leaf(literal)
+	let value = inference.ConstantOf(owner, node.text)
+	if value is ""
+		return node
+	let tokens = Tokenizer(value).Tokens
+	SyntaxParser(tokens).ParseRange(0, tokens.Length)
 Negated(node SyntaxNode) SyntaxNode
 	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Two)).text is "-2"
 	Limits.Negated(Two).text is "2"

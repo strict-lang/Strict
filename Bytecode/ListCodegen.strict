@@ -1,0 +1,46 @@
+has values ValueCodegen
+constant Plain = ListCodegen(ValueCodegen.Plain)
+constant Declared = CodeBlock.Empty.Declare("x", "Number")
+Of(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Of(ValueCodegen.Ones, CodeBlock.Empty).instructions.Length is 1
+	node.IsLiteral then Constant(node, block) else Built(node, block)
+Constant(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Constant(ValueCodegen.Ones, CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 2, 1, 1, 1, 1)
+	Plain.Constant(SyntaxNode("List", "", ValueCodegen.Hi), CodeBlock.Empty).instructions(0).texts.Last is "Hi"
+	mutable texts = List(Mutable(Text))
+	texts.Add(values.target.FullName(values.TypeOf(node, block)))
+	mutable content = List(Number) + block.register + 6 + -1 + node.children.Length
+	for node.children
+		if value.Kind is "Text"
+			texts.Add(value.Unquoted)
+		let number = value.Kind is "Number" then value.text to Number else 0
+		let element = value.Kind is "Text" then (4, 0 - texts.Length) else InstructionEntry.NumberValue(number)
+		content = content + element
+	block.Load(InstructionEntry(InstructionType.LoadConstantToRegister, texts, content))
+Built(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Built(SyntaxNode("List", "", (ValueCodegen.NoNode, ValueCodegen.One)), CodeBlock.Empty).instructions.Length is 6
+	let name = "listResult" + block.nextId
+	let type = values.target.FullName(values.TypeOf(node, block))
+	let empty = InstructionEntry(InstructionType.LoadConstantToRegister, type, (0, 6, -1, 0))
+	mutable result = block.Add(MethodCodegen.StoreConstant(empty, name)).WithNextId
+	for node.children
+		let element = values.Expression(value, result)
+		let write = InstructionEntry.Named(InstructionType.InvokeWriteToList, element.Result, name)
+		result = element.Add(write).At(block.register)
+	result.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, name))
+Added(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Added(ValueCodegen.AddOne, CodeBlock.Empty).register is 2
+	Plain.Added(ValueCodegen.RemoveOne, CodeBlock.Empty).instructions(1).kind is InstructionType.InvokeRemove
+	let name = node.children(0).text
+	let added = values.Expression(node.children(1), block)
+	let kind = node.text is "Add" then InstructionType.InvokeWriteToList else InstructionType.InvokeRemove
+	let written = added.Add(InstructionEntry.Named(kind, added.Result, name))
+	written.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, written.register, name))
+Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) CodeBlock
+	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Numbers", Declared).instructions.Length is 4
+	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Number", Declared).instructions.Length is 1
+	Plain.Argument(ValueCodegen.NoNode, 1, List(Text), Declared).instructions.Length is 1
+	let parameter = position < parameters.Length then parameters(position) else ""
+	let element = values.ElementType(parameter) is values.TypeOf(node, block)
+	let wraps = values.inference.types.IsPlural(parameter) and element
+	values.Expression((wraps then SyntaxNode("List", "", node) else node), block)

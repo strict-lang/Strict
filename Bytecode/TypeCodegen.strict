@@ -41,18 +41,14 @@ Member(header HeaderTokens, position Number) MemberEntry
 		let number = InstructionEntry.NumberValue(TypeShape(lines).EnumValue(position))
 		return MemberEntry(header.MemberName, type, InstructionEntry.Set(List(Text), number), true)
 	MemberEntry(header.MemberName, type, Initial(SyntaxParser(header.tokens).ParseRange(3, header.tokens.Length)), true)
-Initial(node SyntaxNode) InstructionEntry
-	Hello.Initial(SyntaxNode("Text", "\"a\"")).payload is (4, -1, 0)
-	Hello.Initial(SyntaxNode("Call", "Range")).texts.Length is 0
-	constant UnsupportedConstant = Error
-	if node.Kind is "Number"
-		let number = node.text to Number
-		return InstructionEntry.Set(List(Text), InstructionEntry.NumberValue(number))
-	if node.Kind is "Text"
-		return InstructionEntry.Set(node.Unquoted, (4, -1))
-	if node.Kind is not "Boolean"
-		return InstructionEntry(UnsupportedConstant, List(Text), List(Number))
-	InstructionEntry.Set(List(Text), (5, (node.text is "true" then 1 else 0)))
+Initial(node SyntaxNode) List(InstructionEntry)
+	Hello.Initial(SyntaxNode("Text", "\"a\"")).First.payload is (4, -1, 0)
+	Hello.Initial(SyntaxNode("Call", "Range")).Length is 0
+	Hello.Initial(SyntaxParser("(", "1", ",", "2", ")").ParseRange(0, 5)).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
+	if node.IsLiteral is false
+		return List(InstructionEntry)
+	let load = Generator.Expression(node, CodeBlock.Empty).instructions(0)
+	List(InstructionEntry) + InstructionEntry.Set(load.texts, MethodCodegen.LoadedValue(load))
 Methods(names Texts) List(MethodEntry)
 	Limit.Methods(List(Text)).First.instructions.Length is 2
 	mutable methods = List(Mutable(MethodEntry))

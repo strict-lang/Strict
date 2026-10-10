@@ -51,17 +51,27 @@ Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	let iterator = node.children(0)
 	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
 	let element = isRange then "Number" else methods.values.ElementType(methods.values.TypeOf(iterator, block))
-	let declared = Begin(iterator, block).Declare("index", "Number").Declare("value", element)
+	let nested = Begin(iterator, block).Declare("index", "Number").Declare("outer", block.scope.TypeOf("value"))
+	let declared = nested.Declare("value", element)
 	let plain = aggregation is ""
 	let body = node.children.Last
 	let looped = plain then methods.Body(body, declared) else AggregatedLoop(body, declared, aggregation)
 	looped.Add(InstructionEntry.Jump(InstructionType.LoopEnd, looped.instructions.Length - block.instructions.Length))
 Begin(iterator SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Begin(SyntaxNode("Number", "3"), CodeBlock.Empty).instructions.Last.kind is InstructionType.LoopBegin
+	Plain.Begin(SyntaxNode("Identifier", "r"), CodeBlock.Empty.Declare("r", "Range")).instructions.Length is 4
 	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
+	if (isRange is false) and (methods.values.TypeOf(iterator, block) is "Range")
+		return RangeFields(iterator, block)
 	let start = methods.values.Expression((isRange then iterator.children(0) else iterator), block)
 	let end = isRange then methods.values.Expression(iterator.children(1), start) else start
 	end.Add(InstructionEntry.LoopBegin(start.Result, (isRange then end.Result else -1)))
+RangeFields(iterator SyntaxNode, block CodeBlock) CodeBlock
+	Plain.RangeFields(SyntaxNode("Identifier", "r"), CodeBlock.Empty).instructions(1).texts is ("Start")
+	let range = methods.values.Expression(iterator, block)
+	let start = range.Load(InstructionEntry(InstructionType.FieldLoad, "Start", (range.register, range.Result, -1)))
+	let end = start.Load(InstructionEntry(InstructionType.FieldLoad, "ExclusiveEnd", (start.register, range.Result, -1)))
+	end.Add(InstructionEntry.LoopBegin(start.Result, end.Result))
 AggregatedLoop(body SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.AggregatedLoop(FilterLoop, CodeBlock.Empty, "sum").instructions.Last.kind is InstructionType.JumpEnd
 	if body.children.Last.Kind is not "If"

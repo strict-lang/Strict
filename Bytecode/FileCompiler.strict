@@ -7,6 +7,8 @@ constant CountCall = InstructionEntry.Invoke(0, ("Strict/Range", "Count", "Stric
 constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
 constant Counted = TypeEntry("A", List(MemberEntry), List(MethodEntry) + CountRun)
 constant Bad = TypeEntry("A", List(MemberEntry), List(MethodEntry) + Broken)
+constant Natives = ("from", "to", "not", "and", "or", "xor", "Exists", "ReadLines")
+constant TextNatives = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
 Run(path Text, root Text)
 	let types = Compiled(path, root)
 	let bytes = BinaryFile(types).Bytes
@@ -79,13 +81,21 @@ BaseTypes(entries List(TypeEntry), main Text) Texts
 UsedMethods(entries List(TypeEntry), type Text) Texts
 	UsedMethods(Go, "Strict/B") is ("Go")
 	UsedMethods(Counted, "Strict/Range") is ("Count")
-	constant natives = ("from", "to", "Length", "Count", "not", "and", "or", "xor", "Exists", "ReadLines")
 	for Targets(entries)
 		let method = value.Substring(value.LastIndexOf(".") + 1, value.Length - value.LastIndexOf(".") - 1)
-		let isLength = method is in ("Length", "Count")
-		let isNative = isLength then SourceName(type) is in ("Text", "List", "File") else method is in natives
-		if value.StartsWith(type + ".") and ((not isNative) or type.LastIndexOf("/") > 6)
+		if value.StartsWith(type + ".") and (not IsNative(type, method))
 			method
+IsNative(type Text, method Text) Boolean
+	IsNative("Strict/Text", "Upper") is true
+	IsNative("Strict/Range", "Length") is false
+	IsNative("Strict/Bytecode/B", "to") is false
+	if type.LastIndexOf("/") > 6
+		return false
+	if method is in ("Length", "Count")
+		return SourceName(type) is in ("Text", "List", "File")
+	if method is in TextNatives
+		return SourceName(type) is "Text"
+	method is in Natives
 SourceName(type Text) Text
 	SourceName("Strict/List(Number)") is "List"
 	SourceName("Strict/Process") is "Process"

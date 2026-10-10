@@ -19,6 +19,21 @@ public sealed class InstructionExecutionFailed(string message,
 		BuildMessage(message, instructions, failingIndex, methodContext, sourceLines, sourceFilePath),
 		inner)
 {
+	private readonly List<string> callers = [];
+
+	/// <summary>
+	/// Used as an exception filter by each calling method the error passes, never catches it.
+	/// </summary>
+	internal bool AddCaller(string method)
+	{
+		callers.Add(method);
+		return false;
+	}
+
+	public override string Message =>
+		base.Message + string.Concat(callers.Select(caller =>
+			Environment.NewLine + "   called from " + caller));
+
 	private static string BuildMessage(string message, IReadOnlyList<Instruction> instructions,
 		int failingIndex, string methodContext, string[]? sourceLines, string sourceFilePath)
 	{

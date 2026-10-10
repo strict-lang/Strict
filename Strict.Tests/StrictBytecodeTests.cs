@@ -84,6 +84,8 @@ public sealed class StrictBytecodeTests
 	[TestCase("Optimizers/UnreachableTests")]
 	[TestCase("TestRunner/TestDemo")]
 	[TestCase("Language/PackageTests", "Examples/BaseTypesTest")]
+	[TestCase("Validators/ValidateCheck", "Validators", ".")]
+	[TestCase("Runtime/Execute", "Examples/HelloLogger.strict", ".")]
 	public async Task StrictCompiledProgramRunsLikeCSharp(string program, params string[] arguments)
 	{
 		var source = Root + "/" + program + Type.Extension;

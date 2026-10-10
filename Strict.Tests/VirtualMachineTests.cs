@@ -833,6 +833,21 @@ public sealed class VirtualMachineTests : TestBytecode
 	}
 
 	[Test]
+	public void GrowingCopyOfListKeepsOriginal()
+	{
+		var source = new[]
+		{
+			"has numbers", "Grow Number", "\tmutable result = numbers", "\tresult = result + 3",
+			"\tresult.Add(4)", "\tnumbers.Length"
+		};
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(GrowingCopyOfListKeepsOriginal),
+			$"{nameof(GrowingCopyOfListKeepsOriginal)}((1, 2)).Grow", source)).Generate();
+		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(2));
+	}
+
+	[Test]
 	public void AndSkipsRightSideWhenLeftIsFalse()
 	{
 		var source = new[]
@@ -875,6 +890,17 @@ public sealed class VirtualMachineTests : TestBytecode
 			$"{nameof(ToTextUsesOwnToTextMethod)}(2).Show", source)).Generate();
 		Assert.That(new VirtualMachine(instructions).Execute(initialVariables: null).Returns!.Value.Text,
 			Is.EqualTo("number 3"));
+	}
+
+	[Test]
+	public void FailureInCalledMethodNamesCaller()
+	{
+		var instructions = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(FailureInCalledMethodNamesCaller), $"{nameof(FailureInCalledMethodNamesCaller)}((1, 2)).Outer",
+			"has numbers", "Outer Number", "\tInner + 1", "Inner Number", "\tnumbers(5)")).Generate();
+		Assert.That(() => new VirtualMachine(instructions).Execute(initialVariables: null),
+			Throws.InstanceOf<InstructionExecutionFailed>().With.Message.
+				Contains("called from " + nameof(FailureInCalledMethodNamesCaller)));
 	}
 
 	[Test]

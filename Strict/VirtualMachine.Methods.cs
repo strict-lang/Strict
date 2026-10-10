@@ -42,11 +42,18 @@ public sealed partial class VirtualMachine
 		var started = Profile == null
 			? 0
 			: Stopwatch.GetTimestamp();
-		RunInstructions(invokeInstructions
+		try
+		{
+			RunInstructions(invokeInstructions
 #if DEBUG
-			, info.MethodName
+				, info.MethodName
 #endif
-		);
+			);
+		}
+		catch (InstructionExecutionFailed failed) when (failed.AddCaller(previousMethodContext))
+		{
+			throw; //ncrunch: no coverage, the filter never catches
+		}
 		if (Profile != null)
 			AddToProfile(info.FullName, Stopwatch.GetElapsedTime(started));
 		if (savedLoops == null)

@@ -67,11 +67,14 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	isDeclaration then stored.Declare(name, values.TypeOf(assigned, block)) else stored
 StoreConstant(load InstructionEntry, name Text) InstructionEntry
 	Plain.StoreConstant(InstructionEntry.LoadNumber(2, 7), "a").Bytes(BinaryNames("a")) is (2, 1, 7, 0, 0)
+	let texts = load.texts + name
+	InstructionEntry(InstructionType.StoreConstantToVariable, texts, LoadedValue(load) + (-1 - load.texts.Length) + 0)
+LoadedValue(load InstructionEntry) Numbers
+	Plain.LoadedValue(InstructionEntry.LoadNumber(2, 7)) is (1, 7)
 	mutable content = List(Number) + load.payload(1)
 	for Range(2, load.payload.Length)
 		content = content + load.payload(value)
-	let texts = load.texts + name
-	InstructionEntry(InstructionType.StoreConstantToVariable, texts, content + (-1 - load.texts.Length) + 0)
+	content
 Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text) CodeBlock
 	Plain.Generate(IfBody, NoScope, "None").instructions.Length is 9
 	let condition = OperatorCodegen(values).Condition(node.children(0), block)

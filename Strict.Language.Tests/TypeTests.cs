@@ -245,6 +245,10 @@ public sealed class TypeTests
 	}
 
 	[Test]
+	public void TextArgumentMentioningGenericIsNoType() =>
+		Assert.That(package.FindType("Number(\"has value Generic\")"), Is.Null);
+
+	[Test]
 	public void MakeSureGenericTypeIsProperlyGenerated()
 	{
 		var listType = package.GetType(Type.List);

@@ -54,9 +54,7 @@ public sealed partial class VirtualMachine
 		if (left.IsList)
 		{
 			var items = new List<ValueInstance>(left.List.Items);
-			var removeIndex = items.FindIndex(item => item.Equals(right));
-			if (removeIndex >= 0)
-				items.RemoveAt(removeIndex);
+			items.RemoveAll(item => item.Equals(right));
 			return new ValueInstance(left.List.ReturnType, items.ToArray());
 		}
 		if (left.IsText || right.IsText)

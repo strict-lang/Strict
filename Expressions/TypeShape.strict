@@ -38,6 +38,36 @@ ParameterScope Scope
 			names.Add(header.tokens(0))
 			parameters.Add(Text.Combine(header.ParameterNames, ","))
 	Scope(names, parameters)
+UsesGenerics Boolean
+	TypeShape("has value Generic").UsesGenerics is true
+	TypeShape("has value Generic or None").UsesGenerics is false
+	TypeShape("for Iterator(Generic)", "in(element Generic) Boolean").UsesGenerics is true
+	TypeShape("constant Names = (\"Generic\")", "Run", "\tNames").UsesGenerics is false
+	for lines
+		if index < 3 and IsGenericLine(index)
+			return true
+	false
+IsGenericLine(position Number) Boolean
+	TypeShape("has count Number").IsGenericLine(0) is false
+	let line = lines(position)
+	let mentions = line.IndexOf("Generic") is not -1 or line.IndexOf("generic") is not -1
+	if line.StartsWith("has ") or line.StartsWith("mutable ")
+		let words = line.Split(" ")
+		return mentions and (words.Length < 4 or words(2) is not in ("Generic", "generic") or line.IndexOf("(") is not -1)
+	let hasBody = position + 1 < lines.Length and lines(position + 1).StartsWith("\t")
+	mentions and (line.StartsWith("constant ") is false) and (hasBody is false)
+CallScope(generics Texts) Scope
+	TypeShape("has iterator", "has Start Number").CallScope(List(Text) + "Iterator").TypeOf("from") is "Start"
+	TypeShape("from(number)", "\tvalue").CallScope(List(Text)).TypeOf("from") is "number"
+	constant scope = ParameterScope
+	if "from" is in scope.names
+		return scope
+	constant members = MemberScope
+	mutable names = List(Mutable(Text))
+	for members.names
+		if members.types(index) is not in generics and (members.types(index).IndexOf("Generic") is -1)
+			names.Add(value)
+	scope.With("from", Text.Combine(names, ","))
 MethodScope Scope
 	TypeShape("constant Limit = 3", "Add(other Number) Number", "\tother").MethodScope.TypeOf("Add") is "Number"
 	TypeShape("constant Limit = 3", "Add(other Number) Number", "\tother").MethodScope.TypeOf("Limit") is "Number"
@@ -62,16 +92,15 @@ EnumValue(position Number) Number
 	next
 ConstantText(position Number) Text
 	TypeShape("constant A", "constant B = 10", "constant C").ConstantText(2) is "11"
-	TypeShape("constant Limit = 3 * 2").ConstantText(0) is ""
+	TypeShape("constant Limit = 3 * 2").ConstantText(0) is "3 * 2"
 	let tokens = Tokenizer(lines(position)).Tokens
 	if tokens.Length is 2
 		return EnumValue(position) to Text
-	let kind = SyntaxParser(tokens).Leaf(tokens.Last).Kind
-	let isLiteral = (tokens.Length is 4) and (kind is in ("Number", "Text", "Boolean"))
-	isLiteral then tokens.Last else ""
+	let line = lines(position)
+	line.Substring(line.IndexOf(" = ") + 3, line.Length - line.IndexOf(" = ") - 3)
 ConstantScope Scope
 	TypeShape("constant A", "constant B = 10", "constant C").ConstantScope.TypeOf("C") is "11"
-	TypeShape("constant Limit = 3 * 2", "has a").ConstantScope.names.Length is 0
+	TypeShape("constant Limit = 3 * 2", "has a").ConstantScope.names.Length is 1
 	mutable names = List(Mutable(Text))
 	mutable literals = List(Mutable(Text))
 	for lines
