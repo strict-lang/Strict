@@ -4,10 +4,13 @@ constant MaxSteps = 10000000
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
 constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper", "Strict/Text"), List(Number), 0), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("ab"), Locals.Empty))
-Launch(typeName Text)
+Launch(typeName Text, arguments List(VmValue))
 	let main = Natives(types).TypeOf(typeName)
-	let run = Find(typeName, "Run", 0)
-	Execute(run, Bound(main, Natives(types).Fresh(main), run, List(VmValue)))
+	let exact = Find(typeName, "Run", arguments.Length)
+	let isExact = exact.instructions.Length > 0
+	let run = isExact then exact else Find(typeName, "Run", 1)
+	let bound = isExact then arguments else List(VmValue) + VmValue.OfList(arguments)
+	Execute(run, Bound(main, Natives(types).Fresh(main), run, bound))
 Find(typeName Text, methodName Text, count Number) MethodEntry
 	Hello.Find("HelloLogger", "Run", 0).instructions.Length is 2
 	Hello.Find("HelloLogger", "Other", 0).instructions.Length is 0

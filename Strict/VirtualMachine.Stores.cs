@@ -17,22 +17,30 @@ public sealed partial class VirtualMachine
 		else if (instruction.InstructionType == InstructionType.StoreConstantToVariable)
 		{
 			var storeVariable = (StoreVariableInstruction)instruction;
-			var value = CloneConstantValue(storeVariable.ValueInstance);
-			StoreIdentifierValue(GetIdentifierAccessPath(storeVariable, storeVariable.Identifier),
-				storeVariable.Identifier, value, storeVariable.IsMember);
+			StoreValue(storeVariable, storeVariable.Identifier,
+				CloneConstantValue(storeVariable.ValueInstance), storeVariable.IsMember);
 		}
 		else if (instruction.InstructionType == InstructionType.StoreRegisterToVariable)
 		{
 			var storeFromRegister = (StoreFromRegisterInstruction)instruction;
-			var storePath = storeFromRegister.CachedAccessPath ??=
-				(object?)IndexedElementAccessPath.TryParse(storeFromRegister.Identifier) ??
-				IdentifierAccessPath.Parse(storeFromRegister.Identifier);
-			if (storePath is not IndexedElementAccessPath indexedPath ||
-				!TryStoreToListElement(indexedPath, storeFromRegister))
-				StoreIdentifierValue(storePath as IdentifierAccessPath ??
-					((IndexedElementAccessPath)storePath).WholePath, storeFromRegister.Identifier,
-					Memory.Registers[storeFromRegister.Register], false);
+			StoreValue(storeFromRegister, storeFromRegister.Identifier,
+				Memory.Registers[storeFromRegister.Register], false);
 		}
+	}
+
+	/// <summary>
+	/// Constants and registers both store into list elements like numbers(index) = 5.
+	/// </summary>
+	private void StoreValue(Instruction instruction, string identifier, ValueInstance value,
+		bool isMember)
+	{
+		var storePath = instruction.CachedAccessPath ??=
+			(object?)IndexedElementAccessPath.TryParse(identifier) ??
+			IdentifierAccessPath.Parse(identifier);
+		if (storePath is not IndexedElementAccessPath indexedPath ||
+			!TryStoreToListElement(indexedPath, value))
+			StoreIdentifierValue(storePath as IdentifierAccessPath ??
+				((IndexedElementAccessPath)storePath).WholePath, identifier, value, isMember);
 	}
 
 	private void TryLoadInstructions(Instruction instruction)
@@ -105,7 +113,7 @@ public sealed partial class VirtualMachine
 				: default;
 
 	private bool TryStoreToListElement(IndexedElementAccessPath indexedAccessPath,
-		StoreFromRegisterInstruction store)
+		ValueInstance value)
 	{
 		var listValue = indexedAccessPath.ListPath.TryResolve(this, out var resolvedList)
 			? resolvedList
@@ -118,7 +126,7 @@ public sealed partial class VirtualMachine
 		var index = (int)indexInstance.Number;
 		if (index >= 0 && index < listValue.List.Count)
 		{
-			listValue.List[index] = Memory.Registers[store.Register];
+			listValue.List[index] = value;
 			return true;
 		}
 		return false;

@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Tests;
@@ -866,6 +866,12 @@ public sealed class VirtualMachineTests : TestBytecode
 			Is.EqualTo(2));
 
 	[Test]
+	public void ElementAssignedOnCopyKeepsOriginal() =>
+		Assert.That(RunSource(nameof(ElementAssignedOnCopyKeepsOriginal), "((1, 2)).Change",
+			"has numbers", "Change Number", "\tmutable result = numbers", "\tresult(0) = 5",
+			"\tnumbers(0) + result(0)").Number, Is.EqualTo(6));
+
+	[Test]
 	public void ListTakenFromNestedListIsChangedAsCopy() =>
 		Assert.That(RunSource(nameof(ListTakenFromNestedListIsChangedAsCopy), "(((1, 2), (3, 4))).Grow",
 			"has rows List(Numbers)", "Grow Number", "\tmutable row = rows(0)", "\trow.Add(5)",
@@ -878,6 +884,51 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\tresult.Add(4)", "\tmutable other = numbers + 8", "\tmutable firsts = numbers", "\tfor 2",
 			"\t\tif index is 1", "\t\t\tother.Add(9)", "\t\tif index is 0", "\t\t\tfirsts = other",
 			"\tsaved.Length + firsts.Length * 10").Number, Is.EqualTo(33));
+
+	[Test]
+	public void AppendingToNewestListVersionReusesItsMemory()
+	{
+		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		Assert.That(RunSource(nameof(AppendingToNewestListVersionReusesItsMemory), "((1, 2)).Grow",
+			"has numbers", "Grow Number", "\tmutable values = numbers", "\tfor 5000",
+			"\t\tvalues = values + value", "\tvalues.Length").Number, Is.EqualTo(5002));
+		Assert.That(GC.GetAllocatedBytesForCurrentThread() - allocatedBefore, Is.LessThan(20_000_000));
+	}
+
+	[Test]
+	public void ListMemberNextToOtherMemberKeepsItsElements() =>
+		Assert.That(RunSource(nameof(ListMemberNextToOtherMemberKeepsItsElements),
+			"((1, 2), \"ab\").Added", "has numbers", "has name Text", "Added Number",
+			"\tnumbers(0) + numbers(1)").Number, Is.EqualTo(3));
+
+	[Test]
+	public void ElementAssignedThroughLetIndexChangesTheList()
+	{
+		var binary = new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ElementAssignedThroughLetIndexChangesTheList),
+			nameof(ElementAssignedThroughLetIndexChangesTheList) + "(1).Set((1, 2, 3))", "has number",
+			"Set(mutable numbers Numbers) Numbers", "\tlet target = number + 0",
+			"\tnumbers(target) = 5", "\tnumbers")).Generate();
+		new AllInstructionOptimizers().Optimize(binary);
+		Assert.That(new VirtualMachine(binary).Execute(initialVariables: null).Returns!.Value.List.
+			Items.Select(item => item.Number), Is.EqualTo(new[] { 1.0, 5.0, 3.0 }));
+	}
+
+	[Test]
+	public void CallsInLoopsDoNotAllocatePerCall()
+	{
+		var machine = new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(CallsInLoopsDoNotAllocatePerCall),
+			nameof(CallsInLoopsDoNotAllocatePerCall) + "((1, 2)).Total", "has numbers",
+			"Total Number", "\tmutable sum = 0", "\tfor 10000",
+			"\t\tsum = sum + Counted(index, \"ab\")", "\tsum",
+			"Counted(start Number, word Text) Number", "\tmutable count = word.IndexOf(\"b\")",
+			"\tfor numbers", "\t\tcount = count + value - start", "\tcount")).Generate());
+		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		Assert.That(machine.Execute(initialVariables: null).Returns!.Value.Number,
+			Is.EqualTo(-99950000));
+		Assert.That(GC.GetAllocatedBytesForCurrentThread() - allocatedBefore, Is.LessThan(100_000));
+	}
 
 	[Test]
 	public void RemoveAsLastLineReturnsList() =>

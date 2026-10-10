@@ -178,6 +178,46 @@ public sealed partial class BinaryGenerator
 		instructions.Add(new StoreFromRegisterInstruction(registry.PreviousRegister, listName));
 	}
 
+	/// <summary>
+	/// An element write changes the list in place, a list the variable does not own is still used
+	/// by the variable, member or list it came from: it is copied first and owned afterwards.
+	/// </summary>
+	private void CopyListIfNotOwned(Expression target)
+	{
+		if (target is not ListCall { List: VariableCall listVariable } || OwnsList(listVariable))
+			return;
+		instructions.Add(new CopyListInstruction(listVariable.Variable.Name));
+		ownedLists.Add(listVariable.Variable.Name);
+	}
+
+	/// <summary>
+	/// Element writes in a loop copy such a list once before the loop, unless the loop shares the
+	/// list itself, then every write copies it (bad code, the old version is used again).
+	/// </summary>
+	private void CopyElementWrittenListsBeforeLoop(For forExpression, bool isValueUsed)
+	{
+		var copied = ElementWrittenLists(forExpression.Body).Distinct().
+			Where(name => !ownedLists.Contains(name)).ToList();
+		ownedLists.UnionWith(copied);
+		Disown(forExpression, isValueUsed);
+		foreach (var name in copied.Where(ownedLists.Contains))
+			instructions.Add(new CopyListInstruction(name));
+	}
+
+	private static IEnumerable<string> ElementWrittenLists(Expression expression) =>
+		expression switch
+		{
+			MutableReassignment { Target: ListCall { List: VariableCall listVariable } } =>
+				[listVariable.Variable.Name],
+			Body body => body.Expressions.SelectMany(ElementWrittenLists),
+			For nestedFor => ElementWrittenLists(nestedFor.Body),
+			If ifExpression => ElementWrittenLists(ifExpression.Then).Concat(
+				ifExpression.OptionalElse is { } optionalElse
+					? ElementWrittenLists(optionalElse)
+					: []),
+			_ => []
+		};
+
 	private void GenerateInPlaceListChange(string listName, Expression element, bool isRemove)
 	{
 		GenerateInstructionFromExpression(element);

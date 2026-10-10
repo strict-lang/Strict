@@ -143,7 +143,7 @@ public sealed partial class TypeParser
 		if (char.IsLower(nameAndType[0]))
 		{
 			var memberNameWithFirstLetterCaps = nameAndType.MakeFirstLetterUppercase();
-			var memberNameType = type.FindType(memberNameWithFirstLetterCaps);
+			var memberNameType = FindUpcastType(memberNameWithFirstLetterCaps);
 			if (memberNameType != null && !constantValue.StartsWith(memberNameWithFirstLetterCaps))
 				return memberNameType;
 		}
@@ -282,7 +282,7 @@ public sealed partial class TypeParser
 		if (char.IsLower(memberName[0]))
 		{
 			var memberNameWithFirstLetterCaps = memberName.MakeFirstLetterUppercase();
-			if (type.FindType(memberNameWithFirstLetterCaps) != null &&
+			if (FindUpcastType(memberNameWithFirstLetterCaps) != null &&
 				!remainingTextSpan.StartsWith(memberNameWithFirstLetterCaps))
 				return string.Concat(memberNameWithFirstLetterCaps, "(", remainingTextSpan, ")").AsSpan();
 		}
@@ -290,6 +290,21 @@ public sealed partial class TypeParser
 			? throw new CurrentTypeCannotBeInstantiatedAsMemberType(type, LineNumber,
 				remainingTextSpan.ToString())
 			: remainingTextSpan;
+	}
+
+	/// <summary>
+	/// Only types of the own package, its parents or a top level (base) package count, an unrelated
+	/// package that happens to be loaded must not change a member type (`constant limit = 10`).
+	/// </summary>
+	private Type? FindUpcastType(string typeName)
+	{
+		var found = type.FindType(typeName);
+		if (found == null || !found.Package.FullName.Contains(Context.ParentSeparator))
+			return found;
+		for (var package = type.Package; package != null; package = package.Parent as Package)
+			if (found.Package == package)
+				return found;
+		return null;
 	}
 
 	public sealed class CurrentTypeCannotBeInstantiatedAsMemberType(Type type,

@@ -51,14 +51,10 @@ public sealed partial class VirtualMachine
 	private ValueInstance AddValueInstances(ValueInstance left, ValueInstance right)
 	{
 		if (left.IsList)
-		{
-			var items = new List<ValueInstance>(left.List.Items);
-			if (right.IsList && !left.List.ReturnType.GetFirstImplementation().IsList)
-				items.AddRange(right.List.Items);
-			else
-				items.Add(right);
-			return new ValueInstance(left.List.ReturnType, items.ToArray());
-		}
+			return new ValueInstance(left.List.Appended(right.IsList &&
+				!left.List.ReturnType.GetFirstImplementation().IsList
+					? right.List.Items
+					: [right]));
 		if (right.IsList)
 			return new ValueInstance(right.List.ReturnType, [left, .. right.List.Items]);
 		if (left.IsText || right.IsText)
@@ -70,20 +66,26 @@ public sealed partial class VirtualMachine
 	private ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
 	{
 		if (left.IsList)
-		{
-			var items = new List<ValueInstance>(left.List.Items);
-			if (right.IsList && !left.List.ReturnType.GetFirstImplementation().IsList)
-				foreach (var item in right.List.Items)
-					items.Remove(item);
-			else
-				items.RemoveAll(item => item.Equals(right));
-			return new ValueInstance(left.List.ReturnType, items.ToArray());
-		}
+			return SubtractFromList(left, right);
 		if (left.IsText || right.IsText)
 			throw Fail("Text subtraction is not supported: '" + left + "' - '" + right +
 				"'"); //ncrunch: no coverage
 		return new ValueInstance(GetNumberResultType(left),
 			left.GetArithmeticNumber() - right.GetArithmeticNumber());
+	}
+
+	/// <summary>
+	/// Own method, the RemoveAll lambda would otherwise allocate its closure on every subtraction.
+	/// </summary>
+	private static ValueInstance SubtractFromList(ValueInstance left, ValueInstance right)
+	{
+		var items = new List<ValueInstance>(left.List.Items);
+		if (right.IsList && !left.List.ReturnType.GetFirstImplementation().IsList)
+			foreach (var item in right.List.Items)
+				items.Remove(item);
+		else
+			items.RemoveAll(item => item.Equals(right));
+		return new ValueInstance(left.List.ReturnType, items.ToArray());
 	}
 
 	private (ValueInstance, ValueInstance) GetOperands(BinaryInstruction instruction) =>

@@ -1,4 +1,8 @@
 has logger
-Run(path Text, root Text)
-	let types = FileCompiler(logger).Compiled(path, root)
-	Machine(types, logger).Launch(types.First.Name)
+Run(arguments Texts)
+	let types = FileCompiler(logger).Compiled(arguments(0), arguments(1))
+	mutable numbers = List(Mutable(VmValue))
+	for Range(2, arguments.Length)
+		let number = arguments(value) to Number
+		numbers.Add(VmValue.OfNumber(number))
+	Machine(types, logger).Launch(types.First.Name, numbers)

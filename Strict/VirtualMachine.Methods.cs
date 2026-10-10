@@ -16,11 +16,6 @@ public sealed partial class VirtualMachine
 		if (TryExecuteSpecialInvoke(invoke, implicitInstance))
 			return;
 		var info = invoke.MethodInfo;
-		var evaluatedArgs = info.ArgumentRegisters.Length == 0
-			? Array.Empty<ValueInstance>()
-			: new ValueInstance[info.ArgumentRegisters.Length];
-		for (var argIndex = 0; argIndex < info.ArgumentRegisters.Length; argIndex++)
-			evaluatedArgs[argIndex] = Memory.Registers[info.ArgumentRegisters[argIndex]];
 		var evaluatedInstance = info.InstanceRegister.HasValue
 			? Memory.Registers[info.InstanceRegister.Value]
 			: implicitInstance;
@@ -33,7 +28,7 @@ public sealed partial class VirtualMachine
 		var previousInstance = currentInstance;
 		currentMethodContext = info.FullName;
 		currentInstance = evaluatedInstance;
-		InitializeMethodCallScope(info, evaluatedArgs, evaluatedInstance);
+		InitializeMethodCallScope(info, evaluatedInstance);
 		var isReentrant = !runningBlocks.Add(invokeInstructions);
 		var savedLoops = isReentrant
 			? SaveLoopStates(invokeInstructions)
@@ -55,9 +50,9 @@ public sealed partial class VirtualMachine
 		}
 		if (Profile != null)
 			AddToProfile(info.FullName, Stopwatch.GetElapsedTime(started));
-		if (savedLoops == null)
+		if (!isReentrant)
 			runningBlocks.Remove(invokeInstructions);
-		else
+		else if (savedLoops != null)
 			foreach (var (loopBegin, state) in savedLoops)
 				loopBegin.RestoreState(state);
 		var result = TryFlattenNestedIteratorList(info, Returns);
@@ -276,15 +271,16 @@ public sealed partial class VirtualMachine
 	/// Parameters are bound after the instance members: a method called on a type name keeps the
 	/// caller's implicit instance, its parameters must win over caller members of the same name.
 	/// </summary>
-	private void InitializeMethodCallScope(InvokeMethodInfo info, ValueInstance[] evaluatedArguments,
-		ValueInstance? evaluatedInstance)
+	private void InitializeMethodCallScope(InvokeMethodInfo info, ValueInstance? evaluatedInstance)
 	{
 		if (evaluatedInstance.HasValue)
 			SetInstanceScope(evaluatedInstance.Value);
+		var argumentCount = info.ArgumentRegisters.Length;
 		for (var parameterIndex = 0; parameterIndex < info.ParameterNames.Length &&
-			parameterIndex < evaluatedArguments.Length; parameterIndex++)
-			Memory.Frame.Set(info.ParameterNames[parameterIndex], evaluatedArguments[parameterIndex]);
-		for (var parameterIndex = evaluatedArguments.Length;
+			parameterIndex < argumentCount; parameterIndex++)
+			Memory.Frame.Set(info.ParameterNames[parameterIndex],
+				Memory.Registers[info.ArgumentRegisters[parameterIndex]]);
+		for (var parameterIndex = argumentCount;
 			parameterIndex < info.ParameterNames.Length; parameterIndex++)
 			Memory.Frame.Set(info.ParameterNames[parameterIndex],
 				new ValueInstance(executable.numberType, 0.0));
@@ -368,14 +364,14 @@ public sealed partial class VirtualMachine
 
 	private readonly HashSet<List<Instruction>> runningBlocks = new(ReferenceEqualityComparer.Instance);
 
-	private static List<(LoopBeginInstruction, LoopBeginInstruction.State)> SaveLoopStates(
+	private static List<(LoopBeginInstruction, LoopBeginInstruction.State)>? SaveLoopStates(
 		List<Instruction> blockInstructions)
 	{
 		List<(LoopBeginInstruction, LoopBeginInstruction.State)>? states = null;
 		foreach (var instruction in blockInstructions)
 			if (instruction is LoopBeginInstruction loopBegin)
 				(states ??= []).Add((loopBegin, loopBegin.SaveState()));
-		return states ?? [];
+		return states;
 	}
 
 	private bool TryGetBinaryMembers(Type type, out List<BinaryMember> members)
@@ -449,7 +445,9 @@ public sealed partial class VirtualMachine
 	private void DisposeTrackedValues(CallFrame frame, ValueInstance? returnValue,
 		CallFrame? parentFrame)
 	{
-		foreach (var value in frame.DisposableValues.ToArray())
+		if (frame.DisposableValues is not { Count: > 0 } disposableValues)
+			return;
+		foreach (var value in disposableValues.ToArray())
 			if (returnValue.HasValue && value.Equals(returnValue.Value))
 			{
 				if (parentFrame != null)

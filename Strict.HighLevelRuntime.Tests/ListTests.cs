@@ -38,6 +38,28 @@ public sealed class ListTests
 	}
 
 	[Test]
+	public void AppendingToNewestListVersionReusesItsMemory()
+	{
+		using var t = CreateType(nameof(AppendingToNewestListVersionReusesItsMemory), "has numbers",
+			"Grow Number", "\tmutable values = numbers", "\tfor 5000", "\t\tvalues = values + value",
+			"\tvalues.Length");
+		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Grow"), CreateNumbers(t), []).
+			Number, Is.EqualTo(5002));
+		Assert.That(GC.GetAllocatedBytesForCurrentThread() - allocatedBefore, Is.LessThan(20_000_000));
+	}
+
+	[Test]
+	public void ElementAssignedOnCopyOfParameterKeepsOriginal()
+	{
+		using var t = CreateType(nameof(ElementAssignedOnCopyOfParameterKeepsOriginal), "has numbers",
+			"Change(other Numbers) Number", "\tmutable result = other", "\tresult(0) = 5",
+			"\tother(0) + result(0)");
+		Assert.That(interpreter.Execute(t.Methods.Single(m => m.Name == "Change"), CreateNumbers(t),
+			[new ValueInstance(t.Members[0].Type, [one, two])]).Number, Is.EqualTo(6));
+	}
+
+	[Test]
 	public void AddNumberToList()
 	{
 		using var t = CreateType(nameof(AddNumberToList), "has numbers", "AddOne Numbers",

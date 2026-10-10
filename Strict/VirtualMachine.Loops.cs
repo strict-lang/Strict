@@ -31,6 +31,11 @@ public sealed partial class VirtualMachine
 		loopBegin.SavedOuterIndexValue = frame.TryGet(OuterIndexSymbolId, out var outerIndexValue)
 			? outerIndexValue
 			: default;
+		if (loopBegin.CustomVariableNames.Length == 0)
+		{
+			loopBegin.SavedCustomValues = NoCustomValues;
+			return;
+		}
 		var savedCustomValues = new Dictionary<string, ValueInstance>(StringComparer.Ordinal);
 		for (var variableIndex = 0; variableIndex < loopBegin.CustomVariableNames.Length;
 			variableIndex++)
@@ -38,6 +43,11 @@ public sealed partial class VirtualMachine
 				savedCustomValues.Add(loopBegin.CustomVariableNames[variableIndex], customValue);
 		loopBegin.SavedCustomValues = savedCustomValues;
 	}
+
+	/// <summary>
+	/// Marks a loop without custom variables as captured, a Dictionary per loop start adds up fast.
+	/// </summary>
+	private static readonly Dictionary<string, ValueInstance> NoCustomValues = new();
 
 	private static void RestoreLoopState(LoopBeginInstruction loopBegin, CallFrame frame)
 	{

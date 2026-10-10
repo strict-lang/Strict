@@ -111,6 +111,8 @@ public abstract class Visitor
 		}
 		else if (expression is MutableReassignment reassignment)
 		{
+			if (reassignment.Target is ListCall elementTarget)
+				Visit(elementTarget.Index, body, context);
 			Visit(reassignment.Value, body, context);
 		}
 		else if (expression is Return returnExpression)

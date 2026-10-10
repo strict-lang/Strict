@@ -4,6 +4,9 @@ constant Declared = CodeBlock.Empty.Declare("x", "Number")
 constant Shared = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", true)
 constant Owned = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", false)
 constant Appending = BodyParser("Run", "\tvalues = values + 1").Block(1, 1).children(0)
+constant Writing = BodyParser("Run", "\tvalues(0) = 5").Block(1, 1).children(0)
+constant WritingLoop = BodyParser("Run", "\tfor 3", "\t\tvalues(index) = index").Block(1, 1).children(0)
+constant SharingLoop = BodyParser("Run", "\tfor values", "\t\tvalues(index) = index").Block(1, 1).children(0)
 Of(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Of(ValueCodegen.Ones, CodeBlock.Empty).instructions.Length is 1
 	node.IsLiteral then Constant(node, block) else Built(node, block)
@@ -50,6 +53,32 @@ Copied(node SyntaxNode, block CodeBlock) CodeBlock
 	let operation = node.text is "Add" then InstructionType.Add else InstructionType.Subtract
 	let changed = element.Load(InstructionEntry.Binary(operation, (list.Result, element.Result, element.register)))
 	changed.Stored(node.children(0).text)
+ElementCopied(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.ElementCopied(Writing, Shared).instructions(0).kind is InstructionType.CopyList
+	Plain.ElementCopied(Writing, Shared).Owns("values") is true
+	Plain.ElementCopied(Writing, Owned).instructions.Length is 0
+	let target = node.children(0)
+	if node.Kind is not "Reassignment" or target.Kind is not "Call" or block.Owns(target.text)
+		return block
+	block.Add(InstructionEntry(InstructionType.CopyList, target.text, -1)).Sharing(target.text, false)
+CopiedBefore(loop SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
+	Plain.CopiedBefore(WritingLoop, Shared, false).instructions(0).kind is InstructionType.CopyList
+	Plain.CopiedBefore(SharingLoop, Shared, false).instructions.Length is 0
+	mutable result = block
+	for ElementWritten(loop.children.Last)
+		let owned = result.Sharing(value, false)
+		if (result.Owns(value) is false) and Disowned(loop, owned, isUsed).Owns(value)
+			result = owned.Add(InstructionEntry(InstructionType.CopyList, value, -1))
+	result
+ElementWritten(node SyntaxNode) Texts
+	Plain.ElementWritten(WritingLoop) is ("values")
+	Plain.ElementWritten(Appending).Length is 0
+	if (node.Kind is "Reassignment") and (node.children(0).Kind is "Call")
+		return List(Text) + node.children(0).text
+	mutable names = List(Mutable(Text))
+	for node.children
+		names = names + ElementWritten(value)
+	names
 IsAppend(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsAppend(Appending, Owned) is true
 	Plain.IsAppend(BodyParser("Run", "\tvalues = values + values").Block(1, 1).children(0), Owned) is false

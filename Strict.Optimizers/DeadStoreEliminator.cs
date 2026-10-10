@@ -17,7 +17,7 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 		var loadedVariables = CollectLoadedVariables(instructions);
 		instructions.RemoveAll(instruction =>
 			instruction is StoreVariableInstruction { IsMember: false } store &&
-			!loadedVariables.Contains(store.Identifier));
+			!IsElementWrite(store.Identifier) && !loadedVariables.Contains(store.Identifier));
 		RemoveDeadRegisterStoreChains(instructions, loadedVariables);
 		return instructions;
 	}
@@ -38,9 +38,7 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 			{
 				if (instructions[storeIndex] is not StoreFromRegisterInstruction store)
 					continue;
-				// List-element writes like image.Colors(colorIndex) = … are side-effecting;
-				// they mutate the list in-place and must never be treated as dead stores.
-				if (store.Identifier.Contains('('))
+				if (IsElementWrite(store.Identifier))
 					continue;
 				if (loadedVariables.Contains(store.Identifier))
 					continue;
@@ -116,8 +114,17 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 			WriteToListInstruction writeToList => writeToList.Identifier,
 			WriteToTableInstruction writeToTable => writeToTable.Identifier,
 			RemoveInstruction remove => remove.Identifier,
+			StoreVariableInstruction store when IsElementWrite(store.Identifier) => store.Identifier,
+			StoreFromRegisterInstruction store when IsElementWrite(store.Identifier) =>
+				store.Identifier,
 			_ => null
 		};
+
+	/// <summary>
+	/// List-element writes like image.Colors(colorIndex) = … change the list in place, they are
+	/// never dead and read both the list and the index variable.
+	/// </summary>
+	private static bool IsElementWrite(string identifier) => identifier.Contains('(');
 
 	private static HashSet<string> CollectLoadedVariables(List<Instruction> instructions)
 	{
@@ -127,6 +134,9 @@ public sealed class DeadStoreEliminator : InstructionOptimizer
 			{
 				loaded.Add(identifier);
 				loaded.Add(identifier.Split('.', '(')[0]);
+				var openParenthesis = identifier.LastIndexOf('(');
+				if (openParenthesis > 0 && identifier.EndsWith(')'))
+					loaded.Add(identifier[(openParenthesis + 1)..^1].Split('.')[0]);
 			}
 		return loaded;
 	}

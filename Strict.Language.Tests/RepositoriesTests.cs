@@ -121,6 +121,15 @@ public class RepositoriesTests
 	}
 
 	[Test]
+	public async Task MemberNamedLikeTypeOfUnrelatedPackageKeepsItsValueType()
+	{
+		using var languagePackage = await repos.LoadStrictPackage("Strict/Language");
+		using var examplesPackage = await repos.LoadStrictPackage("Strict/Examples");
+		Assert.That(examplesPackage.GetType("NativeConditions").Members[0].Type.Name,
+			Is.EqualTo(Type.Number));
+	}
+
+	[Test]
 	public async Task LoadStrictImageProcessingTypes()
 	{
 		using var package = await repos.LoadStrictPackage("Strict/ImageProcessing");

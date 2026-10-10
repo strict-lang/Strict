@@ -96,6 +96,10 @@ public partial class Interpreter
 	public class UnableToCallMemberWithoutInstance(MemberCall member, ExecutionContext ctx)
 		: Exception(member + ", context " + ctx); //ncrunch: no coverage
 
+	/// <summary>
+	/// Writes the element in place, an immutable list may still be used elsewhere (values never
+	/// change) and is copied once into a Mutable list of this variable first.
+	/// </summary>
 	private ValueInstance EvaluateMutableListElementAssignment(ListCall target, Expression value,
 		ExecutionContext ctx)
 	{
@@ -103,6 +107,12 @@ public partial class Interpreter
 		var newValue = CopyIfMutableList(RunExpression(value, ctx));
 		var index = (int)RunExpression(target.Index, ctx).Number;
 		var listInstance = RunExpression(target.List, ctx);
+		if (!listInstance.IsMutable && target.List is VariableCall or ParameterCall)
+		{
+			var listType = listInstance.GetType();
+			listInstance = ctx.Set(target.List.ToString(), new ValueInstance(listInstance,
+				listType.GetType(Type.Mutable).GetGenericImplementation(listType)));
+		}
 		listInstance.List.Items[index] = newValue;
 		return newValue;
 	}

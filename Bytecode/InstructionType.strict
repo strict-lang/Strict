@@ -34,4 +34,5 @@ constant InvokeRemove
 constant Print
 constant FieldLoad
 constant ConstructValueType
+constant CopyList
 constant IncludesSourceLine = 128

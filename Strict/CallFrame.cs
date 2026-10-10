@@ -266,7 +266,7 @@ internal sealed class CallFrame
 
 	internal void TrackDisposable(ValueInstance value) => (disposableValues ??= []).Add(value);
 
-	internal IReadOnlyList<ValueInstance> DisposableValues => disposableValues ?? [];
+	internal IReadOnlyList<ValueInstance>? DisposableValues => disposableValues;
 
 	internal void RemoveDisposable(ValueInstance value) => disposableValues?.Remove(value);
 

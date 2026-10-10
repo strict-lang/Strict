@@ -59,6 +59,8 @@ public sealed partial class BinaryGenerator
 	{
 		if (aggregation != LoopAggregation.None)
 			Disown(forExpression, true);
+		CopyElementWrittenListsBeforeLoop(forExpression, aggregation != LoopAggregation.None);
+		var ownedAtLoopStart = ownedLists.ToHashSet();
 		var forSourceLine = forExpression.LineNumber;
 		var instructionCountBeforeLoopStart = instructions.Count;
 		var customVariableNames =
@@ -90,6 +92,7 @@ public sealed partial class BinaryGenerator
 			Begin = loopBegin, SourceLine = forSourceLine
 		};
 		instructions.Add(loopEnd);
+		ownedLists.IntersectWith(ownedAtLoopStart);
 	}
 
 	private void AddLoopAggregation(string aggregationTarget, LoopAggregation aggregation)

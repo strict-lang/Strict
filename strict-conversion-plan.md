@@ -122,6 +122,9 @@ C2 VM hot paths: table dispatch instead of `switch` on method names, cached meth
    allocation (pool exists, verify), loop state without dictionaries (`SavedCustomValues`).
 C3 Lists: copy-on-write or in-place `Mutable(List)` Add so Strict loops building lists are O(n)
    (now `list + x` copies → O(n²), visible in all Strict packages).
+   Decided 2026-10-10: values stay immutable in the language, runtimes append in place to a shared
+   backing and hand back the same memory (the previous version stays a valid shorter view), only
+   changing an old version again copies (bad code). No mutable language features for speed.
 C4 Parser/loader: `FindTypeCount = 1069` for a tiny demo → cache by name per Context, avoid
    regex scans for dependency detection per file, parallel package loading (package level only,
    per AGENTS), lazy method body parsing kept.
@@ -436,6 +439,45 @@ left constructor members without a from parameter (like `logger`) uninitialized
 `Examples/InstructionType` instead of `Bytecode/InstructionType` once Examples was loaded) and the
 dependencies were only assigned after parsing the package. Strict papercuts still open:
 `Method(not x)` (sole unary argument) is not parsed, `(a then b else c).Next` is parsed as a list.
+Then (2026-10-10): list appends reuse memory (C3 decision). `ValueArrayInstance` versions share one
+backing list, `list + element` on the newest version appends in place in the C# VM and the
+interpreter, older versions stay valid shorter views and copy only when changed again. Strict VM
+MemoryPressure 21.2 → 1.75 s (Release, allocated 15.9 GB → 297 MB), the Strict compiler allocates
+23% less on FizzBuzz (time unchanged). Program arguments: `Runtime/Execute.strict <file> <root>
+[numbers]` binds them like the C# Runner (a Run with that many parameters, else one list
+parameter), Sum joins `StrictVirtualMachineRunsLikeCSharp` (20 Examples). Fixed on the way: a
+camelCase member named like a type took a type of any loaded package (`constant limit = 10` in
+Examples became Language/Limit once Language was loaded, a load order race in
+RunAllTestsForAllStrictFilesInThisRepo), now only the own package, its parents and top level
+packages count. Cost audit (Release): the 20,000 appends are ~1% of MemoryPressure's bytes on the
+Strict VM, each append is 6 Strict VM steps or ~87 Strict calls on the C# VM (66.6 µs, 14.3 KB).
+Directly on the C# VM it is 13 ms cold and 1.5 ms warm (77 ns per append), natively 0.7 ns. The C#
+VM no longer allocates per call (argument arrays, an empty disposables List, a Dictionary per loop
+start, a closure per subtraction, native Text argument arrays, dotted ListCall paths split again
+per access): MemoryPressure 297 → 150 MB, FizzBuzz compile 22.2 → 11.3 MB, time unchanged (GC was
+1.4%). Fixed on the way: the entry call `X((1, 2), "ab").Method` put both arguments into the list
+member (the `X(1, 2, 3)` shorthand fired whenever the arguments were not a single list), and
+`let target = …` plus `numbers(target) = 5` silently changed nothing: the validator never visited
+assignment targets (false UnusedMethodVariableMustBeRemoved), DeadStoreEliminator dropped the
+element write and the `let` (the index only appears inside the store name), and the C# VM stored
+constants into a variable literally named `numbers(target)`. Still open: the Strict VM
+(`Runtime/Storage.strict`) has no element writes at all, a C# VM element write that cannot be
+resolved (index out of range) still falls back to such a variable instead of failing. Fixed:
+after `mutable result = numbers` the element write `result(0) = 5` changed `numbers` too (C# VM
+always, interpreter for parameters). Both compilers now emit `CopyList` before the first element
+write to a list the variable does not own (before the loop when the loop does not share it) and
+the interpreter copies such a list once into a Mutable list. With that the Strict VM stays
+functional and still got faster (MemoryPressure on the Strict VM, Release: 1646 → 1255 ms, 138.9 →
+117.4 MB): `Locals.Replaced` copies natively and writes one element instead of rebuilding the list
+in a Strict loop, one `#loop` state (begin, length, iteration, outer state) replaces the backward
+`LoopBeginOf` scan and the `#loop`/`#iteration` text keys, Storage/Operations/Flow get the
+instruction instead of fetching it again, and `NextWithRegister`/`NextWithLocal` build one frame
+instead of two. The rest of the gap to the in-place prototype (0.77 s, 89 MB) is one new Frame and
+Locals per step, closing it needs the runtime to reuse an instance whose old version is dead. Next,
+ranked by measured effect: ReadyToRun as one version bubble (FizzBuzz compile 348 → 195 ms), one
+store and an in-place append for `x = x.Add(y)` in both compilers, and the Strict compiler
+tokenizing, reading and linking each file once (1,602 tokenizations for 1,073 lines, 54
+LinkedType calls for 12 types).
 
 D6 progress (2026-10-10): `Compiler/NativeCompiler.strict <file> <root>` is a native compiler
 written in Strict. It compiles the program with the Strict compiler (`FileCompiler.Compiled`),
@@ -1300,15 +1342,15 @@ stays 0% until D7 switches a Runner stage to the Strict implementation and delet
 | Phase | Project | `.strict` files / lines | Current scope (differential test) | C# replaced |
 |-------|---------|-------------------------|-----------------------------------|-------------|
 | 1 | Language | 22 / 472 | Type/Member/Method model, header tokens, package lookup | 0% |
-| 2 | Expressions | 49 / 1479 | Tokenizer, syntax tree, statements: every line of 18 folders round-trips (D1) | 0% |
+| 2 | Expressions | 49 / 1584 | Tokenizer, syntax tree, statements: every line of 18 folders round-trips (D1) | 0% |
 | 3 | Validators | 5 / 235 | Same rule as C# for each validator case (D2) | 0% |
 | 4 | TestRunner | 7 / 196 | Simple assertion evaluator | 0% |
 | 5 | HighLevelRuntime | 20 / 560 | Line-level evaluator subset | 0% |
-| 6 | Bytecode | 47 / 2114 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
+| 6 | Bytecode | 52 / 2741 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
 | 7 | Optimizers | 15 / 261 | Instruction passes; codegen folding and load reuse live in Bytecode | 0% |
-| 8 | Runtime | 12 / 523 | Strict VM runs 19 Strict-compiled Examples like the C# VM (D5) | 0% |
-| 9 | Compiler | 22 / 828 | Native compiler via MLIR, 10 numeric Examples like the VM (D6) | 0% |
-| **Total** | | **199 / 6668** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
+| 8 | Runtime | 12 / 560 | Strict VM runs 20 Strict-compiled Examples like the C# VM (D5) | 0% |
+| 9 | Compiler | 22 / 829 | Native compiler via MLIR, 10 numeric Examples like the VM (D6) | 0% |
+| **Total** | | **204 / 7438** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
 
 ---
 ## Missing Runtime Features Tracker

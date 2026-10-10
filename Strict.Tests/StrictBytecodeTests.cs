@@ -134,19 +134,17 @@ public sealed class StrictBytecodeTests
 	[TestCase("MemoryPressure")]
 	[TestCase("NumberStats")]
 	[TestCase("Grade")]
-	public async Task StrictVirtualMachineRunsLikeCSharp(string example)
+	[TestCase("Sum", "5", "10", "20")]
+	public async Task StrictVirtualMachineRunsLikeCSharp(string example, params string[] numbers)
 	{
 		var source = Root + "/Examples/" + example + Type.Extension;
 		await new Runner(source).Run();
-		consoleWriter.GetStringBuilder().Clear();
-		new VirtualMachine(new BinaryExecutable(Path.ChangeExtension(source, BinaryExecutable.Extension))).
-			Execute();
-		var expected = consoleWriter.ToString();
-		consoleWriter.GetStringBuilder().Clear();
-		await new Runner(Root + "/Runtime/Execute" + Type.Extension, source + " " + Root).Run();
-		var output = consoleWriter.ToString();
-		Assert.That(output[..output.LastIndexOf("Executed ", StringComparison.Ordinal)],
-			Is.EqualTo(expected));
+		var expected = await RunUntilExecuted(Path.ChangeExtension(source, BinaryExecutable.Extension),
+			numbers.Length > 0
+				? string.Join(" ", numbers)
+				: Method.Run);
+		Assert.That(await RunUntilExecuted(Root + "/Runtime/Execute" + Type.Extension,
+			string.Join(" ", [source, Root, .. numbers])), Is.EqualTo(expected));
 	}
 
 	private static string Root =>
@@ -158,17 +156,21 @@ public sealed class StrictBytecodeTests
 	/// </summary>
 	private async Task<string> Execute(string binaryPath, string arguments)
 	{
-		consoleWriter.GetStringBuilder().Clear();
 		if (arguments.Length > 0)
-		{
-			await new Runner(binaryPath, arguments).Run();
-			var output = consoleWriter.ToString();
-			return output[..output.LastIndexOf("Executed ", StringComparison.Ordinal)];
-		}
+			return await RunUntilExecuted(binaryPath, arguments);
+		consoleWriter.GetStringBuilder().Clear();
 		var machine = new VirtualMachine(new BinaryExecutable(binaryPath));
 		return consoleWriter + (machine.Execute().Returns is { HasValue: true } returns
 			? "Returns " + returns
 			: "");
+	}
+
+	private async Task<string> RunUntilExecuted(string path, string expressionToRun)
+	{
+		consoleWriter.GetStringBuilder().Clear();
+		await new Runner(path, expressionToRun).Run();
+		var output = consoleWriter.ToString();
+		return output[..output.LastIndexOf("Executed ", StringComparison.Ordinal)];
 	}
 
 	private byte[] LastNumbersLine() =>

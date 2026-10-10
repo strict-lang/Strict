@@ -64,6 +64,19 @@ public sealed class BinaryGeneratorTests : TestBytecode
 	}
 
 	[Test]
+	public void ElementWritesInLoopCopySharedListOnceBeforeLoop()
+	{
+		var types = new BinaryGenerator(GenerateMethodCallFromSource("ElementCopies",
+				"ElementCopies(1, 2).Doubled", "has numbers", "Doubled Numbers",
+				"\tmutable result = numbers", "\tfor numbers", "\t\tresult(index) = value * 2",
+				"\tresult")).Generate().ToInstructions().
+			ConvertAll(instruction => instruction.InstructionType);
+		Assert.That(types.Count(type => type == InstructionType.CopyList), Is.EqualTo(1));
+		Assert.That(types.IndexOf(InstructionType.CopyList),
+			Is.LessThan(types.IndexOf(InstructionType.LoopBegin)));
+	}
+
+	[Test]
 	public void LoggerLogWithTextLiteralGeneratesPrintInstruction()
 	{
 		var methodCall = GenerateMethodCallFromSource("NumValue", "NumValue(5).GetValue",

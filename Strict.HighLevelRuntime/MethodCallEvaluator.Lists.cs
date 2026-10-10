@@ -56,13 +56,7 @@ public sealed partial class MethodCallEvaluator
 				leftList.List.Items.Add(item);
 			return leftList;
 		}
-		var combined = new ValueInstance[leftList.List.Items.Count + rightList.Count];
-		var itemIndex = 0;
-		foreach (var item in leftList.List.Items)
-			combined[itemIndex++] = item;
-		foreach (var item in convertedRightItems)
-			combined[itemIndex++] = item;
-		return new ValueInstance(leftList.List.ReturnType, combined);
+		return new ValueInstance(leftList.List.Appended(convertedRightItems));
 	}
 
 	private ValueInstance RightItemForCombineLists(Type leftItemType, ValueInstance item,
@@ -126,11 +120,7 @@ public sealed partial class MethodCallEvaluator
 			leftList.List.Items.Add(rightItem);
 			return leftList;
 		}
-		var combined = new ValueInstance[leftList.List.Items.Count + 1];
-		for (var itemIndex = 0; itemIndex < leftList.List.Items.Count; itemIndex++)
-			combined[itemIndex] = leftList.List.Items[itemIndex];
-		combined[leftList.List.Items.Count] = rightItem;
-		return new ValueInstance(leftList.List.ReturnType, combined);
+		return new ValueInstance(leftList.List.Appended([rightItem]));
 	}
 
 	private static ValueInstance RemoveFromList(ValueInstance leftList, ValueInstance right)

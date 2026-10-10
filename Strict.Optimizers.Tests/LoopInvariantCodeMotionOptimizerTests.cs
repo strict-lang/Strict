@@ -15,4 +15,15 @@ public sealed class LoopInvariantCodeMotionOptimizerTests : TestOptimizers
 			new StoreFromRegisterInstruction(Register.R1, "position"),
 			new LoopEndInstruction(5)
 		], 7)[2], Is.InstanceOf<LoadVariableToRegister>());
+
+	[Test]
+	public void LoadOfListCopiedInsideLoopStaysInLoop() =>
+		Assert.That(Optimize(new LoopInvariantCodeMotionOptimizer(), [
+			new LoadConstantInstruction(Register.R0, Num(3)),
+			new LoopBeginInstruction(Register.R0),
+			new CopyListInstruction("values"),
+			new LoadVariableToRegister(Register.R1, "values"),
+			new StoreFromRegisterInstruction(Register.R1, "saved"),
+			new LoopEndInstruction(4)
+		], 6)[3], Is.InstanceOf<LoadVariableToRegister>());
 }

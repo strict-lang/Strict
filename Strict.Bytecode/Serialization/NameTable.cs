@@ -121,6 +121,7 @@ public sealed class NameTable
 			WriteToListInstruction writeList => Add(writeList.Identifier),
 			WriteToTableInstruction writeTable => Add(writeTable.Identifier),
 			RemoveInstruction remove => Add(remove.Identifier),
+			CopyListInstruction copyList => Add(copyList.Identifier),
 			ListCallInstruction listCall => Add(listCall.Identifier),
 			PrintInstruction print => Add(print.TextPrefix),
 			ConstructValueTypeInstruction construct => Add(construct.ReturnType.FullName),

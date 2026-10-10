@@ -6,7 +6,7 @@ namespace Strict.Optimizers;
 /// <summary>
 /// Moves loop-invariant LoadVariableToRegister instructions before the LoopBeginInstruction.
 /// A load is loop-invariant when the variable it reads is never written inside the loop body
-/// (no StoreFromRegisterInstruction or StoreVariableInstruction with the same name).
+/// (no store or CopyListInstruction with the same name).
 /// This avoids re-loading constants like 'brightness' on every loop iteration.
 /// </summary>
 public sealed class LoopInvariantCodeMotionOptimizer : InstructionOptimizer
@@ -80,6 +80,9 @@ public sealed class LoopInvariantCodeMotionOptimizer : InstructionOptimizer
 				break;
 			case StoreVariableInstruction storeVar:
 				written.Add(storeVar.Identifier);
+				break;
+			case CopyListInstruction copyList:
+				written.Add(copyList.Identifier);
 				break;
 			}
 		return written;

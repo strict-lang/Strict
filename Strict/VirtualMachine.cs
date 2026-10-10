@@ -173,6 +173,9 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		case InstructionType.InvokeRemove:
 			ExecuteRemove((RemoveInstruction)instruction);
 			return;
+		case InstructionType.CopyList:
+			ExecuteCopyList((CopyListInstruction)instruction);
+			return;
 		case InstructionType.ListCall:
 			ExecuteListCall((ListCallInstruction)instruction);
 			return;
@@ -234,6 +237,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 				", KeyRegister=" + writeToTable.Register + ", ValueRegister=" + writeToTable.Value,
 			RemoveInstruction remove => ", Identifier=" + remove.Identifier + ", Register=" +
 				remove.Register,
+			CopyListInstruction copyList => ", Identifier=" + copyList.Identifier,
 			FieldLoadInstruction fieldLoad => ", FieldName=" + fieldLoad.FieldName + ", ObjectRegister=" +
 				fieldLoad.ObjectRegister + ", Register=" + fieldLoad.Register,
 			ConstructValueTypeInstruction construct => ", ReturnType=" + construct.ReturnType.Name +
@@ -392,15 +396,21 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private void ExecuteRemove(RemoveInstruction removeInstruction)
 	{
 		var item = Memory.Registers[removeInstruction.Register];
-		var items = GetFrameValue(removeInstruction.Identifier).List.Items;
+		var items = GetFrameValue(removeInstruction, removeInstruction.Identifier).List.Items;
 		//TODO: is there actually a need for this loop? or is there always 1 entry anyway?
 		for (var itemIndex = items.Count - 1; itemIndex >= 0; itemIndex--)
 			if (items[itemIndex].Equals(item))
 				items.RemoveAt(itemIndex);
 	}
 
-	private ValueInstance GetFrameValue(string identifier) =>
-		Memory.Frame.TryGet(identifier, out var value)
+	private void ExecuteCopyList(CopyListInstruction copyList)
+	{
+		var list = GetFrameValue(copyList, copyList.Identifier).List;
+		Memory.Frame.Set(copyList.Identifier, new ValueInstance(list.Clone(list.ReturnType)));
+	}
+
+	private ValueInstance GetFrameValue(Instruction instruction, string identifier) =>
+		GetIdentifierAccessPath(instruction, identifier).TryResolve(this, out var value)
 			? value
 			: throw Fail("Could not resolve variable '" + identifier +
 				"' - check that the variable is defined and in scope");
@@ -408,7 +418,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private void ExecuteListCall(ListCallInstruction listCallInstruction)
 	{
 		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
-		var collectionValue = GetFrameValue(listCallInstruction.Identifier);
+		var collectionValue = GetFrameValue(listCallInstruction, listCallInstruction.Identifier);
 		if (collectionValue is { IsList: false, IsText: false })
 		{
 			if (listCallInstruction.Identifier == Type.OuterLowercase &&

@@ -41,6 +41,15 @@ public sealed class TypeValidatorTests
 		]), true));
 
 	[Test]
+	public void VariableUsedOnlyAsAssignedElementIndexIsNotUnused() =>
+		Assert.DoesNotThrow(() => validator.Visit(new Method(type, 1, parser, [
+			"Set(mutable numbers Numbers, offset Number) Numbers",
+			"\tlet target = offset + 1",
+			"\tnumbers(target) = 5",
+			"\tnumbers"
+		]), true));
+
+	[Test]
 	public void VariableUsedOnlyInReturnIsNotUnused()
 	{
 		using var typeWithReturn = CreateType(nameof(VariableUsedOnlyInReturnIsNotUnused), [

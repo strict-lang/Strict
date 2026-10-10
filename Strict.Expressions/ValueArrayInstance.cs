@@ -8,6 +8,10 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 {
 	private static readonly ConditionalWeakTable<Type, Dictionary<string, int>> MemberIndexes = new();
 	private List<ValueInstance>? items;
+	/// <summary>
+	/// Elements this version sees when its items are shared with newer versions, -1 owns them alone.
+	/// </summary>
+	private int sharedCount = -1;
 	private float[]? flatNumbers;
 	private bool hasSharedFlatNumbers;
 	private Type? flatElementType;
@@ -32,6 +36,13 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		items = new List<ValueInstance>(count);
 		for (var index = 0; index < count; index++)
 			items.Add(repeatedItem);
+	}
+
+	private ValueArrayInstance(Type returnType, List<ValueInstance> sharedItems, int sharedCount)
+	{
+		ReturnType = returnType;
+		items = sharedItems;
+		this.sharedCount = sharedCount;
 	}
 
 	private ValueArrayInstance(Type returnType, float[] flatNumbers, Type flatElementType,
@@ -156,11 +167,49 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	}
 
 	public readonly Type ReturnType;
-	public List<ValueInstance> Items => items ??= MaterializeItems();
+	/// <summary>
+	/// Callers may change the returned list, a version sharing it with others gets its own copy.
+	/// </summary>
+	public List<ValueInstance> Items
+	{
+		get
+		{
+			if (sharedCount >= 0)
+				Detach();
+			return items ??= MaterializeItems();
+		}
+	}
+
+	private void Detach()
+	{
+		items = items!.GetRange(0, sharedCount);
+		sharedCount = -1;
+	}
+
 	public int Count =>
-		items?.Count ?? (FlatWidth > 0
-			? (flatNumbers?.Length ?? 0) / FlatWidth
-			: 0);
+		sharedCount >= 0
+			? sharedCount
+			: items?.Count ?? (FlatWidth > 0
+				? (flatNumbers?.Length ?? 0) / FlatWidth
+				: 0);
+
+	/// <summary>
+	/// The new list of list + elements shares this memory, the newest version appends in place.
+	/// Appending to an older version again copies it first, that is bad code (README rules).
+	/// </summary>
+	public ValueArrayInstance Appended(IReadOnlyList<ValueInstance> elements)
+	{
+		var backing = items ?? MaterializeItems();
+		lock (backing)
+		{
+			if (sharedCount >= 0 && sharedCount != backing.Count)
+				return new ValueArrayInstance(ReturnType, [.. backing.Take(sharedCount), .. elements]);
+			sharedCount = backing.Count;
+			backing.AddRange(elements);
+			return new ValueArrayInstance(ReturnType, backing, backing.Count);
+		}
+	}
+
 	/*obs, this is not the way we should call any of this!
 		public static ValueArrayInstance CreateWithCapacity(Type returnType, int capacity)
 		{
@@ -210,7 +259,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 		{
 			if (items != null)
 			{
-				items[index] = value;
+				Items[index] = value;
 				return;
 			}
 			if (!TrySetFlatItem(index, value))
@@ -318,7 +367,9 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	public ValueArrayInstance Clone(Type newType)
 	{
 		if (items != null)
-			return new ValueArrayInstance(newType, new List<ValueInstance>(items));
+			return new ValueArrayInstance(newType, sharedCount < 0
+				? items
+				: items.GetRange(0, sharedCount));
 		if (flatNumbers != null && flatElementType != null)
 		{
 			hasSharedFlatNumbers = true;

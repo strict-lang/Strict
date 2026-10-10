@@ -68,6 +68,7 @@ Exit codes: 0 success, 1 failed (parsing, test or runtime error), 2 wrong usage 
 - Test lines are Boolean comparisons (`is`, `is not`, `>`, `<`) at the start of each method; every method needs at least one.
 - Other packages are referenced as `Package/Type` only in declarations (members, parameters, return types), method bodies use the plain type name.
 - `constant` for values computed only from constants, `let` for everything else that doesn't change, `mutable` only when a value really changes (loop counters).
+- Values never change: `list + element` gives a new list, a `mutable` variable can only be reassigned to such a new value. Internally the runtime keeps the same list and appends in place, the new list is the same memory and the previous version is not used anymore. Changing an old version again forces a copy, that is bad code: a list is either fixed, or growing and then only its latest version is used.
 
 See the Readme.md of the Strict project for more details, how to use and example code.
 ## Language Server Protocol
@@ -165,6 +166,9 @@ Note: Peripheral projects kept around for specific purposes: `Strict.Grammar` + 
 
 4. **One-Time Tests**
 	 Tests live where the code lives, run once, then disappear from the bytecode.
+
+5. **Strict Rules First, Then Hardware Speed**
+	 First priority: clean strict rules with exactly one way to solve each problem. Second: performance and parallelism as close to the hardware as possible (CPU, GPU, NPU, TPU, CUDA, distributed over the network). Immutable values are implemented by reusing memory in place, not by copying.
 
 ---
 

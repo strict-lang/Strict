@@ -161,19 +161,22 @@ public sealed partial class VirtualMachine
 		if (!instance.IsText)
 			return false;
 		var text = instance.Text;
-		var args = new ValueInstance[info.ArgumentRegisters.Length];
-		for (var argIndex = 0; argIndex < info.ArgumentRegisters.Length; argIndex++)
-			args[argIndex] = Memory.Registers[info.ArgumentRegisters[argIndex]];
+		var first = info.ArgumentRegisters.Length > 0
+			? Memory.Registers[info.ArgumentRegisters[0]]
+			: default;
+		ValueInstance? second = info.ArgumentRegisters.Length > 1
+			? Memory.Registers[info.ArgumentRegisters[1]]
+			: null;
 		Memory.Registers[invoke.Register] = info.MethodName switch
 		{
-			"StartsWith" => EvaluateStartsWith(text, args),
+			"StartsWith" => EvaluateStartsWith(text, first, second),
 			"IndexOf" => new ValueInstance(executable.numberType,
-				text.IndexOf(args[0].Text, args.Length > 1
-					? (int)args[1].Number
+				text.IndexOf(first.Text, second.HasValue
+					? (int)second.Value.Number
 					: 0, StringComparison.Ordinal)),
 			"LastIndexOf" => new ValueInstance(executable.numberType,
-				text.LastIndexOf(args[0].Text, StringComparison.Ordinal)),
-			"Substring" => EvaluateSubstring(text, args),
+				text.LastIndexOf(first.Text, StringComparison.Ordinal)),
+			"Substring" => EvaluateSubstring(text, first, second),
 			"Upper" => new ValueInstance(text.ToUpperInvariant()),
 			"Lower" => new ValueInstance(text.ToLowerInvariant()),
 			"Capitalize" => new ValueInstance(text.Length == 0
@@ -187,22 +190,24 @@ public sealed partial class VirtualMachine
 		return true;
 	}
 
-	private ValueInstance EvaluateStartsWith(string text, ValueInstance[] args)
+	private ValueInstance EvaluateStartsWith(string text, ValueInstance prefixValue,
+		ValueInstance? startValue)
 	{
-		var prefix = args[0].Text;
-		var start = args.Length > 1
-			? (int)args[1].Number
+		var prefix = prefixValue.Text;
+		var start = startValue.HasValue
+			? (int)startValue.Value.Number
 			: 0;
 		var matches = start >= 0 && start + prefix.Length <= text.Length &&
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
 		return new ValueInstance(executable.booleanType, matches);
 	}
 
-	private static ValueInstance EvaluateSubstring(string text, ValueInstance[] args)
+	private static ValueInstance EvaluateSubstring(string text, ValueInstance startValue,
+		ValueInstance? lengthValue)
 	{
-		var start = (int)args[0].Number;
-		var length = args.Length > 1
-			? (int)args[1].Number
+		var start = (int)startValue.Number;
+		var length = lengthValue.HasValue
+			? (int)lengthValue.Value.Number
 			: text.Length - start;
 		if (start < 0 || start > text.Length || length <= 0)
 			return new ValueInstance("");

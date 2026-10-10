@@ -50,6 +50,7 @@ public sealed partial class BinaryExecutable
 			InstructionType.Print => new PrintInstruction(reader, table),
 			InstructionType.ConstructValueType => new ConstructValueTypeInstruction(reader, table, this),
 			InstructionType.FieldLoad => new FieldLoadInstruction(reader, table),
+			InstructionType.CopyList => new CopyListInstruction(reader, table),
 			_ when IsBinaryOp(type) => new BinaryInstruction(reader, type),
 			_ => throw new InvalidFile("Unknown instruction type: " + type) //ncrunch: no coverage
 		};

@@ -172,7 +172,8 @@ public sealed partial class BinaryGenerator
 				: parameter.DefaultValue ?? member.InitialValue;
 			if (argumentExpression == null)
 				continue;
-			if (parameter.Type.IsList && instance.Arguments is not [List])
+			if (parameter.Type.IsList &&
+				!argumentExpression.ReturnType.IsSameOrCanBeUsedAs(parameter.Type))
 			{
 				var listItems = instance.Arguments.Select(GetValueInstanceFromExpression).ToArray();
 				instructions.Add(new StoreVariableInstruction(new ValueInstance(parameter.Type, listItems),
@@ -329,6 +330,7 @@ public sealed partial class BinaryGenerator
 				false);
 			return;
 		case MutableReassignment reassignment:
+			CopyListIfNotOwned(reassignment.Target);
 			GenerateForAssignmentOrDeclaration(reassignment.Value, reassignment.Name);
 			return;
 		case MemberCall memberCall:

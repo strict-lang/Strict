@@ -1,13 +1,15 @@
 has frame
 constant SkipFirst = InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0)
 constant Branch = Frame(MethodEntry("Run", List(MemberEntry), "None", (SkipFirst, InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Return(1))), 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty)
+constant Copying = Frame(MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry(InstructionType.CopyList, "a", -1), InstructionEntry.Return(0))), 0, List(VmValue), Locals.Empty)
 Step Frame
 	Flow(Branch).Step.position is 2
 	Flow(Branch.At(1)).Step.Local("#result").number is 3
+	Flow(Copying).Step.position is 1
 	let entry = frame.Instruction
 	if entry.kind is InstructionType.Return
 		return frame.WithLocal("#result", frame.Register(entry.payload(0))).At(frame.method.instructions.Length)
-	if entry.kind is InstructionType.JumpEnd
+	if (entry.kind is InstructionType.JumpEnd) or (entry.kind is InstructionType.CopyList)
 		return frame.Next
 	if entry.kind >= InstructionType.JumpToIdIfFalse
 		return Jumped(entry)

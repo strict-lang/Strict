@@ -44,5 +44,6 @@ public enum InstructionType : byte
 	Print,
 	FieldLoad,
 	ConstructValueType,
+	CopyList,
 	IncludesSourceLine = 128
 }
