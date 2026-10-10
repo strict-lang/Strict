@@ -540,27 +540,18 @@ public sealed class RunnerTests
 			});
 
 	[Test]
-	public async Task TypeNameCallParametersWinOverCallerMembers()
-	{
-		var directory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(directory);
-		await File.WriteAllTextAsync(Path.Combine(directory, "Maker" + Type.Extension),
-			"has unit Number\nMade(number Number) Number\n\tMaker.Made(1) is 1\n\tnumber\n" +
-			"Doubled Number\n\tMaker(2).Doubled is 4\n\tunit * 2");
-		var path = Path.Combine(directory, "Counter" + Type.Extension);
-		await File.WriteAllTextAsync(path,
+	public Task TypeNameCallParametersWinOverCallerMembers() =>
+		InTemporaryFile("Counter",
 			"has number\nhas logger\nShifted Number\n\tCounter(5).Shifted is 4\n" +
-			"\tMaker.Made(number - 1)\nRun\n\tlogger.Log(Counter(5).Shifted)");
-		try
-		{
-			await new Runner(path).Run();
-			Assert.That(consoleWriter.ToString(), Does.StartWith("4"));
-		}
-		finally
-		{
-			Directory.Delete(directory, true);
-		}
-	}
+			"\tMaker.Made(number - 1)\nRun\n\tlogger.Log(Counter(5).Shifted)", async path =>
+			{
+				await File.WriteAllTextAsync(
+					Path.Combine(Path.GetDirectoryName(path)!, "Maker" + Type.Extension),
+					"has unit Number\nMade(number Number) Number\n\tMaker.Made(1) is 1\n\tnumber\n" +
+					"Doubled Number\n\tMaker(2).Doubled is 4\n\tunit * 2");
+				await new Runner(path).Run();
+				Assert.That(consoleWriter.ToString(), Does.StartWith("4"));
+			});
 
 	[Test]
 	public async Task DeclaredPackageTypesWinAfterExamplesWereLoaded()
