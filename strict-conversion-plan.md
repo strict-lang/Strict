@@ -472,7 +472,9 @@ functional and still got faster (MemoryPressure on the Strict VM, Release: 1646 
 in a Strict loop, one `#loop` state (begin, length, iteration, outer state) replaces the backward
 `LoopBeginOf` scan and the `#loop`/`#iteration` text keys, Storage/Operations/Flow get the
 instruction instead of fetching it again, and `NextWithRegister`/`NextWithLocal` build one frame
-instead of two. The rest of the gap to the in-place prototype (0.77 s, 89 MB) is one new Frame and
+instead of two. From Examples, as first measured: 1.75 s and 297 MB at the start of this round, now
+1.36 s and 120 MB; FizzBuzz through the Strict compiler 330 ms and 22.2 MB, now 311 ms and 10.7 MB.
+The rest of the gap to the in-place prototype (0.77 s, 89 MB) is one new Frame and
 Locals per step, closing it needs the runtime to reuse an instance whose old version is dead. Next,
 ranked by measured effect: ReadyToRun as one version bubble (FizzBuzz compile 348 → 195 ms), one
 store and an in-place append for `x = x.Add(y)` in both compilers, and the Strict compiler
@@ -1346,11 +1348,11 @@ stays 0% until D7 switches a Runner stage to the Strict implementation and delet
 | 3 | Validators | 5 / 235 | Same rule as C# for each validator case (D2) | 0% |
 | 4 | TestRunner | 7 / 196 | Simple assertion evaluator | 0% |
 | 5 | HighLevelRuntime | 20 / 560 | Line-level evaluator subset | 0% |
-| 6 | Bytecode | 52 / 2741 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
+| 6 | Bytecode | 52 / 2772 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
 | 7 | Optimizers | 15 / 261 | Instruction passes; codegen folding and load reuse live in Bytecode | 0% |
-| 8 | Runtime | 12 / 560 | Strict VM runs 20 Strict-compiled Examples like the C# VM (D5) | 0% |
+| 8 | Runtime | 12 / 574 | Strict VM runs 20 Strict-compiled Examples like the C# VM (D5) | 0% |
 | 9 | Compiler | 22 / 829 | Native compiler via MLIR, 10 numeric Examples like the VM (D6) | 0% |
-| **Total** | | **204 / 7438** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
+| **Total** | | **204 / 7483** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
 
 ---
 ## Missing Runtime Features Tracker

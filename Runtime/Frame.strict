@@ -6,10 +6,6 @@ constant Start = Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)
 Instruction InstructionEntry
 	Start.Instruction.kind is InstructionType.Print
 	method.instructions(position)
-IsDone Boolean
-	Start.IsDone is false
-	Start.At(2).IsDone is true
-	position >= method.instructions.Length
 Register(number Number) VmValue
 	Start.WithRegister(1, VmValue.OfNumber(5)).Register(1).number is 5
 	Start.Register(3).kind is "None"
@@ -20,12 +16,18 @@ WithRegister(number Number, entry VmValue) Frame
 WithLocal(name Text, entry VmValue) Frame
 	Start.WithLocal("a", VmValue.OfNumber(5)).locals.Get("a").number is 5
 	Frame(method, position, registers, locals.With(name, entry))
+NextWithRegister(number Number, entry VmValue) Frame
+	Start.NextWithRegister(1, VmValue.OfNumber(5)).Register(1).number is 5
+	Frame(method, position + 1, locals.Replaced(registers, number, entry), locals)
+NextWithLocal(name Text, entry VmValue) Frame
+	Start.NextWithLocal("a", VmValue.OfNumber(5)).position is 1
+	Frame(method, position + 1, registers, locals.With(name, entry))
 At(target Number) Frame
 	Start.At(1).position is 1
 	Frame(method, target, registers, locals)
 Next Frame
 	Start.Next.position is 1
-	At(position + 1)
+	Frame(method, position + 1, registers, locals)
 Local(name Text) VmValue
 	Start.WithLocal("b", VmValue.OfText("x")).Local("b").text is "x"
 	locals.Get(name)

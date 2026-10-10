@@ -75,6 +75,11 @@ Before writing any code, stop at the first rung that holds:
 - User prefers minimal test additions in this repo; rely on existing coverage when possible and add at most one focused regression test for a bug fix.
 - User prefers not to weaken tests by changing or removing assertions; focus fixes on production code and diagnostics instead.
 
+## Time Limits
+- Fast feedback over thoroughness: no tool call over 5 minutes, no sub-agent or workflow over 10 minutes, never sit idle 15 minutes waiting on anything. Hitting a limit means something is wrong: stop it (TaskStop), report what was slow and why, do not keep waiting. Never poll with sleep loops.
+- Sub-agents and workflows only run tests affected by their change (seconds), never Slow, Nightly, full suites or NCrunch console runs. Only the main session runs Slow and Nightly, once, in the background, before a big commit.
+- No Workflow tool runs and at most 3 parallel sub-agents unless the user asks for it in the current prompt, also when ultracode is on (its workflows ran 1-3 hours each).
+
 ## Strict Semantics
 - When asked about Strict semantics, derive behavior directly from README.md and Strict/TestPackage examples; re-check cited examples before answering and avoid contradicting them.
 

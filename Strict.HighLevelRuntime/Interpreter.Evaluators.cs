@@ -109,9 +109,9 @@ public partial class Interpreter
 		var listInstance = RunExpression(target.List, ctx);
 		if (!listInstance.IsMutable && target.List is VariableCall or ParameterCall)
 		{
-			var listType = listInstance.GetType();
+			var immutableType = listInstance.GetType();
 			listInstance = ctx.Set(target.List.ToString(), new ValueInstance(listInstance,
-				listType.GetType(Type.Mutable).GetGenericImplementation(listType)));
+				immutableType.GetType(Type.Mutable).GetGenericImplementation(immutableType)));
 		}
 		listInstance.List.Items[index] = newValue;
 		return newValue;

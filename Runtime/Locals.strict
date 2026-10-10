@@ -17,8 +17,12 @@ With(name Text, entry VmValue) Locals
 Replaced(elements List(VmValue), position Number, entry VmValue) List(VmValue)
 	Empty.Replaced((VmValue.OfNumber(1), VmValue.OfNumber(2)), 1, VmValue.None).Last.kind is "None"
 	Empty.Replaced(List(VmValue), 2, VmValue.None).Length is 3
-	let length = position + 1 > elements.Length then position + 1 else elements.Length
-	mutable result = List(Mutable(VmValue))
-	for length
-		result.Add(index is position then entry else index < elements.Length then elements(index) else VmValue.None)
+	Empty.Replaced(List(VmValue) + VmValue.OfNumber(1), -1, VmValue.None).First.number is 1
+	if position < 0
+		return elements
+	mutable result = elements
+	if position >= elements.Length
+		for position + 1 - elements.Length
+			result = result + VmValue.None
+	result(position) = entry
 	result

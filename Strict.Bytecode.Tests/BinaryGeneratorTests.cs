@@ -71,7 +71,8 @@ public sealed class BinaryGeneratorTests : TestBytecode
 				"\tmutable result = numbers", "\tfor numbers", "\t\tresult(index) = value * 2",
 				"\tresult")).Generate().ToInstructions().
 			ConvertAll(instruction => instruction.InstructionType);
-		Assert.That(types.Count(type => type == InstructionType.CopyList), Is.EqualTo(1));
+		Assert.That(types.Count(instructionType => instructionType == InstructionType.CopyList),
+			Is.EqualTo(1));
 		Assert.That(types.IndexOf(InstructionType.CopyList),
 			Is.LessThan(types.IndexOf(InstructionType.LoopBegin)));
 	}

@@ -9,25 +9,31 @@ Begin Frame
 	let hasEnd = entry.payload(1) is 1
 	let start = hasEnd then iterable.number else 0
 	let end = hasEnd then frame.Register(entry.payload(2)).number else Count(iterable)
-	let state = (iterable, VmValue.OfNumber(start), VmValue.OfNumber(end), frame.Local("index"), frame.Local("value"))
 	let begin = frame.position
-	let started = frame.WithLocal("#loop" + begin, VmValue.OfList(state))
-	start is end then Restored(started, begin).At(frame.method.LoopEndOf(begin) + 1) else Current(started, begin, 0).Next
+	let saved = (frame.Local("index"), frame.Local("value"), VmValue.OfNumber(begin))
+	let range = (iterable, VmValue.OfNumber(start), VmValue.OfNumber(end))
+	let state = range + saved + VmValue.OfNumber((end - start).Absolute) + VmValue.OfNumber(0) + frame.Local("#loop")
+	start is end then Restored(frame, state).At(frame.method.LoopEndOf(begin) + 1) else Current(frame, state, 0).Next
 End Frame
 	Looping(Looping(Counting).Begin).End.Local("index").number is 1
+	Looping(Looping(Looping(Counting).Begin).End).End.Local("index").number is 2
 	Looping(Looping(Ranged).Begin).End.Local("value").number is 4
-	let begin = frame.method.LoopBeginOf(frame.position)
-	let state = frame.Local("#loop" + begin).items
-	let length = (state(2).number - state(1).number).Absolute
-	let next = frame.Local("#iteration" + begin).number + 1
-	next < length then Current(frame, begin, next).At(begin + 1) else Restored(frame, begin).Next
-Current(looped Frame, begin Number, iteration Number) Frame
-	Looping(Counting).Current(Looping(Counting).Begin, 0, 2).Local("value").number is 2
-	let state = looped.Local("#loop" + begin).items
+	let state = frame.Local("#loop").items
+	let next = state(7).number + 1
+	if next >= state(6).number
+		return Restored(frame, state).Next
+	Current(frame, Counted(state, next), next).At(state(5).number + 1)
+Counted(state List(VmValue), next Number) List(VmValue)
+	Looping(Counting).Counted(Looping(Counting).Begin.Local("#loop").items, 2).Length is 9
+	mutable result = state
+	result(7) = VmValue.OfNumber(next)
+	result
+Current(looped Frame, state List(VmValue), iteration Number) Frame
+	Looping(Counting).Current(Counting, Looping(Counting).Begin.Local("#loop").items, 2).Local("value").number is 2
 	let current = Element(state, iteration)
-	let index = state(0).kind is in ("List", "Text") then VmValue.OfNumber(iteration) else current
-	let counted = looped.WithLocal("#iteration" + begin, VmValue.OfNumber(iteration))
-	counted.WithLocal("index", index).WithLocal("value", current)
+	let kind = state(0).kind
+	let index = (kind is "List") or (kind is "Text") then VmValue.OfNumber(iteration) else current
+	looped.WithLocal("#loop", VmValue.OfList(state)).WithLocal("index", index).WithLocal("value", current)
 Element(state List(VmValue), iteration Number) VmValue
 	Looping(Counting).Element((VmValue.OfText("ab"), VmValue.OfNumber(0), VmValue.OfNumber(2)), 1).text is "b"
 	Looping(Counting).Element((VmValue.OfNumber(5), VmValue.OfNumber(5), VmValue.OfNumber(2)), 1).number is 4
@@ -38,10 +44,9 @@ Element(state List(VmValue), iteration Number) VmValue
 		return VmValue.OfText(iterable.text.Substring(iteration, 1))
 	let start = state(1).number
 	VmValue.OfNumber(state(2).number < start then start - iteration else start + iteration)
-Restored(looped Frame, begin Number) Frame
-	Looping(Counting).Restored(Looping(Counting).Begin, 0).Local("index").kind is "None"
-	let state = looped.Local("#loop" + begin).items
-	looped.WithLocal("index", state(3)).WithLocal("value", state(4))
+Restored(looped Frame, state List(VmValue)) Frame
+	Looping(Counting).Restored(Counting, Looping(Counting).Begin.Local("#loop").items).Local("index").kind is "None"
+	looped.WithLocal("index", state(3)).WithLocal("value", state(4)).WithLocal("#loop", state(8))
 Count(iterable VmValue) Number
 	Looping(Counting).Count(VmValue.OfNumber(2.5)) is 2
 	Looping(Counting).Count(VmValue.OfText("abc")) is 3

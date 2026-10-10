@@ -33,29 +33,30 @@ Execute(method MethodEntry, locals Locals) VmValue
 	Machine(List(TypeEntry) + Doubler).Execute(Doubler.methods.First, Locals.Empty).number is 42
 	mutable current = Frame(method, 0, List(VmValue), locals)
 	for MaxSteps
-		if current.IsDone
+		if current.position >= current.method.instructions.Length
 			return current.Local("#result")
 		current = Step(current)
 	logger.Log("Stopped " + method.Name + " after " + MaxSteps + " steps")
 	current.Local("#result")
 Step(frame Frame) Frame
 	Hello.Step(Frame(Doubler.methods.First, 0, List(VmValue), Locals.Empty)).Register(0).number is 21
-	let kind = frame.Instruction.kind
+	let entry = frame.Instruction
+	let kind = entry.kind
 	if kind <= InstructionType.StoreRegisterToVariable or (kind is InstructionType.InvokeWriteToList)
-		return Storage(frame).Step
+		return Storage(frame, entry).Step
 	if kind < InstructionType.BinaryOperatorsSeparator
-		return Operations(frame).Step
+		return Operations(frame, entry).Step
 	if kind is InstructionType.Invoke
 		return Invoked(frame)
 	if kind is InstructionType.Print
 		return Printed(frame)
-	kind is InstructionType.FieldLoad then Field(frame) else Flow(frame).Step
+	kind is InstructionType.FieldLoad then Field(frame) else Flow(frame, entry).Step
 Invoked(frame Frame) Frame
 	Machine(List(TypeEntry) + Doubler).Invoked(Frame(MethodEntry.GoRun, 0, List(VmValue), Locals.Empty)).position is 1
 	let result = Call(Invocation(frame.Instruction, frame))
 	if result.kind is "Error"
 		logger.Log(result.text)
-	frame.WithRegister(frame.Instruction.payload(0), result).Next
+	frame.NextWithRegister(frame.Instruction.payload(0), result)
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
 	Hello.Call(Uppered).text is "AB"
@@ -82,4 +83,4 @@ Field(frame Frame) Frame
 	for Natives(types).TypeOf(instance.kind).members
 		if value.Name is entry.texts(0)
 			found = instance.items(index)
-	frame.WithRegister(entry.payload(0), found).Next
+	frame.NextWithRegister(entry.payload(0), found)
