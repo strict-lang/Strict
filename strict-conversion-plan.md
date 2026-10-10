@@ -513,11 +513,11 @@ Then: lists behave as values in both generators. A local list variable owns its 
 was declared with a new list (literal, built list or operator result) and was not shared since:
 before each statement C# `BinaryGenerator.Disown` / Strict `ListCodegen.Disowned` end the ownership
 of variables reassigned from another value or used as a whole value (assignment, argument, list
-element, return, loop iterator, right operand), loops are checked as a whole first and aggregated
-loops treat their last line as shared. `list.Remove(x)` returns the list, VM `list - other` removes
-each element of `other` once like the interpreter. Open: `Add` on immutable parameters and members
-still changes the caller's list in place, the interpreter shares `Mutable` lists after the first
-`Add` (`firsts = result` in a loop sees later appends).
+element, return, loop iterator, right operand except the list searched by `is in`), loops are
+checked as a whole first and aggregated loops treat their last line as shared. `list.Remove(x)`
+returns the list, VM `list - other` removes each element of `other` once like the interpreter. Open:
+`Add` on immutable parameters and members still changes the caller's list in place, the interpreter
+shares `Mutable` lists after the first `Add` (`firsts = result` in a loop sees later appends).
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

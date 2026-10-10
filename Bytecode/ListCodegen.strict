@@ -59,6 +59,7 @@ IsNew(node SyntaxNode) Boolean
 Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.Disowned(BodyParser("Run", "\tlet saved = values").Block(1, 1), Owned, false).Owns("values") is false
 	Plain.Disowned(BodyParser("Run", "\tvalues.Add(1)").Block(1, 1), Owned, false).Owns("values") is true
+	Plain.Disowned(BodyParser("Run", "\t1 is not in values").Block(1, 1), Owned, false).Owns("values") is true
 	if node.Kind is "Identifier"
 		return isUsed then block.Disowned(node.text) else block
 	let reassigned = (node.Kind is "Reassignment") and (IsNew(node.children(1)) is false)
@@ -77,7 +78,8 @@ IsUsed(parent SyntaxNode, position Number, isUsed Boolean) Boolean
 		return isUsed
 	if (parent.Kind is "MethodCall") and (position is 0)
 		return isUsed and (parent.text is in ("Add", "Remove"))
-	position > 0 or parent.Kind is not in ("Member", "Binary", "If", "ElseIf", "Reassignment")
+	let instance = parent.text is in ("is in", "is not in") then 1 else 0
+	position is not instance or parent.Kind is not in ("Member", "Binary", "If", "ElseIf", "Reassignment")
 Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) CodeBlock
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Numbers", Declared).instructions.Length is 4
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Number", Declared).instructions.Length is 1
