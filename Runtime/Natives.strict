@@ -4,6 +4,7 @@ constant Shape = TypeEntry("Strict/Shape", (Width, MemberEntry.LoggerMember), Li
 constant Shapes = Natives(List(TypeEntry) + Shape)
 constant NewShape = Invocation(InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfNumber(3), Locals.Empty))
 constant SystemCall = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "OperatingSystem", "Strict/Text"), List(Number), -1), Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty))
+constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
 Result(call Invocation) VmValue
 	Shapes.Result(NewShape).items.First.number is 3
 	let name = call.MethodName
@@ -37,6 +38,31 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 		return VmValue("Error", 0, "Unsupported native call " + call.TypeName + "." + name, List(VmValue))
 	let path = call.Arguments.Length > 0 then call.Arguments.First.text else instance.items.First.text
 	VmValue.OfBoolean(File(path).Exists or Directory.Exists(path))
+Searched(name Text, text Text, arguments List(VmValue)) VmValue
+	Shapes.Searched("StartsWith", "abc", (VmValue.OfText("bc"), VmValue.OfNumber(1))).IsTrue is true
+	Shapes.Searched("Substring", "abc", (VmValue.OfNumber(1), VmValue.OfNumber(2))).text is "bc"
+	Shapes.Searched("IndexOf", "abc", List(VmValue) + VmValue.OfText("c")).number is 2
+	if arguments.Length is 0
+		return Edited(name, text)
+	let first = arguments.First
+	let second = arguments.Length > 1 then arguments(1).number else 0
+	if name is "Substring"
+		return VmValue.OfText(text.Substring(first.number, second))
+	if name is "StartsWith"
+		return VmValue.OfBoolean(text.StartsWith(first.text, second))
+	VmValue.OfNumber(name is "IndexOf" then text.IndexOf(first.text, second) else text.LastIndexOf(first.text))
+Edited(name Text, text Text) VmValue
+	Shapes.Edited("Capitalize", "ab").text is "Ab"
+	Shapes.Edited("TrimEnd", " a ").text is " a"
+	if name is "Upper"
+		return VmValue.OfText(text.Upper)
+	if name is "Lower"
+		return VmValue.OfText(text.Lower)
+	if name is "Capitalize"
+		return VmValue.OfText(text.Capitalize)
+	if name is "Trim"
+		return VmValue.OfText(text.Trim)
+	VmValue.OfText(name is "TrimStart" then text.TrimStart else text.TrimEnd)
 Constructed(call Invocation) VmValue
 	Shapes.Constructed(NewShape).kind is "Strict/Shape"
 	let type = TypeOf(call.TypeName)

@@ -8,6 +8,8 @@ constant Iterating = LoopCodegen(MethodCodegen(ValueCodegen(TypeInference(KnownT
 constant NestedLoop = BodyParser("Pairs Numbers", "\tfor 2", "\t\tfor 3", "\t\t\tindex").Block(1, 1).children(0).children.Last
 constant ForA = BodyParser("Run", "\tfor a", "\t\tvalue").Block(1, 1).children(0)
 constant RowsBody = BodyParser("Rows List(Numbers)", "\tmutable row = (1)", "\tfor 2", "\t\trow.Add(index)", "\t\trow").Block(1, 1)
+constant BareFor = BodyParser("Upper Text", "\tfor", "\t\tUpper").Block(1, 1).children(0)
+constant OnText = LoopCodegen(MethodCodegen(ValueCodegen(ValueCodegen.NoTypes, ValueCodegen.Plain.methods, CallTarget(CallTarget.NoTypes, TypeShape("has characters"), "Strict/Text", List(Text)))))
 Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
 	Plain.Aggregation(DoubledBody, "Numbers") is "list"
@@ -55,16 +57,22 @@ Collected(block CodeBlock, aggregation Text) CodeBlock
 Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	MethodCodegen.Plain.Generate(MethodCodegen.LoopBody, MethodCodegen.NoScope, "None").instructions.Length is 6
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.kind is InstructionType.LoopEnd
-	Iterating.Loop(ForA, CodeBlock.Empty.Declare("a", "A"), "").scope.TypeOf("value") is "Number"
-	let iterator = Iterated(node.children(0), block)
-	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
-	let element = isRange then "Number" else methods.values.ElementType(methods.values.TypeOf(iterator, block))
-	let nested = Begin(iterator, block).Declare("index", "Number").Declare("outer", block.scope.TypeOf("value"))
-	let declared = nested.Declare("value", element).Sharing("value", true).Sharing("outer", true)
+	let declared = Declared(node, block)
 	let collected = aggregation is "" then declared else ListCodegen(methods.values).Disowned(node, declared, true)
 	let body = node.children.Last
 	let looped = aggregation is "" then methods.Body(body, declared) else AggregatedLoop(body, collected, aggregation)
 	looped.Add(InstructionEntry.Jump(InstructionType.LoopEnd, looped.instructions.Length - block.instructions.Length))
+Declared(node SyntaxNode, block CodeBlock) CodeBlock
+	Iterating.Declared(ForA, CodeBlock.Empty.Declare("a", "A")).scope.TypeOf("value") is "Number"
+	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).instructions(0).texts is ("value")
+	OnText.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("value") is "Character"
+	let iterator = Iterated((node.HasValue then node.children(0) else SyntaxNode("Identifier", "value")), block)
+	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
+	let bodies = MethodBodies(methods.values.target.TypeName, methods.values.target.shape, methods.values.inference)
+	let iterated = node.HasValue then methods.values.TypeOf(iterator, block) else bodies.IteratedType
+	let element = isRange then "Number" else methods.values.ElementType(iterated)
+	let nested = Begin(iterator, block).Declare("index", "Number").Declare("outer", block.scope.TypeOf("value"))
+	nested.Declare("value", element).Sharing("value", true).Sharing("outer", true)
 Iterated(iterator SyntaxNode, block CodeBlock) SyntaxNode
 	Iterating.Iterated(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "A")).text is "for"
 	Plain.Iterated(SyntaxNode("Number", "3"), CodeBlock.Empty).text is "3"

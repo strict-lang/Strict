@@ -3,6 +3,7 @@ has logger
 constant MaxSteps = 10000000
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
+constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper", "Strict/Text"), List(Number), 0), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("ab"), Locals.Empty))
 Launch(typeName Text)
 	let main = Natives(types).TypeOf(typeName)
 	let run = Find(typeName, "Run", 0)
@@ -54,9 +55,12 @@ Invoked(frame Frame) Frame
 	frame.WithRegister(frame.Instruction.payload(0), result).Next
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
+	Hello.Call(Uppered).text is "AB"
 	constant hosted = ("Find", "RunTool", "Run", "OperatingSystem")
 	if (call.TypeName is "Strict/Process") and (call.MethodName is in hosted)
 		return Natives(types).Hosted(call)
+	if (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
+		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	let method = Find(call.TypeName, call.MethodName, call.Arguments.Length)
 	if method.instructions.Length is 0
 		return Natives(types).Result(call)

@@ -10,7 +10,6 @@ constant Bad = TypeEntry("A", List(MemberEntry), List(MethodEntry) + Broken)
 constant ForNumbers = MethodEntry("for", List(MemberEntry), "Strict/Iterator(Number)", List(InstructionEntry))
 constant Iterating = TypeEntry("A", List(MemberEntry), List(MethodEntry) + ForNumbers)
 constant Natives = ("from", "to", "not", "and", "or", "xor", "Exists", "ReadLines")
-constant TextNatives = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
 Run(path Text, root Text)
 	let types = Compiled(path, root)
 	let bytes = BinaryFile(types).Bytes
@@ -89,15 +88,13 @@ UsedMethods(entries List(TypeEntry), type Text) Texts
 		if value.StartsWith(type + ".") and (not IsNative(type, method))
 			method
 IsNative(type Text, method Text) Boolean
-	IsNative("Strict/Text", "Upper") is true
+	IsNative("Strict/Text", "Upper") is false
 	IsNative("Strict/Range", "Length") is false
 	IsNative("Strict/Bytecode/B", "to") is false
 	if type.LastIndexOf("/") > 6
 		return false
 	if method is in ("Length", "Count")
 		return SourceName(type) is in ("Text", "List", "File")
-	if method is in TextNatives
-		return SourceName(type) is "Text"
 	method is in Natives
 SourceName(type Text) Text
 	SourceName("Strict/List(Number)") is "List"
