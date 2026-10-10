@@ -24,7 +24,8 @@ public partial class Type : Context, IDisposable
 	{
 		if (file.Lines.Length > Limit.LineCount)
 			throw new LinesCountMustNotExceedLimit(this, file.Lines.Length);
-		package.Add(this);
+		if (this is not GenericTypeImplementation)
+			package.Add(this);
 		Lines = file.Lines;
 		IsGeneric = Name == GenericUppercase || OneOfFirstThreeLinesContainsGeneric();
 		IsMutable = Name == Mutable || Name.StartsWith(Mutable + "(", StringComparison.Ordinal);

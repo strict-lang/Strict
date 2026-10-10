@@ -205,6 +205,23 @@ public class PackageTests
 		color.Package.Unload();
 	}
 
+	[Test]
+	public void SameNamedTypesOfTwoRootPackagesGetTheirOwnGenericImplementations()
+	{
+		var first = new Type(new Package("FirstWidgets"), new TypeLines("Widget", "Run"));
+		var second = new Type(new Package("SecondWidgets"), new TypeLines("Widget", "Run"));
+		var list = TestPackage.Instance.GetType(Type.List);
+		var dictionary = TestPackage.Instance.GetType(Type.Dictionary);
+		Assert.That(list.GetGenericImplementation(first).GetFirstImplementation(), Is.SameAs(first));
+		Assert.That(list.GetGenericImplementation(second).GetFirstImplementation(), Is.SameAs(second));
+		Assert.That(dictionary.GetGenericImplementation(first, first).ImplementationTypes,
+			Is.EqualTo(new[] { first, first }));
+		Assert.That(dictionary.GetGenericImplementation(first, second).ImplementationTypes,
+			Is.EqualTo(new[] { first, second }));
+		first.Package.Unload();
+		second.Package.Unload();
+	}
+
 	/// <summary>
 	/// Can be used to profile and optimize the GetType performance by doing it many times
 	/// </summary>

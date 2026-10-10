@@ -242,10 +242,8 @@ public class Package : Context, IDisposable
 	{
 		if (type != null)
 			lock (syncRoot)
-			{
-				types.Remove(type.Name);
-				typesSnapshot = null;
-			}
+				if (types.GetValueOrDefault(type.Name) == type && types.Remove(type.Name))
+					typesSnapshot = null;
 	}
 
 	private void Remove(Package package)

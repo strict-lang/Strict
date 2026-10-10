@@ -21,8 +21,8 @@ public sealed class GenericTypeImplementation : Type
 	}
 
 	/// <summary>
-	/// List(Color) lives next to Color (Strict/ImageProcessing/List(Color)) when Color is inside
-	/// the generic's package, List(Number) stays Strict/List(Number), same named types never mix.
+	/// List(Color) is Strict/ImageProcessing/List(Color) when Color is inside the generic's package,
+	/// but is not added there: only the generic's cache finds it, same named ones never clash.
 	/// ponytail: List.strict code resolves names there, a Range there would shadow Strict/Range.
 	/// </summary>
 	private static Package GetPackage(Type generic, IEnumerable<Type> implementationTypes)
