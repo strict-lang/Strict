@@ -7,6 +7,8 @@ constant CountCall = InstructionEntry.Invoke(0, ("Strict/Range", "Count", "Stric
 constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
 constant Counted = TypeEntry("A", List(MemberEntry), List(MethodEntry) + CountRun)
 constant Bad = TypeEntry("A", List(MemberEntry), List(MethodEntry) + Broken)
+constant ForNumbers = MethodEntry("for", List(MemberEntry), "Strict/Iterator(Number)", List(InstructionEntry))
+constant Iterating = TypeEntry("A", List(MemberEntry), List(MethodEntry) + ForNumbers)
 constant Natives = ("from", "to", "not", "and", "or", "xor", "Exists", "ReadLines")
 constant TextNatives = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
 Run(path Text, root Text)
@@ -51,13 +53,14 @@ IsValid(bytes Numbers) Boolean
 	true
 Linked(entries List(TypeEntry), root Text, main TypeCodegen, depth Number) List(TypeEntry)
 	Linked(TypeEntry.HelloLogger, ".", TypeCodegen.Hello, 3).Length is 4
+	Linked(Iterating, ".", Sample, 3).Length is 1
 	if depth is 0
 		return entries
-	mutable linked = List(Mutable(TypeEntry))
-	linked.Add(entries.First)
+	mutable linked = List(TypeEntry) + entries.First
 	for BaseTypes(entries, main.fullName)
-		if File(root + "/" + SourceName(value) + ".strict").Exists
-			linked.Add(LinkedType(value, root, main, UsedMethods(entries, value)))
+		let source = File(root + "/" + SourceName(value) + ".strict")
+		if source.Exists and ((value.IndexOf("(") is -1) or (TypeShape(source.ReadLines).IsTrait is false))
+			linked = linked + LinkedType(value, root, main, UsedMethods(entries, value))
 	if (linked.Length is entries.Length) and (Targets(linked).Length is Targets(entries).Length)
 		return linked
 	Linked(linked, root, main, depth - 1)

@@ -48,10 +48,13 @@ ShapeScope(typeName Text) Scope
 ElementType(typeName Text) Text
 	Sample.ElementType("Texts") is "Text"
 	Sample.ElementType("Range") is "Number"
+	Sample.ElementType("Iterator(Text)") is "Text"
 	if typeName is in ("Number", "Range", "Text")
 		return typeName is "Range" then "Number" else typeName
 	if typeName is "List"
 		return "Generics"
+	if typeName.StartsWith("Iterator(")
+		return typeName.Substring(9, typeName.Length - 10)
 	IsPluralName(typeName) then typeName.Substring(0, typeName.Length - 1) else "Unknown"
 MemberType(instanceType Text, name Text) Text
 	Sample.MemberType("Count", "Increment") is "Count"

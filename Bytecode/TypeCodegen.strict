@@ -67,6 +67,7 @@ Methods(names Texts) List(MethodEntry)
 Method(start Number) MethodEntry
 	Hello.Method(1).returnType is "None"
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"
+	Iterating.Method(1).returnType is "Strict/Iterator(Number)"
 	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
 	let shape = generator.target.shape
@@ -78,9 +79,8 @@ Method(start Number) MethodEntry
 BodyType(header HeaderTokens) Text
 	Iterating.BodyType(HeaderTokens("for", "Iterator", "(", "Number", ")")) is "Numbers"
 	Hello.BodyType(HeaderTokens("Run", "Number")) is "Number"
-	let start = header.ParametersEnd + 1
-	let isIterator = (header.ReturnType is "Iterator") and start + 2 < header.tokens.Length
-	Concrete(isIterator then header.TypeName(start + 2) + "s" else header.ReturnType)
+	let returnType = header.ReturnType
+	Concrete(returnType.StartsWith("Iterator(") then inference.types.ElementType(returnType) + "s" else returnType)
 Parameters(header HeaderTokens) List(MemberEntry)
 	Hello.Parameters(HeaderTokens("Add", "(", "first", "Number", ")")).Length is 1
 	let types = header.ParameterTypes
@@ -91,9 +91,10 @@ Parameters(header HeaderTokens) List(MemberEntry)
 Concrete(type Text) Text
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "Numbers"
 	Hello.Concrete("Generic") is "Generic"
+	Hello.Concrete("Iterator(Generic)") is "Iterator"
 	let open = fullName.IndexOf("(")
 	if open is -1
-		return type
+		return type.Replace("(Generic)", "")
 	let element = fullName.Substring(open + 1, fullName.Length - open - 2)
 	if type is "Generic"
 		return element

@@ -2,10 +2,11 @@ has methods MethodCodegen
 constant Plain = LoopCodegen(MethodCodegen.Plain)
 constant DoubledBody = BodyParser("Doubled Numbers", "\tfor 3", "\t\tindex * 2").Block(1, 1)
 constant FilterLoop = MethodCodegen.FilterBody.children(0).children.Last
-constant ForIterator = Scope(List(Text) + "for", List(Text) + "Iterator")
+constant ForIterator = Scope(List(Text) + "for", List(Text) + "Iterator(Number)")
 constant Unscoped = (CallTarget.NoScope, CallTarget.NoScope, CallTarget.NoScope)
 constant Iterating = LoopCodegen(MethodCodegen(ValueCodegen(TypeInference(KnownTypes(("A", "List", "Range"), Unscoped, (ForIterator, ForIterator, ForIterator), Unscoped), Unscoped), ValueCodegen.Plain.methods, CallTarget.Plain)))
 constant NestedLoop = BodyParser("Pairs Numbers", "\tfor 2", "\t\tfor 3", "\t\t\tindex").Block(1, 1).children(0).children.Last
+constant ForA = BodyParser("Run", "\tfor a", "\t\tvalue").Block(1, 1).children(0)
 Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
 	Plain.Aggregation(DoubledBody, "Numbers") is "list"
@@ -52,6 +53,7 @@ Collected(block CodeBlock, aggregation Text) CodeBlock
 Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	MethodCodegen.Plain.Generate(MethodCodegen.LoopBody, MethodCodegen.NoScope, "None").instructions.Length is 6
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.kind is InstructionType.LoopEnd
+	Iterating.Loop(ForA, CodeBlock.Empty.Declare("a", "A"), "").scope.TypeOf("value") is "Number"
 	let iterator = Iterated(node.children(0), block)
 	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
 	let element = isRange then "Number" else methods.values.ElementType(methods.values.TypeOf(iterator, block))

@@ -34,13 +34,14 @@ TypeName(start Number) Text
 	HeaderTokens("List", "(", "Mutable", "(", "Text", ")", ")").TypeName(0) is "Texts"
 	HeaderTokens("Bytecode", "/", "InstructionList").TypeName(0) is "InstructionList"
 	HeaderTokens("List", "(", "key", "Generic", ")").TypeName(0) is "List"
+	HeaderTokens("Iterator", "(", "Vector2", ")").TypeName(0) is "Iterator(Vector2)"
 	if start + 2 >= tokens.Length or tokens(start + 1) is not in ("/", "(")
 		return tokens(start)
 	let inner = TypeName(start + 2)
 	if (tokens(start + 1) is "/") or (tokens(start) is "Mutable")
 		return inner
-	let isNamedElement = inner.Lower is inner
-	(tokens(start) is "List") and (not isNamedElement) then inner + "s" else tokens(start)
+	let isList = (tokens(start) is "List") and inner.Lower is not inner
+	isList then inner + "s" else tokens(start) + (tokens(start) is "Iterator" then "(" + inner + ")" else "")
 ReturnType Text
 	HeaderTokens("Run", "Number").ReturnType is "Number"
 	HeaderTokens("Add", "(", "x", ")").ReturnType is "None"
