@@ -44,6 +44,7 @@ EnumValue(position Number) Number
 	next
 Initial(node SyntaxNode) InstructionEntry
 	Hello.Initial(SyntaxNode("Text", "\"a\"")).payload is (4, -1, 0)
+	Hello.Initial(SyntaxNode("Call", "Range")).texts.Length is 0
 	constant UnsupportedConstant = Error
 	if node.Kind is "Number"
 		let number = node.text to Number
@@ -51,7 +52,7 @@ Initial(node SyntaxNode) InstructionEntry
 	if node.Kind is "Text"
 		return InstructionEntry.Set(node.Unquoted, (4, -1))
 	if node.Kind is not "Boolean"
-		return UnsupportedConstant
+		return InstructionEntry(UnsupportedConstant, List(Text), List(Number))
 	InstructionEntry.Set(List(Text), (5, (node.text is "true" then 1 else 0)))
 Methods(names Texts) List(MethodEntry)
 	Limit.Methods(List(Text)).First.instructions.Length is 2

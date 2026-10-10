@@ -7,7 +7,7 @@ Folded(node SyntaxNode) SyntaxNode
 	Limits.Folded(SyntaxNode("Binary", "*", (Limit, Two))).text is "6"
 	Limits.Folded(SyntaxNode("Binary", "/", (Limit, SyntaxNode("Number", "0")))).Kind is "Binary"
 	Limits.Folded(SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), Two))).Kind is "Binary"
-	let value = node.Kind is "Identifier" then shape.ConstantLiteral(node.text) else node
+	let value = node.Kind is "Identifier" then shape.ConstantLiteral(node.text) else Negated(node)
 	if value.Kind is not "Binary" or value.text is not in ("+", "-", "*", "/", "%")
 		return value
 	let left = Folded(value.children(0))
@@ -15,6 +15,13 @@ Folded(node SyntaxNode) SyntaxNode
 	if left.Kind is not "Number" or right.Kind is not "Number" or (right.text is "0")
 		return value
 	SyntaxNode("Number", Calculated(value.text, left.text to Number, right.text to Number) to Text)
+Negated(node SyntaxNode) SyntaxNode
+	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Two)).text is "-2"
+	Limits.Negated(Two).text is "2"
+	if node.Kind is not "Negate"
+		return node
+	let inner = Folded(node.children(0))
+	inner.Kind is "Number" then SyntaxNode("Number", (0 - (inner.text to Number)) to Text) else node
 Calculated(operator Text, left Number, right Number) Number
 	Limits.Calculated("-", 7, 2) is 5
 	Limits.Calculated("%", 7, 2) is 1

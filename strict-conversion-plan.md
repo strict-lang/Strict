@@ -434,6 +434,17 @@ method that runs out of registers. Strict papercuts: an implicit-instance method
 constant (`let x = OwnMethod` must be `constant`), the inner `value` of nested loops keeps the
 outer type, `List.Reverse` (`outer.value`) does not run on the VM.
 
+D7 progress (2026-10-10): measured the Strict compiler (`Bytecode/FileCompiler`) on the 41 programs
+with a Run method outside Examples. Before: 33 produced bytecode, 8 crashed (`-1` literals parsed as
+`Negate` reached the binary operator path; a non-literal constant returned a bare Error where an
+InstructionEntry was expected). Both fixed (`ConstantFolding.Negated`, unsupported constants become
+an instruction with an Error kind), now 33 compile and 8 stop with "unsupported code". None of the
+33 runs like C# yet: only root base types (`Strict/X`) are linked, types of the program's own
+package and of declared dependencies are not resolved, so `BytecodeInstruction.ReturnOp(0)` becomes
+a variable load and `ExpressionParser(...)` a call on the main type. Next: package-aware inference
+and linking (folder files + declared dependency packages), then a Slow differential test over all
+41 programs like `StrictCompiledExampleRunsLikeCSharp`.
+
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
    `-Windows/-Linux/-MacOS`, diagnostics flag shows stage times + instruction reduction.
