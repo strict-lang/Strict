@@ -19,6 +19,7 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty).instructions(0).payload is (0, 1, 2)
 	Plain.Expression(SyntaxNode("Binary", ">=", (One, NoNode)), CodeBlock.Empty).instructions.Length is 5
 	Plain.Expression(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 9
+	Plain.Expression(SyntaxNode("Identifier", "Error"), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	let folded = ConstantFolding(target.TypeName, inference).Folded(node)
 	if folded.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
 		return Leaf(folded, block)
@@ -33,7 +34,7 @@ Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	let owner = target.ImplicitOwner(node.text, block.scope)
 	if isFree and owner is not ""
 		return InstanceCall(SyntaxNode("Member", node.text, SyntaxNode("Identifier", owner)), block)
-	if IsMethodCall(node, block)
+	if IsMethodCall(node, block) or isFree and (node.text is "Error")
 		return Invoke(node, block, -1, TypeOf(node, block))
 	if isFree and inference.types.IsPlural(node.text)
 		return Elements.Empty(node.text, block)
@@ -130,7 +131,7 @@ Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeB
 	let owner = Owner(node, block)
 	let first = node.Kind is in ("Member", "MethodCall") then 1 else 0
 	let signature = target.Signature(node.text, owner, returnType, node.children.Length - first)
-	let call = Elements.Grouped(node, first, signature.Length - 3)
+	let call = Elements.Grouped(target.WithErrorArguments(node, block.scope), first, signature.Length - 3)
 	let parameters = target.ParameterTypes(node.text, owner, node.children.Length - first)
 	mutable result = block
 	mutable arguments = List(Mutable(Number))

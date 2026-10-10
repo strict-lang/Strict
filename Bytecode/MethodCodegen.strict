@@ -11,6 +11,7 @@ constant LoopBody = BodyParser("Run Number", "\tfor 3", "\t\tindex", "\t0").Bloc
 constant FilterBody = BodyParser("Count Number", "\tfor 3", "\t\tif index > 0", "\t\t\t1").Block(1, 1)
 constant ElseBody = BodyParser("Run", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1)
 constant ReturnElse = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\telse", "\t\treturn 4").Block(1, 1)
+constant InRun = CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "Run")
 constant CopiedBody = BodyParser("Run", "\tmutable copy = (1)", "\tlet saved = copy", "\tcopy.Add(1)").Block(1, 1)
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Length is 4
@@ -59,16 +60,16 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 		return ListCodegen(values).Added(SyntaxNode("MethodCall", "Add", node.children.Last.children), block)
 	let name = AssignedName(node)
 	let assigned = node.children.Last
-	let stored = Stored(assigned, name, ListCodegen(values).ElementCopied(node, block))
+	let stored = Stored(assigned, name, ListCodegen(values).ElementCopied(node, block), node.Kind is "Declaration")
 	node.Kind is "Declaration" then Declared(stored, name, assigned) else stored
-Stored(assigned SyntaxNode, name Text, block CodeBlock) CodeBlock
-	Plain.Stored(One, "a", CodeBlock.Empty).instructions.Length is 1
-	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", CodeBlock.Empty).instructions(0).texts is ("a")
-	constant stacktraces = SyntaxNode("Call", "List", SyntaxNode("Identifier", "Stacktrace"))
-	let error = SyntaxNode("Call", "Error", (SyntaxNode("Text", "\"" + name + "\""), stacktraces))
-	let isError = (assigned.Kind is "Identifier") and (assigned.text is "Error")
-	let value = values.Expression((isError then error else assigned), block)
-	assigned.IsLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else value.Stored(name)
+Stored(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) CodeBlock
+	Plain.Stored(One, "a", CodeBlock.Empty, true).instructions.Length is 1
+	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", CodeBlock.Empty, true).instructions(0).texts is ("a")
+	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", InRun, false).instructions(0).texts is ("Run")
+	let named = isDeclaration then block.Declare(CodeBlock.ErrorMarker, name) else block
+	let value = values.Expression(assigned, named)
+	let restored = CodeBlock(value.instructions, value.register, value.nextId, block.scope)
+	assigned.IsLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else restored.Stored(name)
 AssignedName(node SyntaxNode) Text
 	Plain.AssignedName(SyntaxNode("Declaration", "let a", One)) is "a"
 	Plain.AssignedName(ElementAssignment) is "x.a(1)"

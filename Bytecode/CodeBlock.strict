@@ -4,6 +4,7 @@ has nextId Number
 has scope Expressions/Scope
 constant Empty = CodeBlock(List(InstructionEntry), 0, 0, Scope(List(Text), List(Text)))
 constant SharedMarker = " shares"
+constant ErrorMarker = " error"
 Add(entry InstructionEntry) CodeBlock
 	CodeBlock.Empty.Add(InstructionEntry.Return(0)).instructions.Length is 1
 	CodeBlock(instructions + entry, register, nextId, scope)

@@ -9,6 +9,7 @@ constant NoTypes = KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes)
 constant Adder = CallTarget(NoTypes, TypeShape("Add(numbers) Number", "\t1"), "Strict/C", List(Text))
 constant Ranges = CallTarget(KnownTypes(List(Text) + "Range", NoScopes, NoScopes, (Scope(List(Text) + "from", List(Text) + "Start,ExclusiveEnd"), NoScope)), Greeter, "Strict/Range", List(Text))
 constant Overloaded = CallTarget(NoTypes, TypeShape("Members Number", "\tMembers(1)", "Members(lines Number) Number", "\tlines"), "Strict/C", List(Text))
+constant BareError = SyntaxNode("Identifier", "Error")
 constant Plain = CallTarget(NoTypes, Greeter, "Strict/Examples/Greeter", ("Strict/Logger", "Strict/Examples/Helper"))
 Signature(name Text, type Text, returnType Text, arguments Number) Texts
 	Plain.Signature("Greeter", "Greeter", "Greeter", 1) is ("Strict/Examples/Greeter", "from", "Greeter", "text")
@@ -52,6 +53,14 @@ Header(name Text) HeaderTokens
 	Plain.Header("Greet").ReturnType is "Text"
 	Plain.Header("Missing").tokens.Length is 0
 	Overload(name, -1)
+WithErrorArguments(node SyntaxNode, scope Scope) SyntaxNode
+	Plain.WithErrorArguments(BareError, MethodCodegen.InRun.scope) to Text is "Error(\"Run\", List(Stacktrace))"
+	Plain.WithErrorArguments(SyntaxNode("Identifier", "x"), MethodCodegen.InRun.scope) to Text is "x"
+	if node.text is not "Error" or node.children.Length > 0
+		return node
+	constant stacktraces = SyntaxNode("Call", "List", SyntaxNode("Identifier", "Stacktrace"))
+	let name = SyntaxNode("Text", "\"" + scope.TypeOf(CodeBlock.ErrorMarker) + "\"")
+	SyntaxNode("Call", "Error", (name, stacktraces))
 ImplicitOwner(name Text, scope Scope) Text
 	Plain.ImplicitOwner("x", Scope(("value", "outer"), ("A", "A"))) is "value"
 	Plain.ImplicitOwner("x", Scope(List(Text) + "value", List(Text) + "A")) is ""
