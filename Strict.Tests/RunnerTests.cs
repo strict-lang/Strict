@@ -1,5 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
@@ -130,10 +131,14 @@ public sealed class RunnerTests
 		Directory.SetCurrentDirectory(root);
 		try
 		{
+			var sourceRunStart = DateTime.UtcNow;
 			foreach (var inputPath in hasRun
 				? [sourcePath, Path.ChangeExtension(sourcePath, BinaryExecutable.Extension)]
 				: new[] { sourcePath })
 			{
+				if (inputPath != sourcePath)
+					Assert.That(File.GetLastWriteTimeUtc(inputPath), Is.GreaterThanOrEqualTo(sourceRunStart),
+						"Source run did not save " + inputPath);
 				var result = NativeProcessRunner.Run("dotnet",
 					"\"" + regeneratingRuntime + "\" \"" + inputPath + "\"" + arguments, 120000);
 				if (hasRun)
@@ -264,15 +269,20 @@ public sealed class RunnerTests
 		}
 	}
 
-	private static readonly Lock FreshAssemblyGate = new();
 	private static string? freshStrictAssembly;
 
+	/// <summary>
+	/// NCrunch test processes and engines share one build in %TEMP%, a named mutex lets only one
+	/// thread or process build it at a time.
+	/// </summary>
 	private static string StrictAssemblyForFreshProcess()
 	{
 		var location = typeof(Strict.Program).Assembly.Location;
 		if (Environment.GetEnvironmentVariable("NCrunch") != "1")
 			return location;
-		lock (FreshAssemblyGate)
+		using var buildGate = new Mutex(false, "StrictFreshProcessBuild");
+		WaitEvenIfAbandoned(buildGate);
+		try
 		{
 			if (freshStrictAssembly != null)
 				return freshStrictAssembly;
@@ -287,6 +297,22 @@ public sealed class RunnerTests
 			Assert.That(built, Has.Length.EqualTo(1), string.Join(Environment.NewLine, built));
 			return freshStrictAssembly = built[0];
 		}
+		finally
+		{
+			buildGate.ReleaseMutex();
+		}
+	}
+
+	/// <summary>
+	/// A killed NCrunch process abandons the mutex, the owner gets it anyway and builds again.
+	/// </summary>
+	private static void WaitEvenIfAbandoned(Mutex gate)
+	{
+		try
+		{
+			gate.WaitOne();
+		}
+		catch (AbandonedMutexException) { } //ncrunch: no coverage
 	}
 
 	/// <summary>
@@ -299,13 +325,32 @@ public sealed class RunnerTests
 		var directory = Path.Combine(AppContext.BaseDirectory,
 			"StrictRuntime" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(directory);
-		foreach (var file in Directory.GetFiles(Path.GetDirectoryName(strictAssembly)!))
+		foreach (var file in GetRuntimeFiles(strictAssembly))
 		{
 			var copy = Path.Combine(directory, Path.GetFileName(file));
 			File.Copy(file, copy);
 			File.SetLastWriteTimeUtc(copy, writeTime);
 		}
 		return Path.Combine(directory, Path.GetFileName(strictAssembly));
+	}
+
+	/// <summary>
+	/// Only what Strict.deps.json loads, not the test assemblies next to it or the Strict.jitprofile
+	/// fresh processes write there.
+	/// </summary>
+	private static List<string> GetRuntimeFiles(string strictAssembly)
+	{
+		var dependencies = Path.ChangeExtension(strictAssembly, ".deps.json");
+		using var json = JsonDocument.Parse(File.ReadAllText(dependencies));
+		var libraries = json.RootElement.GetProperty("targets").EnumerateObject().First().Value;
+		return
+		[
+			.. libraries.EnumerateObject().SelectMany(library =>
+				library.Value.TryGetProperty("runtime", out var runtime)
+					? runtime.EnumerateObject().Select(asset => Path.GetFileName(asset.Name))
+					: []).Select(file => Path.Combine(Path.GetDirectoryName(strictAssembly)!, file)),
+			dependencies, Path.ChangeExtension(strictAssembly, ".runtimeconfig.json")
+		];
 	}
 
 	[TearDown]

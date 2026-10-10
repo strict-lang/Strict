@@ -661,6 +661,12 @@ arguments, single-element lists, reserved names, test lines, package references,
   copy whose Strict*.dll write time decides cache freshness (used packages always map to repo folders).
   `CachedBinaryWithOlderVersionIsRegenerated` covers the InvalidVersion catch (passed at once, fails
   without it). C# Version 4 = TypeEntry.FormatVersion 4, BinaryTypeData.strict has unused Version 1.
+- Review fixes: the program suite passed on a stale repo .strictbinary when the source run could not
+  save it (binary held open: "not saved" is only logged), it now asserts the binary was rewritten.
+  Runtime copies hold only the 20 files Strict.deps.json loads (1.3 MB, was 96 files/28.6 MB, which
+  included Strict.jitprofile that fresh processes write: IOException). The NCrunch %TEMP% build is
+  behind a named mutex (abandoned one handled), cold 5-7 s, warm ~1 s. NCrunch console run on
+  Strict.Tests.csproj (cold and warm): 1310 fast tests passed, 5 allowlist ignores.
 
 Parser fuzzing (2026-10-10): Slow `ParserFuzzTests` mutates all 299 .strict files 40 times (seed 7,
 11960 parses, 3 s); a .NET exception (also inside ParsingFailed) or a parse over 5 s fails it.
