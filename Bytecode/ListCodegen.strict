@@ -3,6 +3,7 @@ constant Plain = ListCodegen(ValueCodegen.Plain)
 constant Declared = CodeBlock.Empty.Declare("x", "Number")
 constant Shared = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", true)
 constant Owned = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", false)
+constant Appending = BodyParser("Run", "\tvalues = values + 1").Block(1, 1).children(0)
 Of(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Of(ValueCodegen.Ones, CodeBlock.Empty).instructions.Length is 1
 	node.IsLiteral then Constant(node, block) else Built(node, block)
@@ -49,6 +50,19 @@ Copied(node SyntaxNode, block CodeBlock) CodeBlock
 	let operation = node.text is "Add" then InstructionType.Add else InstructionType.Subtract
 	let changed = element.Load(InstructionEntry.Binary(operation, (list.Result, element.Result, element.register)))
 	changed.Stored(node.children(0).text)
+IsAppend(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsAppend(Appending, Owned) is true
+	Plain.IsAppend(BodyParser("Run", "\tvalues = values + values").Block(1, 1).children(0), Owned) is false
+	Plain.IsAppend(BodyParser("Run", "\tx = values + 1").Block(1, 1).children(0), Owned) is false
+	Plain.IsAppend(BodyParser("Run", "\ttext = text + 1").Block(1, 1).children(0), Owned.Declare("text", "Texts")) is false
+	let value = node.children.Last
+	if node.Kind is not "Reassignment" or value.text is not "+"
+		return false
+	let list = value.children(0)
+	let types = values.inference.types
+	let isList = (list to Text is node.children(0) to Text) and types.IsPlural(values.TypeOf(list, block))
+	let isVariable = (list.Kind is "Identifier") and (values.target.IsMember(values.target.TypeName, list.text) is false)
+	isList and isVariable and (types.IsPlural(values.TypeOf(value.children(1), block)) is false)
 IsNew(node SyntaxNode) Boolean
 	Plain.IsNew(ValueCodegen.Ones) is true
 	Plain.IsNew(ValueCodegen.GreeterText) is false
