@@ -19,8 +19,7 @@ public sealed partial class VirtualMachine
 			return false;
 		var type = rawValue.GetType();
 		return type is { IsNumber: false, IsBoolean: false, IsCharacter: false, IsNone: false } &&
-			invoke.MethodInfo.TypeFullName.EndsWith(Context.ParentSeparator + type.Name,
-				StringComparison.Ordinal) &&
+			invoke.MethodInfo.ShortTypeName == type.Name &&
 			(invoke.CachedInstructions ??= GetPrecompiledMethodInstructions(invoke)) != null;
 	}
 
