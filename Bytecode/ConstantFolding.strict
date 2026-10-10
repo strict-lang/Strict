@@ -5,6 +5,8 @@ constant Limits = ConstantFolding("Count", Counts)
 constant Calls = ConstantFolding("Count", TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Empty", List(Text) + "Count(1)"), TypeInference.NoShape)))
 constant Limit = SyntaxNode("Identifier", "Limit")
 constant Two = SyntaxNode("Number", "2")
+constant Count = SyntaxNode("Identifier", "Count")
+constant Owned = ConstantFolding("Text", TypeInference(KnownTypes.Sample, (Scope(("Limit", "Twice", "Alias", "Loop"), ("3", "Limit * 2", "Limit", "Loop")), TypeInference.NoShape)))
 Folded(node SyntaxNode) SyntaxNode
 	Limits.Folded(Limit).text is "3"
 	Limits.Folded(SyntaxNode("Binary", "*", (Limit, Two))).text is "6"
@@ -22,15 +24,30 @@ Constant(node SyntaxNode) SyntaxNode
 	Limits.Constant(SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count"))).text is "3"
 	Limits.Constant(Two).text is "2"
 	Calls.Constant(SyntaxNode("Identifier", "Empty")).Kind is "Call"
+	Owned.Constant(SyntaxNode("Member", "Twice", Count)) to Text is "Count.Limit * 2"
+	Owned.Constant(SyntaxNode("Member", "Alias", Count)).text is "3"
+	Owned.Constant(SyntaxNode("Member", "Loop", Count)).Kind is "Member"
+	Aliased(node, List(Text))
+Aliased(node SyntaxNode, aliases Texts) SyntaxNode
+	Limits.Aliased(Limit, List(Text) + "Count.Limit").Kind is "Identifier"
 	let isOther = (node.Kind is "Member") and (node.children(0).Kind is "Identifier")
 	if node.Kind is not "Identifier" and (isOther is false)
 		return node
 	let owner = isOther then node.children(0).text else typeName
 	let value = inference.ConstantOf(owner, node.text)
-	if value is ""
+	if (value is "") or (owner + "." + node.text is in aliases)
 		return node
 	let tokens = Tokenizer(value).Tokens
-	SyntaxParser(tokens).ParseRange(0, tokens.Length)
+	let parsed = ConstantFolding(owner, inference).Qualified(SyntaxParser(tokens).ParseRange(0, tokens.Length))
+	parsed.Kind is "Member" then Aliased(parsed, aliases + (owner + "." + node.text)) else parsed
+Qualified(node SyntaxNode) SyntaxNode
+	Limits.Qualified(SyntaxNode("Binary", "*", (Limit, Two))) to Text is "Count.Limit * 2"
+	if (node.Kind is "Identifier") and inference.ConstantOf(typeName, node.text) is not ""
+		return SyntaxNode("Member", node.text, SyntaxNode("Identifier", typeName))
+	mutable qualified = List(Mutable(SyntaxNode))
+	for node.children
+		qualified.Add(Qualified(value))
+	SyntaxNode(node.Kind, node.text, qualified)
 Negated(node SyntaxNode) SyntaxNode
 	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Two)).text is "-2"
 	Limits.Negated(Two).text is "2"
