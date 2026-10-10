@@ -67,11 +67,12 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty) is true
 	Plain.IsIndexing(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is false
 	OwnA.IsIndexing(SyntaxNode("Call", "limits", One), CodeBlock.Empty) is true
+	Plain.IsIndexing(SyntaxNode("MethodCall", "text", (NewGreeter, One, One)), CodeBlock.Empty) is true
 	if node.Kind is "Call"
 		let isConstant = methods.TypeOf(node.text) is not "" and (target.Header(node.text).tokens.Length is 0)
 		let isNamed = block.scope.TypeOf(node.text) is not "" or target.IsMember(target.TypeName, node.text) or isConstant
 		return (node.children.Length is 1) and isNamed
-	let isMember = (node.Kind is "MethodCall") and (node.children.Length is 2)
+	let isMember = (node.Kind is "MethodCall") and (node.children.Length is in (2, 3))
 	isMember and target.IsMember(TypeOf(node.children(0), block), node.text)
 Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
@@ -80,12 +81,22 @@ Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	let name = isNamed then node.text else "list" + block.nextId
 	let list = isNamed then block else Expression(SyntaxNode("Member", node.text, node.children(0)), block)
 	let stored = isNamed then list else list.Stored(name).WithNextId
-	let index = Expression(node.children.Last, stored)
+	let index = Expression(GridIndex(node), stored)
 	index.Load(InstructionEntry(InstructionType.IndexCall, List(Text) + name, (index.register, index.Result, -1)))
+GridIndex(node SyntaxNode) SyntaxNode
+	Plain.GridIndex(SyntaxNode("MethodCall", "a", (NoNode, One))).text is "1"
+	Plain.GridIndex(SyntaxNode("MethodCall", "a", (NoNode, One, One))).text is "+"
+	if node.children.Length < 3
+		return node.children.Last
+	let width = SyntaxNode("Member", "Width", SyntaxNode("Member", "Size", node.children(0)))
+	SyntaxNode("Binary", "+", (node.children(1), SyntaxNode("Binary", "*", (width, node.children(2)))))
 InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.InstanceCall(SyntaxNode("Member", "Greet", NoNode), CodeBlock.Empty).instructions(1).payload.Last is 0
 	Plain.InstanceCall(ToText, CodeBlock.Empty).Result is 1
 	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(1).kind is InstructionType.FieldLoad
+	Plain.InstanceCall(SyntaxNode("Member", "index", SyntaxNode("Identifier", "outer")), CodeBlock.Empty).register is 1
+	if (node.Kind is "Member") and (node.text is "index") and (node.children(0).text is "outer")
+		return block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "outer.index"))
 	let instance = Expression(node.children(0), block)
 	if (node.Kind is "Member") and target.IsMember(TypeOf(node.children(0), block), node.text)
 		return instance.Load(InstructionEntry(InstructionType.FieldLoad, node.text, (instance.register, instance.Result, -1)))

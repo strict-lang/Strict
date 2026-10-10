@@ -90,6 +90,8 @@ public sealed class StrictBytecodeTests
 	[TestCase("Compiler/SourceCompiler", "Examples/NativeArithmetic.strict")]
 	[TestCase("Compiler/CompilerDemo")]
 	[TestCase("Compiler/EmitTests")]
+	[TestCase("ImageProcessing/AdjustBrightness")]
+	[TestCase("ImageProcessing/ProcessImage", "ImageProcessing/test_image.jpg")]
 	[TestCase("Expressions/ResolveCheck", "Expressions", ".", Category = "Nightly")]
 	[TestCase("Expressions/TypeReport", "Expressions", ".", Category = "Nightly")]
 	[TestCase("Runtime/Execute", "Examples/HelloLogger.strict", ".", Category = "Nightly")]

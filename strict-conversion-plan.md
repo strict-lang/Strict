@@ -498,6 +498,13 @@ Strict compiler (Nightly case, the heavy self-hosting cases take ~19 min). Open:
 iterators of `Size`, nested loop aggregation, `outer.index`), `outer` as a local name crashes the
 C# parser with a NullReferenceException, and the Strict compiler's in-place `Add` has no ownership
 check yet.
+Then: ImageProcessing/AdjustBrightness and ProcessImage run like C#. Loops over a type with its own
+`for Iterator(...)` method call it first (`LoopCodegen.Iterated`, C# `GetLoopIteratorExpression`),
+iterator methods aggregate into a list of their element type (`TypeCodegen.BodyType`, the inference
+only keeps `Iterator`), a nested `for` as the last statement aggregates into the same list,
+`outer.index` is a variable path load, assignments store to the full target text
+(`image.Colors(index)`), 2D list indexing flattens to `x + instance.Size.Width * y` like C#
+`ListCall.CreateFlattenedIndex`, and `has x = 1` members keep their initial value (`ColorValue.Alpha`).
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

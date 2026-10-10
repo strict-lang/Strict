@@ -4,6 +4,7 @@ constant TestOperators = ("is", "is not", "is in", "is not in")
 constant NoNode = SyntaxNode("Identifier", "x")
 constant One = SyntaxNode("Number", "1")
 constant MixedList = SyntaxNode("List", "", (NoNode, One))
+constant ElementAssignment = SyntaxNode("Reassignment", "", (SyntaxNode("MethodCall", "a", (NoNode, One)), NoNode))
 constant NoScope = Scope(List(Text), List(Text))
 constant SumBody = BodyParser("Sum Number", "\tfor 3", "\t\tindex").Block(1, 1)
 constant IfBody = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\t4").Block(1, 1)
@@ -59,13 +60,13 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).instructions.First.payload is (1, 1, -1, 0)
 	Plain.Assignment(SyntaxNode("Reassignment", "", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 2
 	Plain.Assignment(SyntaxNode("Declaration", "let a", MixedList), CodeBlock.Empty).instructions.Length is 7
+	Plain.Assignment(ElementAssignment, CodeBlock.Empty).instructions.Last.texts is ("x.a(1)")
 	let isDeclaration = node.Kind is "Declaration"
-	let name = isDeclaration then Tokenizer(node.text).Tokens.Last else node.children(0).text
+	let name = isDeclaration then Tokenizer(node.text).Tokens.Last else node.children(0) to Text
 	let assigned = node.children(isDeclaration then 0 else 1)
 	let value = values.Expression(assigned, block)
 	let store = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, value.Result, name)
-	let isLiteral = assigned.IsLiteral
-	let stored = isLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else value.Add(store)
+	let stored = assigned.IsLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else value.Add(store)
 	isDeclaration then stored.Declare(name, values.TypeOf(assigned, block)) else stored
 StoreConstant(load InstructionEntry, name Text) InstructionEntry
 	Plain.StoreConstant(InstructionEntry.LoadNumber(2, 7), "a").Bytes(BinaryNames("a")) is (2, 1, 7, 0, 0)
