@@ -57,11 +57,13 @@ Collected(block CodeBlock, aggregation Text) CodeBlock
 Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	MethodCodegen.Plain.Generate(MethodCodegen.LoopBody, MethodCodegen.NoScope, "None").instructions.Length is 6
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.kind is InstructionType.LoopEnd
+	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty.Declare("value", "Text"), "").scope.TypeOf("outer") is ""
 	let declared = Declared(node, block)
 	let collected = aggregation is "" then declared else ListCodegen(methods.values).Disowned(node, declared, true)
 	let body = node.children.Last
 	let looped = aggregation is "" then methods.Body(body, declared) else AggregatedLoop(body, collected, aggregation)
-	looped.Add(InstructionEntry.Jump(InstructionType.LoopEnd, looped.instructions.Length - block.instructions.Length))
+	let end = InstructionEntry.Jump(InstructionType.LoopEnd, looped.instructions.Length - block.instructions.Length)
+	CodeBlock(looped.instructions + end, looped.register, looped.nextId, block.scope)
 Declared(node SyntaxNode, block CodeBlock) CodeBlock
 	Iterating.Declared(ForA, CodeBlock.Empty.Declare("a", "A")).scope.TypeOf("value") is "Number"
 	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).instructions(0).texts is ("value")
