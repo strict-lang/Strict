@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Strict.Expressions;
 using Strict.Language;
@@ -36,13 +35,6 @@ public partial class Interpreter
 			? new ValueInstance(booleanType, false)
 			: noneInstance;
 	} //ncrunch: no coverage end
-
-	private bool InitializesMembers(Method method) =>
-		memberInitializingFroms.GetOrAdd(method, static from =>
-			from.lines.Skip(1).Any(line => from.Type.Members.Any(member =>
-				line.StartsWith("\t" + member.Name + " = ", StringComparison.Ordinal))));
-
-	private readonly ConcurrentDictionary<Method, bool> memberInitializingFroms = new();
 
 	/// <summary>
 	/// A custom from(..) assigns members, start from default member values and run its body.

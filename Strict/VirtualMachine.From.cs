@@ -42,14 +42,53 @@ public sealed partial class VirtualMachine
 				values[memberIndex] = Memory.Registers[info.ArgumentRegisters[memberIndex]];
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
 			if (!values[memberIndex].HasValue)
-				values[memberIndex] = IsTrait(members[memberIndex].Type)
-					? CreateTraitInstance(members[memberIndex].Type)
-					: GetMemberInitialOrDefaultValue(members[memberIndex], hasBinaryMembers, binaryMembers,
-						memberIndex);
+				values[memberIndex] =
+					GetDefaultMemberValue(members, memberIndex, hasBinaryMembers, binaryMembers);
 		TryPreFillConstrainedListMembers(targetType, values);
 		ConvertBytesToColorsIfNeeded(members, values);
 		Memory.Registers[invoke.Register] = new ValueInstance(targetType, values);
 		return true;
+	}
+
+	private ValueInstance GetDefaultMemberValue(List<Member> members, int memberIndex,
+		bool hasBinaryMembers, List<BinaryMember> binaryMembers) =>
+		IsTrait(members[memberIndex].Type)
+			? CreateTraitInstance(members[memberIndex].Type)
+			: GetMemberInitialOrDefaultValue(members[memberIndex], hasBinaryMembers, binaryMembers,
+				memberIndex);
+
+	/// <summary>
+	/// A compiled from body assigns members like the interpreter, it starts from default values.
+	/// </summary>
+	private bool TryRunMemberInitializingFrom(Invoke invoke, Type targetType)
+	{
+		var fromInstructions = invoke.CachedInstructions ??=
+			GetPrecompiledMethodInstructions(invoke) ?? NoCompiledFrom;
+		if (fromInstructions.Count == 0)
+			return false;
+		var members = targetType.Members;
+		var hasBinaryMembers = TryGetBinaryMembers(targetType, out var binaryMembers);
+		var defaults = new ValueInstance[members.Count];
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			defaults[memberIndex] =
+				GetDefaultMemberValue(members, memberIndex, hasBinaryMembers, binaryMembers);
+		Memory.Registers[invoke.Register] = RunInvokedMethod(invoke, fromInstructions,
+			new ValueInstance(targetType, defaults), targetType)!.Value;
+		return true;
+	}
+
+	private static readonly List<Instruction> NoCompiledFrom = [];
+
+	/// <summary>
+	/// The from instance scope put every member into the frame, the body may have changed them.
+	/// </summary>
+	private ValueInstance CollectInitializedMembers(Type type)
+	{
+		var members = type.Members;
+		var values = new ValueInstance[members.Count];
+		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
+			Memory.Frame.TryGet(members[memberIndex].Name, out values[memberIndex]);
+		return new ValueInstance(type, values);
 	}
 
 	private void ConvertBytesToColorsIfNeeded(List<Member> members, ValueInstance[] values)

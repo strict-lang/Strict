@@ -12,7 +12,8 @@ namespace Strict.Optimizers;
 /// bidirectional conversion exists (from constructor + to method) and the compact type uses
 /// fewer bytes per instance. For example ColorValue(0.5, 0.5, 0.25) becomes Color(128, 128, 64)
 /// because Color stores each component as a Byte (4 bytes total) instead of Number (32 bytes).
-/// Not in AllInstructionOptimizers: the VM returns and stores a ColorValue unconverted into Color.
+/// Not in AllInstructionOptimizers: Color.from(colorValue) keeps 127.5 and Alpha 255, compacting
+/// rounds to 128 and leaves the missing Alpha at 0, results would differ from unoptimized runs.
 /// </summary>
 public sealed class CompactTypeOptimizer : InstructionOptimizer
 {
@@ -121,8 +122,8 @@ public sealed class CompactTypeOptimizer : InstructionOptimizer
 
 	/// <summary>
 	/// Compacting changes the value type, so every reader must expect the compact type. ponytail:
-	/// only a return from a method declared with the compact type counts (once returns convert),
-	/// typed stores, parameters and list elements stay unsafe until conversions are generated.
+	/// only a return from a method declared with the compact type counts, stores, parameters and
+	/// list elements read the larger value through their generated Color.from conversion.
 	/// </summary>
 	private static bool IsOnlyReadAsCompactType(BinaryMethod method, int constructIndex,
 		Type compactType)

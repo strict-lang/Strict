@@ -523,6 +523,15 @@ Cleanup round: Text natives (`Upper`, `StartsWith`, ...) are linked like C# (a b
 longer leaks `outer`/`value` into the following statements, member reassignments store the member
 name like C# `MutableReassignment.Name`, and a type's own list member flattens 2D indexes too.
 Open: leading Boolean method-call test lines (`"hello".StartsWith("hel")`) are kept as code.
+Conversions: a value accepted only through `CanBeConvertedTo` (its `to` or the target `from(x)`,
+like a `ColorValue` stored into a `Color` list element, in a list literal argument or as a parameter)
+is wrapped in `Expressions/Conversion` (printed as the value), README typed collections convert. The
+VM runs member initializing `from` bodies (`Method.InitializesMembers`, shared with the interpreter),
+the Strict compiler converts reassigned values and own or constructor arguments
+(`ListCodegen.Converted`) and its `from` methods return their type. AdjustBrightness logs and
+compares its stored `Color` `to ColorValue`. Open: non-literal lists with convertible elements (only
+the interpreter converts them at runtime), the Strict compiler knows parameter types only of own
+methods and constructors, CompactTypeOptimizer stays parked (rounds 127.5 to 128, Alpha 0).
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

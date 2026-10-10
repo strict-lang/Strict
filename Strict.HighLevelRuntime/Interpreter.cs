@@ -135,7 +135,7 @@ public partial class Interpreter
 		if (method is { Name: Method.From, Type.IsGeneric: false })
 			return !instance.Equals(noneInstance)
 				? throw new MethodCall.CannotCallFromConstructorWithExistingInstance()
-				: !runOnlyTests && InitializesMembers(method)
+				: !runOnlyTests && method.InitializesMembers
 					? ExecuteMemberInitializingFrom(method, args, parentContext)
 					: GetFromConstructorValue(method, args);
 		if (instance.TryGetValueTypeInstance()?.ReturnType.Name == Type.System)
@@ -274,22 +274,12 @@ public partial class Interpreter
 		if (item.IsList && targetType.IsList)
 			return TryConvertListArgument(item, targetType, parentContext);
 		var sourceType = item.TryGetValueTypeInstance()?.ReturnType ?? item.GetType();
-		if (!sourceType.CanBeConvertedTo(targetType))
-			return null;
-		if (sourceType.AvailableMethods.TryGetValue(BinaryOperator.To, out var toMethods))
-		{
-			var toMethod = toMethods.FirstOrDefault(method => method.ReturnType == targetType ||
-				method.ReturnType.IsSameOrCanBeUsedAs(targetType, false));
-			if (toMethod != null)
-				return Execute(toMethod, item, [], parentContext);
-		}
-		if (!targetType.AvailableMethods.TryGetValue(Method.From, out var fromMethods))
-			return null;
-		var fromMethod = fromMethods.FirstOrDefault(method => method.Parameters.Count == 1 &&
-			sourceType.IsSameOrCanBeUsedAs(method.Parameters[0].Type, false));
-		return fromMethod != null
-			? Execute(fromMethod, noneInstance, [item], parentContext)
-			: null;
+		var method = sourceType.FindConversionMethod(targetType);
+		return method == null
+			? null
+			: method.Name == Method.From
+				? Execute(method, noneInstance, [item], parentContext)
+				: Execute(method, item, [], parentContext);
 	}
 
 	private void ValidateInstanceAndArguments(Method method, ValueInstance instance,

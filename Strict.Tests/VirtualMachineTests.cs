@@ -1071,7 +1071,8 @@ public sealed class VirtualMachineTests : TestBytecode
 			"has number", "Run Number", "\tconstant width = 16", "\tconstant height = 9",
 			"\tmutable image = Image(Size(width, height))", "\tfor image.Size",
 			"\t\timage.Colors(index) = ColorValue(0.25, 0.25, 0.25)", "\tmutable count = 0",
-			"\tfor image.Size", "\t\tif image.Colors(index) is ColorValue(0.25, 0.25, 0.25)",
+			"\tfor image.Size",
+			"\t\tif image.Colors(index) to ColorValue is ColorValue(0.25, 0.25, 0.25)",
 			"\t\t\tcount = count + 1", "\tcount")).ParseMembersAndMethods(parser);
 		// @formatter: on
 		var runMethod = testType.Methods.Single(m => m.Name == Method.Run);

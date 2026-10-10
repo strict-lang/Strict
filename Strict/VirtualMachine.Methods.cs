@@ -16,18 +16,29 @@ public sealed partial class VirtualMachine
 		if (TryExecuteSpecialInvoke(invoke, implicitInstance))
 			return;
 		var info = invoke.MethodInfo;
+		var invokeInstructions = invoke.CachedInstructions ??=
+			GetPrecompiledMethodInstructions(invoke) ?? throw Fail(
+				"No precompiled method instructions found for '" + info.TypeFullName + "." +
+				info.MethodName + "' with return type " + info.ReturnTypeName);
+		var result = RunInvokedMethod(invoke, invokeInstructions, info.InstanceRegister.HasValue
+			? Memory.Registers[info.InstanceRegister.Value]
+			: implicitInstance);
+		if (result != null)
+			Memory.Registers[invoke.Register] = result.Value;
+	}
+
+	/// <summary>
+	/// Runs in a child scope, a member initializing from returns its type with the members it set.
+	/// </summary>
+	private ValueInstance? RunInvokedMethod(Invoke invoke, List<Instruction> invokeInstructions,
+		ValueInstance? evaluatedInstance, Type? initializedType = null)
+	{
+		var info = invoke.MethodInfo;
 		var evaluatedArgs = info.ArgumentRegisters.Length == 0
 			? Array.Empty<ValueInstance>()
 			: new ValueInstance[info.ArgumentRegisters.Length];
 		for (var argIndex = 0; argIndex < info.ArgumentRegisters.Length; argIndex++)
 			evaluatedArgs[argIndex] = Memory.Registers[info.ArgumentRegisters[argIndex]];
-		var evaluatedInstance = info.InstanceRegister.HasValue
-			? Memory.Registers[info.InstanceRegister.Value]
-			: implicitInstance;
-		var invokeInstructions = invoke.CachedInstructions ??=
-			GetPrecompiledMethodInstructions(invoke) ?? throw Fail(
-				"No precompiled method instructions found for '" + info.TypeFullName + "." +
-				info.MethodName + "' with return type " + info.ReturnTypeName);
 		var childScope = InitializeChildScope();
 		var previousMethodContext = currentMethodContext;
 		var previousInstance = currentInstance;
@@ -60,12 +71,13 @@ public sealed partial class VirtualMachine
 		else
 			foreach (var (loopBegin, state) in savedLoops)
 				loopBegin.RestoreState(state);
-		var result = TryFlattenNestedIteratorList(info, Returns);
+		var result = initializedType == null
+			? TryFlattenNestedIteratorList(info, Returns)
+			: CollectInitializedMembers(initializedType);
 		currentMethodContext = previousMethodContext;
 		currentInstance = previousInstance;
 		CleanupChildScope(childScope);
-		if (result != null)
-			Memory.Registers[invoke.Register] = result.Value;
+		return result;
 	}
 
 	/// <summary>
@@ -196,7 +208,8 @@ public sealed partial class VirtualMachine
 		}
 		if (IsTrait(returnType) && TryCallNativeFromPlugin(invoke, returnType))
 			return true;
-		return TryHandleFromConstructor(invoke, returnType);
+		return TryRunMemberInitializingFrom(invoke, returnType) ||
+			TryHandleFromConstructor(invoke, returnType);
 	}
 
 	private ValueInstance ToConstructedValue(Type returnType, ValueInstance argument) =>

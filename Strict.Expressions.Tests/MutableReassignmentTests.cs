@@ -108,6 +108,32 @@ public sealed class MutableReassignmentTests : TestExpressions
 				InstanceOf<NewExpressionDoesNotMatchMemberType>());
 
 	[Test]
+	public async Task ConvertibleValueIsConvertedWhenStoredOrPassed()
+	{
+		using var package =
+			await new Repositories(parser).LoadStrictPackage("Strict/ImageProcessing");
+		using var program = new Type(package,
+			new TypeLines(nameof(ConvertibleValueIsConvertedWhenStoredOrPassed),
+				"has number", "Keep(color) Color", "\tcolor", "Normalized(colorValue) ColorValue",
+				"\tcolorValue", "Run(mutable image) Color",
+				"\timage.Colors(0) = ColorValue(0.25, 0.5, 0.25)",
+				"\tconstant pixels = Image(Size(1, 1), (ColorValue(0.25, 0.5, 0.25)))",
+				"\tconstant normalized = Normalized(Color(1, 0, 0))",
+				"\tKeep(ColorValue(0.25, 0.5, 0.25))")).ParseMembersAndMethods(parser);
+		var body = (Body)program.Methods[2].GetBodyAndParseIfNeeded();
+		var colorType = package.GetType("Color");
+		Assert.That(((MutableReassignment)body.Expressions[0]).Value.ReturnType,
+			Is.EqualTo(colorType));
+		Assert.That(((MethodCall)((Declaration)body.Expressions[1]).Value).Arguments[1].ReturnType,
+			Is.EqualTo(package.GetListImplementationType(colorType)));
+		Assert.That(((MethodCall)((Declaration)body.Expressions[2]).Value).Arguments[0].ReturnType,
+			Is.EqualTo(package.GetType("ColorValue")));
+		Assert.That(((MethodCall)body.Expressions[3]).Arguments[0].ReturnType, Is.EqualTo(colorType));
+		Assert.That(body.ToString(), Is.EqualTo(string.Join(Environment.NewLine,
+			program.Methods[2].lines.Skip(1).Select(line => line[1..]))));
+	}
+
+	[Test]
 	public void MutableVariableInstanceUsingSpace()
 	{
 		using var program = new Type(TestPackage.Instance,

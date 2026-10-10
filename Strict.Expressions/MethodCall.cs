@@ -212,9 +212,12 @@ public class MethodCall : ConcreteExpression
 	private static IReadOnlyList<Expression> NormalizeListArguments(Body body, Method method,
 		IReadOnlyList<Expression> arguments)
 	{
-		if (AreArgumentsAutoParsedAsList(method, arguments))
-			return [new List(body, arguments.ToList())];
-		arguments = WrapSingleListElements(body, method, arguments);
+		arguments = AreArgumentsAutoParsedAsList(method, arguments)
+			? [new List(body, arguments.ToList())]
+			: WrapSingleListElements(body, method, arguments);
+		arguments = Conversion.ConvertAll(arguments, index => index < method.Parameters.Count
+			? method.Parameters[index].Type
+			: null) ?? arguments;
 		if (arguments.Count >= method.Parameters.Count)
 			return arguments;
 		List<Expression>? normalizedArguments = null;

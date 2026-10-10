@@ -461,7 +461,7 @@ public sealed partial class BinaryGenerator
 			GenerateInstructionFromExpression(list);
 			return;
 		}
-		if (methodCall.Method.Name != Method.From)
+		if (methodCall.Method.Name != Method.From || methodCall.Method.InitializesMembers)
 			discoveredInvokeMethods.Add(methodCall.Method);
 		Register? instanceRegister = null;
 		if (methodCall.Instance != null)

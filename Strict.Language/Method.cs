@@ -283,6 +283,24 @@ public sealed partial class Method : Context
 
 	public bool IsTrait => methodBody == null;
 
+	/// <summary>
+	/// A custom from(..) assigning members runs its body on an instance with default member values.
+	/// </summary>
+	public bool InitializesMembers
+	{
+		get
+		{
+			if (initializesMembersState == 0)
+				initializesMembersState = Name == From && lines.Skip(1).Any(line =>
+					Type.Members.Any(member =>
+						line.StartsWith("\t" + member.Name + " = ", StringComparison.Ordinal)))
+					? 2
+					: 1;
+			return initializesMembersState == 2;
+		}
+	}
+	private int initializesMembersState;
+
 	public override Type? FindTypeCore(string name, Context? searchingFrom = null) =>
 		name == Type.ValueLowercase
 			? Type
