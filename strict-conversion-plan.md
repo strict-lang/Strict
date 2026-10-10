@@ -589,6 +589,12 @@ Cleanup round: Text natives (`Upper`, `StartsWith`, ...) are linked like C# (a b
 longer leaks `outer`/`value` into the following statements, member reassignments store the member
 name like C# `MutableReassignment.Name`, and a type's own list member flattens 2D indexes too.
 Open: leading Boolean method-call test lines (`"hello".StartsWith("hel")`) are kept as code.
+Bootstrap fixpoint: the Strict compiler compiled by itself (FileCompiler.strictbinary) writes the
+same bytes as the C#-run Strict compiler for all 66 tracked programs with a Run method, itself
+included. Needed: `constant X = Error` builds `Error.from(name, stacktraces)` like C# (was a load
+of the variable `Error`) and MethodCodegen is back to 15 methods. Open: the stacktrace list stays
+empty (SyntaxNode has no line numbers, the compiler no file path), `x = Error` uses `x` not the
+method name, `Error("text")`/`Error(value)` are not normalized like C# `NormalizeErrorArguments` yet.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
