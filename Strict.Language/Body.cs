@@ -228,6 +228,8 @@ public sealed class Body : Expression
 			throw new NamedType.CannotUseKeywordsAsName(name);
 		if (!name.Length.IsNameLengthWithinLimit())
 			throw new NamedType.NameLengthIsNotWithinTheAllowedLimit(name);
+		if (name == Type.OuterLowercase)
+			throw new OuterLoopVariableCannotBeDeclared(this);
 		if (FindVariable(name.AsSpan(), name != Type.IndexLowercase && name != Type.ValueLowercase) is
 			not null)
 			throw new VariableNameIsAlreadyInUse(this, FindVariable(name.AsSpan())!, value);
@@ -252,6 +254,10 @@ public sealed class Body : Expression
 		: ParsingFailed(body,
 			$"Variable {oldVariable} was already declared before and cannot be " +
 			$"re-declared here with: {newValue}");
+
+	public sealed class OuterLoopVariableCannotBeDeclared(Body body) : ParsingFailed(body,
+		Type.OuterLowercase + " always refers to the value outside the current for loop and " +
+		"cannot be declared as a variable, use a different name");
 
 	public sealed class ValueIsNotMutableAndCannotBeChanged(Body body, string name)
 		: ParsingFailed(body, name);

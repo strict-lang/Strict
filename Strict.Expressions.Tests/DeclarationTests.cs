@@ -112,6 +112,12 @@ public class DeclarationTests : TestExpressions
 	}
 
 	[Test]
+	public void OuterLoopVariableCannotBeDeclared() =>
+		Assert.That(() => ParseExpression("constant outer = 5"),
+			Throws.InstanceOf<Body.OuterLoopVariableCannotBeDeclared>().With.Message.
+				StartsWith("outer always refers to the value outside the current for loop"));
+
+	[Test]
 	public void LetWithoutVariableNameCannotParse() =>
 		Assert.That(() => ParseExpression("constant 5"),
 			Throws.InstanceOf<Declaration.MissingAssignmentValueExpression>());

@@ -66,6 +66,9 @@ public partial class MethodExpressionParser : ExpressionParser
 		var valueCall = new VariableCall(valueVar, body.CurrentFileLineNumber);
 		if (input.Equals(Type.ValueLowercase, StringComparison.Ordinal))
 			return valueCall;
+		var localOrParameter = TryParseLocalVariableOrParameter(body, input);
+		if (localOrParameter != null)
+			return localOrParameter;
 		Method? method;
 		try
 		{
