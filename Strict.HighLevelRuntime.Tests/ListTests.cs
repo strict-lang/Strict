@@ -244,6 +244,26 @@ public sealed class ListTests
 		Assert.That(originalNumbers.List.Items.Count, Is.EqualTo(2));
 	}
 
+	[TestCase(4, "\tmutable firsts = numbers", "\tfor 2", "\t\tresult.Add(index)",
+		"\t\tif index is 0", "\t\t\tfirsts = result", "\tfirsts.Length")]
+	[TestCase(4, "\tresult.Add(1)", "\tlet saved = result", "\tresult.Add(2)", "\tsaved.Length")]
+	[TestCase(54, "\tresult.Add(1)", "\tlet more = result + 5",
+		"\tresult.Length + more.Length * 10")]
+	[TestCase(4, "\tresult.Add(1)", "\tlet pairs = (result, numbers)", "\tresult.Add(2)",
+		"\tpairs(0).Length")]
+	[TestCase(4, "\tresult.Add(1)", "\tlet saved = SavedListKeepsValue(result)", "\tresult.Add(2)",
+		"\tsaved.Size")]
+	public void SavedListKeepsValue(double expected, params string[] lines)
+	{
+		using var type = CreateType(nameof(SavedListKeepsValue),
+		[
+			"has numbers", "Run Number", "\tmutable result = numbers + 7", .. lines, "Size Number",
+			"\tnumbers.Length"
+		]);
+		Assert.That(interpreter.Execute(type.Methods[0], CreateNumbers(type), []).Number,
+			Is.EqualTo(expected));
+	}
+
 	private ValueInstance CreateMutableNumberList(params ValueInstance[] items)
 	{
 		var numberType = interpreter.numberType;

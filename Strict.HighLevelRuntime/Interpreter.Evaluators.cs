@@ -43,7 +43,7 @@ public partial class Interpreter
 		var count = list.Values.Count;
 		var values = new ValueInstance[count];
 		for (var i = 0; i < count; i++)
-			values[i] = RunExpression(list.Values[i], context);
+			values[i] = CopyIfMutableList(RunExpression(list.Values[i], context));
 		return new ValueInstance(list.ReturnType, values);
 	}
 
@@ -118,11 +118,23 @@ public partial class Interpreter
 				Statistics.MutableDeclarationCount++;
 			Statistics.MutableUsageCount++;
 		}
-		var result = RunExpression(value, ctx);
+		var result = !isDeclaration && value is Binary { Instance: { } instance } binary &&
+			instance.ToString() == name
+				? methodCallEvaluator.Evaluate(binary, ctx, true)
+				: CopyIfMutableList(RunExpression(value, ctx));
 		return isDeclaration
 			? ctx.Variables[name] = result
 			: ctx.Set(name, result);
 	}
+
+	/// <summary>
+	/// Lists are values: only list = list + element changes a Mutable list in place, anything else
+	/// keeping it (variable, argument, list element, loop result) gets an immutable copy.
+	/// </summary>
+	internal static ValueInstance CopyIfMutableList(ValueInstance value) =>
+		value is { IsList: true, IsMutable: true }
+			? new ValueInstance(value, value.GetType().GetFirstImplementation())
+			: value;
 
 	private ValueInstance EvaluateReturn(Return r, ExecutionContext ctx)
 	{

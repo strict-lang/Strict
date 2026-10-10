@@ -44,12 +44,16 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 				"List call needs a list, got: " + listInstanceText), null, false);
 	}
 
-	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx)
+	/// <summary>
+	/// isAssignedToInstance is list = list + element, only then a Mutable list changes in place.
+	/// </summary>
+	public ValueInstance Evaluate(MethodCall call, ExecutionContext ctx,
+		bool isAssignedToInstance = false)
 	{
 		interpreter.Statistics.MethodCallCount++;
 		var operatorType = GetOperatorCategory(call.Method.Name);
 		if (operatorType != OperatorCategory.None)
-			return EvaluateArithmeticOrCompareOrLogical(call, ctx, operatorType);
+			return EvaluateArithmeticOrCompareOrLogical(call, ctx, operatorType, isAssignedToInstance);
 		var instance = call.Instance != null
 			? TryGetDirectOuterValue(call.Instance, ctx) ?? interpreter.RunExpression(call.Instance, ctx)
 			: call.Method.Name != Method.From
@@ -104,7 +108,7 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 		};
 
 	private ValueInstance EvaluateArithmeticOrCompareOrLogical(MethodCall call, ExecutionContext ctx,
-		OperatorCategory operatorType)
+		OperatorCategory operatorType, bool isAssignedToInstance)
 	{
 		interpreter.Statistics.BinaryCount++;
 		if (call.Instance == null || call.Arguments.Count != 1)
@@ -117,8 +121,10 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 		var rightInstance = interpreter.RunExpression(call.Arguments[0], ctx);
 		return operatorType switch
 		{
-			OperatorCategory.Arithmetic => ExecuteArithmeticOperation(call, ctx, leftInstance,
-				rightInstance),
+			OperatorCategory.Arithmetic => ExecuteArithmeticOperation(call, ctx,
+				isAssignedToInstance || IsChangingOwnInstance(call, ctx)
+					? leftInstance
+					: Interpreter.CopyIfMutableList(leftInstance), rightInstance),
 			OperatorCategory.Comparison => ExecuteComparisonOperation(call, ctx, leftInstance,
 				rightInstance),
 			OperatorCategory.Logical => ExecuteLogicalBinaryOperation(call, ctx, leftInstance,
@@ -128,6 +134,12 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 					"Unknown operator category"))
 		};
 	}
+
+	/// <summary>
+	/// A method returning Mutable like List.Add changes its instance, value + element is in place.
+	/// </summary>
+	private static bool IsChangingOwnInstance(MethodCall call, ExecutionContext ctx) =>
+		ctx.Method.ReturnType.IsMutable && call.Instance?.ToString() == Type.ValueLowercase;
 
 	/// <summary>
 	/// "and" is false when the left side is false, "or" true when it is true, the right is skipped.
@@ -341,7 +353,12 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 		{
 			args = new ValueInstance[call.Arguments.Count];
 			for (var i = 0; i < call.Arguments.Count; i++)
-				args[i] = interpreter.RunExpression(call.Arguments[i], ctx);
+			{
+				var argument = interpreter.RunExpression(call.Arguments[i], ctx);
+				args[i] = i < call.Method.Parameters.Count && call.Method.Parameters[i].IsMutable
+					? argument
+					: Interpreter.CopyIfMutableList(argument);
+			}
 		}
 		if (instance is { IsDictionary: true } && args.Length > 0 && call.Method.Name == "Add")
 		{
