@@ -75,6 +75,40 @@ public sealed class StrictBytecodeTests
 		Assert.That(Execute(binaryPath, basePackage, variables), Is.EqualTo(expected));
 	}
 
+	[TestCase("HelloLogger")]
+	[TestCase("NativeArithmetic")]
+	[TestCase("NativeConditions")]
+	[TestCase("NativeLoop")]
+	[TestCase("Greeter")]
+	[TestCase("Fibonacci")]
+	[TestCase("AreaCalculator")]
+	[TestCase("SimpleCalculator")]
+	[TestCase("TemperatureConverter")]
+	[TestCase("GcdCalculator")]
+	[TestCase("FizzBuzz")]
+	[TestCase("AutofilledMutable")]
+	[TestCase("Pixel")]
+	[TestCase("DirProbe")]
+	[TestCase("NumberSummer")]
+	[TestCase("MemoryPressure")]
+	[TestCase("NumberStats")]
+	[TestCase("Grade")]
+	public async Task StrictVirtualMachineRunsLikeCSharp(string example)
+	{
+		var source = Root + "/Examples/" + example + Type.Extension;
+		await new Runner(source).Run();
+		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
+		consoleWriter.GetStringBuilder().Clear();
+		new VirtualMachine(new BinaryExecutable(Path.ChangeExtension(source, BinaryExecutable.Extension),
+			basePackage)).Execute();
+		var expected = consoleWriter.ToString();
+		consoleWriter.GetStringBuilder().Clear();
+		await new Runner(Root + "/Runtime/Execute" + Type.Extension, source + " " + Root).Run();
+		var output = consoleWriter.ToString();
+		Assert.That(output[..output.LastIndexOf("Executed ", StringComparison.Ordinal)],
+			Is.EqualTo(expected));
+	}
+
 	private static string Root =>
 		Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)).
 			Replace('\\', '/');

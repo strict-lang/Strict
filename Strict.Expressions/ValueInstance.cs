@@ -685,6 +685,7 @@ public readonly partial struct ValueInstance : IEquatable<ValueInstance>
 				return true;
 			}
 			if (other.number != ListId && other.number != DictionaryId && other.number != TextId &&
+				other.value is not Type { IsNone: true } &&
 				flatArray.TryGetMember("number", out var flatNumberMember) &&
 				flatNumberMember.number == other.number)
 				return true;
@@ -698,11 +699,12 @@ public readonly partial struct ValueInstance : IEquatable<ValueInstance>
 			if (other.number == TypeId)
 				return instance.Equals((ValueTypeInstance)other.value);
 			if (other.number != ListId && other.number != DictionaryId && other.number != TextId &&
+				other.value is not Type { IsNone: true } &&
 				instance.TryGetValue("number", out var numberMember) && numberMember.number == other.number)
 				return true;
 		}
 		else if (other.number == TypeId && number != ListId && number != DictionaryId &&
-			number != TextId &&
+			number != TextId && value is not Type { IsNone: true } &&
 			((ValueTypeInstance)other.value).TryGetValue("number", out var otherNumberMember) &&
 			otherNumberMember.number == number)
 		{

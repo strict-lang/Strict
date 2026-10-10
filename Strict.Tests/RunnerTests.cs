@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Runtime.InteropServices;
 using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
@@ -137,6 +137,7 @@ public sealed class RunnerTests
 		["Expressions/ResolveCheck.strict"] = "Expressions .",
 		["Expressions/TypeReport.strict"] = "Expressions .",
 		["Bytecode/FileCompiler.strict"] = "Examples/HelloLogger.strict .",
+		["Runtime/Execute.strict"] = "Examples/HelloLogger.strict .",
 		["Validators/ValidateCheck.strict"] = "Validators ."
 	};
 

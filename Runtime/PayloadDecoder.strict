@@ -1,0 +1,58 @@
+has entry Bytecode/InstructionEntry
+constant Ones = PayloadDecoder(InstructionEntry(InstructionType.LoadConstantToRegister, ("Strict/List(Number)"), (0, 6, -1, 2, 1, 1, 3, 0, 0, 0, 0, 0, 0, 248, 63)))
+Value(position Number) VmValue
+	PayloadDecoder(InstructionEntry.LoadNumber(0, 7)).Value(1).number is 7
+	PayloadDecoder(InstructionEntry.LoadText(0, "a")).Value(1).text is "a"
+	PayloadDecoder(InstructionEntry.LoadBoolean(0, true)).Value(1).IsTrue is true
+	let kind = entry.payload(position)
+	if kind is 1
+		return VmValue.OfNumber(entry.payload(position + 1))
+	if kind is 3
+		return VmValue.OfNumber(Double(position + 1))
+	if kind is 4
+		return VmValue.OfText(Text(position + 1))
+	kind is 5 then VmValue.OfBoolean(entry.payload(position + 1) is 1) else Elements(position)
+End(position Number) Number
+	Ones.End(1) is 15
+	let kind = entry.payload(position)
+	if kind is 3
+		return position + 9
+	if kind is not 6
+		return position + 2
+	mutable next = position + 3
+	for entry.payload(position + 2)
+		next = End(next)
+	next
+Elements(position Number) VmValue
+	Ones.Elements(1) to Text is "(1, 1.5)"
+	mutable elements = List(Mutable(VmValue))
+	mutable next = position + 3
+	for entry.payload(position + 2)
+		elements.Add(Value(next))
+		next = End(next)
+	VmValue.OfList(elements)
+Double(position Number) Number
+	PayloadDecoder(InstructionEntry.LoadNumber(0, 1.5)).Double(2) is 1.5
+	PayloadDecoder(InstructionEntry.LoadNumber(0, -1000)).Double(2) is -1000
+	let top = entry.payload(position + 7)
+	let sixth = entry.payload(position + 6)
+	let exponent = (top % 128) * 16 + (sixth / 16).Floor
+	mutable mantissa = sixth % 16
+	for 6
+		mantissa = mantissa * 256 + entry.payload(position + 5 - index)
+	let fraction = exponent is 0 then mantissa / 2 ^ 52 else 1 + mantissa / 2 ^ 52
+	let magnitude = fraction * 2 ^ ((exponent is 0 then 1 else exponent) - 1023)
+	top < 128 then magnitude else 0 - magnitude
+Text(position Number) Text
+	PayloadDecoder(InstructionEntry.LoadText(0, "a")).Text(2) is "a"
+	entry.texts(-1 - entry.payload(position))
+SevenBit(position Number) Number
+	PayloadDecoder(InstructionEntry.Jump(InstructionType.LoopEnd, 300)).SevenBit(0) is 300
+	mutable result = 0
+	mutable scale = 1
+	for Range(position, entry.payload.Length)
+		result = result + (entry.payload(value) % 128) * scale
+		if entry.payload(value) < 128
+			return result
+		scale = scale * 128
+	result

@@ -1,4 +1,4 @@
-using Strict.Expressions;
+﻿using Strict.Expressions;
 using Strict.Language;
 using Strict.Language.Tests;
 using Type = Strict.Language.Type;
@@ -36,6 +36,21 @@ public sealed class ToTests
 					new ValueInstance(package.GetType(Type.Number), 0)
 				])
 			]), []).Text, Is.EqualTo("(0, 0, 0, 255)"));
+	}
+
+	[Test]
+	public void OwnToTextIsUsedForElementsOfOwnType()
+	{
+		const string Name = "TextTree";
+		var type = CreateType(Name, "has kind Text", "has number", "has text",
+			"has items List(" + Name + ")", "to Text", "\tif kind is \"Number\"",
+			"\t\treturn number to Text", "\tkind is \"List\" then Joined else text", "Joined Text",
+			"\tmutable result = \"(\"", "\tfor items", "\t\tresult = result + value to Text",
+			"\tresult + \")\"", "Run Text",
+			"\tconstant one = " + Name + "(\"Number\", 1, \"\", List(" + Name + "))",
+			"\t" + Name + "(\"List\", 0, \"\", (one, one)) to Text");
+		Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+			interpreter.noneInstance, []).Text, Is.EqualTo("(11)"));
 	}
 
 	[Test]

@@ -1,0 +1,26 @@
+has frame
+constant LoadSeven = InstructionEntry.LoadNumber(0, 7)
+constant StoreSeven = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a")
+constant LoadA = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a")
+constant AppendSeven = InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "list")
+constant Sample = Frame(MethodEntry("Run", List(MemberEntry), "None", (LoadSeven, StoreSeven, LoadA, AppendSeven)), 0, List(VmValue), Locals.Empty)
+Step Frame
+	Storage(Sample).Step.Register(0).number is 7
+	Storage(Storage(Sample).Step).Step.Local("a").number is 7
+	Storage(Storage(Storage(Sample).Step).Step).Step.Register(1).number is 7
+	let entry = frame.Instruction
+	let kind = entry.kind
+	if kind is InstructionType.LoadConstantToRegister
+		return frame.WithRegister(entry.payload(0), PayloadDecoder(entry).Value(1)).Next
+	if kind is InstructionType.LoadVariableToRegister
+		return frame.WithRegister(entry.payload(0), frame.Local(entry.texts(0))).Next
+	if kind is InstructionType.StoreConstantToVariable
+		return frame.WithLocal(entry.texts.Last, PayloadDecoder(entry).Value(0)).Next
+	kind is InstructionType.StoreRegisterToVariable then Stored(entry.texts(0)) else Appended(entry.texts(0))
+Stored(name Text) Frame
+	Storage(Sample.Next).Stored("b").Local("b").kind is "None"
+	frame.WithLocal(name, frame.Register(frame.Instruction.payload(0))).Next
+Appended(name Text) Frame
+	Storage(Sample.WithRegister(0, VmValue.OfNumber(7)).At(3)).Appended("list").Local("list").Length is 1
+	let elements = frame.Local(name).items + frame.Register(frame.Instruction.payload(0))
+	frame.WithLocal(name, VmValue.OfList(elements)).Next

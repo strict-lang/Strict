@@ -125,14 +125,12 @@ public sealed class Repositories(ExpressionParser parser)
 			var parent = await LoadParentPackage(fullName);
 			var files = Directory.GetFiles(packagePath, "*" + Type.Extension);
 			var dependencyPackages = await LoadDependencyPackages(fullName, files);
-			var package = CreatePackageFromFiles(packagePath, files
+			return CreatePackageFromFiles(packagePath, files, dependencyPackages
 #if DEBUG
 				, parent, callerFilePath, callerLineNumber, callerMemberName);
 #else
 				, parent);
 #endif
-			package.automaticallyLoadedDependencyPackages = dependencyPackages;
-			return package;
 		});
 
 	private async Task<Package?> LoadParentPackage(string fullName)
@@ -220,7 +218,7 @@ public sealed class Repositories(ExpressionParser parser)
 	/// Constraint parsing is deferred to a second pass so all type methods are available.
 	/// </summary>
 	private Package CreatePackageFromFiles(string packagePath, IReadOnlyCollection<string> files,
-		Package? parent = null
+		List<Package> dependencyPackages, Package? parent = null
 #if DEBUG
 		, [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = 0,
 		[CallerMemberName] string callerMemberName = ""
@@ -239,6 +237,7 @@ public sealed class Repositories(ExpressionParser parser)
 			? new Package(parent, packagePath, this)
 			: new Package(packagePath, this);
 #endif
+		package.automaticallyLoadedDependencyPackages = dependencyPackages;
 		lock (LoadedPackages)
 		{
 			LoadedPackages.Add(package);

@@ -1,0 +1,75 @@
+has types List(TypeEntry)
+has logger
+constant MaxSteps = 10000000
+constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
+constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
+Launch(typeName Text)
+	let main = Natives(types).TypeOf(typeName)
+	let run = Find(typeName, "Run", 0)
+	Execute(run, Bound(main, Natives(types).Fresh(main), run, List(VmValue)))
+Find(typeName Text, methodName Text, count Number) MethodEntry
+	Hello.Find("HelloLogger", "Run", 0).instructions.Length is 2
+	Hello.Find("HelloLogger", "Other", 0).instructions.Length is 0
+	for Natives(types).TypeOf(typeName).methods
+		if (value.Name is methodName) and (value.parameters.Length is count)
+			return value
+	MethodEntry(methodName, List(MemberEntry), "None", List(InstructionEntry))
+Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue)) Locals
+	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue)).Get("value").number is 2
+	mutable locals = Locals.Empty.With("#this", instance).With("value", instance)
+	if instance.kind is "List"
+		locals = locals.With("elements", instance)
+	if Natives(types).IsNamed(type, instance.kind)
+		for type.members
+			locals = locals.With(value.Name, (index < instance.items.Length then instance.items(index) else VmValue.None))
+	for method.parameters
+		locals = locals.With(value.Name, arguments(index))
+	locals
+Execute(method MethodEntry, locals Locals) VmValue
+	Machine(List(TypeEntry) + Doubler).Execute(Doubler.methods.First, Locals.Empty).number is 42
+	mutable current = Frame(method, 0, List(VmValue), locals)
+	for MaxSteps
+		if current.IsDone
+			return current.Local("#result")
+		current = Step(current)
+	logger.Log("Stopped " + method.Name + " after " + MaxSteps + " steps")
+	current.Local("#result")
+Step(frame Frame) Frame
+	Hello.Step(Frame(Doubler.methods.First, 0, List(VmValue), Locals.Empty)).Register(0).number is 21
+	let kind = frame.Instruction.kind
+	if kind <= InstructionType.StoreRegisterToVariable or (kind is InstructionType.InvokeWriteToList)
+		return Storage(frame).Step
+	if kind < InstructionType.BinaryOperatorsSeparator
+		return Operations(frame).Step
+	if kind is InstructionType.Invoke
+		return Invoked(frame)
+	if kind is InstructionType.Print
+		return Printed(frame)
+	kind is InstructionType.FieldLoad then Field(frame) else Flow(frame).Step
+Invoked(frame Frame) Frame
+	Machine(List(TypeEntry) + Doubler).Invoked(Frame(MethodEntry.GoRun, 0, List(VmValue), Locals.Empty)).position is 1
+	let result = Call(Invocation(frame.Instruction, frame))
+	if result.kind is "Error"
+		logger.Log(result.text)
+	frame.WithRegister(frame.Instruction.payload(0), result).Next
+Call(call Invocation) VmValue
+	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
+	let method = Find(call.TypeName, call.MethodName, call.Arguments.Length)
+	if method.instructions.Length is 0
+		return Natives(types).Result(call)
+	Execute(method, Bound(Natives(types).TypeOf(call.TypeName), call.Instance, method, call.Arguments))
+Printed(frame Frame) Frame
+	Hello.Printed(Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)).position is 1
+	let entry = frame.Instruction
+	let shown = entry.payload(1) is 1 then frame.Register(entry.payload(2)) to Text else ""
+	logger.Log(entry.texts(0) + shown)
+	frame.Next
+Field(frame Frame) Frame
+	Hello.Field(Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)).position is 1
+	let entry = frame.Instruction
+	let instance = frame.Register(entry.payload(1))
+	mutable found = VmValue.None
+	for Natives(types).TypeOf(instance.kind).members
+		if value.Name is entry.texts(0)
+			found = instance.items(index)
+	frame.WithRegister(entry.payload(0), found).Next

@@ -1,0 +1,4 @@
+has logger
+Run(path Text, root Text)
+	let types = FileCompiler(logger).Compiled(path, root)
+	Machine(types, logger).Launch(types.First.Name)

@@ -931,6 +931,27 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
+	public void ConstructorWithoutLoggerArgumentCreatesLogger()
+	{
+		using var type = CreateType(nameof(ConstructorWithoutLoggerArgumentCreatesLogger),
+			"has number", "has logger", "Shown Number", "\tlogger.Log(\"shown\")", "\tnumber", "Run Number",
+			"\t" + nameof(ConstructorWithoutLoggerArgumentCreatesLogger) + "(3).Shown");
+		var output = new StringWriter();
+		var previous = Console.Out;
+		Console.SetOut(output);
+		try
+		{
+			Assert.That(interpreter.Execute(type.Methods.Single(method => method.Name == Method.Run),
+				interpreter.noneInstance, []).Number, Is.EqualTo(3));
+		}
+		finally
+		{
+			Console.SetOut(previous);
+		}
+		Assert.That(output.ToString(), Does.Contain("shown"));
+	}
+
+	[Test]
 	public void ExecuteRunMethodWithLoggerWritesToConsole()
 	{
 		using var app = CreateType(nameof(ExecuteRunMethodWithLoggerWritesToConsole), "has logger",

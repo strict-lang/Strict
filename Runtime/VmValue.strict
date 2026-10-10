@@ -1,59 +1,43 @@
 has kind Text
 has number
 has text
-has flag Boolean
-IsNone Boolean
-	if kind is "None"
-		return true
-	false
-IsNumber Boolean
-	if kind is "Number"
-		return true
-	false
-IsBoolean Boolean
-	if kind is "Boolean"
-		return true
-	false
-IsText Boolean
-	if kind is "Text"
-		return true
-	false
+has items List(VmValue)
+constant None = VmValue("None", 0, "", List(VmValue))
+OfNumber(amount Number) VmValue
+	OfNumber(3).number is 3
+	VmValue("Number", amount, "", List(VmValue))
+OfText(content Text) VmValue
+	OfText("a").text is "a"
+	VmValue("Text", 0, content, List(VmValue))
+OfBoolean(condition Boolean) VmValue
+	OfBoolean(true).IsTrue is true
+	VmValue("Boolean", (condition then 1 else 0), "", List(VmValue))
+OfList(elements List(VmValue)) VmValue
+	OfList(OfNumber(1), OfNumber(2)).items.Length is 2
+	VmValue("List", 0, "", elements)
 IsTrue Boolean
-	if kind is "Boolean"
-		if flag
-			return true
-	false
+	OfBoolean(false).IsTrue is false
+	number is 1
+Length Number
+	OfText("abc").Length is 3
+	OfList(OfNumber(1), OfNumber(2)).Length is 2
+	kind is "Text" then text.Length else items.Length
 to Text
+	OfNumber(2.5) to Text is "2.5"
+	OfBoolean(true) to Text is "true"
+	OfText("a") to Text is "a"
+	OfList(OfNumber(1), OfNumber(2)) to Text is "(1, 2)"
 	if kind is "Number"
 		return number to Text
 	if kind is "Boolean"
-		return FlagText
-	if kind is "Text"
-		return text
-	"none"
-FlagText Text
-	if flag
-		return "true"
-	"false"
-None VmValue
-	VmValue.None.IsNone is true
-	VmValue("None", 0, "", false)
-FromNumber(amount Number) VmValue
-	FromNumber(5).number is 5
-	VmValue("Number", amount, "", false)
-FromBoolean(flagValue Boolean) VmValue
-	FromBoolean(true).flag is true
-	VmValue("Boolean", 0, "", flagValue)
-FromText(content Text) VmValue
-	FromText("hi").text is "hi"
-	VmValue("Text", 0, content, false)
-EqualsValue(other VmValue) Boolean
-	if kind is not other.kind
-		return false
-	if kind is "Number"
-		return number is other.number
-	if kind is "Boolean"
-		return flag is other.flag
-	if kind is "Text"
-		return text is other.text
-	true
+		return IsTrue then "true" else "false"
+	kind is "List" then Joined else text
+Joined Text
+	OfList(OfNumber(1), OfNumber(2)).Joined is "(1, 2)"
+	OfList(List(VmValue)).Joined is ""
+	if items.Length < 2
+		return items.Length is 0 then "" else items(0) to Text
+	mutable result = "(" + items(0) to Text
+	for Range(1, items.Length)
+		result = result + ", " + items(value) to Text
+	result + ")"

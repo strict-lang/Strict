@@ -1,0 +1,71 @@
+has frame
+constant Counting = Frame(MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1))), 0, List(VmValue) + VmValue.OfNumber(3), Locals.Empty)
+constant Ranged = Frame(MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, 1), InstructionEntry.Jump(InstructionType.LoopEnd, 1))), 0, (VmValue.OfNumber(5), VmValue.OfNumber(2)), Locals.Empty)
+Begin Frame
+	Looping(Counting).Begin.Local("index").number is 0
+	Looping(Ranged).Begin.Local("value").number is 5
+	let entry = frame.Instruction
+	let iterable = frame.Register(entry.payload(0))
+	let hasEnd = entry.payload(1) is 1
+	let start = hasEnd then iterable.number else 0
+	let end = hasEnd then frame.Register(entry.payload(2)).number else Count(iterable)
+	let state = (iterable, VmValue.OfNumber(start), VmValue.OfNumber(end), frame.Local("index"), frame.Local("value"))
+	let begin = frame.position
+	let started = frame.WithLocal("#loop" + begin, VmValue.OfList(state))
+	start is end then Restored(started, begin).At(EndOf(begin) + 1) else Current(started, begin, 0).Next
+End Frame
+	Looping(Looping(Counting).Begin).End.Local("index").number is 1
+	Looping(Looping(Ranged).Begin).End.Local("value").number is 4
+	let begin = BeginOf(frame.position)
+	let state = frame.Local("#loop" + begin).items
+	let length = (state(2).number - state(1).number).Absolute
+	let next = frame.Local("#iteration" + begin).number + 1
+	next < length then Current(frame, begin, next).At(begin + 1) else Restored(frame, begin).Next
+Current(looped Frame, begin Number, iteration Number) Frame
+	Looping(Counting).Current(Looping(Counting).Begin, 0, 2).Local("value").number is 2
+	let state = looped.Local("#loop" + begin).items
+	let current = Element(state, iteration)
+	let index = state(0).kind is in ("List", "Text") then VmValue.OfNumber(iteration) else current
+	let counted = looped.WithLocal("#iteration" + begin, VmValue.OfNumber(iteration))
+	counted.WithLocal("index", index).WithLocal("value", current)
+Element(state List(VmValue), iteration Number) VmValue
+	Looping(Counting).Element((VmValue.OfText("ab"), VmValue.OfNumber(0), VmValue.OfNumber(2)), 1).text is "b"
+	Looping(Counting).Element((VmValue.OfNumber(5), VmValue.OfNumber(5), VmValue.OfNumber(2)), 1).number is 4
+	let iterable = state(0)
+	if iterable.kind is "List"
+		return iterable.items(iteration)
+	if iterable.kind is "Text"
+		return VmValue.OfText(iterable.text.Substring(iteration, 1))
+	let start = state(1).number
+	VmValue.OfNumber(state(2).number < start then start - iteration else start + iteration)
+Restored(looped Frame, begin Number) Frame
+	Looping(Counting).Restored(Looping(Counting).Begin, 0).Local("index").kind is "None"
+	let state = looped.Local("#loop" + begin).items
+	looped.WithLocal("index", state(3)).WithLocal("value", state(4))
+Count(iterable VmValue) Number
+	Looping(Counting).Count(VmValue.OfNumber(2.5)) is 2
+	Looping(Counting).Count(VmValue.OfText("abc")) is 3
+	if iterable.kind is "Number"
+		return iterable.number < 0 then 0 else iterable.number.Floor
+	iterable.Length
+BeginOf(position Number) Number
+	Looping(Counting).BeginOf(1) is 0
+	mutable depth = 0
+	for position
+		let candidate = position - 1 - index
+		let kind = frame.method.instructions(candidate).kind
+		if (kind is InstructionType.LoopBegin) and (depth is 0)
+			return candidate
+		let change = kind is InstructionType.LoopEnd then 1 else kind is InstructionType.LoopBegin then -1 else 0
+		depth = depth + change
+	0
+EndOf(position Number) Number
+	Looping(Counting).EndOf(0) is 1
+	mutable depth = 0
+	for Range(position + 1, frame.method.instructions.Length)
+		let kind = frame.method.instructions(value).kind
+		if (kind is InstructionType.LoopEnd) and (depth is 0)
+			return value
+		let change = kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0
+		depth = depth + change
+	frame.method.instructions.Length

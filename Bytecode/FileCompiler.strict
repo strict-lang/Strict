@@ -1,14 +1,16 @@
 has logger
 constant Go = TypeEntry("A", List(MemberEntry), MethodEntry.GoRun)
 Run(path Text, root Text)
-	let inference = ResolveCheck.Inference(Directory.Files(root, "*.strict") + path)
-	let fullName = "Strict/" + path.Substring(root.Length + 1, path.Length - root.Length - 8)
-	let main = TypeCodegen(fullName, File(path).ReadLines, inference).Entry
-	let bytes = BinaryFile(Linked(main, root, inference, 3)).Bytes
+	let bytes = BinaryFile(Compiled(path, root)).Bytes
 	if IsValid(bytes)
 		logger.Log(bytes)
 	else
 		logger.Log("Compilation failed, unsupported code in " + path)
+Compiled(path Text, root Text) List(TypeEntry)
+	let inference = ResolveCheck.Inference(Directory.Files(root, "*.strict") + path)
+	let fullName = "Strict/" + path.Substring(root.Length + 1, path.Length - root.Length - 8)
+	let main = TypeCodegen(fullName, File(path).ReadLines, inference).Entry
+	Linked(main, root, inference, 3)
 IsValid(bytes Numbers) Boolean
 	IsValid(0, 255) is true
 	IsValid(1, 256) is false

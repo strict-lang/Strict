@@ -1,0 +1,58 @@
+has frame
+constant Pair = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))), 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty)
+constant Compare = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Binary(InstructionType.LessThan, (0, 1))), 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty)
+constant OneTwo = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))
+Step Frame
+	Operations(Pair).Step.Register(2).number is 7
+	Operations(Compare).Step.Local("#flag").IsTrue is true
+	let entry = frame.Instruction
+	let left = frame.Register(entry.payload(1))
+	let right = frame.Register(entry.payload(2))
+	if entry.kind > InstructionType.ArithmeticSeparator
+		return Compared(Comparison(entry.kind, left, right))
+	frame.WithRegister(entry.payload(3), Calculated(entry.kind, left, right)).Next
+Compared(condition Boolean) Frame
+	Operations(Pair).Compared(true).Register(2).IsTrue is true
+	let truth = VmValue.OfBoolean(condition)
+	let flagged = frame.WithLocal("#flag", truth)
+	let entry = frame.Instruction
+	let result = entry.payload(0) is 3 then flagged.WithRegister(entry.payload(3), truth) else flagged
+	result.Next
+Comparison(kind Number, left VmValue, right VmValue) Boolean
+	Operations(Pair).Comparison(InstructionType.GreaterThan, VmValue.OfNumber(3), VmValue.OfNumber(1)) is true
+	Operations(Pair).Comparison(InstructionType.Equal, VmValue.OfText("a"), VmValue.OfText("a")) is true
+	if kind is InstructionType.Equal
+		return left is right
+	if kind is InstructionType.NotEqual
+		return left is not right
+	kind is InstructionType.LessThan then left.number < right.number else left.number > right.number
+Calculated(kind Number, left VmValue, right VmValue) VmValue
+	Operations(Pair).Calculated(InstructionType.Modulo, VmValue.OfNumber(7), VmValue.OfNumber(4)).number is 3
+	if kind is InstructionType.Add
+		return Added(left, right)
+	if kind is InstructionType.Subtract
+		return left.kind is "List" then Removed(left, right) else VmValue.OfNumber(left.number - right.number)
+	if kind is InstructionType.Multiply
+		return VmValue.OfNumber(left.number * right.number)
+	if kind is InstructionType.Divide
+		return VmValue.OfNumber(left.number / right.number)
+	VmValue.OfNumber(kind is InstructionType.Modulo then left.number % right.number else left.number ^ right.number)
+Added(left VmValue, right VmValue) VmValue
+	Operations(Pair).Added(VmValue.OfText("a"), VmValue.OfNumber(1)).text is "a1"
+	Operations(Pair).Added(VmValue.OfList(List(VmValue)), VmValue.OfNumber(1)).Length is 1
+	if left.kind is "List"
+		return VmValue.OfList(right.kind is "List" then left.items + right.items else left.items + right)
+	if right.kind is "List"
+		return VmValue.OfList(List(VmValue) + left + right.items)
+	let leftText = left to Text
+	if (left.kind is "Text") or (right.kind is "Text")
+		return VmValue.OfText(leftText + right to Text)
+	VmValue.OfNumber(left.number + right.number)
+Removed(elements VmValue, element VmValue) VmValue
+	Operations(Pair).Removed(OneTwo, VmValue.OfNumber(1)).items.First.number is 2
+	let position = elements.items.Index(element)
+	mutable remaining = List(Mutable(VmValue))
+	for elements.items
+		if index is not position
+			remaining.Add(value)
+	VmValue.OfList(remaining)

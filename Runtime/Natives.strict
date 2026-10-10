@@ -1,0 +1,81 @@
+has types List(TypeEntry)
+constant Width = MemberEntry("width", "Strict/Number", List(InstructionEntry), false)
+constant Shape = TypeEntry("Strict/Shape", (Width, MemberEntry.LoggerMember), List(MethodEntry))
+constant Shapes = Natives(List(TypeEntry) + Shape)
+constant NewShape = Invocation(InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfNumber(3), Locals.Empty))
+Result(call Invocation) VmValue
+	Shapes.Result(NewShape).items.First.number is 3
+	let name = call.MethodName
+	if name is "from"
+		return Constructed(call)
+	let instance = call.Instance
+	if name is "to"
+		return Converted(instance, call.ReturnType)
+	if name is in ("Length", "Count")
+		return VmValue.OfNumber(instance.Length)
+	if name is in ("not", "and", "or", "xor")
+		return Logical(name, instance.IsTrue, call)
+	Queried(name, instance, call)
+Converted(instance VmValue, target Text) VmValue
+	Shapes.Converted(VmValue.OfNumber(2), "Strict/Text").text is "2"
+	Shapes.Converted(VmValue.OfText("5"), "Strict/Number").number is 5
+	target is "Strict/Text" then VmValue.OfText(instance to Text) else VmValue.OfNumber(instance.text to Number)
+Logical(name Text, left Boolean, call Invocation) VmValue
+	Shapes.Logical("not", true, NewShape).IsTrue is false
+	if name is "not"
+		return VmValue.OfBoolean(left is false)
+	let right = call.Arguments.First.IsTrue
+	VmValue.OfBoolean(name is "and" then left and right else name is "or" then left or right else left is not right)
+Queried(name Text, instance VmValue, call Invocation) VmValue
+	Shapes.Queried("in", VmValue.OfList(VmValue.OfNumber(3)), NewShape).IsTrue is true
+	if name is "in"
+		return VmValue.OfBoolean(call.Arguments.First is in instance.items)
+	if name is "Index"
+		return VmValue.OfNumber(instance.items.Index(call.Arguments.First))
+	if name is not "Exists"
+		return VmValue("Error", 0, "Unsupported native call " + call.TypeName + "." + name, List(VmValue))
+	let path = call.Arguments.Length > 0 then call.Arguments.First.text else instance.items.First.text
+	VmValue.OfBoolean(File(path).Exists or Directory.Exists(path))
+Constructed(call Invocation) VmValue
+	Shapes.Constructed(NewShape).kind is "Strict/Shape"
+	let type = TypeOf(call.TypeName)
+	if type.members.Length is 0
+		return call.Arguments.Length > 0 then call.Arguments.First else VmValue.None
+	let arguments = call.Arguments
+	mutable values = List(Mutable(VmValue))
+	for type.members
+		let argument = call.ParameterNames.Index(value.Name)
+		let chosen = argument < 0 then index else argument
+		let isGiven = (value.IsConstant is false) and chosen < arguments.Length
+		values.Add(isGiven then arguments(chosen) else Initial(value))
+	VmValue(call.TypeName, 0, "", values)
+Fresh(type TypeEntry) VmValue
+	Shapes.Fresh(Shape).items.First.number is 0
+	mutable values = List(Mutable(VmValue))
+	for type.members
+		values.Add(Initial(value))
+	VmValue(type.Name, 0, "", values)
+Initial(member MemberEntry) VmValue
+	Shapes.Initial(Width).number is 0
+	Shapes.Initial(MemberEntry.SevenMember).number is 7
+	if member.initial.Length > 0
+		return PayloadDecoder(member.initial.First).Value(0)
+	if member.typeName is "Strict/Number"
+		return VmValue.OfNumber(0)
+	if member.typeName is "Strict/Text"
+		return VmValue.OfText("")
+	if member.typeName is "Strict/Boolean"
+		return VmValue.OfBoolean(false)
+	member.typeName.StartsWith("Strict/List") then VmValue.OfList(List(VmValue)) else VmValue.None
+TypeOf(name Text) TypeEntry
+	Shapes.TypeOf("Strict/Shape").members.Length is 2
+	Shapes.TypeOf("Strict/Other").members.Length is 0
+	Shapes.TypeOf("Shape").Name is "Strict/Shape"
+	for types
+		if IsNamed(value, name)
+			return value
+	TypeEntry(name, List(MemberEntry), List(MethodEntry))
+IsNamed(type TypeEntry, name Text) Boolean
+	Shapes.IsNamed(Shape, "Shape") is true
+	Shapes.IsNamed(Shape, "Strict/Other") is false
+	type.JustName is TypeEntry(name, List(MemberEntry), List(MethodEntry)).JustName

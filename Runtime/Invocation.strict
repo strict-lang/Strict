@@ -1,0 +1,29 @@
+has entry InstructionEntry
+has frame
+constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), Frame(MethodEntry.HelloRun, 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty))
+TypeName Text
+	AddCall.TypeName is "T"
+	PayloadDecoder(entry).Text(1)
+MethodName Text
+	AddCall.MethodName is "Add"
+	PayloadDecoder(entry).Text(2)
+ReturnType Text
+	AddCall.ReturnType is "Strict/Number"
+	PayloadDecoder(entry).Text(4 + entry.payload(3))
+ParameterNames Texts
+	AddCall.ParameterNames is ("x")
+	mutable names = List(Mutable(Text))
+	for entry.payload(3)
+		names.Add(PayloadDecoder(entry).Text(4 + index))
+	names
+Arguments List(VmValue)
+	AddCall.Arguments.First.number is 3
+	let countPosition = 5 + entry.payload(3)
+	mutable arguments = List(Mutable(VmValue))
+	for entry.payload(countPosition)
+		arguments.Add(frame.Register(entry.payload(countPosition + 1 + index)))
+	arguments
+Instance VmValue
+	AddCall.Instance.number is 4
+	let flagPosition = 6 + entry.payload(3) + entry.payload(5 + entry.payload(3))
+	entry.payload(flagPosition) is 1 then frame.Register(entry.payload(flagPosition + 1)) else frame.Local("#this")

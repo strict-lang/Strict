@@ -30,6 +30,17 @@ public class PackageTests
 	}
 
 	[Test]
+	public void DependencyPackageTypeIsFoundBeforeOtherChildPackages()
+	{
+		new Type(new Package(mainPackage, "Unrelated"), new TypeLines("Shared", "Run"));
+		var dependency = new Package(mainPackage, "Dependency");
+		var expected = new Type(dependency, new TypeLines("Shared", "Run"));
+		var user = new Package(mainPackage, "User");
+		user.automaticallyLoadedDependencyPackages.Add(dependency);
+		Assert.That(user.FindType("Shared"), Is.EqualTo(expected));
+	}
+
+	[Test]
 	public void IsPrivateNameCheckShouldReturnNull() =>
 		Assert.That(new Package(nameof(IsPrivateNameCheckShouldReturnNull)).FindType("isPrivate"),
 			Is.Null);

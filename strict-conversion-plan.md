@@ -389,6 +389,26 @@ rejected like keywords (CannotUseKeywordsAsName). The C#
 RedundantLoadEliminator ignores StoreConstantToVariable between two loads of the same variable
 (Strict's LoadReuse treats every store as a barrier).
 
+D5 progress (2026-10-10): `Runtime/` is rewritten, the old BytecodeInstruction sketch is gone. The
+Strict VM (`Machine`) runs the TypeEntry/MethodEntry/InstructionEntry lists produced by the
+Strict compiler: `VmValue` (kind, number, text, items), `Locals`, `Frame` (registers, locals, the
+condition flag and loop state as `#` locals), `PayloadDecoder` (small numbers, IEEE doubles,
+texts, lists, 7-bit ids), `Storage`, `Operations`, `Flow`, `Looping` (count and range loops in
+both directions, lists, texts, index/value restored), `Invocation` (Invoke payload) and `Natives`
+(constructors by member name with defaults, to, Length/Count, Boolean logic, in/Index, Exists).
+`Runtime/Execute.strict <file> <root>` compiles a program with the Strict compiler and runs it on
+the Strict VM. Slow test `StrictVirtualMachineRunsLikeCSharp`: 18 Examples print the same as on
+the C# VM (ProcessProbe needs process natives, Sum program arguments). Open: loading
+`.strictbinary` files (decoder per instruction kind, stored ZIP), process natives, program
+arguments, speed (the Strict VM runs inside the C# VM).
+C# bugs found on the way (each with a test): `ValueInstance.Equals` treated a type instance whose
+`number` member is 0 as None, so the implicit instance of a method call was lost; the interpreter
+left constructor members without a from parameter (like `logger`) uninitialized
+(NullReferenceException); type lookup ignored the packages a package declares (Runtime found
+`Examples/InstructionType` instead of `Bytecode/InstructionType` once Examples was loaded) and the
+dependencies were only assigned after parsing the package. Strict papercuts still open:
+`Method(not x)` (sole unary argument) is not parsed, `(a then b else c).Next` is parsed as a list.
+
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
    `-Windows/-Linux/-MacOS`, diagnostics flag shows stage times + instruction reduction.

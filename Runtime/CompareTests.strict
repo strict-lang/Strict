@@ -1,9 +1,0 @@
-has logger
-Run
-	constant left = BytecodeInstruction.LoadConstant(0, 5)
-	constant right = BytecodeInstruction.LoadConstant(1, 5)
-	constant eq = BytecodeInstruction("Equal", 0, 1, "2")
-	constant ret = BytecodeInstruction.ReturnOp(2)
-	constant ops = InstructionList.Empty.Append(left).Append(right).Append(eq).Append(ret)
-	constant state = VirtualMachine(ops).Run
-	logger.Log(state.returnValue)

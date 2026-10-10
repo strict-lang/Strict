@@ -162,7 +162,8 @@ public class Package : Context, IDisposable
 		}
 		if (IsPrivateName(name))
 			return null;
-		var type = FindDirectType(name) ?? FindTypeInChildrenOrParentPackages(name, searchingFrom);
+		var type = FindDirectType(name) ?? FindTypeInDependencyPackages(name) ??
+			FindTypeInChildrenOrParentPackages(name, searchingFrom);
 		if (type != null)
 			lock (syncRoot)
 			{
@@ -170,6 +171,17 @@ public class Package : Context, IDisposable
 				lastType = type;
 			}
 		return type;
+	}
+
+	/// <summary>
+	/// Packages this one declares (like Bytecode/MethodEntry) win over unrelated sibling packages.
+	/// </summary>
+	private Type? FindTypeInDependencyPackages(string name)
+	{
+		foreach (var dependency in automaticallyLoadedDependencyPackages)
+			if (dependency.FindDirectType(name) is { } type)
+				return type;
+		return null;
 	}
 
 	private Type? FindTypeInChildrenOrParentPackages(string name, Context? searchingFrom)

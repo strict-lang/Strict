@@ -128,9 +128,11 @@ public partial class Interpreter
 			}
 		}
 		for (var memberIndex = 0; memberIndex < typeMembers.Count; memberIndex++)
-			if (!values[memberIndex].HasValue && typeMembers[memberIndex].Type.IsList)
-				values[memberIndex] = new ValueInstance(typeMembers[memberIndex].Type,
-					Array.Empty<ValueInstance>());
+			if (!values[memberIndex].HasValue && !typeMembers[memberIndex].IsConstant)
+				values[memberIndex] = typeMembers[memberIndex].Type.IsList
+					? new ValueInstance(typeMembers[memberIndex].Type, Array.Empty<ValueInstance>())
+					: TryAutoCreateInstance(typeMembers[memberIndex].Type) ??
+					GetDefaultValue(typeMembers[memberIndex].Type);
 		ValidateMemberConstraints(method, values);
 		if (!method.Type.IsMutable && values.Length == 1 &&
 			values[0].IsSameOrCanBeUsedAs(method.Type))
