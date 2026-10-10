@@ -58,8 +58,10 @@ public sealed class StrictBytecodeTests
 	[TestCase("Examples/NumberStats")]
 	[TestCase("Examples/Grade")]
 	[TestCase("Examples/Sum", 5, 10, 20)]
+	[TestCase("Bytecode/BytecodeDemo")]
 	[TestCase("Bytecode/DecompilerTests")]
 	[TestCase("Bytecode/ExecutableTests")]
+	[TestCase("Bytecode/GeneratorTests")]
 	[TestCase("Bytecode/InstructionTests")]
 	[TestCase("Bytecode/NameTableTests")]
 	[TestCase("Bytecode/RegistryTests")]
@@ -68,6 +70,12 @@ public sealed class StrictBytecodeTests
 	[TestCase("Compiler/PlatformTests")]
 	[TestCase("HighLevelRuntime/EvaluatorTests")]
 	[TestCase("HighLevelRuntime/RuntimeValueTests")]
+	[TestCase("Optimizers/DeadStoreTests")]
+	[TestCase("Optimizers/FolderTests")]
+	[TestCase("Optimizers/OptimizerDemo")]
+	[TestCase("Optimizers/PipelineTests")]
+	[TestCase("Optimizers/StrengthTests")]
+	[TestCase("Optimizers/UnreachableTests")]
 	public async Task StrictCompiledProgramRunsLikeCSharp(string program, params double[] numbers)
 	{
 		var source = Root + "/" + program + Type.Extension;

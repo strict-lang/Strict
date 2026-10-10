@@ -455,6 +455,16 @@ The differential tests loaded binaries into the shared source package, so a C# b
 right when its source package was parsed earlier in the same process (and the Strict-compiled
 side failed the same way, both sides equal). They now load self-contained like the CLI, which
 needed the loader to always provide the base Text type.
+Next rounds: conditional values, constants of other types and own enum constants folded through
+the inference, list indexing as IndexCall, and a C# VM fix (parameters are bound after the implicit
+instance members, a type-name call read the caller's member instead of its own parameter of the
+same name, which made the Strict compiler write stores one register off). Now 18 of the 41
+programs outside Examples run exactly like their C# compiled versions (all Optimizers tests, most
+Bytecode tests, Linker/Platform tests, Evaluator/RuntimeValue tests), checked by
+`StrictCompiledProgramRunsLikeCSharp` with 38 cases. Open: Compiler/NativeCompiler, Runtime,
+Expressions, Validators, Language parser and ImageProcessing still hit unsupported code; some
+HighLevelRuntime and TestRunner programs fail at runtime (missing linked methods, recursion in
+Platform.Current, an unresolved implicit member).
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
