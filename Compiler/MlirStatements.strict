@@ -1,0 +1,89 @@
+has function MlirFunction
+has position Number
+constant Copy = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), InstructionEntry.Return(0))), true), 0)
+Emitted Texts
+	Copy.Emitted.Last is "    llvm.store %t0c, %r0 : f64, !llvm.ptr"
+	let entry = function.method.instructions(position)
+	let kind = entry.kind
+	if kind is InstructionType.LoadConstantToRegister
+		return Literal(PayloadDecoder(entry).Value(1), "%r" + entry.payload(0))
+	if kind is InstructionType.StoreConstantToVariable
+		return Literal(PayloadDecoder(entry).Value(0), "%v_" + entry.texts.Last)
+	if kind is InstructionType.LoadVariableToRegister
+		return function.Copied("%v_" + entry.texts(0), "%r" + entry.payload(0), Temp(""))
+	if kind is InstructionType.StoreRegisterToVariable
+		return function.Copied("%r" + entry.payload(0), "%v_" + entry.texts(0), Temp(""))
+	kind is InstructionType.Return then Returned(entry) else Jumped(entry)
+Temp(suffix Text) Text
+	Copy.Temp("c") is "%t0c"
+	"%t" + position + suffix
+Literal(literal Runtime/VmValue, slot Text) Texts
+	Copy.Literal(VmValue.OfNumber(1), "%r0").First is "    %t0c = arith.constant 0x3FF0000000000000 : f64"
+	if literal.kind is not in ("Number", "Boolean")
+		return List(Text) + Unsupported(literal.kind + " constant")
+	("    " + Temp("") + "c = arith.constant " + Hex(literal.number) + " : f64", function.Store(Temp("c"), slot))
+Hex(number Number) Text
+	Copy.Hex(-2) is "0xC000000000000000"
+	constant digits = "0123456789ABCDEF"
+	mutable result = "0x"
+	for 8
+		let part = ByteEncoder.Empty.Double(number).bytes(7 - index)
+		result = result + digits.Substring((part / 16).Floor, 1) + digits.Substring(part % 16, 1)
+	result
+Returned(entry InstructionEntry) Texts
+	MlirStatements(Copy.function, 2).Returned(InstructionEntry.Return(0)).Last is "    return %t2 : f64"
+	(function.Load(Temp(""), "%r" + entry.payload(0)), "    return " + Temp("") + " : f64")
+Jumped(entry InstructionEntry) Texts
+	Copy.Jumped(InstructionEntry.Jump(InstructionType.JumpEnd, 0)).Length is 0
+	if entry.kind is InstructionType.JumpEnd
+		return List(Text)
+	if entry.kind is not in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+		return List(Text) + Unsupported("instruction kind " + entry.kind)
+	let target = "^bb" + JumpEnd(PayloadDecoder(entry).SevenBit(0))
+	let next = "^bb" + (position + 1)
+	let branches = entry.kind is InstructionType.JumpToIdIfTrue then target + ", " + next else next + ", " + target
+	("    " + Temp("") + " = llvm.load %flag : !llvm.ptr -> i1", "    cf.cond_br " + Temp("") + ", " + branches)
+JumpEnd(id Number) Number
+	Copy.JumpEnd(5) is 3
+	for function.method.instructions
+		if (value.kind is InstructionType.JumpEnd) and (PayloadDecoder(value).SevenBit(0) is id)
+			return index
+	function.method.instructions.Length
+Unsupported(what Text) Text
+	Copy.Unsupported("List") is "unsupported: List in Shape_Run_0"
+	"unsupported: " + what + " in " + function.Symbol
+Calculated(entry InstructionEntry) Texts
+	Copy.Calculated(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))).Length is 4
+	constant left = Temp("a")
+	constant right = Temp("b")
+	let loads = (function.Load(left, "%r" + entry.payload(1)), function.Load(right, "%r" + entry.payload(2)))
+	if entry.kind > InstructionType.ArithmeticSeparator
+		return loads + Compared(entry, left + ", " + right)
+	if entry.kind is InstructionType.Power
+		return List(Text) + Unsupported("Power")
+	let operation = "    " + Temp("") + "c = arith." + Operation(entry.kind) + " " + left + ", " + right + " : f64"
+	loads + operation + function.Store(Temp("c"), "%r" + entry.payload(3))
+Operation(kind Number) Text
+	Copy.Operation(InstructionType.Modulo) is "remf"
+	if kind is InstructionType.Add
+		return "addf"
+	if kind is InstructionType.Subtract
+		return "subf"
+	if kind is InstructionType.Multiply
+		return "mulf"
+	kind is InstructionType.Divide then "divf" else "remf"
+Predicate(kind Number) Text
+	Copy.Predicate(InstructionType.NotEqual) is "one"
+	if kind is InstructionType.Equal
+		return "oeq"
+	if kind is InstructionType.NotEqual
+		return "one"
+	kind is InstructionType.LessThan then "olt" else "ogt"
+Compared(entry InstructionEntry, operands Text) Texts
+	Copy.Compared(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), "%a, %b").Length is 2
+	let compare = "    " + Temp("") + "c = arith.cmpf " + Predicate(entry.kind) + ", " + operands + " : f64"
+	let flagged = (compare, "    llvm.store " + Temp("") + "c, %flag : i1, !llvm.ptr")
+	if entry.payload(0) is not 3
+		return flagged
+	constant number = "    " + Temp("") + "d = arith.uitofp " + Temp("") + "c : i1 to f64"
+	flagged + number + function.Store(Temp("d"), "%r" + entry.payload(3))

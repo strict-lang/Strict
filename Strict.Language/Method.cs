@@ -246,7 +246,7 @@ public sealed partial class Method : Context
 
 	private static bool IsTestExpression(Body body, string currentLine, Expression expression) =>
 		!IsLastMethodLine(body) &&
-		(currentLine.Contains($" {BinaryOperator.Is} ") || (expression.GetType().Name == "MethodCall" &&
+		(currentLine.Contains($" {BinaryOperator.Is} ") || (expression.GetType().Name is "MethodCall" or "Binary" &&
 			body.ParsingLineNumber == body.Method.Tests.Count + 1 &&
 			(body.Parent != null || body.ParsingLineNumber < body.LineRange.End.Value - 1))) &&
 		!currentLine.Trim().StartsWith("if ", StringComparison.Ordinal) &&

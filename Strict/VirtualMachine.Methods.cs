@@ -127,7 +127,8 @@ public sealed partial class VirtualMachine
 		{
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.TypeResolver)),
 			BinaryOperator.To => hasInstance && TryHandleToConversion(invoke, implicitInstance),
-			"Length" or "Count" => hasInstance && TryHandleNativeLength(invoke, implicitInstance),
+			"Length" or "Count" => hasInstance && info.ArgumentRegisters.Length == 0 &&
+				TryHandleNativeLength(invoke, implicitInstance),
 			BinaryOperator.In or "Index" => hasInstance && TryHandleNativeListSearch(invoke, implicitInstance),
 			"ReadLines" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" => hasInstance &&
 				TryHandleNativeFileMethod(invoke, implicitInstance),

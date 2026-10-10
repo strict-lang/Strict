@@ -24,10 +24,9 @@ public sealed class PhraseTokenizer
 				throw new InvalidEmptyOrUnmatchedBrackets(input);
 			throw new InputTooSmall(input);
 		}
-		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' ||
-			part.Contains("  ", StringComparison.Ordinal))
+		if (part.Length == 0 || part[0] == ' ' || part[^1] == ' ' || HasPairOutsideText(part, ' ', ' '))
 			throw new InvalidSpacing(input);
-		if (HasEmptyBracketsOutsideText(part))
+		if (HasPairOutsideText(part, '(', ')'))
 			throw new InvalidEmptyOrUnmatchedBrackets(input);
 		this.input = input;
 	}
@@ -292,13 +291,13 @@ public sealed class PhraseTokenizer
 		private bool foundBinaryOperationInMethodCall;
 	}
 
-	private static bool HasEmptyBracketsOutsideText(ReadOnlySpan<char> part)
+	private static bool HasPairOutsideText(ReadOnlySpan<char> part, char first, char second)
 	{
 		var isInText = false;
 		for (var index = 0; index < part.Length - 1; index++)
 		{
 			isInText = TextLiteral.Advance(part, ref index, isInText);
-			if (!isInText && part[index] == '(' && index + 1 < part.Length && part[index + 1] == ')')
+			if (!isInText && part[index] == first && index + 1 < part.Length && part[index + 1] == second)
 				return true;
 		}
 		return false;

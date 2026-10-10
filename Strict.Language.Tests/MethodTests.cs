@@ -189,6 +189,17 @@ public sealed class MethodTests
 	}
 
 	[Test]
+	public void ComparisonLineIsTest()
+	{
+		var customType = new Type(TestPackage.Instance,
+				new TypeLines(nameof(ComparisonLineIsTest), "has logger", "Twice(number) Number",
+					"	Twice(3) > 5", "	number * 2")).
+			ParseMembersAndMethods(parser);
+		customType.Methods[0].GetBodyAndParseIfNeeded();
+		Assert.That(customType.Methods[0].Tests.Count, Is.EqualTo(1));
+	}
+
+	[Test]
 	public void ThenInsideTextDoesNotHideTest()
 	{
 		var customType = new Type(TestPackage.Instance,

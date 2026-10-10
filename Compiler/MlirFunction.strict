@@ -1,0 +1,119 @@
+has types List(TypeEntry)
+has type TypeEntry
+has method MethodEntry
+has isEntry Boolean
+constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop, true)
+constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
+constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList)
+Symbol Text
+	Counter.Symbol is "Counter_Run_0"
+	let name = type.JustName.Replace("(", "_").Replace(")", "_")
+	name + "_" + method.Name + "_" + method.parameters.Length
+Parameters Texts
+	Counter.Parameters.Length is 0
+	mutable names = List(Mutable(Text))
+	if isEntry is false
+		names = names + NumericMembers(type)
+	for method.parameters
+		names.Add(value.Name)
+	names
+NumericMembers(owner TypeEntry) Texts
+	Counter.NumericMembers(Shape).Length is 1
+	for owner.members
+		if (value.IsConstant is false) and (value.typeName is "Strict/Number")
+			value.Name
+MemberCount Number
+	Counter.MemberCount is 0
+	mutable most = 0
+	for types
+		let count = NumericMembers(value).Length
+		most = count > most then count else most
+	most
+RegisterCount Number
+	Counter.RegisterCount is 1
+	let reuse = LoadReuse(method.instructions)
+	mutable most = 0
+	for method.instructions
+		let written = reuse.Written(value)
+		most = written + 1 > most then written + 1 else most
+		for reuse.Reads(value)
+			most = value + 1 > most then value + 1 else most
+	most
+VariableNames Texts
+	Counter.VariableNames is ("index", "value")
+	mutable names = ("index", "value")
+	for Parameters
+		names = value is in names then names else names + value
+	for method.instructions
+		if value.kind is in NamedKinds
+			names = value.texts(0) is in names then names else names + value.texts(0)
+		if value.kind is InstructionType.StoreConstantToVariable
+			names = value.texts.Last is in names then names else names + value.texts.Last
+	names
+Load(target Text, slot Text) Text
+	Counter.Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f64"
+	"    " + target + " = llvm.load " + slot + " : !llvm.ptr -> f64"
+Store(stored Text, slot Text) Text
+	Counter.Store("%a", "%r0") is "    llvm.store %a, %r0 : f64, !llvm.ptr"
+	"    llvm.store " + stored + ", " + slot + " : f64, !llvm.ptr"
+Copied(source Text, destination Text, temp Text) Texts
+	Counter.Copied("%r0", "%v_a", "%t1").Length is 2
+	mutable lines = (Load(temp, source), Store(temp, destination))
+	for MemberCount
+		let member = temp + "m" + index
+		lines = lines + Load(member, source + "_m" + index) + Store(member, destination + "_m" + index)
+	lines
+Text Text
+	Counter.Text.StartsWith("  func.func @Counter_Run_0() -> f64 {") is true
+	mutable signature = List(Mutable(Text))
+	for Parameters
+		signature.Add("%p" + index + ": f64")
+	let header = "  func.func @" + Symbol + "(" + Text.Combine(signature, ", ") + ") -> f64 {"
+	Text.Combine(List(Text) + header + Slots + Body + "  }", "\n")
+Slots Texts
+	Counter.Slots.Length is 11
+	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64")
+	lines = lines + "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr"
+	for RegisterCount
+		lines = lines + Slot("%r" + index)
+	for VariableNames
+		lines = lines + Slot("%v_" + value)
+	for method.instructions
+		lines = value.kind is InstructionType.LoopBegin then lines + Slot("%loop" + index) else lines
+	for Parameters
+		lines = lines + Store("%p" + index, "%v_" + value)
+	lines
+Slot(name Text) Texts
+	Counter.Slot("%r0").Length is 2
+	mutable lines = List(Mutable(Text))
+	for MemberCount + 1
+		let slot = index is 0 then name else name + "_m" + (index - 1)
+		lines = lines + ("    " + slot + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr") + Store("%zero", slot)
+	lines
+Body Texts
+	Counter.Body.Last is "    return %zero : f64"
+	mutable lines = List(Mutable(Text))
+	for method.instructions
+		lines = lines + Label(index) + Emitted(index)
+	let isReturning = method.instructions.Length > 0 and (method.instructions.Last.kind is InstructionType.Return)
+	isReturning then lines else lines + "    return %zero : f64"
+Label(position Number) Texts
+	Counter.Label(0).Length is 0
+	constant terminators = (InstructionType.Return, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+	if position is 0
+		return List(Text)
+	let afterTerminator = method.instructions(position - 1).kind is in terminators
+	if method.instructions(position).kind is not InstructionType.JumpEnd and (afterTerminator is false)
+		return List(Text)
+	let label = "  ^bb" + position + ":"
+	afterTerminator then List(Text) + label else ("    cf.br ^bb" + position, label)
+Emitted(position Number) Texts
+	Counter.Emitted(0).Length is 18
+	let kind = method.instructions(position).kind
+	if kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+		return kind is InstructionType.LoopBegin then MlirLoops(value, position).Begin else MlirLoops(value, position).End
+	if kind is in (InstructionType.Invoke, InstructionType.Print, InstructionType.FieldLoad)
+		return MlirCalls(value, position).Emitted
+	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
+		return MlirStatements(value, position).Calculated(method.instructions(position))
+	MlirStatements(value, position).Emitted

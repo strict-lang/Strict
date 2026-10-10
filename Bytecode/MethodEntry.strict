@@ -5,6 +5,7 @@ has instructions List(InstructionEntry)
 constant PrintHi = InstructionEntry.Print("Hi")
 constant GoCall = InstructionEntry.Invoke(0, ("Strict/B", "Go", "None"), List(Number), -1)
 constant GoRun = MethodEntry("Run", List(MemberEntry), "None", GoCall)
+constant CountingLoop = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))
 constant HelloRun = MethodEntry("Run", List(MemberEntry), "None", (PrintHi, InstructionEntry.Return(0)))
 Names(names BinaryNames) BinaryNames
 	HelloRun.Names(BinaryNames("a", "b")).names.Length is 5
@@ -34,3 +35,24 @@ Invoked Texts
 		if value.kind is InstructionType.Invoke
 			targets.Add(value.texts(0) + "." + value.texts(1))
 	targets
+LoopBeginOf(position Number) Number
+	CountingLoop.LoopBeginOf(1) is 0
+	mutable depth = 0
+	for position
+		let candidate = position - 1 - index
+		let kind = instructions(candidate).kind
+		if (kind is InstructionType.LoopBegin) and (depth is 0)
+			return candidate
+		let change = kind is InstructionType.LoopEnd then 1 else kind is InstructionType.LoopBegin then -1 else 0
+		depth = depth + change
+	0
+LoopEndOf(position Number) Number
+	CountingLoop.LoopEndOf(0) is 1
+	mutable depth = 0
+	for Range(position + 1, instructions.Length)
+		let kind = instructions(value).kind
+		if (kind is InstructionType.LoopEnd) and (depth is 0)
+			return value
+		let change = kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0
+		depth = depth + change
+	instructions.Length

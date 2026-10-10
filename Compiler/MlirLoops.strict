@@ -1,0 +1,50 @@
+has function MlirFunction
+has position Number
+constant Counting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop, true), 0)
+Temp(suffix Text) Text
+	Counting.Temp("k") is "%t0k"
+	"%t" + position + suffix
+Begin Texts
+	Counting.Begin.Length is 18
+	let entry = function.method.instructions(position)
+	let bounds = entry.payload(1) is 1 then RangeBounds(entry) else CountBounds(entry)
+	let saved = (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value"))
+	let label = "^loop" + position
+	let header = (function.Store("%zero", "%loop" + position), "    cf.br " + label, "  " + label + ":")
+	constant check = "    " + Temp("m") + " = arith.cmpf olt, " + Temp("k") + ", " + Temp("n") + " : f64"
+	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
+	let iteration = (function.Load(Temp("k"), "%loop" + position), check, branch, "  " + label + "body:")
+	bounds + saved + header + iteration + Current
+Current Texts
+	Counting.Current.Length is 4
+	constant offset = "    " + Temp("o") + " = arith.mulf " + Temp("k") + ", " + Temp("s") + " : f64"
+	constant current = "    " + Temp("c") + " = arith.addf " + Temp("b") + ", " + Temp("o") + " : f64"
+	(offset, current, function.Store(Temp("c"), "%v_index"), function.Store(Temp("c"), "%v_value"))
+RangeBounds(entry InstructionEntry) Texts
+	Counting.RangeBounds(InstructionEntry.LoopBegin(0, 1)).Length is 9
+	let start = function.Load(Temp("b"), "%r" + entry.payload(0))
+	let end = function.Load(Temp("e"), "%r" + entry.payload(2))
+	constant isDown = "    " + Temp("d") + " = arith.cmpf olt, " + Temp("e") + ", " + Temp("b") + " : f64"
+	constant up = "    " + Temp("u") + " = arith.subf " + Temp("e") + ", " + Temp("b") + " : f64"
+	constant down = "    " + Temp("w") + " = arith.subf " + Temp("b") + ", " + Temp("e") + " : f64"
+	constant count = "    " + Temp("n") + " = arith.select " + Temp("d") + ", " + Temp("w") + ", " + Temp("u") + " : f64"
+	constant one = "    " + Temp("p") + " = arith.constant 1.0 : f64"
+	constant minusOne = "    " + Temp("q") + " = arith.constant -1.0 : f64"
+	constant step = "    " + Temp("s") + " = arith.select " + Temp("d") + ", " + Temp("q") + ", " + Temp("p") + " : f64"
+	(start, end, isDown, up, down, count, one, minusOne, step)
+CountBounds(entry InstructionEntry) Texts
+	Counting.CountBounds(InstructionEntry.LoopBegin(0, -1)).Length is 5
+	constant start = "    " + Temp("b") + " = arith.constant 0.0 : f64"
+	constant whole = "    " + Temp("i") + " = arith.fptosi " + Temp("v") + " : f64 to i64"
+	constant count = "    " + Temp("n") + " = arith.sitofp " + Temp("i") + " : i64 to f64"
+	constant step = "    " + Temp("s") + " = arith.constant 1.0 : f64"
+	(start, function.Load(Temp("v"), "%r" + entry.payload(0)), whole, count, step)
+End Texts
+	MlirLoops(Counting.function, 1).End.Length is 8
+	let begin = function.method.LoopBeginOf(position)
+	let counter = "%loop" + begin
+	constant next = "    " + Temp("w") + " = arith.addf " + Temp("k") + ", " + Temp("u") + " : f64"
+	let increment = (function.Load(Temp("k"), counter), "    " + Temp("u") + " = arith.constant 1.0 : f64", next)
+	let exit = ("    cf.br ^loop" + begin, "  ^loop" + begin + "exit:")
+	let restore = (function.Store("%t" + begin + "x", "%v_index"), function.Store("%t" + begin + "y", "%v_value"))
+	increment + function.Store(Temp("w"), counter) + exit + restore

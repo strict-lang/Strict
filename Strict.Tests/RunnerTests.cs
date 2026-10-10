@@ -87,6 +87,34 @@ public sealed class RunnerTests
 			Is.EqualTo(consoleWriter.ToString().ReplaceLineEndings()), native.Error);
 	}
 
+	[TestCase("HelloLogger")]
+	[TestCase("AreaCalculator")]
+	[TestCase("SimpleCalculator")]
+	[TestCase("TemperatureConverter")]
+	[TestCase("Pixel")]
+	[TestCase("Fibonacci")]
+	[TestCase("GcdCalculator")]
+	[Category("Slow")]
+	public async Task StrictNativeCompilerRunsLikeVirtualMachine(string example)
+	{
+		var root = FindRepoRoot().Replace('\\', '/');
+		var sourcePath = root + "/Examples/" + example + Type.Extension;
+		await new Runner(sourcePath).Run();
+		consoleWriter.GetStringBuilder().Clear();
+		new VirtualMachine(new BinaryExecutable(Path.ChangeExtension(sourcePath,
+			BinaryExecutable.Extension))).Execute();
+		var expected = consoleWriter.ToString();
+		consoleWriter.GetStringBuilder().Clear();
+		await new Runner(root + "/Compiler/NativeCompiler" + Type.Extension, sourcePath + " " + root).Run();
+		Assert.That(consoleWriter.ToString(), Does.Contain("Built "));
+		var native = NativeProcessRunner.Run(Path.ChangeExtension(sourcePath,
+			OperatingSystem.IsWindows()
+				? ".exe"
+				: null), "");
+		Assert.That(native.Output.ReplaceLineEndings(), Is.EqualTo(expected.ReplaceLineEndings()),
+			native.Error);
+	}
+
 	[TestCaseSource(nameof(StrictProgramPaths))]
 	[Category("Slow")]
 	public void RunStrictProgramFromSourceAndCachedBinaryInFreshProcess(string relativePath)
@@ -137,6 +165,7 @@ public sealed class RunnerTests
 		["Expressions/ResolveCheck.strict"] = "Expressions .",
 		["Expressions/TypeReport.strict"] = "Expressions .",
 		["Bytecode/FileCompiler.strict"] = "Examples/HelloLogger.strict .",
+		["Compiler/NativeCompiler.strict"] = "Examples/NativeArithmetic.strict .",
 		["Runtime/Execute.strict"] = "Examples/HelloLogger.strict .",
 		["Validators/ValidateCheck.strict"] = "Validators ."
 	};

@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Tests;
@@ -522,6 +522,13 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(machine.Execute().Returns!.Value.Number, Is.EqualTo(1));
 		Assert.That(machine.Profile!.Keys, Has.None.EndsWith(".Index"));
 	}
+
+	[Test]
+	public void ListCountWithArgumentCountsMatches() =>
+		Assert.That(new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ListCountWithArgumentCountsMatches), nameof(ListCountWithArgumentCountsMatches) +
+			"(1).Matches", ["has number", "Matches Number", "\t(number, 2, number).Count(number)"])).
+			Generate()).Execute().Returns!.Value.Number, Is.EqualTo(2));
 
 	[Test]
 	public void NumberFloorRunsNatively()

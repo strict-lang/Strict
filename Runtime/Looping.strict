@@ -12,11 +12,11 @@ Begin Frame
 	let state = (iterable, VmValue.OfNumber(start), VmValue.OfNumber(end), frame.Local("index"), frame.Local("value"))
 	let begin = frame.position
 	let started = frame.WithLocal("#loop" + begin, VmValue.OfList(state))
-	start is end then Restored(started, begin).At(EndOf(begin) + 1) else Current(started, begin, 0).Next
+	start is end then Restored(started, begin).At(frame.method.LoopEndOf(begin) + 1) else Current(started, begin, 0).Next
 End Frame
 	Looping(Looping(Counting).Begin).End.Local("index").number is 1
 	Looping(Looping(Ranged).Begin).End.Local("value").number is 4
-	let begin = BeginOf(frame.position)
+	let begin = frame.method.LoopBeginOf(frame.position)
 	let state = frame.Local("#loop" + begin).items
 	let length = (state(2).number - state(1).number).Absolute
 	let next = frame.Local("#iteration" + begin).number + 1
@@ -48,24 +48,3 @@ Count(iterable VmValue) Number
 	if iterable.kind is "Number"
 		return iterable.number < 0 then 0 else iterable.number.Floor
 	iterable.Length
-BeginOf(position Number) Number
-	Looping(Counting).BeginOf(1) is 0
-	mutable depth = 0
-	for position
-		let candidate = position - 1 - index
-		let kind = frame.method.instructions(candidate).kind
-		if (kind is InstructionType.LoopBegin) and (depth is 0)
-			return candidate
-		let change = kind is InstructionType.LoopEnd then 1 else kind is InstructionType.LoopBegin then -1 else 0
-		depth = depth + change
-	0
-EndOf(position Number) Number
-	Looping(Counting).EndOf(0) is 1
-	mutable depth = 0
-	for Range(position + 1, frame.method.instructions.Length)
-		let kind = frame.method.instructions(value).kind
-		if (kind is InstructionType.LoopEnd) and (depth is 0)
-			return value
-		let change = kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0
-		depth = depth + change
-	frame.method.instructions.Length

@@ -182,11 +182,11 @@ public sealed partial class BinaryGenerator
 			GenerateLoopInstructions(directNestedFor, aggregationTarget, aggregation);
 			return true;
 		}
-		// for x; if cond; value  → only append when the if-then branch runs
-		if (aggregation == LoopAggregation.List && !string.IsNullOrWhiteSpace(aggregationTarget) &&
-			forExpression.Body is If ifInLoop)
+		// for x; if cond; value  → only aggregate when the if-then branch runs
+		if (aggregation is LoopAggregation.List or LoopAggregation.Number &&
+			!string.IsNullOrWhiteSpace(aggregationTarget) && forExpression.Body is If ifInLoop)
 		{
-			GenerateIfThenListAggregation(ifInLoop, aggregationTarget);
+			GenerateIfThenAggregation(ifInLoop, aggregationTarget, aggregation);
 			return true;
 		}
 		if (forExpression.Body is Body forExpressionBody)
@@ -201,11 +201,11 @@ public sealed partial class BinaryGenerator
 					GenerateLoopInstructions(nestedFor, aggregationTarget, aggregation);
 					return true;
 				}
-				if (aggregation == LoopAggregation.List &&
+				if (aggregation is LoopAggregation.List or LoopAggregation.Number &&
 					expressionIndex == forExpressionBody.Expressions.Count - 1 &&
 					expression is If ifExpression && !string.IsNullOrWhiteSpace(aggregationTarget))
 				{
-					GenerateIfThenListAggregation(ifExpression, aggregationTarget);
+					GenerateIfThenAggregation(ifExpression, aggregationTarget, aggregation);
 					return true;
 				}
 				GenerateInstructionFromExpression(expression);
@@ -216,14 +216,15 @@ public sealed partial class BinaryGenerator
 	}
 
 	/// <summary>
-	/// Emits if-condition + then-body + WriteToList only on the then path, so filtered
-	/// collection loops (`for xs; if cond; map(value)`) do not append on false branches.
+	/// Emits if-condition + then-body + aggregation only on the then path, so filtered loops
+	/// (`for xs; if cond; map(value)` or a counting `1`) do not aggregate on false branches.
 	/// </summary>
-	private void GenerateIfThenListAggregation(If ifExpression, string aggregationTarget)
+	private void GenerateIfThenAggregation(If ifExpression, string aggregationTarget,
+		LoopAggregation aggregation)
 	{
 		GenerateCodeForIfCondition(ifExpression.Condition);
 		GenerateCodeForThen(ifExpression);
-		AddListAggregation(aggregationTarget);
+		AddLoopAggregation(aggregationTarget, aggregation);
 		instructions.Add(new JumpToId(idStack.Pop(), InstructionType.JumpEnd));
 		if (ifExpression.OptionalElse == null)
 			return;

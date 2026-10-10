@@ -1,0 +1,81 @@
+has types List(TypeEntry)
+constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop))
+Text Text
+	Counters.Text.StartsWith("module {") is true
+	constant functions = Functions
+	mutable lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32")
+	for functions
+		lines = lines + value.Text
+	Text.Combine(lines + Globals(functions) + Main(functions.First) + "}", "\n")
+Functions List(MlirFunction)
+	Counters.Functions.Length is 1
+	let main = types.First
+	let run = MlirCalls(MlirFunction(types, main, MethodEntry.CountingLoop, true), 0).Callee(main, "Run", 0)
+	Reachable(List(MlirFunction) + MlirFunction(types, main, run, true), 5)
+Reachable(functions List(MlirFunction), depth Number) List(MlirFunction)
+	Counters.Reachable(Counters.Functions, 1).Length is 1
+	mutable result = functions
+	for functions
+		for Callees(value)
+			result = Symbols(result).Index(value.Symbol) < 0 then result + value else result
+	(depth is 0) or (result.Length is functions.Length) then result else Reachable(result, depth - 1)
+Symbols(functions List(MlirFunction)) Texts
+	Counters.Symbols(Counters.Functions) is ("Counter_Run_0")
+	for functions
+		value.Symbol
+Callees(function MlirFunction) List(MlirFunction)
+	Counters.Callees(Counters.Functions.First).Length is 0
+	mutable callees = List(Mutable(MlirFunction))
+	for function.method.instructions
+		callees = callees + Called(function, index)
+	callees
+Called(function MlirFunction, position Number) List(MlirFunction)
+	Counters.Called(Counters.Functions.First, 0).Length is 0
+	let entry = function.method.instructions(position)
+	if entry.kind is not InstructionType.Invoke
+		return List(MlirFunction)
+	let decoder = PayloadDecoder(entry)
+	if decoder.Text(2) is "from"
+		return List(MlirFunction)
+	let type = Natives(types).TypeOf(decoder.Text(1))
+	let callee = MlirCalls(function, position).Callee(type, decoder.Text(2), entry.payload(5 + entry.payload(3)))
+	constant none = List(MlirFunction)
+	callee.instructions.Length is 0 then none else none + MlirFunction(types, type, callee, false)
+Globals(functions List(MlirFunction)) Texts
+	Counters.Globals(Counters.Functions).Length is 0
+	mutable lines = List(Mutable(Text))
+	for functions
+		lines = lines + FunctionGlobals(value)
+	lines
+FunctionGlobals(function MlirFunction) Texts
+	Counters.FunctionGlobals(MlirCalls.Shapes).Length is 1
+	for function.method.instructions
+		if value.kind is InstructionType.Print
+			Global(function, index)
+Global(function MlirFunction, position Number) Text
+	Counters.Global(MlirCalls.Shapes, 2).IndexOf("Hi %g\\0A\\00") > 0 is true
+	let entry = function.method.instructions(position)
+	let hasValue = entry.payload(1) is 1
+	let content = Escaped(entry.texts(0)) + (hasValue then "%g" else "") + "\\0A\\00"
+	let length = EscapedLength(entry.texts(0)) + (hasValue then 4 else 2)
+	let name = "@s" + function.Symbol + "_" + position
+	"  llvm.mlir.global internal constant " + name + "(\"" + content + "\") : !llvm.array<" + length + " x i8>"
+Escaped(text Text) Text
+	Counters.Escaped("a\"%") is "a\\22%%"
+	constant digits = "0123456789ABCDEF"
+	mutable result = ""
+	for ByteEncoder.Empty.UnicodeBytes(text)
+		let isPlain = value >= 32 and value < 127 and value is not in (34, 37, 92)
+		let hex = "\\" + digits.Substring((value / 16).Floor, 1) + digits.Substring(value % 16, 1)
+		let character = Character(value) to Text
+		result = result + (isPlain then character else value is 37 then "%%" else hex)
+	result
+EscapedLength(text Text) Number
+	Counters.EscapedLength("a%") is 3
+	let bytes = ByteEncoder.Empty.UnicodeBytes(text)
+	bytes.Length + bytes.Count(37)
+Main(entry MlirFunction) Texts
+	Counters.Main(Counters.Functions.First).Length is 5
+	let call = "    %result = func.call @" + entry.Symbol + "() : () -> f64"
+	constant code = "    %code = arith.fptosi %result : f64 to i32"
+	("  func.func @main() -> i32 {", call, code, "    return %code : i32", "  }")

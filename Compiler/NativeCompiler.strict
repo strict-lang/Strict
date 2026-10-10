@@ -1,0 +1,32 @@
+has logger
+Run(path Text, root Text)
+	let mlir = MlirModule(FileCompiler(logger).Compiled(path, root)).Text
+	let unsupported = mlir.IndexOf("unsupported:")
+	if unsupported is not -1
+		logger.Log("Native compilation failed, " + mlir.Substring(unsupported, mlir.Length - unsupported))
+	else
+		let base = path.Substring(0, path.Length - 7)
+		File(base + ".mlir").Write(mlir)
+		logger.Log(Built(base))
+Built(base Text) Text
+	NativeCompiler.Built("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+	let lowered = Lowered(base)
+	if lowered is not ""
+		return lowered
+	let executable = base + NasmFormat(Platform.Current).ExeExtension
+	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module"
+	let linked = ToolRunner("clang").Execute(linking)
+	linked.Failed then "clang failed: " + linked.error else "Built " + executable
+Lowered(base Text) Text
+	NativeCompiler.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+	constant passes = " --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm"
+	let lowering = Quoted(base + ".mlir") + passes + " --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
+	let lowered = ToolRunner("mlir-opt").Execute(lowering)
+	if lowered.Failed
+		return "mlir-opt failed: " + lowered.error
+	let translation = "--mlir-to-llvmir " + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
+	let translated = ToolRunner("mlir-translate").Execute(translation)
+	translated.Failed then "mlir-translate failed: " + translated.error else ""
+Quoted(path Text) Text
+	NativeCompiler.Quoted("a b") is "\"a b\""
+	"\"" + path + "\""

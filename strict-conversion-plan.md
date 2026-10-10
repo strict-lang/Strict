@@ -413,6 +413,27 @@ left constructor members without a from parameter (like `logger`) uninitialized
 dependencies were only assigned after parsing the package. Strict papercuts still open:
 `Method(not x)` (sole unary argument) is not parsed, `(a then b else c).Next` is parsed as a list.
 
+D6 progress (2026-10-10): `Compiler/NativeCompiler.strict <file> <root>` is a native compiler
+written in Strict. It compiles the program with the Strict compiler (`FileCompiler.Compiled`),
+emits MLIR from the TypeEntry/InstructionEntry lists (`MlirModule`, `MlirFunction`,
+`MlirStatements`, `MlirLoops`, `MlirCalls`) and runs mlir-opt, mlir-translate and clang through
+`ToolRunner`. Same design as the fixed C# backend (C6): registers, variables and instance members
+live in stack slots that LLVM promotes, JumpEnd labels become blocks, count and range loops are
+real loops, instances are their number members, every reachable method is a function, prints use
+printf (links the C runtime), constants are exact IEEE hex literals and `main` returns the Run
+result as exit code. Texts, lists and other calls fail with an "unsupported:" message. Slow test
+`StrictNativeCompilerRunsLikeVirtualMachine`: 7 printing Examples run like the VM,
+NativeArithmetic/Conditions/Loop exit with 20/30/45. Open: texts, lists, Boolean and fraction
+printing like the VM (printf `%g`), Windows without the C runtime, Run(numbers) from argv, then
+delete the old line-level SourceCompiler/NASM path.
+Bugs fixed on the way (each with a test): the VM ran `list.Count(x)` as Length; a summing loop with
+a filtering `if` aggregated on every iteration (C# generator; the Strict compiler's SummedBody has
+the same shape, still open); a test line comparing with `>` was kept as code (recursion and
+register exhaustion); text literals with two spaces were rejected; BinaryGenerator now names the
+method that runs out of registers. Strict papercuts: an implicit-instance method call counts as
+constant (`let x = OwnMethod` must be `constant`), the inner `value` of nested loops keeps the
+outer type, `List.Reverse` (`outer.value`) does not run on the VM.
+
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
    `-Windows/-Linux/-MacOS`, diagnostics flag shows stage times + instruction reduction.

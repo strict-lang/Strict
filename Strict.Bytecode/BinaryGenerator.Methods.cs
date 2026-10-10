@@ -19,13 +19,7 @@ public sealed partial class BinaryGenerator
 		{
 			CollectMethodDependencies(runMethod);
 			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
-			var methodBody = runMethod.GetBodyAndParseIfNeeded();
-			var methodExpressions = methodBody is Body body
-				? body.Expressions.Where(expr => !runMethod.Tests.Contains(expr)).ToList()
-				: [methodBody];
-			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
-				runMethod.ReturnType);
-			var methodInstructions = childGenerator.GenerateInstructions(childGenerator.Expressions);
+			var (childGenerator, methodInstructions) = GenerateMethodInstructions(runMethod);
 			var parameters = CreateBinaryMembers(runMethod.Parameters, entryType);
 			AddCompiledMethod(methodsByType, runMethod.Type.FullName, runMethod.Name, parameters,
 				GetBinaryTypeName(runMethod.ReturnType, entryType), methodInstructions);
@@ -41,13 +35,7 @@ public sealed partial class BinaryGenerator
 				continue;
 			CollectMethodDependencies(method);
 			EnqueueConstraintMethods(methodsToCompile, compiledMethodKeys);
-			var body = method.GetBodyAndParseIfNeeded();
-			var methodExpressions = body is Body methodBody
-				? methodBody.Expressions.Where(expr => !method.Tests.Contains(expr)).ToList()
-				: [body];
-			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
-				method.ReturnType);
-			var methodInstructions = childGenerator.GenerateInstructions(childGenerator.Expressions);
+			var (childGenerator, methodInstructions) = GenerateMethodInstructions(method);
 			var parameters = CreateBinaryMembers(method.Parameters, entryType);
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
 				GetBinaryTypeName(method.ReturnType, entryType), methodInstructions);
@@ -249,13 +237,7 @@ public sealed partial class BinaryGenerator
 		{
 			var method = methodsToCompile.Dequeue();
 			CollectMethodDependencies(method);
-			var body = method.GetBodyAndParseIfNeeded();
-			var methodExpressions = body is Body methodBody
-				? methodBody.Expressions.Where(expr => !method.Tests.Contains(expr)).ToList()
-				: [body];
-			var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
-				method.ReturnType);
-			var methodInstructions = childGenerator.GenerateInstructions(childGenerator.Expressions);
+			var (childGenerator, methodInstructions) = GenerateMethodInstructions(method);
 			var parameters = method.Parameters.Select(parameter =>
 				new BinaryMember(parameter.Name, parameter.Type.FullName, null)).ToList();
 			AddCompiledMethod(methodsByType, method.Type.FullName, method.Name, parameters,
@@ -265,6 +247,29 @@ public sealed partial class BinaryGenerator
 		}
 		return methodsByType;
 	}
+
+	private (BinaryGenerator Generator, List<Instruction> Instructions) GenerateMethodInstructions(
+		Method method)
+	{
+		var body = method.GetBodyAndParseIfNeeded();
+		var methodExpressions = body is Body methodBody
+			? methodBody.Expressions.Where(expr => !method.Tests.Contains(expr)).ToList()
+			: [body];
+		var childGenerator = new BinaryGenerator(binary.basePackage, methodExpressions,
+			method.ReturnType);
+		try
+		{
+			return (childGenerator, childGenerator.GenerateInstructions(childGenerator.Expressions));
+		}
+		catch (Registry.OutOfRegisters)
+		{
+			throw new MethodNeedsTooManyRegisters(method);
+		}
+	}
+
+	public sealed class MethodNeedsTooManyRegisters(Method method) : ParsingFailed(method.Type,
+		method.TypeLineNumber, method.Name + " needs more than " + Registers.Count +
+		" registers in one statement, split long expressions into smaller ones", method.Name);
 
 	private void EnqueueConstraintMethods(Queue<Method> methodsToCompile,
 		HashSet<string> compiledMethodKeys)

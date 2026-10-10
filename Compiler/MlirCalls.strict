@@ -1,0 +1,97 @@
+has function MlirFunction
+has position Number
+constant NewShape = InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1)
+constant Shapes = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), NewShape, InstructionEntry.PrintValue("Hi ", 0, false))), true)
+Temp(suffix Text) Text
+	MlirCalls(Shapes, 1).Temp("a") is "%t1a"
+	"%t" + position + suffix
+Emitted Texts
+	MlirCalls(Shapes, 1).Emitted.Length is 2
+	let entry = function.method.instructions(position)
+	if entry.kind is InstructionType.Print
+		return Printed(entry)
+	if entry.kind is InstructionType.FieldLoad
+		return Field(entry)
+	let decoder = PayloadDecoder(entry)
+	decoder.Text(2) is "from" then Constructed(entry, decoder.Text(1)) else Invoked(entry, decoder)
+Constructed(entry InstructionEntry, typeName Text) Texts
+	MlirCalls(Shapes, 1).Constructed(NewShape, "Strict/Shape").Last is "    llvm.store %t1a0, %r1_m0 : f64, !llvm.ptr"
+	let type = Natives(function.types).TypeOf(typeName)
+	let numeric = function.NumericMembers(type)
+	mutable lines = List(Mutable(Text))
+	for type.members
+		if value.Name is in numeric
+			lines = lines + MemberValue(entry, value, index, numeric.Index(value.Name))
+	lines
+MemberValue(entry InstructionEntry, member MemberEntry, order Number, slot Number) Texts
+	MlirCalls(Shapes, 1).MemberValue(NewShape, MlirFunction.Shape.members.First, 0, 0).Length is 2
+	let names = Invocation(entry, Frame(function.method, 0, List(VmValue), Locals.Empty)).ParameterNames
+	let argument = names.Index(member.Name)
+	let chosen = argument < 0 then order else argument
+	let countPosition = 5 + entry.payload(3)
+	let target = "%r" + entry.payload(0) + "_m" + slot
+	if chosen < entry.payload(countPosition)
+		let source = "%r" + entry.payload(countPosition + 1 + chosen)
+		return (function.Load(Temp("a" + slot), source), function.Store(Temp("a" + slot), target))
+	MlirStatements(function, position).Literal(Natives(function.types).Initial(member), target)
+Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
+	MlirCalls(Shapes, 1).Invoked(NewShape, PayloadDecoder(NewShape)).First.StartsWith("unsupported") is true
+	let type = Natives(function.types).TypeOf(decoder.Text(1))
+	let countPosition = 5 + entry.payload(3)
+	let callee = Callee(type, decoder.Text(2), entry.payload(countPosition))
+	let returnsNumber = decoder.Text(4 + entry.payload(3)) is in ("Strict/Number", "Strict/Boolean", "None")
+	if (callee.instructions.Length is 0) or (returnsNumber is false)
+		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
+	let target = MlirFunction(function.types, type, callee, false)
+	let operands = Operands(entry, function.NumericMembers(type))
+	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
+	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + operands + ") : (" + types + ") -> f64"
+	Loads(entry, function.NumericMembers(type)) + call + function.Store(Temp("r"), "%r" + entry.payload(0))
+Callee(type TypeEntry, name Text, count Number) MethodEntry
+	MlirCalls(Shapes, 1).Callee(MlirFunction.Shape, "Area", 0).instructions.Length is 0
+	for type.methods
+		if (value.Name is name) and (value.parameters.Length is count)
+			return value
+	MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry))
+Loads(entry InstructionEntry, members Texts) Texts
+	MlirCalls(Shapes, 1).Loads(NewShape, List(Text)).Length is 1
+	let countPosition = 5 + entry.payload(3)
+	let flagPosition = countPosition + 1 + entry.payload(countPosition)
+	let instance = entry.payload(flagPosition) is 1 then "%r" + entry.payload(flagPosition + 1) + "_m" else ""
+	mutable lines = List(Mutable(Text))
+	for members
+		lines = lines + function.Load(Temp("m" + index), (instance is "" then "%v_" + value else instance + index))
+	for entry.payload(countPosition)
+		lines = lines + function.Load(Temp("a" + index), "%r" + entry.payload(countPosition + 1 + index))
+	lines
+Operands(entry InstructionEntry, members Texts) Text
+	MlirCalls(Shapes, 1).Operands(NewShape, ("width")) is "%t1m0, %t1a0"
+	mutable names = List(Mutable(Text))
+	for members
+		names.Add(Temp("m" + index))
+	for entry.payload(5 + entry.payload(3))
+		names.Add(Temp("a" + index))
+	Text.Combine(names, ", ")
+ArgumentTypes(count Number) Texts
+	MlirCalls(Shapes, 1).ArgumentTypes(2) is ("f64", "f64")
+	for count
+		"f64"
+Printed(entry InstructionEntry) Texts
+	MlirCalls(Shapes, 2).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Length is 3
+	if (entry.payload(1) is 1) and (entry.payload(3) is 1)
+		return List(Text) + MlirStatements(function, position).Unsupported("printing a text value")
+	let address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
+	constant printf = " = llvm.call @printf("
+	constant vararg = ") vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr"
+	if entry.payload(1) is 0
+		return (address, "    " + Temp("c") + printf + Temp("a") + vararg + ") -> i32")
+	constant call = "    " + Temp("c") + printf + Temp("a") + ", " + Temp("b") + vararg + ", f64) -> i32"
+	(address, function.Load(Temp("b"), "%r" + entry.payload(2)), call)
+Field(entry InstructionEntry) Texts
+	MlirCalls(Shapes, 0).Field(InstructionEntry(InstructionType.FieldLoad, "width", (2, 1, -1))).Length is 2
+	mutable slot = -1
+	for function.types
+		let numeric = function.NumericMembers(value)
+		slot = slot < 0 and (entry.texts(0) is in numeric) then numeric.Index(entry.texts(0)) else slot
+	let source = "%r" + entry.payload(1) + "_m" + slot
+	(function.Load(Temp("f"), source), function.Store(Temp("f"), "%r" + entry.payload(0)))
