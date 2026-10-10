@@ -698,6 +698,11 @@ passing List(Language/Variable) to the base Method: Language/Variable (a copy of
 MethodParser builds root Variables (ConstantCollapser folded `X(...).IsMutable` to its default). RunnerTests
 unload temp packages, Package.Types is a snapshot, no static Any methods or lastType cache. Medians of 7
 (plain folders): test TypeCodegen 1616 → 1590 ms, SyntaxParser 450 → 449 ms, Language.Tests 254 → 263 ms.
+Review fix (2026-10-11): implementations were still added to a package by simple name, so List(Widget) of
+two root packages or Dictionary(Color, Color) with Colors of two packages threw TypeAlreadyExistsInPackage;
+now only the generic's cache finds them (parent package kept for FullName). Language/Method.strict is gone
+again. Medians vs f-type-identity (7 interleaved): TypeCodegen 1594 → 1592 ms, SyntaxParser 453 → 448 ms,
+Language.Tests (434 shared tests, 11 runs) 256 → 256 ms; 428 Slow RunnerTests/differential tests green.
 
 
 ## Native loops — 2026-10-09 (late night, part 4)
