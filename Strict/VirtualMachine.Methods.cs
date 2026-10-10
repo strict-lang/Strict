@@ -266,9 +266,15 @@ public sealed partial class VirtualMachine
 		return null;
 	}
 
+	/// <summary>
+	/// Parameters are bound after the instance members: a method called on a type name keeps the
+	/// caller's implicit instance, its parameters must win over caller members of the same name.
+	/// </summary>
 	private void InitializeMethodCallScope(InvokeMethodInfo info, ValueInstance[] evaluatedArguments,
 		ValueInstance? evaluatedInstance)
 	{
+		if (evaluatedInstance.HasValue)
+			SetInstanceScope(evaluatedInstance.Value);
 		for (var parameterIndex = 0; parameterIndex < info.ParameterNames.Length &&
 			parameterIndex < evaluatedArguments.Length; parameterIndex++)
 			Memory.Frame.Set(info.ParameterNames[parameterIndex], evaluatedArguments[parameterIndex]);
@@ -276,9 +282,10 @@ public sealed partial class VirtualMachine
 			parameterIndex < info.ParameterNames.Length; parameterIndex++)
 			Memory.Frame.Set(info.ParameterNames[parameterIndex],
 				new ValueInstance(executable.numberType, 0.0));
-		if (!evaluatedInstance.HasValue)
-			return;
-		var instance = evaluatedInstance.Value;
+	}
+
+	private void SetInstanceScope(ValueInstance instance)
+	{
 		Memory.Frame.Set(Type.ValueLowercase, instance, true);
 		if (instance.IsText || instance.IsList)
 		{

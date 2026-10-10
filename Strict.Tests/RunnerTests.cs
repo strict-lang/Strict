@@ -383,6 +383,27 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task TypeNameCallParametersWinOverCallerMembers()
+	{
+		var directory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(directory);
+		File.WriteAllText(Path.Combine(directory, "Maker" + Type.Extension), "has unit Number\n" +
+			"Made(number Number) Number\n\tMaker.Made(1) is 1\n\tnumber\nDoubled Number\n\tMaker(2).Doubled is 4\n\tunit * 2");
+		var path = Path.Combine(directory, "Counter" + Type.Extension);
+		File.WriteAllText(path, "has number\nhas logger\nShifted Number\n\tCounter(5).Shifted is 4\n" +
+			"\tMaker.Made(number - 1)\nRun\n\tlogger.Log(Counter(5).Shifted)");
+		try
+		{
+			await new Runner(path).Run();
+			Assert.That(consoleWriter.ToString(), Does.StartWith("4"));
+		}
+		finally
+		{
+			Directory.Delete(directory, true);
+		}
+	}
+
+	[Test]
 	public async Task DeclaredPackageTypesWinAfterExamplesWereLoaded()
 	{
 		await new Runner(SimpleCalculatorFilePath).Check(false);

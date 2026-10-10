@@ -3,6 +3,9 @@ constant Go = TypeEntry("A", List(MemberEntry), MethodEntry.GoRun)
 constant Invalid = InstructionEntry(Error, List(Text), List(Number))
 constant Broken = MethodEntry("Bad", List(MemberEntry), "None", List(InstructionEntry) + Invalid)
 constant Sample = TypeCodegen("Strict/Bytecode/FileCompiler", List(Text), ValueCodegen.NoTypes, List(Text))
+constant CountCall = InstructionEntry.Invoke(0, ("Strict/Bytecode/B", "Count", "Strict/Number"), List(Number), -1)
+constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
+constant Counted = TypeEntry("A", List(MemberEntry), List(MethodEntry) + CountRun)
 constant Bad = TypeEntry("A", List(MemberEntry), List(MethodEntry) + Broken)
 Run(path Text, root Text)
 	let types = Compiled(path, root)
@@ -72,10 +75,11 @@ BaseTypes(entries List(TypeEntry), main Text) Texts
 	types
 UsedMethods(entries List(TypeEntry), type Text) Texts
 	UsedMethods(Go, "Strict/B") is ("Go")
+	UsedMethods(Counted, "Strict/Bytecode/B") is ("Count")
 	constant natives = ("from", "to", "Length", "Count", "not", "and", "or", "xor", "Exists", "ReadLines")
 	for Targets(entries)
 		let method = value.Substring(value.LastIndexOf(".") + 1, value.Length - value.LastIndexOf(".") - 1)
-		if value.StartsWith(type + ".") and method is not in natives
+		if value.StartsWith(type + ".") and (method is not in natives or type.LastIndexOf("/") > 6)
 			method
 SourceName(type Text) Text
 	SourceName("Strict/List(Number)") is "List"

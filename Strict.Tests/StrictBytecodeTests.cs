@@ -38,35 +38,45 @@ public sealed class StrictBytecodeTests
 			Is.EqualTo(new[] { "hello.txt=104,105", "data.bin=1,2,3" }));
 	}
 
-	[TestCase("HelloLogger")]
-	[TestCase("NativeArithmetic")]
-	[TestCase("NativeConditions")]
-	[TestCase("NativeLoop")]
-	[TestCase("Greeter")]
-	[TestCase("Fibonacci")]
-	[TestCase("AreaCalculator")]
-	[TestCase("SimpleCalculator")]
-	[TestCase("TemperatureConverter")]
-	[TestCase("GcdCalculator")]
-	[TestCase("FizzBuzz")]
-	[TestCase("AutofilledMutable")]
-	[TestCase("Pixel")]
-	[TestCase("DirProbe")]
-	[TestCase("ProcessProbe")]
-	[TestCase("NumberSummer")]
-	[TestCase("MemoryPressure")]
-	[TestCase("NumberStats")]
-	[TestCase("Grade")]
-	[TestCase("Sum", 5, 10, 20)]
-	public async Task StrictCompiledExampleRunsLikeCSharp(string example, params double[] numbers)
+	[TestCase("Examples/HelloLogger")]
+	[TestCase("Examples/NativeArithmetic")]
+	[TestCase("Examples/NativeConditions")]
+	[TestCase("Examples/NativeLoop")]
+	[TestCase("Examples/Greeter")]
+	[TestCase("Examples/Fibonacci")]
+	[TestCase("Examples/AreaCalculator")]
+	[TestCase("Examples/SimpleCalculator")]
+	[TestCase("Examples/TemperatureConverter")]
+	[TestCase("Examples/GcdCalculator")]
+	[TestCase("Examples/FizzBuzz")]
+	[TestCase("Examples/AutofilledMutable")]
+	[TestCase("Examples/Pixel")]
+	[TestCase("Examples/DirProbe")]
+	[TestCase("Examples/ProcessProbe")]
+	[TestCase("Examples/NumberSummer")]
+	[TestCase("Examples/MemoryPressure")]
+	[TestCase("Examples/NumberStats")]
+	[TestCase("Examples/Grade")]
+	[TestCase("Examples/Sum", 5, 10, 20)]
+	[TestCase("Bytecode/DecompilerTests")]
+	[TestCase("Bytecode/ExecutableTests")]
+	[TestCase("Bytecode/InstructionTests")]
+	[TestCase("Bytecode/NameTableTests")]
+	[TestCase("Bytecode/RegistryTests")]
+	[TestCase("Bytecode/ValueTests")]
+	[TestCase("Compiler/LinkerTests")]
+	[TestCase("Compiler/PlatformTests")]
+	[TestCase("HighLevelRuntime/EvaluatorTests")]
+	[TestCase("HighLevelRuntime/RuntimeValueTests")]
+	public async Task StrictCompiledProgramRunsLikeCSharp(string program, params double[] numbers)
 	{
-		var source = Root + "/Examples/" + example + Type.Extension;
+		var source = Root + "/" + program + Type.Extension;
 		await new Runner(source).Run();
 		var expected = await Execute(Path.ChangeExtension(source, BinaryExecutable.Extension), numbers);
 		await new Runner(Root + "/Bytecode/FileCompiler" + Type.Extension, source + " " + Root).
 			Run();
 		var binaryPath = Path.Combine(Path.GetTempPath(), nameof(StrictBytecodeTests),
-			example + BinaryExecutable.Extension);
+			Path.GetFileName(program) + BinaryExecutable.Extension);
 		Directory.CreateDirectory(Path.GetDirectoryName(binaryPath)!);
 		await File.WriteAllBytesAsync(binaryPath, LastNumbersLine());
 		Assert.That(await Execute(binaryPath, numbers), Is.EqualTo(expected));

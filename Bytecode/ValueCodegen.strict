@@ -17,7 +17,7 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty).instructions(0).payload is (0, 1, 2)
 	Plain.Expression(SyntaxNode("Binary", ">=", (One, NoNode)), CodeBlock.Empty).instructions.Length is 5
 	Plain.Expression(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 9
-	let folded = ConstantFolding(target.shape, inference).Folded(node)
+	let folded = ConstantFolding(target.TypeName, inference).Folded(node)
 	if folded.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
 		return Leaf(folded, block)
 	if (node.Kind is in ("Call", "Member", "MethodCall", "Not")) or (node.text is "to")
@@ -61,11 +61,30 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 	if (node.Kind is "Call") and (node.text is "List")
 		let listType = target.FullName(TypeOf(node, block))
 		return block.Load(InstructionEntry(InstructionType.LoadConstantToRegister, listType, (block.register, 6, -1, 0)))
+	if IsIndexing(node, block)
+		return Indexed(node, block)
 	if (node.Kind is "Call") or IsTypeName(node.children(0), block)
 		return Invoke(node, block, -1, TypeOf(node, block))
 	let first = node.children(0)
 	let isListVariable = (first.Kind is "Identifier") and inference.types.IsPlural(TypeOf(first, block))
 	(node.text is "Add") and isListVariable then AddToList(node, block) else InstanceCall(node, block)
+IsIndexing(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty) is true
+	Plain.IsIndexing(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is false
+	if node.Kind is "Call"
+		let isNamed = block.scope.TypeOf(node.text) is not "" or target.IsMember(target.TypeName, node.text)
+		return (node.children.Length is 1) and isNamed
+	let isMember = (node.Kind is "MethodCall") and (node.children.Length is 2)
+	isMember and target.IsMember(TypeOf(node.children(0), block), node.text)
+Indexed(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
+	Plain.Indexed(SyntaxNode("MethodCall", "text", (NewGreeter, One)), CodeBlock.Empty).nextId is 1
+	let isNamed = node.Kind is "Call"
+	let name = isNamed then node.text else "list" + block.nextId
+	let list = isNamed then block else Expression(SyntaxNode("Member", node.text, node.children(0)), block)
+	let stored = isNamed then list else list.Stored(name).WithNextId
+	let index = Expression(node.children.Last, stored)
+	index.Load(InstructionEntry(InstructionType.IndexCall, List(Text) + name, (index.register, index.Result, -1)))
 InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.InstanceCall(SyntaxNode("Member", "Greet", NoNode), CodeBlock.Empty).instructions(1).payload.Last is 0
 	Plain.InstanceCall(ToText, CodeBlock.Empty).Result is 1

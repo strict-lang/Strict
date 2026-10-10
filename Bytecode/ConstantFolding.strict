@@ -1,7 +1,7 @@
-has shape Expressions/TypeShape
+has typeName Text
 has inference Expressions/TypeInference
 constant Counts = TypeInference(KnownTypes.Sample, TypeInference.Limits)
-constant Limits = ConstantFolding(TypeShape("constant Limit = 3", "Run"), Counts)
+constant Limits = ConstantFolding("Count", Counts)
 constant Limit = SyntaxNode("Identifier", "Limit")
 constant Two = SyntaxNode("Number", "2")
 Folded(node SyntaxNode) SyntaxNode
@@ -9,7 +9,7 @@ Folded(node SyntaxNode) SyntaxNode
 	Limits.Folded(SyntaxNode("Binary", "*", (Limit, Two))).text is "6"
 	Limits.Folded(SyntaxNode("Binary", "/", (Limit, SyntaxNode("Number", "0")))).Kind is "Binary"
 	Limits.Folded(SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), Two))).Kind is "Binary"
-	let value = node.Kind is "Identifier" then shape.ConstantLiteral(node.text) else Negated(OtherConstant(node))
+	let value = Negated(Constant(node))
 	if value.Kind is not "Binary" or value.text is not in ("+", "-", "*", "/", "%")
 		return value
 	let left = Folded(value.children(0))
@@ -17,12 +17,15 @@ Folded(node SyntaxNode) SyntaxNode
 	if left.Kind is not "Number" or right.Kind is not "Number" or (right.text is "0")
 		return value
 	SyntaxNode("Number", Calculated(value.text, left.text to Number, right.text to Number) to Text)
-OtherConstant(node SyntaxNode) SyntaxNode
-	Limits.OtherConstant(SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count"))).text is "3"
-	Limits.OtherConstant(Two).text is "2"
-	if node.Kind is not "Member" or node.children(0).Kind is not "Identifier"
+Constant(node SyntaxNode) SyntaxNode
+	Limits.Constant(SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count"))).text is "3"
+	Limits.Constant(Limit).text is "3"
+	Limits.Constant(Two).text is "2"
+	let isOther = (node.Kind is "Member") and (node.children(0).Kind is "Identifier")
+	if node.Kind is not "Identifier" and (isOther is false)
 		return node
-	let literal = inference.ConstantOf(node.children(0).text, node.text)
+	let owner = isOther then node.children(0).text else typeName
+	let literal = inference.ConstantOf(owner, node.text)
 	literal is "" then node else SyntaxParser(List(Text) + literal).Leaf(literal)
 Negated(node SyntaxNode) SyntaxNode
 	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Two)).text is "-2"

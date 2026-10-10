@@ -72,14 +72,3 @@ ConstantScope Scope
 			names.Add(tokens(1))
 			literals.Add(ConstantText(index))
 	Scope(names, literals)
-ConstantLiteral(name Text) SyntaxNode
-	TypeShape("constant Limit = 3").ConstantLiteral("Limit").text is "3"
-	TypeShape("constant Limit = 3", "constant Name = \"a\"").ConstantLiteral("Name").Kind is "Text"
-	TypeShape("constant Limit = 3 * 2").ConstantLiteral("Limit").Kind is "Identifier"
-	for lines
-		if value.StartsWith("constant " + name + " = ")
-			let tokens = Tokenizer(value).Tokens
-			let literal = SyntaxParser(tokens).Leaf(tokens.Last)
-			let isLiteral = (tokens.Length is 4) and (literal.Kind is in ("Number", "Text", "Boolean"))
-			return isLiteral then literal else SyntaxNode("Identifier", name)
-	SyntaxNode("Identifier", name)
