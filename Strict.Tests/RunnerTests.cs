@@ -350,6 +350,63 @@ public sealed class RunnerTests
 		}
 	}
 
+	private static Task InTemporaryFile(string typeName, string code, Func<string, Task> test) =>
+		InTemporaryCopy([], async directory =>
+		{
+			var path = Path.Combine(directory, typeName + Type.Extension);
+			await File.WriteAllTextAsync(path, code);
+			await test(path);
+		});
+
+	[Test]
+	public Task EndlessRecursionOnVmNamesStrictLineAndCallers() =>
+		InTemporaryFile("EndlessVm",
+			"has number\nhas logger\nDeeper Number\n\tif number < 0\n\t\treturn 0\n" +
+			"\tEndlessVm(number + 1).Deeper\nRun\n\tlogger.Log(EndlessVm(1).Deeper)", async path =>
+			{
+				Assert.That(await Strict.Program.Main([path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("StackOverflow").And.Contain(path + ":line 6").
+						And.Contain("EndlessVm.Deeper (255 times)").And.Contain("EndlessVm.Run"));
+			});
+
+	[Test]
+	public Task LoopCollectingBillionsOfNumbersOnVmNamesStrictLine() =>
+		InTemporaryFile("HugeRange",
+			"has logger\nNumbers(limit Number) Numbers\n\tHugeRange.Numbers(3) is (1, 2)\n" +
+			"\tfor Range(1, limit)\n\t\tvalue\nRun\n\tlogger.Log(Numbers(3000000000).Length)",
+			async path =>
+			{
+				Assert.That(await Strict.Program.Main([path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("OverflowException").And.Contain(path + ":line 4").
+						And.Not.Contain("at Strict.VirtualMachine"));
+			});
+
+	[Test]
+	public Task EnormousListInTestNamesStrictLine() =>
+		InTemporaryFile("HugeList",
+			"has count Number\nhas numbers with Length is count\nLength Number\n" +
+			"\tHugeList(3000 * 1000000).Length is 1\n\tnumbers.Length", async path =>
+			{
+				Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("OutOfMemoryException").And.Contain(path + ":line 4").
+						And.Not.Contain("at Strict.HighLevelRuntime"));
+			});
+
+	[Test]
+	public Task EndlessRecursionInTestNamesStrictLineAndTestLine() =>
+		InTemporaryFile("EndlessTest",
+			"has number\nDeeper Number\n\tEndlessTest(1).Deeper is 0\n\tif number < 0\n\t\treturn 0\n" +
+			"\tEndlessTest(number + 1).Deeper", async path =>
+			{
+				Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("CallDepthExceeded").And.Contain(path + ":line 6").
+						And.Contain(path + ":line 3"));
+			});
+
 	[Test]
 	public async Task RunFromBytecodeFileWithoutStrictSourceFile()
 	{
@@ -378,24 +435,15 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public async Task TestCommandReportsFailingInlineTestWithoutDotNetStackTrace()
-	{
-		var directory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(directory);
-		var path = Path.Combine(directory, "WrongTwice" + Type.Extension);
-		await File.WriteAllTextAsync(path,
-			"has logger\nTwice(number) Number\n\tTwice(2) is 5\n\tnumber * 2\nRun\n\tlogger.Log(Twice(2))");
-		try
-		{
-			Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
-			Assert.That(consoleWriter.ToString(),
-				Does.Contain(path + ":line 3").And.Not.Contain("at Strict.Runner"));
-		}
-		finally
-		{
-			Directory.Delete(directory, true);
-		}
-	}
+	public Task TestCommandReportsFailingInlineTestWithoutDotNetStackTrace() =>
+		InTemporaryFile("WrongTwice",
+			"has logger\nTwice(number) Number\n\tTwice(2) is 5\n\tnumber * 2\nRun\n\tlogger.Log(Twice(2))",
+			async path =>
+			{
+				Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain(path + ":line 3").And.Not.Contain("at Strict.Runner"));
+			});
 
 	[Test]
 	public async Task TypeNameCallParametersWinOverCallerMembers()

@@ -668,6 +668,12 @@ other files' mutations. 9 fixes got their missing fast test (`for in x` is now M
 error line). Per-file seeds at 400/file found `for (five)` crashing (no comma); TryParseNumber took
 `(5` as -75 (double to uint saturates), so `constant result = ((5)` parsed. Both fixed, seeds 7 and
 13 at 400/file green (44 s each). Open: `logger.Log((5)` reports an argument mismatch, not the bracket.
+VM limits (2026-10-10): endless recursion crashed `Strict test` (Debug) with a real .NET stack overflow
+(every body caught and rethrew); `CallDepthExceeded` now passes bodies, lists the Strict call chain and
+guards small thread stacks (~5.5 KB per Strict call in Debug). VM `StackOverflow` is an
+`InstructionExecutionFailed` with file:line and `Deeper (255 times)` callers. Raw Overflow/OutOfMemory
+(`Range(1, 3e9)`, `Length is 3e9` lists) become Strict errors at the line, BenchBrightness 271 vs 275 ms
+(noise). No step limit: only `LoopEnd` jumps back, count fixed at start. Open: `for N` caps at int.Max.
 
 
 ## Native loops — 2026-10-09 (late night, part 4)

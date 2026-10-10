@@ -125,8 +125,9 @@ public partial class Interpreter
 		ValueInstance[]? capturedMutableParameters = null)
 	{
 		Statistics.MethodCount++;
-		if (parentContext is { Depth: > MaxCallDepth })
-			throw new CallDepthExceeded(method, parentContext.Depth);
+		if (parentContext != null && (parentContext.Depth > MaxCallDepth ||
+			!RuntimeHelpers.TryEnsureSufficientExecutionStack()))
+			throw new CallDepthExceeded(parentContext);
 		args = NormalizeArguments(method, args, parentContext);
 		ValidateInstanceAndArguments(method, instance, args, parentContext);
 		if (TryExecuteNativeFileConstructor(method, instance, args, parentContext,
@@ -464,8 +465,14 @@ public partial class Interpreter
 	public sealed class NegativeLoopCount(Method method, int count)
 		: InterpreterExecutionFailed(method, "Loop count " + count + " is negative");
 
-	public sealed class CallDepthExceeded(Method method, int depth) : InterpreterExecutionFailed(method,
-		"Call depth " + depth + " exceeded " + MaxCallDepth + ", endless recursion?");
+	/// <summary>
+	/// Builds the whole Strict call chain at once, bodies let it pass without wrapping each level.
+	/// </summary>
+	public sealed class CallDepthExceeded(ExecutionContext caller) : InterpreterExecutionFailed(
+		caller.Method, caller.CurrentExpressionLineNumber, BuildContextMessage(caller.Method,
+			caller.CurrentExpressionLineNumber, caller,
+			"Call depth " + caller.Depth + " exceeded the call depth limit " + MaxCallDepth +
+			" or thread stack, endless recursion?"), null, false);
 
 	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
 		: InterpreterExecutionFailed(context.Type, expr.GetType().Name); //ncrunch: no coverage

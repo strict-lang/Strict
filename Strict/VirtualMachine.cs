@@ -72,8 +72,15 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 			}
 		instructions = blockInstructions;
 		var instructionsLength = instructions.Count;
-		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
-			ExecuteInstruction(instructions[instructionIndex]);
+		try
+		{
+			for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
+				ExecuteInstruction(instructions[instructionIndex]);
+		}
+		catch (Exception ex) when (ex is OverflowException or OutOfMemoryException)
+		{
+			throw Fail(ex.GetType().Name + ": " + ex.Message);
+		}
 	}
 
 	private void InitializeEntryPointMembers(BinaryMethod method)
@@ -277,8 +284,9 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private sealed class InvalidInstruction(Instruction instruction)
 		: Exception(instruction.ToString()); //ncrunch: no coverage
 
-	public sealed class StackOverflow(int depth, string method) : Exception("VM call depth " +
-		depth + " exceeded the call depth or thread stack limit in " + method);
+	public sealed class StackOverflow(int depth, InstructionExecutionFailed.Location location)
+		: InstructionExecutionFailed("VM call depth " + depth +
+			" exceeded the call depth or thread stack limit, endless recursion?", location);
 
 	private string ResolveMethodContext(BinaryMethod method)
 	{
@@ -289,12 +297,14 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		return method.Name;
 	}
 
-	private InstructionExecutionFailed Fail(string message, Exception? inner = null)
+	private InstructionExecutionFailed Fail(string message) => new(message, GetFailureLocation());
+
+	private InstructionExecutionFailed.Location GetFailureLocation()
 	{
-		var index = Math.Max(0, Math.Min(instructionIndex, instructions.Count - 1));
 		var (sourceLines, filePath) = TryGetSourceContext();
-		return new InstructionExecutionFailed(message, instructions, index, currentMethodContext,
-			sourceLines, filePath, inner);
+		return new InstructionExecutionFailed.Location(instructions,
+			Math.Max(0, Math.Min(instructionIndex, instructions.Count - 1)), currentMethodContext,
+			sourceLines, filePath);
 	}
 
 	private (string[]? lines, string filePath) TryGetSourceContext()

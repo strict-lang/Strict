@@ -14,7 +14,7 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 		{
 			return TryEvaluate(body, ctx, runOnlyTests);
 		}
-		catch (InterpreterExecutionFailed ex)
+		catch (InterpreterExecutionFailed ex) when (ex is not Interpreter.CallDepthExceeded)
 		{
 			//TODO: is this really needed, can't we build the failure message already correct where the original InterpreterExecutionFailed is thrown?
 			if (ex.Message.Contains(InterpreterExecutionFailed.GetMethodFailureHeader(body.Method),
@@ -26,6 +26,12 @@ internal sealed class BodyEvaluator(Interpreter interpreter)
 			throw new InterpreterExecutionFailed(body.Method, fileLineNumber,
 				InterpreterExecutionFailed.BuildMethodFailureMessage(body.Method, fileLineNumber,
 					body.Expressions, ex.Headline), ex, false);
+		}
+		catch (Exception ex) when (ex is OverflowException or OutOfMemoryException)
+		{
+			throw new InterpreterExecutionFailed(body.Method, ctx.CurrentExpressionLineNumber,
+				InterpreterExecutionFailed.BuildContextMessage(body.Method, ctx.CurrentExpressionLineNumber,
+					ctx, ex.GetType().Name + ": " + ex.Message), null, false);
 		}
 		finally
 		{

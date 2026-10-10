@@ -402,7 +402,7 @@ public sealed partial class VirtualMachine
 		var savedFrame = Memory.Frame;
 		if (registerStackDepth >= MaxCallDepth ||
 			!System.Runtime.CompilerServices.RuntimeHelpers.TryEnsureSufficientExecutionStack())
-			throw new StackOverflow(registerStackDepth, currentMethodContext);
+			throw new StackOverflow(registerStackDepth, GetFailureLocation());
 		var depth = registerStackDepth++;
 		// ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
 		// ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
