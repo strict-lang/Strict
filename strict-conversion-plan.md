@@ -529,9 +529,15 @@ is wrapped in `Expressions/Conversion` (printed as the value), README typed coll
 VM runs member initializing `from` bodies (`Method.InitializesMembers`, shared with the interpreter),
 the Strict compiler converts reassigned values and own or constructor arguments
 (`ListCodegen.Converted`) and its `from` methods return their type. AdjustBrightness logs and
-compares its stored `Color` `to ColorValue`. Open: non-literal lists with convertible elements (only
-the interpreter converts them at runtime), the Strict compiler knows parameter types only of own
-methods and constructors, CompactTypeOptimizer stays parked (rounds 127.5 to 128, Alpha 0).
+compares its stored `Color` `to ColorValue`. Binary operator arguments convert too
+(`colors + ColorValue(..)`), a list variable whose elements need a conversion becomes a `Conversion`
+with a `For` over its elements (interpreter converts element by element, BinaryGenerator reuses the
+list aggregation loop). The Strict compiler mirrors this in `Bytecode/ConversionCodegen` (`to` route,
+explicitly typed `from`, operator and `Add`/`Remove` elements, element loops for list variables,
+nested `Color(1, 0, 0)` is `Color(ColorValue(1, 0, 0))` like C#) and `KnownTypes.ParameterTypesOf`
+knows the parameter types of other types' methods. Open: CompactTypeOptimizer stays parked (rounds
+127.5 to 128, Alpha 0), return values are not converted, `to` methods returning a usable but not the
+same type and a list member's `.Add` with a convertible element are only converted by C#.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

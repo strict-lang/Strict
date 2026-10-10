@@ -4,11 +4,8 @@ constant Declared = CodeBlock.Empty.Declare("x", "Number")
 constant Shared = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", true)
 constant Owned = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", false)
 constant Appending = BodyParser("Run", "\tvalues = values + 1").Block(1, 1).children(0)
-constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name")
-constant ColorTypes = KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + "from", List(Text) + "colorValue"), KnownTypes.NoMembers))
-constant Colored = ListCodegen(ValueCodegen(TypeInference(ColorTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
-constant NewColorValue = SyntaxNode("Call", "ColorValue", ValueCodegen.One)
-constant ColorReassignment = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "c"), NewColorValue))
+constant Colored = ListCodegen(ConversionCodegen.Colored.values)
+constant AddColor = SyntaxNode("MethodCall", "Add", (ConversionCodegen.Pixels, ConversionCodegen.NewColor))
 Of(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Of(ValueCodegen.Ones, CodeBlock.Empty).instructions.Length is 1
 	node.IsLiteral then Constant(node, block) else Built(node, block)
@@ -40,10 +37,11 @@ Added(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Added(ValueCodegen.AddOne, CodeBlock.Empty).register is 2
 	Plain.Added(ValueCodegen.RemoveOne, CodeBlock.Empty).instructions(1).kind is InstructionType.InvokeRemove
 	Plain.Added(ValueCodegen.AddOne, Shared).instructions.Last.kind is InstructionType.StoreRegisterToVariable
+	Colored.Added(AddColor, ConversionCodegen.Pixelated).instructions(2).texts(1) is "to"
 	let name = node.children(0).text
 	if block.Owns(name) is false
 		return Copied(node, block)
-	let added = values.Expression(node.children(1), block)
+	let added = values.Expression(ConversionCodegen(values).Operand(node, block), block)
 	let kind = node.text is "Add" then InstructionType.InvokeWriteToList else InstructionType.InvokeRemove
 	let written = added.Add(InstructionEntry.Named(kind, added.Result, name))
 	written.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, written.register, name))
@@ -51,7 +49,7 @@ Copied(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Copied(ValueCodegen.RemoveOne, Shared).instructions(2).payload is (3, 0, 1, 2)
 	Plain.Copied(ValueCodegen.RemoveOne, Shared).instructions(2).kind is InstructionType.Subtract
 	let list = values.Expression(node.children(0), block)
-	let element = values.Expression(node.children(1), list)
+	let element = values.Expression(ConversionCodegen(values).Operand(node, block), list)
 	let operation = node.text is "Add" then InstructionType.Add else InstructionType.Subtract
 	let changed = element.Load(InstructionEntry.Binary(operation, (list.Result, element.Result, element.register)))
 	changed.Stored(node.children(0).text)
@@ -106,28 +104,8 @@ Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) Co
 	let parameter = position < parameters.Length then parameters(position) else ""
 	let element = values.ElementType(parameter) is values.TypeOf(node, block)
 	let wraps = values.inference.types.IsPlural(parameter) and element
-	values.Expression((wraps then SyntaxNode("List", "", node) else Converted(node, parameter, block)), block)
-Assigned(node SyntaxNode, block CodeBlock) SyntaxNode
-	Plain.Assigned(SyntaxNode("Declaration", "let a", ValueCodegen.One), CodeBlock.Empty).Kind is "Number"
-	Colored.Assigned(ColorReassignment, CodeBlock.Empty.Declare("c", "Color")).text is "Color"
-	let value = node.children.Last
-	node.Kind is "Declaration" then value else Converted(value, values.TypeOf(node.children(0), block), block)
-Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
-	Colored.Converted(NewColorValue, "Color", CodeBlock.Empty).text is "Color"
-	Colored.Converted(ValueCodegen.One, "Color", CodeBlock.Empty).Kind is "Number"
-	Colored.Converted(SyntaxNode("List", "", NewColorValue), "Colors", CodeBlock.Empty).children(0).text is "Color"
-	let types = values.inference.types
-	if (node.Kind is "List") and types.IsPlural(type)
-		return SyntaxNode("List", "", ConvertedElements(node, types.ElementType(type), block))
-	let origins = types.ParametersOf(type, "from", 1)
-	let source = values.TypeOf(node, block)
-	let isExplicit = (origins.Length is 1) and (types.MembersOf(type).TypeOf(origins(0)) is "")
-	let isBase = (source is in Primitives) or (type is in Primitives)
-	isExplicit and (origins(0).Capitalize is source) and (isBase is false) then SyntaxNode("Call", type, node) else node
-ConvertedElements(node SyntaxNode, type Text, block CodeBlock) List(SyntaxNode)
-	Colored.ConvertedElements(SyntaxNode("List", "", NewColorValue), "Color", CodeBlock.Empty).Length is 1
-	for node.children
-		Converted(value, type, block)
+	let converted = ConversionCodegen(values).Converted(node, parameter, block)
+	values.Expression((wraps then SyntaxNode("List", "", node) else converted), block)
 Grouped(node SyntaxNode, first Number, parameters Number) SyntaxNode
 	Plain.Grouped(SyntaxNode("Call", "B", (ValueCodegen.One, ValueCodegen.One)), 0, 1).children.Length is 1
 	Plain.Grouped(ValueCodegen.AddOne, 1, 1).children(1).Kind is "Number"

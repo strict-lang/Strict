@@ -1,0 +1,77 @@
+has values ValueCodegen
+constant Plain = ConversionCodegen(ValueCodegen.Plain)
+constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name")
+constant ColorTypes = KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers))
+constant Colored = ConversionCodegen(ValueCodegen(TypeInference(ColorTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
+constant NewColorValue = SyntaxNode("Call", "ColorValue", ValueCodegen.One)
+constant NewColor = SyntaxNode("Call", "Color", ValueCodegen.One)
+constant ColorReassignment = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "c"), NewColorValue))
+constant Pixels = SyntaxNode("Identifier", "pixels")
+constant Pixelated = CodeBlock.Empty.Declare("pixels", "ColorValues")
+Assigned(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Assigned(SyntaxNode("Declaration", "let a", ValueCodegen.One), CodeBlock.Empty).Kind is "Number"
+	Colored.Assigned(ColorReassignment, CodeBlock.Empty.Declare("c", "Color")).text is "Color"
+	let value = node.children.Last
+	node.Kind is "Declaration" then value else Converted(value, values.TypeOf(node.children(0), block), block)
+Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
+	Colored.Converted(NewColorValue, "Color", CodeBlock.Empty).text is "Color"
+	Colored.Converted(NewColor, "ColorValue", CodeBlock.Empty).text is "to"
+	Colored.Converted(Pixels, "Colors", Pixelated).Kind is "Converted"
+	Colored.Converted(ValueCodegen.Ones, "ColorValue", CodeBlock.Empty).text is "ColorValue"
+	if values.inference.types.IsPlural(type)
+		return Elements(node, type, block)
+	if (node.Kind is "List") and values.inference.types.IsKnown(type) and type is not in Primitives
+		return SyntaxNode("Call", type, node.children)
+	let converter = Converter(values.TypeOf(node, block), type)
+	if converter is "to"
+		return SyntaxNode("Binary", "to", (node, SyntaxNode("Identifier", type)))
+	converter is "from" then SyntaxNode("Call", type, node) else node
+Converter(source Text, type Text) Text
+	Colored.Converter("ColorValue", "Color") is "from"
+	Colored.Converter("Color", "ColorValue") is "to"
+	Colored.Converter("Number", "Color") is ""
+	let types = values.inference.types
+	if (source is in Primitives) or (type is in Primitives) or (source is type)
+		return ""
+	if types.MethodsOf(source).Has("to", type)
+		return "to"
+	let origins = types.ParameterTypesOf(type, "from", 1)
+	(origins.Length is 1) and (origins(0) is source) then "from" else ""
+ConvertedElements(node SyntaxNode, type Text, block CodeBlock) List(SyntaxNode)
+	Colored.ConvertedElements(SyntaxNode("List", "", NewColorValue), "Color", CodeBlock.Empty).Length is 1
+	for node.children
+		Converted(value, type, block)
+Elements(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
+	Colored.Elements(SyntaxNode("List", "", NewColorValue), "Colors", CodeBlock.Empty).children(0).text is "Color"
+	Colored.Elements(Pixels, "Colors", Pixelated).children(1).text is "Color"
+	Colored.Elements(Pixels, "ColorValues", Pixelated).Kind is "Identifier"
+	let types = values.inference.types
+	if node.Kind is "List"
+		return SyntaxNode("List", "", ConvertedElements(node, types.ElementType(type), block))
+	let source = values.TypeOf(node, block)
+	let scoped = block.Declare("value", types.ElementType(source))
+	constant element = SyntaxNode("Identifier", "value")
+	let converted = types.IsPlural(source) then Converted(element, types.ElementType(type), scoped) else element
+	converted.text is "value" then node else SyntaxNode("Converted", type, (node, converted))
+Operand(node SyntaxNode, block CodeBlock) SyntaxNode
+	Colored.Operand(SyntaxNode("Binary", "+", (Pixels, NewColor)), Pixelated).text is "to"
+	Plain.Operand(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty).text is "1"
+	let types = values.inference.types
+	let listType = values.TypeOf(node.children(0), block)
+	let operand = node.children(1)
+	if types.IsPlural(listType) is false
+		return operand
+	let isList = (operand.Kind is "List") or types.IsPlural(values.TypeOf(operand, block))
+	Converted(operand, (isList then listType else types.ElementType(listType)), block)
+Looped(node SyntaxNode, block CodeBlock) CodeBlock
+	Colored.Looped(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(4).kind is InstructionType.Invoke
+	let name = "converted" + block.nextId
+	let type = values.target.FullName(node.text)
+	let empty = InstructionEntry(InstructionType.LoadConstantToRegister, type, (0, 6, -1, 0))
+	let started = block.Add(MethodCodegen.StoreConstant(empty, name)).WithNextId
+	let begun = LoopCodegen(MethodCodegen(values)).Declared(SyntaxNode("For", "", node.children), started)
+	let element = values.Expression(node.children(1), begun)
+	let written = element.Add(InstructionEntry.Named(InstructionType.InvokeWriteToList, element.Result, name))
+	let end = InstructionEntry.Jump(InstructionType.LoopEnd, written.instructions.Length - started.instructions.Length)
+	let ended = CodeBlock(written.instructions + end, block.register, written.nextId, block.scope)
+	ended.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, name))

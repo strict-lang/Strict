@@ -30,6 +30,7 @@ MemberScope Scope
 	Scope(names, types)
 ParameterScope Scope
 	TypeShape("Add(first Number, second Number) Number", "\tfirst").ParameterScope.TypeOf("Add") is "first,second"
+	TypeShape("Add(first Number, second) Number", "\tfirst").ParameterScope.TypeOf("Add types") is "Number,Second"
 	mutable names = List(Mutable(Text))
 	mutable parameters = List(Mutable(Text))
 	for lines
@@ -37,6 +38,8 @@ ParameterScope Scope
 			let header = HeaderTokens(Tokenizer(value).Tokens)
 			names.Add(header.tokens(0))
 			parameters.Add(Text.Combine(header.ParameterNames, ","))
+			names.Add(header.tokens(0) + " types")
+			parameters.Add(Text.Combine(header.ParameterTypes, ","))
 	Scope(names, parameters)
 UsesGenerics Boolean
 	TypeShape("has value Generic").UsesGenerics is true

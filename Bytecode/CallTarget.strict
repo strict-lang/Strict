@@ -10,6 +10,7 @@ constant Adder = CallTarget(NoTypes, TypeShape("Add(numbers) Number", "\t1"), "S
 constant Ranges = CallTarget(KnownTypes(List(Text) + "Range", NoScopes, NoScopes, (Scope(List(Text) + "from", List(Text) + "Start,ExclusiveEnd"), NoScope)), Greeter, "Strict/Range", List(Text))
 constant Overloaded = CallTarget(NoTypes, TypeShape("Members Number", "\tMembers(1)", "Members(lines Number) Number", "\tlines"), "Strict/C", List(Text))
 constant Plain = CallTarget(NoTypes, Greeter, "Strict/Examples/Greeter", ("Strict/Logger", "Strict/Examples/Helper"))
+constant Colored = CallTarget(ConversionCodegen.ColorTypes, Greeter, "Strict/C", List(Text))
 Signature(name Text, type Text, returnType Text, arguments Number) Texts
 	Plain.Signature("Greeter", "Greeter", "Greeter", 1) is ("Strict/Examples/Greeter", "from", "Greeter", "text")
 	Plain.Signature("Greet", "Greeter", "Text", 0) is ("Strict/Examples/Greeter", "Greet", "Strict/Text")
@@ -26,11 +27,15 @@ OtherSignature(name Text, type Text, returnType Text, arguments Number) Texts
 		return (FullName(type), "from", type) + FromNames(type)
 	(FullName(type), name, FullName(returnType)) + types.ParametersOf(type, name, arguments)
 ParameterTypes(name Text, type Text, arguments Number) Texts
-	Plain.ParameterTypes("Greeter", "Greeter", 1) is ("Text")
-	Adder.ParameterTypes("Add", "C", 1) is ("Numbers")
+	Plain.ParameterTypes("Greeter", "Greeter", 1) + Adder.ParameterTypes("Add", "C", 1) is ("Text", "Numbers")
+	Colored.ParameterTypes("Color", "Color", 3) is ("ColorValue")
 	Plain.ParameterTypes("Length", "Text", 0).Length is 0
-	if name is not type
-		return type is TypeName then Overload(name, arguments).ParameterTypes else List(Text)
+	CallTarget(KnownTypes.Sample, Greeter, "Strict/C", List(Text)).ParameterTypes("Twice", "Count", 1) is ("Number")
+	if (type is TypeName) and name is not type
+		return Overload(name, arguments).ParameterTypes
+	let declared = types.ParameterTypesOf(type, (name is type then "from" else name), arguments)
+	if name is not type or declared.Length > 0
+		return declared
 	let members = type is TypeName then shape.MemberScope else types.MembersOf(type)
 	for FromNames(type)
 		members.TypeOf(value)
