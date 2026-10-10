@@ -541,6 +541,16 @@ public sealed class VirtualMachineTests : TestBytecode
 		Assert.That(machine.Profile!.Keys, Has.None.EndsWith(".Floor"));
 	}
 
+	[Test]
+	public void NumberWrapperValueIsUsedAsNumberInArithmetic() =>
+		Assert.That(new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+				nameof(NumberWrapperValueIsUsedAsNumberInArithmetic),
+				nameof(NumberWrapperValueIsUsedAsNumberInArithmetic) + "(0).Halved", "has number",
+				"Halved Number",
+				"\t" + nameof(NumberWrapperValueIsUsedAsNumberInArithmetic) + "(180).ValueHalved",
+				"ValueHalved Number", "\tvalue / 2")).Generate()).Execute().Returns!.Value.Number,
+			Is.EqualTo(90));
+
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
 	{
 		var fromMethod = targetType.FindMethod(Method.From, []);

@@ -21,14 +21,23 @@ public sealed partial class VirtualMachine
 		{
 			InstructionType.Add => AddValueInstances(left, right),
 			InstructionType.Subtract => SubtractValueInstances(left, right),
-			InstructionType.Multiply => new ValueInstance(right.GetType(), left.Number * right.Number),
-			InstructionType.Divide => new ValueInstance(right.GetType(), left.Number / right.Number),
-			InstructionType.Modulo => new ValueInstance(right.GetType(), left.Number % right.Number),
-			InstructionType.Power => new ValueInstance(right.GetType(), Math.Pow(left.Number, right.Number)),
-			_ => throw Fail("Unsupported binary operation: " +
-				instruction.InstructionType) //ncrunch: no coverage
+			_ => new ValueInstance(right.GetType(), CalculateNumber(instruction.InstructionType,
+				left.GetArithmeticNumber(), right.GetArithmeticNumber()))
 		};
 	}
+
+	/// <summary>
+	/// Number wrappers like Degrees (e.g. the implicit value) calculate with their number member.
+	/// </summary>
+	private double CalculateNumber(InstructionType operation, double left, double right) =>
+		operation switch
+		{
+			InstructionType.Multiply => left * right,
+			InstructionType.Divide => left / right,
+			InstructionType.Modulo => left % right,
+			InstructionType.Power => Math.Pow(left, right),
+			_ => throw Fail("Unsupported binary operation: " + operation) //ncrunch: no coverage
+		};
 
 	private static ValueInstance AddValueInstances(ValueInstance left, ValueInstance right)
 	{
@@ -45,7 +54,8 @@ public sealed partial class VirtualMachine
 			return new ValueInstance(right.List.ReturnType, [left, .. right.List.Items]);
 		if (left.IsText || right.IsText)
 			return new ValueInstance(ConvertToText(left).Text + ConvertToText(right).Text);
-		return new ValueInstance(right.GetType(), left.Number + right.Number);
+		return new ValueInstance(right.GetType(),
+			left.GetArithmeticNumber() + right.GetArithmeticNumber());
 	}
 
 	private ValueInstance SubtractValueInstances(ValueInstance left, ValueInstance right)
@@ -63,7 +73,8 @@ public sealed partial class VirtualMachine
 		if (left.IsText || right.IsText)
 			throw Fail("Text subtraction is not supported: '" + left + "' - '" + right +
 				"'"); //ncrunch: no coverage
-		return new ValueInstance(left.GetType(), left.Number - right.Number);
+		return new ValueInstance(left.GetType(),
+			left.GetArithmeticNumber() - right.GetArithmeticNumber());
 	}
 
 	private (ValueInstance, ValueInstance) GetOperands(BinaryInstruction instruction) =>
