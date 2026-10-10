@@ -31,7 +31,7 @@ Body(body SyntaxNode, block CodeBlock) CodeBlock
 	mutable result = block
 	for body.children
 		result = Statement(value, result.At(block.register), HasElse(body, index))
-	result
+	CodeBlock(result.instructions, result.register, result.nextId, block.scope)
 HasElse(body SyntaxNode, position Number) Boolean
 	Plain.HasElse(ElseBody, 0) is true
 	Plain.HasElse(ElseBody, 1) is false

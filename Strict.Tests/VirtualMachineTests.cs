@@ -891,6 +891,13 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\tnumbers(0) + result(0)").Number, Is.EqualTo(6));
 
 	[Test]
+	public void CopyInSkippedIfBranchDoesNotOwnListAfterIt() =>
+		Assert.That(RunSource(nameof(CopyInSkippedIfBranchDoesNotOwnListAfterIt), "((1, 2)).Change",
+			"has numbers", "Change Number", "\tmutable other = numbers", "\tif numbers(0) is 5",
+			"\t\tother(0) = 5", "\tother(1) = 6", "\tnumbers(1) * 10 + other(1)").Number,
+			Is.EqualTo(26));
+
+	[Test]
 	public void ListTakenFromNestedListIsChangedAsCopy() =>
 		Assert.That(RunSource(nameof(ListTakenFromNestedListIsChangedAsCopy), "(((1, 2), (3, 4))).Grow",
 			"has rows List(Numbers)", "Grow Number", "\tmutable row = rows(0)", "\trow.Add(5)",
