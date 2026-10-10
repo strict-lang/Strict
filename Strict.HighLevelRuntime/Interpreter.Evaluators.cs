@@ -121,11 +121,21 @@ public partial class Interpreter
 		var result = !isDeclaration && value is Binary { Instance: { } instance } binary &&
 			instance.ToString() == name
 				? methodCallEvaluator.Evaluate(binary, ctx, true)
-				: CopyIfMutableList(RunExpression(value, ctx));
+				: CopyUnlessHeld(RunExpression(value, ctx), isDeclaration
+					? null
+					: ctx.Find(name, Statistics));
 		return isDeclaration
 			? ctx.Variables[name] = result
 			: ctx.Set(name, result);
 	}
+
+	/// <summary>
+	/// values = values.Add(1) already stored its list in values, copying it again is O(n) per call.
+	/// </summary>
+	private static ValueInstance CopyUnlessHeld(ValueInstance result, ValueInstance? current) =>
+		current is { IsList: true } held && result.IsList && ReferenceEquals(held.List, result.List)
+			? result
+			: CopyIfMutableList(result);
 
 	/// <summary>
 	/// Lists are values: only list = list + element changes a Mutable list in place, anything else

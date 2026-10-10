@@ -119,6 +119,7 @@ public sealed partial class BinaryGenerator
 			break;
 		case Declaration declaration:
 			ownedLists.Remove(declaration.Name);
+			// ReSharper disable TailRecursiveCall
 			Disown(declaration.Value, true);
 			break;
 		case MutableReassignment reassignment:
@@ -194,8 +195,9 @@ public sealed partial class BinaryGenerator
 		reassignment.Value is Binary
 		{
 			Method.Name: BinaryOperator.Plus, Instance: VariableCall or ParameterCall
-		} binary && binary.Instance.ReturnType.IsList && binary.Instance.ToString() == reassignment.Name &&
-		!binary.Method.Parameters[0].Type.IsList && OwnsList(binary.Instance);
+		} plusBinary && plusBinary.Instance.ReturnType.IsList &&
+		plusBinary.Instance.ToString() == reassignment.Name &&
+		!plusBinary.Method.Parameters[0].Type.IsList && OwnsList(plusBinary.Instance);
 
 	private bool TryGenerateAddForTable(MethodCall methodCall)
 	{

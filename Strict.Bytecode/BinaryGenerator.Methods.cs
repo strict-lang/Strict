@@ -146,7 +146,7 @@ public sealed partial class BinaryGenerator
 			CollectExpressionDependencies(reassignment.Value);
 			break;
 		case For forExpression:
-			CollectExpressionDependencies(GetLoopIteratorExpression(forExpression.Iterator));
+			CollectExpressionDependencies(GetLoopIteratorExpression(forExpression));
 			CollectExpressionDependencies(forExpression.Body);
 			break;
 		case If ifExpression:

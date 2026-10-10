@@ -148,8 +148,9 @@ Phase C1–C4 result (2026-10-09), AdjustBrightness, Release unless noted:
   65 GB → 22 ms / 2 MB.
 - C4 Context.FindType already caches hits; package loading is now logged (Compiler package
   ~105 ms, 5.8 MB). ReadyToRun publishing only saved ~10% on source runs, nothing cached, skipped.
-Follow-ups: parameter/member symbol ids precomputed per invoke and type, lazy custom iterators,
-per-instruction cached access paths, VM constraint checks (from Phase A).
+Follow-ups: member symbol ids precomputed per type, VM constraint checks (from Phase A). Done in
+the Phase C dev loop below: per-instruction cached access paths, lazy custom iterators (parameter
+symbol ids were measured without gain).
 
 Phase C7 progress (2026-10-10), Strict compiler (Bytecode/FileCompiler on the C# VM, Debug):
 - Per Example run time: HelloLogger 130 → 111 ms, FizzBuzz 520 → 281 ms, ProcessProbe 850 →
@@ -213,8 +214,12 @@ VM: parsed variable access paths are cached on the instructions instead of per-V
 dictionaries: BenchBrightness 320x180 Run 482/498 → 436/450 ms (Debug, interleaved). Measured and
 rejected: saving only the registers a callee writes (CPU samples blamed RegisterFile copies for 68%,
 A/B showed no change) and symbol ids for parameters. Release runs it 19% faster than Debug (350 ms).
-Next: `for image.Size` builds all 57,600 Vector2 elements although the body only uses `index`
-(Size.for is ~25% of the run, 48 MB allocated per run).
+Lazy custom iterators: a loop without custom variables or a nested loop that never reads `value` or
+`outer` (bare words binding to the value included) counts to the iterator's `Length` instead of
+calling `for`, in C# BinaryGenerator and Strict LoopCodegen alike. BenchBrightness no longer builds
+57,600 Vector2 (Size.for was 92 ms): Run 350/355 → 244/249 ms Release, 429/435 → 320/326 ms
+Debug, allocated 48 → 27 MB, 121 → 103 instructions (interleaved, same VM). Next: the Process loop
+body itself (~150 ms beyond its two calls, ~2.6 µs per pixel) and the 27 MB still allocated.
 
 ### Phase D — Self-hosting milestones (≈15–25 sessions)
 D1 Real front end in Strict (Language + Expressions): full Type/Member/Method model, Package/Context

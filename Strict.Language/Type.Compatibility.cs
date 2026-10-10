@@ -184,8 +184,8 @@ public partial class Type
 		int maxDepth)
 	{
 		var key = (targetType, allowImplicitConversion, maxDepth);
-		var usableMemberCache = this.usableMemberCache ??= new();
-		if (usableMemberCache.TryGetValue(key, out var cached))
+		var memberCache = usableMemberCache ??= new ConcurrentDictionary<(Type, bool, int), bool>();
+		if (memberCache.TryGetValue(key, out var cached))
 			return cached;
 		var found = false;
 		for (var memberIndex = 0; memberIndex < members.Count; memberIndex++)
@@ -193,10 +193,10 @@ public partial class Type
 				IsSameOrCanBeUsedAs(targetType, allowImplicitConversion, maxDepth - 1))
 			{
 				if (found)
-					return usableMemberCache[key] = false;
+					return memberCache[key] = false;
 				found = true;
 			}
-		return usableMemberCache[key] = found;
+		return memberCache[key] = found;
 	}
 
 	private ConcurrentDictionary<(Type, bool, int), bool>? usableMemberCache;

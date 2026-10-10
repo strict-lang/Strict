@@ -63,7 +63,7 @@ public sealed partial class BinaryGenerator
 		var instructionCountBeforeLoopStart = instructions.Count;
 		var customVariableNames =
 			forExpression.CustomVariables.Select(variable => variable.ToString()).ToArray();
-		var iterator = GetLoopIteratorExpression(forExpression.Iterator);
+		var iterator = GetLoopIteratorExpression(forExpression);
 		LoopBeginInstruction loopBegin;
 		if (iterator.ReturnType.Name == Type.Range)
 		{
@@ -135,17 +135,50 @@ public sealed partial class BinaryGenerator
 	private void AddListAggregation(string aggregationTarget) =>
 		instructions.Add(new WriteToListInstruction(registry.PreviousRegister, aggregationTarget));
 
-	private static Expression GetLoopIteratorExpression(Expression iterator)
+	/// <summary>
+	/// Custom iterators build all their elements, loops only using index count to Length instead.
+	/// </summary>
+	private static Expression GetLoopIteratorExpression(For forExpression)
 	{
-		if (iterator.ReturnType.IsList || iterator.ReturnType.IsText || iterator.ReturnType.IsNumber ||
-			iterator.ReturnType.Name == Type.Range)
+		var iterator = forExpression.Iterator;
+		var type = iterator.ReturnType;
+		if (type.IsList || type.IsText || type.IsNumber || type.Name == Type.Range)
 			return iterator;
-		var iteratorMethod = iterator.ReturnType.Methods.FirstOrDefault(method =>
+		var iteratorMethod = type.Methods.FirstOrDefault(method =>
 			method.Name == Keyword.For && method.ReturnType.IsIterator);
-		return iteratorMethod == null
-			? iterator
-			: new MethodCall(iteratorMethod, iterator, lineNumber: iterator.LineNumber);
+		if (iteratorMethod == null)
+			return iterator;
+		var lengthMethod = type.Methods.FirstOrDefault(method =>
+			method is { Name: "Length", Parameters.Count: 0, ReturnType.IsNumber: true });
+		if (lengthMethod != null && forExpression.CustomVariables.Length == 0 &&
+			!UsesLoopValue(forExpression.Body))
+			iteratorMethod = lengthMethod;
+		return new MethodCall(iteratorMethod, iterator, lineNumber: iterator.LineNumber);
 	}
+
+	/// <summary>
+	/// Unknown expressions count as using the loop value, only proven index-only loops change.
+	/// </summary>
+	private static bool UsesLoopValue(Expression expression) =>
+		expression switch
+		{
+			VariableCall variableCall => variableCall.Variable.Name is Type.ValueLowercase
+				or Type.OuterLowercase,
+			List list => list.Values.Any(UsesLoopValue),
+			Value or ParameterCall => false,
+			MemberCall memberCall => memberCall.Instance != null && UsesLoopValue(memberCall.Instance),
+			MethodCall methodCall => methodCall.Instance != null && UsesLoopValue(methodCall.Instance) ||
+				methodCall.Arguments.Any(UsesLoopValue),
+			Body body => body.Expressions.Any(UsesLoopValue),
+			Declaration declaration => UsesLoopValue(declaration.Value),
+			MutableReassignment reassignment => UsesLoopValue(reassignment.Target) ||
+				UsesLoopValue(reassignment.Value),
+			If ifExpression => UsesLoopValue(ifExpression.Condition) ||
+				UsesLoopValue(ifExpression.Then) ||
+				ifExpression.OptionalElse != null && UsesLoopValue(ifExpression.OptionalElse),
+			ListCall listCall => UsesLoopValue(listCall.List) || UsesLoopValue(listCall.Index),
+			_ => true
+		};
 
 	private LoopBeginInstruction GenerateInstructionForRangeLoopInstruction(
 		Expression range, params string[] customVariableNames)

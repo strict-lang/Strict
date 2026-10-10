@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
 using Strict.Bytecode.Tests;
@@ -861,8 +861,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	[Test]
 	public void ListReassignedFromMemberIsChangedAsCopy() =>
 		Assert.That(RunSource(nameof(ListReassignedFromMemberIsChangedAsCopy), "((1, 2)).Grow",
-			"has numbers", "Grow Number", "\tmutable result = numbers + 7", "\tresult = numbers",
-			"\tresult.Add(4)", "\tresult = numbers", "\tresult = result + 5", "\tnumbers.Length").Number,
+				"has numbers", "Grow Number", "\tmutable result = numbers + 7", "\tresult = numbers",
+				"\tresult.Add(4)", "\tresult = numbers", "\tresult = result + 5", "\tnumbers.Length").Number,
 			Is.EqualTo(2));
 
 	[Test]
@@ -882,7 +882,7 @@ public sealed class VirtualMachineTests : TestBytecode
 	[Test]
 	public void RemoveAsLastLineReturnsList() =>
 		Assert.That(RunSource(nameof(RemoveAsLastLineReturnsList), "((1, 2)).Shrink", "has numbers",
-			"Shrink Numbers", "\tmutable result = numbers + 7", "\tresult.Remove(1)").List.Items.
+				"Shrink Numbers", "\tmutable result = numbers + 7", "\tresult.Remove(1)").List.Items.
 			Select(item => item.Number), Is.EqualTo(new[] { 2.0, 7.0 }));
 
 	[Test]
@@ -1077,8 +1077,9 @@ public sealed class VirtualMachineTests : TestBytecode
 		var runMethod = testType.Methods.Single(m => m.Name == Method.Run);
 		var executable =
 			BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod]); //TODO: extremely slow
-		var result = new VirtualMachine(executable).Execute().Returns!.Value.Number;
-		Assert.That(result, Is.EqualTo(16 * 9));
+		var machine = new VirtualMachine(executable) { Profile = [] };
+		Assert.That(machine.Execute().Returns!.Value.Number, Is.EqualTo(16 * 9));
+		Assert.That(machine.Profile!.Keys, Has.None.EndsWith(".for"));
 	}
 
 	[Test]
