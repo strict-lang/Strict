@@ -63,7 +63,11 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	node.Kind is "Declaration" then Declared(stored, name, assigned) else stored
 Stored(assigned SyntaxNode, name Text, block CodeBlock) CodeBlock
 	Plain.Stored(One, "a", CodeBlock.Empty).instructions.Length is 1
-	let value = values.Expression(assigned, block)
+	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", CodeBlock.Empty).instructions(0).texts is ("a")
+	constant stacktraces = SyntaxNode("Call", "List", SyntaxNode("Identifier", "Stacktrace"))
+	let error = SyntaxNode("Call", "Error", (SyntaxNode("Text", "\"" + name + "\""), stacktraces))
+	let isError = (assigned.Kind is "Identifier") and (assigned.text is "Error")
+	let value = values.Expression((isError then error else assigned), block)
 	assigned.IsLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else value.Stored(name)
 AssignedName(node SyntaxNode) Text
 	Plain.AssignedName(SyntaxNode("Declaration", "let a", One)) is "a"
