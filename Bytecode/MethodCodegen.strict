@@ -5,7 +5,6 @@ constant One = SyntaxNode("Number", "1")
 constant MixedList = SyntaxNode("List", "", (NoNode, One))
 constant ElementAssignment = SyntaxNode("Reassignment", "", (SyntaxNode("MethodCall", "a", (NoNode, One)), NoNode))
 constant NoScope = Scope(List(Text), List(Text))
-constant Even = MethodCodegen(ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text) + "IsEven", List(Text) + "Boolean"), CallTarget(CallTarget.NoTypes, TypeShape("IsEven(number Number) Boolean", "\tnumber % 2 is 0"), "Strict/C", List(Text))))
 constant SumBody = BodyParser("Sum Number", "\tfor 3", "\t\tindex").Block(1, 1)
 constant IfBody = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\t4").Block(1, 1)
 constant LoopBody = BodyParser("Run Number", "\tfor 3", "\t\tindex", "\t0").Block(1, 1)
@@ -21,32 +20,11 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(FilterBody, NoScope, "Number").instructions(12).kind is InstructionType.JumpEnd
 	Plain.Generate(CopiedBody, NoScope, "None").instructions(5).kind is InstructionType.Add
 	let start = CodeBlock(List(InstructionEntry), 0, 0, scope)
-	let code = WithoutTests(body, start)
+	let code = TestLines(values).Without(body, start)
 	let block = LoopCodegen(MethodCodegen(values)).Aggregated(code, start, returnType)
 	if (code.children.Length is 0) or (block.instructions.Last.kind is InstructionType.Return)
 		return block
 	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
-WithoutTests(body SyntaxNode, block CodeBlock) SyntaxNode
-	Plain.WithoutTests(BodyParser("Run", "	1 is 1", "	2 is not 3", "	2").Block(1, 1), CodeBlock.Empty).children.Length is 1
-	Plain.WithoutTests(BodyParser("Run", "\t2 is in (1, 2)", "\t2").Block(1, 1), CodeBlock.Empty).children.Length is 1
-	Plain.WithoutTests(BodyParser("Run Boolean", "\t3 > 1", "\ttrue").Block(1, 1), CodeBlock.Empty).children.Length is 1
-	mutable code = List(Mutable(SyntaxNode))
-	for body.children
-		if (index is body.children.Length - 1) or (IsTest(value, code.Length is 0, block) is false)
-			code.Add(value)
-	SyntaxNode("Body", "", code)
-IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
-	Plain.IsTest(SyntaxNode("Binary", ">", (One, One)), false, CodeBlock.Empty) is false
-	Plain.IsTest(SyntaxNode("Not", "", SyntaxNode("Binary", "is", (One, One))), false, CodeBlock.Empty) is true
-	Plain.IsTest(SyntaxNode("Binary", "+", (One, One)), true, CodeBlock.Empty) is false
-	Plain.IsTest(SyntaxNode("Declaration", "let a", SyntaxParser("1", "is", "1").Parse), false, CodeBlock.Empty) is false
-	Even.IsTest(SyntaxNode("Call", "IsEven", One), true, CodeBlock.Empty) is true
-	if line.Kind is in ("If", "ElseIf", "Else", "Declaration", "Reassignment")
-		return false
-	let lineText = line to Text
-	if isLeading and values.IsMethodCall(line, block) or lineText.IndexOf(" is ") >= 0
-		return values.TypeOf(line, block) is "Boolean"
-	false
 Body(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
 	mutable result = block

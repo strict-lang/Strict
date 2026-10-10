@@ -1,0 +1,25 @@
+has values ValueCodegen
+constant Plain = TestLines(ValueCodegen.Plain)
+constant One = MethodCodegen.One
+constant Even = TestLines(ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text) + "IsEven", List(Text) + "Boolean"), CallTarget(CallTarget.NoTypes, TypeShape("IsEven(number Number) Boolean", "\tnumber % 2 is 0"), "Strict/C", List(Text))))
+Without(body SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Without(BodyParser("Run", "	1 is 1", "	2 is not 3", "	2").Block(1, 1), CodeBlock.Empty).children.Length is 1
+	Plain.Without(BodyParser("Run", "\t2 is in (1, 2)", "\t2").Block(1, 1), CodeBlock.Empty).children.Length is 1
+	Plain.Without(BodyParser("Run Boolean", "\t3 > 1", "\ttrue").Block(1, 1), CodeBlock.Empty).children.Length is 1
+	mutable code = List(Mutable(SyntaxNode))
+	for body.children
+		if (index is body.children.Length - 1) or (IsTest(value, code.Length is 0, block) is false)
+			code.Add(value)
+	SyntaxNode("Body", "", code)
+IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
+	Plain.IsTest(SyntaxNode("Binary", ">", (One, One)), false, CodeBlock.Empty) is false
+	Plain.IsTest(SyntaxNode("Not", "", SyntaxNode("Binary", "is", (One, One))), false, CodeBlock.Empty) is true
+	Plain.IsTest(SyntaxNode("Binary", "+", (One, One)), true, CodeBlock.Empty) is false
+	Plain.IsTest(SyntaxNode("Declaration", "let a", SyntaxParser("1", "is", "1").Parse), false, CodeBlock.Empty) is false
+	Even.IsTest(SyntaxNode("Call", "IsEven", One), true, CodeBlock.Empty) is true
+	if line.Kind is in ("If", "ElseIf", "Else", "Declaration", "Reassignment")
+		return false
+	let lineText = line to Text
+	if isLeading and values.IsMethodCall(line, block) or lineText.IndexOf(" is ") >= 0
+		return values.TypeOf(line, block) is "Boolean"
+	false
