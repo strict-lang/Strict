@@ -379,8 +379,8 @@ public sealed class RunnerTests
 			{
 				Assert.That(await Strict.Program.Main([path]), Is.EqualTo(1));
 				Assert.That(consoleWriter.ToString(),
-					Does.Contain("OverflowException").And.Contain(path + ":line 4").
-						And.Not.Contain("at Strict.VirtualMachine"));
+					Does.Contain("Loop count or range bound 3000000000").
+						And.Contain(path + ":line 4").And.Not.Contain("at Strict.VirtualMachine"));
 			});
 
 	[Test]
@@ -404,6 +404,19 @@ public sealed class RunnerTests
 				Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
 				Assert.That(consoleWriter.ToString(),
 					Does.Contain("CallDepthExceeded").And.Contain(path + ":line 6").
+						And.Contain(path + ":line 3"));
+			});
+
+	[Test]
+	public Task FailureDeepInLegalRecursionNamesCallersInsteadOfCrashing() =>
+		InTemporaryFile("FailDeep",
+			"has number\nDeeper Number\n\tFailDeep(1).Deeper is 0\n\tconstant numbers = (1, 2)\n" +
+			"\tif number > 125\n\t\treturn numbers(number)\n\tFailDeep(number + 1).Deeper",
+			async path =>
+			{
+				Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("ListIndexOutOfRange").And.Contain(path + ":line 7").
 						And.Contain(path + ":line 3"));
 			});
 

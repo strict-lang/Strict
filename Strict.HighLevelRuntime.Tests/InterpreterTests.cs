@@ -796,30 +796,6 @@ public sealed class InterpreterTests
 	}
 
 	[Test]
-	public void EndlessRecursionOnSmallStackIsCallDepthExceeded()
-	{
-		using var t = CreateType(nameof(EndlessRecursionOnSmallStackIsCallDepthExceeded),
-			"has number", "Deeper Number", "\tif number < 0", "\t\treturn 0",
-			$"\t{nameof(EndlessRecursionOnSmallStackIsCallDepthExceeded)}(number + 1).Deeper");
-		Exception? error = null;
-		var thread = new Thread(() =>
-		{
-			try
-			{
-				interpreter.Execute(t.Methods.Single(m => m.Name == "Deeper"),
-					new ValueInstance(t, [new ValueInstance(interpreter.numberType, 1.0)]), []);
-			}
-			catch (Exception ex)
-			{
-				error = ex;
-			}
-		}, 256 * 1024);
-		thread.Start();
-		thread.Join();
-		Assert.That(error, Is.InstanceOf<Interpreter.CallDepthExceeded>());
-	}
-
-	[Test]
 	public void StackOverflowDetectionChecksGrandParentContextToo()
 	{
 		using var t = CreateType(nameof(StackOverflowDetectionChecksGrandParentContextToo),

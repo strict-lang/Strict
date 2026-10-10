@@ -174,6 +174,17 @@ public sealed class ForTests
 	}
 
 	[Test]
+	public void HugeRangeFailsInsteadOfRunningNoIterations()
+	{
+		using var t = CreateType(nameof(HugeRangeFailsInsteadOfRunningNoIterations), "has number",
+			"Numbers(start Number) Numbers", "\tfor Range(start, start + 2)", "\t\tvalue");
+		Assert.That(
+			() => interpreter.Execute(t.Methods[0], interpreter.noneInstance,
+				[new ValueInstance(interpreter.numberType, 3000000000)]),
+			Throws.InstanceOf<OverflowException>().With.Message.Contains("3000000000"));
+	}
+
+	[Test]
 	public void ForLoopThrowsWhenIteratorLengthIsUnsupported()
 	{
 		const string TypeName = nameof(ForLoopThrowsWhenIteratorLengthIsUnsupported);

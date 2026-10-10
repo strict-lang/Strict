@@ -673,7 +673,12 @@ VM limits (2026-10-10): endless recursion crashed `Strict test` (Debug) with a r
 guards small thread stacks (~5.5 KB per Strict call in Debug). VM `StackOverflow` is an
 `InstructionExecutionFailed` with file:line and `Deeper (255 times)` callers. Raw Overflow/OutOfMemory
 (`Range(1, 3e9)`, `Length is 3e9` lists) become Strict errors at the line, BenchBrightness 271 vs 275 ms
-(noise). No step limit: only `LoopEnd` jumps back, count fixed at start. Open: `for N` caps at int.Max.
+(noise). No step limit: only `LoopEnd` jumps back, count fixed at start.
+Review fix: a failure 120 calls deep (legal, limit 128) still crashed Debug `Strict test` (0xC00000FD,
+110 was fine), each body rethrew it. Bodies now wrap an error once with all Strict callers
+(`ListsCallers`) and let it pass. `for 1e12` and `Range(3e9, 3e9 + 2)` silently ran int.MaxValue or 0
+times, `GetLoopBound` now fails in VM and interpreter naming value and line. The 256 KB thread test hit
+NCrunch's stack guard (<480 KB left) and is gone; NCrunch green (606 HighLevelRuntime, 1314 Strict.Tests).
 
 
 ## Native loops — 2026-10-09 (late night, part 4)

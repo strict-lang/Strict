@@ -39,7 +39,7 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 		}
 		throw new InterpreterExecutionFailed(ctx.Method, call.LineNumber,
 			InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
-				"List call needs a list, got: " + listInstanceText), null, false);
+				"List call needs a list, got: " + listInstanceText), null, true);
 	}
 
 	/// <summary>

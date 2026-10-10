@@ -68,8 +68,8 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		if (isRangeIterator && iteratorInstance!.TryGetValue("Start", out var startValue) &&
 			iteratorInstance.TryGetValue("ExclusiveEnd", out var endValue))
 		{
-			start = (int)startValue.GetArithmeticNumber();
-			end = (int)endValue.GetArithmeticNumber();
+			start = startValue.GetLoopBound();
+			end = endValue.GetLoopBound();
 		}
 		else
 		{

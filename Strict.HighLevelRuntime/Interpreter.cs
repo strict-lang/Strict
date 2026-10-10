@@ -465,14 +465,11 @@ public partial class Interpreter
 	public sealed class NegativeLoopCount(Method method, int count)
 		: InterpreterExecutionFailed(method, "Loop count " + count + " is negative");
 
-	/// <summary>
-	/// Builds the whole Strict call chain at once, bodies let it pass without wrapping each level.
-	/// </summary>
 	public sealed class CallDepthExceeded(ExecutionContext caller) : InterpreterExecutionFailed(
 		caller.Method, caller.CurrentExpressionLineNumber, BuildContextMessage(caller.Method,
 			caller.CurrentExpressionLineNumber, caller,
 			"Call depth " + caller.Depth + " exceeded the call depth limit " + MaxCallDepth +
-			" or thread stack, endless recursion?"), null, false);
+			" or thread stack, endless recursion?"), null, true);
 
 	public class ExpressionNotSupported(Expression expr, ExecutionContext context)
 		: InterpreterExecutionFailed(context.Type, expr.GetType().Name); //ncrunch: no coverage
