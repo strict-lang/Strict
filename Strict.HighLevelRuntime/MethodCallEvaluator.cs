@@ -11,11 +11,10 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 		interpreter.Statistics.ListCallCount++;
 		var directOuter = TryGetDirectOuterValue(call.List, ctx);
 		var listInstance = directOuter ?? interpreter.RunExpression(call.List, ctx);
-		var indexValue = interpreter.RunExpression(call.Index, ctx);
+		var index = (int)interpreter.RunExpression(call.Index, ctx).GetArithmeticNumber();
 		if (listInstance.IsList || listInstance.IsText ||
 			listInstance.TryGetValueTypeInstance()?.ReturnType.IsList == true)
 		{
-			var index = (int)indexValue.Number;
 			var length = listInstance.GetIteratorLength();
 			if (index < -length || index >= length)
 				throw new Interpreter.ListIndexOutOfRange(ctx.Method, call.ToString(), index, length);
@@ -27,8 +26,7 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 			if (typeInst != null)
 				for (var i = 0; i < typeInst.Values.Length; i++)
 					if (typeInst.Values[i].IsText)
-						return typeInst.Values[i].
-							GetIteratorValue(interpreter.characterType, (int)indexValue.Number);
+						return typeInst.Values[i].GetIteratorValue(interpreter.characterType, index);
 		}
 		var listInstanceText = listInstance.GetType().Name;
 		try
@@ -176,6 +174,8 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 					: throw new InterpreterExecutionFailed(ctx.Method,
 						InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
 							"Only + operator is supported for Text, got: " + op));
+			if (op == BinaryOperator.Plus && left.IsText && right.TryGetValueTypeInstance() != null)
+				return new ValueInstance(left.Text + ConvertToTextWithOwnToMethod(right, ctx));
 			if (left.IsText && IsNumberLike(right))
 				return op == BinaryOperator.Plus
 					? right.IsPrimitiveType(interpreter.characterType)
@@ -184,8 +184,6 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 					: throw new InterpreterExecutionFailed(ctx.Method,
 						InterpreterExecutionFailed.BuildContextMessage(ctx.Method, call, ctx,
 							"Only + operator is supported for Text+Number, got: " + op));
-			if (op == BinaryOperator.Plus && left.IsText && right.TryGetValueTypeInstance() != null)
-				return new ValueInstance(left.Text + ConvertToTextWithOwnToMethod(right, ctx));
 			var leftList = ConvertToListValue(left);
 			var rightList = ConvertToListValue(right);
 			if (leftList.HasValue && rightList.HasValue)
@@ -302,8 +300,8 @@ public sealed partial class MethodCallEvaluator(Interpreter interpreter)
 					right.GetType().IsSameOrCanBeUsedAs(left.GetType()));
 			return interpreter.ToBoolean(left.Equals(right));
 		}
-		var l = left.Number;
-		var r = right.Number;
+		var l = left.GetArithmeticNumber();
+		var r = right.GetArithmeticNumber();
 		return op switch
 		{
 			BinaryOperator.Greater => interpreter.ToBoolean(l > r),

@@ -147,8 +147,8 @@ public sealed partial class MethodCallEvaluator
 	{
 		var result = new ValueInstance[leftList.Count];
 		for (var index = 0; index < leftList.Count; index++)
-			result[index] =
-				new ValueInstance(numberType, leftList[index].Number * rightList[index].Number);
+			result[index] = new ValueInstance(numberType,
+				leftList[index].GetArithmeticNumber() * rightList[index].GetArithmeticNumber());
 		return new ValueInstance(leftListType, result);
 	}
 
@@ -157,8 +157,8 @@ public sealed partial class MethodCallEvaluator
 	{
 		var result = new ValueInstance[leftList.Count];
 		for (var index = 0; index < leftList.Count; index++)
-			result[index] =
-				new ValueInstance(numberType, leftList[index].Number / rightList[index].Number);
+			result[index] = new ValueInstance(numberType,
+				leftList[index].GetArithmeticNumber() / rightList[index].GetArithmeticNumber());
 		return new ValueInstance(leftListType, result);
 	}
 
@@ -167,7 +167,8 @@ public sealed partial class MethodCallEvaluator
 	{
 		var result = new ValueInstance[leftList.Count];
 		for (var i = 0; i < leftList.Count; i++)
-			result[i] = new ValueInstance(leftList[i].GetType(), leftList[i].Number * rightNumber);
+			result[i] = new ValueInstance(leftList[i].GetType(),
+				leftList[i].GetArithmeticNumber() * rightNumber);
 		return new ValueInstance(leftListType, result);
 	}
 
@@ -176,7 +177,8 @@ public sealed partial class MethodCallEvaluator
 	{
 		var result = new ValueInstance[leftList.Count];
 		for (var i = 0; i < leftList.Count; i++)
-			result[i] = new ValueInstance(leftList[i].GetType(), leftList[i].Number / rightNumber);
+			result[i] = new ValueInstance(leftList[i].GetType(),
+				leftList[i].GetArithmeticNumber() / rightNumber);
 		return new ValueInstance(leftListType, result);
 	}
 }

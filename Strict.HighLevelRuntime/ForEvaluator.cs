@@ -65,8 +65,8 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		if (isRangeIterator && iteratorInstance!.TryGetValue("Start", out var startValue) &&
 			iteratorInstance.TryGetValue("ExclusiveEnd", out var endValue))
 		{
-			var start = (int)startValue.Number;
-			var end = (int)endValue.Number;
+			var start = (int)startValue.GetArithmeticNumber();
+			var end = (int)endValue.GetArithmeticNumber();
 			if (start <= end)
 				for (var index = start; index < end; index++)
 				{
@@ -254,13 +254,13 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		{
 			var sum = 0.0;
 			for (var index = 0; index < results.Count; index++)
-				sum += results[index].Number;
+				sum += results[index].GetArithmeticNumber();
 			return sum;
 		}
-		var consolidated = results[0].Number;
+		var consolidated = results[0].GetArithmeticNumber();
 		for (var index = 1; index < results.Count; index++)
 		{
-			var value = results[index].Number;
+			var value = results[index].GetArithmeticNumber();
 			consolidated = shorthandOperator switch
 			{
 				BinaryOperator.Multiply => consolidated * value,

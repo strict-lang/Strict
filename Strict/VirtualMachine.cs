@@ -417,7 +417,8 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 
 	private void ExecuteListCall(ListCallInstruction listCallInstruction)
 	{
-		var indexValue = (int)Memory.Registers[listCallInstruction.IndexValueRegister].Number;
+		var indexValue =
+			(int)Memory.Registers[listCallInstruction.IndexValueRegister].GetArithmeticNumber();
 		var collectionValue = GetFrameValue(listCallInstruction, listCallInstruction.Identifier);
 		if (collectionValue is { IsList: false, IsText: false })
 		{

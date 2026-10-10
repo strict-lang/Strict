@@ -543,13 +543,16 @@ public sealed class VirtualMachineTests : TestBytecode
 
 	[Test]
 	public void NumberWrapperValueIsUsedAsNumberInArithmetic() =>
-		Assert.That(RunOnNumberWrapper(nameof(NumberWrapperValueIsUsedAsNumberInArithmetic),
-			"value / 2").Number, Is.EqualTo(90));
+		Assert.That(RunOnNumberWrapper(nameof(NumberWrapperValueIsUsedAsNumberInArithmetic), 180,
+			"Number", "\tvalue / 2").Number, Is.EqualTo(90));
 
-	private ValueInstance RunOnNumberWrapper(string typeName, string calculation) =>
+	private ValueInstance RunOnNumberWrapper(string typeName, int number, string returnType,
+		params string[] lines) =>
 		new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(typeName,
-			typeName + "(0).Run", "has number", "Run Number", "\t" + typeName + "(180).Calculate",
-			"Calculate Number", "\t" + calculation)).Generate()).Execute().Returns!.Value;
+			typeName + "(0).Run", [
+				"has number", "Run " + returnType, "\t" + typeName + "(" + number + ").Calculate",
+				"Calculate " + returnType, .. lines
+			])).Generate()).Execute().Returns!.Value;
 
 	[TestCase("Plus", "90 + value", "270")]
 	[TestCase("Minus", "value - 90", "90")]
@@ -557,7 +560,21 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ArithmeticWithNumberWrapperGivesNumber(string operation, string calculation,
 		string expected) =>
 		Assert.That(RunOnNumberWrapper(nameof(ArithmeticWithNumberWrapperGivesNumber) + operation,
-			calculation).ToExpressionCodeString(), Is.EqualTo(expected));
+			180, "Number", "\t" + calculation).ToExpressionCodeString(), Is.EqualTo(expected));
+
+	[TestCase("Greater", "Boolean", "true", "\tvalue > 1")]
+	[TestCase("Smaller", "Boolean", "false", "\tvalue < 1")]
+	[TestCase("ListIndex", "Number", "30", "\tconstant numbers = (10, 20, 30)", "\tnumbers(value)")]
+	[TestCase("StoreIndex", "Number", "7", "\tmutable numbers = (1, 2, 3)",
+		"\tnumbers(value) = value + 5", "\tnumbers(2)")]
+	[TestCase("TextArgument", "Text", "ll", "\t\"hello\".Substring(value, 2)")]
+	[TestCase("RangeEnd", "Number", "1", "\tfor Range(1, value)", "\t\tindex")]
+	[TestCase("CharacterFrom", "Boolean", "true", "\tCharacter(value) is Character(2)")]
+	[TestCase("Increment", "Number", "3", "\tvalue.Increment")]
+	public void NumberWrapperIsReadAsItsNumber(string name, string returnType, string expected,
+		params string[] lines) =>
+		Assert.That(RunOnNumberWrapper(nameof(NumberWrapperIsReadAsItsNumber) + name, 2, returnType,
+			lines).ToExpressionCodeString(), Is.EqualTo(expected));
 
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
 	{

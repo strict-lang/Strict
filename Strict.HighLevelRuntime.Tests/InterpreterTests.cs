@@ -997,6 +997,34 @@ public sealed class InterpreterTests
 		Assert.That(interpreter.Execute(greet, instance, []).Text, Is.EqualTo("Hello, World!"));
 	}
 
+	[TestCase("Boolean", "true", "\tvalue > 1")]
+	[TestCase("Boolean", "false", "\tvalue < 1")]
+	[TestCase("Boolean", "true", "\tvalue >= 2")]
+	[TestCase("Boolean", "false", "\tvalue <= 1")]
+	[TestCase("Number", "30", "\tconstant numbers = (10, 20, 30)", "\tnumbers(value)")]
+	[TestCase("Number", "7", "\tmutable numbers = (1, 2, 3)", "\tnumbers(value) = 7",
+		"\tnumbers(2)")]
+	[TestCase("Text", "ll", "\t\"hello\".Substring(value, 2)")]
+	[TestCase("Number", "1", "\tfor Range(1, value)", "\t\tindex")]
+	[TestCase("Boolean", "true", "\tCharacter(value) is Character(2)")]
+	[TestCase("Number", "3", "\tfor (1, 2)",
+		"\t\t" + nameof(NumberWrapperIsReadAsItsNumber) + "(value)")]
+	[TestCase("Text", "v(2)", "\t\"v\" + value")]
+	[TestCase("Numbers", "(4, 4)", "\t(value, value) * 2")]
+	[TestCase("Numbers", "(1, 1)", "\t(value, value) / 2")]
+	[TestCase("Numbers", "(4, 4)", "\t(value, value) * (value, value)")]
+	[TestCase("Numbers", "(2, 1)", "\t(value, value) / (" + nameof(NumberWrapperIsReadAsItsNumber) +
+		"(1), " + nameof(NumberWrapperIsReadAsItsNumber) + "(2))")]
+	public void NumberWrapperIsReadAsItsNumber(string returnType, string expected,
+		params string[] lines)
+	{
+		using var type = CreateType(nameof(NumberWrapperIsReadAsItsNumber),
+			["has number", "Calculate " + returnType, .. lines]);
+		var instance = new ValueInstance(type, [new ValueInstance(interpreter.numberType, 2)]);
+		Assert.That(interpreter.Execute(type.Methods[0], instance, []).ToExpressionCodeString(),
+			Is.EqualTo(expected));
+	}
+
 	[Test]
 	public void ArithmeticFallbackErrorShowsMethodAndCallerContext()
 	{

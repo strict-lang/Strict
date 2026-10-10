@@ -198,7 +198,7 @@ public sealed partial class VirtualMachine
 		returnType.IsCharacter
 			? new ValueInstance(executable.characterType, argument.IsText
 				? argument.Text[0]
-				: argument.Number)
+				: argument.GetArithmeticNumber())
 			: argument;
 
 	private List<Instruction>? GetPrecompiledMethodInstructions(Method method) =>

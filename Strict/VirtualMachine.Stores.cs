@@ -123,7 +123,7 @@ public sealed partial class VirtualMachine
 		var indexInstance = TryResolveIndexValue(indexedAccessPath);
 		if (!indexInstance.HasValue)
 			return false;
-		var index = (int)indexInstance.Number;
+		var index = (int)indexInstance.GetArithmeticNumber();
 		if (index >= 0 && index < listValue.List.Count)
 		{
 			listValue.List[index] = value;
