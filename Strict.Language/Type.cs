@@ -350,9 +350,9 @@ public partial class Type : Context, IDisposable
 	private Dictionary<string, GenericTypeImplementation>? cachedGenericTypes;
 	private readonly Lock genericImplementationLock = new();
 	public string FilePath =>
-		Path.GetFullPath(Path.Combine(Package.FolderPath, (this is GenericTypeImplementation genericType
-			? genericType.Generic.Name
-			: Name) + Extension));
+		this is GenericTypeImplementation genericType
+			? genericType.Generic.FilePath
+			: Path.GetFullPath(Path.Combine(Package.FolderPath, Name + Extension));
 
 	public const string Extension = ".strict";
 

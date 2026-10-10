@@ -221,9 +221,15 @@ public sealed partial class BinaryGenerator
 			: type.FullName;
 	}
 
-	private static bool IsStrictBaseType(Type type, Type entryType) =>
-		type.FullName != entryType.FullName && (type.Package.Name == nameof(Strict) ||
-			entryType.Package.Name == "TestPackage" && type.Package.Name == "TestPackage");
+	/// <summary>
+	/// List(Color) lives next to Color, but is still named Strict/List(Color) like List.strict.
+	/// </summary>
+	private static bool IsStrictBaseType(Type type, Type entryType)
+	{
+		var package = (type as GenericTypeImplementation)?.Generic.Package ?? type.Package;
+		return type.FullName != entryType.FullName && (package.Name == nameof(Strict) ||
+			entryType.Package.Name == "TestPackage" && package.Name == "TestPackage");
+	}
 
 	private Dictionary<string, Dictionary<string, List<BinaryMethod>>> CompileMethodsFromExpressions(
 		string thisEntryTypeFullName, IReadOnlyList<Expression> entryExpressions, Type runReturnType)

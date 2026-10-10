@@ -155,6 +155,20 @@ public class PackageTests
 		}
 	}
 
+	[Test]
+	public async Task ListOfSameNamedTypeInOtherPackageUsesThatType()
+	{
+		var parser = new MethodExpressionParser();
+		var imageProcessing =
+			await new Repositories(parser).LoadStrictPackage("Strict/ImageProcessing");
+		var color = new Type(new Package((Package)imageProcessing.Parent, "OtherColors"),
+			new TypeLines("Color", "has Red Number", "has Green Number", "Reds Colors",
+				"\t(Color(1, 2))")).ParseMembersAndMethods(parser);
+		Assert.That(color.Methods[0].ReturnType.GetFirstImplementation(), Is.SameAs(color));
+		Assert.That(imageProcessing.GetType("Colors").FilePath,
+			Is.EqualTo(color.GetType(Type.List).FilePath));
+	}
+
 	/// <summary>
 	/// Can be used to profile and optimize the GetType performance by doing it many times
 	/// </summary>

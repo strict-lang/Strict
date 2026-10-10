@@ -39,22 +39,21 @@ public partial class Type
 
 	public GenericTypeImplementation GetGenericImplementation(params Type[] implementationTypes)
 	{
-		var key = GetImplementationName(implementationTypes);
+		var key = GetImplementationKey(implementationTypes);
 		lock (genericImplementationLock)
 		{
 			return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
 		}
 	}
 
-	internal string GetImplementationName(Type[] implementationTypes)
-	{
-		var key = "";
-		for (var i = 0; i < implementationTypes.Length; i++)
-			key += (key == ""
-				? ""
-				: ", ") + implementationTypes[i].Name;
-		return Name + "(" + key + ")";
-	}
+	/// <summary>
+	/// Full names keep List(Color) of two packages apart, both are still named List(Color).
+	/// </summary>
+	private static string GetImplementationKey(IEnumerable<Type> implementationTypes) =>
+		string.Join(", ", implementationTypes.Select(type => type.FullName));
+
+	private string GetImplementationName(Type[] implementationTypes) =>
+		Name + "(" + string.Join(", ", implementationTypes.Select(type => type.Name)) + ")";
 
 	internal string GetImplementationName(IReadOnlyList<NamedType> implementationTypes)
 	{
@@ -85,7 +84,8 @@ public partial class Type
 			GetGenericTypeArguments().Count == implementationTypes.Length ||
 			HasMatchingConstructor(implementationTypes))
 		{
-			var genericType = new GenericTypeImplementation(this, implementationTypes, key);
+			var genericType = new GenericTypeImplementation(this, implementationTypes,
+				GetImplementationName(implementationTypes));
 			cachedGenericTypes!.Add(key, genericType);
 			foreach (var implementationType in implementationTypes)
 				LazyInitializer.EnsureInitialized(ref implementationType.implementationsUsingThisType).
@@ -120,7 +120,7 @@ public partial class Type
 	private void RemoveGenericImplementation(GenericTypeImplementation implementation)
 	{
 		lock (genericImplementationLock)
-			cachedGenericTypes?.Remove(implementation.Name);
+			cachedGenericTypes?.Remove(GetImplementationKey(implementation.ImplementationTypes));
 		implementation.Dispose();
 	}
 
