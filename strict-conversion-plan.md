@@ -694,7 +694,8 @@ NCrunch's stack guard (<480 KB left) and is gone; NCrunch green (606 HighLevelRu
 Type identity (2026-10-10): List(Color) was cached by simple names, a temp ImageProcessing copy's List(Color)
 replaced Strict/ImageProcessing/List(Color) for the whole process; now keyed by full names and living next
 to Color (List(Number) stays Strict/List(Number), binaries keep Strict/List(Color)). That exposed Language
-passing List(Language/Variable) to the base Method: Language got a data-only Method.strict. RunnerTests
+passing List(Language/Variable) to the base Method: Language/Variable (a copy of root Variable) is gone,
+MethodParser builds root Variables (ConstantCollapser folded `X(...).IsMutable` to its default). RunnerTests
 unload temp packages, Package.Types is a snapshot, no static Any methods or lastType cache. Medians of 7
 (plain folders): test TypeCodegen 1616 → 1590 ms, SyntaxParser 450 → 449 ms, Language.Tests 254 → 263 ms.
 
@@ -1020,7 +1021,7 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 | 8 | `NumberExtensions.cs` | Simple number helpers | Methods on Number | 🚧 Deferred |
 | 9 | `StringExtensions.cs` | String helpers | Methods on Text | 🚧 Deferred |
 | 10 | `SpanExtensions.cs` | Span helpers | Performance-critical | 🚧 Deferred |
-| 11 | `Variable.cs` | Variable | `Language/Variable.strict` + root `Variable.strict` | ✅ 75% |
+| 11 | `Variable.cs` | Variable | Root `Variable.strict` (`Language/MethodParser.strict` builds them) | ✅ 75% |
 | 12 | `Parameter.cs` | Method parameter | `Language/Parameter.strict` | ✅ 75% |
 | 13 | `Member.cs` | Type member definition | `Language/Member.strict` — `Parse`, kind/name/type extract | ✅ 80% |
 | 14 | `Expression.cs` | Expression base | `Language/Expression.strict` | ✅ 50% |
@@ -1044,7 +1045,7 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
-- ✅ **Language package `.strict` files** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, MethodParser, Context, Package, Type, Body, Parser + constants. Root `Method.strict` is data-only (`Name`/`Type`/`Parameters`), `Language/Method.strict` is the same signature with the Language `Type` and `Variable`; parsing lives in `MethodParser.strict`.
+- ✅ **Language package `.strict` files** — TypeLines, NamedType, Parameter, Member, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, MethodParser, Context, Package, Type, Body, Parser + constants. Root `Method.strict` is data-only (`Name`/`Type`/`Parameters`) with root `Variable`s as parameters; parsing lives in `MethodParser.strict`.
 - ✅ **Object-model cleanup** — Language types use `Name`/`Type` (not legacy `elementName`/`typeName`/`expressionText`). Guarded by `StrictLanguageConversionTests` (11 tests).
 - ✅ **Type.strict** — real member/method line parse under **HighLevelRuntime** (inline tests green). `Members`/`Methods` + `MethodParser.Parse` for headers/params/body span.
 - ✅ **MethodParser.strict** — `Parse` / `ParseBody` / parameter extraction; avoids `IndexOf("(")` via `OpenParen`/`CloseParen` constants + character scan.

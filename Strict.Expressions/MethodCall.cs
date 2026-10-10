@@ -391,22 +391,16 @@ public class MethodCall : ConcreteExpression
 
 	private static IReadOnlyList<Expression> CreateStacktraces(Body body) => [CreateStacktrace(body)];
 
-	/// <summary>
-	/// Method, Type and Name as Stacktrace knows them, a package may have own ones (Language).
-	/// </summary>
-	private static Expression CreateStacktrace(Body body)
-	{
-		var stacktrace = body.Method.GetType(Type.Stacktrace);
-		return CreateFromMethodCall(body, stacktrace, [
-			CreateFromMethodCall(body, stacktrace.GetType(nameof(Method)), [
-				new Value(stacktrace.GetType(nameof(Type.Name)), body.Method.Name),
-				CreateFromMethodCall(body, stacktrace.GetType(nameof(Type)),
+	private static Expression CreateStacktrace(Body body) =>
+		CreateFromMethodCall(body, body.Method.GetType(Type.Stacktrace), [
+			CreateFromMethodCall(body, body.Method.GetType(nameof(Method)), [
+				new Value(body.Method.GetType(nameof(Type.Name)), body.Method.Name),
+				CreateFromMethodCall(body, body.Method.GetType(nameof(Type)),
 					[new Text(body.Method, body.Method.Type.Name)])
 			]),
 			new Text(body.Method, body.Method.Type.FilePath),
 			new Number(body.Method, body.ParsingLineNumber)
 		]);
-	}
 
 	private static bool
 		IsConstructorUsedWithSameArgumentType(IReadOnlyList<Expression> arguments, Type fromType) =>

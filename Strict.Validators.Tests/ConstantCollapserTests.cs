@@ -43,6 +43,19 @@ public sealed class ConstantCollapserTests
 	}
 
 	[Test]
+	public void ConstructorArgumentWinsOverMemberDefault()
+	{
+		using var defaultedType = new Type(TestPackage.Instance,
+			new TypeLines(nameof(ConstructorArgumentWinsOverMemberDefault), "has number",
+				"has scale = 1", "Run Boolean",
+				"\tConstructorArgumentWinsOverMemberDefault(5, 2).scale is 2"));
+		defaultedType.ParseMembersAndMethods(parser);
+		collapser.Visit(defaultedType.Methods[0], true);
+		Assert.That(defaultedType.Methods[0].GetBodyAndParseIfNeeded().ToString(),
+			Is.EqualTo("ConstructorArgumentWinsOverMemberDefault(5, 2).scale is 2"));
+	}
+
+	[Test]
 	public void KeepDeclarationUsedThroughMemberCall()
 	{
 		var method = new Method(type, 1, parser, [

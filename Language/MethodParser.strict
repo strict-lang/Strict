@@ -77,8 +77,8 @@ ExtractParameter(text Text) Variable
 	let parts = normalized.Split(" ")
 	let parameterName = parts.First to Name
 	if parts.Length is 1
-		return Variable(parameterName, Type("Any"), isMutable, "")
-	Variable(parameterName, Type(parts.Last), isMutable, "")
+		return Variable(parameterName, Type("Any"), isMutable)
+	Variable(parameterName, Type(parts.Last), isMutable)
 BodyLength(sourceLines Texts, bodyStart Number) Number
 	BodyLength(("Run", "\t\"ok\"", "Add Number"), 1) is 1
 	for sourceLines
