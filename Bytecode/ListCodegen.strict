@@ -7,6 +7,7 @@ constant Appending = BodyParser("Run", "\tvalues = values + 1").Block(1, 1).chil
 constant Writing = BodyParser("Run", "\tvalues(0) = 5").Block(1, 1).children(0)
 constant WritingLoop = BodyParser("Run", "\tfor 3", "\t\tvalues(index) = index").Block(1, 1).children(0)
 constant SharingLoop = BodyParser("Run", "\tfor values", "\t\tvalues(index) = index").Block(1, 1).children(0)
+constant BranchCopy = BodyParser("Run", "\tmutable other = (1, 2)", "\tlet saved = other", "\tif 1 > 2", "\t\tother(0) = 5", "\tother(1) = 6").Block(1, 1)
 Of(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Of(ValueCodegen.Ones, CodeBlock.Empty).instructions.Length is 1
 	node.IsLiteral then Constant(node, block) else Built(node, block)
@@ -57,6 +58,7 @@ ElementCopied(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.ElementCopied(Writing, Shared).instructions(0).kind is InstructionType.CopyList
 	Plain.ElementCopied(Writing, Shared).Owns("values") is true
 	Plain.ElementCopied(Writing, Owned).instructions.Length is 0
+	MethodCodegen.Plain.Body(BranchCopy, CodeBlock.Empty).instructions(10).kind is InstructionType.CopyList
 	let target = node.children(0)
 	if node.Kind is not "Reassignment" or target.Kind is not "Call" or block.Owns(target.text)
 		return block

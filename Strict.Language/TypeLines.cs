@@ -47,10 +47,13 @@ public partial class TypeLines
 	private void AnyMustImplement(int line, string name)
 	{
 		if (Lines[line] != name)
-			throw new AnyStrictMustImplement(name); //ncrunch: no coverage
+			throw new AnyStrictMustImplement(name, line); //ncrunch: no coverage
 	}
 
-	private sealed class AnyStrictMustImplement(string name) : Exception(name); //ncrunch: no coverage
+	//ncrunch: no coverage start
+	private sealed class AnyStrictMustImplement(string name, int line) : ParsingFailed(
+		Type.Any + Type.Extension + " line " + (line + 1) + " must be: " + name, line);
+	//ncrunch: no coverage end
 #endif
 	public string Name { get; }
 	public string[] Lines { get; }

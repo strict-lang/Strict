@@ -997,6 +997,45 @@ public sealed class InterpreterTests
 		Assert.That(interpreter.Execute(greet, instance, []).Text, Is.EqualTo("Hello, World!"));
 	}
 
+	[TestCase("Boolean", "true", "\tvalue > 1")]
+	[TestCase("Boolean", "false", "\tvalue < 1")]
+	[TestCase("Boolean", "true", "\tvalue >= 2")]
+	[TestCase("Boolean", "false", "\tvalue <= 1")]
+	[TestCase("Number", "30", "\tconstant numbers = (10, 20, 30)", "\tnumbers(value)")]
+	[TestCase("Number", "7", "\tmutable numbers = (1, 2, 3)", "\tnumbers(value) = 7",
+		"\tnumbers(2)")]
+	[TestCase("Text", "ll", "\t\"hello\".Substring(value, 2)")]
+	[TestCase("Number", "1", "\tfor Range(1, value)", "\t\tindex")]
+	[TestCase("Boolean", "true", "\tCharacter(value) is Character(2)")]
+	[TestCase("Number", "3", "\tfor (1, 2)",
+		"\t\t" + nameof(NumberWrapperIsReadAsItsNumber) + "(value)")]
+	[TestCase("Text", "v(2)", "\t\"v\" + value")]
+	[TestCase("Numbers", "(4, 4)", "\t(value, value) * 2")]
+	[TestCase("Numbers", "(1, 1)", "\t(value, value) / 2")]
+	[TestCase("Numbers", "(4, 4)", "\t(value, value) * (value, value)")]
+	[TestCase("Numbers", "(2, 1)", "\t(value, value) / (" + nameof(NumberWrapperIsReadAsItsNumber) +
+		"(1), " + nameof(NumberWrapperIsReadAsItsNumber) + "(2))")]
+	[TestCase("Numbers", "(2, 2)", "\t(value, value)")]
+	[TestCase("Number", "2", "\tlet numbers = (1, value)", "\tnumbers(1)")]
+	public void NumberWrapperIsReadAsItsNumber(string returnType, string expected,
+		params string[] lines) =>
+		Assert.That(CalculateOnNumberWrapper(nameof(NumberWrapperIsReadAsItsNumber), "has number",
+			returnType, lines), Is.EqualTo(expected));
+
+	private string CalculateOnNumberWrapper(string typeName, string member, string returnType,
+		params string[] lines)
+	{
+		using var type = CreateType(typeName, [member, "Calculate " + returnType, .. lines]);
+		var instance = new ValueInstance(type, [new ValueInstance(interpreter.numberType, 2)]);
+		return interpreter.Execute(type.Methods[0], instance, []).ToExpressionCodeString();
+	}
+
+	[Test]
+	public void NumberWrapperAssignedToMemberIsStoredAsItsNumber() =>
+		Assert.That(
+			CalculateOnNumberWrapper(nameof(NumberWrapperAssignedToMemberIsStoredAsItsNumber),
+				"mutable number", "Number", "\tnumber = value", "\tnumber + 1"), Is.EqualTo("3"));
+
 	[Test]
 	public void ArithmeticFallbackErrorShowsMethodAndCallerContext()
 	{

@@ -63,6 +63,20 @@ public sealed class ForTests
 	}
 
 	[Test]
+	public async Task LoopOverNumberWrapperRunsItsNumberTimes()
+	{
+		var parser = new MethodExpressionParser();
+		using var mathPackage = await new Repositories(parser).LoadStrictPackage("Strict/Math");
+		using var testType = new Type(mathPackage,
+			new TypeLines(nameof(LoopOverNumberWrapperRunsItsNumberTimes), "has number", "Count Number",
+				"\tfor Degrees(3)", "\t\tvalue")).ParseMembersAndMethods(parser);
+		var packageInterpreter = new Interpreter(mathPackage, TestBehavior.Disabled);
+		Assert.That(
+			packageInterpreter.Execute(testType.Methods[0], packageInterpreter.noneInstance, []).Number,
+			Is.EqualTo(0 + 1 + 2));
+	}
+
+	[Test]
 	public void CustomVariableInForLoopIsUsed()
 	{
 		using var t = CreateType(nameof(CustomVariableInForLoopIsUsed), "has number", "Sum Number",
@@ -160,6 +174,17 @@ public sealed class ForTests
 	}
 
 	[Test]
+	public void HugeRangeFailsInsteadOfRunningNoIterations()
+	{
+		using var t = CreateType(nameof(HugeRangeFailsInsteadOfRunningNoIterations), "has number",
+			"Numbers(start Number) Numbers", "\tfor Range(start, start + 2)", "\t\tvalue");
+		Assert.That(
+			() => interpreter.Execute(t.Methods[0], interpreter.noneInstance,
+				[new ValueInstance(interpreter.numberType, 3000000000)]),
+			Throws.InstanceOf<OverflowException>().With.Message.Contains("3000000000"));
+	}
+
+	[Test]
 	public void ForLoopThrowsWhenIteratorLengthIsUnsupported()
 	{
 		const string TypeName = nameof(ForLoopThrowsWhenIteratorLengthIsUnsupported);
@@ -203,6 +228,27 @@ public sealed class ForTests
 		var result = interpreter.Execute(t.Methods.Single(m => m.Name == "FindFirst"),
 			interpreter.noneInstance, []);
 		Assert.That(result.Number, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void RangeLoopIterationsDoNotAllocate()
+	{
+		using var type = CreateType(nameof(RangeLoopIterationsDoNotAllocate), "has number",
+			"Sum Number", "\tfor Range(1, 1001)", "\t\tindex");
+		interpreter.Execute(type.Methods[0], interpreter.noneInstance, []);
+		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		Assert.That(interpreter.Execute(type.Methods[0], interpreter.noneInstance, []).Number,
+			Is.EqualTo(500500));
+		Assert.That(GC.GetAllocatedBytesForCurrentThread() - allocatedBefore, Is.LessThan(4000));
+	}
+
+	[Test]
+	public void OuterFollowsValueMemberChangedInsideLoop()
+	{
+		using var type = CreateType(nameof(OuterFollowsValueMemberChangedInsideLoop),
+			"mutable Value Number", "Sum Number", "\tfor 3", "\t\tValue = Value + 1", "\t\touter");
+		var instance = new ValueInstance(type, [new ValueInstance(type.GetType(Type.Number), 0)]);
+		Assert.That(interpreter.Execute(type.Methods[0], instance, []).Number, Is.EqualTo(3));
 	}
 
 	[Test]

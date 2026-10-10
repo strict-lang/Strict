@@ -11,6 +11,7 @@ constant LoopBody = BodyParser("Run Number", "\tfor 3", "\t\tindex", "\t0").Bloc
 constant FilterBody = BodyParser("Count Number", "\tfor 3", "\t\tif index > 0", "\t\t\t1").Block(1, 1)
 constant ElseBody = BodyParser("Run", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1)
 constant ReturnElse = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\telse", "\t\treturn 4").Block(1, 1)
+constant InRun = CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "Run")
 constant CopiedBody = BodyParser("Run", "\tmutable copy = (1)", "\tlet saved = copy", "\tcopy.Add(1)").Block(1, 1)
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Length is 4
@@ -30,7 +31,7 @@ Body(body SyntaxNode, block CodeBlock) CodeBlock
 	mutable result = block
 	for body.children
 		result = Statement(value, result.At(block.register), HasElse(body, index))
-	result
+	CodeBlock(result.instructions, result.register, result.nextId, block.scope)
 HasElse(body SyntaxNode, position Number) Boolean
 	Plain.HasElse(ElseBody, 0) is true
 	Plain.HasElse(ElseBody, 1) is false
@@ -59,12 +60,16 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 		return ListCodegen(values).Added(SyntaxNode("MethodCall", "Add", node.children.Last.children), block)
 	let name = AssignedName(node)
 	let assigned = node.children.Last
-	let stored = Stored(assigned, name, ListCodegen(values).ElementCopied(node, block))
+	let stored = Stored(assigned, name, ListCodegen(values).ElementCopied(node, block), node.Kind is "Declaration")
 	node.Kind is "Declaration" then Declared(stored, name, assigned) else stored
-Stored(assigned SyntaxNode, name Text, block CodeBlock) CodeBlock
-	Plain.Stored(One, "a", CodeBlock.Empty).instructions.Length is 1
-	let value = values.Expression(assigned, block)
-	assigned.IsLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else value.Stored(name)
+Stored(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) CodeBlock
+	Plain.Stored(One, "a", CodeBlock.Empty, true).instructions.Length is 1
+	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", CodeBlock.Empty, true).instructions(0).texts is ("a")
+	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", InRun, false).instructions(0).texts is ("Run")
+	let named = isDeclaration then block.Declare(CodeBlock.ErrorMarker, name) else block
+	let value = values.Expression(assigned, named)
+	let restored = CodeBlock(value.instructions, value.register, value.nextId, block.scope)
+	assigned.IsLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else restored.Stored(name)
 AssignedName(node SyntaxNode) Text
 	Plain.AssignedName(SyntaxNode("Declaration", "let a", One)) is "a"
 	Plain.AssignedName(ElementAssignment) is "x.a(1)"
@@ -92,12 +97,8 @@ Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text)
 	let branch = Body(node.children.Last, condition)
 	let body = aggregation is "" then branch else LoopCodegen(MethodCodegen(values)).Collected(branch, aggregation)
 	let skipsElse = hasElse and body.instructions.Last.kind is not InstructionType.Return
-	let flagged = skipsElse then SkipElse(body) else body
+	let flagged = skipsElse then body.Flagged else body
 	flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
-SkipElse(block CodeBlock) CodeBlock
-	Plain.SkipElse(CodeBlock.Empty).instructions(1).payload is (2, 0, 0)
-	let truth = block.Load(InstructionEntry.LoadBoolean(block.register, true))
-	truth.Add(InstructionEntry.Binary(InstructionType.Equal, (truth.Result, truth.Result)))
 Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Generate(ElseBody, NoScope, "None").instructions.Length is 12
 	Plain.Generate(ReturnElse, NoScope, "None").instructions.Length is 9

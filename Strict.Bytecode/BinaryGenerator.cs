@@ -233,8 +233,13 @@ public sealed partial class BinaryGenerator
 	private static bool IsStatement(Expression expression) =>
 		expression is Body or Return or Declaration or MutableReassignment or For;
 
+	/// <summary>
+	/// Lists copied or declared in an if branch are only owned until the branch ends, the other
+	/// path did not copy them. Lists shared in it stay disowned.
+	/// </summary>
 	private List<Instruction> GenerateInstructions(IReadOnlyList<Expression> expressions)
 	{
+		var ownedBefore = ownedLists.ToArray();
 		for (var i = 0; i < expressions.Count; i++)
 		{
 			var statementStartRegister = registry.NextRegister;
@@ -250,6 +255,7 @@ public sealed partial class BinaryGenerator
 			if (i < expressions.Count - 1)
 				registry.ReleaseTo(statementStartRegister);
 		}
+		ownedLists.IntersectWith(ownedBefore);
 		return instructions;
 	}
 

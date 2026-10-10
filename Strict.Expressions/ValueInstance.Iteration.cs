@@ -24,8 +24,23 @@ public readonly partial struct ValueInstance
 				return elementsMember.List.Count;
 			throw new IteratorNotSupported(this);
 		}
-		return (int)number;
+		return GetLoopBound();
 	}
+
+	/// <summary>
+	/// Loops count with ints, bigger counts or range bounds fail instead of silently running less.
+	/// </summary>
+	public int GetLoopBound()
+	{
+		var bound = GetArithmeticNumber();
+		return bound is >= int.MinValue and <= int.MaxValue
+			? (int)bound
+			: throw new LoopLimitExceeded(bound);
+	}
+
+	public sealed class LoopLimitExceeded(double bound) : OverflowException(
+		"Loop count or range bound " + bound + " does not fit into " + int.MinValue + ".." +
+		int.MaxValue);
 
 	public Type GetIteratorType() => ((ValueArrayInstance)value).ReturnType.GetFirstImplementation();
 

@@ -61,47 +61,35 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		var itemType = GetForValueType(iterator);
 		var iteratorInstance = iterator.TryGetValueTypeInstance();
 		var isRangeIterator = iteratorInstance?.ReturnType == interpreter.rangeType;
+		var isNumberOnlyIteration = isRangeIterator || iterator.IsNumberLike(interpreter.numberType);
 		var bodyAsBody = f.Body as Body;
+		var start = 0;
+		int end;
 		if (isRangeIterator && iteratorInstance!.TryGetValue("Start", out var startValue) &&
 			iteratorInstance.TryGetValue("ExclusiveEnd", out var endValue))
 		{
-			var start = (int)startValue.Number;
-			var end = (int)endValue.Number;
-			if (start <= end)
-				for (var index = start; index < end; index++)
-				{
-					interpreter.ResetIteration(loop);
-					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator,
-						bodyAsBody);
-					if (ctx.ExitMethodAndReturnValue.HasValue)
-						return ctx.ExitMethodAndReturnValue.Value;
-				}
-			else
-				for (var index = start; index > end; index--)
-				{
-					interpreter.ResetIteration(loop);
-					ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator,
-						bodyAsBody);
-					if (ctx.ExitMethodAndReturnValue.HasValue)
-						return ctx.ExitMethodAndReturnValue.Value;
-				}
+			start = startValue.GetLoopBound();
+			end = endValue.GetLoopBound();
 		}
 		else
 		{
-			var loopCount = iterator.GetIteratorLength();
-			if (loopCount < 0)
-				throw new Interpreter.NegativeLoopCount(ctx.Method, loopCount);
-			var loopRange = new Range(0, loopCount);
-			for (var index = loopRange.Start.Value; index < loopRange.End.Value; index++)
-			{
-				interpreter.ResetIteration(loop);
-				ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop, isRangeIterator,
-					bodyAsBody);
-				if (ctx.ExitMethodAndReturnValue.HasValue)
-					return ctx.ExitMethodAndReturnValue.Value;
-			}
+			end = iterator.GetIteratorLength();
+			if (end < 0)
+				throw new Interpreter.NegativeLoopCount(ctx.Method, end);
 		}
-		return ShouldConsolidateForResult(f, results, ctx) ?? new ValueInstance(
+		var step = start <= end
+			? 1
+			: -1;
+		for (var index = start; index != end; index += step)
+		{
+			interpreter.ResetIteration(loop);
+			loop.Variables[Type.OuterLowercase] = ctx.Get(Type.ValueLowercase, interpreter.Statistics);
+			ExecuteForIteration(f, ctx, iterator, ref results, itemType, index, loop,
+				isNumberOnlyIteration, bodyAsBody);
+			if (ctx.ExitMethodAndReturnValue.HasValue)
+				return ctx.ExitMethodAndReturnValue.Value;
+		}
+		return ShouldConsolidateForResult(results, ctx) ?? new ValueInstance(
 			interpreter.listType.GetGenericImplementation(results is { Count: > 0 }
 				? GetResultElementType(results[0])
 				: bodyAsBody?.Expressions[^1].ReturnType ?? f.Body.ReturnType), results?.ToArray() ?? []);
@@ -109,12 +97,10 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 
 	private void ExecuteForIteration(For f, ExecutionContext ctx, ValueInstance iterator,
 		ref List<ValueInstance>? results, Type itemType, int index, ExecutionContext loop,
-		bool isRangeIterator, Body? bodyAsBody)
+		bool isNumberOnlyIteration, Body? bodyAsBody)
 	{
 		var indexInstance = new ValueInstance(interpreter.numberType, index);
 		loop.Variables[Type.IndexLowercase] = indexInstance;
-		loop.Variables[Type.OuterLowercase] = ctx.Get(Type.ValueLowercase, interpreter.Statistics);
-		var isNumberOnlyIteration = iterator.IsPrimitiveType(interpreter.numberType) || isRangeIterator;
 		var iterationValue = isNumberOnlyIteration
 			? indexInstance
 			: iterator.GetIteratorValue(itemType, index);
@@ -131,7 +117,12 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 			IsVariableRead(bodyAsBody?.Expressions[^1] ?? f.Body)))
 		{
 			results ??= new List<ValueInstance>();
-			results.Add(Interpreter.CopyIfMutableList(itemResult));
+			if (results.Count == 1 && ctx.Method.ReturnType.IsNumber)
+				results[0] = new ValueInstance(interpreter.numberType,
+					Consolidate(results[0].GetArithmeticNumber(), itemResult.GetArithmeticNumber(),
+						f.ShorthandOperator));
+			else
+				results.Add(Interpreter.CopyIfMutableList(itemResult));
 		}
 	}
 
@@ -186,12 +177,13 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		return last;
 	}
 
-	private ValueInstance? ShouldConsolidateForResult(For f, List<ValueInstance>? results,
+	private ValueInstance? ShouldConsolidateForResult(List<ValueInstance>? results,
 		ExecutionContext ctx)
 	{
 		if (ctx.Method.ReturnType.IsNumber)
-			return new ValueInstance(interpreter.numberType,
-				ConsolidateNumberResult(results, f.ShorthandOperator));
+			return new ValueInstance(interpreter.numberType, results is { Count: > 0 }
+				? results[0].GetArithmeticNumber()
+				: 0);
 		if (ctx.Method.ReturnType.IsBoolean)
 		{
 			var any = false;
@@ -245,34 +237,21 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		return new ValueInstance(text.ToString());
 	}
 
-	private static double ConsolidateNumberResult(List<ValueInstance>? results,
-		string shorthandOperator)
-	{
-		if (results == null || results.Count == 0)
-			return 0.0;
-		if (shorthandOperator.Length == 0 || shorthandOperator == BinaryOperator.Plus)
+	/// <summary>
+	/// Number loops fold each result into the first one right away, a Length loop over a long Text
+	/// would otherwise keep one result per character.
+	/// </summary>
+	private static double Consolidate(double consolidated, double value,
+		string shorthandOperator) =>
+		shorthandOperator switch
 		{
-			var sum = 0.0;
-			for (var index = 0; index < results.Count; index++)
-				sum += results[index].Number;
-			return sum;
-		}
-		var consolidated = results[0].Number;
-		for (var index = 1; index < results.Count; index++)
-		{
-			var value = results[index].Number;
-			consolidated = shorthandOperator switch
-			{
-				BinaryOperator.Multiply => consolidated * value,
-				BinaryOperator.Minus => consolidated - value,
-				BinaryOperator.Divide => consolidated / value,
-				BinaryOperator.Modulate => consolidated % value,
-				BinaryOperator.Power => Math.Pow(consolidated, value),
-				_ => consolidated + value
-			};
-		}
-		return consolidated;
-	}
+			BinaryOperator.Multiply => consolidated * value,
+			BinaryOperator.Minus => consolidated - value,
+			BinaryOperator.Divide => consolidated / value,
+			BinaryOperator.Modulate => consolidated % value,
+			BinaryOperator.Power => Math.Pow(consolidated, value),
+			_ => consolidated + value
+		};
 
 	private Type GetResultElementType(ValueInstance result) =>
 		result.IsText

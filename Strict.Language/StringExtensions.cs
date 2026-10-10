@@ -39,7 +39,7 @@ public static class StringExtensions
 			if (!char.IsAsciiLetter(text[index]))
 				return index == text.Length - 1 && char.IsAsciiDigit(text[index]) &&
 					(number = text[index] - '0') is > 1 and < 10;
-		return true;
+		return text.Length > 0;
 	}
 
 	public static bool IsKeyword(this ReadOnlySpan<char> text)

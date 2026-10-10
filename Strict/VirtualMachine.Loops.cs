@@ -123,9 +123,8 @@ public sealed partial class VirtualMachine
 		var frame = Memory.Frame;
 		if (!loopBegin.IsInitialized)
 		{
-			var startIndex = Convert.ToInt32(Memory.Registers[loopBegin.Register].Number);
-			var endIndex = Convert.ToInt32(Memory.Registers[loopBegin.EndIndex!.Value].Number);
-			loopBegin.InitializeRangeState(startIndex, endIndex);
+			loopBegin.InitializeRangeState(Memory.Registers[loopBegin.Register].GetLoopBound(),
+				Memory.Registers[loopBegin.EndIndex!.Value].GetLoopBound());
 			CaptureLoopState(loopBegin, frame);
 			if (loopBegin.LoopCount <= 0)
 			{

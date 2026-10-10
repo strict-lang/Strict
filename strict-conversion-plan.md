@@ -591,6 +591,27 @@ Cleanup round: Text natives (`Upper`, `StartsWith`, ...) are linked like C# (a b
 longer leaks `outer`/`value` into the following statements, member reassignments store the member
 name like C# `MutableReassignment.Name`, and a type's own list member flattens 2D indexes too.
 Open: leading Boolean method-call test lines (`"hello".StartsWith("hel")`) are kept as code.
+Bootstrap fixpoint: the Strict compiler compiled by itself (FileCompiler.strictbinary) writes the
+same bytes as the C#-run Strict compiler for all 66 tracked programs with a Run method, itself
+included. Needed: a bare `Error` in any position (declaration value, return, then/else branch,
+argument, last line) builds `Error.from(name, stacktraces)` like C# (was a load of the variable
+`Error`), named after the declaration while its value is compiled, else after the method
+(`CodeBlock.ErrorMarker` scope entry), and MethodCodegen is back to 15 methods. Open: the
+stacktrace list stays empty (SyntaxNode has no line numbers, the compiler no file path),
+`Error("text")`/`Error(value)` are not normalized like C# `NormalizeErrorArguments` yet, and C#
+keeps a `mutable` declaration's name for later errors in that body (TryParseDeclaration returns
+before resetting `CurrentDeclarationNameForErrorText`), the Strict compiler uses the method name.
+Interpreter speed of the inline tests (`test Bytecode/TypeCodegen.strict`, median of 7, Debug):
+TypeCodegen 1777 ms / 401 MB → 1293 ms / 82 MB, LoopCodegen 1690 ms / 369 MB → 1276 ms / 78 MB,
+MethodCodegen 1041 ms / 222 MB → 754 ms / 50 MB. Bisect: the interpreter list value commits copy
+only ~150 short lists per run, the growth came from the Strict compiler running 2-3x more
+expressions (Grid test, ownership checks, Error positions) and from the number wrapper commit, which
+checked `IsNumberLike` (a type compatibility walk allocating a closure) on every loop iteration
+(+21-27% allocations). The check now runs once per loop (`outer` is still read per iteration, a loop
+can change the member it resolves to), `DisposableValues` (interpreter and VM) no longer creates a List per call and Number loops fold each result instead
+of keeping all of them. Next: `Text.Length` runs `List.Length` (`for elements / 1`), 3.3M of the
+6.2M TypeCodegen expressions, the VM has native `Length`/`Count`; the context pool's
+ConcurrentStack allocates a node per returned context (17 MB per TypeCodegen run).
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
@@ -636,6 +657,54 @@ arguments, single-element lists, reserved names, test lines, package references,
 - Thread safety of Repositories/package cache under parallel tests (AGENTS multithreading rules).
 - Memory/time limits in VM (stack overflow detection, step limits) with clear RuntimeErrors.
 - Binary format versioning + compatibility tests (old cache → clean regenerate).
+- 2026-10-10 test isolation: RunnerTests no longer write, delete or re-time repo files (Color.strict
+  rewrite, BytecodeInstruction.strict re-time, SimpleCalculator.asm and program-suite .strictbinary
+  deletes, 4x4_output.png/test_image_output.jpg). They use temp copies or a fresh process on a runtime
+  copy whose Strict*.dll write time decides cache freshness (used packages always map to repo folders).
+  `CachedBinaryWithOlderVersionIsRegenerated` covers the InvalidVersion catch (passed at once, fails
+  without it). C# Version 4 = TypeEntry.FormatVersion 4, BinaryTypeData.strict has unused Version 1.
+- Review fixes: the program suite passed on a stale repo .strictbinary when the source run could not
+  save it (binary held open: "not saved" is only logged), it now asserts the binary was rewritten.
+  Runtime copies hold only the 20 files Strict.deps.json loads (1.3 MB, was 96 files/28.6 MB, which
+  included Strict.jitprofile that fresh processes write: IOException). The NCrunch %TEMP% build is
+  behind a named mutex (abandoned one handled), cold 5-7 s, warm ~1 s. NCrunch console run on
+  Strict.Tests.csproj (cold and warm): 1310 fast tests passed, 5 allowlist ignores.
+
+Parser fuzzing (2026-10-10): Slow `ParserFuzzTests` mutates all 299 .strict files 40 times (seed 7,
+11960 parses, 3 s); a .NET exception (also inside ParsingFailed) or a parse over 5 s fails it.
+Found 1 hang and 19 crash classes at 100 mutations/file, 20 root causes fixed (GetMemberType endless
+loop, Stack empty in Binary, unwrapped constraint/generic test errors, Type.Dispose keeping
+List(Type) alive, index bounds); seeds 7/13/21 at 400/file are green. Open: UnterminatedString,
+CannotUseKeywordsAsName and other parse errors still only get wrapped into ParsingFailed.
+Fuzz review: every file gets its own seed from its repo path, new or edited files no longer change
+other files' mutations. 9 fixes got their missing fast test (`for in x` is now MissingVariableNameBeforeIn,
+`if is`, `then else`, `(1, (2)`, empty parameter, unclosed `Range(`, `=` in member names, conditional
+error line). Per-file seeds at 400/file found `for (five)` crashing (no comma); TryParseNumber took
+`(5` as -75 (double to uint saturates), so `constant result = ((5)` parsed. Both fixed, seeds 7 and
+13 at 400/file green (44 s each). Open: `logger.Log((5)` reports an argument mismatch, not the bracket.
+VM limits (2026-10-10): endless recursion crashed `Strict test` (Debug) with a real .NET stack overflow
+(every body caught and rethrew); `CallDepthExceeded` now passes bodies, lists the Strict call chain and
+guards small thread stacks (~5.5 KB per Strict call in Debug). VM `StackOverflow` is an
+`InstructionExecutionFailed` with file:line and `Deeper (255 times)` callers. Raw Overflow/OutOfMemory
+(`Range(1, 3e9)`, `Length is 3e9` lists) become Strict errors at the line, BenchBrightness 271 vs 275 ms
+(noise). No step limit: only `LoopEnd` jumps back, count fixed at start.
+Review fix: a failure 120 calls deep (legal, limit 128) still crashed Debug `Strict test` (0xC00000FD,
+110 was fine), each body rethrew it. Bodies now wrap an error once with all Strict callers
+(`ListsCallers`) and let it pass. `for 1e12` and `Range(3e9, 3e9 + 2)` silently ran int.MaxValue or 0
+times, `GetLoopBound` now fails in VM and interpreter naming value and line. The 256 KB thread test hit
+NCrunch's stack guard (<480 KB left) and is gone; NCrunch green (606 HighLevelRuntime, 1314 Strict.Tests).
+Type identity (2026-10-10): List(Color) was cached by simple names, a temp ImageProcessing copy's List(Color)
+replaced Strict/ImageProcessing/List(Color) for the whole process; now keyed by full names and living next
+to Color (List(Number) stays Strict/List(Number), binaries keep Strict/List(Color)). That exposed Language
+passing List(Language/Variable) to the base Method: Language/Variable (a copy of root Variable) is gone,
+MethodParser builds root Variables (ConstantCollapser folded `X(...).IsMutable` to its default). RunnerTests
+unload temp packages, Package.Types is a snapshot, no static Any methods or lastType cache. Medians of 7
+(plain folders): test TypeCodegen 1616 → 1590 ms, SyntaxParser 450 → 449 ms, Language.Tests 254 → 263 ms.
+Review fix (2026-10-11): implementations were still added to a package by simple name, so List(Widget) of
+two root packages or Dictionary(Color, Color) with Colors of two packages threw TypeAlreadyExistsInPackage;
+now only the generic's cache finds them (parent package kept for FullName). Language/Method.strict is gone
+again. Medians vs f-type-identity (7 interleaved): TypeCodegen 1594 → 1592 ms, SyntaxParser 453 → 448 ms,
+Language.Tests (434 shared tests, 11 runs) 256 → 256 ms; 428 Slow RunnerTests/differential tests green.
 
 
 ## Native loops — 2026-10-09 (late night, part 4)
@@ -959,7 +1028,7 @@ not an auto-numbered enum value. This is the same principle as C#'s naming restr
 | 8 | `NumberExtensions.cs` | Simple number helpers | Methods on Number | 🚧 Deferred |
 | 9 | `StringExtensions.cs` | String helpers | Methods on Text | 🚧 Deferred |
 | 10 | `SpanExtensions.cs` | Span helpers | Performance-critical | 🚧 Deferred |
-| 11 | `Variable.cs` | Variable | `Language/Variable.strict` + root `Variable.strict` | ✅ 75% |
+| 11 | `Variable.cs` | Variable | Root `Variable.strict` (`Language/MethodParser.strict` builds them) | ✅ 75% |
 | 12 | `Parameter.cs` | Method parameter | `Language/Parameter.strict` | ✅ 75% |
 | 13 | `Member.cs` | Type member definition | `Language/Member.strict` — `Parse`, kind/name/type extract | ✅ 80% |
 | 14 | `Expression.cs` | Expression base | `Language/Expression.strict` | ✅ 50% |
@@ -983,7 +1052,7 @@ This means `has name Text` fails if a `Name` type exists — use a name that eit
 
 **Summary of what's done vs what's next:**
 - ✅ **5 pure-constant types done** (Phase 1a) — Limit, Keyword, TypeKind, UnaryOperator, BinaryOperator
-- ✅ **Language package `.strict` files** — TypeLines, NamedType, Parameter, Member, Variable, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, MethodParser, Context, Package, Type, Body, Parser + constants. Root `Method.strict` is data-only (`Name`/`Type`/`Parameters`); parsing lives in `MethodParser.strict`.
+- ✅ **Language package `.strict` files** — TypeLines, NamedType, Parameter, Member, Expression, ConcreteExpression, ExpressionParser, TypeParser, TypeFinder, MethodParser, Context, Package, Type, Body, Parser + constants. Root `Method.strict` is data-only (`Name`/`Type`/`Parameters`) with root `Variable`s as parameters; parsing lives in `MethodParser.strict`.
 - ✅ **Object-model cleanup** — Language types use `Name`/`Type` (not legacy `elementName`/`typeName`/`expressionText`). Guarded by `StrictLanguageConversionTests` (11 tests).
 - ✅ **Type.strict** — real member/method line parse under **HighLevelRuntime** (inline tests green). `Members`/`Methods` + `MethodParser.Parse` for headers/params/body span.
 - ✅ **MethodParser.strict** — `Parse` / `ParseBody` / parameter extraction; avoids `IndexOf("(")` via `OpenParen`/`CloseParen` constants + character scan.

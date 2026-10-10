@@ -8,40 +8,44 @@ namespace Strict;
 /// the failing instruction with a surrounding window, source lines with line numbers from the
 /// .strict file, and a clickable stack trace entry (same format as ParsingFailed).
 /// </summary>
-public sealed class InstructionExecutionFailed(string message,
-	List<Instruction> instructions,
-	int failingIndex,
-	string methodContext,
-	string[]? sourceLines = null,
-	string sourceFilePath = "",
-	Exception? inner = null)
-	: Exception(
-		BuildMessage(message, instructions, failingIndex, methodContext, sourceLines, sourceFilePath),
-		inner)
+public class InstructionExecutionFailed(string message, InstructionExecutionFailed.Location location)
+	: Exception(BuildMessage(message, location))
 {
-	private readonly List<string> callers = [];
+	public sealed record Location(List<Instruction> Instructions,
+		int FailingIndex,
+		string MethodContext,
+		string[]? SourceLines,
+		string SourceFilePath);
+
+	private readonly List<(string Method, int Calls)> callers = [];
 
 	/// <summary>
 	/// Used as an exception filter by each calling method the error passes, never catches it.
+	/// Recursive calls of the same method are counted instead of listed again.
 	/// </summary>
 	internal bool AddCaller(string method)
 	{
-		callers.Add(method);
+		if (callers.Count > 0 && callers[^1].Method == method)
+			callers[^1] = (method, callers[^1].Calls + 1);
+		else
+			callers.Add((method, 1));
 		return false;
 	}
 
 	public override string Message =>
 		base.Message + string.Concat(callers.Select(caller =>
-			Environment.NewLine + "   called from " + caller));
+			Environment.NewLine + "   called from " + caller.Method + (caller.Calls > 1
+				? " (" + caller.Calls + " times)"
+				: "")));
 
-	private static string BuildMessage(string message, IReadOnlyList<Instruction> instructions,
-		int failingIndex, string methodContext, string[]? sourceLines, string sourceFilePath)
+	private static string BuildMessage(string message, Location location)
 	{
 		var builder = new StringBuilder();
 		builder.Append(message);
-		AppendInstructionWindow(builder, instructions, failingIndex, methodContext);
-		AppendSourceSection(builder, instructions, failingIndex, methodContext, sourceLines,
-			sourceFilePath);
+		AppendInstructionWindow(builder, location.Instructions, location.FailingIndex,
+			location.MethodContext);
+		AppendSourceSection(builder, location.Instructions, location.FailingIndex,
+			location.MethodContext, location.SourceLines, location.SourceFilePath);
 		return builder.ToString().TrimEnd();
 	}
 

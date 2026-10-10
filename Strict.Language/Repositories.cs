@@ -132,11 +132,11 @@ public sealed partial class Repositories(ExpressionParser parser)
 #endif
 		});
 
+	/// <summary>
+	/// Always through the cache, a parent still being parsed by another thread is awaited.
+	/// </summary>
 	private async Task<Package?> LoadParentPackage(string fullName)
 	{
-		var parent = FindParentPackage(fullName);
-		if (parent != null)
-			return parent;
 		var separatorIndex = fullName.LastIndexOf(Context.ParentSeparator);
 		if (separatorIndex < 0)
 			return null;
@@ -199,16 +199,6 @@ public sealed partial class Repositories(ExpressionParser parser)
 		""")]
 	private static partial Regex TypeFullNamePattern { get; }
 
-	private static Package? FindParentPackage(string fullName)
-	{
-		var separatorIndex = fullName.LastIndexOf(Context.ParentSeparator);
-		if (separatorIndex < 0)
-			return null;
-		var parentName = fullName[..separatorIndex];
-		// ReSharper disable once InconsistentlySynchronizedField
-		return LoadedPackages.Find(package => package.FullName == parentName);
-	}
-
 	/// <summary>
 	/// Initially we need to create just empty types, and then after they all have been created,
 	/// we will fill and load them, otherwise we could not use types within the package context.
@@ -261,7 +251,7 @@ public sealed partial class Repositories(ExpressionParser parser)
 			loadedPackagesSnapshot = LoadedPackages.ToArray();
 		}
 		foreach (var loadedPackage in loadedPackagesSnapshot)
-		foreach (var type in loadedPackage.GetTypesSnapshot())
+		foreach (var type in loadedPackage.Types.Values)
 			type.InvalidateAvailableMethodsCache();
 	}
 
@@ -375,15 +365,20 @@ public sealed partial class Repositories(ExpressionParser parser)
 	public static readonly Uri GitHubStrictUri = new("https://github.com/" + StrictOrg + "/");
 
 	/// <summary>
-	/// Called by Package.Dispose
+	/// A package loaded from a temporary folder must go with it, else other packages still find its
+	/// types. Shared repository packages are never unloaded, all tests and programs use them.
 	/// </summary>
-	internal void Remove(Package result)
+	public static void Unload(string fullName)
 	{
-		CacheService.Remove(result.FullName);
+		CacheService.Remove(fullName);
+		Package? package;
 		lock (LoadedPackages)
 		{
-			LoadedPackages.Remove(result);
+			package = LoadedPackages.Find(loaded => loaded.FullName == fullName);
+			if (package != null)
+				LoadedPackages.Remove(package);
 		}
+		package?.Unload();
 	}
 
 	public bool ContainsPackageNameInCache(string fullName) =>

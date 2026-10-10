@@ -24,10 +24,8 @@ public partial class Type : Context, IDisposable
 	{
 		if (file.Lines.Length > Limit.LineCount)
 			throw new LinesCountMustNotExceedLimit(this, file.Lines.Length);
-		var existingType = package.FindDirectType(Name);
-		if (existingType != null)
-			throw new TypeAlreadyExistsInPackage(Name, package, existingType);
-		package.Add(this);
+		if (this is not GenericTypeImplementation)
+			package.Add(this);
 		Lines = file.Lines;
 		IsGeneric = Name == GenericUppercase || OneOfFirstThreeLinesContainsGeneric();
 		IsMutable = Name == Mutable || Name.StartsWith(Mutable + "(", StringComparison.Ordinal);
@@ -204,8 +202,6 @@ public partial class Type : Context, IDisposable
 
 	internal void InvalidateAvailableMethodsCache()
 	{
-		if (Package.Name is nameof(Strict) or "TestPackage")
-			cachedAnyMethods = null;
 		cachedAvailableMethods = null;
 		lock (genericImplementationLock)
 		{
@@ -350,9 +346,9 @@ public partial class Type : Context, IDisposable
 	private Dictionary<string, GenericTypeImplementation>? cachedGenericTypes;
 	private readonly Lock genericImplementationLock = new();
 	public string FilePath =>
-		Path.GetFullPath(Path.Combine(Package.FolderPath, (this is GenericTypeImplementation genericType
-			? genericType.Generic.Name
-			: Name) + Extension));
+		this is GenericTypeImplementation genericType
+			? genericType.Generic.FilePath
+			: Path.GetFullPath(Path.Combine(Package.FolderPath, Name + Extension));
 
 	public const string Extension = ".strict";
 
@@ -422,8 +418,6 @@ public partial class Type : Context, IDisposable
 
 	private volatile Dictionary<string, List<Method>>? cachedAvailableMethods;
 
-	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
-
 	[GeneratedRegex(@"^\t+(?:let|constant|mutable) (\w+) = ")]
 	private static partial Regex DeclarationPattern { get; }
 
@@ -460,6 +454,7 @@ public partial class Type : Context, IDisposable
 	{
 		GC.SuppressFinalize(this);
 		((Package)Parent).Remove(this);
+		RemoveGenericImplementations();
 	}
 
 	public int FindLineNumber(string firstLineThatContains)

@@ -42,6 +42,15 @@ public sealed class ForTests : TestExpressions
 			Throws.InstanceOf<IndexIsReservedDoNotUseItExplicitly>());
 
 	[Test]
+	public void MissingVariableNameBeforeIn() =>
+		Assert.That(() => ParseExpression("for in five", "\tlogger.Log(five)"),
+			Throws.InstanceOf<MissingVariableNameBeforeIn>());
+
+	[Test]
+	public void BracketedIteratorWithoutListElements() =>
+		Assert.That(ParseExpression("for (five)", "\tlogger.Log(value)"), Is.InstanceOf<For>());
+
+	[Test]
 	public void ForVariableMatchingMemberIsNotAddedAsVariable() =>
 		Assert.That(() => ParseExpression("for five in (1, 2, 3)", "\tlogger.Log(five)"),
 			Throws.InstanceOf<Body.IdentifierNotFound>());

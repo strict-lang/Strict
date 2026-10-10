@@ -122,9 +122,9 @@ public sealed class If(Expression condition,
 	private static Expression ParseSelectorIf(Body body, ReadOnlySpan<char> line)
 	{
 		var trimmedLine = line.TrimEnd();
+		if (trimmedLine.Length <= 3 + SelectorSuffix.Length)
+			throw new MissingCondition(body);
 		var selectorText = trimmedLine[3..^SelectorSuffix.Length];
-		if (selectorText.IsEmpty)
-			throw new MissingCondition(body); //ncrunch: no coverage
 		var selector = body.Method.ParseExpression(body, selectorText);
 		var selectorLineNumber = body.CurrentFileLineNumber;
 		var thenBody = body.FindCurrentChild();
@@ -333,10 +333,12 @@ public sealed class If(Expression condition,
 		var elseIndex = input.IndexOf(ElseSeparator, StringComparison.Ordinal);
 		if (elseIndex <= thenIndex)
 			throw new MissingElseExpression(body);
+		if (elseIndex < thenIndex + ThenSeparator.Length)
+			throw new MissingThen(body);
 		return new If(GetConditionExpression(body, input[..thenIndex]),
 			body.Method.ParseExpression(body, input[(thenIndex + ThenSeparator.Length)..elseIndex]),
 			body.CurrentFileLineNumber,
-			body.Method.ParseExpression(body, input[(elseIndex + ElseSeparator.Length)..]));
+			body.Method.ParseExpression(body, input[(elseIndex + ElseSeparator.Length)..]), body);
 	}
 
 	private static int CountThenSeparators(ReadOnlySpan<char> input)

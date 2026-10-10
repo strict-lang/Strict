@@ -1,5 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Strict.Bytecode;
 using Strict.Bytecode.Serialization;
 using Strict.Compiler;
@@ -125,17 +126,21 @@ public sealed class RunnerTests
 		var arguments = ProgramArguments.TryGetValue(relativePath, out var argument)
 			? string.Concat(argument.Split(' ').Select(part => " \"" + Path.Combine(root, part) + "\""))
 			: "";
-		File.Delete(Path.ChangeExtension(sourcePath, BinaryExecutable.Extension));
+		regeneratingRuntime ??= CopyStrictRuntime(DateTime.UtcNow.AddDays(1));
 		var testDirectory = Directory.GetCurrentDirectory();
 		Directory.SetCurrentDirectory(root);
 		try
 		{
+			var sourceRunStart = DateTime.UtcNow;
 			foreach (var inputPath in hasRun
 				? [sourcePath, Path.ChangeExtension(sourcePath, BinaryExecutable.Extension)]
 				: new[] { sourcePath })
 			{
+				if (inputPath != sourcePath)
+					Assert.That(File.GetLastWriteTimeUtc(inputPath), Is.GreaterThanOrEqualTo(sourceRunStart),
+						"Source run did not save " + inputPath);
 				var result = NativeProcessRunner.Run("dotnet",
-					"\"" + StrictAssemblyForFreshProcess() + "\" \"" + inputPath + "\"" + arguments, 120000);
+					"\"" + regeneratingRuntime + "\" \"" + inputPath + "\"" + arguments, 120000);
 				if (hasRun)
 					Assert.That(result.ExitCode, Is.Zero,
 						inputPath + Environment.NewLine + result.Output + result.Error);
@@ -148,6 +153,18 @@ public sealed class RunnerTests
 		{
 			Directory.SetCurrentDirectory(testDirectory);
 		}
+	}
+
+	/// <summary>
+	/// Its Strict*.dll are newer than every cached binary, source runs always compile from source.
+	/// </summary>
+	private string? regeneratingRuntime;
+
+	[OneTimeTearDown]
+	public void DeleteRegeneratingRuntime()
+	{
+		if (regeneratingRuntime != null)
+			Directory.Delete(Path.GetDirectoryName(regeneratingRuntime)!, true);
 	}
 
 	private static bool HasRunMethod(string filePath) =>
@@ -252,15 +269,20 @@ public sealed class RunnerTests
 		}
 	}
 
-	private static readonly Lock FreshAssemblyGate = new();
 	private static string? freshStrictAssembly;
 
+	/// <summary>
+	/// NCrunch test processes and engines share one build in %TEMP%, a named mutex lets only one
+	/// thread or process build it at a time.
+	/// </summary>
 	private static string StrictAssemblyForFreshProcess()
 	{
 		var location = typeof(Strict.Program).Assembly.Location;
 		if (Environment.GetEnvironmentVariable("NCrunch") != "1")
 			return location;
-		lock (FreshAssemblyGate)
+		using var buildGate = new Mutex(false, "StrictFreshProcessBuild");
+		WaitEvenIfAbandoned(buildGate);
+		try
 		{
 			if (freshStrictAssembly != null)
 				return freshStrictAssembly;
@@ -275,6 +297,60 @@ public sealed class RunnerTests
 			Assert.That(built, Has.Length.EqualTo(1), string.Join(Environment.NewLine, built));
 			return freshStrictAssembly = built[0];
 		}
+		finally
+		{
+			buildGate.ReleaseMutex();
+		}
+	}
+
+	/// <summary>
+	/// A killed NCrunch process abandons the mutex, the owner gets it anyway and builds again.
+	/// </summary>
+	private static void WaitEvenIfAbandoned(Mutex gate)
+	{
+		try
+		{
+			gate.WaitOne();
+		}
+		catch (AbandonedMutexException) { } //ncrunch: no coverage
+	}
+
+	/// <summary>
+	/// Newer Strict*.dll outdate cached binaries, a copy with its own write time decides that for
+	/// a fresh process instead of re-timing or deleting files other tests use. In the repo for CI.
+	/// </summary>
+	private static string CopyStrictRuntime(DateTime writeTime)
+	{
+		var strictAssembly = StrictAssemblyForFreshProcess();
+		var directory = Path.Combine(AppContext.BaseDirectory,
+			"StrictRuntime" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(directory);
+		foreach (var file in GetRuntimeFiles(strictAssembly))
+		{
+			var copy = Path.Combine(directory, Path.GetFileName(file));
+			File.Copy(file, copy);
+			File.SetLastWriteTimeUtc(copy, writeTime);
+		}
+		return Path.Combine(directory, Path.GetFileName(strictAssembly));
+	}
+
+	/// <summary>
+	/// Only what Strict.deps.json loads, not the test assemblies next to it or the Strict.jitprofile
+	/// fresh processes write there.
+	/// </summary>
+	private static List<string> GetRuntimeFiles(string strictAssembly)
+	{
+		var dependencies = Path.ChangeExtension(strictAssembly, ".deps.json");
+		using var json = JsonDocument.Parse(File.ReadAllText(dependencies));
+		var libraries = json.RootElement.GetProperty("targets").EnumerateObject().First().Value;
+		return
+		[
+			.. libraries.EnumerateObject().SelectMany(library =>
+				library.Value.TryGetProperty("runtime", out var runtime)
+					? runtime.EnumerateObject().Select(asset => Path.GetFileName(asset.Name))
+					: []).Select(file => Path.Combine(Path.GetDirectoryName(strictAssembly)!, file)),
+			dependencies, Path.ChangeExtension(strictAssembly, ".runtimeconfig.json")
+		];
 	}
 
 	[TearDown]
@@ -288,42 +364,30 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public async Task RunSimpleCalculator()
-	{
-		var asmFilePath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
-		if (File.Exists(asmFilePath))
-			File.Delete(asmFilePath); //ncrunch: no coverage
-		try
+	public Task RunSimpleCalculator() =>
+		AfterRunningSimpleCalculatorCopy(sourcePath =>
 		{
-			await new Runner(SimpleCalculatorFilePath).Run();
-		}
-		//ncrunch: no coverage start
-		catch (IOException)
-		{
-			Thread.Sleep(100);
-			await new Runner(SimpleCalculatorFilePath).Run();
-		} //ncrunch: no coverage end
-		Assert.That(consoleWriter.ToString(),
-			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6" + Environment.NewLine));
-		Assert.That(File.Exists(asmFilePath), Is.False);
-	}
+			Assert.That(consoleWriter.ToString(),
+				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6" + Environment.NewLine));
+			Assert.That(File.Exists(Path.ChangeExtension(sourcePath, ".asm")), Is.False);
+			return Task.CompletedTask;
+		});
 
 	[Test]
-	public async Task RunFromBytecodeFileProducesSameOutput()
-	{
-		var binaryFilePath = await GetExamplesBinaryFile("SimpleCalculator");
-		await new Runner(binaryFilePath).Run();
-		Assert.That(consoleWriter.ToString(),
-			Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
-	}
+	public Task RunFromBytecodeFileProducesSameOutput() =>
+		AfterRunningSimpleCalculatorCopy(async sourcePath =>
+		{
+			consoleWriter.GetStringBuilder().Clear();
+			await new Runner(Path.ChangeExtension(sourcePath, BinaryExecutable.Extension)).Run();
+			Assert.That(consoleWriter.ToString(),
+				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
+		});
 
 	[Test]
 	public Task CachedBinaryOlderThanRuntimeIsRegenerated() =>
-		InTemporaryCopy([SimpleCalculatorFilePath], async directory =>
+		AfterRunningSimpleCalculatorCopy(async sourcePath =>
 		{
-			var sourcePath = Path.Combine(directory, Path.GetFileName(SimpleCalculatorFilePath));
 			var binaryPath = Path.ChangeExtension(sourcePath, BinaryExecutable.Extension);
-			await new Runner(sourcePath).Run();
 			var runtimeTime = File.GetLastWriteTimeUtc(typeof(Runner).Assembly.Location);
 			File.SetLastWriteTimeUtc(sourcePath, runtimeTime.AddMinutes(-2));
 			File.SetLastWriteTimeUtc(binaryPath, runtimeTime.AddMinutes(-1));
@@ -331,8 +395,28 @@ public sealed class RunnerTests
 			Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(runtimeTime));
 		});
 
+	[Test]
+	public Task CachedBinaryWithOlderVersionIsRegenerated() =>
+		AfterRunningSimpleCalculatorCopy(async sourcePath =>
+		{
+			var binaryPath = Path.ChangeExtension(sourcePath, BinaryExecutable.Extension);
+			await using (var archive = await ZipFile.OpenAsync(binaryPath, ZipArchiveMode.Update))
+			await using (var entry = await archive.GetEntry("SimpleCalculator.bytecode")!.OpenAsync())
+			{
+				entry.Position = 1;
+				entry.WriteByte(BinaryType.Version - 1);
+			}
+			consoleWriter.GetStringBuilder().Clear();
+			await new Runner(sourcePath, Method.Run, true).Run();
+			Assert.That(consoleWriter.ToString(),
+				Does.Contain("Cached binary incompatible: File version: " + (BinaryType.Version - 1)).
+					And.Contain("2 + 3 = 5"));
+			Assert.That(() => new BinaryExecutable(binaryPath), Throws.Nothing);
+		});
+
 	/// <summary>
 	/// Tests changing sources or cached binaries use copies, parallel tests read the repo files.
+	/// The Runner loads a copy as package Strict/folder name, later tests must not find its types.
 	/// </summary>
 	private static async Task InTemporaryCopy(IEnumerable<string> files, Func<string, Task> test)
 	{
@@ -346,78 +430,140 @@ public sealed class RunnerTests
 		}
 		finally
 		{
+			Repositories.Unload(nameof(Strict) + Context.ParentSeparator + Path.GetFileName(directory));
 			Directory.Delete(directory, true);
 		}
 	}
 
-	[Test]
-	public async Task RunFromBytecodeFileWithoutStrictSourceFile()
-	{
-		var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(tempDirectory);
-		var copiedSourceFilePath =
-			Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
-		var copiedBinaryFilePath =
-			Path.ChangeExtension(copiedSourceFilePath, BinaryExecutable.Extension);
-		try
+	private static Task InTemporaryFile(string typeName, string code, Func<string, Task> test) =>
+		InTemporaryCopy([], async directory =>
 		{
-			File.Copy(SimpleCalculatorFilePath, copiedSourceFilePath);
-			await new Runner(copiedSourceFilePath).Run();
-			Assert.That(File.Exists(copiedBinaryFilePath), Is.True);
+			var path = Path.Combine(directory, typeName + Type.Extension);
+			await File.WriteAllTextAsync(path, code);
+			await test(path);
+		});
+
+	[Test]
+	public Task EndlessRecursionOnVmNamesStrictLineAndCallers() =>
+		InTemporaryFile("EndlessVm",
+			"has number\nhas logger\nDeeper Number\n\tif number < 0\n\t\treturn 0\n" +
+			"\tEndlessVm(number + 1).Deeper\nRun\n\tlogger.Log(EndlessVm(1).Deeper)", async path =>
+			{
+				Assert.That(await Strict.Program.Main([path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("StackOverflow").And.Contain(path + ":line 6").
+						And.Contain("EndlessVm.Deeper (255 times)").And.Contain("EndlessVm.Run"));
+			});
+
+	[Test]
+	public Task LoopCollectingBillionsOfNumbersOnVmNamesStrictLine() =>
+		InTemporaryFile("HugeRange",
+			"has logger\nNumbers(limit Number) Numbers\n\tHugeRange.Numbers(3) is (1, 2)\n" +
+			"\tfor Range(1, limit)\n\t\tvalue\nRun\n\tlogger.Log(Numbers(3000000000).Length)",
+			async path =>
+			{
+				Assert.That(await Strict.Program.Main([path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("Loop count or range bound 3000000000").
+						And.Contain(path + ":line 4").And.Not.Contain("at Strict.VirtualMachine"));
+			});
+
+	[Test]
+	public Task EnormousListInTestNamesStrictLine() =>
+		InTemporaryFile("HugeList",
+			"has count Number\nhas numbers with Length is count\nLength Number\n" +
+			"\tHugeList(3000 * 1000000).Length is 1\n\tnumbers.Length", async path =>
+			{
+				Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("OutOfMemoryException").And.Contain(path + ":line 4").
+						And.Not.Contain("at Strict.HighLevelRuntime"));
+			});
+
+	[Test]
+	public Task EndlessRecursionInTestNamesStrictLineAndTestLine() =>
+		InTemporaryFile("EndlessTest",
+			"has number\nDeeper Number\n\tEndlessTest(1).Deeper is 0\n\tif number < 0\n\t\treturn 0\n" +
+			"\tEndlessTest(number + 1).Deeper", async path =>
+			{
+				Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("CallDepthExceeded").And.Contain(path + ":line 6").
+						And.Contain(path + ":line 3"));
+			});
+
+	[Test]
+	public Task FailureDeepInLegalRecursionNamesCallersInsteadOfCrashing() =>
+		InTemporaryFile("FailDeep",
+			"has number\nDeeper Number\n\tFailDeep(1).Deeper is 0\n\tconstant numbers = (1, 2)\n" +
+			"\tif number > 125\n\t\treturn numbers(number)\n\tFailDeep(number + 1).Deeper",
+			async path =>
+			{
+				Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain("ListIndexOutOfRange").And.Contain(path + ":line 7").
+						And.Contain(path + ":line 3"));
+			});
+
+	/// <summary>
+	/// Runs a temporary SimpleCalculator copy once, the test gets the copied source path and finds
+	/// the cached binary next to it.
+	/// </summary>
+	private static Task AfterRunningSimpleCalculatorCopy(Func<string, Task> test) =>
+		InTemporaryCopy([SimpleCalculatorFilePath], async directory =>
+		{
+			var sourcePath = Path.Combine(directory, Path.GetFileName(SimpleCalculatorFilePath));
+			await new Runner(sourcePath).Run();
+			await test(sourcePath);
+		});
+
+	[Test]
+	public Task RunFromBytecodeFileWithoutStrictSourceFile() =>
+		AfterRunningSimpleCalculatorCopy(async sourcePath =>
+		{
+			var binaryPath = Path.ChangeExtension(sourcePath, BinaryExecutable.Extension);
+			Assert.That(File.Exists(binaryPath), Is.True);
 			consoleWriter.GetStringBuilder().Clear();
-			File.Delete(copiedSourceFilePath);
-			await new Runner(copiedBinaryFilePath).Run();
+			File.Delete(sourcePath);
+			await new Runner(binaryPath).Run();
 			Assert.That(consoleWriter.ToString(),
 				Does.StartWith("2 + 3 = 5" + Environment.NewLine + "2 * 3 = 6"));
-		}
-		finally
-		{
-			if (Directory.Exists(tempDirectory))
-				Directory.Delete(tempDirectory, true);
-		}
-	}
+		});
 
 	[Test]
-	public async Task TestCommandReportsFailingInlineTestWithoutDotNetStackTrace()
-	{
-		var directory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(directory);
-		var path = Path.Combine(directory, "WrongTwice" + Type.Extension);
-		await File.WriteAllTextAsync(path,
-			"has logger\nTwice(number) Number\n\tTwice(2) is 5\n\tnumber * 2\nRun\n\tlogger.Log(Twice(2))");
-		try
-		{
-			Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
-			Assert.That(consoleWriter.ToString(),
-				Does.Contain(path + ":line 3").And.Not.Contain("at Strict.Runner"));
-		}
-		finally
-		{
-			Directory.Delete(directory, true);
-		}
-	}
+	public Task TestCommandReportsFailingInlineTestWithoutDotNetStackTrace() =>
+		InTemporaryFile("WrongTwice",
+			"has logger\nTwice(number) Number\n\tTwice(2) is 5\n\tnumber * 2\nRun\n\tlogger.Log(Twice(2))",
+			async path =>
+			{
+				Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
+				Assert.That(consoleWriter.ToString(),
+					Does.Contain(path + ":line 3").And.Not.Contain("at Strict.Runner"));
+			});
 
 	[Test]
-	public async Task TypeNameCallParametersWinOverCallerMembers()
-	{
-		var directory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(directory);
-		await File.WriteAllTextAsync(Path.Combine(directory, "Maker" + Type.Extension),
-			"has unit Number\nMade(number Number) Number\n\tMaker.Made(1) is 1\n\tnumber\n" +
-			"Doubled Number\n\tMaker(2).Doubled is 4\n\tunit * 2");
-		var path = Path.Combine(directory, "Counter" + Type.Extension);
-		await File.WriteAllTextAsync(path,
+	public Task TypeNameCallParametersWinOverCallerMembers() =>
+		InTemporaryFile("Counter",
 			"has number\nhas logger\nShifted Number\n\tCounter(5).Shifted is 4\n" +
-			"\tMaker.Made(number - 1)\nRun\n\tlogger.Log(Counter(5).Shifted)");
-		try
+			"\tMaker.Made(number - 1)\nRun\n\tlogger.Log(Counter(5).Shifted)", async path =>
+			{
+				await File.WriteAllTextAsync(
+					Path.Combine(Path.GetDirectoryName(path)!, "Maker" + Type.Extension),
+					"has unit Number\nMade(number Number) Number\n\tMaker.Made(1) is 1\n\tnumber\n" +
+					"Doubled Number\n\tMaker(2).Doubled is 4\n\tunit * 2");
+				await new Runner(path).Run();
+				Assert.That(consoleWriter.ToString(), Does.StartWith("4"));
+			});
+
+	[Test]
+	public async Task TemporaryPackageTypesAreGoneAfterTheTest()
+	{
+		await InTemporaryFile("Leftover", "has logger\nRun\n\tlogger.Log(\"left\")", async path =>
 		{
 			await new Runner(path).Run();
-			Assert.That(consoleWriter.ToString(), Does.StartWith("4"));
-		}
-		finally
-		{
-			Directory.Delete(directory, true);
-		}
+			Assert.That(new Package("LeftoverFinder").FindType("Leftover"), Is.Not.Null);
+		});
+		Assert.That(new Package("LeftoverSeeker").FindType("Leftover"), Is.Null);
 	}
 
 	[Test]
@@ -482,25 +628,33 @@ public sealed class RunnerTests
 		Assert.That(consoleWriter.ToString(), Does.Not.Match(@"Time: \d+,\d+ ms"));
 	}
 
+	/// <summary>
+	/// Used packages are repo folders, so the copied binary and runtime are made older than the
+	/// newest base package file instead of re-timing a file other tests use.
+	/// </summary>
 	[Test]
-	public async Task CachedBinaryIsOutdatedWhenUsedPackageChanged()
-	{
-		var entry = Path.Combine(FindRepoRoot(), "Compiler", "EmitTests.strict");
-		await new Runner(entry).Run();
-		var dependency = Path.Combine(FindRepoRoot(), "Bytecode", "BytecodeInstruction.strict");
-		var originalTime = File.GetLastWriteTimeUtc(dependency);
-		File.SetLastWriteTimeUtc(dependency, DateTime.UtcNow.AddMinutes(1));
-		try
+	public Task CachedBinaryIsOutdatedWhenUsedPackageChanged() =>
+		AfterRunningSimpleCalculatorCopy(sourcePath =>
 		{
-			consoleWriter.GetStringBuilder().Clear();
-			await new Runner(entry, Method.Run, true).Run();
-			Assert.That(consoleWriter.ToString(), Does.Not.Contain("Using cached"));
-		}
-		finally
-		{
-			File.SetLastWriteTimeUtc(dependency, originalTime);
-		}
-	}
+			var basePackageChange = new DirectoryInfo(FindRepoRoot()).
+				EnumerateFiles("*" + Type.Extension).Max(file => file.LastWriteTimeUtc);
+			File.SetLastWriteTimeUtc(sourcePath, basePackageChange.AddMinutes(-2));
+			File.SetLastWriteTimeUtc(Path.ChangeExtension(sourcePath, BinaryExecutable.Extension),
+				basePackageChange.AddMinutes(-1));
+			var runtime = CopyStrictRuntime(basePackageChange.AddMinutes(-2));
+			try
+			{
+				var result = NativeProcessRunner.Run("dotnet",
+					"\"" + runtime + "\" \"" + sourcePath + "\" -diagnostics", 120000);
+				Assert.That(result.Output, Does.Contain("Cached binary outdated, a used package changed").
+					And.Contain("2 + 3 = 5"), result.Output + result.Error);
+			}
+			finally
+			{
+				Directory.Delete(Path.GetDirectoryName(runtime)!, true);
+			}
+			return Task.CompletedTask;
+		});
 
 	[Test]
 	public async Task AppendAfterLoopKeepsElementInVirtualMachine()
@@ -519,47 +673,44 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public async Task AsmFileIsNotCreatedWhenRunningFromPrecompiledBytecode()
-	{
-		var asmPath = Path.ChangeExtension(SimpleCalculatorFilePath, ".asm");
-		if (File.Exists(asmPath))
-			File.Delete(asmPath); //ncrunch: no coverage
-		var binaryPath = await GetExamplesBinaryFile("SimpleCalculator");
-		await new Runner(binaryPath).Run();
-		Assert.That(File.Exists(asmPath), Is.False);
-	}
+	public Task AsmFileIsNotCreatedWhenRunningFromPrecompiledBytecode() =>
+		AfterRunningSimpleCalculatorCopy(async sourcePath =>
+		{
+			await new Runner(Path.ChangeExtension(sourcePath, BinaryExecutable.Extension)).Run();
+			Assert.That(File.Exists(Path.ChangeExtension(sourcePath, ".asm")), Is.False);
+		});
 
 	[Test]
-	public async Task SaveStrictBinaryWithTypeBytecodeEntriesOnly()
-	{
-		var binaryPath = await GetExamplesBinaryFile("SimpleCalculator");
-		await using var archive = await ZipFile.OpenReadAsync(binaryPath);
-		var entries = archive.Entries.Select(entry => entry.FullName.Replace('\\', '/')).ToList();
-		Assert.That(
-			entries.All(entry =>
-				entry.EndsWith(BinaryType.BytecodeEntryExtension, StringComparison.OrdinalIgnoreCase)),
-			Is.True);
-		Assert.That(entries.Any(entry => entry.Contains("#", StringComparison.Ordinal)), Is.False);
-		Assert.That(entries, Does.Contain("SimpleCalculator.bytecode"));
-		Assert.That(entries, Does.Contain("Strict/Number.bytecode"));
-		Assert.That(entries, Does.Contain("Strict/Logger.bytecode"));
-		Assert.That(entries, Does.Contain("Strict/Text.bytecode"));
-		Assert.That(entries, Does.Contain("Strict/Character.bytecode"));
-		Assert.That(entries, Does.Contain("Strict/TextWriter.bytecode"));
-	}
+	public Task SaveStrictBinaryWithTypeBytecodeEntriesOnly() =>
+		AfterRunningSimpleCalculatorCopy(async sourcePath =>
+		{
+			await using var archive =
+				await ZipFile.OpenReadAsync(Path.ChangeExtension(sourcePath, BinaryExecutable.Extension));
+			var entries = archive.Entries.Select(entry => entry.FullName.Replace('\\', '/')).ToList();
+			Assert.That(
+				entries.All(entry =>
+					entry.EndsWith(BinaryType.BytecodeEntryExtension, StringComparison.OrdinalIgnoreCase)),
+				Is.True);
+			Assert.That(entries.Any(entry => entry.Contains("#", StringComparison.Ordinal)), Is.False);
+			Assert.That(entries, Does.Contain("SimpleCalculator.bytecode"));
+			Assert.That(entries, Does.Contain("Strict/Number.bytecode"));
+			Assert.That(entries, Does.Contain("Strict/Logger.bytecode"));
+			Assert.That(entries, Does.Contain("Strict/Text.bytecode"));
+			Assert.That(entries, Does.Contain("Strict/Character.bytecode"));
+			Assert.That(entries, Does.Contain("Strict/TextWriter.bytecode"));
+		});
 
 	[Test]
-	public async Task ListConstantOfConstructedValuesRunsFromSource()
-	{
-		var folder = Path.Combine(Path.GetTempPath(),
-			nameof(ListConstantOfConstructedValuesRunsFromSource));
-		Directory.CreateDirectory(folder);
-		var path = Path.Combine(folder, "RangePair" + Type.Extension);
-		await File.WriteAllTextAsync(path, string.Join('\n',
-			"has number", "constant Ranges = (Range(0, 1), Range(1, 3))", "Total Number",
-			"\tRangePair(0).Total is 2", "\tRanges.Length + number", "Run Number", "\tRangePair(1).Total"));
-		Assert.That(async () => await new Runner(path).Run(), Throws.Nothing);
-	}
+	public Task ListConstantOfConstructedValuesRunsFromSource() =>
+		InTemporaryCopy([], async folder =>
+		{
+			var path = Path.Combine(folder, "RangePair" + Type.Extension);
+			await File.WriteAllTextAsync(path, string.Join('\n',
+				"has number", "constant Ranges = (Range(0, 1), Range(1, 3))", "Total Number",
+				"\tRangePair(0).Total is 2", "\tRanges.Length + number", "Run Number",
+				"\tRangePair(1).Total"));
+			Assert.That(async () => await new Runner(path).Run(), Throws.Nothing);
+		});
 
 	[Test]
 	public async Task RunSumWithProgramArguments()
@@ -655,17 +806,11 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public async Task SaveStrictBinaryEntryNameTableSkipsPrefilledNames()
-	{
-		var tempDirectory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
-		Directory.CreateDirectory(tempDirectory);
-		try
+	public Task SaveStrictBinaryEntryNameTableSkipsPrefilledNames() =>
+		AfterRunningSimpleCalculatorCopy(async sourcePath =>
 		{
-			var sourceCopyPath = Path.Combine(tempDirectory, Path.GetFileName(SimpleCalculatorFilePath));
-			File.Copy(SimpleCalculatorFilePath, sourceCopyPath);
-			await new Runner(sourceCopyPath).Run();
-			var binaryPath = Path.ChangeExtension(sourceCopyPath, BinaryExecutable.Extension);
-			await using var archive = await ZipFile.OpenReadAsync(binaryPath);
+			await using var archive =
+				await ZipFile.OpenReadAsync(Path.ChangeExtension(sourcePath, BinaryExecutable.Extension));
 			var entry = archive.Entries.First(file => file.FullName == "SimpleCalculator.bytecode");
 			using var reader = new BinaryReader(await entry.OpenAsync());
 			Assert.That(reader.ReadByte(), Is.EqualTo((byte)'S'));
@@ -678,25 +823,10 @@ public sealed class RunnerTests
 			Assert.That(customNames, Does.Not.Contain("Strict/Text"));
 			Assert.That(customNames, Does.Not.Contain("Strict/Boolean"));
 			Assert.That(customNames, Does.Not.Contain("SimpleCalculator"));
-		}
-		finally
-		{
-			if (Directory.Exists(tempDirectory))
-				Directory.Delete(tempDirectory, true);
-		}
-	}
+		});
 
 	private static string SimpleCalculatorFilePath => GetExamplesFilePath("SimpleCalculator");
 	private static string SumFilePath => GetExamplesFilePath("Sum");
-
-	private async Task<string> GetExamplesBinaryFile(string filename)
-	{
-		var localPath = Path.ChangeExtension(GetExamplesFilePath(filename), BinaryExecutable.Extension);
-		if (!File.Exists(localPath))
-			await new Runner(GetExamplesFilePath(filename)).Run(); //ncrunch: no coverage
-		consoleWriter.GetStringBuilder().Clear();
-		return localPath;
-	}
 
 	public static string GetExamplesFilePath(string filename)
 	{
@@ -770,29 +900,31 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public void NativeImageRoundTripIsPixelIdenticalForPng()
-	{
-		var repoRoot = FindRepoRoot();
-		var testImagePath = Path.Combine(repoRoot, "ImageProcessing", "4x4.png");
-		var searchDirectory = AppContext.BaseDirectory;
-		CopyNativePluginsToDirectory(repoRoot, searchDirectory);
-		var originalBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", testImagePath,
-			searchDirectory, out var width, out var height);
-		Assert.That(originalBytes, Is.Not.Null, "Plugin is missing at " + searchDirectory);
-		Assert.That(width, Is.EqualTo(4));
-		Assert.That(height, Is.EqualTo(4));
-		Assert.That(originalBytes!.Length, Is.EqualTo(4 * 4 * 4));
-		var outputPath = Path.Combine(repoRoot, "ImageProcessing", "4x4_output.png");
-		NativePluginLoader.TrySaveNativeImage("ImageSaver", outputPath, originalBytes, width, height,
-			searchDirectory);
-		Assert.That(File.Exists(outputPath), Is.True);
-		var reloadedBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", outputPath,
-			searchDirectory, out var reloadedWidth, out var reloadedHeight);
-		Assert.That(reloadedBytes, Is.Not.Null);
-		Assert.That(reloadedWidth, Is.EqualTo(width));
-		Assert.That(reloadedHeight, Is.EqualTo(height));
-		Assert.That(reloadedBytes, Is.EqualTo(originalBytes));
-	}
+	public Task NativeImageRoundTripIsPixelIdenticalForPng() =>
+		InTemporaryCopy([], directory =>
+		{
+			var repoRoot = FindRepoRoot();
+			var testImagePath = Path.Combine(repoRoot, "ImageProcessing", "4x4.png");
+			var searchDirectory = AppContext.BaseDirectory;
+			CopyNativePluginsToDirectory(repoRoot, searchDirectory);
+			var originalBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", testImagePath,
+				searchDirectory, out var width, out var height);
+			Assert.That(originalBytes, Is.Not.Null, "Plugin is missing at " + searchDirectory);
+			Assert.That(width, Is.EqualTo(4));
+			Assert.That(height, Is.EqualTo(4));
+			Assert.That(originalBytes!.Length, Is.EqualTo(4 * 4 * 4));
+			var outputPath = Path.Combine(directory, "4x4_output.png");
+			NativePluginLoader.TrySaveNativeImage("ImageSaver", outputPath, originalBytes, width,
+				height, searchDirectory);
+			Assert.That(File.Exists(outputPath), Is.True);
+			var reloadedBytes = NativePluginLoader.TryLoadNativeLifecycle("ImageLoader", outputPath,
+				searchDirectory, out var reloadedWidth, out var reloadedHeight);
+			Assert.That(reloadedBytes, Is.Not.Null);
+			Assert.That(reloadedWidth, Is.EqualTo(width));
+			Assert.That(reloadedHeight, Is.EqualTo(height));
+			Assert.That(reloadedBytes, Is.EqualTo(originalBytes));
+			return Task.CompletedTask;
+		});
 
 	private static void CopyNativePluginsToDirectory(string repoRoot, string targetDirectory)
 	{
@@ -824,64 +956,37 @@ public sealed class RunnerTests
 	}
 
 	[Test]
-	public async Task NativeImageLoadProcessSavePipeline()
-	{
-		var repoRoot = FindRepoRoot();
-		var testImagePath = Path.Combine(repoRoot, "ImageProcessing", "test_image.jpg");
-		CopyNativePluginsToDirectory(repoRoot, AppContext.BaseDirectory);
-		var processImagePath =
-			Path.Combine(repoRoot, "ImageProcessing", "ProcessImage" + Type.Extension);
-		await new Runner(processImagePath, testImagePath).Run();
-		await new Runner(processImagePath, testImagePath).Run();
-		var outputImagePath = testImagePath.Replace(".jpg", "_output.jpg");
-		Assert.That(File.Exists(outputImagePath), Is.True, outputImagePath);
-		var output = consoleWriter.ToString();
-		Assert.That(output, Does.Contain("Processed image saved to:"));
-	}
+	public Task NativeImageLoadProcessSavePipeline() =>
+		InTemporaryCopy([Path.Combine(FindRepoRoot(), "ImageProcessing", "test_image.jpg")],
+			async directory =>
+			{
+				var repoRoot = FindRepoRoot();
+				var testImagePath = Path.Combine(directory, "test_image.jpg");
+				CopyNativePluginsToDirectory(repoRoot, AppContext.BaseDirectory);
+				var processImagePath =
+					Path.Combine(repoRoot, "ImageProcessing", "ProcessImage" + Type.Extension);
+				await new Runner(processImagePath, testImagePath).Run();
+				await new Runner(processImagePath, testImagePath).Run();
+				var outputImagePath = testImagePath.Replace(".jpg", "_output.jpg");
+				Assert.That(File.Exists(outputImagePath), Is.True, outputImagePath);
+				Assert.That(consoleWriter.ToString(), Does.Contain("Processed image saved to:"));
+			});
 
 	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
-	public async Task RunAdjustBrightnessRegeneratesCachedBinaryWhenColorChanges()
-	{
-		var adjustBrightnessPath = GetExamplesFilePath("../ImageProcessing/AdjustBrightness");
-		var colorPath = Path.Combine(Path.GetDirectoryName(adjustBrightnessPath)!, "Color.strict");
-		var binaryPath = Path.ChangeExtension(adjustBrightnessPath, BinaryExecutable.Extension);
-		var originalColorCode = await File.ReadAllTextAsync(colorPath);
-		var originalColorTimestamp = File.GetLastWriteTimeUtc(colorPath);
-		var hadBinary = File.Exists(binaryPath);
-		var originalBinaryBytes = hadBinary
-			? await File.ReadAllBytesAsync(binaryPath)
-			: [];
-		var originalBinaryTimestamp = hadBinary
-			? File.GetLastWriteTimeUtc(binaryPath)
-			: DateTime.MinValue;
-		try
-		{
-			if (File.Exists(binaryPath))
-				File.Delete(binaryPath);
-			await new Runner(adjustBrightnessPath).Run();
-			var firstBinaryTimestamp = File.GetLastWriteTimeUtc(binaryPath);
-			consoleWriter.GetStringBuilder().Clear();
-			await File.WriteAllTextAsync(colorPath,
-				originalColorCode.Replace("has Alpha = 1", "has Alpha = 0.5"));
-			File.SetLastWriteTimeUtc(colorPath, DateTime.UtcNow.AddSeconds(2));
-			await new Runner(adjustBrightnessPath).Run();
-			Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(firstBinaryTimestamp));
-		}
-		finally
-		{
-			await File.WriteAllTextAsync(colorPath, originalColorCode);
-			File.SetLastWriteTimeUtc(colorPath, originalColorTimestamp);
-			if (hadBinary)
+	public Task RunAdjustBrightnessRegeneratesCachedBinaryWhenColorChanges() =>
+		InTemporaryCopy(
+			Directory.GetFiles(Path.Combine(FindRepoRoot(), "ImageProcessing"), "*" + Type.Extension),
+			async directory =>
 			{
-				await File.WriteAllBytesAsync(binaryPath, originalBinaryBytes);
-				File.SetLastWriteTimeUtc(binaryPath, originalBinaryTimestamp);
-			}
-			else if (File.Exists(binaryPath))
-			{
-				File.Delete(binaryPath);
-			}
-		}
-	}
+				var adjustBrightnessPath = Path.Combine(directory, "AdjustBrightness" + Type.Extension);
+				var binaryPath = Path.ChangeExtension(adjustBrightnessPath, BinaryExecutable.Extension);
+				await new Runner(adjustBrightnessPath).Run();
+				var firstBinaryTimestamp = File.GetLastWriteTimeUtc(binaryPath);
+				File.SetLastWriteTimeUtc(Path.Combine(directory, "Color" + Type.Extension),
+					DateTime.UtcNow.AddSeconds(2));
+				await new Runner(adjustBrightnessPath).Run();
+				Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(firstBinaryTimestamp));
+			});
 }

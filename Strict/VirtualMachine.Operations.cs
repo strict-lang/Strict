@@ -98,8 +98,8 @@ public sealed partial class VirtualMachine
 		var (right, left) = GetOperands(instruction);
 		conditionFlag = instruction.InstructionType switch
 		{
-			InstructionType.GreaterThan => left.Number > right.Number,
-			InstructionType.LessThan => left.Number < right.Number,
+			InstructionType.GreaterThan => left.GetArithmeticNumber() > right.GetArithmeticNumber(),
+			InstructionType.LessThan => left.GetArithmeticNumber() < right.GetArithmeticNumber(),
 			InstructionType.Equal => left.Equals(right),
 			InstructionType.NotEqual => !left.Equals(right),
 			_ => throw Fail("Unsupported conditional operation: " +

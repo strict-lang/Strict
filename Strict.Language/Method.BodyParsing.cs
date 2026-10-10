@@ -52,6 +52,8 @@ public sealed partial class Method
 	{
 		if (tabs is 0 or > 3)
 			throw new InvalidIndentation(Type, lineNumber, line, Name);
+		if (tabs == line.Length)
+			throw new TypeParser.EmptyLineIsNotAllowed(Type, lineNumber);
 		if (char.IsWhiteSpace(line[tabs]))
 			throw new TypeParser.ExtraWhitespacesFoundAtBeginningOfLine(Type, lineNumber, line, Name);
 		if (char.IsWhiteSpace(line[^1]))
@@ -73,15 +75,29 @@ public sealed partial class Method
 				? methodBody.Expressions[0]
 				: methodBody;
 		var expressions = new List<Expression>();
+		try
+		{
+			AddDeclarationsAndTests(methodBody, expressions);
+		}
+		catch (Exception ex) when (ex is not ParsingFailed)
+		{
+			throw methodBody.FailedAtCurrentLine(ex);
+		}
+		expressions.Add(new PlaceholderExpression(ReturnType));
+		methodBody.SetExpressions(expressions);
+		return methodBody;
+	}
+
+	private void AddDeclarationsAndTests(Body body, List<Expression> expressions)
+	{
 		var lastExecutableLineIndex = GetLastExecutableLineIndex();
 		for (var index = 1; index < lines.Count; index++)
 		{
 			var line = lines[index];
-			methodBody.ParsingLineNumber = index;
+			body.ParsingLineNumber = index;
 			if (IsDeclarationLine(line))
 			{
-				var declaration = Parser.ParseLineExpression(methodBody, line.AsSpan(methodBody.Tabs));
-				expressions.Add(declaration);
+				expressions.Add(Parser.ParseLineExpression(body, line.AsSpan(body.Tabs)));
 				continue;
 			}
 			if (index == lastExecutableLineIndex || !IsPotentialTestLine(line) || IsControlFlowLine(line))
@@ -89,7 +105,7 @@ public sealed partial class Method
 			Expression expression;
 			try
 			{
-				expression = Parser.ParseLineExpression(methodBody, line.AsSpan(methodBody.Tabs));
+				expression = Parser.ParseLineExpression(body, line.AsSpan(body.Tabs));
 			}
 			catch (Type.GenericTypesCannotBeUsedDirectlyUseImplementation)
 			{
@@ -101,9 +117,6 @@ public sealed partial class Method
 				expressions.Add(expression);
 			}
 		}
-		expressions.Add(new PlaceholderExpression(ReturnType));
-		methodBody.SetExpressions(expressions);
-		return methodBody;
 	}
 
 	private int GetLastExecutableLineIndex()

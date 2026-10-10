@@ -116,6 +116,11 @@ public static class SpanExtensions
 	// ReSharper disable once MethodTooLong
 	public static bool TryParseNumber(this ReadOnlySpan<char> input, out double number)
 	{
+		if (input.IsEmpty)
+		{
+			number = 0;
+			return false;
+		}
 		if (input[0] == '-')
 		{
 			if (!input[1..].TryParseNumber(out number))
@@ -123,9 +128,9 @@ public static class SpanExtensions
 			number = -number;
 			return true;
 		}
-		number = input[0] - '0';
+		number = (uint)(input[0] - '0');
 		// Trick from char.IsDigit, which calls char.IsBetween using uint to do an in between check
-		if ((uint)number > 9)
+		if (number > 9)
 			return false;
 		var decimalPosition = input.Length;
 		for (var index = 1; index < input.Length; index++)

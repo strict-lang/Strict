@@ -24,6 +24,15 @@ public class KeywordTests
 	]; //ncrunch: no coverage end
 
 	[TestCaseSource(nameof(KeywordsList))]
+	public void CannotUseKeywordsAsConstantName(string name) =>
+		Assert.That(
+			() => new Type(TestPackage.Instance,
+				new TypeLines(name + nameof(CannotUseKeywordsAsConstantName), $"constant {name} = 5",
+					"Run", "\t5")).ParseMembersAndMethods(parser),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<NamedType.CannotUseKeywordsAsName>());
+
+	[TestCaseSource(nameof(KeywordsList))]
 	public void CannotUseKeywordsAsVariableName(string name) =>
 		Assert.That(
 			() => new Type(TestPackage.Instance,

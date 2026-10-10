@@ -102,7 +102,8 @@ public sealed class ExecutionContext(Type type,
 
 	internal void TrackDisposable(ValueInstance value) => (disposableValues ??= []).Add(value);
 
-	internal IReadOnlyList<ValueInstance> DisposableValues => disposableValues ?? [];
+	internal IReadOnlyList<ValueInstance> DisposableValues =>
+		(IReadOnlyList<ValueInstance>?)disposableValues ?? [];
 
 	internal void RemoveDisposable(ValueInstance value) => disposableValues?.Remove(value);
 

@@ -73,12 +73,15 @@ Method(start Number) MethodEntry
 	(Grid.Method(2).instructions(5).texts, Grid.Method(2).instructions(6).texts) is (("index"), ("outer.index"))
 	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
-	let shape = generator.target.shape
-	let scope = MethodBodies(generator.target.TypeName, shape, inference).HeaderScope(header, shape.MemberScope)
+	let scope = MethodScope(header, generator.target)
 	let returnType = Concrete(header.ReturnType)
 	let code = MethodCodegen(generator).Generate(BodyParser(lines).Block(start + 1, 1), scope, BodyType(header))
 	let optimized = LoadReuse(code.instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(returnType), optimized)
+MethodScope(header HeaderTokens, target CallTarget) Scope
+	Hello.MethodScope(HeaderTokens("Run"), Hello.Generator.target).TypeOf(CodeBlock.ErrorMarker) is "Run"
+	let members = MethodBodies(target.TypeName, target.shape, inference).HeaderScope(header, target.shape.MemberScope)
+	members.With(CodeBlock.ErrorMarker, header.tokens(0))
 BodyType(header HeaderTokens) Text
 	Iterating.BodyType(HeaderTokens("for", "Iterator", "(", "Number", ")")) is "Numbers"
 	Hello.BodyType(HeaderTokens("Run", "Number")) is "Number"

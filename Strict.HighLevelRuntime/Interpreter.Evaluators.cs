@@ -105,7 +105,7 @@ public partial class Interpreter
 	{
 		Statistics.MutableUsageCount++;
 		var newValue = CopyIfMutableList(RunExpression(value, ctx));
-		var index = (int)RunExpression(target.Index, ctx).Number;
+		var index = (int)RunExpression(target.Index, ctx).GetArithmeticNumber();
 		var listInstance = RunExpression(target.List, ctx);
 		if (!listInstance.IsMutable && target.List is VariableCall or ParameterCall)
 		{

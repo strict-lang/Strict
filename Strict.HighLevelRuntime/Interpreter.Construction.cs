@@ -82,7 +82,7 @@ public partial class Interpreter
 			if (IsSingleCharacterTextArgument(method.Type, args[0]))
 				return new ValueInstance(method.Type, args[0].Text[0]);
 			if (!args[0].IsText || args[0].IsSameOrCanBeUsedAs(method.Type))
-				return new ValueInstance(method.Type, args[0].Number);
+				return new ValueInstance(method.Type, args[0].GetArithmeticNumber());
 		}
 		if (method.Type.IsList)
 			return new ValueInstance(method.Type, args.ToArray());

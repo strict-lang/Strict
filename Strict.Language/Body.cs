@@ -68,7 +68,7 @@ public sealed class Body : Expression
 			catch (Exception ex)
 			{
 				StartDebuggerInDebugModeIfNotAttached();
-				throw new ParsingFailed((Type)Method.Parent, CurrentFileLineNumber, CurrentLine, ex);
+				throw FailedAtCurrentLine(ex);
 			}
 		SetExpressions(expressions);
 		return Expressions.Count == 1
@@ -97,6 +97,9 @@ public sealed class Body : Expression
 			trimmed.StartsWith(Keyword.For + " ", StringComparison.Ordinal) ||
 			trimmed.StartsWith(Keyword.Else, StringComparison.Ordinal);
 	}
+
+	internal ParsingFailed FailedAtCurrentLine(Exception inner) =>
+		new((Type)Method.Parent, CurrentFileLineNumber, CurrentLine, inner);
 
 	public Range LineRange { get; internal set; }
 	public int ParsingLineNumber { get; set; }

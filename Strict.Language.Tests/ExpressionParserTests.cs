@@ -73,6 +73,11 @@ public class ExpressionParserTests : ExpressionParser
 			Throws.InstanceOf<Method.InvalidIndentation>());
 
 	[Test]
+	public void TabOnlyLineIsAnEmptyLineInMethods() =>
+		Assert.That(() => new Method(type, 0, this, ["Run", "\t"]),
+			Throws.InstanceOf<TypeParser.EmptyLineIsNotAllowed>());
+
+	[Test]
 	public void TooMuchIndentationIsNotValidInMethods() =>
 		Assert.That(() => new Method(type, 0, this, ["Run", new string('\t', 4)]),
 			Throws.InstanceOf<Method.InvalidIndentation>());

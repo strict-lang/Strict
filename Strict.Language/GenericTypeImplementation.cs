@@ -3,7 +3,8 @@ namespace Strict.Language;
 public sealed class GenericTypeImplementation : Type
 {
 	public GenericTypeImplementation(Type generic, Type[] implementationTypes, string typeName) :
-		base(generic.Package, new TypeLines(typeName, CreateHasLines(generic, implementationTypes)))
+		base(GetPackage(generic, implementationTypes),
+			new TypeLines(typeName, CreateHasLines(generic, implementationTypes)))
 	{
 		Generic = generic;
 		ImplementationTypes = implementationTypes;
@@ -17,6 +18,21 @@ public sealed class GenericTypeImplementation : Type
 			typeKind = ImplementationTypes[0].typeKind;
 		ImplementMembers();
 		ImplementMethods();
+	}
+
+	/// <summary>
+	/// List(Color) is Strict/ImageProcessing/List(Color) when Color is inside the generic's package,
+	/// but is not added there: only the generic's cache finds it, same named ones never clash.
+	/// ponytail: List.strict code resolves names there, a Range there would shadow Strict/Range.
+	/// </summary>
+	private static Package GetPackage(Type generic, IEnumerable<Type> implementationTypes)
+	{
+		foreach (var implementationType in implementationTypes)
+			for (var parent = implementationType.Package.Parent; parent is Package package;
+				parent = package.Parent)
+				if (package == generic.Package)
+					return implementationType.Package;
+		return generic.Package;
 	}
 
 	private static string[] CreateHasLines(Type generic, Type[] implementationTypes) =>

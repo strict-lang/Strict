@@ -85,9 +85,42 @@ public sealed class TypeParserTests
 			Throws.InstanceOf<TypeParser.MemberWithTypeAnyIsNotAllowed>());
 
 	[Test]
+	public void MemberTypeMustCloseItsBracket() =>
+		Assert.That(
+			() => CreateType(nameof(MemberTypeMustCloseItsBracket), "has logger", "has values List(Text"),
+			Throws.InstanceOf<TypeParser.MemberTypeMustCloseItsBracket>());
+
+	[Test]
 	public void MembersMustComeBeforeMethods() =>
 		Assert.That(() => CreateType(nameof(MembersMustComeBeforeMethods), "Run", "has logger"),
 			Throws.InstanceOf<TypeParser.MembersMustComeBeforeMethods>());
+
+	[Test]
+	public void DuplicateMembersWithInitialValuesAreNotAllowed() =>
+		Assert.That(
+			() => CreateType(nameof(DuplicateMembersWithInitialValuesAreNotAllowed), "constant Max = 5",
+				"constant Max = 5", "Run", "\tMax"),
+			Throws.InstanceOf<TypeParser.DuplicateMembersAreNotAllowed>());
+
+	[TestCase("has number =")]
+	[TestCase("has number with number > 0 =")]
+	public void MemberMissingInitialValue(string line) =>
+		Assert.That(() => CreateType(nameof(MemberMissingInitialValue), line),
+			Throws.InstanceOf<TypeParser.MemberMissingInitialValue>());
+
+	[Test]
+	public void EqualSignInConstrainedMemberName() =>
+		Assert.That(
+			() => CreateType(nameof(EqualSignInConstrainedMemberName),
+				"has number=5 with number > 0", "Run", "\tnumber"),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
+
+	[Test]
+	public void InvalidConstraintFailsAtMemberLine() =>
+		Assert.That(
+			() => CreateType(nameof(InvalidConstraintFailsAtMemberLine), "has number with .value > 0",
+				"Run", "\tnumber"), Throws.InstanceOf<ParsingFailed>().With.Message.Contains(":line 1"));
 
 	[Test]
 	public void MissingConstraintExpression() =>
@@ -140,6 +173,16 @@ public sealed class TypeParserTests
 		Assert.That(
 			() => CreateType(nameof(HugeConstantRangeIsDetected), "has logger", "Run",
 				"\tRange(1,2000000001)"), Throws.InstanceOf<TypeParser.HugeConstantRangeNotAllowed>());
+
+	[Test]
+	public void UnclosedRangeIsReportedByTheMethodBody()
+	{
+		using var type = new Type(package, new TypeLines(nameof(UnclosedRangeIsReportedByTheMethodBody),
+			"has logger", "Run", "\tRange(1, 5")).ParseMembersAndMethods(parser);
+		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<PhraseTokenizer.InvalidEmptyOrUnmatchedBrackets>());
+	}
 
 	[Test]
 	public void RedundantReturnPreviousLineContainsValueAlready() =>

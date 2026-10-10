@@ -9,29 +9,35 @@ public class InterpreterExecutionFailed : ParsingFailed
 		this(method, method.TypeLineNumber, message, inner) { }
 
 	internal InterpreterExecutionFailed(Method method, int fileLineNumber, string message,
-		Exception? inner = null, bool appendClickableLine = true) : base(appendClickableLine
-		? message + GetClickableStacktraceLine(method.Type, fileLineNumber, "")
-		: message, fileLineNumber, inner) =>
-		MethodName = method.ToString();
+		Exception? inner = null, bool messageListsCallers = false) : base(messageListsCallers
+			? message
+			: message + GetClickableStacktraceLine(method.Type, fileLineNumber, ""),
+		fileLineNumber, inner) =>
+		(MethodName, ListsCallers) = (method.ToString(), messageListsCallers);
 
 	protected InterpreterExecutionFailed(Type returnType, string message) : base(returnType, 0,
 		message) =>
 		MethodName = string.Empty;
 
 	internal string MethodName { get; }
+	/// <summary>
+	/// The message already names every Strict caller, bodies let it pass instead of wrapping it.
+	/// </summary>
+	internal bool ListsCallers { get; }
 	internal string Headline =>
 		(InnerException != null && InnerException is not InterpreterExecutionFailed
 			? InnerException.GetType().Name + ": "
 			: "") + GetHeadline(Message);
 
-	internal static string GetMethodFailureHeader(Method method) =>
-		"Failed in \"" + method.Type.FullName + "." + method.Name + "\":";
-
 	internal static string BuildMethodFailureMessage(Method method, int fileLineNumber,
-		IEnumerable<Expression> expressions, string headline) =>
-		headline + Environment.NewLine + GetMethodFailureHeader(method) + Environment.NewLine +
-		string.Join(Environment.NewLine, expressions) +
-		GetClickableStacktraceLocation(method.Type, fileLineNumber, "");
+		IEnumerable<Expression> expressions, string headline, ExecutionContext ctx)
+	{
+		var location = GetClickableStacktraceLocation(method.Type, fileLineNumber, "");
+		return headline + Environment.NewLine + "Failed in \"" + method.Type.FullName + "." +
+			method.Name + "\":" + Environment.NewLine +
+			string.Join(Environment.NewLine, expressions) + location +
+			BuildCallerChain(ctx.Parent, location);
+	}
 
 	internal static string GetHeadline(string message)
 	{

@@ -13,6 +13,8 @@ public sealed partial class Method
 	{
 		foreach (var nameAndType in SplitParameters(parametersSpan))
 		{
+			if (nameAndType.IsEmpty)
+				throw new InvalidMethodParameters(this, parametersSpan.ToString());
 			if (char.IsUpper(nameAndType[0]))
 				throw new ParametersMustStartWithLowerCase(this, nameAndType.ToString());
 			var nameAndTypeAsString = nameAndType.ToString();

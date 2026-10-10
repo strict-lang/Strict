@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace Strict.Language;
 
 public partial class Type
@@ -37,22 +39,24 @@ public partial class Type
 
 	public GenericTypeImplementation GetGenericImplementation(params Type[] implementationTypes)
 	{
-		var key = GetImplementationName(implementationTypes);
+		var key = GetImplementationKey(implementationTypes);
 		lock (genericImplementationLock)
 		{
 			return GetGenericImplementation(key) ?? CreateGenericImplementation(key, implementationTypes);
 		}
 	}
 
-	internal string GetImplementationName(Type[] implementationTypes)
-	{
-		var key = "";
-		for (var i = 0; i < implementationTypes.Length; i++)
-			key += (key == ""
-				? ""
-				: ", ") + implementationTypes[i].Name;
-		return Name + "(" + key + ")";
-	}
+	/// <summary>
+	/// Full names keep List(Color) of two packages apart, both are still named List(Color).
+	/// Runtime list creation asks for List(Type) a lot, one implementation type allocates nothing.
+	/// </summary>
+	private static string GetImplementationKey(IReadOnlyList<Type> implementationTypes) =>
+		implementationTypes.Count == 1
+			? implementationTypes[0].FullName
+			: string.Join(", ", implementationTypes.Select(type => type.FullName));
+
+	private string GetImplementationName(IEnumerable<Type> implementationTypes) =>
+		Name + "(" + string.Join(", ", implementationTypes.Select(type => type.Name)) + ")";
 
 	internal string GetImplementationName(IReadOnlyList<NamedType> implementationTypes)
 	{
@@ -83,11 +87,44 @@ public partial class Type
 			GetGenericTypeArguments().Count == implementationTypes.Length ||
 			HasMatchingConstructor(implementationTypes))
 		{
-			var genericType = new GenericTypeImplementation(this, implementationTypes, key);
+			var genericType = new GenericTypeImplementation(this, implementationTypes,
+				GetImplementationName(implementationTypes));
 			cachedGenericTypes!.Add(key, genericType);
+			foreach (var implementationType in implementationTypes)
+				LazyInitializer.EnsureInitialized(ref implementationType.implementationsUsingThisType).
+					Enqueue(genericType);
 			return genericType;
 		}
 		throw new TypeArgumentsCountDoesNotMatchGenericType(this, implementationTypes);
+	}
+
+	private ConcurrentQueue<GenericTypeImplementation>? implementationsUsingThisType;
+
+	/// <summary>
+	/// List(ThisType) or a generic type's own implementations must not outlive it, a type parsed again
+	/// under the same name would get them back. ponytail: own implementations stay queued in their
+	/// implementation types (tiny leak per re-parsed generic type), upgrade: remove them there too.
+	/// </summary>
+	private void RemoveGenericImplementations()
+	{
+		while (implementationsUsingThisType?.TryDequeue(out var implementation) == true)
+			implementation.Generic.RemoveGenericImplementation(implementation);
+		Dictionary<string, GenericTypeImplementation>? ownImplementations;
+		lock (genericImplementationLock)
+		{
+			ownImplementations = cachedGenericTypes;
+			cachedGenericTypes = null;
+		}
+		if (ownImplementations != null)
+			foreach (var implementation in ownImplementations.Values)
+				implementation.Dispose();
+	}
+
+	private void RemoveGenericImplementation(GenericTypeImplementation implementation)
+	{
+		lock (genericImplementationLock)
+			cachedGenericTypes?.Remove(GetImplementationKey(implementation.ImplementationTypes));
+		implementation.Dispose();
 	}
 
 	private bool HasMatchingConstructor(Type[] implementationTypes) =>

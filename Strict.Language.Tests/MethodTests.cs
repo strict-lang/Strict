@@ -25,9 +25,10 @@ public sealed class MethodTests
 		Assert.That(() => new Method(type, 0, null!, ["Texts GetFiles"]),
 			Throws.InstanceOf<Context.TypeNotFound>());
 
-	[Test]
-	public void InvalidMethodParameters() =>
-		Assert.Throws<Method.InvalidMethodParameters>(() => new Method(type, 0, null!, ["ab("]));
+	[TestCase("ab(")]
+	[TestCase("Run(first Number, , second Number)")]
+	public void InvalidMethodParameters(string definition) =>
+		Assert.Throws<Method.InvalidMethodParameters>(() => new Method(type, 0, null!, [definition]));
 
 	[Test]
 	public void ParametersMustNotBeEmpty() =>

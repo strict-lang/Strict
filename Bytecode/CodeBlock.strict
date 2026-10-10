@@ -4,6 +4,7 @@ has nextId Number
 has scope Expressions/Scope
 constant Empty = CodeBlock(List(InstructionEntry), 0, 0, Scope(List(Text), List(Text)))
 constant SharedMarker = " shares"
+constant ErrorMarker = " error"
 Add(entry InstructionEntry) CodeBlock
 	CodeBlock.Empty.Add(InstructionEntry.Return(0)).instructions.Length is 1
 	CodeBlock(instructions + entry, register, nextId, scope)
@@ -47,11 +48,12 @@ Joined(name Text, id Number) CodeBlock
 	ended.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, ended.register, name))
 Chosen(name Text, id Number) CodeBlock
 	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)).Chosen("a", 0).instructions.Length is 6
-	let stored = Stored(name)
-	let truth = stored.Load(InstructionEntry.LoadBoolean(stored.register, true))
-	let flagged = truth.Add(InstructionEntry.Binary(InstructionType.Equal, (truth.Result, truth.Result)))
-	let ended = flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, id))
+	let ended = Stored(name).Flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, id))
 	ended.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, ended.nextId)).WithNextId
+Flagged CodeBlock
+	CodeBlock.Empty.Flagged.instructions(1).payload is (2, 0, 0)
+	let truth = Load(InstructionEntry.LoadBoolean(register, true))
+	truth.Add(InstructionEntry.Binary(InstructionType.Equal, (truth.Result, truth.Result)))
 Negated CodeBlock
 	CodeBlock.Empty.Load(InstructionEntry.LoadBoolean(0, true)).Negated.Result is 2
 	let falsity = Load(InstructionEntry.LoadBoolean(register, false))

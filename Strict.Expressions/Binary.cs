@@ -74,7 +74,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 
 	public sealed class IncompleteTokensForBinaryExpression(Body body,
 		ReadOnlySpan<char> input,
-		IEnumerable<Range> postfixTokens) : ParsingFailed(body, //ncrunch: no coverage
+		IEnumerable<Range> postfixTokens) : ParsingFailed(body,
 		string.Join(", ", input.GetTextsFromRanges(postfixTokens).Reverse()));
 
 	private static Expression BuildBinaryExpression(Body body, ReadOnlySpan<char> input,
@@ -87,7 +87,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 #endif
 		return operatorToken switch
 		{
-			BinaryOperator.To => To.Parse(body, input[tokens.Pop()],
+			BinaryOperator.To => To.Parse(body, input[PopToken(body, input, tokens)],
 				GetUnaryOrBuildNestedBinary(body, input, tokens)),
 			UnaryOperator.Not => BuildNotBinaryExpression(body, input, tokens),
 			_ => BuildRegularBinaryExpression(body, input, tokens, operatorToken)
@@ -119,7 +119,8 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		Stack<Range> tokens) =>
 		BuildNot(tokens.Count == 1
 			? GetUnaryOrBuildNestedBinary(body, input, tokens)
-			: BuildRegularBinaryExpression(body, input, tokens, input[tokens.Pop()].ToString()));
+			: BuildRegularBinaryExpression(body, input, tokens,
+				input[PopToken(body, input, tokens)].ToString()));
 
 	private static Binary BuildRegularBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, string operatorToken)
@@ -190,7 +191,7 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 	private static Expression GetUnaryOrBuildNestedBinary(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens, bool checkRightForIsTypeComparison = false)
 	{
-		var nextTokenRange = tokens.Pop();
+		var nextTokenRange = PopToken(body, input, tokens);
 #if LOG_OPERATORS_PARSING
 		Console.WriteLine("GetUnaryOrBuildNestedBinary token=" +
 			input[nextTokenRange].ToString() + ", remaining tokens=" + tokens.Count);
@@ -205,6 +206,11 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 					? TypeComparison.Parse(body, input, nextTokenRange)
 					: body.Method.ParseExpression(body, input[nextTokenRange]);
 	}
+
+	private static Range PopToken(Body body, ReadOnlySpan<char> input, Stack<Range> tokens) =>
+		tokens.TryPop(out var token)
+			? token
+			: throw new IncompleteTokensForBinaryExpression(body, input, tokens);
 
 	private static Expression BuildNot(Expression expression) =>
 		new Not(expression.ReturnType.GetMethod(UnaryOperator.Not, []), expression);

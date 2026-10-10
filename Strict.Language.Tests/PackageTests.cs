@@ -41,6 +41,41 @@ public class PackageTests
 	}
 
 	[Test]
+	public void TypeAddedLaterWinsOverForeignTypeFoundBefore()
+	{
+		var foreign = new Type(new Package(mainPackage, "Foreign"), new TypeLines("Later", "Run"));
+		Assert.That(new Type(subPackage, new TypeLines("Asker", "Run")).FindType("Later"),
+			Is.EqualTo(foreign));
+		var later = new Type(subPackage, new TypeLines("Later", "Run"));
+		Assert.That(new Type(subPackage, new TypeLines("SecondAsker", "Run")).FindType("Later"),
+			Is.EqualTo(later));
+	}
+
+	[Test]
+	public void TypesCanBeEnumeratedWhileATypeIsAdded()
+	{
+		foreach (var _ in subPackage.Types)
+			if (subPackage.FindDirectType("Added") == null)
+				new Type(subPackage, new TypeLines("Added", "Run"));
+		Assert.That(subPackage.FindDirectType("Added"), Is.Not.Null);
+	}
+
+	[Test]
+	public void AnyMethodsComeFromTheAnyOfTheOwnPackageTree()
+	{
+		var parser = new MethodExpressionParser();
+		using var testPackageType = new Type(TestPackage.Instance, new TypeLines("AnyUser", "Run")).
+			ParseMembersAndMethods(parser);
+		Assert.That(testPackageType.AvailableMethods, Does.Not.ContainKey("Hello"));
+		var ownTree = new Package("OwnAnyTree");
+		new Type(ownTree, new TypeLines(Type.Any, "from", "to Type", "to Text", "Hello Number")).
+			ParseMembersAndMethods(parser);
+		Assert.That(new Type(ownTree, new TypeLines("Probe", "Run")).ParseMembersAndMethods(parser).
+			AvailableMethods, Does.ContainKey("Hello"));
+		ownTree.Unload();
+	}
+
+	[Test]
 	public void IsPrivateNameCheckShouldReturnNull() =>
 		Assert.That(new Package(nameof(IsPrivateNameCheckShouldReturnNull)).FindType("isPrivate"),
 			Is.Null);
@@ -107,6 +142,11 @@ public class PackageTests
 		Assert.Throws<Package.FullNameMustContainPackageAndTypeNames>(() =>
 			mainPackage.FindFullType(publicSubType.Name));
 
+	[TestCase("/")]
+	[TestCase("Strict/")]
+	public void FullNameWithoutTypeNameIsNoType(string fullName) =>
+		Assert.That(mainPackage.FindFullType(fullName), Is.Null);
+
 	[Test]
 	public void ContextNameMustNotContainSpecialCharactersOrNumbers()
 	{
@@ -148,6 +188,38 @@ public class PackageTests
 		{
 			expressionParser.TearDown();
 		}
+	}
+
+	[Test]
+	public async Task ListOfSameNamedTypeInOtherPackageUsesThatType()
+	{
+		var parser = new MethodExpressionParser();
+		var imageProcessing =
+			await new Repositories(parser).LoadStrictPackage("Strict/ImageProcessing");
+		var color = new Type(new Package((Package)imageProcessing.Parent, "OtherColors"),
+			new TypeLines("Color", "has Red Number", "has Green Number", "Reds Colors",
+				"\t(Color(1, 2))")).ParseMembersAndMethods(parser);
+		Assert.That(color.Methods[0].ReturnType.GetFirstImplementation(), Is.SameAs(color));
+		Assert.That(imageProcessing.GetType("Colors").FilePath,
+			Is.EqualTo(color.GetType(Type.List).FilePath));
+		color.Package.Unload();
+	}
+
+	[Test]
+	public void SameNamedTypesOfTwoRootPackagesGetTheirOwnGenericImplementations()
+	{
+		var first = new Type(new Package("FirstWidgets"), new TypeLines("Widget", "Run"));
+		var second = new Type(new Package("SecondWidgets"), new TypeLines("Widget", "Run"));
+		var list = TestPackage.Instance.GetType(Type.List);
+		var dictionary = TestPackage.Instance.GetType(Type.Dictionary);
+		Assert.That(list.GetGenericImplementation(first).GetFirstImplementation(), Is.SameAs(first));
+		Assert.That(list.GetGenericImplementation(second).GetFirstImplementation(), Is.SameAs(second));
+		Assert.That(dictionary.GetGenericImplementation(first, first).ImplementationTypes,
+			Is.EqualTo(new[] { first, first }));
+		Assert.That(dictionary.GetGenericImplementation(first, second).ImplementationTypes,
+			Is.EqualTo(new[] { first, second }));
+		first.Package.Unload();
+		second.Package.Unload();
 	}
 
 	/// <summary>

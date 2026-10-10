@@ -543,13 +543,16 @@ public sealed class VirtualMachineTests : TestBytecode
 
 	[Test]
 	public void NumberWrapperValueIsUsedAsNumberInArithmetic() =>
-		Assert.That(RunOnNumberWrapper(nameof(NumberWrapperValueIsUsedAsNumberInArithmetic),
-			"value / 2").Number, Is.EqualTo(90));
+		Assert.That(RunOnNumberWrapper(nameof(NumberWrapperValueIsUsedAsNumberInArithmetic), 180,
+			"Number", "\tvalue / 2").Number, Is.EqualTo(90));
 
-	private ValueInstance RunOnNumberWrapper(string typeName, string calculation) =>
+	private ValueInstance RunOnNumberWrapper(string typeName, int number, string returnType,
+		params string[] lines) =>
 		new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(typeName,
-			typeName + "(0).Run", "has number", "Run Number", "\t" + typeName + "(180).Calculate",
-			"Calculate Number", "\t" + calculation)).Generate()).Execute().Returns!.Value;
+			typeName + "(0).Run", [
+				"has number", "Run " + returnType, "\t" + typeName + "(" + number + ").Calculate",
+				"Calculate " + returnType, .. lines
+			])).Generate()).Execute().Returns!.Value;
 
 	[TestCase("Plus", "90 + value", "270")]
 	[TestCase("Minus", "value - 90", "90")]
@@ -557,7 +560,23 @@ public sealed class VirtualMachineTests : TestBytecode
 	public void ArithmeticWithNumberWrapperGivesNumber(string operation, string calculation,
 		string expected) =>
 		Assert.That(RunOnNumberWrapper(nameof(ArithmeticWithNumberWrapperGivesNumber) + operation,
-			calculation).ToExpressionCodeString(), Is.EqualTo(expected));
+			180, "Number", "\t" + calculation).ToExpressionCodeString(), Is.EqualTo(expected));
+
+	[TestCase("Greater", "Boolean", "true", "\tvalue > 1")]
+	[TestCase("Smaller", "Boolean", "false", "\tvalue < 1")]
+	[TestCase("ListIndex", "Number", "30", "\tconstant numbers = (10, 20, 30)", "\tnumbers(value)")]
+	[TestCase("StoreIndex", "Number", "7", "\tmutable numbers = (1, 2, 3)",
+		"\tnumbers(value) = value + 5", "\tnumbers(2)")]
+	[TestCase("TextArgument", "Text", "ll", "\t\"hello\".Substring(value, 2)")]
+	[TestCase("RangeEnd", "Number", "1", "\tfor Range(1, value)", "\t\tindex")]
+	[TestCase("CharacterFrom", "Boolean", "true", "\tCharacter(value) is Character(2)")]
+	[TestCase("Increment", "Number", "3", "\tvalue.Increment")]
+	[TestCase("StoreWrapper", "Number", "3", "\tmutable numbers = (1, 2, 3)",
+		"\tnumbers(0) = value", "\tnumbers(0) + 1")]
+	public void NumberWrapperIsReadAsItsNumber(string name, string returnType, string expected,
+		params string[] lines) =>
+		Assert.That(RunOnNumberWrapper(nameof(NumberWrapperIsReadAsItsNumber) + name, 2, returnType,
+			lines).ToExpressionCodeString(), Is.EqualTo(expected));
 
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
 	{
@@ -872,6 +891,13 @@ public sealed class VirtualMachineTests : TestBytecode
 			"\tnumbers(0) + result(0)").Number, Is.EqualTo(6));
 
 	[Test]
+	public void CopyInSkippedIfBranchDoesNotOwnListAfterIt() =>
+		Assert.That(RunSource(nameof(CopyInSkippedIfBranchDoesNotOwnListAfterIt), "((1, 2)).Change",
+			"has numbers", "Change Number", "\tmutable other = numbers", "\tif numbers(0) is 5",
+			"\t\tother(0) = 5", "\tother(1) = 6", "\tnumbers(1) * 10 + other(1)").Number,
+			Is.EqualTo(26));
+
+	[Test]
 	public void ListTakenFromNestedListIsChangedAsCopy() =>
 		Assert.That(RunSource(nameof(ListTakenFromNestedListIsChangedAsCopy), "(((1, 2), (3, 4))).Grow",
 			"has rows List(Numbers)", "Grow Number", "\tmutable row = rows(0)", "\trow.Add(5)",
@@ -1131,6 +1157,20 @@ public sealed class VirtualMachineTests : TestBytecode
 		var machine = new VirtualMachine(executable) { Profile = [] };
 		Assert.That(machine.Execute().Returns!.Value.Number, Is.EqualTo(16 * 9));
 		Assert.That(machine.Profile!.Keys, Has.None.EndsWith(".for"));
+	}
+
+	[Test]
+	public async Task LoopOverNumberWrapperRunsItsNumberTimes()
+	{
+		var parser = new MethodExpressionParser();
+		using var mathPackage = await new Repositories(parser).LoadStrictPackage("Strict/Math");
+		using var testType = new Type(mathPackage,
+			new TypeLines(nameof(LoopOverNumberWrapperRunsItsNumberTimes), "has number", "Run Number",
+				"\tfor Degrees(3)", "\t\tvalue")).ParseMembersAndMethods(parser);
+		var runMethod = testType.Methods[0];
+		Assert.That(
+			new VirtualMachine(BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod])).Execute().
+				Returns!.Value.Number, Is.EqualTo(0 + 1 + 2));
 	}
 
 	[Test]

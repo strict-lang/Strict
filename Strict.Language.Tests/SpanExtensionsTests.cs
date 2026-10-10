@@ -120,6 +120,12 @@ GetComplicatedSequenceTexts returns Texts
 	public void AnyOperator(string input) =>
 		Assert.That(input.AsSpan().Any(["+", "-", "*", "is"]), Is.True);
 
+	[TestCase("-")]
+	[TestCase("1e-")]
+	[TestCase("(5")]
+	public void InvalidNumberIsNoNumber(string input) =>
+		Assert.That(input.AsSpan().TryParseNumber(out _), Is.False);
+
 	[TestCase("is+")]
 	public void NotAnyOperator(string input) =>
 		Assert.That(input.AsSpan().Any(["+", "-", "*", "is"]), Is.False);

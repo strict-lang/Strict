@@ -114,7 +114,7 @@ public sealed partial class VirtualMachine
 			? 1.0
 			: -1.0;
 		Memory.Registers[invoke.Register] =
-			new ValueInstance(current.GetType(), current.Number + delta);
+			new ValueInstance(GetNumberResultType(current), current.GetArithmeticNumber() + delta);
 		return true;
 	}
 
@@ -172,7 +172,7 @@ public sealed partial class VirtualMachine
 			"StartsWith" => EvaluateStartsWith(text, first, second),
 			"IndexOf" => new ValueInstance(executable.numberType,
 				text.IndexOf(first.Text, second.HasValue
-					? (int)second.Value.Number
+					? (int)second.Value.GetArithmeticNumber()
 					: 0, StringComparison.Ordinal)),
 			"LastIndexOf" => new ValueInstance(executable.numberType,
 				text.LastIndexOf(first.Text, StringComparison.Ordinal)),
@@ -195,7 +195,7 @@ public sealed partial class VirtualMachine
 	{
 		var prefix = prefixValue.Text;
 		var start = startValue.HasValue
-			? (int)startValue.Value.Number
+			? (int)startValue.Value.GetArithmeticNumber()
 			: 0;
 		var matches = start >= 0 && start + prefix.Length <= text.Length &&
 			text.AsSpan(start, prefix.Length).SequenceEqual(prefix);
@@ -205,9 +205,9 @@ public sealed partial class VirtualMachine
 	private static ValueInstance EvaluateSubstring(string text, ValueInstance startValue,
 		ValueInstance? lengthValue)
 	{
-		var start = (int)startValue.Number;
+		var start = (int)startValue.GetArithmeticNumber();
 		var length = lengthValue.HasValue
-			? (int)lengthValue.Value.Number
+			? (int)lengthValue.Value.GetArithmeticNumber()
 			: text.Length - start;
 		if (start < 0 || start > text.Length || length <= 0)
 			return new ValueInstance("");

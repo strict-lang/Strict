@@ -104,16 +104,8 @@ public sealed class ConstantCollapser : Visitor
 			return expression;
 		if (expression is Binary binary)
 		{
-			var left = binary.Instance!;
-			if (left is VariableCall { Variable: { IsMutable: false, InitialValue.IsConstant: true } } leftCall)
-				left = leftCall.Variable.InitialValue;
-			if (left is MemberCall { Member: { IsMutable: false, InitialValue.IsConstant: true } } leftMember)
-				left = leftMember.Member.InitialValue;
-			var right = binary.Arguments[0];
-			if (right is VariableCall { Variable: { IsMutable: false, InitialValue.IsConstant: true } } rightCall)
-				right = rightCall.Variable.InitialValue;
-			if (right is MemberCall { Member: { IsMutable: false, InitialValue.IsConstant: true } } rightMember)
-				right = rightMember.Member.InitialValue;
+			var left = GetConstantValueOrSelf(binary.Instance!);
+			var right = GetConstantValueOrSelf(binary.Arguments[0]);
 			var collapsedExpression = TryCollapseBinaryExpression(left, right, binary.Method);
 			if (collapsedExpression != null)
 				return collapsedExpression;
@@ -131,6 +123,20 @@ public sealed class ConstantCollapser : Visitor
 			? collapsed
 			: expression;
 	}
+
+	/// <summary>
+	/// A member default of another instance is only its optional constructor argument, not constant.
+	/// </summary>
+	private static Expression GetConstantValueOrSelf(Expression expression) =>
+		expression switch
+		{
+			VariableCall { Variable: { IsMutable: false, InitialValue.IsConstant: true } } variableCall =>
+				variableCall.Variable.InitialValue,
+			MemberCall { Member: { IsMutable: false, InitialValue.IsConstant: true } } memberCall
+				when memberCall.Instance == null || memberCall.Member.IsConstant =>
+				memberCall.Member.InitialValue,
+			_ => expression
+		};
 
 	private Expression? TryCollapseTo(To to)
 	{
