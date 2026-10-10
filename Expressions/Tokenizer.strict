@@ -1,4 +1,5 @@
 has line Text
+constant WordCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 Tokens Texts
 	Tokenizer("a + b").Tokens is ("a", "+", "b")
 	Tokenizer("Add(5, x.y)").Tokens is ("Add", "(", "5", ",", "x", ".", "y", ")")
@@ -42,13 +43,10 @@ WordLength(start Number) Number
 	Tokenizer("1.Lerp").WordLength(0) is 1
 	Tokenizer("Vector2.One").WordLength(0) is 7
 	for Range(start, line.Length)
-		if not IsWordPart(value)
+		let character = line.Substring(value, 1)
+		if (WordCharacters.IndexOf(character) is -1) and (character is not "." or (not IsDecimalPoint(value)))
 			return value - start
 	line.Length - start
-IsWordPart(position Number) Boolean
-	Tokenizer("a.5").IsWordPart(1) is false
-	let character = line.Substring(position, 1)
-	IsWordCharacter(character) or (character is ".") and IsDecimalPoint(position)
 IsDecimalPoint(position Number) Boolean
 	Tokenizer("1.5").IsDecimalPoint(1) is true
 	Tokenizer("a2.b").IsDecimalPoint(2) is false
@@ -59,7 +57,7 @@ IsWordCharacter(character Text) Boolean
 	IsWordCharacter("a") is true
 	IsWordCharacter("7") is true
 	IsWordCharacter("(") is false
-	"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".IndexOf(character) is not -1
+	WordCharacters.IndexOf(character) is not -1
 IsDigit(character Text) Boolean
 	IsDigit("7") is true
 	IsDigit("a") is false

@@ -46,6 +46,23 @@ public sealed partial class Runner
 	private readonly string expressionToRun;
 
 	private readonly bool enableDetailedOutput;
+	/// <summary>
+	/// Prints the slowest invoked methods (inclusive time and calls) after running on the VM.
+	/// </summary>
+	public bool Profile { get; init; }
+
+	private void Execute(BinaryExecutable binary,
+		IReadOnlyDictionary<string, ValueInstance>? arguments)
+	{
+		var machine = new VirtualMachine(binary) { Profile = Profile ? [] : null };
+		LogTiming(nameof(Run), () => machine.Execute(initialVariables: arguments));
+		if (machine.Profile == null)
+			return;
+		Console.WriteLine("Profile (inclusive time, calls, method):");
+		foreach (var (method, time) in machine.Profile.OrderByDescending(entry => entry.Value.Time).
+			Take(20))
+			Console.WriteLine($"{time.Time.TotalMilliseconds,10:F1} ms {time.Calls,9} {method}");
+	}
 
 	private readonly MethodExpressionParser parser;
 
@@ -291,12 +308,11 @@ public sealed partial class Runner
 					typeData.Value.MethodGroups.TryGetValue(Method.Run, out var overloads) &&
 					overloads.Contains(runMethod)).Key, Method.Run, runMethod.parameters.Count,
 				runMethod.ReturnTypeName);
-			var arguments = BuildProgramArguments(binary, runMethod);
-			LogTiming(nameof(Run), () => new VirtualMachine(binary).Execute(initialVariables: arguments));
+			Execute(binary, BuildProgramArguments(binary, runMethod));
 		}
 		else
 		{
-			LogTiming(nameof(Run), () => new VirtualMachine(binary).Execute());
+			Execute(binary, null);
 		}
 		Console.WriteLine("Executed " + strictFilePath + " via " + nameof(VirtualMachine) + " in " +
 			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");

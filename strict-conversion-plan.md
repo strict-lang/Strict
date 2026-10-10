@@ -156,6 +156,12 @@ Phase C7 progress (2026-10-10), Strict compiler (Bytecode/FileCompiler on the C#
   457 ms; the Slow differential over 20 Examples 9 s → 4 s. ZIP CRC32 was 75% of FizzBuzz (402
   bytes): bitwise XOR per bit (~320 loop iterations per byte) is replaced by nibble XORs with a
   256 entry nibble table (`Bytecode/Crc`, ~80 per byte). Linking stops at a fixed point.
+- New `-profile` CLI option: the VM records inclusive time and calls per invoked method and prints
+  the top 20 (`VirtualMachine.Profile`). First findings on ResolveCheck (Bytecode folder):
+  `List(Text).in` ran its Strict loop 107,659 times (now a VM native, like Length), and the
+  tokenizer made two method calls per character (now inlined into WordLength). ResolveCheck on
+  Bytecode 4.4 → 2.4 s. Next hotspot: every line is tokenized about 4 times (TypeShape scopes,
+  BodyParser); tokenize once per file.
 - Remaining costs: inference over all base files (~100 ms per run, rebuilt for every file),
   linking recompiles used base types each round (ProcessProbe ~200 ms), CRC still ~150 ms.
 - Finding, needs a decision: every `List(Number)` uses the flat float32 backing, so integers

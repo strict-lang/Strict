@@ -39,6 +39,7 @@ public static class Program
 											  -nasm        Force NASM backend (fallback, less optimized, requires nasm + gcc/clang)
 											  -diagnostics Output detailed step-by-step logs and timing for each pipeline stage
 											               (automatically enabled in Debug builds)
+											  -profile     After running print the slowest invoked methods (time, calls)
 											  -decompile   Decompile a .strictbinary into partial .strict source files
 											               (creates a folder with one .strict per type; no tests, optimized)
 
@@ -89,7 +90,10 @@ public static class Program
 			var expression = nonFlagArgs.Length == 0
 				? Method.Run
 				: string.Join(" ", nonFlagArgs);
-			var runner = new Runner(filePath, expression, diagnostics);
+			var runner = new Runner(filePath, expression, diagnostics)
+			{
+				Profile = options.Contains("-profile")
+			};
 			var buildForPlatform = GetPlatformOption(options);
 			var backend = options.Contains("-nasm")
 				? CompilerBackend.Nasm

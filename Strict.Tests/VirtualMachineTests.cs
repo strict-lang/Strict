@@ -483,6 +483,33 @@ public sealed class VirtualMachineTests : TestBytecode
 				["has text", "Joined Text", "\tfor (text, \"b\")", "\t\tvalue + \",\""])).Generate()).
 				Execute().Returns!.Value.Text, Is.EqualTo("a,b,"));
 
+	[Test]
+	public void ProfileCountsInvokedMethods()
+	{
+		var machine = new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ProfileCountsInvokedMethods), nameof(ProfileCountsInvokedMethods) + "(3).Twice",
+			[
+				"has number", "Twice Number", "\tDoubled(number) + Doubled(1)", "Doubled(amount Number) Number",
+				"\tamount * 2"
+			])).Generate()) { Profile = [] };
+		machine.Execute();
+		Assert.That(machine.Profile!.Single(entry => entry.Key.EndsWith(".Doubled")).Value.Calls,
+			Is.EqualTo(2));
+	}
+
+	[Test]
+	public void ListContainsRunsNatively()
+	{
+		var machine = new VirtualMachine(new BinaryGenerator(GenerateMethodCallFromSource(
+			nameof(ListContainsRunsNatively), nameof(ListContainsRunsNatively) + "(\"b\").Known",
+			["has name Text", "Known Boolean", "\tname is in (\"a\", \"b\", name + \"c\")"])).Generate())
+		{
+			Profile = []
+		};
+		Assert.That(machine.Execute().Returns!.Value.Boolean, Is.True);
+		Assert.That(machine.Profile!.Keys, Has.None.EndsWith(".in"));
+	}
+
 	private static Invoke CreateFromInvoke(Type targetType, Register register)
 	{
 		var fromMethod = targetType.FindMethod(Method.From, []);

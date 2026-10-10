@@ -86,6 +86,17 @@ public sealed partial class VirtualMachine
 		return true;
 	}
 
+	private bool TryHandleNativeListContains(Invoke invoke, ValueInstance? implicitInstance)
+	{
+		var list = ResolveInvokeInstance(invoke.MethodInfo, implicitInstance);
+		if (!list.IsList || invoke.MethodInfo.ArgumentRegisters.Length != 1)
+			return false;
+		var searched = Memory.Registers[invoke.MethodInfo.ArgumentRegisters[0]];
+		Memory.Registers[invoke.Register] =
+			new ValueInstance(executable.booleanType, list.List.Items.Contains(searched));
+		return true;
+	}
+
 	private bool TryHandleIncrementDecrement(Invoke invoke, bool isIncrement,
 		ValueInstance? implicitInstance)
 	{

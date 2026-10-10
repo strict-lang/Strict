@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using Strict.Bytecode;
 using Strict.Bytecode.Instructions;
@@ -38,11 +39,16 @@ public sealed partial class VirtualMachine
 		var savedLoops = isReentrant
 			? SaveLoopStates(invokeInstructions)
 			: null;
+		var started = Profile == null
+			? 0
+			: Stopwatch.GetTimestamp();
 		RunInstructions(invokeInstructions
 #if DEBUG
 			, info.MethodName
 #endif
 		);
+		if (Profile != null)
+			AddToProfile(info.FullName, Stopwatch.GetElapsedTime(started));
 		if (savedLoops == null)
 			runningBlocks.Remove(invokeInstructions);
 		else
@@ -54,6 +60,19 @@ public sealed partial class VirtualMachine
 		CleanupChildScope(childScope);
 		if (result != null)
 			Memory.Registers[invoke.Register] = result.Value;
+	}
+
+	/// <summary>
+	/// Optional inclusive time and call count per invoked method, used by the -profile option.
+	/// </summary>
+	public Dictionary<string, MethodTime>? Profile { get; init; }
+
+	public readonly record struct MethodTime(TimeSpan Time, int Calls);
+
+	private void AddToProfile(string methodName, TimeSpan elapsed)
+	{
+		var previous = Profile!.GetValueOrDefault(methodName);
+		Profile[methodName] = new MethodTime(previous.Time + elapsed, previous.Calls + 1);
 	}
 
 	/// <summary>
@@ -109,6 +128,7 @@ public sealed partial class VirtualMachine
 			Method.From => ExecuteFromInvoke(invoke, info.ResolveReturnType(executable.TypeResolver)),
 			BinaryOperator.To => hasInstance && TryHandleToConversion(invoke, implicitInstance),
 			"Length" or "Count" => hasInstance && TryHandleNativeLength(invoke, implicitInstance),
+			BinaryOperator.In => hasInstance && TryHandleNativeListContains(invoke, implicitInstance),
 			"ReadLines" or "ReadBytes" or "Write" or "Delete" or "Exists" or "Close" => hasInstance &&
 				TryHandleNativeFileMethod(invoke, implicitInstance),
 			"Increment" => TryHandleIncrementDecrement(invoke, true, implicitInstance),
