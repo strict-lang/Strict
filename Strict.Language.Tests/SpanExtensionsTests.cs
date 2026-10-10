@@ -122,7 +122,8 @@ GetComplicatedSequenceTexts returns Texts
 
 	[TestCase("-")]
 	[TestCase("1e-")]
-	public void IncompleteNumberIsNoNumber(string input) =>
+	[TestCase("(5")]
+	public void InvalidNumberIsNoNumber(string input) =>
 		Assert.That(input.AsSpan().TryParseNumber(out _), Is.False);
 
 	[TestCase("is+")]

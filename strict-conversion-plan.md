@@ -662,6 +662,12 @@ Found 1 hang and 19 crash classes at 100 mutations/file, 20 root causes fixed (G
 loop, Stack empty in Binary, unwrapped constraint/generic test errors, Type.Dispose keeping
 List(Type) alive, index bounds); seeds 7/13/21 at 400/file are green. Open: UnterminatedString,
 CannotUseKeywordsAsName and other parse errors still only get wrapped into ParsingFailed.
+Fuzz review: every file gets its own seed from its repo path, new or edited files no longer change
+other files' mutations. 9 fixes got their missing fast test (`for in x` is now MissingVariableNameBeforeIn,
+`if is`, `then else`, `(1, (2)`, empty parameter, unclosed `Range(`, `=` in member names, conditional
+error line). Per-file seeds at 400/file found `for (five)` crashing (no comma); TryParseNumber took
+`(5` as -75 (double to uint saturates), so `constant result = ((5)` parsed. Both fixed, seeds 7 and
+13 at 400/file green (44 s each). Open: `logger.Log((5)` reports an argument mismatch, not the bracket.
 
 
 ## Native loops — 2026-10-09 (late night, part 4)

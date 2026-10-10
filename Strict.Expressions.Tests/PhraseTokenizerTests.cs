@@ -30,6 +30,7 @@ public sealed class PhraseTokenizerTests
 	[TestCase("list = ()")]
 	[TestCase("() + 5")]
 	[TestCase("(")]
+	[TestCase("(1, (2)")]
 	public void InvalidEmptyOrUnmatchedBrackets(string code) =>
 		Assert.That(() => GetTokens(code).Count,
 			Throws.InstanceOf<PhraseTokenizer.InvalidEmptyOrUnmatchedBrackets>());

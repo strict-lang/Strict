@@ -2,9 +2,10 @@ namespace Strict.Expressions.Tests;
 
 public sealed class IfTests : TestExpressions
 {
-	[Test]
-	public void MissingCondition() =>
-		Assert.That(() => ParseExpression("if"),
+	[TestCase("if")]
+	[TestCase("if is")]
+	public void MissingCondition(string line) =>
+		Assert.That(() => ParseExpression(line),
 			Throws.InstanceOf<If.MissingCondition>().With.Message.
 				Contains(Path.Combine("Strict", "dummy.strict") + ":line 2"));
 
@@ -107,9 +108,15 @@ public sealed class IfTests : TestExpressions
 			Throws.InstanceOf<If.InvalidCondition>());
 
 	[Test]
+	public void MissingThenExpressionInConditional() =>
+		Assert.That(() => ParseExpression("constant result = true then else 5"),
+			Throws.InstanceOf<If.MissingThen>());
+
+	[Test]
 	public void ReturnTypeOfConditionalThenAndElseMustHaveMatchingType() =>
     Assert.That(() => ParseExpression("constant result = true then true else 5"),
-			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>());
+			Throws.InstanceOf<If.ReturnTypeOfThenAndElseMustHaveMatchingType>().With.Message.
+				Contains(Path.Combine("Strict", "dummy.strict") + ":line 2"));
 
 	[Test]
 	public void SelectorIfRequiresAtLeastOneCase() =>

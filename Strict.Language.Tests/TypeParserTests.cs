@@ -102,10 +102,19 @@ public sealed class TypeParserTests
 				"constant Max = 5", "Run", "\tMax"),
 			Throws.InstanceOf<TypeParser.DuplicateMembersAreNotAllowed>());
 
-	[Test]
-	public void MemberMissingInitialValue() =>
-		Assert.That(() => CreateType(nameof(MemberMissingInitialValue), "has number ="),
+	[TestCase("has number =")]
+	[TestCase("has number with number > 0 =")]
+	public void MemberMissingInitialValue(string line) =>
+		Assert.That(() => CreateType(nameof(MemberMissingInitialValue), line),
 			Throws.InstanceOf<TypeParser.MemberMissingInitialValue>());
+
+	[Test]
+	public void EqualSignInConstrainedMemberName() =>
+		Assert.That(
+			() => CreateType(nameof(EqualSignInConstrainedMemberName),
+				"has number=5 with number > 0", "Run", "\tnumber"),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<Context.NameMustBeAWordWithoutAnySpecialCharactersOrNumbers>());
 
 	[Test]
 	public void InvalidConstraintFailsAtMemberLine() =>
@@ -164,6 +173,16 @@ public sealed class TypeParserTests
 		Assert.That(
 			() => CreateType(nameof(HugeConstantRangeIsDetected), "has logger", "Run",
 				"\tRange(1,2000000001)"), Throws.InstanceOf<TypeParser.HugeConstantRangeNotAllowed>());
+
+	[Test]
+	public void UnclosedRangeIsReportedByTheMethodBody()
+	{
+		using var type = new Type(package, new TypeLines(nameof(UnclosedRangeIsReportedByTheMethodBody),
+			"has logger", "Run", "\tRange(1, 5")).ParseMembersAndMethods(parser);
+		Assert.That(() => type.Methods[0].GetBodyAndParseIfNeeded(),
+			Throws.InstanceOf<ParsingFailed>().With.InnerException.
+				InstanceOf<PhraseTokenizer.InvalidEmptyOrUnmatchedBrackets>());
+	}
 
 	[Test]
 	public void RedundantReturnPreviousLineContainsValueAlready() =>

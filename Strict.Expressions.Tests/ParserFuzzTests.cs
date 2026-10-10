@@ -13,11 +13,11 @@ public sealed class ParserFuzzTests
 	[Category("Slow")]
 	public async Task MutatedStrictFilesOnlyFailWithParsingFailed()
 	{
-		var random = new Random(7);
 		var repositories = new Repositories(Parser);
 		var crashes = new Dictionary<string, List<string>>();
 		foreach (var file in StrictFiles())
 		{
+			var random = new Random(GetSeed(file));
 			var package = await repositories.LoadStrictPackage(GetPackageName(file));
 			var privatePackage = CreatePrivateTwin(package);
 			var lines = TypeLines.FromFile(file);
@@ -47,13 +47,21 @@ public sealed class ParserFuzzTests
 		Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
 
 	/// <summary>
-	/// All tracked .strict files: the root and every package folder, C# project folders are skipped.
+	/// All .strict files of the root and every package folder, C# project folders are skipped.
 	/// </summary>
 	private static IEnumerable<string> StrictFiles() =>
 		Directory.EnumerateFiles(Root, "*" + Type.Extension).
 			Concat(Directory.EnumerateDirectories(Root).Where(IsPackageFolder).SelectMany(folder =>
 				Directory.EnumerateFiles(folder, "*" + Type.Extension, SearchOption.AllDirectories))).
 			Where(file => !IsBuildOutput(file)).Order(StringComparer.Ordinal);
+
+	/// <summary>
+	/// Seeded per file from its repository path (string.GetHashCode is randomized per process), so
+	/// adding or editing other .strict files never changes the mutations of this file.
+	/// </summary>
+	private static int GetSeed(string file) =>
+		Path.GetRelativePath(Root, file).Replace('\\', '/').Aggregate(7,
+			(hash, character) => hash * 31 + character);
 
 	private static bool IsPackageFolder(string folder) =>
 		!Path.GetFileName(folder).StartsWith('.') &&

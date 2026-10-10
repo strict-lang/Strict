@@ -90,11 +90,15 @@ public sealed class For(Expression[] customVariables,
 
 	public sealed class MissingInnerBody(Body body) : ParsingFailed(body);
 
+	public sealed class MissingVariableNameBeforeIn(Body body) : ParsingFailed(body);
+
 	private static Expression ParseFor(Body body, ReadOnlySpan<char> line, Body innerBody)
 	{
 		if (!HasIn(line) && line[^1] == ')')
 			return ParseWithImplicitVariable(body, line, innerBody);
 		var variableNames = FindVariableNames(line);
+		if (variableNames.IsEmpty && HasIn(line))
+			throw new MissingVariableNameBeforeIn(body);
 		var variables = AddVariablesIfTheyDoNotExistYet(body, line, variableNames, innerBody);
 		if (body.FindVariable(variableNames) is { IsMutable: false } && HasIn(line))
 			throw new ImmutableIterator(variableNames.ToString(), body);
@@ -255,8 +259,9 @@ public sealed class For(Expression[] customVariables,
 			: knownIterableName;
 		var variable = body.FindVariable(iterableName)?.Type ??
 			body.Method.Type.FindMember(iterableName.ToString())?.Type;
-		if (iterableName.Length > 0 && iterableName[0] == '(' && iterableName[^1] == ')')
-			return iterableName[1..iterableName.IndexOf(',')].ToString();
+		if (iterableName.Length > 0 && iterableName[0] == '(' && iterableName[^1] == ')' &&
+			iterableName.IndexOf(',') is var commaIndex and > 0)
+			return iterableName[1..commaIndex].ToString();
 		if (variable is { IsIterator: true })
 		{
 			var isGenericIterator = variable.IsGeneric ||

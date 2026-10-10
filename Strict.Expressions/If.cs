@@ -123,7 +123,7 @@ public sealed class If(Expression condition,
 	{
 		var trimmedLine = line.TrimEnd();
 		if (trimmedLine.Length <= 3 + SelectorSuffix.Length)
-			throw new MissingCondition(body); //ncrunch: no coverage
+			throw new MissingCondition(body);
 		var selectorText = trimmedLine[3..^SelectorSuffix.Length];
 		var selector = body.Method.ParseExpression(body, selectorText);
 		var selectorLineNumber = body.CurrentFileLineNumber;
