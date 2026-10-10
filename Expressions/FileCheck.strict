@@ -1,7 +1,8 @@
 has inference TypeInference
 has known Texts
 constant NoScope = Scope(("x", "z"), ("y", "w"))
-constant NoInference = TypeInference(KnownTypes(("A", "B"), (NoScope, NoScope), (NoScope, NoScope), (NoScope, NoScope)))
+constant NoScopes = (NoScope, NoScope)
+constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes), NoScopes)
 Unresolved(statements ScopedStatements) Texts
 	Unresolved(MethodBodies("A", TypeShape("has a Number", "Run", "\ta + b"), NoInference).Statements).Length is 1
 	mutable unresolved = List(Mutable(Text))

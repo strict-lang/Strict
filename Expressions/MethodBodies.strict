@@ -1,8 +1,9 @@
 has typeName Text
 has shape TypeShape
 has inference TypeInference
-constant NoInference = TypeInference(KnownTypes(("A", "B"), (NoScope, NoScope), (NoScope, NoScope), (NoScope, NoScope)))
 constant NoScope = Scope(("x", "z"), ("y", "w"))
+constant NoScopes = (NoScope, NoScope)
+constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes), NoScopes)
 constant Sample = TypeShape("has a Number", "Run", "\tlet b = a", "\tb")
 constant AddOther = HeaderTokens("Add", "(", "other", ")")
 Statements ScopedStatements

@@ -3,19 +3,30 @@ constant Plain = OperatorCodegen(ValueCodegen.Plain)
 constant One = SyntaxNode("Number", "1")
 constant NoNode = SyntaxNode("Identifier", "x")
 constant InOnes = SyntaxNode("Binary", "is in", (One, ValueCodegen.Ones))
+constant Choose = SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (NoNode, One)), One))
 Operation(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Operation(SyntaxNode("Binary", "<=", (One, One)), CodeBlock.Empty).Result is 4
 	Plain.Operation(SyntaxNode("Negate", "", List(SyntaxNode) + NoNode), CodeBlock.Empty).instructions.Length is 1
 	if node.children.Length < 2
 		return block.Load(InstructionEntry.Binary(OperatorType(node.Kind), (block.register, block.register)))
-	if node.text is in ("and", "or")
-		return Logical(node, block)
-	if node.text is in ("is in", "is not in")
-		return Contains(node, block)
+	if node.text is in ("and", "or", "is in", "is not in", "else")
+		return Composite(node, block)
 	let left = values.Expression(node.children(0), block)
 	let right = values.Expression(node.children(1), left)
 	let result = right.Load(InstructionEntry.Binary(OperatorType(node.text), (left.Result, right.Result, right.register)))
 	node.text is in (">=", "<=") then result.Negated else result
+Composite(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Composite(Choose, CodeBlock.Empty).instructions.Last.kind is InstructionType.LoadVariableToRegister
+	if node.text is in ("and", "or")
+		return Logical(node, block)
+	node.text is "else" then Choice(node, block) else Contains(node, block)
+Choice(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Choice(Choose, CodeBlock.Empty).instructions.Length is 14
+	let decision = node.children(0)
+	let condition = Condition(decision.children(0), block)
+	let name = "conditional" + (condition.nextId - 1)
+	let chosen = values.Expression(decision.children(1), condition).Chosen(name, condition.nextId - 1)
+	values.Expression(node.children(1), chosen).Joined(name, chosen.nextId - 1)
 Logical(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).nextId is 1
 	let left = values.Expression(node.children(0), block)

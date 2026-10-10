@@ -1,10 +1,18 @@
 has types KnownTypes
+has constants Scopes
 constant NoScope = Scope(("x", "z"), ("y", "w"))
 constant NoShape = Scope(("x", "z"), ("y", "w"))
-constant NoInference = TypeInference(KnownTypes(("A", "B"), (NoShape, NoShape), (NoShape, NoShape), (NoShape, NoShape)))
+constant NoShapes = (NoShape, NoShape)
+constant NoInference = TypeInference(KnownTypes(("A", "B"), NoShapes, NoShapes, NoShapes), NoShapes)
+constant Limits = (Scope(List(Text) + "Limit", List(Text) + "3"), NoShape)
 constant NoNode = SyntaxNode("Identifier", "x")
 constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "Text")))
 constant MutableText = SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "Text"), NoNode))
+ConstantOf(typeName Text, name Text) Text
+	TypeInference(KnownTypes.Sample, Limits).ConstantOf("Count", "Limit") is "3"
+	NoInference.ConstantOf("A", "Missing") is ""
+	let index = types.names.Index(typeName)
+	index is -1 then "" else constants(index).TypeOf(name)
 TypeOf(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.TypeOf(SyntaxNode("Number", "1"), NoScope, NoShape) is "Number"
 	if node.Kind is in ("Number", "Text", "Boolean")

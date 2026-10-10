@@ -4,7 +4,8 @@ has fullName Text
 has typeNames Texts
 constant NoScope = Scope(("x", "z"), ("y", "w"))
 constant Greeter = TypeShape("has text", "Greet Text", "\t\"Hi \" + text", "Run", "\tGreeter(\"a\").Greet")
-constant NoTypes = KnownTypes(("A", "B"), (NoScope, NoScope), (NoScope, NoScope), (NoScope, NoScope))
+constant NoScopes = (NoScope, NoScope)
+constant NoTypes = KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes)
 constant Plain = CallTarget(NoTypes, Greeter, "Strict/Examples/Greeter", ("Strict/Logger", "Strict/Examples/Helper"))
 Signature(name Text, type Text, returnType Text) Texts
 	Plain.Signature("Greeter", "Greeter", "Greeter") is ("Strict/Examples/Greeter", "from", "Greeter", "text")

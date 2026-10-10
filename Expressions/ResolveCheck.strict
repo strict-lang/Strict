@@ -26,12 +26,14 @@ Inference(files Texts) TypeInference
 	mutable members = List(Mutable(Scope))
 	mutable methods = List(Mutable(Scope))
 	mutable parameters = List(Mutable(Scope))
+	mutable constants = List(Mutable(Scope))
 	for files
 		let shape = TypeShape(File(value).ReadLines)
 		members.Add(shape.MemberScope)
 		methods.Add(shape.MethodScope)
 		parameters.Add(shape.ParameterScope)
-	TypeInference(KnownTypes(TypeNames(files), members, methods, parameters))
+		constants.Add(shape.ConstantScope)
+	TypeInference(KnownTypes(TypeNames(files), members, methods, parameters), constants)
 TypeName(path Text) Text
 	TypeName("Examples/Sum.strict") is "Sum"
 	Path(path).FileName.RemoveExtension.text

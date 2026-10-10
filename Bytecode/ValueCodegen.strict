@@ -9,7 +9,7 @@ constant Hi = SyntaxNode("Text", "\"Hi\"")
 constant Ones = SyntaxNode("List", "", (One, One))
 constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "Text")))
 constant AddOne = SyntaxNode("MethodCall", "Add", (SyntaxNode("Identifier", "values"), One))
-constant NoTypes = TypeInference(CallTarget.Plain.types)
+constant NoTypes = TypeInference(CallTarget.Plain.types, CallTarget.NoScopes)
 constant Plain = ValueCodegen(NoTypes, Scope(("Greet", "Run"), ("Text", "None")), CallTarget.Plain)
 Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Identifier", "a"), CodeBlock.Empty).register is 1
@@ -17,7 +17,7 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty).instructions(0).payload is (0, 1, 2)
 	Plain.Expression(SyntaxNode("Binary", ">=", (One, NoNode)), CodeBlock.Empty).instructions.Length is 5
 	Plain.Expression(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 9
-	let folded = ConstantFolding(target.shape).Folded(node)
+	let folded = ConstantFolding(target.shape, inference).Folded(node)
 	if folded.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
 		return Leaf(folded, block)
 	if (node.Kind is in ("Call", "Member", "MethodCall", "Not")) or (node.text is "to")

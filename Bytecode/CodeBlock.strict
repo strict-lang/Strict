@@ -29,6 +29,13 @@ Joined(name Text, id Number) CodeBlock
 	let stored = Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, Result, name))
 	let ended = stored.Add(InstructionEntry.Jump(InstructionType.JumpEnd, id))
 	ended.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, ended.register, name))
+Chosen(name Text, id Number) CodeBlock
+	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)).Chosen("a", 0).instructions.Length is 6
+	let stored = Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, Result, name))
+	let truth = stored.Load(InstructionEntry.LoadBoolean(stored.register, true))
+	let flagged = truth.Add(InstructionEntry.Binary(InstructionType.Equal, (truth.Result, truth.Result)))
+	let ended = flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, id))
+	ended.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, ended.nextId)).WithNextId
 Negated CodeBlock
 	CodeBlock.Empty.Load(InstructionEntry.LoadBoolean(0, true)).Negated.Result is 2
 	let falsity = Load(InstructionEntry.LoadBoolean(register, false))
