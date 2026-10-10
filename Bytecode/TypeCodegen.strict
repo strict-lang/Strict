@@ -7,6 +7,7 @@ constant Sized = TypeCodegen("Strict/Size", ("Width Number", "Height Number"), N
 constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogger.Log(\"Hi\")"), NoTypes, List(Text))
 constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number", "\tlimit"), NoTypes, List(Text))
 constant Iterating = TypeCodegen("Strict/Size", ("has Width Number", "for Iterator(Number)", "\tfor Width", "\t\tindex"), NoTypes, List(Text))
+constant Grid = TypeCodegen("Strict/Size", ("has Width Number", "has Height Number", "for Iterator(Vector2)", "\tfor Height", "\t\tfor Width", "\t\t\tVector2(index, outer.index)"), NoTypes, List(Text))
 Entry TypeEntry
 	Hello.Entry.Bytes is (83, 4, 1, 2, 72, 105, 1, 45, 29, 0, 0, 1, 55, 1, 0, 1, 2, 45, 69, 0, 32, 0)
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
@@ -69,6 +70,7 @@ Method(start Number) MethodEntry
 	Hello.Method(1).returnType is "None"
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"
 	Iterating.Method(1).returnType is "Strict/Iterator(Number)"
+	(Grid.Method(2).instructions(5).texts, Grid.Method(2).instructions(6).texts) is (("index"), ("outer.index"))
 	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
 	let shape = generator.target.shape

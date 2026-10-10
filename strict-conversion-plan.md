@@ -518,6 +518,11 @@ checked as a whole first and aggregated loops treat their last line as shared. `
 returns the list, VM `list - other` removes each element of `other` once like the interpreter. Open:
 `Add` on immutable parameters and members still changes the caller's list in place, the interpreter
 shares `Mutable` lists after the first `Add` (`firsts = result` in a loop sees later appends).
+Cleanup round: Text natives (`Upper`, `StartsWith`, ...) are linked like C# (a bare `for` iterates
+`value`, Text yields `Character` elements), the Strict VM intercepts them like the C# VM, a loop no
+longer leaks `outer`/`value` into the following statements, member reassignments store the member
+name like C# `MutableReassignment.Name`, and a type's own list member flattens 2D indexes too.
+Open: leading Boolean method-call test lines (`"hello".StartsWith("hel")`) are kept as code.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
