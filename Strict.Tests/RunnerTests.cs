@@ -61,6 +61,32 @@ public sealed class RunnerTests
 		Assert.That(result.Output, Does.Contain("Run returned " + expected), result.Output + result.Error);
 	}
 
+	[TestCase("HelloLogger")]
+	[TestCase("NativeArithmetic")]
+	[TestCase("NativeConditions")]
+	[TestCase("NativeLoop")]
+	[TestCase("AreaCalculator")]
+	[TestCase("SimpleCalculator")]
+	[TestCase("TemperatureConverter")]
+	[TestCase("Pixel")]
+	[TestCase("Fibonacci")]
+	[TestCase("GcdCalculator")]
+	[Category("Slow")]
+	public async Task NativeExecutableRunsLikeVirtualMachine(string example)
+	{
+		var sourcePath = GetExamplesFilePath(example);
+		await new Runner(sourcePath).Build(Enum.Parse<Platform>(NativeProcessRunner.OperatingSystemName));
+		consoleWriter.GetStringBuilder().Clear();
+		new VirtualMachine(new BinaryExecutable(Path.ChangeExtension(sourcePath,
+			BinaryExecutable.Extension))).Execute();
+		var native = NativeProcessRunner.Run(Path.ChangeExtension(sourcePath,
+			OperatingSystem.IsWindows()
+				? ".exe"
+				: null), "");
+		Assert.That(native.Output.ReplaceLineEndings(),
+			Is.EqualTo(consoleWriter.ToString().ReplaceLineEndings()), native.Error);
+	}
+
 	[TestCaseSource(nameof(StrictProgramPaths))]
 	[Category("Slow")]
 	public void RunStrictProgramFromSourceAndCachedBinaryInFreshProcess(string relativePath)

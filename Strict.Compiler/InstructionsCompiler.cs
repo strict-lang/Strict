@@ -76,12 +76,14 @@ public abstract class InstructionsCompiler
 				continue;
 			var methodInstructions = new List<Instruction>(precompiled);
 			var memberNames = info.InstanceRegister.HasValue
-				? GetMemberNamesFromBinary(binary, info.TypeFullName)
+				? GetInstanceMembers(binary, info.TypeFullName).Select(member => member.Member.Name).ToList()
 				: [];
 			var parameterNames = new List<string>(memberNames);
 			parameterNames.AddRange(info.ParameterNames);
 			var typeName = BinaryMemberJustTypeName(info.TypeFullName);
 			var symbol = typeName + "_" + info.MethodName + "_" + info.ParameterNames.Length;
+			if (methods.Values.Any(method => method.Symbol == symbol))
+				symbol += "_" + methods.Count;
 			var compiledMethodInfo = new CompiledMethodInfo(symbol, methodInstructions,
 				parameterNames, memberNames);
 			methods[methodKey] = compiledMethodInfo;
@@ -90,23 +92,29 @@ public abstract class InstructionsCompiler
 		return methods;
 	}
 
-	private static List<string> GetMemberNamesFromBinary(BinaryExecutable? binary,
-		string typeFullName)
+	/// <summary>
+	/// Number members are the native state of an instance (passed before the method parameters),
+	/// Position counts all non-constant members for positional constructor arguments.
+	/// </summary>
+	protected static List<(BinaryMember Member, int Position)> GetInstanceMembers(
+		BinaryExecutable? binary, string typeFullName) =>
+	[
+		.. (FindBinaryType(binary, typeFullName)?.Members.Where(member => !member.IsConstant) ?? []).
+		Select((member, position) => (member, position)).
+		Where(pair => pair.member.JustTypeName == Type.Number)
+	];
+
+	private static BinaryType? FindBinaryType(BinaryExecutable? binary, string typeFullName)
 	{
 		if (binary == null)
-			return [];
+			return null;
 		if (binary.MethodsPerType.TryGetValue(typeFullName, out var typeData))
-			return typeData.Members.
-				Where(member => !member.FullTypeName.EndsWith("Trait", StringComparison.OrdinalIgnoreCase)).
-				Select(member => member.Name).ToList();
+			return typeData;
 		var justTypeName = BinaryMemberJustTypeName(typeFullName);
 		foreach (var (key, data) in binary.MethodsPerType)
 			if (BinaryMemberJustTypeName(key) == justTypeName)
-				return data.Members.
-					Where(member =>
-						!member.FullTypeName.EndsWith("Trait", StringComparison.OrdinalIgnoreCase)).
-					Select(member => member.Name).ToList();
-		return [];
+				return data;
+		return null;
 	}
 
 	private static void EnqueueInvokedMethodInfos(IEnumerable<Instruction> instructions,

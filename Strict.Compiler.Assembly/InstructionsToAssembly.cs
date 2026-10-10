@@ -341,15 +341,14 @@ public sealed partial class InstructionsToAssembly : InstructionsCompiler
 		var op = binary.InstructionType switch
 		{
 			InstructionType.Add => "addsd",
-			InstructionType.Subtract => "subsd",
+			InstructionType.Subtract or InstructionType.Modulo => "subsd",
 			InstructionType.Multiply => "mulsd",
 			InstructionType.Divide => "divsd",
-			InstructionType.Modulo => null, //ncrunch: no coverage
 			_ => throw new NotSupportedByBackend( //ncrunch: no coverage
 				$"x64 compilation of {binary.InstructionType} is not supported")
 		};
-		if (op == null)
-			return; //ncrunch: no coverage
+		if (binary.InstructionType == InstructionType.Modulo)
+			src1 = EmitTruncatedQuotientTimesDivisor(src0, src1, lines);
 		if (instructionIndex + 1 < allInstructions.Count &&
 			allInstructions[instructionIndex + 1] is ReturnInstruction returnInstruction &&
 			returnInstruction.Register == binary.Registers[^1] && src0 == "xmm0")
@@ -361,6 +360,19 @@ public sealed partial class InstructionsToAssembly : InstructionsCompiler
 		if (dest != src0)
 			lines.Add("    movsd " + dest + ", " + src0);
 		lines.Add("    " + op + " " + dest + ", " + src1);
+	}
+
+	/// <summary>
+	/// Strict % truncates like C#: a % b = a - trunc(a / b) * b, the product is left in xmm15.
+	/// </summary>
+	private static string EmitTruncatedQuotientTimesDivisor(string dividend, string divisor,
+		List<string> lines)
+	{
+		lines.Add("    movsd xmm15, " + dividend);
+		lines.Add("    divsd xmm15, " + divisor);
+		lines.Add("    roundsd xmm15, xmm15, 3");
+		lines.Add("    mulsd xmm15, " + divisor);
+		return "xmm15";
 	}
 
 	private static void EmitComparison(BinaryInstruction binary, List<string> lines)

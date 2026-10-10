@@ -528,6 +528,28 @@ public sealed class InstructionsToMlirTests
 		Assert.That(rewritten, Does.Contain("@print_number_from_double("));
 	}
 
+	[Test]
+	public void WindowsPrintAfterLoopNeedsNoStackProbe()
+	{
+		const string LlvmIr = """
+													@str_PrintRun_0 = internal constant [7 x i8] c"Sum: %g\0A\00"
+
+													declare i32 @printf(ptr, ...)
+
+													define double @PrintRun() {
+													  br label %1
+
+													1:
+													  %2 = call i32 (ptr, ...) @printf(ptr @str_PrintRun_0, double 4.200000e+01)
+													  ret double 4.200000e+01
+													}
+
+													""";
+		var rewritten = RewriteWindowsPrintRuntime(LlvmIr);
+		var caller = rewritten[rewritten.IndexOf("define double @PrintRun", StringComparison.Ordinal)..];
+		Assert.That(caller[..caller.IndexOf('}')], Does.Not.Contain("alloca"));
+	}
+
 	private string Compile(List<Instruction> instructions, Platform platform) =>
 		compiler.Compile(
 				BinaryExecutable.CreateForEntryInstructions(TestPackage.Instance, instructions), platform).

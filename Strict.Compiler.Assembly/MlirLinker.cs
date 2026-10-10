@@ -38,9 +38,9 @@ public sealed class MlirLinker : Linker
 		ToolRunner.RunProcess(mlirTranslatePath,
 			$"--mlir-to-llvmir \"{llvmDialectPath}\" -o \"{llvmIrPath}\"");
 		ToolRunner.EnsureOutputFileExists(llvmIrPath, "mlir-translate", platform);
-		if (platform == Platform.Windows && hasPrintCalls)
+		if (platform == Platform.Windows)
 			await File.WriteAllTextAsync(llvmIrPath,
-				RewriteWindowsPrintRuntime(await File.ReadAllTextAsync(llvmIrPath)));
+				AddWindowsRuntime(await File.ReadAllTextAsync(llvmIrPath), hasPrintCalls));
 		var exeFilePath = platform == Platform.Windows
 			? Path.ChangeExtension(asmFilePath, ".exe")
 			: Path.ChangeExtension(asmFilePath, null);
@@ -137,22 +137,9 @@ public sealed class MlirLinker : Linker
 		Dictionary<string, (int TextLength, int PrefixLength)> stringLengths, int replacementIndex)
 	{
 		var label = match.Groups["label"].Value;
-		var value = match.Groups["value"].Value;
-		var prefixLength = stringLengths[label].PrefixLength;
-		return $"  %stdout_{replacementIndex} = call ptr @GetStdHandle(i32 -11)\n" +
-			$"  %written_{replacementIndex} = alloca i32\n" +
-			$"  call i32 @WriteFile(ptr %stdout_{
-				replacementIndex
-			}, ptr {
-				label
-			}, i32 {
-				prefixLength
-			}, ptr %written_{
-				replacementIndex
-			}, ptr null)\n" + $"  call void @print_number_from_double(ptr %stdout_{
-				replacementIndex
-			}, double {
-				value
+		return BuildWriteFile(replacementIndex, label, stringLengths[label].PrefixLength) + "\n" +
+			$"  call void @print_number_from_double(ptr %stdout_{replacementIndex}, double {
+				match.Groups["value"].Value
 			})";
 	}
 
@@ -161,18 +148,19 @@ public sealed class MlirLinker : Linker
 		Dictionary<string, (int TextLength, int PrefixLength)> stringLengths, int replacementIndex)
 	{
 		var label = match.Groups["label"].Value;
-		var textLength = stringLengths[label].TextLength;
-		return $"  %stdout_{replacementIndex} = call ptr @GetStdHandle(i32 -11)\n" +
-			$"  %written_{replacementIndex} = alloca i32\n" + $"  call i32 @WriteFile(ptr %stdout_{
-				replacementIndex
-			}, ptr {
-				label
-			}, i32 {
-				textLength
-			}, ptr %written_{
-				replacementIndex
-			}, ptr null)";
+		return BuildWriteFile(replacementIndex, label, stringLengths[label].TextLength);
 	} //ncrunch: no coverage end
+
+	/// <summary>
+	/// One module global receives the written byte count, an alloca after a branch needs __chkstk.
+	/// </summary>
+	private static string BuildWriteFile(int replacementIndex, string label, int length) =>
+		$"  %stdout_{replacementIndex} = call ptr @GetStdHandle(i32 -11)\n" +
+		$"  call i32 @WriteFile(ptr %stdout_{replacementIndex}, ptr {label}, i32 {length}, ptr {
+			WrittenSymbol
+		}, ptr null)";
+
+	private const string WrittenSymbol = "@print_written";
 
 	private static Dictionary<string, (int TextLength, int PrefixLength)> ParseStringLengths(
 		string llvmIr)
@@ -216,29 +204,62 @@ public sealed class MlirLinker : Linker
 	private static string EnsureWindowsPrintRuntimeSupport(string llvmIr)
 	{
 		var additions = new StringBuilder();
-		if (!llvmIr.Contains("@_fltused = global i32 0", StringComparison.Ordinal))
-			additions.AppendLine("@_fltused = global i32 0");
+		if (!llvmIr.Contains(FloatUsedSymbol, StringComparison.Ordinal))
+			additions.AppendLine(FloatUsedSymbol);
+		if (!llvmIr.Contains(WrittenSymbol + " =", StringComparison.Ordinal))
+			additions.AppendLine(WrittenSymbol + " = internal global i32 0");
 		if (!llvmIr.Contains("declare ptr @GetStdHandle(i32)", StringComparison.Ordinal))
 			additions.AppendLine("declare ptr @GetStdHandle(i32)");
 		if (!llvmIr.Contains("declare i32 @WriteFile(ptr, ptr, i32, ptr, ptr)",
 			StringComparison.Ordinal))
 			additions.AppendLine("declare i32 @WriteFile(ptr, ptr, i32, ptr, ptr)");
 		if (additions.Length > 0)
-		{
-			var headerInsertIndex = llvmIr.IndexOf("\n\n", StringComparison.Ordinal);
-			llvmIr = headerInsertIndex > -1
-				? llvmIr.Insert(headerInsertIndex + 2, additions + "\n")
-				: additions + "\n" + llvmIr;
-		}
-		if (!llvmIr.Contains("define void @print_number_from_double(", StringComparison.Ordinal))
-		{
-			var metadataIndex = llvmIr.IndexOf("\n!llvm.module.flags", StringComparison.Ordinal);
-			var helper = "\n" + BuildWindowsPrintNumberHelper() + "\n";
-			llvmIr = metadataIndex > -1
-				? llvmIr.Insert(metadataIndex, helper)
-				: llvmIr + helper;
-		}
-		return llvmIr;
+			llvmIr = InsertDeclarations(llvmIr, additions.ToString());
+		return llvmIr.Contains("define void @print_number_from_double(", StringComparison.Ordinal)
+			? llvmIr
+			: InsertFunction(llvmIr, BuildWindowsPrintNumberHelper());
+	}
+
+	private static string AddWindowsRuntime(string llvmIr, bool hasPrintCalls)
+	{
+		llvmIr = hasPrintCalls
+			? RewriteWindowsPrintRuntime(llvmIr)
+			: InsertDeclarations(llvmIr, FloatUsedSymbol);
+		return llvmIr.Contains(" frem ", StringComparison.Ordinal) &&
+			!llvmIr.Contains("define double @fmod(", StringComparison.Ordinal)
+				? InsertFunction(llvmIr, WindowsRemainderHelper)
+				: llvmIr;
+	}
+
+	private static string InsertFunction(string llvmIr, string function)
+	{
+		var metadataIndex = llvmIr.IndexOf("\n!llvm.module.flags", StringComparison.Ordinal);
+		var helper = "\n" + function + "\n";
+		return metadataIndex > -1
+			? llvmIr.Insert(metadataIndex, helper)
+			: llvmIr + helper;
+	}
+
+	/// <summary>
+	/// frem becomes a call to fmod, which only exists in the C runtime. ponytail: exact while
+	/// |a / b| fits into 63 bits (fptosi), upgrade path: bit level fmod like the CRT does.
+	/// </summary>
+	private const string WindowsRemainderHelper = "define double @fmod(double %a, double %b) {\n" +
+		"entry:\n  %quotient = fdiv double %a, %b\n  %whole = fptosi double %quotient to i64\n" +
+		"  %truncated = sitofp i64 %whole to double\n  %product = fmul double %truncated, %b\n" +
+		"  %remainder = fsub double %a, %product\n  ret double %remainder\n}";
+
+	/// <summary>
+	/// Without the C runtime the MSVC style linker still expects _fltused once doubles are used.
+	/// </summary>
+	private const string FloatUsedSymbol = "@_fltused = global i32 0";
+
+	private static string InsertDeclarations(string llvmIr, string declarations)
+	{
+		var headerInsertIndex = llvmIr.IndexOf("\n\n", StringComparison.Ordinal);
+		return headerInsertIndex > -1
+			? llvmIr.Insert(headerInsertIndex + 2, declarations + "\n")
+			: declarations + "\n" + llvmIr;
 	}
 
 	private static string BuildWindowsPrintNumberHelper() =>

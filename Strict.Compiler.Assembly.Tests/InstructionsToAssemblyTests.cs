@@ -37,6 +37,16 @@ public sealed class InstructionsToAssemblyTests
 	}
 
 	[Test]
+	public void ModuloSubtractsTruncatedQuotientTimesDivisor()
+	{
+		var assembly = CompileMethod(CreateSingleMethod("ModuloType", "has dummy Number",
+			"Remainder(numerator Number, denominator Number) Number", "\tnumerator % denominator"));
+		Assert.That(assembly, Does.Contain("roundsd xmm15, xmm15, 3"));
+		Assert.That(assembly, Does.Contain("mulsd xmm15, xmm1"));
+		Assert.That(assembly, Does.Contain("subsd xmm0, xmm15"));
+	}
+
+	[Test]
 	public void FunctionHasTextSectionAndEpilogue()
 	{
 		var method = CreateSingleMethod("FunctionFrameType", "has dummy Number",

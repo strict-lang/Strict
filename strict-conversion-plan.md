@@ -164,11 +164,38 @@ Phase C7 progress (2026-10-10), Strict compiler (Bytecode/FileCompiler on the C#
   BodyParser); tokenize once per file.
 - Remaining costs: inference over all base files (~100 ms per run, rebuilt for every file),
   linking recompiles used base types each round (ProcessProbe ~200 ms), CRC still ~150 ms.
+- `Number.Floor` and `List.Index` run as VM natives (Floor ran its Strict body 45,295 times per
+  FizzBuzz compile): FizzBuzz 263 → ~206 ms, CRC 154 → ~72-86 ms. Method headers are still
+  tokenized twice (MethodScope + ParameterScope, ~10% of a run), left as is.
 - Finding, needs a decision: every `List(Number)` uses the flat float32 backing, so integers
   above 2^24 change silently (a CRC table entry 1996959894 reads back as 1996959872 in the
   interpreter, the VM path happened to differ). Crc avoids storing 32 bit values in lists; the
   general fix (double backing, or float32 only for numeric data types like ColorValue) changes
   memory numbers of the C1 work and is left for the user to decide.
+
+Phase C5 result (2026-10-10): no test result cache needed. Cached binaries skip inline tests
+entirely and a source run only tests the changed main type: FileCompiler from source spends 29 ms
+of 336 ms in tests (load packages 118, generate 53, optimize 25, run 93).
+
+Phase C6 result (2026-10-10), native output correctness before speed:
+- Before: the default MLIR backend built 1 of 14 numeric Examples (invalid IR for if/else, loop
+  bodies emitted once, SSA values used across joins, `logger` passed as a number argument), the
+  LLVM backend built 6 but printed wrong results (AreaCalculator perimeter 110 instead of 30,
+  texts as empty lines), NASM silently dropped `%`.
+- Now MLIR keeps variables in stack slots when a function branches or loops (LLVM promotes them
+  back to registers, verified: the loop becomes phi nodes), emits real count and range loops
+  (both directions, index/value restored), jumps to the matching JumpEnd, passes instances as
+  their number members (constructor arguments by member name, defaults like the VM) and gives
+  overloads unique symbols. Windows without CRT: `_fltused`, an `fmod` for `%`, no dynamic allocas
+  around prints (they needed `__chkstk`). Texts, lists and Boolean prints throw
+  NotSupportedByBackend instead of producing wrong executables. NASM implements `%`.
+- Slow test `NativeExecutableRunsLikeVirtualMachine`: 10 Examples print the same natively as on
+  the VM. 10M iterations of `sum = sum + index % 2`: VM (Debug) 10.1 s, native 0.34 s, 2,560 byte
+  exe.
+- Open: native number printing only matches the VM for integers below 1e7 (Windows prints integer
+  digits, Linux printf `%g`), Strict prints `2.9999994e7` and shortest round-trip fractions. NASM
+  and LLVM backends still miscompile (duplicate labels, texts); delete them once MLIR covers
+  lists and texts (D6).
 
 ### Phase D — Self-hosting milestones (≈15–25 sessions)
 D1 Real front end in Strict (Language + Expressions): full Type/Member/Method model, Package/Context

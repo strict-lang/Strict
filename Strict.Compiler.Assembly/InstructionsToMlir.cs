@@ -32,14 +32,14 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 		var hasPrint = instructions.OfType<PrintInstruction>().Any();
 		var methodInfos = CollectMethods([.. instructions], precompiledMethods, binary);
 		var allStringConstants = new List<(string Name, string Text, int ByteLen)>();
-		var entryFunction = BuildFunction(methodName, [], [.. instructions], methodInfos);
+		var entryFunction = BuildFunction(methodName, [], [.. instructions], methodInfos, binary);
 		allStringConstants.AddRange(entryFunction.StringConstants);
 		var hasGpuOps = entryFunction.UsesGpu;
 		var methodFunctions = new List<CompiledFunction>();
 		foreach (var methodInfo in methodInfos.Values)
 		{
 			var methodFunction = BuildFunction(methodInfo.Symbol, methodInfo.ParameterNames,
-				methodInfo.Instructions, methodInfos);
+				methodInfo.Instructions, methodInfos, binary);
 			allStringConstants.AddRange(methodFunction.StringConstants);
 			hasGpuOps |= methodFunction.UsesGpu;
 			methodFunctions.Add(methodFunction);
@@ -78,9 +78,10 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 			} x i8>"));
 
 	private static CompiledFunction BuildFunction(string methodName, IEnumerable<string> paramNames,
-		List<Instruction> instructions, Dictionary<string, CompiledMethodInfo>? compiledMethods = null)
+		List<Instruction> instructions, Dictionary<string, CompiledMethodInfo>? compiledMethods = null,
+		BinaryExecutable? binary = null)
 	{
-		var context = new EmitContext(methodName);
+		var context = new EmitContext(methodName, instructions, binary);
 		var paramList = paramNames.ToList();
 		for (var index = 0; index < paramList.Count; index++)
 			context.ParamIndexByName[paramList[index]] = index;
@@ -88,29 +89,72 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 			? string.Join(", ", paramList.Select((_, index) => $"%param{index}: f64"))
 			: "";
 		var lines = new List<string> { $"  func.func @{methodName}({paramSignature}) -> f64 {{" };
+		if (context.UsesSlots)
+			EmitSlots(paramList, instructions, lines, context);
 		for (var index = 0; index < instructions.Count; index++)
 			EmitInstruction(instructions, index, lines, context, compiledMethods);
-		if (!instructions.Any(instr => instr is ReturnInstruction))
-		{ //ncrunch: no coverage start
+		if (context.BlockStarts.Contains(instructions.Count))
+			StartBlock(instructions.Count, lines, context);
+		if (!context.IsTerminated)
+		{
 			lines.Add("    %zero = arith.constant 0.0 : f64");
 			lines.Add("    return %zero : f64");
-		} //ncrunch: no coverage end
+		}
 		lines.Add("  }");
 		return new CompiledFunction(string.Join("\n", lines), context.StringConstants,
 			context.HadGpuOps);
+	}
+
+	/// <summary>
+	/// Functions with jumps or loops keep every variable in a stack slot, LLVM promotes them to
+	/// registers again (mem2reg), so values stay correct across branches and loop iterations.
+	/// </summary>
+	private static void EmitSlots(List<string> paramList, List<Instruction> instructions,
+		List<string> lines, EmitContext context)
+	{
+		lines.Add("    %slotSize = arith.constant 1 : i64");
+		lines.Add("    %slotZero = arith.constant 0.0 : f64");
+		lines.Add("    %flagSlot = llvm.alloca %slotSize x i1 : (i64) -> !llvm.ptr");
+		for (var index = 0; index < paramList.Count; index++)
+			AddSlot(paramList[index], "%param" + index, lines, context);
+		for (var index = 0; index < instructions.Count; index++)
+			switch (instructions[index])
+			{
+			case StoreFromRegisterInstruction store:
+				AddSlot(store.Identifier, "%slotZero", lines, context);
+				break;
+			case StoreVariableInstruction store:
+				AddSlot(store.Identifier, "%slotZero", lines, context);
+				break;
+			case LoopBeginInstruction loopBegin:
+				AddSlot(LoopCounterName(index), "%slotZero", lines, context);
+				foreach (var name in LoopVariableNames(loopBegin))
+					AddSlot(name, "%slotZero", lines, context);
+				break;
+			}
+	}
+
+	private static void AddSlot(string name, string initialValue, List<string> lines,
+		EmitContext context)
+	{
+		if (context.Slots.ContainsKey(name))
+			return;
+		var slot = "%slot" + context.Slots.Count;
+		context.Slots[name] = slot;
+		lines.Add($"    {slot} = llvm.alloca %slotSize x f64 : (i64) -> !llvm.ptr");
+		lines.Add($"    llvm.store {initialValue}, {slot} : f64, !llvm.ptr");
 	}
 
 	private static void EmitInstruction(List<Instruction> instructions, int index, List<string> lines,
 		EmitContext context, Dictionary<string, CompiledMethodInfo>? compiledMethods)
 	{
 		var instruction = instructions[index];
-		if (context.JumpTargets.Contains(index))
-			lines.Add($"  ^bb{index}:");
+		if (context.BlockStarts.Contains(index) || context.IsTerminated)
+			StartBlock(index, lines, context);
 		switch (instruction.InstructionType)
 		{
 		case InstructionType.LoadConstantToRegister:
-			var loadConst = (LoadConstantInstruction)instruction;
-			EmitLoadConstant(loadConst, lines, context);
+			EmitLoadConstant((LoadConstantInstruction)instruction, lines, context);
 			break;
 		case InstructionType.Add:
 		case InstructionType.Subtract:
@@ -121,48 +165,40 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 		case InstructionType.NotEqual:
 		case InstructionType.LessThan:
 		case InstructionType.GreaterThan:
-			var binary = (BinaryInstruction)instruction;
-			EmitBinary(binary, lines, context);
+			EmitBinary((BinaryInstruction)instruction, lines, context);
 			break;
 		case InstructionType.Return:
-			var ret = (ReturnInstruction)instruction;
-			EmitReturn(ret, lines, context);
+			EmitReturn((ReturnInstruction)instruction, lines, context);
 			break;
 		case InstructionType.StoreRegisterToVariable:
-			var storeReg = (StoreFromRegisterInstruction)instruction;
-			EmitStoreFromRegister(storeReg, context);
+			EmitStoreFromRegister((StoreFromRegisterInstruction)instruction, lines, context);
 			break;
 		case InstructionType.LoadVariableToRegister:
-			var loadVar = (LoadVariableToRegister)instruction;
-			EmitLoadVariable(loadVar, context);
+			EmitLoadVariable((LoadVariableToRegister)instruction, lines, context);
 			break;
 		case InstructionType.StoreConstantToVariable:
-			var storeVar = (StoreVariableInstruction)instruction;
-			EmitStoreVariable(storeVar, context);
+			EmitStoreVariable((StoreVariableInstruction)instruction, lines, context);
 			break;
 		case InstructionType.Jump:
 		case InstructionType.JumpIfTrue:
 		case InstructionType.JumpIfFalse:
-			var jump = (Jump)instruction;
-			EmitJump(jump, lines, context, index);
+		case InstructionType.JumpIfNotZero:
+			EmitJump((Jump)instruction, lines, context, index);
 			break;
 		case InstructionType.Print:
-			var print = (PrintInstruction)instruction;
-			EmitPrint(print, lines, context); //ncrunch: no coverage
-			break; //ncrunch: no coverage
+			EmitPrint((PrintInstruction)instruction, lines, context);
+			break;
 		case InstructionType.Invoke:
-			var invoke = (Invoke)instruction;
-			EmitInvoke(invoke, lines, context, compiledMethods);
+			EmitInvoke((Invoke)instruction, lines, context, compiledMethods);
 			break;
 		case InstructionType.JumpEnd:
+			break;
 		case InstructionType.JumpToIdIfFalse:
 		case InstructionType.JumpToIdIfTrue:
-			var jumpToId = (JumpToId)instruction;
-			EmitJumpToId(jumpToId, lines, context, index); //ncrunch: no coverage
-			break; //ncrunch: no coverage
+			EmitJumpToId((JumpToId)instruction, lines, context, index);
+			break;
 		case InstructionType.LoopBegin:
-			var loopBegin = (LoopBeginInstruction)instruction;
-			EmitLoopBegin(loopBegin, lines, context, instructions, index);
+			EmitLoopBegin((LoopBeginInstruction)instruction, lines, context, instructions, index);
 			break;
 		case InstructionType.LoopEnd:
 			EmitLoopEnd(lines, context);
@@ -179,19 +215,21 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 	private static void EmitLoadConstant(LoadConstantInstruction loadConst, List<string> lines,
 		EmitContext context)
 	{
-		if (loadConst.Constant.IsText)
-			return; //ncrunch: no coverage
-		var value = FormatDouble(loadConst.Constant.Number);
+		var constant = loadConst.Constant;
+		if (constant.IsText || constant.IsList || constant.IsDictionary || constant.IsFlatNumeric ||
+			constant.TryGetValueTypeInstance() != null)
+			throw new NotSupportedByBackend("MLIR compilation only supports numbers and booleans, not " +
+				"constant " + constant + " in " + context.FunctionName);
 		var temp = context.NextTemp();
-		lines.Add($"    {temp} = arith.constant {value} : f64");
-		context.RegisterValues[loadConst.Register] = temp;
+		lines.Add($"    {temp} = arith.constant {FormatDouble(constant.Number)} : f64");
+		context.SetRegister(loadConst.Register, temp, constant.GetType().IsBoolean);
 		context.RegisterConstants[loadConst.Register] = loadConst.Constant.Number;
 	}
 
 	private static void EmitBinary(BinaryInstruction binary, List<string> lines, EmitContext context)
 	{
-		var left = context.RegisterValues.GetValueOrDefault(binary.Registers[0], "%zero");
-		var right = context.RegisterValues.GetValueOrDefault(binary.Registers[1], "%zero");
+		var left = context.Value(binary.Registers[0]);
+		var right = context.Value(binary.Registers[1]);
 		if (IsComparison(binary.InstructionType))
 		{
 			EmitComparison(binary, lines, context, left, right);
@@ -209,16 +247,18 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 				"Unsupported binary op: " + binary.InstructionType)
 		};
 		lines.Add($"    {temp} = {op} {left}, {right} : f64");
-		if (binary.Registers.Length > 2)
-			context.RegisterValues[binary.Registers[^1]] = temp;
-		else
-			context.RegisterValues[binary.Registers[0]] = temp; //ncrunch: no coverage
+		context.SetRegister(binary.Registers.Length > 2
+			? binary.Registers[^1]
+			: binary.Registers[0], temp);
 	}
 
 	private static bool IsComparison(InstructionType type) =>
 		type is InstructionType.GreaterThan or InstructionType.LessThan or InstructionType.Equal
 			or InstructionType.NotEqual;
 
+	/// <summary>
+	/// Sets the condition flag for following jumps, a third register also gets the Boolean as 0 or 1.
+	/// </summary>
 	private static void EmitComparison(BinaryInstruction binary, List<string> lines,
 		EmitContext context, string left, string right)
 	{
@@ -233,6 +273,13 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 		var temp = context.NextTemp();
 		lines.Add($"    {temp} = arith.cmpf {predicate}, {left}, {right} : f64");
 		context.LastConditionTemp = temp;
+		if (context.UsesSlots)
+			lines.Add($"    llvm.store {temp}, %flagSlot : i1, !llvm.ptr");
+		if (binary.Registers.Length < 3)
+			return;
+		var number = context.NextTemp();
+		lines.Add($"    {number} = arith.uitofp {temp} : i1 to f64");
+		context.SetRegister(binary.Registers[2], number, true);
 	}
 
 	private static void EmitReturn(ReturnInstruction ret, List<string> lines, EmitContext context)
@@ -248,30 +295,58 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 			lines.Add($"    {temp} = arith.constant {value} : f64");
 			lines.Add($"    return {temp} : f64");
 		} //ncrunch: no coverage end
+		context.IsTerminated = true;
 	}
 
 	private static void EmitStoreFromRegister(StoreFromRegisterInstruction storeReg,
+		List<string> lines, EmitContext context)
+	{
+		if (context.RegisterInstances.TryGetValue(storeReg.Register, out var instance))
+			context.VariableInstances[storeReg.Identifier] = instance;
+		else
+			StoreVariable(storeReg.Identifier, context.Value(storeReg.Register), lines, context);
+	}
+
+	private static void StoreVariable(string name, string value, List<string> lines,
 		EmitContext context)
 	{
-		if (context.RegisterValues.TryGetValue(storeReg.Register, out var value))
-			context.VariableValues[storeReg.Identifier] = value;
-		//unused: if (context.RegisterInstances.TryGetValue(storeReg.Register, out var instances))
-		//unused:	context.VariableInstances[storeReg.Identifier] = instances;
+		if (context.UsesSlots)
+			lines.Add($"    llvm.store {value}, {context.Slots[name]} : f64, !llvm.ptr");
+		else
+			context.VariableValues[name] = value;
 	}
 
-	private static void EmitLoadVariable(LoadVariableToRegister loadVar, EmitContext context)
+	private static void EmitLoadVariable(LoadVariableToRegister loadVar, List<string> lines,
+		EmitContext context)
 	{
-		if (context.VariableValues.TryGetValue(loadVar.Identifier, out var value))
-			context.RegisterValues[loadVar.Register] = value;
-		else if (context.ParamIndexByName.TryGetValue(loadVar.Identifier, out var paramIndex))
-			context.RegisterValues[loadVar.Register] = $"%param{paramIndex}";
+		var name = loadVar.Identifier;
+		if (context.VariableInstances.TryGetValue(name, out var instance))
+			context.RegisterInstances[loadVar.Register] = instance;
+		else if (context.LoopValues.TryGetValue(name, out var loopValue))
+			context.SetRegister(loadVar.Register, loopValue);
+		else if (context.UsesSlots && context.Slots.TryGetValue(name, out var slot))
+		{
+			var temp = context.NextTemp();
+			lines.Add($"    {temp} = llvm.load {slot} : !llvm.ptr -> f64");
+			context.SetRegister(loadVar.Register, temp);
+		}
+		else if (!context.UsesSlots && context.VariableValues.TryGetValue(name, out var value))
+			context.SetRegister(loadVar.Register, value);
+		else if (context.ParamIndexByName.TryGetValue(name, out var paramIndex))
+			context.SetRegister(loadVar.Register, $"%param{paramIndex}");
+		else
+			throw new NotSupportedByBackend("Variable " + name + " is not available in MLIR function " +
+				context.FunctionName);
 	}
 
-	private static void EmitStoreVariable(StoreVariableInstruction storeVar, EmitContext context)
+	private static void EmitStoreVariable(StoreVariableInstruction storeVar, List<string> lines,
+		EmitContext context)
 	{
-		if (!storeVar.ValueInstance.IsText)
-			context.VariableValues[storeVar.Identifier] = //ncrunch: no coverage
-				FormatDouble(storeVar.ValueInstance.Number);
+		if (storeVar.ValueInstance.IsText)
+			return;
+		var temp = context.NextTemp();
+		lines.Add($"    {temp} = arith.constant {FormatDouble(storeVar.ValueInstance.Number)} : f64");
+		StoreVariable(storeVar.Identifier, temp, lines, context);
 	}
 
 	private const string PrintfVarargSignature = "vararg(!llvm.func<i32 (ptr, ...)>)";
@@ -300,26 +375,61 @@ public sealed partial class InstructionsToMlir : InstructionsCompiler
 		return text;
 	}
 
-	private static int CountStringBytes(string text) =>
-		text.Replace("\\0A", "\n").Replace("\\00", "\0").Length;
-
-	private sealed class EmitContext(string functionName)
+	private sealed class EmitContext
 	{
-		public string FunctionName { get; } = functionName;
+		public EmitContext(string functionName, List<Instruction> instructions,
+			BinaryExecutable? binary)
+		{
+			FunctionName = functionName;
+			Binary = binary;
+			UsesSlots = instructions.Any(instruction => instruction is Jump or LoopBeginInstruction ||
+				instruction.InstructionType is InstructionType.JumpToIdIfFalse
+					or InstructionType.JumpToIdIfTrue);
+			for (var index = instructions.Count - 1; index >= 0; index--)
+				if (instructions[index] is JumpToId { InstructionType: InstructionType.JumpEnd } jumpEnd)
+					JumpEndIndices[jumpEnd.Id] = index;
+			BlockStarts = FindBlockStarts(instructions, JumpEndIndices);
+		}
+
+		public string FunctionName { get; }
+		public BinaryExecutable? Binary { get; }
+		public bool UsesSlots { get; }
+		public Dictionary<int, int> JumpEndIndices { get; } = new();
+		public HashSet<int> BlockStarts { get; }
+		public bool IsTerminated { get; set; }
 		public string NextTemp() => $"%t{TempCounter++}";
 		public int TempCounter;
 		public Dictionary<Register, string> RegisterValues { get; } = new();
-		public Dictionary<Register, Register[]> RegisterInstances { get; } = new();
+		public HashSet<Register> BooleanRegisters { get; } = [];
+		public Dictionary<Register, List<string>> RegisterInstances { get; } = new();
 		public Dictionary<string, string> VariableValues { get; } = new(StringComparer.Ordinal);
-		//unused: public Dictionary<string, Register[]> VariableInstances { get; } = new(StringComparer.Ordinal);
+		public Dictionary<string, List<string>> VariableInstances { get; } =
+			new(StringComparer.Ordinal);
+		public Dictionary<string, string> Slots { get; } = new(StringComparer.Ordinal);
+		public Dictionary<string, string> LoopValues { get; } = new(StringComparer.Ordinal);
+		public Stack<LoopState> Loops { get; } = new();
 		public Dictionary<string, int> ParamIndexByName { get; } = new(StringComparer.Ordinal);
 		public string? LastConditionTemp { get; set; }
-		public HashSet<int> JumpTargets { get; } = [];
 		public List<(string Name, string Text, int ByteLen)> StringConstants { get; } = [];
-		public int ActiveLoopCount;
 		public Dictionary<Register, double> RegisterConstants { get; } = new();
 		public bool UsesGpu { get; set; }
 		public bool HadGpuOps { get; private set; }
+
+		public string Value(Register register) =>
+			RegisterValues.TryGetValue(register, out var value)
+				? value
+				: throw new NotSupportedByBackend("Register " + register + " has no value in MLIR function " +
+					FunctionName);
+
+		public void SetRegister(Register register, string value, bool isBoolean = false)
+		{
+			RegisterValues[register] = value;
+			RegisterInstances.Remove(register);
+			if (isBoolean)
+				BooleanRegisters.Add(register);
+			else
+				BooleanRegisters.Remove(register);
+		}
 
 		public void SetGpuActive()
 		{
