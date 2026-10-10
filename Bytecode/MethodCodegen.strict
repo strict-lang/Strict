@@ -1,6 +1,5 @@
 has values ValueCodegen
 constant Plain = MethodCodegen(ValueCodegen.Plain)
-constant TestOperators = ("is", "is not", "is in", "is not in")
 constant NoNode = SyntaxNode("Identifier", "x")
 constant One = SyntaxNode("Number", "1")
 constant MixedList = SyntaxNode("List", "", (NoNode, One))
@@ -20,20 +19,32 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(SumBody, NoScope, "Number").instructions.Length is 11
 	Plain.Generate(FilterBody, NoScope, "Number").instructions(12).kind is InstructionType.JumpEnd
 	Plain.Generate(CopiedBody, NoScope, "None").instructions(5).kind is InstructionType.Add
-	let code = WithoutTests(body)
+	let code = WithoutTests(body, scope)
 	let start = CodeBlock(List(InstructionEntry), 0, 0, scope)
 	let block = LoopCodegen(MethodCodegen(values)).Aggregated(code, start, returnType)
 	if (code.children.Length is 0) or (block.instructions.Last.kind is InstructionType.Return)
 		return block
 	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
-WithoutTests(body SyntaxNode) SyntaxNode
-	Plain.WithoutTests(BodyParser("Run Number", "	1 is 1", "	2 is not 3", "	2").Block(1, 1)).children.Length is 1
-	Plain.WithoutTests(BodyParser("Run Number", "\t2 is in (1, 2)", "\t2").Block(1, 1)).children.Length is 1
+WithoutTests(body SyntaxNode, scope Scope) SyntaxNode
+	Plain.WithoutTests(BodyParser("Run Number", "	1 is 1", "	2 is not 3", "	2").Block(1, 1), NoScope).children.Length is 1
+	Plain.WithoutTests(BodyParser("Run Number", "\t2 is in (1, 2)", "\t2").Block(1, 1), NoScope).children.Length is 1
+	Plain.WithoutTests(BodyParser("Run Boolean", "\t3 > 1", "\ttrue").Block(1, 1), NoScope).children.Length is 1
 	mutable code = List(Mutable(SyntaxNode))
 	for body.children
-		if (index is body.children.Length - 1) or value.Kind is not "Binary" or value.text is not in TestOperators
+		if (index is body.children.Length - 1) or (IsTest(value, code.Length is 0, scope) is false)
 			code.Add(value)
 	SyntaxNode("Body", "", code)
+IsTest(line SyntaxNode, isLeading Boolean, scope Scope) Boolean
+	Plain.IsTest(SyntaxNode("Binary", ">", (One, One)), false, NoScope) is false
+	Plain.IsTest(SyntaxNode("Not", "", SyntaxNode("Binary", "is", (One, One))), false, NoScope) is true
+	Plain.IsTest(SyntaxNode("Binary", "+", (One, One)), true, NoScope) is false
+	Plain.IsTest(SyntaxNode("Declaration", "let a", SyntaxNode("Binary", "is", (One, One))), false, NoScope) is false
+	if line.Kind is in ("If", "ElseIf", "Else", "Declaration", "Reassignment")
+		return false
+	let lineText = line to Text
+	if isLeading and (line.Kind is in ("MethodCall", "Binary")) or lineText.IndexOf(" is ") >= 0
+		return values.inference.TypeOf(line, scope, values.methods) is "Boolean"
+	false
 Body(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
 	mutable result = block
