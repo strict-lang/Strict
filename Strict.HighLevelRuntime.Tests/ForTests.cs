@@ -226,6 +226,18 @@ public sealed class ForTests
 		Assert.That(result.Text, Is.EqualTo("((a, a)), ((b, b))"));
 	}
 
+	[TestCase("((1, 2, 7, 0), (1, 2, 7, 0, 1))", "Rows List(Numbers)", "\tmutable row = (1, 2, 7)",
+		"\tfor 2", "\t\trow.Add(index)", "\t\trow")]
+	[TestCase("6", "Counts Number", "\tmutable count = 0", "\tfor 3", "\t\tcount.Increment",
+		"\t\tcount")]
+	public void LoopCollectsChangedValueOfEachIteration(string expected, params string[] lines)
+	{
+		using var t = CreateType(nameof(LoopCollectsChangedValueOfEachIteration),
+			["has number", .. lines]);
+		Assert.That(interpreter.Execute(t.Methods[0], interpreter.noneInstance, []).
+			ToExpressionCodeString(), Is.EqualTo(expected));
+	}
+
 	[Test]
 	public void RemoveParenthesesWithElseIfChain()
 	{

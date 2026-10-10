@@ -126,12 +126,20 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		{
 			ctx.ExitMethodAndReturnValue = loop.ExitMethodAndReturnValue;
 		}
-		else if (!itemResult.IsPrimitiveType(interpreter.noneType) && !itemResult.IsMutable)
+		else if (!itemResult.IsPrimitiveType(interpreter.noneType) && (!itemResult.IsMutable ||
+			IsVariableRead(bodyAsBody?.Expressions[^1] ?? f.Body)))
 		{
 			results ??= new List<ValueInstance>();
-			results.Add(itemResult);
+			results.Add(Interpreter.CopyIfMutableList(itemResult));
 		}
 	}
+
+	/// <summary>
+	/// Changing lines like list.Add(value) give Mutable values that are not collected, a line only
+	/// reading a changed variable collects its value of this iteration.
+	/// </summary>
+	private static bool IsVariableRead(Expression expression) =>
+		expression is VariableCall or ParameterCall or MemberCall or Instance;
 
 	private static void AssignCustomVariables(For f, ExecutionContext ctx, ExecutionContext loop,
 		ValueInstance value)
@@ -269,7 +277,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		result.IsText
 			? interpreter.textType
 			: result.IsList
-				? result.List.ReturnType.GetFirstImplementation()
+				? result.List.ReturnType
 				: result.TryGetValueTypeInstance()?.ReturnType ?? result.GetType();
 
 	private Type GetForValueType(ValueInstance iterator)
