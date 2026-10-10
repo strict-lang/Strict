@@ -357,6 +357,12 @@ public sealed class ForTests : TestExpressions
 	}
 
 	[Test]
+	public void OuterOutsideForLoopIsAParsingError() =>
+		Assert.That(() => ParseExpression("outer.Length"),
+			Throws.InstanceOf<OuterIsOnlyAvailableInsideForLoop>().With.Message.
+				StartsWith("outer is only available inside a for loop body"));
+
+	[Test]
 	public void ParameterWinsOverSameNamedMemberOfLoopValue()
 	{
 		using var programType = new Type(TestPackage.Instance,

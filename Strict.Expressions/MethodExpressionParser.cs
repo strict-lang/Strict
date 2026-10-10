@@ -315,6 +315,8 @@ public partial class MethodExpressionParser : ExpressionParser
 	{
 		if (input.Equals(Type.OuterLowercase, StringComparison.Ordinal))
 		{
+			if (!IsContextInForExpression(body))
+				throw new OuterIsOnlyAvailableInsideForLoop(body);
 			var methodType = body.Method.Type;
 			var outerInstanceType = methodType.IsGeneric && methodType is not GenericTypeImplementation
 				? body.Method.GetType(Type.Any)

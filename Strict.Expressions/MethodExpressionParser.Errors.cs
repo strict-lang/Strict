@@ -28,6 +28,10 @@ public partial class MethodExpressionParser
 	public sealed class KeywordNotAllowedAsMemberOrMethod(Body body, string input, Type type)
 		: ParsingFailed(body, input, type);
 
+	public sealed class OuterIsOnlyAvailableInsideForLoop(Body body) : ParsingFailed(body,
+		Type.OuterLowercase + " is only available inside a for loop body, it refers to the value " +
+		"outside the current for loop");
+
 	protected sealed class InvalidOperatorHere(Body body, string message)
 		: ParsingFailed(body, message);
 
