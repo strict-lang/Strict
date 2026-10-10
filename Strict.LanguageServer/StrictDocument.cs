@@ -5,6 +5,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using Strict.Language;
+using Strict.Validators;
 
 namespace Strict.LanguageServer;
 
@@ -127,9 +128,9 @@ public sealed class StrictDocument(Package package)
 		var type = folderPackage.SynchronizeAndGetType(uri.Path.GetFileName(), content);
 		if (type is not { IsTrait: false })
 			return;
-		var methods = ParseTypeMethods(type.Methods);
-		if (methods == null)
-			return;
+		var methods = ParseTypeMethods(type.Methods).ToList();
+		new TypeValidator().Visit(type);
+		new ConstantCollapser().Visit(type);
 		try
 		{
 			new RunnerService(package).AddService(new TestRunner(package, languageServer, methods, uri)).
@@ -141,7 +142,7 @@ public sealed class StrictDocument(Package package)
 		}
 	}
 
-	private static IEnumerable<Method>? ParseTypeMethods(IEnumerable<Method> methods)
+	private static IEnumerable<Method> ParseTypeMethods(IEnumerable<Method> methods)
 	{
 		foreach (var method in methods.Where(method => !method.IsGeneric && !IsManualRun(method)))
 			if (method.GetBodyAndParseIfNeeded() is Body body)

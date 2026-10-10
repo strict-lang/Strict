@@ -40,6 +40,12 @@ public sealed class BinaryTests : TestExpressions
 			Throws.InstanceOf<Binary.ComparisonTypesDoNotMatch>());
 
 	[Test]
+	public void ComparisonsInAndNeedBrackets() =>
+		Assert.That(() => ParseExpression("1 is 1 and 2 is 2"),
+			Throws.InstanceOf<Binary.LogicalOperatorNeedsBooleans>().With.Message.
+				Contains("(a is b) and (c is d)"));
+
+	[Test]
 	public void NoMatchingMethodFound() =>
 		Assert.That(() => ParseExpression("true - \"text\""),
 			Throws.Exception.InnerException.InstanceOf<Type.NoMatchingMethodFound>().With.InnerException.

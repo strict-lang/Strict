@@ -48,6 +48,27 @@ The best way to learn how any expression or base type works is to look at the co
 
 `.strict` files must not end with trailing blank lines or whitespace-only tab lines.
 
+## Command line
+```
+Strict [run] Examples/Sum.strict 5 10 20   build .strictbinary cache if needed and execute Run
+Strict check Examples/Sum.strict           parse and validate only
+Strict test Examples/Sum.strict            check and run all inline method tests
+Strict build Examples/Sum.strict           native executable for this platform (-Windows/-Linux/-MacOS)
+Strict decompile Examples/Sum.strictbinary partial .strict files from bytecode
+```
+Exit codes: 0 success, 1 failed (parsing, test or runtime error), 2 wrong usage (unknown option, missing file). Errors show the Strict message with clickable `file:line` locations, `-diagnostics` adds the full .NET stack trace and stage timings.
+
+## Rules worth knowing
+- Limits: 120 characters per line, 13 lines per method (header and tests included), 4 parameters, 15 methods, 15 members, nesting depth 5, names 2-50 characters.
+- `is` has the lowest precedence: `a is b and c is d` must be written `(a is b) and (c is d)`. `is not` and `is not in` bind tighter: `value > 31 and value is not in (34, 92)` needs no brackets.
+- A conditional used as one of several arguments needs brackets: `Text(value, (isShort then 2 else 4))`.
+- `(x)` is just `x`, not a list; a single-element list is built with `List(Number) + x`.
+- Keywords and operator words (`from`, `to`, `is`, `in`, `and`, `or`, `not`, `constant`, `mutable`, `let`, ...) can't be names. A parameter called `value` collides with the implicit instance `value`.
+- Members don't repeat their type when the name already says it: `has number`, not `has number Number`.
+- Test lines are Boolean comparisons (`is`, `is not`, `>`, `<`) at the start of each method; every method needs at least one.
+- Other packages are referenced as `Package/Type` only in declarations (members, parameters, return types), method bodies use the plain type name.
+- `constant` for values computed only from constants, `let` for everything else that doesn't change, `mutable` only when a value really changes (loop counters).
+
 See the Readme.md of the Strict project for more details, how to use and example code.
 ## Language Server Protocol
 

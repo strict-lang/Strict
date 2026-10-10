@@ -363,6 +363,42 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task TestCommandReportsFailingInlineTestWithoutDotNetStackTrace()
+	{
+		var directory = Path.Combine(Path.GetTempPath(), "Strict" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(directory);
+		var path = Path.Combine(directory, "WrongTwice" + Type.Extension);
+		File.WriteAllText(path,
+			"has logger\nTwice(number) Number\n\tTwice(2) is 5\n\tnumber * 2\nRun\n\tlogger.Log(Twice(2))");
+		try
+		{
+			Assert.That(await Strict.Program.Main(["test", path]), Is.EqualTo(1));
+			Assert.That(consoleWriter.ToString(),
+				Does.Contain(path + ":line 3").And.Not.Contain("at Strict.Runner"));
+		}
+		finally
+		{
+			Directory.Delete(directory, true);
+		}
+	}
+
+	[Test]
+	public async Task DeclaredPackageTypesWinAfterExamplesWereLoaded()
+	{
+		await new Runner(SimpleCalculatorFilePath).Check(false);
+		Assert.That(async () => await new Runner(Path.Combine(FindRepoRoot(), "Compiler",
+			"EmitTests" + Type.Extension)).Check(false), Throws.Nothing);
+	}
+
+	[Test]
+	public async Task UnknownOptionIsUsageError()
+	{
+		Assert.That(await Strict.Program.Main([GetExamplesFilePath("SimpleCalculator"), "-fast"]),
+			Is.EqualTo(2));
+		Assert.That(consoleWriter.ToString(), Does.Contain("Unknown option -fast"));
+	}
+
+	[Test]
 	public void BuildWithExpressionEntryPointThrows()
 	{
 		var runner = new Runner(SimpleCalculatorFilePath, "(1, 2, 3).Length");

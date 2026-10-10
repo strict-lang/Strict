@@ -108,6 +108,13 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 		: ParsingFailed(body, "Cannot compare " + left + " (" + left.ReturnType.Name + ") with " + right +
 			" (" + right.ReturnType.Name + "), use brackets for comparisons in and/or/xor expressions");
 
+	/// <summary>
+	/// "a is 1 and b is 2" parses as "a is ((1 and b) is 2)", use brackets: "(a is 1) and (b is 2)".
+	/// </summary>
+	public sealed class LogicalOperatorNeedsBooleans(Body body, Expression left, string operatorToken)
+		: ParsingFailed(body, left + " (" + left.ReturnType.Name + ") has no " + operatorToken +
+			", is binds weaker than and/or/xor, use brackets: (a is b) and (c is d)");
+
 	private static Expression BuildNotBinaryExpression(Body body, ReadOnlySpan<char> input,
 		Stack<Range> tokens) =>
 		BuildNot(tokens.Count == 1
@@ -136,6 +143,9 @@ public sealed class Binary(Expression left, Method operatorMethod, Expression[] 
 #endif
 		if (operatorToken is BinaryOperator.Is && !AreComparable(left.ReturnType, right.ReturnType))
 			throw new ComparisonTypesDoNotMatch(body, left, right);
+		if (operatorToken is BinaryOperator.And or BinaryOperator.Or or BinaryOperator.Xor &&
+			!left.ReturnType.AvailableMethods.ContainsKey(operatorToken))
+			throw new LogicalOperatorNeedsBooleans(body, left, operatorToken);
 		// Any incompatibility is checked at runtime when the Executor runs on this
 		if (operatorToken is BinaryOperator.In)
 			return new Binary(right, right.ReturnType.GetMethod(BinaryOperator.In, [left]), [left]);

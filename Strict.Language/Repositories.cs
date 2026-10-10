@@ -177,11 +177,8 @@ public sealed class Repositories(ExpressionParser parser)
 			if (typeFullName[0] == '"' || lastSeparatorIndex <= 0)
 				continue;
 			var packageName = NormalizePackageName(typeFullName[..lastSeparatorIndex], rootPackageName);
-			lock (LoadedPackages)
-			{
-				if (packageName != fullName && LoadedPackages.Find(p => p.FullName == packageName) == null)
-					dependencies.Add(packageName);
-			}
+			if (packageName != fullName)
+				dependencies.Add(packageName);
 		}
 		return dependencies;
 	}

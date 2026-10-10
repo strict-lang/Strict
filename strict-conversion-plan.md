@@ -427,8 +427,8 @@ NativeArithmetic/Conditions/Loop exit with 20/30/45. Open: texts, lists, Boolean
 printing like the VM (printf `%g`), Windows without the C runtime, Run(numbers) from argv, then
 delete the old line-level SourceCompiler/NASM path.
 Bugs fixed on the way (each with a test): the VM ran `list.Count(x)` as Length; a summing loop with
-a filtering `if` aggregated on every iteration (C# generator; the Strict compiler's SummedBody has
-the same shape, still open); a test line comparing with `>` was kept as code (recursion and
+a filtering `if` aggregated on every iteration (C# generator; the Strict compiler's summing loops
+now add inside the then branch too, `MethodCodegen.SummedLoop`); a test line comparing with `>` was kept as code (recursion and
 register exhaustion); text literals with two spaces were rejected; BinaryGenerator now names the
 method that runs out of registers. Strict papercuts: an implicit-instance method call counts as
 constant (`let x = OwnMethod` must be `constant`), the inner `value` of nested loops keeps the
@@ -446,6 +446,21 @@ E4 Tooling: LanguageServer diagnostics use the same validators; VS Code extensio
    `strict check` used by CI.
 E5 CI: Windows + Linux runs of all suites incl. Slow and native compile tests; nightly benchmarks
    with regression thresholds (fail on >10% slowdown or allocation growth).
+
+E progress (2026-10-10): `Strict [run|check|test|build|decompile] <file|folder> [-options] [args]`,
+exit codes 0 success, 1 failed, 2 wrong usage (unknown option, missing file), negative numbers are
+program arguments, not options. `check`/`test` use the new `Runner.Check(runTests)`, which always
+parses and validates (inline tests used to run only with diagnostics). Strict errors print only
+type name, message and the clickable .strict locations; .NET stack traces only for non-Strict
+exceptions or with `-diagnostics`. Files outside the Strict root load their folder as a package, so
+error links point to the real file instead of `<root>/<Type>.strict`. `a is 1 and b is 2` fails with
+`LogicalOperatorNeedsBooleans`, which explains the `is` precedence and the bracket fix. A package
+loaded earlier (Bytecode) was dropped from the declared dependencies of the next package (Runtime),
+so after a fresh build `InstructionType` resolved to `Examples/InstructionType` depending on test
+order; declared dependencies now always include loaded packages. The LanguageServer runs
+TypeValidator and ConstantCollapser like `strict check`, so validator errors become diagnostics.
+README: "Command line" and "Rules worth knowing" sections (limits, `is` precedence, conditional
+arguments, single-element lists, reserved names, test lines, package references, constants).
 
 ### Phase F — Hardening (continuous, ≈2 sessions final pass)
 - Fuzz the parser with mutated `.strict` files (no crashes, only ParsingFailed).
@@ -1154,23 +1169,21 @@ This is the execution engine — the capstone of the self-hosting effort.
 
 ## Overall Progress Dashboard
 
-Counts verified on 2026-10-09. Counts include demos/tests and exclude root base types;
-Language's root Method.strict is also excluded. Earlier totals of 51 files and 12% were stale.
-The percentage below measures production C# replacement, not existence of parallel files.
+Counts verified on 2026-10-10 (files and lines per folder, root base types excluded). "C# replaced"
+stays 0% until D7 switches a Runner stage to the Strict implementation and deletes the C# stage.
 
-| Phase | Project | Actual `.strict` Files | Current scope | C# replaced |
-|-------|---------|------------------------|---------------|-------------|
-| 0 | Base types verification | 3 | Base assertions verified; cached-runtime compatibility under retest | N/A |
-| 1 | Language | 22 | Local package loading verified; full parsing/lookup pending | 0% |
-| 2 | Expressions | 33 | AST models, classifier/tokenizer subset | 0% |
-| 3 | Validators | 6 | Line-level validation subset | 0% |
-| 4 | TestRunner | 7 | Simple assertion evaluator | 0% |
-| 5 | HighLevelRuntime | 21 | Line-level evaluator subset | 0% |
-| 6 | Bytecode | 30 | Line-level generation; ZIP serialization pending | 0% |
-| 7 | Optimizers | 19 | Simplified instruction passes | 0% |
-| 8 | Runtime | 17 | Partial VM; production orchestration remains C# | 0% |
-| 9 | Compiler | 19 | NASM subset and tool invocation | 0% |
-| **Total** | | **177** | **No phase verified fully self-hosted** | **0%** |
+| Phase | Project | `.strict` files / lines | Current scope (differential test) | C# replaced |
+|-------|---------|-------------------------|-----------------------------------|-------------|
+| 1 | Language | 22 / 472 | Type/Member/Method model, header tokens, package lookup | 0% |
+| 2 | Expressions | 49 / 1479 | Tokenizer, syntax tree, statements: every line of 18 folders round-trips (D1) | 0% |
+| 3 | Validators | 5 / 235 | Same rule as C# for each validator case (D2) | 0% |
+| 4 | TestRunner | 7 / 196 | Simple assertion evaluator | 0% |
+| 5 | HighLevelRuntime | 20 / 560 | Line-level evaluator subset | 0% |
+| 6 | Bytecode | 47 / 2114 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
+| 7 | Optimizers | 15 / 261 | Instruction passes; codegen folding and load reuse live in Bytecode | 0% |
+| 8 | Runtime | 12 / 523 | Strict VM runs 19 Strict-compiled Examples like the C# VM (D5) | 0% |
+| 9 | Compiler | 22 / 828 | Native compiler via MLIR, 10 numeric Examples like the VM (D6) | 0% |
+| **Total** | | **199 / 6668** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
 
 ---
 ## Missing Runtime Features Tracker

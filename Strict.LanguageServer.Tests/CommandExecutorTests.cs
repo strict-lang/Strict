@@ -41,7 +41,7 @@ public sealed class CommandExecutorTests
 	{
 		var uri = new DocumentUri("", "", "BaseTypesTest/BaseTypesTest" + Type.Extension, "", "");
 		document.AddOrUpdate(uri, "has logger", "Run",
-			"\tconstant worldHelper = MissingSibling(\"World\")", "\tlogger.Log(\"hi\")");
+			"\tconstant worldHelper = MissingSibling(\"World\")", "\tlogger.Log(worldHelper)");
 		document.InitializeContent(uri);
 		var diagnostics = document.GetDiagnostics(TestPackage.Instance, uri, languageServer.Object);
 		Assert.That(diagnostics.Select(item => item.Message), Is.Empty);
@@ -55,13 +55,24 @@ public sealed class CommandExecutorTests
 	public void OpeningRunWithInlineTestsStillRunsThem()
 	{
 		var uri = new DocumentUri("", "", "HasTests/HasTests" + Type.Extension, "", "");
-		document.AddOrUpdate(uri, "has number", "Run", "\t5 is 5");
+		document.AddOrUpdate(uri, "has number", "Run Number", "\t5 is 5", "\tnumber");
 		document.InitializeContent(uri);
 		var diagnostics = document.GetDiagnostics(TestPackage.Instance, uri, languageServer.Object);
 		Assert.That(diagnostics.Select(item => item.Message), Is.Empty);
 		var parsed = TestPackage.Instance.Find("HasTests")?.FindDirectType("HasTests")?.Methods.
 			Single(method => method.Name == Method.Run);
 		Assert.That(parsed?.WasParsedAlready, Is.True);
+	}
+
+	[Test]
+	public void UnusedParameterIsReportedAsDiagnostic()
+	{
+		var uri = new DocumentUri("", "", "UnusedOther/UnusedOther" + Type.Extension, "", "");
+		document.AddOrUpdate(uri, "has number", "Twice(other Number) Number", "\tTwice(2) is 0",
+			"\tnumber * 2");
+		document.InitializeContent(uri);
+		Assert.That(document.GetDiagnostics(TestPackage.Instance, uri, languageServer.Object).
+			Select(item => item.Code?.String), Has.One.EqualTo("UnusedMethodParameterMustBeRemoved"));
 	}
 
 	[Test]
