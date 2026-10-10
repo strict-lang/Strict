@@ -21,7 +21,7 @@ Negated(node SyntaxNode) SyntaxNode
 	if node.Kind is not "Negate"
 		return node
 	let inner = Folded(node.children(0))
-	inner.Kind is "Number" then SyntaxNode("Number", (0 - (inner.text to Number)) to Text) else node
+	inner.Kind is "Number" then SyntaxNode("Number", (0 - inner.text to Number) to Text) else node
 Calculated(operator Text, left Number, right Number) Number
 	Limits.Calculated("-", 7, 2) is 5
 	Limits.Calculated("%", 7, 2) is 1

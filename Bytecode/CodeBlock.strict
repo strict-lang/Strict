@@ -18,6 +18,21 @@ At(start Number) CodeBlock
 Declare(name Text, type Text) CodeBlock
 	CodeBlock.Empty.Declare("a", "Number").scope.TypeOf("a") is "Number"
 	CodeBlock(instructions, register, nextId, scope.With(name, type))
+Skipping(name Text, jump Number) CodeBlock
+	CodeBlock.Empty.Load(InstructionEntry.LoadBoolean(0, true)).Skipping("a", InstructionType.JumpToIdIfFalse).nextId is 1
+	let stored = Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, Result, name))
+	let truth = stored.Load(InstructionEntry.LoadBoolean(stored.register, true))
+	let compared = truth.Add(InstructionEntry.Binary(InstructionType.Equal, (Result, truth.Result)))
+	compared.Add(InstructionEntry.Jump(jump, nextId)).WithNextId
+Joined(name Text, id Number) CodeBlock
+	CodeBlock.Empty.Load(InstructionEntry.LoadBoolean(0, true)).Joined("a", 0).instructions.Length is 4
+	let stored = Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, Result, name))
+	let ended = stored.Add(InstructionEntry.Jump(InstructionType.JumpEnd, id))
+	ended.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, ended.register, name))
+Negated CodeBlock
+	CodeBlock.Empty.Load(InstructionEntry.LoadBoolean(0, true)).Negated.Result is 2
+	let falsity = Load(InstructionEntry.LoadBoolean(register, false))
+	falsity.Load(InstructionEntry.Binary(InstructionType.Equal, (Result, falsity.Result, falsity.register)))
 WithNextId CodeBlock
 	CodeBlock.Empty.WithNextId.nextId is 1
 	CodeBlock(instructions, register, nextId + 1, scope)

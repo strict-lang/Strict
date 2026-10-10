@@ -1,8 +1,10 @@
 has fullName Text
 has lines Texts
 has inference Expressions/TypeInference
-constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogger.Log(\"Hi\")"), ValueCodegen.NoTypes)
-constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number", "\tlimit"), ValueCodegen.NoTypes)
+has typeNames Texts
+constant NoTypes = ValueCodegen.NoTypes
+constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogger.Log(\"Hi\")"), NoTypes, List(Text))
+constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number", "\tlimit"), NoTypes, List(Text))
 Entry TypeEntry
 	Hello.Entry.Bytes is (83, 4, 1, 2, 72, 105, 1, 45, 29, 0, 0, 1, 55, 1, 0, 1, 2, 45, 69, 0, 32, 0)
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
@@ -10,9 +12,12 @@ Selected(names Texts) TypeEntry
 	Limit.Selected("Run").Name is "Strict/Limit"
 	Limit.Selected("Missing").methods.Length is 0
 	TypeEntry(fullName, Members, Methods(names))
+Sibling(type Text, source Texts) TypeCodegen
+	Hello.Sibling("Strict/Limit", Limit.lines).fullName is "Strict/Limit"
+	TypeCodegen(type, source, inference, typeNames)
 Generator ValueCodegen
 	Limit.Generator.target.TypeName is "Limit"
-	let target = CallTarget(inference.types, TypeShape(lines), fullName)
+	let target = CallTarget(inference.types, TypeShape(lines), fullName, typeNames)
 	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target)
 Members List(MemberEntry)
 	Limit.Members.First.initial.First.payload is (1, 10, 0)
@@ -32,7 +37,7 @@ Member(header HeaderTokens, position Number) MemberEntry
 		return MemberEntry(header.MemberName, type, InstructionEntry.Set(List(Text), number), true)
 	MemberEntry(header.MemberName, type, Initial(SyntaxParser(header.tokens).ParseRange(3, header.tokens.Length)), true)
 EnumValue(position Number) Number
-	TypeCodegen("Strict/Kind", ("constant A", "constant B = 10", "constant C"), ValueCodegen.NoTypes).EnumValue(2) is 11
+	TypeCodegen("Strict/Kind", ("constant A", "constant B = 10", "constant C"), NoTypes, List(Text)).EnumValue(2) is 11
 	Hello.EnumValue(0) is 0
 	mutable next = 0
 	for position
@@ -79,7 +84,7 @@ Parameters(header HeaderTokens) List(MemberEntry)
 		parameters.Add(MemberEntry(value, Generator.target.FullName(Concrete(types(index))), List(InstructionEntry), false))
 	parameters
 Concrete(type Text) Text
-	TypeCodegen("Strict/List(Number)", List(Text), ValueCodegen.NoTypes).Concrete("Generics") is "Numbers"
+	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "Numbers"
 	Hello.Concrete("Generic") is "Generic"
 	let open = fullName.IndexOf("(")
 	if open is -1

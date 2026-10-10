@@ -53,6 +53,8 @@ public sealed partial class BinaryExecutable(Package basePackage)
 	{
 		try
 		{
+			if (basePackage.FindType(Type.Text) == null)
+				new Type(basePackage, new TypeLines(Type.Text));
 			if (basePackage.FindType(Type.Any) == null)
 				new Type(basePackage,
 					new TypeLines(Type.Any, Method.From, BinaryOperator.To + " Type",

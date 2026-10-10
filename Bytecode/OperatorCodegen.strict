@@ -1,0 +1,52 @@
+has values ValueCodegen
+constant Plain = OperatorCodegen(ValueCodegen.Plain)
+constant One = SyntaxNode("Number", "1")
+constant NoNode = SyntaxNode("Identifier", "x")
+constant InOnes = SyntaxNode("Binary", "is in", (One, ValueCodegen.Ones))
+Operation(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Operation(SyntaxNode("Binary", "<=", (One, One)), CodeBlock.Empty).Result is 4
+	Plain.Operation(SyntaxNode("Negate", "", List(SyntaxNode) + NoNode), CodeBlock.Empty).instructions.Length is 1
+	if node.children.Length < 2
+		return block.Load(InstructionEntry.Binary(OperatorType(node.Kind), (block.register, block.register)))
+	if node.text is in ("and", "or")
+		return Logical(node, block)
+	if node.text is in ("is in", "is not in")
+		return Contains(node, block)
+	let left = values.Expression(node.children(0), block)
+	let right = values.Expression(node.children(1), left)
+	let result = right.Load(InstructionEntry.Binary(OperatorType(node.text), (left.Result, right.Result, right.register)))
+	node.text is in (">=", "<=") then result.Negated else result
+Logical(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).nextId is 1
+	let left = values.Expression(node.children(0), block)
+	let name = "logical" + left.nextId
+	let jump = node.text is "and" then InstructionType.JumpToIdIfFalse else InstructionType.JumpToIdIfTrue
+	values.Expression(node.children(1), left.Skipping(name, jump)).Joined(name, left.nextId)
+Contains(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Contains(InOnes, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	let call = SyntaxNode("MethodCall", "in", (node.children(1), node.children(0)))
+	let negated = SyntaxNode("Not", "", List(SyntaxNode) + call)
+	values.InstanceCall((node.text is "is in" then call else negated), block)
+Condition(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Condition(SyntaxNode("Boolean", "true"), CodeBlock.Empty).nextId is 1
+	Plain.Condition(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 4
+	let isComparison = (node.Kind is "Binary") and (node.text is in ("is", "is not", "<", ">"))
+	let operand = isComparison then node.children(0) else node
+	let left = values.Expression(operand, block)
+	let truth = InstructionEntry.LoadBoolean(left.register, true)
+	let right = isComparison then values.Expression(node.children(1), left) else left.Load(truth)
+	let type = isComparison then OperatorType(node.text) else InstructionType.Equal
+	let compared = right.Add(InstructionEntry.Binary(type, (left.Result, right.Result)))
+	compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
+OperatorType(operator Text) Number
+	Plain.OperatorType("*") is InstructionType.Multiply
+	Plain.OperatorType("is not") is InstructionType.NotEqual
+	Plain.OperatorType(">=") is InstructionType.LessThan
+	constant arithmetic = ("+", "-", "*", "/", "%", "^")
+	constant comparisons = ("is", "is not", "<", ">")
+	constant UnsupportedOperator = Error
+	if operator is in (">=", "<=")
+		return operator is ">=" then InstructionType.LessThan else InstructionType.GreaterThan
+	if operator is in arithmetic
+		return InstructionType.Add + arithmetic.Index(operator)
+	operator is in comparisons then InstructionType.Equal + comparisons.Index(operator) else UnsupportedOperator

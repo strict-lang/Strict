@@ -62,17 +62,14 @@ public sealed class StrictBytecodeTests
 	{
 		var source = Root + "/Examples/" + example + Type.Extension;
 		await new Runner(source).Run();
-		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
-		var variables = CreateNumbersVariable(basePackage, numbers);
-		var expected = Execute(Path.ChangeExtension(source, BinaryExecutable.Extension),
-			basePackage, variables);
+		var expected = await Execute(Path.ChangeExtension(source, BinaryExecutable.Extension), numbers);
 		await new Runner(Root + "/Bytecode/FileCompiler" + Type.Extension, source + " " + Root).
 			Run();
 		var binaryPath = Path.Combine(Path.GetTempPath(), nameof(StrictBytecodeTests),
 			example + BinaryExecutable.Extension);
 		Directory.CreateDirectory(Path.GetDirectoryName(binaryPath)!);
 		await File.WriteAllBytesAsync(binaryPath, LastNumbersLine());
-		Assert.That(Execute(binaryPath, basePackage, variables), Is.EqualTo(expected));
+		Assert.That(await Execute(binaryPath, numbers), Is.EqualTo(expected));
 	}
 
 	[TestCase("HelloLogger")]
@@ -98,10 +95,9 @@ public sealed class StrictBytecodeTests
 	{
 		var source = Root + "/Examples/" + example + Type.Extension;
 		await new Runner(source).Run();
-		var basePackage = await new Repositories(new MethodExpressionParser()).LoadStrictPackage();
 		consoleWriter.GetStringBuilder().Clear();
-		new VirtualMachine(new BinaryExecutable(Path.ChangeExtension(source, BinaryExecutable.Extension),
-			basePackage)).Execute();
+		new VirtualMachine(new BinaryExecutable(Path.ChangeExtension(source, BinaryExecutable.Extension))).
+			Execute();
 		var expected = consoleWriter.ToString();
 		consoleWriter.GetStringBuilder().Clear();
 		await new Runner(Root + "/Runtime/Execute" + Type.Extension, source + " " + Root).Run();
@@ -114,26 +110,20 @@ public sealed class StrictBytecodeTests
 		Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict)).
 			Replace('\\', '/');
 
-	private static Dictionary<string, ValueInstance>? CreateNumbersVariable(Package basePackage,
-		double[] numbers)
-	{
-		if (numbers.Length == 0)
-			return null;
-		var numberType = basePackage.GetType(Type.Number);
-		return new Dictionary<string, ValueInstance>
-		{
-			["numbers"] = new(basePackage.GetType(Type.List).GetGenericImplementation(numberType),
-				numbers.Select(number => new ValueInstance(numberType, number)).ToArray())
-		};
-	}
-
-	private string Execute(string binaryPath, Package basePackage,
-		IReadOnlyDictionary<string, ValueInstance>? variables)
+	/// <summary>
+	/// Binaries load self-contained like the CLI does, program arguments go through the Runner.
+	/// </summary>
+	private async Task<string> Execute(string binaryPath, double[] numbers)
 	{
 		consoleWriter.GetStringBuilder().Clear();
-		var machine = new VirtualMachine(new BinaryExecutable(binaryPath, basePackage));
-		return consoleWriter + (machine.Execute(initialVariables: variables).Returns is
-			{ HasValue: true } returns
+		if (numbers.Length > 0)
+		{
+			await new Runner(binaryPath, string.Join(" ", numbers)).Run();
+			var output = consoleWriter.ToString();
+			return output[..output.LastIndexOf("Executed ", StringComparison.Ordinal)];
+		}
+		var machine = new VirtualMachine(new BinaryExecutable(binaryPath));
+		return consoleWriter + (machine.Execute().Returns is { HasValue: true } returns
 			? "Returns " + returns
 			: "");
 	}

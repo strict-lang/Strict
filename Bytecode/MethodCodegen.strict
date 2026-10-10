@@ -91,11 +91,12 @@ StoreConstant(load InstructionEntry, name Text) InstructionEntry
 	InstructionEntry(InstructionType.StoreConstantToVariable, texts, content + (-1 - load.texts.Length) + 0)
 Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, sums Boolean) CodeBlock
 	Plain.Generate(IfBody, NoScope, "None").instructions.Length is 9
-	let branch = Body(node.children.Last, values.Condition(node.children(0), block))
+	let condition = OperatorCodegen(values).Condition(node.children(0), block)
+	let branch = Body(node.children.Last, condition)
 	let body = sums then AddToSum(branch) else branch
 	let skipsElse = hasElse and body.instructions.Last.kind is not InstructionType.Return
 	let flagged = skipsElse then SkipElse(body) else body
-	flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
+	flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
 SkipElse(block CodeBlock) CodeBlock
 	Plain.SkipElse(CodeBlock.Empty).instructions(1).payload is (2, 0, 0)
 	let truth = block.Load(InstructionEntry.LoadBoolean(block.register, true))

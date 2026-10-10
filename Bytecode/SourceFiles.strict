@@ -1,0 +1,41 @@
+has root Text
+Of(path Text) Texts
+	SourceFiles(".").Of("./Missing/A.strict").Length is Directory.Files(".", "*.strict").Length
+	mutable files = List(Mutable(Text))
+	for Folders(List(Text) + Path(path).PathOnly.text, 3)
+		files = files + Directory.Files(value, "*.strict")
+	Added(files, Directory.Files(root, "*.strict"))
+Folders(folders Texts, depth Number) Texts
+	SourceFiles(".").Folders(List(Text) + "./Missing", 2).Length is 1
+	mutable result = folders
+	for folders
+		result = Added(result, Referenced(value))
+	(depth is 0) or (result.Length is folders.Length) then result else Folders(result, depth - 1)
+Added(folders Texts, more Texts) Texts
+	SourceFiles(".").Added(("a", "b"), ("b", "c")) is ("a", "b", "c")
+	mutable result = folders
+	for more
+		if value is not in result
+			result = result + value
+	result
+Referenced(folder Text) Texts
+	SourceFiles(".").Referenced("./Missing").Length is 0
+	mutable result = List(Mutable(Text))
+	for Directory.Files(folder, "*.strict")
+		result = Added(result, PackagesIn(File(value).ReadLines))
+	result
+PackagesIn(lines Texts) Texts
+	SourceFiles(".").PackagesIn("has a Bytecode/X", "Run") is List(Text) + "./Bytecode"
+	mutable result = List(Mutable(Text))
+	for lines
+		result = Added(result, PackageNames(Tokenizer(value).Tokens))
+	result
+PackageNames(tokens Texts) Texts
+	SourceFiles(".").PackageNames("Bytecode", "/", "X", "Strict", "/", "Y") is List(Text) + "./Bytecode"
+	for tokens
+		if index + 1 < tokens.Length and (tokens(index + 1) is "/") and IsPackage(value)
+			root + "/" + value
+IsPackage(name Text) Boolean
+	SourceFiles(".").IsPackage("Bytecode") is true
+	SourceFiles(".").IsPackage("Strict") is false
+	name is not "Strict" and Directory.Exists(root + "/" + name)
