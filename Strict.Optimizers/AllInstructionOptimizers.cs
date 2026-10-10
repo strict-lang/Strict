@@ -12,7 +12,6 @@ public class AllInstructionOptimizers : InstructionOptimizer
 	[
 		new TestCodeRemover(),
 		new ConstantFoldingOptimizer(),
-		new CompactTypeOptimizer(),
 		new MethodInliningOptimizer(),
 		new ConstructorToFieldMutationsOptimizer(),
 		new LoopInvariantCodeMotionOptimizer(),
