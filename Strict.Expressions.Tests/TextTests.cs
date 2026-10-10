@@ -12,6 +12,10 @@ public sealed class TextTests : TestExpressions
 		Assert.That(((Text)ParseExpression("\"hi\\nthere\"")).Data.Text, Is.EqualTo("hi\nthere"));
 
 	[Test]
+	public void EscapedBackslashBeforeLetterStaysBackslash() =>
+		Assert.That(((Text)ParseExpression("\"a\\\\tb\"")).Data.Text, Is.EqualTo("a\\tb"));
+
+	[Test]
 	public void ParseTextWithNewLineAndTabEscapesRoundTrips() =>
 		ParseAndCheckOutputMatchesInput("\"for x\\n\\ty\"", new Text(method, "for x\n\ty"));
 

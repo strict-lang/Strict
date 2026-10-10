@@ -1,5 +1,6 @@
 has values ValueCodegen
 constant Plain = MethodCodegen(ValueCodegen.Plain)
+constant TestOperators = ("is", "is not", "is in", "is not in")
 constant NoNode = SyntaxNode("Identifier", "x")
 constant One = SyntaxNode("Number", "1")
 constant MixedList = SyntaxNode("List", "", (NoNode, One))
@@ -24,9 +25,10 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
 WithoutTests(body SyntaxNode) SyntaxNode
 	Plain.WithoutTests(BodyParser("Run Number", "	1 is 1", "	2 is not 3", "	2").Block(1, 1)).children.Length is 1
+	Plain.WithoutTests(BodyParser("Run Number", "\t2 is in (1, 2)", "\t2").Block(1, 1)).children.Length is 1
 	mutable code = List(Mutable(SyntaxNode))
 	for body.children
-		if (index is body.children.Length - 1) or value.Kind is not "Binary" or value.text is not in ("is", "is not")
+		if (index is body.children.Length - 1) or value.Kind is not "Binary" or value.text is not in TestOperators
 			code.Add(value)
 	SyntaxNode("Body", "", code)
 Body(body SyntaxNode, block CodeBlock) CodeBlock

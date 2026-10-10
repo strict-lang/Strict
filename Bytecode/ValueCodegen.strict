@@ -97,14 +97,15 @@ IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeBlock
 	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1, "Text").instructions(0).texts.Last is "Strict/Text"
 	let owner = Owner(node, block)
+	let signature = target.Signature(node.text, owner, returnType)
+	let first = node.Kind is in ("Member", "MethodCall") then 1 else 0
+	let call = Elements.Grouped(node, first, signature.Length - 3)
 	let parameters = target.ParameterTypes(node.text, owner)
 	mutable result = block
 	mutable arguments = List(Mutable(Number))
-	let first = node.Kind is in ("Member", "MethodCall") then 1 else 0
-	for Range(first, node.children.Length)
-		result = Elements.Argument(node.children(value), value - first, parameters, result)
+	for Range(first, call.children.Length)
+		result = Elements.Argument(call.children(value), value - first, parameters, result)
 		arguments.Add(result.Result)
-	let signature = target.Signature(node.text, owner, returnType)
 	result.Load(InstructionEntry.Invoke(result.register, signature, arguments, instance))
 Owner(node SyntaxNode, block CodeBlock) Text
 	Plain.Owner(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is "Greeter"

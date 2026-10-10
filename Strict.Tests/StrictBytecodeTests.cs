@@ -85,7 +85,15 @@ public sealed class StrictBytecodeTests
 	[TestCase("TestRunner/TestDemo")]
 	[TestCase("Language/PackageTests", "Examples/BaseTypesTest")]
 	[TestCase("Validators/ValidateCheck", "Validators", ".")]
-	[TestCase("Runtime/Execute", "Examples/HelloLogger.strict", ".")]
+	[TestCase("Expressions/RoundTrip", "Expressions")]
+	[TestCase("Compiler/SourceCompiler", "Examples/NativeArithmetic.strict")]
+	[TestCase("Compiler/CompilerDemo")]
+	[TestCase("Compiler/EmitTests")]
+	[TestCase("Expressions/ResolveCheck", "Expressions", ".", Category = "Nightly")]
+	[TestCase("Expressions/TypeReport", "Expressions", ".", Category = "Nightly")]
+	[TestCase("Runtime/Execute", "Examples/HelloLogger.strict", ".", Category = "Nightly")]
+	[TestCase("Bytecode/FileCompiler", "Examples/HelloLogger.strict", ".", Category = "Nightly")]
+	[TestCase("Compiler/NativeCompiler", "Examples/NativeArithmetic.strict", ".", Category = "Nightly")]
 	public async Task StrictCompiledProgramRunsLikeCSharp(string program, params string[] arguments)
 	{
 		var source = Root + "/" + program + Type.Extension;

@@ -1,3 +1,4 @@
+using System.Text;
 using Strict.Language;
 using Type = Strict.Language.Type;
 
@@ -17,9 +18,23 @@ public sealed class Text(Context context, string value, int lineNumber = 0)
 				body.CurrentFileLineNumber)
 			: null;
 
-	private static string Unescape(ReadOnlySpan<char> input) =>
-		input.ToString().Replace("\\n", "\n", StringComparison.Ordinal).
-			Replace("\\r", "\r", StringComparison.Ordinal).Replace("\\t", "\t", StringComparison.Ordinal).
-			Replace("\\\"", "\"", StringComparison.Ordinal).
-			Replace(@"\\", @"\", StringComparison.Ordinal);
+	private static string Unescape(ReadOnlySpan<char> input)
+	{
+		if (!input.Contains('\\'))
+			return input.ToString();
+		var builder = new StringBuilder(input.Length);
+		for (var index = 0; index < input.Length; index++)
+			if (input[index] == '\\' && index + 1 < input.Length &&
+				input[index + 1] is 'n' or 'r' or 't' or '"' or '\\')
+				builder.Append(input[++index] switch
+				{
+					'n' => '\n',
+					'r' => '\r',
+					't' => '\t',
+					var escaped => escaped
+				});
+			else
+				builder.Append(input[index]);
+		return builder.ToString();
+	}
 }

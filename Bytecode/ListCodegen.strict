@@ -44,3 +44,13 @@ Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) Co
 	let element = values.ElementType(parameter) is values.TypeOf(node, block)
 	let wraps = values.inference.types.IsPlural(parameter) and element
 	values.Expression((wraps then SyntaxNode("List", "", node) else node), block)
+Grouped(node SyntaxNode, first Number, parameters Number) SyntaxNode
+	Plain.Grouped(SyntaxNode("Call", "B", (ValueCodegen.One, ValueCodegen.One)), 0, 1).children.Length is 1
+	Plain.Grouped(ValueCodegen.AddOne, 1, 1).children(1).Kind is "Number"
+	if parameters is not 1 or node.children.Length - first < 2
+		return node
+	mutable arguments = List(Mutable(SyntaxNode))
+	for Range(first, node.children.Length)
+		arguments.Add(node.children(value))
+	let grouped = SyntaxNode("List", "", arguments)
+	SyntaxNode(node.Kind, node.text, (first is 1 then (node.children(0), grouped) else List(SyntaxNode) + grouped))

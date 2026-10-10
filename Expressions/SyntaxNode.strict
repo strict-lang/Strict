@@ -127,5 +127,8 @@ IsLiteral Boolean
 Unquoted Text
 	SyntaxNode("Text", "\"a\"").Unquoted is "a"
 	SyntaxNode("Text", "\"a\\\\b\"").Unquoted is "a\\b"
-	let unquoted = text.Substring(1, text.Length - 2).Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t")
-	unquoted.Replace("\\\"", "\"").Replace("\\\\", "\\")
+	SyntaxNode("Text", "\"a\\\\tb\"").Unquoted is "a\\tb"
+	mutable parts = List(Mutable(Text))
+	for text.Substring(1, text.Length - 2).Split("\\\\")
+		parts.Add(value.Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t").Replace("\\\"", "\""))
+	Text.Combine(parts, "\\")

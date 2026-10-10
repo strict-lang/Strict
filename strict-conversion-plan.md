@@ -484,11 +484,20 @@ then `copy.Add(x)` changed `other` too, which cut `SourceFiles.Folders` after on
 list minus removed only the first match (interpreter removes all), text arguments mentioning
 `Generic` were parsed as generic type names, and VM errors now list the calling methods. 28 of
 41 programs run like C# (ValidateCheck and Runtime/Execute added, 48 differential cases); the
-Strict-compiled FileCompiler runs and writes a binary for HelloLogger. Open: C# `Text.Unescape`
-turns `"\t"` into backslash+tab (replaces before `\`), the VM's own-`to Text` check compares type
-full names that depend on the binary's folder, Path parameters from text arguments, custom
-iterators (`for size`), Platform.Current recursion, `outer` as a local name crashes the C# parser
-with a NullReferenceException, and the Strict compiler's in-place `Add` has no ownership check yet.
+Strict-compiled FileCompiler runs and writes a binary for HelloLogger.
+Then: C# `Text.Unescape` is a single pass (`"\t"` was backslash+tab) and the Strict `Unquoted` splits
+at escaped backslashes, the VM finds a type's own `to Text` by type name (full names depend on the
+binary's folder), several arguments for a single list parameter are grouped like C#
+(`ByteEncoder(MagicByte, FormatVersion)`), and `is in`/`is not in` test lines are stripped.
+36 of the 39 tracked programs now run exactly like C# (TestInterpreter has no Run method,
+BenchBrightness is untracked): RoundTrip, ResolveCheck, TypeReport, ValidateCheck, SourceCompiler,
+CompilerDemo, EmitTests, NativeCompiler, Runtime/Execute and Bytecode/FileCompiler included. The
+Strict compiler compiled by itself produces byte-identical HelloLogger bytecode to the C#-compiled
+Strict compiler (Nightly case, the heavy self-hosting cases take ~19 min). Open: Language/Parser
+(types only used as parameters, `Strict/Path`, are not linked), ImageProcessing (custom `for`
+iterators of `Size`, nested loop aggregation, `outer.index`), `outer` as a local name crashes the
+C# parser with a NullReferenceException, and the Strict compiler's in-place `Add` has no ownership
+check yet.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
