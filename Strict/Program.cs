@@ -1,3 +1,4 @@
+using System.Runtime;
 using Strict.Bytecode;
 using Strict.Compiler;
 using Strict.Language;
@@ -10,6 +11,8 @@ public static class Program
 	//ncrunch: no coverage start
 	public static async Task<int> Main(string[] args)
 	{
+		ProfileOptimization.SetProfileRoot(AppContext.BaseDirectory);
+		ProfileOptimization.StartProfile(nameof(Strict) + ".jitprofile");
 		args = ResolveImplicitExecutableTarget(args);
 		var command = args.Length > 0 && Commands.Contains(args[0])
 			? args[0]

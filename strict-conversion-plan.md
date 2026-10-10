@@ -197,6 +197,25 @@ Phase C6 result (2026-10-10), native output correctness before speed:
   and LLVM backends still miscompile (duplicate labels, texts); delete them once MLIR covers
   lists and texts (D6).
 
+Phase C dev loop (2026-10-10), `Strict.exe Compiler/CompilerDemo.strict` from the cached binary,
+Debug, best/median of 15: wall 218/248 → 129/135 ms, Loading cached 30/31 → 13/14 ms (962 → 496
+KB), Run 120/146 → 52/56 ms. Native links run binutils `ld` directly (the gcc driver started
+collect2 and ld: 66 ms vs 20 ms), tools share Strict's console (a new hidden console per tool cost
+~8 ms), a multicore JIT profile (`Strict.jitprofile`) compiles last run's methods in the background,
+timing logs are culture-invariant (no ICU culture init), cache checks enumerate each folder once,
+`[GeneratedRegex]` replaces Reflection.Emit compiled regexes, NameTable indices and Type caches are
+lazy, generic stubs skip the TypeParser and zip entries are read in one call. Fixed on the way:
+NativeProcessRunner returned empty output while the thread pool was busy (NCrunch). Left: Run is
+mostly nasm, ld and add.exe (~35 ms) plus first-call JIT, the VM itself needs ~0.2 ms; EventSource
+off (~11 ms, a Defender ETW session forces the runtime manifest), a ReadyToRun publish (~45 ms) or
+NativeAOT (~100 ms, needs AOT fixes) would cut startup further. EventSource is now off (A/B -11 ms).
+VM: parsed variable access paths are cached on the instructions instead of per-VM string
+dictionaries: BenchBrightness 320x180 Run 482/498 → 436/450 ms (Debug, interleaved). Measured and
+rejected: saving only the registers a callee writes (CPU samples blamed RegisterFile copies for 68%,
+A/B showed no change) and symbol ids for parameters. Release runs it 19% faster than Debug (350 ms).
+Next: `for image.Size` builds all 57,600 Vector2 elements although the body only uses `index`
+(Size.for is ~25% of the run, 48 MB allocated per run).
+
 ### Phase D — Self-hosting milestones (≈15–25 sessions)
 D1 Real front end in Strict (Language + Expressions): full Type/Member/Method model, Package/Context
    lookup (parent + children, generics, plural types, traits), tokenizer + shunting-yard producing an
@@ -613,7 +632,7 @@ arguments, single-element lists, reserved names, test lines, package references,
 
 - `Compiler/SourceCompiler.strict Examples/NativeArithmetic.strict` runs entirely in Strict:
   read file → Run body + constant members → `Bytecode/LineGenerator` → `Compiler/InstructionsToNasm`
-  → nasm + gcc → runs the exe and logs `Run returned 20`. The compiled exe exits with the result.
+  → nasm + ld → runs the exe and logs `Run returned 20`. The compiled exe exits with the result.
 - Compiler package shares `Bytecode/BytecodeInstruction` (cross package via full name in one member
   or parameter type). `CompInstruction`/`CompList` removed. Data section is generated from constant
   loads/stores and stored variables. Optimizers and Runtime still have their own instruction copies
@@ -1254,7 +1273,7 @@ This is the execution engine — the capstone of the self-hosting effort.
 - Package `Strict/Compiler` loads with platform, register map (R→xmm), instruction emit, NASM body/entry, linker plans, **native tool spawn**.
 - **Emits:** load const/var, store, return, add/sub/mul/div, compare with NASM `[rel …]` memory operands and real `\n` line breaks.
 - **Process/Directory natives:** `Process.strict` + `ProcessResult.strict` + VM hooks via shared `NativeProcessRunner`; C# `ToolRunner` delegates to the same runner.
-- **CompilerDemo end-to-end:** generate `add.asm` → `nasm` → `add.obj` → `gcc` → `add.exe` entirely from Strict.
+- **CompilerDemo end-to-end:** generate `add.asm` → `nasm` → `add.obj` → `ld` → `add.exe` entirely from Strict.
 - Demos green: `CompilerDemo`, `ProcessProbe`, `PlatformTests`, `EmitTests`, `LinkerTests`.
 - C# NASM/MLIR/LLVM compilers remain production bootstrap for full pipelines; tool invocation is no longer C#-only.
 

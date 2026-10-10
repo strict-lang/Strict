@@ -12,8 +12,8 @@ public sealed partial class Runner
 	{
 		var strictRoot = Repositories.GetLocalDevelopmentPath(Repositories.StrictOrg, nameof(Strict));
 		return binary.MethodsPerType.Keys.Select(GetPackageName).Where(name => name.Length > 0).
-			Distinct().Any(packageName => DirectoryHasNewerStrictFile(Path.Combine(strictRoot,
-				Path.GetRelativePath(nameof(Strict), packageName)), binaryTime));
+			Distinct().Any(packageName => DirectoryHasNewerFile(Path.Combine(strictRoot,
+				Path.GetRelativePath(nameof(Strict), packageName)), "*" + Type.Extension, binaryTime));
 	}
 
 	private static string GetPackageName(string typeFullName)
@@ -25,15 +25,14 @@ public sealed partial class Runner
 			: "";
 	}
 
-	private static bool DirectoryHasNewerStrictFile(string? directory, DateTime binaryTime)
-	{
-		if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
-			return false;
-		foreach (var file in Directory.EnumerateFiles(directory, "*" + Type.Extension))
-			if (File.GetLastWriteTimeUtc(file) > binaryTime)
-				return true;
-		return false;
-	}
+	/// <summary>
+	/// A newer .strict file or Strict*.dll outdates the cache. Enumerated files already carry their
+	/// write time, no extra file system call per file is needed.
+	/// </summary>
+	private static bool DirectoryHasNewerFile(string? directory, string searchPattern,
+		DateTime binaryTime) =>
+		!string.IsNullOrEmpty(directory) && Directory.Exists(directory) && new DirectoryInfo(directory).
+			EnumerateFiles(searchPattern).Any(file => file.LastWriteTimeUtc > binaryTime);
 
 	private BinaryExecutable CacheStrictExecutable(BinaryExecutable binary)
 	{

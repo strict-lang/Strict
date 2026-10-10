@@ -18,11 +18,11 @@ ForWindows(asmPath Text) LinkerPlan
 ForLinux(asmPath Text) LinkerPlan
 	let objPath = asmPath + ".o"
 	let nasm = "nasm -f elf64 " + asmPath + " -o " + objPath
-	LinkerPlan(nasm, "gcc " + objPath + " to " + asmPath, objPath, asmPath)
+	LinkerPlan(nasm, "ld " + objPath + " to " + asmPath, objPath, asmPath)
 ForMac(asmPath Text) LinkerPlan
 	let objPath = asmPath + ".o"
 	let nasm = "nasm -f macho64 " + asmPath + " -o " + objPath
 	LinkerPlan(nasm, "clang " + objPath + " to " + asmPath, objPath, asmPath)
 WindowsLink(objPath Text, executable Text) Text
-	LinkerPlan.ForWindows("out.asm").linkerCommand is "gcc out.asm.obj to out.asm.exe with kernel32"
-	"gcc " + objPath + " to " + executable + " with kernel32"
+	LinkerPlan.ForWindows("out.asm").linkerCommand is "ld out.asm.obj to out.asm.exe with kernel32"
+	"ld " + objPath + " to " + executable + " with kernel32"

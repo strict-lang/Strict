@@ -475,6 +475,14 @@ public sealed class RunnerTests
 			});
 
 	[Test]
+	[SetCulture("de-DE")]
+	public async Task DiagnosticTimesUseInvariantCulture()
+	{
+		await new Runner(SimpleCalculatorFilePath, Method.Run, true).Run();
+		Assert.That(consoleWriter.ToString(), Does.Not.Match(@"Time: \d+,\d+ ms"));
+	}
+
+	[Test]
 	public async Task CachedBinaryIsOutdatedWhenUsedPackageChanged()
 	{
 		var entry = Path.Combine(FindRepoRoot(), "Compiler", "EmitTests.strict");
@@ -834,21 +842,46 @@ public sealed class RunnerTests
 	//ncrunch: no coverage start
 	[Test]
 	[Category("Slow")]
-	public Task RunAdjustBrightnessRegeneratesCachedBinaryWhenColorChanges() =>
-		InTemporaryCopy(
-			Directory.GetFiles(Path.Combine(FindRepoRoot(), "ImageProcessing"), "*" + Type.Extension),
-			async directory =>
+	public async Task RunAdjustBrightnessRegeneratesCachedBinaryWhenColorChanges()
+	{
+		var adjustBrightnessPath = GetExamplesFilePath("../ImageProcessing/AdjustBrightness");
+		var colorPath = Path.Combine(Path.GetDirectoryName(adjustBrightnessPath)!, "Color.strict");
+		var binaryPath = Path.ChangeExtension(adjustBrightnessPath, BinaryExecutable.Extension);
+		var originalColorCode = await File.ReadAllTextAsync(colorPath);
+		var originalColorTimestamp = File.GetLastWriteTimeUtc(colorPath);
+		var hadBinary = File.Exists(binaryPath);
+		var originalBinaryBytes = hadBinary
+			? await File.ReadAllBytesAsync(binaryPath)
+			: [];
+		var originalBinaryTimestamp = hadBinary
+			? File.GetLastWriteTimeUtc(binaryPath)
+			: DateTime.MinValue;
+		try
+		{
+			if (File.Exists(binaryPath))
+				File.Delete(binaryPath);
+			await new Runner(adjustBrightnessPath).Run();
+			var firstBinaryTimestamp = File.GetLastWriteTimeUtc(binaryPath);
+			consoleWriter.GetStringBuilder().Clear();
+			await File.WriteAllTextAsync(colorPath,
+				originalColorCode.Replace("has Alpha = 1", "has Alpha = 0.5"));
+			File.SetLastWriteTimeUtc(colorPath, DateTime.UtcNow.AddSeconds(2));
+			await new Runner(adjustBrightnessPath).Run();
+			Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(firstBinaryTimestamp));
+		}
+		finally
+		{
+			await File.WriteAllTextAsync(colorPath, originalColorCode);
+			File.SetLastWriteTimeUtc(colorPath, originalColorTimestamp);
+			if (hadBinary)
 			{
-				var adjustBrightnessPath = Path.Combine(directory, "AdjustBrightness" + Type.Extension);
-				var colorPath = Path.Combine(directory, "Color" + Type.Extension);
-				var binaryPath = Path.ChangeExtension(adjustBrightnessPath, BinaryExecutable.Extension);
-				await new Runner(adjustBrightnessPath).Run();
-				var firstBinaryTimestamp = File.GetLastWriteTimeUtc(binaryPath);
-				consoleWriter.GetStringBuilder().Clear();
-				await File.WriteAllTextAsync(colorPath,
-					(await File.ReadAllTextAsync(colorPath)).Replace("has Alpha = 1", "has Alpha = 0.5"));
-				File.SetLastWriteTimeUtc(colorPath, DateTime.UtcNow.AddSeconds(2));
-				await new Runner(adjustBrightnessPath).Run();
-				Assert.That(File.GetLastWriteTimeUtc(binaryPath), Is.GreaterThan(firstBinaryTimestamp));
-			});
+				await File.WriteAllBytesAsync(binaryPath, originalBinaryBytes);
+				File.SetLastWriteTimeUtc(binaryPath, originalBinaryTimestamp);
+			}
+			else if (File.Exists(binaryPath))
+			{
+				File.Delete(binaryPath);
+			}
+		}
+	}
 }

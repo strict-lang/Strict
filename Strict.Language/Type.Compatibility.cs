@@ -28,12 +28,13 @@ public partial class Type
 	private bool ExecuteIsIteratorCheck()
 	{
 		CheckIfParsed();
+		var evaluatedMemberTypes = cachedEvaluatedMemberTypes ??= new();
 		foreach (var member in members)
 		{
-			if (cachedEvaluatedMemberTypes.TryGetValue(member.Type.Name, out var result))
+			if (evaluatedMemberTypes.TryGetValue(member.Type.Name, out var result))
 				return result; //ncrunch: no coverage
 			var isIterator = member is { IsPublic: false, Type.IsIterator: true };
-			cachedEvaluatedMemberTypes[member.Type.Name] = isIterator;
+			evaluatedMemberTypes[member.Type.Name] = isIterator;
 			if (isIterator)
 				return true;
 		}
@@ -183,6 +184,7 @@ public partial class Type
 		int maxDepth)
 	{
 		var key = (targetType, allowImplicitConversion, maxDepth);
+		var usableMemberCache = this.usableMemberCache ??= new();
 		if (usableMemberCache.TryGetValue(key, out var cached))
 			return cached;
 		var found = false;
@@ -197,7 +199,7 @@ public partial class Type
 		return usableMemberCache[key] = found;
 	}
 
-	private readonly ConcurrentDictionary<(Type, bool, int), bool> usableMemberCache = new();
+	private ConcurrentDictionary<(Type, bool, int), bool>? usableMemberCache;
 
 	/// <summary>
 	/// Only allow implicit conversions as defined in Any.strict (to Text, to Type, to HashCode)

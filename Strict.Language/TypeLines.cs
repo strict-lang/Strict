@@ -9,7 +9,7 @@ namespace Strict.Language;
 /// Step 3 is to actually resolve each of the type members and members (which can be in a
 /// different order as well, methods are also evaluated lazily and not at parsing time)
 /// </summary>
-public class TypeLines
+public partial class TypeLines
 {
 	public TypeLines(string name, params string[] lines)
 	{
@@ -97,10 +97,11 @@ public class TypeLines
 			}
 	}
 
-	private static readonly Regex TypeUsagePattern = new(
+	[GeneratedRegex(
 		"""
 		"(?:[^"\\\n]|\\.)*"|(?<![A-Za-z0-9.])([A-Z][A-Za-z0-9]*)(?=[.(])
-		""", RegexOptions.Compiled);
+		""")]
+	private static partial Regex TypeUsagePattern { get; }
 
 	private void AddDependentType(string remainingLine, ref IList<string> dependentTypes)
 	{

@@ -14,11 +14,12 @@ Link(exePath Text) ProcessResult
 	NativeBuild("Compiler/output/missing.asm", Platform.Linux).Link("missing").Failed is true
 	ToolRunner(ToolInfo(platform).LinkerName).Execute(ObjectPath + " -o " + exePath + LinkFlags)
 LinkFlags Text
-	NativeBuild("a.asm", Platform.Linux).LinkFlags is " -s -Wl,--gc-sections -nostdlib -Wl,-e,_start"
+	NativeBuild("a.asm", Platform.Linux).LinkFlags is " -s --gc-sections -e _start"
+	NativeBuild("a.asm", Platform.Windows).LinkFlags is " -s --gc-sections -e main -lkernel32"
 	NativeBuild("a.asm", Platform.MacOS).LinkFlags is " -s"
 	if platform is Platform.Windows
-		return " -s -Wl,--gc-sections -nostdlib -Wl,-e,main -lkernel32"
-	platform is Platform.Linux then " -s -Wl,--gc-sections -nostdlib -Wl,-e,_start" else " -s"
+		return " -s --gc-sections -e main -lkernel32"
+	platform is Platform.Linux then " -s --gc-sections -e _start" else " -s"
 SimpleAdd(outputDir Text, target Number) Text
 	NativeBuild.SimpleAdd("Compiler/output", Platform.Linux) is "Compiler/output/add.asm"
 	NativeBuild(outputDir + "/add.asm", target).WriteAsm(InstructionsToNasm.SimpleAdd(target).Compile)

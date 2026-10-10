@@ -72,7 +72,9 @@ public sealed partial class Runner
 
 	private readonly Repositories repositories;
 
-	private readonly List<long> stepTimes = [];
+	private long totalStepTicks;
+	private string TotalStepSeconds =>
+		TimeSpan.FromTicks(totalStepTicks).ToString(@"s\.ffffff", CultureInfo.InvariantCulture) + "s";
 
 	private bool IsExpressionInvocation =>
 		expressionToRun != Method.Run && expressionToRun.Contains('(');
@@ -106,16 +108,17 @@ public sealed partial class Runner
 		{
 			var binaryTime = new FileInfo(cachedBinaryFilePath).LastWriteTimeUtc;
 			var sourceTime = new FileInfo(strictFilePath).LastWriteTimeUtc;
-			if (binaryTime >= sourceTime && binaryTime >= RuntimeBuildTime &&
-				!DirectoryHasNewerStrictFile(Path.GetDirectoryName(Path.GetFullPath(strictFilePath)),
-					binaryTime))
+			if (binaryTime >= sourceTime &&
+				!DirectoryHasNewerFile(AppContext.BaseDirectory, nameof(Strict) + "*.dll", binaryTime) &&
+				!DirectoryHasNewerFile(Path.GetDirectoryName(Path.GetFullPath(strictFilePath)),
+					"*" + Type.Extension, binaryTime))
 				try
 				{
 					var binary = LogTiming("Loading cached " + cachedBinaryFilePath,
 						() => new BinaryExecutable(cachedBinaryFilePath));
 					if (!UsedPackageHasNewerStrictFile(binary, binaryTime))
 					{
-						Log("Using cached " + cachedBinaryFilePath + " from " + binaryTime);
+						Log("Using cached " + cachedBinaryFilePath + " from " + ToLogText(binaryTime));
 						return binary;
 					}
 					Log("Cached binary outdated, a used package changed, regenerating ..");
@@ -129,7 +132,8 @@ public sealed partial class Runner
 					Log("Cached binary incompatible: " + ex.Message + ", regenerating ..");
 				}
 			else
-				Log("Cached binary outdated (" + binaryTime + " < " + sourceTime + "), regenerating ..");
+				Log("Cached binary outdated (" + ToLogText(binaryTime) + " < " + ToLogText(sourceTime) +
+					"), regenerating ..");
 		}
 #endif
 		var package = await LogTimingAsync("Load packages", LoadBasePackage);
@@ -154,13 +158,6 @@ public sealed partial class Runner
 		return await repositories.LoadStrictPackage(nameof(Strict) + Context.ParentSeparator +
 			relative);
 	}
-
-	/// <summary>
-	/// A cache compiled by an older parser, generator or optimizer is outdated as well.
-	/// </summary>
-	private static readonly DateTime RuntimeBuildTime = Directory.
-		EnumerateFiles(AppContext.BaseDirectory, nameof(Strict) + "*.dll").
-		Select(File.GetLastWriteTimeUtc).DefaultIfEmpty(DateTime.MinValue).Max();
 
 	/// <summary>
 	/// Parses and validates the main type, optionally runs its inline tests, without any bytecode.
@@ -309,10 +306,13 @@ public sealed partial class Runner
 	private void LogElapsed(string message, long startTicks, long allocatedBytes)
 	{
 		var endTicks = DateTime.UtcNow.Ticks;
-		Log(message + " Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds +
-			" ms, allocated: " + allocatedBytes / 1024 + " KB");
-		stepTimes.Add(endTicks - startTicks);
+		Log(message + " Time: " + TimeSpan.FromTicks(endTicks - startTicks).TotalMilliseconds.
+			ToString(CultureInfo.InvariantCulture) + " ms, allocated: " + allocatedBytes / 1024 + " KB");
+		totalStepTicks += endTicks - startTicks;
 	}
+
+	private static string ToLogText(DateTime time) =>
+		time.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
 	public async Task Run()
 	{
@@ -338,8 +338,8 @@ public sealed partial class Runner
 			Execute(binary, null);
 		}
 		Console.WriteLine("Executed " + strictFilePath + " via " + nameof(VirtualMachine) + " in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s");
-		stepTimes.Clear();
+			TotalStepSeconds);
+		totalStepTicks = 0;
 	}
 
 	public async Task RunExpression(string expressionString)
@@ -440,7 +440,7 @@ public sealed partial class Runner
 	private void
 		PrintCompilationSummary(CompilerBackend backend, Platform platform, string exeFilePath) =>
 		Console.WriteLine("Compiled " + strictFilePath + " via " + backend + " in " +
-			TimeSpan.FromTicks(stepTimes.Sum()).ToString(@"s\.ffffff") + "s to " + platform +
+			TotalStepSeconds + " to " + platform +
 			" executable of " + new FileInfo(exeFilePath).Length + " bytes to: " + exeFilePath);
 
 	public sealed class StrictFileNotFound(string filePath)

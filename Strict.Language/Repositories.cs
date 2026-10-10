@@ -13,7 +13,7 @@ namespace Strict.Language;
 /// always available for any .strict file in the Editor. If a type is not found, we check on GitHub
 /// </summary>
 /// <remarks>Everything in here is async, you can load many packages in parallel</remarks>
-public sealed class Repositories(ExpressionParser parser)
+public sealed partial class Repositories(ExpressionParser parser)
 {
 	public Task<Package> LoadStrictPackage(string packageNameAndSubfolder = nameof(Strict)
 #if DEBUG
@@ -193,10 +193,11 @@ public sealed class Repositories(ExpressionParser parser)
 	/// <summary>
 	/// Text literals are matched too (and skipped), "Examples/Sum.strict" is no dependency.
 	/// </summary>
-	private static readonly Regex TypeFullNamePattern = new(
+	[GeneratedRegex(
 		"""
 		"(?:[^"\\\n]|\\.)*"|(?<![A-Za-z0-9/])[A-Z][A-Za-z0-9]*(?:/[A-Z][A-Za-z0-9]*)+(?![A-Za-z0-9/])
-		""", RegexOptions.Compiled);
+		""")]
+	private static partial Regex TypeFullNamePattern { get; }
 
 	private static Package? FindParentPackage(string fullName)
 	{

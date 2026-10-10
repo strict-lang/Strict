@@ -51,10 +51,6 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 	private static readonly int OuterSymbolId = CallFrame.OuterSymbolId;
 	private static readonly int OuterIndexSymbolId =
 		CallFrame.ResolveSymbolId(Type.OuterLowercase + "." + Type.IndexLowercase);
-	private readonly Dictionary<string, IdentifierAccessPath> identifierAccessPaths =
-		new(StringComparer.Ordinal);
-	private readonly Dictionary<string, IndexedElementAccessPath> indexedElementAccessPaths =
-		new(StringComparer.Ordinal);
 
 	private void RunInstructions(List<Instruction> blockInstructions
 #if DEBUG
@@ -67,8 +63,6 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 			PerformanceLog.Write("VirtualMachine.RunInstructions",
 				"context=" + context + ", count=" + blockInstructions.Count);
 #endif
-		if (blocksWithCachedAccessPaths.Add(blockInstructions))
-			CacheInstructionAccessPaths(blockInstructions);
 		for (var index = 0; index < blockInstructions.Count; index++)
 			if (blockInstructions[index].InstructionType == InstructionType.LoopBegin)
 			{
@@ -80,53 +74,6 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 		var instructionsLength = instructions.Count;
 		for (instructionIndex = 0; instructionIndex < instructionsLength; instructionIndex++)
 			ExecuteInstruction(instructions[instructionIndex]);
-	}
-
-	private readonly HashSet<List<Instruction>> blocksWithCachedAccessPaths =
-		new(ReferenceEqualityComparer.Instance);
-
-	private void CacheInstructionAccessPaths(List<Instruction> blockInstructions)
-	{
-		identifierAccessPaths.EnsureCapacity(identifierAccessPaths.Count + blockInstructions.Count * 2);
-		indexedElementAccessPaths.EnsureCapacity(indexedElementAccessPaths.Count +
-			blockInstructions.Count);
-		for (var cachedInstructionIndex = 0; cachedInstructionIndex < blockInstructions.Count;
-			cachedInstructionIndex++)
-			switch (blockInstructions[cachedInstructionIndex])
-			{
-			case LoadVariableToRegister loadVariable:
-				GetIdentifierAccessPath(loadVariable.Identifier);
-				break;
-			case StoreVariableInstruction storeVariable:
-				GetIdentifierAccessPath(storeVariable.Identifier);
-				break;
-			case StoreFromRegisterInstruction storeFromRegister:
-				CacheStoreAccessPath(storeFromRegister.Identifier);
-				break;
-			case ListCallInstruction listCall:
-				GetIdentifierAccessPath(listCall.Identifier);
-				break;
-			case WriteToListInstruction writeToList:
-				GetIdentifierAccessPath(writeToList.Identifier);
-				break;
-			case RemoveInstruction remove:
-				GetIdentifierAccessPath(remove.Identifier);
-				break;
-			}
-	}
-
-	private void CacheStoreAccessPath(string identifier)
-	{
-		var indexedAccessPath = GetIndexedElementAccessPath(identifier);
-		if (indexedAccessPath.IsValid)
-		{
-			GetIdentifierAccessPath(indexedAccessPath.ListPath);
-			GetIdentifierAccessPath(indexedAccessPath.IndexExpression);
-		}
-		else
-		{
-			GetIdentifierAccessPath(identifier);
-		}
 	}
 
 	private void InitializeEntryPointMembers(BinaryMethod method)
@@ -491,7 +438,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 
 	private void ExecuteWriteToList(WriteToListInstruction writeToListInstruction)
 	{
-		if (!GetIdentifierAccessPath(writeToListInstruction.Identifier).
+		if (!GetIdentifierAccessPath(writeToListInstruction, writeToListInstruction.Identifier).
 			TryResolve(this, out var collection))
 			throw Fail("Cannot resolve list variable \"" + writeToListInstruction.Identifier + "\"");
 		collection.List.Items.Add(Memory.Registers[writeToListInstruction.Register]);
@@ -499,7 +446,7 @@ public sealed partial class VirtualMachine(BinaryExecutable executable)
 
 	private void ExecuteWriteToTable(WriteToTableInstruction writeToTableInstruction)
 	{
-		if (!GetIdentifierAccessPath(writeToTableInstruction.Identifier).
+		if (!GetIdentifierAccessPath(writeToTableInstruction, writeToTableInstruction.Identifier).
 			TryResolve(this, out var collection))
 			throw Fail("Cannot resolve table variable \"" + writeToTableInstruction.Identifier + "\"");
 		collection.GetDictionaryItems()[Memory.Registers[writeToTableInstruction.Register]] =

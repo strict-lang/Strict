@@ -6,6 +6,10 @@ public abstract class Instruction(InstructionType instructionType)
 {
 	public InstructionType InstructionType { get; } = instructionType;
 	public int SourceLine { get; set; }
+	/// <summary>
+	/// Parsed variable access path of this instruction's identifier, set by the VM on first use.
+	/// </summary>
+	internal object? CachedAccessPath { get; set; }
 
 	/// <summary>
 	/// Used for tests to check the instructions generated with simple multiline instructions list.

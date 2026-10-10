@@ -3,14 +3,14 @@ constant NasmName = "nasm"
 constant NasmDownload = "https://nasm.us"
 LinkerName Text
 	ToolInfo(Platform.MacOS).LinkerName is "clang"
-	platform is Platform.MacOS then "clang" else "gcc"
+	platform is Platform.MacOS then "clang" else "ld"
 LinkerDownload Text
 	ToolInfo(Platform.Windows).LinkerDownload is "https://www.mingw-w64.org"
 	if platform is Platform.Windows
 		return "https://www.mingw-w64.org"
 	if platform is Platform.MacOS
 		return "https://developer.apple.com/xcode"
-	"https://gcc.gnu.org"
+	"https://www.gnu.org/software/binutils"
 LinkerMissingMessage Text
-	ToolInfo(Platform.Linux).LinkerMissingMessage.StartsWith("Required tool 'gcc'") is true
+	ToolInfo(Platform.Linux).LinkerMissingMessage.StartsWith("Required tool 'ld'") is true
 	"Required tool '" + LinkerName + "' was not found. Download: " + LinkerDownload

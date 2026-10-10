@@ -51,9 +51,14 @@ public sealed partial class BinaryExecutable
 		if (package.FindDirectType(mainName) != null)
 			return;
 		EnsureStubType(basePackage, Type.GenericUppercase);
-		new Type(package, new TypeLines(mainName, arguments.Select((_, index) =>
-				Type.HasWithSpaceAtEnd + "generic" + (char)('A' + index) + " " + Type.GenericUppercase).
-			ToArray())).ParseMembersAndMethods(new MethodExpressionParser());
+		var genericType = basePackage.GetType(Type.GenericUppercase);
+		var memberNames = new string[arguments.Count];
+		for (var index = 0; index < memberNames.Length; index++)
+			memberNames[index] = Type.GenericLowercase + (char)('A' + index);
+		var stub = new Type(package, new TypeLines(mainName, memberNames.Select(memberName =>
+			Type.HasWithSpaceAtEnd + memberName + " " + Type.GenericUppercase).ToArray()));
+		foreach (var memberName in memberNames)
+			stub.Members.Add(new Member(stub, memberName, genericType));
 	}
 
 	private static List<string> SplitGenericArguments(string arguments)

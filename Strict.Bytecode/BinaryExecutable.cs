@@ -69,8 +69,10 @@ public sealed partial class BinaryExecutable(Package basePackage)
 					StringComparison.OrdinalIgnoreCase))
 				{
 					var typeFullName = GetEntryNameWithoutExtension(entry.FullName);
-					using var bytecode = entry.Open();
-					var reader = new BinaryReader(bytecode);
+					var bytes = new byte[entry.Length];
+					using (var bytecode = entry.Open())
+						bytecode.ReadExactly(bytes);
+					var reader = new BinaryReader(new MemoryStream(bytes));
 					MethodsPerType.Add(typeFullName, new BinaryType(reader, this, typeFullName));
 				}
 			if (basePackage.Parent is not Package)

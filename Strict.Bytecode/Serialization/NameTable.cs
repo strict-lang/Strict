@@ -10,11 +10,18 @@ namespace Strict.Bytecode.Serialization;
 /// </summary>
 public sealed class NameTable
 {
-	public NameTable(BinaryReader reader, string justTypeName) : this(justTypeName)
+	/// <summary>
+	/// Written names are unique, so reading only fills the list, indices are built when writing.
+	/// </summary>
+	public NameTable(BinaryReader reader, string justTypeName)
 	{
+		names.AddRange(BuiltInPredefinedNames);
+		if (Array.IndexOf(BuiltInPredefinedNames, justTypeName) < 0)
+			names.Add(justTypeName);
+		prefilledNamesCount = names.Count;
 		var customNamesCount = reader.Read7BitEncodedInt();
 		for (var index = 0; index < customNamesCount; index++)
-			Add(reader.ReadString());
+			names.Add(reader.ReadString());
 	}
 
 	public NameTable(string justTypeName)
@@ -125,16 +132,24 @@ public sealed class NameTable
 
 	public NameTable Add(string name)
 	{
-		if (indices.ContainsKey(name))
-			return this;
-		indices[name] = names.Count;
-		names.Add(name);
+		if (Indices.TryAdd(name, names.Count))
+			names.Add(name);
 		return this;
 	}
 
-	private readonly Dictionary<string, int> indices = new(StringComparer.Ordinal);
+	private Dictionary<string, int>? indices;
+	private Dictionary<string, int> Indices => indices ??= CreateIndices();
+
+	private Dictionary<string, int> CreateIndices()
+	{
+		var created = new Dictionary<string, int>(names.Count, StringComparer.Ordinal);
+		for (var index = 0; index < names.Count; index++)
+			created.TryAdd(names[index], index);
+		return created;
+	}
+
 	public readonly List<string> names = [];
-	public int this[string name] => indices[name];
+	public int this[string name] => Indices[name];
 
 	private NameTable CollectValueInstanceStrings(ValueInstance val)
 	{

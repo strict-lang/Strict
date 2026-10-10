@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>Strict.ico</ApplicationIcon>
+    <EventSourceSupport>false</EventSourceSupport>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Strict.Compiler.Assembly\Strict.Compiler.Assembly.csproj" />

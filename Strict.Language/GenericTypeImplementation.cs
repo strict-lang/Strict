@@ -79,7 +79,7 @@ public sealed class GenericTypeImplementation : Type
 	{
 		members.Clear();
 		cachedIteratorState = 0;
-		cachedEvaluatedMemberTypes.Clear();
+		cachedEvaluatedMemberTypes?.Clear();
 		ImplementMembers();
 	}
 }

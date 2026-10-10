@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Strict.Expressions;
@@ -83,25 +84,19 @@ public static class NativeProcessRunner
 			RedirectStandardOutput = true,
 			RedirectStandardError = true,
 			UseShellExecute = false,
-			CreateNoWindow = true
+			CreateNoWindow = OperatingSystem.IsWindows() && GetConsoleCP() == 0
 		};
 		var output = new StringBuilder();
 		var error = new StringBuilder();
-		process.OutputDataReceived += (_, args) =>
-		{
-			if (args.Data != null)
-				output.AppendLine(args.Data);
-		};
-		process.ErrorDataReceived += (_, args) =>
-		{
-			if (args.Data != null)
-				error.AppendLine(args.Data);
-		};
+		var outputClosed = new TaskCompletionSource();
+		var errorClosed = new TaskCompletionSource();
+		process.OutputDataReceived += (_, args) => AppendLine(output, outputClosed, args.Data);
+		process.ErrorDataReceived += (_, args) => AppendLine(error, errorClosed, args.Data);
 		process.Start();
 		process.BeginOutputReadLine();
 		process.BeginErrorReadLine();
-		if (!process.WaitForExit(timeoutMs))
-		{
+		var exited = process.WaitForExit(timeoutMs);
+		if (!exited)
 			try
 			{
 				process.Kill(true);
@@ -110,12 +105,29 @@ public static class NativeProcessRunner
 			{
 				// ignore kill failures
 			}
-			// ponytail: 2s drain; a grandchild can hold the redirected pipe open forever
-			process.WaitForExit(2000);
-			return new ProcessRunResult(124, output.ToString(), "timed out after " + timeoutMs + " ms");
-		}
-		process.WaitForExit(2000);
-		return new ProcessRunResult(process.ExitCode, output.ToString(), error.ToString());
+		// ponytail: 2s drain; a grandchild can hold the redirected pipe open forever
+		Task.WaitAll([outputClosed.Task, errorClosed.Task], 2000);
+		return exited
+			? new ProcessRunResult(process.ExitCode, output.ToString(), error.ToString())
+			: new ProcessRunResult(124, output.ToString(), "timed out after " + timeoutMs + " ms");
+	}
+
+	/// <summary>
+	/// Tools share Strict's console, a new hidden console per tool costs ~8 ms on Windows. Only
+	/// without any console (0) they need their own, else each one would open a visible window.
+	/// </summary>
+	[DllImport("kernel32.dll")]
+	private static extern uint GetConsoleCP();
+
+	/// <summary>
+	/// WaitForExit with a timeout does not wait for the async readers, the null line marks the end.
+	/// </summary>
+	private static void AppendLine(StringBuilder text, TaskCompletionSource closed, string? line)
+	{
+		if (line == null)
+			closed.TrySetResult();
+		else
+			text.AppendLine(line);
 	}
 
 	public readonly record struct ProcessRunResult(int ExitCode, string Output, string Error)

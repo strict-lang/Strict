@@ -18,13 +18,19 @@ public sealed partial class VirtualMachine
 		{
 			var storeVariable = (StoreVariableInstruction)instruction;
 			var value = CloneConstantValue(storeVariable.ValueInstance);
-			StoreIdentifierValue(storeVariable.Identifier, value, storeVariable.IsMember);
+			StoreIdentifierValue(GetIdentifierAccessPath(storeVariable, storeVariable.Identifier),
+				storeVariable.Identifier, value, storeVariable.IsMember);
 		}
 		else if (instruction.InstructionType == InstructionType.StoreRegisterToVariable)
 		{
 			var storeFromRegister = (StoreFromRegisterInstruction)instruction;
-			if (!TryStoreToListElement(storeFromRegister))
-				StoreIdentifierValue(storeFromRegister.Identifier,
+			var storePath = storeFromRegister.CachedAccessPath ??=
+				(object?)IndexedElementAccessPath.TryParse(storeFromRegister.Identifier) ??
+				IdentifierAccessPath.Parse(storeFromRegister.Identifier);
+			if (storePath is not IndexedElementAccessPath indexedPath ||
+				!TryStoreToListElement(indexedPath, storeFromRegister))
+				StoreIdentifierValue(storePath as IdentifierAccessPath ??
+					((IndexedElementAccessPath)storePath).WholePath, storeFromRegister.Identifier,
 					Memory.Registers[storeFromRegister.Register], false);
 		}
 	}
@@ -34,7 +40,8 @@ public sealed partial class VirtualMachine
 		if (instruction.InstructionType == InstructionType.LoadVariableToRegister)
 		{
 			var loadVariable = (LoadVariableToRegister)instruction;
-			if (!GetIdentifierAccessPath(loadVariable.Identifier).TryResolve(this, out var registerValue))
+			if (!GetIdentifierAccessPath(loadVariable, loadVariable.Identifier).
+				TryResolve(this, out var registerValue))
 				throw Fail("Could not resolve variable '" + loadVariable.Identifier + //ncrunch: no coverage
 					"' - check that the variable is defined and in scope");
 			Memory.Registers[loadVariable.Register] = registerValue;
@@ -54,23 +61,22 @@ public sealed partial class VirtualMachine
 					new Dictionary<ValueInstance, ValueInstance>(value.GetDictionaryItems()))
 				: value;
 
-	private IdentifierAccessPath GetIdentifierAccessPath(string identifier) =>
-		identifierAccessPaths.TryGetValue(identifier, out var accessPath)
-			? accessPath
-			: identifierAccessPaths[identifier] = IdentifierAccessPath.Parse(identifier);
+	private static IdentifierAccessPath GetIdentifierAccessPath(Instruction instruction,
+		string identifier) =>
+		(IdentifierAccessPath)(instruction.CachedAccessPath ??= IdentifierAccessPath.Parse(identifier));
 
 	private bool TryGetFrameValue(int symbolId, out ValueInstance value) =>
 		Memory.Frame.TryGet(symbolId, out value);
 
-	private void StoreIdentifierValue(string identifier, ValueInstance value, bool isMember)
+	private void StoreIdentifierValue(IdentifierAccessPath accessPath, string identifier,
+		ValueInstance value, bool isMember)
 	{
-		var accessPath = GetIdentifierAccessPath(identifier);
-		if (accessPath.MemberNames.Length == 0)
+		if (accessPath.MemberNames!.Length == 0)
 		{
 			Memory.Frame.Set(accessPath.RootSymbolId, value, isMember, identifier);
 			return;
 		}
-		if (!accessPath.GetParentPath().TryResolve(this, out var parentValue))
+		if (!accessPath.ParentPath.TryResolve(this, out var parentValue))
 			throw Fail("Could not resolve parent path for '" + identifier + "'");
 		var memberName = accessPath.MemberNames[^1];
 		var flatInstance = parentValue.TryGetFlatNumericArrayInstance();
@@ -98,15 +104,15 @@ public sealed partial class VirtualMachine
 						: default
 				: default;
 
-	private bool TryStoreToListElement(StoreFromRegisterInstruction store)
+	private bool TryStoreToListElement(IndexedElementAccessPath indexedAccessPath,
+		StoreFromRegisterInstruction store)
 	{
-		var indexedAccessPath = GetIndexedElementAccessPath(store.Identifier);
-		if (!indexedAccessPath.IsValid)
-			return false;
-		var listValue = TryResolveListValue(indexedAccessPath.ListPath);
+		var listValue = indexedAccessPath.ListPath.TryResolve(this, out var resolvedList)
+			? resolvedList
+			: default;
 		if (!listValue.IsList)
 			return false;
-		var indexInstance = TryResolveIndexValue(indexedAccessPath.IndexExpression);
+		var indexInstance = TryResolveIndexValue(indexedAccessPath);
 		if (!indexInstance.HasValue)
 			return false;
 		var index = (int)indexInstance.Number;
@@ -118,30 +124,23 @@ public sealed partial class VirtualMachine
 		return false;
 	}
 
-	private IndexedElementAccessPath GetIndexedElementAccessPath(string identifier) =>
-		indexedElementAccessPaths.TryGetValue(identifier, out var accessPath)
-			? accessPath
-			: indexedElementAccessPaths[identifier] = IndexedElementAccessPath.Parse(identifier);
-
-	private ValueInstance TryResolveListValue(string listPath) =>
-		GetIdentifierAccessPath(listPath).TryResolve(this, out var listValue)
-			? listValue
-			: default;
-
-	private ValueInstance TryResolveIndexValue(string indexExpression)
+	private ValueInstance TryResolveIndexValue(IndexedElementAccessPath indexedAccessPath)
 	{
-		if (double.TryParse(indexExpression, out var number))
+		if (indexedAccessPath.IndexNumber is { } number)
 			return new ValueInstance(executable.numberType, number);
-		var accessPath = GetIdentifierAccessPath(indexExpression);
-		if (accessPath.TryResolve(this, out var indexInstance))
+		if (indexedAccessPath.IndexPath.TryResolve(this, out var indexInstance))
 			return indexInstance;
 		return TryGetFrameValue(IndexSymbolId, out indexInstance)
 			? indexInstance
 			: default;
 	}
 
-	private readonly record struct IdentifierAccessPath(int RootSymbolId, string[] MemberNames)
+	private sealed class IdentifierAccessPath(int rootSymbolId, string[]? memberNames)
 	{
+		private static readonly IdentifierAccessPath Unresolvable = new(-1, null);
+		public int RootSymbolId { get; } = rootSymbolId;
+		public string[]? MemberNames { get; } = memberNames;
+
 		public bool TryResolve(VirtualMachine vm, out ValueInstance value)
 		{
 			if (MemberNames == null)
@@ -190,7 +189,7 @@ public sealed partial class VirtualMachine
 		public static IdentifierAccessPath Parse(string identifier)
 		{
 			if (identifier == Type.None)
-				return default;
+				return Unresolvable;
 			var firstDotIndex = identifier.IndexOf('.');
 			if (firstDotIndex < 0)
 				return new IdentifierAccessPath(CallFrame.ResolveSymbolId(identifier), []);
@@ -215,23 +214,29 @@ public sealed partial class VirtualMachine
 			return new IdentifierAccessPath(rootSymbolId, memberNames);
 		}
 
-		public IdentifierAccessPath GetParentPath() =>
-			MemberNames.Length == 1
-				? this with { MemberNames = [] }
-				: this with { MemberNames = MemberNames[..^1] };
+		public IdentifierAccessPath ParentPath =>
+			field ??= new IdentifierAccessPath(RootSymbolId, MemberNames![..^1]);
 	}
 
-	private readonly record struct IndexedElementAccessPath(string ListPath,
-		string IndexExpression,
-		bool IsValid)
+	private sealed class IndexedElementAccessPath(string identifier, int openParen)
 	{
-		public static IndexedElementAccessPath Parse(string identifier)
+		public IdentifierAccessPath WholePath { get; } = IdentifierAccessPath.Parse(identifier);
+		public IdentifierAccessPath ListPath { get; } =
+			IdentifierAccessPath.Parse(identifier[..openParen]);
+		public double? IndexNumber { get; } =
+			double.TryParse(identifier.AsSpan(openParen + 1, identifier.Length - openParen - 2),
+				out var number)
+				? number
+				: null;
+		public IdentifierAccessPath IndexPath { get; } =
+			IdentifierAccessPath.Parse(identifier[(openParen + 1)..^1]);
+
+		public static IndexedElementAccessPath? TryParse(string identifier)
 		{
 			var openParen = identifier.LastIndexOf('(');
 			return openParen <= 0 || !identifier.EndsWith(')')
-				? new IndexedElementAccessPath(string.Empty, string.Empty, false)
-				: new IndexedElementAccessPath(identifier[..openParen], identifier[(openParen + 1)..^1],
-					true);
+				? null
+				: new IndexedElementAccessPath(identifier, openParen);
 		}
 	}
 }

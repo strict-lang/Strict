@@ -394,7 +394,7 @@ public partial class Type : Context, IDisposable
 
 	private const int IteratorTrue = 2;
 
-	protected readonly ConcurrentDictionary<string, bool> cachedEvaluatedMemberTypes = new();
+	protected ConcurrentDictionary<string, bool>? cachedEvaluatedMemberTypes;
 
 	internal bool
 		CanBeCreatedFromSingleMember(Type sourceType, bool allowImplicitConversion = false) =>
@@ -424,8 +424,8 @@ public partial class Type : Context, IDisposable
 
 	private static IReadOnlyDictionary<string, List<Method>>? cachedAnyMethods;
 
-	private static readonly Regex DeclarationPattern = new(@"^\t+(?:let|constant|mutable) (\w+) = ",
-		RegexOptions.Compiled);
+	[GeneratedRegex(@"^\t+(?:let|constant|mutable) (\w+) = ")]
+	private static partial Regex DeclarationPattern { get; }
 
 	/// <summary>
 	/// Helper for method parameters default values, which don't have a methodBody to parse, but
