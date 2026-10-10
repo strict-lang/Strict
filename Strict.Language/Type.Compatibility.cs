@@ -116,9 +116,15 @@ public partial class Type
 	/// same Iterator(T). This is used to recognize that Range IS an Iterator(Number) because Range
 	/// declares "for Iterator(Number)" in its method list.
 	/// </summary>
-	private bool DeclaresForIterator(Type targetType) =>
-		targetType is GenericTypeImplementation { Generic.typeKind: TypeKind.Iterator } &&
-		methods.Any(m => m.Name == "for" && m.ReturnType == targetType);
+	private bool DeclaresForIterator(Type targetType)
+	{
+		if (targetType is not GenericTypeImplementation { Generic.typeKind: TypeKind.Iterator })
+			return false;
+		foreach (var method in methods)
+			if (method.Name == "for" && method.ReturnType == targetType)
+				return true;
+		return false;
+	}
 
 	private bool IsGenericTypeCompatible(Type sameOrUsableType)
 	{

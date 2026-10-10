@@ -599,6 +599,17 @@ stacktrace list stays empty (SyntaxNode has no line numbers, the compiler no fil
 `Error("text")`/`Error(value)` are not normalized like C# `NormalizeErrorArguments` yet, and C#
 keeps a `mutable` declaration's name for later errors in that body (TryParseDeclaration returns
 before resetting `CurrentDeclarationNameForErrorText`), the Strict compiler uses the method name.
+Interpreter speed of the inline tests (`test Bytecode/TypeCodegen.strict`, median of 7, Debug):
+TypeCodegen 1777 ms / 401 MB → 1293 ms / 82 MB, LoopCodegen 1690 ms / 369 MB → 1276 ms / 78 MB,
+MethodCodegen 1041 ms / 222 MB → 754 ms / 50 MB. Bisect: the interpreter list value commits copy
+only ~150 short lists per run, the growth came from the Strict compiler running 2-3x more
+expressions (Grid test, ownership checks, Error positions) and from the number wrapper commit, which
+checked `IsNumberLike` (a type compatibility walk allocating a closure) on every loop iteration
+(+21-27% allocations). The check now runs once per loop, `outer` is looked up once per loop,
+`DisposableValues` no longer creates a List per iteration and Number loops fold each result instead
+of keeping all of them. Next: `Text.Length` runs `List.Length` (`for elements / 1`), 3.3M of the
+6.2M TypeCodegen expressions, the VM has native `Length`/`Count`; the context pool's
+ConcurrentStack allocates a node per returned context (17 MB per TypeCodegen run).
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

@@ -220,6 +220,18 @@ public sealed class ForTests
 	}
 
 	[Test]
+	public void RangeLoopIterationsDoNotAllocate()
+	{
+		using var type = CreateType(nameof(RangeLoopIterationsDoNotAllocate), "has number",
+			"Sum Number", "\tfor Range(1, 1001)", "\t\tindex");
+		interpreter.Execute(type.Methods[0], interpreter.noneInstance, []);
+		var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+		Assert.That(interpreter.Execute(type.Methods[0], interpreter.noneInstance, []).Number,
+			Is.EqualTo(500500));
+		Assert.That(GC.GetAllocatedBytesForCurrentThread() - allocatedBefore, Is.LessThan(4000));
+	}
+
+	[Test]
 	public void TextReturnTypeWithNoResultsReturnsEmpty()
 	{
 		using var t = CreateType(nameof(TextReturnTypeWithNoResultsReturnsEmpty), "has number",
