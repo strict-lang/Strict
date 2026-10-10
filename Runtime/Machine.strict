@@ -54,6 +54,9 @@ Invoked(frame Frame) Frame
 	frame.WithRegister(frame.Instruction.payload(0), result).Next
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
+	constant hosted = ("Find", "RunTool", "Run", "OperatingSystem")
+	if (call.TypeName is "Strict/Process") and (call.MethodName is in hosted)
+		return Natives(types).Hosted(call)
 	let method = Find(call.TypeName, call.MethodName, call.Arguments.Length)
 	if method.instructions.Length is 0
 		return Natives(types).Result(call)

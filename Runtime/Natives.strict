@@ -3,6 +3,7 @@ constant Width = MemberEntry("width", "Strict/Number", List(InstructionEntry), f
 constant Shape = TypeEntry("Strict/Shape", (Width, MemberEntry.LoggerMember), List(MethodEntry))
 constant Shapes = Natives(List(TypeEntry) + Shape)
 constant NewShape = Invocation(InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfNumber(3), Locals.Empty))
+constant SystemCall = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "OperatingSystem", "Strict/Text"), List(Number), -1), Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty))
 Result(call Invocation) VmValue
 	Shapes.Result(NewShape).items.First.number is 3
 	let name = call.MethodName
@@ -79,3 +80,21 @@ IsNamed(type TypeEntry, name Text) Boolean
 	Shapes.IsNamed(Shape, "Shape") is true
 	Shapes.IsNamed(Shape, "Strict/Other") is false
 	type.JustName is TypeEntry(name, List(MemberEntry), List(MethodEntry)).JustName
+Hosted(call Invocation) VmValue
+	Shapes.Hosted(SystemCall).text is in ("Windows", "Linux", "MacOS", "Unknown")
+	let name = call.MethodName
+	if name is "OperatingSystem"
+		return VmValue.OfText(Process.OperatingSystem)
+	let first = call.Arguments.First.text
+	if name is "Find"
+		return ProcessValue(Process.Find(first))
+	if name is "RunTool"
+		return ResultValue(Process.RunTool(first, call.Arguments.Last.text))
+	ResultValue(Process(call.Instance.items.First.text).Run(first))
+ProcessValue(process Process) VmValue
+	Shapes.ProcessValue(Process("tool")).items.First.text is "tool"
+	VmValue("Strict/Process", 0, "", List(VmValue) + VmValue.OfText(process.executable))
+ResultValue(result ProcessResult) VmValue
+	Shapes.ResultValue(ProcessResult(0, "out", "")).items.First.number is 0
+	let code = VmValue.OfNumber(result.exitCode)
+	VmValue("Strict/ProcessResult", 0, "", (code, VmValue.OfText(result.Output), VmValue.OfText(result.error)))

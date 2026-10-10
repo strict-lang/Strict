@@ -31,7 +31,9 @@ to Text
 		return number to Text
 	if kind is "Boolean"
 		return IsTrue then "true" else "false"
-	kind is "List" then Joined else text
+	if kind is "List"
+		return Joined
+	kind is in ("Text", "None") then text else Automatic
 Joined Text
 	OfList(OfNumber(1), OfNumber(2)).Joined is "(1, 2)"
 	OfList(List(VmValue)).Joined is ""
@@ -41,3 +43,11 @@ Joined Text
 	for Range(1, items.Length)
 		result = result + ", " + items(value) to Text
 	result + ")"
+Automatic Text
+	VmValue("Strict/Process", 0, "", List(VmValue) + OfText("a") + None).Automatic is "(a)"
+	mutable result = ""
+	for items
+		if value.kind is not "None"
+			let shown = value to Text
+			result = result is "" then shown else result + ", " + shown
+	"(" + result + ")"

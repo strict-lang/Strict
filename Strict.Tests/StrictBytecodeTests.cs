@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using Strict.Bytecode;
 using Strict.Language;
 using Strict.Expressions;
@@ -89,6 +89,7 @@ public sealed class StrictBytecodeTests
 	[TestCase("AutofilledMutable")]
 	[TestCase("Pixel")]
 	[TestCase("DirProbe")]
+	[TestCase("ProcessProbe")]
 	[TestCase("NumberSummer")]
 	[TestCase("MemoryPressure")]
 	[TestCase("NumberStats")]

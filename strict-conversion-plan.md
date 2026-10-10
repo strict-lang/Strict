@@ -397,10 +397,11 @@ texts, lists, 7-bit ids), `Storage`, `Operations`, `Flow`, `Looping` (count and 
 both directions, lists, texts, index/value restored), `Invocation` (Invoke payload) and `Natives`
 (constructors by member name with defaults, to, Length/Count, Boolean logic, in/Index, Exists).
 `Runtime/Execute.strict <file> <root>` compiles a program with the Strict compiler and runs it on
-the Strict VM. Slow test `StrictVirtualMachineRunsLikeCSharp`: 18 Examples print the same as on
-the C# VM (ProcessProbe needs process natives, Sum program arguments). Open: loading
-`.strictbinary` files (decoder per instruction kind, stored ZIP), process natives, program
-arguments, speed (the Strict VM runs inside the C# VM).
+the Strict VM. Slow test `StrictVirtualMachineRunsLikeCSharp`: 19 Examples print the same as on
+the C# VM, Process.Find/RunTool/Run/OperatingSystem are host hooks (the Strict VM calls the
+host's Process, native on the C# VM) and instances print their automatic text like the C# VM.
+Open: loading `.strictbinary` files (decoder per instruction kind, stored ZIP), program arguments
+(Sum), speed (the Strict VM runs inside the C# VM).
 C# bugs found on the way (each with a test): `ValueInstance.Equals` treated a type instance whose
 `number` member is 0 as None, so the implicit instance of a method call was lost; the interpreter
 left constructor members without a from parameter (like `logger`) uninitialized
