@@ -63,6 +63,20 @@ public sealed class ForTests
 	}
 
 	[Test]
+	public async Task LoopOverNumberWrapperRunsItsNumberTimes()
+	{
+		var parser = new MethodExpressionParser();
+		using var mathPackage = await new Repositories(parser).LoadStrictPackage("Strict/Math");
+		using var testType = new Type(mathPackage,
+			new TypeLines(nameof(LoopOverNumberWrapperRunsItsNumberTimes), "has number", "Count Number",
+				"\tfor Degrees(3)", "\t\tvalue")).ParseMembersAndMethods(parser);
+		var packageInterpreter = new Interpreter(mathPackage, TestBehavior.Disabled);
+		Assert.That(
+			packageInterpreter.Execute(testType.Methods[0], packageInterpreter.noneInstance, []).Number,
+			Is.EqualTo(0 + 1 + 2));
+	}
+
+	[Test]
 	public void CustomVariableInForLoopIsUsed()
 	{
 		using var t = CreateType(nameof(CustomVariableInForLoopIsUsed), "has number", "Sum Number",

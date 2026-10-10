@@ -24,7 +24,7 @@ public readonly partial struct ValueInstance
 				return elementsMember.List.Count;
 			throw new IteratorNotSupported(this);
 		}
-		return (int)number;
+		return (int)GetArithmeticNumber();
 	}
 
 	public Type GetIteratorType() => ((ValueArrayInstance)value).ReturnType.GetFirstImplementation();

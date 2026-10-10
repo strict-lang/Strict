@@ -126,7 +126,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 			flatIndex >= flatNumbers.Length)
 			return false;
 		EnsureWritableFlatNumbers();
-		flatNumbers[flatIndex] = (float)memberValue.Number;
+		flatNumbers[flatIndex] = (float)memberValue.GetArithmeticNumber();
 		return true;
 	}
 
@@ -332,7 +332,7 @@ public sealed class ValueArrayInstance : IEquatable<ValueArrayInstance>
 	{
 		if (elementWidth == 1)
 		{
-			target[offset] = (float)item.Number;
+			target[offset] = (float)item.GetArithmeticNumber();
 			return true;
 		}
 		if (item.GetType() != elementType)

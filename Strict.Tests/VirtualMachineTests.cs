@@ -571,6 +571,8 @@ public sealed class VirtualMachineTests : TestBytecode
 	[TestCase("RangeEnd", "Number", "1", "\tfor Range(1, value)", "\t\tindex")]
 	[TestCase("CharacterFrom", "Boolean", "true", "\tCharacter(value) is Character(2)")]
 	[TestCase("Increment", "Number", "3", "\tvalue.Increment")]
+	[TestCase("StoreWrapper", "Number", "3", "\tmutable numbers = (1, 2, 3)",
+		"\tnumbers(0) = value", "\tnumbers(0) + 1")]
 	public void NumberWrapperIsReadAsItsNumber(string name, string returnType, string expected,
 		params string[] lines) =>
 		Assert.That(RunOnNumberWrapper(nameof(NumberWrapperIsReadAsItsNumber) + name, 2, returnType,
@@ -1148,6 +1150,20 @@ public sealed class VirtualMachineTests : TestBytecode
 		var machine = new VirtualMachine(executable) { Profile = [] };
 		Assert.That(machine.Execute().Returns!.Value.Number, Is.EqualTo(16 * 9));
 		Assert.That(machine.Profile!.Keys, Has.None.EndsWith(".for"));
+	}
+
+	[Test]
+	public async Task LoopOverNumberWrapperRunsItsNumberTimes()
+	{
+		var parser = new MethodExpressionParser();
+		using var mathPackage = await new Repositories(parser).LoadStrictPackage("Strict/Math");
+		using var testType = new Type(mathPackage,
+			new TypeLines(nameof(LoopOverNumberWrapperRunsItsNumberTimes), "has number", "Run Number",
+				"\tfor Degrees(3)", "\t\tvalue")).ParseMembersAndMethods(parser);
+		var runMethod = testType.Methods[0];
+		Assert.That(
+			new VirtualMachine(BinaryGenerator.GenerateFromRunMethods(runMethod, [runMethod])).Execute().
+				Returns!.Value.Number, Is.EqualTo(0 + 1 + 2));
 	}
 
 	[Test]

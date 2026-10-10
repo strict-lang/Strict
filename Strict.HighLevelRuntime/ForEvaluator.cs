@@ -114,7 +114,7 @@ internal sealed class ForEvaluator(Interpreter interpreter)
 		var indexInstance = new ValueInstance(interpreter.numberType, index);
 		loop.Variables[Type.IndexLowercase] = indexInstance;
 		loop.Variables[Type.OuterLowercase] = ctx.Get(Type.ValueLowercase, interpreter.Statistics);
-		var isNumberOnlyIteration = iterator.IsPrimitiveType(interpreter.numberType) || isRangeIterator;
+		var isNumberOnlyIteration = iterator.IsNumberLike(interpreter.numberType) || isRangeIterator;
 		var iterationValue = isNumberOnlyIteration
 			? indexInstance
 			: iterator.GetIteratorValue(itemType, index);
