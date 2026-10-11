@@ -74,24 +74,39 @@ public partial class Type
 	/// <summary>
 	/// Checks whether this type can be adapted to targetType via existing to/from conversions.
 	/// </summary>
-	public bool CanBeConvertedTo(Type targetType, bool allowImplicitConversion = false)
+	public bool CanBeConvertedTo(Type targetType, bool allowImplicitConversion = false) =>
+		IsSameOrCanBeUsedAs(targetType, allowImplicitConversion) ||
+		IsConvertibleWithoutMethod(targetType, allowImplicitConversion) ||
+		FindToOrFromMethod(targetType, allowImplicitConversion) != null;
+
+	/// <summary>
+	/// Our to method or the targetType from method converting our values, null if none is needed.
+	/// </summary>
+	public Method? FindConversionMethod(Type targetType) =>
+		IsConvertibleWithoutMethod(targetType, false)
+			? null
+			: FindToOrFromMethod(targetType, false);
+
+	private bool IsConvertibleWithoutMethod(Type targetType, bool allowImplicitConversion) =>
+		CanConvertBetweenByteListAndCompositeByteList(targetType) ||
+		targetType.CanBeCreatedFromSingleMember(this, allowImplicitConversion);
+
+	private Method? FindToOrFromMethod(Type targetType, bool allowImplicitConversion)
 	{
-		if (IsSameOrCanBeUsedAs(targetType, allowImplicitConversion))
-			return true;
-		if (CanConvertBetweenByteListAndCompositeByteList(targetType))
-			return true;
-		if (targetType.CanBeCreatedFromSingleMember(this, allowImplicitConversion))
-			return true;
 		if (IsBaseTypeExcludedFromImplicitListConversion() ||
 			targetType.IsBaseTypeExcludedFromImplicitListConversion())
-			return false;
-		if (AvailableMethods.TryGetValue(BinaryOperator.To, out var toMethods) &&
-			toMethods.Any(method => method.ReturnType == targetType ||
-				method.ReturnType.IsSameOrCanBeUsedAs(targetType, allowImplicitConversion)))
-			return true;
-		return targetType.AvailableMethods.TryGetValue(Method.From, out var fromMethods) &&
-			fromMethods.Any(method => method.Parameters.Count == 1 &&
-				IsSameOrCanBeUsedAs(method.Parameters[0].Type, allowImplicitConversion));
+			return null;
+		if (AvailableMethods.TryGetValue(BinaryOperator.To, out var toMethods))
+			foreach (var method in toMethods)
+				if (method.ReturnType == targetType ||
+					method.ReturnType.IsSameOrCanBeUsedAs(targetType, allowImplicitConversion))
+					return method;
+		if (targetType.AvailableMethods.TryGetValue(Method.From, out var fromMethods))
+			foreach (var method in fromMethods)
+				if (method.Parameters.Count == 1 &&
+					IsSameOrCanBeUsedAs(method.Parameters[0].Type, allowImplicitConversion))
+					return method;
+		return null;
 	}
 
 	private bool IsBaseTypeExcludedFromImplicitListConversion() =>

@@ -5,7 +5,7 @@ has parameters Scopes
 constant NoMembers = Scope(List(Text), List(Text))
 constant CountMembers = Scope(("number", "unused"), ("Number", "Unused"))
 constant CountMethods = Scope(("Increment", "Twice"), ("Count", "Count"))
-constant CountParameters = Scope(("Increment", "Twice", "Twice"), ("", "times,offset", "times"))
+constant CountParameters = Scope(("Increment", "Twice", "Twice", "Twice types"), ("", "times,offset", "times", "Number"))
 constant SampleParameters = (CountParameters, NoMembers)
 constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers), SampleParameters)
 IsKnown(typeName Text) Boolean
@@ -38,6 +38,9 @@ ParametersOf(typeName Text, method Text, arguments Number) Texts
 		if (value is method) and (ParameterNames(scope.types(index)).Length is arguments)
 			return ParameterNames(scope.types(index))
 	ParameterNames(scope.TypeOf(method))
+ParameterTypesOf(typeName Text, method Text, arguments Number) Texts
+	Sample.ParameterTypesOf("Count", "Twice", 1) is ("Number")
+	ParametersOf(typeName, method + " types", arguments)
 ParameterNames(joined Text) Texts
 	Sample.ParameterNames("a,b") is ("a", "b")
 	joined is "" then List(Text) else joined.Split(",")

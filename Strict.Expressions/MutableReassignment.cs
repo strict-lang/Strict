@@ -55,7 +55,8 @@ public sealed class MutableReassignment : ConcreteExpression
 			!newExpression.ReturnType.CanBeConvertedTo(expression.ReturnType))
 			throw new ValueTypeNotMatchingWithAssignmentType(body, expression.ReturnType,
 				newExpression.ReturnType);
-		return new MutableReassignment(body, expression, newExpression);
+		return new MutableReassignment(body, expression,
+			Conversion.ConvertIfNeeded(body, newExpression, expression.ReturnType));
 	}
 
 	public sealed class ValueTypeNotMatchingWithAssignmentType(Body body,

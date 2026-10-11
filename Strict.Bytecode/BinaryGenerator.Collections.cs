@@ -33,7 +33,7 @@ public sealed partial class BinaryGenerator
 		};
 
 	private static Expression UnwrapToConversion(Expression expression) =>
-		expression is To { Instance: { } inner }
+		expression is To { Instance: { } inner, ConversionType.IsText: true }
 			? inner
 			: expression;
 

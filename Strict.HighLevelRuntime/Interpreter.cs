@@ -136,7 +136,7 @@ public partial class Interpreter
 		if (method is { Name: Method.From, Type.IsGeneric: false })
 			return !instance.Equals(noneInstance)
 				? throw new MethodCall.CannotCallFromConstructorWithExistingInstance()
-				: !runOnlyTests && InitializesMembers(method)
+				: !runOnlyTests && method.InitializesMembers
 					? ExecuteMemberInitializingFrom(method, args, parentContext)
 					: GetFromConstructorValue(method, args);
 		if (instance.TryGetValueTypeInstance()?.ReturnType.Name == Type.System)
@@ -249,6 +249,12 @@ public partial class Interpreter
 		return normalizedArgs ?? args;
 	}
 
+	private ValueInstance ConvertElements(Conversion conversion, ExecutionContext context) =>
+		TryConvertListArgument(RunExpression(conversion.Value, context), conversion.ReturnType,
+			context) ?? throw new InterpreterExecutionFailed(context.Method,
+			InterpreterExecutionFailed.BuildContextMessage(context.Method, conversion, context,
+				"Cannot convert the elements of " + conversion.Value + " to " + conversion.ReturnType));
+
 	private ValueInstance? TryConvertListArgument(ValueInstance argument, Type parameterType,
 		ExecutionContext? parentContext)
 	{
@@ -275,22 +281,12 @@ public partial class Interpreter
 		if (item.IsList && targetType.IsList)
 			return TryConvertListArgument(item, targetType, parentContext);
 		var sourceType = item.TryGetValueTypeInstance()?.ReturnType ?? item.GetType();
-		if (!sourceType.CanBeConvertedTo(targetType))
-			return null;
-		if (sourceType.AvailableMethods.TryGetValue(BinaryOperator.To, out var toMethods))
-		{
-			var toMethod = toMethods.FirstOrDefault(method => method.ReturnType == targetType ||
-				method.ReturnType.IsSameOrCanBeUsedAs(targetType, false));
-			if (toMethod != null)
-				return Execute(toMethod, item, [], parentContext);
-		}
-		if (!targetType.AvailableMethods.TryGetValue(Method.From, out var fromMethods))
-			return null;
-		var fromMethod = fromMethods.FirstOrDefault(method => method.Parameters.Count == 1 &&
-			sourceType.IsSameOrCanBeUsedAs(method.Parameters[0].Type, false));
-		return fromMethod != null
-			? Execute(fromMethod, noneInstance, [item], parentContext)
-			: null;
+		var method = sourceType.FindConversionMethod(targetType);
+		return method == null
+			? null
+			: method.Name == Method.From
+				? Execute(method, noneInstance, [item], parentContext)
+				: Execute(method, item, [], parentContext);
 	}
 
 	private void ValidateInstanceAndArguments(Method method, ValueInstance instance,
@@ -443,6 +439,7 @@ public partial class Interpreter
 			Return r => EvaluateReturn(r, context),
 			To t => toEvaluator.Evaluate(t, context),
 			Not n => EvaluateNot(n, context),
+			Conversion { Elements: not null } conversion => ConvertElements(conversion, context),
 			MethodCall call => methodCallEvaluator.Evaluate(call, context),
 			Declaration c => EvaluateAndAssign(c.Name, c.Value, context, true),
 			MutableReassignment a => a.Target is ListCall listCallTarget

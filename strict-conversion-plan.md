@@ -612,6 +612,23 @@ can change the member it resolves to), `DisposableValues` (interpreter and VM) n
 of keeping all of them. Next: `Text.Length` runs `List.Length` (`for elements / 1`), 3.3M of the
 6.2M TypeCodegen expressions, the VM has native `Length`/`Count`; the context pool's
 ConcurrentStack allocates a node per returned context (17 MB per TypeCodegen run).
+Conversions: a value accepted only through `CanBeConvertedTo` (its `to` or the target `from(x)`,
+like a `ColorValue` stored into a `Color` list element, in a list literal argument or as a parameter)
+is wrapped in `Expressions/Conversion` (printed as the value), README typed collections convert. The
+VM runs member initializing `from` bodies (`Method.InitializesMembers`, shared with the interpreter),
+the Strict compiler converts reassigned values and own or constructor arguments
+(`ListCodegen.Converted`) and its `from` methods return their type. AdjustBrightness logs and
+compares its stored `Color` `to ColorValue`. Binary operator arguments convert too
+(`colors + ColorValue(..)`), a list variable whose elements need a conversion becomes a `Conversion`
+with a `For` over its elements (interpreter converts element by element, BinaryGenerator reuses the
+list aggregation loop). The Strict compiler mirrors this in `Bytecode/ConversionCodegen` (`to` route,
+explicitly typed `from`, operator and `Add`/`Remove` elements, element loops for list variables,
+nested `Color(1, 0, 0)` is `Color(ColorValue(1, 0, 0))` like C#) and `KnownTypes.ParameterTypesOf`
+knows the parameter types of other types' methods. Open: CompactTypeOptimizer stays parked (rounds
+127.5 to 128, Alpha 0), return values are not converted, `to` methods returning a usable but not the
+same type and a list member's `.Add` with a convertible element are only converted by C#.
+Cost: BenchBrightness +34% run time and +15.8 MB allocated (two values per pixel go through
+`ColorValue.from`). Merged 2026-10-11 for README-correct semantics, the speed is a Phase C item.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

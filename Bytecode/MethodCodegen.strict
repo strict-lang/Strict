@@ -59,7 +59,7 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	if ListCodegen(values).IsAppend(node, block)
 		return ListCodegen(values).Added(SyntaxNode("MethodCall", "Add", node.children.Last.children), block)
 	let name = AssignedName(node)
-	let assigned = node.children.Last
+	let assigned = ConversionCodegen(values).Assigned(node, block)
 	let stored = Stored(assigned, name, ListCodegen(values).ElementCopied(node, block), node.Kind is "Declaration")
 	node.Kind is "Declaration" then Declared(stored, name, assigned) else stored
 Stored(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) CodeBlock

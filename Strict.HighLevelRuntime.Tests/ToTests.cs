@@ -68,7 +68,8 @@ public sealed class ToTests
 		Assert.That(
 			fullInterpreter.Execute(program.Methods.Single(method => method.Name == Method.Run),
 				fullInterpreter.noneInstance, []).Text,
-			Is.EqualTo("Image(Size=(2, 2), Colors=((0, 0, 0), (0, 0, 0), (0, 0, 0), ...))"));
+			Is.EqualTo(
+				"Image(Size=(2, 2), Colors=((0, 0, 0, 255), (0, 0, 0, 255), (0, 0, 0, 255), ...))"));
 	}
 
 	[Test]

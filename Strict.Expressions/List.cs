@@ -27,6 +27,9 @@ public sealed class List : Value
 
 	public bool IsWrappedElement { get; private init; }
 
+	internal List WithValues(Type listType, List<Expression> values) =>
+		new(listType, values, LineNumber, IsMutable) { IsWrappedElement = IsWrappedElement };
+
 	private static Type GetCommonBaseType(IReadOnlyList<Expression> values, Body bodyForErrorMessage)
 	{
 		var firstType = values[0].ReturnType;

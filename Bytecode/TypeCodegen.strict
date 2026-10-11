@@ -8,6 +8,7 @@ constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogg
 constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number", "\tlimit"), NoTypes, List(Text))
 constant Iterating = TypeCodegen("Strict/Size", ("has Width Number", "for Iterator(Number)", "\tfor Width", "\t\tindex"), NoTypes, List(Text))
 constant Grid = TypeCodegen("Strict/Size", ("has Width Number", "has Height Number", "for Iterator(Vector2)", "\tfor Height", "\t\tfor Width", "\t\t\tVector2(index, outer.index)"), NoTypes, List(Text))
+constant Created = TypeCodegen("Strict/C", ("has a Number", "from(b Number)", "\ta = b"), NoTypes, List(Text))
 Entry TypeEntry
 	Hello.Entry.Bytes is (83, 4, 1, 2, 72, 105, 1, 45, 29, 0, 0, 1, 55, 1, 0, 1, 2, 45, 69, 0, 32, 0)
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
@@ -67,14 +68,14 @@ Methods(names Texts) List(MethodEntry)
 			methods.Add(Method(index))
 	methods
 Method(start Number) MethodEntry
-	Hello.Method(1).returnType is "None"
+	(Hello.Method(1).returnType, Created.Method(1).returnType) is ("None", "Strict/C")
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"
 	Iterating.Method(1).returnType is "Strict/Iterator(Number)"
 	(Grid.Method(2).instructions(5).texts, Grid.Method(2).instructions(6).texts) is (("index"), ("outer.index"))
 	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
 	let scope = MethodScope(header, generator.target)
-	let returnType = Concrete(header.ReturnType)
+	let returnType = header.tokens(0) is "from" then generator.target.TypeName else Concrete(header.ReturnType)
 	let code = MethodCodegen(generator).Generate(BodyParser(lines).Block(start + 1, 1), scope, BodyType(header))
 	let optimized = LoadReuse(code.instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(returnType), optimized)

@@ -598,6 +598,15 @@ public sealed class RunnerTests
 	}
 
 	[Test]
+	public async Task RunExpressionCallsFromConstructorBodyInVirtualMachine()
+	{
+		await new Runner(Path.Combine(FindRepoRoot(), "ImageProcessing", "Color.strict"),
+			"Color(ColorValue(0.25, 0.5, 0.25))").Run();
+		Assert.That(consoleWriter.ToString(), Does.EndWith("(63.75, 127.5, 63.75, 255)" +
+			Environment.NewLine));
+	}
+
+	[Test]
 	public async Task ImplicitCallInsideLoopUsesMethodInstanceInVirtualMachine()
 	{
 		await new Runner(Path.Combine(FindRepoRoot(), "Compiler", "InstrToAsm.strict"),

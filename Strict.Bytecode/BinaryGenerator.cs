@@ -355,6 +355,9 @@ public sealed partial class BinaryGenerator
 			instructions.Add(new LoadConstantInstruction(registry.AllocateRegister(),
 				GetValueInstanceFromExpression(value)));
 			break;
+		case Conversion { Elements: { } elements }:
+			GenerateInstructionForListAggregation(elements);
+			break;
 		case MethodCall methodCall:
 			GenerateMethodCallInstruction(methodCall);
 			break;
@@ -469,7 +472,7 @@ public sealed partial class BinaryGenerator
 			GenerateInstructionFromExpression(list);
 			return;
 		}
-		if (methodCall.Method.Name != Method.From)
+		if (methodCall.Method.Name != Method.From || methodCall.Method.InitializesMembers)
 			discoveredInvokeMethods.Add(methodCall.Method);
 		Register? instanceRegister = null;
 		if (methodCall.Instance != null)

@@ -7,16 +7,19 @@ constant Choose = SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (No
 Operation(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Operation(SyntaxNode("Binary", "<=", (One, One)), CodeBlock.Empty).Result is 4
 	Plain.Operation(SyntaxNode("Negate", "", List(SyntaxNode) + NoNode), CodeBlock.Empty).instructions.Length is 1
+	Plain.Operation(SyntaxNode("Converted", "Numbers", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 7
 	if node.children.Length < 2
 		return block.Load(InstructionEntry.Binary(OperatorType(node.Kind), (block.register, block.register)))
-	if node.text is in ("and", "or", "is in", "is not in", "else")
+	if (node.Kind is "Converted") or (node.text is in ("and", "or", "is in", "is not in", "else"))
 		return Composite(node, block)
 	let left = values.Expression(node.children(0), block)
-	let right = values.Expression(node.children(1), left)
+	let right = values.Expression(ConversionCodegen(values).Operand(node, block), left)
 	let result = right.Load(InstructionEntry.Binary(OperatorType(node.text), (left.Result, right.Result, right.register)))
 	node.text is in (">=", "<=") then result.Negated else result
 Composite(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Composite(Choose, CodeBlock.Empty).instructions.Last.kind is InstructionType.LoadVariableToRegister
+	if node.Kind is "Converted"
+		return ConversionCodegen(values).Looped(node, block)
 	if node.text is in ("and", "or")
 		return Logical(node, block)
 	node.text is "else" then Choice(node, block) else Contains(node, block)
