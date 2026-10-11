@@ -41,7 +41,19 @@ IsComposite(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsComposite(Choose, CodeBlock.Empty) is true
 	Plain.IsComposite(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
 	let isFixed = (node.Kind is "Converted") or (node.text is in ("and", "or", "is in", "is not in", "else"))
-	isFixed or IsCustom(node, block) or IsMismatched(node, block)
+	isFixed or IsCustom(node, block) or (Decided(node, block) is not "")
+Decided(node SyntaxNode, block CodeBlock) Text
+	Plain.Decided(Mismatched, CodeBlock.Empty) is "false"
+	Plain.Decided(SyntaxNode("Binary", "is not", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is "true"
+	Plain.Decided(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is ""
+	if node.text is not in ("is", "is not")
+		return ""
+	let wanted = node.children.Last
+	let isType = values.IsTypeName(wanted, block) and (wanted.text is not "Error")
+	if (isType is false) and (IsMismatched(node, block) is false)
+		return ""
+	let matches = isType and Matches(values.TypeOf(node.children(0), block), wanted.text)
+	(matches is (node.text is "is")) to Text
 IsMismatched(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsMismatched(Mismatched, CodeBlock.Empty) is true
 	Plain.IsMismatched(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is false
@@ -51,10 +63,17 @@ IsMismatched(node SyntaxNode, block CodeBlock) Boolean
 	let right = values.TypeOf(node.children(1), block)
 	let isInstance = (left.IndexOf("(") > 0) and (right.IndexOf("(") > 0) and (left is not right)
 	isInstance and (values.inference.types.BaseName(left) is values.inference.types.BaseName(right))
+Matches(type Text, wanted Text) Boolean
+	Plain.Matches("Numbers", "Iterator") is true
+	Plain.Matches("A(Number)", "A") is true
+	Plain.Matches("Number", "B") is false
+	let types = values.inference.types
+	let isIterable = (type is in ("Number", "Range", "Text")) or types.IsPlural(type) or (types.BaseName(type) is "List")
+	(type is wanted) or (types.BaseName(type) is wanted) or (wanted is "Iterator") and isIterable
 Composite(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Composite(Choose, CodeBlock.Empty).instructions.Last.kind is InstructionType.LoadVariableToRegister
-	if IsMismatched(node, block)
-		return values.Expression(SyntaxNode("Boolean", node.text is "is" then "false" else "true"), block)
+	if Decided(node, block) is not ""
+		return values.Expression(SyntaxNode("Boolean", Decided(node, block)), block)
 	if node.Kind is "Converted"
 		return ConversionCodegen(values).Looped(node, block)
 	if node.text is in ("and", "or")
@@ -83,7 +102,8 @@ Contains(node SyntaxNode, block CodeBlock) CodeBlock
 Condition(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Condition(SyntaxNode("Boolean", "true"), CodeBlock.Empty).nextId is 1
 	Plain.Condition(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 4
-	let isComparison = (node.Kind is "Binary") and (node.text is in ("is", "is not", "<", ">"))
+	let isCompared = (node.Kind is "Binary") and (node.text is in ("is", "is not", "<", ">"))
+	let isComparison = isCompared and (Decided(node, block) is "")
 	let operand = isComparison then node.children(0) else node
 	let left = values.Expression(operand, block)
 	let truth = InstructionEntry.LoadBoolean(left.register, true)
