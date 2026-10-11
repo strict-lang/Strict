@@ -5,7 +5,6 @@ constant Search = InstructionEntry.Invoke(2, ("Strict/Text", "IndexOf", "Strict/
 constant TextType = TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry))
 constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Combine")
 constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end", "strict_text_combine")
-constant HelperMethods = ("File.ReadLines", "File.Exists", "File.Write", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 constant DefaultedLast = ("strict_text_index", "strict_text_starts", "strict_directory_files", "strict_text_combine")
 constant Texts = MlirFunction(List(TypeEntry), MlirFunction.Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), LengthCall, Search)))
 Helper(typeName Text, name Text, count Number) Text
@@ -63,7 +62,7 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("Process", "RunTool") is "strict_process_runtool"
 	MlirNatives(Texts, 1).TypeHelper("Degrees", "Sin") is "strict_degrees_sin"
 	MlirNatives(Texts, 1).TypeHelper("Vector2", "Atan") is "strict_vector2_atan"
-	if kind + "." + name is not in HelperMethods
+	if kind + "." + name is not in Hosted.Methods
 		return ""
 	let suffix = name is "ReadLines" then "read_lines" else name.Lower
 	"strict_" + kind.Lower + "_" + suffix

@@ -75,9 +75,8 @@ Invoked(frame Frame) Frame
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
 	Hello.Call(Uppered).text is "AB"
-	constant hosted = ("Find", "RunTool", "Run", "OperatingSystem")
-	if (call.TypeName is "Strict/Process") and (call.MethodName is in hosted)
-		return Natives(types).Hosted(call)
+	if Hosted(call).IsHosted
+		return Hosted(call).Result
 	if (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	let type = Natives(types).TypeOf(call.TypeName)

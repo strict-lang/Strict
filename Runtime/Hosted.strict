@@ -1,0 +1,73 @@
+has call Invocation
+constant SystemCall = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "OperatingSystem", "Strict/Text"), List(Number), -1), Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty))
+constant Current = Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("."), Locals.Empty)
+constant Existing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Exists", "Strict/Boolean", "path"), 0, -1), Current)
+constant Listing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Directories", "Strict/List(Text)", "path"), 0, -1), Current)
+constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(90)))
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
+IsHosted Boolean
+	Hosted(SystemCall).IsHosted is true
+	Hosted(Invocation.AddCall).IsHosted is false
+	TypeEntry.ShortName(call.TypeName) + "." + call.MethodName is in Methods
+Result VmValue
+	Hosted(SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
+	Hosted(Existing).Result.IsTrue is true
+	let type = TypeEntry.ShortName(call.TypeName)
+	if type is "Process"
+		return Processed
+	if type is not in ("File", "Directory")
+		return Measured
+	call.MethodName is in ("ReadLines", "Files", "Directories") then Entries else Stored
+Processed VmValue
+	Hosted(SystemCall).Processed.text is in ("Windows", "Linux", "MacOS", "Unknown")
+	let name = call.MethodName
+	if name is "OperatingSystem"
+		return VmValue.OfText(Process.OperatingSystem)
+	let first = call.Arguments.First.text
+	if name is "Find"
+		return VmValue("Strict/Process", 0, "", List(VmValue) + VmValue.OfText(Process.Find(first).executable))
+	let result = Process.RunTool(first, call.Arguments.Last.text)
+	let code = VmValue.OfNumber(result.exitCode)
+	VmValue("Strict/ProcessResult", 0, "", (code, VmValue.OfText(result.Output), VmValue.OfText(result.error)))
+Stored VmValue
+	Hosted(Existing).Stored.IsTrue is true
+	let path = Location
+	if call.MethodName is "Write"
+		File(path).Write(call.Arguments.First.text)
+	if call.MethodName is "Create"
+		Directory.Create(path)
+	call.MethodName is "Exists" then VmValue.OfBoolean(File(path).Exists or Directory.Exists(path)) else VmValue.None
+Entries VmValue
+	Hosted(Listing).Entries.Length > 0 is true
+	let path = Location
+	if call.MethodName is "ReadLines"
+		return Values(File(path).ReadLines)
+	let pattern = call.Arguments.Length > 1 then call.Arguments.Last.text else ""
+	Values(call.MethodName is "Files" then Directory.Files(path, pattern) else Directory.Directories(path))
+Values(texts Texts) VmValue
+	Hosted(Listing).Values(("a", "b")).Length is 2
+	mutable values = List(Mutable(VmValue))
+	for texts
+		values.Add(VmValue.OfText(value))
+	VmValue.OfList(values)
+Location Text
+	Hosted(Existing).Location is "."
+	TypeEntry.ShortName(call.TypeName) is "File" then call.Instance.Member(0).text else call.Arguments.First.text
+Measured VmValue
+	Hosted(Sine).Measured.number is 1
+	let type = TypeEntry.ShortName(call.TypeName)
+	let number = call.Instance.number
+	if type is "Degrees"
+		return VmValue.OfNumber(Turned(Degrees(number)).number)
+	if type is "Vector2"
+		return VmValue.OfNumber(Aimed(Vector2(call.Instance.items.First.number, call.Instance.items.Last.number)))
+	VmValue.OfNumber(Inverted(Ratio(number)).number)
+Turned(angle Math/Degrees) Math/Ratio
+	Hosted(Sine).Turned(Degrees(90)).number is 1
+	call.MethodName is "Sin" then angle.Sin else call.MethodName is "Cos" then angle.Cos else angle.Tan
+Inverted(ratio Math/Ratio) Math/Degrees
+	Hosted(Sine).Inverted(Ratio(1)).number is 45
+	call.MethodName is "Asin" then ratio.Asin else call.MethodName is "Acos" then ratio.Acos else ratio.Atan
+Aimed(vector Math/Vector2) Number
+	Hosted(Sine).Aimed(Vector2(1, 0)) is 90
+	vector.Atan.number

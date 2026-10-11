@@ -5,7 +5,6 @@ constant Shapes = Natives(List(TypeEntry) + Shape)
 constant NewShape = Invocation(InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfNumber(3), Locals.Empty))
 constant Degree = TypeEntry("Strict/Degree", List(MemberEntry) + Width, List(MethodEntry))
 constant NewDegree = Invocation(InstructionEntry.Invoke(1, ("Strict/Degree", "from", "Strict/Degree", "width"), 0, -1), NewShape.frame)
-constant SystemCall = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "OperatingSystem", "Strict/Text"), List(Number), -1), Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty))
 constant Pairs = VmValue.OfList(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.OfList(VmValue.OfNumber(2), VmValue.OfNumber(4)))
 constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
 Result(call Invocation) VmValue
@@ -60,10 +59,7 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 		return VmValue.OfBoolean(call.Arguments.First is in instance.items)
 	if name is "Index"
 		return VmValue.OfNumber(instance.items.Index(call.Arguments.First))
-	if name is not "Exists"
-		return VmValue("Error", 0, "Unsupported native call " + call.TypeName + "." + name, List(VmValue))
-	let path = call.Arguments.Length > 0 then call.Arguments.First.text else instance.items.First.text
-	VmValue.OfBoolean(File(path).Exists or Directory.Exists(path))
+	VmValue("Error", 0, "Unsupported native call " + call.TypeName + "." + name, List(VmValue))
 Searched(name Text, text Text, arguments List(VmValue)) VmValue
 	Shapes.Searched("StartsWith", "abc", (VmValue.OfText("bc"), VmValue.OfNumber(1))).IsTrue is true
 	Shapes.Searched("Substring", "abc", (VmValue.OfNumber(1), VmValue.OfNumber(2))).text is "bc"
@@ -132,21 +128,3 @@ IsNamed(type TypeEntry, name Text) Boolean
 	Shapes.IsNamed(Shape, "Shape") is true
 	Shapes.IsNamed(Shape, "Strict/Other") is false
 	type.JustName is TypeEntry(name, List(MemberEntry), List(MethodEntry)).JustName
-Hosted(call Invocation) VmValue
-	Shapes.Hosted(SystemCall).text is in ("Windows", "Linux", "MacOS", "Unknown")
-	let name = call.MethodName
-	if name is "OperatingSystem"
-		return VmValue.OfText(Process.OperatingSystem)
-	let first = call.Arguments.First.text
-	if name is "Find"
-		return ProcessValue(Process.Find(first))
-	if name is "RunTool"
-		return ResultValue(Process.RunTool(first, call.Arguments.Last.text))
-	ResultValue(Process(call.Instance.items.First.text).Run(first))
-ProcessValue(process Process) VmValue
-	Shapes.ProcessValue(Process("tool")).items.First.text is "tool"
-	VmValue("Strict/Process", 0, "", List(VmValue) + VmValue.OfText(process.executable))
-ResultValue(result ProcessResult) VmValue
-	Shapes.ResultValue(ProcessResult(0, "out", "")).items.First.number is 0
-	let code = VmValue.OfNumber(result.exitCode)
-	VmValue("Strict/ProcessResult", 0, "", (code, VmValue.OfText(result.Output), VmValue.OfText(result.error)))
