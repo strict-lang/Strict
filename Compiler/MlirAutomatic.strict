@@ -41,9 +41,11 @@ Conversion(kind Text) Text
 	Sample.Conversion("Number") is "strict_number_text"
 	Sample.Conversion("Shape") is "strict_automatic_Shape"
 	Sample.Conversion("Logger") is "skip"
-	if kind is "Text"
+	let represented = MlirLayout(function).Represented(kind)
+	if represented is "Text"
 		return ""
-	let helper = MlirTexts(function, 0).Helper(kind)
+	let helper = MlirTexts(function, 0).Helper(represented)
 	if helper is not ""
 		return helper
-	MlirEquality(function, 0).IsKnown(kind) then "strict_automatic_" + MlirEquality(function, 0).Symbol(kind) else "skip"
+	let equality = MlirEquality(function, 0)
+	equality.IsKnown(represented) then "strict_automatic_" + equality.Symbol(represented) else "skip"

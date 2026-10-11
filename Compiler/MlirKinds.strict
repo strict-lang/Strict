@@ -32,7 +32,7 @@ Calculated(writer Number, entry InstructionEntry) Text
 		return "Boolean"
 	if entry.kind < InstructionType.StoreSeparator or entry.kind > InstructionType.ArithmeticSeparator
 		return "Number"
-	let left = KindOf(writer, entry.payload(1))
+	let left = MlirLayout(function).Represented(KindOf(writer, entry.payload(1)))
 	if left.StartsWith("List(")
 		return left
 	let isText = (left is "Text") or IsText(writer, entry.payload(2))
@@ -40,7 +40,7 @@ Calculated(writer Number, entry InstructionEntry) Text
 IsText(position Number, register Number) Boolean
 	Graded.IsText(4, 1) is true
 	Graded.IsText(4, 2) is false
-	KindOf(position, register) is "Text"
+	MlirLayout(function).Represented(KindOf(position, register)) is "Text"
 Writer(position Number, register Number) Number
 	Graded.Writer(5, 1) is 2
 	Graded.Writer(1, 7) is -1
@@ -103,7 +103,11 @@ FieldKind(writer Number, entry InstructionEntry) Text
 	Graded.FieldKind(7, Width) is "Number"
 	Graded.FieldKind(1, Characters) is "Text"
 	let kind = KindOf(writer, entry.payload(1))
-	if MlirInstances(function, 0).IsStruct(kind) is false
+	let layout = MlirLayout(function)
+	let wrapped = layout.Wrapped(kind)
+	if wrapped is not ""
+		return wrapped
+	if layout.IsStruct(kind) is false
 		return kind
 	let member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
 	member is "" then "Number" else member
@@ -118,9 +122,10 @@ ElementKind(container Text) Text
 	Graded.ElementKind("List(TypeEntry)") is "TypeEntry"
 	Graded.ElementKind("Text") is "Character"
 	Graded.ElementKind("Number") is "Number"
-	if container is "Text"
+	let represented = MlirLayout(function).Represented(container)
+	if represented is "Text"
 		return "Character"
-	container.StartsWith("List(") then container.Substring(5, container.Length - 6) else "Number"
+	represented.StartsWith("List(") then represented.Substring(5, represented.Length - 6) else "Number"
 ConstantKind(literal Runtime/VmValue, texts Texts) Text
 	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfText("b")), ("a", "b")) is "List(Text)"
 	Graded.ConstantKind(VmValue.OfNumber(1), List(Text)) is "Number"

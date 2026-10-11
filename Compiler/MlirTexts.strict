@@ -18,18 +18,35 @@ IsConversion Boolean
 		return false
 	let decoder = PayloadDecoder(entry)
 	let target = MlirKinds(function).Short(decoder.Text(4 + entry.payload(3)))
-	(decoder.Text(2) is "to") and (target is in ("Text", "Number"))
+	let isTo = decoder.Text(2) is "to"
+	isTo and ((target is in ("Text", "Number", "Character")) or IsRetyped(entry, target))
+IsRetyped(entry InstructionEntry, target Text) Boolean
+	MlirTexts(Joined, 7).IsRetyped(Joined.method.instructions(7), "Number") is true
+	MlirTexts(Joined, 7).IsRetyped(Joined.method.instructions(7), "Shape") is false
+	let source = MlirKinds(function).KindOf(position, Instance(entry))
+	let own = MlirCalls(function, position).Callee(function.TypeOf(source), "to", 0, target)
+	let layout = MlirLayout(function)
+	(own.instructions.Length is 0) and (layout.Represented(source) is layout.Represented(target))
+Instance(entry InstructionEntry) Number
+	MlirTexts(Joined, 7).Instance(Joined.method.instructions(7)) is 1
+	let countPosition = 5 + entry.payload(3)
+	entry.payload(countPosition + 2 + entry.payload(countPosition))
 Converted(entry InstructionEntry) Texts
 	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 3
-	let countPosition = 5 + entry.payload(3)
-	let instance = entry.payload(countPosition + 2 + entry.payload(countPosition))
-	if MlirKinds(function).Short(PayloadDecoder(entry).Text(4 + entry.payload(3))) is "Number"
-		return Numbered(instance, "%r" + entry.payload(0))
-	TextBits(instance, "v") + function.Store(Temp("vx"), "%r" + entry.payload(0))
+	let instance = Instance(entry)
+	let result = "%r" + entry.payload(0)
+	let target = MlirKinds(function).Short(PayloadDecoder(entry).Text(4 + entry.payload(3)))
+	if target is "Number"
+		return Numbered(instance, result)
+	if target is not in ("Text", "Character")
+		return function.Copied("%r" + instance, result, Temp("y"))
+	let text = TextBits(instance, "v")
+	let first = MlirMemory(function, position).Called(Temp("vc"), "strict_text_at", (Temp("vx"), "%zero"))
+	target is "Text" then text + function.Store(Temp("vx"), result) else text + first + function.Store(Temp("vc"), result)
 Numbered(instance Number, target Text) Texts
 	MlirTexts(Joined, 1).Numbered(0, "%r1").Length is 3
 	let loaded = function.Load(Temp("n"), "%r" + instance)
-	if MlirKinds(function).KindOf(position, instance) is not "Text"
+	if MlirKinds(function).IsText(position, instance) is false
 		return (loaded, function.Store(Temp("n"), target))
 	let parsed = MlirMemory(function, position).Called(Temp("nv"), "strict_text_number", List(Text) + Temp("n"))
 	(loaded, parsed, function.Store(Temp("nv"), target))
@@ -37,7 +54,7 @@ TextBits(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).TextBits(2, "b") is ("    %t3bx = llvm.load %r2 : !llvm.ptr -> f64")
 	MlirTexts(Joined, 5).TextBits(2, "b").Length is 2
 	MlirTexts(Joined, 6).TextBits(1, "b").Length is 2
-	let kind = MlirKinds(function).KindOf(position, register)
+	let kind = Printable(MlirKinds(function).KindOf(position, register))
 	if kind is "Text"
 		return List(Text) + function.Load(Temp(suffix + "x"), "%r" + register)
 	let loaded = function.Load(Temp(suffix), "%r" + register)
@@ -45,6 +62,10 @@ TextBits(register Number, suffix Text) Texts
 	if helper is ""
 		return Described(loaded, suffix, kind)
 	(loaded, MlirMemory(function, position).Called(Temp(suffix + "x"), helper, List(Text) + Temp(suffix)))
+Printable(kind Text) Text
+	MlirTexts(Joined, 0).Printable("Number") is "Number"
+	let own = MlirCalls(function, position).Callee(function.TypeOf(kind), "to", 0, "Text")
+	own.instructions.Length > 0 then kind else MlirLayout(function).Represented(kind)
 Helper(kind Text) Text
 	MlirTexts(Joined, 0).Helper("Boolean") is "strict_boolean_text"
 	MlirTexts(Joined, 0).Helper("List(Text)") is "strict_list_text_text"
@@ -53,7 +74,7 @@ Helper(kind Text) Text
 		return "strict_" + kind.Lower + "_text"
 	if kind.StartsWith("List(") is false
 		return ""
-	let element = MlirKinds(function).ElementKind(kind)
+	let element = MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind))
 	element is in ("Text", "Number") then "strict_list_text_" + element.Lower else ""
 Described(loaded Text, suffix Text, kind Text) Texts
 	MlirTexts(Joined, 1).Described("", "d", "Shape").Last.IndexOf("@strict_automatic_Shape(") > 0 is true

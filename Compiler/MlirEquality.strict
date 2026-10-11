@@ -11,8 +11,9 @@ Handles(entry InstructionEntry) Boolean
 	let kinds = MlirKinds(function)
 	if kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))
 		return true
-	let kind = kinds.KindOf(position, entry.payload(1))
-	let isValue = kind.StartsWith("List(") or MlirInstances(function, 0).IsStruct(kind)
+	let layout = MlirLayout(function)
+	let kind = layout.Represented(kinds.KindOf(position, entry.payload(1)))
+	let isValue = kind.StartsWith("List(") or layout.IsStruct(kind)
 	isValue and (entry.kind is in (InstructionType.Equal, InstructionType.NotEqual))
 Compared(entry InstructionEntry) Texts
 	MlirEquality(Same, 2).Compared(Same.method.instructions(2)).Length is 5
@@ -20,7 +21,7 @@ Compared(entry InstructionEntry) Texts
 		return List(Text) + MlirStatements(function, position).Unsupported("Text operator " + entry.kind)
 	let kinds = MlirKinds(function)
 	let isText = kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))
-	let kind = isText then "Text" else kinds.KindOf(position, entry.payload(1))
+	let kind = isText then "Text" else MlirLayout(function).Represented(kinds.KindOf(position, entry.payload(1)))
 	let loads = Operand(entry.payload(1), "l", isText) + Operand(entry.payload(2), "r", isText)
 	let predicate = entry.kind is InstructionType.Equal then "one" else "oeq"
 	let flag = "    " + Temp("f") + " = arith.cmpf " + predicate + ", " + Temp("q") + ", %zero : f64"
@@ -29,7 +30,8 @@ Compared(entry InstructionEntry) Texts
 	entry.payload(0) is not 3 then lines else lines + MlirStatements(function, position).Numbered(Temp("f"), entry)
 Operand(register Number, suffix Text, isText Boolean) Texts
 	MlirEquality(Same, 2).Operand(1, "l", false) is ("    %t2l = llvm.load %r1 : !llvm.ptr -> f64")
-	if (isText is false) or (MlirKinds(function).KindOf(position, register) is not "Character")
+	let kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register))
+	if (isText is false) or (kind is not "Character")
 		return List(Text) + function.Load(Temp(suffix), "%r" + register)
 	let code = function.Load(Temp(suffix + "c"), "%r" + register)
 	(code, MlirMemory(function, position).Called(Temp(suffix), "strict_character_text", List(Text) + Temp(suffix + "c")))
@@ -38,7 +40,7 @@ Call(kind Text, result Text, left Text, right Text) Texts
 	MlirEquality(Same, 2).Call("List(Text)", "%q", "%l", "%r").Length is 2
 	if kind.StartsWith("List(") is false
 		return List(Text) + MlirMemory(function, position).Called(result, Helper(kind), (left, right))
-	let helper = Helper(MlirKinds(function).ElementKind(kind))
+	let helper = Helper(MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind)))
 	let element = "    " + result + "e = func.constant @" + helper + " : (f64, f64) -> f64"
 	let call = "    " + result + " = func.call @strict_list_equal(" + left + ", " + right + ", " + result + "e)"
 	(element, call + ListSignature)
@@ -52,7 +54,7 @@ Helper(kind Text) Text
 IsKnown(kind Text) Boolean
 	MlirEquality(Same, 2).IsKnown("Shape") is true
 	MlirEquality(Same, 2).IsKnown("Number") is false
-	if MlirInstances(function, 0).IsStruct(kind) is false
+	if MlirLayout(function).IsStruct(kind) is false
 		return false
 	for function.types
 		if MlirKinds(function).Short(value.Name) is kind
@@ -87,7 +89,8 @@ Member(member MemberEntry, slot Number) Texts
 	let loads = memory.Loaded("%pa", slot, "a" + slot) + memory.Loaded("%pb", slot, "b" + slot)
 	let left = memory.Temp("a" + slot + "v")
 	let right = memory.Temp("b" + slot + "v")
-	let compared = Call(MlirKinds(function).Short(member.typeName), "%e" + slot, left, right)
+	let kind = MlirLayout(function).Represented(MlirKinds(function).Short(member.typeName))
+	let compared = Call(kind, "%e" + slot, left, right)
 	let check = "    %s" + slot + " = arith.cmpf one, %e" + slot + ", %zero : f64"
 	let next = "    cf.cond_br %s" + slot + ", ^m" + (slot + 1) + ", ^different"
 	List(Text) + ("  ^m" + slot + ":") + loads + compared + check + next

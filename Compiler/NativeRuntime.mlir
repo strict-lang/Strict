@@ -1,6 +1,13 @@
   llvm.func @llvm.eh.unwind.init()
   llvm.func @exit(i32)
   llvm.func @memset(!llvm.ptr, i32, i64) -> !llvm.ptr
+  llvm.func @sin(f64) -> f64
+  llvm.func @cos(f64) -> f64
+  llvm.func @tan(f64) -> f64
+  llvm.func @asin(f64) -> f64
+  llvm.func @acos(f64) -> f64
+  llvm.func @atan(f64) -> f64
+  llvm.func @atan2(f64, f64) -> f64
   llvm.mlir.global internal @strict_gc_base(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_top(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_limit(0 : i64) : i64
@@ -1319,6 +1326,72 @@
     %result = llvm.intr.floor(%number) : (f64) -> f64
     return %result : f64
   }
+  func.func private @strict_snapped(%number: f64) -> f64 {
+    %limit = arith.constant 1.0e-10 : f64
+    %rounded = llvm.intr.round(%number) : (f64) -> f64
+    %difference = arith.subf %number, %rounded : f64
+    %distance = llvm.intr.fabs(%difference) : (f64) -> f64
+    %isNear = arith.cmpf olt, %distance, %limit : f64
+    %result = arith.select %isNear, %rounded, %number : f64
+    return %result : f64
+  }
+  func.func private @strict_radians(%degrees: f64) -> f64 {
+    %pi = arith.constant 3.141592653589793 : f64
+    %half = arith.constant 180.0 : f64
+    %scaled = arith.mulf %degrees, %pi : f64
+    %result = arith.divf %scaled, %half : f64
+    return %result : f64
+  }
+  func.func private @strict_degrees(%radians: f64) -> f64 {
+    %pi = arith.constant 3.141592653589793 : f64
+    %half = arith.constant 180.0 : f64
+    %scaled = arith.mulf %radians, %half : f64
+    %degrees = arith.divf %scaled, %pi : f64
+    %result = func.call @strict_snapped(%degrees) : (f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_degrees_sin(%degrees: f64) -> f64 {
+    %radians = func.call @strict_radians(%degrees) : (f64) -> f64
+    %sine = llvm.call @sin(%radians) : (f64) -> f64
+    %result = func.call @strict_snapped(%sine) : (f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_degrees_cos(%degrees: f64) -> f64 {
+    %radians = func.call @strict_radians(%degrees) : (f64) -> f64
+    %cosine = llvm.call @cos(%radians) : (f64) -> f64
+    %result = func.call @strict_snapped(%cosine) : (f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_degrees_tan(%degrees: f64) -> f64 {
+    %radians = func.call @strict_radians(%degrees) : (f64) -> f64
+    %tangent = llvm.call @tan(%radians) : (f64) -> f64
+    %result = func.call @strict_snapped(%tangent) : (f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_ratio_asin(%ratio: f64) -> f64 {
+    %angle = llvm.call @asin(%ratio) : (f64) -> f64
+    %result = func.call @strict_degrees(%angle) : (f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_ratio_acos(%ratio: f64) -> f64 {
+    %angle = llvm.call @acos(%ratio) : (f64) -> f64
+    %result = func.call @strict_degrees(%angle) : (f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_ratio_atan(%ratio: f64) -> f64 {
+    %angle = llvm.call @atan(%ratio) : (f64) -> f64
+    %result = func.call @strict_degrees(%angle) : (f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_vector2_atan(%vector: f64) -> f64 {
+    %first = arith.constant 0.0 : f64
+    %second = arith.constant 1.0 : f64
+    %x = func.call @strict_list_get(%vector, %first) : (f64, f64) -> f64
+    %y = func.call @strict_list_get(%vector, %second) : (f64, f64) -> f64
+    %angle = llvm.call @atan2(%x, %y) : (f64, f64) -> f64
+    %result = func.call @strict_degrees(%angle) : (f64) -> f64
+    return %result : f64
+  }
   func.func private @strict_text_number(%text: f64) -> f64 {
     %a = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
@@ -1838,12 +1911,38 @@
     %end = llvm.getelementptr %buffer[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %terminator, %end : i8, !llvm.ptr
     %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
-    %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    %skipped = func.call @strict_bom_length(%buffer, %count) : (!llvm.ptr, i64) -> i64
+    %text = llvm.getelementptr %buffer[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %result = func.call @strict_bits(%text) : (!llvm.ptr) -> f64
     return %result : f64
   ^absent:
     %empty = llvm.mlir.addressof @strict_empty : !llvm.ptr
     %none = func.call @strict_bits(%empty) : (!llvm.ptr) -> f64
     return %none : f64
+  }
+  func.func private @strict_bom_length(%buffer: !llvm.ptr, %count: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %three = arith.constant 3 : i64
+    %enough = arith.cmpi sge, %count, %three : i64
+    cf.cond_br %enough, ^check, ^done(%none : i64)
+  ^check:
+    %firstMark = arith.constant -17 : i8
+    %secondMark = arith.constant -69 : i8
+    %thirdMark = arith.constant -65 : i8
+    %first = llvm.load %buffer : !llvm.ptr -> i8
+    %secondSlot = llvm.getelementptr %buffer[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %second = llvm.load %secondSlot : !llvm.ptr -> i8
+    %thirdSlot = llvm.getelementptr %buffer[2] : (!llvm.ptr) -> !llvm.ptr, i8
+    %third = llvm.load %thirdSlot : !llvm.ptr -> i8
+    %isFirst = arith.cmpi eq, %first, %firstMark : i8
+    %isSecond = arith.cmpi eq, %second, %secondMark : i8
+    %isThird = arith.cmpi eq, %third, %thirdMark : i8
+    %firstTwo = arith.andi %isFirst, %isSecond : i1
+    %isMark = arith.andi %firstTwo, %isThird : i1
+    %skip = arith.select %isMark, %three, %none : i64
+    cf.br ^done(%skip : i64)
+  ^done(%length: i64):
+    return %length : i64
   }
   func.func private @strict_file_read_lines(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -1916,12 +2015,8 @@
     return %result : f64
   }
   func.func private @strict_process_find(%self: f64, %name: f64) -> f64 {
-    %size = arith.constant 8 : i64
     %path = func.call @strict_tool_path(%name) : (f64) -> f64
-    %block = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
-    llvm.store %path, %block : f64, !llvm.ptr
-    %result = func.call @strict_bits(%block) : (!llvm.ptr) -> f64
-    return %result : f64
+    return %path : f64
   }
   llvm.mlir.global internal constant @strict_tool_missing("tool not found: \00") : !llvm.array<17 x i8>
   func.func private @strict_process_runtool(%self: f64, %name: f64, %arguments: f64) -> f64 {

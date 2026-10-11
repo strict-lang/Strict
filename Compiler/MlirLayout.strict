@@ -1,0 +1,59 @@
+has function MlirFunction
+constant Degrees = TypeEntry("Strict/Degrees", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
+constant Angle = TypeEntry("Strict/Angle", (MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false)), List(MethodEntry))
+constant Wrapping = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Degrees + Angle, Degrees, MethodEntry.CountingLoop))
+constant Widened = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "width"), InstructionEntry.Return(0))
+constant Packing = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("from", List(MemberEntry), "Strict/Shape", Widened)))
+IsStruct(typeName Text) Boolean
+	Wrapping.IsStruct("Shape") is true
+	Wrapping.IsStruct("Strict/Degrees") is false
+	Wrapping.IsStruct("List(Number)") is false
+	let short = MlirKinds(function).Short(typeName)
+	(IsBase(short) is false) and (Wrapped(short) is "")
+Represented(kind Text) Text
+	Wrapping.Represented("Angle") is "Number"
+	Wrapping.Represented("Shape") is "Shape"
+	let wrapped = Wrapped(kind)
+	wrapped is "" then kind else Represented(wrapped)
+Wrapped(typeName Text) Text
+	Wrapping.Wrapped("Angle") is "Degrees"
+	Wrapping.Wrapped("Shape") is ""
+	Wrapping.Wrapped("Number") is ""
+	let short = MlirKinds(function).Short(typeName)
+	if IsBase(short) or (short is in ("Logger", "File"))
+		return ""
+	let changing = Changing(function.TypeOf(short))
+	changing.Length is 1 then MlirKinds(function).Short(changing.First.typeName) else ""
+Changing(type TypeEntry) List(MemberEntry)
+	Wrapping.Changing(MlirFunction.Shape).Length is 2
+	for type.members
+		if value.IsConstant is false
+			value
+IsInitializer Boolean
+	Wrapping.IsInitializer is false
+	Packing.IsInitializer is true
+	if (function.method.Name is not "from") or (IsStruct(function.type.Name) is false)
+		return false
+	let names = MlirInstances(function, 0).StoredNames(function.type)
+	for function.method.instructions
+		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is in names)
+			return true
+	false
+Returned(position Number) Texts
+	Wrapping.Returned(-2) is ("    return %zero : f64")
+	Packing.Returned(2).Last is "    return %t2nf : f64"
+	if IsInitializer is false
+		return List(Text) + "    return %zero : f64"
+	let memory = MlirMemory(function, position)
+	let stored = MlirInstances(function, 0).Stored(function.type)
+	mutable lines = memory.Allocated(stored.Length, "n")
+	for stored
+		let temp = memory.Temp("v" + index)
+		let copied = (function.Load(temp, "%v_" + value.Name), function.Store(temp, memory.Temp("n" + index)))
+		lines = lines + memory.Slot(memory.Temp("np"), index, "n" + index) + copied
+	lines + memory.Bits(memory.Temp("np"), "n") + ("    return " + memory.Temp("nf") + " : f64")
+IsBase(short Text) Boolean
+	Wrapping.IsBase("Character") is true
+	Wrapping.IsBase("List(Text)") is true
+	Wrapping.IsBase("Shape") is false
+	(short is in ("Number", "Text", "Boolean", "Character", "None")) or short.StartsWith("List(")

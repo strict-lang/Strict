@@ -89,7 +89,7 @@ Body Texts
 	for method.instructions
 		lines = lines + Label(index) + Emitted(index)
 	let isReturning = method.instructions.Length > 0 and (method.instructions.Last.kind is InstructionType.Return)
-	isReturning then lines else lines + "    return %zero : f64"
+	isReturning then lines else lines + MlirLayout(value).Returned(-2)
 Label(position Number) Texts
 	Counter.Label(0).Length is 0
 	constant terminators = (InstructionType.Return, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)

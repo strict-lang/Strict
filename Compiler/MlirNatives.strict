@@ -5,7 +5,7 @@ constant Search = InstructionEntry.Invoke(2, ("Strict/Text", "IndexOf", "Strict/
 constant TextType = TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry))
 constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Combine")
 constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end", "strict_text_combine")
-constant SystemNames = ("File.ReadLines", "File.Exists", "File.Write", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem")
+constant HelperMethods = ("File.ReadLines", "File.Exists", "File.Write", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 constant DefaultedLast = ("strict_text_index", "strict_text_starts", "strict_directory_files", "strict_text_combine")
 constant Texts = MlirFunction(List(TypeEntry), MlirFunction.Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), Length, Search)))
 Helper(typeName Text, name Text, count Number) Text
@@ -30,9 +30,7 @@ ValueHelper(kind Text, name Text, count Number) Text
 		return "strict_" + name.Lower + (count is 0 then "_one" else "")
 	if (kind is "Boolean") and (name is in ("not", "and", "or", "xor"))
 		return "strict_" + name
-	if kind is in ("File", "Directory", "Process")
-		return SystemHelper(kind, name)
-	kind is "Text" then TextHelper(name) else ""
+	kind is "Text" then TextHelper(name) else TypeHelper(kind, name)
 CollectionHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "in", 1) is "strict_list_has_text"
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "Remove", 1) is ""
@@ -44,15 +42,18 @@ CollectionHelper(kind Text, name Text, count Number) Text
 Finder(element Text, operation Text) Text
 	MlirNatives(Texts, 1).Finder("Text", "has") is "strict_list_has_text"
 	MlirNatives(Texts, 1).Finder("Shape", "index") is ""
-	if element is "Text"
+	let represented = MlirLayout(function).Represented(element)
+	if represented is "Text"
 		return "strict_list_" + operation + "_text"
-	element is in ("Number", "Boolean", "Character") then "strict_list_" + operation + "_number" else ""
-SystemHelper(kind Text, name Text) Text
-	MlirNatives(Texts, 1).SystemHelper("File", "ReadLines") is "strict_file_read_lines"
-	MlirNatives(Texts, 1).SystemHelper("Directory", "Files") is "strict_directory_files"
-	MlirNatives(Texts, 1).SystemHelper("File", "Delete") is ""
-	MlirNatives(Texts, 1).SystemHelper("Process", "RunTool") is "strict_process_runtool"
-	if kind + "." + name is not in SystemNames
+	represented is in ("Number", "Boolean", "Character") then "strict_list_" + operation + "_number" else ""
+TypeHelper(kind Text, name Text) Text
+	MlirNatives(Texts, 1).TypeHelper("File", "ReadLines") is "strict_file_read_lines"
+	MlirNatives(Texts, 1).TypeHelper("Directory", "Files") is "strict_directory_files"
+	MlirNatives(Texts, 1).TypeHelper("File", "Delete") is ""
+	MlirNatives(Texts, 1).TypeHelper("Process", "RunTool") is "strict_process_runtool"
+	MlirNatives(Texts, 1).TypeHelper("Degrees", "Sin") is "strict_degrees_sin"
+	MlirNatives(Texts, 1).TypeHelper("Vector2", "Atan") is "strict_vector2_atan"
+	if kind + "." + name is not in HelperMethods
 		return ""
 	let suffix = name is "ReadLines" then "read_lines" else name.Lower
 	"strict_" + kind.Lower + "_" + suffix

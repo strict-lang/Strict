@@ -7,6 +7,8 @@ constant LinuxDownload = "https://github.com/llvm/llvm-project/releases/download
 constant LinuxMembers = " LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate"
 constant Accept = " --accept-package-agreements --accept-source-agreements"
 constant Pacman = "C:\\msys64\\usr\\bin\\pacman.exe"
+constant SingleThreaded = " --mlir-disable-threading"
+constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -O2 -c -Wno-override-module"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
 Located(name Text) Text
@@ -68,3 +70,44 @@ Installing(missing Texts) Text
 	let where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
 	let problem = started.Failed then ", could not start it: " + started.error else ""
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
+Built(base Text) Text
+	OnWindows.Built("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+	let lowered = Lowered(base)
+	if lowered is not ""
+		return lowered
+	let executable = base + Extension
+	let system = platform is Platform.Windows then " -Wl,-Brepro" else " -lm"
+	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + system
+	let linked = ToolRunner(Located("clang")).Execute(linking)
+	linked.Failed then "clang failed: " + linked.error else "Built " + executable
+CrossBuilt(base Text) Text
+	OnWindows.CrossBuilt("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+	let linux = base + ".linux"
+	let lowered = Lowered(linux)
+	if lowered is not ""
+		return lowered
+	let compiling = Quoted(linux + ".ll") + " -o " + Quoted(linux + ".o") + LinuxTarget
+	let compiled = ToolRunner(Located("clang")).Execute(compiling)
+	if compiled.Failed
+		return "clang failed: " + compiled.error
+	let linking = "-e gcc -static " + Quoted(WslPath(linux + ".o")) + " -o " + Quoted(WslPath(base)) + " -lm"
+	let linked = ToolRunner("wsl").Execute(linking)
+	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + base + " for Linux"
+WslPath(path Text) Text
+	OnWindows.WslPath("C:/code/A") is "/mnt/c/code/A"
+	OnWindows.WslPath("D:\\B\\c") is "/mnt/d/B/c"
+	"/mnt/" + path.Substring(0, 1).Lower + path.Substring(2, path.Length - 2).Replace("\\", "/")
+Lowered(base Text) Text
+	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+	constant passes = " --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm"
+	let output = " --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
+	let lowering = Quoted(base + ".mlir") + SingleThreaded + passes + output
+	let lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
+	if lowered.Failed
+		return "mlir-opt failed: " + lowered.error
+	let translation = SingleThreaded + " --mlir-to-llvmir " + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
+	let translated = ToolRunner(Located("mlir-translate")).Execute(translation)
+	translated.Failed then "mlir-translate failed: " + translated.error else ""
+Quoted(path Text) Text
+	OnWindows.Quoted("a b") is "\"a b\""
+	"\"" + path + "\""

@@ -80,9 +80,12 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
 	Plain.Indexed(SyntaxNode("MethodCall", "text", (NewGreeter, One)), CodeBlock.Empty).nextId is 1
-	let isNamed = node.Kind is "Call"
+	let named = ConstantFolding(target.TypeName, inference).Folded(SyntaxNode("Identifier", node.text))
+	let isComputed = (named.Kind is not "Identifier") and (named.IsLiteral is false)
+	let isNamed = (node.Kind is "Call") and (isComputed is false)
 	let name = isNamed then node.text else "list" + block.nextId
-	let list = isNamed then block else Expression(SyntaxNode("Member", node.text, node.children(0)), block)
+	let source = node.Kind is "Call" then named else SyntaxNode("Member", node.text, node.children(0))
+	let list = isNamed then block else Expression(source, block)
 	let stored = isNamed then list else list.Stored(name).WithNextId
 	let index = Expression(GridIndex(node), stored)
 	index.Load(InstructionEntry(InstructionType.IndexCall, List(Text) + name, (index.register, index.Result, -1)))

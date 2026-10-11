@@ -31,7 +31,7 @@ Collection Text
 	let entry = function.method.instructions(position)
 	if entry.payload(1) is 1
 		return ""
-	let kind = MlirKinds(function).KindOf(position, entry.payload(0))
+	let kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, entry.payload(0)))
 	(kind is "Text") or kind.StartsWith("List(") then kind else ""
 RangeBounds(entry InstructionEntry) Texts
 	Counting.RangeBounds(InstructionEntry.LoopBegin(0, 1)).Length is 9

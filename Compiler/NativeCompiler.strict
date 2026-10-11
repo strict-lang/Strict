@@ -1,6 +1,4 @@
 has logger
-constant SingleThreaded = " --mlir-disable-threading"
-constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -O2 -c -Wno-override-module"
 constant Usage = "Usage: NativeCompiler [build|test|check|run] <file or folder> <root> [arguments]"
 Run(arguments Texts) Number
 	if arguments.Length < 2
@@ -28,14 +26,14 @@ Compiling(arguments Texts) Number
 	Compile(arguments(0), arguments(1))
 	0
 Test(path Text, root Text) Number
-	let program = MlirModule(FileCompiler(logger).Compiled(path, root, true), "Tests").Text
+	let program = MlirModule(FileCompiler(logger).Compiled(path, root, true), TestCodegen.Runner).Text
 	let unsupported = Unsupported(program)
 	if unsupported is not -1
 		logger.Log("Tests of " + path + " not compiled, " + program.Substring(unsupported, program.Length - unsupported))
 		return 1
 	let base = path.Substring(0, path.Length - 7) + ".test"
 	File(base + ".mlir").Write(Mlir(program, root, Platform.Current))
-	let built = Built(base, Toolchain(Platform.Current, root))
+	let built = Toolchain(Platform.Current, root).Built(base)
 	if built.StartsWith("Built ") is false
 		logger.Log(built)
 		return 1
@@ -43,10 +41,19 @@ Test(path Text, root Text) Number
 Tested(executable Text, path Text) Number
 	NativeCompiler.Tested("Compiler/output/missing.exe", "a") is 127
 	let result = ToolRunner(executable).Execute("")
-	let failures = result.exitCode to Text + " failed in " + path
-	let summary = result.exitCode is 0 then "All tests passed in " + path else failures
-	logger.Log(result.Output + summary + (result.error is "" then "" else " " + result.error))
-	result.exitCode
+	logger.Log(result.Output + Summary(result.exitCode, path) + (result.error is "" then "" else " " + result.error))
+	IsCrash(result.exitCode) then 128 else result.exitCode
+Summary(code Number, path Text) Text
+	NativeCompiler.Summary(0, "a") is "All tests passed in a"
+	NativeCompiler.Summary(2, "a") is "2 failed in a"
+	NativeCompiler.Summary(139, "a") is "Tests crashed with exit code 139 in a"
+	if code is 0
+		return "All tests passed in " + path
+	IsCrash(code) then "Tests crashed with exit code " + code + " in " + path else code to Text + " failed in " + path
+IsCrash(code Number) Boolean
+	NativeCompiler.IsCrash(139) is true
+	NativeCompiler.IsCrash(127) is false
+	(code > 128) or (code < 0)
 Compile(path Text, root Text)
 	let program = MlirModule(FileCompiler(logger).Compiled(path, root, false), "Run").Text
 	let unsupported = Unsupported(program)
@@ -60,58 +67,17 @@ Compile(path Text, root Text)
 		Build(path.Substring(0, path.Length - 7), program, tools)
 Build(base Text, program Text, tools Toolchain)
 	File(base + ".mlir").Write(Mlir(program, tools.root, Platform.Current))
-	logger.Log(Built(base, tools))
+	logger.Log(tools.Built(base))
 	if Platform.Current is Platform.Windows
 		File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
-		logger.Log(CrossBuilt(base, tools))
+		logger.Log(tools.CrossBuilt(base))
 Mlir(program Text, root Text, platform Number) Text
 	NativeCompiler.Mlir("module {\n}", ".", Platform.Linux).Length > 100000 is true
 	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
 	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(platform) + ".mlir").ReadLines
 	program.Substring(0, program.Length - 1) + runtime + "\n" + Text.Combine(system, "\n") + "\n}"
-Built(base Text, tools Toolchain) Text
-	NativeCompiler.Built("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed") is true
-	let lowered = Lowered(base, tools)
-	if lowered is not ""
-		return lowered
-	let executable = base + tools.Extension
-	constant system = Platform.Current is Platform.Windows then " -Wl,-Brepro" else " -lm"
-	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + system
-	let linked = ToolRunner(tools.Located("clang")).Execute(linking)
-	linked.Failed then "clang failed: " + linked.error else "Built " + executable
-CrossBuilt(base Text, tools Toolchain) Text
-	NativeCompiler.CrossBuilt("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed") is true
-	let linux = base + ".linux"
-	let lowered = Lowered(linux, tools)
-	if lowered is not ""
-		return lowered
-	let compiling = Quoted(linux + ".ll") + " -o " + Quoted(linux + ".o") + LinuxTarget
-	let compiled = ToolRunner(tools.Located("clang")).Execute(compiling)
-	if compiled.Failed
-		return "clang failed: " + compiled.error
-	let linking = "-e gcc -static " + Quoted(WslPath(linux + ".o")) + " -o " + Quoted(WslPath(base)) + " -lm"
-	let linked = ToolRunner("wsl").Execute(linking)
-	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + base + " for Linux"
-WslPath(path Text) Text
-	NativeCompiler.WslPath("C:/code/A") is "/mnt/c/code/A"
-	NativeCompiler.WslPath("D:\\B\\c") is "/mnt/d/B/c"
-	"/mnt/" + path.Substring(0, 1).Lower + path.Substring(2, path.Length - 2).Replace("\\", "/")
-Lowered(base Text, tools Toolchain) Text
-	NativeCompiler.Lowered("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed") is true
-	constant passes = " --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm"
-	let output = " --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
-	let lowering = Quoted(base + ".mlir") + SingleThreaded + passes + output
-	let lowered = ToolRunner(tools.Located("mlir-opt")).Execute(lowering)
-	if lowered.Failed
-		return "mlir-opt failed: " + lowered.error
-	let translation = SingleThreaded + " --mlir-to-llvmir " + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
-	let translated = ToolRunner(tools.Located("mlir-translate")).Execute(translation)
-	translated.Failed then "mlir-translate failed: " + translated.error else ""
 Unsupported(mlir Text) Number
 	NativeCompiler.Unsupported("a\nunsupported: x") is 2
 	NativeCompiler.Unsupported("unsupported: x") is 0
 	NativeCompiler.Unsupported("@c(\"unsupported: x\")") is -1
 	("\n" + mlir).IndexOf("\nunsupported:")
-Quoted(path Text) Text
-	NativeCompiler.Quoted("a b") is "\"a b\""
-	"\"" + path + "\""

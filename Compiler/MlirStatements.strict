@@ -45,6 +45,8 @@ Hex(number Number) Text
 	result
 Returned(entry InstructionEntry) Texts
 	MlirStatements(Copy.function, 2).Returned(InstructionEntry.Return(0)).Last is "    return %t2 : f64"
+	if MlirLayout(function).IsInitializer
+		return MlirLayout(function).Returned(position)
 	(function.Load(Temp(""), "%r" + entry.payload(0)), "    return " + Temp("") + " : f64")
 Jumped(entry InstructionEntry) Texts
 	Copy.Jumped(InstructionEntry.Jump(InstructionType.JumpEnd, 0)).Length is 0

@@ -52,7 +52,7 @@ Called(function MlirFunction, position Number) List(MlirFunction)
 	if entry.kind is not InstructionType.Invoke
 		return List(MlirFunction)
 	let decoder = PayloadDecoder(entry)
-	if (decoder.Text(2) is "from") or MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
+	if MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
 		return List(MlirFunction)
 	let type = Natives(types).TypeOf(decoder.Text(1))
 	let returned = decoder.Text(4 + entry.payload(3))

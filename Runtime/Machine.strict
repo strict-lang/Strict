@@ -15,7 +15,7 @@ Launch(typeName Text, arguments List(VmValue))
 Tested(typeName Text) Number
 	Hello.Tested("HelloLogger") is 0
 	let main = Natives(types).TypeOf(typeName)
-	let tests = Find(typeName, "Tests", 0)
+	let tests = Find(typeName, TestCodegen.Runner, 0)
 	Execute(tests, Bound(main, Natives(types).Fresh(main), tests, List(VmValue))).number
 Find(typeName Text, methodName Text, count Number) MethodEntry
 	Hello.Find("HelloLogger", "Run", 0).instructions.Length is 2

@@ -3,8 +3,9 @@ constant Even = TestCodegen(TypeCodegen("Strict/Even", ("IsEven(number Number) B
 constant Counter = CodeBlock.Empty.Declare("failed", "Number")
 constant OneIsOne = SyntaxNode("Binary", "is", (MethodCodegen.One, MethodCodegen.One))
 constant EvenFailed = InstructionEntry.Print("Test failed: IsEven(2) is true in IsEven")
+constant Runner = "$Tests"
 Tests MethodEntry
-	Even.Tests.Name is "Tests"
+	Even.Tests.Name is Runner
 	Even.Tests.instructions.Last.kind is InstructionType.Return
 	let scope = types.Generator.target.shape.MemberScope.With("failed", "Number")
 	let start = CodeBlock(List(InstructionEntry), 0, 0, scope)
@@ -13,7 +14,7 @@ Tests MethodEntry
 		if TypeShape(types.lines).IsMethodHeader(value)
 			block = Method(index, block)
 	let failed = block.At(0).Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "failed"))
-	MethodEntry("Tests", List(MemberEntry), "Strict/Number", failed.Add(InstructionEntry.Return(0)).instructions)
+	MethodEntry(Runner, List(MemberEntry), "Strict/Number", failed.Add(InstructionEntry.Return(0)).instructions)
 Method(start Number, block CodeBlock) CodeBlock
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0 is true
 	let name = Tokenizer(types.lines(start)).Tokens.First

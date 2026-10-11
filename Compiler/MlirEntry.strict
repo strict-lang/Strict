@@ -10,7 +10,7 @@ Main Texts
 	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
 	let returned = MlirKinds(entry).Short(entry.method.returnType) is "Number"
 	let code = returned then "    %code = arith.fptosi %result : f64 to i32" else "    %code = arith.constant 0 : i32"
-	let prepared = header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot") + Arguments
+	let prepared = header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot", "", List(Text)) + Arguments
 	prepared + (self, EntryCall, code) + ("    return %code : i32", "  }")
 EntryCall Text
 	Counted.EntryCall is "    %result = func.call @Counter_Run_0(%self) : (f64) -> f64"
