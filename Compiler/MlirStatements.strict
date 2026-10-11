@@ -90,11 +90,11 @@ Operation(kind Number) Text
 		return "mulf"
 	kind is InstructionType.Divide then "divf" else "remf"
 Predicate(kind Number) Text
-	Copy.Predicate(InstructionType.NotEqual) is "one"
+	Copy.Predicate(InstructionType.NotEqual) is "une"
 	if kind is InstructionType.Equal
 		return "oeq"
 	if kind is InstructionType.NotEqual
-		return "one"
+		return "une"
 	kind is InstructionType.LessThan then "olt" else "ogt"
 Compared(entry InstructionEntry, operands Text) Texts
 	Copy.Compared(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), "%a, %b").Length is 2

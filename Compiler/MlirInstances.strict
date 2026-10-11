@@ -19,6 +19,7 @@ StoredNames(owner TypeEntry) Texts
 Constructed(entry InstructionEntry, typeName Text) Texts
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape").Last is "    llvm.store %t1of, %r1 : f64, !llvm.ptr"
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Character").Length is 2
+	Text.Combine(MlirInstances(Shapes, 1).Constructed(Built, "Strict/Error")).IndexOf("@strict_error_bits(") > 0 is true
 	if (MlirKinds(function).Short(typeName) is "File") or (MlirLayout(function).IsStruct(typeName) is false)
 		return function.Copied("%r" + entry.payload(5 + entry.payload(3) + 1), "%r" + entry.payload(0), Temp("o"))
 	let members = Stored(function.TypeOf(typeName))
@@ -26,7 +27,7 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 	mutable lines = memory.Allocated(members.Length, "o")
 	for members
 		lines = lines + MemberValue(entry, value, index)
-	lines + memory.Bits(Temp("op"), "o") + function.Store(Temp("of"), "%r" + entry.payload(0))
+	lines + memory.Boxed(Temp("op"), "o", typeName) + function.Store(Temp("of"), "%r" + entry.payload(0))
 MemberValue(entry InstructionEntry, member MemberEntry, slot Number) Texts
 	MlirInstances(Shapes, 1).MemberValue(Built, MlirFunction.Shape.members.First, 0).Length is 3
 	let names = Invocation(entry, Frame(function.method, 0, List(VmValue), Locals.Empty)).ParameterNames
@@ -89,7 +90,7 @@ Unpacked Texts
 	lines + ("    cf.br ^unpacked", "  ^unpacked:")
 SelfGuard Texts
 	MlirInstances(Method, 0).SelfGuard.Last is "  ^unpack:"
-	constant check = "    %hasSelf = arith.cmpf one, %self, %zero : f64"
+	constant check = "    %hasSelf = arith.cmpf une, %self, %zero : f64"
 	(check, "    cf.cond_br %hasSelf, ^unpack, ^unpacked", "  ^unpack:")
 Aliased Texts
 	MlirInstances(MlirLayout.Wrapping.function, 0).Aliased.Length is 2

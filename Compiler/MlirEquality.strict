@@ -4,6 +4,7 @@ constant Built = InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Sha
 constant Same = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Built, InstructionEntry.Binary(InstructionType.Equal, (1, 1)))))
 constant ListSignature = " : (f64, f64, (f64, f64) -> f64) -> f64"
 constant Prologue = ("    %zero = arith.constant 0.0 : f64", "    %one = arith.constant 1.0 : f64", "    %same = arith.cmpf oeq, %a, %b : f64", "    %aUnset = arith.cmpf oeq, %a, %zero : f64", "    %bUnset = arith.cmpf oeq, %b, %zero : f64", "    %unset = arith.ori %aUnset, %bUnset : i1", "    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr", "    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr", "    cf.cond_br %same, ^equal, ^check", "  ^check:", "    cf.cond_br %unset, ^different, ^m0")
+constant ErrorKinds = ("Error", "ErrorWithValue")
 constant Epilogue = ("    cf.br ^equal", "  ^equal:", "    return %one : f64", "  ^different:", "    return %zero : f64", "  }")
 Handles(entry InstructionEntry) Boolean
 	MlirEquality(Same, 2).Handles(Same.method.instructions(2)) is true
@@ -11,17 +12,25 @@ Handles(entry InstructionEntry) Boolean
 	let kinds = MlirKinds(function)
 	if kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))
 		return true
-	let layout = MlirLayout(function)
-	let kind = layout.Represented(kinds.KindOf(position, entry.payload(1)))
-	let isValue = kind.StartsWith("List(") or layout.IsStruct(kind)
+	let kind = ComparedKind(entry, false)
+	let isValue = (kind is "Error") or kind.StartsWith("List(") or MlirLayout(function).IsStruct(kind)
 	isValue and (entry.kind is in (InstructionType.Equal, InstructionType.NotEqual))
+ComparedKind(entry InstructionEntry, isText Boolean) Text
+	MlirEquality(Same, 2).ComparedKind(Same.method.instructions(2), true) is "Text"
+	MlirEquality(Same, 2).ComparedKind(Same.method.instructions(2), false) is "Shape"
+	if isText
+		return "Text"
+	let layout = MlirLayout(function)
+	let left = layout.Represented(MlirKinds(function).KindOf(position, entry.payload(1)))
+	let right = layout.Represented(MlirKinds(function).KindOf(position, entry.payload(2)))
+	(left is in ErrorKinds) or (right is in ErrorKinds) then "Error" else left
 Compared(entry InstructionEntry) Texts
 	MlirEquality(Same, 2).Compared(Same.method.instructions(2)).Length is 5
 	if entry.kind is not in (InstructionType.Equal, InstructionType.NotEqual)
 		return List(Text) + MlirStatements(function, position).Unsupported("Text operator " + entry.kind)
 	let kinds = MlirKinds(function)
 	let isText = kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))
-	let kind = isText then "Text" else MlirLayout(function).Represented(kinds.KindOf(position, entry.payload(1)))
+	let kind = ComparedKind(entry, isText)
 	let loads = Operand(entry.payload(1), "l", isText) + Operand(entry.payload(2), "r", isText)
 	let predicate = entry.kind is InstructionType.Equal then "one" else "oeq"
 	let flag = "    " + Temp("f") + " = arith.cmpf " + predicate + ", " + Temp("q") + ", %zero : f64"
@@ -49,8 +58,9 @@ Helper(kind Text) Text
 	MlirEquality(Same, 2).Helper("Text") is "strict_text_equal"
 	MlirEquality(Same, 2).Helper("Number") is "strict_equal_number"
 	MlirEquality(Same, 2).Helper("List(Text)") is "strict_list_equal_text"
-	if kind is in ("Text", "File")
-		return "strict_text_equal"
+	MlirEquality(Same, 2).Helper("Error") is "strict_error_equal"
+	if kind is in ("Text", "File", "Error")
+		return kind is "Error" then "strict_error_equal" else "strict_text_equal"
 	let element = MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind))
 	if kind.StartsWith("List(")
 		return element is "Text" then "strict_list_equal_text" else "strict_list_equal_number"

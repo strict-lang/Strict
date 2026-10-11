@@ -18,10 +18,15 @@ Tests MethodEntry
 Method(start Number, block CodeBlock) CodeBlock
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0 is true
 	let name = Tokenizer(types.lines(start)).Tokens.First
-	mutable result = block
+	mutable result = block.Declare(CodeBlock.ErrorMarker, name)
 	for TestLines(types.Generator).Tests(BodyParser(types.lines).Block(start + 1, 1), block)
-		result = Checked(value, name, result.At(0))
+		result = Line(value, name, result.At(0))
 	result
+Line(line SyntaxNode, method Text, block CodeBlock) CodeBlock
+	Even.Line(OneIsOne, "IsEven", Counter).instructions.Length > 4 is true
+	if line.Kind is "Declaration"
+		return MethodCodegen(types.Generator).Statement(line, block, false)
+	Checked(line, method, block)
 Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock
 	Even.Checked(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
 	let value = types.Generator.Expression(test, block)

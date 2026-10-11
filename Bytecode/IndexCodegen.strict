@@ -25,8 +25,11 @@ Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	isError then WithValue(node, block) else Element(node, block)
 WithValue(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions(0).texts is ("failed")
-	let error = SyntaxNode("Identifier", node.text)
-	values.Expression(SyntaxNode("Call", "ErrorWithValue", (error, node.children(0))), block)
+	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions.Last.texts.Last is "Value"
+	let error = values.Expression(SyntaxNode("Identifier", node.text), block)
+	let wrapped = values.Expression(node.children(0), error)
+	constant signature = ("Strict/ErrorWithValue", "from", "Strict/ErrorWithValue", "Error", "Value")
+	wrapped.Load(InstructionEntry.Invoke(wrapped.register, signature, (error.Result, wrapped.Result), -1))
 Element(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Element(SyntaxNode("MethodCall", "text", (ValueCodegen.NewGreeter, One)), CodeBlock.Empty).nextId is 1
 	let named = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))

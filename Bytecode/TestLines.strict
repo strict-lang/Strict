@@ -14,14 +14,21 @@ Without(body SyntaxNode, block CodeBlock) SyntaxNode
 Tests(body SyntaxNode, block CodeBlock) SyntaxNodes
 	Plain.Tests(BodyParser("Run", "\t1 is 1", "\t2 is not 3", "\t2").Block(1, 1), CodeBlock.Empty).Length is 2
 	Plain.Tests(BodyParser("Run", "\tlet a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 1
+	Plain.Tests(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 2
+	Plain.Tests(BodyParser("Run", "\t1 is 1", "\tconstant a = 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 1
 	mutable tests = List(Mutable(SyntaxNode))
 	mutable hasCode = false
 	for body.children
 		let isTest = (index < body.children.Length - 1) and IsTest(value, hasCode is false, block)
-		if isTest
+		if isTest or IsTestConstant(body, index, block)
 			tests.Add(value)
 		hasCode = hasCode or (isTest is false)
 	tests
+IsTestConstant(body SyntaxNode, position Number, block CodeBlock) Boolean
+	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), 0, CodeBlock.Empty) is true
+	let line = body.children(position)
+	let isDeclared = (line.Kind is "Declaration") and line.text.StartsWith("constant ")
+	isDeclared and (position + 2 < body.children.Length) and IsTest(body.children(position + 1), false, block)
 IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	Plain.IsTest(SyntaxNode("Binary", ">", (One, One)), false, CodeBlock.Empty) is false
 	Plain.IsTest(SyntaxNode("Not", "", SyntaxNode("Binary", "is", (One, One))), false, CodeBlock.Empty) is true

@@ -622,7 +622,9 @@
     llvm.store %increased, %usedSlot : i64, !llvm.ptr
     return
   }
-  func.func private @strict_gc_mark(%word: i64) {
+  func.func private @strict_gc_mark(%tagged: i64) {
+    %address = arith.constant 281474976710655 : i64
+    %word = arith.andi %tagged, %address : i64
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %shift = arith.constant 16 : i64
@@ -905,9 +907,62 @@
     return
   }
   func.func private @strict_ptr(%bits: f64) -> !llvm.ptr {
+    %address = arith.constant 281474976710655 : i64
     %i = arith.bitcast %bits : f64 to i64
-    %p = llvm.inttoptr %i : i64 to !llvm.ptr
+    %untagged = arith.andi %i, %address : i64
+    %p = llvm.inttoptr %untagged : i64 to !llvm.ptr
     return %p : !llvm.ptr
+  }
+  func.func private @strict_error_bits(%p: !llvm.ptr) -> f64 {
+    %tag = arith.constant 9221683186994511872 : i64
+    %i = llvm.ptrtoint %p : !llvm.ptr to i64
+    %tagged = arith.ori %i, %tag : i64
+    %f = arith.bitcast %tagged : i64 to f64
+    return %f : f64
+  }
+  func.func private @strict_error_value_bits(%p: !llvm.ptr) -> f64 {
+    %tag = arith.constant 9221964661971222528 : i64
+    %i = llvm.ptrtoint %p : !llvm.ptr to i64
+    %tagged = arith.ori %i, %tag : i64
+    %f = arith.bitcast %tagged : i64 to f64
+    return %f : f64
+  }
+  func.func private @strict_error_name(%value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %shift = arith.constant 48 : i64
+    %errorTag = arith.constant 32762 : i64
+    %valueTag = arith.constant 32763 : i64
+    %i = arith.bitcast %value : f64 to i64
+    %tag = arith.shrui %i, %shift : i64
+    %isError = arith.cmpi eq, %tag, %errorTag : i64
+    %isValue = arith.cmpi eq, %tag, %valueTag : i64
+    %isAny = arith.ori %isError, %isValue : i1
+    cf.cond_br %isAny, ^error, ^none
+  ^error:
+    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %first = llvm.load %p : !llvm.ptr -> f64
+    cf.cond_br %isValue, ^wrapped, ^named
+  ^wrapped:
+    %inner = func.call @strict_error_name(%first) : (f64) -> f64
+    return %inner : f64
+  ^named:
+    return %first : f64
+  ^none:
+    return %zero : f64
+  }
+  func.func private @strict_error_equal(%left: f64, %right: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %leftName = func.call @strict_error_name(%left) : (f64) -> f64
+    %rightName = func.call @strict_error_name(%right) : (f64) -> f64
+    %leftSet = arith.cmpf une, %leftName, %zero : f64
+    %rightSet = arith.cmpf une, %rightName, %zero : f64
+    %bothSet = arith.andi %leftSet, %rightSet : i1
+    cf.cond_br %bothSet, ^compare, ^different
+  ^compare:
+    %result = func.call @strict_text_equal(%leftName, %rightName) : (f64, f64) -> f64
+    return %result : f64
+  ^different:
+    return %zero : f64
   }
   func.func private @strict_bits(%p: !llvm.ptr) -> f64 {
     %i = llvm.ptrtoint %p : !llvm.ptr to i64

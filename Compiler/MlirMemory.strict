@@ -9,7 +9,13 @@ Pointer(bits Text, suffix Text) Texts
 	List(Text) + ("    " + Temp(suffix + "p") + " = func.call @strict_ptr(" + bits + ") : (f64) -> !llvm.ptr")
 Bits(pointer Text, suffix Text) Texts
 	Sample.Bits("%p", "a") is ("    %t3af = func.call @strict_bits(%p) : (!llvm.ptr) -> f64")
-	List(Text) + ("    " + Temp(suffix + "f") + " = func.call @strict_bits(" + pointer + ") : (!llvm.ptr) -> f64")
+	Boxed(pointer, suffix, "")
+Boxed(pointer Text, suffix Text, typeName Text) Texts
+	Sample.Boxed("%p", "a", "Strict/Error") is ("    %t3af = func.call @strict_error_bits(%p) : (!llvm.ptr) -> f64")
+	let short = MlirKinds(function).Short(typeName)
+	let tagged = short is "ErrorWithValue" then "strict_error_value_bits" else "strict_bits"
+	let helper = short is "Error" then "strict_error_bits" else tagged
+	List(Text) + ("    " + Temp(suffix + "f") + " = func.call @" + helper + "(" + pointer + ") : (!llvm.ptr) -> f64")
 Allocated(slots Number, suffix Text) Texts
 	Sample.Allocated(2, "o").First is "    %t3oz = arith.constant 16 : i64"
 	Sample.Allocated(2, "o").Last is "    %t3op = func.call @strict_alloc(%t3oz) : (i64) -> !llvm.ptr"
