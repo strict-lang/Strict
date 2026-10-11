@@ -5,6 +5,7 @@ constant Steps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister,
 constant Listed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", Steps))
 constant Written = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers(1)"), InstructionEntry(InstructionType.CopyList, "numbers", -1))))
 constant Pair = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))
+constant Removal = InstructionEntry.Named(InstructionType.InvokeRemove, 1, "numbers")
 Temp(suffix Text) Text
 	MlirLists(Listed, 2).Temp("l") is "%t2l"
 	"%t" + position + suffix
@@ -51,8 +52,12 @@ ElementName(item Runtime/VmValue, element Text) Text
 	item.kind is "Text" then Temp(element + "xf") else Temp(element + "c")
 Appended(entry InstructionEntry) Texts
 	MlirLists(Listed, 3).Appended(Steps(3)).Last is "    llvm.store %t3n, %v_numbers : f64, !llvm.ptr"
+	Text.Combine(MlirLists(Listed, 3).Appended(Removal)).IndexOf("@strict_list_remove_number(") > 0 is true
 	let name = "%v_" + entry.texts(0)
-	let added = MlirMemory(function, position).Called(Temp("n"), "strict_list_add", (Temp("l"), Temp("e")))
+	let elements = MlirKinds(function).ElementKind(MlirKinds(function).VariableKind(position, entry.texts(0)))
+	let remover = elements is "Text" then "strict_list_remove_text" else "strict_list_remove_number"
+	let helper = entry.kind is InstructionType.InvokeRemove then remover else "strict_list_add"
+	let added = MlirMemory(function, position).Called(Temp("n"), helper, (Temp("l"), Temp("e")))
 	let element = function.Load(Temp("e"), "%r" + entry.payload(0))
 	(function.Load(Temp("l"), name), element, added, function.Store(Temp("n"), name))
 Indexed(entry InstructionEntry) Texts

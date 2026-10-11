@@ -933,6 +933,71 @@
   llvm.mlir.global internal constant @strict_close_paren(")\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal @strict_empty_holder(dense<0.0> : tensor<3xf64>) : !llvm.array<3 x f64>
   llvm.mlir.global internal @strict_empty_view(dense<0.0> : tensor<2xf64>) : !llvm.array<2 x f64>
+  func.func private @strict_increment(%self: f64, %amount: f64) -> f64 {
+    %result = arith.addf %self, %amount : f64
+    return %result : f64
+  }
+  func.func private @strict_increment_one(%self: f64) -> f64 {
+    %one = arith.constant 1.0 : f64
+    %result = arith.addf %self, %one : f64
+    return %result : f64
+  }
+  func.func private @strict_decrement(%self: f64, %amount: f64) -> f64 {
+    %result = arith.subf %self, %amount : f64
+    return %result : f64
+  }
+  func.func private @strict_decrement_one(%self: f64) -> f64 {
+    %one = arith.constant 1.0 : f64
+    %result = arith.subf %self, %one : f64
+    return %result : f64
+  }
+  func.func private @strict_list_remove(%list: f64, %item: f64, %isText: i1) -> f64 {
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %sixteen = arith.constant 16 : i64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    cf.br ^scan(%start, %start : i64, i64)
+  ^scan(%read: i64, %write: i64):
+    %more = arith.cmpi slt, %read, %count : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = llvm.getelementptr %items[%read] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    %matched = func.call @strict_list_matches(%value, %item, %isText) : (f64, f64, i1) -> i1
+    %next = arith.addi %read, %step : i64
+    cf.cond_br %matched, ^scan(%next, %write : i64, i64), ^keep
+  ^keep:
+    %target = llvm.getelementptr %items[%write] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %value, %target : f64, !llvm.ptr
+    %written = arith.addi %write, %step : i64
+    cf.br ^scan(%next, %written : i64, i64)
+  ^done:
+    %remaining = arith.sitofp %write : i64 to f64
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %remaining, %usedSlot : f64, !llvm.ptr
+    %result = func.call @strict_alloc(%sixteen) : (i64) -> !llvm.ptr
+    llvm.store %remaining, %result : f64, !llvm.ptr
+    %resultHolder = llvm.getelementptr %result[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %holderBits, %resultHolder : f64, !llvm.ptr
+    %bits = func.call @strict_bits(%result) : (!llvm.ptr) -> f64
+    return %bits : f64
+  }
+  func.func private @strict_list_remove_text(%list: f64, %item: f64) -> f64 {
+    %isText = arith.constant true
+    %result = func.call @strict_list_remove(%list, %item, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_remove_number(%list: f64, %item: f64) -> f64 {
+    %isText = arith.constant false
+    %result = func.call @strict_list_remove(%list, %item, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
   func.func private @strict_list_empty() -> f64 {
     %view = llvm.mlir.addressof @strict_empty_view : !llvm.ptr
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64

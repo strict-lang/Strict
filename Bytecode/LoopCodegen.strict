@@ -32,7 +32,8 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	let aggregation = Aggregation(body, returnType)
 	if aggregation is ""
 		return methods.Body(body, block)
-	let leading = Leading(body, Started(block, returnType, aggregation).At(block.register))
+	let started = Started(block, returnType, aggregation).Declare("forResult", returnType)
+	let leading = Leading(body, started.At(block.register))
 	let looped = Loop(body.children.Last, leading, aggregation).At(block.register)
 	looped.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, looped.register, "forResult"))
 Leading(body SyntaxNode, block CodeBlock) CodeBlock
@@ -147,6 +148,6 @@ AggregatedLoop(body SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 		return Loop(last, Leading(body, block), aggregation)
 	if Reduction(last) is not ""
 		return Collected(methods.values.Expression(last.children(1), Leading(body, block)), aggregation)
-	if last.Kind is not "If"
+	if last.Kind is not in ("If", "ElseIf", "Else")
 		return Collected(methods.Body(body, block), aggregation)
-	methods.Conditional(last, Leading(body, block), false, aggregation)
+	methods.Body(BranchValues(aggregation).Rewritten(body), block)

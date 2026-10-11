@@ -18,11 +18,15 @@ Helper(typeName Text, name Text, count Number) Text
 		return kind is "Text" then "strict_text_length" else kind.StartsWith("List(") then "strict_list_length" else ""
 	if kind.StartsWith("List(")
 		return CollectionHelper(kind, name, count)
-	ValueHelper(kind, name)
-ValueHelper(kind Text, name Text) Text
-	MlirNatives(Texts, 1).ValueHelper("Boolean", "not") is "strict_not"
+	ValueHelper(kind, name, count)
+ValueHelper(kind Text, name Text, count Number) Text
+	MlirNatives(Texts, 1).ValueHelper("Boolean", "not", 0) is "strict_not"
+	MlirNatives(Texts, 1).ValueHelper("Number", "Increment", 0) is "strict_increment_one"
+	MlirNatives(Texts, 1).ValueHelper("Number", "Decrement", 1) is "strict_decrement"
 	if (kind is "Number") and (name is "Floor")
 		return "strict_floor"
+	if (kind is "Number") and (name is in ("Increment", "Decrement"))
+		return "strict_" + name.Lower + (count is 0 then "_one" else "")
 	if (kind is "Boolean") and (name is in ("not", "and", "or", "xor"))
 		return "strict_" + name
 	if kind is in ("File", "Directory", "Process")

@@ -21,7 +21,7 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(FilterBody, NoScope, "Number").instructions(12).kind is InstructionType.JumpEnd
 	Plain.Generate(CopiedBody, NoScope, "None").instructions(5).kind is InstructionType.Add
 	let start = CodeBlock(List(InstructionEntry), 0, 0, scope)
-	let code = TestLines(values).Without(body, start)
+	let code = BranchValues(returnType).Rewritten(TestLines(values).Without(body, start))
 	let block = LoopCodegen(MethodCodegen(values)).Aggregated(code, start, returnType)
 	if (code.children.Length is 0) or (block.instructions.Last.kind is InstructionType.Return)
 		return block
