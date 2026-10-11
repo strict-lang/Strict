@@ -96,7 +96,10 @@ CrossBuilt(base Text) Text
 WslPath(path Text) Text
 	OnWindows.WslPath("C:/code/A") is "/mnt/c/code/A"
 	OnWindows.WslPath("D:\\B\\c") is "/mnt/d/B/c"
-	"/mnt/" + path.Substring(0, 1).Lower + path.Substring(2, path.Length - 2).Replace("\\", "/")
+	OnWindows.WslPath("./Examples/Sum") is "./Examples/Sum"
+	let slashed = path.Replace("\\", "/")
+	let drive = "/mnt/" + slashed.Substring(0, 1).Lower
+	slashed.IndexOf(":") is 1 then drive + slashed.Substring(2, slashed.Length - 2) else slashed
 Lowered(base Text) Text
 	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed") is true
 	constant passes = " --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm"
