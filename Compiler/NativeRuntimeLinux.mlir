@@ -1,0 +1,301 @@
+  llvm.func @opendir(!llvm.ptr) -> !llvm.ptr
+  llvm.func @readdir(!llvm.ptr) -> !llvm.ptr
+  llvm.func @closedir(!llvm.ptr) -> i32
+  llvm.func @mkdir(!llvm.ptr, i32) -> i32
+  llvm.func @fnmatch(!llvm.ptr, !llvm.ptr, i32) -> i32
+  llvm.func @qsort(!llvm.ptr, i64, i64, !llvm.ptr)
+  llvm.func @strcasecmp(!llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @getenv(!llvm.ptr) -> !llvm.ptr
+  llvm.func @access(!llvm.ptr, i32) -> i32
+  llvm.func @mkstemp(!llvm.ptr) -> i32
+  llvm.func @close(i32) -> i32
+  llvm.func @unlink(!llvm.ptr) -> i32
+  llvm.func @fflush(!llvm.ptr) -> i32
+  llvm.func @fork() -> i32
+  llvm.func @execl(!llvm.ptr, !llvm.ptr, ...) -> i32
+  llvm.func @_exit(i32)
+  llvm.func @waitpid(i32, !llvm.ptr, i32) -> i32
+  llvm.func @kill(i32, i32) -> i32
+  llvm.func @usleep(i32) -> i32
+  llvm.mlir.global internal constant @strict_separator_path("/\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
+  func.func private @strict_directory_exists(%self: f64, %path: f64) -> f64 {
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %directory = llvm.call @opendir(%name) : (!llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %exists = llvm.icmp "ne" %directory, %null : !llvm.ptr
+    cf.cond_br %exists, ^close, ^done
+  ^close:
+    %closed = llvm.call @closedir(%directory) : (!llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    %result = func.call @strict_boolean(%exists) : (i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_directory_create(%self: f64, %path: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %mode = arith.constant 511 : i32
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %created = llvm.call @mkdir(%name, %mode) : (!llvm.ptr, i32) -> i32
+    return %zero : f64
+  }
+  func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
+    %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
+    %separator = func.call @strict_bits(%separatorText) : (!llvm.ptr) -> f64
+    %prefix = func.call @strict_text_concat(%path, %separator) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%prefix, %name) : (f64, f64) -> f64
+    return %result : f64
+  }
+  llvm.func @strict_compare_names(%left: !llvm.ptr, %right: !llvm.ptr) -> i32 {
+    %leftName = llvm.load %left : !llvm.ptr -> !llvm.ptr
+    %rightName = llvm.load %right : !llvm.ptr -> !llvm.ptr
+    %order = llvm.call @strcasecmp(%leftName, %rightName) : (!llvm.ptr, !llvm.ptr) -> i32
+    llvm.return %order : i32
+  }
+  func.func private @strict_directory_files(%self: f64, %path: f64, %pattern: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %four = arith.constant 4.0 : f64
+    %none = arith.constant 0 : i32
+    %slotSize = arith.constant 8 : i64
+    %directoryType = arith.constant 4 : i8
+    %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
+    %isUnset = arith.cmpf oeq, %pattern, %zero : f64
+    %safePattern = arith.select %isUnset, %any, %pattern : f64
+    %patternLength = func.call @strict_text_length(%safePattern) : (f64) -> f64
+    %isEmpty = arith.cmpf oeq, %patternLength, %zero : f64
+    %chosen = arith.select %isEmpty, %any, %safePattern : f64
+    %patternText = func.call @strict_ptr(%chosen) : (f64) -> !llvm.ptr
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
+    %directory = llvm.call @opendir(%name) : (!llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %failed = llvm.icmp "eq" %directory, %null : !llvm.ptr
+    cf.cond_br %failed, ^done(%created : f64), ^next(%created : f64)
+  ^next(%current: f64):
+    %entry = llvm.call @readdir(%directory) : (!llvm.ptr) -> !llvm.ptr
+    %finished = llvm.icmp "eq" %entry, %null : !llvm.ptr
+    cf.cond_br %finished, ^close(%current : f64), ^entry(%current : f64)
+  ^entry(%found: f64):
+    %typeSlot = llvm.getelementptr %entry[18] : (!llvm.ptr) -> !llvm.ptr, i8
+    %type = llvm.load %typeSlot : !llvm.ptr -> i8
+    %fileName = llvm.getelementptr %entry[19] : (!llvm.ptr) -> !llvm.ptr, i8
+    %isFile = arith.cmpi ne, %type, %directoryType : i8
+    %matched = llvm.call @fnmatch(%patternText, %fileName, %none) : (!llvm.ptr, !llvm.ptr, i32) -> i32
+    %isMatch = arith.cmpi eq, %matched, %none : i32
+    %take = arith.andi %isFile, %isMatch : i1
+    cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
+  ^add(%before: f64):
+    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
+    %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
+    %added = func.call @strict_list_add(%before, %full) : (f64, f64) -> f64
+    cf.br ^next(%added : f64)
+  ^close(%all: f64):
+    %closed = llvm.call @closedir(%directory) : (!llvm.ptr) -> i32
+    %length = func.call @strict_list_length(%all) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %items = func.call @strict_list_items(%all) : (f64) -> !llvm.ptr
+    %compare = llvm.mlir.addressof @strict_compare_names : !llvm.ptr
+    llvm.call @qsort(%items, %count, %slotSize, %compare) : (!llvm.ptr, i64, i64, !llvm.ptr) -> ()
+    cf.br ^done(%all : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
+  llvm.mlir.global internal constant @strict_linux("Linux\00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal constant @strict_path_variable("PATH\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_temp_template("/tmp/strictXXXXXX\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_shell("/bin/sh\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @strict_shell_name("sh\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_shell_command("-c\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_exec_quote("exec \22\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @strict_quote_space("\22 \00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_output_redirect(" > \22\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_error_redirect("\22 2> \22\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_start_failed("could not start \00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_timed_out("timed out after 30000 ms\00") : !llvm.array<25 x i8>
+  func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
+    %name = llvm.mlir.addressof @strict_linux : !llvm.ptr
+    %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_tool_path(%name: f64) -> f64 {
+    %executable = arith.constant 1 : i32
+    %ok = arith.constant 0 : i32
+    %slash = arith.constant 47 : i32
+    %colon = arith.constant 58 : i32
+    %noBytes = arith.constant 0 : i64
+    %two = arith.constant 2 : i64
+    %slashCharacter = arith.constant 47 : i8
+    %terminator = arith.constant 0 : i8
+    %file = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
+    %fileSize = llvm.call @strlen(%file) : (!llvm.ptr) -> i64
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %slashAt = llvm.call @strchr(%file, %slash) : (!llvm.ptr, i32) -> !llvm.ptr
+    %isPath = llvm.icmp "ne" %slashAt, %null : !llvm.ptr
+    cf.cond_br %isPath, ^direct, ^search
+  ^direct:
+    %access = llvm.call @access(%file, %executable) : (!llvm.ptr, i32) -> i32
+    %usable = arith.cmpi eq, %access, %ok : i32
+    %direct = arith.select %usable, %name, %empty : f64
+    return %direct : f64
+  ^search:
+    %variable = llvm.mlir.addressof @strict_path_variable : !llvm.ptr
+    %paths = llvm.call @getenv(%variable) : (!llvm.ptr) -> !llvm.ptr
+    %noPath = llvm.icmp "eq" %paths, %null : !llvm.ptr
+    cf.cond_br %noPath, ^missing, ^segment(%paths : !llvm.ptr)
+  ^segment(%start: !llvm.ptr):
+    %end = llvm.call @strchr(%start, %colon) : (!llvm.ptr, i32) -> !llvm.ptr
+    %isLast = llvm.icmp "eq" %end, %null : !llvm.ptr
+    %restSize = llvm.call @strlen(%start) : (!llvm.ptr) -> i64
+    %startAddress = llvm.ptrtoint %start : !llvm.ptr to i64
+    %endAddress = llvm.ptrtoint %end : !llvm.ptr to i64
+    %segmentSize = arith.subi %endAddress, %startAddress : i64
+    %size = arith.select %isLast, %restSize, %segmentSize : i64
+    %withName = arith.addi %size, %fileSize : i64
+    %bytes = arith.addi %withName, %two : i64
+    %candidate = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    %copiedDirectory = llvm.call @memcpy(%candidate, %start, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %slashSlot = llvm.getelementptr %candidate[%size] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %slashCharacter, %slashSlot : i8, !llvm.ptr
+    %nameSlot = llvm.getelementptr %slashSlot[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %copiedName = llvm.call @memcpy(%nameSlot, %file, %fileSize) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %terminatorSlot = llvm.getelementptr %nameSlot[%fileSize] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %terminatorSlot : i8, !llvm.ptr
+    %found = llvm.call @access(%candidate, %executable) : (!llvm.ptr, i32) -> i32
+    %isFound = arith.cmpi eq, %found, %ok : i32
+    %notEmpty = arith.cmpi ne, %size, %noBytes : i64
+    %usableCandidate = arith.andi %isFound, %notEmpty : i1
+    cf.cond_br %usableCandidate, ^located(%candidate : !llvm.ptr), ^advance
+  ^advance:
+    %following = llvm.getelementptr %end[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    cf.cond_br %isLast, ^missing, ^segment(%following : !llvm.ptr)
+  ^located(%path: !llvm.ptr):
+    %located = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    return %located : f64
+  ^missing:
+    return %empty : f64
+  }
+  func.func private @strict_temp_file() -> f64 {
+    %size = arith.constant 18 : i64
+    %template = llvm.mlir.addressof @strict_temp_template : !llvm.ptr
+    %name = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%name, %template, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %descriptor = llvm.call @mkstemp(%name) : (!llvm.ptr) -> i32
+    %closed = llvm.call @close(%descriptor) : (i32) -> i32
+    %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_removed_file(%path: f64) -> f64 {
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %text = func.call @strict_file_text(%path) : (f64) -> f64
+    %deleted = llvm.call @unlink(%name) : (!llvm.ptr) -> i32
+    return %text : f64
+  }
+  func.func private @strict_text_of(%global: !llvm.ptr) -> f64 {
+    %bits = func.call @strict_bits(%global) : (!llvm.ptr) -> f64
+    return %bits : f64
+  }
+  func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
+    %none = arith.constant 0 : i32
+    %noHang = arith.constant 1 : i32
+    %killSignal = arith.constant 9 : i32
+    %failure = arith.constant 127 : i32
+    %millisecond = arith.constant 1000 : i32
+    %limit = arith.constant 30000 : i32
+    %step = arith.constant 1 : i32
+    %statusSize = arith.constant 8 : i64
+    %execQuote = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
+    %quoteSpace = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %outputRedirect = llvm.mlir.addressof @strict_output_redirect : !llvm.ptr
+    %errorRedirect = llvm.mlir.addressof @strict_error_redirect : !llvm.ptr
+    %quote = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %execText = func.call @strict_text_of(%execQuote) : (!llvm.ptr) -> f64
+    %quoteSpaceText = func.call @strict_text_of(%quoteSpace) : (!llvm.ptr) -> f64
+    %outputText = func.call @strict_text_of(%outputRedirect) : (!llvm.ptr) -> f64
+    %errorText = func.call @strict_text_of(%errorRedirect) : (!llvm.ptr) -> f64
+    %quoteText = func.call @strict_text_of(%quote) : (!llvm.ptr) -> f64
+    %outputPath = func.call @strict_temp_file() : () -> f64
+    %errorPath = func.call @strict_temp_file() : () -> f64
+    %quoted = func.call @strict_text_concat(%execText, %path) : (f64, f64) -> f64
+    %program = func.call @strict_text_concat(%quoted, %quoteSpaceText) : (f64, f64) -> f64
+    %called = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
+    %toOutput = func.call @strict_text_concat(%called, %outputText) : (f64, f64) -> f64
+    %withOutput = func.call @strict_text_concat(%toOutput, %outputPath) : (f64, f64) -> f64
+    %toError = func.call @strict_text_concat(%withOutput, %errorText) : (f64, f64) -> f64
+    %withError = func.call @strict_text_concat(%toError, %errorPath) : (f64, f64) -> f64
+    %command = func.call @strict_text_concat(%withError, %quoteText) : (f64, f64) -> f64
+    %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
+    %shell = llvm.mlir.addressof @strict_shell : !llvm.ptr
+    %shellName = llvm.mlir.addressof @strict_shell_name : !llvm.ptr
+    %shellCommand = llvm.mlir.addressof @strict_shell_command : !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %status = func.call @strict_alloc(%statusSize) : (i64) -> !llvm.ptr
+    %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
+    %child = llvm.call @fork() : () -> i32
+    %isChild = arith.cmpi eq, %child, %none : i32
+    cf.cond_br %isChild, ^child, ^parent
+  ^child:
+    %executed = llvm.call @execl(%shell, %shellName, %shellCommand, %commandText, %null) vararg(!llvm.func<i32 (ptr, ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    llvm.call @_exit(%failure) : (i32) -> ()
+    llvm.unreachable
+  ^parent:
+    %notStarted = arith.cmpi slt, %child, %none : i32
+    cf.cond_br %notStarted, ^startFailed, ^wait(%none : i32)
+  ^startFailed:
+    %unusedOutput = func.call @strict_removed_file(%outputPath) : (f64) -> f64
+    %unusedError = func.call @strict_removed_file(%errorPath) : (f64) -> f64
+    %startCode = arith.constant 1.0 : f64
+    %startText = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startPrefix = func.call @strict_bits(%startText) : (!llvm.ptr) -> f64
+    %startError = func.call @strict_text_concat(%startPrefix, %path) : (f64, f64) -> f64
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
+    return %startFailure : f64
+  ^wait(%waited: i32):
+    %ended = llvm.call @waitpid(%child, %status, %noHang) : (i32, !llvm.ptr, i32) -> i32
+    %hasEnded = arith.cmpi eq, %ended, %child : i32
+    cf.cond_br %hasEnded, ^exited, ^check(%waited : i32)
+  ^check(%elapsed: i32):
+    %timedOut = arith.cmpi sge, %elapsed, %limit : i32
+    cf.cond_br %timedOut, ^kill, ^sleep(%elapsed : i32)
+  ^sleep(%sleeping: i32):
+    %slept = llvm.call @usleep(%millisecond) : (i32) -> i32
+    %later = arith.addi %sleeping, %step : i32
+    cf.br ^wait(%later : i32)
+  ^kill:
+    %killed = llvm.call @kill(%child, %killSignal) : (i32, i32) -> i32
+    %reaped = llvm.call @waitpid(%child, %status, %none) : (i32, !llvm.ptr, i32) -> i32
+    %timeoutCode = arith.constant 124.0 : f64
+    %timedOutText = llvm.mlir.addressof @strict_timed_out : !llvm.ptr
+    %timedOutMessage = func.call @strict_bits(%timedOutText) : (!llvm.ptr) -> f64
+    cf.br ^collect(%timeoutCode, %timedOutMessage, %step : f64, f64, i32)
+  ^exited:
+    %rawStatus = llvm.load %status : !llvm.ptr -> i32
+    %eight = arith.constant 8 : i32
+    %byteMask = arith.constant 255 : i32
+    %signalMask = arith.constant 127 : i32
+    %signalBase = arith.constant 128 : i32
+    %shifted = arith.shrui %rawStatus, %eight : i32
+    %exitCode = arith.andi %shifted, %byteMask : i32
+    %signal = arith.andi %rawStatus, %signalMask : i32
+    %wasSignaled = arith.cmpi ne, %signal, %none : i32
+    %signalCode = arith.addi %signalBase, %signal : i32
+    %code = arith.select %wasSignaled, %signalCode, %exitCode : i32
+    %exitNumber = arith.sitofp %code : i32 to f64
+    %noMessage = arith.constant 0.0 : f64
+    cf.br ^collect(%exitNumber, %noMessage, %none : f64, f64, i32)
+  ^collect(%result: f64, %override: f64, %hasOverride: i32):
+    %written = func.call @strict_removed_file(%outputPath) : (f64) -> f64
+    %reported = func.call @strict_removed_file(%errorPath) : (f64) -> f64
+    %useOverride = arith.cmpi ne, %hasOverride, %none : i32
+    %message = arith.select %useOverride, %override, %reported : f64
+    %processResult = func.call @strict_process_result(%result, %written, %message) : (f64, f64, f64) -> f64
+    return %processResult : f64
+  }

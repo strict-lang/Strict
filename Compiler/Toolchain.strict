@@ -1,0 +1,70 @@
+has platform Number
+has root Text
+constant Needed = ("mlir-opt", "mlir-translate", "clang")
+constant WindowsFolders = ("C:/msys64/ucrt64/bin/", "C:/Program Files/LLVM/bin/")
+constant LinuxRelease = "LLVM-22.1.0-Linux-X64"
+constant LinuxDownload = "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz"
+constant LinuxMembers = " LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate"
+constant Accept = " --accept-package-agreements --accept-source-agreements"
+constant Pacman = "C:\\msys64\\usr\\bin\\pacman.exe"
+constant OnWindows = Toolchain(Platform.Windows, "C:/s")
+constant OnLinux = Toolchain(Platform.Linux, "/s")
+Located(name Text) Text
+	OnWindows.Located("noSuchStrictTool") is ""
+	if Process.Find(name).IsAvailable
+		return name
+	for Folders
+		if File(value + name + Extension).Exists
+			return value + name + Extension
+	""
+Folders Texts
+	OnLinux.Folders is ("/s/Tools/LLVM-22.1.0-Linux-X64/bin/")
+	if platform is Platform.Windows
+		return WindowsFolders
+	List(Text) + (root + "/Tools/" + LinuxRelease + "/bin/")
+Extension Text
+	OnWindows.Extension is ".exe"
+	OnLinux.Extension is ""
+	platform is Platform.Windows then ".exe" else ""
+Missing(names Texts) Texts
+	OnLinux.Missing(("noSuchStrictTool")) is ("noSuchStrictTool")
+	for names
+		if Located(value) is ""
+			value
+InstallLines(missing Texts) Texts
+	OnLinux.InstallLines(("clang")).Length is 2
+	platform is Platform.Windows then WindowsLines(missing) else LinuxLines
+WindowsLines(missing Texts) Texts
+	OnWindows.WindowsLines(("clang")).First is "winget install -e --id LLVM.LLVM" + Accept
+	mutable lines = List(Mutable(Text))
+	let needsMlir = ("mlir-opt" is in missing) or ("mlir-translate" is in missing)
+	if needsMlir and (File(Pacman).Exists is false)
+		lines.Add("winget install -e --id MSYS2.MSYS2" + Accept)
+	if needsMlir
+		lines.Add(Pacman + " -S --noconfirm --needed mingw-w64-ucrt-x86_64-mlir")
+	if "clang" is in missing
+		lines.Add("winget install -e --id LLVM.LLVM" + Accept)
+	lines
+LinuxLines Texts
+	OnLinux.LinuxLines.First is "mkdir -p /s/Tools"
+	let extract = " | tar -xJ --occurrence -C " + root + "/Tools" + LinuxMembers
+	("mkdir -p " + root + "/Tools", "curl -sL " + LinuxDownload + extract)
+Launch(script Text) Text
+	OnWindows.Launch("C:/s/Tools/Install.cmd") is "/c start \"Strict tools\" cmd /k \"C:\\s\\Tools\\Install.cmd\""
+	OnLinux.Launch("/s/Tools/install.sh") is "-c \"nohup sh /s/Tools/install.sh > /s/Tools/install.log 2>&1 &\""
+	if platform is Platform.Windows
+		return "/c start \"Strict tools\" cmd /k \"" + script.Replace("/", "\\") + "\""
+	"-c \"nohup sh " + script + " > " + root + "/Tools/install.log 2>&1 &\""
+Installing(missing Texts) Text
+	OnWindows.Installing(List(Text)) is ""
+	if missing.Length is 0
+		return ""
+	let isWindows = platform is Platform.Windows
+	let script = root + "/Tools/" + (isWindows then "Install.cmd" else "install.sh")
+	Directory.Create(root + "/Tools")
+	File(script).Write(Text.Combine(InstallLines(missing), "\n"))
+	let shell = isWindows then "cmd" else "sh"
+	let started = Process.RunTool(shell, Launch(script))
+	let where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
+	let problem = started.Failed then ", could not start it: " + started.error else ""
+	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem

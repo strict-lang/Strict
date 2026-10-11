@@ -1,37 +1,65 @@
 has logger
 constant SingleThreaded = " --mlir-disable-threading"
+constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -O2 -c -Wno-override-module"
 Run(path Text, root Text)
 	let program = MlirModule(FileCompiler(logger).Compiled(path, root)).Text
-	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
-	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(Platform.Current) + ".mlir").ReadLines
-	let mlir = program.Substring(0, program.Length - 1) + runtime + "\n" + Text.Combine(system, "\n") + "\n}"
-	let unsupported = Unsupported(mlir)
+	let unsupported = Unsupported(program)
+	let tools = Toolchain(Platform.Current, root)
+	let missing = tools.Missing(Toolchain.Needed)
 	if unsupported is not -1
-		logger.Log("Native compilation failed, " + mlir.Substring(unsupported, mlir.Length - unsupported))
+		logger.Log("Native compilation failed, " + program.Substring(unsupported, program.Length - unsupported))
+	else if missing.Length > 0
+		logger.Log(tools.Installing(missing))
 	else
-		let base = path.Substring(0, path.Length - 7)
-		File(base + ".mlir").Write(mlir)
-		logger.Log(Built(base))
-Built(base Text) Text
-	NativeCompiler.Built("Compiler/output/missing").StartsWith("mlir-opt failed") is true
-	let lowered = Lowered(base)
+		Build(path.Substring(0, path.Length - 7), program, tools)
+Build(base Text, program Text, tools Toolchain)
+	File(base + ".mlir").Write(Mlir(program, tools.root, Platform.Current))
+	logger.Log(Built(base, tools))
+	if Platform.Current is Platform.Windows
+		File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
+		logger.Log(CrossBuilt(base, tools))
+Mlir(program Text, root Text, platform Number) Text
+	NativeCompiler.Mlir("module {\n}", ".", Platform.Linux).IndexOf("@strict_linux") > 0 is true
+	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
+	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(platform) + ".mlir").ReadLines
+	program.Substring(0, program.Length - 1) + runtime + "\n" + Text.Combine(system, "\n") + "\n}"
+Built(base Text, tools Toolchain) Text
+	NativeCompiler.Built("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed") is true
+	let lowered = Lowered(base, tools)
 	if lowered is not ""
 		return lowered
 	let executable = base + NasmFormat(Platform.Current).ExeExtension
-	constant reproducible = Platform.Current is Platform.Windows then " -Wl,-Brepro" else ""
-	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + reproducible
-	let linked = ToolRunner("clang").Execute(linking)
+	constant system = Platform.Current is Platform.Windows then " -Wl,-Brepro" else " -lm"
+	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + system
+	let linked = ToolRunner(tools.Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else "Built " + executable
-Lowered(base Text) Text
-	NativeCompiler.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+CrossBuilt(base Text, tools Toolchain) Text
+	NativeCompiler.CrossBuilt("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed") is true
+	let linux = base + ".linux"
+	let lowered = Lowered(linux, tools)
+	if lowered is not ""
+		return lowered
+	let compiling = Quoted(linux + ".ll") + " -o " + Quoted(linux + ".o") + LinuxTarget
+	let compiled = ToolRunner(tools.Located("clang")).Execute(compiling)
+	if compiled.Failed
+		return "clang failed: " + compiled.error
+	let linking = "-e gcc -static " + Quoted(WslPath(linux + ".o")) + " -o " + Quoted(WslPath(base)) + " -lm"
+	let linked = ToolRunner("wsl").Execute(linking)
+	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + base + " for Linux"
+WslPath(path Text) Text
+	NativeCompiler.WslPath("C:/code/A") is "/mnt/c/code/A"
+	NativeCompiler.WslPath("D:\\B\\c") is "/mnt/d/B/c"
+	"/mnt/" + path.Substring(0, 1).Lower + path.Substring(2, path.Length - 2).Replace("\\", "/")
+Lowered(base Text, tools Toolchain) Text
+	NativeCompiler.Lowered("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed") is true
 	constant passes = " --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm"
 	let output = " --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
 	let lowering = Quoted(base + ".mlir") + SingleThreaded + passes + output
-	let lowered = ToolRunner("mlir-opt").Execute(lowering)
+	let lowered = ToolRunner(tools.Located("mlir-opt")).Execute(lowering)
 	if lowered.Failed
 		return "mlir-opt failed: " + lowered.error
 	let translation = SingleThreaded + " --mlir-to-llvmir " + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
-	let translated = ToolRunner("mlir-translate").Execute(translation)
+	let translated = ToolRunner(tools.Located("mlir-translate")).Execute(translation)
 	translated.Failed then "mlir-translate failed: " + translated.error else ""
 Unsupported(mlir Text) Number
 	NativeCompiler.Unsupported("a\nunsupported: x") is 2

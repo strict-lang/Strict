@@ -1,3 +1,8 @@
+# native Linux executables are built next to their .strict files without an extension
+*
+!*.*
+!*/
+!LICENSE
 # User-specific files and cache folders
 *.rsuser
 *.suo
@@ -137,7 +142,8 @@ ipch/
 *.llvm.mlir
 !Compiler/NativeRuntime*.mlir
 *.obj
-Examples/PureAdder
+*.o
+/Tools/
 *.7z
 test_output.txt
 temp_inspect.csx
