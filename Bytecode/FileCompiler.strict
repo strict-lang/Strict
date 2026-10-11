@@ -21,8 +21,9 @@ Normalized(path Text, root Text) Text
 	Normalized("Bytecode\\A.strict", ".") is "./Bytecode/A.strict"
 	Normalized("./A.strict", ".") is "./A.strict"
 	Normalized("C:/s/A.strict", ".") is "C:/s/A.strict"
+	Normalized("C:/s/./A.strict", "C:/s") is "C:/s/A.strict"
 	Normalized("C:\\s\\A.strict", "C:/s") is "C:/s/A.strict"
-	let slashed = path.Replace("\\", "/")
+	let slashed = path.Replace("\\", "/").Replace("/./", "/")
 	let isRelative = (slashed.StartsWith("/") is false) and (slashed.IndexOf(":") < 0)
 	(root is ".") and isRelative and (slashed.StartsWith("./") is false) then "./" + slashed else slashed
 FullName(path Text, root Text) Text
