@@ -8,40 +8,43 @@ Without(body SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Without(BodyParser("Run", "\t2 is in (1, 2)", "\t2").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.Without(BodyParser("Run Boolean", "\t3 > 1", "\ttrue").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.Without(Declared, CodeBlock.Empty).children.Length is 1
+	let end = LeadingEnd(body, block)
 	mutable code = List(Mutable(SyntaxNode))
-	mutable hasCode = false
 	for body.children
-		let isTest = IsTest(value, hasCode is false, block)
-		if (index is body.children.Length - 1) or ((isTest or IsTestConstant(body, index, block)) is false)
+		if index >= end
 			code.Add(value)
-		hasCode = hasCode or (isTest is false)
 	SyntaxNode("Body", "", UsedConstants(body, code, block) + code)
 UsedConstants(body SyntaxNode, code SyntaxNodes, block CodeBlock) SyntaxNodes
 	Plain.UsedConstants(Declared, Declared.children, CodeBlock.Empty).Length is 1
 	mutable names = List(Mutable(Text))
 	for SyntaxNode("Body", "", code).Statements
 		names = names + value.HeadNames
+	let end = LeadingEnd(body, block)
 	for body.children
-		if IsTestConstant(body, index, block) and (Tokenizer(value.text).Tokens.Last is in names)
+		if (index < end) and IsTestConstant(body, index, block) and (Tokenizer(value.text).Tokens.Last is in names)
 			value
 Tests(body SyntaxNode, block CodeBlock) SyntaxNodes
 	Plain.Tests(BodyParser("Run", "\t1 is 1", "\t2 is not 3", "\t2").Block(1, 1), CodeBlock.Empty).Length is 2
-	Plain.Tests(BodyParser("Run", "\tlet a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 1
+	Plain.Tests(BodyParser("Run", "\tlet a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 0
 	Plain.Tests(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 2
 	Plain.Tests(BodyParser("Run", "\t1 is 1", "\tconstant a = 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 1
-	mutable tests = List(Mutable(SyntaxNode))
-	mutable hasCode = false
+	Plain.Tests(BodyParser("Run", "\tmutable a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 0
+	let end = LeadingEnd(body, block)
 	for body.children
-		let isTest = (index < body.children.Length - 1) and IsTest(value, hasCode is false, block)
-		if isTest or IsTestConstant(body, index, block)
-			tests.Add(value)
-		hasCode = hasCode or (isTest is false)
-	tests
+		if index < end
+			value
+LeadingEnd(body SyntaxNode, block CodeBlock) Number
+	Plain.LeadingEnd(Declared, CodeBlock.Empty) is 2
+	for body.children
+		let isLast = index is body.children.Length - 1
+		if isLast or ((IsTest(value, true, block) or IsTestConstant(body, index, block)) is false)
+			return index
+	body.children.Length
 IsTestConstant(body SyntaxNode, position Number, block CodeBlock) Boolean
 	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), 0, CodeBlock.Empty) is true
 	let line = body.children(position)
 	let isDeclared = (line.Kind is "Declaration") and line.text.StartsWith("constant ")
-	isDeclared and (position + 2 < body.children.Length) and IsTest(body.children(position + 1), false, block)
+	isDeclared and (position + 2 < body.children.Length) and IsTest(body.children(position + 1), true, block)
 IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	Plain.IsTest(SyntaxNode("Binary", ">", (One, One)), false, CodeBlock.Empty) is false
 	Plain.IsTest(SyntaxNode("Not", "", SyntaxNode("Binary", "is", (One, One))), false, CodeBlock.Empty) is true

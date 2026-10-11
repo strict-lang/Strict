@@ -20,7 +20,6 @@ In priority order. Remove what is done, add what is found.
    - `to Type` is missing (`Variable.strict`).
    - ImageProcessing executables crash when run (Image and ColorValue members).
 8. **Validators**: a `let` with only constant values must be `constant`. The check misses list literals.
-   - A `... is ...` line after code lines is taken as a test and runs without the variables it uses (`Examples/BaseTypesTest` TestMutable `counter is 1`). Only the lines at the start of a method should be tests.
 9. **Tooling**: LanguageServer in Strict (the C# one is on the `dotnet` branch), CI with the native toolchain.
 10. **Strict VM speed**: 245 ms for 1M iterations, about 5x slower than native (45 ms). Fast enough for now. When needed, update frames and registers in place for values with only one reference.
 11. **Mutable as signals** (design decision, from the 2023 blog post "mutable"): `mutable squareArea = length * length` would keep recomputing when `length` changes, while `constant` stays the first value. Today a `mutable` only changes when it is reassigned (README). Within one method the compiler could recompute the dependent mutables after each reassignment of their inputs; members would need dependency tracking across methods.
