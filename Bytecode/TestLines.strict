@@ -1,16 +1,29 @@
 has values ValueCodegen
 constant Plain = TestLines(ValueCodegen.Plain)
 constant One = MethodCodegen.One
+constant Declared = BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\t2").Block(1, 1)
 constant Even = TestLines(ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text) + "IsEven", List(Text) + "Boolean"), CallTarget(CallTarget.NoTypes, TypeShape("IsEven(number Number) Boolean", "\tnumber % 2 is 0"), "Strict/C", List(Text))))
 Without(body SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Without(BodyParser("Run", "	1 is 1", "	2 is not 3", "	2").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.Without(BodyParser("Run", "\t2 is in (1, 2)", "\t2").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.Without(BodyParser("Run Boolean", "\t3 > 1", "\ttrue").Block(1, 1), CodeBlock.Empty).children.Length is 1
+	Plain.Without(Declared, CodeBlock.Empty).children.Length is 1
 	mutable code = List(Mutable(SyntaxNode))
+	mutable hasCode = false
 	for body.children
-		if (index is body.children.Length - 1) or (IsTest(value, code.Length is 0, block) is false)
+		let isTest = IsTest(value, hasCode is false, block)
+		if (index is body.children.Length - 1) or ((isTest or IsTestConstant(body, index, block)) is false)
 			code.Add(value)
-	SyntaxNode("Body", "", code)
+		hasCode = hasCode or (isTest is false)
+	SyntaxNode("Body", "", UsedConstants(body, code, block) + code)
+UsedConstants(body SyntaxNode, code SyntaxNodes, block CodeBlock) SyntaxNodes
+	Plain.UsedConstants(Declared, Declared.children, CodeBlock.Empty).Length is 1
+	mutable names = List(Mutable(Text))
+	for SyntaxNode("Body", "", code).Statements
+		names = names + value.HeadNames
+	for body.children
+		if IsTestConstant(body, index, block) and (Tokenizer(value.text).Tokens.Last is in names)
+			value
 Tests(body SyntaxNode, block CodeBlock) SyntaxNodes
 	Plain.Tests(BodyParser("Run", "\t1 is 1", "\t2 is not 3", "\t2").Block(1, 1), CodeBlock.Empty).Length is 2
 	Plain.Tests(BodyParser("Run", "\tlet a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 1
