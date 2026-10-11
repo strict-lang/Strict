@@ -39,7 +39,7 @@ Test(path Text, root Text) Number
 	if built.StartsWith("Built ") is false
 		logger.Log(built)
 		return 1
-	Tested(base + NasmFormat(Platform.Current).ExeExtension, path)
+	Tested(base + Toolchain(Platform.Current, root).Extension, path)
 Tested(executable Text, path Text) Number
 	NativeCompiler.Tested("Compiler/output/missing.exe", "a") is 127
 	let result = ToolRunner(executable).Execute("")
@@ -74,7 +74,7 @@ Built(base Text, tools Toolchain) Text
 	let lowered = Lowered(base, tools)
 	if lowered is not ""
 		return lowered
-	let executable = base + NasmFormat(Platform.Current).ExeExtension
+	let executable = base + tools.Extension
 	constant system = Platform.Current is Platform.Windows then " -Wl,-Brepro" else " -lm"
 	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + system
 	let linked = ToolRunner(tools.Located("clang")).Execute(linking)

@@ -1,6 +1,0 @@
-has compiler InstructionsToNasm
-CompileAndPlan(asmPath Text) Text
-	"; LINK: " is in CompilerPipeline(InstructionsToNasm.SimpleAdd(Platform.Linux)).CompileAndPlan("a.asm")
-	compiler.Compile + "\n; LINK: " + LinkerPlan.ForAsm(asmPath, compiler.platform) to Text
-to Text
-	"compiler"
