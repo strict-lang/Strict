@@ -58,12 +58,14 @@ ElementType(typeName Text) Text
 	Sample.ElementType("Texts") is "Text"
 	Sample.ElementType("Range") is "Number"
 	Sample.ElementType("Iterator(Text)") is "Text"
+	Sample.ElementType("Dictionary(Text, Number)") is "Number"
 	if typeName is in ("Number", "Range", "Text")
 		return typeName is "Range" then "Number" else typeName
 	if typeName is "List"
 		return "Generics"
-	if typeName.StartsWith("Iterator(")
-		return typeName.Substring(9, typeName.Length - 10)
+	if typeName.StartsWith("Iterator(") or typeName.StartsWith("Dictionary(")
+		let start = typeName.LastIndexOf(", ") > 0 then typeName.LastIndexOf(", ") + 2 else typeName.IndexOf("(") + 1
+		return typeName.Substring(start, typeName.Length - start - 1)
 	IsPlural(typeName) then typeName.Substring(0, typeName.Length - 1) else "Unknown"
 MemberType(instanceType Text, name Text) Text
 	Sample.MemberType("Count", "Increment") is "Count"
@@ -71,13 +73,15 @@ MemberType(instanceType Text, name Text) Text
 	ResolvedType(instanceType, name, 3)
 ResolvedType(instanceType Text, name Text, depth Number) Text
 	Sample.ResolvedType("Count", "Twice", 1) is "Count"
+	Sample.ResolvedType("Count(Number)", "Twice", 1) is "Count(Number)"
 	let type = DeclaredType(instanceType, name, depth)
 	if type is ""
 		return "Unknown"
 	if type is "Generic"
 		return ElementType(instanceType)
 	let isInherited = (MembersOf(instanceType).TypeOf(name) is "") and (MethodsOf(instanceType).TypeOf(name) is "")
-	(type is "List") or isInherited and (type is ValueOf(instanceType)) then instanceType else type
+	let isOwn = type is in ("List", BaseName(instanceType))
+	isOwn or isInherited and (type is ValueOf(instanceType)) then instanceType else type
 ValueOf(typeName Text) Text
 	Sample.ValueOf("Text") is ""
 	let typeMembers = MembersOf(typeName)

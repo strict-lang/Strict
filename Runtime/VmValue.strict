@@ -15,6 +15,16 @@ OfBoolean(condition Boolean) VmValue
 OfList(elements List(VmValue)) VmValue
 	OfList(OfNumber(1), OfNumber(2)).items.Length is 2
 	VmValue("List", 0, "", elements)
+OfError(name Text) VmValue
+	OfError("Missing").items.First.text is "Missing"
+	VmValue("Strict/Error", 0, "", (OfText(name), OfList(List(VmValue))))
+KeyIndex(key VmValue) Number
+	OfList(OfList(OfNumber(1), OfNumber(3)), OfList(OfNumber(2), OfNumber(4))).KeyIndex(OfNumber(2)) is 1
+	OfList(OfList(OfNumber(1), OfNumber(3))).KeyIndex(OfNumber(5)) is -1
+	for items
+		if value.items.First is key
+			return index
+	-1
 IsTrue Boolean
 	OfBoolean(false).IsTrue is false
 	number is 1

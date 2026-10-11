@@ -4,6 +4,7 @@ constant Shape = TypeEntry("Strict/Shape", (Width, MemberEntry.LoggerMember), Li
 constant Shapes = Natives(List(TypeEntry) + Shape)
 constant NewShape = Invocation(InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfNumber(3), Locals.Empty))
 constant SystemCall = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "OperatingSystem", "Strict/Text"), List(Number), -1), Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty))
+constant Pairs = VmValue.OfList(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.OfList(VmValue.OfNumber(2), VmValue.OfNumber(4)))
 constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
 Result(call Invocation) VmValue
 	Shapes.Result(NewShape).items.First.number is 3
@@ -18,6 +19,18 @@ Result(call Invocation) VmValue
 	if name is in ("not", "and", "or", "xor")
 		return Logical(name, instance.IsTrue, call)
 	Queried(name, instance, call)
+Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
+	Shapes.Keyed("get", Pairs, List(VmValue) + VmValue.OfNumber(2)).number is 4
+	Shapes.Keyed("Add", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))) is VmValue.OfError("DuplicateKey")
+	Shapes.Keyed("Remove", Pairs, List(VmValue) + VmValue.OfNumber(1)).Length is 1
+	let found = pairs.KeyIndex(arguments.First)
+	if name is "in"
+		return VmValue.OfBoolean(found >= 0)
+	if name is "get"
+		return found >= 0 then pairs.items(found).items.Last else VmValue.OfError("KeyNotFound")
+	if name is "Remove"
+		return found >= 0 then VmValue.OfList(pairs.items - pairs.items(found)) else pairs
+	found >= 0 then VmValue.OfError("DuplicateKey") else VmValue.OfList(pairs.items + VmValue.OfList(arguments))
 Converted(instance VmValue, target Text) VmValue
 	Shapes.Converted(VmValue.OfNumber(2), "Strict/Text").text is "2"
 	Shapes.Converted(VmValue.OfText("5"), "Strict/Number").number is 5
@@ -30,6 +43,8 @@ Logical(name Text, left Boolean, call Invocation) VmValue
 	VmValue.OfBoolean(name is "and" then left and right else name is "or" then left or right else left is not right)
 Queried(name Text, instance VmValue, call Invocation) VmValue
 	Shapes.Queried("in", VmValue.OfList(VmValue.OfNumber(3)), NewShape).IsTrue is true
+	if call.TypeName.StartsWith("Strict/Dictionary(")
+		return Keyed(name, instance, call.Arguments)
 	if name is "in"
 		return VmValue.OfBoolean(call.Arguments.First is in instance.items)
 	if name is "Index"

@@ -5,6 +5,7 @@ constant One = ValueCodegen.One
 constant NoNode = ValueCodegen.NoNode
 constant Hi = ValueCodegen.Hi
 constant Failed = CodeBlock.Empty.Declare("failed", "Error")
+constant Named = CodeBlock.Empty.Declare("named", "Dictionary(Text, Number)")
 IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty) is true
 	Plain.IsIndexing(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is false
@@ -21,6 +22,10 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
 	Plain.Indexed(SyntaxNode("Call", "failed", One), Failed).instructions.Last.kind is InstructionType.Invoke
+	Plain.Indexed(SyntaxNode("Call", "named", One), Named).instructions.Last.kind is InstructionType.Invoke
+	let named = SyntaxNode("Identifier", node.text)
+	if (node.Kind is "Call") and values.TypeOf(named, block).StartsWith("Dictionary(")
+		return values.Expression(SyntaxNode("MethodCall", "get", (named, node.children(0))), block)
 	let isError = (node.Kind is "Call") and (block.scope.TypeOf(node.text) is "Error")
 	isError then WithValue(node, block) else Element(node, block)
 WithValue(node SyntaxNode, block CodeBlock) CodeBlock

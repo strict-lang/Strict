@@ -20,9 +20,6 @@ Selected(names Texts) TypeEntry
 	TypeCodegen("Strict/B", ("Not Boolean", "\ttrue"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 0
 	let membersOnly = (names.Length is 0) and (TypeShape(lines).IsTrait is false)
 	TypeEntry(fullName, Members, (membersOnly then List(MethodEntry) else Methods(names)))
-Sibling(type Text, source Texts) TypeCodegen
-	Hello.Sibling("Strict/Limit", Limit.lines).fullName is "Strict/Limit"
-	TypeCodegen(type, source, inference, typeNames)
 Generator ValueCodegen
 	Limit.Generator.target.TypeName is "Limit"
 	let target = CallTarget(inference.types, TypeShape(lines), fullName, typeNames)
@@ -110,12 +107,21 @@ Default(header HeaderTokens, position Number) List(InstructionEntry)
 Concrete(type Text) Text
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "Numbers"
 	TypeCodegen("Strict/List(Text)", List(Text), NoTypes, List(Text)).Concrete("List") is "Texts"
+	TypeCodegen("Strict/Dictionary(Text, Text)", List(Text), NoTypes, List(Text)).Concrete("List") is "Textss"
 	Hello.Concrete("Generic") is "Generic"
 	Hello.Concrete("Iterator(Generic)") is "Iterator"
 	let open = fullName.IndexOf("(")
 	if open is -1
 		return type.Replace("(Generic)", "")
-	let element = fullName.Substring(open + 1, fullName.Length - open - 2)
+	let element = Item(fullName.Substring(open + 1, fullName.Length - open - 2))
 	if type is "Generic"
 		return element
 	type is in ("Generics", "List") then element + "s" else type
+Item(arguments Text) Text
+	Hello.Item("Number") is "Number"
+	Hello.Item("Text, Text") is "Texts"
+	Hello.Item("Text, Number") is "List(Text, Number)"
+	let parts = arguments.Split(", ")
+	if parts.Length is 1
+		return arguments
+	parts(0) is parts(1) then parts(0) + "s" else "List(" + arguments + ")"

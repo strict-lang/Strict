@@ -8,6 +8,8 @@ constant Limits = (Scope(List(Text) + "Limit", List(Text) + "3"), NoShape)
 constant NoNode = SyntaxNode("Identifier", "x")
 constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "Text")))
 constant MutableText = SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "Text"), NoNode))
+constant Pairs = SyntaxParser(Tokenizer("Dictionary((1, \"a\"))").Tokens).Parse
+constant Typed = SyntaxParser(Tokenizer("Dictionary(Text, Number)").Tokens).Parse
 constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name")
 constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)), NoShapes)
 ConstantOf(typeName Text, name Text) Text
@@ -38,6 +40,11 @@ IdentifierType(name Text, scope Scope, current Scope) Text
 	current.TypeOf(name) is "" then name else current.TypeOf(name)
 Called(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.Called(SyntaxNode("Call", "Mutable", SyntaxNode("Number", "5")), NoScope, NoShape) is "Number"
+	NoInference.Called(Pairs, NoScope, NoShape) is "Dictionary(Number, Text)"
+	NoInference.Called(Typed, NoScope, NoShape) is "Dictionary(Text, Number)"
+	if (node.text is "Dictionary") and (node.children.Length > 0)
+		let pair = node.children(0).Kind is "List" then node.children(0).children else node.children
+		return "Dictionary(" + TypeOf(pair(0), scope, current) + ", " + TypeOf(pair.Last, scope, current) + ")"
 	let isMutable = (node.text is "Mutable") and (node.children.Length is 1)
 	isMutable then TypeOf(node.children(0), scope, current) else CallType(node.text, scope, current)
 CallType(name Text, scope Scope, current Scope) Text

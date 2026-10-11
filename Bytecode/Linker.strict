@@ -46,7 +46,8 @@ Fresh(signature Text) TypeEntry
 LinkedType(type Text, methods Texts) TypeEntry
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
-	let entry = main.Sibling(type, File(root + "/" + SourceName(type) + ".strict").ReadLines).Selected(methods)
+	let source = File(root + "/" + SourceName(type) + ".strict").ReadLines
+	let entry = TypeCodegen(type, source, main.inference, main.typeNames).Selected(methods)
 	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
 	isLocal then TypeEntry(Path(type).FileName.text, entry.members, entry.methods) else entry
 BaseTypes(entries List(TypeEntry), targets Texts) Texts
@@ -71,10 +72,11 @@ IsNative(type Text, method Text) Boolean
 	Sample.IsNative("Strict/Text", "Upper") is false
 	Sample.IsNative("Strict/Range", "Length") is false
 	Sample.IsNative("Strict/Bytecode/B", "to") is false
+	Sample.IsNative("Strict/Dictionary(Number, Number)", "get") is true
 	if type.LastIndexOf("/") > 6
 		return false
-	if method is in ("Length", "Count")
-		return SourceName(type) is in ("Text", "List", "File")
+	if (method is in ("Length", "Count")) or (SourceName(type) is "Dictionary")
+		return SourceName(type) is in ("Text", "List", "File", "Dictionary")
 	method is in Natives
 SourceName(type Text) Text
 	Sample.SourceName("Strict/List(Number)") is "List"

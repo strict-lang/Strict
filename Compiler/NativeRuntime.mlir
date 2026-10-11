@@ -35,6 +35,8 @@
   llvm.mlir.global internal constant @strict_gc_classes(dense<[0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 19, 19]> : tensor<65xi8>) : !llvm.array<65 x i8>
   llvm.mlir.global internal constant @strict_gc_out_of_memory("Strict: out of memory\0A\00") : !llvm.array<23 x i8>
   llvm.mlir.global internal constant @strict_dimensions("listsHaveDifferentDimensions\00") : !llvm.array<29 x i8>
+  llvm.mlir.global internal constant @strict_key_not_found("KeyNotFound\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @strict_duplicate_key("DuplicateKey\00") : !llvm.array<13 x i8>
   func.func private @strict_gc_init(%stack: !llvm.ptr) {
     %tableBytes = arith.constant 8388608 : i64
     %heapBytes = arith.constant 68719476736 : i64
@@ -1366,6 +1368,127 @@
   func.func private @strict_list_divided_number(%list: f64, %number: f64) -> f64 {
     %yes = arith.constant true
     %result = func.call @strict_list_scalar(%list, %number, %yes) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_find(%dictionary: f64, %key: f64, %isText: i1) -> i64 {
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %none = arith.constant -1 : i64
+    %zero = arith.constant 0.0 : f64
+    %length = func.call @strict_list_length(%dictionary) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    cf.br ^loop(%start : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^body, ^missing
+  ^body:
+    %items = func.call @strict_list_items(%dictionary) : (f64) -> !llvm.ptr
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %pair = llvm.load %slot : !llvm.ptr -> f64
+    %pairKey = func.call @strict_list_get(%pair, %zero) : (f64, f64) -> f64
+    %matched = func.call @strict_list_matches(%pairKey, %key, %isText) : (f64, f64, i1) -> i1
+    %next = arith.addi %index, %step : i64
+    cf.cond_br %matched, ^found(%index : i64), ^loop(%next : i64)
+  ^found(%position: i64):
+    return %position : i64
+  ^missing:
+    return %none : i64
+  }
+  func.func private @strict_dictionary_has(%dictionary: f64, %key: f64, %isText: i1) -> f64 {
+    %none = arith.constant -1 : i64
+    %position = func.call @strict_dictionary_find(%dictionary, %key, %isText) : (f64, f64, i1) -> i64
+    %found = arith.cmpi ne, %position, %none : i64
+    %result = func.call @strict_boolean(%found) : (i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_get(%dictionary: f64, %key: f64, %isText: i1) -> f64 {
+    %none = arith.constant -1 : i64
+    %one = arith.constant 1.0 : f64
+    %position = func.call @strict_dictionary_find(%dictionary, %key, %isText) : (f64, f64, i1) -> i64
+    %found = arith.cmpi ne, %position, %none : i64
+    cf.cond_br %found, ^value, ^missing
+  ^value:
+    %items = func.call @strict_list_items(%dictionary) : (f64) -> !llvm.ptr
+    %slot = llvm.getelementptr %items[%position] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %pair = llvm.load %slot : !llvm.ptr -> f64
+    %value = func.call @strict_list_get(%pair, %one) : (f64, f64) -> f64
+    return %value : f64
+  ^missing:
+    %name = llvm.mlir.addressof @strict_key_not_found : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
+  }
+  func.func private @strict_dictionary_add(%dictionary: f64, %key: f64, %value: f64, %isText: i1) -> f64 {
+    %none = arith.constant -1 : i64
+    %nothing = arith.constant 0.0 : f64
+    %position = func.call @strict_dictionary_find(%dictionary, %key, %isText) : (f64, f64, i1) -> i64
+    %found = arith.cmpi ne, %position, %none : i64
+    cf.cond_br %found, ^duplicate, ^append
+  ^duplicate:
+    %name = llvm.mlir.addressof @strict_duplicate_key : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
+  ^append:
+    %single = func.call @strict_list_add(%nothing, %key) : (f64, f64) -> f64
+    %pair = func.call @strict_list_add(%single, %value) : (f64, f64) -> f64
+    %result = func.call @strict_list_add(%dictionary, %pair) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_remove(%dictionary: f64, %key: f64, %isText: i1) -> f64 {
+    %none = arith.constant -1 : i64
+    %zero = arith.constant 0.0 : f64
+    %bits = arith.constant false
+    %position = func.call @strict_dictionary_find(%dictionary, %key, %isText) : (f64, f64, i1) -> i64
+    %found = arith.cmpi ne, %position, %none : i64
+    cf.cond_br %found, ^remove, ^unchanged
+  ^remove:
+    %items = func.call @strict_list_items(%dictionary) : (f64) -> !llvm.ptr
+    %slot = llvm.getelementptr %items[%position] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %pair = llvm.load %slot : !llvm.ptr -> f64
+    %copy = func.call @strict_list_copy(%dictionary, %zero) : (f64, f64) -> f64
+    %result = func.call @strict_list_remove(%copy, %pair, %bits) : (f64, f64, i1) -> f64
+    return %result : f64
+  ^unchanged:
+    return %dictionary : f64
+  }
+  func.func private @strict_dictionary_has_number(%dictionary: f64, %key: f64) -> f64 {
+    %isText = arith.constant false
+    %result = func.call @strict_dictionary_has(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_has_text(%dictionary: f64, %key: f64) -> f64 {
+    %isText = arith.constant true
+    %result = func.call @strict_dictionary_has(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_get_number(%dictionary: f64, %key: f64) -> f64 {
+    %isText = arith.constant false
+    %result = func.call @strict_dictionary_get(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_get_text(%dictionary: f64, %key: f64) -> f64 {
+    %isText = arith.constant true
+    %result = func.call @strict_dictionary_get(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_add_number(%dictionary: f64, %key: f64, %value: f64) -> f64 {
+    %isText = arith.constant false
+    %result = func.call @strict_dictionary_add(%dictionary, %key, %value, %isText) : (f64, f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_add_text(%dictionary: f64, %key: f64, %value: f64) -> f64 {
+    %isText = arith.constant true
+    %result = func.call @strict_dictionary_add(%dictionary, %key, %value, %isText) : (f64, f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_remove_number(%dictionary: f64, %key: f64) -> f64 {
+    %isText = arith.constant false
+    %result = func.call @strict_dictionary_remove(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_dictionary_remove_text(%dictionary: f64, %key: f64) -> f64 {
+    %isText = arith.constant true
+    %result = func.call @strict_dictionary_remove(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
     return %result : f64
   }
   func.func private @strict_text_length(%text: f64) -> f64 {
