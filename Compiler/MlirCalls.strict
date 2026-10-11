@@ -25,7 +25,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
-	let helper = MlirNatives(function, position).Helper(Owner(entry, type), decoder.Text(2), count)
+	let helper = NativeHelper(entry, decoder)
 	if helper is not ""
 		return MlirNatives(function, position).Emitted(entry, type, helper)
 	Compiled(entry, decoder, type, count)
@@ -38,6 +38,13 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + Operands(entry) + ") : (" + types + ") -> f64"
 	Loads(entry, type) + call + function.Store(Temp("r"), "%r" + entry.payload(0))
+NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
+	MlirCalls(Shapes, 2).NativeHelper(Area, PayloadDecoder(Area)) is ""
+	let type = function.TypeOf(decoder.Text(1))
+	let count = entry.payload(5 + entry.payload(3))
+	let natives = MlirNatives(function, position)
+	let owned = natives.Helper(Owner(entry, type), decoder.Text(2), count)
+	owned is "" then natives.Helper(type.Name, decoder.Text(2), count) else owned
 Owner(entry InstructionEntry, type TypeEntry) Text
 	MlirCalls(Shapes, 2).Owner(Area, AreaShape) is "Shape"
 	let countPosition = 5 + entry.payload(3)

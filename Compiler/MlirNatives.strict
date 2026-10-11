@@ -3,8 +3,8 @@ has position Number
 constant Length = InstructionEntry.Invoke(1, ("Strict/Text", "Length", "Strict/Number"), List(Number), 0)
 constant Search = InstructionEntry.Invoke(2, ("Strict/Text", "IndexOf", "Strict/Number", "text"), 1, 0)
 constant TextType = TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry))
-constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower")
-constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower")
+constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
+constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end")
 constant Texts = MlirFunction(List(TypeEntry), MlirFunction.Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), Length, Search)))
 Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Text", "Length", 0) is "strict_text_length"
@@ -16,8 +16,13 @@ Helper(typeName Text, name Text, count Number) Text
 		return kind is "Text" then "strict_text_length" else kind.StartsWith("List(") then "strict_list_length" else ""
 	if kind.StartsWith("List(")
 		return CollectionHelper(kind, name, count)
+	ValueHelper(kind, name)
+ValueHelper(kind Text, name Text) Text
+	MlirNatives(Texts, 1).ValueHelper("Boolean", "not") is "strict_not"
 	if (kind is "Number") and (name is "Floor")
 		return "strict_floor"
+	if (kind is "Boolean") and (name is in ("not", "and", "or", "xor"))
+		return "strict_" + name
 	kind is "Text" then TextHelper(name) else ""
 CollectionHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "in", 1) is "strict_list_has_text"
@@ -34,7 +39,7 @@ Finder(element Text, operation Text) Text
 	element is in ("Number", "Boolean", "Character") then "strict_list_" + operation + "_number" else ""
 TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"
-	MlirNatives(Texts, 1).TextHelper("Trim") is ""
+	MlirNatives(Texts, 1).TextHelper("Split") is ""
 	let found = TextNames.Index(name)
 	found < 0 then "" else TextHelpers(found)
 Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
@@ -42,6 +47,7 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	let calls = MlirCalls(function, position)
 	let count = entry.payload(5 + entry.payload(3))
 	let operands = List(Text) + calls.Temp("m") + calls.ArgumentNames(count)
-	let completed = (helper is "strict_text_index") and (count is 1) then operands + "%zero" else operands
+	let hasStart = helper is in ("strict_text_index", "strict_text_starts")
+	let completed = hasStart and (count is 1) then operands + "%zero" else operands
 	let call = MlirMemory(function, position).Called(calls.Temp("r"), helper, completed)
 	calls.Loads(entry, type) + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))

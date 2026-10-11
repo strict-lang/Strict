@@ -31,7 +31,7 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 		return MlirConstants(function, position).Literal(literal.text, slot, suffix)
 	if literal.kind is "List"
 		return MlirLists(function, position).Literal(literal, slot, suffix)
-	if literal.kind is not in ("Number", "Boolean")
+	if literal.kind is not in ("Number", "Boolean", "None")
 		return List(Text) + Unsupported(literal.kind + " constant")
 	let number = "    " + Temp(suffix + "c") + " = arith.constant " + Hex(literal.number) + " : f64"
 	(number, function.Store(Temp(suffix + "c"), slot))
@@ -74,9 +74,9 @@ Calculated(entry InstructionEntry) Texts
 		return MlirTexts(function, position).Compared(entry)
 	if entry.kind > InstructionType.ArithmeticSeparator
 		return loads + Compared(entry, left + ", " + right)
-	if entry.kind is InstructionType.Power
-		return List(Text) + Unsupported("Power")
-	let operation = "    " + Temp("") + "c = arith." + Operation(entry.kind) + " " + left + ", " + right + " : f64"
+	let arithmetic = "    " + Temp("") + "c = arith." + Operation(entry.kind) + " " + left + ", " + right + " : f64"
+	constant power = "    " + Temp("c") + " = llvm.intr.pow(" + left + ", " + right + ") : (f64, f64) -> f64"
+	let operation = entry.kind is InstructionType.Power then power else arithmetic
 	loads + operation + function.Store(Temp("c"), "%r" + entry.payload(3))
 Operation(kind Number) Text
 	Copy.Operation(InstructionType.Modulo) is "remf"
