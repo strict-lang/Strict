@@ -14,10 +14,7 @@ ReturnType Text
 	PayloadDecoder(entry).Text(4 + entry.payload(3))
 ParameterNames Texts
 	AddCall.ParameterNames is ("x")
-	mutable names = List(Mutable(Text))
-	for entry.payload(3)
-		names.Add(PayloadDecoder(entry).Text(4 + index))
-	names
+	PayloadDecoder(entry).Names
 Arguments List(VmValue)
 	AddCall.Arguments.First.number is 3
 	let countPosition = 5 + entry.payload(3)

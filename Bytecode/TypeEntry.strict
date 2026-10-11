@@ -5,6 +5,7 @@ constant MagicByte = 83
 constant FormatVersion = 4
 constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
 constant CharacterEntry = TypeEntry("Strict/Character", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
+constant Scaling = TypeEntry("Strict/Vector", List(MemberEntry), (MethodEntry("*", List(MemberEntry) + MemberEntry("other", "Strict/Vector", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry)), MethodEntry("*", List(MemberEntry) + MemberEntry("scale", "Strict/Number", List(InstructionEntry), false), "Strict/Vector", List(InstructionEntry))))
 constant ToNumber = MethodEntry("to", List(MemberEntry), "Strict/Number", List(InstructionEntry))
 constant Converting = TypeEntry("Strict/Digit", List(MemberEntry), (ToNumber, MethodEntry("to", List(MemberEntry) + MemberEntry.SevenMember, "Strict/Text", List(InstructionEntry))))
 Names BinaryNames
@@ -43,19 +44,27 @@ MethodGroup(methodName Text, names BinaryNames) Numbers
 	for overloads
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
 	encoder.bytes
-Callee(name Text, count Number, returnType Text) MethodEntry
-	HelloLogger.Callee("Run", 0, "None").instructions.Length is 2
-	Converting.Callee("to", 0, "Text").parameters.Length is 1
-	Converting.Callee("to", 0, "Strict/Number").parameters.Length is 0
-	let returned = ShortName(returnType)
-	mutable defaulted = MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry))
+Callee(name Text, count Number, returnType Text, names Texts) MethodEntry
+	HelloLogger.Callee("Run", 0, "None", List(Text)).instructions.Length is 2
+	Converting.Callee("to", 0, "Text", List(Text)).parameters.Length is 1
+	Converting.Callee("to", 0, "Strict/Number", List(Text)).parameters.Length is 0
+	Scaling.Callee("*", 1, "Strict/Vector", List(Text) + "scale").returnType is "Strict/Vector"
+	mutable chosen = MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry))
+	mutable best = 0
 	for methods
-		let isNamed = (value.Name is name) and (name is not "to" or (ShortName(value.returnType) is returned))
-		if isNamed and (value.parameters.Length is count)
-			return value
-		if isNamed and (count < value.parameters.Length) and (value.parameters(count).initial.Length > 0)
-			defaulted = value
-	defaulted
+		let fit = value.Fit(name, count, returnType, names)
+		if fit > best
+			chosen = value
+			best = fit
+	chosen
+OverloadSuffix(method MethodEntry) Text
+	Scaling.OverloadSuffix(Scaling.methods.Last) is "_scale"
+	HelloLogger.OverloadSuffix(MethodEntry.HelloRun) is ""
+	mutable count = 0
+	for methods
+		if (value.Name is method.Name) and (value.Name is not "to") and (value.parameters.Length is method.parameters.Length)
+			count = count + 1
+	count > 1 then "_" + Text.Combine(method.ParameterNames, "_") else ""
 ShortName(typeName Text) Text
 	HelloLogger.ShortName("Strict/Bytecode/TypeEntry") is "TypeEntry"
 	HelloLogger.ShortName("Strict/List(TypeEntry)") is "List(TypeEntry)"

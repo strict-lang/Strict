@@ -47,7 +47,7 @@ Called(node SyntaxNode, scope Scope, current Scope) Text
 	if (node.text is "Dictionary") and (node.children.Length > 0)
 		let pair = node.children(0).Kind is "List" then node.children(0).children else node.children
 		return "Dictionary(" + TypeOf(pair(0), scope, current) + ", " + TypeOf(pair.Last, scope, current) + ")"
-	let isGeneric = (node.children.Length is 1) and (types.ParameterTypesOf(node.text, "from", 1) is ("Generic"))
+	let isGeneric = (node.children.Length is 1) and (types.ParametersOf(node.text, "from types", 1) is ("Generic"))
 	if isGeneric
 		return node.text + "(" + TypeOf(node.children(0), scope, current) + ")"
 	let isMutable = (node.text is "Mutable") and (node.children.Length is 1)
@@ -69,6 +69,9 @@ IsListName(name Text) Boolean
 	name.Substring(0, 1).Lower is name.Substring(0, 1)
 MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.MemberCallType(SyntaxNode("Member", "Length", (ToText, NoNode)), NoScope, NoShape) is "Unknown"
+	let binary = SyntaxNode("Binary", node.text, node.children)
+	if (node.Kind is "MethodCall") and (binary.Precedence >= 11) and (binary.Precedence < 20)
+		return ArithmeticType(binary, scope, current)
 	let instanceType = TypeOf(node.children(0), scope, current)
 	let type = node.text is "value" then instanceType else types.MemberType(instanceType, node.text)
 	let isMember = (node.text is "value") or types.MembersOf(instanceType).TypeOf(node.text) is not ""
@@ -105,7 +108,10 @@ ArithmeticType(node SyntaxNode, scope Scope, current Scope) Text
 	let right = TypeOf(node.children(1), scope, current)
 	if (node.text is "+") and (left is "Number") and types.IsPlural(right)
 		return right
-	let operatorType = types.MemberType(left, node.text)
+	let ordinal = types.ParameterScope(left).Overload(node.text, List(Text) + right, left)
+	let declared = types.MethodsOf(left).TypeAt(node.text, ordinal)
+	let overloaded = declared is in ("List", types.BaseName(left)) then left else declared
+	let operatorType = ordinal < 0 then types.MemberType(left, node.text) else overloaded
 	operatorType is "Unknown" then left else operatorType
 ConditionalType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.ConditionalType(SyntaxNode("Binary", "then", (NoNode, NoNode)), NoScope, NoShape) is "y"
@@ -123,7 +129,7 @@ Converter(source Text, type Text) Text
 		return "to"
 	if (source is in Primitives) or (type is in Primitives) or (source is type)
 		return ""
-	let origins = types.ParameterTypesOf(type, "from", 1)
+	let origins = types.ParametersOf(type, "from types", 1)
 	let isFrom = (origins.Length is 1) and (origins(0) is source)
 	types.MethodsOf(source).Has("to", type) then "to" else (isFrom then "from" else "")
 Assigned(target Text, assigned Text) Text

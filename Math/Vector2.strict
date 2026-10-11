@@ -18,6 +18,12 @@ Length Number
 	Vector2(0, 0) + Vector2.One is (1, 1)
 	Vector2(1, 2) + Vector2(4, 5) is (5, 7)
 	(X + other.X, Y + other.Y)
+*(other) Number
+	Vector2(1, 2) * Vector2(3, 4) is 11
+	X * other.X + Y * other.Y
+*(scale Number) Vector2
+	Vector2(1, 2) * 3 is Vector2(3, 6)
+	Vector2(X * scale, Y * scale)
 Normalize Vector2
 	Vector2(1, 0).Normalize is Vector2(1, 0)
 	Vector2(0, 5).Normalize is Vector2(0, 1)

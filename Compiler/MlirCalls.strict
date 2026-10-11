@@ -30,7 +30,7 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	Text.Combine(MlirCalls(Hashes, 1).Created(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0 is true
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
-	let custom = type.Callee("from", count, decoder.Text(4 + entry.payload(3)))
+	let custom = type.Callee("from", count, decoder.Text(4 + entry.payload(3)), decoder.Names)
 	let instances = MlirInstances(function, position)
 	if (custom.instructions.Length is 0) or IsMemberValue(entry, type)
 		return instances.Constructed(entry, decoder.Text(1))
@@ -56,7 +56,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	Compiled(entry, decoder, type, count)
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
-	let callee = type.Callee(decoder.Text(2), count, decoder.Text(4 + entry.payload(3)))
+	let callee = type.Callee(decoder.Text(2), count, decoder.Text(4 + entry.payload(3)), decoder.Names)
 	if callee.instructions.Length is 0
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let target = MlirFunction(function.types, type, callee)

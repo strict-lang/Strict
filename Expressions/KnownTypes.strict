@@ -38,15 +38,15 @@ ParametersOf(typeName Text, method Text, arguments Number) Texts
 	Sample.ParametersOf("Count", "Twice", 2) is ("times", "offset")
 	Sample.ParametersOf("Count", "Twice", 1) is ("times")
 	Sample.ParametersOf("Count", "Increment", 0).Length is 0
-	let position = names.Index(BaseName(typeName))
-	let scope = position is -1 then NoMembers else parameters(position)
+	let scope = ParameterScope(typeName)
 	for scope.names
 		if (value is method) and (ParameterNames(scope.types(index)).Length is arguments)
 			return ParameterNames(scope.types(index))
 	ParameterNames(scope.TypeOf(method))
-ParameterTypesOf(typeName Text, method Text, arguments Number) Texts
-	Sample.ParameterTypesOf("Count", "Twice", 1) is ("Number")
-	ParametersOf(typeName, method + " types", arguments)
+ParameterScope(typeName Text) Scope
+	Sample.ParameterScope("Count").TypeOf("Twice types") is "Number"
+	let position = names.Index(BaseName(typeName))
+	position is -1 then NoMembers else parameters(position)
 ParameterNames(joined Text) Texts
 	Sample.ParameterNames("a,b") is ("a", "b")
 	joined is "" then List(Text) else joined.Split(",")

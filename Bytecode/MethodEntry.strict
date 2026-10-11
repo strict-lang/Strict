@@ -41,6 +41,20 @@ IsInitializer(members List(MemberEntry)) Boolean
 		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is in names)
 			return true
 	false
+ParameterNames Texts
+	Logged.ParameterNames is ("logger")
+	for parameters
+		value.Name
+Fit(name Text, count Number, target Text, names Texts) Number
+	GoRun.Fit("Run", 0, "None", List(Text)) is 3
+	Logged.Fit("Add", 1, "None", List(Text) + "other") is 2
+	GoRun.Fit("Go", 0, "None", List(Text)) is 0
+	let isReturning = name is not "to" or (TypeEntry.ShortName(target) is TypeEntry.ShortName(returnType))
+	if (Name is not name) or (isReturning is false)
+		return 0
+	if parameters.Length is count
+		return ParameterNames is names then 3 else 2
+	(count < parameters.Length) and (parameters(count).initial.Length > 0) then 1 else 0
 SignatureTypes Texts
 	Logged.SignatureTypes is ("Strict/Number", "Strict/Logger")
 	mutable types = List(Mutable(Text))

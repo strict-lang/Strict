@@ -13,15 +13,15 @@ constant Paired = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntr
 constant Listing = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.IndexCall, "list", (0, 0, -1))), 0, List(VmValue) + VmValue.OfNumber(1), Locals(("list"), (VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)))))
 Launch(typeName Text, arguments List(VmValue))
 	let main = Natives(types).TypeOf(typeName)
-	let exact = main.Callee("Run", arguments.Length, "None")
+	let exact = main.Callee("Run", arguments.Length, "None", List(Text))
 	let isExact = exact.instructions.Length > 0
-	let run = isExact then exact else main.Callee("Run", 1, "None")
+	let run = isExact then exact else main.Callee("Run", 1, "None", List(Text))
 	let bound = isExact then arguments else List(VmValue) + VmValue.OfList(arguments)
 	Execute(run, Bound(main, Natives(types).Fresh(main), run, bound))
 Tested(typeName Text) Number
 	Hello.Tested("HelloLogger") is 0
 	let main = Natives(types).TypeOf(typeName)
-	let tests = main.Callee(TestCodegen.Runner, 0, "None")
+	let tests = main.Callee(TestCodegen.Runner, 0, "None", List(Text))
 	Execute(tests, Bound(main, Natives(types).Fresh(main), tests, List(VmValue))).number
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue)) Locals
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue)).Get("value").number is 2
@@ -84,7 +84,7 @@ Call(call Invocation) VmValue
 	if (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	let type = Natives(types).TypeOf(call.TypeName)
-	let method = type.Callee(call.MethodName, call.Arguments.Length, call.ReturnType)
+	let method = type.Callee(call.MethodName, call.Arguments.Length, call.ReturnType, call.ParameterNames)
 	if (method.instructions.Length is 0) or call.IsNativeConversion or call.IsMemberValue(type)
 		return Natives(types).Result(call)
 	Executed(type, method, call)

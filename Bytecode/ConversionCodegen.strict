@@ -8,6 +8,11 @@ constant NewColor = SyntaxNode("Call", "Color", ValueCodegen.One)
 constant ColorReassignment = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "c"), NewColorValue))
 constant Pixels = SyntaxNode("Identifier", "pixels")
 constant Pixelated = CodeBlock.Empty.Declare("pixels", "ColorValues")
+ArgumentTypes(node SyntaxNode, owner Text, block CodeBlock) Texts
+	Plain.ArgumentTypes(SyntaxNode("Call", "Greet", ValueCodegen.One), "Greeter", CodeBlock.Empty) is ("Unknown")
+	let isOverloaded = values.target.IsOverloaded(node.text, owner)
+	for Range(values.ArgumentStart(node), node.children.Length)
+		isOverloaded then values.TypeOf(node.children(value), block) else "Unknown"
 Assigned(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Assigned(SyntaxNode("Declaration", "let a", ValueCodegen.One), CodeBlock.Empty).Kind is "Number"
 	Colored.Assigned(ColorReassignment, CodeBlock.Empty.Declare("c", "Color")).text is "Color"

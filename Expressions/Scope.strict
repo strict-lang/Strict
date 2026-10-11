@@ -21,3 +21,31 @@ Has(name Text, type Text) Boolean
 		if (value is name) and (types(index) is type)
 			return true
 	false
+Count(name Text) Number
+	Scope(("a", "b", "a"), ("A", "B", "C")).Count("a") is 2
+	for names
+		if value is name
+			1
+TypeAt(name Text, ordinal Number) Text
+	Scope(("a", "b", "a"), ("A", "B", "C")).TypeAt("a", 1) is "C"
+	Scope(("a", "b"), ("A", "B")).TypeAt("a", 1) is ""
+	mutable found = -1
+	for names
+		if value is name
+			found = found + 1
+			if found is ordinal
+				return types(index)
+	""
+Overload(method Text, argumentTypes Texts, owner Text) Number
+	Scope(("*", "* types", "*", "* types"), ("a", "Other", "b", "Number")).Overload("*", ("V"), "V") is 0
+	if Count(method) < 2
+		return -1
+	let other = "," + owner + ","
+	let arguments = "," + Text.Combine(argumentTypes, ",") + ","
+	mutable ordinal = -1
+	for names
+		if value is method + " types"
+			ordinal = ordinal + 1
+			if ("," + types(index) + ",").Replace(",Other,", other).Replace(",Other,", other) is arguments
+				return ordinal
+	-1

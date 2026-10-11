@@ -15,7 +15,7 @@ Symbol Text
 	let name = MlirEquality(value, 0).Symbol(type.JustName)
 	let conversion = method.Name is "to" then "_" + TypeEntry.ShortName(method.returnType) else ""
 	let spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else method.Name
-	name + "_" + spelled + "_" + method.parameters.Length + conversion
+	name + "_" + spelled + "_" + method.parameters.Length + conversion + type.OverloadSuffix(method)
 Parameters Texts
 	Counter.Parameters is ("value")
 	mutable names = List(Mutable(Text))

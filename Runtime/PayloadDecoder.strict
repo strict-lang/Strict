@@ -50,6 +50,10 @@ ElementParts Texts
 	let open = entry.texts(0).IndexOf("(")
 	let name = entry.texts(0)
 	open < 0 then List(Text) else (name.Substring(0, open), name.Substring(open + 1, name.Length - open - 2))
+Names Texts
+	PayloadDecoder(Invocation.AddCall.entry).Names is ("x")
+	for entry.payload(3)
+		Text(4 + index)
 Text(position Number) Text
 	PayloadDecoder(InstructionEntry.LoadText(0, "a")).Text(2) is "a"
 	entry.texts(-1 - entry.payload(position))
