@@ -4,7 +4,7 @@ constant Built = InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Sha
 constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (2, 1, -1))
 constant Shapes = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Built, Width)))
 constant MemberBase = 100000
-constant Method = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)
+constant Looping = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)
 constant Outer = TypeEntry("Strict/Outer", (MemberEntry("shape", "Strict/Shape", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
 constant Nesting = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Outer, Outer, MethodEntry.CountingLoop)
 Stored(owner TypeEntry) List(MemberEntry)
@@ -76,8 +76,8 @@ Field(entry InstructionEntry) Texts
 	let loaded = List(Text) + function.Load(Temp("i"), "%r" + entry.payload(1)) + memory.Pointer(Temp("i"), "i")
 	loaded + memory.Loaded(Temp("ip"), slot, "m") + function.Store(Temp("mv"), "%r" + entry.payload(0))
 Unpacked Texts
-	MlirInstances(Method, 0).Unpacked.Length is 10
-	MlirInstances(Method, 0).Unpacked.Last is "  ^unpacked:"
+	MlirInstances(Looping, 0).Unpacked.Length is 10
+	MlirInstances(Looping, 0).Unpacked.Last is "  ^unpacked:"
 	if MlirLayout(function).IsStruct(function.type.Name) is false
 		return Aliased
 	if Stored(function.type).Length is 0
@@ -89,7 +89,7 @@ Unpacked Texts
 		lines = lines + loaded + function.Store(memory.Temp("u" + index + "v"), "%v_" + value.Name)
 	lines + ("    cf.br ^unpacked", "  ^unpacked:")
 SelfGuard Texts
-	MlirInstances(Method, 0).SelfGuard.Last is "  ^unpack:"
+	MlirInstances(Looping, 0).SelfGuard.Last is "  ^unpack:"
 	constant check = "    %hasSelf = arith.cmpf une, %self, %zero : f64"
 	(check, "    cf.cond_br %hasSelf, ^unpack, ^unpacked", "  ^unpack:")
 Aliased Texts

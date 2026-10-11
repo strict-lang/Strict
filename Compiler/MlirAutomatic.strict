@@ -11,10 +11,10 @@ Functions Texts
 		let equality = MlirEquality(function, 0)
 		if equality.IsKnown(kind) and (equality.Symbol(kind) is not in symbols)
 			symbols.Add(equality.Symbol(kind))
-			lines = lines + Function(value) + Listed(equality.Symbol(kind))
+			lines = lines + Function(value) + Collection(equality.Symbol(kind))
 	lines
-Listed(symbol Text) Texts
-	Sample.Listed("Shape").Length is 5
+Collection(symbol Text) Texts
+	Sample.Collection("Shape").Length is 5
 	let header = "  func.func private @strict_automatic_list_" + symbol + "(%value: f64) -> f64 {"
 	let converter = "    %converter = func.constant @strict_automatic_" + symbol + " : (f64) -> f64"
 	let call = "    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64"
@@ -42,10 +42,10 @@ Member(member MemberEntry, slot Number, count Number) Texts
 	let converted = conversion is "" then List(Text) else List(Text) + memory.Called(text, conversion, List(Text) + value)
 	let added = "    %l" + (count + 1) + " = func.call @strict_list_add(%l" + count + ", " + text + ") : (f64, f64) -> f64"
 	memory.Loaded("%p", slot, "m" + slot) + converted + added
-ListConversion(kind Text) Text
-	Sample.ListConversion("List(Logger)") is "skip"
-	Sample.ListConversion("List(Shape)") is "strict_automatic_list_Shape"
-	Sample.ListConversion("List(List(Text))") is "strict_list_text_lists_text"
+ElementConversion(kind Text) Text
+	Sample.ElementConversion("List(Logger)") is "skip"
+	Sample.ElementConversion("List(Shape)") is "strict_automatic_list_Shape"
+	Sample.ElementConversion("List(List(Text))") is "strict_list_text_lists_text"
 	let inner = Conversion(MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind)))
 	if inner is in ("strict_list_text_text", "strict_list_text_number")
 		return inner.Replace("strict_list_text_", "strict_list_text_lists_")
@@ -61,7 +61,7 @@ Conversion(kind Text) Text
 	let helper = MlirTexts(function, 0).Helper(represented)
 	if helper is not ""
 		return helper
-	represented.StartsWith("List(") then ListConversion(represented) else Structured(represented)
+	represented.StartsWith("List(") then ElementConversion(represented) else Structured(represented)
 Structured(kind Text) Text
 	Sample.Structured("Shape") is "strict_automatic_Shape"
 	let equality = MlirEquality(function, 0)
