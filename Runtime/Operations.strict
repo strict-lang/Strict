@@ -44,9 +44,8 @@ Added(left VmValue, right VmValue) VmValue
 		return VmValue.OfList(right.kind is "List" then left.items + right.items else left.items + right)
 	if right.kind is "List"
 		return VmValue.OfList(List(VmValue) + left + right.items)
-	let leftText = left to Text
 	if (left.kind is "Text") or (right.kind is "Text")
-		return VmValue.OfText(leftText + right to Text)
+		return VmValue.OfText(left to Text + right to Text)
 	VmValue.OfNumber(left.number + right.number)
 Removed(elements VmValue, element VmValue) VmValue
 	Adding.Removed(OneTwo, VmValue.OfNumber(1)).items.First.number is 2

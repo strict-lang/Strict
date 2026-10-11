@@ -19,10 +19,9 @@ Emitted Texts
 	entry.kind is InstructionType.IndexCall then Indexed(entry) else Appended(entry)
 Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	MlirLists(Listed, 0).Literal(Pair, "%v_a", "").Last is "    llvm.store %t0e1l, %v_a : f64, !llvm.ptr"
+	MlirLists(Listed, 0).Literal(VmValue.OfList(List(VmValue)), "%v_a", "").Length is 2
 	let memory = MlirMemory(function, position)
-	let size = MlirStatements(function, position).Hex(literal.items.Length + 4)
-	let capacity = "    " + Temp(suffix + "q") + " = arith.constant " + size + " : f64"
-	mutable lines = (capacity, memory.Called(Temp(suffix + "l"), "strict_list_new", (Temp(suffix + "q"), "%zero")))
+	mutable lines = Created(literal.items.Length, suffix)
 	mutable current = Temp(suffix + "l")
 	for literal.items
 		let element = suffix + "e" + index
@@ -30,6 +29,14 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 		lines = lines + Element(value, index, element) + added
 		current = Temp(element + "l")
 	lines + function.Store(current, slot)
+Created(count Number, suffix Text) Texts
+	MlirLists(Listed, 0).Created(0, "").First is "    %t0l = func.call @strict_list_empty() : () -> f64"
+	let memory = MlirMemory(function, position)
+	if count is 0
+		return List(Text) + memory.Called(Temp(suffix + "l"), "strict_list_empty", List(Text))
+	let size = MlirStatements(function, position).Hex(count + 4)
+	let capacity = "    " + Temp(suffix + "q") + " = arith.constant " + size + " : f64"
+	(capacity, memory.Called(Temp(suffix + "l"), "strict_list_new", (Temp(suffix + "q"), "%zero")))
 Element(item Runtime/VmValue, index Number, element Text) Texts
 	MlirLists(Listed, 0).Element(VmValue.OfNumber(2), 0, "e0") is ("    %t0e0c = arith.constant 0x4000000000000000 : f64")
 	if item.kind is "Text"
