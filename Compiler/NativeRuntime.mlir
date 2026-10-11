@@ -76,6 +76,14 @@
     %done = llvm.call @memcpy(%to, %from, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     return %copy : f64
   }
+  func.func private @strict_list_set(%list: f64, %index: f64, %element: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %at = arith.fptosi %index : f64 to i64
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %element, %slot : f64, !llvm.ptr
+    return %zero : f64
+  }
   func.func private @strict_list_add(%list: f64, %element: f64) -> f64 {
     %nothing = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %list, %nothing : f64
@@ -329,24 +337,38 @@
     %none = func.call @strict_bits(%empty) : (!llvm.ptr) -> f64
     return %none : f64
   }
-  func.func private @strict_argument_numbers(%count: i32, %values: !llvm.ptr) -> f64 {
+  func.func private @strict_argument_list(%count: i32, %values: !llvm.ptr, %numbers: i1) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
     %first = arith.constant 1 : i32
     %one = arith.constant 1 : i32
     %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
     cf.br ^check(%first, %created : i32, f64)
-  ^check(%index: i32, %numbers: f64):
+  ^check(%index: i32, %elements: f64):
     %more = arith.cmpi slt, %index, %count : i32
-    cf.cond_br %more, ^add, ^done
-  ^add:
+    cf.cond_br %more, ^read, ^done
+  ^read:
     %text = func.call @strict_argument(%count, %values, %index) : (i32, !llvm.ptr, i32) -> f64
+    cf.cond_br %numbers, ^parse, ^add(%text : f64)
+  ^parse:
     %number = func.call @strict_text_number(%text) : (f64) -> f64
-    %added = func.call @strict_list_add(%numbers, %number) : (f64, f64) -> f64
+    cf.br ^add(%number : f64)
+  ^add(%element: f64):
+    %added = func.call @strict_list_add(%elements, %element) : (f64, f64) -> f64
     %next = arith.addi %index, %one : i32
     cf.br ^check(%next, %added : i32, f64)
   ^done:
-    return %numbers : f64
+    return %elements : f64
+  }
+  func.func private @strict_argument_numbers(%count: i32, %values: !llvm.ptr) -> f64 {
+    %numbers = arith.constant true
+    %result = func.call @strict_argument_list(%count, %values, %numbers) : (i32, !llvm.ptr, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_argument_texts(%count: i32, %values: !llvm.ptr) -> f64 {
+    %numbers = arith.constant false
+    %result = func.call @strict_argument_list(%count, %values, %numbers) : (i32, !llvm.ptr, i1) -> f64
+    return %result : f64
   }
   llvm.mlir.global internal constant @strict_precise("%.*g\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_scientific("%.16e\00") : !llvm.array<6 x i8>
@@ -415,6 +437,37 @@
   ^done:
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
     return %result : f64
+  }
+  func.func private @strict_equal_number(%left: f64, %right: f64) -> f64 {
+    %same = arith.cmpf oeq, %left, %right : f64
+    %result = func.call @strict_boolean(%same) : (i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_equal(%left: f64, %right: f64, %element: (f64, f64) -> f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %leftLength = func.call @strict_list_length(%left) : (f64) -> f64
+    %rightLength = func.call @strict_list_length(%right) : (f64) -> f64
+    %sameLength = arith.cmpf oeq, %leftLength, %rightLength : f64
+    %count = arith.fptosi %leftLength : f64 to i64
+    cf.cond_br %sameLength, ^check(%start : i64), ^different
+  ^check(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^compare, ^equal
+  ^compare:
+    %at = arith.sitofp %index : i64 to f64
+    %leftItem = func.call @strict_list_get(%left, %at) : (f64, f64) -> f64
+    %rightItem = func.call @strict_list_get(%right, %at) : (f64, f64) -> f64
+    %equalItems = func.call_indirect %element(%leftItem, %rightItem) : (f64, f64) -> f64
+    %same = arith.cmpf one, %equalItems, %zero : f64
+    %next = arith.addi %index, %step : i64
+    cf.cond_br %same, ^check(%next : i64), ^different
+  ^equal:
+    return %one : f64
+  ^different:
+    return %zero : f64
   }
   func.func private @strict_list_matches(%value: f64, %item: f64, %isText: i1) -> i1 {
     %zero = arith.constant 0.0 : f64

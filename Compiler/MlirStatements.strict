@@ -70,8 +70,8 @@ Calculated(entry InstructionEntry) Texts
 	constant left = Temp("a")
 	constant right = Temp("b")
 	let loads = (function.Load(left, "%r" + entry.payload(1)), function.Load(right, "%r" + entry.payload(2)))
-	if MlirKinds(function).IsText(position, entry.payload(1)) or MlirKinds(function).IsText(position, entry.payload(2))
-		return MlirTexts(function, position).Compared(entry)
+	if MlirEquality(function, position).Handles(entry)
+		return MlirEquality(function, position).Compared(entry)
 	if entry.kind > InstructionType.ArithmeticSeparator
 		return loads + Compared(entry, left + ", " + right)
 	let arithmetic = "    " + Temp("") + "c = arith." + Operation(entry.kind) + " " + left + ", " + right + " : f64"

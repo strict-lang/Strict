@@ -71,13 +71,3 @@ Concatenated(entry InstructionEntry) Texts
 	let operands = TextBits(entry.payload(1), "l") + TextBits(entry.payload(2), "r")
 	let joined = MlirMemory(function, position).Called(Temp("c"), "strict_text_concat", (Temp("lx"), Temp("rx")))
 	operands + joined + function.Store(Temp("c"), "%r" + entry.payload(3))
-Compared(entry InstructionEntry) Texts
-	MlirTexts(Joined, 2).Compared(InstructionEntry.Binary(InstructionType.Equal, (0, 0))).Length is 5
-	if entry.kind is not in (InstructionType.Equal, InstructionType.NotEqual)
-		return List(Text) + MlirStatements(function, position).Unsupported("Text operator " + entry.kind)
-	let loads = (function.Load(Temp("ta"), "%r" + entry.payload(1)), function.Load(Temp("tb"), "%r" + entry.payload(2)))
-	let equal = MlirMemory(function, position).Called(Temp("tq"), "strict_text_equal", (Temp("ta"), Temp("tb")))
-	let predicate = entry.kind is InstructionType.Equal then "one" else "oeq"
-	let flag = "    " + Temp("tf") + " = arith.cmpf " + predicate + ", " + Temp("tq") + ", %zero : f64"
-	let lines = loads + equal + flag + ("    llvm.store " + Temp("tf") + ", %flag : i1, !llvm.ptr")
-	entry.payload(0) is not 3 then lines else lines + MlirStatements(function, position).Numbered(Temp("tf"), entry)

@@ -4,10 +4,11 @@ has method MethodEntry
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
+constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList)
 constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
-	let name = type.JustName.Replace("(", "_").Replace(")", "_")
+	let name = MlirEquality(value, 0).Symbol(type.JustName)
 	let conversion = method.Name is "to" then "_" + MlirKinds(value).Short(method.returnType) else ""
 	name + "_" + method.Name + "_" + method.parameters.Length + conversion
 Parameters Texts
@@ -33,7 +34,7 @@ VariableNames Texts
 	for Parameters + MlirInstances(value, 0).StoredNames(type)
 		names = value is in names then names else names + value
 	for method.instructions
-		if value.kind is in NamedKinds
+		if (value.kind is in NamedKinds) and value.texts(0).IndexOf("(") < 0
 			names = value.texts(0) is in names then names else names + value.texts(0)
 		if value.kind is InstructionType.StoreConstantToVariable
 			names = value.texts.Last is in names then names else names + value.texts.Last
@@ -101,7 +102,7 @@ Emitted(position Number) Texts
 		return kind is InstructionType.LoopBegin then MlirLoops(value, position).Begin else MlirLoops(value, position).End
 	if kind is in (InstructionType.Invoke, InstructionType.Print, InstructionType.FieldLoad)
 		return MlirCalls(value, position).Emitted
-	if kind is in (InstructionType.IndexCall, InstructionType.InvokeWriteToList)
+	if (kind is in ListKinds) or MlirLists(value, position).IsElementStore
 		return MlirLists(value, position).Emitted
 	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 		return MlirStatements(value, position).Binary(method.instructions(position))

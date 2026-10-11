@@ -3,13 +3,19 @@ has position Number
 constant Items = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
 constant Steps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "numbers"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 3)), InstructionEntry.Binary(InstructionType.Add, (0, 0, 3)))
 constant Listed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", Steps))
+constant Written = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers(1)"), InstructionEntry(InstructionType.CopyList, "numbers", -1))))
 constant Pair = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))
 Temp(suffix Text) Text
 	MlirLists(Listed, 2).Temp("l") is "%t2l"
 	"%t" + position + suffix
 Emitted Texts
 	MlirLists(Listed, 3).Emitted.Length is 4
+	MlirLists(Written, 2).Emitted.Length is 3
 	let entry = function.method.instructions(position)
+	if entry.kind is InstructionType.CopyList
+		return Copied(entry)
+	if IsElementStore
+		return ElementStored(entry)
 	entry.kind is InstructionType.IndexCall then Indexed(entry) else Appended(entry)
 Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	MlirLists(Listed, 0).Literal(Pair, "%v_a", "").Last is "    llvm.store %t0e1l, %v_a : f64, !llvm.ptr"
@@ -49,6 +55,30 @@ Indexed(entry InstructionEntry) Texts
 	let access = MlirMemory(function, position).Called(Temp("x"), getter, (Temp("l"), Temp("i")))
 	let loads = (function.Load(Temp("l"), "%v_" + entry.texts(0)), function.Load(Temp("i"), "%r" + entry.payload(1)))
 	loads + access + function.Store(Temp("x"), "%r" + entry.payload(0))
+IsElementStore Boolean
+	MlirLists(Written, 1).IsElementStore is true
+	MlirLists(Written, 0).IsElementStore is false
+	let entry = function.method.instructions(position)
+	if entry.kind is not InstructionType.StoreRegisterToVariable
+		return false
+	entry.texts(0).IndexOf("(") > 0
+ElementStored(entry InstructionEntry) Texts
+	MlirLists(Written, 1).ElementStored(Written.method.instructions(1)).Last.IndexOf("strict_list_set") > 0 is true
+	let name = entry.texts(0)
+	let open = name.IndexOf("(")
+	let index = name.Substring(open + 1, name.Length - open - 2)
+	let isNumber = "0123456789".IndexOf(index.Substring(0, 1)) is not -1
+	constant prefix = "    " + Temp("i") + " = arith.constant "
+	let loaded = function.Load(Temp("i"), "%v_" + index)
+	let indexed = isNumber then prefix + index + ".0 : f64" else loaded
+	let list = function.Load(Temp("l"), "%v_" + name.Substring(0, open))
+	let loads = (list, indexed, function.Load(Temp("e"), "%r" + entry.payload(0)))
+	loads + MlirMemory(function, position).Called(Temp("s"), "strict_list_set", (Temp("l"), Temp("i"), Temp("e")))
+Copied(entry InstructionEntry) Texts
+	MlirLists(Written, 2).Copied(Written.method.instructions(2)).Length is 3
+	let name = "%v_" + entry.texts(0)
+	let copy = MlirMemory(function, position).Called(Temp("c"), "strict_list_copy", (Temp("l"), "%zero"))
+	(function.Load(Temp("l"), name), copy, function.Store(Temp("c"), name))
 IsOperation Boolean
 	MlirLists(Listed, 4).IsOperation is true
 	MlirLists(Listed, 1).IsOperation is false

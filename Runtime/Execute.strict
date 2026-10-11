@@ -1,8 +1,18 @@
 has logger
 Run(arguments Texts)
 	let types = FileCompiler(logger).Compiled(arguments(0), arguments(1))
-	mutable numbers = List(Mutable(VmValue))
-	for Range(2, arguments.Length)
-		let number = arguments(value) to Number
-		numbers.Add(VmValue.OfNumber(number))
-	Machine(types, logger).Launch(types.First.Name, numbers)
+	if HasRun(types.First) is false
+		logger.Log("NoRunMethodFound: No Run method found in " + types.First.Name)
+	else
+		mutable numbers = List(Mutable(VmValue))
+		for Range(2, arguments.Length)
+			let number = arguments(value) to Number
+			numbers.Add(VmValue.OfNumber(number))
+		Machine(types, logger).Launch(types.First.Name, numbers)
+HasRun(type TypeEntry) Boolean
+	Execute.HasRun(TypeEntry.HelloLogger) is true
+	Execute.HasRun(TypeEntry("A", List(MemberEntry), List(MethodEntry))) is false
+	for type.methods
+		if value.Name is "Run"
+			return true
+	false

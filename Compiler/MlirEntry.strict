@@ -27,11 +27,15 @@ Argument(kind Text, index Number) Texts
 	Counted.Argument("Text", 0).Last.StartsWith("    %arg0 = func.call @strict_argument(%argc, %argv") is true
 	Counted.Argument("List(Number)", 1).Length is 1
 	let name = "%arg" + index
-	if kind.StartsWith("List(") or (kind is "Numbers")
-		return List(Text) + ("    " + name + " = func.call @strict_argument_numbers(%argc, %argv) : (i32, !llvm.ptr) -> f64")
+	if kind.StartsWith("List(") or (kind is in ("Numbers", "Texts"))
+		return List(Text) + AllArguments(kind, name)
 	let read = kind is "Number" then name + "text" else name
 	let position = "    %argindex" + index + " = arith.constant " + (index + 1) + " : i32"
 	constant signature = ") : (i32, !llvm.ptr, i32) -> f64"
 	let argument = "    " + read + " = func.call @strict_argument(%argc, %argv, %argindex" + index + signature
 	let parsed = "    " + name + " = func.call @strict_text_number(" + read + ") : (f64) -> f64"
 	kind is "Number" then (position, argument, parsed) else (position, argument)
+AllArguments(kind Text, name Text) Text
+	Counted.AllArguments("Texts", "%arg0").IndexOf("@strict_argument_texts(") > 0 is true
+	let elements = kind is in ("Texts", "List(Text)") then "texts" else "numbers"
+	"    " + name + " = func.call @strict_argument_" + elements + "(%argc, %argv) : (i32, !llvm.ptr) -> f64"
