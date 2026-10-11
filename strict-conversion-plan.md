@@ -713,8 +713,22 @@ reference counting that reuses a value in place when it is the only reference, w
 builds itself in 10.6 s (65 s via Strict.exe) and FileCompiler.exe compiles itself in 12.4 s (36.9 s).
 Sampling profiler for native exes: inject a thread that suspends the main thread every 1 ms and
 records rip, map the rvas with `llvm-pdbutil dump --publics` (scratch tooling, not checked in).
-Next: reference counting with in-place reuse (the Strict VM copies its registers list every step),
-automatic instance text, `NativeRuntimeLinux.mlir`, tests without C# (step 7), Linked rounds.
+Later the same day: list to text and Text.Combine join in one pass (both were quadratic, and with
+nothing freed FileCompiler.exe crashed after 77 s printing the bytes of NativeCompiler.strict), the
+Linker (moved out of FileCompiler) reuses unchanged types between its rounds and computes targets
+once per round, and native exes link with `-Brepro`. Now: FileCompiler compiling itself takes 0.93 s
+natively and 19.7 s on the C# VM (36.9 s before), NativeCompiler.exe builds itself in 4.1 s (2.65 s
+of it mlir-opt, mlir-translate and clang -O2) and is a byte-identical fixpoint, an Example built by
+the VM-run and by the native NativeCompiler gives the same exe bytes.
+Decision needed before the next speed step: memory is never freed (bump arena). The Strict VM
+allocates ~500 bytes per step (frames, registers and locals are copied), 1M loop iterations use
+GBs. Options: reference counting with in-place reuse when a value has one reference (Perceus style,
+matches "in place when the old version is not used", but every store in the emitter must count and
+wrong kind inference would free numbers), or a conservative mark-sweep collector in the runtime
+(no emitter changes, scans stack and registers for pointer bits, size-class pages; in-place reuse
+stays with the existing list views and CopyList).
+Next after that: automatic instance text (ProcessProbe), `NativeRuntimeLinux.mlir`, tests without
+C# (step 7), the Strict VM's per-step copies.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
@@ -1520,11 +1534,11 @@ stays 0% until D7 switches a Runner stage to the Strict implementation and delet
 | 3 | Validators | 5 / 235 | Same rule as C# for each validator case (D2) | 0% |
 | 4 | TestRunner | 7 / 196 | Simple assertion evaluator | 0% |
 | 5 | HighLevelRuntime | 20 / 560 | Line-level evaluator subset | 0% |
-| 6 | Bytecode | 53 / 2868 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
+| 6 | Bytecode | 54 / 2892 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
 | 7 | Optimizers | 15 / 261 | Instruction passes; codegen folding and load reuse live in Bytecode | 0% |
 | 8 | Runtime | 12 / 574 | Strict VM runs 20 Strict-compiled Examples like the C# VM (D5) | 0% |
-| 9 | Compiler | 30 / 1462 | Native compiler via MLIR, FileCompiler.exe compiles itself like the VM (D6) | 0% |
-| **Total** | | **212 / 8239** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
+| 9 | Compiler | 31 / 1582 | Native compiler via MLIR, compiles itself (byte fixpoint), Execute.exe runs all Examples (D6) | 0% |
+| **Total** | | **213 / 8383** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
 
 ---
 ## Missing Runtime Features Tracker
