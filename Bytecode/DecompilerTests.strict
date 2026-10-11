@@ -1,6 +1,0 @@
-has logger
-Run
-	logger.Log(Decompiler(BytecodeInstruction.SetNumber(0, 5)).Reconstruct)
-	logger.Log(Decompiler(BytecodeInstruction.LoadVariable(1, "x")).Reconstruct)
-	logger.Log(Decompiler(BytecodeInstruction.BinaryOp(InstructionType.Add, 0, 1, 2)).Reconstruct)
-	logger.Log(Decompiler(BytecodeInstruction.ReturnOp(2)).Reconstruct)
