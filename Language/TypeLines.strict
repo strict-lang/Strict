@@ -1,6 +1,0 @@
-has Name
-has Lines Texts
-LineCount Number
-	Lines.Length
-to Text
-	Name

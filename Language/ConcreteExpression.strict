@@ -1,6 +1,0 @@
-has Expression
-has Text
-IsConstant Boolean
-	Expression.IsConstant
-to Text
-	Text

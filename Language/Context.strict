@@ -1,4 +1,0 @@
-has Parent Context or None
-has Name
-has FullName Name
-constant ParentSeparator = "/"

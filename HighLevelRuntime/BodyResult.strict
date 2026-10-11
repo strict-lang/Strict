@@ -1,4 +1,0 @@
-has Result RuntimeValue
-has Frame ExecutionContext
-to Text
-	Result to Text
