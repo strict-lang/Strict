@@ -1,0 +1,81 @@
+has function MlirFunction
+has position Number
+constant Declarations = ("  llvm.func @snprintf(!llvm.ptr, i64, !llvm.ptr, ...) -> i32", "  llvm.func @malloc(i64) -> !llvm.ptr", "  llvm.mlir.global internal constant @strict_true(\"true\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_false(\"false\\00\") : !llvm.array<6 x i8>", "  llvm.mlir.global internal constant @strict_number(\"%g\\00\") : !llvm.array<3 x i8>", "  llvm.mlir.global internal constant @strict_pair(\"%s%s\\00\") : !llvm.array<5 x i8>")
+constant Joined = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a%"), InstructionEntry.LoadNumber(1, 7), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.PrintValue("x: ", 2, true), MlirKinds.Passed, InstructionEntry.PrintValue("y: ", 2, false), InstructionEntry.PrintValue("z: ", 1, false), InstructionEntry.Invoke(3, ("Strict/Number", "to", "Strict/Text"), List(Number), 1))), true)
+Temp(suffix Text) Text
+	MlirTexts(Joined, 2).Temp("l") is "%t2l"
+	MlirStatements(function, position).Temp(suffix)
+IsSum Boolean
+	MlirTexts(Joined, 2).IsSum is true
+	MlirTexts(Joined, 1).IsSum is false
+	let entry = function.method.instructions(position)
+	(entry.kind is InstructionType.Add) and MlirKinds(function).IsText(position + 1, entry.payload(3))
+IsConversion Boolean
+	MlirTexts(Joined, 7).IsConversion is true
+	MlirTexts(Joined, 6).IsConversion is false
+	let entry = function.method.instructions(position)
+	if entry.kind is not InstructionType.Invoke
+		return false
+	let decoder = PayloadDecoder(entry)
+	(decoder.Text(2) is "to") and (decoder.Text(4 + entry.payload(3)) is "Strict/Text")
+Converted(entry InstructionEntry) Texts
+	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 8
+	let countPosition = 5 + entry.payload(3)
+	let instance = entry.payload(countPosition + 2 + entry.payload(countPosition))
+	Pointer(instance, "v") + Bits(Temp("vp"), "%r" + entry.payload(0))
+Bits(pointer Text, slot Text) Texts
+	MlirTexts(Joined, 0).Bits("%p", "%r0").Last is "    llvm.store %t0xf, %r0 : f64, !llvm.ptr"
+	let integer = "    " + Temp("xi") + " = llvm.ptrtoint " + pointer + " : !llvm.ptr to i64"
+	(integer, "    " + Temp("xf") + " = arith.bitcast " + Temp("xi") + " : i64 to f64", function.Store(Temp("xf"), slot))
+Format Text
+	MlirTexts(Joined, 3).Format is "%s"
+	MlirTexts(Joined, 5).Format is "%s"
+	MlirTexts(Joined, 6).Format is "%g"
+	let entry = function.method.instructions(position)
+	let isText = entry.payload(3) is 1
+	isText or (MlirKinds(function).KindOf(position, entry.payload(2)) is "Boolean") then "%s" else "%g"
+Pointer(register Number, suffix Text) Texts
+	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = llvm.inttoptr %t3bi : i64 to !llvm.ptr"
+	MlirTexts(Joined, 5).Pointer(2, "b").Last is "    %t5bp = llvm.select %t5bc, %t5bt, %t5bf : i1, !llvm.ptr"
+	MlirTexts(Joined, 6).Pointer(1, "b").Length is 5
+	let kind = MlirKinds(function).KindOf(position, register)
+	let loaded = function.Load(Temp(suffix), "%r" + register)
+	if kind is "Boolean"
+		return Truth(loaded, suffix)
+	if kind is not "Text"
+		return Formatted(loaded, suffix)
+	let integer = "    " + Temp(suffix + "i") + " = arith.bitcast " + Temp(suffix) + " : f64 to i64"
+	(loaded, integer, "    " + Temp(suffix + "p") + " = llvm.inttoptr " + Temp(suffix + "i") + " : i64 to !llvm.ptr")
+Truth(loaded Text, suffix Text) Texts
+	MlirTexts(Joined, 5).Truth("", "b").Length is 5
+	let compared = "    " + Temp(suffix + "c") + " = arith.cmpf one, " + Temp(suffix) + ", %zero : f64"
+	let yes = "    " + Temp(suffix + "t") + " = llvm.mlir.addressof @strict_true : !llvm.ptr"
+	let no = "    " + Temp(suffix + "f") + " = llvm.mlir.addressof @strict_false : !llvm.ptr"
+	let options = Temp(suffix + "c") + ", " + Temp(suffix + "t") + ", " + Temp(suffix + "f")
+	(loaded, compared, yes, no, "    " + Temp(suffix + "p") + " = llvm.select " + options + " : i1, !llvm.ptr")
+Formatted(loaded Text, suffix Text) Texts
+	MlirTexts(Joined, 6).Formatted("", "b").Length is 5
+	let size = "    " + Temp(suffix + "z") + " = arith.constant 32 : i64"
+	let buffer = "    " + Temp(suffix + "p") + " = llvm.call @malloc(" + Temp(suffix + "z") + ") : (i64) -> !llvm.ptr"
+	let format = "    " + Temp(suffix + "f") + " = llvm.mlir.addressof @strict_number : !llvm.ptr"
+	let values = Temp(suffix + "f") + ", " + Temp(suffix)
+	let target = Temp(suffix + "p") + ", " + Temp(suffix + "z")
+	(loaded, size, buffer, format, Formats(Temp(suffix + "n"), target, values, "f64"))
+Formats(result Text, buffer Text, values Text, types Text) Text
+	MlirTexts(Joined, 0).Formats("%n", "%b, %s", "%f", "f64").StartsWith("    %n = llvm.call @snprintf(%b, %s, %f") is true
+	MlirTexts(Joined, 0).Formats("%n", "%b, %s", "%f", "f64").IndexOf(", i64, !llvm.ptr, f64) -> i32") > 0 is true
+	constant signature = ") vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, "
+	"    " + result + " = llvm.call @snprintf(" + buffer + ", " + values + signature + types + ") -> i32"
+Concatenated(entry InstructionEntry) Texts
+	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 19
+	let operands = Pointer(entry.payload(1), "l") + Pointer(entry.payload(2), "r")
+	constant values = Temp("f") + ", " + Temp("lp") + ", " + Temp("rp")
+	constant pair = "    " + Temp("f") + " = llvm.mlir.addressof @strict_pair : !llvm.ptr"
+	constant empty = "    " + Temp("o") + " = llvm.mlir.zero : !llvm.ptr"
+	constant none = (empty, "    " + Temp("e") + " = arith.constant 0 : i64")
+	constant measured = Formats(Temp("n"), Temp("o") + ", " + Temp("e"), values, "!llvm.ptr, !llvm.ptr")
+	constant widened = "    " + Temp("w") + " = arith.extsi " + Temp("n") + " : i32 to i64"
+	constant size = (widened, "    " + Temp("s") + " = arith.addi " + Temp("w") + ", %one : i64")
+	constant buffer = "    " + Temp("b") + " = llvm.call @malloc(" + Temp("s") + ") : (i64) -> !llvm.ptr"
+	constant written = Formats(Temp("m"), Temp("b") + ", " + Temp("s"), values, "!llvm.ptr, !llvm.ptr")
+	operands + pair + none + measured + size + buffer + written + Bits(Temp("b"), "%r" + entry.payload(3))

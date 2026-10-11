@@ -48,6 +48,7 @@ Before writing any code, stop at the first rung that holds:
 - Priorities: first clean strict rules, exactly one way to solve each problem; second performance and parallelism, everything as fast as possible and close to the hardware (CPU, GPU, NPU, TPU, CUDA, distributed over the network).
 - Values are immutable in the language: there are no mutable data types like a growing list, appending gives a new list every time. The runtime (VM, interpreter, compiled code) does not copy for that: like functional languages it keeps the same list, changes it in place and hands back the same memory as the new list, the previous version is not used anymore. If an old version is used again the runtime has to copy, but that is bad code (a list is either fixed, or growing and then only its latest version is used). Never add mutable language features for speed, optimize the internal representation instead.
 - Use `dotnet build` to build, `dotnet test` to test, do not try to use VS building or ReSharper build, you always fail trying to do that.
+- Commands for the user to run go into a Windows PowerShell 5.1 window: no `!` prefix, no `&&` (use `;`), no grep, xargs, sed, awk or heredocs (those only exist in the Bash tool). Use Where-Object/ForEach-Object.
 - The AdderProgram implementation must be written in Strict, with C# code only used to run it.
 - Keep AdderProgram in the Tests project and use TestPackage (or Strict.Base) for basic types.
 - Every type including Color should be able to call Any.strict methods like `to Text`; `to Text` should route through the Any-style text conversion rather than a wrong type-specific conversion.
@@ -78,6 +79,7 @@ Before writing any code, stop at the first rung that holds:
 ## Time Limits
 - Fast feedback over thoroughness: no tool call over 5 minutes, no sub-agent or workflow over 10 minutes, never sit idle 15 minutes waiting on anything. Hitting a limit means something is wrong: stop it (TaskStop), report what was slow and why, do not keep waiting. Never poll with sleep loops.
 - Sub-agents and workflows only run tests affected by their change (seconds), never Slow, Nightly, full suites or NCrunch console runs. Only the main session runs Slow and Nightly, once, in the background, before a big commit.
+- Test sets that may take long run in calls of at most 4.5 minutes with per-test results written to a file as they finish (`--logger "console;verbosity=normal"`) and `--blame-hang-timeout 60s`, never piped through grep at the end (no progress is visible until it ends). Split by filter when a set needs longer. A stopped run leaves testhost.exe running, kill it.
 - No Workflow tool runs and at most 3 parallel sub-agents unless the user asks for it in the current prompt, also when ultracode is on (its workflows ran 1-3 hours each).
 
 ## Strict Semantics

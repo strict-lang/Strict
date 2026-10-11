@@ -95,6 +95,9 @@ public sealed class RunnerTests
 	[TestCase("Pixel")]
 	[TestCase("Fibonacci")]
 	[TestCase("GcdCalculator")]
+	[TestCase("Grade")]
+	[TestCase("Greeter")]
+	[TestCase("FizzBuzz")]
 	[Category("Slow")]
 	public async Task StrictNativeCompilerRunsLikeVirtualMachine(string example)
 	{

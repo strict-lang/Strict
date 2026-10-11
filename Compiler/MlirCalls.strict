@@ -12,16 +12,18 @@ Emitted Texts
 		return Printed(entry)
 	if entry.kind is InstructionType.FieldLoad
 		return Field(entry)
+	if MlirTexts(function, position).IsConversion
+		return MlirTexts(function, position).Converted(entry)
 	let decoder = PayloadDecoder(entry)
 	decoder.Text(2) is "from" then Constructed(entry, decoder.Text(1)) else Invoked(entry, decoder)
 Constructed(entry InstructionEntry, typeName Text) Texts
 	MlirCalls(Shapes, 1).Constructed(NewShape, "Strict/Shape").Last is "    llvm.store %t1a0, %r1_m0 : f64, !llvm.ptr"
 	let type = Natives(function.types).TypeOf(typeName)
-	let numeric = function.NumericMembers(type)
+	let stored = function.ValueMembers(type)
 	mutable lines = List(Mutable(Text))
 	for type.members
-		if value.Name is in numeric
-			lines = lines + MemberValue(entry, value, index, numeric.Index(value.Name))
+		if value.Name is in stored
+			lines = lines + MemberValue(entry, value, index, stored.Index(value.Name))
 	lines
 MemberValue(entry InstructionEntry, member MemberEntry, order Number, slot Number) Texts
 	MlirCalls(Shapes, 1).MemberValue(NewShape, MlirFunction.Shape.members.First, 0, 0).Length is 2
@@ -39,14 +41,14 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let type = Natives(function.types).TypeOf(decoder.Text(1))
 	let countPosition = 5 + entry.payload(3)
 	let callee = Callee(type, decoder.Text(2), entry.payload(countPosition))
-	let returnsNumber = decoder.Text(4 + entry.payload(3)) is in ("Strict/Number", "Strict/Boolean", "None")
-	if (callee.instructions.Length is 0) or (returnsNumber is false)
+	let returnsValue = decoder.Text(4 + entry.payload(3)) is in ("Strict/Number", "Strict/Boolean", "Strict/Text", "None")
+	if (callee.instructions.Length is 0) or (returnsValue is false)
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let target = MlirFunction(function.types, type, callee, false)
-	let operands = Operands(entry, function.NumericMembers(type))
+	let operands = Operands(entry, function.ValueMembers(type))
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + operands + ") : (" + types + ") -> f64"
-	Loads(entry, function.NumericMembers(type)) + call + function.Store(Temp("r"), "%r" + entry.payload(0))
+	Loads(entry, function.ValueMembers(type)) + call + function.Store(Temp("r"), "%r" + entry.payload(0))
 Callee(type TypeEntry, name Text, count Number) MethodEntry
 	MlirCalls(Shapes, 1).Callee(MlirFunction.Shape, "Area", 0).instructions.Length is 0
 	for type.methods
@@ -78,20 +80,22 @@ ArgumentTypes(count Number) Texts
 		"f64"
 Printed(entry InstructionEntry) Texts
 	MlirCalls(Shapes, 2).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Length is 3
-	if (entry.payload(1) is 1) and (entry.payload(3) is 1)
-		return List(Text) + MlirStatements(function, position).Unsupported("printing a text value")
 	let address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	constant printf = " = llvm.call @printf("
 	constant vararg = ") vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr"
 	if entry.payload(1) is 0
 		return (address, "    " + Temp("c") + printf + Temp("a") + vararg + ") -> i32")
+	let texts = MlirTexts(function, position)
+	if texts.Format is "%s"
+		constant pointerCall = "    " + Temp("c") + printf + Temp("a") + ", " + Temp("bp") + vararg + ", !llvm.ptr) -> i32"
+		return List(Text) + address + texts.Pointer(entry.payload(2), "b") + pointerCall
 	constant call = "    " + Temp("c") + printf + Temp("a") + ", " + Temp("b") + vararg + ", f64) -> i32"
 	(address, function.Load(Temp("b"), "%r" + entry.payload(2)), call)
 Field(entry InstructionEntry) Texts
 	MlirCalls(Shapes, 0).Field(InstructionEntry(InstructionType.FieldLoad, "width", (2, 1, -1))).Length is 2
 	mutable slot = -1
 	for function.types
-		let numeric = function.NumericMembers(value)
-		slot = slot < 0 and (entry.texts(0) is in numeric) then numeric.Index(entry.texts(0)) else slot
+		let stored = function.ValueMembers(value)
+		slot = slot < 0 and (entry.texts(0) is in stored) then stored.Index(entry.texts(0)) else slot
 	let source = "%r" + entry.payload(1) + "_m" + slot
 	(function.Load(Temp("f"), source), function.Store(Temp("f"), "%r" + entry.payload(0)))

@@ -1,0 +1,41 @@
+has function MlirFunction
+has position Number
+IsConstant Boolean
+	MlirConstants(MlirTexts.Joined, 0).IsConstant is true
+	MlirConstants(MlirTexts.Joined, 1).IsConstant is false
+	MlirConstants(MlirTexts.Joined, 2).IsConstant is false
+	let kind = function.method.instructions(position).kind
+	if kind is not in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
+		return false
+	Constant.kind is "Text"
+Constant Runtime/VmValue
+	MlirConstants(MlirTexts.Joined, 0).Constant.text is "a%"
+	let entry = function.method.instructions(position)
+	PayloadDecoder(entry).Value(entry.kind is InstructionType.LoadConstantToRegister then 1 else 0)
+Global Text
+	MlirConstants(MlirTexts.Joined, 0).Global.IndexOf("@cShape_Run_0_0(\"a%\\00\") : !llvm.array<3 x i8>") > 0 is true
+	let text = Constant.text
+	let name = "@c" + function.Symbol + "_" + position + "(\"" + Escaped(text, false) + "\\00\")"
+	"  llvm.mlir.global internal constant " + name + " : !llvm.array<" + (EscapedLength(text, false) + 1) + " x i8>"
+Literal(slot Text) Texts
+	MlirConstants(MlirTexts.Joined, 0).Literal("%r0").Length is 4
+	let texts = MlirTexts(function, position)
+	let symbol = "@c" + function.Symbol + "_" + position
+	let address = "    " + texts.Temp("c") + " = llvm.mlir.addressof " + symbol + " : !llvm.ptr"
+	List(Text) + address + texts.Bits(texts.Temp("c"), slot)
+Escaped(text Text, isFormat Boolean) Text
+	MlirConstants(MlirTexts.Joined, 0).Escaped("a\"%", true) is "a\\22%%"
+	MlirConstants(MlirTexts.Joined, 0).Escaped("a%", false) is "a%"
+	constant digits = "0123456789ABCDEF"
+	mutable result = ""
+	for ByteEncoder.Empty.UnicodeBytes(text)
+		let isPlain = value >= 32 and value < 127 and value is not in (34, 37, 92)
+		let hex = "\\" + digits.Substring((value / 16).Floor, 1) + digits.Substring(value % 16, 1)
+		let percent = isFormat then "%%" else "%"
+		result = result + (isPlain then Character(value) to Text else value is 37 then percent else hex)
+	result
+EscapedLength(text Text, isFormat Boolean) Number
+	MlirConstants(MlirTexts.Joined, 0).EscapedLength("a%", true) is 3
+	MlirConstants(MlirTexts.Joined, 0).EscapedLength("a%", false) is 2
+	let bytes = ByteEncoder.Empty.UnicodeBytes(text)
+	isFormat then bytes.Length + bytes.Count(37) else bytes.Length

@@ -19,6 +19,8 @@ Temp(suffix Text) Text
 	"%t" + position + suffix
 Literal(literal Runtime/VmValue, slot Text) Texts
 	Copy.Literal(VmValue.OfNumber(1), "%r0").First is "    %t0c = arith.constant 0x3FF0000000000000 : f64"
+	if (literal.kind is "Text") and MlirConstants(function, position).IsConstant
+		return MlirConstants(function, position).Literal(slot)
 	if literal.kind is not in ("Number", "Boolean")
 		return List(Text) + Unsupported(literal.kind + " constant")
 	("    " + Temp("") + "c = arith.constant " + Hex(literal.number) + " : f64", function.Store(Temp("c"), slot))
@@ -57,6 +59,8 @@ Calculated(entry InstructionEntry) Texts
 	constant left = Temp("a")
 	constant right = Temp("b")
 	let loads = (function.Load(left, "%r" + entry.payload(1)), function.Load(right, "%r" + entry.payload(2)))
+	if MlirKinds(function).IsText(position, entry.payload(1)) or MlirKinds(function).IsText(position, entry.payload(2))
+		return List(Text) + Unsupported("Text operator " + entry.kind)
 	if entry.kind > InstructionType.ArithmeticSeparator
 		return loads + Compared(entry, left + ", " + right)
 	if entry.kind is InstructionType.Power

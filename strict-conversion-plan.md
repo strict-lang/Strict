@@ -491,9 +491,9 @@ real loops, instances are their number members, every reachable method is a func
 printf (links the C runtime), constants are exact IEEE hex literals and `main` returns the Run
 result as exit code. Texts, lists and other calls fail with an "unsupported:" message. Slow test
 `StrictNativeCompilerRunsLikeVirtualMachine`: 7 printing Examples run like the VM,
-NativeArithmetic/Conditions/Loop exit with 20/30/45. Open: texts, lists, Boolean and fraction
-printing like the VM (printf `%g`), Windows without the C runtime, Run(numbers) from argv, then
-delete the old line-level SourceCompiler/NASM path.
+NativeArithmetic/Conditions/Loop exit with 20/30/45. Open: lists, fraction printing like the VM
+(printf `%g`), Windows without the C runtime, Run(numbers) from argv, then delete the old
+line-level SourceCompiler/NASM path.
 Bugs fixed on the way (each with a test): the VM ran `list.Count(x)` as Length; a summing loop with
 a filtering `if` aggregated on every iteration (C# generator; the Strict compiler's summing loops
 now add inside the then branch too, `MethodCodegen.SummedLoop`); a test line comparing with `>` was kept as code (recursion and
@@ -501,6 +501,21 @@ register exhaustion); text literals with two spaces were rejected; BinaryGenerat
 method that runs out of registers. Strict papercuts: an implicit-instance method call counts as
 constant (`let x = OwnMethod` must be `constant`), the inner `value` of nested loops keeps the
 outer type, `List.Reverse` (`outer.value`) does not run on the VM.
+Texts (2026-10-11): 14 of the 20 runnable Examples build natively with the Strict compiler (11
+before), Grade, Greeter and FizzBuzz joined the Slow differential (10 cases, 5 s). A text value is
+its pointer bit cast into the existing f64 slot, so slots, signatures and copies stay unchanged.
+`MlirKinds` infers each register's kind (Number, Text, Boolean) from its writer (constant, variable
+store, parameter, member, call return type, operator), `MlirTexts` prints texts with `%s` and
+Booleans as `true`/`false` (the VM's text, not 1/0), joins with snprintf into a malloc'd buffer and
+converts `to Text` with `%g`, `MlirConstants` emits text constants as globals. Instances now carry
+their Text and Boolean members (`ValueMembers`): Greeter printed `Hello, (null)!` before, silently
+wrong. Texts are never freed (ponytail: fine for short programs, arena or ownership later); other
+operators on texts and text member defaults (`mutable text` without argument) fail with
+"unsupported:". Exe size: HelloLogger 112 KB, Grade/Greeter 141 KB, FizzBuzz 146 KB (C runtime
+linked). Seen once: mlir-translate (msys64 ucrt64) crashed with an access violation while four
+native builds ran in parallel, the same Grade build passes alone. Left: lists (MemoryPressure,
+NumberStats, NumberSummer), `Text.Length` (AutofilledMutable), Directory/Process natives (DirProbe,
+ProcessProbe), fraction printing like the VM, Run(numbers) from argv.
 
 D7 progress (2026-10-10): measured the Strict compiler (`Bytecode/FileCompiler`) on the 41 programs
 with a Run method outside Examples. Before: 33 produced bytecode, 8 crashed (`-1` literals parsed as
@@ -629,6 +644,31 @@ knows the parameter types of other types' methods. Open: CompactTypeOptimizer st
 same type and a list member's `.Add` with a convertible element are only converted by C#.
 Cost: BenchBrightness +34% run time and +15.8 MB allocated (two values per pixel go through
 `ColorValue.from`). Merged 2026-10-11 for README-correct semantics, the speed is a Phase C item.
+The conversion rule (`Converter`) now lives in `Expressions/TypeInference`, so the front end types a
+converting reassignment as its target like C# (StrictInfersSameTypesAsCSharp, ImageProcessing).
+
+Path to Strict without .NET (measured 2026-10-11). Today every stage exists in Strict but runs on
+the C# VM: the Strict compiler compiling itself (FileCompiler.strict) takes 196 s and allocates
+4.5 GB there (Debug). Leaving .NET needs a native Strict compiler, which the D6 native backend must
+first be able to compile. Native survey over all 67 programs with a Run method: 15 build and run;
+13 (FileCompiler, NativeCompiler, Runtime/Execute, Sum, ...) take arguments, `Run(path, root)` had
+silently produced an empty exe and now fails with "unsupported:". Missing, in order of need:
+1. Program arguments as Texts (`Run(path Text, root Text)`, `Run(numbers)`) from argv.
+2. Instances as heap values (pointer in the 64-bit slot like texts): calls returning instances
+   (`Registry.Empty`, `TypeEntry`), members that are instances or lists.
+3. Lists: literals, `Length`, index, `+`/`Add` appending in place (C3 semantics), `in`, `Index`,
+   loops over lists, lists of instances and texts. Dictionaries after that.
+4. Text natives: Length, Substring, IndexOf, StartsWith, Split, Character, `to Number`.
+5. Host natives through the C runtime: File read/write, Directory files/exists/create, Process
+   run (mlir-opt, mlir-translate, clang), Error values with stack traces.
+6. Stage 1: the native backend compiles FileCompiler and NativeCompiler; stage 2: those exes compile
+   themselves, byte-identical output (fixpoint), and all Examples run like the C# VM.
+7. Tests without C#: inline tests run by a natively compiled test runner (TestRunner/TestInterpreter
+   is still small) or compiled into the binaries.
+Only then can C# go: keep the C# projects as the bootstrap and reference for the differential
+tests until stage 2 holds, record golden outputs, check in a native bootstrap compiler, then delete
+the C# layers one by one (the plan's "C# replaced" column). LanguageServer and the VS Code extension
+need their own Strict versions later.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
@@ -1437,8 +1477,8 @@ stays 0% until D7 switches a Runner stage to the Strict implementation and delet
 | 6 | Bytecode | 52 / 2772 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
 | 7 | Optimizers | 15 / 261 | Instruction passes; codegen folding and load reuse live in Bytecode | 0% |
 | 8 | Runtime | 12 / 574 | Strict VM runs 20 Strict-compiled Examples like the C# VM (D5) | 0% |
-| 9 | Compiler | 22 / 829 | Native compiler via MLIR, 10 numeric Examples like the VM (D6) | 0% |
-| **Total** | | **204 / 7483** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
+| 9 | Compiler | 25 / 1038 | Native compiler via MLIR, 14 Examples incl. texts like the VM (D6) | 0% |
+| **Total** | | **207 / 7692** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
 
 ---
 ## Missing Runtime Features Tracker

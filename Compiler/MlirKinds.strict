@@ -1,0 +1,88 @@
+has function MlirFunction
+constant Passed = InstructionEntry.Invoke(2, ("Strict/Shape", "Passed", "Strict/Boolean"), List(Number), -1)
+constant Graded = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "A"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "letter"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "letter"), Passed, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "width"))), true))
+KindOf(position Number, register Number) Text
+	Graded.KindOf(1, 0) is "Text"
+	Graded.KindOf(6, 4) is "Number"
+	Graded.KindOf(0, 7) is "Number"
+	let writer = Writer(position, register)
+	writer < 0 then "Number" else WrittenKind(writer)
+WrittenKind(writer Number) Text
+	Graded.WrittenKind(2) is "Text"
+	Graded.WrittenKind(3) is "Boolean"
+	let entry = function.method.instructions(writer)
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return PayloadDecoder(entry).Value(1).kind
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return VariableKind(writer, entry.texts(0))
+	if entry.kind is InstructionType.Invoke
+		return TypeKind(PayloadDecoder(entry).Text(4 + entry.payload(3)))
+	entry.kind is InstructionType.FieldLoad then MemberKind(entry.texts(0)) else Calculated(writer, entry)
+Calculated(writer Number, entry InstructionEntry) Text
+	Graded.Calculated(4, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3))) is "Text"
+	Graded.Calculated(4, InstructionEntry.Binary(InstructionType.Equal, (1, 0, 3))) is "Boolean"
+	if entry.kind > InstructionType.ArithmeticSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
+		return "Boolean"
+	let isArithmetic = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.ArithmeticSeparator
+	isArithmetic and (IsText(writer, entry.payload(1)) or IsText(writer, entry.payload(2))) then "Text" else "Number"
+IsText(position Number, register Number) Boolean
+	Graded.IsText(4, 1) is true
+	Graded.IsText(4, 2) is false
+	KindOf(position, register) is "Text"
+Writer(position Number, register Number) Number
+	Graded.Writer(5, 1) is 2
+	Graded.Writer(1, 7) is -1
+	let reuse = LoadReuse(function.method.instructions)
+	mutable found = -1
+	for position
+		found = reuse.Written(function.method.instructions(index)) is register then index else found
+	found
+VariableKind(position Number, name Text) Text
+	Graded.VariableKind(2, "letter") is "Text"
+	Graded.VariableKind(2, "width") is "Number"
+	let found = Stored(position, name)
+	if found < 0
+		return DeclaredKind(name)
+	let store = function.method.instructions(found)
+	if store.kind is InstructionType.StoreConstantToVariable
+		return PayloadDecoder(store).Value(0).kind
+	KindOf(found, store.payload(0))
+Stored(position Number, name Text) Number
+	Graded.Stored(2, "letter") is 1
+	Graded.Stored(2, "width") is -1
+	mutable found = -1
+	for position
+		let entry = function.method.instructions(index)
+		let isStore = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts(0) is name)
+		let isConstant = (entry.kind is InstructionType.StoreConstantToVariable) and (entry.texts.Last is name)
+		found = isStore or isConstant then index else found
+	found
+DeclaredKind(name Text) Text
+	Graded.DeclaredKind("width") is "Number"
+	Graded.DeclaredKind("other") is "Number"
+	let parameter = MembersKind(function.method.parameters, name)
+	if parameter is not ""
+		return parameter
+	let member = MembersKind(function.type.members, name)
+	member is "" then "Number" else member
+MemberKind(name Text) Text
+	Graded.MemberKind("width") is "Number"
+	for function.types
+		let kind = MembersKind(value.members, name)
+		if kind is not ""
+			return kind
+	"Number"
+MembersKind(members List(MemberEntry), name Text) Text
+	Graded.MembersKind(MlirFunction.Shape.members, "width") is "Number"
+	Graded.MembersKind(MlirFunction.Shape.members, "other") is ""
+	for members
+		if value.Name is name
+			return TypeKind(value.typeName)
+	""
+TypeKind(typeName Text) Text
+	Graded.TypeKind("Strict/Text") is "Text"
+	Graded.TypeKind("Strict/Boolean") is "Boolean"
+	Graded.TypeKind("Strict/Shape") is "Number"
+	if typeName is "Strict/Text"
+		return "Text"
+	typeName is "Strict/Boolean" then "Boolean" else "Number"

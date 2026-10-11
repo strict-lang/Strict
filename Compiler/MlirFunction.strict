@@ -4,6 +4,7 @@ has method MethodEntry
 has isEntry Boolean
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop, true)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
+constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList)
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
@@ -13,20 +14,21 @@ Parameters Texts
 	Counter.Parameters.Length is 0
 	mutable names = List(Mutable(Text))
 	if isEntry is false
-		names = names + NumericMembers(type)
+		names = names + ValueMembers(type)
 	for method.parameters
 		names.Add(value.Name)
 	names
-NumericMembers(owner TypeEntry) Texts
-	Counter.NumericMembers(Shape).Length is 1
+ValueMembers(owner TypeEntry) Texts
+	Counter.ValueMembers(Shape).Length is 1
+	Counter.ValueMembers(Named) is ("name")
 	for owner.members
-		if (value.IsConstant is false) and (value.typeName is "Strict/Number")
+		if (value.IsConstant is false) and (value.typeName is in ("Strict/Number", "Strict/Text", "Strict/Boolean"))
 			value.Name
 MemberCount Number
 	Counter.MemberCount is 0
 	mutable most = 0
 	for types
-		let count = NumericMembers(value).Length
+		let count = ValueMembers(value).Length
 		most = count > most then count else most
 	most
 RegisterCount Number
@@ -114,6 +116,8 @@ Emitted(position Number) Texts
 		return kind is InstructionType.LoopBegin then MlirLoops(value, position).Begin else MlirLoops(value, position).End
 	if kind is in (InstructionType.Invoke, InstructionType.Print, InstructionType.FieldLoad)
 		return MlirCalls(value, position).Emitted
+	if MlirTexts(value, position).IsSum
+		return MlirTexts(value, position).Concatenated(method.instructions(position))
 	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 		return MlirStatements(value, position).Calculated(method.instructions(position))
 	MlirStatements(value, position).Emitted

@@ -1,9 +1,13 @@
 has types List(TypeEntry)
 constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop))
+constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry)))
 Text Text
 	Counters.Text.StartsWith("module {") is true
+	NoRun.Text.StartsWith("unsupported:") is true
 	constant functions = Functions
-	mutable lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32")
+	if functions.First.method.instructions.Length is 0
+		return "unsupported: no Run method without parameters in " + types.First.Name
+	mutable lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
 	for functions
 		lines = lines + value.Text
 	Text.Combine(lines + Globals(functions) + Main(functions.First) + "}", "\n")
@@ -50,30 +54,20 @@ Globals(functions List(MlirFunction)) Texts
 FunctionGlobals(function MlirFunction) Texts
 	Counters.FunctionGlobals(MlirCalls.Shapes).Length is 1
 	for function.method.instructions
-		if value.kind is InstructionType.Print
+		if (value.kind is InstructionType.Print) or MlirConstants(function, index).IsConstant
 			Global(function, index)
 Global(function MlirFunction, position Number) Text
 	Counters.Global(MlirCalls.Shapes, 2).IndexOf("Hi %g\\0A\\00") > 0 is true
 	let entry = function.method.instructions(position)
+	let constants = MlirConstants(function, position)
+	if entry.kind is not InstructionType.Print
+		return constants.Global
 	let hasValue = entry.payload(1) is 1
-	let content = Escaped(entry.texts(0)) + (hasValue then "%g" else "") + "\\0A\\00"
-	let length = EscapedLength(entry.texts(0)) + (hasValue then 4 else 2)
+	let format = hasValue then MlirTexts(function, position).Format else ""
+	let content = constants.Escaped(entry.texts(0), true) + format + "\\0A\\00"
+	let length = constants.EscapedLength(entry.texts(0), true) + (hasValue then 4 else 2)
 	let name = "@s" + function.Symbol + "_" + position
 	"  llvm.mlir.global internal constant " + name + "(\"" + content + "\") : !llvm.array<" + length + " x i8>"
-Escaped(text Text) Text
-	Counters.Escaped("a\"%") is "a\\22%%"
-	constant digits = "0123456789ABCDEF"
-	mutable result = ""
-	for ByteEncoder.Empty.UnicodeBytes(text)
-		let isPlain = value >= 32 and value < 127 and value is not in (34, 37, 92)
-		let hex = "\\" + digits.Substring((value / 16).Floor, 1) + digits.Substring(value % 16, 1)
-		let character = Character(value) to Text
-		result = result + (isPlain then character else value is 37 then "%%" else hex)
-	result
-EscapedLength(text Text) Number
-	Counters.EscapedLength("a%") is 3
-	let bytes = ByteEncoder.Empty.UnicodeBytes(text)
-	bytes.Length + bytes.Count(37)
 Main(entry MlirFunction) Texts
 	Counters.Main(Counters.Functions.First).Length is 5
 	let call = "    %result = func.call @" + entry.Symbol + "() : () -> f64"
