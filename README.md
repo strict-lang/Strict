@@ -212,7 +212,7 @@ to HashCode
 is(other) Boolean
 ```
 
-A character is just a number, but can be created from a single letter text or specifying a UTF value:
+A character is just a number, one byte of a text: texts are UTF-8, so letters outside of ASCII take several characters. It can be created from a single letter text or from its value:
 ```
 has number
 from(text)
