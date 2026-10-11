@@ -4,6 +4,7 @@ constant Pair = Frame(MethodEntry("Run", List(MemberEntry), "None", List(Instruc
 constant Compare = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Binary(InstructionType.LessThan, (0, 1))), 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty)
 constant Adding = Operations(Pair, Pair.Instruction)
 constant OneTwo = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))
+constant DimensionError = VmValue("Strict/Error", 0, "", (VmValue.OfText("listsHaveDifferentDimensions"), VmValue.OfList(List(VmValue))))
 Step Frame
 	Adding.Step.Register(2).number is 7
 	Operations(Compare, Compare.Instruction).Step.Local("#flag").IsTrue is true
@@ -28,20 +29,28 @@ Comparison(kind Number, left VmValue, right VmValue) Boolean
 	kind is InstructionType.LessThan then left.number < right.number else left.number > right.number
 Calculated(kind Number, left VmValue, right VmValue) VmValue
 	Adding.Calculated(InstructionType.Modulo, VmValue.OfNumber(7), VmValue.OfNumber(4)).number is 3
+	Adding.Calculated(InstructionType.Multiply, OneTwo, OneTwo).Length is 2
+	Adding.Calculated(InstructionType.Divide, OneTwo, VmValue.OfNumber(2)).Length is 2
 	if kind is InstructionType.Add
 		return Added(left, right)
+	if left.kind is "List"
+		return kind is InstructionType.Subtract then Removed(left, right) else Zipped(kind, left, right)
+	VmValue.OfNumber(Numeric(kind, left.number, right.number))
+Numeric(kind Number, left Number, right Number) Number
+	Adding.Numeric(InstructionType.Modulo, 7, 4) is 3
 	if kind is InstructionType.Subtract
-		return left.kind is "List" then Removed(left, right) else VmValue.OfNumber(left.number - right.number)
+		return left - right
 	if kind is InstructionType.Multiply
-		return VmValue.OfNumber(left.number * right.number)
+		return left * right
 	if kind is InstructionType.Divide
-		return VmValue.OfNumber(left.number / right.number)
-	VmValue.OfNumber(kind is InstructionType.Modulo then left.number % right.number else left.number ^ right.number)
+		return left / right
+	kind is InstructionType.Modulo then left % right else left ^ right
 Added(left VmValue, right VmValue) VmValue
 	Adding.Added(VmValue.OfText("a"), VmValue.OfNumber(1)).text is "a1"
 	Adding.Added(VmValue.OfList(List(VmValue)), VmValue.OfNumber(1)).Length is 1
+	Adding.Added(VmValue.OfList(List(VmValue) + VmValue.OfText("a")), OneTwo).items.Last.kind is "Text"
 	if left.kind is "List"
-		return VmValue.OfList(right.kind is "List" then left.items + right.items else left.items + right)
+		return VmValue.OfList(left.items + Matching(left, right.kind is "List" then right.items else List(VmValue) + right))
 	if right.kind is "List"
 		return VmValue.OfList(List(VmValue) + left + right.items)
 	if (left.kind is "Text") or (right.kind is "Text")
@@ -49,9 +58,32 @@ Added(left VmValue, right VmValue) VmValue
 	VmValue.OfNumber(left.number + right.number)
 Removed(elements VmValue, element VmValue) VmValue
 	Adding.Removed(OneTwo, VmValue.OfNumber(1)).items.First.number is 2
-	let position = elements.items.Index(element)
+	Adding.Removed(OneTwo, OneTwo).Length is 0
+	let unwanted = element.kind is "List" then element.items else List(VmValue) + element
 	mutable remaining = List(Mutable(VmValue))
 	for elements.items
-		if index is not position
+		if value is not in unwanted
 			remaining.Add(value)
 	VmValue.OfList(remaining)
+Matching(elements VmValue, others List(VmValue)) List(VmValue)
+	Adding.Matching(VmValue.OfList(List(VmValue) + VmValue.OfText("a")), OneTwo.items).First.kind is "Text"
+	if (elements.items.Length is 0) or (elements.items.First.kind is not "Text")
+		return others
+	for others
+		VmValue.OfText(value to Text)
+Zipped(kind Number, left VmValue, right VmValue) VmValue
+	Adding.Zipped(InstructionType.Multiply, OneTwo, OneTwo).items.Last.number is 4
+	Adding.Zipped(InstructionType.Multiply, OneTwo, VmValue.OfList(List(VmValue) + VmValue.OfNumber(1))) is DimensionError
+	let others = right.kind is "List" then right.items else List(VmValue) + right
+	let spreads = (kind is InstructionType.Divide) or (right.kind is not "List")
+	let isSingle = (left.items.Length is 1) or (others.Length is 1)
+	if (left.items.Length is not others.Length) and ((spreads and isSingle) is false)
+		return DimensionError
+	let length = left.items.Length > others.Length then left.items.Length else others.Length
+	mutable results = List(Mutable(VmValue))
+	for length
+		results.Add(VmValue.OfNumber(Numeric(kind, Element(left.items, index).number, Element(others, index).number)))
+	VmValue.OfList(results)
+Element(items List(VmValue), position Number) VmValue
+	Adding.Element(OneTwo.items, 1).number is 2
+	items(items.Length is 1 then 0 else position)
