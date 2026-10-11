@@ -9,7 +9,7 @@ IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
 	let short = TypeEntry.ShortName(typeName)
-	(IsBase(short) is false) and (Wrapped(short) is "")
+	(TypeEntry.IsBaseName(short) is false) and (Wrapped(short) is "")
 Represented(kind Text) Text
 	Wrapping.Represented("Angle") is "Number"
 	Wrapping.Represented("Shape") is "Shape"
@@ -22,16 +22,7 @@ Wrapped(typeName Text) Text
 	Wrapping.Wrapped("Angle") is "Degrees"
 	Wrapping.Wrapped("Shape") is ""
 	Wrapping.Wrapped("Number") is ""
-	let short = TypeEntry.ShortName(typeName)
-	if IsBase(short) or (short is in ("Logger", "File"))
-		return ""
-	let changing = Changing(function.TypeOf(short))
-	changing.Length is 1 then TypeEntry.ShortName(changing.First.typeName) else ""
-Changing(type TypeEntry) List(MemberEntry)
-	Wrapping.Changing(MlirFunction.Shape).Length is 2
-	for type.members
-		if value.IsConstant is false
-			value
+	function.TypeOf(TypeEntry.ShortName(typeName)).Wrapped
 IsInitializer Boolean
 	Wrapping.IsInitializer is false
 	Packing.IsInitializer is true
@@ -55,8 +46,3 @@ Returned(position Number) Texts
 		let copied = (function.Load(temp, "%v_" + value.Name), function.Store(temp, memory.Temp("n" + index)))
 		lines = lines + memory.Slot(memory.Temp("np"), index, "n" + index) + copied
 	lines + memory.Bits(memory.Temp("np"), "n") + ("    return " + memory.Temp("nf") + " : f64")
-IsBase(short Text) Boolean
-	Wrapping.IsBase("Character") is true
-	Wrapping.IsBase("List(Text)") is true
-	Wrapping.IsBase("Shape") is false
-	(short is in ("Number", "Text", "Boolean", "Character", "None")) or short.StartsWith("List(")

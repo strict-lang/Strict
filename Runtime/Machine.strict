@@ -7,6 +7,7 @@ constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper"
 constant Characters = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1))), 0, List(VmValue) + VmValue.OfText("ab"), Locals.Empty)
 constant Texts = TypeEntry("Strict/Text", List(MemberEntry) + MemberEntry("characters", "Strict/List(Character)", List(InstructionEntry), false), List(MethodEntry))
 constant Defaulted = MethodEntry("Add", List(MemberEntry) + MemberEntry.SevenMember, "Strict/Number", List(InstructionEntry))
+constant Wrapper = TypeEntry("Strict/Wrapper", (MemberEntry.LoggerMember, MemberEntry.SevenMember), List(MethodEntry))
 constant Listing = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.IndexCall, "list", (0, 0, -1))), 0, List(VmValue) + VmValue.OfNumber(1), Locals(("list"), (VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)))))
 Launch(typeName Text, arguments List(VmValue))
 	let main = Natives(types).TypeOf(typeName)
@@ -22,14 +23,20 @@ Tested(typeName Text) Number
 	Execute(tests, Bound(main, Natives(types).Fresh(main), tests, List(VmValue))).number
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue)) Locals
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue)).Get("value").number is 2
-	Hello.Bound(Texts, VmValue.OfText("ab"), MethodEntry.HelloRun, List(VmValue)).Get("characters").text is "ab"
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue)).Get("a").number is 7
-	mutable locals = Locals.Empty.With("#this", instance).With("value", instance)
-	if instance.IsBase or Natives(types).IsNamed(type, instance.kind)
-		for type.members
-			locals = locals.With(value.Name, instance.Member(index))
+	mutable locals = Members(type, instance)
 	for method.parameters
 		locals = locals.With(value.Name, (index < arguments.Length then arguments(index) else Natives(types).Initial(value)))
+	locals
+Members(type TypeEntry, instance VmValue) Locals
+	Hello.Members(Texts, VmValue.OfText("ab")).Get("characters").text is "ab"
+	Hello.Members(Wrapper, VmValue.OfError("a")).Get("logger").kind is "Strict/Error"
+	Hello.Members(Wrapper, VmValue.OfError("a")).Get("a").number is 7
+	mutable locals = Locals.Empty.With("#this", instance).With("value", instance)
+	let isOwn = Natives(types).IsNamed(type, instance.kind)
+	for type.members
+		let member = value.IsConstant then Natives(types).Initial(value) else isOwn then instance.Member(index) else instance
+		locals = locals.With(value.Name, member)
 	locals
 Execute(method MethodEntry, locals Locals) VmValue
 	Machine(List(TypeEntry) + Doubler).Execute(Doubler.methods.First, Locals.Empty).number is 42
@@ -92,12 +99,11 @@ Printed(frame Frame) Frame
 Field(frame Frame) Frame
 	Hello.Field(Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)).position is 1
 	Hello.Field(Characters).Register(1).text is "ab"
+	Hello.Field(Characters.WithRegister(0, VmValue.OfError("a"))).Register(1).kind is "Strict/Error"
 	let entry = frame.Instruction
 	let instance = frame.Register(entry.payload(1))
-	if instance.IsBase
-		return frame.NextWithRegister(entry.payload(0), instance)
-	mutable found = VmValue.None
+	mutable found = instance
 	for Natives(types).TypeOf(instance.kind).members
 		if value.Name is entry.texts(0)
-			found = instance.items(index)
+			found = instance.Member(index)
 	frame.NextWithRegister(entry.payload(0), found)

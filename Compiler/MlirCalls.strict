@@ -38,7 +38,7 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 IsMemberValue(entry InstructionEntry, type TypeEntry) Boolean
 	MlirCalls(Hashes, 1).IsMemberValue(Hashed, Hash) is false
 	let layout = MlirLayout(function)
-	let members = layout.Changing(type)
+	let members = type.Changing
 	let countPosition = 5 + entry.payload(3)
 	if (members.Length is not 1) or (entry.payload(countPosition) is not 1)
 		return false

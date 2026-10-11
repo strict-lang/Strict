@@ -66,6 +66,25 @@ ShortName(typeName Text) Text
 	let head = open < 0 then typeName else typeName.Substring(0, open)
 	let slash = head.LastIndexOf("/")
 	slash < 0 then typeName else typeName.Substring(slash + 1, typeName.Length - slash - 1)
+Wrapped Text
+	HelloLogger.Wrapped is "Logger"
+	Converting.Wrapped is ""
+	let short = ShortName(Name)
+	if IsBaseName(short) or (short is in ("Logger", "File"))
+		return ""
+	let changing = Changing
+	changing.Length is 1 then ShortName(changing.First.typeName) else ""
+Changing List(MemberEntry)
+	HelloLogger.Changing.Length is 1
+	TypeEntry("A", List(MemberEntry) + MemberEntry.SevenMember, List(MethodEntry)).Changing.Length is 0
+	for members
+		if value.IsConstant is false
+			value
+IsBaseName(short Text) Boolean
+	HelloLogger.IsBaseName("Character") is true
+	HelloLogger.IsBaseName("List(Text)") is true
+	HelloLogger.IsBaseName("Shape") is false
+	(short is in ("Number", "Text", "Boolean", "Character", "None")) or short.StartsWith("List(")
 JustName Text
 	TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry)).JustName is "Process"
 	HelloLogger.JustName is "HelloLogger"

@@ -3,6 +3,8 @@ constant Width = MemberEntry("width", "Strict/Number", List(InstructionEntry), f
 constant Shape = TypeEntry("Strict/Shape", (Width, MemberEntry.LoggerMember), List(MethodEntry))
 constant Shapes = Natives(List(TypeEntry) + Shape)
 constant NewShape = Invocation(InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfNumber(3), Locals.Empty))
+constant Degree = TypeEntry("Strict/Degree", List(MemberEntry) + Width, List(MethodEntry))
+constant NewDegree = Invocation(InstructionEntry.Invoke(1, ("Strict/Degree", "from", "Strict/Degree", "width"), 0, -1), NewShape.frame)
 constant SystemCall = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "OperatingSystem", "Strict/Text"), List(Number), -1), Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty))
 constant Pairs = VmValue.OfList(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.OfList(VmValue.OfNumber(2), VmValue.OfNumber(4)))
 constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
@@ -86,16 +88,16 @@ Edited(name Text, text Text) VmValue
 	VmValue.OfText(name is "TrimStart" then text.TrimStart else text.TrimEnd)
 Constructed(call Invocation) VmValue
 	Shapes.Constructed(NewShape).kind is "Strict/Shape"
+	Natives(List(TypeEntry) + Degree).Constructed(NewDegree).number is 3
 	let type = TypeOf(call.TypeName)
-	if type.members.Length is 0
-		return call.Arguments.Length > 0 then call.Arguments.First else VmValue.None
 	let arguments = call.Arguments
+	if (type.members.Length is 0) or (type.Wrapped is not "")
+		return arguments.Length > 0 then arguments.First else VmValue.None
 	mutable values = List(Mutable(VmValue))
 	for type.members
 		let argument = call.ParameterNames.Index(value.Name)
 		let chosen = argument < 0 then index else argument
-		let isGiven = (value.IsConstant is false) and chosen < arguments.Length
-		values.Add(isGiven then arguments(chosen) else Initial(value))
+		values.Add((value.IsConstant is false) and (chosen < arguments.Length) then arguments(chosen) else Initial(value))
 	VmValue(call.TypeName, 0, "", values)
 Fresh(type TypeEntry) VmValue
 	Shapes.Fresh(Shape).items.First.number is 0
