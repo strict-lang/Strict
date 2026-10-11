@@ -1,10 +1,12 @@
 has entry MlirFunction
 constant Counted = MlirEntry(MlirModule.Counters.Functions.First)
+constant CollectorStart = ("    %frameLevel = arith.constant 0 : i32", "    %stackBase = llvm.call_intrinsic \"llvm.frameaddress.p0\"(%frameLevel) : (i32) -> !llvm.ptr", "    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()")
 Main Texts
-	Counted.Main.Length is 13
+	Counted.Main.Length is 16
+	Counted.Main.Index("    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()") is 3
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
-	constant header = List(Text) + "  func.func @main(%argc: i32, %argv: !llvm.ptr) -> i32 {" + constants
+	constant header = List(Text) + "  func.func @main(%argc: i32, %argv: !llvm.ptr) -> i32 {" + CollectorStart + constants
 	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
 	let returned = MlirKinds(entry).Short(entry.method.returnType) is "Number"
 	let code = returned then "    %code = arith.fptosi %result : f64 to i32" else "    %code = arith.constant 0 : i32"

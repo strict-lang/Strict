@@ -1,31 +1,846 @@
-  llvm.mlir.global internal @strict_heap_next(0 : i64) : i64
-  llvm.mlir.global internal @strict_heap_end(0 : i64) : i64
+  llvm.func @llvm.eh.unwind.init()
+  llvm.func @exit(i32)
+  llvm.func @memset(!llvm.ptr, i32, i64) -> !llvm.ptr
+  llvm.mlir.global internal @strict_gc_base(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_top(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_limit(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_committed(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_table(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_stack(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_allocated(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_threshold(4194304 : i64) : i64
+  llvm.mlir.global internal @strict_gc_marked(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_pool(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_pooled(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_spare(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_spare_count(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_spare_capacity(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_large(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_work(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_work_size(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_work_capacity(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_cursors(dense<0> : tensor<32xi64>) : !llvm.array<32 x i64>
+  llvm.mlir.global internal @strict_gc_ends(dense<0> : tensor<32xi64>) : !llvm.array<32 x i64>
+  llvm.mlir.global internal @strict_gc_spans(dense<0> : tensor<32xi64>) : !llvm.array<32 x i64>
+  llvm.mlir.global internal @strict_gc_pages(dense<0> : tensor<32xi64>) : !llvm.array<32 x i64>
+  llvm.mlir.global internal @strict_gc_sweeps(dense<0> : tensor<32xi64>) : !llvm.array<32 x i64>
+  llvm.mlir.global internal constant @strict_gc_sizes(dense<[16, 32, 48, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512, 640, 768, 896, 1024, 1280, 1536, 1792, 2048, 2560, 3072, 3584, 4096, 6144, 8192, 12288, 16384]> : tensor<32xi64>) : !llvm.array<32 x i64>
+  llvm.mlir.global internal constant @strict_gc_classes(dense<[0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 19, 19]> : tensor<65xi8>) : !llvm.array<65 x i8>
+  llvm.mlir.global internal constant @strict_gc_out_of_memory("Strict: out of memory\0A\00") : !llvm.array<23 x i8>
+  func.func private @strict_gc_init(%stack: !llvm.ptr) {
+    %tableBytes = arith.constant 8388608 : i64
+    %heapBytes = arith.constant 68719476736 : i64
+    %pageSize = arith.constant 65536 : i64
+    %pageRest = arith.constant 65535 : i64
+    %pageMask = arith.constant -65536 : i64
+    %slack = arith.addi %tableBytes, %pageSize : i64
+    %total = arith.addi %heapBytes, %slack : i64
+    %reserved = func.call @strict_reserve(%total) : (i64) -> !llvm.ptr
+    %start = llvm.ptrtoint %reserved : !llvm.ptr to i64
+    %padded = arith.addi %start, %pageRest : i64
+    %table = arith.andi %padded, %pageMask : i64
+    %tablePointer = llvm.inttoptr %table : i64 to !llvm.ptr
+    func.call @strict_commit(%tablePointer, %tableBytes) : (!llvm.ptr, i64) -> ()
+    %base = arith.addi %table, %tableBytes : i64
+    %limit = arith.addi %base, %heapBytes : i64
+    %tableSlot = llvm.mlir.addressof @strict_gc_table : !llvm.ptr
+    llvm.store %table, %tableSlot : i64, !llvm.ptr
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    llvm.store %base, %baseSlot : i64, !llvm.ptr
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    llvm.store %base, %topSlot : i64, !llvm.ptr
+    %committedSlot = llvm.mlir.addressof @strict_gc_committed : !llvm.ptr
+    llvm.store %base, %committedSlot : i64, !llvm.ptr
+    %limitSlot = llvm.mlir.addressof @strict_gc_limit : !llvm.ptr
+    llvm.store %limit, %limitSlot : i64, !llvm.ptr
+    %stackBits = llvm.ptrtoint %stack : !llvm.ptr to i64
+    %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
+    llvm.store %stackBits, %stackSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_fail() {
+    %message = llvm.mlir.addressof @strict_gc_out_of_memory : !llvm.ptr
+    %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    %code = arith.constant 1 : i32
+    llvm.call @exit(%code) : (i32) -> ()
+    return
+  }
   func.func private @strict_alloc(%size: i64) -> !llvm.ptr {
-    %seven = arith.constant 7 : i64
-    %mask = arith.constant -8 : i64
-    %chunk = arith.constant 67108864 : i64
-    %padded = arith.addi %size, %seven : i64
-    %rounded = arith.andi %padded, %mask : i64
-    %nextSlot = llvm.mlir.addressof @strict_heap_next : !llvm.ptr
-    %endSlot = llvm.mlir.addressof @strict_heap_end : !llvm.ptr
-    %next = llvm.load %nextSlot : !llvm.ptr -> i64
+    %smallLimit = arith.constant 1024 : i64
+    %isTable = arith.cmpi ule, %size, %smallLimit : i64
+    cf.cond_br %isTable, ^table, ^larger
+  ^table:
+    %fifteen = arith.constant 15 : i64
+    %four = arith.constant 4 : i64
+    %padded = arith.addi %size, %fifteen : i64
+    %slot = arith.shrui %padded, %four : i64
+    %classes = llvm.mlir.addressof @strict_gc_classes : !llvm.ptr
+    %entry = llvm.getelementptr %classes[0, %slot] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<65 x i8>
+    %classByte = llvm.load %entry : !llvm.ptr -> i8
+    %class = arith.extui %classByte : i8 to i64
+    %object = func.call @strict_gc_small(%class) : (i64) -> !llvm.ptr
+    return %object : !llvm.ptr
+  ^larger:
+    %maxSmall = arith.constant 16384 : i64
+    %isLarge = arith.cmpi ugt, %size, %maxSmall : i64
+    %firstLarger = arith.constant 20 : i64
+    cf.cond_br %isLarge, ^large, ^search(%firstLarger : i64)
+  ^search(%candidate: i64):
+    %sizes = llvm.mlir.addressof @strict_gc_sizes : !llvm.ptr
+    %sizeSlot = llvm.getelementptr %sizes[0, %candidate] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %candidateSize = llvm.load %sizeSlot : !llvm.ptr -> i64
+    %fits = arith.cmpi uge, %candidateSize, %size : i64
+    %one = arith.constant 1 : i64
+    %following = arith.addi %candidate, %one : i64
+    cf.cond_br %fits, ^found(%candidate : i64), ^search(%following : i64)
+  ^found(%chosen: i64):
+    %medium = func.call @strict_gc_small(%chosen) : (i64) -> !llvm.ptr
+    return %medium : !llvm.ptr
+  ^large:
+    %big = func.call @strict_gc_large_alloc(%size) : (i64) -> !llvm.ptr
+    return %big : !llvm.ptr
+  }
+  func.func private @strict_gc_count(%bytes: i64) {
+    %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
+    %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
+    %counted = arith.addi %allocated, %bytes : i64
+    llvm.store %counted, %allocatedSlot : i64, !llvm.ptr
+    %thresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
+    %threshold = llvm.load %thresholdSlot : !llvm.ptr -> i64
+    %due = arith.cmpi ugt, %counted, %threshold : i64
+    cf.cond_br %due, ^collect, ^done
+  ^collect:
+    func.call @strict_gc_collect() : () -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_gc_small(%class: i64) -> !llvm.ptr {
+    %sizes = llvm.mlir.addressof @strict_gc_sizes : !llvm.ptr
+    %sizeSlot = llvm.getelementptr %sizes[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %objectSize = llvm.load %sizeSlot : !llvm.ptr -> i64
+    %cursors = llvm.mlir.addressof @strict_gc_cursors : !llvm.ptr
+    %cursorSlot = llvm.getelementptr %cursors[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %ends = llvm.mlir.addressof @strict_gc_ends : !llvm.ptr
+    %endSlot = llvm.getelementptr %ends[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    cf.br ^try
+  ^try:
+    %cursor = llvm.load %cursorSlot : !llvm.ptr -> i64
     %end = llvm.load %endSlot : !llvm.ptr -> i64
-    %after = arith.addi %next, %rounded : i64
-    %fits = arith.cmpi ule, %after, %end : i64
-    cf.cond_br %fits, ^take(%next : i64), ^refill
+    %next = arith.addi %cursor, %objectSize : i64
+    %fits = arith.cmpi ule, %next, %end : i64
+    cf.cond_br %fits, ^take, ^refill
+  ^take:
+    llvm.store %next, %cursorSlot : i64, !llvm.ptr
+    %pointer = llvm.inttoptr %cursor : i64 to !llvm.ptr
+    return %pointer : !llvm.ptr
   ^refill:
-    %big = arith.cmpi ugt, %rounded, %chunk : i64
-    %chunkSize = arith.select %big, %rounded, %chunk : i64
-    %block = llvm.call @malloc(%chunkSize) : (i64) -> !llvm.ptr
-    %start = llvm.ptrtoint %block : !llvm.ptr to i64
-    %blockEnd = arith.addi %start, %chunkSize : i64
-    llvm.store %blockEnd, %endSlot : i64, !llvm.ptr
-    cf.br ^take(%start : i64)
-  ^take(%at: i64):
-    %taken = arith.addi %at, %rounded : i64
-    llvm.store %taken, %nextSlot : i64, !llvm.ptr
-    %result = llvm.inttoptr %at : i64 to !llvm.ptr
+    func.call @strict_gc_next_span(%class) : (i64) -> ()
+    cf.br ^try
+  }
+  func.func private @strict_gc_link(%object: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %flag = arith.constant -9223372036854775808 : i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %offset = arith.subi %object, %base : i64
+    %shifted = arith.addi %offset, %one : i64
+    %encoded = arith.ori %shifted, %flag : i64
+    %isNull = arith.cmpi eq, %object, %zero : i64
+    %result = arith.select %isNull, %zero, %encoded : i64
+    return %result : i64
+  }
+  func.func private @strict_gc_unlink(%link: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %mask = arith.constant 9223372036854775807 : i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %offset = arith.andi %link, %mask : i64
+    %address = arith.addi %base, %offset : i64
+    %decoded = arith.subi %address, %one : i64
+    %isNull = arith.cmpi eq, %link, %zero : i64
+    %result = arith.select %isNull, %zero, %decoded : i64
+    return %result : i64
+  }
+  func.func private @strict_gc_next_span(%class: i64) {
+    %zero = arith.constant 0 : i64
+    %clear = arith.constant 0 : i32
+    %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
+    %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
+    %thresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
+    %threshold = llvm.load %thresholdSlot : !llvm.ptr -> i64
+    %due = arith.cmpi ugt, %allocated, %threshold : i64
+    %spans = llvm.mlir.addressof @strict_gc_spans : !llvm.ptr
+    %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %sweeps = llvm.mlir.addressof @strict_gc_sweeps : !llvm.ptr
+    %sweepSlot = llvm.getelementptr %sweeps[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    cf.cond_br %due, ^collect, ^search
+  ^collect:
+    func.call @strict_gc_collect() : () -> ()
+    cf.br ^search
+  ^search:
+    %span = llvm.load %spanSlot : !llvm.ptr -> i64
+    %hasSpan = arith.cmpi ne, %span, %zero : i64
+    cf.cond_br %hasSpan, ^pop, ^sweep
+  ^pop:
+    %startPointer = llvm.inttoptr %span : i64 to !llvm.ptr
+    %link = llvm.load %startPointer : !llvm.ptr -> i64
+    %endWordSlot = llvm.getelementptr %startPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %endWord = llvm.load %endWordSlot : !llvm.ptr -> i64
+    %following = func.call @strict_gc_unlink(%link) : (i64) -> i64
+    llvm.store %following, %spanSlot : i64, !llvm.ptr
+    %spanEnd = func.call @strict_gc_unlink(%endWord) : (i64) -> i64
+    %bytes = arith.subi %spanEnd, %span : i64
+    %cleared = llvm.call @memset(%startPointer, %clear, %bytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %cursors = llvm.mlir.addressof @strict_gc_cursors : !llvm.ptr
+    %cursorSlot = llvm.getelementptr %cursors[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    llvm.store %span, %cursorSlot : i64, !llvm.ptr
+    %ends = llvm.mlir.addressof @strict_gc_ends : !llvm.ptr
+    %endSlot = llvm.getelementptr %ends[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    llvm.store %spanEnd, %endSlot : i64, !llvm.ptr
+    %counted = llvm.load %allocatedSlot : !llvm.ptr -> i64
+    %more = arith.addi %counted, %bytes : i64
+    llvm.store %more, %allocatedSlot : i64, !llvm.ptr
+    return
+  ^sweep:
+    %page = llvm.load %sweepSlot : !llvm.ptr -> i64
+    %hasPage = arith.cmpi ne, %page, %zero : i64
+    cf.cond_br %hasPage, ^sweepPage, ^fresh
+  ^sweepPage:
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %nextPage = llvm.load %nextSlot : !llvm.ptr -> i64
+    llvm.store %nextPage, %sweepSlot : i64, !llvm.ptr
+    func.call @strict_gc_sweep_page(%page, %class) : (i64, i64) -> ()
+    cf.br ^search
+  ^fresh:
+    func.call @strict_gc_new_small_page(%class) : (i64) -> ()
+    cf.br ^search
+  }
+  func.func private @strict_gc_add_span(%class: i64, %start: i64, %end: i64) {
+    %spans = llvm.mlir.addressof @strict_gc_spans : !llvm.ptr
+    %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %head = llvm.load %spanSlot : !llvm.ptr -> i64
+    %link = func.call @strict_gc_link(%head) : (i64) -> i64
+    %endLink = func.call @strict_gc_link(%end) : (i64) -> i64
+    %startPointer = llvm.inttoptr %start : i64 to !llvm.ptr
+    llvm.store %link, %startPointer : i64, !llvm.ptr
+    %endSlot = llvm.getelementptr %startPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %endLink, %endSlot : i64, !llvm.ptr
+    llvm.store %start, %spanSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_add_run(%page: i64, %first: i64, %objectSize: i64, %class: i64, %from: i64, %to: i64) {
+    %fromOffset = arith.muli %from, %objectSize : i64
+    %toOffset = arith.muli %to, %objectSize : i64
+    %pageFirst = arith.addi %page, %first : i64
+    %start = arith.addi %pageFirst, %fromOffset : i64
+    %end = arith.addi %pageFirst, %toOffset : i64
+    func.call @strict_gc_add_span(%class, %start, %end) : (i64, i64, i64) -> ()
+    return
+  }
+  func.func private @strict_gc_keep_page(%page: i64, %class: i64) {
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %pages = llvm.mlir.addressof @strict_gc_pages : !llvm.ptr
+    %pagesSlot = llvm.getelementptr %pages[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %oldFirst = llvm.load %pagesSlot : !llvm.ptr -> i64
+    %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %oldFirst, %nextSlot : i64, !llvm.ptr
+    llvm.store %page, %pagesSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_sweep_page(%page: i64, %class: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %none = arith.constant -1 : i64
+    %unmarked = arith.constant 0 : i8
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %objectSize = llvm.load %pagePointer : !llvm.ptr -> i64
+    %countSlot = llvm.getelementptr %pagePointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %firstSlot = llvm.getelementptr %pagePointer[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %first = llvm.load %firstSlot : !llvm.ptr -> i64
+    %marks = llvm.getelementptr %pagePointer[64] : (!llvm.ptr) -> !llvm.ptr, i8
+    %spans = llvm.mlir.addressof @strict_gc_spans : !llvm.ptr
+    %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %savedHead = llvm.load %spanSlot : !llvm.ptr -> i64
+    cf.br ^scan(%zero, %none, %zero : i64, i64, i64)
+  ^scan(%index: i64, %runStart: i64, %live: i64):
+    %more = arith.cmpi ult, %index, %count : i64
+    cf.cond_br %more, ^fast, ^finish
+  ^fast:
+    %plusEight = arith.addi %index, %eight : i64
+    %roomForEight = arith.cmpi ule, %plusEight, %count : i64
+    cf.cond_br %roomForEight, ^wide, ^byte
+  ^wide:
+    %wordSlot = llvm.getelementptr %marks[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %word = llvm.load %wordSlot {alignment = 1 : i64} : !llvm.ptr -> i64
+    %allDead = arith.cmpi eq, %word, %zero : i64
+    %noRun = arith.cmpi eq, %runStart, %none : i64
+    %openedEight = arith.select %noRun, %index, %runStart : i64
+    cf.cond_br %allDead, ^scan(%plusEight, %openedEight, %live : i64, i64, i64), ^byte
+  ^byte:
+    %markSlot = llvm.getelementptr %marks[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %mark = llvm.load %markSlot : !llvm.ptr -> i8
+    %isLive = arith.cmpi ne, %mark, %unmarked : i8
+    %nextIndex = arith.addi %index, %one : i64
+    %hasNoRun = arith.cmpi eq, %runStart, %none : i64
+    %opened = arith.select %hasNoRun, %index, %runStart : i64
+    cf.cond_br %isLive, ^liveObject, ^scan(%nextIndex, %opened, %live : i64, i64, i64)
+  ^liveObject:
+    llvm.store %unmarked, %markSlot : i8, !llvm.ptr
+    %moreLive = arith.addi %live, %one : i64
+    cf.cond_br %hasNoRun, ^scan(%nextIndex, %none, %moreLive : i64, i64, i64), ^closeRun
+  ^closeRun:
+    func.call @strict_gc_add_run(%page, %first, %objectSize, %class, %runStart, %index) : (i64, i64, i64, i64, i64, i64) -> ()
+    cf.br ^scan(%nextIndex, %none, %moreLive : i64, i64, i64)
+  ^finish:
+    %hasOpenRun = arith.cmpi ne, %runStart, %none : i64
+    %isEmpty = arith.cmpi eq, %live, %zero : i64
+    cf.cond_br %isEmpty, ^release, ^closeLast
+  ^release:
+    llvm.store %savedHead, %spanSlot : i64, !llvm.ptr
+    func.call @strict_gc_release_page(%page) : (i64) -> ()
+    return
+  ^closeLast:
+    cf.cond_br %hasOpenRun, ^addLast, ^keep
+  ^addLast:
+    func.call @strict_gc_add_run(%page, %first, %objectSize, %class, %runStart, %count) : (i64, i64, i64, i64, i64, i64) -> ()
+    cf.br ^keep
+  ^keep:
+    func.call @strict_gc_keep_page(%page, %class) : (i64, i64) -> ()
+    return
+  }
+  func.func private @strict_gc_page_kind(%page: i64, %kind: i64) {
+    %shift = arith.constant 16 : i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %tableSlot = llvm.mlir.addressof @strict_gc_table : !llvm.ptr
+    %table = llvm.load %tableSlot : !llvm.ptr -> i64
+    %offset = arith.subi %page, %base : i64
+    %index = arith.shrui %offset, %shift : i64
+    %tablePointer = llvm.inttoptr %table : i64 to !llvm.ptr
+    %entry = llvm.getelementptr %tablePointer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %kind, %entry : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_new_small_page(%class: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %usable = arith.constant 65456 : i64
+    %header = arith.constant 64 : i64
+    %fifteen = arith.constant 15 : i64
+    %alignMask = arith.constant -16 : i64
+    %page = func.call @strict_gc_take_pages(%one) : (i64) -> i64
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %sizes = llvm.mlir.addressof @strict_gc_sizes : !llvm.ptr
+    %sizeSlot = llvm.getelementptr %sizes[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %objectSize = llvm.load %sizeSlot : !llvm.ptr -> i64
+    %perObject = arith.addi %objectSize, %one : i64
+    %count = arith.divui %usable, %perObject : i64
+    %withMarks = arith.addi %header, %count : i64
+    %paddedMarks = arith.addi %withMarks, %fifteen : i64
+    %first = arith.andi %paddedMarks, %alignMask : i64
+    llvm.store %objectSize, %pagePointer : i64, !llvm.ptr
+    %countSlot = llvm.getelementptr %pagePointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %count, %countSlot : i64, !llvm.ptr
+    %firstSlot = llvm.getelementptr %pagePointer[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %first, %firstSlot : i64, !llvm.ptr
+    %classSlot = llvm.getelementptr %pagePointer[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %class, %classSlot : i64, !llvm.ptr
+    %scale = arith.constant 4294967296 : i64
+    %sizeRest = arith.subi %objectSize, %one : i64
+    %scaled = arith.addi %scale, %sizeRest : i64
+    %reciprocal = arith.divui %scaled, %objectSize : i64
+    %reciprocalSlot = llvm.getelementptr %pagePointer[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %reciprocal, %reciprocalSlot : i64, !llvm.ptr
+    func.call @strict_gc_page_kind(%page, %one) : (i64, i64) -> ()
+    func.call @strict_gc_keep_page(%page, %class) : (i64, i64) -> ()
+    %objectBytes = arith.muli %count, %objectSize : i64
+    %start = arith.addi %page, %first : i64
+    %end = arith.addi %start, %objectBytes : i64
+    func.call @strict_gc_add_span(%class, %start, %end) : (i64, i64, i64) -> ()
+    return
+  }
+  func.func private @strict_gc_take_pages(%count: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %pageSize = arith.constant 65536 : i64
+    %clear = arith.constant 0 : i32
+    %single = arith.cmpi eq, %count, %one : i64
+    %poolSlot = llvm.mlir.addressof @strict_gc_pool : !llvm.ptr
+    %pooledSlot = llvm.mlir.addressof @strict_gc_pooled : !llvm.ptr
+    %spareSlot = llvm.mlir.addressof @strict_gc_spare : !llvm.ptr
+    %spareCountSlot = llvm.mlir.addressof @strict_gc_spare_count : !llvm.ptr
+    cf.cond_br %single, ^pool, ^grow
+  ^pool:
+    %pooled = llvm.load %poolSlot : !llvm.ptr -> i64
+    %hasPooled = arith.cmpi ne, %pooled, %zero : i64
+    cf.cond_br %hasPooled, ^reuse, ^spare
+  ^reuse:
+    %pooledPointer = llvm.inttoptr %pooled : i64 to !llvm.ptr
+    %nextPooled = llvm.load %pooledPointer : !llvm.ptr -> i64
+    llvm.store %nextPooled, %poolSlot : i64, !llvm.ptr
+    %poolCount = llvm.load %pooledSlot : !llvm.ptr -> i64
+    %fewer = arith.subi %poolCount, %one : i64
+    llvm.store %fewer, %pooledSlot : i64, !llvm.ptr
+    %headerAndMarks = arith.constant 4096 : i64
+    %zeroed = llvm.call @memset(%pooledPointer, %clear, %headerAndMarks) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    return %pooled : i64
+  ^spare:
+    %spareCount = llvm.load %spareCountSlot : !llvm.ptr -> i64
+    %hasSpare = arith.cmpi ne, %spareCount, %zero : i64
+    cf.cond_br %hasSpare, ^recommit, ^grow
+  ^recommit:
+    %last = arith.subi %spareCount, %one : i64
+    llvm.store %last, %spareCountSlot : i64, !llvm.ptr
+    %spare = llvm.load %spareSlot : !llvm.ptr -> i64
+    %sparePointer = llvm.inttoptr %spare : i64 to !llvm.ptr
+    %spareEntry = llvm.getelementptr %sparePointer[%last] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %sparePage = llvm.load %spareEntry : !llvm.ptr -> i64
+    %sparePagePointer = llvm.inttoptr %sparePage : i64 to !llvm.ptr
+    func.call @strict_commit(%sparePagePointer, %pageSize) : (!llvm.ptr, i64) -> ()
+    return %sparePage : i64
+  ^grow:
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %bytes = arith.muli %count, %pageSize : i64
+    %newTop = arith.addi %top, %bytes : i64
+    %limitSlot = llvm.mlir.addressof @strict_gc_limit : !llvm.ptr
+    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %exceeds = arith.cmpi ugt, %newTop, %limit : i64
+    cf.cond_br %exceeds, ^fail, ^commit
+  ^fail:
+    func.call @strict_gc_fail() : () -> ()
+    return %zero : i64
+  ^commit:
+    llvm.store %newTop, %topSlot : i64, !llvm.ptr
+    %committedSlot = llvm.mlir.addressof @strict_gc_committed : !llvm.ptr
+    %committed = llvm.load %committedSlot : !llvm.ptr -> i64
+    %needsCommit = arith.cmpi ugt, %newTop, %committed : i64
+    cf.cond_br %needsCommit, ^ahead, ^ready
+  ^ahead:
+    %stepRest = arith.constant 1048575 : i64
+    %stepMask = arith.constant -1048576 : i64
+    %paddedTop = arith.addi %newTop, %stepRest : i64
+    %commitEnd = arith.andi %paddedTop, %stepMask : i64
+    %fitsLimit = arith.cmpi ule, %commitEnd, %limit : i64
+    %ending = arith.select %fitsLimit, %commitEnd, %limit : i64
+    %commitBytes = arith.subi %ending, %committed : i64
+    %committedPointer = llvm.inttoptr %committed : i64 to !llvm.ptr
+    func.call @strict_commit(%committedPointer, %commitBytes) : (!llvm.ptr, i64) -> ()
+    llvm.store %ending, %committedSlot : i64, !llvm.ptr
+    cf.br ^ready
+  ^ready:
+    return %top : i64
+  }
+  func.func private @strict_gc_release_page(%page: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %poolLimit = arith.constant 1024 : i64
+    %pageSize = arith.constant 65536 : i64
+    %eight = arith.constant 8 : i64
+    func.call @strict_gc_page_kind(%page, %zero) : (i64, i64) -> ()
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %poolSlot = llvm.mlir.addressof @strict_gc_pool : !llvm.ptr
+    %pooledSlot = llvm.mlir.addressof @strict_gc_pooled : !llvm.ptr
+    %poolCount = llvm.load %pooledSlot : !llvm.ptr -> i64
+    %hasRoom = arith.cmpi ult, %poolCount, %poolLimit : i64
+    cf.cond_br %hasRoom, ^pool, ^decommit
+  ^pool:
+    %pooled = llvm.load %poolSlot : !llvm.ptr -> i64
+    llvm.store %pooled, %pagePointer : i64, !llvm.ptr
+    llvm.store %page, %poolSlot : i64, !llvm.ptr
+    %more = arith.addi %poolCount, %one : i64
+    llvm.store %more, %pooledSlot : i64, !llvm.ptr
+    return
+  ^decommit:
+    func.call @strict_decommit(%pagePointer, %pageSize) : (!llvm.ptr, i64) -> ()
+    %spareSlot = llvm.mlir.addressof @strict_gc_spare : !llvm.ptr
+    %spareCountSlot = llvm.mlir.addressof @strict_gc_spare_count : !llvm.ptr
+    %spareCapacitySlot = llvm.mlir.addressof @strict_gc_spare_capacity : !llvm.ptr
+    %spare = llvm.load %spareSlot : !llvm.ptr -> i64
+    %spareCount = llvm.load %spareCountSlot : !llvm.ptr -> i64
+    %spareCapacity = llvm.load %spareCapacitySlot : !llvm.ptr -> i64
+    %full = arith.cmpi uge, %spareCount, %spareCapacity : i64
+    cf.cond_br %full, ^grow, ^store(%spare : i64)
+  ^grow:
+    %initial = arith.constant 1024 : i64
+    %doubled = arith.addi %spareCapacity, %spareCapacity : i64
+    %isFirst = arith.cmpi eq, %spareCapacity, %zero : i64
+    %capacity = arith.select %isFirst, %initial, %doubled : i64
+    %bytes = arith.muli %capacity, %eight : i64
+    %sparePointer = llvm.inttoptr %spare : i64 to !llvm.ptr
+    %grown = llvm.call @realloc(%sparePointer, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %grownBits = llvm.ptrtoint %grown : !llvm.ptr to i64
+    llvm.store %grownBits, %spareSlot : i64, !llvm.ptr
+    llvm.store %capacity, %spareCapacitySlot : i64, !llvm.ptr
+    cf.br ^store(%grownBits : i64)
+  ^store(%buffer: i64):
+    %bufferPointer = llvm.inttoptr %buffer : i64 to !llvm.ptr
+    %entry = llvm.getelementptr %bufferPointer[%spareCount] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %page, %entry : i64, !llvm.ptr
+    %increased = arith.addi %spareCount, %one : i64
+    llvm.store %increased, %spareCountSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_large_alloc(%size: i64) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %eight = arith.constant 8 : i64
+    %shift = arith.constant 16 : i64
+    %header = arith.constant 64 : i64
+    %pageRest = arith.constant 65535 : i64
+    func.call @strict_gc_count(%size) : (i64) -> ()
+    %total = arith.addi %size, %header : i64
+    %padded = arith.addi %total, %pageRest : i64
+    %pages = arith.shrui %padded, %shift : i64
+    %page = func.call @strict_gc_take_pages(%pages) : (i64) -> i64
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    llvm.store %size, %pagePointer : i64, !llvm.ptr
+    %pagesSlot = llvm.getelementptr %pagePointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %pages, %pagesSlot : i64, !llvm.ptr
+    %largeSlot = llvm.mlir.addressof @strict_gc_large : !llvm.ptr
+    %previous = llvm.load %largeSlot : !llvm.ptr -> i64
+    %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %previous, %nextSlot : i64, !llvm.ptr
+    llvm.store %page, %largeSlot : i64, !llvm.ptr
+    func.call @strict_gc_page_kind(%page, %two) : (i64, i64) -> ()
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %offset = arith.subi %page, %base : i64
+    %firstIndex = arith.shrui %offset, %shift : i64
+    %firstShifted = arith.shli %firstIndex, %eight : i64
+    %continuation = arith.ori %firstShifted, %three : i64
+    cf.br ^mark(%one : i64)
+  ^mark(%index: i64):
+    %more = arith.cmpi ult, %index, %pages : i64
+    cf.cond_br %more, ^continue, ^done
+  ^continue:
+    %pageSize = arith.constant 65536 : i64
+    %pageOffset = arith.muli %index, %pageSize : i64
+    %continued = arith.addi %page, %pageOffset : i64
+    func.call @strict_gc_page_kind(%continued, %continuation) : (i64, i64) -> ()
+    %nextIndex = arith.addi %index, %one : i64
+    cf.br ^mark(%nextIndex : i64)
+  ^done:
+    %payload = arith.addi %page, %header : i64
+    %result = llvm.inttoptr %payload : i64 to !llvm.ptr
     return %result : !llvm.ptr
+  }
+  func.func private @strict_gc_push(%object: i64, %size: i64) {
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %zero = arith.constant 0 : i64
+    %sixteen = arith.constant 16 : i64
+    %workSlot = llvm.mlir.addressof @strict_gc_work : !llvm.ptr
+    %usedSlot = llvm.mlir.addressof @strict_gc_work_size : !llvm.ptr
+    %capacitySlot = llvm.mlir.addressof @strict_gc_work_capacity : !llvm.ptr
+    %work = llvm.load %workSlot : !llvm.ptr -> i64
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
+    %full = arith.cmpi uge, %used, %capacity : i64
+    cf.cond_br %full, ^grow, ^store(%work : i64)
+  ^grow:
+    %initial = arith.constant 65536 : i64
+    %doubled = arith.addi %capacity, %capacity : i64
+    %isFirst = arith.cmpi eq, %capacity, %zero : i64
+    %newCapacity = arith.select %isFirst, %initial, %doubled : i64
+    %bytes = arith.muli %newCapacity, %sixteen : i64
+    %workPointer = llvm.inttoptr %work : i64 to !llvm.ptr
+    %grown = llvm.call @realloc(%workPointer, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %grownBits = llvm.ptrtoint %grown : !llvm.ptr to i64
+    %failed = arith.cmpi eq, %grownBits, %zero : i64
+    cf.cond_br %failed, ^fail, ^grown
+  ^fail:
+    func.call @strict_gc_fail() : () -> ()
+    return
+  ^grown:
+    llvm.store %grownBits, %workSlot : i64, !llvm.ptr
+    llvm.store %newCapacity, %capacitySlot : i64, !llvm.ptr
+    cf.br ^store(%grownBits : i64)
+  ^store(%buffer: i64):
+    %bufferPointer = llvm.inttoptr %buffer : i64 to !llvm.ptr
+    %position = arith.muli %used, %two : i64
+    %entry = llvm.getelementptr %bufferPointer[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %object, %entry : i64, !llvm.ptr
+    %sizeEntry = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %size, %sizeEntry : i64, !llvm.ptr
+    %increased = arith.addi %used, %one : i64
+    llvm.store %increased, %usedSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_mark(%word: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %shift = arith.constant 16 : i64
+    %eight = arith.constant 8 : i64
+    %kindMask = arith.constant 255 : i64
+    %unmarked = arith.constant 0 : i8
+    %marked = arith.constant 1 : i8
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %aboveBase = arith.cmpi uge, %word, %base : i64
+    %belowTop = arith.cmpi ult, %word, %top : i64
+    %inHeap = arith.andi %aboveBase, %belowTop : i1
+    cf.cond_br %inHeap, ^page, ^done
+  ^page:
+    %offset = arith.subi %word, %base : i64
+    %index = arith.shrui %offset, %shift : i64
+    %tableSlot = llvm.mlir.addressof @strict_gc_table : !llvm.ptr
+    %table = llvm.load %tableSlot : !llvm.ptr -> i64
+    %tablePointer = llvm.inttoptr %table : i64 to !llvm.ptr
+    %entrySlot = llvm.getelementptr %tablePointer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %entry = llvm.load %entrySlot : !llvm.ptr -> i64
+    %kind = arith.andi %entry, %kindMask : i64
+    %isSmall = arith.cmpi eq, %kind, %one : i64
+    cf.cond_br %isSmall, ^small, ^other
+  ^small:
+    %pageStart = arith.shli %index, %shift : i64
+    %page = arith.addi %base, %pageStart : i64
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %objectSize = llvm.load %pagePointer : !llvm.ptr -> i64
+    %countSlot = llvm.getelementptr %pagePointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %firstSlot = llvm.getelementptr %pagePointer[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %first = llvm.load %firstSlot : !llvm.ptr -> i64
+    %within = arith.subi %word, %page : i64
+    %pastHeader = arith.cmpi uge, %within, %first : i64
+    cf.cond_br %pastHeader, ^object, ^done
+  ^object:
+    %relative = arith.subi %within, %first : i64
+    %reciprocalSlot = llvm.getelementptr %pagePointer[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %reciprocal = llvm.load %reciprocalSlot : !llvm.ptr -> i64
+    %product = arith.muli %relative, %reciprocal : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %objectIndex = arith.shrui %product, %thirtyTwo : i64
+    %valid = arith.cmpi ult, %objectIndex, %count : i64
+    cf.cond_br %valid, ^check, ^done
+  ^check:
+    %marks = llvm.getelementptr %pagePointer[64] : (!llvm.ptr) -> !llvm.ptr, i8
+    %markSlot = llvm.getelementptr %marks[%objectIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %mark = llvm.load %markSlot : !llvm.ptr -> i8
+    %isUnmarked = arith.cmpi eq, %mark, %unmarked : i8
+    cf.cond_br %isUnmarked, ^set, ^done
+  ^set:
+    llvm.store %marked, %markSlot : i8, !llvm.ptr
+    %objectOffset = arith.muli %objectIndex, %objectSize : i64
+    %objectStart = arith.addi %first, %objectOffset : i64
+    %objectAddress = arith.addi %page, %objectStart : i64
+    func.call @strict_gc_add_marked(%objectSize) : (i64) -> ()
+    func.call @strict_gc_push(%objectAddress, %objectSize) : (i64, i64) -> ()
+    cf.br ^done
+  ^other:
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %isFirst = arith.cmpi eq, %kind, %two : i64
+    %isContinued = arith.cmpi eq, %kind, %three : i64
+    %isLarge = arith.ori %isFirst, %isContinued : i1
+    %continuedFrom = arith.shrui %entry, %eight : i64
+    %firstIndex = arith.select %isContinued, %continuedFrom, %index : i64
+    cf.cond_br %isLarge, ^large(%firstIndex : i64), ^done
+  ^large(%startIndex: i64):
+    %largeStart = arith.shli %startIndex, %shift : i64
+    %header = arith.addi %base, %largeStart : i64
+    %headerPointer = llvm.inttoptr %header : i64 to !llvm.ptr
+    %payloadSize = llvm.load %headerPointer : !llvm.ptr -> i64
+    %largeMarkSlot = llvm.getelementptr %headerPointer[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %largeMark = llvm.load %largeMarkSlot : !llvm.ptr -> i64
+    %isLargeUnmarked = arith.cmpi eq, %largeMark, %zero : i64
+    cf.cond_br %isLargeUnmarked, ^setLarge, ^done
+  ^setLarge:
+    llvm.store %one, %largeMarkSlot : i64, !llvm.ptr
+    %payloadOffset = arith.constant 64 : i64
+    %payload = arith.addi %header, %payloadOffset : i64
+    func.call @strict_gc_add_marked(%payloadSize) : (i64) -> ()
+    func.call @strict_gc_push(%payload, %payloadSize) : (i64, i64) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_gc_add_marked(%bytes: i64) {
+    %markedSlot = llvm.mlir.addressof @strict_gc_marked : !llvm.ptr
+    %marked = llvm.load %markedSlot : !llvm.ptr -> i64
+    %more = arith.addi %marked, %bytes : i64
+    llvm.store %more, %markedSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_mark_range(%from: i64, %to: i64) {
+    %eight = arith.constant 8 : i64
+    %alignMask = arith.constant -8 : i64
+    %aligned = arith.andi %from, %alignMask : i64
+    cf.br ^loop(%aligned : i64)
+  ^loop(%at: i64):
+    %more = arith.cmpi ult, %at, %to : i64
+    cf.cond_br %more, ^word, ^done
+  ^word:
+    %pointer = llvm.inttoptr %at : i64 to !llvm.ptr
+    %value = llvm.load %pointer : !llvm.ptr -> i64
+    func.call @strict_gc_mark(%value) : (i64) -> ()
+    %next = arith.addi %at, %eight : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return
+  }
+  func.func private @strict_gc_drain() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %workSlot = llvm.mlir.addressof @strict_gc_work : !llvm.ptr
+    %usedSlot = llvm.mlir.addressof @strict_gc_work_size : !llvm.ptr
+    cf.br ^loop
+  ^loop:
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    %empty = arith.cmpi eq, %used, %zero : i64
+    cf.cond_br %empty, ^done, ^pop
+  ^pop:
+    %last = arith.subi %used, %one : i64
+    llvm.store %last, %usedSlot : i64, !llvm.ptr
+    %work = llvm.load %workSlot : !llvm.ptr -> i64
+    %workPointer = llvm.inttoptr %work : i64 to !llvm.ptr
+    %position = arith.muli %last, %two : i64
+    %entry = llvm.getelementptr %workPointer[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %object = llvm.load %entry : !llvm.ptr -> i64
+    %sizeEntry = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %size = llvm.load %sizeEntry : !llvm.ptr -> i64
+    %end = arith.addi %object, %size : i64
+    func.call @strict_gc_mark_range(%object, %end) : (i64, i64) -> ()
+    cf.br ^loop
+  ^done:
+    return
+  }
+  func.func private @strict_gc_unsweep(%class: i64) {
+    %zero = arith.constant 0 : i64
+    %clear = arith.constant 0 : i32
+    %sweeps = llvm.mlir.addressof @strict_gc_sweeps : !llvm.ptr
+    %sweepSlot = llvm.getelementptr %sweeps[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    cf.br ^next
+  ^next:
+    %page = llvm.load %sweepSlot : !llvm.ptr -> i64
+    %done = arith.cmpi eq, %page, %zero : i64
+    cf.cond_br %done, ^finished, ^clear
+  ^clear:
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %following = llvm.load %nextSlot : !llvm.ptr -> i64
+    llvm.store %following, %sweepSlot : i64, !llvm.ptr
+    %countSlot = llvm.getelementptr %pagePointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %marks = llvm.getelementptr %pagePointer[64] : (!llvm.ptr) -> !llvm.ptr, i8
+    %cleared = llvm.call @memset(%marks, %clear, %count) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %classSlot = llvm.getelementptr %pagePointer[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pageClass = llvm.load %classSlot : !llvm.ptr -> i64
+    func.call @strict_gc_keep_page(%page, %pageClass) : (i64, i64) -> ()
+    cf.br ^next
+  ^finished:
+    return
+  }
+  func.func private @strict_gc_sweep_large() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %pageSize = arith.constant 65536 : i64
+    %largeSlot = llvm.mlir.addressof @strict_gc_large : !llvm.ptr
+    cf.br ^visit(%largeSlot : !llvm.ptr)
+  ^visit(%link: !llvm.ptr):
+    %current = llvm.load %link : !llvm.ptr -> i64
+    %end = arith.cmpi eq, %current, %zero : i64
+    cf.cond_br %end, ^done, ^check
+  ^check:
+    %headerPointer = llvm.inttoptr %current : i64 to !llvm.ptr
+    %markSlot = llvm.getelementptr %headerPointer[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %mark = llvm.load %markSlot : !llvm.ptr -> i64
+    %nextSlot = llvm.getelementptr %headerPointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %isMarked = arith.cmpi ne, %mark, %zero : i64
+    cf.cond_br %isMarked, ^survive, ^free
+  ^survive:
+    llvm.store %zero, %markSlot : i64, !llvm.ptr
+    cf.br ^visit(%nextSlot : !llvm.ptr)
+  ^free:
+    %following = llvm.load %nextSlot : !llvm.ptr -> i64
+    llvm.store %following, %link : i64, !llvm.ptr
+    %pagesSlot = llvm.getelementptr %headerPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pages = llvm.load %pagesSlot : !llvm.ptr -> i64
+    cf.br ^release(%zero : i64)
+  ^release(%index: i64):
+    %more = arith.cmpi ult, %index, %pages : i64
+    cf.cond_br %more, ^releaseOne, ^visit(%link : !llvm.ptr)
+  ^releaseOne:
+    %pageOffset = arith.muli %index, %pageSize : i64
+    %pageAddress = arith.addi %current, %pageOffset : i64
+    func.call @strict_gc_release_page(%pageAddress) : (i64) -> ()
+    %nextIndex = arith.addi %index, %one : i64
+    cf.br ^release(%nextIndex : i64)
+  ^done:
+    return
+  }
+  func.func private @strict_gc_collect() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %classCount = arith.constant 32 : i64
+    %minimum = arith.constant 4194304 : i64
+    llvm.call @llvm.eh.unwind.init() : () -> ()
+    %stackPointer = llvm.call_intrinsic "llvm.stacksave.p0"() : () -> !llvm.ptr
+    cf.br ^unsweep(%zero : i64)
+  ^unsweep(%class: i64):
+    %more = arith.cmpi ult, %class, %classCount : i64
+    cf.cond_br %more, ^unsweepOne, ^mark
+  ^unsweepOne:
+    func.call @strict_gc_unsweep(%class) : (i64) -> ()
+    %cursors = llvm.mlir.addressof @strict_gc_cursors : !llvm.ptr
+    %cursorSlot = llvm.getelementptr %cursors[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    llvm.store %zero, %cursorSlot : i64, !llvm.ptr
+    %ends = llvm.mlir.addressof @strict_gc_ends : !llvm.ptr
+    %endSlot = llvm.getelementptr %ends[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    llvm.store %zero, %endSlot : i64, !llvm.ptr
+    %spans = llvm.mlir.addressof @strict_gc_spans : !llvm.ptr
+    %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    llvm.store %zero, %spanSlot : i64, !llvm.ptr
+    %nextClass = arith.addi %class, %one : i64
+    cf.br ^unsweep(%nextClass : i64)
+  ^mark:
+    %markedSlot = llvm.mlir.addressof @strict_gc_marked : !llvm.ptr
+    llvm.store %zero, %markedSlot : i64, !llvm.ptr
+    %from = llvm.ptrtoint %stackPointer : !llvm.ptr to i64
+    %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
+    %stackBase = llvm.load %stackSlot : !llvm.ptr -> i64
+    %sixteen = arith.constant 16 : i64
+    %to = arith.addi %stackBase, %sixteen : i64
+    func.call @strict_gc_mark_range(%from, %to) : (i64, i64) -> ()
+    func.call @strict_gc_drain() : () -> ()
+    cf.br ^sweeps(%zero : i64)
+  ^sweeps(%sweepClass: i64):
+    %moreSweeps = arith.cmpi ult, %sweepClass, %classCount : i64
+    cf.cond_br %moreSweeps, ^moveOne, ^large
+  ^moveOne:
+    %pages = llvm.mlir.addressof @strict_gc_pages : !llvm.ptr
+    %pagesSlot = llvm.getelementptr %pages[0, %sweepClass] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %sweeps = llvm.mlir.addressof @strict_gc_sweeps : !llvm.ptr
+    %sweepSlot = llvm.getelementptr %sweeps[0, %sweepClass] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %classPages = llvm.load %pagesSlot : !llvm.ptr -> i64
+    llvm.store %classPages, %sweepSlot : i64, !llvm.ptr
+    llvm.store %zero, %pagesSlot : i64, !llvm.ptr
+    %nextSweep = arith.addi %sweepClass, %one : i64
+    cf.br ^sweeps(%nextSweep : i64)
+  ^large:
+    func.call @strict_gc_sweep_large() : () -> ()
+    %marked = llvm.load %markedSlot : !llvm.ptr -> i64
+    %twice = arith.addi %marked, %marked : i64
+    %fourTimes = arith.addi %twice, %twice : i64
+    %doubled = arith.addi %fourTimes, %fourTimes : i64
+    %isSmall = arith.cmpi ult, %doubled, %minimum : i64
+    %threshold = arith.select %isSmall, %minimum, %doubled : i64
+    %thresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
+    llvm.store %threshold, %thresholdSlot : i64, !llvm.ptr
+    %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
+    llvm.store %zero, %allocatedSlot : i64, !llvm.ptr
+    return
   }
   func.func private @strict_ptr(%bits: f64) -> !llvm.ptr {
     %i = arith.bitcast %bits : f64 to i64

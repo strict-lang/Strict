@@ -1,3 +1,36 @@
+  llvm.func @VirtualAlloc(!llvm.ptr, i64, i32, i32) -> !llvm.ptr
+  llvm.func @VirtualFree(!llvm.ptr, i64, i32) -> i32
+  func.func private @strict_reserve(%size: i64) -> !llvm.ptr {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %reserve = arith.constant 8192 : i32
+    %noAccess = arith.constant 1 : i32
+    %reserved = llvm.call @VirtualAlloc(%null, %size, %reserve, %noAccess) : (!llvm.ptr, i64, i32, i32) -> !llvm.ptr
+    %failed = llvm.icmp "eq" %reserved, %null : !llvm.ptr
+    cf.cond_br %failed, ^fail, ^done
+  ^fail:
+    func.call @strict_gc_fail() : () -> ()
+    cf.br ^done
+  ^done:
+    return %reserved : !llvm.ptr
+  }
+  func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %commit = arith.constant 4096 : i32
+    %readWrite = arith.constant 4 : i32
+    %committed = llvm.call @VirtualAlloc(%at, %size, %commit, %readWrite) : (!llvm.ptr, i64, i32, i32) -> !llvm.ptr
+    %failed = llvm.icmp "eq" %committed, %null : !llvm.ptr
+    cf.cond_br %failed, ^fail, ^done
+  ^fail:
+    func.call @strict_gc_fail() : () -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_decommit(%at: !llvm.ptr, %size: i64) {
+    %decommit = arith.constant 16384 : i32
+    %freed = llvm.call @VirtualFree(%at, %size, %decommit) : (!llvm.ptr, i64, i32) -> i32
+    return
+  }
   llvm.func @FindFirstFileA(!llvm.ptr, !llvm.ptr) -> !llvm.ptr
   llvm.func @FindNextFileA(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @FindClose(!llvm.ptr) -> i32

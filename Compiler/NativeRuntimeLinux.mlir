@@ -1,3 +1,30 @@
+  llvm.func @mmap(!llvm.ptr, i64, i32, i32, i32, i64) -> !llvm.ptr
+  llvm.func @madvise(!llvm.ptr, i64, i32) -> i32
+  func.func private @strict_reserve(%size: i64) -> !llvm.ptr {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %readWrite = arith.constant 3 : i32
+    %privateAnonymousNoReserve = arith.constant 16418 : i32
+    %noFile = arith.constant -1 : i32
+    %noOffset = arith.constant 0 : i64
+    %failure = arith.constant -1 : i64
+    %reserved = llvm.call @mmap(%null, %size, %readWrite, %privateAnonymousNoReserve, %noFile, %noOffset) : (!llvm.ptr, i64, i32, i32, i32, i64) -> !llvm.ptr
+    %address = llvm.ptrtoint %reserved : !llvm.ptr to i64
+    %failed = arith.cmpi eq, %address, %failure : i64
+    cf.cond_br %failed, ^fail, ^done
+  ^fail:
+    func.call @strict_gc_fail() : () -> ()
+    cf.br ^done
+  ^done:
+    return %reserved : !llvm.ptr
+  }
+  func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
+    return
+  }
+  func.func private @strict_decommit(%at: !llvm.ptr, %size: i64) {
+    %dontNeed = arith.constant 4 : i32
+    %advised = llvm.call @madvise(%at, %size, %dontNeed) : (!llvm.ptr, i64, i32) -> i32
+    return
+  }
   llvm.func @opendir(!llvm.ptr) -> !llvm.ptr
   llvm.func @readdir(!llvm.ptr) -> !llvm.ptr
   llvm.func @closedir(!llvm.ptr) -> i32
