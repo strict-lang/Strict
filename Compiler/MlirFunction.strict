@@ -4,13 +4,18 @@ has method MethodEntry
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
+constant Adding = MlirFunction(List(TypeEntry), Shape, MethodEntry("+", List(MemberEntry), "None", List(InstructionEntry)))
+constant OperatorNames = ("+", "-", "*", "/", "%", "^")
+constant OperatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power")
 constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
 constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
+	Adding.Symbol is "Shape_Plus_0"
 	let name = MlirEquality(value, 0).Symbol(type.JustName)
 	let conversion = method.Name is "to" then "_" + MlirKinds(value).Short(method.returnType) else ""
-	name + "_" + method.Name + "_" + method.parameters.Length + conversion
+	let spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else method.Name
+	name + "_" + spelled + "_" + method.parameters.Length + conversion
 Parameters Texts
 	Counter.Parameters is ("value")
 	mutable names = List(Mutable(Text))
