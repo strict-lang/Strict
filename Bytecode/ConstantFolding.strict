@@ -6,6 +6,7 @@ constant Calls = ConstantFolding("Count", TypeInference(KnownTypes.Sample, (Scop
 constant Limit = SyntaxNode("Identifier", "Limit")
 constant Two = SyntaxNode("Number", "2")
 constant Count = SyntaxNode("Identifier", "Count")
+constant Local = BodyParser("Run", "\tconstant a = 2", "\tconstant b = a * 3", "\tb + a").Block(1, 1)
 constant Owned = ConstantFolding("Text", TypeInference(KnownTypes.Sample, (Scope(("Limit", "Twice", "Alias", "Loop"), ("3", "Limit * 2", "Limit", "Loop")), TypeInference.NoShape)))
 Folded(node SyntaxNode) SyntaxNode
 	Limits.Folded(Limit).text is "3"
@@ -20,6 +21,34 @@ Folded(node SyntaxNode) SyntaxNode
 	if left.Kind is not "Number" or right.Kind is not "Number" or (right.text is "0")
 		return value
 	SyntaxNode("Number", Calculated(value.text, left.text to Number, right.text to Number) to Text)
+Inlined(body SyntaxNode) SyntaxNode
+	Limits.Inlined(Local).Lines("") is ("6 + 2")
+	mutable constants = List(Mutable(SyntaxNode))
+	mutable code = List(Mutable(SyntaxNode))
+	for body.children
+		let line = Literal(Substituted(value, constants))
+		if line.Kind is "Constant"
+			constants.Add(line)
+		else
+			code.Add(line)
+	SyntaxNode("Body", "", code)
+Literal(line SyntaxNode) SyntaxNode
+	Limits.Literal(Local.children(0)) to Text is "a"
+	Limits.Literal(Local.children(1)).Kind is "Declaration"
+	if (line.Kind is not "Declaration") or (line.text.StartsWith("constant ") is false)
+		return line
+	let folded = Folded(line.children(0))
+	let isLiteral = folded.Kind is in ("Number", "Text", "Boolean")
+	isLiteral then SyntaxNode("Constant", Tokenizer(line.text).Tokens.Last, List(SyntaxNode) + folded) else line
+Substituted(node SyntaxNode, constants SyntaxNodes) SyntaxNode
+	Limits.Substituted(SyntaxNode("Identifier", "a"), List(SyntaxNode) + Limits.Literal(Local.children(0))).text is "2"
+	for constants
+		if (node.Kind is "Identifier") and (value.text is node.text)
+			return value.children(0)
+	mutable children = List(Mutable(SyntaxNode))
+	for node.children
+		children.Add(Substituted(value, constants))
+	SyntaxNode(node.Kind, node.text, children)
 Constant(node SyntaxNode) SyntaxNode
 	Limits.Constant(SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count"))).text is "3"
 	Limits.Constant(Two).text is "2"
