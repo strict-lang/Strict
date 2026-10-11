@@ -1,14 +1,14 @@
 has function MlirFunction
 has position Number
-constant Copy = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), InstructionEntry.Return(0))), true), 0)
+constant Copy = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), InstructionEntry.Return(0)))), 0)
 Emitted Texts
 	Copy.Emitted.Last is "    llvm.store %t0c, %r0 : f64, !llvm.ptr"
 	let entry = function.method.instructions(position)
 	let kind = entry.kind
 	if kind is InstructionType.LoadConstantToRegister
-		return Literal(PayloadDecoder(entry).Value(1), "%r" + entry.payload(0))
+		return Literal(PayloadDecoder(entry).Value(1), "%r" + entry.payload(0), "")
 	if kind is InstructionType.StoreConstantToVariable
-		return Literal(PayloadDecoder(entry).Value(0), "%v_" + entry.texts.Last)
+		return Literal(PayloadDecoder(entry).Value(0), "%v_" + entry.texts.Last, "")
 	if kind is InstructionType.LoadVariableToRegister
 		return function.Copied("%v_" + entry.texts(0), "%r" + entry.payload(0), Temp(""))
 	if kind is InstructionType.StoreRegisterToVariable
@@ -17,13 +17,14 @@ Emitted Texts
 Temp(suffix Text) Text
 	Copy.Temp("c") is "%t0c"
 	"%t" + position + suffix
-Literal(literal Runtime/VmValue, slot Text) Texts
-	Copy.Literal(VmValue.OfNumber(1), "%r0").First is "    %t0c = arith.constant 0x3FF0000000000000 : f64"
-	if (literal.kind is "Text") and MlirConstants(function, position).IsConstant
-		return MlirConstants(function, position).Literal(slot)
+Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
+	Copy.Literal(VmValue.OfNumber(1), "%r0", "").First is "    %t0c = arith.constant 0x3FF0000000000000 : f64"
+	if literal.kind is "Text"
+		return MlirConstants(function, position).Literal(literal.text, slot, suffix)
 	if literal.kind is not in ("Number", "Boolean")
 		return List(Text) + Unsupported(literal.kind + " constant")
-	("    " + Temp("") + "c = arith.constant " + Hex(literal.number) + " : f64", function.Store(Temp("c"), slot))
+	let number = "    " + Temp(suffix + "c") + " = arith.constant " + Hex(literal.number) + " : f64"
+	(number, function.Store(Temp(suffix + "c"), slot))
 Hex(number Number) Text
 	Copy.Hex(-2) is "0xC000000000000000"
 	constant digits = "0123456789ABCDEF"

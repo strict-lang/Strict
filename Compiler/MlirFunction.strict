@@ -1,8 +1,7 @@
 has types List(TypeEntry)
 has type TypeEntry
 has method MethodEntry
-has isEntry Boolean
-constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop, true)
+constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList)
@@ -11,26 +10,12 @@ Symbol Text
 	let name = type.JustName.Replace("(", "_").Replace(")", "_")
 	name + "_" + method.Name + "_" + method.parameters.Length
 Parameters Texts
-	Counter.Parameters.Length is 0
+	Counter.Parameters is ("value")
 	mutable names = List(Mutable(Text))
-	if isEntry is false
-		names = names + ValueMembers(type)
+	names.Add("value")
 	for method.parameters
 		names.Add(value.Name)
 	names
-ValueMembers(owner TypeEntry) Texts
-	Counter.ValueMembers(Shape).Length is 1
-	Counter.ValueMembers(Named) is ("name")
-	for owner.members
-		if (value.IsConstant is false) and (value.typeName is in ("Strict/Number", "Strict/Text", "Strict/Boolean"))
-			value.Name
-MemberCount Number
-	Counter.MemberCount is 0
-	mutable most = 0
-	for types
-		let count = ValueMembers(value).Length
-		most = count > most then count else most
-	most
 RegisterCount Number
 	Counter.RegisterCount is 1
 	let reuse = LoadReuse(method.instructions)
@@ -44,7 +29,7 @@ RegisterCount Number
 VariableNames Texts
 	Counter.VariableNames is ("index", "value")
 	mutable names = ("index", "value")
-	for Parameters
+	for Parameters + MlirInstances(value, 0).StoredNames(type)
 		names = value is in names then names else names + value
 	for method.instructions
 		if value.kind is in NamedKinds
@@ -52,6 +37,9 @@ VariableNames Texts
 		if value.kind is InstructionType.StoreConstantToVariable
 			names = value.texts.Last is in names then names else names + value.texts.Last
 	names
+TypeOf(name Text) TypeEntry
+	Counter.TypeOf("Strict/Other").members.Length is 0
+	Natives(types).TypeOf(name)
 Load(target Text, slot Text) Text
 	Counter.Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f64"
 	"    " + target + " = llvm.load " + slot + " : !llvm.ptr -> f64"
@@ -60,20 +48,16 @@ Store(stored Text, slot Text) Text
 	"    llvm.store " + stored + ", " + slot + " : f64, !llvm.ptr"
 Copied(source Text, destination Text, temp Text) Texts
 	Counter.Copied("%r0", "%v_a", "%t1").Length is 2
-	mutable lines = (Load(temp, source), Store(temp, destination))
-	for MemberCount
-		let member = temp + "m" + index
-		lines = lines + Load(member, source + "_m" + index) + Store(member, destination + "_m" + index)
-	lines
+	(Load(temp, source), Store(temp, destination))
 Text Text
-	Counter.Text.StartsWith("  func.func @Counter_Run_0() -> f64 {") is true
+	Counter.Text.StartsWith("  func.func @Counter_Run_0(%p0: f64) -> f64 {") is true
 	mutable signature = List(Mutable(Text))
 	for Parameters
 		signature.Add("%p" + index + ": f64")
 	let header = "  func.func @" + Symbol + "(" + Text.Combine(signature, ", ") + ") -> f64 {"
 	Text.Combine(List(Text) + header + Slots + Body + "  }", "\n")
 Slots Texts
-	Counter.Slots.Length is 11
+	Counter.Slots.Length is 12
 	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64")
 	lines = lines + "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr"
 	for RegisterCount
@@ -84,14 +68,10 @@ Slots Texts
 		lines = value.kind is InstructionType.LoopBegin then lines + Slot("%loop" + index) else lines
 	for Parameters
 		lines = lines + Store("%p" + index, "%v_" + value)
-	lines
+	lines + MlirInstances(value, 0).Unpacked
 Slot(name Text) Texts
 	Counter.Slot("%r0").Length is 2
-	mutable lines = List(Mutable(Text))
-	for MemberCount + 1
-		let slot = index is 0 then name else name + "_m" + (index - 1)
-		lines = lines + ("    " + slot + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr") + Store("%zero", slot)
-	lines
+	("    " + name + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", Store("%zero", name))
 Body Texts
 	Counter.Body.Last is "    return %zero : f64"
 	mutable lines = List(Mutable(Text))

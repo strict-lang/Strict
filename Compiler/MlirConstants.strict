@@ -17,12 +17,17 @@ Global Text
 	let text = Constant.text
 	let name = "@c" + function.Symbol + "_" + position + "(\"" + Escaped(text, false) + "\\00\")"
 	"  llvm.mlir.global internal constant " + name + " : !llvm.array<" + (EscapedLength(text, false) + 1) + " x i8>"
-Literal(slot Text) Texts
-	MlirConstants(MlirTexts.Joined, 0).Literal("%r0").Length is 4
-	let texts = MlirTexts(function, position)
-	let symbol = "@c" + function.Symbol + "_" + position
-	let address = "    " + texts.Temp("c") + " = llvm.mlir.addressof " + symbol + " : !llvm.ptr"
-	List(Text) + address + texts.Bits(texts.Temp("c"), slot)
+Literal(text Text, slot Text, suffix Text) Texts
+	MlirConstants(MlirTexts.Joined, 0).Literal("a%", "%r0", "").Length is 4
+	MlirConstants(MlirTexts.Joined, 1).Literal("", "%s", "d0").First.IndexOf("@strict_empty") > 0 is true
+	MlirConstants(MlirTexts.Joined, 1).Literal("b", "%s", "").First.StartsWith("unsupported") is true
+	if text is not "" and (IsConstant is false)
+		return List(Text) + MlirStatements(function, position).Unsupported("Text constant")
+	let memory = MlirMemory(function, position)
+	let symbol = text is "" then "@strict_empty" else "@c" + function.Symbol + "_" + position
+	let address = "    " + memory.Temp(suffix + "c") + " = llvm.mlir.addressof " + symbol + " : !llvm.ptr"
+	let bits = memory.Bits(memory.Temp(suffix + "c"), suffix + "x")
+	List(Text) + address + bits + function.Store(memory.Temp(suffix + "xf"), slot)
 Escaped(text Text, isFormat Boolean) Text
 	MlirConstants(MlirTexts.Joined, 0).Escaped("a\"%", true) is "a\\22%%"
 	MlirConstants(MlirTexts.Joined, 0).Escaped("a%", false) is "a%"

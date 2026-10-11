@@ -1,6 +1,6 @@
 has function MlirFunction
 has position Number
-constant Counting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop, true), 0)
+constant Counting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop), 0)
 Temp(suffix Text) Text
 	Counting.Temp("k") is "%t0k"
 	"%t" + position + suffix

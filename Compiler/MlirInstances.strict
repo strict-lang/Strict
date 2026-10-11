@@ -1,0 +1,71 @@
+has function MlirFunction
+has position Number
+constant Built = InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1)
+constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (2, 1, -1))
+constant Shapes = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Built, Width)))
+constant Method = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)
+Stored(owner TypeEntry) List(MemberEntry)
+	MlirInstances(Shapes, 0).Stored(MlirFunction.Shape).Length is 1
+	for owner.members
+		if (value.IsConstant is false) and MlirKinds(function).Short(value.typeName) is not "Logger"
+			value
+StoredNames(owner TypeEntry) Texts
+	MlirInstances(Shapes, 0).StoredNames(MlirFunction.Shape) is ("width")
+	for Stored(owner)
+		value.Name
+IsStruct(typeName Text) Boolean
+	MlirInstances(Shapes, 0).IsStruct("Shape") is true
+	MlirInstances(Shapes, 0).IsStruct("List(Number)") is false
+	let short = MlirKinds(function).Short(typeName)
+	short is not in ("Number", "Text", "Boolean", "Character", "None") and (short.StartsWith("List(") is false)
+Constructed(entry InstructionEntry, typeName Text) Texts
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape").Last is "    llvm.store %t1of, %r1 : f64, !llvm.ptr"
+	let members = Stored(function.TypeOf(typeName))
+	let memory = MlirMemory(function, position)
+	mutable lines = memory.Allocated(members.Length, "o")
+	for members
+		lines = lines + MemberValue(entry, value, index)
+	lines + memory.Bits(Temp("op"), "o") + function.Store(Temp("of"), "%r" + entry.payload(0))
+MemberValue(entry InstructionEntry, member MemberEntry, slot Number) Texts
+	MlirInstances(Shapes, 1).MemberValue(Built, MlirFunction.Shape.members.First, 0).Length is 3
+	let names = Invocation(entry, Frame(function.method, 0, List(VmValue), Locals.Empty)).ParameterNames
+	let argument = names.Index(member.Name)
+	let chosen = argument < 0 then slot else argument
+	let countPosition = 5 + entry.payload(3)
+	let target = MlirMemory(function, position).Slot(Temp("op"), slot, "s" + slot)
+	if chosen < entry.payload(countPosition)
+		let source = function.Load(Temp("a" + slot), "%r" + entry.payload(countPosition + 1 + chosen))
+		return (target, source, function.Store(Temp("a" + slot), Temp("s" + slot)))
+	List(Text) + target + Default(member, Temp("s" + slot), "d" + slot)
+Default(member MemberEntry, slot Text, suffix Text) Texts
+	MlirInstances(Shapes, 1).Default(MlirFunction.Shape.members.First, "%s", "d0").Length is 2
+	MlirStatements(function, position).Literal(Natives(function.types).Initial(member), slot, suffix)
+Fresh(type TypeEntry, target Text) Texts
+	MlirInstances(Shapes, 0).Fresh(MlirFunction.Shape, "%self").Length is 8
+	let memory = MlirMemory(function, position)
+	mutable lines = memory.Allocated(Stored(type).Length, "o")
+	for Stored(type)
+		lines = lines + memory.Slot(Temp("op"), index, "s" + index) + Default(value, Temp("s" + index), "d" + index)
+	lines + memory.Bits(Temp("op"), "o") + function.Store(Temp("of"), target)
+Field(entry InstructionEntry) Texts
+	MlirInstances(Shapes, 2).Field(Width).Length is 6
+	let owner = function.TypeOf(MlirKinds(function).KindOf(position, entry.payload(1)))
+	let slot = StoredNames(owner).Index(entry.texts(0))
+	if slot < 0
+		return List(Text) + MlirStatements(function, position).Unsupported("member " + owner.Name + "." + entry.texts(0))
+	let memory = MlirMemory(function, position)
+	let loaded = List(Text) + function.Load(Temp("i"), "%r" + entry.payload(1)) + memory.Pointer(Temp("i"), "i")
+	loaded + memory.Loaded(Temp("ip"), slot, "m") + function.Store(Temp("mv"), "%r" + entry.payload(0))
+Unpacked Texts
+	MlirInstances(Method, 0).Unpacked.Length is 6
+	if (IsStruct(function.type.Name) is false) or (Stored(function.type).Length is 0)
+		return List(Text)
+	let memory = MlirMemory(function, -1)
+	mutable lines = List(Text) + function.Load("%self", "%v_value") + memory.Pointer("%self", "self")
+	for Stored(function.type)
+		let loaded = memory.Loaded(memory.Temp("selfp"), index, "u" + index)
+		lines = lines + loaded + function.Store(memory.Temp("u" + index + "v"), "%v_" + value.Name)
+	lines
+Temp(suffix Text) Text
+	MlirInstances(Shapes, 1).Temp("o") is "%t1o"
+	"%t" + position + suffix

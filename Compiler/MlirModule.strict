@@ -14,15 +14,21 @@ Text Text
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1
 	let main = types.First
-	let run = MlirCalls(MlirFunction(types, main, MethodEntry.CountingLoop, true), 0).Callee(main, "Run", 0)
-	Reachable(List(MlirFunction) + MlirFunction(types, main, run, true), 5)
-Reachable(functions List(MlirFunction), depth Number) List(MlirFunction)
-	Counters.Reachable(Counters.Functions, 1).Length is 1
-	mutable result = functions
-	for functions
-		for Callees(value)
-			result = Symbols(result).Index(value.Symbol) < 0 then result + value else result
-	(depth is 0) or (result.Length is functions.Length) then result else Reachable(result, depth - 1)
+	let run = MlirCalls(MlirFunction(types, main, MethodEntry.CountingLoop), 0).Callee(main, "Run", 0)
+	let first = List(MlirFunction) + MlirFunction(types, main, run)
+	Reachable(first, first)
+Reachable(known List(MlirFunction), fresh List(MlirFunction)) List(MlirFunction)
+	Counters.Reachable(Counters.Functions, Counters.Functions).Length is 1
+	mutable found = List(Mutable(MlirFunction))
+	for fresh
+		found = found + Unknown(known + found, Callees(value))
+	found.Length is 0 then known else Reachable(known + found, found)
+Unknown(known List(MlirFunction), candidates List(MlirFunction)) List(MlirFunction)
+	Counters.Unknown(Counters.Functions, Counters.Functions).Length is 0
+	mutable result = List(Mutable(MlirFunction))
+	for candidates
+		result = Symbols(known + result).Index(value.Symbol) < 0 then result + value else result
+	result
 Symbols(functions List(MlirFunction)) Texts
 	Counters.Symbols(Counters.Functions) is ("Counter_Run_0")
 	for functions
@@ -44,7 +50,7 @@ Called(function MlirFunction, position Number) List(MlirFunction)
 	let type = Natives(types).TypeOf(decoder.Text(1))
 	let callee = MlirCalls(function, position).Callee(type, decoder.Text(2), entry.payload(5 + entry.payload(3)))
 	constant none = List(MlirFunction)
-	callee.instructions.Length is 0 then none else none + MlirFunction(types, type, callee, false)
+	callee.instructions.Length is 0 then none else none + MlirFunction(types, type, callee)
 Globals(functions List(MlirFunction)) Texts
 	Counters.Globals(Counters.Functions).Length is 0
 	mutable lines = List(Mutable(Text))
@@ -57,7 +63,7 @@ FunctionGlobals(function MlirFunction) Texts
 		if (value.kind is InstructionType.Print) or MlirConstants(function, index).IsConstant
 			Global(function, index)
 Global(function MlirFunction, position Number) Text
-	Counters.Global(MlirCalls.Shapes, 2).IndexOf("Hi %g\\0A\\00") > 0 is true
+	Counters.Global(MlirCalls.Shapes, 3).IndexOf("Hi %g\\0A\\00") > 0 is true
 	let entry = function.method.instructions(position)
 	let constants = MlirConstants(function, position)
 	if entry.kind is not InstructionType.Print
@@ -69,7 +75,11 @@ Global(function MlirFunction, position Number) Text
 	let name = "@s" + function.Symbol + "_" + position
 	"  llvm.mlir.global internal constant " + name + "(\"" + content + "\") : !llvm.array<" + length + " x i8>"
 Main(entry MlirFunction) Texts
-	Counters.Main(Counters.Functions.First).Length is 5
-	let call = "    %result = func.call @" + entry.Symbol + "() : () -> f64"
-	constant code = "    %code = arith.fptosi %result : f64 to i32"
-	("  func.func @main() -> i32 {", call, code, "    return %code : i32", "  }")
+	Counters.Main(Counters.Functions.First).Length is 14
+	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
+	constant header = List(Text) + "  func.func @main() -> i32 {" + constants
+	let call = "    %result = func.call @" + entry.Symbol + "(%self) : (f64) -> f64"
+	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
+	let invoked = (self, call, "    %code = arith.fptosi %result : f64 to i32")
+	header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot") + invoked + ("    return %code : i32", "  }")

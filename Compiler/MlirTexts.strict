@@ -1,7 +1,7 @@
 has function MlirFunction
 has position Number
-constant Declarations = ("  llvm.func @snprintf(!llvm.ptr, i64, !llvm.ptr, ...) -> i32", "  llvm.func @malloc(i64) -> !llvm.ptr", "  llvm.mlir.global internal constant @strict_true(\"true\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_false(\"false\\00\") : !llvm.array<6 x i8>", "  llvm.mlir.global internal constant @strict_number(\"%g\\00\") : !llvm.array<3 x i8>", "  llvm.mlir.global internal constant @strict_pair(\"%s%s\\00\") : !llvm.array<5 x i8>")
-constant Joined = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a%"), InstructionEntry.LoadNumber(1, 7), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.PrintValue("x: ", 2, true), MlirKinds.Passed, InstructionEntry.PrintValue("y: ", 2, false), InstructionEntry.PrintValue("z: ", 1, false), InstructionEntry.Invoke(3, ("Strict/Number", "to", "Strict/Text"), List(Number), 1))), true)
+constant Declarations = ("  llvm.func @snprintf(!llvm.ptr, i64, !llvm.ptr, ...) -> i32", "  llvm.func @malloc(i64) -> !llvm.ptr", "  llvm.mlir.global internal constant @strict_true(\"true\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_false(\"false\\00\") : !llvm.array<6 x i8>", "  llvm.mlir.global internal constant @strict_number(\"%g\\00\") : !llvm.array<3 x i8>", "  llvm.mlir.global internal constant @strict_pair(\"%s%s\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_empty(\"\\00\") : !llvm.array<1 x i8>")
+constant Joined = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a%"), InstructionEntry.LoadNumber(1, 7), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.PrintValue("x: ", 2, true), MlirKinds.Passed, InstructionEntry.PrintValue("y: ", 2, false), InstructionEntry.PrintValue("z: ", 1, false), InstructionEntry.Invoke(3, ("Strict/Number", "to", "Strict/Text"), List(Number), 1))))
 Temp(suffix Text) Text
 	MlirTexts(Joined, 2).Temp("l") is "%t2l"
 	MlirStatements(function, position).Temp(suffix)
@@ -25,8 +25,7 @@ Converted(entry InstructionEntry) Texts
 	Pointer(instance, "v") + Bits(Temp("vp"), "%r" + entry.payload(0))
 Bits(pointer Text, slot Text) Texts
 	MlirTexts(Joined, 0).Bits("%p", "%r0").Last is "    llvm.store %t0xf, %r0 : f64, !llvm.ptr"
-	let integer = "    " + Temp("xi") + " = llvm.ptrtoint " + pointer + " : !llvm.ptr to i64"
-	(integer, "    " + Temp("xf") + " = arith.bitcast " + Temp("xi") + " : i64 to f64", function.Store(Temp("xf"), slot))
+	MlirMemory(function, position).Bits(pointer, "x") + function.Store(Temp("xf"), slot)
 Format Text
 	MlirTexts(Joined, 3).Format is "%s"
 	MlirTexts(Joined, 5).Format is "%s"
