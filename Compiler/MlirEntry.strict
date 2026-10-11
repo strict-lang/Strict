@@ -1,7 +1,7 @@
 has entry MlirFunction
 constant Counted = MlirEntry(MlirModule.Counters.Functions.First)
 Main Texts
-	Counted.Main.Length is 14
+	Counted.Main.Length is 13
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
 	constant header = List(Text) + "  func.func @main(%argc: i32, %argv: !llvm.ptr) -> i32 {" + constants

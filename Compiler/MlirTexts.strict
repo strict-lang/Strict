@@ -64,7 +64,7 @@ Described(loaded Text, suffix Text, kind Text) Texts
 	let symbol = MlirFunction(function.types, type, method).Symbol
 	(loaded, MlirMemory(function, position).Called(Temp(suffix + "x"), symbol, List(Text) + Temp(suffix)))
 Pointer(register Number, suffix Text) Texts
-	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = llvm.inttoptr %t3bi : i64 to !llvm.ptr"
+	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = func.call @strict_ptr(%t3bx) : (f64) -> !llvm.ptr"
 	TextBits(register, suffix) + MlirMemory(function, position).Pointer(Temp(suffix + "x"), suffix)
 Concatenated(entry InstructionEntry) Texts
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 5

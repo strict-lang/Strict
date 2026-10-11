@@ -45,14 +45,14 @@ Default(member MemberEntry, slot Text, suffix Text) Texts
 	MlirInstances(Shapes, 1).Default(MlirFunction.Shape.members.First, "%s", "d0").Length is 2
 	MlirStatements(function, position).Literal(Natives(function.types).Initial(member), slot, suffix)
 Fresh(type TypeEntry, target Text) Texts
-	MlirInstances(Shapes, 0).Fresh(MlirFunction.Shape, "%self").Length is 8
+	MlirInstances(Shapes, 0).Fresh(MlirFunction.Shape, "%self").Length is 7
 	let memory = MlirMemory(function, position)
 	mutable lines = memory.Allocated(Stored(type).Length, "o")
 	for Stored(type)
 		lines = lines + memory.Slot(Temp("op"), index, "s" + index) + Default(value, Temp("s" + index), "d" + index)
 	lines + memory.Bits(Temp("op"), "o") + function.Store(Temp("of"), target)
 Field(entry InstructionEntry) Texts
-	MlirInstances(Shapes, 2).Field(Width).Length is 6
+	MlirInstances(Shapes, 2).Field(Width).Length is 5
 	MlirInstances(MlirKinds.Graded.function, 1).Field(MlirKinds.Characters).Length is 2
 	let kind = MlirKinds(function).KindOf(position, entry.payload(1))
 	if IsStruct(kind) is false
@@ -65,17 +65,22 @@ Field(entry InstructionEntry) Texts
 	let loaded = List(Text) + function.Load(Temp("i"), "%r" + entry.payload(1)) + memory.Pointer(Temp("i"), "i")
 	loaded + memory.Loaded(Temp("ip"), slot, "m") + function.Store(Temp("mv"), "%r" + entry.payload(0))
 Unpacked Texts
-	MlirInstances(Method, 0).Unpacked.Length is 6
+	MlirInstances(Method, 0).Unpacked.Length is 10
+	MlirInstances(Method, 0).Unpacked.Last is "  ^unpacked:"
 	if IsStruct(function.type.Name) is false
 		return Aliased
 	if Stored(function.type).Length is 0
 		return List(Text)
 	let memory = MlirMemory(function, -1)
-	mutable lines = List(Text) + function.Load("%self", "%v_value") + memory.Pointer("%self", "self")
+	mutable lines = List(Text) + function.Load("%self", "%v_value") + SelfGuard + memory.Pointer("%self", "self")
 	for Stored(function.type)
 		let loaded = memory.Loaded(memory.Temp("selfp"), index, "u" + index)
 		lines = lines + loaded + function.Store(memory.Temp("u" + index + "v"), "%v_" + value.Name)
-	lines
+	lines + ("    cf.br ^unpacked", "  ^unpacked:")
+SelfGuard Texts
+	MlirInstances(Method, 0).SelfGuard.Last is "  ^unpack:"
+	constant check = "    %hasSelf = arith.cmpf one, %self, %zero : f64"
+	(check, "    cf.cond_br %hasSelf, ^unpack, ^unpacked", "  ^unpack:")
 Aliased Texts
 	MlirInstances(Method, 0).Aliased.Length is 0
 	mutable lines = List(Mutable(Text))

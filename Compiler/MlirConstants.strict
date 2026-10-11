@@ -37,7 +37,7 @@ TextGlobal(text Text, symbol Text) Text
 	let name = "@c" + function.Symbol + "_" + position + symbol + "(\"" + Escaped(text, false) + "\\00\")"
 	"  llvm.mlir.global internal constant " + name + " : !llvm.array<" + (EscapedLength(text, false) + 1) + " x i8>"
 Literal(text Text, slot Text, suffix Text) Texts
-	MlirConstants(MlirTexts.Joined, 0).Literal("a%", "%r0", "").Length is 4
+	MlirConstants(MlirTexts.Joined, 0).Literal("a%", "%r0", "").Length is 3
 	MlirConstants(MlirTexts.Joined, 1).Literal("", "%s", "d0").First.IndexOf("@strict_empty") > 0 is true
 	MlirConstants(MlirTexts.Joined, 1).Literal("b", "%s", "").First.StartsWith("unsupported") is true
 	if text is not "" and (IsConstant is false)

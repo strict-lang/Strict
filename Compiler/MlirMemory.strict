@@ -5,13 +5,11 @@ Temp(suffix Text) Text
 	Sample.Temp("p") is "%t3p"
 	"%t" + position + suffix
 Pointer(bits Text, suffix Text) Texts
-	Sample.Pointer("%v", "a").Last is "    %t3ap = llvm.inttoptr %t3ai : i64 to !llvm.ptr"
-	let integer = "    " + Temp(suffix + "i") + " = arith.bitcast " + bits + " : f64 to i64"
-	(integer, "    " + Temp(suffix + "p") + " = llvm.inttoptr " + Temp(suffix + "i") + " : i64 to !llvm.ptr")
+	Sample.Pointer("%v", "a") is ("    %t3ap = func.call @strict_ptr(%v) : (f64) -> !llvm.ptr")
+	List(Text) + ("    " + Temp(suffix + "p") + " = func.call @strict_ptr(" + bits + ") : (f64) -> !llvm.ptr")
 Bits(pointer Text, suffix Text) Texts
-	Sample.Bits("%p", "a").Last is "    %t3af = arith.bitcast %t3ai : i64 to f64"
-	let integer = "    " + Temp(suffix + "i") + " = llvm.ptrtoint " + pointer + " : !llvm.ptr to i64"
-	(integer, "    " + Temp(suffix + "f") + " = arith.bitcast " + Temp(suffix + "i") + " : i64 to f64")
+	Sample.Bits("%p", "a") is ("    %t3af = func.call @strict_bits(%p) : (!llvm.ptr) -> f64")
+	List(Text) + ("    " + Temp(suffix + "f") + " = func.call @strict_bits(" + pointer + ") : (!llvm.ptr) -> f64")
 Allocated(slots Number, suffix Text) Texts
 	Sample.Allocated(2, "o").First is "    %t3oz = arith.constant 16 : i64"
 	Sample.Allocated(2, "o").Last is "    %t3op = func.call @strict_alloc(%t3oz) : (i64) -> !llvm.ptr"

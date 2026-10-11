@@ -87,7 +87,7 @@ ArgumentTypes(count Number) Texts
 	for count
 		"f64"
 Printed(entry InstructionEntry) Texts
-	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Length is 6
+	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Length is 5
 	let address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	constant printf = " = llvm.call @printf("
 	constant vararg = ") vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr"
