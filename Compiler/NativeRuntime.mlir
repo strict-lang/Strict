@@ -1036,11 +1036,9 @@
     return %value : f64
   }
   func.func private @strict_list_copy(%list: f64, %extra: f64) -> f64 {
-    %two = arith.constant 2.0 : f64
     %eight = arith.constant 8.0 : f64
     %length = func.call @strict_list_length(%list) : (f64) -> f64
-    %doubled = arith.mulf %length, %two : f64
-    %capacity = arith.addf %doubled, %extra : f64
+    %capacity = arith.addf %length, %extra : f64
     %copy = func.call @strict_list_new(%capacity, %length) : (f64, f64) -> f64
     %from = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %to = func.call @strict_list_items(%copy) : (f64) -> !llvm.ptr
@@ -1177,10 +1175,18 @@
     %a = func.call @strict_ptr(%left) : (f64) -> !llvm.ptr
     %b = func.call @strict_ptr(%right) : (f64) -> !llvm.ptr
     %identical = llvm.icmp "eq" %a, %b : !llvm.ptr
-    cf.cond_br %identical, ^equal, ^compare
+    cf.cond_br %identical, ^equal, ^first
   ^equal:
     %truth = func.call @strict_boolean(%identical) : (i1) -> f64
     return %truth : f64
+  ^first:
+    %firstLeft = llvm.load %a : !llvm.ptr -> i8
+    %firstRight = llvm.load %b : !llvm.ptr -> i8
+    %sameFirst = arith.cmpi eq, %firstLeft, %firstRight : i8
+    cf.cond_br %sameFirst, ^compare, ^different
+  ^different:
+    %falsity = func.call @strict_boolean(%sameFirst) : (i1) -> f64
+    return %falsity : f64
   ^compare:
     %compared = llvm.call @strcmp(%a, %b) : (!llvm.ptr, !llvm.ptr) -> i32
     %same = arith.cmpi eq, %compared, %zero : i32
