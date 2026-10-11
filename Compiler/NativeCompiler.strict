@@ -18,7 +18,8 @@ Built(base Text) Text
 	if lowered is not ""
 		return lowered
 	let executable = base + NasmFormat(Platform.Current).ExeExtension
-	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module"
+	constant reproducible = Platform.Current is Platform.Windows then " -Wl,-Brepro" else ""
+	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + reproducible
 	let linked = ToolRunner("clang").Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else "Built " + executable
 Lowered(base Text) Text
