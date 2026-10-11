@@ -1,0 +1,20 @@
+has values ValueCodegen
+constant Plain = SelectorCodegen(ValueCodegen.Plain)
+constant One = SyntaxNode("Number", "1")
+constant IsOne = SyntaxNode("Binary", "is", (One, One))
+constant Picked = BodyParser("Pick Number", "\tif 2 is", "\t\t1 then 10", "\t\t2 then 20").Block(1, 1).children(0)
+Selected(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Selected(Picked, CodeBlock.Empty).instructions.Length is 14
+	mutable result = block
+	for node.children.Last.children
+		result = Case(node.children(0), value, result.At(block.register))
+	result
+Case(selector SyntaxNode, line SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Case(IsOne, SyntaxNode("ElseValue", "", One), CodeBlock.Empty).instructions.Length is 2
+	Plain.Case(IsOne, SyntaxNode("Binary", "then", (One, One)), CodeBlock.Empty).instructions.Length is 7
+	let isElse = line.Kind is "ElseValue"
+	let comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
+	let condition = isElse then block else OperatorCodegen(values).Condition(comparison, block)
+	let value = values.Expression(line.children.Last, condition)
+	let returned = value.Add(InstructionEntry.Return(value.Result))
+	isElse then returned else returned.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))

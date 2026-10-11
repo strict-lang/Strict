@@ -1,6 +1,7 @@
 has methods MethodCodegen
 constant Plain = LoopCodegen(MethodCodegen.Plain)
 constant DoubledBody = BodyParser("Doubled Numbers", "\tfor 3", "\t\tindex * 2").Block(1, 1)
+constant ProductBody = BodyParser("Product Number", "\tfor 3", "\t\t* index").Block(1, 1)
 constant FilterLoop = MethodCodegen.FilterBody.children(0).children.Last
 constant ForIterator = Scope(("for", "Length"), ("Iterator(Number)", "Number"))
 constant Unscoped = (CallTarget.NoScope, CallTarget.NoScope, CallTarget.NoScope)
@@ -13,22 +14,25 @@ constant BareFor = BodyParser("Upper Text", "\tfor", "\t\tUpper").Block(1, 1).ch
 constant OnText = LoopCodegen(MethodCodegen(ValueCodegen(ValueCodegen.NoTypes, ValueCodegen.Plain.methods, CallTarget(CallTarget.NoTypes, TypeShape("has characters"), "Strict/Text", List(Text)))))
 Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
+	Plain.Aggregation(ProductBody, "Number") is "product"
 	Plain.Aggregation(DoubledBody, "Numbers") is "list"
 	Plain.Aggregation(DoubledBody, "Boolean") is ""
 	if (body.children.Length is 0) or body.children.Last.Kind is not "For"
 		return ""
 	if returnType is in ("Number", "Text")
-		return "sum"
+		let reduction = Reduction(body.children.Last.children.Last.children.Last)
+		return reduction is in ("", "+") then "sum" else (reduction is "*" then "product" else "")
 	methods.values.inference.types.IsPlural(returnType) or returnType.StartsWith("List(") then "list" else ""
 Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	Plain.Aggregated(MethodCodegen.SumBody, CodeBlock.Empty, "Number").Result is 0
 	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Numbers").instructions(0).texts.Last is "forResult"
+	Plain.Aggregated(ProductBody, CodeBlock.Empty, "Number").instructions(0) is InstructionEntry.LoadNumber(0, 1)
 	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Boolean").instructions.Length is 6
 	Plain.Aggregated(RowsBody, CodeBlock.Empty, "List(Numbers)").instructions(6).kind is InstructionType.Add
 	let aggregation = Aggregation(body, returnType)
 	if aggregation is ""
 		return methods.Body(body, block)
-	let leading = Leading(body, Started(block, returnType).At(block.register))
+	let leading = Leading(body, Started(block, returnType, aggregation).At(block.register))
 	let looped = Loop(body.children.Last, leading, aggregation).At(block.register)
 	looped.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, looped.register, "forResult"))
 Leading(body SyntaxNode, block CodeBlock) CodeBlock
@@ -37,23 +41,30 @@ Leading(body SyntaxNode, block CodeBlock) CodeBlock
 	for body.children.Length - 1
 		result = methods.Statement(body.children(index), result.At(block.register), methods.HasElse(body, index))
 	result.At(block.register)
-Started(block CodeBlock, returnType Text) CodeBlock
-	Plain.Started(CodeBlock.Empty, "Number").instructions.Length is 2
-	Plain.Started(CodeBlock.Empty, "Numbers").instructions.Length is 1
+Started(block CodeBlock, returnType Text, aggregation Text) CodeBlock
+	Plain.Started(CodeBlock.Empty, "Number", "sum").instructions.Length is 2
+	Plain.Started(CodeBlock.Empty, "Numbers", "list").instructions.Length is 1
 	if returnType is "Text"
 		return block.Load(InstructionEntry.LoadText(block.register, "")).Stored("forResult")
+	let start = aggregation is "product" then 1 else 0
 	if returnType is "Number"
-		return block.Load(InstructionEntry.LoadNumber(block.register, 0)).Stored("forResult")
+		return block.Load(InstructionEntry.LoadNumber(block.register, start)).Stored("forResult")
 	let type = methods.values.target.FullName(returnType)
 	let empty = InstructionEntry(InstructionType.LoadConstantToRegister, type, (0, 6, -1, 0))
 	block.Add(MethodCodegen.StoreConstant(empty, "forResult"))
+Reduction(line SyntaxNode) Text
+	Plain.Reduction(SyntaxNode("Identifier", "value")) is ""
+	Plain.Reduction(ProductBody.children(0).children.Last.children(0)) is "*"
+	(line.Kind is "Binary") and (line.children(0).Kind is "Missing") then line.text else ""
 Collected(block CodeBlock, aggregation Text) CodeBlock
 	Plain.Collected(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), "sum").instructions.Length is 4
 	Plain.Collected(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), "list").instructions.Length is 2
+	Plain.Collected(CodeBlock.Empty.At(1), "product").instructions(1).kind is InstructionType.Multiply
 	if aggregation is "list"
 		return block.Add(InstructionEntry.Named(InstructionType.InvokeWriteToList, block.Result, "forResult"))
 	let loaded = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "forResult"))
-	let added = InstructionEntry.Binary(InstructionType.Add, (loaded.Result, block.Result, loaded.register))
+	let operation = aggregation is "product" then InstructionType.Multiply else InstructionType.Add
+	let added = InstructionEntry.Binary(operation, (loaded.Result, block.Result, loaded.register))
 	loaded.Load(added).Stored("forResult")
 Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	MethodCodegen.Plain.Generate(MethodCodegen.LoopBody, MethodCodegen.NoScope, "None").instructions.Length is 6
@@ -130,9 +141,12 @@ RangeFields(iterator SyntaxNode, block CodeBlock) CodeBlock
 AggregatedLoop(body SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.AggregatedLoop(FilterLoop, CodeBlock.Empty, "sum").instructions.Last.kind is InstructionType.JumpEnd
 	Plain.AggregatedLoop(NestedLoop, CodeBlock.Empty, "list").instructions.Last.kind is InstructionType.LoopEnd
+	Plain.AggregatedLoop(ProductBody.children(0).children.Last, CodeBlock.Empty, "product").instructions.Length is 4
 	let last = body.children.Last
 	if (aggregation is "list") and (last.Kind is "For")
 		return Loop(last, Leading(body, block), aggregation)
+	if Reduction(last) is not ""
+		return Collected(methods.values.Expression(last.children(1), Leading(body, block)), aggregation)
 	if last.Kind is not "If"
 		return Collected(methods.Body(body, block), aggregation)
 	methods.Conditional(last, Leading(body, block), false, aggregation)

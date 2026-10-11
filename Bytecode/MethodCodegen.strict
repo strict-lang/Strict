@@ -93,6 +93,9 @@ LoadedValue(load InstructionEntry) Numbers
 	content
 Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text) CodeBlock
 	Plain.Generate(IfBody, NoScope, "None").instructions.Length is 9
+	Plain.Conditional(SelectorCodegen.Picked, CodeBlock.Empty, false, "").instructions.Length is 14
+	if MethodBodies(values.target.TypeName, values.target.shape, values.inference).IsSelector(node)
+		return SelectorCodegen(values).Selected(node, block)
 	let condition = OperatorCodegen(values).Condition(node.children(0), block)
 	let branch = Body(node.children.Last, condition)
 	let body = aggregation is "" then branch else LoopCodegen(MethodCodegen(values)).Collected(branch, aggregation)
