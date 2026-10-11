@@ -403,12 +403,14 @@ If you look at the source code of Dictionary.strict you might be confused how si
 ## Image processing
 ```
 has brightness Number where value is not 0
-Process(mutable image) Image
-	mutable testImage = Image(Size(1, 1), (Color(0, 1, 2)))
+Process(image) Image
+	constant testImage = Image(Size(1, 1), (Color(0, 1, 2)))
 	AdjustBrightness(0).Process(testImage) is Image(Size(1, 1), (Color(0, 1, 2)))
 	AdjustBrightness(5).Process(testImage) is Image(Size(1, 1), (Color(5, 6, 7)))
-	for image.Size
-		image.Colors(index) = GetBrightnessAdjustedColor(image.Colors(index))
+	mutable adjusted = image
+	for adjusted.Size
+		adjusted.Colors(index) = GetBrightnessAdjustedColor(adjusted.Colors(index))
+	adjusted
 GetBrightnessAdjustedColor(currentColor Color) Color
 	AdjustBrightness(0).GetBrightnessAdjustedColor(Color(0, 1, 2)) is Color(0, 1, 2)
 	AdjustBrightness(5).GetBrightnessAdjustedColor(Color(0, 0, 0)) is Color(5, 5, 5)

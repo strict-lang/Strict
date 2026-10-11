@@ -57,33 +57,27 @@ Postfix Texts
 	ShuntingYard("a + b * c").Postfix is ("a", "b", "c", "*", "+")
 	ShuntingYard("a * b + c").Postfix is ("a", "b", "*", "c", "+")
 	ShuntingYard("a + b - c").Postfix is ("a", "b", "+", "c", "-")
-	mutable result = List(Mutable(Text))
-	mutable opsStack = List(Mutable(Text))
+	mutable output = List(Mutable(Text))
+	mutable operators = List(Mutable(Text))
 	for Tokens
-		ProcessToken(value, result, opsStack)
-	FlushOperators(result, opsStack)
-	result
-FlushOperators(mutable result Texts, mutable opsStack Texts) Mutable(Texts)
-	if opsStack.Length is 0
-		return result
-	let top = opsStack(opsStack.Length - 1)
-	result.Add(top)
-	opsStack.Remove(top)
-	FlushOperators(result, opsStack)
-ProcessToken(token Text, mutable result Texts, mutable opsStack Texts) Mutable(Texts)
-	let prec = OperatorPrecedence(token)
-	if prec is 0
-		return result.Add(token)
-	AddOperator(prec, result, opsStack)
-	opsStack.Add(token)
-AddOperator(prec Number, mutable result Texts, mutable opsStack Texts) Mutable(Texts)
-	if opsStack.Length is 0
-		return opsStack
-	let top = opsStack(opsStack.Length - 1)
-	if OperatorPrecedence(top) >= prec
-		result.Add(top)
-		opsStack.Remove(top)
-		return AddOperator(prec, result, opsStack)
-	opsStack
+		output = output + Emitted(operators, value)
+		if IsOperator(value)
+			operators = (List(Text) + value) + Kept(operators, value)
+	output + operators
+Emitted(operators Texts, token Text) Texts
+	ShuntingYard("").Emitted(("*", "+"), "a") is ("a")
+	ShuntingYard("").Emitted(("*", "+"), "-") is ("*", "+")
+	ShuntingYard("").Emitted(("+"), "*").Length is 0
+	if IsOperator(token) is false
+		return List(Text) + token
+	for operators
+		if OperatorPrecedence(value) >= OperatorPrecedence(token)
+			value
+Kept(operators Texts, token Text) Texts
+	ShuntingYard("").Kept(("*", "+"), "-").Length is 0
+	ShuntingYard("").Kept(("+"), "*") is ("+")
+	for operators
+		if OperatorPrecedence(value) < OperatorPrecedence(token)
+			value
 to Text
 	input

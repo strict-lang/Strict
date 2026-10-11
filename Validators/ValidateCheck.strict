@@ -20,9 +20,9 @@ Mutations(files Texts) Texts
 		mutations = mutations + FileMutations(TypeShape(File(value).ReadLines))
 	mutations
 FileMutations(shape Expressions/TypeShape) Texts
-	FileMutations(TypeShape("Add(mutable list) Mutable(List)", "\tlist")) is ("Add", "Add:0")
+	FileMutations(TypeShape("Add(element Number) Mutable(List)", "\telement")) is ("Add")
 	mutable mutations = List(Mutable(Text))
 	for shape.lines
-		if shape.IsMethodHeader(value)
-			mutations = mutations + HeaderTokens(Tokenizer(value).Tokens).Mutations
+		if shape.IsMethodHeader(value) and HeaderTokens(Tokenizer(value).Tokens).ReturnsMutable
+			mutations.Add(Tokenizer(value).Tokens.First)
 	mutations

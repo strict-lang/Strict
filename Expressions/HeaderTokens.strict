@@ -100,19 +100,10 @@ ReturnsMutable Boolean
 	HeaderTokens("Run", "Number").ReturnsMutable is false
 	constant start = ParametersEnd + 1
 	start < tokens.Length and (tokens(start) is "Mutable")
-Mutations Texts
-	HeaderTokens(Tokenizer("Add(x, mutable list) Mutable(List)").Tokens).Mutations is ("Add", "Add:1")
-	mutable mutations = List(Mutable(Text))
-	if ReturnsMutable
-		mutations.Add(tokens(0))
+MutableParameters Texts
+	HeaderTokens(Tokenizer("Add(x, mutable list) Mutable(List)").Tokens).MutableParameters is ("list")
+	mutable names = List(Mutable(Text))
 	for ParametersEnd
-		if index > 1 and IsParameterStart(index) and (tokens(index - 1) is "mutable")
-			mutations.Add(tokens(0) + ":" + ParameterIndex(index))
-	mutations
-ParameterIndex(position Number) Number
-	HeaderTokens(Tokenizer("Add(x, mutable list)").Tokens).ParameterIndex(5) is 1
-	mutable count = 0
-	for position
-		if index > 1 and IsParameterStart(index)
-			count = count + 1
-	count
+		if index > 1 and (tokens(index - 1) is "mutable")
+			names.Add(tokens(index))
+	names

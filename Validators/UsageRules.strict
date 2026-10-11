@@ -4,11 +4,11 @@ has memberNames Texts
 has mutations Texts
 Sample UsageRules
 	Sample.statements.Length is 4
-	constant lines = ("Run(count, mutable list)", "\tlet aa = 5", "\tmutable bb = 0", "\tRun(1, list)", "\tcount + bb")
+	constant lines = ("Run(count, mutable list)", "\tlet aa = 5", "\tmutable bb = 0", "\tlist.Add(1)", "\tcount + bb")
 	constant runHeader = HeaderTokens(Tokenizer(lines(0)).Tokens)
-	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), ("Add", "Run:1"))
+	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), ("Add"))
 Issues ValidationIssues
-	Sample.Issues.Length is 3
+	Sample.Issues.Length is 4
 	mutable issues = List(Mutable(ValidationIssue))
 	for statements
 		if value.Kind is "Declaration"
@@ -26,7 +26,7 @@ DeclarationIssues(declaration SyntaxNode) ValidationIssues
 		issues.Add(ValidationIssue("VariableDeclaredAsMutableButValueNeverChanged", name, "Never changed"))
 	issues
 ParameterIssues ValidationIssues
-	Sample.ParameterIssues.Length is 1
+	Sample.ParameterIssues.Length is 2
 	mutable issues = List(Mutable(ValidationIssue))
 	if statements.Length is 0
 		return issues
@@ -37,11 +37,10 @@ ParameterIssues ValidationIssues
 			issues.Add(ValidationIssue("UnusedMethodParameterMustBeRemoved", value, "Never used"))
 	issues + MutableParameterIssues
 MutableParameterIssues ValidationIssues
-	Sample.MutableParameterIssues.Length is 0
+	Sample.MutableParameterIssues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
-	for header.ParameterNames
-		if (header.tokens(0) + ":" + index is in header.Mutations) and (not IsChanged(value))
-			issues.Add(ValidationIssue("ParameterDeclaredAsMutableButValueNeverChanged", value, "Never changed"))
+	for header.MutableParameters
+		issues.Add(ValidationIssue("ParameterMustNotBeMutableReturnTheChangedValue", value, "Return the changed value"))
 	issues
 IsUsed(name Text) Boolean
 	Sample.IsUsed("count") is true
@@ -63,7 +62,7 @@ Changes(node SyntaxNode, name Text) Boolean
 	Sample.Changes(Sample.statements(2), "list") is true
 	if (node.Kind is "Reassignment") and (RootName(node.children(0)) is name)
 		return true
-	if (node.Kind is in ("Call", "MethodCall")) and IsMutatingCall(node, name)
+	if IsMutatingCall(node, name)
 		return true
 	for node.children
 		if value.Kind is not "Body" and Changes(value, name)
@@ -71,13 +70,7 @@ Changes(node SyntaxNode, name Text) Boolean
 	false
 IsMutatingCall(call SyntaxNode, name Text) Boolean
 	Sample.IsMutatingCall(Sample.statements(2), "list") is true
-	let first = call.Kind is "MethodCall" then 1 else 0
-	if (first is 1) and (call.text is in mutations) and (RootName(call.children(0)) is name)
-		return true
-	for call.children.Length - first
-		if (call.text + ":" + index is in mutations) and (RootName(call.children(first + index)) is name)
-			return true
-	false
+	(call.Kind is "MethodCall") and (call.text is in mutations) and (RootName(call.children(0)) is name)
 RootName(node SyntaxNode) Text
 	Sample.RootName(Sample.statements(3)) is "count"
 	let names = node.HeadNames
