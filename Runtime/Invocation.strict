@@ -1,6 +1,7 @@
 has entry InstructionEntry
 has frame
 constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), Frame(MethodEntry.HelloRun, 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty))
+constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("5"), Locals.Empty))
 TypeName Text
 	AddCall.TypeName is "T"
 	PayloadDecoder(entry).Text(1)
@@ -23,6 +24,13 @@ Arguments List(VmValue)
 	for entry.payload(countPosition)
 		arguments.Add(frame.Register(entry.payload(countPosition + 1 + index)))
 	arguments
+IsNativeConversion Boolean
+	Parsing.IsNativeConversion is true
+	AddCall.IsNativeConversion is false
+	let source = TypeEntry.ShortName(TypeName)
+	let isBase = (source is in ("Number", "Character", "Boolean", "Text")) or source.StartsWith("List(")
+	let isTextual = (ReturnType is "Strict/Text") and isBase
+	(MethodName is "to") and (isTextual or ((ReturnType is "Strict/Number") and (source is "Text")))
 Instance VmValue
 	AddCall.Instance.number is 4
 	let flagPosition = 6 + entry.payload(3) + entry.payload(5 + entry.payload(3))

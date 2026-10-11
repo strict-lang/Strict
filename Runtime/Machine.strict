@@ -68,7 +68,7 @@ Call(call Invocation) VmValue
 	if (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	let method = Natives(types).TypeOf(call.TypeName).Callee(call.MethodName, call.Arguments.Length, call.ReturnType)
-	if method.instructions.Length is 0
+	if (method.instructions.Length is 0) or call.IsNativeConversion
 		return Natives(types).Result(call)
 	Execute(method, Bound(Natives(types).TypeOf(call.TypeName), call.Instance, method, call.Arguments))
 Indexed(frame Frame) Frame
