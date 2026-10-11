@@ -9,6 +9,13 @@
   llvm.func @atan(f64) -> f64
   llvm.func @atan2(f64, f64) -> f64
   llvm.func @strftime(!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
+  llvm.func @remove(!llvm.ptr) -> i32
+  func.func private @strict_file_delete(%path: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %removed = llvm.call @remove(%name) : (!llvm.ptr) -> i32
+    return %zero : f64
+  }
   llvm.mlir.global internal constant @strict_time_format("%Y-%m-%d %H:%M\00") : !llvm.array<15 x i8>
   func.func private @strict_time_text(%local: !llvm.ptr) -> f64 {
     %null = llvm.mlir.zero : !llvm.ptr

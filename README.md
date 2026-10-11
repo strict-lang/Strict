@@ -51,16 +51,16 @@ The best way to learn how any expression or base type works is to look at the co
 ## Command line
 Strict is written in Strict and compiles itself to a native executable, no .NET or other runtime is needed (the C# implementation that bootstrapped it lives on the `dotnet` branch).
 ```
-strict build Examples/Sum.strict          native executable (on Windows also the Linux one through WSL)
-strict test Examples/Sum.strict           compile every inline method test into an executable and run it
+strict run Examples/Sum.strict . 5 10 20  run on the Strict VM, the fastest, everything stays in memory
+strict build Examples/Sum.strict          run the tests, then the native executable (on Windows also the Linux one through WSL)
+strict test Examples/Sum.strict           run the inline tests of every method on the Strict VM
 strict check Examples                     validate a folder (type rules, unused members, limits)
-strict run Examples/Sum.strict . 5 10 20  compile with the Strict compiler and run on the Strict VM
 ```
-`strict` is `strict.exe` (on Linux `strict`) in this folder, next to the base types, put this folder on the PATH to use it everywhere. `strict help` explains each command, `strict version` shows the version (1.0) and when this `strict` was built. Without a command a file is built. The optional path after the file is the repository root (base types and packages are resolved from there), it defaults to the current folder; `run` needs it before program arguments. Exit codes: 0 success, `test` returns the number of failed tests (128 when the test executable crashed), 2 wrong usage.
+`strict` is `strict.exe` (on Linux `strict`) in this folder, next to the base types, put this folder on the PATH to use it everywhere. `strict help` explains each command, `strict version` shows the version number and when this `strict` was built. Without a command a file is built. A build keeps the executable and its `.mlir` (the input of the tools, also the bootstrap seed), the other tool files are removed. Building a type without a `Run` method compiles its tests natively instead, runs them and removes the test executable again (this is how the native code generator is tested). The optional path after the file is the repository root (base types and packages are resolved from there), it defaults to the current folder; `run` needs it before program arguments. Exit codes: 0 success, `test` and `build` return the number of failed tests (128 when a test executable crashed), 2 wrong usage or a missing file.
 
 Needed tools: `mlir-opt` and `mlir-translate` (LLVM MLIR, on Windows the msys64 ucrt64 package `mingw-w64-ucrt-x86_64-mlir`) and `clang` (LLVM 22). When they are missing `strict` says so and starts installing them (Windows: winget and pacman in a new window, Linux: the LLVM 22 release archive into `Tools/`).
 
-Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR) with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux), then let it build itself: `strict build Strict.strict` twice gives identical output (fixpoint).
+Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR) with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux), then let it build itself twice through a copy (a running `strict.exe` can't overwrite itself on Windows): `copy strict.exe strict0.exe` and `strict0 build Strict.strict` twice gives identical output (fixpoint).
 
 ## Rules worth knowing
 - Limits: 120 characters per line, 13 lines per method (header and tests included), 4 parameters, 15 methods, 15 members, nesting depth 5, names 2-50 characters.

@@ -58,7 +58,7 @@ Finder(element Text, operation Text) Text
 TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadLines") is "strict_file_read_lines"
 	MlirNatives(Texts, 1).TypeHelper("Directory", "Files") is "strict_directory_files"
-	MlirNatives(Texts, 1).TypeHelper("File", "Delete") is ""
+	MlirNatives(Texts, 1).TypeHelper("File", "Rename") is ""
 	MlirNatives(Texts, 1).TypeHelper("Process", "RunTool") is "strict_process_runtool"
 	MlirNatives(Texts, 1).TypeHelper("Degrees", "Sin") is "strict_degrees_sin"
 	MlirNatives(Texts, 1).TypeHelper("Vector2", "Atan") is "strict_vector2_atan"

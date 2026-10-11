@@ -29,10 +29,10 @@ Extension Text
 	OnLinux.Extension is ""
 	platform is Platform.Windows then ".exe" else ""
 Executable(base Text) Text
-	OnWindows.Executable("Compiler/Strict") is "Compiler/strict.exe"
-	OnLinux.Executable("./Examples/Sum.test") is "./Examples/sum.test"
-	let start = base.LastIndexOf("/") + 1
-	base.Substring(0, start) + base.Substring(start, base.Length - start).Lower + Extension
+	OnWindows.Executable("./Strict") is "./strict.exe"
+	OnLinux.Executable("./Examples/ProcessImage") is "./Examples/ProcessImage"
+	let isCommand = Path(base).FileName.text is "Strict"
+	(isCommand then base.Substring(0, base.Length - 6) + "strict" else base) + Extension
 Missing(names Texts) Texts
 	OnLinux.Missing(("noSuchStrictTool")) is ("noSuchStrictTool")
 	for names

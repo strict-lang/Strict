@@ -1,0 +1,85 @@
+has logger
+constant Intermediates = (".llvm.mlir", ".ll", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o")
+Built(path Text, root Text) Number
+	if IsProgram(path) is false
+		return Test(path, root)
+	let failed = Execute(logger).Test(path, root)
+	failed > 0 then failed else Compile(path, root)
+IsProgram(path Text) Boolean
+	NativeBuild.IsProgram("Examples/Sum.strict") is true
+	NativeBuild.IsProgram("Character.strict") is false
+	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
+Test(path Text, root Text) Number
+	let program = MlirModule(FileCompiler(logger).Compiled(path, root, true), TestCodegen.Runner).Text
+	let unsupported = Unsupported(program)
+	if unsupported is not -1
+		logger.Log("Tests of " + path + " not compiled, " + program.Substring(unsupported, program.Length - unsupported))
+		return 1
+	let base = Base(path, root) + ".test"
+	File(base + ".mlir").Write(Mlir(program, root, Platform.Current))
+	Ran(base, path, Toolchain(Platform.Current, root))
+Ran(base Text, path Text, tools Toolchain) Number
+	let built = tools.Built(base)
+	if built.StartsWith("Built ") is false
+		logger.Log(built)
+		return 1
+	let result = Tested(tools.Executable(base), path)
+	Removed(base, (".mlir", ".llvm.mlir", ".ll", tools.Extension))
+	result
+Tested(executable Text, path Text) Number
+	NativeBuild.Tested("Compiler/output/missing.exe", "a") is 127
+	let result = ToolRunner(executable).Execute("")
+	logger.Log(result.Output + Summary(result.exitCode, path) + (result.error is "" then "" else " " + result.error))
+	IsCrash(result.exitCode) then 128 else result.exitCode
+Summary(code Number, path Text) Text
+	NativeBuild.Summary(0, "a") is "All tests passed in a"
+	NativeBuild.Summary(2, "a") is "2 failed in a"
+	NativeBuild.Summary(139, "a") is "Tests crashed with exit code 139 in a"
+	if code is 0
+		return "All tests passed in " + path
+	IsCrash(code) then "Tests crashed with exit code " + code + " in " + path else code to Text + " failed in " + path
+IsCrash(code Number) Boolean
+	NativeBuild.IsCrash(139) is true
+	NativeBuild.IsCrash(127) is false
+	(code > 128) or (code < 0)
+Compile(path Text, root Text) Number
+	let program = MlirModule(FileCompiler(logger).Compiled(path, root, false), "Run").Text
+	let unsupported = Unsupported(program)
+	let tools = Toolchain(Platform.Current, root)
+	let missing = tools.Missing(Toolchain.Needed)
+	if unsupported is not -1
+		logger.Log("Native compilation failed, " + program.Substring(unsupported, program.Length - unsupported))
+		return 1
+	if missing.Length > 0
+		logger.Log(tools.Installing(missing))
+		return 1
+	Build(Base(path, root), program, tools)
+Build(base Text, program Text, tools Toolchain) Number
+	File(base + ".mlir").Write(Mlir(program, tools.root, Platform.Current))
+	let built = tools.Built(base)
+	logger.Log(built)
+	if Platform.Current is Platform.Windows
+		File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
+		logger.Log(tools.CrossBuilt(base))
+	if built.StartsWith("Built ") is false
+		return 1
+	Removed(base, Intermediates)
+	0
+Removed(base Text, suffixes Texts)
+	for suffixes
+		File(base + value).Delete
+Base(path Text, root Text) Text
+	NativeBuild.Base("Character.strict", ".") is "./Character"
+	NativeBuild.Base("C:/s/A.strict", "C:/s") is "C:/s/A"
+	let source = FileCompiler.Normalized(path, root)
+	source.Substring(0, source.Length - 7)
+Mlir(program Text, root Text, platform Number) Text
+	NativeBuild.Mlir("module {\n}", ".", Platform.Linux).Length > 100000 is true
+	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
+	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(platform) + ".mlir").ReadLines
+	program.Substring(0, program.Length - 1) + runtime + "\n" + Text.Combine(system, "\n") + "\n}"
+Unsupported(mlir Text) Number
+	NativeBuild.Unsupported("a\nunsupported: x") is 2
+	NativeBuild.Unsupported("unsupported: x") is 0
+	NativeBuild.Unsupported("@c(\"unsupported: x\")") is -1
+	("\n" + mlir).IndexOf("\nunsupported:")

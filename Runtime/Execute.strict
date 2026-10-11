@@ -1,7 +1,5 @@
 has logger
 Run(arguments Texts) Number
-	if arguments(0) is "test"
-		return Test(arguments(1), arguments(2))
 	let types = FileCompiler(logger).Compiled(arguments(0), arguments(1), false)
 	if HasRun(types.First) is false
 		logger.Log("NoRunMethodFound: No Run method found in " + types.First.Name)
