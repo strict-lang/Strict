@@ -25,13 +25,7 @@ Wrapped(typeName Text) Text
 IsInitializer Boolean
 	Wrapping.IsInitializer is false
 	Packing.IsInitializer is true
-	if (function.method.Name is not "from") or (IsStruct(function.type.Name) is false)
-		return false
-	let names = MlirInstances(function, 0).StoredNames(function.type)
-	for function.method.instructions
-		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is in names)
-			return true
-	false
+	IsStruct(function.type.Name) and function.method.IsInitializer(MlirInstances(function, 0).Stored(function.type))
 Returned(position Number) Texts
 	Wrapping.Returned(-2) is ("    return %zero : f64")
 	Packing.Returned(2).Last is "    return %t2nf : f64"

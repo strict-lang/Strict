@@ -1,12 +1,17 @@
 has frame
 has entry InstructionEntry
+has types List(TypeEntry) = List(TypeEntry)
 constant LoadSeven = InstructionEntry.LoadNumber(0, 7)
 constant StoreSeven = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a")
 constant LoadA = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a")
 constant AppendSeven = InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "list")
 constant SetSecond = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list(1)")
+constant SetPairSecond = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "pair.b(1)")
+constant Pair = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry))
 constant Sample = Frame(MethodEntry("Run", List(MemberEntry), "None", (LoadSeven, StoreSeven, LoadA, AppendSeven)), 0, List(VmValue), Locals.Empty)
 constant Listed = Sample.WithRegister(0, VmValue.OfNumber(7)).WithLocal("list", VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2)))
+constant Paired = Listed.WithLocal("pair", VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2)))))
+constant Pairing = Storage(Paired, SetPairSecond, List(TypeEntry) + Pair)
 Step Frame
 	Storage(Sample, LoadSeven).Step.Register(0).number is 7
 	Storage(Storage(Sample, LoadSeven).Step, StoreSeven).Step.Local("a").number is 7
@@ -22,13 +27,29 @@ Step Frame
 Stored(name Text) Frame
 	Storage(Sample.Next, StoreSeven).Stored("b").Local("b").kind is "None"
 	Storage(Listed, SetSecond).Stored("list(1)").Local("list").items(1).number is 7
+	Pairing.Stored("pair.b(1)").Local("pair").items(1).items(1).number is 7
 	let parts = PayloadDecoder(entry).ElementParts
 	if parts.Length is 0
 		return frame.NextWithLocal(name, frame.Register(entry.payload(0)))
 	let local = frame.Local(parts(1))
 	let position = local.kind is "None" then parts(1) to Number else local.number
-	let elements = frame.locals.Replaced(frame.Local(parts(0)).items, position, frame.Register(entry.payload(0)))
-	frame.NextWithLocal(parts(0), VmValue.OfList(elements))
+	let dot = parts(0).IndexOf(".")
+	let owner = dot > 0 then parts(0).Substring(0, dot) else parts(0)
+	let member = dot > 0 then parts(0).Substring(dot + 1, parts(0).Length - dot - 1) else ""
+	Written(owner, member, position)
+Written(name Text, member Text, position Number) Frame
+	Pairing.Written("pair", "b", 0).Local("pair").items(1).items(0).number is 7
+	let owner = frame.Local(name)
+	mutable slot = -1
+	for Natives(types).TypeOf(owner.kind).members
+		if value.Name is member
+			slot = index
+	let list = slot < 0 then owner else owner.items(slot)
+	let changed = VmValue.OfList(frame.locals.Replaced(list.items, position, frame.Register(entry.payload(0))))
+	if slot < 0
+		return frame.NextWithLocal(name, changed)
+	let items = frame.locals.Replaced(owner.items, slot, changed)
+	frame.NextWithLocal(name, VmValue(owner.kind, owner.number, owner.text, items))
 Appended(name Text) Frame
 	Storage(Sample.WithRegister(0, VmValue.OfNumber(7)).At(3), AppendSeven).Appended("list").Local("list").Length is 1
 	let elements = frame.Local(name).items + frame.Register(entry.payload(0))

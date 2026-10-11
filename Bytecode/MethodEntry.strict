@@ -7,6 +7,7 @@ constant GoCall = InstructionEntry.Invoke(0, ("Strict/B", "Go", "None"), List(Nu
 constant GoRun = MethodEntry("Run", List(MemberEntry), "None", GoCall)
 constant CountingLoop = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))
 constant Logged = MethodEntry("Add", MemberEntry.LoggerMember, "Strict/Number", List(InstructionEntry))
+constant Initializing = MethodEntry("from", List(MemberEntry), "Strict/A", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "logger")))
 constant HelloRun = MethodEntry("Run", List(MemberEntry), "None", (PrintHi, InstructionEntry.Return(0)))
 Names(names BinaryNames) BinaryNames
 	HelloRun.Names(BinaryNames("a", "b")).names.Length is 5
@@ -28,6 +29,18 @@ Bytes(names BinaryNames) Numbers
 	for instructions
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
 	encoder.bytes
+IsInitializer(members List(MemberEntry)) Boolean
+	Initializing.IsInitializer(List(MemberEntry) + MemberEntry.LoggerMember) is true
+	GoRun.IsInitializer(List(MemberEntry) + MemberEntry.LoggerMember) is false
+	if Name is not "from"
+		return false
+	mutable names = List(Mutable(Text))
+	for members
+		names.Add(value.Name)
+	for instructions
+		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is in names)
+			return true
+	false
 SignatureTypes Texts
 	Logged.SignatureTypes is ("Strict/Number", "Strict/Logger")
 	mutable types = List(Mutable(Text))

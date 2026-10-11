@@ -36,6 +36,10 @@ Calculated(kind Number, left VmValue, right VmValue) VmValue
 	Adding.Calculated(InstructionType.Modulo, VmValue.OfNumber(7), VmValue.OfNumber(4)).number is 3
 	Adding.Calculated(InstructionType.Multiply, OneTwo, OneTwo).Length is 2
 	Adding.Calculated(InstructionType.Divide, OneTwo, VmValue.OfNumber(2)).Length is 2
+	Adding.Calculated(InstructionType.Modulo, DimensionError, VmValue.OfNumber(1)) is DimensionError
+	let isValue = (left.kind is not in ("Text", "List")) and (right.kind is not in ("Text", "List"))
+	if isValue and ((left.kind is "Strict/Error") or (right.kind is "Strict/Error"))
+		return left.kind is "Strict/Error" then left else right
 	if kind is InstructionType.Add
 		return Added(left, right)
 	if left.kind is "List"
