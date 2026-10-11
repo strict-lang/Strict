@@ -4,6 +4,7 @@ constant MaxSteps = 10000000
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
 constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper", "Strict/Text"), List(Number), 0), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("ab"), Locals.Empty))
+constant Characters = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1))), 0, List(VmValue) + VmValue.OfText("ab"), Locals.Empty)
 constant Listing = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.IndexCall, "list", (0, 0, -1))), 0, List(VmValue) + VmValue.OfNumber(1), Locals(("list"), (VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)))))
 Launch(typeName Text, arguments List(VmValue))
 	let main = Natives(types).TypeOf(typeName)
@@ -95,8 +96,11 @@ Printed(frame Frame) Frame
 	frame.Next
 Field(frame Frame) Frame
 	Hello.Field(Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)).position is 1
+	Hello.Field(Characters).Register(1).text is "ab"
 	let entry = frame.Instruction
 	let instance = frame.Register(entry.payload(1))
+	if instance.kind is in ("Text", "Number", "Boolean", "List")
+		return frame.NextWithRegister(entry.payload(0), instance)
 	mutable found = VmValue.None
 	for Natives(types).TypeOf(instance.kind).members
 		if value.Name is entry.texts(0)
