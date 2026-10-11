@@ -8,7 +8,7 @@ IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("Shape") is true
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
-	let short = MlirKinds(function).Short(typeName)
+	let short = TypeEntry.ShortName(typeName)
 	(IsBase(short) is false) and (Wrapped(short) is "")
 Represented(kind Text) Text
 	Wrapping.Represented("Angle") is "Number"
@@ -22,11 +22,11 @@ Wrapped(typeName Text) Text
 	Wrapping.Wrapped("Angle") is "Degrees"
 	Wrapping.Wrapped("Shape") is ""
 	Wrapping.Wrapped("Number") is ""
-	let short = MlirKinds(function).Short(typeName)
+	let short = TypeEntry.ShortName(typeName)
 	if IsBase(short) or (short is in ("Logger", "File"))
 		return ""
 	let changing = Changing(function.TypeOf(short))
-	changing.Length is 1 then MlirKinds(function).Short(changing.First.typeName) else ""
+	changing.Length is 1 then TypeEntry.ShortName(changing.First.typeName) else ""
 Changing(type TypeEntry) List(MemberEntry)
 	Wrapping.Changing(MlirFunction.Shape).Length is 2
 	for type.members

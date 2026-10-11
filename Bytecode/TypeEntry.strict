@@ -4,6 +4,8 @@ has methods List(MethodEntry)
 constant MagicByte = 83
 constant FormatVersion = 4
 constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
+constant ToNumber = MethodEntry("to", List(MemberEntry), "Strict/Number", List(InstructionEntry))
+constant Converting = TypeEntry("Strict/Digit", List(MemberEntry), (ToNumber, MethodEntry("to", List(MemberEntry) + MemberEntry.SevenMember, "Strict/Text", List(InstructionEntry))))
 Names BinaryNames
 	HelloLogger.Names.names.Length is 70
 	mutable result = BinaryNames.Empty.Predefined(JustName)
@@ -40,6 +42,30 @@ MethodGroup(methodName Text, names BinaryNames) Numbers
 	for overloads
 		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
 	encoder.bytes
+Callee(name Text, count Number, returnType Text) MethodEntry
+	HelloLogger.Callee("Run", 0, "None").instructions.Length is 2
+	Converting.Callee("to", 0, "Text").parameters.Length is 1
+	Converting.Callee("to", 0, "Strict/Number").parameters.Length is 0
+	let returned = ShortName(returnType)
+	mutable defaulted = MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry))
+	for methods
+		let isNamed = (value.Name is name) and (name is not "to" or (ShortName(value.returnType) is returned))
+		if isNamed and (value.parameters.Length is count)
+			return value
+		if isNamed and (count < value.parameters.Length) and (value.parameters(count).initial.Length > 0)
+			defaulted = value
+	defaulted
+ShortName(typeName Text) Text
+	HelloLogger.ShortName("Strict/Bytecode/TypeEntry") is "TypeEntry"
+	HelloLogger.ShortName("Strict/List(TypeEntry)") is "List(TypeEntry)"
+	HelloLogger.ShortName("Number") is "Number"
+	HelloLogger.ShortName("Strict/List(Mutable(Text))") is "List(Text)"
+	if typeName.IndexOf("Mutable(") is not -1
+		return ShortName(typeName.Replace("Mutable(", "").Substring(0, typeName.Length - 9))
+	let open = typeName.IndexOf("(")
+	let head = open < 0 then typeName else typeName.Substring(0, open)
+	let slash = head.LastIndexOf("/")
+	slash < 0 then typeName else typeName.Substring(slash + 1, typeName.Length - slash - 1)
 JustName Text
 	TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry)).JustName is "Process"
 	HelloLogger.JustName is "HelloLogger"

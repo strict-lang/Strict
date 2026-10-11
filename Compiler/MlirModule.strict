@@ -56,7 +56,7 @@ Called(function MlirFunction, position Number) List(MlirFunction)
 		return List(MlirFunction)
 	let type = Natives(types).TypeOf(decoder.Text(1))
 	let returned = decoder.Text(4 + entry.payload(3))
-	let callee = MlirCalls(function, position).Callee(type, decoder.Text(2), entry.payload(5 + entry.payload(3)), returned)
+	let callee = type.Callee(decoder.Text(2), entry.payload(5 + entry.payload(3)), returned)
 	constant none = List(MlirFunction)
 	callee.instructions.Length is 0 then none else none + MlirFunction(types, type, callee)
 Globals(functions List(MlirFunction)) Texts

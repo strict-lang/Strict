@@ -7,7 +7,7 @@ Functions Texts
 	mutable lines = List(Mutable(Text))
 	mutable symbols = List(Mutable(Text))
 	for function.types
-		let kind = MlirKinds(function).Short(value.Name)
+		let kind = TypeEntry.ShortName(value.Name)
 		let equality = MlirEquality(function, 0)
 		if equality.IsKnown(kind) and (equality.Symbol(kind) is not in symbols)
 			symbols.Add(equality.Symbol(kind))
@@ -21,7 +21,7 @@ Collection(symbol Text) Texts
 	(header, converter, call, "    return %result : f64", "  }")
 Function(type TypeEntry) Texts
 	Sample.Function(MlirFunction.Shape).Length is 24
-	let name = MlirEquality(function, 0).Symbol(MlirKinds(function).Short(type.Name))
+	let name = MlirEquality(function, 0).Symbol(TypeEntry.ShortName(type.Name))
 	mutable lines = List(Text) + ("  func.func private @strict_automatic_" + name + "(%value: f64) -> f64 {") + Prologue
 	mutable count = 0
 	for MlirInstances(function, 0).Stored(type)
@@ -33,7 +33,7 @@ Function(type TypeEntry) Texts
 	lines + joined + Parentheses
 Member(member MemberEntry, slot Number, count Number) Texts
 	Sample.Member(MlirFunction.Shape.members.First, 0, 0).Last.IndexOf("@strict_list_add(%l0, %x0)") > 0 is true
-	let conversion = Conversion(MlirKinds(function).Short(member.typeName))
+	let conversion = Conversion(TypeEntry.ShortName(member.typeName))
 	if conversion is "skip"
 		return List(Text)
 	let memory = MlirMemory(function, 0)

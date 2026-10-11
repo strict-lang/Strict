@@ -10,7 +10,7 @@ constant Nesting = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Outer, Ou
 Stored(owner TypeEntry) List(MemberEntry)
 	MlirInstances(Shapes, 0).Stored(MlirFunction.Shape).Length is 1
 	for owner.members
-		if (value.IsConstant is false) and MlirKinds(function).Short(value.typeName) is not "Logger"
+		if (value.IsConstant is false) and TypeEntry.ShortName(value.typeName) is not "Logger"
 			value
 StoredNames(owner TypeEntry) Texts
 	MlirInstances(Shapes, 0).StoredNames(MlirFunction.Shape) is ("width")
@@ -20,7 +20,7 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape").Last is "    llvm.store %t1of, %r1 : f64, !llvm.ptr"
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Character").Length is 2
 	Text.Combine(MlirInstances(Shapes, 1).Constructed(Built, "Strict/Error")).IndexOf("@strict_error_bits(") > 0 is true
-	if (MlirKinds(function).Short(typeName) is "File") or (MlirLayout(function).IsStruct(typeName) is false)
+	if (TypeEntry.ShortName(typeName) is "File") or (MlirLayout(function).IsStruct(typeName) is false)
 		return function.Copied("%r" + entry.payload(5 + entry.payload(3) + 1), "%r" + entry.payload(0), Temp("o"))
 	let members = Stored(function.TypeOf(typeName))
 	let memory = MlirMemory(function, position)

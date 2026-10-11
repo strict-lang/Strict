@@ -23,7 +23,7 @@ WrittenKind(writer Number) Text
 		let variable = VariableKind(writer, entry.texts(0))
 		return entry.kind is InstructionType.IndexCall then ElementKind(variable) else variable
 	if entry.kind is InstructionType.Invoke
-		return Short(PayloadDecoder(entry).Text(4 + entry.payload(3)))
+		return TypeEntry.ShortName(PayloadDecoder(entry).Text(4 + entry.payload(3)))
 	entry.kind is InstructionType.FieldLoad then FieldKind(writer, entry) else Calculated(writer, entry)
 Calculated(writer Number, entry InstructionEntry) Text
 	Graded.Calculated(4, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3))) is "Text"
@@ -84,7 +84,7 @@ DeclaredKind(position Number, name Text) Text
 OwnValueKind(position Number, name Text) Text
 	Graded.OwnValueKind(0, "value") is "Shape"
 	Graded.OwnValueKind(11, "value") is "Number"
-	let own = Short(function.type.Name)
+	let own = TypeEntry.ShortName(function.type.Name)
 	if name is "value"
 		let looped = LoopValueKind(position)
 		return looped is "" then own else looped
@@ -117,7 +117,7 @@ MembersKind(members List(MemberEntry), name Text) Text
 	Graded.MembersKind(MlirFunction.Shape.members, "other") is ""
 	for members
 		if value.Name is name
-			return Short(value.typeName)
+			return TypeEntry.ShortName(value.typeName)
 	""
 ElementKind(container Text) Text
 	Graded.ElementKind("List(TypeEntry)") is "TypeEntry"
@@ -134,16 +134,5 @@ ConstantKind(literal Runtime/VmValue, texts Texts) Text
 	if literal.kind is not "List"
 		return literal.kind
 	if literal.items.Length is 0
-		return texts.Length is 0 then "List(Number)" else Short(texts(0))
+		return texts.Length is 0 then "List(Number)" else TypeEntry.ShortName(texts(0))
 	"List(" + ConstantKind(literal.items.First, List(Text)) + ")"
-Short(name Text) Text
-	Graded.Short("Strict/Bytecode/TypeEntry") is "TypeEntry"
-	Graded.Short("Strict/List(TypeEntry)") is "List(TypeEntry)"
-	Graded.Short("Number") is "Number"
-	Graded.Short("Strict/List(Mutable(Text))") is "List(Text)"
-	if name.IndexOf("Mutable(") is not -1
-		return Short(name.Replace("Mutable(", "").Substring(0, name.Length - 9))
-	let open = name.IndexOf("(")
-	let head = open < 0 then name else name.Substring(0, open)
-	let slash = head.LastIndexOf("/")
-	slash < 0 then name else name.Substring(slash + 1, name.Length - slash - 1)

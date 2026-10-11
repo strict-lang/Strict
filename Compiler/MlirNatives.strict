@@ -15,7 +15,7 @@ Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Number", "Floor", 0) is "strict_floor"
 	MlirNatives(Texts, 1).Helper("Strict/Other", "Floor", 0) is ""
 	MlirNatives(Texts, 1).Helper("Strict/Directory", "Directories", 1) is "strict_directory_directories"
-	let kind = MlirKinds(function).Short(typeName)
+	let kind = TypeEntry.ShortName(typeName)
 	let isList = kind.StartsWith("List(") or kind.StartsWith("Dictionary(")
 	if (name is in ("Length", "Count")) and (count is 0)
 		return kind is "Text" then "strict_text_length" else isList then "strict_list_length" else ""

@@ -8,7 +8,7 @@ Main Texts
 	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
 	constant header = List(Text) + "  func.func @main(%argc: i32, %argv: !llvm.ptr) -> i32 {" + CollectorStart + constants
 	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
-	let returned = MlirKinds(entry).Short(entry.method.returnType) is "Number"
+	let returned = TypeEntry.ShortName(entry.method.returnType) is "Number"
 	let code = returned then "    %code = arith.fptosi %result : f64 to i32" else "    %code = arith.constant 0 : i32"
 	let prepared = header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot", "", List(Text)) + Arguments
 	prepared + (self, EntryCall, code) + ("    return %code : i32", "  }")
@@ -23,7 +23,7 @@ Arguments Texts
 	Counted.Arguments.Length is 0
 	mutable lines = List(Mutable(Text))
 	for entry.method.parameters
-		lines = lines + Argument(MlirKinds(entry).Short(value.typeName), index)
+		lines = lines + Argument(TypeEntry.ShortName(value.typeName), index)
 	lines
 Argument(kind Text, index Number) Texts
 	Counted.Argument("Text", 0).Last.StartsWith("    %arg0 = func.call @strict_argument(%argc, %argv") is true

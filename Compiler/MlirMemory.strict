@@ -12,7 +12,7 @@ Bits(pointer Text, suffix Text) Texts
 	Boxed(pointer, suffix, "")
 Boxed(pointer Text, suffix Text, typeName Text) Texts
 	Sample.Boxed("%p", "a", "Strict/Error") is ("    %t3af = func.call @strict_error_bits(%p) : (!llvm.ptr) -> f64")
-	let short = MlirKinds(function).Short(typeName)
+	let short = TypeEntry.ShortName(typeName)
 	let tagged = short is "ErrorWithValue" then "strict_error_value_bits" else "strict_bits"
 	let helper = short is "Error" then "strict_error_bits" else tagged
 	List(Text) + ("    " + Temp(suffix + "f") + " = func.call @" + helper + "(" + pointer + ") : (!llvm.ptr) -> f64")

@@ -20,7 +20,7 @@ IsConversion Boolean
 	if entry.kind is not InstructionType.Invoke
 		return false
 	let decoder = PayloadDecoder(entry)
-	let target = MlirKinds(function).Short(decoder.Text(4 + entry.payload(3)))
+	let target = TypeEntry.ShortName(decoder.Text(4 + entry.payload(3)))
 	let isTo = decoder.Text(2) is "to"
 	isTo and (target.StartsWith("List(") or IsNativeConversion(entry, target))
 IsNativeConversion(entry InstructionEntry, target Text) Boolean
@@ -30,7 +30,7 @@ IsNativeConversion(entry InstructionEntry, target Text) Boolean
 	let layout = MlirLayout(function)
 	if (target is "Text") or (target is "Number") and (layout.Represented(source) is "Text")
 		return true
-	let own = MlirCalls(function, position).Callee(function.TypeOf(source), "to", 0, target)
+	let own = function.TypeOf(source).Callee("to", 0, target)
 	let isSame = layout.Represented(source) is layout.Represented(target)
 	(own.instructions.Length is 0) and ((target is in ("Number", "Character")) or isSame)
 Instance(entry InstructionEntry) Number
@@ -41,7 +41,7 @@ Converted(entry InstructionEntry) Texts
 	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 3
 	let instance = Instance(entry)
 	let result = "%r" + entry.payload(0)
-	let target = MlirKinds(function).Short(PayloadDecoder(entry).Text(4 + entry.payload(3)))
+	let target = TypeEntry.ShortName(PayloadDecoder(entry).Text(4 + entry.payload(3)))
 	if target is "Number"
 		return Numbered(instance, result)
 	if target.StartsWith("List(")
@@ -85,7 +85,7 @@ TextBits(register Number, suffix Text) Texts
 	(loaded, MlirMemory(function, position).Called(Temp(suffix + "x"), helper, List(Text) + Temp(suffix)))
 Printable(kind Text) Text
 	MlirTexts(Joined, 0).Printable("Number") is "Number"
-	let own = MlirCalls(function, position).Callee(function.TypeOf(kind), "to", 0, "Text")
+	let own = function.TypeOf(kind).Callee("to", 0, "Text")
 	own.instructions.Length > 0 then kind else MlirLayout(function).Represented(kind)
 Helper(kind Text) Text
 	MlirTexts(Joined, 0).Helper("Boolean") is "strict_boolean_text"
@@ -101,7 +101,7 @@ Described(loaded Text, suffix Text, kind Text) Texts
 	MlirTexts(Joined, 1).Described("", "d", "Shape").Last.IndexOf("@strict_automatic_Shape(") > 0 is true
 	MlirTexts(Joined, 1).Described("", "d", "Logger").First.StartsWith("unsupported") is true
 	let type = function.TypeOf(kind)
-	let method = MlirCalls(function, position).Callee(type, "to", 0, "Text")
+	let method = type.Callee("to", 0, "Text")
 	let automatic = MlirAutomatic(function).Conversion(kind)
 	if (method.instructions.Length is 0) and (automatic is "skip")
 		return List(Text) + MlirStatements(function, position).Unsupported("text of " + kind)

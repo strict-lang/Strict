@@ -13,7 +13,7 @@ Symbol Text
 	Counter.Symbol is "Counter_Run_0"
 	Adding.Symbol is "Shape_Plus_0"
 	let name = MlirEquality(value, 0).Symbol(type.JustName)
-	let conversion = method.Name is "to" then "_" + MlirKinds(value).Short(method.returnType) else ""
+	let conversion = method.Name is "to" then "_" + TypeEntry.ShortName(method.returnType) else ""
 	let spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else method.Name
 	name + "_" + spelled + "_" + method.parameters.Length + conversion
 Parameters Texts

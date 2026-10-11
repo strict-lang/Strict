@@ -8,7 +8,6 @@ constant Shapes = MlirFunction(List(TypeEntry) + AreaShape, AreaShape, MethodEnt
 constant FromText = MethodEntry("from", MemberEntry("text", "Strict/Text", List(InstructionEntry), false), "Strict/Hash", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Return(0)))
 constant Hash = TypeEntry("Strict/Hash", MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry) + FromText)
 constant Defaulted = MethodEntry("from", MemberEntry("text", "Strict/Text", InstructionEntry.Set(List(Text), InstructionEntry.NumberValue(2)), false), "Strict/Hash", FromText.instructions)
-constant DefaultHash = TypeEntry("Strict/Hash", Hash.members, List(MethodEntry) + Defaulted)
 constant Hashed = InstructionEntry.Invoke(1, ("Strict/Hash", "from", "Strict/Hash", "text"), 0, -1)
 constant Hashes = MlirFunction(List(TypeEntry) + Hash, Hash, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "abc"), Hashed)))
 Temp(suffix Text) Text
@@ -31,7 +30,7 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	Text.Combine(MlirCalls(Hashes, 1).Created(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0 is true
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
-	let custom = Callee(type, "from", count, decoder.Text(4 + entry.payload(3)))
+	let custom = type.Callee("from", count, decoder.Text(4 + entry.payload(3)))
 	let instances = MlirInstances(function, position)
 	if (custom.instructions.Length is 0) or IsMemberValue(entry, type)
 		return instances.Constructed(entry, decoder.Text(1))
@@ -45,8 +44,8 @@ IsMemberValue(entry InstructionEntry, type TypeEntry) Boolean
 		return false
 	let kinds = MlirKinds(function)
 	let argument = kinds.KindOf(position, entry.payload(countPosition + 1))
-	let isSame = argument is kinds.Short(type.Name)
-	isSame or (layout.Represented(argument) is layout.Represented(kinds.Short(members.First.typeName)))
+	let isSame = argument is TypeEntry.ShortName(type.Name)
+	isSame or (layout.Represented(argument) is layout.Represented(TypeEntry.ShortName(members.First.typeName)))
 Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
 	let type = function.TypeOf(decoder.Text(1))
@@ -57,7 +56,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	Compiled(entry, decoder, type, count)
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
-	let callee = Callee(type, decoder.Text(2), count, decoder.Text(4 + entry.payload(3)))
+	let callee = type.Callee(decoder.Text(2), count, decoder.Text(4 + entry.payload(3)))
 	if callee.instructions.Length is 0
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let target = MlirFunction(function.types, type, callee)
@@ -87,19 +86,6 @@ Owner(entry InstructionEntry, type TypeEntry) Text
 	let flagPosition = countPosition + 1 + entry.payload(countPosition)
 	let hasInstance = entry.payload(flagPosition) is 1
 	hasInstance then MlirKinds(function).KindOf(position, entry.payload(flagPosition + 1)) else type.Name
-Callee(type TypeEntry, name Text, count Number, returnType Text) MethodEntry
-	MlirCalls(Shapes, 1).Callee(AreaShape, "Size", 0, "Number").instructions.Length is 0
-	MlirCalls(Shapes, 1).Callee(DefaultHash, "from", 0, "Hash").parameters.Length is 1
-	let returned = MlirKinds(function).Short(returnType)
-	mutable defaulted = MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry))
-	for type.methods
-		let isReturning = name is not "to" or (MlirKinds(function).Short(value.returnType) is returned)
-		let isNamed = (value.Name is name) and isReturning
-		if isNamed and (value.parameters.Length is count)
-			return value
-		if isNamed and (count < value.parameters.Length) and (value.parameters(count).initial.Length > 0)
-			defaulted = value
-	defaulted
 Loads(entry InstructionEntry, type TypeEntry) Texts
 	MlirCalls(Shapes, 2).Loads(Area, AreaShape).Length is 1
 	let countPosition = 5 + entry.payload(3)
