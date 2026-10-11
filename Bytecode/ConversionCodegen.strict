@@ -1,7 +1,7 @@
 has values ValueCodegen
 constant Plain = ConversionCodegen(ValueCodegen.Plain)
 constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name")
-constant ColorTypes = KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers))
+constant ColorTypes = TypeInference.Colors.types
 constant Colored = ConversionCodegen(ValueCodegen(TypeInference(ColorTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant NewColorValue = SyntaxNode("Call", "ColorValue", ValueCodegen.One)
 constant NewColor = SyntaxNode("Call", "Color", ValueCodegen.One)
@@ -20,23 +20,12 @@ Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Colored.Converted(ValueCodegen.Ones, "ColorValue", CodeBlock.Empty).text is "ColorValue"
 	if values.inference.types.IsPlural(type)
 		return Elements(node, type, block)
-	if (node.Kind is "List") and values.inference.types.IsKnown(type) and type is not in Primitives
+	if (node.Kind is "List") and values.inference.types.IsKnown(type) and type is not in TypeInference.Primitives
 		return SyntaxNode("Call", type, node.children)
-	let converter = Converter(values.TypeOf(node, block), type)
+	let converter = values.inference.Converter(values.TypeOf(node, block), type)
 	if converter is "to"
 		return SyntaxNode("Binary", "to", (node, SyntaxNode("Identifier", type)))
 	converter is "from" then SyntaxNode("Call", type, node) else node
-Converter(source Text, type Text) Text
-	Colored.Converter("ColorValue", "Color") is "from"
-	Colored.Converter("Color", "ColorValue") is "to"
-	Colored.Converter("Number", "Color") is ""
-	let types = values.inference.types
-	if (source is in Primitives) or (type is in Primitives) or (source is type)
-		return ""
-	if types.MethodsOf(source).Has("to", type)
-		return "to"
-	let origins = types.ParameterTypesOf(type, "from", 1)
-	(origins.Length is 1) and (origins(0) is source) then "from" else ""
 ConvertedElements(node SyntaxNode, type Text, block CodeBlock) List(SyntaxNode)
 	Colored.ConvertedElements(SyntaxNode("List", "", NewColorValue), "Color", CodeBlock.Empty).Length is 1
 	for node.children

@@ -61,9 +61,12 @@ StatementType(scoped ScopedStatement) Text
 	if (statement.Kind is in ("ElseIf", "Else", "ElseValue")) or (statement.Kind is "Return") and (not statement.HasValue)
 		return ""
 	if statement.Kind is "Reassignment"
-		return inference.TypeOf(statement.children(1), scoped.scope, Methods)
+		return Reassigned(statement, scoped.scope)
 	let value = statement.Kind is in ("Declaration", "Return") then statement.children(0) else statement
 	inference.TypeOf(value, scoped.scope, Methods)
+Reassigned(statement SyntaxNode, scope Scope) Text
+	let target = inference.TypeOf(statement.children(0), scope, Methods)
+	inference.Assigned(target, inference.TypeOf(statement.children(1), scope, Methods))
 BlockType(statement SyntaxNode, scope Scope) Text
 	BlockType(SyntaxNode("For", "for"), NoScope) is ""
 	if statement.Kind is "For"

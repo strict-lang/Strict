@@ -8,6 +8,8 @@ constant Limits = (Scope(List(Text) + "Limit", List(Text) + "3"), NoShape)
 constant NoNode = SyntaxNode("Identifier", "x")
 constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "Text")))
 constant MutableText = SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "Text"), NoNode))
+constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name")
+constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)), NoShapes)
 ConstantOf(typeName Text, name Text) Text
 	TypeInference(KnownTypes.Sample, Limits).ConstantOf("Count", "Limit") is "3"
 	NoInference.ConstantOf("A", "Missing") is ""
@@ -89,3 +91,17 @@ ConditionalType(node SyntaxNode, scope Scope, current Scope) Text
 		return TypeOf(node.children(1), scope, current)
 	let thenType = TypeOf(node.children(0), scope, current)
 	thenType is "Error" then TypeOf(node.children(1), scope, current) else thenType
+Converter(source Text, type Text) Text
+	Colors.Converter("ColorValue", "Color") is "from"
+	Colors.Converter("Color", "ColorValue") is "to"
+	Colors.Converter("Number", "Color") is ""
+	if (source is in Primitives) or (type is in Primitives) or (source is type)
+		return ""
+	if types.MethodsOf(source).Has("to", type)
+		return "to"
+	let origins = types.ParameterTypesOf(type, "from", 1)
+	(origins.Length is 1) and (origins(0) is source) then "from" else ""
+Assigned(target Text, assigned Text) Text
+	Colors.Assigned("Color", "ColorValue") is "Color"
+	Colors.Assigned("Number", "Number") is "Number"
+	Converter(assigned, target) is "" then assigned else target
