@@ -83,14 +83,13 @@ IsElementStore Boolean
 	entry.texts(0).IndexOf("(") > 0
 ElementStored(entry InstructionEntry) Texts
 	MlirLists(Written, 1).ElementStored(Written.method.instructions(1)).Last.IndexOf("strict_list_set") > 0 is true
-	let name = entry.texts(0)
-	let open = name.IndexOf("(")
-	let index = name.Substring(open + 1, name.Length - open - 2)
+	let parts = PayloadDecoder(entry).ElementParts
+	let index = parts(1)
 	let isNumber = "0123456789".IndexOf(index.Substring(0, 1)) is not -1
 	constant prefix = "    " + Temp("i") + " = arith.constant "
 	let loaded = function.Load(Temp("i"), "%v_" + index)
 	let indexed = isNumber then prefix + index + ".0 : f64" else loaded
-	let loads = Target(name.Substring(0, open)) + indexed + function.Load(Temp("e"), "%r" + entry.payload(0))
+	let loads = Target(parts(0)) + indexed + function.Load(Temp("e"), "%r" + entry.payload(0))
 	loads + MlirMemory(function, position).Called(Temp("s"), "strict_list_set", (Temp("l"), Temp("i"), Temp("e")))
 Target(path Text) Texts
 	MlirLists(Written, 1).Target("numbers") is ("    %t1l = llvm.load %v_numbers : !llvm.ptr -> f64")

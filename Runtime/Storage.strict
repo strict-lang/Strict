@@ -4,7 +4,9 @@ constant LoadSeven = InstructionEntry.LoadNumber(0, 7)
 constant StoreSeven = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a")
 constant LoadA = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a")
 constant AppendSeven = InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "list")
+constant SetSecond = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list(1)")
 constant Sample = Frame(MethodEntry("Run", List(MemberEntry), "None", (LoadSeven, StoreSeven, LoadA, AppendSeven)), 0, List(VmValue), Locals.Empty)
+constant Listed = Sample.WithRegister(0, VmValue.OfNumber(7)).WithLocal("list", VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2)))
 Step Frame
 	Storage(Sample, LoadSeven).Step.Register(0).number is 7
 	Storage(Storage(Sample, LoadSeven).Step, StoreSeven).Step.Local("a").number is 7
@@ -19,7 +21,14 @@ Step Frame
 	kind is InstructionType.StoreRegisterToVariable then Stored(entry.texts(0)) else Appended(entry.texts(0))
 Stored(name Text) Frame
 	Storage(Sample.Next, StoreSeven).Stored("b").Local("b").kind is "None"
-	frame.NextWithLocal(name, frame.Register(entry.payload(0)))
+	Storage(Listed, SetSecond).Stored("list(1)").Local("list").items(1).number is 7
+	let parts = PayloadDecoder(entry).ElementParts
+	if parts.Length is 0
+		return frame.NextWithLocal(name, frame.Register(entry.payload(0)))
+	let local = frame.Local(parts(1))
+	let position = local.kind is "None" then parts(1) to Number else local.number
+	let elements = frame.locals.Replaced(frame.Local(parts(0)).items, position, frame.Register(entry.payload(0)))
+	frame.NextWithLocal(parts(0), VmValue.OfList(elements))
 Appended(name Text) Frame
 	Storage(Sample.WithRegister(0, VmValue.OfNumber(7)).At(3), AppendSeven).Appended("list").Local("list").Length is 1
 	let elements = frame.Local(name).items + frame.Register(entry.payload(0))
