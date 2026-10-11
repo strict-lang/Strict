@@ -4,6 +4,7 @@ has methods List(MethodEntry)
 constant MagicByte = 83
 constant FormatVersion = 4
 constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
+constant CharacterEntry = TypeEntry("Strict/Character", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
 constant ToNumber = MethodEntry("to", List(MemberEntry), "Strict/Number", List(InstructionEntry))
 constant Converting = TypeEntry("Strict/Digit", List(MemberEntry), (ToNumber, MethodEntry("to", List(MemberEntry) + MemberEntry.SevenMember, "Strict/Text", List(InstructionEntry))))
 Names BinaryNames
@@ -74,6 +75,11 @@ Wrapped Text
 		return ""
 	let changing = Changing
 	changing.Length is 1 then ShortName(changing.First.typeName) else ""
+IsStruct Boolean
+	HelloLogger.IsStruct is false
+	CharacterEntry.IsStruct is false
+	Converting.IsStruct is true
+	(IsBaseName(ShortName(Name)) is false) and (Wrapped is "")
 Changing List(MemberEntry)
 	HelloLogger.Changing.Length is 1
 	TypeEntry("A", List(MemberEntry) + MemberEntry.SevenMember, List(MethodEntry)).Changing.Length is 0

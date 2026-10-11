@@ -42,6 +42,14 @@ Member(index Number) VmValue
 	VmValue("Strict/Shape", 0, "", List(VmValue) + OfNumber(3)).Member(0).number is 3
 	None.Member(1).kind is "None"
 	IsBase then value else index < items.Length then items(index) else None
+As(typeName Text) VmValue
+	OfText("a").As("Strict/Number").number is 97
+	OfNumber(98).As("Strict/Character").text is "b"
+	OfText("ab").As("Strict/List(Character)").text is "ab"
+	let target = TypeEntry.ShortName(typeName)
+	if (kind is "Number") and (target is "Character")
+		return OfText(Character(number) to Text)
+	(kind is "Text") and (target is "Number") then OfNumber(Character(text).number) else value
 IsTrue Boolean
 	OfBoolean(false).IsTrue is false
 	number is 1

@@ -36,13 +36,16 @@ Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 Converted(instance VmValue, target Text) VmValue
 	Shapes.Converted(VmValue.OfNumber(2), "Strict/Text").text is "2"
 	Shapes.Converted(VmValue.OfText("5"), "Strict/Number").number is 5
+	Shapes.Converted(VmValue.OfNumber(75), "Strict/Character").text is "7"
 	Shapes.Converted(VmValue.OfList(VmValue.OfText("1")), "Strict/List(Number)").items.First.number is 1
 	if target.StartsWith("Strict/List(")
 		mutable converted = List(Mutable(VmValue))
 		for instance.items
 			converted.Add(Converted(value, target is "Strict/List(Text)" then "Strict/Text" else "Strict/Number"))
 		return VmValue.OfList(converted)
-	target is "Strict/Text" then VmValue.OfText(instance to Text) else VmValue.OfNumber(instance.text to Number)
+	if target is "Strict/Number"
+		return VmValue.OfNumber(instance.text to Number)
+	VmValue.OfText(target is "Strict/Character" then (instance to Text).Substring(0, 1) else instance to Text)
 Logical(name Text, left Boolean, call Invocation) VmValue
 	Shapes.Logical("not", true, NewShape).IsTrue is false
 	if name is "not"
@@ -91,8 +94,8 @@ Constructed(call Invocation) VmValue
 	Natives(List(TypeEntry) + Degree).Constructed(NewDegree).number is 3
 	let type = TypeOf(call.TypeName)
 	let arguments = call.Arguments
-	if (type.members.Length is 0) or (type.Wrapped is not "")
-		return arguments.Length > 0 then arguments.First else VmValue.None
+	if (type.members.Length is 0) or (type.IsStruct is false)
+		return arguments.Length > 0 then arguments.First.As(call.TypeName) else VmValue.None
 	mutable values = List(Mutable(VmValue))
 	for type.members
 		let argument = call.ParameterNames.Index(value.Name)

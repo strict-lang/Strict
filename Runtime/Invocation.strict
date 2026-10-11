@@ -2,6 +2,7 @@ has entry InstructionEntry
 has frame
 constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), Frame(MethodEntry.HelloRun, 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty))
 constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("5"), Locals.Empty))
+constant Coding = Invocation(InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character", "text"), 0, -1), Parsing.frame.WithRegister(0, VmValue.OfNumber(65)))
 TypeName Text
 	AddCall.TypeName is "T"
 	PayloadDecoder(entry).Text(1)
@@ -31,6 +32,15 @@ IsNativeConversion Boolean
 	let isBase = (source is in ("Number", "Character", "Boolean", "Text")) or source.StartsWith("List(")
 	let isTextual = (ReturnType is "Strict/Text") and isBase
 	(MethodName is "to") and (isTextual or ((ReturnType is "Strict/Number") and (source is "Text")))
+IsMemberValue(type TypeEntry) Boolean
+	Coding.IsMemberValue(TypeEntry.CharacterEntry) is true
+	Parsing.IsMemberValue(TypeEntry.CharacterEntry) is false
+	let changing = type.Changing
+	if (MethodName is not "from") or (changing.Length is not 1) or (Arguments.Length is not 1)
+		return false
+	let kind = TypeEntry.ShortName(Arguments.First.kind)
+	let member = TypeEntry.ShortName(changing.First.typeName)
+	(kind is TypeEntry.ShortName(type.Name)) or (member is kind) or member.StartsWith(kind + "(")
 Instance VmValue
 	AddCall.Instance.number is 4
 	let flagPosition = 6 + entry.payload(3) + entry.payload(5 + entry.payload(3))

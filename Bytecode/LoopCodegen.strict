@@ -143,10 +143,10 @@ Begin(iterator SyntaxNode, block CodeBlock) CodeBlock
 	let end = isRange then methods.values.Expression(iterator.children(1), start) else start
 	end.Add(InstructionEntry.LoopBegin(start.Result, (isRange then end.Result else -1)))
 RangeFields(iterator SyntaxNode, block CodeBlock) CodeBlock
-	Plain.RangeFields(SyntaxNode("Identifier", "r"), CodeBlock.Empty).instructions(1).texts is ("Start")
+	Plain.RangeFields(SyntaxNode("Identifier", "r"), CodeBlock.Empty).instructions(1).texts is ("Start", "Range")
 	let range = methods.values.Expression(iterator, block)
-	let start = range.Load(InstructionEntry(InstructionType.FieldLoad, "Start", (range.register, range.Result, -1)))
-	let end = start.Load(InstructionEntry(InstructionType.FieldLoad, "ExclusiveEnd", (start.register, range.Result, -1)))
+	let start = methods.values.Field("Start", "Range", range, range.Result)
+	let end = methods.values.Field("ExclusiveEnd", "Range", start, range.Result)
 	end.Add(InstructionEntry.LoopBegin(start.Result, end.Result))
 AggregatedLoop(body SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.AggregatedLoop(FilterLoop, CodeBlock.Empty, "sum").instructions.Last.kind is InstructionType.JumpEnd

@@ -8,8 +8,7 @@ IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("Shape") is true
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
-	let short = TypeEntry.ShortName(typeName)
-	(TypeEntry.IsBaseName(short) is false) and (Wrapped(short) is "")
+	function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
 Represented(kind Text) Text
 	Wrapping.Represented("Angle") is "Number"
 	Wrapping.Represented("Shape") is "Shape"

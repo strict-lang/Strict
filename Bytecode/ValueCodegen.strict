@@ -79,10 +79,13 @@ InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 		return block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "outer.index"))
 	let instance = Expression(node.children(0), block)
 	if (node.Kind is "Member") and (IsMethodCall(node, block) is false)
-		return instance.Load(InstructionEntry(InstructionType.FieldLoad, node.text, (instance.register, instance.Result, -1)))
+		return Field(node.text, TypeOf(node.children(0), block), instance, instance.Result)
 	let method = node.Kind is "Not" then "not" else "to"
 	let call = node.Kind is in ("Binary", "Not") then SyntaxNode("Member", method, node.children(0)) else node
 	Invoke(call, instance, instance.Result, TypeOf(node, block))
+Field(member Text, owner Text, block CodeBlock, instance Number) CodeBlock
+	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(1).texts is ("text", "Greeter")
+	block.Load(InstructionEntry(InstructionType.FieldLoad, (member, owner), (block.register, instance, -1, -2)))
 IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsMethodCall(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty) is true
 	Plain.IsMethodCall(SyntaxNode("Member", "Greet", NewGreeter), CodeBlock.Empty) is true

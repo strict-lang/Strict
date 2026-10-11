@@ -8,6 +8,7 @@ constant Characters = Frame(MethodEntry("Run", List(MemberEntry), "None", List(I
 constant Texts = TypeEntry("Strict/Text", List(MemberEntry) + MemberEntry("characters", "Strict/List(Character)", List(InstructionEntry), false), List(MethodEntry))
 constant Defaulted = MethodEntry("Add", List(MemberEntry) + MemberEntry.SevenMember, "Strict/Number", List(InstructionEntry))
 constant Wrapper = TypeEntry("Strict/Wrapper", (MemberEntry.LoggerMember, MemberEntry.SevenMember), List(MethodEntry))
+constant Coded = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.FieldLoad, ("number", "Character"), (1, 0, -1, -2))), 0, List(VmValue) + VmValue.OfText("a"), Locals.Empty)
 constant Listing = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.IndexCall, "list", (0, 0, -1))), 0, List(VmValue) + VmValue.OfNumber(1), Locals(("list"), (VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)))))
 Launch(typeName Text, arguments List(VmValue))
 	let main = Natives(types).TypeOf(typeName)
@@ -33,11 +34,16 @@ Members(type TypeEntry, instance VmValue) Locals
 	Hello.Members(Wrapper, VmValue.OfError("a")).Get("logger").kind is "Strict/Error"
 	Hello.Members(Wrapper, VmValue.OfError("a")).Get("a").number is 7
 	mutable locals = Locals.Empty.With("#this", instance).With("value", instance)
-	let isOwn = Natives(types).IsNamed(type, instance.kind)
 	for type.members
-		let member = value.IsConstant then Natives(types).Initial(value) else isOwn then instance.Member(index) else instance
-		locals = locals.With(value.Name, member)
+		locals = locals.With(value.Name, MemberValue(type, instance, index))
 	locals
+MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
+	Hello.MemberValue(Wrapper, VmValue.OfError("a"), 1).number is 7
+	Hello.MemberValue(TypeEntry.CharacterEntry, VmValue.OfText("a"), 0).number is 97
+	let member = owner.members(index)
+	if member.IsConstant
+		return Natives(types).Initial(member)
+	Natives(types).IsNamed(owner, instance.kind) then instance.Member(index) else instance.As(member.typeName)
 Execute(method MethodEntry, locals Locals) VmValue
 	Machine(List(TypeEntry) + Doubler).Execute(Doubler.methods.First, Locals.Empty).number is 42
 	mutable current = Frame(method, 0, List(VmValue), locals)
@@ -74,10 +80,11 @@ Call(call Invocation) VmValue
 		return Natives(types).Hosted(call)
 	if (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
-	let method = Natives(types).TypeOf(call.TypeName).Callee(call.MethodName, call.Arguments.Length, call.ReturnType)
-	if (method.instructions.Length is 0) or call.IsNativeConversion
+	let type = Natives(types).TypeOf(call.TypeName)
+	let method = type.Callee(call.MethodName, call.Arguments.Length, call.ReturnType)
+	if (method.instructions.Length is 0) or call.IsNativeConversion or call.IsMemberValue(type)
 		return Natives(types).Result(call)
-	Execute(method, Bound(Natives(types).TypeOf(call.TypeName), call.Instance, method, call.Arguments))
+	Execute(method, Bound(type, call.Instance, method, call.Arguments))
 Indexed(frame Frame) Frame
 	Hello.Indexed(Listing).Register(0).number is 20
 	Hello.Indexed(Listing.WithRegister(0, VmValue.OfNumber(5))).Register(0) is VmValue.OfError("Run")
@@ -100,10 +107,12 @@ Field(frame Frame) Frame
 	Hello.Field(Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)).position is 1
 	Hello.Field(Characters).Register(1).text is "ab"
 	Hello.Field(Characters.WithRegister(0, VmValue.OfError("a"))).Register(1).kind is "Strict/Error"
+	Machine(List(TypeEntry) + TypeEntry.CharacterEntry).Field(Coded).Register(1).number is 97
 	let entry = frame.Instruction
 	let instance = frame.Register(entry.payload(1))
+	let owner = Natives(types).TypeOf(entry.texts.Length > 1 then entry.texts.Last else instance.kind)
 	mutable found = instance
-	for Natives(types).TypeOf(instance.kind).members
+	for owner.members
 		if value.Name is entry.texts(0)
-			found = instance.Member(index)
+			found = MemberValue(owner, instance, index)
 	frame.NextWithRegister(entry.payload(0), found)
