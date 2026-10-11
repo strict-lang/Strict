@@ -2185,6 +2185,31 @@
     %result = func.call @strict_list_equal(%left, %right, %element) : (f64, f64, (f64, f64) -> f64) -> f64
     return %result : f64
   }
+  func.func private @strict_list_equal_pair(%left: f64, %right: f64, %keyIsText: i1, %valueIsText: i1) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %leftKey = func.call @strict_list_get(%left, %zero) : (f64, f64) -> f64
+    %rightKey = func.call @strict_list_get(%right, %zero) : (f64, f64) -> f64
+    %leftValue = func.call @strict_list_get(%left, %one) : (f64, f64) -> f64
+    %rightValue = func.call @strict_list_get(%right, %one) : (f64, f64) -> f64
+    %sameKey = func.call @strict_list_matches(%leftKey, %rightKey, %keyIsText) : (f64, f64, i1) -> i1
+    %sameValue = func.call @strict_list_matches(%leftValue, %rightValue, %valueIsText) : (f64, f64, i1) -> i1
+    %same = arith.andi %sameKey, %sameValue : i1
+    %result = arith.select %same, %one, %zero : f64
+    return %result : f64
+  }
+  func.func private @strict_list_equal_pair_text_number(%left: f64, %right: f64) -> f64 {
+    %keyIsText = arith.constant true
+    %valueIsText = arith.constant false
+    %result = func.call @strict_list_equal_pair(%left, %right, %keyIsText, %valueIsText) : (f64, f64, i1, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_equal_pair_number_text(%left: f64, %right: f64) -> f64 {
+    %keyIsText = arith.constant false
+    %valueIsText = arith.constant true
+    %result = func.call @strict_list_equal_pair(%left, %right, %keyIsText, %valueIsText) : (f64, f64, i1, i1) -> f64
+    return %result : f64
+  }
   func.func private @strict_list_text_mapped(%list: f64, %converter: (f64) -> f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
@@ -2238,6 +2263,51 @@
   func.func private @strict_list_text_number(%list: f64) -> f64 {
     %isText = arith.constant 0 : i1
     %result = func.call @strict_list_text(%list, %isText) : (f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_textual(%value: f64, %isText: i1) -> f64 {
+    cf.cond_br %isText, ^text, ^number
+  ^text:
+    return %value : f64
+  ^number:
+    %text = func.call @strict_number_text(%value) : (f64) -> f64
+    return %text : f64
+  }
+  func.func private @strict_list_text_pair(%pair: f64, %keyIsText: i1, %valueIsText: i1) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %two = arith.constant 2.0 : f64
+    %key = func.call @strict_list_get(%pair, %zero) : (f64, f64) -> f64
+    %value = func.call @strict_list_get(%pair, %one) : (f64, f64) -> f64
+    %keyText = func.call @strict_textual(%key, %keyIsText) : (f64, i1) -> f64
+    %valueText = func.call @strict_textual(%value, %valueIsText) : (f64, i1) -> f64
+    %empty = func.call @strict_list_new(%two, %zero) : (f64, f64) -> f64
+    %first = func.call @strict_list_add(%empty, %keyText) : (f64, f64) -> f64
+    %texts = func.call @strict_list_add(%first, %valueText) : (f64, f64) -> f64
+    %isText = arith.constant true
+    %result = func.call @strict_list_text(%texts, %isText) : (f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_text_pair_text_number(%pair: f64) -> f64 {
+    %keyIsText = arith.constant true
+    %valueIsText = arith.constant false
+    %result = func.call @strict_list_text_pair(%pair, %keyIsText, %valueIsText) : (f64, i1, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_text_pair_number_text(%pair: f64) -> f64 {
+    %keyIsText = arith.constant false
+    %valueIsText = arith.constant true
+    %result = func.call @strict_list_text_pair(%pair, %keyIsText, %valueIsText) : (f64, i1, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_text_lists_pair_text_number(%list: f64) -> f64 {
+    %converter = func.constant @strict_list_text_pair_text_number : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%list, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_text_lists_pair_number_text(%list: f64) -> f64 {
+    %converter = func.constant @strict_list_text_pair_number_text : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%list, %converter) : (f64, (f64) -> f64) -> f64
     return %result : f64
   }
   func.func private @strict_boolean_text(%value: f64) -> f64 {

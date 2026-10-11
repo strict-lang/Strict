@@ -113,15 +113,7 @@ Concrete(type Text) Text
 	let open = fullName.IndexOf("(")
 	if open is -1
 		return type.Replace("(Generic)", "")
-	let element = Item(fullName.Substring(open + 1, fullName.Length - open - 2))
+	let element = MethodBodies.Item(fullName.Substring(open + 1, fullName.Length - open - 2))
 	if type is "Generic"
 		return element
 	type is in ("Generics", "List") then element + "s" else type
-Item(arguments Text) Text
-	Hello.Item("Number") is "Number"
-	Hello.Item("Text, Text") is "Texts"
-	Hello.Item("Text, Number") is "List(Text, Number)"
-	let parts = arguments.Split(", ")
-	if parts.Length is 1
-		return arguments
-	parts(0) is parts(1) then parts(0) + "s" else "List(" + arguments + ")"

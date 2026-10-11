@@ -96,7 +96,7 @@ Declared(node SyntaxNode, block CodeBlock) CodeBlock
 	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
 	let bodies = MethodBodies(methods.values.target.TypeName, methods.values.target.shape, methods.values.inference)
 	let iterated = node.HasValue then methods.values.TypeOf(iterator, block) else bodies.IteratedType
-	let element = isRange then "Number" else methods.values.ElementType(iterated)
+	let element = isRange then "Number" else bodies.Element(iterated)
 	let begun = Begin(Counted(iterator, node.children.Last, block, element), block)
 	let nested = begun.Declare("index", "Number").Declare("outer", block.scope.TypeOf("value"))
 	nested.Declare("value", element).Sharing("value", true).Sharing("outer", true)

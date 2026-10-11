@@ -91,12 +91,11 @@ Helper(kind Text) Text
 	MlirTexts(Joined, 0).Helper("Boolean") is "strict_boolean_text"
 	MlirTexts(Joined, 0).Helper("List(Text)") is "strict_list_text_text"
 	MlirTexts(Joined, 0).Helper("Shape") is ""
+	MlirTexts(Joined, 0).Helper("List(Text, Number)") is "strict_list_text_pair_text_number"
 	if kind is in ("Number", "Character", "Boolean")
 		return "strict_" + kind.Lower + "_text"
-	if kind.StartsWith("List(") is false
-		return ""
-	let element = MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind))
-	element is in ("Text", "Number") then "strict_list_text_" + element.Lower else ""
+	let suffix = kind.StartsWith("List(") then MlirKinds(function).ElementSuffix(kind) else ""
+	suffix is "" then "" else "strict_list_text_" + suffix
 Described(loaded Text, suffix Text, kind Text) Texts
 	MlirTexts(Joined, 1).Described("", "d", "Shape").Last.IndexOf("@strict_automatic_Shape(") > 0 is true
 	MlirTexts(Joined, 1).Described("", "d", "Logger").First.StartsWith("unsupported") is true

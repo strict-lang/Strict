@@ -135,6 +135,3 @@ Elements ListCodegen
 TypeOf(node SyntaxNode, block CodeBlock) Text
 	Plain.TypeOf(SyntaxNode("Number", "1"), CodeBlock.Empty) is "Number"
 	inference.TypeOf(node, block.scope, methods)
-ElementType(iterated Text) Text
-	Plain.ElementType("Number") is "Number"
-	iterated is "Number" then iterated else inference.types.ElementType(iterated)

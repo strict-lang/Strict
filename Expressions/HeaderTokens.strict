@@ -41,7 +41,14 @@ TypeName(start Number) Text
 	if (tokens(start + 1) is "/") or (tokens(start) is "Mutable")
 		return inner
 	let isList = (tokens(start) is "List") and inner.Lower is not inner
-	isList then inner + "s" else tokens(start) + (tokens(start) is "Iterator" then "(" + inner + ")" else "")
+	isList then inner + "s" else Arguments(start, inner)
+Arguments(start Number, inner Text) Text
+	HeaderTokens("Iterator", "(", "Vector2", ")").Arguments(0, "Vector2") is "Iterator(Vector2)"
+	HeaderTokens(Tokenizer("Dictionary(Text, Number)").Tokens).Arguments(0, "Text") is "Dictionary(Text, Number)"
+	HeaderTokens("Range", "(", "Number", ")").Arguments(0, "Number") is "Range"
+	if (tokens(start) is "Dictionary") and (tokens(start + 3) is ",")
+		return "Dictionary(" + inner + ", " + TypeName(start + 4) + ")"
+	tokens(start) + (tokens(start) is "Iterator" then "(" + inner + ")" else "")
 ReturnType Text
 	HeaderTokens("Run", "Number").ReturnType is "Number"
 	HeaderTokens("Add", "(", "x", ")").ReturnType is "None"

@@ -1,0 +1,6 @@
+has prices Dictionary(Text, Number)
+Expensive Texts
+	FruitPrices(Dictionary(("Apple", 3), ("Pear", 2), ("Plum", 5))).Expensive is ("Apple", "Plum")
+	for prices
+		if value.Value > 2
+			value.Key

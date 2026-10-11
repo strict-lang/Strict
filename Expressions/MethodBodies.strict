@@ -52,7 +52,28 @@ LoopScope(statement SyntaxNode, scope Scope) Scope
 		return scope
 	let iterated = statement.HasValue then inference.TypeOf(statement.children(0), scope, Methods) else IteratedType
 	let nested = scope.With("outer", scope.TypeOf("value"))
-	nested.With("value", inference.types.ElementType(iterated)).With("index", "Number")
+	nested.With("value", Element(iterated)).With("index", "Number")
+Element(iterated Text) Text
+	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Number)") is "List(Text, Number)"
+	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Text)") is "Texts"
+	let isDictionary = iterated.StartsWith("Dictionary(")
+	isDictionary then Item(iterated.Substring(11, iterated.Length - 12)) else inference.types.ElementType(iterated)
+Item(arguments Text) Text
+	MethodBodies.Item("Number") is "Number"
+	MethodBodies.Item("Text, Text") is "Texts"
+	MethodBodies.Item("Text, Number") is "List(Text, Number)"
+	MethodBodies.Item("List(Text, Number), List(Text, Number)") is "List(Text, Number)s"
+	if arguments.IndexOf(", ") < 0
+		return arguments
+	let half = ((arguments.Length - 2) / 2).Floor
+	let first = arguments.Substring(0, half)
+	first is arguments.Substring(half + 2, half) then first + "s" else "List(" + arguments + ")"
+Pair(type Text) Texts
+	MethodBodies.Pair("List(Text, Number)") is ("Text", "Number")
+	MethodBodies.Pair("List(List(Text, Number))").Length is 0
+	let comma = type.IndexOf(", ")
+	let isPair = type.StartsWith("List(") and (comma > 0) and (type.Substring(5, comma - 5).IndexOf("(") < 0)
+	isPair then (type.Substring(5, comma - 5), type.Substring(comma + 2, type.Length - comma - 3)) else List(Text)
 Declare(statement SyntaxNode, scope Scope) Scope
 	if statement.Kind is not "Declaration"
 		return scope

@@ -85,10 +85,13 @@ ImplicitValueType(name Text, scope Scope) Text
 	type is "Unknown" then "" else type
 OperatorType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.OperatorType(SyntaxNode("Not", ""), NoScope, NoShape) is "Boolean"
+	NoInference.OperatorType(Pairs.children(0), NoScope, NoShape) is "List(Number, Text)"
 	if node.Kind is "Not"
 		return "Boolean"
 	if node.Kind is "Binary"
 		return BinaryType(node, scope, current)
+	if (node.Kind is "List") and (node.children.Length is 2)
+		return MethodBodies.Item(TypeOf(node.children(0), scope, current) + ", " + TypeOf(node.children(1), scope, current))
 	if node.Kind is "List"
 		return TypeOf(node.children(0), scope, current) + "s"
 	node.Kind is "Negate" then TypeOf(node.children(0), scope, current) else "Unknown"

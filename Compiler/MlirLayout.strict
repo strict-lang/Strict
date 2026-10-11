@@ -13,8 +13,11 @@ Represented(kind Text) Text
 	Wrapping.Represented("Angle") is "Number"
 	Wrapping.Represented("Shape") is "Shape"
 	Wrapping.Represented("Texts") is "List(Text)"
+	Wrapping.Represented("Dictionary(Text, Number)") is "List(List(Text, Number))"
 	if kind is in ("Texts", "Numbers", "Booleans")
 		return "List(" + kind.Substring(0, kind.Length - 1) + ")"
+	if kind.StartsWith("Dictionary(")
+		return "List(" + Represented(MethodBodies.Item(kind.Substring(11, kind.Length - 12))) + ")"
 	let wrapped = Wrapped(kind)
 	wrapped is "" then kind else Represented(wrapped)
 Wrapped(typeName Text) Text

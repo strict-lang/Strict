@@ -131,8 +131,22 @@ ConstantKind(literal Runtime/VmValue, texts Texts) Text
 	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfText("b")), ("a", "b")) is "List(Text)"
 	Graded.ConstantKind(VmValue.OfNumber(1), List(Text)) is "Number"
 	Graded.ConstantKind(VmValue.OfList(List(VmValue)), ("Strict/List(Mutable(Text))")) is "List(Text)"
+	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfNumber(1)), List(Text)) is "List(Text, Number)"
 	if literal.kind is not "List"
 		return literal.kind
 	if literal.items.Length is 0
 		return texts.Length is 0 then "List(Number)" else TypeEntry.ShortName(texts(0))
-	"List(" + ConstantKind(literal.items.First, List(Text)) + ")"
+	let first = ConstantKind(literal.items.First, List(Text))
+	let last = ConstantKind(literal.items.Last, List(Text))
+	"List(" + first + ((literal.items.Length is 2) and (last is not first) then ", " + last else "") + ")"
+ElementSuffix(kind Text) Text
+	Graded.ElementSuffix("List(Text, Number)") is "pair_text_number"
+	Graded.ElementSuffix("List(Text)") is "text"
+	Graded.ElementSuffix("List(Shape)") is ""
+	let pair = MethodBodies.Pair(kind)
+	let layout = MlirLayout(function)
+	let element = layout.Represented(pair.Length is 0 then ElementKind(kind) else pair(0))
+	let last = pair.Length is 0 then element else layout.Represented(pair(1))
+	if (element is not in ("Text", "Number")) or (last is not in ("Text", "Number"))
+		return ""
+	pair.Length is 0 then element.Lower else "pair_" + element.Lower + "_" + last.Lower
