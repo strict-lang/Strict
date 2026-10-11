@@ -51,12 +51,12 @@ The best way to learn how any expression or base type works is to look at the co
 ## Command line
 Strict is written in Strict and compiles itself to a native executable, no .NET or other runtime is needed (the C# implementation that bootstrapped it lives on the `dotnet` branch).
 ```
-strict run Examples/Sum.strict 5 10 20    run on the Strict VM, the fastest, everything stays in memory
+strict Examples/Sum.strict 5 10 20        run on the Strict VM, the fastest, everything stays in memory
 strict build Examples/Sum.strict          run the tests, then the native executable (on Windows also the Linux one through WSL)
 strict test Examples/Sum.strict           run the inline tests of every method on the Strict VM
 strict check Examples                     validate a folder (type rules, unused members, limits)
 ```
-`strict` is `strict.exe` (on Linux `strict`) in this folder, next to the base types, put this folder on the PATH to use it everywhere. `strict help` explains each command, `strict version` shows the version number and when this `strict` was built. Without a command a file is built. A build keeps the executable and its `.mlir` (the input of the tools, also the bootstrap seed), the other tool files are removed. Building a type without a `Run` method compiles its tests natively instead, runs them and removes the test executable again (this is how the native code generator is tested). Types are looked up in the current folder first (in a project folder also in all its sub folders, so `Shapes/Square.strict` is just `Square`), then next to `strict.exe` (the base types and packages like `Math`). A folder after the file overrides where the base types are. Exit codes: 0 success, `test` and `build` return the number of failed tests (128 when a test executable crashed), 2 wrong usage or a missing file.
+`strict` is `strict.exe` (on Linux `strict`) in this folder, next to the base types, put this folder on the PATH to use it everywhere. `strict` alone explains each command, `strict version` shows the version number and when this `strict` was built. Without a command the file is run, like `python file.py`. A build keeps the executable and its `.mlir` (the input of the tools, also the bootstrap seed), the other tool files are removed. A type without a `Run` method builds its tests instead: `strict build Character.strict` gives `Character.test.exe`, its exit code is the number of failed tests (this is how the native code generator is tested). Types are looked up in the current folder first (in a project folder also in all its sub folders, so `Shapes/Square.strict` is just `Square`), then next to `strict.exe` (the base types and packages like `Math`). A folder after the file overrides where the base types are. Exit codes: 0 success, `test` and `build` return the number of failed tests, 2 wrong usage or a missing file.
 
 Needed tools: `mlir-opt` and `mlir-translate` (LLVM MLIR, on Windows the msys64 ucrt64 package `mingw-w64-ucrt-x86_64-mlir`) and `clang` (LLVM 22). When they are missing `strict` says so and starts installing them (Windows: winget and pacman in a new window, Linux: the LLVM 22 release archive into `Tools/`).
 
@@ -81,7 +81,7 @@ Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR
 | `Expressions` | Tokenizer, syntax tree, statements, header tokens, type shapes, known types and type inference over all packages |
 | `Validators` | Unused and never changed variables, constant folding, limits (`ValidateCheck` behind `strict check`) |
 | `Bytecode` | Compiles a type into register based instructions (`FileCompiler`), inlines constants, removes tests, links used types, writes `.strictbinary` |
-| `Runtime` | The Strict VM running those instructions (`Execute` behind `strict run`) |
+| `Runtime` | The Strict VM running those instructions (`Execute` behind `strict <file>` and `strict test`) |
 | `Compiler` | Instructions to MLIR, `NativeRuntime*.mlir` (texts, lists, files, processes, collector), mlir-opt, mlir-translate and clang |
 
 Native model: every value is one 64-bit slot, numbers are doubles, texts, lists and instances are pointer bits, Error values carry a NaN tag in the top bits so `x is Error` works for a value of any type. A type with one member is that member (`Name` is its text, `Degrees` its number), other instances are heap blocks with one slot per member. Lists append in place while they are the newest version. Memory is managed by a conservative mark-sweep collector (64 KB pages, size classes, interior pointers, collections after 4 MB or 8x the live data), 1M loop iterations on the Strict VM use 9 MB.
