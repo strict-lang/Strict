@@ -28,10 +28,11 @@ Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
 	Plain.Indexed(SyntaxNode("Call", "failed", One), Failed).instructions.Last.kind is InstructionType.Invoke
 	Plain.Indexed(SyntaxNode("Call", "named", One), Named).instructions.Last.kind is InstructionType.Invoke
-	let named = SyntaxNode("Identifier", node.text)
-	if (node.Kind is "Call") and values.TypeOf(named, block).StartsWith("Dictionary(")
-		return values.Expression(SyntaxNode("MethodCall", "get", (named, node.children(0))), block)
-	let isError = (node.Kind is "Call") and (block.scope.TypeOf(node.text) is "Error")
+	let isCall = node.Kind is "Call"
+	let named = isCall then SyntaxNode("Identifier", node.text) else SyntaxNode("Member", node.text, node.children(0))
+	if values.TypeOf(named, block).StartsWith("Dictionary(")
+		return values.Expression(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
+	let isError = isCall and (block.scope.TypeOf(node.text) is "Error")
 	isError then WithValue(node, block) else Element(node, block)
 WithValue(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions(0).texts is ("failed")

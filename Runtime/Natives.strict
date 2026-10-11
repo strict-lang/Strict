@@ -30,8 +30,15 @@ Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 	if name is "get"
 		return found >= 0 then pairs.items(found).items.Last else VmValue.OfError("KeyNotFound")
 	if name is "Remove"
-		return found >= 0 then VmValue.OfList(pairs.items - pairs.items(found)) else pairs
+		return found >= 0 then Unpaired(pairs, found) else pairs
 	found >= 0 then VmValue.OfError("DuplicateKey") else VmValue.OfList(pairs.items + VmValue.OfList(arguments))
+Unpaired(pairs VmValue, position Number) VmValue
+	Shapes.Unpaired(Pairs, 0).items.First.items.First.number is 2
+	mutable kept = List(Mutable(VmValue))
+	for pairs.items
+		if index is not position
+			kept.Add(value)
+	VmValue.OfList(kept)
 Converted(instance VmValue, target Text) VmValue
 	Shapes.Converted(VmValue.OfNumber(2), "Strict/Text").text is "2"
 	Shapes.Converted(VmValue.OfText("5"), "Strict/Number").number is 5

@@ -975,20 +975,23 @@
     return %f : f64
   }
   func.func private @strict_list_new(%capacity: f64, %length: f64) -> f64 {
-    %headers = arith.constant 40 : i64
+    %headers = arith.constant 48 : i64
     %eight = arith.constant 8.0 : f64
     %bytesf = arith.mulf %capacity, %eight : f64
     %bytes = arith.fptosi %bytesf : f64 to i64
     %total = arith.addi %headers, %bytes : i64
     %view = func.call @strict_alloc(%total) : (i64) -> !llvm.ptr
     %holder = llvm.getelementptr %view[16] : (!llvm.ptr) -> !llvm.ptr, i8
-    %items = llvm.getelementptr %view[40] : (!llvm.ptr) -> !llvm.ptr, i8
+    %items = llvm.getelementptr %view[48] : (!llvm.ptr) -> !llvm.ptr, i8
     %itemsbits = func.call @strict_bits(%items) : (!llvm.ptr) -> f64
     llvm.store %itemsbits, %holder : f64, !llvm.ptr
     %used = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %length, %used : f64, !llvm.ptr
     %cap = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %capacity, %cap : f64, !llvm.ptr
+    %unindexed = arith.constant 0.0 : f64
+    %index = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %unindexed, %index : f64, !llvm.ptr
     llvm.store %length, %view : f64, !llvm.ptr
     %holderbits = func.call @strict_bits(%holder) : (!llvm.ptr) -> f64
     %viewholder = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -998,7 +1001,7 @@
   }
   llvm.mlir.global internal constant @strict_open_paren("(\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_close_paren(")\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal @strict_empty_holder(dense<0.0> : tensor<3xf64>) : !llvm.array<3 x f64>
+  llvm.mlir.global internal @strict_empty_holder(dense<0.0> : tensor<4xf64>) : !llvm.array<4 x f64>
   llvm.mlir.global internal @strict_empty_view(dense<0.0> : tensor<2xf64>) : !llvm.array<2 x f64>
   func.func private @strict_increment(%self: f64, %amount: f64) -> f64 {
     %result = arith.addf %self, %amount : f64
@@ -1412,26 +1415,150 @@
     %result = func.call @strict_list_scalar(%list, %number, %yes) : (f64, f64, i1) -> f64
     return %result : f64
   }
-  func.func private @strict_dictionary_find(%dictionary: f64, %key: f64, %isText: i1) -> i64 {
+  func.func private @strict_hash_key(%key: f64, %isText: i1) -> i64 {
+    %zero = arith.constant 0.0 : f64
     %start = arith.constant 0 : i64
-    %step = arith.constant 1 : i64
+    %unset = arith.cmpf oeq, %key, %zero : f64
+    cf.cond_br %unset, ^mixed(%start : i64), ^kind
+  ^kind:
+    cf.cond_br %isText, ^text, ^number
+  ^text:
+    %pointer = func.call @strict_ptr(%key) : (f64) -> !llvm.ptr
+    cf.br ^loop(%pointer, %start : !llvm.ptr, i64)
+  ^loop(%at: !llvm.ptr, %hash: i64):
+    %byte = llvm.load %at : !llvm.ptr -> i8
+    %end = arith.constant 0 : i8
+    %done = arith.cmpi eq, %byte, %end : i8
+    cf.cond_br %done, ^mixed(%hash : i64), ^next
+  ^next:
+    %code = arith.extui %byte : i8 to i64
+    %thirtyOne = arith.constant 31 : i64
+    %scaled = arith.muli %hash, %thirtyOne : i64
+    %added = arith.addi %scaled, %code : i64
+    %following = llvm.getelementptr %at[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    cf.br ^loop(%following, %added : !llvm.ptr, i64)
+  ^number:
+    %bits = arith.bitcast %key : f64 to i64
+    cf.br ^mixed(%bits : i64)
+  ^mixed(%value: i64):
+    %golden = arith.constant -7046029254386353131 : i64
+    %product = arith.muli %value, %golden : i64
+    %shift = arith.constant 29 : i64
+    %high = arith.shrui %product, %shift : i64
+    %result = arith.xori %product, %high : i64
+    return %result : i64
+  }
+  func.func private @strict_dictionary_index(%dictionary: f64, %isText: i1) -> !llvm.ptr {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %eight = arith.constant 8 : i64
+    %view = func.call @strict_ptr(%dictionary) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %usedCount = llvm.load %usedSlot : !llvm.ptr -> f64
+    %used = arith.fptosi %usedCount : f64 to i64
+    %indexSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %indexBits = llvm.load %indexSlot : !llvm.ptr -> f64
+    %needed = arith.muli %used, %two : i64
+    %missing = arith.cmpf oeq, %indexBits, %zero : f64
+    cf.cond_br %missing, ^build, ^check
+  ^check:
+    %existing = func.call @strict_ptr(%indexBits) : (f64) -> !llvm.ptr
+    %slots = llvm.load %existing : !llvm.ptr -> i64
+    %countSlot = llvm.getelementptr %existing[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %shrunk = arith.cmpi sgt, %count, %used : i64
+    %crowded = arith.cmpi sge, %needed, %slots : i64
+    %stale = arith.ori %shrunk, %crowded : i1
+    cf.cond_br %stale, ^build, ^extend(%existing, %count : !llvm.ptr, i64)
+  ^build:
+    %sixteen = arith.constant 16 : i64
+    cf.br ^size(%sixteen : i64)
+  ^size(%candidate: i64):
+    %small = arith.cmpi sle, %candidate, %needed : i64
+    %doubled = arith.muli %candidate, %two : i64
+    cf.cond_br %small, ^size(%doubled : i64), ^allocate(%candidate : i64)
+  ^allocate(%size: i64):
+    %entries = arith.addi %size, %two : i64
+    %bytes = arith.muli %entries, %eight : i64
+    %fresh = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
+    %clear = arith.constant 0 : i32
+    %cleared = llvm.call @memset(%fresh, %clear, %bytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    llvm.store %size, %fresh : i64, !llvm.ptr
+    %freshBits = func.call @strict_bits(%fresh) : (!llvm.ptr) -> f64
+    llvm.store %freshBits, %indexSlot : f64, !llvm.ptr
+    cf.br ^extend(%fresh, %none : !llvm.ptr, i64)
+  ^extend(%table: !llvm.ptr, %position: i64):
+    %more = arith.cmpi slt, %position, %used : i64
+    cf.cond_br %more, ^insert, ^done
+  ^insert:
+    %items = func.call @strict_list_items(%dictionary) : (f64) -> !llvm.ptr
+    %pairSlot = llvm.getelementptr %items[%position] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %pair = llvm.load %pairSlot : !llvm.ptr -> f64
+    %key = func.call @strict_list_get(%pair, %zero) : (f64, f64) -> f64
+    %hash = func.call @strict_hash_key(%key, %isText) : (f64, i1) -> i64
+    %tableSize = llvm.load %table : !llvm.ptr -> i64
+    %mask = arith.subi %tableSize, %one : i64
+    %first = arith.andi %hash, %mask : i64
+    cf.br ^probe(%first : i64)
+  ^probe(%slot: i64):
+    %offset = arith.addi %slot, %two : i64
+    %entrySlot = llvm.getelementptr %table[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %entry = llvm.load %entrySlot : !llvm.ptr -> i64
+    %free = arith.cmpi eq, %entry, %none : i64
+    %following = arith.addi %slot, %one : i64
+    %wrapped = arith.andi %following, %mask : i64
+    cf.cond_br %free, ^place, ^probe(%wrapped : i64)
+  ^place:
+    %stored = arith.addi %position, %one : i64
+    llvm.store %stored, %entrySlot : i64, !llvm.ptr
+    cf.br ^extend(%table, %stored : !llvm.ptr, i64)
+  ^done:
+    %countTarget = llvm.getelementptr %table[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %used, %countTarget : i64, !llvm.ptr
+    return %table : !llvm.ptr
+  }
+  func.func private @strict_dictionary_find(%dictionary: f64, %key: f64, %isText: i1) -> i64 {
     %none = arith.constant -1 : i64
+    %empty = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
     %zero = arith.constant 0.0 : f64
     %length = func.call @strict_list_length(%dictionary) : (f64) -> f64
     %count = arith.fptosi %length : f64 to i64
-    cf.br ^loop(%start : i64)
-  ^loop(%index: i64):
-    %more = arith.cmpi slt, %index, %count : i64
-    cf.cond_br %more, ^body, ^missing
-  ^body:
+    %isEmpty = arith.cmpi eq, %count, %empty : i64
+    cf.cond_br %isEmpty, ^missing, ^search
+  ^search:
+    %table = func.call @strict_dictionary_index(%dictionary, %isText) : (f64, i1) -> !llvm.ptr
     %items = func.call @strict_list_items(%dictionary) : (f64) -> !llvm.ptr
-    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    %pair = llvm.load %slot : !llvm.ptr -> f64
+    %hash = func.call @strict_hash_key(%key, %isText) : (f64, i1) -> i64
+    %size = llvm.load %table : !llvm.ptr -> i64
+    %mask = arith.subi %size, %one : i64
+    %first = arith.andi %hash, %mask : i64
+    cf.br ^probe(%first : i64)
+  ^probe(%slot: i64):
+    %offset = arith.addi %slot, %two : i64
+    %entrySlot = llvm.getelementptr %table[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %entry = llvm.load %entrySlot : !llvm.ptr -> i64
+    %following = arith.addi %slot, %one : i64
+    %wrapped = arith.andi %following, %mask : i64
+    %free = arith.cmpi eq, %entry, %empty : i64
+    cf.cond_br %free, ^missing, ^candidate
+  ^candidate:
+    %position = arith.subi %entry, %one : i64
+    %visible = arith.cmpi slt, %position, %count : i64
+    cf.cond_br %visible, ^compare, ^probe(%wrapped : i64)
+  ^compare:
+    %pairSlot = llvm.getelementptr %items[%position] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %pair = llvm.load %pairSlot : !llvm.ptr -> f64
     %pairKey = func.call @strict_list_get(%pair, %zero) : (f64, f64) -> f64
     %matched = func.call @strict_list_matches(%pairKey, %key, %isText) : (f64, f64, i1) -> i1
-    %next = arith.addi %index, %step : i64
-    cf.cond_br %matched, ^found(%index : i64), ^loop(%next : i64)
-  ^found(%position: i64):
+    cf.cond_br %matched, ^found, ^probe(%wrapped : i64)
+  ^found:
     return %position : i64
   ^missing:
     return %none : i64

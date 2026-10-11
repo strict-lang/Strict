@@ -4,3 +4,9 @@ Expensive Texts
 	for prices
 		if value.Value > 2
 			value.Key
+Without(fruit Text) Dictionary(Text, Number)
+	FruitPrices(Dictionary(("Apple", 3), ("Pear", 2))).Without("Apple") is Dictionary(("Pear", 2))
+	constant fruits = FruitPrices(Dictionary(("Apple", 3), ("Pear", 2), ("Plum", 5)))
+	fruits.Without("Pear").Length is 2
+	fruits.prices("Pear") is 2
+	prices.Remove(fruit)
