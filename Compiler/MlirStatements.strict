@@ -18,9 +18,9 @@ Binary(entry InstructionEntry) Texts
 	Copy.Binary(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))).Length is 4
 	if MlirTexts(function, position).IsSum
 		return MlirTexts(function, position).Concatenated(entry)
-	let collection = MlirLists(function, position)
-	if collection.IsOperation
-		return collection.Operated(entry)
+	let operators = MlirListOperators(function, position)
+	if operators.IsOperation
+		return operators.Operated(entry)
 	Calculated(entry)
 Temp(suffix Text) Text
 	Copy.Temp("c") is "%t0c"

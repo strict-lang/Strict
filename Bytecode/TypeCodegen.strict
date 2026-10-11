@@ -109,6 +109,7 @@ Default(header HeaderTokens, position Number) List(InstructionEntry)
 	Initial(ConstantFolding(Generator.target.TypeName, Generator.inference).Folded(node))
 Concrete(type Text) Text
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "Numbers"
+	TypeCodegen("Strict/List(Text)", List(Text), NoTypes, List(Text)).Concrete("List") is "Texts"
 	Hello.Concrete("Generic") is "Generic"
 	Hello.Concrete("Iterator(Generic)") is "Iterator"
 	let open = fullName.IndexOf("(")
@@ -117,4 +118,4 @@ Concrete(type Text) Text
 	let element = fullName.Substring(open + 1, fullName.Length - open - 2)
 	if type is "Generic"
 		return element
-	type is "Generics" then element + "s" else type
+	type is in ("Generics", "List") then element + "s" else type

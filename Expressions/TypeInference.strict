@@ -79,15 +79,20 @@ OperatorType(node SyntaxNode, scope Scope, current Scope) Text
 	node.Kind is "Negate" then TypeOf(node.children(0), scope, current) else "Unknown"
 BinaryType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.BinaryType(ToText, NoScope, NoShape) is "Text"
+	NoInference.BinaryType(SyntaxParser(Tokenizer("3 + (4)").Tokens).Parse, NoScope, NoShape) is "Numbers"
 	if node.text is "to"
 		return ConstructedType(node.children(1))
 	if node.text is in ("then", "else")
 		return ConditionalType(node, scope, current)
 	if node.children(0).Kind is "Missing"
 		return TypeOf(node.children(1), scope, current)
-	if node.Precedence < 11
-		return "Boolean"
+	node.Precedence < 11 then "Boolean" else ArithmeticType(node, scope, current)
+ArithmeticType(node SyntaxNode, scope Scope, current Scope) Text
+	NoInference.ArithmeticType(SyntaxParser(Tokenizer("2 * 3").Tokens).Parse, NoScope, NoShape) is "Number"
 	let left = TypeOf(node.children(0), scope, current)
+	let right = TypeOf(node.children(1), scope, current)
+	if (node.text is "+") and (left is "Number") and types.IsPlural(right)
+		return right
 	let operatorType = types.MemberType(left, node.text)
 	operatorType is "Unknown" then left else operatorType
 ConditionalType(node SyntaxNode, scope Scope, current Scope) Text

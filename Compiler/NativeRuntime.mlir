@@ -34,6 +34,7 @@
   llvm.mlir.global internal constant @strict_gc_sizes(dense<[16, 32, 48, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512, 640, 768, 896, 1024, 1280, 1536, 1792, 2048, 2560, 3072, 3584, 4096, 6144, 8192, 12288, 16384]> : tensor<32xi64>) : !llvm.array<32 x i64>
   llvm.mlir.global internal constant @strict_gc_classes(dense<[0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 19, 19]> : tensor<65xi8>) : !llvm.array<65 x i8>
   llvm.mlir.global internal constant @strict_gc_out_of_memory("Strict: out of memory\0A\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_dimensions("listsHaveDifferentDimensions\00") : !llvm.array<29 x i8>
   func.func private @strict_gc_init(%stack: !llvm.ptr) {
     %tableBytes = arith.constant 8388608 : i64
     %heapBytes = arith.constant 68719476736 : i64
@@ -1227,6 +1228,145 @@
     %used = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %total, %used : f64, !llvm.ptr
     return %copy : f64
+  }
+  func.func private @strict_list_prepend(%element: f64, %list: f64) -> f64 {
+    %nothing = arith.constant 0.0 : f64
+    %single = func.call @strict_list_add(%nothing, %element) : (f64, f64) -> f64
+    %result = func.call @strict_list_concat(%single, %list) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_without(%left: f64, %right: f64, %isText: i1) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %copy = func.call @strict_list_copy(%left, %zero) : (f64, f64) -> f64
+    %length = func.call @strict_list_length(%right) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    cf.br ^loop(%start, %copy : i64, f64)
+  ^loop(%index: i64, %current: f64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %items = func.call @strict_list_items(%right) : (f64) -> !llvm.ptr
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %item = llvm.load %slot : !llvm.ptr -> f64
+    %removed = func.call @strict_list_remove(%current, %item, %isText) : (f64, f64, i1) -> f64
+    %next = arith.addi %index, %step : i64
+    cf.br ^loop(%next, %removed : i64, f64)
+  ^done:
+    return %current : f64
+  }
+  func.func private @strict_list_without_number(%left: f64, %right: f64) -> f64 {
+    %isText = arith.constant false
+    %result = func.call @strict_list_without(%left, %right, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_without_text(%left: f64, %right: f64) -> f64 {
+    %isText = arith.constant true
+    %result = func.call @strict_list_without(%left, %right, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_error_named(%name: !llvm.ptr) -> f64 {
+    %sixteen = arith.constant 16 : i64
+    %block = func.call @strict_alloc(%sixteen) : (i64) -> !llvm.ptr
+    %nameBits = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    llvm.store %nameBits, %block : f64, !llvm.ptr
+    %traces = func.call @strict_list_empty() : () -> f64
+    %tracesSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %traces, %tracesSlot : f64, !llvm.ptr
+    %error = func.call @strict_error_bits(%block) : (!llvm.ptr) -> f64
+    return %error : f64
+  }
+  func.func private @strict_list_zip(%left: f64, %right: f64, %divide: i1, %broadcast: i1) -> f64 {
+    %one = arith.constant 1.0 : f64
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %leftLength = func.call @strict_list_length(%left) : (f64) -> f64
+    %rightLength = func.call @strict_list_length(%right) : (f64) -> f64
+    %same = arith.cmpf oeq, %leftLength, %rightLength : f64
+    %leftSingle = arith.cmpf oeq, %leftLength, %one : f64
+    %rightSingle = arith.cmpf oeq, %rightLength, %one : f64
+    %single = arith.ori %leftSingle, %rightSingle : i1
+    %spread = arith.andi %broadcast, %single : i1
+    %fits = arith.ori %same, %spread : i1
+    cf.cond_br %fits, ^combine, ^mismatch
+  ^mismatch:
+    %name = llvm.mlir.addressof @strict_dimensions : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
+  ^combine:
+    %longer = arith.cmpf ogt, %leftLength, %rightLength : f64
+    %length = arith.select %longer, %leftLength, %rightLength : f64
+    %result = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    cf.br ^loop(%start : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %leftAt = arith.select %leftSingle, %start, %index : i64
+    %rightAt = arith.select %rightSingle, %start, %index : i64
+    %leftItems = func.call @strict_list_items(%left) : (f64) -> !llvm.ptr
+    %leftSlot = llvm.getelementptr %leftItems[%leftAt] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %first = llvm.load %leftSlot : !llvm.ptr -> f64
+    %rightItems = func.call @strict_list_items(%right) : (f64) -> !llvm.ptr
+    %rightSlot = llvm.getelementptr %rightItems[%rightAt] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %second = llvm.load %rightSlot : !llvm.ptr -> f64
+    %product = arith.mulf %first, %second : f64
+    %quotient = arith.divf %first, %second : f64
+    %value = arith.select %divide, %quotient, %product : f64
+    %resultItems = func.call @strict_list_items(%result) : (f64) -> !llvm.ptr
+    %target = llvm.getelementptr %resultItems[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %value, %target : f64, !llvm.ptr
+    %next = arith.addi %index, %step : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return %result : f64
+  }
+  func.func private @strict_list_times(%left: f64, %right: f64) -> f64 {
+    %no = arith.constant false
+    %result = func.call @strict_list_zip(%left, %right, %no, %no) : (f64, f64, i1, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_divided(%left: f64, %right: f64) -> f64 {
+    %yes = arith.constant true
+    %result = func.call @strict_list_zip(%left, %right, %yes, %yes) : (f64, f64, i1, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_scalar(%list: f64, %number: f64, %divide: i1) -> f64 {
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %result = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    cf.br ^loop(%start : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %element = llvm.load %slot : !llvm.ptr -> f64
+    %product = arith.mulf %element, %number : f64
+    %quotient = arith.divf %element, %number : f64
+    %value = arith.select %divide, %quotient, %product : f64
+    %resultItems = func.call @strict_list_items(%result) : (f64) -> !llvm.ptr
+    %target = llvm.getelementptr %resultItems[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %value, %target : f64, !llvm.ptr
+    %next = arith.addi %index, %step : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return %result : f64
+  }
+  func.func private @strict_list_times_number(%list: f64, %number: f64) -> f64 {
+    %no = arith.constant false
+    %result = func.call @strict_list_scalar(%list, %number, %no) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_divided_number(%list: f64, %number: f64) -> f64 {
+    %yes = arith.constant true
+    %result = func.call @strict_list_scalar(%list, %number, %yes) : (f64, f64, i1) -> f64
+    return %result : f64
   }
   func.func private @strict_text_length(%text: f64) -> f64 {
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr

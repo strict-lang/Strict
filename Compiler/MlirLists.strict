@@ -7,8 +7,6 @@ constant Written = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFuncti
 constant Pair = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))
 constant Removal = InstructionEntry.Named(InstructionType.InvokeRemove, 1, "numbers")
 constant Words = MemberEntry("words", "Strict/List(Text)", List(InstructionEntry), false)
-constant WordSteps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "words"), InstructionEntry.LoadNumber(1, 3), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
-constant Worded = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Words, "None", WordSteps))
 Temp(suffix Text) Text
 	MlirLists(Listed, 2).Temp("l") is "%t2l"
 	"%t" + position + suffix
@@ -107,29 +105,3 @@ Copied(entry InstructionEntry) Texts
 	let name = "%v_" + entry.texts(0)
 	let copy = MlirMemory(function, position).Called(Temp("c"), "strict_list_copy", (Temp("l"), "%zero"))
 	(function.Load(Temp("l"), name), copy, function.Store(Temp("c"), name))
-IsOperation Boolean
-	MlirLists(Listed, 4).IsOperation is true
-	MlirLists(Listed, 1).IsOperation is false
-	let entry = function.method.instructions(position)
-	let left = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, entry.payload(1)))
-	(entry.kind is InstructionType.Add) and left.StartsWith("List(")
-Operated(entry InstructionEntry) Texts
-	MlirLists(Listed, 4).Operated(Steps(4)).Length is 4
-	Text.Combine(MlirLists(Listed, 5).Operated(Steps(5)), "").IndexOf("strict_list_concat") > 0 is true
-	let right = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, entry.payload(2)))
-	let isList = right.StartsWith("List(")
-	let name = isList then "strict_list_concat" else "strict_list_add"
-	let call = MlirMemory(function, position).Called(Temp("c"), name, (Temp("a"), Temp("b")))
-	let loads = List(Text) + function.Load(Temp("a"), "%r" + entry.payload(1)) + RightOperand(entry, isList)
-	loads + call + function.Store(Temp("c"), "%r" + entry.payload(3))
-RightOperand(entry InstructionEntry, isList Boolean) Texts
-	Text.Combine(MlirLists(Worded, 2).RightOperand(WordSteps(2), false)).IndexOf("@strict_number_text(") > 0 is true
-	MlirLists(Listed, 4).RightOperand(Steps(4), false).Length is 1
-	let kinds = MlirKinds(function)
-	let right = kinds.KindOf(position, entry.payload(2))
-	let isNumbers = (isList then kinds.ElementKind(right) else right) is "Number"
-	let needsTexts = isNumbers and (kinds.ElementKind(kinds.KindOf(position, entry.payload(1))) is "Text")
-	let helper = isList then "strict_list_texts" else "strict_number_text"
-	let raw = function.Load(Temp(needsTexts then "br" else "b"), "%r" + entry.payload(2))
-	let converted = MlirMemory(function, position).Called(Temp("b"), helper, List(Text) + Temp("br"))
-	needsTexts then (raw, converted) else List(Text) + raw

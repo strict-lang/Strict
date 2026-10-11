@@ -1,0 +1,57 @@
+has function MlirFunction
+has position Number
+constant Operators = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
+constant Steps = MlirLists.Listed.method.instructions
+constant WordSteps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "words"), InstructionEntry.LoadNumber(1, 3), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
+constant Worded = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Words, "None", WordSteps))
+constant Arithmetic = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Subtract, (0, 1, 2)), InstructionEntry.Binary(InstructionType.Multiply, (0, 0, 3)), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 4)), InstructionEntry.Binary(InstructionType.Add, (1, 0, 5)))
+constant Mixed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", Arithmetic))
+IsOperation Boolean
+	MlirListOperators(MlirLists.Listed, 4).IsOperation is true
+	MlirListOperators(MlirLists.Listed, 1).IsOperation is false
+	MlirListOperators(Mixed, 5).IsOperation is true
+	let entry = function.method.instructions(position)
+	let isList = IsList(entry.payload(1)) or (entry.kind is InstructionType.Add) and IsList(entry.payload(2))
+	isList and (entry.kind is in Operators)
+IsList(register Number) Boolean
+	MlirListOperators(Mixed, 2).IsList(0) is true
+	MlirListOperators(Mixed, 2).IsList(1) is false
+	MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register)).StartsWith("List(")
+ElementSuffix(register Number) Text
+	MlirListOperators(Mixed, 2).ElementSuffix(0) is "number"
+	MlirListOperators(Worded, 2).ElementSuffix(0) is "text"
+	MlirKinds(function).ElementKind(MlirKinds(function).KindOf(position, register)) is "Text" then "text" else "number"
+Helper(entry InstructionEntry) Text
+	MlirListOperators(Mixed, 2).Helper(Arithmetic(2)) is "strict_list_remove_number"
+	MlirListOperators(Mixed, 3).Helper(Arithmetic(3)) is "strict_list_times"
+	MlirListOperators(Mixed, 4).Helper(Arithmetic(4)) is "strict_list_divided_number"
+	MlirListOperators(Mixed, 5).Helper(Arithmetic(5)) is "strict_list_prepend"
+	let isList = IsList(entry.payload(2))
+	if entry.kind is InstructionType.Subtract
+		return (isList then "strict_list_without_" else "strict_list_remove_") + ElementSuffix(entry.payload(1))
+	if entry.kind is InstructionType.Add
+		let appended = isList then "strict_list_concat" else "strict_list_add"
+		return IsList(entry.payload(1)) then appended else "strict_list_prepend"
+	let operation = entry.kind is InstructionType.Multiply then "strict_list_times" else "strict_list_divided"
+	isList then operation else operation + "_number"
+Operated(entry InstructionEntry) Texts
+	MlirListOperators(MlirLists.Listed, 4).Operated(Steps(4)).Length is 4
+	Text.Combine(MlirListOperators(MlirLists.Listed, 5).Operated(Steps(5)), "").IndexOf("strict_list_concat") > 0 is true
+	let names = MlirLists(function, position)
+	let result = names.Temp("c")
+	let call = MlirMemory(function, position).Called(result, Helper(entry), (names.Temp("a"), names.Temp("b")))
+	let left = function.Load(names.Temp("a"), "%r" + entry.payload(1))
+	let right = RightOperand(entry, IsList(entry.payload(2)))
+	(List(Text) + left + right) + call + function.Store(result, "%r" + entry.payload(3))
+RightOperand(entry InstructionEntry, isList Boolean) Texts
+	Text.Combine(MlirListOperators(Worded, 2).RightOperand(WordSteps(2), false)).IndexOf("strict_number_text") > 0 is true
+	MlirListOperators(MlirLists.Listed, 4).RightOperand(Steps(4), false).Length is 1
+	let kinds = MlirKinds(function)
+	let right = kinds.KindOf(position, entry.payload(2))
+	let isNumbers = (isList then kinds.ElementKind(right) else right) is "Number"
+	let needsTexts = isNumbers and (kinds.ElementKind(kinds.KindOf(position, entry.payload(1))) is "Text")
+	let helper = isList then "strict_list_texts" else "strict_number_text"
+	let names = MlirLists(function, position)
+	let raw = function.Load(names.Temp(needsTexts then "br" else "b"), "%r" + entry.payload(2))
+	let converted = MlirMemory(function, position).Called(names.Temp("b"), helper, List(Text) + names.Temp("br"))
+	needsTexts then (raw, converted) else List(Text) + raw

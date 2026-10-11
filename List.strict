@@ -85,7 +85,7 @@ Key Generic
 	("A", "Apple").Key is "A"
 	elements(0)
 Value Generic
-	("A", "Apple").Key is "Apple"
+	("A", "Apple").Value is "Apple"
 	elements(1)
 in(other Generic) Boolean
 	3 is in (1, 2, 3)
@@ -121,4 +121,4 @@ Reverse List
 	(1, 2, 3).Reverse is (3, 2, 1)
 	(5, 10, 5).Reverse is (5, 10, 5)
 	for Range(0, Length).Reverse
-		outer.value(index)
+		elements(value)
