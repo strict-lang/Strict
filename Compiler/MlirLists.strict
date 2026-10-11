@@ -63,12 +63,17 @@ Appended(entry InstructionEntry) Texts
 	let element = function.Load(Temp("e"), "%r" + entry.payload(0))
 	(function.Load(Temp("l"), name), element, added, function.Store(Temp("n"), name))
 Indexed(entry InstructionEntry) Texts
-	MlirLists(Listed, 2).Indexed(Steps(2)).Length is 4
+	MlirLists(Listed, 2).Indexed(Steps(2)).Length is 6
 	let isText = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, entry.texts(0))) is "Text"
-	let getter = isText then "strict_text_at" else "strict_list_get"
-	let access = MlirMemory(function, position).Called(Temp("x"), getter, (Temp("l"), Temp("i")))
+	let getter = isText then "strict_text_at" else "strict_list_at"
+	let arguments = isText then (Temp("l"), Temp("i")) else (Temp("l"), Temp("i"), Temp("nb"))
+	let access = MlirMemory(function, position).Called(Temp("x"), getter, arguments)
 	let loads = (function.Load(Temp("l"), "%v_" + entry.texts(0)), function.Load(Temp("i"), "%r" + entry.payload(1)))
-	loads + access + function.Store(Temp("x"), "%r" + entry.payload(0))
+	(isText then loads else loads + NameBits) + access + function.Store(Temp("x"), "%r" + entry.payload(0))
+NameBits Texts
+	MlirLists(Listed, 2).NameBits.Last.IndexOf("strict_bits") > 0 is true
+	let address = "    " + Temp("n") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
+	(address, "    " + Temp("nb") + " = func.call @strict_bits(" + Temp("n") + ") : (!llvm.ptr) -> f64")
 IsElementStore Boolean
 	MlirLists(Written, 1).IsElementStore is true
 	MlirLists(Written, 0).IsElementStore is false

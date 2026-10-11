@@ -77,11 +77,15 @@ Call(call Invocation) VmValue
 	Execute(method, Bound(Natives(types).TypeOf(call.TypeName), call.Instance, method, call.Arguments))
 Indexed(frame Frame) Frame
 	Hello.Indexed(Listing).Register(0).number is 20
+	Hello.Indexed(Listing.WithRegister(0, VmValue.OfNumber(5))).Register(0) is VmValue.OfError("Run")
 	let entry = frame.Instruction
 	let collection = frame.Local(entry.texts(0))
 	let position = frame.Register(entry.payload(1)).number
+	let wrapped = position < 0 then position + collection.Length else position
+	if (wrapped < 0) or (wrapped >= collection.Length)
+		return frame.NextWithRegister(entry.payload(0), VmValue.OfError(frame.method.Name))
 	let isText = collection.kind is "Text"
-	let element = isText then VmValue.OfText(collection.text.Substring(position, 1)) else collection.items(position)
+	let element = isText then VmValue.OfText(collection.text.Substring(wrapped, 1)) else collection.items(wrapped)
 	frame.NextWithRegister(entry.payload(0), element)
 Printed(frame Frame) Frame
 	Hello.Printed(Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)).position is 1

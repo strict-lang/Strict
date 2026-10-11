@@ -81,7 +81,8 @@ Positions(function MlirFunction) Numbers
 IsGlobal(function MlirFunction, position Number) Boolean
 	Counters.IsGlobal(MlirCalls.Shapes, 3) is true
 	let isInstruction = position < function.method.instructions.Length
-	if isInstruction and (function.method.instructions(position).kind is InstructionType.Print)
+	let kind = isInstruction then function.method.instructions(position).kind else -1
+	if kind is in (InstructionType.Print, InstructionType.IndexCall)
 		return true
 	MlirConstants(function, position).IsConstant
 Global(function MlirFunction, position Number) Text
@@ -90,7 +91,14 @@ Global(function MlirFunction, position Number) Text
 	if position >= function.method.instructions.Length
 		return constants.Global
 	let entry = function.method.instructions(position)
+	if entry.kind is InstructionType.IndexCall
+		return NameGlobal(function, position)
 	entry.kind is InstructionType.Print then PrintGlobal(function, position, entry) else constants.Global
+NameGlobal(function MlirFunction, position Number) Text
+	Counters.NameGlobal(Counters.Functions.First, 0).IndexOf("Run\\00") > 0 is true
+	let name = function.method.Name
+	let global = "  llvm.mlir.global internal constant @s" + function.Symbol + "_" + position
+	global + "(\"" + name + "\\00\") : !llvm.array<" + (name.Length + 1) + " x i8>"
 PrintGlobal(function MlirFunction, position Number, entry InstructionEntry) Text
 	Counters.PrintGlobal(MlirCalls.Shapes, 3, MlirCalls.Shapes.method.instructions(3)).StartsWith("  llvm") is true
 	let constants = MlirConstants(function, position)
