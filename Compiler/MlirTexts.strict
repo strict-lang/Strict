@@ -1,6 +1,6 @@
 has function MlirFunction
 has position Number
-constant Declarations = ("  llvm.func @snprintf(!llvm.ptr, i64, !llvm.ptr, ...) -> i32", "  llvm.func @malloc(i64) -> !llvm.ptr", "  llvm.func @realloc(!llvm.ptr, i64) -> !llvm.ptr", "  llvm.func @memcpy(!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr", "  llvm.func @strlen(!llvm.ptr) -> i64", "  llvm.func @strcmp(!llvm.ptr, !llvm.ptr) -> i32", "  llvm.func @strncmp(!llvm.ptr, !llvm.ptr, i64) -> i32", "  llvm.func @strstr(!llvm.ptr, !llvm.ptr) -> !llvm.ptr", "  llvm.func @toupper(i32) -> i32", "  llvm.func @tolower(i32) -> i32", "  llvm.func @strtod(!llvm.ptr, !llvm.ptr) -> f64", "  llvm.mlir.global internal constant @strict_true(\"true\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_false(\"false\\00\") : !llvm.array<6 x i8>", "  llvm.mlir.global internal constant @strict_number(\"%g\\00\") : !llvm.array<3 x i8>", "  llvm.mlir.global internal constant @strict_pair(\"%s%s\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_empty(\"\\00\") : !llvm.array<1 x i8>")
+constant Declarations = ("  llvm.func @snprintf(!llvm.ptr, i64, !llvm.ptr, ...) -> i32", "  llvm.func @malloc(i64) -> !llvm.ptr", "  llvm.func @realloc(!llvm.ptr, i64) -> !llvm.ptr", "  llvm.func @memcpy(!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr", "  llvm.func @strlen(!llvm.ptr) -> i64", "  llvm.func @strcmp(!llvm.ptr, !llvm.ptr) -> i32", "  llvm.func @strncmp(!llvm.ptr, !llvm.ptr, i64) -> i32", "  llvm.func @strstr(!llvm.ptr, !llvm.ptr) -> !llvm.ptr", "  llvm.func @toupper(i32) -> i32", "  llvm.func @tolower(i32) -> i32", "  llvm.func @strtod(!llvm.ptr, !llvm.ptr) -> f64", "  llvm.func @strchr(!llvm.ptr, i32) -> !llvm.ptr", "  llvm.func @strtol(!llvm.ptr, !llvm.ptr, i32) -> i64", "  llvm.mlir.global internal constant @strict_true(\"true\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_false(\"false\\00\") : !llvm.array<6 x i8>", "  llvm.mlir.global internal constant @strict_number(\"%g\\00\") : !llvm.array<3 x i8>", "  llvm.mlir.global internal constant @strict_pair(\"%s%s\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_empty(\"\\00\") : !llvm.array<1 x i8>")
 constant Joined = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a%"), InstructionEntry.LoadNumber(1, 7), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.PrintValue("x: ", 2, true), MlirKinds.Passed, InstructionEntry.PrintValue("y: ", 2, false), InstructionEntry.PrintValue("z: ", 1, false), InstructionEntry.Invoke(3, ("Strict/Number", "to", "Strict/Text"), List(Number), 1))))
 Temp(suffix Text) Text
 	MlirTexts(Joined, 2).Temp("l") is "%t2l"
@@ -20,7 +20,7 @@ IsConversion Boolean
 	let target = MlirKinds(function).Short(decoder.Text(4 + entry.payload(3)))
 	(decoder.Text(2) is "to") and (target is in ("Text", "Number"))
 Converted(entry InstructionEntry) Texts
-	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 8
+	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 7
 	let countPosition = 5 + entry.payload(3)
 	let instance = entry.payload(countPosition + 2 + entry.payload(countPosition))
 	if MlirKinds(function).Short(PayloadDecoder(entry).Text(4 + entry.payload(3))) is "Number"
@@ -36,24 +36,29 @@ Numbered(instance Number, target Text) Texts
 Bits(pointer Text, slot Text) Texts
 	MlirTexts(Joined, 0).Bits("%p", "%r0").Last is "    llvm.store %t0xf, %r0 : f64, !llvm.ptr"
 	MlirMemory(function, position).Bits(pointer, "x") + function.Store(Temp("xf"), slot)
-Format Text
-	MlirTexts(Joined, 3).Format is "%s"
-	MlirTexts(Joined, 5).Format is "%s"
-	MlirTexts(Joined, 6).Format is "%g"
-	let entry = function.method.instructions(position)
-	let isText = entry.payload(3) is 1
-	isText or (MlirKinds(function).KindOf(position, entry.payload(2)) is "Boolean") then "%s" else "%g"
 Pointer(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = llvm.inttoptr %t3bi : i64 to !llvm.ptr"
 	MlirTexts(Joined, 5).Pointer(2, "b").Last is "    %t5bp = llvm.select %t5bc, %t5bt, %t5bf : i1, !llvm.ptr"
-	MlirTexts(Joined, 6).Pointer(1, "b").Length is 5
+	MlirTexts(Joined, 6).Pointer(1, "b").Length is 4
 	let kind = MlirKinds(function).KindOf(position, register)
 	let loaded = function.Load(Temp(suffix), "%r" + register)
 	if kind is "Boolean"
 		return Truth(loaded, suffix)
 	if kind is "Text"
 		return List(Text) + loaded + MlirMemory(function, position).Pointer(Temp(suffix), suffix)
-	kind is "Character" then Character(loaded, suffix) else Formatted(loaded, suffix)
+	if kind is "Character"
+		return Character(loaded, suffix)
+	kind is "Number" then Formatted(loaded, suffix) else Described(loaded, suffix, kind)
+Described(loaded Text, suffix Text, kind Text) Texts
+	MlirTexts(Joined, 1).Described("", "d", "Shape").First.StartsWith("unsupported") is true
+	let type = function.TypeOf(kind)
+	let method = MlirCalls(function, position).Callee(type, "to", 0, "Text")
+	if method.instructions.Length is 0
+		return List(Text) + MlirStatements(function, position).Unsupported("text of " + kind)
+	let memory = MlirMemory(function, position)
+	let symbol = MlirFunction(function.types, type, method).Symbol
+	let text = memory.Called(Temp(suffix + "x"), symbol, List(Text) + Temp(suffix))
+	(loaded, text) + memory.Pointer(Temp(suffix + "x"), suffix)
 Character(loaded Text, suffix Text) Texts
 	MlirTexts(Joined, 1).Character("", "c").Length is 4
 	let memory = MlirMemory(function, position)
@@ -77,20 +82,17 @@ Truth(loaded Text, suffix Text) Texts
 	let options = Temp(suffix + "c") + ", " + Temp(suffix + "t") + ", " + Temp(suffix + "f")
 	(loaded, compared, yes, no, "    " + Temp(suffix + "p") + " = llvm.select " + options + " : i1, !llvm.ptr")
 Formatted(loaded Text, suffix Text) Texts
-	MlirTexts(Joined, 6).Formatted("", "b").Length is 5
-	let size = "    " + Temp(suffix + "z") + " = arith.constant 32 : i64"
-	let buffer = "    " + Temp(suffix + "p") + " = llvm.call @malloc(" + Temp(suffix + "z") + ") : (i64) -> !llvm.ptr"
-	let format = "    " + Temp(suffix + "f") + " = llvm.mlir.addressof @strict_number : !llvm.ptr"
-	let values = Temp(suffix + "f") + ", " + Temp(suffix)
-	let target = Temp(suffix + "p") + ", " + Temp(suffix + "z")
-	(loaded, size, buffer, format, Formats(Temp(suffix + "n"), target, values, "f64"))
+	MlirTexts(Joined, 6).Formatted("", "b").Length is 4
+	let memory = MlirMemory(function, position)
+	let text = memory.Called(Temp(suffix + "x"), "strict_number_text", List(Text) + Temp(suffix))
+	(loaded, text) + memory.Pointer(Temp(suffix + "x"), suffix)
 Formats(result Text, buffer Text, values Text, types Text) Text
 	MlirTexts(Joined, 0).Formats("%n", "%b, %s", "%f", "f64").StartsWith("    %n = llvm.call @snprintf(%b, %s, %f") is true
 	MlirTexts(Joined, 0).Formats("%n", "%b, %s", "%f", "f64").IndexOf(", i64, !llvm.ptr, f64) -> i32") > 0 is true
 	constant signature = ") vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, "
 	"    " + result + " = llvm.call @snprintf(" + buffer + ", " + values + signature + types + ") -> i32"
 Concatenated(entry InstructionEntry) Texts
-	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 19
+	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 18
 	let operands = Pointer(entry.payload(1), "l") + Pointer(entry.payload(2), "r")
 	constant values = Temp("f") + ", " + Temp("lp") + ", " + Temp("rp")
 	constant pair = "    " + Temp("f") + " = llvm.mlir.addressof @strict_pair : !llvm.ptr"

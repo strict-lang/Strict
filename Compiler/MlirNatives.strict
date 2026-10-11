@@ -14,9 +14,24 @@ Helper(typeName Text, name Text, count Number) Text
 	let kind = MlirKinds(function).Short(typeName)
 	if (name is in ("Length", "Count")) and (count is 0)
 		return kind is "Text" then "strict_text_length" else kind.StartsWith("List(") then "strict_list_length" else ""
+	if kind.StartsWith("List(")
+		return CollectionHelper(kind, name, count)
 	if (kind is "Number") and (name is "Floor")
 		return "strict_floor"
 	kind is "Text" then TextHelper(name) else ""
+CollectionHelper(kind Text, name Text, count Number) Text
+	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "in", 1) is "strict_list_has_text"
+	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "Remove", 1) is ""
+	if name is not in ("in", "Index") or count is not 1
+		return ""
+	let operation = name is "in" then "has" else "index"
+	Finder(MlirKinds(function).ElementKind(kind), operation)
+Finder(element Text, operation Text) Text
+	MlirNatives(Texts, 1).Finder("Text", "has") is "strict_list_has_text"
+	MlirNatives(Texts, 1).Finder("Shape", "index") is ""
+	if element is "Text"
+		return "strict_list_" + operation + "_text"
+	element is in ("Number", "Boolean", "Character") then "strict_list_" + operation + "_number" else ""
 TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"
 	MlirNatives(Texts, 1).TextHelper("Trim") is ""

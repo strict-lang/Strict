@@ -8,7 +8,8 @@ constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.S
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
 	let name = type.JustName.Replace("(", "_").Replace(")", "_")
-	name + "_" + method.Name + "_" + method.parameters.Length
+	let conversion = method.Name is "to" then "_" + MlirKinds(value).Short(method.returnType) else ""
+	name + "_" + method.Name + "_" + method.parameters.Length + conversion
 Parameters Texts
 	Counter.Parameters is ("value")
 	mutable names = List(Mutable(Text))
@@ -50,11 +51,11 @@ Copied(source Text, destination Text, temp Text) Texts
 	Counter.Copied("%r0", "%v_a", "%t1").Length is 2
 	(Load(temp, source), Store(temp, destination))
 Text Text
-	Counter.Text.StartsWith("  func.func @Counter_Run_0(%p0: f64) -> f64 {") is true
+	Counter.Text.StartsWith("  func.func private @Counter_Run_0(%p0: f64) -> f64 {") is true
 	mutable signature = List(Mutable(Text))
 	for Parameters
 		signature.Add("%p" + index + ": f64")
-	let header = "  func.func @" + Symbol + "(" + Text.Combine(signature, ", ") + ") -> f64 {"
+	let header = "  func.func private @" + Symbol + "(" + Text.Combine(signature, ", ") + ") -> f64 {"
 	Text.Combine(List(Text) + header + Slots + Body + "  }", "\n")
 Slots Texts
 	Counter.Slots.Length is 12

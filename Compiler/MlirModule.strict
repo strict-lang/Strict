@@ -14,9 +14,14 @@ Text Text
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1
 	let main = types.First
-	let run = MlirCalls(MlirFunction(types, main, MethodEntry.CountingLoop), 0).Callee(main, "Run", 0)
-	let first = List(MlirFunction) + MlirFunction(types, main, run)
+	let first = List(MlirFunction) + MlirFunction(types, main, RunMethod(main))
 	Reachable(first, first)
+RunMethod(main TypeEntry) MethodEntry
+	Counters.RunMethod(TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry))).instructions.Length is 0
+	for main.methods
+		if value.Name is "Run"
+			return value
+	MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))
 Reachable(known List(MlirFunction), fresh List(MlirFunction)) List(MlirFunction)
 	Counters.Reachable(Counters.Functions, Counters.Functions).Length is 1
 	mutable found = List(Mutable(MlirFunction))
@@ -48,7 +53,8 @@ Called(function MlirFunction, position Number) List(MlirFunction)
 	if decoder.Text(2) is "from"
 		return List(MlirFunction)
 	let type = Natives(types).TypeOf(decoder.Text(1))
-	let callee = MlirCalls(function, position).Callee(type, decoder.Text(2), entry.payload(5 + entry.payload(3)))
+	let returned = decoder.Text(4 + entry.payload(3))
+	let callee = MlirCalls(function, position).Callee(type, decoder.Text(2), entry.payload(5 + entry.payload(3)), returned)
 	constant none = List(MlirFunction)
 	callee.instructions.Length is 0 then none else none + MlirFunction(types, type, callee)
 Globals(functions List(MlirFunction)) Texts
@@ -63,13 +69,13 @@ FunctionGlobals(function MlirFunction) Texts
 		if (value.kind is InstructionType.Print) or MlirConstants(function, index).IsConstant
 			Global(function, index)
 Global(function MlirFunction, position Number) Text
-	Counters.Global(MlirCalls.Shapes, 3).IndexOf("Hi %g\\0A\\00") > 0 is true
+	Counters.Global(MlirCalls.Shapes, 3).IndexOf("Hi %s\\0A\\00") > 0 is true
 	let entry = function.method.instructions(position)
 	let constants = MlirConstants(function, position)
 	if entry.kind is not InstructionType.Print
 		return constants.Global
 	let hasValue = entry.payload(1) is 1
-	let format = hasValue then MlirTexts(function, position).Format else ""
+	let format = hasValue then "%s" else ""
 	let content = constants.Escaped(entry.texts(0), true) + format + "\\0A\\00"
 	let length = constants.EscapedLength(entry.texts(0), true) + (hasValue then 4 else 2)
 	let name = "@s" + function.Symbol + "_" + position
@@ -78,10 +84,34 @@ Main(entry MlirFunction) Texts
 	Counters.Main(Counters.Functions.First).Length is 14
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
-	constant header = List(Text) + "  func.func @main() -> i32 {" + constants
-	let call = "    %result = func.call @" + entry.Symbol + "(%self) : (f64) -> f64"
+	constant header = List(Text) + "  func.func @main(%argc: i32, %argv: !llvm.ptr) -> i32 {" + constants
 	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
 	let returned = MlirKinds(entry).Short(entry.method.returnType) is "Number"
 	let code = returned then "    %code = arith.fptosi %result : f64 to i32" else "    %code = arith.constant 0 : i32"
-	let invoked = (self, call, code)
-	header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot") + invoked + ("    return %code : i32", "  }")
+	let prepared = header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot") + Arguments(entry)
+	prepared + (self, EntryCall(entry), code) + ("    return %code : i32", "  }")
+EntryCall(entry MlirFunction) Text
+	Counters.EntryCall(Counters.Functions.First) is "    %result = func.call @Counter_Run_0(%self) : (f64) -> f64"
+	let count = entry.method.parameters.Length
+	let names = List(Text) + "%self" + MlirCalls(entry, 0).ArgumentNames(count)
+	let operands = Text.Combine(names, ", ").Replace("%t0a", "%arg")
+	let signature = Text.Combine(MlirCalls(entry, 0).ArgumentTypes(count + 1), ", ")
+	"    %result = func.call @" + entry.Symbol + "(" + operands + ") : (" + signature + ") -> f64"
+Arguments(entry MlirFunction) Texts
+	Counters.Arguments(Counters.Functions.First).Length is 0
+	mutable lines = List(Mutable(Text))
+	for entry.method.parameters
+		lines = lines + Argument(MlirKinds(entry).Short(value.typeName), index)
+	lines
+Argument(kind Text, index Number) Texts
+	Counters.Argument("Text", 0).Last.StartsWith("    %arg0 = func.call @strict_argument(%argc, %argv") is true
+	Counters.Argument("List(Number)", 1).Length is 1
+	let name = "%arg" + index
+	if kind.StartsWith("List(") or (kind is "Numbers")
+		return List(Text) + ("    " + name + " = func.call @strict_argument_numbers(%argc, %argv) : (i32, !llvm.ptr) -> f64")
+	let read = kind is "Number" then name + "text" else name
+	let position = "    %argindex" + index + " = arith.constant " + (index + 1) + " : i32"
+	constant signature = ") : (i32, !llvm.ptr, i32) -> f64"
+	let argument = "    " + read + " = func.call @strict_argument(%argc, %argv, %argindex" + index + signature
+	let parsed = "    " + name + " = func.call @strict_text_number(" + read + ") : (f64) -> f64"
+	kind is "Number" then (position, argument, parsed) else (position, argument)

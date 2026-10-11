@@ -24,24 +24,32 @@ Emitted Texts
 Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
 	let type = function.TypeOf(decoder.Text(1))
-	let callee = Callee(type, decoder.Text(2), entry.payload(5 + entry.payload(3)))
+	let count = entry.payload(5 + entry.payload(3))
+	let helper = MlirNatives(function, position).Helper(Owner(entry, type), decoder.Text(2), count)
+	if helper is not ""
+		return MlirNatives(function, position).Emitted(entry, type, helper)
+	Compiled(entry, decoder, type, count)
+Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
+	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
+	let callee = Callee(type, decoder.Text(2), count, decoder.Text(4 + entry.payload(3)))
 	if callee.instructions.Length is 0
-		return Native(entry, type, decoder.Text(2))
+		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let target = MlirFunction(function.types, type, callee)
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + Operands(entry) + ") : (" + types + ") -> f64"
 	Loads(entry, type) + call + function.Store(Temp("r"), "%r" + entry.payload(0))
-Native(entry InstructionEntry, type TypeEntry, name Text) Texts
-	MlirCalls(Shapes, 2).Native(Area, AreaShape, "Size").First.StartsWith("unsupported") is true
-	let natives = MlirNatives(function, position)
-	let helper = natives.Helper(type.Name, name, entry.payload(5 + entry.payload(3)))
-	if helper is ""
-		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + name)
-	natives.Emitted(entry, type, helper)
-Callee(type TypeEntry, name Text, count Number) MethodEntry
-	MlirCalls(Shapes, 1).Callee(AreaShape, "Size", 0).instructions.Length is 0
+Owner(entry InstructionEntry, type TypeEntry) Text
+	MlirCalls(Shapes, 2).Owner(Area, AreaShape) is "Shape"
+	let countPosition = 5 + entry.payload(3)
+	let flagPosition = countPosition + 1 + entry.payload(countPosition)
+	let hasInstance = entry.payload(flagPosition) is 1
+	hasInstance then MlirKinds(function).KindOf(position, entry.payload(flagPosition + 1)) else type.Name
+Callee(type TypeEntry, name Text, count Number, returnType Text) MethodEntry
+	MlirCalls(Shapes, 1).Callee(AreaShape, "Size", 0, "Number").instructions.Length is 0
+	let returned = MlirKinds(function).Short(returnType)
 	for type.methods
-		if (value.Name is name) and (value.parameters.Length is count)
+		let isReturning = name is not "to" or (MlirKinds(function).Short(value.returnType) is returned)
+		if (value.Name is name) and (value.parameters.Length is count) and isReturning
 			return value
 	MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry))
 Loads(entry InstructionEntry, type TypeEntry) Texts
@@ -72,15 +80,11 @@ ArgumentTypes(count Number) Texts
 	for count
 		"f64"
 Printed(entry InstructionEntry) Texts
-	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Length is 3
+	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Length is 6
 	let address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	constant printf = " = llvm.call @printf("
 	constant vararg = ") vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr"
 	if entry.payload(1) is 0
 		return (address, "    " + Temp("c") + printf + Temp("a") + vararg + ") -> i32")
-	let texts = MlirTexts(function, position)
-	if texts.Format is "%s"
-		constant pointerCall = "    " + Temp("c") + printf + Temp("a") + ", " + Temp("bp") + vararg + ", !llvm.ptr) -> i32"
-		return List(Text) + address + texts.Pointer(entry.payload(2), "b") + pointerCall
-	constant call = "    " + Temp("c") + printf + Temp("a") + ", " + Temp("b") + vararg + ", f64) -> i32"
-	(address, function.Load(Temp("b"), "%r" + entry.payload(2)), call)
+	constant pointerCall = "    " + Temp("c") + printf + Temp("a") + ", " + Temp("bp") + vararg + ", !llvm.ptr) -> i32"
+	List(Text) + address + MlirTexts(function, position).Pointer(entry.payload(2), "b") + pointerCall
