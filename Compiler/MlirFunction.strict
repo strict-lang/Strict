@@ -4,7 +4,7 @@ has method MethodEntry
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
-constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList)
+constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
 	let name = type.JustName.Replace("(", "_").Replace(")", "_")
@@ -58,7 +58,7 @@ Text Text
 	let header = "  func.func private @" + Symbol + "(" + Text.Combine(signature, ", ") + ") -> f64 {"
 	Text.Combine(List(Text) + header + Slots + Body + "  }", "\n")
 Slots Texts
-	Counter.Slots.Length is 12
+	Counter.Slots.Length is 15
 	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64")
 	lines = lines + "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr"
 	for RegisterCount
@@ -67,9 +67,13 @@ Slots Texts
 		lines = lines + Slot("%v_" + value)
 	for method.instructions
 		lines = value.kind is InstructionType.LoopBegin then lines + Slot("%loop" + index) else lines
+	lines + Entry
+Entry Texts
+	Counter.Entry.Length is 4
+	mutable lines = Slot("%instance") + Store("%p0", "%instance")
 	for Parameters
 		lines = lines + Store("%p" + index, "%v_" + value)
-	lines + MlirInstances(value, 0).Unpacked
+	lines + MlirInstances(value, 0).Unpacked + MlirInstances(value, 0).Constants
 Slot(name Text) Texts
 	Counter.Slot("%r0").Length is 2
 	("    " + name + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", Store("%zero", name))

@@ -3,6 +3,7 @@ has position Number
 constant Built = InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1)
 constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (2, 1, -1))
 constant Shapes = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Built, Width)))
+constant MemberBase = 100000
 constant Method = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)
 Stored(owner TypeEntry) List(MemberEntry)
 	MlirInstances(Shapes, 0).Stored(MlirFunction.Shape).Length is 1
@@ -20,6 +21,9 @@ IsStruct(typeName Text) Boolean
 	short is not in ("Number", "Text", "Boolean", "Character", "None") and (short.StartsWith("List(") is false)
 Constructed(entry InstructionEntry, typeName Text) Texts
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape").Last is "    llvm.store %t1of, %r1 : f64, !llvm.ptr"
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Character").Length is 2
+	if (MlirKinds(function).Short(typeName) is "File") or (IsStruct(typeName) is false)
+		return function.Copied("%r" + entry.payload(5 + entry.payload(3) + 1), "%r" + entry.payload(0), Temp("o"))
 	let members = Stored(function.TypeOf(typeName))
 	let memory = MlirMemory(function, position)
 	mutable lines = memory.Allocated(members.Length, "o")
@@ -49,7 +53,11 @@ Fresh(type TypeEntry, target Text) Texts
 	lines + memory.Bits(Temp("op"), "o") + function.Store(Temp("of"), target)
 Field(entry InstructionEntry) Texts
 	MlirInstances(Shapes, 2).Field(Width).Length is 6
-	let owner = function.TypeOf(MlirKinds(function).KindOf(position, entry.payload(1)))
+	MlirInstances(MlirKinds.Graded.function, 1).Field(MlirKinds.Characters).Length is 2
+	let kind = MlirKinds(function).KindOf(position, entry.payload(1))
+	if IsStruct(kind) is false
+		return function.Copied("%r" + entry.payload(1), "%r" + entry.payload(0), Temp("a"))
+	let owner = function.TypeOf(kind)
 	let slot = StoredNames(owner).Index(entry.texts(0))
 	if slot < 0
 		return List(Text) + MlirStatements(function, position).Unsupported("member " + owner.Name + "." + entry.texts(0))
@@ -74,6 +82,24 @@ Aliased Texts
 	for Stored(function.type)
 		if value.Name is in ("elements", "characters")
 			lines = lines + function.Copied("%v_value", "%v_" + value.Name, "%talias" + index)
+	lines
+ReferencedConstants List(MemberEntry)
+	MlirInstances(Shapes, 0).ReferencedConstants.Length is 0
+	for function.type.members
+		if value.IsConstant and IsReferenced(value.Name)
+			value
+IsReferenced(name Text) Boolean
+	MlirInstances(Shapes, 0).IsReferenced("width") is false
+	for function.method.instructions
+		if (value.kind is in (InstructionType.IndexCall, InstructionType.LoadVariableToRegister)) and (value.texts(0) is name)
+			return true
+	false
+Constants Texts
+	MlirInstances(Shapes, 0).Constants.Length is 0
+	mutable lines = List(Mutable(Text))
+	for ReferencedConstants
+		let initial = Natives(function.types).Initial(value)
+		lines = lines + MlirStatements(function, MemberBase + index).Literal(initial, "%v_" + value.Name, "")
 	lines
 Temp(suffix Text) Text
 	MlirInstances(Shapes, 1).Temp("o") is "%t1o"

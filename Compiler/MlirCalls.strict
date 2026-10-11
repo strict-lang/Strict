@@ -65,7 +65,7 @@ Loads(entry InstructionEntry, type TypeEntry) Texts
 	let flagPosition = countPosition + 1 + entry.payload(countPosition)
 	let hasInstance = entry.payload(flagPosition) is 1
 	let isOwn = type.Name is function.type.Name
-	let self = hasInstance then "%r" + entry.payload(flagPosition + 1) else isOwn then "%v_value" else ""
+	let self = hasInstance then "%r" + entry.payload(flagPosition + 1) else isOwn then "%instance" else ""
 	constant none = "    " + Temp("m") + " = arith.constant 0.0 : f64"
 	let first = self is "" then none else function.Load(Temp("m"), self)
 	List(Text) + first + ArgumentLoads(entry)

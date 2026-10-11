@@ -3,7 +3,8 @@ constant SingleThreaded = " --mlir-disable-threading"
 Run(path Text, root Text)
 	let program = MlirModule(FileCompiler(logger).Compiled(path, root)).Text
 	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
-	let mlir = program.Substring(0, program.Length - 1) + runtime + "\n}"
+	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(Platform.Current) + ".mlir").ReadLines
+	let mlir = program.Substring(0, program.Length - 1) + runtime + "\n" + Text.Combine(system, "\n") + "\n}"
 	let unsupported = mlir.IndexOf("unsupported:")
 	if unsupported is not -1
 		logger.Log("Native compilation failed, " + mlir.Substring(unsupported, mlir.Length - unsupported))

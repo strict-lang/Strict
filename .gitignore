@@ -135,6 +135,7 @@ ipch/
 *.ll
 *.mlir
 *.llvm.mlir
+!Compiler/NativeRuntime*.mlir
 *.obj
 Examples/PureAdder
 *.7z

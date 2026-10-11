@@ -23,6 +23,8 @@ ValueHelper(kind Text, name Text) Text
 		return "strict_floor"
 	if (kind is "Boolean") and (name is in ("not", "and", "or", "xor"))
 		return "strict_" + name
+	if kind is in ("File", "Directory")
+		return SystemHelper(kind, name)
 	kind is "Text" then TextHelper(name) else ""
 CollectionHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "in", 1) is "strict_list_has_text"
@@ -37,6 +39,17 @@ Finder(element Text, operation Text) Text
 	if element is "Text"
 		return "strict_list_" + operation + "_text"
 	element is in ("Number", "Boolean", "Character") then "strict_list_" + operation + "_number" else ""
+SystemHelper(kind Text, name Text) Text
+	MlirNatives(Texts, 1).SystemHelper("File", "ReadLines") is "strict_file_read_lines"
+	MlirNatives(Texts, 1).SystemHelper("Directory", "Files") is "strict_directory_files"
+	MlirNatives(Texts, 1).SystemHelper("File", "Delete") is ""
+	constant fileNames = ("ReadLines", "Exists", "Write")
+	constant directoryNames = ("Files", "Exists", "Create")
+	let isKnown = kind is "File" then name is in fileNames else name is in directoryNames
+	if isKnown is false
+		return ""
+	let suffix = name is "ReadLines" then "read_lines" else name.Lower
+	"strict_" + kind.Lower + "_" + suffix
 TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"
 	MlirNatives(Texts, 1).TextHelper("Split") is ""
@@ -47,7 +60,7 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	let calls = MlirCalls(function, position)
 	let count = entry.payload(5 + entry.payload(3))
 	let operands = List(Text) + calls.Temp("m") + calls.ArgumentNames(count)
-	let hasStart = helper is in ("strict_text_index", "strict_text_starts")
+	let hasStart = helper is in ("strict_text_index", "strict_text_starts", "strict_directory_files")
 	let completed = hasStart and (count is 1) then operands + "%zero" else operands
 	let call = MlirMemory(function, position).Called(calls.Temp("r"), helper, completed)
 	calls.Loads(entry, type) + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))

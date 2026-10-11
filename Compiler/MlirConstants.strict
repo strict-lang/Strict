@@ -4,7 +4,8 @@ IsConstant Boolean
 	MlirConstants(MlirTexts.Joined, 0).IsConstant is true
 	MlirConstants(MlirTexts.Joined, 1).IsConstant is false
 	MlirConstants(MlirTexts.Joined, 2).IsConstant is false
-	let kind = function.method.instructions(position).kind
+	let isMember = position >= function.method.instructions.Length
+	let kind = isMember then InstructionType.LoadConstantToRegister else function.method.instructions(position).kind
 	if kind is not in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
 		return false
 	constant literal = Constant
@@ -16,6 +17,10 @@ TextElements(literal Runtime/VmValue) Numbers
 			index
 Constant Runtime/VmValue
 	MlirConstants(MlirTexts.Joined, 0).Constant.text is "a%"
+	if position >= function.method.instructions.Length
+		let referenced = MlirInstances(function, 0).ReferencedConstants
+		let member = referenced(position - MlirInstances.MemberBase)
+		return Natives(function.types).Initial(member)
 	let entry = function.method.instructions(position)
 	PayloadDecoder(entry).Value(entry.kind is InstructionType.LoadConstantToRegister then 1 else 0)
 Global Text

@@ -2,6 +2,7 @@ has function MlirFunction
 constant Passed = InstructionEntry.Invoke(2, ("Strict/Shape", "Passed", "Strict/Boolean"), List(Number), -1)
 constant NewShape = InstructionEntry.Invoke(6, ("Strict/Shape", "from", "Strict/Shape", "width"), 4, -1)
 constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (5, 6, -1))
+constant Characters = InstructionEntry(InstructionType.FieldLoad, "characters", (5, 0, -1))
 constant Indexed = InstructionEntry(InstructionType.IndexCall, "letters", (7, 4, -1))
 constant Looped = (InstructionEntry.LoopBegin(4, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "value"), InstructionEntry(InstructionType.LoopEnd, List(Text), (1)))
 constant Graded = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "A"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "letter"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "letter"), Passed, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "width"), NewShape, Width, Indexed) + Looped)))
@@ -17,7 +18,7 @@ WrittenKind(writer Number) Text
 	Graded.WrittenKind(7) is "Number"
 	let entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadConstantToRegister
-		return ConstantKind(PayloadDecoder(entry).Value(1))
+		return ConstantKind(PayloadDecoder(entry).Value(1), entry.texts)
 	if entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
 		let variable = VariableKind(writer, entry.texts(0))
 		return entry.kind is InstructionType.IndexCall then ElementKind(variable) else variable
@@ -32,8 +33,10 @@ Calculated(writer Number, entry InstructionEntry) Text
 	if entry.kind < InstructionType.StoreSeparator or entry.kind > InstructionType.ArithmeticSeparator
 		return "Number"
 	let left = KindOf(writer, entry.payload(1))
+	if left.StartsWith("List(")
+		return left
 	let isText = (left is "Text") or IsText(writer, entry.payload(2))
-	(entry.kind is InstructionType.Add) and isText then "Text" else left.StartsWith("List(") then left else "Number"
+	(entry.kind is InstructionType.Add) and isText then "Text" else "Number"
 IsText(position Number, register Number) Boolean
 	Graded.IsText(4, 1) is true
 	Graded.IsText(4, 2) is false
@@ -54,7 +57,7 @@ VariableKind(position Number, name Text) Text
 		return DeclaredKind(position, name)
 	let store = function.method.instructions(found)
 	if store.kind is InstructionType.StoreConstantToVariable
-		return ConstantKind(PayloadDecoder(store).Value(0))
+		return ConstantKind(PayloadDecoder(store).Value(0), store.texts)
 	KindOf(found, store.payload(0))
 Stored(position Number, name Text) Number
 	Graded.Stored(2, "letter") is 1
@@ -98,8 +101,11 @@ LoopValueKind(position Number) Text
 	entry.payload(1) is 1 then "Number" else ElementKind(KindOf(begin, entry.payload(0)))
 FieldKind(writer Number, entry InstructionEntry) Text
 	Graded.FieldKind(7, Width) is "Number"
-	let owner = function.TypeOf(KindOf(writer, entry.payload(1)))
-	let member = MembersKind(owner.members, entry.texts(0))
+	Graded.FieldKind(1, Characters) is "Text"
+	let kind = KindOf(writer, entry.payload(1))
+	if MlirInstances(function, 0).IsStruct(kind) is false
+		return kind
+	let member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
 	member is "" then "Number" else member
 MembersKind(members List(MemberEntry), name Text) Text
 	Graded.MembersKind(MlirFunction.Shape.members, "width") is "Number"
@@ -115,16 +121,22 @@ ElementKind(container Text) Text
 	if container is "Text"
 		return "Character"
 	container.StartsWith("List(") then container.Substring(5, container.Length - 6) else "Number"
-ConstantKind(literal Runtime/VmValue) Text
-	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfText("b"))) is "List(Text)"
-	Graded.ConstantKind(VmValue.OfNumber(1)) is "Number"
+ConstantKind(literal Runtime/VmValue, texts Texts) Text
+	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfText("b")), ("a", "b")) is "List(Text)"
+	Graded.ConstantKind(VmValue.OfNumber(1), List(Text)) is "Number"
+	Graded.ConstantKind(VmValue.OfList(List(VmValue)), ("Strict/List(Mutable(Text))")) is "List(Text)"
 	if literal.kind is not "List"
 		return literal.kind
-	"List(" + (literal.items.Length is 0 then "Number" else ConstantKind(literal.items.First)) + ")"
+	if literal.items.Length is 0
+		return texts.Length is 0 then "List(Number)" else Short(texts(0))
+	"List(" + ConstantKind(literal.items.First, List(Text)) + ")"
 Short(name Text) Text
 	Graded.Short("Strict/Bytecode/TypeEntry") is "TypeEntry"
 	Graded.Short("Strict/List(TypeEntry)") is "List(TypeEntry)"
 	Graded.Short("Number") is "Number"
+	Graded.Short("Strict/List(Mutable(Text))") is "List(Text)"
+	if name.IndexOf("Mutable(") is not -1
+		return Short(name.Replace("Mutable(", "").Substring(0, name.Length - 9))
 	let open = name.IndexOf("(")
 	let head = open < 0 then name else name.Substring(0, open)
 	let slash = head.LastIndexOf("/")

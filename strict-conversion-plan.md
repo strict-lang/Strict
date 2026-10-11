@@ -669,6 +669,28 @@ Only then can C# go: keep the C# projects as the bootstrap and reference for the
 tests until stage 2 holds, record golden outputs, check in a native bootstrap compiler, then delete
 the C# layers one by one (the plan's "C# replaced" column). LanguageServer and the VS Code extension
 need their own Strict versions later.
+Native Strict compiler (2026-10-11, later): steps 1-5 are done except Process (run, OperatingSystem).
+NativeCompiler builds `Bytecode/FileCompiler.exe` (38 s with the Release Strict.exe, 197 s Debug).
+It compiles 39 of 41 Examples byte-identical to the VM run (3.2 s in total, 17.1 s via Strict.exe)
+and compiles FileCompiler.strict itself byte-identical (stage 1, 401,839 bytes of output), test
+StrictFileCompilerRunsNativelyLikeVirtualMachine (Nightly). The 2 other Examples fail the same way on
+both: the Strict compiler emits a text where a number belongs (ArithmeticFunction selector `if`,
+ReduceButGrow `* value` product loop). Native model: every value is one f64 slot, texts, instances
+and lists are pointer bits, an instance is a malloc'd block with one slot per stored member, a list
+is a {length, holder} view appending in place while it is the newest version. Natives run before
+compiled bodies like both VMs, helpers live in `Compiler/NativeRuntime.mlir` plus
+`NativeRuntimeWindows.mlir` (kernel32 for directories). Root causes fixed on the way: non-struct
+values are their own member and `Character(code)` is the code (`separator.characters.Length` read a
+C string as a pointer); empty list constants keep their declared element type (`List(Mutable(Text))`
+was inferred as `List(Number)`, `in` compared texts as numbers and the linker never converged).
+LLVM 22 at -O0 (FastISel) emits `movsd (%xmm0)` for a bitcast+inttoptr load, so every -O0 build of
+our MLIR is miscompiled: debug with -O2 -g and a vectored exception handler printing the faulting
+address instead (ASAN builds are -O0 and crash at random places).
+Speed: the native self-compile takes 20.2 s against 36.8 s on the VM, only 1.8x. FileCompiler.Linked
+regenerates every linked type in each of its 14 rounds (892 LinkedType calls), the Tokenizer runs
+601,745 times, native `Text.Length` is strlen, `list + list` copies and nothing is freed.
+Next: Process natives and `NativeRuntimeLinux.mlir` so NativeCompiler builds natively, stage 2
+(native exes compile themselves), then the Linked rounds and text length for speed.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,
@@ -1464,21 +1486,21 @@ This is the execution engine — the capstone of the self-hosting effort.
 
 ## Overall Progress Dashboard
 
-Counts verified on 2026-10-10 (files and lines per folder, root base types excluded). "C# replaced"
+Counts verified on 2026-10-11 (files and lines per folder, root base types excluded). "C# replaced"
 stays 0% until D7 switches a Runner stage to the Strict implementation and deletes the C# stage.
 
 | Phase | Project | `.strict` files / lines | Current scope (differential test) | C# replaced |
 |-------|---------|-------------------------|-----------------------------------|-------------|
-| 1 | Language | 22 / 472 | Type/Member/Method model, header tokens, package lookup | 0% |
-| 2 | Expressions | 49 / 1584 | Tokenizer, syntax tree, statements: every line of 18 folders round-trips (D1) | 0% |
+| 1 | Language | 21 / 467 | Type/Member/Method model, header tokens, package lookup | 0% |
+| 2 | Expressions | 49 / 1616 | Tokenizer, syntax tree, statements: every line of 18 folders round-trips (D1) | 0% |
 | 3 | Validators | 5 / 235 | Same rule as C# for each validator case (D2) | 0% |
 | 4 | TestRunner | 7 / 196 | Simple assertion evaluator | 0% |
 | 5 | HighLevelRuntime | 20 / 560 | Line-level evaluator subset | 0% |
-| 6 | Bytecode | 52 / 2772 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
+| 6 | Bytecode | 53 / 2868 | Compiles Examples to .strictbinary running like C# (D3), 402 vs 404 instructions (D4) | 0% |
 | 7 | Optimizers | 15 / 261 | Instruction passes; codegen folding and load reuse live in Bytecode | 0% |
 | 8 | Runtime | 12 / 574 | Strict VM runs 20 Strict-compiled Examples like the C# VM (D5) | 0% |
-| 9 | Compiler | 25 / 1038 | Native compiler via MLIR, 14 Examples incl. texts like the VM (D6) | 0% |
-| **Total** | | **207 / 7692** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
+| 9 | Compiler | 30 / 1462 | Native compiler via MLIR, FileCompiler.exe compiles itself like the VM (D6) | 0% |
+| **Total** | | **212 / 8239** | **Every stage exists in Strict, Runner still uses C#** | **0%** |
 
 ---
 ## Missing Runtime Features Tracker

@@ -122,6 +122,27 @@ public sealed class RunnerTests
 			native.Error);
 	}
 
+	[Test]
+	[Category("Nightly")]
+	public async Task StrictFileCompilerRunsNativelyLikeVirtualMachine()
+	{
+		var root = FindRepoRoot().Replace('\\', '/');
+		var compilerPath = root + "/Bytecode/FileCompiler" + Type.Extension;
+		var arguments = root + "/Examples/HelloLogger" + Type.Extension + " " + root;
+		await new Runner(compilerPath, arguments).Run();
+		var output = consoleWriter.ToString();
+		var expected = output[..output.LastIndexOf("Executed ", StringComparison.Ordinal)];
+		consoleWriter.GetStringBuilder().Clear();
+		await new Runner(root + "/Compiler/NativeCompiler" + Type.Extension, compilerPath + " " + root).Run();
+		Assert.That(consoleWriter.ToString(), Does.Contain("Built "));
+		var native = NativeProcessRunner.Run(Path.ChangeExtension(compilerPath,
+			OperatingSystem.IsWindows()
+				? ".exe"
+				: null), arguments);
+		Assert.That(native.Output.ReplaceLineEndings(), Is.EqualTo(expected.ReplaceLineEndings()),
+			native.Error);
+	}
+
 	[TestCaseSource(nameof(StrictProgramPaths))]
 	[Category("Slow")]
 	public void RunStrictProgramFromSourceAndCachedBinaryInFreshProcess(string relativePath)
