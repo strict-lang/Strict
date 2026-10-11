@@ -1,6 +1,5 @@
 has values ValueCodegen
 constant Plain = ConversionCodegen(ValueCodegen.Plain)
-constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name")
 constant ColorTypes = TypeInference.Colors.types
 constant Colored = ConversionCodegen(ValueCodegen(TypeInference(ColorTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant NewColorValue = SyntaxNode("Call", "ColorValue", ValueCodegen.One)

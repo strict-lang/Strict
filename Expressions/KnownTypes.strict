@@ -59,10 +59,9 @@ ElementType(typeName Text) Text
 	Sample.ElementType("Range") is "Number"
 	Sample.ElementType("Iterator(Text)") is "Text"
 	Sample.ElementType("Dictionary(Text, Number)") is "Number"
-	if typeName is in ("Number", "Range", "Text")
-		return typeName is "Range" then "Number" else typeName
-	if typeName is "List"
-		return "Generics"
+	Sample.ElementType("Text") is "Character"
+	if typeName is in ("Number", "Range", "Text", "List")
+		return typeName is "Text" then "Character" else typeName is "List" then "Generics" else "Number"
 	if typeName.StartsWith("Iterator(") or typeName.StartsWith("Dictionary(")
 		let start = typeName.LastIndexOf(", ") > 0 then typeName.LastIndexOf(", ") + 2 else typeName.IndexOf("(") + 1
 		return typeName.Substring(start, typeName.Length - start - 1)

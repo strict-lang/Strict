@@ -11,7 +11,7 @@ constant MutableText = SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "
 constant Pairs = SyntaxParser(Tokenizer("Dictionary((1, \"a\"))").Tokens).Parse
 constant Typed = SyntaxParser(Tokenizer("Dictionary(Text, Number)").Tokens).Parse
 constant Hashing = TypeInference(KnownTypes(("Hash", "B"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("from", "from types"), ("generic", "Generic")), KnownTypes.NoMembers)), NoShapes)
-constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name")
+constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name", "Generic")
 constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)), NoShapes)
 ConstantOf(typeName Text, name Text) Text
 	TypeInference(KnownTypes.Sample, Limits).ConstantOf("Count", "Limit") is "3"
