@@ -22,14 +22,17 @@ IsConversion Boolean
 	let decoder = PayloadDecoder(entry)
 	let target = MlirKinds(function).Short(decoder.Text(4 + entry.payload(3)))
 	let isTo = decoder.Text(2) is "to"
-	isTo and ((target is in ("Text", "Number", "Character")) or target.StartsWith("List(") or IsRetyped(entry, target))
-IsRetyped(entry InstructionEntry, target Text) Boolean
-	MlirTexts(Joined, 7).IsRetyped(Joined.method.instructions(7), "Number") is true
-	MlirTexts(Joined, 7).IsRetyped(Joined.method.instructions(7), "Shape") is false
+	isTo and (target.StartsWith("List(") or IsNativeConversion(entry, target))
+IsNativeConversion(entry InstructionEntry, target Text) Boolean
+	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Number") is true
+	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Shape") is false
 	let source = MlirKinds(function).KindOf(position, Instance(entry))
-	let own = MlirCalls(function, position).Callee(function.TypeOf(source), "to", 0, target)
 	let layout = MlirLayout(function)
-	(own.instructions.Length is 0) and (layout.Represented(source) is layout.Represented(target))
+	if (target is "Text") or (target is "Number") and (layout.Represented(source) is "Text")
+		return true
+	let own = MlirCalls(function, position).Callee(function.TypeOf(source), "to", 0, target)
+	let isSame = layout.Represented(source) is layout.Represented(target)
+	(own.instructions.Length is 0) and ((target is in ("Number", "Character")) or isSame)
 Instance(entry InstructionEntry) Number
 	MlirTexts(Joined, 7).Instance(Joined.method.instructions(7)) is 1
 	let countPosition = 5 + entry.payload(3)

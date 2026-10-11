@@ -2,6 +2,7 @@ has values ValueCodegen
 constant Plain = OperatorCodegen(ValueCodegen.Plain)
 constant One = SyntaxNode("Number", "1")
 constant NoNode = SyntaxNode("Identifier", "x")
+constant Characters = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Character"), (KnownTypes.NoMembers), (Scope(("+"), ("Text"))), (KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant InOnes = SyntaxNode("Binary", "is in", (One, ValueCodegen.Ones))
 constant Choose = SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (NoNode, One)), One))
 constant Comparisons = ("is", "is not", "<", ">", "xor", ">=", "<=")
@@ -26,11 +27,12 @@ Negative(operand SyntaxNode, block CodeBlock) CodeBlock
 IsCustom(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsCustom(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
 	Plain.IsCustom(SyntaxNode("Binary", "is", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Size")) is false
+	Characters.IsCustom(SyntaxNode("Binary", "+", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Character")) is true
 	if node.text is not in ("+", "-", "*", "/", "%", "^")
 		return false
 	let type = values.TypeOf(node.children(0), block)
 	let types = values.inference.types
-	if (type is in ("Number", "Text", "Boolean", "Character")) or type.StartsWith("List(") or types.IsPlural(type)
+	if (type is in ("Number", "Text", "Boolean")) or type.StartsWith("List(") or types.IsPlural(type)
 		return false
 	types.MethodsOf(type).TypeOf(node.text) is not ""
 Composite(node SyntaxNode, block CodeBlock) CodeBlock

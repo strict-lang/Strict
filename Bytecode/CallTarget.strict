@@ -89,7 +89,8 @@ FullName(type Text) Text
 	Plain.FullName("Greeter") is "Strict/Examples/Greeter"
 	Plain.FullName("Helper") is "Strict/Examples/Helper"
 	Plain.FullName("None") is "None"
-	if type is in ("None", TypeName)
+	Plain.FullName("Other") is Plain.FullName(Plain.TypeName)
+	if type is in ("None", "Other", TypeName)
 		return type is "None" then type else fullName
 	if types.IsPlural(type)
 		return "Strict/List(" + types.ElementType(type) + ")"
