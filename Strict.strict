@@ -2,7 +2,7 @@ has logger
 constant Version = "1.0"
 constant Commands = ("run", "build", "test", "check")
 constant Informing = ("version", "--version", "help", "--help")
-constant Help = ("Usage: strict [command] <file or folder> [root folder, default .] [arguments]", "  run      run the Run method on the Strict VM, the fastest, everything stays in memory", "  build    run the tests and compile a native executable, the default without a command", "  test     run the inline tests of every method on the Strict VM", "  check    validate the .strict files of a folder: type rules, unused members, limits", "  version  show the version number and when this strict executable was built")
+constant Help = ("Usage: strict [command] <file or folder> [arguments]", "  run      run the Run method on the Strict VM, the fastest, everything stays in memory", "  build    run the tests and compile a native executable, the default without a command", "  test     run the inline tests of every method on the Strict VM", "  check    validate the .strict files of a folder: type rules, unused members, limits", "  version  show the version number and when this strict executable was built")
 Run(arguments Texts) Number
 	let command = arguments.Length > 0 then arguments(0) else "help"
 	let rest = Rooted(command is in Commands then Rest(arguments) else arguments)
@@ -27,8 +27,14 @@ Message(command Text, rest Texts) Text
 	(command is "check") or File(rest(0)).Exists then "" else rest(0) + " not found"
 Rooted(arguments Texts) Texts
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
-	Strict.Rooted(("a.strict", "b")) is ("a.strict", "b")
-	arguments.Length is 1 then arguments + "." else arguments
+	Strict.Rooted(("a.strict", "Compiler")) is ("a.strict", "Compiler")
+	Strict.Rooted(("a.strict", "5")) is ("a.strict", ".", "5")
+	if (arguments.Length is 0) or ((arguments.Length > 1) and Directory.Exists(arguments(1)))
+		return arguments
+	(List(Text) + arguments(0) + Root) + Rest(arguments)
+Root Text
+	Strict.Root is "."
+	File("Any.strict").Exists then "." else Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
 Rest(arguments Texts) Texts
 	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)

@@ -30,7 +30,7 @@ Entries(entries List(TypeEntry), signatures Texts, signed Texts) List(TypeEntry)
 Linkable(types Texts) Texts
 	Hello.Linkable("Strict/Logger", "Strict/Missing") is ("Strict/Logger")
 	for types
-		let source = File(root + "/" + SourceName(value) + ".strict")
+		let source = File(SourcePath(value))
 		if source.Exists and ((value.IndexOf("(") is -1) or (TypeShape(source.ReadLines).IsTrait is false))
 			value
 Signatures(types Texts, targets Texts) Texts
@@ -46,7 +46,7 @@ Fresh(signature Text) TypeEntry
 LinkedType(type Text, methods Texts) TypeEntry
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
-	let source = File(root + "/" + SourceName(type) + ".strict").ReadLines
+	let source = File(SourcePath(type)).ReadLines
 	let entry = TypeCodegen(type, source, main.inference, main.typeNames).Selected(methods)
 	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
 	isLocal then TypeEntry(Path(type).FileName.text, entry.members, entry.methods) else entry
@@ -85,6 +85,10 @@ SourceName(type Text) Text
 	Sample.SourceName("Strict/Process") is "Process"
 	let name = type.Substring(7, type.Length - 7)
 	name.IndexOf("(") is -1 then name else name.Substring(0, name.IndexOf("("))
+SourcePath(type Text) Text
+	Sample.SourcePath("Strict/Process") is "./Process.strict"
+	let local = "./" + SourceName(type) + ".strict"
+	File(local).Exists then local else root + "/" + SourceName(type) + ".strict"
 UsedTypes(entries List(TypeEntry)) Texts
 	Sample.UsedTypes(Go) is List(Text)
 	mutable types = List(Mutable(Text))

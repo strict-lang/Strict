@@ -2,7 +2,8 @@ has root Text
 Of(path Text) Texts
 	SourceFiles(".").Of("./Missing/A.strict").Length is Directory.Files(".", "*.strict").Length
 	mutable files = List(Mutable(Text))
-	for Folders(List(Text) + Path(path).PathOnly.text, 3)
+	let project = File("./Any.strict").Exists then List(Text) else Tree(".")
+	for Folders(Added(project, List(Text) + Path(path).PathOnly.text), 3)
 		files = files + Directory.Files(value, "*.strict")
 	Added(files, Directory.Files(root, "*.strict"))
 Folders(folders Texts, depth Number) Texts
@@ -33,9 +34,21 @@ PackagesIn(lines Texts) Texts
 PackageNames(tokens Texts) Texts
 	SourceFiles(".").PackageNames("Bytecode", "/", "X", "Strict", "/", "Y") is List(Text) + "./Bytecode"
 	for tokens
-		if index + 1 < tokens.Length and (tokens(index + 1) is "/") and IsPackage(value)
-			root + "/" + value
-IsPackage(name Text) Boolean
-	SourceFiles(".").IsPackage("Bytecode") is true
-	SourceFiles(".").IsPackage("Strict") is false
-	name is not "Strict" and Directory.Exists(root + "/" + name)
+		if index + 1 < tokens.Length and (tokens(index + 1) is "/") and (Package(value) is not "")
+			Package(value)
+Package(name Text) Text
+	SourceFiles(".").Package("Bytecode") is "./Bytecode"
+	SourceFiles(".").Package("Strict") is ""
+	SourceFiles("C:/Missing").Package("Missing") is ""
+	if (name is "Strict") or Directory.Exists("./" + name)
+		return name is "Strict" then "" else "./" + name
+	Directory.Exists(root + "/" + name) then root + "/" + name else ""
+Tree(folder Text) Texts
+	SourceFiles(".").Tree("./Math") is List(Text) + "./Math"
+	mutable folders = List(Mutable(Text)) + folder
+	for Directory.Directories(folder)
+		let name = Path(value.Replace("\\", "/")).FileName.text
+		let first = name.Substring(0, 1)
+		if (first is first.Upper) and (first is not first.Lower)
+			folders = folders + Tree(folder + "/" + name)
+	folders

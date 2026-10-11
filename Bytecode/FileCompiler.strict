@@ -10,25 +10,29 @@ Run(path Text, root Text)
 	else
 		logger.Log("Compilation failed, unsupported code in " + path + ": " + Unsupported(types))
 Compiled(path Text, root Text, withTests Boolean) List(TypeEntry)
-	let source = Normalized(path, root)
+	let source = Normalized(path)
 	let files = SourceFiles(root).Of(source)
 	let inference = ResolveCheck.Inference(files)
 	let main = TypeCodegen(FullName(source, root), File(source).ReadLines, inference, FullNames(files, root))
 	let entry = main.Entry
 	let methods = withTests then entry.methods + TestCodegen(main).Tests else entry.methods
 	Linker(root, main).Linked(TypeEntry(entry.Name, entry.members, methods), List(Text), 20)
-Normalized(path Text, root Text) Text
-	Normalized("Bytecode\\A.strict", ".") is "./Bytecode/A.strict"
-	Normalized("./A.strict", ".") is "./A.strict"
-	Normalized("C:/s/A.strict", ".") is "C:/s/A.strict"
-	Normalized("C:/s/./A.strict", "C:/s") is "C:/s/A.strict"
-	Normalized("C:\\s\\A.strict", "C:/s") is "C:/s/A.strict"
+Normalized(path Text) Text
+	Normalized("Bytecode\\A.strict") is "./Bytecode/A.strict"
+	Normalized("./A.strict") is "./A.strict"
+	Normalized("C:/s/A.strict") is "C:/s/A.strict"
+	Normalized("C:/s/./A.strict") is "C:/s/A.strict"
+	Normalized("C:\\s\\A.strict") is "C:/s/A.strict"
+	Normalized("A.strict") is "./A.strict"
 	let slashed = path.Replace("\\", "/").Replace("/./", "/")
 	let isRelative = (slashed.StartsWith("/") is false) and (slashed.IndexOf(":") < 0)
-	(root is ".") and isRelative and (slashed.StartsWith("./") is false) then "./" + slashed else slashed
+	isRelative and (slashed.StartsWith("./") is false) then "./" + slashed else slashed
 FullName(path Text, root Text) Text
 	FullName("C:/s/Bytecode\\A.strict", "C:/s") is "Strict/Bytecode/A"
-	"Strict/" + path.Substring(root.Length + 1, path.Length - root.Length - 8).Replace("\\", "/")
+	FullName("./Sub/Game.strict", "C:/s") is "Strict/Sub/Game"
+	let slashed = path.Replace("\\", "/")
+	let start = slashed.StartsWith(root + "/") then root.Length + 1 else (slashed.StartsWith("./") then 2 else 0)
+	"Strict/" + slashed.Substring(start, slashed.Length - start - 7)
 FullNames(files Texts, root Text) Texts
 	FullNames(("C:/s/A.strict", "C:/s/B/C.strict"), "C:/s") is ("Strict/A", "Strict/B/C")
 	for files

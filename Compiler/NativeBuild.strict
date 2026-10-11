@@ -15,7 +15,7 @@ Test(path Text, root Text) Number
 	if unsupported is not -1
 		logger.Log("Tests of " + path + " not compiled, " + program.Substring(unsupported, program.Length - unsupported))
 		return 1
-	let base = Base(path, root) + ".test"
+	let base = Base(path) + ".test"
 	File(base + ".mlir").Write(Mlir(program, root, Platform.Current))
 	Ran(base, path, Toolchain(Platform.Current, root))
 Ran(base Text, path Text, tools Toolchain) Number
@@ -53,7 +53,7 @@ Compile(path Text, root Text) Number
 	if missing.Length > 0
 		logger.Log(tools.Installing(missing))
 		return 1
-	Build(Base(path, root), program, tools)
+	Build(Base(path), program, tools)
 Build(base Text, program Text, tools Toolchain) Number
 	File(base + ".mlir").Write(Mlir(program, tools.root, Platform.Current))
 	let built = tools.Built(base)
@@ -68,10 +68,10 @@ Build(base Text, program Text, tools Toolchain) Number
 Removed(base Text, suffixes Texts)
 	for suffixes
 		File(base + value).Delete
-Base(path Text, root Text) Text
-	NativeBuild.Base("Character.strict", ".") is "./Character"
-	NativeBuild.Base("C:/s/A.strict", "C:/s") is "C:/s/A"
-	let source = FileCompiler.Normalized(path, root)
+Base(path Text) Text
+	NativeBuild.Base("Character.strict") is "./Character"
+	NativeBuild.Base("C:/s/A.strict") is "C:/s/A"
+	let source = FileCompiler.Normalized(path)
 	source.Substring(0, source.Length - 7)
 Mlir(program Text, root Text, platform Number) Text
 	NativeBuild.Mlir("module {\n}", ".", Platform.Linux).Length > 100000 is true
