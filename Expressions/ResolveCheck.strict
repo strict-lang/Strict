@@ -1,4 +1,5 @@
 has logger
+constant Counting = TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers))
 Run(folder Text, root Text)
 	let inference = Inference(Directory.Files(folder, "*.strict") + AllFiles(root))
 	let known = inference.types.names + ("value", "index", "outer")
@@ -19,6 +20,30 @@ AllFiles(root Text) Texts
 	for Directory.Directories(root)
 		files = files + Directory.Files(value, "*.strict")
 	files
+ChainType(inference TypeInference, tokens Texts, typeName Text) Text
+	ResolveCheck.ChainType(Counting, Tokenizer("constant a = Count(1).Twice(2)").Tokens, "Count") is "Count"
+	ResolveCheck.ChainType(Counting, Tokenizer("constant a = 1").Tokens, "Count") is ""
+	if (tokens.Length < 4) or (tokens(2) is not "=")
+		return ""
+	let node = SyntaxParser(tokens).ParseRange(3, tokens.Length)
+	let current = inference.types.ShapeScope(typeName)
+	node.Kind is in ("MethodCall", "Member") then inference.TypeOf(node, Scope(List(Text), List(Text)), current) else ""
+Refined(inference TypeInference, shapes List(TypeShape)) TypeInference
+	ResolveCheck.Refined(Counting, List(TypeShape)).types.methods.Length is 0
+	let types = inference.types
+	mutable methods = List(Mutable(Scope))
+	for shapes
+		methods.Add(ChainTyped(inference, value, types.methods(index), types.names(index)))
+	TypeInference(KnownTypes(types.names, types.members, methods, types.parameters), inference.constants)
+ChainTyped(inference TypeInference, shape TypeShape, scope Scope, typeName Text) Scope
+	ResolveCheck.ChainTyped(Counting, TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0
+	mutable result = scope
+	for shape.lines
+		if value.StartsWith("constant ") and (value.IndexOf(".") > 0)
+			let tokens = Tokenizer(value).Tokens
+			let chained = ChainType(inference, tokens, typeName)
+			result = chained is "" then result else result.With(tokens(1), chained)
+	result
 TypeNames(files Texts) Texts
 	for files
 		TypeName(value)
@@ -34,7 +59,7 @@ Inference(files Texts) TypeInference
 		methods.Add(value.MethodScope)
 		parameters.Add(value.CallScope(generics))
 		constants.Add(value.ConstantScope)
-	TypeInference(KnownTypes(TypeNames(files), members, methods, parameters), constants)
+	Refined(TypeInference(KnownTypes(TypeNames(files), members, methods, parameters), constants), shapes)
 Shapes(files Texts) List(TypeShape)
 	for files
 		TypeShape(File(value).ReadLines)

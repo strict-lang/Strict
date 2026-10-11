@@ -48,8 +48,12 @@ Helper(kind Text) Text
 	MlirEquality(Same, 2).Helper("Shape") is "strict_equal_Shape"
 	MlirEquality(Same, 2).Helper("Text") is "strict_text_equal"
 	MlirEquality(Same, 2).Helper("Number") is "strict_equal_number"
+	MlirEquality(Same, 2).Helper("List(Text)") is "strict_list_equal_text"
 	if kind is in ("Text", "File")
 		return "strict_text_equal"
+	let element = MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind))
+	if kind.StartsWith("List(")
+		return element is "Text" then "strict_list_equal_text" else "strict_list_equal_number"
 	IsKnown(kind) then "strict_equal_" + Symbol(kind) else "strict_equal_number"
 IsKnown(kind Text) Boolean
 	MlirEquality(Same, 2).IsKnown("Shape") is true

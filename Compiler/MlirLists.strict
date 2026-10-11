@@ -6,6 +6,9 @@ constant Listed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunctio
 constant Written = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers(1)"), InstructionEntry(InstructionType.CopyList, "numbers", -1))))
 constant Pair = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))
 constant Removal = InstructionEntry.Named(InstructionType.InvokeRemove, 1, "numbers")
+constant Words = MemberEntry("words", "Strict/List(Text)", List(InstructionEntry), false)
+constant WordSteps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "words"), InstructionEntry.LoadNumber(1, 3), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
+constant Worded = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Words, "None", WordSteps))
 Temp(suffix Text) Text
 	MlirLists(Listed, 2).Temp("l") is "%t2l"
 	"%t" + position + suffix
@@ -84,9 +87,21 @@ ElementStored(entry InstructionEntry) Texts
 	constant prefix = "    " + Temp("i") + " = arith.constant "
 	let loaded = function.Load(Temp("i"), "%v_" + index)
 	let indexed = isNumber then prefix + index + ".0 : f64" else loaded
-	let list = function.Load(Temp("l"), "%v_" + name.Substring(0, open))
-	let loads = (list, indexed, function.Load(Temp("e"), "%r" + entry.payload(0)))
+	let loads = Target(name.Substring(0, open)) + indexed + function.Load(Temp("e"), "%r" + entry.payload(0))
 	loads + MlirMemory(function, position).Called(Temp("s"), "strict_list_set", (Temp("l"), Temp("i"), Temp("e")))
+Target(path Text) Texts
+	MlirLists(Written, 1).Target("numbers") is ("    %t1l = llvm.load %v_numbers : !llvm.ptr -> f64")
+	MlirLists(Written, 1).Target("numbers.width").Last is "    %t1l = llvm.load %t1ls : !llvm.ptr -> f64"
+	let dot = path.IndexOf(".")
+	if dot < 0
+		return List(Text) + function.Load(Temp("l"), "%v_" + path)
+	let owner = path.Substring(0, dot)
+	let ownerType = function.TypeOf(MlirKinds(function).VariableKind(position, owner))
+	let names = MlirInstances(function, position).StoredNames(ownerType)
+	let memory = MlirMemory(function, position)
+	let slot = memory.Slot(Temp("op"), names.Index(path.Substring(dot + 1, path.Length - dot - 1)), "ls")
+	let pointer = List(Text) + function.Load(Temp("o"), "%v_" + owner) + memory.Pointer(Temp("o"), "o")
+	pointer + slot + function.Load(Temp("l"), Temp("ls"))
 Copied(entry InstructionEntry) Texts
 	MlirLists(Written, 2).Copied(Written.method.instructions(2)).Length is 3
 	let name = "%v_" + entry.texts(0)
@@ -105,5 +120,16 @@ Operated(entry InstructionEntry) Texts
 	let isList = right.StartsWith("List(")
 	let name = isList then "strict_list_concat" else "strict_list_add"
 	let call = MlirMemory(function, position).Called(Temp("c"), name, (Temp("a"), Temp("b")))
-	let loads = (function.Load(Temp("a"), "%r" + entry.payload(1)), function.Load(Temp("b"), "%r" + entry.payload(2)))
+	let loads = List(Text) + function.Load(Temp("a"), "%r" + entry.payload(1)) + RightOperand(entry, isList)
 	loads + call + function.Store(Temp("c"), "%r" + entry.payload(3))
+RightOperand(entry InstructionEntry, isList Boolean) Texts
+	Text.Combine(MlirLists(Worded, 2).RightOperand(WordSteps(2), false)).IndexOf("@strict_number_text(") > 0 is true
+	MlirLists(Listed, 4).RightOperand(Steps(4), false).Length is 1
+	let kinds = MlirKinds(function)
+	let right = kinds.KindOf(position, entry.payload(2))
+	let isNumbers = (isList then kinds.ElementKind(right) else right) is "Number"
+	let needsTexts = isNumbers and (kinds.ElementKind(kinds.KindOf(position, entry.payload(1))) is "Text")
+	let helper = isList then "strict_list_texts" else "strict_number_text"
+	let raw = function.Load(Temp(needsTexts then "br" else "b"), "%r" + entry.payload(2))
+	let converted = MlirMemory(function, position).Called(Temp("b"), helper, List(Text) + Temp("br"))
+	needsTexts then (raw, converted) else List(Text) + raw

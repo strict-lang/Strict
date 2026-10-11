@@ -44,13 +44,17 @@ Wrapped(line SyntaxNode) SyntaxNode
 	Returning.Wrapped(Value).Kind is "Return"
 	BranchValues("list").Wrapped(Value).text is "Add"
 	BranchValues("product").Wrapped(Value).children.Last.text is "*"
+	BranchValues("any").Wrapped(Value).Kind is "If"
 	if IsValue(line) is false
 		return line
+	if mode is "any"
+		return SyntaxNode("If", "", (line, SyntaxNode("Body", "", SyntaxNode("Return", "", SyntaxNode("Boolean", "true")))))
+	mode is in ("sum", "product", "list") then Accumulated(line) else SyntaxNode("Return", "", line)
+Accumulated(line SyntaxNode) SyntaxNode
+	BranchValues("sum").Accumulated(Value).Kind is "Reassignment"
 	constant result = SyntaxNode("Identifier", "forResult")
 	if mode is "list"
 		return SyntaxNode("MethodCall", "Add", (result, line))
-	if mode is not in ("sum", "product")
-		return SyntaxNode("Return", "", line)
 	SyntaxNode("Reassignment", "", (result, SyntaxNode("Binary", (mode is "product" then "*" else "+"), (result, line))))
 IsValue(line SyntaxNode) Boolean
 	Returning.IsValue(Value) is true

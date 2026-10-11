@@ -76,7 +76,7 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 		let isNamed = block.scope.TypeOf(node.text) is not "" or isOwnMember or isConstant
 		return (node.children.Length is 1) and isNamed or (node.children.Length is 2) and isOwnMember
 	let isMember = (node.Kind is "MethodCall") and (node.children.Length is in (2, 3))
-	isMember and target.IsMember(TypeOf(node.children(0), block), node.text)
+	isMember and ((node.text is "value") or target.IsMember(TypeOf(node.children(0), block), node.text))
 Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
 	Plain.Indexed(SyntaxNode("MethodCall", "text", (NewGreeter, One)), CodeBlock.Empty).nextId is 1
@@ -123,7 +123,7 @@ IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
 	if node.Kind is "Identifier"
 		return (block.scope.TypeOf(node.text) is "") and target.Header(node.text).tokens.Length > 0
 	if node.Kind is "Member"
-		return target.IsMember(TypeOf(node.children(0), block), node.text) is false
+		return (node.text is not "value") and (target.IsMember(TypeOf(node.children(0), block), node.text) is false)
 	(node.Kind is in ("Call", "MethodCall")) and (IsIndexing(node, block) is false)
 IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is true

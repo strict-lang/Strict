@@ -90,11 +90,23 @@ BodyType(header HeaderTokens) Text
 	Concrete(returnType.StartsWith("Iterator(") then inference.types.ElementType(returnType) + "s" else returnType)
 Parameters(header HeaderTokens) List(MemberEntry)
 	Hello.Parameters(HeaderTokens("Add", "(", "first", "Number", ")")).Length is 1
+	Hello.Parameters(HeaderTokens("Add", "(", "x", "=", "1", ")")).First.initial.Length is 1
 	let types = header.ParameterTypes
 	mutable parameters = List(Mutable(MemberEntry))
 	for header.ParameterNames
-		parameters.Add(MemberEntry(value, Generator.target.FullName(Concrete(types(index))), List(InstructionEntry), false))
+		let type = Generator.target.FullName(Concrete(types(index)))
+		parameters.Add(MemberEntry(value, type, Default(header, header.tokens.Index(value)), false))
 	parameters
+Default(header HeaderTokens, position Number) List(InstructionEntry)
+	Hello.Default(HeaderTokens("Add", "(", "x", ")"), 2).Length is 0
+	if header.tokens(position + 1) is not "="
+		return List(InstructionEntry)
+	mutable end = -1
+	for Range(position + 2, header.tokens.Length)
+		if (end is -1) and (header.tokens(value) is in (",", ")"))
+			end = value
+	let node = SyntaxParser(header.tokens).ParseRange(position + 2, end)
+	Initial(ConstantFolding(Generator.target.TypeName, Generator.inference).Folded(node))
 Concrete(type Text) Text
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "Numbers"
 	Hello.Concrete("Generic") is "Generic"

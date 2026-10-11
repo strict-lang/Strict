@@ -2,6 +2,8 @@ has function MlirFunction
 has position Number
 constant Declarations = ("  llvm.func @snprintf(!llvm.ptr, i64, !llvm.ptr, ...) -> i32", "  llvm.func @malloc(i64) -> !llvm.ptr", "  llvm.func @realloc(!llvm.ptr, i64) -> !llvm.ptr", "  llvm.func @memcpy(!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr", "  llvm.func @strlen(!llvm.ptr) -> i64", "  llvm.func @strcmp(!llvm.ptr, !llvm.ptr) -> i32", "  llvm.func @strncmp(!llvm.ptr, !llvm.ptr, i64) -> i32", "  llvm.func @strstr(!llvm.ptr, !llvm.ptr) -> !llvm.ptr", "  llvm.func @toupper(i32) -> i32", "  llvm.func @tolower(i32) -> i32", "  llvm.func @strtod(!llvm.ptr, !llvm.ptr) -> f64", "  llvm.func @strchr(!llvm.ptr, i32) -> !llvm.ptr", "  llvm.func @strtol(!llvm.ptr, !llvm.ptr, i32) -> i64", "  llvm.func @fopen(!llvm.ptr, !llvm.ptr) -> !llvm.ptr", "  llvm.func @fclose(!llvm.ptr) -> i32", "  llvm.func @fseek(!llvm.ptr, i64, i32) -> i32", "  llvm.func @ftell(!llvm.ptr) -> i64", "  llvm.func @fread(!llvm.ptr, i64, i64, !llvm.ptr) -> i64", "  llvm.func @fwrite(!llvm.ptr, i64, i64, !llvm.ptr) -> i64", "  llvm.mlir.global internal constant @strict_true(\"true\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_false(\"false\\00\") : !llvm.array<6 x i8>", "  llvm.mlir.global internal constant @strict_number(\"%g\\00\") : !llvm.array<3 x i8>", "  llvm.mlir.global internal constant @strict_pair(\"%s%s\\00\") : !llvm.array<5 x i8>", "  llvm.mlir.global internal constant @strict_empty(\"\\00\") : !llvm.array<1 x i8>")
 constant Joined = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a%"), InstructionEntry.LoadNumber(1, 7), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.PrintValue("x: ", 2, true), MlirKinds.Passed, InstructionEntry.PrintValue("y: ", 2, false), InstructionEntry.PrintValue("z: ", 1, false), InstructionEntry.Invoke(3, ("Strict/Number", "to", "Strict/Text"), List(Number), 1))))
+constant ToNumbers = InstructionEntry.Invoke(1, ("Strict/List(Text)", "to", "Strict/List(Number)"), List(Number), 0)
+constant Listing = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Words, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "words"), ToNumbers)))
 Temp(suffix Text) Text
 	MlirTexts(Joined, 2).Temp("l") is "%t2l"
 	MlirStatements(function, position).Temp(suffix)
@@ -13,13 +15,14 @@ IsSum Boolean
 IsConversion Boolean
 	MlirTexts(Joined, 7).IsConversion is true
 	MlirTexts(Joined, 6).IsConversion is false
+	MlirTexts(Listing, 1).IsConversion is true
 	let entry = function.method.instructions(position)
 	if entry.kind is not InstructionType.Invoke
 		return false
 	let decoder = PayloadDecoder(entry)
 	let target = MlirKinds(function).Short(decoder.Text(4 + entry.payload(3)))
 	let isTo = decoder.Text(2) is "to"
-	isTo and ((target is in ("Text", "Number", "Character")) or IsRetyped(entry, target))
+	isTo and ((target is in ("Text", "Number", "Character")) or target.StartsWith("List(") or IsRetyped(entry, target))
 IsRetyped(entry InstructionEntry, target Text) Boolean
 	MlirTexts(Joined, 7).IsRetyped(Joined.method.instructions(7), "Number") is true
 	MlirTexts(Joined, 7).IsRetyped(Joined.method.instructions(7), "Shape") is false
@@ -38,11 +41,26 @@ Converted(entry InstructionEntry) Texts
 	let target = MlirKinds(function).Short(PayloadDecoder(entry).Text(4 + entry.payload(3)))
 	if target is "Number"
 		return Numbered(instance, result)
-	if target is not in ("Text", "Character")
-		return function.Copied("%r" + instance, result, Temp("y"))
+	if target.StartsWith("List(")
+		return Elements(instance, target, result)
+	let copied = function.Copied("%r" + instance, result, Temp("y"))
+	target is in ("Text", "Character") then Textual(instance, target, result) else copied
+Textual(instance Number, target Text, result Text) Texts
+	MlirTexts(Joined, 7).Textual(1, "Text", "%r3").Length is 3
 	let text = TextBits(instance, "v")
 	let first = MlirMemory(function, position).Called(Temp("vc"), "strict_text_at", (Temp("vx"), "%zero"))
 	target is "Text" then text + function.Store(Temp("vx"), result) else text + first + function.Store(Temp("vc"), result)
+Elements(instance Number, target Text, result Text) Texts
+	Text.Combine(MlirTexts(Listing, 1).Elements(0, "List(Number)", "%r1")).IndexOf("@strict_list_numbers(") > 0 is true
+	let kinds = MlirKinds(function)
+	let source = kinds.ElementKind(kinds.KindOf(position, instance))
+	let element = kinds.ElementKind(target)
+	let loaded = function.Load(Temp("w"), "%r" + instance)
+	if (source is element) or (element is not in ("Number", "Text")) or (source is not in ("Number", "Text"))
+		return (loaded, function.Store(Temp("w"), result))
+	let helper = element is "Number" then "strict_list_numbers" else "strict_list_texts"
+	let converted = MlirMemory(function, position).Called(Temp("wc"), helper, List(Text) + Temp("w"))
+	(loaded, converted, function.Store(Temp("wc"), result))
 Numbered(instance Number, target Text) Texts
 	MlirTexts(Joined, 1).Numbered(0, "%r1").Length is 3
 	let loaded = function.Load(Temp("n"), "%r" + instance)

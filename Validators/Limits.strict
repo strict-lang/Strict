@@ -4,7 +4,7 @@ constant MaxCharacters = 120
 constant MaxMethodLines = 13
 constant MaxMethods = 15
 constant MaxMembers = 15
-constant Enum = Limits(("constant A", "constant B", "constant C", "constant D", "constant E", "constant F", "constant G", "constant H", "constant I", "constant J", "constant K", "constant L", "constant M", "constant N", "constant O", "constant P"), false)
+constant OnlyConstants = Limits(("constant A", "constant B", "constant C", "constant D", "constant E", "constant F", "constant G", "constant H", "constant I", "constant J", "constant K", "constant L", "constant M", "constant N", "constant O", "constant P"), false)
 constant Sample = Limits(("has number", "Run", "\t\t\t\t\t\t1", "  2"), false)
 constant Long = Limits(("Run", "\t1", "\t2", "\t3", "\t4", "\t5", "\t6", "\t7", "\t8", "\t9", "\t10", "\t11", "\t12", "\t13"), false)
 Issues ValidationIssues
@@ -40,7 +40,7 @@ MethodIssues ValidationIssues
 	issues
 CountIssues ValidationIssues
 	Limits(("has a Number", "has b Number"), false).CountIssues.Length is 0
-	Limits(Enum.lines, false).CountIssues.Length is 0
+	Limits(OnlyConstants.lines, false).CountIssues.Length is 0
 	let shape = TypeShape(lines)
 	mutable methods = 0
 	mutable members = 0
@@ -52,7 +52,7 @@ CountIssues ValidationIssues
 	let memberLimit = (methods is 0) and (members is Count("constant ")) then 40 else MaxMembers
 	methodIssues + Counted("MemberCountShouldNotExceedLimit", members, memberLimit)
 Count(start Text) Number
-	Enum.Count("constant ") is 16
+	OnlyConstants.Count("constant ") is 16
 	mutable count = 0
 	for lines
 		count = count + (value.StartsWith(start) then 1 else 0)

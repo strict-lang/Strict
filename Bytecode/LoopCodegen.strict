@@ -16,9 +16,11 @@ Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
 	Plain.Aggregation(ProductBody, "Number") is "product"
 	Plain.Aggregation(DoubledBody, "Numbers") is "list"
-	Plain.Aggregation(DoubledBody, "Boolean") is ""
+	Plain.Aggregation(DoubledBody, "Boolean") is "any"
 	if (body.children.Length is 0) or body.children.Last.Kind is not "For"
 		return ""
+	if returnType is "Boolean"
+		return "any"
 	if returnType is in ("Number", "Text")
 		let reduction = Reduction(body.children.Last.children.Last.children.Last)
 		return reduction is in ("", "+") then "sum" else (reduction is "*" then "product" else "")
@@ -27,11 +29,11 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	Plain.Aggregated(MethodCodegen.SumBody, CodeBlock.Empty, "Number").Result is 0
 	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Numbers").instructions(0).texts.Last is "forResult"
 	Plain.Aggregated(ProductBody, CodeBlock.Empty, "Number").instructions(0) is InstructionEntry.LoadNumber(0, 1)
-	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Boolean").instructions.Length is 6
+	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Boolean").instructions.Length is 13
 	Plain.Aggregated(RowsBody, CodeBlock.Empty, "List(Numbers)").instructions(6).kind is InstructionType.Add
 	let aggregation = Aggregation(body, returnType)
-	if aggregation is ""
-		return methods.Body(body, block)
+	if aggregation is in ("", "any")
+		return methods.Body((aggregation is "any" then AnyTrue(body) else body), block)
 	let started = Started(block, returnType, aggregation).Declare("forResult", returnType)
 	let leading = Leading(body, started.At(block.register))
 	let looped = Loop(body.children.Last, leading, aggregation).At(block.register)
@@ -42,6 +44,13 @@ Leading(body SyntaxNode, block CodeBlock) CodeBlock
 	for body.children.Length - 1
 		result = methods.Statement(body.children(index), result.At(block.register), methods.HasElse(body, index))
 	result.At(block.register)
+AnyTrue(body SyntaxNode) SyntaxNode
+	Plain.AnyTrue(DoubledBody).children.Last.Kind is "Boolean"
+	Plain.AnyTrue(DoubledBody).children(0).children.Last.children(0).Kind is "If"
+	mutable statements = List(Mutable(SyntaxNode))
+	for body.children
+		statements.Add(index is body.children.Length - 1 then BranchValues("any").Branch(value) else value)
+	SyntaxNode("Body", body.text, statements + SyntaxNode("Boolean", "false"))
 Started(block CodeBlock, returnType Text, aggregation Text) CodeBlock
 	Plain.Started(CodeBlock.Empty, "Number", "sum").instructions.Length is 2
 	Plain.Started(CodeBlock.Empty, "Numbers", "list").instructions.Length is 1

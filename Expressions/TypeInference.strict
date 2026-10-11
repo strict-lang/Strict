@@ -22,7 +22,7 @@ TypeOf(node SyntaxNode, scope Scope, current Scope) Text
 	if node.Kind is "Identifier"
 		return IdentifierType(node.text, scope, current)
 	if node.Kind is "Call"
-		return node.text is "List" then ConstructedType(node.children(0)) + "s" else CallType(node.text, scope, current)
+		return node.text is "List" then ConstructedType(node.children(0)) + "s" else Called(node, scope, current)
 	if node.Kind is in ("Member", "MethodCall")
 		return MemberCallType(node, scope, current)
 	OperatorType(node, scope, current)
@@ -36,6 +36,10 @@ IdentifierType(name Text, scope Scope, current Scope) Text
 	if ImplicitValueType(name, scope) is not ""
 		return ImplicitValueType(name, scope)
 	current.TypeOf(name) is "" then name else current.TypeOf(name)
+Called(node SyntaxNode, scope Scope, current Scope) Text
+	NoInference.Called(SyntaxNode("Call", "Mutable", SyntaxNode("Number", "5")), NoScope, NoShape) is "Number"
+	let isMutable = (node.text is "Mutable") and (node.children.Length is 1)
+	isMutable then TypeOf(node.children(0), scope, current) else CallType(node.text, scope, current)
 CallType(name Text, scope Scope, current Scope) Text
 	NoInference.CallType("Vector2", NoScope, NoShape) is "Vector2"
 	NoInference.CallType("x", NoScope, Scope(("x", "y"), ("Texts", "Y"))) is "Text"

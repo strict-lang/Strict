@@ -7,6 +7,8 @@ constant AreaShape = TypeEntry("Strict/Shape", MlirFunction.Shape.members, List(
 constant Shapes = MlirFunction(List(TypeEntry) + AreaShape, AreaShape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), NewShape, Area, InstructionEntry.PrintValue("Hi ", 0, false))))
 constant FromText = MethodEntry("from", MemberEntry("text", "Strict/Text", List(InstructionEntry), false), "Strict/Hash", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Return(0)))
 constant Hash = TypeEntry("Strict/Hash", MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry) + FromText)
+constant Defaulted = MethodEntry("from", MemberEntry("text", "Strict/Text", InstructionEntry.Set(List(Text), InstructionEntry.NumberValue(2)), false), "Strict/Hash", FromText.instructions)
+constant DefaultHash = TypeEntry("Strict/Hash", Hash.members, List(MethodEntry) + Defaulted)
 constant Hashed = InstructionEntry.Invoke(1, ("Strict/Hash", "from", "Strict/Hash", "text"), 0, -1)
 constant Hashes = MlirFunction(List(TypeEntry) + Hash, Hash, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "abc"), Hashed)))
 Temp(suffix Text) Text
@@ -60,8 +62,18 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let target = MlirFunction(function.types, type, callee)
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
-	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + Operands(entry) + ") : (" + types + ") -> f64"
-	Loads(entry, type) + call + function.Store(Temp("r"), "%r" + entry.payload(0))
+	let names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
+	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + names + ") : (" + types + ") -> f64"
+	Loads(entry, type) + Defaults(callee, count) + call + function.Store(Temp("r"), "%r" + entry.payload(0))
+Defaults(callee MethodEntry, count Number) Texts
+	MlirCalls(Hashes, 1).Defaults(Defaulted, 0).Last is "    %t1a0 = llvm.load %r1 : !llvm.ptr -> f64"
+	let scratch = "%r" + function.method.instructions(position).payload(0)
+	mutable lines = List(Mutable(Text))
+	for Range(count, callee.parameters.Length)
+		let initial = Natives(function.types).Initial(callee.parameters(value))
+		let literal = MlirStatements(function, position).Literal(initial, scratch, "p" + value)
+		lines = lines + literal + function.Load(Temp("a" + value), scratch)
+	lines
 NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
 	MlirCalls(Shapes, 2).NativeHelper(Area, PayloadDecoder(Area)) is ""
 	let type = function.TypeOf(decoder.Text(1))
@@ -77,12 +89,17 @@ Owner(entry InstructionEntry, type TypeEntry) Text
 	hasInstance then MlirKinds(function).KindOf(position, entry.payload(flagPosition + 1)) else type.Name
 Callee(type TypeEntry, name Text, count Number, returnType Text) MethodEntry
 	MlirCalls(Shapes, 1).Callee(AreaShape, "Size", 0, "Number").instructions.Length is 0
+	MlirCalls(Shapes, 1).Callee(DefaultHash, "from", 0, "Hash").parameters.Length is 1
 	let returned = MlirKinds(function).Short(returnType)
+	mutable defaulted = MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry))
 	for type.methods
 		let isReturning = name is not "to" or (MlirKinds(function).Short(value.returnType) is returned)
-		if (value.Name is name) and (value.parameters.Length is count) and isReturning
+		let isNamed = (value.Name is name) and isReturning
+		if isNamed and (value.parameters.Length is count)
 			return value
-	MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry))
+		if isNamed and (count < value.parameters.Length) and (value.parameters(count).initial.Length > 0)
+			defaulted = value
+	defaulted
 Loads(entry InstructionEntry, type TypeEntry) Texts
 	MlirCalls(Shapes, 2).Loads(Area, AreaShape).Length is 1
 	let countPosition = 5 + entry.payload(3)
@@ -99,10 +116,6 @@ ArgumentLoads(entry InstructionEntry) Texts
 	let countPosition = 5 + entry.payload(3)
 	for entry.payload(countPosition)
 		function.Load(Temp("a" + index), "%r" + entry.payload(countPosition + 1 + index))
-Operands(entry InstructionEntry) Text
-	MlirCalls(Shapes, 2).Operands(Area) is "%t2m"
-	let names = List(Text) + Temp("m") + ArgumentNames(entry.payload(5 + entry.payload(3)))
-	Text.Combine(names, ", ")
 ArgumentNames(count Number) Texts
 	MlirCalls(Shapes, 2).ArgumentNames(2) is ("%t2a0", "%t2a1")
 	for count

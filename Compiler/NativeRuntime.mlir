@@ -1779,6 +1779,86 @@
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  func.func private @strict_list_mapped(%list: f64, %toText: i1) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %empty = func.call @strict_list_new(%length, %zero) : (f64, f64) -> f64
+    cf.br ^loop(%zero, %empty : f64, f64)
+  ^loop(%index: f64, %built: f64):
+    %more = arith.cmpf olt, %index, %length : f64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %element = func.call @strict_list_get(%list, %index) : (f64, f64) -> f64
+    cf.cond_br %toText, ^text, ^number
+  ^text:
+    %asText = func.call @strict_number_text(%element) : (f64) -> f64
+    cf.br ^add(%asText : f64)
+  ^number:
+    %asNumber = func.call @strict_text_number(%element) : (f64) -> f64
+    cf.br ^add(%asNumber : f64)
+  ^add(%converted: f64):
+    %added = func.call @strict_list_add(%built, %converted) : (f64, f64) -> f64
+    %next = arith.addf %index, %one : f64
+    cf.br ^loop(%next, %added : f64, f64)
+  ^done:
+    return %built : f64
+  }
+  func.func private @strict_list_equal_text(%left: f64, %right: f64) -> f64 {
+    %element = func.constant @strict_text_equal : (f64, f64) -> f64
+    %result = func.call @strict_list_equal(%left, %right, %element) : (f64, f64, (f64, f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_equal_number(%left: f64, %right: f64) -> f64 {
+    %element = func.constant @strict_equal_number : (f64, f64) -> f64
+    %result = func.call @strict_list_equal(%left, %right, %element) : (f64, f64, (f64, f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_text_mapped(%list: f64, %converter: (f64) -> f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %empty = func.call @strict_list_new(%length, %zero) : (f64, f64) -> f64
+    cf.br ^loop(%zero, %empty : f64, f64)
+  ^loop(%index: f64, %built: f64):
+    %more = arith.cmpf olt, %index, %length : f64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %element = func.call @strict_list_get(%list, %index) : (f64, f64) -> f64
+    %text = func.call_indirect %converter(%element) : (f64) -> f64
+    %added = func.call @strict_list_add(%built, %text) : (f64, f64) -> f64
+    %next = arith.addf %index, %one : f64
+    cf.br ^loop(%next, %added : f64, f64)
+  ^done:
+    %joined = func.call @strict_text_combine(%zero, %built, %zero) : (f64, f64, f64) -> f64
+    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
+    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_text_lists_text(%list: f64) -> f64 {
+    %converter = func.constant @strict_list_text_text : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%list, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_text_lists_number(%list: f64) -> f64 {
+    %converter = func.constant @strict_list_text_number : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%list, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_texts(%list: f64) -> f64 {
+    %toText = arith.constant 1 : i1
+    %result = func.call @strict_list_mapped(%list, %toText) : (f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_numbers(%list: f64) -> f64 {
+    %toText = arith.constant 0 : i1
+    %result = func.call @strict_list_mapped(%list, %toText) : (f64, i1) -> f64
+    return %result : f64
+  }
   func.func private @strict_list_text_text(%list: f64) -> f64 {
     %isText = arith.constant 1 : i1
     %result = func.call @strict_list_text(%list, %isText) : (f64, i1) -> f64
