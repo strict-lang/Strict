@@ -5,6 +5,7 @@ constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
 constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper", "Strict/Text"), List(Number), 0), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("ab"), Locals.Empty))
 constant Characters = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1))), 0, List(VmValue) + VmValue.OfText("ab"), Locals.Empty)
+constant Texts = TypeEntry("Strict/Text", List(MemberEntry) + MemberEntry("characters", "Strict/List(Character)", List(InstructionEntry), false), List(MethodEntry))
 constant Listing = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.IndexCall, "list", (0, 0, -1))), 0, List(VmValue) + VmValue.OfNumber(1), Locals(("list"), (VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)))))
 Launch(typeName Text, arguments List(VmValue))
 	let main = Natives(types).TypeOf(typeName)
@@ -27,12 +28,11 @@ Find(typeName Text, methodName Text, count Number) MethodEntry
 	MethodEntry(methodName, List(MemberEntry), "None", List(InstructionEntry))
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue)) Locals
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue)).Get("value").number is 2
+	Hello.Bound(Texts, VmValue.OfText("ab"), MethodEntry.HelloRun, List(VmValue)).Get("characters").text is "ab"
 	mutable locals = Locals.Empty.With("#this", instance).With("value", instance)
-	if instance.kind is "List"
-		locals = locals.With("elements", instance)
-	if Natives(types).IsNamed(type, instance.kind)
+	if instance.IsBase or Natives(types).IsNamed(type, instance.kind)
 		for type.members
-			locals = locals.With(value.Name, (index < instance.items.Length then instance.items(index) else VmValue.None))
+			locals = locals.With(value.Name, instance.Member(index))
 	for method.parameters
 		locals = locals.With(value.Name, arguments(index))
 	locals
@@ -99,7 +99,7 @@ Field(frame Frame) Frame
 	Hello.Field(Characters).Register(1).text is "ab"
 	let entry = frame.Instruction
 	let instance = frame.Register(entry.payload(1))
-	if instance.kind is in ("Text", "Number", "Boolean", "List")
+	if instance.IsBase
 		return frame.NextWithRegister(entry.payload(0), instance)
 	mutable found = VmValue.None
 	for Natives(types).TypeOf(instance.kind).members

@@ -33,6 +33,15 @@ Counted(arguments List(VmValue)) Number
 	for items
 		if value is arguments.First
 			1
+IsBase Boolean
+	OfText("a").IsBase is true
+	None.IsBase is false
+	kind is in ("Text", "Number", "Boolean", "List")
+Member(index Number) VmValue
+	OfText("ab").Member(0).text is "ab"
+	VmValue("Strict/Shape", 0, "", List(VmValue) + OfNumber(3)).Member(0).number is 3
+	None.Member(1).kind is "None"
+	IsBase then value else index < items.Length then items(index) else None
 IsTrue Boolean
 	OfBoolean(false).IsTrue is false
 	number is 1
