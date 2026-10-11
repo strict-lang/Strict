@@ -186,7 +186,7 @@
     %size = arith.select %isLast, %restSize, %segmentSize : i64
     %withName = arith.addi %size, %fileSize : i64
     %bytes = arith.addi %withName, %two : i64
-    %candidate = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    %candidate = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
     %copiedDirectory = llvm.call @memcpy(%candidate, %start, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %slashSlot = llvm.getelementptr %candidate[%size] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %slashCharacter, %slashSlot : i8, !llvm.ptr
@@ -211,7 +211,7 @@
   func.func private @strict_temp_file() -> f64 {
     %size = arith.constant 18 : i64
     %template = llvm.mlir.addressof @strict_temp_template : !llvm.ptr
-    %name = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %name = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %copied = llvm.call @memcpy(%name, %template, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %descriptor = llvm.call @mkstemp(%name) : (!llvm.ptr) -> i32
     %closed = llvm.call @close(%descriptor) : (i32) -> i32
@@ -262,7 +262,7 @@
     %shellName = llvm.mlir.addressof @strict_shell_name : !llvm.ptr
     %shellCommand = llvm.mlir.addressof @strict_shell_command : !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
-    %status = func.call @strict_alloc(%statusSize) : (i64) -> !llvm.ptr
+    %status = func.call @strict_alloc_text(%statusSize) : (i64) -> !llvm.ptr
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
     %child = llvm.call @fork() : () -> i32
     %isChild = arith.cmpi eq, %child, %none : i32
