@@ -141,6 +141,7 @@ ipch/
 *.mlir
 *.llvm.mlir
 !Compiler/NativeRuntime*.mlir
+!Compiler/Bootstrap.mlir
 *.obj
 *.o
 /Tools/

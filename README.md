@@ -49,14 +49,18 @@ The best way to learn how any expression or base type works is to look at the co
 `.strict` files must not end with trailing blank lines or whitespace-only tab lines.
 
 ## Command line
+Strict is written in Strict and compiles itself to a native executable, no .NET or other runtime is needed (the C# implementation that bootstrapped it lives on the `dotnet` branch).
 ```
-Strict [run] Examples/Sum.strict 5 10 20   build .strictbinary cache if needed and execute Run
-Strict check Examples/Sum.strict           parse and validate only
-Strict test Examples/Sum.strict            check and run all inline method tests
-Strict build Examples/Sum.strict           native executable for this platform (-Windows/-Linux/-MacOS)
-Strict decompile Examples/Sum.strictbinary partial .strict files from bytecode
+NativeCompiler build Examples/Sum.strict .        native executable (on Windows also the Linux one through WSL)
+NativeCompiler test Examples/Sum.strict .         compile every inline method test into an executable and run it
+NativeCompiler check Examples .                   validate a folder (type rules, unused members, limits)
+NativeCompiler run Examples/Sum.strict . 5 10 20  compile with the Strict compiler and run on the Strict VM
 ```
-Exit codes: 0 success, 1 failed (parsing, test or runtime error), 2 wrong usage (unknown option, missing file). Errors show the Strict message with clickable `file:line` locations, `-diagnostics` adds the full .NET stack trace and stage timings.
+The second path is the repository root (base types and packages are resolved from there). Exit codes: 0 success, `test` returns the number of failed tests (128 when the test executable crashed), 2 wrong usage.
+
+Needed tools: `mlir-opt` and `mlir-translate` (LLVM MLIR, on Windows the msys64 ucrt64 package `mingw-w64-ucrt-x86_64-mlir`) and `clang` (LLVM 22). When they are missing NativeCompiler says so and starts installing them (Windows: winget and pacman in a new window, Linux: the LLVM 22 release archive into `Tools/`).
+
+Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR) with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux), then let it build itself: `Compiler\NativeCompiler.exe build Compiler\NativeCompiler.strict .` twice gives identical output (fixpoint).
 
 ## Rules worth knowing
 - Limits: 120 characters per line, 13 lines per method (header and tests included), 4 parameters, 15 methods, 15 members, nesting depth 5, names 2-50 characters.
@@ -70,86 +74,27 @@ Exit codes: 0 success, 1 failed (parsing, test or runtime error), 2 wrong usage 
 - `constant` for values computed only from constants, `let` for everything else that doesn't change, `mutable` only when a value really changes (loop counters).
 - Values never change: `list + element` gives a new list, a `mutable` variable can only be reassigned to such a new value. Internally the runtime keeps the same list and appends in place, the new list is the same memory and the previous version is not used anymore. Changing an old version again forces a copy, that is bad code: a list is either fixed, or growing and then only its latest version is used.
 
-See the Readme.md of the Strict project for more details, how to use and example code.
-## Language Server Protocol
+## How it is built (from low to high level)
+| Package | Responsibility |
+|---------|----------------|
+| root types | `Number`, `Text`, `List`, `Dictionary`, `Error`, `File`, ... define the language and are its documentation |
+| `Expressions` | Tokenizer, syntax tree, statements, header tokens, type shapes, known types and type inference over all packages |
+| `Validators` | Unused and never changed variables, constant folding, limits (`ValidateCheck` behind `NativeCompiler check`) |
+| `Bytecode` | Compiles a type into register based instructions (`FileCompiler`), inlines constants, removes tests, links used types, writes `.strictbinary` |
+| `Runtime` | The Strict VM running those instructions (`Execute` behind `NativeCompiler run`) |
+| `Compiler` | `NativeCompiler`: instructions to MLIR, `NativeRuntime*.mlir` (texts, lists, files, processes, collector), mlir-opt, mlir-translate and clang |
 
-The LSP (Language Server Protocol) implementation here adds support for VSCode, VS2019, IntelliJ and many more IDEs as possible Editors for Strict.
+Native model: every value is one 64-bit slot, numbers are doubles, texts, lists and instances are pointer bits. A type with one member is that member (`Name` is its text, `Degrees` its number), other instances are heap blocks with one slot per member. Lists append in place while they are the newest version. Memory is managed by a conservative mark-sweep collector (64 KB pages, size classes, interior pointers, collections after 4 MB or 8x the live data), 1M loop iterations on the Strict VM use 9 MB.
 
-## Architecture at a Glance (from low to high level)
+Speed (1M loop iterations): native executable 45 ms (227 KB), Strict VM 245 ms, C# Strict.exe 420 ms. NativeCompiler builds itself in 10 s, most of it in mlir-opt and clang.
 
-| Layer                       | Responsibility                                                                      | When It Runs                    | Rejects / Optimises                                                           |
-|-----------------------------|-------------------------------------------------------------------------------------|---------------------------------|-------------------------------------------------------------------------------|
-| **Strict.Language**         | Load *.strict* files, package handling, core type parsing (structure only)          | File load                       | Bad formatting & package errors                                               |
-| **Strict.Expressions**      | Lazy-parse method bodies into an immutable tree of `if`, `for`, assignments, calls… | First method call               | Structural/semantic violations                                                |
-| **Strict.Validators**       | Visitor-based static analysis & constant folding                                    | After expression parsing        | Duplicate code remover, impossible casts, unused mutables, foldable constants |
-| **Strict.HighLevelRuntime** | Execute expressions directly in interpreter mode for fast checks and tests          | On demand during test execution | Value/type errors, side-effects                                               |
-| **Strict.TestRunner**       | Run in-code tests via HighLevelRuntime (`method must start with a test`)            | First call to a method          | Failing test expressions, the central verification point                      |
-| **Strict.Bytecode**         | Generate register-based bytecode instructions from expression trees                 | After tests succeed             | Unsupported expression patterns                                               |
-| **Strict.Optimizers**       | Remove passed tests and other provably dead code from bytecode                      | After bytecode generation       | Dead instructions, test artefacts, constant folds                             |
-| **Strict** (exe)            | Execute optimized bytecode in the VirtualMachine; create executable                 | Final step                      | Value/type errors, side-effects                                               |
-
-## 1 · Strict.Language
-* Parses package headers and type signatures only.
-* Keeps every package cached in memory for instant access.
-* Any malformed file is rejected before deeper compilation.
-
-## 2 · Strict.Expressions
-* Method bodies are parsed _lazily_ the first time they’re needed.
-* Produces an **immutable** expression tree — never mutated at runtime.
-* Early structural checks ensure only valid Strict constructs survive.
-
-## 3 · Strict.Validators
-* Flags impossible casts (`"abc" to Number`) and other static mistakes. These are validation errors same as parsing errors that need to be fixed before anything can continue.
-* Runs constant folding & simple propagation (e.g. `"5" to Number → 5`). This doesn't affect tests code, but for execution (any step after this) it still uses the folded expressions. Production is always folded and collapsed to the simplest form (in an IDE via a warning that needs to be fixed).
-* finds all duplicate code and removes it (reinventing the wheel over and over), e.g.
-	* Reimplementing GetElementsText like the example below will be replaced with existing code: Text.Combine
-	* This will affect ALL new code and make it much faster to write code, as you can just write the most straightforward code and Strict will figure out if there is already an existing implementation for it. Then replace it with that, which is also a great way to learn how to do things in Strict by just writing the most straightforward code and then looking at the optimized version of it.
-	* Implemented like ReSharper/JetBrains warning issues: Since there is no warnings in Strict, everything is an error and thus this needs to be fixed before it can be used.
-	* Also removes verbose code that can be shorter, like Text.characters.Length → Text.Length
-* Separation of concerns: validation without touching runtime state.
-
-## 4 · Strict.HighLevelRuntime
-* Interpreter-style execution for quick feedback during editing, mostly for test execution.
-* Drives tests and advanced checks without bytecode generation (which is also fast, but not needed, we can stay in memory for most work)
-* Fast enough for most validation and dev workflows. All non-external code is always executed and tested immediately like NCrunch (see SCrunch).
-
-## 5 · Strict.TestRunner
-* Every method must open with a self-contained test (one line methods can be excluded if they are simple enough, e.g. just returning a value or doing a comparison).
-* Tests are executed once; passing expressions become `true` and are pruned.
-* Guarantees that only verified code reaches lower layers. Since tests are stripped here, no test is ever executed in bytecode, only production code that is actually called remains.
-
-* ## 6 · Strict.Bytecode
-* Converts expression trees into flat register-based instructions (`BytecodeGenerator`).
-* Defines the instruction set (~20 types: arithmetic, jumps, loads, stores, loops, invoke).
-* Pure code generation — no execution happens here.
-* Very compact (most types are just a few bytes, a whole package is less than a kb). Also zipped.
-
-## 7 · Strict.Optimizers
-* Operates on bytecode instruction lists produced by `Strict.Bytecode`.
-* Runs optimized code from the above steps: test code removed, constant folding, dead store elimination, unreachable code elimination, redundant load elimination, jump threading, strength reduction.
-* Preserve original line numbers for precise error reporting.
-
-## 8. Strict.Compiler
-* Compiles bytecode into actual executables for any supported platform (Windows, Linux, macOS).
-* Currently, can utilize MLIR (for the most optimized output, supporting parallelization and GPU execution), LLVM (for a more general approach) or direct NASM code generation (low level assembly).
-* Executables are very tiny and do not require any runtime, the Strict executable contains everything needed to do all these steps, parsing, validation, testing, bytecode generation, optimization and execution. External libraries used or needed for compilation (like MLIR) are not included and need to be on the executing machine. Same for any content used of course (but maybe we include them into the bytecode .strictbinary files like .apk packages).
-
-## 9 · Strict (exe) — Runner + VirtualMachine
-* The `Runner` orchestrates the full pipeline: load → parse → validate → test → generate → optimize → execute.
-* The `VirtualMachine` executes optimized bytecode via a register file, call frames and a program counter.
-* Only the VM sees real values and side effects — this is where programs actually run.
-
-## 10 · Strict.Transpiler
-* Optional: Transpiles Strict into C# or CUDA for execution on existing runtimes.
-* `Strict.Compiler.Roslyn` generates C# source, `Strict.Compiler.Cuda` generates CUDA kernels.
-* Useful for running select Strict code without the bytecode path.
-
-## 11 · Strict.LanguageServer
-* VS Code-first LSP implementation for daily Strict development.
-* Solid as all Strict work happens to it directly.
-* Shows all parsing and validation errors, warnings to automatically fix, tests results, code navigation, refactoring support, etc. in real time.
-
-Note: Peripheral projects kept around for specific purposes: `Strict.Grammar` + `Strict.Grammar.Tests` (syntax highlighters from `Grammar.ebnf`), `Strict.PackageManager` (github-based packages, optional for now).
+## Open work
+- Native gaps (each has a failing inline test): Dictionary methods, `Error` values in comparisons (`is Error`), `from(generic)` needs monomorphization (HashCode), `to Type`, mutable parameters changed by the callee (ShuntingYard), mixed list operations (`3 + (4)`, `(1) + ("Hi")`), a native image plugin for ImageProcessing.
+- Unicode: native texts are UTF-8 bytes and a Character is one byte, C# used UTF-16 characters (ByteEncoder test), decide which one Strict means.
+- Validators: reject keywords as names, constants named like a type or a method.
+- Strict VM: 245 ms for 1M iterations, the 10-100x goal needs in-place frame and register updates when a value has only one reference.
+- `Language`, `HighLevelRuntime`, `TestRunner` and `Optimizers` are the old line-level models, superseded by the packages above.
+- Tooling: LanguageServer and VS Code extension (C# on the `dotnet` branch), CI with the native toolchain.
 
 ---
 

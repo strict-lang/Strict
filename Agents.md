@@ -28,8 +28,8 @@ Before writing any code, stop at the first rung that holds:
 - Yes: "Bug in auth middleware. Fix:"
 - Boundaries: Code/commits/PRs written normal.
 
-## 🚨 Top Priority: Strict Self-Hosting Conversion
-**Read [`strict-conversion-plan.md`](strict-conversion-plan.md) first.** It is the top priority for all ongoing work. The plan outlines converting every C# layer of the Strict implementation into `.strict` files so the language can bootstrap itself. Always check the plan before starting any new task, update progress percentages when `.strict` files are added or C# files are replaced, and follow the layer-by-layer order described there.
+## 🚨 Top Priority: Strict is self-hosted
+Strict compiles itself natively (`Compiler/NativeCompiler.strict`, see the README sections "Command line" and "Open work"). The README "Open work" list is the priority list, keep it current (remove what is done, add what is found). The C# implementation that bootstrapped Strict lives on the `dotnet` branch for reference only, all new work is Strict code.
 
 ## Project Guidelines
 - In Strict, type instance equality should check type compatibility and then compare member values (including list/dictionary members) rather than reference equality.
