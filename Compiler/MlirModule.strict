@@ -81,5 +81,7 @@ Main(entry MlirFunction) Texts
 	constant header = List(Text) + "  func.func @main() -> i32 {" + constants
 	let call = "    %result = func.call @" + entry.Symbol + "(%self) : (f64) -> f64"
 	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
-	let invoked = (self, call, "    %code = arith.fptosi %result : f64 to i32")
+	let returned = MlirKinds(entry).Short(entry.method.returnType) is "Number"
+	let code = returned then "    %code = arith.fptosi %result : f64 to i32" else "    %code = arith.constant 0 : i32"
+	let invoked = (self, call, code)
 	header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot") + invoked + ("    return %code : i32", "  }")

@@ -58,13 +58,22 @@ Field(entry InstructionEntry) Texts
 	loaded + memory.Loaded(Temp("ip"), slot, "m") + function.Store(Temp("mv"), "%r" + entry.payload(0))
 Unpacked Texts
 	MlirInstances(Method, 0).Unpacked.Length is 6
-	if (IsStruct(function.type.Name) is false) or (Stored(function.type).Length is 0)
+	if IsStruct(function.type.Name) is false
+		return Aliased
+	if Stored(function.type).Length is 0
 		return List(Text)
 	let memory = MlirMemory(function, -1)
 	mutable lines = List(Text) + function.Load("%self", "%v_value") + memory.Pointer("%self", "self")
 	for Stored(function.type)
 		let loaded = memory.Loaded(memory.Temp("selfp"), index, "u" + index)
 		lines = lines + loaded + function.Store(memory.Temp("u" + index + "v"), "%v_" + value.Name)
+	lines
+Aliased Texts
+	MlirInstances(Method, 0).Aliased.Length is 0
+	mutable lines = List(Mutable(Text))
+	for Stored(function.type)
+		if value.Name is in ("elements", "characters")
+			lines = lines + function.Copied("%v_value", "%v_" + value.Name, "%talias" + index)
 	lines
 Temp(suffix Text) Text
 	MlirInstances(Shapes, 1).Temp("o") is "%t1o"

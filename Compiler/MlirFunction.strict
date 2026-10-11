@@ -96,8 +96,8 @@ Emitted(position Number) Texts
 		return kind is InstructionType.LoopBegin then MlirLoops(value, position).Begin else MlirLoops(value, position).End
 	if kind is in (InstructionType.Invoke, InstructionType.Print, InstructionType.FieldLoad)
 		return MlirCalls(value, position).Emitted
-	if MlirTexts(value, position).IsSum
-		return MlirTexts(value, position).Concatenated(method.instructions(position))
+	if kind is in (InstructionType.IndexCall, InstructionType.InvokeWriteToList)
+		return MlirLists(value, position).Emitted
 	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
-		return MlirStatements(value, position).Calculated(method.instructions(position))
+		return MlirStatements(value, position).Binary(method.instructions(position))
 	MlirStatements(value, position).Emitted

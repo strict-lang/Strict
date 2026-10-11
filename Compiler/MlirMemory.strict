@@ -22,3 +22,7 @@ Slot(base Text, index Number, suffix Text) Text
 Loaded(base Text, index Number, suffix Text) Texts
 	Sample.Loaded("%b", 0, "m").Last is "    %t3mv = llvm.load %t3m : !llvm.ptr -> f64"
 	(Slot(base, index, suffix), function.Load(Temp(suffix + "v"), Temp(suffix)))
+Called(result Text, name Text, operands Texts) Text
+	Sample.Called("%r", "add", ("%a", "%b")) is "    %r = func.call @add(%a, %b) : (f64, f64) -> f64"
+	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
+	"    " + result + " = func.call @" + name + "(" + Text.Combine(operands, ", ") + ") : (" + types + ") -> f64"

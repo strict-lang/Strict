@@ -1,0 +1,64 @@
+has function MlirFunction
+has position Number
+constant Items = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
+constant Steps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "numbers"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 3)), InstructionEntry.Binary(InstructionType.Add, (0, 0, 3)))
+constant Listed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", Steps))
+constant Pair = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))
+Temp(suffix Text) Text
+	MlirLists(Listed, 2).Temp("l") is "%t2l"
+	"%t" + position + suffix
+Emitted Texts
+	MlirLists(Listed, 3).Emitted.Length is 4
+	let entry = function.method.instructions(position)
+	entry.kind is InstructionType.IndexCall then Indexed(entry) else Appended(entry)
+Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
+	MlirLists(Listed, 0).Literal(Pair, "%v_a", "").Last is "    llvm.store %t0e1l, %v_a : f64, !llvm.ptr"
+	let memory = MlirMemory(function, position)
+	let size = MlirStatements(function, position).Hex(literal.items.Length + 4)
+	let capacity = "    " + Temp(suffix + "q") + " = arith.constant " + size + " : f64"
+	mutable lines = (capacity, memory.Called(Temp(suffix + "l"), "strict_list_new", (Temp(suffix + "q"), "%zero")))
+	mutable current = Temp(suffix + "l")
+	for literal.items
+		let element = suffix + "e" + index
+		let added = memory.Called(Temp(element + "l"), "strict_list_add", (current, ElementName(value, element)))
+		lines = lines + Element(value, index, element) + added
+		current = Temp(element + "l")
+	lines + function.Store(current, slot)
+Element(item Runtime/VmValue, index Number, element Text) Texts
+	MlirLists(Listed, 0).Element(VmValue.OfNumber(2), 0, "e0") is ("    %t0e0c = arith.constant 0x4000000000000000 : f64")
+	if item.kind is "Text"
+		return MlirConstants(function, position).Address(item.text, "_" + index, element)
+	if item.kind is not in ("Number", "Boolean")
+		let unsupported = MlirStatements(function, position).Unsupported("nested " + item.kind + " constant")
+		return List(Text) + unsupported
+	let number = MlirStatements(function, position).Hex(item.number)
+	List(Text) + ("    " + Temp(element + "c") + " = arith.constant " + number + " : f64")
+ElementName(item Runtime/VmValue, element Text) Text
+	MlirLists(Listed, 0).ElementName(VmValue.OfText("a"), "e1") is "%t0e1xf"
+	item.kind is "Text" then Temp(element + "xf") else Temp(element + "c")
+Appended(entry InstructionEntry) Texts
+	MlirLists(Listed, 3).Appended(Steps(3)).Last is "    llvm.store %t3n, %v_numbers : f64, !llvm.ptr"
+	let name = "%v_" + entry.texts(0)
+	let added = MlirMemory(function, position).Called(Temp("n"), "strict_list_add", (Temp("l"), Temp("e")))
+	let element = function.Load(Temp("e"), "%r" + entry.payload(0))
+	(function.Load(Temp("l"), name), element, added, function.Store(Temp("n"), name))
+Indexed(entry InstructionEntry) Texts
+	MlirLists(Listed, 2).Indexed(Steps(2)).Length is 4
+	let isText = MlirKinds(function).VariableKind(position, entry.texts(0)) is "Text"
+	let getter = isText then "strict_text_at" else "strict_list_get"
+	let access = MlirMemory(function, position).Called(Temp("x"), getter, (Temp("l"), Temp("i")))
+	let loads = (function.Load(Temp("l"), "%v_" + entry.texts(0)), function.Load(Temp("i"), "%r" + entry.payload(1)))
+	loads + access + function.Store(Temp("x"), "%r" + entry.payload(0))
+IsOperation Boolean
+	MlirLists(Listed, 4).IsOperation is true
+	MlirLists(Listed, 1).IsOperation is false
+	let entry = function.method.instructions(position)
+	(entry.kind is InstructionType.Add) and MlirKinds(function).KindOf(position, entry.payload(1)).StartsWith("List(")
+Operated(entry InstructionEntry) Texts
+	MlirLists(Listed, 4).Operated(Steps(4)).Length is 4
+	Text.Combine(MlirLists(Listed, 5).Operated(Steps(5)), "").IndexOf("strict_list_concat") > 0 is true
+	let isList = MlirKinds(function).KindOf(position, entry.payload(2)).StartsWith("List(")
+	let name = isList then "strict_list_concat" else "strict_list_add"
+	let call = MlirMemory(function, position).Called(Temp("c"), name, (Temp("a"), Temp("b")))
+	let loads = (function.Load(Temp("a"), "%r" + entry.payload(1)), function.Load(Temp("b"), "%r" + entry.payload(2)))
+	loads + call + function.Store(Temp("c"), "%r" + entry.payload(3))

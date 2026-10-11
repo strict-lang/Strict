@@ -14,6 +14,14 @@ Emitted Texts
 	if kind is InstructionType.StoreRegisterToVariable
 		return function.Copied("%r" + entry.payload(0), "%v_" + entry.texts(0), Temp(""))
 	kind is InstructionType.Return then Returned(entry) else Jumped(entry)
+Binary(entry InstructionEntry) Texts
+	Copy.Binary(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))).Length is 4
+	if MlirTexts(function, position).IsSum
+		return MlirTexts(function, position).Concatenated(entry)
+	let collection = MlirLists(function, position)
+	if collection.IsOperation
+		return collection.Operated(entry)
+	Calculated(entry)
 Temp(suffix Text) Text
 	Copy.Temp("c") is "%t0c"
 	"%t" + position + suffix
@@ -21,6 +29,8 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	Copy.Literal(VmValue.OfNumber(1), "%r0", "").First is "    %t0c = arith.constant 0x3FF0000000000000 : f64"
 	if literal.kind is "Text"
 		return MlirConstants(function, position).Literal(literal.text, slot, suffix)
+	if literal.kind is "List"
+		return MlirLists(function, position).Literal(literal, slot, suffix)
 	if literal.kind is not in ("Number", "Boolean")
 		return List(Text) + Unsupported(literal.kind + " constant")
 	let number = "    " + Temp(suffix + "c") + " = arith.constant " + Hex(literal.number) + " : f64"
@@ -61,7 +71,7 @@ Calculated(entry InstructionEntry) Texts
 	constant right = Temp("b")
 	let loads = (function.Load(left, "%r" + entry.payload(1)), function.Load(right, "%r" + entry.payload(2)))
 	if MlirKinds(function).IsText(position, entry.payload(1)) or MlirKinds(function).IsText(position, entry.payload(2))
-		return List(Text) + Unsupported("Text operator " + entry.kind)
+		return MlirTexts(function, position).Compared(entry)
 	if entry.kind > InstructionType.ArithmeticSeparator
 		return loads + Compared(entry, left + ", " + right)
 	if entry.kind is InstructionType.Power
@@ -88,7 +98,8 @@ Compared(entry InstructionEntry, operands Text) Texts
 	Copy.Compared(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), "%a, %b").Length is 2
 	let compare = "    " + Temp("") + "c = arith.cmpf " + Predicate(entry.kind) + ", " + operands + " : f64"
 	let flagged = (compare, "    llvm.store " + Temp("") + "c, %flag : i1, !llvm.ptr")
-	if entry.payload(0) is not 3
-		return flagged
-	constant number = "    " + Temp("") + "d = arith.uitofp " + Temp("") + "c : i1 to f64"
-	flagged + number + function.Store(Temp("d"), "%r" + entry.payload(3))
+	entry.payload(0) is not 3 then flagged else flagged + Numbered(Temp("c"), entry)
+Numbered(flag Text, entry InstructionEntry) Texts
+	Copy.Numbered("%f", InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))).Length is 2
+	let number = "    " + Temp("d") + " = arith.uitofp " + flag + " : i1 to f64"
+	(number, function.Store(Temp("d"), "%r" + entry.payload(3)))

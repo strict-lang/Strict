@@ -36,7 +36,7 @@ public sealed class MlirLinker : Linker
 		ToolRunner.EnsureOutputFileExists(llvmDialectPath, "mlir-opt", platform);
 		var llvmIrPath = Path.ChangeExtension(asmFilePath, ".ll");
 		ToolRunner.RunProcess(mlirTranslatePath,
-			$"--mlir-to-llvmir \"{llvmDialectPath}\" -o \"{llvmIrPath}\"");
+			$"{SingleThreaded}--mlir-to-llvmir \"{llvmDialectPath}\" -o \"{llvmIrPath}\"");
 		ToolRunner.EnsureOutputFileExists(llvmIrPath, "mlir-translate", platform);
 		if (platform == Platform.Windows)
 			await File.WriteAllTextAsync(llvmIrPath,
@@ -52,10 +52,13 @@ public sealed class MlirLinker : Linker
 		return exeFilePath;
 	}
 
+	//MLIR 21 tools crash in a threading race (~25% of mlir-translate runs), single threaded never did
+	private const string SingleThreaded = "--mlir-disable-threading ";
+
 	private static string BuildMlirOptArgs(string inputPath, string outputPath) =>
 		$"\"{
 			inputPath
-		}\" --canonicalize --cse --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm " +
+		}\" {SingleThreaded}--canonicalize --cse --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm " +
 		$"--convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts -o \"{outputPath}\"";
 
 	private static string BuildMlirOptArgsWithGpu(string inputPath, string outputPath) =>

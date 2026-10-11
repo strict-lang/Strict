@@ -1,6 +1,9 @@
 has logger
+constant SingleThreaded = " --mlir-disable-threading"
 Run(path Text, root Text)
-	let mlir = MlirModule(FileCompiler(logger).Compiled(path, root)).Text
+	let program = MlirModule(FileCompiler(logger).Compiled(path, root)).Text
+	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
+	let mlir = program.Substring(0, program.Length - 1) + runtime + "\n}"
 	let unsupported = mlir.IndexOf("unsupported:")
 	if unsupported is not -1
 		logger.Log("Native compilation failed, " + mlir.Substring(unsupported, mlir.Length - unsupported))
@@ -20,11 +23,12 @@ Built(base Text) Text
 Lowered(base Text) Text
 	NativeCompiler.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed") is true
 	constant passes = " --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm"
-	let lowering = Quoted(base + ".mlir") + passes + " --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
+	let output = " --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
+	let lowering = Quoted(base + ".mlir") + SingleThreaded + passes + output
 	let lowered = ToolRunner("mlir-opt").Execute(lowering)
 	if lowered.Failed
 		return "mlir-opt failed: " + lowered.error
-	let translation = "--mlir-to-llvmir " + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
+	let translation = SingleThreaded + " --mlir-to-llvmir " + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
 	let translated = ToolRunner("mlir-translate").Execute(translation)
 	translated.Failed then "mlir-translate failed: " + translated.error else ""
 Quoted(path Text) Text

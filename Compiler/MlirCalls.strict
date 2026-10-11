@@ -26,11 +26,18 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let type = function.TypeOf(decoder.Text(1))
 	let callee = Callee(type, decoder.Text(2), entry.payload(5 + entry.payload(3)))
 	if callee.instructions.Length is 0
-		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
+		return Native(entry, type, decoder.Text(2))
 	let target = MlirFunction(function.types, type, callee)
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + Operands(entry) + ") : (" + types + ") -> f64"
 	Loads(entry, type) + call + function.Store(Temp("r"), "%r" + entry.payload(0))
+Native(entry InstructionEntry, type TypeEntry, name Text) Texts
+	MlirCalls(Shapes, 2).Native(Area, AreaShape, "Size").First.StartsWith("unsupported") is true
+	let natives = MlirNatives(function, position)
+	let helper = natives.Helper(type.Name, name, entry.payload(5 + entry.payload(3)))
+	if helper is ""
+		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + name)
+	natives.Emitted(entry, type, helper)
 Callee(type TypeEntry, name Text, count Number) MethodEntry
 	MlirCalls(Shapes, 1).Callee(AreaShape, "Size", 0).instructions.Length is 0
 	for type.methods

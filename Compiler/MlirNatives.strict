@@ -1,0 +1,32 @@
+has function MlirFunction
+has position Number
+constant Length = InstructionEntry.Invoke(1, ("Strict/Text", "Length", "Strict/Number"), List(Number), 0)
+constant Search = InstructionEntry.Invoke(2, ("Strict/Text", "IndexOf", "Strict/Number", "text"), 1, 0)
+constant TextType = TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry))
+constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower")
+constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower")
+constant Texts = MlirFunction(List(TypeEntry), MlirFunction.Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), Length, Search)))
+Helper(typeName Text, name Text, count Number) Text
+	MlirNatives(Texts, 1).Helper("Strict/Text", "Length", 0) is "strict_text_length"
+	MlirNatives(Texts, 1).Helper("Strict/List(Number)", "Count", 0) is "strict_list_length"
+	MlirNatives(Texts, 1).Helper("Strict/Number", "Floor", 0) is "strict_floor"
+	MlirNatives(Texts, 1).Helper("Strict/Other", "Floor", 0) is ""
+	let kind = MlirKinds(function).Short(typeName)
+	if (name is in ("Length", "Count")) and (count is 0)
+		return kind is "Text" then "strict_text_length" else kind.StartsWith("List(") then "strict_list_length" else ""
+	if (kind is "Number") and (name is "Floor")
+		return "strict_floor"
+	kind is "Text" then TextHelper(name) else ""
+TextHelper(name Text) Text
+	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"
+	MlirNatives(Texts, 1).TextHelper("Trim") is ""
+	let found = TextNames.Index(name)
+	found < 0 then "" else TextHelpers(found)
+Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
+	MlirNatives(Texts, 2).Emitted(Search, TextType, "strict_text_index").Length is 4
+	let calls = MlirCalls(function, position)
+	let count = entry.payload(5 + entry.payload(3))
+	let operands = List(Text) + calls.Temp("m") + calls.ArgumentNames(count)
+	let completed = (helper is "strict_text_index") and (count is 1) then operands + "%zero" else operands
+	let call = MlirMemory(function, position).Called(calls.Temp("r"), helper, completed)
+	calls.Loads(entry, type) + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))

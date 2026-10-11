@@ -17,7 +17,7 @@ WrittenKind(writer Number) Text
 	Graded.WrittenKind(7) is "Number"
 	let entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadConstantToRegister
-		return PayloadDecoder(entry).Value(1).kind
+		return ConstantKind(PayloadDecoder(entry).Value(1))
 	if entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
 		let variable = VariableKind(writer, entry.texts(0))
 		return entry.kind is InstructionType.IndexCall then ElementKind(variable) else variable
@@ -54,7 +54,7 @@ VariableKind(position Number, name Text) Text
 		return DeclaredKind(position, name)
 	let store = function.method.instructions(found)
 	if store.kind is InstructionType.StoreConstantToVariable
-		return PayloadDecoder(store).Value(0).kind
+		return ConstantKind(PayloadDecoder(store).Value(0))
 	KindOf(found, store.payload(0))
 Stored(position Number, name Text) Number
 	Graded.Stored(2, "letter") is 1
@@ -73,9 +73,19 @@ DeclaredKind(position Number, name Text) Text
 	let parameter = MembersKind(function.method.parameters, name)
 	if parameter is not ""
 		return parameter
+	if name is in ("value", "characters", "elements")
+		return OwnValueKind(position, name)
+	let member = MembersKind(function.type.members, name)
+	member is "" then "Number" else member
+OwnValueKind(position Number, name Text) Text
+	Graded.OwnValueKind(0, "value") is "Shape"
+	Graded.OwnValueKind(11, "value") is "Number"
+	let own = Short(function.type.Name)
 	if name is "value"
 		let looped = LoopValueKind(position)
-		return looped is "" then Short(function.type.Name) else looped
+		return looped is "" then own else looped
+	if (own is "Text") or own.StartsWith("List(")
+		return own
 	let member = MembersKind(function.type.members, name)
 	member is "" then "Number" else member
 LoopValueKind(position Number) Text
@@ -105,6 +115,12 @@ ElementKind(container Text) Text
 	if container is "Text"
 		return "Character"
 	container.StartsWith("List(") then container.Substring(5, container.Length - 6) else "Number"
+ConstantKind(literal Runtime/VmValue) Text
+	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfText("b"))) is "List(Text)"
+	Graded.ConstantKind(VmValue.OfNumber(1)) is "Number"
+	if literal.kind is not "List"
+		return literal.kind
+	"List(" + (literal.items.Length is 0 then "Number" else ConstantKind(literal.items.First)) + ")"
 Short(name Text) Text
 	Graded.Short("Strict/Bytecode/TypeEntry") is "TypeEntry"
 	Graded.Short("Strict/List(TypeEntry)") is "List(TypeEntry)"
