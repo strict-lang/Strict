@@ -1,26 +1,32 @@
 has logger
-constant Usage = "Usage: NativeCompiler [build|test|check|run] <file or folder> <root> [arguments]"
+constant Usage = "Usage: strict [build|test|check|run] <file or folder> [root, default .] [arguments]"
+constant Commands = ("build", "test", "check", "run")
 Run(arguments Texts) Number
-	if arguments.Length < 2
+	let command = arguments.Length > 0 then arguments(0) else ""
+	let rest = Rooted(command is in Commands then Rest(arguments) else arguments)
+	if rest.Length < 2
 		logger.Log(Usage)
 		return 2
-	let command = arguments(0)
-	let rest = Rest(arguments)
 	if command is "test"
 		return Test(rest(0), rest(1))
 	if command is "check"
 		return Checked(ValidateCheck(logger), rest(0), rest(1))
-	let target = command is "build" then rest else arguments
-	command is "run" then Execute(logger).Run(rest) else Compiling(target)
+	command is "run" then Execute(logger).Run(rest) else Compiling(rest)
+Rooted(arguments Texts) Texts
+	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
+	Strict.Rooted(("a.strict", "b")) is ("a.strict", "b")
+	Strict.Rooted(("test", "a.strict")) is ("test", "a.strict", ".")
+	let isTest = (arguments.Length is 2) and (arguments(0) is "test")
+	(arguments.Length is 1) or isTest then arguments + "." else arguments
 Checked(checker Validators/ValidateCheck, folder Text, root Text) Number
-	NativeCompiler.Checked(ValidateCheck(Logger), "Compiler/output", ".") is 0
+	Strict.Checked(ValidateCheck(Logger), "Compiler/output", ".") is 0
 	checker.Run(folder, root)
 Rest(arguments Texts) Texts
-	NativeCompiler.Rest(("test", "a", "b")) is ("a", "b")
+	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)
 		arguments(value)
 Compiling(arguments Texts) Number
-	NativeCompiler.Compiling(("Compiler/output/missing.strict")) is 2
+	Strict.Compiling(("Compiler/output/missing.strict")) is 2
 	if arguments.Length < 2
 		return 2
 	Compile(arguments(0), arguments(1))
@@ -39,20 +45,20 @@ Test(path Text, root Text) Number
 		return 1
 	Tested(base + Toolchain(Platform.Current, root).Extension, path)
 Tested(executable Text, path Text) Number
-	NativeCompiler.Tested("Compiler/output/missing.exe", "a") is 127
+	Strict.Tested("Compiler/output/missing.exe", "a") is 127
 	let result = ToolRunner(executable).Execute("")
 	logger.Log(result.Output + Summary(result.exitCode, path) + (result.error is "" then "" else " " + result.error))
 	IsCrash(result.exitCode) then 128 else result.exitCode
 Summary(code Number, path Text) Text
-	NativeCompiler.Summary(0, "a") is "All tests passed in a"
-	NativeCompiler.Summary(2, "a") is "2 failed in a"
-	NativeCompiler.Summary(139, "a") is "Tests crashed with exit code 139 in a"
+	Strict.Summary(0, "a") is "All tests passed in a"
+	Strict.Summary(2, "a") is "2 failed in a"
+	Strict.Summary(139, "a") is "Tests crashed with exit code 139 in a"
 	if code is 0
 		return "All tests passed in " + path
 	IsCrash(code) then "Tests crashed with exit code " + code + " in " + path else code to Text + " failed in " + path
 IsCrash(code Number) Boolean
-	NativeCompiler.IsCrash(139) is true
-	NativeCompiler.IsCrash(127) is false
+	Strict.IsCrash(139) is true
+	Strict.IsCrash(127) is false
 	(code > 128) or (code < 0)
 Compile(path Text, root Text)
 	let program = MlirModule(FileCompiler(logger).Compiled(path, root, false), "Run").Text
@@ -72,17 +78,17 @@ Build(base Text, program Text, tools Toolchain)
 		File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
 		logger.Log(tools.CrossBuilt(base))
 Base(path Text, root Text) Text
-	NativeCompiler.Base("Character.strict", ".") is "./Character"
-	NativeCompiler.Base("C:/s/A.strict", "C:/s") is "C:/s/A"
+	Strict.Base("Character.strict", ".") is "./Character"
+	Strict.Base("C:/s/A.strict", "C:/s") is "C:/s/A"
 	let source = FileCompiler.Normalized(path, root)
 	source.Substring(0, source.Length - 7)
 Mlir(program Text, root Text, platform Number) Text
-	NativeCompiler.Mlir("module {\n}", ".", Platform.Linux).Length > 100000 is true
+	Strict.Mlir("module {\n}", ".", Platform.Linux).Length > 100000 is true
 	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
 	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(platform) + ".mlir").ReadLines
 	program.Substring(0, program.Length - 1) + runtime + "\n" + Text.Combine(system, "\n") + "\n}"
 Unsupported(mlir Text) Number
-	NativeCompiler.Unsupported("a\nunsupported: x") is 2
-	NativeCompiler.Unsupported("unsupported: x") is 0
-	NativeCompiler.Unsupported("@c(\"unsupported: x\")") is -1
+	Strict.Unsupported("a\nunsupported: x") is 2
+	Strict.Unsupported("unsupported: x") is 0
+	Strict.Unsupported("@c(\"unsupported: x\")") is -1
 	("\n" + mlir).IndexOf("\nunsupported:")

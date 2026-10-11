@@ -51,16 +51,16 @@ The best way to learn how any expression or base type works is to look at the co
 ## Command line
 Strict is written in Strict and compiles itself to a native executable, no .NET or other runtime is needed (the C# implementation that bootstrapped it lives on the `dotnet` branch).
 ```
-NativeCompiler build Examples/Sum.strict .        native executable (on Windows also the Linux one through WSL)
-NativeCompiler test Examples/Sum.strict .         compile every inline method test into an executable and run it
-NativeCompiler check Examples .                   validate a folder (type rules, unused members, limits)
-NativeCompiler run Examples/Sum.strict . 5 10 20  compile with the Strict compiler and run on the Strict VM
+strict build Examples/Sum.strict          native executable (on Windows also the Linux one through WSL)
+strict test Examples/Sum.strict           compile every inline method test into an executable and run it
+strict check Examples                     validate a folder (type rules, unused members, limits)
+strict run Examples/Sum.strict . 5 10 20  compile with the Strict compiler and run on the Strict VM
 ```
-The second path is the repository root (base types and packages are resolved from there). Exit codes: 0 success, `test` returns the number of failed tests (128 when the test executable crashed), 2 wrong usage.
+`strict` is `Compiler/Strict.exe` (on Linux `Compiler/Strict`), put the `Compiler` folder on the PATH to use it everywhere. Without a command a file is built. The optional path after the file is the repository root (base types and packages are resolved from there), it defaults to the current folder; `run` needs it before program arguments. Exit codes: 0 success, `test` returns the number of failed tests (128 when the test executable crashed), 2 wrong usage.
 
-Needed tools: `mlir-opt` and `mlir-translate` (LLVM MLIR, on Windows the msys64 ucrt64 package `mingw-w64-ucrt-x86_64-mlir`) and `clang` (LLVM 22). When they are missing NativeCompiler says so and starts installing them (Windows: winget and pacman in a new window, Linux: the LLVM 22 release archive into `Tools/`).
+Needed tools: `mlir-opt` and `mlir-translate` (LLVM MLIR, on Windows the msys64 ucrt64 package `mingw-w64-ucrt-x86_64-mlir`) and `clang` (LLVM 22). When they are missing `strict` says so and starts installing them (Windows: winget and pacman in a new window, Linux: the LLVM 22 release archive into `Tools/`).
 
-Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR) with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux), then let it build itself: `Compiler\NativeCompiler.exe build Compiler\NativeCompiler.strict .` twice gives identical output (fixpoint).
+Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR) with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux), then let it build itself: `Compiler\Strict.exe build Compiler\Strict.strict` twice gives identical output (fixpoint).
 
 ## Rules worth knowing
 - Limits: 120 characters per line, 13 lines per method (header and tests included), 4 parameters, 15 methods, 15 members, nesting depth 5, names 2-50 characters.
@@ -79,14 +79,14 @@ Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR
 |---------|----------------|
 | root types | `Number`, `Text`, `List`, `Dictionary`, `Error`, `File`, ... define the language and are its documentation |
 | `Expressions` | Tokenizer, syntax tree, statements, header tokens, type shapes, known types and type inference over all packages |
-| `Validators` | Unused and never changed variables, constant folding, limits (`ValidateCheck` behind `NativeCompiler check`) |
+| `Validators` | Unused and never changed variables, constant folding, limits (`ValidateCheck` behind `strict check`) |
 | `Bytecode` | Compiles a type into register based instructions (`FileCompiler`), inlines constants, removes tests, links used types, writes `.strictbinary` |
-| `Runtime` | The Strict VM running those instructions (`Execute` behind `NativeCompiler run`) |
-| `Compiler` | `NativeCompiler`: instructions to MLIR, `NativeRuntime*.mlir` (texts, lists, files, processes, collector), mlir-opt, mlir-translate and clang |
+| `Runtime` | The Strict VM running those instructions (`Execute` behind `strict run`) |
+| `Compiler` | `Strict` (the `strict` command): instructions to MLIR, `NativeRuntime*.mlir` (texts, lists, files, processes, collector), mlir-opt, mlir-translate and clang |
 
 Native model: every value is one 64-bit slot, numbers are doubles, texts, lists and instances are pointer bits, Error values carry a NaN tag in the top bits so `x is Error` works for a value of any type. A type with one member is that member (`Name` is its text, `Degrees` its number), other instances are heap blocks with one slot per member. Lists append in place while they are the newest version. Memory is managed by a conservative mark-sweep collector (64 KB pages, size classes, interior pointers, collections after 4 MB or 8x the live data), 1M loop iterations on the Strict VM use 9 MB.
 
-Speed (1M loop iterations): native executable 45 ms (227 KB), Strict VM 245 ms, C# Strict.exe 420 ms. NativeCompiler builds itself in 10 s, most of it in mlir-opt and clang.
+Speed (1M loop iterations): native executable 45 ms (227 KB), Strict VM 245 ms, C# Strict.exe 420 ms. `strict` builds itself in 10 s, most of it in mlir-opt and clang.
 
 ## Open work
 See [improvements.md](improvements.md), in priority order.
