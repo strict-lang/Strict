@@ -3,6 +3,19 @@
   llvm.func @FindClose(!llvm.ptr) -> i32
   llvm.func @GetFileAttributesA(!llvm.ptr) -> i32
   llvm.func @CreateDirectoryA(!llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @getenv(!llvm.ptr) -> !llvm.ptr
+  llvm.func @calloc(i64, i64) -> !llvm.ptr
+  llvm.func @SearchPathA(!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @GetTempPathA(i32, !llvm.ptr) -> i32
+  llvm.func @GetTempFileNameA(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> i32
+  llvm.func @CreateFileA(!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
+  llvm.func @GetStdHandle(i32) -> !llvm.ptr
+  llvm.func @CreateProcessA(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @WaitForSingleObject(!llvm.ptr, i32) -> i32
+  llvm.func @TerminateProcess(!llvm.ptr, i32) -> i32
+  llvm.func @GetExitCodeProcess(!llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @CloseHandle(!llvm.ptr) -> i32
+  llvm.func @DeleteFileA(!llvm.ptr) -> i32
   llvm.mlir.global internal constant @strict_separator_path("\5C\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
   func.func private @strict_directory_exists(%self: f64, %path: f64) -> f64 {
@@ -76,5 +89,157 @@
     %closed = llvm.call @FindClose(%handle) : (!llvm.ptr) -> i32
     cf.br ^done(%all : f64)
   ^done(%result: f64):
+    return %result : f64
+  }
+  llvm.mlir.global internal constant @strict_windows("Windows\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @strict_path_variable("PATH\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_exe_extension(".exe\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_temp_prefix("str\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_quote_space("\22 \00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_start_failed("could not start \00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_timed_out("timed out after 30000 ms\00") : !llvm.array<25 x i8>
+  func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
+    %name = llvm.mlir.addressof @strict_windows : !llvm.ptr
+    %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_tool_path(%name: f64) -> f64 {
+    %size = arith.constant 1024 : i32
+    %bytes = arith.constant 1024 : i64
+    %none = arith.constant 0 : i32
+    %variable = llvm.mlir.addressof @strict_path_variable : !llvm.ptr
+    %paths = llvm.call @getenv(%variable) : (!llvm.ptr) -> !llvm.ptr
+    %extension = llvm.mlir.addressof @strict_exe_extension : !llvm.ptr
+    %file = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
+    %buffer = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %length = llvm.call @SearchPathA(%paths, %file, %extension, %size, %buffer, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+    %found = arith.cmpi ugt, %length, %none : i32
+    %fits = arith.cmpi ult, %length, %size : i32
+    %usable = arith.andi %found, %fits : i1
+    %path = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %result = arith.select %usable, %path, %empty : f64
+    return %result : f64
+  }
+  func.func private @strict_temp_file() -> f64 {
+    %size = arith.constant 1024 : i32
+    %bytes = arith.constant 1024 : i64
+    %unique = arith.constant 0 : i32
+    %directory = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %length = llvm.call @GetTempPathA(%size, %directory) : (i32, !llvm.ptr) -> i32
+    %name = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %prefix = llvm.mlir.addressof @strict_temp_prefix : !llvm.ptr
+    %created = llvm.call @GetTempFileNameA(%directory, %prefix, %unique, %name) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> i32
+    %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_inherited_file(%path: f64) -> !llvm.ptr {
+    %write = arith.constant 1073741824 : i32
+    %share = arith.constant 3 : i32
+    %always = arith.constant 2 : i32
+    %normal = arith.constant 128 : i32
+    %count = arith.constant 1 : i64
+    %size = arith.constant 24 : i64
+    %length = arith.constant 24 : i32
+    %inherit = arith.constant 1 : i32
+    %attributes = llvm.call @calloc(%count, %size) : (i64, i64) -> !llvm.ptr
+    llvm.store %length, %attributes : i32, !llvm.ptr
+    %inheritSlot = llvm.getelementptr %attributes[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %inherit, %inheritSlot : i32, !llvm.ptr
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %handle = llvm.call @CreateFileA(%name, %write, %share, %attributes, %always, %normal, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
+    return %handle : !llvm.ptr
+  }
+  func.func private @strict_removed_file(%path: f64) -> f64 {
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %text = func.call @strict_file_text(%path) : (f64) -> f64
+    %deleted = llvm.call @DeleteFileA(%name) : (!llvm.ptr) -> i32
+    return %text : f64
+  }
+  func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
+    %count = arith.constant 1 : i64
+    %startupSize = arith.constant 104 : i64
+    %startupLength = arith.constant 104 : i32
+    %useHandles = arith.constant 256 : i32
+    %inputHandle = arith.constant -10 : i32
+    %informationSize = arith.constant 24 : i64
+    %inherit = arith.constant 1 : i32
+    %noFlags = arith.constant 0 : i32
+    %quoteText = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quote = func.call @strict_bits(%quoteText) : (!llvm.ptr) -> f64
+    %quoteSpaceText = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpace = func.call @strict_bits(%quoteSpaceText) : (!llvm.ptr) -> f64
+    %quoted = func.call @strict_text_concat(%quote, %path) : (f64, f64) -> f64
+    %program = func.call @strict_text_concat(%quoted, %quoteSpace) : (f64, f64) -> f64
+    %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
+    %outputPath = func.call @strict_temp_file() : () -> f64
+    %errorPath = func.call @strict_temp_file() : () -> f64
+    %output = func.call @strict_inherited_file(%outputPath) : (f64) -> !llvm.ptr
+    %error = func.call @strict_inherited_file(%errorPath) : (f64) -> !llvm.ptr
+    %startup = llvm.call @calloc(%count, %startupSize) : (i64, i64) -> !llvm.ptr
+    llvm.store %startupLength, %startup : i32, !llvm.ptr
+    %flagsSlot = llvm.getelementptr %startup[60] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %useHandles, %flagsSlot : i32, !llvm.ptr
+    %input = llvm.call @GetStdHandle(%inputHandle) : (i32) -> !llvm.ptr
+    %inputSlot = llvm.getelementptr %startup[80] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %input, %inputSlot : !llvm.ptr, !llvm.ptr
+    %outputSlot = llvm.getelementptr %startup[88] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %output, %outputSlot : !llvm.ptr, !llvm.ptr
+    %errorSlot = llvm.getelementptr %startup[96] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %error, %errorSlot : !llvm.ptr, !llvm.ptr
+    %information = llvm.call @calloc(%count, %informationSize) : (i64, i64) -> !llvm.ptr
+    %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %null, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %failed = arith.cmpi eq, %started, %noFlags : i32
+    cf.cond_br %failed, ^notStarted, ^running
+  ^notStarted:
+    %closedOutput = llvm.call @CloseHandle(%output) : (!llvm.ptr) -> i32
+    %closedError = llvm.call @CloseHandle(%error) : (!llvm.ptr) -> i32
+    %unusedOutput = func.call @strict_removed_file(%outputPath) : (f64) -> f64
+    %unusedError = func.call @strict_removed_file(%errorPath) : (f64) -> f64
+    %startCode = arith.constant 1.0 : f64
+    %startText = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startPrefix = func.call @strict_bits(%startText) : (!llvm.ptr) -> f64
+    %startError = func.call @strict_text_concat(%startPrefix, %path) : (f64, f64) -> f64
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
+    return %startFailure : f64
+  ^running:
+    %timeout = arith.constant 30000 : i32
+    %process = llvm.load %information : !llvm.ptr -> !llvm.ptr
+    %threadSlot = llvm.getelementptr %information[8] : (!llvm.ptr) -> !llvm.ptr, i8
+    %thread = llvm.load %threadSlot : !llvm.ptr -> !llvm.ptr
+    %waited = llvm.call @WaitForSingleObject(%process, %timeout) : (!llvm.ptr, i32) -> i32
+    %timedOut = arith.cmpi ne, %waited, %noFlags : i32
+    cf.cond_br %timedOut, ^kill, ^exited
+  ^kill:
+    %killed = llvm.call @TerminateProcess(%process, %inherit) : (!llvm.ptr, i32) -> i32
+    %drain = arith.constant 2000 : i32
+    %ended = llvm.call @WaitForSingleObject(%process, %drain) : (!llvm.ptr, i32) -> i32
+    %timeoutCode = arith.constant 124.0 : f64
+    cf.br ^collect(%timeoutCode : f64)
+  ^exited:
+    %codeSlot = llvm.call @calloc(%count, %count) : (i64, i64) -> !llvm.ptr
+    %gotCode = llvm.call @GetExitCodeProcess(%process, %codeSlot) : (!llvm.ptr, !llvm.ptr) -> i32
+    %exitCode = llvm.load %codeSlot : !llvm.ptr -> i32
+    %exitNumber = arith.uitofp %exitCode : i32 to f64
+    cf.br ^collect(%exitNumber : f64)
+  ^collect(%code: f64):
+    %closedProcess = llvm.call @CloseHandle(%process) : (!llvm.ptr) -> i32
+    %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
+    %closedOut = llvm.call @CloseHandle(%output) : (!llvm.ptr) -> i32
+    %closedErr = llvm.call @CloseHandle(%error) : (!llvm.ptr) -> i32
+    %written = func.call @strict_removed_file(%outputPath) : (f64) -> f64
+    %reported = func.call @strict_removed_file(%errorPath) : (f64) -> f64
+    %timedOutText = llvm.mlir.addressof @strict_timed_out : !llvm.ptr
+    %timedOutMessage = func.call @strict_bits(%timedOutText) : (!llvm.ptr) -> f64
+    %message = arith.select %timedOut, %timedOutMessage, %reported : f64
+    %result = func.call @strict_process_result(%code, %written, %message) : (f64, f64, f64) -> f64
     return %result : f64
   }

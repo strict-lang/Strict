@@ -5,6 +5,7 @@ constant Search = InstructionEntry.Invoke(2, ("Strict/Text", "IndexOf", "Strict/
 constant TextType = TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry))
 constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
 constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end")
+constant SystemNames = ("File.ReadLines", "File.Exists", "File.Write", "Directory.Files", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem")
 constant Texts = MlirFunction(List(TypeEntry), MlirFunction.Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), Length, Search)))
 Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Text", "Length", 0) is "strict_text_length"
@@ -23,15 +24,16 @@ ValueHelper(kind Text, name Text) Text
 		return "strict_floor"
 	if (kind is "Boolean") and (name is in ("not", "and", "or", "xor"))
 		return "strict_" + name
-	if kind is in ("File", "Directory")
+	if kind is in ("File", "Directory", "Process")
 		return SystemHelper(kind, name)
 	kind is "Text" then TextHelper(name) else ""
 CollectionHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "in", 1) is "strict_list_has_text"
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "Remove", 1) is ""
-	if name is not in ("in", "Index") or count is not 1
+	MlirNatives(Texts, 1).CollectionHelper("List(Number)", "Count", 1) is "strict_list_count_number"
+	if name is not in ("in", "Index", "Count") or count is not 1
 		return ""
-	let operation = name is "in" then "has" else "index"
+	let operation = name is "in" then "has" else name.Lower
 	Finder(MlirKinds(function).ElementKind(kind), operation)
 Finder(element Text, operation Text) Text
 	MlirNatives(Texts, 1).Finder("Text", "has") is "strict_list_has_text"
@@ -43,10 +45,8 @@ SystemHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).SystemHelper("File", "ReadLines") is "strict_file_read_lines"
 	MlirNatives(Texts, 1).SystemHelper("Directory", "Files") is "strict_directory_files"
 	MlirNatives(Texts, 1).SystemHelper("File", "Delete") is ""
-	constant fileNames = ("ReadLines", "Exists", "Write")
-	constant directoryNames = ("Files", "Exists", "Create")
-	let isKnown = kind is "File" then name is in fileNames else name is in directoryNames
-	if isKnown is false
+	MlirNatives(Texts, 1).SystemHelper("Process", "RunTool") is "strict_process_runtool"
+	if kind + "." + name is not in SystemNames
 		return ""
 	let suffix = name is "ReadLines" then "read_lines" else name.Lower
 	"strict_" + kind.Lower + "_" + suffix

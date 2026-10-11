@@ -689,8 +689,17 @@ address instead (ASAN builds are -O0 and crash at random places).
 Speed: the native self-compile takes 20.2 s against 36.8 s on the VM, only 1.8x. FileCompiler.Linked
 regenerates every linked type in each of its 14 rounds (892 LinkedType calls), the Tokenizer runs
 601,745 times, native `Text.Length` is strlen, `list + list` copies and nothing is freed.
-Next: Process natives and `NativeRuntimeLinux.mlir` so NativeCompiler builds natively, stage 2
-(native exes compile themselves), then the Linked rounds and text length for speed.
+Stage 2 (2026-10-11, later): Process natives (Find, RunTool with redirected output files and the
+VM's 30 s timeout, OperatingSystem) let NativeCompiler build itself: `Compiler/NativeCompiler.exe`
+compiles NativeCompiler.strict in 13 s (65 s via Strict.exe) and FileCompiler.strict in 8 s (38 s),
+both byte-identical MLIR to the VM run (fixpoint; the exes differ only in the linker timestamp,
+`/Brepro` would fix that). All 19 Examples the backend supports compile to identical MLIR and run
+identically (3.0 s native against 9.6 s VM per half of the Examples). No .NET is needed anymore to
+compile Strict, only mlir-opt, mlir-translate and clang. Found on the way: the Strict parser grouped
+`a then b else c then d else e` to the left (C# nests in the else part), so the native compiler
+escaped every character; File.ReadLines dropped the empty last line the VM keeps.
+Next: `NativeRuntimeLinux.mlir`, a native runner like Strict.exe (Runtime/Execute), tests without
+C# (step 7), then speed: Linked rounds, Tokenizer, text length, freeing memory.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

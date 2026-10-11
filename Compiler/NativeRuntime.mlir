@@ -416,7 +416,18 @@
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  func.func private @strict_list_index_number(%list: f64, %item: f64) -> f64 {
+  func.func private @strict_list_matches(%value: f64, %item: f64, %isText: i1) -> i1 {
+    %zero = arith.constant 0.0 : f64
+    cf.cond_br %isText, ^text, ^number
+  ^text:
+    %equal = func.call @strict_text_equal(%value, %item) : (f64, f64) -> f64
+    %same = arith.cmpf one, %equal, %zero : f64
+    return %same : i1
+  ^number:
+    %identical = arith.cmpf oeq, %value, %item : f64
+    return %identical : i1
+  }
+  func.func private @strict_list_find(%list: f64, %item: f64, %isText: i1) -> f64 {
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %none = arith.constant -1.0 : f64
@@ -430,7 +441,7 @@
   ^compare:
     %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %slot : !llvm.ptr -> f64
-    %same = arith.cmpf oeq, %value, %item : f64
+    %same = func.call @strict_list_matches(%value, %item, %isText) : (f64, f64, i1) -> i1
     %next = arith.addi %index, %step : i64
     cf.cond_br %same, ^found(%index : i64), ^check(%next : i64)
   ^found(%at: i64):
@@ -439,30 +450,48 @@
   ^missing:
     return %none : f64
   }
+  func.func private @strict_list_index_number(%list: f64, %item: f64) -> f64 {
+    %isText = arith.constant false
+    %result = func.call @strict_list_find(%list, %item, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
   func.func private @strict_list_index_text(%list: f64, %item: f64) -> f64 {
+    %isText = arith.constant true
+    %result = func.call @strict_list_find(%list, %item, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_count(%list: f64, %item: f64, %isText: i1) -> f64 {
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %zero = arith.constant 0.0 : f64
-    %none = arith.constant -1.0 : f64
+    %one = arith.constant 1.0 : f64
     %length = func.call @strict_list_length(%list) : (f64) -> f64
     %count = arith.fptosi %length : f64 to i64
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
-    cf.br ^check(%start : i64)
-  ^check(%index: i64):
+    cf.br ^check(%start, %zero : i64, f64)
+  ^check(%index: i64, %found: f64):
     %more = arith.cmpi slt, %index, %count : i64
-    cf.cond_br %more, ^compare, ^missing
+    cf.cond_br %more, ^compare, ^done
   ^compare:
     %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %slot : !llvm.ptr -> f64
-    %equal = func.call @strict_text_equal(%value, %item) : (f64, f64) -> f64
-    %same = arith.cmpf one, %equal, %zero : f64
+    %same = func.call @strict_list_matches(%value, %item, %isText) : (f64, f64, i1) -> i1
+    %added = arith.addf %found, %one : f64
+    %total = arith.select %same, %added, %found : f64
     %next = arith.addi %index, %step : i64
-    cf.cond_br %same, ^found(%index : i64), ^check(%next : i64)
-  ^found(%at: i64):
-    %result = arith.sitofp %at : i64 to f64
+    cf.br ^check(%next, %total : i64, f64)
+  ^done:
+    return %found : f64
+  }
+  func.func private @strict_list_count_number(%list: f64, %item: f64) -> f64 {
+    %isText = arith.constant false
+    %result = func.call @strict_list_count(%list, %item, %isText) : (f64, f64, i1) -> f64
     return %result : f64
-  ^missing:
-    return %none : f64
+  }
+  func.func private @strict_list_count_text(%list: f64, %item: f64) -> f64 {
+    %isText = arith.constant true
+    %result = func.call @strict_list_count(%list, %item, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
   }
   func.func private @strict_list_has_number(%list: f64, %item: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -716,13 +745,8 @@
     %added = func.call @strict_text_line(%text, %lineStart, %index, %found) : (f64, i64, i64, f64) -> f64
     cf.br ^scan(%next, %next, %added : i64, i64, f64)
   ^finish:
-    %hasRest = arith.cmpi slt, %lineStart, %length : i64
-    cf.cond_br %hasRest, ^rest, ^done(%found : f64)
-  ^rest:
     %last = func.call @strict_text_line(%text, %lineStart, %length, %found) : (f64, i64, i64, f64) -> f64
-    cf.br ^done(%last : f64)
-  ^done(%result: f64):
-    return %result : f64
+    return %last : f64
   }
   func.func private @strict_text_line(%text: f64, %start: i64, %end: i64, %lines: f64) -> f64 {
     %step = arith.constant 1 : i64
@@ -754,4 +778,43 @@
     %written = llvm.call @fwrite(%content, %one, %length, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
     %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
     return %zero : f64
+  }
+  func.func private @strict_process_result(%code: f64, %output: f64, %error: f64) -> f64 {
+    %size = arith.constant 24 : i64
+    %block = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    llvm.store %code, %block : f64, !llvm.ptr
+    %outputSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %output, %outputSlot : f64, !llvm.ptr
+    %errorSlot = llvm.getelementptr %block[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %error, %errorSlot : f64, !llvm.ptr
+    %result = func.call @strict_bits(%block) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_process_find(%self: f64, %name: f64) -> f64 {
+    %size = arith.constant 8 : i64
+    %path = func.call @strict_tool_path(%name) : (f64) -> f64
+    %block = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    llvm.store %path, %block : f64, !llvm.ptr
+    %result = func.call @strict_bits(%block) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  llvm.mlir.global internal constant @strict_tool_missing("tool not found: \00") : !llvm.array<17 x i8>
+  func.func private @strict_process_runtool(%self: f64, %name: f64, %arguments: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %path = func.call @strict_tool_path(%name) : (f64) -> f64
+    %length = func.call @strict_text_length(%path) : (f64) -> f64
+    %missing = arith.cmpf oeq, %length, %zero : f64
+    cf.cond_br %missing, ^absent, ^present
+  ^absent:
+    %code = arith.constant 127.0 : f64
+    %prefixText = llvm.mlir.addressof @strict_tool_missing : !llvm.ptr
+    %prefix = func.call @strict_bits(%prefixText) : (!llvm.ptr) -> f64
+    %error = func.call @strict_text_concat(%prefix, %name) : (f64, f64) -> f64
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %failure = func.call @strict_process_result(%code, %empty, %error) : (f64, f64, f64) -> f64
+    return %failure : f64
+  ^present:
+    %result = func.call @strict_process_execute(%path, %arguments) : (f64, f64) -> f64
+    return %result : f64
   }

@@ -8,6 +8,7 @@ Parse SyntaxNode
 	SyntaxParser(Tokenizer("x is not 5").Tokens).Parse to Text is "x is not 5"
 	SyntaxParser(Tokenizer("(1, 2, 3)").Tokens).Parse to Text is "(1, 2, 3)"
 	SyntaxParser(Tokenizer("list.Add(-1)").Tokens).Parse to Text is "list.Add(-1)"
+	SyntaxParser(Tokenizer("a then b else c then d else e").Tokens).Parse.children.Last.text is "else"
 	ParseRange(0, tokens.Length)
 ParseRange(start Number, end Number) SyntaxNode
 	SyntaxParser("a", "+", "b").ParseRange(0, 3).Kind is "Binary"
@@ -56,7 +57,7 @@ LowestOperatorIndex(start Number, end Number) Number
 		let precedence = OperatorPrecedence(start + index, start)
 		if (depth is 0) and precedence > 0 and precedence <= bestPrecedence
 			best = start + index
-			bestPrecedence = precedence
+			bestPrecedence = tokens(best) is "else" then precedence - 0.5 else precedence
 	best
 BracketDelta(token Text) Number
 	SyntaxParser("1").BracketDelta("(") is 1
