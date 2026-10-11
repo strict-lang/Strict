@@ -1,15 +1,7 @@
 has logger
-constant Go = TypeEntry("A", List(MemberEntry), MethodEntry.GoRun)
 constant Invalid = InstructionEntry(Error, List(Text), List(Number))
 constant Broken = MethodEntry("Bad", List(MemberEntry), "None", List(InstructionEntry) + Invalid)
-constant Sample = TypeCodegen("Strict/Bytecode/FileCompiler", List(Text), ValueCodegen.NoTypes, List(Text))
-constant CountCall = InstructionEntry.Invoke(0, ("Strict/Range", "Count", "Strict/Number"), List(Number), -1)
-constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
-constant Counted = TypeEntry("A", List(MemberEntry), List(MethodEntry) + CountRun)
 constant Bad = TypeEntry("A", List(MemberEntry), List(MethodEntry) + Broken)
-constant ForNumbers = MethodEntry("for", List(MemberEntry), "Strict/Iterator(Number)", List(InstructionEntry))
-constant Iterating = TypeEntry("A", List(MemberEntry), List(MethodEntry) + ForNumbers)
-constant Natives = ("from", "to", "not", "and", "or", "xor", "Exists", "ReadLines")
 Run(path Text, root Text)
 	let types = Compiled(path, root)
 	let bytes = BinaryFile(types).Bytes
@@ -21,7 +13,7 @@ Compiled(path Text, root Text) List(TypeEntry)
 	let files = SourceFiles(root).Of(path)
 	let inference = ResolveCheck.Inference(files)
 	let main = TypeCodegen(FullName(path, root), File(path).ReadLines, inference, FullNames(files, root))
-	Linked(main.Entry, root, main, 20)
+	Linker(root, main).Linked(main.Entry, List(Text), 20)
 FullName(path Text, root Text) Text
 	FullName("C:/s/Bytecode\\A.strict", "C:/s") is "Strict/Bytecode/A"
 	"Strict/" + path.Substring(root.Length + 1, path.Length - root.Length - 8).Replace("\\", "/")
@@ -30,7 +22,7 @@ FullNames(files Texts, root Text) Texts
 	for files
 		FullName(value, root)
 Unsupported(entries List(TypeEntry)) Text
-	Unsupported(Go) is ""
+	Unsupported(Linker.Go) is ""
 	Unsupported(Bad) is "A.Bad"
 	for entries
 		if IsValid(value.Bytes) is false
@@ -50,66 +42,3 @@ IsValid(bytes Numbers) Boolean
 		if value < 0 or value > 255 or value % 1 is not 0
 			return false
 	true
-Linked(entries List(TypeEntry), root Text, main TypeCodegen, depth Number) List(TypeEntry)
-	Linked(TypeEntry.HelloLogger, ".", TypeCodegen.Hello, 3).Length is 4
-	Linked(Iterating, ".", Sample, 3).Length is 1
-	if depth is 0
-		return entries
-	mutable linked = List(TypeEntry) + entries.First
-	for BaseTypes(entries, main.fullName)
-		let source = File(root + "/" + SourceName(value) + ".strict")
-		if source.Exists and ((value.IndexOf("(") is -1) or (TypeShape(source.ReadLines).IsTrait is false))
-			linked = linked + LinkedType(value, root, main, UsedMethods(entries, value))
-	if (linked.Length is entries.Length) and (Targets(linked).Length is Targets(entries).Length)
-		return linked
-	Linked(linked, root, main, depth - 1)
-LinkedType(type Text, root Text, main TypeCodegen, methods Texts) TypeEntry
-	LinkedType("Strict/Logger", ".", Sample, List(Text)).Name is "Strict/Logger"
-	LinkedType("Strict/Bytecode/Crc", ".", Sample, List(Text)).Name is "Crc"
-	let entry = main.Sibling(type, File(root + "/" + SourceName(type) + ".strict").ReadLines).Selected(methods)
-	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
-	isLocal then TypeEntry(Path(type).FileName.text, entry.members, entry.methods) else entry
-BaseTypes(entries List(TypeEntry), main Text) Texts
-	BaseTypes(Go, "Strict/Examples/Go") is ("Strict/B")
-	mutable types = List(Mutable(Text))
-	for Targets(entries)
-		let type = value.Substring(0, value.LastIndexOf("."))
-		if type is not in types and type is not main
-			types.Add(type)
-	for UsedTypes(entries)
-		if value is not in types and value is not main
-			types.Add(value)
-	types
-UsedMethods(entries List(TypeEntry), type Text) Texts
-	UsedMethods(Go, "Strict/B") is ("Go")
-	UsedMethods(Counted, "Strict/Range") is ("Count")
-	for Targets(entries)
-		let method = value.Substring(value.LastIndexOf(".") + 1, value.Length - value.LastIndexOf(".") - 1)
-		if value.StartsWith(type + ".") and (not IsNative(type, method))
-			method
-IsNative(type Text, method Text) Boolean
-	IsNative("Strict/Text", "Upper") is false
-	IsNative("Strict/Range", "Length") is false
-	IsNative("Strict/Bytecode/B", "to") is false
-	if type.LastIndexOf("/") > 6
-		return false
-	if method is in ("Length", "Count")
-		return SourceName(type) is in ("Text", "List", "File")
-	method is in Natives
-SourceName(type Text) Text
-	SourceName("Strict/List(Number)") is "List"
-	SourceName("Strict/Process") is "Process"
-	let name = type.Substring(7, type.Length - 7)
-	name.IndexOf("(") is -1 then name else name.Substring(0, name.IndexOf("("))
-UsedTypes(entries List(TypeEntry)) Texts
-	UsedTypes(Go) is List(Text)
-	mutable types = List(Mutable(Text))
-	for entries
-		types = types + value.UsedTypes
-	types
-Targets(entries List(TypeEntry)) Texts
-	Targets(Go) is ("Strict/B.Go")
-	mutable targets = List(Mutable(Text))
-	for entries
-		targets = targets + value.Invoked
-	targets

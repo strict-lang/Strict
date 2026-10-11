@@ -1,0 +1,96 @@
+has root Text
+has main TypeCodegen
+constant Go = TypeEntry("A", List(MemberEntry), MethodEntry.GoRun)
+constant CountCall = InstructionEntry.Invoke(0, ("Strict/Range", "Count", "Strict/Number"), List(Number), -1)
+constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
+constant Counted = TypeEntry("A", List(MemberEntry), List(MethodEntry) + CountRun)
+constant ForNumbers = MethodEntry("for", List(MemberEntry), "Strict/Iterator(Number)", List(InstructionEntry))
+constant Iterating = TypeEntry("A", List(MemberEntry), List(MethodEntry) + ForNumbers)
+constant Sample = Linker(".", TypeCodegen("Strict/Bytecode/FileCompiler", List(Text), ValueCodegen.NoTypes, List(Text)))
+constant Hello = Linker(".", TypeCodegen.Hello)
+constant Natives = ("from", "to", "not", "and", "or", "xor", "Exists", "ReadLines")
+Linked(entries List(TypeEntry), signatures Texts, depth Number) List(TypeEntry)
+	Hello.Linked(TypeEntry.HelloLogger, List(Text), 3).Length is 4
+	Sample.Linked(Iterating, List(Text), 3).Length is 1
+	if depth is 0
+		return entries
+	let targets = Targets(entries)
+	let signed = Signatures(Linkable(BaseTypes(entries, targets)), targets)
+	let linked = Entries(entries, signatures, signed)
+	if (linked.Length is entries.Length) and (Targets(linked).Length is targets.Length)
+		return linked
+	Linked(linked, signed, depth - 1)
+Entries(entries List(TypeEntry), signatures Texts, signed Texts) List(TypeEntry)
+	Sample.Entries(Go, List(Text), List(Text)).Length is 1
+	mutable linked = List(TypeEntry) + entries.First
+	for signed
+		let known = signatures.Index(value)
+		linked = linked + (known < 0 then Fresh(value) else entries(known + 1))
+	linked
+Linkable(types Texts) Texts
+	Hello.Linkable("Strict/Logger", "Strict/Missing") is ("Strict/Logger")
+	for types
+		let source = File(root + "/" + SourceName(value) + ".strict")
+		if source.Exists and ((value.IndexOf("(") is -1) or (TypeShape(source.ReadLines).IsTrait is false))
+			value
+Signatures(types Texts, targets Texts) Texts
+	Sample.Signatures(("Strict/B"), ("Strict/B.Go")) is ("Strict/B:Go")
+	for types
+		value + ":" + Text.Combine(UsedMethods(targets, value), ",")
+Fresh(signature Text) TypeEntry
+	Sample.Fresh("Strict/Logger:").Name is "Strict/Logger"
+	let colon = signature.IndexOf(":")
+	let methods = signature.Substring(colon + 1, signature.Length - colon - 1)
+	let names = methods is "" then List(Text) else methods.Split(",")
+	LinkedType(signature.Substring(0, colon), names)
+LinkedType(type Text, methods Texts) TypeEntry
+	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
+	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
+	let entry = main.Sibling(type, File(root + "/" + SourceName(type) + ".strict").ReadLines).Selected(methods)
+	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
+	isLocal then TypeEntry(Path(type).FileName.text, entry.members, entry.methods) else entry
+BaseTypes(entries List(TypeEntry), targets Texts) Texts
+	Sample.BaseTypes(Go, ("Strict/B.Go")) is ("Strict/B")
+	mutable types = List(Mutable(Text))
+	for targets
+		let type = value.Substring(0, value.LastIndexOf("."))
+		if type is not in types and type is not main.fullName
+			types.Add(type)
+	for UsedTypes(entries)
+		if value is not in types and value is not main.fullName
+			types.Add(value)
+	types
+UsedMethods(targets Texts, type Text) Texts
+	Sample.UsedMethods(("Strict/B.Go"), "Strict/B") is ("Go")
+	Sample.UsedMethods(("Strict/Range.Count"), "Strict/Range") is ("Count")
+	for targets
+		let method = value.Substring(value.LastIndexOf(".") + 1, value.Length - value.LastIndexOf(".") - 1)
+		if value.StartsWith(type + ".") and (not IsNative(type, method))
+			method
+IsNative(type Text, method Text) Boolean
+	Sample.IsNative("Strict/Text", "Upper") is false
+	Sample.IsNative("Strict/Range", "Length") is false
+	Sample.IsNative("Strict/Bytecode/B", "to") is false
+	if type.LastIndexOf("/") > 6
+		return false
+	if method is in ("Length", "Count")
+		return SourceName(type) is in ("Text", "List", "File")
+	method is in Natives
+SourceName(type Text) Text
+	Sample.SourceName("Strict/List(Number)") is "List"
+	Sample.SourceName("Strict/Process") is "Process"
+	let name = type.Substring(7, type.Length - 7)
+	name.IndexOf("(") is -1 then name else name.Substring(0, name.IndexOf("("))
+UsedTypes(entries List(TypeEntry)) Texts
+	Sample.UsedTypes(Go) is List(Text)
+	mutable types = List(Mutable(Text))
+	for entries
+		types = types + value.UsedTypes
+	types
+Targets(entries List(TypeEntry)) Texts
+	Sample.Targets(Go) is ("Strict/B.Go")
+	Sample.Targets(Counted) is ("Strict/Range.Count")
+	mutable targets = List(Mutable(Text))
+	for entries
+		targets = targets + value.Invoked
+	targets
