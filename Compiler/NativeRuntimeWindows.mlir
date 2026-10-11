@@ -61,7 +61,7 @@
     %chosen = arith.select %isEmpty, %any, %safePattern : f64
     %search = func.call @strict_path_join(%path, %chosen) : (f64, f64) -> f64
     %searchText = func.call @strict_ptr(%search) : (f64) -> !llvm.ptr
-    %data = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %data = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
     %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
     %handle = llvm.call @FindFirstFileA(%searchText, %data) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %handleValue = llvm.ptrtoint %handle : !llvm.ptr to i64
@@ -112,7 +112,7 @@
     %paths = llvm.call @getenv(%variable) : (!llvm.ptr) -> !llvm.ptr
     %extension = llvm.mlir.addressof @strict_exe_extension : !llvm.ptr
     %file = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
-    %buffer = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %buffer = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %length = llvm.call @SearchPathA(%paths, %file, %extension, %size, %buffer, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
     %found = arith.cmpi ugt, %length, %none : i32
@@ -128,9 +128,9 @@
     %size = arith.constant 1024 : i32
     %bytes = arith.constant 1024 : i64
     %unique = arith.constant 0 : i32
-    %directory = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %directory = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
     %length = llvm.call @GetTempPathA(%size, %directory) : (i32, !llvm.ptr) -> i32
-    %name = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %name = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
     %prefix = llvm.mlir.addressof @strict_temp_prefix : !llvm.ptr
     %created = llvm.call @GetTempFileNameA(%directory, %prefix, %unique, %name) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> i32
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64

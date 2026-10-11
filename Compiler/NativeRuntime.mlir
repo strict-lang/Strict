@@ -1,3 +1,32 @@
+  llvm.mlir.global internal @strict_heap_next(0 : i64) : i64
+  llvm.mlir.global internal @strict_heap_end(0 : i64) : i64
+  func.func private @strict_alloc(%size: i64) -> !llvm.ptr {
+    %seven = arith.constant 7 : i64
+    %mask = arith.constant -8 : i64
+    %chunk = arith.constant 67108864 : i64
+    %padded = arith.addi %size, %seven : i64
+    %rounded = arith.andi %padded, %mask : i64
+    %nextSlot = llvm.mlir.addressof @strict_heap_next : !llvm.ptr
+    %endSlot = llvm.mlir.addressof @strict_heap_end : !llvm.ptr
+    %next = llvm.load %nextSlot : !llvm.ptr -> i64
+    %end = llvm.load %endSlot : !llvm.ptr -> i64
+    %after = arith.addi %next, %rounded : i64
+    %fits = arith.cmpi ule, %after, %end : i64
+    cf.cond_br %fits, ^take(%next : i64), ^refill
+  ^refill:
+    %big = arith.cmpi ugt, %rounded, %chunk : i64
+    %chunkSize = arith.select %big, %rounded, %chunk : i64
+    %block = llvm.call @malloc(%chunkSize) : (i64) -> !llvm.ptr
+    %start = llvm.ptrtoint %block : !llvm.ptr to i64
+    %blockEnd = arith.addi %start, %chunkSize : i64
+    llvm.store %blockEnd, %endSlot : i64, !llvm.ptr
+    cf.br ^take(%start : i64)
+  ^take(%at: i64):
+    %taken = arith.addi %at, %rounded : i64
+    llvm.store %taken, %nextSlot : i64, !llvm.ptr
+    %result = llvm.inttoptr %at : i64 to !llvm.ptr
+    return %result : !llvm.ptr
+  }
   func.func private @strict_ptr(%bits: f64) -> !llvm.ptr {
     %i = arith.bitcast %bits : f64 to i64
     %p = llvm.inttoptr %i : i64 to !llvm.ptr
@@ -12,11 +41,11 @@
     %c16 = arith.constant 16 : i64
     %c24 = arith.constant 24 : i64
     %eight = arith.constant 8.0 : f64
-    %view = llvm.call @malloc(%c16) : (i64) -> !llvm.ptr
-    %holder = llvm.call @malloc(%c24) : (i64) -> !llvm.ptr
+    %view = func.call @strict_alloc(%c16) : (i64) -> !llvm.ptr
+    %holder = func.call @strict_alloc(%c24) : (i64) -> !llvm.ptr
     %bytesf = arith.mulf %capacity, %eight : f64
     %bytes = arith.fptosi %bytesf : f64 to i64
-    %items = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %items = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
     %itemsbits = func.call @strict_bits(%items) : (!llvm.ptr) -> f64
     llvm.store %itemsbits, %holder : f64, !llvm.ptr
     %used = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -124,7 +153,10 @@
     %bytes = arith.fptosi %bytesf : f64 to i64
     %oldbits = llvm.load %holder : !llvm.ptr -> f64
     %old = func.call @strict_ptr(%oldbits) : (f64) -> !llvm.ptr
-    %moved = llvm.call @realloc(%old, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %moved = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    %usedBytesf = arith.mulf %used, %eight : f64
+    %usedBytes = arith.fptosi %usedBytesf : f64 to i64
+    %grown = llvm.call @memcpy(%moved, %old, %usedBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %movedbits = func.call @strict_bits(%moved) : (!llvm.ptr) -> f64
     llvm.store %movedbits, %holder : f64, !llvm.ptr
     llvm.store %larger, %capslot : f64, !llvm.ptr
@@ -137,7 +169,7 @@
     llvm.store %element, %slot : f64, !llvm.ptr
     %next = arith.addf %used, %one : f64
     llvm.store %next, %usedslot : f64, !llvm.ptr
-    %result = llvm.call @malloc(%c16) : (i64) -> !llvm.ptr
+    %result = func.call @strict_alloc(%c16) : (i64) -> !llvm.ptr
     llvm.store %next, %result : f64, !llvm.ptr
     %resultholder = llvm.getelementptr %result[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %holderbits, %resultholder : f64, !llvm.ptr
@@ -258,7 +290,7 @@
     %offset = arith.fptosi %start : f64 to i64
     %count = arith.fptosi %length : f64 to i64
     %size = arith.addi %count, %one : i64
-    %copy = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %copy = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
     %from = llvm.getelementptr %a[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %done = llvm.call @memcpy(%copy, %from, %count) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %end = llvm.getelementptr %copy[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -295,7 +327,7 @@
   func.func private @strict_character_text(%code: f64) -> f64 {
     %two = arith.constant 2 : i64
     %terminator = arith.constant 0 : i8
-    %copy = llvm.call @malloc(%two) : (i64) -> !llvm.ptr
+    %copy = func.call @strict_alloc(%two) : (i64) -> !llvm.ptr
     %byte = arith.fptoui %code : f64 to i8
     llvm.store %byte, %copy : i8, !llvm.ptr
     %end = llvm.getelementptr %copy[1] : (!llvm.ptr) -> !llvm.ptr, i8
@@ -378,7 +410,7 @@
     %zero = arith.constant 0.0 : f64
     %large = arith.constant 1.0e7 : f64
     %tiny = arith.constant 1.0e-9 : f64
-    %buffer = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %buffer = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
     %absolute = llvm.intr.fabs(%number) : (f64) -> f64
     %isLarge = arith.cmpf oge, %absolute, %large : f64
     %isPositive = arith.cmpf ogt, %absolute, %zero : f64
@@ -586,7 +618,7 @@
     %rightLength = llvm.call @strlen(%b) : (!llvm.ptr) -> i64
     %total = arith.addi %leftLength, %rightLength : i64
     %size = arith.addi %total, %one : i64
-    %buffer = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %buffer = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
     %first = llvm.call @memcpy(%buffer, %a, %leftLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %end = llvm.getelementptr %buffer[%leftLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %rightSize = arith.addi %rightLength, %one : i64
@@ -761,7 +793,7 @@
     %size = llvm.call @ftell(%file) : (!llvm.ptr) -> i64
     %toStart = llvm.call @fseek(%file, %start, %beginning) : (!llvm.ptr, i64, i32) -> i32
     %capacity = arith.addi %size, %one : i64
-    %buffer = llvm.call @malloc(%capacity) : (i64) -> !llvm.ptr
+    %buffer = func.call @strict_alloc(%capacity) : (i64) -> !llvm.ptr
     %count = llvm.call @fread(%buffer, %one, %size, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
     %end = llvm.getelementptr %buffer[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %terminator, %end : i8, !llvm.ptr
@@ -834,7 +866,7 @@
   }
   func.func private @strict_process_result(%code: f64, %output: f64, %error: f64) -> f64 {
     %size = arith.constant 24 : i64
-    %block = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %block = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
     llvm.store %code, %block : f64, !llvm.ptr
     %outputSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %output, %outputSlot : f64, !llvm.ptr
@@ -846,7 +878,7 @@
   func.func private @strict_process_find(%self: f64, %name: f64) -> f64 {
     %size = arith.constant 8 : i64
     %path = func.call @strict_tool_path(%name) : (f64) -> f64
-    %block = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %block = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
     llvm.store %path, %block : f64, !llvm.ptr
     %result = func.call @strict_bits(%block) : (!llvm.ptr) -> f64
     return %result : f64

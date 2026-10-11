@@ -698,8 +698,23 @@ identically (3.0 s native against 9.6 s VM per half of the Examples). No .NET is
 compile Strict, only mlir-opt, mlir-translate and clang. Found on the way: the Strict parser grouped
 `a then b else c then d else e` to the left (C# nests in the else part), so the native compiler
 escaped every character; File.ReadLines dropped the empty last line the VM keeps.
-Next: `NativeRuntimeLinux.mlir`, a native runner like Strict.exe (Runtime/Execute), tests without
-C# (step 7), then speed: Linked rounds, Tokenizer, text length, freeing memory.
+Native runner (2026-10-11, later): `Runtime/Execute.exe` is the Strict compiler plus the Strict VM
+built natively and gives the same output as the C# Strict.exe for all 41 Examples (2.8 s against
+5.8 s in total). Needed: instance equality by member values (generated `strict_equal_<Type>`, the
+VM's `left is right` on two VmValues compared pointers), list element assignment and CopyList,
+`Run(arguments Texts)` and the NoRunMethodFound message. The native backend itself compiles 19 of
+the 20 runnable Examples (ProcessProbe needs automatic instance text), the other 21 have no Run.
+Speed and memory, 1M loop iterations: C# Strict.exe 456 ms; NativeCompiler 352 ms plus 63 ms for
+the exe; Execute.exe (Strict VM) 2544 ms and 3.5 GB, 85% of the time in the Windows heap and page
+commits because nothing is freed and every VM step copies frames, registers and locals (~500 bytes).
+`strict_alloc`, a bump arena in 64 MB chunks replacing malloc (ponytail: never frees, the upgrade is
+reference counting that reuses a value in place when it is the only reference, which is the README's
+"in place when the old version is not used" rule), brought it to 827 ms. With it NativeCompiler.exe
+builds itself in 10.6 s (65 s via Strict.exe) and FileCompiler.exe compiles itself in 12.4 s (36.9 s).
+Sampling profiler for native exes: inject a thread that suspends the main thread every 1 ms and
+records rip, map the rvas with `llvm-pdbutil dump --publics` (scratch tooling, not checked in).
+Next: reference counting with in-place reuse (the Strict VM copies its registers list every step),
+automatic instance text, `NativeRuntimeLinux.mlir`, tests without C# (step 7), Linked rounds.
 
 ### Phase E — Usability and product quality (≈4 sessions)
 E1 CLI: clear usage, `strict run|test|build|decompile|check` commands, consistent exit codes,

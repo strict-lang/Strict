@@ -14,8 +14,9 @@ Bits(pointer Text, suffix Text) Texts
 	(integer, "    " + Temp(suffix + "f") + " = arith.bitcast " + Temp(suffix + "i") + " : i64 to f64")
 Allocated(slots Number, suffix Text) Texts
 	Sample.Allocated(2, "o").First is "    %t3oz = arith.constant 16 : i64"
+	Sample.Allocated(2, "o").Last is "    %t3op = func.call @strict_alloc(%t3oz) : (i64) -> !llvm.ptr"
 	let size = "    " + Temp(suffix + "z") + " = arith.constant " + (slots < 1 then 8 else slots * 8) + " : i64"
-	(size, "    " + Temp(suffix + "p") + " = llvm.call @malloc(" + Temp(suffix + "z") + ") : (i64) -> !llvm.ptr")
+	(size, "    " + Temp(suffix + "p") + " = func.call @strict_alloc(" + Temp(suffix + "z") + ") : (i64) -> !llvm.ptr")
 Slot(base Text, index Number, suffix Text) Text
 	Sample.Slot("%b", 2, "s") is "    %t3s = llvm.getelementptr %b[2] : (!llvm.ptr) -> !llvm.ptr, f64"
 	"    " + Temp(suffix) + " = llvm.getelementptr " + base + "[" + index + "] : (!llvm.ptr) -> !llvm.ptr, f64"
