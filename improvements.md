@@ -12,10 +12,10 @@ In priority order. Remove what is done, add what is found.
    - Add a folder mode for `run test`: today every file starts its own process, which parses all files and infers all types again.
    - `check` prints automatic instance text `(UnusedMethodParameterMustBeRemoved, other, Never used)` instead of `ValidationIssue.to Text` (`UnusedMethodParameterMustBeRemoved: other`). Issues also need a line number: the client marks the first line containing the target for now. A folder outside root is printed with mixed separators (`C:/.../pkg\Unused.strict`).
 6. **Native gaps**:
-   - `to Type` is missing (`Variable.strict`, also on the Strict VM, which otherwise passes the same 217 files).
    - `Character("b").number` prints `b` instead of 98, the member load keeps the Character kind.
    - ImageProcessing executables crash when run (Image and ColorValue members).
 7. **Validators**: a `let` with only constant values must be `constant`. The check misses list literals.
 8. **Tooling**: LanguageServer in Strict (the C# one is on the `dotnet` branch), CI with the native toolchain.
-9. **Strict VM speed**: 245 ms for 1M iterations, about 5x slower than native (45 ms). Fast enough for now. When needed, update frames and registers in place for values with only one reference.
-10. **Mutable as signals** (design decision, from the 2023 blog post "mutable"): `mutable squareArea = length * length` would keep recomputing when `length` changes, while `constant` stays the first value. Today a `mutable` only changes when it is reassigned (README). Within one method the compiler could recompute the dependent mutables after each reassignment of their inputs; members would need dependency tracking across methods.
+9. **Reflection** (later, only as use cases need it): `"Number" to Type` builds `Type("Number", "Strict")` and `value is Number` is decided at compile time from the static type, on both backends. Not supported yet: `to Type` of other values (`Any.strict`, `5 to Type` would be the static type) and of a Text that is not a literal (needs the type names at runtime).
+10. **Strict VM speed**: 245 ms for 1M iterations, about 5x slower than native (45 ms). Fast enough for now. When needed, update frames and registers in place for values with only one reference.
+11. **Mutable as signals** (design decision, from the 2023 blog post "mutable"): `mutable squareArea = length * length` would keep recomputing when `length` changes, while `constant` stays the first value. Today a `mutable` only changes when it is reassigned (README). Within one method the compiler could recompute the dependent mutables after each reassignment of their inputs; members would need dependency tracking across methods.
