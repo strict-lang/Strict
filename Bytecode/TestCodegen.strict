@@ -1,0 +1,43 @@
+has types TypeCodegen
+constant Even = TestCodegen(TypeCodegen("Strict/Even", ("IsEven(number Number) Boolean", "\tIsEven(2) is true", "\tnumber % 2 is 0"), TypeCodegen.NoTypes, List(Text)))
+constant Counter = CodeBlock.Empty.Declare("failed", "Number")
+constant OneIsOne = SyntaxNode("Binary", "is", (MethodCodegen.One, MethodCodegen.One))
+constant EvenFailed = InstructionEntry.Print("Test failed: IsEven(2) is true in IsEven")
+Tests MethodEntry
+	Even.Tests.Name is "Tests"
+	Even.Tests.instructions.Last.kind is InstructionType.Return
+	let scope = types.Generator.target.shape.MemberScope.With("failed", "Number")
+	let start = CodeBlock(List(InstructionEntry), 0, 0, scope)
+	mutable block = start.Add(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "failed"))
+	for types.lines
+		if TypeShape(types.lines).IsMethodHeader(value)
+			block = Method(index, block)
+	let failed = block.At(0).Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "failed"))
+	MethodEntry("Tests", List(MemberEntry), "Strict/Number", failed.Add(InstructionEntry.Return(0)).instructions)
+Method(start Number, block CodeBlock) CodeBlock
+	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0 is true
+	let name = Tokenizer(types.lines(start)).Tokens.First
+	mutable result = block
+	for TestLines(types.Generator).Tests(BodyParser(types.lines).Block(start + 1, 1), block)
+		result = Checked(value, name, result.At(0))
+	result
+Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock
+	Even.Checked(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
+	let value = types.Generator.Expression(test, block)
+	let truth = value.Load(InstructionEntry.LoadBoolean(value.register, true))
+	let compared = truth.Add(InstructionEntry.Binary(InstructionType.Equal, (value.Result, truth.Result)))
+	let jumped = compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, compared.nextId)).WithNextId
+	let printed = Got(test, jumped.Add(InstructionEntry.Print("Test failed: " + test to Text + " in " + method)))
+	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, jumped.nextId - 1))
+Got(test SyntaxNode, block CodeBlock) CodeBlock
+	Even.Got(OneIsOne, Counter).instructions.Last.kind is InstructionType.Print
+	Even.Got(MethodCodegen.One, Counter).instructions.Length is 0
+	if (test.Kind is not "Binary") or (test.text is not "is")
+		return block
+	let left = types.Generator.Expression(test.children(0), block)
+	let isText = types.Generator.TypeOf(test.children(0), left) is "Text"
+	left.Add(InstructionEntry.PrintValue("  got: ", left.Result, isText))
+Counted(block CodeBlock) CodeBlock
+	Even.Counted(Counter).instructions.Last.texts is ("failed")
+	constant sum = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "failed"), SyntaxNode("Number", "1")))
+	types.Generator.Expression(sum, block).Stored("failed")

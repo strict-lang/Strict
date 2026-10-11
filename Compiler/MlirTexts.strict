@@ -56,12 +56,14 @@ Helper(kind Text) Text
 	let element = MlirKinds(function).ElementKind(kind)
 	element is in ("Text", "Number") then "strict_list_text_" + element.Lower else ""
 Described(loaded Text, suffix Text, kind Text) Texts
-	MlirTexts(Joined, 1).Described("", "d", "Shape").First.StartsWith("unsupported") is true
+	MlirTexts(Joined, 1).Described("", "d", "Shape").Last.IndexOf("@strict_automatic_Shape(") > 0 is true
+	MlirTexts(Joined, 1).Described("", "d", "Logger").First.StartsWith("unsupported") is true
 	let type = function.TypeOf(kind)
 	let method = MlirCalls(function, position).Callee(type, "to", 0, "Text")
-	if method.instructions.Length is 0
+	let automatic = MlirAutomatic(function).Conversion(kind)
+	if (method.instructions.Length is 0) and (automatic is "skip")
 		return List(Text) + MlirStatements(function, position).Unsupported("text of " + kind)
-	let symbol = MlirFunction(function.types, type, method).Symbol
+	let symbol = method.instructions.Length is 0 then automatic else MlirFunction(function.types, type, method).Symbol
 	(loaded, MlirMemory(function, position).Called(Temp(suffix + "x"), symbol, List(Text) + Temp(suffix)))
 Pointer(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = func.call @strict_ptr(%t3bx) : (f64) -> !llvm.ptr"

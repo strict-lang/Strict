@@ -1,8 +1,33 @@
 has logger
 constant SingleThreaded = " --mlir-disable-threading"
 constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -O2 -c -Wno-override-module"
-Run(path Text, root Text)
-	let program = MlirModule(FileCompiler(logger).Compiled(path, root)).Text
+Run(arguments Texts) Number
+	if arguments(0) is "test"
+		return Test(arguments(1), arguments(2))
+	Compile(arguments(0), arguments(1))
+	0
+Test(path Text, root Text) Number
+	let program = MlirModule(FileCompiler(logger).Compiled(path, root, true), "Tests").Text
+	let unsupported = Unsupported(program)
+	if unsupported is not -1
+		logger.Log("Tests of " + path + " not compiled, " + program.Substring(unsupported, program.Length - unsupported))
+		return 1
+	let base = path.Substring(0, path.Length - 7) + ".test"
+	File(base + ".mlir").Write(Mlir(program, root, Platform.Current))
+	let built = Built(base, Toolchain(Platform.Current, root))
+	if built.StartsWith("Built ") is false
+		logger.Log(built)
+		return 1
+	Tested(base + NasmFormat(Platform.Current).ExeExtension, path)
+Tested(executable Text, path Text) Number
+	NativeCompiler.Tested("Compiler/output/missing.exe", "a") is 127
+	let result = ToolRunner(executable).Execute("")
+	let failures = result.exitCode to Text + " failed in " + path
+	let summary = result.exitCode is 0 then "All tests passed in " + path else failures
+	logger.Log(result.Output + summary + (result.error is "" then "" else " " + result.error))
+	result.exitCode
+Compile(path Text, root Text)
+	let program = MlirModule(FileCompiler(logger).Compiled(path, root, false), "Run").Text
 	let unsupported = Unsupported(program)
 	let tools = Toolchain(Platform.Current, root)
 	let missing = tools.Missing(Toolchain.Needed)
@@ -19,7 +44,7 @@ Build(base Text, program Text, tools Toolchain)
 		File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
 		logger.Log(CrossBuilt(base, tools))
 Mlir(program Text, root Text, platform Number) Text
-	NativeCompiler.Mlir("module {\n}", ".", Platform.Linux).IndexOf("@strict_linux") > 0 is true
+	NativeCompiler.Mlir("module {\n}", ".", Platform.Linux).Length > 100000 is true
 	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
 	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(platform) + ".mlir").ReadLines
 	program.Substring(0, program.Length - 1) + runtime + "\n" + Text.Combine(system, "\n") + "\n}"

@@ -1,14 +1,23 @@
 has logger
-Run(arguments Texts)
-	let types = FileCompiler(logger).Compiled(arguments(0), arguments(1))
+Run(arguments Texts) Number
+	if arguments(0) is "test"
+		return Test(arguments(1), arguments(2))
+	let types = FileCompiler(logger).Compiled(arguments(0), arguments(1), false)
 	if HasRun(types.First) is false
 		logger.Log("NoRunMethodFound: No Run method found in " + types.First.Name)
-	else
-		mutable numbers = List(Mutable(VmValue))
-		for Range(2, arguments.Length)
-			let number = arguments(value) to Number
-			numbers.Add(VmValue.OfNumber(number))
-		Machine(types, logger).Launch(types.First.Name, numbers)
+		return 0
+	mutable numbers = List(Mutable(VmValue))
+	for Range(2, arguments.Length)
+		let number = arguments(value) to Number
+		numbers.Add(VmValue.OfNumber(number))
+	Machine(types, logger).Launch(types.First.Name, numbers)
+	0
+Test(path Text, root Text) Number
+	let types = FileCompiler(logger).Compiled(path, root, true)
+	let failed = Machine(types, logger).Tested(types.First.Name)
+	let summary = failed is 0 then "All tests passed in " + path else failed to Text + " tests failed in " + path
+	logger.Log(summary)
+	failed
 HasRun(type TypeEntry) Boolean
 	Execute.HasRun(TypeEntry.HelloLogger) is true
 	Execute.HasRun(TypeEntry("A", List(MemberEntry), List(MethodEntry))) is false

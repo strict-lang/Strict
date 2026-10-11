@@ -1,16 +1,17 @@
 has types List(TypeEntry)
-constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop))
-constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry)))
+has entryName Text
+constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run")
+constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry)), "Tests")
 Text Text
 	Counters.Text.StartsWith("module {") is true
 	NoRun.Text.StartsWith("unsupported:") is true
 	constant functions = Functions
 	if functions.First.method.instructions.Length is 0
-		return "unsupported: no Run method without parameters in " + types.First.Name
+		return "unsupported: no " + entryName + " method without parameters in " + types.First.Name
 	mutable lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
 	for functions
 		lines = lines + value.Text
-	lines = lines + MlirEquality(functions.First, 0).Functions
+	lines = lines + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
 	Text.Combine(lines + Globals(functions) + MlirEntry(functions.First).Main + "}", "\n")
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1
@@ -20,9 +21,9 @@ Functions List(MlirFunction)
 RunMethod(main TypeEntry) MethodEntry
 	Counters.RunMethod(TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry))).instructions.Length is 0
 	for main.methods
-		if value.Name is "Run"
+		if value.Name is entryName
 			return value
-	MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))
+	MethodEntry(entryName, List(MemberEntry), "None", List(InstructionEntry))
 Reachable(known List(MlirFunction), fresh List(MlirFunction)) List(MlirFunction)
 	Counters.Reachable(Counters.Functions, Counters.Functions).Length is 1
 	mutable found = List(Mutable(MlirFunction))

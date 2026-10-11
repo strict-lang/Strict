@@ -929,6 +929,8 @@
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  llvm.mlir.global internal constant @strict_open_paren("(\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_close_paren(")\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal @strict_empty_holder(dense<0.0> : tensor<3xf64>) : !llvm.array<3 x f64>
   llvm.mlir.global internal @strict_empty_view(dense<0.0> : tensor<2xf64>) : !llvm.array<2 x f64>
   func.func private @strict_list_empty() -> f64 {

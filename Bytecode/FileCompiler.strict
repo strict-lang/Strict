@@ -3,17 +3,19 @@ constant Invalid = InstructionEntry(Error, List(Text), List(Number))
 constant Broken = MethodEntry("Bad", List(MemberEntry), "None", List(InstructionEntry) + Invalid)
 constant Bad = TypeEntry("A", List(MemberEntry), List(MethodEntry) + Broken)
 Run(path Text, root Text)
-	let types = Compiled(path, root)
+	let types = Compiled(path, root, false)
 	let bytes = BinaryFile(types).Bytes
 	if IsValid(bytes)
 		logger.Log(bytes)
 	else
 		logger.Log("Compilation failed, unsupported code in " + path + ": " + Unsupported(types))
-Compiled(path Text, root Text) List(TypeEntry)
+Compiled(path Text, root Text, withTests Boolean) List(TypeEntry)
 	let files = SourceFiles(root).Of(path)
 	let inference = ResolveCheck.Inference(files)
 	let main = TypeCodegen(FullName(path, root), File(path).ReadLines, inference, FullNames(files, root))
-	Linker(root, main).Linked(main.Entry, List(Text), 20)
+	let entry = main.Entry
+	let methods = withTests then entry.methods + TestCodegen(main).Tests else entry.methods
+	Linker(root, main).Linked(TypeEntry(entry.Name, entry.members, methods), List(Text), 20)
 FullName(path Text, root Text) Text
 	FullName("C:/s/Bytecode\\A.strict", "C:/s") is "Strict/Bytecode/A"
 	"Strict/" + path.Substring(root.Length + 1, path.Length - root.Length - 8).Replace("\\", "/")

@@ -57,9 +57,13 @@ Symbol(name Text) Text
 	name.Replace("(", "_").Replace(")", "_").Replace(", ", "_")
 Functions Texts
 	MlirEquality(Same, 0).Functions.Length is 27
+	MlirEquality(MlirFunction(Same.types + MlirFunction.Shape, MlirFunction.Shape, Same.method), 0).Functions.Length is 27
 	mutable lines = List(Mutable(Text))
+	mutable symbols = List(Mutable(Text))
 	for function.types
-		if IsKnown(MlirKinds(function).Short(value.Name))
+		let kind = MlirKinds(function).Short(value.Name)
+		if IsKnown(kind) and (Symbol(kind) is not in symbols)
+			symbols.Add(Symbol(kind))
 			lines = lines + Function(value)
 	lines
 Function(type TypeEntry) Texts
