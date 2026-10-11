@@ -1,6 +1,7 @@
 has typeName Text
 has shape TypeShape
 has inference TypeInference
+constant FromGeneric = HeaderTokens(Tokenizer("from(generic)").Tokens)
 constant NoScope = Scope(("x", "z"), ("y", "w"))
 constant NoScopes = (NoScope, NoScope)
 constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes), NoScopes)
@@ -18,9 +19,12 @@ Statements ScopedStatements
 	statements
 HeaderScope(header HeaderTokens, members Scope) Scope
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(AddOther, NoScope).TypeOf("other") is "Demo"
+	MethodBodies("Demo(Number)", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("generic") is "Number"
+	let open = typeName.IndexOf("(")
+	let argument = open < 0 then "Generic" else typeName.Substring(open + 1, typeName.Length - open - 2)
 	mutable types = List(Mutable(Text))
 	for header.ParameterTypes
-		types.Add(value is "Other" then typeName else value)
+		types.Add(value is "Other" then typeName else (value is "Generic" then argument else value))
 	members.With("value", InstanceType).WithAll(header.ParameterNames, types)
 InstanceType Text
 	MethodBodies("List", Sample, NoInference).InstanceType is "Generics"

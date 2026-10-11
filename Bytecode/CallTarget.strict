@@ -23,8 +23,9 @@ Signature(name Text, type Text, returnType Text, arguments Number) Texts
 	(fullName, name, FullName(returnType)) + Overload(name, arguments).ParameterNames
 OtherSignature(name Text, type Text, returnType Text, arguments Number) Texts
 	Plain.OtherSignature("C", "C", "C", 0) is ("Strict/C", "from", "C")
+	Plain.OtherSignature("C", "C(Number)", "C(Number)", 1) is ("Strict/C(Number)", "from", "C(Number)")
 	Plain.OtherSignature("Length", "Text", "Number", 0) is ("Strict/Text", "Length", "Strict/Number")
-	if name is type
+	if (name is type) or type.StartsWith(name + "(")
 		return (FullName(type), "from", type) + FromNames(type)
 	(FullName(type), name, FullName(returnType)) + types.ParametersOf(type, name, arguments)
 ParameterTypes(name Text, type Text, arguments Number) Texts
@@ -43,7 +44,7 @@ ParameterTypes(name Text, type Text, arguments Number) Texts
 FromNames(type Text) Texts
 	Plain.FromNames("Greeter") is ("text")
 	Ranges.FromNames("Range") is ("Start", "ExclusiveEnd")
-	if types.IsKnown(type)
+	if types.IsKnown(types.BaseName(type))
 		return types.ParametersOf(type, "from", -1)
 	type is TypeName then shape.MemberScope.names else List(Text)
 Overload(name Text, arguments Number) HeaderTokens

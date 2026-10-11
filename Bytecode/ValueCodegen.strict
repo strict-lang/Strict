@@ -119,7 +119,10 @@ Owner(node SyntaxNode, block CodeBlock) Text
 	if node.Kind is in ("Member", "MethodCall")
 		return TypeOf(node.children(0), block)
 	let isOwnMethod = methods.TypeOf(node.text) is not ""
-	inference.types.IsKnown(node.text) and (not isOwnMethod) then node.text else target.TypeName
+	let instance = TypeOf(node, block)
+	if inference.types.IsKnown(node.text) and (not isOwnMethod)
+		return instance.StartsWith(node.text + "(") then instance else node.text
+	target.TypeName
 Elements ListCodegen
 	Plain.Elements.values.target.TypeName is "Greeter"
 	ListCodegen(ValueCodegen(inference, methods, target))

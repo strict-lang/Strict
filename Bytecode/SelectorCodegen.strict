@@ -2,19 +2,39 @@ has values ValueCodegen
 constant Plain = SelectorCodegen(ValueCodegen.Plain)
 constant One = SyntaxNode("Number", "1")
 constant IsOne = SyntaxNode("Binary", "is", (One, One))
+constant Typed = SyntaxNode("Binary", "is", List(SyntaxNode) + SyntaxNode("Identifier", "x"))
+constant ACase = SyntaxNode("Binary", "then", (SyntaxNode("Identifier", "A"), One))
 constant Picked = BodyParser("Pick Number", "\tif 2 is", "\t\t1 then 10", "\t\t2 then 20").Block(1, 1).children(0)
 Selected(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Selected(Picked, CodeBlock.Empty).instructions.Length is 14
 	mutable result = block
+	mutable isDecided = false
 	for node.children.Last.children
-		result = Case(node.children(0), value, result.At(block.register))
+		if isDecided is false
+			result = Case(node.children(0), value, result.At(block.register))
+			isDecided = TypeCase(node.children(0), value, block) is "match"
 	result
 Case(selector SyntaxNode, line SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Case(IsOne, SyntaxNode("ElseValue", "", One), CodeBlock.Empty).instructions.Length is 2
 	Plain.Case(IsOne, SyntaxNode("Binary", "then", (One, One)), CodeBlock.Empty).instructions.Length is 7
-	let isElse = line.Kind is "ElseValue"
+	let typed = TypeCase(selector, line, block)
+	if typed is "skip"
+		return block
+	let isElse = (line.Kind is "ElseValue") or (typed is "match")
 	let comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
 	let condition = isElse then block else OperatorCodegen(values).Condition(comparison, block)
 	let value = values.Expression(line.children.Last, condition)
 	let returned = value.Add(InstructionEntry.Return(value.Result))
 	isElse then returned else returned.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
+TypeCase(selector SyntaxNode, line SyntaxNode, block CodeBlock) Text
+	Plain.TypeCase(Typed, ACase, CodeBlock.Empty.Declare("x", "A")) is "match"
+	Plain.TypeCase(Typed, ACase, CodeBlock.Empty.Declare("x", "B")) is "skip"
+	Plain.TypeCase(IsOne, SyntaxNode("Binary", "then", (One, One)), CodeBlock.Empty) is ""
+	if (line.Kind is "ElseValue") or (values.IsTypeName(line.children(0), block) is false)
+		return ""
+	let type = values.TypeOf(selector.children(0), block)
+	let wanted = line.children(0).text
+	let types = values.inference.types
+	let isIterable = (type is in ("Number", "Range", "Text")) or types.IsPlural(type) or (types.BaseName(type) is "List")
+	let matches = (type is wanted) or (types.BaseName(type) is wanted) or (wanted is "Iterator") and isIterable
+	matches then "match" else "skip"
