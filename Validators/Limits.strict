@@ -1,0 +1,65 @@
+has lines Texts
+has isBase Boolean
+constant MaxCharacters = 120
+constant MaxMethodLines = 13
+constant MaxMethods = 15
+constant MaxMembers = 15
+constant Enum = Limits(("constant A", "constant B", "constant C", "constant D", "constant E", "constant F", "constant G", "constant H", "constant I", "constant J", "constant K", "constant L", "constant M", "constant N", "constant O", "constant P"), false)
+constant Sample = Limits(("has number", "Run", "\t\t\t\t\t\t1", "  2"), false)
+constant Long = Limits(("Run", "\t1", "\t2", "\t3", "\t4", "\t5", "\t6", "\t7", "\t8", "\t9", "\t10", "\t11", "\t12", "\t13"), false)
+Issues ValidationIssues
+	Sample.Issues.Length is 2
+	Limits(("has number", "Run", "\t1"), false).Issues.Length is 0
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		issues = issues + LineIssues(value, index)
+	issues + MethodIssues + CountIssues
+LineIssues(line Text, number Number) ValidationIssues
+	Sample.LineIssues("\t\t\t\t\t\t1", 2).First to Text is "NestingMoreThanFiveLevelsIsNotAllowed: line 3"
+	Sample.LineIssues(" a", 0).First to Text is "ExtraWhitespacesFoundAtBeginningOfLine: line 1"
+	mutable issues = List(Mutable(ValidationIssue))
+	let where = "line " + (number + 1)
+	if line.StartsWith("\t") and (line.Length > MaxCharacters)
+		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", where, line.Length to Text + " > " + MaxCharacters))
+	if line.StartsWith("\t\t\t\t\t\t")
+		issues.Add(ValidationIssue("NestingMoreThanFiveLevelsIsNotAllowed", where, "more than five levels"))
+	if line.StartsWith(" ")
+		issues.Add(ValidationIssue("ExtraWhitespacesFoundAtBeginningOfLine", where, "indent with tabs"))
+	issues
+MethodIssues ValidationIssues
+	Long.MethodIssues.First to Text is "MethodLengthMustNotExceedTwelve: Run"
+	let shape = TypeShape(lines)
+	mutable issues = List(Mutable(ValidationIssue))
+	mutable start = -1
+	for lines.Length + 1
+		let isHeader = (index is lines.Length) or (lines(index).StartsWith("\t") is false)
+		if isHeader and (start >= 0) and (index - start > MaxMethodLines)
+			issues.Add(ValidationIssue("MethodLengthMustNotExceedTwelve", lines(start), (index - start) to Text + " lines"))
+		if isHeader and (index < lines.Length) and shape.IsMethodHeader(lines(index))
+			start = index
+	issues
+CountIssues ValidationIssues
+	Limits(("has a Number", "has b Number"), false).CountIssues.Length is 0
+	Limits(Enum.lines, false).CountIssues.Length is 0
+	let shape = TypeShape(lines)
+	mutable methods = 0
+	mutable members = 0
+	for lines
+		methods = methods + (shape.IsMethodHeader(value) then 1 else 0)
+		members = members + (value.StartsWith("has ") or value.StartsWith("constant ") then 1 else 0)
+	let methodCount = isBase then 0 else methods
+	let methodIssues = Counted("MethodCountMustNotExceedLimit", methodCount, MaxMethods)
+	let memberLimit = (methods is 0) and (members is Count("constant ")) then 40 else MaxMembers
+	methodIssues + Counted("MemberCountShouldNotExceedLimit", members, memberLimit)
+Count(start Text) Number
+	Enum.Count("constant ") is 16
+	mutable count = 0
+	for lines
+		count = count + (value.StartsWith(start) then 1 else 0)
+	count
+Counted(rule Text, count Number, limit Number) ValidationIssues
+	Sample.Counted("A", 16, 15).First to Text is "A: 16"
+	Sample.Counted("A", 15, 15).Length is 0
+	if count <= limit
+		return List(ValidationIssue)
+	List(ValidationIssue) + ValidationIssue(rule, count to Text, "limit is " + limit)

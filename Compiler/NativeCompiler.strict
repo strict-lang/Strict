@@ -1,9 +1,30 @@
 has logger
 constant SingleThreaded = " --mlir-disable-threading"
 constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -O2 -c -Wno-override-module"
+constant Usage = "Usage: NativeCompiler [build|test|check|run] <file or folder> <root> [arguments]"
 Run(arguments Texts) Number
-	if arguments(0) is "test"
-		return Test(arguments(1), arguments(2))
+	if arguments.Length < 2
+		logger.Log(Usage)
+		return 2
+	let command = arguments(0)
+	let rest = Rest(arguments)
+	if command is "test"
+		return Test(rest(0), rest(1))
+	if command is "check"
+		return Checked(ValidateCheck(logger), rest(0), rest(1))
+	let target = command is "build" then rest else arguments
+	command is "run" then Execute(logger).Run(rest) else Compiling(target)
+Checked(checker Validators/ValidateCheck, folder Text, root Text) Number
+	NativeCompiler.Checked(ValidateCheck(Logger), "Compiler/output", ".") is 0
+	checker.Run(folder, root)
+Rest(arguments Texts) Texts
+	NativeCompiler.Rest(("test", "a", "b")) is ("a", "b")
+	for Range(1, arguments.Length)
+		arguments(value)
+Compiling(arguments Texts) Number
+	NativeCompiler.Compiling(("Compiler/output/missing.strict")) is 2
+	if arguments.Length < 2
+		return 2
 	Compile(arguments(0), arguments(1))
 	0
 Test(path Text, root Text) Number

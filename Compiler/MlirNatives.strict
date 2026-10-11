@@ -5,7 +5,7 @@ constant Search = InstructionEntry.Invoke(2, ("Strict/Text", "IndexOf", "Strict/
 constant TextType = TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry))
 constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Combine")
 constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end", "strict_text_combine")
-constant SystemNames = ("File.ReadLines", "File.Exists", "File.Write", "Directory.Files", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem")
+constant SystemNames = ("File.ReadLines", "File.Exists", "File.Write", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem")
 constant DefaultedLast = ("strict_text_index", "strict_text_starts", "strict_directory_files", "strict_text_combine")
 constant Texts = MlirFunction(List(TypeEntry), MlirFunction.Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), Length, Search)))
 Helper(typeName Text, name Text, count Number) Text
@@ -13,6 +13,7 @@ Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/List(Number)", "Count", 0) is "strict_list_length"
 	MlirNatives(Texts, 1).Helper("Strict/Number", "Floor", 0) is "strict_floor"
 	MlirNatives(Texts, 1).Helper("Strict/Other", "Floor", 0) is ""
+	MlirNatives(Texts, 1).Helper("Strict/Directory", "Directories", 1) is "strict_directory_directories"
 	let kind = MlirKinds(function).Short(typeName)
 	if (name is in ("Length", "Count")) and (count is 0)
 		return kind is "Text" then "strict_text_length" else kind.StartsWith("List(") then "strict_list_length" else ""

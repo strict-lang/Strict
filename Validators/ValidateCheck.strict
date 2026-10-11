@@ -1,12 +1,14 @@
 has logger
-Run(folder Text, root Text)
+Run(folder Text, root Text) Number
 	let mutations = Mutations(Directory.Files(folder, "*.strict") + ResolveCheck(logger).AllFiles(root))
 	mutable issues = 0
 	for Directory.Files(folder, "*.strict")
-		issues = issues + CheckFile(value, mutations)
+		issues = issues + CheckFile(value, mutations, folder.Replace("\\", "/").Replace("/.", "") is root)
 	logger.Log("Validation issues: " + issues)
-CheckFile(path Text, mutations Texts) Number
-	let found = TypeValidator(TypeShape(File(path).ReadLines), mutations).Validate
+	issues
+CheckFile(path Text, mutations Texts, isBase Boolean) Number
+	let lines = File(path).ReadLines
+	let found = TypeValidator(TypeShape(lines), mutations).Validate + Limits(lines, isBase).Issues
 	for found
 		logger.Log(path + ": " + value)
 	found.Length

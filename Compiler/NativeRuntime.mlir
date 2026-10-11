@@ -998,6 +998,25 @@
     %result = func.call @strict_list_remove(%list, %item, %isText) : (f64, f64, i1) -> f64
     return %result : f64
   }
+  func.func private @strict_is_dot_name(%name: !llvm.ptr) -> i1 {
+    %dot = arith.constant 46 : i8
+    %end = arith.constant 0 : i8
+    %first = llvm.load %name : !llvm.ptr -> i8
+    %secondSlot = llvm.getelementptr %name[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %second = llvm.load %secondSlot : !llvm.ptr -> i8
+    %startsWithDot = arith.cmpi eq, %first, %dot : i8
+    %isSingle = arith.cmpi eq, %second, %end : i8
+    %secondIsDot = arith.cmpi eq, %second, %dot : i8
+    cf.cond_br %secondIsDot, ^third, ^decide(%isSingle : i1)
+  ^third:
+    %thirdSlot = llvm.getelementptr %name[2] : (!llvm.ptr) -> !llvm.ptr, i8
+    %third = llvm.load %thirdSlot : !llvm.ptr -> i8
+    %isDouble = arith.cmpi eq, %third, %end : i8
+    cf.br ^decide(%isDouble : i1)
+  ^decide(%isDotted: i1):
+    %result = arith.andi %startsWithDot, %isDotted : i1
+    return %result : i1
+  }
   func.func private @strict_list_empty() -> f64 {
     %view = llvm.mlir.addressof @strict_empty_view : !llvm.ptr
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64

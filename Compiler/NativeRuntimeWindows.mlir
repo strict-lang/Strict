@@ -124,6 +124,50 @@
   ^done(%result: f64):
     return %result : f64
   }
+  func.func private @strict_directory_directories(%self: f64, %path: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %four = arith.constant 4.0 : f64
+    %size = arith.constant 320 : i64
+    %invalidHandle = arith.constant -1 : i64
+    %directoryFlag = arith.constant 16 : i32
+    %none = arith.constant 0 : i32
+    %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
+    %search = func.call @strict_path_join(%path, %any) : (f64, f64) -> f64
+    %searchText = func.call @strict_ptr(%search) : (f64) -> !llvm.ptr
+    %data = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
+    %handle = llvm.call @FindFirstFileA(%searchText, %data) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %handleValue = llvm.ptrtoint %handle : !llvm.ptr to i64
+    %failed = arith.cmpi eq, %handleValue, %invalidHandle : i64
+    cf.cond_br %failed, ^done(%created : f64), ^entry(%created : f64)
+  ^entry(%found: f64):
+    %attributes = llvm.load %data : !llvm.ptr -> i32
+    %masked = arith.andi %attributes, %directoryFlag : i32
+    %isDirectory = arith.cmpi ne, %masked, %none : i32
+    %fileName = llvm.getelementptr %data[44] : (!llvm.ptr) -> !llvm.ptr, i8
+    %isDotName = func.call @strict_is_dot_name(%fileName) : (!llvm.ptr) -> i1
+    %notDot = arith.xori %isDotName, %isDirectory : i1
+    %take = arith.andi %isDirectory, %notDot : i1
+    cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
+  ^add(%before: f64):
+    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
+    %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
+    %added = func.call @strict_list_add(%before, %full) : (f64, f64) -> f64
+    cf.br ^next(%added : f64)
+  ^next(%current: f64):
+    %more = llvm.call @FindNextFileA(%handle, %data) : (!llvm.ptr, !llvm.ptr) -> i32
+    %hasMore = arith.cmpi ne, %more, %none : i32
+    cf.cond_br %hasMore, ^entry(%current : f64), ^close(%current : f64)
+  ^close(%all: f64):
+    %closed = llvm.call @FindClose(%handle) : (!llvm.ptr) -> i32
+    cf.br ^done(%all : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   llvm.mlir.global internal constant @strict_windows("Windows\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @strict_path_variable("PATH\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_exe_extension(".exe\00") : !llvm.array<5 x i8>

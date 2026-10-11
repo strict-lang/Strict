@@ -131,6 +131,49 @@
   ^done(%result: f64):
     return %result : f64
   }
+  func.func private @strict_directory_directories(%self: f64, %path: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %four = arith.constant 4.0 : f64
+    %slotSize = arith.constant 8 : i64
+    %directoryType = arith.constant 4 : i8
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
+    %directory = llvm.call @opendir(%name) : (!llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %failed = llvm.icmp "eq" %directory, %null : !llvm.ptr
+    cf.cond_br %failed, ^done(%created : f64), ^next(%created : f64)
+  ^next(%current: f64):
+    %entry = llvm.call @readdir(%directory) : (!llvm.ptr) -> !llvm.ptr
+    %finished = llvm.icmp "eq" %entry, %null : !llvm.ptr
+    cf.cond_br %finished, ^close(%current : f64), ^entry(%current : f64)
+  ^entry(%found: f64):
+    %typeSlot = llvm.getelementptr %entry[18] : (!llvm.ptr) -> !llvm.ptr, i8
+    %type = llvm.load %typeSlot : !llvm.ptr -> i8
+    %fileName = llvm.getelementptr %entry[19] : (!llvm.ptr) -> !llvm.ptr, i8
+    %isDirectory = arith.cmpi eq, %type, %directoryType : i8
+    %isDotName = func.call @strict_is_dot_name(%fileName) : (!llvm.ptr) -> i1
+    %notDot = arith.xori %isDotName, %isDirectory : i1
+    %take = arith.andi %isDirectory, %notDot : i1
+    cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
+  ^add(%before: f64):
+    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
+    %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
+    %added = func.call @strict_list_add(%before, %full) : (f64, f64) -> f64
+    cf.br ^next(%added : f64)
+  ^close(%all: f64):
+    %closed = llvm.call @closedir(%directory) : (!llvm.ptr) -> i32
+    %length = func.call @strict_list_length(%all) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %items = func.call @strict_list_items(%all) : (f64) -> !llvm.ptr
+    %compare = llvm.mlir.addressof @strict_compare_names : !llvm.ptr
+    llvm.call @qsort(%items, %count, %slotSize, %compare) : (!llvm.ptr, i64, i64, !llvm.ptr) -> ()
+    cf.br ^done(%all : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   llvm.mlir.global internal constant @strict_linux("Linux\00") : !llvm.array<6 x i8>
   llvm.mlir.global internal constant @strict_path_variable("PATH\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_temp_template("/tmp/strictXXXXXX\00") : !llvm.array<18 x i8>
