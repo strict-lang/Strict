@@ -89,12 +89,7 @@ Native model: every value is one 64-bit slot, numbers are doubles, texts, lists 
 Speed (1M loop iterations): native executable 45 ms (227 KB), Strict VM 245 ms, C# Strict.exe 420 ms. NativeCompiler builds itself in 10 s, most of it in mlir-opt and clang.
 
 ## Open work
-- Native gaps (each has a failing inline test): Dictionary methods, `from(generic)` needs monomorphization (HashCode), `to Type`, mutable parameters changed by the callee (ShuntingYard), mixed list operations (`3 + (4)`, `(1) + ("Hi")`).
-- Unicode: native texts are UTF-8 bytes and a Character is one byte, C# used UTF-16 characters (ByteEncoder test), decide which one Strict means.
-- Validators: a `let` with only constant values must be `constant` (C# did), the Strict validator misses list literals.
-- Strict VM: 245 ms for 1M iterations, the 10-100x goal needs in-place frame and register updates when a value has only one reference.
-- `Language`, `HighLevelRuntime`, `TestRunner` and `Optimizers` are the old line-level models, superseded by the packages above.
-- Tooling: LanguageServer and VS Code extension (C# on the `dotnet` branch), CI with the native toolchain.
+See [improvements.md](improvements.md), in priority order.
 
 ---
 

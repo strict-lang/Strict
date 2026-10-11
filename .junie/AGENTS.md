@@ -29,7 +29,7 @@ Before writing any code, stop at the first rung that holds:
 - Boundaries: Code/commits/PRs written normal.
 
 ## 🚨 Top Priority: Strict is self-hosted
-Strict compiles itself natively (`Compiler/NativeCompiler.strict`, see the README sections "Command line" and "Open work"). The README "Open work" list is the priority list, keep it current (remove what is done, add what is found). The C# implementation that bootstrapped Strict lives on the `dotnet` branch for reference only, all new work is Strict code.
+Strict compiles itself natively (`Compiler/NativeCompiler.strict`, see the README section "Command line"). [improvements.md](improvements.md) is the priority list, keep it current (remove what is done, add what is found). The C# implementation that bootstrapped Strict lives on the `dotnet` branch for reference only, all new work is Strict code.
 
 ## Project Guidelines
 - In Strict, type instance equality should check type compatibility and then compare member values (including list/dictionary members) rather than reference equality.

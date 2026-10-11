@@ -29,7 +29,7 @@ Before writing any code, stop at the first rung that holds:
 - Boundaries: Code/commits/PRs written normal.
 
 ## 🚨 Top Priority: Strict is self-hosted
-Strict compiles itself natively (`Compiler/NativeCompiler.strict`, see the README sections "Command line" and "Open work"). The README "Open work" list is the priority list, keep it current (remove what is done, add what is found). The C# implementation that bootstrapped Strict lives on the `dotnet` branch for reference only, all new work is Strict code.
+Strict compiles itself natively (`Compiler/NativeCompiler.strict`, see the README section "Command line"). [improvements.md](improvements.md) is the priority list, keep it current (remove what is done, add what is found). The C# implementation that bootstrapped Strict lives on the `dotnet` branch for reference only, all new work is Strict code.
 
 ## Project Guidelines
 - In Strict, type instance equality should check type compatibility and then compare member values (including list/dictionary members) rather than reference equality.
@@ -59,7 +59,7 @@ Strict compiles itself natively (`Compiler/NativeCompiler.strict`, see the READM
 - Do not remove TODOs until the code has actually been improved and fixed. When there are tests failing that cover the TODO, the TODO still needs to be tested and fixed before removal.
 
 ## Tests
-- Tests are the lines at the start of every method. `NativeCompiler test <file> .` compiles them into an executable, its exit code is the number of failed tests (128 when it crashed). Run the tests of every changed file; after compiler or runtime changes also run them for every folder and build every Example, all must pass before work is done (failing tests that are listed in README "Open work" excepted).
+- Tests are the lines at the start of every method. `NativeCompiler test <file> .` compiles them into an executable, its exit code is the number of failed tests (128 when it crashed). Run the tests of every changed file; after compiler or runtime changes also run them for every folder and build every Example, all must pass before work is done (failing tests listed in improvements.md excepted).
 - `NativeCompiler check <folder> .` must report 0 issues for every changed folder.
 - Do not ignore linker or platform-build errors; failures must surface instead of being swallowed.
 - User prefers minimal test additions in this repo; rely on existing coverage when possible and add at most one focused regression test for a bug fix.
