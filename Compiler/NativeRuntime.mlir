@@ -8,6 +8,27 @@
   llvm.func @acos(f64) -> f64
   llvm.func @atan(f64) -> f64
   llvm.func @atan2(f64, f64) -> f64
+  llvm.func @strftime(!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
+  llvm.mlir.global internal constant @strict_time_format("%Y-%m-%d %H:%M\00") : !llvm.array<15 x i8>
+  func.func private @strict_time_text(%local: !llvm.ptr) -> f64 {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %invalid = llvm.icmp "eq" %local, %null : !llvm.ptr
+    cf.cond_br %invalid, ^empty, ^format
+  ^format:
+    %size = arith.constant 32 : i64
+    %text = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %pattern = llvm.mlir.addressof @strict_time_format : !llvm.ptr
+    %written = llvm.call @strftime(%text, %size, %pattern, %local) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
+    %end = llvm.getelementptr %text[%written] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %result = func.call @strict_bits(%text) : (!llvm.ptr) -> f64
+    return %result : f64
+  ^empty:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nothing = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    return %nothing : f64
+  }
   llvm.mlir.global internal @strict_gc_base(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_top(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_limit(0 : i64) : i64

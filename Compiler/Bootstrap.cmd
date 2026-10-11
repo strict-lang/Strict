@@ -1,5 +1,5 @@
 @echo off
-rem Builds Compiler\Strict.exe from Bootstrap.mlir without any Strict binary, needs mlir-opt, mlir-translate and clang
+rem Builds strict.exe in the Strict folder from Bootstrap.mlir without any Strict binary, needs mlir-opt, mlir-translate and clang
 setlocal
 cd /d "%~dp0"
 set "PATH=%PATH%;C:\msys64\ucrt64\bin;C:\Program Files\LLVM\bin"
@@ -7,5 +7,5 @@ set "PATH=%PATH%;C:\msys64\ucrt64\bin;C:\Program Files\LLVM\bin"
 set "PASSES=--convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
 mlir-opt Strict.mlir --mlir-disable-threading %PASSES% -o Strict.llvm.mlir || exit /b 1
 mlir-translate --mlir-disable-threading --mlir-to-llvmir Strict.llvm.mlir -o Strict.ll || exit /b 1
-clang Strict.ll -o Strict.exe -O2 -Wno-override-module -Wl,-Brepro || exit /b 1
-echo Built %~dp0Strict.exe
+clang Strict.ll -o ..\strict.exe -O2 -Wno-override-module -Wl,-Brepro || exit /b 1
+echo Built %~dp0..\strict.exe

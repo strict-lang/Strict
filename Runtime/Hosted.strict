@@ -4,7 +4,7 @@ constant Current = Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText
 constant Existing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Exists", "Strict/Boolean", "path"), 0, -1), Current)
 constant Listing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Directories", "Strict/List(Text)", "path"), 0, -1), Current)
 constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(90)))
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted is true
 	Hosted(Invocation.AddCall).IsHosted is false
@@ -21,10 +21,10 @@ Result VmValue
 Processed VmValue
 	Hosted(SystemCall).Processed.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	let name = call.MethodName
-	if name is "OperatingSystem"
-		return VmValue.OfText(Process.OperatingSystem)
-	let first = call.Arguments.First.text
-	if name is "Find"
+	if name is in ("OperatingSystem", "Built")
+		return VmValue.OfText(name is "Built" then Process(call.Instance.Member(0).text).Built else Process.OperatingSystem)
+	let first = name is "Current" then Process.Current.executable else call.Arguments.First.text
+	if name is in ("Find", "Current")
 		return VmValue("Strict/Process", 0, "", List(VmValue) + VmValue.OfText(Process.Find(first).executable))
 	let result = Process.RunTool(first, call.Arguments.Last.text)
 	let code = VmValue.OfNumber(result.exitCode)

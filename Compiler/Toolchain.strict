@@ -28,6 +28,11 @@ Extension Text
 	OnWindows.Extension is ".exe"
 	OnLinux.Extension is ""
 	platform is Platform.Windows then ".exe" else ""
+Executable(base Text) Text
+	OnWindows.Executable("Compiler/Strict") is "Compiler/strict.exe"
+	OnLinux.Executable("./Examples/Sum.test") is "./Examples/sum.test"
+	let start = base.LastIndexOf("/") + 1
+	base.Substring(0, start) + base.Substring(start, base.Length - start).Lower + Extension
 Missing(names Texts) Texts
 	OnLinux.Missing(("noSuchStrictTool")) is ("noSuchStrictTool")
 	for names
@@ -75,24 +80,24 @@ Built(base Text) Text
 	let lowered = Lowered(base)
 	if lowered is not ""
 		return lowered
-	let executable = base + Extension
+	let executable = Executable(base)
 	let system = platform is Platform.Windows then " -Wl,-Brepro" else " -lm"
 	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else "Built " + executable
 CrossBuilt(base Text) Text
 	OnWindows.CrossBuilt("Compiler/output/missing").StartsWith("mlir-opt failed") is true
-	let linux = base + ".linux"
-	let lowered = Lowered(linux)
+	let lowered = Lowered(base + ".linux")
 	if lowered is not ""
 		return lowered
-	let compiling = Quoted(linux + ".ll") + " -o " + Quoted(linux + ".o") + LinuxTarget
+	let compiling = Quoted(base + ".linux.ll") + " -o " + Quoted(base + ".linux.o") + LinuxTarget
 	let compiled = ToolRunner(Located("clang")).Execute(compiling)
 	if compiled.Failed
 		return "clang failed: " + compiled.error
-	let linking = "-e gcc -static " + Quoted(WslPath(linux + ".o")) + " -o " + Quoted(WslPath(base)) + " -lm"
+	let program = Toolchain(Platform.Linux, root).Executable(base)
+	let linking = "-e gcc -static " + Quoted(WslPath(base + ".linux.o")) + " -o " + Quoted(WslPath(program)) + " -lm"
 	let linked = ToolRunner("wsl").Execute(linking)
-	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + base + " for Linux"
+	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
 WslPath(path Text) Text
 	OnWindows.WslPath("C:/code/A") is "/mnt/c/code/A"
 	OnWindows.WslPath("D:\\B\\c") is "/mnt/d/B/c"

@@ -1,17 +1,25 @@
 has logger
-constant Usage = "Usage: strict [build|test|check|run] <file or folder> [root, default .] [arguments]"
+constant Version = "1.0"
 constant Commands = ("build", "test", "check", "run")
+constant Informing = ("version", "--version", "help", "--help")
+constant Help = ("Usage: strict [command] <file or folder> [root folder, default .] [arguments]", "  build    compile a .strict file into a native executable, the default without a command", "  test     compile the inline tests of a .strict file into an executable and run them", "  check    validate the .strict files of a folder: type rules, unused members, limits", "  run      run the Run method of a .strict file on the Strict VM, run test runs its tests there", "  version  show the Strict version and when this strict was built", "  help     show this help")
 Run(arguments Texts) Number
-	let command = arguments.Length > 0 then arguments(0) else ""
+	let command = arguments.Length > 0 then arguments(0) else "help"
 	let rest = Rooted(command is in Commands then Rest(arguments) else arguments)
-	if rest.Length < 2
-		logger.Log(Usage)
-		return 2
+	if (command is in Informing) or (rest.Length < 2)
+		return Informed(command)
 	if command is "test"
 		return Test(rest(0), rest(1))
 	if command is "check"
 		return Checked(ValidateCheck(logger), rest(0), rest(1))
 	command is "run" then Execute(logger).Run(rest) else Compiling(rest)
+Informed(command Text) Number
+	Strict(Logger).Informed("version") is 0
+	Strict(Logger).Informed("help") is 0
+	Strict(Logger).Informed("test") is 2
+	let isVersion = command is in ("version", "--version")
+	logger.Log(isVersion then "strict version " + Version + " " + Process.Current.Built else Text.Combine(Help, "\n"))
+	isVersion or (command is in ("help", "--help")) then 0 else 2
 Rooted(arguments Texts) Texts
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
 	Strict.Rooted(("a.strict", "b")) is ("a.strict", "b")
@@ -43,7 +51,7 @@ Test(path Text, root Text) Number
 	if built.StartsWith("Built ") is false
 		logger.Log(built)
 		return 1
-	Tested(base + Toolchain(Platform.Current, root).Extension, path)
+	Tested(Toolchain(Platform.Current, root).Executable(base), path)
 Tested(executable Text, path Text) Number
 	Strict.Tested("Compiler/output/missing.exe", "a") is 127
 	let result = ToolRunner(executable).Execute("")
@@ -71,7 +79,7 @@ Compile(path Text, root Text)
 		logger.Log(tools.Installing(missing))
 	else
 		Build(Base(path, root), program, tools)
-Build(base Text, program Text, tools Toolchain)
+Build(base Text, program Text, tools Compiler/Toolchain)
 	File(base + ".mlir").Write(Mlir(program, tools.root, Platform.Current))
 	logger.Log(tools.Built(base))
 	if Platform.Current is Platform.Windows

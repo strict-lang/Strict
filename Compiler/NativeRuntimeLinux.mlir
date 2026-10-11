@@ -44,6 +44,9 @@
   llvm.func @waitpid(i32, !llvm.ptr, i32) -> i32
   llvm.func @kill(i32, i32) -> i32
   llvm.func @usleep(i32) -> i32
+  llvm.func @readlink(!llvm.ptr, !llvm.ptr, i64) -> i64
+  llvm.func @stat(!llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @localtime(!llvm.ptr) -> !llvm.ptr
   llvm.mlir.global internal constant @strict_separator_path("/\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
   func.func private @strict_directory_exists(%self: f64, %path: f64) -> f64 {
@@ -189,6 +192,39 @@
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
     %name = llvm.mlir.addressof @strict_linux : !llvm.ptr
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  llvm.mlir.global internal constant @strict_self_executable("/proc/self/exe\00") : !llvm.array<15 x i8>
+  func.func private @strict_process_current(%self: f64) -> f64 {
+    %size = arith.constant 4096 : i64
+    %limit = arith.constant 4095 : i64
+    %zero = arith.constant 0 : i64
+    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %link = llvm.mlir.addressof @strict_self_executable : !llvm.ptr
+    %length = llvm.call @readlink(%link, %path, %limit) : (!llvm.ptr, !llvm.ptr, i64) -> i64
+    %failed = arith.cmpi slt, %length, %zero : i64
+    %index = arith.select %failed, %zero, %length : i64
+    %end = llvm.getelementptr %path[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_process_built(%self: f64) -> f64 {
+    %size = arith.constant 256 : i64
+    %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
+    %path = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr
+    %status = llvm.call @stat(%path, %buffer) : (!llvm.ptr, !llvm.ptr) -> i32
+    %none = arith.constant 0 : i32
+    %failed = arith.cmpi ne, %status, %none : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    cf.cond_br %failed, ^done(%null : !llvm.ptr), ^time
+  ^time:
+    %modified = llvm.getelementptr %buffer[88] : (!llvm.ptr) -> !llvm.ptr, i8
+    %local = llvm.call @localtime(%modified) : (!llvm.ptr) -> !llvm.ptr
+    cf.br ^done(%local : !llvm.ptr)
+  ^done(%time: !llvm.ptr):
+    %result = func.call @strict_time_text(%time) : (!llvm.ptr) -> f64
     return %result : f64
   }
   func.func private @strict_tool_path(%name: f64) -> f64 {

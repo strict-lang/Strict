@@ -49,6 +49,9 @@
   llvm.func @GetExitCodeProcess(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @CloseHandle(!llvm.ptr) -> i32
   llvm.func @DeleteFileA(!llvm.ptr) -> i32
+  llvm.func @GetModuleFileNameA(!llvm.ptr, !llvm.ptr, i32) -> i32
+  llvm.func @GetFileAttributesExA(!llvm.ptr, i32, !llvm.ptr) -> i32
+  llvm.func @_localtime64(!llvm.ptr) -> !llvm.ptr
   llvm.mlir.global internal constant @strict_separator_path("\5C\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
   func.func private @strict_directory_exists(%self: f64, %path: f64) -> f64 {
@@ -178,6 +181,45 @@
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
     %name = llvm.mlir.addressof @strict_windows : !llvm.ptr
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_process_current(%self: f64) -> f64 {
+    %size = arith.constant 1024 : i64
+    %limit = arith.constant 1023 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %length = llvm.call @GetModuleFileNameA(%null, %path, %limit) : (!llvm.ptr, !llvm.ptr, i32) -> i32
+    %index = arith.extui %length : i32 to i64
+    %end = llvm.getelementptr %path[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_process_built(%self: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %dataSize = arith.constant 40 : i64
+    %data = llvm.alloca %dataSize x i8 : (i64) -> !llvm.ptr
+    %seconds = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %path = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr
+    %standard = arith.constant 0 : i32
+    %found = llvm.call @GetFileAttributesExA(%path, %standard, %data) : (!llvm.ptr, i32, !llvm.ptr) -> i32
+    %none = arith.constant 0 : i32
+    %missing = arith.cmpi eq, %found, %none : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    cf.cond_br %missing, ^done(%null : !llvm.ptr), ^time
+  ^time:
+    %writeSlot = llvm.getelementptr %data[20] : (!llvm.ptr) -> !llvm.ptr, i8
+    %fileTime = llvm.load %writeSlot {alignment = 4 : i64} : !llvm.ptr -> i64
+    %epoch = arith.constant 116444736000000000 : i64
+    %since = arith.subi %fileTime, %epoch : i64
+    %ticks = arith.constant 10000000 : i64
+    %count = arith.divsi %since, %ticks : i64
+    llvm.store %count, %seconds : i64, !llvm.ptr
+    %local = llvm.call @_localtime64(%seconds) : (!llvm.ptr) -> !llvm.ptr
+    cf.br ^done(%local : !llvm.ptr)
+  ^done(%time: !llvm.ptr):
+    %result = func.call @strict_time_text(%time) : (!llvm.ptr) -> f64
     return %result : f64
   }
   func.func private @strict_tool_path(%name: f64) -> f64 {

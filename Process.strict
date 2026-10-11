@@ -15,6 +15,12 @@ RunTool(name Text, arguments Text) ProcessResult
 OperatingSystem Text
 	Process.OperatingSystem is in ("Windows", "Linux", "MacOS")
 	"Unknown"
+Current Process
+	Process.Current.IsAvailable is true
+	Process("")
+Built Text
+	Process.Current.Built.Length is 16
+	""
 to Text
 	if executable is ""
 		return "Process(missing)"
