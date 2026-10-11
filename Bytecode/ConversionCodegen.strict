@@ -7,6 +7,8 @@ constant NewColorValue = SyntaxNode("Call", "ColorValue", ValueCodegen.One)
 constant NewColor = SyntaxNode("Call", "Color", ValueCodegen.One)
 constant ColorReassignment = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "c"), NewColorValue))
 constant Pixels = SyntaxNode("Identifier", "pixels")
+constant Kinded = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Kind", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "to", List(Text) + "Text"), List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
+constant HelperType = SyntaxParser(Tokenizer("\"Helper\" to Type").Tokens).Parse
 constant Pixelated = CodeBlock.Empty.Declare("pixels", "ColorValues")
 ArgumentTypes(node SyntaxNode, owner Text, block CodeBlock) Texts
 	Plain.ArgumentTypes(SyntaxNode("Call", "Greet", ValueCodegen.One), "Greeter", CodeBlock.Empty) is ("Unknown")
@@ -31,6 +33,17 @@ Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	if converter is "to"
 		return SyntaxNode("Binary", "to", (node, SyntaxNode("Identifier", type)))
 	converter is "from" then SyntaxNode("Call", type, node) else node
+Typed(node SyntaxNode) SyntaxNode
+	Plain.Typed(SyntaxParser(Tokenizer("\"Number\" to Type").Tokens).Parse) to Text is "Type(\"Number\", \"Strict\")"
+	Plain.Typed(HelperType) to Text is "Type(\"Helper\", \"Strict/Examples\")"
+	Plain.Typed(ValueCodegen.ToText) is ValueCodegen.ToText
+	let isNamed = (node.Kind is "Binary") and (node.text is "to") and (node.children(0).Kind is "Text")
+	if (isNamed is false) or (node.children(1).text is not "Type")
+		return node
+	let full = values.target.FullName(node.children(0).Unquoted)
+	let split = full.LastIndexOf("/")
+	let name = SyntaxNode("Text", "\"" + full.Substring(split + 1, full.Length - split - 1) + "\"")
+	SyntaxNode("Call", "Type", (name, SyntaxNode("Text", "\"" + full.Substring(0, split) + "\"")))
 ConvertedElements(node SyntaxNode, type Text, block CodeBlock) List(SyntaxNode)
 	Colored.ConvertedElements(SyntaxNode("List", "", NewColorValue), "Color", CodeBlock.Empty).Length is 1
 	for node.children
@@ -54,9 +67,20 @@ Operand(node SyntaxNode, block CodeBlock) SyntaxNode
 	let listType = values.TypeOf(node.children(0), block)
 	let operand = node.children(1)
 	if types.IsPlural(listType) is false
-		return operand
+		return node.text is "+" then Textual(node, block) else operand
 	let isList = (operand.Kind is "List") or types.IsPlural(values.TypeOf(operand, block))
 	Converted(operand, (isList then listType else types.ElementType(listType)), block)
+Textual(node SyntaxNode, block CodeBlock) SyntaxNode
+	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.Hi, SyntaxNode("Call", "Kind"))), CodeBlock.Empty).text is "to"
+	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.One)), CodeBlock.Empty).text is "1"
+	let operand = node.children(1)
+	let type = values.TypeOf(operand, block)
+	let types = values.inference.types
+	if (types.MethodsOf(type).Has("to", "Text") is false) or TypeEntry.IsBaseName(type)
+		return operand
+	let left = values.TypeOf(node.children(0), block)
+	let converted = SyntaxNode("Binary", "to", (operand, SyntaxNode("Identifier", "Text")))
+	"Text" is in (left, types.ValueOf(left)) then converted else operand
 Looped(node SyntaxNode, block CodeBlock) CodeBlock
 	Colored.Looped(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(4).kind is InstructionType.Invoke
 	let name = "converted" + block.nextId
