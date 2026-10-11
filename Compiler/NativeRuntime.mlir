@@ -626,7 +626,26 @@
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  llvm.mlir.global internal constant @strict_comma(", \00") : !llvm.array<3 x i8>
   func.func private @strict_list_text(%list: f64, %isText: i1) -> f64 {
+    %commaText = llvm.mlir.addressof @strict_comma : !llvm.ptr
+    %comma = func.call @strict_bits(%commaText) : (!llvm.ptr) -> f64
+    %brackets = arith.constant true
+    %result = func.call @strict_join(%list, %isText, %comma, %brackets) : (f64, i1, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_text_combine(%self: f64, %texts: f64, %separator: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %isUnset = arith.cmpf oeq, %separator, %zero : f64
+    %commaText = llvm.mlir.addressof @strict_comma : !llvm.ptr
+    %comma = func.call @strict_bits(%commaText) : (!llvm.ptr) -> f64
+    %chosen = arith.select %isUnset, %comma, %separator : f64
+    %isText = arith.constant true
+    %brackets = arith.constant false
+    %result = func.call @strict_join(%texts, %isText, %chosen, %brackets) : (f64, i1, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_join(%list: f64, %isText: i1, %separator: f64, %brackets: i1) -> f64 {
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -634,11 +653,14 @@
     %length = func.call @strict_list_length(%list) : (f64) -> f64
     %count = arith.fptosi %length : f64 to i64
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %separatorPointer = func.call @strict_ptr(%separator) : (f64) -> !llvm.ptr
+    %separatorSize = llvm.call @strlen(%separatorPointer) : (!llvm.ptr) -> i64
     %partsBytes = arith.muli %count, %eight : i64
     %parts = func.call @strict_alloc(%partsBytes) : (i64) -> !llvm.ptr
     %isMultiple = arith.cmpi sgt, %count, %step : i64
-    %brackets = arith.select %isMultiple, %two, %start : i64
-    cf.br ^measure(%start, %brackets : i64, i64)
+    %enclosed = arith.andi %isMultiple, %brackets : i1
+    %bracketSize = arith.select %enclosed, %two, %start : i64
+    cf.br ^measure(%start, %bracketSize : i64, i64)
   ^measure(%index: i64, %total: i64):
     %more = arith.cmpi slt, %index, %count : i64
     cf.cond_br %more, ^part, ^allocate
@@ -655,7 +677,7 @@
     %pointer = func.call @strict_ptr(%element) : (f64) -> !llvm.ptr
     %size = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
     %isFirst = arith.cmpi eq, %index, %start : i64
-    %gap = arith.select %isFirst, %start, %two : i64
+    %gap = arith.select %isFirst, %start, %separatorSize : i64
     %withGap = arith.addi %total, %gap : i64
     %measured = arith.addi %withGap, %size : i64
     %next = arith.addi %index, %step : i64
@@ -663,7 +685,7 @@
   ^allocate:
     %bytes = arith.addi %total, %step : i64
     %buffer = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
-    cf.cond_br %isMultiple, ^opening, ^write(%start, %start : i64, i64)
+    cf.cond_br %enclosed, ^opening, ^write(%start, %start : i64, i64)
   ^opening:
     %open = arith.constant 40 : i8
     llvm.store %open, %buffer : i8, !llvm.ptr
@@ -673,17 +695,12 @@
     cf.cond_br %remaining, ^separate, ^closing
   ^separate:
     %isFirstPart = arith.cmpi eq, %at, %start : i64
-    cf.cond_br %isFirstPart, ^copy(%offset : i64), ^comma
-  ^comma:
-    %commaCharacter = arith.constant 44 : i8
-    %spaceCharacter = arith.constant 32 : i8
-    %commaSlot = llvm.getelementptr %buffer[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %commaCharacter, %commaSlot : i8, !llvm.ptr
-    %spaceOffset = arith.addi %offset, %step : i64
-    %spaceSlot = llvm.getelementptr %buffer[%spaceOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %spaceCharacter, %spaceSlot : i8, !llvm.ptr
-    %afterComma = arith.addi %offset, %two : i64
-    cf.br ^copy(%afterComma : i64)
+    cf.cond_br %isFirstPart, ^copy(%offset : i64), ^gapped
+  ^gapped:
+    %gapTarget = llvm.getelementptr %buffer[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %copiedGap = llvm.call @memcpy(%gapTarget, %separatorPointer, %separatorSize) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %afterGap = arith.addi %offset, %separatorSize : i64
+    cf.br ^copy(%afterGap : i64)
   ^copy(%position: i64):
     %partAt = llvm.getelementptr %parts[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %part = llvm.load %partAt : !llvm.ptr -> f64
@@ -695,7 +712,7 @@
     %following = arith.addi %at, %step : i64
     cf.br ^write(%following, %advanced : i64, i64)
   ^closing:
-    cf.cond_br %isMultiple, ^bracket, ^terminate(%offset : i64)
+    cf.cond_br %enclosed, ^bracket, ^terminate(%offset : i64)
   ^bracket:
     %close = arith.constant 41 : i8
     %closeSlot = llvm.getelementptr %buffer[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
