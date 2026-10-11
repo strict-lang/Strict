@@ -1633,9 +1633,20 @@
   func.func private @strict_text_substring(%text: f64, %start: f64, %length: f64) -> f64 {
     %one = arith.constant 1 : i64
     %terminator = arith.constant 0 : i8
+    %zero = arith.constant 0.0 : f64
     %a = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %offset = arith.fptosi %start : f64 to i64
-    %count = arith.fptosi %length : f64 to i64
+    %textLength = func.call @strict_text_length(%text) : (f64) -> f64
+    %negativeStart = arith.cmpf olt, %start, %zero : f64
+    %startOrZero = arith.select %negativeStart, %zero, %start : f64
+    %beyond = arith.cmpf ogt, %startOrZero, %textLength : f64
+    %clampedStart = arith.select %beyond, %textLength, %startOrZero : f64
+    %rest = arith.subf %textLength, %clampedStart : f64
+    %negativeCount = arith.cmpf olt, %length, %zero : f64
+    %countOrZero = arith.select %negativeCount, %zero, %length : f64
+    %tooLong = arith.cmpf ogt, %countOrZero, %rest : f64
+    %clampedCount = arith.select %tooLong, %rest, %countOrZero : f64
+    %offset = arith.fptosi %clampedStart : f64 to i64
+    %count = arith.fptosi %clampedCount : f64 to i64
     %size = arith.addi %count, %one : i64
     %copy = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %from = llvm.getelementptr %a[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
