@@ -25,6 +25,14 @@ KeyIndex(key VmValue) Number
 		if value.items.First is key
 			return index
 	-1
+Counted(arguments List(VmValue)) Number
+	OfList(OfNumber(1), OfNumber(2), OfNumber(1)).Counted(List(VmValue) + OfNumber(1)) is 2
+	OfList(OfNumber(1)).Counted(List(VmValue)) is 1
+	if arguments.Length is 0
+		return Length
+	for items
+		if value is arguments.First
+			1
 IsTrue Boolean
 	OfBoolean(false).IsTrue is false
 	number is 1

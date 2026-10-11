@@ -35,6 +35,8 @@
   llvm.mlir.global internal constant @strict_gc_classes(dense<[0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 19, 19]> : tensor<65xi8>) : !llvm.array<65 x i8>
   llvm.mlir.global internal constant @strict_gc_out_of_memory("Strict: out of memory\0A\00") : !llvm.array<23 x i8>
   llvm.mlir.global internal constant @strict_dimensions("listsHaveDifferentDimensions\00") : !llvm.array<29 x i8>
+  llvm.mlir.global internal constant @strict_downcast_prefix("Cannot downcast Text to Number for list: Text \22\00") : !llvm.array<48 x i8>
+  llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_key_not_found("KeyNotFound\00") : !llvm.array<12 x i8>
   llvm.mlir.global internal constant @strict_duplicate_key("DuplicateKey\00") : !llvm.array<13 x i8>
   func.func private @strict_gc_init(%stack: !llvm.ptr) {
@@ -1258,6 +1260,24 @@
     %single = func.call @strict_list_add(%nothing, %element) : (f64, f64) -> f64
     %result = func.call @strict_list_concat(%single, %list) : (f64, f64) -> f64
     return %result : f64
+  }
+  func.func private @strict_list_downcast(%left: f64, %right: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %count = func.call @strict_list_length(%right) : (f64) -> f64
+    %empty = arith.cmpf oeq, %count, %zero : f64
+    cf.cond_br %empty, ^unchanged, ^error
+  ^unchanged:
+    return %left : f64
+  ^error:
+    %first = func.call @strict_list_get(%right, %zero) : (f64, f64) -> f64
+    %prefixPointer = llvm.mlir.addressof @strict_downcast_prefix : !llvm.ptr
+    %prefix = func.call @strict_bits(%prefixPointer) : (!llvm.ptr) -> f64
+    %quotePointer = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quote = func.call @strict_bits(%quotePointer) : (!llvm.ptr) -> f64
+    %named = func.call @strict_text_concat(%prefix, %first) : (f64, f64) -> f64
+    %message = func.call @strict_text_concat(%named, %quote) : (f64, f64) -> f64
+    %error = func.call @strict_error_text(%message) : (f64) -> f64
+    return %error : f64
   }
   func.func private @strict_list_without(%left: f64, %right: f64, %isText: i1) -> f64 {
     %zero = arith.constant 0.0 : f64

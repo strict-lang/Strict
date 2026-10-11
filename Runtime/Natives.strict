@@ -15,7 +15,7 @@ Result(call Invocation) VmValue
 	if name is "to"
 		return Converted(instance, call.ReturnType)
 	if name is in ("Length", "Count")
-		return VmValue.OfNumber(instance.Length)
+		return VmValue.OfNumber(instance.Counted(call.Arguments))
 	if name is in ("not", "and", "or", "xor")
 		return Logical(name, instance.IsTrue, call)
 	Queried(name, instance, call)
@@ -34,6 +34,12 @@ Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 Converted(instance VmValue, target Text) VmValue
 	Shapes.Converted(VmValue.OfNumber(2), "Strict/Text").text is "2"
 	Shapes.Converted(VmValue.OfText("5"), "Strict/Number").number is 5
+	Shapes.Converted(VmValue.OfList(VmValue.OfText("1")), "Strict/List(Number)").items.First.number is 1
+	if target.StartsWith("Strict/List(")
+		mutable converted = List(Mutable(VmValue))
+		for instance.items
+			converted.Add(Converted(value, target is "Strict/List(Text)" then "Strict/Text" else "Strict/Number"))
+		return VmValue.OfList(converted)
 	target is "Strict/Text" then VmValue.OfText(instance to Text) else VmValue.OfNumber(instance.text to Number)
 Logical(name Text, left Boolean, call Invocation) VmValue
 	Shapes.Logical("not", true, NewShape).IsTrue is false

@@ -184,7 +184,6 @@
   llvm.mlir.global internal constant @strict_quote_space("\22 \00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @strict_output_redirect(" > \22\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_error_redirect("\22 2> \22\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_start_failed("could not start \00") : !llvm.array<17 x i8>
   llvm.mlir.global internal constant @strict_timed_out("timed out after 30000 ms\00") : !llvm.array<25 x i8>
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {

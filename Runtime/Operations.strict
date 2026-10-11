@@ -50,7 +50,7 @@ Added(left VmValue, right VmValue) VmValue
 	Adding.Added(VmValue.OfList(List(VmValue)), VmValue.OfNumber(1)).Length is 1
 	Adding.Added(VmValue.OfList(List(VmValue) + VmValue.OfText("a")), OneTwo).items.Last.kind is "Text"
 	if left.kind is "List"
-		return VmValue.OfList(left.items + Matching(left, right.kind is "List" then right.items else List(VmValue) + right))
+		return Concatenated(left, right.kind is "List" then right.items else List(VmValue) + right)
 	if right.kind is "List"
 		return VmValue.OfList(List(VmValue) + left + right.items)
 	if (left.kind is "Text") or (right.kind is "Text")
@@ -65,6 +65,13 @@ Removed(elements VmValue, element VmValue) VmValue
 		if value is not in unwanted
 			remaining.Add(value)
 	VmValue.OfList(remaining)
+Concatenated(left VmValue, others List(VmValue)) VmValue
+	Adding.Concatenated(OneTwo, OneTwo.items).Length is 4
+	Adding.Concatenated(OneTwo, List(VmValue) + VmValue.OfText("a")).kind is "Strict/Error"
+	let isNumbers = (left.items.Length > 0) and (left.items.First.kind is "Number")
+	if isNumbers and (others.Length > 0) and (others.First.kind is "Text")
+		return VmValue.OfError("Cannot downcast Text to Number for list: Text \"" + others.First.text + "\"")
+	VmValue.OfList(left.items + Matching(left, others))
 Matching(elements VmValue, others List(VmValue)) List(VmValue)
 	Adding.Matching(VmValue.OfList(List(VmValue) + VmValue.OfText("a")), OneTwo.items).First.kind is "Text"
 	if (elements.items.Length is 0) or (elements.items.First.kind is not "Text")
