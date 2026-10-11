@@ -34,9 +34,7 @@ Strict compiles itself natively (`Compiler/NativeCompiler.strict`, see the READM
 ## Project Guidelines
 - In Strict, type instance equality should check type compatibility and then compare member values (including list/dictionary members) rather than reference equality.
 - Aim for a proper root-cause fix rather than a quick workaround or “duct-taping.”
-- Apply Limit.cs rules with a ~2x multiplier for C#. Classes should ideally be between 100-400 lines, but classes above 500 lines should be split for better maintainability.
-- When splitting `Executor.cs`, keep high-level methods there (Execute, exceptions, DoArgumentsMatch, stackoverflow detection, arguments/instances/parameters handling, RunExpression), and move expression evaluators into separate classes unless they are single-line/simple.
-- Do not add new methods to low level types like `SpanExtensions` without asking first; keep refactors focused and fix one issue at a time.
+- Do not add new methods to the root base types (`Number`, `Text`, `List`, ...) without asking first; keep refactors focused and fix one issue at a time.
 - If you cannot make the test pass within 10 edits, stop and output: failing test name, error message, suspected root cause, and show a proposed fix (or up to 3 fixes if it is unclear). This resets if the user gives a new prompt.
 - When a user reports a specific failing reproduction in this repo, trust that exact reproduction and verify that exact case instead of generalizing from broader test runs. When the user already provides an exact failing test that covers the issue, prefer fixing against that existing reproduction instead of adding extra tests.
 - When working on this repo, keep fixes narrowly focused on the exact failing reproduction or requested test; if changes start getting out of hand, revert, explain, and let the user take over.
@@ -47,79 +45,39 @@ Strict compiles itself natively (`Compiler/NativeCompiler.strict`, see the READM
 - The long-term goal is NOT to create just another programming language, but use Strict as the foundation for a higher level language for computers to understand and write code. This is the first step towards a future where computers can write their own code, which is the ultimate goal of Strict. Again, this is very different from other programming languages that are designed for humans to write code but not for computers to understand it. Even though LLMs can be trained to repeat and imitate, which is amazing to see, they still don't understand anything really and make the most ridiculous mistakes on any project bigger than a handful of files. Strict needs to be very fast, both in execution and writing code (much faster than any existing system), so millions of lines of code can be thought of by computers and be evaluated in real time (seconds).
 - Priorities: first clean strict rules, exactly one way to solve each problem; second performance and parallelism, everything as fast as possible and close to the hardware (CPU, GPU, NPU, TPU, CUDA, distributed over the network).
 - Values are immutable in the language: there are no mutable data types like a growing list, appending gives a new list every time. The runtime (VM, interpreter, compiled code) does not copy for that: like functional languages it keeps the same list, changes it in place and hands back the same memory as the new list, the previous version is not used anymore. If an old version is used again the runtime has to copy, but that is bad code (a list is either fixed, or growing and then only its latest version is used). Never add mutable language features for speed, optimize the internal representation instead.
-- Use `dotnet build` to build, `dotnet test` to test, do not try to use VS building or ReSharper build, you always fail trying to do that.
+- Build with `Compiler\NativeCompiler.exe build <file> .`, test with `test <file> .`, validate a folder with `check <folder> .` (see README "Command line"). After changing `Compiler/`, `Bytecode/`, `Expressions/` or `Compiler/NativeRuntime*.mlir`, let NativeCompiler build itself twice and check stage 2 and 3 are identical before trusting any result. A runtime change the old compiler's code can't use needs stage 1 built with the old runtime. When the bootstrap seed can no longer build the current source, regenerate `Compiler/Bootstrap.mlir` from a fixpoint build in the same commit.
 - Commands for the user to run go into a Windows PowerShell 5.1 window: no `!` prefix, no `&&` (use `;`), no grep, xargs, sed, awk or heredocs (those only exist in the Bash tool). Use Where-Object/ForEach-Object.
-- The AdderProgram implementation must be written in Strict, with C# code only used to run it.
-- Keep AdderProgram in the Tests project and use TestPackage (or Strict.Base) for basic types.
 - Every type including Color should be able to call Any.strict methods like `to Text`; `to Text` should route through the Any-style text conversion rather than a wrong type-specific conversion.
 
 ## Code Style
 - No empty lines are allowed inside methods.
 - Always indent with tabs, never use spaces, follow the coding guidelines in .editorconfig and the project's existing style.
-- Avoid adding `ArgumentNullException.ThrowIfNull`/debug asserts.
 - No duplicate code is allowed, not in production, not in tests. If code exists for something, reuse it. If it doesn't exist, add it in the right place and reuse it.
 - Do name variables and members properly, no 1 letter abbreviations (not even i, a, b, c, s, n), explain what this is. i should be index, s could be name or message or whatever, n might be number or name. Do not use long verbose names either. Short scope -> short names, long scope -> longer names with more of an explanation what they are for (e.g. outputFilePath, optimizedInstructions).
-- In tests, prefer inlining `var` locals where possible and using expression-bodied tests/helpers when they stay readable; avoid unused helper overloads.
-- Do not add more \[Ignore\] attributes in any Tests project, except in an allowlist file.
-- Do not add SupportedOSPlatform attributes, especially in tests just because you can't do something locally.
 - Do not add ad-hoc hacky cuda kernel code or any code without a proper transpiler or code emitter.
 - Do not add long comments, limit to 3 lines for summaries, best is none or 1 line. Inside methods there should usually not be any comments. Do not add comments to separate sections in a file (like using ---- or ====, that's ugly).
 - Do not remove TODOs until the code has actually been improved and fixed. When there are tests failing that cover the TODO, the TODO still needs to be tested and fixed before removal.
 
 ## Tests
-- Do not run Category("Manual") or \[Ignore\] tests ever; tests with these attributes are either supposed to be manually run or are currently disabled and ignored. If a test is fixed, remove the Ignore attribute and it becomes a normal test again.
-- Tests in the Slow or Nightly category are usually not run every time and can be skipped and ignored. On bigger refactors and before big commits they should be run locally; CI does not run them (they need mlir-opt, clang and nasm) as they will be slower and we want to keep all tests fast (<10ms).
-- Prefer NCrunch for C# or SCrunch for Strict; all tests should be run all the time (if something changed), it is fine to run tests via `dotnet test` to also include Slow and Nightly tests.
-- All tests must succeed before work is done, including under NCrunch: every test NCrunch runs automatically (all except Slow, Nightly, Manual) must pass there within its 30s timeout, Slow and Nightly tests must pass with `dotnet test`. NCrunch runs tests in parallel processes against the real repo files with instrumented code, so tests must not lock, modify or depend on files other tests use. Use the NCrunch MCP server (`.mcp.json`, NCrunch Console Tool) to check NCrunch results: StartSession on Strict.sln starts a second engine next to Visual Studio (Strict.v3.ncrunchsolution keeps Slow, Nightly and Manual out of its automatic runs), then WaitForEngineWorkCompleted, GetTestDetails/GetTestTraceOutput and always StopSession when done. Never run Manual or Slow tests through it, the second engine already doubles the load.
-- Check all ReSharper errors, warnings and issues from time to time and always before big commits, e.g. `dotnet tool exec JetBrains.ReSharper.GlobalTools -- inspectcode Strict.sln --no-build --severity=SUGGESTION`, and fix them.
-- Do not ignore linker or platform-build errors in code or tests; tests must surface failures instead of swallowing InvalidOperationException for platform compilation issues.
+- Tests are the lines at the start of every method. `NativeCompiler test <file> .` compiles them into an executable, its exit code is the number of failed tests (128 when it crashed). Run the tests of every changed file; after compiler or runtime changes also run them for every folder and build every Example, all must pass before work is done (failing tests that are listed in README "Open work" excepted).
+- `NativeCompiler check <folder> .` must report 0 issues for every changed folder.
+- Do not ignore linker or platform-build errors; failures must surface instead of being swallowed.
 - User prefers minimal test additions in this repo; rely on existing coverage when possible and add at most one focused regression test for a bug fix.
 - User prefers not to weaken tests by changing or removing assertions; focus fixes on production code and diagnostics instead.
 
 ## Time Limits
 - Fast feedback over thoroughness: no tool call over 5 minutes, no sub-agent or workflow over 10 minutes, never sit idle 15 minutes waiting on anything. Hitting a limit means something is wrong: stop it (TaskStop), report what was slow and why, do not keep waiting. Never poll with sleep loops.
-- Sub-agents and workflows only run tests affected by their change (seconds), never Slow, Nightly, full suites or NCrunch console runs. Only the main session runs Slow and Nightly, once, in the background, before a big commit.
-- Test sets that may take long run in calls of at most 4.5 minutes with per-test results written to a file as they finish (`--logger "console;verbosity=normal"`) and `--blame-hang-timeout 60s`, never piped through grep at the end (no progress is visible until it ends). Split by filter when a set needs longer. A stopped run leaves testhost.exe running, kill it.
+- Sub-agents and workflows only run tests affected by their change (seconds), never the tests of all folders. Only the main session runs those, before a big commit.
+- Test sets that may take long run in calls of at most 4.5 minutes with per-file results written to a file as they finish, never piped through grep at the end (no progress is visible until it ends). Split by folder when a set needs longer. A stopped run can leave test executables running, kill them.
 - No Workflow tool runs and at most 3 parallel sub-agents unless the user asks for it in the current prompt, also when ultracode is on (its workflows ran 1-3 hours each).
 
 ## Strict Semantics
-- When asked about Strict semantics, derive behavior directly from README.md and Strict/TestPackage examples; re-check cited examples before answering and avoid contradicting them.
+- When asked about Strict semantics, derive behavior directly from README.md and the tests of the root base types; re-check cited examples before answering and avoid contradicting them.
 
-## Strict.Runtime Guidelines
-- Prefer ValueInstance-backed representations and avoid object-based value/rawValue conversions where possible.
+## Runtime Guidelines
 - Bytecode artifacts should be self-contained for runtime (no source .strict fallback), and .strictbinary packaging should mirror package/project directory structure for reconstruction.
 - Bytecode packaging should be compact and include only actually used methods; base type entries should usually have empty method lists unless methods are called.
-- Do not ignore ToolNotFound or toolchain failures during asm/executable creation; throw immediately and do not silently ignore problems.
-
-## Repository Exploration Snapshot of the C# Version of Strict early 2026
-- Top-level repository includes core base-library `.strict` type files at root (e.g., `Boolean.strict`, `Number.strict`, `Text.strict`, `List.strict`, `Dictionary.strict`, plus `Any`, `Type`, `Iterator`, `Error`, `Method`, `App`, `System`, `Logger`, `Stacktrace`, `File`, `Directory`, `TextReader`, `TextWriter`, and related foundational types).
-- Main solution file is `Strict.sln`, coordinating many projects beyond runtime: `Strict.Bytecode`, `Strict.Compiler`, `Strict.Compiler.Assembly`, `Strict.Compiler.Cuda`, `Strict.Expressions`, `Strict.Grammar`, `Strict.Language`, `Strict.HighLevelRuntime`, `Strict.LanguageServer`, `Strict.Optimizers`, `Strict.PackageManager`, `Strict.TestRunner`, `Strict.Transpiler`, and `Strict.Validators`.
-- Primary runtime/interpreter project is `Strict/` targeting .NET 10, with key files `Runner.cs`, `Program.cs`, `VirtualMachine.cs`, `Memory.cs`, `RegisterFile.cs`, and `CallFrame.cs`.
-- `Runner.cs` is a central orchestration component (large file) handling source parsing, validation, tests, bytecode generation, optimization, execution, binary save/load, diagnostics, expression execution, and native compilation entry points.
-- Runner constructor behavior supports both `.strict` source input and `.strictbinary` precompiled bytecode input.
-- Source flow in Runner includes staged execution: parse method bodies/expressions, validate types and constants, execute inline tests, generate bytecode, optimize bytecode, and execute on VM.
-- Precompiled flow executes bytecode directly and bypasses source parse/validate/test phases.
-- Bytecode optimizer sequence currently includes five named passes: `TestCodeRemover`, `ConstantFoldingOptimizer`, `DeadStoreEliminator`, `UnreachableCodeEliminator`, and `RedundantLoadEliminator`.
-- Runner diagnostics can report stage timing and bytecode instruction reduction metrics.
-- Runner can emit native binaries by generating NASM x64 assembly and invoking platform toolchain/linker for Windows/Linux/macOS targets.
-- Runner argument handling maps CLI numeric args to `Run(numbers)` signatures and supports expression execution patterns like `TypeName(args).Method`.
-- `Program.cs` is the CLI entrypoint and supports usage with `.strict` and `.strictbinary` inputs.
-- CLI options include diagnostics, decompile mode, and explicit target platform flags (`-Windows`, `-Linux`, `-MacOS`).
-- Decompile mode in CLI can turn `.strictbinary` into partial `.strict` output for inspection.
-- `Examples/` contains 35+ sample `.strict` programs and also includes `Examples.csproj` plus transpiler-generated C# output under `csTranspilerOutput/`.
-- Notable examples include `SimpleCalculator`, `Sum`, `FizzBuzz`, `PureAdder`, and `Fibonacci`, plus additional algorithmic/domain samples (GCD, temperature conversion, linked-list analysis, instruction/processor samples, list and number utilities, etc.).
-- Example patterns cover arithmetic, list/range iteration, recursion, mutation via mutable variables, classification logic, and text output behavior.
-- `Strict.Tests/` contains focused runtime/integration tests including `RunnerTests`, VM tests, memory/call-frame tests, adder tests, and binary execution performance tests.
-- Test stack uses NUnit and includes console output capture/assertion for user-visible behavior validation.
-- Test coverage includes bytecode serialization/deserialization workflows (zip-based artifacts) and platform compilation pathways.
-- Test project targets .NET 10 and references runtime and bytecode-related projects.
-- Performance benchmarking exists in tests (BenchmarkDotNet usage noted in exploration).
-- `TestPackage.Instance` is the standard preconfigured package used in tests to preload base types and enable full type resolution/validation.
-- Base type behavior highlights: `Boolean` logical ops/conversion, `Number` arithmetic/comparison/iteration/conversions/increment-decrement, `Text` concat/search/conversion helpers, `List` structural ops/indexing/accessors/utilities, `Dictionary` key operations and duplicate-key semantics.
-- Architecture implication for future edits: preserve Runner stage boundaries and contracts across parse/validate/test/bytecode/optimize/execute.
-- Stability implication for language/runtime changes: keep root base type semantics and example program behavior consistent unless intentionally changed with matching test updates.
-- Practical testing implication: prefer extending existing `Strict.Tests` runtime patterns (console assertions, package setup, serialization checks, platform-path checks) when introducing behavior changes.
-- Repository context priority: maintain compatibility between source execution and bytecode execution paths, and keep `.strictbinary` behavior self-consistent with runtime expectations.
+- Do not ignore missing tools or toolchain failures during executable creation; report them immediately and do not silently ignore problems.
 
 ## Test-Driven Development (TDD)
 
@@ -421,33 +379,28 @@ No exceptions without your human partner's permission.
 ## Optimization Work
 - Demonstrate actual measured improvement in generated executable size and execution speed, not just theoretical flag changes.
 
-## Strict Runtime Conversion Work
-- For Strict runtime conversion work, prioritize Text/Path/Directory/File base features first; treat Error as the exception model (no throw/catch work), and defer async/await/Task, HTTP download, reflection, ZIP/binary I/O, and Process.Start to later phases.
-- In Strict runtime conversion, Path should not define redundant from/to methods because Path behaves like Text; use Path methods FileName, RemoveExtension, PathOnly returning Path, and move LastIndexOf to Text.strict; implement Text Upper/Lower. 
-- Prefer root-cause, general runtime fixes over TestPackage-specific workarounds and reject adding Number.Upper/Lower helper methods for this issue.
+## Runtime Features
+- Treat Error as the exception model (no throw/catch); async/await, HTTP download and reflection come later.
+- Path should not define redundant from/to methods because Path behaves like Text; use Path methods FileName, RemoveExtension, PathOnly returning Path.
+- Prefer root-cause, general runtime fixes over type-specific workarounds.
 
 ## Error Messaging Guidelines
 - Ensure error messages are precise and human-readable; avoid unclear wording like 'requested call token'.
 - Explicitly distinguish lookup context type from instance value in error messages.
-- In this repo, parsing errors must always be derived from `ParsingFailed`.
-- Interpreter execution errors in Strict.HighLevelRuntime should use `InterpreterExecutionFailed` with good stack traces and clickable file links instead of raw `VariableNotFound`, `NotSupportedException`, or `InvalidOperationException` (which are all forbidden in this codebase).
-- At runtime in VirtualMachine or in a compiled executable `RuntimeError` should be used to display the detailed error with clickable stacktraces going back to the .strict source code!
+- Validation issues name their rule (`MethodLengthMustNotExceedTwelve`, ...) with the file and line.
+- At runtime in the Strict VM or in a compiled executable errors should show the Error with clickable stacktraces going back to the .strict source code.
 
 ## Additional Guidelines
 - In this repo, keep fixes narrowly focused and avoid adding many new tests; prefer relying on existing coverage and add at most one specific regression test when needed.
 
 ## Multithreading Support
-- In this repo, treat Repositories and related package-loading/test-running code as intended to support multithreaded execution; caching exists to avoid reloading the same package across parallel tests.
-- Keep the `typesToTest` snapshot list in `TestInterpreter.RunAllTestsInPackage` because package types can change while lazily adding generic implementations during execution.
-- For this repo's test-runner performance work, parallelize at the package level, not per type; avoid `Parallel.ForEachAsync` over types because type tests are too fine-grained and the overhead dominates.
+- For test-runner performance work, parallelize at the package or file level, not per type; type tests are too fine-grained and the overhead dominates.
 
 ## Logging Guidelines
 - When logging caller chains for diagnostics, include more than just a few methods so the upstream caller beyond framework helpers (like String.Join) is visible.
 
 ## VM Optimization Work
-- Prefer root-cause VM optimization work that removes string-based frame lookups (FrameKey/CallFrame string access) and stays in ValueInstance/object model lookups instead of adding more caching or tests.
-- For the ongoing VM refactor in this repo, remove remaining CallFrame string-lookup issues properly: avoid FrameKey-style fallback behavior, avoid returning fabricated string-based ValueInstances for non-text cases, reduce duplicated Get/TryGet helpers, and focus on lowering the still-high AdjustBrightness allocations.
-- For ongoing Strict VM optimization, prioritize root-cause fixes that maximize preallocated register-array use, remove remaining string/dictionary/list hot-loop lookups where possible, and use allocation profiling to target ValueInstance/object allocations before deeper VM changes.
+- For Strict VM (`Runtime/`) optimization, prioritize root-cause fixes: update frames, registers and locals in place when a value has only one reference, remove string/dictionary/list hot-loop lookups, and measure time and allocations before and after.
 
 ## VM Collection Optimization
 - Prefer a single flat preallocated float32 backing for any type composed only of numbers and lists of such types, with fast index-based reads and writes and no per-access object creation in VM or compiled execution.

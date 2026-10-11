@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Strict": {
-      "commandName": "Project",
-      "commandLineArgs": "c:/code/GitHub/strict-lang/Strict/Compiler/CompilerDemo.strict"
-    }
-  }
-}
