@@ -69,8 +69,11 @@ CopiedBefore(loop SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 ElementWritten(node SyntaxNode) Texts
 	Plain.ElementWritten(WritingLoop) is ("values")
 	Plain.ElementWritten(Appending).Length is 0
+	Plain.ElementWritten(BodyParser("Run", "\tx.a(0) = 5").Block(1, 1).children(0)) is ("x.a")
 	if (node.Kind is "Reassignment") and (node.children(0).Kind is "Call")
 		return List(Text) + node.children(0).text
+	if (node.Kind is "Reassignment") and (node.children(0).Kind is "MethodCall")
+		return List(Text) + (node.children(0).children(0) to Text + "." + node.children(0).text)
 	mutable names = List(Mutable(Text))
 	for node.children
 		names = names + ElementWritten(value)

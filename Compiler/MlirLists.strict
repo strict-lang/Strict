@@ -7,6 +7,7 @@ constant Written = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFuncti
 constant Pair = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))
 constant Removal = InstructionEntry.Named(InstructionType.InvokeRemove, 1, "numbers")
 constant Hoisting = MlirLists(MlirParameters.Reading.function, 1)
+constant MemberCopy = InstructionEntry(InstructionType.CopyList, "numbers.width", -1)
 constant Pushing = InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult")
 constant Versioning = InstructionEntry(InstructionType.StoreRegisterToVariable, "numbers(1)", (0, -1, 1))
 constant Words = MemberEntry("words", "Strict/List(Text)", List(InstructionEntry), false)
@@ -129,15 +130,17 @@ Target(path Text) Texts
 	let dot = path.IndexOf(".")
 	if dot < 0
 		return List(Text) + function.Load(Temp("l"), "%v_" + path)
-	let owner = path.Substring(0, dot)
-	let ownerType = function.TypeOf(MlirKinds(function).VariableKind(position, owner))
-	let names = MlirInstances(function, position).StoredNames(ownerType)
 	let memory = MlirMemory(function, position)
-	let slot = memory.Slot(Temp("op"), names.Index(path.Substring(dot + 1, path.Length - dot - 1)), "ls")
-	let pointer = List(Text) + function.Load(Temp("o"), "%v_" + owner) + memory.Pointer(Temp("o"), "o")
+	let slot = memory.Slot(Temp("op"), memory.Member(path).First, "ls")
+	let owner = function.Load(Temp("o"), "%v_" + path.Substring(0, dot))
+	let pointer = List(Text) + owner + memory.Pointer(Temp("o"), "o")
 	pointer + slot + function.Load(Temp("l"), Temp("ls"))
 Copied(entry InstructionEntry) Texts
 	MlirLists(Written, 2).Copied(Written.method.instructions(2)).Length is 3
-	let name = "%v_" + entry.texts(0)
+	MlirLists(Written, 2).Copied(MemberCopy).Last is "    llvm.store %t2oc, %v_numbers : f64, !llvm.ptr"
+	let path = entry.texts(0)
 	let copy = MlirMemory(function, position).Called(Temp("c"), "strict_list_copy", (Temp("l"), "%zero"))
-	(function.Load(Temp("l"), name), copy, function.Store(Temp("c"), name))
+	if path.IndexOf(".") < 0
+		return (function.Load(Temp("l"), "%v_" + path), copy, function.Store(Temp("c"), "%v_" + path))
+	let changed = MlirMemory(function, position).Changed(path, Temp("c"), Temp("oc"))
+	Target(path) + copy + changed + function.Store(Temp("oc"), "%v_" + path.Substring(0, path.IndexOf(".")))

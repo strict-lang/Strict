@@ -7,10 +7,10 @@ Run(arguments Texts) Number
 	if HasRun(types.First) is false
 		logger.Log("All tests passed in " + arguments(0))
 		return 0
-	mutable numbers = List(Mutable(VmValue))
+	mutable texts = List(Mutable(VmValue))
 	for Range(2, arguments.Length)
-		numbers.Add(VmValue.OfNumber(arguments(value) to Number))
-	Machine(Resolver(types).Resolved, logger).Launch(types.First.Name, numbers)
+		texts.Add(VmValue.OfText(arguments(value)))
+	Machine(Resolver(types).Resolved, logger).Launch(types.First.Name, texts)
 	0
 Test(path Text, root Text) Number
 	if Directory.Exists(path)

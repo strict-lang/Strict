@@ -1,1 +1,32 @@
-Save(path, colors Bytes, width Number, height Number)
+has path Text
+constant Signature = (137, 80, 78, 71, 13, 10, 26, 10)
+constant Header = 1229472850
+constant End = 1229278788
+Save(image Image)
+	File(path).Write(Bytes(image))
+Bytes(image Image) Bytes
+	ImageSaver("").Bytes(Image.Blank(Size(1, 1))).Length is 73
+	let header = Big32(image.Size.Width) + Big32(image.Size.Height) + (8, 6, 0, 0, 0)
+	let data = Deflate(Scanlines(image)).Stored
+	let numbers = Signature + Chunk(Header, header) + Chunk(Png.ImageData, data) + Chunk(End, List(Number))
+	for numbers
+		Byte(value)
+Chunk(type Number, data Numbers) Numbers
+	ImageSaver("").Chunk(End, List(Number)) is (0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130)
+	let typed = Big32(type) + data
+	Big32(data.Length) + typed + Big32(Crc(typed).Value)
+Big32(number Number) Numbers
+	ImageSaver("").Big32(258) is (0, 0, 1, 2)
+	((number / 16777216).Floor % 256, (number / 65536).Floor % 256, (number / 256).Floor % 256, number % 256)
+Scanlines(image Image) Numbers
+	ImageSaver("").Scanlines(Image.Blank(Size(1, 1))) is (0, 0, 0, 0, 255)
+	let row = image.Size.Width * 4 + 1
+	for image.Size.Height * row
+		let column = index % row
+		let pixel = (index / row).Floor * image.Size.Width + ((column - 1) / 4).Floor
+		column is 0 then 0 else Channel(image.Colors(pixel), (column - 1) % 4)
+Channel(color ColorValue, channel Number) Number
+	ImageSaver("").Channel(ColorValue(1, 0.5, 0), 1) is 128
+	let rgb = channel is 0 then color.Red else channel is 1 then color.Green else color.Blue
+	let component = channel is 3 then color.Alpha else rgb
+	(component.Clamp * 255).Round

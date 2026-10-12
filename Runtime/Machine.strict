@@ -18,8 +18,16 @@ Launch(typeName Text, arguments List(VmValue))
 	let exact = main.Callee("Run", arguments.Length, "None", List(Text))
 	let isExact = exact.instructions.Length > 0
 	let run = isExact then exact else main.Callee("Run", 1, "None", List(Text))
-	let bound = isExact then arguments else List(VmValue) + VmValue.OfList(arguments)
+	let typed = Typed(run.parameters, arguments)
+	let bound = isExact then typed else List(VmValue) + VmValue.OfList(typed)
 	Execute(run, Bound(main, Natives(types).Fresh(main), run, bound), main.Name)
+Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
+	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("5")).First.number is 5
+	Hello.Typed(List(MemberEntry) + MemberEntry.LoggerMember, List(VmValue) + VmValue.OfText("a")).First.text is "a"
+	for arguments
+		let parameter = index < parameters.Length then parameters(index) else parameters.Last
+		let isNumber = parameter.typeName is in ("Strict/Number", "Strict/List(Number)")
+		isNumber then VmValue.OfNumber(value.text to Number) else value
 Tested(typeName Text) Number
 	Hello.Tested("HelloLogger") is 0
 	let main = Natives(types).TypeOf(typeName)

@@ -25,7 +25,10 @@ Sharing(name Text, shares Boolean) CodeBlock
 	CodeBlock(instructions, register, nextId, scope.With(name + SharedMarker, (shares then "shared" else "owned")))
 Owns(name Text) Boolean
 	CodeBlock.Empty.Sharing("a", false).Owns("a") is true
-	scope.TypeOf(name + SharedMarker) is not "shared"
+	CodeBlock.Empty.Sharing("a", true).Owns("a.b") is false
+	let marker = scope.TypeOf(name + SharedMarker)
+	let dot = name.IndexOf(".")
+	(marker is "") and (dot > 0) then Owns(name.Substring(0, dot)) else marker is not "shared"
 Disowned(name Text) CodeBlock
 	CodeBlock.Empty.Sharing("a", false).Disowned("a").Owns("a") is false
 	CodeBlock.Empty.Disowned("a").scope.names.Length is 0
@@ -35,8 +38,12 @@ Disowned(name Text) CodeBlock
 Stored(name Text) CodeBlock
 	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)).Stored("a").instructions(1).payload is (0, -1)
 	CodeBlock.Empty.Sharing("a", true).Stored("a(0)").instructions(0).payload is (-1, -1, 1)
+	CodeBlock.Empty.Sharing("a", true).Stored("a.b(0)").instructions(0).kind is InstructionType.CopyList
 	let bracket = name.IndexOf("(")
-	let isShared = (bracket > 0) and (Owns(name.Substring(0, bracket)) is false)
+	let list = bracket > 0 then name.Substring(0, bracket) else ""
+	let isShared = (list is not "") and (Owns(list) is false)
+	if isShared and (list.IndexOf(".") > 0)
+		return Add(InstructionEntry(InstructionType.CopyList, list, -1)).Sharing(list, false).Stored(name)
 	let payload = isShared then (Result, -1, 1) else (Result, -1)
 	Add(InstructionEntry(InstructionType.StoreRegisterToVariable, name, payload))
 Skipping(name Text, jump Number) CodeBlock

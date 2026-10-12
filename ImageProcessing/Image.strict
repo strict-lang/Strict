@@ -1,2 +1,9 @@
 has Math/Size
-mutable Colors with Length is Size.Length
+mutable Colors List(ColorValue) with Length is Size.Length
+Blank(size Size) Image
+	Image.Blank(Size(2, 1)).Colors.Length is 2
+	Image(size, Black(size.Length))
+Black(count Number) List(ColorValue)
+	Image.Black(1) is List(ColorValue) + ColorValue(0, 0, 0)
+	for count
+		ColorValue(0, 0, 0)

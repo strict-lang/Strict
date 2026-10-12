@@ -1,6 +1,8 @@
 has function MlirFunction
 has position Number
 constant Sample = MlirMemory(MlirFunction.Counter, 3)
+constant Pair = TypeEntry("Strict/Pair", (MemberEntry("first", "Strict/Number", List(InstructionEntry), false), MemberEntry("rest", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry))
+constant Pairing = MlirMemory(MlirFunction(List(TypeEntry) + Pair, Pair, MethodEntry("Run", List(MemberEntry) + MemberEntry("pair", "Strict/Pair", List(InstructionEntry), false), "None", List(InstructionEntry))), 0)
 Temp(suffix Text) Text
 	Sample.Temp("p") is "%t3p"
 	"%t" + position + suffix
@@ -42,3 +44,15 @@ Traced(operand Text, result Text) Texts
 	let call = " = func.call @strict_trace(" + operand + ", " + Temp("tw") + ", " + Temp("twl") + ")"
 	let number = "    " + Temp("twl") + " = arith.constant " + line + " : i64"
 	(address, number, "    " + result + call + " : (f64, !llvm.ptr, i64) -> f64")
+Member(path Text) Numbers
+	Pairing.Member("pair.rest") is (1, 2)
+	let dot = path.IndexOf(".")
+	let ownerType = function.TypeOf(MlirKinds(function).VariableKind(position, path.Substring(0, dot)))
+	let names = MlirInstances(function, position).StoredNames(ownerType)
+	(names.Index(path.Substring(dot + 1, path.Length - dot - 1)), names.Length)
+Changed(path Text, element Text, result Text) Texts
+	Pairing.Changed("pair.rest", "%c", "%r").Last.IndexOf("@strict_instance_with(%t0o, %t0ms, %c, %t0mc)") > 0 is true
+	let member = Member(path)
+	let slot = "    " + Temp("ms") + " = arith.constant " + member.First + ".0 : f64"
+	let count = "    " + Temp("mc") + " = arith.constant " + member.Last + ".0 : f64"
+	(slot, count, Called(result, "strict_instance_with", (Temp("o"), Temp("ms"), element, Temp("mc"))))

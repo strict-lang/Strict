@@ -1,4 +1,22 @@
-from(path)
-Colors Bytes
-Width Number
-Height Number
+has path Text
+Loaded Image
+	ImageLoader("ImageProcessing/4x4.png").Loaded.Size is Size(4, 4)
+	let png = Png.Read(path)
+	Image(Size(png.Width, png.Height), Colors(png))
+Colors(png Png) List(ColorValue)
+	ImageLoader("").Colors(Png.GraySample).First is ColorValue(10 / 255, 10 / 255, 10 / 255)
+	let samples = png.Samples(png.Unfiltered(png.Raw))
+	let palette = png.Chunk(Png.Palette)
+	for png.Width * png.Height
+		Pixel(png, samples, palette, index)
+Pixel(png Png, samples Numbers, palette Numbers, pixel Number) ColorValue
+	ImageLoader("").Pixel(Png.PaletteSample, (0, 1), (0, 0, 0, 255, 255, 255), 1) is ColorValue(1, 1, 1)
+	let kind = png.bytes(25)
+	let start = pixel * png.Channels
+	let entry = samples(start) * 3
+	if kind is 3
+		return ColorValue(palette(entry) / 255, palette(entry + 1) / 255, palette(entry + 2) / 255)
+	let most = png.bytes(24) >= 8 then 255 else 2 ^ png.bytes(24) - 1
+	let alpha = kind is 6 then samples(start + 3) / most else kind is 4 then samples(start + 1) / most else 1
+	let colored = (kind is 2) or (kind is 6) then 1 else 0
+	ColorValue(samples(start) / most, samples(start + colored) / most, samples(start + colored * 2) / most, alpha)

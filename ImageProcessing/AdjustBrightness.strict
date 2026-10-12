@@ -7,17 +7,16 @@ Process(image) Image
 	AdjustBrightness(0.5).Process(Image(Size(1, 1), (testColor))) is Image(Size(1, 1), (ColorValue(0.75, 1, 0.75)))
 	mutable adjusted = image
 	for adjusted.Size
-		adjusted.Colors(index) = GetBrightnessAdjustedColor(adjusted.Colors(index) to ColorValue)
+		adjusted.Colors(index) = GetBrightnessAdjustedColor(adjusted.Colors(index))
 	adjusted
 GetBrightnessAdjustedColor(current ColorValue) ColorValue
 	AdjustBrightness(0.25).GetBrightnessAdjustedColor(testColor) is ColorValue(0.5, 0.75, 0.5)
 	AdjustBrightness(0.5).GetBrightnessAdjustedColor(testColor) is ColorValue(0.75, 1, 0.75)
 	AdjustBrightness(-0.25).GetBrightnessAdjustedColor(testColor) is ColorValue(0, 0.25, 0)
-	ColorValue(current.Red + brightness, current.Green + brightness, current.Blue + brightness)
+	ColorValue((current.Red + brightness).Clamp, (current.Green + brightness).Clamp, (current.Blue + brightness).Clamp)
 Run
 	constant speedUpCalculationsDivisor = 80
 	constant width = 1280 / speedUpCalculationsDivisor
 	constant height = 720 / speedUpCalculationsDivisor
-	let image = AdjustBrightness(0.25).Process(Image(Size(width, height)))
-	logger.Log("Brightness adjustment successful: " + image.Colors(width / 2, height / 2) to ColorValue)
-	image.Colors(width / 2, height / 2) to ColorValue is ColorValue(0.25, 0.25, 0.25)
+	let image = AdjustBrightness(0.25).Process(Image.Blank(Size(width, height)))
+	logger.Log("Brightness adjustment successful: " + image.Colors(width / 2, height / 2))

@@ -1463,6 +1463,19 @@
     %current = func.call @strict_list_get(%list, %index) : (f64, f64) -> f64
     return %current : f64
   }
+  func.func private @strict_instance_with(%instance: f64, %slot: f64, %value: f64, %count: f64) -> f64 {
+    %eight = arith.constant 8.0 : f64
+    %bytesf = arith.mulf %count, %eight : f64
+    %bytes = arith.fptosi %bytesf : f64 to i64
+    %copy = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    %source = func.call @strict_ptr(%instance) : (f64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%copy, %source, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %at = arith.fptosi %slot : f64 to i64
+    %target = llvm.getelementptr %copy[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %value, %target : f64, !llvm.ptr
+    %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
   func.func private @strict_list_write(%list: f64, %index: f64, %element: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %minusOne = arith.constant -1.0 : f64
