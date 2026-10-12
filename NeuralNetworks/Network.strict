@@ -1,10 +1,10 @@
 has layers List(Layer)
 constant Single = Network(List(Layer) + Layer.Halves)
 constant Halved = (List(Numbers) + (1, 0)) + (List(Number) + 0.5)
-constant Pair = Network((Layer((0.5, 0.5, 0.5, 0.5), (0, 0)), Layer.Halves))
+constant Pair = Network((Layer(((0.5, 0.5), (0.5, 0.5)), (0, 0)), Layer.Halves))
 Random(sizes Numbers) Network
 	Network.Random((2, 3, 1)).layers.Length is 2
-	Network.Random((2, 3, 1)).layers.Last.weights.Length is 3
+	Network.Random((2, 3, 1)).layers.Last.weights.First.Length is 3
 	Network(Layers(sizes))
 Layers(sizes Numbers) List(Layer)
 	Single.Layers((2, 1)).Length is 1

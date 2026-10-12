@@ -1,10 +1,15 @@
-has weights Numbers
+has weights List(Numbers)
 has biases Numbers
-constant Halves = Layer((0.5, 0.5), List(Number) + 0)
+constant Halves = Layer(List(Numbers) + (0.5, 0.5), List(Number) + 0)
 Random(inputs Number, outputs Number) Layer
-	Layer.Random(2, 3).weights.Length is 6
+	Layer.Random(2, 3).weights.Length is 3
+	Layer.Random(2, 3).weights.First.Length is 2
 	Layer.Random(2, 3).biases is (0, 0, 0)
-	Layer(Weights(inputs * outputs), Zeros(outputs))
+	Layer(Rows(inputs, outputs), Zeros(outputs))
+Rows(inputs Number, outputs Number) List(Numbers)
+	Halves.Rows(2, 3).Length is 3
+	for outputs
+		Weights(inputs)
 Weights(count Number) Numbers
 	Halves.Weights(3).Length is 3
 	for count
@@ -13,41 +18,40 @@ Zeros(count Number) Numbers
 	Halves.Zeros(2) is (0, 0)
 	for count
 		0
-Inputs Number
-	Halves.Inputs is 2
-	weights.Length / biases.Length
 Forward(input Numbers) Numbers
 	Halves.Forward((1, 1)) is List(Number) + 0.7310585786300049
-	for biases
-		Sigmoid(Summed(input, index) + value)
-Summed(input Numbers, output Number) Number
-	Halves.Summed((1, 3), 0) is 2
+	for weights
+		Sigmoid(Summed(value, input) + biases(index))
+Summed(row Numbers, input Numbers) Number
+	Halves.Summed((1, 2), (1, 3)) is 7
 	mutable sum = 0
-	let start = output * Inputs
-	for input
-		sum = sum + weights(start + index) * value
+	for row
+		sum = sum + value * input(index)
 	sum
 Sigmoid(number Number) Number
 	Halves.Sigmoid(0) is 0.5
 	1 / (1 + (0 - number).Exponential)
 Spread(deltas Numbers) Numbers
 	Halves.Spread(List(Number) + 2) is (1, 1)
-	for Inputs
+	for weights.First.Length
 		Back(deltas, index)
 Back(deltas Numbers, input Number) Number
 	Halves.Back(List(Number) + 2, 1) is 1
 	mutable sum = 0
-	for deltas
-		sum = sum + weights(index * Inputs + input) * value
+	for weights
+		sum = sum + value(input) * deltas(index)
 	sum
 Updated(input Numbers, deltas Numbers, rate Number) Layer
-	Halves.Updated((1, 0), List(Number) + 1, 0.5) is Layer((0, 0.5), List(Number) + (0 - 0.5))
+	Halves.Updated((1, 0), List(Number) + 1, 0.5) is Layer(List(Numbers) + (0, 0.5), List(Number) + (0 - 0.5))
 	Layer(Moved(input, deltas, rate), Shifted(deltas, rate))
-Moved(input Numbers, deltas Numbers, rate Number) Numbers
-	Halves.Moved((1, 0), List(Number) + 1, 0.5) is (0, 0.5)
-	let inputs = Inputs
+Moved(input Numbers, deltas Numbers, rate Number) List(Numbers)
+	Halves.Moved((1, 0), List(Number) + 1, 0.5) is List(Numbers) + (0, 0.5)
 	for weights
-		value - rate * deltas((index / inputs).Floor) * input(index % inputs)
+		Row(value, rate * deltas(index), input)
+Row(row Numbers, scaled Number, input Numbers) Numbers
+	Halves.Row((1, 1), 0.5, (1, 0)) is (0.5, 1)
+	for row
+		value - scaled * input(index)
 Shifted(deltas Numbers, rate Number) Numbers
 	Halves.Shifted(List(Number) + 1, 0.5) is List(Number) + (0 - 0.5)
 	for biases
