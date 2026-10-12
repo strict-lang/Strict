@@ -2,6 +2,7 @@ has header Expressions/HeaderTokens
 has statements Expressions/SyntaxNodes
 has memberNames Texts
 has mutations Texts
+constant ElementStore = BodyParser("Run", "	list(index) = 5").Block(1, 1).children(0)
 Sample UsageRules
 	Sample.statements.Length is 4
 	constant lines = ("Run(count, mutable list)", "\tlet aa = 5", "\tmutable bb = 0", "\tlist.Add(1)", "\tcount + bb")
@@ -58,7 +59,11 @@ IsUsed(name Text) Boolean
 	false
 UsedNames(statement SyntaxNode) Texts
 	Sample.UsedNames(Sample.statements(3)).Length is 2
-	statement.Kind is "Reassignment" then statement.children(1).HeadNames else statement.HeadNames
+	Sample.UsedNames(ElementStore) is ("list", "index")
+	if statement.Kind is not "Reassignment"
+		return statement.HeadNames
+	let assigned = statement.children(1).HeadNames
+	statement.children(0).Kind is "Call" then statement.children(0).HeadNames + assigned else assigned
 IsChanged(name Text) Boolean
 	Sample.IsChanged("bb") is false
 	for statements
