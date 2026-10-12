@@ -2042,21 +2042,19 @@
     %result = func.call @strict_list_scalar(%list, %number, %yes) : (f64, f64, i1) -> f64
     return %result : f64
   }
-  func.func private @strict_hash_key(%key: f64, %isText: i1) -> i64 {
+  func.func private @strict_hash_text(%key: f64) -> i64 {
     %zero = arith.constant 0.0 : f64
     %start = arith.constant 0 : i64
     %unset = arith.cmpf oeq, %key, %zero : f64
-    cf.cond_br %unset, ^mixed(%start : i64), ^kind
-  ^kind:
-    cf.cond_br %isText, ^text, ^number
+    cf.cond_br %unset, ^done(%start : i64), ^text
   ^text:
     %pointer = func.call @strict_ptr(%key) : (f64) -> !llvm.ptr
     cf.br ^loop(%pointer, %start : !llvm.ptr, i64)
   ^loop(%at: !llvm.ptr, %hash: i64):
     %byte = llvm.load %at : !llvm.ptr -> i8
     %end = arith.constant 0 : i8
-    %done = arith.cmpi eq, %byte, %end : i8
-    cf.cond_br %done, ^mixed(%hash : i64), ^next
+    %finished = arith.cmpi eq, %byte, %end : i8
+    cf.cond_br %finished, ^done(%hash : i64), ^next
   ^next:
     %code = arith.extui %byte : i8 to i64
     %thirtyOne = arith.constant 31 : i64
@@ -2064,10 +2062,16 @@
     %added = arith.addi %scaled, %code : i64
     %following = llvm.getelementptr %at[1] : (!llvm.ptr) -> !llvm.ptr, i8
     cf.br ^loop(%following, %added : !llvm.ptr, i64)
-  ^number:
+  ^done(%value: i64):
+    %result = func.call @strict_hash_mixed(%value) : (i64) -> i64
+    return %result : i64
+  }
+  func.func private @strict_hash_number(%key: f64) -> i64 {
     %bits = arith.bitcast %key : f64 to i64
-    cf.br ^mixed(%bits : i64)
-  ^mixed(%value: i64):
+    %result = func.call @strict_hash_mixed(%bits) : (i64) -> i64
+    return %result : i64
+  }
+  func.func private @strict_hash_mixed(%value: i64) -> i64 {
     %golden = arith.constant -7046029254386353131 : i64
     %product = arith.muli %value, %golden : i64
     %shift = arith.constant 29 : i64
@@ -2075,7 +2079,7 @@
     %result = arith.xori %product, %high : i64
     return %result : i64
   }
-  func.func private @strict_dictionary_index(%dictionary: f64, %isText: i1) -> !llvm.ptr {
+  func.func private @strict_dictionary_index(%dictionary: f64, %hash: (f64) -> i64) -> !llvm.ptr {
     %zero = arith.constant 0.0 : f64
     %restored = func.call @strict_list_items(%dictionary) : (f64) -> !llvm.ptr
     %none = arith.constant 0 : i64
@@ -2128,10 +2132,10 @@
     %pairSlot = llvm.getelementptr %items[%position] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %pair = llvm.load %pairSlot : !llvm.ptr -> f64
     %key = func.call @strict_list_get(%pair, %zero) : (f64, f64) -> f64
-    %hash = func.call @strict_hash_key(%key, %isText) : (f64, i1) -> i64
+    %keyHash = func.call_indirect %hash(%key) : (f64) -> i64
     %tableSize = llvm.load %table : !llvm.ptr -> i64
     %mask = arith.subi %tableSize, %one : i64
-    %first = arith.andi %hash, %mask : i64
+    %first = arith.andi %keyHash, %mask : i64
     cf.br ^probe(%first : i64)
   ^probe(%slot: i64):
     %offset = arith.addi %slot, %two : i64
@@ -2150,7 +2154,7 @@
     llvm.store %used, %countTarget : i64, !llvm.ptr
     return %table : !llvm.ptr
   }
-  func.func private @strict_dictionary_find(%dictionary: f64, %key: f64, %isText: i1) -> i64 {
+  func.func private @strict_dictionary_find(%dictionary: f64, %key: f64, %hash: (f64) -> i64, %equal: (f64, f64) -> f64) -> i64 {
     %none = arith.constant -1 : i64
     %empty = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -2161,12 +2165,12 @@
     %isEmpty = arith.cmpi eq, %count, %empty : i64
     cf.cond_br %isEmpty, ^missing, ^search
   ^search:
-    %table = func.call @strict_dictionary_index(%dictionary, %isText) : (f64, i1) -> !llvm.ptr
+    %table = func.call @strict_dictionary_index(%dictionary, %hash) : (f64, (f64) -> i64) -> !llvm.ptr
     %items = func.call @strict_list_items(%dictionary) : (f64) -> !llvm.ptr
-    %hash = func.call @strict_hash_key(%key, %isText) : (f64, i1) -> i64
+    %keyHash = func.call_indirect %hash(%key) : (f64) -> i64
     %size = llvm.load %table : !llvm.ptr -> i64
     %mask = arith.subi %size, %one : i64
-    %first = arith.andi %hash, %mask : i64
+    %first = arith.andi %keyHash, %mask : i64
     cf.br ^probe(%first : i64)
   ^probe(%slot: i64):
     %offset = arith.addi %slot, %two : i64
@@ -2184,24 +2188,25 @@
     %pairSlot = llvm.getelementptr %items[%position] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %pair = llvm.load %pairSlot : !llvm.ptr -> f64
     %pairKey = func.call @strict_list_get(%pair, %zero) : (f64, f64) -> f64
-    %matched = func.call @strict_list_matches(%pairKey, %key, %isText) : (f64, f64, i1) -> i1
+    %same = func.call_indirect %equal(%pairKey, %key) : (f64, f64) -> f64
+    %matched = arith.cmpf one, %same, %zero : f64
     cf.cond_br %matched, ^found, ^probe(%wrapped : i64)
   ^found:
     return %position : i64
   ^missing:
     return %none : i64
   }
-  func.func private @strict_dictionary_has(%dictionary: f64, %key: f64, %isText: i1) -> f64 {
+  func.func private @strict_dictionary_has(%dictionary: f64, %key: f64, %hash: (f64) -> i64, %equal: (f64, f64) -> f64) -> f64 {
     %none = arith.constant -1 : i64
-    %position = func.call @strict_dictionary_find(%dictionary, %key, %isText) : (f64, f64, i1) -> i64
+    %position = func.call @strict_dictionary_find(%dictionary, %key, %hash, %equal) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> i64
     %found = arith.cmpi ne, %position, %none : i64
     %result = func.call @strict_boolean(%found) : (i1) -> f64
     return %result : f64
   }
-  func.func private @strict_dictionary_get(%dictionary: f64, %key: f64, %isText: i1) -> f64 {
+  func.func private @strict_dictionary_get(%dictionary: f64, %key: f64, %hash: (f64) -> i64, %equal: (f64, f64) -> f64) -> f64 {
     %none = arith.constant -1 : i64
     %one = arith.constant 1.0 : f64
-    %position = func.call @strict_dictionary_find(%dictionary, %key, %isText) : (f64, f64, i1) -> i64
+    %position = func.call @strict_dictionary_find(%dictionary, %key, %hash, %equal) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> i64
     %found = arith.cmpi ne, %position, %none : i64
     cf.cond_br %found, ^value, ^missing
   ^value:
@@ -2215,10 +2220,10 @@
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
-  func.func private @strict_dictionary_add(%dictionary: f64, %key: f64, %value: f64, %isText: i1) -> f64 {
+  func.func private @strict_dictionary_add(%dictionary: f64, %key: f64, %value: f64, %hash: (f64) -> i64, %equal: (f64, f64) -> f64) -> f64 {
     %none = arith.constant -1 : i64
     %nothing = arith.constant 0.0 : f64
-    %position = func.call @strict_dictionary_find(%dictionary, %key, %isText) : (f64, f64, i1) -> i64
+    %position = func.call @strict_dictionary_find(%dictionary, %key, %hash, %equal) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> i64
     %found = arith.cmpi ne, %position, %none : i64
     cf.cond_br %found, ^duplicate, ^append
   ^duplicate:
@@ -2231,11 +2236,11 @@
     %result = func.call @strict_list_add(%dictionary, %pair) : (f64, f64) -> f64
     return %result : f64
   }
-  func.func private @strict_dictionary_remove(%dictionary: f64, %key: f64, %isText: i1) -> f64 {
+  func.func private @strict_dictionary_remove(%dictionary: f64, %key: f64, %hash: (f64) -> i64, %equal: (f64, f64) -> f64) -> f64 {
     %none = arith.constant -1 : i64
     %zero = arith.constant 0.0 : f64
     %bits = arith.constant false
-    %position = func.call @strict_dictionary_find(%dictionary, %key, %isText) : (f64, f64, i1) -> i64
+    %position = func.call @strict_dictionary_find(%dictionary, %key, %hash, %equal) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> i64
     %found = arith.cmpi ne, %position, %none : i64
     cf.cond_br %found, ^remove, ^unchanged
   ^remove:
@@ -2247,46 +2252,6 @@
     return %result : f64
   ^unchanged:
     return %dictionary : f64
-  }
-  func.func private @strict_dictionary_has_number(%dictionary: f64, %key: f64) -> f64 {
-    %isText = arith.constant false
-    %result = func.call @strict_dictionary_has(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
-    return %result : f64
-  }
-  func.func private @strict_dictionary_has_text(%dictionary: f64, %key: f64) -> f64 {
-    %isText = arith.constant true
-    %result = func.call @strict_dictionary_has(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
-    return %result : f64
-  }
-  func.func private @strict_dictionary_get_number(%dictionary: f64, %key: f64) -> f64 {
-    %isText = arith.constant false
-    %result = func.call @strict_dictionary_get(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
-    return %result : f64
-  }
-  func.func private @strict_dictionary_get_text(%dictionary: f64, %key: f64) -> f64 {
-    %isText = arith.constant true
-    %result = func.call @strict_dictionary_get(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
-    return %result : f64
-  }
-  func.func private @strict_dictionary_add_number(%dictionary: f64, %key: f64, %value: f64) -> f64 {
-    %isText = arith.constant false
-    %result = func.call @strict_dictionary_add(%dictionary, %key, %value, %isText) : (f64, f64, f64, i1) -> f64
-    return %result : f64
-  }
-  func.func private @strict_dictionary_add_text(%dictionary: f64, %key: f64, %value: f64) -> f64 {
-    %isText = arith.constant true
-    %result = func.call @strict_dictionary_add(%dictionary, %key, %value, %isText) : (f64, f64, f64, i1) -> f64
-    return %result : f64
-  }
-  func.func private @strict_dictionary_remove_number(%dictionary: f64, %key: f64) -> f64 {
-    %isText = arith.constant false
-    %result = func.call @strict_dictionary_remove(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
-    return %result : f64
-  }
-  func.func private @strict_dictionary_remove_text(%dictionary: f64, %key: f64) -> f64 {
-    %isText = arith.constant true
-    %result = func.call @strict_dictionary_remove(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
-    return %result : f64
   }
   llvm.mlir.global internal @strict_measured_text(0 : i64) : i64
   llvm.mlir.global internal @strict_measured_length(0 : i64) : i64

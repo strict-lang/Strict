@@ -15,7 +15,7 @@ Functions Texts
 		let equality = MlirEquality(function, 0)
 		if equality.IsKnown(kind) and (equality.Symbol(kind) is not in symbols)
 			symbols.Add(equality.Symbol(kind))
-			lines = lines + Function(value) + Collection(equality.Symbol(kind))
+			lines = lines + Function(value) + Collection(equality.Symbol(kind)) + Hash(equality.Symbol(kind))
 	lines
 Collection(symbol Text) Texts
 	Sample.Collection("Shape").Length is 5
@@ -23,6 +23,11 @@ Collection(symbol Text) Texts
 	let converter = MlirMemory(function, 0).Constant("%converter", "strict_automatic_" + symbol, Converting)
 	constant call = "    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64"
 	(header, converter, call, "    return %result : f64", "  }")
+Hash(symbol Text) Texts
+	Sample.Hash("Shape").First is "  func.func private @strict_hash_Shape(%value: f64) -> i64 {"
+	let header = "  func.func private @strict_hash_" + symbol + "(%value: f64) -> i64 {"
+	let text = "    %text = func.call @strict_automatic_" + symbol + "(%value) : (f64) -> f64"
+	(header, text, "    %hash = func.call @strict_hash_text(%text) : (f64) -> i64", "    return %hash : i64", "  }")
 Function(type TypeEntry) Texts
 	Sample.Function(MlirFunction.Shape).Length is 24
 	let name = MlirEquality(function, 0).Symbol(TypeEntry.ShortName(type.Name))

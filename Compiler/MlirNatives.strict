@@ -36,20 +36,45 @@ CollectionHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "in", 1) is "strict_list_has_text"
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "Remove", 1) is ""
 	MlirNatives(Texts, 1).CollectionHelper("List(Number)", "Count", 1) is "strict_list_count_number"
-	MlirNatives(Texts, 1).CollectionHelper("Dictionary(Text, Number)", "Add", 2) is "strict_dictionary_add_text"
+	MlirNatives(Texts, 1).CollectionHelper("Dictionary(Text, Number)", "Add", 2) is "strict_dictionary_add"
 	if kind.StartsWith("Dictionary(")
-		return DictionaryHelper(kind, name)
+		return DictionaryHelper(name)
 	if name is not in ("in", "Index", "Count") or count is not 1
 		return ""
 	let operation = name is "in" then "has" else name.Lower
 	Finder(MlirKinds(function).ElementKind(kind), operation)
-DictionaryHelper(kind Text, name Text) Text
-	MlirNatives(Texts, 1).DictionaryHelper("Dictionary(Number, Text)", "in") is "strict_dictionary_has_number"
-	MlirNatives(Texts, 1).DictionaryHelper("Dictionary(Text, Text)", "to") is ""
-	if name is not in ("in", "get", "Add", "Remove")
-		return ""
-	let key = kind.Substring(11, kind.IndexOf(",") - 11) is "Text" then "text" else "number"
-	"strict_dictionary_" + (name is "in" then "has" else name.Lower) + "_" + key
+DictionaryHelper(name Text) Text
+	MlirNatives(Texts, 1).DictionaryHelper("in") is "strict_dictionary_has"
+	MlirNatives(Texts, 1).DictionaryHelper("to") is ""
+	name is in ("in", "get", "Add", "Remove") then "strict_dictionary_" + (name is "in" then "has" else name.Lower) else ""
+Keyed(kind Text) Texts
+	MlirNatives(Texts, 1).Keyed("Strict/Dictionary(Text, Number)") is ("strict_hash_text", "strict_text_equal")
+	MlirNatives(Texts, 1).Keyed("Dictionary(Text, Text)") is ("strict_hash_text", "strict_text_equal")
+	MlirNatives(MlirEquality.Same, 0).Keyed("Dictionary(Shape, Text)") is ("strict_hash_Shape", "strict_equal_Shape")
+	let key = Key(kind)
+	if key is "Text"
+		return ("strict_hash_text", "strict_text_equal")
+	let equality = MlirEquality(function, position)
+	if equality.IsKnown(key) is false
+		return ("strict_hash_number", "strict_equal_number")
+	("strict_hash_" + equality.Symbol(key), equality.Helper(key))
+Key(kind Text) Text
+	MlirNatives(Texts, 1).Key("List(List(Text, Number))") is "Text"
+	MlirNatives(Texts, 1).Key("Dictionary(Number, Number)") is "Number"
+	let short = TypeEntry.ShortName(kind)
+	let pair = MlirLayout(function).Paired(short)
+	let kinds = MlirKinds(function)
+	MlirLayout(function).Represented(pair.Length > 0 then pair(0) else kinds.ElementKind(kinds.ElementKind(short)))
+Keying(helper Text, operands Texts, kind Text) Texts
+	MlirNatives(Texts, 2).Keying("f", ("%m", "%k"), "Dictionary(Text, Text)").Last.IndexOf("f(%m, %k, %t2h") > 0 is true
+	let memory = MlirMemory(function, position)
+	let functions = Keyed(kind)
+	let hash = memory.Constant(memory.Temp("h"), functions(0), "(f64) -> i64")
+	let equal = memory.Constant(memory.Temp("e"), functions(1), "(f64, f64) -> f64")
+	let arguments = Text.Combine(operands + memory.Temp("h") + memory.Temp("e"), ", ")
+	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
+	let call = "    " + memory.Temp("r") + " = func.call @" + helper + "(" + arguments + ") : (" + types
+	(hash, equal, call + ", (f64) -> i64, (f64, f64) -> f64) -> f64")
 Finder(element Text, operation Text) Text
 	MlirNatives(Texts, 1).Finder("Text", "has") is "strict_list_has_text"
 	MlirNatives(Texts, 1).Finder("Shape", "index") is ""
@@ -83,5 +108,6 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	let operands = List(Text) + calls.Temp("m") + calls.ArgumentNames(count)
 	let hasStart = helper is in DefaultedLast
 	let completed = hasStart and (count is 1) then operands + "%zero" else operands
-	let call = MlirMemory(function, position).Called(calls.Temp("r"), helper, completed)
+	let plain = List(Text) + MlirMemory(function, position).Called(calls.Temp("r"), helper, completed)
+	let call = helper.StartsWith("strict_dictionary_") then Keying(helper, completed, calls.Owner(entry, type)) else plain
 	calls.Loads(entry, type) + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))
