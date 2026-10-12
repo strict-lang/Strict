@@ -5,8 +5,9 @@ constant Existing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "
 constant Listing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Directories", "Strict/List(Text)", "path"), 0, -1), Current)
 constant Reading = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "ReadBytes", "Strict/List(Byte)"), List(Number), 0), Current.WithRegister(0, VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Any.strict"))))
 constant Dating = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Modified", "Strict/Number"), List(Number), 0), Reading.frame)
+constant Logging = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Logarithm", "Strict/Number"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(1)))
 constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(90)))
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted is true
 	Hosted(Invocation.AddCall).IsHosted is false
@@ -85,8 +86,11 @@ Location Text
 	TypeEntry.ShortName(call.TypeName) is "File" then call.Instance.Member(0).text else call.Arguments.First.text
 Measured VmValue
 	Hosted(Sine).Measured.number is 1
+	Hosted(Logging).Measured.number is 0
 	let type = TypeEntry.ShortName(call.TypeName)
 	let number = call.Instance.number
+	if type is "Number"
+		return VmValue.OfNumber(call.MethodName is "Logarithm" then number.Logarithm else number.Random)
 	if type is "Degrees"
 		return VmValue.OfNumber(Turned(Degrees(number)).number)
 	if type is "Vector2"

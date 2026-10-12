@@ -1,5 +1,8 @@
 has iterator
 constant Epsilon = 0.00001
+constant E = 2.718281828459045
+constant Pi = 3.141592653589793
+constant Phi = 1.618033988749895
 to Text
 	5 to Text is "5"
 	10.1 to Text is "10.1"
@@ -29,11 +32,13 @@ Ceiling Number
 	(0 - 2.4).Ceiling is -2
 	let fraction = value % 1
 	fraction > 0 then value - fraction + 1 else value - fraction
-Round Number
+Round(decimals = 0) Number
 	2.4.Round is 2
 	2.6.Round is 3
 	3.5.Round is 4
-	(value + 0.5).Floor
+	3.14159.Round(2) is 3.14
+	let scale = 10 ^ decimals
+	(value * scale + 0.5).Floor / scale
 Absolute Number
 	-1.Absolute is 1
 	1.Absolute is 1
@@ -118,6 +123,22 @@ Decrement(amount = 1) Mutable(Number)
 	Mutable(3).Decrement is 2
 	Mutable(-2).Decrement(-7) is 5
 	value = value - amount
+IsFinite Boolean
+	1.IsFinite
+	(1 / 0).IsFinite is false
+	(value is value) and (value - value is 0)
+Exponential Number
+	0.Exponential is 1
+	1.Exponential is E
+	E ^ value
+Logarithm Number
+	1.Logarithm is 0
+	E.Logarithm is 1
+	value
+Random Number
+	10.Random < 10
+	10.Random >= 0
+	value
 SquareRoot Number
 	4.SquareRoot is 2
 	9.SquareRoot is 3

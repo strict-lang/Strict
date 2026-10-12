@@ -24,6 +24,7 @@ ValueHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).ValueHelper("Number", "Increment", 0) is "strict_increment_one"
 	MlirNatives(Texts, 1).ValueHelper("Number", "Decrement", 1) is "strict_decrement"
 	MlirNatives(Texts, 1).ValueHelper("Number", "xor", 1) is "strict_number_xor"
+	MlirNatives(Texts, 1).ValueHelper("Number", "Logarithm", 0) is "strict_number_logarithm"
 	if (kind is "Number") and (name is "Floor")
 		return "strict_floor"
 	if (kind is "Number") and (name is in ("Increment", "Decrement"))
@@ -68,8 +69,7 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "Modified") is "strict_file_modified"
 	if kind + "." + name is not in Hosted.Methods
 		return ""
-	let suffix = name is "ReadLines" then "read_lines" else name.Lower
-	"strict_" + kind.Lower + "_" + suffix
+	"strict_" + kind.Lower + "_" + (name is "ReadLines" then "read_lines" else name.Lower)
 TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"
 	MlirNatives(Texts, 1).TextHelper("Split") is ""

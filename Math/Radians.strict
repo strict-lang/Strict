@@ -1,8 +1,7 @@
 has number
-constant Pi = 3.14159265359
-constant DegreesPerRadian = 180 / Pi
+constant DegreesPerRadian = 180 / Number.Pi
 to Degrees
 	Radians(0) to Degrees is 0
-	Radians(Pi / 4) to Degrees is 45
-	Radians(Pi / 2) to Degrees is 90
+	Radians(Number.Pi / 4) to Degrees is 45
+	Radians(Number.Pi / 2) to Degrees is 90
 	value * DegreesPerRadian

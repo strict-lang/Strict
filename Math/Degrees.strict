@@ -13,6 +13,5 @@ Tan Ratio
 	Degrees(45).Tan is 1
 	value
 to Radians
-	Degrees(180) to Radians is Radians.Pi
-	Degrees(180) to Radians is Radians.Pi
+	Degrees(180) to Radians is Number.Pi
 	value / Radians.DegreesPerRadian

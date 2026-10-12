@@ -8,6 +8,7 @@
   llvm.func @acos(f64) -> f64
   llvm.func @atan(f64) -> f64
   llvm.func @atan2(f64, f64) -> f64
+  llvm.func @log(f64) -> f64
   llvm.func @strftime(!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
   llvm.func @remove(!llvm.ptr) -> i32
   llvm.func @fgetc(!llvm.ptr) -> i32
@@ -1052,6 +1053,45 @@
     %right = arith.fptosi %other : f64 to i64
     %bits = arith.xori %left, %right : i64
     %result = arith.sitofp %bits : i64 to f64
+    return %result : f64
+  }
+  func.func private @strict_number_logarithm(%self: f64) -> f64 {
+    %result = llvm.call @log(%self) : (f64) -> f64
+    return %result : f64
+  }
+  llvm.mlir.global internal @strict_random_state(0 : i64) : i64
+  func.func private @strict_number_random(%self: f64) -> f64 {
+    %stateAddress = llvm.mlir.addressof @strict_random_state : !llvm.ptr
+    %state = llvm.load %stateAddress : !llvm.ptr -> i64
+    %zero = arith.constant 0 : i64
+    %unseeded = arith.cmpi eq, %state, %zero : i64
+    cf.cond_br %unseeded, ^seed, ^next(%state : i64)
+  ^seed:
+    %seeded = func.call @strict_random_seed() : () -> i64
+    cf.br ^next(%seeded : i64)
+  ^next(%current: i64):
+    %golden = arith.constant -7046029254386353131 : i64
+    %advanced = arith.addi %current, %golden : i64
+    llvm.store %advanced, %stateAddress : i64, !llvm.ptr
+    %shift30 = arith.constant 30 : i64
+    %high30 = arith.shrui %advanced, %shift30 : i64
+    %first = arith.xori %advanced, %high30 : i64
+    %firstFactor = arith.constant -4658895280553007687 : i64
+    %firstMixed = arith.muli %first, %firstFactor : i64
+    %shift27 = arith.constant 27 : i64
+    %high27 = arith.shrui %firstMixed, %shift27 : i64
+    %second = arith.xori %firstMixed, %high27 : i64
+    %secondFactor = arith.constant -7723592293110705685 : i64
+    %secondMixed = arith.muli %second, %secondFactor : i64
+    %shift31 = arith.constant 31 : i64
+    %high31 = arith.shrui %secondMixed, %shift31 : i64
+    %bits = arith.xori %secondMixed, %high31 : i64
+    %shift11 = arith.constant 11 : i64
+    %top = arith.shrui %bits, %shift11 : i64
+    %fraction = arith.uitofp %top : i64 to f64
+    %unitScale = arith.constant 1.1102230246251565e-16 : f64
+    %unit = arith.mulf %fraction, %unitScale : f64
+    %result = arith.mulf %unit, %self : f64
     return %result : f64
   }
   func.func private @strict_increment(%self: f64, %amount: f64) -> f64 {

@@ -59,6 +59,20 @@ Sum Generic
 	(1, 2, 3).Sum is 6
 	for elements
 		value
+Maximum Generic
+	(1, 3, 2).Maximum is 3
+	mutable maximum = First
+	for elements
+		if value > maximum
+			maximum = value
+	maximum
+Minimum Generic
+	(2, 1, 3).Minimum is 1
+	mutable minimum = First
+	for elements
+		if value < minimum
+			minimum = value
+	minimum
 X Generic
 	(1, 2, 3).X is 1
 	Numbers.X is Error

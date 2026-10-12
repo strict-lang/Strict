@@ -196,6 +196,16 @@
     %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  llvm.func @_time64(!llvm.ptr) -> i64
+  func.func private @strict_random_seed() -> i64 {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %now = llvm.call @_time64(%null) : (!llvm.ptr) -> i64
+    %one = arith.constant 1 : i64
+    %slot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %address = llvm.ptrtoint %slot : !llvm.ptr to i64
+    %mixed = arith.xori %now, %address : i64
+    return %mixed : i64
+  }
   func.func private @strict_file_modified(%path: f64) -> f64 {
     %dataSize = arith.constant 40 : i64
     %data = llvm.alloca %dataSize x i8 : (i64) -> !llvm.ptr

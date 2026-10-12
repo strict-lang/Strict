@@ -27,6 +27,11 @@ Combine(texts Texts, separator = ", ") Text
 	Combine(("hi", "there"), Character.NewLine) is "hi\nthere"
 	for texts
 		(index is 0 then "" else separator) + value
+EndsWith(text) Boolean
+	"hello".EndsWith("llo")
+	"hello".EndsWith("hel") is false
+	"lo".EndsWith("hello") is false
+	StartsWith(text, Length - text.Length)
 StartsWith(text, start = 0) Boolean
 	"hello".StartsWith("hel")
 	"hello".StartsWith("hel", 1) is false
