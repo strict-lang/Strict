@@ -8,7 +8,7 @@ Sample UsageRules
 	constant runHeader = HeaderTokens(Tokenizer(lines(0)).Tokens)
 	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), ("Add"))
 Issues ValidationIssues
-	Sample.Issues.Length is 4
+	Sample.Issues.Length is 5
 	mutable issues = List(Mutable(ValidationIssue))
 	for statements
 		if value.Kind is "Declaration"
@@ -16,14 +16,21 @@ Issues ValidationIssues
 	ParameterIssues + issues
 DeclarationIssues(declaration SyntaxNode) ValidationIssues
 	Sample.DeclarationIssues(Sample.statements(1)).Length is 1
+	Sample.DeclarationIssues(Sample.statements(0)).Length is 2
 	let name = Tokenizer(declaration.text).Tokens.Last
-	mutable issues = List(Mutable(ValidationIssue))
+	mutable issues = KindIssues(declaration, name)
 	if name is in memberNames
 		issues.Add(ValidationIssue("VariableHidesMemberUseDifferentName", name, "Use a different name"))
 	if not IsUsed(name)
 		issues.Add(ValidationIssue("UnusedMethodVariableMustBeRemoved", name, "Never used"))
+	issues
+KindIssues(declaration SyntaxNode, name Text) ValidationIssues
+	Sample.KindIssues(Sample.statements(0), "aa").First.ruleName is "UseConstantHere"
+	mutable issues = List(Mutable(ValidationIssue))
 	if declaration.text.StartsWith("mutable ") and (not IsChanged(name))
 		issues.Add(ValidationIssue("VariableDeclaredAsMutableButValueNeverChanged", name, "Never changed"))
+	if declaration.text.StartsWith("let ") and declaration.children(0).IsLiteral
+		issues.Add(ValidationIssue("UseConstantHere", name, "Use constant"))
 	issues
 ParameterIssues ValidationIssues
 	Sample.ParameterIssues.Length is 2

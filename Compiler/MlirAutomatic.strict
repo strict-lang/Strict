@@ -17,7 +17,7 @@ Collection(symbol Text) Texts
 	Sample.Collection("Shape").Length is 5
 	let header = "  func.func private @strict_automatic_list_" + symbol + "(%value: f64) -> f64 {"
 	let converter = "    %converter = func.constant @strict_automatic_" + symbol + " : (f64) -> f64"
-	let call = "    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64"
+	constant call = "    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64"
 	(header, converter, call, "    return %result : f64", "  }")
 Function(type TypeEntry) Texts
 	Sample.Function(MlirFunction.Shape).Length is 24
