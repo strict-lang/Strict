@@ -211,6 +211,23 @@
     return %result : f64
   }
   llvm.func @time(!llvm.ptr) -> i64
+  llvm.func @clock_gettime(i32, !llvm.ptr) -> i32
+  func.func private @strict_clock() -> f64 {
+    %two = arith.constant 2 : i64
+    %monotonic = arith.constant 1 : i32
+    %timespec = llvm.alloca %two x i64 : (i64) -> !llvm.ptr
+    %read = llvm.call @clock_gettime(%monotonic, %timespec) : (i32, !llvm.ptr) -> i32
+    %secondsSlot = llvm.getelementptr %timespec[0] : (!llvm.ptr) -> !llvm.ptr, i64
+    %nanosecondsSlot = llvm.getelementptr %timespec[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %whole = llvm.load %secondsSlot : !llvm.ptr -> i64
+    %nanoseconds = llvm.load %nanosecondsSlot : !llvm.ptr -> i64
+    %wholeFloat = arith.sitofp %whole : i64 to f64
+    %nanosecondsFloat = arith.sitofp %nanoseconds : i64 to f64
+    %billion = arith.constant 1.0e9 : f64
+    %fraction = arith.divf %nanosecondsFloat, %billion : f64
+    %seconds = arith.addf %wholeFloat, %fraction : f64
+    return %seconds : f64
+  }
   func.func private @strict_random_seed() -> i64 {
     %null = llvm.mlir.zero : !llvm.ptr
     %now = llvm.call @time(%null) : (!llvm.ptr) -> i64

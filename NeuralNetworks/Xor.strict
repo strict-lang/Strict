@@ -3,8 +3,10 @@ constant Inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 constant Targets = (0, 1, 1, 0)
 Run
 	let untrained = Network.Random((2, 3, 1))
+	let started = Process.Elapsed
 	let network = Trained(untrained, 20000)
-	logger.Log("Error before training " + Error(untrained) + ", after " + Error(network))
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	logger.Log("Error before training " + Error(untrained) + ", after " + Error(network) + " in " + milliseconds + " ms")
 	for Inputs
 		logger.Log(value to Text + " gives " + network.Predict(value).First)
 Trained(network Network, steps Number) Network

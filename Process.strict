@@ -18,6 +18,9 @@ OperatingSystem Text
 Current Process
 	Process.Current.IsAvailable is true
 	Process("")
+Elapsed Number
+	Process.Elapsed > 0 is true
+	0
 Built Text
 	Process.Current.Built.Length is 19
 	""

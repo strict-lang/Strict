@@ -197,6 +197,21 @@
     return %result : f64
   }
   llvm.func @_time64(!llvm.ptr) -> i64
+  llvm.func @QueryPerformanceCounter(!llvm.ptr) -> i32
+  llvm.func @QueryPerformanceFrequency(!llvm.ptr) -> i32
+  func.func private @strict_clock() -> f64 {
+    %one = arith.constant 1 : i64
+    %counter = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %frequency = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %counted = llvm.call @QueryPerformanceCounter(%counter) : (!llvm.ptr) -> i32
+    %measured = llvm.call @QueryPerformanceFrequency(%frequency) : (!llvm.ptr) -> i32
+    %ticks = llvm.load %counter : !llvm.ptr -> i64
+    %perSecond = llvm.load %frequency : !llvm.ptr -> i64
+    %ticksFloat = arith.sitofp %ticks : i64 to f64
+    %perSecondFloat = arith.sitofp %perSecond : i64 to f64
+    %seconds = arith.divf %ticksFloat, %perSecondFloat : f64
+    return %seconds : f64
+  }
   func.func private @strict_random_seed() -> i64 {
     %null = llvm.mlir.zero : !llvm.ptr
     %now = llvm.call @_time64(%null) : (!llvm.ptr) -> i64

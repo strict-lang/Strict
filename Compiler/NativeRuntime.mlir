@@ -70,7 +70,18 @@
   llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_key_not_found("KeyNotFound\00") : !llvm.array<12 x i8>
   llvm.mlir.global internal constant @strict_duplicate_key("DuplicateKey\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal @strict_started(0.0 : f64) : f64
+  func.func private @strict_process_elapsed(%self: f64) -> f64 {
+    %now = func.call @strict_clock() : () -> f64
+    %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
+    %started = llvm.load %startedSlot : !llvm.ptr -> f64
+    %elapsed = arith.subf %now, %started : f64
+    return %elapsed : f64
+  }
   func.func private @strict_gc_init(%stack: !llvm.ptr) {
+    %startedNow = func.call @strict_clock() : () -> f64
+    %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
+    llvm.store %startedNow, %startedSlot : f64, !llvm.ptr
     %tableBytes = arith.constant 8388608 : i64
     %heapBytes = arith.constant 68719476736 : i64
     %pageSize = arith.constant 65536 : i64

@@ -2,8 +2,10 @@ has logger
 constant Sample = ("variety", "5.1,3.5,1.4,.2,0", "7,3.2,4.7,1.4,1")
 Run
 	let rows = Rows(File("NeuralNetworks/iris.csv").ReadLines)
+	let started = Process.Elapsed
 	let network = Trained(Network.Random((4, 8, 3)), Training(rows), 200)
-	logger.Log("Iris test accuracy " + Accuracy(network, Testing(rows)) + " after 200 epochs")
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	logger.Log("Iris test accuracy " + Accuracy(network, Testing(rows)) + " after 200 epochs in " + milliseconds + " ms")
 Rows(lines Texts) List(Numbers)
 	Iris.Rows(Sample).Length is 2
 	for Range(1, lines.Length)
