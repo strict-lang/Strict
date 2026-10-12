@@ -63,10 +63,16 @@ Found(name Text) Texts
 	Probe.Found("Bytecode").Length is 0
 	Probe.Found("NeuralNetworks/mnist").Length > 100 is true
 	if File(name).Exists
-		return List(Text) + name
+		return IsInput(name) then List(Text) + name else List(Text)
 	if (Directory.Exists(name) is false) or (name.IndexOf(":") >= 0)
 		return List(Text)
 	Directory.Files(name, "*.strict").Length is 0 then Contained(name) else List(Text)
+IsInput(name Text) Boolean
+	Probe.IsInput("Compiler/NativeRuntime.mlir") is true
+	Probe.IsInput("./Character.test") is false
+	Probe.IsInput("strict") is false
+	let isOutput = name.EndsWith(".exe") or name.EndsWith(".test") or name.EndsWith(".strictbinary")
+	(name.LastIndexOf(".") > name.LastIndexOf("/") + 1) and (isOutput is false)
 Contained(folder Text) Texts
 	Probe.Contained("NeuralNetworks/mnist").Length is Probe.Found("NeuralNetworks/mnist").Length
 	mutable files = Directory.Files(folder)

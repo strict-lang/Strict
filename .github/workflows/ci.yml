@@ -42,6 +42,7 @@ jobs:
               base="${file%.strict}"
               if [ -f "$base.test" ]; then
                 "./$base.test" > run.log 2>&1 || { grep -v "^Test passed" run.log; exit 1; }
+                rm -f "$base.test" "$base.test.mlir"
               fi
             done
           done
