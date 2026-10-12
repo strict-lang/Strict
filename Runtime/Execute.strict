@@ -10,7 +10,7 @@ Run(arguments Texts) Number
 	mutable numbers = List(Mutable(VmValue))
 	for Range(2, arguments.Length)
 		numbers.Add(VmValue.OfNumber(arguments(value) to Number))
-	Machine(types, logger).Launch(types.First.Name, numbers)
+	Machine(Resolver(types).Resolved, logger).Launch(types.First.Name, numbers)
 	0
 Test(path Text, root Text) Number
 	let failed = Verified(path, root)
@@ -30,7 +30,7 @@ Verified(path Text, root Text) Number
 		File(cache.Path).Write(cache.Packed(header, types))
 	failed
 Tested(types List(TypeEntry), path Text) Number
-	let failed = Machine(types, logger).Tested(types.First.Name)
+	let failed = Machine(Resolver(types).Resolved, logger).Tested(types.First.Name)
 	if failed > 0
 		logger.Log(failed to Text + " tests failed in " + path)
 	failed

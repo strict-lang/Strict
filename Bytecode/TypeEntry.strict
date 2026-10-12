@@ -27,19 +27,24 @@ Bytes Numbers
 		let method = value.Integers(names)
 		integers = integers + method.Length + method
 	ByteEncoder.Empty.SevenBits(integers).bytes
+Chosen(name Text, count Number, returnType Text, names Texts) Number
+	HelloLogger.Chosen("Run", 0, "None", List(Text)) is 0
+	HelloLogger.Chosen("Missing", 0, "None", List(Text)) is -1
+	mutable chosen = -1
+	mutable best = 0
+	for methods
+		let fit = value.Fit(name, count, returnType, names)
+		if fit > best
+			chosen = index
+			best = fit
+	chosen
 Callee(name Text, count Number, returnType Text, names Texts) MethodEntry
 	HelloLogger.Callee("Run", 0, "None", List(Text)).instructions.Length is 2
 	Converting.Callee("to", 0, "Text", List(Text)).parameters.Length is 1
 	Converting.Callee("to", 0, "Strict/Number", List(Text)).parameters.Length is 0
 	Scaling.Callee("*", 1, "Strict/Vector", List(Text) + "scale").returnType is "Strict/Vector"
-	mutable chosen = MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry))
-	mutable best = 0
-	for methods
-		let fit = value.Fit(name, count, returnType, names)
-		if fit > best
-			chosen = value
-			best = fit
-	chosen
+	let chosen = Chosen(name, count, returnType, names)
+	chosen < 0 then MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry)) else methods(chosen)
 OverloadSuffix(method MethodEntry) Text
 	Scaling.OverloadSuffix(Scaling.methods.Last) is "_scale"
 	HelloLogger.OverloadSuffix(MethodEntry.HelloRun) is ""

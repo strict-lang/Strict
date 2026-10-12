@@ -81,15 +81,16 @@ Invoked(frame Frame) Frame
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
 	Hello.Call(Uppered).text is "AB"
-	if Hosted(call).IsHosted
+	let entry = call.IsResolved then call.entry else Resolver(types).Targeted(call.entry)
+	let at = Invocation(entry, call.frame).Resolution
+	let route = entry.payload(at)
+	if route is Resolver.Hosting
 		return Hosted(call).Result
-	if (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
+	if route is Resolver.Searching
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
-	let type = Natives(types).TypeOf(call.TypeName)
-	let method = type.Callee(call.MethodName, call.Arguments.Length, call.ReturnType, call.ParameterNames)
-	if (method.instructions.Length is 0) or call.IsNativeConversion or call.IsMemberValue(type)
+	if (route < 0) or ((entry.payload(at + 2) is 1) and call.IsMemberValue(types(route)))
 		return Natives(types).Result(call)
-	Executed(type, method, call)
+	Executed(types(route), types(route).methods(entry.payload(at + 1)), call)
 Executed(type TypeEntry, method MethodEntry, call Invocation) VmValue
 	Machine(List(TypeEntry) + Paired).Executed(Paired, Paired.methods.First, Invocation.AddCall).items.First.number is 7
 	if (type.IsStruct is false) or (method.IsInitializer(type.Changing) is false)

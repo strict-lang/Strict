@@ -1,0 +1,44 @@
+has types List(TypeEntry)
+constant Native = -1
+constant Hosting = -2
+constant Searching = -3
+constant Doubling = Resolver(List(TypeEntry) + Machine.Doubler)
+constant Twice = Invocation(InstructionEntry.Invoke(0, ("Strict/Doubler", "Twice", "Strict/Number"), List(Number), -1), Frame.Start)
+Resolved List(TypeEntry)
+	Doubling.Resolved.First.methods.First.instructions.Length is 3
+	for types
+		TypeEntry(value.Name, value.members, Methods(value.methods))
+Methods(methods List(MethodEntry)) List(MethodEntry)
+	Doubling.Methods(List(MethodEntry) + MethodEntry.GoRun).First.instructions.First.payload.Length is 10
+	for methods
+		MethodEntry(value.Name, value.parameters, value.returnType, Instructions(value.instructions))
+Instructions(instructions List(InstructionEntry)) List(InstructionEntry)
+	Doubling.Instructions(MethodEntry.GoRun.instructions).First.payload.Length is 10
+	for instructions
+		value.kind is InstructionType.Invoke then Targeted(value) else value
+Targeted(entry InstructionEntry) InstructionEntry
+	Doubling.Targeted(Twice.entry).payload is (0, -1, -2, 0, -3, 0, 0, 0, 0, 0)
+	Doubling.Targeted(Invocation.AddCall.entry).payload is (2, -1, -2, 1, -4, -3, 1, 0, 1, 1, Native, 0, 0)
+	InstructionEntry(entry.kind, entry.texts, entry.payload + Target(Invocation(entry, Frame.Start)))
+Target(call Invocation) Numbers
+	Doubling.Target(Machine.Uppered) is (Searching, 0, 0)
+	Doubling.Target(Hosted.SystemCall) is (Hosting, 0, 0)
+	if Hosted(call).IsHosted
+		return (Hosting, 0, 0)
+	let isText = (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
+	isText then (Searching, 0, 0) else Called(call)
+Called(call Invocation) Numbers
+	Doubling.Called(Twice) is (0, 0, 0)
+	Doubling.Called(Invocation.AddCall) is (Native, 0, 0)
+	let type = Natives(types).TypeOf(call.TypeName)
+	let method = type.Chosen(call.MethodName, call.Arguments.Length, call.ReturnType, call.ParameterNames)
+	if (method < 0) or call.IsNativeConversion or (type.methods(method).instructions.Length is 0)
+		return (Native, 0, 0)
+	(Position(type), method, call.IsWrapping(type) then 1 else 0)
+Position(type TypeEntry) Number
+	Doubling.Position(Machine.Doubler) is 0
+	Doubling.Position(TypeEntry.HelloLogger) is -1
+	for types
+		if value.Name is type.Name
+			return index
+	-1
