@@ -1,0 +1,32 @@
+has function MlirFunction
+constant Writers = (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable, InstructionType.InvokeWriteToList, InstructionType.InvokeRemove, InstructionType.CopyList)
+constant Reading = MlirParameters(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1))))))
+FixedLists Texts
+	Reading.FixedLists is ("numbers")
+	MlirParameters(MlirLists.Listed).FixedLists.Length is 0
+	for function.method.parameters
+		if value.typeName.StartsWith("Strict/List(") and IsFixed(value.Name)
+			value.Name
+IsFixed(name Text) Boolean
+	Reading.IsFixed("numbers") is true
+	for function.method.instructions
+		let target = value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else value.texts.First
+		if (value.kind is in Writers) and ((target is name) or target.StartsWith(name + "("))
+			return false
+	true
+Hoisted Texts
+	Reading.Hoisted.Length is 2
+	let fixed = FixedLists
+	mutable lines = List(Mutable(Text))
+	for function.method.parameters
+		if value.Name is in fixed
+			lines = lines + Started(value.Name, "%p" + (index + 1))
+	lines
+Started(name Text, parameter Text) Texts
+	Reading.Started("numbers", "%p1").Last is "    %n_numbers = func.call @strict_list_length(%p1) : (f64) -> f64"
+	let items = "    %h_" + name + " = func.call @strict_list_start(" + parameter + ") : (f64) -> !llvm.ptr"
+	(items, "    %n_" + name + " = func.call @strict_list_length(" + parameter + ") : (f64) -> f64")
+Read(name Text, position Text, nameBits Text, result Text) Text
+	Reading.Read("a", "%i", "%nb", "%x").StartsWith("    %x = func.call @strict_items_at(%h_a, %n_a, %i, %nb)") is true
+	let operands = "(%h_" + name + ", %n_" + name + ", " + position + ", " + nameBits + ")"
+	"    " + result + " = func.call @strict_items_at" + operands + " : (!llvm.ptr, f64, f64, f64) -> f64"

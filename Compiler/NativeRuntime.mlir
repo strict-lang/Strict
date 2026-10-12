@@ -1312,6 +1312,35 @@
     %value = func.call @strict_list_get(%list, %chosen) : (f64, f64) -> f64
     return %value : f64
   }
+  func.func private @strict_list_start(%list: f64) -> !llvm.ptr {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %list, %zero : f64
+    cf.cond_br %unset, ^none, ^some
+  ^none:
+    %null = llvm.mlir.zero : !llvm.ptr
+    return %null : !llvm.ptr
+  ^some:
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    return %items : !llvm.ptr
+  }
+  func.func private @strict_items_at(%items: !llvm.ptr, %length: f64, %index: f64, %name: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %negative = arith.cmpf olt, %index, %zero : f64
+    %wrapped = arith.addf %index, %length : f64
+    %chosen = arith.select %negative, %wrapped, %index : f64
+    %below = arith.cmpf olt, %chosen, %zero : f64
+    %above = arith.cmpf uge, %chosen, %length : f64
+    %outside = arith.ori %below, %above : i1
+    cf.cond_br %outside, ^error, ^inside
+  ^error:
+    %error = func.call @strict_error_text(%name) : (f64) -> f64
+    return %error : f64
+  ^inside:
+    %at = arith.fptosi %chosen : f64 to i64
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    return %value : f64
+  }
   func.func private @strict_list_copy(%list: f64, %extra: f64) -> f64 {
     %eight = arith.constant 8.0 : f64
     %length = func.call @strict_list_length(%list) : (f64) -> f64

@@ -79,7 +79,7 @@ Entry Texts
 	mutable lines = Slot("%instance") + Store("%p0", "%instance")
 	for Parameters
 		lines = lines + Store("%p" + index, "%v_" + value)
-	lines + MlirInstances(value, 0).Unpacked + MlirInstances(value, 0).Constants
+	lines + MlirParameters(value).Hoisted + MlirInstances(value, 0).Unpacked + MlirInstances(value, 0).Constants
 Slot(name Text) Texts
 	Counter.Slot("%r0").Length is 2
 	("    " + name + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", Store("%zero", name))
