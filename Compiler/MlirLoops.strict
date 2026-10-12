@@ -3,6 +3,8 @@ has position Number
 constant Counting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop), 0)
 constant OuterLoop = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "outer"), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))
 constant Nested = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, OuterLoop), 0)
+constant Emptied = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "forResult")
+constant Collecting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (Emptied, InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))), 1)
 Temp(suffix Text) Text
 	Counting.Temp("k") is "%t0k"
 	"%t" + position + suffix
@@ -16,7 +18,7 @@ Begin Texts
 	constant check = "    " + Temp("m") + " = arith.cmpf olt, " + Temp("k") + ", " + Temp("n") + " : f64"
 	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
 	let iteration = (function.Load(Temp("k"), "%loop" + position), check, branch, "  " + label + "body:")
-	bounds + saved + Outered + header + iteration + Current
+	bounds + saved + Outered + Presized + header + iteration + Current
 Current Texts
 	Counting.Current.Length is 4
 	constant offset = "    " + Temp("o") + " = arith.mulf " + Temp("k") + ", " + Temp("s") + " : f64"
@@ -69,6 +71,24 @@ Outered Texts
 	if "outer.index" is in names
 		lines = lines + function.Load(Temp("j"), "%v_outer.index") + function.Store(Temp("x"), "%v_outer.index")
 	lines
+IsCollecting Boolean
+	Collecting.IsCollecting is true
+	Counting.IsCollecting is false
+	for position
+		let entry = function.method.instructions(position - 1 - index)
+		if entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+			return false
+		if (entry.kind is InstructionType.StoreConstantToVariable) and (entry.texts.Last is "forResult")
+			return entry.payload(0) is 6
+	false
+Presized Texts
+	Counting.Presized.Length is 0
+	Collecting.Presized.Last is "    llvm.store %t1r, %v_forResult : f64, !llvm.ptr"
+	if IsCollecting is false
+		return List(Text)
+	constant capacity = "    " + Temp("a") + " = arith.maximumf " + Temp("n") + ", %zero : f64"
+	let created = MlirMemory(function, position).Called(Temp("r"), "strict_list_new", (Temp("a"), "%zero"))
+	(capacity, created, function.Store(Temp("r"), "%v_forResult"))
 Restored(begin Number) Texts
 	MlirLoops(Nested.function, 2).Restored(0) is List(Text) + "    llvm.store %t0z, %v_outer : f64, !llvm.ptr"
 	let names = function.VariableNames
