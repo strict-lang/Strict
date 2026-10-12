@@ -10,13 +10,15 @@
   llvm.func @atan2(f64, f64) -> f64
   llvm.func @strftime(!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
   llvm.func @remove(!llvm.ptr) -> i32
+  llvm.func @fgetc(!llvm.ptr) -> i32
+  llvm.func @fputc(i32, !llvm.ptr) -> i32
   func.func private @strict_file_delete(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %removed = llvm.call @remove(%name) : (!llvm.ptr) -> i32
     return %zero : f64
   }
-  llvm.mlir.global internal constant @strict_time_format("%Y-%m-%d %H:%M\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_time_format("%Y-%m-%d %H:%M:%S\00") : !llvm.array<18 x i8>
   func.func private @strict_time_text(%local: !llvm.ptr) -> f64 {
     %null = llvm.mlir.zero : !llvm.ptr
     %invalid = llvm.icmp "eq" %local, %null : !llvm.ptr
@@ -2677,6 +2679,120 @@
     %length = llvm.call @strlen(%content) : (!llvm.ptr) -> i64
     %written = llvm.call @fwrite(%content, %one, %length, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
     %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    return %zero : f64
+  }
+  func.func private @strict_file_writelines(%path: f64, %lines: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %newline = arith.constant 10 : i32
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %mode = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
+    %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
+    cf.cond_br %failed, ^done, ^write
+  ^write:
+    %lengthNumber = func.call @strict_list_length(%lines) : (f64) -> f64
+    %count = arith.fptosi %lengthNumber : f64 to i64
+    %hasLines = arith.cmpi sgt, %count, %start : i64
+    cf.cond_br %hasLines, ^items, ^close
+  ^items:
+    %items = func.call @strict_list_items(%lines) : (f64) -> !llvm.ptr
+    cf.br ^line(%start : i64)
+  ^line(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^separate, ^close
+  ^separate:
+    %first = arith.cmpi eq, %index, %start : i64
+    cf.cond_br %first, ^text, ^newline
+  ^newline:
+    %put = llvm.call @fputc(%newline, %file) : (i32, !llvm.ptr) -> i32
+    cf.br ^text
+  ^text:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %line = llvm.load %slot : !llvm.ptr -> f64
+    %content = func.call @strict_ptr(%line) : (f64) -> !llvm.ptr
+    %length = llvm.call @strlen(%content) : (!llvm.ptr) -> i64
+    %written = llvm.call @fwrite(%content, %step, %length, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
+    %next = arith.addi %index, %step : i64
+    cf.br ^line(%next : i64)
+  ^close:
+    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return %zero : f64
+  }
+  func.func private @strict_file_readbytes(%path: f64) -> f64 {
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %ending = arith.constant 2 : i32
+    %beginning = arith.constant 0 : i32
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %file, %null : !llvm.ptr
+    cf.cond_br %missing, ^absent, ^read
+  ^read:
+    %toEnd = llvm.call @fseek(%file, %start, %ending) : (!llvm.ptr, i64, i32) -> i32
+    %told = llvm.call @ftell(%file) : (!llvm.ptr) -> i64
+    %toStart = llvm.call @fseek(%file, %start, %beginning) : (!llvm.ptr, i64, i32) -> i32
+    %known = arith.cmpi sge, %told, %start : i64
+    %size = arith.select %known, %told, %start : i64
+    %length = arith.sitofp %size : i64 to f64
+    %bytes = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%bytes) : (f64) -> !llvm.ptr
+    cf.br ^copy(%start : i64)
+  ^copy(%index: i64):
+    %more = arith.cmpi slt, %index, %size : i64
+    cf.cond_br %more, ^byte, ^done
+  ^byte:
+    %read = llvm.call @fgetc(%file) : (!llvm.ptr) -> i32
+    %number = arith.sitofp %read : i32 to f64
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %number, %slot : f64, !llvm.ptr
+    %next = arith.addi %index, %step : i64
+    cf.br ^copy(%next : i64)
+  ^done:
+    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    return %bytes : f64
+  ^absent:
+    %empty = func.call @strict_list_empty() : () -> f64
+    return %empty : f64
+  }
+  func.func private @strict_file_writebytes(%path: f64, %bytes: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %mode = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
+    %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
+    cf.cond_br %failed, ^done, ^write
+  ^write:
+    %lengthNumber = func.call @strict_list_length(%bytes) : (f64) -> f64
+    %count = arith.fptosi %lengthNumber : f64 to i64
+    %hasItems = arith.cmpi sgt, %count, %start : i64
+    cf.cond_br %hasItems, ^items, ^close
+  ^items:
+    %items = func.call @strict_list_items(%bytes) : (f64) -> !llvm.ptr
+    cf.br ^copy(%start : i64)
+  ^copy(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^byte, ^close
+  ^byte:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %number = llvm.load %slot : !llvm.ptr -> f64
+    %byte = arith.fptosi %number : f64 to i32
+    %put = llvm.call @fputc(%byte, %file) : (i32, !llvm.ptr) -> i32
+    %next = arith.addi %index, %step : i64
+    cf.br ^copy(%next : i64)
+  ^close:
+    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
     return %zero : f64
   }
   func.func private @strict_process_result(%code: f64, %output: f64, %error: f64) -> f64 {

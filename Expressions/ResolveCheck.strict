@@ -30,11 +30,26 @@ ChainType(inference TypeInference, tokens Texts, typeName Text) Text
 	node.Kind is in ("MethodCall", "Member") then inference.TypeOf(node, Scope(List(Text), List(Text)), current) else ""
 Refined(inference TypeInference, shapes List(TypeShape)) TypeInference
 	ResolveCheck.Refined(Counting, List(TypeShape)).types.methods.Length is 0
+	Inference(("File.strict", "TextWriter.strict", "BytesWriter.strict")).types.ParameterScope("File").Count("Write") is 2
 	let types = inference.types
 	mutable methods = List(Mutable(Scope))
+	mutable parameters = List(Mutable(Scope))
 	for shapes
 		methods.Add(ChainTyped(inference, value, types.methods(index), types.names(index)))
-	TypeInference(KnownTypes(types.names, types.members, methods, types.parameters), inference.constants)
+		parameters.Add(Overloaded(types, shapes, value, types.parameters(index)))
+	TypeInference(KnownTypes(types.names, types.members, methods, parameters), inference.constants)
+Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scope) Scope
+	ResolveCheck.Overloaded(Counting.types, List(TypeShape), TypeShape("has a"), KnownTypes.NoMembers).names.Length is 0
+	mutable traits = KnownTypes.NoMembers
+	for shape.MemberScope.types
+		let position = types.names.Index(value)
+		if (position >= 0) and shapes(position).IsTrait
+			traits = traits.WithAll(types.parameters(position).names, types.parameters(position).types)
+	mutable result = scope
+	for traits.names
+		if (traits.Count(value) > 1) and (scope.Count(value) is 0)
+			result = result.With(value, traits.types(index))
+	result
 ChainTyped(inference TypeInference, shape TypeShape, scope Scope, typeName Text) Scope
 	ResolveCheck.ChainTyped(Counting, TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0
 	mutable result = scope

@@ -3,8 +3,9 @@ constant SystemCall = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "
 constant Current = Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("."), Locals.Empty)
 constant Existing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Exists", "Strict/Boolean", "path"), 0, -1), Current)
 constant Listing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Directories", "Strict/List(Text)", "path"), 0, -1), Current)
+constant Reading = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "ReadBytes", "Strict/List(Byte)"), List(Number), 0), Current.WithRegister(0, VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Any.strict"))))
 constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(90)))
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted is true
 	Hosted(Invocation.AddCall).IsHosted is false
@@ -17,7 +18,7 @@ Result VmValue
 		return Processed
 	if type is not in ("File", "Directory")
 		return Measured
-	call.MethodName is in ("ReadLines", "Files", "Directories") then Entries else Stored
+	call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored
 Processed VmValue
 	Hosted(SystemCall).Processed.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	let name = call.MethodName
@@ -33,7 +34,10 @@ Stored VmValue
 	Hosted(Existing).Stored.IsTrue is true
 	let path = Location
 	if call.MethodName is "Write"
-		File(path).Write(call.Arguments.First.text)
+		if "bytes" is in call.ParameterNames
+			File(path).Write(BytesOf(call.Arguments.First))
+		else
+			File(path).Write(TextsOf(call.Arguments.First))
 	if call.MethodName is "Delete"
 		File(path).Delete
 	if call.MethodName is "Create"
@@ -41,9 +45,12 @@ Stored VmValue
 	call.MethodName is "Exists" then VmValue.OfBoolean(File(path).Exists or Directory.Exists(path)) else VmValue.None
 Entries VmValue
 	Hosted(Listing).Entries.Length > 0 is true
+	Hosted(Reading).Entries.items.First.number is 102
 	let path = Location
 	if call.MethodName is "ReadLines"
 		return Values(File(path).ReadLines)
+	if call.MethodName is "ReadBytes"
+		return ByteValues(File(path).ReadBytes)
 	let pattern = call.Arguments.Length > 1 then call.Arguments.Last.text else ""
 	Values(call.MethodName is "Files" then Directory.Files(path, pattern) else Directory.Directories(path))
 Values(texts Texts) VmValue
@@ -52,6 +59,20 @@ Values(texts Texts) VmValue
 	for texts
 		values.Add(VmValue.OfText(value))
 	VmValue.OfList(values)
+ByteValues(bytes Bytes) VmValue
+	Hosted(Listing).ByteValues(List(Byte) + Byte(7)).items.First.number is 7
+	mutable values = List(Mutable(VmValue))
+	for bytes
+		values.Add(VmValue.OfNumber(value.number))
+	VmValue.OfList(values)
+BytesOf(content VmValue) Bytes
+	Hosted(Listing).BytesOf(VmValue.OfList(List(VmValue) + VmValue.OfNumber(7))) is List(Byte) + Byte(7)
+	for content.items
+		Byte(value.number)
+TextsOf(content VmValue) Texts
+	Hosted(Listing).TextsOf(VmValue.OfList(List(VmValue) + VmValue.OfText("a"))) is ("a")
+	for content.items
+		value.text
 Location Text
 	Hosted(Existing).Location is "."
 	TypeEntry.ShortName(call.TypeName) is "File" then call.Instance.Member(0).text else call.Arguments.First.text

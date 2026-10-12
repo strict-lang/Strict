@@ -21,7 +21,7 @@ Message(command Text, rest Texts) Text
 	Strict.Message("test", ("a.strict", ".")) is "a.strict not found"
 	Strict.Message("check", ("Compiler", ".")) is ""
 	if command is in ("version", "--version")
-		return Version + " " + Process.Current.Built
+		return Version + " " + Process.Current.Built.Substring(0, 16)
 	if (command is in Informing) or (rest.Length < 2)
 		return Text.Combine(Help, "\n")
 	(command is "check") or File(rest(0)).Exists then "" else rest(0) + " not found"

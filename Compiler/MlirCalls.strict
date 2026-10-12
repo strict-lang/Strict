@@ -78,8 +78,10 @@ NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
 	let natives = MlirNatives(function, position)
-	let owned = natives.Helper(Owner(entry, type), decoder.Text(2), count)
-	owned is "" then natives.Helper(type.Name, decoder.Text(2), count) else owned
+	let isWrite = (decoder.Text(2) is "Write") and (decoder.Names.Length is 1)
+	let name = isWrite then "Write" + decoder.Names.First.Capitalize else decoder.Text(2)
+	let owned = natives.Helper(Owner(entry, type), name, count)
+	owned is "" then natives.Helper(type.Name, name, count) else owned
 Owner(entry InstructionEntry, type TypeEntry) Text
 	MlirCalls(Shapes, 2).Owner(Area, AreaShape) is "Shape"
 	let countPosition = 5 + entry.payload(3)

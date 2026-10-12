@@ -19,7 +19,7 @@ Current Process
 	Process.Current.IsAvailable is true
 	Process("")
 Built Text
-	Process.Current.Built.Length is 16
+	Process.Current.Built.Length is 19
 	""
 to Text
 	if executable is ""

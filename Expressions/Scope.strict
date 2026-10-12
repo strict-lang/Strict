@@ -38,14 +38,23 @@ TypeAt(name Text, ordinal Number) Text
 	""
 Overload(method Text, argumentTypes Texts, owner Text) Number
 	Scope(("*", "* types", "*", "* types"), ("a", "Other", "b", "Number")).Overload("*", ("V"), "V") is 0
+	Scope(("W", "W types", "W", "W types"), ("a", "Ts", "b", "Bs")).Overload("W", List(Text) + "List(B)", "F") is 1
 	if Count(method) < 2
 		return -1
-	let other = "," + owner + ","
-	let arguments = "," + Text.Combine(argumentTypes, ",") + ","
 	mutable ordinal = -1
 	for names
 		if value is method + " types"
 			ordinal = ordinal + 1
-			if ("," + types(index) + ",").Replace(",Other,", other).Replace(",Other,", other) is arguments
+			if Fits(types(index), argumentTypes, owner)
 				return ordinal
 	-1
+Fits(declared Text, argumentTypes Texts, owner Text) Boolean
+	Scope(List(Text), List(Text)).Fits("Other,Bytes", ("F", "List(Byte)"), "F") is true
+	Scope(List(Text), List(Text)).Fits("Texts", List(Text) + "Bytes", "F") is false
+	let other = "," + owner + ","
+	let arguments = "," + Text.Combine(Plurals(argumentTypes), ",") + ","
+	("," + declared + ",").Replace(",Other,", other).Replace(",Other,", other) is arguments
+Plurals(typeNames Texts) Texts
+	Scope(List(Text), List(Text)).Plurals(("List(B)", "N", "List(A, B)")) is ("Bs", "N", "List(A, B)")
+	for typeNames
+		value.StartsWith("List(") and (value.IndexOf(",") < 0) then value.Substring(5, value.Length - 6) + "s" else value

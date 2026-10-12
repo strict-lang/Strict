@@ -62,6 +62,8 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("Process", "RunTool") is "strict_process_runtool"
 	MlirNatives(Texts, 1).TypeHelper("Degrees", "Sin") is "strict_degrees_sin"
 	MlirNatives(Texts, 1).TypeHelper("Vector2", "Atan") is "strict_vector2_atan"
+	MlirNatives(Texts, 1).TypeHelper("File", "ReadBytes") is "strict_file_readbytes"
+	MlirNatives(Texts, 1).TypeHelper("File", "WriteLines") is "strict_file_writelines"
 	if kind + "." + name is not in Hosted.Methods
 		return ""
 	let suffix = name is "ReadLines" then "read_lines" else name.Lower
