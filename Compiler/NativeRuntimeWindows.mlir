@@ -52,7 +52,7 @@
   llvm.func @GetModuleFileNameA(!llvm.ptr, !llvm.ptr, i32) -> i32
   llvm.func @GetFileAttributesExA(!llvm.ptr, i32, !llvm.ptr) -> i32
   llvm.func @_localtime64(!llvm.ptr) -> !llvm.ptr
-  llvm.mlir.global internal constant @strict_separator_path("\5C\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_separator_path("/\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
   func.func private @strict_directory_exists(%self: f64, %path: f64) -> f64 {
     %invalid = arith.constant -1 : i32

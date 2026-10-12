@@ -37,7 +37,6 @@
   llvm.func @mkstemp(!llvm.ptr) -> i32
   llvm.func @close(i32) -> i32
   llvm.func @unlink(!llvm.ptr) -> i32
-  llvm.func @fflush(!llvm.ptr) -> i32
   llvm.func @fork() -> i32
   llvm.func @execl(!llvm.ptr, !llvm.ptr, ...) -> i32
   llvm.func @_exit(i32)

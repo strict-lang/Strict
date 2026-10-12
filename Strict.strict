@@ -19,12 +19,14 @@ Message(command Text, rest Texts) Text
 	Strict.Message("version", List(Text)).StartsWith(Version + " 20") is true
 	Strict.Message("help", List(Text)).StartsWith("strict <file> [arguments]  run") is true
 	Strict.Message("test", ("a.strict", ".")) is "a.strict not found"
+	Strict.Message("test", ("Compiler", ".")) is ""
 	Strict.Message("check", ("Compiler", ".")) is ""
 	if command is in ("version", "--version")
 		return Version + " " + Process.Current.Built.Substring(0, 16)
 	if (command is in Informing) or (rest.Length < 2)
 		return Text.Combine(Help, "\n")
-	(command is "check") or File(rest(0)).Exists then "" else rest(0) + " not found"
+	let isFolder = (command is "test") and Directory.Exists(rest(0))
+	(command is "check") or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
 Rooted(arguments Texts) Texts
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
 	Strict.Rooted(("a.strict", "Compiler")) is ("a.strict", "Compiler")

@@ -13,6 +13,12 @@
   llvm.func @remove(!llvm.ptr) -> i32
   llvm.func @fgetc(!llvm.ptr) -> i32
   llvm.func @fputc(i32, !llvm.ptr) -> i32
+  llvm.func @fflush(!llvm.ptr) -> i32
+  func.func private @strict_flush() {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
+    return
+  }
   func.func private @strict_file_delete(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
@@ -142,6 +148,7 @@
     %emptyView = llvm.mlir.addressof @strict_empty_view : !llvm.ptr
     %emptyViewHolder = llvm.getelementptr %emptyView[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %emptyHolderBits, %emptyViewHolder : f64, !llvm.ptr
+    func.call @strict_characters_init() : () -> ()
     %stackBits = llvm.ptrtoint %stack : !llvm.ptr to i64
     %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
     llvm.store %stackBits, %stackSlot : i64, !llvm.ptr
@@ -943,6 +950,8 @@
   }
   func.func private @strict_gc_collect() {
     %zero = arith.constant 0 : i64
+    %measuredSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
+    llvm.store %zero, %measuredSlot : i64, !llvm.ptr
     %one = arith.constant 1 : i64
     %classCount = arith.constant 64 : i64
     %minimum = arith.constant 4194304 : i64
@@ -2257,18 +2266,36 @@
     %result = func.call @strict_dictionary_remove(%dictionary, %key, %isText) : (f64, f64, i1) -> f64
     return %result : f64
   }
+  llvm.mlir.global internal @strict_measured_text(0 : i64) : i64
+  llvm.mlir.global internal @strict_measured_length(0 : i64) : i64
   func.func private @strict_text_length(%text: f64) -> f64 {
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
+    %address = llvm.ptrtoint %pointer : !llvm.ptr to i64
+    %textSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
+    %lengthSlot = llvm.mlir.addressof @strict_measured_length : !llvm.ptr
+    %measured = llvm.load %textSlot : !llvm.ptr -> i64
+    %known = arith.cmpi eq, %measured, %address : i64
+    cf.cond_br %known, ^cached, ^measure
+  ^cached:
+    %cachedLength = llvm.load %lengthSlot : !llvm.ptr -> i64
+    %cachedResult = arith.uitofp %cachedLength : i64 to f64
+    return %cachedResult : f64
+  ^measure:
     %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    llvm.store %address, %textSlot : i64, !llvm.ptr
+    llvm.store %length, %lengthSlot : i64, !llvm.ptr
     %result = arith.uitofp %length : i64 to f64
     return %result : f64
   }
   func.func private @strict_text_at(%text: f64, %index: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    %length = func.call @strict_text_length(%text) : (f64) -> f64
     %negative = arith.cmpf olt, %index, %zero : f64
+    cf.cond_br %negative, ^wrap, ^read(%index : f64)
+  ^wrap:
+    %length = func.call @strict_text_length(%text) : (f64) -> f64
     %wrapped = arith.addf %index, %length : f64
-    %chosen = arith.select %negative, %wrapped, %index : f64
+    cf.br ^read(%wrapped : f64)
+  ^read(%chosen: f64):
     %at = arith.fptosi %chosen : f64 to i64
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
     %slot = llvm.getelementptr %pointer[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -2317,15 +2344,35 @@
   }
   func.func private @strict_text_index(%text: f64, %search: f64, %start: f64) -> f64 {
     %none = arith.constant -1.0 : f64
+    %nothing = arith.constant 0 : i8
     %a = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
     %b = func.call @strict_ptr(%search) : (f64) -> !llvm.ptr
-    %length = func.call @strict_text_length(%text) : (f64) -> f64
-    %beyond = arith.cmpf ogt, %start, %length : f64
-    cf.cond_br %beyond, ^missing, ^search
-  ^search:
     %offset = arith.fptosi %start : f64 to i64
+    %zeroStart = arith.constant 0.0 : f64
+    %fromStart = arith.cmpf ole, %start, %zeroStart : f64
+    cf.cond_br %fromStart, ^search, ^measure
+  ^measure:
+    %textLength = func.call @strict_text_length(%text) : (f64) -> f64
+    %short = arith.cmpf ogt, %start, %textLength : f64
+    cf.cond_br %short, ^missing, ^search
+  ^search:
     %from = llvm.getelementptr %a[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %found = llvm.call @strstr(%from, %b) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %first = llvm.load %b : !llvm.ptr -> i8
+    %isEmpty = arith.cmpi eq, %first, %nothing : i8
+    cf.cond_br %isEmpty, ^general, ^second
+  ^second:
+    %secondSlot = llvm.getelementptr %b[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %following = llvm.load %secondSlot : !llvm.ptr -> i8
+    %isSingle = arith.cmpi eq, %following, %nothing : i8
+    cf.cond_br %isSingle, ^single, ^general
+  ^single:
+    %character = arith.extui %first : i8 to i32
+    %character_found = llvm.call @strchr(%from, %character) : (!llvm.ptr, i32) -> !llvm.ptr
+    cf.br ^found(%character_found : !llvm.ptr)
+  ^general:
+    %text_found = llvm.call @strstr(%from, %b) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    cf.br ^found(%text_found : !llvm.ptr)
+  ^found(%found: !llvm.ptr):
     %null = llvm.mlir.zero : !llvm.ptr
     %isNull = llvm.icmp "eq" %found, %null : !llvm.ptr
     cf.cond_br %isNull, ^missing, ^hit
@@ -2354,29 +2401,70 @@
   ^exit:
     return %last : f64
   }
+  llvm.mlir.global internal @strict_characters(dense<0> : tensor<512xi8>) : !llvm.array<512 x i8>
+  func.func private @strict_characters_init() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %count = arith.constant 256 : i64
+    %table = llvm.mlir.addressof @strict_characters : !llvm.ptr
+    cf.br ^loop(%zero : i64)
+  ^loop(%code: i64):
+    %more = arith.cmpi ult, %code, %count : i64
+    cf.cond_br %more, ^fill, ^done
+  ^fill:
+    %offset = arith.addi %code, %code : i64
+    %slot = llvm.getelementptr %table[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = arith.trunci %code : i64 to i8
+    llvm.store %byte, %slot : i8, !llvm.ptr
+    %next = arith.addi %code, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return
+  }
   func.func private @strict_text_substring(%text: f64, %start: f64, %length: f64) -> f64 {
     %one = arith.constant 1 : i64
     %terminator = arith.constant 0 : i8
     %zero = arith.constant 0.0 : f64
     %a = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %textLength = func.call @strict_text_length(%text) : (f64) -> f64
     %negativeStart = arith.cmpf olt, %start, %zero : f64
     %startOrZero = arith.select %negativeStart, %zero, %start : f64
+    %negativeCount = arith.cmpf olt, %length, %zero : f64
+    %countOrZero = arith.select %negativeCount, %zero, %length : f64
+    %textLength = func.call @strict_text_length(%text) : (f64) -> f64
     %beyond = arith.cmpf ogt, %startOrZero, %textLength : f64
     %clampedStart = arith.select %beyond, %textLength, %startOrZero : f64
     %rest = arith.subf %textLength, %clampedStart : f64
-    %negativeCount = arith.cmpf olt, %length, %zero : f64
-    %countOrZero = arith.select %negativeCount, %zero, %length : f64
     %tooLong = arith.cmpf ogt, %countOrZero, %rest : f64
     %clampedCount = arith.select %tooLong, %rest, %countOrZero : f64
     %offset = arith.fptosi %clampedStart : f64 to i64
     %count = arith.fptosi %clampedCount : f64 to i64
+    %from = llvm.getelementptr %a[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %isCharacter = arith.cmpi eq, %count, %one : i64
+    cf.cond_br %isCharacter, ^character, ^copy
+  ^character:
+    %byte = llvm.load %from : !llvm.ptr -> i8
+    %code = arith.extui %byte : i8 to i64
+    %twice = arith.addi %code, %code : i64
+    %table = llvm.mlir.addressof @strict_characters : !llvm.ptr
+    %shared = llvm.getelementptr %table[%twice] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %sharedBits = func.call @strict_bits(%shared) : (!llvm.ptr) -> f64
+    return %sharedBits : f64
+  ^copy:
     %size = arith.addi %count, %one : i64
     %copy = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
-    %from = llvm.getelementptr %a[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %done = llvm.call @memcpy(%copy, %from, %count) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %end = llvm.getelementptr %copy[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %terminator, %end : i8, !llvm.ptr
+    %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_text_copy(%text: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
+    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %size = arith.addi %length, %one : i64
+    %copy = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %done = llvm.call @memcpy(%copy, %pointer, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
     return %result : f64
   }
@@ -2385,7 +2473,7 @@
     %one = arith.constant 1 : i64
     %start = arith.constant 0 : i64
     %length = func.call @strict_text_length(%text) : (f64) -> f64
-    %copy = func.call @strict_text_substring(%text, %zero, %length) : (f64, f64, f64) -> f64
+    %copy = func.call @strict_text_copy(%text) : (f64) -> f64
     %pointer = func.call @strict_ptr(%copy) : (f64) -> !llvm.ptr
     %count = arith.fptosi %length : f64 to i64
     cf.br ^check(%start : i64)
@@ -3114,7 +3202,7 @@
   func.func private @strict_text_capitalize(%text: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %length = func.call @strict_text_length(%text) : (f64) -> f64
-    %copy = func.call @strict_text_substring(%text, %zero, %length) : (f64, f64, f64) -> f64
+    %copy = func.call @strict_text_copy(%text) : (f64) -> f64
     %pointer = func.call @strict_ptr(%copy) : (f64) -> !llvm.ptr
     %first = llvm.load %pointer : !llvm.ptr -> i8
     %wide = arith.extui %first : i8 to i32

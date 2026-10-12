@@ -3,3 +3,6 @@ Greet Text
 	TextHelper("World").Greet is "Hello, World!"
 	TextHelper("Strict").Greet is "Hello, Strict!"
 	"Hello, " + text + "!"
+Initial Text
+	TextHelper("world").Initial + TextHelper("world").text.Substring(0, 1) is "Ww"
+	text.Substring(0, 1).Upper

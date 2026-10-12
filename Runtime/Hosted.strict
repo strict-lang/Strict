@@ -5,6 +5,7 @@ constant Existing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "
 constant Listing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Directories", "Strict/List(Text)", "path"), 0, -1), Current)
 constant Reading = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "ReadBytes", "Strict/List(Byte)"), List(Number), 0), Current.WithRegister(0, VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Any.strict"))))
 constant Dating = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Modified", "Strict/Number"), List(Number), 0), Reading.frame)
+constant Probing = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Exists", "Strict/Boolean"), List(Number), 0), Current)
 constant Timing = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Elapsed", "Strict/Number"), List(Number), -1), Current)
 constant Logging = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Logarithm", "Strict/Number"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(1)))
 constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(90)))
@@ -51,10 +52,12 @@ Stored VmValue
 	Answered(path)
 Answered(path Text) VmValue
 	Hosted(Existing).Answered(".").IsTrue is true
+	Hosted(Probing).Answered(".").IsTrue is false
 	Hosted(Dating).Answered("Any.strict").number > 1.7e9 is true
 	if call.MethodName is "Modified"
 		return VmValue.OfNumber(File(path).Modified)
-	call.MethodName is "Exists" then VmValue.OfBoolean(File(path).Exists or Directory.Exists(path)) else VmValue.None
+	let exists = call.TypeName is "Strict/Directory" then Directory.Exists(path) else File(path).Exists
+	call.MethodName is "Exists" then VmValue.OfBoolean(exists) else VmValue.None
 Entries VmValue
 	Hosted(Listing).Entries.Length > 0 is true
 	Hosted(Reading).Entries.items.First.number is 102

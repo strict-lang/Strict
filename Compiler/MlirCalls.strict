@@ -114,11 +114,12 @@ ArgumentTypes(count Number) Texts
 	for count
 		"f64"
 Printed(entry InstructionEntry) Texts
-	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Length is 6
+	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Last.IndexOf("@strict_flush()") > 0 is true
 	let address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	constant printf = " = llvm.call @printf("
 	constant vararg = ") vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr"
+	constant flush = "    func.call @strict_flush() : () -> ()"
 	if entry.payload(1) is 0
-		return (address, "    " + Temp("c") + printf + Temp("a") + vararg + ") -> i32")
+		return (address, "    " + Temp("c") + printf + Temp("a") + vararg + ") -> i32", flush)
 	constant pointerCall = "    " + Temp("c") + printf + Temp("a") + ", " + Temp("bp") + vararg + ", !llvm.ptr) -> i32"
-	List(Text) + address + MlirTexts(function, position).Pointer(entry.payload(2), "b") + pointerCall
+	List(Text) + address + MlirTexts(function, position).Pointer(entry.payload(2), "b") + pointerCall + flush

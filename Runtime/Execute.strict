@@ -13,9 +13,16 @@ Run(arguments Texts) Number
 	Machine(Resolver(types).Resolved, logger).Launch(types.First.Name, numbers)
 	0
 Test(path Text, root Text) Number
+	if Directory.Exists(path)
+		return Folder(path, root)
 	let failed = Verified(path, root)
 	if failed is 0
 		logger.Log("All tests passed in " + path)
+	failed
+Folder(path Text, root Text) Number
+	mutable failed = 0
+	for Directory.Files(path, "*.strict")
+		failed = failed + Test(value, root)
 	failed
 Verified(path Text, root Text) Number
 	let cache = BinaryFile(FileCompiler.Normalized(path))
