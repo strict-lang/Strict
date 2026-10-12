@@ -39,6 +39,11 @@ Assignable(argument Text, declared Text, isExact Boolean) Boolean
 	let plural = isList then argument.Substring(5, argument.Length - 6) + "s" else argument
 	if plural is declared
 		return true
-	if isExact
-		return false
-	(declared is "Generic") or (types.ValueOf(declared) is argument) or (types.ValueOf(argument) is declared)
+	(isExact is false) and Converts(argument, declared)
+Converts(argument Text, declared Text) Boolean
+	Scaling.Converts("Byte", "Number") is true
+	Overloads(TypeInference.Colors.types).Converts("ColorValue", "Color") is true
+	Scaling.Converts("Text", "Number") is false
+	if (declared is "Generic") or (types.ValueOf(declared) is argument) or (types.ValueOf(argument) is declared)
+		return true
+	TypeInference(types, List(Scope)).Converter(argument, declared) is not ""
