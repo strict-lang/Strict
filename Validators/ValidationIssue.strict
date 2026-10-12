@@ -1,6 +1,7 @@
 has ruleName Text
 has target Text
-has Message Text
+has Line Number
 to Text
-	ValidationIssue("UnusedMemberMustBeRemoved", "count", "Never used") to Text is "UnusedMemberMustBeRemoved: count"
+	ValidationIssue("UnusedMemberMustBeRemoved", "count", 3) to Text is "UnusedMemberMustBeRemoved: count"
+	ValidationIssue("UnusedMemberMustBeRemoved", "count", 3).Line is 3
 	ruleName + ": " + target

@@ -15,26 +15,27 @@ Issues ValidationIssues
 		issues = issues + LineIssues(value, index)
 	issues + MethodIssues + CountIssues
 LineIssues(line Text, number Number) ValidationIssues
-	Sample.LineIssues("\t\t\t\t\t\t1", 2).First to Text is "NestingMoreThanFiveLevelsIsNotAllowed: line 3"
-	Sample.LineIssues(" a", 0).First to Text is "ExtraWhitespacesFoundAtBeginningOfLine: line 1"
+	Sample.LineIssues("\t\t\t\t\t\t1", 2).First.Line is 3
+	Sample.LineIssues(" a", 0).First to Text is "ExtraWhitespacesFoundAtBeginningOfLine: indent with tabs"
 	mutable issues = List(Mutable(ValidationIssue))
-	let where = "line " + (number + 1)
+	let length = line.Length to Text + " > " + MaxCharacters
 	if line.StartsWith("\t") and (line.Length > MaxCharacters)
-		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", where, line.Length to Text + " > " + MaxCharacters))
+		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", length, number + 1))
 	if line.StartsWith("\t\t\t\t\t\t")
-		issues.Add(ValidationIssue("NestingMoreThanFiveLevelsIsNotAllowed", where, "more than five levels"))
+		issues.Add(ValidationIssue("NestingMoreThanFiveLevelsIsNotAllowed", "more than five levels", number + 1))
 	if line.StartsWith(" ")
-		issues.Add(ValidationIssue("ExtraWhitespacesFoundAtBeginningOfLine", where, "indent with tabs"))
+		issues.Add(ValidationIssue("ExtraWhitespacesFoundAtBeginningOfLine", "indent with tabs", number + 1))
 	issues
 MethodIssues ValidationIssues
 	Long.MethodIssues.First to Text is "MethodLengthMustNotExceedTwelve: Run"
+	Long.MethodIssues.First.Line is 1
 	let shape = TypeShape(lines)
 	mutable issues = List(Mutable(ValidationIssue))
 	mutable start = -1
 	for lines.Length + 1
 		let isHeader = (index is lines.Length) or (lines(index).StartsWith("\t") is false)
 		if isHeader and (start >= 0) and (index - start > MaxMethodLines)
-			issues.Add(ValidationIssue("MethodLengthMustNotExceedTwelve", lines(start), (index - start) to Text + " lines"))
+			issues.Add(ValidationIssue("MethodLengthMustNotExceedTwelve", lines(start), start + 1))
 		if isHeader and (index < lines.Length) and shape.IsMethodHeader(lines(index))
 			start = index
 	issues
@@ -58,8 +59,8 @@ Count(start Text) Number
 		count = count + (value.StartsWith(start) then 1 else 0)
 	count
 Counted(rule Text, count Number, limit Number) ValidationIssues
-	Sample.Counted("A", 16, 15).First to Text is "A: 16"
+	Sample.Counted("A", 16, 15).First to Text is "A: 16 > 15"
 	Sample.Counted("A", 15, 15).Length is 0
 	if count <= limit
 		return List(ValidationIssue)
-	List(ValidationIssue) + ValidationIssue(rule, count to Text, "limit is " + limit)
+	List(ValidationIssue) + ValidationIssue(rule, count to Text + " > " + limit, 1)

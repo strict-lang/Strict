@@ -12,7 +12,7 @@ CheckFile(path Text, mutations Texts, isBase Boolean, typeNames Texts) Number
 	let rules = TypeValidator(TypeShape(lines), mutations).Validate + Limits(lines, isBase).Issues
 	let found = rules + Names(lines, typeNames).Issues
 	for found
-		logger.Log(path + ": " + value)
+		logger.Log(path + ":line " + value.Line + ": " + value)
 	found.Length
 Mutations(files Texts) Texts
 	mutable mutations = List(Mutable(Text))

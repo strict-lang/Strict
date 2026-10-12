@@ -10,22 +10,22 @@ Issues ValidationIssues
 		issues = issues + LineIssues(value, index)
 	issues
 LineIssues(line Text, number Number) ValidationIssues
-	Sample.LineIssues("\tlet constant = 1", 3).First to Text is "CannotUseKeywordsAsName: line 4"
+	Sample.LineIssues("\tlet constant = 1", 3).First.Line is 4
 	let isHeader = TypeShape(lines).IsMethodHeader(line)
 	mutable issues = List(Mutable(ValidationIssue))
 	for DeclaredNames(line)
-		issues = issues + NameIssues(line, value, isHeader and (index is 0), "line " + (number + 1))
+		issues = issues + NameIssues(line, value, isHeader and (index is 0), number + 1)
 	issues
-NameIssues(line Text, name Text, isMethod Boolean, where Text) ValidationIssues
-	Sample.NameIssues("has from Text", "from", false, "line 1").First to Text is "CannotUseKeywordsAsName: line 1"
-	Sample.NameIssues("in(other) Boolean", "in", true, "line 2").Length is 0
+NameIssues(line Text, name Text, isMethod Boolean, number Number) ValidationIssues
+	Sample.NameIssues("has from Text", "from", false, 1).First to Text is "CannotUseKeywordsAsName: from"
+	Sample.NameIssues("in(other) Boolean", "in", true, 2).Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	if (isMethod is false) and (name is in Keywords)
-		issues.Add(ValidationIssue("CannotUseKeywordsAsName", where, name))
+		issues.Add(ValidationIssue("CannotUseKeywordsAsName", name, number))
 	if IsListPrefixed(line, name)
-		issues.Add(ValidationIssue("ListPrefixIsNotAllowedUseImplementationTypeNameInPlural", where, name))
+		issues.Add(ValidationIssue("ListPrefixIsNotAllowedUseImplementationTypeNameInPlural", name, number))
 	if IsMisnamedConstant(line, name)
-		issues.Add(ValidationIssue("ConstantNameMustNotBeATypeOrMethodName", where, name))
+		issues.Add(ValidationIssue("ConstantNameMustNotBeATypeOrMethodName", name, number))
 	issues
 IsListPrefixed(line Text, name Text) Boolean
 	Sample.IsListPrefixed("Listed Number", "Listed") is true

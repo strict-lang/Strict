@@ -2,13 +2,14 @@ has header Expressions/HeaderTokens
 has statements Expressions/SyntaxNodes
 has memberNames Texts
 has mutations Texts
+has line Number = 0
 constant Shadowing = UsageRules(HeaderTokens(Tokenizer("Run(value Number)").Tokens), BodyParser("Run(value Number)", "\tlet value = Count(1)", "\tvalue").Block(1, 1).Statements, List(Text), List(Text))
 constant ElementStore = BodyParser("Run", "	list(index) = 5").Block(1, 1).children(0)
 Sample UsageRules
 	Sample.statements.Length is 4
 	constant lines = ("Run(count, mutable list)", "\tlet aa = 5", "\tmutable bb = 0", "\tlist.Add(1)", "\tcount + bb")
 	constant runHeader = HeaderTokens(Tokenizer(lines(0)).Tokens)
-	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), ("Add"))
+	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), ("Add"), 1)
 Issues ValidationIssues
 	Sample.Issues.Length is 5
 	mutable issues = List(Mutable(ValidationIssue))
@@ -19,21 +20,22 @@ Issues ValidationIssues
 DeclarationIssues(declaration SyntaxNode) ValidationIssues
 	Sample.DeclarationIssues(Sample.statements(1)).Length is 1
 	Sample.DeclarationIssues(Sample.statements(0)).Length is 2
+	Sample.DeclarationIssues(Sample.statements(0)).First.Line is 2
 	Shadowing.DeclarationIssues(Shadowing.statements(0)).First.ruleName is "VariableHidesMemberUseDifferentName"
 	let name = Tokenizer(declaration.text).Tokens.Last
 	mutable issues = KindIssues(declaration, name)
 	if (name is in memberNames) or (name is "value")
-		issues.Add(ValidationIssue("VariableHidesMemberUseDifferentName", name, "Use a different name"))
+		issues.Add(ValidationIssue("VariableHidesMemberUseDifferentName", name, declaration.line))
 	if not IsUsed(name)
-		issues.Add(ValidationIssue("UnusedMethodVariableMustBeRemoved", name, "Never used"))
+		issues.Add(ValidationIssue("UnusedMethodVariableMustBeRemoved", name, declaration.line))
 	issues
 KindIssues(declaration SyntaxNode, name Text) ValidationIssues
 	Sample.KindIssues(Sample.statements(0), "aa").First.ruleName is "UseConstantHere"
 	mutable issues = List(Mutable(ValidationIssue))
 	if declaration.text.StartsWith("mutable ") and (not IsChanged(name))
-		issues.Add(ValidationIssue("VariableDeclaredAsMutableButValueNeverChanged", name, "Never changed"))
+		issues.Add(ValidationIssue("VariableDeclaredAsMutableButValueNeverChanged", name, declaration.line))
 	if declaration.text.StartsWith("let ") and declaration.children(0).IsLiteral
-		issues.Add(ValidationIssue("UseConstantHere", name, "Use constant"))
+		issues.Add(ValidationIssue("UseConstantHere", name, declaration.line))
 	issues
 ParameterIssues ValidationIssues
 	Sample.ParameterIssues.Length is 2
@@ -43,15 +45,16 @@ ParameterIssues ValidationIssues
 		return issues
 	for header.ParameterNames
 		if (value is in memberNames) or (value is "value")
-			issues.Add(ValidationIssue("ParameterHidesMemberUseDifferentName", value, "Use a different name"))
+			issues.Add(ValidationIssue("ParameterHidesMemberUseDifferentName", value, line))
 		if header.tokens(0) is not "from" and (not IsUsed(value))
-			issues.Add(ValidationIssue("UnusedMethodParameterMustBeRemoved", value, "Never used"))
+			issues.Add(ValidationIssue("UnusedMethodParameterMustBeRemoved", value, line))
 	issues + MutableParameterIssues
 MutableParameterIssues ValidationIssues
 	Sample.MutableParameterIssues.Length is 1
+	Sample.MutableParameterIssues.First.Line is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for header.MutableParameters
-		issues.Add(ValidationIssue("ParameterMustNotBeMutableReturnTheChangedValue", value, "Return the changed value"))
+		issues.Add(ValidationIssue("ParameterMustNotBeMutableReturnTheChangedValue", value, line))
 	issues
 IsUsed(name Text) Boolean
 	Sample.IsUsed("count") is true

@@ -11,16 +11,19 @@ Validate ValidationIssues
 		if shape.IsMethodHeader(value)
 			let header = HeaderTokens(Tokenizer(value).Tokens)
 			let statements = BodyParser(shape.lines).Block(index + 1, 1).Statements
-			issues = issues + UsageRules(header, statements, shape.MemberScope.names, mutations).Issues
+			issues = issues + UsageRules(header, statements, shape.MemberScope.names, mutations, index + 1).Issues
 	MemberIssues + ConstantIssues + issues
 MemberIssues ValidationIssues
 	Sample.MemberIssues.Length is 1
+	Sample.MemberIssues.First.Line is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	if IsExempt
 		return issues
-	for MemberNames
-		if value is not in ReservedNames and (not IsPublic(value)) and UsageCount(value) < 2
-			issues.Add(ValidationIssue("UnusedMemberMustBeRemoved", value, "Never used"))
+	for shape.lines
+		if shape.IsMemberLine(value)
+			let name = HeaderTokens(Tokenizer(value).Tokens).MemberName
+			if name is not in ReservedNames and (not IsPublic(name)) and UsageCount(name) < 2
+				issues.Add(ValidationIssue("UnusedMemberMustBeRemoved", name, index + 1))
 	issues
 MemberNames Texts
 	Sample.MemberNames is ("unused", "logger")
@@ -58,7 +61,7 @@ ConstantIssues ValidationIssues
 	mutable issues = List(Mutable(ValidationIssue))
 	for shape.lines
 		if IsComputedMember(value)
-			issues.Add(ValidationIssue("UseConstantHere", HeaderTokens(Tokenizer(value).Tokens).MemberName, "Use constant"))
+			issues.Add(ValidationIssue("UseConstantHere", HeaderTokens(Tokenizer(value).Tokens).MemberName, index + 1))
 	issues
 IsComputedMember(line Text) Boolean
 	Sample.IsComputedMember("has number = 17 + 4") is true
