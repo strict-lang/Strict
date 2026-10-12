@@ -56,7 +56,7 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Call(SyntaxNode("Call", "Greeter", SyntaxNode("Text", "\"a\"")), CodeBlock.Empty).Result is 1
 	Plain.Call(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.Call(SyntaxNode("Call", "Dictionary", One), CodeBlock.Empty).instructions.Last.kind is not InstructionType.Invoke
-	if (node.Kind is "Call") and (node.text is in ("List", "Dictionary"))
+	if (node.Kind is "Call") and (node.text is in ("List", "Dictionary", "Mutable"))
 		return Constructed(node, block)
 	if IndexCodegen(value).IsIndexing(node, block)
 		return IndexCodegen(value).Indexed(node, block)
@@ -68,6 +68,9 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 Constructed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Constructed(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.Constructed(SyntaxNode("Call", "Dictionary"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
+	Plain.Constructed(SyntaxNode("Call", "Mutable", One), CodeBlock.Empty).instructions(0).payload is (0, 1, 1)
+	if node.text is "Mutable"
+		return Expression(node.children(0), block)
 	let isEmpty = (node.text is "List") or (node.children.Length is 0) or IsTypeName(node.children(0), block)
 	isEmpty then Elements.Empty(TypeOf(node, block), block) else Elements.Of(SyntaxNode("List", "", node.children), block)
 InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
