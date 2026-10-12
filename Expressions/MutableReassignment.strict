@@ -9,5 +9,5 @@ Parse(text Text) MutableReassignment
 	if equalsIndex is -1
 		return MutableReassignment(text, "")
 	let name = text.Substring(0, equalsIndex).Trim
-	let value = text.Substring(equalsIndex + 3, text.Length - equalsIndex - 3).Trim
-	MutableReassignment(name, value)
+	let assigned = text.Substring(equalsIndex + 3, text.Length - equalsIndex - 3).Trim
+	MutableReassignment(name, assigned)

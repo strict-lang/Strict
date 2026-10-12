@@ -16,7 +16,6 @@ In priority order. Remove what is done, add what is found.
    - `check` issues need a line number: the client marks the first line containing the target for now.
 9. **Native gaps**:
    - An element store with a computed index (`result(position % 4) = value`) emits invalid MLIR, only a variable or a number works as index (`let slot = position % 4` first).
-   - A parameter named `value` hides the instance natively (`value` is the instance in a method): the method reads its members from the parameter. The validator should reject the name.
    - A one element list of lists prints `(1, 0)` on the Strict VM but `((1, 0))` natively.
    - Logging a one-member instance prints its member natively but `(member)` on the Strict VM and in C# (`Examples/ProcessProbe.strict`: `Process.Find("nasm")`).
    - `AdjustBrightness` prints garbage on both backends: `Image(Size(width, height))` without colors, element assignment `adjusted.Colors(index) = ...` on a mutable member and the 2D index `image.Colors(x, y)` are not supported yet. `ProcessImage.strict` does not build: `ImageLoader` and `ImageSaver` were C++ plugins (`NativePlugins/`) of the C# VM, the native compiler can't call C functions yet. `Png` reads PNG files in Strict now (gray, palette, RGB and alpha up to 8 bits, all filters, not interlaced), `ImageLoader` could use it for PNG files, JPG reading and any image saving are still missing.

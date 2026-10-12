@@ -80,14 +80,14 @@ IsAppend(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsAppend(BodyParser("Run", "\tvalues = values + values").Block(1, 1).children(0), Owned) is false
 	Plain.IsAppend(BodyParser("Run", "\tx = values + 1").Block(1, 1).children(0), Owned) is false
 	Plain.IsAppend(BodyParser("Run", "\ttext = text + 1").Block(1, 1).children(0), Owned.Declare("text", "Texts")) is false
-	let value = node.children.Last
-	if node.Kind is not "Reassignment" or value.text is not "+"
+	let sum = node.children.Last
+	if node.Kind is not "Reassignment" or sum.text is not "+"
 		return false
-	let list = value.children(0)
+	let list = sum.children(0)
 	let types = values.inference.types
 	let isList = (list to Text is node.children(0) to Text) and types.IsPlural(values.TypeOf(list, block))
 	let isVariable = (list.Kind is "Identifier") and (values.target.IsMember(values.target.TypeName, list.text) is false)
-	isList and isVariable and (types.IsPlural(values.TypeOf(value.children(1), block)) is false)
+	isList and isVariable and (types.IsPlural(values.TypeOf(sum.children(1), block)) is false)
 IsNew(node SyntaxNode) Boolean
 	Plain.IsNew(ValueCodegen.Ones) is false
 	Plain.IsNew(SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Identifier", "x")))) is true

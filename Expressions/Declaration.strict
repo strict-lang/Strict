@@ -19,8 +19,8 @@ Parse(text Text) Declaration
 	if equalsIndex is -1
 		return Declaration(rest.Trim, "Any", "", declarationKind)
 	let name = rest.Substring(0, equalsIndex).Trim
-	let value = rest.Substring(equalsIndex + 3, rest.Length - equalsIndex - 3).Trim
-	Declaration(name, "Any", value, declarationKind)
+	let assigned = rest.Substring(equalsIndex + 3, rest.Length - equalsIndex - 3).Trim
+	Declaration(name, "Any", assigned, declarationKind)
 ExtractKind(text Text) Text
 	ExtractKind("constant x = 1") is "constant"
 	if text.StartsWith("constant ")

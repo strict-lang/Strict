@@ -37,9 +37,9 @@ Member(member MemberEntry, slot Number, count Number) Texts
 	if conversion is "skip"
 		return List(Text)
 	let memory = MlirMemory(function, 0)
-	let value = memory.Temp("m" + slot + "v")
-	let text = conversion is "" then value else "%x" + slot
-	let converted = conversion is "" then List(Text) else List(Text) + memory.Called(text, conversion, List(Text) + value)
+	let loaded = memory.Temp("m" + slot + "v")
+	let text = conversion is "" then loaded else "%x" + slot
+	let converted = conversion is "" then List(Text) else List(Text) + memory.Called(text, conversion, List(Text) + loaded)
 	let added = "    %l" + (count + 1) + " = func.call @strict_list_add(%l" + count + ", " + text + ") : (f64, f64) -> f64"
 	memory.Loaded("%p", slot, "m" + slot) + converted + added
 ElementConversion(kind Text) Text

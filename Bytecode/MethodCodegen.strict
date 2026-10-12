@@ -61,8 +61,8 @@ Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 		return LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
 	if (node.Kind is "MethodCall") and (node.text is "Log")
 		return Log(node.children(1), block)
-	let value = values.Expression((node.Kind is "Return" then node.children(0) else node), block)
-	node.Kind is "Return" then value.Add(InstructionEntry.Return(value.Result)) else value
+	let generated = values.Expression((node.Kind is "Return" then node.children(0) else node), block)
+	node.Kind is "Return" then generated.Add(InstructionEntry.Return(generated.Result)) else generated
 Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).instructions.First.payload is (1, 1, -1, 0)
@@ -82,10 +82,10 @@ Stored(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) C
 	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", InRun, false).instructions(0).texts is ("Run")
 	Plain.Stored(One, "a(0)", CodeBlock.Empty, false).instructions.Last.kind is InstructionType.StoreRegisterToVariable
 	let named = isDeclaration then block.Declare(CodeBlock.ErrorMarker, name) else block
-	let value = values.Expression(assigned, named)
-	let restored = CodeBlock(value.instructions, value.register, value.nextId, block.scope)
+	let generated = values.Expression(assigned, named)
+	let restored = CodeBlock(generated.instructions, generated.register, generated.nextId, block.scope)
 	let isConstant = assigned.IsLiteral and (name.IndexOf("(") < 0)
-	isConstant then block.Add(StoreConstant(value.instructions.Last, name)) else restored.Stored(name)
+	isConstant then block.Add(StoreConstant(generated.instructions.Last, name)) else restored.Stored(name)
 AssignedName(node SyntaxNode) Text
 	Plain.AssignedName(SyntaxNode("Declaration", "let a", One)) is "a"
 	Plain.AssignedName(ElementAssignment) is "x.a(1)"
@@ -133,6 +133,6 @@ Log(argument SyntaxNode, block CodeBlock) CodeBlock
 		return block.Add(InstructionEntry.Print(argument.Unquoted))
 	let hasPrefix = (argument.Kind is "Binary") and (argument.text is "+") and (argument.children(0).Kind is "Text")
 	let printed = hasPrefix then argument.children(1) else argument
-	let value = values.Expression(printed, block)
+	let generated = values.Expression(printed, block)
 	let prefix = hasPrefix then argument.children(0).Unquoted else ""
-	value.Add(InstructionEntry.PrintValue(prefix, value.Result, values.TypeOf(printed, value) is "Text"))
+	generated.Add(InstructionEntry.PrintValue(prefix, generated.Result, values.TypeOf(printed, generated) is "Text"))

@@ -29,9 +29,9 @@ Line(line SyntaxNode, method Text, block CodeBlock) CodeBlock
 	Checked(line, method, block)
 Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock
 	Even.Checked(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
-	let value = types.Generator.Expression(test, block)
-	let truth = value.Load(InstructionEntry.LoadBoolean(value.register, true))
-	let compared = truth.Add(InstructionEntry.Binary(InstructionType.Equal, (value.Result, truth.Result)))
+	let generated = types.Generator.Expression(test, block)
+	let truth = generated.Load(InstructionEntry.LoadBoolean(generated.register, true))
+	let compared = truth.Add(InstructionEntry.Binary(InstructionType.Equal, (generated.Result, truth.Result)))
 	let jumped = compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, compared.nextId)).WithNextId
 	let file = TypeEntry(types.fullName, List(MemberEntry), List(MethodEntry)).File
 	let place = " in " + method + " at " + file + ":line " + test.line

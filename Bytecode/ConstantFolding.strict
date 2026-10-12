@@ -13,14 +13,14 @@ Folded(node SyntaxNode) SyntaxNode
 	Limits.Folded(SyntaxNode("Binary", "*", (Limit, Two))).text is "6"
 	Limits.Folded(SyntaxNode("Binary", "/", (Limit, SyntaxNode("Number", "0")))).Kind is "Binary"
 	Limits.Folded(SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), Two))).Kind is "Binary"
-	let value = Negated(Constant(node))
-	if value.Kind is not "Binary" or value.text is not in ("+", "-", "*", "/", "%")
-		return value
-	let left = Folded(value.children(0))
-	let right = Folded(value.children(1))
+	let negated = Negated(Constant(node))
+	if negated.Kind is not "Binary" or negated.text is not in ("+", "-", "*", "/", "%")
+		return negated
+	let left = Folded(negated.children(0))
+	let right = Folded(negated.children(1))
 	if left.Kind is not "Number" or right.Kind is not "Number" or (right.text is "0")
-		return value
-	SyntaxNode("Number", Calculated(value.text, left.text to Number, right.text to Number) to Text)
+		return negated
+	SyntaxNode("Number", Calculated(negated.text, left.text to Number, right.text to Number) to Text)
 Inlined(body SyntaxNode) SyntaxNode
 	Limits.Inlined(Local).Lines("") is ("6 + 2")
 	mutable constants = List(Mutable(SyntaxNode))
@@ -64,10 +64,10 @@ Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 	if node.Kind is not "Identifier" and (isOther is false)
 		return node
 	let owner = isOther then node.children(0).text else typeName
-	let value = inference.ConstantOf(owner, node.text)
-	if (value is "") or (owner + "." + node.text is in aliases)
+	let definition = inference.ConstantOf(owner, node.text)
+	if (definition is "") or (owner + "." + node.text is in aliases)
 		return node
-	let tokens = Tokenizer(value).Tokens
+	let tokens = Tokenizer(definition).Tokens
 	let parsed = ConstantFolding(owner, inference).Qualified(SyntaxParser(tokens).ParseRange(0, tokens.Length))
 	parsed.Kind is "Member" then Aliased(parsed, aliases + (owner + "." + node.text)) else parsed
 Qualified(node SyntaxNode) SyntaxNode

@@ -18,8 +18,8 @@ ArgumentTypes(node SyntaxNode, owner Text, block CodeBlock) Texts
 Assigned(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Assigned(SyntaxNode("Declaration", "let a", ValueCodegen.One), CodeBlock.Empty).Kind is "Number"
 	Colored.Assigned(ColorReassignment, CodeBlock.Empty.Declare("c", "Color")).text is "Color"
-	let value = node.children.Last
-	node.Kind is "Declaration" then value else Converted(value, values.TypeOf(node.children(0), block), block)
+	let right = node.children.Last
+	node.Kind is "Declaration" then right else Converted(right, values.TypeOf(node.children(0), block), block)
 Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Colored.Converted(NewColorValue, "Color", CodeBlock.Empty).text is "Color"
 	Colored.Converted(NewColor, "ColorValue", CodeBlock.Empty).text is "to"
