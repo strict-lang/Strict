@@ -23,7 +23,7 @@ Begin Texts
 	bounds + Items + saved + Outered + Presized + header + iteration + Current
 Current Texts
 	Counting.Current.Length is 4
-	Text.Combine(Listing.Current).IndexOf("%t1g = llvm.load %t1gs : !llvm.ptr -> f64") > 0 is true
+	Text.Combine(Listing.Current).IndexOf("llvm.store %t1g, %v_value") > 0 is true
 	constant offset = "    " + Temp("o") + " = arith.mulf " + Temp("k") + ", " + Temp("s") + " : f64"
 	constant current = "    " + Temp("c") + " = arith.addf " + Temp("b") + ", " + Temp("o") + " : f64"
 	let indexed = (offset, current, function.Store(Temp("c"), "%v_index"))
@@ -31,14 +31,11 @@ Current Texts
 	if collection is ""
 		return indexed + function.Store(Temp("c"), "%v_value")
 	let character = MlirMemory(function, position).Called(Temp("g"), "strict_text_at", (Temp("v"), Temp("c")))
-	let element = collection is "Text" then List(Text) + character else Element
-	indexed + element + function.Store(Temp("g"), "%v_value")
-Element Texts
-	Listing.Element.Length is 3
-	constant whole = "    " + Temp("ci") + " = arith.fptosi " + Temp("c") + " : f64 to i64"
-	constant pointer = Temp("h") + "[" + Temp("ci") + "]"
-	constant slot = "    " + Temp("gs") + " = llvm.getelementptr " + pointer + " : (!llvm.ptr, i64) -> !llvm.ptr, f64"
-	(whole, slot, function.Load(Temp("g"), Temp("gs")))
+	indexed + (collection is "Text" then character else Element) + function.Store(Temp("g"), "%v_value")
+Element Text
+	Listing.Element.StartsWith("    %t1g = func.call @strict_hoisted_item(%t1h, %t1c, %t1hv, %t1v)") is true
+	constant operands = "(" + Temp("h") + ", " + Temp("c") + ", " + Temp("hv") + ", " + Temp("v") + ")"
+	"    " + Temp("g") + " = func.call @strict_hoisted_item" + operands + " : (!llvm.ptr, f64, i64, f64) -> f64"
 Collection Text
 	Counting.Collection is ""
 	let entry = function.method.instructions(position)
@@ -71,11 +68,13 @@ CountBounds(entry InstructionEntry) Texts
 	constant counter = collection is "Text" then "strict_text_length" else "strict_list_length"
 	(start, loaded, MlirMemory(function, position).Called(Temp("n"), counter, List(Text) + Temp("v")), step)
 Items Texts
-	Listing.Items.Last.IndexOf("@strict_list_items(%t1v)") > 0 is true
+	Listing.Items.First.IndexOf("@strict_list_items(%t1v)") > 0 is true
+	Listing.Items.Last is "    %t1hv = func.call @strict_list_version() : () -> i64"
 	constant collection = Collection
 	if (collection is "") or (collection is "Text")
 		return List(Text)
-	List(Text) + ("    " + Temp("h") + " = func.call @strict_list_items(" + Temp("v") + ") : (f64) -> !llvm.ptr")
+	let items = "    " + Temp("h") + " = func.call @strict_list_items(" + Temp("v") + ") : (f64) -> !llvm.ptr"
+	(items, "    " + Temp("hv") + " = func.call @strict_list_version() : () -> i64")
 Outered Texts
 	Counting.Outered.Length is 0
 	Nested.Outered.Last is "    llvm.store %t0y, %v_outer : f64, !llvm.ptr"

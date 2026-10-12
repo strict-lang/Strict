@@ -22,7 +22,8 @@ End Frame
 	let next = state(7).number + 1
 	if next >= state(6).number
 		return Restored(frame, state).Next
-	Current(frame, Counted(state, next), next).At(state(5).number + 1)
+	let start = state(5).number + 1
+	Current(frame, Counted(state, next), next).At(start)
 Counted(state List(VmValue), next Number) List(VmValue)
 	Looping(Counting).Counted(Looping(Counting).Begin.Local("#loop").items, 2).Length is 9
 	mutable result = state

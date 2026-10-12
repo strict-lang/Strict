@@ -1,0 +1,8 @@
+has step Number
+Rotated(values Numbers) Numbers
+	Rotation(1).Rotated((1, 2, 3) + 4) is (4, 1, 2, 3, 1)
+	mutable rotated = values
+	for rotated
+		let target = (index + step) % values.Length
+		rotated(target) = value
+	rotated + values(0)

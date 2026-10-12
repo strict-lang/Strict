@@ -4,7 +4,6 @@ constant Declared = CodeBlock.Empty.Declare("x", "Number")
 constant Shared = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", true)
 constant Owned = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", false)
 constant Appending = BodyParser("Run", "\tvalues = values + 1").Block(1, 1).children(0)
-constant Writing = BodyParser("Run", "\tvalues(0) = 5").Block(1, 1).children(0)
 constant WritingLoop = BodyParser("Run", "\tfor 3", "\t\tvalues(index) = index").Block(1, 1).children(0)
 constant SharingLoop = BodyParser("Run", "\tfor values", "\t\tvalues(index) = index").Block(1, 1).children(0)
 constant BranchCopy = BodyParser("Run", "\tmutable other = (1, 2)", "\tlet saved = other", "\tif 1 > 2", "\t\tother(0) = 5", "\tother(1) = 6").Block(1, 1)
@@ -57,17 +56,9 @@ Copied(node SyntaxNode, block CodeBlock) CodeBlock
 	let operation = node.text is "Add" then InstructionType.Add else InstructionType.Subtract
 	let changed = element.Load(InstructionEntry.Binary(operation, (list.Result, element.Result, element.register)))
 	changed.Stored(node.children(0).text)
-ElementCopied(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.ElementCopied(Writing, Shared).instructions(0).kind is InstructionType.CopyList
-	Plain.ElementCopied(Writing, Shared).Owns("values") is true
-	Plain.ElementCopied(Writing, Owned).instructions.Length is 0
-	MethodCodegen.Plain.Body(BranchCopy, CodeBlock.Empty).instructions(11).kind is InstructionType.CopyList
-	let target = node.children(0)
-	if node.Kind is not "Reassignment" or target.Kind is not "Call" or block.Owns(target.text)
-		return block
-	block.Add(InstructionEntry(InstructionType.CopyList, target.text, -1)).Sharing(target.text, false)
 CopiedBefore(loop SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.CopiedBefore(WritingLoop, Shared, false).instructions(0).kind is InstructionType.CopyList
+	MethodCodegen.Plain.Body(BranchCopy, CodeBlock.Empty).instructions.Last.payload.Length is 3
 	Plain.CopiedBefore(SharingLoop, Shared, false).instructions.Length is 0
 	mutable result = block
 	for ElementWritten(loop.children.Last)

@@ -8,6 +8,7 @@ constant Pair = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))
 constant Removal = InstructionEntry.Named(InstructionType.InvokeRemove, 1, "numbers")
 constant Hoisting = MlirLists(MlirParameters.Reading.function, 1)
 constant Pushing = InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult")
+constant Versioning = InstructionEntry(InstructionType.StoreRegisterToVariable, "numbers(1)", (0, -1, 1))
 constant Words = MemberEntry("words", "Strict/List(Text)", List(InstructionEntry), false)
 constant Literals = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 2, 1, 1, 1, 2))))
 Temp(suffix Text) Text
@@ -87,7 +88,7 @@ Appended(entry InstructionEntry) Texts
 	(function.Load(Temp("l"), name), element, added, function.Store(Temp("n"), name))
 Indexed(entry InstructionEntry) Texts
 	MlirLists(Listed, 2).Indexed(Steps(2)).Length is 6
-	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_items_at(") > 0 is true
+	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_at(") > 0 is true
 	let isText = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, entry.texts(0))) is "Text"
 	let getter = isText then "strict_text_at" else "strict_list_at"
 	let arguments = isText then (Temp("l"), Temp("i")) else (Temp("l"), Temp("i"), Temp("nb"))
@@ -95,8 +96,8 @@ Indexed(entry InstructionEntry) Texts
 	let loads = (function.Load(Temp("l"), "%v_" + entry.texts(0)), function.Load(Temp("i"), "%r" + entry.payload(1)))
 	let parameters = MlirParameters(function)
 	if entry.texts(0) is in parameters.FixedLists
-		let read = parameters.Read(entry.texts(0), Temp("i"), Temp("nb"), Temp("x"))
-		return (List(Text) + loads.Last) + NameBits + read + function.Store(Temp("x"), "%r" + entry.payload(0))
+		let read = parameters.Read(entry.texts(0), Temp("l"), Temp("i"), Temp("nb"), Temp("x"))
+		return loads + NameBits + read + function.Store(Temp("x"), "%r" + entry.payload(0))
 	(isText then loads else loads + NameBits) + access + function.Store(Temp("x"), "%r" + entry.payload(0))
 NameBits Texts
 	MlirLists(Listed, 2).NameBits.Last.IndexOf("strict_bits") > 0 is true
@@ -111,14 +112,17 @@ IsElementStore Boolean
 	entry.texts(0).IndexOf("(") > 0
 ElementStored(entry InstructionEntry) Texts
 	MlirLists(Written, 1).ElementStored(Written.method.instructions(1)).Last.IndexOf("strict_list_set") > 0 is true
+	MlirLists(Written, 1).ElementStored(Versioning).Last is "    llvm.store %t1s, %v_numbers : f64, !llvm.ptr"
 	let parts = PayloadDecoder(entry).ElementParts
 	let index = parts(1)
 	let isNumber = "0123456789".IndexOf(index.Substring(0, 1)) is not -1
 	constant prefix = "    " + Temp("i") + " = arith.constant "
-	let loaded = function.Load(Temp("i"), "%v_" + index)
-	let indexed = isNumber then prefix + index + ".0 : f64" else loaded
+	let indexed = isNumber then prefix + index + ".0 : f64" else function.Load(Temp("i"), "%v_" + index)
 	let loads = Target(parts(0)) + indexed + function.Load(Temp("e"), "%r" + entry.payload(0))
-	loads + MlirMemory(function, position).Called(Temp("s"), "strict_list_set", (Temp("l"), Temp("i"), Temp("e")))
+	let isVersioned = entry.payload.Length > 2
+	let helper = isVersioned then "strict_list_write" else "strict_list_set"
+	let call = MlirMemory(function, position).Called(Temp("s"), helper, (Temp("l"), Temp("i"), Temp("e")))
+	isVersioned then loads + call + function.Store(Temp("s"), "%v_" + parts(0)) else loads + call
 Target(path Text) Texts
 	MlirLists(Written, 1).Target("numbers") is ("    %t1l = llvm.load %v_numbers : !llvm.ptr -> f64")
 	MlirLists(Written, 1).Target("numbers.width").Last is "    %t1l = llvm.load %t1ls : !llvm.ptr -> f64"
