@@ -1,0 +1,3 @@
+has logger
+Run
+	logger.Log(Dataset.Read(File("NeuralNetworks/diabetes.csv").ReadLines, 2).Evaluated("Diabetes", (19, 10, 2), 200))

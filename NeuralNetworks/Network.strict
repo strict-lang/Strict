@@ -52,3 +52,20 @@ Difference(output Numbers, target Numbers) Numbers
 Error(input Numbers, target Numbers) Number
 	Single.Error((1, 1), List(Number) + 0.7310585786300049) is 0
 	(Difference(Predict(input), target) * Difference(Predict(input), target)).Sum
+Learned(data Dataset, epochs Number) Network
+	Network.Random((4, 3, 2)).Learned(Dataset.Pairs, 300).Accuracy(Dataset.Pairs) is 1
+	mutable trained = value
+	for epochs * data.inputs.Length
+		let position = index % data.inputs.Length
+		trained = trained.Trained(data.inputs(position), data.targets(position), 0.5)
+	trained
+Accuracy(data Dataset) Number
+	Single.Accuracy(Dataset(List(Numbers), List(Numbers))) is 0
+	mutable correct = 0
+	for data.inputs
+		if Best(Predict(value)) is Best(data.targets(index))
+			correct = correct + 1
+	data.inputs.Length is 0 then 0 else correct / data.inputs.Length
+Best(output Numbers) Number
+	Single.Best((0.1, 0.7, 0.2)) is 1
+	output.Index(output.Maximum)
