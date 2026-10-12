@@ -19,3 +19,10 @@ Written(path Text) Boolean
 	let exists = File(path).Exists
 	File(path).Delete
 	exists
+Renamed(path Text) Boolean
+	Renamed("Examples/BaseTypesTest/renamed") is true
+	File(path).Write(List(Text) + "renamed")
+	File(path).Rename(path + "2")
+	let isMoved = File(path + "2").Exists and (File(path).Exists is false)
+	File(path + "2").Delete
+	isMoved

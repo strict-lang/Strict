@@ -60,7 +60,7 @@ strict check Examples                     validate a folder (type rules, unused 
 
 Needed tools: `mlir-opt` and `mlir-translate` (LLVM MLIR, on Windows the msys64 ucrt64 package `mingw-w64-ucrt-x86_64-mlir`) and `clang` (LLVM 22). When they are missing `strict` says so and starts installing them (Windows: winget and pacman in a new window, Linux: the LLVM 22 release archive into `Tools/`).
 
-Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR) with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux), then let it build itself twice through a copy (a running `strict.exe` can't overwrite itself on Windows): `copy strict.exe strict0.exe` and `strict0 build Strict.strict` twice gives identical output (fixpoint).
+Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR) with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux), then let it build itself: `strict build Strict.strict` twice gives identical output (fixpoint). On Windows an existing executable is linked to `name.new.exe` first and then swapped in (`File.Rename`), the running `strict.exe` stays as `strict.old.exe` until the next build.
 
 ## Rules worth knowing
 - Limits: 120 characters per line, 13 lines per method (header and tests included), 4 parameters, 15 methods, 15 members, nesting depth 5, names 2-50 characters.

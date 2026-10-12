@@ -11,6 +11,7 @@
   llvm.func @log(f64) -> f64
   llvm.func @strftime(!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
   llvm.func @remove(!llvm.ptr) -> i32
+  llvm.func @rename(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @fgetc(!llvm.ptr) -> i32
   llvm.func @fputc(i32, !llvm.ptr) -> i32
   llvm.func @fflush(!llvm.ptr) -> i32
@@ -23,6 +24,14 @@
     %zero = arith.constant 0.0 : f64
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %removed = llvm.call @remove(%name) : (!llvm.ptr) -> i32
+    return %zero : f64
+  }
+  func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %newName = func.call @strict_ptr(%newPath) : (f64) -> !llvm.ptr
+    %removed = llvm.call @remove(%newName) : (!llvm.ptr) -> i32
+    %renamed = llvm.call @rename(%name, %newName) : (!llvm.ptr, !llvm.ptr) -> i32
     return %zero : f64
   }
   llvm.mlir.global internal constant @strict_time_format("%Y-%m-%d %H:%M:%S\00") : !llvm.array<18 x i8>

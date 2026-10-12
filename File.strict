@@ -8,3 +8,4 @@ from(path)
 Exists Boolean
 Modified Number
 Delete
+Rename(newPath Text)

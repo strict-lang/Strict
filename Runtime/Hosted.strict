@@ -9,7 +9,9 @@ constant Probing = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Exists
 constant Timing = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Elapsed", "Strict/Number"), List(Number), -1), Current)
 constant Logging = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Logarithm", "Strict/Number"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(1)))
 constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(90)))
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
+constant Aiming = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Vector2", "Atan", "Strict/Number"), List(Number), 0), Current.WithRegister(0, VmValue("Strict/Math/Vector2", 0, "", (VmValue.OfNumber(1), VmValue.OfNumber(0)))))
+constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), Current.WithRegister(0, VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing"))))
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted is true
 	Hosted(Invocation.AddCall).IsHosted is false
@@ -39,17 +41,23 @@ Processed VmValue
 	VmValue("Strict/ProcessResult", 0, "", (code, VmValue.OfText(result.Output), VmValue.OfText(result.error)))
 Stored VmValue
 	Hosted(Existing).Stored.IsTrue is true
-	let path = Location
 	if call.MethodName is "Write"
 		if "bytes" is in call.ParameterNames
-			File(path).Write(BytesOf(call.Arguments.First))
+			File(Location).Write(BytesOf(call.Arguments.First))
 		else
-			File(path).Write(TextsOf(call.Arguments.First))
-	if call.MethodName is "Delete"
-		File(path).Delete
+			File(Location).Write(TextsOf(call.Arguments.First))
+	if call.MethodName is in ("Delete", "Rename")
+		return Moved
 	if call.MethodName is "Create"
-		Directory.Create(path)
-	Answered(path)
+		Directory.Create(Location)
+	Answered(Location)
+Moved VmValue
+	Hosted(Deleting).Moved.IsTrue is false
+	if call.MethodName is "Delete"
+		File(Location).Delete
+	else
+		File(Location).Rename(call.Arguments.First.text)
+	Answered(Location)
 Answered(path Text) VmValue
 	Hosted(Existing).Answered(".").IsTrue is true
 	Hosted(Probing).Answered(".").IsTrue is false
@@ -94,6 +102,7 @@ Location Text
 Measured VmValue
 	Hosted(Sine).Measured.number is 1
 	Hosted(Logging).Measured.number is 0
+	Hosted(Aiming).Measured.number is 90
 	let type = TypeEntry.ShortName(call.TypeName)
 	let number = call.Instance.number
 	if type is "Number"
@@ -101,7 +110,7 @@ Measured VmValue
 	if type is "Degrees"
 		return VmValue.OfNumber(Turned(Degrees(number)).number)
 	if type is "Vector2"
-		return VmValue.OfNumber(Aimed(Vector2(call.Instance.items.First.number, call.Instance.items.Last.number)))
+		return VmValue.OfNumber(Vector2(call.Instance.items.First.number, call.Instance.items.Last.number).Atan.number)
 	VmValue.OfNumber(Inverted(Ratio(number)).number)
 Turned(angle Math/Degrees) Math/Ratio
 	Hosted(Sine).Turned(Degrees(90)).number is 1
@@ -109,6 +118,3 @@ Turned(angle Math/Degrees) Math/Ratio
 Inverted(ratio Math/Ratio) Math/Degrees
 	Hosted(Sine).Inverted(Ratio(1)).number is 45
 	call.MethodName is "Asin" then ratio.Asin else call.MethodName is "Acos" then ratio.Acos else ratio.Atan
-Aimed(vector Math/Vector2) Number
-	Hosted(Sine).Aimed(Vector2(1, 0)) is 90
-	vector.Atan.number

@@ -22,13 +22,25 @@ Build(base Text, program Text, tools Toolchain) Number
 		logger.Log(tools.Installing(missing))
 		return 1
 	File(base + ".mlir").Write(Mlir(program, tools.root, Platform.Current))
-	let built = tools.Built(base)
+	let built = Linked(base, tools)
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
 		return 1
 	CrossBuild(base, program, tools)
 	Removed(base)
 	0
+Linked(base Text, tools Toolchain) Text
+	NativeBuild.Linked("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed") is true
+	let executable = tools.Executable(base)
+	let isSwapped = (Platform.Current is Platform.Windows) and File(executable).Exists
+	let target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
+	let built = tools.Built(base, target)
+	if isSwapped and built.StartsWith("Built ")
+		let old = executable.Replace(".exe", ".old.exe")
+		File(executable).Rename(old)
+		File(target).Rename(executable)
+		File(old).Delete
+	built.Replace(target, executable)
 CrossBuild(base Text, program Text, tools Toolchain)
 	if Platform.Current is Platform.Windows
 		File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))

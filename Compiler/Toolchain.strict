@@ -75,12 +75,11 @@ Installing(missing Texts) Text
 	let where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
 	let problem = started.Failed then ", could not start it: " + started.error else ""
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
-Built(base Text) Text
-	OnWindows.Built("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+Built(base Text, executable Text) Text
+	OnWindows.Built("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed") is true
 	let lowered = Lowered(base)
 	if lowered is not ""
 		return lowered
-	let executable = Executable(base)
 	let system = platform is Platform.Windows then " -Wl,-Brepro" else " -lm"
 	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)
