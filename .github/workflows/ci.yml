@@ -1,0 +1,47 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    env:
+      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing Expressions ImageProcessing Math NeuralNetworks Runtime Validators
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        id: llvm
+        with:
+          path: Tools/LLVM-22.1.0-Linux-X64
+          key: llvm-22.1.0-linux-x64
+      - name: LLVM 22 (clang, mlir-opt, mlir-translate)
+        if: steps.llvm.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p Tools
+          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz | tar -xJ -C Tools LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate
+      - name: Bootstrap from the seed
+        run: sh Compiler/bootstrap.sh
+      - name: Self build until the fixpoint
+        run: |
+          for stage in 1 2 3; do
+            rm -f Strict.strictbinary
+            ./strict build Strict.strict
+            cp Strict.mlir stage$stage.mlir
+          done
+          cmp stage2.mlir stage3.mlir
+      - name: Tests on the Strict VM
+        run: |
+          for folder in $FOLDERS; do
+            ./strict test "$folder" > test.log 2>&1 || { grep -v "^Test passed" test.log; exit 1; }
+          done
+      - name: Native builds and tests
+        run: |
+          for folder in $FOLDERS; do
+            for file in "$folder"/*.strict; do
+              ./strict build "$file" > build.log 2>&1 || { grep -v "^Test passed" build.log; exit 1; }
+              base="${file%.strict}"
+              if [ -f "$base.test" ]; then
+                "./$base.test" > run.log 2>&1 || { grep -v "^Test passed" run.log; exit 1; }
+              fi
+            done
+          done

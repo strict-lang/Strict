@@ -3285,8 +3285,11 @@
     cf.cond_br %missing, ^absent, ^present
   ^present:
     %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    %directory = func.call @strict_directory_exists(%zero, %path) : (f64, f64) -> f64
+    %isDirectory = arith.cmpf one, %directory, %zero : f64
     %one = arith.constant 1.0 : f64
-    return %one : f64
+    %result = arith.select %isDirectory, %zero, %one : f64
+    return %result : f64
   ^absent:
     return %zero : f64
   }
