@@ -67,12 +67,13 @@ Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR
 - `is` has the lowest precedence: `a is b and c is d` must be written `(a is b) and (c is d)`. `is not` and `is not in` bind tighter: `value > 31 and value is not in (34, 92)` needs no brackets.
 - A conditional used as one of several arguments needs brackets: `Text(value, (isShort then 2 else 4))`.
 - `(x)` is just `x`, not a list; a single-element list is built with `List(Number) + x`.
+- `and`, `or` and `xor` of two Numbers are bitwise on their integer values (64-bit two's complement): `12 and 10 is 8`, `12 xor 10 is 6`.
 - Keywords and operator words (`from`, `to`, `is`, `in`, `and`, `or`, `not`, `constant`, `mutable`, `let`, ...) can't be names. A parameter called `value` collides with the implicit instance `value`.
 - Members don't repeat their type when the name already says it: `has number`, not `has number Number`.
 - Test lines are Boolean comparisons (`is`, `is not`, `>`, `<`) at the start of each method; every method needs at least one.
 - Other packages are referenced as `Package/Type` only in declarations (members, parameters, return types), method bodies use the plain type name.
 - `constant` for values computed only from constants, `let` for everything else that doesn't change, `mutable` only when a value really changes (loop counters).
-- Values never change: `list + element` gives a new list, a `mutable` variable can only be reassigned to such a new value. Internally the runtime keeps the same list and appends in place, the new list is the same memory and the previous version is not used anymore. Changing an old version again forces a copy, that is bad code: a list is either fixed, or growing and then only its latest version is used.
+- Values never change: `list + element` (or `list + otherList`) gives a new list, a `mutable` variable can only be reassigned to such a new value. Internally the runtime keeps the same list and appends in place, the new list is the same memory and the previous version is not used anymore. Changing an old version again forces a copy, that is bad code: a list is either fixed, or growing and then only its latest version is used.
 
 ## How it is built (from low to high level)
 | Package | Responsibility |

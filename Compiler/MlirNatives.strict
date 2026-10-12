@@ -23,12 +23,13 @@ ValueHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).ValueHelper("Boolean", "not", 0) is "strict_not"
 	MlirNatives(Texts, 1).ValueHelper("Number", "Increment", 0) is "strict_increment_one"
 	MlirNatives(Texts, 1).ValueHelper("Number", "Decrement", 1) is "strict_decrement"
+	MlirNatives(Texts, 1).ValueHelper("Number", "xor", 1) is "strict_number_xor"
 	if (kind is "Number") and (name is "Floor")
 		return "strict_floor"
 	if (kind is "Number") and (name is in ("Increment", "Decrement"))
 		return "strict_" + name.Lower + (count is 0 then "_one" else "")
-	if (kind is "Boolean") and (name is in ("not", "and", "or", "xor"))
-		return "strict_" + name
+	if (kind is in ("Boolean", "Number")) and (name is in ("not", "and", "or", "xor"))
+		return "strict_" + (kind is "Number" then "number_" else "") + name
 	kind is "Text" then TextHelper(name) else TypeHelper(kind, name)
 CollectionHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "in", 1) is "strict_list_has_text"

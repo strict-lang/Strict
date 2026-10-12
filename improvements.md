@@ -6,7 +6,6 @@ In priority order. Remove what is done, add what is found.
    - Without a token the GitHub API allows 60 requests per hour, each missing type costs the organization listing and one request per repository.
    - Only the `.strict` files directly in the package folder are downloaded (no sub packages), a newer version needs the folder deleted first.
 2. **`.strictbinary` cache**: `strict <file>`, `test` and `build` write `Name.strictbinary` next to `Name.strict` once all its tests passed: a zip with a `sources` entry (format version, build time of `strict`, every source file the compiler reads with its hash) and one entry per used type (`TypeEntry.Bytes`, read back by `EntryDecoder`). While it is up to date the tests count as passed and its bytecode is used instead of compiling again (`strict test Strict.strict` 3.3 s, cached 0.15 s, a self-build 27 s before, 15 s now). Still open:
-   - The zip CRC is computed without bitwise operators (`Floor` and `%` per nibble): about 300 ms of the 446 KB `Strict.strictbinary`. Bitwise operators on Number (ask first) or a native would take about 1 ms.
    - The stamp is the modification time of the running `strict` executable, so two copies (the VS Code one, a self-build copy) invalidate each other's caches, a hash of the executable would not.
    - An up to date check still reads and hashes every source file the compiler would read (60-150 ms).
    - Tests that read other files (`NativeRuntime.mlir`, images) are not rerun when only those files change.

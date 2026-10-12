@@ -98,12 +98,15 @@ OperatorType(node SyntaxNode, scope Scope, current Scope) Text
 BinaryType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.BinaryType(ToText, NoScope, NoShape) is "Text"
 	NoInference.BinaryType(SyntaxParser(Tokenizer("3 + (4)").Tokens).Parse, NoScope, NoShape) is "Numbers"
+	NoInference.BinaryType(SyntaxParser(Tokenizer("12 xor 10").Tokens).Parse, NoScope, NoShape) is "Number"
 	if node.text is "to"
 		return ConstructedType(node.children(1))
 	if node.text is in ("then", "else")
 		return ConditionalType(node, scope, current)
 	if node.children(0).Kind is "Missing"
 		return TypeOf(node.children(1), scope, current)
+	if (node.text is in ("and", "or", "xor")) and (TypeOf(node.children(0), scope, current) is "Number")
+		return "Number"
 	node.Precedence < 11 then "Boolean" else ArithmeticType(node, scope, current)
 ArithmeticType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.ArithmeticType(SyntaxParser(Tokenizer("2 * 3").Tokens).Parse, NoScope, NoShape) is "Number"

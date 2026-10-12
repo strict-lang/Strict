@@ -18,7 +18,7 @@ Result(call Invocation) VmValue
 	if name is in ("Length", "Count")
 		return VmValue.OfNumber(instance.Counted(call.Arguments))
 	if name is in ("not", "and", "or", "xor")
-		return Logical(name, instance.IsTrue, call)
+		return Logical(name, instance, call)
 	Queried(name, instance, call)
 Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 	Shapes.Keyed("get", Pairs, List(VmValue) + VmValue.OfNumber(2)).number is 4
@@ -52,12 +52,21 @@ Converted(instance VmValue, target Text) VmValue
 	if target is "Strict/Number"
 		return VmValue.OfNumber(instance.text to Number)
 	VmValue.OfText(target is "Strict/Character" then (instance to Text).Substring(0, 1) else instance to Text)
-Logical(name Text, left Boolean, call Invocation) VmValue
-	Shapes.Logical("not", true, NewShape).IsTrue is false
+Logical(name Text, left VmValue, call Invocation) VmValue
+	Shapes.Logical("not", VmValue.OfBoolean(true), NewShape).IsTrue is false
 	if name is "not"
-		return VmValue.OfBoolean(left is false)
-	let right = call.Arguments.First.IsTrue
-	VmValue.OfBoolean(name is "and" then left and right else name is "or" then left or right else left is not right)
+		return VmValue.OfBoolean(left.IsTrue is false)
+	let right = call.Arguments.First
+	if TypeEntry.ShortName(call.TypeName) is "Number"
+		return VmValue.OfNumber(Bitwise(name, left.number, right.number))
+	let isLeft = left.IsTrue
+	let isRight = right.IsTrue
+	if name is "xor"
+		return VmValue.OfBoolean(isLeft is not isRight)
+	VmValue.OfBoolean(name is "and" then isLeft and isRight else isLeft or isRight)
+Bitwise(name Text, left Number, right Number) Number
+	Shapes.Bitwise("xor", 12, 10) is 6
+	name is "and" then left and right else name is "or" then left or right else left xor right
 Queried(name Text, instance VmValue, call Invocation) VmValue
 	Shapes.Queried("in", VmValue.OfList(VmValue.OfNumber(3)), NewShape).IsTrue is true
 	if call.TypeName.StartsWith("Strict/Dictionary(")

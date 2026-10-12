@@ -30,6 +30,8 @@ IsCustom(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsCustom(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
 	Plain.IsCustom(SyntaxNode("Binary", "is", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Size")) is false
 	Characters.IsCustom(SyntaxNode("Binary", "+", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Character")) is true
+	if IsBitwise(node, block)
+		return true
 	if node.text is not in ("+", "-", "*", "/", "%", "^")
 		return false
 	let type = values.TypeOf(node.children(0), block)
@@ -37,6 +39,10 @@ IsCustom(node SyntaxNode, block CodeBlock) Boolean
 	if (type is in ("Number", "Text", "Boolean")) or type.StartsWith("List(") or types.IsPlural(type)
 		return false
 	types.MethodsOf(type).TypeOf(node.text) is not ""
+IsBitwise(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsBitwise(SyntaxNode("Binary", "xor", (One, One)), CodeBlock.Empty) is true
+	Plain.IsBitwise(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Boolean")) is false
+	(node.text is in ("and", "or", "xor")) and (values.TypeOf(node.children(0), block) is "Number")
 IsComposite(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsComposite(Choose, CodeBlock.Empty) is true
 	Plain.IsComposite(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
@@ -76,10 +82,10 @@ Composite(node SyntaxNode, block CodeBlock) CodeBlock
 		return values.Expression(SyntaxNode("Boolean", Decided(node, block)), block)
 	if node.Kind is "Converted"
 		return ConversionCodegen(values).Looped(node, block)
-	if node.text is in ("and", "or")
-		return Logical(node, block)
 	if IsCustom(node, block)
 		return values.Expression(SyntaxNode("MethodCall", node.text, node.children), block)
+	if node.text is in ("and", "or")
+		return Logical(node, block)
 	node.text is "else" then Choice(node, block) else Contains(node, block)
 Choice(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Choice(Choose, CodeBlock.Empty).instructions.Length is 14
