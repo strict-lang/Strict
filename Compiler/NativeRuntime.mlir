@@ -70,6 +70,35 @@
   llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_key_not_found("KeyNotFound\00") : !llvm.array<12 x i8>
   llvm.mlir.global internal constant @strict_duplicate_key("DuplicateKey\00") : !llvm.array<13 x i8>
+  func.func private @strict_remainder(%left: f64, %right: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %limit = arith.constant 9007199254740992.0 : f64
+    %leftSize = llvm.intr.fabs(%left) : (f64) -> f64
+    %rightSize = llvm.intr.fabs(%right) : (f64) -> f64
+    %leftSmall = arith.cmpf olt, %leftSize, %limit : f64
+    %rightSmall = arith.cmpf olt, %rightSize, %limit : f64
+    %rightSet = arith.cmpf one, %right, %zero : f64
+    %small = arith.andi %leftSmall, %rightSmall : i1
+    %usable = arith.andi %small, %rightSet : i1
+    cf.cond_br %usable, ^convert, ^fractional
+  ^convert:
+    %leftWhole = arith.fptosi %left : f64 to i64
+    %rightWhole = arith.fptosi %right : f64 to i64
+    %leftBack = arith.sitofp %leftWhole : i64 to f64
+    %rightBack = arith.sitofp %rightWhole : i64 to f64
+    %leftExact = arith.cmpf oeq, %leftBack, %left : f64
+    %rightExact = arith.cmpf oeq, %rightBack, %right : f64
+    %whole = arith.andi %leftExact, %rightExact : i1
+    cf.cond_br %whole, ^integral, ^fractional
+  ^integral:
+    %rest = arith.remsi %leftWhole, %rightWhole : i64
+    %restNumber = arith.sitofp %rest : i64 to f64
+    %signed = llvm.intr.copysign(%restNumber, %left) : (f64, f64) -> f64
+    return %signed : f64
+  ^fractional:
+    %fraction = arith.remf %left, %right : f64
+    return %fraction : f64
+  }
   llvm.mlir.global internal @strict_started(0.0 : f64) : f64
   func.func private @strict_process_elapsed(%self: f64) -> f64 {
     %now = func.call @strict_clock() : () -> f64
@@ -1370,6 +1399,39 @@
     llvm.store %holderbits, %resultholder : f64, !llvm.ptr
     %bits = func.call @strict_bits(%result) : (!llvm.ptr) -> f64
     return %bits : f64
+  }
+  func.func private @strict_list_push(%list: f64, %element: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %unset = arith.cmpf oeq, %list, %zero : f64
+    cf.cond_br %unset, ^add, ^check
+  ^check:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %length = llvm.load %view : !llvm.ptr -> f64
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %used = llvm.load %usedSlot : !llvm.ptr -> f64
+    %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> f64
+    %newest = arith.cmpf oeq, %length, %used : f64
+    %room = arith.cmpf olt, %used, %capacity : f64
+    %inPlace = arith.andi %newest, %room : i1
+    cf.cond_br %inPlace, ^push, ^add
+  ^push:
+    %itemsBits = llvm.load %holder : !llvm.ptr -> f64
+    %items = func.call @strict_ptr(%itemsBits) : (f64) -> !llvm.ptr
+    %at = arith.fptosi %used : f64 to i64
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %element, %slot : f64, !llvm.ptr
+    %next = arith.addf %used, %one : f64
+    llvm.store %next, %usedSlot : f64, !llvm.ptr
+    llvm.store %next, %view : f64, !llvm.ptr
+    return %list : f64
+  ^add:
+    %added = func.call @strict_list_add(%list, %element) : (f64, f64) -> f64
+    return %added : f64
   }
   func.func private @strict_list_concat(%left: f64, %right: f64) -> f64 {
     %zero = arith.constant 0.0 : f64

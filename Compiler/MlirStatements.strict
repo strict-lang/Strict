@@ -76,19 +76,23 @@ Calculated(entry InstructionEntry) Texts
 		return MlirEquality(function, position).Compared(entry)
 	if entry.kind > InstructionType.ArithmeticSeparator
 		return loads + Compared(entry, left + ", " + right)
-	let arithmetic = "    " + Temp("") + "c = arith." + Operation(entry.kind) + " " + left + ", " + right + " : f64"
-	constant power = "    " + Temp("c") + " = llvm.intr.pow(" + left + ", " + right + ") : (f64, f64) -> f64"
-	let operation = entry.kind is InstructionType.Power then power else arithmetic
-	loads + operation + function.Store(Temp("c"), "%r" + entry.payload(3))
+	loads + Operated(entry.kind, left, right) + function.Store(Temp("c"), "%r" + entry.payload(3))
+Operated(kind Number, left Text, right Text) Text
+	Copy.Operated(InstructionType.Modulo, "%a", "%b").IndexOf("@strict_remainder(%a, %b)") > 0 is true
+	Copy.Operated(InstructionType.Add, "%a", "%b") is "    %t0c = arith.addf %a, %b : f64"
+	let result = "    " + Temp("c") + " = "
+	if kind is InstructionType.Power
+		return result + "llvm.intr.pow(" + left + ", " + right + ") : (f64, f64) -> f64"
+	if kind is InstructionType.Modulo
+		return result + "func.call @strict_remainder(" + left + ", " + right + ") : (f64, f64) -> f64"
+	result + "arith." + Operation(kind) + " " + left + ", " + right + " : f64"
 Operation(kind Number) Text
-	Copy.Operation(InstructionType.Modulo) is "remf"
+	Copy.Operation(InstructionType.Divide) is "divf"
 	if kind is InstructionType.Add
 		return "addf"
 	if kind is InstructionType.Subtract
 		return "subf"
-	if kind is InstructionType.Multiply
-		return "mulf"
-	kind is InstructionType.Divide then "divf" else "remf"
+	kind is InstructionType.Multiply then "mulf" else "divf"
 Predicate(kind Number) Text
 	Copy.Predicate(InstructionType.NotEqual) is "une"
 	if kind is InstructionType.Equal

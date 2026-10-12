@@ -80,6 +80,8 @@ is(other) Boolean
 %(other) Number
 	100 % 10 is 0
 	7 % 4 is 3
+	(0 - 7) % 3 is 0 - 1
+	5.5 % 2 is 1.5
 	value % other
 ^(other) Number
 	2 ^ 2 is 4
