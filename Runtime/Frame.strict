@@ -3,6 +3,7 @@ has position Number
 has registers List(VmValue)
 has locals
 constant Start = Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)
+constant Looped = Start.WithLocal("#loop", VmValue.OfList(VmValue.None, VmValue.None, VmValue.None, VmValue.OfNumber(2), VmValue.OfNumber(7)))
 Instruction InstructionEntry
 	Start.Instruction.kind is InstructionType.Print
 	method.instructions(position)
@@ -30,4 +31,9 @@ Next Frame
 	Frame(method, position + 1, registers, locals)
 Local(name Text) VmValue
 	Start.WithLocal("b", VmValue.OfText("x")).Local("b").text is "x"
-	locals.Get(name)
+	Looped.Local("outer").number is 7
+	Looped.Local("outer.index").number is 2
+	let found = locals.Get(name)
+	if (found.kind is not "None") or (name.StartsWith("outer") is false)
+		return found
+	locals.Get("#loop").items(name is "outer" then 4 else 3)
