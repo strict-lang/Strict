@@ -2669,18 +2669,6 @@
     %result = func.call @strict_list_add(%lines, %line) : (f64, f64) -> f64
     return %result : f64
   }
-  func.func private @strict_file_write(%path: f64, %text: f64) -> f64 {
-    %one = arith.constant 1 : i64
-    %zero = arith.constant 0.0 : f64
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
-    %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %content = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %length = llvm.call @strlen(%content) : (!llvm.ptr) -> i64
-    %written = llvm.call @fwrite(%content, %one, %length, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
-    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
-    return %zero : f64
-  }
   func.func private @strict_file_writelines(%path: f64, %lines: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %start = arith.constant 0 : i64
