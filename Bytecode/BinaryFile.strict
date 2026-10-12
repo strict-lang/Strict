@@ -46,3 +46,13 @@ Types(entries List(ZipEntry)) List(TypeEntry)
 	Probe.Types(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
 	for Range(1, entries.Length)
 		EntryDecoder.Of(entries(value).content).Type
+Data(path Text) Texts
+	Probe.Data("Compiler/NativeBuild.strict") is ("Compiler/NativeRuntime.mlir")
+	mutable files = List(Mutable(Text))
+	for File(path).ReadLines
+		for Tokenizer(value).Tokens
+			let literal = value.StartsWith("\"") then value.Substring(1, value.Length - 2) else ""
+			let name = literal.StartsWith("/") then literal.Substring(1, literal.Length - 1) else literal
+			if (name is not in files) and (name.EndsWith(".strict") is false) and File(name).Exists
+				files.Add(name)
+	files

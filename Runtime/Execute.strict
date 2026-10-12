@@ -28,7 +28,7 @@ Verified(path Text, root Text) Number
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	if cache.IsFresh(cache.Unpacked(File(cache.Path).ReadBytes))
 		return 0
-	let header = cache.Header(SourceFiles(root).Of(cache.source))
+	let header = cache.Header(SourceFiles(root).Of(cache.source) + cache.Data(cache.source))
 	let types = FileCompiler(logger).Compiled(path, root, true)
 	if types.Length is 0
 		return 1
