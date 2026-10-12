@@ -1,0 +1,44 @@
+has types KnownTypes
+constant Scaler = KnownTypes(("Scaler", "Byte"), (KnownTypes.NoMembers, Scope(List(Text) + "number", List(Text) + "Number")), (Scope(("Scaled", "Scaled", "*", "*"), ("Number", "Number", "Number", "Scaler")), KnownTypes.NoMembers), (Scope(("Scaled", "Scaled types", "Scaled", "Scaled types", "*", "* types", "*", "* types"), ("text", "Text", "byte", "Byte", "other", "Other", "factor", "Number")), KnownTypes.NoMembers))
+constant Scaling = Overloads(Scaler)
+Chosen(owner Text, method Text, argumentTypes Texts) Number
+	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Text") is 0
+	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Number") is 1
+	Scaling.Chosen("Scaler", "*", List(Text) + "Scaler") is 0
+	Scaling.Chosen("Scaler", "*", List(Text) + "Byte") is 1
+	Scaling.Chosen("Scaler", "Missing", List(Text)) is -1
+	let exact = Ordinal(owner, method, argumentTypes, true)
+	exact >= 0 then exact else Ordinal(owner, method, argumentTypes, false)
+Ordinal(owner Text, method Text, argumentTypes Texts, isExact Boolean) Number
+	Scaling.Ordinal("Scaler", "Scaled", List(Text) + "Number", true) is -1
+	let scope = types.ParameterScope(owner)
+	if scope.Count(method) < 2
+		return -1
+	mutable ordinal = -1
+	for scope.names
+		if value is method + " types"
+			ordinal = ordinal + 1
+			if Fits(types.ParameterNames(scope.types(index)), argumentTypes, owner, isExact)
+				return ordinal
+	-1
+Fits(declared Texts, argumentTypes Texts, owner Text, isExact Boolean) Boolean
+	Scaling.Fits(("Other", "Bytes"), ("Scaler", "List(Byte)"), "Scaler", true) is true
+	Scaling.Fits(List(Text) + "Texts", List(Text) + "Bytes", "Scaler", true) is false
+	if declared.Length is not argumentTypes.Length
+		return false
+	for declared
+		if Assignable(argumentTypes(index), (value is "Other" then owner else value), isExact) is false
+			return false
+	true
+Assignable(argument Text, declared Text, isExact Boolean) Boolean
+	Scaling.Assignable("List(Byte)", "Bytes", true) is true
+	Scaling.Assignable("List(A, B)", "List(A, B)", true) is true
+	Scaling.Assignable("Number", "Generic", true) is false
+	Scaling.Assignable("Number", "Generic", false) is true
+	let isList = argument.StartsWith("List(") and (argument.IndexOf(",") < 0)
+	let plural = isList then argument.Substring(5, argument.Length - 6) + "s" else argument
+	if plural is declared
+		return true
+	if isExact
+		return false
+	(declared is "Generic") or (types.ValueOf(declared) is argument) or (types.ValueOf(argument) is declared)

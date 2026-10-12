@@ -52,7 +52,7 @@ FromNames(type Text) Texts
 Chosen(name Text, argumentTypes Texts) HeaderTokens
 	Overloaded.Chosen("Members", List(Text) + "Number").ParameterNames is ("lines")
 	Overloaded.Chosen("Members", List(Text)).ParameterNames.Length is 0
-	let ordinal = types.ParameterScope(TypeName).Overload(name, argumentTypes, TypeName)
+	let ordinal = Overloads(types).Chosen(TypeName, name, argumentTypes)
 	mutable seen = -1
 	for shape.lines
 		if shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
@@ -68,7 +68,7 @@ IsOverloaded(name Text, type Text) Boolean
 Declared(type Text, name Text, argumentTypes Texts, suffix Text) Texts
 	Counting.Declared("Count", "Twice", List(Text) + "Number", " types") is ("Number")
 	let scope = types.ParameterScope(type)
-	let ordinal = scope.Overload(name, argumentTypes, type)
+	let ordinal = Overloads(types).Chosen(type, name, argumentTypes)
 	if ordinal < 0
 		return types.ParametersOf(type, name + suffix, argumentTypes.Length)
 	types.ParameterNames(scope.TypeAt(name + suffix, ordinal))

@@ -9,7 +9,7 @@ constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "
 constant Pairs = SyntaxParser(Tokenizer("Dictionary((1, \"a\"))").Tokens).Parse
 constant Typed = SyntaxParser(Tokenizer("Dictionary(Text, Number)").Tokens).Parse
 constant Hashing = TypeInference(KnownTypes(("Hash", "B"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("from", "from types"), ("generic", "Generic")), KnownTypes.NoMembers)), NoShapes)
-constant Scaling = TypeInference(KnownTypes(List(Text) + "Pair", List(Scope) + NoShape, List(Scope) + Scope(("Scaled", "Scaled"), ("Pair", "Number")), List(Scope) + Scope(("Scaled", "Scaled types", "Scaled", "Scaled types"), ("factor", "Number", "other", "Other"))), List(Scope) + NoShape)
+constant Scaling = TypeInference(KnownTypes(List(Text) + "Pair", List(Scope) + NoShape, List(Scope) + Scope(("Scaled", "Scaled", "Scaled", "Scaled"), ("Pair", "Number", "Pair", "Number")), List(Scope) + Scope(("Scaled", "Scaled types", "Scaled", "Scaled types", "Scaled", "Scaled types", "Scaled", "Scaled types"), ("factor", "Number", "other", "Other", "factor,offset", "Number,Number", "other,offset", "Other,Number"))), List(Scope) + NoShape)
 constant Paired = Scope(List(Text) + "p", List(Text) + "Pair")
 constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name", "Generic")
 constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)), NoShapes)
@@ -71,15 +71,15 @@ MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.MemberCallType(SyntaxNode("Member", "Length", (ToText, NoNode)), NoShape, NoShape) is "Unknown"
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.Scaled(3)").Tokens).Parse, Paired, NoShape) is "Pair"
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.Scaled(p)").Tokens).Parse, Paired, NoShape) is "Number"
+	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.Scaled(3, 1)").Tokens).Parse, Paired, NoShape) is "Pair"
 	let binary = SyntaxNode("Binary", node.text, node.children)
 	let instanceType = TypeOf(node.children(0), scope, current)
-	let isOverloaded = (node.children.Length is 2) and (types.MethodsOf(instanceType).Count(node.text) > 1)
+	let isOverloaded = (node.children.Length > 1) and (types.MethodsOf(instanceType).Count(node.text) > 1)
 	if (node.Kind is "MethodCall") and (binary.Precedence >= 11) and (binary.Precedence < 20) or isOverloaded
 		return ArithmeticType(binary, scope, current)
 	let type = node.text is "value" then instanceType else types.MemberType(instanceType, node.text)
 	let isMember = (node.text is "value") or types.MembersOf(instanceType).TypeOf(node.text) is not ""
-	let isListCall = (node.Kind is "MethodCall") and isMember
-	isListCall then types.ElementType(type) else type
+	(node.Kind is "MethodCall") and isMember then types.ElementType(type) else type
 ImplicitValueType(name Text, scope Scope) Text
 	NoInference.ImplicitValueType("Length", NoShape) is ""
 	if scope.TypeOf("value") is ""
@@ -114,10 +114,12 @@ BinaryType(node SyntaxNode, scope Scope, current Scope) Text
 ArithmeticType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.ArithmeticType(SyntaxParser(Tokenizer("2 * 3").Tokens).Parse, NoShape, NoShape) is "Number"
 	let left = TypeOf(node.children(0), scope, current)
-	let right = TypeOf(node.children(1), scope, current)
-	if (node.text is "+") and (left is "Number") and types.IsPlural(right)
-		return right
-	let ordinal = types.ParameterScope(left).Overload(node.text, List(Text) + right, left)
+	mutable arguments = List(Mutable(Text))
+	for Range(1, node.children.Length)
+		arguments.Add(TypeOf(node.children(value), scope, current))
+	if (node.text is "+") and (left is "Number") and types.IsPlural(arguments(0))
+		return arguments(0)
+	let ordinal = Overloads(types).Chosen(left, node.text, arguments)
 	let declared = types.MethodsOf(left).TypeAt(node.text, ordinal)
 	let overloaded = declared is in ("List", types.BaseName(left)) then left else declared
 	let operatorType = ordinal < 0 then types.MemberType(left, node.text) else overloaded
