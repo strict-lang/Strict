@@ -61,7 +61,7 @@
   llvm.mlir.global internal @strict_gc_table(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_stack(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_allocated(0 : i64) : i64
-  llvm.mlir.global internal @strict_gc_threshold(4194304 : i64) : i64
+  llvm.mlir.global internal @strict_gc_threshold(16777216 : i64) : i64
   llvm.mlir.global internal @strict_gc_marked(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_pool(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_pooled(0 : i64) : i64
@@ -963,7 +963,7 @@
     llvm.store %zero, %measuredSlot : i64, !llvm.ptr
     %one = arith.constant 1 : i64
     %classCount = arith.constant 64 : i64
-    %minimum = arith.constant 4194304 : i64
+    %minimum = arith.constant 16777216 : i64
     llvm.call @llvm.eh.unwind.init() : () -> ()
     %stackPointer = llvm.call_intrinsic "llvm.stacksave.p0"() : () -> !llvm.ptr
     cf.br ^unsweep(%zero : i64)

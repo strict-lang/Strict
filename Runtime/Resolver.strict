@@ -82,7 +82,7 @@ Slotted(entry InstructionEntry, names Texts) InstructionEntry
 	Doubling.Slotted(InstructionEntry.LoadNumber(0, 7), Specials).payload is (0, 1, 7)
 	let local = Local(entry)
 	if local is ""
-		return entry
+		return Decoded(entry)
 	let kind = entry.kind
 	let slot = Slot(local, names)
 	if kind is InstructionType.StoreConstantToVariable
@@ -90,6 +90,12 @@ Slotted(entry InstructionEntry, names Texts) InstructionEntry
 	let payload = entry.payload
 	let start = kind is InstructionType.IndexCall then (payload(0), payload(1)) else List(Number) + payload(0)
 	InstructionEntry(kind, entry.texts, start + slot + Element(entry, names), entry.line)
+Decoded(entry InstructionEntry) InstructionEntry
+	Doubling.Decoded(InstructionEntry.LoadNumber(0, 1.5)).payload is (0, 1, 1.5)
+	Doubling.Decoded(InstructionEntry.LoadNumber(0, 7)).payload is (0, 1, 7)
+	if (entry.kind is not InstructionType.LoadConstantToRegister) or (entry.payload(1) is not 3)
+		return entry
+	InstructionEntry(entry.kind, entry.texts, (entry.payload(0), 1, PayloadDecoder(entry).Double(2)), entry.line)
 Element(entry InstructionEntry, names Texts) Numbers
 	Doubling.Element(StoreSecond, Specials) is (LiteralIndex, 1)
 	Doubling.Element(StoreElement, Specials) is List(Number) + 5

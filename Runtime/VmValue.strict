@@ -3,6 +3,8 @@ has number
 has text
 has items List(VmValue)
 constant None = VmValue("None", 0, "", List(VmValue))
+constant TrueValue = VmValue("Boolean", 1, "", List(VmValue))
+constant FalseValue = VmValue("Boolean", 0, "", List(VmValue))
 constant Failed = VmValue("Strict/Error", 0, "", (OfText("x"), OfList(List(VmValue) + VmValue("Strict/Stacktrace", 0, "", (OfText("B.C"), OfText("B.strict"), OfNumber(7))))))
 OfNumber(amount Number) VmValue
 	OfNumber(3).number is 3
@@ -12,7 +14,8 @@ OfText(content Text) VmValue
 	VmValue("Text", 0, content, List(VmValue))
 OfBoolean(condition Boolean) VmValue
 	OfBoolean(true).IsTrue is true
-	VmValue("Boolean", (condition then 1 else 0), "", List(VmValue))
+	OfBoolean(false).IsTrue is false
+	condition then TrueValue else FalseValue
 OfList(elements List(VmValue)) VmValue
 	OfList(OfNumber(1), OfNumber(2)).items.Length is 2
 	VmValue("List", 0, "", elements)
