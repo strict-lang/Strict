@@ -2,6 +2,7 @@ has layers List(Layer)
 constant Single = Network(List(Layer) + Layer.Halves)
 constant Halved = (List(Numbers) + (1, 0)) + (List(Number) + 0.5)
 constant Pair = Network((Layer(((0.5, 0.5), (0.5, 0.5)), (0, 0)), Layer.Halves))
+constant Classifier = Network(List(Layer) + Layer(((1, 0), (0, 1)), (0, 0)))
 Random(sizes Numbers) Network
 	Network.Random((2, 3, 1)).layers.Length is 2
 	Network.Random((2, 3, 1)).layers.Last.weights.First.Length is 3
@@ -12,17 +13,30 @@ Layers(sizes Numbers) List(Layer)
 		Layer.Random(sizes(index - 1), sizes(index))
 Predict(input Numbers) Numbers
 	Single.Predict((1, 1)) is List(Number) + 0.7310585786300049
-	mutable activation = input
-	for layers
-		activation = value.Forward(activation)
-	activation
+	Classifier.Predict((1, 1)) is (0.5, 0.5)
+	Activations(input).Last
 Activations(input Numbers) List(Numbers)
 	Pair.Activations((1, 1)).Length is 3
 	mutable activations = List(Mutable(Numbers))
 	activations.Add(input)
 	for layers
-		activations.Add(value.Forward(activations.Last))
+		activations.Add(index is layers.Length - 1 then Output(value, activations.Last) else value.Forward(activations.Last))
 	activations
+Output(layer Layer, input Numbers) Numbers
+	Single.Output(Layer.Halves, (1, 1)) is List(Number) + 0.7310585786300049
+	Classifier.Output(Classifier.layers.First, (2, 0)).First > 0.88 is true
+	layer.biases.Length > 1 then Softmax(layer.Sums(input)) else layer.Forward(input)
+Softmax(sums Numbers) Numbers
+	Single.Softmax((1, 1)) is (0.5, 0.5)
+	let exponentials = Exponentials(sums)
+	let total = exponentials.Sum
+	for exponentials
+		value / total
+Exponentials(sums Numbers) Numbers
+	Single.Exponentials((0, 0)) is (1, 1)
+	let largest = sums.Maximum
+	for sums
+		(value - largest).Exponential
 Trained(input Numbers, target Numbers, rate Number) Network
 	Pair.Trained((1, 1), List(Number) + 0, 1).Predict((1, 1)).First < Pair.Predict((1, 1)).First is true
 	let activations = Activations(input)
@@ -33,7 +47,7 @@ Updated(activations List(Numbers), deltas List(Numbers), rate Number) List(Layer
 		value.Updated(activations(index), deltas(index), rate)
 Deltas(activations List(Numbers), target Numbers) List(Numbers)
 	Pair.Deltas(Pair.Activations((1, 1)), List(Number) + 0).Length is 2
-	mutable delta = Derived(activations.Last, Difference(activations.Last, target))
+	mutable delta = Difference(activations.Last, target)
 	mutable deltas = List(Mutable(Numbers))
 	deltas.Add(delta)
 	for Range(1, layers.Length)
@@ -49,15 +63,12 @@ Difference(output Numbers, target Numbers) Numbers
 	Single.Difference((1, 0.5), (0, 0.5)) is (1, 0)
 	for output
 		value - target(index)
-Error(input Numbers, target Numbers) Number
-	Single.Error((1, 1), List(Number) + 0.7310585786300049) is 0
-	(Difference(Predict(input), target) * Difference(Predict(input), target)).Sum
 Learned(data Dataset, epochs Number) Network
 	Network.Random((4, 3, 2)).Learned(Dataset.Pairs, 300).Accuracy(Dataset.Pairs) is 1
 	mutable trained = value
 	for epochs * data.inputs.Length
 		let position = index % data.inputs.Length
-		trained = trained.Trained(data.inputs(position), data.targets(position), 0.5)
+		trained = trained.Trained(data.inputs(position), data.targets(position), 0.25)
 	trained
 Accuracy(data Dataset) Number
 	Single.Accuracy(Dataset(List(Numbers), List(Numbers))) is 0

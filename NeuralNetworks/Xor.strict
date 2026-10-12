@@ -13,11 +13,12 @@ Trained(network Network, steps Number) Network
 	Xor.Error(Xor.Trained(Network.Pair, 200)) < Xor.Error(Network.Pair) is true
 	mutable trained = network
 	for steps
-		trained = trained.Trained(Inputs(index % 4), List(Number) + Targets(index % 4), 0.5)
+		trained = trained.Trained(Inputs(index % 4), List(Number) + Targets(index % 4), 0.1)
 	trained
 Error(network Network) Number
 	Xor.Error(Network.Pair) > 0 is true
 	mutable error = 0
 	for Inputs
-		error = error + network.Error(value, List(Number) + Targets(index))
+		let difference = network.Difference(network.Predict(value), List(Number) + Targets(index))
+		error = error + (difference * difference).Sum
 	error
