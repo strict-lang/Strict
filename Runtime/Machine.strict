@@ -44,7 +44,9 @@ MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 	let member = owner.members(index)
 	if member.IsConstant
 		return Natives(types).Initial(member)
-	Natives(types).IsNamed(owner, instance.kind) then instance.Member(index) else instance.As(member.typeName)
+	let natives = Natives(types)
+	let isOwner = natives.IsNamed(owner, instance.kind, natives.Short(instance.kind))
+	isOwner then instance.Member(index) else instance.As(member.typeName)
 Execute(method MethodEntry, locals Locals) VmValue
 	Machine(List(TypeEntry) + Doubler).Execute(Doubler.methods.First, Locals.Empty).number is 42
 	Finished(method, locals).Local("#result")
