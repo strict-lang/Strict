@@ -3,8 +3,8 @@ has isQuiet Boolean = false
 constant Even = TestCodegen(TypeCodegen("Strict/Even", ("IsEven(number Number) Boolean", "\tIsEven(2) is true", "\tnumber % 2 is 0"), TypeCodegen.NoTypes, List(Text)))
 constant Counter = CodeBlock.Empty.Declare("failed", "Number")
 constant OneIsOne = SyntaxNode("Binary", "is", (MethodCodegen.One, MethodCodegen.One))
-constant EvenFailed = InstructionEntry.Print("Test failed: IsEven(2) is true in IsEven at Even.strict:line 2")
-constant EvenPassed = InstructionEntry.Print("Test passed: IsEven(2) is true in IsEven at Even.strict:line 2")
+constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2", (-1, 0), 2)
+constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2", (-1, 0), 2)
 constant Runner = "$Tests"
 Tests MethodEntry
 	Even.Tests.Name is Runner
@@ -21,10 +21,11 @@ Method(start Number, block CodeBlock) CodeBlock
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0 is true
 	Even.Method(0, Counter).instructions.Index(EvenPassed) > 0 is true
 	TestCodegen(Even.types, true).Method(0, Counter).instructions.Index(EvenPassed) is -1
+	Even.Method(0, Counter).instructions.Last.line is 2
 	let name = Tokenizer(types.lines(start)).Tokens.First
 	mutable result = block.Declare(CodeBlock.ErrorMarker, name)
 	for TestLines(types.Generator).Tests(BodyParser(types.lines).Block(start + 1, 1), block)
-		result = Line(value, name, result.At(0))
+		result = MethodCodegen(types.Generator).Lined(Line(value, name, result.At(0)), result.instructions.Length, value.line)
 	result
 Line(line SyntaxNode, method Text, block CodeBlock) CodeBlock
 	Even.Line(OneIsOne, "IsEven", Counter).instructions.Length > 4 is true

@@ -1115,26 +1115,53 @@
   }
   llvm.mlir.global internal constant @strict_trace_at("\09at \00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_trace_line(":line \00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @strict_trace_in(" in \00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_error_prefix("Error: \00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @strict_error_newline("\0A\00") : !llvm.array<2 x i8>
   func.func private @strict_error_trace(%value: f64, %location: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["noinline"]} {
+    %one = arith.constant 1 : i64
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
-    %where = func.call @strict_bits(%location) : (!llvm.ptr) -> f64
+    %method = func.call @strict_bits(%location) : (!llvm.ptr) -> f64
+    %methodLength = llvm.call @strlen(%location) : (!llvm.ptr) -> i64
+    %skip = arith.addi %methodLength, %one : i64
+    %filePointer = llvm.getelementptr %location[%skip] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %file = func.call @strict_bits(%filePointer) : (!llvm.ptr) -> f64
     %lineNumber = arith.sitofp %line : i64 to f64
-    %at = llvm.mlir.addressof @strict_trace_at : !llvm.ptr
-    %atBits = func.call @strict_bits(%at) : (!llvm.ptr) -> f64
-    %lineLabel = llvm.mlir.addressof @strict_trace_line : !llvm.ptr
-    %lineBits = func.call @strict_bits(%lineLabel) : (!llvm.ptr) -> f64
-    %number = func.call @strict_number_text(%lineNumber) : (f64) -> f64
-    %first = func.call @strict_text_concat(%atBits, %where) : (f64, f64) -> f64
-    %second = func.call @strict_text_concat(%first, %lineBits) : (f64, f64) -> f64
-    %entry = func.call @strict_text_concat(%second, %number) : (f64, f64) -> f64
+    %size = arith.constant 24 : i64
+    %entryBlock = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    llvm.store %method, %entryBlock : f64, !llvm.ptr
+    %fileSlot = llvm.getelementptr %entryBlock[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %file, %fileSlot : f64, !llvm.ptr
+    %lineSlot = llvm.getelementptr %entryBlock[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %lineNumber, %lineSlot : f64, !llvm.ptr
+    %entry = func.call @strict_bits(%entryBlock) : (!llvm.ptr) -> f64
     %block = func.call @strict_ptr(%error) : (f64) -> !llvm.ptr
     %tracesSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %traces = llvm.load %tracesSlot : !llvm.ptr -> f64
     %added = func.call @strict_list_add(%traces, %entry) : (f64, f64) -> f64
     llvm.store %added, %tracesSlot : f64, !llvm.ptr
     return %value : f64
+  }
+  func.func private @strict_trace_text(%entry: f64) -> f64 {
+    %block = func.call @strict_ptr(%entry) : (f64) -> !llvm.ptr
+    %method = llvm.load %block : !llvm.ptr -> f64
+    %fileSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %file = llvm.load %fileSlot : !llvm.ptr -> f64
+    %lineSlot = llvm.getelementptr %block[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %line = llvm.load %lineSlot : !llvm.ptr -> f64
+    %at = llvm.mlir.addressof @strict_trace_at : !llvm.ptr
+    %atBits = func.call @strict_bits(%at) : (!llvm.ptr) -> f64
+    %in = llvm.mlir.addressof @strict_trace_in : !llvm.ptr
+    %inBits = func.call @strict_bits(%in) : (!llvm.ptr) -> f64
+    %lineLabel = llvm.mlir.addressof @strict_trace_line : !llvm.ptr
+    %lineBits = func.call @strict_bits(%lineLabel) : (!llvm.ptr) -> f64
+    %number = func.call @strict_number_text(%line) : (f64) -> f64
+    %first = func.call @strict_text_concat(%atBits, %method) : (f64, f64) -> f64
+    %second = func.call @strict_text_concat(%first, %inBits) : (f64, f64) -> f64
+    %third = func.call @strict_text_concat(%second, %file) : (f64, f64) -> f64
+    %fourth = func.call @strict_text_concat(%third, %lineBits) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%fourth, %number) : (f64, f64) -> f64
+    return %result : f64
   }
   func.func private @strict_error_report(%value: f64) -> f64 attributes {passthrough = ["noinline"]} {
     %zero = arith.constant 0.0 : f64
@@ -1155,7 +1182,8 @@
     %more = arith.cmpf olt, %index, %count : f64
     cf.cond_br %more, ^add, ^done
   ^add:
-    %trace = func.call @strict_list_get(%traces, %index) : (f64, f64) -> f64
+    %entry = func.call @strict_list_get(%traces, %index) : (f64, f64) -> f64
+    %trace = func.call @strict_trace_text(%entry) : (f64) -> f64
     %lined = func.call @strict_text_concat(%text, %newlineBits) : (f64, f64) -> f64
     %longer = func.call @strict_text_concat(%lined, %trace) : (f64, f64) -> f64
     %next = arith.addf %index, %one : f64
@@ -1620,16 +1648,20 @@
     %one = arith.constant 1 : i64
     %error = func.call @strict_error_text(%name) : (f64) -> f64
     %pointer = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
-    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
-    %skip = arith.addi %length, %one : i64
-    %trace = llvm.getelementptr %pointer[%skip] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %traceBits = func.call @strict_bits(%trace) : (!llvm.ptr) -> f64
-    %block = func.call @strict_ptr(%error) : (f64) -> !llvm.ptr
-    %tracesSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %traces = llvm.load %tracesSlot : !llvm.ptr -> f64
-    %added = func.call @strict_list_add(%traces, %traceBits) : (f64, f64) -> f64
-    llvm.store %added, %tracesSlot : f64, !llvm.ptr
-    return %error : f64
+    %nameLength = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %afterName = arith.addi %nameLength, %one : i64
+    %location = llvm.getelementptr %pointer[%afterName] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %methodLength = llvm.call @strlen(%location) : (!llvm.ptr) -> i64
+    %afterMethod = arith.addi %methodLength, %one : i64
+    %file = llvm.getelementptr %location[%afterMethod] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %fileLength = llvm.call @strlen(%file) : (!llvm.ptr) -> i64
+    %afterFile = arith.addi %fileLength, %one : i64
+    %lineText = llvm.getelementptr %file[%afterFile] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %lineBits = func.call @strict_bits(%lineText) : (!llvm.ptr) -> f64
+    %lineNumber = func.call @strict_text_number(%lineBits) : (f64) -> f64
+    %line = arith.fptosi %lineNumber : f64 to i64
+    %traced = func.call @strict_error_trace(%error, %location, %line) : (f64, !llvm.ptr, i64) -> f64
+    return %traced : f64
   }
   func.func private @strict_list_read(%list: f64, %index: f64, %name: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
