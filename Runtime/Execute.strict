@@ -1,4 +1,6 @@
 has logger
+constant Anything = BinaryFile("./Any.strict")
+constant AnyFiles = SourceFiles(".").Of(Anything.source)
 Run(arguments Texts) Number
 	let failed = Failures(List(Text) + arguments(0), arguments(1), true)
 	if failed > 0
@@ -39,12 +41,26 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let types = FileCompiler(logger, isQuiet).Built(path, root, true, files, inference)
 	if types.Length is 0
 		return 1
+	let before = Process.FilesRead.Length
 	let failed = Tested(types, path)
-	let current = SourceFiles(root).Of(cache.source)
-	let complete = current.Length is files.Length then header else cache.Header(current + cache.Data(cache.source))
 	if failed is 0
-		File(cache.Path).Write(cache.Packed(complete, types))
+		File(cache.Path).Write(cache.Packed(Completed(cache, root, files, header, before), types))
 	failed
+Completed(cache BinaryFile, root Text, files Texts, header Numbers, before Number) Numbers
+	Execute(Logger).Completed(Anything, ".", AnyFiles, (1, 2), Process.FilesRead.Length) is (1, 2)
+	let read = Read(before)
+	let current = SourceFiles(root).Of(cache.source)
+	let isSame = (current.Length is files.Length) and (read.Length is 0)
+	isSame then header else cache.Header(current + cache.Data(cache.source) + read)
+Read(before Number) Texts
+	Execute(Logger).Read(Process.FilesRead.Length).Length is 0
+	let read = Process.FilesRead
+	mutable found = List(Mutable(Text))
+	for Range(before, read.Length)
+		let path = read(value)
+		if BinaryFile(path).IsInput(path) and (path.EndsWith(".strict") is false) and (path is not in found)
+			found.Add(path)
+	found
 Tested(types List(TypeEntry), path Text) Number
 	let failed = Machine(Resolver(types).Resolved, logger).Tested(types.First.Name)
 	if failed > 0

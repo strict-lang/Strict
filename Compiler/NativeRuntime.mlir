@@ -3293,6 +3293,54 @@
   ^absent:
     return %zero : f64
   }
+  llvm.mlir.global internal @strict_read_paths(0 : i64) : i64
+  llvm.mlir.global internal @strict_read_count(0 : i64) : i64
+  func.func private @strict_file_noted(%path: f64) {
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %length = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
+    %size = arith.addi %length, %one : i64
+    %copy = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%copy, %name, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %countSlot = llvm.mlir.addressof @strict_read_count : !llvm.ptr
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %next = arith.addi %count, %one : i64
+    %bytes = arith.muli %next, %eight : i64
+    %pathsSlot = llvm.mlir.addressof @strict_read_paths : !llvm.ptr
+    %paths = llvm.load %pathsSlot : !llvm.ptr -> i64
+    %old = llvm.inttoptr %paths : i64 to !llvm.ptr
+    %grown = llvm.call @realloc(%old, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %grownBits = llvm.ptrtoint %grown : !llvm.ptr to i64
+    llvm.store %grownBits, %pathsSlot : i64, !llvm.ptr
+    %slot = llvm.getelementptr %grown[%count] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+    llvm.store %copy, %slot : !llvm.ptr, !llvm.ptr
+    llvm.store %next, %countSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_process_filesread(%self: f64) -> f64 {
+    %start = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %countSlot = llvm.mlir.addressof @strict_read_count : !llvm.ptr
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %pathsSlot = llvm.mlir.addressof @strict_read_paths : !llvm.ptr
+    %pathsBits = llvm.load %pathsSlot : !llvm.ptr -> i64
+    %paths = llvm.inttoptr %pathsBits : i64 to !llvm.ptr
+    %empty = func.call @strict_list_empty() : () -> f64
+    cf.br ^loop(%start, %empty : i64, f64)
+  ^loop(%index: i64, %built: f64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %slot = llvm.getelementptr %paths[%index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+    %path = llvm.load %slot : !llvm.ptr -> !llvm.ptr
+    %text = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %added = func.call @strict_list_add(%built, %text) : (f64, f64) -> f64
+    %next = arith.addi %index, %one : i64
+    cf.br ^loop(%next, %added : i64, f64)
+  ^done:
+    return %built : f64
+  }
   func.func private @strict_file_text(%path: f64) -> f64 {
     %start = arith.constant 0 : i64
     %ending = arith.constant 2 : i32
@@ -3306,6 +3354,7 @@
     %missing = llvm.icmp "eq" %file, %null : !llvm.ptr
     cf.cond_br %missing, ^absent, ^read
   ^read:
+    func.call @strict_file_noted(%path) : (f64) -> ()
     %toEnd = llvm.call @fseek(%file, %start, %ending) : (!llvm.ptr, i64, i32) -> i32
     %size = llvm.call @ftell(%file) : (!llvm.ptr) -> i64
     %toStart = llvm.call @fseek(%file, %start, %beginning) : (!llvm.ptr, i64, i32) -> i32
@@ -3485,6 +3534,7 @@
     %missing = llvm.icmp "eq" %file, %null : !llvm.ptr
     cf.cond_br %missing, ^absent, ^read
   ^read:
+    func.call @strict_file_noted(%path) : (f64) -> ()
     %toEnd = llvm.call @fseek(%file, %start, %ending) : (!llvm.ptr, i64, i32) -> i32
     %told = llvm.call @ftell(%file) : (!llvm.ptr) -> i64
     %toStart = llvm.call @fseek(%file, %start, %beginning) : (!llvm.ptr, i64, i32) -> i32

@@ -11,7 +11,7 @@ constant Logging = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Loga
 constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(90)))
 constant Aiming = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Vector2", "Atan", "Strict/Number"), List(Number), 0), Current.WithRegister(0, VmValue("Strict/Math/Vector2", 0, "", (VmValue.OfNumber(1), VmValue.OfNumber(0)))))
 constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), Current.WithRegister(0, VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing"))))
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.FilesRead", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted is true
 	Hosted(Invocation.AddCall).IsHosted is false
@@ -29,8 +29,8 @@ Result VmValue
 Processed VmValue
 	Hosted(SystemCall).Processed.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	let name = call.MethodName
-	if name is "Elapsed"
-		return VmValue.OfNumber(Process.Elapsed)
+	if name is in ("Elapsed", "FilesRead")
+		return name is "Elapsed" then VmValue.OfNumber(Process.Elapsed) else Values(Process.FilesRead)
 	if name is in ("OperatingSystem", "Built")
 		return VmValue.OfText(name is "Built" then Process(call.Instance.Member(0).text).Built else Process.OperatingSystem)
 	let first = name is "Current" then Process.Current.executable else call.Arguments.First.text

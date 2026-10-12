@@ -21,6 +21,10 @@ Current Process
 Elapsed Number
 	Process.Elapsed > 0 is true
 	0
+FilesRead Texts
+	File("Process.strict").ReadLines.Length > 10 is true
+	"Process.strict" is in Process.FilesRead
+	List(Text)
 Built Text
 	Process.Current.Built.Length is 19
 	""
