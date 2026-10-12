@@ -13,3 +13,9 @@ Directories(path) Texts
 	Directory.Directories(path)
 Create(path)
 	Directory.Create(path)
+Written(path Text) Boolean
+	Written("Examples/BaseTypesTest/Created/written") is true
+	File(path).Write(List(Text) + "written")
+	let exists = File(path).Exists
+	File(path).Delete
+	exists

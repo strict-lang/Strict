@@ -3343,14 +3343,50 @@
     %result = func.call @strict_list_add(%lines, %line) : (f64, f64) -> f64
     return %result : f64
   }
+  func.func private @strict_file_create(%path: f64) -> !llvm.ptr {
+    %zero = arith.constant 0.0 : f64
+    %step = arith.constant 1 : i64
+    %slash = arith.constant 47 : i8
+    %backslash = arith.constant 92 : i8
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %mode = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
+    %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
+    cf.cond_br %failed, ^folders, ^done(%file : !llvm.ptr)
+  ^folders:
+    %length = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
+    cf.br ^character(%step : i64)
+  ^character(%index: i64):
+    %more = arith.cmpi slt, %index, %length : i64
+    cf.cond_br %more, ^check, ^retry
+  ^check:
+    %slot = llvm.getelementptr %name[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %character = llvm.load %slot : !llvm.ptr -> i8
+    %isSlash = arith.cmpi eq, %character, %slash : i8
+    %isBackslash = arith.cmpi eq, %character, %backslash : i8
+    %isSeparator = arith.ori %isSlash, %isBackslash : i1
+    cf.cond_br %isSeparator, ^create, ^next
+  ^create:
+    %count = arith.sitofp %index : i64 to f64
+    %folder = func.call @strict_text_substring(%path, %zero, %count) : (f64, f64, f64) -> f64
+    %created = func.call @strict_directory_create(%zero, %folder) : (f64, f64) -> f64
+    cf.br ^next
+  ^next:
+    %following = arith.addi %index, %step : i64
+    cf.br ^character(%following : i64)
+  ^retry:
+    %again = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    cf.br ^done(%again : !llvm.ptr)
+  ^done(%result: !llvm.ptr):
+    return %result : !llvm.ptr
+  }
   func.func private @strict_file_writelines(%path: f64, %lines: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %newline = arith.constant 10 : i32
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
-    %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %file = func.call @strict_file_create(%path) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
     cf.cond_br %failed, ^done, ^write
@@ -3427,9 +3463,7 @@
     %zero = arith.constant 0.0 : f64
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
-    %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %file = func.call @strict_file_create(%path) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
     cf.cond_br %failed, ^done, ^write
