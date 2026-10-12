@@ -24,7 +24,7 @@ Method(start Number, block CodeBlock) CodeBlock
 	Even.Method(0, Counter).instructions.Last.line is 2
 	let name = Tokenizer(types.lines(start)).Tokens.First
 	mutable result = block.Declare(CodeBlock.ErrorMarker, name)
-	for TestLines(types.Generator).Tests(BodyParser(types.lines).Block(start + 1, 1), block)
+	for TestLines(types.Generator).Tests(BodyParser(types.lines).Method(start + 1), block)
 		result = MethodCodegen(types.Generator).Lined(Line(value, name, result.At(0)), result.instructions.Length, value.line)
 	result
 Line(line SyntaxNode, method Text, block CodeBlock) CodeBlock

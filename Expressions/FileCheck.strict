@@ -12,6 +12,8 @@ Unknown(scoped ScopedStatement, current Scope) Text
 	Counting.Unknown(TwiceCall, KnownTypes.NoMembers) is ""
 	Counting.Unknown(MissingCall, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Counting.Unknown(OtherName, KnownTypes.NoMembers) is "NameNotFound: other"
+	if scoped.statement.Kind is "Invalid"
+		return scoped.statement.text
 	let names = UnknownNames(scoped.statement, known + scoped.scope.names + ValueNames(scoped.scope))
 	if names.Length > 0
 		return "NameNotFound: " + names.First

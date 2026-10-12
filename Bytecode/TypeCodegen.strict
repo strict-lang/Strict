@@ -73,7 +73,7 @@ Method(start Number) MethodEntry
 	constant generator = Generator
 	let scope = MethodScope(header, generator.target)
 	let returnType = header.tokens(0) is "from" then generator.target.TypeName else Concrete(header.ReturnType)
-	let code = MethodCodegen(generator).Generate(BodyParser(lines).Block(start + 1, 1), scope, BodyType(header))
+	let code = MethodCodegen(generator).Generate(BodyParser(lines).Method(start + 1), scope, BodyType(header))
 	let optimized = LoadReuse(code.instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(returnType), optimized)
 MethodScope(header HeaderTokens, target CallTarget) Scope

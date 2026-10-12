@@ -15,7 +15,7 @@ Statements ScopedStatements
 	for shape.lines
 		if shape.IsMethodHeader(value)
 			let parameters = HeaderScope(HeaderTokens(Tokenizer(value).Tokens), members)
-			statements = statements + Flatten(BodyParser(shape.lines).Block(index + 1, 1), parameters, index + 1)
+			statements = statements + Flatten(BodyParser(shape.lines).Method(index + 1), parameters, index + 1)
 	statements
 HeaderScope(header HeaderTokens, members Scope) Scope
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(AddOther, NoScope).TypeOf("other") is "Demo"
@@ -34,10 +34,11 @@ IteratedType Text
 	typeName is "Text" then "Characters" else InstanceType
 Flatten(body SyntaxNode, outerScope Scope, start Number) ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.scope.TypeOf("b") is "Number"
+	MethodBodies("Demo", TypeShape(BodyParser.Positions), NoInference).Statements.Last.line is 5
 	mutable statements = List(Mutable(ScopedStatement))
 	mutable scope = outerScope
 	for body.children
-		let line = start + statements.Length
+		let line = value.line > 0 then value.line - 1 else start + statements.Length
 		statements.Add(ScopedStatement(value, scope, line))
 		if value.HasBody
 			statements = statements + Flatten(value.children.Last, LoopScope(value, scope), line + 1)

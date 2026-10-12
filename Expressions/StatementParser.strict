@@ -28,11 +28,30 @@ ParseElse SyntaxNode
 ParseAssignmentOrExpression SyntaxNode
 	StatementParser("a", "=", "1").ParseAssignmentOrExpression.Kind is "Reassignment"
 	StatementParser(Tokenizer("a").Tokens).ParseAssignmentOrExpression.Kind is "Identifier"
+	StatementParser(Tokenizer("next(add = 1) = add").Tokens).ParseAssignmentOrExpression to Text is "next(add = 1) = add"
 	constant assignment = AssignmentIndex
 	if assignment is -1
 		return Syntax.Parse
-	constant target = Syntax.ParseRange(0, assignment)
-	SyntaxNode("Reassignment", "", (target, Syntax.ParseRange(assignment + 1, tokens.Length)))
+	let assigned = Syntax.ParseRange(assignment + 1, tokens.Length)
+	if tokens.Index("=") < assignment
+		return SyntaxNode("Computed", tokens(0), (Signature(assignment), assigned))
+	SyntaxNode("Reassignment", "", (Syntax.ParseRange(0, assignment), assigned))
+Signature(assignment Number) SyntaxNode
+	StatementParser(Tokenizer("f(a, b = (1, 2)) = a").Tokens).Signature(12) to Text is "f(a, b = (1, 2))"
+	mutable parameters = List(Mutable(SyntaxNode))
+	mutable start = 2
+	mutable depth = 0
+	for Range(2, assignment)
+		depth = depth + Syntax.BracketDelta(tokens(value))
+		if ((depth is 0) and (tokens(value) is ",")) or (depth < 0)
+			parameters.Add(Parameter(start, value))
+			start = value + 1
+	SyntaxNode("Call", tokens(0), parameters)
+Parameter(start Number, end Number) SyntaxNode
+	StatementParser(Tokenizer("f(a = 2) = a").Tokens).Parameter(2, 5) to Text is "a = 2"
+	StatementParser(Tokenizer("f(a) = a").Tokens).Parameter(2, 3) to Text is "a"
+	let name = SyntaxNode("Identifier", tokens(start))
+	end - start > 1 then SyntaxNode("Reassignment", "", (name, Syntax.ParseRange(start + 2, end))) else name
 AssignmentIndex Number
 	StatementParser("a", "=", "1").AssignmentIndex is 1
 	StatementParser("f", "(", "a", ")").AssignmentIndex is -1

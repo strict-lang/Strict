@@ -56,7 +56,7 @@ StatementText Text
 	SyntaxNode("For", "for", (SyntaxNode("Body", ""), SyntaxNode("Body", ""))).StatementText is "for"
 	if Kind is "Declaration"
 		return text + " = " + ChildText(0, 0)
-	if Kind is "Reassignment"
+	if Kind is in ("Reassignment", "Computed")
 		return ChildText(0, 0) + " = " + ChildText(1, 0)
 	HasValue and (Kind is in keywordKinds) then keywordTexts(keywordKinds.Index(Kind)) + " " + ChildText(0, 0) else text
 ChildText(childIndex Number, minimumPrecedence Number) Text

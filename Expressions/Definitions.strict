@@ -1,0 +1,83 @@
+has lines Texts
+constant Positions = Definitions(BodyParser.Positions)
+constant Body = BodyParser(BodyParser.Positions).Block(1, 1)
+constant Next = Body.children(1)
+constant Assigned = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "next"), SyntaxNode("Number", "5")))
+constant Branch = SyntaxNode("If", "", (SyntaxNode("Identifier", "a"), Body))
+constant NextTwo = SyntaxNode("Call", "next", List(SyntaxNode) + SyntaxNode("Number", "2"))
+Inlined(body SyntaxNode, start Number) SyntaxNode
+	Positions.Inlined(Body, 1).children.Length is 4
+	Positions.Inlined(Body, 1).children.Last to Text is "position + 2"
+	Expanded(body, Known(start), List(SyntaxNode))
+Known(start Number) Texts
+	Definitions(("has count Number", "Add(other Number) Number", "\tother")).Known(2) is ("count", "other", "value")
+	let header = start > 0 then HeaderTokens(Tokenizer(lines(start - 1)).Tokens).ParameterNames else List(Text)
+	TypeShape(lines).MemberScope.names + header + "value"
+Expanded(body SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
+	Positions.Expanded(Body, ("value", "position"), List(SyntaxNode)).children(1) to Text is "position + 1"
+	mutable names = known
+	mutable computed = definitions
+	mutable statements = List(Mutable(SyntaxNode))
+	for body.children
+		let statement = Substituted(Defined(value, names, computed), computed)
+		if statement.Kind is "Computed"
+			computed = computed + statement
+		else
+			statements.Add(Nested(statement, names, computed))
+		names = names + Declared(statement)
+	SyntaxNode(body.Kind, body.text, statements, body.line)
+Nested(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
+	Positions.Nested(Branch, List(Text), List(SyntaxNode)).children.Last.children.Length is 4
+	mutable children = List(Mutable(SyntaxNode))
+	for statement.children
+		children.Add(value.Kind is "Body" then Expanded(value, known, definitions) else value)
+	SyntaxNode(statement.Kind, statement.text, children, statement.line)
+Defined(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
+	Positions.Defined(Assigned, List(Text), List(SyntaxNode)).Kind is "Computed"
+	Positions.Defined(Assigned, List(Text) + "next", List(SyntaxNode)).Kind is "Reassignment"
+	Positions.Defined(Assigned, List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
+	if statement.Kind is not "Reassignment"
+		return statement
+	let target = statement.children(0)
+	if (target.Kind is "Identifier") and (target.text is in Names(definitions))
+		return SyntaxNode("Invalid", "ComputedNameMustNotBeAssigned: " + target.text, List(SyntaxNode), statement.line)
+	let isNew = (target.Kind is in ("Identifier", "Call")) and (target.text is not in known) and AreNames(target.children)
+	isNew then SyntaxNode("Computed", target.text, statement.children, statement.line) else statement
+Substituted(node SyntaxNode, definitions SyntaxNodes) SyntaxNode
+	Positions.Substituted(NextTwo, List(SyntaxNode) + Next) to Text is "position + 2"
+	Positions.Substituted(SyntaxNode("Identifier", "other"), List(SyntaxNode) + Next) to Text is "other"
+	if node.Kind is in ("Reassignment", "Computed")
+		return SyntaxNode(node.Kind, node.text, (node.children(0), Substituted(node.children(1), definitions)), node.line)
+	mutable children = List(Mutable(SyntaxNode))
+	for node.children
+		children.Add(value.Kind is "Body" then value else Substituted(value, definitions))
+	for definitions
+		if (node.Kind is in ("Identifier", "Call")) and (node.text is value.text)
+			let applied = Applied(value, children)
+			return SyntaxNode(applied.Kind, applied.text, applied.children, node.line)
+	SyntaxNode(node.Kind, node.text, children, node.line)
+Applied(definition SyntaxNode, arguments SyntaxNodes) SyntaxNode
+	Positions.Applied(Next, List(SyntaxNode)) to Text is "position + 1"
+	Positions.Applied(Next, List(SyntaxNode) + SyntaxNode("Identifier", "step")) to Text is "position + step"
+	mutable bound = List(Mutable(SyntaxNode))
+	for definition.children(0).children
+		let isDefault = value.Kind is "Reassignment"
+		let name = isDefault then value.children(0) else value
+		let argument = index < arguments.Length then arguments(index) else isDefault then value.children(1) else value
+		bound.Add(SyntaxNode("Computed", name.text, (name, argument)))
+	Substituted(definition.children(1), bound)
+Declared(statement SyntaxNode) Texts
+	Positions.Declared(Body.children(0)) is ("position")
+	Positions.Declared(Next).Length is 0
+	statement.Kind is "Declaration" then List(Text) + Tokenizer(statement.text).Tokens.Last else List(Text)
+Names(definitions SyntaxNodes) Texts
+	Positions.Names(List(SyntaxNode) + Next) is ("next")
+	for definitions
+		value.text
+AreNames(nodes SyntaxNodes) Boolean
+	Positions.AreNames(List(SyntaxNode) + SyntaxNode("Identifier", "a")) is true
+	Positions.AreNames(List(SyntaxNode) + SyntaxNode("Number", "1")) is false
+	for nodes
+		if value.Kind is not "Identifier"
+			return false
+	true

@@ -10,7 +10,7 @@ Validate ValidationIssues
 	for shape.lines
 		if shape.IsMethodHeader(value)
 			let header = HeaderTokens(Tokenizer(value).Tokens)
-			let statements = BodyParser(shape.lines).Block(index + 1, 1).Statements
+			let statements = BodyParser(shape.lines).Method(index + 1).Statements
 			issues = issues + UsageRules(header, statements, shape.MemberScope.names, mutations, index + 1).Issues
 	MemberIssues + ConstantIssues + issues
 MemberIssues ValidationIssues

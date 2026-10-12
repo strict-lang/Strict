@@ -1,4 +1,6 @@
 has lines Texts
+constant Positions = ("Run", "\tmutable position = 3", "\tnext(add = 1) = position + add", "\tnext", "\tposition = 10", "\tnext(2)")
+constant Inlined = ("\tmutable position = 3", "\tposition + 1", "\tposition = 10", "\tposition + 2")
 Block(start Number, depth Number) SyntaxNode
 	BodyParser("Run", "\tif a", "\t\tb", "\tc").Block(1, 1).children.Length is 2
 	BodyParser("Run", "\tif a", "\t\tb", "\tc").Block(1, 1).Lines("\t") is ("\tif a", "\t\tb", "\tc")
@@ -7,6 +9,9 @@ Block(start Number, depth Number) SyntaxNode
 		if Indent(lines(value)) is depth
 			statements.Add(Statement(value, depth))
 	SyntaxNode("Body", "", statements)
+Method(start Number) SyntaxNode
+	BodyParser(Positions).Method(1).Lines("\t") is Inlined
+	Definitions(lines).Inlined(Block(start, 1), start)
 Statement(lineIndex Number, depth Number) SyntaxNode
 	BodyParser("Run", "\tfor 3", "\t\tvalue").Statement(1, 1).children.Length is 2
 	BodyParser("Run", "\ta", "\tb").Statement(1, 1).children.Length is 0

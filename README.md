@@ -257,6 +257,16 @@ TrimStart Text
 	""
 ```
 
+`name = expression` (or `name(parameter = default) = expression`) for a name that is not a variable, member or parameter is a computed name: a single expression whose type is inferred, every use evaluates it again with the current values (`let` keeps a calculated value, `mutable` a reassignable one), effects run on every use. Assigning to it is a `ComputedNameMustNotBeAssigned` error. Only for very simple, obvious things (square roots, lengths, small sums of local values), one expression is not a tested method. Uses are replaced by the expression with the arguments for the parameters, the same on the Strict VM and natively:
+```
+	mutable position = 3
+	next(add = 1) = position + add
+	next is 4
+	position = 10
+	next is 11
+	next(2) is 12
+```
+
 ## if expressions
 Strict only has `if` for conditional expressions, which can be in block and single-line forms, plus a selector-style variant for compact matching. Everything is an expression, `if` and `for` always return an expression as well, which can be used as an automated return expression as well. In for loops the `if` expression is often used to filter values like piping in functional languages, see below for more advanced examples.
 
