@@ -23,10 +23,15 @@ Verified(path Text, root Text) Number
 	if cache.IsFresh(header, cache.Unpacked(File(cache.Path).ReadBytes))
 		return 0
 	let types = FileCompiler(logger).Compiled(path, root, true)
-	let failed = Machine(types, logger).Tested(types.First.Name)
+	if types.Length is 0
+		return 1
+	let failed = Tested(types, path)
 	if failed is 0
 		File(cache.Path).Write(cache.Packed(header, types))
-	else
+	failed
+Tested(types List(TypeEntry), path Text) Number
+	let failed = Machine(types, logger).Tested(types.First.Name)
+	if failed > 0
 		logger.Log(failed to Text + " tests failed in " + path)
 	failed
 Loaded(path Text, root Text) List(TypeEntry)

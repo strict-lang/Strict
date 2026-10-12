@@ -1,0 +1,81 @@
+has logger
+constant Organization = "https://api.github.com/orgs/strict-lang/repos?per_page=100"
+constant Raw = "https://raw.githubusercontent.com/"
+constant Delimiters = (" ", ")", "]", "#", "?", "\"", "'", ">", "<", ",", "/")
+constant Listing = ("  \"tree\": [", "      \"path\": \"Math/Vector2.strict\",", "      \"path\": \"Math/Size.strict\",", "      \"path\": \"Math/README.md\",", "      \"path\": \"Vector2.strict\",")
+constant Readme = ("See https://github.com/strict-lang/Strict.", "[a](https://github.com/b/c.git) github.com/d")
+constant Owned = ("  {", "    \"full_name\": \"strict-lang/Strict\",", "    \"full_name\": \"strict-lang/sdk\",")
+Downloaded(type Text) Text
+	for Candidates
+		let folder = Fetched(value, type)
+		if folder is not ""
+			return folder
+	""
+Candidates Texts
+	mutable candidates = File("README.md").Exists then Linked(File("README.md").ReadLines) else List(Text)
+	for Quoted(Fetch(Organization), "full_name")
+		if value is not in candidates
+			candidates = candidates + value
+	candidates
+Fetched(repository Text, type Text) Text
+	let paths = Quoted(Fetch("https://api.github.com/repos/" + repository + "/git/trees/HEAD?recursive=1"), "path")
+	let folder = Folder(paths, type)
+	let local = "./" + Path((folder is "." then repository else folder)).FileName.text
+	if (folder is "") or Directory.Exists(local)
+		return ""
+	Directory.Create(local)
+	for Files(paths, folder)
+		let target = local + "/" + Path(value).FileName.text
+		Process.RunTool("curl", "-sfL -o \"" + target + "\" \"" + Raw + repository + "/HEAD/" + value + "\"")
+	logger.Log("Downloaded " + local + " from https://github.com/" + repository)
+	local
+Fetch(url Text) Texts
+	Process.RunTool("curl", "-sfL \"" + url + "\"").Output.Split("\n")
+Linked(lines Texts) Texts
+	Repositories.Linked(Readme) is ("strict-lang/Strict", "b/c")
+	Repositories.Linked(("github.com/a/b", "docs/c/d", "github.com/a/b")) is ("a/b")
+	mutable repositories = List(Mutable(Text))
+	for lines
+		let start = value.IndexOf("github.com/")
+		if start >= 0
+			let repository = Repository(value.Substring(start + 11, value.Length - start - 11))
+			if (repository is not "") and (repository is not in repositories)
+				repositories.Add(repository)
+	repositories
+Repository(link Text) Text
+	Repositories.Repository("strict-lang/Strict.") is "strict-lang/Strict"
+	Repositories.Repository("b/c.git) and more") is "b/c"
+	let slash = link.IndexOf("/")
+	if slash <= 0
+		return ""
+	mutable end = slash + 1
+	for Range(slash + 1, link.Length)
+		if (end is value) and (link.Substring(value, 1) is not in Delimiters)
+			end = value + 1
+	let repository = link.Substring(0, end).Replace(".git", "")
+	let last = repository.Length - 1
+	repository.Substring(last, 1) is "." then repository.Substring(0, last) else repository
+Quoted(lines Texts, key Text) Texts
+	Repositories.Quoted(Listing, "path") is ("Math/Vector2.strict", "Math/Size.strict", "Math/README.md", "Vector2.strict")
+	Repositories.Quoted(Owned, "full_name") is ("strict-lang/Strict", "strict-lang/sdk")
+	for lines
+		let start = value.IndexOf("\"" + key + "\": \"")
+		if start >= 0
+			value.Substring(start + key.Length + 5, value.LastIndexOf("\"") - start - key.Length - 5)
+Folder(paths Texts, type Text) Text
+	Repositories.Folder(Repositories.Quoted(Listing, "path"), "Vector2") is "Math"
+	Repositories.Folder(List(Text) + "Vector2.strict", "Vector2s") is "."
+	Repositories.Folder(List(Text) + "Math/Size.strict", "Vector2") is ""
+	let singular = type.Substring(type.Length - 1, 1) is "s" then type.Substring(0, type.Length - 1) else type
+	for paths
+		let file = Path(value).FileName.text
+		if file is in (type + ".strict", singular + ".strict")
+			return value.IndexOf("/") < 0 then "." else value.Substring(0, value.LastIndexOf("/"))
+	""
+Files(paths Texts, folder Text) Texts
+	Repositories.Files(Repositories.Quoted(Listing, "path"), "Math") is ("Math/Vector2.strict", "Math/Size.strict")
+	Repositories.Files(Repositories.Quoted(Listing, "path"), ".") is ("Vector2.strict")
+	let prefix = folder is "." then "" else folder + "/"
+	for paths
+		if value.StartsWith(prefix) and (value.LastIndexOf("/") is prefix.Length - 1) and (value.LastIndexOf(".strict") > 0)
+			value
