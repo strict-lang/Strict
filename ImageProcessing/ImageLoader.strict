@@ -1,6 +1,10 @@
 has path Text
 Loaded Image
 	ImageLoader("ImageProcessing/4x4.png").Loaded.Size is Size(4, 4)
+	ImageLoader("ImageProcessing/Digit.jpg").Loaded.Size is Size(28, 28)
+	if path.EndsWith(".jpg") or path.EndsWith(".jpeg")
+		let pixels = JpegPixels.Read(path)
+		return Image(Size(pixels.decoder.jpeg.Width, pixels.decoder.jpeg.Height), pixels.Colors)
 	let png = Png.Read(path)
 	Image(Size(png.Width, png.Height), Colors(png))
 Colors(png Png) List(ColorValue)

@@ -8,17 +8,19 @@ OneHot(label Number, classes Number) Numbers
 Images(folder Text, classes Number) Dataset
 	Dataset.Images("NeuralNetworks/mnist", 1).inputs.Length is 40
 	Dataset.Images("NeuralNetworks/mnist", 1).inputs.First.Sum is 83.99215686274508
+	Dataset.Images("NeuralNetworks/mnist28", 1).inputs.First.Length is 784
 	mutable images = List(Mutable(Numbers))
 	mutable labeled = List(Mutable(Numbers))
+	let folders = Directory.Directories(folder)
 	for classes
-		let files = Directory.Files(folder + "/" + index, "*.png")
+		let files = Directory.Files(folders(index), "*.png") + Directory.Files(folders(index), "*.jpg")
 		images = images + Pictures(files)
 		labeled = labeled + Labels(OneHot(index, classes), files.Length)
 	Dataset(images, labeled)
 Pictures(files Texts) List(Numbers)
 	Pairs.Pictures(List(Text)).Length is 0
 	for files
-		Png.Read(value).Grays
+		value.EndsWith(".jpg") then JpegPixels.Read(value).Grays else Png.Read(value).Grays
 Labels(label Numbers, count Number) List(Numbers)
 	Pairs.Labels((1, 0), 2) is ((1, 0), (1, 0))
 	for count
@@ -40,3 +42,26 @@ Evaluated(name Text, sizes Numbers, epochs Number) Text
 	let network = Network.Random(sizes).Learned(Training, epochs)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	name + " test accuracy " + network.Accuracy(Testing) + " after " + epochs + " epochs in " + milliseconds + " ms"
+Shuffled Dataset
+	Pairs.Shuffled.inputs.Length is Pairs.inputs.Length
+	Pairs.Shuffled.targets.Length is Pairs.targets.Length
+	let order = Order(inputs.Length)
+	Dataset(Picked(inputs, order), Picked(targets, order))
+Order(count Number) Numbers
+	Pairs.Order(5).Sum is 10
+	Pairs.Order(5).Length is 5
+	mutable order = Indices(count)
+	for count
+		let other = index + (count - index).Random.Floor
+		let current = order(index)
+		order(index) = order(other)
+		order(other) = current
+	order
+Indices(count Number) Numbers
+	Pairs.Indices(3) is (0, 1, 2)
+	for count
+		index
+Picked(rows List(Numbers), order Numbers) List(Numbers)
+	Pairs.Picked(List(Numbers) + (1, 2) + (3, 4), (1, 0)).First is (3, 4)
+	for order
+		rows(value)

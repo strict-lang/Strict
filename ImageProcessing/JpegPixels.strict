@@ -1,0 +1,51 @@
+has decoder JpegDecoder
+has blocks List(Numbers)
+constant Gray = JpegPixels.From(JpegDecoder.Gray)
+constant Colored = JpegPixels.From(JpegDecoder.Colored)
+From(source JpegDecoder) JpegPixels
+	JpegPixels.From(JpegDecoder.Gray).blocks.Length is 1
+	JpegPixels(source, source.Blocks)
+Read(path Text) JpegPixels
+	(JpegPixels.Read("ImageProcessing/Digit.jpg").Plane(0).Sum - 25761).Absolute < 10 is true
+	From(JpegDecoder.From(Jpeg.Read(path)))
+Plane(component Number) Numbers
+	Gray.Plane(0).First is 1
+	Gray.Plane(0).Sum is 7616
+	let width = decoder.jpeg.Width
+	let horizontal = Factor(component, true) / decoder.Largest(true)
+	let vertical = Factor(component, false) / decoder.Largest(false)
+	for decoder.jpeg.Height * width
+		Sample(component, ((index % width) * horizontal).Floor, ((index / width).Floor * vertical).Floor)
+Sample(component Number, column Number, row Number) Number
+	Gray.Sample(0, 1, 0) is 30
+	let horizontal = Factor(component, true)
+	let vertical = Factor(component, false)
+	let mcu = (row / (8 * vertical)).Floor * decoder.Columns + (column / (8 * horizontal)).Floor
+	let inside = ((row % (8 * vertical)) / 8).Floor * horizontal + ((column % (8 * horizontal)) / 8).Floor
+	let block = blocks(mcu * decoder.plan.Length + decoder.plan.Index(component) + inside)
+	block((row % 8) * 8 + column % 8)
+Factor(component Number, isHorizontal Boolean) Number
+	Colored.Factor(0, true) is 2
+	Colored.Factor(1, false) is 1
+	let sampling = decoder.samplings(component)
+	isHorizontal then (sampling / 16).Floor else sampling % 16
+Grays Numbers
+	Gray.Grays.First is 1 / 255
+	for Plane(0)
+		value / 255
+Colors List(ColorValue)
+	Gray.Colors.First is ColorValue(1 / 255, 1 / 255, 1 / 255)
+	Colored.Colors.Last.Red > 0.9 is true
+	let luma = Plane(0)
+	let isGray = decoder.samplings.Length < 3
+	let blue = isGray then luma else Plane(1)
+	let red = isGray then luma else Plane(2)
+	for luma
+		isGray then Converted(value, 0, 0) else Converted(value, blue(index) - 128, red(index) - 128)
+Converted(luma Number, blue Number, red Number) ColorValue
+	Colored.Converted(128, 0, 0) is ColorValue(128 / 255, 128 / 255, 128 / 255)
+	ColorValue(Clamped(luma + 1.402 * red), Clamped(luma - 0.344136 * blue - 0.714136 * red), Clamped(luma + 1.772 * blue))
+Clamped(component Number) Number
+	Colored.Clamped(300) is 1
+	Colored.Clamped(-5) is 0
+	component < 0 then 0 else component > 255 then 1 else component / 255

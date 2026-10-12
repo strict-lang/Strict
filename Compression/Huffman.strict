@@ -1,6 +1,7 @@
 has counts Numbers
 has symbols Numbers
 constant Sample = Huffman.From((2, 1, 3, 3))
+constant Longest = Huffman((0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1), (5, 9))
 From(lengths Numbers) Huffman
 	Huffman.From((2, 1, 3, 3)).symbols is (1, 0, 2, 3)
 	Huffman(Counts(lengths), Sorted(lengths))
@@ -20,13 +21,12 @@ Sorted(lengths Numbers) Numbers
 	sorted
 Decoded(stream Inflate, position Number) Symbol
 	Sample.Decoded(Inflate(List(Number) + 6), 1) is Symbol(2, 3)
-	mutable code = 0
-	mutable first = 0
+	Longest.Decoded(Inflate((1, 0)), 0) is Symbol(9, 16)
+	mutable relative = 0
 	mutable offset = 0
-	for Range(1, 16)
-		code = code * 2 + stream.Bit(position + value - 1)
-		first = (first + counts(value - 1)) * 2
+	for Range(1, counts.Length)
+		relative = (relative - counts(value - 1)) * 2 + stream.Bit(position + value - 1)
 		offset = offset + counts(value - 1)
-		if code - counts(value) < first
-			return Symbol(symbols(offset + code - first), value)
+		if relative < counts(value)
+			return Symbol(symbols(offset + relative), value)
 	Symbol(-1, 0)

@@ -1,0 +1,3 @@
+has logger
+Run
+	logger.Log(Dataset.Images("NeuralNetworks/mnist28", 6).Evaluated("Digits28", (784, 64, 6), 50))

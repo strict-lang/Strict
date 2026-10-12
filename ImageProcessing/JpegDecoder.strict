@@ -1,0 +1,109 @@
+has jpeg Jpeg
+has plan Numbers
+has samplings Numbers
+has dcCodes List(Huffman)
+has acCodes List(Huffman)
+has tables List(Numbers)
+constant Gray = JpegDecoder.From(Jpeg.Gray)
+constant Colored = JpegDecoder.From(Jpeg.Colored)
+From(image Jpeg) JpegDecoder
+	JpegDecoder.From(Jpeg.Gray).plan is List(Number) + 0
+	JpegDecoder.From(Jpeg.Colored).samplings is (34, 17, 17)
+	let count = image.bytes(image.Segment(Jpeg.Frame) + 9)
+	let factors = Component(image, count, 11)
+	let dc = Selected(image, count, 0)
+	JpegDecoder(image, Plan(factors), factors, dc, Selected(image, count, 16), Quantizations(image, count))
+Component(image Jpeg, count Number, offset Number) Numbers
+	JpegDecoder.Component(Jpeg.Colored, 3, 10) is (1, 2, 3)
+	for count
+		image.bytes(image.Segment(Jpeg.Frame) + offset + index * 3)
+Plan(factors Numbers) Numbers
+	JpegDecoder.Plan((34, 17, 17)) is (0, 0, 0, 0, 1, 2)
+	mutable order = List(Mutable(Number))
+	for factors
+		let component = index
+		for (value / 16).Floor * (value % 16)
+			order.Add(component)
+	order
+Selected(image Jpeg, count Number, kind Number) List(Huffman)
+	JpegDecoder.Selected(Jpeg.Gray, 1, 16).First.symbols.Length is 6
+	let ids = Component(image, count, 10)
+	for count
+		let selectors = Selectors(image, ids(index))
+		image.Huffmans(kind + (kind is 0 then (selectors / 16).Floor else selectors % 16))
+Selectors(image Jpeg, id Number) Number
+	JpegDecoder.Selectors(Jpeg.Colored, 2) is 17
+	let scan = image.Segment(Jpeg.Scan)
+	for image.bytes(scan + 4)
+		if image.bytes(scan + 5 + index * 2) is id
+			return image.bytes(scan + 6 + index * 2)
+	0
+Quantizations(image Jpeg, count Number) List(Numbers)
+	JpegDecoder.Quantizations(Jpeg.Colored, 3).Last.Last is 20
+	for Component(image, count, 12)
+		image.Quantization(value)
+Blocks List(Numbers)
+	Gray.Blocks.Length is 1
+	Colored.Blocks.Length is 6
+	let total = Columns * Rows
+	let interval = jpeg.Interval is 0 then total else jpeg.Interval
+	mutable blocks = List(Mutable(Numbers))
+	for jpeg.Intervals
+		let remaining = total - index * interval
+		blocks = blocks + Decoded(Inflate(value), remaining < interval then remaining else interval)
+	blocks
+Decoded(stream Inflate, mcus Number) List(Numbers)
+	Gray.Decoded(Inflate(Jpeg.Gray.Intervals.First), 1).First.Length is 64
+	mutable blocks = List(Mutable(Numbers))
+	mutable predictions = samplings * 0
+	mutable position = 0
+	for mcus * plan.Length
+		let component = plan(index % plan.Length)
+		let dc = dcCodes(component).Decoded(stream, position)
+		let ac = Coefficients(stream, position + dc.bits + dc.number, acCodes(component))
+		predictions(component) = predictions(component) + Extended(Received(stream, position + dc.bits, dc.number), dc.number)
+		blocks.Add(Idct.Samples(predictions(component), ac.output, tables(component)))
+		position = ac.position
+	blocks
+Coefficients(stream Inflate, position Number, ac Huffman) Inflation
+	Gray.Coefficients(Inflate(List(Number) + 0), 0, Huffman((0, 1), List(Number) + 0)).position is 1
+	mutable state = Inflation(List(Number), position)
+	for 63
+		let next = state.output.Length is 0 then 1 else state.output(state.output.Length - 2) + 1
+		if next > 63
+			return state
+		let symbol = ac.Decoded(stream, state.position)
+		if symbol.number is 0
+			return Inflation(state.output, state.position + symbol.bits)
+		state = Coefficient(stream, state, symbol, next)
+	state
+Coefficient(stream Inflate, state Inflation, symbol Symbol, next Number) Inflation
+	Gray.Coefficient(Inflate(List(Number) + 3), Inflation(List(Number), 0), Symbol(17, 1), 1).output is (2, 1)
+	let size = symbol.number % 16
+	let start = state.position + symbol.bits
+	let at = next + (symbol.number / 16).Floor
+	Inflation(state.output + at + Extended(Received(stream, start, size), size), start + size)
+Extended(bits Number, size Number) Number
+	Gray.Extended(3, 2) is 3
+	Gray.Extended(1, 2) is -2
+	Gray.Extended(0, 0) is 0
+	size is 0 then 0 else bits < 2 ^ (size - 1) then bits - 2 ^ size + 1 else bits
+Received(stream Inflate, position Number, count Number) Number
+	Gray.Received(Inflate(List(Number) + 1), 0, 2) is 2
+	mutable result = 0
+	for count
+		result = result * 2 + stream.Bit(position + index)
+	result
+Columns Number
+	Colored.Columns is 1
+	((jpeg.Width + 8 * Largest(true) - 1) / (8 * Largest(true))).Floor
+Rows Number
+	Gray.Rows is 1
+	((jpeg.Height + 8 * Largest(false) - 1) / (8 * Largest(false))).Floor
+Largest(isHorizontal Boolean) Number
+	Colored.Largest(true) is 2
+	mutable largest = 1
+	for samplings
+		let sampling = isHorizontal then (value / 16).Floor else value % 16
+		largest = sampling > largest then sampling else largest
+	largest

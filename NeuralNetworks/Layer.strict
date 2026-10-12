@@ -15,8 +15,9 @@ Rows(inputs Number, outputs Number) List(Numbers)
 		Weights(inputs)
 Weights(count Number) Numbers
 	Halves.Weights(3).Length is 3
+	Halves.Weights(4).Maximum <= 0.5 is true
 	for count
-		2.Random - 1
+		(2.Random - 1) / count.SquareRoot
 Zeros(count Number) Numbers
 	Halves.Zeros(2) is (0, 0)
 	for count

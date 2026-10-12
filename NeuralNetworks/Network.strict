@@ -66,9 +66,10 @@ Difference(output Numbers, target Numbers) Numbers
 Learned(data Dataset, epochs Number) Network
 	Network.Random((4, 3, 2)).Learned(Dataset.Pairs, 300).Accuracy(Dataset.Pairs) is 1
 	mutable trained = value
-	for epochs * data.inputs.Length
-		let position = index % data.inputs.Length
-		trained = trained.Trained(data.inputs(position), data.targets(position), 0.25)
+	for epochs
+		let shuffled = data.Shuffled
+		for shuffled.inputs
+			trained = trained.Trained(value, shuffled.targets(index), 0.25)
 	trained
 Accuracy(data Dataset) Number
 	Single.Accuracy(Dataset(List(Numbers), List(Numbers))) is 0
