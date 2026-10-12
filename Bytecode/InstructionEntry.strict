@@ -1,6 +1,8 @@
 has kind Number
 has texts
 has payload Numbers
+has line Number = 0
+constant ReturnLined = InstructionEntry(InstructionType.Return, List(Text), List(Number) + 3, 7)
 Names(names BinaryNames) BinaryNames
 	InstructionEntry(InstructionType.Print, "Hi", (-1, 0)).Names(BinaryNames("a", "b")).names.Length is 3
 	mutable result = names
@@ -9,13 +11,14 @@ Names(names BinaryNames) BinaryNames
 	result
 Integers(names BinaryNames) Numbers
 	InstructionEntry.Print("b").Integers(BinaryNames("a", "b")) is (45, 1, 1, 2, 1, 0)
-	mutable integers = List(Number) + kind + texts.Length
+	ReturnLined.Integers(BinaryNames("a")) is (160, 0, 1, 6, 7)
+	mutable integers = List(Number) + (line > 0 then kind + InstructionType.IncludesSourceLine else kind) + texts.Length
 	for texts
 		integers = integers + names.Index(value)
 	integers = integers + payload.Length
 	for payload
 		integers = integers + (value < 0 then -2 * value - 1 else 2 * value)
-	integers
+	line > 0 then integers + line else integers
 Print(text Text) InstructionEntry
 	InstructionEntry.Print("b").payload is (-1, 0)
 	InstructionEntry(InstructionType.Print, text, (-1, 0))

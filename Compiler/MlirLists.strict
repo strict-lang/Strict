@@ -87,18 +87,18 @@ Appended(entry InstructionEntry) Texts
 	let element = function.Load(Temp("e"), "%r" + entry.payload(0))
 	(function.Load(Temp("l"), name), element, added, function.Store(Temp("n"), name))
 Indexed(entry InstructionEntry) Texts
-	MlirLists(Listed, 2).Indexed(Steps(2)).Length is 6
-	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_at(") > 0 is true
+	MlirLists(Listed, 2).Indexed(Steps(2)).Last is "    llvm.store %t2x, %r2 : f64, !llvm.ptr"
+	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_read(") > 0 is true
 	let isText = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, entry.texts(0))) is "Text"
-	let getter = isText then "strict_text_at" else "strict_list_at"
+	let memory = MlirMemory(function, position)
 	let arguments = isText then (Temp("l"), Temp("i")) else (Temp("l"), Temp("i"), Temp("nb"))
-	let access = MlirMemory(function, position).Called(Temp("x"), getter, arguments)
+	let access = memory.Called(Temp("x"), isText then "strict_text_at" else "strict_list_read", arguments)
 	let loads = (function.Load(Temp("l"), "%v_" + entry.texts(0)), function.Load(Temp("i"), "%r" + entry.payload(1)))
+	let stored = function.Store(Temp("x"), "%r" + entry.payload(0))
 	let parameters = MlirParameters(function)
 	if entry.texts(0) is in parameters.FixedLists
-		let read = parameters.Read(entry.texts(0), Temp("l"), Temp("i"), Temp("nb"), Temp("x"))
-		return loads + NameBits + read + function.Store(Temp("x"), "%r" + entry.payload(0))
-	(isText then loads else loads + NameBits) + access + function.Store(Temp("x"), "%r" + entry.payload(0))
+		return loads + NameBits + parameters.Read(entry.texts(0), Temp("l"), Temp("i"), Temp("nb"), Temp("x")) + stored
+	(isText then loads else loads + NameBits) + access + stored
 NameBits Texts
 	MlirLists(Listed, 2).NameBits.Last.IndexOf("strict_bits") > 0 is true
 	let address = "    " + Temp("n") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"

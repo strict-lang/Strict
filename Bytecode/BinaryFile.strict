@@ -6,7 +6,7 @@ Path Text
 	Probe.Path is "./Bytecode/Probe.strictbinary"
 	source.Substring(0, source.Length - 7) + ".strictbinary"
 Header(sources Texts) Numbers
-	Probe.Header(List(Text)) is (1, 0, 2)
+	Probe.Header(List(Text)) is (1, 0, 3)
 	mutable integers = BinaryNames(sources).Integers + TypeEntry.FormatVersion
 	for sources
 		integers = integers + Stamp(value)
@@ -24,7 +24,7 @@ Packed(header Numbers, types List(TypeEntry)) Bytes
 		Byte(value)
 Unpacked(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
-	Packing.First.content is (1, 0, 2)
+	Packing.First.content is (1, 0, 3)
 	mutable numbers = List(Mutable(Number))
 	for bytes
 		numbers.Add(value.number)

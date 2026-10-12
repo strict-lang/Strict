@@ -29,9 +29,11 @@ Comparison(kind Number, left VmValue, right VmValue) Boolean
 	if kind is InstructionType.NotEqual
 		return Comparable(left) is not Comparable(right)
 	kind is InstructionType.LessThan then left.number < right.number else left.number > right.number
-Comparable(value VmValue) VmValue
+Comparable(operand VmValue) VmValue
 	Adding.Comparable(Detailed) is DimensionError
-	value.kind is "Strict/ErrorWithValue" then value.items.First else value
+	Adding.Comparable(Frame.Logging.Traced(DimensionError)) is DimensionError
+	let error = operand.kind is "Strict/ErrorWithValue" then operand.items.First else operand
+	error.kind is "Strict/Error" then VmValue.OfError(error.items.First.text) else error
 Calculated(kind Number, left VmValue, right VmValue) VmValue
 	Adding.Calculated(InstructionType.Modulo, VmValue.OfNumber(7), VmValue.OfNumber(4)).number is 3
 	Adding.Calculated(InstructionType.Multiply, OneTwo, OneTwo).Length is 2

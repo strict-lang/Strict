@@ -31,10 +31,21 @@ Production(body SyntaxNode, block CodeBlock) SyntaxNode
 	ConstantFolding(values.target.TypeName, values.inference).Inlined(TestLines(values).Without(body, block))
 Body(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
+	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).instructions.Last.line is 3
 	mutable result = block
 	for body.children
-		result = Statement(value, result.At(block.register), HasElse(body, index))
+		let statement = Statement(value, result.At(block.register), HasElse(body, index))
+		result = Lined(statement, result.instructions.Length, value.line)
 	CodeBlock(result.instructions, result.register, result.nextId, block.scope)
+Lined(block CodeBlock, start Number, line Number) CodeBlock
+	Plain.Lined(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), 0, 5).instructions.First.line is 5
+	if line is 0
+		return block
+	mutable lined = List(Mutable(InstructionEntry))
+	for block.instructions
+		let isUnlined = (index >= start) and (value.line is 0)
+		lined.Add(isUnlined then InstructionEntry(value.kind, value.texts, value.payload, line) else value)
+	CodeBlock(lined, block.register, block.nextId, block.scope)
 HasElse(body SyntaxNode, position Number) Boolean
 	Plain.HasElse(ElseBody, 0) is true
 	Plain.HasElse(ElseBody, 1) is false

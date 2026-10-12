@@ -26,9 +26,14 @@ Member(start Number) MemberEntry
 	MemberEntry(names(stream(start)), names(stream(start + 1)), Instructions(start + 3), (stream(start + 2) is 1))
 Instruction(start Number) InstructionEntry
 	EntryDecoder((45, 1, 0, 2, 1, 0), List(Text) + "Hi").Instruction(0) is InstructionEntry.Print("Hi")
+	EntryDecoder((160, 0, 1, 6, 7), List(Text)).Instruction(0) is InstructionEntry.ReturnLined
 	let textCount = stream(start + 1)
 	let payloadStart = start + 3 + textCount
-	InstructionEntry(stream(start), TextsAt(start + 2, textCount), Payload(payloadStart, stream(payloadStart - 1)))
+	let payloadCount = stream(payloadStart - 1)
+	let hasLine = stream(start) >= InstructionType.IncludesSourceLine
+	let kind = hasLine then stream(start) - InstructionType.IncludesSourceLine else stream(start)
+	let line = hasLine then stream(payloadStart + payloadCount) else 0
+	InstructionEntry(kind, TextsAt(start + 2, textCount), Payload(payloadStart, payloadCount), line)
 TextsAt(start Number, count Number) Texts
 	EntryDecoder((1, 0), ("a", "b")).TextsAt(0, 2) is ("b", "a")
 	for Range(start, start + count)

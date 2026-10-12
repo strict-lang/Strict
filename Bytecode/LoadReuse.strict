@@ -103,13 +103,14 @@ IsBoundary(entry InstructionEntry) Boolean
 	(entry.kind is InstructionType.Invoke) or entry.kind >= InstructionType.LoopBegin
 Remapped(entry InstructionEntry, position Number) InstructionEntry
 	Twice.Remapped(AddBoth, 2).payload is (3, 0, 0, 2)
+	Twice.Remapped(InstructionEntry(InstructionType.Add, List(Text), (3, 0, 1, 2), 4), 2).line is 4
 	let reads = ReadPositions(entry)
 	if reads.Length is 0
 		return entry
 	mutable content = List(Mutable(Number))
 	for entry.payload
 		content.Add(index is in reads then Origin(value, position) else value)
-	InstructionEntry(entry.kind, entry.texts, content)
+	InstructionEntry(entry.kind, entry.texts, content, entry.line)
 Origin(register Number, position Number) Number
 	Twice.Origin(1, 2) is 0
 	Twice.Origin(0, 2) is 0

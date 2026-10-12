@@ -10,10 +10,11 @@ Block(start Number, depth Number) SyntaxNode
 Statement(lineIndex Number, depth Number) SyntaxNode
 	BodyParser("Run", "\tfor 3", "\t\tvalue").Statement(1, 1).children.Length is 2
 	BodyParser("Run", "\ta", "\tb").Statement(1, 1).children.Length is 0
+	BodyParser("Run", "\ta", "\tb").Statement(2, 1).line is 3
 	let statement = StatementParser(Tokenizer(lines(lineIndex).Trim).Tokens).ParseStatement
 	if (lineIndex + 1 is lines.Length) or Indent(lines(lineIndex + 1)) <= depth
-		return statement
-	SyntaxNode(statement.Kind, statement.text, statement.children + Block(lineIndex + 1, depth + 1))
+		return SyntaxNode(statement.Kind, statement.text, statement.children, lineIndex + 1)
+	SyntaxNode(statement.Kind, statement.text, statement.children + Block(lineIndex + 1, depth + 1), lineIndex + 1)
 BlockEnd(start Number, depth Number) Number
 	BodyParser("Run", "\ta", "Other").BlockEnd(1, 1) is 2
 	BodyParser("Run", "\ta", "\t\tb").BlockEnd(1, 1) is 3

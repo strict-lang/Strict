@@ -10,19 +10,21 @@ constant Defaulted = MethodEntry("Add", List(MemberEntry) + MemberEntry.SevenMem
 constant Wrapper = TypeEntry("Strict/Wrapper", (MemberEntry.LoggerMember, MemberEntry.SevenMember), List(MethodEntry))
 constant Coded = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.FieldLoad, ("number", "Character"), (1, 0, -1, -2))), 0, List(VmValue) + VmValue.OfText("a"), Locals.Empty)
 constant Paired = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry.Initializing)
-constant Listing = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.IndexCall, "list", (0, 0, -1))), 0, List(VmValue) + VmValue.OfNumber(1), Locals(("list"), (VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)))))
+constant Listing = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.IndexCall, "list", (0, 0, -1))), 0, List(VmValue) + VmValue.OfNumber(1), Locals(("list"), (VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)))), "Strict/Lists")
+constant Failing = TypeEntry("Strict/Failing", List(MemberEntry), List(MethodEntry) + MethodEntry("Fail", List(MemberEntry), "Strict/Number", (InstructionEntry(InstructionType.IndexCall, "list", (0, 0, -1)), InstructionEntry.Return(0))))
+constant Calling = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)), 0, List(VmValue), Locals.Empty, "Strict/Caller")
 Launch(typeName Text, arguments List(VmValue))
 	let main = Natives(types).TypeOf(typeName)
 	let exact = main.Callee("Run", arguments.Length, "None", List(Text))
 	let isExact = exact.instructions.Length > 0
 	let run = isExact then exact else main.Callee("Run", 1, "None", List(Text))
 	let bound = isExact then arguments else List(VmValue) + VmValue.OfList(arguments)
-	Execute(run, Bound(main, Natives(types).Fresh(main), run, bound))
+	Execute(run, Bound(main, Natives(types).Fresh(main), run, bound), main.Name)
 Tested(typeName Text) Number
 	Hello.Tested("HelloLogger") is 0
 	let main = Natives(types).TypeOf(typeName)
 	let tests = main.Callee(TestCodegen.Runner, 0, "None", List(Text))
-	Execute(tests, Bound(main, Natives(types).Fresh(main), tests, List(VmValue))).number
+	Execute(tests, Bound(main, Natives(types).Fresh(main), tests, List(VmValue)), main.Name).number
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue)) Locals
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue)).Get("value").number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue)).Get("a").number is 7
@@ -47,12 +49,13 @@ MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 	let natives = Natives(types)
 	let isOwner = natives.IsNamed(owner, instance.kind, natives.Short(instance.kind))
 	isOwner then instance.Member(index) else instance.As(member.typeName)
-Execute(method MethodEntry, locals Locals) VmValue
-	Machine(List(TypeEntry) + Doubler).Execute(Doubler.methods.First, Locals.Empty).number is 42
-	Finished(method, locals).Local("#result")
-Finished(method MethodEntry, locals Locals) Frame
-	Machine(List(TypeEntry) + Doubler).Finished(Doubler.methods.First, Locals.Empty).position is 3
-	mutable current = Frame(method, 0, List(VmValue), locals)
+Execute(method MethodEntry, locals Locals, owner Text) VmValue
+	Machine(List(TypeEntry) + Doubler).Execute(Doubler.methods.First, Locals.Empty, "Strict/Doubler").number is 42
+	Finished(method, locals, owner).Local("#result")
+Finished(method MethodEntry, locals Locals, owner Text) Frame
+	Machine(List(TypeEntry) + Doubler).Finished(Doubler.methods.First, Locals.Empty, "Strict/Doubler").position is 3
+	Machine(List(TypeEntry) + Doubler).Finished(Doubler.methods.First, Locals.Empty, "Strict/D").owner is "Strict/D"
+	mutable current = Frame(method, 0, List(VmValue), locals, owner)
 	for MaxSteps
 		if current.position >= current.method.instructions.Length
 			return current
@@ -74,10 +77,12 @@ Step(frame Frame) Frame
 	kind is InstructionType.FieldLoad then Field(frame) else Flow(frame, entry).Step
 Invoked(frame Frame) Frame
 	Machine(List(TypeEntry) + Doubler).Invoked(Frame(MethodEntry.GoRun, 0, List(VmValue), Locals.Empty)).position is 1
+	Machine(List(TypeEntry) + Failing).Invoked(Calling).Register(0).Traces.IndexOf("at Caller.Run") > 0 is true
 	let result = Call(Invocation(frame.Instruction, frame))
 	if result.kind is "Error"
 		logger.Log(result.text)
-	frame.NextWithRegister(frame.Instruction.payload(0), result)
+	let traced = result.kind is "Strict/Error" then frame.Traced(result) else result
+	frame.NextWithRegister(frame.Instruction.payload(0), traced)
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
 	Hello.Call(Uppered).text is "AB"
@@ -94,21 +99,21 @@ Call(call Invocation) VmValue
 Executed(type TypeEntry, method MethodEntry, call Invocation) VmValue
 	Machine(List(TypeEntry) + Paired).Executed(Paired, Paired.methods.First, Invocation.AddCall).items.First.number is 7
 	if (type.IsStruct is false) or (method.IsInitializer(type.Changing) is false)
-		return Execute(method, Bound(type, call.Instance, method, call.Arguments))
-	let finished = Finished(method, Bound(type, Natives(types).Fresh(type), method, call.Arguments))
+		return Execute(method, Bound(type, call.Instance, method, call.Arguments), type.Name)
+	let finished = Finished(method, Bound(type, Natives(types).Fresh(type), method, call.Arguments), type.Name)
 	mutable values = List(Mutable(VmValue))
 	for type.members
 		values.Add(finished.Local(value.Name))
 	VmValue(type.Name, 0, "", values)
 Indexed(frame Frame) Frame
 	Hello.Indexed(Listing).Register(0).number is 20
-	Hello.Indexed(Listing.WithRegister(0, VmValue.OfNumber(5))).Register(0) is VmValue.OfError("Run")
+	Hello.Indexed(Listing.WithRegister(0, VmValue.OfNumber(5))).Register(0).Traces.IndexOf("Lists.Run in") > 0 is true
 	let entry = frame.Instruction
 	let collection = frame.Local(entry.texts(0))
 	let position = frame.Register(entry.payload(1)).number
 	let wrapped = position < 0 then position + collection.Length else position
 	if (wrapped < 0) or (wrapped >= collection.Length)
-		return frame.NextWithRegister(entry.payload(0), VmValue.OfError(frame.method.Name))
+		return frame.NextWithRegister(entry.payload(0), frame.Traced(VmValue.OfError(frame.method.Name)))
 	let isText = collection.kind is "Text"
 	let element = isText then VmValue.OfText(collection.text.Substring(wrapped, 1)) else collection.items(wrapped)
 	frame.NextWithRegister(entry.payload(0), element)

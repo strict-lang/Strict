@@ -89,11 +89,14 @@ Printable(kind Text) Text
 	own.instructions.Length > 0 then kind else MlirLayout(function).Represented(kind)
 Helper(kind Text) Text
 	MlirTexts(Joined, 0).Helper("Boolean") is "strict_boolean_text"
+	MlirTexts(Joined, 0).Helper("Error") is "strict_error_report"
 	MlirTexts(Joined, 0).Helper("List(Text)") is "strict_list_text_text"
 	MlirTexts(Joined, 0).Helper("Shape") is ""
 	MlirTexts(Joined, 0).Helper("List(Text, Number)") is "strict_list_text_pair_text_number"
 	if kind is in ("Number", "Character", "Boolean")
 		return "strict_" + kind.Lower + "_text"
+	if kind is "Error"
+		return "strict_error_report"
 	let suffix = kind.StartsWith("List(") then MlirKinds(function).ElementSuffix(kind) else ""
 	suffix is "" then "" else "strict_list_text_" + suffix
 Described(loaded Text, suffix Text, kind Text) Texts
@@ -107,8 +110,9 @@ Described(loaded Text, suffix Text, kind Text) Texts
 	let symbol = method.instructions.Length is 0 then automatic else MlirFunction(function.types, type, method).Symbol
 	(loaded, MlirMemory(function, position).Called(Temp(suffix + "x"), symbol, List(Text) + Temp(suffix)))
 Pointer(register Number, suffix Text) Texts
-	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = func.call @strict_ptr(%t3bx) : (f64) -> !llvm.ptr"
-	TextBits(register, suffix) + MlirMemory(function, position).Pointer(Temp(suffix + "x"), suffix)
+	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = func.call @strict_ptr(%t3bs) : (f64) -> !llvm.ptr"
+	let shown = MlirMemory(function, position).Called(Temp(suffix + "s"), "strict_shown", List(Text) + Temp(suffix + "x"))
+	TextBits(register, suffix) + shown + MlirMemory(function, position).Pointer(Temp(suffix + "s"), suffix)
 Concatenated(entry InstructionEntry) Texts
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 5
 	let operands = TextBits(entry.payload(1), "l") + TextBits(entry.payload(2), "r")

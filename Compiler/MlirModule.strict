@@ -60,16 +60,21 @@ Called(function MlirFunction, position Number) List(MlirFunction)
 	constant none = List(MlirFunction)
 	callee.instructions.Length is 0 then none else none + MlirFunction(types, type, callee)
 Globals(functions List(MlirFunction)) Texts
-	Counters.Globals(Counters.Functions).Length is 0
+	Counters.Globals(Counters.Functions).Length is 1
 	mutable lines = List(Mutable(Text))
 	for functions
 		lines = lines + FunctionGlobals(value)
 	lines
 FunctionGlobals(function MlirFunction) Texts
-	Counters.FunctionGlobals(MlirCalls.Shapes).Length is 1
+	Counters.FunctionGlobals(MlirCalls.Shapes).Length is 2
+	Counters.FunctionGlobals(MlirCalls.Shapes).First.IndexOf("@wShape_Run_0(\"Shape.Run in Shape.strict") > 0 is true
+	let location = function.type.Location(function.method.Name)
+	let where = "  llvm.mlir.global internal constant @w" + function.Symbol + "(\"" + location + "\\00\")"
+	mutable lines = List(Text) + (where + " : !llvm.array<" + (location.Length + 1) + " x i8>")
 	for Positions(function)
 		if IsGlobal(function, value)
-			Global(function, value)
+			lines = lines + Global(function, value)
+	lines
 Positions(function MlirFunction) Numbers
 	Counters.Positions(MlirCalls.Shapes).Length is 4
 	mutable positions = List(Mutable(Number))
@@ -96,9 +101,11 @@ Global(function MlirFunction, position Number) Text
 	entry.kind is InstructionType.Print then PrintGlobal(function, position, entry) else constants.Global
 NameGlobal(function MlirFunction, position Number) Text
 	Counters.NameGlobal(Counters.Functions.First, 0).IndexOf("Run\\00") > 0 is true
+	Counters.NameGlobal(Counters.Functions.First, 0).IndexOf("\\09at Counter.Run in Counter.strict:line 0\\00") > 0 is true
 	let name = function.method.Name
+	let trace = "at " + function.type.Location(name) + ":line " + function.method.instructions(position).line
 	let global = "  llvm.mlir.global internal constant @s" + function.Symbol + "_" + position
-	global + "(\"" + name + "\\00\") : !llvm.array<" + (name.Length + 1) + " x i8>"
+	global + "(\"" + name + "\\00\\09" + trace + "\\00\") : !llvm.array<" + (name.Length + trace.Length + 3) + " x i8>"
 PrintGlobal(function MlirFunction, position Number, entry InstructionEntry) Text
 	Counters.PrintGlobal(MlirCalls.Shapes, 3, MlirCalls.Shapes.method.instructions(3)).StartsWith("  llvm") is true
 	let constants = MlirConstants(function, position)

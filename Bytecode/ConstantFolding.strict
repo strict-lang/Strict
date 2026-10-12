@@ -42,13 +42,14 @@ Literal(line SyntaxNode) SyntaxNode
 	isLiteral then SyntaxNode("Constant", Tokenizer(line.text).Tokens.Last, List(SyntaxNode) + folded) else line
 Substituted(node SyntaxNode, constants SyntaxNodes) SyntaxNode
 	Limits.Substituted(SyntaxNode("Identifier", "a"), List(SyntaxNode) + Limits.Literal(Local.children(0))).text is "2"
+	Limits.Substituted(SyntaxNode("Call", "f", List(SyntaxNode), 4), List(SyntaxNode)).line is 4
 	for constants
 		if (node.Kind is "Identifier") and (value.text is node.text)
 			return value.children(0)
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
 		children.Add(Substituted(value, constants))
-	SyntaxNode(node.Kind, node.text, children)
+	SyntaxNode(node.Kind, node.text, children, node.line)
 Constant(node SyntaxNode) SyntaxNode
 	Limits.Constant(SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count"))).text is "3"
 	Limits.Constant(Two).text is "2"

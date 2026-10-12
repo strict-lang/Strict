@@ -11,10 +11,13 @@ Bits(pointer Text, suffix Text) Texts
 	Sample.Bits("%p", "a") is ("    %t3af = func.call @strict_bits(%p) : (!llvm.ptr) -> f64")
 	Boxed(pointer, suffix, "")
 Boxed(pointer Text, suffix Text, typeName Text) Texts
-	Sample.Boxed("%p", "a", "Strict/Error") is ("    %t3af = func.call @strict_error_bits(%p) : (!llvm.ptr) -> f64")
+	Sample.Boxed("%p", "a", "Strict/Error").First is "    %t3afe = func.call @strict_error_bits(%p) : (!llvm.ptr) -> f64"
+	Sample.Boxed("%p", "a", "Strict/Error").Last.StartsWith("    %t3af = func.call @strict_trace(%t3afe,") is true
 	let short = TypeEntry.ShortName(typeName)
-	let tagged = short is "ErrorWithValue" then "strict_error_value_bits" else "strict_bits"
-	let helper = short is "Error" then "strict_error_bits" else tagged
+	if short is "Error"
+		let tagged = "    " + Temp(suffix + "fe") + " = func.call @strict_error_bits(" + pointer + ") : (!llvm.ptr) -> f64"
+		return List(Text) + tagged + Traced(Temp(suffix + "fe"), Temp(suffix + "f"))
+	let helper = short is "ErrorWithValue" then "strict_error_value_bits" else "strict_bits"
 	List(Text) + ("    " + Temp(suffix + "f") + " = func.call @" + helper + "(" + pointer + ") : (!llvm.ptr) -> f64")
 Allocated(slots Number, suffix Text) Texts
 	Sample.Allocated(2, "o").First is "    %t3oz = arith.constant 16 : i64"
@@ -31,3 +34,11 @@ Called(result Text, name Text, operands Texts) Text
 	Sample.Called("%r", "add", ("%a", "%b")) is "    %r = func.call @add(%a, %b) : (f64, f64) -> f64"
 	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
 	"    " + result + " = func.call @" + name + "(" + Text.Combine(operands, ", ") + ") : (" + types + ") -> f64"
+Traced(operand Text, result Text) Texts
+	Sample.Traced("%r", "%x").Last is "    %x = func.call @strict_trace(%r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64"
+	let instructions = function.method.instructions
+	let line = position < instructions.Length then instructions(position).line else 0
+	let address = "    " + Temp("tw") + " = llvm.mlir.addressof @w" + function.Symbol + " : !llvm.ptr"
+	let call = " = func.call @strict_trace(" + operand + ", " + Temp("tw") + ", " + Temp("twl") + ")"
+	let number = "    " + Temp("twl") + " = arith.constant " + line + " : i64"
+	(address, number, "    " + result + call + " : (f64, !llvm.ptr, i64) -> f64")

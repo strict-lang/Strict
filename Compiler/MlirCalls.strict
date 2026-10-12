@@ -15,7 +15,7 @@ Temp(suffix Text) Text
 	"%t" + position + suffix
 Emitted Texts
 	MlirCalls(Shapes, 1).Emitted.Last is "    llvm.store %t1of, %r1 : f64, !llvm.ptr"
-	MlirCalls(Hashes, 1).Emitted.Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
+	MlirCalls(Hashes, 1).Emitted.Last is "    llvm.store %t1tr, %r1 : f64, !llvm.ptr"
 	let entry = function.method.instructions(position)
 	if entry.kind is InstructionType.Print
 		return Printed(entry)
@@ -47,7 +47,7 @@ IsMemberValue(entry InstructionEntry, type TypeEntry) Boolean
 	let isSame = argument is TypeEntry.ShortName(type.Name)
 	isSame or (layout.Represented(argument) is layout.Represented(TypeEntry.ShortName(members.First.typeName)))
 Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
-	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
+	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2tr, %r2 : f64, !llvm.ptr"
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
 	let helper = NativeHelper(entry, decoder)
@@ -55,7 +55,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 		return MlirNatives(function, position).Emitted(entry, type, helper)
 	Compiled(entry, decoder, type, count)
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
-	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
+	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 6
 	let callee = type.Callee(decoder.Text(2), count, decoder.Text(4 + entry.payload(3)), decoder.Names)
 	if callee.instructions.Length is 0
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
@@ -63,7 +63,8 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	let names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
 	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + names + ") : (" + types + ") -> f64"
-	Loads(entry, type) + Defaults(callee, count) + call + function.Store(Temp("r"), "%r" + entry.payload(0))
+	let traced = MlirMemory(function, position).Traced(Temp("r"), Temp("tr"))
+	Loads(entry, type) + Defaults(callee, count) + call + traced + function.Store(Temp("tr"), "%r" + entry.payload(0))
 Defaults(callee MethodEntry, count Number) Texts
 	MlirCalls(Hashes, 1).Defaults(Defaulted, 0).Last is "    %t1a0 = llvm.load %r1 : !llvm.ptr -> f64"
 	let scratch = "%r" + function.method.instructions(position).payload(0)
@@ -113,7 +114,7 @@ ArgumentTypes(count Number) Texts
 	for count
 		"f64"
 Printed(entry InstructionEntry) Texts
-	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Length is 5
+	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Length is 6
 	let address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	constant printf = " = llvm.call @printf("
 	constant vararg = ") vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr"

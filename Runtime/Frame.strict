@@ -2,7 +2,9 @@ has method Bytecode/MethodEntry
 has position Number
 has registers List(VmValue)
 has locals
+has owner Text = ""
 constant Start = Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)
+constant Logging = Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty, "Strict/Examples/HelloLogger")
 constant Looped = Start.WithLocal("#loop", VmValue.OfList(VmValue.None, VmValue.None, VmValue.None, VmValue.OfNumber(2), VmValue.OfNumber(7)))
 Instruction InstructionEntry
 	Start.Instruction.kind is InstructionType.Print
@@ -13,22 +15,23 @@ Register(number Number) VmValue
 	number < registers.Length then registers(number) else VmValue.None
 WithRegister(number Number, entry VmValue) Frame
 	Start.WithRegister(0, VmValue.OfNumber(5)).registers.Length is 1
-	Frame(method, position, locals.Replaced(registers, number, entry), locals)
+	Frame(method, position, locals.Replaced(registers, number, entry), locals, owner)
 WithLocal(name Text, entry VmValue) Frame
 	Start.WithLocal("a", VmValue.OfNumber(5)).locals.Get("a").number is 5
-	Frame(method, position, registers, locals.With(name, entry))
+	Frame(method, position, registers, locals.With(name, entry), owner)
 NextWithRegister(number Number, entry VmValue) Frame
 	Start.NextWithRegister(1, VmValue.OfNumber(5)).Register(1).number is 5
-	Frame(method, position + 1, locals.Replaced(registers, number, entry), locals)
+	Frame(method, position + 1, locals.Replaced(registers, number, entry), locals, owner)
 NextWithLocal(name Text, entry VmValue) Frame
 	Start.NextWithLocal("a", VmValue.OfNumber(5)).position is 1
-	Frame(method, position + 1, registers, locals.With(name, entry))
+	Frame(method, position + 1, registers, locals.With(name, entry), owner)
 At(target Number) Frame
 	Start.At(1).position is 1
-	Frame(method, target, registers, locals)
+	Frame(method, target, registers, locals, owner)
 Next Frame
 	Start.Next.position is 1
-	Frame(method, position + 1, registers, locals)
+	Logging.Next.owner is "Strict/Examples/HelloLogger"
+	Frame(method, position + 1, registers, locals, owner)
 Local(name Text) VmValue
 	Start.WithLocal("b", VmValue.OfText("x")).Local("b").text is "x"
 	Looped.Local("outer").number is 7
@@ -37,3 +40,9 @@ Local(name Text) VmValue
 	if (found.kind is not "None") or (name.StartsWith("outer") is false)
 		return found
 	locals.Get("#loop").items(name is "outer" then 4 else 3)
+Traced(error VmValue) VmValue
+	Logging.Traced(VmValue.OfError("a")).Traces is "\n\tat HelloLogger.Run in Examples/HelloLogger.strict:line 3"
+	let called = VmValue.OfText(TypeEntry.ShortName(owner) + "." + method.Name)
+	let file = VmValue.OfText(TypeEntry(owner, List(MemberEntry), List(MethodEntry)).File)
+	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(Instruction.line)))
+	VmValue(error.kind, error.number, error.text, (error.items(0), VmValue.OfList(error.items(1).items + trace)))

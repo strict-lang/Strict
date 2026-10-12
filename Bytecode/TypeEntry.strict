@@ -1,7 +1,7 @@
 has Name Text
 has members List(MemberEntry)
 has methods List(MethodEntry)
-constant FormatVersion = 2
+constant FormatVersion = 3
 constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
 constant CharacterEntry = TypeEntry("Strict/Character", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
 constant Scaling = TypeEntry("Strict/Vector", List(MemberEntry), (MethodEntry("*", List(MemberEntry) + MemberEntry("other", "Strict/Vector", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry)), MethodEntry("*", List(MemberEntry) + MemberEntry("scale", "Strict/Number", List(InstructionEntry), false), "Strict/Vector", List(InstructionEntry))))
@@ -16,7 +16,7 @@ Names BinaryNames
 		result = value.Names(result)
 	result
 Bytes Numbers
-	HelloLogger.Bytes.Length is 72
+	HelloLogger.Bytes.Length is 74
 	let names = Names
 	mutable integers = names.Integers + names.Index(Name) + members.Length
 	for members
@@ -109,3 +109,10 @@ Invoked Texts
 	for methods
 		targets = targets + value.Invoked
 	targets
+File Text
+	CharacterEntry.File is "Character.strict"
+	let folder = Name.IndexOf("/") + 1
+	Name.Substring(folder, Name.Length - folder) + ".strict"
+Location(methodName Text) Text
+	CharacterEntry.Location("Lower") is "Character.Lower in Character.strict"
+	ShortName(Name) + "." + methodName + " in " + File

@@ -18,8 +18,9 @@ Instructions(instructions List(InstructionEntry)) List(InstructionEntry)
 		value.kind is InstructionType.Invoke then Targeted(value) else value
 Targeted(entry InstructionEntry) InstructionEntry
 	Doubling.Targeted(Twice.entry).payload is (0, -1, -2, 0, -3, 0, 0, 0, 0, 0)
+	Doubling.Targeted(InstructionEntry(InstructionType.Invoke, Twice.entry.texts, Twice.entry.payload, 9)).line is 9
 	Doubling.Targeted(Invocation.AddCall.entry).payload is (2, -1, -2, 1, -4, -3, 1, 0, 1, 1, Native, 0, 0)
-	InstructionEntry(entry.kind, entry.texts, entry.payload + Target(Invocation(entry, Frame.Start)))
+	InstructionEntry(entry.kind, entry.texts, entry.payload + Target(Invocation(entry, Frame.Start)), entry.line)
 Target(call Invocation) Numbers
 	Doubling.Target(Machine.Uppered) is (Searching, 0, 0)
 	Doubling.Target(Hosted.SystemCall) is (Hosting, 0, 0)

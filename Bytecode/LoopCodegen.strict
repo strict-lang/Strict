@@ -42,7 +42,8 @@ Leading(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Leading(MethodCodegen.SumBody, CodeBlock.Empty).instructions.Length is 0
 	mutable result = block
 	for body.children.Length - 1
-		result = methods.Statement(body.children(index), result.At(block.register), methods.HasElse(body, index))
+		let statement = methods.Statement(body.children(index), result.At(block.register), methods.HasElse(body, index))
+		result = methods.Lined(statement, result.instructions.Length, body.children(index).line)
 	result.At(block.register)
 AnyTrue(body SyntaxNode) SyntaxNode
 	Plain.AnyTrue(DoubledBody).children.Last.Kind is "Boolean"

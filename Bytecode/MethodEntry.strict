@@ -2,7 +2,7 @@ has Name Text
 has parameters List(MemberEntry)
 has returnType Text
 has instructions List(InstructionEntry)
-constant PrintHi = InstructionEntry.Print("Hi")
+constant PrintHi = InstructionEntry(InstructionType.Print, "Hi", (-1, 0), 3)
 constant GoCall = InstructionEntry.Invoke(0, ("Strict/B", "Go", "None"), List(Number), -1)
 constant GoRun = MethodEntry("Run", List(MemberEntry), "None", GoCall)
 constant CountingLoop = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))
@@ -20,7 +20,7 @@ Names(names BinaryNames) BinaryNames
 		result = value.Names(result)
 	result
 Integers(names BinaryNames) Numbers
-	HelloRun.Integers(BinaryNames("Run", "None", "Hi")) is (0, 1, 0, 2, 6, 45, 1, 2, 2, 1, 0, 4, 32, 0, 1, 0)
+	HelloRun.Integers(BinaryNames("Run", "None", "Hi")) is (0, 1, 0, 2, 7, 173, 1, 2, 2, 1, 0, 3, 4, 32, 0, 1, 0)
 	mutable integers = List(Number) + names.Index(Name) + names.Index(returnType) + parameters.Length
 	for parameters
 		let member = value.Integers(names)
