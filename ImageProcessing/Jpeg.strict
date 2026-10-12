@@ -25,17 +25,31 @@ Segment(marker Number) Number
 	found.Length is 0 then -1 else found.First
 Segments(marker Number) Numbers
 	Gray.Segments(Codes) is (102, 124)
+	Jpeg.Read("ImageProcessing/Progressive.jpg").Segments(Scan).Length is 10
 	mutable found = List(Mutable(Number))
 	mutable position = 2
 	for bytes.Length
-		if position + 3 >= bytes.Length
+		if (position + 3 >= bytes.Length) or (bytes(position + 1) is 217)
 			return found
-		if bytes(position + 1) is marker
+		if Kind(position) is marker
 			found.Add(position)
-		if bytes(position + 1) is Scan
-			return found
-		position = position + 2 + Number16(position + 2)
+		let after = position + 2 + Number16(position + 2)
+		position = bytes(position + 1) is Scan then Skipped(after) else after
 	found
+Kind(position Number) Number
+	Gray.Kind(89) is Frame
+	Jpeg.Read("ImageProcessing/Progressive.jpg").Kind(158) is Frame
+	bytes(position + 1) is in (193, 194) then Frame else bytes(position + 1)
+Skipped(start Number) Number
+	Gray.Skipped(161) is 167
+	for Range(start, bytes.Length - 1)
+		if (bytes(value) is 255) and (bytes(value + 1) is not 0) and (IsRestart(value) is false)
+			return value
+	bytes.Length
+IsRestart(position Number) Boolean
+	Gray.IsRestart(167) is false
+	Jpeg((255, 208)).IsRestart(0) is true
+	(bytes(position + 1) >= 208) and (bytes(position + 1) <= 215)
 Entry(segment Number, info Number, isCodes Boolean) Number
 	Gray.Entry(124, 16, true) is 128
 	Colored.Entry(89, 1, false) is 93
@@ -56,41 +70,37 @@ Quantization(id Number) Numbers
 		if position >= 0
 			return Inflate.Part(bytes, position + 1, 64)
 	List(Number)
-Huffmans(info Number) Huffman
-	Gray.Huffmans(16).symbols is (0, 6, 9, 34, 53, 82)
-	Gray.Huffmans(0).counts.Length is 17
+Huffmans(info Number, scan Number) Huffman
+	Gray.Huffmans(16, 151).symbols is (0, 6, 9, 34, 53, 82)
+	Gray.Huffmans(0, 102).counts.Length is 0
+	Jpeg.Read("ImageProcessing/Progressive.jpg").Huffmans(16, 438).symbols is (0, 16, 17, 81)
+	mutable found = Huffman(List(Number), List(Number))
 	for Segments(Codes)
 		let position = Entry(value, info, true)
-		if position >= 0
+		if (value < scan) and (position >= 0)
 			let counts = Inflate.Part(bytes, position + 1, 16)
-			return Huffman(List(Number) + 0 + counts, Inflate.Part(bytes, position + 17, counts.Sum))
-	Huffman(List(Number), List(Number))
-Interval Number
-	Gray.Interval is 0
-	Segment(Restart) < 0 then 0 else Number16(Segment(Restart) + 4)
-Intervals List(Numbers)
-	Gray.Intervals.Length is 1
-	Gray.Intervals.First is (184, 221, 201, 174, 9, 147)
-	mutable intervals = List(Mutable(Numbers))
-	mutable position = Segment(Scan) + 2 + Number16(Segment(Scan) + 2)
-	for bytes.Length
-		let part = Unstuffed(position)
-		intervals.Add(part.output)
-		if part.position < 0
-			return intervals
-		position = part.position
-	intervals
+			found = Huffman(List(Number) + 0 + counts, Inflate.Part(bytes, position + 17, counts.Sum))
+	found
+Interval(scan Number) Number
+	Gray.Interval(151) is 0
+	Jpeg.Read("ImageProcessing/Progressive.jpg").Interval(234) is 2
+	mutable interval = 0
+	for Segments(Restart)
+		if value < scan
+			interval = Number16(value + 4)
+	interval
 Unstuffed(start Number) Inflation
 	Gray.Unstuffed(161).output.Length is 6
+	Gray.Unstuffed(161).position is 167
 	mutable output = List(Mutable(Number))
 	mutable position = start
 	for bytes.Length - start
 		let next = position + 1 < bytes.Length then bytes(position + 1) else 217
 		if (bytes(position) is 255) and (next is not 0)
-			return Inflation(output, (next >= 208) and (next <= 215) then position + 2 else -1)
+			return Inflation(output, position)
 		output.Add(Reversed(bytes(position)))
 		position = position + (bytes(position) is 255 then 2 else 1)
-	Inflation(output, -1)
+	Inflation(output, bytes.Length - 2)
 Reversed(byte Number) Number
 	Gray.Reversed(1) is 128
 	Gray.Reversed(6) is 96

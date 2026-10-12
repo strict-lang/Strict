@@ -1,0 +1,84 @@
+has decoder JpegDecoder
+has start Number
+constant Gray = JpegScan(JpegDecoder.Gray, 151)
+constant Colored = JpegScan(JpegDecoder.Colored, 279)
+Components Numbers
+	Colored.Components is (0, 1, 2)
+	JpegScan(JpegDecoder.Read("ImageProcessing/Progressive.jpg"), 352).Components is List(Number) + 2
+	let jpeg = decoder.jpeg
+	let identifiers = JpegDecoder.Component(jpeg, jpeg.bytes(jpeg.Segment(Jpeg.Frame) + 9), 10)
+	for jpeg.bytes(start + 4)
+		identifiers.Index(jpeg.bytes(start + 5 + index * 2))
+Band Numbers
+	Gray.Band is (0, 63, 0, 0)
+	JpegScan(JpegDecoder.Read("ImageProcessing/Progressive.jpg"), 496).Band is (1, 63, 2, 1)
+	let position = start + 5 + decoder.jpeg.bytes(start + 4) * 2
+	let approximation = decoder.jpeg.bytes(position + 2)
+	(decoder.jpeg.bytes(position), decoder.jpeg.bytes(position + 1), (approximation / 16).Floor, approximation % 16)
+Codes(kind Number) List(Huffman)
+	Gray.Codes(16).First.symbols is (0, 6, 9, 34, 53, 82)
+	Colored.Codes(0).Length is 3
+	let components = Components
+	for decoder.samplings
+		let position = components.Index(index)
+		let selectors = position < 0 then 0 else decoder.jpeg.bytes(start + 6 + position * 2)
+		decoder.jpeg.Huffmans(kind + (kind is 0 then (selectors / 16).Floor else selectors % 16), start)
+Intervals List(Numbers)
+	Gray.Intervals.First is (184, 221, 201, 174, 9, 147)
+	JpegScan(JpegDecoder.Read("ImageProcessing/Progressive.jpg"), 291).Intervals.Length is 6
+	mutable intervals = List(Mutable(Numbers))
+	mutable position = start + 2 + decoder.jpeg.Number16(start + 2)
+	for decoder.jpeg.bytes.Length
+		let part = decoder.jpeg.Unstuffed(position)
+		intervals.Add(part.output)
+		if decoder.jpeg.IsRestart(part.position) is false
+			return intervals
+		position = part.position + 2
+	intervals
+Unit JpegUnit
+	Gray.Unit.band is (0, 63, 0, 0)
+	JpegUnit(Inflate(List(Number)), Codes(0), Codes(16), Band)
+Order Numbers
+	Colored.Order is (0, 1, 2, 3, 4, 5)
+	JpegScan(JpegDecoder.Read("ImageProcessing/Progressive.jpg"), 291).Order is (0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15)
+	let components = Components
+	components.Length is 1 then Raster(components.First) else Interleaved(components)
+Interleaved(components Numbers) Numbers
+	Colored.Interleaved((1, 2)) is (4, 5)
+	for decoder.Total
+		if decoder.plan(index % decoder.plan.Length) is in components
+			index
+Raster(component Number) Numbers
+	Colored.Raster(0) is (0, 1, 2, 3)
+	Colored.Raster(2) is List(Number) + 5
+	let across = decoder.Extent(component, true)
+	let columns = decoder.Columns
+	for across * decoder.Extent(component, false)
+		decoder.Located(component, index % across, (index / across).Floor, columns)
+Chunk(count Number) Number
+	Colored.Chunk(6) is 6
+	JpegScan(JpegDecoder.Read("ImageProcessing/Progressive.jpg"), 234).Chunk(18) is 12
+	let interval = decoder.jpeg.Interval(start)
+	let size = Components.Length is 1 then 1 else count * decoder.plan.Length / decoder.Total
+	interval is 0 then count else interval * size
+Scanned(coefficients List(Numbers)) List(Numbers)
+	Gray.Scanned(JpegDecoder.Gray.Zeros).First.First is -24
+	Colored.Scanned(JpegDecoder.Colored.Zeros).Last.First is -2
+	let order = Order
+	let units = Chunk(order.Length)
+	let unit = Unit
+	mutable blocks = coefficients
+	for Intervals
+		blocks = Decoded(unit.Streamed(value), blocks, order, Range(index * units, index * units + units))
+	blocks
+Decoded(unit JpegUnit, coefficients List(Numbers), order Numbers, units Range) List(Numbers)
+	Gray.Decoded(JpegUnit.Gray, JpegDecoder.Gray.Zeros, List(Number) + 0, Range(0, 1)).First.First is -24
+	Gray.Decoded(JpegUnit.Gray, JpegDecoder.Gray.Zeros, List(Number) + 0, Range(1, 2)).First.First is 0
+	mutable blocks = coefficients
+	mutable state = JpegState(List(Number), 0, 0, 0, decoder.samplings * 0)
+	for units
+		if value < order.Length
+			let block = order(value)
+			state = unit.Decoded(state.Holding(blocks(block)), decoder.plan(block % decoder.plan.Length))
+			blocks(block) = state.coefficients
+	blocks

@@ -1,0 +1,100 @@
+has stream Inflate
+has dcCodes List(Huffman)
+has acCodes List(Huffman)
+has band Numbers
+constant Gray = JpegScan.Gray.Unit.Streamed(JpegScan.Gray.Intervals.First)
+constant Begin = JpegState(Idct.Flat * 0, 0, 0, 0, List(Number) + 0)
+Streamed(bytes Numbers) JpegUnit
+	Gray.Streamed(List(Number) + 3).stream.bytes is List(Number) + 3
+	JpegUnit(Inflate(bytes), dcCodes, acCodes, band)
+Decoded(state JpegState, component Number) JpegState
+	Gray.Decoded(Begin, 0).coefficients(1) is -273
+	Gray.Decoded(Begin, 0).position is 47
+	if band(0) > 0
+		return Spectral(state, component, band(0))
+	let first = band(2) is 0 then Predicted(state, component) else Sharpened(state)
+	band(1) > 0 then Spectral(first, component, 1) else first
+Predicted(state JpegState, component Number) JpegState
+	Gray.Predicted(Begin, 0).coefficients.First is -24
+	Gray.Predicted(Begin, 0).position is 6
+	let symbol = dcCodes(component).Decoded(stream, state.position)
+	let difference = Extended(Received(state.position + symbol.bits, symbol.number), symbol.number)
+	mutable predictions = state.predictions
+	predictions(component) = predictions(component) + difference
+	mutable coefficients = state.coefficients
+	coefficients(0) = predictions(component) * 2 ^ band(3)
+	JpegState(coefficients, state.position + symbol.bits + symbol.number, state.run, 0, predictions)
+Sharpened(state JpegState) JpegState
+	Gray.Sharpened(Begin).coefficients.First is 0
+	Gray.Sharpened(Begin.Advanced(3, 0)).coefficients.First is 1
+	mutable coefficients = state.coefficients
+	coefficients(0) = coefficients(0) + stream.Bit(state.position) * 2 ^ band(3)
+	JpegState(coefficients, state.position + 1, state.run, 0, state.predictions)
+Spectral(state JpegState, component Number, start Number) JpegState
+	Gray.Spectral(Gray.Predicted(Begin, 0), 0, 1).next is 64
+	Gray.Spectral(Begin.Advanced(0, 2), 0, 1).run is 1
+	if state.run > 0
+		return Corrected(state.Advanced(state.position, state.run - 1).At(start), band(1) + 1)
+	mutable current = state.At(start)
+	for 64
+		if current.next > band(1)
+			return current
+		current = Symbolized(current, component)
+	current
+Symbolized(state JpegState, component Number) JpegState
+	Gray.Symbolized(Gray.Predicted(Begin, 0).At(1), 0).coefficients(1) is -273
+	Gray.Symbolized(Gray.Predicted(Begin, 0).At(1), 0).position is 18
+	let symbol = acCodes(component).Decoded(stream, state.position)
+	let zeros = (symbol.number / 16).Floor
+	let size = symbol.number % 16
+	let position = state.position + symbol.bits
+	if (size is 0) and (zeros < 15)
+		return Corrected(state.Advanced(position + zeros, Run(position, zeros)), band(1) + 1)
+	let number = band(2) is 0 then Extended(Received(position, size), size) else size * (stream.Bit(position) * 2 - 1)
+	let target = Target(state.coefficients, state.next, zeros)
+	Placed(Corrected(state.Advanced(position + size, 0), target), target, number * 2 ^ band(3))
+Target(coefficients Numbers, start Number, zeros Number) Number
+	Gray.Target(Idct.Flat, 0, 5) is 6
+	Gray.Target(Idct.Flat, 60, 9) is 64
+	mutable remaining = zeros
+	for Range(start, band(1) + 1)
+		if coefficients(value) is 0
+			if remaining is 0
+				return value
+			remaining = remaining - 1
+	band(1) + 1
+Corrected(state JpegState, end Number) JpegState
+	Gray.Corrected(Begin.Holding(Idct.Flat), 64).position is 1
+	Gray.Corrected(Begin.Holding(Idct.Flat).Advanced(3, 0), 64).coefficients.First is 9
+	mutable coefficients = state.coefficients
+	mutable position = state.position
+	for Range(state.next, end)
+		if coefficients(value) is not 0
+			let sign = coefficients(value) > 0 then 1 else -1
+			coefficients(value) = coefficients(value) + stream.Bit(position) * sign * 2 ^ band(3)
+			position = position + 1
+	JpegState(coefficients, position, state.run, end, state.predictions)
+Placed(state JpegState, target Number, number Number) JpegState
+	Gray.Placed(Begin.Holding(Idct.Flat), 2, 7).coefficients(2) is 7
+	Gray.Placed(Begin, 64, 7).next is 0
+	if target > band(1)
+		return state
+	mutable coefficients = state.coefficients
+	coefficients(target) = number
+	JpegState(coefficients, state.position, state.run, target + 1, state.predictions)
+Run(position Number, zeros Number) Number
+	Gray.Run(0, 0) is 0
+	Gray.Run(3, 2) is 6
+	2 ^ zeros - 1 + Received(position, zeros)
+Extended(bits Number, size Number) Number
+	Gray.Extended(3, 2) is 3
+	Gray.Extended(1, 2) is -2
+	Gray.Extended(0, 0) is 0
+	size is 0 then 0 else bits < 2 ^ (size - 1) then bits - 2 ^ size + 1 else bits
+Received(position Number, count Number) Number
+	Gray.Received(0, 3) is 0
+	Gray.Received(3, 3) is 7
+	mutable result = 0
+	for count
+		result = result * 2 + stream.Bit(position + index)
+	result

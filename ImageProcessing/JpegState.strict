@@ -1,0 +1,17 @@
+has coefficients Numbers
+has position Number
+has run Number
+has next Number
+has predictions Numbers
+constant Begin = JpegState(List(Number), 0, 0, 0, (0, 0, 0))
+At(start Number) JpegState
+	Begin.At(5).next is 5
+	JpegState(coefficients, position, run, start, predictions)
+Advanced(reached Number, remaining Number) JpegState
+	Begin.Advanced(3, 1).position is 3
+	Begin.Advanced(3, 1).run is 1
+	JpegState(coefficients, reached, remaining, next, predictions)
+Holding(block Numbers) JpegState
+	Begin.At(5).Holding((1, 2)).next is 0
+	Begin.Holding((1, 2)).coefficients is (1, 2)
+	JpegState(block, position, run, 0, predictions)
