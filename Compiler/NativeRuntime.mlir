@@ -3098,10 +3098,26 @@
     %added = func.call @strict_list_add(%list, %text) : (f64, f64) -> f64
     return %added : f64
   }
+  func.func private @strict_converted(%value: f64, %converter: (f64) -> f64) -> f64 {
+    %failed = func.call @strict_is_failure(%value) : (f64) -> i1
+    cf.cond_br %failed, ^report, ^convert
+  ^report:
+    %report = func.call @strict_error_report(%value) : (f64) -> f64
+    return %report : f64
+  ^convert:
+    %text = func.call_indirect %converter(%value) : (f64) -> f64
+    return %text : f64
+  }
   func.func private @strict_text_itself(%text: f64) -> f64 {
     return %text : f64
   }
   func.func private @strict_pair_text(%pair: f64, %keyText: (f64) -> f64, %valueText: (f64) -> f64) -> f64 {
+    %failed = func.call @strict_is_failure(%pair) : (f64) -> i1
+    cf.cond_br %failed, ^report, ^convert
+  ^report:
+    %report = func.call @strict_error_report(%pair) : (f64) -> f64
+    return %report : f64
+  ^convert:
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
     %two = arith.constant 2.0 : f64
@@ -3117,6 +3133,12 @@
     return %result : f64
   }
   func.func private @strict_pairs_text(%list: f64, %keyText: (f64) -> f64, %valueText: (f64) -> f64) -> f64 {
+    %failed = func.call @strict_is_failure(%list) : (f64) -> i1
+    cf.cond_br %failed, ^report, ^convert
+  ^report:
+    %report = func.call @strict_error_report(%list) : (f64) -> f64
+    return %report : f64
+  ^convert:
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
     %length = func.call @strict_list_length(%list) : (f64) -> f64

@@ -4,6 +4,7 @@ constant Declarations = ("  llvm.func @snprintf(!llvm.ptr, i64, !llvm.ptr, ...) 
 constant Joined = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a%"), InstructionEntry.LoadNumber(1, 7), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.PrintValue("x: ", 2, true), MlirKinds.Passed, InstructionEntry.PrintValue("y: ", 2, false), InstructionEntry.PrintValue("z: ", 1, false), InstructionEntry.Invoke(3, ("Strict/Number", "to", "Strict/Text"), List(Number), 1))))
 constant ToNumbers = InstructionEntry.Invoke(1, ("Strict/List(Text)", "to", "Strict/List(Number)"), List(Number), 0)
 constant Listing = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Words, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "words"), ToNumbers)))
+constant ShapeConverter = "    %t1dxc = func.constant @strict_automatic_Shape : (f64) -> f64"
 Temp(suffix Text) Text
 	MlirTexts(Joined, 2).Temp("l") is "%t2l"
 	MlirStatements(function, position).Temp(suffix)
@@ -38,7 +39,7 @@ Instance(entry InstructionEntry) Number
 	let countPosition = 5 + entry.payload(3)
 	entry.payload(countPosition + 2 + entry.payload(countPosition))
 Converted(entry InstructionEntry) Texts
-	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 3
+	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 4
 	let instance = Instance(entry)
 	let result = "%r" + entry.payload(0)
 	let target = TypeEntry.ShortName(PayloadDecoder(entry).Text(4 + entry.payload(3)))
@@ -49,7 +50,7 @@ Converted(entry InstructionEntry) Texts
 	let copied = function.Copied("%r" + instance, result, Temp("y"))
 	target is in ("Text", "Character") then Textual(instance, target, result) else copied
 Textual(instance Number, target Text, result Text) Texts
-	MlirTexts(Joined, 7).Textual(1, "Text", "%r3").Length is 3
+	MlirTexts(Joined, 7).Textual(1, "Text", "%r3").Length is 4
 	let text = TextBits(instance, "v")
 	let first = MlirMemory(function, position).Called(Temp("vc"), "strict_text_at", (Temp("vx"), "%zero"))
 	target is "Text" then text + function.Store(Temp("vx"), result) else text + first + function.Store(Temp("vc"), result)
@@ -73,8 +74,8 @@ Numbered(instance Number, target Text) Texts
 	(loaded, parsed, function.Store(Temp("nv"), target))
 TextBits(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).TextBits(2, "b") is ("    %t3bx = llvm.load %r2 : !llvm.ptr -> f64")
-	MlirTexts(Joined, 5).TextBits(2, "b").Length is 2
-	MlirTexts(Joined, 6).TextBits(1, "b").Length is 2
+	MlirTexts(Joined, 5).TextBits(2, "b").Last.IndexOf("@strict_converted(%t5b, %t5bxc)") > 0 is true
+	MlirTexts(Joined, 6).TextBits(1, "b").Length is 3
 	let kind = Printable(MlirKinds(function).KindOf(position, register))
 	if kind is "Text"
 		return List(Text) + function.Load(Temp(suffix + "x"), "%r" + register)
@@ -82,7 +83,7 @@ TextBits(register Number, suffix Text) Texts
 	let helper = Helper(kind)
 	if helper is ""
 		return Described(loaded, suffix, kind)
-	(loaded, MlirMemory(function, position).Called(Temp(suffix + "x"), helper, List(Text) + Temp(suffix)))
+	List(Text) + loaded + MlirMemory(function, position).Converting(Temp(suffix + "x"), helper, Temp(suffix))
 Printable(kind Text) Text
 	MlirTexts(Joined, 0).Printable("Number") is "Number"
 	let own = function.TypeOf(kind).Callee("to", 0, "Text", List(Text))
@@ -99,7 +100,7 @@ Helper(kind Text) Text
 	let suffix = kind.StartsWith("List(") then MlirKinds(function).ElementSuffix(kind) else ""
 	suffix is "" then "" else "strict_list_text_" + suffix
 Described(loaded Text, suffix Text, kind Text) Texts
-	MlirTexts(Joined, 1).Described("", "d", "Shape").Last.IndexOf("@strict_automatic_Shape(") > 0 is true
+	MlirTexts(Joined, 1).Described("", "d", "Shape").Index(ShapeConverter) is 1
 	MlirTexts(Joined, 1).Described("", "d", "Logger").First.StartsWith("unsupported") is true
 	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)").Last.IndexOf("@strict_pair_text(") > 0 is true
 	let type = function.TypeOf(kind)
@@ -110,13 +111,13 @@ Described(loaded Text, suffix Text, kind Text) Texts
 	if (method.instructions.Length is 0) and (automatic is "skip")
 		return List(Text) + MlirStatements(function, position).Unsupported("text of " + kind)
 	let symbol = method.instructions.Length is 0 then automatic else MlirFunction(function.types, type, method).Symbol
-	(loaded, MlirMemory(function, position).Called(Temp(suffix + "x"), symbol, List(Text) + Temp(suffix)))
+	List(Text) + loaded + MlirMemory(function, position).Converting(Temp(suffix + "x"), symbol, Temp(suffix))
 Pointer(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = func.call @strict_ptr(%t3bs) : (f64) -> !llvm.ptr"
 	let shown = MlirMemory(function, position).Called(Temp(suffix + "s"), "strict_shown", List(Text) + Temp(suffix + "x"))
 	TextBits(register, suffix) + shown + MlirMemory(function, position).Pointer(Temp(suffix + "s"), suffix)
 Concatenated(entry InstructionEntry) Texts
-	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 5
+	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 6
 	let operands = TextBits(entry.payload(1), "l") + TextBits(entry.payload(2), "r")
 	let joined = MlirMemory(function, position).Called(Temp("c"), "strict_text_concat", (Temp("lx"), Temp("rx")))
 	operands + joined + function.Store(Temp("c"), "%r" + entry.payload(3))

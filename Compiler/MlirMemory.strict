@@ -69,3 +69,7 @@ Unwrapped(path Text) Text
 Constant(target Text, symbol Text, signature Text) Text
 	Sample.Constant("%e", "f", "(f64) -> f64") is "    %e = func.constant @f : (f64) -> f64"
 	"    " + target + " = func.constant @" + symbol + " : " + signature
+Converting(result Text, converter Text, operand Text) Texts
+	Sample.Converting("%x", "f", "%v").Last.IndexOf("@strict_converted(%v, %xc)") > 0 is true
+	let call = "    " + result + " = func.call @strict_converted(" + operand + ", " + result + "c)"
+	(Constant(result + "c", converter, "(f64) -> f64"), call + " : (f64, (f64) -> f64) -> f64")

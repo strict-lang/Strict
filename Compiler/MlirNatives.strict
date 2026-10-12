@@ -66,15 +66,15 @@ Key(kind Text) Text
 	let kinds = MlirKinds(function)
 	MlirLayout(function).Represented(pair.Length > 0 then pair(0) else kinds.ElementKind(kinds.ElementKind(short)))
 Keying(helper Text, operands Texts, kind Text) Texts
-	MlirNatives(Texts, 2).Keying("f", ("%m", "%k"), "Dictionary(Text, Text)").Last.IndexOf("f(%m, %k, %t2h") > 0 is true
+	MlirNatives(Texts, 2).Keying("f", ("%m", "%k"), "Dictionary(Text, Text)").Last.IndexOf("trace(%t2k") > 0 is true
 	let memory = MlirMemory(function, position)
 	let functions = Keyed(kind)
 	let hash = memory.Constant(memory.Temp("h"), functions(0), "(f64) -> i64")
 	let equal = memory.Constant(memory.Temp("e"), functions(1), "(f64, f64) -> f64")
 	let arguments = Text.Combine(operands + memory.Temp("h") + memory.Temp("e"), ", ")
 	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
-	let call = "    " + memory.Temp("r") + " = func.call @" + helper + "(" + arguments + ") : (" + types
-	(hash, equal, call + ", (f64) -> i64, (f64, f64) -> f64) -> f64")
+	let call = "    " + memory.Temp("k") + " = func.call @" + helper + "(" + arguments + ") : (" + types
+	(hash, equal, call + ", (f64) -> i64, (f64, f64) -> f64) -> f64") + memory.Traced(memory.Temp("k"), memory.Temp("r"))
 Finder(element Text, operation Text) Text
 	MlirNatives(Texts, 1).Finder("Text", "has") is "strict_list_has_text"
 	MlirNatives(Texts, 1).Finder("Shape", "index") is ""
