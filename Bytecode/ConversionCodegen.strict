@@ -8,6 +8,7 @@ constant ColorReassignment = SyntaxNode("Reassignment", "", (SyntaxNode("Identif
 constant Pixels = SyntaxNode("Identifier", "pixels")
 constant Kinded = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Kind", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "to", List(Text) + "Text"), List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant Stepped = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Step", List(Scope) + Scope(List(Text) + "step", List(Text) + "Number"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
+constant Mapped = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Dictionary", List(Scope) + Scope(List(Text) + "keysAndValues", List(Text) + "List(key Generic, mappedValue Generic)"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant HelperType = SyntaxParser(Tokenizer("\"Helper\" to Type").Tokens).Parse
 constant Nesting = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), SyntaxNode("List", "", (ValueCodegen.One, ValueCodegen.One))))
 constant Pixelated = CodeBlock.Empty.Declare("pixels", "ColorValues")
@@ -36,8 +37,10 @@ Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 Bracketed(node SyntaxNode, block CodeBlock) SyntaxNode
 	Stepped.Bracketed(SyntaxNode("Call", "Step"), CodeBlock.Empty).text is "+"
 	Plain.Bracketed(ValueCodegen.One, CodeBlock.Empty) is ValueCodegen.One
-	let members = values.inference.types.MembersOf(values.TypeOf(node, block))
-	if members.names.Length is not 1
+	Mapped.Bracketed(SyntaxNode("Call", "Dictionary", ValueCodegen.Ones), CodeBlock.Empty).Kind is "Call"
+	let type = values.TypeOf(node, block)
+	let members = values.inference.types.MembersOf(type)
+	if (members.names.Length is not 1) or type.StartsWith("Dictionary(")
 		return node
 	if members.names(0).Lower is members.types(0).Lower
 		return node

@@ -92,7 +92,6 @@ Helper(kind Text) Text
 	MlirTexts(Joined, 0).Helper("Error") is "strict_error_report"
 	MlirTexts(Joined, 0).Helper("List(Text)") is "strict_list_text_text"
 	MlirTexts(Joined, 0).Helper("Shape") is ""
-	MlirTexts(Joined, 0).Helper("List(Text, Number)") is "strict_list_text_pair_text_number"
 	if kind is in ("Number", "Character", "Boolean")
 		return "strict_" + kind.Lower + "_text"
 	if kind is "Error"
@@ -102,9 +101,12 @@ Helper(kind Text) Text
 Described(loaded Text, suffix Text, kind Text) Texts
 	MlirTexts(Joined, 1).Described("", "d", "Shape").Last.IndexOf("@strict_automatic_Shape(") > 0 is true
 	MlirTexts(Joined, 1).Described("", "d", "Logger").First.StartsWith("unsupported") is true
+	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)").Last.IndexOf("@strict_pair_text(") > 0 is true
 	let type = function.TypeOf(kind)
 	let method = type.Callee("to", 0, "Text", List(Text))
 	let automatic = MlirAutomatic(function).Conversion(kind)
+	if (method.instructions.Length is 0) and (MlirLayout(function).Paired(kind).Length > 0)
+		return List(Text) + loaded + MlirAutomatic(function).Pairs(Temp(suffix + "x"), kind, Temp(suffix))
 	if (method.instructions.Length is 0) and (automatic is "skip")
 		return List(Text) + MlirStatements(function, position).Unsupported("text of " + kind)
 	let symbol = method.instructions.Length is 0 then automatic else MlirFunction(function.types, type, method).Symbol

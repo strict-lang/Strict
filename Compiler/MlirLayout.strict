@@ -42,3 +42,10 @@ Returned(position Number) Texts
 		let copied = (function.Load(temp, "%v_" + value.Name), function.Store(temp, memory.Temp("n" + index)))
 		lines = lines + memory.Slot(memory.Temp("np"), index, "n" + index) + copied
 	lines + memory.Bits(memory.Temp("np"), "n") + ("    return " + memory.Temp("nf") + " : f64")
+Paired(kind Text) Texts
+	Wrapping.Paired("List(Text, Number)") is ("Text", "Number")
+	Wrapping.Paired("Dictionary(Text, Shape)") is ("Text", "Shape")
+	Wrapping.Paired("Texts").Length is 0
+	let represented = Represented(kind)
+	let pair = MethodBodies.Pair(represented)
+	pair.Length > 0 then pair else MethodBodies.Pair(MlirKinds(function).ElementKind(represented))

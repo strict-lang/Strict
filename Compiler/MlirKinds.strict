@@ -143,13 +143,8 @@ ConstantKind(literal Runtime/VmValue, texts Texts) Text
 	let last = ConstantKind(literal.items.Last, List(Text))
 	"List(" + first + ((literal.items.Length is 2) and (last is not first) then ", " + last else "") + ")"
 ElementSuffix(kind Text) Text
-	Graded.ElementSuffix("List(Text, Number)") is "pair_text_number"
+	Graded.ElementSuffix("List(Text, Number)") is ""
 	Graded.ElementSuffix("List(Text)") is "text"
 	Graded.ElementSuffix("List(Shape)") is ""
-	let pair = MethodBodies.Pair(kind)
-	let layout = MlirLayout(function)
-	let element = layout.Represented(pair.Length is 0 then ElementKind(kind) else pair(0))
-	let last = pair.Length is 0 then element else layout.Represented(pair(1))
-	if (element is not in ("Text", "Number")) or (last is not in ("Text", "Number"))
-		return ""
-	pair.Length is 0 then element.Lower else "pair_" + element.Lower + "_" + last.Lower
+	let element = MlirLayout(function).Represented(ElementKind(kind))
+	element is in ("Text", "Number") then element.Lower else ""

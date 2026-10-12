@@ -66,3 +66,6 @@ Unwrapped(path Text) Text
 	if dot < 0
 		return path
 	Member(path).Last is 1 then path.Substring(0, dot) else path
+Constant(target Text, symbol Text, signature Text) Text
+	Sample.Constant("%e", "f", "(f64) -> f64") is "    %e = func.constant @f : (f64) -> f64"
+	"    " + target + " = func.constant @" + symbol + " : " + signature

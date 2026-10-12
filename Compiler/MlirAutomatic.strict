@@ -2,6 +2,9 @@ has function MlirFunction
 constant Prologue = ("    %zero = arith.constant 0.0 : f64", "    %unset = arith.cmpf oeq, %value, %zero : f64", "    cf.cond_br %unset, ^unset, ^set", "  ^unset:", "    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr", "    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64", "    return %empty : f64", "  ^set:", "    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr", "    %l0 = func.call @strict_list_empty() : () -> f64")
 constant Parentheses = ("    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr", "    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64", "    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr", "    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64", "    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64", "    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64", "    return %result : f64", "  }")
 constant Sample = MlirAutomatic(MlirEquality.Same)
+constant Priced = MemberEntry("prices", "Strict/Dictionary(Text, Shape)", List(InstructionEntry), false)
+constant Converting = "(f64) -> f64"
+constant PairSignature = " : (f64, (f64) -> f64, (f64) -> f64) -> f64"
 Functions Texts
 	Sample.Functions.First.StartsWith("  func.func private @strict_automatic_") is true
 	mutable lines = List(Mutable(Text))
@@ -16,7 +19,7 @@ Functions Texts
 Collection(symbol Text) Texts
 	Sample.Collection("Shape").Length is 5
 	let header = "  func.func private @strict_automatic_list_" + symbol + "(%value: f64) -> f64 {"
-	let converter = "    %converter = func.constant @strict_automatic_" + symbol + " : (f64) -> f64"
+	let converter = MlirMemory(function, 0).Constant("%converter", "strict_automatic_" + symbol, Converting)
 	constant call = "    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64"
 	(header, converter, call, "    return %result : f64", "  }")
 Function(type TypeEntry) Texts
@@ -33,22 +36,45 @@ Function(type TypeEntry) Texts
 	lines + joined + Parentheses
 Member(member MemberEntry, slot Number, count Number) Texts
 	Sample.Member(MlirFunction.Shape.members.First, 0, 0).Last.IndexOf("@strict_list_add(%l0, %x0)") > 0 is true
-	let conversion = Conversion(TypeEntry.ShortName(member.typeName))
-	if conversion is "skip"
+	Sample.Member(Priced, 0, 0).Length is 6
+	let kind = TypeEntry.ShortName(member.typeName)
+	let conversion = Conversion(kind)
+	if (conversion is "skip") and (MlirLayout(function).Paired(kind).Length is 0)
 		return List(Text)
 	let memory = MlirMemory(function, 0)
 	let loaded = memory.Temp("m" + slot + "v")
 	let text = conversion is "" then loaded else "%x" + slot
-	let converted = conversion is "" then List(Text) else List(Text) + memory.Called(text, conversion, List(Text) + loaded)
 	let added = "    %l" + (count + 1) + " = func.call @strict_list_add(%l" + count + ", " + text + ") : (f64, f64) -> f64"
-	memory.Loaded("%p", slot, "m" + slot) + converted + added
+	memory.Loaded("%p", slot, "m" + slot) + Converted(text, kind, loaded) + added
+Converted(target Text, kind Text, loaded Text) Texts
+	Sample.Converted("%x", "Text", "%v").Length is 0
+	Sample.Converted("%x", "Number", "%v").First.IndexOf("@strict_number_text(%v)") > 0 is true
+	if MlirLayout(function).Paired(kind).Length > 0
+		return Pairs(target, kind, loaded)
+	let conversion = Conversion(kind)
+	let call = MlirMemory(function, 0).Called(target, conversion, List(Text) + loaded)
+	conversion is "" then List(Text) else List(Text) + call
+Pairs(target Text, kind Text, loaded Text) Texts
+	Sample.Pairs("%x", "List(Text, Shape)", "%v").Last.IndexOf("@strict_pair_text(%v, %xk, %xv)") > 0 is true
+	Sample.Pairs("%x", "Dictionary(Text, Number)", "%v").Last.IndexOf("@strict_pairs_text(") > 0 is true
+	let layout = MlirLayout(function)
+	let pair = layout.Paired(kind)
+	let memory = MlirMemory(function, 0)
+	let runtime = MethodBodies.Pair(layout.Represented(kind)).Length > 0 then "strict_pair_text(" else "strict_pairs_text("
+	let call = "    " + target + " = func.call @" + runtime + loaded + ", " + target + "k, " + target + "v)"
+	let key = memory.Constant(target + "k", Converter(pair(0)), Converting)
+	(key, memory.Constant(target + "v", Converter(pair(1)), Converting), call + PairSignature)
+Converter(kind Text) Text
+	Sample.Converter("Text") is "strict_text_itself"
+	Sample.Converter("Shape") is "strict_automatic_Shape"
+	let conversion = Conversion(kind)
+	conversion is "" then "strict_text_itself" else conversion
 ElementConversion(kind Text) Text
 	Sample.ElementConversion("List(Logger)") is "skip"
 	Sample.ElementConversion("List(Shape)") is "strict_automatic_list_Shape"
 	Sample.ElementConversion("List(List(Text))") is "strict_list_text_lists_text"
-	Sample.ElementConversion("List(List(Text, Number))") is "strict_list_text_lists_pair_text_number"
 	let inner = Conversion(MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind)))
-	if (inner is in ("strict_list_text_text", "strict_list_text_number")) or inner.StartsWith("strict_list_text_pair_")
+	if inner is in ("strict_list_text_text", "strict_list_text_number")
 		return inner.Replace("strict_list_text_", "strict_list_text_lists_")
 	inner.StartsWith("strict_automatic_") then inner.Replace("strict_automatic_", "strict_automatic_list_") else "skip"
 Conversion(kind Text) Text
