@@ -1,0 +1,39 @@
+has bytes Numbers
+constant LocalHeader = 6.7324752e7
+constant EndHeader = 1.01010256e8
+constant Sample = ZipReader(ZipWriter.Sample.Bytes)
+Entries List(ZipEntry)
+	Sample.Entries is ZipWriter.Sample.entries
+	ZipReader(List(Number)).Entries.Length is 0
+	mutable entries = List(Mutable(ZipEntry))
+	mutable position = 0
+	for bytes.Length
+		if IsEntry(position) is false
+			return entries
+		entries.Add(Entry(position))
+		position = End(position)
+	entries
+IsEntry(position Number) Boolean
+	Sample.IsEntry(0) is true
+	Sample.IsEntry(1) is false
+	ZipReader(Sample.Content(0, 60)).IsEntry(0) is false
+	if position + 30 > bytes.Length
+		return false
+	(Read(bytes.Length - 22, 4) is EndHeader) and (Read(position, 4) is LocalHeader)
+Entry(position Number) ZipEntry
+	Sample.Entry(0) is ZipWriter.Sample.entries.First
+	let size = Read(position + 18, 4)
+	ZipEntry(ByteEncoder(bytes).Spelled(position + 30, Read(position + 26, 2)), Content(End(position) - size, size))
+End(position Number) Number
+	Sample.End(0) is 33
+	position + 30 + Read(position + 26, 2) + Read(position + 28, 2) + Read(position + 18, 4)
+Read(start Number, size Number) Number
+	ZipReader(1, 2).Read(0, 2) is 513
+	mutable result = 0
+	for size
+		result = result + bytes(start + index) * 256 ^ index
+	result
+Content(start Number, size Number) Numbers
+	ZipReader(1, 2, 3).Content(1, 2) is (2, 3)
+	for Range(start, start + size)
+		bytes(value)

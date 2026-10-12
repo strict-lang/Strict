@@ -17,6 +17,31 @@ SevenBit(number Number) ByteEncoder
 		result = result + (isLast then rest else rest % 128 + 128)
 		rest = (rest / 128).Floor
 	ByteEncoder(result)
+SevenBits(numbers Numbers) ByteEncoder
+	ByteEncoder(List(Number)).SevenBits((1, 300)).bytes is (1, 172, 2)
+	mutable encoder = ByteEncoder(bytes)
+	for numbers
+		encoder = encoder.SevenBit(value)
+	encoder
+Integers Numbers
+	ByteEncoder(1, 172, 2).Integers is (1, 300)
+	mutable integers = List(Mutable(Number))
+	mutable number = 0
+	mutable scale = 1
+	for bytes
+		number = number + (value % 128) * scale
+		scale = scale * 128
+		if value < 128
+			integers.Add(number)
+			number = 0
+			scale = 1
+	integers
+Spelled(start Number, length Number) Text
+	ByteEncoder(104, 105, 195, 164).Spelled(2, 2) is "ä"
+	mutable text = ""
+	for Range(start, start + length)
+		text = text + Character(bytes(value))
+	text
 SevenBitLength(number Number) Number
 	ByteEncoder(1, 2).SevenBitLength(300) is 2
 	number < 128 then 1 else 1 + SevenBitLength((number / 128).Floor)

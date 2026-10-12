@@ -10,10 +10,12 @@ Names(names BinaryNames) BinaryNames
 	for initial
 		result = value.Names(result)
 	result
-Bytes(names BinaryNames) Numbers
-	LoggerMember.Bytes(BinaryNames.Empty.Predefined("A")) is (45, 29, 0, 0)
-	SevenMember.Bytes(BinaryNames("a", "b")) is (0, 1, 1, 4, 1, 7, 0, 1)
-	mutable encoder = ByteEncoder.Empty.SevenBit(names.Index(Name)).SevenBit(names.Index(typeName)).UInt(initial.Length, 1)
+Integers(names BinaryNames) Numbers
+	LoggerMember.Integers(BinaryNames("logger", "Strict/Logger")) is (0, 1, 0, 0)
+	SevenMember.Integers(BinaryNames("a", "b")) is (0, 1, 1, 1, 6, 4, 0, 3, 2, 14, 0)
+	let flag = IsConstant then 1 else 0
+	mutable integers = List(Number) + names.Index(Name) + names.Index(typeName) + flag + initial.Length
 	for initial
-		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
-	encoder.UInt((IsConstant then 1 else 0), 1).bytes
+		let instruction = value.Integers(names)
+		integers = integers + instruction.Length + instruction
+	integers

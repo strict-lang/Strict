@@ -85,7 +85,7 @@ Declared(block CodeBlock, name Text, assigned SyntaxNode) CodeBlock
 	Plain.Declared(CodeBlock.Empty.Declare("x", "Numbers"), "a", NoNode).Owns("a") is false
 	block.Declare(name, values.TypeOf(assigned, block)).Sharing(name, ListCodegen(values).IsNew(assigned) is false)
 StoreConstant(load InstructionEntry, name Text) InstructionEntry
-	Plain.StoreConstant(InstructionEntry.LoadNumber(2, 7), "a").Bytes(BinaryNames("a")) is (2, 1, 7, 0, 0)
+	Plain.StoreConstant(InstructionEntry.LoadNumber(2, 7), "a").payload is (1, 7, -1, 0)
 	let texts = load.texts + name
 	InstructionEntry(InstructionType.StoreConstantToVariable, texts, LoadedValue(load) + (-1 - load.texts.Length) + 0)
 LoadedValue(load InstructionEntry) Numbers

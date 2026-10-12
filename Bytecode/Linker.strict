@@ -8,6 +8,7 @@ constant ForNumbers = MethodEntry("for", List(MemberEntry), "Strict/Iterator(Num
 constant Iterating = TypeEntry("A", List(MemberEntry), List(MethodEntry) + ForNumbers)
 constant Sample = Linker(".", TypeCodegen("Strict/Bytecode/FileCompiler", List(Text), ValueCodegen.NoTypes, List(Text)))
 constant Hello = Linker(".", TypeCodegen.Hello)
+constant Reading = TypeEntry("A", List(MemberEntry) + MemberEntry("b", "Strict/List(Byte)", List(InstructionEntry), false), List(MethodEntry))
 constant Natives = ("to", "not", "and", "or", "xor", "Exists", "ReadLines")
 Linked(entries List(TypeEntry), signatures Texts, depth Number) List(TypeEntry)
 	Hello.Linked(TypeEntry.HelloLogger, List(Text), 3).Length is 4
@@ -91,10 +92,21 @@ SourcePath(type Text) Text
 	File(local).Exists then local else root + "/" + SourceName(type) + ".strict"
 UsedTypes(entries List(TypeEntry)) Texts
 	Sample.UsedTypes(Go) is List(Text)
+	Sample.UsedTypes(Reading) is ("Strict/List(Byte)", "Strict/Byte")
 	mutable types = List(Mutable(Text))
 	for entries
-		types = types + value.UsedTypes
+		types = types + Elements(value.UsedTypes)
 	types
+Elements(types Texts) Texts
+	Sample.Elements(("Strict/List(Byte)", "Strict/Texts")) is ("Strict/List(Byte)", "Strict/Byte", "Strict/Texts")
+	mutable result = List(Mutable(Text))
+	for types
+		result.Add(value)
+		if value.StartsWith("Strict/List(") and (value.LastIndexOf("(") is 11)
+			let element = value.Substring(12, value.Length - 13)
+			if TypeEntry.IsBaseName(element) is false
+				result.Add("Strict/" + element)
+	result
 Targets(entries List(TypeEntry)) Texts
 	Sample.Targets(Go) is ("Strict/B.Go")
 	Sample.Targets(Counted) is ("Strict/Range.Count")

@@ -10,7 +10,7 @@ IsProgram(path Text) Boolean
 Compile(path Text, root Text) Number
 	let isProgram = IsProgram(path)
 	let entry = isProgram then "Run" else TestCodegen.Runner
-	let program = MlirModule(FileCompiler(logger).Compiled(path, root, isProgram is false), entry).Text
+	let program = MlirModule(Execute(logger).Loaded(path, root), entry).Text
 	let unsupported = Unsupported(program)
 	if unsupported is not -1
 		logger.Log("Native compilation failed, " + program.Substring(unsupported, program.Length - unsupported))

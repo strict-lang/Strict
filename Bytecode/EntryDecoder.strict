@@ -1,0 +1,63 @@
+has stream Numbers
+has names Texts
+constant Hello = EntryDecoder.Of(TypeEntry.HelloLogger.Bytes)
+Of(bytes Numbers) EntryDecoder
+	EntryDecoder.Of(TypeEntry.HelloLogger.Bytes).names is TypeEntry.HelloLogger.Names.names
+	let integers = ByteEncoder(bytes).Integers
+	EntryDecoder(integers, EntryDecoder(integers, List(Text)).Names)
+Names Texts
+	EntryDecoder((5, 2, 1, 97, 1, 98), List(Text)).Names is ("a", "b")
+	mutable position = 2
+	for stream(1)
+		let length = stream(position)
+		position = position + 1 + length
+		ByteEncoder(stream).Spelled(position - length, length)
+Type TypeEntry
+	Hello.Type is TypeEntry.HelloLogger
+	EntryDecoder.Of(TypeEntry.Scaling.Bytes).Type is TypeEntry.Scaling
+	EntryDecoder.Of(TypeEntry.Converting.Bytes).Type is TypeEntry.Converting
+	let start = 1 + stream(0)
+	TypeEntry(names(stream(start)), Members(start + 1), Methods(After(start + 1)))
+Method(start Number) MethodEntry
+	EntryDecoder((0, 1, 0, 0), ("Run", "None")).Method(0).returnType is "None"
+	MethodEntry(names(stream(start)), Members(start + 2), names(stream(start + 1)), Instructions(After(start + 2)))
+Member(start Number) MemberEntry
+	EntryDecoder((0, 1, 1, 0), ("a", "b")).Member(0) is MemberEntry("a", "b", List(InstructionEntry), true)
+	MemberEntry(names(stream(start)), names(stream(start + 1)), Instructions(start + 3), (stream(start + 2) is 1))
+Instruction(start Number) InstructionEntry
+	EntryDecoder((45, 1, 0, 2, 1, 0), List(Text) + "Hi").Instruction(0) is InstructionEntry.Print("Hi")
+	let textCount = stream(start + 1)
+	let payloadStart = start + 3 + textCount
+	InstructionEntry(stream(start), TextsAt(start + 2, textCount), Payload(payloadStart, stream(payloadStart - 1)))
+TextsAt(start Number, count Number) Texts
+	EntryDecoder((1, 0), ("a", "b")).TextsAt(0, 2) is ("b", "a")
+	for Range(start, start + count)
+		names(stream(value))
+Payload(start Number, count Number) Numbers
+	EntryDecoder((4, 1, 0), List(Text)).Payload(0, 3) is (2, -1, 0)
+	for Range(start, start + count)
+		stream(value) % 2 is 0 then stream(value) / 2 else 0 - (stream(value) + 1) / 2
+Members(start Number) List(MemberEntry)
+	EntryDecoder((1, 4, 0, 1, 1, 0), ("a", "b")).Members(0).First is MemberEntry("a", "b", List(InstructionEntry), true)
+	for Starts(start)
+		Member(value)
+Methods(start Number) List(MethodEntry)
+	EntryDecoder((1, 4, 0, 1, 0, 0), ("Run", "None")).Methods(0).Length is 1
+	for Starts(start)
+		Method(value)
+Instructions(start Number) List(InstructionEntry)
+	EntryDecoder((1, 6, 45, 1, 0, 2, 1, 0), List(Text) + "Hi").Instructions(0).First is InstructionEntry.Print("Hi")
+	for Starts(start)
+		Instruction(value)
+Starts(start Number) Numbers
+	EntryDecoder((2, 1, 7, 2, 8, 9), List(Text)).Starts(0) is (2, 4)
+	mutable position = start + 1
+	for stream(start)
+		let record = position + 1
+		position = record + stream(position)
+		record
+After(start Number) Number
+	EntryDecoder((2, 1, 7, 2, 8, 9), List(Text)).After(0) is 6
+	EntryDecoder(List(Number) + 0, List(Text)).After(0) is 1
+	let starts = Starts(start)
+	starts.Length is 0 then start + 1 else starts.Last + stream(starts.Last - 1)

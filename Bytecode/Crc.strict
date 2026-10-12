@@ -5,10 +5,19 @@ Value Number
 	Crc(49, 50, 51, 52, 53, 54, 55, 56, 57).Value is 3.421780262e9
 	Crc(104, 105).Value is 3.633523372e9
 	constant xors = NibbleXors
+	let table = Table(xors)
 	mutable crc = 4.294967295e9
 	for bytes
-		crc = Xor(Entry(Xor(crc % 256, value, xors), xors), (crc / 256).Floor, xors)
+		crc = Xor(table(LowXor(crc % 256, value, xors)), (crc / 256).Floor, xors)
 	Xor(crc, AllBits, xors)
+Table(xors Numbers) Numbers
+	Crc(1).Table(Crc(1).NibbleXors).Last is 7.55167117e8
+	for 256
+		Entry(index, xors)
+LowXor(left Number, right Number, xors Numbers) Number
+	Crc(1).LowXor(12, 10, Crc(1).NibbleXors) is 6
+	Crc(1).LowXor(255, 15, Crc(1).NibbleXors) is 240
+	xors((left % 16) * 16 + right % 16) + 16 * xors((left / 16).Floor * 16 + (right / 16).Floor)
 Entry(index Number, xors Numbers) Number
 	Crc(1).Entry(1, Crc(1).NibbleXors) is 1.996959894e9
 	Crc(1).Entry(255, Crc(1).NibbleXors) is 7.55167117e8

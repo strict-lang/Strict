@@ -1,7 +1,39 @@
-has types List(TypeEntry)
-Bytes Numbers
-	BinaryFile(TypeEntry.HelloLogger).Bytes.Length is 160
-	mutable entries = List(Mutable(ZipEntry))
+has source Text
+has root Text
+constant Probe = BinaryFile("./Bytecode/Probe.strict", ".")
+constant Packing = Probe.Unpacked(Probe.Packed((1, 2), List(TypeEntry) + TypeEntry.HelloLogger))
+Path Text
+	Probe.Path is "./Bytecode/Probe.strictbinary"
+	source.Substring(0, source.Length - 7) + ".strictbinary"
+Header Numbers
+	BinaryFile("C:/Missing/A.strict", "C:/Missing").Header.Length > 3 is true
+	mutable hashes = List(Mutable(Number)) + TypeEntry.FormatVersion
+	let sources = SourceFiles(root).Of(source)
+	for sources
+		hashes.Add(HashCode(File(value).ReadLines).number)
+	BinaryNames(List(Text) + Process.Current.Built + sources).Integers + hashes
+Packed(header Numbers, types List(TypeEntry)) Bytes
+	Probe.Packed((1, 2), List(TypeEntry)).Length > 50 is true
+	mutable entries = List(Mutable(ZipEntry)) + ZipEntry("sources", ByteEncoder.Empty.SevenBits(header).bytes)
 	for types
 		entries.Add(ZipEntry(value.Name + ".bytecode", value.Bytes))
-	ZipWriter(entries).Bytes
+	for ZipWriter(entries).Bytes
+		Byte(value)
+Unpacked(bytes Bytes) List(ZipEntry)
+	Packing.Length is 2
+	Packing.First.content is (1, 2)
+	mutable numbers = List(Mutable(Number))
+	for bytes
+		numbers.Add(value.number)
+	ZipReader(numbers).Entries
+IsFresh(header Numbers, entries List(ZipEntry)) Boolean
+	Probe.IsFresh((1, 2), Packing) is true
+	Probe.IsFresh((1, 3), Packing) is false
+	Probe.IsFresh((1, 2), List(ZipEntry)) is false
+	if entries.Length is 0
+		return false
+	entries.First.content is ByteEncoder.Empty.SevenBits(header).bytes
+Types(entries List(ZipEntry)) List(TypeEntry)
+	Probe.Types(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
+	for Range(1, entries.Length)
+		EntryDecoder.Of(entries(value).content).Type

@@ -19,16 +19,17 @@ Names(names BinaryNames) BinaryNames
 	for instructions
 		result = value.Names(result)
 	result
-Bytes(names BinaryNames) Numbers
-	HelloRun.Bytes(BinaryNames("Hi", "None")) is (0, 1, 2, 45, 0, 0, 32, 0)
-	MethodEntry("Add", MemberEntry.LoggerMember, "None", List(InstructionEntry)).Bytes(BinaryNames("None")).Length is 7
-	mutable encoder = ByteEncoder.Empty.SevenBit(parameters.Length)
+Integers(names BinaryNames) Numbers
+	HelloRun.Integers(BinaryNames("Run", "None", "Hi")) is (0, 1, 0, 2, 6, 45, 1, 2, 2, 1, 0, 4, 32, 0, 1, 0)
+	mutable integers = List(Number) + names.Index(Name) + names.Index(returnType) + parameters.Length
 	for parameters
-		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
-	encoder = encoder.SevenBit(names.Index(returnType)).SevenBit(instructions.Length)
+		let member = value.Integers(names)
+		integers = integers + member.Length + member
+	integers = integers + instructions.Length
 	for instructions
-		encoder = ByteEncoder(encoder.bytes + value.Bytes(names))
-	encoder.bytes
+		let instruction = value.Integers(names)
+		integers = integers + instruction.Length + instruction
+	integers
 IsInitializer(members List(MemberEntry)) Boolean
 	Initializing.IsInitializer(List(MemberEntry) + MemberEntry.LoggerMember) is true
 	GoRun.IsInitializer(List(MemberEntry) + MemberEntry.LoggerMember) is false

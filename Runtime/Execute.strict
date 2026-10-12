@@ -1,21 +1,38 @@
 has logger
 Run(arguments Texts) Number
-	let types = FileCompiler(logger).Compiled(arguments(0), arguments(1), false)
+	let failed = Verified(arguments(0), arguments(1))
+	if failed > 0
+		return failed
+	let types = Loaded(arguments(0), arguments(1))
 	if HasRun(types.First) is false
-		logger.Log("NoRunMethodFound: No Run method found in " + types.First.Name)
+		logger.Log("All tests passed in " + arguments(0))
 		return 0
 	mutable numbers = List(Mutable(VmValue))
 	for Range(2, arguments.Length)
-		let number = arguments(value) to Number
-		numbers.Add(VmValue.OfNumber(number))
+		numbers.Add(VmValue.OfNumber(arguments(value) to Number))
 	Machine(types, logger).Launch(types.First.Name, numbers)
 	0
 Test(path Text, root Text) Number
+	let failed = Verified(path, root)
+	if failed is 0
+		logger.Log("All tests passed in " + path)
+	failed
+Verified(path Text, root Text) Number
+	let cache = BinaryFile(FileCompiler.Normalized(path), root)
+	let header = cache.Header
+	if cache.IsFresh(header, cache.Unpacked(File(cache.Path).ReadBytes))
+		return 0
 	let types = FileCompiler(logger).Compiled(path, root, true)
 	let failed = Machine(types, logger).Tested(types.First.Name)
-	let summary = failed is 0 then "All tests passed in " + path else failed to Text + " tests failed in " + path
-	logger.Log(summary)
+	if failed is 0
+		File(cache.Path).Write(cache.Packed(header, types))
+	else
+		logger.Log(failed to Text + " tests failed in " + path)
 	failed
+Loaded(path Text, root Text) List(TypeEntry)
+	let cache = BinaryFile(FileCompiler.Normalized(path), root)
+	let types = cache.Types(cache.Unpacked(File(cache.Path).ReadBytes))
+	types.Length > 0 then types else FileCompiler(logger).Compiled(path, root, true)
 HasRun(type TypeEntry) Boolean
 	Execute.HasRun(TypeEntry.HelloLogger) is true
 	Execute.HasRun(TypeEntry("A", List(MemberEntry), List(MethodEntry))) is false
