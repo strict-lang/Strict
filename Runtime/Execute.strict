@@ -40,8 +40,10 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	if types.Length is 0
 		return 1
 	let failed = Tested(types, path)
+	let current = SourceFiles(root).Of(cache.source)
+	let complete = current.Length is files.Length then header else cache.Header(current + cache.Data(cache.source))
 	if failed is 0
-		File(cache.Path).Write(cache.Packed(header, types))
+		File(cache.Path).Write(cache.Packed(complete, types))
 	failed
 Tested(types List(TypeEntry), path Text) Number
 	let failed = Machine(Resolver(types).Resolved, logger).Tested(types.First.Name)

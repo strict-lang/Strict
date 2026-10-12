@@ -5,12 +5,13 @@ constant Raw = "https://raw.githubusercontent.com/"
 constant Delimiters = (" ", ")", "]", "#", "?", "\"", "'", ">", "<", ",", "/")
 constant Listing = ("  \"tree\": [", "      \"path\": \"Math/Vector2.strict\",", "      \"path\": \"Math/Size.strict\",", "      \"path\": \"Math/README.md\",", "      \"path\": \"Vector2.strict\",")
 constant Readme = ("See https://github.com/strict-lang/Strict.", "[a](https://github.com/b/c.git) github.com/d")
+constant Nested = ("Math/Vector2.strict", "Math/Shapes/Circle.strict", "Text.strict")
 constant Listed = ("  {", "    \"full_name\": \"strict-lang/Strict\",", "    \"full_name\": \"strict-lang/sdk\",")
 Downloaded(type Text) Text
 	for Clones
 		let local = SourceFiles(value).SubfolderWith(value, type)
 		if local is not ""
-			return Copied(local)
+			return Copied(local, type)
 	if Directory.Exists(Development + "/strict-lang")
 		return ""
 	for Candidates
@@ -39,26 +40,28 @@ Candidates Texts
 Fetched(repository Text, type Text) Text
 	let paths = Quoted(Fetch("https://api.github.com/repos/" + repository + "/git/trees/HEAD?recursive=1"), "path")
 	let folder = Folder(paths, type)
+	if folder is ""
+		return ""
 	let local = "./" + Path((folder is "." then repository else folder)).FileName.text
-	if (folder is "") or Directory.Exists(local)
-		return ""
-	Directory.Create(local)
 	for Files(paths, folder)
-		let target = local + "/" + Path(value).FileName.text
-		Process.RunTool("curl", "-sfL -o \"" + target + "\" \"" + Raw + repository + "/HEAD/" + value + "\"")
+		let target = local + "/" + Relative(value, folder)
+		Process.RunTool("curl", "-sfL --create-dirs -o \"" + target + "\" \"" + Raw + repository + "/HEAD/" + value + "\"")
+	File(local + "/.origin").Write(List(Text) + "https://github.com/" + repository + "/tree/HEAD/" + folder)
 	logger.Log("Downloaded " + local + " from https://github.com/" + repository)
-	local
-Copied(folder Text) Text
+	Provided(local, type)
+Copied(folder Text, type Text) Text
 	let local = "./" + Path(folder).FileName.text
-	if Directory.Exists(local)
-		return ""
-	Directory.Create(local)
-	for Directory.Files(folder, "*.strict")
-		File(local + "/" + Path(value.Replace("\\", "/")).FileName.text).Write(File(value).ReadBytes)
+	for BinaryFile(folder).Contained(folder)
+		if value.EndsWith(".strict")
+			File(local + "/" + Relative(value.Replace("\\", "/"), folder)).Write(File(value).ReadBytes)
+	File(local + "/.origin").Write(List(Text) + folder)
 	logger.Log("Copied " + local + " from " + folder)
-	local
+	Provided(local, type)
 Fetch(url Text) Texts
-	Process.RunTool("curl", "-sfL \"" + url + "\"").Output.Split("\n")
+	let token = Process.RunTool("gh", "auth token")
+	let isAuthorized = token.Succeeded and (token.Output.Trim is not "")
+	let header = isAuthorized then "-H \"Authorization: Bearer " + token.Output.Trim + "\" " else ""
+	Process.RunTool("curl", "-sfL " + header + "\"" + url + "\"").Output.Split("\n")
 Linked(lines Texts) Texts
 	Repositories.Linked(Readme) is ("strict-lang/Strict", "b/c")
 	Repositories.Linked(("github.com/a/b", "docs/c/d", "github.com/a/b")) is ("a/b")
@@ -102,8 +105,30 @@ Folder(paths Texts, type Text) Text
 	""
 Files(paths Texts, folder Text) Texts
 	Repositories.Files(Repositories.Quoted(Listing, "path"), "Math") is ("Math/Vector2.strict", "Math/Size.strict")
-	Repositories.Files(Repositories.Quoted(Listing, "path"), ".") is ("Vector2.strict")
+	Repositories.Files(Repositories.Quoted(Listing, "path"), ".").Last is "Vector2.strict"
+	Repositories.Files(Nested, "Math") is ("Math/Vector2.strict", "Math/Shapes/Circle.strict")
 	let prefix = folder is "." then "" else folder + "/"
 	for paths
-		if value.StartsWith(prefix) and (value.LastIndexOf("/") is prefix.Length - 1) and (value.LastIndexOf(".strict") > 0)
+		if value.StartsWith(prefix) and value.EndsWith(".strict")
 			value
+Relative(path Text, folder Text) Text
+	Repositories.Relative("Math/Shapes/Circle.strict", "Math") is "Shapes/Circle.strict"
+	Repositories.Relative("Vector2.strict", ".") is "Vector2.strict"
+	folder is "." then path else path.Substring(folder.Length + 1, path.Length - folder.Length - 1)
+Provided(local Text, type Text) Text
+	Repositories.Provided("./Math", "Vector2") is "./Math"
+	Repositories.Provided("./Math", "Missing") is ""
+	for BinaryFile(local).Contained(local)
+		if value.Replace("\\", "/").EndsWith("/" + type + ".strict")
+			return local
+	""
+Updated(folder Text) Number
+	Repositories.Updated("./Math") is 0
+	mutable updated = 0
+	for Directory.Directories(folder)
+		let files = Directory.Files(value, "*.strict")
+		if File(value + "/.origin").Exists and (files.Length > 0)
+			let type = Path(files.First.Replace("\\", "/")).FileName.text
+			if Downloaded(type.Substring(0, type.Length - 7)) is not ""
+				updated = updated + 1
+	updated

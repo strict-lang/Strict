@@ -40,7 +40,8 @@ PackagesIn(lines Texts) Texts
 	SourceFiles(".").PackagesIn("has a Bytecode/X", "Run") is List(Text) + "./Bytecode"
 	mutable result = List(Mutable(Text))
 	for lines
-		result = Added(result, PackageNames(Tokenizer(value).Tokens))
+		if value.IndexOf("/") >= 0
+			result = Added(result, PackageNames(Tokenizer(value).Tokens))
 	result
 PackageNames(tokens Texts) Texts
 	SourceFiles(".").PackageNames("Bytecode", "/", "X", "Strict", "/", "Y") is List(Text) + "./Bytecode"
