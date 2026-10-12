@@ -5,6 +5,8 @@ constant One = ValueCodegen.One
 constant NoNode = ValueCodegen.NoNode
 constant Hi = ValueCodegen.Hi
 constant Failed = CodeBlock.Empty.Declare("failed", "Error")
+constant Primed = IndexCodegen(ValueCodegen(TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Primes", List(Text) + "(2, 3, 5)"), TypeInference.NoShape)), Scope(("Greet", "Run"), ("Text", "None")), CallTarget.Plain))
+constant PrimeCall = SyntaxNode("MethodCall", "Primes", (SyntaxNode("Identifier", "Count"), ValueCodegen.One))
 constant Named = CodeBlock.Empty.Declare("named", "Dictionary(Text, Number)")
 IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty) is true
@@ -12,10 +14,17 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	OwnA.IsIndexing(SyntaxNode("Call", "limits", One), CodeBlock.Empty) is true
 	Plain.IsIndexing(SyntaxNode("Call", "text", (One, One)), CodeBlock.Empty) is true
 	Plain.IsIndexing(SyntaxNode("MethodCall", "text", (ValueCodegen.NewGreeter, One, One)), CodeBlock.Empty) is true
+	Primed.IsIndexing(PrimeCall, CodeBlock.Empty) is true
 	if node.Kind is "Call"
 		return IsIndexedCall(node, block)
 	let isMember = (node.Kind is "MethodCall") and (node.children.Length is in (2, 3))
-	isMember and ((node.text is "value") or values.target.IsMember(values.TypeOf(node.children(0), block), node.text))
+	let isConstant = isMember and IsConstantList(node)
+	let isOwned = isMember and values.target.IsMember(values.TypeOf(node.children(0), block), node.text)
+	isMember and (node.text is "value") or isConstant or isOwned
+IsConstantList(node SyntaxNode) Boolean
+	Primed.IsConstantList(PrimeCall) is true
+	let member = SyntaxNode("Member", node.text, node.children(0))
+	ConstantFolding(values.target.TypeName, values.inference).Folded(member).Kind is "List"
 IsIndexedCall(node SyntaxNode, block CodeBlock) Boolean
 	OwnA.IsIndexedCall(SyntaxNode("Call", "limits", One), CodeBlock.Empty) is true
 	OwnA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is false
