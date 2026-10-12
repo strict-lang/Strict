@@ -1,5 +1,7 @@
 has logger
 constant Counting = TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Twice = TypeShape("Twice = number * 2")
+constant Next = Tokenizer("Next(add = 1) = number + add").Tokens
 Run(folder Text, root Text)
 	let inference = Inference(Directory.Files(folder, "*.strict") + AllFiles(root))
 	mutable unresolved = List(Mutable(Text))
@@ -55,13 +57,22 @@ Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scop
 	result
 ChainTyped(inference TypeInference, shape TypeShape, scope Scope, typeName Text) Scope
 	ResolveCheck.ChainTyped(Counting, TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0
+	ResolveCheck.ChainTyped(Counting, Twice, KnownTypes.NoMembers, "Count").TypeOf("Twice") is "Number"
 	mutable result = scope
 	for shape.lines
+		let tokens = Tokenizer(value).Tokens
 		if value.StartsWith("constant ") and (value.IndexOf(".") > 0)
-			let tokens = Tokenizer(value).Tokens
 			let chained = ChainType(inference, tokens, typeName)
 			result = chained is "" then result else result.With(tokens(1), chained)
+		else if shape.IsComputed(value)
+			result = result.With(tokens(0), ComputedType(inference, tokens, typeName, result))
 	result
+ComputedType(inference TypeInference, tokens Texts, typeName Text, methods Scope) Text
+	ResolveCheck.ComputedType(Counting, Next, "Count", KnownTypes.NoMembers) is "Number"
+	let header = HeaderTokens(tokens)
+	let node = SyntaxParser(tokens).ParseRange(header.ParametersEnd + 2, tokens.Length)
+	let current = inference.types.ShapeScope(typeName).WithAll(methods.names, methods.types)
+	inference.TypeOf(node, Scope(header.ParameterNames, header.ParameterTypes), current)
 TypeNames(files Texts) Texts
 	for files
 		TypeName(value)

@@ -72,7 +72,7 @@ Method(start Number) MethodEntry
 	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
 	let scope = MethodScope(header, generator.target)
-	let returnType = header.tokens(0) is "from" then generator.target.TypeName else Concrete(header.ReturnType)
+	let returnType = header.tokens(0) is "from" then generator.target.TypeName else Concrete(Returned(header))
 	let code = MethodCodegen(generator).Generate(BodyParser(lines).Method(start + 1), scope, BodyType(header))
 	let optimized = LoadReuse(code.instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(returnType), optimized)
@@ -83,8 +83,12 @@ MethodScope(header HeaderTokens, target CallTarget) Scope
 BodyType(header HeaderTokens) Text
 	Iterating.BodyType(HeaderTokens("for", "Iterator", "(", "Number", ")")) is "Numbers"
 	Hello.BodyType(HeaderTokens("Run", "Number")) is "Number"
-	let returnType = header.ReturnType
+	let returnType = Returned(header)
 	Concrete(returnType.StartsWith("Iterator(") then inference.types.ElementType(returnType) + "s" else returnType)
+Returned(header HeaderTokens) Text
+	Hello.Returned(HeaderTokens("Run", "Number")) is "Number"
+	let returned = header.ReturnType
+	returned is "=" then inference.types.MethodsOf(Generator.target.TypeName).TypeOf(header.tokens(0)) else returned
 Parameters(header HeaderTokens) List(MemberEntry)
 	Hello.Parameters(HeaderTokens("Add", "(", "first", "Number", ")")).Length is 1
 	Hello.Parameters(HeaderTokens("Add", "(", "x", "=", "1", ")")).First.initial.Length is 1

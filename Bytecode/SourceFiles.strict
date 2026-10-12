@@ -91,7 +91,7 @@ Declared(shape Expressions/TypeShape) Texts
 Returned(shape Expressions/TypeShape) Texts
 	SourceFiles(".").Returned(TypeShape(("constant Pair = (1, 2)", "Add(other) Number", "	other"))) is ("Number")
 	for shape.lines
-		if shape.IsMethodHeader(value)
+		if shape.IsMethodHeader(value) and (shape.IsComputed(value) is false)
 			HeaderTokens(Tokenizer(value).Tokens).ReturnType
 Nearby(types Texts) Texts
 	SourceFiles(".").Nearby(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length

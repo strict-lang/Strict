@@ -1,0 +1,11 @@
+has Width Number
+has Height Number
+Area = Width * Height
+Doubled(factor = 2) = Area * factor
+IsSquare = Width is Height
+Scaled(factor Number) Number
+	Rectangle(2, 3).Scaled(2) is 24
+	Rectangle(2, 3).IsSquare is false
+	Rectangle(2, 2).IsSquare is true
+	Rectangle(2, 3).Doubled is 12
+	Doubled(factor) * 2

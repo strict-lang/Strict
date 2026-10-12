@@ -10,12 +10,23 @@ IsMethodHeader(line Text) Boolean
 	if (line is "") or line.StartsWith("\t")
 		return false
 	not IsMemberLine(line)
+IsComputed(line Text) Boolean
+	TypeShape("has a").IsComputed("Area = Width * Height") is true
+	TypeShape("has a").IsComputed("Next(add = 1) = add") is true
+	TypeShape("has a").IsComputed("Add(other) Number") is false
+	TypeShape("has a").IsComputed("constant Limit = 3") is false
+	if IsMethodHeader(line) is false
+		return false
+	let tokens = Tokenizer(line).Tokens
+	let assigned = HeaderTokens(tokens).ParametersEnd + 1
+	(assigned < tokens.Length) and (tokens(assigned) is "=")
 IsTrait Boolean
 	TypeShape("Length Number").IsTrait is true
 	TypeShape("has length", "in(element) Boolean").IsTrait is true
 	TypeShape("Not Boolean", "\ttrue").IsTrait is false
+	TypeShape("has a", "Twice = a * 2").IsTrait is false
 	for lines
-		if value.StartsWith("\t")
+		if value.StartsWith("\t") or IsComputed(value)
 			return false
 	true
 MemberScope Scope
@@ -121,7 +132,7 @@ UsedTypes Texts
 		let tokens = Tokenizer(value.Trim).Tokens
 		if (tokens.Length > 1) and (tokens(0) is "constant")
 			own = own + tokens(1)
-		else if value.StartsWith("\t")
+		else if value.StartsWith("\t") or IsComputed(value)
 			used = used + Capitalized(tokens)
 	for used
 		if (value is not in own) and (used.Index(value) is index)

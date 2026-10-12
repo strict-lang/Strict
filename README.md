@@ -257,7 +257,7 @@ TrimStart Text
 	""
 ```
 
-`name = expression` (or `name(parameter = default) = expression`) for a name that is not a variable, member or parameter is a computed name: a single expression whose type is inferred, every use evaluates it again with the current values (`let` keeps a calculated value, `mutable` a reassignable one), effects run on every use. Assigning to it is a `ComputedNameMustNotBeAssigned` error. Only for very simple, obvious things (square roots, lengths, small sums of local values), one expression is not a tested method. Uses are replaced by the expression with the arguments for the parameters, the same on the Strict VM and natively:
+`name = expression` (or `name(parameter = default) = expression`) for a name that is not a variable, member or parameter is a computed name: a single expression whose type is inferred, every use evaluates it again with the current values (`let` keeps a calculated value, `mutable` a reassignable one), effects run on every use. Assigning to it is a `ComputedNameMustNotBeAssigned` error. Only for very simple, obvious things (square roots, lengths, small sums of local values), one expression is not a tested method. Uses are replaced by the expression with the arguments for the parameters, the same on the Strict VM and natively. On a type, `Area = Width * Height` (or `Doubled(factor = 2) = Area * factor`) is a method without tests whose return type is inferred from the expression (`Examples/Rectangle.strict`):
 ```
 	mutable position = 3
 	next(add = 1) = position + add
