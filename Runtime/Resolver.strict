@@ -2,20 +2,29 @@ has types List(TypeEntry)
 constant Native = -1
 constant Hosting = -2
 constant Searching = -3
+constant OuterSlot = -2
+constant OuterIndexSlot = -3
+constant LiteralIndex = -4
+constant Specials = ("#this", "value", "#result", "#flag", "#loop", "index")
+constant Named = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 constant Doubling = Resolver(List(TypeEntry) + Machine.Doubler)
 constant Twice = Invocation(InstructionEntry.Invoke(0, ("Strict/Doubler", "Twice", "Strict/Number"), List(Number), -1), Frame.Start)
+constant LoadIndex = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index")
+constant StoreSecond = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list(1)")
+constant StoreElement = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list(index)")
+constant Going = TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + MethodEntry.GoRun)
 Resolved List(TypeEntry)
 	Doubling.Resolved.First.methods.First.instructions.Length is 3
 	for types
-		TypeEntry(value.Name, value.members, Methods(value.methods))
-Methods(methods List(MethodEntry)) List(MethodEntry)
-	Doubling.Methods(List(MethodEntry) + MethodEntry.GoRun).First.instructions.First.payload.Length is 10
-	for methods
-		MethodEntry(value.Name, value.parameters, value.returnType, Instructions(value.instructions))
-Instructions(instructions List(InstructionEntry)) List(InstructionEntry)
-	Doubling.Instructions(MethodEntry.GoRun.instructions).First.payload.Length is 10
+		TypeEntry(value.Name, value.members, Methods(value))
+Methods(type TypeEntry) List(MethodEntry)
+	Doubling.Methods(Going).First.instructions.First.payload.Length is 10
+	for type.methods
+		MethodEntry(value.Name, value.parameters, value.returnType, Instructions(value.instructions, Slots(type, value)))
+Instructions(instructions List(InstructionEntry), names Texts) List(InstructionEntry)
+	Doubling.Instructions(MethodEntry.GoRun.instructions, Specials).First.payload.Length is 10
 	for instructions
-		value.kind is InstructionType.Invoke then Targeted(value) else value
+		value.kind is InstructionType.Invoke then Targeted(value) else Slotted(value, names)
 Targeted(entry InstructionEntry) InstructionEntry
 	Doubling.Targeted(Twice.entry).payload is (0, -1, -2, 0, -3, 0, 0, 0, 0, 0)
 	Doubling.Targeted(InstructionEntry(InstructionType.Invoke, Twice.entry.texts, Twice.entry.payload, 9)).line is 9
@@ -43,3 +52,58 @@ Position(type TypeEntry) Number
 		if value.Name is type.Name
 			return index
 	-1
+Slots(type TypeEntry, method MethodEntry) Texts
+	Doubling.Slots(Storage.Pair, Storage.Sample.method) is Specials + ("logger", "b", "a", "list")
+	mutable names = List(Mutable(Text)) + Specials
+	for type.members
+		names.Add(value.Name)
+	for method.parameters
+		names.Add(value.Name)
+	for method.instructions
+		let local = Local(value)
+		if (local is not in names) and (local is not in ("", "outer", "outer.index"))
+			names.Add(local)
+	names
+Local(entry InstructionEntry) Text
+	Doubling.Local(Storage.LoadA) is "a"
+	Doubling.Local(Storage.SetPairSecond) is "pair"
+	Doubling.Local(InstructionEntry.LoadNumber(0, 7)) is ""
+	if entry.kind is InstructionType.StoreConstantToVariable
+		return entry.texts.Last
+	if entry.kind is not in Named
+		return ""
+	let parts = PayloadDecoder(entry).ElementParts
+	if (entry.kind is not InstructionType.StoreRegisterToVariable) or (parts.Length is 0)
+		return entry.texts(0)
+	let dot = parts(0).IndexOf(".")
+	dot > 0 then parts(0).Substring(0, dot) else parts(0)
+Slotted(entry InstructionEntry, names Texts) InstructionEntry
+	Doubling.Slotted(LoadIndex, Specials).payload is (1, 5)
+	Doubling.Slotted(InstructionEntry.LoadNumber(0, 7), Specials).payload is (0, 1, 7)
+	let local = Local(entry)
+	if local is ""
+		return entry
+	let kind = entry.kind
+	let slot = Slot(local, names)
+	if kind is InstructionType.StoreConstantToVariable
+		return InstructionEntry(kind, entry.texts, entry.payload + slot, entry.line)
+	let payload = entry.payload
+	let start = kind is InstructionType.IndexCall then (payload(0), payload(1)) else List(Number) + payload(0)
+	InstructionEntry(kind, entry.texts, start + slot + Element(entry, names), entry.line)
+Element(entry InstructionEntry, names Texts) Numbers
+	Doubling.Element(StoreSecond, Specials) is (LiteralIndex, 1)
+	Doubling.Element(StoreElement, Specials) is List(Number) + 5
+	Doubling.Element(Storage.LoadA, Specials).Length is 0
+	if entry.kind is not InstructionType.StoreRegisterToVariable
+		return List(Number)
+	let parts = PayloadDecoder(entry).ElementParts
+	if parts.Length is 0
+		return List(Number)
+	let slot = Slot(parts(1), names)
+	slot is -1 then (LiteralIndex, parts(1) to Number) else List(Number) + slot
+Slot(name Text, names Texts) Number
+	Doubling.Slot("outer", Specials) is OuterSlot
+	Doubling.Slot("index", Specials) is 5
+	if name is "outer"
+		return OuterSlot
+	name is "outer.index" then OuterIndexSlot else names.Index(name)

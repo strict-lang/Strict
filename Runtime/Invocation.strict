@@ -1,7 +1,7 @@
 has entry InstructionEntry
 has frame
-constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), Frame(MethodEntry.HelloRun, 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty))
-constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("5"), Locals.Empty))
+constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), Frame(MethodEntry.HelloRun, 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), List(VmValue)))
+constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("5"), List(VmValue)))
 constant Coding = Invocation(InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character", "text"), 0, -1), Parsing.frame.WithRegister(0, VmValue.OfNumber(65)))
 TypeName Text
 	AddCall.TypeName is "T"
@@ -54,4 +54,4 @@ IsWrapping(type TypeEntry) Boolean
 Instance VmValue
 	AddCall.Instance.number is 4
 	let flag = Flag
-	entry.payload(flag) is 1 then frame.Register(entry.payload(flag + 1)) else frame.Local("#this")
+	entry.payload(flag) is 1 then frame.Register(entry.payload(flag + 1)) else frame.Local(Frame.ThisSlot)

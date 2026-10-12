@@ -1,11 +1,18 @@
 has method Bytecode/MethodEntry
 has position Number
 has registers List(VmValue)
-has locals
+has locals List(VmValue)
 has owner Text = ""
-constant Start = Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty)
-constant Logging = Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty, "Strict/Examples/HelloLogger")
-constant Looped = Start.WithLocal("#loop", VmValue.OfList(VmValue.None, VmValue.None, VmValue.None, VmValue.OfNumber(2), VmValue.OfNumber(7)))
+constant ThisSlot = 0
+constant ValueSlot = 1
+constant ResultSlot = 2
+constant FlagSlot = 3
+constant LoopSlot = 4
+constant IndexSlot = 5
+constant MembersSlot = 6
+constant Start = Frame(MethodEntry.HelloRun, 0, List(VmValue), List(VmValue))
+constant Logging = Frame(MethodEntry.HelloRun, 0, List(VmValue), List(VmValue), "Strict/Examples/HelloLogger")
+constant Looped = Start.WithLocal(LoopSlot, VmValue.OfList(VmValue.None, VmValue.None, VmValue.None, VmValue.OfNumber(2), VmValue.OfNumber(7)))
 Instruction InstructionEntry
 	Start.Instruction.kind is InstructionType.Print
 	method.instructions(position)
@@ -15,16 +22,16 @@ Register(number Number) VmValue
 	number < registers.Length then registers(number) else VmValue.None
 WithRegister(number Number, entry VmValue) Frame
 	Start.WithRegister(0, VmValue.OfNumber(5)).registers.Length is 1
-	Frame(method, position, locals.Replaced(registers, number, entry), locals, owner)
-WithLocal(name Text, entry VmValue) Frame
-	Start.WithLocal("a", VmValue.OfNumber(5)).locals.Get("a").number is 5
-	Frame(method, position, registers, locals.With(name, entry), owner)
+	Frame(method, position, Replaced(registers, number, entry), locals, owner)
+WithLocal(slot Number, entry VmValue) Frame
+	Start.WithLocal(6, VmValue.OfNumber(5)).Local(6).number is 5
+	Frame(method, position, registers, Replaced(locals, slot, entry), owner)
 NextWithRegister(number Number, entry VmValue) Frame
 	Start.NextWithRegister(1, VmValue.OfNumber(5)).Register(1).number is 5
-	Frame(method, position + 1, locals.Replaced(registers, number, entry), locals, owner)
-NextWithLocal(name Text, entry VmValue) Frame
-	Start.NextWithLocal("a", VmValue.OfNumber(5)).position is 1
-	Frame(method, position + 1, registers, locals.With(name, entry), owner)
+	Frame(method, position + 1, Replaced(registers, number, entry), locals, owner)
+NextWithLocal(slot Number, entry VmValue) Frame
+	Start.NextWithLocal(6, VmValue.OfNumber(5)).position is 1
+	Frame(method, position + 1, registers, Replaced(locals, slot, entry), owner)
 At(target Number) Frame
 	Start.At(1).position is 1
 	Frame(method, target, registers, locals, owner)
@@ -32,17 +39,30 @@ Next Frame
 	Start.Next.position is 1
 	Logging.Next.owner is "Strict/Examples/HelloLogger"
 	Frame(method, position + 1, registers, locals, owner)
-Local(name Text) VmValue
-	Start.WithLocal("b", VmValue.OfText("x")).Local("b").text is "x"
-	Looped.Local("outer").number is 7
-	Looped.Local("outer.index").number is 2
-	let found = locals.Get(name)
-	if (found.kind is not "None") or (name.StartsWith("outer") is false)
-		return found
-	locals.Get("#loop").items(name is "outer" then 4 else 3)
+Local(slot Number) VmValue
+	Start.WithLocal(6, VmValue.OfText("x")).Local(6).text is "x"
+	Start.Local(6).kind is "None"
+	Looped.Local(Resolver.OuterSlot).number is 7
+	Looped.Local(Resolver.OuterIndexSlot).number is 2
+	if slot < 0
+		return locals(LoopSlot).items(slot is Resolver.OuterSlot then 4 else 3)
+	slot < locals.Length then locals(slot) else VmValue.None
 Traced(error VmValue) VmValue
 	Logging.Traced(VmValue.OfError("a")).Traces is "\n\tat HelloLogger.Run in Examples/HelloLogger.strict:line 3"
 	let called = VmValue.OfText(TypeEntry.ShortName(owner) + "." + method.Name)
 	let file = VmValue.OfText(TypeEntry(owner, List(MemberEntry), List(MethodEntry)).File)
 	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(Instruction.line)))
 	VmValue(error.kind, error.number, error.text, (error.items(0), VmValue.OfList(error.items(1).items + trace)))
+Replaced(elements List(VmValue), slot Number, entry VmValue) List(VmValue)
+	Start.Replaced((VmValue.OfNumber(1), VmValue.OfNumber(2)), 1, VmValue.None).Last.kind is "None"
+	Start.Replaced(List(VmValue), 2, VmValue.None).Length is 3
+	Start.Replaced(List(VmValue) + VmValue.OfNumber(1), -1, VmValue.None).First.number is 1
+	if slot < 0
+		return elements
+	mutable result = elements
+	for slot - elements.Length
+		result = result + VmValue.None
+	if slot >= elements.Length
+		return result + entry
+	result(slot) = entry
+	result

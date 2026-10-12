@@ -1,6 +1,6 @@
 has call Invocation
-constant SystemCall = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "OperatingSystem", "Strict/Text"), List(Number), -1), Frame(MethodEntry.HelloRun, 0, List(VmValue), Locals.Empty))
-constant Current = Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("."), Locals.Empty)
+constant SystemCall = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "OperatingSystem", "Strict/Text"), List(Number), -1), Frame(MethodEntry.HelloRun, 0, List(VmValue), List(VmValue)))
+constant Current = Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("."), List(VmValue))
 constant Existing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Exists", "Strict/Boolean", "path"), 0, -1), Current)
 constant Listing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Directories", "Strict/List(Text)", "path"), 0, -1), Current)
 constant Reading = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "ReadBytes", "Strict/List(Byte)"), List(Number), 0), Current.WithRegister(0, VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Any.strict"))))

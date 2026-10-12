@@ -1,14 +1,14 @@
 has frame
 has entry InstructionEntry
-constant Pair = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))), 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty)
-constant Compare = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Binary(InstructionType.LessThan, (0, 1))), 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), Locals.Empty)
+constant Pair = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))), 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), List(VmValue))
+constant Compare = Frame(MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Binary(InstructionType.LessThan, (0, 1))), 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), List(VmValue))
 constant Adding = Operations(Pair, Pair.Instruction)
 constant OneTwo = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))
 constant DimensionError = VmValue.OfError("listsHaveDifferentDimensions")
 constant Detailed = VmValue("Strict/ErrorWithValue", 0, "", (DimensionError, OneTwo))
 Step Frame
 	Adding.Step.Register(2).number is 7
-	Operations(Compare, Compare.Instruction).Step.Local("#flag").IsTrue is true
+	Operations(Compare, Compare.Instruction).Step.Local(Frame.FlagSlot).IsTrue is true
 	let left = frame.Register(entry.payload(1))
 	let right = frame.Register(entry.payload(2))
 	if entry.kind > InstructionType.ArithmeticSeparator
@@ -17,7 +17,7 @@ Step Frame
 Compared(condition Boolean) Frame
 	Adding.Compared(true).Register(2).IsTrue is true
 	let truth = VmValue.OfBoolean(condition)
-	let flagged = frame.WithLocal("#flag", truth)
+	let flagged = frame.WithLocal(Frame.FlagSlot, truth)
 	let result = entry.payload(0) is 3 then flagged.WithRegister(entry.payload(3), truth) else flagged
 	result.Next
 Comparison(kind Number, left VmValue, right VmValue) Boolean
