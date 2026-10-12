@@ -1,5 +1,6 @@
 has logger
 has isQuiet Boolean = false
+constant Logged = (Linker.Go, TypeEntry.HelloLogger)
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
 Compiled(path Text, root Text, withTests Boolean) List(TypeEntry)
 	let files = SourceFiles(root).Of(Normalized(path))
@@ -14,7 +15,25 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 	let main = TypeCodegen(FullName(source, root), File(source).ReadLines, inference, FullNames(files, root))
 	let entry = main.Entry
 	let methods = withTests then entry.methods + TestCodegen(main, isQuiet).Tests else entry.methods
-	Linker(root, main).Linked(TypeEntry(entry.Name, entry.members, methods), List(Text), 20)
+	let linker = Linker(root, main)
+	Checked(linker, linker.Linked(TypeEntry(entry.Name, entry.members, methods), List(Text), 20), source, inference)
+Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
+	FileCompiler.Checked(Linker.Sample, List(TypeEntry) + Linker.Go, "./A.strict", ResolveCheck.Counting).Length is 1
+	mutable unresolved = List(Mutable(Text))
+	for Sources(linker, linked, source)
+		unresolved = unresolved + ResolveCheck(logger).Unresolved(value, inference)
+	for unresolved
+		logger.Log(value)
+	unresolved.Length is 0 then linked else List(TypeEntry)
+Sources(linker Linker, linked List(TypeEntry), source Text) Texts
+	FileCompiler.Sources(Linker.Sample, Logged, "./Examples/A.strict") is List(Text) + "./Examples/HelloLogger.strict"
+	mutable paths = List(Mutable(Text))
+	for linked
+		let local = Path(source).PathOnly.text + "/" + value.Name + ".strict"
+		let path = value.Name.IndexOf("/") < 0 then local else linker.SourcePath(value.Name)
+		if (path is not source) and (path is not in paths) and File(path).Exists
+			paths.Add(path)
+	paths
 Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 	if Repositories(logger).Downloaded(type) is not ""
 		return Compiled(path, root, withTests)
