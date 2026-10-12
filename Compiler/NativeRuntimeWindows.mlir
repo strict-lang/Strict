@@ -196,6 +196,28 @@
     %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  func.func private @strict_file_modified(%path: f64) -> f64 {
+    %dataSize = arith.constant 40 : i64
+    %data = llvm.alloca %dataSize x i8 : (i64) -> !llvm.ptr
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %standard = arith.constant 0 : i32
+    %found = llvm.call @GetFileAttributesExA(%name, %standard, %data) : (!llvm.ptr, i32, !llvm.ptr) -> i32
+    %none = arith.constant 0 : i32
+    %missing = arith.cmpi eq, %found, %none : i32
+    %zero = arith.constant 0.0 : f64
+    cf.cond_br %missing, ^done(%zero : f64), ^time
+  ^time:
+    %writeSlot = llvm.getelementptr %data[20] : (!llvm.ptr) -> !llvm.ptr, i8
+    %fileTime = llvm.load %writeSlot {alignment = 4 : i64} : !llvm.ptr -> i64
+    %epoch = arith.constant 116444736000000000 : i64
+    %since = arith.subi %fileTime, %epoch : i64
+    %ticks = arith.sitofp %since : i64 to f64
+    %perSecond = arith.constant 1.0e7 : f64
+    %seconds = arith.divf %ticks, %perSecond : f64
+    cf.br ^done(%seconds : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   func.func private @strict_process_built(%self: f64) -> f64 {
     %one = arith.constant 1 : i64
     %dataSize = arith.constant 40 : i64

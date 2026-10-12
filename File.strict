@@ -6,4 +6,5 @@ has BytesWriter
 has BytesReader
 from(path)
 Exists Boolean
+Modified Number
 Delete

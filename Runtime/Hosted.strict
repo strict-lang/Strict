@@ -4,8 +4,9 @@ constant Current = Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText
 constant Existing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Exists", "Strict/Boolean", "path"), 0, -1), Current)
 constant Listing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Directories", "Strict/List(Text)", "path"), 0, -1), Current)
 constant Reading = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "ReadBytes", "Strict/List(Byte)"), List(Number), 0), Current.WithRegister(0, VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Any.strict"))))
+constant Dating = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Modified", "Strict/Number"), List(Number), 0), Reading.frame)
 constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), Current.WithRegister(0, VmValue.OfNumber(90)))
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted is true
 	Hosted(Invocation.AddCall).IsHosted is false
@@ -42,6 +43,12 @@ Stored VmValue
 		File(path).Delete
 	if call.MethodName is "Create"
 		Directory.Create(path)
+	Answered(path)
+Answered(path Text) VmValue
+	Hosted(Existing).Answered(".").IsTrue is true
+	Hosted(Dating).Answered("Any.strict").number > 1.7e9 is true
+	if call.MethodName is "Modified"
+		return VmValue.OfNumber(File(path).Modified)
 	call.MethodName is "Exists" then VmValue.OfBoolean(File(path).Exists or Directory.Exists(path)) else VmValue.None
 Entries VmValue
 	Hosted(Listing).Entries.Length > 0 is true

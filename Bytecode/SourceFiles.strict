@@ -92,8 +92,11 @@ Nearby(types Texts) Texts
 PackageWith(type Text) Text
 	SourceFiles(".").PackageWith("Vector2") is "./Math"
 	SourceFiles(".").PackageWith("Missing") is ""
-	for Directory.Directories(root)
-		let folder = root + "/" + Path(value.Replace("\\", "/")).FileName.text
+	SubfolderWith(root, type)
+SubfolderWith(parent Text, type Text) Text
+	SourceFiles(".").SubfolderWith(".", "Vector2") is "./Math"
+	for Directory.Directories(parent)
+		let folder = parent + "/" + Path(value.Replace("\\", "/")).FileName.text
 		if File(folder + "/" + type + ".strict").Exists
 			return folder
 	""

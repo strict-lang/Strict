@@ -18,10 +18,10 @@ Test(path Text, root Text) Number
 		logger.Log("All tests passed in " + path)
 	failed
 Verified(path Text, root Text) Number
-	let cache = BinaryFile(FileCompiler.Normalized(path), root)
-	let header = cache.Header
-	if cache.IsFresh(header, cache.Unpacked(File(cache.Path).ReadBytes))
+	let cache = BinaryFile(FileCompiler.Normalized(path))
+	if cache.IsFresh(cache.Unpacked(File(cache.Path).ReadBytes))
 		return 0
+	let header = cache.Header(SourceFiles(root).Of(cache.source))
 	let types = FileCompiler(logger).Compiled(path, root, true)
 	if types.Length is 0
 		return 1
@@ -35,7 +35,7 @@ Tested(types List(TypeEntry), path Text) Number
 		logger.Log(failed to Text + " tests failed in " + path)
 	failed
 Loaded(path Text, root Text) List(TypeEntry)
-	let cache = BinaryFile(FileCompiler.Normalized(path), root)
+	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let types = cache.Types(cache.Unpacked(File(cache.Path).ReadBytes))
 	types.Length > 0 then types else FileCompiler(logger).Compiled(path, root, true)
 HasRun(type TypeEntry) Boolean

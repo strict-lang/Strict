@@ -65,6 +65,7 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("Vector2", "Atan") is "strict_vector2_atan"
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadBytes") is "strict_file_readbytes"
 	MlirNatives(Texts, 1).TypeHelper("File", "WriteLines") is "strict_file_writelines"
+	MlirNatives(Texts, 1).TypeHelper("File", "Modified") is "strict_file_modified"
 	if kind + "." + name is not in Hosted.Methods
 		return ""
 	let suffix = name is "ReadLines" then "read_lines" else name.Lower

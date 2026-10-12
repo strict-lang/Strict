@@ -210,6 +210,29 @@
     %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  func.func private @strict_file_modified(%path: f64) -> f64 {
+    %size = arith.constant 256 : i64
+    %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %status = llvm.call @stat(%name, %buffer) : (!llvm.ptr, !llvm.ptr) -> i32
+    %none = arith.constant 0 : i32
+    %failed = arith.cmpi ne, %status, %none : i32
+    %zero = arith.constant 0.0 : f64
+    cf.cond_br %failed, ^done(%zero : f64), ^time
+  ^time:
+    %secondsSlot = llvm.getelementptr %buffer[88] : (!llvm.ptr) -> !llvm.ptr, i8
+    %seconds = llvm.load %secondsSlot : !llvm.ptr -> i64
+    %nanosecondsSlot = llvm.getelementptr %buffer[96] : (!llvm.ptr) -> !llvm.ptr, i8
+    %nanoseconds = llvm.load %nanosecondsSlot : !llvm.ptr -> i64
+    %whole = arith.sitofp %seconds : i64 to f64
+    %part = arith.sitofp %nanoseconds : i64 to f64
+    %billion = arith.constant 1.0e9 : f64
+    %fraction = arith.divf %part, %billion : f64
+    %time = arith.addf %whole, %fraction : f64
+    cf.br ^done(%time : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   func.func private @strict_process_built(%self: f64) -> f64 {
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
