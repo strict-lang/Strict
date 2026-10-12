@@ -1,4 +1,5 @@
 has bytes Numbers
+constant Repeated = (1, 2, 3, 1, 2, 3, 1, 2, 3, 4)
 Stored Numbers
 	Deflate((1, 2, 3)).Stored is (120, 1, 1, 3, 0, 252, 255, 1, 2, 3, 0, 13, 0, 7)
 	Inflate(Inflate.Part(Deflate((104, 105)).Stored, 2, 7)).Inflated is (104, 105)
@@ -21,3 +22,88 @@ Adler Numbers
 		low = (low + value) % 65521
 		high = (high + low) % 65521
 	((high / 256).Floor, high % 256, (low / 256).Floor, low % 256)
+Zlib Numbers
+	Inflate(Inflate.Part(Deflate(Repeated).Zlib, 2, Deflate(Repeated).Zlib.Length - 2)).Inflated is Repeated
+	Inflate(Inflate.Part(Deflate(List(Number)).Zlib, 2, 4)).Inflated.Length is 0
+	(List(Number) + 120 + 1) + Packed(Codes) + Adler
+Codes Numbers
+	Deflate(Repeated).Codes.Length < 24 is true
+	mutable codes = List(Mutable(Number)) + 3 + 3
+	mutable heads = Heads
+	mutable position = 0
+	for bytes.Length
+		if position < bytes.Length
+			let candidate = heads(Key(position)) - 1
+			heads(Key(position)) = position + 1
+			let length = Matched(candidate, position)
+			codes = codes + Symbols(length, position, candidate)
+			position = position + (length >= 3 then length else 1)
+	codes + 0 + 7
+Matched(candidate Number, position Number) Number
+	Deflate(Repeated).Matched(0, 3) is 6
+	Deflate(Repeated).Matched(-1, 3) is 0
+	if (candidate < 0) or (position - candidate > 32768)
+		return 0
+	let most = (bytes.Length - position).Clamp(0, 258)
+	for most
+		if bytes(candidate + index) is not bytes(position + index)
+			return index
+	most
+Symbols(length Number, position Number, candidate Number) Numbers
+	Deflate(Repeated).Symbols(0, 0, -1) is (140, 8)
+	Deflate(Repeated).Symbols(3, 3, 0).Length is 8
+	length >= 3 then LengthCodes(length) + DistanceCodes(position - candidate) else Literal(bytes(position))
+Literal(byte Number) Numbers
+	Deflate(Repeated).Literal(1) is (140, 8)
+	Deflate(Repeated).Literal(144) is (19, 9)
+	byte < 144 then (Reversed(48 + byte, 8), 8) else (Reversed(256 + byte, 9), 9)
+LengthCodes(length Number) Numbers
+	Deflate(Repeated).LengthCodes(3) is (64, 7, 0, 0)
+	Deflate(Repeated).LengthCodes(258) is (163, 8, 0, 0)
+	let code = Bucket(Inflate.LengthBases, length)
+	let symbol = 257 + code
+	let huffman = symbol < 280 then (Reversed(symbol - 256, 7), 7) else (Reversed(symbol - 88, 8), 8)
+	huffman + (length - Inflate.LengthBases(code), Inflate.LengthBits(code))
+DistanceCodes(distance Number) Numbers
+	Deflate(Repeated).DistanceCodes(3) is (8, 5, 0, 0)
+	let code = Bucket(Inflate.DistanceBases, distance)
+	(Reversed(code, 5), 5, distance - Inflate.DistanceBases(code), Inflate.DistanceBits(code))
+Bucket(bases Numbers, number Number) Number
+	Deflate(Repeated).Bucket(Inflate.LengthBases, 10) is 7
+	Deflate(Repeated).Bucket(Inflate.LengthBases, 258) is 28
+	for bases
+		if index + 1 is bases.Length
+			return index
+		if bases(index + 1) > number
+			return index
+	0
+Reversed(code Number, length Number) Number
+	Deflate(Repeated).Reversed(1, 7) is 64
+	Deflate(Repeated).Reversed(6, 3) is 3
+	mutable result = 0
+	for length
+		result = result * 2 + (code / 2 ^ index).Floor % 2
+	result
+Packed(codes Numbers) Numbers
+	Deflate(Repeated).Packed((3, 3, 0, 7)) is (3, 0)
+	mutable packed = List(Mutable(Number))
+	mutable accumulator = 0
+	mutable count = 0
+	for (codes.Length / 2).Floor
+		accumulator = accumulator + codes(index * 2) * 2 ^ count
+		count = count + codes(index * 2 + 1)
+		for (count / 8).Floor
+			packed.Add(accumulator % 256)
+			accumulator = (accumulator / 256).Floor
+		count = count % 8
+	count > 0 then packed + accumulator else packed
+Heads Numbers
+	Deflate(Repeated).Heads.Length is 32768
+	for 32768
+		0
+Key(position Number) Number
+	Deflate(Repeated).Key(0) is 515
+	Deflate(Repeated).Key(8) is 0
+	if position + 2 >= bytes.Length
+		return 0
+	((bytes(position) * 256 + bytes(position + 1)) * 256 + bytes(position + 2)) % 32768
