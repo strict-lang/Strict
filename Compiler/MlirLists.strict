@@ -127,18 +127,19 @@ ElementStored(entry InstructionEntry) Texts
 Target(path Text) Texts
 	MlirLists(Written, 1).Target("numbers") is ("    %t1l = llvm.load %v_numbers : !llvm.ptr -> f64")
 	MlirLists(Written, 1).Target("numbers.width").Last is "    %t1l = llvm.load %t1ls : !llvm.ptr -> f64"
-	let dot = path.IndexOf(".")
-	if dot < 0
-		return List(Text) + function.Load(Temp("l"), "%v_" + path)
 	let memory = MlirMemory(function, position)
-	let slot = memory.Slot(Temp("op"), memory.Member(path).First, "ls")
-	let owner = function.Load(Temp("o"), "%v_" + path.Substring(0, dot))
+	let target = memory.Unwrapped(path)
+	let dot = target.IndexOf(".")
+	if dot < 0
+		return List(Text) + function.Load(Temp("l"), "%v_" + target)
+	let slot = memory.Slot(Temp("op"), memory.Member(target).First, "ls")
+	let owner = function.Load(Temp("o"), "%v_" + target.Substring(0, dot))
 	let pointer = List(Text) + owner + memory.Pointer(Temp("o"), "o")
 	pointer + slot + function.Load(Temp("l"), Temp("ls"))
 Copied(entry InstructionEntry) Texts
 	MlirLists(Written, 2).Copied(Written.method.instructions(2)).Length is 3
 	MlirLists(Written, 2).Copied(MemberCopy).Last is "    llvm.store %t2oc, %v_numbers : f64, !llvm.ptr"
-	let path = entry.texts(0)
+	let path = MlirMemory(function, position).Unwrapped(entry.texts(0))
 	let copy = MlirMemory(function, position).Called(Temp("c"), "strict_list_copy", (Temp("l"), "%zero"))
 	if path.IndexOf(".") < 0
 		return (function.Load(Temp("l"), "%v_" + path), copy, function.Store(Temp("c"), "%v_" + path))

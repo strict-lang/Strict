@@ -2,6 +2,8 @@ has function MlirFunction
 has position Number
 constant Sample = MlirMemory(MlirFunction.Counter, 3)
 constant Pair = TypeEntry("Strict/Pair", (MemberEntry("first", "Strict/Number", List(InstructionEntry), false), MemberEntry("rest", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry))
+constant Box = TypeEntry("Strict/Box", List(MemberEntry) + MemberEntry("values", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry))
+constant Boxing = MlirMemory(MlirFunction(List(TypeEntry) + Box, Box, MethodEntry("Run", List(MemberEntry) + MemberEntry("box", "Strict/Box", List(InstructionEntry), false), "None", List(InstructionEntry))), 0)
 constant Pairing = MlirMemory(MlirFunction(List(TypeEntry) + Pair, Pair, MethodEntry("Run", List(MemberEntry) + MemberEntry("pair", "Strict/Pair", List(InstructionEntry), false), "None", List(InstructionEntry))), 0)
 Temp(suffix Text) Text
 	Sample.Temp("p") is "%t3p"
@@ -56,3 +58,11 @@ Changed(path Text, element Text, result Text) Texts
 	let slot = "    " + Temp("ms") + " = arith.constant " + member.First + ".0 : f64"
 	let count = "    " + Temp("mc") + " = arith.constant " + member.Last + ".0 : f64"
 	(slot, count, Called(result, "strict_instance_with", (Temp("o"), Temp("ms"), element, Temp("mc"))))
+Unwrapped(path Text) Text
+	Pairing.Unwrapped("pair.rest") is "pair.rest"
+	Boxing.Unwrapped("box.values") is "box"
+	Pairing.Unwrapped("numbers") is "numbers"
+	let dot = path.IndexOf(".")
+	if dot < 0
+		return path
+	Member(path).Last is 1 then path.Substring(0, dot) else path
