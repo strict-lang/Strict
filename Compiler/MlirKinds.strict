@@ -3,6 +3,8 @@ constant Passed = InstructionEntry.Invoke(2, ("Strict/Shape", "Passed", "Strict/
 constant NewShape = InstructionEntry.Invoke(6, ("Strict/Shape", "from", "Strict/Shape", "width"), 4, -1)
 constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (5, 6, -1))
 constant Characters = InstructionEntry(InstructionType.FieldLoad, "characters", (5, 0, -1))
+constant Coded = InstructionEntry(InstructionType.FieldLoad, "number", (2, 1, -1))
+constant Lettered = MlirKinds(MlirFunction(List(TypeEntry) + TypeEntry.CharacterEntry, TypeEntry.CharacterEntry, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "b"), InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character", "text"), 0, -1), Coded))))
 constant Indexed = InstructionEntry(InstructionType.IndexCall, "letters", (7, 4, -1))
 constant Looped = (InstructionEntry.LoopBegin(4, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "value"), InstructionEntry(InstructionType.LoopEnd, List(Text), (1)))
 constant Graded = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "A"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "letter"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "letter"), Passed, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "width"), NewShape, Width, Indexed) + Looped)))
@@ -103,15 +105,16 @@ LoopValueKind(position Number) Text
 FieldKind(writer Number, entry InstructionEntry) Text
 	Graded.FieldKind(7, Width) is "Number"
 	Graded.FieldKind(1, Characters) is "Text"
+	Lettered.FieldKind(2, Coded) is "Number"
 	let kind = KindOf(writer, entry.payload(1))
 	let layout = MlirLayout(function)
 	let wrapped = layout.Wrapped(kind)
 	if (wrapped is not "") and (entry.texts(0) is not "value")
 		return wrapped
-	if (entry.texts(0) is "value") or (layout.IsStruct(kind) is false)
+	if entry.texts(0) is "value"
 		return kind
 	let member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
-	member is "" then "Number" else member
+	layout.IsStruct(kind) then (member is "" then "Number" else member) else (member is "Number" then member else kind)
 MembersKind(members List(MemberEntry), name Text) Text
 	Graded.MembersKind(MlirFunction.Shape.members, "width") is "Number"
 	Graded.MembersKind(MlirFunction.Shape.members, "other") is ""

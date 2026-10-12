@@ -1,0 +1,21 @@
+has logger
+constant Inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
+constant Targets = (0, 1, 1, 0)
+Run
+	let untrained = Network.Random((2, 3, 1))
+	let network = Trained(untrained, 20000)
+	logger.Log("Error before training " + Error(untrained) + ", after " + Error(network))
+	for Inputs
+		logger.Log(value to Text + " gives " + network.Predict(value).First)
+Trained(network Network, steps Number) Network
+	Xor.Error(Xor.Trained(Network.Pair, 200)) < Xor.Error(Network.Pair) is true
+	mutable trained = network
+	for steps
+		trained = trained.Trained(Inputs(index % 4), List(Number) + Targets(index % 4), 0.5)
+	trained
+Error(network Network) Number
+	Xor.Error(Network.Pair) > 0 is true
+	mutable error = 0
+	for Inputs
+		error = error + network.Error(value, List(Number) + Targets(index))
+	error

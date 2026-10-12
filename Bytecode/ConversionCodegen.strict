@@ -8,6 +8,7 @@ constant ColorReassignment = SyntaxNode("Reassignment", "", (SyntaxNode("Identif
 constant Pixels = SyntaxNode("Identifier", "pixels")
 constant Kinded = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Kind", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "to", List(Text) + "Text"), List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant HelperType = SyntaxParser(Tokenizer("\"Helper\" to Type").Tokens).Parse
+constant Nesting = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), SyntaxNode("List", "", (ValueCodegen.One, ValueCodegen.One))))
 constant Pixelated = CodeBlock.Empty.Declare("pixels", "ColorValues")
 ArgumentTypes(node SyntaxNode, owner Text, block CodeBlock) Texts
 	Plain.ArgumentTypes(SyntaxNode("Call", "Greet", ValueCodegen.One), "Greeter", CodeBlock.Empty) is ("Unknown")
@@ -62,13 +63,25 @@ Elements(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 Operand(node SyntaxNode, block CodeBlock) SyntaxNode
 	Colored.Operand(SyntaxNode("Binary", "+", (Pixels, NewColor)), Pixelated).text is "to"
 	Plain.Operand(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty).text is "1"
+	Plain.Operand(Nesting, CodeBlock.Empty.Declare("x", "List(Numbers)")).children.Length is 1
 	let types = values.inference.types
 	let listType = values.TypeOf(node.children(0), block)
 	let operand = node.children(1)
+	if (node.text is "+") and IsElement(listType, operand, block)
+		return SyntaxNode("List", "", List(SyntaxNode) + operand)
 	if types.IsPlural(listType) is false
 		return node.text is "+" then Textual(node, block) else operand
 	let isList = (operand.Kind is "List") or types.IsPlural(values.TypeOf(operand, block))
 	Converted(operand, (isList then listType else types.ElementType(listType)), block)
+IsElement(collection Text, operand SyntaxNode, block CodeBlock) Boolean
+	Plain.IsElement("List(Numbers)", Nesting.children.Last, CodeBlock.Empty) is true
+	Plain.IsElement("Numberss", Nesting.children.Last, CodeBlock.Empty) is true
+	Plain.IsElement("Numbers", Nesting.children.Last, CodeBlock.Empty) is false
+	let types = values.inference.types
+	let isSpelled = collection.StartsWith("List(") and (collection.IndexOf(",") < 0)
+	let element = isSpelled then collection.Substring(5, collection.Length - 6) else types.ElementType(collection)
+	let isListElement = types.IsPlural(element) or element.StartsWith("List(")
+	isListElement and (values.TypeOf(operand, block) is element)
 Textual(node SyntaxNode, block CodeBlock) SyntaxNode
 	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.Hi, SyntaxNode("Call", "Kind"))), CodeBlock.Empty).text is "to"
 	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.One)), CodeBlock.Empty).text is "1"

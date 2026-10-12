@@ -1,0 +1,54 @@
+has layers List(Layer)
+constant Single = Network(List(Layer) + Layer.Halves)
+constant Halved = (List(Numbers) + (1, 0)) + (List(Number) + 0.5)
+constant Pair = Network((Layer((0.5, 0.5, 0.5, 0.5), (0, 0)), Layer.Halves))
+Random(sizes Numbers) Network
+	Network.Random((2, 3, 1)).layers.Length is 2
+	Network.Random((2, 3, 1)).layers.Last.weights.Length is 3
+	Network(Layers(sizes))
+Layers(sizes Numbers) List(Layer)
+	Single.Layers((2, 1)).Length is 1
+	for Range(1, sizes.Length)
+		Layer.Random(sizes(index - 1), sizes(index))
+Predict(input Numbers) Numbers
+	Single.Predict((1, 1)) is List(Number) + 0.7310585786300049
+	mutable activation = input
+	for layers
+		activation = value.Forward(activation)
+	activation
+Activations(input Numbers) List(Numbers)
+	Pair.Activations((1, 1)).Length is 3
+	mutable activations = List(Mutable(Numbers))
+	activations.Add(input)
+	for layers
+		activations.Add(value.Forward(activations.Last))
+	activations
+Trained(input Numbers, target Numbers, rate Number) Network
+	Pair.Trained((1, 1), List(Number) + 0, 1).Predict((1, 1)).First < Pair.Predict((1, 1)).First is true
+	let activations = Activations(input)
+	Network(Updated(activations, Deltas(activations, target), rate))
+Updated(activations List(Numbers), deltas List(Numbers), rate Number) List(Layer)
+	Single.Updated(Halved, List(Numbers) + (List(Number) + 1), 0.5).First.biases is List(Number) + (0 - 0.5)
+	for layers
+		value.Updated(activations(index), deltas(index), rate)
+Deltas(activations List(Numbers), target Numbers) List(Numbers)
+	Pair.Deltas(Pair.Activations((1, 1)), List(Number) + 0).Length is 2
+	mutable delta = Derived(activations.Last, Difference(activations.Last, target))
+	mutable deltas = List(Mutable(Numbers))
+	deltas.Add(delta)
+	for Range(1, layers.Length)
+		let next = layers.Length - index
+		delta = Derived(activations(next), layers(next).Spread(delta))
+		deltas.Add(delta)
+	deltas.Reverse
+Derived(activation Numbers, errors Numbers) Numbers
+	Single.Derived(List(Number) + 0.5, List(Number) + 2) is List(Number) + 0.5
+	for activation
+		errors(index) * value * (1 - value)
+Difference(output Numbers, target Numbers) Numbers
+	Single.Difference((1, 0.5), (0, 0.5)) is (1, 0)
+	for output
+		value - target(index)
+Error(input Numbers, target Numbers) Number
+	Single.Error((1, 1), List(Number) + 0.7310585786300049) is 0
+	(Difference(Predict(input), target) * Difference(Predict(input), target)).Sum
