@@ -3,12 +3,44 @@ has known Texts
 constant NoScope = Scope(("x", "z"), ("y", "w"))
 constant NoScopes = (NoScope, NoScope)
 constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes), NoScopes)
-Unresolved(statements ScopedStatements) Texts
-	Unresolved(MethodBodies("A", TypeShape("has a Number", "Run", "\ta + b"), NoInference).Statements).Length is 1
-	mutable unresolved = List(Mutable(Text))
-	for statements
-		unresolved = unresolved + UnknownNames(value.statement, known + value.scope.names + ValueNames(value.scope))
-	unresolved
+constant Counting = FileCheck(TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers)), ("Count", "Text"))
+constant Counted = Scope(List(Text) + "count", List(Text) + "Count")
+constant TwiceCall = ScopedStatement(SyntaxParser(Tokenizer("count.Twice").Tokens).Parse, Counted, 0)
+constant MissingCall = ScopedStatement(SyntaxParser(Tokenizer("count.Missing").Tokens).Parse, Counted, 0)
+constant OtherName = ScopedStatement(SyntaxParser(Tokenizer("count + other").Tokens).Parse, Counted, 0)
+Unknown(scoped ScopedStatement, current Scope) Text
+	Counting.Unknown(TwiceCall, KnownTypes.NoMembers) is ""
+	Counting.Unknown(MissingCall, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
+	Counting.Unknown(OtherName, KnownTypes.NoMembers) is "NameNotFound: other"
+	let names = UnknownNames(scoped.statement, known + scoped.scope.names + ValueNames(scoped.scope))
+	if names.Length > 0
+		return "NameNotFound: " + names.First
+	let methods = UnknownMethods(scoped.statement, scoped.scope, current)
+	methods.Length is 0 then "" else "MethodNotFound: " + methods.First
+UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
+	Counting.UnknownMethods(MissingCall.statement, Counted, KnownTypes.NoMembers) is ("Count.Missing")
+	mutable unknown = List(Mutable(Text))
+	if IsCall(node)
+		let instance = inference.TypeOf(node.children(0), scope, current)
+		if IsMissing(instance, node.text)
+			unknown.Add(instance + "." + node.text)
+	for node.children
+		if value.Kind is not "Body"
+			unknown = unknown + UnknownMethods(value, scope, current)
+	unknown
+IsCall(node SyntaxNode) Boolean
+	Counting.IsCall(MissingCall.statement) is true
+	Counting.IsCall(OtherName.statement) is false
+	let isNamed = (node.text.Length > 0) and (node.text.Substring(0, 1).Upper is not node.text.Substring(0, 1).Lower)
+	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
+	isMember and isNamed and (node.text is not in ("value", "index"))
+IsMissing(instance Text, name Text) Boolean
+	Counting.IsMissing("Count", "Missing") is true
+	Counting.IsMissing("Count", "Twice") is false
+	Counting.IsMissing("Generic", "number") is false
+	let types = inference.types
+	let isChecked = types.IsKnown(types.BaseName(instance)) and (instance is not in ("Generic", "Generics"))
+	isChecked and (types.DeclaredType(instance, name, 3) is "") and (types.MemberType(instance, name) is "Unknown")
 ValueNames(scope Scope) Texts
 	FileCheck(NoInference, ("N", "R")).ValueNames(NoScope).Length is 0
 	if scope.TypeOf("value") is ""
@@ -16,12 +48,10 @@ ValueNames(scope Scope) Texts
 	let valueScope = inference.types.ShapeScope(scope.TypeOf("value"))
 	valueScope.names
 UnknownNames(statement SyntaxNode, names Texts) Texts
-	FileCheck(NoInference, ("N", "R")).UnknownNames(SyntaxNode("Identifier", "c"), ("a", "b")).Length is 1
-	mutable unknown = List(Mutable(Text))
+	FileCheck(NoInference, ("N", "R")).UnknownNames(SyntaxNode("Identifier", "c"), ("a", "b")) is ("c")
 	for statement.HeadNames
 		if not IsKnown(value, names)
-			unknown.Add(value + " in " + statement to Text)
-	unknown
+			value
 IsKnown(name Text, names Texts) Boolean
 	IsKnown("Numbers", ("Number", "a")) is true
 	IsKnown("b", ("Number", "a")) is false

@@ -3,12 +3,12 @@ constant Tips = " is not in this folder, next to strict, in a GitHub repository 
 Compiled(path Text, root Text, withTests Boolean) List(TypeEntry)
 	let source = Normalized(path)
 	let files = SourceFiles(root).Of(source)
-	if Parsed(files) is false
-		return List(TypeEntry)
 	let missing = SourceFiles(root).Missing(File(source).ReadLines, files)
 	if missing.Length > 0
-		return Located(path, root, withTests, missing.First)
+		return Located(source, root, withTests, missing.First)
 	let inference = ResolveCheck.Inference(files)
+	if (Parsed(files) is false) or (Resolved(source, inference) is false)
+		return List(TypeEntry)
 	let main = TypeCodegen(FullName(source, root), File(source).ReadLines, inference, FullNames(files, root))
 	let entry = main.Entry
 	let methods = withTests then entry.methods + TestCodegen(main).Tests else entry.methods
@@ -58,6 +58,12 @@ IsOperand(node SyntaxNode, position Number) Boolean
 	FileCompiler.IsOperand(SyntaxNode("Binary", "+", (SyntaxNode("Missing", ""), SyntaxNode("Missing", ""))), 1) is true
 	FileCompiler.IsOperand(SyntaxNode("Binary", "is", (SyntaxNode("Missing", ""), SyntaxNode("Missing", ""))), 1) is false
 	(node.Kind is in ("Not", "Negate")) or ((node.Kind is "Binary") and ((position is 0) or (node.text is not "is")))
+Resolved(source Text, inference TypeInference) Boolean
+	FileCompiler.Resolved("./Logger.strict", ResolveCheck.Inference(("./Logger.strict", "./TextWriter.strict"))) is true
+	let unresolved = ResolveCheck(logger).Unresolved(source, inference)
+	for unresolved
+		logger.Log(value)
+	unresolved.Length is 0
 LineOf(lines Texts, name Text) Number
 	FileCompiler.LineOf(("has logger", "has numbr"), "Numbr") is 2
 	for lines

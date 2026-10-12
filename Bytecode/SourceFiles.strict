@@ -47,6 +47,7 @@ Package(name Text) Text
 	Directory.Exists(root + "/" + name) then root + "/" + name else ""
 Missing(lines Texts, files Texts) Texts
 	SourceFiles(".").Missing(Typo, Directory.Files(".", "*.strict")) is ("Numbr")
+	SourceFiles(".").Missing(("Run", "\tVectr2(1, 2)"), Directory.Files(".", "*.strict")) is ("Vectr2")
 	mutable known = List(Mutable(Text)) + "None" + "Other"
 	for files
 		known.Add(Path(value.Replace("\\", "/")).FileName.RemoveExtension.text)
@@ -54,7 +55,7 @@ Missing(lines Texts, files Texts) Texts
 		if value.StartsWith("constant ")
 			let tokens = Tokenizer(value).Tokens
 			known.Add(tokens(1))
-	for Declared(TypeShape(lines))
+	for Declared(TypeShape(lines)) + TypeShape(lines).UsedTypes
 		if IsKnown(value, known) is false
 			value
 IsKnown(name Text, known Texts) Boolean

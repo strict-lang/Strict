@@ -2,19 +2,22 @@ has logger
 constant Counting = TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers))
 Run(folder Text, root Text)
 	let inference = Inference(Directory.Files(folder, "*.strict") + AllFiles(root))
-	let known = inference.types.names + ("value", "index", "outer")
-	mutable unresolved = 0
+	mutable unresolved = List(Mutable(Text))
 	for Directory.Files(folder, "*.strict")
-		unresolved = unresolved + CheckFile(value, inference, known)
-	logger.Log("Unresolved names: " + unresolved)
-CheckFile(path Text, inference TypeInference, known Texts) Number
-	let shape = TypeShape(File(path).ReadLines)
-	let statements = MethodBodies(TypeName(path), shape, inference).Statements
-	let typeNames = inference.types.ShapeScope(TypeName(path)).names
-	let unresolved = FileCheck(inference, known + typeNames).Unresolved(statements)
+		unresolved = unresolved + Unresolved(value, inference)
 	for unresolved
-		logger.Log(path + ": " + value)
-	unresolved.Length
+		logger.Log(value)
+	logger.Log("Unresolved names: " + unresolved.Length)
+Unresolved(path Text, inference TypeInference) Texts
+	ResolveCheck.Unresolved("Logger.strict", Inference(("Logger.strict", "TextWriter.strict"))).Length is 0
+	let typeName = TypeName(path)
+	let bodies = MethodBodies(typeName, TypeShape(File(path).ReadLines), inference)
+	let known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(typeName).names
+	let check = FileCheck(inference, known)
+	for bodies.Statements
+		let unknown = check.Unknown(value, bodies.Methods)
+		if unknown is not ""
+			unknown + " used in " + path + ":" + (value.line + 1)
 AllFiles(root Text) Texts
 	mutable files = Directory.Files(root, "*.strict")
 	for Directory.Directories(root)
