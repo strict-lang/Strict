@@ -3123,6 +3123,16 @@
     %result = func.call @strict_list_text(%list, %isText) : (f64, i1) -> f64
     return %result : f64
   }
+  func.func private @strict_list_add_set(%list: f64, %text: f64, %value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %value, %zero : f64
+    cf.cond_br %unset, ^skip, ^add
+  ^skip:
+    return %list : f64
+  ^add:
+    %added = func.call @strict_list_add(%list, %text) : (f64, f64) -> f64
+    return %added : f64
+  }
   func.func private @strict_text_itself(%text: f64) -> f64 {
     return %text : f64
   }

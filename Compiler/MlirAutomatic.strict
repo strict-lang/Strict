@@ -3,6 +3,7 @@ constant Prologue = ("    %zero = arith.constant 0.0 : f64", "    %unset = arith
 constant Parentheses = ("    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr", "    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64", "    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr", "    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64", "    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64", "    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64", "    return %result : f64", "  }")
 constant Sample = MlirAutomatic(MlirEquality.Same)
 constant Priced = MemberEntry("prices", "Strict/Dictionary(Text, Shape)", List(InstructionEntry), false)
+constant Nested = MemberEntry("inner", "Strict/Shape", List(InstructionEntry), false)
 constant Converting = "(f64) -> f64"
 constant PairSignature = " : (f64, (f64) -> f64, (f64) -> f64) -> f64"
 Functions Texts
@@ -37,6 +38,7 @@ Function(type TypeEntry) Texts
 Member(member MemberEntry, slot Number, count Number) Texts
 	Sample.Member(MlirFunction.Shape.members.First, 0, 0).Last.IndexOf("@strict_list_add(%l0, %x0)") > 0 is true
 	Sample.Member(Priced, 0, 0).Length is 6
+	Sample.Member(Nested, 0, 0).Last.IndexOf("@strict_list_add_set(%l0, %x0, %t0m0v)") > 0 is true
 	let kind = TypeEntry.ShortName(member.typeName)
 	let conversion = Conversion(kind)
 	if (conversion is "skip") and (MlirLayout(function).Paired(kind).Length is 0)
@@ -44,8 +46,14 @@ Member(member MemberEntry, slot Number, count Number) Texts
 	let memory = MlirMemory(function, 0)
 	let loaded = memory.Temp("m" + slot + "v")
 	let text = conversion is "" then loaded else "%x" + slot
-	let added = "    %l" + (count + 1) + " = func.call @strict_list_add(%l" + count + ", " + text + ") : (f64, f64) -> f64"
-	memory.Loaded("%p", slot, "m" + slot) + Converted(text, kind, loaded) + added
+	memory.Loaded("%p", slot, "m" + slot) + Converted(text, kind, loaded) + Added(count, text, loaded, kind)
+Added(count Number, text Text, loaded Text, kind Text) Text
+	Sample.Added(0, "%x0", "%v", "Number") is "    %l1 = func.call @strict_list_add(%l0, %x0) : (f64, f64) -> f64"
+	Sample.Added(1, "%x1", "%v", "Shape").IndexOf("@strict_list_add_set(%l1, %x1, %v)") > 0 is true
+	let target = "    %l" + (count + 1) + " = func.call @"
+	if MlirLayout(function).Represented(kind) is in ("Number", "Boolean", "Character")
+		return target + "strict_list_add(%l" + count + ", " + text + ") : (f64, f64) -> f64"
+	target + "strict_list_add_set(%l" + count + ", " + text + ", " + loaded + ") : (f64, f64, f64) -> f64"
 Converted(target Text, kind Text, loaded Text) Texts
 	Sample.Converted("%x", "Text", "%v").Length is 0
 	Sample.Converted("%x", "Number", "%v").First.IndexOf("@strict_number_text(%v)") > 0 is true
