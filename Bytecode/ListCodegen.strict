@@ -52,7 +52,9 @@ Copied(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Copied(ValueCodegen.RemoveOne, Shared).instructions(2).payload is (3, 0, 1, 2)
 	Plain.Copied(ValueCodegen.RemoveOne, Shared).instructions(2).kind is InstructionType.Subtract
 	let list = values.Expression(node.children(0), block)
-	let element = values.Expression(ConversionCodegen(values).Operand(node, block), list)
+	let operand = ConversionCodegen(values).Operand(node, block)
+	let isElement = ConversionCodegen(values).IsElement(values.TypeOf(node.children(0), block), operand, block)
+	let element = values.Expression((isElement then SyntaxNode("List", "", List(SyntaxNode) + operand) else operand), list)
 	let operation = node.text is "Add" then InstructionType.Add else InstructionType.Subtract
 	let changed = element.Load(InstructionEntry.Binary(operation, (list.Result, element.Result, element.register)))
 	changed.Stored(node.children(0).text)
