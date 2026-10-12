@@ -1,46 +1,28 @@
 has inputs List(Numbers)
 has targets List(Numbers)
-constant Sample = ("variety", "5.1,3.5,1.4,.2,0", "7,3.2,4.7,1.4,1")
-constant Pairs = Dataset.Read(Sample, 2)
-Read(lines Texts, classes Number) Dataset
-	Dataset.Read(Sample, 2).inputs is ((0, 1, 0, 0), (1, 0, 1, 1))
-	Dataset.Read(Sample, 2).targets is ((1, 0), (0, 1))
-	let rows = Rows(lines)
-	Dataset(Scaled(rows), Targets(rows, classes))
-Rows(lines Texts) List(Numbers)
-	Dataset.Rows(Sample).Length is 2
-	for Range(1, lines.Length)
-		Parsed(lines(value))
-Parsed(line Text) Numbers
-	Dataset.Parsed("5.1,3.5,1.4,.2,0") is (5.1, 3.5, 1.4, 0.2, 0)
-	for line.Split(",")
-		value to Number
-Scaled(rows List(Numbers)) List(Numbers)
-	Dataset.Scaled(((1, 5, 0), (3, 5, 1))) is ((0, 0), (1, 0))
-	let lows = Extremes(rows, false)
-	let highs = Extremes(rows, true)
-	for rows
-		Features(value, lows, highs)
-Extremes(rows List(Numbers), isHighest Boolean) Numbers
-	Dataset.Extremes(((1, 5, 0), (3, 4, 1)), true) is (3, 5)
-	for rows.First.Length - 1
-		isHighest then Column(rows, index).Maximum else Column(rows, index).Minimum
-Column(rows List(Numbers), position Number) Numbers
-	Dataset.Column(((1, 5, 0), (3, 4, 1)), 1) is (5, 4)
-	for rows
-		value(position)
-Features(row Numbers, lows Numbers, highs Numbers) Numbers
-	Dataset.Features((5, 10, 1), (0, 10), (10, 10)) is (0.5, 0)
-	for lows
-		highs(index) is value then 0 else (row(index) - value) / (highs(index) - value)
-Targets(rows List(Numbers), classes Number) List(Numbers)
-	Dataset.Targets(((1, 2), (3, 0)), 3) is ((0, 0, 1), (1, 0, 0))
-	for rows
-		OneHot(value.Last, classes)
+constant Pairs = Csv.Sample.Classified(2)
 OneHot(label Number, classes Number) Numbers
 	Dataset.OneHot(1, 3) is (0, 1, 0)
 	for classes
 		index is label then 1 else 0
+Images(folder Text, classes Number) Dataset
+	Dataset.Images("NeuralNetworks/mnist", 1).inputs.Length is 40
+	Dataset.Images("NeuralNetworks/mnist", 1).inputs.First.Sum is 83.99215686274508
+	mutable images = List(Mutable(Numbers))
+	mutable labeled = List(Mutable(Numbers))
+	for classes
+		let files = Directory.Files(folder + "/" + index, "*.png")
+		images = images + Pictures(files)
+		labeled = labeled + Labels(OneHot(index, classes), files.Length)
+	Dataset(images, labeled)
+Pictures(files Texts) List(Numbers)
+	Pairs.Pictures(List(Text)).Length is 0
+	for files
+		Png.Read(value).Grays
+Labels(label Numbers, count Number) List(Numbers)
+	Pairs.Labels((1, 0), 2) is ((1, 0), (1, 0))
+	for count
+		label
 Training Dataset
 	Pairs.Training.inputs is List(Numbers) + (1, 0, 1, 1)
 	Dataset(Kept(inputs, false), Kept(targets, false))

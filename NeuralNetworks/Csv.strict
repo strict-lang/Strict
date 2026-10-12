@@ -1,0 +1,37 @@
+has lines Texts
+constant Sample = Csv(("variety", "5.1,3.5,1.4,.2,0", "7,3.2,4.7,1.4,1"))
+Classified(classes Number) Dataset
+	Sample.Classified(2).inputs is ((0, 1, 0, 0), (1, 0, 1, 1))
+	Sample.Classified(2).targets is ((1, 0), (0, 1))
+	let rows = Rows
+	Dataset(Scaled(rows), Targets(rows, classes))
+Rows List(Numbers)
+	Sample.Rows.Length is 2
+	for Range(1, lines.Length)
+		Parsed(lines(value))
+Parsed(line Text) Numbers
+	Sample.Parsed("5.1,3.5,1.4,.2,0") is (5.1, 3.5, 1.4, 0.2, 0)
+	for line.Split(",")
+		value to Number
+Scaled(rows List(Numbers)) List(Numbers)
+	Sample.Scaled(((1, 5, 0), (3, 5, 1))) is ((0, 0), (1, 0))
+	let lows = Extremes(rows, false)
+	let highs = Extremes(rows, true)
+	for rows
+		Features(value, lows, highs)
+Extremes(rows List(Numbers), isHighest Boolean) Numbers
+	Sample.Extremes(((1, 5, 0), (3, 4, 1)), true) is (3, 5)
+	for rows.First.Length - 1
+		isHighest then Column(rows, index).Maximum else Column(rows, index).Minimum
+Column(rows List(Numbers), position Number) Numbers
+	Sample.Column(((1, 5, 0), (3, 4, 1)), 1) is (5, 4)
+	for rows
+		value(position)
+Features(row Numbers, lows Numbers, highs Numbers) Numbers
+	Sample.Features((5, 10, 1), (0, 10), (10, 10)) is (0.5, 0)
+	for lows
+		highs(index) is value then 0 else (row(index) - value) / (highs(index) - value)
+Targets(rows List(Numbers), classes Number) List(Numbers)
+	Sample.Targets(((1, 2), (3, 0)), 3) is ((0, 0, 1), (1, 0, 0))
+	for rows
+		Dataset.OneHot(value.Last, classes)

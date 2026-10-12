@@ -1,4 +1,5 @@
 has root Text
+constant Imaging = List(Text) + "./ImageProcessing/Png.strict"
 constant Typo = ("constant Limit = 3", "has numbr", "has counts Numbers", "Add(other Number, most = Limit) Other", "	other")
 Of(path Text) Texts
 	SourceFiles(".").Of("./Missing/A.strict").Length is Directory.Files(".", "*.strict").Length
@@ -6,8 +7,16 @@ Of(path Text) Texts
 	let project = File("./Any.strict").Exists then List(Text) else Tree(".")
 	for Folders(Added(project, List(Text) + Path(path).PathOnly.text), 3)
 		files = files + Directory.Files(value, "*.strict")
-	let found = Added(files, Directory.Files(root, "*.strict"))
-	Added(found, Nearby(Missing(File(path).ReadLines, found)))
+	let local = Directory.Files(Path(path).PathOnly.text, "*.strict")
+	Closed(Added(files, Directory.Files(root, "*.strict")), Added(local, List(Text) + path), 3)
+Closed(found Texts, sources Texts, depth Number) Texts
+	Directory.Files("./Compression", "*.strict").First is in SourceFiles(".").Closed(List(Text), Imaging, 0)
+	mutable missing = List(Mutable(Text))
+	for sources
+		missing = Added(missing, Missing(File(value).ReadLines, found))
+	let nearby = Nearby(missing)
+	let added = Added(found, nearby)
+	(depth is 0) or (added.Length is found.Length) then added else Closed(added, nearby, depth - 1)
 Folders(folders Texts, depth Number) Texts
 	SourceFiles(".").Folders(List(Text) + "./Missing", 2).Length is 1
 	mutable result = folders
@@ -87,14 +96,10 @@ Nearby(types Texts) Texts
 	SourceFiles(".").Nearby(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	mutable files = List(Mutable(Text))
 	for types
-		let folder = PackageWith(value)
+		let folder = SubfolderWith(root, value)
 		if folder is not ""
 			files = Added(files, Directory.Files(folder, "*.strict"))
 	files
-PackageWith(type Text) Text
-	SourceFiles(".").PackageWith("Vector2") is "./Math"
-	SourceFiles(".").PackageWith("Missing") is ""
-	SubfolderWith(root, type)
 SubfolderWith(parent Text, type Text) Text
 	SourceFiles(".").SubfolderWith(".", "Vector2") is "./Math"
 	for Directory.Directories(parent)

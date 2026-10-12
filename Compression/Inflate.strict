@@ -1,0 +1,119 @@
+has bytes Numbers
+constant StoredSample = Inflate((1, 2, 0, 253, 255, 104, 105))
+constant FixedSample = Inflate((75, 76, 74, 78, 4, 35, 0))
+constant DynamicSample = Inflate((21, 136, 193, 13, 0, 48, 16, 130, 102, 5, 189, 253, 87, 168, 125, 16, 2, 234, 21, 188, 81, 35, 21, 126, 64, 50, 119, 43, 251, 15))
+constant DynamicText = (98, 98, 98, 101, 100, 97, 97, 98, 101, 97, 97, 98, 100, 98, 99, 98, 97, 100, 98, 97, 97, 101, 97, 97, 98, 97, 97, 99, 99, 101, 97, 97, 100, 99, 98, 97, 99, 98, 99, 98)
+constant LengthBases = (3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258)
+constant LengthBits = (0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0)
+constant DistanceBases = (1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577)
+constant DistanceBits = (0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13)
+constant FixedDistances = (5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5)
+constant Order = (16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15)
+constant Powers = (1, 2, 4, 8, 16, 32, 64, 128)
+constant FixedLiteralCodes = Huffman.From(StoredSample.FixedLengths)
+constant FixedDistanceCodes = Huffman.From(FixedDistances)
+Inflated Numbers
+	StoredSample.Inflated is (104, 105)
+	FixedSample.Inflated is (97, 98, 99, 97, 98, 99, 97, 98, 99)
+	DynamicSample.Inflated is DynamicText
+	mutable state = Inflation(List(Number), 0)
+	for bytes.Length
+		let isLast = Bit(state.position) is 1
+		state = Block(Inflation(state.output, state.position + 3), Bits(state.position + 1, 2))
+		if isLast
+			return state.output
+	state.output
+Block(state Inflation, kind Number) Inflation
+	StoredSample.Block(Inflation(List(Number), 3), 0).output is (104, 105)
+	if kind is 0
+		return Stored(state)
+	if kind is 1
+		return Coded(state, FixedLiteralCodes, FixedDistanceCodes)
+	Dynamic(state)
+Stored(state Inflation) Inflation
+	StoredSample.Stored(Inflation(List(Number), 3)).position is 56
+	let start = ((state.position + 7) / 8).Floor
+	mutable output = state.output
+	for bytes(start) + bytes(start + 1) * 256
+		output = output + bytes(start + 4 + index)
+	Inflation(output, (start + 4 + output.Length - state.output.Length) * 8)
+Coded(state Inflation, literals Huffman, distances Huffman) Inflation
+	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).output.Length is 9
+	mutable current = state
+	for bytes.Length * 8
+		let symbol = literals.Decoded(Inflate(bytes), current.position)
+		if symbol.number is 256
+			return Inflation(current.output, current.position + symbol.bits)
+		current = Applied(Inflation(current.output, current.position + symbol.bits), symbol.number, distances)
+	current
+Applied(state Inflation, symbol Number, distances Huffman) Inflation
+	StoredSample.Applied(Inflation(List(Number), 0), 65, Huffman.Sample).output is (65)
+	if symbol < 256
+		return Inflation(state.output + symbol, state.position)
+	let length = LengthBases(symbol - 257) + Bits(state.position, LengthBits(symbol - 257))
+	let afterLength = state.position + LengthBits(symbol - 257)
+	let code = distances.Decoded(Inflate(bytes), afterLength)
+	let extra = DistanceBits(code.number)
+	let distance = DistanceBases(code.number) + Bits(afterLength + code.bits, extra)
+	Inflation(Copied(state.output, length, distance), afterLength + code.bits + extra)
+Copied(output Numbers, length Number, distance Number) Numbers
+	StoredSample.Copied((1, 2), 3, 2) is (1, 2, 1, 2, 1)
+	mutable result = output
+	for length
+		result = result + result(result.Length - distance)
+	result
+Dynamic(state Inflation) Inflation
+	DynamicSample.Dynamic(Inflation(List(Number), 3)).output is DynamicText
+	let literalCount = Bits(state.position, 5) + 257
+	let distanceCount = Bits(state.position + 5, 5) + 1
+	let codeCount = Bits(state.position + 10, 4) + 4
+	let codes = Huffman.From(CodeLengths(state.position + 14, codeCount))
+	let start = state.position + 14 + codeCount * 3
+	let lengths = Lengths(Inflation(List(Number), start), codes, literalCount + distanceCount)
+	let literals = Huffman.From(Part(lengths.output, 0, literalCount))
+	let distances = Huffman.From(Part(lengths.output, literalCount, distanceCount))
+	Coded(Inflation(state.output, lengths.position), literals, distances)
+CodeLengths(position Number, count Number) Numbers
+	DynamicSample.CodeLengths(17, 4).Length is 19
+	for 19
+		let order = Order.Index(index)
+		order < count then Bits(position + order * 3, 3) else 0
+Lengths(state Inflation, codes Huffman, count Number) Inflation
+	StoredSample.Lengths(Inflation((1, 2), 0), Huffman.Sample, 2).output is (1, 2)
+	mutable current = state
+	for count
+		if current.output.Length >= count
+			return current
+		let symbol = codes.Decoded(Inflate(bytes), current.position)
+		current = Repeated(Inflation(current.output, current.position + symbol.bits), symbol.number)
+	current
+Repeated(state Inflation, symbol Number) Inflation
+	StoredSample.Repeated(Inflation((1, 2), 0), 16).output is (1, 2, 2, 2, 2, 2)
+	if symbol < 16
+		return Inflation(state.output + symbol, state.position)
+	let extra = symbol is 16 then 2 else symbol is 17 then 3 else 7
+	let times = Bits(state.position, extra) + (symbol is 18 then 11 else 3)
+	let repeated = symbol is 16 then state.output.Last else 0
+	mutable output = state.output
+	for times
+		output = output + repeated
+	Inflation(output, state.position + extra)
+Bits(position Number, count Number) Number
+	StoredSample.Bits(0, 3) is 1
+	StoredSample.Bits(8, 2) is 2
+	mutable result = 0
+	for count
+		result = result * 2 + Bit(position + count - 1 - index)
+	result
+Bit(position Number) Number
+	StoredSample.Bit(0) is 1
+	StoredSample.Bit(1) is 0
+	(bytes((position / 8).Floor) and Powers(position % 8)) > 0 then 1 else 0
+FixedLengths Numbers
+	StoredSample.FixedLengths.Count(7) is 24
+	for 288
+		index < 144 then 8 else index < 256 then 9 else index < 280 then 7 else 8
+Part(numbers Numbers, start Number, count Number) Numbers
+	StoredSample.Part((1, 2, 3, 4), 1, 2) is (2, 3)
+	for count
+		numbers(start + index)
