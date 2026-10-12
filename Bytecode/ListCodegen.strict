@@ -61,7 +61,7 @@ ElementCopied(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.ElementCopied(Writing, Shared).instructions(0).kind is InstructionType.CopyList
 	Plain.ElementCopied(Writing, Shared).Owns("values") is true
 	Plain.ElementCopied(Writing, Owned).instructions.Length is 0
-	MethodCodegen.Plain.Body(BranchCopy, CodeBlock.Empty).instructions(10).kind is InstructionType.CopyList
+	MethodCodegen.Plain.Body(BranchCopy, CodeBlock.Empty).instructions(11).kind is InstructionType.CopyList
 	let target = node.children(0)
 	if node.Kind is not "Reassignment" or target.Kind is not "Call" or block.Owns(target.text)
 		return block
@@ -98,12 +98,14 @@ IsAppend(node SyntaxNode, block CodeBlock) Boolean
 	let isVariable = (list.Kind is "Identifier") and (values.target.IsMember(values.target.TypeName, list.text) is false)
 	isList and isVariable and (types.IsPlural(values.TypeOf(value.children(1), block)) is false)
 IsNew(node SyntaxNode) Boolean
-	Plain.IsNew(ValueCodegen.Ones) is true
+	Plain.IsNew(ValueCodegen.Ones) is false
+	Plain.IsNew(SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Identifier", "x")))) is true
 	Plain.IsNew(ValueCodegen.GreeterText) is false
 	Plain.IsNew(ValueCodegen.ToText) is false
+	Plain.IsNew(SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "values"), SyntaxNode("Number", "3")))) is false
 	if node.Kind is "Binary"
-		return node.text is not in ("to", "then", "else")
-	(node.Kind is "List") or (node.Kind is "Call") and (node.text is "List")
+		return node.text is "+" then IsNew(node.children(0)) else node.text is not in ("to", "then", "else")
+	((node.Kind is "List") and (node.IsLiteral is false)) or ((node.Kind is "Call") and (node.text is "List"))
 Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.Disowned(BodyParser("Run", "\tlet saved = values").Block(1, 1), Owned, false).Owns("values") is false
 	Plain.Disowned(BodyParser("Run", "\tvalues.Add(1)").Block(1, 1), Owned, false).Owns("values") is true

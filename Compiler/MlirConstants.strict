@@ -4,12 +4,13 @@ IsConstant Boolean
 	MlirConstants(MlirTexts.Joined, 0).IsConstant is true
 	MlirConstants(MlirTexts.Joined, 1).IsConstant is false
 	MlirConstants(MlirTexts.Joined, 2).IsConstant is false
+	MlirConstants(MlirLists.Literals, 0).IsConstant is true
 	let isMember = position >= function.method.instructions.Length
 	let kind = isMember then InstructionType.LoadConstantToRegister else function.method.instructions(position).kind
 	if kind is not in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
 		return false
 	constant literal = Constant
-	(literal.kind is "Text") or (literal.kind is "List") and TextElements(literal).Length > 0
+	(literal.kind is "Text") or (literal.kind is "List") and (literal.items.Length > 0)
 TextElements(literal Runtime/VmValue) Numbers
 	MlirConstants(MlirTexts.Joined, 0).TextElements(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))) is (1)
 	for literal.items
@@ -25,13 +26,18 @@ Constant Runtime/VmValue
 	PayloadDecoder(entry).Value(entry.kind is InstructionType.LoadConstantToRegister then 1 else 0)
 Global Text
 	MlirConstants(MlirTexts.Joined, 0).Global.IndexOf("@cShape_Run_0_0(\"a%\\00\") : !llvm.array<3 x i8>") > 0 is true
+	MlirConstants(MlirLists.Literals, 0).Global is "  llvm.mlir.global internal @lShape_Run_0_0(0.0 : f64) : f64"
 	constant literal = Constant
 	if literal.kind is "Text"
 		return TextGlobal(literal.text, "")
 	mutable lines = List(Mutable(Text))
+	lines.Add("  llvm.mlir.global internal " + Cache + "(0.0 : f64) : f64")
 	for TextElements(literal)
 		lines = lines + TextGlobal(literal.items(value).text, "_" + value)
 	Text.Combine(lines, "\n")
+Cache Text
+	MlirConstants(MlirLists.Literals, 0).Cache is "@lShape_Run_0_0"
+	"@l" + function.Symbol + "_" + position
 TextGlobal(text Text, symbol Text) Text
 	MlirConstants(MlirTexts.Joined, 0).TextGlobal("b", "_1").IndexOf("@cShape_Run_0_0_1(") > 0 is true
 	let name = "@c" + function.Symbol + "_" + position + symbol + "(\"" + Escaped(text, false) + "\\00\")"

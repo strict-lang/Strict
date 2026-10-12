@@ -874,6 +874,33 @@
   ^done:
     return
   }
+  llvm.mlir.global internal @strict_gc_pinned(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_pinned_count(0 : i64) : i64
+  func.func private @strict_list_pin(%value: f64) {
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %countSlot = llvm.mlir.addressof @strict_gc_pinned_count : !llvm.ptr
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %next = arith.addi %count, %one : i64
+    %bytes = arith.muli %next, %eight : i64
+    %pinnedSlot = llvm.mlir.addressof @strict_gc_pinned : !llvm.ptr
+    %pinned = llvm.load %pinnedSlot : !llvm.ptr -> i64
+    %old = llvm.inttoptr %pinned : i64 to !llvm.ptr
+    %grown = llvm.call @realloc(%old, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %grownBits = llvm.ptrtoint %grown : !llvm.ptr to i64
+    llvm.store %grownBits, %pinnedSlot : i64, !llvm.ptr
+    %slot = llvm.getelementptr %grown[%count] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %value, %slot : f64, !llvm.ptr
+    llvm.store %next, %countSlot : i64, !llvm.ptr
+    %view = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %fixed = arith.constant 0.0 : f64
+    llvm.store %fixed, %capacitySlot : f64, !llvm.ptr
+    return
+  }
   func.func private @strict_gc_collect() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -907,6 +934,14 @@
     %sixteen = arith.constant 16 : i64
     %to = arith.addi %stackBase, %sixteen : i64
     func.call @strict_gc_mark_range(%from, %to) : (i64, i64) -> ()
+    %pinnedSlot = llvm.mlir.addressof @strict_gc_pinned : !llvm.ptr
+    %pinnedStart = llvm.load %pinnedSlot : !llvm.ptr -> i64
+    %pinnedCountSlot = llvm.mlir.addressof @strict_gc_pinned_count : !llvm.ptr
+    %pinnedCount = llvm.load %pinnedCountSlot : !llvm.ptr -> i64
+    %wordBytes = arith.constant 8 : i64
+    %pinnedBytes = arith.muli %pinnedCount, %wordBytes : i64
+    %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
+    func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> ()
     func.call @strict_gc_drain() : () -> ()
     cf.br ^sweeps(%zero : i64)
   ^sweeps(%sweepClass: i64):

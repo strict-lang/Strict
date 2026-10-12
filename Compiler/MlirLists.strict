@@ -7,6 +7,7 @@ constant Written = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFuncti
 constant Pair = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))
 constant Removal = InstructionEntry.Named(InstructionType.InvokeRemove, 1, "numbers")
 constant Words = MemberEntry("words", "Strict/List(Text)", List(InstructionEntry), false)
+constant Literals = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 2, 1, 1, 1, 2))))
 Temp(suffix Text) Text
 	MlirLists(Listed, 2).Temp("l") is "%t2l"
 	"%t" + position + suffix
@@ -22,6 +23,15 @@ Emitted Texts
 Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	MlirLists(Listed, 0).Literal(Pair, "%v_a", "").Last is "    llvm.store %t0e1l, %v_a : f64, !llvm.ptr"
 	MlirLists(Listed, 0).Literal(VmValue.OfList(List(VmValue)), "%v_a", "").Length is 2
+	MlirLists(Literals, 0).Literal(Pair, "%r0", "").First is "    %t0g = llvm.mlir.addressof @lShape_Run_0_0 : !llvm.ptr"
+	MlirLists(Literals, 0).Literal(Pair, "%r0", "").Last is "    llvm.store %t0r, %r0 : f64, !llvm.ptr"
+	let count = literal.items.Length
+	let result = count is 0 then Temp(suffix + "l") else Temp(suffix + "e" + (count - 1) + "l")
+	if (suffix is not "") or (count is 0) or (MlirConstants(function, position).IsConstant is false)
+		return Built(literal, suffix) + function.Store(result, slot)
+	Cached(Built(literal, suffix), result) + function.Store(Temp("r"), slot)
+Built(literal Runtime/VmValue, suffix Text) Texts
+	MlirLists(Listed, 0).Built(Pair, "").Last.IndexOf("%t0e1l = func.call @strict_list_add(%t0e0l, %t0e1xf)") > 0 is true
 	let memory = MlirMemory(function, position)
 	mutable lines = Created(literal.items.Length, suffix)
 	mutable current = Temp(suffix + "l")
@@ -30,7 +40,16 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 		let added = memory.Called(Temp(element + "l"), "strict_list_add", (current, ElementName(value, element)))
 		lines = lines + Element(value, index, element) + added
 		current = Temp(element + "l")
-	lines + function.Store(current, slot)
+	lines
+Cached(built Texts, result Text) Texts
+	MlirLists(Literals, 0).Cached(List(Text), "%x").Index("    cf.cond_br %t0u, ^l0, ^m0(%t0v : f64)") is 3
+	let address = "    " + Temp("g") + " = llvm.mlir.addressof " + MlirConstants(function, position).Cache + " : !llvm.ptr"
+	let unset = "    " + Temp("u") + " = arith.cmpf oeq, " + Temp("v") + ", %zero : f64"
+	let branch = "    cf.cond_br " + Temp("u") + ", ^l" + position + ", ^m" + position + "(" + Temp("v") + " : f64)"
+	let starts = (address, function.Load(Temp("v"), Temp("g")), unset, branch, "  ^l" + position + ":")
+	let pinned = "    func.call @strict_list_pin(" + result + ") : (f64) -> ()"
+	let joined = ("    cf.br ^m" + position + "(" + result + " : f64)", "  ^m" + position + "(" + Temp("r") + ": f64):")
+	starts + built + pinned + function.Store(result, Temp("g")) + joined
 Created(count Number, suffix Text) Texts
 	MlirLists(Listed, 0).Created(0, "").First is "    %t0l = func.call @strict_list_empty() : () -> f64"
 	let memory = MlirMemory(function, position)

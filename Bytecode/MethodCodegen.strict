@@ -69,10 +69,12 @@ Stored(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) C
 	Plain.Stored(One, "a", CodeBlock.Empty, true).instructions.Length is 1
 	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", CodeBlock.Empty, true).instructions(0).texts is ("a")
 	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", InRun, false).instructions(0).texts is ("Run")
+	Plain.Stored(One, "a(0)", CodeBlock.Empty, false).instructions.Last.kind is InstructionType.StoreRegisterToVariable
 	let named = isDeclaration then block.Declare(CodeBlock.ErrorMarker, name) else block
 	let value = values.Expression(assigned, named)
 	let restored = CodeBlock(value.instructions, value.register, value.nextId, block.scope)
-	assigned.IsLiteral then block.Add(StoreConstant(value.instructions.Last, name)) else restored.Stored(name)
+	let isConstant = assigned.IsLiteral and (name.IndexOf("(") < 0)
+	isConstant then block.Add(StoreConstant(value.instructions.Last, name)) else restored.Stored(name)
 AssignedName(node SyntaxNode) Text
 	Plain.AssignedName(SyntaxNode("Declaration", "let a", One)) is "a"
 	Plain.AssignedName(ElementAssignment) is "x.a(1)"
