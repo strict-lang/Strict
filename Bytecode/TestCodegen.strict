@@ -1,4 +1,5 @@
 has types TypeCodegen
+has isQuiet Boolean = false
 constant Even = TestCodegen(TypeCodegen("Strict/Even", ("IsEven(number Number) Boolean", "\tIsEven(2) is true", "\tnumber % 2 is 0"), TypeCodegen.NoTypes, List(Text)))
 constant Counter = CodeBlock.Empty.Declare("failed", "Number")
 constant OneIsOne = SyntaxNode("Binary", "is", (MethodCodegen.One, MethodCodegen.One))
@@ -19,6 +20,7 @@ Tests MethodEntry
 Method(start Number, block CodeBlock) CodeBlock
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0 is true
 	Even.Method(0, Counter).instructions.Index(EvenPassed) > 0 is true
+	TestCodegen(Even.types, true).Method(0, Counter).instructions.Index(EvenPassed) is -1
 	let name = Tokenizer(types.lines(start)).Tokens.First
 	mutable result = block.Declare(CodeBlock.ErrorMarker, name)
 	for TestLines(types.Generator).Tests(BodyParser(types.lines).Block(start + 1, 1), block)
@@ -36,12 +38,15 @@ Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock
 	let compared = truth.Add(InstructionEntry.Binary(InstructionType.Equal, (generated.Result, truth.Result)))
 	let file = TypeEntry(types.fullName, List(MemberEntry), List(MethodEntry)).File
 	let place = test to Text + " in " + method + " at " + file + ":line " + test.line
-	let passed = compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
-	let printedPass = passed.Add(InstructionEntry.Print("Test passed: " + place))
-	let reported = printedPass.Add(InstructionEntry.Jump(InstructionType.JumpEnd, passed.nextId - 1))
+	let reported = isQuiet then compared else Passed(compared, place)
 	let jumped = reported.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, reported.nextId)).WithNextId
 	let printed = Got(test, jumped.Add(InstructionEntry.Print("Test failed: " + place)))
 	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, jumped.nextId - 1))
+Passed(compared CodeBlock, place Text) CodeBlock
+	Even.Passed(Counter, "x").instructions.Length is 3
+	let passed = compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
+	let printed = passed.Add(InstructionEntry.Print("Test passed: " + place))
+	printed.Add(InstructionEntry.Jump(InstructionType.JumpEnd, passed.nextId - 1))
 Got(test SyntaxNode, block CodeBlock) CodeBlock
 	Even.Got(OneIsOne, Counter).instructions.Last.kind is InstructionType.Print
 	Even.Got(MethodCodegen.One, Counter).instructions.Length is 0

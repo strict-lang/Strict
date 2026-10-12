@@ -1,6 +1,6 @@
 has logger
 Run(arguments Texts) Number
-	let failed = Verified(arguments(0), arguments(1))
+	let failed = Failures(List(Text) + arguments(0), arguments(1), true)
 	if failed > 0
 		return failed
 	let types = Loaded(arguments(0), arguments(1))
@@ -13,23 +13,30 @@ Run(arguments Texts) Number
 	Machine(Resolver(types).Resolved, logger).Launch(types.First.Name, texts)
 	0
 Test(path Text, root Text) Number
-	if Directory.Exists(path)
-		return Folder(path, root)
-	let failed = Verified(path, root)
-	if failed is 0
-		logger.Log("All tests passed in " + path)
-	failed
-Folder(path Text, root Text) Number
+	let paths = Directory.Exists(path) then Directory.Files(path, "*.strict") else List(Text) + path
+	Failures(paths, root, false)
+Failures(paths Texts, root Text, isQuiet Boolean) Number
+	let stale = Stale(paths)
+	let files = stale.Length is 0 then List(Text) else SourceFiles(root).Of(FileCompiler.Normalized(stale.First))
+	if FileCompiler(logger).Parsed(files) is false
+		return stale.Length
+	let inference = ResolveCheck.Inference(files)
 	mutable failed = 0
-	for Directory.Files(path, "*.strict")
-		failed = failed + Test(value, root)
+	for paths
+		let failures = value is in stale then Verified(value, root, isQuiet, files, inference) else 0
+		if (failures is 0) and (isQuiet is false)
+			logger.Log("All tests passed in " + value)
+		failed = failed + failures
 	failed
-Verified(path Text, root Text) Number
+Stale(paths Texts) Texts
+	for paths
+		let cache = BinaryFile(FileCompiler.Normalized(value))
+		if cache.IsFresh(cache.Unpacked(File(cache.Path).ReadBytes)) is false
+			value
+Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference) Number
 	let cache = BinaryFile(FileCompiler.Normalized(path))
-	if cache.IsFresh(cache.Unpacked(File(cache.Path).ReadBytes))
-		return 0
-	let header = cache.Header(SourceFiles(root).Of(cache.source) + cache.Data(cache.source))
-	let types = FileCompiler(logger).Compiled(path, root, true)
+	let header = cache.Header(files + cache.Data(cache.source))
+	let types = FileCompiler(logger, isQuiet).Built(path, root, true, files, inference)
 	if types.Length is 0
 		return 1
 	let failed = Tested(types, path)

@@ -1,17 +1,19 @@
 has logger
+has isQuiet Boolean = false
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
 Compiled(path Text, root Text, withTests Boolean) List(TypeEntry)
+	let files = SourceFiles(root).Of(Normalized(path))
+	Parsed(files) then Built(path, root, withTests, files, ResolveCheck.Inference(files)) else List(TypeEntry)
+Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInference) List(TypeEntry)
 	let source = Normalized(path)
-	let files = SourceFiles(root).Of(source)
 	let missing = SourceFiles(root).Missing(File(source).ReadLines, files)
 	if missing.Length > 0
 		return Located(source, root, withTests, missing.First)
-	let inference = ResolveCheck.Inference(files)
-	if (Parsed(files) is false) or (Resolved(source, inference) is false)
+	if Resolved(source, inference) is false
 		return List(TypeEntry)
 	let main = TypeCodegen(FullName(source, root), File(source).ReadLines, inference, FullNames(files, root))
 	let entry = main.Entry
-	let methods = withTests then entry.methods + TestCodegen(main).Tests else entry.methods
+	let methods = withTests then entry.methods + TestCodegen(main, isQuiet).Tests else entry.methods
 	Linker(root, main).Linked(TypeEntry(entry.Name, entry.members, methods), List(Text), 20)
 Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 	if Repositories(logger).Downloaded(type) is not ""
