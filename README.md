@@ -87,7 +87,7 @@ Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR
 
 Native model: every value is one 64-bit slot, numbers are doubles, texts, lists and instances are pointer bits, Error values carry a NaN tag in the top bits so `x is Error` works for a value of any type. A type with one member is that member (`Name` is its text, `Degrees` its number), other instances are heap blocks with one slot per member. Lists append in place while they are the newest version. Memory is managed by a conservative mark-sweep collector (64 KB pages, size classes, interior pointers, collections after 4 MB or 8x the live data), 1M loop iterations on the Strict VM use 9 MB.
 
-Speed (1M loop iterations): native executable 45 ms (227 KB), Strict VM 245 ms, C# Strict.exe 420 ms. `strict` builds itself in 10 s, most of it in mlir-opt and clang.
+Speed (1M loop iterations): native executable 40 ms (269 KB), Strict VM 255 ms, C# Strict.exe 420 ms. `strict` builds itself in 14.5 s, most of it in mlir-opt and clang. The neural network samples (`NeuralNetworks/`) log their training time, `Digits.strict` trains a 256-32-4 network on 128 images for 100 epochs in 0.38 s natively.
 
 ## Open work
 See [improvements.md](improvements.md), in priority order.
