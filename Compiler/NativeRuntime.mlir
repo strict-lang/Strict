@@ -2912,8 +2912,8 @@
     %separatorSize = llvm.call @strlen(%separatorPointer) : (!llvm.ptr) -> i64
     %partsBytes = arith.muli %count, %eight : i64
     %parts = func.call @strict_alloc(%partsBytes) : (i64) -> !llvm.ptr
-    %isMultiple = arith.cmpi sgt, %count, %step : i64
-    %enclosed = arith.andi %isMultiple, %brackets : i1
+    %hasItems = arith.cmpi sgt, %count, %start : i64
+    %enclosed = arith.andi %hasItems, %brackets : i1
     %bracketSize = arith.select %enclosed, %two, %start : i64
     cf.br ^measure(%start, %bracketSize : i64, i64)
   ^measure(%index: i64, %total: i64):
@@ -3058,6 +3058,11 @@
     cf.br ^loop(%next, %added : f64, f64)
   ^done:
     %joined = func.call @strict_text_combine(%zero, %built, %zero) : (f64, f64, f64) -> f64
+    %isEmpty = arith.cmpf oeq, %length, %zero : f64
+    cf.cond_br %isEmpty, ^empty, ^enclose
+  ^empty:
+    return %joined : f64
+  ^enclose:
     %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
     %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
     %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr

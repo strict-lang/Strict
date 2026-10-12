@@ -70,9 +70,10 @@ to Text
 	kind is in ("Text", "None") then text else Automatic
 Joined Text
 	OfList(OfNumber(1), OfNumber(2)).Joined is "(1, 2)"
+	OfList(List(VmValue) + OfNumber(5)).Joined is "(5)"
 	OfList(List(VmValue)).Joined is ""
-	if items.Length < 2
-		return items.Length is 0 then "" else items(0) to Text
+	if items.Length is 0
+		return ""
 	mutable result = "(" + items(0) to Text
 	for Range(1, items.Length)
 		result = result + ", " + items(value) to Text

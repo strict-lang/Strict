@@ -6,3 +6,6 @@ Greet Text
 Initial Text
 	TextHelper("world").Initial + TextHelper("world").text.Substring(0, 1) is "Ww"
 	text.Substring(0, 1).Upper
+Wrapped Text
+	TextHelper("World").Wrapped is "(World)"
+	(List(Text) + text) to Text
