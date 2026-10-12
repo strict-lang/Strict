@@ -7,6 +7,8 @@ constant Hi = ValueCodegen.Hi
 constant Failed = CodeBlock.Empty.Declare("failed", "Error")
 constant Primed = IndexCodegen(ValueCodegen(TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Primes", List(Text) + "(2, 3, 5)"), TypeInference.NoShape)), Scope(("Greet", "Run"), ("Text", "None")), CallTarget.Plain))
 constant PrimeCall = SyntaxNode("MethodCall", "Primes", (SyntaxNode("Identifier", "Count"), ValueCodegen.One))
+constant Looped = BodyParser("Run", "\tfor 3", "\t\tvalues(index + 1) = 5").Block(1, 1)
+constant Computed = BodyParser("Run", "\tvalues(index + 1) = 5").Block(1, 1)
 constant Named = CodeBlock.Empty.Declare("named", "Dictionary(Text, Number)")
 IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty) is true
@@ -71,3 +73,28 @@ GridIndex(node SyntaxNode) SyntaxNode
 	let size = first is 0 then SyntaxNode("Identifier", "Size") else SyntaxNode("Member", "Size", node.children(0))
 	let width = SyntaxNode("Member", "Width", size)
 	SyntaxNode("Binary", "+", (node.children(first), SyntaxNode("Binary", "*", (width, node.children(first + 1)))))
+Unnested(body SyntaxNode) SyntaxNode
+	Plain.Unnested(Computed).children.Length is 2
+	Plain.Unnested(Computed).children.Last to Text is "values(elementIndex2) = 5"
+	mutable statements = List(Mutable(SyntaxNode))
+	for body.children
+		statements = statements + Split(value.HasBody then Nested(value) else value)
+	SyntaxNode("Body", body.text, statements, body.line)
+Nested(statement SyntaxNode) SyntaxNode
+	Plain.Nested(Looped.children(0)).children.Last.children.Length is 2
+	mutable children = List(Mutable(SyntaxNode))
+	for statement.children
+		children.Add(index is statement.children.Length - 1 then Unnested(value) else value)
+	SyntaxNode(statement.Kind, statement.text, children, statement.line)
+Split(statement SyntaxNode) SyntaxNodes
+	Plain.Split(Computed.children(0)).First to Text is "let elementIndex2 = index + 1"
+	Plain.Split(SyntaxNode("Number", "1")).Length is 1
+	let target = statement.Kind is "Reassignment" then statement.children(0) else One
+	let isCall = (target.Kind is in ("Call", "MethodCall")) and (target.children.Length > 0)
+	if (isCall is false) or (GridIndex(target).Kind is in ("Identifier", "Number"))
+		return List(SyntaxNode) + statement
+	let name = "elementIndex" + statement.line
+	let declaration = SyntaxNode("Declaration", "let " + name, GridIndex(target), statement.line)
+	let instance = target.Kind is "MethodCall" then List(SyntaxNode) + target.children(0) else List(SyntaxNode)
+	let element = SyntaxNode(target.Kind, target.text, instance + SyntaxNode("Identifier", name))
+	(declaration, SyntaxNode("Reassignment", statement.text, (element, statement.children(1)), statement.line))

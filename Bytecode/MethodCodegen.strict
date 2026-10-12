@@ -28,7 +28,8 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
 Production(body SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Production(BodyParser("Run", "\tconstant a = 2", "\ta").Block(1, 1), CodeBlock.Empty).Lines("") is ("2")
-	ConstantFolding(values.target.TypeName, values.inference).Inlined(TestLines(values).Without(body, block))
+	let inlined = ConstantFolding(values.target.TypeName, values.inference).Inlined(TestLines(values).Without(body, block))
+	IndexCodegen(values).Unnested(inlined)
 Body(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
 	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).instructions.Last.line is 3
