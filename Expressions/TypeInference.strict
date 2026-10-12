@@ -138,10 +138,10 @@ Converter(source Text, type Text) Text
 	Colors.Converter("Text", "Character") is "to"
 	if (source is in ("Character", "Text")) and (type is in ("Character", "Text")) and (source is not type)
 		return "to"
-	if (source is in Primitives) or (type is in Primitives) or (source is type)
+	if (source is in Primitives) or (source is type)
 		return ""
 	let origins = types.ParametersOf(type, "from types", 1)
-	let isFrom = (origins.Length is 1) and (origins(0) is source)
+	let isFrom = (type is not in Primitives) and (origins.Length is 1) and (origins(0) is source)
 	types.MethodsOf(source).Has("to", type) then "to" else (isFrom then "from" else "")
 Assigned(target Text, assigned Text) Text
 	Colors.Assigned("Color", "ColorValue") is "Color"

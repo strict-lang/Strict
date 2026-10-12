@@ -240,6 +240,8 @@ to Text
 	Name + " " + Type
 ```
 
+Logging a value or adding it to a text uses its own `to Text` (`Process(C:\Tools\nasm.exe)`), a type without one shows its members in brackets, `(1, 2)`, also a type with one named member like `has step Number`, `(1)`. A value type whose one member is just its type (`has number`, `has text`) shows that value, `Byte(5)` is `5`.
+
 Variables are always created in a method body scope. They look almost the same to members, but have a much smaller scope. They can be `constant` if the value is purely constant and never changes, this is always optimized away. Or it can be `let` (if the incoming value can be different, e.g. coming from a has member value that is different for each instance). `mutable` is also allowed here and rare. Only needed if a value needs to change, e.g. counting up in a loop. These kinds of mutable values are not dangerous as long as they don't leave the scope (then the same applies as for members, use rarely, only for specific optimizations, avoid otherwise).
 
 Example:

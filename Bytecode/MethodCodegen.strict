@@ -133,7 +133,7 @@ Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	if argument.Kind is "Text"
 		return block.Add(InstructionEntry.Print(argument.Unquoted))
 	let hasPrefix = (argument.Kind is "Binary") and (argument.text is "+") and (argument.children(0).Kind is "Text")
-	let printed = hasPrefix then argument.children(1) else argument
+	let printed = ConversionCodegen(values).Converted(hasPrefix then argument.children(1) else argument, "Text", block)
 	let generated = values.Expression(printed, block)
 	let prefix = hasPrefix then argument.children(0).Unquoted else ""
 	generated.Add(InstructionEntry.PrintValue(prefix, generated.Result, values.TypeOf(printed, generated) is "Text"))
