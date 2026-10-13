@@ -90,7 +90,7 @@ Native model: every value is one 64-bit slot, numbers are doubles, texts, lists 
 
 Strict VM model: when the types are loaded `Resolver` numbers the locals and registers of every method into slots, resolves every call target and jump, decodes number constants and gives every instruction the slot its result goes to (`InstructionEntry.Target`). A call runs in one list of slots that its `Frame` owns and writes in place (the compiler keeps a list owned when it is only passed to methods of the same type that neither store nor return it), member values come from one decoded instance per type, constant instances like `VmValue.None` are built once natively. Training `NeuralNetworks/Iris.strict` on the VM takes 2.1 s (4.0 s with a new frame per instruction), `ImageProcessing/ProcessImage.strict` 27 s (82 s).
 
-Speed (1M loop iterations): native executable 40 ms (269 KB), Strict VM 105 ms, C# Strict.exe 420 ms. `strict` builds itself in 14.5 s, most of it in mlir-opt and clang. The neural network samples (`NeuralNetworks/`) log their training time, `Digits.strict` trains a 256-32-4 network on 128 images for 100 epochs in 0.38 s natively.
+Speed (1M loop iterations): native executable 40 ms (269 KB), Strict VM 105 ms, C# Strict.exe 420 ms. `strict` builds itself in 14.5 s, most of it in mlir-opt and clang. The neural network samples (`NeuralNetworks/`) log their training time, the MNIST digits of [Mnist](https://github.com/strict-lang/Mnist) train a 256-32-4 network on 128 images for 100 epochs in 0.49 s natively.
 
 ## Open work
 See [improvements.md](improvements.md), in priority order.

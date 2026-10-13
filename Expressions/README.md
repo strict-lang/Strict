@@ -1,0 +1,2 @@
+# Strict.Expressions
+Understands Strict source: `Tokenizer` and `SyntaxParser` turn lines into syntax trees, `BodyParser` and `StatementParser` read method bodies, `TypeShape` the structure of a type file (members, methods, constants, traits), `KnownTypes`, `Instantiation` and `TypeInference` know the types of all packages, `ResolveCheck` reports unknown names and methods (`NameNotFound`, `MethodNotFound`) with file and line before anything runs.

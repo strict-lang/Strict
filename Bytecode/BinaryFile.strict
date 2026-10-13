@@ -48,7 +48,7 @@ Types(entries List(ZipEntry)) List(TypeEntry)
 		EntryDecoder.Of(entries(value).content).Type
 Data(path Text) Texts
 	Probe.Data("Compiler/NativeBuild.strict") is ("Compiler/NativeRuntime.mlir")
-	Probe.Data("NeuralNetworks/Dataset.strict").Length > 100 is true
+	Probe.Data("NeuralNetworks/Dataset.strict").Length is 2
 	mutable files = List(Mutable(Text))
 	for File(path).ReadLines
 		for Tokenizer(value).Tokens
@@ -61,7 +61,7 @@ Data(path Text) Texts
 Found(name Text) Texts
 	Probe.Found("Compiler/NativeRuntime.mlir") is List(Text) + "Compiler/NativeRuntime.mlir"
 	Probe.Found("Bytecode").Length is 0
-	Probe.Found("NeuralNetworks/mnist").Length > 100 is true
+	Probe.Found("NeuralNetworks/images").Length is 2
 	if File(name).Exists
 		return IsInput(name) then List(Text) + name else List(Text)
 	if (Directory.Exists(name) is false) or (name.IndexOf(":") >= 0)
@@ -74,7 +74,7 @@ IsInput(name Text) Boolean
 	let isOutput = name.EndsWith(".exe") or name.EndsWith(".test") or name.EndsWith(".strictbinary")
 	(name.LastIndexOf(".") > name.LastIndexOf("/") + 1) and (isOutput is false)
 Contained(folder Text) Texts
-	Probe.Contained("NeuralNetworks/mnist").Length is Probe.Found("NeuralNetworks/mnist").Length
+	Probe.Contained("NeuralNetworks/images").Length is Probe.Found("NeuralNetworks/images").Length
 	mutable files = Directory.Files(folder)
 	for Directory.Directories(folder)
 		files = files + Contained(value)

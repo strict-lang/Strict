@@ -1,0 +1,2 @@
+# Strict.Validators
+The rules behind `strict check`: `Limits` (120 characters per line, 13 lines per method with header and tests, 15 methods and members, ...), `Names` (keywords, list prefixes, constant names), `UsageRules` and `TypeValidator` (unused or never changed variables and members), `ConstantCollapser` (folds constant expressions), run by `ValidateCheck` for every file of a folder. Every issue prints as `<File>.strict:line <N>: <Rule>: <detail>`, `strict check <folder>` reports 0 issues before a commit.
