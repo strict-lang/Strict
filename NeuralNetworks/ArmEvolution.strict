@@ -1,0 +1,59 @@
+has logger
+constant Lengths = (0.5, 0.3)
+constant Target = (0.4, 0.5)
+constant Population = 40
+constant Generations = 100
+Run
+	let started = Process.Elapsed
+	let best = Evolved(Arms, Generations)
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	logger.Log("Joint angles " + best + " reach " + Reached(best) + " for the target " + Target)
+	logger.Log("Distance " + Distance(best) + " after " + Generations + " generations in " + milliseconds + " ms")
+Reached(angles Numbers) Numbers
+	ArmEvolution.Reached((0, 0)) is (0.8, 0)
+	let first = Degrees(angles(0))
+	let both = Degrees(angles(0) + angles(1))
+	(Lengths(0) * first.Cos + Lengths(1) * both.Cos, Lengths(0) * first.Sin + Lengths(1) * both.Sin)
+Distance(angles Numbers) Number
+	ArmEvolution.Distance((0, 0)) is 0.6403124237432849
+	let reached = Reached(angles)
+	let horizontal = reached(0) - Target(0)
+	let vertical = reached(1) - Target(1)
+	(horizontal * horizontal + vertical * vertical).SquareRoot
+Arms List(Numbers)
+	ArmEvolution.Arms.Length is Population
+	for Population
+		(360.Random - 180, 360.Random - 180)
+Evolved(population List(Numbers), generations Number) Numbers
+	ArmEvolution.Evolved(List(Numbers) + (0, 0), 2) is (0, 0)
+	mutable current = population
+	for generations
+		current = Next(current)
+	Best(current)
+Next(population List(Numbers)) List(Numbers)
+	ArmEvolution.Next(ArmEvolution.Arms).Length is Population
+	mutable next = List(Mutable(Numbers))
+	next.Add(Best(population))
+	for Range(1, population.Length)
+		next.Add(Mutated(Crossed(Tournament(population), Tournament(population))))
+	next
+Crossed(first Numbers, second Numbers) Numbers
+	ArmEvolution.Crossed((1, 2), (1, 2)) is (1, 2)
+	for first
+		1.Random < 0.5 then value else second(index)
+Mutated(angles Numbers) Numbers
+	ArmEvolution.Mutated((10, 20)).Length is 2
+	for angles
+		1.Random < 0.2 then value + 10.Random - 5 else value
+Tournament(population List(Numbers)) Numbers
+	ArmEvolution.Tournament(List(Numbers) + (0, 0)) is (0, 0)
+	let first = population(population.Length.Random.Floor)
+	let second = population(population.Length.Random.Floor)
+	Distance(first) < Distance(second) then first else second
+Best(population List(Numbers)) Numbers
+	ArmEvolution.Best(((0, 0), (40, 40))) is (40, 40)
+	mutable best = population.First
+	for population
+		if Distance(value) < Distance(best)
+			best = value
+	best
