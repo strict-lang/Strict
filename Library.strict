@@ -2,3 +2,18 @@ has path Text
 Call(symbol Text, arguments Numbers) Number
 	Library("missing.dll").Call("Add", (0, 1, 2)) is not 3
 	Error(path + " " + symbol + " needs the native runtime for " + arguments.Length + " numbers")
+TextSlot(text Text) Number
+	Library("missing.dll").TextSlot("a") is not 3
+	Error(path + " passes " + text + " to C only natively")
+NumbersSlot(numbers Numbers) Number
+	Library("missing.dll").NumbersSlot((1, 2)) is not 3
+	Error(path + " passes " + numbers.Length + " numbers to C only natively")
+TextResult(bits Number) Text
+	Library("missing.dll").TextResult(Library("missing.dll").TextSlot("a")) is "a"
+	Error(path + " copies the text " + bits + " only natively")
+NumbersResult(bits Number) Numbers
+	Library("missing.dll").NumbersResult(Library("missing.dll").NumbersSlot((1, 2))) is (1, 2)
+	Error(path + " copies the numbers " + bits + " only natively")
+Failure(bits Number) Text
+	Library("missing.dll").Failure(3) is ""
+	Error(path + " reads the failure " + bits + " only natively")

@@ -224,6 +224,100 @@
     %printed = llvm.call @printf(%format, %place, %count, %spentMilliseconds, %ownMilliseconds) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, f64, f64, f64) -> i32
     return
   }
+  func.func private @strict_list_flat(%list: f64) -> f64 {
+    %lengthNumber = func.call @strict_list_length(%list) : (f64) -> f64
+    %length = arith.fptosi %lengthNumber : f64 to i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %slots = arith.addi %length, %one : i64
+    %bytes = arith.muli %slots, %eight : i64
+    %flat = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    llvm.store %lengthNumber, %flat : f64, !llvm.ptr
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %target = llvm.getelementptr %flat[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %itemBytes = arith.muli %length, %eight : i64
+    %copied = llvm.call @memcpy(%target, %items, %itemBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %result = func.call @strict_bits(%flat) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_foreign_failed(%result: f64) -> i1 {
+    %bits = arith.bitcast %result : f64 to i64
+    %shift = arith.constant 48 : i64
+    %top = arith.shrui %bits, %shift : i64
+    %failTag = arith.constant 32764 : i64
+    %failed = arith.cmpi eq, %top, %failTag : i64
+    return %failed : i1
+  }
+  func.func private @strict_foreign_error(%result: f64) -> f64 {
+    %name = func.call @strict_ptr(%result) : (f64) -> !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
+  }
+  func.func private @strict_foreign_number(%result: f64) -> f64 {
+    %failed = func.call @strict_foreign_failed(%result) : (f64) -> i1
+    cf.cond_br %failed, ^fail, ^done
+  ^fail:
+    %error = func.call @strict_foreign_error(%result) : (f64) -> f64
+    return %error : f64
+  ^done:
+    return %result : f64
+  }
+  func.func private @strict_foreign_text(%result: f64) -> f64 {
+    %failed = func.call @strict_foreign_failed(%result) : (f64) -> i1
+    cf.cond_br %failed, ^fail, ^copy
+  ^fail:
+    %error = func.call @strict_foreign_error(%result) : (f64) -> f64
+    return %error : f64
+  ^copy:
+    %copied = func.call @strict_text_copy(%result) : (f64) -> f64
+    return %copied : f64
+  }
+  func.func private @strict_foreign_numbers(%result: f64) -> f64 {
+    %failed = func.call @strict_foreign_failed(%result) : (f64) -> i1
+    cf.cond_br %failed, ^fail, ^copy
+  ^fail:
+    %error = func.call @strict_foreign_error(%result) : (f64) -> f64
+    return %error : f64
+  ^copy:
+    %flat = func.call @strict_ptr(%result) : (f64) -> !llvm.ptr
+    %countNumber = llvm.load %flat : !llvm.ptr -> f64
+    %list = func.call @strict_list_new(%countNumber, %countNumber) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %source = llvm.getelementptr %flat[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %count = arith.fptosi %countNumber : f64 to i64
+    %eight = arith.constant 8 : i64
+    %bytes = arith.muli %count, %eight : i64
+    %copied = llvm.call @memcpy(%items, %source, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    return %list : f64
+  }
+  llvm.mlir.global internal constant @strict_library_no_failure("\00") : !llvm.array<1 x i8>
+  func.func private @strict_library_textslot(%library: f64, %text: f64) -> f64 {
+    return %text : f64
+  }
+  func.func private @strict_library_numbersslot(%library: f64, %numbers: f64) -> f64 {
+    %flat = func.call @strict_list_flat(%numbers) : (f64) -> f64
+    return %flat : f64
+  }
+  func.func private @strict_library_textresult(%library: f64, %bits: f64) -> f64 {
+    %copied = func.call @strict_foreign_text(%bits) : (f64) -> f64
+    return %copied : f64
+  }
+  func.func private @strict_library_numbersresult(%library: f64, %bits: f64) -> f64 {
+    %copied = func.call @strict_foreign_numbers(%bits) : (f64) -> f64
+    return %copied : f64
+  }
+  func.func private @strict_library_failure(%library: f64, %bits: f64) -> f64 {
+    %failed = func.call @strict_foreign_failed(%bits) : (f64) -> i1
+    cf.cond_br %failed, ^name, ^none
+  ^name:
+    %name = func.call @strict_text_copy(%bits) : (f64) -> f64
+    return %name : f64
+  ^none:
+    %empty = llvm.mlir.addressof @strict_library_no_failure : !llvm.ptr
+    %emptyBits = func.call @strict_bits(%empty) : (!llvm.ptr) -> f64
+    %copied = func.call @strict_text_copy(%emptyBits) : (f64) -> f64
+    return %copied : f64
+  }
   func.func private @strict_gc_init(%stack: !llvm.ptr) {
     %startedNow = func.call @strict_clock() : () -> f64
     %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr

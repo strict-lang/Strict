@@ -2,5 +2,18 @@ has logger
 Added Number
 	NativeAdd.Added is 3
 	Adder.Add(1, 2)
+Greeted Text
+	NativeAdd.Greeted is "Hello Strict"
+	Adder.Greeting("Strict")
+Summed Number
+	NativeAdd.Summed is 6
+	Adder.Total((1, 2, 3))
+Doubles Numbers
+	NativeAdd.Doubles is (2, 4, 6)
+	Adder.Doubled((1, 2, 3))
+Failed Number
+	NativeAdd.Failed is Error("NativeFailure")
+	Adder.Failing
 Run
 	logger.Log("1 + 2 = " + Added)
+	logger.Log(Greeted + ", the sum of 1, 2, 3 is " + Summed + " and doubled they are " + Doubles)

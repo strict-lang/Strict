@@ -15,7 +15,7 @@ Symbol Text
 	Counter.Symbol is "Counter_Run_0"
 	Adding.Symbol is "Shape_Plus_0"
 	if MlirForeign(value).IsForeign
-		return MlirForeign(value).Symbol
+		return MlirForeign(value).Wrapper
 	let name = MlirEquality(value, 0).Symbol(type.JustName)
 	let conversion = method.Name is "to" then "_" + TypeEntry.ShortName(method.returnType) else ""
 	let spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else method.Name
@@ -53,7 +53,7 @@ Copied(source Text, destination Text, temp Text) Texts
 Text Text
 	Counter.Text.StartsWith("  func.func private @Counter_Run_0(%p0: f64) -> f64 {") is true
 	if MlirForeign(value).IsForeign
-		return MlirForeign(value).Declaration
+		return Text.Combine(MlirForeign(value).Declaration, "\n")
 	mutable signature = List(Mutable(Text))
 	for Parameters
 		signature.Add("%p" + index + ": f64")

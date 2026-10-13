@@ -15,18 +15,43 @@ Called VmValue
 	let built = NativeSources(List(Text) + Folder(type)).Library(Platform.Current, Execute.Root)
 	if built.StartsWith("Built ") is false
 		return VmValue("Error", 0, built, List(VmValue))
-	let symbol = type.JustName + "_" + call.MethodName
-	let arguments = (List(Number) + 0) + Numbers(call.Arguments)
-	VmValue.OfNumber(Library(built.Substring(6, built.Length - 6)).Call(symbol, arguments))
+	let library = Library(built.Substring(6, built.Length - 6))
+	let method = Method(type)
+	let bits = library.Call(type.JustName + "_" + call.MethodName, Arguments(library, method))
+	let failure = library.Failure(bits)
+	failure is "" then Converted(library, method.returnType, bits) else VmValue.OfError(failure)
 IsForeign(type TypeEntry) Boolean
 	Adding.IsForeign(Adder) is true
 	Adding.IsForeign(TypeEntry("Strict/Shape", List(MemberEntry), List(MethodEntry))) is false
-	if type.members.Length > 0
-		return false
 	for type.methods
 		if value.Name is call.MethodName
-			return value.instructions.Length is 0
+			return MlirForeign(MlirFunction(types, type, value)).IsForeign
 	false
+Method(type TypeEntry) MethodEntry
+	Adding.Method(Adder).Name is "Add"
+	for type.methods
+		if value.Name is call.MethodName
+			return value
+	type.methods.First
+Arguments(library Library, method MethodEntry) Numbers
+	Adding.Arguments(Library("missing.dll"), Add) is (0, 1, 2)
+	mutable arguments = List(Number) + 0
+	for call.Arguments
+		let kind = method.parameters(index).typeName
+		let number = kind.EndsWith("Text") then library.TextSlot(value.text) else value.number
+		arguments = arguments + (MlirForeign.IsNumbers(kind) then library.NumbersSlot(Numbers(value.items)) else number)
+	arguments
+Converted(library Library, returnType Text, bits Number) VmValue
+	Adding.Converted(Library("missing.dll"), "Strict/Number", 3).number is 3
+	if returnType.EndsWith("Text")
+		return VmValue.OfText(library.TextResult(bits))
+	MlirForeign.IsNumbers(returnType) then Elements(library.NumbersResult(bits)) else VmValue.OfNumber(bits)
+Elements(numbers Numbers) VmValue
+	Adding.Elements((1, 2)).items.Length is 2
+	mutable items = List(Mutable(VmValue))
+	for numbers
+		items.Add(VmValue.OfNumber(value))
+	VmValue.OfList(items)
 Folder(type TypeEntry) Text
 	Adding.Folder(Adder) is "Examples/NativeAdd/native"
 	Foreign(Invocation.AddCall, List(TypeEntry), "Examples/NativeAdd").Folder(Shorter) is "Examples/NativeAdd/native"
@@ -39,5 +64,18 @@ Numbers(values List(VmValue)) Numbers
 		value.number
 Hosted VmValue
 	Calling.Hosted.number is not 3
-	let path = call.Instance.Member(0).text
-	VmValue.OfNumber(Library(path).Call(call.Arguments.First.text, Numbers(call.Arguments.Last.items)))
+	let library = Library(call.Instance.Member(0).text)
+	let argument = call.Arguments.First
+	let name = call.MethodName
+	if name is "Call"
+		return VmValue.OfNumber(library.Call(argument.text, Numbers(call.Arguments.Last.items)))
+	if name is "TextSlot"
+		return VmValue.OfNumber(library.TextSlot(argument.text))
+	if name is "NumbersSlot"
+		return VmValue.OfNumber(library.NumbersSlot(Numbers(argument.items)))
+	Copied(library, name, argument.number)
+Copied(library Library, name Text, bits Number) VmValue
+	Adding.Copied(Library("missing.dll"), "Failure", 3).text is ""
+	if name is "TextResult"
+		return VmValue.OfText(library.TextResult(bits))
+	name is "Failure" then VmValue.OfText(library.Failure(bits)) else Elements(library.NumbersResult(bits))

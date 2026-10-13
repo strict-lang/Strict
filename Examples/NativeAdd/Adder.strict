@@ -1,1 +1,5 @@
 Add(left Number, right Number) Number
+Greeting(name Text) Text
+Total(numbers Numbers) Number
+Doubled(numbers Numbers) Numbers
+Failing Number

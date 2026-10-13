@@ -8,14 +8,15 @@ In priority order. Remove what is done, add what is found. Every item gets done 
 5. **Reflection** (later, only as use cases need it): `"Number" to Type` builds `Type("Number", "Strict")`, `5 to Type` (any other value) is its static type and `value is Number` is decided at compile time from the static type, on both backends. `value.Members` lists the stored members of an instance as `Variable`s (name, static type, value) and `HashCode` of an instance combines the hashes of its members: the compiler writes `Members` and `to HashCode` for every type that uses them (`Bytecode/Automatic`). Not supported yet: `to Type` of a Text that is not a literal (needs the type names at runtime), natively the value of such a `Variable` is a `Generic` without its type, it can not be printed or compared yet, the `Method` of a `Stacktrace` is its `Type.Method` text on both backends (a `Method` value needs the methods at runtime).
 ## DeltaEngine native packages (2026-10-13, blocking phases 3–5 and 9)
 
-Done (numbers only): a type without members whose methods have no body is implemented in C in
+Done: a type without members whose methods have no body is implemented in C in
 `native/` next to it (`Examples/NativeAdd`: `Adder.Add(1, 2)` calls `double Adder_Add(double self,
 double left, double right)` from `native/Adder.c`). `strict build` links the C files (MlirForeign,
 NativeSources, Windows with clang, Linux through WSL gcc, `native/<Platform>.flags`), the VM builds
 `native/<Folder>.dll` when a source, `Compiler/strict.h` or the flags are newer and calls it through
 the new root type `Library` (LoadLibraryA/GetProcAddress, 1 to 5 numbers, Errors for a missing
-library or symbol). Still open from the checks below: Text and Numbers arguments and results,
-handles and `strict_fail` in strict.h, the Linux VM (dlopen, the Linux runtime returns an Error),
+library or symbol). Text and Numbers arguments and results and `strict_fail` Errors work on both
+(strict.h, `NativeAdd` tests all of them). Still open from the checks below: handles are plain numbers
+so far, the Linux VM (dlopen, the Linux runtime returns an Error),
 Repositories copying `native/`, removing the dotnet-era `NativePlugins/`, CI coverage of
 `Examples/NativeAdd`.
 

@@ -1,15 +1,63 @@
 has function MlirFunction
 constant Add = MethodEntry("Add", (MemberEntry("left", "Strict/Number", List(InstructionEntry), false), MemberEntry("right", "Strict/Number", List(InstructionEntry), false)), "Strict/Number", List(InstructionEntry))
 constant Adder = MlirFunction(List(TypeEntry), TypeEntry("Strict/Examples/NativeAdd/Adder", List(MemberEntry), List(MethodEntry) + Add), Add)
+constant Adding = "%p0: f64, %p1: f64, %p2: f64"
+constant Booleans = MlirFunction(List(TypeEntry), TypeEntry("Strict/Boolean", List(MemberEntry), List(MethodEntry)), Add)
+constant Doubles = MethodEntry("Doubled", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/List(Number)", List(InstructionEntry))
+constant Doubler = MlirFunction(List(TypeEntry), TypeEntry("Strict/Examples/NativeAdd/Adder", List(MemberEntry), List(MethodEntry) + Doubles), Doubles)
 IsForeign Boolean
 	MlirForeign(Adder).IsForeign is true
 	MlirForeign(MlirFunction.Counter).IsForeign is false
 	MlirForeign(MlirFunction.Adding).IsForeign is false
-	(function.method.instructions.Length is 0) and (function.type.members.Length is 0)
+	MlirForeign(Booleans).IsForeign is false
+	MlirForeign(MlirFunction(List(TypeEntry), Adder.type, TypeEntry.ToNumber)).IsForeign is false
+	let name = function.type.Name
+	let isBase = (name.IndexOf("/") >= 0) and (name.IndexOf("/") is name.LastIndexOf("/"))
+	let first = function.method.Name.Substring(0, 1)
+	let isBodyless = (function.method.instructions.Length is 0) and (function.type.members.Length is 0)
+	isBodyless and (isBase is false) and (first.Lower is not first)
 Symbol Text
 	MlirForeign(Adder).Symbol is "Adder_Add"
 	function.type.JustName + "_" + function.method.Name
-Declaration Text
-	MlirForeign(Adder).Declaration is "  func.func private @Adder_Add(f64, f64, f64) -> f64"
+Wrapper Text
+	MlirForeign(Adder).Wrapper is "Adder_Add_foreign"
+	Symbol + "_foreign"
+Declaration Texts
+	MlirForeign(Adder).Declaration.First is "  func.func private @Adder_Add(f64, f64, f64) -> f64"
+	MlirForeign(Adder).Declaration.Index("  func.func private @Adder_Add_foreign(" + Adding + ") -> f64 {") is 1
+	MlirForeign(Doubler).Declaration.Length is 7
 	let types = Text.Combine(MlirCalls(function, 0).ArgumentTypes(function.Parameters.Length), ", ")
-	"  func.func private @" + Symbol + "(" + types + ") -> f64"
+	let header = "  func.func private @" + Wrapper + "(" + Parameters + ") -> f64 {"
+	let call = "    %result = func.call @" + Symbol + "(" + Arguments + ") : (" + types + ") -> f64"
+	let declaration = "  func.func private @" + Symbol + "(" + types + ") -> f64"
+	(List(Text) + declaration + header) + Converted + call + Returned + "  }"
+Parameters Text
+	MlirForeign(Adder).Parameters is Adding
+	mutable parameters = List(Mutable(Text))
+	for function.Parameters
+		parameters.Add("%p" + index + ": f64")
+	Text.Combine(parameters, ", ")
+Converted Texts
+	MlirForeign(Doubler).Converted is List(Text) + "    %c1 = func.call @strict_list_flat(%p1) : (f64) -> f64"
+	mutable lines = List(Mutable(Text))
+	for function.method.parameters
+		if IsNumbers(value.typeName)
+			lines.Add("    %c" + (index + 1) + " = func.call @strict_list_flat(%p" + (index + 1) + ") : (f64) -> f64")
+	lines
+Arguments Text
+	MlirForeign(Adder).Arguments is "%p0, %p1, %p2"
+	MlirForeign(Doubler).Arguments is "%p0, %c1"
+	mutable arguments = List(Text) + "%p0"
+	for function.method.parameters
+		arguments = arguments + ((IsNumbers(value.typeName) then "%c" else "%p") + (index + 1))
+	Text.Combine(arguments, ", ")
+Returned Texts
+	MlirForeign(Adder).Returned.First is "    %converted = func.call @strict_foreign_number(%result) : (f64) -> f64"
+	MlirForeign(Doubler).Returned.First.IndexOf("@strict_foreign_numbers(") > 0 is true
+	let returned = function.method.returnType
+	let kind = IsNumbers(returned) then "numbers" else returned.EndsWith("Text") then "text" else "number"
+	("    %converted = func.call @strict_foreign_" + kind + "(%result) : (f64) -> f64", "    return %converted : f64")
+IsNumbers(typeName Text) Boolean
+	MlirForeign(Adder).IsNumbers("Strict/List(Number)") is true
+	MlirForeign(Adder).IsNumbers("Strict/Number") is false
+	typeName.EndsWith("List(Number)") or typeName.EndsWith("Numbers")
