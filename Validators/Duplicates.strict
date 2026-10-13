@@ -1,0 +1,56 @@
+has owners Texts
+has bodies Texts
+constant Copy = ("Halve(number Number) Number", "\tHalve(4) is 2", "\tlet half = number / 2", "\thalf < 0 then 0 - half else half")
+constant Looping = ("Next(number Number) Number", "\tnumber + 1", "Evolved(start Number) Number", "\tlet current = Next(start)", "\tcurrent + current + 1")
+constant Evolving = Duplicates(List(Text) + "B.Evolved", List(Text) + "let current = Next(start)\ncurrent + current + 1\n")
+constant Copies = Duplicates(("A.Halve", "B.Half"), ("let half = number / 2\nhalf < 0 then 0 - half else half\n", "x"))
+Of(files Texts) Duplicates
+	Duplicates.Of(List(Text) + "Validators/ValidationIssue.strict").owners is ("ValidationIssue.to")
+	mutable named = List(Mutable(Text))
+	mutable implementations = List(Mutable(Text))
+	for files
+		let lines = File(value).ReadLines
+		let typeName = Path(value).FileName.RemoveExtension.text
+		for lines
+			if TypeShape(lines).IsMethodHeader(value)
+				named.Add(typeName + "." + Tokenizer(value).Tokens.First)
+				implementations.Add(Implementation(lines, index))
+	Duplicates(named, implementations)
+Issues(path Text, lines Texts) List(ValidationIssue)
+	Copies.Issues("B.strict", Copy).First to Text is "MethodAlreadyExists: A.Halve"
+	Copies.Issues("A.strict", Copy).Length is 0
+	let typeName = Path(path).FileName.RemoveExtension.text
+	for lines
+		if TypeShape(lines).IsMethodHeader(value) and (Other(typeName, lines, index) is not "")
+			ValidationIssue("MethodAlreadyExists", Other(typeName, lines, index), index + 1)
+Other(typeName Text, lines Texts, header Number) Text
+	Copies.Other("B", Copy, 0) is "A.Halve"
+	Evolving.Other("A", Looping, 2) is ""
+	let owner = typeName + "." + Tokenizer(lines(header)).Tokens.First
+	let body = Implementation(lines, header)
+	if (body.Length < 40) or CallsOwn(lines, body)
+		return ""
+	for bodies
+		if (value is body) and (owners(index) is not owner)
+			return owners(index)
+	""
+CallsOwn(lines Texts, body Text) Boolean
+	Copies.CallsOwn(Looping, "let current = Next(start)") is true
+	Copies.CallsOwn(Looping, "start + 1") is false
+	for lines
+		if TypeShape(lines).IsMethodHeader(value) and (body.IndexOf(Tokenizer(value).Tokens.First + "(") >= 0)
+			return true
+	false
+Implementation(lines Texts, header Number) Text
+	Copies.Implementation(Copy, 0) is "let half = number / 2\nhalf < 0 then 0 - half else half\n"
+	let last = FileCheck.LastLine(lines, header)
+	mutable result = ""
+	for Range(header + 1, last + 1)
+		if (result is not "") or (value is last) or (IsTest(lines(value).Trim) is false)
+			result = result + lines(value).Trim + "\n"
+	result
+IsTest(line Text) Boolean
+	Copies.IsTest("Halve(4) is 2") is true
+	Copies.IsTest("let half = number / 2") is false
+	let isStatement = Tokenizer(line).Tokens.First is in ("let", "mutable", "constant", "if", "for", "return", "else")
+	(isStatement is false) and ((line.IndexOf(" is ") > 0) or (line.IndexOf(" < ") > 0) or (line.IndexOf(" > ") > 0))
