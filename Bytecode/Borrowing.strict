@@ -1,0 +1,40 @@
+has values ValueCodegen
+has borrowing Texts
+constant Lent = ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text), List(Text)), CallTarget(CallTarget.Plain.types, TypeShape("Read(numbers Numbers) Number", "\tnumbers(0)", "Keep(numbers Numbers) Numbers", "\tnumbers", "Pass(numbers Numbers) Number", "\tRead(numbers)", "Again(numbers Numbers) Number", "\tAgain(numbers)", "Twice(numbers Numbers) Number", "\t1", "Twice(numbers Numbers, other Number) Number", "\tother"), "Strict/Lent", List(Text)))
+constant Lending = Borrowing(Lent, List(Text))
+constant Owned = CodeBlock.Empty.Sharing("values", false)
+constant Reading = BodyParser("Run", "\tRead(values)").Block(1, 1).children(0)
+IsBorrowed(call SyntaxNode, position Number, block CodeBlock) Boolean
+	Lending.IsBorrowed(Reading, 0, Owned) is true
+	Lending.IsBorrowed(BodyParser("Run", "\tKeep(values)").Block(1, 1).children(0), 0, Owned) is false
+	Lending.IsBorrowed(BodyParser("Run", "\tPass(values)").Block(1, 1).children(0), 0, Owned) is true
+	Lending.IsBorrowed(BodyParser("Run", "\tAgain(values)").Block(1, 1).children(0), 0, Owned) is true
+	Lending.IsBorrowed(Reading, 0, CodeBlock.Empty) is false
+	if call.Kind is not "Call"
+		return false
+	let argument = call.children(position)
+	if (argument.Kind is not "Identifier") or (block.scope.TypeOf(argument.text + CodeBlock.SharedMarker) is not "owned")
+		return false
+	(call.text + "/" + position is in borrowing) or (Keeps(call.text, call.children.Length, position) is false)
+Keeps(name Text, count Number, position Number) Boolean
+	Lending.Keeps("Read", 1, 0) is false
+	Lending.Keeps("Keep", 1, 0) is true
+	Lending.Keeps("Twice", 1, 0) is true
+	let start = Header(name, count)
+	if start < 0
+		return true
+	let lines = values.target.shape.lines
+	let parameters = HeaderTokens(Tokenizer(lines(start)).Tokens).ParameterNames
+	let checking = ListCodegen(values, borrowing + (name + "/" + position))
+	let owned = CodeBlock.Empty.Sharing(parameters(position), false)
+	checking.Disowned(BodyParser(lines).Method(start + 1), owned, true).Owns(parameters(position)) is false
+Header(name Text, count Number) Number
+	Lending.Header("Keep", 1) is 2
+	Lending.Header("Twice", 1) is -1
+	Lending.Header("Missing", 0) is -1
+	mutable found = -1
+	for values.target.shape.lines
+		if values.target.shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
+			let isOnly = (found is -1) and (HeaderTokens(Tokenizer(value).Tokens).ParameterNames.Length is count)
+			found = isOnly then index else -2
+	found < 0 then -1 else found

@@ -1,4 +1,5 @@
 has values ValueCodegen
+has borrowing Texts = List(Text)
 constant Plain = ListCodegen(ValueCodegen.Plain)
 constant Declared = CodeBlock.Empty.Declare("x", "Number")
 constant Shared = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", true)
@@ -106,12 +107,14 @@ Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.Disowned(BodyParser("Run", "\tlet saved = values").Block(1, 1), Owned, false).Owns("values") is false
 	Plain.Disowned(BodyParser("Run", "\tvalues.Add(1)").Block(1, 1), Owned, false).Owns("values") is true
 	Plain.Disowned(BodyParser("Run", "\t1 is not in values").Block(1, 1), Owned, false).Owns("values") is true
+	ListCodegen(Borrowing.Lent).Disowned(Borrowing.Reading, Owned, false).Owns("values") is true
 	if node.Kind is "Identifier"
 		return isUsed then block.Disowned(node.text) else block
 	let reassigned = (node.Kind is "Reassignment") and (IsNew(node.children(1)) is false)
 	mutable result = reassigned then block.Disowned(node.children(0) to Text) else block
 	for node.children
-		result = Disowned(value, result, IsUsed(node, index, isUsed))
+		let used = IsUsed(node, index, isUsed) and (Borrowing(values, borrowing).IsBorrowed(node, index, result) is false)
+		result = Disowned(value, result, used)
 	result
 IsUsed(parent SyntaxNode, position Number, isUsed Boolean) Boolean
 	Plain.IsUsed(ValueCodegen.AddOne, 0, true) is true
