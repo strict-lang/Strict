@@ -13,13 +13,16 @@ Run(folder Text, root Text)
 Unresolved(path Text, inference TypeInference) Texts
 	ResolveCheck.Unresolved("Logger.strict", Inference(("Logger.strict", "TextWriter.strict"))).Length is 0
 	let typeName = TypeName(path)
-	let bodies = MethodBodies(typeName, TypeShape(File(path).ReadLines), inference)
+	let lines = File(path).ReadLines
+	let bodies = MethodBodies(typeName, TypeShape(lines), inference)
 	let known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(typeName).names
 	let check = FileCheck(inference, known)
+	mutable unresolved = check.Unimplemented(path, lines)
 	for bodies.Statements
 		let unknown = check.Unknown(value, bodies.Methods)
 		if unknown is not ""
-			unknown + " used in " + path + ":" + (value.line + 1)
+			unresolved.Add(unknown + " used in " + path + ":" + (value.line + 1))
+	unresolved
 AllFiles(root Text) Texts
 	mutable files = Directory.Files(root, "*.strict")
 	for Directory.Directories(root)
