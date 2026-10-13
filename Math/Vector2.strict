@@ -34,3 +34,18 @@ Atan Degrees
 	Vector2(1, 0).Atan is 90
 	Vector2(-1, -1).Atan is -135
 	Degrees(0)
+-(other) Vector2
+	Vector2(4, 7) - Vector2(1, 2) is Vector2(3, 5)
+	Vector2(X - other.X, Y - other.Y)
+/(scale Number) Vector2
+	Vector2(6, 8) / 2 is Vector2(3, 4)
+	Vector2(X / scale, Y / scale)
+DistanceTo(other) Number
+	Vector2(1, 2).DistanceTo(Vector2(4, 6)) is 5
+	(value - other).Length
+Lerp(other, alpha Number) Vector2
+	Vector2(2, 4).Lerp(Vector2(6, 8), 0.25) is Vector2(3, 5)
+	Vector2(X + (other.X - X) * alpha, Y + (other.Y - Y) * alpha)
+Rotated(angle Degrees) Vector2
+	Vector2(1, 0).Rotated(Degrees(90)).DistanceTo(Vector2(0, 1)) < 0.000001
+	Vector2(X * angle.Cos - Y * angle.Sin, X * angle.Sin + Y * angle.Cos)

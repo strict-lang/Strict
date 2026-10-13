@@ -1,0 +1,27 @@
+has Low Number
+has High Number
+Seeded(seed Number) PseudoRandom
+	PseudoRandom.Seeded(1) is PseudoRandom(521288629, 1)
+	PseudoRandom.Seeded(0) is Error("InvalidSeed")
+	if (seed is 0) or (seed % 1 is not 0) or seed.Absolute > 9007199254740991
+		return Error("InvalidSeed")
+	let low = ((seed % 4294967296) + 4294967296) % 4294967296
+	let high = (((seed / 65536).Floor % 4294967296) + 4294967296) % 4294967296
+	PseudoRandom((high is 0 then 521288629 else high), (low is 0 then 362436069 else low))
+Next PseudoRandom
+	PseudoRandom.Seeded(1).Next.Uint is 2697938338
+	PseudoRandom.Seeded(1).Next.Next.Uint is 1580277510
+	PseudoRandom.Seeded(1).Next.Next.Next.Uint is 3019139328
+	let low = 18000 * (Low % 65536) + (Low / 65536).Floor
+	let high = 36969 * (High % 65536) + (High / 65536).Floor
+	PseudoRandom(low, high)
+Uint Number
+	PseudoRandom(1, 65536).Uint is 1
+	(High * 65536 + Low) % 4294967296
+Get(minimum Number, maximum Number) Number
+	PseudoRandom.Seeded(1).Next.Get(0, 10).Floor is 6
+	PseudoRandom.Seeded(1).Next.Get(5, 5) is 5
+	PseudoRandom.Seeded(1).Next.Get(10, 0) is Error("InvalidRange")
+	if maximum < minimum
+		return Error("InvalidRange")
+	(Uint + 1) * 0.0000000002328306435454494 * (maximum - minimum) + minimum
