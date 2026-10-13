@@ -123,6 +123,7 @@ Qualified(element Text, package Text) Text
 Targets(entries List(TypeEntry)) Texts
 	Sample.Targets(Go) is ("Strict/B.Go")
 	Sample.Targets(Counted) is ("Strict/Range.Count")
+	Sample.Targets((Go, Counted)) is ("Strict/B.Go", "Strict/Range.Count")
 	mutable targets = List(Mutable(Text))
 	for entries
 		targets = targets + value.Invoked

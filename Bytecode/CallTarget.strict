@@ -131,4 +131,4 @@ PackageType(type Text) Text
 	""
 TypeName Text
 	Plain.TypeName is "Greeter"
-	fullName.Substring(fullName.LastIndexOf("/") + 1, fullName.Length - fullName.LastIndexOf("/") - 1)
+	Path(fullName).FileName.text

@@ -139,15 +139,11 @@ TypeOf(name Text) TypeEntry
 	for types
 		if value.Name is name
 			return value
-	let short = Short(name)
+	let short = Path(name).FileName.text
 	for types
 		if IsNamed(value, name, short)
 			return value
 	TypeEntry(name, List(MemberEntry), List(MethodEntry))
-Short(name Text) Text
-	Shapes.Short("Strict/A/Shape") is "Shape"
-	Shapes.Short("Shape") is "Shape"
-	name.Substring(name.LastIndexOf("/") + 1, name.Length - name.LastIndexOf("/") - 1)
 IsNamed(type TypeEntry, name Text, short Text) Boolean
 	Shapes.IsNamed(Shape, "Shape", "Shape") is true
 	Shapes.IsNamed(Shape, "Strict/Other", "Other") is false

@@ -4,11 +4,4 @@ Count Number
 	ValueListInstance("Numbers", ("1", "2")).Count is 2
 	items.Length
 to Text
-	"(" + JoinItems + ")"
-JoinItems Text
-	mutable result = ""
-	for items
-		if result is not ""
-			result = result + ", "
-		result = result + value
-	result
+	"(" + Text.Combine(items) + ")"

@@ -2,11 +2,4 @@ has elements Texts
 has ValueTypeName Text
 to Text
 	DictionaryExpression(("a=1", "b=2"), "Number") to Text is "Dictionary(a=1, b=2)"
-	"Dictionary(" + JoinElements + ")"
-JoinElements Text
-	mutable result = ""
-	for elements
-		if result is not ""
-			result = result + ", "
-		result = result + value
-	result
+	"Dictionary(" + Text.Combine(elements) + ")"

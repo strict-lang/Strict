@@ -47,4 +47,4 @@ Logical(left Boolean, operator Text, right Boolean) Boolean
 	operator is "and" then left and right else left or right
 Inner(literal SyntaxNode) Text
 	Inner(SyntaxNode("Text", "\"a\"")) is "a"
-	literal.Kind is "Text" then literal.text.Substring(1, literal.text.Length - 2) else literal.text
+	literal.Kind is "Text" then literal.Unquoted else literal.text

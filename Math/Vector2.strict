@@ -6,10 +6,10 @@ constant Up = Vector2(0, -1)
 constant Down = Vector2(0, 1)
 X Number
 	Vector2(1, 2).X is 1
-	numbers(0)
+	numbers.X
 Y Number
 	Vector2(1, 2).Y is 2
-	numbers(1)
+	numbers.Y
 Length Number
 	Vector2(0, 0).Length is 0
 	Vector2(3, 4).Length is 5

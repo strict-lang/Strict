@@ -6,14 +6,7 @@ to Text
 	MethodCall("Log", "logger", ("\"Hi\""), "None") to Text is "logger.Log(\"Hi\")"
 	MethodCall("Run", "", List(Text), "None") to Text is "Run()"
 	if instance is ""
-		return methodName + "(" + JoinArguments + ")"
-	instance + "." + methodName + "(" + JoinArguments + ")"
-JoinArguments Text
-	mutable result = ""
-	for arguments
-		if result is not ""
-			result = result + ", "
-		result = result + value
-	result
+		return methodName + "(" + Text.Combine(arguments) + ")"
+	instance + "." + methodName + "(" + Text.Combine(arguments) + ")"
 ArgumentCount Number
 	arguments.Length
