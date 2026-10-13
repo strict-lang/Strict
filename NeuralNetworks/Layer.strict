@@ -66,3 +66,15 @@ Shifted(deltas Numbers, rate Number) Numbers
 	let previous = previousBiases.Length is 0 then biases else previousBiases
 	for biases
 		value - rate * deltas(index) + Momentum * (value - previous(index))
+Mutated(strength Number) Layer
+	Halves.Mutated(0) is Halves
+	(Halves.Mutated(0.1).weights.First.First - 0.5).Absolute <= 0.1 is true
+	mutable rows = List(Mutable(Numbers))
+	for weights
+		rows.Add(Noisy(value, strength))
+	Layer(rows, Noisy(biases, strength))
+Noisy(values Numbers, strength Number) Numbers
+	Halves.Noisy((1, 2), 0) is (1, 2)
+	(Halves.Noisy(List(Number) + 1, 0.5).First - 1).Absolute <= 0.5 is true
+	for values
+		value + (2.Random - 1) * strength

@@ -84,7 +84,7 @@ IsNative(type Text, method Text) Boolean
 	if type.LastIndexOf("/") > 6
 		return false
 	if (method is in ("Length", "Count")) or (SourceName(type) is "Dictionary")
-		return SourceName(type) is in ("Text", "List", "File", "Dictionary")
+		return (SourceName(type) is in ("List", "File", "Dictionary")) or ((type is "Strict/Text") and (method is "Length"))
 	let name = method.Split(" ").First
 	(name is in Natives) and ((name is not "to") or TypeEntry.IsBaseName(TypeEntry.ShortName(type)))
 SourceName(type Text) Text

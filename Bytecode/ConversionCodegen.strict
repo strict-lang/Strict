@@ -107,7 +107,7 @@ IsElement(collection Text, operand SyntaxNode, block CodeBlock) Boolean
 	let types = values.inference.types
 	let isSpelled = collection.StartsWith("List(") and (collection.IndexOf(",") < 0)
 	let element = isSpelled then collection.Substring(5, collection.Length - 6) else types.ElementType(collection)
-	let isListElement = types.IsPlural(element) or element.StartsWith("List(")
+	let isListElement = types.IsPlural(element) or element.StartsWith("List(") or types.IsPlural(types.ValueOf(element))
 	isListElement and (values.TypeOf(operand, block) is element)
 Textual(node SyntaxNode, block CodeBlock) SyntaxNode
 	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.Hi, SyntaxNode("Call", "Kind"))), CodeBlock.Empty).text is "to"

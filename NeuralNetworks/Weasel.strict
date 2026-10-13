@@ -1,0 +1,52 @@
+has logger
+constant Target = "METHINKS IT IS LIKE A WEASEL"
+constant Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
+constant Offspring = 100
+constant MutationRate = 0.05
+Run
+	let started = Process.Elapsed
+	let first = Random(Target.Length)
+	let generations = Generations(first)
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	logger.Log("Evolved \"" + Target + "\" from \"" + first + "\"")
+	logger.Log("in " + generations + " generations, " + milliseconds + " ms")
+Random(length Number) Text
+	Weasel.Random(5).Length is 5
+	mutable text = ""
+	for length
+		text = text + Letter
+	text
+Letter Character
+	Letters.Count(Weasel.Letter) is 1
+	Letters(Letters.Length.Random.Floor)
+Fitness(text Text) Number
+	Weasel.Fitness(Target) is Target.Length
+	Weasel.Fitness("MXTHINKS") is 7
+	mutable matches = 0
+	for text
+		if value is Target(index)
+			matches = matches + 1
+	matches
+Mutated(parent Text) Text
+	Weasel.Mutated(Target).Length is Target.Length
+	mutable child = ""
+	for parent
+		child = child + (1.Random < MutationRate then Letter else value)
+	child
+Fittest(parent Text) Text
+	Weasel.Fittest(Target) is Target
+	Weasel.Fitness(Weasel.Fittest("A")) >= Weasel.Fitness("A") is true
+	mutable best = parent
+	for Offspring
+		let child = Mutated(parent)
+		if Fitness(child) > Fitness(best)
+			best = child
+	best
+Generations(first Text) Number
+	Weasel.Generations(Target) is 0
+	mutable best = first
+	for 10000
+		if best is Target
+			return index
+		best = Fittest(best)
+	10000

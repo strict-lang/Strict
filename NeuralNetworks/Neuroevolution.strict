@@ -1,0 +1,46 @@
+has logger
+constant Population = 50
+constant Generations = 300
+constant Strength = 0.5
+Run
+	let started = Process.Elapsed
+	let best = Evolved(Networks, Generations)
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	logger.Log(Generations + " generations of " + Population + " networks in " + milliseconds + " ms")
+	logger.Log("XOR error " + Xor.Error(best))
+	for Xor.Inputs
+		logger.Log(value to Text + " gives " + best.Predict(value).First)
+Networks List(Network)
+	Neuroevolution.Networks.Length is Population
+	for Population
+		Network.Random((2, 3, 1))
+Evolved(population List(Network), generations Number) Network
+	Xor.Error(Neuroevolution.Evolved(List(Network) + Network.Pair, 3)) is Xor.Error(Network.Pair)
+	mutable current = population
+	for generations
+		current = Next(current)
+	Best(current)
+Next(population List(Network)) List(Network)
+	Neuroevolution.Next(Neuroevolution.Networks).Length is Population
+	mutable next = List(Network) + Best(population)
+	for Range(1, population.Length)
+		next = next + Mutated(Tournament(population))
+	next
+Mutated(network Network) Network
+	Neuroevolution.Mutated(Network.Pair).layers.Length is 2
+	mutable layers = List(Mutable(Layer))
+	for network.layers
+		layers.Add(value.Mutated(Strength))
+	Network(layers)
+Tournament(population List(Network)) Network
+	Neuroevolution.Tournament(List(Network) + Network.Pair) is Network.Pair
+	let first = population(population.Length.Random.Floor)
+	let second = population(population.Length.Random.Floor)
+	Xor.Error(first) < Xor.Error(second) then first else second
+Best(population List(Network)) Network
+	Xor.Error(Neuroevolution.Best((Network.Pair, Network.Single))) <= Xor.Error(Network.Pair) is true
+	mutable best = population.First
+	for population
+		if Xor.Error(value) < Xor.Error(best)
+			best = value
+	best
