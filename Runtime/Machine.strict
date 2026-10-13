@@ -1,6 +1,7 @@
 has types List(TypeEntry)
 has logger
 has prototypes List(VmValue) = List(VmValue)
+has folder Text = ""
 constant MaxSteps = 1000000000000000
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
@@ -11,7 +12,6 @@ constant Wrapper = TypeEntry("Strict/Wrapper", (MemberEntry.LoggerMember, Member
 constant Coded = InstructionEntry(InstructionType.FieldLoad, ("number", "Character"), (1, 0, -1, -2))
 constant Paired = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry.Initializing)
 constant Failing = TypeEntry("Strict/Failing", List(MemberEntry), List(MethodEntry) + MethodEntry("Fail", List(MemberEntry), "Strict/Number", (InstructionEntry(InstructionType.IndexCall, "list", (0, 0, 6)), InstructionEntry.Return(0))))
-constant Indexing = MethodEntry("At", List(MemberEntry) + MemberEntry("index", "Strict/Number", List(InstructionEntry), false), "None", List(InstructionEntry))
 constant Pairing = Machine(List(TypeEntry) + Paired)
 Launch(typeName Text, arguments List(VmValue))
 	let main = Natives(types).TypeOf(typeName)
@@ -40,7 +40,7 @@ Prepared Machine
 	mutable created = List(Mutable(VmValue))
 	for types
 		created.Add(Natives(types).Fresh(value))
-	Machine(types, logger, created)
+	Machine(types, logger, created, folder)
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue), VmValue.None).Last.number is 7
@@ -75,7 +75,7 @@ Argument(method MethodEntry, arguments List(VmValue), position Number) VmValue
 		return VmValue.None
 	position < arguments.Length then arguments(position) else Natives(types).Initial(method.parameters(position))
 Indexed(method MethodEntry, arguments List(VmValue)) VmValue
-	Hello.Indexed(Indexing, List(VmValue) + VmValue.OfNumber(4)).number is 4
+	Hello.Indexed(MethodEntry.Indexing, List(VmValue) + VmValue.OfNumber(4)).number is 4
 	Hello.Indexed(Defaulted, List(VmValue)).kind is "None"
 	for method.parameters
 		if value.Name is "index"
@@ -111,7 +111,7 @@ Call(call Invocation) VmValue
 	if route is Resolver.Searching
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	if (route < 0) or ((entry.payload(at + 2) is 1) and call.IsMemberValue(types(route)))
-		return Natives(types).Result(call)
+		return Natives(types, folder).Result(call)
 	Executed(route, types(route).methods(entry.payload(at + 1)), call)
 Executed(route Number, method MethodEntry, call Invocation) VmValue
 	Pairing.Executed(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7

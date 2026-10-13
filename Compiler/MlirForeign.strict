@@ -1,0 +1,15 @@
+has function MlirFunction
+constant Add = MethodEntry("Add", (MemberEntry("left", "Strict/Number", List(InstructionEntry), false), MemberEntry("right", "Strict/Number", List(InstructionEntry), false)), "Strict/Number", List(InstructionEntry))
+constant Adder = MlirFunction(List(TypeEntry), TypeEntry("Strict/Examples/NativeAdd/Adder", List(MemberEntry), List(MethodEntry) + Add), Add)
+IsForeign Boolean
+	MlirForeign(Adder).IsForeign is true
+	MlirForeign(MlirFunction.Counter).IsForeign is false
+	MlirForeign(MlirFunction.Adding).IsForeign is false
+	(function.method.instructions.Length is 0) and (function.type.members.Length is 0)
+Symbol Text
+	MlirForeign(Adder).Symbol is "Adder_Add"
+	function.type.JustName + "_" + function.method.Name
+Declaration Text
+	MlirForeign(Adder).Declaration is "  func.func private @Adder_Add(f64, f64, f64) -> f64"
+	let types = Text.Combine(MlirCalls(function, 0).ArgumentTypes(function.Parameters.Length), ", ")
+	"  func.func private @" + Symbol + "(" + types + ") -> f64"

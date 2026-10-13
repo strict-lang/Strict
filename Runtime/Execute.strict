@@ -12,7 +12,7 @@ Run(arguments Texts) Number
 	mutable texts = List(Mutable(VmValue))
 	for Range(2, arguments.Length)
 		texts.Add(VmValue.OfText(arguments(value)))
-	Machine(Resolver(types).Resolved, logger).Prepared.Launch(types.First.Name, texts)
+	Started(types, arguments(0)).Launch(types.First.Name, texts)
 	0
 Test(path Text, root Text) Number
 	let paths = Directory.Exists(path) then Directory.Files(path, "*.strict") else List(Text) + path
@@ -60,7 +60,7 @@ Read(before Number) Texts
 			found.Add(path)
 	found
 Tested(types List(TypeEntry), path Text) Number
-	let failed = Machine(Resolver(types).Resolved, logger).Prepared.Tested(types.First.Name)
+	let failed = Started(types, path).Tested(types.First.Name)
 	if failed > 0
 		logger.Log(Summary(failed, path))
 	failed
@@ -79,3 +79,9 @@ Summary(failed Number, path Text) Text
 	Execute.Summary(0, "A.strict") is "All tests passed in A.strict"
 	Execute.Summary(2, "A.strict") is "2 tests failed in A.strict"
 	failed is 0 then "All tests passed in " + path else failed + " tests failed in " + path
+Root Text
+	Execute.Root is "."
+	File("Any.strict").Exists then "." else Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
+Started(types List(TypeEntry), path Text) Machine
+	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "Examples/HelloLogger.strict").folder is "Examples"
+	Machine(Resolver(types).Resolved, logger, List(VmValue), Path(path).PathOnly.text).Prepared

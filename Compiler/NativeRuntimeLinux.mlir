@@ -453,3 +453,9 @@
     %processResult = func.call @strict_process_result(%result, %written, %message) : (f64, f64, f64) -> f64
     return %processResult : f64
   }
+  llvm.mlir.global internal constant @strict_library_windows("LibraryCallsNeedWindowsForNow\00") : !llvm.array<30 x i8>
+  func.func private @strict_library_call(%path: f64, %symbol: f64, %arguments: f64) -> f64 {
+    %message = llvm.mlir.addressof @strict_library_windows : !llvm.ptr
+    %error = func.call @strict_error_named(%message) : (!llvm.ptr) -> f64
+    return %error : f64
+  }

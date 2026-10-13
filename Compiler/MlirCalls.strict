@@ -65,9 +65,9 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 6
 	let callee = type.Callee(decoder.Text(2), count, decoder.Text(4 + entry.payload(3)), decoder.Names)
-	if callee.instructions.Length is 0
-		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let target = MlirFunction(function.types, type, callee)
+	if (callee.instructions.Length is 0) and (MlirForeign(target).IsForeign is false)
+		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	let names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
 	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + names + ") : (" + types + ") -> f64"

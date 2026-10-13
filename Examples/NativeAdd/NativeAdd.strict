@@ -1,0 +1,6 @@
+has logger
+Added Number
+	NativeAdd.Added is 3
+	Adder.Add(1, 2)
+Run
+	logger.Log("1 + 2 = " + Added)

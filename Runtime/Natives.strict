@@ -1,4 +1,5 @@
 has types List(TypeEntry)
+has folder Text = ""
 constant Width = MemberEntry("width", "Strict/Number", List(InstructionEntry), false)
 constant Shape = TypeEntry("Strict/Shape", (Width, MemberEntry.LoggerMember), List(MethodEntry))
 constant Shapes = Natives(List(TypeEntry) + Shape)
@@ -75,7 +76,7 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 		return VmValue.OfBoolean(call.Arguments.First is in instance.items)
 	if name is "Index"
 		return VmValue.OfNumber(instance.items.Index(call.Arguments.First))
-	VmValue("Error", 0, "Unsupported native call " + call.TypeName + "." + name, List(VmValue))
+	Foreign(call, types, folder).Called
 Searched(name Text, text Text, arguments List(VmValue)) VmValue
 	Shapes.Searched("StartsWith", "abc", (VmValue.OfText("bc"), VmValue.OfNumber(1))).IsTrue is true
 	Shapes.Searched("Substring", "abc", (VmValue.OfNumber(1), VmValue.OfNumber(2))).text is "bc"

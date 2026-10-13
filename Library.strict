@@ -1,0 +1,4 @@
+has path Text
+Call(symbol Text, arguments Numbers) Number
+	Library("missing.dll").Call("Add", (0, 1, 2)) is not 3
+	Error(path + " " + symbol + " needs the native runtime for " + arguments.Length + " numbers")

@@ -1,0 +1,56 @@
+has folders Texts
+constant Adding = NativeSources(List(Text) + "Examples/NativeAdd/native")
+Files Texts
+	Adding.Files is List(Text) + "Examples/NativeAdd/native/Adder.c"
+	mutable files = List(Mutable(Text))
+	for folders
+		files = files + Directory.Files(value, "*.c")
+	files
+Flags(platform Number) Text
+	Adding.Flags(Platform.Windows) is ""
+	mutable flags = ""
+	for folders
+		let file = value + "/" + Platform.NameOf(platform) + ".flags"
+		if File(file).Exists
+			flags = flags + " " + Text.Combine(File(file).ReadLines, " ")
+	flags
+Arguments(platform Number, root Text) Text
+	Adding.Arguments(Platform.Windows, "C:/s") is " \"Examples/NativeAdd/native/Adder.c\" -I\"C:/s/Compiler\""
+	NativeSources(List(Text)).Arguments(Platform.Windows, "C:/s") is ""
+	if folders.Length is 0
+		return ""
+	mutable arguments = ""
+	for Files
+		arguments = arguments + " \"" + value + "\""
+	arguments + " -I\"" + root + "/Compiler\"" + Flags(platform)
+Library(platform Number, root Text) Text
+	Adding.Library(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.") is true
+	let folder = folders.First
+	let name = Path(Path(folder).PathOnly.text).FileName.text
+	let library = folder + "/" + name + (platform is Platform.Windows then ".dll" else ".so")
+	if IsCurrent(library, platform, root)
+		return "Built " + library
+	let shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
+	let clang = Toolchain(platform, root).Located("clang")
+	let result = ToolRunner(clang).Execute(shared + Arguments(platform, root) + " -o \"" + library + "\"")
+	result.Failed then "clang failed: " + result.error else "Built " + library
+IsCurrent(library Text, platform Number, root Text) Boolean
+	Adding.IsCurrent("Examples/NativeAdd/native/Missing.dll", Platform.Windows, ".") is false
+	if File(library).Exists is false
+		return false
+	let built = File(library).Modified
+	for (Files + (root + "/Compiler/strict.h")) + (folders.First + "/" + Platform.NameOf(platform) + ".flags")
+		if File(value).Exists and (File(value).Modified > built)
+			return false
+	true
+LinuxLinked(base Text, program Text, root Text) Text
+	Adding.LinuxLinked("Compiler/output/missing", "missing", ".").StartsWith("Linux build skipped") is true
+	let tools = Toolchain(Platform.Windows, root)
+	mutable sources = folders.Length is 0 then "" else " -I" + tools.Quoted(tools.WslPath(root + "/Compiler"))
+	for Files
+		sources = sources + " " + tools.Quoted(tools.WslPath(value))
+	let gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc "
+	let linkage = gcc + tools.Quoted(tools.WslPath(base + ".linux.o"))
+	let output = " -o " + tools.Quoted(tools.WslPath(program)) + " -lm" + Flags(Platform.Linux)
+	let linked = ToolRunner("wsl").Execute(linkage + sources + output)
+	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"

@@ -1,0 +1,43 @@
+has call Invocation
+has types List(TypeEntry)
+has folder Text = ""
+constant Add = MethodEntry("Add", (MemberEntry("left", "Strict/Number", List(InstructionEntry), false), MemberEntry("right", "Strict/Number", List(InstructionEntry), false)), "Strict/Number", List(InstructionEntry))
+constant Adder = TypeEntry("Strict/Examples/NativeAdd/Adder", List(MemberEntry), List(MethodEntry) + Add)
+constant Adding = Foreign(Invocation(InstructionEntry.Invoke(3, ("Strict/Examples/NativeAdd/Adder", "Add", "Strict/Number", "left", "right"), (0, 0), -1), (VmValue.OfNumber(1), VmValue.OfNumber(2)), VmValue.None), List(TypeEntry) + Adder)
+constant Shorter = TypeEntry("Adder", List(MemberEntry), List(MethodEntry))
+constant Missing = VmValue("Strict/Library", 0, "", List(VmValue) + VmValue.OfText("missing.dll"))
+constant Calling = Foreign(Invocation(InstructionEntry.Invoke(2, ("Strict/Library", "Call", "Strict/Number", "symbol", "arguments"), (0, 0), 0), (VmValue.OfText("Add"), VmValue.OfList(VmValue.OfNumber(0))), Missing), List(TypeEntry))
+Called VmValue
+	Foreign(Invocation.AddCall, List(TypeEntry)).Called.text is "Unsupported native call T.Add"
+	let type = Natives(types).TypeOf(call.TypeName)
+	if IsForeign(type) is false
+		return VmValue("Error", 0, "Unsupported native call " + call.TypeName + "." + call.MethodName, List(VmValue))
+	let built = NativeSources(List(Text) + Folder(type)).Library(Platform.Current, Execute.Root)
+	if built.StartsWith("Built ") is false
+		return VmValue("Error", 0, built, List(VmValue))
+	let symbol = type.JustName + "_" + call.MethodName
+	let arguments = (List(Number) + 0) + Numbers(call.Arguments)
+	VmValue.OfNumber(Library(built.Substring(6, built.Length - 6)).Call(symbol, arguments))
+IsForeign(type TypeEntry) Boolean
+	Adding.IsForeign(Adder) is true
+	Adding.IsForeign(TypeEntry("Strict/Shape", List(MemberEntry), List(MethodEntry))) is false
+	if type.members.Length > 0
+		return false
+	for type.methods
+		if value.Name is call.MethodName
+			return value.instructions.Length is 0
+	false
+Folder(type TypeEntry) Text
+	Adding.Folder(Adder) is "Examples/NativeAdd/native"
+	Foreign(Invocation.AddCall, List(TypeEntry), "Examples/NativeAdd").Folder(Shorter) is "Examples/NativeAdd/native"
+	let file = type.Name.IndexOf("/") < 0 then folder + "/" + type.File else type.File
+	let parent = Path(file).PathOnly.text
+	parent is "" then "native" else parent + "/native"
+Numbers(values List(VmValue)) Numbers
+	Adding.Numbers((VmValue.OfNumber(1), VmValue.OfNumber(2))) is (1, 2)
+	for values
+		value.number
+Hosted VmValue
+	Calling.Hosted.number is not 3
+	let path = call.Instance.Member(0).text
+	VmValue.OfNumber(Library(path).Call(call.Arguments.First.text, Numbers(call.Arguments.Last.items)))

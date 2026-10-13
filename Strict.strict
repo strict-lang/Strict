@@ -37,10 +37,7 @@ Rooted(arguments Texts) Texts
 	Strict.Rooted(("a.strict", "5")) is ("a.strict", ".", "5")
 	if (arguments.Length is 0) or ((arguments.Length > 1) and Directory.Exists(arguments(1)))
 		return arguments
-	(List(Text) + arguments(0) + Root) + Rest(arguments)
-Root Text
-	Strict.Root is "."
-	File("Any.strict").Exists then "." else Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
+	(List(Text) + arguments(0) + Execute.Root) + Rest(arguments)
 Rest(arguments Texts) Texts
 	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)

@@ -1,5 +1,6 @@
 has platform Number
 has root Text
+has natives Texts = List(Text)
 constant Needed = ("mlir-opt", "mlir-translate", "clang")
 constant WindowsFolders = ("C:/msys64/ucrt64/bin/", "C:/Program Files/LLVM/bin/")
 constant LinuxRelease = "LLVM-22.1.0-Linux-X64"
@@ -81,7 +82,8 @@ Built(base Text, executable Text) Text
 	if lowered is not ""
 		return lowered
 	let system = platform is Platform.Windows then " -Wl,-Brepro" else " -lm"
-	let linking = Quoted(base + ".ll") + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + system
+	let sources = NativeSources(natives).Arguments(platform, root)
+	let linking = Quoted(base + ".ll") + sources + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else "Built " + executable
 CrossBuilt(base Text) Text
@@ -94,9 +96,7 @@ CrossBuilt(base Text) Text
 	if compiled.Failed
 		return "clang failed: " + compiled.error
 	let program = Toolchain(Platform.Linux, root).Executable(base)
-	let linking = "-e gcc -static " + Quoted(WslPath(base + ".linux.o")) + " -o " + Quoted(WslPath(program)) + " -lm"
-	let linked = ToolRunner("wsl").Execute(linking)
-	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
+	NativeSources(natives).LinuxLinked(base, program, root)
 WslPath(path Text) Text
 	OnWindows.WslPath("C:/code/A") is "/mnt/c/code/A"
 	OnWindows.WslPath("D:\\B\\c") is "/mnt/d/B/c"
