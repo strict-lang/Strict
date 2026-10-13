@@ -14,6 +14,11 @@ Doubles Numbers
 Failed Number
 	NativeAdd.Failed is Error("NativeFailure")
 	Adder.Failing
+Counted Number
+	NativeAdd.Counted is 35
+	let counter = Counter(10, 5)
+	counter.Next + counter.Next
 Run
 	logger.Log("1 + 2 = " + Added)
 	logger.Log(Greeted + ", the sum of 1, 2, 3 is " + Summed + " and doubled they are " + Doubles)
+	logger.Log("A counter from 10 by 5 counts " + Counted)

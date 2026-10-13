@@ -7,6 +7,8 @@ constant Adding = Foreign(Invocation(InstructionEntry.Invoke(3, ("Strict/Example
 constant Shorter = TypeEntry("Adder", List(MemberEntry), List(MethodEntry))
 constant Missing = VmValue("Strict/Library", 0, "", List(VmValue) + VmValue.OfText("missing.dll"))
 constant Calling = Foreign(Invocation(InstructionEntry.Invoke(2, ("Strict/Library", "Call", "Strict/Number", "symbol", "arguments"), (0, 0), 0), (VmValue.OfText("Add"), VmValue.OfList(VmValue.OfNumber(0))), Missing), List(TypeEntry))
+constant Counter = TypeEntry(MlirForeign.Counter.Name, MlirForeign.Counter.members, List(MethodEntry) + MlirForeign.Next)
+constant Counting = Foreign(Invocation(InstructionEntry.Invoke(1, (Counter.Name, "Next", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfNumber(7).As(Counter.Name)), List(TypeEntry) + Counter)
 Called VmValue
 	Foreign(Invocation.AddCall, List(TypeEntry)).Called.text is "Unsupported native call T.Add"
 	let type = Natives(types).TypeOf(call.TypeName)
@@ -35,7 +37,8 @@ Method(type TypeEntry) MethodEntry
 	type.methods.First
 Arguments(library Library, method MethodEntry) Numbers
 	Adding.Arguments(Library("missing.dll"), Add) is (0, 1, 2)
-	mutable arguments = List(Number) + 0
+	Counting.Arguments(Library("missing.dll"), MlirForeign.Next) is (7)
+	mutable arguments = List(Number) + (call.entry.payload(call.Flag) is 1 then call.Instance.number else 0)
 	for call.Arguments
 		let kind = method.parameters(index).typeName
 		let number = kind.EndsWith("Text") then library.TextSlot(value.text) else value.number

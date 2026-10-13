@@ -1,0 +1,3 @@
+has handle Number
+from(start Number, step Number)
+Next Number

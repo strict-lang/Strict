@@ -11,16 +11,16 @@ constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Up
 Result(call Invocation) VmValue
 	Shapes.Result(NewShape).items.First.number is 3
 	let name = call.MethodName
+	let foreign = Foreign(call, types, folder)
 	if name is "from"
-		return Constructed(call)
-	let instance = call.Instance
+		return foreign.IsForeign(TypeOf(call.TypeName)) then foreign.Called else Constructed(call)
 	if name is "to"
-		return Converted(instance, call.ReturnType)
+		return Converted(call.Instance, call.ReturnType)
 	if name is in ("Length", "Count")
-		return VmValue.OfNumber(instance.Counted(call.Arguments))
+		return VmValue.OfNumber(call.Instance.Counted(call.Arguments))
 	if name is in ("not", "and", "or", "xor")
-		return Logical(name, instance, call)
-	Queried(name, instance, call)
+		return Logical(name, call.Instance, call)
+	Queried(name, call.Instance, call)
 Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 	Shapes.Keyed("get", Pairs, List(VmValue) + VmValue.OfNumber(2)).number is 4
 	Shapes.Keyed("Add", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))) is VmValue.OfError("DuplicateKey")

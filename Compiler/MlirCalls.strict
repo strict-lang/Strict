@@ -10,6 +10,9 @@ constant Hash = TypeEntry("Strict/Hash", MemberEntry("number", "Strict/Number", 
 constant Defaulted = MethodEntry("from", MemberEntry("text", "Strict/Text", InstructionEntry.Set(List(Text), InstructionEntry.NumberValue(2)), false), "Strict/Hash", FromText.instructions)
 constant Hashed = InstructionEntry.Invoke(1, ("Strict/Hash", "from", "Strict/Hash", "text"), 0, -1)
 constant Hashes = MlirFunction(List(TypeEntry) + Hash, Hash, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "abc"), Hashed)))
+constant CounterType = TypeEntry(MlirForeign.Counter.Name, MlirForeign.Counter.members, List(MethodEntry) + MlirForeign.Started)
+constant NewCounter = InstructionEntry.Invoke(2, (CounterType.Name, "from", CounterType.Name, "left", "right"), (0, 1), -1)
+constant Counters = MlirCalls(MlirFunction(List(TypeEntry) + CounterType, CounterType, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 10), InstructionEntry.LoadNumber(1, 5), NewCounter))), 2)
 Temp(suffix Text) Text
 	MlirCalls(Shapes, 1).Temp("a") is "%t1a"
 	"%t" + position + suffix
@@ -29,12 +32,14 @@ Emitted Texts
 Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 1).Created(NewShape, PayloadDecoder(NewShape)).Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(Hashes, 1).Created(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0 is true
+	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).IndexOf("@Counter_from_foreign(") > 0 is true
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
 	let custom = type.Callee("from", count, decoder.Text(4 + entry.payload(3)), decoder.Names)
 	let instances = MlirInstances(function, position)
 	let target = "%r" + entry.payload(0)
-	if (custom.instructions.Length is 0) or IsMemberValue(entry, type)
+	let isForeign = MlirForeign(MlirFunction(function.types, type, custom)).IsForeign
+	if ((custom.instructions.Length is 0) and (isForeign is false)) or IsMemberValue(entry, type)
 		return Shared(instances.Constructed(entry, decoder.Text(1)), target)
 	instances.Fresh(type, target, "f", List(Text)) + Compiled(entry, decoder, type, count)
 Shared(constructed Texts, target Text) Texts
