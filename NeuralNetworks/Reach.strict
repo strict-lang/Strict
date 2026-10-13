@@ -1,0 +1,46 @@
+has arm Arm
+has target Numbers
+constant Planar = Reach(Arm.Planar, (0.4, 0.5, 0))
+constant Population = 40
+Distance(angles Numbers) Number
+	Planar.Distance((0, 0)) is 0.6403124237432849
+	let difference = Network.Difference(arm.Reached(angles), target)
+	Layer.Summed(difference, difference).SquareRoot
+Arms List(Numbers)
+	Planar.Arms.Length is Population
+	for Population
+		arm.Random
+Evolved(population List(Numbers), generations Number) Numbers
+	Planar.Evolved(List(Numbers) + (0, 0), 2) is (0, 0)
+	mutable current = population
+	for generations
+		current = Next(current)
+	Best(current)
+Next(population List(Numbers)) List(Numbers)
+	Planar.Next(Planar.Arms).Length is Population
+	mutable next = List(Mutable(Numbers))
+	next.Add(Best(population))
+	for Range(1, population.Length)
+		next.Add(Mutated(Crossed(Tournament(population), Tournament(population))))
+	next
+Crossed(first Numbers, second Numbers) Numbers
+	Planar.Crossed((1, 2), (1, 2)) is (1, 2)
+	for first
+		1.Random < 0.5 then value else second(index)
+Mutated(angles Numbers) Numbers
+	Planar.Mutated((10, 20)).Length is 2
+	Planar.Mutated((180, 180)).First <= 180 is true
+	for angles
+		(1.Random < 0.2 then value + 10.Random - 5 else value).Clamp(arm.lowest(index), arm.highest(index))
+Tournament(population List(Numbers)) Numbers
+	Planar.Tournament(List(Numbers) + (0, 0)) is (0, 0)
+	let first = population(population.Length.Random.Floor)
+	let second = population(population.Length.Random.Floor)
+	Distance(first) < Distance(second) then first else second
+Best(population List(Numbers)) Numbers
+	Planar.Best(((0, 0), (40, 40))) is (40, 40)
+	mutable best = population.First
+	for population
+		if Distance(value) < Distance(best)
+			best = value
+	best
