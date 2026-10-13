@@ -1,0 +1,100 @@
+has features Numbers
+has thresholds Numbers
+has rights Numbers
+has labels Numbers
+constant Empty = DecisionTree(List(Number), List(Number), List(Number), List(Number))
+constant Rows = ((0, 0, 0), (0, 1, 0), (1, 1, 0), (5, 5, 1), (5, 6, 1))
+constant Stump = DecisionTree((0, -1, -1), (1, 0, 0), (2, -1, -1), (-1, 0, 1))
+Trained(rows List(Numbers), depth Number) DecisionTree
+	DecisionTree.Trained(Rows, 3) is Stump
+	Empty.Grown(rows, depth, rows.First.Length - 1)
+Grown(rows List(Numbers), depth Number, picked Number) DecisionTree
+	Empty.Grown(List(Numbers) + (1, 2, 1), 2, 2) is DecisionTree((-1), (0), (-1), (1))
+	let split = BestSplit(rows, picked)
+	if (depth is 0) or (split.Length is 0)
+		return Leaf(Majority(Kinds(rows)))
+	let position = features.Length
+	let left = Node(split).Grown(Side(rows, split, true), depth - 1, picked)
+	let right = left.Grown(Side(rows, split, false), depth - 1, picked)
+	right.Linked(position, left.features.Length)
+Leaf(label Number) DecisionTree
+	Empty.Leaf(1).labels is (1)
+	DecisionTree(features + -1, thresholds + 0, rights + -1, labels + label)
+Node(split Numbers) DecisionTree
+	Empty.Node((0, 1)).thresholds is (1)
+	DecisionTree(features + split(0), thresholds + split(1), rights + -1, labels + -1)
+Linked(position Number, right Number) DecisionTree
+	Empty.Node((0, 1)).Linked(0, 2).rights is (2)
+	mutable linked = rights
+	linked(position) = right
+	DecisionTree(features, thresholds, linked, labels)
+Majority(kinds Numbers) Number
+	Empty.Majority((0, 1, 1)) is 1
+	let counts = Counts(kinds)
+	counts.Index(counts.Maximum)
+BestSplit(rows List(Numbers), picked Number) Numbers
+	Empty.BestSplit(Rows, 2) is (0, 1)
+	Empty.BestSplit(List(Numbers) + (1, 2, 1), 2).Length is 0
+	mutable best = List(Number)
+	mutable lowest = Gini(Kinds(rows)) - 0.000001
+	for Features(rows.First.Length - 1, picked)
+		let candidate = BestThreshold(rows, value)
+		if candidate(1) < lowest
+			lowest = candidate(1)
+			best = (value, candidate(0))
+	best
+Features(count Number, picked Number) Numbers
+	Empty.Features(3, 3) is (0, 1, 2)
+	Empty.Features(3, 2).Length is 2
+	let order = picked < count then Dataset.Pairs.Order(count) else Dataset.Pairs.Indices(count)
+	for picked
+		order(index)
+BestThreshold(rows List(Numbers), feature Number) Numbers
+	Empty.BestThreshold(Rows, 0) is (1, 0)
+	mutable threshold = 0
+	mutable lowest = 2
+	for rows
+		let score = SplitGini(rows, (feature, value(feature)))
+		if score < lowest
+			lowest = score
+			threshold = value(feature)
+	(threshold, lowest)
+SplitGini(rows List(Numbers), split Numbers) Number
+	Empty.SplitGini(Rows, (0, 1)) is 0
+	Empty.SplitGini(Rows, (0, 5)) is 2
+	let left = Side(rows, split, true)
+	let right = Side(rows, split, false)
+	if (left.Length is 0) or (right.Length is 0)
+		return 2
+	(left.Length * Gini(Kinds(left)) + right.Length * Gini(Kinds(right))) / rows.Length
+Side(rows List(Numbers), split Numbers, isLeft Boolean) List(Numbers)
+	Empty.Side(Rows, (0, 1), false).Length is 2
+	for rows
+		if (value(split(0)) <= split(1)) is isLeft
+			value
+Gini(kinds Numbers) Number
+	Empty.Gini((0, 0, 1, 1)) is 0.5
+	Empty.Gini((1, 1)) is 0
+	mutable sum = 0
+	for Counts(kinds)
+		sum = sum + (value / kinds.Length) * (value / kinds.Length)
+	1 - sum
+Counts(kinds Numbers) Numbers
+	Empty.Counts((0, 2, 2)) is (1, 0, 2)
+	mutable counts = Layer.Halves.Zeros(kinds.Maximum + 1)
+	for kinds
+		counts(value) = counts(value) + 1
+	counts
+Kinds(rows List(Numbers)) Numbers
+	Empty.Kinds(Rows) is (0, 0, 0, 1, 1)
+	for rows
+		value.Last
+Classified(sample Numbers) Number
+	Stump.Classified((5, 4)) is 1
+	Stump.Classified((0.5, 0)) is 0
+	mutable position = 0
+	for features.Length
+		if labels(position) >= 0
+			return labels(position)
+		position = sample(features(position)) <= thresholds(position) then position + 1 else rights(position)
+	labels(position)

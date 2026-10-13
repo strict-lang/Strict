@@ -1,0 +1,70 @@
+has centers List(Numbers)
+constant Corners = KMeans(((0, 0), (1, 1)))
+constant Square = ((0, 0), (0.2, 0), (1, 1), (0.8, 1))
+Started(samples List(Numbers), count Number) KMeans
+	KMeans.Started(Square, 2).centers is ((0, 0), (1, 1))
+	KMeans(Picked(samples, count))
+Picked(samples List(Numbers), count Number) List(Numbers)
+	Corners.Picked(Square, 2) is ((0, 0), (1, 1))
+	for count
+		samples((index * samples.Length / count).Floor)
+Nearest(sample Numbers) Number
+	Corners.Nearest((0.2, 0.1)) is 0
+	Corners.Nearest((0.9, 0.7)) is 1
+	mutable best = 0
+	for centers
+		if Distance(value, sample) < Distance(centers(best), sample)
+			best = index
+	best
+Distance(first Numbers, second Numbers) Number
+	Corners.Distance((0, 0), (1, 2)) is 5
+	mutable sum = 0
+	for first
+		sum = sum + (value - second(index)) * (value - second(index))
+	sum
+Assigned(samples List(Numbers)) Numbers
+	Corners.Assigned(Square) is (0, 0, 1, 1)
+	for samples
+		Nearest(value)
+Updated(samples List(Numbers)) KMeans
+	Corners.Updated(Square).centers.First is (0.1, 0)
+	let assigned = Assigned(samples)
+	mutable moved = List(Mutable(Numbers))
+	for centers
+		moved.Add(Mean(samples, assigned, index))
+	KMeans(moved)
+Mean(samples List(Numbers), assigned Numbers, cluster Number) Numbers
+	Corners.Mean(Square, (0, 0, 1, 1), 1) is (0.9, 1)
+	Corners.Mean(Square, (0, 0, 0, 0), 1) is (1, 1)
+	mutable sum = centers(cluster) * 0
+	mutable count = 0
+	for samples
+		if assigned(index) is cluster
+			sum = Summed(sum, value)
+			count = count + 1
+	count is 0 then centers(cluster) else sum / count
+Summed(first Numbers, second Numbers) Numbers
+	Corners.Summed((1, 2), (3, 4)) is (4, 6)
+	for first
+		value + second(index)
+Trained(samples List(Numbers), iterations Number) KMeans
+	KMeans.Started(Square, 2).Trained(Square, 3).centers is ((0.1, 0), (0.9, 1))
+	mutable trained = value
+	for iterations
+		trained = trained.Updated(samples)
+	trained
+Purity(samples List(Numbers), labels Numbers) Number
+	Corners.Purity(Square, (0, 0, 1, 1)) is 1
+	Corners.Purity(Square, (0, 1, 1, 1)) is 0.75
+	let assigned = Assigned(samples)
+	mutable matching = 0
+	for centers
+		matching = matching + Majority(assigned, labels, index)
+	matching / samples.Length
+Majority(assigned Numbers, labels Numbers, cluster Number) Number
+	Corners.Majority((0, 0, 1, 1), (0, 1, 1, 1), 0) is 1
+	mutable counts = labels * 0
+	for assigned
+		if value is cluster
+			counts(labels(index)) = counts(labels(index)) + 1
+	counts.Maximum

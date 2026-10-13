@@ -1,0 +1,14 @@
+has logger
+constant Address = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+constant Downloaded = "MachineLearning/shakespeare.txt"
+constant Characters = 200000
+constant Order = 5
+Run
+	if File(Downloaded).Exists is false
+		Process.RunTool("curl", "-sfL -o \"" + Downloaded + "\" \"" + Address + "\"")
+	let text = Text.Combine(File(Downloaded).ReadLines, "\n").Substring(0, Characters)
+	let started = Process.Elapsed
+	let generated = Markov(text, Order).Generated(text.Substring(0, Order), 400)
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	logger.Log("Order " + Order + " chain over " + Characters + " characters of Shakespeare in " + milliseconds + " ms:")
+	logger.Log(generated)

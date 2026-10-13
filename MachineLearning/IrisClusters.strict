@@ -1,0 +1,9 @@
+has logger
+Run
+	let data = Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3)
+	let started = Process.Elapsed
+	let clusters = KMeans.Started(data.inputs, 3).Trained(data.inputs, 10)
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	let purity = (clusters.Purity(data.inputs, data.Labels) * 100).Round(1)
+	logger.Log("3 clusters of " + data.inputs.Length + " flowers match their species to " + purity + "%")
+	logger.Log("k-means took " + milliseconds + " ms")

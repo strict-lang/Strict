@@ -1,0 +1,38 @@
+has text Text
+has order Number
+constant Sample = Markov("abcabd", 2)
+Count(context Text) Number
+	Sample.Count("ab") is 2
+	Sample.Count("bd") is 0
+	Position(context, text.Length)
+Position(context Text, wanted Number) Number
+	Sample.Position("ab", 1) is 3
+	Sample.Position("ab", 6) is 2
+	mutable found = 0
+	mutable start = text.IndexOf(context)
+	for text.Length
+		if (start < 0) or (start + context.Length >= text.Length)
+			return wanted >= text.Length then found else -1
+		if found is wanted
+			return start
+		found = found + 1
+		start = text.IndexOf(context, start + 1)
+	-1
+Next(context Text) Text
+	Sample.Next("bc") is "a"
+	Sample.Next("bd") is ""
+	let count = Count(context)
+	if count is 0
+		return ""
+	let position = Position(context, count.Random.Floor)
+	text.Substring(position + context.Length, 1)
+Generated(start Text, length Number) Text
+	Sample.Generated("bc", 1) is "bca"
+	Sample.Generated("bd", 5) is "bd"
+	mutable generated = start
+	for length
+		let next = Next(generated.Substring(generated.Length - order, order))
+		if next is ""
+			return generated
+		generated = generated + next
+	generated

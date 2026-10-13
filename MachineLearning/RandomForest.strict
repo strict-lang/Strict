@@ -1,0 +1,23 @@
+has trees List(DecisionTree)
+constant Single = RandomForest(List(DecisionTree) + DecisionTree.Stump)
+Trained(rows List(Numbers), count Number, depth Number) RandomForest
+	RandomForest.Trained(DecisionTree.Rows, 3, 2).trees.Length is 3
+	let picked = (rows.First.Length - 1).SquareRoot.Ceiling
+	mutable grown = List(Mutable(DecisionTree))
+	for count
+		grown.Add(DecisionTree.Empty.Grown(Bootstrap(rows), depth, picked))
+	RandomForest(grown)
+Bootstrap(rows List(Numbers)) List(Numbers)
+	Single.Bootstrap(DecisionTree.Rows).Length is 5
+	for rows
+		rows(rows.Length.Random.Floor)
+Classified(sample Numbers) Number
+	Single.Classified((5, 4)) is 1
+	mutable votes = List(Mutable(Number))
+	for trees
+		votes.Add(value.Classified(sample))
+	DecisionTree.Majority(votes)
+Predicted(tests List(Numbers)) Numbers
+	Single.Predicted(((0, 0), (5, 5))) is (0, 1)
+	for tests
+		Classified(value)

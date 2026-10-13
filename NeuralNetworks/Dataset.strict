@@ -31,6 +31,25 @@ Training Dataset
 Testing Dataset
 	Pairs.Testing.inputs is List(Numbers) + (0, 1, 0, 0)
 	Dataset(Kept(inputs, true), Kept(targets, true))
+Labels Numbers
+	Pairs.Labels is (0, 1)
+	for targets
+		value.Index(1)
+Labeled List(Numbers)
+	Pairs.Labeled.First.Last is 0
+	Pairs.Labeled.First.Length is 5
+	let labels = Labels
+	for inputs
+		value + labels(index)
+Agreement(predicted Numbers) Number
+	Pairs.Agreement((0, 1)) is 1
+	Pairs.Agreement((0, 0)) is 0.5
+	let expected = Labels
+	mutable matching = 0
+	for predicted
+		if value is expected(index)
+			matching = matching + 1
+	matching / predicted.Length
 Kept(rows List(Numbers), isTesting Boolean) List(Numbers)
 	Pairs.Kept(Pairs.targets, true) is List(Numbers) + (1, 0)
 	for rows

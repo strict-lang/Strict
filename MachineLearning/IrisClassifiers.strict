@@ -1,0 +1,16 @@
+has logger
+Run
+	let data = Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3)
+	let training = data.Training
+	let testing = data.Testing
+	let neighbors = NearestNeighbors(training.inputs, training.Labels)
+	logger.Log("Nearest neighbors " + Percent(testing.Agreement(neighbors.Predicted(testing.inputs, 5))))
+	let bayes = NaiveBayes.Trained(training.inputs, training.Labels)
+	logger.Log("Naive Bayes " + Percent(testing.Agreement(bayes.Predicted(testing.inputs))))
+	let tree = RandomForest(List(DecisionTree) + DecisionTree.Trained(training.Labeled, 4))
+	logger.Log("Decision tree " + Percent(testing.Agreement(tree.Predicted(testing.inputs))))
+	let forest = RandomForest.Trained(training.Labeled, 25, 4)
+	logger.Log("Random forest of 25 trees " + Percent(testing.Agreement(forest.Predicted(testing.inputs))))
+Percent(ratio Number) Text
+	IrisClassifiers.Percent(0.5) is "50% test accuracy"
+	(ratio * 100).Round(1) + "% test accuracy"
