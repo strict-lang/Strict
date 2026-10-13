@@ -3,6 +3,7 @@ constant Plain = OperatorCodegen(ValueCodegen.Plain)
 constant One = SyntaxNode("Number", "1")
 constant NoNode = SyntaxNode("Identifier", "x")
 constant Characters = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Character"), (KnownTypes.NoMembers), (Scope(("+"), ("Text"))), (KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
+constant Hashes = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Hash"), (Scope(("number"), ("Number"))), (KnownTypes.NoMembers), (Scope(("from", "from types"), ("generic", "Generic")))), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant InOnes = SyntaxNode("Binary", "is in", (One, ValueCodegen.Ones))
 constant Choose = SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (NoNode, One)), One))
 constant Mismatched = SyntaxParser(Tokenizer("Dictionary(A, B) is Dictionary(B, A)").Tokens).Parse
@@ -63,12 +64,15 @@ Decided(node SyntaxNode, block CodeBlock) Text
 IsMismatched(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsMismatched(Mismatched, CodeBlock.Empty) is true
 	Plain.IsMismatched(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is false
+	Hashes.IsMismatched(SyntaxParser(Tokenizer("Hash(1) is Hash(\"a\")").Tokens).Parse, CodeBlock.Empty) is false
 	if node.text is not in ("is", "is not")
 		return false
 	let left = values.TypeOf(node.children(0), block)
 	let right = values.TypeOf(node.children(1), block)
 	let isInstance = (left.IndexOf("(") > 0) and (right.IndexOf("(") > 0) and (left is not right)
-	isInstance and (values.inference.types.BaseName(left) is values.inference.types.BaseName(right))
+	let types = values.inference.types
+	let isMethodGeneric = "Generic" is in types.ParametersOf(left, "from types", -1)
+	isInstance and (isMethodGeneric is false) and (types.BaseName(left) is types.BaseName(right))
 Matches(type Text, wanted Text) Boolean
 	Plain.Matches("Numbers", "Iterator") is true
 	Plain.Matches("A(Number)", "A") is true

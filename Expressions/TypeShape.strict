@@ -74,14 +74,15 @@ IsGenericLine(position Number) Boolean
 CallScope(generics Texts) Scope
 	TypeShape("has iterator", "has Start Number").CallScope(List(Text) + "Iterator").TypeOf("from") is "Start"
 	TypeShape("from(number)", "\tvalue").CallScope(List(Text)).TypeOf("from") is "number"
+	TypeShape("has Name", "has Value Generic", "has Size = 0").CallScope(List(Text)).TypeOf("from") is "Name,Value,Size"
 	constant scope = ParameterScope
 	if "from" is in scope.names
 		return scope
 	constant members = MemberScope
 	mutable names = List(Mutable(Text))
-	for members.names
-		if members.types(index) is not in generics and (members.types(index).IndexOf("Generic") is -1)
-			names.Add(value)
+	for members.types
+		if (value is not in generics) and ((value is "Generic") or (value.IndexOf("Generic") is -1))
+			names.Add(members.names(index))
 	scope.With("from", Text.Combine(names, ","))
 MethodScope Scope
 	TypeShape("constant Limit = 3", "Add(other Number) Number", "\tother").MethodScope.TypeOf("Add") is "Number"

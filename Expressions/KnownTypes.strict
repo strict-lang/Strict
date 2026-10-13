@@ -103,7 +103,7 @@ DeclaredType(typeName Text, name Text, depth Number) Text
 		let type = MemberMethodType(value, name, depth - 1)
 		if type is not ""
 			return type
-	""
+	MethodsOf("Any").TypeOf(name)
 MemberMethodType(memberType Text, name Text, depth Number) Text
 	Sample.MemberMethodType("Texts", "Missing", 1) is ""
 	if IsKnown(memberType)

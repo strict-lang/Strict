@@ -9,4 +9,5 @@ Swapped Couple
 	Couple("a", 2).first.Length is 1
 	Couple("a", "b") is Couple("a", "b")
 	Couple("a", 2) is not Couple("a", 3)
+	Couple("a", 2).Members.Last to Text is "second Strict.Number"
 	Couple(second, first)

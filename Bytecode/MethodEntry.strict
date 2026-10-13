@@ -5,6 +5,7 @@ has instructions List(InstructionEntry)
 has Slots Number = 0
 constant PrintHi = InstructionEntry(InstructionType.Print, "Hi", (-1, 0), 3)
 constant GoCall = InstructionEntry.Invoke(0, ("Strict/B", "Go", "None"), List(Number), -1)
+constant Converting = MethodEntry("Run", List(MemberEntry), "None", InstructionEntry.Invoke(0, ("Strict/Digit", "to", "Strict/Text"), List(Number), -1))
 constant GoRun = MethodEntry("Run", List(MemberEntry), "None", GoCall)
 constant CountingLoop = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))
 constant Logged = MethodEntry("Add", MemberEntry.LoggerMember, "Strict/Number", List(InstructionEntry))
@@ -68,10 +69,13 @@ SignatureTypes Texts
 Invoked Texts
 	GoRun.Invoked is ("Strict/B.Go")
 	HelloRun.Invoked.Length is 0
+	Converting.Invoked is ("Strict/Digit.to", "Strict/Digit.to Text")
 	mutable targets = List(Mutable(Text))
 	for instructions
 		if value.kind is InstructionType.Invoke
 			targets.Add(value.texts(0) + "." + value.texts(1))
+			if value.texts(1) is "to"
+				targets.Add(value.texts(0) + ".to " + TypeEntry.ShortName(value.texts(2)))
 	targets
 LoopBeginOf(position Number) Number
 	CountingLoop.LoopBeginOf(1) is 0

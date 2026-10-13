@@ -1,5 +1,6 @@
 constant OneTwo = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))
 constant DimensionError = VmValue.OfError("listsHaveDifferentDimensions")
+constant Hashed = VmValue("Strict/HashCode(Type)", 0, "", List(VmValue) + VmValue.OfNumber(5))
 constant Detailed = VmValue("Strict/ErrorWithValue", 0, "", (DimensionError, OneTwo))
 Result(kind Number, left VmValue, right VmValue) VmValue
 	Result(InstructionType.Add, VmValue.OfNumber(3), VmValue.OfNumber(4)).number is 7
@@ -11,6 +12,7 @@ Comparison(kind Number, left VmValue, right VmValue) Boolean
 	Comparison(InstructionType.GreaterThan, VmValue.OfNumber(3), VmValue.OfNumber(1)) is true
 	Comparison(InstructionType.Equal, VmValue.OfText("a"), VmValue.OfText("a")) is true
 	Comparison(InstructionType.Equal, Detailed, DimensionError) is true
+	Comparison(InstructionType.Equal, Hashed, VmValue("Strict/HashCode(Texts)", 0, "", Hashed.items)) is true
 	if kind is InstructionType.Equal
 		return Comparable(left) is Comparable(right)
 	if kind is InstructionType.NotEqual
@@ -19,8 +21,11 @@ Comparison(kind Number, left VmValue, right VmValue) Boolean
 Comparable(operand VmValue) VmValue
 	Comparable(Detailed) is DimensionError
 	Comparable(VmValue.Failed) is VmValue.OfError("x")
-	let error = operand.kind is "Strict/ErrorWithValue" then operand.items.First else operand
-	error.kind is "Strict/Error" then VmValue.OfError(error.items.First.text) else error
+	let compared = operand.kind is "Strict/ErrorWithValue" then operand.items.First else operand
+	if compared.kind is "Strict/Error"
+		return VmValue.OfError(compared.items.First.text)
+	let open = compared.items.Length is 0 then -1 else compared.kind.IndexOf("(")
+	open > 0 then VmValue(compared.kind.Substring(0, open), compared.number, compared.text, compared.items) else compared
 Calculated(kind Number, left VmValue, right VmValue) VmValue
 	Calculated(InstructionType.Modulo, VmValue.OfNumber(7), VmValue.OfNumber(4)).number is 3
 	Calculated(InstructionType.Multiply, OneTwo, OneTwo).Length is 2

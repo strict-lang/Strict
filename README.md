@@ -211,7 +211,9 @@ to Type
 to Text
 to HashCode
 is(other) Boolean
+Members Variables
 ```
+`Members` gives every stored member as a `Variable` (name, type and current value), `to HashCode` combines the hash codes of the members, the compiler writes both for a type when they are used.
 
 A character is just a number, one byte of a text: texts are UTF-8, so letters outside of ASCII take several characters. It can be created from a single letter text or from its value:
 ```

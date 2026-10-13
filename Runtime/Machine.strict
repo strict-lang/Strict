@@ -49,7 +49,7 @@ Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmVal
 	let start = Frame.MembersSlot + type.members.Length
 	let end = start + method.parameters.Length
 	let isSame = type.Name is instance.kind
-	let ownership = isSame then 2 else Natives.IsNamed(type, instance.kind, Natives.Short(instance.kind)) then 1 else 0
+	let ownership = isSame then 2 else IsOwned(type, instance.kind) then 1 else 0
 	let indexed = Indexed(method, arguments)
 	for end > method.Slots then end else method.Slots
 		let found = index < start then Member(type, instance, index, ownership, prototype) else VmValue.None
@@ -85,14 +85,17 @@ MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 	Hello.MemberValue(Wrapper, VmValue.OfError("a"), 0).kind is "Strict/Error"
 	Hello.MemberValue(Wrapper, VmValue.OfError("a"), 1).number is 7
 	Hello.MemberValue(TypeEntry.CharacterEntry, VmValue.OfText("a"), 0).number is 97
+	Hello.MemberValue(Paired, VmValue("Strict/Pair(Number)", 0, "", (VmValue.None, VmValue.OfNumber(2))), 1).number is 2
 	let member = owner.members(index)
 	if member.IsConstant
 		return Natives(types).Initial(member)
 	if owner.Name is instance.kind
 		return instance.Member(index)
-	let natives = Natives(types)
-	let isOwner = natives.IsNamed(owner, instance.kind, natives.Short(instance.kind))
-	isOwner then instance.Member(index) else instance.As(member.typeName)
+	IsOwned(owner, instance.kind) then instance.Member(index) else instance.As(member.typeName)
+IsOwned(type TypeEntry, kind Text) Boolean
+	Hello.IsOwned(Paired, "Strict/Pair(Number)") is true
+	Hello.IsOwned(Paired, "Strict/Other") is false
+	TypeEntry.ShortName(type.Name).Split("(").First is TypeEntry.ShortName(kind).Split("(").First
 Execute(method MethodEntry, locals List(VmValue), owner Text) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
 	let slots = Frame(value, method, owner).Finished(locals)

@@ -8,16 +8,15 @@ constant Mixed = SyntaxParser(Tokenizer("Couple(\"a\", 2)").Tokens).Parse
 Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Pairing.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
 	Pairing.Name(SyntaxNode("Call", "Text"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
+	Pairing.Name(SyntaxNode("Call", "Couple"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Implicit.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
 	let explicit = types.ParametersOf(node.text, "from types", node.children.Length)
 	let declared = explicit.Length is node.children.Length then explicit else types.MembersOf(node.text).types
-	if "Generic" is not in declared
-		return ""
 	mutable arguments = List(Mutable(Text))
 	for declared
 		if (value is "Generic") and (index < node.children.Length)
 			arguments.Add(inference.TypeOf(node.children(index), scope, current))
-	node.text + "(" + Text.Combine(arguments, ", ") + ")"
+	arguments.Length is 0 then "" else node.text + "(" + Text.Combine(arguments, ", ") + ")"
 Argument(instanceType Text, name Text) Text
 	Pairing.Argument("Couple(Text, Number)", "second") is "Number"
 	Pairing.Argument("Couple(Text, Number)", "first") is "Text"

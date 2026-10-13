@@ -3,11 +3,13 @@ from(generic)
 	HashCode(5) is 5
 	HashCode("abc") is 96354
 	HashCode((1, 2)) is 33
+	HashCode(Type("Number", "Strict")) is HashCode(("Number", "Strict"))
 	if generic is
 		Number then generic
 		Character then generic.number
 		Iterator then Combined(generic)
-		else HashCode(generic to Text).number
+		Boolean then (generic then 1 else 0)
+		else (generic to HashCode).number
 Combined(elements Generic) Number
 	HashCode((1, 2)).Combined((3, 4)) is 97
 	mutable hash = 0

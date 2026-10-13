@@ -18,13 +18,14 @@ Linked(entries List(TypeEntry), signatures Texts, depth Number) List(TypeEntry)
 		return entries
 	let targets = Targets(entries)
 	let signed = Signatures(Linkable(BaseTypes(entries, targets)), targets)
-	let linked = Entries(entries, signatures, signed)
+	let linked = Entries(entries, signatures, signed, targets)
 	if (linked.Length is entries.Length) and (Targets(linked).Length is targets.Length)
 		return linked
 	Linked(linked, signed, depth - 1)
-Entries(entries List(TypeEntry), signatures Texts, signed Texts) List(TypeEntry)
-	Sample.Entries(Go, List(Text), List(Text)).Length is 1
-	mutable linked = List(TypeEntry) + entries.First
+Entries(entries List(TypeEntry), signatures Texts, signed Texts, targets Texts) List(TypeEntry)
+	Sample.Entries(Go, List(Text), List(Text), List(Text)).Length is 1
+	let automatic = Automatic(main.lines, TypeEntry.ShortName(main.fullName), Instantiation(main.inference.types))
+	mutable linked = List(TypeEntry) + automatic.Completed(main, entries.First, targets)
 	for signed
 		let known = signatures.Index(value)
 		linked = linked + (known < 0 then Fresh(value) else entries(known + 1))
@@ -49,7 +50,8 @@ LinkedType(type Text, methods Texts) TypeEntry
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
 	let source = File(SourcePath(type)).ReadLines
-	let entry = TypeCodegen(type, source, main.inference, main.typeNames).Selected(methods)
+	let automatic = Automatic(source, TypeEntry.ShortName(type), Instantiation(main.inference.types)).Lines(methods)
+	let entry = TypeCodegen(type, automatic, main.inference, main.typeNames).Selected(methods)
 	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
 	isLocal then TypeEntry(Path(type).FileName.text, entry.members, entry.methods) else entry
 BaseTypes(entries List(TypeEntry), targets Texts) Texts
@@ -66,10 +68,12 @@ BaseTypes(entries List(TypeEntry), targets Texts) Texts
 UsedMethods(targets Texts, type Text) Texts
 	Sample.UsedMethods(("Strict/B.Go"), "Strict/B") is ("Go")
 	Sample.UsedMethods(("Strict/Range.Count"), "Strict/Range") is ("Count")
+	Sample.UsedMethods(("Strict/B.Go", "Strict/C.Go", "Strict/B.to Text"), "Strict/B") is ("Go", "to Text")
+	Sample.UsedMethods(("Strict/Number.to Text", "Strict/Number.Floor"), "Strict/Number") is ("Floor")
+	let prefix = type + "."
 	for targets
-		let method = value.Substring(value.LastIndexOf(".") + 1, value.Length - value.LastIndexOf(".") - 1)
-		if value.StartsWith(type + ".") and (not IsNative(type, method))
-			method
+		if value.StartsWith(prefix) and (IsNative(type, value.Split(".").Last) is false)
+			value.Substring(prefix.Length, value.Length - prefix.Length)
 IsNative(type Text, method Text) Boolean
 	Sample.IsNative("Strict/Text", "Upper") is false
 	Sample.IsNative("Strict/Range", "Length") is false
@@ -81,7 +85,8 @@ IsNative(type Text, method Text) Boolean
 		return false
 	if (method is in ("Length", "Count")) or (SourceName(type) is "Dictionary")
 		return SourceName(type) is in ("Text", "List", "File", "Dictionary")
-	(method is in Natives) and ((method is not "to") or TypeEntry.IsBaseName(TypeEntry.ShortName(type)))
+	let name = method.Split(" ").First
+	(name is in Natives) and ((name is not "to") or TypeEntry.IsBaseName(TypeEntry.ShortName(type)))
 SourceName(type Text) Text
 	Sample.SourceName("Strict/List(Number)") is "List"
 	Sample.SourceName("Strict/Process") is "Process"
