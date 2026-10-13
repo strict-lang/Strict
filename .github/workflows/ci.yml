@@ -46,3 +46,54 @@ jobs:
               fi
             done
           done
+  windows:
+    runs-on: windows-latest
+    env:
+      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing Expressions ImageProcessing Math NeuralNetworks Runtime Validators
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        id: llvm
+        with:
+          path: Tools/LLVM-22.1.0-Windows
+          key: llvm-22.1.0-windows-clang
+      - name: clang 22
+        if: steps.llvm.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p Tools/LLVM-22.1.0-Windows
+          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/clang+llvm-22.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xJ -C Tools/LLVM-22.1.0-Windows --strip-components=2 clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/clang.exe
+      - name: mlir-opt and mlir-translate from MSYS2
+        run: |
+          /c/msys64/usr/bin/pacman.exe -Sy --noconfirm --needed mingw-w64-ucrt-x86_64-mlir
+          cygpath -w "$PWD/Tools/LLVM-22.1.0-Windows" >> "$GITHUB_PATH"
+      - name: Bootstrap from the seed
+        shell: cmd
+        run: Compiler\Bootstrap.cmd
+      - name: Self build until the fixpoint
+        run: |
+          for stage in 1 2 3; do
+            rm -f Strict.strictbinary
+            ./strict.exe build Strict.strict
+            cp Strict.mlir stage$stage.mlir
+          done
+          cmp stage2.mlir stage3.mlir
+      - name: Tests on the Strict VM
+        run: |
+          for folder in $FOLDERS; do
+            ./strict.exe test "$folder" > test.log 2>&1 || { grep -v "^Test passed" test.log; exit 1; }
+          done
+      - name: Native builds and tests
+        run: |
+          for folder in $FOLDERS; do
+            for file in "$folder"/*.strict; do
+              ./strict.exe build "$file" > build.log 2>&1 || { grep -v "^Test passed" build.log; exit 1; }
+              base="${file%.strict}"
+              if [ -f "$base.test.exe" ]; then
+                "./$base.test.exe" > run.log 2>&1 || { grep -v "^Test passed" run.log; exit 1; }
+                rm -f "$base.test.exe" "$base.test.mlir" "$base.test"
+              fi
+            done
+          done

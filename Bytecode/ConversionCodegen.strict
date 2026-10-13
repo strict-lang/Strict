@@ -9,6 +9,7 @@ constant Pixels = SyntaxNode("Identifier", "pixels")
 constant Kinded = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Kind", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "to", List(Text) + "Text"), List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant Stepped = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Step", List(Scope) + Scope(List(Text) + "step", List(Text) + "Number"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant Mapped = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Dictionary", List(Scope) + Scope(List(Text) + "keysAndValues", List(Text) + "List(key Generic, mappedValue Generic)"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
+constant Typing = SyntaxParser(Tokenizer("5 to Type").Tokens).Parse
 constant HelperType = SyntaxParser(Tokenizer("\"Helper\" to Type").Tokens).Parse
 constant Nesting = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), SyntaxNode("List", "", (ValueCodegen.One, ValueCodegen.One))))
 constant Pixelated = CodeBlock.Empty.Declare("pixels", "ColorValues")
@@ -53,14 +54,20 @@ Changed(node SyntaxNode, converter Text, type Text) SyntaxNode
 	if converter is "to"
 		return SyntaxNode("Binary", "to", (node, SyntaxNode("Identifier", type)))
 	converter is "from" then SyntaxNode("Call", type, node) else node
-Typed(node SyntaxNode) SyntaxNode
-	Plain.Typed(SyntaxParser(Tokenizer("\"Number\" to Type").Tokens).Parse) to Text is "Type(\"Number\", \"Strict\")"
-	Plain.Typed(HelperType) to Text is "Type(\"Helper\", \"Strict/Examples\")"
-	Plain.Typed(ValueCodegen.ToText) is ValueCodegen.ToText
-	let isNamed = (node.Kind is "Binary") and (node.text is "to") and (node.children(0).Kind is "Text")
-	if (isNamed is false) or (node.children(1).text is not "Type")
+Typed(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Typed(HelperType, CodeBlock.Empty) to Text is "Type(\"Helper\", \"Strict/Examples\")"
+	Plain.Typed(ValueCodegen.ToText, CodeBlock.Empty) is ValueCodegen.ToText
+	Plain.Typed(Typing, CodeBlock.Empty) to Text is "Type(\"Number\", \"Strict\")"
+	let isType = (node.Kind is "Binary") and (node.text is "to") and (node.children(1).text is "Type")
+	if isType is false
 		return node
-	let full = values.target.FullName(node.children(0).Unquoted)
+	let source = node.children(0)
+	if source.Kind is "Text"
+		return TypeValue(values.target.FullName(source.Unquoted))
+	let known = values.TypeOf(source, block)
+	known is "Text" then node else TypeValue(values.target.FullName(known))
+TypeValue(full Text) SyntaxNode
+	Plain.TypeValue("Strict/Number") to Text is "Type(\"Number\", \"Strict\")"
 	let split = full.LastIndexOf("/")
 	let name = SyntaxNode("Text", "\"" + full.Substring(split + 1, full.Length - split - 1) + "\"")
 	SyntaxNode("Call", "Type", (name, SyntaxNode("Text", "\"" + full.Substring(0, split) + "\"")))

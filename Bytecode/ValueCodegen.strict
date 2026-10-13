@@ -20,7 +20,7 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Binary", ">=", (One, NoNode)), CodeBlock.Empty).instructions.Length is 5
 	Plain.Expression(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 9
 	Plain.Expression(SyntaxNode("Identifier", "Error"), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
-	let folded = ConversionCodegen(value).Typed(ConstantFolding(target.TypeName, inference).Folded(node))
+	let folded = ConversionCodegen(value).Typed(ConstantFolding(target.TypeName, inference).Folded(node), block)
 	if folded.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
 		return Leaf(folded, block)
 	if (folded.Kind is in ("Call", "Member", "MethodCall", "Not")) or (folded.text is "to")

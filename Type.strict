@@ -1,4 +1,6 @@
 has Name
 has Package Text
 to Text
+	(5 to Type) to Text is "Strict.Number"
+	("Text" to Type) to Text is "Strict.Text"
 	Package + "." + Name
