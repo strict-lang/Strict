@@ -10,12 +10,15 @@ constant AddOther = HeaderTokens("Add", "(", "other", ")")
 Statements ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Length is 2
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.line is 3
+	MethodBodies("Demo", TypeShape("has a Number", "constant Twice = a * 2"), NoInference).Statements.Last.line is 1
 	let members = shape.MemberScope
 	mutable statements = List(Mutable(ScopedStatement))
 	for shape.lines
 		if shape.IsMethodHeader(value)
 			let parameters = HeaderScope(HeaderTokens(Tokenizer(value).Tokens), members)
 			statements = statements + Flatten(BodyParser(shape.lines).Method(index + 1), parameters, index + 1)
+		if value.StartsWith("constant ") and (value.IndexOf(" = ") > 0)
+			statements.Add(ScopedStatement(BodyParser(shape.lines).Statement(index, 0), members, index))
 	statements
 HeaderScope(header HeaderTokens, members Scope) Scope
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(AddOther, NoScope).TypeOf("other") is "Demo"
