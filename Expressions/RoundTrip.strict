@@ -19,3 +19,14 @@ CheckBody(lines Texts, start Number, path Text) Number
 			logger.Log(path + ": " + lines(start + index) + " => " + value)
 			mismatches = mismatches + 1
 	mismatches
+Formatted(lines Texts) Texts
+	RoundTrip.Formatted(("Run", "	let x=(1,2)")) is ("Run", "	let x = (1, 2)")
+	RoundTrip.Formatted(("has number ", "Twice Number", "	number*2")) is ("has number", "Twice Number", "	number * 2")
+	let shape = TypeShape(lines)
+	mutable formatted = List(Mutable(Text))
+	for lines
+		if value.StartsWith("	") is false
+			formatted.Add(value.Trim)
+			if shape.IsMethodHeader(value)
+				formatted = formatted + BodyParser(lines).Block(index + 1, 1).Lines("	")
+	formatted
