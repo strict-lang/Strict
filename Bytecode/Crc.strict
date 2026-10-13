@@ -13,10 +13,10 @@ Table Numbers
 	Crc(1).Table.Last is 7.55167117e8
 	for 256
 		Entry(index)
-Entry(index Number) Number
+Entry(position Number) Number
 	Crc(1).Entry(1) is 1.996959894e9
 	Crc(1).Entry(255) is 7.55167117e8
-	mutable entry = index
+	mutable entry = position
 	for 8
 		entry = entry % 2 is 1 then (Polynomial xor (entry / 2).Floor) else (entry / 2).Floor
 	entry
