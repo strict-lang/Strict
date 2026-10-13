@@ -25,16 +25,20 @@ Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 	Shapes.Keyed("get", Pairs, List(VmValue) + VmValue.OfNumber(2)).number is 4
 	Shapes.Keyed("Add", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))) is VmValue.OfError("DuplicateKey")
 	Shapes.Keyed("Remove", Pairs, List(VmValue) + VmValue.OfNumber(1)).Length is 1
+	Shapes.Keyed("set", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))).items.Last.items.Last.number is 5
 	let found = pairs.KeyIndex(arguments.First)
 	if name is "in"
 		return VmValue.OfBoolean(found >= 0)
 	if name is "get"
 		return found >= 0 then pairs.items(found).items.Last else VmValue.OfError("KeyNotFound")
-	if name is "Remove"
-		return found >= 0 then Unpaired(pairs, found) else pairs
-	found >= 0 then VmValue.OfError("DuplicateKey") else VmValue.OfList(pairs.items + VmValue.OfList(arguments))
-Unpaired(pairs VmValue, position Number) VmValue
-	Shapes.Unpaired(Pairs, 0).items.First.items.First.number is 2
+	if found < 0
+		return name is "Remove" then pairs else VmValue.OfList(pairs.items + VmValue.OfList(arguments))
+	name is "Add" then VmValue.OfError("DuplicateKey") else Changed(name, pairs, found, arguments)
+Changed(name Text, pairs VmValue, position Number, arguments List(VmValue)) VmValue
+	Shapes.Changed("Remove", Pairs, 0, List(VmValue) + VmValue.OfNumber(1)).items.First.items.First.number is 2
+	Shapes.Changed("set", Pairs, 0, (VmValue.OfNumber(1), VmValue.OfNumber(5))).items.First.items.Last.number is 5
+	if name is "set"
+		return VmValue.OfList(Storage(types).Replaced(pairs.items, position, VmValue.OfList(arguments)))
 	mutable kept = List(Mutable(VmValue))
 	for pairs.items
 		if index is not position

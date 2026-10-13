@@ -29,6 +29,13 @@ Add(key Generic, mappedValue Generic) Mutable(Dictionary)
 	Dictionary((2, 4)).Add(4, 8) is Dictionary((2, 4), (4, 8))
 	Dictionary((1, 1), (2, 2)).Add(3, 3).Length is 3
 	in(key) then DuplicateKey else keysAndValues.Add((key, mappedValue))
+set(key Generic, mappedValue Generic) Mutable(Dictionary)
+	Dictionary((1, 1), (2, 2)).set(1, 3) is Dictionary((1, 3), (2, 2))
+	Dictionary((1, 1)).set(2, 4) is Dictionary((1, 1), (2, 4))
+	if in(key) is false
+		return Add(key, mappedValue)
+	for keysAndValues
+		value.Key is key then (key, mappedValue) else value
 Remove(key Generic) Mutable(Dictionary)
 	Dictionary((1, 1), (2, 2)).Remove(1).Length is 1
 	keysAndValues.Remove((key, get(key)))

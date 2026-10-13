@@ -55,7 +55,7 @@ Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Statement(SyntaxNode("Return", "", One), CodeBlock.Empty, false).instructions.Length is 2
 	let block = ListCodegen(values).Disowned(node, previous, false)
 	if node.Kind is in ("Declaration", "Reassignment")
-		return Assignment(node, block)
+		return Assignment(IndexCodegen(values).Keyed(node, block), block)
 	if node.Kind is in ("If", "ElseIf", "Else")
 		return node.Kind is "If" then Conditional(node, block, hasElse, "") else Else(node, block, hasElse)
 	if node.Kind is "For"

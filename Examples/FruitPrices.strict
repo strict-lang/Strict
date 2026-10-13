@@ -10,3 +10,11 @@ Without(fruit Text) Dictionary(Text, Number)
 	fruits.Without("Pear").Length is 2
 	fruits.prices("Pear") is 2
 	prices.Remove(fruit)
+Raised(fruit Text, amount Number) Dictionary(Text, Number)
+	FruitPrices(Dictionary(("Pear", 2))).Raised("Plum", 5) is Dictionary(("Pear", 2), ("Plum", 5))
+	constant fruits = FruitPrices(Dictionary(("Apple", 3), ("Pear", 2)))
+	fruits.Raised("Apple", 1) is Dictionary(("Apple", 4), ("Pear", 2))
+	fruits.prices("Apple") is 3
+	mutable raised = prices
+	raised(fruit) = (fruit is in raised then raised(fruit) else 0) + amount
+	raised

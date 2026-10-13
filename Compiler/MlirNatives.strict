@@ -46,7 +46,9 @@ CollectionHelper(kind Text, name Text, count Number) Text
 DictionaryHelper(name Text) Text
 	MlirNatives(Texts, 1).DictionaryHelper("in") is "strict_dictionary_has"
 	MlirNatives(Texts, 1).DictionaryHelper("to") is ""
-	name is in ("in", "get", "Add", "Remove") then "strict_dictionary_" + (name is "in" then "has" else name.Lower) else ""
+	MlirNatives(Texts, 1).DictionaryHelper("set") is "strict_dictionary_set"
+	let isKeyed = name is in ("in", "get", "set", "Add", "Remove")
+	isKeyed then "strict_dictionary_" + (name is "in" then "has" else name.Lower) else ""
 Keyed(kind Text) Texts
 	MlirNatives(Texts, 1).Keyed("Strict/Dictionary(Text, Number)") is ("strict_hash_text", "strict_text_equal")
 	MlirNatives(Texts, 1).Keyed("Dictionary(Text, Text)") is ("strict_hash_text", "strict_text_equal")

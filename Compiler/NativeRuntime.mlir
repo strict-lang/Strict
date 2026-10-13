@@ -2528,6 +2528,41 @@
     %result = func.call @strict_list_add(%dictionary, %pair) : (f64, f64) -> f64
     return %result : f64
   }
+  func.func private @strict_dictionary_set(%dictionary: f64, %key: f64, %value: f64, %hash: (f64) -> i64, %equal: (f64, f64) -> f64) -> f64 {
+    %none = arith.constant -1 : i64
+    %nothing = arith.constant 0.0 : f64
+    %position = func.call @strict_dictionary_find(%dictionary, %key, %hash, %equal) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> i64
+    %single = func.call @strict_list_add(%nothing, %key) : (f64, f64) -> f64
+    %pair = func.call @strict_list_add(%single, %value) : (f64, f64) -> f64
+    %found = arith.cmpi ne, %position, %none : i64
+    cf.cond_br %found, ^replace, ^append
+  ^replace:
+    %view = func.call @strict_ptr(%dictionary) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %indexSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %indexBits = llvm.load %indexSlot : !llvm.ptr -> f64
+    %at = arith.sitofp %position : i64 to f64
+    %written = func.call @strict_list_write(%dictionary, %at, %pair) : (f64, f64, f64) -> f64
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %used = llvm.load %usedSlot : !llvm.ptr -> f64
+    %inPlace = arith.cmpf olt, %used, %nothing : f64
+    cf.cond_br %inPlace, ^keepIndex, ^done(%written : f64)
+  ^keepIndex:
+    %newView = func.call @strict_ptr(%written) : (f64) -> !llvm.ptr
+    %newHolderSlot = llvm.getelementptr %newView[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %newHolderBits = llvm.load %newHolderSlot : !llvm.ptr -> f64
+    %newHolder = func.call @strict_ptr(%newHolderBits) : (f64) -> !llvm.ptr
+    %newIndexSlot = llvm.getelementptr %newHolder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %indexBits, %newIndexSlot : f64, !llvm.ptr
+    cf.br ^done(%written : f64)
+  ^append:
+    %appended = func.call @strict_list_add(%dictionary, %pair) : (f64, f64) -> f64
+    cf.br ^done(%appended : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   func.func private @strict_dictionary_remove(%dictionary: f64, %key: f64, %hash: (f64) -> i64, %equal: (f64, f64) -> f64) -> f64 {
     %none = arith.constant -1 : i64
     %zero = arith.constant 0.0 : f64

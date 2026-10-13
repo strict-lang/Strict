@@ -10,6 +10,7 @@ constant PrimeCall = SyntaxNode("MethodCall", "Primes", (SyntaxNode("Identifier"
 constant Looped = BodyParser("Run", "\tfor 3", "\t\tvalues(index + 1) = 5").Block(1, 1)
 constant Computed = BodyParser("Run", "\tvalues(index + 1) = 5").Block(1, 1)
 constant Named = CodeBlock.Empty.Declare("named", "Dictionary(Text, Number)")
+constant KeyedWrite = BodyParser("Run", "\tnamed(\"a\") = 1").Block(1, 1).children(0)
 IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty) is true
 	Plain.IsIndexing(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is false
@@ -45,6 +46,15 @@ Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 		return values.Expression(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
 	let isError = isCall and (block.scope.TypeOf(node.text) is "Error")
 	isError then WithValue(node, block) else Element(node, block)
+Keyed(statement SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Keyed(KeyedWrite, Named) to Text is "named = named.set(\"a\", 1)"
+	Plain.Keyed(Computed.children(0), Named) is Computed.children(0)
+	let target = statement.Kind is "Reassignment" then statement.children(0) else One
+	let named = SyntaxNode("Identifier", target.text)
+	if (target.Kind is not "Call") or (values.TypeOf(named, block).StartsWith("Dictionary(") is false)
+		return statement
+	let set = SyntaxNode("MethodCall", "set", (named, target.children.Last, statement.children(1)))
+	SyntaxNode("Reassignment", statement.text, (named, set), statement.line)
 WithValue(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions(0).texts is ("failed")
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions.Last.texts.Last is "Value"
