@@ -3,7 +3,7 @@ A multilayer perceptron written in Strict, the use case for measuring parallel l
 
 Start with `Xor.strict` (2-3-1 neurons learn XOR in 11 ms natively), then `Iris.strict`: `strict build NeuralNetworks/Iris.strict` (from the repository root) trains 4-8-3 neurons for 200 epochs and reaches 97% test accuracy in 25 ms natively, 2.4 s on the Strict VM. `Diabetes.strict` learns a quarter of the UCI Diabetic Retinopathy Debrecen data (288 rows, 19 features), 60-64% in 80 ms.
 
-`LogicGates.strict` starts even simpler, with single neurons (`Perceptron`, a step output like the saturated sigmoid of AiInvest): Or, And, Nor and Nand are learned from zero weights in 3 to 5 epochs, Xor needs a hidden layer and is built from an Or and a Nand neuron feeding an And neuron.
+`LogicGates.strict` starts even simpler, with single neurons (`Perceptron`, a step output like the saturated sigmoid of AiInvest): Or, And, Nor and Nand are learned from zero weights in 3 to 5 epochs, Xor needs a hidden layer and is built from an Or and a Nand neuron feeding an And neuron. `LinearRegression.strict` fits a line to 10 points by gradient descent on the mean squared error and lands on the exact least squares line (y = 2.0006 x + 1.0273).
 
 `Activation` gives a layer Sigmoid (the default), Tanh, Relu, LeakyRelu or Softplus with the derivative backpropagation needs: `Network.Random((4, 8, 3), Activation.Tanh)` uses it for the hidden layers. `ActivationComparison.strict` trains Iris with each of them: 97-100% test accuracy in about 25 ms natively, except plain Relu (33-67%, its neurons die at learning rate 0.25, which LeakyRelu avoids).
 

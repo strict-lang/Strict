@@ -1,0 +1,45 @@
+has logger
+constant Inputs = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+constant Targets = (1.1, 2.9, 5.2, 6.8, 9.1, 11, 13.2, 14.9, 17.1, 19)
+constant Rate = 0.02
+Run
+	logger.Log("Gradient descent: " + Described(Fitted((0, 0), 2000)))
+	logger.Log("Least squares:    " + Described(Exact))
+Described(line Numbers) Text
+	LinearRegression.Described((2, 1)) is "y = 2 x + 1, error 0.017"
+	"y = " + line(0).Round(4) + " x + " + line(1).Round(4) + ", error " + Error(line).Round(4)
+Fitted(line Numbers, steps Number) Numbers
+	Error(LinearRegression.Fitted((0, 0), 100)) < Error((0, 0)) is true
+	mutable current = line
+	for steps
+		current = Stepped(current)
+	current
+Stepped(line Numbers) Numbers
+	LinearRegression.Stepped((2, 1)).Length is 2
+	mutable slope = 0
+	mutable intercept = 0
+	for Inputs
+		let difference = Difference(line, index)
+		slope = slope + 2 * difference * value / Inputs.Length
+		intercept = intercept + 2 * difference / Inputs.Length
+	(line(0) - Rate * slope, line(1) - Rate * intercept)
+Difference(line Numbers, position Number) Number
+	LinearRegression.Difference((2, 1), 0).Round(1) is -0.1
+	line(0) * Inputs(position) + line(1) - Targets(position)
+Error(line Numbers) Number
+	LinearRegression.Error((2, 1)).Round(3) is 0.017
+	mutable sum = 0
+	for Inputs
+		let difference = Difference(line, index)
+		sum = sum + difference * difference
+	sum / Inputs.Length
+Exact Numbers
+	LinearRegression.Exact.First.Round(4) is 2.0006
+	let meanInput = Inputs.Sum / Inputs.Length
+	let meanTarget = Targets.Sum / Targets.Length
+	mutable covariance = 0
+	mutable variance = 0
+	for Inputs
+		covariance = covariance + (value - meanInput) * (Targets(index) - meanTarget)
+		variance = variance + (value - meanInput) * (value - meanInput)
+	(covariance / variance, meanTarget - covariance / variance * meanInput)
