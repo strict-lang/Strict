@@ -9,17 +9,33 @@ constant TwiceCall = ScopedStatement(SyntaxParser(Tokenizer("count.Twice").Token
 constant MissingCall = ScopedStatement(SyntaxParser(Tokenizer("count.Missing").Tokens).Parse, Counted, 0)
 constant Untested = ("Twice(number Number) Number", "\tTwice(2) is 4")
 constant OtherName = ScopedStatement(SyntaxParser(Tokenizer("count + other").Tokens).Parse, Counted, 0)
+constant Flagged = Scope(List(Text) + "flag", List(Text) + "Boolean")
+constant FlagLoop = ScopedStatement(StatementParser(Tokenizer("for flag").Tokens).ParseStatement, Flagged, 0)
 Unknown(scoped ScopedStatement, current Scope) Text
 	Counting.Unknown(TwiceCall, KnownTypes.NoMembers) is ""
 	Counting.Unknown(MissingCall, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Counting.Unknown(OtherName, KnownTypes.NoMembers) is "NameNotFound: other"
+	Counting.Unknown(FlagLoop, KnownTypes.NoMembers).StartsWith("NotIterable: flag is a Boolean") is true
 	if scoped.statement.Kind is "Invalid"
 		return scoped.statement.text
 	let names = UnknownNames(scoped.statement, known + scoped.scope.names + ValueNames(scoped.scope))
 	if names.Length > 0
 		return "NameNotFound: " + names.First
 	let methods = UnknownMethods(scoped.statement, scoped.scope, current)
-	methods.Length is 0 then "" else "MethodNotFound: " + methods.First
+	methods.Length > 0 then "MethodNotFound: " + methods.First else NotIterable(scoped, current)
+NotIterable(scoped ScopedStatement, current Scope) Text
+	Counting.NotIterable(FlagLoop, KnownTypes.NoMembers) is "NotIterable: flag is a Boolean, use for as long as flag"
+	Counting.NotIterable(TwiceCall, KnownTypes.NoMembers) is ""
+	let loop = scoped.statement
+	if (loop.Kind is not "For") or (loop.HasValue is false) or (loop.text is "for as long as")
+		return ""
+	let type = inference.TypeOf(loop.children(0), scoped.scope, current)
+	let element = inference.types.ElementType(type)
+	let iterated = inference.types.ElementType(inference.types.MethodsOf(type).TypeOf("for"))
+	if (element is not "Unknown") or (iterated is not "Unknown") or (type is in ("Unknown", "Generic", "Generics"))
+		return ""
+	let hint = type is "Boolean" then ", use for as long as " + loop.children(0) else ""
+	"NotIterable: " + loop.children(0) + " is a " + type + hint
 UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 	Counting.UnknownMethods(MissingCall.statement, Counted, KnownTypes.NoMembers) is ("Count.Missing")
 	mutable unknown = List(Mutable(Text))

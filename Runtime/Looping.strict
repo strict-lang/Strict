@@ -18,12 +18,13 @@ Iterated(loop VmValue, iteration Number) VmValue
 	let counted = VmValue.OfNumber(iteration)
 	let element = Element(loop, iteration)
 	VmValue.OfList(loop, counted, loop.number > 0 then counted else element, element)
-Ended(state VmValue) VmValue
-	Ended(Counting).items(2).number is 1
-	Ended(Ended(Ended(Counting))).kind is "None"
+Ended(state VmValue, isStopped Boolean) VmValue
+	Ended(Counting, false).items(2).number is 1
+	Ended(Ended(Ended(Counting, false), false), false).kind is "None"
+	Ended(Counting, true).kind is "None"
 	let loop = state.items(0)
 	let next = state.items(1).number + 1
-	next >= loop.items(4).number then loop.items(5) else Iterated(loop, next)
+	isStopped or (next >= loop.items(4).number) then loop.items(5) else Iterated(loop, next)
 Next(state VmValue, position Number, begin Number) Number
 	Next(Counting, 9, 7) is 8
 	Next(VmValue.None, 9, 7) is 10

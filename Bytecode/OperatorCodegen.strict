@@ -112,6 +112,11 @@ Contains(node SyntaxNode, block CodeBlock) CodeBlock
 Condition(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Condition(SyntaxNode("Boolean", "true"), CodeBlock.Empty).nextId is 1
 	Plain.Condition(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 4
+	let compared = Compared(node, block)
+	compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
+Compared(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Compared(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 3
+	Plain.Compared(NoNode, CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
 	let isCompared = (node.Kind is "Binary") and (node.text is in ("is", "is not", "<", ">"))
 	let isComparison = isCompared and (Decided(node, block) is "")
 	let operand = isComparison then node.children(0) else node
@@ -119,8 +124,7 @@ Condition(node SyntaxNode, block CodeBlock) CodeBlock
 	let truth = InstructionEntry.LoadBoolean(left.register, true)
 	let right = isComparison then values.Expression(node.children(1), left) else left.Load(truth)
 	let type = isComparison then OperatorType(node.text) else InstructionType.Equal
-	let compared = right.Add(InstructionEntry.Binary(type, (left.Result, right.Result)))
-	compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
+	right.Add(InstructionEntry.Binary(type, (left.Result, right.Result)))
 OperatorType(operator Text) Number
 	Plain.OperatorType("*") is InstructionType.Multiply
 	Plain.OperatorType("is not") is InstructionType.NotEqual

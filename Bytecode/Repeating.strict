@@ -1,0 +1,20 @@
+has values ValueCodegen
+constant Plain = Repeating(ValueCodegen.Plain)
+constant Countdown = BodyParser("Run", "\tfor as long as x > 0", "\t\tx").Block(1, 1).children(0)
+constant Counting = MethodCodegen.LoopBody.children(0)
+Rewritten(loop SyntaxNode) SyntaxNode
+	Plain.Rewritten(Countdown).children(0) to Text is "x > 0 then 1000000000000000 else 0"
+	Plain.Rewritten(Counting) is Counting
+	if loop.text is not "for as long as"
+		return loop
+	let endless = SyntaxNode("Binary", "then", (loop.children(0), SyntaxNode("Number", "1000000000000000")))
+	let count = SyntaxNode("Binary", "else", (endless, SyntaxNode("Number", "0")))
+	SyntaxNode("For", loop.text, (count, loop.children.Last), loop.line)
+Ended(loop SyntaxNode, looped CodeBlock, start CodeBlock) CodeBlock
+	Plain.Ended(Countdown, CodeBlock.Empty, CodeBlock.Empty).instructions.Last.payload is (3, -1)
+	Plain.Ended(Counting, CodeBlock.Empty, CodeBlock.Empty).instructions.Last.payload is (0)
+	let isRepeated = loop.text is "for as long as"
+	let checked = isRepeated then OperatorCodegen(values).Compared(loop.children(0), looped) else looped
+	let offset = ByteEncoder.Empty.SevenBit(checked.instructions.Length - start.instructions.Length).bytes
+	let end = InstructionEntry(InstructionType.LoopEnd, List(Text), isRepeated then offset + -1 else offset)
+	CodeBlock(checked.instructions + end, checked.register, checked.nextId, start.scope)

@@ -7,14 +7,22 @@ ParseStatement SyntaxNode
 	StatementParser(Tokenizer("x.y = 2").Tokens).ParseStatement to Text is "x.y = 2"
 	StatementParser(Tokenizer("return a then b else c").Tokens).ParseStatement to Text is "return a then b else c"
 	StatementParser(Tokenizer("else if a is 1").Tokens).ParseStatement to Text is "else if a is 1"
+	StatementParser(Tokenizer("for as long as a").Tokens).ParseStatement to Text is "for as long as a"
 	let first = tokens(0)
 	if first is in ("let", "constant", "mutable")
 		return SyntaxNode("Declaration", first + " " + tokens(1), Rest(3))
-	if first is in ("return", "if", "for")
-		return tokens.Length is 1 then SyntaxNode(first.Capitalize, first) else SyntaxNode(first.Capitalize, "", Rest(1))
+	first is in ("return", "if", "for", "else") then Keyword(first) else ParseAssignmentOrExpression
+Keyword(first Text) SyntaxNode
+	StatementParser(Tokenizer("for as long as a").Tokens).Keyword("for").text is "for as long as"
+	StatementParser("return").Keyword("return").Kind is "Return"
 	if first is "else"
 		return ParseElse
-	ParseAssignmentOrExpression
+	if tokens.Length is 1
+		return SyntaxNode(first.Capitalize, first)
+	let isWhile = (first is "for") and (tokens.Length > 4) and (tokens(1) is "as") and (tokens(3) is "as")
+	if isWhile and (tokens(2) is "long")
+		return SyntaxNode("For", "for as long as", Rest(4))
+	SyntaxNode(first.Capitalize, "", Rest(1))
 Rest(start Number) SyntaxNodes
 	StatementParser("return", "1").Rest(1).Length is 1
 	Syntax.Single(Syntax.ParseRange(start, tokens.Length))

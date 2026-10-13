@@ -7,6 +7,7 @@ constant ListLoop = MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "Non
 constant Listing = MlirLoops(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, ListLoop), 1)
 constant Emptied = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "forResult")
 constant Collecting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (Emptied, InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))), 1)
+constant Repeated = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry(InstructionType.LoopEnd, List(Text), (1, -1)))))
 Temp(suffix Text) Text
 	Counting.Temp("k") is "%t0k"
 	"%t" + position + suffix
@@ -118,6 +119,13 @@ End Texts
 	let counter = "%loop" + begin
 	constant next = "    " + Temp("w") + " = arith.addf " + Temp("k") + ", " + Temp("u") + " : f64"
 	let increment = (function.Load(Temp("k"), counter), "    " + Temp("u") + " = arith.constant 1.0 : f64", next)
-	let exit = ("    cf.br ^loop" + begin, "  ^loop" + begin + "exit:")
+	let exit = Back(begin) + ("  ^loop" + begin + "exit:")
 	let restore = (function.Store("%t" + begin + "x", "%v_index"), function.Store("%t" + begin + "y", "%v_value"))
 	increment + function.Store(Temp("w"), counter) + exit + restore + Restored(begin)
+Back(begin Number) Texts
+	MlirLoops(Counting.function, 1).Back(0).Length is 1
+	MlirLoops(Repeated, 1).Back(0).Last is "    cf.cond_br %t1f, ^loop0, ^loop0exit"
+	if -1 is not in function.method.instructions(position).payload
+		return List(Text) + ("    cf.br ^loop" + begin)
+	let flag = "    " + Temp("f") + " = llvm.load %flag : !llvm.ptr -> i1"
+	(flag, "    cf.cond_br " + Temp("f") + ", ^loop" + begin + ", ^loop" + begin + "exit")

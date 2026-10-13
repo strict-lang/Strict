@@ -353,6 +353,19 @@ Outputs this into the logger (defaults to the console):
 
 The for expression requires an iterator to go through each element, which is what someList is. There is no need to specify an enumerator index or value as this is done automatically, and you can access these via "index" (0, 1, 2, 3, etc.) and "value" (whatever value is at this index). If you need to access the outer value you can use "outer.value".
 
+`for as long as condition` repeats its body while the condition is true, the condition is checked before every iteration and `index` counts the iterations (this is what a while loop does elsewhere). A `for` over a value that can not be iterated, like a Boolean or a type without a `for` iterator, is a `NotIterable` error:
+```
+GCD Number
+	GcdCalculator(48, 18).GCD is 6
+	mutable current = first
+	mutable modulo = second
+	for as long as modulo is not 0
+		let remainder = current % modulo
+		current = modulo
+		modulo = remainder
+	current
+```
+
 You can iterate over a number if you just want a quick for loop for let's say 10 iterations. This outputs 10 lines starting from 0 to 9, index is available and the outer value stays unchanged and isn't used or needed here:
 ```
   for 10

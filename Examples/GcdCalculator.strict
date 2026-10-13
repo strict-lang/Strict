@@ -4,11 +4,10 @@ has logger
 GCD Number
 	GcdCalculator(48, 18).GCD is 6
 	GcdCalculator(12, 8).GCD is 4
+	GcdCalculator(7, 0).GCD is 7
 	mutable current = first
 	mutable modulo = second
-	for 100
-		if modulo is 0
-			return current
+	for as long as modulo is not 0
 		let temp = modulo
 		modulo = current % modulo
 		current = temp

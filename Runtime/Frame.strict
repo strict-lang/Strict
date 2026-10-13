@@ -111,7 +111,7 @@ Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Looped(InstructionEntry.LoopBegin(6, 8), Listed, 0).items(3).number is 1
 	Twice.Looped(MethodEntry.CountingLoop.instructions(1), Listed, 1).items(2).number is 1
 	if entry.kind is InstructionType.LoopEnd
-		return Looping.Ended(slots(LoopSlot))
+		return Looping.Ended(slots(LoopSlot), (-1 is in entry.payload) and (slots(FlagSlot).IsTrue is false))
 	Looping.Begun(slots(LoopSlot), slots(entry.payload(0)), Ending(entry, slots), position)
 Entered(entry InstructionEntry, slots List(VmValue), position Number) Number
 	Twice.Entered(InstructionEntry.LoopBegin(2, -1), Listed, 0) is 4
