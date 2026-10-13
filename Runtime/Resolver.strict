@@ -25,8 +25,8 @@ Methods(type TypeEntry) List(MethodEntry)
 		let scratch = names.Length + LoadReuse(value.instructions).RegisterCount
 		MethodEntry(value.Name, value.parameters, value.returnType, Instructions(value, names, scratch), scratch + 1)
 Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEntry)
-	Doubling.Instructions(MethodEntry.GoRun, Specials, 7).First.payload.Length is 11
-	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.payload is (7, Frame.ResultSlot)
+	Doubling.Instructions(MethodEntry.GoRun, Specials, 7).First.payload.Length is 10
+	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.Target is Frame.ResultSlot
 	for method.instructions
 		let resolved = value.kind is InstructionType.Invoke then Targeted(value) else Slotted(value, names)
 		Placed(LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length), method, index, scratch)
@@ -119,12 +119,13 @@ Slot(name Text, names Texts) Number
 		return OuterSlot
 	name is "outer.index" then OuterIndexSlot else names.Index(name)
 Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Number) InstructionEntry
-	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).payload is (0, 2, 9)
-	Doubling.Placed(MethodEntry.CountingLoop.instructions(1), MethodEntry.CountingLoop, 1, 9).payload is (1, 0, 4)
+	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).payload is (0, 2)
+	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).Target is 9
+	Doubling.Placed(MethodEntry.CountingLoop.instructions(1), MethodEntry.CountingLoop, 1, 9).payload is (1, 0)
 	let isJump = (entry.kind is InstructionType.JumpToIdIfFalse) or (entry.kind is InstructionType.JumpToIdIfTrue)
 	let jumped = isJump then entry.payload + method.JumpEndOf(entry) else entry.payload
 	let looped = entry.kind is InstructionType.LoopEnd then jumped + method.LoopBeginOf(position) else jumped
-	InstructionEntry(entry.kind, entry.texts, looped + Destination(entry, scratch), entry.line)
+	InstructionEntry(entry.kind, entry.texts, looped, entry.line, Destination(entry, scratch))
 Destination(entry InstructionEntry, scratch Number) Number
 	Doubling.Destination(InstructionEntry.Binary(InstructionType.Equal, (6, 7)), 9) is Frame.FlagSlot
 	let kind = entry.kind

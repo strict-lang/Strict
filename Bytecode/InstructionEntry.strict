@@ -2,6 +2,7 @@ has kind Number
 has texts
 has payload Numbers
 has line Number = 0
+has Target Number = -1
 constant ReturnLined = InstructionEntry(InstructionType.Return, List(Text), List(Number) + 3, 7)
 Names(names BinaryNames) BinaryNames
 	InstructionEntry(InstructionType.Print, "Hi", (-1, 0)).Names(BinaryNames("a", "b")).names.Length is 3
