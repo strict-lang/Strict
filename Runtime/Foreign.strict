@@ -43,6 +43,9 @@ Arguments(library Library, method MethodEntry) Numbers
 	arguments
 Converted(library Library, returnType Text, bits Number) VmValue
 	Adding.Converted(Library("missing.dll"), "Strict/Number", 3).number is 3
+	Adding.Converted(Library("missing.dll"), "Strict/Boolean", 0).kind is "Boolean"
+	if returnType.EndsWith("Boolean")
+		return VmValue.OfBoolean(bits is not 0)
 	if returnType.EndsWith("Text")
 		return VmValue.OfText(library.TextResult(bits))
 	MlirForeign.IsNumbers(returnType) then Elements(library.NumbersResult(bits)) else VmValue.OfNumber(bits)

@@ -22,9 +22,12 @@ Compile(path Text, root Text, isCounting = false) Number
 	isCounting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path) else built
 Natives(path Text, root Text, types List(TypeEntry)) Texts
 	NativeBuild.Natives("Examples/NativeAdd/NativeAdd.strict", ".", List(TypeEntry)).Length is 0
+	constant imported = NativeBuild.Natives("Examples/HelloLogger.strict", "Compiler", List(TypeEntry) + Foreign.Adder)
+	imported is List(Text) + ("Examples/NativeAdd" + "/native")
 	mutable folders = List(Mutable(Text))
 	for types
-		let file = value.Name.IndexOf("/") < 0 then path else root + "/" + value.File
+		let source = File(value.File).Exists then value.File else root + "/" + value.File
+		let file = value.Name.IndexOf("/") < 0 then path else source
 		let folder = Path(file).PathOnly.text
 		if Directory.Exists(folder + "/native") and (folder + "/native" is not in folders)
 			folders.Add(folder + "/native")
