@@ -36,3 +36,14 @@ Required acceptance checks:
 
 Until this lands, headless engine work can continue; graphical/audio phases and full
 WebWars acceptance remain blocked. This request does not mark those phases complete.
+## DeltaEngine: native constructor argument liveness (2026-10-13)
+
+Exact repro: WebWars/Announcer.Advance returned
+`Announcer(queue - queue.First, 1.5, queue.First)` with queue ("a", "b").
+VM test `Pair.Advance(0).spoken is "a"` passed; native Windows emitted "b".
+First argument removes item in place before third argument reads old queue.
+Port now caches `let line = queue.First` before removing it, avoiding repeated lookup.
+Compiler should preserve immutable old-list value when later constructor argument
+still reads it: include remaining argument reads in ownership/liveness analysis,
+or snapshot needed scalar reads before mutating operations. Runtime file currently
+has independent changes, so this request records repro instead of editing it.
