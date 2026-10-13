@@ -1,0 +1,38 @@
+has logger
+constant Strings = 2000
+constant Untrained = Gru.Random(7, 7)
+Run
+	logger.Log(Report("Reber grammar", Reber.Simple, Strings))
+	logger.Log(Report("Embedded Reber grammar", Reber.Embedded, Strings))
+Report(name Text, grammar Reber, strings Number) Text
+	ReberPrediction.Report("Reber", Reber.Simple, 5).StartsWith("Reber: trained on ") is true
+	let started = Process.Elapsed
+	let trained = Trained(Untrained, grammar, strings)
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	let correct = Correct(trained, grammar, 100)
+	name + ": trained on " + strings + " strings in " + milliseconds + " ms, " + correct + " of 100 new strings right"
+Trained(network Gru, grammar Reber, count Number) Gru
+	ReberPrediction.Trained(Untrained, Reber.Simple, 1).output.weights.Length is 7
+	mutable trained = network
+	for count
+		let steps = grammar.Walk
+		trained = trained.Trained(grammar.Inputs(steps), grammar.Targets(steps), 0.1)
+	trained
+Correct(network Gru, grammar Reber, count Number) Number
+	ReberPrediction.Correct(Untrained, Reber.Simple, 3) <= 3 is true
+	mutable correct = 0
+	for count
+		if IsPredicted(network, grammar, grammar.Walk)
+			correct = correct + 1
+	correct
+IsPredicted(network Gru, grammar Reber, steps List(Numbers)) Boolean
+	ReberPrediction.IsPredicted(Untrained, Reber.Simple, Reber.Shortest) is false
+	let targets = grammar.Targets(steps)
+	for Recurrent.Outputs(network.output, network.States(grammar.Inputs(steps)))
+		if Rounded(value) is not targets(index)
+			return false
+	true
+Rounded(outputs Numbers) Numbers
+	ReberPrediction.Rounded((0.2, 0.7)) is (0, 1)
+	for outputs
+		value.Round

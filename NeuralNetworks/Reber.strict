@@ -1,0 +1,44 @@
+has edges List(Numbers)
+has end Number
+constant Symbols = ("B", "T", "P", "S", "X", "V", "E")
+constant Simple = Reber(((0, 1, 0, 1), (1, 2, 2, 3), (3, 2, 4, 4), (1, 3, 5, 5), (4, 3, 3, 6), (2, 4, 5, 6), (6, 7, 6, 7)), 7)
+constant Embedded = Reber(((0, 1, 0, 1), (1, 2, 2, 10), (0, 3, 0, 3), (1, 4, 2, 5), (3, 4, 4, 6), (1, 5, 5, 7), (4, 5, 3, 8), (2, 6, 5, 8), (6, 9, 6, 9), (1, 18, 1, 18), (0, 11, 0, 11), (1, 12, 2, 13), (3, 12, 4, 14), (1, 13, 5, 15), (4, 13, 3, 16), (2, 14, 5, 16), (6, 17, 6, 17), (2, 18, 2, 18), (6, 19, 6, 19)), 19)
+constant Shortest = ((0, 1), (1, 2), (4, 4), (3, 6), (6, 7))
+Walk List(Numbers)
+	Simple.Walk.First is (0, 1)
+	Simple.Walk.Last is (6, 7)
+	mutable steps = List(Mutable(Numbers))
+	mutable state = 0
+	for 1000
+		let edge = edges(state)
+		let choice = 1.Random < 0.5 then 0 else 2
+		steps.Add((edge(choice), edge(choice + 1)))
+		state = edge(choice + 1)
+		if state is end
+			return steps
+	steps
+Inputs(steps List(Numbers)) List(Numbers)
+	Simple.Inputs(Shortest).Length is 4
+	Simple.Inputs(Shortest).First is (1, 0, 0, 0, 0, 0, 0)
+	for Range(0, steps.Length - 1)
+		Dataset.OneHot(steps(value).First, Symbols.Length)
+Targets(steps List(Numbers)) List(Numbers)
+	Simple.Targets(Shortest).First is (0, 1, 1, 0, 0, 0, 0)
+	Simple.Targets(Shortest).Last is (0, 0, 0, 0, 0, 0, 1)
+	Embedded.Targets(Embedded.Walk).Last is (0, 0, 0, 0, 0, 0, 1)
+	for Range(0, steps.Length - 1)
+		Allowed(steps(value).Last)
+Allowed(state Number) Numbers
+	Simple.Allowed(2) is (0, 0, 0, 1, 1, 0, 0)
+	Embedded.Allowed(9) is (0, 1, 0, 0, 0, 0, 0)
+	Embedded.Allowed(17) is (0, 0, 1, 0, 0, 0, 0)
+	let edge = edges(state)
+	for Symbols
+		(index is edge(0)) or (index is edge(2)) then 1 else 0
+Text(steps List(Numbers)) Text
+	Simple.Text(Shortest) is "BTXSE"
+	Embedded.Text(Embedded.Walk).Substring(2, 1) is "B"
+	mutable text = ""
+	for steps
+		text = text + Symbols(value.First)
+	text

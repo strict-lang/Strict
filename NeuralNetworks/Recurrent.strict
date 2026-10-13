@@ -4,10 +4,12 @@ has output Layer
 constant Hidden = 16
 constant Single = List(Numbers) + (List(Number) + 1)
 constant Zero = List(Number) + 0
+constant Step = List(Numbers) + (1, 0)
 constant Tiny = Recurrent(Layer(List(Numbers) + (1, 0), Zero), Layer(Single, Zero), Layer(Single, Zero))
-Random(inputs Number) Recurrent
-	Recurrent.Random(2).recurrent.weights.Length is Hidden
-	Recurrent(Layer.Random(inputs, Hidden), Layer.Random(Hidden, Hidden), Layer.Random(Hidden, 1))
+Random(inputs Number, outputs Number) Recurrent
+	Recurrent.Random(2, 3).recurrent.weights.Length is Hidden
+	Recurrent.Random(2, 3).output.weights.Length is 3
+	Recurrent(Layer.Random(inputs, Hidden), Layer.Random(Hidden, Hidden), Layer.Random(Hidden, outputs))
 States(inputs List(Numbers)) List(Numbers)
 	Tiny.States(List(Numbers) + (0, 0)) is (Zero, List(Number) + 0.5)
 	mutable states = List(Mutable(Numbers))
@@ -20,15 +22,17 @@ Next(previous Numbers, step Numbers) Numbers
 	let recurring = recurrent.Sums(previous)
 	for input.Sums(step)
 		Activation.Sigmoid.Output(value + recurring(index))
-Predicted(inputs List(Numbers)) Numbers
-	Tiny.Predicted(List(Numbers) + (0, 0)) is List(Number) + 1
-	let states = States(inputs)
+Predicted(inputs List(Numbers)) List(Numbers)
+	Tiny.Predicted(List(Numbers) + (0, 0)) is List(Numbers) + (List(Number) + 0.6224593312018546)
+	Outputs(output, States(inputs))
+Outputs(layer Layer, states List(Numbers)) List(Numbers)
+	Recurrent.Outputs(Layer.Halves, ((0, 0), (2, 0))) is List(Numbers) + (List(Number) + 0.7310585786300049)
 	for Range(1, states.Length)
-		output.Forward(states(value)).First.Round
-Trained(inputs List(Numbers), targets Numbers, rate Number) Recurrent
-	Tiny.Trained(List(Numbers) + (1, 0), Zero, 2).Predicted(List(Numbers) + (1, 0)) is Zero
+		layer.Forward(states(value))
+Trained(inputs List(Numbers), targets List(Numbers), rate Number) Recurrent
+	Tiny.Trained(Step, List(Numbers) + Zero, 2).Predicted(Step).First.First < 0.5 is true
 	let states = States(inputs)
-	let outputs = OutputDeltas(states, targets)
+	let outputs = OutputDeltas(output, states, targets)
 	let hiddens = HiddenDeltas(states, outputs)
 	mutable trained = value
 	for inputs
@@ -36,10 +40,10 @@ Trained(inputs List(Numbers), targets Numbers, rate Number) Recurrent
 		let recurrentLayer = trained.recurrent.Updated(states(index), hiddens(index), rate)
 		trained = Recurrent(inputLayer, recurrentLayer, trained.output.Updated(states(index + 1), outputs(index), rate))
 	trained
-OutputDeltas(states List(Numbers), targets Numbers) List(Numbers)
-	Tiny.OutputDeltas((Zero, Zero), Zero) is List(Numbers) + (List(Number) + 0.5)
+OutputDeltas(layer Layer, states List(Numbers), targets List(Numbers)) List(Numbers)
+	Recurrent.OutputDeltas(Tiny.output, (Zero, Zero), List(Numbers) + Zero) is List(Numbers) + (List(Number) + 0.5)
 	for Range(1, states.Length)
-		List(Number) + (output.Forward(states(value)).First - targets(value - 1))
+		Network.Difference(layer.Forward(states(value)), targets(value - 1))
 HiddenDeltas(states List(Numbers), outputs List(Numbers)) List(Numbers)
 	Tiny.HiddenDeltas((Zero, List(Number) + 0.5), List(Numbers) + Zero) is List(Numbers) + Zero
 	mutable future = Layer.Halves.Zeros(recurrent.weights.Length)

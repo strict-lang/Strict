@@ -1,0 +1,110 @@
+has update Layer
+has reset Layer
+has candidate Layer
+has output Layer
+constant Hidden = 16
+constant Remembering = -2
+constant Zero = List(Number) + 0
+constant One = List(Number) + 1
+constant Pair = List(Numbers) + (1, 1)
+constant Halves = (0.5, 0.5, 0.5)
+constant Tiny = Gru(Layer(Pair, Zero), Layer(Pair, Zero), Layer(Pair, Zero, Activation.Tanh), Layer(List(Numbers) + One, Zero))
+Random(inputs Number, outputs Number) Gru
+	Gru.Random(7, 3).update.weights.First.Length is 7 + Hidden
+	Gru.Random(7, 3).output.weights.Length is 3
+	Gru.Random(7, 3).update.biases.First is Remembering
+	let size = inputs + Hidden
+	let tanh = Layer.Random(size, Hidden, Activation.Tanh)
+	let keeping = Layer(Layer.Halves.Rows(size, Hidden), Filled(Remembering))
+	Gru(keeping, Layer.Random(size, Hidden), tanh, Layer.Random(Hidden, outputs))
+States(inputs List(Numbers)) List(Numbers)
+	Tiny.States(List(Numbers) + One).Last.First.IsNearlyEqual(0.5567699411459397) is true
+	mutable states = List(Mutable(Numbers))
+	states.Add(Layer.Halves.Zeros(update.biases.Length))
+	for inputs
+		states.Add(Next(states.Last, value))
+	states
+Next(previous Numbers, step Numbers) Numbers
+	Tiny.Next(Zero, One).First.IsNearlyEqual(0.5567699411459397) is true
+	let gates = Gates(previous, step)
+	let size = previous.Length
+	for previous
+		value + gates(index) * (gates(2 * size + index) - value)
+Gates(previous Numbers, step Numbers) Numbers
+	Tiny.Gates(Zero, One).First.IsNearlyEqual(0.7310585786300049) is true
+	Tiny.Gates(Zero, One).Last.IsNearlyEqual(0.7615941559557649) is true
+	let joined = step + previous
+	let resetting = reset.Forward(joined)
+	update.Forward(joined) + resetting + candidate.Forward(step + resetting * previous)
+Trained(inputs List(Numbers), targets List(Numbers), rate Number) Gru
+	Tiny.Trained(List(Numbers) + One, List(Numbers) + Zero, 2).output.weights.First.First < 1 is true
+	let states = States(inputs)
+	let outputs = Recurrent.OutputDeltas(output, states, targets)
+	let deltas = HiddenDeltas(inputs, states, outputs)
+	mutable trained = value
+	for inputs
+		trained = trained.Updated(value, states(index), deltas(index), outputs(index), states(index + 1), rate)
+	trained
+HiddenDeltas(inputs List(Numbers), states List(Numbers), outputs List(Numbers)) List(Numbers)
+	Tiny.HiddenDeltas(List(Numbers) + One, (Zero, One), List(Numbers) + One).First.Length is 5
+	let size = update.biases.Length
+	mutable future = Layer.Halves.Zeros(size)
+	mutable deltas = List(Mutable(Numbers))
+	for inputs.Length
+		let time = inputs.Length - 1 - index
+		let gradient = Network.Difference(output.Spread(outputs(time)), future * -1)
+		let step = Step(inputs(time), states(time), Clipped(gradient))
+		future = Part(step, 4 * size, size)
+		deltas.Add(step)
+	deltas.Reverse
+Step(step Numbers, previous Numbers, gradient Numbers) Numbers
+	Tiny.Step(One, Zero, One).Length is 5
+	let size = previous.Length
+	let gates = Gates(previous, step)
+	let updates = UpdateDeltas(gates, previous, gradient)
+	let candidates = CandidateDeltas(gates, gradient)
+	let fromCandidate = Part(candidate.Spread(candidates), step.Length, size)
+	let resets = ResetDeltas(gates, previous, fromCandidate)
+	let fromGates = Part(update.Spread(updates), step.Length, size) + Part(reset.Spread(resets), step.Length, size)
+	let earlier = PreviousDeltas(gates, gradient, fromCandidate, fromGates)
+	updates + resets + candidates + Part(gates, size, size) * previous + earlier
+UpdateDeltas(gates Numbers, previous Numbers, gradient Numbers) Numbers
+	Tiny.UpdateDeltas((0.5, 0.5, 1), Zero, One) is List(Number) + 0.25
+	let size = previous.Length
+	for gradient
+		value * (gates(2 * size + index) - previous(index)) * gates(index) * (1 - gates(index))
+CandidateDeltas(gates Numbers, gradient Numbers) Numbers
+	Tiny.CandidateDeltas(Halves, One) is List(Number) + 0.375
+	let size = gradient.Length
+	for gradient
+		value * gates(index) * (1 - gates(2 * size + index) * gates(2 * size + index))
+ResetDeltas(gates Numbers, previous Numbers, fromCandidate Numbers) Numbers
+	Tiny.ResetDeltas(Halves, List(Number) + 2, One) is List(Number) + 0.5
+	let size = previous.Length
+	for previous
+		fromCandidate(index) * value * gates(size + index) * (1 - gates(size + index))
+PreviousDeltas(gates Numbers, gradient Numbers, fromCandidate Numbers, fromGates Numbers) Numbers
+	Tiny.PreviousDeltas(Halves, One, One, (1, 1)) is List(Number) + 3
+	let size = gradient.Length
+	for gradient
+		value * (1 - gates(index)) + fromCandidate(index) * gates(size + index) + fromGates(index) + fromGates(size + index)
+Filled(bias Number) Numbers
+	Gru.Filled(1).Length is Hidden
+	for Hidden
+		bias
+Clipped(gradient Numbers) Numbers
+	Tiny.Clipped((-3, 0.5, 2)) is (-1, 0.5, 1)
+	for gradient
+		value.Clamp(-1, 1)
+Part(values Numbers, start Number, count Number) Numbers
+	Tiny.Part((1, 2, 3, 4), 1, 2) is (2, 3)
+	for Range(start, start + count)
+		values(value)
+Updated(step Numbers, previous Numbers, delta Numbers, outputDelta Numbers, state Numbers, rate Number) Gru
+	Tiny.Updated(One, Zero, (1, 1, 1, 0, 1), One, One, 1).output.weights is List(Numbers) + Zero
+	let size = previous.Length
+	let joined = step + previous
+	let updated = update.Updated(joined, Part(delta, 0, size), rate)
+	let resetted = reset.Updated(joined, Part(delta, size, size), rate)
+	let candidated = candidate.Updated(step + Part(delta, 3 * size, size), Part(delta, 2 * size, size), rate)
+	Gru(updated, resetted, candidated, output.Updated(state, outputDelta, rate))
