@@ -122,6 +122,63 @@
     %elapsed = arith.subf %now, %started : f64
     return %elapsed : f64
   }
+  llvm.mlir.global internal constant @strict_line_format("Line %s executed %.0f times in %.2f ms\0A\00") : !llvm.array<40 x i8>
+  func.func private @strict_line(%table: !llvm.ptr, %index: i64, %state: !llvm.ptr) {
+    func.call @strict_line_stop(%table, %state) : (!llvm.ptr, !llvm.ptr) -> ()
+    %now = func.call @strict_clock() : () -> f64
+    %two = arith.constant 2 : i64
+    %countIndex = arith.muli %index, %two : i64
+    %countSlot = llvm.getelementptr %table[%countIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %count = llvm.load %countSlot : !llvm.ptr -> f64
+    %one = arith.constant 1.0 : f64
+    %counted = arith.addf %count, %one : f64
+    llvm.store %counted, %countSlot : f64, !llvm.ptr
+    %indexNumber = arith.sitofp %index : i64 to f64
+    llvm.store %indexNumber, %state : f64, !llvm.ptr
+    %startedSlot = llvm.getelementptr %state[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %now, %startedSlot : f64, !llvm.ptr
+    return
+  }
+  func.func private @strict_line_stop(%table: !llvm.ptr, %state: !llvm.ptr) {
+    %previous = llvm.load %state : !llvm.ptr -> f64
+    %none = arith.constant 0.0 : f64
+    %isCounted = arith.cmpf oge, %previous, %none : f64
+    cf.cond_br %isCounted, ^add, ^done
+  ^add:
+    %now = func.call @strict_clock() : () -> f64
+    %startedSlot = llvm.getelementptr %state[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %started = llvm.load %startedSlot : !llvm.ptr -> f64
+    %spent = arith.subf %now, %started : f64
+    %previousIndex = arith.fptosi %previous : f64 to i64
+    %two = arith.constant 2 : i64
+    %doubled = arith.muli %previousIndex, %two : i64
+    %one = arith.constant 1 : i64
+    %secondsIndex = arith.addi %doubled, %one : i64
+    %secondsSlot = llvm.getelementptr %table[%secondsIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %seconds = llvm.load %secondsSlot : !llvm.ptr -> f64
+    %total = arith.addf %seconds, %spent : f64
+    llvm.store %total, %secondsSlot : f64, !llvm.ptr
+    %unset = arith.constant -1.0 : f64
+    llvm.store %unset, %state : f64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_line_print(%table: !llvm.ptr, %index: i64, %place: !llvm.ptr) {
+    %two = arith.constant 2 : i64
+    %countIndex = arith.muli %index, %two : i64
+    %countSlot = llvm.getelementptr %table[%countIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %count = llvm.load %countSlot : !llvm.ptr -> f64
+    %one = arith.constant 1 : i64
+    %secondsIndex = arith.addi %countIndex, %one : i64
+    %secondsSlot = llvm.getelementptr %table[%secondsIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %seconds = llvm.load %secondsSlot : !llvm.ptr -> f64
+    %thousand = arith.constant 1000.0 : f64
+    %milliseconds = arith.mulf %seconds, %thousand : f64
+    %format = llvm.mlir.addressof @strict_line_format : !llvm.ptr
+    %printed = llvm.call @printf(%format, %place, %count, %milliseconds) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, f64, f64) -> i32
+    return
+  }
   func.func private @strict_gc_init(%stack: !llvm.ptr) {
     %startedNow = func.call @strict_clock() : () -> f64
     %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr

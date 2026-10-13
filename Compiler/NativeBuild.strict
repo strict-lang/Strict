@@ -7,16 +7,24 @@ IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict") is true
 	NativeBuild.IsProgram("Character.strict") is false
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
-Compile(path Text, root Text) Number
-	let isProgram = IsProgram(path)
-	let entry = isProgram then "Run" else TestCodegen.Runner
-	let program = MlirModule(Execute(logger).Loaded(path, root), entry).Text
+Compile(path Text, root Text, isCounting = false) Number
+	let isProgram = IsProgram(path) and (isCounting is false)
+	let types = isCounting then FileCompiler(logger).Compiled(path, root, true) else Execute(logger).Loaded(path, root)
+	if types.Length is 0
+		return 1
+	let program = MlirModule(types, isProgram then "Run" else TestCodegen.Runner, CountedFile(path, root, isCounting)).Text
 	let unsupported = Unsupported(program)
 	if unsupported is not -1
 		logger.Log("Native compilation failed, " + program.Substring(unsupported, program.Length - unsupported))
 		return 1
-	Build(Output(path, isProgram), program, Toolchain(Platform.Current, root))
-Build(base Text, program Text, tools Toolchain) Number
+	let base = Output(path, isProgram)
+	let built = Build(base, program, Toolchain(Platform.Current, root), isCounting)
+	isCounting and (built is 0) then Ran(base, Toolchain(Platform.Current, root)) else built
+CountedFile(path Text, root Text, isCounting Boolean) Text
+	NativeBuild.CountedFile("./Examples/Sum.strict", ".", true) is "Examples/Sum.strict"
+	NativeBuild.CountedFile("./Examples/Sum.strict", ".", false) is ""
+	isCounting then TypeEntry(FileCompiler.FullName(path, root), List(MemberEntry), List(MethodEntry)).File else ""
+Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	let missing = tools.Missing(Toolchain.Needed)
 	if missing.Length > 0
 		logger.Log(tools.Installing(missing))
@@ -26,9 +34,16 @@ Build(base Text, program Text, tools Toolchain) Number
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
 		return 1
-	CrossBuild(base, program, tools)
+	CrossBuild(base, program, tools, isCounting)
 	Removed(base)
 	0
+Ran(base Text, tools Toolchain) Number
+	let executable = tools.Executable(base)
+	let result = ToolRunner(executable).Execute("")
+	logger.Log(result.Output.Trim)
+	File(executable).Delete
+	File(base + ".mlir").Delete
+	result.exitCode
 Linked(base Text, tools Toolchain) Text
 	NativeBuild.Linked("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed") is true
 	let executable = tools.Executable(base)
@@ -41,8 +56,8 @@ Linked(base Text, tools Toolchain) Text
 		File(target).Rename(executable)
 		File(old).Delete
 	built.Replace(target, executable)
-CrossBuild(base Text, program Text, tools Toolchain)
-	if Platform.Current is Platform.Windows
+CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean)
+	if (Platform.Current is Platform.Windows) and (isCounting is false)
 		File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
 		logger.Log(tools.CrossBuilt(base))
 Removed(base Text)

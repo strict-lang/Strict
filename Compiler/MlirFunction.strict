@@ -1,6 +1,7 @@
 has types List(TypeEntry)
 has type TypeEntry
 has method MethodEntry
+has lineSlots Numbers = List(Number)
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
@@ -9,6 +10,7 @@ constant OperatorNames = ("+", "-", "*", "/", "%", "^")
 constant OperatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power")
 constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
 constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
+IsCounted = lineSlots.Length > 0
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
 	Adding.Symbol is "Shape_Plus_0"
@@ -63,7 +65,7 @@ Slots Texts
 		lines = lines + Slot("%v_" + value)
 	for method.instructions
 		lines = value.kind is InstructionType.LoopBegin then lines + Slot("%loop" + index) else lines
-	lines + Entry
+	lines + MlirLines(value).Allocated + Entry
 Entry Texts
 	Counter.Entry.Length is 4
 	mutable lines = Slot("%instance") + Store("%p0", "%instance")
@@ -75,11 +77,13 @@ Slot(name Text) Texts
 	("    " + name + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", Store("%zero", name))
 Body Texts
 	Counter.Body.Last is "    return %zero : f64"
+	MlirLines.Lined.Body.Length > MlirLines.Unlined.Body.Length is true
+	let counter = MlirLines(value)
 	mutable lines = List(Mutable(Text))
 	for method.instructions
-		lines = lines + Label(index) + Emitted(index)
+		lines = lines + Label(index) + counter.At(index) + Emitted(index)
 	let isReturning = method.instructions.Length > 0 and (method.instructions.Last.kind is InstructionType.Return)
-	isReturning then lines else lines + MlirLayout(value).Returned(-2)
+	isReturning then lines else lines + counter.End + MlirLayout(value).Returned(-2)
 Label(position Number) Texts
 	Counter.Label(0).Length is 0
 	constant terminators = (InstructionType.Return, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)

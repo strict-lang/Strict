@@ -1,18 +1,21 @@
 has types List(TypeEntry)
 has entryName Text
+has countedFile Text = ""
 constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run")
 constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry)), "Tests")
 Text Text
 	Counters.Text.StartsWith("module {") is true
 	NoRun.Text.StartsWith("unsupported:") is true
-	constant functions = Functions
+	let functions = Functions
 	if functions.First.method.instructions.Length is 0
 		return "unsupported: no " + entryName + " method without parameters in " + types.First.Name
 	mutable lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
-	for functions
+	let counted = countedFile is "" then functions else MlirLines.Counted(functions, types.First, countedFile)
+	for counted
 		lines = lines + value.Text
 	lines = lines + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
-	Text.Combine(lines + Globals(functions) + MlirEntry(functions.First).Main + "}", "\n")
+	let table = countedFile is "" then List(Text) else MlirLines.Table(functions, types.First, countedFile)
+	Text.Combine(lines + Globals(functions) + table + MlirEntry(counted.First).Main + "}", "\n")
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1
 	let main = types.First

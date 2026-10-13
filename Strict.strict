@@ -2,7 +2,7 @@ has logger
 constant Version = "1.0"
 constant Commands = ("build", "test", "check", "update", "format")
 constant Informing = ("version", "--version", "help", "--help")
-constant Help = ("strict <file> [arguments]  run the Run method on the Strict VM, the fastest, everything stays in memory", "strict build <file>        run the tests, then compile a native executable (Name.test without a Run method)", "strict test <file>         run the inline tests of every method on the Strict VM", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built")
+constant Help = ("strict <file> [arguments]  run the Run method on the Strict VM, the fastest, everything stays in memory", "strict build <file>        run the tests, then compile a native executable (Name.test without a Run method)", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> lines   run them natively and print how often and how long (ms, callees included) each line ran", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built")
 Run(arguments Texts) Number
 	let command = arguments.Length > 0 then arguments(0) else "help"
 	let rest = Rooted(command is in Commands then Rest(arguments) else arguments)
@@ -13,7 +13,7 @@ Run(arguments Texts) Number
 	if command is in ("check", "update", "format")
 		return Tool(command, rest)
 	if command is "test"
-		return Execute(logger).Test(rest(0), rest(1))
+		return Tested(rest)
 	command is "build" then Built(NativeBuild(logger), rest(0), rest(1)) else Execute(logger).Run(rest)
 Message(command Text, rest Texts) Text
 	Strict.Message("version", List(Text)).StartsWith(Version + " 20") is true
@@ -27,6 +27,10 @@ Message(command Text, rest Texts) Text
 		return Text.Combine(Help, "\n")
 	let isFolder = (command is "test") and Directory.Exists(rest(0))
 	(command is in ("check", "update")) or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
+Tested(rest Texts) Number
+	Strict.Tested(("Examples/HelloLogger.strict", ".")) is 0
+	let option = rest.Length > 2 then rest(2) else ""
+	option is "lines" then NativeBuild(logger).Compile(rest(0), rest(1), true) else Execute(logger).Test(rest(0), rest(1))
 Rooted(arguments Texts) Texts
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
 	Strict.Rooted(("a.strict", "Compiler")) is ("a.strict", "Compiler")
