@@ -1,0 +1,34 @@
+has kind Number
+constant Sigmoid = Activation(0)
+constant Tanh = Activation(1)
+constant Relu = Activation(2)
+constant LeakyRelu = Activation(3)
+constant Softplus = Activation(4)
+constant Names = ("Sigmoid", "Tanh", "Relu", "LeakyRelu", "Softplus")
+Output(sum Number) Number
+	Sigmoid.Output(0) is 0.5
+	Tanh.Output(1).IsNearlyEqual(0.7615941559557649) is true
+	Relu.Output(-2) is 0
+	LeakyRelu.Output(-2) is -0.02
+	Softplus.Output(0) is 0.6931471805599453
+	if value is
+		Tanh then 2 / (1 + (0 - 2 * sum).Exponential) - 1
+		Relu then (sum > 0 then sum else 0)
+		LeakyRelu then (sum > 0 then sum else 0.01 * sum)
+		Softplus then (1 + sum.Exponential).Logarithm
+		else 1 / (1 + (0 - sum).Exponential)
+Derivative(output Number) Number
+	Sigmoid.Derivative(0.5) is 0.25
+	Tanh.Derivative(0.5) is 0.75
+	Relu.Derivative(3) is 1
+	LeakyRelu.Derivative(-0.02) is 0.01
+	Softplus.Derivative(0.6931471805599453).IsNearlyEqual(0.5) is true
+	if value is
+		Tanh then 1 - output * output
+		Relu then (output > 0 then 1 else 0)
+		LeakyRelu then (output > 0 then 1 else 0.01)
+		Softplus then 1 - (0 - output).Exponential
+		else output * (1 - output)
+to Text
+	Tanh to Text is "Tanh"
+	Names(kind)

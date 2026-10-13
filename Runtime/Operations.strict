@@ -21,9 +21,12 @@ Comparison(kind Number, left VmValue, right VmValue) Boolean
 Comparable(operand VmValue) VmValue
 	Comparable(Detailed) is DimensionError
 	Comparable(VmValue.Failed) is VmValue.OfError("x")
+	Comparable(VmValue("Strict/Degree", 0, "", List(VmValue) + VmValue.OfNumber(7))) is VmValue.OfNumber(7)
 	let compared = operand.kind is "Strict/ErrorWithValue" then operand.items.First else operand
 	if compared.kind is "Strict/Error"
 		return VmValue.OfError(compared.items.First.text)
+	if (compared.items.Length is 1) and (compared.kind is not in ("List", "Text", "Number", "Boolean", "None"))
+		return Comparable(compared.items.First)
 	let open = compared.items.Length is 0 then -1 else compared.kind.IndexOf("(")
 	open > 0 then VmValue(compared.kind.Substring(0, open), compared.number, compared.text, compared.items) else compared
 Calculated(kind Number, left VmValue, right VmValue) VmValue

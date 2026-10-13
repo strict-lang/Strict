@@ -5,6 +5,8 @@ Start with `Xor.strict` (2-3-1 neurons learn XOR in 11 ms natively), then `Iris.
 
 `LogicGates.strict` starts even simpler, with single neurons (`Perceptron`, a step output like the saturated sigmoid of AiInvest): Or, And, Nor and Nand are learned from zero weights in 3 to 5 epochs, Xor needs a hidden layer and is built from an Or and a Nand neuron feeding an And neuron.
 
+`Activation` gives a layer Sigmoid (the default), Tanh, Relu, LeakyRelu or Softplus with the derivative backpropagation needs: `Network.Random((4, 8, 3), Activation.Tanh)` uses it for the hidden layers. `ActivationComparison.strict` trains Iris with each of them: 97-100% test accuracy in about 25 ms natively, except plain Relu (33-67%, its neurons die at learning rate 0.25, which LeakyRelu avoids).
+
 Evolution instead of gradients: `Weasel.strict` (the weasel program of Richard Dawkins) evolves a random text into "METHINKS IT IS LIKE A WEASEL" with mutation and selection in about 70 generations, a few milliseconds natively. `Neuroevolution.strict` evolves the weights of the XOR network (tournament selection, mutation, the best network always survives) and reaches an error around 1e-13 in 46 ms natively.
 
 Bigger data does not belong into this repository: the MNIST digits are in [Mnist](https://github.com/strict-lang/Mnist), larger datasets should be downloaded when they are needed.

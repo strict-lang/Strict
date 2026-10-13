@@ -3,14 +3,15 @@ constant Single = Network(List(Layer) + Layer.Halves)
 constant Halved = (List(Numbers) + (1, 0)) + (List(Number) + 0.5)
 constant Pair = Network((Layer(((0.5, 0.5), (0.5, 0.5)), (0, 0)), Layer.Halves))
 constant Classifier = Network(List(Layer) + Layer(((1, 0), (0, 1)), (0, 0)))
-Random(sizes Numbers) Network
+Random(sizes Numbers, hidden = Activation.Sigmoid) Network
 	Network.Random((2, 3, 1)).layers.Length is 2
 	Network.Random((2, 3, 1)).layers.Last.weights.First.Length is 3
-	Network(Layers(sizes))
-Layers(sizes Numbers) List(Layer)
-	Single.Layers((2, 1)).Length is 1
+	Network.Random((2, 3, 1), Activation.Tanh).layers.First.activation is Activation.Tanh
+	Network(Layers(sizes, hidden))
+Layers(sizes Numbers, hidden Activation) List(Layer)
+	Single.Layers((2, 1), Activation.Tanh).First.activation is Activation.Sigmoid
 	for Range(1, sizes.Length)
-		Layer.Random(sizes(index - 1), sizes(index))
+		Layer.Random(sizes(index - 1), sizes(index), (index < sizes.Length - 1 then hidden else Activation.Sigmoid))
 Predict(input Numbers) Numbers
 	Single.Predict((1, 1)) is List(Number) + 0.7310585786300049
 	Classifier.Predict((1, 1)) is (0.5, 0.5)
@@ -52,13 +53,14 @@ Deltas(activations List(Numbers), target Numbers) List(Numbers)
 	deltas.Add(delta)
 	for Range(1, layers.Length)
 		let next = layers.Length - index
-		delta = Derived(activations(next), layers(next).Spread(delta))
+		delta = Derived(layers(next - 1).activation, activations(next), layers(next).Spread(delta))
 		deltas.Add(delta)
 	deltas.Reverse
-Derived(activation Numbers, errors Numbers) Numbers
-	Single.Derived(List(Number) + 0.5, List(Number) + 2) is List(Number) + 0.5
+Derived(function Activation, activation Numbers, errors Numbers) Numbers
+	Single.Derived(Activation.Sigmoid, List(Number) + 0.5, List(Number) + 2) is List(Number) + 0.5
+	Single.Derived(Activation.Tanh, List(Number) + 0.5, List(Number) + 2) is List(Number) + 1.5
 	for activation
-		errors(index) * value * (1 - value)
+		errors(index) * function.Derivative(value)
 Difference(output Numbers, target Numbers) Numbers
 	Single.Difference((1, 0.5), (0, 0.5)) is (1, 0)
 	for output

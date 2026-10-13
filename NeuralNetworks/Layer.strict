@@ -1,14 +1,16 @@
 has weights List(Numbers)
 has biases Numbers
+has activation = Activation.Sigmoid
 has previousWeights List(Numbers) = List(Numbers)
 has previousBiases Numbers = List(Number)
 constant Momentum = 0.5
 constant Halves = Layer(List(Numbers) + (0.5, 0.5), List(Number) + 0)
-Random(inputs Number, outputs Number) Layer
+Random(inputs Number, outputs Number, function = Activation.Sigmoid) Layer
 	Layer.Random(2, 3).weights.Length is 3
 	Layer.Random(2, 3).weights.First.Length is 2
 	Layer.Random(2, 3).biases is (0, 0, 0)
-	Layer(Rows(inputs, outputs), Zeros(outputs))
+	Layer.Random(2, 3, Activation.Tanh).activation is Activation.Tanh
+	Layer(Rows(inputs, outputs), Zeros(outputs), function)
 Rows(inputs Number, outputs Number) List(Numbers)
 	Halves.Rows(2, 3).Length is 3
 	for outputs
@@ -26,7 +28,7 @@ Forward(input Numbers) Numbers
 	Halves.Forward((1, 1)) is List(Number) + 0.7310585786300049
 	Halves.Forward((0, 0)) is List(Number) + 0.5
 	for weights
-		1 / (1 + (0 - Summed(value, input) - biases(index)).Exponential)
+		activation.Output(Summed(value, input) + biases(index))
 Sums(input Numbers) Numbers
 	Halves.Sums((1, 1)) is List(Number) + 1
 	for weights
@@ -51,7 +53,7 @@ Updated(input Numbers, deltas Numbers, rate Number) Layer
 	Halves.Updated((1, 0), List(Number) + 1, 0.5).weights is List(Numbers) + (0, 0.5)
 	Halves.Updated((1, 0), List(Number) + 1, 0.5).biases is List(Number) + (0 - 0.5)
 	Halves.Updated((1, 0), List(Number) + 1, 0.5).Updated((1, 0), (0), 0.5).biases is List(Number) + (0 - 0.75)
-	Layer(Moved(input, deltas, rate), Shifted(deltas, rate), weights, biases)
+	Layer(Moved(input, deltas, rate), Shifted(deltas, rate), activation, weights, biases)
 Moved(input Numbers, deltas Numbers, rate Number) List(Numbers)
 	Halves.Moved((1, 0), List(Number) + 1, 0.5) is List(Numbers) + (0, 0.5)
 	for weights
@@ -72,7 +74,7 @@ Mutated(strength Number) Layer
 	mutable rows = List(Mutable(Numbers))
 	for weights
 		rows.Add(Noisy(value, strength))
-	Layer(rows, Noisy(biases, strength))
+	Layer(rows, Noisy(biases, strength), activation)
 Noisy(values Numbers, strength Number) Numbers
 	Halves.Noisy((1, 2), 0) is (1, 2)
 	(Halves.Noisy(List(Number) + 1, 0.5).First - 1).Absolute <= 0.5 is true

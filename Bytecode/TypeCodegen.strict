@@ -55,9 +55,13 @@ Initial(node SyntaxNode) List(InstructionEntry)
 	Hello.Initial(SyntaxNode("Text", "\"a\"")).First.payload is (4, -1, 0)
 	Hello.Initial(SyntaxNode("Call", "Range")).Length is 0
 	Hello.Initial(SyntaxParser("(", "1", ",", "2", ")").ParseRange(0, 5)).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
-	if node.IsLiteral is false
+	let folded = ConstantFolding(Generator.target.TypeName, Generator.inference).Folded(node)
+	let isCall = (folded.Kind is "Call") and (folded.children.Length is 1) and (TypeEntry.IsBaseName(folded.text) is false)
+	let isWrapper = isCall and (Generator.inference.types.MembersOf(folded.text).names.Length is 1)
+	let literal = isWrapper then folded.children(0) else folded
+	if literal.IsLiteral is false
 		return List(InstructionEntry)
-	let load = Generator.Expression(node, CodeBlock.Empty).instructions(0)
+	let load = Generator.Expression(literal, CodeBlock.Empty).instructions(0)
 	List(InstructionEntry) + InstructionEntry.Set(load.texts, MethodCodegen.LoadedValue(load))
 Methods(names Texts) List(MethodEntry)
 	Limit.Methods(List(Text)).First.instructions.Length is 2
@@ -111,7 +115,7 @@ Default(header HeaderTokens, position Number) List(InstructionEntry)
 		if (end is -1) and (header.tokens(value) is in (",", ")"))
 			end = value
 	let node = SyntaxParser(header.tokens).ParseRange(position + 2, end)
-	Initial(ConstantFolding(Generator.target.TypeName, Generator.inference).Folded(node))
+	Initial(node)
 Concrete(type Text) Text
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "Numbers"
 	TypeCodegen("Strict/List(Text)", List(Text), NoTypes, List(Text)).Concrete("List") is "Texts"

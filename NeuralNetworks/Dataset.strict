@@ -36,10 +36,10 @@ Kept(rows List(Numbers), isTesting Boolean) List(Numbers)
 	for rows
 		if (index % 5 is 0) is isTesting
 			value
-Evaluated(name Text, sizes Numbers, epochs Number) Text
+Evaluated(name Text, sizes Numbers, epochs Number, hidden = Activation.Sigmoid) Text
 	Pairs.Evaluated("Pairs", (4, 3, 2), 1).StartsWith("Pairs test accuracy ") is true
 	let started = Process.Elapsed
-	let network = Network.Random(sizes).Learned(Training, epochs)
+	let network = Network.Random(sizes, hidden).Learned(Training, epochs)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	name + " test accuracy " + network.Accuracy(Testing) + " after " + epochs + " epochs in " + milliseconds + " ms"
 Shuffled Dataset
