@@ -11,6 +11,7 @@ constant Wrapper = TypeEntry("Strict/Wrapper", (MemberEntry.LoggerMember, Member
 constant Coded = InstructionEntry(InstructionType.FieldLoad, ("number", "Character"), (1, 0, -1, -2))
 constant Paired = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry.Initializing)
 constant Failing = TypeEntry("Strict/Failing", List(MemberEntry), List(MethodEntry) + MethodEntry("Fail", List(MemberEntry), "Strict/Number", (InstructionEntry(InstructionType.IndexCall, "list", (0, 0, 6)), InstructionEntry.Return(0))))
+constant Indexing = MethodEntry("At", List(MemberEntry) + MemberEntry("index", "Strict/Number", List(InstructionEntry), false), "None", List(InstructionEntry))
 constant FailCall = InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)
 Launch(typeName Text, arguments List(VmValue))
 	let main = Natives(types).TypeOf(typeName)
@@ -36,22 +37,39 @@ Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmVal
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue)).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue)).Last.number is 7
 	Frame.Doubling.Bound(Doubler, VmValue.None, Frame.Twice.method, List(VmValue)).Length is 9
-	mutable locals = List(VmValue) + Members(type, instance)
+	Hello.Bound(Texts, VmValue.OfText("ab"), Doubler.methods.First, List(VmValue)).Last.text is "ab"
+	let start = Frame.MembersSlot + type.members.Length
+	let end = start + method.parameters.Length
+	let isOwner = (type.Name is instance.kind) or Natives.IsNamed(type, instance.kind, Natives.Short(instance.kind))
+	let indexed = Indexed(method, arguments)
+	for end > method.Slots then end else method.Slots
+		index < start then Member(type, instance, index, isOwner, indexed) else Argument(method, arguments, index - start)
+Member(type TypeEntry, instance VmValue, slot Number, isOwner Boolean, indexed VmValue) VmValue
+	Hello.Member(Wrapper, VmValue.OfError("a"), 6, false, VmValue.None).kind is "Strict/Error"
+	Hello.Member(Wrapper, VmValue.OfError("a"), 7, false, VmValue.None).number is 7
+	Hello.Member(Wrapper, VmValue.OfError("a"), Frame.IndexSlot, false, VmValue.OfNumber(3)).number is 3
+	if slot < Frame.MembersSlot
+		return slot < 2 then instance else slot is Frame.IndexSlot then indexed else VmValue.None
+	let position = slot - Frame.MembersSlot
+	let member = type.members(position)
+	if member.IsConstant
+		let isKept = (type.Name is instance.kind) and (position < instance.items.Length)
+		return isKept then instance.items(position) else Natives.Initial(member)
+	isOwner then instance.Member(position) else instance.As(member.typeName)
+Argument(method MethodEntry, arguments List(VmValue), position Number) VmValue
+	Hello.Argument(Defaulted, List(VmValue), 0).number is 7
+	Hello.Argument(Defaulted, List(VmValue) + VmValue.OfNumber(2), 0).number is 2
+	Hello.Argument(Defaulted, List(VmValue), 1).kind is "None"
+	if position >= method.parameters.Length
+		return VmValue.None
+	position < arguments.Length then arguments(position) else Natives(types).Initial(method.parameters(position))
+Indexed(method MethodEntry, arguments List(VmValue)) VmValue
+	Hello.Indexed(Indexing, List(VmValue) + VmValue.OfNumber(4)).number is 4
+	Hello.Indexed(Defaulted, List(VmValue)).kind is "None"
 	for method.parameters
-		let argument = index < arguments.Length then arguments(index) else Natives(types).Initial(value)
-		locals = locals + argument
 		if value.Name is "index"
-			locals(Frame.IndexSlot) = argument
-	for method.Slots - locals.Length
-		locals = locals + VmValue.None
-	locals
-Members(type TypeEntry, instance VmValue) List(VmValue)
-	Hello.Members(Texts, VmValue.OfText("ab")).Last.text is "ab"
-	Hello.Members(Wrapper, VmValue.OfError("a")).Length is 8
-	Hello.Members(Wrapper, VmValue.OfError("a")).Last.number is 7
-	for Range(0, Frame.MembersSlot + type.members.Length)
-		let member = value - Frame.MembersSlot
-		value < 2 then instance else member < 0 then VmValue.None else MemberValue(type, instance, member)
+			return index < arguments.Length then arguments(index) else Natives(types).Initial(value)
+	VmValue.None
 MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 	Hello.MemberValue(Wrapper, VmValue.OfError("a"), 0).kind is "Strict/Error"
 	Hello.MemberValue(Wrapper, VmValue.OfError("a"), 1).number is 7

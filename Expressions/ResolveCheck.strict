@@ -28,10 +28,13 @@ AllFiles(root Text) Texts
 ChainType(inference TypeInference, tokens Texts, typeName Text) Text
 	ResolveCheck.ChainType(Counting, Tokenizer("constant a = Count(1).Twice(2)").Tokens, "Count") is "Count"
 	ResolveCheck.ChainType(Counting, Tokenizer("constant a = 1").Tokens, "Count") is ""
+	ResolveCheck.ChainType(Counting, Tokenizer("constant a = Twice(2)").Tokens, "Count") is "Count"
 	if (tokens.Length < 4) or (tokens(2) is not "=")
 		return ""
 	let node = SyntaxParser(tokens).ParseRange(3, tokens.Length)
 	let current = inference.types.ShapeScope(typeName)
+	if node.Kind is "Call"
+		return inference.types.MethodsOf(typeName).TypeOf(node.text)
 	node.Kind is in ("MethodCall", "Member") then inference.TypeOf(node, Scope(List(Text), List(Text)), current) else ""
 Refined(inference TypeInference, shapes List(TypeShape)) TypeInference
 	ResolveCheck.Refined(Counting, List(TypeShape)).types.methods.Length is 0
@@ -61,7 +64,7 @@ ChainTyped(inference TypeInference, shape TypeShape, scope Scope, typeName Text)
 	mutable result = scope
 	for shape.lines
 		let tokens = Tokenizer(value).Tokens
-		if value.StartsWith("constant ") and (value.IndexOf(".") > 0)
+		if value.StartsWith("constant ") and ((value.IndexOf(".") > 0) or (value.IndexOf("(") > 0))
 			let chained = ChainType(inference, tokens, typeName)
 			result = chained is "" then result else result.With(tokens(1), chained)
 		else if shape.IsComputed(value)

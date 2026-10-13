@@ -1,10 +1,9 @@
-has state VmValue
-constant Counting = Looping(VmValue.None).Begun(VmValue.OfNumber(3), VmValue.None, 7)
-constant Ranged = Looping(VmValue.None).Begun(VmValue.OfNumber(5), VmValue.OfNumber(2), 7)
-Begun(iterable VmValue, ending VmValue, begin Number) VmValue
+constant Counting = Begun(VmValue.None, VmValue.OfNumber(3), VmValue.None, 7)
+constant Ranged = Begun(VmValue.None, VmValue.OfNumber(5), VmValue.OfNumber(2), 7)
+Begun(state VmValue, iterable VmValue, ending VmValue, begin Number) VmValue
 	Counting.items(2).number is 0
 	Ranged.items(3).number is 5
-	Looping(Counting).Begun(VmValue.OfNumber(0), VmValue.None, 9) is Counting
+	Begun(Counting, VmValue.OfNumber(0), VmValue.None, 9) is Counting
 	let start = Start(iterable, ending)
 	let end = End(iterable, ending)
 	if start is end
@@ -13,41 +12,41 @@ Begun(iterable VmValue, ending VmValue, begin Number) VmValue
 	let count = VmValue.OfNumber((end - start).Absolute)
 	Iterated(VmValue.OfList(List(VmValue) + iterable + bounds + count + state), 0)
 Iterated(loop VmValue, iteration Number) VmValue
-	Looping(VmValue.None).Iterated(Counting.items(0), 2).items(3).number is 2
-	Looping(VmValue.None).Iterated(VmValue.OfList(VmValue.OfText("ab")), 1).items(3).text is "b"
+	Iterated(Counting.items(0), 2).items(3).number is 2
+	Iterated(VmValue.OfList(VmValue.OfText("ab")), 1).items(3).text is "b"
 	let counted = VmValue.OfNumber(iteration)
 	let element = Element(loop, iteration)
 	let isSequence = (loop.items(0).kind is "List") or (loop.items(0).kind is "Text")
 	VmValue.OfList(loop, counted, isSequence then counted else element, element)
-Ended VmValue
-	Looping(Counting).Ended.items(2).number is 1
-	Looping(Looping(Looping(Counting).Ended).Ended).Ended.kind is "None"
+Ended(state VmValue) VmValue
+	Ended(Counting).items(2).number is 1
+	Ended(Ended(Ended(Counting))).kind is "None"
 	let loop = state.items(0)
 	let next = state.items(1).number + 1
 	next >= loop.items(4).number then loop.items(5) else Iterated(loop, next)
-Next(position Number, begin Number) Number
-	Looping(Counting).Next(9, 7) is 8
-	Looping(VmValue.None).Next(9, 7) is 10
+Next(state VmValue, position Number, begin Number) Number
+	Next(Counting, 9, 7) is 8
+	Next(VmValue.None, 9, 7) is 10
 	(state.items.Length > 0) and (state.items(0).items(3).number is begin) then begin + 1 else position + 1
-Current(isOuter Boolean, isIndex Boolean, fallback VmValue) VmValue
-	Looping(Counting).Current(false, true, VmValue.None).number is 0
-	Looping(Counting).Current(true, false, VmValue.OfText("a")).text is "a"
-	Looping(VmValue.None).Current(false, true, VmValue.OfNumber(4)).number is 4
+Current(state VmValue, isOuter Boolean, isIndex Boolean, fallback VmValue) VmValue
+	Current(Counting, false, true, VmValue.None).number is 0
+	Current(Counting, true, false, VmValue.OfText("a")).text is "a"
+	Current(VmValue.None, false, true, VmValue.OfNumber(4)).number is 4
 	let current = isOuter and (state.items.Length > 0) then state.items(0).items(5) else state
 	current.items.Length is 0 then fallback else current.items(isIndex then 2 else 3)
 IsEmpty(iterable VmValue, ending VmValue) Boolean
-	Looping(VmValue.None).IsEmpty(VmValue.OfNumber(0), VmValue.None) is true
-	Looping(VmValue.None).IsEmpty(VmValue.OfText("a"), VmValue.None) is false
+	IsEmpty(VmValue.OfNumber(0), VmValue.None) is true
+	IsEmpty(VmValue.OfText("a"), VmValue.None) is false
 	Start(iterable, ending) is End(iterable, ending)
 Start(iterable VmValue, ending VmValue) Number
-	Looping(VmValue.None).Start(VmValue.OfNumber(5), VmValue.OfNumber(2)) is 5
+	Start(VmValue.OfNumber(5), VmValue.OfNumber(2)) is 5
 	ending.kind is "None" then 0 else iterable.number
 End(iterable VmValue, ending VmValue) Number
-	Looping(VmValue.None).End(VmValue.OfText("abc"), VmValue.None) is 3
+	End(VmValue.OfText("abc"), VmValue.None) is 3
 	ending.kind is "None" then Count(iterable) else ending.number
 Element(loop VmValue, iteration Number) VmValue
-	Looping(VmValue.None).Element(Counting.items(0), 2).number is 2
-	Looping(VmValue.None).Element(Ranged.items(0), 1).number is 4
+	Element(Counting.items(0), 2).number is 2
+	Element(Ranged.items(0), 1).number is 4
 	let iterable = loop.items(0)
 	if iterable.kind is "List"
 		return iterable.items(iteration)
@@ -56,8 +55,8 @@ Element(loop VmValue, iteration Number) VmValue
 	let start = loop.items(1).number
 	VmValue.OfNumber(loop.items(2).number < start then start - iteration else start + iteration)
 Count(iterable VmValue) Number
-	Looping(VmValue.None).Count(VmValue.OfNumber(2.5)) is 2
-	Looping(VmValue.None).Count(VmValue.OfText("abc")) is 3
+	Count(VmValue.OfNumber(2.5)) is 2
+	Count(VmValue.OfText("abc")) is 3
 	if iterable.kind is "Number"
 		return iterable.number < 0 then 0 else iterable.number.Floor
 	iterable.Length
