@@ -6,19 +6,19 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     env:
-      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing Expressions ImageProcessing Math NeuralNetworks Runtime Validators
+      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing Expressions ImageProcessing MachineLearning Math NeuralNetworks Runtime Validators
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
         id: llvm
         with:
           path: Tools/LLVM-22.1.0-Linux-X64
-          key: llvm-22.1.0-linux-x64
+          key: llvm-22.1.0-linux-x64-headers
       - name: LLVM 22 (clang, mlir-opt, mlir-translate)
         if: steps.llvm.outputs.cache-hit != 'true'
         run: |
           mkdir -p Tools
-          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz | tar -xJ -C Tools LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate
+          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz | tar -xJ -C Tools LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate LLVM-22.1.0-Linux-X64/lib/clang/22/include
       - name: Bootstrap from the seed
         run: sh Compiler/bootstrap.sh
       - name: Self build until the fixpoint
@@ -49,7 +49,7 @@ jobs:
   windows:
     runs-on: windows-latest
     env:
-      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing Expressions ImageProcessing Math NeuralNetworks Runtime Validators
+      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing Expressions ImageProcessing MachineLearning Math NeuralNetworks Runtime Validators
     defaults:
       run:
         shell: bash

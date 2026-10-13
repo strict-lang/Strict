@@ -52,7 +52,7 @@ Fetched(repository Text, type Text) Text
 Copied(folder Text, type Text) Text
 	let local = "./" + Path(folder).FileName.text
 	for BinaryFile(folder).Contained(folder)
-		if value.EndsWith(".strict")
+		if value.EndsWith(".strict") or (value.Replace("\\", "/").IndexOf("/native/") > 0)
 			File(local + "/" + Relative(value.Replace("\\", "/"), folder)).Write(File(value).ReadBytes)
 	File(local + "/.origin").Write(List(Text) + folder)
 	logger.Log("Copied " + local + " from " + folder)
@@ -107,9 +107,10 @@ Files(paths Texts, folder Text) Texts
 	Repositories.Files(Repositories.Quoted(Listing, "path"), "Math") is ("Math/Vector2.strict", "Math/Size.strict")
 	Repositories.Files(Repositories.Quoted(Listing, "path"), ".").Last is "Vector2.strict"
 	Repositories.Files(Nested, "Math") is ("Math/Vector2.strict", "Math/Shapes/Circle.strict")
+	Repositories.Files(("Pack/A.strict", "Pack/native/A.c", "Pack/B.txt"), "Pack") is ("Pack/A.strict", "Pack/native/A.c")
 	let prefix = folder is "." then "" else folder + "/"
 	for paths
-		if value.StartsWith(prefix) and value.EndsWith(".strict")
+		if value.StartsWith(prefix) and (value.EndsWith(".strict") or (value.IndexOf("/native/") > 0))
 			value
 Relative(path Text, folder Text) Text
 	Repositories.Relative("Math/Shapes/Circle.strict", "Math") is "Shapes/Circle.strict"

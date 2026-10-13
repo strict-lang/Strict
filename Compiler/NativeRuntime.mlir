@@ -318,6 +318,66 @@
     %copied = func.call @strict_text_copy(%emptyBits) : (f64) -> f64
     return %copied : f64
   }
+  llvm.mlir.global internal constant @strict_library_missing("LibraryNotFound\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @strict_library_symbol_missing("LibrarySymbolNotFound\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @strict_library_arguments("LibraryCallNeedsOneToFiveNumbers\00") : !llvm.array<33 x i8>
+  func.func private @strict_library_invoke(%function: !llvm.ptr, %arguments: f64) -> f64 {
+    %items = func.call @strict_list_items(%arguments) : (f64) -> !llvm.ptr
+    %countNumber = func.call @strict_list_length(%arguments) : (f64) -> f64
+    %count = arith.fptosi %countNumber : f64 to i64
+    cf.switch %count : i64, [
+      default: ^unsupported,
+      1: ^one,
+      2: ^two,
+      3: ^three,
+      4: ^four,
+      5: ^five
+    ]
+  ^one:
+    %a10 = llvm.load %items : !llvm.ptr -> f64
+    %r1 = llvm.call %function(%a10) : !llvm.ptr, (f64) -> f64
+    return %r1 : f64
+  ^two:
+    %a20 = llvm.load %items : !llvm.ptr -> f64
+    %p21 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a21 = llvm.load %p21 : !llvm.ptr -> f64
+    %r2 = llvm.call %function(%a20, %a21) : !llvm.ptr, (f64, f64) -> f64
+    return %r2 : f64
+  ^three:
+    %a30 = llvm.load %items : !llvm.ptr -> f64
+    %p31 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a31 = llvm.load %p31 : !llvm.ptr -> f64
+    %p32 = llvm.getelementptr %items[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a32 = llvm.load %p32 : !llvm.ptr -> f64
+    %r3 = llvm.call %function(%a30, %a31, %a32) : !llvm.ptr, (f64, f64, f64) -> f64
+    return %r3 : f64
+  ^four:
+    %a40 = llvm.load %items : !llvm.ptr -> f64
+    %p41 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a41 = llvm.load %p41 : !llvm.ptr -> f64
+    %p42 = llvm.getelementptr %items[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a42 = llvm.load %p42 : !llvm.ptr -> f64
+    %p43 = llvm.getelementptr %items[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a43 = llvm.load %p43 : !llvm.ptr -> f64
+    %r4 = llvm.call %function(%a40, %a41, %a42, %a43) : !llvm.ptr, (f64, f64, f64, f64) -> f64
+    return %r4 : f64
+  ^five:
+    %a50 = llvm.load %items : !llvm.ptr -> f64
+    %p51 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a51 = llvm.load %p51 : !llvm.ptr -> f64
+    %p52 = llvm.getelementptr %items[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a52 = llvm.load %p52 : !llvm.ptr -> f64
+    %p53 = llvm.getelementptr %items[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a53 = llvm.load %p53 : !llvm.ptr -> f64
+    %p54 = llvm.getelementptr %items[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a54 = llvm.load %p54 : !llvm.ptr -> f64
+    %r5 = llvm.call %function(%a50, %a51, %a52, %a53, %a54) : !llvm.ptr, (f64, f64, f64, f64, f64) -> f64
+    return %r5 : f64
+  ^unsupported:
+    %argumentsMessage = llvm.mlir.addressof @strict_library_arguments : !llvm.ptr
+    %argumentsError = func.call @strict_error_named(%argumentsMessage) : (!llvm.ptr) -> f64
+    return %argumentsError : f64
+  }
   func.func private @strict_gc_init(%stack: !llvm.ptr) {
     %startedNow = func.call @strict_clock() : () -> f64
     %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr

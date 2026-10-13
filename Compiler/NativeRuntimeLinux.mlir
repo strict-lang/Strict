@@ -453,9 +453,29 @@
     %processResult = func.call @strict_process_result(%result, %written, %message) : (f64, f64, f64) -> f64
     return %processResult : f64
   }
-  llvm.mlir.global internal constant @strict_library_windows("LibraryCallsNeedWindowsForNow\00") : !llvm.array<30 x i8>
+  llvm.func @dlopen(!llvm.ptr, i32) -> !llvm.ptr
+  llvm.func @dlsym(!llvm.ptr, !llvm.ptr) -> !llvm.ptr
   func.func private @strict_library_call(%path: f64, %symbol: f64, %arguments: f64) -> f64 {
-    %message = llvm.mlir.addressof @strict_library_windows : !llvm.ptr
-    %error = func.call @strict_error_named(%message) : (!llvm.ptr) -> f64
-    return %error : f64
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %now = arith.constant 2 : i32
+    %library = llvm.call @dlopen(%name, %now) : (!llvm.ptr, i32) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isMissing = llvm.icmp "eq" %library, %null : !llvm.ptr
+    cf.cond_br %isMissing, ^noLibrary, ^loaded
+  ^noLibrary:
+    %libraryMessage = llvm.mlir.addressof @strict_library_missing : !llvm.ptr
+    %libraryError = func.call @strict_error_named(%libraryMessage) : (!llvm.ptr) -> f64
+    return %libraryError : f64
+  ^loaded:
+    %symbolName = func.call @strict_ptr(%symbol) : (f64) -> !llvm.ptr
+    %function = llvm.call @dlsym(%library, %symbolName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %isAbsent = llvm.icmp "eq" %function, %null : !llvm.ptr
+    cf.cond_br %isAbsent, ^noSymbol, ^found
+  ^noSymbol:
+    %symbolMessage = llvm.mlir.addressof @strict_library_symbol_missing : !llvm.ptr
+    %symbolError = func.call @strict_error_named(%symbolMessage) : (!llvm.ptr) -> f64
+    return %symbolError : f64
+  ^found:
+    %result = func.call @strict_library_invoke(%function, %arguments) : (!llvm.ptr, f64) -> f64
+    return %result : f64
   }

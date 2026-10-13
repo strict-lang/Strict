@@ -12,13 +12,13 @@ Done: a type without members whose methods have no body is implemented in C in
 `native/` next to it (`Examples/NativeAdd`: `Adder.Add(1, 2)` calls `double Adder_Add(double self,
 double left, double right)` from `native/Adder.c`). `strict build` links the C files (MlirForeign,
 NativeSources, Windows with clang, Linux through WSL gcc, `native/<Platform>.flags`), the VM builds
-`native/<Folder>.dll` when a source, `Compiler/strict.h` or the flags are newer and calls it through
-the new root type `Library` (LoadLibraryA/GetProcAddress, 1 to 5 numbers, Errors for a missing
-library or symbol). Text and Numbers arguments and results and `strict_fail` Errors work on both
-(strict.h, `NativeAdd` tests all of them). Still open from the checks below: handles are plain numbers
-so far, the Linux VM (dlopen, the Linux runtime returns an Error),
-Repositories copying `native/`, removing the dotnet-era `NativePlugins/`, CI coverage of
-`Examples/NativeAdd`.
+`native/<Folder>.dll` (`.so` on Linux) when a source, `Compiler/strict.h` or the flags are newer and
+calls it through the new root type `Library` (LoadLibraryA/GetProcAddress or dlopen/dlsym, 1 to 5
+numbers, Errors for a missing library or symbol). Text and Numbers arguments and results and
+`strict_fail` Errors work on both (strict.h, `NativeAdd` tests all of them, also in WSL), packages
+copied from a clone or GitHub keep `native/`, the dotnet-era `NativePlugins/` is gone. Still open:
+handles are plain numbers so far, CI does not run `Examples/NativeAdd` yet (the Windows job extracts
+only clang.exe without its headers, the Linux job extracts the headers now).
 
 Required acceptance checks:
 - Examples/NativeAdd: bodyless Adder.Add(left Number, right Number) Number, implemented
