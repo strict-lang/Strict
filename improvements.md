@@ -15,9 +15,9 @@ NativeSources, Windows with clang, Linux through WSL gcc, `native/<Platform>.fla
 calls it through the new root type `Library` (LoadLibraryA/GetProcAddress or dlopen/dlsym, 1 to 5
 numbers, Errors for a missing library or symbol). Text and Numbers arguments and results and
 `strict_fail` Errors work on both (strict.h, `NativeAdd` tests all of them, also in WSL), packages
-copied from a clone or GitHub keep `native/`, the dotnet-era `NativePlugins/` is gone. Still open:
-handles are plain numbers so far, CI does not run `Examples/NativeAdd` yet (the Windows job extracts
-only clang.exe without its headers, the Linux job extracts the headers now).
+copied from a clone or GitHub keep `native/`, the dotnet-era `NativePlugins/` is gone. CI runs
+`Examples/NativeAdd` on both jobs (the Windows job extracts clang's headers too, the Linux steps are
+validated in a fresh WSL clone, the Windows job is not run yet). Still open: handles are plain numbers.
 
 Required acceptance checks:
 - Examples/NativeAdd: bodyless Adder.Add(left Number, right Number) Number, implemented

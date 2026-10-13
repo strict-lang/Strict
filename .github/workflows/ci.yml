@@ -6,7 +6,7 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     env:
-      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing Expressions ImageProcessing MachineLearning Math NeuralNetworks Runtime Validators
+      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing Expressions ImageProcessing MachineLearning Math NeuralNetworks Runtime Validators
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -49,7 +49,7 @@ jobs:
   windows:
     runs-on: windows-latest
     env:
-      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing Expressions ImageProcessing MachineLearning Math NeuralNetworks Runtime Validators
+      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing Expressions ImageProcessing MachineLearning Math NeuralNetworks Runtime Validators
     defaults:
       run:
         shell: bash
@@ -59,16 +59,16 @@ jobs:
         id: llvm
         with:
           path: Tools/LLVM-22.1.0-Windows
-          key: llvm-22.1.0-windows-clang
+          key: llvm-22.1.0-windows-clang-headers
       - name: clang 22
         if: steps.llvm.outputs.cache-hit != 'true'
         run: |
           mkdir -p Tools/LLVM-22.1.0-Windows
-          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/clang+llvm-22.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xJ -C Tools/LLVM-22.1.0-Windows --strip-components=2 clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/clang.exe
+          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/clang+llvm-22.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xJ -C Tools/LLVM-22.1.0-Windows --strip-components=1 clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/clang.exe clang+llvm-22.1.0-x86_64-pc-windows-msvc/lib/clang/22/include
       - name: mlir-opt and mlir-translate from MSYS2
         run: |
           /c/msys64/usr/bin/pacman.exe -Sy --noconfirm --needed mingw-w64-ucrt-x86_64-mlir
-          cygpath -w "$PWD/Tools/LLVM-22.1.0-Windows" >> "$GITHUB_PATH"
+          cygpath -w "$PWD/Tools/LLVM-22.1.0-Windows/bin" >> "$GITHUB_PATH"
       - name: Bootstrap from the seed
         shell: cmd
         run: Compiler\Bootstrap.cmd
