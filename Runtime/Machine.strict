@@ -40,22 +40,24 @@ Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmVal
 	Hello.Bound(Texts, VmValue.OfText("ab"), Doubler.methods.First, List(VmValue)).Last.text is "ab"
 	let start = Frame.MembersSlot + type.members.Length
 	let end = start + method.parameters.Length
-	let isOwner = (type.Name is instance.kind) or Natives.IsNamed(type, instance.kind, Natives.Short(instance.kind))
+	let isSame = type.Name is instance.kind
+	let ownership = isSame then 2 else Natives.IsNamed(type, instance.kind, Natives.Short(instance.kind)) then 1 else 0
 	let indexed = Indexed(method, arguments)
 	for end > method.Slots then end else method.Slots
-		index < start then Member(type, instance, index, isOwner, indexed) else Argument(method, arguments, index - start)
-Member(type TypeEntry, instance VmValue, slot Number, isOwner Boolean, indexed VmValue) VmValue
-	Hello.Member(Wrapper, VmValue.OfError("a"), 6, false, VmValue.None).kind is "Strict/Error"
-	Hello.Member(Wrapper, VmValue.OfError("a"), 7, false, VmValue.None).number is 7
-	Hello.Member(Wrapper, VmValue.OfError("a"), Frame.IndexSlot, false, VmValue.OfNumber(3)).number is 3
+		index < start then Member(type, instance, index, ownership, indexed) else Argument(method, arguments, index - start)
+Member(type TypeEntry, instance VmValue, slot Number, ownership Number, indexed VmValue) VmValue
+	Hello.Member(Wrapper, VmValue.OfError("a"), 6, 0, VmValue.None).kind is "Strict/Error"
+	Hello.Member(Wrapper, VmValue.OfError("a"), 7, 0, VmValue.None).number is 7
+	Hello.Member(Wrapper, VmValue.OfError("a"), Frame.IndexSlot, 0, VmValue.OfNumber(3)).number is 3
 	if slot < Frame.MembersSlot
 		return slot < 2 then instance else slot is Frame.IndexSlot then indexed else VmValue.None
 	let position = slot - Frame.MembersSlot
+	if (ownership is 2) and (position < instance.items.Length)
+		return instance.items(position)
 	let member = type.members(position)
 	if member.IsConstant
-		let isKept = (type.Name is instance.kind) and (position < instance.items.Length)
-		return isKept then instance.items(position) else Natives.Initial(member)
-	isOwner then instance.Member(position) else instance.As(member.typeName)
+		return Natives.Initial(member)
+	ownership > 0 then instance.Member(position) else instance.As(member.typeName)
 Argument(method MethodEntry, arguments List(VmValue), position Number) VmValue
 	Hello.Argument(Defaulted, List(VmValue), 0).number is 7
 	Hello.Argument(Defaulted, List(VmValue) + VmValue.OfNumber(2), 0).number is 2
@@ -89,8 +91,8 @@ Execute(method MethodEntry, locals List(VmValue), owner Text) VmValue
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
 	Hello.Call(Uppered).text is "AB"
-	let entry = call.IsResolved then call.entry else Resolver(types).Targeted(call.entry)
-	let at = Invocation(entry, call.Arguments, call.Instance).Resolution
+	let at = call.Resolution
+	let entry = call.entry.payload.Length > at then call.entry else Resolver(types).Targeted(call.entry)
 	let route = entry.payload(at)
 	if route is Resolver.Hosting
 		return Hosted(call).Result

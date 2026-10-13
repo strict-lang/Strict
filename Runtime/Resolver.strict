@@ -92,16 +92,23 @@ Slotted(entry InstructionEntry, names Texts) InstructionEntry
 	let kind = entry.kind
 	let slot = Slot(local, names)
 	if kind is InstructionType.StoreConstantToVariable
-		return InstructionEntry(kind, entry.texts, entry.payload + slot, entry.line)
+		return Decoded(InstructionEntry(kind, entry.texts, entry.payload + slot, entry.line))
 	let payload = entry.payload
 	let start = kind is InstructionType.IndexCall then (payload(0), payload(1)) else List(Number) + payload(0)
 	InstructionEntry(kind, entry.texts, start + slot + Element(entry, names), entry.line)
 Decoded(entry InstructionEntry) InstructionEntry
 	Doubling.Decoded(InstructionEntry.LoadNumber(0, 1.5)).payload is (0, 1, 1.5)
 	Doubling.Decoded(InstructionEntry.LoadNumber(0, 7)).payload is (0, 1, 7)
-	if (entry.kind is not InstructionType.LoadConstantToRegister) or (entry.payload(1) is not 3)
+	Doubling.Decoded(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0.5), "a")).payload is (1, 0.5, -1, 0)
+	let at = entry.kind is InstructionType.LoadConstantToRegister then 1 else 0
+	let isConstant = (at is 1) or (entry.kind is InstructionType.StoreConstantToVariable)
+	if (isConstant is false) or (entry.payload(at) is not 3)
 		return entry
-	InstructionEntry(entry.kind, entry.texts, (entry.payload(0), 1, PayloadDecoder(entry).Double(2)), entry.line)
+	let number = PayloadDecoder(entry).Double(at + 1)
+	mutable payload = at is 1 then (entry.payload(0), 1, number) else (1, number)
+	for Range(at + 9, entry.payload.Length)
+		payload = payload + entry.payload(value)
+	InstructionEntry(entry.kind, entry.texts, payload, entry.line)
 Element(entry InstructionEntry, names Texts) Numbers
 	Doubling.Element(ElementStore, Specials) is (LiteralIndex, 1)
 	Doubling.Element(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a(index)"), Specials).Length is 1
