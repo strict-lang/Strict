@@ -32,8 +32,21 @@ Formatted(lines Texts) Texts
 	formatted
 Tabbed(lines Texts) Texts
 	RoundTrip.Tabbed(("Run", "    1")) is ("Run", "\t1")
+	RoundTrip.Tabbed(("    Run", "        1")) is ("Run", "\t1")
+	mutable indented = List(Mutable(Text))
 	for lines
-		Indented(value)
+		indented.Add(Indented(value))
+	let shared = Shared(indented)
+	for indented
+		value.Length < shared then value else value.Substring(shared, value.Length - shared)
+Shared(lines Texts) Number
+	RoundTrip.Shared(("\tRun", "\t\t1", "")) is 1
+	RoundTrip.Shared(("Run", "\t1")) is 0
+	mutable shared = 1000
+	for lines
+		if value.Trim is not ""
+			shared = (shared, value.Length + 1 - (value + "x").Trim.Length).Minimum
+	shared
 Indented(line Text) Text
 	RoundTrip.Indented("    a") is "\ta"
 	RoundTrip.Indented("\t      b") is "\t\t\tb"

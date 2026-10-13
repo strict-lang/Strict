@@ -68,12 +68,14 @@ IsParsed(line Text) Boolean
 	FileCompiler.IsParsed("(number + other") is false
 	FileCompiler.IsParsed("if generic is") is true
 	FileCompiler.IsParsed("* value") is true
+	FileCompiler.IsParsed("number + other other") is false
 	let tokens = Tokenizer(line).Tokens
 	if tokens.Count("(") is not tokens.Count(")")
 		return false
 	let statement = StatementParser(tokens).ParseStatement
 	let isReduce = (statement.Kind is "Binary") and (statement.children.First.Kind is "Missing")
-	IsComplete(isReduce then statement.children.Last else statement)
+	let regenerated = Tokenizer(statement to Text).Tokens - "(" - ")"
+	IsComplete(isReduce then statement.children.Last else statement) and (regenerated is (tokens - "(" - ")"))
 IsComplete(node SyntaxNode) Boolean
 	FileCompiler.IsComplete(SyntaxParser(Tokenizer("a + b * c").Tokens).Parse)
 	FileCompiler.IsComplete(SyntaxParser(Tokenizer("a + + b").Tokens).Parse) is false
