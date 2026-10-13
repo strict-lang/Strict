@@ -52,14 +52,9 @@ Signature(assignment Number) SyntaxNode
 	for Range(2, assignment)
 		depth = depth + Syntax.BracketDelta(tokens(value))
 		if ((depth is 0) and (tokens(value) is ",")) or (depth < 0)
-			parameters.Add(Parameter(start, value))
+			parameters.Add(Syntax.ParseRange(start, value))
 			start = value + 1
 	SyntaxNode("Call", tokens(0), parameters)
-Parameter(start Number, end Number) SyntaxNode
-	StatementParser(Tokenizer("f(a = 2) = a").Tokens).Parameter(2, 5) to Text is "a = 2"
-	StatementParser(Tokenizer("f(a) = a").Tokens).Parameter(2, 3) to Text is "a"
-	let name = SyntaxNode("Identifier", tokens(start))
-	end - start > 1 then SyntaxNode("Reassignment", "", (name, Syntax.ParseRange(start + 2, end))) else name
 AssignmentIndex Number
 	StatementParser("a", "=", "1").AssignmentIndex is 1
 	StatementParser("f", "(", "a", ")").AssignmentIndex is -1

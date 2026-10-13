@@ -9,3 +9,6 @@ Scaled(factor Number) Number
 	ComputedRectangle(2, 2).IsSquare is true
 	ComputedRectangle(2, 3).Doubled is 12
 	Doubled(factor) * 2
+Widened(extra Number) ComputedRectangle
+	ComputedRectangle(2, 3).Widened(1) is ComputedRectangle(3, 3)
+	ComputedRectangle(value, Width = Width + extra)

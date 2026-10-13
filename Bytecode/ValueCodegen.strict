@@ -61,7 +61,7 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 	if IndexCodegen(value).IsIndexing(node, block)
 		return IndexCodegen(value).Indexed(node, block)
 	if (node.Kind is "Call") or IsTypeName(node.children(0), block)
-		return Invoke(node, block, -1, TypeOf(node, block))
+		return Invoke(ConversionCodegen(value).Replaced(node), block, -1, TypeOf(node, block))
 	let first = node.children(0)
 	let isListVariable = (first.Kind is "Identifier") and inference.types.IsPlural(TypeOf(first, block))
 	(node.text is in ("Add", "Remove")) and isListVariable then Elements.Added(node, block) else InstanceCall(node, block)

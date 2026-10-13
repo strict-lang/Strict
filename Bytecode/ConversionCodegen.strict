@@ -4,8 +4,8 @@ constant ColorTypes = TypeInference.Colors.types
 constant Colored = ConversionCodegen(ValueCodegen(TypeInference(ColorTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant NewColorValue = SyntaxNode("Call", "ColorValue", ValueCodegen.One)
 constant NewColor = SyntaxNode("Call", "Color", ValueCodegen.One)
-constant ColorReassignment = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "c"), NewColorValue))
 constant Pixels = SyntaxNode("Identifier", "pixels")
+constant Repainted = SyntaxNode("Call", "Greeter", (Pixels, SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "c"), NewColorValue))))
 constant Kinded = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Kind", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "to", List(Text) + "Text"), List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant Stepped = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Step", List(Scope) + Scope(List(Text) + "step", List(Text) + "Number"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant Mapped = ConversionCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Dictionary", List(Scope) + Scope(List(Text) + "keysAndValues", List(Text) + "List(key Generic, mappedValue Generic)"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
@@ -20,7 +20,7 @@ ArgumentTypes(node SyntaxNode, owner Text, block CodeBlock) Texts
 		isOverloaded then values.TypeOf(node.children(value), block) else "Unknown"
 Assigned(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Assigned(SyntaxNode("Declaration", "let a", ValueCodegen.One), CodeBlock.Empty).Kind is "Number"
-	Colored.Assigned(ColorReassignment, CodeBlock.Empty.Declare("c", "Color")).text is "Color"
+	Colored.Assigned(Repainted.children(1), CodeBlock.Empty.Declare("c", "Color")).text is "Color"
 	let right = node.children.Last
 	node.Kind is "Declaration" then right else Converted(right, values.TypeOf(node.children(0), block), block)
 Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
@@ -132,3 +132,20 @@ Looped(node SyntaxNode, block CodeBlock) CodeBlock
 	let end = InstructionEntry.Jump(InstructionType.LoopEnd, written.instructions.Length - started.instructions.Length)
 	let ended = CodeBlock(written.instructions + end, block.register, written.nextId, block.scope)
 	ended.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, name))
+Replaced(call SyntaxNode) SyntaxNode
+	Plain.Replaced(Repainted) to Text is "Greeter(pixels.text)"
+	Plain.Replaced(NewColor) is NewColor
+	let names = values.target.FromNames(call.text)
+	if (call.children.Length < 2) or (call.children(1).Kind is not "Reassignment") or (names.Length is 0)
+		return call
+	mutable arguments = List(Mutable(SyntaxNode))
+	for names
+		arguments.Add(Replacement(call, value))
+	SyntaxNode("Call", call.text, arguments, call.line)
+Replacement(call SyntaxNode, name Text) SyntaxNode
+	Plain.Replacement(Repainted, "c") is NewColorValue
+	Plain.Replacement(Repainted, "size") to Text is "pixels.size"
+	for call.children
+		if (value.Kind is "Reassignment") and (value.children(0).text is name)
+			return value.children(1)
+	SyntaxNode("Member", name, call.children(0))

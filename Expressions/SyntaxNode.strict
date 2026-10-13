@@ -83,15 +83,15 @@ ArgumentsText(firstIndex Number) Text
 HeadNames Texts
 	StatementParser(Tokenizer("let a = b.Length + Add(c)").Tokens).ParseStatement.HeadNames is ("b", "Add", "c")
 	SyntaxNode("Body", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "b"))).HeadNames.Length is 0
-	if Kind is "Body"
-		return List(Text)
-	if Kind is "Identifier"
-		return Tokenizer(text).Tokens
+	SyntaxParser(Tokenizer("Point(p, y = q)").Tokens).Parse.HeadNames is ("Point", "p", "q")
+	if Kind is in ("Body", "Identifier")
+		return Kind is "Body" then List(Text) else Tokenizer(text).Tokens
 	mutable names = List(Mutable(Text))
 	if Kind is "Call"
 		names.Add(text)
 	for children
-		names = names + HeadNames
+		let isNamed = (Kind is "Call") and (value.Kind is "Reassignment")
+		names = names + (isNamed then value.children.Last.HeadNames else HeadNames)
 	names
 HasBody Boolean
 	SyntaxNode("For", "", (SyntaxNode("Number", "3"), SyntaxNode("Body", ""))).HasBody is true
