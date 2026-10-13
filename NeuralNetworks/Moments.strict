@@ -1,0 +1,45 @@
+has first List(Numbers)
+has second List(Numbers)
+has firstBias Numbers
+has secondBias Numbers
+constant SquareBeta = 0.999
+constant Tiny = 0.00000001
+constant Start = Moments(List(Numbers) + (0, 0), List(Numbers) + (0, 0), List(Number) + 0, List(Number) + 0)
+Zeros(layer Layer) Moments
+	Moments.Zeros(Layer.Halves) is Start
+	let biases = layer.Zeros(layer.biases.Length)
+	Moments(Zeroed(layer.weights), Zeroed(layer.weights), biases, biases)
+Zeroed(rows List(Numbers)) List(Numbers)
+	Start.Zeroed(List(Numbers) + (3, 4)) is List(Numbers) + (0, 0)
+	for rows
+		value * 0
+Updated(deltas Numbers, input Numbers, beta Number) Moments
+	Start.Updated(List(Number) + 2, (1, 0), 0.5).first is List(Numbers) + (1, 0)
+	Start.Updated(List(Number) + 2, (1, 0), 0.5).secondBias.First.Round(3) is 0.004
+	let gradients = Gradients(deltas, input)
+	let firsts = Averaged(first, gradients, beta, false)
+	let seconds = Averaged(second, gradients, SquareBeta, true)
+	Moments(firsts, seconds, Mixed(firstBias, deltas, beta, false), Mixed(secondBias, deltas, SquareBeta, true))
+Gradients(deltas Numbers, input Numbers) List(Numbers)
+	Start.Gradients((1, 2), (3, 4)) is ((3, 4), (6, 8))
+	for deltas
+		input * value
+Averaged(old List(Numbers), gradients List(Numbers), beta Number, isSquared Boolean) List(Numbers)
+	Start.Averaged(List(Numbers) + (0, 0), List(Numbers) + (2, 4), 0.5, true) is List(Numbers) + (2, 8)
+	for old
+		Mixed(value, gradients(index), beta, isSquared)
+Mixed(old Numbers, gradients Numbers, beta Number, isSquared Boolean) Numbers
+	Start.Mixed((0, 0), (2, 4), 0.5, false) is (1, 2)
+	for old
+		beta * value + (1 - beta) * (isSquared then gradients(index) * gradients(index) else gradients(index))
+Applied(layer Layer, rate Number) Layer
+	Start.Applied(Layer.Halves, 0.1) is Layer.Halves
+	Layer(Stepped(layer.weights, first, second, rate), Moved(layer.biases, firstBias, secondBias, rate), layer.activation)
+Stepped(rows List(Numbers), firsts List(Numbers), seconds List(Numbers), rate Number) List(Numbers)
+	Start.Stepped(List(Numbers) + (1, 1), List(Numbers) + (1, 0), List(Numbers) + (1, 0), 0.5).First.First.Round(3) is 0.5
+	for rows
+		Moved(value, firsts(index), seconds(index), rate)
+Moved(values Numbers, firsts Numbers, seconds Numbers, rate Number) Numbers
+	Start.Moved((1, 1), (1, 0), (1, 0), 0.5).Last is 1
+	for values
+		value - rate * firsts(index) / (seconds(index).SquareRoot + Tiny)

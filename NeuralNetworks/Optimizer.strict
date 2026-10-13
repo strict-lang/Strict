@@ -1,0 +1,30 @@
+has network Network
+has moments List(Moments)
+has beta Number
+has step Number = 0
+constant Adam = 0.9
+constant RmsProp = 0
+constant Paired = Optimizer.Started(Network.Pair, Adam)
+Started(untrained Network, decay Number) Optimizer
+	Paired.moments.Length is 2
+	mutable zeros = List(Mutable(Moments))
+	for untrained.layers
+		zeros.Add(Moments.Zeros(value))
+	Optimizer(untrained, zeros, decay)
+Trained(input Numbers, target Numbers, rate Number) Optimizer
+	Paired.Trained((1, 1), List(Number) + 0, 0.1).network.Predict((1, 1)).First < 0.7 is true
+	let activations = network.Activations(input)
+	let deltas = network.Deltas(activations, target)
+	let next = step + 1
+	let scaled = rate * (1 - Power(Moments.SquareBeta, next)).SquareRoot / (1 - Power(beta, next))
+	mutable layers = List(Mutable(Layer))
+	mutable updated = List(Mutable(Moments))
+	for network.layers
+		let moment = moments(index).Updated(deltas(index), activations(index), beta)
+		updated.Add(moment)
+		layers.Add(moment.Applied(value, scaled))
+	Optimizer(Network(layers), updated, beta, next)
+Power(base Number, exponent Number) Number
+	Optimizer.Power(0.5, 2).Round(6) is 0.25
+	Optimizer.Power(0, 3) is 0
+	(exponent * base.Logarithm).Exponential

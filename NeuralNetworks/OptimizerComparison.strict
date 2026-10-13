@@ -1,0 +1,16 @@
+has logger
+constant Steps = 2000
+constant Rate = 0.05
+constant Uneven = Network((Layer(((0.5, -0.4), (-0.3, 0.6), (0.2, 0.1)), (0, 0, 0)), Layer(List(Numbers) + (0.3, -0.2, 0.4), List(Number) + 0)))
+Run
+	let network = Network.Random((2, 3, 1))
+	logger.Log("XOR error after " + Steps + " steps from the same random 2-3-1 network:")
+	logger.Log("Gradient descent with momentum " + Xor.Error(Xor.Trained(network, Steps)))
+	logger.Log("RMSprop " + Xor.Error(Trained(Optimizer.Started(network, Optimizer.RmsProp)).network))
+	logger.Log("Adam " + Xor.Error(Trained(Optimizer.Started(network, Optimizer.Adam)).network))
+Trained(optimizer Optimizer) Optimizer
+	Xor.Error(OptimizerComparison.Trained(Optimizer.Started(Uneven, Optimizer.Adam)).network) < 0.1 is true
+	mutable trained = optimizer
+	for Steps
+		trained = trained.Trained(Xor.Inputs(index % 4), List(Number) + Xor.Targets(index % 4), Rate)
+	trained
