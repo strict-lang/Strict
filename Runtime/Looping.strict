@@ -1,58 +1,63 @@
-has frame
-constant Counting = Frame(MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1))), 0, List(VmValue) + VmValue.OfNumber(3), List(VmValue))
-constant Begun = Looping(Counting).Begin.Local(Frame.LoopSlot).items
-constant Ranged = Frame(MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, 1), InstructionEntry.Jump(InstructionType.LoopEnd, 1))), 0, (VmValue.OfNumber(5), VmValue.OfNumber(2)), List(VmValue))
-Begin Frame
-	Looping(Counting).Begin.Local(Frame.IndexSlot).number is 0
-	Looping(Ranged).Begin.Local(Frame.ValueSlot).number is 5
-	let entry = frame.Instruction
-	let iterable = frame.Register(entry.payload(0))
-	let hasEnd = entry.payload(1) is 1
-	let start = hasEnd then iterable.number else 0
-	let end = hasEnd then frame.Register(entry.payload(2)).number else Count(iterable)
-	let begin = frame.position
-	let saved = (frame.Local(Frame.IndexSlot), frame.Local(Frame.ValueSlot), VmValue.OfNumber(begin))
-	let counts = (VmValue.OfNumber((end - start).Absolute), VmValue.OfNumber(0), frame.Local(Frame.LoopSlot))
-	let state = (iterable, VmValue.OfNumber(start), VmValue.OfNumber(end)) + saved + counts
-	start is end then Restored(frame, state).At(frame.method.LoopEndOf(begin) + 1) else Current(frame, state, 0).Next
-End Frame
-	Looping(Looping(Counting).Begin).End.Local(Frame.IndexSlot).number is 1
-	Looping(Looping(Looping(Counting).Begin).End).End.Local(Frame.IndexSlot).number is 2
-	Looping(Looping(Ranged).Begin).End.Local(Frame.ValueSlot).number is 4
-	let state = frame.Local(Frame.LoopSlot).items
-	let next = state(7).number + 1
-	if next >= state(6).number
-		return Restored(frame, state).Next
-	let start = state(5).number + 1
-	Current(frame, Counted(state, next), next).At(start)
-Counted(state List(VmValue), next Number) List(VmValue)
-	Looping(Counting).Counted(Begun, 2).Length is 9
-	mutable result = state
-	result(7) = VmValue.OfNumber(next)
-	result
-Current(looped Frame, state List(VmValue), iteration Number) Frame
-	Looping(Counting).Current(Counting, Begun, 2).Local(Frame.ValueSlot).number is 2
-	let current = Element(state, iteration)
-	let kind = state(0).kind
-	let index = (kind is "List") or (kind is "Text") then VmValue.OfNumber(iteration) else current
-	let counted = looped.WithLocal(Frame.LoopSlot, VmValue.OfList(state))
-	counted.WithLocal(Frame.IndexSlot, index).WithLocal(Frame.ValueSlot, current)
-Element(state List(VmValue), iteration Number) VmValue
-	Looping(Counting).Element((VmValue.OfText("ab"), VmValue.OfNumber(0), VmValue.OfNumber(2)), 1).text is "b"
-	Looping(Counting).Element((VmValue.OfNumber(5), VmValue.OfNumber(5), VmValue.OfNumber(2)), 1).number is 4
-	let iterable = state(0)
+has state VmValue
+constant Counting = Looping(VmValue.None).Begun(VmValue.OfNumber(3), VmValue.None, 7)
+constant Ranged = Looping(VmValue.None).Begun(VmValue.OfNumber(5), VmValue.OfNumber(2), 7)
+Begun(iterable VmValue, ending VmValue, begin Number) VmValue
+	Counting.items(2).number is 0
+	Ranged.items(3).number is 5
+	Looping(Counting).Begun(VmValue.OfNumber(0), VmValue.None, 9) is Counting
+	let start = Start(iterable, ending)
+	let end = End(iterable, ending)
+	if start is end
+		return state
+	let bounds = (VmValue.OfNumber(start), VmValue.OfNumber(end), VmValue.OfNumber(begin))
+	let count = VmValue.OfNumber((end - start).Absolute)
+	Iterated(VmValue.OfList(List(VmValue) + iterable + bounds + count + state), 0)
+Iterated(loop VmValue, iteration Number) VmValue
+	Looping(VmValue.None).Iterated(Counting.items(0), 2).items(3).number is 2
+	Looping(VmValue.None).Iterated(VmValue.OfList(VmValue.OfText("ab")), 1).items(3).text is "b"
+	let counted = VmValue.OfNumber(iteration)
+	let element = Element(loop, iteration)
+	let isSequence = (loop.items(0).kind is "List") or (loop.items(0).kind is "Text")
+	VmValue.OfList(loop, counted, isSequence then counted else element, element)
+Ended VmValue
+	Looping(Counting).Ended.items(2).number is 1
+	Looping(Looping(Looping(Counting).Ended).Ended).Ended.kind is "None"
+	let loop = state.items(0)
+	let next = state.items(1).number + 1
+	next >= loop.items(4).number then loop.items(5) else Iterated(loop, next)
+Next(position Number, begin Number) Number
+	Looping(Counting).Next(9, 7) is 8
+	Looping(VmValue.None).Next(9, 7) is 10
+	(state.items.Length > 0) and (state.items(0).items(3).number is begin) then begin + 1 else position + 1
+Current(isOuter Boolean, isIndex Boolean, fallback VmValue) VmValue
+	Looping(Counting).Current(false, true, VmValue.None).number is 0
+	Looping(Counting).Current(true, false, VmValue.OfText("a")).text is "a"
+	Looping(VmValue.None).Current(false, true, VmValue.OfNumber(4)).number is 4
+	let current = isOuter and (state.items.Length > 0) then state.items(0).items(5) else state
+	current.items.Length is 0 then fallback else current.items(isIndex then 2 else 3)
+IsEmpty(iterable VmValue, ending VmValue) Boolean
+	Looping(VmValue.None).IsEmpty(VmValue.OfNumber(0), VmValue.None) is true
+	Looping(VmValue.None).IsEmpty(VmValue.OfText("a"), VmValue.None) is false
+	Start(iterable, ending) is End(iterable, ending)
+Start(iterable VmValue, ending VmValue) Number
+	Looping(VmValue.None).Start(VmValue.OfNumber(5), VmValue.OfNumber(2)) is 5
+	ending.kind is "None" then 0 else iterable.number
+End(iterable VmValue, ending VmValue) Number
+	Looping(VmValue.None).End(VmValue.OfText("abc"), VmValue.None) is 3
+	ending.kind is "None" then Count(iterable) else ending.number
+Element(loop VmValue, iteration Number) VmValue
+	Looping(VmValue.None).Element(Counting.items(0), 2).number is 2
+	Looping(VmValue.None).Element(Ranged.items(0), 1).number is 4
+	let iterable = loop.items(0)
 	if iterable.kind is "List"
 		return iterable.items(iteration)
 	if iterable.kind is "Text"
 		return VmValue.OfText(iterable.text.Substring(iteration, 1))
-	let start = state(1).number
-	VmValue.OfNumber(state(2).number < start then start - iteration else start + iteration)
-Restored(looped Frame, state List(VmValue)) Frame
-	Looping(Counting).Restored(Counting, Begun).Local(Frame.IndexSlot).kind is "None"
-	looped.WithLocal(Frame.IndexSlot, state(3)).WithLocal(Frame.ValueSlot, state(4)).WithLocal(Frame.LoopSlot, state(8))
+	let start = loop.items(1).number
+	VmValue.OfNumber(loop.items(2).number < start then start - iteration else start + iteration)
 Count(iterable VmValue) Number
-	Looping(Counting).Count(VmValue.OfNumber(2.5)) is 2
-	Looping(Counting).Count(VmValue.OfText("abc")) is 3
+	Looping(VmValue.None).Count(VmValue.OfNumber(2.5)) is 2
+	Looping(VmValue.None).Count(VmValue.OfText("abc")) is 3
 	if iterable.kind is "Number"
 		return iterable.number < 0 then 0 else iterable.number.Floor
 	iterable.Length

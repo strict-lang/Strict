@@ -30,7 +30,7 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 	lines + memory.Boxed(Temp("op"), "o", typeName) + function.Store(Temp("of"), "%r" + entry.payload(0))
 MemberValue(entry InstructionEntry, member MemberEntry, slot Number) Texts
 	MlirInstances(Shapes, 1).MemberValue(Built, MlirFunction.Shape.members.First, 0).Length is 3
-	let names = Invocation(entry, Frame(function.method, 0, List(VmValue), List(VmValue))).ParameterNames
+	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	let argument = names.Index(member.Name)
 	let chosen = argument < 0 then slot else argument
 	let countPosition = 5 + entry.payload(3)

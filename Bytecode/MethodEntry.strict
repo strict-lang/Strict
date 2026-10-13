@@ -2,12 +2,14 @@ has Name Text
 has parameters List(MemberEntry)
 has returnType Text
 has instructions List(InstructionEntry)
+has Slots Number = 0
 constant PrintHi = InstructionEntry(InstructionType.Print, "Hi", (-1, 0), 3)
 constant GoCall = InstructionEntry.Invoke(0, ("Strict/B", "Go", "None"), List(Number), -1)
 constant GoRun = MethodEntry("Run", List(MemberEntry), "None", GoCall)
 constant CountingLoop = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))
 constant Logged = MethodEntry("Add", MemberEntry.LoggerMember, "Strict/Number", List(InstructionEntry))
 constant Initializing = MethodEntry("from", List(MemberEntry), "Strict/A", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "logger")))
+constant Branching = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Return(1)))
 constant HelloRun = MethodEntry("Run", List(MemberEntry), "None", (PrintHi, InstructionEntry.Return(0)))
 Names(names BinaryNames) BinaryNames
 	HelloRun.Names(BinaryNames("a", "b")).names.Length is 5
@@ -82,6 +84,13 @@ LoopBeginOf(position Number) Number
 		let change = kind is InstructionType.LoopEnd then 1 else kind is InstructionType.LoopBegin then -1 else 0
 		depth = depth + change
 	0
+JumpEndOf(jump InstructionEntry) Number
+	Branching.JumpEndOf(Branching.instructions(0)) is 2
+	Branching.JumpEndOf(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 5)) is 4
+	for instructions
+		if (value.kind is InstructionType.JumpEnd) and (value.payload is jump.payload)
+			return index
+	instructions.Length
 LoopEndOf(position Number) Number
 	CountingLoop.LoopEndOf(0) is 1
 	mutable depth = 0

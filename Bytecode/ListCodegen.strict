@@ -107,7 +107,7 @@ Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.Disowned(BodyParser("Run", "\tlet saved = values").Block(1, 1), Owned, false).Owns("values") is false
 	Plain.Disowned(BodyParser("Run", "\tvalues.Add(1)").Block(1, 1), Owned, false).Owns("values") is true
 	Plain.Disowned(BodyParser("Run", "\t1 is not in values").Block(1, 1), Owned, false).Owns("values") is true
-	ListCodegen(Borrowing.Lent).Disowned(Borrowing.Reading, Owned, false).Owns("values") is true
+	Plain.Disowned(BodyParser("Run", "\tif 1 > 2", "\t\treturn values").Block(1, 1), Owned, false).Owns("values") is true
 	if node.Kind is "Identifier"
 		return isUsed then block.Disowned(node.text) else block
 	let reassigned = (node.Kind is "Reassignment") and (IsNew(node.children(1)) is false)
@@ -120,8 +120,8 @@ IsUsed(parent SyntaxNode, position Number, isUsed Boolean) Boolean
 	Plain.IsUsed(ValueCodegen.AddOne, 0, true) is true
 	Plain.IsUsed(ValueCodegen.GreeterText, 0, true) is false
 	let isLast = position is parent.children.Length - 1
-	if parent.Kind is "Body"
-		return isUsed and isLast
+	if parent.Kind is in ("Body", "Return")
+		return parent.Kind is "Body" then (isUsed and isLast) else (isUsed or (borrowing.Length > 0))
 	let isBranch = isLast and ((parent.Kind is in ("If", "ElseIf", "Else", "ElseValue", "For")) or (parent.text is "then"))
 	if isBranch or (parent.text is "else")
 		return isUsed

@@ -1,7 +1,5 @@
+has machine Machine
 has method Bytecode/MethodEntry
-has position Number
-has registers List(VmValue)
-has locals List(VmValue)
 has owner Text = ""
 constant ThisSlot = 0
 constant ValueSlot = 1
@@ -10,59 +8,131 @@ constant FlagSlot = 3
 constant LoopSlot = 4
 constant IndexSlot = 5
 constant MembersSlot = 6
-constant Start = Frame(MethodEntry.HelloRun, 0, List(VmValue), List(VmValue))
-constant Logging = Frame(MethodEntry.HelloRun, 0, List(VmValue), List(VmValue), "Strict/Examples/HelloLogger")
-constant Looped = Start.WithLocal(LoopSlot, VmValue.OfList(VmValue.None, VmValue.None, VmValue.None, VmValue.OfNumber(2), VmValue.OfNumber(7)))
-Instruction InstructionEntry
-	Start.Instruction.kind is InstructionType.Print
-	method.instructions(position)
-Register(number Number) VmValue
-	Start.WithRegister(1, VmValue.OfNumber(5)).Register(1).number is 5
-	Start.Register(3).kind is "None"
-	number < registers.Length then registers(number) else VmValue.None
-WithRegister(number Number, entry VmValue) Frame
-	Start.WithRegister(0, VmValue.OfNumber(5)).registers.Length is 1
-	Frame(method, position, Replaced(registers, number, entry), locals, owner)
-WithLocal(slot Number, entry VmValue) Frame
-	Start.WithLocal(6, VmValue.OfNumber(5)).Local(6).number is 5
-	Frame(method, position, registers, Replaced(locals, slot, entry), owner)
-NextWithRegister(number Number, entry VmValue) Frame
-	Start.NextWithRegister(1, VmValue.OfNumber(5)).Register(1).number is 5
-	Frame(method, position + 1, Replaced(registers, number, entry), locals, owner)
-NextWithLocal(slot Number, entry VmValue) Frame
-	Start.NextWithLocal(6, VmValue.OfNumber(5)).position is 1
-	Frame(method, position + 1, registers, Replaced(locals, slot, entry), owner)
-At(target Number) Frame
-	Start.At(1).position is 1
-	Frame(method, target, registers, locals, owner)
-Next Frame
-	Start.Next.position is 1
-	Logging.Next.owner is "Strict/Examples/HelloLogger"
-	Frame(method, position + 1, registers, locals, owner)
-Local(slot Number) VmValue
-	Start.WithLocal(6, VmValue.OfText("x")).Local(6).text is "x"
-	Start.Local(6).kind is "None"
-	Looped.Local(Resolver.OuterSlot).number is 7
-	Looped.Local(Resolver.OuterIndexSlot).number is 2
-	if slot < 0
-		return locals(LoopSlot).items(slot is Resolver.OuterSlot then 4 else 3)
-	slot < locals.Length then locals(slot) else VmValue.None
-Traced(error VmValue) VmValue
-	Logging.Traced(VmValue.OfError("a")).Traces is "\n\tat HelloLogger.Run in Examples/HelloLogger.strict:line 3"
+constant Doubling = Machine(Resolver(List(TypeEntry) + Machine.Doubler).Resolved)
+constant Twice = Frame(Doubling, Doubling.types.First.methods.First, "Strict/Doubler")
+constant Calling = Frame(Machine(Resolver(List(TypeEntry) + Machine.Failing).Resolved), MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + Machine.FailCall), "Strict/Caller")
+constant Listed = (VmValue.OfText("ab"), VmValue.OfText("a"), VmValue.None, VmValue.OfBoolean(true), Looping.Counting, VmValue.None, VmValue.OfNumber(1), VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)), VmValue.OfNumber(5))
+constant StoreSecond = InstructionEntry(InstructionType.StoreRegisterToVariable, "list(1)", (6, 7, Resolver.LiteralIndex, 1, 7))
+Finished(arguments List(VmValue)) List(VmValue)
+	Twice.Finished(Listed).Index(VmValue.OfNumber(42)) is ResultSlot
+	mutable slots = List(VmValue) + arguments
+	mutable position = 0
+	for Machine.MaxSteps
+		if position >= method.instructions.Length
+			return slots
+		let entry = method.instructions(position)
+		let target = entry.payload.Last
+		slots(target) = Value(entry, position, slots)
+		position = Next(entry, position, slots)
+	slots
+Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
+	Twice.Value(Twice.method.instructions(0), 0, Listed).number is 21
+	Twice.Value(InstructionEntry.Binary(InstructionType.LessThan, (6, 8)), 0, Listed).IsTrue is true
+	if entry.kind < InstructionType.StoreSeparator
+		return Stored(entry, slots, position)
+	if entry.kind < InstructionType.BinaryOperatorsSeparator
+		return Operations.Result(entry.kind, slots(entry.payload(1)), slots(entry.payload(2)))
+	if entry.kind is InstructionType.Invoke
+		return Invoked(entry, slots, position)
+	if (entry.kind is InstructionType.LoopBegin) or (entry.kind is InstructionType.LoopEnd)
+		return Looped(entry, slots, position)
+	Other(entry, slots)
+Next(entry InstructionEntry, position Number, slots List(VmValue)) Number
+	Twice.Next(InstructionEntry(InstructionType.JumpToIdIfTrue, List(Text), (0, 7, 9)), 1, Listed) is 7
+	if (entry.kind < InstructionType.Return) or (entry.kind > InstructionType.JumpToIdIfTrue)
+		return position + 1
+	if entry.kind is InstructionType.Return
+		return method.instructions.Length
+	if entry.kind is InstructionType.LoopBegin
+		return Entered(entry, slots, position)
+	let linked = entry.payload(entry.payload.Length - 2)
+	if entry.kind is InstructionType.LoopEnd
+		return Looping(slots(LoopSlot)).Next(position, linked)
+	let isTaken = slots(FlagSlot).IsTrue is (entry.kind is InstructionType.JumpToIdIfTrue)
+	(entry.kind >= InstructionType.JumpToIdIfFalse) and isTaken then linked else position + 1
+Stored(entry InstructionEntry, slots List(VmValue), position Number) VmValue
+	Twice.Stored(InstructionEntry(InstructionType.LoadVariableToRegister, "a", (6, 8, 6)), Listed, 0).number is 5
+	Twice.Stored(InstructionEntry(InstructionType.StoreRegisterToVariable, "a", (6, 8, 8)), Listed, 0).number is 1
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return Local(entry.payload(1), slots)
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return PayloadDecoder(entry).Value(1)
+	if entry.kind is InstructionType.StoreConstantToVariable
+		return PayloadDecoder(entry).Value(0)
+	if entry.kind is InstructionType.IndexCall
+		return Indexed(entry, slots, position)
+	entry.payload.Length < 4 then slots(entry.payload(0)) else Written(entry, slots)
+Written(entry InstructionEntry, slots List(VmValue)) VmValue
+	Twice.Written(StoreSecond, Listed).items(1).number is 1
+	let index = entry.payload(2)
+	let position = index is Resolver.LiteralIndex then entry.payload(3) else Local(index, slots).number
+	let target = PayloadDecoder(entry).ElementParts.First
+	Storage(machine.types).Written(slots(entry.payload(1)), target, position, slots(entry.payload(0)))
+Local(slot Number, slots List(VmValue)) VmValue
+	Twice.Local(ResultSlot, Listed).kind is "None"
+	Twice.Local(IndexSlot, Listed).number is 0
+	Twice.Local(Resolver.OuterSlot, Listed).text is "a"
+	if (slot >= 0) and (slot is not ValueSlot) and (slot is not IndexSlot)
+		return slots(slot)
+	let isIndex = (slot is IndexSlot) or (slot is Resolver.OuterIndexSlot)
+	Looping(slots(LoopSlot)).Current(slot < 0, isIndex, slots(isIndex then IndexSlot else ValueSlot))
+Indexed(entry InstructionEntry, slots List(VmValue), position Number) VmValue
+	Twice.Indexed(InstructionEntry(InstructionType.IndexCall, "list", (6, 6, 7, 6)), Listed, 0).number is 20
+	Twice.Indexed(InstructionEntry(InstructionType.IndexCall, "list", (6, 8, 7, 6)), Listed, 0).Length is 2
+	let collection = Local(entry.payload(2), slots)
+	let at = slots(entry.payload(1)).number
+	let wrapped = at < 0 then at + collection.Length else at
+	if (wrapped < 0) or (wrapped >= collection.Length)
+		return Traced(VmValue.OfError(method.Name), position)
+	collection.kind is "Text" then VmValue.OfText(collection.text.Substring(wrapped, 1)) else collection.items(wrapped)
+Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
+	Calling.Invoked(Machine.FailCall, Listed, 0).Traces.IndexOf("at Caller.Run") > 0 is true
+	let result = machine.Call(Called(entry, slots))
+	if result.kind is "Error"
+		machine.Logged(result.text)
+	result.kind is "Strict/Error" then Traced(result, position) else result
+Called(entry InstructionEntry, slots List(VmValue)) Invocation
+	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Instance.number is 4
+	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Arguments.First.number is 3
+	let count = 5 + entry.payload(3)
+	let flag = count + 1 + entry.payload(count)
+	let instance = entry.payload(flag) is 1 then slots(entry.payload(flag + 1)) else slots(ThisSlot)
+	mutable arguments = List(Mutable(VmValue))
+	for entry.payload(count)
+		arguments.Add(slots(entry.payload(count + 1 + index)))
+	Invocation(entry, arguments, instance)
+Traced(error VmValue, position Number) VmValue
+	Twice.Traced(VmValue.OfError("a"), 0).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0 is true
 	let called = VmValue.OfText(TypeEntry.ShortName(owner) + "." + method.Name)
 	let file = VmValue.OfText(TypeEntry(owner, List(MemberEntry), List(MethodEntry)).File)
-	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(Instruction.line)))
+	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(method.instructions(position).line)))
 	VmValue(error.kind, error.number, error.text, (error.items(0), VmValue.OfList(error.items(1).items + trace)))
-Replaced(elements List(VmValue), slot Number, entry VmValue) List(VmValue)
-	Start.Replaced((VmValue.OfNumber(1), VmValue.OfNumber(2)), 1, VmValue.None).Last.kind is "None"
-	Start.Replaced(List(VmValue), 2, VmValue.None).Length is 3
-	Start.Replaced(List(VmValue) + VmValue.OfNumber(1), -1, VmValue.None).First.number is 1
-	if slot < 0
-		return elements
-	mutable result = elements
-	for slot - elements.Length
-		result = result + VmValue.None
-	if slot >= elements.Length
-		return result + entry
-	result(slot) = entry
-	result
+Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
+	Twice.Looped(InstructionEntry.LoopBegin(6, 8), Listed, 0).items(3).number is 1
+	Twice.Looped(MethodEntry.CountingLoop.instructions(1), Listed, 1).items(2).number is 1
+	let looping = Looping(slots(LoopSlot))
+	if entry.kind is InstructionType.LoopEnd
+		return looping.Ended
+	looping.Begun(slots(entry.payload(0)), Ending(entry, slots), position)
+Entered(entry InstructionEntry, slots List(VmValue), position Number) Number
+	Twice.Entered(InstructionEntry.LoopBegin(2, -1), Listed, 0) is 4
+	Twice.Entered(MethodEntry.CountingLoop.instructions(0), Listed, 0) is 1
+	let isEmpty = Looping.IsEmpty(slots(entry.payload(0)), Ending(entry, slots))
+	isEmpty then method.LoopEndOf(position) + 1 else position + 1
+Ending(entry InstructionEntry, slots List(VmValue)) VmValue
+	Twice.Ending(InstructionEntry.LoopBegin(6, 8), Listed).number is 5
+	Twice.Ending(InstructionEntry.LoopBegin(6, -1), Listed).kind is "None"
+	entry.payload(1) is 1 then slots(entry.payload(2)) else VmValue.None
+Other(entry InstructionEntry, slots List(VmValue)) VmValue
+	Twice.Other(InstructionEntry(InstructionType.InvokeWriteToList, "list", (8, 7, 7)), Listed).Length is 3
+	if entry.kind is InstructionType.Return
+		return slots(entry.payload(0))
+	if entry.kind is InstructionType.FieldLoad
+		return machine.Field(entry, slots(entry.payload(1)))
+	if entry.kind is InstructionType.InvokeWriteToList
+		return VmValue.OfList(slots(entry.payload(1)).items + slots(entry.payload(0)))
+	if entry.kind is InstructionType.InvokeRemove
+		return Operations.Removed(slots(entry.payload(1)), slots(entry.payload(0)))
+	if entry.kind is InstructionType.Print
+		return machine.Logged(entry.texts(0) + (entry.payload(1) is 1 then slots(entry.payload(2)) to Text else ""))
+	VmValue.None

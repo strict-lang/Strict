@@ -1,6 +1,6 @@
 has values ValueCodegen
 has borrowing Texts
-constant Lent = ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text), List(Text)), CallTarget(CallTarget.Plain.types, TypeShape("Read(numbers Numbers) Number", "\tnumbers(0)", "Keep(numbers Numbers) Numbers", "\tnumbers", "Pass(numbers Numbers) Number", "\tRead(numbers)", "Again(numbers Numbers) Number", "\tAgain(numbers)", "Twice(numbers Numbers) Number", "\t1", "Twice(numbers Numbers, other Number) Number", "\tother"), "Strict/Lent", List(Text)))
+constant Lent = ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text), List(Text)), CallTarget(CallTarget.Plain.types, TypeShape("Read(numbers Numbers) Number", "\tnumbers(0)", "Keep(numbers Numbers) Numbers", "\tnumbers", "Pass(numbers Numbers) Number", "\tRead(numbers)", "Again(numbers Numbers) Number", "\tAgain(numbers)", "Twice(numbers Numbers) Number", "\t1", "Twice(numbers Numbers, other Number) Number", "\tother", "Early(numbers Numbers) Numbers", "\tif numbers.Length > 1", "\t\treturn numbers", "\tList(Number)"), "Strict/Lent", List(Text)))
 constant Lending = Borrowing(Lent, List(Text))
 constant Owned = CodeBlock.Empty.Sharing("values", false)
 constant Reading = BodyParser("Run", "\tRead(values)").Block(1, 1).children(0)
@@ -10,6 +10,7 @@ IsBorrowed(call SyntaxNode, position Number, block CodeBlock) Boolean
 	Lending.IsBorrowed(BodyParser("Run", "\tPass(values)").Block(1, 1).children(0), 0, Owned) is true
 	Lending.IsBorrowed(BodyParser("Run", "\tAgain(values)").Block(1, 1).children(0), 0, Owned) is true
 	Lending.IsBorrowed(Reading, 0, CodeBlock.Empty) is false
+	ListCodegen(Lent).Disowned(Reading, Owned, false).Owns("values") is true
 	if call.Kind is not "Call"
 		return false
 	let argument = call.children(position)
@@ -20,6 +21,7 @@ Keeps(name Text, count Number, position Number) Boolean
 	Lending.Keeps("Read", 1, 0) is false
 	Lending.Keeps("Keep", 1, 0) is true
 	Lending.Keeps("Twice", 1, 0) is true
+	Lending.Keeps("Early", 1, 0) is true
 	let start = Header(name, count)
 	if start < 0
 		return true

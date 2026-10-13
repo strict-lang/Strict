@@ -92,11 +92,34 @@ Written(entry InstructionEntry) Number
 	Twice.Written(AddBoth) is 2
 	Twice.Written(Indexed) is 1
 	Twice.Written(InstructionEntry.Return(2)) is -1
+	let position = WritePosition(entry)
+	position < 0 then -1 else entry.payload(position)
+WritePosition(entry InstructionEntry) Number
+	Twice.WritePosition(AddBoth) is 3
+	Twice.WritePosition(InstructionEntry.Binary(InstructionType.Equal, (0, 1))) is -1
 	if entry.kind is in WritingKinds
-		return entry.payload(0)
-	if entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
-		return entry.payload(0) is 3 then entry.payload(3) else -1
-	-1
+		return 0
+	let isBinary = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
+	isBinary and (entry.payload(0) is 3) then 3 else -1
+RegisterCount Number
+	Twice.RegisterCount is 3
+	mutable most = 0
+	for instructions
+		let written = Written(value)
+		most = written + 1 > most then written + 1 else most
+		for Reads(value)
+			most = value + 1 > most then value + 1 else most
+	most
+Rebased(entry InstructionEntry, base Number) InstructionEntry
+	Twice.Rebased(AddBoth, 6).payload is (3, 6, 7, 8)
+	Twice.Rebased(InstructionEntry.Return(2), 6).payload is List(Number) + 8
+	Twice.Rebased(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), 6).payload is (2, 6, 7)
+	let written = WritePosition(entry)
+	let positions = written < 0 then ReadPositions(entry) else ReadPositions(entry) + written
+	mutable content = List(Mutable(Number))
+	for entry.payload
+		content.Add(index is in positions then value + base else value)
+	InstructionEntry(entry.kind, entry.texts, content, entry.line)
 IsBoundary(entry InstructionEntry) Boolean
 	Twice.IsBoundary(InstructionEntry.Jump(InstructionType.JumpEnd, 1)) is true
 	Twice.IsBoundary(AddBoth) is false

@@ -1,8 +1,9 @@
 has entry InstructionEntry
-has frame
-constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), Frame(MethodEntry.HelloRun, 0, (VmValue.OfNumber(3), VmValue.OfNumber(4)), List(VmValue)))
-constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), Frame(MethodEntry.HelloRun, 0, List(VmValue) + VmValue.OfText("5"), List(VmValue)))
-constant Coding = Invocation(InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character", "text"), 0, -1), Parsing.frame.WithRegister(0, VmValue.OfNumber(65)))
+has Arguments List(VmValue)
+has Instance VmValue
+constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), List(VmValue) + VmValue.OfNumber(3), VmValue.OfNumber(4))
+constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfText("5"))
+constant Coding = Invocation(InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character", "text"), 0, -1), List(VmValue) + VmValue.OfNumber(65), VmValue.None)
 TypeName Text
 	AddCall.TypeName is "T"
 	PayloadDecoder(entry).Text(1)
@@ -15,13 +16,9 @@ ReturnType Text
 ParameterNames Texts
 	AddCall.ParameterNames is ("x")
 	PayloadDecoder(entry).Names
-Arguments List(VmValue)
-	AddCall.Arguments.First.number is 3
-	let countPosition = 5 + entry.payload(3)
-	mutable arguments = List(Mutable(VmValue))
-	for entry.payload(countPosition)
-		arguments.Add(frame.Register(entry.payload(countPosition + 1 + index)))
-	arguments
+Count Number
+	AddCall.Count is 1
+	entry.payload(5 + entry.payload(3))
 IsNativeConversion Boolean
 	Parsing.IsNativeConversion is true
 	AddCall.IsNativeConversion is false
@@ -39,7 +36,7 @@ IsMemberValue(type TypeEntry) Boolean
 	(kind is TypeEntry.ShortName(type.Name)) or (member is kind) or member.StartsWith(kind + "(")
 Flag Number
 	AddCall.Flag is 8
-	6 + entry.payload(3) + entry.payload(5 + entry.payload(3))
+	6 + entry.payload(3) + Count
 Resolution Number
 	AddCall.Resolution is 10
 	let flag = Flag
@@ -50,8 +47,4 @@ IsResolved Boolean
 IsWrapping(type TypeEntry) Boolean
 	Coding.IsWrapping(TypeEntry.CharacterEntry) is true
 	AddCall.IsWrapping(TypeEntry.CharacterEntry) is false
-	(MethodName is "from") and (type.Changing.Length is 1) and (Arguments.Length is 1)
-Instance VmValue
-	AddCall.Instance.number is 4
-	let flag = Flag
-	entry.payload(flag) is 1 then frame.Register(entry.payload(flag + 1)) else frame.Local(Frame.ThisSlot)
+	(MethodName is "from") and (type.Changing.Length is 1) and (Count is 1)

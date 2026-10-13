@@ -23,16 +23,6 @@ Parameters Texts
 	for method.parameters
 		names.Add(value.Name)
 	names
-RegisterCount Number
-	Counter.RegisterCount is 1
-	let reuse = LoadReuse(method.instructions)
-	mutable most = 0
-	for method.instructions
-		let written = reuse.Written(value)
-		most = written + 1 > most then written + 1 else most
-		for reuse.Reads(value)
-			most = value + 1 > most then value + 1 else most
-	most
 VariableNames Texts
 	Counter.VariableNames is ("index", "value")
 	mutable names = ("index", "value")
@@ -67,7 +57,7 @@ Slots Texts
 	Counter.Slots.Length is 15
 	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64")
 	lines = lines + "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr"
-	for RegisterCount
+	for LoadReuse(method.instructions).RegisterCount
 		lines = lines + Slot("%r" + index)
 	for VariableNames
 		lines = lines + Slot("%v_" + value)
