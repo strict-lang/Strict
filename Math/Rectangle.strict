@@ -1,0 +1,21 @@
+has Center Vector2
+has Width Number with value >= 0
+has Height Number with value >= 0
+Left = Center.X - Width / 2
+Right = Center.X + Width / 2
+Bottom = Center.Y - Height / 2
+Top = Center.Y + Height / 2
+Contains(point Vector2) Boolean
+	Rectangle(Vector2(2, 3), 4, 6).Contains(Vector2(0, 0))
+	Rectangle(Vector2(2, 3), 4, 6).Contains(Vector2(4, 6))
+	Rectangle(Vector2(2, 3), 4, 6).Contains(Vector2(5, 3)) is false
+	point.X >= Left and point.X <= Right and point.Y >= Bottom and point.Y <= Top
+Intersects(other) Boolean
+	Rectangle(Vector2(0, 0), 6, 2).Intersects(Rectangle(Vector2(0, 0), 2, 6))
+	Rectangle(Vector2(0, 0), 2, 2).Intersects(Rectangle(Vector2(2, 0), 2, 2))
+	Rectangle(Vector2(0, 0), 2, 2).Intersects(Rectangle(Vector2(3, 0), 2, 2)) is false
+	Left <= other.Right and Right >= other.Left and Bottom <= other.Top and Top >= other.Bottom
+CreateFromCorners(first Vector2, second Vector2) Rectangle
+	Rectangle.CreateFromCorners(Vector2(4, 6), Vector2(0, 0)) is Rectangle(Vector2(2, 3), 4, 6)
+	let center = Vector2((first.X + second.X) / 2, (first.Y + second.Y) / 2)
+	Rectangle(center, (second.X - first.X).Absolute, (second.Y - first.Y).Absolute)
