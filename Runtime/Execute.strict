@@ -7,7 +7,7 @@ Run(arguments Texts) Number
 		return failed
 	let types = Loaded(arguments(0), arguments(1))
 	if HasRun(types.First) is false
-		logger.Log("All tests passed in " + arguments(0))
+		logger.Log(Summary(0, arguments(0)))
 		return 0
 	mutable texts = List(Mutable(VmValue))
 	for Range(2, arguments.Length)
@@ -25,7 +25,7 @@ Failures(paths Texts, root Text, isQuiet Boolean) Number
 	for paths
 		let failures = value is in stale then Verified(value, root, isQuiet, files, inference) else 0
 		if (failures is 0) and (isQuiet is false)
-			logger.Log("All tests passed in " + value)
+			logger.Log(Summary(0, value))
 		failed = failed + failures
 	failed
 Stale(paths Texts) Texts
@@ -62,7 +62,7 @@ Read(before Number) Texts
 Tested(types List(TypeEntry), path Text) Number
 	let failed = Machine(Resolver(types).Resolved, logger).Prepared.Tested(types.First.Name)
 	if failed > 0
-		logger.Log(failed to Text + " tests failed in " + path)
+		logger.Log(Summary(failed, path))
 	failed
 Loaded(path Text, root Text) List(TypeEntry)
 	let cache = BinaryFile(FileCompiler.Normalized(path))
@@ -75,3 +75,7 @@ HasRun(type TypeEntry) Boolean
 		if value.Name is "Run"
 			return true
 	false
+Summary(failed Number, path Text) Text
+	Execute.Summary(0, "A.strict") is "All tests passed in A.strict"
+	Execute.Summary(2, "A.strict") is "2 tests failed in A.strict"
+	failed is 0 then "All tests passed in " + path else failed + " tests failed in " + path

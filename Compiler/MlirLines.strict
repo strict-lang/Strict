@@ -5,8 +5,8 @@ constant Twice = MethodEntry("Twice", List(MemberEntry), "Strict/Number", (Instr
 constant Lined = MlirFunction(List(TypeEntry), MlirFunction.Shape, Twice, (4, 5))
 constant Jumped = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Jump", List(MemberEntry), "None", (InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (0, 1, 7), 2), InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (1, 1, 8), 3), InstructionEntry(InstructionType.JumpEnd, List(Text), List(Number) + 0, 2))), (0, 1))
 constant Unlined = MlirFunction(List(TypeEntry), MlirFunction.Shape, Twice)
-constant State = ("    %linetable = llvm.mlir.addressof @strict_lines : !llvm.ptr", "    %linecount = arith.constant 2 : i64", "    %linestate = llvm.alloca %linecount x f64 : (i64) -> !llvm.ptr", "    %linenone = arith.constant -1.0 : f64", "    llvm.store %linenone, %linestate : f64, !llvm.ptr")
-constant Stop = "    func.call @strict_line_stop(%linetable, %linestate) : (!llvm.ptr, !llvm.ptr) -> ()"
+constant State = ("    %linetable = llvm.mlir.addressof @strict_lines : !llvm.ptr", "    %linecount = arith.constant 5 : i64", "    %linestate = llvm.alloca %linecount x f64 : (i64) -> !llvm.ptr", "    func.call @strict_line_enter(%linestate) : (!llvm.ptr) -> ()")
+constant Stop = "    func.call @strict_line_leave(%linetable, %linestate) : (!llvm.ptr, !llvm.ptr) -> ()"
 constant Signature = " : (!llvm.ptr, i64, !llvm.ptr) -> ()"
 constant Shaped = TypeEntry("Strict/Shape", List(MemberEntry), (Twice, MethodEntry.CountingLoop))
 constant Shapes = List(MlirFunction) + Unlined
@@ -22,6 +22,7 @@ Numbers Numbers
 	numbers
 Allocated Texts
 	MlirLines(Lined).Allocated is State
+	MlirLines(Lined).Allocated.Last.IndexOf("@strict_line_enter(%linestate)") > 0 is true
 	MlirLines(Unlined).Allocated.Length is 0
 	function.IsCounted then State else List(Text)
 At(position Number) Texts
@@ -44,6 +45,7 @@ Started(position Number, line Number) Texts
 	("    %line" + position + " = arith.constant " + slot + " : i64", call)
 End Texts
 	MlirLines(Lined).End is List(Text) + Stop
+	Stop.IndexOf("@strict_line_leave(%linetable, %linestate)") > 0 is true
 	MlirLines(Unlined).End.Length is 0
 	function.IsCounted then List(Text) + Stop else List(Text)
 Placed Texts
@@ -80,9 +82,9 @@ Counted(functions List(MlirFunction), main TypeEntry, file Text) List(MlirFuncti
 	for functions
 		MlirFunction(value.types, value.type, value.method, MlirLines(value, main.Name, file).Indexes(places))
 Table(functions List(MlirFunction), main TypeEntry, file Text) Texts
-	MlirLines.Table(Shapes, MlirFunction.Shape, "Shape.strict").First.IndexOf("tensor<4xf64>") > 0 is true
+	MlirLines.Table(Shapes, MlirFunction.Shape, "Shape.strict").First.IndexOf("tensor<6xf64>") > 0 is true
 	let places = Places(functions + Uncompiled(functions, main), main, file)
-	let size = places.Length * 2
+	let size = places.Length * 3
 	let table = "  llvm.mlir.global internal @strict_lines(dense<0.0> : tensor<" + size + "xf64>)"
 	mutable lines = List(Text) + (table + " : !llvm.array<" + size + " x f64>")
 	mutable printer = Printer

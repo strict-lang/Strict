@@ -30,3 +30,18 @@ Formatted(lines Texts) Texts
 			if shape.IsMethodHeader(value)
 				formatted = formatted + BodyParser(lines).Block(index + 1, 1).Lines("	")
 	formatted
+Tabbed(lines Texts) Texts
+	RoundTrip.Tabbed(("Run", "    1")) is ("Run", "\t1")
+	for lines
+		Indented(value)
+Indented(line Text) Text
+	RoundTrip.Indented("    a") is "\ta"
+	RoundTrip.Indented("\t      b") is "\t\t\tb"
+	RoundTrip.Indented("a  b") is "a  b"
+	if line.StartsWith("\t")
+		return "\t" + Indented(line.Substring(1, line.Length - 1))
+	if line.StartsWith(" ") is false
+		return line
+	let wide = line.StartsWith("    ") then 4 else (line.StartsWith("   ") then 3 else 2)
+	let spaces = line.StartsWith("  ") then wide else 1
+	"\t" + Indented(line.Substring(spaces, line.Length - spaces))

@@ -19,7 +19,7 @@ Compile(path Text, root Text, isCounting = false) Number
 		return 1
 	let base = Output(path, isProgram)
 	let built = Build(base, program, Toolchain(Platform.Current, root), isCounting)
-	isCounting and (built is 0) then Ran(base, Toolchain(Platform.Current, root)) else built
+	isCounting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path) else built
 CountedFile(path Text, root Text, isCounting Boolean) Text
 	NativeBuild.CountedFile("./Examples/Sum.strict", ".", true) is "Examples/Sum.strict"
 	NativeBuild.CountedFile("./Examples/Sum.strict", ".", false) is ""
@@ -37,10 +37,12 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	CrossBuild(base, program, tools, isCounting)
 	Removed(base)
 	0
-Ran(base Text, tools Toolchain) Number
+Ran(base Text, tools Toolchain, path Text) Number
 	let executable = tools.Executable(base)
 	let result = ToolRunner(executable).Execute("")
 	logger.Log(result.Output.Trim)
+	if (result.exitCode >= 0) and (result.exitCode < 128)
+		logger.Log(Execute.Summary(result.exitCode, path))
 	File(executable).Delete
 	File(base + ".mlir").Delete
 	result.exitCode
