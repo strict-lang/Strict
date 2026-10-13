@@ -66,7 +66,7 @@ Field(entry InstructionEntry) Texts
 	MlirInstances(Shapes, 2).Field(Width).Length is 5
 	MlirInstances(MlirKinds.Graded.function, 1).Field(MlirKinds.Characters).Length is 2
 	let kind = MlirKinds(function).KindOf(position, entry.payload(1))
-	if (entry.texts(0) is "value") or (MlirLayout(function).IsStruct(kind) is false)
+	if MlirLayout(function).IsAliased(entry, position)
 		return function.Copied("%r" + entry.payload(1), "%r" + entry.payload(0), Temp("a"))
 	let owner = function.TypeOf(kind)
 	let slot = StoredNames(owner).Index(entry.texts(0))

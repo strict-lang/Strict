@@ -4,6 +4,14 @@ constant Angle = TypeEntry("Strict/Angle", (MemberEntry("degrees", "Strict/Degre
 constant Wrapping = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Degrees + Angle, Degrees, MethodEntry.CountingLoop))
 constant Widened = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "width"), InstructionEntry.Return(0))
 constant Packing = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("from", List(MemberEntry), "Strict/Shape", Widened)))
+constant LoggerField = InstructionEntry(InstructionType.FieldLoad, "logger", (2, 1, -1))
+constant Logged = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), MlirInstances.Built, LoggerField)))
+IsAliased(entry InstructionEntry, position Number) Boolean
+	MlirLayout(MlirInstances.Shapes).IsAliased(MlirInstances.Width, 2) is false
+	MlirLayout(Logged).IsAliased(LoggerField, 2) is true
+	let kinds = MlirKinds(function)
+	let isValue = (entry.texts(0) is "value") or (IsStruct(kinds.KindOf(position, entry.payload(1))) is false)
+	isValue or (TypeEntry.ShortName(kinds.WrittenKind(position)) is "Logger")
 IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("Shape") is true
 	Wrapping.IsStruct("Strict/Degrees") is false
