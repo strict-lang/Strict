@@ -33,7 +33,7 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	let result = count is 0 then Temp(suffix + "l") else Temp(suffix + "e" + (count - 1) + "l")
 	if (suffix is not "") or (count is 0) or (MlirConstants(function, position).IsConstant is false)
 		return Built(literal, suffix) + function.Store(result, slot)
-	Cached(Built(literal, suffix), result) + function.Store(Temp("r"), slot)
+	Cached(Built(literal, suffix), result, "strict_list_pin") + function.Store(Temp("r"), slot)
 Built(literal Runtime/VmValue, suffix Text) Texts
 	MlirLists(Listed, 0).Built(Pair, "").Last.IndexOf("%t0e1l = func.call @strict_list_add(%t0e0l, %t0e1xf)") > 0 is true
 	let memory = MlirMemory(function, position)
@@ -45,13 +45,14 @@ Built(literal Runtime/VmValue, suffix Text) Texts
 		lines = lines + Element(value, index, element) + added
 		current = Temp(element + "l")
 	lines
-Cached(built Texts, result Text) Texts
-	MlirLists(Literals, 0).Cached(List(Text), "%x").Index("    cf.cond_br %t0u, ^l0, ^m0(%t0v : f64)") is 3
+Cached(built Texts, result Text, pin Text) Texts
+	MlirLists(Literals, 0).Cached(List(Text), "%x", "pin").Index("    cf.cond_br %t0u, ^l0, ^m0(%t0v : f64)") is 3
+	MlirLists(Literals, 0).Cached(List(Text), "%x", "pin").Index("    func.call @pin(%x) : (f64) -> ()") is 5
 	let address = "    " + Temp("g") + " = llvm.mlir.addressof " + MlirConstants(function, position).Cache + " : !llvm.ptr"
 	let unset = "    " + Temp("u") + " = arith.cmpf oeq, " + Temp("v") + ", %zero : f64"
 	let branch = "    cf.cond_br " + Temp("u") + ", ^l" + position + ", ^m" + position + "(" + Temp("v") + " : f64)"
 	let starts = (address, function.Load(Temp("v"), Temp("g")), unset, branch, "  ^l" + position + ":")
-	let pinned = "    func.call @strict_list_pin(" + result + ") : (f64) -> ()"
+	let pinned = "    func.call @" + pin + "(" + result + ") : (f64) -> ()"
 	let joined = ("    cf.br ^m" + position + "(" + result + " : f64)", "  ^m" + position + "(" + Temp("r") + ": f64):")
 	starts + built + pinned + function.Store(result, Temp("g")) + joined
 Created(count Number, suffix Text) Texts

@@ -66,7 +66,7 @@ Globals(functions List(MlirFunction)) Texts
 		lines = lines + FunctionGlobals(value)
 	lines
 FunctionGlobals(function MlirFunction) Texts
-	Counters.FunctionGlobals(MlirCalls.Shapes).Length is 2
+	Counters.FunctionGlobals(MlirCalls.Shapes).Length is 3
 	Counters.FunctionGlobals(MlirCalls.Shapes).First.IndexOf("(\"Shape.Run\\00Shape.strict\\00\")") > 0 is true
 	let location = function.type.Location(function.method.Name)
 	let content = location.Replace(" in ", "\\00") + "\\00\")"
@@ -93,12 +93,15 @@ IsGlobal(function MlirFunction, position Number) Boolean
 	MlirConstants(function, position).IsConstant
 Global(function MlirFunction, position Number) Text
 	Counters.Global(MlirCalls.Shapes, 3).IndexOf("Hi %s\\0A\\00") > 0 is true
+	Counters.Global(MlirCalls.Shapes, 1) is "  llvm.mlir.global internal @lShape_Run_0_1(0.0 : f64) : f64"
 	let constants = MlirConstants(function, position)
 	if position >= function.method.instructions.Length
 		return constants.Global
 	let entry = function.method.instructions(position)
 	if entry.kind is InstructionType.IndexCall
 		return NameGlobal(function, position)
+	if entry.kind is InstructionType.Invoke
+		return "  llvm.mlir.global internal " + constants.Cache + "(0.0 : f64) : f64"
 	entry.kind is InstructionType.Print then PrintGlobal(function, position, entry) else constants.Global
 NameGlobal(function MlirFunction, position Number) Text
 	Counters.NameGlobal(Counters.Functions.First, 0).IndexOf("Run\\00") > 0 is true

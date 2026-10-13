@@ -1,5 +1,6 @@
 has function MlirFunction
 has position Number
+constant Varying = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), MlirInstances.Built)))
 IsConstant Boolean
 	MlirConstants(MlirTexts.Joined, 0).IsConstant is true
 	MlirConstants(MlirTexts.Joined, 1).IsConstant is false
@@ -7,6 +8,8 @@ IsConstant Boolean
 	MlirConstants(MlirLists.Literals, 0).IsConstant is true
 	let isMember = position >= function.method.instructions.Length
 	let kind = isMember then InstructionType.LoadConstantToRegister else function.method.instructions(position).kind
+	if kind is InstructionType.Invoke
+		return IsShared
 	if kind is not in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
 		return false
 	constant literal = Constant
@@ -35,6 +38,44 @@ Global Text
 	for TextElements(literal)
 		lines = lines + TextGlobal(literal.items(value).text, "_" + value)
 	Text.Combine(lines, "\n")
+IsShared Boolean
+	MlirConstants(MlirInstances.Shapes, 1).IsShared is true
+	MlirConstants(Varying, 1).IsShared is false
+	MlirConstants(MlirCalls.Hashes, 1).IsShared is false
+	let entry = function.method.instructions(position)
+	let decoder = PayloadDecoder(entry)
+	if decoder.Text(2) is not "from"
+		return false
+	IsPlain(decoder, entry) and AreConstants(entry)
+IsPlain(decoder PayloadDecoder, entry InstructionEntry) Boolean
+	MlirConstants(MlirInstances.Shapes, 1).IsPlain(PayloadDecoder(MlirInstances.Built), MlirInstances.Built) is true
+	MlirConstants(MlirCalls.Hashes, 1).IsPlain(PayloadDecoder(MlirCalls.Hashed), MlirCalls.Hashed) is false
+	let typeName = decoder.Text(1)
+	let short = TypeEntry.ShortName(typeName)
+	if (MlirLayout(function).IsStruct(typeName) is false) or (short is in ("File", "Error", "ErrorWithValue"))
+		return false
+	let count = entry.payload(5 + entry.payload(3))
+	let custom = function.TypeOf(typeName).Callee("from", count, decoder.Text(4 + entry.payload(3)), decoder.Names)
+	custom.instructions.Length is 0
+AreConstants(entry InstructionEntry) Boolean
+	MlirConstants(MlirInstances.Shapes, 1).AreConstants(MlirInstances.Built) is true
+	MlirConstants(Varying, 1).AreConstants(MlirInstances.Built) is false
+	for LoadReuse(function.method.instructions).Reads(entry)
+		if IsLoaded(value) is false
+			return false
+	true
+IsLoaded(register Number) Boolean
+	MlirConstants(MlirInstances.Shapes, 1).IsLoaded(0) is true
+	MlirConstants(Varying, 1).IsLoaded(0) is false
+	MlirConstants(MlirInstances.Shapes, 2).IsLoaded(1) is false
+	let reuse = LoadReuse(function.method.instructions)
+	for position
+		let previous = function.method.instructions(position - 1 - index)
+		if reuse.IsBoundary(previous)
+			return false
+		if reuse.Written(previous) is register
+			return previous.kind is InstructionType.LoadConstantToRegister
+	false
 Cache Text
 	MlirConstants(MlirLists.Literals, 0).Cache is "@lShape_Run_0_0"
 	"@l" + function.Symbol + "_" + position

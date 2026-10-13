@@ -14,8 +14,9 @@ Temp(suffix Text) Text
 	MlirCalls(Shapes, 1).Temp("a") is "%t1a"
 	"%t" + position + suffix
 Emitted Texts
-	MlirCalls(Shapes, 1).Emitted.Last is "    llvm.store %t1of, %r1 : f64, !llvm.ptr"
+	MlirCalls(Shapes, 1).Emitted.Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
 	MlirCalls(Hashes, 1).Emitted.Last is "    llvm.store %t1tr, %r1 : f64, !llvm.ptr"
+	Text.Combine(MlirCalls(Shapes, 1).Emitted).IndexOf("@strict_pin(%t1of)") > 0 is true
 	let entry = function.method.instructions(position)
 	if entry.kind is InstructionType.Print
 		return Printed(entry)
@@ -26,15 +27,22 @@ Emitted Texts
 	let decoder = PayloadDecoder(entry)
 	decoder.Text(2) is "from" then Created(entry, decoder) else Invoked(entry, decoder)
 Created(entry InstructionEntry, decoder PayloadDecoder) Texts
-	MlirCalls(Shapes, 1).Created(NewShape, PayloadDecoder(NewShape)).Last is "    llvm.store %t1of, %r1 : f64, !llvm.ptr"
+	MlirCalls(Shapes, 1).Created(NewShape, PayloadDecoder(NewShape)).Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(Hashes, 1).Created(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0 is true
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
 	let custom = type.Callee("from", count, decoder.Text(4 + entry.payload(3)), decoder.Names)
 	let instances = MlirInstances(function, position)
+	let target = "%r" + entry.payload(0)
 	if (custom.instructions.Length is 0) or IsMemberValue(entry, type)
-		return instances.Constructed(entry, decoder.Text(1))
-	instances.Fresh(type, "%r" + entry.payload(0), "f", List(Text)) + Compiled(entry, decoder, type, count)
+		return Shared(instances.Constructed(entry, decoder.Text(1)), target)
+	instances.Fresh(type, target, "f", List(Text)) + Compiled(entry, decoder, type, count)
+Shared(constructed Texts, target Text) Texts
+	MlirCalls(Shapes, 1).Shared(List(Text), "%r1").Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
+	MlirCalls(Hashes, 1).Shared(List(Text), "%r1").Length is 0
+	if MlirConstants(function, position).IsConstant is false
+		return constructed
+	MlirLists(function, position).Cached(constructed, Temp("of"), "strict_pin") + function.Store(Temp("r"), target)
 IsMemberValue(entry InstructionEntry, type TypeEntry) Boolean
 	MlirCalls(Hashes, 1).IsMemberValue(Hashed, Hash) is false
 	let layout = MlirLayout(function)

@@ -932,7 +932,7 @@
   }
   llvm.mlir.global internal @strict_gc_pinned(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_pinned_count(0 : i64) : i64
-  func.func private @strict_list_pin(%value: f64) {
+  func.func private @strict_pin(%value: f64) {
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
     %countSlot = llvm.mlir.addressof @strict_gc_pinned_count : !llvm.ptr
@@ -948,6 +948,10 @@
     %slot = llvm.getelementptr %grown[%count] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     llvm.store %value, %slot : f64, !llvm.ptr
     llvm.store %next, %countSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_list_pin(%value: f64) {
+    func.call @strict_pin(%value) : (f64) -> ()
     %view = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
     %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
