@@ -9,6 +9,8 @@ Start with `Xor.strict` (2-3-1 neurons learn XOR in 11 ms natively), then `Iris.
 
 `Optimizer` trains a network with Adam (`Moments` keeps the running averages of the gradients and their squares per layer) or RMSprop (Adam without the first moment) instead of plain gradient descent with momentum. `OptimizerComparison.strict` starts all three from the same random XOR network: after 2000 steps momentum is still at an error of about 1, RMSprop and Adam are below 0.01.
 
+`Recurrent` is the first network with memory: an Elman network (input, hidden-to-hidden and output `Layer`s) trained with backpropagation through time. `BinaryAddition.strict` (a BrightWire sample) feeds it two numbers below 128 bit by bit and it learns to output their sum: 100 of 100 new sums right after 10000 random examples, 0.29 s natively.
+
 Evolution instead of gradients: `Weasel.strict` (the weasel program of Richard Dawkins) evolves a random text into "METHINKS IT IS LIKE A WEASEL" with mutation and selection in about 70 generations, a few milliseconds natively. `Neuroevolution.strict` evolves the weights of the XOR network (tournament selection, mutation, the best network always survives) and reaches an error around 1e-13 in 46 ms natively. `ArmEvolution.strict` is a genetic algorithm with real valued genes (crossover, mutation, tournament selection, the best survives) that finds the 2 joint angles of a planar arm reaching a target: within 0.5 mm after 100 generations of 40 arms in 1.7 ms natively (AiInvest evolved the 6 joints of a Franka arm the same way).
 
 Bigger data does not belong into this repository: the MNIST digits are in [Mnist](https://github.com/strict-lang/Mnist), larger datasets should be downloaded when they are needed.

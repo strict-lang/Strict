@@ -32,13 +32,15 @@ ChainType(inference TypeInference, tokens Texts, typeName Text) Text
 	ResolveCheck.ChainType(Counting, Tokenizer("constant a = Count(1).Twice(2)").Tokens, "Count") is "Count"
 	ResolveCheck.ChainType(Counting, Tokenizer("constant a = 1").Tokens, "Count") is ""
 	ResolveCheck.ChainType(Counting, Tokenizer("constant a = Twice(2)").Tokens, "Count") is "Count"
+	ResolveCheck.ChainType(Counting, Tokenizer("constant a = List(Number) + 3").Tokens, "Count") is "Numbers"
 	if (tokens.Length < 4) or (tokens(2) is not "=")
 		return ""
 	let node = SyntaxParser(tokens).ParseRange(3, tokens.Length)
 	let current = inference.types.ShapeScope(typeName)
 	if node.Kind is "Call"
 		return inference.types.MethodsOf(typeName).TypeOf(node.text)
-	node.Kind is in ("MethodCall", "Member") then inference.TypeOf(node, Scope(List(Text), List(Text)), current) else ""
+	let isInferred = node.Kind is in ("MethodCall", "Member", "Binary", "List")
+	isInferred then inference.TypeOf(node, Scope(List(Text), List(Text)), current) else ""
 Refined(inference TypeInference, shapes List(TypeShape)) TypeInference
 	ResolveCheck.Refined(Counting, List(TypeShape)).types.methods.Length is 0
 	Inference(("File.strict", "TextWriter.strict", "BytesWriter.strict")).types.ParameterScope("File").Count("Write") is 2

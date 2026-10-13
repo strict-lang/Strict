@@ -1,0 +1,47 @@
+has logger
+constant Powers = (1, 2, 4, 8, 16, 32, 64, 128)
+constant Examples = 10000
+Run
+	let started = Process.Elapsed
+	let trained = Trained(Recurrent.Random(2), Examples)
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	logger.Log("Trained on " + Examples + " random sums in " + milliseconds + " ms")
+	logger.Log(Correct(trained, 100) + " of 100 new sums are right, 37 + 85 = " + Added(trained, 37, 85))
+Trained(network Recurrent, count Number) Recurrent
+	BinaryAddition.Trained(Recurrent.Random(2), 1).input.weights.Length is Recurrent.Hidden
+	mutable trained = network
+	for count
+		let first = Operand
+		let second = Operand
+		trained = trained.Trained(Pairs(first, second), Bits(first + second), 0.1)
+	trained
+Operand Number
+	BinaryAddition.Operand < 128 is true
+	128.Random.Floor
+Pairs(first Number, second Number) List(Numbers)
+	BinaryAddition.Pairs(1, 2).Length is 8
+	BinaryAddition.Pairs(1, 2).First is (1, 0)
+	for Powers
+		((first / value).Floor % 2, (second / value).Floor % 2)
+Bits(number Number) Numbers
+	BinaryAddition.Bits(5) is (1, 0, 1, 0, 0, 0, 0, 0)
+	for Powers
+		(number / value).Floor % 2
+Decoded(bits Numbers) Number
+	BinaryAddition.Decoded((1, 0, 1, 0, 0, 0, 0, 0)) is 5
+	mutable sum = 0
+	for bits
+		sum = sum + value * Powers(index)
+	sum
+Added(network Recurrent, first Number, second Number) Number
+	BinaryAddition.Added(Recurrent.Random(2), 1, 2) < 256 is true
+	Decoded(network.Predicted(Pairs(first, second)))
+Correct(network Recurrent, count Number) Number
+	BinaryAddition.Correct(Recurrent.Random(2), 3) <= 3 is true
+	mutable correct = 0
+	for count
+		let first = Operand
+		let second = Operand
+		if Added(network, first, second) is first + second
+			correct = correct + 1
+	correct

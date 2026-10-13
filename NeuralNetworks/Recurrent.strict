@@ -1,0 +1,55 @@
+has input Layer
+has recurrent Layer
+has output Layer
+constant Hidden = 16
+constant Single = List(Numbers) + (List(Number) + 1)
+constant Zero = List(Number) + 0
+constant Tiny = Recurrent(Layer(List(Numbers) + (1, 0), Zero), Layer(Single, Zero), Layer(Single, Zero))
+Random(inputs Number) Recurrent
+	Recurrent.Random(2).recurrent.weights.Length is Hidden
+	Recurrent(Layer.Random(inputs, Hidden), Layer.Random(Hidden, Hidden), Layer.Random(Hidden, 1))
+States(inputs List(Numbers)) List(Numbers)
+	Tiny.States(List(Numbers) + (0, 0)) is (Zero, List(Number) + 0.5)
+	mutable states = List(Mutable(Numbers))
+	states.Add(Layer.Halves.Zeros(recurrent.weights.Length))
+	for inputs
+		states.Add(Next(states.Last, value))
+	states
+Next(previous Numbers, step Numbers) Numbers
+	Tiny.Next(Zero, (0, 0)) is List(Number) + 0.5
+	let recurring = recurrent.Sums(previous)
+	for input.Sums(step)
+		Activation.Sigmoid.Output(value + recurring(index))
+Predicted(inputs List(Numbers)) Numbers
+	Tiny.Predicted(List(Numbers) + (0, 0)) is List(Number) + 1
+	let states = States(inputs)
+	for Range(1, states.Length)
+		output.Forward(states(value)).First.Round
+Trained(inputs List(Numbers), targets Numbers, rate Number) Recurrent
+	Tiny.Trained(List(Numbers) + (1, 0), Zero, 2).Predicted(List(Numbers) + (1, 0)) is Zero
+	let states = States(inputs)
+	let outputs = OutputDeltas(states, targets)
+	let hiddens = HiddenDeltas(states, outputs)
+	mutable trained = value
+	for inputs
+		let inputLayer = trained.input.Updated(value, hiddens(index), rate)
+		let recurrentLayer = trained.recurrent.Updated(states(index), hiddens(index), rate)
+		trained = Recurrent(inputLayer, recurrentLayer, trained.output.Updated(states(index + 1), outputs(index), rate))
+	trained
+OutputDeltas(states List(Numbers), targets Numbers) List(Numbers)
+	Tiny.OutputDeltas((Zero, Zero), Zero) is List(Numbers) + (List(Number) + 0.5)
+	for Range(1, states.Length)
+		List(Number) + (output.Forward(states(value)).First - targets(value - 1))
+HiddenDeltas(states List(Numbers), outputs List(Numbers)) List(Numbers)
+	Tiny.HiddenDeltas((Zero, List(Number) + 0.5), List(Numbers) + Zero) is List(Numbers) + Zero
+	mutable future = Layer.Halves.Zeros(recurrent.weights.Length)
+	mutable deltas = List(Mutable(Numbers))
+	for outputs.Length
+		let time = outputs.Length - 1 - index
+		future = Delta(states(time + 1), output.Spread(outputs(time)), recurrent.Spread(future))
+		deltas.Add(future)
+	deltas.Reverse
+Delta(state Numbers, fromOutput Numbers, fromFuture Numbers) Numbers
+	Tiny.Delta(List(Number) + 0.5, List(Number) + 1, List(Number) + 1) is List(Number) + 0.5
+	for state
+		(fromOutput(index) + fromFuture(index)) * value * (1 - value)
