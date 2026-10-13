@@ -12,7 +12,7 @@ Run(arguments Texts) Number
 	mutable texts = List(Mutable(VmValue))
 	for Range(2, arguments.Length)
 		texts.Add(VmValue.OfText(arguments(value)))
-	Machine(Resolver(types).Resolved, logger).Launch(types.First.Name, texts)
+	Machine(Resolver(types).Resolved, logger).Prepared.Launch(types.First.Name, texts)
 	0
 Test(path Text, root Text) Number
 	let paths = Directory.Exists(path) then Directory.Files(path, "*.strict") else List(Text) + path
@@ -62,7 +62,7 @@ Read(before Number) Texts
 			found.Add(path)
 	found
 Tested(types List(TypeEntry), path Text) Number
-	let failed = Machine(Resolver(types).Resolved, logger).Tested(types.First.Name)
+	let failed = Machine(Resolver(types).Resolved, logger).Prepared.Tested(types.First.Name)
 	if failed > 0
 		logger.Log(failed to Text + " tests failed in " + path)
 	failed

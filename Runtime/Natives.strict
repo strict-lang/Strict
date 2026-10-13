@@ -136,6 +136,9 @@ TypeOf(name Text) TypeEntry
 	Shapes.TypeOf("Strict/Shape").members.Length is 2
 	Shapes.TypeOf("Strict/Other").members.Length is 0
 	Shapes.TypeOf("Shape").Name is "Strict/Shape"
+	for types
+		if value.Name is name
+			return value
 	let short = Short(name)
 	for types
 		if IsNamed(value, name, short)
