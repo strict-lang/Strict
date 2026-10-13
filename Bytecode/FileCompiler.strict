@@ -48,14 +48,20 @@ Parsed(files Texts) Boolean
 		let lines = File(value).ReadLines
 		let broken = Unparsable(lines)
 		if broken >= 0
-			logger.Log("ParsingFailed: " + lines(broken).Trim + " in " + Normalized(value) + ":" + (broken + 1))
+			let problem = lines(broken).Trim is "" then "EmptyLineInsideMethod" else "ParsingFailed: " + lines(broken).Trim
+			logger.Log(problem + " in " + Normalized(value) + ":" + (broken + 1))
 			return false
 	true
 Unparsable(lines Texts) Number
 	FileCompiler.Unparsable(("Add(other Number) Number", "	number + + other")) is 1
 	FileCompiler.Unparsable(("Run", "	logger.Log(1 + 2)")) is -1
+	FileCompiler.Unparsable(("Run", "\t", "\t1")) is 1
+	FileCompiler.Unparsable(("Run", "\t1 is 1", "", "\t1")) is 2
 	for lines
 		if value.StartsWith("	") and (IsParsed(value.Trim) is false)
+			return index
+		let next = index + 1 < lines.Length then lines(index + 1) else ""
+		if (value.Trim is "") and (value.StartsWith("\t") or next.StartsWith("\t"))
 			return index
 	-1
 IsParsed(line Text) Boolean
@@ -107,7 +113,10 @@ Normalized(path Text) Text
 FullName(path Text, root Text) Text
 	FullName("C:/s/Bytecode\\A.strict", "C:/s") is "Strict/Bytecode/A"
 	FullName("./Sub/Game.strict", "C:/s") is "Strict/Sub/Game"
+	FullName("D:/project/Helper.strict", "C:/s") is "Strict/Helper"
 	let slashed = path.Replace("\\", "/")
+	if (slashed.StartsWith(root + "/") is false) and ((slashed.IndexOf(":") is 1) or slashed.StartsWith("/"))
+		return "Strict/" + Path(slashed).FileName.RemoveExtension.text
 	let start = slashed.StartsWith(root + "/") then root.Length + 1 else (slashed.StartsWith("./") then 2 else 0)
 	"Strict/" + slashed.Substring(start, slashed.Length - start - 7)
 FullNames(files Texts, root Text) Texts

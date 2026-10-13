@@ -69,6 +69,7 @@ Unimplemented(path Text, lines Texts) Texts
 	Counting.Unimplemented("A.strict", ("from(number)", "\tA(2) is A(2)")).Length is 1
 	Counting.Unimplemented("A.strict", List(Text) + "constant Ones = A(1) is A(1)").Length is 0
 	Counting.Unimplemented("A.strict", ("from", "\tA(2) is A(2)")).Length is 0
+	Counting.Unimplemented("A.strict", ("Twice(number Number) Number", "\tA(3).Twice(2) is 6")).Length is 1
 	let typeName = Path(path).FileName.RemoveExtension.text
 	for lines
 		if (value.StartsWith("\t") is false) and IsUnimplemented(lines, index, typeName)
@@ -80,12 +81,12 @@ IsUnimplemented(lines Texts, header Number, typeName Text) Boolean
 	let lastLine = LastLine(lines, header)
 	if (lastLine is header) or (lines(header) is "from") or TypeShape(lines).IsMemberLine(lines(header))
 		return false
-	let name = Tokenizer(lines(header)).Tokens.First
 	let last = lines(lastLine).Trim
-	let called = name is "from" then typeName else name
+	let called = lines(header).StartsWith("from") then typeName else Tokenizer(lines(header)).Tokens.First
 	let isComparison = (last.IndexOf(" is ") > 0) or (last.IndexOf(" < ") > 0) or (last.IndexOf(" > ") > 0)
 	let isCalled = last.StartsWith(called + "(") or last.StartsWith(called + " ")
-	isComparison and (isCalled or last.StartsWith(typeName + "." + called))
+	let isInstance = last.StartsWith(typeName + "(") and (last.IndexOf(")." + called) > 0)
+	isComparison and (isCalled or isInstance or last.StartsWith(typeName + "." + called))
 LastLine(lines Texts, header Number) Number
 	Counting.LastLine(("Add(other) Number", "\tother", "Run", "\t1"), 0) is 1
 	Counting.LastLine(List(Text) + "has number", 0) is 0
