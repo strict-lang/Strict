@@ -3,6 +3,8 @@ A multilayer perceptron written in Strict, the use case for measuring parallel l
 
 Start with `Xor.strict` (2-3-1 neurons learn XOR in 11 ms natively), then `Iris.strict`: `strict build NeuralNetworks/Iris.strict` (from the repository root) trains 4-8-3 neurons for 200 epochs and reaches 97% test accuracy in 25 ms natively, 2.4 s on the Strict VM. `Diabetes.strict` learns a quarter of the UCI Diabetic Retinopathy Debrecen data (288 rows, 19 features), 60-64% in 80 ms.
 
+`LogicGates.strict` starts even simpler, with single neurons (`Perceptron`, a step output like the saturated sigmoid of AiInvest): Or, And, Nor and Nand are learned from zero weights in 3 to 5 epochs, Xor needs a hidden layer and is built from an Or and a Nand neuron feeding an And neuron.
+
 Evolution instead of gradients: `Weasel.strict` (the weasel program of Richard Dawkins) evolves a random text into "METHINKS IT IS LIKE A WEASEL" with mutation and selection in about 70 generations, a few milliseconds natively. `Neuroevolution.strict` evolves the weights of the XOR network (tournament selection, mutation, the best network always survives) and reaches an error around 1e-13 in 46 ms natively.
 
 Bigger data does not belong into this repository: the MNIST digits are in [Mnist](https://github.com/strict-lang/Mnist), larger datasets should be downloaded when they are needed.

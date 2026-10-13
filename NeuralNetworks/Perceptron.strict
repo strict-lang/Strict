@@ -1,0 +1,42 @@
+has weights Numbers
+has bias Number
+constant Rate = 0.5
+constant Inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
+constant Untrained = Perceptron((0, 0), 0)
+constant Both = Perceptron((1, 1), -1)
+Output(input Numbers) Number
+	Both.Output((1, 1)) is 1
+	Both.Output((0, 1)) is 0
+	Perceptron(List(Number) + -1, 1).Output(List(Number) + 1) is 0
+	mutable sum = bias
+	for weights
+		sum = sum + value * input(index)
+	sum > 0 then 1 else 0
+Trained(input Numbers, target Number) Perceptron
+	Untrained.Trained((1, 1), 1).bias is Rate
+	Both.Trained((1, 1), 1) is Both
+	let step = (target - Output(input)) * Rate
+	Perceptron(Moved(input, step), bias + step)
+Moved(input Numbers, step Number) Numbers
+	Untrained.Moved((1, 0), 0.5) is (0.5, 0)
+	for weights
+		value + step * input(index)
+Epoch(targets Numbers) Perceptron
+	Untrained.Epoch((0, 1, 1, 1)).Output((1, 1)) is 1
+	mutable trained = value
+	for Inputs
+		trained = trained.Trained(value, targets(index))
+	trained
+Outputs Numbers
+	Both.Outputs is (0, 0, 0, 1)
+	for Inputs
+		Output(value)
+Epochs(targets Numbers) Number
+	Untrained.Epochs((0, 0, 0, 1)) > 0 is true
+	Both.Epochs((0, 0, 0, 1)) is 0
+	mutable trained = value
+	for 100
+		if trained.Outputs is targets
+			return index
+		trained = trained.Epoch(targets)
+	100

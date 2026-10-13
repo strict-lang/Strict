@@ -1,0 +1,18 @@
+has logger
+constant Gates = ("Or", "And", "Nor", "Nand")
+constant Tables = ((0, 1, 1, 1), (0, 0, 0, 1), (1, 0, 0, 0), (1, 1, 1, 0))
+constant Either = Perceptron((1, 1), 0)
+constant NotBoth = Perceptron((-1, -1), 2)
+Run
+	for Gates
+		let table = Tables(index)
+		logger.Log(value + " " + table + " learned in " + Perceptron.Untrained.Epochs(table) + " epochs")
+	logger.Log("Xor " + Xors + " needs a hidden layer: Or and Nand into And")
+Xor(input Numbers) Number
+	LogicGates.Xor((0, 1)) is 1
+	LogicGates.Xor((1, 1)) is 0
+	Perceptron.Both.Output((Either.Output(input), NotBoth.Output(input)))
+Xors Numbers
+	LogicGates.Xors is (0, 1, 1, 0)
+	for Perceptron.Inputs
+		Xor(value)
