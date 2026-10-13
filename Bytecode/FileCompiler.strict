@@ -48,8 +48,7 @@ Parsed(files Texts) Boolean
 		let lines = File(value).ReadLines
 		let broken = Unparsable(lines)
 		if broken >= 0
-			let problem = lines(broken).Trim is "" then "EmptyLineInsideMethod" else "ParsingFailed: " + lines(broken).Trim
-			logger.Log(problem + " in " + Normalized(value) + ":" + (broken + 1))
+			logger.Log(FileCheck.Problem(lines, broken) + " in " + Normalized(value) + ":" + (broken + 1))
 			return false
 	true
 Unparsable(lines Texts) Number

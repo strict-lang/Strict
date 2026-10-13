@@ -96,3 +96,13 @@ LastLine(lines Texts, header Number) Number
 			return last
 		last = value
 	last
+Problem(lines Texts, broken Number) Text
+	Counting.Problem(("Run", "	1 +"), 1) is "ParsingFailed: 1 +"
+	Counting.Problem(("has number", "Run", "	1", "", "	2"), 3) is "EmptyLineInsideMethod: Run"
+	if lines(broken).Trim is not ""
+		return "ParsingFailed: " + lines(broken).Trim
+	mutable header = 0
+	for Range(0, broken)
+		if lines(value).StartsWith("	") is false
+			header = value
+	"EmptyLineInsideMethod: " + Tokenizer(lines(header)).Tokens.First

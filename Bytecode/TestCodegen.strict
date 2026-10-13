@@ -5,7 +5,7 @@ constant Counter = CodeBlock.Empty.Declare("failed", "Number").Declare("started"
 constant Elapsed = SyntaxParser(Tokenizer("Process.Elapsed").Tokens).Parse
 constant Duration = SyntaxParser(Tokenizer("((Process.Elapsed - started) * 1000).Round(2) + \" ms)\"").Tokens).Parse
 constant OneIsOne = SyntaxNode("Binary", "is", (MethodCodegen.One, MethodCodegen.One))
-constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2", (-1, 0), 2)
+constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 26, 1), 2)
 constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 16, 1), 2)
 constant Runner = "$Tests"
 Tests MethodEntry
@@ -44,14 +44,19 @@ Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock
 	let place = test to Text + " in " + method + " at " + file + ":line " + test.line
 	let reported = isQuiet then compared else Passed(compared, place)
 	let jumped = reported.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, reported.nextId)).WithNextId
-	let printed = Got(test, jumped.Add(InstructionEntry.Print("Test failed: " + place)))
+	let printed = Got(test, Timed(jumped, "Test failed: " + place))
 	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, jumped.nextId - 1))
 Passed(compared CodeBlock, place Text) CodeBlock
 	Even.Passed(Counter, "x").instructions.Index(InstructionEntry.Print("Test passed: x")) is -1
 	let passed = compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
-	let duration = types.Generator.Expression(Duration, passed)
-	let printed = duration.Add(InstructionEntry.PrintValue("Test passed: " + place + " (", duration.Result, true))
-	printed.Add(InstructionEntry.Jump(InstructionType.JumpEnd, passed.nextId - 1))
+	Timed(passed, "Test passed: " + place).Add(InstructionEntry.Jump(InstructionType.JumpEnd, passed.nextId - 1))
+Timed(block CodeBlock, message Text) CodeBlock
+	Even.Timed(Counter, "x").instructions.Last.texts is ("x (")
+	TestCodegen(Even.types, true).Timed(Counter, "x").instructions.Last.texts is ("x")
+	if isQuiet
+		return block.Add(InstructionEntry.Print(message))
+	let duration = types.Generator.Expression(Duration, block)
+	duration.Add(InstructionEntry.PrintValue(message + " (", duration.Result, true))
 Got(test SyntaxNode, block CodeBlock) CodeBlock
 	Even.Got(OneIsOne, Counter).instructions.Last.kind is InstructionType.Print
 	Even.Got(MethodCodegen.One, Counter).instructions.Length is 0
