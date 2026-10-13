@@ -1,0 +1,10 @@
+has queue Texts
+has spoken Text = ""
+constant Pair = Announcer(("a", "b"))
+Advance Announcer
+	Pair.Advance.spoken is "a"
+	Pair.Advance.queue.Length is 1
+	Announcer(queue - queue.First, queue.First)
+to Text
+	Pair.Advance to Text is "a, 1 queued"
+	spoken + ", " + queue.Length + " queued"

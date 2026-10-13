@@ -23,13 +23,13 @@ ElementSuffix(register Number) Text
 	MlirListOperators(Worded, 2).ElementSuffix(0) is "text"
 	MlirKinds(function).ElementKind(MlirKinds(function).KindOf(position, register)) is "Text" then "text" else "number"
 Helper(entry InstructionEntry) Text
-	MlirListOperators(Mixed, 2).Helper(Arithmetic(2)) is "strict_list_remove_number"
+	MlirListOperators(Mixed, 2).Helper(Arithmetic(2)) is "strict_list_removed_number"
 	MlirListOperators(Mixed, 3).Helper(Arithmetic(3)) is "strict_list_times"
 	MlirListOperators(Mixed, 4).Helper(Arithmetic(4)) is "strict_list_divided_number"
 	MlirListOperators(Mixed, 5).Helper(Arithmetic(5)) is "strict_list_prepend"
 	let isList = IsList(entry.payload(2))
 	if entry.kind is InstructionType.Subtract
-		return (isList then "strict_list_without_" else "strict_list_remove_") + ElementSuffix(entry.payload(1))
+		return (isList then "strict_list_without_" else "strict_list_removed_") + ElementSuffix(entry.payload(1))
 	if entry.kind is InstructionType.Add
 		return Added(entry, isList)
 	let operation = entry.kind is InstructionType.Multiply then "strict_list_times" else "strict_list_divided"

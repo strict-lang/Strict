@@ -1625,6 +1625,22 @@
     %bits = func.call @strict_bits(%result) : (!llvm.ptr) -> f64
     return %bits : f64
   }
+  func.func private @strict_list_removed(%list: f64, %item: f64, %isText: i1) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %copy = func.call @strict_list_copy(%list, %zero) : (f64, f64) -> f64
+    %result = func.call @strict_list_remove(%copy, %item, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_removed_text(%list: f64, %item: f64) -> f64 {
+    %isText = arith.constant true
+    %result = func.call @strict_list_removed(%list, %item, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_removed_number(%list: f64, %item: f64) -> f64 {
+    %isText = arith.constant false
+    %result = func.call @strict_list_removed(%list, %item, %isText) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
   func.func private @strict_list_remove_text(%list: f64, %item: f64) -> f64 {
     %isText = arith.constant true
     %result = func.call @strict_list_remove(%list, %item, %isText) : (f64, f64, i1) -> f64
