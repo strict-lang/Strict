@@ -2364,11 +2364,17 @@
     return %result : i64
   }
   func.func private @strict_hash_mixed(%value: i64) -> i64 {
-    %golden = arith.constant -7046029254386353131 : i64
-    %product = arith.muli %value, %golden : i64
-    %shift = arith.constant 29 : i64
-    %high = arith.shrui %product, %shift : i64
-    %result = arith.xori %product, %high : i64
+    %shift = arith.constant 33 : i64
+    %first = arith.constant -49064778989728563 : i64
+    %second = arith.constant -4265267296055464877 : i64
+    %high = arith.shrui %value, %shift : i64
+    %folded = arith.xori %value, %high : i64
+    %product = arith.muli %folded, %first : i64
+    %productHigh = arith.shrui %product, %shift : i64
+    %mixed = arith.xori %product, %productHigh : i64
+    %spread = arith.muli %mixed, %second : i64
+    %spreadHigh = arith.shrui %spread, %shift : i64
+    %result = arith.xori %spread, %spreadHigh : i64
     return %result : i64
   }
   func.func private @strict_dictionary_index(%dictionary: f64, %hash: (f64) -> i64) -> !llvm.ptr {
