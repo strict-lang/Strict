@@ -1,0 +1,82 @@
+has types KnownTypes
+constant Couples = KnownTypes(("Couple", "Text"), (Scope(("first", "second"), ("Generic", "Generic")), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("from", "from types"), ("first,second", "Generic,Generic")), KnownTypes.NoMembers))
+constant Implicit = Instantiation(KnownTypes(("Couple", "Text"), (Couples.members(0), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("from", "from types"), ("", "Type")), KnownTypes.NoMembers)))
+constant Pairing = Instantiation(Couples)
+constant Inferring = TypeInference(Couples, (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Swapping = TypeShape("has first Generic", "has second Generic", "Swapped Couple", "\tCouple(second, first)")
+constant Mixed = SyntaxParser(Tokenizer("Couple(\"a\", 2)").Tokens).Parse
+Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
+	Pairing.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
+	Pairing.Name(SyntaxNode("Call", "Text"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
+	Implicit.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
+	let explicit = types.ParametersOf(node.text, "from types", node.children.Length)
+	let declared = explicit.Length is node.children.Length then explicit else types.MembersOf(node.text).types
+	if "Generic" is not in declared
+		return ""
+	mutable arguments = List(Mutable(Text))
+	for declared
+		if (value is "Generic") and (index < node.children.Length)
+			arguments.Add(inference.TypeOf(node.children(index), scope, current))
+	node.text + "(" + Text.Combine(arguments, ", ") + ")"
+Argument(instanceType Text, name Text) Text
+	Pairing.Argument("Couple(Text, Number)", "second") is "Number"
+	Pairing.Argument("Couple(Text, Number)", "first") is "Text"
+	Pairing.Argument("Iterator(Text)", "first") is "Text"
+	let arguments = Arguments(instanceType)
+	if (arguments.Length < 2) or (types.BaseName(instanceType) is in ("List", "Dictionary", "Iterator"))
+		return types.ElementType(instanceType)
+	let position = Position(instanceType, name)
+	(position >= 0) and (position < arguments.Length) then arguments(position) else "Unknown"
+Position(instanceType Text, name Text) Number
+	Pairing.Position("Couple(Text, Number)", "second") is 1
+	Pairing.Position("Couple(Text, Number)", "missing") is -1
+	let members = types.MembersOf(instanceType)
+	mutable position = -1
+	for members.names
+		position = members.types(index) is "Generic" then position + 1 else position
+		if value is name
+			return members.types(index) is "Generic" then position else -1
+	-1
+Arguments(instanceType Text) Texts
+	Pairing.Arguments("Couple(Text, Number)") is ("Text", "Number")
+	Pairing.Arguments("Couple(List(Text, Number), Number)") is ("List(Text, Number)", "Number")
+	Pairing.Arguments("Couple").Length is 0
+	for SyntaxParser(Tokenizer(instanceType).Tokens).Parse.children
+		value to Text
+Members(typeName Text, members Scope) Scope
+	Pairing.Members("Couple(Text, Number)", Couples.members(0)).TypeOf("second") is "Number"
+	Pairing.Members("Couple", Couples.members(0)).TypeOf("second") is "Generic"
+	if Arguments(typeName).Length < 2
+		return members
+	mutable concrete = List(Mutable(Text))
+	for members.names
+		concrete.Add(members.types(index) is "Generic" then Argument(typeName, value) else members.types(index))
+	Scope(members.names, concrete)
+Own(fullName Text, type Text) Text
+	Pairing.Own("Strict/Couple(Text, Number)", "Couple") is "Couple(Text, Number)"
+	Pairing.Own("Strict/Dictionary(Text, Number)", "Dictionary") is "Dictionary"
+	Pairing.Own("Strict/Couple(Text, Number)", "Text") is "Text"
+	Pairing.Own("Strict/Couple(Text, Number)", "Couple(second, first)") is "Couple(Number, Text)"
+	let typeName = fullName.Substring(fullName.LastIndexOf("/") + 1, fullName.Length - fullName.LastIndexOf("/") - 1)
+	if (type is in ("List", "Dictionary")) or (types.BaseName(type) is not types.BaseName(typeName))
+		return type
+	type is types.BaseName(typeName) then typeName else Substituted(typeName, type)
+Template(shape TypeShape, position Number, typeName Text) Text
+	Pairing.Template(Swapping, 2, "Couple") is "Couple(second, first)"
+	Pairing.Template(Swapping, 2, "Pair") is ""
+	if (HeaderTokens(Tokenizer(shape.lines(position)).Tokens).ReturnType is not typeName) or (shape.UsesGenerics is false)
+		return ""
+	let result = BodyParser(shape.lines).Method(position + 1).children.Last
+	(result.Kind is "Call") and (result.text is typeName) then result to Text else ""
+Substituted(instanceType Text, template Text) Text
+	Pairing.Substituted("Couple(Text, Number)", "Couple(second, first)") is "Couple(Number, Text)"
+	Pairing.Substituted("Couple(Text, Number)", "Couple(1, first)") is "Couple(Text, Number)"
+	let members = types.MembersOf(instanceType)
+	mutable arguments = List(Mutable(Text))
+	for Arguments(template)
+		if (index < members.types.Length) and (members.types(index) is "Generic")
+			let argument = Argument(instanceType, value)
+			if argument is "Unknown"
+				return instanceType
+			arguments.Add(argument)
+	types.BaseName(instanceType) + "(" + Text.Combine(arguments, ", ") + ")"

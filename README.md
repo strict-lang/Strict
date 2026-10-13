@@ -198,6 +198,8 @@ Members are always defined at the top of any type file. Members are basically fi
 
 Members can be either `has` (default), `constant` (for anything that does not change, think of static readonly, this includes way more than other programming languages and propagates upward, anything composed out of constants is a constant too, constants are always precomputed and optimized away, even if this is a complex operation) or `mutable` (rarely used, this means the value is allowed to change, mostly for optimization purposes, should be avoided otherwise as parallization will struggle with mutables).
 
+A member of type `Generic` makes a type generic: every use is an instance of its own, with one type argument per `Generic` member in member order, taken from the constructor arguments. `Couple("a", 2)` (with `has first Generic` and `has second Generic`) is a `Couple(Text, Number)`, its `first` is a `Text`, it prints as `(a, 2)` and compares member by member. A method declared to return its own type returns what its body constructs: `Swapped Couple` with the body `Couple(second, first)` gives a `Couple(Number, Text)` here. See `Examples/Couple.strict`.
+
 Some examples:
 
 Any.strict is the basis of every other type, it doesn't have to be added as a member, all types are always Any. You can never use Any directly, but it implements these methods automatically in every type.

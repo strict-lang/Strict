@@ -82,7 +82,9 @@ ResolvedType(instanceType Text, name Text, depth Number) Text
 	if type is ""
 		return "Unknown"
 	if type is "Generic"
-		return ElementType(instanceType)
+		return Instantiation(value).Argument(instanceType, name)
+	if (type.IndexOf("(") > 0) and (BaseName(type) is BaseName(instanceType))
+		return Instantiation(value).Substituted(instanceType, type)
 	let isInherited = (MembersOf(instanceType).TypeOf(name) is "") and (MethodsOf(instanceType).TypeOf(name) is "")
 	let isOwn = type is in ("List", BaseName(instanceType))
 	isOwn or isInherited and (type is ValueOf(instanceType)) then instanceType else type

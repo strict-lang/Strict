@@ -119,12 +119,15 @@ FullName(type Text) Text
 PackageType(type Text) Text
 	Plain.PackageType("Helper") is "Strict/Examples/Helper"
 	Plain.PackageType("Number") is ""
-	let local = fullName.Substring(0, fullName.LastIndexOf("/") + 1) + type
+	Plain.PackageType("Helper(Number, Text)") is "Strict/Examples/Helper(Number, Text)"
+	let base = types.BaseName(type)
+	let arguments = type.Substring(base.Length, type.Length - base.Length)
+	let local = fullName.Substring(0, fullName.LastIndexOf("/") + 1) + base
 	if local is in typeNames
-		return local
+		return local + arguments
 	for typeNames
-		if Path(value).FileName.text is type
-			return value
+		if Path(value).FileName.text is base
+			return value + arguments
 	""
 TypeName Text
 	Plain.TypeName is "Greeter"

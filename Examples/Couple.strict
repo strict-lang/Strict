@@ -1,0 +1,12 @@
+has first Generic
+has second Generic
+Swapped Couple
+	Couple(1, 2).Swapped is Couple(2, 1)
+	(Couple(1, 2) to Text) is "(1, 2)"
+	(Couple("a", "b").Swapped to Text) is "(b, a)"
+	Couple("a", "b").Swapped.first.Length is 1
+	(Couple("a", 2).Swapped to Text) is "(2, a)"
+	Couple("a", 2).first.Length is 1
+	Couple("a", "b") is Couple("a", "b")
+	Couple("a", 2) is not Couple("a", 3)
+	Couple(second, first)

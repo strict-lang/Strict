@@ -35,7 +35,9 @@ Member(header HeaderTokens, position Number) MemberEntry
 	Hello.Member(HeaderTokens("has", "logger"), 0).typeName is "Strict/Logger"
 	Hello.Member(HeaderTokens("constant", "Add"), 0).initial.First.payload is (1, 0, 0)
 	Hello.Member(HeaderTokens("has", "alpha", "=", "1", "with", "value", ">", "0"), 0).initial.First.payload is (1, 1, 0)
-	let type = Generator.target.FullName(Concrete(header.DeclaredType(1)))
+	let declared = Scope(List(Text) + header.MemberName, List(Text) + header.DeclaredType(1))
+	let member = Instantiation(inference.types).Members(Generator.target.TypeName, declared)
+	let type = Generator.target.FullName(Concrete(member.types.First))
 	let isConstant = header.tokens(0) is "constant"
 	if isConstant and (header.tokens.Length is 2)
 		let number = InstructionEntry.NumberValue(TypeShape(lines).EnumValue(position))
@@ -88,7 +90,9 @@ BodyType(header HeaderTokens) Text
 Returned(header HeaderTokens) Text
 	Hello.Returned(HeaderTokens("Run", "Number")) is "Number"
 	let returned = header.ReturnType
-	returned is "=" then inference.types.MethodsOf(Generator.target.TypeName).TypeOf(header.tokens(0)) else returned
+	let name = Generator.target.TypeName
+	let isTemplate = (returned is inference.types.BaseName(name)) and (name.IndexOf("(") > 0)
+	(returned is "=") or isTemplate then inference.types.MethodsOf(name).TypeOf(header.tokens(0)) else returned
 Parameters(header HeaderTokens) List(MemberEntry)
 	Hello.Parameters(HeaderTokens("Add", "(", "first", "Number", ")")).Length is 1
 	Hello.Parameters(HeaderTokens("Add", "(", "x", "=", "1", ")")).First.initial.Length is 1
@@ -120,4 +124,4 @@ Concrete(type Text) Text
 	let element = MethodBodies.Item(fullName.Substring(open + 1, fullName.Length - open - 2))
 	if type is "Generic"
 		return element
-	type is in ("Generics", "List") then element + "s" else type
+	type is in ("Generics", "List") then element + "s" else Instantiation(inference.types).Own(fullName, type)

@@ -65,11 +65,16 @@ ChainTyped(inference TypeInference, shape TypeShape, scope Scope, typeName Text)
 	for shape.lines
 		let tokens = Tokenizer(value).Tokens
 		if value.StartsWith("constant ") and ((value.IndexOf(".") > 0) or (value.IndexOf("(") > 0))
-			let chained = ChainType(inference, tokens, typeName)
-			result = chained is "" then result else result.With(tokens(1), chained)
+			result = Typed(result, tokens(1), ChainType(inference, tokens, typeName))
 		else if shape.IsComputed(value)
 			result = result.With(tokens(0), ComputedType(inference, tokens, typeName, result))
+		else if shape.IsMethodHeader(value)
+			result = Typed(result, tokens(0), Instantiation(inference.types).Template(shape, index, typeName))
 	result
+Typed(scope Scope, name Text, type Text) Scope
+	ResolveCheck.Typed(KnownTypes.NoMembers, "a", "").names.Length is 0
+	ResolveCheck.Typed(KnownTypes.NoMembers, "a", "Number").TypeOf("a") is "Number"
+	type is "" then scope else scope.With(name, type)
 ComputedType(inference TypeInference, tokens Texts, typeName Text, methods Scope) Text
 	ResolveCheck.ComputedType(Counting, Next, "Count", KnownTypes.NoMembers) is "Number"
 	let header = HeaderTokens(tokens)

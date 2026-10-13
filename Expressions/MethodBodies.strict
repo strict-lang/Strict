@@ -28,7 +28,8 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 	mutable types = List(Mutable(Text))
 	for header.ParameterTypes
 		types.Add(value is "Other" then typeName else (value is "Generic" then argument else value))
-	members.With("value", InstanceType).WithAll(header.ParameterNames, types)
+	let concrete = Instantiation(inference.types).Members(typeName, members)
+	concrete.With("value", InstanceType).WithAll(header.ParameterNames, types)
 InstanceType Text
 	MethodBodies("List", Sample, NoInference).InstanceType is "Generics"
 	typeName is "List" then "Generics" else typeName
