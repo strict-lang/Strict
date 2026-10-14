@@ -1,0 +1,93 @@
+has machine Machine
+constant Listed = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
+constant Holder = TypeEntry("Strict/Holder", (MemberEntry.LoggerMember, Listed), (MethodEntry("Numbers", List(MemberEntry), "Strict/List(Number)", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Return(0))), MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0, -1)), InstructionEntry.Return(1)))))
+constant FirstCall = InstructionEntry.Invoke(1, ("Strict/Holder", "First", "Strict/Number"), List(Number), 0)
+constant Outer = TypeEntry("Strict/Outer", List(MemberEntry) + MemberEntry("holder", "Strict/Holder", List(InstructionEntry), false), List(MethodEntry) + MethodEntry("Head", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "holder"), FirstCall, InstructionEntry.Return(1))))
+constant Getting = Accessor(Machine((Holder, Outer)))
+constant FirstResolved = Resolver(Getting.machine.types).Targeted(FirstCall)
+constant Held = VmValue("Strict/Holder", 0, "", (VmValue.None, VmValue.OfList(VmValue.OfNumber(3), VmValue.OfNumber(5))))
+Path(target Numbers, count Number, depth Number) Numbers
+	Getting.Path((0, 0, 0), 0, 0) is (0, 1)
+	Getting.Path((1, 0, 0), 0, 0) is (1, 0, 0, 1, -1, 0)
+	Getting.Path((0, 0, 0), 1, 0).Length is 0
+	Getting.Path((-1, 0, 0), 0, 0).Length is 0
+	if (target(0) < 0) or (target(2) is 1) or (count > 0) or (depth > 7)
+		return List(Number)
+	let method = machine.types(target(0)).methods(target(1))
+	let length = method.instructions.Length
+	if (method.parameters.Length > 0) or (length < 2) or (length > 3)
+		return List(Number)
+	Followed(target(0), method.instructions, depth)
+Followed(route Number, instructions List(InstructionEntry), depth Number) Numbers
+	Getting.Followed(0, Holder.methods(1).instructions, 0) is (0, 1, -1, 0)
+	Getting.Followed(0, List(InstructionEntry) + FirstCall + InstructionEntry.Return(1), 0).Length is 0
+	let first = instructions.First
+	let returned = instructions.Last
+	if returned.kind is not InstructionType.Return
+		return List(Number)
+	if instructions.Length is 2
+		return Loaded(route, first, returned.payload(0))
+	let middle = instructions(1)
+	if middle.payload(0) is not returned.payload(0)
+		return List(Number)
+	middle.kind is InstructionType.IndexCall then Indexed(route, first, middle) else Chained(route, first, middle, depth)
+Loaded(route Number, entry InstructionEntry, register Number) Numbers
+	Getting.Loaded(0, Holder.methods(0).instructions.First, 0) is (0, 1)
+	Getting.Loaded(0, Holder.methods(0).instructions.First, 1).Length is 0
+	let isLoad = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.payload(0) is register)
+	let member = isLoad then Member(route, entry.texts(0)) else -1
+	member < 0 then List(Number) else (route, member)
+Member(route Number, name Text) Number
+	Getting.Member(0, "numbers") is 1
+	Getting.Member(0, "missing") is -1
+	for machine.types(route).members
+		if (value.Name is name) and (value.IsConstant is false)
+			return index
+	-1
+Indexed(route Number, first InstructionEntry, middle InstructionEntry) Numbers
+	Getting.Indexed(0, Holder.methods(1).instructions.First, Holder.methods(1).instructions(1)) is (0, 1, -1, 0)
+	Getting.Indexed(0, Holder.methods(0).instructions.First, Holder.methods(1).instructions(1)).Length is 0
+	let isConstant = (first.kind is InstructionType.LoadConstantToRegister) and (first.payload(0) is middle.payload(1))
+	let loaded = isConstant then PayloadDecoder(first).Value(1) else VmValue.None
+	let member = Member(route, middle.texts(0))
+	let isWhole = (loaded.kind is "Number") and (loaded.number is loaded.number.Floor)
+	isWhole and (member >= 0) then (route, member, -1, loaded.number) else List(Number)
+Chained(route Number, first InstructionEntry, middle InstructionEntry, depth Number) Numbers
+	Getting.Chained(1, Outer.methods(0).instructions.First, FirstCall, 0) is (1, 0, 0, 1, -1, 0)
+	Getting.Chained(1, Outer.methods(0).instructions.First, FirstCall, 8).Length is 0
+	if middle.kind is not InstructionType.Invoke
+		return List(Number)
+	let call = Invocation(middle, List(VmValue), VmValue.None)
+	let loaded = middle.payload(call.Flag) is 1 then Loaded(route, first, middle.payload(call.Flag + 1)) else List(Number)
+	if loaded.Length is 0
+		return loaded
+	let inner = Path(Resolver(machine.types).Target(call), call.Count, depth + 1)
+	inner.Length is 0 then inner else loaded + inner
+Accessed(call Invocation) VmValue
+	Getting.Accessed(Invocation(FirstResolved, List(VmValue), Held)).number is 3
+	Getting.Accessed(Invocation(FirstCall, List(VmValue), Held)).kind is "None"
+	let payload = call.entry.payload
+	let at = call.Resolution + 3
+	if payload.Length <= at
+		return VmValue.None
+	mutable found = call.Instance
+	for (payload.Length - at) / 2
+		found = Step(found, payload(at + index * 2), payload(at + index * 2 + 1))
+	found.kind is in ("Error", "Strict/Error") then VmValue.None else found
+Step(instance VmValue, route Number, number Number) VmValue
+	Getting.Step(Held, 0, 1).Length is 2
+	Getting.Step(Held.items(1), -1, 1).number is 5
+	Getting.Step(Held.items(1), -1, 2).kind is "None"
+	if route >= 0
+		return machine.MemberValue(machine.types(route), instance, number)
+	let wrapped = Wrapped(instance, number)
+	wrapped < 0 then VmValue.None else Item(instance, wrapped)
+Wrapped(collection VmValue, at Number) Number
+	Getting.Wrapped(VmValue.OfText("ab"), -1) is 1
+	Getting.Wrapped(VmValue.OfText("ab"), 2) is -1
+	let wrapped = at < 0 then at + collection.Length else at
+	(wrapped < 0) or (wrapped >= collection.Length) then -1 else wrapped
+Item(collection VmValue, position Number) VmValue
+	Getting.Item(VmValue.OfText("ab"), 1).text is "b"
+	Getting.Item(Held.items(1), 0).number is 3
+	collection.kind is "Text" then VmValue.OfText(collection.text.Substring(position, 1)) else collection.items(position)

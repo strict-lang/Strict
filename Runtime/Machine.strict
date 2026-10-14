@@ -95,6 +95,9 @@ MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 IsOwned(type TypeEntry, kind Text) Boolean
 	Hello.IsOwned(Paired, "Strict/Pair(Number)") is true
 	Hello.IsOwned(Paired, "Strict/Other") is false
+	Hello.IsOwned(Paired, "List") is true
+	if kind is "List"
+		return true
 	TypeEntry.ShortName(type.Name).Split("(").First is TypeEntry.ShortName(kind).Split("(").First
 Execute(method MethodEntry, locals List(VmValue), owner Text) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42

@@ -13,7 +13,8 @@ Run(folder Text, root Text) Number
 	issues
 CheckFile(path Text, mutations Texts, isBase Boolean, typeNames Texts) List(ValidationIssue)
 	let lines = File(path).ReadLines
-	let rules = TypeValidator(TypeShape(lines), mutations).Validate + Limits(lines, isBase).Issues
+	let typeName = Path(path).FileName.RemoveExtension.text
+	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + Limits(lines, isBase).Issues
 	rules + Names(lines, typeNames).Issues
 Logged(path Text, found List(ValidationIssue)) Number
 	for found

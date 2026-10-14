@@ -1,6 +1,8 @@
 has shape Expressions/TypeShape
 has mutations Texts
+has typeName Text = ""
 constant ReservedNames = ("value", "iterator", "elements", "generic")
+constant Replacing = TypeValidator(TypeShape("has a Number", "has b Number", "Changed(x Number) C", "\tC(1, 2).Changed(3).a is 3", "\tC(value, a = x)"), ("Add", "Remove"), "C")
 Sample TypeValidator
 	Sample.mutations.Length is 2
 	TypeValidator(TypeShape("has unused Number", "has logger", "Run", "\tlogger.Log(1)"), ("Add", "Remove"))
@@ -16,13 +18,13 @@ Validate ValidationIssues
 MemberIssues ValidationIssues
 	Sample.MemberIssues.Length is 1
 	Sample.MemberIssues.First.Line is 1
+	Replacing.MemberIssues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
-	if IsExempt
-		return issues
+	let kept = IsExempt then MemberNames else Copied
 	for shape.lines
 		if shape.IsMemberLine(value)
 			let name = HeaderTokens(Tokenizer(value).Tokens).MemberName
-			if name is not in ReservedNames and (not IsPublic(name)) and UsageCount(name) < 2
+			if name is not in ReservedNames and (not IsPublic(name)) and UsageCount(name) < 2 and (name is not in kept)
 				issues.Add(ValidationIssue("UnusedMemberMustBeRemoved", name, index + 1))
 	issues
 MemberNames Texts
@@ -77,3 +79,28 @@ IsConstantNode(node SyntaxNode) Boolean
 	if node.Kind is in ("Number", "Text", "Boolean")
 		return true
 	(node.Kind is "Binary") and IsConstantNode(node.children(0)) and IsConstantNode(node.children(1))
+Copied Texts
+	Replacing.Copied is ("b")
+	mutable copied = List(Mutable(Text))
+	for shape.lines
+		if shape.IsMethodHeader(value)
+			copied = copied + Unnamed(SyntaxNode("Body", "", BodyParser(shape.lines).Method(index + 1).Statements))
+	copied
+Unnamed(node SyntaxNode) Texts
+	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value, a = 1)").Tokens).Parse) is ("b")
+	Replacing.Unnamed(SyntaxParser(Tokenizer("D(value, a = 1)").Tokens).Parse).Length is 0
+	mutable unnamed = List(Mutable(Text))
+	for node.children
+		unnamed = unnamed + Unnamed(value)
+	if (node.Kind is not "Call") or (node.text is not typeName) or (node.children.Length < 2)
+		return unnamed
+	node.children(1).Kind is "Reassignment" then unnamed + Unread(node) else unnamed
+Unread(call SyntaxNode) Texts
+	Replacing.Unread(SyntaxParser(Tokenizer("C(value, b = 1)").Tokens).Parse) is ("a")
+	mutable named = List(Mutable(Text))
+	for call.children
+		if value.Kind is "Reassignment"
+			named.Add(value.children(0).text)
+	for MemberNames
+		if value is not in named
+			value

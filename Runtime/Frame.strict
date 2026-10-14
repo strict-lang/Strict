@@ -80,14 +80,13 @@ Indexed(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Indexed(InstructionEntry(InstructionType.IndexCall, "list", (6, 6, 7)), Listed, 0).number is 20
 	Twice.Indexed(InstructionEntry(InstructionType.IndexCall, "a", (6, 8, 7)), Listed, 0).Traces.Length > 0 is true
 	let collection = Local(entry.payload(2), slots)
-	let at = slots(entry.payload(1)).number
-	let wrapped = at < 0 then at + collection.Length else at
-	if (wrapped < 0) or (wrapped >= collection.Length)
-		return Traced(VmValue.OfError(method.Name), position)
-	collection.kind is "Text" then VmValue.OfText(collection.text.Substring(wrapped, 1)) else collection.items(wrapped)
+	let wrapped = Accessor(machine).Wrapped(collection, slots(entry.payload(1)).number)
+	wrapped < 0 then Traced(VmValue.OfError(method.Name), position) else Accessor(machine).Item(collection, wrapped)
 Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Calling.Invoked(Calling.method.instructions.First, Listed, 0).Traces.IndexOf("at Caller.Run") > 0 is true
-	let result = machine.Call(Called(entry, slots))
+	let call = Called(entry, slots)
+	let accessed = Accessor(machine).Accessed(call)
+	let result = accessed.kind is "None" then machine.Call(call) else accessed
 	if result.kind is "Error"
 		machine.Logged(result.text)
 	result.kind is "Strict/Error" then Traced(result, position) else result

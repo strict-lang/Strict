@@ -9,6 +9,7 @@ constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number
 constant Iterating = TypeCodegen("Strict/Size", ("has Width Number", "for Iterator(Number)", "\tfor Width", "\t\tindex"), NoTypes, List(Text))
 constant Grid = TypeCodegen("Strict/Size", ("has Width Number", "has Height Number", "for Iterator(Vector2)", "\tfor Height", "\t\tfor Width", "\t\t\tVector2(index, outer.index)"), NoTypes, List(Text))
 constant Created = TypeCodegen("Strict/C", ("has a Number", "from(b Number)", "\ta = b"), NoTypes, List(Text))
+constant Vectors = TypeCodegen("Strict/C", List(Text), TypeInference(KnownTypes(List(Text) + "Vector2", List(Scope) + Scope(List(Text) + "numbers", List(Text) + "Numbers"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers), List(Text))
 Entry TypeEntry
 	Hello.Entry is TypeEntry.HelloLogger
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
@@ -54,11 +55,9 @@ InitialOf(header HeaderTokens) List(InstructionEntry)
 Initial(node SyntaxNode) List(InstructionEntry)
 	Hello.Initial(SyntaxNode("Text", "\"a\"")).First.payload is (4, -1, 0)
 	Hello.Initial(SyntaxNode("Call", "Range")).Length is 0
+	Vectors.Initial(SyntaxParser(Tokenizer("Vector2(1, 2)").Tokens).Parse).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
 	Hello.Initial(SyntaxParser("(", "1", ",", "2", ")").ParseRange(0, 5)).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
-	let folded = ConstantFolding(Generator.target.TypeName, Generator.inference).Folded(node)
-	let isCall = (folded.Kind is "Call") and (folded.children.Length is 1) and (TypeEntry.IsBaseName(folded.text) is false)
-	let isWrapper = isCall and (Generator.inference.types.MembersOf(folded.text).names.Length is 1)
-	let literal = isWrapper then folded.children(0) else folded
+	let literal = ConstantFolding(Generator.target.TypeName, inference).Unwrapped(node)
 	if literal.IsLiteral is false
 		return List(InstructionEntry)
 	let load = Generator.Expression(literal, CodeBlock.Empty).instructions(0)

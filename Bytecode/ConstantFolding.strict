@@ -8,6 +8,7 @@ constant Two = SyntaxNode("Number", "2")
 constant Count = SyntaxNode("Identifier", "Count")
 constant Local = BodyParser("Run", "\tconstant a = 2", "\tconstant b = a * 3", "\tb + a").Block(1, 1)
 constant Owned = ConstantFolding("Text", TypeInference(KnownTypes.Sample, (Scope(("Limit", "Twice", "Alias", "Loop"), ("3", "Limit * 2", "Limit", "Loop")), TypeInference.NoShape)))
+constant Wrapping = ConstantFolding("C", TypeInference(KnownTypes(("Vector2", "Angle"), (Scope(List(Text) + "numbers", List(Text) + "Numbers"), Scope(List(Text) + "degrees", List(Text) + "Number")), (KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "Angle")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)))
 Folded(node SyntaxNode) SyntaxNode
 	Limits.Folded(Limit).text is "3"
 	Limits.Folded(SyntaxNode("Binary", "*", (Limit, Two))).text is "6"
@@ -98,3 +99,14 @@ Calculated(operator Text, left Number, right Number) Number
 	if operator is "*"
 		return left * right
 	operator is "/" then left / right else left % right
+Unwrapped(node SyntaxNode) SyntaxNode
+	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Vector2(1, 2)").Tokens).Parse) to Text is "(1, 2)"
+	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Vector2(Limit)").Tokens).Parse) to Text is "Limit"
+	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Angle(90)").Tokens).Parse) to Text is "Angle(90)"
+	Limits.Unwrapped(Limit).text is "3"
+	let folded = Folded(node)
+	let members = inference.types.MembersOf(folded.text).types
+	let isWrapper = (folded.Kind is "Call") and (members.Length is 1) and (TypeEntry.IsBaseName(folded.text) is false)
+	if (isWrapper is false) or (inference.types.MethodsOf(folded.text).TypeOf("from") is not "")
+		return folded
+	folded.children.Length is 1 then Folded(folded.children(0)) else SyntaxNode("List", "", folded.children)

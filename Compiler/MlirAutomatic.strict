@@ -4,6 +4,7 @@ constant Parentheses = ("    %openText = llvm.mlir.addressof @strict_open_paren 
 constant Sample = MlirAutomatic(MlirEquality.Same)
 constant Priced = MemberEntry("prices", "Strict/Dictionary(Text, Shape)", List(InstructionEntry), false)
 constant Nested = MemberEntry("inner", "Strict/Shape", List(InstructionEntry), false)
+constant Stating = TypeEntry("Strict/States", List(MemberEntry) + MemberEntry("states", "Strict/Dictionary(Number, Missing)", List(InstructionEntry), false), List(MethodEntry))
 constant Converting = "(f64) -> f64"
 constant PairSignature = " : (f64, (f64) -> f64, (f64) -> f64) -> f64"
 Functions Texts
@@ -30,6 +31,7 @@ Hash(symbol Text) Texts
 	(header, text, "    %hash = func.call @strict_hash_text(%text) : (f64) -> i64", "    return %hash : i64", "  }")
 Function(type TypeEntry) Texts
 	Sample.Function(MlirFunction.Shape).Length is 24
+	Text.Combine(Sample.Function(Stating)).IndexOf("@skip") is -1
 	let name = MlirEquality(function, 0).Symbol(TypeEntry.ShortName(type.Name))
 	mutable lines = List(Text) + ("  func.func private @strict_automatic_" + name + "(%value: f64) -> f64 {") + Prologue
 	mutable count = 0
@@ -45,13 +47,20 @@ Member(member MemberEntry, slot Number, count Number) Texts
 	Sample.Member(Priced, 0, 0).Length is 6
 	Sample.Member(Nested, 0, 0).Last.IndexOf("@strict_list_add_set(%l0, %x0, %t0m0v)") > 0 is true
 	let kind = TypeEntry.ShortName(member.typeName)
-	let conversion = Conversion(kind)
-	if (conversion is "skip") and (MlirLayout(function).Paired(kind).Length is 0)
+	if IsSkipped(kind)
 		return List(Text)
+	let conversion = Conversion(kind)
 	let memory = MlirMemory(function, 0)
 	let loaded = memory.Temp("m" + slot + "v")
 	let text = conversion is "" then loaded else "%x" + slot
 	memory.Loaded("%p", slot, "m" + slot) + Converted(text, kind, loaded) + Added(count, text, loaded, kind)
+IsSkipped(kind Text) Boolean
+	Sample.IsSkipped("Logger") is true
+	Sample.IsSkipped("Dictionary(Number, Missing)") is true
+	Sample.IsSkipped("Dictionary(Text, Number)") is false
+	let pair = MlirLayout(function).Paired(kind)
+	let converters = pair.Length is 0 then List(Text) + Conversion(kind) else (Converter(pair(0)), Converter(pair(1)))
+	"skip" is in converters
 Added(count Number, text Text, loaded Text, kind Text) Text
 	Sample.Added(0, "%x0", "%v", "Number") is "    %l1 = func.call @strict_list_add(%l0, %x0) : (f64, f64) -> f64"
 	Sample.Added(1, "%x1", "%v", "Shape").IndexOf("@strict_list_add_set(%l1, %x1, %v)") > 0 is true

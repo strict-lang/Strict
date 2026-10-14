@@ -50,7 +50,8 @@ Called(node SyntaxNode, scope Scope, current Scope) Text
 	if (node.text is "Mutable") and (node.children.Length is 1)
 		return TypeOf(node.children(0), scope, current)
 	let instantiated = Instantiation(types).Name(node, value, scope, current)
-	instantiated is "" then CallType(node.text, scope, current) else instantiated
+	let overloaded = instantiated is "" then Overloads(types).Returned(node, value, scope, current) else instantiated
+	overloaded is "" then CallType(node.text, scope, current) else overloaded
 CallType(name Text, scope Scope, current Scope) Text
 	NoInference.CallType("Vector2", NoShape, NoShape) is "Vector2"
 	NoInference.CallType("x", NoShape, Scope(("x", "y"), ("Texts", "Y"))) is "Text"

@@ -128,15 +128,15 @@ Fresh(type TypeEntry) VmValue
 Initial(member MemberEntry) VmValue
 	Shapes.Initial(Width).number is 0
 	Shapes.Initial(MemberEntry.SevenMember).number is 7
+	Shapes.Initial(MemberEntry("table", "Strict/Dictionary(Number, Number)", List(InstructionEntry), false)).kind is "List"
 	if member.initial.Length > 0
 		return PayloadDecoder(member.initial.First).Value(0)
 	if member.typeName is "Strict/Number"
 		return VmValue.OfNumber(0)
-	if member.typeName is "Strict/Text"
-		return VmValue.OfText("")
-	if member.typeName is "Strict/Boolean"
-		return VmValue.OfBoolean(false)
-	member.typeName.StartsWith("Strict/List") then VmValue.OfList(List(VmValue)) else VmValue.None
+	if member.typeName is in ("Strict/Text", "Strict/Boolean")
+		return member.typeName is "Strict/Text" then VmValue.OfText("") else VmValue.OfBoolean(false)
+	let isList = member.typeName.StartsWith("Strict/List") or member.typeName.StartsWith("Strict/Dictionary")
+	isList then VmValue.OfList(List(VmValue)) else VmValue.None
 TypeOf(name Text) TypeEntry
 	Shapes.TypeOf("Strict/Shape").members.Length is 2
 	Shapes.TypeOf("Strict/Other").members.Length is 0

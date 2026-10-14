@@ -1,6 +1,10 @@
 has types KnownTypes
 constant Scaler = KnownTypes(("Scaler", "Byte"), (KnownTypes.NoMembers, Scope(List(Text) + "number", List(Text) + "Number")), (Scope(("Scaled", "Scaled", "*", "*"), ("Number", "Number", "Number", "Scaler")), KnownTypes.NoMembers), (Scope(("Scaled", "Scaled types", "Scaled", "Scaled types", "*", "* types", "*", "* types"), ("text", "Text", "byte", "Byte", "other", "Other", "factor", "Number")), KnownTypes.NoMembers))
 constant Scaling = Overloads(Scaler)
+constant Labeler = KnownTypes(List(Text) + "Labeler", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Labels", "Labels"), ("List(Numbers)", "Numbers")), List(Scope) + Scope(("Labels", "Labels types", "Labels", "Labels types"), ("label,count", "Numbers,Number", "", "")))
+constant Labeling = Overloads(Labeler)
+constant LabelInference = TypeInference(Labeler, List(Scope) + KnownTypes.NoMembers)
+constant LabelsCall = SyntaxParser(Tokenizer("Labels((1, 0), 2)").Tokens).Parse
 Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Text") is 0
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Number") is 1
@@ -47,3 +51,15 @@ Converts(argument Text, declared Text) Boolean
 	if (declared is "Generic") or (types.ValueOf(declared) is argument) or (types.ValueOf(argument) is declared)
 		return true
 	TypeInference(types, List(Scope)).Converter(argument, declared) is not ""
+Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
+	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "List(Numbers)"
+	Labeling.Returned(SyntaxNode("Call", "Labels"), LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
+	Scaling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
+	let position = types.methods.Index(current)
+	if (position < 0) or (current.Count(node.text) < 2)
+		return ""
+	mutable arguments = List(Mutable(Text))
+	for node.children
+		arguments.Add(inference.TypeOf(value, scope, current))
+	let ordinal = Chosen(types.names(position), node.text, arguments)
+	ordinal < 0 then "" else current.TypeAt(node.text, ordinal)

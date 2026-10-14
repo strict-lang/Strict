@@ -41,8 +41,6 @@ Strict compiles itself natively (`Strict.strict` builds the `strict` command `st
 - When debugging in this repo, continue working toward the root cause instead of stopping after a fixed small number of steps.
 
 ## Project-Specific Rules
-- Strict is a simple-to-understand programming language that not only humans can read and understand, but also computers are able to understand, modify and write it.
-- The long-term goal is NOT to create just another programming language, but use Strict as the foundation for a higher level language for computers to understand and write code. This is the first step towards a future where computers can write their own code, which is the ultimate goal of Strict. Again, this is very different from other programming languages that are designed for humans to write code but not for computers to understand it. Even though LLMs can be trained to repeat and imitate, which is amazing to see, they still don't understand anything really and make the most ridiculous mistakes on any project bigger than a handful of files. Strict needs to be very fast, both in execution and writing code (much faster than any existing system), so millions of lines of code can be thought of by computers and be evaluated in real time (seconds).
 - Priorities: first clean strict rules, exactly one way to solve each problem; second performance and parallelism, everything as fast as possible and close to the hardware (CPU, GPU, NPU, TPU, CUDA, distributed over the network).
 - Values are immutable in the language: there are no mutable data types like a growing list, appending gives a new list every time. The runtime (VM, interpreter, compiled code) does not copy for that: like functional languages it keeps the same list, changes it in place and hands back the same memory as the new list, the previous version is not used anymore. If an old version is used again the runtime has to copy, but that is bad code (a list is either fixed, or growing and then only its latest version is used). Never add mutable language features for speed, optimize the internal representation instead.
 - Test with `strict test <file>` (Strict VM, in memory), build natively with `strict build <file>` (`strict.exe` in the repository root, a type without Run builds its tests natively into `Name.test.exe`), validate a folder with `check <folder>` (see README "Command line"). After changing `Compiler/`, `Bytecode/`, `Expressions/` or `Compiler/NativeRuntime*.mlir`, let `strict` build itself twice from a copy and check stage 2 and 3 are identical before trusting any result (delete `Strict.strictbinary` before every stage, otherwise the later stages reuse the bytecode of the first). A runtime change the old compiler's code can't use needs stage 1 built with the old runtime. When the bootstrap seed can no longer build the current source, regenerate `Compiler/Bootstrap.mlir` from a fixpoint build in the same commit.
@@ -113,52 +111,9 @@ Write code before the test? Delete it. Start over.
 
 Implement fresh from tests. Period.
 
-### Red-Green-Refactordigraph tdd_cycle {
-    rankdir=LR;
-    red [label="RED\nWrite failing test", shape=box, style=filled, fillcolor="#ffcccc"];
-    verify_red [label="Verify fails\ncorrectly", shape=diamond];
-    green [label="GREEN\nMinimal code", shape=box, style=filled, fillcolor="#ccffcc"];
-    verify_green [label="Verify passes\nAll green", shape=diamond];
-    refactor [label="REFACTOR\nClean up", shape=box, style=filled, fillcolor="#ccccff"];
-    next [label="Next", shape=ellipse];
-
-    red -> verify_red;
-    verify_red -> green [label="yes"];
-    verify_red -> red [label="wrong\nfailure"];
-    green -> verify_green;
-    verify_green -> refactor [label="yes"];
-    verify_green -> green [label="no"];
-    refactor -> verify_green [label="stay\ngreen"];
-    verify_green -> next;
-    next -> red;
-}
+### Red-Green-Refactor
 #### RED - Write Failing Test
 Write one minimal test showing what should happen.
-
-<Good>test('retries failed operations 3 times', async () => {
-  let attempts = 0;
-  const operation = () => {
-    attempts++;
-    if (attempts < 3) throw new Error('fail');
-    return 'success';
-  };
-
-  const result = await retryOperation(operation);
-
-  expect(result).toBe('success');
-  expect(attempts).toBe(3);
-});Clear name, tests real behavior, one thing
-</Good>
-
-<Bad>test('retry works', async () => {
-  const mock = jest.fn()
-    .mockRejectedValueOnce(new Error())
-    .mockRejectedValueOnce(new Error())
-    .mockResolvedValueOnce('success');
-  await retryOperation(mock);
-  expect(mock).toHaveBeenCalledTimes(3);
-});Vague name, tests mock not code
-</Bad>
 
 **Requirements:**
 - One behavior
@@ -167,7 +122,7 @@ Write one minimal test showing what should happen.
 
 #### Verify RED - Watch It Fail
 **MANDATORY. Never skip.**
-npm test path/to/test.test.ts
+`strict test <file>`
 Confirm:
 - Test fails (not errors)
 - Failure message is expected
@@ -180,35 +135,11 @@ Confirm:
 #### GREEN - Minimal Code
 Write simplest code to pass the test.
 
-<Good>async function retryOperation<T>(fn: () => Promise<T>): Promise<T> {
-  for (let i = 0; i < 3; i++) {
-    try {
-      return await fn();
-    } catch (e) {
-      if (i === 2) throw e;
-    }
-  }
-  throw new Error('unreachable');
-}Just enough to pass
-</Good>
-
-<Bad>async function retryOperation<T>(
-  fn: () => Promise<T>,
-  options?: {
-    maxRetries?: number;
-    backoff?: 'linear' | 'exponential';
-    onRetry?: (attempt: number) => void;
-  }
-): Promise<T> {
-  // YAGNI
-}Over-engineered
-</Bad>
-
 Don't add features, refactor other code, or "improve" beyond the test.
 
 #### Verify GREEN - Watch It Pass
 **MANDATORY.**
-npm test path/to/test.test.ts
+`strict test <file>`
 Confirm:
 - Test passes
 - Other tests still pass
@@ -319,27 +250,6 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 
 **All of these mean: Delete code. Start over with TDD.**
 
-## Example: Bug Fix
-**Bug:** Empty email accepted
-
-**RED**test('rejects empty email', async () => {
-  const result = await submitForm({ email: '' });
-  expect(result.error).toBe('Email required');
-});
-**Verify RED**$ npm test
-FAIL: expected 'Email required', got undefined
-**GREEN**
-function submitForm(data: FormData) {
-  if (!data.email?.trim()) {
-    return { error: 'Email required' };
-  }
-  // ...
-}
-**Verify GREEN**$ npm test
-PASS
-**REFACTOR**
-Extract validation for multiple fields if needed.
-
 ## Verification Checklist
 Before marking work complete:
 - [ ] Every new function/method has a test
@@ -366,12 +276,6 @@ Bug found? Write failing test reproducing it. Follow TDD cycle. Test proves fix 
 
 Never fix bugs without a test.
 
-## Testing Anti-Patterns
-When adding mocks or test utilities, read @testing-anti-patterns.md to avoid common pitfalls:
-- Testing mock behavior instead of real behavior
-- Adding test-only methods to production classes
-- Mocking without understanding dependencies
-
 ## Final RuleProduction code → test exists and failed first
 Otherwise → not TDD
 No exceptions without your human partner's permission.
@@ -389,9 +293,6 @@ No exceptions without your human partner's permission.
 - Explicitly distinguish lookup context type from instance value in error messages.
 - Validation issues name their rule (`MethodLengthMustNotExceedTwelve`, ...) with the file and line.
 - At runtime in the Strict VM or in a compiled executable errors should show the Error with clickable stacktraces going back to the .strict source code.
-
-## Additional Guidelines
-- In this repo, keep fixes narrowly focused and avoid adding many new tests; prefer relying on existing coverage and add at most one specific regression test when needed.
 
 ## Multithreading Support
 - For test-runner performance work, parallelize at the package or file level, not per type; type tests are too fine-grained and the overhead dominates.
