@@ -1,0 +1,16 @@
+has logger
+Counted(count Number) Numbers
+	Squares.Counted(3) is (0, 1, 2)
+	for count
+		value
+Squared(numbers Numbers) Numbers
+	Squares.Squared((1, 2, 3)) is (1, 4, 9)
+	Squares.Squared(Squares.Counted(70000)).Last is 4899860001
+	for numbers
+		Square(value)
+Square(number Number) Number
+	Squares.Square(3) is 9
+	number * number
+Run
+	let squared = Squared(Counted(1000000))
+	logger.Log("Sum of squares " + squared.Sum + ", the last is " + squared.Last)

@@ -519,3 +519,13 @@
   ^leave:
     llvm.return
   }
+  llvm.mlir.global internal constant @strict_gpu_driver("nvcuda.dll\00") : !llvm.array<11 x i8>
+  func.func private @strict_gpu_library() -> !llvm.ptr {
+    %name = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %library = llvm.call @LoadLibraryA(%name) : (!llvm.ptr) -> !llvm.ptr
+    return %library : !llvm.ptr
+  }
+  func.func private @strict_gpu_lookup(%library: !llvm.ptr, %name: !llvm.ptr) -> !llvm.ptr {
+    %function = llvm.call @GetProcAddress(%library, %name) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    return %function : !llvm.ptr
+  }

@@ -1,5 +1,5 @@
 has logger
-constant Intermediates = (".llvm.mlir", ".ll", ".res", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o")
+constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".ptx", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o")
 Built(path Text, root Text) Number
 	let failed = Execute(logger).Test(path, root)
 	failed > 0 then failed else Compile(path, root)
@@ -12,14 +12,29 @@ Compile(path Text, root Text, isCounting = false) Number
 	let types = isCounting then FileCompiler(logger).Compiled(path, root, true) else Execute(logger).Loaded(path, root)
 	if types.Length is 0
 		return 1
-	let program = MlirModule(types, isProgram then "Run" else TestCodegen.Runner, CountedFile(path, root, isCounting)).Text
-	let unsupported = Unsupported(program)
-	if unsupported is not -1
-		logger.Log("Native compilation failed, " + program.Substring(unsupported, program.Length - unsupported).Lines.First)
-		return 1
 	let base = Output(path, isProgram)
+	let module = MlirModule(types, isProgram then "Run" else TestCodegen.Runner, CountedFile(path, root, isCounting))
+	let program = Device(module.Text, base, root)
+	if program is ""
+		return 1
 	let built = Build(base, program, Toolchain(Platform.Current, root, Natives(path, root, types)), isCounting)
 	isCounting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path) else built
+Device(program Text, base Text, root Text) Text
+	NativeBuild.Device("module {\n}", "A", ".") is "module {\n}"
+	let at = Unsupported(program)
+	if at is not -1
+		return Failed("Native compilation failed, " + program.Substring(at, program.Length - at).Lines.First)
+	let marker = program.IndexOf("\n" + MlirGpu.Marker)
+	if marker < 0
+		return program
+	File(base + ".gpu.mlir").Write(program.Substring(marker + 1, program.Length - marker - 1))
+	let gpu = DeviceBuild(Toolchain(Platform.Current, root))
+	let ptx = gpu.Ptx(base)
+	let host = program.Substring(0, marker)
+	ptx.StartsWith("//") then gpu.Embedded(host, ptx) else Failed("GPU kernels failed: " + ptx)
+Failed(message Text) Text
+	logger.Log(message)
+	""
 Natives(path Text, root Text, types List(TypeEntry)) Texts
 	NativeBuild.Natives("Examples/NativeAdd/NativeAdd.strict", ".", List(TypeEntry)).Length is 0
 	constant imported = NativeBuild.Natives("Examples/HelloLogger.strict", "Compiler", List(TypeEntry) + Foreign.Adder)

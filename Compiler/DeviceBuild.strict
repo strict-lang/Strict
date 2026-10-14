@@ -1,0 +1,17 @@
+has tools Toolchain
+constant Nvptx = "--target=nvptx64-nvidia-cuda -march=sm_75 -O3 -S -Wno-override-module "
+constant Missing = DeviceBuild(Toolchain.OnWindows)
+Ptx(base Text) Text
+	Missing.Ptx("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+	let lowered = tools.Lowered(base + ".gpu")
+	if lowered is not ""
+		return lowered
+	let arguments = Nvptx + tools.Quoted(base + ".gpu.ll") + " -o " + tools.Quoted(base + ".ptx")
+	let compiled = ToolRunner(tools.Located("clang")).Execute(arguments)
+	compiled.Failed then "clang failed: " + compiled.error else Text.Combine(File(base + ".ptx").ReadLines, "\n")
+Embedded(host Text, ptx Text) Text
+	Missing.Embedded("module {\n}", "// a").EndsWith("@strict_gpu_ptx(\"// a\\00\") : !llvm.array<5 x i8>\n}") is true
+	let content = MlirConstants.Escaped(ptx, false)
+	let length = MlirConstants.EscapedLength(ptx, false) + 1
+	let global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"" + content + "\\00\")"
+	host.Substring(0, host.Length - 1) + global + " : !llvm.array<" + length + " x i8>\n}"
