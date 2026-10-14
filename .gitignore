@@ -1,8 +1,9 @@
-# native Linux executables are built next to their .strict files without an extension
+# native Linux executables are built next to their .strict files without an extension, tests as Name.test
 *
 !*.*
 !*/
 !LICENSE
+*.test
 # User-specific files and cache folders
 *.rsuser
 *.suo
@@ -162,3 +163,5 @@ MachineLearning/shakespeare.txt
 **/native/*.dll
 **/native/*.so
 **/native/*.exp
+
+NeuralNetworks/gpt2/

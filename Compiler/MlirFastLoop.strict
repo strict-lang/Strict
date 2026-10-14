@@ -1,0 +1,76 @@
+has function MlirFunction
+has position Number
+constant Doubler = MlirKernel.Doubler
+constant Doubling = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2), 2)
+constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, f64"
+constant Items = " : (f64) -> !llvm.ptr"
+Temp(suffix Text) Text
+	Doubling.Temp("ki") is "%t2ki"
+	"%t" + position + suffix
+Checked Texts
+	Doubling.Checked.Last is "    %t2ok1 = arith.andi %t2ok0, %t2e_numbers : i1"
+	let memory = MlirMemory(function, position)
+	mutable lines = MlirLoops(function, position).CountBounds(function.method.instructions(position))
+	lines = lines + ("    " + Temp("ok0") + " = arith.constant true")
+	for MlirKernel(function, position).Sources
+		let list = Temp("l_" + value)
+		let length = memory.Called(Temp("n_" + value), "strict_list_length", List(Text) + list)
+		let enough = "    " + Temp("e_" + value) + " = arith.cmpf oge, " + Temp("n_" + value) + ", " + Temp("n") + " : f64"
+		let combined = " = arith.andi " + Temp("ok" + index) + ", " + Temp("e_" + value) + " : i1"
+		lines = lines + function.Load(list, "%v_" + value) + length + enough + ("    " + Temp("ok" + (index + 1)) + combined)
+	lines
+Started Texts
+	Doubling.Started.First is "  ^loop2fast:"
+	Doubling.Started.Last is "    %t2ri = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"
+	let loops = MlirLoops(function, position)
+	mutable lines = List(Text) + ("  ^loop" + position + "fast:") + loops.Items
+	for MlirKernel(function, position).Sources
+		lines = lines + ("    " + Temp("h_" + value) + " = func.call @strict_list_start(" + Temp("l_" + value) + ")" + Items)
+	let saved = (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value"))
+	let items = "    " + Temp("ri") + " = func.call @strict_list_items(" + Temp("r") + ")" + Items
+	lines + saved + loops.Outered + (loops.IsCollecting then loops.Presized + items else List(Text))
+Counted Texts
+	Doubling.Counted.Last is "  ^loop2body:"
+	let label = "^loop" + position
+	let whole = "    " + Temp("ni") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
+	let start = ("    " + Temp("zi") + " = arith.constant 0 : i64", "    cf.br " + label + "(" + Temp("zi") + " : i64)")
+	let check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("ki") + ", " + Temp("ni") + " : i64"
+	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
+	List(Text) + whole + start + ("  " + label + "(" + Temp("ki") + ": i64):") + check + branch + ("  " + label + "body:")
+Current Texts
+	Doubling.Current.Last is "    llvm.store %t2g, %v_value : f64, !llvm.ptr"
+	let converted = "    " + Temp("c") + " = arith.sitofp " + Temp("ki") + " : i64 to f64"
+	let index = (converted, function.Store(Temp("c"), "%v_index"))
+	if MlirLoops(function, position).Collection is ""
+		return index + function.Store(Temp("c"), "%v_value")
+	let address = "    " + Temp("gp") + " = llvm.getelementptr " + Temp("h") + "[" + Temp("ki") + "]" + Pointer
+	let element = "    " + Temp("g") + " = llvm.load " + Temp("gp") + " : !llvm.ptr -> f64"
+	index + (address, element, function.Store(Temp("g"), "%v_value"))
+Looped Texts
+	Doubling.Looped.Last is "    cf.br ^loop2(%t2next : i64)"
+	mutable lines = List(Mutable(Text))
+	for Range(position + 1, function.method.LoopEndOf(position))
+		lines = lines + MlirLines(function).At(value) + function.Emitted(value)
+	let one = "    " + Temp("one") + " = arith.constant 1 : i64"
+	let next = "    " + Temp("next") + " = arith.addi " + Temp("ki") + ", " + Temp("one") + " : i64"
+	lines + one + next + ("    cf.br ^loop" + position + "(" + Temp("next") + " : i64)")
+Exited Texts
+	Doubling.Exited.First is "  ^loop2exit:"
+	let loops = MlirLoops(function, function.method.LoopEndOf(position))
+	let filled = MlirMemory(function, position).Called(Temp("fill"), "strict_list_filled", (Temp("r"), Temp("n")))
+	let restored = (function.Store(Temp("x"), "%v_index"), function.Store(Temp("y"), "%v_value"))
+	let collected = MlirLoops(function, position).IsCollecting then List(Text) + filled else List(Text)
+	List(Text) + ("  ^loop" + position + "exit:") + collected + restored + loops.Restored(position)
+Emitted(at Number) Texts
+	Doubling.Emitted(4).First is "    %t4p = llvm.getelementptr %t2h_numbers[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
+	Doubling.Emitted(7).Last is "    llvm.store %t7e, %t7p : f64, !llvm.ptr"
+	let entry = function.method.instructions(at)
+	let pointer = "%t" + at + "p"
+	let isRead = entry.kind is InstructionType.IndexCall
+	let items = isRead then Temp("h_" + entry.texts(0)) else Temp("ri")
+	let address = "    " + pointer + " = llvm.getelementptr " + items + "[" + Temp("ki") + "]" + Pointer
+	let loaded = "    %t" + at + "x = llvm.load " + pointer + " : !llvm.ptr -> f64"
+	if isRead
+		return (address, loaded, function.Store("%t" + at + "x", "%r" + entry.payload(0)))
+	let stored = "    llvm.store %t" + at + "e, " + pointer + " : f64, !llvm.ptr"
+	(function.Load("%t" + at + "e", "%r" + entry.payload(0)), address, stored)

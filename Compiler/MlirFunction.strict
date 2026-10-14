@@ -2,6 +2,7 @@ has types List(TypeEntry)
 has type TypeEntry
 has method MethodEntry
 has lineSlots Numbers = List(Number)
+has FastLoop Number = -1
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))

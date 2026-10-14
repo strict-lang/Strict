@@ -27,7 +27,25 @@ Failures(paths Texts, root Text, isQuiet Boolean) Number
 		if (failures is 0) and (isQuiet is false)
 			logger.Log(Summary(0, value))
 		failed = failed + failures
+	if stale.Length > 1
+		Compacted(stale, Owners(paths))
 	failed
+Compacted(paths Texts, owners List(TypeEntry)) Number
+	Execute(Logger).Compacted(List(Text) + "Missing.strict", List(TypeEntry)) is 0
+	mutable compacted = 0
+	for paths
+		let cache = BinaryFile(FileCompiler.Normalized(value))
+		let entries = File(cache.Path).Exists then cache.Unpacked(File(cache.Path).ReadBytes) else List(ZipEntry)
+		if cache.IsFresh(entries)
+			File(cache.Path).Write(cache.Packed(ByteEncoder(entries.First.content).Integers, cache.Types(entries), owners))
+			compacted = compacted + 1
+	compacted
+Owners(paths Texts) List(TypeEntry)
+	Execute(Logger).Owners(List(Text) + "Missing.strict").Length is 0
+	for paths
+		let owner = BinaryFile(FileCompiler.Normalized(value)).Owned(Path(value).FileName.RemoveExtension.text)
+		if owner.Name is not ""
+			owner
 Stale(paths Texts) Texts
 	for paths
 		let cache = BinaryFile(FileCompiler.Normalized(value))
@@ -42,7 +60,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let before = Process.FilesRead.Length
 	let failed = Tested(types, path)
 	if failed is 0
-		File(cache.Path).Write(cache.Packed(Completed(cache, root, files, header, before), types))
+		File(cache.Path).Write(cache.Packed(Completed(cache, root, files, header, before), types, List(TypeEntry)))
 	failed
 Completed(cache BinaryFile, root Text, files Texts, header Numbers, before Number) Numbers
 	Execute(Logger).Completed(Anything, ".", AnyFiles, (1, 2), Process.FilesRead.Length) is (1, 2)

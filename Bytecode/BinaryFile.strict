@@ -1,12 +1,12 @@
 has source Text
 constant Probe = BinaryFile("./Bytecode/Probe.strict")
-constant Packing = Probe.Unpacked(Probe.Packed(Probe.Header(List(Text)), List(TypeEntry) + TypeEntry.HelloLogger))
-constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + 5, List(TypeEntry)))
+constant Packing = Probe.Unpacked(Probe.Packed(Probe.Header(List(Text)), List(TypeEntry) + TypeEntry.HelloLogger, List(TypeEntry)))
+constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + 5, List(TypeEntry), List(TypeEntry)))
 Path Text
 	Probe.Path is "./Bytecode/Probe.strictbinary"
 	source.Substring(0, source.Length - 7) + ".strictbinary"
 Header(sources Texts) Numbers
-	Probe.Header(List(Text)) is (1, 0, 3)
+	Probe.Header(List(Text)) is (1, 0, 4)
 	mutable integers = BinaryNames(sources).Integers + TypeEntry.FormatVersion
 	for sources
 		integers = integers + Stamp(value)
@@ -15,24 +15,33 @@ Stamp(path Text) Number
 	Probe.Stamp("./Any.strict") > 1.7e12 is true
 	Probe.Stamp("./Missing.strict") is 0
 	(File(path).Modified * 1000).Floor
-Packed(header Numbers, types List(TypeEntry)) Bytes
-	Probe.Packed((1, 2), List(TypeEntry)).Length > 50 is true
+Packed(header Numbers, types List(TypeEntry), owners List(TypeEntry)) Bytes
+	Probe.Packed((1, 2), List(TypeEntry), List(TypeEntry)).Length > 50 is true
 	mutable entries = List(Mutable(ZipEntry)) + ZipEntry("sources", ByteEncoder.Empty.SevenBits(header).bytes)
 	for types
-		entries.Add(ZipEntry(value.Name + ".bytecode", value.Bytes))
+		entries.Add(index is 0 then ZipEntry(value.Name + ".bytecode", value.Bytes) else Entry(value, owners))
 	for ZipWriter(entries).Bytes
 		Byte(value)
 Unpacked(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
-	Packing.First.content is (1, 0, 3)
+	Packing.First.content is (1, 0, 4)
 	mutable numbers = List(Mutable(Number))
 	for bytes
 		numbers.Add(value.number)
 	ZipReader(numbers).Entries
 IsFresh(entries List(ZipEntry)) Boolean
 	Probe.IsFresh(Packing) is true
-	Probe.IsFresh(Outdated) is false
-	Probe.IsFresh(List(ZipEntry)) is false
+	Probe.IsFresh(Packing + ZipEntry("Missing.reference", List(Number))) is false
+	if IsCurrent(entries) is false
+		return false
+	for entries
+		if value.Name.EndsWith(".reference") and (Owned(value.Name.Substring(0, value.Name.Length - 10)).Name is "")
+			return false
+	true
+IsCurrent(entries List(ZipEntry)) Boolean
+	Probe.IsCurrent(Packing) is true
+	Probe.IsCurrent(Outdated) is false
+	Probe.IsCurrent(List(ZipEntry)) is false
 	if (entries.Length is 0) or (entries.First.Name is not "sources")
 		return false
 	let header = EntryDecoder.Of(entries.First.content)
@@ -45,7 +54,12 @@ IsFresh(entries List(ZipEntry)) Boolean
 Types(entries List(ZipEntry)) List(TypeEntry)
 	Probe.Types(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
 	for Range(1, entries.Length)
-		EntryDecoder.Of(entries(value).content).Type
+		let entry = entries(value)
+		entry.Name.EndsWith(".reference") then Referenced(entry) else EntryDecoder.Of(entry.content).Type
+Referenced(entry ZipEntry) TypeEntry
+	Probe.Referenced(ZipEntry("Missing.reference", List(Number))).methods.Length is 0
+	let owner = Owned(entry.Name.Substring(0, entry.Name.Length - 10))
+	TypeReference(owner).Selected(ByteEncoder(entry.content).Integers)
 Data(path Text) Texts
 	Probe.Data("Compiler/NativeBuild.strict") is ("Compiler/NativeRuntime.mlir")
 	Probe.Data("NeuralNetworks/Dataset.strict").Length is 2
@@ -80,3 +94,18 @@ Contained(folder Text) Texts
 	for Directory.Directories(folder)
 		files = files + Contained(value)
 	files
+Owned(name Text) TypeEntry
+	Probe.Owned("Missing").Name is ""
+	let owner = BinaryFile(source.Substring(0, source.LastIndexOf("/") + 1) + name + ".strict")
+	let isOwnable = (name.IndexOf("/") < 0) and (name.IndexOf("(") < 0) and File(owner.Path).Exists
+	let entries = isOwnable then owner.Unpacked(File(owner.Path).ReadBytes) else List(ZipEntry)
+	let first = entries.Length > 1 then entries(1).Name else ""
+	let unknown = TypeEntry("", List(MemberEntry), List(MethodEntry))
+	first is name + ".bytecode" then EntryDecoder.Of(entries(1).content).Type else unknown
+Entry(type TypeEntry, owners List(TypeEntry)) ZipEntry
+	Probe.Entry(TypeEntry.HelloLogger, List(TypeEntry)).Name is "HelloLogger.bytecode"
+	Probe.Entry(TypeEntry.HelloLogger, List(TypeEntry) + TypeEntry.HelloLogger).Name is "HelloLogger.reference"
+	for owners
+		if TypeReference(value).Covers(type)
+			return ZipEntry(type.Name + ".reference", ByteEncoder.Empty.SevenBits(TypeReference(value).Selection(type)).bytes)
+	ZipEntry(type.Name + ".bytecode", type.Bytes)

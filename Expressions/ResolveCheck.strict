@@ -17,7 +17,7 @@ Unresolved(path Text, inference TypeInference) Texts
 	let bodies = MethodBodies(typeName, TypeShape(lines), inference)
 	let known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(typeName).names
 	let check = FileCheck(inference, known)
-	mutable unresolved = check.Unimplemented(path, lines)
+	mutable unresolved = check.Unimplemented(path, lines) + check.UnsupportedDefaults(path, lines)
 	for bodies.Statements
 		let unknown = check.Unknown(value, bodies.Methods)
 		if unknown is not ""

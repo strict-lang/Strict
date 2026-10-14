@@ -1,7 +1,7 @@
 has Name Text
 has members List(MemberEntry)
 has methods List(MethodEntry)
-constant FormatVersion = 3
+constant FormatVersion = 4
 constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
 constant CharacterEntry = TypeEntry("Strict/Character", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
 constant Scaling = TypeEntry("Strict/Vector", List(MemberEntry), (MethodEntry("*", List(MemberEntry) + MemberEntry("other", "Strict/Vector", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry)), MethodEntry("*", List(MemberEntry) + MemberEntry("scale", "Strict/Number", List(InstructionEntry), false), "Strict/Vector", List(InstructionEntry))))

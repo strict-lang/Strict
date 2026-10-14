@@ -1,0 +1,24 @@
+has owner TypeEntry
+constant Logged = TypeReference(TypeEntry.HelloLogger)
+constant Memberless = TypeReference(TypeEntry("HelloLogger", MemberEntry.LoggerMember, List(MethodEntry)))
+Covers(needed TypeEntry) Boolean
+	Logged.Covers(TypeEntry.HelloLogger) is true
+	Logged.Covers(TypeEntry.Converting) is false
+	Memberless.Covers(TypeEntry.HelloLogger) is false
+	if (owner.Name is not needed.Name) or (owner.members is not needed.members)
+		return false
+	for needed.methods
+		if value is not in owner.methods
+			return false
+	true
+Selection(needed TypeEntry) Numbers
+	Logged.Selection(TypeEntry.HelloLogger) is List(Number) + 0
+	for needed.methods
+		owner.methods.Index(value)
+Selected(selection Numbers) TypeEntry
+	Logged.Selected(List(Number)).methods.Length is 0
+	Logged.Selected(List(Number) + 0) is TypeEntry.HelloLogger
+	mutable methods = List(Mutable(MethodEntry))
+	for selection
+		methods.Add(owner.methods(value))
+	TypeEntry(owner.Name, owner.members, methods)

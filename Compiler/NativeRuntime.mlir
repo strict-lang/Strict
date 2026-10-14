@@ -2071,6 +2071,16 @@
     %bits = func.call @strict_bits(%result) : (!llvm.ptr) -> f64
     return %bits : f64
   }
+  func.func private @strict_list_filled(%list: f64, %length: f64) -> f64 {
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    llvm.store %length, %view : f64, !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %length, %usedSlot : f64, !llvm.ptr
+    return %list : f64
+  }
   func.func private @strict_list_push(%list: f64, %element: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
@@ -2617,9 +2627,16 @@
     %cachedResult = arith.uitofp %cachedLength : i64 to f64
     return %cachedResult : f64
   ^measure:
+    // ponytail: only one long text stays cached, alternating two long texts re-measures, upgrade: length in a text header
     %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %longText = arith.constant 256 : i64
+    %isLong = arith.cmpi uge, %length, %longText : i64
+    cf.cond_br %isLong, ^remember, ^measured
+  ^remember:
     llvm.store %address, %textSlot : i64, !llvm.ptr
     llvm.store %length, %lengthSlot : i64, !llvm.ptr
+    cf.br ^measured
+  ^measured:
     %result = arith.uitofp %length : i64 to f64
     return %result : f64
   }
@@ -2977,6 +2994,9 @@
   llvm.mlir.global internal constant @strict_precise("%.*g\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_scientific("%.16e\00") : !llvm.array<6 x i8>
   llvm.mlir.global internal constant @strict_exponent("e%d\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @strict_nan("NaN\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @strict_infinity("Infinity\00") : !llvm.array<9 x i8>
+  llvm.mlir.global internal constant @strict_negative_infinity("-Infinity\00") : !llvm.array<10 x i8>
   func.func private @strict_number_text(%number: f64) -> f64 {
     %failed = func.call @strict_is_failure(%number) : (f64) -> i1
     cf.cond_br %failed, ^report, ^format
@@ -2984,8 +3004,23 @@
     %report = func.call @strict_error_report(%number) : (f64) -> f64
     return %report : f64
   ^format:
-    %size = arith.constant 40 : i64
     %zero = arith.constant 0.0 : f64
+    %magnitude = llvm.intr.fabs(%number) : (f64) -> f64
+    %infinity = arith.constant 0x7FF0000000000000 : f64
+    %isFinite = arith.cmpf olt, %magnitude, %infinity : f64
+    cf.cond_br %isFinite, ^finite, ^special
+  ^special:
+    %isNumber = arith.cmpf ord, %number, %number : f64
+    %isBelow = arith.cmpf olt, %number, %zero : f64
+    %nanText = llvm.mlir.addressof @strict_nan : !llvm.ptr
+    %positiveText = llvm.mlir.addressof @strict_infinity : !llvm.ptr
+    %negativeText = llvm.mlir.addressof @strict_negative_infinity : !llvm.ptr
+    %infinite = arith.select %isBelow, %negativeText, %positiveText : !llvm.ptr
+    %special = arith.select %isNumber, %infinite, %nanText : !llvm.ptr
+    %specialBits = func.call @strict_bits(%special) : (!llvm.ptr) -> f64
+    return %specialBits : f64
+  ^finite:
+    %size = arith.constant 40 : i64
     %large = arith.constant 1.0e7 : f64
     %tiny = arith.constant 1.0e-9 : f64
     %buffer = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr

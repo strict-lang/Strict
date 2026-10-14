@@ -3,3 +3,8 @@ Reverse Numbers
 	ReverseList(1, 2, 3, 4).Reverse is (4, 3, 2, 1)
 	for Range(0, numbers.Length).Reverse
 		numbers(index)
+Added(other Numbers) Numbers
+	ReverseList(1, 2).Added((10, 20)) is (11, 22)
+	(ReverseList(1, 2, 3).Added((10, 20)) to Text).StartsWith("(11, 22, Error: Added") is true
+	for numbers
+		value + other(index)

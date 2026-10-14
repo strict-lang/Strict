@@ -10,6 +10,7 @@ constant MissingCall = ScopedStatement(SyntaxParser(Tokenizer("count.Missing").T
 constant Untested = ("Twice(number Number) Number", "\tTwice(2) is 4")
 constant OtherName = ScopedStatement(SyntaxParser(Tokenizer("count + other").Tokens).Parse, Counted, 0)
 constant Flagged = Scope(List(Text) + "flag", List(Text) + "Boolean")
+constant Sized = List(Text) + "has size Count = Count(1, 2)"
 constant FlagLoop = ScopedStatement(StatementParser(Tokenizer("for flag").Tokens).ParseStatement, Flagged, 0)
 Unknown(scoped ScopedStatement, current Scope) Text
 	Counting.Unknown(TwiceCall, KnownTypes.NoMembers) is ""
@@ -129,3 +130,29 @@ Problem(lines Texts, broken Number) Text
 		if lines(value).StartsWith("	") is false
 			header = value
 	"EmptyLineInsideMethod: " + Tokenizer(lines(header)).Tokens.First
+UnsupportedDefaults(path Text, lines Texts) Texts
+	Counting.UnsupportedDefaults("A.strict", Sized).First.StartsWith("UnsupportedDefault: size in A.strict:1, ") is true
+	Counting.UnsupportedDefaults("A.strict", ("has a Number = 5", "has c Numbers = List(Number)")).Length is 0
+	Counting.UnsupportedDefaults("A.strict", List(Text) + "has b Text = Text(other)").Length is 1
+	constant hint = ", only constant values, empty lists and dictionaries and types with one member can be defaults"
+	let shape = TypeShape(lines)
+	for lines
+		let tokens = Tokenizer(value).Tokens
+		let equals = tokens.Index("=")
+		let isDefault = shape.IsMemberLine(value) and (value.StartsWith("constant ") is false) and (equals > 0)
+		let end = tokens.Index("with") > 0 then tokens.Index("with") else tokens.Length
+		if isDefault and (IsConstantDefault(SyntaxParser(tokens).ParseRange(equals + 1, end)) is false)
+			"UnsupportedDefault: " + tokens(1) + " in " + path + ":" + (index + 1) + hint + ", pass it to the constructor"
+IsConstantDefault(node SyntaxNode) Boolean
+	Counting.IsConstantDefault(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse) is true
+	Counting.IsConstantDefault(SyntaxParser(Tokenizer("-1 + 2").Tokens).Parse) is true
+	Counting.IsConstantDefault(SyntaxParser(Tokenizer("Count(1, 2)").Tokens).Parse) is false
+	if node.IsLiteral or (node.Kind is in ("Identifier", "Member"))
+		return true
+	if node.Kind is in ("Binary", "Negate")
+		return IsConstantDefault(node.children(0)) and ((node.Kind is "Negate") or IsConstantDefault(node.children.Last))
+	if (node.Kind is not "Call") or (node.text is in ("List", "Dictionary"))
+		return node.Kind is "Call"
+	let members = inference.types.MembersOf(node.text).names.Length
+	let isWrapper = (node.text is in ("Number", "Text", "Boolean")) or (members is 1)
+	isWrapper and SyntaxNode("List", "", node.children).IsLiteral

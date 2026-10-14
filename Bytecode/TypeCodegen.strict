@@ -10,6 +10,7 @@ constant Iterating = TypeCodegen("Strict/Size", ("has Width Number", "for Iterat
 constant Grid = TypeCodegen("Strict/Size", ("has Width Number", "has Height Number", "for Iterator(Vector2)", "\tfor Height", "\t\tfor Width", "\t\t\tVector2(index, outer.index)"), NoTypes, List(Text))
 constant Created = TypeCodegen("Strict/C", ("has a Number", "from(b Number)", "\ta = b"), NoTypes, List(Text))
 constant Vectors = TypeCodegen("Strict/C", List(Text), TypeInference(KnownTypes(List(Text) + "Vector2", List(Scope) + Scope(List(Text) + "numbers", List(Text) + "Numbers"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers), List(Text))
+constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
 Entry TypeEntry
 	Hello.Entry is TypeEntry.HelloLogger
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
@@ -119,12 +120,11 @@ Concrete(type Text) Text
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "Numbers"
 	TypeCodegen("Strict/List(Text)", List(Text), NoTypes, List(Text)).Concrete("List") is "Texts"
 	TypeCodegen("Strict/Dictionary(Text, Text)", List(Text), NoTypes, List(Text)).Concrete("List") is "Textss"
+	TypeCodegen("Strict/List(Number, Text)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "List(Number, Text)"
 	Hello.Concrete("Generic") is "Generic"
 	Hello.Concrete("Iterator(Generic)") is "Iterator"
 	let open = fullName.IndexOf("(")
-	if open is -1
-		return type.Replace("(Generic)", "")
 	let element = MethodBodies.Item(fullName.Substring(open + 1, fullName.Length - open - 2))
-	if type is "Generic"
-		return element
-	type is in ("Generics", "List") then element + "s" else Instantiation(inference.types).Own(fullName, type)
+	let elements = fullName.StartsWith("Strict/List(") and (fullName.IndexOf(",") > 0) then element else element + "s"
+	let other = type is in ("Generics", "List") then elements else Instantiation(inference.types).Own(fullName, type)
+	open is -1 then type.Replace("(Generic)", "") else (type is "Generic" then element else other)

@@ -70,10 +70,14 @@ UsedMethods(targets Texts, type Text) Texts
 	Sample.UsedMethods(("Strict/Range.Count"), "Strict/Range") is ("Count")
 	Sample.UsedMethods(("Strict/B.Go", "Strict/C.Go", "Strict/B.to Text"), "Strict/B") is ("Go", "to Text")
 	Sample.UsedMethods(("Strict/Number.to Text", "Strict/Number.Floor"), "Strict/Number") is ("Floor")
+	Sample.UsedMethods(("Strict/B.Go", "Strict/B.Go"), "Strict/B") is ("Go")
 	let prefix = type + "."
+	mutable used = List(Mutable(Text))
 	for targets
-		if value.StartsWith(prefix) and (IsNative(type, value.Split(".").Last) is false)
-			value.Substring(prefix.Length, value.Length - prefix.Length)
+		let method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
+		if (method is not "") and (method is not in used) and (IsNative(type, value.Split(".").Last) is false)
+			used.Add(method)
+	used
 IsNative(type Text, method Text) Boolean
 	Sample.IsNative("Strict/Text", "Upper") is false
 	Sample.IsNative("Strict/Range", "Length") is false

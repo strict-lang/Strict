@@ -21,7 +21,7 @@ Begin Texts
 	constant check = "    " + Temp("m") + " = arith.cmpf olt, " + Temp("k") + ", " + Temp("n") + " : f64"
 	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
 	let iteration = (function.Load(Temp("k"), "%loop" + position), check, branch, "  " + label + "body:")
-	bounds + Items + saved + Outered + Presized + header + iteration + Current
+	MlirKernel(function, position).Versioned + bounds + Items + saved + Outered + Presized + header + iteration + Current
 Current Texts
 	Counting.Current.Length is 4
 	Text.Combine(Listing.Current).IndexOf("llvm.store %t1g, %v_value") > 0 is true
@@ -121,7 +121,8 @@ End Texts
 	let increment = (function.Load(Temp("k"), counter), "    " + Temp("u") + " = arith.constant 1.0 : f64", next)
 	let exit = Back(begin) + ("  ^loop" + begin + "exit:")
 	let restore = (function.Store("%t" + begin + "x", "%v_index"), function.Store("%t" + begin + "y", "%v_value"))
-	increment + function.Store(Temp("w"), counter) + exit + restore + Restored(begin)
+	let joined = MlirKernel(function, begin).Joined
+	increment + function.Store(Temp("w"), counter) + exit + restore + Restored(begin) + joined
 Back(begin Number) Texts
 	MlirLoops(Counting.function, 1).Back(0).Length is 1
 	MlirLoops(Repeated, 1).Back(0).Last is "    cf.cond_br %t1f, ^loop0, ^loop0exit"

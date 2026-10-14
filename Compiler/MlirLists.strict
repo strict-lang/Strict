@@ -18,6 +18,8 @@ Temp(suffix Text) Text
 Emitted Texts
 	MlirLists(Listed, 3).Emitted.Length is 4
 	MlirLists(Written, 2).Emitted.Length is 3
+	if function.FastLoop >= 0
+		return MlirFastLoop(function, function.FastLoop).Emitted(position)
 	let entry = function.method.instructions(position)
 	if entry.kind is InstructionType.CopyList
 		return Copied(entry)

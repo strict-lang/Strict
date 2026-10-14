@@ -46,24 +46,26 @@ StartsWith(text, start = 0) Boolean
 Split(separator Text) Texts
 	"a,b".Split(",") is ("a", "b")
 	"abc".Split(",") is ("abc")
-	let separatorIndex = IndexOf(separator)
-	if separatorIndex is -1
-		return (value)
-	let restStart = separatorIndex + separator.characters.Length
-	let restLength = Length - restStart
-	(Substring(0, separatorIndex)) + Substring(restStart, restLength).Split(separator)
+	"a,,b,".Split(",") is ("a", "", "b", "")
+	mutable parts = List(Mutable(Text))
+	mutable start = 0
+	mutable found = separator is "" then -1 else IndexOf(separator)
+	for as long as found >= 0
+		parts.Add(Substring(start, found - start))
+		start = found + separator.Length
+		found = IndexOf(separator, start)
+	parts + Substring(start, Length - start)
 Lines Texts
 	"a\nb".Lines is ("a", "b")
+	"a\n\nb\n".Lines is ("a", "", "b")
 	constant unixText = Replace("\r", "")
 	if unixText is ""
 		return Texts
-	constant separatorIndex = unixText.IndexOf("\n")
-	if separatorIndex is -1
-		return (unixText)
-	constant rest = unixText.Substring(separatorIndex + 1, unixText.Length - separatorIndex - 1)
-	if rest is ""
-		return (unixText.Substring(0, separatorIndex))
-	(unixText.Substring(0, separatorIndex)) + rest.Lines
+	let parts = unixText.Split("\n")
+	if parts.Last is not ""
+		return parts
+	for Range(0, parts.Length - 1)
+		parts(value)
 Trim Text
 	" hi ".Trim is "hi"
 	"noSpaces".Trim is "noSpaces"

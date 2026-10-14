@@ -6,6 +6,7 @@ constant Phi = 1.618033988749895
 to Text
 	5 to Text is "5"
 	10.1 to Text is "10.1"
+	(-1 / 0) to Text is "-Infinity"
 	for digits
 		value to Character
 digits Numbers

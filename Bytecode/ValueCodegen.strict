@@ -61,7 +61,7 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 	if IndexCodegen(value).IsIndexing(node, block)
 		return IndexCodegen(value).Indexed(node, block)
 	if (node.Kind is "Call") or IsTypeName(node.children(0), block)
-		return Invoke(ConversionCodegen(value).Replaced(node), block, -1, TypeOf(node, block))
+		return Replacing(node, block)
 	let first = node.children(0)
 	let isListVariable = (first.Kind is "Identifier") and inference.types.IsPlural(TypeOf(first, block))
 	(node.text is in ("Add", "Remove")) and isListVariable then Elements.Added(node, block) else InstanceCall(node, block)
@@ -102,6 +102,18 @@ IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
 	if node.Kind is "Member"
 		return (node.text is not "value") and (target.IsMember(TypeOf(node.children(0), block), node.text) is false)
 	(node.Kind is in ("Call", "MethodCall")) and (IndexCodegen(value).IsIndexing(node, block) is false)
+Replacing(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Replacing(TypeCodegen.Rebuilt, CodeBlock.Empty).instructions(2).texts is ("replaced0")
+	let replaced = ConversionCodegen(value).Replaced(node)
+	let instance = node.children.Length > 0 then node.children(0) else node
+	if (replaced is node) or (instance.Kind is "Identifier")
+		return Invoke(replaced, block, -1, TypeOf(node, block))
+	let name = "replaced" + block.nextId
+	let stored = Expression(instance, block).Stored(name).At(block.register).Declare(name, TypeOf(instance, block))
+	mutable children = node.children
+	children(0) = SyntaxNode("Identifier", name)
+	let renamed = ConversionCodegen(value).Replaced(SyntaxNode(node.Kind, node.text, children, node.line))
+	Invoke(renamed, stored.WithNextId, -1, TypeOf(node, block))
 IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is true
 	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false
