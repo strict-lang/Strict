@@ -1,0 +1,16 @@
+has type Text
+constant Integer = MlirTyped("i64")
+constant Pointer = MlirTyped("!llvm.ptr")
+constant Double = MlirTyped("f64")
+constant Parts = ("d", "n", "b")
+constant Types = ("!llvm.ptr", "i64", "i64")
+constant Element = " : (!llvm.ptr, i64, i64) -> f64"
+Load(target Text, slot Text) Text
+	Integer.Load("%a", "%s") is "    %a = llvm.load %s : !llvm.ptr -> i64"
+	"    " + target + " = llvm.load " + slot + " : !llvm.ptr -> " + type
+Store(stored Text, slot Text) Text
+	Integer.Store("%a", "%s") is "    llvm.store %a, %s : i64, !llvm.ptr"
+	"    llvm.store " + stored + ", " + slot + " : " + type + ", !llvm.ptr"
+Constant(target Text, literal Text) Text
+	Integer.Constant("%a", "0") is "    %a = arith.constant 0 : i64"
+	"    " + target + " = arith.constant " + literal + " : " + type

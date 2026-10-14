@@ -1,0 +1,72 @@
+has function MlirFunction
+has at Number
+constant Summing = MlirDeviceSums(MlirDeviceStatements.Summed, 2)
+constant Doubling = MlirDeviceSums(MlirGpu.Doubling.function, 2)
+IsSum Boolean
+	Summing.IsSum is true
+	Doubling.IsSum is false
+	let names = Accumulated
+	for Range(at + 1, function.method.LoopEndOf(at))
+		let entry = function.method.instructions(value)
+		if (entry.kind is InstructionType.LoopBegin) or (entry.kind is InstructionType.InvokeWriteToList)
+			return false
+		let isRead = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is in names)
+		if isRead and (IsAdded(value) is false)
+			return false
+	names.Length > 0
+Accumulated Texts
+	Summing.Accumulated is ("sum")
+	Doubling.Accumulated.Length is 0
+	mutable names = List(Mutable(Text))
+	for Range(at + 1, function.method.LoopEndOf(at))
+		let entry = function.method.instructions(value)
+		if entry.kind is InstructionType.StoreRegisterToVariable
+			if IsAccumulation(value) is false
+				return List(Text)
+			names.Add(entry.texts(0))
+	names
+IsAccumulation(store Number) Boolean
+	Summing.IsAccumulation(10) is true
+	Summing.IsAccumulation(5) is false
+	let entry = function.method.instructions(store)
+	let previous = function.method.instructions(store - 1)
+	let isSum = (previous.kind is InstructionType.Add) or (previous.kind is InstructionType.Subtract)
+	if (isSum is false) or (previous.payload(3) is not entry.payload(0))
+		return false
+	let loaded = Writer(store - 1, previous.payload(1))
+	if loaded < 0
+		return false
+	let writer = function.method.instructions(loaded)
+	(writer.kind is InstructionType.LoadVariableToRegister) and (writer.texts(0) is entry.texts(0))
+IsAdded(load Number) Boolean
+	Summing.IsAdded(3) is true
+	let register = function.method.instructions(load).payload(0)
+	for Range(load + 1, function.method.LoopEndOf(at))
+		let entry = function.method.instructions(value)
+		if (entry.kind is InstructionType.Add) or (entry.kind is InstructionType.Subtract)
+			if entry.payload(1) is register
+				return IsAccumulation(value + 1)
+	false
+Writer(before Number, register Number) Number
+	Summing.Writer(9, 1) is 3
+	for before - at - 1
+		let candidate = before - 1 - index
+		if LoadReuse(function.method.instructions).Written(function.method.instructions(candidate)) is register
+			return candidate
+	-1
+IsWarped Boolean
+	MlirDeviceSums(MlirGpu.Layering.function, 2).IsWarped is true
+	Doubling.IsWarped is false
+	let end = function.method.LoopEndOf(at)
+	if IsSummed(function, at + 1, end)
+		return true
+	for MlirGpu.Devices(function, at + 1, end, 0)
+		if IsSummed(value, 0, value.method.instructions.Length)
+			return true
+	false
+IsSummed(inspected MlirFunction, first Number, limit Number) Boolean
+	Summing.IsSummed(Summing.function, 0, 14) is true
+	for Range(first, limit)
+		if (inspected.method.instructions(value).kind is InstructionType.LoopBegin) and MlirDeviceSums(inspected, value).IsSum
+			return true
+	false

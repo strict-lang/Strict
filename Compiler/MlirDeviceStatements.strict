@@ -3,19 +3,107 @@ has at Number
 constant Doubled = MlirParallel.Doubling.function
 constant Twice = MlirDevice.Twice.function
 constant Checked = MlirGpu.Checking.function
+constant Layered = MlirGpu.Layering.function
+constant Summed = MlirFunction(Layered.types, GpuSamples.Layered, GpuSamples.Summed)
 constant Calling = MlirDeviceStatements(Doubled, 4)
 constant Call = Doubled.method.instructions(4)
 constant Collecting = MlirDeviceStatements(Doubled, 5)
 constant Multiplying = MlirDeviceStatements(Twice, 2)
+constant Reading = MlirDeviceStatements(Summed, 6)
+constant Lookup = Summed.method.instructions(6)
+constant Inputs = MlirDeviceStatements(Layered, 4)
+constant Passing = MlirDeviceStatements(Layered, 5)
 Emitted Texts
 	MlirDeviceStatements(Doubled, 3).Emitted.First is "    %d3 = llvm.load %v_value : !llvm.ptr -> f64"
 	MlirDeviceStatements(Twice, 3).Emitted.Last is "    return %d3 : f64"
 	let entry = function.method.instructions(at)
-	if entry.kind < InstructionType.StoreSeparator
+	if entry.kind < InstructionType.IndexCall
 		return Moved(entry)
+	if entry.kind is InstructionType.IndexCall
+		return Indexed(entry)
 	if entry.kind < InstructionType.ArithmeticSeparator
 		return Calculated(entry)
+	if entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+		return MlirDeviceLoops(function, at).Emitted
 	entry.kind is InstructionType.Invoke then Called(entry) else Finished(entry)
+Temp(suffix Text) Text
+	MlirDeviceStatements(Doubled, 3).Temp("a") is "%d3a"
+	"%d" + at + suffix
+Moved(entry InstructionEntry) Texts
+	MlirDeviceStatements(Twice, 1).Moved(Twice.method.instructions(1)).First.EndsWith("0x4000000000000000 : f64") is true
+	Inputs.Moved(Layered.method.instructions(4)).Last.EndsWith("%d4b, %r2b : i64, !llvm.ptr") is true
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return Copied("%v_" + entry.texts(0), "%r" + entry.payload(0), entry.texts(0))
+	if entry.kind is InstructionType.StoreRegisterToVariable
+		return Copied("%r" + entry.payload(0), "%v_" + entry.texts(0), entry.texts(0))
+	let isLoad = entry.kind is InstructionType.LoadConstantToRegister
+	let number = PayloadDecoder(entry).Value(isLoad then 1 else 0).number
+	let target = isLoad then "%r" + entry.payload(0) else "%v_" + entry.texts.Last
+	let loaded = MlirTyped.Double.Constant(Temp(""), MlirStatements(function, at).Hex(number))
+	(loaded, function.Store(Temp(""), target))
+Copied(source Text, target Text, name Text) Texts
+	MlirDeviceStatements(Doubled, 3).Copied("%v_value", "%r1", "value").Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
+	if IsList(MlirKinds(function).VariableKind(at, name)) is false
+		return (function.Load(Temp(""), source), function.Store(Temp(""), target))
+	mutable lines = List(Mutable(Text))
+	for MlirTyped.Parts
+		lines = lines + MlirTyped(MlirTyped.Types(index)).Load(Temp(value), source + value)
+		lines = lines + MlirTyped(MlirTyped.Types(index)).Store(Temp(value), target + value)
+	lines
+IsList(kind Text) Boolean
+	Reading.IsList("Numbers") is true
+	Reading.IsList("Number") is false
+	MlirLayout(function).Represented(kind) is "List(Number)"
+Indexed(entry InstructionEntry) Texts
+	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k)") > 0 is true
+	let list = "%v_" + entry.texts(0)
+	let index = function.Load(Temp("i"), "%r" + entry.payload(1))
+	let position = "    " + Temp("j") + " = arith.fptosi " + Temp("i") + " : f64 to i32"
+	let widened = "    " + Temp("k") + " = arith.extsi " + Temp("j") + " : i32 to i64"
+	let length = (MlirTyped.Integer.Load(Temp("n"), list + "n"), MlirTyped.Integer.Constant(Temp("z"), "0"))
+	let low = "    " + Temp("l") + " = arith.cmpi sge, " + Temp("k") + ", " + Temp("z") + " : i64"
+	let high = "    " + Temp("h") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("n") + " : i64"
+	let inside = "    " + Temp("o") + " = arith.andi " + Temp("l") + ", " + Temp("h") + " : i1"
+	let branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "read, ^d" + at + "fail"
+	(index, position, widened) + length + (low, high, inside, branch) + Failed + Read(list, "%r" + entry.payload(0))
+Failed Texts
+	Reading.Failed.First is "  ^d6fail:"
+	let one = MlirTyped.Integer.Constant(Temp("f"), "1")
+	("  ^d" + at + "fail:", one, MlirTyped.Integer.Store(Temp("f"), "%failed"), "    cf.br ^d" + at + "done")
+Read(list Text, target Text) Texts
+	Reading.Read("%v_input", "%r4").Last is "  ^d6done:"
+	let data = MlirTyped.Pointer.Load(Temp("d"), list + "d")
+	let bits = MlirTyped.Integer.Load(Temp("b"), list + "b")
+	let operands = "(" + Temp("d") + ", " + Temp("b") + ", " + Temp("k") + ")"
+	let read = "    " + Temp("") + " = func.call @strict_device_element" + operands + MlirTyped.Element
+	let done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
+	("  ^d" + at + "read:", data, bits, read, function.Store(Temp(""), target)) + done
+Calculated(entry InstructionEntry) Texts
+	Multiplying.Calculated(Twice.method.instructions(2)).Last is "    llvm.store %d2, %r2 : f64, !llvm.ptr"
+	let left = function.Load(Temp("a"), "%r" + entry.payload(1))
+	let right = function.Load(Temp("b"), "%r" + entry.payload(2))
+	let operation = MlirStatements(function, at).Operation(entry.kind)
+	let flags = IsContracted(entry) then " fastmath<contract>" else ""
+	let calculated = "    " + Temp("") + " = arith." + operation + " " + Temp("a") + ", " + Temp("b") + flags + " : f64"
+	(left, right, calculated, function.Store(Temp(""), "%r" + entry.payload(3)))
+IsContracted(entry InstructionEntry) Boolean
+	MlirDeviceStatements(Summed, 9).IsContracted(Summed.method.instructions(9)) is true
+	Multiplying.IsContracted(Twice.method.instructions(2)) is false
+	let begin = function.method.LoopBeginOf(at)
+	let isLooped = (begin < at) and (function.method.instructions(begin).kind is InstructionType.LoopBegin)
+	let isCalculation = entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+	isCalculation and isLooped and MlirDeviceSums(function, begin).IsSum
+Called(entry InstructionEntry) Texts
+	Text.Combine(Calling.Called(Call)).IndexOf("@Rows_Twice_1_device(%failed, %lane, %lanes, %d4i, %d4p0)") > 0 is true
+	Text.Combine(Passing.Called(Layered.method.instructions(5))).IndexOf("%d5p0d, %d5p0n, %d5p0b") > 0 is true
+	let calls = MlirDeviceCalls(function, at, Callee)
+	let arguments = "(" + Text.Combine(calls.Arguments(entry), ", ") + ")"
+	let call = "    " + Temp("") + " = func.call @" + calls.callee.Symbol + "_device" + arguments
+	let typed = call + " : (" + calls.Types + ") -> f64"
+	calls.Loaded(entry) + typed + function.Store(Temp(""), "%r" + entry.payload(0))
+Callee MlirFunction
+	Calling.Callee.Symbol is "Rows_Twice_1"
+	MlirModule(function.types, "").Called(function, at).First
 Finished(entry InstructionEntry) Texts
 	MlirDeviceStatements(Checked, 5).Finished(Checked.method.instructions(5)).Length is 0
 	if entry.kind is InstructionType.CheckError
@@ -23,61 +111,13 @@ Finished(entry InstructionEntry) Texts
 	if entry.kind is InstructionType.Return
 		return (function.Load(Temp(""), "%r" + entry.payload(0)), "    return " + Temp("") + " : f64")
 	Collected(entry)
-Temp(suffix Text) Text
-	MlirDeviceStatements(Doubled, 3).Temp("a") is "%d3a"
-	"%d" + at + suffix
-Moved(entry InstructionEntry) Texts
-	MlirDeviceStatements(Twice, 1).Moved(Twice.method.instructions(1)).First.EndsWith("0x4000000000000000 : f64") is true
-	if entry.kind is InstructionType.LoadVariableToRegister
-		return Copied("%v_" + entry.texts(0), "%r" + entry.payload(0))
-	if entry.kind is InstructionType.StoreRegisterToVariable
-		return Copied("%r" + entry.payload(0), "%v_" + entry.texts(0))
-	let isLoad = entry.kind is InstructionType.LoadConstantToRegister
-	let number = PayloadDecoder(entry).Value(isLoad then 1 else 0).number
-	let target = isLoad then "%r" + entry.payload(0) else "%v_" + entry.texts.Last
-	let loaded = "    " + Temp("") + " = arith.constant " + MlirStatements(function, at).Hex(number) + " : f64"
-	(loaded, function.Store(Temp(""), target))
-Copied(source Text, target Text) Texts
-	MlirDeviceStatements(Doubled, 3).Copied("%v_value", "%r1").Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
-	(function.Load(Temp(""), source), function.Store(Temp(""), target))
-Calculated(entry InstructionEntry) Texts
-	Multiplying.Calculated(Twice.method.instructions(2)).Last is "    llvm.store %d2, %r2 : f64, !llvm.ptr"
-	let left = function.Load(Temp("a"), "%r" + entry.payload(1))
-	let right = function.Load(Temp("b"), "%r" + entry.payload(2))
-	let operation = MlirStatements(function, at).Operation(entry.kind)
-	let calculated = "    " + Temp("") + " = arith." + operation + " " + Temp("a") + ", " + Temp("b") + " : f64"
-	(left, right, calculated, function.Store(Temp(""), "%r" + entry.payload(3)))
-Called(entry InstructionEntry) Texts
-	Text.Combine(Calling.Called(Call)).IndexOf("@Rows_Twice_1_device(%d4i, %d4p0)") > 0 is true
-	let arguments = Arguments(entry)
-	let types = Text.Combine(Typed(arguments.Length), ", ")
-	let call = "    " + Temp("") + " = func.call @" + Callee.Symbol + "_device(" + Text.Combine(arguments, ", ") + ")"
-	Loaded(entry) + (call + " : (" + types + ") -> f64") + function.Store(Temp(""), "%r" + entry.payload(0))
-Arguments(entry InstructionEntry) Texts
-	Calling.Arguments(Call) is ("%d4i", "%d4p0")
-	mutable names = List(Text) + Temp("i")
-	for entry.payload(5 + entry.payload(3))
-		names = names + Temp("p" + index)
-	names
-Loaded(entry InstructionEntry) Texts
-	Calling.Loaded(Call).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
-	let countPosition = 5 + entry.payload(3)
-	let flagPosition = countPosition + 1 + entry.payload(countPosition)
-	let register = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
-	let unset = "    " + Temp("i") + " = arith.constant 0.0 : f64"
-	mutable lines = List(Text) + (register < 0 then unset else function.Load(Temp("i"), "%r" + register))
-	for entry.payload(countPosition)
-		lines = lines + function.Load(Temp("p" + index), "%r" + entry.payload(countPosition + 1 + index))
-	lines
-Callee MlirFunction
-	Calling.Callee.Symbol is "Rows_Twice_1"
-	MlirModule(function.types, "").Called(function, at).First
-Typed(count Number) Texts
-	Calling.Typed(2) is ("f64", "f64")
-	for count
-		"f64"
 Collected(entry InstructionEntry) Texts
-	Collecting.Collected(Doubled.method.instructions(5)).Last is "    llvm.store %d5, %d5p : f64, !llvm.ptr"
+	Collecting.Collected(Doubled.method.instructions(5)).Last is "  ^d5skip:"
 	let pointer = "    " + Temp("p") + " = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
 	let stored = "    llvm.store " + Temp("") + ", " + Temp("p") + " : f64, !llvm.ptr"
-	(function.Load(Temp(""), "%r" + entry.payload(0)), pointer, stored)
+	let compared = "    " + Temp("w") + " = arith.cmpi eq, %lane, " + Temp("z") + " : i64"
+	let first = (MlirTyped.Integer.Constant(Temp("z"), "0"), compared)
+	let branch = ("    cf.cond_br " + Temp("w") + ", ^d" + at + "write, ^d" + at + "skip", "  ^d" + at + "write:")
+	let skip = ("    cf.br ^d" + at + "skip", "  ^d" + at + "skip:")
+	let written = (function.Load(Temp(""), "%r" + entry.payload(0)), pointer, stored) + skip
+	first + branch + written

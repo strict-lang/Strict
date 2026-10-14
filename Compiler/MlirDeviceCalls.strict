@@ -1,0 +1,44 @@
+has function MlirFunction
+has at Number
+has callee MlirFunction
+constant Twice = MlirDeviceCalls(MlirParallel.Doubling.function, 4, MlirDevice.Twice.function)
+constant Twicing = Twice.function.method.instructions(4)
+constant Summing = MlirDeviceCalls(MlirGpu.Layering.function, 5, MlirDeviceStatements.Summed)
+Temp(suffix Text) Text
+	Twice.Temp("i") is "%d4i"
+	"%d" + at + suffix
+IsList(parameter Number) Boolean
+	Summing.IsList(0) is true
+	Twice.IsList(0) is false
+	TypeEntry.ShortName(callee.method.parameters(parameter).typeName) is in ("List(Number)", "Numbers")
+Arguments(entry InstructionEntry) Texts
+	Twice.Arguments(Twicing) is ("%failed", "%lane", "%lanes", "%d4i", "%d4p0")
+	mutable names = ("%failed", "%lane", "%lanes", Temp("i"))
+	for entry.payload(5 + entry.payload(3))
+		let parts = (Temp("p" + index + "d"), Temp("p" + index + "n"), Temp("p" + index + "b"))
+		names = IsList(index) then names + parts else names + Temp("p" + index)
+	names
+Types Text
+	Twice.Types is "!llvm.ptr, i64, i64, f64, f64"
+	Summing.Types is "!llvm.ptr, i64, i64, f64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64"
+	mutable types = ("!llvm.ptr", "i64", "i64", "f64")
+	for callee.method.parameters
+		types = IsList(index) then types + MlirTyped.Types else types + "f64"
+	Text.Combine(types, ", ")
+Loaded(entry InstructionEntry) Texts
+	Twice.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
+	let countPosition = 5 + entry.payload(3)
+	let flagPosition = countPosition + 1 + entry.payload(countPosition)
+	let register = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
+	let unset = "    " + Temp("i") + " = arith.constant 0.0 : f64"
+	mutable lines = List(Text) + (register < 0 then unset else function.Load(Temp("i"), "%r" + register))
+	for entry.payload(countPosition)
+		lines = lines + Argument(index, "%r" + entry.payload(countPosition + 1 + index))
+	lines
+Argument(parameter Number, register Text) Texts
+	Twice.Argument(0, "%r1") is ("    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64")
+	Summing.Argument(0, "%r1").Last is "    %d5p0b = llvm.load %r1b : !llvm.ptr -> i64"
+	if IsList(parameter) is false
+		return List(Text) + function.Load(Temp("p" + parameter), register)
+	for MlirTyped.Parts
+		MlirTyped(MlirTyped.Types(index)).Load(Temp("p" + parameter + value), register + value)

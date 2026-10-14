@@ -1,0 +1,117 @@
+has function MlirFunction
+has position Number
+constant Doubling = MlirGpuCheck(MlirGpu.Doubling.function, 2)
+constant Randomizing = MlirGpuCheck(MlirGpu.Randomizing.function, 2)
+constant Layering = MlirGpuCheck(MlirGpu.Layering.function, 2)
+constant Summed = MlirDeviceStatements.Summed
+constant Moves = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
+constant Rows = ("", "List(Number)", "List(Numbers)", "List(List(Number))")
+IsGpu Boolean
+	Doubling.IsGpu is true
+	Randomizing.IsGpu is false
+	MlirGpuCheck(MlirGpu.Checking.function, 2).IsGpu is true
+	Layering.IsGpu is true
+	let isListed = MlirLoops(function, position).Collection is in Rows
+	if (isListed is false) or (MlirParallel(function, position).IsParallel is false)
+		return false
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if IsDevice(function, value, 0) is false
+			return false
+	true
+IsDevice(inspected MlirFunction, at Number, depth Number) Boolean
+	Doubling.IsDevice(Doubling.function, 4, 0) is true
+	Randomizing.IsDevice(Randomizing.function, 4, 0) is false
+	let entry = inspected.method.instructions(at)
+	if entry.kind is in Moves
+		return IsValued(inspected, at, depth)
+	if entry.kind is InstructionType.IndexCall
+		return IsList(inspected, at, entry.texts(0))
+	if entry.kind is InstructionType.Invoke
+		return IsCall(inspected, at, depth)
+	if entry.kind < InstructionType.BinaryOperatorsSeparator
+		return IsArithmetic(inspected, at)
+	IsControl(inspected, at, depth)
+IsValued(inspected MlirFunction, at Number, depth Number) Boolean
+	Doubling.IsValued(Doubling.function, 3, 0) is true
+	Layering.IsValued(Layering.function, 4, 0) is true
+	let entry = inspected.method.instructions(at)
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return PayloadDecoder(entry).Value(1).kind is in ("Number", "Boolean")
+	if entry.kind is InstructionType.StoreConstantToVariable
+		return PayloadDecoder(entry).Value(0).kind is in ("Number", "Boolean")
+	let name = entry.texts(0)
+	let isValue = (MlirKinds(inspected).VariableKind(at, name) is in ("Number", "Boolean")) or IsList(inspected, at, name)
+	let isFree = (depth is 0) and (name is not "forResult")
+	isValue and ((entry.kind is InstructionType.StoreRegisterToVariable) or isFree or IsKnown(inspected, at, name, depth))
+IsList(inspected MlirFunction, at Number, name Text) Boolean
+	Layering.IsList(Layering.function, 8, "biases") is true
+	Doubling.IsList(Doubling.function, 3, "value") is false
+	MlirDeviceStatements(inspected, at).IsList(MlirKinds(inspected).VariableKind(at, name))
+IsControl(inspected MlirFunction, at Number, depth Number) Boolean
+	Doubling.IsControl(Doubling.function, 5, 0) is true
+	Layering.IsControl(Summed, 2, 1) is true
+	let entry = inspected.method.instructions(at)
+	if entry.kind is InstructionType.Return
+		return depth > 0
+	if entry.kind is InstructionType.InvokeWriteToList
+		return (depth is 0) and (entry.texts(0) is "forResult")
+	if entry.kind is InstructionType.LoopBegin
+		return IsInnerLoop(inspected, at)
+	(entry.kind is InstructionType.LoopEnd) or (entry.kind is InstructionType.CheckError)
+IsInnerLoop(inspected MlirFunction, at Number) Boolean
+	Layering.IsInnerLoop(Summed, 2) is true
+	Layering.IsInnerLoop(Layering.function, 2) is false
+	let loops = MlirLoops(inspected, at)
+	let isPlain = (loops.Collection is "") or (loops.Collection is "List(Number)")
+	isPlain and (loops.IsCollecting is false) and (inspected.method.instructions(at).payload(1) is not 1)
+IsArithmetic(inspected MlirFunction, at Number) Boolean
+	Doubling.IsArithmetic(MlirDevice.Twice.function, 2) is true
+	let entry = inspected.method.instructions(at)
+	let isOperator = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.Modulo)
+	let kinds = MlirKinds(inspected)
+	isOperator and (kinds.KindOf(at, entry.payload(1)) is "Number") and (kinds.KindOf(at, entry.payload(2)) is "Number")
+IsKnown(inspected MlirFunction, at Number, name Text, depth Number) Boolean
+	Doubling.IsKnown(Doubling.function, 3, "value", 0) is true
+	Doubling.IsKnown(Doubling.function, 3, "numbers", 0) is false
+	Layering.IsKnown(Summed, 3, "sum", 1) is true
+	let first = depth is 0 then position + 1 else 0
+	let given = depth is 0 then ("value", "index") else inspected.Parameters + "index"
+	for Range(first, at)
+		let earlier = inspected.method.instructions(value)
+		let isStore = earlier.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
+		if isStore and (earlier.texts.Last is name)
+			return true
+	name is in given
+IsCall(inspected MlirFunction, at Number, depth Number) Boolean
+	Doubling.IsCall(Doubling.function, 4, 0) is true
+	Layering.IsCall(Layering.function, 5, 0) is true
+	let entry = inspected.method.instructions(at)
+	let countPosition = 5 + entry.payload(3)
+	let flagPosition = countPosition + 1 + entry.payload(countPosition)
+	let register = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
+	let instance = register < 0 then "Number" else MlirKinds(inspected).KindOf(at, register)
+	let callees = MlirModule(inspected.types, "").Called(inspected, at)
+	(instance is "Number") and (depth < 3) and IsDeviceMethod(callees, depth + 1)
+IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
+	Doubling.IsDeviceMethod(List(MlirFunction) + MlirDevice.Twice.function, 1) is true
+	Layering.IsDeviceMethod(List(MlirFunction) + Summed, 1) is true
+	if (callees.Length is not 1) or (callees.First.method.instructions.Length is 0)
+		return false
+	let callee = callees.First
+	if callee.method.instructions.Last.kind is not InstructionType.Return
+		return false
+	for callee.method.instructions
+		if IsDevice(callee, index, depth) is false
+			return false
+	true
+Free Texts
+	Doubling.Free.Length is 0
+	Layering.Free is ("input", "biases")
+	mutable names = List(Mutable(Text))
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		let isRead = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
+		let name = isRead then entry.texts(0) else ""
+		if isRead and (name is not in names) and (IsKnown(function, value, name, 0) is false)
+			names.Add(name)
+	names

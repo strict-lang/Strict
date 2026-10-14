@@ -2,102 +2,66 @@ has function MlirFunction
 has position Number
 constant Doubling = MlirGpu(MlirParallel.Doubling.function, 2)
 constant Randomizing = MlirGpu(MlirParallel.Randomizing.function, 2)
-constant Twice = InstructionEntry.Invoke(2, ("Strict/Rows", "Twice", "Strict/Number", "number"), List(Number) + 1, -1)
-constant Looped = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), Twice)
-constant Collected = (InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
-constant Checked = MethodEntry("Checked", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (List(InstructionEntry) + MlirLoops.Emptied + Looped + Collected))
-constant Checking = MlirGpu(MlirFunction(Doubling.function.types, MlirParallel.Rows, Checked), 2)
-constant Threshold = 65536
+constant Checking = MlirGpu(MlirFunction(Doubling.function.types, MlirParallel.Rows, GpuSamples.Checked), 2)
+constant Layering = MlirGpu(MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Sums), 2)
+constant Indexing = "] : (!llvm.ptr) -> !llvm.ptr, f64"
 constant Marker = "// device kernels"
-constant Moves = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
 constant NameGlobal = "  llvm.mlir.global internal constant @kRows_Doubled_1_gpu2(\"Rows_Doubled_1_gpu2\\00\") : !llvm.array<20 x i8>"
-constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64) -> f64"
-IsGpu Boolean
-	Doubling.IsGpu is true
-	Randomizing.IsGpu is false
-	Checking.IsGpu is true
-	let collection = MlirLoops(function, position).Collection
-	let isListed = (collection is "") or (collection is "List(Number)")
-	if (isListed is false) or (MlirParallel(function, position).IsParallel is false)
-		return false
-	for Range(position + 1, function.method.LoopEndOf(position))
-		if IsDevice(function, value, 0) is false
-			return false
-	true
-IsDevice(inspected MlirFunction, at Number, depth Number) Boolean
-	Doubling.IsDevice(Doubling.function, 4, 0) is true
-	Randomizing.IsDevice(Randomizing.function, 4, 0) is false
-	let entry = inspected.method.instructions(at)
-	if entry.kind is in Moves
-		return IsNumbered(inspected, at, depth)
-	if entry.kind is InstructionType.Invoke
-		return (depth < 3) and IsDeviceMethod(MlirModule(inspected.types, "").Called(inspected, at), depth + 1)
-	if entry.kind is InstructionType.CheckError
-		return true
-	if entry.kind is in (InstructionType.InvokeWriteToList, InstructionType.Return)
-		return entry.kind is InstructionType.Return then depth > 0 else (depth is 0) and (entry.texts(0) is "forResult")
-	IsArithmetic(inspected, at)
-IsArithmetic(inspected MlirFunction, at Number) Boolean
-	Doubling.IsArithmetic(MlirDevice.Twice.function, 2) is true
-	let entry = inspected.method.instructions(at)
-	let isOperator = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.Modulo)
-	let kinds = MlirKinds(inspected)
-	isOperator and (kinds.KindOf(at, entry.payload(1)) is "Number") and (kinds.KindOf(at, entry.payload(2)) is "Number")
-IsNumbered(inspected MlirFunction, at Number, depth Number) Boolean
-	Doubling.IsNumbered(Doubling.function, 3, 0) is true
-	let entry = inspected.method.instructions(at)
-	if entry.kind is InstructionType.LoadConstantToRegister
-		return PayloadDecoder(entry).Value(1).kind is in ("Number", "Boolean")
-	if entry.kind is InstructionType.StoreConstantToVariable
-		return PayloadDecoder(entry).Value(0).kind is in ("Number", "Boolean")
-	let name = entry.texts(0)
-	let isNumber = MlirKinds(inspected).VariableKind(at, name) is in ("Number", "Boolean")
-	isNumber and ((entry.kind is InstructionType.StoreRegisterToVariable) or IsKnown(inspected, at, name, depth))
-IsKnown(inspected MlirFunction, at Number, name Text, depth Number) Boolean
-	Doubling.IsKnown(Doubling.function, 3, "value", 0) is true
-	Doubling.IsKnown(Doubling.function, 3, "numbers", 0) is false
-	let first = depth is 0 then position + 1 else 0
-	let given = depth is 0 then ("value", "index") else inspected.Parameters - "value"
-	for Range(first, at)
-		let earlier = inspected.method.instructions(value)
-		if (earlier.kind is InstructionType.StoreRegisterToVariable) and (earlier.texts(0) is name)
-			return true
-	name is in given
-IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
-	Doubling.IsDeviceMethod(List(MlirFunction) + MlirDevice.Twice.function, 1) is true
-	if (callees.Length is not 1) or (callees.First.method.instructions.Length is 0)
-		return false
-	let callee = callees.First
-	if callee.method.instructions.Last.kind is not InstructionType.Return
-		return false
-	for callee.method.instructions
-		if IsDevice(callee, index, depth) is false
-			return false
-	true
+constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64"
+constant ElementFunction = "  func.func private @strict_device_element(%data: !llvm.ptr, %bits: i64, %at: i64) -> f64 {\n    %sixteen = arith.constant 16 : i64\n    %isHalf = arith.cmpi eq, %bits, %sixteen : i64\n    cf.cond_br %isHalf, ^half, ^wider\n  ^half:\n    %halfSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f16\n    %halfValue = llvm.load %halfSlot : !llvm.ptr -> f16\n    %halfNumber = arith.extf %halfValue : f16 to f64\n    return %halfNumber : f64\n  ^wider:\n    %thirtyTwo = arith.constant 32 : i64\n    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64\n    cf.cond_br %isSingle, ^single, ^double\n  ^single:\n    %singleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32\n    %singleValue = llvm.load %singleSlot : !llvm.ptr -> f32\n    %singleNumber = arith.extf %singleValue : f32 to f64\n    return %singleNumber : f64\n  ^double:\n    %doubleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64\n    %doubleValue = llvm.load %doubleSlot : !llvm.ptr -> f64\n    return %doubleValue : f64\n  }"
+constant SumFunction = "  func.func private @strict_device_sum(%value: f64) -> f64 {\n    %all = arith.constant -1 : i32\n    %clamp = arith.constant 31 : i32\n    %thirtyTwo = arith.constant 32 : i64\n    %sixteen = arith.constant 16 : i32\n    %one = arith.constant 1 : i32\n    %two = arith.constant 2 : i32\n    cf.br ^round(%value, %sixteen : f64, i32)\n  ^round(%sum: f64, %offset: i32):\n    %more = arith.cmpi sge, %offset, %one : i32\n    cf.cond_br %more, ^shuffle, ^done\n  ^shuffle:\n    %bits = arith.bitcast %sum : f64 to i64\n    %low = arith.trunci %bits : i64 to i32\n    %shifted = arith.shrui %bits, %thirtyTwo : i64\n    %high = arith.trunci %shifted : i64 to i32\n    %otherLow = nvvm.shfl.sync bfly %all, %low, %offset, %clamp : i32 -> i32\n    %otherHigh = nvvm.shfl.sync bfly %all, %high, %offset, %clamp : i32 -> i32\n    %lowWide = arith.extui %otherLow : i32 to i64\n    %highWide = arith.extui %otherHigh : i32 to i64\n    %highPlaced = arith.shli %highWide, %thirtyTwo : i64\n    %combined = arith.ori %highPlaced, %lowWide : i64\n    %other = arith.bitcast %combined : i64 to f64\n    %added = arith.addf %sum, %other : f64\n    %half = arith.divui %offset, %two : i32\n    cf.br ^round(%added, %half : f64, i32)\n  ^done:\n    return %sum : f64\n  }"
 Launched Texts
 	Doubling.Launched.Last is "  ^loop2host:"
 	Randomizing.Launched.Length is 0
-	if IsGpu is false
+	if MlirGpuCheck(function, position).IsGpu is false
 		return List(Text)
 	let ready = "    " + Temp("gr") + " = func.call @strict_gpu_ready() : () -> i1"
 	let count = "    " + Temp("gc") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
-	let threshold = "    " + Temp("gt") + " = arith.constant " + Threshold + " : i64"
+	let threshold = MlirTyped.Integer.Constant(Temp("gt"), MlirParallel.Threshold to Text)
 	let enough = "    " + Temp("ge") + " = arith.cmpi sge, " + Temp("gc") + ", " + Temp("gt") + " : i64"
 	let both = "    " + Temp("gb") + " = arith.andi " + Temp("gr") + ", " + Temp("ge") + " : i1"
 	let branch = "    cf.cond_br " + Temp("gb") + ", ^loop" + position + "gpu, ^loop" + position + "host"
 	(ready, count, threshold, enough, both, branch) + Run + ("  ^loop" + position + "host:")
 Run Texts
-	Text.Combine(Doubling.Run).IndexOf("func.call @strict_gpu_run(%t2gp, %t2gk, %t2gs, %t2gc, %t2v)") > 0 is true
+	Text.Combine(Doubling.Run).IndexOf("%t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gy)") > 0 is true
 	let name = MlirDevice(function, position).Name
 	let addresses = (Address("gp", "strict_gpu_ptx"), Address("gk", "k" + name), Address("gs", "f" + name))
-	let source = MlirLoops(function, position).Collection is "" then "%zero" else Temp("v")
-	let operands = "(" + Temp("gp") + ", " + Temp("gk") + ", " + Temp("gs") + ", " + Temp("gc") + ", " + source + ")"
-	let run = "    " + Temp("gl") + " = func.call @strict_gpu_run" + operands + " : " + Running
+	let collection = MlirLoops(function, position).Collection
+	let source = collection is "" then "%zero" else Temp("v")
+	let number = collection is "" then "0" else collection is "List(Number)" then "1" else "2"
+	let kind = MlirTyped.Integer.Constant(Temp("gq"), number)
+	let first = (Temp("gp"), Temp("gk"), Temp("gs"), Temp("gc"), source)
+	let lanes = MlirTyped.Integer.Constant(Temp("gy"), MlirDeviceSums(function, position).IsWarped then "32" else "1")
+	let second = (Temp("gq"), Temp("ga"), Temp("gw"), Temp("gm"), Temp("gy"))
+	let run = "    " + Temp("gl") + " = func.call @strict_gpu_run(" + Text.Combine(first + second, ", ") + ") : " + Running
+	(List(Text) + ("  ^loop" + position + "gpu:")) + addresses + Values + (kind, lanes, run) + Finished
+Values Texts
+	Doubling.Values.Last is "    %t2gm = arith.constant 0 : i64"
+	MlirGpu(MlirGpu.Layering.function, 2).Values.Last is "    %t2gm = arith.constant 3 : i64"
+	let free = MlirGpuCheck(function, position).Free
+	let size = MlirTyped.Integer.Constant(Temp("gz"), (free.Length + 1) to Text)
+	let array = "    " + Temp("ga") + " = llvm.alloca " + Temp("gz") + " x f64 : (i64) -> !llvm.ptr"
+	mutable lines = (size, array)
+	mutable mask = 0
+	for free
+		lines = lines + Value(index, value)
+		mask = MlirDevice(function, position).IsList(value) then mask + 2 ^ index else mask
+	lines + Counted(free.Length, mask)
+Value(at Number, name Text) Texts
+	Doubling.Value(0, "input").Last is "    llvm.store %t2gv0, %t2gx0 : f64, !llvm.ptr"
+	let loaded = Temp("gv" + at)
+	let slot = "    " + Temp("gx" + at) + " = llvm.getelementptr " + Temp("ga") + "[" + at + Indexing
+	(function.Load(loaded, "%v_" + name), slot, function.Store(loaded, Temp("gx" + at)))
+Counted(count Number, mask Number) Texts
+	Doubling.Counted(2, 3).Last is "    %t2gm = arith.constant 3 : i64"
+	(MlirTyped.Integer.Constant(Temp("gw"), count to Text), MlirTyped.Integer.Constant(Temp("gm"), mask to Text))
+Finished Texts
+	Doubling.Finished.Last is "    cf.br ^loop2exit"
 	let failed = "    " + Temp("gf") + " = arith.cmpf oeq, " + Temp("gl") + ", %zero : f64"
 	let branch = "    cf.cond_br " + Temp("gf") + ", ^loop" + position + "host, ^loop" + position + "gpudone"
 	let label = "  ^loop" + position
 	let done = (label + "gpudone:", function.Store(Temp("gl"), "%v_forResult"), "    cf.br ^loop" + position + "exit")
-	(List(Text) + (label + "gpu:")) + addresses + (run, failed, branch) + done
+	(failed, branch) + done
 Address(suffix Text, name Text) Text
 	Doubling.Address("gp", "strict_gpu_ptx") is "    %t2gp = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr"
 	"    " + Temp(suffix) + " = llvm.mlir.addressof @" + name + " : !llvm.ptr"
@@ -109,7 +73,7 @@ Globals Texts
 	Doubling.Globals.Last is "  llvm.mlir.global internal @fRows_Doubled_1_gpu2(0 : i64) : i64"
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
-		if (value.kind is InstructionType.LoopBegin) and MlirGpu(function, index).IsGpu
+		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(function, index).IsGpu
 			let name = MlirDevice(function, index).Name
 			let text = "  llvm.mlir.global internal constant @k" + name + "(\"" + name + "\\00\")"
 			let slot = "  llvm.mlir.global internal @f" + name + "(0 : i64) : i64"
@@ -123,18 +87,26 @@ Module(functions List(MlirFunction)) Text
 	for functions
 		let found = Kernels(value)
 		kernels = kernels + found
-		callees = found.Length is 0 then callees else callees + Devices(value, 0, value.method.instructions.Length, 0)
+		callees = callees + Callees(value)
 	if kernels.Length is 0
 		return ""
 	let header = (Marker, "module attributes {llvm.target_triple = \"nvptx64-nvidia-cuda\"} {")
-	Text.Combine(header + kernels + Functions(callees) + "}", "\n")
+	Text.Combine(header + kernels + Functions(callees) + ElementFunction + SumFunction + "}", "\n")
 Kernels(inspected MlirFunction) Texts
 	MlirGpu.Kernels(Doubling.function).First is MlirDevice.DoublingHeader
 	mutable lines = List(Mutable(Text))
 	for inspected.method.instructions
-		if (value.kind is InstructionType.LoopBegin) and MlirGpu(inspected, index).IsGpu
+		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, index).IsGpu
 			lines = lines + MlirDevice(inspected, index).Kernel
 	lines
+Callees(inspected MlirFunction) List(MlirFunction)
+	MlirGpu.Callees(Doubling.function).First.Symbol is "Rows_Twice_1"
+	MlirGpu.Callees(Randomizing.function).Length is 0
+	mutable found = List(Mutable(MlirFunction))
+	for inspected.method.instructions
+		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, index).IsGpu
+			found = found + Devices(inspected, index + 1, inspected.method.LoopEndOf(index), 0)
+	found
 Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(MlirFunction)
 	MlirGpu.Devices(Doubling.function, 0, 7, 0).First.Symbol is "Rows_Twice_1"
 	mutable found = List(Mutable(MlirFunction))

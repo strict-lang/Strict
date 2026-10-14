@@ -4612,6 +4612,9 @@
     return %result : f64
   }
   llvm.mlir.global internal @strict_gpu_state(0 : i64) : i64
+  // ponytail: a launch costs about 150 us of copies and synchronization, so loops reading fewer than 4M numbers
+  // stay on the CPU (STRICT_GPU=all sends every loop), keeping results on the device would let smaller loops use it
+  llvm.mlir.global internal @strict_gpu_minimum(4194304 : i64) : i64
   llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<12xi64>) : !llvm.array<12 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00") : !llvm.array<188 x i8>
@@ -4644,6 +4647,13 @@
     %first = llvm.load %setting : !llvm.ptr -> i8
     %off = arith.constant 48 : i8
     %disabled = arith.cmpi eq, %first, %off : i8
+    %letterA = arith.constant 97 : i8
+    %everything = arith.cmpi eq, %first, %letterA : i8
+    %one = arith.constant 1 : i64
+    %minimumSlot = llvm.mlir.addressof @strict_gpu_minimum : !llvm.ptr
+    %minimum = llvm.load %minimumSlot : !llvm.ptr -> i64
+    %chosen = arith.select %everything, %one, %minimum : i64
+    llvm.store %chosen, %minimumSlot : i64, !llvm.ptr
     cf.cond_br %disabled, ^failed, ^library
   ^library:
     %library = func.call @strict_gpu_library() : () -> !llvm.ptr
@@ -4833,67 +4843,678 @@
     %launched = arith.cmpi eq, %result, %zero32 : i32
     return %launched : i1
   }
-  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64) -> f64 {
+  llvm.func @free(!llvm.ptr)
+  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %lanes: i64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %six = arith.constant 6 : i64
+    %eight = arith.constant 8 : i64
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %work = func.call @strict_gpu_work(%count, %source, %kind) : (i64, f64, i64) -> i64
+    %minimumSlot = llvm.mlir.addressof @strict_gpu_minimum : !llvm.ptr
+    %minimum = llvm.load %minimumSlot : !llvm.ptr -> i64
+    %enough = arith.cmpi sge, %work, %minimum : i64
+    cf.cond_br %enough, ^lookup, ^failed
+  ^lookup:
+    %function = func.call @strict_gpu_function(%ptx, %name, %slot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
+    cf.cond_br %missing, ^failed, ^prepare
+  ^prepare:
+    func.call @strict_gpu_reset() : () -> ()
+    %triple = arith.muli %valueCount, %three : i64
+    %slotCount = arith.addi %triple, %six : i64
+    %slots = llvm.alloca %slotCount x i64 : (i64) -> !llvm.ptr
+    %parameters = llvm.alloca %slotCount x !llvm.ptr : (i64) -> !llvm.ptr
+    %bufferCount = arith.addi %valueCount, %three : i64
+    %buffers = llvm.alloca %bufferCount x i64 : (i64) -> !llvm.ptr
+    %flag = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    llvm.store %none, %flag : i64, !llvm.ptr
+    cf.br ^clear(%none : i64)
+  ^clear(%clearIndex: i64):
+    %clearing = arith.cmpi slt, %clearIndex, %slotCount : i64
+    cf.cond_br %clearing, ^clearOne, ^outputs
+  ^clearOne:
+    %pointed = llvm.getelementptr %slots[%clearIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %pointer = llvm.getelementptr %parameters[%clearIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+    llvm.store %pointed, %pointer : !llvm.ptr, !llvm.ptr
+    %inBuffers = arith.cmpi slt, %clearIndex, %bufferCount : i64
+    %clearNext = arith.addi %clearIndex, %one : i64
+    cf.cond_br %inBuffers, ^clearBuffer, ^clear(%clearNext : i64)
+  ^clearBuffer:
+    %bufferSlot = llvm.getelementptr %buffers[%clearIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %none, %bufferSlot : i64, !llvm.ptr
+    cf.br ^clear(%clearNext : i64)
+  ^outputs:
+    %bytes = arith.muli %count, %eight : i64
+    %result = func.call @strict_gpu_temporary(%bytes, %buffers) : (i64, !llvm.ptr) -> i64
+    %failedBuffer = llvm.getelementptr %buffers[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %failedDevice = func.call @strict_gpu_temporary(%eight, %failedBuffer) : (i64, !llvm.ptr) -> i64
+    %hasResult = arith.cmpi ne, %result, %none : i64
+    %hasFlag = arith.cmpi ne, %failedDevice, %none : i64
+    %allocated = arith.andi %hasResult, %hasFlag : i1
+    cf.cond_br %allocated, ^clearFlag, ^release
+  ^clearFlag:
+    %cleared = func.call @strict_gpu_put(%failedDevice, %flag, %eight) : (i64, !llvm.ptr, i64) -> i1
+    cf.cond_br %cleared, ^fixed, ^release
+  ^fixed:
+    llvm.store %count, %slots : i64, !llvm.ptr
+    %resultSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %result, %resultSlot : i64, !llvm.ptr
+    %failedSlot = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %failedDevice, %failedSlot : i64, !llvm.ptr
+    %sourceSlot = llvm.getelementptr %slots[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %sourceBuffer = llvm.getelementptr %buffers[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %sourceReady = func.call @strict_gpu_source(%source, %kind, %sourceSlot, %sourceBuffer) : (f64, i64, !llvm.ptr, !llvm.ptr) -> i1
+    cf.cond_br %sourceReady, ^values(%none, %six : i64, i64), ^release
+  ^values(%valueIndex: i64, %slotIndex: i64):
+    %moreValues = arith.cmpi slt, %valueIndex, %valueCount : i64
+    cf.cond_br %moreValues, ^value, ^launch
+  ^value:
+    %valueSlot = llvm.getelementptr %values[%valueIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %valueSlot : !llvm.ptr -> f64
+    %shifted = arith.shrui %mask, %valueIndex : i64
+    %lowest = arith.andi %shifted, %one : i64
+    %isList = arith.cmpi ne, %lowest, %none : i64
+    %target = llvm.getelementptr %slots[%slotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %nextValue = arith.addi %valueIndex, %one : i64
+    cf.cond_br %isList, ^list, ^number
+  ^number:
+    llvm.store %value, %target : f64, !llvm.ptr
+    %afterNumber = arith.addi %slotIndex, %one : i64
+    cf.br ^values(%nextValue, %afterNumber : i64, i64)
+  ^list:
+    %listBuffer = arith.addi %valueIndex, %three : i64
+    %listBufferSlot = llvm.getelementptr %buffers[%listBuffer] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %listReady = func.call @strict_gpu_list(%value, %target, %listBufferSlot) : (f64, !llvm.ptr, !llvm.ptr) -> i1
+    %afterList = arith.addi %slotIndex, %three : i64
+    cf.cond_br %listReady, ^values(%nextValue, %afterList : i64, i64), ^release
+  ^launch:
+    %threads = arith.constant 256 : i64
+    %threadTotal = arith.muli %count, %lanes : i64
+    %launched = func.call @strict_gpu_launch(%function, %threadTotal, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    cf.cond_br %launched, ^check, ^release
+  ^check:
+    %checked = func.call @strict_gpu_get(%flag, %failedDevice, %eight) : (!llvm.ptr, i64, i64) -> i1
+    %failedValue = llvm.load %flag : !llvm.ptr -> i64
+    %passed = arith.cmpi eq, %failedValue, %none : i64
+    %usable = arith.andi %checked, %passed : i1
+    cf.cond_br %usable, ^download, ^release
+  ^download:
+    %countNumber = arith.sitofp %count : i64 to f64
+    %list = func.call @strict_list_new(%countNumber, %countNumber) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %got = func.call @strict_gpu_get(%items, %result, %bytes) : (!llvm.ptr, i64, i64) -> i1
+    func.call @strict_gpu_free_all(%buffers, %bufferCount) : (!llvm.ptr, i64) -> ()
+    %chosen = arith.select %got, %list, %zero : f64
+    return %chosen : f64
+  ^release:
+    func.call @strict_gpu_free_all(%buffers, %bufferCount) : (!llvm.ptr, i64) -> ()
+    cf.br ^failed
+  ^failed:
+    return %zero : f64
+  }
+  func.func private @strict_gpu_work(%count: i64, %source: f64, %kind: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %two = arith.constant 2 : i64
+    %isRows = arith.cmpi eq, %kind, %two : i64
+    %hasRows = arith.cmpi sgt, %count, %none : i64
+    %measured = arith.andi %isRows, %hasRows : i1
+    cf.cond_br %measured, ^rows, ^elements
+  ^rows:
+    %items = func.call @strict_list_items(%source) : (f64) -> !llvm.ptr
+    %first = llvm.load %items : !llvm.ptr -> f64
+    %columnsNumber = func.call @strict_list_length(%first) : (f64) -> f64
+    %columns = arith.fptosi %columnsNumber : f64 to i64
+    %cells = arith.muli %count, %columns : i64
+    return %cells : i64
+  ^elements:
+    return %count : i64
+  }
+  func.func private @strict_gpu_free_all(%buffers: !llvm.ptr, %count: i64) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    cf.br ^next(%none : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^free, ^done
+  ^free:
+    %slot = llvm.getelementptr %buffers[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %device = llvm.load %slot : !llvm.ptr -> i64
+    func.call @strict_gpu_release(%device) : (i64) -> ()
+    %following = arith.addi %index, %one : i64
+    cf.br ^next(%following : i64)
+  ^done:
+    return
+  }
+  func.func private @strict_gpu_source(%source: f64, %kind: i64, %out: !llvm.ptr, %buffer: !llvm.ptr) -> i1 {
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %isNumbers = arith.cmpi eq, %kind, %one : i64
+    cf.cond_br %isNumbers, ^numbers, ^other
+  ^numbers:
+    %listed = func.call @strict_gpu_list(%source, %out, %buffer) : (f64, !llvm.ptr, !llvm.ptr) -> i1
+    return %listed : i1
+  ^other:
+    %isRows = arith.cmpi eq, %kind, %two : i64
+    cf.cond_br %isRows, ^rows, ^counted
+  ^rows:
+    %gathered = func.call @strict_gpu_rows(%source, %out, %buffer) : (f64, !llvm.ptr, !llvm.ptr) -> i1
+    return %gathered : i1
+  ^counted:
+    %none = arith.constant 0 : i64
+    %sixtyFour = arith.constant 64 : i64
+    func.call @strict_gpu_view(%out, %none, %none, %sixtyFour) : (!llvm.ptr, i64, i64, i64) -> ()
+    %true = arith.constant true
+    return %true : i1
+  }
+  func.func private @strict_gpu_view(%out: !llvm.ptr, %device: i64, %length: i64, %bits: i64) {
+    llvm.store %device, %out : i64, !llvm.ptr
+    %lengthSlot = llvm.getelementptr %out[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %length, %lengthSlot : i64, !llvm.ptr
+    %bitsSlot = llvm.getelementptr %out[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %bits, %bitsSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gpu_host(%list: f64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %isPlain = arith.cmpi eq, %packed, %none : i64
+    cf.cond_br %isPlain, ^plain, ^narrow
+  ^plain:
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    return %items : !llvm.ptr
+  ^narrow:
+    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    return %data : !llvm.ptr
+  }
+  func.func private @strict_gpu_bits(%list: f64) -> i64 {
+    %none = arith.constant 0 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %isPlain = arith.cmpi eq, %packed, %none : i64
+    %bits = arith.select %isPlain, %sixtyFour, %packed : i64
+    return %bits : i64
+  }
+  func.func private @strict_gpu_list(%list: f64, %out: !llvm.ptr, %buffer: !llvm.ptr) -> i1 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
-    %unset = llvm.mlir.zero : !llvm.ptr
-    %function = func.call @strict_gpu_function(%ptx, %name, %slot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
-    %bytes = arith.muli %count, %eight : i64
-    cf.cond_br %missing, ^failed, ^output
-  ^output:
-    %result = func.call @strict_gpu_alloc(%bytes) : (i64) -> i64
-    %noResult = arith.cmpi eq, %result, %none : i64
-    cf.cond_br %noResult, ^failed, ^source
-  ^source:
-    %hasSource = arith.cmpf one, %source, %zero : f64
-    cf.cond_br %hasSource, ^packing, ^launch(%none : i64)
-  ^packing:
-    %packed = func.call @strict_list_packed(%source) : (f64) -> i64
-    %isPacked = arith.cmpi ne, %packed, %none : i64
-    cf.cond_br %isPacked, ^release(%result, %none : i64, i64), ^upload
-  ^upload:
-    %items = func.call @strict_list_items(%source) : (f64) -> !llvm.ptr
-    %input = func.call @strict_gpu_alloc(%bytes) : (i64) -> i64
-    %noInput = arith.cmpi eq, %input, %none : i64
-    cf.cond_br %noInput, ^release(%result, %none : i64, i64), ^copy
+    %sixtyFour = arith.constant 64 : i64
+    %cacheable = arith.constant 65536 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %isUnset = arith.cmpf oeq, %list, %zero : f64
+    cf.cond_br %isUnset, ^empty, ^sized
+  ^empty:
+    func.call @strict_gpu_view(%out, %none, %none, %sixtyFour) : (!llvm.ptr, i64, i64, i64) -> ()
+    return %true : i1
+  ^sized:
+    %lengthNumber = func.call @strict_list_length(%list) : (f64) -> f64
+    %length = arith.fptosi %lengthNumber : f64 to i64
+    %bits = func.call @strict_gpu_bits(%list) : (f64) -> i64
+    %cells = arith.muli %length, %bits : i64
+    %bytes = arith.divui %cells, %eight : i64
+    %size = arith.maxui %bytes, %eight : i64
+    %big = arith.cmpi uge, %bytes, %cacheable : i64
+    cf.cond_br %big, ^lookup, ^fresh
+  ^lookup:
+    %hit = func.call @strict_gpu_cached(%list, %one, %out) : (f64, i64, !llvm.ptr) -> i1
+    cf.cond_br %hit, ^owned, ^fresh
+  ^owned:
+    llvm.store %none, %buffer : i64, !llvm.ptr
+    return %true : i1
+  ^fresh:
+    cf.cond_br %big, ^dedicated, ^temporary
+  ^dedicated:
+    %owned = func.call @strict_gpu_alloc(%size) : (i64) -> i64
+    llvm.store %owned, %buffer : i64, !llvm.ptr
+    cf.br ^allocated(%owned : i64)
+  ^temporary:
+    %scratch = func.call @strict_gpu_temporary(%size, %buffer) : (i64, !llvm.ptr) -> i64
+    cf.br ^allocated(%scratch : i64)
+  ^allocated(%device: i64):
+    func.call @strict_gpu_view(%out, %device, %length, %bits) : (!llvm.ptr, i64, i64, i64) -> ()
+    %hasDevice = arith.cmpi ne, %device, %none : i64
+    %hasBytes = arith.cmpi ne, %bytes, %none : i64
+    %copying = arith.andi %hasDevice, %hasBytes : i1
+    cf.cond_br %copying, ^copy, ^done
   ^copy:
-    %put = func.call @strict_gpu_put(%input, %items, %bytes) : (i64, !llvm.ptr, i64) -> i1
-    cf.cond_br %put, ^launch(%input : i64), ^release(%result, %input : i64, i64)
-  ^launch(%device: i64):
-    %three = arith.constant 3 : i64
-    %parameters = llvm.alloca %three x !llvm.ptr : (i64) -> !llvm.ptr
-    %values = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
-    llvm.store %count, %values : i64, !llvm.ptr
-    %resultValue = llvm.getelementptr %values[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %result, %resultValue : i64, !llvm.ptr
-    %sourceValue = llvm.getelementptr %values[2] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %device, %sourceValue : i64, !llvm.ptr
-    llvm.store %values, %parameters : !llvm.ptr, !llvm.ptr
-    %second = llvm.getelementptr %parameters[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    llvm.store %resultValue, %second : !llvm.ptr, !llvm.ptr
-    %third = llvm.getelementptr %parameters[2] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    llvm.store %sourceValue, %third : !llvm.ptr, !llvm.ptr
-    %threads = arith.constant 256 : i64
-    %launched = func.call @strict_gpu_launch(%function, %count, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
-    cf.cond_br %launched, ^download, ^release(%result, %device : i64, i64)
-  ^download:
-    %countNumber = arith.sitofp %count : i64 to f64
-    %list = func.call @strict_list_new(%countNumber, %countNumber) : (f64, f64) -> f64
-    %target = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
-    %got = func.call @strict_gpu_get(%target, %result, %bytes) : (!llvm.ptr, i64, i64) -> i1
-    func.call @strict_gpu_free(%result) : (i64) -> ()
-    func.call @strict_gpu_release(%device) : (i64) -> ()
-    %chosen = arith.select %got, %list, %zero : f64
-    return %chosen : f64
-  ^release(%output: i64, %temporary: i64):
-    func.call @strict_gpu_free(%output) : (i64) -> ()
-    func.call @strict_gpu_release(%temporary) : (i64) -> ()
-    cf.br ^failed
-  ^failed:
-    return %zero : f64
+    %host = func.call @strict_gpu_host(%list) : (f64) -> !llvm.ptr
+    %put = func.call @strict_gpu_put(%device, %host, %bytes) : (i64, !llvm.ptr, i64) -> i1
+    %keeping = arith.andi %put, %big : i1
+    cf.cond_br %keeping, ^remember, ^copied
+  ^remember:
+    func.call @strict_gpu_remember(%list, %one, %out) : (f64, i64, !llvm.ptr) -> ()
+    llvm.store %none, %buffer : i64, !llvm.ptr
+    return %true : i1
+  ^copied:
+    return %put : i1
+  ^done:
+    return %hasDevice : i1
+  }
+  func.func private @strict_gpu_rows(%rows: f64, %out: !llvm.ptr, %buffer: !llvm.ptr) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %eight = arith.constant 8 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %cacheable = arith.constant 65536 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %countNumber = func.call @strict_list_length(%rows) : (f64) -> f64
+    %count = arith.fptosi %countNumber : f64 to i64
+    %isEmpty = arith.cmpi eq, %count, %none : i64
+    cf.cond_br %isEmpty, ^empty, ^first
+  ^empty:
+    func.call @strict_gpu_view(%out, %none, %none, %sixtyFour) : (!llvm.ptr, i64, i64, i64) -> ()
+    return %true : i1
+  ^first:
+    %items = func.call @strict_list_items(%rows) : (f64) -> !llvm.ptr
+    %firstRow = llvm.load %items : !llvm.ptr -> f64
+    %columnsNumber = func.call @strict_list_length(%firstRow) : (f64) -> f64
+    %columns = arith.fptosi %columnsNumber : f64 to i64
+    %bits = func.call @strict_gpu_narrowest(%items, %count, %columns) : (!llvm.ptr, i64, i64) -> i64
+    %unequal = arith.cmpi eq, %bits, %none : i64
+    cf.cond_br %unequal, ^unsized, ^sized
+  ^unsized:
+    return %false : i1
+  ^sized:
+    %rowCells = arith.muli %columns, %bits : i64
+    %rowBytes = arith.divui %rowCells, %eight : i64
+    %total = arith.muli %rowBytes, %count : i64
+    %size = arith.maxui %total, %eight : i64
+    %big = arith.cmpi uge, %total, %cacheable : i64
+    cf.cond_br %big, ^lookup, ^stage
+  ^lookup:
+    %hit = func.call @strict_gpu_cached(%rows, %two, %out) : (f64, i64, !llvm.ptr) -> i1
+    cf.cond_br %hit, ^owned, ^stage
+  ^owned:
+    llvm.store %none, %buffer : i64, !llvm.ptr
+    return %true : i1
+  ^stage:
+    %staging = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    cf.br ^row(%none : i64)
+  ^row(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^gather, ^upload
+  ^gather:
+    %rowSlot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %row = llvm.load %rowSlot : !llvm.ptr -> f64
+    %rowBits = func.call @strict_gpu_bits(%row) : (f64) -> i64
+    %sameBits = arith.cmpi eq, %rowBits, %bits : i64
+    %offset = arith.muli %index, %rowBytes : i64
+    %destination = llvm.getelementptr %staging[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %sameBits, ^place, ^narrow
+  ^place:
+    %rowData = func.call @strict_gpu_host(%row) : (f64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%destination, %rowData, %rowBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^row(%next : i64)
+  ^narrow:
+    %wide = func.call @strict_list_items(%row) : (f64) -> !llvm.ptr
+    %narrowed = func.call @strict_gpu_narrow(%wide, %destination, %columns, %bits) : (!llvm.ptr, !llvm.ptr, i64, i64) -> i1
+    cf.cond_br %narrowed, ^row(%next : i64), ^mismatch
+  ^mismatch:
+    llvm.call @free(%staging) : (!llvm.ptr) -> ()
+    return %false : i1
+  ^upload:
+    cf.cond_br %big, ^dedicated, ^temporary
+  ^dedicated:
+    %owned = func.call @strict_gpu_alloc(%size) : (i64) -> i64
+    llvm.store %owned, %buffer : i64, !llvm.ptr
+    cf.br ^allocated(%owned : i64)
+  ^temporary:
+    %scratch = func.call @strict_gpu_temporary(%size, %buffer) : (i64, !llvm.ptr) -> i64
+    cf.br ^allocated(%scratch : i64)
+  ^allocated(%device: i64):
+    func.call @strict_gpu_view(%out, %device, %columns, %bits) : (!llvm.ptr, i64, i64, i64) -> ()
+    %hasDevice = arith.cmpi ne, %device, %none : i64
+    cf.cond_br %hasDevice, ^copy, ^unavailable
+  ^copy:
+    %put = func.call @strict_gpu_put(%device, %staging, %total) : (i64, !llvm.ptr, i64) -> i1
+    llvm.call @free(%staging) : (!llvm.ptr) -> ()
+    %keeping = arith.andi %put, %big : i1
+    cf.cond_br %keeping, ^remember, ^copiedRows
+  ^remember:
+    func.call @strict_gpu_remember(%rows, %two, %out) : (f64, i64, !llvm.ptr) -> ()
+    llvm.store %none, %buffer : i64, !llvm.ptr
+    return %true : i1
+  ^copiedRows:
+    return %put : i1
+  ^unavailable:
+    llvm.call @free(%staging) : (!llvm.ptr) -> ()
+    return %false : i1
+  }
+  llvm.mlir.global internal @strict_gpu_cache(dense<0> : tensor<1024xi64>) : !llvm.array<1024 x i64>
+  llvm.mlir.global internal @strict_gpu_clock(0 : i64) : i64
+  func.func private @strict_gpu_entry(%index: i64) -> !llvm.ptr {
+    %eight = arith.constant 8 : i64
+    %cache = llvm.mlir.addressof @strict_gpu_cache : !llvm.ptr
+    %offset = arith.muli %index, %eight : i64
+    %entry = llvm.getelementptr %cache[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    return %entry : !llvm.ptr
+  }
+  func.func private @strict_gpu_tick() -> i64 {
+    %one = arith.constant 1 : i64
+    %clockSlot = llvm.mlir.addressof @strict_gpu_clock : !llvm.ptr
+    %clock = llvm.load %clockSlot : !llvm.ptr -> i64
+    %next = arith.addi %clock, %one : i64
+    llvm.store %next, %clockSlot : i64, !llvm.ptr
+    return %next : i64
+  }
+  func.func private @strict_gpu_cached(%list: f64, %kind: i64, %out: !llvm.ptr) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %entries = arith.constant 128 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %listBits = arith.bitcast %list : f64 to i64
+    cf.br ^next(%none : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %entries : i64
+    cf.cond_br %more, ^compare, ^missing
+  ^compare:
+    %entry = func.call @strict_gpu_entry(%index) : (i64) -> !llvm.ptr
+    %stored = llvm.load %entry : !llvm.ptr -> i64
+    %kindSlot = llvm.getelementptr %entry[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %storedKind = llvm.load %kindSlot : !llvm.ptr -> i64
+    %sameList = arith.cmpi eq, %stored, %listBits : i64
+    %sameKind = arith.cmpi eq, %storedKind, %kind : i64
+    %found = arith.andi %sameList, %sameKind : i1
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %found, ^hit, ^next(%following : i64)
+  ^hit:
+    %deviceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %device = llvm.load %deviceSlot : !llvm.ptr -> i64
+    %lengthSlot = llvm.getelementptr %entry[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %length = llvm.load %lengthSlot : !llvm.ptr -> i64
+    %bitsSlot = llvm.getelementptr %entry[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_view(%out, %device, %length, %bits) : (!llvm.ptr, i64, i64, i64) -> ()
+    %used = func.call @strict_gpu_tick() : () -> i64
+    %usedSlot = llvm.getelementptr %entry[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %used, %usedSlot : i64, !llvm.ptr
+    return %true : i1
+  ^missing:
+    return %false : i1
+  }
+  func.func private @strict_gpu_remember(%list: f64, %kind: i64, %out: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %entries = arith.constant 128 : i64
+    %latest = arith.constant 9223372036854775807 : i64
+    cf.br ^scan(%none, %none, %latest : i64, i64, i64)
+  ^scan(%index: i64, %oldest: i64, %oldestUse: i64):
+    %more = arith.cmpi slt, %index, %entries : i64
+    cf.cond_br %more, ^compare, ^replace(%oldest : i64)
+  ^compare:
+    %entry = func.call @strict_gpu_entry(%index) : (i64) -> !llvm.ptr
+    %usedSlot = llvm.getelementptr %entry[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    %older = arith.cmpi slt, %used, %oldestUse : i64
+    %chosen = arith.select %older, %index, %oldest : i64
+    %chosenUse = arith.select %older, %used, %oldestUse : i64
+    %following = arith.addi %index, %one : i64
+    cf.br ^scan(%following, %chosen, %chosenUse : i64, i64, i64)
+  ^replace(%target: i64):
+    %slot = func.call @strict_gpu_entry(%target) : (i64) -> !llvm.ptr
+    %previous = llvm.load %slot : !llvm.ptr -> i64
+    %isUsed = arith.cmpi ne, %previous, %none : i64
+    cf.cond_br %isUsed, ^evict, ^store
+  ^evict:
+    %oldDeviceSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %oldDevice = llvm.load %oldDeviceSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_release(%oldDevice) : (i64) -> ()
+    %previousList = arith.bitcast %previous : i64 to f64
+    func.call @strict_unpin(%previousList) : (f64) -> ()
+    cf.br ^store
+  ^store:
+    func.call @strict_list_pin(%list) : (f64) -> ()
+    %listBits = arith.bitcast %list : f64 to i64
+    llvm.store %listBits, %slot : i64, !llvm.ptr
+    %device = llvm.load %out : !llvm.ptr -> i64
+    %deviceSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %device, %deviceSlot : i64, !llvm.ptr
+    %lengthSource = llvm.getelementptr %out[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %length = llvm.load %lengthSource : !llvm.ptr -> i64
+    %lengthSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %length, %lengthSlot : i64, !llvm.ptr
+    %bitsSource = llvm.getelementptr %out[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %bits = llvm.load %bitsSource : !llvm.ptr -> i64
+    %bitsSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %bits, %bitsSlot : i64, !llvm.ptr
+    %stamp = func.call @strict_gpu_tick() : () -> i64
+    %stampSlot = llvm.getelementptr %slot[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %stamp, %stampSlot : i64, !llvm.ptr
+    %kindSlot = llvm.getelementptr %slot[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %kind, %kindSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_unpin(%value: f64) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %countSlot = llvm.mlir.addressof @strict_gc_pinned_count : !llvm.ptr
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %pinnedSlot = llvm.mlir.addressof @strict_gc_pinned : !llvm.ptr
+    %pinnedBits = llvm.load %pinnedSlot : !llvm.ptr -> i64
+    %pinned = llvm.inttoptr %pinnedBits : i64 to !llvm.ptr
+    %valueBits = arith.bitcast %value : f64 to i64
+    cf.br ^next(%none : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^compare, ^done
+  ^compare:
+    %slot = llvm.getelementptr %pinned[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %stored = llvm.load %slot : !llvm.ptr -> i64
+    %found = arith.cmpi eq, %stored, %valueBits : i64
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %found, ^remove, ^next(%following : i64)
+  ^remove:
+    %lastIndex = arith.subi %count, %one : i64
+    %lastSlot = llvm.getelementptr %pinned[%lastIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %last = llvm.load %lastSlot : !llvm.ptr -> i64
+    llvm.store %last, %slot : i64, !llvm.ptr
+    llvm.store %lastIndex, %countSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  llvm.mlir.global internal @strict_gpu_arena(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
+  func.func private @strict_gpu_reset() {
+    %none = arith.constant 0 : i64
+    %arena = llvm.mlir.addressof @strict_gpu_arena : !llvm.ptr
+    %capacitySlot = llvm.getelementptr %arena[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
+    %wantedSlot = llvm.getelementptr %arena[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %wanted = llvm.load %wantedSlot : !llvm.ptr -> i64
+    %offsetSlot = llvm.getelementptr %arena[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %none, %offsetSlot : i64, !llvm.ptr
+    llvm.store %none, %wantedSlot : i64, !llvm.ptr
+    %tooSmall = arith.cmpi ugt, %wanted, %capacity : i64
+    cf.cond_br %tooSmall, ^grow, ^done
+  ^grow:
+    %base = llvm.load %arena : !llvm.ptr -> i64
+    func.call @strict_gpu_release(%base) : (i64) -> ()
+    %half = arith.constant 1 : i64
+    %extra = arith.shrui %wanted, %half : i64
+    %grown = arith.addi %wanted, %extra : i64
+    %fresh = func.call @strict_gpu_alloc(%grown) : (i64) -> i64
+    llvm.store %fresh, %arena : i64, !llvm.ptr
+    %isAllocated = arith.cmpi ne, %fresh, %none : i64
+    %kept = arith.select %isAllocated, %grown, %none : i64
+    llvm.store %kept, %capacitySlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_gpu_temporary(%bytes: i64, %buffer: !llvm.ptr) -> i64 {
+    %none = arith.constant 0 : i64
+    %spare = arith.constant 255 : i64
+    %alignment = arith.constant -256 : i64
+    %arena = llvm.mlir.addressof @strict_gpu_arena : !llvm.ptr
+    %padded = arith.addi %bytes, %spare : i64
+    %aligned = arith.andi %padded, %alignment : i64
+    %wantedSlot = llvm.getelementptr %arena[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %wanted = llvm.load %wantedSlot : !llvm.ptr -> i64
+    %moreWanted = arith.addi %wanted, %aligned : i64
+    llvm.store %moreWanted, %wantedSlot : i64, !llvm.ptr
+    %base = llvm.load %arena : !llvm.ptr -> i64
+    %capacitySlot = llvm.getelementptr %arena[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
+    %offsetSlot = llvm.getelementptr %arena[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %offset = llvm.load %offsetSlot : !llvm.ptr -> i64
+    %end = arith.addi %offset, %aligned : i64
+    %fits = arith.cmpi ule, %end, %capacity : i64
+    cf.cond_br %fits, ^scratch, ^owned
+  ^scratch:
+    llvm.store %end, %offsetSlot : i64, !llvm.ptr
+    llvm.store %none, %buffer : i64, !llvm.ptr
+    %address = arith.addi %base, %offset : i64
+    return %address : i64
+  ^owned:
+    %device = func.call @strict_gpu_alloc(%bytes) : (i64) -> i64
+    llvm.store %device, %buffer : i64, !llvm.ptr
+    return %device : i64
+  }
+  func.func private @strict_gpu_half(%value: f64, %exact: !llvm.ptr) -> i16 {
+    %none = arith.constant 0 : i64
+    %false = arith.constant false
+    %bits = arith.bitcast %value : f64 to i64
+    %signShift = arith.constant 63 : i64
+    %signBit = arith.shrui %bits, %signShift : i64
+    %fifteen = arith.constant 15 : i64
+    %sign = arith.shli %signBit, %fifteen : i64
+    %exponentShift = arith.constant 52 : i64
+    %exponentMask = arith.constant 2047 : i64
+    %shifted = arith.shrui %bits, %exponentShift : i64
+    %exponent = arith.andi %shifted, %exponentMask : i64
+    %mantissaMask = arith.constant 4503599627370495 : i64
+    %mantissa = arith.andi %bits, %mantissaMask : i64
+    %isZeroExponent = arith.cmpi eq, %exponent, %none : i64
+    %isZeroMantissa = arith.cmpi eq, %mantissa, %none : i64
+    %isZero = arith.andi %isZeroExponent, %isZeroMantissa : i1
+    cf.cond_br %isZero, ^encoded(%sign : i64), ^special
+  ^special:
+    %isSpecial = arith.cmpi eq, %exponent, %exponentMask : i64
+    cf.cond_br %isSpecial, ^infinite, ^finite
+  ^infinite:
+    %infinity = arith.constant 31744 : i64
+    %quiet = arith.constant 512 : i64
+    %nanBit = arith.select %isZeroMantissa, %none, %quiet : i64
+    %signed = arith.ori %sign, %infinity : i64
+    %special = arith.ori %signed, %nanBit : i64
+    cf.br ^encoded(%special : i64)
+  ^finite:
+    %bias = arith.constant 1023 : i64
+    %unbiased = arith.subi %exponent, %bias : i64
+    %lowestNormal = arith.constant -14 : i64
+    %highest = arith.constant 15 : i64
+    %aboveSubnormal = arith.cmpi sge, %unbiased, %lowestNormal : i64
+    %belowOverflow = arith.cmpi sle, %unbiased, %highest : i64
+    %isNormal = arith.andi %aboveSubnormal, %belowOverflow : i1
+    cf.cond_br %isNormal, ^normal, ^subnormal
+  ^normal:
+    %lowMask = arith.constant 4398046511103 : i64
+    %low = arith.andi %mantissa, %lowMask : i64
+    %fits = arith.cmpi eq, %low, %none : i64
+    %rebiased = arith.addi %unbiased, %fifteen : i64
+    %ten = arith.constant 10 : i64
+    %placed = arith.shli %rebiased, %ten : i64
+    %fortyTwo = arith.constant 42 : i64
+    %top = arith.shrui %mantissa, %fortyTwo : i64
+    %body = arith.ori %placed, %top : i64
+    %normalBits = arith.ori %sign, %body : i64
+    cf.cond_br %fits, ^encoded(%normalBits : i64), ^inexact
+  ^subnormal:
+    %lowestSubnormal = arith.constant -24 : i64
+    %isSubnormal = arith.cmpi sge, %unbiased, %lowestSubnormal : i64
+    %belowNormal = arith.cmpi slt, %unbiased, %lowestNormal : i64
+    %inRange = arith.andi %isSubnormal, %belowNormal : i1
+    cf.cond_br %inRange, ^small, ^inexact
+  ^small:
+    %implicit = arith.constant 4503599627370496 : i64
+    %full = arith.ori %mantissa, %implicit : i64
+    %fortyTwoSmall = arith.constant 42 : i64
+    %distance = arith.subi %lowestNormal, %unbiased : i64
+    %shift = arith.addi %fortyTwoSmall, %distance : i64
+    %one = arith.constant 1 : i64
+    %unit = arith.shli %one, %shift : i64
+    %remainderMask = arith.subi %unit, %one : i64
+    %remainder = arith.andi %full, %remainderMask : i64
+    %fitsSmall = arith.cmpi eq, %remainder, %none : i64
+    %fraction = arith.shrui %full, %shift : i64
+    %smallBits = arith.ori %sign, %fraction : i64
+    cf.cond_br %fitsSmall, ^encoded(%smallBits : i64), ^inexact
+  ^inexact:
+    llvm.store %false, %exact : i1, !llvm.ptr
+    %nothing = arith.constant 0 : i16
+    return %nothing : i16
+  ^encoded(%result: i64):
+    %half = arith.trunci %result : i64 to i16
+    return %half : i16
+  }
+  func.func private @strict_gpu_narrow(%items: !llvm.ptr, %target: !llvm.ptr, %count: i64, %bits: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %sixteen = arith.constant 16 : i64
+    %true = arith.constant true
+    %exact = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
+    llvm.store %true, %exact : i1, !llvm.ptr
+    %isHalf = arith.cmpi eq, %bits, %sixteen : i64
+    cf.br ^next(%none : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^element, ^done
+  ^element:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %isHalf, ^half, ^single
+  ^half:
+    %half = func.call @strict_gpu_half(%value, %exact) : (f64, !llvm.ptr) -> i16
+    %halfSlot = llvm.getelementptr %target[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i16
+    llvm.store %half, %halfSlot : i16, !llvm.ptr
+    cf.br ^next(%following : i64)
+  ^single:
+    %single = arith.truncf %value : f64 to f32
+    %back = arith.extf %single : f32 to f64
+    %same = arith.cmpf ueq, %back, %value : f64
+    %singleSlot = llvm.getelementptr %target[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %single, %singleSlot : f32, !llvm.ptr
+    cf.cond_br %same, ^next(%following : i64), ^lost
+  ^lost:
+    %false = arith.constant false
+    llvm.store %false, %exact : i1, !llvm.ptr
+    cf.br ^next(%following : i64)
+  ^done:
+    %result = llvm.load %exact : !llvm.ptr -> i1
+    return %result : i1
+  }
+  func.func private @strict_gpu_narrowest(%items: !llvm.ptr, %count: i64, %columns: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %sixtyFour = arith.constant 64 : i64
+    cf.br ^next(%none, %sixtyFour : i64, i64)
+  ^next(%index: i64, %narrowest: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^row, ^done
+  ^row:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %row = llvm.load %slot : !llvm.ptr -> f64
+    %lengthNumber = func.call @strict_list_length(%row) : (f64) -> f64
+    %length = arith.fptosi %lengthNumber : f64 to i64
+    %sameLength = arith.cmpi eq, %length, %columns : i64
+    %bits = func.call @strict_gpu_bits(%row) : (f64) -> i64
+    %narrower = arith.minui %narrowest, %bits : i64
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %sameLength, ^next(%following, %narrower : i64, i64), ^mismatch
+  ^mismatch:
+    return %none : i64
+  ^done:
+    return %narrowest : i64
   }
   func.func private @strict_gpu_release(%device: i64) {
     %none = arith.constant 0 : i64
