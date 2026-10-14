@@ -88,21 +88,21 @@ STRICT_EXPORT double TensorFile_Floats(double self, double path, double start, d
 }
 
 /* The rows (or the columns when transposed) of the float32 matrix of shape (rows, columns) at start, each as numbers with
-   bits 32 (exact) or 16 (rounded to halves). */
+   bits 32 (exact), 16 (rounded to halves) or 8 (quantized, strict_quantized). */
 static double Matrix(double path, double start, double shape, double bits, int transposed)
 {
 	static double* rows = 0;
 	static unsigned char* storage = 0;
 	const strict_numbers* dimensions = strict_numbers_of(shape);
-	if (dimensions->count != 2 || (bits != 16 && bits != 32))
-		return strict_fail("OnlyMatricesOf16Or32BitsAreSupported");
+	if (dimensions->count != 2 || (bits != 8 && bits != 16 && bits != 32))
+		return strict_fail("OnlyMatricesOf8Or16Or32BitsAreSupported");
 	uint64_t height = (uint64_t)dimensions->items[0], width = (uint64_t)dimensions->items[1];
 	const char* failure = 0;
 	float* floats = Read(path, start, height * width, &failure);
 	if (!floats)
 		return strict_fail(failure);
 	uint64_t outer = transposed ? width : height, inner = transposed ? height : width;
-	uint64_t size = (sizeof(strict_packed) + inner * ((uint64_t)bits / 8) + 7) / 8 * 8;
+	uint64_t size = (sizeof(strict_packed) + strict_packed_bytes(inner, (uint64_t)bits) + 7) / 8 * 8;
 	free(rows);
 	free(storage);
 	rows = malloc((1 + outer) * sizeof(double));
@@ -111,16 +111,17 @@ static double Matrix(double path, double start, double shape, double bits, int t
 	for (uint64_t row = 0; row < outer; row++)
 	{
 		strict_packed* packed = (strict_packed*)(storage + row * size);
+		const float* first = transposed ? floats + row : floats + row * width;
+		uint64_t stride = transposed ? width : 1;
 		packed->count = (double)inner;
 		packed->bits = bits;
-		for (uint64_t column = 0; column < inner; column++)
-		{
-			float value = transposed ? floats[column * width + row] : floats[row * width + column];
+		if (bits == 8)
+			strict_quantized(packed, first, inner, stride);
+		for (uint64_t column = 0; bits != 8 && column < inner; column++)
 			if (bits == 16)
-				((uint16_t*)packed->data)[column] = strict_half(value);
+				((uint16_t*)packed->data)[column] = strict_half(first[column * stride]);
 			else
-				((float*)packed->data)[column] = value;
-		}
+				((float*)packed->data)[column] = first[column * stride];
 		rows[1 + row] = strict_packed_result(packed);
 	}
 	free(floats);

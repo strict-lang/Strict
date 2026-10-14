@@ -8,8 +8,6 @@ constant Indexing = "] : (!llvm.ptr) -> !llvm.ptr, f64"
 constant Marker = "// device kernels"
 constant NameGlobal = "  llvm.mlir.global internal constant @kRows_Doubled_1_gpu2(\"Rows_Doubled_1_gpu2\\00\") : !llvm.array<20 x i8>"
 constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64"
-constant ElementFunction = "  func.func private @strict_device_element(%data: !llvm.ptr, %bits: i64, %at: i64) -> f64 {\n    %sixteen = arith.constant 16 : i64\n    %isHalf = arith.cmpi eq, %bits, %sixteen : i64\n    cf.cond_br %isHalf, ^half, ^wider\n  ^half:\n    %halfSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f16\n    %halfValue = llvm.load %halfSlot : !llvm.ptr -> f16\n    %halfNumber = arith.extf %halfValue : f16 to f64\n    return %halfNumber : f64\n  ^wider:\n    %thirtyTwo = arith.constant 32 : i64\n    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64\n    cf.cond_br %isSingle, ^single, ^double\n  ^single:\n    %singleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32\n    %singleValue = llvm.load %singleSlot : !llvm.ptr -> f32\n    %singleNumber = arith.extf %singleValue : f32 to f64\n    return %singleNumber : f64\n  ^double:\n    %doubleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64\n    %doubleValue = llvm.load %doubleSlot : !llvm.ptr -> f64\n    return %doubleValue : f64\n  }"
-constant SumFunction = "  func.func private @strict_device_sum(%value: f64) -> f64 {\n    %all = arith.constant -1 : i32\n    %clamp = arith.constant 31 : i32\n    %thirtyTwo = arith.constant 32 : i64\n    %sixteen = arith.constant 16 : i32\n    %one = arith.constant 1 : i32\n    %two = arith.constant 2 : i32\n    cf.br ^round(%value, %sixteen : f64, i32)\n  ^round(%sum: f64, %offset: i32):\n    %more = arith.cmpi sge, %offset, %one : i32\n    cf.cond_br %more, ^shuffle, ^done\n  ^shuffle:\n    %bits = arith.bitcast %sum : f64 to i64\n    %low = arith.trunci %bits : i64 to i32\n    %shifted = arith.shrui %bits, %thirtyTwo : i64\n    %high = arith.trunci %shifted : i64 to i32\n    %otherLow = nvvm.shfl.sync bfly %all, %low, %offset, %clamp : i32 -> i32\n    %otherHigh = nvvm.shfl.sync bfly %all, %high, %offset, %clamp : i32 -> i32\n    %lowWide = arith.extui %otherLow : i32 to i64\n    %highWide = arith.extui %otherHigh : i32 to i64\n    %highPlaced = arith.shli %highWide, %thirtyTwo : i64\n    %combined = arith.ori %highPlaced, %lowWide : i64\n    %other = arith.bitcast %combined : i64 to f64\n    %added = arith.addf %sum, %other : f64\n    %half = arith.divui %offset, %two : i32\n    cf.br ^round(%added, %half : f64, i32)\n  ^done:\n    return %sum : f64\n  }"
 Launched Texts
 	Doubling.Launched.Last is "  ^loop2host:"
 	Randomizing.Launched.Length is 0
@@ -91,7 +89,7 @@ Module(functions List(MlirFunction)) Text
 	if kernels.Length is 0
 		return ""
 	let header = (Marker, "module attributes {llvm.target_triple = \"nvptx64-nvidia-cuda\"} {")
-	Text.Combine(header + kernels + Functions(callees) + ElementFunction + SumFunction + "}", "\n")
+	Text.Combine(header + kernels + Functions(callees) + "}", "\n")
 Kernels(inspected MlirFunction) Texts
 	MlirGpu.Kernels(Doubling.function).First is MlirDevice.DoublingHeader
 	mutable lines = List(Mutable(Text))

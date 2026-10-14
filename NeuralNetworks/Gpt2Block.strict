@@ -28,10 +28,11 @@ Dense(weights Safetensors, name Text) Layer
 	Layer(weights.Columns(name + ".weight"), weights.Values(name + ".bias"))
 Cached(input Numbers) Gpt2Block
 	Tiny.Cached(Embedded).keys.Length is 12
+	Tiny.Cached(Embedded).Cached(Embedded).values.First.Length is 2
 	let combined = attention.Sums(Normalized(input, attentionGain, attentionBias))
 	let size = combined.Length / 3
 	let queried = Split(combined, 0)
-	Gpt2Block(value, keys = keys + Split(combined, size), values = values + Split(combined, 2 * size), queries = queried)
+	Gpt2Block(value, keys = keys + Split(combined, size), values = Appended(combined, 2 * size), queries = queried)
 Split(combined Numbers, start Number) List(Numbers)
 	Tiny.Split(Tiny.attention.biases, 12).First is List(Number) + Tiny.attention.biases(12)
 	let size = combined.Length / 3 / Heads
@@ -50,22 +51,21 @@ Merged Numbers
 	merged
 Attended(head Number) Numbers
 	Tiny.Cached(Embedded).Attended(0).Length is 1
+	Tiny.Cached(Embedded).Attended(0).First is Tiny.Cached(Embedded).values.First.First
 	let weights = Network.Softmax(Scores(head))
-	for queries(head).Length
-		Weighted(weights, head, index)
+	let size = values.Length / Heads
+	for size
+		Layer.Summed(values(head * size + index), weights)
 Scores(head Number) Numbers
 	Tiny.Cached(Embedded).Scores(0).Length is 1
 	let query = queries(head)
 	let scale = query.Length.SquareRoot
 	for keys.Length / Heads
 		Layer.Summed(keys(index * Heads + head), query) / scale
-Weighted(weights Numbers, head Number, dimension Number) Number
-	Tiny.Cached(Embedded).Weighted(List(Number) + 1, 0, 0) is Tiny.Cached(Embedded).values.First.First
-	mutable sum = 0
-	for weights
-		let stored = values(index * Heads + head)
-		sum = sum + value * stored(dimension)
-	sum
+Appended(combined Numbers, start Number) List(Numbers)
+	Tiny.Appended((1, 2, 3, 4, 5), 3).Last is List(Number) + 5
+	for combined.Length - start
+		(values.Length is 0 then List(Number) else values(index)) + combined(start + index)
 Normalized(input Numbers, gain Numbers, bias Numbers) Numbers
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).First.IsNearlyEqual(-1.2247356859083902) is true
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).Last.IsNearlyEqual(2.2247356859083902) is true

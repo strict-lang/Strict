@@ -1,6 +1,7 @@
 has function MlirFunction
 has position Number
-constant Letters = "abcdefgh"
+constant Letters = "abcdefghi"
+constant Widths = (16, 32, 8)
 constant Summing = MlirPacked(MlirKernel.Summing.function, 1)
 constant Doubling = MlirPacked(MlirKernel.Doubling.function, 2)
 Branch Text
@@ -27,11 +28,10 @@ Keyed(name Text, index Number) Texts
 	let shifted = " = arith.shli " + prefix + "q" + index + ", " + prefix + "m" + index + " : i64"
 	let sum = " = arith.addi " + prefix + "s" + index + ", " + prefix + "w" + index + " : i64"
 	(packed, shift, "    " + prefix + "w" + index + shifted, "    " + prefix + "s" + (index + 1) + sum)
-Case(index Number) Text
-	Summing.Case(1) is "1024: ^fcloop1fast, 2048: ^fdloop1fast"
-	let label = "loop" + position + "fast"
-	let half = ((16 * 64 ^ index) to Text) + ": ^f" + Letters.Substring(2 * index, 1) + label
-	half + ", " + ((32 * 64 ^ index) to Text) + ": ^f" + Letters.Substring(2 * index + 1, 1) + label
+Case(source Number) Texts
+	Summing.Case(1) is ("1024: ^fdloop1fast", "2048: ^feloop1fast", "512: ^ffloop1fast")
+	for Widths
+		((value * 64 ^ source) to Text) + ": ^f" + Letters.Substring(3 * source + index, 1) + "loop" + position + "fast"
 Dispatched Texts
 	Text.Combine(Summing.Dispatched).IndexOf("[default: ^loop1generic, 0: ^floop1fast, 16: ^faloop1fast") > 0 is true
 	Doubling.Dispatched.Length is 0
@@ -39,10 +39,10 @@ Dispatched Texts
 	if names.Length is 0
 		return List(Text)
 	mutable lines = List(Text) + ("  ^floop" + position + "packed:", "    %f" + position + "s0 = arith.constant 0 : i64")
-	mutable cases = List(Mutable(Text))
+	mutable cases = List(Text)
 	for names
 		lines = lines + Keyed(value, index)
-		cases.Add(Case(index))
+		cases = cases + Case(index)
 	let targets = "[default: ^loop" + position + "generic, 0: ^floop" + position + "fast, " + Text.Combine(cases, ", ")
 	lines + ("    cf.switch %f" + position + "s" + names.Length + " : i64, " + targets + "]") + Variants
 Variants Texts
@@ -50,8 +50,8 @@ Variants Texts
 	Text.Combine(Summing.Variants).IndexOf("arith.extf %fa1gn : f16 to f64") > 0 is true
 	let names = Packable
 	mutable lines = List(Mutable(Text))
-	for names.Length * 2
-		let packing = names((index / 2).Floor) + (index % 2 is 0 then " 16" else " 32")
+	for names.Length * 3
+		let packing = names((index / 3).Floor) + " " + Widths(index % 3)
 		let packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
 		let copied = MlirFastLoop(packed, position).Copied
 		let renamed = MlirKernel(function, position).Renamed(copied, Letters.Substring(index, 1))

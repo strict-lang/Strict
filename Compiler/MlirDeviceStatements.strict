@@ -54,7 +54,7 @@ IsList(kind Text) Boolean
 	Reading.IsList("Number") is false
 	MlirLayout(function).Represented(kind) is "List(Number)"
 Indexed(entry InstructionEntry) Texts
-	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k)") > 0 is true
+	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0 is true
 	let list = "%v_" + entry.texts(0)
 	let index = function.Load(Temp("i"), "%r" + entry.payload(1))
 	let position = "    " + Temp("j") + " = arith.fptosi " + Temp("i") + " : f64 to i32"
@@ -73,7 +73,7 @@ Read(list Text, target Text) Texts
 	Reading.Read("%v_input", "%r4").Last is "  ^d6done:"
 	let data = MlirTyped.Pointer.Load(Temp("d"), list + "d")
 	let bits = MlirTyped.Integer.Load(Temp("b"), list + "b")
-	let operands = "(" + Temp("d") + ", " + Temp("b") + ", " + Temp("k") + ")"
+	let operands = "(" + Temp("d") + ", " + Temp("b") + ", " + Temp("k") + ", " + Temp("n") + ")"
 	let read = "    " + Temp("") + " = func.call @strict_device_element" + operands + MlirTyped.Element
 	let done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
 	("  ^d" + at + "read:", data, bits, read, function.Store(Temp(""), target)) + done

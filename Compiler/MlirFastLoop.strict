@@ -5,6 +5,7 @@ constant Doubling = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Doubl
 constant Summed = MlirKernel.Summing.function
 constant Summing = MlirFastLoop(MlirFunction(Summed.types, Summed.type, Summed.method, List(Number), 1), 1)
 constant Halving = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2, "numbers 16"), 2)
+constant Quartering = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2, "numbers 8"), 2)
 constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, "
 constant Iterated = "for"
 constant Items = " : (f64) -> !llvm.ptr"
@@ -28,7 +29,7 @@ Started Texts
 	Doubling.Started.Last is "    %t2ri = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"
 	let loops = MlirLoops(function, position)
 	let collected = Pointed(Temp("h"), Temp("v"), Iterated, "strict_list_items")
-	let items = loops.Items.Length is 0 then loops.Items else (collected, loops.Items.Last)
+	let items = loops.Items.Length is 0 then loops.Items else collected + loops.Items.Last
 	mutable lines = List(Text) + ("  ^loop" + position + "fast:") + items
 	for MlirKernel(function, position).Sources
 		lines = lines + Pointed(Temp("h_" + value), Temp("l_" + value), value, "strict_list_start")
@@ -85,23 +86,41 @@ Emitted(at Number) Texts
 	(function.Load("%t" + at + "e", "%r" + entry.payload(0)), address, stored)
 Element(source Text) Text
 	Halving.Element("numbers") is "f16"
+	Quartering.Element("numbers") is "i8"
 	Doubling.Element("numbers") is "f64"
 	let parts = function.Packing.Split(" ")
-	parts.First is not source then "f64" else parts.Last is "16" then "f16" else "f32"
+	if parts.First is not source
+		return "f64"
+	parts.Last is "8" then "i8" else parts.Last is "16" then "f16" else "f32"
 Loaded(result Text, address Text, items Text, source Text) Texts
 	Doubling.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = llvm.load %p : !llvm.ptr -> f64"
 	Halving.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.extf %xn : f16 to f64"
+	Quartering.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.mulf %xq, %xw : f64"
 	let type = Element(source)
 	let pointer = "    " + address + " = llvm.getelementptr " + items + "[" + Temp("ki") + "]" + Pointer + type
 	if type is "f64"
 		return (pointer, "    " + result + " = llvm.load " + address + " : !llvm.ptr -> f64")
 	let narrow = "    " + result + "n = llvm.load " + address + " : !llvm.ptr -> " + type
+	if type is "i8"
+		return (pointer, narrow) + Scaled(result, items)
 	(pointer, narrow, "    " + result + " = arith.extf " + result + "n : " + type + " to f64")
-Pointed(result Text, list Text, source Text, plain Text) Text
-	Halving.Pointed("%h", "%l", "numbers", "strict_list_start").IndexOf("@strict_list_data(%l)") > 0 is true
-	Doubling.Pointed("%h", "%l", "numbers", "strict_list_start").IndexOf("@strict_list_start(%l)") > 0 is true
+Scaled(result Text, items Text) Texts
+	Quartering.Scaled("%x", "%h").First is "    %xf = arith.constant 5 : i64"
+	let block = "    " + result + "b = arith.shrui " + Temp("ki") + ", " + result + "f : i64"
+	let address = "    " + result + "a = llvm.getelementptr " + items + "s[" + result + "b]" + Pointer + "f32"
+	let scale = "    " + result + "s = llvm.load " + result + "a : !llvm.ptr -> f32"
+	let widened = "    " + result + "w = arith.extf " + result + "s : f32 to f64"
+	let byte = "    " + result + "q = arith.sitofp " + result + "n : i8 to f64"
+	let product = "    " + result + " = arith.mulf " + result + "q, " + result + "w : f64"
+	(MlirTyped.Integer.Constant(result + "f", "5"), block, address, scale, widened, byte, product)
+Pointed(result Text, list Text, source Text, plain Text) Texts
+	Halving.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_list_data(%l)") > 0 is true
+	Quartering.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_list_scales(%l)") > 0 is true
+	Doubling.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_list_start(%l)") > 0 is true
 	let called = Element(source) is "f64" then plain else "strict_list_data"
-	"    " + result + " = func.call @" + called + "(" + list + ")" + Items
+	let pointed = "    " + result + " = func.call @" + called + "(" + list + ")" + Items
+	let scales = "    " + result + "s = func.call @strict_list_scales(" + list + ")" + Items
+	Element(source) is "i8" then (pointed, scales) else List(Text) + pointed
 IsAccumulated(at Number) Boolean
 	Summing.IsAccumulated(5) is true
 	Doubling.IsAccumulated(6) is false

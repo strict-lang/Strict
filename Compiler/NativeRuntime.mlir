@@ -323,21 +323,23 @@
   }
   func.func private @strict_packed_list(%packed: !llvm.ptr) -> f64 {
     %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
     %eight = arith.constant 8.0 : f64
     %blockSize = arith.constant 56 : i64
     %count = llvm.load %packed : !llvm.ptr -> f64
     %bitsSlot = llvm.getelementptr %packed[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %bits = llvm.load %bitsSlot : !llvm.ptr -> f64
-    %allBits = arith.mulf %count, %bits : f64
-    %bytesNumber = arith.divf %allBits, %eight : f64
-    %bytes = arith.fptosi %bytesNumber : f64 to i64
+    %elements = arith.fptosi %count : f64 to i64
+    %wholeBits = arith.fptosi %bits : f64 to i64
+    %bytes = func.call @strict_packed_bytes(%elements, %wholeBits) : (i64, i64) -> i64
     %data = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
     %source = llvm.getelementptr %packed[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %copied = llvm.call @memcpy(%data, %source, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %elements = arith.fptosi %count : f64 to i64
     %half = arith.constant 16.0 : f64
     %isHalf = arith.cmpf oeq, %bits, %half : f64
-    func.call @strict_packed_canonical(%data, %elements, %isHalf) : (!llvm.ptr, i64, i1) -> ()
+    %isQuantized = arith.cmpf oeq, %bits, %eight : f64
+    %floats = arith.select %isQuantized, %none, %elements : i64
+    func.call @strict_packed_canonical(%data, %floats, %isHalf) : (!llvm.ptr, i64, i1) -> ()
     %view = func.call @strict_alloc(%blockSize) : (i64) -> !llvm.ptr
     %holder = llvm.getelementptr %view[16] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %zero, %holder : f64, !llvm.ptr
@@ -357,6 +359,33 @@
     llvm.store %holderBits, %viewHolder : f64, !llvm.ptr
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64
     return %result : f64
+  }
+  func.func private @strict_packed_bytes(%count: i64, %bits: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+    %eight = arith.constant 8 : i64
+    %three = arith.constant 3 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %five = arith.constant 5 : i64
+    %two = arith.constant 2 : i64
+    %alignMask = arith.constant -4 : i64
+    %padded = arith.addi %count, %three : i64
+    %aligned = arith.andi %padded, %alignMask : i64
+    %rounded = arith.addi %count, %thirtyOne : i64
+    %blocks = arith.shrui %rounded, %five : i64
+    %scaleBytes = arith.shli %blocks, %two : i64
+    %quantizedBytes = arith.addi %aligned, %scaleBytes : i64
+    %cells = arith.muli %count, %bits : i64
+    %plainBytes = arith.divui %cells, %eight : i64
+    %isQuantized = arith.cmpi eq, %bits, %eight : i64
+    %bytes = arith.select %isQuantized, %quantizedBytes, %plainBytes : i64
+    return %bytes : i64
+  }
+  func.func private @strict_packed_scales(%data: !llvm.ptr, %count: i64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %three = arith.constant 3 : i64
+    %alignMask = arith.constant -4 : i64
+    %padded = arith.addi %count, %three : i64
+    %aligned = arith.andi %padded, %alignMask : i64
+    %scales = llvm.getelementptr %data[%aligned] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    return %scales : !llvm.ptr
   }
   func.func private @strict_packed_canonical(%data: !llvm.ptr, %count: i64, %isHalf: i1) {
     %start = arith.constant 0 : i64
@@ -2294,6 +2323,8 @@
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> f64
     %halfCapacity = arith.constant -16.0 : f64
     %isHalf = arith.cmpf oeq, %capacity, %halfCapacity : f64
+    %quantizedCapacity = arith.constant -8.0 : f64
+    %isQuantized = arith.cmpf oeq, %capacity, %quantizedCapacity : f64
     %dataSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
     %dataBits = llvm.load %dataSlot : !llvm.ptr -> f64
     %data = func.call @strict_ptr(%dataBits) : (f64) -> !llvm.ptr
@@ -2305,6 +2336,7 @@
     %copyItemsBits = llvm.load %copyHolder : !llvm.ptr -> f64
     %copyItems = func.call @strict_ptr(%copyItemsBits) : (f64) -> !llvm.ptr
     %count = arith.fptosi %length : f64 to i64
+    %scales = func.call @strict_packed_scales(%data, %count) : (!llvm.ptr, i64) -> !llvm.ptr
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     cf.br ^check(%start : i64)
@@ -2312,12 +2344,25 @@
     %more = arith.cmpi slt, %index, %count : i64
     cf.cond_br %more, ^element, ^done
   ^element:
-    cf.cond_br %isHalf, ^half, ^single
+    cf.cond_br %isHalf, ^half, ^wider
   ^half:
     %halfSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i16
     %halfBits = llvm.load %halfSlot : !llvm.ptr -> i16
     %fromHalf = func.call @strict_half_number(%halfBits) : (i16) -> f64
     cf.br ^store(%fromHalf : f64)
+  ^wider:
+    cf.cond_br %isQuantized, ^quantized, ^single
+  ^quantized:
+    %byteSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %byteSlot : !llvm.ptr -> i8
+    %byteNumber = arith.sitofp %byte : i8 to f64
+    %five = arith.constant 5 : i64
+    %block = arith.shrui %index, %five : i64
+    %scaleSlot = llvm.getelementptr %scales[%block] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %scale = llvm.load %scaleSlot : !llvm.ptr -> f32
+    %wideScale = arith.extf %scale : f32 to f64
+    %fromQuantized = arith.mulf %byteNumber, %wideScale : f64
+    cf.br ^store(%fromQuantized : f64)
   ^single:
     %singleSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %single = llvm.load %singleSlot : !llvm.ptr -> f32
@@ -2636,6 +2681,14 @@
     return %result : i64
   ^plain:
     return %none : i64
+  }
+  func.func private @strict_list_scales(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %length = llvm.load %view : !llvm.ptr -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %scales = func.call @strict_packed_scales(%data, %count) : (!llvm.ptr, i64) -> !llvm.ptr
+    return %scales : !llvm.ptr
   }
   func.func private @strict_list_data(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
@@ -5109,8 +5162,7 @@
     %lengthNumber = func.call @strict_list_length(%list) : (f64) -> f64
     %length = arith.fptosi %lengthNumber : f64 to i64
     %bits = func.call @strict_gpu_bits(%list) : (f64) -> i64
-    %cells = arith.muli %length, %bits : i64
-    %bytes = arith.divui %cells, %eight : i64
+    %bytes = func.call @strict_packed_bytes(%length, %bits) : (i64, i64) -> i64
     %size = arith.maxui %bytes, %eight : i64
     %big = arith.cmpi uge, %bytes, %cacheable : i64
     cf.cond_br %big, ^lookup, ^fresh
@@ -5176,8 +5228,7 @@
   ^unsized:
     return %false : i1
   ^sized:
-    %rowCells = arith.muli %columns, %bits : i64
-    %rowBytes = arith.divui %rowCells, %eight : i64
+    %rowBytes = func.call @strict_packed_bytes(%columns, %bits) : (i64, i64) -> i64
     %total = arith.muli %rowBytes, %count : i64
     %size = arith.maxui %total, %eight : i64
     %big = arith.cmpi uge, %total, %cacheable : i64
@@ -5627,7 +5678,12 @@
     %exact = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
     llvm.store %true, %exact : i1, !llvm.ptr
     %isHalf = arith.cmpi eq, %bits, %sixteen : i64
-    cf.br ^next(%none : i64)
+    %eight = arith.constant 8 : i64
+    %isQuantized = arith.cmpi eq, %bits, %eight : i64
+    cf.cond_br %isQuantized, ^quantized, ^next(%none : i64)
+  ^quantized:
+    %quantizedExact = func.call @strict_gpu_quantized(%items, %target, %count) : (!llvm.ptr, !llvm.ptr, i64) -> i1
+    return %quantizedExact : i1
   ^next(%index: i64):
     %more = arith.cmpi slt, %index, %count : i64
     cf.cond_br %more, ^element, ^done
@@ -5655,6 +5711,64 @@
   ^done:
     %result = llvm.load %exact : !llvm.ptr -> i1
     return %result : i1
+  }
+  func.func private @strict_gpu_quantized(%items: !llvm.ptr, %target: !llvm.ptr, %count: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %five = arith.constant 5 : i64
+    %zero = arith.constant 0.0 : f64
+    %limit = arith.constant 127.0 : f64
+    %true = arith.constant true
+    %scales = func.call @strict_packed_scales(%target, %count) : (!llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^block(%none, %true : i64, i1)
+  ^block(%first: i64, %exact: i1):
+    %more = arith.cmpi slt, %first, %count : i64
+    %blockEnd = arith.addi %first, %thirtyTwo : i64
+    %end = arith.minsi %blockEnd, %count : i64
+    cf.cond_br %more, ^largest(%first, %zero : i64, f64), ^done
+  ^largest(%index: i64, %largest: f64):
+    %measuring = arith.cmpi slt, %index, %end : i64
+    cf.cond_br %measuring, ^magnitude, ^scaled
+  ^magnitude:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    %negated = arith.negf %value : f64
+    %magnitude = arith.maximumf %value, %negated : f64
+    %larger = arith.maximumf %largest, %magnitude : f64
+    %next = arith.addi %index, %one : i64
+    cf.br ^largest(%next, %larger : i64, f64)
+  ^scaled:
+    %wideScale = arith.divf %largest, %limit : f64
+    %scale = arith.truncf %wideScale : f64 to f32
+    %block = arith.shrui %first, %five : i64
+    %scaleSlot = llvm.getelementptr %scales[%block] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %scale, %scaleSlot : f32, !llvm.ptr
+    %exactScale = arith.extf %scale : f32 to f64
+    %isZero = arith.cmpf oeq, %exactScale, %zero : f64
+    cf.br ^byte(%first, %exact : i64, i1)
+  ^byte(%at: i64, %stillExact: i1):
+    %bytesLeft = arith.cmpi slt, %at, %end : i64
+    cf.cond_br %bytesLeft, ^quantize, ^block(%end, %stillExact : i64, i1)
+  ^quantize:
+    %itemSlot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %item = llvm.load %itemSlot : !llvm.ptr -> f64
+    %divided = arith.divf %item, %exactScale : f64
+    %ratio = arith.select %isZero, %zero, %divided : f64
+    %lowest = arith.negf %limit : f64
+    %below = arith.minnumf %ratio, %limit : f64
+    %clamped = arith.maxnumf %below, %lowest : f64
+    %byte = arith.fptosi %clamped : f64 to i8
+    %byteSlot = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %byteSlot : i8, !llvm.ptr
+    %back = arith.sitofp %byte : i8 to f64
+    %restored = arith.mulf %back, %exactScale : f64
+    %same = arith.cmpf oeq, %restored, %item : f64
+    %bothExact = arith.andi %stillExact, %same : i1
+    %following = arith.addi %at, %one : i64
+    cf.br ^byte(%following, %bothExact : i64, i1)
+  ^done:
+    return %exact : i1
   }
   func.func private @strict_gpu_narrowest(%items: !llvm.ptr, %count: i64, %columns: i64) -> i64 {
     %none = arith.constant 0 : i64

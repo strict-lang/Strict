@@ -56,10 +56,10 @@ Current(register Text, isList Boolean) Texts
 	if isList is false
 		return index + function.Store(Temp("x"), "%v_value")
 	let data = MlirTyped.Pointer.Load(Temp("ed"), register + "d")
-	let bits = MlirTyped.Integer.Load(Temp("eb"), register + "b")
-	let operands = "(" + Temp("ed") + ", " + Temp("eb") + ", " + Temp("k") + ")"
+	let sizes = (MlirTyped.Integer.Load(Temp("eb"), register + "b"), MlirTyped.Integer.Load(Temp("en"), register + "n"))
+	let operands = "(" + Temp("ed") + ", " + Temp("eb") + ", " + Temp("k") + ", " + Temp("en") + ")"
 	let read = "    " + Temp("e") + " = func.call @strict_device_element" + operands + MlirTyped.Element
-	index + (data, bits, read, function.Store(Temp("e"), "%v_value"))
+	index + data + sizes + (read, function.Store(Temp("e"), "%v_value"))
 End Texts
 	Ending.End.Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
 	let begin = function.method.LoopBeginOf(at)

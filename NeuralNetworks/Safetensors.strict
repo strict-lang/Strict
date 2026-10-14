@@ -33,6 +33,7 @@ Float32(name Text) Text
 Rows(name Text) List(Numbers)
 	Tiny.Rows("a") is ((1, 2, 3), (4, 5, 6))
 	Safetensors("NeuralNetworks/tiny.safetensors", 16).Rows("a") is ((1, 2, 3), (4, 5, 6))
+	Safetensors("NeuralNetworks/tiny.safetensors", 8).Rows("a").First.First.IsNearlyEqual(0.992126) is true
 	let entry = Float32(name)
 	TensorFile.Rows(path, Bracketed(entry, "data_offsets").First, Bracketed(entry, "shape"), bits)
 Columns(name Text) List(Numbers)

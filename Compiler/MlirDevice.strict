@@ -107,15 +107,15 @@ Started Texts
 		return index + function.Store("%index", "%v_value")
 	if collection is not "List(Number)"
 		return index + Rowed
-	constant read = "    %element = func.call @strict_device_element(%source, %bits, %at)" + MlirTyped.Element
+	constant read = "    %element = func.call @strict_device_element(%source, %bits, %at, %count)" + MlirTyped.Element
 	index + (read, function.Store("%element", "%v_value"))
 Rowed Texts
-	Layering.Rowed.First is "    %eight = arith.constant 8 : i64"
-	constant bytes = ("    %eight = arith.constant 8 : i64", "    %bytes = arith.divsi %bits, %eight : i64")
-	constant offset = ("    %cells = arith.muli %at, %columns : i64", "    %offset = arith.muli %cells, %bytes : i64")
+	Layering.Rowed.First is "    %bytes = func.call @strict_device_bytes(%columns, %bits) : (i64, i64) -> i64"
+	constant bytes = "    %bytes = func.call @strict_device_bytes(%columns, %bits) : (i64, i64) -> i64"
+	constant offset = "    %offset = arith.muli %at, %bytes : i64"
 	constant row = "    %row = llvm.getelementptr %source[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8"
 	let view = (MlirTyped.Pointer.Store("%row", "%v_valued"), MlirTyped.Integer.Store("%columns", "%v_valuen"))
-	bytes + offset + row + view + MlirTyped.Integer.Store("%bits", "%v_valueb")
+	(bytes, offset, row) + view + MlirTyped.Integer.Store("%bits", "%v_valueb")
 Emitted(first Number, limit Number) Texts
 	Doubling.Emitted(3, 4).Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
