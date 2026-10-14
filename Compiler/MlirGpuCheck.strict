@@ -4,16 +4,25 @@ constant Doubling = MlirGpuCheck(MlirGpu.Doubling.function, 2)
 constant Randomizing = MlirGpuCheck(MlirGpu.Randomizing.function, 2)
 constant Layering = MlirGpuCheck(MlirGpu.Layering.function, 2)
 constant Summed = MlirDeviceStatements.Summed
+constant Absolute = MlirFunction(List(TypeEntry) + GpuSamples.Numbered, GpuSamples.Numbered, GpuSamples.Absolute)
 constant Moves = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
+constant Jumps = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
+constant Values = ("Number", "Boolean")
 constant Rows = ("", "List(Number)", "List(Numbers)", "List(List(Number))")
 IsGpu Boolean
 	Doubling.IsGpu is true
 	Randomizing.IsGpu is false
 	MlirGpuCheck(MlirGpu.Checking.function, 2).IsGpu is true
 	Layering.IsGpu is true
+	MlirGpuCheck(MlirFunction(Doubling.function.types, MlirParallel.Rows, GpuSamples.Ranged), 3).IsGpu is false
 	let isListed = MlirLoops(function, position).Collection is in Rows
-	if (isListed is false) or (MlirParallel(function, position).IsParallel is false)
+	let isRange = function.method.instructions(position).payload(1) is 1
+	if isRange or (isListed is false) or (MlirParallel(function, position).IsParallel is false)
 		return false
+	IsDeviceBody
+IsDeviceBody Boolean
+	Doubling.IsDeviceBody is true
+	Randomizing.IsDeviceBody is false
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if IsDevice(function, value, 0) is false
 			return false
@@ -57,7 +66,8 @@ IsControl(inspected MlirFunction, at Number, depth Number) Boolean
 		return (depth is 0) and (entry.texts(0) is "forResult")
 	if entry.kind is InstructionType.LoopBegin
 		return IsInnerLoop(inspected, at)
-	(entry.kind is InstructionType.LoopEnd) or (entry.kind is InstructionType.CheckError)
+	let isJump = (depth > 0) and (entry.kind is in Jumps)
+	isJump or (entry.kind is InstructionType.LoopEnd) or (entry.kind is InstructionType.CheckError)
 IsInnerLoop(inspected MlirFunction, at Number) Boolean
 	Layering.IsInnerLoop(Summed, 2) is true
 	Layering.IsInnerLoop(Layering.function, 2) is false
@@ -67,9 +77,10 @@ IsInnerLoop(inspected MlirFunction, at Number) Boolean
 IsArithmetic(inspected MlirFunction, at Number) Boolean
 	Doubling.IsArithmetic(MlirDevice.Twice.function, 2) is true
 	let entry = inspected.method.instructions(at)
-	let isOperator = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.Modulo)
+	let isCalculated = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.Modulo)
+	let isOperator = isCalculated or (entry.kind > InstructionType.ArithmeticSeparator)
 	let kinds = MlirKinds(inspected)
-	isOperator and (kinds.KindOf(at, entry.payload(1)) is "Number") and (kinds.KindOf(at, entry.payload(2)) is "Number")
+	isOperator and (kinds.KindOf(at, entry.payload(1)) is in Values) and (kinds.KindOf(at, entry.payload(2)) is in Values)
 IsKnown(inspected MlirFunction, at Number, name Text, depth Number) Boolean
 	Doubling.IsKnown(Doubling.function, 3, "value", 0) is true
 	Doubling.IsKnown(Doubling.function, 3, "numbers", 0) is false
@@ -95,6 +106,7 @@ IsCall(inspected MlirFunction, at Number, depth Number) Boolean
 IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
 	Doubling.IsDeviceMethod(List(MlirFunction) + MlirDevice.Twice.function, 1) is true
 	Layering.IsDeviceMethod(List(MlirFunction) + Summed, 1) is true
+	Layering.IsDeviceMethod(List(MlirFunction) + Absolute, 1) is true
 	if (callees.Length is not 1) or (callees.First.method.instructions.Length is 0)
 		return false
 	let callee = callees.First

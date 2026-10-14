@@ -7,11 +7,10 @@ constant Layered = MlirGpu.Layering.function
 constant Summed = MlirFunction(Layered.types, GpuSamples.Layered, GpuSamples.Summed)
 constant Calling = MlirDeviceStatements(Doubled, 4)
 constant Call = Doubled.method.instructions(4)
-constant Collecting = MlirDeviceStatements(Doubled, 5)
 constant Multiplying = MlirDeviceStatements(Twice, 2)
 constant Reading = MlirDeviceStatements(Summed, 6)
 constant Lookup = Summed.method.instructions(6)
-constant Inputs = MlirDeviceStatements(Layered, 4)
+constant Absolute = MlirDeviceStatements(MlirGpuCheck.Absolute, 2)
 constant Passing = MlirDeviceStatements(Layered, 5)
 Emitted Texts
 	MlirDeviceStatements(Doubled, 3).Emitted.First is "    %d3 = llvm.load %v_value : !llvm.ptr -> f64"
@@ -21,7 +20,7 @@ Emitted Texts
 		return Moved(entry)
 	if entry.kind is InstructionType.IndexCall
 		return Indexed(entry)
-	if entry.kind < InstructionType.ArithmeticSeparator
+	if entry.kind < InstructionType.BinaryOperatorsSeparator
 		return Calculated(entry)
 	if entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 		return MlirDeviceLoops(function, at).Emitted
@@ -31,7 +30,7 @@ Temp(suffix Text) Text
 	"%d" + at + suffix
 Moved(entry InstructionEntry) Texts
 	MlirDeviceStatements(Twice, 1).Moved(Twice.method.instructions(1)).First.EndsWith("0x4000000000000000 : f64") is true
-	Inputs.Moved(Layered.method.instructions(4)).Last.EndsWith("%d4b, %r2b : i64, !llvm.ptr") is true
+	MlirDeviceStatements(Layered, 4).Moved(Layered.method.instructions(4)).Last.EndsWith(", %r2b : i64, !llvm.ptr") is true
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Copied("%v_" + entry.texts(0), "%r" + entry.payload(0), entry.texts(0))
 	if entry.kind is InstructionType.StoreRegisterToVariable
@@ -80,6 +79,9 @@ Read(list Text, target Text) Texts
 	("  ^d" + at + "read:", data, bits, read, function.Store(Temp(""), target)) + done
 Calculated(entry InstructionEntry) Texts
 	Multiplying.Calculated(Twice.method.instructions(2)).Last is "    llvm.store %d2, %r2 : f64, !llvm.ptr"
+	Text.Combine(Absolute.Calculated(Absolute.function.method.instructions(2))).IndexOf("arith.cmpf olt") > 0 is true
+	if entry.kind > InstructionType.ArithmeticSeparator
+		return MlirStatements(function, at).Calculated(entry)
 	let left = function.Load(Temp("a"), "%r" + entry.payload(1))
 	let right = function.Load(Temp("b"), "%r" + entry.payload(2))
 	let operation = MlirStatements(function, at).Operation(entry.kind)
@@ -106,13 +108,25 @@ Callee MlirFunction
 	MlirModule(function.types, "").Called(function, at).First
 Finished(entry InstructionEntry) Texts
 	MlirDeviceStatements(Checked, 5).Finished(Checked.method.instructions(5)).Length is 0
+	MlirDeviceStatements(Absolute.function, 3).Finished(Absolute.function.method.instructions(3)).Length is 2
 	if entry.kind is InstructionType.CheckError
 		return List(Text)
+	if entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
+		return MlirStatements(function, at).Jumped(entry)
 	if entry.kind is InstructionType.Return
 		return (function.Load(Temp(""), "%r" + entry.payload(0)), "    return " + Temp("") + " : f64")
 	Collected(entry)
+Labeled Texts
+	MlirDeviceStatements(Absolute.function, 4).Labeled is ("  ^bb4:")
+	MlirDeviceStatements(Absolute.function, 10).Labeled is ("    cf.br ^bb10", "  ^bb10:")
+	if (at is 0) or (function.Label(at).Length is 0)
+		return List(Text)
+	let previous = function.method.instructions(at - 1).kind
+	let isJump = previous is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+	let isTerminated = isJump or (previous is InstructionType.Return)
+	isTerminated then List(Text) + ("  ^bb" + at + ":") else ("    cf.br ^bb" + at, "  ^bb" + at + ":")
 Collected(entry InstructionEntry) Texts
-	Collecting.Collected(Doubled.method.instructions(5)).Last is "  ^d5skip:"
+	MlirDeviceStatements(Doubled, 5).Collected(Doubled.method.instructions(5)).Last is "  ^d5skip:"
 	let pointer = "    " + Temp("p") + " = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
 	let stored = "    llvm.store " + Temp("") + ", " + Temp("p") + " : f64, !llvm.ptr"
 	let compared = "    " + Temp("w") + " = arith.cmpi eq, %lane, " + Temp("z") + " : i64"
