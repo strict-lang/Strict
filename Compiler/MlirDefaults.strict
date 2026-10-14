@@ -1,0 +1,29 @@
+has function MlirFunction
+constant Labeled = TypeCodegen("Strict/Labeled", ("has label Text = \"Names\"", "has names Texts = (\"a\", \"b\")"), ValueCodegen.NoTypes, List(Text)).Entry
+constant Labeling = MlirDefaults(MlirFunction(List(TypeEntry) + Labeled, Labeled, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))))
+constant Label = Labeled.members.First
+constant Instances = MlirInstances(Labeling.function, 0)
+constant LabelGlobal = "  llvm.mlir.global internal constant @dLabeled_label(\"Names\\00\") : !llvm.array<6 x i8>"
+Name(owner TypeEntry, member MemberEntry) Text
+	Labeling.Name(Labeled, Label) is "@dLabeled_label"
+	Text.Combine(Instances.Default(Labeled, Label, "%s", "d")).IndexOf(" @dLabeled_label ") > 0 is true
+	"@d" + MlirEquality(function, 0).Symbol(owner.JustName) + "_" + member.Name
+Globals Texts
+	Labeling.Globals.First is LabelGlobal
+	Labeling.Globals.Last.StartsWith("  llvm.mlir.global internal constant @dLabeled_names_1(\"b\\00\")") is true
+	Labeling.Globals.Length is 3
+	mutable lines = List(Mutable(Text))
+	for function.types
+		let type = value
+		for MlirInstances(function, 0).Stored(type)
+			lines = lines + Declared(type, value)
+	lines
+Declared(owner TypeEntry, member MemberEntry) Texts
+	Labeling.Declared(Labeled, Label) is (LabelGlobal)
+	let literal = Natives(function.types).Initial(member)
+	let constants = MlirConstants(function, 0, Name(owner, member))
+	if literal.kind is "Text"
+		return literal.text is "" then List(Text) else List(Text) + constants.TextGlobal(literal.text, "")
+	let elements = literal.kind is "List" then constants.TextElements(literal) else List(Number)
+	for elements
+		constants.TextGlobal(literal.items(value).text, "_" + value)

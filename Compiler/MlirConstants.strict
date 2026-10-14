@@ -1,5 +1,6 @@
 has function MlirFunction
 has position Number
+has named Text = ""
 constant Varying = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), MlirInstances.Built)))
 IsConstant Boolean
 	MlirConstants(MlirTexts.Joined, 0).IsConstant is true
@@ -81,21 +82,27 @@ Cache Text
 	"@l" + function.Symbol + "_" + position
 TextGlobal(text Text, symbol Text) Text
 	MlirConstants(MlirTexts.Joined, 0).TextGlobal("b", "_1").IndexOf("@cShape_Run_0_0_1(") > 0 is true
-	let name = "@c" + function.Symbol + "_" + position + symbol + "(\"" + Escaped(text, false) + "\\00\")"
+	MlirConstants(MlirTexts.Joined, 0, "@dA_b").TextGlobal("b", "_1").IndexOf("@dA_b_1(") > 0 is true
+	let name = Base + symbol + "(\"" + Escaped(text, false) + "\\00\")"
 	"  llvm.mlir.global internal constant " + name + " : !llvm.array<" + (EscapedLength(text, false) + 1) + " x i8>"
 Literal(text Text, slot Text, suffix Text) Texts
 	MlirConstants(MlirTexts.Joined, 0).Literal("a%", "%r0", "").Length is 3
 	MlirConstants(MlirTexts.Joined, 1).Literal("", "%s", "d0").First.IndexOf("@strict_empty") > 0 is true
 	MlirConstants(MlirTexts.Joined, 1).Literal("b", "%s", "").First.StartsWith("unsupported") is true
-	if text is not "" and (IsConstant is false)
+	MlirConstants(MlirTexts.Joined, 1, "@dA_b").Literal("b", "%s", "d0").First.IndexOf(" @dA_b ") > 0 is true
+	if (text is not "") and (named is "") and (IsConstant is false)
 		return List(Text) + MlirStatements(function, position).Unsupported("Text constant")
 	Address(text, "", suffix) + function.Store(MlirMemory(function, position).Temp(suffix + "xf"), slot)
 Address(text Text, symbol Text, suffix Text) Texts
 	MlirConstants(MlirTexts.Joined, 0).Address("a", "_2", "e").First.IndexOf("@cShape_Run_0_0_2 ") > 0 is true
 	let memory = MlirMemory(function, position)
-	let name = text is "" then "@strict_empty" else "@c" + function.Symbol + "_" + position + symbol
+	let name = text is "" then "@strict_empty" else Base + symbol
 	let address = "    " + memory.Temp(suffix + "c") + " = llvm.mlir.addressof " + name + " : !llvm.ptr"
 	List(Text) + address + memory.Bits(memory.Temp(suffix + "c"), suffix + "x")
+Base Text
+	MlirConstants(MlirTexts.Joined, 0).Base is "@cShape_Run_0_0"
+	MlirConstants(MlirTexts.Joined, 0, "@dA_b").Base is "@dA_b"
+	named is "" then "@c" + function.Symbol + "_" + position else named
 Escaped(text Text, isFormat Boolean) Text
 	MlirConstants(MlirTexts.Joined, 0).Escaped("a\"%", true) is "a\\22%%"
 	MlirConstants(MlirTexts.Joined, 0).Escaped("a%", false) is "a%"

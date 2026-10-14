@@ -11,6 +11,7 @@ constant Counter = TypeEntry("Strict/Examples/NativeAdd/Counter", List(MemberEnt
 constant Counting = MlirFunction(List(TypeEntry), Counter, Next)
 constant Splits = MethodEntry("Split", Doubles.parameters, "Strict/List(Numbers)", List(InstructionEntry))
 constant Splitter = MlirFunction(List(TypeEntry), Doubler.type, Splits)
+constant Unimplementing = "TraitHasNoImplementation: Adder.Add has no body and no native/Adder.c, use a Generic member to hold any type with Add"
 constant Started = MethodEntry("from", Add.parameters, "Strict/Examples/NativeAdd/Counter", List(InstructionEntry))
 IsForeign Boolean
 	MlirForeign(Adder).IsForeign is true
@@ -36,6 +37,11 @@ Symbol Text
 Wrapper Text
 	MlirForeign(Adder).Wrapper is "Adder_Add_foreign"
 	Symbol + "_foreign"
+Unimplemented Text
+	MlirForeign(Adder).Unimplemented is Unimplementing
+	let name = function.type.JustName
+	let missing = name + "." + function.method.Name + " has no body and no native/" + name + ".c"
+	"TraitHasNoImplementation: " + missing + ", use a Generic member to hold any type with " + function.method.Name
 Declaration Texts
 	MlirForeign(Adder).Declaration.First is "  func.func private @Adder_Add(f64, f64, f64) -> f64"
 	MlirForeign(Adder).Declaration.Index("  func.func private @Adder_Add_foreign(" + Adding + ") -> f64 {") is 1

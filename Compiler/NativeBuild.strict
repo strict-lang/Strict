@@ -1,5 +1,5 @@
 has logger
-constant Intermediates = (".llvm.mlir", ".ll", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o")
+constant Intermediates = (".llvm.mlir", ".ll", ".res", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o")
 Built(path Text, root Text) Number
 	let failed = Execute(logger).Test(path, root)
 	failed > 0 then failed else Compile(path, root)

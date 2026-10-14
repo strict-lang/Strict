@@ -27,17 +27,17 @@ Generated(name Text) Texts
 		return List(Text) + "Members Variables" + Described
 	if name is "to HashCode"
 		return List(Text) + "to HashCode" + Hashed
-	List(Text) + ("Validated " + instance) + Validations + "\tvalue"
-Validations Texts
-	Sized.Validations.First is "\tif (Width > 0) is false"
-	Sized.Validations.Last.StartsWith("\t\treturn Error(\"ConstraintNotMet: Width with value > 0 is false for") is true
-	mutable result = List(Mutable(Text))
+	List(Text) + ("Validated " + instance) + "\tvalue"
+Validations SyntaxNodes
+	Sized.Validations.First to Text is "if Width > 0 is false"
+	Sized.Validations.First.line is 1
+	mutable result = List(Mutable(SyntaxNode))
 	for Stored
 		let start = value.IndexOf(" with ")
 		if start > 0
 			let constraint = value.Substring(start + 6, value.Length - start - 6)
 			let checked = Constraint(Header(value).MemberName, MemberType(value), instantiation.types)
-			result = result + ("\tif (" + checked.Condition(constraint) + ") is false") + ("\t\t" + checked.Failure(constraint))
+			result.Add(checked.Checked(constraint, lines.Index(value) + 1))
 	result
 IsWanted(name Text, names Texts) Boolean
 	Point.IsWanted("Members", Names) is true

@@ -26,12 +26,13 @@ Binary(entry InstructionEntry) Texts
 Temp(suffix Text) Text
 	Copy.Temp("c") is "%t0c"
 	"%t" + position + suffix
-Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
+Literal(literal Runtime/VmValue, slot Text, suffix Text, named = "") Texts
 	Copy.Literal(VmValue.OfNumber(1), "%r0", "").First is "    %t0c = arith.constant 0x3FF0000000000000 : f64"
+	Copy.Literal(VmValue.OfText("b"), "%s", "d0", "@dA_b").First.IndexOf(" @dA_b ") > 0 is true
 	if literal.kind is "Text"
-		return MlirConstants(function, position).Literal(literal.text, slot, suffix)
+		return MlirConstants(function, position, named).Literal(literal.text, slot, suffix)
 	if literal.kind is "List"
-		return MlirLists(function, position).Literal(literal, slot, suffix)
+		return MlirLists(function, position, named).Literal(literal, slot, suffix)
 	if literal.kind is not in ("Number", "Boolean", "None")
 		return List(Text) + Unsupported(literal.kind + " constant")
 	let number = "    " + Temp(suffix + "c") + " = arith.constant " + Hex(literal.number) + " : f64"

@@ -68,7 +68,7 @@ Globals(functions List(MlirFunction)) Texts
 	mutable lines = List(Mutable(Text))
 	for functions
 		lines = lines + FunctionGlobals(value)
-	lines
+	lines + MlirDefaults(functions.First).Globals
 FunctionGlobals(function MlirFunction) Texts
 	Counters.FunctionGlobals(MlirCalls.Shapes).Length is 3
 	Counters.FunctionGlobals(MlirCalls.Shapes).First.IndexOf("(\"Shape.Run\\00Shape.strict\\00\")") > 0 is true

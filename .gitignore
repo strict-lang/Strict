@@ -151,6 +151,7 @@ test_output.txt
 temp_inspect.csx
 *.exp
 *.lib
+*.res
 .continue/rules/*.md
 .output.txt
 transpiler-test-output.txt

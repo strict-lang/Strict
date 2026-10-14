@@ -1,5 +1,6 @@
 has function MlirFunction
 has position Number
+has named Text = ""
 constant Items = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
 constant Steps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "numbers"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 3)), InstructionEntry.Binary(InstructionType.Add, (0, 0, 3)))
 constant Listed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", Steps))
@@ -67,8 +68,9 @@ Created(count Number, suffix Text) Texts
 	(capacity, memory.Called(Temp(suffix + "l"), "strict_list_new", (Temp(suffix + "q"), "%zero")))
 Element(item Runtime/VmValue, index Number, element Text) Texts
 	MlirLists(Listed, 0).Element(VmValue.OfNumber(2), 0, "e0") is ("    %t0e0c = arith.constant 0x4000000000000000 : f64")
+	MlirLists(Listed, 0, "@dA_b").Element(VmValue.OfText("a"), 0, "e0").First.IndexOf(" @dA_b_0 ") > 0 is true
 	if item.kind is "Text"
-		return MlirConstants(function, position).Address(item.text, "_" + index, element)
+		return MlirConstants(function, position, named).Address(item.text, "_" + index, element)
 	if item.kind is not in ("Number", "Boolean")
 		let unsupported = MlirStatements(function, position).Unsupported("nested " + item.kind + " constant")
 		return List(Text) + unsupported
