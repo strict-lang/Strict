@@ -77,7 +77,8 @@ Keying(helper Text, operands Texts, kind Text) Texts
 	let arguments = Text.Combine(operands + memory.Temp("h") + memory.Temp("e"), ", ")
 	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
 	let call = "    " + memory.Temp("k") + " = func.call @" + helper + "(" + arguments + ") : (" + types
-	(hash, equal, call + ", (f64) -> i64, (f64, f64) -> f64) -> f64") + memory.Traced(memory.Temp("k"), memory.Temp("r"))
+	let traced = memory.Traced(memory.Temp("k"), memory.Temp("r"), "strict_trace")
+	(hash, equal, call + ", (f64) -> i64, (f64, f64) -> f64) -> f64") + traced
 Element(kind Text) Text
 	MlirNatives(Texts, 1).Element("List(Text)") is "Text"
 	MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind))

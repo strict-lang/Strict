@@ -1,5 +1,7 @@
 has entry MlirFunction
 constant Counted = MlirEntry(MlirModule.Counters.Functions.First)
+constant Frames = MemberEntry("frames", "Strict/Number", List(InstructionEntry) + InstructionEntry.Set(List(Text), (1, 7)), false)
+constant Framed = MlirEntry(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Frames, "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))))
 constant Unhandled = ("    %unhandled = func.call @strict_unhandled(%result) : (f64) -> i1", "    %failing = arith.constant 1 : i32")
 constant Exit = "    %exit = arith.select %unhandled, %failing, %code : i32"
 constant CollectorStart = ("    %frameLevel = arith.constant 0 : i32", "    %stackBase = llvm.call_intrinsic \"llvm.frameaddress.p0\"(%frameLevel) : (i32) -> !llvm.ptr", "    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()")
@@ -24,14 +26,26 @@ EntryCall Text
 	"    %result = func.call @" + entry.Symbol + "(" + operands + ") : (" + signature + ") -> f64"
 Arguments Texts
 	Counted.Arguments.Length is 0
+	Framed.Arguments.Last is "    %arg0 = arith.select %arg0has, %arg0given, %arg0default : f64"
 	mutable lines = List(Mutable(Text))
 	for entry.method.parameters
-		lines = lines + Argument(TypeEntry.ShortName(value.typeName), index)
+		let kind = TypeEntry.ShortName(value.typeName)
+		let isDefaulted = (value.initial.Length > 0) and (kind is in ("Number", "Boolean"))
+		let name = "%arg" + index + (isDefaulted then "given" else "")
+		lines = lines + Argument(kind, index, name) + (isDefaulted then Defaulted(value, index) else List(Text))
 	lines
-Argument(kind Text, index Number) Texts
-	Counted.Argument("Text", 0).Last.StartsWith("    %arg0 = func.call @strict_argument(%argc, %argv") is true
-	Counted.Argument("List(Number)", 1).Length is 1
-	let name = "%arg" + index
+Defaulted(parameter MemberEntry, index Number) Texts
+	Framed.Defaulted(Frames, 0).First is "    %arg0slot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	let slot = "%arg" + index + "slot"
+	let stored = MlirStatements(entry, 0).Literal(Natives(entry.types).Initial(parameter), slot, "d" + index)
+	let given = "    %arg" + index + "has = arith.cmpi sgt, %argc, %argindex" + index + " : i32"
+	let operands = "%arg" + index + "has, %arg" + index + "given, %arg" + index + "default : f64"
+	let allocated = "    " + slot + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	let chosen = "    %arg" + index + " = arith.select " + operands
+	List(Text) + allocated + stored + given + entry.Load("%arg" + index + "default", slot) + chosen
+Argument(kind Text, index Number, name Text) Texts
+	Counted.Argument("Text", 0, "%arg0").Last.StartsWith("    %arg0 = func.call @strict_argument(%argc, %argv") is true
+	Counted.Argument("List(Number)", 1, "%arg1").Length is 1
 	if kind.StartsWith("List(") or (kind is in ("Numbers", "Texts"))
 		return List(Text) + AllArguments(kind, name)
 	let read = kind is "Number" then name + "text" else name

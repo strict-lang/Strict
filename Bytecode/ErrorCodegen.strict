@@ -11,6 +11,8 @@ constant A = SyntaxNode("Identifier", "a")
 constant IsError = SyntaxNode("Binary", "is", (A, BareError))
 constant IsOne = SyntaxNode("Binary", "is", (A, ValueCodegen.One))
 constant FallibleA = ErrorScope.Plain.Fallible("a", CodeBlock.Empty.Declare("a", "Number"))
+constant NewSize = SyntaxNode("Call", "Size", ValueCodegen.One)
+constant Sizing = ErrorCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Size", List(Scope) + Scope(List(Text) + "Width", List(Text) + "Number"), List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + TypeShape.Constrained, List(Text) + "true")), CallTarget.NoScopes), Scope(List(Text), List(Text)), CallTarget.Plain))
 Folded(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Folded(ValueCodegen.One, CodeBlock.Empty).text is "1"
 	ConversionCodegen(values).Typed(ConstantFolding(values.target.TypeName, values.inference).Folded(node), block)
@@ -101,3 +103,12 @@ Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(IsError, Greeting, CodeBlock.Empty).instructions.Length is 1
 	Plain.Compared(IsOne, Greeting, CodeBlock.Empty).instructions.Length is 2
 	IsErrorComparison(comparison, block) then Handled(operand, block) else Checked(operand, block)
+Validated(node SyntaxNode, block CodeBlock, constructed CodeBlock) CodeBlock
+	Sizing.Validated(NewSize, CodeBlock.Empty, CodeBlock.Empty).instructions.Last.texts(1) is "Validated"
+	Plain.Validated(Greeting, CodeBlock.Empty, CodeBlock.Empty).instructions.Length is 0
+	let type = values.TypeOf(node, block)
+	let types = values.inference.types
+	let isConstructor = (node.Kind is "Call") and (types.BaseName(type) is node.text)
+	if (isConstructor is false) or (types.ParameterScope(type).TypeOf(TypeShape.Constrained) is not "true")
+		return constructed
+	values.Invoke(SyntaxNode("Member", "Validated", List(SyntaxNode) + node), constructed, constructed.Result, type)

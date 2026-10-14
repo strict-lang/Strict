@@ -1,0 +1,8 @@
+has number with value >= 0 and value % 1 is 0
+Limited(frames = 0 with value >= 0) Number
+	FrameLimit(3).Limited(2) is 2
+	FrameLimit(3).Limited is 0
+	FrameLimit(3).Limited(-1) is Error
+	FrameLimit(-1) is Error
+	FrameLimit(1.5) is Error
+	frames

@@ -11,3 +11,6 @@ Swapped Couple
 	Couple("a", 2) is not Couple("a", 3)
 	Couple("a", 2).Members.Last to Text is "second Strict.Number"
 	Couple(second, first)
+Total Number
+	Couple("ab", "c").Total is 3
+	first.Length + second.Length

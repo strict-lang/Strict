@@ -22,7 +22,7 @@ Argument(instanceType Text, name Text) Text
 	Pairing.Argument("Couple(Text, Number)", "first") is "Text"
 	Pairing.Argument("Iterator(Text)", "first") is "Text"
 	let arguments = Arguments(instanceType)
-	if (arguments.Length < 2) or (types.BaseName(instanceType) is in ("List", "Dictionary", "Iterator"))
+	if (arguments.Length is 0) or (types.BaseName(instanceType) is in ("List", "Dictionary", "Iterator"))
 		return types.ElementType(instanceType)
 	let position = Position(instanceType, name)
 	(position >= 0) and (position < arguments.Length) then arguments(position) else "Unknown"
@@ -45,7 +45,8 @@ Arguments(instanceType Text) Texts
 Members(typeName Text, members Scope) Scope
 	Pairing.Members("Couple(Text, Number)", Couples.members(0)).TypeOf("second") is "Number"
 	Pairing.Members("Couple", Couples.members(0)).TypeOf("second") is "Generic"
-	if Arguments(typeName).Length < 2
+	Pairing.Members("Couple(Text)", Scope(List(Text) + "first", List(Text) + "Generic")).TypeOf("first") is "Text"
+	if Arguments(typeName).Length is 0
 		return members
 	mutable concrete = List(Mutable(Text))
 	for members.names

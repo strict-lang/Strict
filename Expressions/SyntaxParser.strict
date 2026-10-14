@@ -6,6 +6,7 @@ Parse SyntaxNode
 	SyntaxParser(Tokenizer("Add(5, x.y).Length").Tokens).Parse to Text is "Add(5, x.y).Length"
 	SyntaxParser(Tokenizer("(not a) and b").Tokens).Parse to Text is "(not a) and b"
 	SyntaxParser(Tokenizer("x is not 5").Tokens).Parse to Text is "x is not 5"
+	SyntaxParser(Tokenizer("1 < 2 and 3 > 2 or 4 is 0").Tokens).Parse.text is "or"
 	SyntaxParser(Tokenizer("(1, 2, 3)").Tokens).Parse to Text is "(1, 2, 3)"
 	SyntaxParser(Tokenizer("list.Add(-1)").Tokens).Parse to Text is "list.Add(-1)"
 	SyntaxParser(Tokenizer("a then b else c then d else e").Tokens).Parse.children.Last.text is "else"

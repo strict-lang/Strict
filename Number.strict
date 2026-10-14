@@ -88,8 +88,8 @@ is(other) Boolean
 	2 ^ 2 is 4
 	value ^ other
 and(other) Number
-	12 and 10 is 8
-	(0 - 1) and 255 is 255
+	(12 and 10) is 8
+	((0 - 1) and 255) is 255
 	let left = value < 0 then value + 2 ^ 53 else value
 	let right = other < 0 then other + 2 ^ 53 else other
 	mutable result = 0
@@ -99,10 +99,10 @@ and(other) Number
 			result = result + bit
 	result >= 2 ^ 52 then result - 2 ^ 53 else result
 or(other) Number
-	12 or 10 is 14
+	(12 or 10) is 14
 	value + other - (value and other)
 xor(other) Number
-	12 xor 10 is 6
+	(12 xor 10) is 6
 	(value or other) - (value and other)
 >(other) Boolean
 	0 > 0 is false

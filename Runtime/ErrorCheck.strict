@@ -15,4 +15,13 @@ Value(slots List(VmValue), frame Frame, position Number) VmValue
 	Returning.Value(Failed, Frame.Twice, 0).kind is "Strict/Error"
 	Returning.Value(Passed, Frame.Twice, 0).number is 1
 	let checked = slots(entry.payload(0))
-	checked.kind is in VmValue.ErrorKinds then frame.Traced(checked, position) else slots(entry.Target)
+	if checked.kind is not in VmValue.ErrorKinds
+		return slots(entry.Target)
+	IsTracedIn(checked, frame) then checked else frame.Traced(checked, position)
+IsTracedIn(error VmValue, frame Frame) Boolean
+	Returning.IsTracedIn(Frame.Twice.Traced(VmValue.OfError("a"), 0), Frame.Twice) is true
+	Returning.IsTracedIn(VmValue.OfError("a"), Frame.Twice) is false
+	let traces = (error.kind is "Strict/ErrorWithValue" then error.items(0) else error).items(1).items
+	if traces.Length is 0
+		return false
+	traces.Last.items(0).text is TypeEntry.ShortName(frame.owner) + "." + frame.method.Name

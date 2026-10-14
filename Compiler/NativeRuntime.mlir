@@ -1785,6 +1785,42 @@
     llvm.store %added, %tracesSlot : f64, !llvm.ptr
     return %value : f64
   }
+  func.func private @strict_trace_checked(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["noinline"]} {
+    %failed = func.call @strict_is_failure(%value) : (f64) -> i1
+    cf.cond_br %failed, ^check, ^done
+  ^check:
+    %error = func.call @strict_failed_error(%value) : (f64) -> f64
+    %method = func.call @strict_bits(%where) : (!llvm.ptr) -> f64
+    %here = func.call @strict_traced_in(%error, %method) : (f64, f64) -> i1
+    cf.cond_br %here, ^done, ^trace
+  ^trace:
+    %traced = func.call @strict_error_trace(%value, %where, %line) : (f64, !llvm.ptr, i64) -> f64
+    return %traced : f64
+  ^done:
+    return %value : f64
+  }
+  func.func private @strict_traced_in(%error: f64, %method: f64) -> i1 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %block = func.call @strict_ptr(%error) : (f64) -> !llvm.ptr
+    %tracesSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %traces = llvm.load %tracesSlot : !llvm.ptr -> f64
+    %count = func.call @strict_list_length(%traces) : (f64) -> f64
+    %hasTraces = arith.cmpf ogt, %count, %zero : f64
+    cf.cond_br %hasTraces, ^last, ^different
+  ^last:
+    %index = arith.subf %count, %one : f64
+    %entry = func.call @strict_list_get(%traces, %index) : (f64, f64) -> f64
+    %entryBlock = func.call @strict_ptr(%entry) : (f64) -> !llvm.ptr
+    %entryMethod = llvm.load %entryBlock : !llvm.ptr -> f64
+    %entryMethodBits = arith.bitcast %entryMethod : f64 to i64
+    %methodBits = arith.bitcast %method : f64 to i64
+    %same = arith.cmpi eq, %entryMethodBits, %methodBits : i64
+    return %same : i1
+  ^different:
+    %false = arith.constant false
+    return %false : i1
+  }
   func.func private @strict_trace_repeated(%error: f64, %method: f64, %line: i64) -> i1 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64

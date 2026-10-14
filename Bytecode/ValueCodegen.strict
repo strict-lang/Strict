@@ -102,13 +102,13 @@ Replacing(node SyntaxNode, block CodeBlock) CodeBlock
 	let replaced = ConversionCodegen(value).Replaced(node)
 	let instance = node.children.Length > 0 then node.children(0) else node
 	if (replaced is node) or (instance.Kind is "Identifier")
-		return Invoke(replaced, block, -1, TypeOf(node, block))
+		return ErrorCodegen(value).Validated(node, block, Invoke(replaced, block, -1, TypeOf(node, block)))
 	let name = "replaced" + block.nextId
 	let stored = Expression(instance, block).Stored(name).At(block.register).Declare(name, TypeOf(instance, block))
 	mutable children = node.children
 	children(0) = SyntaxNode("Identifier", name)
 	let renamed = ConversionCodegen(value).Replaced(SyntaxNode(node.Kind, node.text, children, node.line))
-	Invoke(renamed, stored.WithNextId, -1, TypeOf(node, block))
+	ErrorCodegen(value).Validated(node, block, Invoke(renamed, stored.WithNextId, -1, TypeOf(node, block)))
 IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is true
 	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false

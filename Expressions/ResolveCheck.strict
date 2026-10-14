@@ -16,7 +16,7 @@ Unresolved(path Text, inference TypeInference) Texts
 	let bodies = MethodBodies(TypeName(path), TypeShape(lines), inference)
 	let known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(TypeName(path)).names
 	let check = FileCheck(inference, known)
-	let issues = check.Unimplemented(path, lines) + check.UnsupportedDefaults(path, lines)
+	let issues = check.Unimplemented(path, lines) + check.UnsupportedDefaults(path, lines) + Constraint.Where(path, lines)
 	mutable unresolved = issues + TypeChoice(lines).Ambiguous(inference.types.names, path)
 	for bodies.Statements
 		let unknown = check.Unknown(value, bodies.Methods)
@@ -60,7 +60,7 @@ Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scop
 			traits = traits.WithAll(types.parameters(position).names, types.parameters(position).types)
 	mutable result = scope
 	for traits.names
-		if (traits.Count(value) > 1) and (scope.Count(value) is 0)
+		if (traits.Count(value) > 1) and (scope.Count(value) is 0) and (value is not TypeShape.Constrained)
 			result = result.With(value, traits.types(index))
 	result
 ChainTyped(inference TypeInference, shape TypeShape, scope Scope, typeName Text) Scope

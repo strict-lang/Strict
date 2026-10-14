@@ -1,6 +1,8 @@
 has values ValueCodegen
 constant Plain = TestLines(ValueCodegen.Plain)
 constant One = MethodCodegen.One
+constant Framed = BodyParser("Run(frames = 0 with value >= 0) Number", "\tRun(1) is 1", "\tframes").Block(1, 1)
+constant FramedHeader = HeaderTokens(Tokenizer("Run(frames = 0 with value >= 0) Number").Tokens)
 constant Declared = BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\t2").Block(1, 1)
 constant Even = TestLines(ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text) + "IsEven", List(Text) + "Boolean"), CallTarget(CallTarget.NoTypes, TypeShape("IsEven(number Number) Boolean", "\tnumber % 2 is 0"), "Strict/C", List(Text))))
 Without(body SyntaxNode, block CodeBlock) SyntaxNode
@@ -57,3 +59,21 @@ IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	if isLeading and values.IsMethodCall(line, block) or lineText.IndexOf(" is ") >= 0
 		return values.TypeOf(line, block) is "Boolean"
 	false
+Guarded(body SyntaxNode, header HeaderTokens, line Number, scope Scope) SyntaxNode
+	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children(1).Kind is "If"
+	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children.Length is 3
+	let end = LeadingEnd(body, CodeBlock(List(InstructionEntry), 0, 0, scope))
+	let checks = Checks(header, line)
+	mutable statements = List(Mutable(SyntaxNode))
+	for body.children
+		statements = index is end then statements + checks + value else statements + value
+	SyntaxNode("Body", "", statements)
+Checks(header HeaderTokens, line Number) SyntaxNodes
+	Plain.Checks(FramedHeader, 1).First.line is 1
+	let parameterTypes = header.ParameterTypes
+	mutable checks = List(Mutable(SyntaxNode))
+	for header.ParameterNames
+		let constraint = Constraint.Parameter(header, value)
+		if constraint is not ""
+			checks.Add(Constraint(value, parameterTypes(index), values.inference.types).Checked(constraint, line))
+	checks

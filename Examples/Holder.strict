@@ -1,0 +1,4 @@
+has item Generic
+Area Number
+	Holder(Size(2, 3)).Area is 6
+	item.Area

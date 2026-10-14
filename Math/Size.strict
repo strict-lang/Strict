@@ -12,6 +12,7 @@ in(element Vector2) Boolean
 Area Number
 	Size(1, 1).Area is 1
 	Size(2, 3).Area is 6
+	Size(0, 1) is Error
 	Width * Height
 Length Number
 	Size(1, 2).Area is Size(1, 2).Length

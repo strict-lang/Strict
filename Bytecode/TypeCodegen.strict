@@ -79,12 +79,14 @@ Method(start Number) MethodEntry
 	constant generator = Generator
 	let scope = MethodScope(header, generator.target)
 	let returnType = header.tokens(0) is "from" then generator.target.TypeName else Concrete(Returned(header))
-	let code = MethodCodegen(generator).Generate(BodyParser(lines).Method(start + 1), scope, BodyType(header))
+	let body = TestLines(generator).Guarded(BodyParser(lines).Method(start + 1), header, start + 1, scope)
+	let code = MethodCodegen(generator).Generate(body, scope, BodyType(header))
 	let optimized = LoadReuse(code.instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(returnType), optimized)
 MethodScope(header HeaderTokens, target CallTarget) Scope
 	Hello.MethodScope(HeaderTokens("Run"), Hello.Generator.target).TypeOf(CodeBlock.ErrorMarker) is "Run"
-	let members = MethodBodies(target.TypeName, target.shape, inference).HeaderScope(header, target.shape.MemberScope)
+	let declared = Instantiation(inference.types).Members(target.TypeName, target.shape.MemberScope)
+	let members = MethodBodies(target.TypeName, target.shape, inference).HeaderScope(header, declared)
 	members.With(CodeBlock.ErrorMarker, header.tokens(0))
 BodyType(header HeaderTokens) Text
 	Iterating.BodyType(HeaderTokens("for", "Iterator", "(", "Number", ")")) is "Numbers"
@@ -108,11 +110,12 @@ Parameters(header HeaderTokens) List(MemberEntry)
 	parameters
 Default(header HeaderTokens, position Number) List(InstructionEntry)
 	Hello.Default(HeaderTokens("Add", "(", "x", ")"), 2).Length is 0
+	Hello.Default(HeaderTokens(Tokenizer("Run(frames = 0 with value >= 0)").Tokens), 2).Length is 1
 	if header.tokens(position + 1) is not "="
 		return List(InstructionEntry)
 	mutable end = -1
 	for Range(position + 2, header.tokens.Length)
-		if (end is -1) and (header.tokens(value) is in (",", ")"))
+		if (end is -1) and (header.tokens(value) is in (",", ")", "with"))
 			end = value
 	let node = SyntaxParser(header.tokens).ParseRange(position + 2, end)
 	Initial(node)

@@ -1,11 +1,12 @@
 has lines Texts
 has instance Text
 has instantiation Expressions/Instantiation
-constant Names = ("Members", "to HashCode")
+constant Names = ("Members", "to HashCode", "Validated")
 constant Wanted = ("Strict/HelloLogger.Run", "Strict/HelloLogger.Members")
 constant Greeter = Automatic(TypeCodegen.Hello.lines, "HelloLogger", Instantiation.Pairing)
 constant Point = Automatic(("has X Number", "mutable Y Number", "has logger", "constant Limit = 3", "Area Number", "\tX * Y"), "Point", Instantiation.Pairing)
 constant Paired = Automatic(("has first Generic", "has second Generic"), "Couple(Text, Number)", Instantiation.Pairing)
+constant Sized = Automatic(("has Width Number with value > 0", "has Height Number"), "Size", Instantiation.Pairing)
 Lines(names Texts) Texts
 	Point.Lines(List(Text)) is Point.lines
 	Point.Lines(Names).Length is 10
@@ -13,17 +14,36 @@ Lines(names Texts) Texts
 	Automatic(List(Text) + "Length Number", "Length", Instantiation.Pairing).Lines(Names).Length is 1
 	Automatic(("has a Number", "to HashCode", "\tHashCode(a)"), "A", Instantiation.Pairing).Lines(Names).Length is 5
 	Automatic(("Members List(Number)", "\t(1)"), "B", Instantiation.Pairing).Lines(Names).Length is 4
+	Sized.Lines(List(Text) + "Validated").Index("Validated Size") is 2
 	mutable result = lines
-	if IsWanted("Members", names)
-		result = result + "Members Variables" + Described
-	if IsWanted("to HashCode", names)
-		result = result + "to HashCode" + Hashed
+	for Names
+		if IsWanted(value, names)
+			result = result + Generated(value)
+	result
+Generated(name Text) Texts
+	Point.Generated("to HashCode").First is "to HashCode"
+	Sized.Generated("Validated").Last is "\tvalue"
+	if name is "Members"
+		return List(Text) + "Members Variables" + Described
+	if name is "to HashCode"
+		return List(Text) + "to HashCode" + Hashed
+	List(Text) + ("Validated " + instance) + Validations + "\tvalue"
+Validations Texts
+	Sized.Validations.First is "\tif (Width > 0) is false"
+	Sized.Validations.Last.StartsWith("\t\treturn Error(\"ConstraintNotMet: Width with value > 0 is false for") is true
+	mutable result = List(Mutable(Text))
+	for Stored
+		let start = value.IndexOf(" with ")
+		if start > 0
+			let constraint = value.Substring(start + 6, value.Length - start - 6)
+			let checked = Constraint(Header(value).MemberName, MemberType(value), instantiation.types)
+			result = result + ("\tif (" + checked.Condition(constraint) + ") is false") + ("\t\t" + checked.Failure(constraint))
 	result
 IsWanted(name Text, names Texts) Boolean
 	Point.IsWanted("Members", Names) is true
 	Point.IsWanted("Members", List(Text)) is false
 	Automatic(List(Text) + "has text", "Name", Instantiation.Pairing).IsWanted("to HashCode", Names) is true
-	if name is not in names
+	if (name is not in names) or ((name is "Validated") and (Constraint.IsConstrained(lines) is false))
 		return false
 	for lines
 		if (value is name) or value.StartsWith(name + " ") or value.StartsWith(name + "(")

@@ -22,7 +22,7 @@ Boxed(pointer Text, suffix Text, typeName Text) Texts
 	let short = TypeEntry.ShortName(typeName)
 	if short is "Error"
 		let tagged = "    " + Temp(suffix + "fe") + " = func.call @strict_error_bits(" + pointer + ") : (!llvm.ptr) -> f64"
-		return List(Text) + tagged + Traced(Temp(suffix + "fe"), Temp(suffix + "f"))
+		return List(Text) + tagged + Traced(Temp(suffix + "fe"), Temp(suffix + "f"), "strict_trace")
 	let helper = short is "ErrorWithValue" then "strict_error_value_bits" else "strict_bits"
 	List(Text) + ("    " + Temp(suffix + "f") + " = func.call @" + helper + "(" + pointer + ") : (!llvm.ptr) -> f64")
 Allocated(slots Number, suffix Text) Texts
@@ -50,12 +50,12 @@ Passed(result Text, helper Text, operands Texts, element Text) Texts
 	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length) + Comparing, ", ")
 	let arguments = Text.Combine(operands + Temp("q"), ", ")
 	(equal, "    " + result + " = func.call @" + helper + "(" + arguments + ") : (" + types + ") -> f64")
-Traced(operand Text, result Text) Texts
-	Sample.Traced("%r", "%x").Last is "    %x = func.call @strict_trace(%r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64"
+Traced(operand Text, result Text, helper Text) Texts
+	Sample.Traced("%r", "%x", "f").Last is "    %x = func.call @f(%r, %t3tw, %t3twl)" + MlirChecks.Tracing
 	let instructions = function.method.instructions
 	let line = position < instructions.Length then instructions(position).line else 0
 	let address = "    " + Temp("tw") + " = llvm.mlir.addressof @w" + function.Symbol + " : !llvm.ptr"
-	let call = " = func.call @strict_trace(" + operand + ", " + Temp("tw") + ", " + Temp("twl") + ")"
+	let call = " = func.call @" + helper + "(" + operand + ", " + Temp("tw") + ", " + Temp("twl") + ")"
 	let number = "    " + Temp("twl") + " = arith.constant " + line + " : i64"
 	(address, number, "    " + result + call + " : (f64, !llvm.ptr, i64) -> f64")
 Member(path Text) Numbers

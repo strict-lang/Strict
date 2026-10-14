@@ -76,7 +76,7 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	let names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
 	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + names + ") : (" + types + ") -> f64"
-	let traced = MlirMemory(function, position).Traced(Temp("r"), Temp("tr"))
+	let traced = MlirMemory(function, position).Traced(Temp("r"), Temp("tr"), "strict_trace")
 	Loads(entry, type) + Defaults(callee, count) + call + traced + function.Store(Temp("tr"), "%r" + entry.payload(0))
 Defaults(callee MethodEntry, count Number) Texts
 	MlirCalls(Hashes, 1).Defaults(Defaulted, 0).Last is "    %t1a0 = llvm.load %r1 : !llvm.ptr -> f64"
