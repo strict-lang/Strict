@@ -1,0 +1,13 @@
+has numbers Numbers
+Doubled Numbers
+	ParallelSum(ParallelSum.Counted(1000)).Doubled.Sum is 999000
+	ParallelSum(ParallelSum.Counted(1000)).Doubled.Last is 1998
+	for numbers
+		Twice(value)
+Twice(number Number) Number
+	ParallelSum(List(Number)).Twice(3) is 6
+	number * 2
+Counted(count Number) Numbers
+	ParallelSum.Counted(3) is (0, 1, 2)
+	for count
+		index

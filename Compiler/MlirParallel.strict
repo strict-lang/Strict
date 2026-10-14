@@ -1,0 +1,127 @@
+has function MlirFunction
+has position Number
+constant Threshold = 256
+constant Shape = "(!llvm.ptr, i64, i64) -> f64"
+constant Signature = "(%context: !llvm.ptr, %from: i64, %to: i64) -> f64 {"
+constant Slot = " : (!llvm.ptr) -> !llvm.ptr, f64"
+constant Twice = MethodEntry("Twice", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "number"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Multiply, (0, 1, 2)), InstructionEntry.Return(2)))
+constant Doubled = MethodEntry("Doubled", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Invoke(2, ("Strict/Rows", "Twice", "Strict/Number", "number"), List(Number) + 1, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 4)))
+constant Randomized = MethodEntry("Randomized", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Invoke(2, ("Strict/Number", "Random", "Strict/Number"), List(Number), 1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 4)))
+constant Filtered = MethodEntry("Filtered", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Binary(InstructionType.GreaterThan, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.LoopEnd, 7)))
+constant Rows = TypeEntry("Strict/Rows", List(MemberEntry), (Twice, Doubled, Randomized, Filtered))
+constant Doubling = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Doubled), 2)
+constant Randomizing = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Randomized), 2)
+IsParallel Boolean
+	Doubling.IsParallel is true
+	Randomizing.IsParallel is false
+	MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Filtered), 2).IsParallel is false
+	MlirParallel(MlirKernel.Doubling.function, 2).IsParallel is false
+	let isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
+	let isSpecial = function.IsCounted or MlirLayout(function).IsInitializer or MlirKernel(function, position).IsSimple
+	if (isBegin is false) or isSpecial or (MlirLoops(function, position).IsCollecting is false)
+		return false
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if MlirPurity(function, position).IsSafe(function, value, 0) is false
+			return false
+	true
+Snapshot Texts
+	Doubling.Snapshot is ("%p0", "%p1", "%r0", "%r1", "%r2", "%v_index", "%v_value", "%v_numbers", "%v_forResult")
+	mutable names = List(Mutable(Text))
+	for function.Parameters
+		names.Add("%p" + index)
+	for LoadReuse(function.method.instructions).RegisterCount
+		names.Add("%r" + index)
+	for function.VariableNames
+		names.Add("%v_" + value)
+	names
+Temp(suffix Text) Text
+	Doubling.Temp("pn") is "%t2pn"
+	"%t" + position + suffix
+Forked Texts
+	Text.Combine(Doubling.Forked).IndexOf("func.call @strict_parallel(%t2pf, %t2pc, %t2pn)") > 0 is true
+	Randomizing.Forked.Length is 0
+	if IsParallel is false
+		return List(Text)
+	let count = "    " + Temp("pn") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
+	let threshold = "    " + Temp("pt") + " = arith.constant " + Threshold + " : i64"
+	let enough = "    " + Temp("pb") + " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
+	let label = "^loop" + position
+	let branch = "    cf.cond_br " + Temp("pb") + ", " + label + "parallel, " + label + "serial"
+	(count, threshold, enough, branch, "  " + label + "parallel:") + Context + Joined + ("  " + label + "serial:")
+Context Texts
+	Doubling.Context.Last is "    llvm.store %t2pv8, %t2pa8 : f64, !llvm.ptr"
+	let names = Snapshot
+	let size = "    " + Temp("ps") + " = arith.constant " + names.Length * 8 + " : i64"
+	mutable lines = (size, "    " + Temp("pc") + " = func.call @strict_alloc(" + Temp("ps") + ") : (i64) -> !llvm.ptr")
+	for names
+		let address = "    " + Temp("pa" + index) + " = llvm.getelementptr " + Temp("pc") + "[" + index + "]"
+		let stored = value.StartsWith("%p") then value else Temp("pv" + index)
+		let loaded = value.StartsWith("%p") then List(Text) else List(Text) + function.Load(stored, value)
+		let store = "    llvm.store " + stored + ", " + Temp("pa" + index) + " : f64, !llvm.ptr"
+		lines = lines + loaded + (address + Slot) + store
+	lines
+Joined Texts
+	Doubling.Joined.Last is "    cf.br ^loop2exit"
+	let body = "    " + Temp("pf") + " = func.constant @" + function.Symbol + "_loop" + position + " : " + Shape
+	let operands = "(" + Temp("pf") + ", " + Temp("pc") + ", " + Temp("pn") + ") : (" + Shape + ", !llvm.ptr, i64) -> f64"
+	let failed = "    " + Temp("pe") + " = func.call @strict_is_failure(" + Temp("pr") + ") : (f64) -> i1"
+	let branch = "    cf.cond_br " + Temp("pe") + ", ^loop" + position + "failed, ^loop" + position + "filled"
+	let filled = MlirMemory(function, position).Called(Temp("pz"), "strict_list_filled", (Temp("pl"), Temp("n")))
+	let label = "  ^loop" + position
+	let returned = (label + "failed:", "    return " + Temp("pr") + " : f64", label + "filled:")
+	let called = (body, "    " + Temp("pr") + " = func.call @strict_parallel" + operands, failed, branch)
+	called + returned + function.Load(Temp("pl"), "%v_forResult") + filled + ("    cf.br ^loop" + position + "exit")
+Outlined Texts
+	Doubling.Outlined.First is "  func.func private @Rows_Doubled_1_loop2" + Signature
+	Randomizing.Outlined.Length is 0
+	mutable lines = List(Mutable(Text))
+	for function.method.instructions
+		if (value.kind is InstructionType.LoopBegin) and MlirParallel(function, index).IsParallel
+			lines = lines + MlirParallel(function, index).Child
+	lines
+Child Texts
+	Doubling.Child.Last is "  }"
+	let header = "  func.func private @" + function.Symbol + "_loop" + position + Signature
+	let count = function.Parameters.Length
+	List(Text) + header + Restored(0, count) + function.Slots + Restored(count, Snapshot.Length) + Iterated + "  }"
+Restored(first Number, limit Number) Texts
+	Doubling.Restored(0, 1).Last is "    %p0 = llvm.load %t2qa0 : !llvm.ptr -> f64"
+	Doubling.Restored(2, 3).Last is "    llvm.store %t2qv2, %r0 : f64, !llvm.ptr"
+	let names = Snapshot
+	mutable lines = List(Mutable(Text))
+	for Range(first, limit)
+		let name = names(value)
+		let target = name.StartsWith("%p") then name else Temp("qv" + value)
+		let address = "    " + Temp("qa" + value) + " = llvm.getelementptr %context[" + value + "]" + Slot
+		let stored = name.StartsWith("%p") then List(Text) else List(Text) + function.Store(target, name)
+		lines = lines + address + ("    " + target + " = llvm.load " + Temp("qa" + value) + " : !llvm.ptr -> f64") + stored
+	lines
+Iterated Texts
+	Text.Combine(Doubling.Iterated).IndexOf("cf.br ^loop2child(%from : i64)") > 0 is true
+	let loops = MlirLoops(function, position)
+	let entry = function.method.instructions(position)
+	let bounds = entry.payload(1) is 1 then loops.RangeBounds(entry) else loops.CountBounds(entry)
+	let items = "    " + Temp("ri") + " = func.call @strict_list_items(" + Temp("rv") + ") : (f64) -> !llvm.ptr"
+	let started = (function.Load(Temp("rv"), "%v_forResult"), items, "    cf.br ^loop" + position + "child(%from : i64)")
+	bounds + loops.Items + started + Checked + loops.Current + Body + Next
+Checked Texts
+	Doubling.Checked.First is "  ^loop2child(%t2ki: i64):"
+	let label = "^loop" + position + "child"
+	let compared = "    " + Temp("km") + " = arith.cmpi slt, " + Temp("ki") + ", %to : i64"
+	let branch = "    cf.cond_br " + Temp("km") + ", " + label + "body, " + label + "exit"
+	let counter = "    " + Temp("k") + " = arith.sitofp " + Temp("ki") + " : i64 to f64"
+	("  " + label + "(" + Temp("ki") + ": i64):", compared, branch, "  " + label + "body:", counter)
+Next Texts
+	Doubling.Next.Last is "    return %zero : f64"
+	let label = "^loop" + position + "child"
+	let next = "    " + Temp("kn") + " = arith.addi " + Temp("ki") + ", %one : i64"
+	(next, "    cf.br " + label + "(" + Temp("kn") + " : i64)", "  " + label + "exit:", "    return %zero : f64")
+Body Texts
+	Doubling.Body.Last.StartsWith("    llvm.store %t5e, %t5p") is true
+	mutable lines = List(Mutable(Text))
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		let isCollect = (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts(0) is "forResult")
+		let emitted = isCollect then MlirFastLoop(function, position).Emitted(value) else function.Emitted(value)
+		lines = lines + function.Label(value) + emitted
+	lines

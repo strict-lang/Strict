@@ -439,3 +439,83 @@
     %number = func.call @strict_canonical(%result) : (f64) -> f64
     return %number : f64
   }
+  llvm.func @GetActiveProcessorCount(i16) -> i32
+  llvm.func @CreateThread(!llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
+  llvm.func @AcquireSRWLockExclusive(!llvm.ptr)
+  llvm.func @ReleaseSRWLockExclusive(!llvm.ptr)
+  llvm.func @SleepConditionVariableSRW(!llvm.ptr, !llvm.ptr, i32, i32) -> i32
+  llvm.func @WakeAllConditionVariable(!llvm.ptr)
+  llvm.mlir.global internal @strict_pool_lock(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_signal(0 : i64) : i64
+  llvm.func @strict_pool_thread(%argument: !llvm.ptr) -> i32 {
+    llvm.call @strict_pool_serve() : () -> ()
+    %zero = llvm.mlir.constant(0 : i32) : i32
+    llvm.return %zero : i32
+  }
+  func.func private @strict_pool_spawn() -> i64 {
+    %groups = arith.constant -1 : i16
+    %processors = llvm.call @GetActiveProcessorCount(%groups) : (i16) -> i32
+    %wide = arith.extui %processors : i32 to i64
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    // ponytail: a quarter of the logical processors was fastest for memory bound GPT-2 decoding (13900KF), compute bound loops could use all
+    %four = arith.constant 4 : i64
+    %two = arith.constant 2 : i64
+    %quarter = arith.divsi %wide, %four : i64
+    %threads = arith.maxsi %quarter, %two : i64
+    %workers = arith.subi %threads, %one : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %procedure = llvm.mlir.addressof @strict_pool_thread : !llvm.ptr
+    %defaultStack = arith.constant 0 : i64
+    %noFlags = arith.constant 0 : i32
+    cf.br ^check(%zero : i64)
+  ^check(%index: i64):
+    %more = arith.cmpi slt, %index, %workers : i64
+    cf.cond_br %more, ^spawn, ^done
+  ^spawn:
+    %thread = llvm.call @CreateThread(%null, %defaultStack, %procedure, %null, %noFlags, %null) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
+    %closed = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
+    %next = arith.addi %index, %one : i64
+    cf.br ^check(%next : i64)
+  ^done:
+    return %workers : i64
+  }
+  llvm.func @strict_pool_sleep(%seen: i64) {
+    %lock = llvm.mlir.addressof @strict_pool_lock : !llvm.ptr
+    %signal = llvm.mlir.addressof @strict_pool_signal : !llvm.ptr
+    %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
+    %sleepersSlot = llvm.mlir.addressof @strict_pool_sleepers : !llvm.ptr
+    %one = llvm.mlir.constant(1 : i64) : i64
+    %forever = llvm.mlir.constant(-1 : i32) : i32
+    %exclusive = llvm.mlir.constant(0 : i32) : i32
+    llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
+    %sleeping = llvm.atomicrmw add %sleepersSlot, %one seq_cst : !llvm.ptr, i64
+    llvm.br ^check
+  ^check:
+    %current = llvm.load %jobSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %same = llvm.icmp "eq" %current, %seen : i64
+    llvm.cond_br %same, ^sleep, ^leave
+  ^sleep:
+    %slept = llvm.call @SleepConditionVariableSRW(%signal, %lock, %forever, %exclusive) : (!llvm.ptr, !llvm.ptr, i32, i32) -> i32
+    llvm.br ^check
+  ^leave:
+    %awake = llvm.atomicrmw sub %sleepersSlot, %one seq_cst : !llvm.ptr, i64
+    llvm.call @ReleaseSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
+    llvm.return
+  }
+  llvm.func @strict_pool_wake() {
+    %lock = llvm.mlir.addressof @strict_pool_lock : !llvm.ptr
+    %signal = llvm.mlir.addressof @strict_pool_signal : !llvm.ptr
+    %sleepersSlot = llvm.mlir.addressof @strict_pool_sleepers : !llvm.ptr
+    %zero = llvm.mlir.constant(0 : i64) : i64
+    %sleepers = llvm.load %sleepersSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %anyone = llvm.icmp "ne" %sleepers, %zero : i64
+    llvm.cond_br %anyone, ^wake, ^leave
+  ^wake:
+    llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
+    llvm.call @ReleaseSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
+    llvm.call @WakeAllConditionVariable(%signal) : (!llvm.ptr) -> ()
+    llvm.return
+  ^leave:
+    llvm.return
+  }

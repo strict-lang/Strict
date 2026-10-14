@@ -82,7 +82,7 @@ Built(base Text, executable Text) Text
 	let lowered = Lowered(base)
 	if lowered is not ""
 		return lowered
-	let system = platform is Platform.Windows then " -Wl,-Brepro" else " -lm"
+	let system = platform is Platform.Windows then " -Wl,-Brepro" else " -lm -lpthread"
 	let sources = NativeSources(natives).Arguments(platform, root)
 	let linking = Quoted(base + ".ll") + sources + " -o " + Quoted(executable) + Optimized + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)

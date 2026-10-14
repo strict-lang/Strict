@@ -576,7 +576,238 @@
     %object = func.call @strict_gc_allocate(%size, %unscanned) : (i64, i64) -> !llvm.ptr
     return %object : !llvm.ptr
   }
+  llvm.mlir.global internal @strict_pool_busy(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_spawned(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_workers(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_job(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_body(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_context(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_count(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_chunk(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_next(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_done(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_failure(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_sleepers(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_mutex(0 : i64) : i64
+  func.func private @strict_parallel(%body: (!llvm.ptr, i64, i64) -> f64, %context: !llvm.ptr, %count: i64) -> f64 {
+    %function = builtin.unrealized_conversion_cast %body : (!llvm.ptr, i64, i64) -> f64 to !llvm.ptr
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
+    %busy = llvm.load %busySlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isBusy = arith.cmpi ne, %busy, %zero : i64
+    cf.cond_br %isBusy, ^serial, ^pool
+  ^pool:
+    %workers = func.call @strict_pool_started() : () -> i64
+    %alone = arith.cmpi eq, %workers, %zero : i64
+    cf.cond_br %alone, ^serial, ^shared
+  ^serial:
+    %serialResult = llvm.call %function(%context, %zero, %count) : !llvm.ptr, (!llvm.ptr, i64, i64) -> f64
+    return %serialResult : f64
+  ^shared:
+    %bodyBits = llvm.ptrtoint %function : !llvm.ptr to i64
+    %bodySlot = llvm.mlir.addressof @strict_pool_body : !llvm.ptr
+    llvm.store %bodyBits, %bodySlot : i64, !llvm.ptr
+    %contextBits = llvm.ptrtoint %context : !llvm.ptr to i64
+    %contextSlot = llvm.mlir.addressof @strict_pool_context : !llvm.ptr
+    llvm.store %contextBits, %contextSlot : i64, !llvm.ptr
+    %countSlot = llvm.mlir.addressof @strict_pool_count : !llvm.ptr
+    llvm.store %count, %countSlot : i64, !llvm.ptr
+    %threads = arith.addi %workers, %one : i64
+    %four = arith.constant 4 : i64
+    %pieces = arith.muli %threads, %four : i64
+    %share = arith.divsi %count, %pieces : i64
+    %chunk = arith.maxsi %share, %one : i64
+    %chunkSlot = llvm.mlir.addressof @strict_pool_chunk : !llvm.ptr
+    llvm.store %chunk, %chunkSlot : i64, !llvm.ptr
+    %doneSlot = llvm.mlir.addressof @strict_pool_done : !llvm.ptr
+    llvm.store %zero, %doneSlot : i64, !llvm.ptr
+    %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
+    llvm.store %zero, %failureSlot : i64, !llvm.ptr
+    %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
+    %previous = llvm.load %jobSlot : !llvm.ptr -> i64
+    %job = arith.addi %previous, %one : i64
+    %mask = arith.constant 4294967295 : i64
+    %tag = arith.andi %job, %mask : i64
+    %shift = arith.constant 32 : i64
+    %first = arith.shli %tag, %shift : i64
+    %nextSlot = llvm.mlir.addressof @strict_pool_next : !llvm.ptr
+    llvm.store %first, %nextSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    llvm.store %job, %jobSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    llvm.call @strict_pool_wake() : () -> ()
+    llvm.call @strict_pool_run(%job) : (i64) -> ()
+    cf.br ^wait
+  ^wait:
+    %done = llvm.load %doneSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %finished = arith.cmpi sge, %done, %count : i64
+    cf.cond_br %finished, ^finish, ^spin
+  ^spin:
+    llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
+    cf.br ^wait
+  ^finish:
+    llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %failureBits = llvm.load %failureSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %failure = arith.bitcast %failureBits : i64 to f64
+    return %failure : f64
+  }
+  func.func private @strict_pool_started() -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %spawnedSlot = llvm.mlir.addressof @strict_pool_spawned : !llvm.ptr
+    %workersSlot = llvm.mlir.addressof @strict_pool_workers : !llvm.ptr
+    %spawned = llvm.load %spawnedSlot : !llvm.ptr -> i64
+    %fresh = arith.cmpi eq, %spawned, %zero : i64
+    cf.cond_br %fresh, ^spawn, ^known
+  ^spawn:
+    %count = func.call @strict_pool_spawn() : () -> i64
+    llvm.store %count, %workersSlot : i64, !llvm.ptr
+    llvm.store %one, %spawnedSlot : i64, !llvm.ptr
+    return %count : i64
+  ^known:
+    %workers = llvm.load %workersSlot : !llvm.ptr -> i64
+    return %workers : i64
+  }
+  llvm.func @strict_pool_run(%job: i64) {
+    %nextSlot = llvm.mlir.addressof @strict_pool_next : !llvm.ptr
+    %countSlot = llvm.mlir.addressof @strict_pool_count : !llvm.ptr
+    %chunkSlot = llvm.mlir.addressof @strict_pool_chunk : !llvm.ptr
+    %doneSlot = llvm.mlir.addressof @strict_pool_done : !llvm.ptr
+    %mask = llvm.mlir.constant(4294967295 : i64) : i64
+    %shift = llvm.mlir.constant(32 : i64) : i64
+    %tag = llvm.and %job, %mask : i64
+    llvm.br ^claim
+  ^claim:
+    %packed = llvm.load %nextSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %owner = llvm.lshr %packed, %shift : i64
+    %isCurrent = llvm.icmp "eq" %owner, %tag : i64
+    llvm.cond_br %isCurrent, ^check, ^leave
+  ^check:
+    %start = llvm.and %packed, %mask : i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %more = llvm.icmp "slt" %start, %count : i64
+    llvm.cond_br %more, ^try, ^leave
+  ^try:
+    %chunk = llvm.load %chunkSlot : !llvm.ptr -> i64
+    %proposed = llvm.add %start, %chunk : i64
+    %over = llvm.icmp "sgt" %proposed, %count : i64
+    %end = llvm.select %over, %count, %proposed : i1, i64
+    %size = llvm.sub %end, %start : i64
+    %claimed = llvm.add %packed, %size : i64
+    %pair = llvm.cmpxchg %nextSlot, %packed, %claimed acq_rel monotonic : !llvm.ptr, i64
+    %won = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
+    llvm.cond_br %won, ^work, ^claim
+  ^work:
+    %result = llvm.call @strict_pool_chunk_run(%start, %end) : (i64, i64) -> i1
+    %finished = llvm.atomicrmw add %doneSlot, %size acq_rel : !llvm.ptr, i64
+    llvm.cond_br %result, ^close, ^claim
+  ^close:
+    %open = llvm.load %nextSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %openOwner = llvm.lshr %open, %shift : i64
+    %stillCurrent = llvm.icmp "eq" %openOwner, %tag : i64
+    %index = llvm.and %open, %mask : i64
+    %total = llvm.load %countSlot : !llvm.ptr -> i64
+    %remaining = llvm.icmp "slt" %index, %total : i64
+    %closable = llvm.and %stillCurrent, %remaining : i1
+    llvm.cond_br %closable, ^skip, ^leave
+  ^skip:
+    %rest = llvm.sub %total, %index : i64
+    %closed = llvm.add %open, %rest : i64
+    %closing = llvm.cmpxchg %nextSlot, %open, %closed acq_rel monotonic : !llvm.ptr, i64
+    %skipped = llvm.extractvalue %closing[1] : !llvm.struct<(i64, i1)>
+    llvm.cond_br %skipped, ^skippedRest, ^close
+  ^skippedRest:
+    %counted = llvm.atomicrmw add %doneSlot, %rest acq_rel : !llvm.ptr, i64
+    llvm.return
+  ^leave:
+    llvm.return
+  }
+  llvm.func @strict_pool_chunk_run(%start: i64, %end: i64) -> i1 {
+    %bodySlot = llvm.mlir.addressof @strict_pool_body : !llvm.ptr
+    %bodyBits = llvm.load %bodySlot : !llvm.ptr -> i64
+    %function = llvm.inttoptr %bodyBits : i64 to !llvm.ptr
+    %contextSlot = llvm.mlir.addressof @strict_pool_context : !llvm.ptr
+    %contextBits = llvm.load %contextSlot : !llvm.ptr -> i64
+    %context = llvm.inttoptr %contextBits : i64 to !llvm.ptr
+    %result = llvm.call %function(%context, %start, %end) : !llvm.ptr, (!llvm.ptr, i64, i64) -> f64
+    %bits = llvm.bitcast %result : f64 to i64
+    %shift = llvm.mlir.constant(48 : i64) : i64
+    %errorTag = llvm.mlir.constant(32762 : i64) : i64
+    %valueTag = llvm.mlir.constant(32763 : i64) : i64
+    %tag = llvm.lshr %bits, %shift : i64
+    %isError = llvm.icmp "eq" %tag, %errorTag : i64
+    %isValue = llvm.icmp "eq" %tag, %valueTag : i64
+    %failed = llvm.or %isError, %isValue : i1
+    llvm.cond_br %failed, ^failed, ^passed
+  ^failed:
+    %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
+    %none = llvm.mlir.constant(0 : i64) : i64
+    %pair = llvm.cmpxchg %failureSlot, %none, %bits acq_rel monotonic : !llvm.ptr, i64
+    llvm.return %failed : i1
+  ^passed:
+    llvm.return %failed : i1
+  }
+  llvm.func @strict_pool_serve() {
+    %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
+    %zero = llvm.mlir.constant(0 : i64) : i64
+    %one = llvm.mlir.constant(1 : i64) : i64
+    %limit = llvm.mlir.constant(200000 : i64) : i64
+    llvm.br ^wait(%zero, %zero : i64, i64)
+  ^wait(%seen: i64, %spins: i64):
+    %current = llvm.load %jobSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %changed = llvm.icmp "ne" %current, %seen : i64
+    llvm.cond_br %changed, ^work(%current : i64), ^idle
+  ^idle:
+    %tired = llvm.icmp "sge" %spins, %limit : i64
+    llvm.cond_br %tired, ^sleep, ^spin
+  ^spin:
+    llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
+    %counted = llvm.add %spins, %one : i64
+    llvm.br ^wait(%seen, %counted : i64, i64)
+  ^sleep:
+    llvm.call @strict_pool_sleep(%seen) : (i64) -> ()
+    llvm.br ^wait(%seen, %zero : i64, i64)
+  ^work(%job: i64):
+    llvm.call @strict_pool_run(%job) : (i64) -> ()
+    llvm.br ^wait(%job, %zero : i64, i64)
+  }
+  llvm.func @strict_gc_lock() {
+    %slot = llvm.mlir.addressof @strict_gc_mutex : !llvm.ptr
+    %zero = llvm.mlir.constant(0 : i64) : i64
+    %one = llvm.mlir.constant(1 : i64) : i64
+    llvm.br ^try
+  ^try:
+    %pair = llvm.cmpxchg %slot, %zero, %one acquire monotonic : !llvm.ptr, i64
+    %taken = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
+    llvm.cond_br %taken, ^done, ^spin
+  ^spin:
+    llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
+    llvm.br ^try
+  ^done:
+    llvm.return
+  }
+  llvm.func @strict_gc_unlock() {
+    %slot = llvm.mlir.addressof @strict_gc_mutex : !llvm.ptr
+    %zero = llvm.mlir.constant(0 : i64) : i64
+    llvm.store %zero, %slot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    llvm.return
+  }
   func.func private @strict_gc_allocate(%size: i64, %list: i64) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
+    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %shared = arith.cmpi ne, %busy, %zero : i64
+    cf.cond_br %shared, ^locked, ^alone
+  ^alone:
+    %object = func.call @strict_gc_allocate_now(%size, %list) : (i64, i64) -> !llvm.ptr
+    return %object : !llvm.ptr
+  ^locked:
+    llvm.call @strict_gc_lock() : () -> ()
+    %lockedObject = func.call @strict_gc_allocate_now(%size, %list) : (i64, i64) -> !llvm.ptr
+    llvm.call @strict_gc_unlock() : () -> ()
+    return %lockedObject : !llvm.ptr
+  }
+  func.func private @strict_gc_allocate_now(%size: i64, %list: i64) -> !llvm.ptr {
     %smallLimit = arith.constant 1024 : i64
     %isTable = arith.cmpi ule, %size, %smallLimit : i64
     cf.cond_br %isTable, ^table, ^larger
@@ -1359,6 +1590,13 @@
   }
   func.func private @strict_gc_collect() {
     %zero = arith.constant 0 : i64
+    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
+    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %shared = arith.cmpi ne, %busy, %zero : i64
+    cf.cond_br %shared, ^deferred, ^collect
+  ^deferred:
+    return
+  ^collect:
     %measuredSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
     llvm.store %zero, %measuredSlot : i64, !llvm.ptr
     %one = arith.constant 1 : i64
@@ -2968,6 +3206,16 @@
     %address = llvm.ptrtoint %pointer : !llvm.ptr to i64
     %textSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
     %lengthSlot = llvm.mlir.addressof @strict_measured_length : !llvm.ptr
+    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
+    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %idle = arith.constant 0 : i64
+    %shared = arith.cmpi ne, %busy, %idle : i64
+    cf.cond_br %shared, ^direct, ^lookup
+  ^direct:
+    %directLength = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %directResult = arith.uitofp %directLength : i64 to f64
+    return %directResult : f64
+  ^lookup:
     %measured = llvm.load %textSlot : !llvm.ptr -> i64
     %known = arith.cmpi eq, %measured, %address : i64
     cf.cond_br %known, ^cached, ^measure

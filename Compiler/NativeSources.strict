@@ -51,6 +51,6 @@ LinuxLinked(base Text, program Text, root Text) Text
 		sources = sources + " " + tools.Quoted(tools.WslPath(value))
 	let gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc "
 	let linkage = gcc + tools.Quoted(tools.WslPath(base + ".linux.o"))
-	let output = " -o " + tools.Quoted(tools.WslPath(program)) + " -lm" + Flags(Platform.Linux)
+	let output = " -o " + tools.Quoted(tools.WslPath(program)) + " -lm -lpthread" + Flags(Platform.Linux)
 	let linked = ToolRunner("wsl").Execute(linkage + sources + output)
 	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
