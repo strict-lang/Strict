@@ -39,3 +39,7 @@ Required acceptance checks:
 
 Until this lands, headless engine work can continue; graphical/audio phases and full
 WebWars acceptance remain blocked. This request does not mark those phases complete.
+
+## DeltaEngine: unused-member validation of implicit replacement copies (2026-10-14)
+
+Replacing Unit.WithState/WithAttack/WithPath/WithDamage/WithSelection with named instance copies passes VM and native tests, but strict check reports belongsTo and selectable as UnusedMemberMustBeRemoved when their only production use is inheritance through Unit(value, stateMachine = state). A named replacement constructor reads all unchanged members; validator should count those implicit reads. Existing explicit copy helpers retained until fixed.
