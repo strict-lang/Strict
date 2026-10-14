@@ -1,0 +1,46 @@
+has blocks List(Gpt2Block)
+has tokens List(Numbers)
+has positions List(Numbers)
+has gain Numbers
+has bias Numbers
+has hidden Numbers = List(Number)
+constant Tiny = Gpt2.Loaded("NeuralNetworks/tinygpt2.safetensors")
+Loaded(path Text) Gpt2
+	Tiny.tokens.Length is 5
+	let weights = Safetensors(path)
+	let final = (weights.Values("ln_f.weight"), weights.Values("ln_f.bias"))
+	Gpt2(Blocks(weights), weights.Rows("wte.weight"), weights.Rows("wpe.weight"), final(0), final(1))
+Blocks(weights Safetensors) List(Gpt2Block)
+	Tiny.Blocks(Gpt2Block.Weights).Length is 1
+	mutable loaded = List(Mutable(Gpt2Block))
+	for as long as weights.Entry("h." + loaded.Length + ".ln_1.weight") is not ""
+		loaded.Add(Gpt2Block.Loaded(weights, "h." + loaded.Length + "."))
+	loaded
+Step(token Number, position Number) Gpt2
+	Tiny.Step(1, 0).Step(2, 1).hidden.First.IsNearlyEqual(7.284562313542782) is true
+	mutable state = Gpt2Block.Added(tokens(token), positions(position))
+	mutable updated = List(Mutable(Gpt2Block))
+	for blocks
+		let cached = value.Cached(state)
+		state = cached.Output(state)
+		updated.Add(cached)
+	Gpt2(value, blocks = updated, hidden = state)
+Next Number
+	Tiny.Step(1, 0).Step(2, 1).Next is 3
+	let logits = Logits(Gpt2Block.Normalized(hidden, gain, bias))
+	logits.Index(logits.Maximum)
+Logits(normed Numbers) Numbers
+	Tiny.Logits((1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)).Length is 5
+	for tokens
+		Layer.Summed(value, normed)
+Generated(prompt Numbers, count Number) Numbers
+	Tiny.Generated((1, 2), 4) is (3, 2, 2, 3)
+	mutable model = value
+	for prompt
+		model = model.Step(value, index)
+	mutable generated = List(Mutable(Number))
+	for count
+		let token = model.Next
+		generated.Add(token)
+		model = model.Step(token, prompt.Length + index)
+	generated

@@ -1,0 +1,17 @@
+has logger
+constant Folder = "NeuralNetworks/gpt2/"
+constant Address = "https://huggingface.co/openai-community/gpt2/resolve/main/"
+constant Prompt = "Alan Turing theorized that computers would one day become"
+constant Count = 20
+Run
+	for ("model.safetensors", "vocab.json", "merges.txt")
+		if File(Folder + value).Exists is false
+			Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + value + "\" \"" + Address + value + "\"")
+	let started = Process.Elapsed
+	let tokenizer = Gpt2Tokens.Parsed(File(Folder + "vocab.json").ReadLines.First, File(Folder + "merges.txt").ReadLines)
+	let model = Gpt2.Loaded(Folder + "model.safetensors")
+	let loaded = Process.Elapsed
+	let generated = model.Generated(tokenizer.Encoded(Prompt), Count)
+	let milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
+	logger.Log(Prompt + tokenizer.Decoded(generated))
+	logger.Log("GPT-2 loaded in " + ((loaded - started) * 1000).Round + " ms, " + milliseconds + " ms per token")

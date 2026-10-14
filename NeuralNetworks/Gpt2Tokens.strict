@@ -1,0 +1,141 @@
+has tokens Texts
+has ids Dictionary(Text, Number)
+has ranks Dictionary(Number, Number)
+constant Tiny = Gpt2Tokens.Parsed("{\"a\": 0, \"b\": 1, \"\\u0120\": 2, \"ab\": 3, \"\\u0120ab\": 4}", ("#version: 0.2", "a b", "Ġ ab"))
+Parsed(vocabulary Text, merges Texts) Gpt2Tokens
+	Tiny.tokens is ("a", "b", " ", "ab", " ab")
+	Tiny.ids(" ab") is 4
+	let ordered = Vocabulary(vocabulary)
+	mutable known = Dictionary(Text, Number)
+	for ordered
+		known(value) = index
+	Gpt2Tokens(ordered, known, Ranked(merges, known))
+Vocabulary(json Text) Texts
+	Vocabulary("{\"\\\"\": 0, \"\\\\\": 1, \"\\u0120a\": 2}") is ("\"", "\\", " a")
+	mutable parsed = List(Mutable(Text))
+	mutable start = 2
+	mutable ending = json.IndexOf("\": 0", start)
+	for as long as ending >= 0
+		parsed.Add(Unescaped(json.Substring(start, ending - start)))
+		start = ending + ("\": " + (parsed.Length - 1) + ", \"").Length
+		ending = json.IndexOf("\": " + parsed.Length, start)
+	parsed
+Unescaped(key Text) Text
+	Unescaped("\\u0120a\\\"") is " a\""
+	mutable raw = ""
+	mutable position = 0
+	for as long as position < key.Length
+		let isCode = key.StartsWith("\\u", position)
+		let skipped = (isCode is false) and (key(position) is "\\") then 1 else 0
+		let code = isCode then Unmapped(Hexadecimal(key.Substring(position + 2, 4))) else key(position + skipped).number
+		raw = raw + Character(code)
+		position = position + (isCode then 6 else 1 + skipped)
+	raw
+Hexadecimal(digits Text) Number
+	Hexadecimal("0120") is 288
+	Hexadecimal("ff") is 255
+	for digits
+		"0123456789abcdef".IndexOf(value to Text) * 16 ^ (digits.Length - 1 - index)
+Unmapped(code Number) Number
+	Unmapped(97) is 97
+	Unmapped(288) is 32
+	Unmapped(289) is 127
+	Unmapped(323) is 173
+	if code < 256
+		return code
+	let skipped = code - 256
+	if skipped < 33
+		return skipped
+	skipped < 67 then skipped + 94 else 173
+Ranked(merges Texts, known Dictionary(Text, Number)) Dictionary(Number, Number)
+	Tiny.ranks(1) is 0
+	Tiny.ranks(13) is 1
+	mutable ranked = Dictionary(Number, Number)
+	for merges
+		if (index > 0) and (" " is in value)
+			let parts = value.Split(" ")
+			ranked(known(Raw(parts(0))) * known.Length + known(Raw(parts(1)))) = index - 1
+	ranked
+Raw(mapped Text) Text
+	Raw("Ġab") is " ab"
+	Raw("ab") is "ab"
+	mutable raw = ""
+	mutable position = 0
+	for as long as position < mapped.Length
+		let lead = mapped(position).number
+		raw = raw + Character(lead < 128 then lead else Unmapped((lead - 192) * 64 + mapped(position + 1).number - 128))
+		position = position + (lead < 128 then 1 else 2)
+	raw
+Decoded(tokenIds Numbers) Text
+	Tiny.Decoded((4, 2, 0)) is " ab a"
+	for tokenIds
+		tokens(value)
+Encoded(text Text) Numbers
+	Tiny.Encoded(" ab a") is (4, 2, 0)
+	mutable encoded = List(Mutable(Number))
+	for Words(text)
+		encoded = encoded + Merged(value)
+	encoded
+Merged(word Text) Numbers
+	Tiny.Merged(" ab") is (4)
+	Tiny.Merged("ba") is (1, 0)
+	mutable symbols = List(Mutable(Number))
+	for word
+		symbols.Add(ids(value to Text))
+	mutable best = Best(symbols)
+	for as long as best >= 0
+		symbols = Joined(symbols, best)
+		best = Best(symbols)
+	symbols
+Best(symbols Numbers) Number
+	Tiny.Best((2, 0, 1)) is 1
+	Tiny.Best((2, 0)) is -1
+	mutable best = -1
+	mutable lowest = ranks.Length
+	for Range(1, symbols.Length)
+		let pair = symbols(value - 1) * tokens.Length + symbols(value)
+		if (pair is in ranks) and (ranks(pair) < lowest)
+			best = value - 1
+			lowest = ranks(pair)
+	best
+Joined(symbols Numbers, at Number) Numbers
+	Tiny.Joined((2, 0, 1), 1) is (2, 3)
+	let merged = ids(tokens(symbols(at)) + tokens(symbols(at + 1)))
+	for symbols
+		if index is not at + 1
+			index is at then merged else value
+Words(text Text) Texts
+	Words("Hi there's  42!") is ("Hi", " there", "'s", " ", " 42", "!")
+	Words("a\n b ") is ("a", "\n", " b", " ")
+	mutable words = List(Mutable(Text))
+	mutable start = 0
+	for as long as start < text.Length
+		let ending = WordEnd(text, start)
+		words.Add(text.Substring(start, ending - start))
+		start = ending
+	words
+WordEnd(text Text, start Number) Number
+	WordEnd("it's", 2) is 4
+	WordEnd("  a", 0) is 1
+	for ("'s", "'t", "'re", "'ve", "'m", "'ll", "'d")
+		if text.StartsWith(value, start)
+			return start + value.Length
+	let first = (text(start) is " ") and (Kind(text, start + 1) > 0) then start + 1 else start
+	let kind = Kind(text, first)
+	mutable ending = first + 1
+	for as long as Kind(text, ending) is kind
+		ending = ending + 1
+	(kind is 0) and (Kind(text, ending) > 0) and (ending - start > 1) then ending - 1 else ending
+Kind(text Text, index Number) Number
+	Kind("a 1!", 0) is 1
+	Kind("a 1!", 1) is 0
+	Kind("a 1!", 2) is 2
+	Kind("a 1!", 4) is -1
+	if index >= text.Length
+		return -1
+	let code = text(index).number
+	if (code is 32) or (code is in Range(9, 14))
+		return 0
+	if (code > 127) or (code is in Range(65, 91)) or (code is in Range(97, 123))
+		return 1
+	code is in Range(48, 58) then 2 else 3

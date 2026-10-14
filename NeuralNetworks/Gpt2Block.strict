@@ -1,0 +1,87 @@
+has attentionGain Numbers
+has attentionBias Numbers
+has attention Layer
+has projection Layer
+has mlpGain Numbers
+has mlpBias Numbers
+has expansion Layer
+has contraction Layer
+has keys List(Numbers) = List(Numbers)
+has values List(Numbers) = List(Numbers)
+has queries List(Numbers) = List(Numbers)
+constant Heads = 12
+constant Weights = Safetensors("NeuralNetworks/tinygpt2.safetensors")
+constant Tiny = Gpt2Block.Loaded(Weights, "h.0.")
+constant Embedded = Weights.Rows("wte.weight").First
+Loaded(weights Safetensors, prefix Text) Gpt2Block
+	Tiny.attention.weights.Length is 36
+	Tiny.attention.weights.First.Length is 12
+	let combine = Dense(weights, prefix + "attn.c_attn")
+	let project = Dense(weights, prefix + "attn.c_proj")
+	let first = (weights.Values(prefix + "ln_1.weight"), weights.Values(prefix + "ln_1.bias"))
+	let second = (weights.Values(prefix + "ln_2.weight"), weights.Values(prefix + "ln_2.bias"))
+	let expand = Dense(weights, prefix + "mlp.c_fc")
+	let contract = Dense(weights, prefix + "mlp.c_proj")
+	Gpt2Block(first(0), first(1), combine, project, second(0), second(1), expand, contract)
+Dense(weights Safetensors, name Text) Layer
+	Tiny.Dense(Weights, "h.0.mlp.c_fc").biases.Length is 48
+	Layer(weights.Columns(name + ".weight"), weights.Values(name + ".bias"))
+Cached(input Numbers) Gpt2Block
+	Tiny.Cached(Embedded).keys.Length is 12
+	let combined = attention.Sums(Normalized(input, attentionGain, attentionBias))
+	let size = combined.Length / 3
+	let queried = Split(combined, 0)
+	Gpt2Block(value, keys = keys + Split(combined, size), values = values + Split(combined, 2 * size), queries = queried)
+Split(combined Numbers, start Number) List(Numbers)
+	Tiny.Split(Tiny.attention.biases, 12).First is List(Number) + Tiny.attention.biases(12)
+	let size = combined.Length / 3 / Heads
+	for Heads
+		Safetensors.Part(combined, start + index * size, size, 1)
+Output(input Numbers) Numbers
+	Tiny.Cached(Embedded).Output(Embedded).Length is 12
+	let attended = Added(input, projection.Sums(Merged))
+	let hidden = expansion.Sums(Normalized(attended, mlpGain, mlpBias))
+	Added(attended, contraction.Sums(Gelu(hidden)))
+Merged Numbers
+	Tiny.Cached(Embedded).Merged.Length is 12
+	mutable merged = List(Number)
+	for Heads
+		merged = merged + Attended(index)
+	merged
+Attended(head Number) Numbers
+	Tiny.Cached(Embedded).Attended(0).Length is 1
+	let weights = Network.Softmax(Scores(head))
+	for queries(head).Length
+		Weighted(weights, head, index)
+Scores(head Number) Numbers
+	Tiny.Cached(Embedded).Scores(0).Length is 1
+	let query = queries(head)
+	let scale = query.Length.SquareRoot
+	for keys.Length / Heads
+		Layer.Summed(keys(index * Heads + head), query) / scale
+Weighted(weights Numbers, head Number, dimension Number) Number
+	Tiny.Cached(Embedded).Weighted(List(Number) + 1, 0, 0) is Tiny.Cached(Embedded).values.First.First
+	mutable sum = 0
+	for weights
+		let stored = values(index * Heads + head)
+		sum = sum + value * stored(dimension)
+	sum
+Normalized(input Numbers, gain Numbers, bias Numbers) Numbers
+	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).First.IsNearlyEqual(-1.2247356859083902) is true
+	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).Last.IsNearlyEqual(2.2247356859083902) is true
+	let mean = input.Sum / input.Length
+	mutable variance = 0
+	for input
+		variance = variance + (value - mean) * (value - mean)
+	let deviation = (variance / input.Length + 0.00001).SquareRoot
+	for input
+		gain(index) * (value - mean) / deviation + bias(index)
+Gelu(input Numbers) Numbers
+	Tiny.Gelu((0, 1)).Last.IsNearlyEqual(0.8411919906082768) is true
+	for input
+		let inner = 0.7978845608028654 * (value + 0.044715 * value * value * value)
+		0.5 * value * (1 + Activation.Tanh.Output(inner))
+Added(left Numbers, right Numbers) Numbers
+	Tiny.Added((1, 2), (3, 4)) is (4, 6)
+	for left
+		value + right(index)

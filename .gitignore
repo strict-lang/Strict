@@ -165,3 +165,6 @@ MachineLearning/shakespeare.txt
 **/native/*.exp
 
 NeuralNetworks/gpt2/
+*.safetensors
+!NeuralNetworks/tiny.safetensors
+!NeuralNetworks/tinygpt2.safetensors

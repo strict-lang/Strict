@@ -55,3 +55,6 @@ Working (see `NeuralNetworks/README.md`): `Safetensors` parses the header in Str
 
 ## Typed project content declarations
 DeltaEngine now uses WebWars/Scene.strict and generated SceneAtlas1–4.strict instead of fixed content CSVs. Readable multiline list/constructor declarations would let atlas data be one declarative list rather than grouped methods imposed by method length/count limits. Example desired declaration: constant Images = ( followed by indented AtlasRegion(...) records and closing ). Existing typed constructors and validations should still apply; no new serialization format needed.
+
+## Same-named project Scene types
+DeltaEngine adding LogoApp/Scene.strict (Initial and Created methods) beside WebWars/Scene.strict (Units, Spells, Atlas methods) breaks Content/GameDataCatalog.Loaded: Scene.Units resolves to LogoApp Scene and reports MethodNotFound. Even has scene WebWars/Scene then scene.Units still reports Scene.Units not found. WebWars/Scene.Units as a static call reports TypeNotFound WebWars. Need canonical package-qualified type identity and qualified static method calls to support Scene.strict per game. Temporary sample filename LogoScene.strict avoids collision. Repro: rename DeltaEngine/LogoApp/LogoScene.strict to Scene.strict, invalidate Content/GameDataCatalog.strictbinary, strict test Content/GameDataCatalog.strict.
