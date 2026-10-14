@@ -43,3 +43,7 @@ WebWars acceptance remain blocked. This request does not mark those phases compl
 ## DeltaEngine: unused-member validation of implicit replacement copies (2026-10-14)
 
 Replacing Unit.WithState/WithAttack/WithPath/WithDamage/WithSelection with named instance copies passes VM and native tests, but strict check reports belongsTo and selectable as UnusedMemberMustBeRemoved when their only production use is inheritance through Unit(value, stateMachine = state). A named replacement constructor reads all unchanged members; validator should count those implicit reads. Existing explicit copy helpers retained until fixed.
+
+## DeltaEngine: native default Dictionary member initialization (2026-10-14)
+
+Match with `has abilities Dictionary(Number, SpecialAbilityState) = Dictionary(Number, SpecialAbilityState)` passes VM tests when constructors omit last member, but compiled Windows Match.test.exe exits -1073741819 and Linux Match.test exits 11 before completing tests. Passing an explicit empty Dictionary to Duel/Created constructors fixes both; same dictionary activation/update tests then exit 0. Native constructors must evaluate compound default expressions, or report unsupported defaults at compilation instead of emitting a crashing value. DeltaEngine uses explicit empty dictionary arguments until fixed.
