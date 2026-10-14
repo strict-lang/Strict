@@ -11,9 +11,25 @@ Summed Number
 Doubles Numbers
 	NativeAdd.Doubles is (2, 4, 6)
 	Adder.Doubled((1, 2, 3))
+Halves Numbers
+	NativeAdd.Halves is (1, 0.0999755859375, -2)
+	Adder.Halved((1, 0.1, -2))
+Rows List(Numbers)
+	NativeAdd.Rows is ((1, 2), (3, 4))
+	Adder.Split((1, 2, 3, 4), 2)
+Dot(left Numbers, right Numbers) Number
+	NativeAdd.Dot(Adder.Halved((1, 2, 3)), (1, 1, 1)) is 6
+	NativeAdd.Dot((1, 1, 1), Adder.Halved((1, 2, 3))) is 6
+	mutable sum = 0
+	for left
+		sum = sum + value * right(index)
+	sum
 Failed Number
 	NativeAdd.Failed is Error("NativeFailure")
 	Adder.Failing
+Undefined Number
+	NativeAdd.Undefined.IsFinite is false
+	Adder.Undefined
 Counted Number
 	NativeAdd.Counted is 35
 	let counter = Counter(10, 5)
@@ -22,3 +38,4 @@ Run
 	logger.Log("1 + 2 = " + Added)
 	logger.Log(Greeted + ", the sum of 1, 2, 3 is " + Summed + " and doubled they are " + Doubles)
 	logger.Log("A counter from 10 by 5 counts " + Counted)
+	logger.Log("Halves " + Halves + ", rows " + Rows + ", dot " + Dot(Adder.Halved((1, 2, 3)), (1, 1, 1)))

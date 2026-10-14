@@ -7,6 +7,7 @@ constant NoScopes = (NoScope, NoScope)
 constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes), NoScopes)
 constant Sample = TypeShape("has a Number", "Run", "\tlet b = a", "\tb")
 constant AddOther = HeaderTokens("Add", "(", "other", ")")
+constant CheckedA = BodyParser("Run", "\tif a is Error", "\t\ta").Block(1, 1).children(0)
 Statements ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Length is 2
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.line is 3
@@ -29,7 +30,10 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 	for header.ParameterTypes
 		types.Add(value is "Other" then typeName else (value is "Generic" then argument else value))
 	let concrete = Instantiation(inference.types).Members(typeName, members)
-	concrete.With("value", InstanceType).WithAll(header.ParameterNames, types)
+	mutable scope = concrete.With("value", InstanceType).WithAll(header.ParameterNames, types)
+	for header.MutableParameters
+		scope = scope.With(value + " mutable", "mutable")
+	scope
 InstanceType Text
 	MethodBodies("List", Sample, NoInference).InstanceType is "Generics"
 	typeName is "List" then "Generics" else typeName
@@ -43,7 +47,8 @@ Flatten(body SyntaxNode, outerScope Scope, start Number) ScopedStatements
 	mutable scope = outerScope
 	for body.children
 		let line = value.line > 0 then value.line - 1 else start + statements.Length
-		statements.Add(ScopedStatement(value, scope, line))
+		let isDropped = index < body.children.Length - 1
+		statements.Add(ScopedStatement(value, isDropped then scope.With(" dropped", "dropped") else scope, line))
 		if value.HasBody
 			statements = statements + Flatten(value.children.Last, LoopScope(value, scope), line + 1)
 		scope = Declare(value, scope)
@@ -53,6 +58,9 @@ Methods Scope
 	inference.types.MethodsOf(typeName)
 LoopScope(statement SyntaxNode, scope Scope) Scope
 	MethodBodies("Range", Sample, NoInference).LoopScope(SyntaxNode("For", "for"), NoScope).TypeOf("value") is "Number"
+	MethodBodies("Range", Sample, NoInference).LoopScope(CheckedA, ErrorNarrowing.NumberA).TypeOf("a") is "Error"
+	if statement.Kind is "If"
+		return ErrorNarrowing(inference).Narrowed(statement.children(0), scope, Methods)
 	if statement.Kind is not "For"
 		return scope
 	let iterated = statement.HasValue then inference.TypeOf(statement.children(0), scope, Methods) else IteratedType
@@ -82,7 +90,9 @@ Pair(type Text) Texts
 Declare(statement SyntaxNode, scope Scope) Scope
 	if statement.Kind is not "Declaration"
 		return scope
-	scope.With(Tokenizer(statement.text).Tokens.Last, inference.TypeOf(statement.children(0), scope, Methods))
+	let name = Tokenizer(statement.text).Tokens.Last
+	let declared = scope.With(name, inference.TypeOf(statement.children(0), scope, Methods))
+	statement.text.StartsWith("mutable ") then declared.With(name + " mutable", "mutable") else declared
 StatementType(scoped ScopedStatement) Text
 	StatementType(ScopedStatement(SyntaxNode("Number", "1"), NoScope, 0)) is "Number"
 	let statement = scoped.statement

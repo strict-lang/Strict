@@ -1,0 +1,77 @@
+has number
+constant Missing = Error
+Found Number
+	ErrorHandling(5).Found is 5
+	ErrorHandling(0).Found is Missing
+	ErrorHandling(0).Found is Error
+	number > 0 then number else Missing
+Doubled Number
+	ErrorHandling(5).Doubled is 10
+	ErrorHandling(0).Doubled is Missing
+	Found * 2
+IsSmall Boolean
+	ErrorHandling(2).IsSmall is true
+	ErrorHandling(0).IsSmall is Missing
+	Found < 3
+IsNearlyFive Boolean
+	ErrorHandling(5).IsNearlyFive is true
+	ErrorHandling(0).IsNearlyFive is Missing
+	Found.IsNearlyEqual(5)
+Checked Number
+	ErrorHandling(5).Checked is 10
+	ErrorHandling(0).Checked is 0
+	let found = Found
+	if found is Error
+		return 0
+	found * 2
+Described Text
+	ErrorHandling(5).Described is "5"
+	ErrorHandling(0).Described.StartsWith("Error: Missing") is true
+	let found = Found
+	if found is Error
+		return found to Text
+	found to Text
+Dropped Number
+	ErrorHandling(5).Dropped is 1
+	ErrorHandling(0).Dropped is Missing
+	Found
+	1
+Passed Number
+	ErrorHandling(5).Passed is 6
+	ErrorHandling(0).Passed is Missing
+	ErrorHandling(Found).Next
+Next Number
+	ErrorHandling(1).Next is 2
+	number + 1
+Collected Numbers
+	ErrorHandling(5).Collected is (1, 5)
+	ErrorHandling(0).Collected is Missing
+	(1, Found)
+Branched Number
+	ErrorHandling(5).Branched is 1
+	ErrorHandling(0).Branched is Missing
+	if Found > 3
+		return 1
+	2
+Counted Number
+	ErrorHandling(5).Counted is 2
+	mutable known = Dictionary(Text, Number)
+	known.Add("a", 1)
+	known.Add("b", number)
+	known.Length
+Duplicated Number
+	ErrorHandling(5).Duplicated is Error
+	mutable known = Dictionary(Text, Number)
+	known.Add("a", 1)
+	known.Add("a", number)
+	known.Length
+Incremented Number
+	ErrorHandling(5).Incremented is 6
+	mutable count = number
+	count.Increment
+	count
+IsKnown Boolean
+	ErrorHandling(0).IsKnown is true
+	ErrorHandling(5).IsKnown is false
+	let found = Found
+	found is in (Missing, Error("Other"))

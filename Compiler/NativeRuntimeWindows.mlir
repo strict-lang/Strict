@@ -410,9 +410,14 @@
   }
   llvm.func @LoadLibraryA(!llvm.ptr) -> !llvm.ptr
   llvm.func @GetProcAddress(!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+  llvm.func @GetFullPathNameA(!llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
   func.func private @strict_library_call(%path: f64, %symbol: f64, %arguments: f64) -> f64 {
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
-    %library = llvm.call @LoadLibraryA(%name) : (!llvm.ptr) -> !llvm.ptr
+    %size = arith.constant 4096 : i32
+    %full = llvm.alloca %size x i8 : (i32) -> !llvm.ptr
+    %noPart = llvm.mlir.zero : !llvm.ptr
+    %fullLength = llvm.call @GetFullPathNameA(%name, %size, %full, %noPart) : (!llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+    %library = llvm.call @LoadLibraryA(%full) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %isMissing = llvm.icmp "eq" %library, %null : !llvm.ptr
     cf.cond_br %isMissing, ^noLibrary, ^loaded
@@ -431,5 +436,6 @@
     return %symbolError : f64
   ^found:
     %result = func.call @strict_library_invoke(%function, %arguments) : (!llvm.ptr, f64) -> f64
-    return %result : f64
+    %number = func.call @strict_canonical(%result) : (f64) -> f64
+    return %number : f64
   }

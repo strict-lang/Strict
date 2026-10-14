@@ -23,7 +23,8 @@ Unknown(scoped ScopedStatement, current Scope) Text
 	if names.Length > 0
 		return "NameNotFound: " + names.First
 	let methods = UnknownMethods(scoped.statement, scoped.scope, current)
-	methods.Length > 0 then methods.First else NotIterable(scoped, current)
+	let iterable = methods.Length > 0 then methods.First else NotIterable(scoped, current)
+	iterable is not "" then iterable else MutatingCheck(inference).Issue(scoped, current)
 NotIterable(scoped ScopedStatement, current Scope) Text
 	Counting.NotIterable(FlagLoop, KnownTypes.NoMembers) is "NotIterable: flag is a Boolean, use for as long as flag"
 	Counting.NotIterable(TwiceCall, KnownTypes.NoMembers) is ""

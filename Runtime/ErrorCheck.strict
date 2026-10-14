@@ -1,0 +1,18 @@
+has entry Bytecode/InstructionEntry
+constant Returning = ErrorCheck(InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0, 0, 0))
+constant Testing = ErrorCheck(InstructionEntry(InstructionType.CheckError, List(Text) + "tested", (0, 7, 8, 12)))
+constant Failed = List(VmValue) + VmValue.Failed
+constant Passed = List(VmValue) + VmValue.OfNumber(1)
+Next(position Number, slots List(VmValue), length Number) Number
+	Returning.Next(3, Failed, 10) is 10
+	Testing.Next(3, Failed, 10) is 12
+	Returning.Next(3, Passed, 10) is 4
+	ErrorCheck(InstructionEntry.Return(0)).Next(3, Failed, 10) is 4
+	if (entry.kind is not InstructionType.CheckError) or (slots(entry.payload(0)).kind is not in VmValue.ErrorKinds)
+		return position + 1
+	entry.texts.Length is 0 then length else entry.payload.Last
+Value(slots List(VmValue), frame Frame, position Number) VmValue
+	Returning.Value(Failed, Frame.Twice, 0).kind is "Strict/Error"
+	Returning.Value(Passed, Frame.Twice, 0).number is 1
+	let checked = slots(entry.payload(0))
+	checked.kind is in VmValue.ErrorKinds then frame.Traced(checked, position) else slots(entry.Target)

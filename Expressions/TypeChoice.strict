@@ -1,0 +1,55 @@
+has lines Texts
+constant Project = ("./LogoApp/Scene.strict", "./WebWars/Scene.strict", "./WebWars/Unit.strict")
+constant Scenes = ("./LogoApp/Scene.strict", "./WebWars/Scene.strict")
+constant Plain = TypeChoice(("Loaded Number", "\tScene.Units.Length"))
+constant Qualified = TypeChoice(("has scene WebWars/Scene", "Loaded Number", "\tscene.Units.Length"))
+Chosen(files Texts, source Text) Texts
+	Plain.Chosen(Project, "./LogoApp/Game.strict") is ("./LogoApp/Scene.strict", "./WebWars/Unit.strict")
+	Qualified.Chosen(Project, "./Content/Catalog.strict") is ("./WebWars/Scene.strict", "./WebWars/Unit.strict")
+	Plain.Chosen(Project, "./Content/Catalog.strict") is Project
+	for files
+		let best = Best(SameNamed(files, value), source)
+		if (best is "") or (best is value)
+			value
+SameNamed(files Texts, path Text) Texts
+	Plain.SameNamed(Project, "./WebWars/Scene.strict").Length is 2
+	let name = Path(path.Replace("\\", "/")).FileName.text
+	for files
+		if Path(value.Replace("\\", "/")).FileName.text is name
+			value
+Best(candidates Texts, source Text) Text
+	Qualified.Best(Scenes, "./Content/Catalog.strict") is "./WebWars/Scene.strict"
+	Plain.Best(Scenes, "./Content/Catalog.strict") is ""
+	if candidates.Length is 1
+		return candidates.First
+	for candidates
+		if IsQualified(value)
+			return value
+	let folder = Path(source.Replace("\\", "/")).PathOnly.text
+	for candidates
+		if Path(value.Replace("\\", "/")).PathOnly.text is folder
+			return value
+	""
+IsQualified(path Text) Boolean
+	Qualified.IsQualified("./WebWars/Scene.strict") is true
+	Plain.IsQualified("./WebWars/Scene.strict") is false
+	let parts = path.Replace("\\", "/").Split("/")
+	let qualified = parts(parts.Length - 2) + "/" + parts.Last.Replace(".strict", "")
+	for lines
+		if value.IndexOf(qualified) >= 0
+			return true
+	false
+Ambiguous(names Texts, path Text) Texts
+	Plain.Ambiguous(("Scene", "Scene", "Unit"), "Catalog.strict").First.StartsWith("AmbiguousType: Scene") is true
+	Plain.Ambiguous(("Scene", "Unit"), "./Content/Catalog.strict").Length is 0
+	for names
+		if (names.Index(value) is index) and (names.Count(value) > 1) and (UsedLine(value) > 0)
+			let advice = " is defined in several packages here, write Package/" + value + " in a declaration"
+			"AmbiguousType: " + value + " used in " + path + ":" + UsedLine(value) + advice
+UsedLine(name Text) Number
+	Plain.UsedLine("Scene") is 2
+	Plain.UsedLine("Unit") is 0
+	for lines
+		if name is in Tokenizer(value).Tokens
+			return index + 1
+	0

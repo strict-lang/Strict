@@ -27,6 +27,7 @@ is(other) Boolean
 	elements + other.elements
 -(other) List
 	(1, 2, 3) - (3) is (1, 2)
+	((Range(0, 1), Range(2, 3)) - (Range(0, 1))).Length is 1
 	elements - other.elements
 /(other) List
 	(2, 4, 6) / (2) is (1, 2, 3)
@@ -47,6 +48,7 @@ is(other) Boolean
 -(generic) List
 	(1, 2, 3) - 3 is (1, 2)
 	(1, 2, 3) - 4 is (1, 2, 3)
+	((Range(0, 1), Range(2, 3)) - Range(0, 1)).Length is 1
 	elements - generic
 *(generic) List
 	(1, 2) * 3 is (3, 6)
@@ -113,6 +115,7 @@ in(other Generic) Boolean
 Index(other Generic) Number
 	(1, 2, 3).Index(2) is 1
 	(1, 2, 3).Index(9) is -1
+	(Range(0, 1), Range(2, 3)).Index(Range(2, 3)) is 1
 	for elements
 		if value is other
 			return index
@@ -123,11 +126,13 @@ Add(element Generic) Mutable(List)
 	value = value + element
 Remove(element Generic) Mutable(List)
 	(1, 2, 3).Remove(2) is (1, 3)
+	(Range(0, 1), Range(2, 3)).Remove(Range(0, 1)).Length is 1
 	value = value - element
 Count(searchFor Generic) Number
 	(1, 2).Count(1) is 1
 	(1, 3).Count(2) is 0
 	("Hi", "Hello", "Hi").Count("Hi") is 2
+	(Range(0, 1), Range(2, 3)).Count(Range(2, 3)) is 1
 	for elements
 		if value is searchFor
 			1

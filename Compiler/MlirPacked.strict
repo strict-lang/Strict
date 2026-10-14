@@ -1,0 +1,59 @@
+has function MlirFunction
+has position Number
+constant Letters = "abcdefgh"
+constant Summing = MlirPacked(MlirKernel.Summing.function, 1)
+constant Doubling = MlirPacked(MlirKernel.Doubling.function, 2)
+Branch Text
+	Summing.Branch is "    cf.cond_br %f1ok1, ^floop1packed, ^loop1generic"
+	Doubling.Branch is "    cf.cond_br %f2ok1, ^floop2fast, ^loop2generic"
+	let kind = Packable.Length > 0 then "packed, ^loop" else "fast, ^loop"
+	let flag = "%f" + position + "ok" + MlirKernel(function, position).Sources.Length
+	"    cf.cond_br " + flag + ", ^floop" + position + kind + position + "generic"
+Packable Texts
+	Summing.Packable is (MlirFastLoop.Iterated, "numbers")
+	Doubling.Packable.Length is 0
+	let loops = MlirLoops(function, position)
+	mutable names = loops.Collection is "List(Number)" then List(Text) + MlirFastLoop.Iterated else List(Text)
+	for MlirKernel(function, position).Sources
+		if MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, value)) is "List(Number)"
+			names = names + value
+	(loops.IsCollecting or (names.Length > 3)) then List(Text) else names
+Keyed(name Text, index Number) Texts
+	Summing.Keyed("numbers", 1).Last is "    %f1s2 = arith.addi %f1s1, %f1w1 : i64"
+	let prefix = "%f" + position
+	let list = name is MlirFastLoop.Iterated then prefix + "v" else prefix + "l_" + name
+	let packed = "    " + prefix + "q" + index + " = func.call @strict_list_packed(" + list + ") : (f64) -> i64"
+	let shift = "    " + prefix + "m" + index + " = arith.constant " + 6 * index + " : i64"
+	let shifted = " = arith.shli " + prefix + "q" + index + ", " + prefix + "m" + index + " : i64"
+	let sum = " = arith.addi " + prefix + "s" + index + ", " + prefix + "w" + index + " : i64"
+	(packed, shift, "    " + prefix + "w" + index + shifted, "    " + prefix + "s" + (index + 1) + sum)
+Case(index Number) Text
+	Summing.Case(1) is "1024: ^fcloop1fast, 2048: ^fdloop1fast"
+	let label = "loop" + position + "fast"
+	let half = ((16 * 64 ^ index) to Text) + ": ^f" + Letters.Substring(2 * index, 1) + label
+	half + ", " + ((32 * 64 ^ index) to Text) + ": ^f" + Letters.Substring(2 * index + 1, 1) + label
+Dispatched Texts
+	Text.Combine(Summing.Dispatched).IndexOf("[default: ^loop1generic, 0: ^floop1fast, 16: ^faloop1fast") > 0 is true
+	Doubling.Dispatched.Length is 0
+	let names = Packable
+	if names.Length is 0
+		return List(Text)
+	mutable lines = List(Text) + ("  ^floop" + position + "packed:", "    %f" + position + "s0 = arith.constant 0 : i64")
+	mutable cases = List(Mutable(Text))
+	for names
+		lines = lines + Keyed(value, index)
+		cases.Add(Case(index))
+	let targets = "[default: ^loop" + position + "generic, 0: ^floop" + position + "fast, " + Text.Combine(cases, ", ")
+	lines + ("    cf.switch %f" + position + "s" + names.Length + " : i64, " + targets + "]") + Variants
+Variants Texts
+	Summing.Variants.First is "  ^faloop1fast:"
+	Text.Combine(Summing.Variants).IndexOf("arith.extf %fa1gn : f16 to f64") > 0 is true
+	let names = Packable
+	mutable lines = List(Mutable(Text))
+	for names.Length * 2
+		let packing = names((index / 2).Floor) + (index % 2 is 0 then " 16" else " 32")
+		let packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
+		let copied = MlirFastLoop(packed, position).Copied
+		let renamed = MlirKernel(function, position).Renamed(copied, Letters.Substring(index, 1))
+		lines = lines + renamed + ("    cf.br ^loop" + position + "joined")
+	lines

@@ -5,7 +5,7 @@ has parameters Scopes
 constant NoMembers = Scope(List(Text), List(Text))
 constant CountMembers = Scope(("number", "unused"), ("Number", "Unused"))
 constant CountMethods = Scope(("Increment", "Twice"), ("Count", "Count"))
-constant CountParameters = Scope(("Increment", "Twice", "Twice", "Twice types"), ("", "times,offset", "times", "Number"))
+constant CountParameters = Scope(("Increment", "Increment mutable", "Twice", "Twice", "Twice types"), ("", "Mutable", "times,offset", "times", "Number"))
 constant SampleParameters = (CountParameters, NoMembers)
 constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers), SampleParameters)
 IsKnown(typeName Text) Boolean

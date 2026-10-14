@@ -5,6 +5,8 @@ constant Body = List(InstructionEntry) + MlirLoops.Emptied + Looped
 constant Doubler = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Doubled", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", Body))
 constant Doubling = MlirKernel(Doubler, 2)
 constant Uncollected = MlirKernel(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Doubled", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", Looped)), 1)
+constant Summed = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "sum"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 6))
+constant Summing = MlirKernel(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MlirLists.Items, "Strict/Number", Summed)), 1)
 constant Calling = MlirKernel(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), MethodEntry.GoCall, InstructionEntry.Jump(InstructionType.LoopEnd, 1)))), 1)
 IsSimple Boolean
 	Doubling.IsSimple is true
@@ -38,10 +40,18 @@ IsAllowed(at Number) Boolean
 		return PayloadDecoder(entry).Value(1).kind is in ("Number", "Boolean")
 	if kind is InstructionType.StoreRegisterToVariable
 		return (entry.texts(0).IndexOf("(") < 0) and (entry.texts(0) is not in Sources)
-	if kind is in (InstructionType.IndexCall, InstructionType.InvokeWriteToList)
-		return kind is InstructionType.IndexCall then IsIndexedByLoop(at) else entry.texts(0) is "forResult"
+	if kind is in (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CheckError)
+		return IsAccessAllowed(at)
 	let isBinary = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 	(kind is InstructionType.LoadVariableToRegister) or (isBinary and IsCalculated(at))
+IsAccessAllowed(at Number) Boolean
+	Doubling.IsAccessAllowed(4) is true
+	Doubling.IsAccessAllowed(7) is true
+	let entry = function.method.instructions(at)
+	let previous = function.method.instructions(at - 1)
+	if entry.kind is InstructionType.CheckError
+		return (previous.kind is InstructionType.IndexCall) and (previous.payload(0) is entry.payload(0))
+	entry.kind is InstructionType.IndexCall then IsIndexedByLoop(at) else entry.texts(0) is "forResult"
 IsCalculated(at Number) Boolean
 	Doubling.IsCalculated(6) is true
 	let isText = MlirTexts(function, at).IsSum
@@ -72,20 +82,21 @@ Versioned Texts
 	Text.Combine(Doubling.Versioned).IndexOf("cf.cond_br %f2ok1, ^floop2fast, ^loop2generic") > 0 is true
 	Doubling.Versioned.Last is "  ^loop2generic:"
 	Calling.Versioned.Length is 0
+	Text.Combine(Summing.Versioned).IndexOf("cf.cond_br %f1ok1, ^floop1packed, ^loop1generic") > 0 is true
 	if IsSimple is false
 		return List(Text)
 	let fast = MlirFunction(function.types, function.type, function.method, function.lineSlots, position)
 	let loop = MlirFastLoop(fast, position)
-	let label = "^loop" + position
-	let flag = "%f" + position + "ok" + Sources.Length
-	let branch = "    cf.cond_br " + flag + ", ^floop" + position + "fast, " + label + "generic"
-	let copy = Renamed(loop.Started + loop.Counted + loop.Current + loop.Looped + loop.Exited)
-	Renamed(loop.Checked) + branch + copy + ("    cf.br " + label + "joined", "  " + label + "generic:")
+	let packed = MlirPacked(function, position)
+	let copy = Renamed(loop.Started + loop.Counted + loop.Current + loop.Looped + loop.Exited, "")
+	let joined = ("    cf.br ^loop" + position + "joined", "  ^loop" + position + "generic:")
+	Renamed(loop.Checked, "") + packed.Branch + packed.Dispatched + copy + joined
 Joined Texts
 	Doubling.Joined is ("    cf.br ^loop2joined", "  ^loop2joined:")
 	Calling.Joined.Length is 0
 	IsSimple then ("    cf.br ^loop" + position + "joined", "  ^loop" + position + "joined:") else List(Text)
-Renamed(lines Texts) Texts
-	Doubling.Renamed(("    %t2k = x", "  ^loop2:")) is ("    %f2k = x", "  ^floop2:")
+Renamed(lines Texts, letter Text) Texts
+	Doubling.Renamed(("    %t2k = x", "  ^loop2:"), "") is ("    %f2k = x", "  ^floop2:")
+	Doubling.Renamed(List(Text) + "  ^loop2:", "a") is List(Text) + "  ^faloop2:"
 	for lines
-		value.Replace("%t", "%f").Replace("^", "^f")
+		value.Replace("%t", "%f" + letter).Replace("^", "^f" + letter)

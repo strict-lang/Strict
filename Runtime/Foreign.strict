@@ -51,7 +51,15 @@ Converted(library Library, returnType Text, bits Number) VmValue
 		return VmValue.OfBoolean(bits is not 0)
 	if returnType.EndsWith("Text")
 		return VmValue.OfText(library.TextResult(bits))
+	if MlirForeign.IsRows(returnType)
+		return Rows(library, bits)
 	MlirForeign.IsNumbers(returnType) then Elements(library.NumbersResult(bits)) else VmValue.OfNumber(bits)
+Rows(library Library, bits Number) VmValue
+	Adding.Rows(Library("missing.dll"), Library("missing.dll").NumbersSlot(List(Number))).items.Length is 0
+	mutable rows = List(Mutable(VmValue))
+	for library.NumbersResult(bits)
+		rows.Add(Elements(library.NumbersResult(value)))
+	VmValue.OfList(rows)
 Elements(numbers Numbers) VmValue
 	Adding.Elements((1, 2)).items.Length is 2
 	mutable items = List(Mutable(VmValue))
@@ -70,16 +78,21 @@ Numbers(values List(VmValue)) Numbers
 		value.number
 Hosted VmValue
 	Calling.Hosted.number is not 3
+	Calling.Hosted.kind is "Strict/Error"
 	let library = Library(call.Instance.Member(0).text)
-	let argument = call.Arguments.First
 	let name = call.MethodName
+	if name is not in ("Call", "TextSlot", "NumbersSlot")
+		return Copied(library, name, call.Arguments.First.number)
+	let result = Raw(library, name)
+	if result is Error
+		return VmValue.OfError(result.Name.text)
+	VmValue.OfNumber(result)
+Raw(library Library, name Text) Number
+	Calling.Raw(Library("missing.dll"), "Call") is Error
+	let argument = call.Arguments.First
 	if name is "Call"
-		return VmValue.OfNumber(library.Call(argument.text, Numbers(call.Arguments.Last.items)))
-	if name is "TextSlot"
-		return VmValue.OfNumber(library.TextSlot(argument.text))
-	if name is "NumbersSlot"
-		return VmValue.OfNumber(library.NumbersSlot(Numbers(argument.items)))
-	Copied(library, name, argument.number)
+		return library.Call(argument.text, Numbers(call.Arguments.Last.items))
+	name is "TextSlot" then library.TextSlot(argument.text) else library.NumbersSlot(Numbers(argument.items))
 Copied(library Library, name Text, bits Number) VmValue
 	Adding.Copied(Library("missing.dll"), "Failure", 3).text is ""
 	if name is "TextResult"

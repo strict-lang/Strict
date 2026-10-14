@@ -39,7 +39,7 @@ Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 Next(entry InstructionEntry, position Number, slots List(VmValue)) Number
 	Twice.Next(InstructionEntry(InstructionType.JumpToIdIfTrue, List(Text), (0, 7)), 1, Listed) is 7
 	if (entry.kind < InstructionType.Return) or (entry.kind > InstructionType.JumpToIdIfTrue)
-		return position + 1
+		return ErrorCheck(entry).Next(position, slots, method.instructions.Length)
 	if entry.kind is InstructionType.Return
 		return method.instructions.Length
 	if entry.kind is InstructionType.LoopBegin
@@ -89,7 +89,7 @@ Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	let result = accessed.kind is "None" then machine.Call(call) else accessed
 	if result.kind is "Error"
 		machine.Logged(result.text)
-	result.kind is "Strict/Error" then Traced(result, position) else result
+	result.kind is in VmValue.ErrorKinds then Traced(result, position) else result
 Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Instance.number is 4
 	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Arguments.First.number is 3
@@ -102,10 +102,16 @@ Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	Invocation(entry, arguments, instance)
 Traced(error VmValue, position Number) VmValue
 	Twice.Traced(VmValue.OfError("a"), 0).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0 is true
+	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0), 0).items(1).items.Length is 1
+	if error.kind is "Strict/ErrorWithValue"
+		return VmValue(error.kind, error.number, error.text, (Traced(error.items(0), position), error.items(1)))
 	let called = VmValue.OfText(TypeEntry.ShortName(owner) + "." + method.Name)
 	let file = VmValue.OfText(TypeEntry(owner, List(MemberEntry), List(MethodEntry)).File)
 	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(method.instructions(position).line)))
-	VmValue(error.kind, error.number, error.text, (error.items(0), VmValue.OfList(error.items(1).items + trace)))
+	let traces = error.items(1).items
+	let isRepeated = (traces.Length > 0) and (traces.Last is trace)
+	let traced = isRepeated then error.items(1) else VmValue.OfList(traces + trace)
+	VmValue(error.kind, error.number, error.text, (error.items(0), traced))
 Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Looped(InstructionEntry.LoopBegin(6, 8), Listed, 0).items(3).number is 1
 	Twice.Looped(MethodEntry.CountingLoop.instructions(1), Listed, 1).items(2).number is 1
@@ -129,6 +135,8 @@ Other(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 		return Looped(entry, slots, position)
 	if entry.kind is InstructionType.Return
 		return slots(entry.payload(0))
+	if entry.kind is InstructionType.CheckError
+		return ErrorCheck(entry).Value(slots, value, position)
 	entry.kind is InstructionType.FieldLoad then machine.Field(entry, slots(entry.payload(1))) else Changed(entry, slots)
 Changed(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Changed(InstructionEntry(InstructionType.InvokeWriteToList, "list", (8, 7)), Listed).Length is 3

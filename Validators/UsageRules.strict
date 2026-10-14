@@ -88,7 +88,7 @@ Changes(node SyntaxNode, name Text) Boolean
 	false
 IsMutatingCall(call SyntaxNode, name Text) Boolean
 	Sample.IsMutatingCall(Sample.statements(2), "list") is true
-	(call.Kind is "MethodCall") and (call.text is in mutations) and (RootName(call.children(0)) is name)
+	(call.Kind is in ("MethodCall", "Member")) and (call.text is in mutations) and (RootName(call.children(0)) is name)
 RootName(node SyntaxNode) Text
 	Sample.RootName(Sample.statements(3)) is "count"
 	let names = node.HeadNames

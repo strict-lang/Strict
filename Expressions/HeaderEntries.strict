@@ -1,0 +1,10 @@
+has header HeaderTokens
+constant Mutating = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Mutable(List)").Tokens))
+constant Adding = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Number").Tokens))
+Parameters Scope
+	Mutating.Parameters.TypeOf("Add mutable") is "Mutable"
+	Adding.Parameters.names is ("Add", "Add types")
+	let name = header.tokens(0)
+	let parameters = (Text.Combine(header.ParameterNames, ","), Text.Combine(header.ParameterTypes, ","))
+	let entries = Scope((name, name + " types"), parameters)
+	header.ReturnsMutable then entries.With(name + " mutable", "Mutable") else entries

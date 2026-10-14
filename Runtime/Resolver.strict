@@ -77,8 +77,8 @@ Local(entry InstructionEntry) Text
 	Doubling.Local(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a")) is "a"
 	Doubling.Local(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "pair.b(1)")) is "pair"
 	Doubling.Local(InstructionEntry.LoadNumber(0, 7)) is ""
-	if entry.kind is InstructionType.StoreConstantToVariable
-		return entry.texts.Last
+	if (entry.kind is InstructionType.StoreConstantToVariable) or (entry.kind is InstructionType.CheckError)
+		return entry.texts.Length > 0 then entry.texts.Last else "#result"
 	if entry.kind is not in Named
 		return ""
 	let parts = PayloadDecoder(entry).ElementParts
@@ -94,7 +94,7 @@ Slotted(entry InstructionEntry, names Texts) InstructionEntry
 		return Decoded(entry)
 	let kind = entry.kind
 	let slot = Slot(local, names)
-	if kind is InstructionType.StoreConstantToVariable
+	if (kind is InstructionType.StoreConstantToVariable) or (kind is InstructionType.CheckError)
 		return Decoded(InstructionEntry(kind, entry.texts, entry.payload + slot, entry.line))
 	let payload = entry.payload
 	let start = kind is InstructionType.IndexCall then (payload(0), payload(1)) else List(Number) + payload(0)
@@ -133,13 +133,16 @@ Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Numb
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).Target is 9
 	Doubling.Placed(MethodEntry.CountingLoop.instructions(1), MethodEntry.CountingLoop, 1, 9).payload is (1, 0)
 	let isJump = (entry.kind is InstructionType.JumpToIdIfFalse) or (entry.kind is InstructionType.JumpToIdIfTrue)
-	let jumped = isJump then entry.payload + method.JumpEndOf(entry) else entry.payload
+	let isFailing = (entry.kind is InstructionType.CheckError) and (entry.texts.Length > 0)
+	let ended = InstructionEntry.Jump(InstructionType.JumpEnd, isFailing then PayloadDecoder(entry).SevenBit(1) else 0)
+	let target = isJump then method.JumpEndOf(entry) else method.JumpEndOf(ended)
+	let jumped = isJump or isFailing then entry.payload + target else entry.payload
 	let looped = entry.kind is InstructionType.LoopEnd then jumped + method.LoopBeginOf(position) else jumped
 	InstructionEntry(entry.kind, entry.texts, looped, entry.line, Destination(entry, scratch))
 Destination(entry InstructionEntry, scratch Number) Number
 	Doubling.Destination(InstructionEntry.Binary(InstructionType.Equal, (6, 7)), 9) is Frame.FlagSlot
 	let kind = entry.kind
-	if kind is InstructionType.StoreConstantToVariable
+	if kind is in (InstructionType.StoreConstantToVariable, InstructionType.CheckError)
 		return entry.payload.Last
 	if kind is in ListWrites
 		return entry.payload(1)

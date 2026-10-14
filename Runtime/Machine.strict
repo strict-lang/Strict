@@ -13,7 +13,7 @@ constant Coded = InstructionEntry(InstructionType.FieldLoad, ("number", "Charact
 constant Paired = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry.Initializing)
 constant Failing = TypeEntry("Strict/Failing", List(MemberEntry), List(MethodEntry) + MethodEntry("Fail", List(MemberEntry), "Strict/Number", (InstructionEntry(InstructionType.IndexCall, "list", (0, 0, 6)), InstructionEntry.Return(0))))
 constant Pairing = Machine(List(TypeEntry) + Paired)
-Launch(typeName Text, arguments List(VmValue))
+Launch(typeName Text, arguments List(VmValue)) Number
 	let main = Natives(types).TypeOf(typeName)
 	let exact = main.Callee("Run", arguments.Length, "None", List(Text))
 	let isExact = exact.instructions.Length > 0
@@ -21,7 +21,11 @@ Launch(typeName Text, arguments List(VmValue))
 	let typed = Typed(run.parameters, arguments)
 	let bound = isExact then typed else List(VmValue) + VmValue.OfList(typed)
 	let instance = Natives(types).Fresh(main)
-	Execute(run, Bound(main, instance, run, bound, instance), main.Name)
+	let result = Execute(run, Bound(main, instance, run, bound, instance), main.Name)
+	if result.kind is in VmValue.ErrorKinds
+		logger.Log(result to Text)
+		return 1
+	0
 Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("5")).First.number is 5
 	Hello.Typed(List(MemberEntry) + MemberEntry.LoggerMember, List(VmValue) + VmValue.OfText("a")).First.text is "a"
@@ -123,12 +127,12 @@ Executed(route Number, method MethodEntry, call Invocation) VmValue
 	let isInitializer = method.Name is "from" then type.IsStruct and method.IsInitializer(type.Changing) else false
 	if isInitializer is false
 		return Execute(method, Bound(type, call.Instance, method, call.Arguments, prototype), type.Name)
-	let bound = Bound(type, prototype, method, call.Arguments, prototype)
-	let finished = Frame(value, method, type.Name).Finished(bound)
+	let finished = Frame(value, method, type.Name).Finished(Bound(type, prototype, method, call.Arguments, prototype))
+	let result = finished(Frame.ResultSlot)
 	mutable values = List(Mutable(VmValue))
 	for type.members
 		values.Add(finished(Frame.MembersSlot + index))
-	VmValue(type.Name, 0, "", values)
+	result.kind is in VmValue.ErrorKinds then result else VmValue(type.Name, 0, "", values)
 Field(entry InstructionEntry, instance VmValue) VmValue
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1)), VmValue.OfText("ab")).text is "ab"
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "c", (1, 0, -1)), VmValue.OfError("a")).kind is "Strict/Error"

@@ -33,16 +33,17 @@ ValueHelper(kind Text, name Text, count Number) Text
 		return "strict_" + (kind is "Number" then "number_" else "") + name
 	kind is "Text" then TextHelper(name) else TypeHelper(kind, name)
 CollectionHelper(kind Text, name Text, count Number) Text
-	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "in", 1) is "strict_list_has_text"
+	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "in", 1) is "strict_list_has"
 	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "Remove", 1) is ""
-	MlirNatives(Texts, 1).CollectionHelper("List(Number)", "Count", 1) is "strict_list_count_number"
+	MlirNatives(Texts, 1).CollectionHelper("List(Number)", "Count", 1) is "strict_list_count"
+	MlirNatives(Texts, 1).CollectionHelper("List(Range)", "Index", 1) is "strict_list_find"
 	MlirNatives(Texts, 1).CollectionHelper("Dictionary(Text, Number)", "Add", 2) is "strict_dictionary_add"
 	if kind.StartsWith("Dictionary(")
 		return DictionaryHelper(name)
 	if name is not in ("in", "Index", "Count") or count is not 1
 		return ""
 	let operation = name is "in" then "has" else name.Lower
-	Finder(MlirKinds(function).ElementKind(kind), operation)
+	"strict_list_" + (operation is "index" then "find" else operation)
 DictionaryHelper(name Text) Text
 	MlirNatives(Texts, 1).DictionaryHelper("in") is "strict_dictionary_has"
 	MlirNatives(Texts, 1).DictionaryHelper("to") is ""
@@ -77,13 +78,9 @@ Keying(helper Text, operands Texts, kind Text) Texts
 	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
 	let call = "    " + memory.Temp("k") + " = func.call @" + helper + "(" + arguments + ") : (" + types
 	(hash, equal, call + ", (f64) -> i64, (f64, f64) -> f64) -> f64") + memory.Traced(memory.Temp("k"), memory.Temp("r"))
-Finder(element Text, operation Text) Text
-	MlirNatives(Texts, 1).Finder("Text", "has") is "strict_list_has_text"
-	MlirNatives(Texts, 1).Finder("Shape", "index") is ""
-	let represented = MlirLayout(function).Represented(element)
-	if represented is "Text"
-		return "strict_list_" + operation + "_text"
-	represented is in ("Number", "Boolean", "Character") then "strict_list_" + operation + "_number" else ""
+Element(kind Text) Text
+	MlirNatives(Texts, 1).Element("List(Text)") is "Text"
+	MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind))
 TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadLines") is "strict_file_read_lines"
 	MlirNatives(Texts, 1).TypeHelper("Directory", "Files") is "strict_directory_files"
@@ -110,6 +107,7 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	let operands = List(Text) + calls.Temp("m") + calls.ArgumentNames(count)
 	let hasStart = helper is in DefaultedLast
 	let completed = hasStart and (count is 1) then operands + "%zero" else operands
-	let plain = List(Text) + MlirMemory(function, position).Called(calls.Temp("r"), helper, completed)
-	let call = helper.StartsWith("strict_dictionary_") then Keying(helper, completed, calls.Owner(entry, type)) else plain
+	let owner = calls.Owner(entry, type)
+	let plain = MlirMemory(function, position).Passed(calls.Temp("r"), helper, completed, Element(owner))
+	let call = helper.StartsWith("strict_dictionary_") then Keying(helper, completed, owner) else plain
 	calls.Loads(entry, type) + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))

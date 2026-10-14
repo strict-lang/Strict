@@ -12,12 +12,12 @@ Run(folder Text, root Text)
 	logger.Log("Unresolved names: " + unresolved.Length)
 Unresolved(path Text, inference TypeInference) Texts
 	ResolveCheck.Unresolved("Logger.strict", Inference(("Logger.strict", "TextWriter.strict"))).Length is 0
-	let typeName = TypeName(path)
 	let lines = File(path).ReadLines
-	let bodies = MethodBodies(typeName, TypeShape(lines), inference)
-	let known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(typeName).names
+	let bodies = MethodBodies(TypeName(path), TypeShape(lines), inference)
+	let known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(TypeName(path)).names
 	let check = FileCheck(inference, known)
-	mutable unresolved = check.Unimplemented(path, lines) + check.UnsupportedDefaults(path, lines)
+	let issues = check.Unimplemented(path, lines) + check.UnsupportedDefaults(path, lines)
+	mutable unresolved = issues + TypeChoice(lines).Ambiguous(inference.types.names, path)
 	for bodies.Statements
 		let unknown = check.Unknown(value, bodies.Methods)
 		if unknown is not ""

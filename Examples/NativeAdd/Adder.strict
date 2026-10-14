@@ -2,4 +2,7 @@ Add(left Number, right Number) Number
 Greeting(name Text) Text
 Total(numbers Numbers) Number
 Doubled(numbers Numbers) Numbers
+Halved(numbers Numbers) Numbers
+Split(numbers Numbers, columns Number) List(Numbers)
 Failing Number
+Undefined Number

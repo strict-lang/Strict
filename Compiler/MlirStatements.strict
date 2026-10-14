@@ -1,6 +1,7 @@
 has function MlirFunction
 has position Number
 constant Copy = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), InstructionEntry.Return(0)))), 0)
+constant Summing = MlirStatements(MlirFastLoop.Summing.function, 5)
 Emitted Texts
 	Copy.Emitted.Last is "    llvm.store %t0c, %r0 : f64, !llvm.ptr"
 	let entry = function.method.instructions(position)
@@ -52,6 +53,8 @@ Jumped(entry InstructionEntry) Texts
 	Copy.Jumped(InstructionEntry.Jump(InstructionType.JumpEnd, 0)).Length is 0
 	if entry.kind is InstructionType.JumpEnd
 		return List(Text)
+	if entry.kind is InstructionType.CheckError
+		return MlirChecks(function, position).Emitted
 	if entry.kind is not in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
 		return List(Text) + Unsupported("instruction kind " + entry.kind)
 	let target = "^bb" + JumpEnd(PayloadDecoder(entry).SevenBit(0))
@@ -80,12 +83,16 @@ Calculated(entry InstructionEntry) Texts
 Operated(kind Number, left Text, right Text) Text
 	Copy.Operated(InstructionType.Modulo, "%a", "%b").IndexOf("@strict_remainder(%a, %b)") > 0 is true
 	Copy.Operated(InstructionType.Add, "%a", "%b") is "    %t0c = arith.addf %a, %b : f64"
+	Summing.Operated(InstructionType.Add, "%a", "%b") is "    %t5c = arith.addf %a, %b fastmath<reassoc,contract> : f64"
+	MlirStatements(MlirFastLoop.Doubling.function, 6).Operated(InstructionType.Add, "%a", "%b").IndexOf("fastmath") is -1
 	let result = "    " + Temp("c") + " = "
 	if kind is InstructionType.Power
 		return result + "llvm.intr.pow(" + left + ", " + right + ") : (f64, f64) -> f64"
 	if kind is InstructionType.Modulo
 		return result + "func.call @strict_remainder(" + left + ", " + right + ") : (f64, f64) -> f64"
-	result + "arith." + Operation(kind) + " " + left + ", " + right + " : f64"
+	let isSum = MlirFastLoop(function, function.FastLoop).IsAccumulated(position)
+	let flags = isSum then " fastmath<reassoc,contract>" else ""
+	result + "arith." + Operation(kind) + " " + left + ", " + right + flags + " : f64"
 Operation(kind Number) Text
 	Copy.Operation(InstructionType.Divide) is "divf"
 	if kind is InstructionType.Add

@@ -5,8 +5,9 @@ constant Counter = CodeBlock.Empty.Declare("failed", "Number").Declare("started"
 constant Elapsed = SyntaxParser(Tokenizer("Process.Elapsed").Tokens).Parse
 constant Duration = SyntaxParser(Tokenizer("((Process.Elapsed - started) * 1000).Round(2) + \" ms)\"").Tokens).Parse
 constant OneIsOne = SyntaxNode("Binary", "is", (MethodCodegen.One, MethodCodegen.One))
-constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 26, 1), 2)
-constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 16, 1), 2)
+constant Declaring = SyntaxNode("Declaration", "let a", MethodCodegen.One)
+constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 25, 1), 2)
+constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 15, 1), 2)
 constant Runner = "$Tests"
 Tests MethodEntry
 	Even.Tests.Name is Runner
@@ -31,21 +32,45 @@ Method(start Number, block CodeBlock) CodeBlock
 	result
 Line(line SyntaxNode, method Text, block CodeBlock) CodeBlock
 	Even.Line(OneIsOne, "IsEven", Counter).instructions.Length > 4 is true
-	if line.Kind is "Declaration"
-		return MethodCodegen(types.Generator).Statement(line, block, false)
-	Checked(line, method, block)
+	Even.Line(Declaring, "IsEven", Counter).instructions(0).kind is InstructionType.StoreConstantToVariable
+	if line.Kind is not "Declaration"
+		return Checked(line, method, block)
+	let failure = block.nextId
+	let marked = block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text)
+	let declared = MethodCodegen(types.Generator).Statement(line, marked, false).Declare(ErrorCodegen.FailureMarker, "")
+	let skipped = declared.Flagged.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, declared.nextId)).WithNextId
+	let failed = skipped.Add(InstructionEntry.Jump(InstructionType.JumpEnd, failure))
+	let printed = Got(failed.Add(InstructionEntry.Print("Test failed: " + Place(line, method))))
+	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, skipped.nextId - 1))
 Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock
 	Even.Checked(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
-	let timed = isQuiet then block else types.Generator.Expression(Elapsed, block).Stored("started")
-	let generated = types.Generator.Expression(test, timed)
-	let truth = generated.Load(InstructionEntry.LoadBoolean(generated.register, true))
-	let compared = truth.Add(InstructionEntry.Binary(InstructionType.Equal, (generated.Result, truth.Result)))
-	let file = TypeEntry(types.fullName, List(MemberEntry), List(MethodEntry)).File
-	let place = test to Text + " in " + method + " at " + file + ":line " + test.line
+	let failure = block.nextId
+	let marked = block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text)
+	let timed = isQuiet then marked else types.Generator.Expression(Elapsed, marked).Stored("started")
+	let compared = Compared(test, timed).Declare(ErrorCodegen.FailureMarker, "")
+	let place = Place(test, method)
 	let reported = isQuiet then compared else Passed(compared, place)
 	let jumped = reported.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, reported.nextId)).WithNextId
-	let printed = Got(test, Timed(jumped, "Test failed: " + place))
+	let failed = jumped.Add(InstructionEntry.Jump(InstructionType.JumpEnd, failure))
+	let printed = Got(Timed(failed, "Test failed: " + place))
 	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, jumped.nextId - 1))
+Compared(test SyntaxNode, block CodeBlock) CodeBlock
+	Even.Compared(OneIsOne, Counter).instructions.Last.kind is InstructionType.Equal
+	Even.Compared(OneIsOne, Counter).scope.TypeOf(ErrorCodegen.Tested) is "Number"
+	let isComparison = (test.Kind is "Binary") and (test.text is in ("is", "is not"))
+	let left = isComparison then test.children(0) else test
+	let stored = ErrorCodegen(types.Generator).Handled(left, block).Stored(ErrorCodegen.Tested).At(block.register)
+	let declared = stored.Declare(ErrorCodegen.Tested, types.Generator.TypeOf(left, block))
+	let right = isComparison then test.children(1) else SyntaxNode("Boolean", "true")
+	let tested = SyntaxNode("Identifier", ErrorCodegen.Tested)
+	let comparison = SyntaxNode("Binary", (isComparison then test.text else "is"), (tested, right), test.line)
+	let generated = types.Generator.Expression(comparison, declared)
+	let truth = generated.Load(InstructionEntry.LoadBoolean(generated.register, true))
+	truth.Add(InstructionEntry.Binary(InstructionType.Equal, (generated.Result, truth.Result)))
+Place(test SyntaxNode, method Text) Text
+	Even.Place(OneIsOne, "IsEven") is "1 is 1 in IsEven at Even.strict:line 0"
+	let file = TypeEntry(types.fullName, List(MemberEntry), List(MethodEntry)).File
+	test to Text + " in " + method + " at " + file + ":line " + test.line
 Passed(compared CodeBlock, place Text) CodeBlock
 	Even.Passed(Counter, "x").instructions.Index(InstructionEntry.Print("Test passed: x")) is -1
 	let passed = compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
@@ -57,14 +82,13 @@ Timed(block CodeBlock, message Text) CodeBlock
 		return block.Add(InstructionEntry.Print(message))
 	let duration = types.Generator.Expression(Duration, block)
 	duration.Add(InstructionEntry.PrintValue(message + " (", duration.Result, true))
-Got(test SyntaxNode, block CodeBlock) CodeBlock
-	Even.Got(OneIsOne, Counter).instructions.Last.kind is InstructionType.Print
-	Even.Got(MethodCodegen.One, Counter).instructions.Length is 0
-	if (test.Kind is not "Binary") or (test.text is not "is")
-		return block
-	let left = types.Generator.Expression(test.children(0), block)
-	let isText = types.Generator.TypeOf(test.children(0), left) is "Text"
-	left.Add(InstructionEntry.PrintValue("  got: ", left.Result, isText))
+Got(block CodeBlock) CodeBlock
+	Even.Got(Counter.Declare(ErrorCodegen.Tested, "Number")).instructions.Last.kind is InstructionType.Print
+	Even.Got(Counter.Declare(ErrorCodegen.Tested, "Number")).instructions.First.texts is List(Text) + ErrorCodegen.Tested
+	let load = InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, ErrorCodegen.Tested)
+	let tested = block.Load(load)
+	let isText = block.scope.TypeOf(ErrorCodegen.Tested) is "Text"
+	tested.Add(InstructionEntry.PrintValue("  got: ", tested.Result, isText))
 Counted(block CodeBlock) CodeBlock
 	Even.Counted(Counter).instructions.Last.texts is ("failed")
 	constant sum = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "failed"), SyntaxNode("Number", "1")))

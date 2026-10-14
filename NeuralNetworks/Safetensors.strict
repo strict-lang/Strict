@@ -1,4 +1,5 @@
 has path Text
+has bits Number = 32
 constant Tiny = Safetensors("NeuralNetworks/tiny.safetensors")
 Entry(name Text) Text
 	Tiny.Entry("b") is "\"dtype\":\"F32\",\"shape\":[3],\"data_offsets\":[24,36]"
@@ -22,23 +23,22 @@ Shape(name Text) Numbers
 Values(name Text) Numbers
 	Tiny.Values("b") is (0.5, -1.5, 2.25)
 	Tiny.Values("a").Length is 6
-	let entry = Entry(name)
-	if entry.IndexOf("\"dtype\":\"F32\"") < 0
-		return Error("OnlyFloat32TensorsAreSupported")
-	let offsets = Bracketed(entry, "data_offsets")
+	let offsets = Bracketed(Float32(name), "data_offsets")
 	TensorFile.Floats(path, offsets(0), (offsets(1) - offsets(0)) / 4)
+Float32(name Text) Text
+	Tiny.Float32("b").StartsWith("\"dtype\":\"F32\"") is true
+	Tiny.Float32("missing") is Error
+	let entry = Entry(name)
+	entry.IndexOf("\"dtype\":\"F32\"") < 0 then Error("OnlyFloat32TensorsAreSupported") else entry
 Rows(name Text) List(Numbers)
 	Tiny.Rows("a") is ((1, 2, 3), (4, 5, 6))
-	let columns = Shape(name).Last
-	let values = Values(name)
-	for values.Length / columns
-		Part(values, index * columns, columns, 1)
+	Safetensors("NeuralNetworks/tiny.safetensors", 16).Rows("a") is ((1, 2, 3), (4, 5, 6))
+	let entry = Float32(name)
+	TensorFile.Rows(path, Bracketed(entry, "data_offsets").First, Bracketed(entry, "shape"), bits)
 Columns(name Text) List(Numbers)
 	Tiny.Columns("a") is ((1, 4), (2, 5), (3, 6))
-	let columns = Shape(name).Last
-	let values = Values(name)
-	for columns
-		Part(values, index, values.Length / columns, columns)
+	let entry = Float32(name)
+	TensorFile.Columns(path, Bracketed(entry, "data_offsets").First, Bracketed(entry, "shape"), bits)
 Part(values Numbers, start Number, count Number, step Number) Numbers
 	Tiny.Part((1, 2, 3, 4), 1, 2, 2) is (2, 4)
 	for count

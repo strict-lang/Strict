@@ -13,7 +13,6 @@ Run(arguments Texts) Number
 	for Range(2, arguments.Length)
 		texts.Add(VmValue.OfText(arguments(value)))
 	Started(types, arguments(0)).Launch(types.First.Name, texts)
-	0
 Test(path Text, root Text) Number
 	let paths = Directory.Exists(path) then Directory.Files(path, "*.strict") else List(Text) + path
 	Failures(paths, root, false)

@@ -18,8 +18,8 @@ Operation(node SyntaxNode, block CodeBlock) CodeBlock
 		return Negative(node.children(0), block)
 	if IsComposite(node, block)
 		return Composite(node, block)
-	let left = values.Expression(node.children(0), block)
-	let right = values.Expression(ConversionCodegen(values).Operand(node, block), left)
+	let left = ErrorCodegen(values).Compared(node, node.children(0), block)
+	let right = ErrorCodegen(values).Right(node, left, true)
 	let result = right.Load(InstructionEntry.Binary(OperatorType(node.text), (left.Result, right.Result, right.register)))
 	node.text is in (">=", "<=") then result.Negated else result
 Negative(operand SyntaxNode, block CodeBlock) CodeBlock
@@ -87,7 +87,7 @@ Composite(node SyntaxNode, block CodeBlock) CodeBlock
 	if node.Kind is "Converted"
 		return ConversionCodegen(values).Looped(node, block)
 	if IsCustom(node, block)
-		return values.Expression(SyntaxNode("MethodCall", node.text, node.children), block)
+		return ErrorCodegen(values).Handled(SyntaxNode("MethodCall", node.text, node.children), block)
 	if node.text is in ("and", "or")
 		return Logical(node, block)
 	node.text is "else" then Choice(node, block) else Contains(node, block)
@@ -96,8 +96,8 @@ Choice(node SyntaxNode, block CodeBlock) CodeBlock
 	let decision = node.children(0)
 	let condition = Condition(decision.children(0), block)
 	let name = "conditional" + (condition.nextId - 1)
-	let chosen = values.Expression(decision.children(1), condition).Chosen(name, condition.nextId - 1)
-	values.Expression(node.children(1), chosen).Joined(name, chosen.nextId - 1)
+	let chosen = ErrorCodegen(values).Handled(decision.children(1), condition).Chosen(name, condition.nextId - 1)
+	ErrorCodegen(values).Handled(node.children(1), chosen).Joined(name, chosen.nextId - 1)
 Logical(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).nextId is 1
 	let left = values.Expression(node.children(0), block)
@@ -106,9 +106,13 @@ Logical(node SyntaxNode, block CodeBlock) CodeBlock
 	values.Expression(node.children(1), left.Skipping(name, jump)).Joined(name, left.nextId)
 Contains(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Contains(InOnes, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
-	let call = SyntaxNode("MethodCall", "in", (node.children(1), node.children(0)))
-	let negated = SyntaxNode("Not", "", List(SyntaxNode) + call)
-	values.InstanceCall((node.text is "is in" then call else negated), block)
+	let collection = node.children(1)
+	let isErrors = values.inference.types.ElementType(values.TypeOf(collection, block)) is in ErrorCodegen.ErrorTypes
+	let name = "contained" + block.nextId
+	let stored = isErrors then ErrorCodegen(values).Kept(node.children(0), name, block) else block
+	let element = isErrors then SyntaxNode("Identifier", name) else node.children(0)
+	let call = SyntaxNode("MethodCall", "in", (collection, element))
+	values.InstanceCall((node.text is "is in" then call else SyntaxNode("Not", "", List(SyntaxNode) + call)), stored)
 Condition(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Condition(SyntaxNode("Boolean", "true"), CodeBlock.Empty).nextId is 1
 	Plain.Condition(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 4
@@ -120,9 +124,10 @@ Compared(node SyntaxNode, block CodeBlock) CodeBlock
 	let isCompared = (node.Kind is "Binary") and (node.text is in ("is", "is not", "<", ">"))
 	let isComparison = isCompared and (Decided(node, block) is "")
 	let operand = isComparison then node.children(0) else node
-	let left = values.Expression(operand, block)
+	let errors = ErrorCodegen(values)
+	let left = errors.Compared(node, operand, block)
 	let truth = InstructionEntry.LoadBoolean(left.register, true)
-	let right = isComparison then values.Expression(node.children(1), left) else left.Load(truth)
+	let right = isComparison then errors.Right(node, left, false) else left.Load(truth)
 	let type = isComparison then OperatorType(node.text) else InstructionType.Equal
 	right.Add(InstructionEntry.Binary(type, (left.Result, right.Result)))
 OperatorType(operator Text) Number

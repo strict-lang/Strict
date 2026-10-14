@@ -20,12 +20,7 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Binary", ">=", (One, NoNode)), CodeBlock.Empty).instructions.Length is 5
 	Plain.Expression(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 9
 	Plain.Expression(SyntaxNode("Identifier", "Error"), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
-	let folded = ConversionCodegen(value).Typed(ConstantFolding(target.TypeName, inference).Folded(node), block)
-	if folded.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
-		return Leaf(folded, block)
-	if (folded.Kind is in ("Call", "Member", "MethodCall", "Not")) or (folded.text is "to")
-		return Call(folded, block)
-	OperatorCodegen(ValueCodegen(inference, methods, target)).Operation(folded, block)
+	ErrorCodegen(value).Checked(node, block)
 Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Variable(SyntaxNode("Identifier", "a"), CodeBlock.Empty).instructions(0).texts is ("a")
 	Plain.Variable(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty).instructions(0).kind is InstructionType.Invoke
@@ -70,13 +65,13 @@ Constructed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Constructed(SyntaxNode("Call", "Dictionary"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.Constructed(SyntaxNode("Call", "Mutable", One), CodeBlock.Empty).instructions(0).payload is (0, 1, 1)
 	if node.text is "Mutable"
-		return Expression(node.children(0), block)
+		return ErrorCodegen(value).Handled(node.children(0), block)
 	let isEmpty = (node.text is "List") or (node.children.Length is 0) or IsTypeName(node.children(0), block)
 	isEmpty then Elements.Empty(TypeOf(node, block), block) else Elements.Of(SyntaxNode("List", "", node.children), block)
 InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.InstanceCall(SyntaxNode("Member", "Greet", NoNode), CodeBlock.Empty).instructions(1).payload.Last is 0
 	Plain.InstanceCall(ToText, CodeBlock.Empty).Result is 1
-	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(1).kind is InstructionType.FieldLoad
+	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(2).kind is InstructionType.FieldLoad
 	Plain.InstanceCall(SyntaxParser("outer", ".", "index").Parse, CodeBlock.Empty).instructions(0).texts is ("outer.index")
 	if (node.Kind is "Member") and (node.text is "index") and (node.children(0).text is "outer")
 		return block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "outer.index"))
@@ -87,7 +82,7 @@ InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 	let call = node.Kind is in ("Binary", "Not") then SyntaxNode("Member", method, node.children(0)) else node
 	Invoke(call, instance, instance.Result, TypeOf(node, block))
 Field(member Text, owner Text, block CodeBlock, instance Number) CodeBlock
-	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(1).texts is ("text", "Greeter")
+	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(2).texts is ("text", "Greeter")
 	block.Load(InstructionEntry(InstructionType.FieldLoad, (member, owner), (block.register, instance, -1, -2)))
 IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsMethodCall(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty) is true
@@ -103,7 +98,7 @@ IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
 		return (node.text is not "value") and (target.IsMember(TypeOf(node.children(0), block), node.text) is false)
 	(node.Kind is in ("Call", "MethodCall")) and (IndexCodegen(value).IsIndexing(node, block) is false)
 Replacing(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Replacing(TypeCodegen.Rebuilt, CodeBlock.Empty).instructions(2).texts is ("replaced0")
+	Plain.Replacing(TypeCodegen.Rebuilt, CodeBlock.Empty).instructions(3).texts is ("replaced0")
 	let replaced = ConversionCodegen(value).Replaced(node)
 	let instance = node.children.Length > 0 then node.children(0) else node
 	if (replaced is node) or (instance.Kind is "Identifier")

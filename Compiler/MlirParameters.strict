@@ -10,9 +10,10 @@ FixedLists Texts
 IsFixed(name Text) Boolean
 	Reading.IsFixed("numbers") is true
 	for function.method.instructions
-		let target = value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else value.texts.First
-		if (value.kind is in Writers) and ((target is name) or target.StartsWith(name + "("))
-			return false
+		if value.kind is in Writers
+			let target = value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else value.texts.First
+			if (target is name) or target.StartsWith(name + "(")
+				return false
 	true
 Hoisted Texts
 	Reading.Hoisted.Length is 3
@@ -23,9 +24,9 @@ Hoisted Texts
 			lines = lines + Started(value.Name, "%p" + (index + 1))
 	lines
 Started(name Text, parameter Text) Texts
-	Reading.Started("numbers", "%p1").First is "    %h_numbers = func.call @strict_list_start(%p1) : (f64) -> !llvm.ptr"
+	Reading.Started("numbers", "%p1").First is "    %h_numbers = func.call @strict_list_hoisted(%p1) : (f64) -> !llvm.ptr"
 	Reading.Started("numbers", "%p1").Last is "    %k_numbers = func.call @strict_list_version() : () -> i64"
-	let items = "    %h_" + name + " = func.call @strict_list_start(" + parameter + ") : (f64) -> !llvm.ptr"
+	let items = "    %h_" + name + " = func.call @strict_list_hoisted(" + parameter + ") : (f64) -> !llvm.ptr"
 	let length = "    %n_" + name + " = func.call @strict_list_length(" + parameter + ") : (f64) -> f64"
 	(items, length, "    %k_" + name + " = func.call @strict_list_version() : () -> i64")
 Read(name Text, list Text, position Text, nameBits Text, result Text) Text

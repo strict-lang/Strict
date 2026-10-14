@@ -43,7 +43,7 @@ Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	let isCall = node.Kind is "Call"
 	let named = isCall then SyntaxNode("Identifier", node.text) else SyntaxNode("Member", node.text, node.children(0))
 	if values.TypeOf(named, block).StartsWith("Dictionary(")
-		return values.Expression(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
+		return ErrorCodegen(values).Handled(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
 	let isError = isCall and (block.scope.TypeOf(node.text) is "Error")
 	isError then WithValue(node, block) else Element(node, block)
 Keyed(statement SyntaxNode, block CodeBlock) SyntaxNode
@@ -69,7 +69,7 @@ Element(node SyntaxNode, block CodeBlock) CodeBlock
 	let isNamed = (node.Kind is "Call") and (isComputed is false)
 	let name = isNamed then node.text else "list" + block.nextId
 	let source = node.Kind is "Call" then named else SyntaxNode("Member", node.text, node.children(0))
-	let list = isNamed then block else values.Expression(source, block)
+	let list = isNamed then ErrorScope(values).Guarded(node.text, block) else values.Expression(source, block)
 	let stored = isNamed then list else list.Stored(name).WithNextId
 	let index = values.Expression(GridIndex(node), stored)
 	index.Load(InstructionEntry(InstructionType.IndexCall, List(Text) + name, (index.register, index.Result, -1)))

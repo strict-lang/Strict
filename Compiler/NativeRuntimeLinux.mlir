@@ -477,5 +477,6 @@
     return %symbolError : f64
   ^found:
     %result = func.call @strict_library_invoke(%function, %arguments) : (!llvm.ptr, f64) -> f64
-    return %result : f64
+    %number = func.call @strict_canonical(%result) : (f64) -> f64
+    return %number : f64
   }

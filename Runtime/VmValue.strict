@@ -5,6 +5,7 @@ has items List(VmValue)
 constant None = VmValue("None", 0, "", List(VmValue))
 constant TrueValue = VmValue("Boolean", 1, "", List(VmValue))
 constant FalseValue = VmValue("Boolean", 0, "", List(VmValue))
+constant ErrorKinds = ("Strict/Error", "Strict/ErrorWithValue")
 constant Failed = VmValue("Strict/Error", 0, "", (OfText("x"), OfList(List(VmValue) + VmValue("Strict/Stacktrace", 0, "", (OfText("B.C"), OfText("B.strict"), OfNumber(7))))))
 OfNumber(amount Number) VmValue
 	OfNumber(3).number is 3
@@ -48,12 +49,13 @@ As(typeName Text) VmValue
 	OfText("a").As("Strict/Number").number is 97
 	OfNumber(98).As("Strict/Character").text is "b"
 	OfText("ab").As("Strict/List(Character)").text is "ab"
+	OfText("ab").As("Strict/Number").text is "ab"
 	if (kind is not "Number") and (kind is not "Text")
 		return value
 	let target = TypeEntry.ShortName(typeName)
 	if (kind is "Number") and (target is "Character")
 		return OfText(Character(number) to Text)
-	(kind is "Text") and (target is "Number") then OfNumber(Character(text).number) else value
+	(kind is "Text") and (target is "Number") and (text.Length is 1) then OfNumber(Character(text).number) else value
 IsTrue Boolean
 	OfBoolean(false).IsTrue is false
 	number is 1

@@ -1,2 +1,4 @@
 Header(path Text) Text
 Floats(path Text, start Number, count Number) Numbers
+Rows(path Text, start Number, shape Numbers, bits Number) List(Numbers)
+Columns(path Text, start Number, shape Numbers, bits Number) List(Numbers)

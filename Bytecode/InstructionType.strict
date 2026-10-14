@@ -35,4 +35,5 @@ constant Print
 constant FieldLoad
 constant ConstructValueType
 constant CopyList
+constant CheckError
 constant IncludesSourceLine = 128

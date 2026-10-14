@@ -23,13 +23,13 @@ ElementSuffix(register Number) Text
 	MlirListOperators(Worded, 2).ElementSuffix(0) is "text"
 	MlirKinds(function).ElementKind(MlirKinds(function).KindOf(position, register)) is "Text" then "text" else "number"
 Helper(entry InstructionEntry) Text
-	MlirListOperators(Mixed, 2).Helper(Arithmetic(2)) is "strict_list_removed_number"
+	MlirListOperators(Mixed, 2).Helper(Arithmetic(2)) is "strict_list_removed"
 	MlirListOperators(Mixed, 3).Helper(Arithmetic(3)) is "strict_list_times"
 	MlirListOperators(Mixed, 4).Helper(Arithmetic(4)) is "strict_list_divided_number"
 	MlirListOperators(Mixed, 5).Helper(Arithmetic(5)) is "strict_list_prepend"
 	let isList = IsList(entry.payload(2))
 	if entry.kind is InstructionType.Subtract
-		return (isList then "strict_list_without_" else "strict_list_removed_") + ElementSuffix(entry.payload(1))
+		return isList then "strict_list_without" else "strict_list_removed"
 	if entry.kind is InstructionType.Add
 		return Added(entry, isList)
 	let operation = entry.kind is InstructionType.Multiply then "strict_list_times" else "strict_list_divided"
@@ -47,7 +47,10 @@ Operated(entry InstructionEntry) Texts
 	Text.Combine(MlirListOperators(MlirLists.Listed, 5).Operated(Steps(5)), "").IndexOf("strict_list_concat") > 0 is true
 	let names = MlirLists(function, position)
 	let result = names.Temp("c")
-	let call = MlirMemory(function, position).Called(result, Helper(entry), (names.Temp("a"), names.Temp("b")))
+	let operands = (names.Temp("a"), names.Temp("b"))
+	let kinds = MlirKinds(function)
+	let element = MlirLayout(function).Represented(kinds.ElementKind(kinds.KindOf(position, entry.payload(1))))
+	let call = MlirMemory(function, position).Passed(result, Helper(entry), operands, element)
 	let left = function.Load(names.Temp("a"), "%r" + entry.payload(1))
 	let right = RightOperand(entry, IsList(entry.payload(2)))
 	(List(Text) + left + right) + call + function.Store(result, "%r" + entry.payload(3))

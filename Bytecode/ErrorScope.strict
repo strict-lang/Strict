@@ -1,0 +1,60 @@
+has values ValueCodegen
+constant FallibleMarker = " fallible"
+constant MutableMarker = " mutable"
+constant Plain = ErrorScope(ValueCodegen.Plain)
+constant Mutated = CodeBlock.Empty.Declare("a", "Count").Declare("a" + MutableMarker, "mutable")
+constant Counting = ErrorScope(ValueCodegen(TypeInference(KnownTypes.Sample, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
+constant Reassigning = BodyParser("Run", "\tmutable a = 1", "\ta = Greet").Block(1, 1)
+constant Adding = BodyParser("Run", "\tmutable a = 1", "\ta = a + 1").Block(1, 1)
+constant Increment = SyntaxNode("Member", "Increment", SyntaxNode("Identifier", "a"))
+constant Numbered = CodeBlock.Empty.Declare("a", "Numbers")
+Prepared(body SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Prepared(Reassigning, CodeBlock.Empty).scope.TypeOf("a fallible") is "fallible"
+	Plain.Prepared(Adding, CodeBlock.Empty).scope.names.Length is 0
+	Plain.Prepared(BodyParser("Run", "\ttext = Greet").Block(1, 1), CodeBlock.Empty).scope.names.Length is 0
+	mutable prepared = block
+	for Reassigned(body)
+		if values.target.IsMember(values.target.TypeName, value) is false
+			prepared = Fallible(value, prepared)
+	prepared
+Reassigned(node SyntaxNode) Texts
+	Plain.Reassigned(BodyParser("Run", "\tmutable a = 1", "\tfor 2", "\t\ta = Greet").Block(1, 1)) is ("a")
+	constant safe = ("Number", "Text", "Boolean", "Not", "Negate")
+	if (node.Kind is "Reassignment") and (node.children(0).Kind is "Identifier")
+		let assigned = node.children(1)
+		let isOperator = (assigned.Kind is "Binary") and (assigned.text is not in ("to", "then", "else"))
+		let isSafe = (assigned.Kind is in safe) or isOperator
+		return isSafe then List(Text) else List(Text) + node.children(0).text
+	mutable names = List(Mutable(Text))
+	for node.children
+		names = names + Reassigned(value)
+	names
+Dropped(node SyntaxNode, block CodeBlock) SyntaxNode
+	Counting.Dropped(Increment, CodeBlock.Empty.Declare("a", "Count")) to Text is "a.Increment"
+	Counting.Dropped(Increment, Mutated) to Text is "a = a.Increment"
+	if (node.Kind is not in ("MethodCall", "Member")) or (node.children(0).Kind is not "Identifier")
+		return node
+	let target = node.children(0)
+	let type = values.TypeOf(target, block)
+	let isMutating = values.inference.types.ParameterScope(type).TypeOf(node.text + MutableMarker) is not ""
+	let isInPlace = (node.text is in ("Add", "Remove")) and values.inference.types.IsPlural(type)
+	let isMutable = block.scope.TypeOf(target.text + MutableMarker) is not ""
+	let isRewritten = isMutating and isMutable and (isInPlace is false)
+	isRewritten then SyntaxNode("Reassignment", "", (target, node), node.line) else node
+Declared(name Text, assigned SyntaxNode, isMutable Boolean, block CodeBlock) CodeBlock
+	Plain.Declared("a", ErrorCodegen.Greeting, false, CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
+	Plain.Declared("a", ValueCodegen.One, true, CodeBlock.Empty).scope.TypeOf("a" + MutableMarker) is "mutable"
+	let marked = isMutable then block.Declare(name + MutableMarker, "mutable") else block
+	let errors = ErrorCodegen(values)
+	errors.MayFail(errors.Folded(assigned, block), block) then Fallible(name, marked) else marked
+Fallible(name Text, block CodeBlock) CodeBlock
+	Plain.Fallible("a", CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
+	block.Declare(name + FallibleMarker, "fallible")
+IsFallible(name Text, block CodeBlock) Boolean
+	Plain.IsFallible("a", Plain.Fallible("a", CodeBlock.Empty)) is true
+	Plain.IsFallible("a", CodeBlock.Empty) is false
+	block.scope.TypeOf(name + FallibleMarker) is not ""
+Guarded(name Text, block CodeBlock) CodeBlock
+	Plain.Guarded("a", Plain.Fallible("a", Numbered)).instructions.Last.kind is InstructionType.CheckError
+	Plain.Guarded("a", Numbered).instructions.Length is 0
+	IsFallible(name, block) then values.Expression(SyntaxNode("Identifier", name), block).At(block.register) else block

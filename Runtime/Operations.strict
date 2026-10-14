@@ -13,11 +13,20 @@ Comparison(kind Number, left VmValue, right VmValue) Boolean
 	Comparison(InstructionType.Equal, VmValue.OfText("a"), VmValue.OfText("a")) is true
 	Comparison(InstructionType.Equal, Detailed, DimensionError) is true
 	Comparison(InstructionType.Equal, Hashed, VmValue("Strict/HashCode(Texts)", 0, "", Hashed.items)) is true
-	if kind is InstructionType.Equal
-		return Comparable(left) is Comparable(right)
-	if kind is InstructionType.NotEqual
-		return Comparable(left) is not Comparable(right)
+	Comparison(InstructionType.Equal, Detailed, VmValue.OfError("")) is true
+	Comparison(InstructionType.NotEqual, VmValue.OfNumber(1), VmValue.OfError("")) is true
+	if kind is in (InstructionType.Equal, InstructionType.NotEqual)
+		return IsSame(left, right) is (kind is InstructionType.Equal)
 	kind is InstructionType.LessThan then left.number < right.number else left.number > right.number
+IsSame(left VmValue, right VmValue) Boolean
+	IsSame(DimensionError, VmValue.OfError("")) is true
+	IsSame(VmValue.OfNumber(1), VmValue.OfError("")) is false
+	let compared = Comparable(left)
+	let other = Comparable(right)
+	let isError = (compared.kind is "Strict/Error") and (other.kind is "Strict/Error")
+	let isLeftAny = (compared.items.Length > 0) and (compared.items.First.text is "")
+	let isAny = isLeftAny or (other.items.Length > 0) and (other.items.First.text is "")
+	(isError and isAny) or (compared is other)
 Comparable(operand VmValue) VmValue
 	Comparable(Detailed) is DimensionError
 	Comparable(VmValue.Failed) is VmValue.OfError("x")

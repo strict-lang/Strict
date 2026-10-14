@@ -41,7 +41,7 @@ Added(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Added(ValueCodegen.AddOne, CodeBlock.Empty).register is 2
 	Plain.Added(ValueCodegen.RemoveOne, CodeBlock.Empty).instructions(1).kind is InstructionType.InvokeRemove
 	Plain.Added(ValueCodegen.AddOne, Shared).instructions.Last.kind is InstructionType.StoreRegisterToVariable
-	Colored.Added(AddColor, ConversionCodegen.Pixelated).instructions(2).texts(1) is "to"
+	Colored.Added(AddColor, ConversionCodegen.Pixelated).instructions(3).texts(1) is "to"
 	let name = node.children(0).text
 	if block.Owns(name) is false
 		return Copied(node, block)

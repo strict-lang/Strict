@@ -7,7 +7,7 @@ constant Stored = LoadReuse((LoadA, InstructionEntry.Named(InstructionType.Store
 constant Indexed = InstructionEntry(InstructionType.IndexCall, "a", (1, 0, -1))
 constant Printed = LoadReuse((LoadA, InstructionEntry.PrintValue("a", 0, false), ReloadA, AddBoth))
 constant WritingKinds = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.Invoke, InstructionType.FieldLoad, InstructionType.IndexCall)
-constant FirstRegisterKinds = (InstructionType.StoreRegisterToVariable, InstructionType.Return, InstructionType.InvokeWriteToList, InstructionType.InvokeRemove, InstructionType.LoopBegin)
+constant FirstRegisterKinds = (InstructionType.StoreRegisterToVariable, InstructionType.Return, InstructionType.InvokeWriteToList, InstructionType.InvokeRemove, InstructionType.LoopBegin, InstructionType.CheckError)
 Optimized List(InstructionEntry)
 	Twice.Optimized.Length is 3
 	Printed.Optimized.Length is 4

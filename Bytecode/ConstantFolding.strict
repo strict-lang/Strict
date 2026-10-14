@@ -7,7 +7,7 @@ constant Limit = SyntaxNode("Identifier", "Limit")
 constant Two = SyntaxNode("Number", "2")
 constant Count = SyntaxNode("Identifier", "Count")
 constant Local = BodyParser("Run", "\tconstant a = 2", "\tconstant b = a * 3", "\tb + a").Block(1, 1)
-constant Owned = ConstantFolding("Text", TypeInference(KnownTypes.Sample, (Scope(("Limit", "Twice", "Alias", "Loop"), ("3", "Limit * 2", "Limit", "Loop")), TypeInference.NoShape)))
+constant Owned = ConstantFolding("Text", TypeInference(KnownTypes.Sample, (Scope(("Limit", "Twice", "Alias", "Loop", "Missing"), ("3", "Limit * 2", "Limit", "Loop", "Error")), TypeInference.NoShape)))
 constant Wrapping = ConstantFolding("C", TypeInference(KnownTypes(("Vector2", "Angle"), (Scope(List(Text) + "numbers", List(Text) + "Numbers"), Scope(List(Text) + "degrees", List(Text) + "Number")), (KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "Angle")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)))
 Folded(node SyntaxNode) SyntaxNode
 	Limits.Folded(Limit).text is "3"
@@ -58,7 +58,10 @@ Constant(node SyntaxNode) SyntaxNode
 	Owned.Constant(SyntaxNode("Member", "Twice", Count)) to Text is "Count.Limit * 2"
 	Owned.Constant(SyntaxNode("Member", "Alias", Count)).text is "3"
 	Owned.Constant(SyntaxNode("Member", "Loop", Count)).Kind is "Member"
-	Aliased(node, List(Text))
+	Owned.Constant(SyntaxNode("Member", "Missing", Count)) to Text is "Error(\"Missing\")"
+	let aliased = Aliased(node, List(Text))
+	let isError = (aliased.Kind is "Identifier") and (aliased.text is "Error") and (node.text is not "Error")
+	isError then SyntaxNode("Call", "Error", SyntaxNode("Text", "\"" + node.text + "\"")) else aliased
 Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 	Limits.Aliased(Limit, List(Text) + "Count.Limit").Kind is "Identifier"
 	let isOther = (node.Kind is "Member") and (node.children(0).Kind is "Identifier")

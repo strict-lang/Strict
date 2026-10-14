@@ -5,6 +5,6 @@ Reverse Numbers
 		numbers(index)
 Added(other Numbers) Numbers
 	ReverseList(1, 2).Added((10, 20)) is (11, 22)
-	(ReverseList(1, 2, 3).Added((10, 20)) to Text).StartsWith("(11, 22, Error: Added") is true
+	ReverseList(1, 2, 3).Added((10, 20)) is Error
 	for numbers
 		value + other(index)

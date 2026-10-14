@@ -10,6 +10,7 @@ constant Accept = " --accept-package-agreements --accept-source-agreements"
 constant Pacman = "C:\\msys64\\usr\\bin\\pacman.exe"
 constant SingleThreaded = " --mlir-disable-threading"
 constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -O2 -c -Wno-override-module"
+constant Optimized = " -O2 -march=native -Wno-override-module"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
 Located(name Text) Text
@@ -83,7 +84,7 @@ Built(base Text, executable Text) Text
 		return lowered
 	let system = platform is Platform.Windows then " -Wl,-Brepro" else " -lm"
 	let sources = NativeSources(natives).Arguments(platform, root)
-	let linking = Quoted(base + ".ll") + sources + " -o " + Quoted(executable) + " -O2 -Wno-override-module" + system
+	let linking = Quoted(base + ".ll") + sources + " -o " + Quoted(executable) + Optimized + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else "Built " + executable
 CrossBuilt(base Text) Text

@@ -1,0 +1,22 @@
+has inference TypeInference
+constant Counting = MutatingCheck(TypeInference(KnownTypes.Sample, TypeInference.Limits))
+constant Counted = Scope(List(Text) + "a", List(Text) + "Count").With(" dropped", "dropped")
+constant Increment = SyntaxNode("Member", "Increment", SyntaxNode("Identifier", "a"))
+constant Immutable = ScopedStatement(Increment, Counted, 0)
+Issue(scoped ScopedStatement, current Scope) Text
+	Counting.Issue(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment") is true
+	Counting.Issue(ScopedStatement(Increment, Counted.With("a mutable", "mutable"), 0), Counted) is ""
+	let statement = scoped.statement
+	if (scoped.scope.TypeOf(" dropped") is "") or (IsMutating(statement, scoped.scope, current) is false)
+		return ""
+	let target = statement.children(0).text
+	if scoped.scope.TypeOf(target + " mutable") is not ""
+		return ""
+	let call = target + "." + statement.text
+	"MutatingCallNeedsMutableVariable: " + call + " has no effect, use a mutable variable or assign the result"
+IsMutating(statement SyntaxNode, scope Scope, current Scope) Boolean
+	Counting.IsMutating(Increment, Counted, Counted) is true
+	if (statement.Kind is not in ("MethodCall", "Member")) or (statement.children(0).Kind is not "Identifier")
+		return false
+	let type = inference.TypeOf(statement.children(0), scope, current)
+	inference.types.ParameterScope(type).TypeOf(statement.text + " mutable") is not ""

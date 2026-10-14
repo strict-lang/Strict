@@ -20,7 +20,7 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(SumBody, NoScope, "Number").instructions.Length is 11
 	Plain.Generate(FilterBody, NoScope, "Number").instructions(12).kind is InstructionType.JumpEnd
 	Plain.Generate(CopiedBody, NoScope, "None").instructions(5).kind is InstructionType.Add
-	let start = CodeBlock(List(InstructionEntry), 0, 0, scope)
+	let start = ErrorScope(values).Prepared(body, CodeBlock(List(InstructionEntry), 0, 0, scope))
 	let code = BranchValues(returnType).Rewritten(Production(body, start))
 	let block = LoopCodegen(MethodCodegen(values)).Aggregated(code, start, returnType)
 	if (code.children.Length is 0) or (block.instructions.Last.kind is InstructionType.Return)
@@ -35,7 +35,8 @@ Body(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).instructions.Last.line is 3
 	mutable result = block
 	for body.children
-		let statement = Statement(value, result.At(block.register), HasElse(body, index))
+		let rewritten = ErrorScope(values).Dropped(value, result)
+		let statement = Statement(rewritten, result.At(block.register), HasElse(body, index))
 		result = Lined(statement, result.instructions.Length, value.line)
 	CodeBlock(result.instructions, result.register, result.nextId, block.scope)
 Lined(block CodeBlock, start Number, line Number) CodeBlock
@@ -62,7 +63,7 @@ Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 		return LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
 	if (node.Kind is "MethodCall") and (node.text is "Log")
 		return Log(node.children(1), block)
-	let generated = values.Expression((node.Kind is "Return" then node.children(0) else node), block)
+	let generated = ErrorCodegen(values).Statement(node, block)
 	node.Kind is "Return" then generated.Add(InstructionEntry.Return(generated.Result)) else generated
 Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
@@ -76,14 +77,15 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	let name = AssignedName(node)
 	let assigned = ConversionCodegen(values).Assigned(node, block)
 	let stored = Stored(assigned, name, block, node.Kind is "Declaration")
-	node.Kind is "Declaration" then Declared(stored, name, assigned) else stored
+	node.Kind is "Declaration" then Declared(stored, name, assigned, node.text.StartsWith("mutable ")) else stored
 Stored(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) CodeBlock
 	Plain.Stored(One, "a", CodeBlock.Empty, true).instructions.Length is 1
 	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", CodeBlock.Empty, true).instructions(0).texts is ("a")
 	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", InRun, false).instructions(0).texts is ("Run")
 	Plain.Stored(One, "a(0)", CodeBlock.Empty, false).instructions.Last.kind is InstructionType.StoreRegisterToVariable
 	let named = isDeclaration then block.Declare(CodeBlock.ErrorMarker, name) else block
-	let generated = values.Expression(assigned, named)
+	let isLocal = isDeclaration or ErrorScope(values).IsFallible(name, block)
+	let generated = isLocal then ErrorCodegen(values).Handled(assigned, named) else values.Expression(assigned, named)
 	let restored = CodeBlock(generated.instructions, generated.register, generated.nextId, block.scope)
 	let isConstant = assigned.IsLiteral and (name.IndexOf("(") < 0)
 	isConstant then block.Add(StoreConstant(generated.instructions.Last, name)) else restored.Stored(name)
@@ -95,9 +97,12 @@ AssignedName(node SyntaxNode) Text
 		return Tokenizer(node.text).Tokens.Last
 	let target = node.children(0)
 	target.Kind is "Member" then target.text else target to Text
-Declared(block CodeBlock, name Text, assigned SyntaxNode) CodeBlock
-	Plain.Declared(CodeBlock.Empty.Declare("x", "Numbers"), "a", NoNode).Owns("a") is false
-	block.Declare(name, values.TypeOf(assigned, block)).Sharing(name, ListCodegen(values).IsNew(assigned) is false)
+Declared(block CodeBlock, name Text, assigned SyntaxNode, isMutable Boolean) CodeBlock
+	Plain.Declared(CodeBlock.Empty.Declare("x", "Numbers"), "a", NoNode, false).Owns("a") is false
+	Plain.Declared(CodeBlock.Empty, "a", ErrorCodegen.Greeting, false).scope.TypeOf("a fallible") is "fallible"
+	let typed = block.Declare(name, values.TypeOf(assigned, block))
+	let shared = typed.Sharing(name, ListCodegen(values).IsNew(assigned) is false)
+	ErrorScope(values).Declared(name, assigned, isMutable, shared)
 StoreConstant(load InstructionEntry, name Text) InstructionEntry
 	Plain.StoreConstant(InstructionEntry.LoadNumber(2, 7), "a").payload is (1, 7, -1, 0)
 	let texts = load.texts + name
@@ -114,7 +119,8 @@ Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text)
 	if MethodBodies(values.target.TypeName, values.target.shape, values.inference).IsSelector(node)
 		return SelectorCodegen(values).Selected(node, block)
 	let condition = OperatorCodegen(values).Condition(node.children(0), block)
-	let branch = Body(node.children.Last, condition)
+	let narrowed = Body(node.children.Last, ErrorCodegen(values).Narrowed(node.children(0), condition))
+	let branch = CodeBlock(narrowed.instructions, narrowed.register, narrowed.nextId, condition.scope)
 	let body = aggregation is "" then branch else LoopCodegen(MethodCodegen(values)).Collected(branch, aggregation)
 	let skipsElse = hasElse and body.instructions.Last.kind is not InstructionType.Return
 	let flagged = skipsElse then body.Flagged else body

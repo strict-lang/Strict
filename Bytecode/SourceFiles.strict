@@ -8,7 +8,9 @@ Of(path Text) Texts
 	for Folders(Added(project, List(Text) + Path(path).PathOnly.text), 3)
 		files = files + Directory.Files(value, "*.strict")
 	let local = Directory.Files(Path(path).PathOnly.text, "*.strict")
-	Closed(Added(files, Directory.Files(root, "*.strict")), Added(local, List(Text) + path), 3)
+	let closed = Closed(Added(files, Directory.Files(root, "*.strict")), Added(local, List(Text) + path), 3)
+	let lines = File(path).Exists then File(path).ReadLines else List(Text)
+	TypeChoice(lines).Chosen(closed, path)
 Closed(found Texts, sources Texts, depth Number) Texts
 	Directory.Files("./Compression", "*.strict").First is in SourceFiles(".").Closed(List(Text), Imaging, 0)
 	mutable missing = List(Mutable(Text))

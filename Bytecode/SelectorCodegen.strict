@@ -23,7 +23,7 @@ Case(selector SyntaxNode, line SyntaxNode, block CodeBlock) CodeBlock
 	let isElse = (line.Kind is "ElseValue") or (typed is "true")
 	let comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
 	let condition = isElse then block else OperatorCodegen(values).Condition(comparison, block)
-	let generated = values.Expression(line.children.Last, condition)
+	let generated = ErrorCodegen(values).Handled(line.children.Last, condition)
 	let returned = generated.Add(InstructionEntry.Return(generated.Result))
 	isElse then returned else returned.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
 TypeCase(selector SyntaxNode, line SyntaxNode, block CodeBlock) Text

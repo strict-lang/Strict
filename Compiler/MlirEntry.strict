@@ -1,8 +1,10 @@
 has entry MlirFunction
 constant Counted = MlirEntry(MlirModule.Counters.Functions.First)
+constant Unhandled = ("    %unhandled = func.call @strict_unhandled(%result) : (f64) -> i1", "    %failing = arith.constant 1 : i32")
+constant Exit = "    %exit = arith.select %unhandled, %failing, %code : i32"
 constant CollectorStart = ("    %frameLevel = arith.constant 0 : i32", "    %stackBase = llvm.call_intrinsic \"llvm.frameaddress.p0\"(%frameLevel) : (i32) -> !llvm.ptr", "    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()")
 Main Texts
-	Counted.Main.Length is 16
+	Counted.Main.Length is 19
 	Counted.Main.Index("    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()") is 3
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
@@ -12,7 +14,7 @@ Main Texts
 	let code = returned then "    %code = arith.fptosi %result : f64 to i32" else "    %code = arith.constant 0 : i32"
 	let prepared = header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot", "", List(Text)) + Arguments
 	let printed = entry.IsCounted then List(Text) + MlirLines.Print else List(Text)
-	prepared + (self, EntryCall, code) + printed + ("    return %code : i32", "  }")
+	prepared + (self, EntryCall, code) + Unhandled + Exit + printed + ("    return %exit : i32", "  }")
 EntryCall Text
 	Counted.EntryCall is "    %result = func.call @Counter_Run_0(%self) : (f64) -> f64"
 	let count = entry.method.parameters.Length

@@ -1,0 +1,103 @@
+has values ValueCodegen
+constant FailureMarker = " failure"
+constant Tested = "tested"
+constant ErrorTypes = ("Error", "ErrorWithValue")
+constant Plain = ErrorCodegen(ValueCodegen.Plain)
+constant Greeting = SyntaxNode("Call", "Greet")
+constant BareError = SyntaxNode("Identifier", "Error")
+constant InTest = CodeBlock.Empty.Declare(FailureMarker, "7")
+constant Counted = CodeBlock.Empty.Declare("a", "Count")
+constant A = SyntaxNode("Identifier", "a")
+constant IsError = SyntaxNode("Binary", "is", (A, BareError))
+constant IsOne = SyntaxNode("Binary", "is", (A, ValueCodegen.One))
+constant FallibleA = ErrorScope.Plain.Fallible("a", CodeBlock.Empty.Declare("a", "Number"))
+Folded(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Folded(ValueCodegen.One, CodeBlock.Empty).text is "1"
+	ConversionCodegen(values).Typed(ConstantFolding(values.target.TypeName, values.inference).Folded(node), block)
+Handled(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Handled(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	Dispatched(Folded(node, block), block)
+Dispatched(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Dispatched(ValueCodegen.One, CodeBlock.Empty).register is 1
+	if node.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
+		return values.Leaf(node, block)
+	if (node.Kind is in ("Call", "Member", "MethodCall", "Not")) or (node.text is "to")
+		return values.Call(node, block)
+	OperatorCodegen(values).Operation(node, block)
+Checked(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Checked(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
+	Plain.Checked(ValueCodegen.One, CodeBlock.Empty).instructions.Length is 1
+	let folded = Folded(node, block)
+	let generated = Dispatched(folded, block)
+	MayFail(folded, block) then generated.Add(Check(generated.Result, block)) else generated
+Check(register Number, block CodeBlock) InstructionEntry
+	Plain.Check(2, CodeBlock.Empty).payload is List(Number) + 2
+	Plain.Check(2, InTest).payload is (2, 7)
+	Plain.Check(2, InTest).texts is List(Text) + Tested
+	let failure = block.scope.TypeOf(FailureMarker)
+	if failure is ""
+		return InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + register)
+	let jump = ByteEncoder.Empty.SevenBit(failure to Number).bytes
+	InstructionEntry(InstructionType.CheckError, List(Text) + Tested, List(Number) + register + jump)
+MayFail(node SyntaxNode, block CodeBlock) Boolean
+	Plain.MayFail(Greeting, CodeBlock.Empty) is true
+	Plain.MayFail(BareError, CodeBlock.Empty) is false
+	Plain.MayFail(A, FallibleA) is true
+	if values.TypeOf(node, block) is in ErrorTypes
+		return false
+	if node.Kind is "Identifier"
+		return ErrorScope(values).IsFallible(node.text, block) or values.IsMethodCall(node, block)
+	if node.Kind is "Binary"
+		return IsFailing(node, block)
+	if (node.Kind is "Call") and (node.text is in ("List", "Dictionary", "Mutable"))
+		return (node.text is "Mutable") and MayFail(node.children(0), block)
+	(node.Kind is in ("Call", "MethodCall")) or (node.Kind is "Member") and values.IsMethodCall(node, block)
+IsFailing(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsFailing(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
+	Plain.IsFailing(ValueCodegen.ToText, CodeBlock.Empty) is true
+	if node.text is "else"
+		return MayFail(node.children(0).children(1), block) or MayFail(node.children(1), block)
+	if (node.text is in ("to", "then")) or OperatorCodegen(values).IsCustom(node, block)
+		return true
+	let type = values.TypeOf(node, block)
+	let isList = values.inference.types.IsPlural(type) or type.StartsWith("List(")
+	(node.text is in ("+", "-", "*", "/", "%", "^")) and isList
+Narrowed(condition SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Narrowed(IsError, Counted).scope.TypeOf("a") is "Error"
+	Plain.Narrowed(IsOne, Counted).scope.TypeOf("a") is "Count"
+	if IsErrorComparison(condition, block) is false
+		return block
+	let target = condition.children(0)
+	(condition.text is "is") and (target.Kind is "Identifier") then block.Declare(target.text, "Error") else block
+AnyError(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.AnyError(IsError, CodeBlock.Empty) to Text is "a is Error(\"\")"
+	Plain.AnyError(IsOne, CodeBlock.Empty) to Text is "a is 1"
+	let wanted = node.children.Last
+	let isBare = (wanted.Kind is "Identifier") and (wanted.text is "Error") and (block.scope.TypeOf("Error") is "")
+	if (node.text is not in ("is", "is not")) or (isBare is false)
+		return node
+	let any = SyntaxNode("Call", "Error", SyntaxNode("Text", "\"\""))
+	SyntaxNode(node.Kind, node.text, (node.children(0), any), node.line)
+IsErrorComparison(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsErrorComparison(IsError, CodeBlock.Empty) is true
+	Plain.IsErrorComparison(IsOne, CodeBlock.Empty) is false
+	if (node.Kind is not "Binary") or (node.text is not in ("is", "is not"))
+		return false
+	let left = values.TypeOf(node.children(0), block)
+	(left is in ErrorTypes) or (values.TypeOf(node.children(1), block) is in ErrorTypes)
+Statement(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Statement(SyntaxNode("Return", "", Greeting), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	Plain.Statement(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
+	node.Kind is "Return" then Handled(node.children(0), block) else Checked(node, block)
+Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
+	Plain.Right(IsError, CodeBlock.Empty, false).instructions.Last.kind is InstructionType.Invoke
+	let any = AnyError(node, block)
+	Compared(node, isConverted then ConversionCodegen(values).Operand(any, block) else any.children(1), block)
+Kept(node SyntaxNode, name Text, block CodeBlock) CodeBlock
+	Plain.Kept(Greeting, "kept", CodeBlock.Empty).instructions.Last.kind is InstructionType.StoreRegisterToVariable
+	let stored = Handled(node, block).Stored(name).At(block.register).WithNextId
+	stored.Declare(name, values.TypeOf(node, block))
+Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Compared(IsError, Greeting, CodeBlock.Empty).instructions.Length is 1
+	Plain.Compared(IsOne, Greeting, CodeBlock.Empty).instructions.Length is 2
+	IsErrorComparison(comparison, block) then Handled(operand, block) else Checked(operand, block)

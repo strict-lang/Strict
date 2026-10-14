@@ -9,6 +9,8 @@ constant Handle = MemberEntry("handle", "Strict/Number", List(InstructionEntry),
 constant Next = MethodEntry("Next", List(MemberEntry), "Strict/Number", List(InstructionEntry))
 constant Counter = TypeEntry("Strict/Examples/NativeAdd/Counter", List(MemberEntry) + Handle, List(MethodEntry) + Next)
 constant Counting = MlirFunction(List(TypeEntry), Counter, Next)
+constant Splits = MethodEntry("Split", Doubles.parameters, "Strict/List(Numbers)", List(InstructionEntry))
+constant Splitter = MlirFunction(List(TypeEntry), Doubler.type, Splits)
 constant Started = MethodEntry("from", Add.parameters, "Strict/Examples/NativeAdd/Counter", List(InstructionEntry))
 IsForeign Boolean
 	MlirForeign(Adder).IsForeign is true
@@ -66,10 +68,16 @@ Arguments Text
 Returned Texts
 	MlirForeign(Adder).Returned.First is "    %converted = func.call @strict_foreign_number(%result) : (f64) -> f64"
 	MlirForeign(Doubler).Returned.First.IndexOf("@strict_foreign_numbers(") > 0 is true
+	MlirForeign(Splitter).Returned.First.IndexOf("@strict_foreign_rows(") > 0 is true
 	let returned = function.method.returnType
-	let kind = IsNumbers(returned) then "numbers" else returned.EndsWith("Text") then "text" else "number"
+	let single = returned.EndsWith("Text") then "text" else "number"
+	let kind = IsNumbers(returned) then "numbers" else IsRows(returned) then "rows" else single
 	("    %converted = func.call @strict_foreign_" + kind + "(%result) : (f64) -> f64", "    return %converted : f64")
 IsNumbers(typeName Text) Boolean
 	MlirForeign(Adder).IsNumbers("Strict/List(Number)") is true
 	MlirForeign(Adder).IsNumbers("Strict/Number") is false
 	typeName.EndsWith("List(Number)") or typeName.EndsWith("Numbers")
+IsRows(typeName Text) Boolean
+	MlirForeign(Adder).IsRows("Strict/List(Numbers)") is true
+	MlirForeign(Adder).IsRows("Strict/List(Number)") is false
+	typeName.EndsWith("List(Numbers)") or typeName.EndsWith("List(List(Number))")

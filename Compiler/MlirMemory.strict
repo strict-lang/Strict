@@ -1,6 +1,8 @@
 has function MlirFunction
 has position Number
 constant Sample = MlirMemory(MlirFunction.Counter, 3)
+constant Equated = ("strict_list_find", "strict_list_has", "strict_list_count", "strict_list_remove", "strict_list_removed", "strict_list_without")
+constant Comparing = "(f64, f64) -> f64"
 constant Pair = TypeEntry("Strict/Pair", (MemberEntry("first", "Strict/Number", List(InstructionEntry), false), MemberEntry("rest", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry))
 constant Box = TypeEntry("Strict/Box", List(MemberEntry) + MemberEntry("values", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry))
 constant Boxing = MlirMemory(MlirFunction(List(TypeEntry) + Box, Box, MethodEntry("Run", List(MemberEntry) + MemberEntry("box", "Strict/Box", List(InstructionEntry), false), "None", List(InstructionEntry))), 0)
@@ -38,6 +40,16 @@ Called(result Text, name Text, operands Texts) Text
 	Sample.Called("%r", "add", ("%a", "%b")) is "    %r = func.call @add(%a, %b) : (f64, f64) -> f64"
 	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
 	"    " + result + " = func.call @" + name + "(" + Text.Combine(operands, ", ") + ") : (" + types + ") -> f64"
+Passed(result Text, helper Text, operands Texts, element Text) Texts
+	Sample.Passed("%r", "f", ("%a", "%b"), "Number") is List(Text) + "    %r = func.call @f(%a, %b) : (f64, f64) -> f64"
+	Sample.Passed("%r", "strict_list_has", ("%a", "%b"), "Text").First.IndexOf("@strict_text_equal") > 0 is true
+	Sample.Passed("%r", "strict_list_has", List(Text) + "%a", "Number").Last.EndsWith(Comparing + ") -> f64") is true
+	if helper is not in Equated
+		return List(Text) + Called(result, helper, operands)
+	let equal = Constant(Temp("q"), MlirEquality(function, position).Helper(element), Comparing)
+	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length) + Comparing, ", ")
+	let arguments = Text.Combine(operands + Temp("q"), ", ")
+	(equal, "    " + result + " = func.call @" + helper + "(" + arguments + ") : (" + types + ") -> f64")
 Traced(operand Text, result Text) Texts
 	Sample.Traced("%r", "%x").Last is "    %x = func.call @strict_trace(%r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64"
 	let instructions = function.method.instructions

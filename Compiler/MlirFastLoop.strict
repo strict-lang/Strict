@@ -2,7 +2,11 @@ has function MlirFunction
 has position Number
 constant Doubler = MlirKernel.Doubler
 constant Doubling = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2), 2)
-constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, f64"
+constant Summed = MlirKernel.Summing.function
+constant Summing = MlirFastLoop(MlirFunction(Summed.types, Summed.type, Summed.method, List(Number), 1), 1)
+constant Halving = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2, "numbers 16"), 2)
+constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, "
+constant Iterated = "for"
 constant Items = " : (f64) -> !llvm.ptr"
 Temp(suffix Text) Text
 	Doubling.Temp("ki") is "%t2ki"
@@ -23,12 +27,14 @@ Started Texts
 	Doubling.Started.First is "  ^loop2fast:"
 	Doubling.Started.Last is "    %t2ri = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"
 	let loops = MlirLoops(function, position)
-	mutable lines = List(Text) + ("  ^loop" + position + "fast:") + loops.Items
+	let collected = Pointed(Temp("h"), Temp("v"), Iterated, "strict_list_items")
+	let items = loops.Items.Length is 0 then loops.Items else (collected, loops.Items.Last)
+	mutable lines = List(Text) + ("  ^loop" + position + "fast:") + items
 	for MlirKernel(function, position).Sources
-		lines = lines + ("    " + Temp("h_" + value) + " = func.call @strict_list_start(" + Temp("l_" + value) + ")" + Items)
+		lines = lines + Pointed(Temp("h_" + value), Temp("l_" + value), value, "strict_list_start")
 	let saved = (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value"))
-	let items = "    " + Temp("ri") + " = func.call @strict_list_items(" + Temp("r") + ")" + Items
-	lines + saved + loops.Outered + (loops.IsCollecting then loops.Presized + items else List(Text))
+	let results = "    " + Temp("ri") + " = func.call @strict_list_items(" + Temp("r") + ")" + Items
+	lines + saved + loops.Outered + (loops.IsCollecting then loops.Presized + results else List(Text))
 Counted Texts
 	Doubling.Counted.Last is "  ^loop2body:"
 	let label = "^loop" + position
@@ -43,9 +49,12 @@ Current Texts
 	let index = (converted, function.Store(Temp("c"), "%v_index"))
 	if MlirLoops(function, position).Collection is ""
 		return index + function.Store(Temp("c"), "%v_value")
-	let address = "    " + Temp("gp") + " = llvm.getelementptr " + Temp("h") + "[" + Temp("ki") + "]" + Pointer
-	let element = "    " + Temp("g") + " = llvm.load " + Temp("gp") + " : !llvm.ptr -> f64"
-	index + (address, element, function.Store(Temp("g"), "%v_value"))
+	index + Loaded(Temp("g"), Temp("gp"), Temp("h"), Iterated) + function.Store(Temp("g"), "%v_value")
+Copied Texts
+	Halving.Copied.First is "  ^loop2fast:"
+	Halving.Copied.Index(Halving.Checked.First) is 1
+	let started = Started
+	List(Text) + started.First + Checked + (started - started.First) + Counted + Current + Looped + Exited
 Looped Texts
 	Doubling.Looped.Last is "    cf.br ^loop2(%t2next : i64)"
 	mutable lines = List(Mutable(Text))
@@ -64,13 +73,50 @@ Exited Texts
 Emitted(at Number) Texts
 	Doubling.Emitted(4).First is "    %t4p = llvm.getelementptr %t2h_numbers[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
 	Doubling.Emitted(7).Last is "    llvm.store %t7e, %t7p : f64, !llvm.ptr"
+	Halving.Emitted(4).Index("    %t4x = arith.extf %t4xn : f16 to f64") is 2
 	let entry = function.method.instructions(at)
 	let pointer = "%t" + at + "p"
-	let isRead = entry.kind is InstructionType.IndexCall
-	let items = isRead then Temp("h_" + entry.texts(0)) else Temp("ri")
-	let address = "    " + pointer + " = llvm.getelementptr " + items + "[" + Temp("ki") + "]" + Pointer
-	let loaded = "    %t" + at + "x = llvm.load " + pointer + " : !llvm.ptr -> f64"
-	if isRead
-		return (address, loaded, function.Store("%t" + at + "x", "%r" + entry.payload(0)))
+	let source = entry.texts(0)
+	if entry.kind is InstructionType.IndexCall
+		let read = "%t" + at + "x"
+		return Loaded(read, pointer, Temp("h_" + source), source) + function.Store(read, "%r" + entry.payload(0))
+	let address = "    " + pointer + " = llvm.getelementptr " + Temp("ri") + "[" + Temp("ki") + "]" + Pointer + "f64"
 	let stored = "    llvm.store %t" + at + "e, " + pointer + " : f64, !llvm.ptr"
 	(function.Load("%t" + at + "e", "%r" + entry.payload(0)), address, stored)
+Element(source Text) Text
+	Halving.Element("numbers") is "f16"
+	Doubling.Element("numbers") is "f64"
+	let parts = function.Packing.Split(" ")
+	parts.First is not source then "f64" else parts.Last is "16" then "f16" else "f32"
+Loaded(result Text, address Text, items Text, source Text) Texts
+	Doubling.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = llvm.load %p : !llvm.ptr -> f64"
+	Halving.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.extf %xn : f16 to f64"
+	let type = Element(source)
+	let pointer = "    " + address + " = llvm.getelementptr " + items + "[" + Temp("ki") + "]" + Pointer + type
+	if type is "f64"
+		return (pointer, "    " + result + " = llvm.load " + address + " : !llvm.ptr -> f64")
+	let narrow = "    " + result + "n = llvm.load " + address + " : !llvm.ptr -> " + type
+	(pointer, narrow, "    " + result + " = arith.extf " + result + "n : " + type + " to f64")
+Pointed(result Text, list Text, source Text, plain Text) Text
+	Halving.Pointed("%h", "%l", "numbers", "strict_list_start").IndexOf("@strict_list_data(%l)") > 0 is true
+	Doubling.Pointed("%h", "%l", "numbers", "strict_list_start").IndexOf("@strict_list_start(%l)") > 0 is true
+	let called = Element(source) is "f64" then plain else "strict_list_data"
+	"    " + result + " = func.call @" + called + "(" + list + ")" + Items
+IsAccumulated(at Number) Boolean
+	Summing.IsAccumulated(5) is true
+	Doubling.IsAccumulated(6) is false
+	let entry = function.method.instructions(at)
+	let next = function.method.instructions(at + 1)
+	let isSum = (entry.kind is InstructionType.Add) or (entry.kind is InstructionType.Subtract)
+	if (function.FastLoop < 0) or (isSum is false) or (next.kind is not InstructionType.StoreRegisterToVariable)
+		return false
+	let writer = Writer(entry.payload(1), at)
+	let isLoaded = (writer.kind is InstructionType.LoadVariableToRegister) and (next.texts(0) is in writer.texts)
+	isLoaded and (next.payload(0) is entry.payload(3))
+Writer(register Number, at Number) InstructionEntry
+	Summing.Writer(3, 5).texts.First is "sum"
+	for at - function.FastLoop - 1
+		let earlier = function.method.instructions(at - 1 - index)
+		if LoadReuse(function.method.instructions).Written(earlier) is register
+			return earlier
+	function.method.instructions(at)

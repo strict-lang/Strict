@@ -3,6 +3,7 @@ has type TypeEntry
 has method MethodEntry
 has lineSlots Numbers = List(Number)
 has FastLoop Number = -1
+has Packing Text = ""
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
@@ -94,7 +95,8 @@ Label(position Number) Texts
 	constant terminators = (InstructionType.Return, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
 	if position is 0
 		return List(Text)
-	let afterTerminator = method.instructions(position - 1).kind is in terminators
+	let previous = method.instructions(position - 1).kind
+	let afterTerminator = (previous is in terminators) or (previous is InstructionType.CheckError)
 	if method.instructions(position).kind is not InstructionType.JumpEnd and (afterTerminator is false)
 		return List(Text)
 	let label = "  ^bb" + position + ":"

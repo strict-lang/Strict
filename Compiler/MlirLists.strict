@@ -79,17 +79,16 @@ ElementName(item Runtime/VmValue, element Text) Text
 	item.kind is "Text" then Temp(element + "xf") else Temp(element + "c")
 Appended(entry InstructionEntry) Texts
 	MlirLists(Listed, 3).Appended(Steps(3)).Last is "    llvm.store %t3n, %v_numbers : f64, !llvm.ptr"
-	Text.Combine(MlirLists(Listed, 3).Appended(Removal)).IndexOf("@strict_list_remove_number(") > 0 is true
+	Text.Combine(MlirLists(Listed, 3).Appended(Removal)).IndexOf("@strict_list_remove(") > 0 is true
 	Text.Combine(MlirLists(Listed, 3).Appended(Pushing)).IndexOf("@strict_list_push(") > 0 is true
 	let name = "%v_" + entry.texts(0)
 	let kinds = MlirKinds(function)
 	let elements = MlirLayout(function).Represented(kinds.ElementKind(kinds.VariableKind(position, entry.texts(0))))
-	let remover = elements is "Text" then "strict_list_remove_text" else "strict_list_remove_number"
 	let adder = entry.texts(0) is "forResult" then "strict_list_push" else "strict_list_add"
-	let helper = entry.kind is InstructionType.InvokeRemove then remover else adder
-	let added = MlirMemory(function, position).Called(Temp("n"), helper, (Temp("l"), Temp("e")))
+	let helper = entry.kind is InstructionType.InvokeRemove then "strict_list_remove" else adder
+	let added = MlirMemory(function, position).Passed(Temp("n"), helper, (Temp("l"), Temp("e")), elements)
 	let element = function.Load(Temp("e"), "%r" + entry.payload(0))
-	(function.Load(Temp("l"), name), element, added, function.Store(Temp("n"), name))
+	(function.Load(Temp("l"), name), element) + added + function.Store(Temp("n"), name)
 Indexed(entry InstructionEntry) Texts
 	MlirLists(Listed, 2).Indexed(Steps(2)).Last is "    llvm.store %t2x, %r2 : f64, !llvm.ptr"
 	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_read(") > 0 is true
