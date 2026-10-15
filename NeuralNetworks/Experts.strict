@@ -1,0 +1,75 @@
+has router Layer
+has expansions List(Layer)
+has contractions List(Layer)
+has used Number
+constant Model = Gguf("NeuralNetworks/tinyqwen3moe.gguf")
+constant Tiny = Experts.Loaded(Model, "blk.0.")
+constant Probe = (0.5, -1, 1.5, 2, -0.25, 0.75, 1, -2)
+Loaded(model Gguf, prefix Text) Experts
+	Tiny.expansions.Length is 4
+	Tiny.expansions.First.weights.Length is 8
+	Tiny.used is 2
+	let architecture = model.Value("general.architecture")
+	let count = model.Value(architecture + ".expert_count") to Number
+	let routing = Layer(model.Rows(prefix + "ffn_gate_inp.weight"), Layer.Zeros(count))
+	let gates = Stacked(model.Rows(prefix + "ffn_gate_exps.weight"), count)
+	let ups = Stacked(model.Rows(prefix + "ffn_up_exps.weight"), count)
+	let downs = Stacked(model.Rows(prefix + "ffn_down_exps.weight"), count)
+	Experts(routing, Joined(gates, ups), downs, model.Value(architecture + ".expert_used_count") to Number)
+Dense(expansion Layer, contraction Layer) Experts
+	Experts.Dense(Tiny.expansions.First, Tiny.contractions.First).Forward(Probe) is Tiny.Expert(0, Probe)
+	Experts(Layer(List(Numbers), List(Number)), List(Layer) + expansion, List(Layer) + contraction, 1)
+Stacked(rows List(Numbers), count Number) List(Layer)
+	Tiny.Stacked(((1, 2), (3, 4), (5, 6), (7, 8)), 2).Last.weights is ((5, 6), (7, 8))
+	let size = rows.Length / count
+	for count
+		Layer(Slice(rows, index * size, size), Layer.Zeros(size))
+Slice(rows List(Numbers), start Number, size Number) List(Numbers)
+	Tiny.Slice(((1, 2), (3, 4), (5, 6)), 1, 2) is ((3, 4), (5, 6))
+	for size
+		rows(start + index)
+Joined(gates List(Layer), ups List(Layer)) List(Layer)
+	Tiny.Joined(List(Layer) + Tiny.router, List(Layer) + Tiny.router).First.weights.Length is 8
+	for gates
+		Layer(value.weights + ups(index).weights, value.biases + ups(index).biases)
+Forward(input Numbers) Numbers
+	Tiny.Forward(Probe).First.IsNearlyEqual(0.4825967035647183, 0.000001) is true
+	Tiny.Forward(Probe).Last.IsNearlyEqual(-0.4171537353010468, 0.000001) is true
+	if router.weights.Length is 0
+		return Expert(0, input)
+	let probabilities = Network.Softmax(router.Sums(input))
+	let chosen = Picked(probabilities)
+	let total = Shares(probabilities, chosen).Sum
+	mutable mixed = Layer.Zeros(input.Length)
+	for chosen
+		mixed = Gpt2Block.Added(mixed, Scaled(Expert(value, input), probabilities(value) / total))
+	mixed
+Shares(probabilities Numbers, chosen Numbers) Numbers
+	Tiny.Shares((0.1, 0.5, 0.4), (1, 2)) is (0.5, 0.4)
+	for chosen
+		probabilities(value)
+Scaled(values Numbers, factor Number) Numbers
+	Tiny.Scaled((1, 2), 0.5) is (0.5, 1)
+	for values
+		value * factor
+Picked(probabilities Numbers) Numbers
+	Tiny.Picked((0.1, 0.5, 0.15, 0.25)) is (1, 3)
+	mutable chosen = List(Number)
+	for used
+		chosen = chosen + Best(probabilities, chosen)
+	chosen
+Best(probabilities Numbers, chosen Numbers) Number
+	Tiny.Best((0.1, 0.5, 0.15, 0.25), List(Number) + 1) is 3
+	mutable best = -1
+	for probabilities
+		if (index is not in chosen) and ((best < 0) or (value > probabilities(best)))
+			best = index
+	best
+Expert(chosen Number, input Numbers) Numbers
+	Tiny.Expert(0, Probe).Length is 8
+	contractions(chosen).Sums(Gated(expansions(chosen).Sums(input)))
+Gated(expanded Numbers) Numbers
+	Tiny.Gated((0, 1)) is List(Number) + 0
+	let half = expanded.Length / 2
+	for half
+		expanded(index) / (1 + (-expanded(index)).Exponential) * expanded(index + half)

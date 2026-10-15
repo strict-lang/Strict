@@ -1,19 +1,25 @@
 has blocks List(Qwen3Block)
 has tokens List(Numbers)
+has outputs List(Numbers)
 has norm Numbers
 has theta Number
 has hidden Numbers = List(Number)
 constant Tiny = Qwen3.Loaded("NeuralNetworks/tinyqwen3.gguf", 32)
+constant TinyMixture = Qwen3.Loaded("NeuralNetworks/tinyqwen3moe.gguf", 32)
 Loaded(path Text, bits = 8) Qwen3
 	Tiny.blocks.Length is 1
 	Tiny.theta is 1000000
+	TinyMixture.outputs is not TinyMixture.tokens
 	let model = Gguf(path, bits)
-	let base = model.Value("qwen3.rope.freq_base") to Number
-	Qwen3(Blocks(model), model.Rows("token_embd.weight"), model.Values("output_norm.weight"), base)
+	let base = model.Value(model.Value("general.architecture") + ".rope.freq_base") to Number
+	let embedding = model.Rows("token_embd.weight")
+	let output = model.Shape("output.weight").Length > 0 then model.Rows("output.weight") else embedding
+	Qwen3(Blocks(model), embedding, output, model.Values("output_norm.weight"), base)
 Blocks(model Gguf) List(Qwen3Block)
 	Tiny.Blocks(Qwen3Block.Weights).First.heads is 2
-	let heads = model.Value("qwen3.attention.head_count") to Number
-	for model.Value("qwen3.block_count") to Number
+	let architecture = model.Value("general.architecture")
+	let heads = model.Value(architecture + ".attention.head_count") to Number
+	for model.Value(architecture + ".block_count") to Number
 		Qwen3Block.Loaded(model, "blk." + index + ".", heads)
 Angles(position Number) Numbers
 	Tiny.Angles(1) is (Radians(1) to Degrees, Radians(0.001) to Degrees)
@@ -35,6 +41,7 @@ Sines(angles Numbers) Numbers
 Step(token Number, position Number) Qwen3
 	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475) is true
 	Tiny.Step(1, 0).Step(2, 1).Scored.Last.IsNearlyEqual(1.1076484232754447) is true
+	TinyMixture.Step(1, 0).Scored.First.IsNearlyEqual(0.9534001625146007, 0.000001) is true
 	let rotation = Rotation(position)
 	mutable state = tokens(token)
 	mutable updated = List(Mutable(Qwen3Block))
@@ -46,7 +53,7 @@ Step(token Number, position Number) Qwen3
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 6
 	let normed = Qwen3Block.Normalized(hidden, norm)
-	for tokens
+	for outputs
 		Layer.Summed(value, normed)
 Next Number
 	Tiny.Step(1, 0).Next is 0

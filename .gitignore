@@ -173,3 +173,4 @@ NeuralNetworks/qwen3/
 *.gguf
 !NeuralNetworks/tiny.gguf
 !NeuralNetworks/tinyqwen3.gguf
+!NeuralNetworks/tinyqwen3moe.gguf

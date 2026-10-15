@@ -1,0 +1,18 @@
+has logger
+constant Weights = "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"
+constant Address = "https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/resolve/main/"
+constant Prompt = "def fibonacci(n):"
+constant Count = 24
+Run(folder Text)
+	let path = folder + "/" + Weights
+	if File(path).Exists is false
+		Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + Address + Weights + "\"")
+	let started = Process.Elapsed
+	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
+	let model = Qwen3.Loaded(path, 4)
+	let loaded = Process.Elapsed
+	let generated = Generation(model).Generated(tokenizer.Encoded(Prompt), Count)
+	let milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
+	logger.Log(Prompt + tokenizer.Decoded(generated))
+	let seconds = (loaded - started).Round(1)
+	logger.Log("Qwen3-Coder-30B-A3B loaded in " + seconds + " s, " + milliseconds + " ms per token")

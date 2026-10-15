@@ -4,8 +4,7 @@ has projection Layer
 has queryNorm Numbers
 has keyNorm Numbers
 has mlpNorm Numbers
-has expansion Layer
-has contraction Layer
+has experts Experts
 has heads Number
 has keys List(Numbers) = List(Numbers)
 has values List(Numbers) = List(Numbers)
@@ -15,13 +14,17 @@ constant Weights = Gguf("NeuralNetworks/tinyqwen3.gguf")
 constant Tiny = Qwen3Block.Loaded(Weights, "blk.0.", 2)
 Loaded(model Gguf, prefix Text, queryHeads Number) Qwen3Block
 	Tiny.attention.weights.Length is 16
-	Tiny.expansion.weights.Length is 32
+	Tiny.experts.expansions.First.weights.Length is 32
 	let attended = Dense(model, prefix, ("attn_q", "attn_k", "attn_v"))
 	let projected = Dense(model, prefix, List(Text) + "attn_output")
-	let expanded = Dense(model, prefix, ("ffn_gate", "ffn_up"))
-	let contracted = Dense(model, prefix, List(Text) + "ffn_down")
 	let norms = Norms(model, prefix)
-	Qwen3Block(norms(0), attended, projected, norms(1), norms(2), norms(3), expanded, contracted, queryHeads)
+	Qwen3Block(norms(0), attended, projected, norms(1), norms(2), norms(3), FeedForward(model, prefix), queryHeads)
+FeedForward(model Gguf, prefix Text) Experts
+	Tiny.FeedForward(Weights, "blk.0.").used is 1
+	Tiny.FeedForward(Experts.Model, "blk.0.").used is 2
+	if model.Shape(prefix + "ffn_gate_inp.weight").Length > 0
+		return Experts.Loaded(model, prefix)
+	Experts.Dense(Dense(model, prefix, ("ffn_gate", "ffn_up")), Dense(model, prefix, List(Text) + "ffn_down"))
 Dense(model Gguf, prefix Text, names Texts) Layer
 	Tiny.Dense(Weights, "blk.0.", List(Text) + "ffn_down").weights.Length is 8
 	Tiny.Dense(Weights, "blk.0.", List(Text) + "ffn_down").biases.Length is 8
@@ -66,8 +69,7 @@ Normalized(input Numbers, weights Numbers) Numbers
 Output(input Numbers) Numbers
 	Tiny.Cached((1, 2, 3, 4, 5, 6, 7, 8), ((1, 1), (0, 0))).Output((1, 2, 3, 4, 5, 6, 7, 8)).Length is 8
 	let attended = Gpt2Block.Added(input, projection.Sums(Merged))
-	let expanded = expansion.Sums(Normalized(attended, mlpNorm))
-	Gpt2Block.Added(attended, contraction.Sums(Gated(expanded)))
+	Gpt2Block.Added(attended, experts.Forward(Normalized(attended, mlpNorm)))
 Merged Numbers
 	Tiny.Cached((1, 2, 3, 4, 5, 6, 7, 8), ((1, 1), (0, 0))).Merged.Length is 8
 	mutable merged = List(Number)
@@ -87,8 +89,3 @@ Scores(head Number, group Number) Numbers
 	let groups = values.Length / query.Length
 	for keys.Length / groups
 		Layer.Summed(keys(index * groups + group), query) / query.Length.SquareRoot
-Gated(expanded Numbers) Numbers
-	Tiny.Gated((0, 1)) is List(Number) + 0
-	let half = expanded.Length / 2
-	for half
-		expanded(index) / (1 + (-expanded(index)).Exponential) * expanded(index + half)

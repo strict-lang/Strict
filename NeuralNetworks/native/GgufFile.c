@@ -427,14 +427,18 @@ static void Repacked(const unsigned char* blocks, uint64_t bits, uint64_t width,
 			PackedQ6K(blocks + block * 210, (int8_t*)packed->data + block * 256, scales + block * 16);
 }
 
-/* Rows of 32, 16 or 8 bits, 4 keeps Q4_K and Q6_K matrices in 4 and 6 bits (other types become 8 bits). */
+/* Rows of 32, 16 or 8 bits, 4 keeps Q4_K and Q6_K matrices in 4 and 6 bits (other types become 8 bits). The matrices of
+   a stack (the experts of a mixture) follow each other. */
 STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double bits)
 {
 	static double* rows = 0;
 	static unsigned char* storage = 0;
 	const char* failure = bits != 4 && bits != 8 && bits != 16 && bits != 32 ? "OnlyMatricesOf4Or8Or16Or32BitsAreSupported" : 0;
-	const Tensor* tensor = failure ? 0 : Requested(path, name, 2, &failure);
-	uint64_t width = tensor ? tensor->shape[0] : 0, height = tensor ? tensor->shape[1] : 0;
+	const Tensor* tensor = failure ? 0 : Requested(path, name, 0, &failure);
+	if (tensor && tensor->dimensions != 2 && tensor->dimensions != 3)
+		tensor = 0, failure = "OnlyMatricesAndStacksOfThemHaveRows";
+	uint64_t width = tensor ? tensor->shape[0] : 0;
+	uint64_t height = tensor ? tensor->shape[1] * (tensor->dimensions == 3 ? tensor->shape[2] : 1) : 0;
 	uint32_t type = tensor ? tensor->type : F32;
 	uint64_t kept = bits != 4 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 : 8;
 	int isBlocked = kept == 4 || kept == 6;
