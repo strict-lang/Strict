@@ -40,7 +40,7 @@ Sources(linker Linker, linked List(TypeEntry), source Text) Texts
 Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 	let normalized = Normalized(path)
 	if normalized.StartsWith("./") and (normalized.IndexOf("/../") < 0)
-		if Repositories(logger).Downloaded(type) is not ""
+		if Repositories(logger, ".").Downloaded(type) is not ""
 			return Compiled(path, root, withTests)
 	logger.Log("TypeNotFound: " + type + " used in " + path + ":" + LineOf(File(path).ReadLines, type) + Tips)
 	List(TypeEntry)

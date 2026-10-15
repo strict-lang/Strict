@@ -1,6 +1,7 @@
 has values ValueCodegen
 constant Plain = IndexCodegen(ValueCodegen.Plain)
 constant OwnA = IndexCodegen(ValueCodegen.OwnA)
+constant Positioning = IndexCodegen(ValueCodegen(Indexing.Inferring, MethodCodegen.NoScope, CallTarget.Plain))
 constant MemberA = IndexCodegen(ValueCodegen(ValueCodegen.NoTypes, MethodCodegen.NoScope, CallTarget(CallTarget.NoTypes, TypeShape("has A Text"), "Strict/C", List(Text))))
 constant One = ValueCodegen.One
 constant NoNode = ValueCodegen.NoNode
@@ -23,8 +24,13 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 		return IsIndexedCall(node, block)
 	let isMember = (node.Kind is "MethodCall") and (node.children.Length is in (2, 3))
 	let isConstant = isMember and IsConstantList(node)
-	let isOwned = isMember and values.target.IsMember(values.TypeOf(node.children(0), block), node.text)
+	let isOwned = isMember and IsOwnedList(node, block)
 	isMember and (node.text is "value") or isConstant or isOwned
+IsOwnedList(node SyntaxNode, block CodeBlock) Boolean
+	Positioning.IsOwnedList(Indexing.Positioned, CodeBlock.Empty.Declare("t", "Trigger")) is true
+	let type = values.TypeOf(node.children(0), block)
+	let isMethod = Indexing(values.inference.types).IsIndexed(type, node.text, node.children.Length - 1)
+	values.target.IsMember(type, node.text) or isMethod
 IsConstantList(node SyntaxNode) Boolean
 	Primed.IsConstantList(PrimeCall) is true
 	let member = SyntaxNode("Member", node.text, node.children(0))

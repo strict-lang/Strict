@@ -99,18 +99,18 @@ Nearby(types Texts) Texts
 	SourceFiles(".").Nearby(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	mutable files = List(Mutable(Text))
 	for types
-		let folder = PackageWith(value, "..")
+		let local = SubfolderWith(root, value)
+		let folder = local is "" then PackageWith(value, "..") else local
 		if folder is not ""
 			files = Added(files, Directory.Files(folder, "*.strict"))
 	files
 PackageWith(type Text, projects Text) Text
-	SourceFiles(".").PackageWith("Vector2", "C:/Missing") is "./Math"
 	SourceFiles("C:/Missing").PackageWith("Adder", ".") is "./Examples/NativeAdd"
-	let found = SubfolderWith(root, type)
-	if found is not ""
-		return found
 	for Directory.Directories(projects)
-		let folder = SubfolderWith(projects + "/" + Path(value.Replace("\\", "/")).FileName.text, type)
+		let project = Path(value.Replace("\\", "/")).FileName.text
+		let first = project.Substring(0, 1)
+		let isPackage = (first is first.Upper) and (first is not first.Lower)
+		let folder = isPackage then SubfolderWith(projects + "/" + project, type) else ""
 		if folder is not ""
 			return folder
 	""

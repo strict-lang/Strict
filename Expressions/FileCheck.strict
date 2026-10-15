@@ -9,6 +9,7 @@ constant TwiceCall = ScopedStatement(SyntaxParser(Tokenizer("count.Twice").Token
 constant MissingCall = ScopedStatement(SyntaxParser(Tokenizer("count.Missing").Tokens).Parse, Counted, 0)
 constant Untested = ("Twice(number Number) Number", "\tTwice(2) is 4")
 constant OtherName = ScopedStatement(SyntaxParser(Tokenizer("count + other").Tokens).Parse, Counted, 0)
+constant Requiring = FileCheck(TypeInference(KnownTypes(List(Text) + "Count", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "Twice", List(Text) + "Count"), List(Scope) + Scope(("Twice", "Twice required"), ("times", "1"))), List(Scope) + KnownTypes.NoMembers), ("Count", "Text"))
 constant Flagged = Scope(List(Text) + "flag", List(Text) + "Boolean")
 constant FlagLoop = ScopedStatement(StatementParser(Tokenizer("for flag").Tokens).ParseStatement, Flagged, 0)
 Unknown(scoped ScopedStatement, current Scope) Text
@@ -40,14 +41,33 @@ NotIterable(scoped ScopedStatement, current Scope) Text
 UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 	Counting.UnknownMethods(MissingCall.statement, Counted, KnownTypes.NoMembers) is ("MethodNotFound: Count.Missing")
 	mutable unknown = UnknownMembers(node)
-	if IsCall(node)
-		let instance = inference.TypeOf(node.children(0), scope, current)
-		if IsMissing(instance, node.text)
-			unknown = unknown + ("MethodNotFound: " + instance + "." + node.text)
+	let issue = IsCall(node) then CallIssue(node, scope, current) else ""
+	if issue is not ""
+		unknown = unknown + issue
 	for node.children
 		if value.Kind is not "Body"
 			unknown = unknown + UnknownMethods(value, scope, current)
 	unknown
+CallIssue(call SyntaxNode, scope Scope, current Scope) Text
+	Counting.CallIssue(MissingCall.statement, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
+	Requiring.CallIssue(TwiceCall.statement, Counted, KnownTypes.NoMembers) is "ArgumentMissing: Count.Twice got 0 of 1"
+	let instance = inference.TypeOf(call.children(0), scope, current)
+	if IsMissing(instance, call.text)
+		return "MethodNotFound: " + instance + "." + call.text
+	let arguments = call.children.Length - 1
+	let fewest = Fewest(instance, call.text)
+	let issue = "ArgumentMissing: " + instance + "." + call.text + " got " + arguments + " of " + fewest
+	fewest > arguments then issue else ""
+Fewest(instance Text, name Text) Number
+	Requiring.Fewest("Count", "Twice") is 1
+	Counting.Fewest("Count", "Twice") is 0
+	let scope = inference.types.ParameterScope(instance)
+	mutable fewest = -1
+	for scope.names
+		if value is name + " required"
+			let required = scope.types(index) to Number
+			fewest = (fewest < 0) or (required < fewest) then required else fewest
+	fewest < 0 then 0 else fewest
 UnknownMembers(call SyntaxNode) Texts
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("Count(c, number = 2)").Tokens).Parse).Length is 0
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("Count(c, size = 2)").Tokens).Parse) is ("MemberNotFound: Count.size")

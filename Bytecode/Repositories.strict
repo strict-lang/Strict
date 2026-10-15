@@ -1,4 +1,5 @@
 has logger
+has target Text
 constant Organization = "https://api.github.com/orgs/strict-lang/repos?per_page=100"
 constant Development = "C:/code/GitHub"
 constant Raw = "https://raw.githubusercontent.com/"
@@ -21,7 +22,8 @@ Downloaded(type Text) Text
 	""
 Clones Texts
 	(Repositories.Clones.Length > 0) is Directory.Exists(Repositories.Development + "/strict-lang")
-	let readme = File("README.md").Exists then Linked(File("README.md").ReadLines) else List(Text)
+	let file = File(target + "/README.md")
+	let readme = file.Exists then Linked(file.ReadLines) else List(Text)
 	mutable clones = List(Mutable(Text))
 	for readme + Owned("strict-lang")
 		if Directory.Exists(Development + "/" + value) and (Development + "/" + value is not in clones)
@@ -32,7 +34,8 @@ Owned(owner Text) Texts
 	for Directory.Directories(Development + "/" + owner)
 		owner + "/" + Path(value.Replace("\\", "/")).FileName.text
 Candidates Texts
-	mutable candidates = File("README.md").Exists then Linked(File("README.md").ReadLines) else List(Text)
+	let file = File(target + "/README.md")
+	mutable candidates = file.Exists then Linked(file.ReadLines) else List(Text)
 	for Quoted(Fetch(Organization), "full_name")
 		if value is not in candidates
 			candidates = candidates + value
@@ -42,15 +45,16 @@ Fetched(repository Text, type Text) Text
 	let folder = Folder(paths, type)
 	if folder is ""
 		return ""
-	let local = "./" + Path((folder is "." then repository else folder)).FileName.text
+	let local = target + "/" + Path((folder is "." then repository else folder)).FileName.text
 	for Files(paths, folder)
-		let target = local + "/" + Relative(value, folder)
-		Process.RunTool("curl", "-sfL --create-dirs -o \"" + target + "\" \"" + Raw + repository + "/HEAD/" + value + "\"")
+		let file = local + "/" + Relative(value, folder)
+		Process.RunTool("curl", "-sfL --create-dirs -o \"" + file + "\" \"" + Raw + repository + "/HEAD/" + value + "\"")
 	File(local + "/.origin").Write(List(Text) + "https://github.com/" + repository + "/tree/HEAD/" + folder)
 	logger.Log("Downloaded " + local + " from https://github.com/" + repository)
 	Provided(local, type)
 Copied(folder Text, type Text) Text
-	let local = "./" + Path(folder).FileName.text
+	Repositories(Logger, "artifacts").Copied("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
+	let local = target + "/" + Path(folder).FileName.text
 	for BinaryFile(folder).Contained(folder)
 		if value.EndsWith(".strict") or (value.Replace("\\", "/").IndexOf("/native/") > 0)
 			File(local + "/" + Relative(value.Replace("\\", "/"), folder)).Write(File(value).ReadBytes)
@@ -130,6 +134,6 @@ Updated(folder Text) Number
 		let files = Directory.Files(value, "*.strict")
 		if File(value + "/.origin").Exists and (files.Length > 0)
 			let type = Path(files.First.Replace("\\", "/")).FileName.text
-			if Downloaded(type.Substring(0, type.Length - 7)) is not ""
+			if Repositories(logger, folder).Downloaded(type.Substring(0, type.Length - 7)) is not ""
 				updated = updated + 1
 	updated

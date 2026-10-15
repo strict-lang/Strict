@@ -3,6 +3,7 @@ constant Returning = BranchValues("Number")
 constant Value = SyntaxNode("Number", "1")
 constant Chained = BodyParser("Pick Number", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1)
 constant ReturnTrue = SyntaxNode("Body", "", SyntaxNode("Return", "", SyntaxNode("Boolean", "true")))
+constant Nested = BodyParser("Picked Numbers", "\tif 1 > 0", "\t\tif 2 > 0", "\t\t\t3").Block(1, 1)
 constant Mixed = BodyParser("Run", "\tif 1 > 2", "\t\t3", "\t5").Block(1, 1)
 Rewritten(body SyntaxNode) SyntaxNode
 	Returning.Rewritten(Chained).children.Last.children.Last.children(0).Kind is "Return"
@@ -37,6 +38,9 @@ Branch(node SyntaxNode) SyntaxNode
 	SyntaxNode(node.Kind, node.text, parts, node.line)
 LastWrapped(block SyntaxNode) SyntaxNode
 	Returning.LastWrapped(SyntaxNode("Body", "", Value)).children(0).Kind is "Return"
+	BranchValues("list").LastWrapped(Nested).children(0).children.Last.children(0).children.Last.children(0).text is "Add"
+	if block.children.Last.Kind is in ("If", "ElseIf", "Else")
+		return Rewritten(block)
 	mutable lines = List(Mutable(SyntaxNode))
 	for block.children
 		let line = index is block.children.Length - 1 then Wrapped(value) else value

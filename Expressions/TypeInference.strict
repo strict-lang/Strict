@@ -20,6 +20,7 @@ ConstantOf(typeName Text, name Text) Text
 	index is -1 then "" else constants(index).TypeOf(name)
 TypeOf(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.TypeOf(SyntaxNode("Number", "1"), NoShape, NoShape) is "Number"
+	Indexing.Inferring.TypeOf(Indexing.Positioned, Indexing.Located, NoShape) is "Number"
 	if node.Kind is in ("Number", "Text", "Boolean")
 		return node.Kind
 	if node.Kind is "Identifier"
@@ -81,7 +82,7 @@ MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
 	if (node.Kind is "MethodCall") and (binary.Precedence >= 11) and (binary.Precedence < 20) or isOverloaded
 		return ArithmeticType(binary, scope, current)
 	let type = node.text is "value" then instanceType else types.MemberType(instanceType, node.text)
-	let isMember = (node.text is "value") or types.MembersOf(instanceType).TypeOf(node.text) is not ""
+	let isMember = (node.text is "value") or Indexing(types).IsIndexed(instanceType, node.text, node.children.Length - 1)
 	(node.Kind is "MethodCall") and isMember then types.ElementType(type) else type
 ImplicitValueType(name Text, scope Scope) Text
 	NoInference.ImplicitValueType("Length", NoShape) is ""

@@ -2,6 +2,7 @@ has shape Expressions/TypeShape
 has mutations Texts
 has typeName Text = ""
 constant ReservedNames = ("value", "iterator", "elements", "generic")
+constant Hint = ", capitalize it when other types use it"
 constant Replacing = TypeValidator(TypeShape("has a Number", "has b Number", "Changed(x Number) C", "\tC(1, 2).Changed(3).a is 3", "\tC(value, a = x)"), ("Add", "Remove"), "C")
 Sample TypeValidator
 	Sample.mutations.Length is 2
@@ -18,6 +19,7 @@ Validate ValidationIssues
 MemberIssues ValidationIssues
 	Sample.MemberIssues.Length is 1
 	Sample.MemberIssues.First.Line is 1
+	Sample.MemberIssues.First to Text is "UnusedMemberMustBeRemoved: unused, capitalize it when other types use it"
 	Replacing.MemberIssues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	let kept = IsExempt then MemberNames else Copied
@@ -25,7 +27,7 @@ MemberIssues ValidationIssues
 		if shape.IsMemberLine(value)
 			let name = HeaderTokens(Tokenizer(value).Tokens).MemberName
 			if name is not in ReservedNames and (not IsPublic(name)) and UsageCount(name) < 2 and (name is not in kept)
-				issues.Add(ValidationIssue("UnusedMemberMustBeRemoved", name, index + 1))
+				issues.Add(ValidationIssue("UnusedMemberMustBeRemoved", name + Hint, index + 1))
 	issues
 MemberNames Texts
 	Sample.MemberNames is ("unused", "logger")

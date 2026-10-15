@@ -245,7 +245,55 @@
     %renamed = llvm.call @rename(%name, %newName) : (!llvm.ptr, !llvm.ptr) -> i32
     return %zero : f64
   }
+  llvm.func @sigaction(i32, !llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @sigaltstack(!llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @write(i32, !llvm.ptr, i64) -> i64
+  llvm.mlir.global internal constant @strict_overflow_text("Error: StackOverflow, methods called each other without end until the stack was used up\0A\00") : !llvm.array<89 x i8>
+  llvm.func @strict_overflow_handler(%signal: i32, %info: !llvm.ptr, %context: !llvm.ptr) {
+    %addressSlot = llvm.getelementptr %info[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %address = llvm.load %addressSlot : !llvm.ptr -> i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %below = llvm.sub %base, %address : i64
+    %window = llvm.mlir.constant(1073741824 : i64) : i64
+    %isStack = llvm.icmp "ult" %below, %window : i64
+    llvm.cond_br %isStack, ^report, ^crash
+  ^report:
+    %null = llvm.mlir.zero : !llvm.ptr
+    %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
+    %text = llvm.mlir.addressof @strict_overflow_text : !llvm.ptr
+    %length = llvm.mlir.constant(88 : i64) : i64
+    %output = llvm.mlir.constant(1 : i32) : i32
+    %written = llvm.call @write(%output, %text, %length) : (i32, !llvm.ptr, i64) -> i64
+    %code = llvm.mlir.constant(139 : i32) : i32
+    llvm.call @_exit(%code) : (i32) -> ()
+    llvm.return
+  ^crash:
+    llvm.return
+  }
   func.func private @strict_guard() {
+    %one = arith.constant 1 : i64
+    %stackBytes = arith.constant 65536 : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %stack = llvm.call @malloc(%stackBytes) : (i64) -> !llvm.ptr
+    %alternate = llvm.alloca %one x !llvm.array<24 x i8> : (i64) -> !llvm.ptr
+    llvm.store %stack, %alternate : !llvm.ptr, !llvm.ptr
+    %stackFlags = llvm.getelementptr %alternate[8] : (!llvm.ptr) -> !llvm.ptr, i8
+    %noFlags = arith.constant 0 : i32
+    llvm.store %noFlags, %stackFlags : i32, !llvm.ptr
+    %stackSize = llvm.getelementptr %alternate[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %stackBytes, %stackSize : i64, !llvm.ptr
+    %alternated = llvm.call @sigaltstack(%alternate, %null) : (!llvm.ptr, !llvm.ptr) -> i32
+    %action = llvm.alloca %one x !llvm.array<152 x i8> : (i64) -> !llvm.ptr
+    %actionBytes = arith.constant 152 : i64
+    %cleared = llvm.call @memset(%action, %noFlags, %actionBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %handler = llvm.mlir.addressof @strict_overflow_handler : !llvm.ptr
+    llvm.store %handler, %action : !llvm.ptr, !llvm.ptr
+    %actionFlags = llvm.getelementptr %action[136] : (!llvm.ptr) -> !llvm.ptr, i8
+    %resetOnStackWithInfo = arith.constant -2013265916 : i32
+    llvm.store %resetOnStackWithInfo, %actionFlags : i32, !llvm.ptr
+    %segmentation = arith.constant 11 : i32
+    %installed = llvm.call @sigaction(%segmentation, %action, %null) : (i32, !llvm.ptr, !llvm.ptr) -> i32
     return
   }
   func.func private @strict_file_modified(%path: f64) -> f64 {

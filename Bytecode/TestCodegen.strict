@@ -9,6 +9,7 @@ constant Declaring = SyntaxNode("Declaration", "let a", MethodCodegen.One)
 constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 25, 1), 2)
 constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 15, 1), 2)
 constant Runner = "$Tests"
+constant Processing = TestCodegen(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(KnownTypes(("Process", "Image"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + "Elapsed", List(Text) + "Number"), Scope(List(Text) + "Process", List(Text) + "Image")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text)))
 Tests MethodEntry
 	Even.Tests.Name is Runner
 	Even.Tests.instructions.Last.kind is InstructionType.Return
@@ -46,7 +47,7 @@ Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock
 	Even.Checked(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
 	let failure = block.nextId
 	let marked = block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text)
-	let timed = isQuiet then marked else types.Generator.Expression(Elapsed, marked).Stored("started")
+	let timed = isQuiet then marked else Clock.Expression(Elapsed, marked).Stored("started")
 	let compared = Compared(test, timed).Declare(ErrorCodegen.FailureMarker, "")
 	let place = Place(test, method)
 	let reported = isQuiet then compared else Passed(compared, place)
@@ -80,7 +81,7 @@ Timed(block CodeBlock, message Text) CodeBlock
 	TestCodegen(Even.types, true).Timed(Counter, "x").instructions.Last.texts is ("x")
 	if isQuiet
 		return block.Add(InstructionEntry.Print(message))
-	let duration = types.Generator.Expression(Duration, block)
+	let duration = Clock.Expression(Duration, block)
 	duration.Add(InstructionEntry.PrintValue(message + " (", duration.Result, true))
 Got(block CodeBlock) CodeBlock
 	Even.Got(Counter.Declare(ErrorCodegen.Tested, "Number")).instructions.Last.kind is InstructionType.Print
@@ -93,3 +94,7 @@ Counted(block CodeBlock) CodeBlock
 	Even.Counted(Counter).instructions.Last.texts is ("failed")
 	constant sum = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "failed"), SyntaxNode("Number", "1")))
 	types.Generator.Expression(sum, block).Stored("failed")
+Clock ValueCodegen
+	Processing.Clock.Expression(Elapsed, Counter).instructions.First.texts.First is "Strict/Process"
+	let neutral = CallTarget(types.inference.types, TypeShape(List(Text)), types.fullName, List(Text))
+	ValueCodegen(types.inference, MethodCodegen.NoScope, neutral)

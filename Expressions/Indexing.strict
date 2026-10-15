@@ -1,0 +1,15 @@
+has types KnownTypes
+constant Triggers = Indexing(KnownTypes(List(Text) + "Trigger", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Position", "Moved"), ("Numbers", "Numbers")), List(Scope) + Scope(("Position", "Moved"), ("", "by"))))
+constant Inferring = TypeInference(Triggers.types, List(Scope) + KnownTypes.NoMembers)
+constant Positioned = SyntaxParser(Tokenizer("t.Position(0)").Tokens).Parse
+constant Located = Scope(List(Text) + "t", List(Text) + "Trigger")
+IsIndexed(typeName Text, name Text, arguments Number) Boolean
+	Indexing(KnownTypes.Sample).IsIndexed("Count", "number", 1) is true
+	Triggers.IsIndexed("Trigger", "Position", 1) is true
+	Triggers.IsIndexed("Trigger", "Moved", 1) is false
+	Indexing(KnownTypes.Sample).IsIndexed("Count", "Twice", 1) is false
+	if types.MembersOf(typeName).TypeOf(name) is not ""
+		return true
+	let returned = types.MethodsOf(typeName).TypeOf(name)
+	let isList = (returned is not "") and (types.ElementType(returned) is not returned)
+	isList and (arguments is 1) and (types.ParametersOf(typeName, name, 1).Length is 0)

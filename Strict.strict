@@ -46,7 +46,8 @@ Rest(arguments Texts) Texts
 Tool(command Text, rest Texts) Number
 	if command is "format"
 		return Format(rest(0))
-	command is "check" then Checked(ValidateCheck(logger), rest(0), rest(1)) else Updated(Repositories(logger), rest(0))
+	let updater = Repositories(logger, ".")
+	command is "check" then Checked(ValidateCheck(logger), rest(0), rest(1)) else Updated(updater, rest(0))
 Checked(checker Validators/ValidateCheck, folder Text, root Text) Number
 	checker.Run(folder, root)
 Updated(updater Bytecode/Repositories, folder Text) Number

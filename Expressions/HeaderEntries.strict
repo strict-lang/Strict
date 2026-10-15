@@ -3,8 +3,15 @@ constant Mutating = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Mutable(
 constant Adding = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Number").Tokens))
 Parameters Scope
 	Mutating.Parameters.TypeOf("Add mutable") is "Mutable"
-	Adding.Parameters.names is ("Add", "Add types")
+	Adding.Parameters.names is ("Add", "Add types", "Add required")
 	let name = header.tokens(0)
-	let parameters = (Text.Combine(header.ParameterNames, ","), Text.Combine(header.ParameterTypes, ","))
-	let entries = Scope((name, name + " types"), parameters)
+	let parameters = (Text.Combine(header.ParameterNames, ","), Text.Combine(header.ParameterTypes, ","), Required to Text)
+	let entries = Scope((name, name + " types", name + " required"), parameters)
 	header.ReturnsMutable then entries.With(name + " mutable", "Mutable") else entries
+Required Number
+	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y = 1, z Number with value > 0)").Tokens)).Required is 2
+	mutable required = 0
+	for header.ParametersEnd
+		if (index > 1) and header.IsParameterStart(index) and (header.tokens(index + 1) is not "=")
+			required = required + 1
+	required
