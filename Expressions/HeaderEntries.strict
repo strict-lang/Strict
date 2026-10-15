@@ -4,14 +4,20 @@ constant Adding = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Number").T
 Parameters Scope
 	Mutating.Parameters.TypeOf("Add mutable") is "Mutable"
 	Adding.Parameters.names is ("Add", "Add types", "Add required")
+	HeaderEntries(HeaderTokens(Tokenizer("B(a Number with Step 0.5)").Tokens)).Parameters.TypeOf("B a step") is "0.5"
+	HeaderEntries(HeaderTokens(Tokenizer("T(a Number) Number with Step 0.5").Tokens)).Parameters.TypeOf("T step") is "0.5"
 	let name = header.tokens(0)
 	let parameters = (Text.Combine(header.ParameterNames, ","), Text.Combine(header.ParameterTypes, ","), Required to Text)
-	let entries = Scope((name, name + " types", name + " required"), parameters)
+	let steps = Steps(header.tokens).Entries(header)
+	let entries = Scope((name, name + " types", name + " required"), parameters).WithAll(steps.names, steps.types)
 	header.ReturnsMutable then entries.With(name + " mutable", "Mutable") else entries
 Required Number
 	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y = 1, z Number with value > 0)").Tokens)).Required is 2
+	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y Text = \"a\")").Tokens)).Required is 1
 	mutable required = 0
 	for header.ParametersEnd
-		if (index > 1) and header.IsParameterStart(index) and (header.tokens(index + 1) is not "=")
+		let tokens = header.tokens
+		let isDefault = (tokens(index + 1) is "=") or (index + 2 < tokens.Length) and (tokens(index + 2) is "=")
+		if (index > 1) and header.IsParameterStart(index) and (isDefault is false)
 			required = required + 1
 	required

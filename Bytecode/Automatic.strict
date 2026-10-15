@@ -31,10 +31,11 @@ Generated(name Text) Texts
 Validations SyntaxNodes
 	Sized.Validations.First to Text is "if Width > 0 is false"
 	Sized.Validations.First.line is 1
+	Automatic(List(Text) + "has price Number with Step 0.01", "P", Instantiation.Pairing).Validations.Length is 0
 	mutable result = List(Mutable(SyntaxNode))
 	for Stored
 		let start = value.IndexOf(" with ")
-		if start > 0
+		if (start > 0) and (value.IndexOf(" with Step ") < 0)
 			let constraint = value.Substring(start + 6, value.Length - start - 6)
 			let checked = Constraint(Header(value).MemberName, MemberType(value), instantiation.types)
 			result.Add(checked.Checked(constraint, lines.Index(value) + 1))

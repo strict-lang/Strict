@@ -50,7 +50,8 @@ Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock
 	let failure = block.nextId
 	let marked = block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text)
 	let timed = isQuiet then marked else Clock.Expression(Elapsed, marked).Stored("started")
-	let compared = Compared(test, timed).Declare(ErrorCodegen.FailureMarker, "")
+	let rounded = StepRounding(types.Generator).Rounded(test, timed)
+	let compared = Compared(rounded, timed).Declare(ErrorCodegen.FailureMarker, "")
 	let place = Place(test, method)
 	let reported = isQuiet then compared else Passed(compared, place)
 	let jumped = reported.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, reported.nextId)).WithNextId

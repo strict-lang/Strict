@@ -44,6 +44,26 @@ Round(decimals = 0) Number
 	3.14159.Round(2) is 3.14
 	let scale = 10 ^ decimals
 	(value * scale + 0.5).Floor / scale
+Stepped(step Number, rounding Text = "Even") Number
+	0.30000000000000004.Stepped(0.01) is 0.3
+	0.125.Stepped(0.01) is 0.12
+	(0 - 0.125).Stepped(0.01) is -0.12
+	0.129.Stepped(0.01, "Floor") is 0.12
+	0.75.Stepped(0.25) is 0.75
+	let inverse = (1 / step).Round(6)
+	(value * inverse).Counted(rounding) / inverse
+Counted(rounding Text) Number
+	12.5.Counted("Even") is 12
+	13.5.Counted("Even") is 14
+	12.1.Counted("Ceiling") is 13
+	12.999999999999998.Counted("Floor") is 13
+	if Absolute > 2251799813685248
+		return Error("DecimalOverflow")
+	let tolerance = Absolute * 0.000000000000001 + 0.000000001
+	let floor = (value + tolerance).Floor
+	let fraction = value - floor
+	let isEvenUp = (fraction > 0.5 + tolerance) or ((fraction - 0.5).Absolute <= tolerance) and ((floor % 2).Absolute is 1)
+	floor + ((rounding is "Ceiling" then fraction > tolerance else (rounding is "Even") and isEvenUp) then 1 else 0)
 Absolute Number
 	-1.Absolute is 1
 	1.Absolute is 1
