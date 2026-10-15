@@ -329,7 +329,7 @@
     %copied = llvm.call @memcpy(%data, %source, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %half = arith.constant 16.0 : f64
     %isHalf = arith.cmpf oeq, %bits, %half : f64
-    %isQuantized = arith.cmpf oeq, %bits, %eight : f64
+    %isQuantized = arith.cmpf ole, %bits, %eight : f64
     %floats = arith.select %isQuantized, %none, %elements : i64
     func.call @strict_packed_canonical(%data, %floats, %isHalf) : (!llvm.ptr, i64, i1) -> ()
     %view = func.call @strict_alloc(%blockSize) : (i64) -> !llvm.ptr
@@ -352,30 +352,51 @@
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  func.func private @strict_packed_data(%count: i64, %bits: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %alignMask = arith.constant -4 : i64
+    %isNibbles = arith.cmpi eq, %bits, %four : i64
+    %rounded = arith.addi %count, %one : i64
+    %pairs = arith.shrui %rounded, %one : i64
+    %numbers = arith.select %isNibbles, %pairs, %count : i64
+    %padded = arith.addi %numbers, %three : i64
+    %aligned = arith.andi %padded, %alignMask : i64
+    return %aligned : i64
+  }
   func.func private @strict_packed_bytes(%count: i64, %bits: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
     %eight = arith.constant 8 : i64
-    %three = arith.constant 3 : i64
+    %six = arith.constant 6 : i64
+    %four = arith.constant 4 : i64
+    %fifteen = arith.constant 15 : i64
     %thirtyOne = arith.constant 31 : i64
     %five = arith.constant 5 : i64
     %two = arith.constant 2 : i64
-    %alignMask = arith.constant -4 : i64
-    %padded = arith.addi %count, %three : i64
-    %aligned = arith.andi %padded, %alignMask : i64
+    %three = arith.constant 3 : i64
+    %aligned = func.call @strict_packed_data(%count, %bits) : (i64, i64) -> i64
     %rounded = arith.addi %count, %thirtyOne : i64
     %blocks = arith.shrui %rounded, %five : i64
     %scaleBytes = arith.shli %blocks, %two : i64
     %quantizedBytes = arith.addi %aligned, %scaleBytes : i64
+    %roundedSixteen = arith.addi %count, %fifteen : i64
+    %sixteens = arith.shrui %roundedSixteen, %four : i64
+    %sixteenBytes = arith.shli %sixteens, %two : i64
+    %sixBytes = arith.addi %aligned, %sixteenBytes : i64
+    %pairBytes = arith.shli %blocks, %three : i64
+    %fourBytes = arith.addi %aligned, %pairBytes : i64
     %cells = arith.muli %count, %bits : i64
     %plainBytes = arith.divui %cells, %eight : i64
     %isQuantized = arith.cmpi eq, %bits, %eight : i64
-    %bytes = arith.select %isQuantized, %quantizedBytes, %plainBytes : i64
+    %isSix = arith.cmpi eq, %bits, %six : i64
+    %isFour = arith.cmpi eq, %bits, %four : i64
+    %orFour = arith.select %isFour, %fourBytes, %plainBytes : i64
+    %orSix = arith.select %isSix, %sixBytes, %orFour : i64
+    %bytes = arith.select %isQuantized, %quantizedBytes, %orSix : i64
     return %bytes : i64
   }
-  func.func private @strict_packed_scales(%data: !llvm.ptr, %count: i64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
-    %three = arith.constant 3 : i64
-    %alignMask = arith.constant -4 : i64
-    %padded = arith.addi %count, %three : i64
-    %aligned = arith.andi %padded, %alignMask : i64
+  func.func private @strict_packed_scales(%data: !llvm.ptr, %count: i64, %bits: i64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %aligned = func.call @strict_packed_data(%count, %bits) : (i64, i64) -> i64
     %scales = llvm.getelementptr %data[%aligned] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     return %scales : !llvm.ptr
   }
@@ -2329,7 +2350,13 @@
     %copyItemsBits = llvm.load %copyHolder : !llvm.ptr -> f64
     %copyItems = func.call @strict_ptr(%copyItemsBits) : (f64) -> !llvm.ptr
     %count = arith.fptosi %length : f64 to i64
-    %scales = func.call @strict_packed_scales(%data, %count) : (!llvm.ptr, i64) -> !llvm.ptr
+    %widthNumber = arith.negf %capacity : f64
+    %width = arith.fptosi %widthNumber : f64 to i64
+    %scales = func.call @strict_packed_scales(%data, %count, %width) : (!llvm.ptr, i64, i64) -> !llvm.ptr
+    %sixCapacity = arith.constant -6.0 : f64
+    %isSix = arith.cmpf oeq, %capacity, %sixCapacity : f64
+    %fourCapacity = arith.constant -4.0 : f64
+    %isFour = arith.cmpf oeq, %capacity, %fourCapacity : f64
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     cf.br ^check(%start : i64)
@@ -2344,7 +2371,46 @@
     %fromHalf = func.call @strict_half_number(%halfBits) : (i16) -> f64
     cf.br ^store(%fromHalf : f64)
   ^wider:
-    cf.cond_br %isQuantized, ^quantized, ^single
+    cf.cond_br %isQuantized, ^quantized, ^narrower
+  ^narrower:
+    cf.cond_br %isSix, ^six, ^fourOrSingle
+  ^fourOrSingle:
+    cf.cond_br %isFour, ^four, ^single
+  ^six:
+    %sixSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %sixByte = llvm.load %sixSlot : !llvm.ptr -> i8
+    %sixNumber = arith.sitofp %sixByte : i8 to f64
+    %sixShift = arith.constant 4 : i64
+    %sixteen = arith.shrui %index, %sixShift : i64
+    %sixScaleSlot = llvm.getelementptr %scales[%sixteen] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %sixScale = llvm.load %sixScaleSlot : !llvm.ptr -> f32
+    %sixWide = arith.extf %sixScale : f32 to f64
+    %fromSix = arith.mulf %sixNumber, %sixWide : f64
+    cf.br ^store(%fromSix : f64)
+  ^four:
+    %oneBit = arith.constant 1 : i64
+    %pairIndex = arith.shrui %index, %oneBit : i64
+    %pairSlot = llvm.getelementptr %data[%pairIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %pair = llvm.load %pairSlot : !llvm.ptr -> i8
+    %pairWide = arith.extui %pair : i8 to i64
+    %odd = arith.andi %index, %oneBit : i64
+    %twoBits = arith.constant 2 : i64
+    %nibbleShift = arith.shli %odd, %twoBits : i64
+    %shifted = arith.shrui %pairWide, %nibbleShift : i64
+    %nibbleMask = arith.constant 15 : i64
+    %nibble = arith.andi %shifted, %nibbleMask : i64
+    %nibbleNumber = arith.uitofp %nibble : i64 to f32
+    %fourShift = arith.constant 5 : i64
+    %group = arith.shrui %index, %fourShift : i64
+    %scaleIndex = arith.shli %group, %oneBit : i64
+    %pairScaleSlot = llvm.getelementptr %scales[%scaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %pairScale = llvm.load %pairScaleSlot : !llvm.ptr -> f32
+    %minimumSlot = llvm.getelementptr %pairScaleSlot[1] : (!llvm.ptr) -> !llvm.ptr, f32
+    %minimum = llvm.load %minimumSlot : !llvm.ptr -> f32
+    %scaled = arith.mulf %pairScale, %nibbleNumber : f32
+    %shiftedDown = arith.subf %scaled, %minimum : f32
+    %fromFour = arith.extf %shiftedDown : f32 to f64
+    cf.br ^store(%fromFour : f64)
   ^quantized:
     %byteSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %byte = llvm.load %byteSlot : !llvm.ptr -> i8
@@ -2680,8 +2746,89 @@
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
     %length = llvm.load %view : !llvm.ptr -> f64
     %count = arith.fptosi %length : f64 to i64
-    %scales = func.call @strict_packed_scales(%data, %count) : (!llvm.ptr, i64) -> !llvm.ptr
+    %bits = func.call @strict_list_packed(%list) : (f64) -> i64
+    %scales = func.call @strict_packed_scales(%data, %count, %bits) : (!llvm.ptr, i64, i64) -> !llvm.ptr
     return %scales : !llvm.ptr
+  }
+  // ponytail: one buffer per thread, a fast loop has at most one packed source; rows of 4 bits become floats per row
+  llvm.mlir.global internal thread_local @strict_float_buffer(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_float_capacity(0 : i64) : i64
+  func.func private @strict_list_floats(%list: f64) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %fifteen = arith.constant 15 : i32
+    %fifteenPairs = arith.constant 15 : i64
+    %nibbleShift = arith.constant 4 : i32
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %length = llvm.load %view : !llvm.ptr -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    %scales = func.call @strict_list_scales(%list) : (f64) -> !llvm.ptr
+    %bufferSlot = llvm.mlir.addressof @strict_float_buffer : !llvm.ptr
+    %capacitySlot = llvm.mlir.addressof @strict_float_capacity : !llvm.ptr
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
+    %padded = arith.addi %count, %one : i64
+    %enough = arith.cmpi sge, %capacity, %padded : i64
+    cf.cond_br %enough, ^ready, ^grow
+  ^grow:
+    %oldBits = llvm.load %bufferSlot : !llvm.ptr -> i64
+    %old = llvm.inttoptr %oldBits : i64 to !llvm.ptr
+    llvm.call @free(%old) : (!llvm.ptr) -> ()
+    %bytes = arith.muli %padded, %four : i64
+    %fresh = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %freshBits = llvm.ptrtoint %fresh : !llvm.ptr to i64
+    llvm.store %freshBits, %bufferSlot : i64, !llvm.ptr
+    llvm.store %padded, %capacitySlot : i64, !llvm.ptr
+    cf.br ^ready
+  ^ready:
+    %bufferBits = llvm.load %bufferSlot : !llvm.ptr -> i64
+    %buffer = llvm.inttoptr %bufferBits : i64 to !llvm.ptr
+    %pairs = arith.shrui %padded, %one : i64
+    %sixteen = arith.constant 16 : i64
+    %roundedPairs = arith.addi %pairs, %fifteenPairs : i64
+    %groups = arith.shrui %roundedPairs, %four : i64
+    cf.br ^group(%zero : i64)
+  ^group(%group: i64):
+    %moreGroups = arith.cmpi slt, %group, %groups : i64
+    cf.cond_br %moreGroups, ^scaled, ^done
+  ^scaled:
+    %scaleIndex = arith.shli %group, %one : i64
+    %scaleSlot = llvm.getelementptr %scales[%scaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %scale = llvm.load %scaleSlot : !llvm.ptr -> f32
+    %minimumSlot = llvm.getelementptr %scaleSlot[1] : (!llvm.ptr) -> !llvm.ptr, f32
+    %minimum = llvm.load %minimumSlot : !llvm.ptr -> f32
+    %firstPair = arith.shli %group, %four : i64
+    %groupEnd = arith.addi %firstPair, %sixteen : i64
+    %endPair = arith.minui %groupEnd, %pairs : i64
+    cf.br ^check(%firstPair : i64)
+  ^check(%pair: i64):
+    %more = arith.cmpi slt, %pair, %endPair : i64
+    cf.cond_br %more, ^pair, ^nextGroup
+  ^pair:
+    %byteSlot = llvm.getelementptr %data[%pair] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %byteSlot : !llvm.ptr -> i8
+    %wide = arith.extui %byte : i8 to i32
+    %low = arith.andi %wide, %fifteen : i32
+    %high = arith.shrui %wide, %nibbleShift : i32
+    %lowNumber = arith.uitofp %low : i32 to f32
+    %highNumber = arith.uitofp %high : i32 to f32
+    %lowScaled = arith.mulf %scale, %lowNumber : f32
+    %lowValue = arith.subf %lowScaled, %minimum : f32
+    %highScaled = arith.mulf %scale, %highNumber : f32
+    %highValue = arith.subf %highScaled, %minimum : f32
+    %first = arith.shli %pair, %one : i64
+    %lowTarget = llvm.getelementptr %buffer[%first] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %lowValue, %lowTarget : f32, !llvm.ptr
+    %highTarget = llvm.getelementptr %lowTarget[1] : (!llvm.ptr) -> !llvm.ptr, f32
+    llvm.store %highValue, %highTarget : f32, !llvm.ptr
+    %next = arith.addi %pair, %one : i64
+    cf.br ^check(%next : i64)
+  ^nextGroup:
+    %following = arith.addi %group, %one : i64
+    cf.br ^group(%following : i64)
+  ^done:
+    return %buffer : !llvm.ptr
   }
   func.func private @strict_list_data(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
@@ -5087,10 +5234,12 @@
     %columnsNumber = func.call @strict_list_length(%first) : (f64) -> f64
     %columns = arith.fptosi %columnsNumber : f64 to i64
     %cells = arith.muli %count, %columns : i64
-    %bits = func.call @strict_gpu_bits(%first) : (f64) -> i64
+    %bits = func.call @strict_list_packed(%first) : (f64) -> i64
     %eight = arith.constant 8 : i64
     %one = arith.constant 1 : i64
-    %isQuantized = arith.cmpi eq, %bits, %eight : i64
+    %isPacked = arith.cmpi ugt, %bits, %none : i64
+    %isNarrow = arith.cmpi ule, %bits, %eight : i64
+    %isQuantized = arith.andi %isPacked, %isNarrow : i1
     %work = arith.select %isQuantized, %one, %cells : i64
     return %work : i64
   ^elements:
@@ -5142,9 +5291,9 @@
     return
   }
   func.func private @strict_gpu_host(%list: f64) -> !llvm.ptr {
-    %none = arith.constant 0 : i64
-    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
-    %isPlain = arith.cmpi eq, %packed, %none : i64
+    %sixtyFour = arith.constant 64 : i64
+    %bits = func.call @strict_gpu_bits(%list) : (f64) -> i64
+    %isPlain = arith.cmpi eq, %bits, %sixtyFour : i64
     cf.cond_br %isPlain, ^plain, ^narrow
   ^plain:
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
@@ -5157,8 +5306,11 @@
     %none = arith.constant 0 : i64
     %sixtyFour = arith.constant 64 : i64
     %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %eight = arith.constant 8 : i64
     %isPlain = arith.cmpi eq, %packed, %none : i64
-    %bits = arith.select %isPlain, %sixtyFour, %packed : i64
+    %isBlocked = arith.cmpi ult, %packed, %eight : i64
+    %isUnpacked = arith.ori %isPlain, %isBlocked : i1
+    %bits = arith.select %isUnpacked, %sixtyFour, %packed : i64
     return %bits : i64
   }
   func.func private @strict_gpu_list(%list: f64, %out: !llvm.ptr, %buffer: !llvm.ptr) -> i1 {
@@ -5737,7 +5889,8 @@
     %zero = arith.constant 0.0 : f64
     %limit = arith.constant 127.0 : f64
     %true = arith.constant true
-    %scales = func.call @strict_packed_scales(%target, %count) : (!llvm.ptr, i64) -> !llvm.ptr
+    %quantizedBits = arith.constant 8 : i64
+    %scales = func.call @strict_packed_scales(%target, %count, %quantizedBits) : (!llvm.ptr, i64, i64) -> !llvm.ptr
     cf.br ^block(%none, %true : i64, i1)
   ^block(%first: i64, %exact: i1):
     %more = arith.cmpi slt, %first, %count : i64

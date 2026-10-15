@@ -1,0 +1,59 @@
+has function MlirFunction
+has position Number
+constant Doubler = MlirKernel.Doubler
+constant Doubling = MlirWidths(MlirFastLoop.Doubling.function, 2)
+constant Halving = MlirWidths(MlirFastLoop.Halving.function, 2)
+constant Quartering = MlirWidths(MlirFastLoop.Quartering.function, 2)
+constant Sixes = MlirWidths(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2, "numbers 6"), 2)
+constant Fours = MlirWidths(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2, "numbers 4"), 2)
+constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, "
+Width(source Text) Text
+	Halving.Width("numbers") is "16"
+	Doubling.Width("numbers") is ""
+	let parts = function.Packing.Split(" ")
+	parts.First is source then parts.Last else ""
+Element(source Text) Text
+	Halving.Element("numbers") is "f16"
+	(Quartering.Element("numbers"), Fours.Element("numbers")) is ("i8", "f32")
+	Doubling.Element("numbers") is "f64"
+	let width = Width(source)
+	width is "" then "f64" else width is "16" then "f16" else width is in ("32", "4") then "f32" else "i8"
+Loaded(result Text, address Text, items Text, source Text) Texts
+	Doubling.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = llvm.load %p : !llvm.ptr -> f64"
+	Quartering.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.mulf %xq, %xw : f64"
+	Fours.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.extf %xn : f32 to f64"
+	let type = Element(source)
+	let pointer = "    " + address + " = llvm.getelementptr " + items + "[" + Temp("ki") + "]" + Pointer + type
+	let loaded = "    " + result + (type is "f64" then "" else "n") + " = llvm.load " + address + " : !llvm.ptr -> " + type
+	(pointer, loaded) + Widened(result, items, source)
+Widened(result Text, items Text, source Text) Texts
+	Halving.Widened("%x", "%h", "numbers") is ("    %x = arith.extf %xn : f16 to f64")
+	Sixes.Widened("%x", "%h", "numbers").First is "    %xf = arith.constant 4 : i64"
+	Doubling.Widened("%x", "%h", "numbers").Length is 0
+	let type = Element(source)
+	if type is "f64"
+		return List(Text)
+	let extended = "    " + result + " = arith.extf " + result + "n : " + type + " to f64"
+	type is "i8" then Scaled(result, items, Width(source) is "6" then "4" else "5") else List(Text) + extended
+Scaled(result Text, items Text, shift Text) Texts
+	Quartering.Scaled("%x", "%h", "5").First is "    %xf = arith.constant 5 : i64"
+	let block = "    " + result + "b = arith.shrui " + Temp("ki") + ", " + result + "f : i64"
+	let address = "    " + result + "a = llvm.getelementptr " + items + "s[" + result + "b]" + Pointer + "f32"
+	let scale = "    " + result + "s = llvm.load " + result + "a : !llvm.ptr -> f32"
+	let widened = "    " + result + "w = arith.extf " + result + "s : f32 to f64"
+	let byte = "    " + result + "q = arith.sitofp " + result + "n : i8 to f64"
+	let product = "    " + result + " = arith.mulf " + result + "q, " + result + "w : f64"
+	(MlirTyped.Integer.Constant(result + "f", shift), block, address, scale, widened, byte, product)
+Pointed(result Text, list Text, source Text, plain Text) Texts
+	Halving.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_list_data(%l)") > 0 is true
+	Quartering.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_list_scales(%l)") > 0 is true
+	Doubling.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_list_start(%l)") > 0 is true
+	Fours.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_list_floats(%l)") > 0 is true
+	let packed = Width(source) is "4" then "strict_list_floats" else "strict_list_data"
+	let called = Element(source) is "f64" then plain else packed
+	let pointed = "    " + result + " = func.call @" + called + "(" + list + ")" + MlirFastLoop.Items
+	let scales = "    " + result + "s = func.call @strict_list_scales(" + list + ")" + MlirFastLoop.Items
+	Element(source) is "i8" then (pointed, scales) else List(Text) + pointed
+Temp(suffix Text) Text
+	Doubling.Temp("ki") is "%t2ki"
+	MlirFastLoop(function, position).Temp(suffix)

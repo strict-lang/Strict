@@ -1,9 +1,10 @@
 has function MlirFunction
 has position Number
-constant Letters = "abcdefghi"
-constant Widths = (16, 32, 8)
+constant Letters = "abcdefghijklmno"
+constant Widths = (16, 32, 8, 6, 4)
 constant Summing = MlirPacked(MlirKernel.Summing.function, 1)
 constant Doubling = MlirPacked(MlirKernel.Doubling.function, 2)
+constant SecondCases = ("1024: ^ffloop1fast", "2048: ^fgloop1fast", "512: ^fhloop1fast", "384: ^filoop1fast", "256: ^fjloop1fast")
 Branch Text
 	Summing.Branch is "    cf.cond_br %f1ok1, ^floop1packed, ^loop1generic"
 	Doubling.Branch is "    cf.cond_br %f2ok1, ^floop2fast, ^loop2generic"
@@ -29,9 +30,10 @@ Keyed(name Text, index Number) Texts
 	let sum = " = arith.addi " + prefix + "s" + index + ", " + prefix + "w" + index + " : i64"
 	(packed, shift, "    " + prefix + "w" + index + shifted, "    " + prefix + "s" + (index + 1) + sum)
 Case(source Number) Texts
-	Summing.Case(1) is ("1024: ^fdloop1fast", "2048: ^feloop1fast", "512: ^ffloop1fast")
+	Summing.Case(1) is SecondCases
 	for Widths
-		((value * 64 ^ source) to Text) + ": ^f" + Letters.Substring(3 * source + index, 1) + "loop" + position + "fast"
+		let letter = Letters.Substring(Widths.Length * source + index, 1)
+		((value * 64 ^ source) to Text) + ": ^f" + letter + "loop" + position + "fast"
 Dispatched Texts
 	Text.Combine(Summing.Dispatched).IndexOf("[default: ^loop1generic, 0: ^floop1fast, 16: ^faloop1fast") > 0 is true
 	Doubling.Dispatched.Length is 0
@@ -50,8 +52,8 @@ Variants Texts
 	Text.Combine(Summing.Variants).IndexOf("arith.extf %fa1gn : f16 to f64") > 0 is true
 	let names = Packable
 	mutable lines = List(Mutable(Text))
-	for names.Length * 3
-		let packing = names((index / 3).Floor) + " " + Widths(index % 3)
+	for names.Length * Widths.Length
+		let packing = names((index / Widths.Length).Floor) + " " + Widths(index % Widths.Length)
 		let packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
 		let copied = MlirFastLoop(packed, position).Copied
 		let renamed = MlirKernel(function, position).Renamed(copied, Letters.Substring(index, 1))

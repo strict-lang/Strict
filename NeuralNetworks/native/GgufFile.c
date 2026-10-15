@@ -309,33 +309,73 @@ static void Decoded(uint32_t type, const unsigned char* block, float* y)
 		DecodedQ6K(block, y);
 }
 
-/* Reads all numbers of the tensor as floats, 0 and the failure name if it can't. */
-static float* Floats(const char* path, const Tensor* tensor, uint64_t count, const char** failure)
+/* Reads the blocks of the tensor as they are stored, 0 and the failure name if it can't. */
+static unsigned char* Blocks(const char* path, const Tensor* tensor, uint64_t count, const char** failure)
 {
 	uint32_t type = tensor->type;
-	uint64_t blockNumbers = BlockNumbers(type), blockBytes = BlockBytes(type), blocks = count / blockNumbers;
+	uint64_t blockBytes = BlockBytes(type), blocks = count / BlockNumbers(type);
 	if ((type != F32 && type != F16 && type != BF16 && type != Q8_0 && type != Q4_K && type != Q6_K) ||
-		count % blockNumbers != 0)
+		count % BlockNumbers(type) != 0)
 	{
 		*failure = "OnlyF32F16BF16Q8_0Q4_KAndQ6_KTensorsAreSupported";
 		return 0;
 	}
 	FILE* file = fopen(path, "rb");
 	unsigned char* raw = malloc(blocks * blockBytes + 1);
-	float* floats = malloc(count * sizeof(float) + 1);
 	size_t read = 0;
 	if (file && strict_seek(file, (int64_t)(dataStart + tensor->offset), SEEK_SET) == 0)
 		read = fread(raw, blockBytes, blocks, file);
 	if (file)
 		fclose(file);
-	for (uint64_t block = 0; read == blocks && block < blocks; block++)
-		Decoded(type, raw + block * blockBytes, floats + block * blockNumbers);
-	free(raw);
 	if (read == blocks)
-		return floats;
-	free(floats);
+		return raw;
+	free(raw);
 	*failure = "GgufTensorDataTruncated";
 	return 0;
+}
+
+/* Reads all numbers of the tensor as floats, 0 and the failure name if it can't. */
+static float* Floats(const char* path, const Tensor* tensor, uint64_t count, const char** failure)
+{
+	unsigned char* raw = Blocks(path, tensor, count, failure);
+	float* floats = raw ? malloc(count * sizeof(float) + 1) : 0;
+	uint64_t blockNumbers = BlockNumbers(tensor->type), blockBytes = BlockBytes(tensor->type);
+	for (uint64_t block = 0; floats && block < count / blockNumbers; block++)
+		Decoded(tensor->type, raw + block * blockBytes, floats + block * blockNumbers);
+	free(raw);
+	return floats;
+}
+
+/* A Q4_K block as 256 nibbles in order and a float scale and minimum for each 32 (packed rows of 4 bits). */
+static void PackedQ4K(const unsigned char* block, unsigned char* nibbles, float* pairs)
+{
+	float d = HalfAt(block), low = HalfAt(block + 2);
+	for (int group = 0; group < 8; group++)
+	{
+		int scale, minimum;
+		ScaleMin(group, block + 4, &scale, &minimum);
+		pairs[2 * group] = d * scale;
+		pairs[2 * group + 1] = low * minimum;
+	}
+	for (int index = 0; index < 256; index += 2)
+	{
+		const unsigned char* q = block + 16 + index / 64 * 32 + index % 32;
+		int high = index % 64 >= 32;
+		int first = high ? q[0] >> 4 : q[0] & 0xF, second = high ? q[1] >> 4 : q[1] & 0xF;
+		nibbles[index / 2] = (unsigned char)(first | second << 4);
+	}
+}
+
+/* A Q6_K block as 256 signed bytes in order and a float scale for each 16 (packed rows of 6 bits). */
+static void PackedQ6K(const unsigned char* block, int8_t* bytes, float* scales)
+{
+	float values[256];
+	float d = HalfAt(block + 208);
+	DecodedQ6K(block, values);
+	for (int group = 0; group < 16; group++)
+		scales[group] = d * ((const int8_t*)(block + 192))[group];
+	for (int index = 0; index < 256; index++)
+		bytes[index] = scales[index / 16] == 0 ? 0 : (int8_t)(values[index] / scales[index / 16]);
 }
 
 static const Tensor* Requested(double path, double name, uint32_t dimensions, const char** failure)
@@ -376,17 +416,33 @@ STRICT_EXPORT double GgufFile_Values(double self, double path, double name)
 
 /* The rows of the matrix name (its contiguous dimension is a row) packed with bits 32, 16 or 8. Q8_0 rows packed with 8
    bits keep their numbers: their scales are halves, so strict_quantized finds the same scales and bytes again. */
+/* The blocks of one row of a Q4_K or Q6_K matrix as a packed row of 4 or 6 bits. */
+static void Repacked(const unsigned char* blocks, uint64_t bits, uint64_t width, strict_packed* packed)
+{
+	float* scales = (float*)(packed->data + strict_packed_data(width, bits));
+	for (uint64_t block = 0; block < width / 256; block++)
+		if (bits == 4)
+			PackedQ4K(blocks + block * 144, packed->data + block * 128, scales + block * 16);
+		else
+			PackedQ6K(blocks + block * 210, (int8_t*)packed->data + block * 256, scales + block * 16);
+}
+
+/* Rows of 32, 16 or 8 bits, 4 keeps Q4_K and Q6_K matrices in 4 and 6 bits (other types become 8 bits). */
 STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double bits)
 {
 	static double* rows = 0;
 	static unsigned char* storage = 0;
-	const char* failure = bits != 8 && bits != 16 && bits != 32 ? "OnlyMatricesOf8Or16Or32BitsAreSupported" : 0;
+	const char* failure = bits != 4 && bits != 8 && bits != 16 && bits != 32 ? "OnlyMatricesOf4Or8Or16Or32BitsAreSupported" : 0;
 	const Tensor* tensor = failure ? 0 : Requested(path, name, 2, &failure);
 	uint64_t width = tensor ? tensor->shape[0] : 0, height = tensor ? tensor->shape[1] : 0;
-	float* floats = tensor ? Floats(strict_text(path), tensor, width * height, &failure) : 0;
-	if (!floats)
+	uint32_t type = tensor ? tensor->type : F32;
+	uint64_t kept = bits != 4 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 : 8;
+	int isBlocked = kept == 4 || kept == 6;
+	unsigned char* raw = tensor && isBlocked ? Blocks(strict_text(path), tensor, width * height, &failure) : 0;
+	float* floats = tensor && !isBlocked ? Floats(strict_text(path), tensor, width * height, &failure) : 0;
+	if (!floats && !raw)
 		return strict_fail(failure);
-	uint64_t size = (sizeof(strict_packed) + strict_packed_bytes(width, (uint64_t)bits) + 7) / 8 * 8;
+	uint64_t size = (sizeof(strict_packed) + strict_packed_bytes(width, kept) + 7) / 8 * 8;
 	free(rows);
 	free(storage);
 	rows = malloc((1 + height) * sizeof(double));
@@ -395,18 +451,20 @@ STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double
 	for (uint64_t row = 0; row < height; row++)
 	{
 		strict_packed* packed = (strict_packed*)(storage + row * size);
-		const float* first = floats + row * width;
 		packed->count = (double)width;
-		packed->bits = bits;
-		if (bits == 8)
-			strict_quantized(packed, first, width, 1);
-		for (uint64_t column = 0; bits != 8 && column < width; column++)
-			if (bits == 16)
-				((uint16_t*)packed->data)[column] = strict_half(first[column]);
+		packed->bits = (double)kept;
+		if (isBlocked)
+			Repacked(raw + row * (width / 256) * BlockBytes(type), kept, width, packed);
+		else if (kept == 8)
+			strict_quantized(packed, floats + row * width, width, 1);
+		for (uint64_t column = 0; floats && kept != 8 && column < width; column++)
+			if (kept == 16)
+				((uint16_t*)packed->data)[column] = strict_half(floats[row * width + column]);
 			else
-				((float*)packed->data)[column] = first[column];
+				((float*)packed->data)[column] = floats[row * width + column];
 		rows[1 + row] = strict_packed_result(packed);
 	}
 	free(floats);
+	free(raw);
 	return strict_numbers_result((strict_numbers*)rows);
 }
