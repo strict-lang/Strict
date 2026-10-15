@@ -1,4 +1,6 @@
 has tokens Texts
+constant ForProblem = "ForWithBodyOnlyAsMethodResult: "
+constant ForHint = ", a for with a body can only be the last line of a method, move it into one"
 Syntax SyntaxParser
 	StatementParser("a", "b").Syntax.tokens.Length is 2
 	SyntaxParser(tokens)
@@ -8,9 +10,12 @@ ParseStatement SyntaxNode
 	StatementParser(Tokenizer("return a then b else c").Tokens).ParseStatement to Text is "return a then b else c"
 	StatementParser(Tokenizer("else if a is 1").Tokens).ParseStatement to Text is "else if a is 1"
 	StatementParser(Tokenizer("for as long as a").Tokens).ParseStatement to Text is "for as long as a"
+	StatementParser(Tokenizer("let a = for b").Tokens).ParseStatement.Kind is "Invalid"
 	let first = tokens(0)
 	if first is in ("let", "constant", "mutable")
-		return SyntaxNode("Declaration", first + " " + tokens(1), Rest(3))
+		let declared = SyntaxNode("Declaration", first + " " + tokens(1), Rest(3))
+		let isLooped = (tokens.Length > 3) and (tokens(3) is "for")
+		return isLooped then SyntaxNode("Invalid", ForProblem + declared + ForHint) else declared
 	first is in ("return", "if", "for", "else") then Keyword(first) else ParseAssignmentOrExpression
 Keyword(first Text) SyntaxNode
 	StatementParser(Tokenizer("for as long as a").Tokens).Keyword("for").text is "for as long as"

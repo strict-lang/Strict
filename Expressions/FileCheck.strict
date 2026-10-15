@@ -150,8 +150,8 @@ Problem(lines Texts, broken Number) Text
 	Counting.Problem(("has number", "Run", "	1", "", "	2"), 3) is "EmptyLineInsideMethod: Run"
 	if lines(broken).Trim is not ""
 		let isFor = lines(broken).IndexOf(" = for ") > 0
-		let hint = isFor then ", a for with a body can only be the last line of a method, move it into one" else ""
-		return (isFor then "ForWithBodyOnlyAsMethodResult: " else "ParsingFailed: ") + lines(broken).Trim + hint
+		let hint = isFor then StatementParser.ForHint else ""
+		return (isFor then StatementParser.ForProblem else "ParsingFailed: ") + lines(broken).Trim + hint
 	mutable header = 0
 	for Range(0, broken)
 		if lines(value).StartsWith("	") is false
