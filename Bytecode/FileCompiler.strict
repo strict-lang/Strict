@@ -111,7 +111,8 @@ Normalized(path Text) Text
 	Normalized("C:\\s\\A.strict") is "C:/s/A.strict"
 	Normalized("A.strict") is "./A.strict"
 	Normalized("../DeltaEngine/A.strict") is "./../DeltaEngine/A.strict"
-	let slashed = path.Replace("\\", "/").Replace("/./", "/")
+	Normalized(Directory.Current + "/Sub/A.strict") is "./Sub/A.strict"
+	let slashed = TypeSource.Relative(path).Replace("\\", "/").Replace("/./", "/")
 	let isRelative = (slashed.StartsWith("/") is false) and (slashed.IndexOf(":") < 0)
 	isRelative and (slashed.StartsWith("./") is false) then "./" + slashed else slashed
 FullName(path Text, root Text) Text

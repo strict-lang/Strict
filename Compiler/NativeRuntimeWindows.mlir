@@ -67,6 +67,19 @@
     %result = func.call @strict_boolean(%exists) : (i1) -> f64
     return %result : f64
   }
+  llvm.func @GetCurrentDirectoryA(i32, !llvm.ptr) -> i32
+  func.func private @strict_directory_current(%self: f64) -> f64 {
+    %size = arith.constant 1024 : i64
+    %limit = arith.constant 1023 : i32
+    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %length = llvm.call @GetCurrentDirectoryA(%limit, %path) : (i32, !llvm.ptr) -> i32
+    %index = arith.extui %length : i32 to i64
+    %end = llvm.getelementptr %path[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
   func.func private @strict_directory_create(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr

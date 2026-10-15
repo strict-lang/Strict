@@ -17,6 +17,13 @@ Located(folder Text) Text
 Location(methodName Text) Text
 	TypeSource(TypeEntry.CharacterEntry).Location("Lower") is "Character.Lower in Character.strict"
 	TypeEntry.ShortName(entry.Name) + "." + methodName + " in " + Located("")
+Relative(path Text) Text
+	Sizing.Relative(Directory.Current + "\\Math/Size.strict") is "./Math/Size.strict"
+	Sizing.Relative("Q:/elsewhere/A.strict") is "Q:/elsewhere/A.strict"
+	let current = Directory.Current.Replace("\\", "/") + "/"
+	let slashed = path.Replace("\\", "/")
+	let isInside = slashed.Lower.StartsWith(current.Lower)
+	isInside then "./" + slashed.Substring(current.Length, slashed.Length - current.Length) else path
 NativeFolder(path Text, root Text) Text
 	TypeSource(TypeEntry("Gpu", List(MemberEntry), List(MethodEntry))).NativeFolder("Gpu.strict", ".") is "./native"
 	TypeSource(TypeEntry("Strict/P/T", List(MemberEntry), List(MethodEntry))).NativeFolder("A", "C:") is "C:/P/native"

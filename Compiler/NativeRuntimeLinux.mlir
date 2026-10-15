@@ -61,6 +61,16 @@
     %result = func.call @strict_boolean(%exists) : (i1) -> f64
     return %result : f64
   }
+  llvm.func @getcwd(!llvm.ptr, i64) -> !llvm.ptr
+  func.func private @strict_directory_current(%self: f64) -> f64 {
+    %size = arith.constant 4096 : i64
+    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %path : i8, !llvm.ptr
+    %found = llvm.call @getcwd(%path, %size) : (!llvm.ptr, i64) -> !llvm.ptr
+    %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
   func.func private @strict_directory_create(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %mode = arith.constant 511 : i32
