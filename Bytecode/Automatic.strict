@@ -1,7 +1,7 @@
 has lines Texts
 has instance Text
 has instantiation Expressions/Instantiation
-constant Names = ("Members", "to HashCode", "Validated")
+constant Names = ("Members", "Code", "to HashCode", "Validated")
 constant Wanted = ("Strict/HelloLogger.Run", "Strict/HelloLogger.Members")
 constant Greeter = Automatic(TypeCodegen.Hello.lines, "HelloLogger", Instantiation.Pairing)
 constant Point = Automatic(("has X Number", "mutable Y Number", "has logger", "constant Limit = 3", "Area Number", "\tX * Y"), "Point", Instantiation.Pairing)
@@ -9,11 +9,11 @@ constant Paired = Automatic(("has first Generic", "has second Generic"), "Couple
 constant Sized = Automatic(("has Width Number with value > 0", "has Height Number"), "Size", Instantiation.Pairing)
 Lines(names Texts) Texts
 	Point.Lines(List(Text)) is Point.lines
-	Point.Lines(Names).Length is 10
+	Point.Lines(Names).Length is 12
 	Point.Lines(Names).Last is "\tHashCode((HashCode(X).number, HashCode(Y).number))"
 	Automatic(List(Text) + "Length Number", "Length", Instantiation.Pairing).Lines(Names).Length is 1
-	Automatic(("has a Number", "to HashCode", "\tHashCode(a)"), "A", Instantiation.Pairing).Lines(Names).Length is 5
-	Automatic(("Members List(Number)", "\t(1)"), "B", Instantiation.Pairing).Lines(Names).Length is 4
+	Automatic(("has a Number", "to HashCode", "\tHashCode(a)"), "A", Instantiation.Pairing).Lines(Names).Length is 7
+	Automatic(("Members List(Number)", "\t(1)"), "B", Instantiation.Pairing).Lines(Names).Length is 6
 	Sized.Lines(List(Text) + "Validated").Index("Validated Size") is 2
 	mutable result = lines
 	for Names
@@ -25,16 +25,17 @@ Generated(name Text) Texts
 	Sized.Generated("Validated").Last is "\tvalue"
 	if name is "Members"
 		return List(Text) + "Members Variables" + Described
-	if name is "to HashCode"
-		return List(Text) + "to HashCode" + Hashed
+	if name is in ("to HashCode", "Code")
+		return name is "Code" then (List(Text) + "Code Text" + Coded) else (List(Text) + "to HashCode" + Hashed)
 	List(Text) + ("Validated " + instance) + "\tvalue"
 Validations SyntaxNodes
 	Sized.Validations.First to Text is "if Width > 0 is false"
 	Sized.Validations.First.line is 1
+	Automatic(List(Text) + "has price Number with Step 0.01", "P", Instantiation.Pairing).Validations.Length is 0
 	mutable result = List(Mutable(SyntaxNode))
 	for Stored
 		let start = value.IndexOf(" with ")
-		if start > 0
+		if (start > 0) and (value.IndexOf(" with Step ") < 0)
 			let constraint = value.Substring(start + 6, value.Length - start - 6)
 			let checked = Constraint(Header(value).MemberName, MemberType(value), instantiation.types)
 			result.Add(checked.Checked(constraint, lines.Index(value) + 1))
@@ -77,6 +78,24 @@ Hashed Text
 	for stored
 		hashes.Add("HashCode(" + Header(value).MemberName + ").number")
 	"\tHashCode((" + Text.Combine(hashes, ", ") + "))"
+Coded Text
+	Point.Coded is "\t\"Point(\" + X.Code + \", \" + Y.Code + \")\""
+	Paired.Coded.StartsWith("\t\"Couple(\" + first.Code") is true
+	Automatic(("Run", "\t1"), "B", Instantiation.Pairing).Coded is "\t\"B\""
+	Automatic(("has Width Number", "has iterator"), "S", Instantiation.Pairing).Coded is "\t\"S(\" + Width.Code + \")\""
+	let name = instance.Split("(").First
+	if Stored.Length is 0
+		return "\t\"" + name + "\""
+	mutable codes = List(Mutable(Text))
+	for Stored
+		if MemberType(value) is not "Iterator"
+			codes.Add(MemberCode(value))
+	"\t\"" + name + "(\" + " + Text.Combine(codes, " + \", \" + ") + " + \")\""
+MemberCode(line Text) Text
+	Point.MemberCode("has X Number") is "X.Code"
+	Point.MemberCode("has prices Dictionary(Text, Number)") is "(prices to Text)"
+	let member = Header(line).MemberName
+	MemberType(line).StartsWith("Dictionary(") then "(" + member + " to Text)" else member + ".Code"
 Stored Texts
 	Point.Stored is ("has X Number", "mutable Y Number")
 	let shape = TypeShape(lines)

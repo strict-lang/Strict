@@ -1,6 +1,7 @@
 from
 to Type
 to Text
+Code Text
 to HashCode
 Members Variables
 is(other) Boolean

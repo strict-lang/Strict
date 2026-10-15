@@ -108,7 +108,7 @@ Resource(base Text, platform Number, root Text) Text
 	Adding.Resource("Examples/Sum", Platform.Windows, ".") is ""
 	Adding.Resource(Iconed, Platform.Linux, ".") is ""
 	Adding.Resource(Iconed, Platform.Current, ".") is (Platform.Current is Platform.Windows then Resourced else "")
-	let icon = base + ".ico"
+	let icon = Release(Logger, base).Icon
 	if (platform is not Platform.Windows) or (File(icon).Exists is false)
 		return ""
 	File(base + ".rc").Write("GLFW_ICON ICON \"" + Path(icon).FileName.text + "\"")

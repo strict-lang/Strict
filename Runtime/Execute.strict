@@ -52,8 +52,13 @@ Owners(paths Texts) List(TypeEntry)
 Stale(paths Texts) Texts
 	for paths
 		let cache = BinaryFile(FileCompiler.Normalized(value))
-		if cache.IsFresh(cache.Unpacked(File(cache.Path).ReadBytes)) is false
+		if IsEdited(value) or (cache.IsFresh(cache.Unpacked(File(cache.Path).ReadBytes)) is false)
 			value
+IsEdited(path Text) Boolean
+	Execute(Logger).IsEdited("Execute.strict") is false
+	Execute(Logger).IsEdited("Missing.strict") is false
+	let source = FileCompiler.Normalized(path)
+	File(source).Exists and (File(source).Modified is 0)
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference) Number
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let header = cache.Header(files + cache.Data(cache.source))
@@ -62,7 +67,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 		return 1
 	let before = Process.FilesRead.Length
 	let failed = Tested(types, path)
-	if failed is 0
+	if (failed is 0) and (IsEdited(path) is false)
 		File(cache.Path).Write(cache.Packed(Completed(cache, root, files, header, before), types, List(TypeEntry)))
 	failed
 Completed(cache BinaryFile, root Text, files Texts, header Numbers, before Number) Numbers

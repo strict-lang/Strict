@@ -35,13 +35,16 @@ Checked(constraint Text, line Number) SyntaxNode
 IsConstrained(lines Texts) Boolean
 	Constraint.IsConstrained(List(Text) + "has width Number with value > 0") is true
 	Constraint.IsConstrained(("has width Number", "Area Number", "\t\"with\"")) is false
+	Constraint.IsConstrained(List(Text) + "has price Number with Step 0.01") is false
 	for lines
-		if TypeShape(lines).IsMemberLine(value) and ("with" is in Tokenizer(value).Tokens)
+		let tokens = Tokenizer(value).Tokens
+		if TypeShape(lines).IsMemberLine(value) and ("with" is in tokens) and (Steps(tokens).Of(1) is "")
 			return true
 	false
 Parameter(header HeaderTokens, parameter Text) Text
 	Constraint.Parameter(HeaderTokens(Tokenizer(Framed).Tokens), "frames") is "value >= 0"
 	Constraint.Parameter(HeaderTokens(Tokenizer("Run(frames Number)").Tokens), "frames") is ""
+	Constraint.Parameter(HeaderTokens(Tokenizer("B(a Number with Step 0.5)").Tokens), "a") is ""
 	mutable words = List(Mutable(Text))
 	mutable isConstraint = false
 	for Range(header.tokens.Index(parameter) + 1, header.ParametersEnd)
@@ -49,7 +52,7 @@ Parameter(header HeaderTokens, parameter Text) Text
 		if (word is ",") and (header.Depth(value) is 1)
 			return Text.Combine(words, " ").Replace(" . ", ".")
 		words = isConstraint then words + word else words
-		isConstraint = isConstraint or (word is "with")
+		isConstraint = isConstraint or (word is "with") and (header.tokens(value + 1) is not "Step")
 	Text.Combine(words, " ").Replace(" . ", ".")
 Where(path Text, lines Texts) Texts
 	Constraint.Where("A.strict", List(Text) + "has a Number where value > 0").First is Misnamed

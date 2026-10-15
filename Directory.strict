@@ -2,5 +2,12 @@ from(text)
 GetFiles Texts
 Directories(path) Texts
 Exists(path) Boolean
+Current Text
 Files(path, pattern = "") Texts
 Create(path)
+Delete(path Text) Boolean
+	Directory.Delete("Missing/Deleted")
+	let isWindows = Process.OperatingSystem is "Windows"
+	let command = isWindows then "/c rd /s /q \"" + path.Replace("/", "\\") + "\"" else "-rf \"" + path + "\""
+	let removed = Process.RunTool(isWindows then "cmd" else "rm", command)
+	(removed.exitCode >= 0) and (Exists(path) is false)

@@ -1,0 +1,40 @@
+has logger
+constant NoExports = ", a library exports the public methods with Number, Text, Boolean or record values and lists of numbers or records"
+Built(path Text, root Text) Number
+	let failed = Execute(logger).Test(path, root)
+	let library = failed > 0 then MlirLibrary(List(TypeEntry)) else MlirLibrary(Execute(logger).Loaded(path, root))
+	failed > 0 then failed else Exported(library, NativeBuild.Output(path, true), root)
+Exported(library MlirLibrary, base Text, root Text) Number
+	if library.Exported.Length is 0
+		logger.Log("No exported methods in " + base + ".strict" + NoExports)
+		return 1
+	File(base + ".mlir").Write(NativeBuild(logger).Mlir(library.Text, root, Platform.Current))
+	let error = Linked(base, Toolchain(Platform.Current, root), library)
+	logger.Log(error is "" then "Built " + Target(base, Platform.Current) + " and " + base + ".cs" else error)
+	if error is not ""
+		return 1
+	File(base + ".cs").Write(CSharpBinding(library).Lines)
+	NativeBuild(logger).Removed(base)
+	0
+Linked(base Text, tools Toolchain, library MlirLibrary) Text
+	let lowered = tools.Lowered(base)
+	if lowered is not ""
+		return lowered
+	let target = Toolchain.Quoted(Target(base, Platform.Current))
+	let linking = Toolchain.Quoted(base + ".ll") + " -o " + target + Toolchain.Optimized + Shared(library)
+	let linked = ToolRunner(tools.Located("clang")).Execute(linking)
+	linked.Failed then "clang failed: " + linked.error else ""
+Target(base Text, platform Number) Text
+	LibraryBuild(Logger).Target("./Games/Policy", Platform.Windows) is "./Games/Policy.dll"
+	LibraryBuild(Logger).Target("./Games/Policy", Platform.Linux) is "./Games/libPolicy.so"
+	let name = Path(base).FileName.text
+	let folder = base.Substring(0, base.Length - name.Length)
+	platform is Platform.Windows then base + ".dll" else folder + "lib" + name + ".so"
+Shared(library MlirLibrary) Text
+	LibraryBuild(Logger).Shared(MlirLibrary.Policy).EndsWith("Policy_Start") is (Platform.Current is Platform.Windows)
+	if Platform.Current is not Platform.Windows
+		return " -shared -fPIC -lm -lpthread"
+	mutable exports = " -shared -Wl,/EXPORT:strict_last_error -Wl,/EXPORT:strict_release"
+	for library.Exported
+		exports = exports + " -Wl,/EXPORT:" + TypeEntry.ShortName(library.types.First.Name) + "_" + value.Name
+	exports

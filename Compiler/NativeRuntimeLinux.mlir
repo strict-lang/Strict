@@ -61,6 +61,24 @@
     %result = func.call @strict_boolean(%exists) : (i1) -> f64
     return %result : f64
   }
+  llvm.func @getcwd(!llvm.ptr, i64) -> !llvm.ptr
+  llvm.func @fdopen(i32, !llvm.ptr) -> !llvm.ptr
+  func.func private @strict_process_input(%self: f64) -> f64 {
+    %standardInput = arith.constant 0 : i32
+    %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %stream = llvm.call @fdopen(%standardInput, %mode) : (i32, !llvm.ptr) -> !llvm.ptr
+    %result = func.call @strict_stream_text(%stream) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_directory_current(%self: f64) -> f64 {
+    %size = arith.constant 4096 : i64
+    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %path : i8, !llvm.ptr
+    %found = llvm.call @getcwd(%path, %size) : (!llvm.ptr, i64) -> !llvm.ptr
+    %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
   func.func private @strict_directory_create(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %mode = arith.constant 511 : i32
@@ -297,6 +315,13 @@
     return
   }
   func.func private @strict_file_modified(%path: f64) -> f64 {
+    %overriddenText = func.call @strict_overridden(%path) : (f64) -> f64
+    %unsetText = arith.constant 0.0 : f64
+    %isOverridden = arith.cmpf one, %overriddenText, %unsetText : f64
+    cf.cond_br %isOverridden, ^overridden, ^disk
+  ^overridden:
+    return %unsetText : f64
+  ^disk:
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr

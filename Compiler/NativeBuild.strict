@@ -61,7 +61,7 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 		return 1
 	let crossed = CrossBuild(base, program, tools, isCounting)
 	Removed(base)
-	crossed
+	Release(logger, base).Packaged(program, crossed)
 Ran(base Text, tools Toolchain, path Text) Number
 	let executable = tools.Executable(base)
 	let result = ToolRunner(executable).Execute("")

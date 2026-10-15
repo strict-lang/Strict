@@ -1,0 +1,138 @@
+has types List(TypeEntry)
+constant Mode = MemberEntry("mode", "Strict/Text", List(InstructionEntry), false)
+constant Enabled = MemberEntry("enabled", "Strict/Boolean", List(InstructionEntry), false)
+constant Start = MethodEntry("Start", (Mode, Enabled), "Strict/Text", (InstructionEntry.LoadText(0, "x"), InstructionEntry.Return(0)))
+constant Policy = MlirLibrary(List(TypeEntry) + TypeEntry("Strict/Policy", List(MemberEntry), (Start, MethodEntry.CountingLoop)))
+constant Price = MemberEntry("price", "Strict/Number", List(InstructionEntry), false)
+constant Amount = MemberEntry("amount", "Strict/Number", List(InstructionEntry), false)
+constant Total = MethodEntry("Total", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Return(0)))
+constant Trades = MlirLibrary(List(TypeEntry) + TypeEntry("Strict/Trade", (Price, Amount), List(MethodEntry) + Total))
+constant Entered = ("    %frameLevel = arith.constant 0 : i32", "    %stackBase = llvm.call_intrinsic \"llvm.frameaddress.p0\"(%frameLevel) : (i32) -> !llvm.ptr", "    func.call @strict_library_enter(%stackBase) : (!llvm.ptr) -> ()", "    %zero = arith.constant 0.0 : f64")
+constant Checked = ("    %failed = func.call @strict_is_failure(%value) : (f64) -> i1", "    cf.cond_br %failed, ^failed, ^done", "  ^failed:", "    %code = func.call @strict_library_failed(%value) : (f64) -> i32", "    return %code : i32", "  ^done:")
+constant TextStored = ("    %text = func.call @strict_library_text(%value) : (f64) -> !llvm.ptr", "    llvm.store %text, %result : !llvm.ptr, !llvm.ptr")
+constant FlagStored = ("    %flag = arith.fptosi %value : f64 to i32", "    llvm.store %flag, %result : i32, !llvm.ptr")
+constant Finished = ("    %ok = arith.constant 0 : i32", "    return %ok : i32", "  }")
+Text Text
+	Policy.Text.StartsWith("module {") is true
+	Policy.Text.IndexOf("  func.func @Policy_Start(") > 0 is true
+	let module = MlirModule(types, Exported.First.Name)
+	mutable roots = List(Mutable(MlirFunction))
+	mutable wrappers = List(Mutable(Text))
+	for Exported
+		roots.Add(MlirFunction(types, types.First, value))
+		wrappers = wrappers + Wrapper(value)
+	let functions = module.Reachable(roots, roots)
+	Text.Combine(module.Declared(functions, functions) + MlirGlobals(functions).Lines + wrappers + "}", "\n")
+Exported List(MethodEntry)
+	Policy.Exported is List(MethodEntry) + Start
+	for types.First.methods
+		if IsExported(value)
+			value
+IsExported(method MethodEntry) Boolean
+	Policy.IsExported(Start) is true
+	Policy.IsExported(MethodEntry.CountingLoop) is false
+	let first = method.Name.Substring(0, 1)
+	let isNamed = (first.Upper is first) and (first.Lower is not first)
+	let isPublic = isNamed and (method.Name is not in ("Run", TestCodegen.Runner))
+	mutable isSupported = Kind(method.returnType) is not ""
+	for method.parameters
+		isSupported = isSupported and (Kind(value.typeName) is not "")
+	let isPlain = MlirInstances(MlirFunction(types, types.First, method), 0).Stored(types.First).Length is 0
+	isPublic and isSupported and (isPlain or IsRecord(types.First.Name))
+IsRecord(typeName Text) Boolean
+	Trades.IsRecord("Strict/Trade") is true
+	Trades.IsRecord("Strict/Text") is false
+	let type = MlirFunction(types, types.First, MethodEntry.CountingLoop).TypeOf(typeName)
+	let stored = MlirInstances(MlirFunction(types, type, MethodEntry.CountingLoop), 0).Stored(type)
+	mutable isPlain = (stored.Length > 0) and (TypeEntry.ShortName(typeName) is not in ("Number", "Text", "Boolean"))
+	for stored
+		isPlain = isPlain and (TypeEntry.ShortName(value.typeName) is in ("Number", "Boolean"))
+	isPlain
+Recorded(pointer Text, typeName Text, suffix Text) Texts
+	Trades.Recorded("%a0", "Strict/Trade", "a0").Last is "    %t0a0f = func.call @strict_bits(%t0a0p) : (!llvm.ptr) -> f64"
+	let function = MlirFunction(types, MlirFunction(types, types.First, Total).TypeOf(typeName), Total)
+	let memory = MlirMemory(function, 0)
+	let stored = MlirInstances(function, 0).Stored(function.type)
+	if MlirLayout(function).IsStruct(typeName) is false
+		return memory.Loaded(pointer, 0, suffix) + Copied(Temp(suffix + "f"), Temp(suffix + "v"))
+	mutable lines = memory.Allocated(stored.Length, suffix)
+	for stored
+		let field = memory.Loaded(pointer, index, suffix + "c" + index)
+		let stored = function.Store(Temp(suffix + "c" + index + "v"), Temp(suffix + "s" + index))
+		lines = lines + field + memory.Slot(Temp(suffix + "p"), index, suffix + "s" + index) + stored
+	lines + memory.Bits(Temp(suffix + "p"), suffix)
+Fields(typeName Text) Texts
+	Trades.Fields("Strict/Trade").Last is "    llvm.store %t0r1v, %t0o1 : f64, !llvm.ptr"
+	let function = MlirFunction(types, MlirFunction(types, types.First, Total).TypeOf(typeName), Total)
+	let memory = MlirMemory(function, 0)
+	if MlirLayout(function).IsStruct(typeName) is false
+		return List(Text) + "    llvm.store %value, %result : f64, !llvm.ptr"
+	mutable lines = memory.Pointer("%value", "r")
+	for MlirInstances(function, 0).Stored(function.type)
+		let field = memory.Loaded(Temp("rp"), index, "r" + index)
+		let slot = memory.Slot("%result", index, "o" + index)
+		lines = lines + field + slot + function.Store(Temp("r" + index + "v"), Temp("o" + index))
+	lines
+Copied(target Text, source Text) Text
+	Trades.Copied("%a", "%b") is "    %a = arith.addf %b, %zero : f64"
+	"    " + target + " = arith.addf " + source + ", %zero : f64"
+Temp(suffix Text) Text
+	Trades.Temp("a") is "%t0a"
+	"%t0" + suffix
+Kind(typeName Text) Text
+	Policy.Kind("Strict/Text") is "!llvm.ptr"
+	Policy.Kind("Strict/Numbers") is "!llvm.ptr"
+	LibraryLists.Book.library.Kind("Strict/List(Trade)") is "!llvm.ptr"
+	let name = TypeEntry.ShortName(typeName)
+	if name is in ("Text", "Boolean")
+		return name is "Text" then "!llvm.ptr" else "i32"
+	let isList = LibraryLists(MlirLibrary(types)).Element(typeName) is not ""
+	name is "Number" then "f64" else IsRecord(typeName) or isList then "!llvm.ptr" else ""
+Wrapper(method MethodEntry) Texts
+	Policy.Wrapper(Start).First is "  func.func @Policy_Start(%a0: !llvm.ptr, %a1: i32, %result: !llvm.ptr) -> i32 {"
+	Policy.Wrapper(Start).Index("    %v1 = arith.sitofp %a1 : i32 to f64") > 0 is true
+	Trades.Wrapper(Total).First is "  func.func @Trade_Total(%instance: !llvm.ptr, %result: !llvm.ptr) -> i32 {"
+	let isRecord = IsRecord(types.First.Name)
+	mutable parameters = isRecord then List(Text) + "%instance: !llvm.ptr" else List(Text)
+	mutable arguments = isRecord then Instance else List(Text) + "    %self = arith.addf %zero, %zero : f64"
+	for method.parameters
+		parameters = parameters + ("%a" + index + ": " + Kind(value.typeName))
+		arguments = arguments + Argument(value.typeName, index)
+	let name = TypeEntry.ShortName(types.First.Name) + "_" + method.Name
+	let header = "  func.func @" + name + "(" + Text.Combine(parameters + "%result: !llvm.ptr", ", ") + ") -> i32 {"
+	List(Text) + header + Entered + arguments + Call(method) + Checked + Stored(method.returnType) + Finished
+Instance Texts
+	Trades.Instance.Last is "    %self = arith.addf %t0instancef, %zero : f64"
+	Recorded("%instance", types.First.Name, "instance") + "    %self = arith.addf %t0instancef, %zero : f64"
+Call(method MethodEntry) Text
+	Policy.Call(Start) is "    %value = func.call @Policy_Start_2(%self, %v0, %v1) : (f64, f64, f64) -> f64"
+	let function = MlirFunction(types, types.First, method)
+	mutable operands = List(Text) + "%self"
+	for method.parameters
+		operands = operands + ("%v" + index)
+	let signature = Text.Combine(MlirCalls(function, 0).ArgumentTypes(operands.Length), ", ")
+	"    %value = func.call @" + function.Symbol + "(" + Text.Combine(operands, ", ") + ") : (" + signature + ") -> f64"
+Argument(typeName Text, position Number) Texts
+	Policy.Argument("Strict/Text", 0).Last.EndsWith("@strict_bits(%a0) : (!llvm.ptr) -> f64") is true
+	Policy.Argument("Strict/Numbers", 1).Last is "    %v1 = func.call @strict_library_list(%a1) : (!llvm.ptr) -> f64"
+	let argument = "%a" + position
+	if IsRecord(typeName)
+		return Recorded(argument, typeName, "a" + position) + Copied("%v" + position, Temp("a" + position + "f"))
+	let kind = Kind(typeName)
+	if LibraryLists(MlirLibrary(types)).Element(typeName) is not ""
+		return LibraryLists(MlirLibrary(types)).Argument(typeName, position)
+	let called = "func.call @strict_bits(" + argument + ") : (!llvm.ptr) -> f64"
+	let flag = kind is "i32" then "arith.sitofp " + argument + " : i32 to f64" else called
+	let converted = kind is "f64" then "arith.addf " + argument + ", %zero : f64" else flag
+	List(Text) + ("    %v" + position + " = " + converted)
+Stored(returnType Text) Texts
+	Policy.Stored("Strict/Number").First.StartsWith("    llvm.store %value") is true
+	Policy.Stored("Strict/List(Number)").First.IndexOf("@strict_library_numbers(%value)") > 0 is true
+	LibraryLists.Book.library.Stored("Strict/List(Trade)").Length is 3
+	let kind = Kind(returnType)
+	if kind is in ("f64", "i32")
+		return kind is "i32" then FlagStored else List(Text) + "    llvm.store %value, %result : f64, !llvm.ptr"
+	if IsRecord(returnType)
+		return Fields(returnType)
+	let isList = LibraryLists(MlirLibrary(types)).Element(returnType) is not ""
+	isList then LibraryLists(MlirLibrary(types)).Stored(returnType) else TextStored

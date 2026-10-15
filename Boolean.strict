@@ -23,6 +23,9 @@ is(other) Boolean
 	true is true
 	true is not false
 	value is other
+Code Text
+	true.Code is "true"
+	value to Text
 to Text
 	true to Text is "true"
 	false to Text is "false"

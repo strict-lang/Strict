@@ -1,0 +1,79 @@
+has values ValueCodegen
+constant Plain = StepRounding(ValueCodegen.Plain)
+constant Price = SyntaxNode("Identifier", "price")
+Rounded(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Rounded(Price, CodeBlock.Empty) is Price
+	Plain.Rounded(Plain.Wrapped(Price, "0.01"), CodeBlock.Empty) to Text is "price.Stepped(0.01)"
+	mutable children = List(Mutable(SyntaxNode))
+	for node.children
+		let isKept = (index is 0) and (node.Kind is "Reassignment" or node.text is "Stepped")
+		children.Add(isKept then value else Rounded(value, block))
+	let rebuilt = SyntaxNode(node.Kind, node.text, children, node.line)
+	if node.Kind is in ("Call", "MethodCall", "Identifier", "Member")
+		return Read(rebuilt, block)
+	let isComparison = (node.Kind is "Binary") and (node.text is in ("<", ">", "<=", ">=", "is", "is not"))
+	isComparison then Compared(rebuilt, block) else rebuilt
+Read(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Read(Price, CodeBlock.Empty) is Price
+	let owner = node.Kind is "Identifier" then values.target.TypeName else values.Owner(node, block)
+	let call = node.Kind is in ("Call", "MethodCall") then Arguments(node, block) else node
+	let step = values.inference.types.ParameterScope(owner).TypeOf(node.text + " step")
+	step is "" then call else Wrapped(call, step)
+Arguments(call SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Arguments(SyntaxNode("Call", "Greet"), CodeBlock.Empty).children.Length is 0
+	let owner = values.Owner(call, block)
+	let isCreating = (call.Kind is "Call") and values.inference.types.IsKnown(call.text)
+	let names = isCreating then values.inference.types.MembersOf(owner).names else Parameters(owner, call.text)
+	let start = values.ArgumentStart(call)
+	mutable children = List(Mutable(SyntaxNode))
+	for call.children
+		let position = index - start
+		let name = (position >= 0) and (position < names.Length) then names(position) else ""
+		children.Add(index < start then value else Argument(value, owner, isCreating then name else call.text + " " + name))
+	SyntaxNode(call.Kind, call.text, children, call.line)
+Parameters(owner Text, method Text) Texts
+	Plain.Parameters("Greeter", "Missing").Length is 0
+	let names = values.inference.types.ParameterScope(owner).TypeOf(method)
+	names is "" then List(Text) else names.Split(",")
+Argument(argument SyntaxNode, owner Text, key Text) SyntaxNode
+	Plain.Argument(Price, "Greeter", "price").Kind is "Identifier"
+	let isNamed = argument.Kind is "Reassignment"
+	let named = isNamed then key.Substring(0, key.LastIndexOf(" ") + 1) + argument.children(0).text else key
+	let step = values.inference.types.ParameterScope(owner).TypeOf(named.Trim + " step")
+	if (step is "") or isNamed is false
+		return step is "" then argument else Wrapped(argument, step)
+	SyntaxNode("Reassignment", argument.text, (argument.children(0), Wrapped(argument.children(1), step)), argument.line)
+Wrapped(node SyntaxNode, step Text) SyntaxNode
+	Plain.Wrapped(Price, "0.01") to Text is "price.Stepped(0.01)"
+	Plain.Wrapped(Price, "0.01 Floor") to Text is "price.Stepped(0.01, \"Floor\")"
+	Plain.Wrapped(Plain.Wrapped(Price, "0.01"), "0.01") to Text is "price.Stepped(0.01)"
+	if (node.Kind is "MethodCall") and (node.text is "Stepped")
+		return node
+	let parts = step.Split(" ")
+	let quoted = "\"" + parts.Last + "\""
+	let rounding = parts.Length > 1 then List(SyntaxNode) + SyntaxNode("Text", quoted) else List(SyntaxNode)
+	SyntaxNode("MethodCall", "Stepped", List(SyntaxNode) + node + SyntaxNode("Number", parts(0)) + rounding, node.line)
+Compared(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Compared(SyntaxNode("Binary", ">", (Price, Price)), CodeBlock.Empty).children(0) is Price
+	let step = Finest(StepOf(node.children(0), block), StepOf(node.children(1), block))
+	if step is ""
+		return node
+	SyntaxNode(node.Kind, node.text, (Wrapped(node.children(0), step), Wrapped(node.children(1), step)), node.line)
+StepOf(node SyntaxNode, block CodeBlock) Text
+	Plain.StepOf(SyntaxNode("Number", "1"), CodeBlock.Empty) is ""
+	if (node.Kind is "MethodCall") and (node.text is "Stepped")
+		return node.children(1).text
+	if (node.Kind is "Binary") and (node.text is in ("+", "-"))
+		return Finest(StepOf(node.children(0), block), StepOf(node.children(1), block))
+	let owner = node.Kind is "Member" then values.TypeOf(node.children(0), block) else values.target.TypeName
+	let method = node.Kind is "Identifier" then block.scope.TypeOf(CodeBlock.ErrorMarker) + " " else ""
+	let scope = values.inference.types.ParameterScope(owner)
+	let own = scope.TypeOf(node.text + " step")
+	(own is "" then scope.TypeOf(method + node.text + " step") else own).Split(" ").First
+Finest(first Text, second Text) Text
+	Plain.Finest("", "0.01") is "0.01"
+	Plain.Finest("0.01", "0.001") is "0.001"
+	Plain.Finest("0.5", "") is "0.5"
+	if (first is "") or (second is "")
+		return first is "" then second else first
+	first to Number < second to Number then first else second

@@ -1,0 +1,40 @@
+has logger
+has base Text
+constant Opening = "= func.call @" + "Window_Open("
+Packaged(program Text, built Number) Number
+	Release(Logger, "Examples/Sum").Packaged("module {\n}", 0) is 0
+	Release(Logger, "Examples/Sum").Packaged("module {\n}", 2) is 2
+	Release(Logger, "Missing/App.test").Packaged(Opening, 0) is 0
+	let isWindowed = program.IndexOf(Opening) >= 0
+	(built is not 0) or base.EndsWith(".test") or (isWindowed is false) then built else Refreshed(Parent + "/Release")
+Parent Text
+	Release(Logger, "Missing/App").Parent is "Missing"
+	Release(Logger, "App").Parent is "."
+	let parent = Path(base).PathOnly.text
+	parent is "" then "." else parent
+Icon Text
+	Release(Logger, "Examples/NativeAdd/NativeAdd").Icon is "Examples/NativeAdd/NativeAdd.ico"
+	Release(Logger, "Examples/NativeAdd/Adder").Icon is "Examples/NativeAdd/NativeAdd.ico"
+	let own = base + ".ico"
+	let folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
+	File(own).Exists or (File(folder).Exists is false) then own else folder
+Refreshed(release Text) Number
+	if Directory.Exists(release) and (Directory.Delete(release) is false)
+		logger.Log("Release folder could not be refreshed: " + release)
+		return 1
+	Directory.Create(release)
+	for (".exe", "")
+		if File(base + value).Exists
+			File(base + value).Rename(release + "/" + Path(base).FileName.text + value)
+	Copied(Parent + "/Content", release + "/Content")
+	logger.Log("Release: " + release)
+	0
+Copied(source Text, target Text) Number
+	if Directory.Exists(source) is false
+		return 0
+	Directory.Create(target)
+	for Directory.Files(source)
+		File(target + "/" + Path(value.Replace("\\", "/")).FileName.text).Write(File(value).ReadBytes)
+	for Directory.Directories(source)
+		Copied(value, target + "/" + Path(value.Replace("\\", "/")).FileName.text)
+	1

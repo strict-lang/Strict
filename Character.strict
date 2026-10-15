@@ -9,6 +9,9 @@ from(text)
 	Character("ab") is Error
 	Character("b") is in ("a", "b")
 	text.Length is 1 then text(0) else Error
+Code Text
+	Character("a").Code is "Character(\"a\")"
+	"Character(" + (value to Text).Code + ")"
 to Text
 	Character("a") to Text is "a"
 	"" + value

@@ -76,6 +76,7 @@
   llvm.mlir.global internal constant @strict_downcast_prefix("Cannot downcast Text to Number for list: Text \22\00") : !llvm.array<48 x i8>
   llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_key_not_found("KeyNotFound\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @strict_index_out_of_range("IndexOutOfRange\00") : !llvm.array<16 x i8>
   llvm.mlir.global internal constant @strict_duplicate_key("DuplicateKey\00") : !llvm.array<13 x i8>
   func.func private @strict_remainder(%left: f64, %right: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -2668,7 +2669,9 @@
   }
   func.func private @strict_index_error(%name: f64) -> f64 attributes {passthrough = ["noinline"]} {
     %one = arith.constant 1 : i64
-    %error = func.call @strict_error_text(%name) : (f64) -> f64
+    %errorName = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %errorNameBits = func.call @strict_bits(%errorName) : (!llvm.ptr) -> f64
+    %error = func.call @strict_error_text(%errorNameBits) : (f64) -> f64
     %pointer = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
     %nameLength = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
     %afterName = arith.addi %nameLength, %one : i64
@@ -4781,6 +4784,13 @@
   llvm.mlir.global internal constant @strict_write_mode("wb\00") : !llvm.array<3 x i8>
   func.func private @strict_file_exists(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
+    %overriddenText = func.call @strict_overridden(%path) : (f64) -> f64
+    %isOverridden = arith.cmpf one, %overriddenText, %zero : f64
+    cf.cond_br %isOverridden, ^overridden, ^disk
+  ^overridden:
+    %present = arith.constant 1.0 : f64
+    return %present : f64
+  ^disk:
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
     %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
@@ -4845,7 +4855,193 @@
   ^done:
     return %built : f64
   }
+  llvm.mlir.global internal @strict_library_error(0 : i64) : i64
+  func.func private @strict_library_enter(%stack: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %tableSlot = llvm.mlir.addressof @strict_gc_table : !llvm.ptr
+    %table = llvm.load %tableSlot : !llvm.ptr -> i64
+    %isReady = arith.cmpi ne, %table, %none : i64
+    cf.cond_br %isReady, ^ready, ^start
+  ^start:
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    return
+  ^ready:
+    %stackValue = llvm.ptrtoint %stack : !llvm.ptr to i64
+    %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
+    llvm.store %stackValue, %stackSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_library_text(%value: f64) -> !llvm.ptr {
+    %kept = func.call @strict_kept_text(%value) : (f64) -> f64
+    %pointer = func.call @strict_ptr(%kept) : (f64) -> !llvm.ptr
+    return %pointer : !llvm.ptr
+  }
+  func.func private @strict_library_failed(%value: f64) -> i32 {
+    %report = func.call @strict_error_report(%value) : (f64) -> f64
+    %text = func.call @strict_library_text(%report) : (f64) -> !llvm.ptr
+    %textValue = llvm.ptrtoint %text : !llvm.ptr to i64
+    %errorSlot = llvm.mlir.addressof @strict_library_error : !llvm.ptr
+    llvm.store %textValue, %errorSlot : i64, !llvm.ptr
+    %failed = arith.constant 1 : i32
+    return %failed : i32
+  }
+  func.func private @strict_library_list(%block: !llvm.ptr) -> f64 {
+    %address = llvm.ptrtoint %block : !llvm.ptr to i64
+    %raw = arith.bitcast %address : i64 to f64
+    %list = func.call @strict_foreign_numbers(%raw) : (f64) -> f64
+    return %list : f64
+  }
+  func.func private @strict_library_numbers(%list: f64) -> !llvm.ptr {
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %slots = arith.addi %count, %one : i64
+    %bytes = arith.muli %slots, %eight : i64
+    %block = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    llvm.store %length, %block : f64, !llvm.ptr
+    %target = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %itemBytes = arith.muli %count, %eight : i64
+    %copied = llvm.call @memcpy(%target, %items, %itemBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    return %block : !llvm.ptr
+  }
+  func.func private @strict_library_records(%block: !llvm.ptr, %fields: i64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %length = llvm.load %block : !llvm.ptr -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %list = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %source = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %bytes = arith.muli %fields, %eight : i64
+    cf.br ^loop(%zero : i64)
+  ^loop(%at: i64):
+    %more = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %more, ^record, ^done
+  ^record:
+    %element = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    %offset = arith.muli %at, %fields : i64
+    %from = llvm.getelementptr %source[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %copied = llvm.call @memcpy(%element, %from, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %bits = func.call @strict_bits(%element) : (!llvm.ptr) -> f64
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %bits, %slot : f64, !llvm.ptr
+    %next = arith.addi %at, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return %list : f64
+  }
+  func.func private @strict_library_recorded(%list: f64, %fields: i64) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %values = arith.muli %count, %fields : i64
+    %slots = arith.addi %values, %one : i64
+    %total = arith.muli %slots, %eight : i64
+    %block = llvm.call @malloc(%total) : (i64) -> !llvm.ptr
+    llvm.store %length, %block : f64, !llvm.ptr
+    %target = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %bytes = arith.muli %fields, %eight : i64
+    cf.br ^loop(%zero : i64)
+  ^loop(%at: i64):
+    %more = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %more, ^record, ^done
+  ^record:
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %bits = llvm.load %slot : !llvm.ptr -> f64
+    %element = func.call @strict_ptr(%bits) : (f64) -> !llvm.ptr
+    %offset = arith.muli %at, %fields : i64
+    %to = llvm.getelementptr %target[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %copied = llvm.call @memcpy(%to, %element, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %next = arith.addi %at, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return %block : !llvm.ptr
+  }
+  func.func @strict_last_error() -> !llvm.ptr {
+    %errorSlot = llvm.mlir.addressof @strict_library_error : !llvm.ptr
+    %textValue = llvm.load %errorSlot : !llvm.ptr -> i64
+    %text = llvm.inttoptr %textValue : i64 to !llvm.ptr
+    return %text : !llvm.ptr
+  }
+  func.func @strict_release(%text: !llvm.ptr) {
+    llvm.call @free(%text) : (!llvm.ptr) -> ()
+    return
+  }
+  llvm.mlir.global internal @strict_override_path(0.0 : f64) : f64
+  llvm.mlir.global internal @strict_override_text(0.0 : f64) : f64
+  func.func private @strict_kept_text(%text: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
+    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %size = arith.addi %length, %one : i64
+    %copy = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%copy, %pointer, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_file_override(%path: f64, %text: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %keptPath = func.call @strict_kept_text(%path) : (f64) -> f64
+    %keptText = func.call @strict_kept_text(%text) : (f64) -> f64
+    %pathSlot = llvm.mlir.addressof @strict_override_path : !llvm.ptr
+    llvm.store %keptPath, %pathSlot : f64, !llvm.ptr
+    %textSlot = llvm.mlir.addressof @strict_override_text : !llvm.ptr
+    llvm.store %keptText, %textSlot : f64, !llvm.ptr
+    return %zero : f64
+  }
+  func.func private @strict_overridden(%path: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %pathSlot = llvm.mlir.addressof @strict_override_path : !llvm.ptr
+    %stored = llvm.load %pathSlot : !llvm.ptr -> f64
+    %isSet = arith.cmpf one, %stored, %zero : f64
+    cf.cond_br %isSet, ^compare, ^none
+  ^compare:
+    %same = func.call @strict_text_equal(%path, %stored) : (f64, f64) -> f64
+    %isSame = arith.cmpf one, %same, %zero : f64
+    cf.cond_br %isSame, ^found, ^none
+  ^found:
+    %textSlot = llvm.mlir.addressof @strict_override_text : !llvm.ptr
+    %text = llvm.load %textSlot : !llvm.ptr -> f64
+    return %text : f64
+  ^none:
+    return %zero : f64
+  }
+  func.func private @strict_stream_text(%file: !llvm.ptr) -> f64 {
+    %chunk = arith.constant 65536 : i64
+    %one = arith.constant 1 : i64
+    %start = arith.constant 0 : i64
+    %terminator = arith.constant 0 : i8
+    %null = llvm.mlir.zero : !llvm.ptr
+    cf.br ^read(%null, %start : !llvm.ptr, i64)
+  ^read(%buffer: !llvm.ptr, %used: i64):
+    %capacity = arith.addi %used, %chunk : i64
+    %withEnd = arith.addi %capacity, %one : i64
+    %grown = llvm.call @realloc(%buffer, %withEnd) : (!llvm.ptr, i64) -> !llvm.ptr
+    %at = llvm.getelementptr %grown[%used] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %count = llvm.call @fread(%at, %one, %chunk, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
+    %total = arith.addi %used, %count : i64
+    %more = arith.cmpi eq, %count, %chunk : i64
+    cf.cond_br %more, ^read(%grown, %total : !llvm.ptr, i64), ^done(%grown, %total : !llvm.ptr, i64)
+  ^done(%text: !llvm.ptr, %length: i64):
+    %end = llvm.getelementptr %text[%length] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %result = func.call @strict_bits(%text) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
   func.func private @strict_file_text(%path: f64) -> f64 {
+    %overriddenText = func.call @strict_overridden(%path) : (f64) -> f64
+    %unsetText = arith.constant 0.0 : f64
+    %isOverridden = arith.cmpf one, %overriddenText, %unsetText : f64
+    cf.cond_br %isOverridden, ^overridden, ^disk
+  ^overridden:
+    return %overriddenText : f64
+  ^disk:
     %start = arith.constant 0 : i64
     %ending = arith.constant 2 : i32
     %beginning = arith.constant 0 : i32

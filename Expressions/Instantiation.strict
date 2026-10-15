@@ -21,9 +21,11 @@ Argument(instanceType Text, name Text) Text
 	Pairing.Argument("Couple(Text, Number)", "second") is "Number"
 	Pairing.Argument("Couple(Text, Number)", "first") is "Text"
 	Pairing.Argument("Iterator(Text)", "first") is "Text"
+	Pairing.Argument("List(Text)", "elements") is "Text"
 	let arguments = Arguments(instanceType)
-	if (arguments.Length is 0) or (types.BaseName(instanceType) is in ("List", "Dictionary", "Iterator"))
-		return types.ElementType(instanceType)
+	let base = types.BaseName(instanceType)
+	if (arguments.Length is 0) or (base is in ("List", "Dictionary", "Iterator"))
+		return (base is "List") and (arguments.Length is 1) then arguments(0) else types.ElementType(instanceType)
 	let position = Position(instanceType, name)
 	(position >= 0) and (position < arguments.Length) then arguments(position) else "Unknown"
 Position(instanceType Text, name Text) Number
@@ -46,12 +48,19 @@ Members(typeName Text, members Scope) Scope
 	Pairing.Members("Couple(Text, Number)", Couples.members(0)).TypeOf("second") is "Number"
 	Pairing.Members("Couple", Couples.members(0)).TypeOf("second") is "Generic"
 	Pairing.Members("Couple(Text)", Scope(List(Text) + "first", List(Text) + "Generic")).TypeOf("first") is "Text"
+	Pairing.Members("Couple(Text)", Scope(List(Text) + "first", List(Text) + "Generics")).TypeOf("first") is "Texts"
 	if Arguments(typeName).Length is 0
 		return members
 	mutable concrete = List(Mutable(Text))
 	for members.names
-		concrete.Add(members.types(index) is "Generic" then Argument(typeName, value) else members.types(index))
+		let type = members.types(index)
+		let argument = type is in ("Generic", "Generics") then Argument(typeName, value) else type
+		concrete.Add(type is "Generics" then Plural(argument) else argument)
 	Scope(members.names, concrete)
+Plural(element Text) Text
+	Pairing.Plural("Text") is "Texts"
+	Pairing.Plural("Couple(Text, Number)") is "List(Couple(Text, Number))"
+	element.IndexOf("(") < 0 then element + "s" else "List(" + element + ")"
 Own(fullName Text, type Text) Text
 	Pairing.Own("Strict/Couple(Text, Number)", "Couple") is "Couple(Text, Number)"
 	Pairing.Own("Strict/Dictionary(Text, Number)", "Dictionary") is "Dictionary"

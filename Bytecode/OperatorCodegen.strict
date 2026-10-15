@@ -6,6 +6,7 @@ constant Characters = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Ch
 constant Hashes = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Hash"), (Scope(("number"), ("Number"))), (KnownTypes.NoMembers), (Scope(("from", "from types"), ("generic", "Generic")))), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant InOnes = SyntaxNode("Binary", "is in", (One, ValueCodegen.Ones))
 constant Choose = SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (NoNode, One)), One))
+constant Narrowing = SyntaxParser(Tokenizer("x is Error then x.Name else \"\"").Tokens).Parse
 constant Mismatched = SyntaxParser(Tokenizer("Dictionary(A, B) is Dictionary(B, A)").Tokens).Parse
 constant Comparisons = ("is", "is not", "<", ">", "xor", ">=", "<=")
 constant ComparisonOffsets = (0, 1, 2, 3, 1, 2, 3)
@@ -93,11 +94,16 @@ Composite(node SyntaxNode, block CodeBlock) CodeBlock
 	node.text is "else" then Choice(node, block) else Contains(node, block)
 Choice(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Choice(Choose, CodeBlock.Empty).instructions.Length is 14
+	Plain.Choice(Narrowing, CodeBlock.Empty.Declare("x", "Number")).instructions(6).texts.First is "Strict/Error"
 	let decision = node.children(0)
 	let condition = Condition(decision.children(0), block)
 	let name = "conditional" + (condition.nextId - 1)
-	let chosen = ErrorCodegen(values).Handled(decision.children(1), condition).Chosen(name, condition.nextId - 1)
-	ErrorCodegen(values).Handled(node.children(1), chosen).Joined(name, chosen.nextId - 1)
+	let narrowed = ErrorCodegen(values).Narrowed(decision.children(0), condition)
+	let chosen = ErrorCodegen(values).Handled(decision.children(1), narrowed).Chosen(name, condition.nextId - 1)
+	let isNarrowed = narrowed.scope.names.Length > condition.scope.names.Length
+	let target = isNarrowed then decision.children(0).children(0).text else ""
+	let restored = isNarrowed then chosen.Declare(target, condition.scope.TypeOf(target)) else chosen
+	ErrorCodegen(values).Handled(node.children(1), restored).Joined(name, chosen.nextId - 1)
 Logical(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).nextId is 1
 	let left = values.Expression(node.children(0), block)

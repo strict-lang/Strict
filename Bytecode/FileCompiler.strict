@@ -39,6 +39,10 @@ Sources(linker Linker, linked List(TypeEntry), source Text) Texts
 	paths
 Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 	let normalized = Normalized(path)
+	let above = SourceFiles(".").SubfolderWith("..", type) + SourceFiles(".").SubfolderWith("../..", type)
+	if above is not ""
+		logger.Log("TypeNotFound: " + type + " used in " + path + " is in " + above + ", run strict in the project folder")
+		return List(TypeEntry)
 	if normalized.StartsWith("./") and (normalized.IndexOf("/../") < 0)
 		if Repositories(logger, ".").Downloaded(type) is not ""
 			return Compiled(path, root, withTests)
@@ -111,7 +115,8 @@ Normalized(path Text) Text
 	Normalized("C:\\s\\A.strict") is "C:/s/A.strict"
 	Normalized("A.strict") is "./A.strict"
 	Normalized("../DeltaEngine/A.strict") is "./../DeltaEngine/A.strict"
-	let slashed = path.Replace("\\", "/").Replace("/./", "/")
+	Normalized(Directory.Current + "/Sub/A.strict") is "./Sub/A.strict"
+	let slashed = TypeSource.Relative(path).Replace("\\", "/").Replace("/./", "/")
 	let isRelative = (slashed.StartsWith("/") is false) and (slashed.IndexOf(":") < 0)
 	isRelative and (slashed.StartsWith("./") is false) then "./" + slashed else slashed
 FullName(path Text, root Text) Text
