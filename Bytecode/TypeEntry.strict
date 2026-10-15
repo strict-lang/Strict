@@ -109,10 +109,7 @@ Invoked Texts
 	for methods
 		targets = targets + value.Invoked
 	targets
-File Text
-	CharacterEntry.File is "Character.strict"
+Source Text
+	CharacterEntry.Source is "Character.strict"
 	let folder = Name.IndexOf("/") + 1
 	Name.Substring(folder, Name.Length - folder) + ".strict"
-Location(methodName Text) Text
-	CharacterEntry.Location("Lower") is "Character.Lower in Character.strict"
-	ShortName(Name) + "." + methodName + " in " + File

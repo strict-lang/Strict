@@ -82,8 +82,8 @@ Built(base Text, executable Text) Text
 	let lowered = Lowered(base)
 	if lowered is not ""
 		return lowered
-	let system = platform is Platform.Windows then " -Wl,-Brepro" else " -lm -lpthread"
-	let sources = NativeSources(natives).Arguments(platform, root)
+	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else " -lm -lpthread"
+	let sources = NativeSources(natives).Objects(platform, root)
 	let resource = NativeSources(natives).Resource(base, platform, root)
 	if resource.StartsWith("llvm-rc failed")
 		return resource

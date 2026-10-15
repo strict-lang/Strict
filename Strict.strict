@@ -38,7 +38,7 @@ Rooted(arguments Texts) Texts
 	Strict.Rooted(("a.strict", "5")) is ("a.strict", ".", "5")
 	if (arguments.Length is 0) or ((arguments.Length > 1) and File(arguments(1) + "/Any.strict").Exists)
 		return arguments
-	(List(Text) + arguments(0) + Execute.Root) + Rest(arguments)
+	(List(Text) + arguments(0) + TypeSource.Root) + Rest(arguments)
 Rest(arguments Texts) Texts
 	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)

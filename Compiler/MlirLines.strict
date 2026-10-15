@@ -52,7 +52,7 @@ End Texts
 Placed Texts
 	MlirLines(Lined).Placed is ("Shape.strict:2", "Shape.strict:3")
 	MlirLines(Lined, "Strict/Shape", "Examples/Shape.strict").Placed.First is "Examples/Shape.strict:2"
-	let file = function.type.Name is mainName then mainFile else function.type.File
+	let file = function.type.Name is mainName then mainFile else function.type.Source
 	for Numbers
 		file + ":" + value
 Indexes(places Texts) Numbers

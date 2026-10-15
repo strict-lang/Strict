@@ -28,7 +28,7 @@ Built(type TypeEntry) Text
 	let native = Folder(type)
 	if Directory.Exists(native) is false
 		return MlirForeign(MlirFunction(types, type, Method(type))).Unimplemented
-	NativeSources(List(Text) + native).Library(Platform.Current, Execute.Root)
+	NativeSources(List(Text) + native).Library(Platform.Current, TypeSource.Root)
 IsForeign(type TypeEntry) Boolean
 	Adding.IsForeign(Adder) is true
 	Adding.IsForeign(TypeEntry("Strict/Shape", List(MemberEntry), List(MethodEntry))) is false
@@ -76,7 +76,7 @@ Elements(numbers Numbers) VmValue
 Folder(type TypeEntry) Text
 	Adding.Folder(Adder) is "Examples/NativeAdd/native"
 	Foreign(Invocation.AddCall, List(TypeEntry), "Examples/NativeAdd").Folder(Shorter) is "Examples/NativeAdd/native"
-	let file = type.Name.IndexOf("/") < 0 then folder + "/" + type.File else type.File
+	let file = type.Name.IndexOf("/") < 0 then folder + "/" + type.Source else type.Source
 	let parent = Path(file).PathOnly.text
 	parent is "" then "native" else parent + "/native"
 Numbers(values List(VmValue)) Numbers

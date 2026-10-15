@@ -25,12 +25,49 @@ Arguments(platform Number, root Text) Text
 	for Files
 		arguments = arguments + " \"" + value + "\""
 	arguments + " -I\"" + root + "/Compiler\"" + Flags(platform)
+Objects(platform Number, root Text) Text
+	Adding.Objects(Platform.Current, ".").StartsWith(" \"Examples/NativeAdd/native/Adder.o\"") is true
+	NativeSources(List(Text)).Objects(Platform.Current, ".") is ""
+	if folders.Length is 0
+		return ""
+	let tokens = Flags(platform).Split(" ")
+	mutable arguments = ""
+	for Files + Sources(tokens)
+		arguments = arguments + " \"" + Object(value, platform, root, Options(tokens, false)) + "\""
+	arguments + Options(tokens, true)
+Sources(tokens Texts) Texts
+	Adding.Sources(("-DX", "a/b.c", "-lgdi32")) is ("a/b.c")
+	for tokens
+		if value.EndsWith(".c")
+			value
+Options(tokens Texts, isLinking Boolean) Text
+	Adding.Options(("-DX", "a/b.c", "-lgdi32", "-Wl,/OPT:REF"), true) is " -lgdi32 -Wl,/OPT:REF"
+	Adding.Options(("-DX", "a/b.c", "-lgdi32"), false) is " -DX"
+	mutable options = ""
+	for tokens
+		let isLinked = value.StartsWith("-l") or value.StartsWith("-Wl")
+		if (value is not "") and (value.EndsWith(".c") is false) and (isLinked is isLinking)
+			options = options + " " + value
+	options
+Object(source Text, platform Number, root Text, options Text) Text
+	Adding.Object("Examples/NativeAdd/native/Adder.c", Platform.Current, ".", "") is "Examples/NativeAdd/native/Adder.o"
+	let target = Path(source).RemoveExtension.text + ".o"
+	if IsCurrent(target, Inputs(platform, root) + source)
+		return target
+	let building = Path(source).RemoveExtension.text + "." + 999999.Random.Floor + ".o"
+	let compile = "-c \"" + source + "\" -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
+	let compiled = ToolRunner(Toolchain(platform, root).Located("clang")).Execute(compile + " -o \"" + building + "\"")
+	compiled.Failed then source else Placed(building, target)
+Inputs(platform Number, root Text) Texts
+	Adding.Inputs(Platform.Windows, ".").Last is "Examples/NativeAdd/native/Windows.flags"
+	let flags = folders.First + "/" + Platform.NameOf(platform) + ".flags"
+	Directory.Files(folders.First, "*.h") + (root + "/Compiler/strict.h") + flags
 Library(platform Number, root Text) Text
 	Adding.Library(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.") is true
 	let folder = folders.First
 	let base = folder + "/" + Path(Path(folder).PathOnly.text).FileName.text
 	let extension = platform is Platform.Windows then ".dll" else ".so"
-	if IsCurrent(base + extension, platform, root)
+	if IsCurrent(base + extension, Files + Inputs(platform, root))
 		return "Built " + base + extension
 	let building = base + "." + 999999.Random.Floor + extension
 	let shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
@@ -45,12 +82,12 @@ Placed(building Text, library Text) Text
 		if File(unique + value).Exists
 			File(unique + value).Delete
 	File(building).Exists then building else library
-IsCurrent(library Text, platform Number, root Text) Boolean
-	Adding.IsCurrent("Examples/NativeAdd/native/Missing.dll", Platform.Windows, ".") is false
-	if File(library).Exists is false
+IsCurrent(target Text, inputs Texts) Boolean
+	Adding.IsCurrent("Examples/NativeAdd/native/Missing.dll", List(Text)) is false
+	if File(target).Exists is false
 		return false
-	let built = File(library).Modified
-	for (Files + (root + "/Compiler/strict.h")) + (folders.First + "/" + Platform.NameOf(platform) + ".flags")
+	let built = File(target).Modified
+	for inputs
 		if File(value).Exists and (File(value).Modified > built)
 			return false
 	true

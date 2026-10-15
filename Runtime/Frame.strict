@@ -106,7 +106,7 @@ Traced(error VmValue, position Number) VmValue
 	if error.kind is "Strict/ErrorWithValue"
 		return VmValue(error.kind, error.number, error.text, (Traced(error.items(0), position), error.items(1)))
 	let called = VmValue.OfText(TypeEntry.ShortName(owner) + "." + method.Name)
-	let file = VmValue.OfText(TypeEntry(owner, List(MemberEntry), List(MethodEntry)).File)
+	let file = VmValue.OfText(TypeSource(TypeEntry(owner, List(MemberEntry), List(MethodEntry))).Located(machine.folder))
 	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(method.instructions(position).line)))
 	let traces = error.items(1).items
 	let isRepeated = (traces.Length > 0) and (traces.Last is trace)

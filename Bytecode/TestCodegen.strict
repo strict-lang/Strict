@@ -69,7 +69,7 @@ Compared(test SyntaxNode, block CodeBlock) CodeBlock
 	truth.Add(InstructionEntry.Binary(InstructionType.Equal, (generated.Result, truth.Result)))
 Place(test SyntaxNode, method Text) Text
 	Even.Place(OneIsOne, "IsEven") is "1 is 1 in IsEven at Even.strict:line 0"
-	let file = TypeEntry(types.fullName, List(MemberEntry), List(MethodEntry)).File
+	let file = TypeEntry(types.fullName, List(MemberEntry), List(MethodEntry)).Source
 	test to Text + " in " + method + " at " + file + ":line " + test.line
 Passed(compared CodeBlock, place Text) CodeBlock
 	Even.Passed(Counter, "x").instructions.Index(InstructionEntry.Print("Test passed: x")) is -1

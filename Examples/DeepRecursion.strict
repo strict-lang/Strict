@@ -1,0 +1,4 @@
+has number
+Down Number
+	DeepRecursion(10000).Down is 0
+	number is 0 then 0 else DeepRecursion(number - 1).Down

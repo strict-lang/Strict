@@ -9,7 +9,7 @@ Lines Texts
 Function(function MlirFunction) Texts
 	Counted.Function(MlirCalls.Shapes).Length is 3
 	Counted.Function(MlirCalls.Shapes).First.IndexOf("(\"Shape.Run\\00Shape.strict\\00\")") > 0 is true
-	let location = function.type.Location(function.method.Name)
+	let location = TypeSource(function.type).Location(function.method.Name)
 	let content = location.Replace(" in ", "\\00") + "\\00\")"
 	let where = "  llvm.mlir.global internal constant @w" + function.Symbol + "(\"" + content
 	mutable lines = List(Text) + (where + " : !llvm.array<" + (location.Length - 2) + " x i8>")
@@ -48,7 +48,7 @@ NameGlobal(function MlirFunction, position Number) Text
 	Counted.NameGlobal(Counted.functions.First, 0).IndexOf("Run\\00") > 0 is true
 	Counted.NameGlobal(Counted.functions.First, 0).IndexOf("\\00Counter.Run\\00Counter.strict\\000\\00") > 0 is true
 	let name = function.method.Name
-	let location = function.type.Location(name)
+	let location = TypeSource(function.type).Location(name)
 	let line = function.method.instructions(position).line to Text
 	let content = name + "\\00" + location.Replace(" in ", "\\00") + "\\00" + line + "\\00"
 	let global = "  llvm.mlir.global internal constant @s" + function.Symbol + "_" + position
