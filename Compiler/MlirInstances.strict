@@ -8,6 +8,8 @@ constant Looping = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry
 constant Outer = TypeEntry("Strict/Outer", (MemberEntry("shape", "Strict/Shape", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
 constant Widened = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("width", "Strict/Number", List(InstructionEntry), false), "None", List(InstructionEntry)))
 constant Sizing = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Outer, Outer, MethodEntry("Run", List(MemberEntry) + MemberEntry("size", "Strict/Number", List(InstructionEntry), false), "None", List(InstructionEntry)))
+constant SelfGuard = ("    %hasSelf = arith.cmpf une, %self, %zero : f64", "    cf.cond_br %hasSelf, ^unpack, ^unpacked", "  ^unpack:")
+constant Named = InstructionEntry(InstructionType.FieldLoad, ("Name", "Error"), (2, 1, -1))
 constant Nesting = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Outer, Outer, MethodEntry.CountingLoop)
 Stored(owner TypeEntry) List(MemberEntry)
 	MlirInstances(Shapes, 0).Stored(MlirFunction.Shape).Length is 1
@@ -68,14 +70,14 @@ Initialized(owner TypeEntry, member MemberEntry, slot Text, prefix Text, creatin
 	isFresh then Fresh(memberType, slot, prefix + "_", creating) else Default(owner, member, slot, prefix + "d")
 Field(entry InstructionEntry) Texts
 	MlirInstances(Shapes, 2).Field(Width).Length is 5
-	MlirInstances(MlirKinds.Graded.function, 1).Field(MlirKinds.Characters).Length is 2
+	if entry.texts is ("Name", "Error")
+		return ErrorName(entry)
 	let kind = MlirKinds(function).KindOf(position, entry.payload(1))
 	if MlirLayout(function).IsAliased(entry, position)
 		return function.Copied("%r" + entry.payload(1), "%r" + entry.payload(0), Temp("a"))
-	let owner = function.TypeOf(kind)
-	let slot = StoredNames(owner).Index(entry.texts(0))
+	let slot = StoredNames(function.TypeOf(kind)).Index(entry.texts(0))
 	if slot < 0
-		return List(Text) + MlirStatements(function, position).Unsupported("member " + owner.Name + "." + entry.texts(0))
+		return List(Text) + MlirStatements(function, position).Unsupported("member " + kind + "." + entry.texts(0))
 	let memory = MlirMemory(function, position)
 	let loaded = List(Text) + function.Load(Temp("i"), "%r" + entry.payload(1)) + memory.Pointer(Temp("i"), "i")
 	loaded + memory.Loaded(Temp("ip"), slot, "m") + function.Store(Temp("mv"), "%r" + entry.payload(0))
@@ -92,10 +94,10 @@ Unpacked Texts
 			let loaded = memory.Loaded(memory.Temp("selfp"), index, "u" + index)
 			lines = lines + loaded + function.Store(memory.Temp("u" + index + "v"), "%v_" + value.Name)
 	lines + ("    cf.br ^unpacked", "  ^unpacked:")
-SelfGuard Texts
-	MlirInstances(Looping, 0).SelfGuard.Last is "  ^unpack:"
-	constant check = "    %hasSelf = arith.cmpf une, %self, %zero : f64"
-	(check, "    cf.cond_br %hasSelf, ^unpack, ^unpacked", "  ^unpack:")
+ErrorName(entry InstructionEntry) Texts
+	MlirInstances(Shapes, 2).ErrorName(Named).Index("    %t2n = func.call @strict_error_name(%t2e) : (f64) -> f64") is 1
+	let named = "    " + Temp("n") + " = func.call @strict_error_name(" + Temp("e") + ") : (f64) -> f64"
+	(function.Load(Temp("e"), "%r" + entry.payload(1)), named, function.Store(Temp("n"), "%r" + entry.payload(0)))
 Aliased Texts
 	MlirInstances(MlirLayout.Wrapping.function, 0).Aliased.Length is 2
 	MlirInstances(Widened, 0).Aliased.Length is 0

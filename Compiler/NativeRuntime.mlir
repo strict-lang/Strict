@@ -4598,6 +4598,84 @@
     %failed = arith.constant 1 : i32
     return %failed : i32
   }
+  func.func private @strict_library_list(%block: !llvm.ptr) -> f64 {
+    %address = llvm.ptrtoint %block : !llvm.ptr to i64
+    %raw = arith.bitcast %address : i64 to f64
+    %list = func.call @strict_foreign_numbers(%raw) : (f64) -> f64
+    return %list : f64
+  }
+  func.func private @strict_library_numbers(%list: f64) -> !llvm.ptr {
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %slots = arith.addi %count, %one : i64
+    %bytes = arith.muli %slots, %eight : i64
+    %block = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    llvm.store %length, %block : f64, !llvm.ptr
+    %target = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %itemBytes = arith.muli %count, %eight : i64
+    %copied = llvm.call @memcpy(%target, %items, %itemBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    return %block : !llvm.ptr
+  }
+  func.func private @strict_library_records(%block: !llvm.ptr, %fields: i64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %length = llvm.load %block : !llvm.ptr -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %list = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %source = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %bytes = arith.muli %fields, %eight : i64
+    cf.br ^loop(%zero : i64)
+  ^loop(%at: i64):
+    %more = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %more, ^record, ^done
+  ^record:
+    %element = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    %offset = arith.muli %at, %fields : i64
+    %from = llvm.getelementptr %source[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %copied = llvm.call @memcpy(%element, %from, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %bits = func.call @strict_bits(%element) : (!llvm.ptr) -> f64
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %bits, %slot : f64, !llvm.ptr
+    %next = arith.addi %at, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return %list : f64
+  }
+  func.func private @strict_library_recorded(%list: f64, %fields: i64) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %values = arith.muli %count, %fields : i64
+    %slots = arith.addi %values, %one : i64
+    %total = arith.muli %slots, %eight : i64
+    %block = llvm.call @malloc(%total) : (i64) -> !llvm.ptr
+    llvm.store %length, %block : f64, !llvm.ptr
+    %target = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %bytes = arith.muli %fields, %eight : i64
+    cf.br ^loop(%zero : i64)
+  ^loop(%at: i64):
+    %more = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %more, ^record, ^done
+  ^record:
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %bits = llvm.load %slot : !llvm.ptr -> f64
+    %element = func.call @strict_ptr(%bits) : (f64) -> !llvm.ptr
+    %offset = arith.muli %at, %fields : i64
+    %to = llvm.getelementptr %target[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %copied = llvm.call @memcpy(%to, %element, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %next = arith.addi %at, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return %block : !llvm.ptr
+  }
   func.func @strict_last_error() -> !llvm.ptr {
     %errorSlot = llvm.mlir.addressof @strict_library_error : !llvm.ptr
     %textValue = llvm.load %errorSlot : !llvm.ptr -> i64

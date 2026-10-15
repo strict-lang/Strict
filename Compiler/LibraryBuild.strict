@@ -1,5 +1,5 @@
 has logger
-constant NoExports = ", a library exports the public methods with Number, Text or Boolean values of a type without members"
+constant NoExports = ", a library exports the public methods with Number, Text, Boolean or record values and lists of numbers or records"
 Built(path Text, root Text) Number
 	let failed = Execute(logger).Test(path, root)
 	let library = failed > 0 then MlirLibrary(List(TypeEntry)) else MlirLibrary(Execute(logger).Loaded(path, root))

@@ -106,15 +106,15 @@ FieldKind(writer Number, entry InstructionEntry) Text
 	Graded.FieldKind(7, Width) is "Number"
 	Graded.FieldKind(1, Characters) is "Text"
 	Lettered.FieldKind(2, Coded) is "Number"
+	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, ("Name", "Error"), (5, 6, -1))) is "Text"
+	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, ("Stacktraces", "Error"), (5, 6, -1))) is not "Text"
 	let kind = KindOf(writer, entry.payload(1))
-	let layout = MlirLayout(function)
-	let wrapped = layout.Wrapped(kind)
-	if (wrapped is not "") and (entry.texts(0) is not "value")
-		return wrapped
-	if entry.texts(0) is "value"
-		return kind
+	let wrapped = entry.texts is ("Name", "Error") then "Text" else MlirLayout(function).Wrapped(kind)
+	if (entry.texts(0) is "value") or (wrapped is not "")
+		return entry.texts(0) is "value" then kind else wrapped
 	let member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
-	layout.IsStruct(kind) then (member is "" then "Number" else member) else (member is "Number" then member else kind)
+	let isStruct = MlirLayout(function).IsStruct(kind)
+	isStruct then (member is "" then "Number" else member) else (member is "Number" then member else kind)
 MembersKind(members List(MemberEntry), name Text) Text
 	Graded.MembersKind(MlirFunction.Shape.members, "width") is "Number"
 	Graded.MembersKind(MlirFunction.Shape.members, "other") is ""

@@ -9,6 +9,7 @@ constant Logged = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunctio
 IsAliased(entry InstructionEntry, position Number) Boolean
 	MlirLayout(MlirInstances.Shapes).IsAliased(MlirInstances.Width, 2) is false
 	MlirLayout(Logged).IsAliased(LoggerField, 2) is true
+	MlirLayout(MlirKinds.Graded.function).IsAliased(MlirKinds.Characters, 1) is true
 	let kinds = MlirKinds(function)
 	let isValue = (entry.texts(0) is "value") or (IsStruct(kinds.KindOf(position, entry.payload(1))) is false)
 	isValue or (TypeEntry.ShortName(kinds.WrittenKind(position)) is "Logger")

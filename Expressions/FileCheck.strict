@@ -146,9 +146,12 @@ LastLine(lines Texts, header Number) Number
 	last
 Problem(lines Texts, broken Number) Text
 	Counting.Problem(("Run", "	1 +"), 1) is "ParsingFailed: 1 +"
+	Counting.Problem(("Run", "	let a = for 3"), 1).StartsWith("ForWithBodyOnlyAsMethodResult: let a = for 3, ") is true
 	Counting.Problem(("has number", "Run", "	1", "", "	2"), 3) is "EmptyLineInsideMethod: Run"
 	if lines(broken).Trim is not ""
-		return "ParsingFailed: " + lines(broken).Trim
+		let isFor = lines(broken).IndexOf(" = for ") > 0
+		let hint = isFor then ", a for with a body can only be the last line of a method, move it into one" else ""
+		return (isFor then "ForWithBodyOnlyAsMethodResult: " else "ParsingFailed: ") + lines(broken).Trim + hint
 	mutable header = 0
 	for Range(0, broken)
 		if lines(value).StartsWith("	") is false

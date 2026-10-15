@@ -1,0 +1,40 @@
+has library MlirLibrary
+constant Trades = MemberEntry("trades", "Strict/List(Trade)", List(InstructionEntry), false)
+constant Valued = MethodEntry("Value", List(MemberEntry) + Trades, "Strict/List(Trade)", MethodEntry.CountingLoop.instructions)
+constant Trade = TypeEntry("Strict/Trade", (MlirLibrary.Price, MlirLibrary.Amount), List(MethodEntry) + MlirLibrary.Total)
+constant Kept = "    llvm.store %numbers, %result : !llvm.ptr, !llvm.ptr"
+constant Recorded = "    %numbers = func.call @strict_library_recorded(%value, %fields) : (f64, i64) -> !llvm.ptr"
+constant Book = LibraryLists(MlirLibrary((TypeEntry("Strict/Book", List(MemberEntry), List(MethodEntry) + Valued), Trade)))
+Element(typeName Text) Text
+	Book.Element("Strict/List(Trade)") is "Trade"
+	Book.Element("Strict/Numbers") is "Number"
+	Book.Element("Strict/List(Text)") is ""
+	Book.Element("Strict/Number") is ""
+	let short = TypeEntry.ShortName(typeName)
+	let listed = short.StartsWith("List(") then short.Substring(5, short.Length - 6) else ""
+	let element = short is "Numbers" then "Number" else listed
+	(element is "Number") or ((element is not "") and library.IsRecord(element)) then element else ""
+Records(typeName Text) Number
+	Book.Records("Strict/List(Trade)") is 2
+	Book.Records("Strict/List(Number)") is 0
+	let element = Element(typeName)
+	if element is in ("", "Number")
+		return 0
+	let type = MlirFunction(library.types, library.types.First, MethodEntry.CountingLoop).TypeOf(element)
+	MlirInstances(MlirFunction(library.types, type, MethodEntry.CountingLoop), 0).Stored(type).Length
+Argument(typeName Text, position Number) Texts
+	Book.Argument("Strict/Numbers", 1) is ("    %v1 = func.call @strict_library_list(%a1) : (!llvm.ptr) -> f64")
+	Book.Argument("Strict/List(Trade)", 0).Last.EndsWith("_records(%a0, %c0) : (!llvm.ptr, i64) -> f64") is true
+	let fields = Records(typeName)
+	let target = "    %v" + position + " = func.call @strict_library_"
+	if fields < 2
+		return List(Text) + (target + "list(%a" + position + ") : (!llvm.ptr) -> f64")
+	let counted = "    %c" + position + " = arith.constant " + fields + " : i64"
+	(counted, target + "records(%a" + position + ", %c" + position + ") : (!llvm.ptr, i64) -> f64")
+Stored(returnType Text) Texts
+	Book.Stored("Strict/List(Number)").First.IndexOf("@strict_library_numbers(%value)") > 0 is true
+	Book.Stored("Strict/List(Trade)").First is "    %fields = arith.constant 2 : i64"
+	let fields = Records(returnType)
+	if fields < 2
+		return ("    %numbers = func.call @strict_library_numbers(%value) : (f64) -> !llvm.ptr", Kept)
+	("    %fields = arith.constant " + fields + " : i64", Recorded, Kept)
