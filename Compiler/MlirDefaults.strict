@@ -3,6 +3,8 @@ constant Labeled = TypeCodegen("Strict/Labeled", ("has label Text = \"Names\"", 
 constant Labeling = MlirDefaults(MlirFunction(List(TypeEntry) + Labeled, Labeled, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))))
 constant Label = Labeled.members.First
 constant Instances = MlirInstances(Labeling.function, 0)
+constant Greeting = TypeCodegen("Strict/Greeting", ("Greeted(name = \"Hi\") Text", "\tname"), ValueCodegen.NoTypes, List(Text)).Entry
+constant Greets = MlirDefaults(MlirFunction(List(TypeEntry) + Greeting, Greeting, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))))
 constant LabelGlobal = "  llvm.mlir.global internal constant @dLabeled_label(\"Names\\00\") : !llvm.array<6 x i8>"
 Name(owner TypeEntry, member MemberEntry) Text
 	Labeling.Name(Labeled, Label) is "@dLabeled_label"
@@ -12,12 +14,13 @@ Globals Texts
 	Labeling.Globals.First is LabelGlobal
 	Labeling.Globals.Last.StartsWith("  llvm.mlir.global internal constant @dLabeled_names_1(\"b\\00\")") is true
 	Labeling.Globals.Length is 3
+	Greets.Globals is List(Text) + "  llvm.mlir.global internal constant @dp0(\"Hi\\00\") : !llvm.array<3 x i8>"
 	mutable lines = List(Mutable(Text))
 	for function.types
 		let type = value
 		for MlirInstances(function, 0).Stored(type)
 			lines = lines + Declared(type, value)
-	lines
+	lines + ParameterGlobals
 Declared(owner TypeEntry, member MemberEntry) Texts
 	Labeling.Declared(Labeled, Label) is (LabelGlobal)
 	let literal = Natives(function.types).Initial(member)
@@ -27,3 +30,25 @@ Declared(owner TypeEntry, member MemberEntry) Texts
 	let elements = literal.kind is "List" then constants.TextElements(literal) else List(Number)
 	for elements
 		constants.TextGlobal(literal.items(value).text, "_" + value)
+ParameterName(text Text) Text
+	Greets.ParameterName("Hi") is "@dp0"
+	"@dp" + ParameterTexts.Index(text)
+ParameterGlobals Texts
+	Greets.ParameterGlobals.Length is 1
+	for ParameterTexts
+		MlirConstants(function, 0, "@dp" + index).TextGlobal(value, "")
+ParameterTexts Texts
+	Greets.ParameterTexts is ("Hi")
+	mutable texts = List(Mutable(Text))
+	for function.types
+		for value.methods
+			texts = Added(texts, value.parameters)
+	texts
+Added(texts Texts, parameters List(MemberEntry)) Texts
+	Greets.Added(List(Text), Greeting.methods.First.parameters) is ("Hi")
+	mutable added = texts
+	for parameters
+		let initial = Natives(function.types).Initial(value)
+		if (initial.kind is "Text") and (initial.text is not "") and (initial.text is not in added)
+			added = added + initial.text
+	added

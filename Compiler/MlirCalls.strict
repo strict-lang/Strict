@@ -84,7 +84,8 @@ Defaults(callee MethodEntry, count Number) Texts
 	mutable lines = List(Mutable(Text))
 	for Range(count, callee.parameters.Length)
 		let initial = Natives(function.types).Initial(callee.parameters(value))
-		let literal = MlirStatements(function, position).Literal(initial, scratch, "p" + value)
+		let named = initial.kind is "Text" then MlirDefaults(function).ParameterName(initial.text) else ""
+		let literal = MlirStatements(function, position).Literal(initial, scratch, "p" + value, named)
 		lines = lines + literal + function.Load(Temp("a" + value), scratch)
 	lines
 NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
