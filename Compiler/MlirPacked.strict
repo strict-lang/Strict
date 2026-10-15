@@ -49,13 +49,14 @@ Dispatched Texts
 	lines + ("    cf.switch %f" + position + "s" + names.Length + " : i64, " + targets + "]") + Variants
 Variants Texts
 	Summing.Variants.First is "  ^faloop1fast:"
-	Text.Combine(Summing.Variants).IndexOf("arith.extf %fa1gn : f16 to f64") > 0 is true
+	Text.Combine(Summing.Variants).IndexOf("arith.extf %fa1gsn : f16 to f32") > 0 is true
 	let names = Packable
 	mutable lines = List(Mutable(Text))
 	for names.Length * Widths.Length
 		let packing = names((index / Widths.Length).Floor) + " " + Widths(index % Widths.Length)
 		let packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
-		let copied = MlirFastLoop(packed, position).Copied
+		let single = MlirSingle(packed, position)
+		let copied = single.IsSingle then single.Copied else MlirFastLoop(packed, position).Copied
 		let renamed = MlirKernel(function, position).Renamed(copied, Letters.Substring(index, 1))
 		lines = lines + renamed + ("    cf.br ^loop" + position + "joined")
 	lines

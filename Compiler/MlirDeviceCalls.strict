@@ -3,6 +3,7 @@ has at Number
 has callee MlirFunction
 constant Twice = MlirDeviceCalls(MlirParallel.Doubling.function, 4, MlirDevice.Twice.function)
 constant Twicing = Twice.function.method.instructions(4)
+constant Flooring = MlirDeviceCalls(MlirGpuCheck.Floored, 1, MlirGpuCheck.Floored)
 constant Summing = MlirDeviceCalls(MlirGpu.Layering.function, 5, MlirDeviceStatements.Summed)
 Temp(suffix Text) Text
 	Twice.Temp("i") is "%d4i"
@@ -21,20 +22,24 @@ Arguments(entry InstructionEntry) Texts
 Types Text
 	Twice.Types is "!llvm.ptr, i64, i64, f64, f64"
 	Summing.Types is "!llvm.ptr, i64, i64, f64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64"
-	mutable types = ("!llvm.ptr", "i64", "i64", "f64")
+	mutable types = ("!llvm.ptr", "i64", "i64", function.Float)
 	for callee.method.parameters
-		types = IsList(index) then types + MlirTyped.Types else types + "f64"
+		types = IsList(index) then types + MlirTyped.Types else types + function.Float
 	Text.Combine(types, ", ")
 Loaded(entry InstructionEntry) Texts
 	Twice.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
 	let countPosition = 5 + entry.payload(3)
 	let flagPosition = countPosition + 1 + entry.payload(countPosition)
 	let register = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
-	let unset = "    " + Temp("i") + " = arith.constant 0.0 : f64"
+	let unset = MlirTyped(function.Float).Constant(Temp("i"), "0.0")
 	mutable lines = List(Text) + (register < 0 then unset else function.Load(Temp("i"), "%r" + register))
 	for entry.payload(countPosition)
 		lines = lines + Argument(index, "%r" + entry.payload(countPosition + 1 + index))
 	lines
+Floored(entry InstructionEntry) Texts
+	Flooring.Floored(MlirGpuCheck.Flooring)(1).IndexOf("llvm.intr.floor") > 0 is true
+	let floored = MlirTyped(function.Float).Floored(Temp(""), Temp("i"))
+	Loaded(entry) + floored + function.Store(Temp(""), "%r" + entry.payload(0))
 Argument(parameter Number, register Text) Texts
 	Twice.Argument(0, "%r1") is ("    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64")
 	Summing.Argument(0, "%r1").Last is "    %d5p0b = llvm.load %r1b : !llvm.ptr -> i64"

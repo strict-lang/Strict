@@ -7,15 +7,18 @@ constant Summing = MlirDevice(MlirFunction(MlirGpu.Layering.function.types, GpuS
 constant Fixed = "%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64"
 constant DoublingHeader = "  llvm.func @Rows_Doubled_1_gpu2(" + Fixed + ") attributes {nvvm.kernel} {"
 constant Ending = ("    cf.br ^exit", "  ^exit:", "    llvm.return", "  }")
+constant RowTypes = " : (!llvm.ptr, i64, i64) -> (!llvm.ptr, i64)"
 constant Allocated = " = llvm.alloca %one x "
 Name Text
 	Doubling.Name is "Rows_Doubled_1_gpu2"
-	function.Symbol + "_gpu" + position
+	MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Name is "Rows_Doubled_1_gpu2s"
+	function.Symbol + "_gpu" + position + MlirTyped(function.Float).Suffix
 Kernel Texts
 	Doubling.Kernel.First is DoublingHeader
 	Doubling.Kernel.Last is "  }"
 	Text.Combine(Doubling.Kernel).IndexOf("func.call @Rows_Twice_1_device(") > 0 is true
 	Layering.Kernel.First.IndexOf("%f_biasesb: i64) attributes") > 0 is true
+	Text.Combine(MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Kernel).IndexOf("i32 to f32") > 0 is true
 	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + ") attributes {nvvm.kernel} {"
 	let body = Emitted(position + 1, function.method.LoopEndOf(position))
 	(List(Text) + header) + Slots + Given + Indexed + Started + body + Ending
@@ -36,7 +39,8 @@ Given Texts
 	mutable lines = List(Mutable(Text))
 	for MlirGpuCheck(function, position).Free
 		let given = "%f_" + value
-		lines = IsList(value) then lines + Stores(given, "%v_" + value) else lines + function.Store(given, "%v_" + value)
+		let slot = "%v_" + value
+		lines = IsList(value) then lines + Stores(given, slot) else lines + MlirTyped(function.Float).Given(given, slot)
 	lines
 Stores(source Text, target Text) Texts
 	Doubling.Stores("%a", "%b").First is "    llvm.store %ad, %bd : !llvm.ptr, !llvm.ptr"
@@ -46,12 +50,13 @@ Function Texts
 	Twice.Function.First.EndsWith("%lane: i64, %lanes: i64, %p0: f64, %p1: f64) -> f64 {") is true
 	Twice.Function.Last is "  }"
 	let calls = MlirDeviceCalls(function, 0, function)
-	mutable parameters = ("%failed: !llvm.ptr", "%lane: i64", "%lanes: i64", "%p0: f64")
+	mutable parameters = ("%failed: !llvm.ptr", "%lane: i64", "%lanes: i64", "%p0: " + function.Float)
 	for function.method.parameters
 		let name = "%p" + (index + 1)
 		let parts = (name + "d: !llvm.ptr", name + "n: i64", name + "b: i64")
-		parameters = calls.IsList(index) then parameters + parts else parameters + (name + ": f64")
-	let header = "  func.func private @" + function.Symbol + "_device(" + Text.Combine(parameters, ", ") + ") -> f64 {"
+		parameters = calls.IsList(index) then parameters + parts else parameters + (name + ": " + function.Float)
+	let symbol = function.Symbol + "_device" + MlirTyped(function.Float).Suffix
+	let header = "  func.func private @" + symbol + "(" + Text.Combine(parameters, ", ") + ") -> " + function.Float + " {"
 	(List(Text) + header) + Slots + Entry + Emitted(0, function.method.instructions.Length) + "  }"
 Slots Texts
 	Doubling.Slots.Last is "    %loop2 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
@@ -66,7 +71,7 @@ Slots Texts
 	lines
 Slot(name Text) Texts
 	Doubling.Slot("%r0").Last is "    %r0b = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
-	mutable lines = List(Text) + ("    " + name + Allocated + "f64 : (i64) -> !llvm.ptr")
+	mutable lines = List(Text) + ("    " + name + Allocated + function.Float + " : (i64) -> !llvm.ptr")
 	for MlirTyped.Parts
 		lines = lines + ("    " + name + value + Allocated + MlirTyped.Types(index) + " : (i64) -> !llvm.ptr")
 	lines
@@ -98,27 +103,27 @@ Laned Texts
 	List(Text) + MlirTyped.Integer.Constant("%lanes", lanes) + divided
 Started Texts
 	Doubling.Started.Last is "    llvm.store %element, %v_value : f64, !llvm.ptr"
-	Layering.Started.Last is "    llvm.store %bits, %v_valueb : i64, !llvm.ptr"
+	Layering.Started.Last is "    llvm.store %rowed#1, %v_valueb : i64, !llvm.ptr"
 	constant narrow = "    %narrow = arith.trunci %at : i64 to i32"
-	constant converted = ("  ^body:", narrow, "    %index = arith.sitofp %narrow : i32 to f64")
+	let converted = ("  ^body:", narrow, "    %index = arith.sitofp %narrow : i32 to " + function.Float)
 	let index = converted + function.Store("%index", "%v_index")
 	let collection = MlirLoops(function, position).Collection
 	if collection is ""
 		return index + function.Store("%index", "%v_value")
 	if collection is not "List(Number)"
 		return index + Rowed
-	constant read = "    %element = func.call @strict_device_element(%source, %bits, %at, %count)" + MlirTyped.Element
+	let read = MlirTyped(function.Float).Read("%element", "(%source, %bits, %at, %count)")
 	index + (read, function.Store("%element", "%v_value"))
 Rowed Texts
-	Layering.Rowed.First is "    %bytes = func.call @strict_device_bytes(%columns, %bits) : (i64, i64) -> i64"
-	constant bytes = "    %bytes = func.call @strict_device_bytes(%columns, %bits) : (i64, i64) -> i64"
-	constant offset = "    %offset = arith.muli %at, %bytes : i64"
-	constant row = "    %row = llvm.getelementptr %source[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8"
-	let view = (MlirTyped.Pointer.Store("%row", "%v_valued"), MlirTyped.Integer.Store("%columns", "%v_valuen"))
-	(bytes, offset, row) + view + MlirTyped.Integer.Store("%bits", "%v_valueb")
+	Layering.Rowed.First.IndexOf("@strict_device_row(%source, %at, %count)") > 0 is true
+	constant row = "    %rowed:2 = func.call @strict_device_row(%source, %at, %count)" + RowTypes
+	let view = (MlirTyped.Pointer.Store("%rowed#0", "%v_valued"), MlirTyped.Integer.Store("%columns", "%v_valuen"))
+	(List(Text) + row) + view + MlirTyped.Integer.Store("%rowed#1", "%v_valueb")
 Emitted(first Number, limit Number) Texts
 	Doubling.Emitted(3, 4).Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
+	MlirDevice(MlirDeviceDot.Summed, 0).Emitted(3, 12).Length is 0
 	mutable lines = List(Mutable(Text))
 	for Range(first, limit)
-		lines = lines + MlirDeviceStatements(function, value).Labeled + MlirDeviceStatements(function, value).Emitted
+		if MlirDeviceDot(function, value).IsCovered is false
+			lines = lines + MlirDeviceStatements(function, value).Labeled + MlirDeviceStatements(function, value).Emitted
 	lines

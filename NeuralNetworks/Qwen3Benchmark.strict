@@ -1,0 +1,50 @@
+has logger
+constant Prompt = "Alan Turing theorized that computers would one day become"
+Run(path Text, bits Number, count Number)
+	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
+	let started = Process.Elapsed
+	let model = Qwen3.Loaded(path, bits)
+	let loaded = Process.Elapsed
+	let prompt = tokenizer.Encoded(Prompt)
+	logger.Log(Prompt + tokenizer.Decoded(Generation(model).Generated(prompt, count)))
+	let before = Process.Elapsed
+	let prefilled = Prefilled(model, prompt)
+	let prefill = (Process.Elapsed - before) * 1000 / prompt.Length
+	let durations = Durations(prefilled, prompt.Length, count)
+	logger.Log(Report(prompt.Length, prefill, durations) + ", loaded in " + (loaded - started).Round(1) + " s")
+Prefilled(model Qwen3, prompt Numbers) Qwen3
+	Qwen3Benchmark(Logger).Prefilled(Qwen3.Tiny, (1, 2, 3)).Next is 2
+	mutable current = model
+	for prompt
+		current = current.Step(value, index)
+	current
+Durations(model Qwen3, start Number, count Number) Numbers
+	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0), 1, 2).Length is 2
+	mutable current = model
+	mutable last = Process.Elapsed
+	mutable durations = List(Mutable(Number))
+	for count
+		current = current.Step(current.Next, start + index)
+		let now = Process.Elapsed
+		durations.Add((now - last) * 1000)
+		last = now
+	durations
+Report(prompt Number, prefill Number, durations Numbers) Text
+	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30)).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)") is true
+	let median = Median(durations)
+	let mean = durations.Sum / durations.Length
+	let prefilled = "prefill " + prompt + " tokens " + prefill.Round(2) + " ms (" + (1000 / prefill).Round + " tokens/s), "
+	let decoded = "decode " + durations.Length + " tokens median " + median.Round(2) + " ms (" + (1000 / median).Round
+	prefilled + decoded + " tokens/s) mean " + mean.Round(2) + " ms"
+Median(numbers Numbers) Number
+	Qwen3Benchmark(Logger).Median((3, 1, 2)) is 2
+	Qwen3Benchmark(Logger).Median((4, 1, 3, 2)) is 3
+	for numbers
+		if Smaller(numbers, value) is (numbers.Length / 2).Floor
+			return value
+	numbers.First
+Smaller(numbers Numbers, number Number) Number
+	Qwen3Benchmark(Logger).Smaller((3, 1, 2), 3) is 2
+	for numbers
+		if value < number
+			1

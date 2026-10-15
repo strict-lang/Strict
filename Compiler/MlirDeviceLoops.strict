@@ -3,13 +3,15 @@ has at Number
 constant Beginning = MlirDeviceLoops(MlirDeviceStatements.Summed, 2)
 constant Ending = MlirDeviceLoops(MlirDeviceStatements.Summed, 11)
 constant Opening = MlirDeviceStatements.Summed.method.instructions(2)
-constant Summed = " : (f64) -> f64"
 constant Saved = ("", "d", "n", "b")
 constant Kinds = ("f64", "!llvm.ptr", "i64", "i64")
 Emitted Texts
 	Beginning.Emitted.Last is "    llvm.store %d2e, %v_value : f64, !llvm.ptr"
 	Ending.Emitted.First is "    %d11k = llvm.load %loop2 : !llvm.ptr -> i64"
+	Text.Combine(MlirDeviceLoops(MlirDeviceDot.Summed, 2).Emitted).IndexOf("@strict_device_dots(") > 0 is true
 	let entry = function.method.instructions(at)
+	if MlirDeviceDot(function, at).IsDot
+		return MlirDeviceDot(function, at).Emitted
 	entry.kind is InstructionType.LoopBegin then Begin("%r" + entry.payload(0), entry) else End
 Temp(suffix Text) Text
 	Beginning.Temp("k") is "%d2k"
@@ -17,7 +19,7 @@ Temp(suffix Text) Text
 Begin(register Text, entry InstructionEntry) Texts
 	Text.Combine(Beginning.Begin("%r0", Opening)).IndexOf("cf.br ^d2loop") > 0 is true
 	let isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).KindOf(at, entry.payload(0)))
-	let converted = "    " + Temp("c") + " = arith.fptosi " + Temp("cf") + " : f64 to i64"
+	let converted = "    " + Temp("c") + " = arith.fptosi " + Temp("cf") + " : " + function.Float + " to i64"
 	let number = (function.Load(Temp("cf"), register), converted)
 	let count = isList then List(Text) + MlirTyped.Integer.Load(Temp("c"), register + "n") else number
 	let start = Started
@@ -38,27 +40,27 @@ Started Texts
 Zeroed(name Text, number Number) Texts
 	Beginning.Zeroed("sum", 0).Last is "    llvm.store %d2a0z, %v_sum : f64, !llvm.ptr"
 	let loaded = function.Load(Temp("a" + number), "%v_" + name)
-	let zero = MlirTyped.Double.Constant(Temp("a" + number + "c"), "0.0")
+	let zero = MlirTyped(function.Float).Constant(Temp("a" + number + "c"), "0.0")
 	let operands = Temp("f") + ", " + Temp("a" + number) + ", " + Temp("a" + number + "c")
-	let chosen = "    " + Temp("a" + number + "z") + " = arith.select " + operands + " : f64"
+	let chosen = "    " + Temp("a" + number + "z") + " = arith.select " + operands + " : " + function.Float
 	(loaded, zero, chosen, function.Store(Temp("a" + number + "z"), "%v_" + name))
 Kept Texts
 	Beginning.Kept.First is "    %d2s = llvm.load %v_value : !llvm.ptr -> f64"
 	mutable lines = List(Mutable(Text))
 	for Saved
-		lines = lines + MlirTyped(Kinds(index)).Load(Temp("s" + value), "%v_value" + value)
-	lines + MlirTyped.Double.Load(Temp("sx"), "%v_index")
+		lines = lines + Part(index).Load(Temp("s" + value), "%v_value" + value)
+	lines + function.Load(Temp("sx"), "%v_index")
 Current(register Text, isList Boolean) Texts
 	Beginning.Current("%r0", true).First is "    %d2t = arith.trunci %d2k : i64 to i32"
 	let narrowed = "    " + Temp("t") + " = arith.trunci " + Temp("k") + " : i64 to i32"
-	let converted = "    " + Temp("x") + " = arith.sitofp " + Temp("t") + " : i32 to f64"
+	let converted = "    " + Temp("x") + " = arith.sitofp " + Temp("t") + " : i32 to " + function.Float
 	let index = (narrowed, converted, function.Store(Temp("x"), "%v_index"))
 	if isList is false
 		return index + function.Store(Temp("x"), "%v_value")
 	let data = MlirTyped.Pointer.Load(Temp("ed"), register + "d")
 	let sizes = (MlirTyped.Integer.Load(Temp("eb"), register + "b"), MlirTyped.Integer.Load(Temp("en"), register + "n"))
 	let operands = "(" + Temp("ed") + ", " + Temp("eb") + ", " + Temp("k") + ", " + Temp("en") + ")"
-	let read = "    " + Temp("e") + " = func.call @strict_device_element" + operands + MlirTyped.Element
+	let read = MlirTyped(function.Float).Read(Temp("e"), operands)
 	index + data + sizes + (read, function.Store(Temp("e"), "%v_value"))
 End Texts
 	Ending.End.Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
@@ -73,7 +75,7 @@ Reduced(begin Number) Texts
 	Ending.Reduced(2).Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
 	for MlirDeviceSums(function, begin).Accumulated
-		let reduced = "    " + Temp("y" + index) + " = func.call @strict_device_sum(" + Temp("x" + index) + ")" + Summed
+		let reduced = MlirTyped(function.Float).Summed(Temp("y" + index), Temp("x" + index))
 		let loaded = function.Load(Temp("x" + index), "%v_" + value)
 		lines = lines + loaded + reduced + function.Store(Temp("y" + index), "%v_" + value)
 	lines
@@ -81,5 +83,9 @@ Restored(begin Number) Texts
 	Ending.Restored(2).First is "    llvm.store %d2s, %v_value : f64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
 	for Saved
-		lines = lines + MlirTyped(Kinds(index)).Store("%d" + begin + "s" + value, "%v_value" + value)
-	lines + MlirTyped.Double.Store("%d" + begin + "sx", "%v_index")
+		lines = lines + Part(index).Store("%d" + begin + "s" + value, "%v_value" + value)
+	lines + function.Store("%d" + begin + "sx", "%v_index")
+Part(number Number) MlirTyped
+	Beginning.Part(0).type is "f64"
+	Beginning.Part(1).type is "!llvm.ptr"
+	MlirTyped(number is 0 then function.Float else Kinds(number))

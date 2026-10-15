@@ -1,0 +1,105 @@
+has function MlirFunction
+has at Number
+constant Summed = MlirFunction(MlirDeviceStatements.Summed, Float = "f32")
+constant Summing = MlirDeviceDot(Summed, 2)
+constant Squaring = MlirDeviceDot(MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Squared, List(Number), -1, "", "f32"), 2)
+constant Kinds = (InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.Multiply, InstructionType.Add, InstructionType.StoreRegisterToVariable, InstructionType.LoopEnd)
+constant Types = " : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64) -> f32"
+constant Offsets = (InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.Add, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.Add, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.Multiply, InstructionType.Add, InstructionType.StoreRegisterToVariable, InstructionType.LoopEnd)
+constant Lanes = ", %lane, %lanes)"
+constant OffsetTypes = " : (!llvm.ptr, !llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> f32"
+IsDot Boolean
+	Summing.IsDot is true
+	MlirDeviceDot(MlirDeviceStatements.Summed, 2).IsDot is false
+	MlirDeviceDot(Summed, 3).IsDot is false
+	Squaring.IsDot is true
+	let instructions = function.method.instructions
+	if (function.Float is not "f32") or (instructions(at).kind is not InstructionType.LoopBegin)
+		return false
+	let kinds = function.method.LoopEndOf(at) is at + 15 then Offsets else Kinds
+	IsSequence(kinds) and (kinds.Length is 15 then IsOffsetShaped else IsShaped)
+IsSequence(kinds Numbers) Boolean
+	Summing.IsSequence(Kinds) is true
+	Summing.IsSequence(Offsets) is false
+	let instructions = function.method.instructions
+	if (at + kinds.Length >= instructions.Length) or (function.method.LoopEndOf(at) is not at + kinds.Length)
+		return false
+	for kinds
+		if instructions(at + 1 + index).kind is not value
+			return false
+	true
+IsShaped Boolean
+	Summing.IsShaped is true
+	let instructions = function.method.instructions
+	let read = instructions(at + 4)
+	let product = instructions(at + 6)
+	let added = instructions(at + 7)
+	let isIndexed = (instructions(at + 3).texts(0) is "index") and (read.payload(1) is instructions(at + 3).payload(0))
+	let isProduct = (product.payload(1) is instructions(at + 2).payload(0)) and (product.payload(2) is read.payload(0))
+	let isSum = (added.payload(1) is instructions(at + 1).payload(0)) and (added.payload(2) is product.payload(3))
+	let isStored = (instructions(at + 8).payload(0) is added.payload(3)) and (instructions(at + 8).texts(0) is Sum)
+	(instructions(at + 2).texts(0) is "value") and isIndexed and isProduct and isSum and isStored
+IsOffsetShaped Boolean
+	Squaring.IsOffsetShaped is true
+	let instructions = function.method.instructions
+	let product = instructions(at + 12)
+	let added = instructions(at + 13)
+	let reads = (instructions(at + 5).payload(0), instructions(at + 10).payload(0))
+	let isRead = (product.payload(1), product.payload(2)) is reads
+	let isSum = (added.payload(1) is instructions(at + 1).payload(0)) and (added.payload(2) is product.payload(3))
+	let isStored = (instructions(at + 14).payload(0) is added.payload(3)) and (instructions(at + 14).texts(0) is Sum)
+	IsIndexed(at + 2) and IsIndexed(at + 7) and isRead and isSum and isStored
+IsIndexed(load Number) Boolean
+	Squaring.IsIndexed(4) is true
+	Squaring.IsIndexed(3) is false
+	let instructions = function.method.instructions
+	if (instructions(load).texts(0) is "index") or (instructions(load + 1).texts(0) is not "index")
+		return false
+	let summed = instructions(load + 2)
+	let registers = (instructions(load).payload(0), instructions(load + 1).payload(0))
+	let isAdded = (summed.payload(1), summed.payload(2)) is registers
+	isAdded and (instructions(load + 3).payload(1) is summed.payload(3))
+IsCovered Boolean
+	MlirDeviceDot(Summed, 5).IsCovered is true
+	MlirDeviceDot(Summed, 11).IsCovered is true
+	MlirDeviceDot(Squaring.function, 17).IsCovered is true
+	Summing.IsCovered is false
+	let begin = function.method.LoopBeginOf(at)
+	(begin >= 0) and (begin < at) and MlirDeviceDot(function, begin).IsDot
+Emitted Texts
+	Text.Combine(Summing.Emitted).IndexOf("@strict_device_dots(%failed, %d2rd, %d2rb, %d2rn, %d2od") > 0 is true
+	Summing.Emitted.Last is "    llvm.store %d2s1, %v_sum : f32, !llvm.ptr"
+	Text.Combine(Squaring.Emitted).IndexOf("offset_dots(%failed, %d2xd, %d2xb, %d2xn, %d2ai, %d2yd") > 0 is true
+	if function.method.LoopEndOf(at) is at + 15
+		return OffsetEmitted
+	let other = "%v_" + function.method.instructions(at + 4).texts(0)
+	let rows = Temp("rd") + ", " + Temp("rb") + ", " + Temp("rn") + ", "
+	let operands = rows + Temp("od") + ", " + Temp("ob") + ", " + Temp("on") + ", %lane, %lanes)"
+	let call = "    " + Temp("") + " = func.call @strict_device_dots(%failed, " + operands + Types
+	Parts("r", "%r" + function.method.instructions(at).payload(0)) + Parts("o", other) + call + Accumulated
+OffsetEmitted Texts
+	Squaring.OffsetEmitted.Last is "    llvm.store %d2s1, %v_sum : f32, !llvm.ptr"
+	let instructions = function.method.instructions
+	let parts = Parts("x", "%v_" + instructions(at + 5).texts(0)) + Parts("y", "%v_" + instructions(at + 10).texts(0))
+	let counted = Whole("a", "%v_" + instructions(at + 2).texts(0)) + Whole("b", "%v_" + instructions(at + 7).texts(0))
+	let first = Temp("xd") + ", " + Temp("xb") + ", " + Temp("xn") + ", " + Temp("ai") + ", "
+	let second = Temp("yd") + ", " + Temp("yb") + ", " + Temp("yn") + ", " + Temp("bi") + ", " + Temp("ci") + Lanes
+	let call = "    " + Temp("") + " = func.call @strict_device_offset_dots(%failed, " + first + second + OffsetTypes
+	parts + counted + Whole("c", "%r" + instructions(at).payload(0)) + call + Accumulated
+Whole(letter Text, slot Text) Texts
+	Squaring.Whole("a", "%v_start").Last is "    %d2ai = arith.fptosi %d2a : f32 to i64"
+	(function.Load(Temp(letter), slot), "    " + Temp(letter + "i") + " = arith.fptosi " + Temp(letter) + " : f32 to i64")
+Accumulated Texts
+	Summing.Accumulated.First is "    %d2s0 = llvm.load %v_sum : !llvm.ptr -> f32"
+	let added = "    " + Temp("s1") + " = arith.addf " + Temp("s0") + ", " + Temp("") + " : f32"
+	(function.Load(Temp("s0"), "%v_" + Sum), added, function.Store(Temp("s1"), "%v_" + Sum))
+Sum Text
+	Summing.Sum is "sum"
+	function.method.instructions(at + 1).texts(0)
+Parts(letter Text, list Text) Texts
+	Summing.Parts("r", "%r0").First is "    %d2rd = llvm.load %r0d : !llvm.ptr -> !llvm.ptr"
+	let data = MlirTyped.Pointer.Load(Temp(letter + "d"), list + "d")
+	(data, MlirTyped.Integer.Load(Temp(letter + "b"), list + "b"), MlirTyped.Integer.Load(Temp(letter + "n"), list + "n"))
+Temp(suffix Text) Text
+	Summing.Temp("s") is "%d2s"
+	"%d" + at + suffix

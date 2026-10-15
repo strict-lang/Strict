@@ -26,10 +26,10 @@ Angles(position Number) Numbers
 	let half = blocks.First.queryNorm.Length / 2
 	for half
 		Radians(position * theta ^ (-index / half)) to Degrees
-Rotation(position Number) List(Numbers)
-	Tiny.Rotation(0) is ((1, 1), (0, 0))
+Rotation(position Number) Numbers
+	Tiny.Rotation(0) is (1, 1, 0, 0)
 	let angles = Angles(position)
-	(Cosines(angles), Sines(angles))
+	Cosines(angles) + Sines(angles)
 Cosines(angles Numbers) Numbers
 	Tiny.Cosines((0, 180)) is (1, -1)
 	for angles
@@ -52,10 +52,13 @@ Step(token Number, position Number) Qwen3
 	Qwen3(value, blocks = updated, hidden = state)
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 6
-	let normed = Qwen3Block.Normalized(hidden, norm)
+	let normed = Qwen3Block.Normalized(hidden, 0, hidden.Length, norm)
 	for outputs
 		Layer.Summed(value, normed)
 Next Number
 	Tiny.Step(1, 0).Next is 0
 	let logits = Scored
-	logits.Index(logits.Maximum)
+	let width = logits.Length % 128 is 0 then 128 else logits.Length
+	let largest = Qwen3Block.Largest(logits, width)
+	let block = largest.Index(largest.Maximum)
+	block * width + Safetensors.Part(logits, block * width, width, 1).Index(largest(block))

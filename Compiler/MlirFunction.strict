@@ -4,6 +4,7 @@ has method MethodEntry
 has lineSlots Numbers = List(Number)
 has FastLoop Number = -1
 has Packing Text = ""
+has Float Text = "f64"
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
@@ -45,10 +46,11 @@ TypeOf(name Text) TypeEntry
 	Natives(types).TypeOf(name)
 Load(target Text, slot Text) Text
 	Counter.Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f64"
-	"    " + target + " = llvm.load " + slot + " : !llvm.ptr -> f64"
+	MlirFunction(Counter, Float = "f32").Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f32"
+	"    " + target + " = llvm.load " + slot + " : !llvm.ptr -> " + Float
 Store(stored Text, slot Text) Text
 	Counter.Store("%a", "%r0") is "    llvm.store %a, %r0 : f64, !llvm.ptr"
-	"    llvm.store " + stored + ", " + slot + " : f64, !llvm.ptr"
+	"    llvm.store " + stored + ", " + slot + " : " + Float + ", !llvm.ptr"
 Copied(source Text, destination Text, temp Text) Texts
 	Counter.Copied("%r0", "%v_a", "%t1").Length is 2
 	(Load(temp, source), Store(temp, destination))

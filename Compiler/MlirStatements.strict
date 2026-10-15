@@ -110,10 +110,10 @@ Predicate(kind Number) Text
 	kind is InstructionType.LessThan then "olt" else "ogt"
 Compared(entry InstructionEntry, operands Text) Texts
 	Copy.Compared(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), "%a, %b").Length is 2
-	let compare = "    " + Temp("") + "c = arith.cmpf " + Predicate(entry.kind) + ", " + operands + " : f64"
+	let compare = "    " + Temp("") + "c = arith.cmpf " + Predicate(entry.kind) + ", " + operands + " : " + function.Float
 	let flagged = (compare, "    llvm.store " + Temp("") + "c, %flag : i1, !llvm.ptr")
 	entry.payload(0) is not 3 then flagged else flagged + Numbered(Temp("c"), entry)
 Numbered(flag Text, entry InstructionEntry) Texts
 	Copy.Numbered("%f", InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))).Length is 2
-	let number = "    " + Temp("d") + " = arith.uitofp " + flag + " : i1 to f64"
+	let number = "    " + Temp("d") + " = arith.uitofp " + flag + " : i1 to " + function.Float
 	(number, function.Store(Temp("d"), "%r" + entry.payload(3)))

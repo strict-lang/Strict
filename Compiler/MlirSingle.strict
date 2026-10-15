@@ -1,0 +1,126 @@
+has function MlirFunction
+has position Number
+constant Layered = MlirDeviceStatements.Summed
+constant Summing = MlirSingle(MlirFunction(Layered.types, Layered.type, Layered.method, List(Number), 2, "for 4"), 2)
+constant Unpacked = MlirSingle(MlirFastLoop.Summing.function, 1)
+constant Allowed = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
+constant Operators = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
+IsSingle Boolean
+	Summing.IsSingle is true
+	Unpacked.IsSingle is false
+	if function.Packing is ""
+		return false
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if function.method.instructions(value).kind is not in Allowed
+			return false
+	("value" is not in Carried) and ("index" is not in Carried)
+Copied Texts
+	Summing.Copied.First is "  ^loop2fast:"
+	Summing.Copied.Last is "    llvm.store %t2y, %v_value : f64, !llvm.ptr"
+	Text.Combine(Summing.Copied).IndexOf("arith.addf %t2u0, %t8s fastmath<reassoc,contract> : f32") > 0 is true
+	let fast = MlirFastLoop(function, position)
+	let started = fast.Started
+	List(Text) + started.First + fast.Checked + (started - started.First) + Counted + Current + Looped + Exited
+Counted Texts
+	Summing.Counted.Last is "  ^loop2body:"
+	"  ^loop2(%t2ki: i64, %t2u0: f32):" is in Summing.Counted
+	let label = "^loop" + position
+	let whole = "    " + Temp("ni") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
+	mutable lines = (whole, "    " + Temp("zi") + " = arith.constant 0 : i64")
+	for Carried
+		lines = lines + Narrowed(Temp("i" + index), "llvm.load %v_" + value + " : !llvm.ptr -> f64")
+	let entered = "    cf.br " + label + "(" + Temp("zi") + Repeated("i", "") + " : i64" + Repeated("", "f32") + ")"
+	let header = "  " + label + "(" + Temp("ki") + ": i64" + Repeated("u", ": f32") + "):"
+	let check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("ki") + ", " + Temp("ni") + " : i64"
+	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
+	lines + (entered, header, check, branch, "  " + label + "body:")
+Current Texts
+	Summing.Current.First is "    %t2cs = arith.sitofp %t2ki : i64 to f32"
+	Summing.Current.Last is "    %t2gs = llvm.load %t2gp : !llvm.ptr -> f32"
+	let index = "    " + Temp("cs") + " = arith.sitofp " + Temp("ki") + " : i64 to f32"
+	if MlirLoops(function, position).Collection is ""
+		return (index, "    " + Temp("gs") + " = arith.sitofp " + Temp("ki") + " : i64 to f32")
+	let widths = MlirWidths(function, position, "f32")
+	List(Text) + index + widths.Loaded(Temp("gs"), Temp("gp"), Temp("h"), MlirFastLoop.Iterated)
+Looped Texts
+	Summing.Looped.Last is "    cf.br ^loop2(%t2next, %t9s : i64, f32)"
+	mutable lines = List(Mutable(Text))
+	mutable carried = ""
+	for Range(position + 1, function.method.LoopEndOf(position))
+		lines = lines + MlirLines(function).At(value, Temp("line")) + Statement(value)
+	for Carried
+		carried = carried + ", " + Variable(value, function.method.LoopEndOf(position))
+	let one = "    " + Temp("one") + " = arith.constant 1 : i64"
+	let next = "    " + Temp("next") + " = arith.addi " + Temp("ki") + ", " + Temp("one") + " : i64"
+	let types = " : i64" + Repeated("", "f32") + ")"
+	lines + one + next + ("    cf.br ^loop" + position + "(" + Temp("next") + carried + types)
+Statement(at Number) Texts
+	Summing.Statement(6).Last is "    %t6s = arith.truncf %t6sn : f64 to f32"
+	Summing.Statement(3).Length is 0
+	let entry = function.method.instructions(at)
+	let result = "%t" + at + "s"
+	let widths = MlirWidths(function, position, "f32")
+	if entry.kind is InstructionType.IndexCall
+		return widths.Loaded(result, "%t" + at + "p", Temp("h_" + entry.texts(0)), entry.texts(0))
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return Literal(entry, at)
+	if (entry.kind is InstructionType.LoadVariableToRegister) and (Variable(entry.texts(0), at) is result)
+		return Narrowed(result, "llvm.load %v_" + entry.texts(0) + " : !llvm.ptr -> f64")
+	entry.kind is in Operators then List(Text) + Calculated(entry, at) else List(Text)
+Literal(entry InstructionEntry, at Number) Texts
+	Summing.Literal(InstructionEntry.LoadNumber(0, 2), 4).Last is "    %t4s = arith.truncf %t4sd : f64 to f32"
+	let hex = MlirStatements(function, at).Hex(PayloadDecoder(entry).Value(1).number)
+	Narrowed("%t" + at + "s", "arith.constant " + hex + " : f64")
+Calculated(entry InstructionEntry, at Number) Text
+	Summing.Calculated(Layered.method.instructions(8), 8) is "    %t8s = arith.mulf %t2gs, %t6s fastmath<contract> : f32"
+	let operands = Register(entry.payload(1), at) + ", " + Register(entry.payload(2), at)
+	let isSum = MlirFastLoop(function, position).IsAccumulated(at)
+	let flags = isSum then " fastmath<reassoc,contract>" else " fastmath<contract>"
+	"    %t" + at + "s = arith." + MlirStatements(function, at).Operation(entry.kind) + " " + operands + flags + " : f32"
+Register(register Number, at Number) Text
+	Summing.Register(2, 8) is "%t2gs"
+	Summing.Register(5, 9) is "%t8s"
+	let reuse = LoadReuse(function.method.instructions)
+	for at - position - 1
+		let earlier = function.method.instructions(at - 1 - index)
+		let isVariable = earlier.kind is InstructionType.LoadVariableToRegister
+		if reuse.Written(earlier) is register
+			return isVariable then Variable(earlier.texts(0), at - 1 - index) else "%t" + (at - 1 - index) + "s"
+	"%t" + at + "s"
+Variable(name Text, at Number) Text
+	Summing.Variable("sum", 3) is "%t2u0"
+	Summing.Variable("sum", 11) is "%t9s"
+	if name is in ("value", "index")
+		return Temp(name is "value" then "gs" else "cs")
+	for at - position - 1
+		let earlier = function.method.instructions(at - 1 - index)
+		if (earlier.kind is InstructionType.StoreRegisterToVariable) and (earlier.texts(0) is name)
+			return Register(earlier.payload(0), at - 1 - index)
+	name is in Carried then Temp("u" + Carried.Index(name)) else "%t" + at + "s"
+Carried Texts
+	Summing.Carried is ("sum")
+	mutable names = List(Mutable(Text))
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts(0) is not in names)
+			names.Add(entry.texts(0))
+	names
+Repeated(letter Text, suffix Text) Text
+	Summing.Repeated("u", ": f32") is ", %t2u0: f32"
+	Summing.Repeated("", "f32") is ", f32"
+	for Carried
+		", " + (letter is "" then "" else Temp(letter + index)) + suffix
+Narrowed(result Text, wide Text) Texts
+	Summing.Narrowed("%a", "x : f64") is ("    %ad = x : f64", "    %a = arith.truncf %ad : f64 to f32")
+	("    " + result + "d = " + wide, "    " + result + " = arith.truncf " + result + "d : f64 to f32")
+Exited Texts
+	"    %t2e0 = arith.extf %t2u0 : f32 to f64" is in Summing.Exited
+	let exited = MlirFastLoop(function, position).Exited
+	mutable lines = List(Text) + exited.First
+	for Carried
+		let widened = "    " + Temp("e" + index) + " = arith.extf " + Temp("u" + index) + " : f32 to f64"
+		lines = lines + widened + function.Store(Temp("e" + index), "%v_" + value)
+	lines + (exited - exited.First)
+Temp(suffix Text) Text
+	Summing.Temp("u0") is "%t2u0"
+	"%t" + position + suffix

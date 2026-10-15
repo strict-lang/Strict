@@ -4,6 +4,7 @@ has contractions List(Layer)
 has used Number
 constant Model = Gguf("NeuralNetworks/tinyqwen3moe.gguf")
 constant Tiny = Experts.Loaded(Model, "blk.0.")
+constant Single = Experts.Dense(Tiny.expansions.First, Tiny.contractions.First)
 constant Probe = (0.5, -1, 1.5, 2, -0.25, 0.75, 1, -2)
 Loaded(model Gguf, prefix Text) Experts
 	Tiny.expansions.Length is 4
@@ -44,6 +45,12 @@ Forward(input Numbers) Numbers
 	for chosen
 		mixed = Gpt2Block.Added(mixed, Scaled(Expert(value, input), probabilities(value) / total))
 	mixed
+Added(input Numbers, residual Numbers) Numbers
+	Tiny.Added(Probe, Probe).First.IsNearlyEqual(0.9825967035647183, 0.000001) is true
+	Single.Added(Probe, Probe) is Gpt2Block.Added(Probe, Tiny.Expert(0, Probe))
+	if router.weights.Length > 0
+		return Gpt2Block.Added(residual, Forward(input))
+	Layer(contractions.First.weights, residual).Sums(Gated(expansions.First.Sums(input)))
 Shares(probabilities Numbers, chosen Numbers) Numbers
 	Tiny.Shares((0.1, 0.5, 0.4), (1, 2)) is (0.5, 0.4)
 	for chosen

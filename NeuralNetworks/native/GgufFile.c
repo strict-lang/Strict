@@ -346,38 +346,6 @@ static float* Floats(const char* path, const Tensor* tensor, uint64_t count, con
 	return floats;
 }
 
-/* A Q4_K block as 256 nibbles in order and a float scale and minimum for each 32 (packed rows of 4 bits). */
-static void PackedQ4K(const unsigned char* block, unsigned char* nibbles, float* pairs)
-{
-	float d = HalfAt(block), low = HalfAt(block + 2);
-	for (int group = 0; group < 8; group++)
-	{
-		int scale, minimum;
-		ScaleMin(group, block + 4, &scale, &minimum);
-		pairs[2 * group] = d * scale;
-		pairs[2 * group + 1] = low * minimum;
-	}
-	for (int index = 0; index < 256; index += 2)
-	{
-		const unsigned char* q = block + 16 + index / 64 * 32 + index % 32;
-		int high = index % 64 >= 32;
-		int first = high ? q[0] >> 4 : q[0] & 0xF, second = high ? q[1] >> 4 : q[1] & 0xF;
-		nibbles[index / 2] = (unsigned char)(first | second << 4);
-	}
-}
-
-/* A Q6_K block as 256 signed bytes in order and a float scale for each 16 (packed rows of 6 bits). */
-static void PackedQ6K(const unsigned char* block, int8_t* bytes, float* scales)
-{
-	float values[256];
-	float d = HalfAt(block + 208);
-	DecodedQ6K(block, values);
-	for (int group = 0; group < 16; group++)
-		scales[group] = d * ((const int8_t*)(block + 192))[group];
-	for (int index = 0; index < 256; index++)
-		bytes[index] = scales[index / 16] == 0 ? 0 : (int8_t)(values[index] / scales[index / 16]);
-}
-
 static const Tensor* Requested(double path, double name, uint32_t dimensions, const char** failure)
 {
 	*failure = Loaded(strict_text(path));
@@ -416,15 +384,18 @@ STRICT_EXPORT double GgufFile_Values(double self, double path, double name)
 
 /* The rows of the matrix name (its contiguous dimension is a row) packed with bits 32, 16 or 8. Q8_0 rows packed with 8
    bits keep their numbers: their scales are halves, so strict_quantized finds the same scales and bytes again. */
-/* The blocks of one row of a Q4_K or Q6_K matrix as a packed row of 4 or 6 bits. */
+/* The blocks of one row of a Q4_K or Q6_K matrix as a packed row of 4 or 6 bits: Q4_K blocks stay as they are, Q6_K
+   blocks give their half scale d to the end of the row. */
 static void Repacked(const unsigned char* blocks, uint64_t bits, uint64_t width, strict_packed* packed)
 {
-	float* scales = (float*)(packed->data + strict_packed_data(width, bits));
-	for (uint64_t block = 0; block < width / 256; block++)
-		if (bits == 4)
-			PackedQ4K(blocks + block * 144, packed->data + block * 128, scales + block * 16);
-		else
-			PackedQ6K(blocks + block * 210, (int8_t*)packed->data + block * 256, scales + block * 16);
+	uint64_t count = width / 256;
+	if (bits == 4)
+		memcpy(packed->data, blocks, count * 144);
+	for (uint64_t block = 0; bits == 6 && block < count; block++)
+	{
+		memcpy(packed->data + block * 208, blocks + block * 210, 208);
+		memcpy(packed->data + count * 208 + block * 2, blocks + block * 210 + 208, 2);
+	}
 }
 
 /* Rows of 32, 16 or 8 bits, 4 keeps Q4_K and Q6_K matrices in 4 and 6 bits (other types become 8 bits). The matrices of

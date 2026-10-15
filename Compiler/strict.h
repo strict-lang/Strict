@@ -21,17 +21,19 @@ static inline double strict_numbers_result(const strict_numbers* numbers) { retu
 /* Numbers stored with fewer bits: count values as 32 bit floats, 16 bit halves or 8 bit quantized (bits is 32, 16 or 8),
    returned with strict_packed_result. A List(Numbers) result is a strict_numbers whose items are Numbers or packed results,
    one per row. 8 bits are a signed byte per number followed (at a multiple of 4 bytes) by a float scale for every 32
-   numbers, a number is its byte times the scale of its 32 (Q8_0 of ggml with the scales apart, strict_quantized). 6 bits
-   (Q6_K) are a signed byte per number and a float scale for every 16. 4 bits (Q4_K) are a nibble per number (the low one
-   first) followed by a float scale and minimum for every 32, a number is the float scale times the nibble minus the
-   minimum, rounded to a float like ggml does. */
+   numbers, a number is its byte times the scale of its 32 (Q8_0 of ggml with the scales apart, strict_quantized). 4 bits
+   are the Q4_K blocks of ggml (144 bytes for 256 numbers), 6 bits the Q6_K blocks without their half scale d (208
+   bytes for 256 numbers) followed by the d of every block, so each block starts 16 byte aligned, both decode like ggml. */
 typedef struct { double count; double bits; unsigned char data[]; } strict_packed;
 static inline double strict_packed_result(const strict_packed* packed) { return strict_value(0x7FF9000000000000ull | (uint64_t)(uintptr_t)packed); }
-static inline uint64_t strict_packed_data(uint64_t count, uint64_t bits) { return ((bits == 4 ? (count + 1) / 2 : count) + 3) / 4 * 4; }
+static inline uint64_t strict_packed_data(uint64_t count, uint64_t bits)
+{
+	return bits == 4 ? (count + 255) / 256 * 144 : bits == 6 ? (count + 255) / 256 * 208 : (count + 3) / 4 * 4;
+}
 static inline uint64_t strict_packed_bytes(uint64_t count, uint64_t bits)
 {
 	uint64_t data = strict_packed_data(count, bits);
-	return bits == 8 ? data + (count + 31) / 32 * 4 : bits == 6 ? data + (count + 15) / 16 * 4 : bits == 4 ? data + (count + 31) / 32 * 8 : count * bits / 8;
+	return bits == 8 ? data + (count + 31) / 32 * 4 : bits == 6 ? data + ((count + 255) / 256 * 2 + 3) / 4 * 4 : bits == 4 ? data : count * bits / 8;
 }
 /* Packs count floats (stride apart) into 8 bits, the scale of 32 numbers is their largest magnitude / 127. */
 static inline void strict_quantized(strict_packed* packed, const float* values, uint64_t count, uint64_t stride)
