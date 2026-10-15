@@ -1,0 +1,4 @@
+Value(path Text, key Text) Text
+Shape(path Text, name Text) Numbers
+Values(path Text, name Text) Numbers
+Rows(path Text, name Text, bits Number) List(Numbers)

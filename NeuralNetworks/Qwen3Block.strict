@@ -1,0 +1,94 @@
+has attentionNorm Numbers
+has attention Layer
+has projection Layer
+has queryNorm Numbers
+has keyNorm Numbers
+has mlpNorm Numbers
+has expansion Layer
+has contraction Layer
+has heads Number
+has keys List(Numbers) = List(Numbers)
+has values List(Numbers) = List(Numbers)
+has queries List(Numbers) = List(Numbers)
+constant Epsilon = 0.000001
+constant Weights = Gguf("NeuralNetworks/tinyqwen3.gguf")
+constant Tiny = Qwen3Block.Loaded(Weights, "blk.0.", 2)
+Loaded(model Gguf, prefix Text, queryHeads Number) Qwen3Block
+	Tiny.attention.weights.Length is 16
+	Tiny.expansion.weights.Length is 32
+	let attended = Dense(model, prefix, ("attn_q", "attn_k", "attn_v"))
+	let projected = Dense(model, prefix, List(Text) + "attn_output")
+	let expanded = Dense(model, prefix, ("ffn_gate", "ffn_up"))
+	let contracted = Dense(model, prefix, List(Text) + "ffn_down")
+	let norms = Norms(model, prefix)
+	Qwen3Block(norms(0), attended, projected, norms(1), norms(2), norms(3), expanded, contracted, queryHeads)
+Dense(model Gguf, prefix Text, names Texts) Layer
+	Tiny.Dense(Weights, "blk.0.", List(Text) + "ffn_down").weights.Length is 8
+	Tiny.Dense(Weights, "blk.0.", List(Text) + "ffn_down").biases.Length is 8
+	mutable rows = List(Numbers)
+	for names
+		rows = rows + model.Rows(prefix + value + ".weight")
+	Layer(rows, Layer.Zeros(rows.Length))
+Norms(model Gguf, prefix Text) List(Numbers)
+	Tiny.Norms(Weights, "blk.0.").Length is 4
+	for ("attn_norm", "attn_q_norm", "attn_k_norm", "ffn_norm")
+		model.Values(prefix + value + ".weight")
+Cached(input Numbers, rotation List(Numbers)) Qwen3Block
+	Tiny.Cached((1, 2, 3, 4, 5, 6, 7, 8), ((1, 1), (0, 0))).keys.Length is 1
+	Tiny.Cached((1, 2, 3, 4, 5, 6, 7, 8), ((1, 1), (0, 0))).queries.Length is 2
+	let combined = attention.Sums(Normalized(input, attentionNorm))
+	let size = queryNorm.Length
+	let groups = (combined.Length / size - heads) / 2
+	let queried = Heads(combined, 0, heads, queryNorm, rotation)
+	let keyed = Heads(combined, heads * size, groups, keyNorm, rotation)
+	let appended = Gpt2Block.Appended(values, combined, (heads + groups) * size)
+	Qwen3Block(value, keys = keys + keyed, values = appended, queries = queried)
+Heads(combined Numbers, start Number, count Number, weights Numbers, rotation List(Numbers)) List(Numbers)
+	Tiny.Heads((1, 2, 3, 4), 0, 1, (1, 1, 1, 1), ((1, 1), (0, 0))).First.First.IsNearlyEqual(0.365148) is true
+	let size = weights.Length
+	for count
+		Rotated(Normalized(Safetensors.Part(combined, start + index * size, size, 1), weights), rotation)
+Rotated(head Numbers, rotation List(Numbers)) Numbers
+	Tiny.Rotated((1, 2, 3, 4), ((1, 1), (0, 0))) is (1, 2, 3, 4)
+	Tiny.Rotated((1, 2, 3, 4), ((0, 0), (1, 1))) is (-3, -4, 1, 2)
+	let half = head.Length / 2
+	let cosines = rotation.First
+	let sines = rotation.Last
+	for head
+		let turn = index % half
+		let sign = index < half then -1 else 1
+		value * cosines(turn) + sign * head((index + half) % head.Length) * sines(turn)
+Normalized(input Numbers, weights Numbers) Numbers
+	Tiny.Normalized((3, 4), (1, 2)).First.IsNearlyEqual(0.848528) is true
+	let scale = 1 / (Layer.Summed(input, input) / input.Length + Epsilon).SquareRoot
+	for input
+		value * scale * weights(index)
+Output(input Numbers) Numbers
+	Tiny.Cached((1, 2, 3, 4, 5, 6, 7, 8), ((1, 1), (0, 0))).Output((1, 2, 3, 4, 5, 6, 7, 8)).Length is 8
+	let attended = Gpt2Block.Added(input, projection.Sums(Merged))
+	let expanded = expansion.Sums(Normalized(attended, mlpNorm))
+	Gpt2Block.Added(attended, contraction.Sums(Gated(expanded)))
+Merged Numbers
+	Tiny.Cached((1, 2, 3, 4, 5, 6, 7, 8), ((1, 1), (0, 0))).Merged.Length is 8
+	mutable merged = List(Number)
+	for heads
+		merged = merged + Attended(index)
+	merged
+Attended(head Number) Numbers
+	Tiny.Cached((1, 2, 3, 4, 5, 6, 7, 8), ((1, 1), (0, 0))).Attended(1).Length is 4
+	let size = queryNorm.Length
+	let group = (head * values.Length / size / heads).Floor
+	let weights = Network.Softmax(Scores(head, group))
+	for size
+		Layer.Summed(values(group * size + index), weights)
+Scores(head Number, group Number) Numbers
+	Tiny.Cached((1, 2, 3, 4, 5, 6, 7, 8), ((1, 1), (0, 0))).Scores(0, 0).Length is 1
+	let query = queries(head)
+	let groups = values.Length / query.Length
+	for keys.Length / groups
+		Layer.Summed(keys(index * groups + group), query) / query.Length.SquareRoot
+Gated(expanded Numbers) Numbers
+	Tiny.Gated((0, 1)) is List(Number) + 0
+	let half = expanded.Length / 2
+	for half
+		expanded(index) / (1 + (-expanded(index)).Exponential) * expanded(index + half)

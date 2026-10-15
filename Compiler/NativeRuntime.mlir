@@ -4709,6 +4709,7 @@
   // ponytail: a launch costs about 130 us of copies and synchronization, so loops reading fewer than 4M numbers
   // stay on the CPU (STRICT_GPU=all sends every loop), keeping results on the device would let smaller loops use it
   llvm.mlir.global internal @strict_gpu_minimum(4194304 : i64) : i64
+  llvm.mlir.global internal @strict_gpu_setting(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<14xi64>) : !llvm.array<14 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00") : !llvm.array<220 x i8>
@@ -4730,26 +4731,40 @@
     llvm.store %result, %stateSlot : i64, !llvm.ptr
     return %opened : i1
   }
-  func.func private @strict_gpu_open() -> i1 {
-    %false = arith.constant false
+  func.func private @strict_gpu_threshold() -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %settingSlot = llvm.mlir.addressof @strict_gpu_setting : !llvm.ptr
+    %minimumSlot = llvm.mlir.addressof @strict_gpu_minimum : !llvm.ptr
+    %read = llvm.load %settingSlot : !llvm.ptr -> i64
+    %isRead = arith.cmpi ne, %read, %zero : i64
+    cf.cond_br %isRead, ^known, ^read
+  ^read:
+    llvm.store %one, %settingSlot : i64, !llvm.ptr
     %name = llvm.mlir.addressof @strict_gpu_switch : !llvm.ptr
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
-    cf.cond_br %isUnset, ^library, ^checkSetting
-  ^checkSetting:
+    cf.cond_br %isUnset, ^known, ^setting
+  ^setting:
     %first = llvm.load %setting : !llvm.ptr -> i8
     %off = arith.constant 48 : i8
-    %disabled = arith.cmpi eq, %first, %off : i8
     %letterA = arith.constant 97 : i8
+    %disabled = arith.cmpi eq, %first, %off : i8
     %everything = arith.cmpi eq, %first, %letterA : i8
-    %one = arith.constant 1 : i64
-    %minimumSlot = llvm.mlir.addressof @strict_gpu_minimum : !llvm.ptr
+    %never = arith.constant 9223372036854775807 : i64
     %minimum = llvm.load %minimumSlot : !llvm.ptr -> i64
-    %chosen = arith.select %everything, %one, %minimum : i64
+    %wanted = arith.select %everything, %one, %minimum : i64
+    %chosen = arith.select %disabled, %never, %wanted : i64
     llvm.store %chosen, %minimumSlot : i64, !llvm.ptr
-    cf.cond_br %disabled, ^failed, ^library
-  ^library:
+    cf.br ^known
+  ^known:
+    %current = llvm.load %minimumSlot : !llvm.ptr -> i64
+    return %current : i64
+  }
+  func.func private @strict_gpu_open() -> i1 {
+    %false = arith.constant false
+    %unset = llvm.mlir.zero : !llvm.ptr
     %library = func.call @strict_gpu_library() : () -> !llvm.ptr
     %missing = llvm.icmp "eq" %library, %unset : !llvm.ptr
     cf.cond_br %missing, ^failed, ^resolve
@@ -4947,10 +4962,12 @@
     %eight = arith.constant 8 : i64
     %unset = llvm.mlir.zero : !llvm.ptr
     %work = func.call @strict_gpu_work(%count, %source, %kind) : (i64, f64, i64) -> i64
-    %minimumSlot = llvm.mlir.addressof @strict_gpu_minimum : !llvm.ptr
-    %minimum = llvm.load %minimumSlot : !llvm.ptr -> i64
+    %minimum = func.call @strict_gpu_threshold() : () -> i64
     %enough = arith.cmpi sge, %work, %minimum : i64
-    cf.cond_br %enough, ^lookup, ^failed
+    cf.cond_br %enough, ^ready, ^failed
+  ^ready:
+    %isReady = func.call @strict_gpu_ready() : () -> i1
+    cf.cond_br %isReady, ^lookup, ^failed
   ^lookup:
     %function = func.call @strict_gpu_function(%ptx, %name, %slot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
@@ -5062,6 +5079,8 @@
   ^failed:
     return %zero : f64
   }
+  // ponytail: rows of 8 bit numbers count as one number, only STRICT_GPU=all sends them to the GPU: their kernels multiply
+  // every scale in f64 and lose to the CPU (Qwen3 0.6B 80 instead of 56 ms per token), 32 bit sums would change that
   func.func private @strict_gpu_work(%count: i64, %source: f64, %kind: i64) -> i64 {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
@@ -5075,7 +5094,12 @@
     %columnsNumber = func.call @strict_list_length(%first) : (f64) -> f64
     %columns = arith.fptosi %columnsNumber : f64 to i64
     %cells = arith.muli %count, %columns : i64
-    return %cells : i64
+    %bits = func.call @strict_gpu_bits(%first) : (f64) -> i64
+    %eight = arith.constant 8 : i64
+    %one = arith.constant 1 : i64
+    %isQuantized = arith.cmpi eq, %bits, %eight : i64
+    %work = arith.select %isQuantized, %one, %cells : i64
+    return %work : i64
   ^elements:
     return %count : i64
   }

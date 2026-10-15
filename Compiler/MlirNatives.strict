@@ -105,10 +105,19 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	MlirNatives(Texts, 2).Emitted(Search, TextType, "strict_text_index").Length is 4
 	let calls = MlirCalls(function, position)
 	let count = entry.payload(5 + entry.payload(3))
-	let operands = List(Text) + calls.Temp("m") + calls.ArgumentNames(count)
-	let hasStart = helper is in DefaultedLast
-	let completed = hasStart and (count is 1) then operands + "%zero" else operands
 	let owner = calls.Owner(entry, type)
+	let textual = Textual(entry, Element(owner), count)
+	let arguments = textual.Length > 0 then List(Text) + calls.Temp("ct") else calls.ArgumentNames(count)
+	let operands = List(Text) + calls.Temp("m") + arguments
+	let completed = (helper is in DefaultedLast) and (count is 1) then operands + "%zero" else operands
 	let plain = MlirMemory(function, position).Passed(calls.Temp("r"), helper, completed, Element(owner))
 	let call = helper.StartsWith("strict_dictionary_") then Keying(helper, completed, owner) else plain
-	calls.Loads(entry, type) + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))
+	calls.Loads(entry, type) + textual + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))
+Textual(entry InstructionEntry, element Text, count Number) Texts
+	MlirNatives(Texts, 2).Textual(Search, "Text", 1).Length is 0
+	let register = entry.payload(6 + entry.payload(3))
+	let isCharacter = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register)) is "Character"
+	if (element is not "Text") or (count is not 1) or (isCharacter is false)
+		return List(Text)
+	let calls = MlirCalls(function, position)
+	List(Text) + MlirMemory(function, position).Called(calls.Temp("ct"), "strict_character_text", calls.ArgumentNames(1))

@@ -1,0 +1,13 @@
+has model Generic
+Generated(prompt Numbers, count Number) Numbers
+	Generation(Gpt2.Tiny).Generated((1, 2), 4) is (3, 2, 2, 3)
+	Generation(Qwen3.Tiny).Generated((1, 2, 3), 6) is (2, 1, 0, 4, 4, 4)
+	mutable current = model
+	for prompt
+		current = current.Step(value, index)
+	mutable generated = List(Mutable(Number))
+	for count
+		let token = current.Next
+		generated.Add(token)
+		current = current.Step(token, prompt.Length + index)
+	generated

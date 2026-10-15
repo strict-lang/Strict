@@ -32,7 +32,7 @@ Cached(input Numbers) Gpt2Block
 	let combined = attention.Sums(Normalized(input, attentionGain, attentionBias))
 	let size = combined.Length / 3
 	let queried = Split(combined, 0)
-	Gpt2Block(value, keys = keys + Split(combined, size), values = Appended(combined, 2 * size), queries = queried)
+	Gpt2Block(value, keys = keys + Split(combined, size), values = Appended(values, combined, 2 * size), queries = queried)
 Split(combined Numbers, start Number) List(Numbers)
 	Tiny.Split(Tiny.attention.biases, 12).First is List(Number) + Tiny.attention.biases(12)
 	let size = combined.Length / 3 / Heads
@@ -62,10 +62,11 @@ Scores(head Number) Numbers
 	let scale = query.Length.SquareRoot
 	for keys.Length / Heads
 		Layer.Summed(keys(index * Heads + head), query) / scale
-Appended(combined Numbers, start Number) List(Numbers)
-	Tiny.Appended((1, 2, 3, 4, 5), 3).Last is List(Number) + 5
+Appended(cached List(Numbers), combined Numbers, start Number) List(Numbers)
+	Tiny.Appended(List(Numbers), (1, 2, 3, 4, 5), 3).Last is List(Number) + 5
+	Tiny.Appended(List(Numbers) + (1, 2), (3, 4, 5), 2).First is (1, 2, 5)
 	for combined.Length - start
-		(values.Length is 0 then List(Number) else values(index)) + combined(start + index)
+		(cached.Length is 0 then List(Number) else cached(index)) + combined(start + index)
 Normalized(input Numbers, gain Numbers, bias Numbers) Numbers
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).First.IsNearlyEqual(-1.2247356859083902) is true
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).Last.IsNearlyEqual(2.2247356859083902) is true

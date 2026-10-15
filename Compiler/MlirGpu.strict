@@ -11,15 +11,14 @@ constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, 
 Launched Texts
 	Doubling.Launched.Last is "  ^loop2host:"
 	Randomizing.Launched.Length is 0
+	Text.Combine(Doubling.Launched).IndexOf("strict_gpu_ready") is -1
 	if MlirGpuCheck(function, position).IsGpu is false
 		return List(Text)
-	let ready = "    " + Temp("gr") + " = func.call @strict_gpu_ready() : () -> i1"
 	let count = "    " + Temp("gc") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
 	let threshold = MlirTyped.Integer.Constant(Temp("gt"), MlirParallel.Threshold to Text)
 	let enough = "    " + Temp("ge") + " = arith.cmpi sge, " + Temp("gc") + ", " + Temp("gt") + " : i64"
-	let both = "    " + Temp("gb") + " = arith.andi " + Temp("gr") + ", " + Temp("ge") + " : i1"
-	let branch = "    cf.cond_br " + Temp("gb") + ", ^loop" + position + "gpu, ^loop" + position + "host"
-	(ready, count, threshold, enough, both, branch) + Run + ("  ^loop" + position + "host:")
+	let branch = "    cf.cond_br " + Temp("ge") + ", ^loop" + position + "gpu, ^loop" + position + "host"
+	(count, threshold, enough, branch) + Run + ("  ^loop" + position + "host:")
 Run Texts
 	Text.Combine(Doubling.Run).IndexOf("%t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gy)") > 0 is true
 	let name = MlirDevice(function, position).Name

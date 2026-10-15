@@ -1,0 +1,16 @@
+has logger
+constant Folder = "NeuralNetworks/qwen3/"
+constant Address = "https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf"
+constant Prompt = "Alan Turing theorized that computers would one day become"
+constant Count = 20
+Run
+	if File(Folder + "model.gguf").Exists is false
+		Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + "model.gguf\" \"" + Address + "\"")
+	let started = Process.Elapsed
+	let tokenizer = Gpt2Tokens.Loaded(Gguf(Folder + "model.gguf"))
+	let model = Qwen3.Loaded(Folder + "model.gguf", 8)
+	let loaded = Process.Elapsed
+	let generated = Generation(model).Generated(tokenizer.Encoded(Prompt), Count)
+	let milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
+	logger.Log(Prompt + tokenizer.Decoded(generated))
+	logger.Log("Qwen3 0.6B loaded in " + ((loaded - started) * 1000).Round + " ms, " + milliseconds + " ms per token")

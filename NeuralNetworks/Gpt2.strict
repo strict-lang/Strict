@@ -35,14 +35,3 @@ Logits(normed Numbers) Numbers
 	Tiny.Logits((1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)).Length is 5
 	for tokens
 		Layer.Summed(value, normed)
-Generated(prompt Numbers, count Number) Numbers
-	Tiny.Generated((1, 2), 4) is (3, 2, 2, 3)
-	mutable model = value
-	for prompt
-		model = model.Step(value, index)
-	mutable generated = List(Mutable(Number))
-	for count
-		let token = model.Next
-		generated.Add(token)
-		model = model.Step(token, prompt.Length + index)
-	generated

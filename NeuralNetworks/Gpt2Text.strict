@@ -11,7 +11,7 @@ Run
 	let tokenizer = Gpt2Tokens.Parsed(File(Folder + "vocab.json").ReadLines.First, File(Folder + "merges.txt").ReadLines)
 	let model = Gpt2.Loaded(Folder + "model.safetensors", 16)
 	let loaded = Process.Elapsed
-	let generated = model.Generated(tokenizer.Encoded(Prompt), Count)
+	let generated = Generation(model).Generated(tokenizer.Encoded(Prompt), Count)
 	let milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
 	logger.Log(Prompt + tokenizer.Decoded(generated))
 	logger.Log("GPT-2 loaded in " + ((loaded - started) * 1000).Round + " ms, " + milliseconds + " ms per token")

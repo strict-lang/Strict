@@ -1,6 +1,7 @@
 has tokens Texts
 has ids Dictionary(Text, Number)
 has ranks Dictionary(Number, Number)
+has isQwen Boolean = false
 constant Tiny = Gpt2Tokens.Parsed("{\"a\": 0, \"b\": 1, \"\\u0120\": 2, \"ab\": 3, \"\\u0120ab\": 4}", ("#version: 0.2", "a b", "Ġ ab"))
 Parsed(vocabulary Text, merges Texts) Gpt2Tokens
 	Tiny.tokens is ("a", "b", " ", "ab", " ab")
@@ -10,6 +11,16 @@ Parsed(vocabulary Text, merges Texts) Gpt2Tokens
 	for ordered
 		known(value) = index
 	Gpt2Tokens(ordered, known, Ranked(merges, known))
+Loaded(model Gguf) Gpt2Tokens
+	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).Encoded("ab c") is (4, 5)
+	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).isQwen is true
+	mutable raw = List(Mutable(Text))
+	mutable known = Dictionary(Text, Number)
+	for model.Value("tokenizer.ggml.tokens").Lines
+		raw.Add(Raw(value))
+		known(raw.Last) = index
+	let ranked = Ranked(model.Value("tokenizer.ggml.merges").Lines, known)
+	Gpt2Tokens(raw, known, ranked, model.Value("tokenizer.ggml.pre") is "qwen2")
 Vocabulary(json Text) Texts
 	Vocabulary("{\"\\\"\": 0, \"\\\\\": 1, \"\\u0120a\": 2}") is ("\"", "\\", " a")
 	mutable parsed = List(Mutable(Text))
@@ -52,7 +63,7 @@ Ranked(merges Texts, known Dictionary(Text, Number)) Dictionary(Number, Number)
 	Tiny.ranks(13) is 1
 	mutable ranked = Dictionary(Number, Number)
 	for merges
-		if (index > 0) and (" " is in value)
+		if (" " is in value) and (value.StartsWith("#version") is false)
 			let parts = value.Split(" ")
 			ranked(known(Raw(parts(0))) * known.Length + known(Raw(parts(1)))) = index - 1
 	ranked
@@ -73,7 +84,7 @@ Decoded(tokenIds Numbers) Text
 Encoded(text Text) Numbers
 	Tiny.Encoded(" ab a") is (4, 2, 0)
 	mutable encoded = List(Mutable(Number))
-	for Words(text)
+	for TokenSplitter(isQwen).Words(text)
 		encoded = encoded + Merged(value)
 	encoded
 Merged(word Text) Numbers
@@ -104,38 +115,3 @@ Joined(symbols Numbers, at Number) Numbers
 	for symbols
 		if index is not at + 1
 			index is at then merged else value
-Words(text Text) Texts
-	Words("Hi there's  42!") is ("Hi", " there", "'s", " ", " 42", "!")
-	Words("a\n b ") is ("a", "\n", " b", " ")
-	mutable words = List(Mutable(Text))
-	mutable start = 0
-	for as long as start < text.Length
-		let ending = WordEnd(text, start)
-		words.Add(text.Substring(start, ending - start))
-		start = ending
-	words
-WordEnd(text Text, start Number) Number
-	WordEnd("it's", 2) is 4
-	WordEnd("  a", 0) is 1
-	for ("'s", "'t", "'re", "'ve", "'m", "'ll", "'d")
-		if text.StartsWith(value, start)
-			return start + value.Length
-	let first = (text(start) is " ") and (Kind(text, start + 1) > 0) then start + 1 else start
-	let kind = Kind(text, first)
-	mutable ending = first + 1
-	for as long as Kind(text, ending) is kind
-		ending = ending + 1
-	(kind is 0) and (Kind(text, ending) > 0) and (ending - start > 1) then ending - 1 else ending
-Kind(text Text, index Number) Number
-	Kind("a 1!", 0) is 1
-	Kind("a 1!", 1) is 0
-	Kind("a 1!", 2) is 2
-	Kind("a 1!", 4) is -1
-	if index >= text.Length
-		return -1
-	let code = text(index).number
-	if (code is 32) or (code is in Range(9, 14))
-		return 0
-	if (code > 127) or (code is in Range(65, 91)) or (code is in Range(97, 123))
-		return 1
-	code is in Range(48, 58) then 2 else 3
