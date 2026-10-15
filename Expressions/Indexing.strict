@@ -6,6 +6,7 @@ constant Located = Scope(List(Text) + "t", List(Text) + "Trigger")
 IsIndexed(typeName Text, name Text, arguments Number) Boolean
 	Indexing(KnownTypes.Sample).IsIndexed("Count", "number", 1) is true
 	Triggers.IsIndexed("Trigger", "Position", 1) is true
+	Inferring.TypeOf(Positioned, Located, KnownTypes.NoMembers) is "Number"
 	Triggers.IsIndexed("Trigger", "Moved", 1) is false
 	Indexing(KnownTypes.Sample).IsIndexed("Count", "Twice", 1) is false
 	if types.MembersOf(typeName).TypeOf(name) is not ""

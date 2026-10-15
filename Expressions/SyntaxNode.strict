@@ -39,6 +39,8 @@ CallText Text
 		return text + "(" + ArgumentsText(0) + ")"
 	if Kind is "MethodCall"
 		return ChildText(0, 21) + "." + text + "(" + ArgumentsText(1) + ")"
+	if Kind is "Index"
+		return ChildText(0, 21) + "(" + ArgumentsText(1) + ")"
 	if Kind is "Member"
 		return ChildText(0, 21) + "." + text
 	UnaryText

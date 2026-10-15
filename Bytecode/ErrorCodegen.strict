@@ -15,7 +15,10 @@ constant NewSize = SyntaxNode("Call", "Size", ValueCodegen.One)
 constant Sizing = ErrorCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Size", List(Scope) + Scope(List(Text) + "Width", List(Text) + "Number"), List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + TypeShape.Constrained, List(Text) + "true")), CallTarget.NoScopes), Scope(List(Text), List(Text)), CallTarget.Plain))
 Folded(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Folded(ValueCodegen.One, CodeBlock.Empty).text is "1"
-	ConversionCodegen(values).Typed(ConstantFolding(values.target.TypeName, values.inference).Folded(node), block)
+	Plain.Folded(SyntaxParser(Tokenizer("outer.B.Greet").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Type"
+	let folding = ConstantFolding(values.target.TypeName, values.inference)
+	let typed = block.scope.TypeOf("outer") is "" then folding.Outer(node) else node
+	ConversionCodegen(values).Typed(folding.Folded(typed), block)
 Handled(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Handled(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	Dispatched(Folded(node, block), block)
@@ -23,7 +26,7 @@ Dispatched(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Dispatched(ValueCodegen.One, CodeBlock.Empty).register is 1
 	if node.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
 		return values.Leaf(node, block)
-	if (node.Kind is in ("Call", "Member", "MethodCall", "Not")) or (node.text is "to")
+	if (node.Kind is in ("Call", "Member", "MethodCall", "Not", "Index")) or (node.text is "to")
 		return values.Call(node, block)
 	OperatorCodegen(values).Operation(node, block)
 Checked(node SyntaxNode, block CodeBlock) CodeBlock
@@ -53,7 +56,7 @@ MayFail(node SyntaxNode, block CodeBlock) Boolean
 		return IsFailing(node, block)
 	if (node.Kind is "Call") and (node.text is in ("List", "Dictionary", "Mutable"))
 		return (node.text is "Mutable") and MayFail(node.children(0), block)
-	(node.Kind is in ("Call", "MethodCall")) or (node.Kind is "Member") and values.IsMethodCall(node, block)
+	(node.Kind is in ("Call", "MethodCall", "Index")) or (node.Kind is "Member") and values.IsMethodCall(node, block)
 IsFailing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsFailing(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
 	Plain.IsFailing(ValueCodegen.ToText, CodeBlock.Empty) is true

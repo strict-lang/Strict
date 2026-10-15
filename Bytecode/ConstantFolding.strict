@@ -64,7 +64,7 @@ Constant(node SyntaxNode) SyntaxNode
 	isError then SyntaxNode("Call", "Error", SyntaxNode("Text", "\"" + node.text + "\"")) else aliased
 Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 	Limits.Aliased(Limit, List(Text) + "Count.Limit").Kind is "Identifier"
-	let isOther = (node.Kind is "Member") and (node.children(0).Kind is "Identifier")
+	let isOther = (node.Kind is "Member") and (node.children(0).Kind is in ("Identifier", "Type"))
 	if node.Kind is not "Identifier" and (isOther is false)
 		return node
 	let owner = isOther then node.children(0).text else typeName
@@ -77,14 +77,24 @@ Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 Qualified(node SyntaxNode) SyntaxNode
 	Limits.Qualified(SyntaxNode("Binary", "*", (Limit, Two))) to Text is "Count.Limit * 2"
 	Limits.Qualified(SyntaxNode("Call", "Twice", (Two, Two))) to Text is "Count.Twice(2, 2)"
+	Limits.Qualified(Limit).children(0).Kind is "Type"
 	if (node.Kind is "Identifier") and inference.ConstantOf(typeName, node.text) is not ""
-		return SyntaxNode("Member", node.text, SyntaxNode("Identifier", typeName))
+		return SyntaxNode("Member", node.text, SyntaxNode("Type", typeName))
 	mutable qualified = List(Mutable(SyntaxNode))
 	for node.children
 		qualified.Add(Qualified(value))
 	if (node.Kind is "Call") and (inference.types.MethodsOf(typeName).TypeOf(node.text) is not "")
-		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Identifier", typeName) + qualified)
+		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Type", typeName) + qualified)
 	SyntaxNode(node.Kind, node.text, qualified)
+Outer(node SyntaxNode) SyntaxNode
+	Limits.Outer(SyntaxParser(Tokenizer("outer.Count.Twice").Tokens).Parse).children(0).Kind is "Type"
+	Limits.Outer(SyntaxParser(Tokenizer("outer.index").Tokens).Parse).children(0).Kind is "Identifier"
+	if (node.Kind is "Member") and (node.children(0) to Text is "outer") and inference.types.IsKnown(node.text)
+		return SyntaxNode("Type", node.text, List(SyntaxNode), node.line)
+	mutable children = List(Mutable(SyntaxNode))
+	for node.children
+		children.Add(Outer(value))
+	SyntaxNode(node.Kind, node.text, children, node.line)
 Negated(node SyntaxNode) SyntaxNode
 	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Two)).text is "-2"
 	Limits.Negated(Two).text is "2"

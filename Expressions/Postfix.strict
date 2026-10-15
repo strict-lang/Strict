@@ -1,0 +1,24 @@
+has tokens Texts
+LastDot(start Number, end Number) Number
+	Postfix(("a", ".", "b", ".", "c")).LastDot(0, 5) is 3
+	Postfix(("f", "(", "a", ".", "b", ")")).LastDot(0, 6) is -1
+	let brackets = SyntaxParser(tokens)
+	mutable depth = 0
+	mutable dot = -1
+	for end - start
+		depth = depth + brackets.BracketDelta(tokens(start + index))
+		if (depth is 0) and (tokens(start + index) is ".")
+			dot = start + index
+	dot
+IndexStart(start Number, end Number) Number
+	Postfix(("f", "(", "1", ")", "(", "2", ")")).IndexStart(0, 7) is 4
+	Postfix(("f", "(", "1", ")")).IndexStart(0, 4) is -1
+	Postfix(("f", "(", "1", ")", ".", "x")).IndexStart(0, 6) is -1
+	let brackets = SyntaxParser(tokens)
+	mutable depth = 0
+	mutable open = -1
+	for end - start
+		depth = depth + brackets.BracketDelta(tokens(end - 1 - index))
+		if (depth is 0) and (open < 0)
+			open = end - 1 - index
+	open > start then (tokens(open - 1) is ")" then open else -1) else -1

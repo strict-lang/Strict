@@ -25,7 +25,7 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	let isMember = (node.Kind is "MethodCall") and (node.children.Length is in (2, 3))
 	let isConstant = isMember and IsConstantList(node)
 	let isOwned = isMember and IsOwnedList(node, block)
-	isMember and (node.text is "value") or isConstant or isOwned
+	isMember and (node.text is "value") or isConstant or isOwned or (node.Kind is "Index")
 IsOwnedList(node SyntaxNode, block CodeBlock) Boolean
 	Positioning.IsOwnedList(Indexing.Positioned, CodeBlock.Empty.Declare("t", "Trigger")) is true
 	let type = values.TypeOf(node.children(0), block)
@@ -49,7 +49,7 @@ Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "failed", One), Failed).instructions.Last.kind is InstructionType.Invoke
 	Plain.Indexed(SyntaxNode("Call", "named", One), Named).instructions.Last.kind is InstructionType.Invoke
 	let isCall = node.Kind is "Call"
-	let named = isCall then SyntaxNode("Identifier", node.text) else SyntaxNode("Member", node.text, node.children(0))
+	let named = Source(node)
 	if values.TypeOf(named, block).StartsWith("Dictionary(")
 		return ErrorCodegen(values).Handled(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
 	let isError = isCall and (block.scope.TypeOf(node.text) is "Error")
@@ -76,11 +76,17 @@ Element(node SyntaxNode, block CodeBlock) CodeBlock
 	let isComputed = (named.Kind is not "Identifier") and (named.IsLiteral is false)
 	let isNamed = (node.Kind is "Call") and (isComputed is false)
 	let name = isNamed then node.text else "list" + block.nextId
-	let source = node.Kind is "Call" then named else SyntaxNode("Member", node.text, node.children(0))
+	let source = node.Kind is "Call" then named else Source(node)
 	let list = isNamed then ErrorScope(values).Guarded(node.text, block) else values.Expression(source, block)
 	let stored = isNamed then list else list.Stored(name).WithNextId
 	let index = values.Expression(GridIndex(node), stored)
 	index.Load(InstructionEntry(InstructionType.IndexCall, List(Text) + name, (index.register, index.Result, -1)))
+Source(node SyntaxNode) SyntaxNode
+	Plain.Source(SyntaxNode("Index", "", (ValueCodegen.Ones, One))) is ValueCodegen.Ones
+	Plain.Source(SyntaxNode("Call", "text", One)).Kind is "Identifier"
+	if node.Kind is "Index"
+		return node.children(0)
+	node.Kind is "Call" then SyntaxNode("Identifier", node.text) else SyntaxNode("Member", node.text, node.children(0))
 GridIndex(node SyntaxNode) SyntaxNode
 	Plain.GridIndex(SyntaxNode("MethodCall", "a", (NoNode, One))).text is "1"
 	Plain.GridIndex(SyntaxNode("MethodCall", "a", (NoNode, One, Hi))) to Text is "1 + x.Size.Width * \"Hi\""

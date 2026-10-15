@@ -74,6 +74,7 @@ Bootstrap a fresh checkout from the checked-in seed (the compiler itself as MLIR
 - `(x)` is just `x`, not a list; a single-element list is built with `List(Number) + x`.
 - `and`, `or` and `xor` of two Numbers are bitwise on their integer values (64-bit two's complement): `12 and 10 is 8`, `12 xor 10 is 6`.
 - Keywords and operator words (`from`, `to`, `is`, `in`, `and`, `or`, `not`, `constant`, `mutable`, `let`, ...) can't be names. A parameter called `value` collides with the implicit instance `value`.
+- The innermost name wins: a method, member or variable named like a type (`Marker`) is that method, member or variable in its scope, `outer.Marker` is the type (outside of a `for`, inside one `outer` is the outer value). Using such a method like the type says so: `MethodNotFound: Number.Unplaced, local Marker hides the type Marker, use outer.Marker`.
 - Members don't repeat their type when the name already says it: `has number`, not `has number Number`.
 - Test lines are Boolean comparisons (`is`, `is not`, `>`, `<`) at the start of each method; every method needs at least one.
 - Other packages are referenced as `Package/Type` only in declarations (members, parameters, return types), method bodies use the plain type name.

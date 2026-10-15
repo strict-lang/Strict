@@ -18,18 +18,19 @@ ConstantOf(typeName Text, name Text) Text
 	NoInference.ConstantOf("A", "Missing") is ""
 	let index = types.names.Index(typeName)
 	index is -1 then "" else constants(index).TypeOf(name)
-TypeOf(node SyntaxNode, scope Scope, current Scope) Text
+TypeOf(node SyntaxNode, scope Scope, own Scope) Text
 	NoInference.TypeOf(SyntaxNode("Number", "1"), NoShape, NoShape) is "Number"
-	Indexing.Inferring.TypeOf(Indexing.Positioned, Indexing.Located, NoShape) is "Number"
-	if node.Kind is in ("Number", "Text", "Boolean")
-		return node.Kind
+	NoInference.TypeOf(SyntaxNode("Type", "A"), NoShape, NoShape) is "A"
+	NoInference.TypeOf(SyntaxParser(Tokenizer("(\"a\", \"b\", \"c\")(1)").Tokens).Parse, NoShape, NoShape) is "Text"
+	if node.Kind is in ("Number", "Text", "Boolean", "Type")
+		return node.Kind is "Type" then node.text else node.Kind
 	if node.Kind is "Identifier"
-		return IdentifierType(node.text, scope, current)
+		return IdentifierType(node.text, scope, own)
 	if node.Kind is "Call"
-		return node.text is "List" then ConstructedType(node.children(0)) + "s" else Called(node, scope, current)
-	if node.Kind is in ("Member", "MethodCall")
-		return MemberCallType(node, scope, current)
-	OperatorType(node, scope, current)
+		return node.text is "List" then ConstructedType(node.children(0)) + "s" else Called(node, scope, own)
+	if node.Kind is "Index"
+		return types.ElementType(TypeOf(node.children(0), scope, own))
+	node.Kind is in ("Member", "MethodCall") then MemberCallType(node, scope, own) else OperatorType(node, scope, own)
 ConstructedType(node SyntaxNode) Text
 	NoInference.ConstructedType(SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "Text"), NoNode))) is "Text"
 	(node.Kind is "Call") and (node.text is "Mutable") then ConstructedType(node.children(0)) else node.text

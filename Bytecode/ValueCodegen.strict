@@ -112,6 +112,9 @@ Replacing(node SyntaxNode, block CodeBlock) CodeBlock
 IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is true
 	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false
+	Plain.IsTypeName(SyntaxNode("Type", "Run"), CodeBlock.Empty) is true
+	if node.Kind is "Type"
+		return true
 	(node.Kind is "Identifier") and (block.scope.TypeOf(node.text) is "") and inference.types.IsKnown(node.text)
 Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeBlock
 	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1, "Text").instructions(0).texts.Last is "Strict/Text"

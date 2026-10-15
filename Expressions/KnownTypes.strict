@@ -69,8 +69,11 @@ ElementType(typeName Text) Text
 MemberType(instanceType Text, name Text) Text
 	Sample.MemberType("Count", "Increment") is "Count"
 	Sample.MemberType("Unknown", "Length") is "Unknown"
+	Sample.MemberType("outer", "Count") is "Count"
 	Sample.MemberType("List(Text, Number)", "Key") is "Text"
 	Sample.MemberType("List(Text, Number)", "Value") is "Number"
+	if (instanceType is "outer") and IsKnown(name)
+		return name
 	let pair = MethodBodies.Pair(instanceType)
 	if (pair.Length is 0) or (name is not in ("Key", "Value"))
 		return ResolvedType(instanceType, name, 3)

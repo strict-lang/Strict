@@ -10,6 +10,7 @@ constant MissingCall = ScopedStatement(SyntaxParser(Tokenizer("count.Missing").T
 constant Untested = ("Twice(number Number) Number", "\tTwice(2) is 4")
 constant OtherName = ScopedStatement(SyntaxParser(Tokenizer("count + other").Tokens).Parse, Counted, 0)
 constant Requiring = FileCheck(TypeInference(KnownTypes(List(Text) + "Count", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "Twice", List(Text) + "Count"), List(Scope) + Scope(("Twice", "Twice required"), ("times", "1"))), List(Scope) + KnownTypes.NoMembers), ("Count", "Text"))
+constant HiddenCall = SyntaxParser(Tokenizer("Count.Missing").Tokens).Parse
 constant Flagged = Scope(List(Text) + "flag", List(Text) + "Boolean")
 constant FlagLoop = ScopedStatement(StatementParser(Tokenizer("for flag").Tokens).ParseStatement, Flagged, 0)
 Unknown(scoped ScopedStatement, current Scope) Text
@@ -51,13 +52,16 @@ UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.CallIssue(MissingCall.statement, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Requiring.CallIssue(TwiceCall.statement, Counted, KnownTypes.NoMembers) is "ArgumentMissing: Count.Twice got 0 of 1"
+	Counting.CallIssue(HiddenCall, Counted, Scope(List(Text) + "Count", List(Text) + "Text")).EndsWith("use outer.Count")
 	let instance = inference.TypeOf(call.children(0), scope, current)
+	let hidden = call.children(0).text
+	let isHidden = (call.children(0).Kind is "Identifier") and inference.types.IsKnown(hidden) and (instance is not hidden)
+	let hint = isHidden then ", local " + hidden + " hides the type " + hidden + ", use outer." + hidden else ""
 	if IsMissing(instance, call.text)
-		return "MethodNotFound: " + instance + "." + call.text
-	let arguments = call.children.Length - 1
+		return "MethodNotFound: " + instance + "." + call.text + hint
 	let fewest = Fewest(instance, call.text)
-	let issue = "ArgumentMissing: " + instance + "." + call.text + " got " + arguments + " of " + fewest
-	fewest > arguments then issue else ""
+	let issue = "ArgumentMissing: " + instance + "." + call.text + " got " + (call.children.Length - 1) + " of " + fewest
+	fewest > call.children.Length - 1 then issue else ""
 Fewest(instance Text, name Text) Number
 	Requiring.Fewest("Count", "Twice") is 1
 	Counting.Fewest("Count", "Twice") is 0

@@ -6,5 +6,6 @@ Reverse Numbers
 Added(other Numbers) Numbers
 	ReverseList(1, 2).Added((10, 20)) is (11, 22)
 	ReverseList(1, 2, 3).Added((10, 20)) is Error
+	ReverseList(1, 2).Added((10, 20))(1) is 22
 	for numbers
 		value + other(index)
