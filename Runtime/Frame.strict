@@ -81,7 +81,7 @@ Indexed(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Indexed(InstructionEntry(InstructionType.IndexCall, "a", (6, 8, 7)), Listed, 0).Traces.Length > 0 is true
 	let collection = Local(entry.payload(2), slots)
 	let wrapped = Accessor(machine).Wrapped(collection, slots(entry.payload(1)).number)
-	wrapped < 0 then Traced(VmValue.OfError(method.Name), position) else Accessor(machine).Item(collection, wrapped)
+	wrapped < 0 then Traced(VmValue.OfError("IndexOutOfRange"), position) else Accessor(machine).Item(collection, wrapped)
 Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Calling.Invoked(Calling.method.instructions.First, Listed, 0).Traces.IndexOf("at Caller.Run") > 0 is true
 	let call = Called(entry, slots)

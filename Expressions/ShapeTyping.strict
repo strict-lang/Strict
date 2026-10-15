@@ -1,5 +1,6 @@
 has inference TypeInference
 constant NoScope = Scope(List(Text), List(Text))
+constant Chained = ShapeTyping(TypeInference(KnownTypes(("Box", "Item"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + "Inner", List(Text) + "Item"), Scope(List(Text) + "Weight", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (Scope(List(Text) + "Sample", List(Text) + "Box(3).Inner"), KnownTypes.NoMembers)))
 constant Counting = ShapeTyping(ResolveCheck.Counting)
 constant Twice = TypeShape("Twice = number * 2")
 constant Next = Tokenizer("Next(add = 1) = number + add").Tokens
@@ -36,11 +37,23 @@ ChainType(tokens Texts, typeName Text, known Scope) Text
 	isInferred then Inferred(node, typeName, known) else ""
 Inferred(node SyntaxNode, typeName Text, known Scope) Text
 	Boxed.Inferred(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
+	Chained.Inferred(SyntaxParser(Tokenizer("Box.Sample.Weight").Tokens).Parse, "User", KnownTypes.NoMembers) is "Number"
 	let owner = node.Kind is "Member" then node.children(0).text else ""
 	let aliased = owner is "" then "" else inference.ConstantOf(owner, node.text)
 	let chained = aliased is "" then "" else ChainType(Tokenizer("constant a = " + aliased).Tokens, owner, NoScope)
 	let current = inference.types.ShapeScope(typeName).WithAll(known.names, known.types)
-	chained is "" then inference.TypeOf(node, NoScope, current) else chained
+	chained is "" then inference.TypeOf(Expanded(node), NoScope, current) else chained
+Expanded(node SyntaxNode) SyntaxNode
+	Chained.Expanded(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse) is SyntaxNode("Type", "Item")
+	let owner = (node.Kind is "Member") and (node.children(0).Kind is "Identifier") then node.children(0).text else ""
+	let definition = inference.types.IsKnown(owner) then inference.ConstantOf(owner, node.text) else ""
+	let typed = definition is "" then "" else ChainType(Tokenizer("constant a = " + definition).Tokens, owner, NoScope)
+	if typed is not ""
+		return SyntaxNode("Type", typed)
+	mutable children = List(Mutable(SyntaxNode))
+	for node.children
+		children.Add(Expanded(value))
+	SyntaxNode(node.Kind, node.text, children, node.line)
 ComputedType(tokens Texts, typeName Text, methods Scope) Text
 	Counting.ComputedType(Next, "Count", KnownTypes.NoMembers) is "Number"
 	let header = HeaderTokens(tokens)

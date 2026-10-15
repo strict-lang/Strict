@@ -1,7 +1,44 @@
 has inference TypeInference
 constant Counting = DefaultCheck(TypeInference(KnownTypes.Sample, (Scope(("Limit", "Started"), ("3", "Count(1, 2)")), KnownTypes.NoMembers)))
+constant Keywords = ("has", "constant", "let", "mutable", "if", "else", "for", "with", "return", "is", "in", "to", "and", "or", "xor", "not", "from", "then")
+constant Moving = List(Text) + "M(from Number) Number"
+constant Countdown = ("Run Number", "\tmutable index = 3", "\tfor as long as index > 0", "\t\tindex", "\tindex")
 constant Sized = List(Text) + "has size Count = Count(1, 2)"
 Unsupported(path Text, lines Texts) Texts
+	Counting.Unsupported("A.strict", Moving).First is "CannotUseKeywordsAsName: from in A.strict:1"
+	Counting.Unsupported("A.strict", Countdown).First is "LoopNameMustNotBeDeclared: index in A.strict:2"
+	Defaults(path, lines) + Keyworded(path, lines) + LoopNames(path, lines)
+LoopNames(path Text, lines Texts) Texts
+	Counting.LoopNames("A.strict", Moving).Length is 0
+	for lines
+		let tokens = Tokenizer(value.Trim).Tokens
+		let isDeclared = value.StartsWith("\t") and (tokens.Length > 1) and (tokens(0) is in ("let", "mutable", "constant"))
+		if isDeclared and (tokens(1) is in ("value", "index")) and HasLoop(lines, index)
+			"LoopNameMustNotBeDeclared: " + tokens(1) + " in " + path + ":" + (index + 1)
+HasLoop(lines Texts, position Number) Boolean
+	DefaultCheck.HasLoop(Countdown, 1) is true
+	DefaultCheck.HasLoop(("Twice(value Number) Number", "\tvalue * 2"), 1) is false
+	mutable header = 0
+	for Range(0, position + 1)
+		if lines(value).StartsWith("\t") is false
+			header = value
+	for Range(header + 1, lines.Length)
+		if lines(value).StartsWith("\t") is false
+			return false
+		if lines(value).Trim.StartsWith("for ")
+			return true
+	false
+Keyworded(path Text, lines Texts) Texts
+	Counting.Keyworded("A.strict", List(Text) + "Moved(other Number) Number").Length is 0
+	mutable issues = List(Mutable(Text))
+	for lines
+		let line = index + 1
+		if TypeShape(lines).IsMethodHeader(value)
+			for HeaderTokens(Tokenizer(value).Tokens).ParameterNames
+				if value is in Keywords
+					issues.Add("CannotUseKeywordsAsName: " + value + " in " + path + ":" + line)
+	issues
+Defaults(path Text, lines Texts) Texts
 	Counting.Unsupported("A.strict", Sized).First.StartsWith("UnsupportedDefault: size in A.strict:1, ") is true
 	Counting.Unsupported("A.strict", ("has a Number = 5", "has c Numbers = List(Number)")).Length is 0
 	Counting.Unsupported("A.strict", List(Text) + "has b Text = Text(other)").Length is 1

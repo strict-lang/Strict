@@ -39,6 +39,10 @@ Sources(linker Linker, linked List(TypeEntry), source Text) Texts
 	paths
 Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 	let normalized = Normalized(path)
+	let above = SourceFiles(".").SubfolderWith("..", type) + SourceFiles(".").SubfolderWith("../..", type)
+	if above is not ""
+		logger.Log("TypeNotFound: " + type + " used in " + path + " is in " + above + ", run strict in the project folder")
+		return List(TypeEntry)
 	if normalized.StartsWith("./") and (normalized.IndexOf("/../") < 0)
 		if Repositories(logger, ".").Downloaded(type) is not ""
 			return Compiled(path, root, withTests)

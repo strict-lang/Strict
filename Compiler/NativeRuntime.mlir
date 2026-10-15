@@ -76,6 +76,7 @@
   llvm.mlir.global internal constant @strict_downcast_prefix("Cannot downcast Text to Number for list: Text \22\00") : !llvm.array<48 x i8>
   llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_key_not_found("KeyNotFound\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @strict_index_out_of_range("IndexOutOfRange\00") : !llvm.array<16 x i8>
   llvm.mlir.global internal constant @strict_duplicate_key("DuplicateKey\00") : !llvm.array<13 x i8>
   func.func private @strict_remainder(%left: f64, %right: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -2641,7 +2642,9 @@
   }
   func.func private @strict_index_error(%name: f64) -> f64 attributes {passthrough = ["noinline"]} {
     %one = arith.constant 1 : i64
-    %error = func.call @strict_error_text(%name) : (f64) -> f64
+    %errorName = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %errorNameBits = func.call @strict_bits(%errorName) : (!llvm.ptr) -> f64
+    %error = func.call @strict_error_text(%errorNameBits) : (f64) -> f64
     %pointer = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
     %nameLength = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
     %afterName = arith.addi %nameLength, %one : i64
@@ -4564,6 +4567,46 @@
     cf.br ^loop(%next, %added : i64, f64)
   ^done:
     return %built : f64
+  }
+  llvm.mlir.global internal @strict_library_error(0 : i64) : i64
+  func.func private @strict_library_enter(%stack: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %tableSlot = llvm.mlir.addressof @strict_gc_table : !llvm.ptr
+    %table = llvm.load %tableSlot : !llvm.ptr -> i64
+    %isReady = arith.cmpi ne, %table, %none : i64
+    cf.cond_br %isReady, ^ready, ^start
+  ^start:
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    return
+  ^ready:
+    %stackValue = llvm.ptrtoint %stack : !llvm.ptr to i64
+    %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
+    llvm.store %stackValue, %stackSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_library_text(%value: f64) -> !llvm.ptr {
+    %kept = func.call @strict_kept_text(%value) : (f64) -> f64
+    %pointer = func.call @strict_ptr(%kept) : (f64) -> !llvm.ptr
+    return %pointer : !llvm.ptr
+  }
+  func.func private @strict_library_failed(%value: f64) -> i32 {
+    %report = func.call @strict_error_report(%value) : (f64) -> f64
+    %text = func.call @strict_library_text(%report) : (f64) -> !llvm.ptr
+    %textValue = llvm.ptrtoint %text : !llvm.ptr to i64
+    %errorSlot = llvm.mlir.addressof @strict_library_error : !llvm.ptr
+    llvm.store %textValue, %errorSlot : i64, !llvm.ptr
+    %failed = arith.constant 1 : i32
+    return %failed : i32
+  }
+  func.func @strict_last_error() -> !llvm.ptr {
+    %errorSlot = llvm.mlir.addressof @strict_library_error : !llvm.ptr
+    %textValue = llvm.load %errorSlot : !llvm.ptr -> i64
+    %text = llvm.inttoptr %textValue : i64 to !llvm.ptr
+    return %text : !llvm.ptr
+  }
+  func.func @strict_release(%text: !llvm.ptr) {
+    llvm.call @free(%text) : (!llvm.ptr) -> ()
+    return
   }
   llvm.mlir.global internal @strict_override_path(0.0 : f64) : f64
   llvm.mlir.global internal @strict_override_text(0.0 : f64) : f64

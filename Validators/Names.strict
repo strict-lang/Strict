@@ -1,11 +1,9 @@
 has lines Texts
-has typeNames Texts
-constant Keywords = ("has", "constant", "let", "mutable", "if", "else", "for", "with", "return", "is", "in", "to", "and", "or", "xor", "not", "from", "then")
-constant Looping = Names(("Filled(value Number) Numbers", "\tfor 3", "\t\tvalue"), ("Number"))
-constant Sample = Names(("has from Text", "constant Number = 3", "Listed Number", "\tlet constant = 1", "\t1"), ("Number", "Text"))
+constant Looping = Names(("Filled(value Number) Numbers", "\tfor 3", "\t\tvalue"))
+constant Sample = Names(("has from Text", "constant Number = 3", "Listed Number", "\tlet constant = 1", "\t1"))
 Issues ValidationIssues
-	Sample.Issues.Length is 4
-	Names(("has text", "Run(count Number) Number", "\tlet total = count", "\ttotal"), ("Text")).Issues.Length is 0
+	Sample.Issues.Length is 3
+	Names(("has text", "Run(count Number) Number", "\tlet total = count", "\ttotal")).Issues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		issues = issues + LineIssues(value, index)
@@ -22,28 +20,15 @@ NameIssues(line Text, name Text, isMethod Boolean, number Number) ValidationIssu
 	Sample.NameIssues("has from Text", "from", false, 1).First to Text is "CannotUseKeywordsAsName: from"
 	Sample.NameIssues("in(other) Boolean", "in", true, 2).Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
-	if (isMethod is false) and (name is in Keywords)
+	if (isMethod is false) and (name is in DefaultCheck.Keywords)
 		issues.Add(ValidationIssue("CannotUseKeywordsAsName", name, number))
 	if IsListPrefixed(line, name)
 		issues.Add(ValidationIssue("ListPrefixIsNotAllowedUseImplementationTypeNameInPlural", name, number))
 	if IsMisnamedConstant(line, name)
 		issues.Add(ValidationIssue("ConstantNameMustNotBeATypeOrMethodName", name, number))
-	if (name is in ("value", "index")) and HasLoop(number - 1)
+	if (name is in ("value", "index")) and DefaultCheck.HasLoop(lines, number - 1)
 		issues.Add(ValidationIssue("LoopNameMustNotBeDeclared", name, number))
 	issues
-HasLoop(position Number) Boolean
-	Looping.HasLoop(0) is true
-	Names(("Twice(value Number) Number", "\tvalue * 2"), ("Number")).HasLoop(1) is false
-	mutable header = 0
-	for Range(0, position + 1)
-		if lines(value).StartsWith("\t") is false
-			header = value
-	for Range(header + 1, lines.Length)
-		if lines(value).StartsWith("\t") is false
-			return false
-		if lines(value).Trim.StartsWith("for ")
-			return true
-	false
 IsListPrefixed(line Text, name Text) Boolean
 	Sample.IsListPrefixed("Listed Number", "Listed") is true
 	Sample.IsListPrefixed("\tlet listed = 1", "listed") is false
@@ -51,13 +36,9 @@ IsListPrefixed(line Text, name Text) Boolean
 	let isListed = (name.StartsWith("List") or name.StartsWith("list")) and (name.Length > 4)
 	isTyped and isListed and (name.Substring(4, 1) is not "(")
 IsMisnamedConstant(line Text, name Text) Boolean
-	Sample.IsMisnamedConstant("constant Number = 3", "Number") is true
-	Sample.IsMisnamedConstant("constant Text = Text(1)", "Text") is false
+	Sample.IsMisnamedConstant("constant Number = 3", "Number") is false
 	Sample.IsMisnamedConstant("constant Listed = 1", "Listed") is true
-	if line.StartsWith("constant ") is false
-		return false
-	let isOtherType = (name is in typeNames) and (line.IndexOf("= " + name + "(") < 0)
-	isOtherType or IsMethodName(name)
+	line.StartsWith("constant ") and IsMethodName(name)
 IsMethodName(name Text) Boolean
 	Sample.IsMethodName("Listed") is true
 	Sample.IsMethodName("Number") is false
