@@ -1,5 +1,11 @@
 has logger
 Run(folder Text, root Text) Number
+	mutable issues = 0
+	for ResolveCheck.Tree(folder)
+		issues = issues + Checked(value, root)
+	logger.Log("Validation issues: " + issues)
+	issues
+Checked(folder Text, root Text) Number
 	let files = Directory.Files(folder, "*.strict")
 	let mutations = Mutations(files + ResolveCheck(logger).AllFiles(root))
 	let typeNames = ResolveCheck.TypeNames(files + Directory.Files(root, "*.strict"))
@@ -9,7 +15,6 @@ Run(folder Text, root Text) Number
 	for files
 		let found = CheckFile(value, mutations, isBase, typeNames) + duplicates.Issues(value, File(value).ReadLines)
 		issues = issues + Logged(value, found)
-	logger.Log("Validation issues: " + issues)
 	issues
 CheckFile(path Text, mutations Texts, isBase Boolean, typeNames Texts) List(ValidationIssue)
 	let lines = File(path).ReadLines

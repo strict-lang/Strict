@@ -61,9 +61,9 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
 		return 1
-	CrossBuild(base, program, tools, isCounting)
+	let crossed = CrossBuild(base, program, tools, isCounting)
 	Removed(base)
-	0
+	crossed
 Ran(base Text, tools Toolchain, path Text) Number
 	let executable = tools.Executable(base)
 	let result = ToolRunner(executable).Execute("")
@@ -85,10 +85,14 @@ Linked(base Text, tools Toolchain) Text
 		File(target).Rename(executable)
 		File(old).Delete
 	built.Replace(target, executable)
-CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean)
-	if (Platform.Current is Platform.Windows) and (isCounting is false)
-		File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
-		logger.Log(tools.CrossBuilt(base))
+CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
+	NativeBuild(Logger).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is 0
+	if (Platform.Current is not Platform.Windows) or isCounting
+		return 0
+	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
+	let crossed = tools.CrossBuilt(base)
+	logger.Log(crossed)
+	crossed.StartsWith("Built ") or crossed.StartsWith("Linux build skipped") then 0 else 1
 Removed(base Text)
 	for Intermediates
 		File(base + value).Delete

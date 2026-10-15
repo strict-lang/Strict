@@ -4,7 +4,7 @@ constant Typo = ("constant Limit = 3", "has numbr", "has counts Numbers", "Add(o
 Of(path Text) Texts
 	SourceFiles(".").Of("./Missing/A.strict").Length is Directory.Files(".", "*.strict").Length
 	mutable files = List(Mutable(Text))
-	let project = File("./Any.strict").Exists then List(Text) else Tree(".")
+	let project = File("./Any.strict").Exists then List(Text) else ResolveCheck.Tree(".")
 	for Folders(Added(project, List(Text) + Path(path).PathOnly.text), 3)
 		files = files + Directory.Files(value, "*.strict")
 	let local = Directory.Files(Path(path).PathOnly.text, "*.strict")
@@ -110,12 +110,3 @@ SubfolderWith(parent Text, type Text) Text
 		if File(folder + "/" + type + ".strict").Exists
 			return folder
 	""
-Tree(folder Text) Texts
-	SourceFiles(".").Tree("./Math") is List(Text) + "./Math"
-	mutable folders = List(Mutable(Text)) + folder
-	for Directory.Directories(folder)
-		let name = Path(value.Replace("\\", "/")).FileName.text
-		let first = name.Substring(0, 1)
-		if (first is first.Upper) and (first is not first.Lower)
-			folders = folders + Tree(folder + "/" + name)
-	folders

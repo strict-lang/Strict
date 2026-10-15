@@ -187,7 +187,9 @@
   llvm.mlir.global internal constant @strict_output_redirect(" > \22\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_error_redirect("\22 2> \22\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @strict_start_failed("could not start \00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @strict_timed_out("timed out after 30000 ms\00") : !llvm.array<25 x i8>
+  // ponytail: a tool or download running longer than 10 minutes is stopped, a timeout argument for Process.Run would let
+  // callers choose (30 s stopped clang in parallel builds and the curl downloads of the GPT-2 and Qwen3 models)
+  llvm.mlir.global internal constant @strict_timed_out("timed out after 10 minutes\00") : !llvm.array<27 x i8>
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
     %name = llvm.mlir.addressof @strict_linux : !llvm.ptr
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
@@ -361,7 +363,7 @@
     %killSignal = arith.constant 9 : i32
     %failure = arith.constant 127 : i32
     %millisecond = arith.constant 1000 : i32
-    %limit = arith.constant 30000 : i32
+    %limit = arith.constant 600000 : i32
     %step = arith.constant 1 : i32
     %statusSize = arith.constant 8 : i64
     %execQuote = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr

@@ -60,7 +60,7 @@ Looped Texts
 	Doubling.Looped.Last is "    cf.br ^loop2(%t2next : i64)"
 	mutable lines = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
-		lines = lines + MlirLines(function).At(value) + function.Emitted(value)
+		lines = lines + MlirLines(function).At(value, Temp("line")) + function.Emitted(value)
 	let one = "    " + Temp("one") + " = arith.constant 1 : i64"
 	let next = "    " + Temp("next") + " = arith.addi " + Temp("ki") + ", " + Temp("one") + " : i64"
 	lines + one + next + ("    cf.br ^loop" + position + "(" + Temp("next") + " : i64)")

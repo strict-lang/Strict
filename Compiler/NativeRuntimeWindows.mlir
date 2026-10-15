@@ -177,7 +177,9 @@
   llvm.mlir.global internal constant @strict_temp_prefix("str\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @strict_quote_space("\22 \00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @strict_start_failed("could not start \00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @strict_timed_out("timed out after 30000 ms\00") : !llvm.array<25 x i8>
+  // ponytail: a tool or download running longer than 10 minutes is stopped, a timeout argument for Process.Run would let
+  // callers choose (30 s stopped clang in parallel builds and the curl downloads of the GPT-2 and Qwen3 models)
+  llvm.mlir.global internal constant @strict_timed_out("timed out after 10 minutes\00") : !llvm.array<27 x i8>
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
     %name = llvm.mlir.addressof @strict_windows : !llvm.ptr
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
@@ -376,7 +378,7 @@
     %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
     return %startFailure : f64
   ^running:
-    %timeout = arith.constant 30000 : i32
+    %timeout = arith.constant 600000 : i32
     %process = llvm.load %information : !llvm.ptr -> !llvm.ptr
     %threadSlot = llvm.getelementptr %information[8] : (!llvm.ptr) -> !llvm.ptr, i8
     %thread = llvm.load %threadSlot : !llvm.ptr -> !llvm.ptr

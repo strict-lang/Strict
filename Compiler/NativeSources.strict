@@ -28,14 +28,23 @@ Arguments(platform Number, root Text) Text
 Library(platform Number, root Text) Text
 	Adding.Library(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.") is true
 	let folder = folders.First
-	let name = Path(Path(folder).PathOnly.text).FileName.text
-	let library = folder + "/" + name + (platform is Platform.Windows then ".dll" else ".so")
-	if IsCurrent(library, platform, root)
-		return "Built " + library
+	let base = folder + "/" + Path(Path(folder).PathOnly.text).FileName.text
+	let extension = platform is Platform.Windows then ".dll" else ".so"
+	if IsCurrent(base + extension, platform, root)
+		return "Built " + base + extension
+	let building = base + "." + 999999.Random.Floor + extension
 	let shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
 	let clang = Toolchain(platform, root).Located("clang")
-	let result = ToolRunner(clang).Execute(shared + Arguments(platform, root) + " -o \"" + library + "\"")
-	result.Failed then "clang failed: " + result.error else "Built " + library
+	let result = ToolRunner(clang).Execute(shared + Arguments(platform, root) + " -o \"" + building + "\"")
+	result.Failed then "clang failed: " + result.error else "Built " + Placed(building, base + extension)
+Placed(building Text, library Text) Text
+	Adding.Placed("Examples/NativeAdd/native/Missing.1.dll", Iconed + ".dll") is Iconed + ".dll"
+	File(building).Rename(library)
+	let unique = Path(building).RemoveExtension.text
+	for (".lib", ".exp")
+		if File(unique + value).Exists
+			File(unique + value).Delete
+	File(building).Exists then building else library
 IsCurrent(library Text, platform Number, root Text) Boolean
 	Adding.IsCurrent("Examples/NativeAdd/native/Missing.dll", Platform.Windows, ".") is false
 	if File(library).Exists is false

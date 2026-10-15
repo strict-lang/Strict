@@ -14,8 +14,12 @@ Run(arguments Texts) Number
 		texts.Add(VmValue.OfText(arguments(value)))
 	Started(types, arguments(0)).Launch(types.First.Name, texts)
 Test(path Text, root Text) Number
-	let paths = Directory.Exists(path) then Directory.Files(path, "*.strict") else List(Text) + path
-	Failures(paths, root, false)
+	if Directory.Exists(path) is false
+		return Failures(List(Text) + path, root, false)
+	mutable failed = 0
+	for ResolveCheck.Tree(path)
+		failed = failed + Failures(Directory.Files(value, "*.strict"), root, false)
+	failed
 Failures(paths Texts, root Text, isQuiet Boolean) Number
 	let stale = Stale(paths)
 	let files = stale.Length is 0 then List(Text) else SourceFiles(root).Of(FileCompiler.Normalized(stale.First))

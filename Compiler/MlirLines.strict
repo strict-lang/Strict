@@ -25,24 +25,25 @@ Allocated Texts
 	MlirLines(Lined).Allocated.Last.IndexOf("@strict_line_enter(%linestate)") > 0 is true
 	MlirLines(Unlined).Allocated.Length is 0
 	function.IsCounted then State else List(Text)
-At(position Number) Texts
-	MlirLines(Lined).At(0).Length is 2
-	MlirLines(Lined).At(1).Length is 0
-	MlirLines(Lined).At(2).Length is 3
-	MlirLines(Unlined).At(0).Length is 0
-	MlirLines(Jumped).At(2).Length is 0
+At(position Number, name Text) Texts
+	MlirLines(Lined).At(0, "%line").Length is 2
+	MlirLines(Lined).At(1, "%line").Length is 0
+	MlirLines(Lined).At(2, "%line").Length is 3
+	MlirLines(Unlined).At(0, "%line").Length is 0
+	MlirLines(Jumped).At(2, "%line").Length is 0
 	if function.IsCounted is false
 		return List(Text)
 	let entry = function.method.instructions(position)
 	let previous = position > 0 then function.method.instructions(position - 1).line else 0
 	let isStart = (entry.line > 0) and (entry.kind is not InstructionType.JumpEnd) and (entry.line is not previous)
-	let started = isStart then Started(position, entry.line) else List(Text)
+	let started = isStart then Started(position, entry.line, name) else List(Text)
 	entry.kind is InstructionType.Return then started + Stop else started
-Started(position Number, line Number) Texts
-	MlirLines(Lined).Started(2, 3).First is "    %line2 = arith.constant 5 : i64"
+Started(position Number, line Number, name Text) Texts
+	MlirLines(Lined).Started(2, 3, "%line").First is "    %line2 = arith.constant 5 : i64"
+	MlirLines(Lined).Started(2, 3, "%t1line").Last.IndexOf("(%linetable, %t1line2, %linestate)") > 0 is true
 	let slot = function.lineSlots(Numbers.Index(line))
-	let call = "    func.call @strict_line(%linetable, %line" + position + ", %linestate)" + Signature
-	("    %line" + position + " = arith.constant " + slot + " : i64", call)
+	let call = "    func.call @strict_line(%linetable, " + name + position + ", %linestate)" + Signature
+	("    " + name + position + " = arith.constant " + slot + " : i64", call)
 End Texts
 	MlirLines(Lined).End is List(Text) + Stop
 	Stop.IndexOf("@strict_line_leave(%linetable, %linestate)") > 0 is true

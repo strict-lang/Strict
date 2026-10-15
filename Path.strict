@@ -29,5 +29,6 @@ ChangeExtension(newExtension Text) Path
 PathOnly Path
 	Path("/dir/file.txt").PathOnly is Path("/dir")
 	Path("noSlash").PathOnly is Path("")
-	let separatorIndex = text.LastIndexOf(PathSeparator)
+	Path("dir\\sub\\file.txt").PathOnly is Path("dir\\sub")
+	let separatorIndex = text.Replace("\\", PathSeparator).LastIndexOf(PathSeparator)
 	separatorIndex is -1 then Path("") else Path(text.Substring(0, separatorIndex))

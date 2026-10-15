@@ -87,7 +87,7 @@ Body Texts
 	let counter = MlirLines(value)
 	mutable lines = List(Mutable(Text))
 	for method.instructions
-		lines = lines + Label(index) + counter.At(index) + Emitted(index)
+		lines = lines + Label(index) + counter.At(index, "%line") + Emitted(index)
 	let isReturning = method.instructions.Length > 0 and (method.instructions.Last.kind is InstructionType.Return)
 	isReturning then lines else lines + counter.End + MlirLayout(value).Returned(-2)
 Label(position Number) Texts

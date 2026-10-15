@@ -23,6 +23,16 @@ Unresolved(path Text, inference TypeInference) Texts
 		if unknown is not ""
 			unresolved.Add(unknown + " used in " + path + ":" + (value.line + 1))
 	unresolved
+Tree(folder Text) Texts
+	ResolveCheck.Tree("./Math") is List(Text) + "./Math"
+	"./Examples/NativeAdd" is in ResolveCheck.Tree("./Examples")
+	mutable folders = List(Mutable(Text)) + folder
+	for Directory.Directories(folder)
+		let name = Path(value.Replace("\\", "/")).FileName.text
+		let first = name.Substring(0, 1)
+		if (first is first.Upper) and (first is not first.Lower)
+			folders = folders + Tree(folder + "/" + name)
+	folders
 AllFiles(root Text) Texts
 	mutable files = Directory.Files(root, "*.strict")
 	for Directory.Directories(root)
