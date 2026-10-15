@@ -140,6 +140,12 @@ Count(character) Number
 	for
 		if value is character
 			1
+Code Text
+	"ab".Code is "\"ab\""
+	"say \"hi\"".Code is "\"say \\\"hi\\\"\""
+	"a\nb\\".Code is "\"a\\nb\\\\\""
+	let escaped = Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\t", "\\t")
+	"\"" + escaped + "\""
 ToBrackets Text
 	"".ToBrackets is ""
 	"Hi".ToBrackets is "(Hi)"

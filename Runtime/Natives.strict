@@ -14,8 +14,8 @@ Result(call Invocation) VmValue
 	let foreign = Foreign(call, types, folder)
 	if name is "from"
 		return foreign.IsForeign(TypeOf(call.TypeName)) then foreign.Called else Constructed(call)
-	if name is "to"
-		return Converted(call.Instance, call.ReturnType)
+	if name is in ("to", "Code")
+		return name is "to" then Converted(call.Instance, call.ReturnType) else VmValue.OfText(ValueCode(call.Instance).Code)
 	if name is in ("Length", "Count")
 		return VmValue.OfNumber(call.Instance.Counted(call.Arguments))
 	if name is in ("not", "and", "or", "xor")

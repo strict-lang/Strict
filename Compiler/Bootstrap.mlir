@@ -811,7 +811,7 @@ module {
     cf.cond_br %t8k, ^bb8e, ^bb9
   ^bb8e:
     %t8tw = llvm.mlir.addressof @wStrict_Rest_1 : !llvm.ptr
-    %t8twl = arith.constant 45 : i64
+    %t8twl = arith.constant 47 : i64
     %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     return %t8tr : f64
   ^bb9:
@@ -929,7 +929,7 @@ module {
     cf.cond_br %t8k, ^bb8e, ^bb9
   ^bb8e:
     %t8tw = llvm.mlir.addressof @wStrict_Rest_1 : !llvm.ptr
-    %t8twl = arith.constant 45 : i64
+    %t8twl = arith.constant 47 : i64
     %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     return %t8tr : f64
   ^bb9:
@@ -1017,7 +1017,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t2twl = arith.constant 39 : i64
+    %t2twl = arith.constant 41 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -1050,7 +1050,7 @@ module {
     cf.cond_br %t11k, ^bb11e, ^bb12
   ^bb11e:
     %t11tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t11twl = arith.constant 39 : i64
+    %t11twl = arith.constant 41 : i64
     %t11tr = func.call @strict_trace_checked(%t11v, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     return %t11tr : f64
   ^bb12:
@@ -1086,7 +1086,7 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t20twl = arith.constant 39 : i64
+    %t20twl = arith.constant 41 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
@@ -1104,7 +1104,7 @@ module {
     cf.cond_br %t24k, ^bb24e, ^bb25
   ^bb24e:
     %t24tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t24twl = arith.constant 39 : i64
+    %t24twl = arith.constant 41 : i64
     %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
     return %t24tr : f64
   ^bb25:
@@ -1116,7 +1116,7 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t26twl = arith.constant 39 : i64
+    %t26twl = arith.constant 41 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
@@ -1163,7 +1163,7 @@ module {
     cf.cond_br %t43k, ^bb43e, ^bb44
   ^bb43e:
     %t43tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t43twl = arith.constant 41 : i64
+    %t43twl = arith.constant 43 : i64
     %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
     return %t43tr : f64
   ^bb44:
@@ -1182,7 +1182,7 @@ module {
     cf.cond_br %t47k, ^bb47e, ^bb48
   ^bb47e:
     %t47tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t47twl = arith.constant 41 : i64
+    %t47twl = arith.constant 43 : i64
     %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     return %t47tr : f64
   ^bb48:
@@ -1191,7 +1191,7 @@ module {
     %t49m = arith.constant 0.0 : f64
     %t49r = func.call @TypeSource_Root_0(%t49m) : (f64) -> f64
     %t49tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t49twl = arith.constant 41 : i64
+    %t49twl = arith.constant 43 : i64
     %t49tr = func.call @strict_trace(%t49r, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t49tr, %r3 : f64, !llvm.ptr
     %t50v = llvm.load %r3 : !llvm.ptr -> f64
@@ -1199,7 +1199,7 @@ module {
     cf.cond_br %t50k, ^bb50e, ^bb51
   ^bb50e:
     %t50tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t50twl = arith.constant 41 : i64
+    %t50twl = arith.constant 43 : i64
     %t50tr = func.call @strict_trace_checked(%t50v, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
     return %t50tr : f64
   ^bb51:
@@ -1218,7 +1218,7 @@ module {
     cf.cond_br %t54k, ^bb54e, ^bb55
   ^bb54e:
     %t54tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t54twl = arith.constant 41 : i64
+    %t54twl = arith.constant 43 : i64
     %t54tr = func.call @strict_trace_checked(%t54v, %t54tw, %t54twl) : (f64, !llvm.ptr, i64) -> f64
     return %t54tr : f64
   ^bb55:
@@ -1228,7 +1228,7 @@ module {
     %t56a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t56r = func.call @Strict_Rest_1(%t56m, %t56a0) : (f64, f64) -> f64
     %t56tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t56twl = arith.constant 41 : i64
+    %t56twl = arith.constant 43 : i64
     %t56tr = func.call @strict_trace(%t56r, %t56tw, %t56twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t56tr, %r6 : f64, !llvm.ptr
     %t57v = llvm.load %r6 : !llvm.ptr -> f64
@@ -1236,7 +1236,7 @@ module {
     cf.cond_br %t57k, ^bb57e, ^bb58
   ^bb57e:
     %t57tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t57twl = arith.constant 41 : i64
+    %t57twl = arith.constant 43 : i64
     %t57tr = func.call @strict_trace_checked(%t57v, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
     return %t57tr : f64
   ^bb58:
@@ -1249,7 +1249,7 @@ module {
     cf.cond_br %t59k, ^bb59e, ^bb60
   ^bb59e:
     %t59tw = llvm.mlir.addressof @wStrict_Rooted_1 : !llvm.ptr
-    %t59twl = arith.constant 41 : i64
+    %t59twl = arith.constant 43 : i64
     %t59tr = func.call @strict_trace_checked(%t59v, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
     return %t59tr : f64
   ^bb60:
@@ -1506,7 +1506,7 @@ module {
     %t38u = arith.cmpf oeq, %t38v, %zero : f64
     cf.cond_br %t38u, ^l38, ^m38(%t38v : f64)
   ^l38:
-    %t38q = arith.constant 0x4028000000000000 : f64
+    %t38q = arith.constant 0x402A000000000000 : f64
     %t38l = func.call @strict_list_new(%t38q, %zero) : (f64, f64) -> f64
     %t38e0c = llvm.mlir.addressof @cStrict_Message_2_38_0 : !llvm.ptr
     %t38e0xf = func.call @strict_bits(%t38e0c) : (!llvm.ptr) -> f64
@@ -1532,9 +1532,12 @@ module {
     %t38e7c = llvm.mlir.addressof @cStrict_Message_2_38_7 : !llvm.ptr
     %t38e7xf = func.call @strict_bits(%t38e7c) : (!llvm.ptr) -> f64
     %t38e7l = func.call @strict_list_add(%t38e6l, %t38e7xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t38e7l) : (f64) -> ()
-    llvm.store %t38e7l, %t38g : f64, !llvm.ptr
-    cf.br ^m38(%t38e7l : f64)
+    %t38e8c = llvm.mlir.addressof @cStrict_Message_2_38_8 : !llvm.ptr
+    %t38e8xf = func.call @strict_bits(%t38e8c) : (!llvm.ptr) -> f64
+    %t38e8l = func.call @strict_list_add(%t38e7l, %t38e8xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t38e8l) : (f64) -> ()
+    llvm.store %t38e8l, %t38g : f64, !llvm.ptr
+    cf.br ^m38(%t38e8l : f64)
   ^m38(%t38r: f64):
     llvm.store %t38r, %r10 : f64, !llvm.ptr
     %t39c = llvm.mlir.addressof @cStrict_Message_2_39 : !llvm.ptr
@@ -1851,7 +1854,7 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t6twl = arith.constant 48 : i64
+    %t6twl = arith.constant 50 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
@@ -1859,7 +1862,7 @@ module {
     %t7a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t7r = func.call @Strict_Format_1(%t7m, %t7a0) : (f64, f64) -> f64
     %t7tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t7twl = arith.constant 48 : i64
+    %t7twl = arith.constant 50 : i64
     %t7tr = func.call @strict_trace(%t7r, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t7tr, %r4 : f64, !llvm.ptr
     %t8 = llvm.load %r4 : !llvm.ptr -> f64
@@ -1901,7 +1904,7 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t20twl = arith.constant 50 : i64
+    %t20twl = arith.constant 52 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
@@ -1918,7 +1921,7 @@ module {
     cf.cond_br %t23k, ^bb23e, ^bb24
   ^bb23e:
     %t23tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t23twl = arith.constant 50 : i64
+    %t23twl = arith.constant 52 : i64
     %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     return %t23tr : f64
   ^bb24:
@@ -1935,7 +1938,7 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t26twl = arith.constant 50 : i64
+    %t26twl = arith.constant 52 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
@@ -1945,7 +1948,7 @@ module {
     %t27a2 = llvm.load %r7 : !llvm.ptr -> f64
     %t27r = func.call @Strict_Checked_3(%t27m, %t27a0, %t27a1, %t27a2) : (f64, f64, f64, f64) -> f64
     %t27tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t27twl = arith.constant 50 : i64
+    %t27twl = arith.constant 52 : i64
     %t27tr = func.call @strict_trace(%t27r, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t27tr, %r8 : f64, !llvm.ptr
     %t28 = llvm.load %r8 : !llvm.ptr -> f64
@@ -1968,7 +1971,7 @@ module {
     cf.cond_br %t34k, ^bb34e, ^bb35
   ^bb34e:
     %t34tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t34twl = arith.constant 50 : i64
+    %t34twl = arith.constant 52 : i64
     %t34tr = func.call @strict_trace_checked(%t34v, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
     return %t34tr : f64
   ^bb35:
@@ -1985,7 +1988,7 @@ module {
     cf.cond_br %t37k, ^bb37e, ^bb38
   ^bb37e:
     %t37tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t37twl = arith.constant 50 : i64
+    %t37twl = arith.constant 52 : i64
     %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     return %t37tr : f64
   ^bb38:
@@ -1994,7 +1997,7 @@ module {
     %t38a1 = llvm.load %r12 : !llvm.ptr -> f64
     %t38r = func.call @Strict_Updated_2(%t38m, %t38a0, %t38a1) : (f64, f64, f64) -> f64
     %t38tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t38twl = arith.constant 50 : i64
+    %t38twl = arith.constant 52 : i64
     %t38tr = func.call @strict_trace(%t38r, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t38tr, %r13 : f64, !llvm.ptr
     %t39 = llvm.load %r13 : !llvm.ptr -> f64
@@ -2008,7 +2011,7 @@ module {
     cf.cond_br %t42k, ^bb42e, ^bb43
   ^bb42e:
     %t42tw = llvm.mlir.addressof @wStrict_Tool_2 : !llvm.ptr
-    %t42twl = arith.constant 50 : i64
+    %t42twl = arith.constant 52 : i64
     %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
     return %t42tr : f64
   ^bb43:
@@ -2069,8 +2072,8 @@ module {
     llvm.store %zero, %v_option : f64, !llvm.ptr
     %v_logger = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_logger : f64, !llvm.ptr
-    %v_conditional2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_conditional2 : f64, !llvm.ptr
+    %v_conditional3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional3 : f64, !llvm.ptr
     %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %instance : f64, !llvm.ptr
     llvm.store %p0, %instance : f64, !llvm.ptr
@@ -2154,151 +2157,242 @@ module {
     %t21f = arith.cmpf one, %t21q, %zero : f64
     llvm.store %t21f, %flag : i1, !llvm.ptr
     %t22 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t22, ^bb23, ^bb37
+    cf.cond_br %t22, ^bb23, ^bb34
   ^bb23:
-    %t23 = llvm.load %v_logger : !llvm.ptr -> f64
-    llvm.store %t23, %r2 : f64, !llvm.ptr
-    %t24o = llvm.load %r2 : !llvm.ptr -> f64
-    llvm.store %t24o, %r3 : f64, !llvm.ptr
+    %t23c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t23c, %r2 : f64, !llvm.ptr
+    %t24l = llvm.load %v_rest : !llvm.ptr -> f64
+    %t24i = llvm.load %r2 : !llvm.ptr -> f64
+    %t24n = llvm.mlir.addressof @sStrict_Tested_1_24 : !llvm.ptr
+    %t24nb = func.call @strict_bits(%t24n) : (!llvm.ptr) -> f64
+    %t24x = func.call @strict_hoisted_read(%h_rest, %n_rest, %t24i, %t24nb, %k_rest, %t24l) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
+    llvm.store %t24x, %r3 : f64, !llvm.ptr
     %t25v = llvm.load %r3 : !llvm.ptr -> f64
     %t25k = func.call @strict_is_failure(%t25v) : (f64) -> i1
     cf.cond_br %t25k, ^bb25e, ^bb26
   ^bb25e:
     %t25tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
-    %t25twl = arith.constant 33 : i64
+    %t25twl = arith.constant 34 : i64
     %t25tr = func.call @strict_trace_checked(%t25v, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
     return %t25tr : f64
   ^bb26:
-    %t26c = arith.constant 0x0000000000000000 : f64
-    llvm.store %t26c, %r4 : f64, !llvm.ptr
-    %t27l = llvm.load %v_rest : !llvm.ptr -> f64
-    %t27i = llvm.load %r4 : !llvm.ptr -> f64
-    %t27n = llvm.mlir.addressof @sStrict_Tested_1_27 : !llvm.ptr
-    %t27nb = func.call @strict_bits(%t27n) : (!llvm.ptr) -> f64
-    %t27x = func.call @strict_hoisted_read(%h_rest, %n_rest, %t27i, %t27nb, %k_rest, %t27l) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
-    llvm.store %t27x, %r5 : f64, !llvm.ptr
-    %t28v = llvm.load %r5 : !llvm.ptr -> f64
-    %t28k = func.call @strict_is_failure(%t28v) : (f64) -> i1
-    cf.cond_br %t28k, ^bb28e, ^bb29
-  ^bb28e:
-    %t28tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
-    %t28twl = arith.constant 33 : i64
-    %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t28tr : f64
-  ^bb29:
-    %t29c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t29c, %r6 : f64, !llvm.ptr
-    %t30l = llvm.load %v_rest : !llvm.ptr -> f64
-    %t30i = llvm.load %r6 : !llvm.ptr -> f64
-    %t30n = llvm.mlir.addressof @sStrict_Tested_1_30 : !llvm.ptr
-    %t30nb = func.call @strict_bits(%t30n) : (!llvm.ptr) -> f64
-    %t30x = func.call @strict_hoisted_read(%h_rest, %n_rest, %t30i, %t30nb, %k_rest, %t30l) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
-    llvm.store %t30x, %r7 : f64, !llvm.ptr
-    %t31v = llvm.load %r7 : !llvm.ptr -> f64
+    %t26m = arith.constant 0.0 : f64
+    %t26a0 = llvm.load %r3 : !llvm.ptr -> f64
+    %t26r = func.call @FileCompiler_Normalized_1(%t26m, %t26a0) : (f64, f64) -> f64
+    %t26tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t26twl = arith.constant 34 : i64
+    %t26tr = func.call @strict_trace(%t26r, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t26tr, %r4 : f64, !llvm.ptr
+    %t27v = llvm.load %r4 : !llvm.ptr -> f64
+    %t27k = func.call @strict_is_failure(%t27v) : (f64) -> i1
+    cf.cond_br %t27k, ^bb27e, ^bb28
+  ^bb27e:
+    %t27tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t27twl = arith.constant 34 : i64
+    %t27tr = func.call @strict_trace_checked(%t27v, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t27tr : f64
+  ^bb28:
+    %t28o = llvm.load %r4 : !llvm.ptr -> f64
+    llvm.store %t28o, %r5 : f64, !llvm.ptr
+    %t29v = llvm.load %r5 : !llvm.ptr -> f64
+    %t29k = func.call @strict_is_failure(%t29v) : (f64) -> i1
+    cf.cond_br %t29k, ^bb29e, ^bb30
+  ^bb29e:
+    %t29tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t29twl = arith.constant 34 : i64
+    %t29tr = func.call @strict_trace_checked(%t29v, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t29tr : f64
+  ^bb30:
+    %t30m = arith.constant 0.0 : f64
+    %t30r = func.call @strict_process_input(%t30m) : (f64) -> f64
+    llvm.store %t30r, %r6 : f64, !llvm.ptr
+    %t31v = llvm.load %r6 : !llvm.ptr -> f64
     %t31k = func.call @strict_is_failure(%t31v) : (f64) -> i1
     cf.cond_br %t31k, ^bb31e, ^bb32
   ^bb31e:
     %t31tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
-    %t31twl = arith.constant 33 : i64
+    %t31twl = arith.constant 34 : i64
     %t31tr = func.call @strict_trace_checked(%t31v, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     return %t31tr : f64
   ^bb32:
-    %t32c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t32c, %r8 : f64, !llvm.ptr
-    %t33m = llvm.load %r3 : !llvm.ptr -> f64
-    %t33a0 = llvm.load %r5 : !llvm.ptr -> f64
-    %t33a1 = llvm.load %r7 : !llvm.ptr -> f64
-    %t33a2 = llvm.load %r8 : !llvm.ptr -> f64
-    %t33r = func.call @NativeBuild_Compile_3(%t33m, %t33a0, %t33a1, %t33a2) : (f64, f64, f64, f64) -> f64
+    %t32m = llvm.load %r5 : !llvm.ptr -> f64
+    %t32a0 = llvm.load %r6 : !llvm.ptr -> f64
+    %t32r = func.call @strict_file_override(%t32m, %t32a0) : (f64, f64) -> f64
+    llvm.store %t32r, %r7 : f64, !llvm.ptr
+    %t33v = llvm.load %r7 : !llvm.ptr -> f64
+    %t33k = func.call @strict_is_failure(%t33v) : (f64) -> i1
+    cf.cond_br %t33k, ^bb33e, ^bb34
+  ^bb33e:
     %t33tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
-    %t33twl = arith.constant 33 : i64
-    %t33tr = func.call @strict_trace(%t33r, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t33tr, %r9 : f64, !llvm.ptr
-    %t34 = llvm.load %r9 : !llvm.ptr -> f64
-    llvm.store %t34, %v_conditional2 : f64, !llvm.ptr
-    %t35c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t35c, %r10 : f64, !llvm.ptr
-    %t36a = llvm.load %r10 : !llvm.ptr -> f64
-    %t36b = llvm.load %r10 : !llvm.ptr -> f64
-    %t36c = arith.cmpf oeq, %t36a, %t36b : f64
-    llvm.store %t36c, %flag : i1, !llvm.ptr
-    cf.br ^bb37
+    %t33twl = arith.constant 34 : i64
+    %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t33tr : f64
+  ^bb34:
+    %t35 = llvm.load %v_option : !llvm.ptr -> f64
+    llvm.store %t35, %r0 : f64, !llvm.ptr
+    %t36v = llvm.load %r0 : !llvm.ptr -> f64
+    %t36k = func.call @strict_is_failure(%t36v) : (f64) -> i1
+    cf.cond_br %t36k, ^bb36e, ^bb37
+  ^bb36e:
+    %t36tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t36twl = arith.constant 35 : i64
+    %t36tr = func.call @strict_trace_checked(%t36v, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t36tr : f64
   ^bb37:
-    %t38 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t38, ^bb50, ^bb39
-  ^bb39:
-    %t39 = llvm.load %v_logger : !llvm.ptr -> f64
-    llvm.store %t39, %r11 : f64, !llvm.ptr
-    %t40o = llvm.load %r11 : !llvm.ptr -> f64
-    llvm.store %t40o, %r12 : f64, !llvm.ptr
-    %t41v = llvm.load %r12 : !llvm.ptr -> f64
-    %t41k = func.call @strict_is_failure(%t41v) : (f64) -> i1
-    cf.cond_br %t41k, ^bb41e, ^bb42
-  ^bb41e:
-    %t41tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
-    %t41twl = arith.constant 33 : i64
-    %t41tr = func.call @strict_trace_checked(%t41v, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t41tr : f64
-  ^bb42:
-    %t42c = arith.constant 0x0000000000000000 : f64
-    llvm.store %t42c, %r13 : f64, !llvm.ptr
-    %t43l = llvm.load %v_rest : !llvm.ptr -> f64
-    %t43i = llvm.load %r13 : !llvm.ptr -> f64
-    %t43n = llvm.mlir.addressof @sStrict_Tested_1_43 : !llvm.ptr
-    %t43nb = func.call @strict_bits(%t43n) : (!llvm.ptr) -> f64
-    %t43x = func.call @strict_hoisted_read(%h_rest, %n_rest, %t43i, %t43nb, %k_rest, %t43l) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
-    llvm.store %t43x, %r14 : f64, !llvm.ptr
-    %t44v = llvm.load %r14 : !llvm.ptr -> f64
-    %t44k = func.call @strict_is_failure(%t44v) : (f64) -> i1
-    cf.cond_br %t44k, ^bb44e, ^bb45
-  ^bb44e:
-    %t44tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
-    %t44twl = arith.constant 33 : i64
-    %t44tr = func.call @strict_trace_checked(%t44v, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t44tr : f64
-  ^bb45:
-    %t45c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t45c, %r15 : f64, !llvm.ptr
-    %t46l = llvm.load %v_rest : !llvm.ptr -> f64
-    %t46i = llvm.load %r15 : !llvm.ptr -> f64
-    %t46n = llvm.mlir.addressof @sStrict_Tested_1_46 : !llvm.ptr
-    %t46nb = func.call @strict_bits(%t46n) : (!llvm.ptr) -> f64
-    %t46x = func.call @strict_hoisted_read(%h_rest, %n_rest, %t46i, %t46nb, %k_rest, %t46l) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
-    llvm.store %t46x, %r16 : f64, !llvm.ptr
-    %t47v = llvm.load %r16 : !llvm.ptr -> f64
-    %t47k = func.call @strict_is_failure(%t47v) : (f64) -> i1
-    cf.cond_br %t47k, ^bb47e, ^bb48
-  ^bb47e:
-    %t47tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
-    %t47twl = arith.constant 33 : i64
-    %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t47tr : f64
-  ^bb48:
-    %t48m = llvm.load %r12 : !llvm.ptr -> f64
-    %t48a0 = llvm.load %r14 : !llvm.ptr -> f64
-    %t48a1 = llvm.load %r16 : !llvm.ptr -> f64
-    %t48r = func.call @Execute_Test_2(%t48m, %t48a0, %t48a1) : (f64, f64, f64) -> f64
+    %t37c = llvm.mlir.addressof @cStrict_Tested_1_37 : !llvm.ptr
+    %t37xf = func.call @strict_bits(%t37c) : (!llvm.ptr) -> f64
+    llvm.store %t37xf, %r1 : f64, !llvm.ptr
+    %t38l = llvm.load %r0 : !llvm.ptr -> f64
+    %t38r = llvm.load %r1 : !llvm.ptr -> f64
+    %t38q = func.call @strict_text_equal(%t38l, %t38r) : (f64, f64) -> f64
+    %t38f = arith.cmpf one, %t38q, %zero : f64
+    llvm.store %t38f, %flag : i1, !llvm.ptr
+    %t39 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t39, ^bb40, ^bb54
+  ^bb40:
+    %t40 = llvm.load %v_logger : !llvm.ptr -> f64
+    llvm.store %t40, %r2 : f64, !llvm.ptr
+    %t41o = llvm.load %r2 : !llvm.ptr -> f64
+    llvm.store %t41o, %r3 : f64, !llvm.ptr
+    %t42v = llvm.load %r3 : !llvm.ptr -> f64
+    %t42k = func.call @strict_is_failure(%t42v) : (f64) -> i1
+    cf.cond_br %t42k, ^bb42e, ^bb43
+  ^bb42e:
+    %t42tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t42twl = arith.constant 35 : i64
+    %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t42tr : f64
+  ^bb43:
+    %t43c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t43c, %r4 : f64, !llvm.ptr
+    %t44l = llvm.load %v_rest : !llvm.ptr -> f64
+    %t44i = llvm.load %r4 : !llvm.ptr -> f64
+    %t44n = llvm.mlir.addressof @sStrict_Tested_1_44 : !llvm.ptr
+    %t44nb = func.call @strict_bits(%t44n) : (!llvm.ptr) -> f64
+    %t44x = func.call @strict_hoisted_read(%h_rest, %n_rest, %t44i, %t44nb, %k_rest, %t44l) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
+    llvm.store %t44x, %r5 : f64, !llvm.ptr
+    %t45v = llvm.load %r5 : !llvm.ptr -> f64
+    %t45k = func.call @strict_is_failure(%t45v) : (f64) -> i1
+    cf.cond_br %t45k, ^bb45e, ^bb46
+  ^bb45e:
+    %t45tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t45twl = arith.constant 35 : i64
+    %t45tr = func.call @strict_trace_checked(%t45v, %t45tw, %t45twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t45tr : f64
+  ^bb46:
+    %t46c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t46c, %r6 : f64, !llvm.ptr
+    %t47l = llvm.load %v_rest : !llvm.ptr -> f64
+    %t47i = llvm.load %r6 : !llvm.ptr -> f64
+    %t47n = llvm.mlir.addressof @sStrict_Tested_1_47 : !llvm.ptr
+    %t47nb = func.call @strict_bits(%t47n) : (!llvm.ptr) -> f64
+    %t47x = func.call @strict_hoisted_read(%h_rest, %n_rest, %t47i, %t47nb, %k_rest, %t47l) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
+    llvm.store %t47x, %r7 : f64, !llvm.ptr
+    %t48v = llvm.load %r7 : !llvm.ptr -> f64
+    %t48k = func.call @strict_is_failure(%t48v) : (f64) -> i1
+    cf.cond_br %t48k, ^bb48e, ^bb49
+  ^bb48e:
     %t48tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
-    %t48twl = arith.constant 33 : i64
-    %t48tr = func.call @strict_trace(%t48r, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t48tr, %r17 : f64, !llvm.ptr
-    %t49 = llvm.load %r17 : !llvm.ptr -> f64
-    llvm.store %t49, %v_conditional2 : f64, !llvm.ptr
-    cf.br ^bb50
-  ^bb50:
-    %t51 = llvm.load %v_conditional2 : !llvm.ptr -> f64
-    llvm.store %t51, %r18 : f64, !llvm.ptr
-    %t52v = llvm.load %r18 : !llvm.ptr -> f64
-    %t52k = func.call @strict_is_failure(%t52v) : (f64) -> i1
-    cf.cond_br %t52k, ^bb52e, ^bb53
-  ^bb52e:
-    %t52tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
-    %t52twl = arith.constant 33 : i64
-    %t52tr = func.call @strict_trace_checked(%t52v, %t52tw, %t52twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t52tr : f64
-  ^bb53:
-    %t53 = llvm.load %r18 : !llvm.ptr -> f64
-    return %t53 : f64
+    %t48twl = arith.constant 35 : i64
+    %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t48tr : f64
+  ^bb49:
+    %t49c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t49c, %r8 : f64, !llvm.ptr
+    %t50m = llvm.load %r3 : !llvm.ptr -> f64
+    %t50a0 = llvm.load %r5 : !llvm.ptr -> f64
+    %t50a1 = llvm.load %r7 : !llvm.ptr -> f64
+    %t50a2 = llvm.load %r8 : !llvm.ptr -> f64
+    %t50r = func.call @NativeBuild_Compile_3(%t50m, %t50a0, %t50a1, %t50a2) : (f64, f64, f64, f64) -> f64
+    %t50tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t50twl = arith.constant 35 : i64
+    %t50tr = func.call @strict_trace(%t50r, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t50tr, %r9 : f64, !llvm.ptr
+    %t51 = llvm.load %r9 : !llvm.ptr -> f64
+    llvm.store %t51, %v_conditional3 : f64, !llvm.ptr
+    %t52c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t52c, %r10 : f64, !llvm.ptr
+    %t53a = llvm.load %r10 : !llvm.ptr -> f64
+    %t53b = llvm.load %r10 : !llvm.ptr -> f64
+    %t53c = arith.cmpf oeq, %t53a, %t53b : f64
+    llvm.store %t53c, %flag : i1, !llvm.ptr
+    cf.br ^bb54
+  ^bb54:
+    %t55 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t55, ^bb67, ^bb56
+  ^bb56:
+    %t56 = llvm.load %v_logger : !llvm.ptr -> f64
+    llvm.store %t56, %r11 : f64, !llvm.ptr
+    %t57o = llvm.load %r11 : !llvm.ptr -> f64
+    llvm.store %t57o, %r12 : f64, !llvm.ptr
+    %t58v = llvm.load %r12 : !llvm.ptr -> f64
+    %t58k = func.call @strict_is_failure(%t58v) : (f64) -> i1
+    cf.cond_br %t58k, ^bb58e, ^bb59
+  ^bb58e:
+    %t58tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t58twl = arith.constant 35 : i64
+    %t58tr = func.call @strict_trace_checked(%t58v, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t58tr : f64
+  ^bb59:
+    %t59c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t59c, %r13 : f64, !llvm.ptr
+    %t60l = llvm.load %v_rest : !llvm.ptr -> f64
+    %t60i = llvm.load %r13 : !llvm.ptr -> f64
+    %t60n = llvm.mlir.addressof @sStrict_Tested_1_60 : !llvm.ptr
+    %t60nb = func.call @strict_bits(%t60n) : (!llvm.ptr) -> f64
+    %t60x = func.call @strict_hoisted_read(%h_rest, %n_rest, %t60i, %t60nb, %k_rest, %t60l) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
+    llvm.store %t60x, %r14 : f64, !llvm.ptr
+    %t61v = llvm.load %r14 : !llvm.ptr -> f64
+    %t61k = func.call @strict_is_failure(%t61v) : (f64) -> i1
+    cf.cond_br %t61k, ^bb61e, ^bb62
+  ^bb61e:
+    %t61tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t61twl = arith.constant 35 : i64
+    %t61tr = func.call @strict_trace_checked(%t61v, %t61tw, %t61twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t61tr : f64
+  ^bb62:
+    %t62c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t62c, %r15 : f64, !llvm.ptr
+    %t63l = llvm.load %v_rest : !llvm.ptr -> f64
+    %t63i = llvm.load %r15 : !llvm.ptr -> f64
+    %t63n = llvm.mlir.addressof @sStrict_Tested_1_63 : !llvm.ptr
+    %t63nb = func.call @strict_bits(%t63n) : (!llvm.ptr) -> f64
+    %t63x = func.call @strict_hoisted_read(%h_rest, %n_rest, %t63i, %t63nb, %k_rest, %t63l) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
+    llvm.store %t63x, %r16 : f64, !llvm.ptr
+    %t64v = llvm.load %r16 : !llvm.ptr -> f64
+    %t64k = func.call @strict_is_failure(%t64v) : (f64) -> i1
+    cf.cond_br %t64k, ^bb64e, ^bb65
+  ^bb64e:
+    %t64tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t64twl = arith.constant 35 : i64
+    %t64tr = func.call @strict_trace_checked(%t64v, %t64tw, %t64twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t64tr : f64
+  ^bb65:
+    %t65m = llvm.load %r12 : !llvm.ptr -> f64
+    %t65a0 = llvm.load %r14 : !llvm.ptr -> f64
+    %t65a1 = llvm.load %r16 : !llvm.ptr -> f64
+    %t65r = func.call @Execute_Test_2(%t65m, %t65a0, %t65a1) : (f64, f64, f64) -> f64
+    %t65tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t65twl = arith.constant 35 : i64
+    %t65tr = func.call @strict_trace(%t65r, %t65tw, %t65twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t65tr, %r17 : f64, !llvm.ptr
+    %t66 = llvm.load %r17 : !llvm.ptr -> f64
+    llvm.store %t66, %v_conditional3 : f64, !llvm.ptr
+    cf.br ^bb67
+  ^bb67:
+    %t68 = llvm.load %v_conditional3 : !llvm.ptr -> f64
+    llvm.store %t68, %r18 : f64, !llvm.ptr
+    %t69v = llvm.load %r18 : !llvm.ptr -> f64
+    %t69k = func.call @strict_is_failure(%t69v) : (f64) -> i1
+    cf.cond_br %t69k, ^bb69e, ^bb70
+  ^bb69e:
+    %t69tw = llvm.mlir.addressof @wStrict_Tested_1 : !llvm.ptr
+    %t69twl = arith.constant 35 : i64
+    %t69tr = func.call @strict_trace_checked(%t69v, %t69tw, %t69twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t69tr : f64
+  ^bb70:
+    %t70 = llvm.load %r18 : !llvm.ptr -> f64
+    return %t70 : f64
   }
   func.func private @Strict_Built_3(%p0: f64, %p1: f64, %p2: f64, %p3: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -2340,7 +2434,7 @@ module {
     %t3a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t3r = func.call @NativeBuild_Built_2(%t3m, %t3a0, %t3a1) : (f64, f64, f64) -> f64
     %t3tw = llvm.mlir.addressof @wStrict_Built_3 : !llvm.ptr
-    %t3twl = arith.constant 57 : i64
+    %t3twl = arith.constant 59 : i64
     %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3tr, %r3 : f64, !llvm.ptr
     %t4v = llvm.load %r3 : !llvm.ptr -> f64
@@ -2348,7 +2442,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wStrict_Built_3 : !llvm.ptr
-    %t4twl = arith.constant 57 : i64
+    %t4twl = arith.constant 59 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -3077,7 +3171,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t2twl = arith.constant 60 : i64
+    %t2twl = arith.constant 62 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -3090,7 +3184,7 @@ module {
     cf.cond_br %t5k, ^bb5e, ^bb6
   ^bb5e:
     %t5tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t5twl = arith.constant 60 : i64
+    %t5twl = arith.constant 62 : i64
     %t5tr = func.call @strict_trace_checked(%t5v, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     return %t5tr : f64
   ^bb6:
@@ -3102,7 +3196,7 @@ module {
     cf.cond_br %t7k, ^bb7e, ^bb8
   ^bb7e:
     %t7tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t7twl = arith.constant 60 : i64
+    %t7twl = arith.constant 62 : i64
     %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     return %t7tr : f64
   ^bb8:
@@ -3110,7 +3204,7 @@ module {
     %t8a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t8r = func.call @RoundTrip_Tabbed_1(%t8m, %t8a0) : (f64, f64) -> f64
     %t8tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t8twl = arith.constant 60 : i64
+    %t8twl = arith.constant 62 : i64
     %t8tr = func.call @strict_trace(%t8r, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t8tr, %r5 : f64, !llvm.ptr
     %t9 = llvm.load %r5 : !llvm.ptr -> f64
@@ -3122,7 +3216,7 @@ module {
     cf.cond_br %t11k, ^bb11e, ^bb12
   ^bb11e:
     %t11tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t11twl = arith.constant 61 : i64
+    %t11twl = arith.constant 63 : i64
     %t11tr = func.call @strict_trace_checked(%t11v, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     return %t11tr : f64
   ^bb12:
@@ -3130,7 +3224,7 @@ module {
     %t12a0 = llvm.load %r0 : !llvm.ptr -> f64
     %t12r = func.call @FileCompiler_Unparsable_1(%t12m, %t12a0) : (f64, f64) -> f64
     %t12tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t12twl = arith.constant 61 : i64
+    %t12twl = arith.constant 63 : i64
     %t12tr = func.call @strict_trace(%t12r, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t12tr, %r1 : f64, !llvm.ptr
     %t13 = llvm.load %r1 : !llvm.ptr -> f64
@@ -3142,7 +3236,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t15twl = arith.constant 62 : i64
+    %t15twl = arith.constant 64 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -3178,7 +3272,7 @@ module {
     cf.cond_br %t24k, ^bb24e, ^bb25
   ^bb24e:
     %t24tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t24twl = arith.constant 63 : i64
+    %t24twl = arith.constant 65 : i64
     %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
     return %t24tr : f64
   ^bb25:
@@ -3189,7 +3283,7 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t26twl = arith.constant 63 : i64
+    %t26twl = arith.constant 65 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
@@ -3198,7 +3292,7 @@ module {
     %t27a1 = llvm.load %r7 : !llvm.ptr -> f64
     %t27r = func.call @FileCheck_Problem_2(%t27m, %t27a0, %t27a1) : (f64, f64, f64) -> f64
     %t27tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t27twl = arith.constant 63 : i64
+    %t27twl = arith.constant 65 : i64
     %t27tr = func.call @strict_trace(%t27r, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t27tr, %r8 : f64, !llvm.ptr
     %t28v = llvm.load %r8 : !llvm.ptr -> f64
@@ -3206,7 +3300,7 @@ module {
     cf.cond_br %t28k, ^bb28e, ^bb29
   ^bb28e:
     %t28tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t28twl = arith.constant 63 : i64
+    %t28twl = arith.constant 65 : i64
     %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
     return %t28tr : f64
   ^bb29:
@@ -3223,7 +3317,7 @@ module {
     %t32a0 = llvm.load %r11 : !llvm.ptr -> f64
     %t32r = func.call @FileCompiler_Normalized_1(%t32m, %t32a0) : (f64, f64) -> f64
     %t32tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t32twl = arith.constant 63 : i64
+    %t32twl = arith.constant 65 : i64
     %t32tr = func.call @strict_trace(%t32r, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t32tr, %r12 : f64, !llvm.ptr
     %t33v = llvm.load %r12 : !llvm.ptr -> f64
@@ -3231,7 +3325,7 @@ module {
     cf.cond_br %t33k, ^bb33e, ^bb34
   ^bb33e:
     %t33tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t33twl = arith.constant 63 : i64
+    %t33twl = arith.constant 65 : i64
     %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
     return %t33tr : f64
   ^bb34:
@@ -3253,7 +3347,7 @@ module {
     cf.cond_br %t38k, ^bb38e, ^bb39
   ^bb38e:
     %t38tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t38twl = arith.constant 63 : i64
+    %t38twl = arith.constant 65 : i64
     %t38tr = func.call @strict_trace_checked(%t38v, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
     return %t38tr : f64
   ^bb39:
@@ -3289,7 +3383,7 @@ module {
     cf.cond_br %t48k, ^bb48e, ^bb49
   ^bb48e:
     %t48tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t48twl = arith.constant 65 : i64
+    %t48twl = arith.constant 67 : i64
     %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
     return %t48tr : f64
   ^bb49:
@@ -3300,7 +3394,7 @@ module {
     cf.cond_br %t50k, ^bb50e, ^bb51
   ^bb50e:
     %t50tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t50twl = arith.constant 65 : i64
+    %t50twl = arith.constant 67 : i64
     %t50tr = func.call @strict_trace_checked(%t50v, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
     return %t50tr : f64
   ^bb51:
@@ -3308,7 +3402,7 @@ module {
     %t51a0 = llvm.load %r2 : !llvm.ptr -> f64
     %t51r = func.call @RoundTrip_Formatted_1(%t51m, %t51a0) : (f64, f64) -> f64
     %t51tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t51twl = arith.constant 65 : i64
+    %t51twl = arith.constant 67 : i64
     %t51tr = func.call @strict_trace(%t51r, %t51tw, %t51twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t51tr, %r3 : f64, !llvm.ptr
     %t52v = llvm.load %r3 : !llvm.ptr -> f64
@@ -3316,7 +3410,7 @@ module {
     cf.cond_br %t52k, ^bb52e, ^bb53
   ^bb52e:
     %t52tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t52twl = arith.constant 65 : i64
+    %t52twl = arith.constant 67 : i64
     %t52tr = func.call @strict_trace_checked(%t52v, %t52tw, %t52twl) : (f64, !llvm.ptr, i64) -> f64
     return %t52tr : f64
   ^bb53:
@@ -3333,7 +3427,7 @@ module {
     cf.cond_br %t55k, ^bb55e, ^bb56
   ^bb55e:
     %t55tw = llvm.mlir.addressof @wStrict_Format_1 : !llvm.ptr
-    %t55twl = arith.constant 65 : i64
+    %t55twl = arith.constant 67 : i64
     %t55tr = func.call @strict_trace_checked(%t55v, %t55tw, %t55twl) : (f64, !llvm.ptr, i64) -> f64
     return %t55tr : f64
   ^bb56:
@@ -3388,7 +3482,7 @@ module {
     %t3a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t3r = func.call @ValidateCheck_Run_2(%t3m, %t3a0, %t3a1) : (f64, f64, f64) -> f64
     %t3tw = llvm.mlir.addressof @wStrict_Checked_3 : !llvm.ptr
-    %t3twl = arith.constant 52 : i64
+    %t3twl = arith.constant 54 : i64
     %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3tr, %r3 : f64, !llvm.ptr
     %t4v = llvm.load %r3 : !llvm.ptr -> f64
@@ -3396,7 +3490,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wStrict_Checked_3 : !llvm.ptr
-    %t4twl = arith.constant 52 : i64
+    %t4twl = arith.constant 54 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -3450,7 +3544,7 @@ module {
     %t3a0 = llvm.load %r2 : !llvm.ptr -> f64
     %t3r = func.call @Repositories_Updated_1(%t3m, %t3a0) : (f64, f64) -> f64
     %t3tw = llvm.mlir.addressof @wStrict_Updated_2 : !llvm.ptr
-    %t3twl = arith.constant 54 : i64
+    %t3twl = arith.constant 56 : i64
     %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3tr, %r3 : f64, !llvm.ptr
     %t4v = llvm.load %r3 : !llvm.ptr -> f64
@@ -3458,7 +3552,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wStrict_Updated_2 : !llvm.ptr
-    %t4twl = arith.constant 54 : i64
+    %t4twl = arith.constant 56 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -3491,6 +3585,333 @@ module {
     llvm.store %t11c, %r0 : f64, !llvm.ptr
     %t12 = llvm.load %r0 : !llvm.ptr -> f64
     return %t12 : f64
+  }
+  func.func private @FileCompiler_Normalized_1(%p0: f64, %p1: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
+    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r0 : f64, !llvm.ptr
+    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r1 : f64, !llvm.ptr
+    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r2 : f64, !llvm.ptr
+    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r3 : f64, !llvm.ptr
+    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r4 : f64, !llvm.ptr
+    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r5 : f64, !llvm.ptr
+    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
+    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r11 : f64, !llvm.ptr
+    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r12 : f64, !llvm.ptr
+    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r13 : f64, !llvm.ptr
+    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r14 : f64, !llvm.ptr
+    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_index : f64, !llvm.ptr
+    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_value : f64, !llvm.ptr
+    %v_path = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_path : f64, !llvm.ptr
+    %v_isQuiet = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_isQuiet : f64, !llvm.ptr
+    %v_slashed = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_slashed : f64, !llvm.ptr
+    %v_logical0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_logical0 : f64, !llvm.ptr
+    %v_isRelative = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_isRelative : f64, !llvm.ptr
+    %v_logical1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_logical1 : f64, !llvm.ptr
+    %v_conditional2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional2 : f64, !llvm.ptr
+    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %instance : f64, !llvm.ptr
+    llvm.store %p0, %instance : f64, !llvm.ptr
+    llvm.store %p0, %v_value : f64, !llvm.ptr
+    llvm.store %p1, %v_path : f64, !llvm.ptr
+    %self = llvm.load %v_value : !llvm.ptr -> f64
+    %hasSelf = arith.cmpf une, %self, %zero : f64
+    cf.cond_br %hasSelf, ^unpack, ^unpacked
+  ^unpack:
+    %t-1selfp = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr
+    %t-1u0 = llvm.getelementptr %t-1selfp[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t-1u0v = llvm.load %t-1u0 : !llvm.ptr -> f64
+    llvm.store %t-1u0v, %v_isQuiet : f64, !llvm.ptr
+    cf.br ^unpacked
+  ^unpacked:
+    %t0 = llvm.load %v_path : !llvm.ptr -> f64
+    llvm.store %t0, %r0 : f64, !llvm.ptr
+    %t1m = arith.constant 0.0 : f64
+    %t1a0 = llvm.load %r0 : !llvm.ptr -> f64
+    %t1r = func.call @TypeSource_Relative_1(%t1m, %t1a0) : (f64, f64) -> f64
+    %t1tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t1twl = arith.constant 115 : i64
+    %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t1tr, %r1 : f64, !llvm.ptr
+    %t2v = llvm.load %r1 : !llvm.ptr -> f64
+    %t2k = func.call @strict_is_failure(%t2v) : (f64) -> i1
+    cf.cond_br %t2k, ^bb2e, ^bb3
+  ^bb2e:
+    %t2tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t2twl = arith.constant 115 : i64
+    %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t2tr : f64
+  ^bb3:
+    %t3c = llvm.mlir.addressof @cFileCompiler_Normalized_1_3 : !llvm.ptr
+    %t3xf = func.call @strict_bits(%t3c) : (!llvm.ptr) -> f64
+    llvm.store %t3xf, %r2 : f64, !llvm.ptr
+    %t4c = llvm.mlir.addressof @cFileCompiler_Normalized_1_4 : !llvm.ptr
+    %t4xf = func.call @strict_bits(%t4c) : (!llvm.ptr) -> f64
+    llvm.store %t4xf, %r3 : f64, !llvm.ptr
+    %t5m = llvm.load %r1 : !llvm.ptr -> f64
+    %t5a0 = llvm.load %r2 : !llvm.ptr -> f64
+    %t5a1 = llvm.load %r3 : !llvm.ptr -> f64
+    %t5r = func.call @Text_Replace_2(%t5m, %t5a0, %t5a1) : (f64, f64, f64) -> f64
+    %t5tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t5twl = arith.constant 115 : i64
+    %t5tr = func.call @strict_trace(%t5r, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t5tr, %r4 : f64, !llvm.ptr
+    %t6v = llvm.load %r4 : !llvm.ptr -> f64
+    %t6k = func.call @strict_is_failure(%t6v) : (f64) -> i1
+    cf.cond_br %t6k, ^bb6e, ^bb7
+  ^bb6e:
+    %t6tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t6twl = arith.constant 115 : i64
+    %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t6tr : f64
+  ^bb7:
+    %t7c = llvm.mlir.addressof @cFileCompiler_Normalized_1_7 : !llvm.ptr
+    %t7xf = func.call @strict_bits(%t7c) : (!llvm.ptr) -> f64
+    llvm.store %t7xf, %r5 : f64, !llvm.ptr
+    %t8c = llvm.mlir.addressof @cFileCompiler_Normalized_1_8 : !llvm.ptr
+    %t8xf = func.call @strict_bits(%t8c) : (!llvm.ptr) -> f64
+    llvm.store %t8xf, %r6 : f64, !llvm.ptr
+    %t9m = llvm.load %r4 : !llvm.ptr -> f64
+    %t9a0 = llvm.load %r5 : !llvm.ptr -> f64
+    %t9a1 = llvm.load %r6 : !llvm.ptr -> f64
+    %t9r = func.call @Text_Replace_2(%t9m, %t9a0, %t9a1) : (f64, f64, f64) -> f64
+    %t9tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t9twl = arith.constant 115 : i64
+    %t9tr = func.call @strict_trace(%t9r, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t9tr, %r7 : f64, !llvm.ptr
+    %t10 = llvm.load %r7 : !llvm.ptr -> f64
+    llvm.store %t10, %v_slashed : f64, !llvm.ptr
+    %t11 = llvm.load %v_slashed : !llvm.ptr -> f64
+    llvm.store %t11, %r0 : f64, !llvm.ptr
+    %t12v = llvm.load %r0 : !llvm.ptr -> f64
+    %t12k = func.call @strict_is_failure(%t12v) : (f64) -> i1
+    cf.cond_br %t12k, ^bb12e, ^bb13
+  ^bb12e:
+    %t12tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t12twl = arith.constant 116 : i64
+    %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t12tr : f64
+  ^bb13:
+    %t13c = llvm.mlir.addressof @cFileCompiler_Normalized_1_13 : !llvm.ptr
+    %t13xf = func.call @strict_bits(%t13c) : (!llvm.ptr) -> f64
+    llvm.store %t13xf, %r1 : f64, !llvm.ptr
+    %t14m = llvm.load %r0 : !llvm.ptr -> f64
+    %t14a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t14r = func.call @strict_text_starts(%t14m, %t14a0, %zero) : (f64, f64, f64) -> f64
+    llvm.store %t14r, %r2 : f64, !llvm.ptr
+    %t15v = llvm.load %r2 : !llvm.ptr -> f64
+    %t15k = func.call @strict_is_failure(%t15v) : (f64) -> i1
+    cf.cond_br %t15k, ^bb15e, ^bb16
+  ^bb15e:
+    %t15tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t15twl = arith.constant 116 : i64
+    %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t15tr : f64
+  ^bb16:
+    %t16c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t16c, %r3 : f64, !llvm.ptr
+    %t17a = llvm.load %r2 : !llvm.ptr -> f64
+    %t17b = llvm.load %r3 : !llvm.ptr -> f64
+    %t17c = arith.cmpf oeq, %t17a, %t17b : f64
+    llvm.store %t17c, %flag : i1, !llvm.ptr
+    %t17d = arith.uitofp %t17c : i1 to f64
+    llvm.store %t17d, %r4 : f64, !llvm.ptr
+    %t18 = llvm.load %r4 : !llvm.ptr -> f64
+    llvm.store %t18, %v_logical0 : f64, !llvm.ptr
+    %t19c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t19c, %r5 : f64, !llvm.ptr
+    %t20a = llvm.load %r4 : !llvm.ptr -> f64
+    %t20b = llvm.load %r5 : !llvm.ptr -> f64
+    %t20c = arith.cmpf oeq, %t20a, %t20b : f64
+    llvm.store %t20c, %flag : i1, !llvm.ptr
+    %t21 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t21, ^bb22, ^bb30
+  ^bb22:
+    %t22 = llvm.load %v_slashed : !llvm.ptr -> f64
+    llvm.store %t22, %r6 : f64, !llvm.ptr
+    %t23v = llvm.load %r6 : !llvm.ptr -> f64
+    %t23k = func.call @strict_is_failure(%t23v) : (f64) -> i1
+    cf.cond_br %t23k, ^bb23e, ^bb24
+  ^bb23e:
+    %t23tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t23twl = arith.constant 116 : i64
+    %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t23tr : f64
+  ^bb24:
+    %t24c = llvm.mlir.addressof @cFileCompiler_Normalized_1_24 : !llvm.ptr
+    %t24xf = func.call @strict_bits(%t24c) : (!llvm.ptr) -> f64
+    llvm.store %t24xf, %r7 : f64, !llvm.ptr
+    %t25m = llvm.load %r6 : !llvm.ptr -> f64
+    %t25a0 = llvm.load %r7 : !llvm.ptr -> f64
+    %t25r = func.call @strict_text_index(%t25m, %t25a0, %zero) : (f64, f64, f64) -> f64
+    llvm.store %t25r, %r8 : f64, !llvm.ptr
+    %t26v = llvm.load %r8 : !llvm.ptr -> f64
+    %t26k = func.call @strict_is_failure(%t26v) : (f64) -> i1
+    cf.cond_br %t26k, ^bb26e, ^bb27
+  ^bb26e:
+    %t26tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t26twl = arith.constant 116 : i64
+    %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t26tr : f64
+  ^bb27:
+    %t27c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t27c, %r9 : f64, !llvm.ptr
+    %t28a = llvm.load %r8 : !llvm.ptr -> f64
+    %t28b = llvm.load %r9 : !llvm.ptr -> f64
+    %t28c = arith.cmpf olt, %t28a, %t28b : f64
+    llvm.store %t28c, %flag : i1, !llvm.ptr
+    %t28d = arith.uitofp %t28c : i1 to f64
+    llvm.store %t28d, %r10 : f64, !llvm.ptr
+    %t29 = llvm.load %r10 : !llvm.ptr -> f64
+    llvm.store %t29, %v_logical0 : f64, !llvm.ptr
+    cf.br ^bb30
+  ^bb30:
+    %t31 = llvm.load %v_logical0 : !llvm.ptr -> f64
+    llvm.store %t31, %r11 : f64, !llvm.ptr
+    %t32 = llvm.load %r11 : !llvm.ptr -> f64
+    llvm.store %t32, %v_isRelative : f64, !llvm.ptr
+    %t33 = llvm.load %v_isRelative : !llvm.ptr -> f64
+    llvm.store %t33, %r0 : f64, !llvm.ptr
+    %t34 = llvm.load %r0 : !llvm.ptr -> f64
+    llvm.store %t34, %v_logical1 : f64, !llvm.ptr
+    %t35c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t35c, %r1 : f64, !llvm.ptr
+    %t36a = llvm.load %r0 : !llvm.ptr -> f64
+    %t36b = llvm.load %r1 : !llvm.ptr -> f64
+    %t36c = arith.cmpf oeq, %t36a, %t36b : f64
+    llvm.store %t36c, %flag : i1, !llvm.ptr
+    %t37 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t37, ^bb38, ^bb46
+  ^bb38:
+    %t38 = llvm.load %v_slashed : !llvm.ptr -> f64
+    llvm.store %t38, %r2 : f64, !llvm.ptr
+    %t39v = llvm.load %r2 : !llvm.ptr -> f64
+    %t39k = func.call @strict_is_failure(%t39v) : (f64) -> i1
+    cf.cond_br %t39k, ^bb39e, ^bb40
+  ^bb39e:
+    %t39tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t39twl = arith.constant 117 : i64
+    %t39tr = func.call @strict_trace_checked(%t39v, %t39tw, %t39twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t39tr : f64
+  ^bb40:
+    %t40c = llvm.mlir.addressof @cFileCompiler_Normalized_1_40 : !llvm.ptr
+    %t40xf = func.call @strict_bits(%t40c) : (!llvm.ptr) -> f64
+    llvm.store %t40xf, %r3 : f64, !llvm.ptr
+    %t41m = llvm.load %r2 : !llvm.ptr -> f64
+    %t41a0 = llvm.load %r3 : !llvm.ptr -> f64
+    %t41r = func.call @strict_text_starts(%t41m, %t41a0, %zero) : (f64, f64, f64) -> f64
+    llvm.store %t41r, %r4 : f64, !llvm.ptr
+    %t42v = llvm.load %r4 : !llvm.ptr -> f64
+    %t42k = func.call @strict_is_failure(%t42v) : (f64) -> i1
+    cf.cond_br %t42k, ^bb42e, ^bb43
+  ^bb42e:
+    %t42tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t42twl = arith.constant 117 : i64
+    %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t42tr : f64
+  ^bb43:
+    %t43c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t43c, %r5 : f64, !llvm.ptr
+    %t44a = llvm.load %r4 : !llvm.ptr -> f64
+    %t44b = llvm.load %r5 : !llvm.ptr -> f64
+    %t44c = arith.cmpf oeq, %t44a, %t44b : f64
+    llvm.store %t44c, %flag : i1, !llvm.ptr
+    %t44d = arith.uitofp %t44c : i1 to f64
+    llvm.store %t44d, %r6 : f64, !llvm.ptr
+    %t45 = llvm.load %r6 : !llvm.ptr -> f64
+    llvm.store %t45, %v_logical1 : f64, !llvm.ptr
+    cf.br ^bb46
+  ^bb46:
+    %t47 = llvm.load %v_logical1 : !llvm.ptr -> f64
+    llvm.store %t47, %r7 : f64, !llvm.ptr
+    %t48c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t48c, %r8 : f64, !llvm.ptr
+    %t49a = llvm.load %r7 : !llvm.ptr -> f64
+    %t49b = llvm.load %r8 : !llvm.ptr -> f64
+    %t49c = arith.cmpf oeq, %t49a, %t49b : f64
+    llvm.store %t49c, %flag : i1, !llvm.ptr
+    %t50 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t50, ^bb51, ^bb58
+  ^bb51:
+    %t51c = llvm.mlir.addressof @cFileCompiler_Normalized_1_51 : !llvm.ptr
+    %t51xf = func.call @strict_bits(%t51c) : (!llvm.ptr) -> f64
+    llvm.store %t51xf, %r9 : f64, !llvm.ptr
+    %t52 = llvm.load %v_slashed : !llvm.ptr -> f64
+    llvm.store %t52, %r10 : f64, !llvm.ptr
+    %t53v = llvm.load %r10 : !llvm.ptr -> f64
+    %t53k = func.call @strict_is_failure(%t53v) : (f64) -> i1
+    cf.cond_br %t53k, ^bb53e, ^bb54
+  ^bb53e:
+    %t53tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t53twl = arith.constant 117 : i64
+    %t53tr = func.call @strict_trace_checked(%t53v, %t53tw, %t53twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t53tr : f64
+  ^bb54:
+    %t54lx = llvm.load %r9 : !llvm.ptr -> f64
+    %t54rx = llvm.load %r10 : !llvm.ptr -> f64
+    %t54c = func.call @strict_text_concat(%t54lx, %t54rx) : (f64, f64) -> f64
+    llvm.store %t54c, %r11 : f64, !llvm.ptr
+    %t55 = llvm.load %r11 : !llvm.ptr -> f64
+    llvm.store %t55, %v_conditional2 : f64, !llvm.ptr
+    %t56c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t56c, %r12 : f64, !llvm.ptr
+    %t57a = llvm.load %r12 : !llvm.ptr -> f64
+    %t57b = llvm.load %r12 : !llvm.ptr -> f64
+    %t57c = arith.cmpf oeq, %t57a, %t57b : f64
+    llvm.store %t57c, %flag : i1, !llvm.ptr
+    cf.br ^bb58
+  ^bb58:
+    %t59 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t59, ^bb62, ^bb60
+  ^bb60:
+    %t60 = llvm.load %v_slashed : !llvm.ptr -> f64
+    llvm.store %t60, %r13 : f64, !llvm.ptr
+    %t61 = llvm.load %r13 : !llvm.ptr -> f64
+    llvm.store %t61, %v_conditional2 : f64, !llvm.ptr
+    cf.br ^bb62
+  ^bb62:
+    %t63 = llvm.load %v_conditional2 : !llvm.ptr -> f64
+    llvm.store %t63, %r14 : f64, !llvm.ptr
+    %t64v = llvm.load %r14 : !llvm.ptr -> f64
+    %t64k = func.call @strict_is_failure(%t64v) : (f64) -> i1
+    cf.cond_br %t64k, ^bb64e, ^bb65
+  ^bb64e:
+    %t64tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
+    %t64twl = arith.constant 117 : i64
+    %t64tr = func.call @strict_trace_checked(%t64v, %t64tw, %t64twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t64tr : f64
+  ^bb65:
+    %t65 = llvm.load %r14 : !llvm.ptr -> f64
+    return %t65 : f64
   }
   func.func private @NativeBuild_Compile_3(%p0: f64, %p1: f64, %p2: f64, %p3: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -5352,7 +5773,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_TypeEntry__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -7701,333 +8122,6 @@ module {
     %t46 = llvm.load %r6 : !llvm.ptr -> f64
     return %t46 : f64
   }
-  func.func private @FileCompiler_Normalized_1(%p0: f64, %p1: f64) -> f64 {
-    %one = arith.constant 1 : i64
-    %zero = arith.constant 0.0 : f64
-    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
-    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r0 : f64, !llvm.ptr
-    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r1 : f64, !llvm.ptr
-    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r2 : f64, !llvm.ptr
-    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r3 : f64, !llvm.ptr
-    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r4 : f64, !llvm.ptr
-    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r5 : f64, !llvm.ptr
-    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r6 : f64, !llvm.ptr
-    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r7 : f64, !llvm.ptr
-    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r8 : f64, !llvm.ptr
-    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r9 : f64, !llvm.ptr
-    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r10 : f64, !llvm.ptr
-    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r11 : f64, !llvm.ptr
-    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r12 : f64, !llvm.ptr
-    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r13 : f64, !llvm.ptr
-    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r14 : f64, !llvm.ptr
-    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_index : f64, !llvm.ptr
-    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_value : f64, !llvm.ptr
-    %v_path = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_path : f64, !llvm.ptr
-    %v_isQuiet = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_isQuiet : f64, !llvm.ptr
-    %v_slashed = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_slashed : f64, !llvm.ptr
-    %v_logical0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_logical0 : f64, !llvm.ptr
-    %v_isRelative = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_isRelative : f64, !llvm.ptr
-    %v_logical1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_logical1 : f64, !llvm.ptr
-    %v_conditional2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_conditional2 : f64, !llvm.ptr
-    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %instance : f64, !llvm.ptr
-    llvm.store %p0, %instance : f64, !llvm.ptr
-    llvm.store %p0, %v_value : f64, !llvm.ptr
-    llvm.store %p1, %v_path : f64, !llvm.ptr
-    %self = llvm.load %v_value : !llvm.ptr -> f64
-    %hasSelf = arith.cmpf une, %self, %zero : f64
-    cf.cond_br %hasSelf, ^unpack, ^unpacked
-  ^unpack:
-    %t-1selfp = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr
-    %t-1u0 = llvm.getelementptr %t-1selfp[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t-1u0v = llvm.load %t-1u0 : !llvm.ptr -> f64
-    llvm.store %t-1u0v, %v_isQuiet : f64, !llvm.ptr
-    cf.br ^unpacked
-  ^unpacked:
-    %t0 = llvm.load %v_path : !llvm.ptr -> f64
-    llvm.store %t0, %r0 : f64, !llvm.ptr
-    %t1m = arith.constant 0.0 : f64
-    %t1a0 = llvm.load %r0 : !llvm.ptr -> f64
-    %t1r = func.call @TypeSource_Relative_1(%t1m, %t1a0) : (f64, f64) -> f64
-    %t1tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t1twl = arith.constant 115 : i64
-    %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t1tr, %r1 : f64, !llvm.ptr
-    %t2v = llvm.load %r1 : !llvm.ptr -> f64
-    %t2k = func.call @strict_is_failure(%t2v) : (f64) -> i1
-    cf.cond_br %t2k, ^bb2e, ^bb3
-  ^bb2e:
-    %t2tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t2twl = arith.constant 115 : i64
-    %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t2tr : f64
-  ^bb3:
-    %t3c = llvm.mlir.addressof @cFileCompiler_Normalized_1_3 : !llvm.ptr
-    %t3xf = func.call @strict_bits(%t3c) : (!llvm.ptr) -> f64
-    llvm.store %t3xf, %r2 : f64, !llvm.ptr
-    %t4c = llvm.mlir.addressof @cFileCompiler_Normalized_1_4 : !llvm.ptr
-    %t4xf = func.call @strict_bits(%t4c) : (!llvm.ptr) -> f64
-    llvm.store %t4xf, %r3 : f64, !llvm.ptr
-    %t5m = llvm.load %r1 : !llvm.ptr -> f64
-    %t5a0 = llvm.load %r2 : !llvm.ptr -> f64
-    %t5a1 = llvm.load %r3 : !llvm.ptr -> f64
-    %t5r = func.call @Text_Replace_2(%t5m, %t5a0, %t5a1) : (f64, f64, f64) -> f64
-    %t5tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t5twl = arith.constant 115 : i64
-    %t5tr = func.call @strict_trace(%t5r, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t5tr, %r4 : f64, !llvm.ptr
-    %t6v = llvm.load %r4 : !llvm.ptr -> f64
-    %t6k = func.call @strict_is_failure(%t6v) : (f64) -> i1
-    cf.cond_br %t6k, ^bb6e, ^bb7
-  ^bb6e:
-    %t6tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t6twl = arith.constant 115 : i64
-    %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t6tr : f64
-  ^bb7:
-    %t7c = llvm.mlir.addressof @cFileCompiler_Normalized_1_7 : !llvm.ptr
-    %t7xf = func.call @strict_bits(%t7c) : (!llvm.ptr) -> f64
-    llvm.store %t7xf, %r5 : f64, !llvm.ptr
-    %t8c = llvm.mlir.addressof @cFileCompiler_Normalized_1_8 : !llvm.ptr
-    %t8xf = func.call @strict_bits(%t8c) : (!llvm.ptr) -> f64
-    llvm.store %t8xf, %r6 : f64, !llvm.ptr
-    %t9m = llvm.load %r4 : !llvm.ptr -> f64
-    %t9a0 = llvm.load %r5 : !llvm.ptr -> f64
-    %t9a1 = llvm.load %r6 : !llvm.ptr -> f64
-    %t9r = func.call @Text_Replace_2(%t9m, %t9a0, %t9a1) : (f64, f64, f64) -> f64
-    %t9tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t9twl = arith.constant 115 : i64
-    %t9tr = func.call @strict_trace(%t9r, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t9tr, %r7 : f64, !llvm.ptr
-    %t10 = llvm.load %r7 : !llvm.ptr -> f64
-    llvm.store %t10, %v_slashed : f64, !llvm.ptr
-    %t11 = llvm.load %v_slashed : !llvm.ptr -> f64
-    llvm.store %t11, %r0 : f64, !llvm.ptr
-    %t12v = llvm.load %r0 : !llvm.ptr -> f64
-    %t12k = func.call @strict_is_failure(%t12v) : (f64) -> i1
-    cf.cond_br %t12k, ^bb12e, ^bb13
-  ^bb12e:
-    %t12tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t12twl = arith.constant 116 : i64
-    %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t12tr : f64
-  ^bb13:
-    %t13c = llvm.mlir.addressof @cFileCompiler_Normalized_1_13 : !llvm.ptr
-    %t13xf = func.call @strict_bits(%t13c) : (!llvm.ptr) -> f64
-    llvm.store %t13xf, %r1 : f64, !llvm.ptr
-    %t14m = llvm.load %r0 : !llvm.ptr -> f64
-    %t14a0 = llvm.load %r1 : !llvm.ptr -> f64
-    %t14r = func.call @strict_text_starts(%t14m, %t14a0, %zero) : (f64, f64, f64) -> f64
-    llvm.store %t14r, %r2 : f64, !llvm.ptr
-    %t15v = llvm.load %r2 : !llvm.ptr -> f64
-    %t15k = func.call @strict_is_failure(%t15v) : (f64) -> i1
-    cf.cond_br %t15k, ^bb15e, ^bb16
-  ^bb15e:
-    %t15tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t15twl = arith.constant 116 : i64
-    %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t15tr : f64
-  ^bb16:
-    %t16c = arith.constant 0x0000000000000000 : f64
-    llvm.store %t16c, %r3 : f64, !llvm.ptr
-    %t17a = llvm.load %r2 : !llvm.ptr -> f64
-    %t17b = llvm.load %r3 : !llvm.ptr -> f64
-    %t17c = arith.cmpf oeq, %t17a, %t17b : f64
-    llvm.store %t17c, %flag : i1, !llvm.ptr
-    %t17d = arith.uitofp %t17c : i1 to f64
-    llvm.store %t17d, %r4 : f64, !llvm.ptr
-    %t18 = llvm.load %r4 : !llvm.ptr -> f64
-    llvm.store %t18, %v_logical0 : f64, !llvm.ptr
-    %t19c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t19c, %r5 : f64, !llvm.ptr
-    %t20a = llvm.load %r4 : !llvm.ptr -> f64
-    %t20b = llvm.load %r5 : !llvm.ptr -> f64
-    %t20c = arith.cmpf oeq, %t20a, %t20b : f64
-    llvm.store %t20c, %flag : i1, !llvm.ptr
-    %t21 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t21, ^bb22, ^bb30
-  ^bb22:
-    %t22 = llvm.load %v_slashed : !llvm.ptr -> f64
-    llvm.store %t22, %r6 : f64, !llvm.ptr
-    %t23v = llvm.load %r6 : !llvm.ptr -> f64
-    %t23k = func.call @strict_is_failure(%t23v) : (f64) -> i1
-    cf.cond_br %t23k, ^bb23e, ^bb24
-  ^bb23e:
-    %t23tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t23twl = arith.constant 116 : i64
-    %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t23tr : f64
-  ^bb24:
-    %t24c = llvm.mlir.addressof @cFileCompiler_Normalized_1_24 : !llvm.ptr
-    %t24xf = func.call @strict_bits(%t24c) : (!llvm.ptr) -> f64
-    llvm.store %t24xf, %r7 : f64, !llvm.ptr
-    %t25m = llvm.load %r6 : !llvm.ptr -> f64
-    %t25a0 = llvm.load %r7 : !llvm.ptr -> f64
-    %t25r = func.call @strict_text_index(%t25m, %t25a0, %zero) : (f64, f64, f64) -> f64
-    llvm.store %t25r, %r8 : f64, !llvm.ptr
-    %t26v = llvm.load %r8 : !llvm.ptr -> f64
-    %t26k = func.call @strict_is_failure(%t26v) : (f64) -> i1
-    cf.cond_br %t26k, ^bb26e, ^bb27
-  ^bb26e:
-    %t26tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t26twl = arith.constant 116 : i64
-    %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t26tr : f64
-  ^bb27:
-    %t27c = arith.constant 0x0000000000000000 : f64
-    llvm.store %t27c, %r9 : f64, !llvm.ptr
-    %t28a = llvm.load %r8 : !llvm.ptr -> f64
-    %t28b = llvm.load %r9 : !llvm.ptr -> f64
-    %t28c = arith.cmpf olt, %t28a, %t28b : f64
-    llvm.store %t28c, %flag : i1, !llvm.ptr
-    %t28d = arith.uitofp %t28c : i1 to f64
-    llvm.store %t28d, %r10 : f64, !llvm.ptr
-    %t29 = llvm.load %r10 : !llvm.ptr -> f64
-    llvm.store %t29, %v_logical0 : f64, !llvm.ptr
-    cf.br ^bb30
-  ^bb30:
-    %t31 = llvm.load %v_logical0 : !llvm.ptr -> f64
-    llvm.store %t31, %r11 : f64, !llvm.ptr
-    %t32 = llvm.load %r11 : !llvm.ptr -> f64
-    llvm.store %t32, %v_isRelative : f64, !llvm.ptr
-    %t33 = llvm.load %v_isRelative : !llvm.ptr -> f64
-    llvm.store %t33, %r0 : f64, !llvm.ptr
-    %t34 = llvm.load %r0 : !llvm.ptr -> f64
-    llvm.store %t34, %v_logical1 : f64, !llvm.ptr
-    %t35c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t35c, %r1 : f64, !llvm.ptr
-    %t36a = llvm.load %r0 : !llvm.ptr -> f64
-    %t36b = llvm.load %r1 : !llvm.ptr -> f64
-    %t36c = arith.cmpf oeq, %t36a, %t36b : f64
-    llvm.store %t36c, %flag : i1, !llvm.ptr
-    %t37 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t37, ^bb38, ^bb46
-  ^bb38:
-    %t38 = llvm.load %v_slashed : !llvm.ptr -> f64
-    llvm.store %t38, %r2 : f64, !llvm.ptr
-    %t39v = llvm.load %r2 : !llvm.ptr -> f64
-    %t39k = func.call @strict_is_failure(%t39v) : (f64) -> i1
-    cf.cond_br %t39k, ^bb39e, ^bb40
-  ^bb39e:
-    %t39tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t39twl = arith.constant 117 : i64
-    %t39tr = func.call @strict_trace_checked(%t39v, %t39tw, %t39twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t39tr : f64
-  ^bb40:
-    %t40c = llvm.mlir.addressof @cFileCompiler_Normalized_1_40 : !llvm.ptr
-    %t40xf = func.call @strict_bits(%t40c) : (!llvm.ptr) -> f64
-    llvm.store %t40xf, %r3 : f64, !llvm.ptr
-    %t41m = llvm.load %r2 : !llvm.ptr -> f64
-    %t41a0 = llvm.load %r3 : !llvm.ptr -> f64
-    %t41r = func.call @strict_text_starts(%t41m, %t41a0, %zero) : (f64, f64, f64) -> f64
-    llvm.store %t41r, %r4 : f64, !llvm.ptr
-    %t42v = llvm.load %r4 : !llvm.ptr -> f64
-    %t42k = func.call @strict_is_failure(%t42v) : (f64) -> i1
-    cf.cond_br %t42k, ^bb42e, ^bb43
-  ^bb42e:
-    %t42tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t42twl = arith.constant 117 : i64
-    %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t42tr : f64
-  ^bb43:
-    %t43c = arith.constant 0x0000000000000000 : f64
-    llvm.store %t43c, %r5 : f64, !llvm.ptr
-    %t44a = llvm.load %r4 : !llvm.ptr -> f64
-    %t44b = llvm.load %r5 : !llvm.ptr -> f64
-    %t44c = arith.cmpf oeq, %t44a, %t44b : f64
-    llvm.store %t44c, %flag : i1, !llvm.ptr
-    %t44d = arith.uitofp %t44c : i1 to f64
-    llvm.store %t44d, %r6 : f64, !llvm.ptr
-    %t45 = llvm.load %r6 : !llvm.ptr -> f64
-    llvm.store %t45, %v_logical1 : f64, !llvm.ptr
-    cf.br ^bb46
-  ^bb46:
-    %t47 = llvm.load %v_logical1 : !llvm.ptr -> f64
-    llvm.store %t47, %r7 : f64, !llvm.ptr
-    %t48c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t48c, %r8 : f64, !llvm.ptr
-    %t49a = llvm.load %r7 : !llvm.ptr -> f64
-    %t49b = llvm.load %r8 : !llvm.ptr -> f64
-    %t49c = arith.cmpf oeq, %t49a, %t49b : f64
-    llvm.store %t49c, %flag : i1, !llvm.ptr
-    %t50 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t50, ^bb51, ^bb58
-  ^bb51:
-    %t51c = llvm.mlir.addressof @cFileCompiler_Normalized_1_51 : !llvm.ptr
-    %t51xf = func.call @strict_bits(%t51c) : (!llvm.ptr) -> f64
-    llvm.store %t51xf, %r9 : f64, !llvm.ptr
-    %t52 = llvm.load %v_slashed : !llvm.ptr -> f64
-    llvm.store %t52, %r10 : f64, !llvm.ptr
-    %t53v = llvm.load %r10 : !llvm.ptr -> f64
-    %t53k = func.call @strict_is_failure(%t53v) : (f64) -> i1
-    cf.cond_br %t53k, ^bb53e, ^bb54
-  ^bb53e:
-    %t53tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t53twl = arith.constant 117 : i64
-    %t53tr = func.call @strict_trace_checked(%t53v, %t53tw, %t53twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t53tr : f64
-  ^bb54:
-    %t54lx = llvm.load %r9 : !llvm.ptr -> f64
-    %t54rx = llvm.load %r10 : !llvm.ptr -> f64
-    %t54c = func.call @strict_text_concat(%t54lx, %t54rx) : (f64, f64) -> f64
-    llvm.store %t54c, %r11 : f64, !llvm.ptr
-    %t55 = llvm.load %r11 : !llvm.ptr -> f64
-    llvm.store %t55, %v_conditional2 : f64, !llvm.ptr
-    %t56c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t56c, %r12 : f64, !llvm.ptr
-    %t57a = llvm.load %r12 : !llvm.ptr -> f64
-    %t57b = llvm.load %r12 : !llvm.ptr -> f64
-    %t57c = arith.cmpf oeq, %t57a, %t57b : f64
-    llvm.store %t57c, %flag : i1, !llvm.ptr
-    cf.br ^bb58
-  ^bb58:
-    %t59 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t59, ^bb62, ^bb60
-  ^bb60:
-    %t60 = llvm.load %v_slashed : !llvm.ptr -> f64
-    llvm.store %t60, %r13 : f64, !llvm.ptr
-    %t61 = llvm.load %r13 : !llvm.ptr -> f64
-    llvm.store %t61, %v_conditional2 : f64, !llvm.ptr
-    cf.br ^bb62
-  ^bb62:
-    %t63 = llvm.load %v_conditional2 : !llvm.ptr -> f64
-    llvm.store %t63, %r14 : f64, !llvm.ptr
-    %t64v = llvm.load %r14 : !llvm.ptr -> f64
-    %t64k = func.call @strict_is_failure(%t64v) : (f64) -> i1
-    cf.cond_br %t64k, ^bb64e, ^bb65
-  ^bb64e:
-    %t64tw = llvm.mlir.addressof @wFileCompiler_Normalized_1 : !llvm.ptr
-    %t64twl = arith.constant 117 : i64
-    %t64tr = func.call @strict_trace_checked(%t64v, %t64tw, %t64twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t64tr : f64
-  ^bb65:
-    %t65 = llvm.load %r14 : !llvm.ptr -> f64
-    return %t65 : f64
-  }
   func.func private @RoundTrip_Formatted_1(%p0: f64, %p1: f64) -> f64 {
     %one = arith.constant 1 : i64
     %zero = arith.constant 0.0 : f64
@@ -8907,6 +9001,301 @@ module {
     llvm.store %t70, %r0 : f64, !llvm.ptr
     %t71 = llvm.load %r0 : !llvm.ptr -> f64
     return %t71 : f64
+  }
+  func.func private @TypeSource_Relative_1(%p0: f64, %p1: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
+    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r0 : f64, !llvm.ptr
+    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r1 : f64, !llvm.ptr
+    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r2 : f64, !llvm.ptr
+    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r3 : f64, !llvm.ptr
+    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r4 : f64, !llvm.ptr
+    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r5 : f64, !llvm.ptr
+    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
+    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r11 : f64, !llvm.ptr
+    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r12 : f64, !llvm.ptr
+    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r13 : f64, !llvm.ptr
+    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r14 : f64, !llvm.ptr
+    %r15 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r15 : f64, !llvm.ptr
+    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_index : f64, !llvm.ptr
+    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_value : f64, !llvm.ptr
+    %v_path = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_path : f64, !llvm.ptr
+    %v_entry = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_entry : f64, !llvm.ptr
+    %v_current = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_current : f64, !llvm.ptr
+    %v_slashed = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_slashed : f64, !llvm.ptr
+    %v_isInside = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_isInside : f64, !llvm.ptr
+    %v_conditional0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional0 : f64, !llvm.ptr
+    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %instance : f64, !llvm.ptr
+    llvm.store %p0, %instance : f64, !llvm.ptr
+    llvm.store %p0, %v_value : f64, !llvm.ptr
+    llvm.store %p1, %v_path : f64, !llvm.ptr
+    %talias0 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %talias0, %v_entry : f64, !llvm.ptr
+    %t0m = arith.constant 0.0 : f64
+    %t0r = func.call @strict_directory_current(%t0m) : (f64) -> f64
+    llvm.store %t0r, %r0 : f64, !llvm.ptr
+    %t1v = llvm.load %r0 : !llvm.ptr -> f64
+    %t1k = func.call @strict_is_failure(%t1v) : (f64) -> i1
+    cf.cond_br %t1k, ^bb1e, ^bb2
+  ^bb1e:
+    %t1tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t1twl = arith.constant 23 : i64
+    %t1tr = func.call @strict_trace_checked(%t1v, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t1tr : f64
+  ^bb2:
+    %t2c = llvm.mlir.addressof @cTypeSource_Relative_1_2 : !llvm.ptr
+    %t2xf = func.call @strict_bits(%t2c) : (!llvm.ptr) -> f64
+    llvm.store %t2xf, %r1 : f64, !llvm.ptr
+    %t3c = llvm.mlir.addressof @cTypeSource_Relative_1_3 : !llvm.ptr
+    %t3xf = func.call @strict_bits(%t3c) : (!llvm.ptr) -> f64
+    llvm.store %t3xf, %r2 : f64, !llvm.ptr
+    %t4m = llvm.load %r0 : !llvm.ptr -> f64
+    %t4a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t4a1 = llvm.load %r2 : !llvm.ptr -> f64
+    %t4r = func.call @Text_Replace_2(%t4m, %t4a0, %t4a1) : (f64, f64, f64) -> f64
+    %t4tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t4twl = arith.constant 23 : i64
+    %t4tr = func.call @strict_trace(%t4r, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t4tr, %r3 : f64, !llvm.ptr
+    %t5v = llvm.load %r3 : !llvm.ptr -> f64
+    %t5k = func.call @strict_is_failure(%t5v) : (f64) -> i1
+    cf.cond_br %t5k, ^bb5e, ^bb6
+  ^bb5e:
+    %t5tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t5twl = arith.constant 23 : i64
+    %t5tr = func.call @strict_trace_checked(%t5v, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t5tr : f64
+  ^bb6:
+    %t6c = llvm.mlir.addressof @cTypeSource_Relative_1_6 : !llvm.ptr
+    %t6xf = func.call @strict_bits(%t6c) : (!llvm.ptr) -> f64
+    llvm.store %t6xf, %r4 : f64, !llvm.ptr
+    %t7lx = llvm.load %r3 : !llvm.ptr -> f64
+    %t7rx = llvm.load %r4 : !llvm.ptr -> f64
+    %t7c = func.call @strict_text_concat(%t7lx, %t7rx) : (f64, f64) -> f64
+    llvm.store %t7c, %r5 : f64, !llvm.ptr
+    %t8 = llvm.load %r5 : !llvm.ptr -> f64
+    llvm.store %t8, %v_current : f64, !llvm.ptr
+    %t9 = llvm.load %v_path : !llvm.ptr -> f64
+    llvm.store %t9, %r0 : f64, !llvm.ptr
+    %t10c = llvm.mlir.addressof @cTypeSource_Relative_1_10 : !llvm.ptr
+    %t10xf = func.call @strict_bits(%t10c) : (!llvm.ptr) -> f64
+    llvm.store %t10xf, %r1 : f64, !llvm.ptr
+    %t11c = llvm.mlir.addressof @cTypeSource_Relative_1_11 : !llvm.ptr
+    %t11xf = func.call @strict_bits(%t11c) : (!llvm.ptr) -> f64
+    llvm.store %t11xf, %r2 : f64, !llvm.ptr
+    %t12m = llvm.load %r0 : !llvm.ptr -> f64
+    %t12a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t12a1 = llvm.load %r2 : !llvm.ptr -> f64
+    %t12r = func.call @Text_Replace_2(%t12m, %t12a0, %t12a1) : (f64, f64, f64) -> f64
+    %t12tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t12twl = arith.constant 24 : i64
+    %t12tr = func.call @strict_trace(%t12r, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t12tr, %r3 : f64, !llvm.ptr
+    %t13 = llvm.load %r3 : !llvm.ptr -> f64
+    llvm.store %t13, %v_slashed : f64, !llvm.ptr
+    %t14 = llvm.load %v_slashed : !llvm.ptr -> f64
+    llvm.store %t14, %r0 : f64, !llvm.ptr
+    %t15v = llvm.load %r0 : !llvm.ptr -> f64
+    %t15k = func.call @strict_is_failure(%t15v) : (f64) -> i1
+    cf.cond_br %t15k, ^bb15e, ^bb16
+  ^bb15e:
+    %t15tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t15twl = arith.constant 25 : i64
+    %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t15tr : f64
+  ^bb16:
+    %t16m = llvm.load %r0 : !llvm.ptr -> f64
+    %t16r = func.call @strict_text_lower(%t16m) : (f64) -> f64
+    llvm.store %t16r, %r1 : f64, !llvm.ptr
+    %t17v = llvm.load %r1 : !llvm.ptr -> f64
+    %t17k = func.call @strict_is_failure(%t17v) : (f64) -> i1
+    cf.cond_br %t17k, ^bb17e, ^bb18
+  ^bb17e:
+    %t17tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t17twl = arith.constant 25 : i64
+    %t17tr = func.call @strict_trace_checked(%t17v, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t17tr : f64
+  ^bb18:
+    %t18 = llvm.load %v_current : !llvm.ptr -> f64
+    llvm.store %t18, %r2 : f64, !llvm.ptr
+    %t19m = llvm.load %r2 : !llvm.ptr -> f64
+    %t19r = func.call @strict_text_lower(%t19m) : (f64) -> f64
+    llvm.store %t19r, %r3 : f64, !llvm.ptr
+    %t20v = llvm.load %r3 : !llvm.ptr -> f64
+    %t20k = func.call @strict_is_failure(%t20v) : (f64) -> i1
+    cf.cond_br %t20k, ^bb20e, ^bb21
+  ^bb20e:
+    %t20tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t20twl = arith.constant 25 : i64
+    %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t20tr : f64
+  ^bb21:
+    %t21m = llvm.load %r1 : !llvm.ptr -> f64
+    %t21a0 = llvm.load %r3 : !llvm.ptr -> f64
+    %t21r = func.call @strict_text_starts(%t21m, %t21a0, %zero) : (f64, f64, f64) -> f64
+    llvm.store %t21r, %r4 : f64, !llvm.ptr
+    %t22 = llvm.load %r4 : !llvm.ptr -> f64
+    llvm.store %t22, %v_isInside : f64, !llvm.ptr
+    %t23 = llvm.load %v_isInside : !llvm.ptr -> f64
+    llvm.store %t23, %r0 : f64, !llvm.ptr
+    %t24v = llvm.load %r0 : !llvm.ptr -> f64
+    %t24k = func.call @strict_is_failure(%t24v) : (f64) -> i1
+    cf.cond_br %t24k, ^bb24e, ^bb25
+  ^bb24e:
+    %t24tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t24twl = arith.constant 26 : i64
+    %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t24tr : f64
+  ^bb25:
+    %t25c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t25c, %r1 : f64, !llvm.ptr
+    %t26a = llvm.load %r0 : !llvm.ptr -> f64
+    %t26b = llvm.load %r1 : !llvm.ptr -> f64
+    %t26c = arith.cmpf oeq, %t26a, %t26b : f64
+    llvm.store %t26c, %flag : i1, !llvm.ptr
+    %t27 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t27, ^bb28, ^bb48
+  ^bb28:
+    %t28c = llvm.mlir.addressof @cTypeSource_Relative_1_28 : !llvm.ptr
+    %t28xf = func.call @strict_bits(%t28c) : (!llvm.ptr) -> f64
+    llvm.store %t28xf, %r2 : f64, !llvm.ptr
+    %t29 = llvm.load %v_slashed : !llvm.ptr -> f64
+    llvm.store %t29, %r3 : f64, !llvm.ptr
+    %t30v = llvm.load %r3 : !llvm.ptr -> f64
+    %t30k = func.call @strict_is_failure(%t30v) : (f64) -> i1
+    cf.cond_br %t30k, ^bb30e, ^bb31
+  ^bb30e:
+    %t30tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t30twl = arith.constant 26 : i64
+    %t30tr = func.call @strict_trace_checked(%t30v, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t30tr : f64
+  ^bb31:
+    %t31 = llvm.load %v_current : !llvm.ptr -> f64
+    llvm.store %t31, %r4 : f64, !llvm.ptr
+    %t32m = llvm.load %r4 : !llvm.ptr -> f64
+    %t32r = func.call @strict_text_length(%t32m) : (f64) -> f64
+    llvm.store %t32r, %r5 : f64, !llvm.ptr
+    %t33v = llvm.load %r5 : !llvm.ptr -> f64
+    %t33k = func.call @strict_is_failure(%t33v) : (f64) -> i1
+    cf.cond_br %t33k, ^bb33e, ^bb34
+  ^bb33e:
+    %t33tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t33twl = arith.constant 26 : i64
+    %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t33tr : f64
+  ^bb34:
+    %t34 = llvm.load %v_slashed : !llvm.ptr -> f64
+    llvm.store %t34, %r6 : f64, !llvm.ptr
+    %t35v = llvm.load %r6 : !llvm.ptr -> f64
+    %t35k = func.call @strict_is_failure(%t35v) : (f64) -> i1
+    cf.cond_br %t35k, ^bb35e, ^bb36
+  ^bb35e:
+    %t35tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t35twl = arith.constant 26 : i64
+    %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t35tr : f64
+  ^bb36:
+    %t36m = llvm.load %r6 : !llvm.ptr -> f64
+    %t36r = func.call @strict_text_length(%t36m) : (f64) -> f64
+    llvm.store %t36r, %r7 : f64, !llvm.ptr
+    %t37v = llvm.load %r7 : !llvm.ptr -> f64
+    %t37k = func.call @strict_is_failure(%t37v) : (f64) -> i1
+    cf.cond_br %t37k, ^bb37e, ^bb38
+  ^bb37e:
+    %t37tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t37twl = arith.constant 26 : i64
+    %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t37tr : f64
+  ^bb38:
+    %t38 = llvm.load %v_current : !llvm.ptr -> f64
+    llvm.store %t38, %r8 : f64, !llvm.ptr
+    %t39m = llvm.load %r8 : !llvm.ptr -> f64
+    %t39r = func.call @strict_text_length(%t39m) : (f64) -> f64
+    llvm.store %t39r, %r9 : f64, !llvm.ptr
+    %t40v = llvm.load %r9 : !llvm.ptr -> f64
+    %t40k = func.call @strict_is_failure(%t40v) : (f64) -> i1
+    cf.cond_br %t40k, ^bb40e, ^bb41
+  ^bb40e:
+    %t40tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t40twl = arith.constant 26 : i64
+    %t40tr = func.call @strict_trace_checked(%t40v, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t40tr : f64
+  ^bb41:
+    %t41a = llvm.load %r7 : !llvm.ptr -> f64
+    %t41b = llvm.load %r9 : !llvm.ptr -> f64
+    %t41c = arith.subf %t41a, %t41b : f64
+    llvm.store %t41c, %r10 : f64, !llvm.ptr
+    %t42m = llvm.load %r3 : !llvm.ptr -> f64
+    %t42a0 = llvm.load %r5 : !llvm.ptr -> f64
+    %t42a1 = llvm.load %r10 : !llvm.ptr -> f64
+    %t42r = func.call @strict_text_substring(%t42m, %t42a0, %t42a1) : (f64, f64, f64) -> f64
+    llvm.store %t42r, %r11 : f64, !llvm.ptr
+    %t43v = llvm.load %r11 : !llvm.ptr -> f64
+    %t43k = func.call @strict_is_failure(%t43v) : (f64) -> i1
+    cf.cond_br %t43k, ^bb43e, ^bb44
+  ^bb43e:
+    %t43tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
+    %t43twl = arith.constant 26 : i64
+    %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t43tr : f64
+  ^bb44:
+    %t44lx = llvm.load %r2 : !llvm.ptr -> f64
+    %t44rx = llvm.load %r11 : !llvm.ptr -> f64
+    %t44c = func.call @strict_text_concat(%t44lx, %t44rx) : (f64, f64) -> f64
+    llvm.store %t44c, %r12 : f64, !llvm.ptr
+    %t45 = llvm.load %r12 : !llvm.ptr -> f64
+    llvm.store %t45, %v_conditional0 : f64, !llvm.ptr
+    %t46c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t46c, %r13 : f64, !llvm.ptr
+    %t47a = llvm.load %r13 : !llvm.ptr -> f64
+    %t47b = llvm.load %r13 : !llvm.ptr -> f64
+    %t47c = arith.cmpf oeq, %t47a, %t47b : f64
+    llvm.store %t47c, %flag : i1, !llvm.ptr
+    cf.br ^bb48
+  ^bb48:
+    %t49 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t49, ^bb52, ^bb50
+  ^bb50:
+    %t50 = llvm.load %v_path : !llvm.ptr -> f64
+    llvm.store %t50, %r14 : f64, !llvm.ptr
+    %t51 = llvm.load %r14 : !llvm.ptr -> f64
+    llvm.store %t51, %v_conditional0 : f64, !llvm.ptr
+    cf.br ^bb52
+  ^bb52:
+    %t53 = llvm.load %v_conditional0 : !llvm.ptr -> f64
+    llvm.store %t53, %r15 : f64, !llvm.ptr
+    %t54 = llvm.load %r15 : !llvm.ptr -> f64
+    return %t54 : f64
   }
   func.func private @NativeBuild_IsProgram_1(%p0: f64, %p1: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -12351,7 +12740,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_Text__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -18776,301 +19165,6 @@ module {
     %t49 = llvm.load %r0 : !llvm.ptr -> f64
     return %t49 : f64
   }
-  func.func private @TypeSource_Relative_1(%p0: f64, %p1: f64) -> f64 {
-    %one = arith.constant 1 : i64
-    %zero = arith.constant 0.0 : f64
-    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
-    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r0 : f64, !llvm.ptr
-    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r1 : f64, !llvm.ptr
-    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r2 : f64, !llvm.ptr
-    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r3 : f64, !llvm.ptr
-    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r4 : f64, !llvm.ptr
-    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r5 : f64, !llvm.ptr
-    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r6 : f64, !llvm.ptr
-    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r7 : f64, !llvm.ptr
-    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r8 : f64, !llvm.ptr
-    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r9 : f64, !llvm.ptr
-    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r10 : f64, !llvm.ptr
-    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r11 : f64, !llvm.ptr
-    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r12 : f64, !llvm.ptr
-    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r13 : f64, !llvm.ptr
-    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r14 : f64, !llvm.ptr
-    %r15 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r15 : f64, !llvm.ptr
-    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_index : f64, !llvm.ptr
-    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_value : f64, !llvm.ptr
-    %v_path = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_path : f64, !llvm.ptr
-    %v_entry = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_entry : f64, !llvm.ptr
-    %v_current = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_current : f64, !llvm.ptr
-    %v_slashed = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_slashed : f64, !llvm.ptr
-    %v_isInside = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_isInside : f64, !llvm.ptr
-    %v_conditional0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_conditional0 : f64, !llvm.ptr
-    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %instance : f64, !llvm.ptr
-    llvm.store %p0, %instance : f64, !llvm.ptr
-    llvm.store %p0, %v_value : f64, !llvm.ptr
-    llvm.store %p1, %v_path : f64, !llvm.ptr
-    %talias0 = llvm.load %v_value : !llvm.ptr -> f64
-    llvm.store %talias0, %v_entry : f64, !llvm.ptr
-    %t0m = arith.constant 0.0 : f64
-    %t0r = func.call @strict_directory_current(%t0m) : (f64) -> f64
-    llvm.store %t0r, %r0 : f64, !llvm.ptr
-    %t1v = llvm.load %r0 : !llvm.ptr -> f64
-    %t1k = func.call @strict_is_failure(%t1v) : (f64) -> i1
-    cf.cond_br %t1k, ^bb1e, ^bb2
-  ^bb1e:
-    %t1tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t1twl = arith.constant 23 : i64
-    %t1tr = func.call @strict_trace_checked(%t1v, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t1tr : f64
-  ^bb2:
-    %t2c = llvm.mlir.addressof @cTypeSource_Relative_1_2 : !llvm.ptr
-    %t2xf = func.call @strict_bits(%t2c) : (!llvm.ptr) -> f64
-    llvm.store %t2xf, %r1 : f64, !llvm.ptr
-    %t3c = llvm.mlir.addressof @cTypeSource_Relative_1_3 : !llvm.ptr
-    %t3xf = func.call @strict_bits(%t3c) : (!llvm.ptr) -> f64
-    llvm.store %t3xf, %r2 : f64, !llvm.ptr
-    %t4m = llvm.load %r0 : !llvm.ptr -> f64
-    %t4a0 = llvm.load %r1 : !llvm.ptr -> f64
-    %t4a1 = llvm.load %r2 : !llvm.ptr -> f64
-    %t4r = func.call @Text_Replace_2(%t4m, %t4a0, %t4a1) : (f64, f64, f64) -> f64
-    %t4tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t4twl = arith.constant 23 : i64
-    %t4tr = func.call @strict_trace(%t4r, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t4tr, %r3 : f64, !llvm.ptr
-    %t5v = llvm.load %r3 : !llvm.ptr -> f64
-    %t5k = func.call @strict_is_failure(%t5v) : (f64) -> i1
-    cf.cond_br %t5k, ^bb5e, ^bb6
-  ^bb5e:
-    %t5tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t5twl = arith.constant 23 : i64
-    %t5tr = func.call @strict_trace_checked(%t5v, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t5tr : f64
-  ^bb6:
-    %t6c = llvm.mlir.addressof @cTypeSource_Relative_1_6 : !llvm.ptr
-    %t6xf = func.call @strict_bits(%t6c) : (!llvm.ptr) -> f64
-    llvm.store %t6xf, %r4 : f64, !llvm.ptr
-    %t7lx = llvm.load %r3 : !llvm.ptr -> f64
-    %t7rx = llvm.load %r4 : !llvm.ptr -> f64
-    %t7c = func.call @strict_text_concat(%t7lx, %t7rx) : (f64, f64) -> f64
-    llvm.store %t7c, %r5 : f64, !llvm.ptr
-    %t8 = llvm.load %r5 : !llvm.ptr -> f64
-    llvm.store %t8, %v_current : f64, !llvm.ptr
-    %t9 = llvm.load %v_path : !llvm.ptr -> f64
-    llvm.store %t9, %r0 : f64, !llvm.ptr
-    %t10c = llvm.mlir.addressof @cTypeSource_Relative_1_10 : !llvm.ptr
-    %t10xf = func.call @strict_bits(%t10c) : (!llvm.ptr) -> f64
-    llvm.store %t10xf, %r1 : f64, !llvm.ptr
-    %t11c = llvm.mlir.addressof @cTypeSource_Relative_1_11 : !llvm.ptr
-    %t11xf = func.call @strict_bits(%t11c) : (!llvm.ptr) -> f64
-    llvm.store %t11xf, %r2 : f64, !llvm.ptr
-    %t12m = llvm.load %r0 : !llvm.ptr -> f64
-    %t12a0 = llvm.load %r1 : !llvm.ptr -> f64
-    %t12a1 = llvm.load %r2 : !llvm.ptr -> f64
-    %t12r = func.call @Text_Replace_2(%t12m, %t12a0, %t12a1) : (f64, f64, f64) -> f64
-    %t12tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t12twl = arith.constant 24 : i64
-    %t12tr = func.call @strict_trace(%t12r, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t12tr, %r3 : f64, !llvm.ptr
-    %t13 = llvm.load %r3 : !llvm.ptr -> f64
-    llvm.store %t13, %v_slashed : f64, !llvm.ptr
-    %t14 = llvm.load %v_slashed : !llvm.ptr -> f64
-    llvm.store %t14, %r0 : f64, !llvm.ptr
-    %t15v = llvm.load %r0 : !llvm.ptr -> f64
-    %t15k = func.call @strict_is_failure(%t15v) : (f64) -> i1
-    cf.cond_br %t15k, ^bb15e, ^bb16
-  ^bb15e:
-    %t15tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t15twl = arith.constant 25 : i64
-    %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t15tr : f64
-  ^bb16:
-    %t16m = llvm.load %r0 : !llvm.ptr -> f64
-    %t16r = func.call @strict_text_lower(%t16m) : (f64) -> f64
-    llvm.store %t16r, %r1 : f64, !llvm.ptr
-    %t17v = llvm.load %r1 : !llvm.ptr -> f64
-    %t17k = func.call @strict_is_failure(%t17v) : (f64) -> i1
-    cf.cond_br %t17k, ^bb17e, ^bb18
-  ^bb17e:
-    %t17tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t17twl = arith.constant 25 : i64
-    %t17tr = func.call @strict_trace_checked(%t17v, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t17tr : f64
-  ^bb18:
-    %t18 = llvm.load %v_current : !llvm.ptr -> f64
-    llvm.store %t18, %r2 : f64, !llvm.ptr
-    %t19m = llvm.load %r2 : !llvm.ptr -> f64
-    %t19r = func.call @strict_text_lower(%t19m) : (f64) -> f64
-    llvm.store %t19r, %r3 : f64, !llvm.ptr
-    %t20v = llvm.load %r3 : !llvm.ptr -> f64
-    %t20k = func.call @strict_is_failure(%t20v) : (f64) -> i1
-    cf.cond_br %t20k, ^bb20e, ^bb21
-  ^bb20e:
-    %t20tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t20twl = arith.constant 25 : i64
-    %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t20tr : f64
-  ^bb21:
-    %t21m = llvm.load %r1 : !llvm.ptr -> f64
-    %t21a0 = llvm.load %r3 : !llvm.ptr -> f64
-    %t21r = func.call @strict_text_starts(%t21m, %t21a0, %zero) : (f64, f64, f64) -> f64
-    llvm.store %t21r, %r4 : f64, !llvm.ptr
-    %t22 = llvm.load %r4 : !llvm.ptr -> f64
-    llvm.store %t22, %v_isInside : f64, !llvm.ptr
-    %t23 = llvm.load %v_isInside : !llvm.ptr -> f64
-    llvm.store %t23, %r0 : f64, !llvm.ptr
-    %t24v = llvm.load %r0 : !llvm.ptr -> f64
-    %t24k = func.call @strict_is_failure(%t24v) : (f64) -> i1
-    cf.cond_br %t24k, ^bb24e, ^bb25
-  ^bb24e:
-    %t24tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t24twl = arith.constant 26 : i64
-    %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t24tr : f64
-  ^bb25:
-    %t25c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t25c, %r1 : f64, !llvm.ptr
-    %t26a = llvm.load %r0 : !llvm.ptr -> f64
-    %t26b = llvm.load %r1 : !llvm.ptr -> f64
-    %t26c = arith.cmpf oeq, %t26a, %t26b : f64
-    llvm.store %t26c, %flag : i1, !llvm.ptr
-    %t27 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t27, ^bb28, ^bb48
-  ^bb28:
-    %t28c = llvm.mlir.addressof @cTypeSource_Relative_1_28 : !llvm.ptr
-    %t28xf = func.call @strict_bits(%t28c) : (!llvm.ptr) -> f64
-    llvm.store %t28xf, %r2 : f64, !llvm.ptr
-    %t29 = llvm.load %v_slashed : !llvm.ptr -> f64
-    llvm.store %t29, %r3 : f64, !llvm.ptr
-    %t30v = llvm.load %r3 : !llvm.ptr -> f64
-    %t30k = func.call @strict_is_failure(%t30v) : (f64) -> i1
-    cf.cond_br %t30k, ^bb30e, ^bb31
-  ^bb30e:
-    %t30tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t30twl = arith.constant 26 : i64
-    %t30tr = func.call @strict_trace_checked(%t30v, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t30tr : f64
-  ^bb31:
-    %t31 = llvm.load %v_current : !llvm.ptr -> f64
-    llvm.store %t31, %r4 : f64, !llvm.ptr
-    %t32m = llvm.load %r4 : !llvm.ptr -> f64
-    %t32r = func.call @strict_text_length(%t32m) : (f64) -> f64
-    llvm.store %t32r, %r5 : f64, !llvm.ptr
-    %t33v = llvm.load %r5 : !llvm.ptr -> f64
-    %t33k = func.call @strict_is_failure(%t33v) : (f64) -> i1
-    cf.cond_br %t33k, ^bb33e, ^bb34
-  ^bb33e:
-    %t33tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t33twl = arith.constant 26 : i64
-    %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t33tr : f64
-  ^bb34:
-    %t34 = llvm.load %v_slashed : !llvm.ptr -> f64
-    llvm.store %t34, %r6 : f64, !llvm.ptr
-    %t35v = llvm.load %r6 : !llvm.ptr -> f64
-    %t35k = func.call @strict_is_failure(%t35v) : (f64) -> i1
-    cf.cond_br %t35k, ^bb35e, ^bb36
-  ^bb35e:
-    %t35tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t35twl = arith.constant 26 : i64
-    %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t35tr : f64
-  ^bb36:
-    %t36m = llvm.load %r6 : !llvm.ptr -> f64
-    %t36r = func.call @strict_text_length(%t36m) : (f64) -> f64
-    llvm.store %t36r, %r7 : f64, !llvm.ptr
-    %t37v = llvm.load %r7 : !llvm.ptr -> f64
-    %t37k = func.call @strict_is_failure(%t37v) : (f64) -> i1
-    cf.cond_br %t37k, ^bb37e, ^bb38
-  ^bb37e:
-    %t37tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t37twl = arith.constant 26 : i64
-    %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t37tr : f64
-  ^bb38:
-    %t38 = llvm.load %v_current : !llvm.ptr -> f64
-    llvm.store %t38, %r8 : f64, !llvm.ptr
-    %t39m = llvm.load %r8 : !llvm.ptr -> f64
-    %t39r = func.call @strict_text_length(%t39m) : (f64) -> f64
-    llvm.store %t39r, %r9 : f64, !llvm.ptr
-    %t40v = llvm.load %r9 : !llvm.ptr -> f64
-    %t40k = func.call @strict_is_failure(%t40v) : (f64) -> i1
-    cf.cond_br %t40k, ^bb40e, ^bb41
-  ^bb40e:
-    %t40tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t40twl = arith.constant 26 : i64
-    %t40tr = func.call @strict_trace_checked(%t40v, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t40tr : f64
-  ^bb41:
-    %t41a = llvm.load %r7 : !llvm.ptr -> f64
-    %t41b = llvm.load %r9 : !llvm.ptr -> f64
-    %t41c = arith.subf %t41a, %t41b : f64
-    llvm.store %t41c, %r10 : f64, !llvm.ptr
-    %t42m = llvm.load %r3 : !llvm.ptr -> f64
-    %t42a0 = llvm.load %r5 : !llvm.ptr -> f64
-    %t42a1 = llvm.load %r10 : !llvm.ptr -> f64
-    %t42r = func.call @strict_text_substring(%t42m, %t42a0, %t42a1) : (f64, f64, f64) -> f64
-    llvm.store %t42r, %r11 : f64, !llvm.ptr
-    %t43v = llvm.load %r11 : !llvm.ptr -> f64
-    %t43k = func.call @strict_is_failure(%t43v) : (f64) -> i1
-    cf.cond_br %t43k, ^bb43e, ^bb44
-  ^bb43e:
-    %t43tw = llvm.mlir.addressof @wTypeSource_Relative_1 : !llvm.ptr
-    %t43twl = arith.constant 26 : i64
-    %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t43tr : f64
-  ^bb44:
-    %t44lx = llvm.load %r2 : !llvm.ptr -> f64
-    %t44rx = llvm.load %r11 : !llvm.ptr -> f64
-    %t44c = func.call @strict_text_concat(%t44lx, %t44rx) : (f64, f64) -> f64
-    llvm.store %t44c, %r12 : f64, !llvm.ptr
-    %t45 = llvm.load %r12 : !llvm.ptr -> f64
-    llvm.store %t45, %v_conditional0 : f64, !llvm.ptr
-    %t46c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t46c, %r13 : f64, !llvm.ptr
-    %t47a = llvm.load %r13 : !llvm.ptr -> f64
-    %t47b = llvm.load %r13 : !llvm.ptr -> f64
-    %t47c = arith.cmpf oeq, %t47a, %t47b : f64
-    llvm.store %t47c, %flag : i1, !llvm.ptr
-    cf.br ^bb48
-  ^bb48:
-    %t49 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t49, ^bb52, ^bb50
-  ^bb50:
-    %t50 = llvm.load %v_path : !llvm.ptr -> f64
-    llvm.store %t50, %r14 : f64, !llvm.ptr
-    %t51 = llvm.load %r14 : !llvm.ptr -> f64
-    llvm.store %t51, %v_conditional0 : f64, !llvm.ptr
-    cf.br ^bb52
-  ^bb52:
-    %t53 = llvm.load %v_conditional0 : !llvm.ptr -> f64
-    llvm.store %t53, %r15 : f64, !llvm.ptr
-    %t54 = llvm.load %r15 : !llvm.ptr -> f64
-    return %t54 : f64
-  }
   func.func private @RoundTrip_Ended_1(%p0: f64, %p1: f64) -> f64 {
     %one = arith.constant 1 : i64
     %zero = arith.constant 0.0 : f64
@@ -22605,7 +22699,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_MlirFunction__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -33832,7 +33926,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_ZipEntry__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -35995,7 +36089,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_MemberEntry__Last_0 : !llvm.ptr
-    %t2twl = arith.constant 99 : i64
+    %t2twl = arith.constant 106 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -36129,7 +36223,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_MemberEntry__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -38478,7 +38572,7 @@ module {
     %t0m = llvm.load %instance : !llvm.ptr -> f64
     %t0r = func.call @List_Number__First_0(%t0m) : (f64) -> f64
     %t0tw = llvm.mlir.addressof @wList_Number__Minimum_0 : !llvm.ptr
-    %t0twl = arith.constant 73 : i64
+    %t0twl = arith.constant 80 : i64
     %t0tr = func.call @strict_trace(%t0r, %t0tw, %t0twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t0tr, %r0 : f64, !llvm.ptr
     %t1 = llvm.load %r0 : !llvm.ptr -> f64
@@ -38514,7 +38608,7 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wList_Number__Minimum_0 : !llvm.ptr
-    %t6twl = arith.constant 75 : i64
+    %t6twl = arith.constant 82 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
@@ -38546,7 +38640,7 @@ module {
     cf.cond_br %t14k, ^bb14e, ^bb15
   ^bb14e:
     %t14tw = llvm.mlir.addressof @wList_Number__Minimum_0 : !llvm.ptr
-    %t14twl = arith.constant 77 : i64
+    %t14twl = arith.constant 84 : i64
     %t14tr = func.call @strict_trace_checked(%t14v, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     return %t14tr : f64
   ^bb15:
@@ -38877,7 +38971,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_SyntaxNode__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -39064,7 +39158,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_SyntaxNode__Last_0 : !llvm.ptr
-    %t2twl = arith.constant 99 : i64
+    %t2twl = arith.constant 106 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -46221,7 +46315,7 @@ module {
     %t1m = llvm.load %r0 : !llvm.ptr -> f64
     %t1r = func.call @TypeCodegen_Generator_0(%t1m) : (f64) -> f64
     %t1tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t1twl = arith.constant 16 : i64
+    %t1twl = arith.constant 18 : i64
     %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t1tr, %r1 : f64, !llvm.ptr
     %t2v = llvm.load %r1 : !llvm.ptr -> f64
@@ -46229,7 +46323,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t2twl = arith.constant 16 : i64
+    %t2twl = arith.constant 18 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -46246,7 +46340,7 @@ module {
     %t5m = llvm.load %r3 : !llvm.ptr -> f64
     %t5r = func.call @TypeShape_MemberScope_0(%t5m) : (f64) -> f64
     %t5tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t5twl = arith.constant 16 : i64
+    %t5twl = arith.constant 18 : i64
     %t5tr = func.call @strict_trace(%t5r, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t5tr, %r4 : f64, !llvm.ptr
     %t6v = llvm.load %r4 : !llvm.ptr -> f64
@@ -46254,7 +46348,7 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t6twl = arith.constant 16 : i64
+    %t6twl = arith.constant 18 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
@@ -46269,7 +46363,7 @@ module {
     %t9a1 = llvm.load %r6 : !llvm.ptr -> f64
     %t9r = func.call @Scope_With_2(%t9m, %t9a0, %t9a1) : (f64, f64, f64) -> f64
     %t9tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t9twl = arith.constant 16 : i64
+    %t9twl = arith.constant 18 : i64
     %t9tr = func.call @strict_trace(%t9r, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t9tr, %r7 : f64, !llvm.ptr
     %t10v = llvm.load %r7 : !llvm.ptr -> f64
@@ -46277,7 +46371,7 @@ module {
     cf.cond_br %t10k, ^bb10e, ^bb11
   ^bb10e:
     %t10tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t10twl = arith.constant 16 : i64
+    %t10twl = arith.constant 18 : i64
     %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     return %t10tr : f64
   ^bb11:
@@ -46292,7 +46386,7 @@ module {
     %t13a1 = llvm.load %r9 : !llvm.ptr -> f64
     %t13r = func.call @Scope_With_2(%t13m, %t13a0, %t13a1) : (f64, f64, f64) -> f64
     %t13tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t13twl = arith.constant 16 : i64
+    %t13twl = arith.constant 18 : i64
     %t13tr = func.call @strict_trace(%t13r, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t13tr, %r10 : f64, !llvm.ptr
     %t14 = llvm.load %r10 : !llvm.ptr -> f64
@@ -46310,7 +46404,7 @@ module {
     cf.cond_br %t19k, ^bb19e, ^bb20
   ^bb19e:
     %t19tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t19twl = arith.constant 17 : i64
+    %t19twl = arith.constant 19 : i64
     %t19tr = func.call @strict_trace_checked(%t19v, %t19tw, %t19twl) : (f64, !llvm.ptr, i64) -> f64
     return %t19tr : f64
   ^bb20:
@@ -46339,7 +46433,7 @@ module {
     cf.cond_br %t23k, ^bb23e, ^bb24
   ^bb23e:
     %t23tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t23twl = arith.constant 18 : i64
+    %t23twl = arith.constant 20 : i64
     %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     return %t23tr : f64
   ^bb24:
@@ -46352,7 +46446,7 @@ module {
     %t26a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t26r = func.call @InstructionEntry_LoadNumber_2(%t26m, %t26a0, %t26a1) : (f64, f64, f64) -> f64
     %t26tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t26twl = arith.constant 18 : i64
+    %t26twl = arith.constant 20 : i64
     %t26tr = func.call @strict_trace(%t26r, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t26tr, %r3 : f64, !llvm.ptr
     %t27v = llvm.load %r3 : !llvm.ptr -> f64
@@ -46360,7 +46454,7 @@ module {
     cf.cond_br %t27k, ^bb27e, ^bb28
   ^bb27e:
     %t27tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t27twl = arith.constant 18 : i64
+    %t27twl = arith.constant 20 : i64
     %t27tr = func.call @strict_trace_checked(%t27v, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     return %t27tr : f64
   ^bb28:
@@ -46372,7 +46466,7 @@ module {
     %t29a1 = llvm.load %r4 : !llvm.ptr -> f64
     %t29r = func.call @MethodCodegen_StoreConstant_2(%t29m, %t29a0, %t29a1) : (f64, f64, f64) -> f64
     %t29tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t29twl = arith.constant 18 : i64
+    %t29twl = arith.constant 20 : i64
     %t29tr = func.call @strict_trace(%t29r, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t29tr, %r5 : f64, !llvm.ptr
     %t30v = llvm.load %r5 : !llvm.ptr -> f64
@@ -46380,7 +46474,7 @@ module {
     cf.cond_br %t30k, ^bb30e, ^bb31
   ^bb30e:
     %t30tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t30twl = arith.constant 18 : i64
+    %t30twl = arith.constant 20 : i64
     %t30tr = func.call @strict_trace_checked(%t30v, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
     return %t30tr : f64
   ^bb31:
@@ -46388,7 +46482,7 @@ module {
     %t31a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t31r = func.call @CodeBlock_Add_1(%t31m, %t31a0) : (f64, f64) -> f64
     %t31tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t31twl = arith.constant 18 : i64
+    %t31twl = arith.constant 20 : i64
     %t31tr = func.call @strict_trace(%t31r, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t31tr, %r6 : f64, !llvm.ptr
     %t32 = llvm.load %r6 : !llvm.ptr -> f64
@@ -46434,7 +46528,7 @@ module {
     cf.cond_br %t39k, ^bb39e, ^bb40
   ^bb39e:
     %t39tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t39twl = arith.constant 20 : i64
+    %t39twl = arith.constant 22 : i64
     %t39tr = func.call @strict_trace_checked(%t39v, %t39tw, %t39twl) : (f64, !llvm.ptr, i64) -> f64
     return %t39tr : f64
   ^bb40:
@@ -46444,7 +46538,7 @@ module {
     %t41a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t41r = func.call @TypeShape_IsMethodHeader_1(%t41m, %t41a0) : (f64, f64) -> f64
     %t41tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t41twl = arith.constant 20 : i64
+    %t41twl = arith.constant 22 : i64
     %t41tr = func.call @strict_trace(%t41r, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t41tr, %r6 : f64, !llvm.ptr
     %t42v = llvm.load %r6 : !llvm.ptr -> f64
@@ -46452,7 +46546,7 @@ module {
     cf.cond_br %t42k, ^bb42e, ^bb43
   ^bb42e:
     %t42tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t42twl = arith.constant 20 : i64
+    %t42twl = arith.constant 22 : i64
     %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
     return %t42tr : f64
   ^bb43:
@@ -46474,7 +46568,7 @@ module {
     cf.cond_br %t48k, ^bb48e, ^bb49
   ^bb48e:
     %t48tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t48twl = arith.constant 21 : i64
+    %t48twl = arith.constant 23 : i64
     %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
     return %t48tr : f64
   ^bb49:
@@ -46483,7 +46577,7 @@ module {
     %t49a1 = llvm.load %r9 : !llvm.ptr -> f64
     %t49r = func.call @TestCodegen_Method_2(%t49m, %t49a0, %t49a1) : (f64, f64, f64) -> f64
     %t49tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t49twl = arith.constant 21 : i64
+    %t49twl = arith.constant 23 : i64
     %t49tr = func.call @strict_trace(%t49r, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t49tr, %r10 : f64, !llvm.ptr
     %t50 = llvm.load %r10 : !llvm.ptr -> f64
@@ -46505,7 +46599,7 @@ module {
     cf.cond_br %t54k, ^bb54e, ^bb55
   ^bb54e:
     %t54tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t54twl = arith.constant 22 : i64
+    %t54twl = arith.constant 24 : i64
     %t54tr = func.call @strict_trace_checked(%t54v, %t54tw, %t54twl) : (f64, !llvm.ptr, i64) -> f64
     return %t54tr : f64
   ^bb55:
@@ -46515,7 +46609,7 @@ module {
     %t56a0 = llvm.load %r1 : !llvm.ptr -> f64
     %t56r = func.call @CodeBlock_At_1(%t56m, %t56a0) : (f64, f64) -> f64
     %t56tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t56twl = arith.constant 22 : i64
+    %t56twl = arith.constant 24 : i64
     %t56tr = func.call @strict_trace(%t56r, %t56tw, %t56twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t56tr, %r2 : f64, !llvm.ptr
     %t57v = llvm.load %r2 : !llvm.ptr -> f64
@@ -46523,7 +46617,7 @@ module {
     cf.cond_br %t57k, ^bb57e, ^bb58
   ^bb57e:
     %t57tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t57twl = arith.constant 22 : i64
+    %t57twl = arith.constant 24 : i64
     %t57tr = func.call @strict_trace_checked(%t57v, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
     return %t57tr : f64
   ^bb58:
@@ -46540,7 +46634,7 @@ module {
     %t61a2 = llvm.load %r5 : !llvm.ptr -> f64
     %t61r = func.call @InstructionEntry_Named_3(%t61m, %t61a0, %t61a1, %t61a2) : (f64, f64, f64, f64) -> f64
     %t61tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t61twl = arith.constant 22 : i64
+    %t61twl = arith.constant 24 : i64
     %t61tr = func.call @strict_trace(%t61r, %t61tw, %t61twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t61tr, %r6 : f64, !llvm.ptr
     %t62v = llvm.load %r6 : !llvm.ptr -> f64
@@ -46548,7 +46642,7 @@ module {
     cf.cond_br %t62k, ^bb62e, ^bb63
   ^bb62e:
     %t62tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t62twl = arith.constant 22 : i64
+    %t62twl = arith.constant 24 : i64
     %t62tr = func.call @strict_trace_checked(%t62v, %t62tw, %t62twl) : (f64, !llvm.ptr, i64) -> f64
     return %t62tr : f64
   ^bb63:
@@ -46556,7 +46650,7 @@ module {
     %t63a0 = llvm.load %r6 : !llvm.ptr -> f64
     %t63r = func.call @CodeBlock_Load_1(%t63m, %t63a0) : (f64, f64) -> f64
     %t63tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t63twl = arith.constant 22 : i64
+    %t63twl = arith.constant 24 : i64
     %t63tr = func.call @strict_trace(%t63r, %t63tw, %t63twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t63tr, %r7 : f64, !llvm.ptr
     %t64 = llvm.load %r7 : !llvm.ptr -> f64
@@ -46576,7 +46670,7 @@ module {
     cf.cond_br %t69k, ^bb69e, ^bb70
   ^bb69e:
     %t69tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t69twl = arith.constant 23 : i64
+    %t69twl = arith.constant 25 : i64
     %t69tr = func.call @strict_trace_checked(%t69v, %t69tw, %t69twl) : (f64, !llvm.ptr, i64) -> f64
     return %t69tr : f64
   ^bb70:
@@ -46586,7 +46680,7 @@ module {
     %t71a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t71r = func.call @InstructionEntry_Return_1(%t71m, %t71a0) : (f64, f64) -> f64
     %t71tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t71twl = arith.constant 23 : i64
+    %t71twl = arith.constant 25 : i64
     %t71tr = func.call @strict_trace(%t71r, %t71tw, %t71twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t71tr, %r5 : f64, !llvm.ptr
     %t72v = llvm.load %r5 : !llvm.ptr -> f64
@@ -46594,7 +46688,7 @@ module {
     cf.cond_br %t72k, ^bb72e, ^bb73
   ^bb72e:
     %t72tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t72twl = arith.constant 23 : i64
+    %t72twl = arith.constant 25 : i64
     %t72tr = func.call @strict_trace_checked(%t72v, %t72tw, %t72twl) : (f64, !llvm.ptr, i64) -> f64
     return %t72tr : f64
   ^bb73:
@@ -46602,7 +46696,7 @@ module {
     %t73a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t73r = func.call @CodeBlock_Add_1(%t73m, %t73a0) : (f64, f64) -> f64
     %t73tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t73twl = arith.constant 23 : i64
+    %t73twl = arith.constant 25 : i64
     %t73tr = func.call @strict_trace(%t73r, %t73tw, %t73twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t73tr, %r6 : f64, !llvm.ptr
     %t74v = llvm.load %r6 : !llvm.ptr -> f64
@@ -46610,7 +46704,7 @@ module {
     cf.cond_br %t74k, ^bb74e, ^bb75
   ^bb74e:
     %t74tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t74twl = arith.constant 23 : i64
+    %t74twl = arith.constant 25 : i64
     %t74tr = func.call @strict_trace_checked(%t74v, %t74tw, %t74twl) : (f64, !llvm.ptr, i64) -> f64
     return %t74tr : f64
   ^bb75:
@@ -46643,7 +46737,7 @@ module {
     cf.cond_br %t77k, ^bb77e, ^bb78
   ^bb77e:
     %t77tw = llvm.mlir.addressof @wTestCodegen_Tests_0 : !llvm.ptr
-    %t77twl = arith.constant 23 : i64
+    %t77twl = arith.constant 25 : i64
     %t77tr = func.call @strict_trace_checked(%t77v, %t77tw, %t77twl) : (f64, !llvm.ptr, i64) -> f64
     return %t77tr : f64
   ^bb78:
@@ -55314,7 +55408,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_Text__Last_0 : !llvm.ptr
-    %t2twl = arith.constant 99 : i64
+    %t2twl = arith.constant 106 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -67360,7 +67454,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_InstructionEntry__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -69691,7 +69785,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_Number__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -82629,7 +82723,7 @@ module {
     cf.cond_br %t5k, ^bb5e, ^bb6
   ^bb5e:
     %t5tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t5twl = arith.constant 29 : i64
+    %t5twl = arith.constant 31 : i64
     %t5tr = func.call @strict_trace_checked(%t5v, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     return %t5tr : f64
   ^bb6:
@@ -82640,14 +82734,14 @@ module {
     cf.cond_br %t7k, ^bb7e, ^bb8
   ^bb7e:
     %t7tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t7twl = arith.constant 29 : i64
+    %t7twl = arith.constant 31 : i64
     %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     return %t7tr : f64
   ^bb8:
     %t8m = llvm.load %r4 : !llvm.ptr -> f64
     %t8r = func.call @Tokenizer_Tokens_0(%t8m) : (f64) -> f64
     %t8tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t8twl = arith.constant 29 : i64
+    %t8twl = arith.constant 31 : i64
     %t8tr = func.call @strict_trace(%t8r, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t8tr, %r5 : f64, !llvm.ptr
     %t9v = llvm.load %r5 : !llvm.ptr -> f64
@@ -82655,14 +82749,14 @@ module {
     cf.cond_br %t9k, ^bb9e, ^bb10
   ^bb9e:
     %t9tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t9twl = arith.constant 29 : i64
+    %t9twl = arith.constant 31 : i64
     %t9tr = func.call @strict_trace_checked(%t9v, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
     return %t9tr : f64
   ^bb10:
     %t10m = llvm.load %r5 : !llvm.ptr -> f64
     %t10r = func.call @List_Text__First_0(%t10m) : (f64) -> f64
     %t10tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t10twl = arith.constant 29 : i64
+    %t10twl = arith.constant 31 : i64
     %t10tr = func.call @strict_trace(%t10r, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t10tr, %r6 : f64, !llvm.ptr
     %t11 = llvm.load %r6 : !llvm.ptr -> f64
@@ -82679,7 +82773,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t15twl = arith.constant 30 : i64
+    %t15twl = arith.constant 32 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -82688,7 +82782,7 @@ module {
     %t16a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t16r = func.call @CodeBlock_Declare_2(%t16m, %t16a0, %t16a1) : (f64, f64, f64) -> f64
     %t16tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t16twl = arith.constant 30 : i64
+    %t16twl = arith.constant 32 : i64
     %t16tr = func.call @strict_trace(%t16r, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t16tr, %r3 : f64, !llvm.ptr
     %t17 = llvm.load %r3 : !llvm.ptr -> f64
@@ -82698,7 +82792,7 @@ module {
     %t19m = llvm.load %r0 : !llvm.ptr -> f64
     %t19r = func.call @TypeCodegen_Generator_0(%t19m) : (f64) -> f64
     %t19tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t19twl = arith.constant 31 : i64
+    %t19twl = arith.constant 33 : i64
     %t19tr = func.call @strict_trace(%t19r, %t19tw, %t19twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t19tr, %r1 : f64, !llvm.ptr
     %t20v = llvm.load %r1 : !llvm.ptr -> f64
@@ -82706,7 +82800,7 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t20twl = arith.constant 31 : i64
+    %t20twl = arith.constant 33 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
@@ -82717,7 +82811,7 @@ module {
     cf.cond_br %t22k, ^bb22e, ^bb23
   ^bb22e:
     %t22tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t22twl = arith.constant 31 : i64
+    %t22twl = arith.constant 33 : i64
     %t22tr = func.call @strict_trace_checked(%t22v, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
     return %t22tr : f64
   ^bb23:
@@ -82735,7 +82829,7 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t26twl = arith.constant 31 : i64
+    %t26twl = arith.constant 33 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
@@ -82751,7 +82845,7 @@ module {
     %t30a0 = llvm.load %r8 : !llvm.ptr -> f64
     %t30r = func.call @BodyParser_Method_1(%t30m, %t30a0) : (f64, f64) -> f64
     %t30tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t30twl = arith.constant 31 : i64
+    %t30twl = arith.constant 33 : i64
     %t30tr = func.call @strict_trace(%t30r, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t30tr, %r9 : f64, !llvm.ptr
     %t31v = llvm.load %r9 : !llvm.ptr -> f64
@@ -82759,7 +82853,7 @@ module {
     cf.cond_br %t31k, ^bb31e, ^bb32
   ^bb31e:
     %t31tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t31twl = arith.constant 31 : i64
+    %t31twl = arith.constant 33 : i64
     %t31tr = func.call @strict_trace_checked(%t31v, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     return %t31tr : f64
   ^bb32:
@@ -82770,7 +82864,7 @@ module {
     %t33a1 = llvm.load %r10 : !llvm.ptr -> f64
     %t33r = func.call @TestLines_Tests_2(%t33m, %t33a0, %t33a1) : (f64, f64, f64) -> f64
     %t33tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t33twl = arith.constant 31 : i64
+    %t33twl = arith.constant 33 : i64
     %t33tr = func.call @strict_trace(%t33r, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t33tr, %r11 : f64, !llvm.ptr
     %t34v = llvm.load %r11 : !llvm.ptr -> f64
@@ -82778,7 +82872,7 @@ module {
     cf.cond_br %t34k, ^bb34e, ^bb35
   ^bb34e:
     %t34tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t34twl = arith.constant 31 : i64
+    %t34twl = arith.constant 33 : i64
     %t34tr = func.call @strict_trace_checked(%t34v, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
     return %t34tr : f64
   ^bb35:
@@ -82807,7 +82901,7 @@ module {
     %t37m = llvm.load %r12 : !llvm.ptr -> f64
     %t37r = func.call @TypeCodegen_Generator_0(%t37m) : (f64) -> f64
     %t37tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t37twl = arith.constant 32 : i64
+    %t37twl = arith.constant 34 : i64
     %t37tr = func.call @strict_trace(%t37r, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t37tr, %r13 : f64, !llvm.ptr
     %t38v = llvm.load %r13 : !llvm.ptr -> f64
@@ -82815,7 +82909,7 @@ module {
     cf.cond_br %t38k, ^bb38e, ^bb39
   ^bb38e:
     %t38tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t38twl = arith.constant 32 : i64
+    %t38twl = arith.constant 34 : i64
     %t38tr = func.call @strict_trace_checked(%t38v, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
     return %t38tr : f64
   ^bb39:
@@ -82826,7 +82920,7 @@ module {
     cf.cond_br %t40k, ^bb40e, ^bb41
   ^bb40e:
     %t40tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t40twl = arith.constant 32 : i64
+    %t40twl = arith.constant 34 : i64
     %t40tr = func.call @strict_trace_checked(%t40v, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
     return %t40tr : f64
   ^bb41:
@@ -82839,7 +82933,7 @@ module {
     cf.cond_br %t43k, ^bb43e, ^bb44
   ^bb43e:
     %t43tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t43twl = arith.constant 32 : i64
+    %t43twl = arith.constant 34 : i64
     %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
     return %t43tr : f64
   ^bb44:
@@ -82850,7 +82944,7 @@ module {
     cf.cond_br %t45k, ^bb45e, ^bb46
   ^bb45e:
     %t45tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t45twl = arith.constant 32 : i64
+    %t45twl = arith.constant 34 : i64
     %t45tr = func.call @strict_trace_checked(%t45v, %t45tw, %t45twl) : (f64, !llvm.ptr, i64) -> f64
     return %t45tr : f64
   ^bb46:
@@ -82860,7 +82954,7 @@ module {
     %t47a0 = llvm.load %r18 : !llvm.ptr -> f64
     %t47r = func.call @CodeBlock_At_1(%t47m, %t47a0) : (f64, f64) -> f64
     %t47tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t47twl = arith.constant 32 : i64
+    %t47twl = arith.constant 34 : i64
     %t47tr = func.call @strict_trace(%t47r, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t47tr, %r19 : f64, !llvm.ptr
     %t48v = llvm.load %r19 : !llvm.ptr -> f64
@@ -82868,7 +82962,7 @@ module {
     cf.cond_br %t48k, ^bb48e, ^bb49
   ^bb48e:
     %t48tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t48twl = arith.constant 32 : i64
+    %t48twl = arith.constant 34 : i64
     %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
     return %t48tr : f64
   ^bb49:
@@ -82878,7 +82972,7 @@ module {
     %t49a2 = llvm.load %r19 : !llvm.ptr -> f64
     %t49r = func.call @TestCodegen_Line_3(%t49m, %t49a0, %t49a1, %t49a2) : (f64, f64, f64, f64) -> f64
     %t49tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t49twl = arith.constant 32 : i64
+    %t49twl = arith.constant 34 : i64
     %t49tr = func.call @strict_trace(%t49r, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t49tr, %r20 : f64, !llvm.ptr
     %t50v = llvm.load %r20 : !llvm.ptr -> f64
@@ -82886,7 +82980,7 @@ module {
     cf.cond_br %t50k, ^bb50e, ^bb51
   ^bb50e:
     %t50tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t50twl = arith.constant 32 : i64
+    %t50twl = arith.constant 34 : i64
     %t50tr = func.call @strict_trace_checked(%t50v, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
     return %t50tr : f64
   ^bb51:
@@ -82897,7 +82991,7 @@ module {
     cf.cond_br %t52k, ^bb52e, ^bb53
   ^bb52e:
     %t52tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t52twl = arith.constant 32 : i64
+    %t52twl = arith.constant 34 : i64
     %t52tr = func.call @strict_trace_checked(%t52v, %t52tw, %t52twl) : (f64, !llvm.ptr, i64) -> f64
     return %t52tr : f64
   ^bb53:
@@ -82914,7 +83008,7 @@ module {
     cf.cond_br %t55k, ^bb55e, ^bb56
   ^bb55e:
     %t55tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t55twl = arith.constant 32 : i64
+    %t55twl = arith.constant 34 : i64
     %t55tr = func.call @strict_trace_checked(%t55v, %t55tw, %t55twl) : (f64, !llvm.ptr, i64) -> f64
     return %t55tr : f64
   ^bb56:
@@ -82931,7 +83025,7 @@ module {
     %t58a2 = llvm.load %r25 : !llvm.ptr -> f64
     %t58r = func.call @MethodCodegen_Lined_3(%t58m, %t58a0, %t58a1, %t58a2) : (f64, f64, f64, f64) -> f64
     %t58tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t58twl = arith.constant 32 : i64
+    %t58twl = arith.constant 34 : i64
     %t58tr = func.call @strict_trace(%t58r, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t58tr, %r26 : f64, !llvm.ptr
     %t59 = llvm.load %r26 : !llvm.ptr -> f64
@@ -82951,7 +83045,7 @@ module {
     cf.cond_br %t62k, ^bb62e, ^bb63
   ^bb62e:
     %t62tw = llvm.mlir.addressof @wTestCodegen_Method_2 : !llvm.ptr
-    %t62twl = arith.constant 33 : i64
+    %t62twl = arith.constant 35 : i64
     %t62tr = func.call @strict_trace_checked(%t62v, %t62tw, %t62twl) : (f64, !llvm.ptr, i64) -> f64
     return %t62tr : f64
   ^bb63:
@@ -91093,7 +91187,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_InstructionEntry__Last_0 : !llvm.ptr
-    %t2twl = arith.constant 99 : i64
+    %t2twl = arith.constant 106 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -103432,7 +103526,7 @@ module {
     cf.cond_br %t5k, ^bb5e, ^bb6
   ^bb5e:
     %t5tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t5twl = arith.constant 67 : i64
+    %t5twl = arith.constant 76 : i64
     %t5tr = func.call @strict_trace_checked(%t5v, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     return %t5tr : f64
   ^bb6:
@@ -103443,14 +103537,14 @@ module {
     cf.cond_br %t7k, ^bb7e, ^bb8
   ^bb7e:
     %t7tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t7twl = arith.constant 67 : i64
+    %t7twl = arith.constant 76 : i64
     %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     return %t7tr : f64
   ^bb8:
     %t8m = llvm.load %r4 : !llvm.ptr -> f64
     %t8r = func.call @Tokenizer_Tokens_0(%t8m) : (f64) -> f64
     %t8tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t8twl = arith.constant 67 : i64
+    %t8twl = arith.constant 76 : i64
     %t8tr = func.call @strict_trace(%t8r, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t8tr, %r5 : f64, !llvm.ptr
     %t9v = llvm.load %r5 : !llvm.ptr -> f64
@@ -103458,7 +103552,7 @@ module {
     cf.cond_br %t9k, ^bb9e, ^bb10
   ^bb9e:
     %t9tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t9twl = arith.constant 67 : i64
+    %t9twl = arith.constant 76 : i64
     %t9tr = func.call @strict_trace_checked(%t9v, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
     return %t9tr : f64
   ^bb10:
@@ -103469,14 +103563,14 @@ module {
     cf.cond_br %t11k, ^bb11e, ^bb12
   ^bb11e:
     %t11tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t11twl = arith.constant 67 : i64
+    %t11twl = arith.constant 76 : i64
     %t11tr = func.call @strict_trace_checked(%t11v, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     return %t11tr : f64
   ^bb12:
     %t12m = llvm.load %r6 : !llvm.ptr -> f64
     %t12r = func.call @HeaderTokens_ReturnType_0(%t12m) : (f64) -> f64
     %t12tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t12twl = arith.constant 67 : i64
+    %t12twl = arith.constant 76 : i64
     %t12tr = func.call @strict_trace(%t12r, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t12tr, %r7 : f64, !llvm.ptr
     %t13v = llvm.load %r7 : !llvm.ptr -> f64
@@ -103484,7 +103578,7 @@ module {
     cf.cond_br %t13k, ^bb13e, ^bb14
   ^bb13e:
     %t13tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t13twl = arith.constant 67 : i64
+    %t13twl = arith.constant 76 : i64
     %t13tr = func.call @strict_trace_checked(%t13v, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
     return %t13tr : f64
   ^bb14:
@@ -103513,7 +103607,7 @@ module {
     %t21m = llvm.load %r11 : !llvm.ptr -> f64
     %t21r = func.call @TypeShape_UsesGenerics_0(%t21m) : (f64) -> f64
     %t21tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t21twl = arith.constant 67 : i64
+    %t21twl = arith.constant 76 : i64
     %t21tr = func.call @strict_trace(%t21r, %t21tw, %t21twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t21tr, %r12 : f64, !llvm.ptr
     %t22v = llvm.load %r12 : !llvm.ptr -> f64
@@ -103521,7 +103615,7 @@ module {
     cf.cond_br %t22k, ^bb22e, ^bb23
   ^bb22e:
     %t22tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t22twl = arith.constant 67 : i64
+    %t22twl = arith.constant 76 : i64
     %t22tr = func.call @strict_trace_checked(%t22v, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
     return %t22tr : f64
   ^bb23:
@@ -103565,7 +103659,7 @@ module {
     cf.cond_br %t37k, ^bb37e, ^bb38
   ^bb37e:
     %t37tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t37twl = arith.constant 69 : i64
+    %t37twl = arith.constant 78 : i64
     %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     return %t37tr : f64
   ^bb38:
@@ -103581,7 +103675,7 @@ module {
     %t41a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t41r = func.call @BodyParser_Method_1(%t41m, %t41a0) : (f64, f64) -> f64
     %t41tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t41twl = arith.constant 69 : i64
+    %t41twl = arith.constant 78 : i64
     %t41tr = func.call @strict_trace(%t41r, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t41tr, %r6 : f64, !llvm.ptr
     %t42v = llvm.load %r6 : !llvm.ptr -> f64
@@ -103589,7 +103683,7 @@ module {
     cf.cond_br %t42k, ^bb42e, ^bb43
   ^bb42e:
     %t42tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t42twl = arith.constant 69 : i64
+    %t42twl = arith.constant 78 : i64
     %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
     return %t42tr : f64
   ^bb43:
@@ -103601,7 +103695,7 @@ module {
     %t44m = llvm.load %r7 : !llvm.ptr -> f64
     %t44r = func.call @List_SyntaxNode__Last_0(%t44m) : (f64) -> f64
     %t44tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t44twl = arith.constant 69 : i64
+    %t44twl = arith.constant 78 : i64
     %t44tr = func.call @strict_trace(%t44r, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t44tr, %r8 : f64, !llvm.ptr
     %t45 = llvm.load %r8 : !llvm.ptr -> f64
@@ -103613,7 +103707,7 @@ module {
     cf.cond_br %t47k, ^bb47e, ^bb48
   ^bb47e:
     %t47tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t47twl = arith.constant 70 : i64
+    %t47twl = arith.constant 79 : i64
     %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     return %t47tr : f64
   ^bb48:
@@ -103650,7 +103744,7 @@ module {
     cf.cond_br %t56k, ^bb56e, ^bb57
   ^bb56e:
     %t56tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t56twl = arith.constant 70 : i64
+    %t56twl = arith.constant 79 : i64
     %t56tr = func.call @strict_trace_checked(%t56v, %t56tw, %t56twl) : (f64, !llvm.ptr, i64) -> f64
     return %t56tr : f64
   ^bb57:
@@ -103690,7 +103784,7 @@ module {
     cf.cond_br %t67k, ^bb67e, ^bb68
   ^bb67e:
     %t67tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t67twl = arith.constant 70 : i64
+    %t67twl = arith.constant 79 : i64
     %t67tr = func.call @strict_trace_checked(%t67v, %t67tw, %t67twl) : (f64, !llvm.ptr, i64) -> f64
     return %t67tr : f64
   ^bb68:
@@ -103725,7 +103819,7 @@ module {
     cf.cond_br %t78k, ^bb78e, ^bb79
   ^bb78e:
     %t78tw = llvm.mlir.addressof @wInstantiation_Template_3 : !llvm.ptr
-    %t78twl = arith.constant 70 : i64
+    %t78twl = arith.constant 79 : i64
     %t78tr = func.call @strict_trace_checked(%t78v, %t78tw, %t78twl) : (f64, !llvm.ptr, i64) -> f64
     return %t78tr : f64
   ^bb79:
@@ -108196,7 +108290,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_Number__Last_0 : !llvm.ptr
-    %t2twl = arith.constant 99 : i64
+    %t2twl = arith.constant 106 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -129183,7 +129277,7 @@ module {
     %t8a2 = llvm.load %r5 : !llvm.ptr -> f64
     %t8r = func.call @TestCodegen_Checked_3(%t8m, %t8a0, %t8a1, %t8a2) : (f64, f64, f64, f64) -> f64
     %t8tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t8twl = arith.constant 38 : i64
+    %t8twl = arith.constant 40 : i64
     %t8tr = func.call @strict_trace(%t8r, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t8tr, %r6 : f64, !llvm.ptr
     %t9 = llvm.load %r6 : !llvm.ptr -> f64
@@ -129203,7 +129297,7 @@ module {
     %t15m = llvm.load %r0 : !llvm.ptr -> f64
     %t15r = func.call @CodeBlock_WithNextId_0(%t15m) : (f64) -> f64
     %t15tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t15twl = arith.constant 40 : i64
+    %t15twl = arith.constant 42 : i64
     %t15tr = func.call @strict_trace(%t15r, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t15tr, %r1 : f64, !llvm.ptr
     %t16v = llvm.load %r1 : !llvm.ptr -> f64
@@ -129211,7 +129305,7 @@ module {
     cf.cond_br %t16k, ^bb16e, ^bb17
   ^bb16e:
     %t16tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t16twl = arith.constant 40 : i64
+    %t16twl = arith.constant 42 : i64
     %t16tr = func.call @strict_trace_checked(%t16v, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     return %t16tr : f64
   ^bb17:
@@ -129229,7 +129323,7 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t20twl = arith.constant 40 : i64
+    %t20twl = arith.constant 42 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
@@ -129238,7 +129332,7 @@ module {
     %t21a1 = llvm.load %r4 : !llvm.ptr -> f64
     %t21r = func.call @CodeBlock_Declare_2(%t21m, %t21a0, %t21a1) : (f64, f64, f64) -> f64
     %t21tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t21twl = arith.constant 40 : i64
+    %t21twl = arith.constant 42 : i64
     %t21tr = func.call @strict_trace(%t21r, %t21tw, %t21twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t21tr, %r5 : f64, !llvm.ptr
     %t22 = llvm.load %r5 : !llvm.ptr -> f64
@@ -129248,7 +129342,7 @@ module {
     %t24m = llvm.load %r0 : !llvm.ptr -> f64
     %t24r = func.call @TypeCodegen_Generator_0(%t24m) : (f64) -> f64
     %t24tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t24twl = arith.constant 41 : i64
+    %t24twl = arith.constant 43 : i64
     %t24tr = func.call @strict_trace(%t24r, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t24tr, %r1 : f64, !llvm.ptr
     %t25v = llvm.load %r1 : !llvm.ptr -> f64
@@ -129256,7 +129350,7 @@ module {
     cf.cond_br %t25k, ^bb25e, ^bb26
   ^bb25e:
     %t25tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t25twl = arith.constant 41 : i64
+    %t25twl = arith.constant 43 : i64
     %t25tr = func.call @strict_trace_checked(%t25v, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
     return %t25tr : f64
   ^bb26:
@@ -129267,7 +129361,7 @@ module {
     cf.cond_br %t27k, ^bb27e, ^bb28
   ^bb27e:
     %t27tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t27twl = arith.constant 41 : i64
+    %t27twl = arith.constant 43 : i64
     %t27tr = func.call @strict_trace_checked(%t27v, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     return %t27tr : f64
   ^bb28:
@@ -129280,7 +129374,7 @@ module {
     cf.cond_br %t30k, ^bb30e, ^bb31
   ^bb30e:
     %t30tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t30twl = arith.constant 41 : i64
+    %t30twl = arith.constant 43 : i64
     %t30tr = func.call @strict_trace_checked(%t30v, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
     return %t30tr : f64
   ^bb31:
@@ -129292,7 +129386,7 @@ module {
     %t32a2 = llvm.load %r5 : !llvm.ptr -> f64
     %t32r = func.call @MethodCodegen_Statement_3(%t32m, %t32a0, %t32a1, %t32a2) : (f64, f64, f64, f64) -> f64
     %t32tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t32twl = arith.constant 41 : i64
+    %t32twl = arith.constant 43 : i64
     %t32tr = func.call @strict_trace(%t32r, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t32tr, %r6 : f64, !llvm.ptr
     %t33v = llvm.load %r6 : !llvm.ptr -> f64
@@ -129300,7 +129394,7 @@ module {
     cf.cond_br %t33k, ^bb33e, ^bb34
   ^bb33e:
     %t33tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t33twl = arith.constant 41 : i64
+    %t33twl = arith.constant 43 : i64
     %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
     return %t33tr : f64
   ^bb34:
@@ -129315,7 +129409,7 @@ module {
     %t36a1 = llvm.load %r8 : !llvm.ptr -> f64
     %t36r = func.call @CodeBlock_Declare_2(%t36m, %t36a0, %t36a1) : (f64, f64, f64) -> f64
     %t36tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t36twl = arith.constant 41 : i64
+    %t36twl = arith.constant 43 : i64
     %t36tr = func.call @strict_trace(%t36r, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t36tr, %r9 : f64, !llvm.ptr
     %t37 = llvm.load %r9 : !llvm.ptr -> f64
@@ -129327,14 +129421,14 @@ module {
     cf.cond_br %t39k, ^bb39e, ^bb40
   ^bb39e:
     %t39tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t39twl = arith.constant 42 : i64
+    %t39twl = arith.constant 44 : i64
     %t39tr = func.call @strict_trace_checked(%t39v, %t39tw, %t39twl) : (f64, !llvm.ptr, i64) -> f64
     return %t39tr : f64
   ^bb40:
     %t40m = llvm.load %r0 : !llvm.ptr -> f64
     %t40r = func.call @CodeBlock_Flagged_0(%t40m) : (f64) -> f64
     %t40tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t40twl = arith.constant 42 : i64
+    %t40twl = arith.constant 44 : i64
     %t40tr = func.call @strict_trace(%t40r, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t40tr, %r1 : f64, !llvm.ptr
     %t41v = llvm.load %r1 : !llvm.ptr -> f64
@@ -129342,7 +129436,7 @@ module {
     cf.cond_br %t41k, ^bb41e, ^bb42
   ^bb41e:
     %t41tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t41twl = arith.constant 42 : i64
+    %t41twl = arith.constant 44 : i64
     %t41tr = func.call @strict_trace_checked(%t41v, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
     return %t41tr : f64
   ^bb42:
@@ -129355,7 +129449,7 @@ module {
     cf.cond_br %t44k, ^bb44e, ^bb45
   ^bb44e:
     %t44tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t44twl = arith.constant 42 : i64
+    %t44twl = arith.constant 44 : i64
     %t44tr = func.call @strict_trace_checked(%t44v, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
     return %t44tr : f64
   ^bb45:
@@ -129369,7 +129463,7 @@ module {
     %t46a1 = llvm.load %r4 : !llvm.ptr -> f64
     %t46r = func.call @InstructionEntry_Jump_2(%t46m, %t46a0, %t46a1) : (f64, f64, f64) -> f64
     %t46tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t46twl = arith.constant 42 : i64
+    %t46twl = arith.constant 44 : i64
     %t46tr = func.call @strict_trace(%t46r, %t46tw, %t46twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t46tr, %r5 : f64, !llvm.ptr
     %t47v = llvm.load %r5 : !llvm.ptr -> f64
@@ -129377,7 +129471,7 @@ module {
     cf.cond_br %t47k, ^bb47e, ^bb48
   ^bb47e:
     %t47tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t47twl = arith.constant 42 : i64
+    %t47twl = arith.constant 44 : i64
     %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     return %t47tr : f64
   ^bb48:
@@ -129385,7 +129479,7 @@ module {
     %t48a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t48r = func.call @CodeBlock_Add_1(%t48m, %t48a0) : (f64, f64) -> f64
     %t48tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t48twl = arith.constant 42 : i64
+    %t48twl = arith.constant 44 : i64
     %t48tr = func.call @strict_trace(%t48r, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t48tr, %r6 : f64, !llvm.ptr
     %t49v = llvm.load %r6 : !llvm.ptr -> f64
@@ -129393,14 +129487,14 @@ module {
     cf.cond_br %t49k, ^bb49e, ^bb50
   ^bb49e:
     %t49tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t49twl = arith.constant 42 : i64
+    %t49twl = arith.constant 44 : i64
     %t49tr = func.call @strict_trace_checked(%t49v, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
     return %t49tr : f64
   ^bb50:
     %t50m = llvm.load %r6 : !llvm.ptr -> f64
     %t50r = func.call @CodeBlock_WithNextId_0(%t50m) : (f64) -> f64
     %t50tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t50twl = arith.constant 42 : i64
+    %t50twl = arith.constant 44 : i64
     %t50tr = func.call @strict_trace(%t50r, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t50tr, %r7 : f64, !llvm.ptr
     %t51 = llvm.load %r7 : !llvm.ptr -> f64
@@ -129412,7 +129506,7 @@ module {
     cf.cond_br %t53k, ^bb53e, ^bb54
   ^bb53e:
     %t53tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t53twl = arith.constant 43 : i64
+    %t53twl = arith.constant 45 : i64
     %t53tr = func.call @strict_trace_checked(%t53v, %t53tw, %t53twl) : (f64, !llvm.ptr, i64) -> f64
     return %t53tr : f64
   ^bb54:
@@ -129425,7 +129519,7 @@ module {
     %t56a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t56r = func.call @InstructionEntry_Jump_2(%t56m, %t56a0, %t56a1) : (f64, f64, f64) -> f64
     %t56tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t56twl = arith.constant 43 : i64
+    %t56twl = arith.constant 45 : i64
     %t56tr = func.call @strict_trace(%t56r, %t56tw, %t56twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t56tr, %r3 : f64, !llvm.ptr
     %t57v = llvm.load %r3 : !llvm.ptr -> f64
@@ -129433,7 +129527,7 @@ module {
     cf.cond_br %t57k, ^bb57e, ^bb58
   ^bb57e:
     %t57tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t57twl = arith.constant 43 : i64
+    %t57twl = arith.constant 45 : i64
     %t57tr = func.call @strict_trace_checked(%t57v, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
     return %t57tr : f64
   ^bb58:
@@ -129441,7 +129535,7 @@ module {
     %t58a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t58r = func.call @CodeBlock_Add_1(%t58m, %t58a0) : (f64, f64) -> f64
     %t58tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t58twl = arith.constant 43 : i64
+    %t58twl = arith.constant 45 : i64
     %t58tr = func.call @strict_trace(%t58r, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t58tr, %r4 : f64, !llvm.ptr
     %t59 = llvm.load %r4 : !llvm.ptr -> f64
@@ -129453,7 +129547,7 @@ module {
     cf.cond_br %t61k, ^bb61e, ^bb62
   ^bb61e:
     %t61tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t61twl = arith.constant 44 : i64
+    %t61twl = arith.constant 46 : i64
     %t61tr = func.call @strict_trace_checked(%t61v, %t61tw, %t61twl) : (f64, !llvm.ptr, i64) -> f64
     return %t61tr : f64
   ^bb62:
@@ -129469,7 +129563,7 @@ module {
     %t65a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t65r = func.call @TestCodegen_Place_2(%t65m, %t65a0, %t65a1) : (f64, f64, f64) -> f64
     %t65tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t65twl = arith.constant 44 : i64
+    %t65twl = arith.constant 46 : i64
     %t65tr = func.call @strict_trace(%t65r, %t65tw, %t65twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t65tr, %r4 : f64, !llvm.ptr
     %t66v = llvm.load %r4 : !llvm.ptr -> f64
@@ -129477,7 +129571,7 @@ module {
     cf.cond_br %t66k, ^bb66e, ^bb67
   ^bb66e:
     %t66tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t66twl = arith.constant 44 : i64
+    %t66twl = arith.constant 46 : i64
     %t66tr = func.call @strict_trace_checked(%t66v, %t66tw, %t66twl) : (f64, !llvm.ptr, i64) -> f64
     return %t66tr : f64
   ^bb67:
@@ -129489,7 +129583,7 @@ module {
     %t68a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t68r = func.call @InstructionEntry_Print_1(%t68m, %t68a0) : (f64, f64) -> f64
     %t68tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t68twl = arith.constant 44 : i64
+    %t68twl = arith.constant 46 : i64
     %t68tr = func.call @strict_trace(%t68r, %t68tw, %t68twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t68tr, %r6 : f64, !llvm.ptr
     %t69v = llvm.load %r6 : !llvm.ptr -> f64
@@ -129497,7 +129591,7 @@ module {
     cf.cond_br %t69k, ^bb69e, ^bb70
   ^bb69e:
     %t69tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t69twl = arith.constant 44 : i64
+    %t69twl = arith.constant 46 : i64
     %t69tr = func.call @strict_trace_checked(%t69v, %t69tw, %t69twl) : (f64, !llvm.ptr, i64) -> f64
     return %t69tr : f64
   ^bb70:
@@ -129505,7 +129599,7 @@ module {
     %t70a0 = llvm.load %r6 : !llvm.ptr -> f64
     %t70r = func.call @CodeBlock_Add_1(%t70m, %t70a0) : (f64, f64) -> f64
     %t70tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t70twl = arith.constant 44 : i64
+    %t70twl = arith.constant 46 : i64
     %t70tr = func.call @strict_trace(%t70r, %t70tw, %t70twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t70tr, %r7 : f64, !llvm.ptr
     %t71v = llvm.load %r7 : !llvm.ptr -> f64
@@ -129513,7 +129607,7 @@ module {
     cf.cond_br %t71k, ^bb71e, ^bb72
   ^bb71e:
     %t71tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t71twl = arith.constant 44 : i64
+    %t71twl = arith.constant 46 : i64
     %t71tr = func.call @strict_trace_checked(%t71v, %t71tw, %t71twl) : (f64, !llvm.ptr, i64) -> f64
     return %t71tr : f64
   ^bb72:
@@ -129521,7 +129615,7 @@ module {
     %t72a0 = llvm.load %r7 : !llvm.ptr -> f64
     %t72r = func.call @TestCodegen_Got_1(%t72m, %t72a0) : (f64, f64) -> f64
     %t72tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t72twl = arith.constant 44 : i64
+    %t72twl = arith.constant 46 : i64
     %t72tr = func.call @strict_trace(%t72r, %t72tw, %t72twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t72tr, %r8 : f64, !llvm.ptr
     %t73 = llvm.load %r8 : !llvm.ptr -> f64
@@ -129533,7 +129627,7 @@ module {
     cf.cond_br %t75k, ^bb75e, ^bb76
   ^bb75e:
     %t75tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t75twl = arith.constant 45 : i64
+    %t75twl = arith.constant 47 : i64
     %t75tr = func.call @strict_trace_checked(%t75v, %t75tw, %t75twl) : (f64, !llvm.ptr, i64) -> f64
     return %t75tr : f64
   ^bb76:
@@ -129541,7 +129635,7 @@ module {
     %t76a0 = llvm.load %r0 : !llvm.ptr -> f64
     %t76r = func.call @TestCodegen_Counted_1(%t76m, %t76a0) : (f64, f64) -> f64
     %t76tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t76twl = arith.constant 45 : i64
+    %t76twl = arith.constant 47 : i64
     %t76tr = func.call @strict_trace(%t76r, %t76tw, %t76twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t76tr, %r1 : f64, !llvm.ptr
     %t77v = llvm.load %r1 : !llvm.ptr -> f64
@@ -129549,7 +129643,7 @@ module {
     cf.cond_br %t77k, ^bb77e, ^bb78
   ^bb77e:
     %t77tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t77twl = arith.constant 45 : i64
+    %t77twl = arith.constant 47 : i64
     %t77tr = func.call @strict_trace_checked(%t77v, %t77tw, %t77twl) : (f64, !llvm.ptr, i64) -> f64
     return %t77tr : f64
   ^bb78:
@@ -129562,7 +129656,7 @@ module {
     cf.cond_br %t80k, ^bb80e, ^bb81
   ^bb80e:
     %t80tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t80twl = arith.constant 45 : i64
+    %t80twl = arith.constant 47 : i64
     %t80tr = func.call @strict_trace_checked(%t80v, %t80tw, %t80twl) : (f64, !llvm.ptr, i64) -> f64
     return %t80tr : f64
   ^bb81:
@@ -129582,7 +129676,7 @@ module {
     %t84a1 = llvm.load %r6 : !llvm.ptr -> f64
     %t84r = func.call @InstructionEntry_Jump_2(%t84m, %t84a0, %t84a1) : (f64, f64, f64) -> f64
     %t84tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t84twl = arith.constant 45 : i64
+    %t84twl = arith.constant 47 : i64
     %t84tr = func.call @strict_trace(%t84r, %t84tw, %t84twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t84tr, %r7 : f64, !llvm.ptr
     %t85v = llvm.load %r7 : !llvm.ptr -> f64
@@ -129590,7 +129684,7 @@ module {
     cf.cond_br %t85k, ^bb85e, ^bb86
   ^bb85e:
     %t85tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t85twl = arith.constant 45 : i64
+    %t85twl = arith.constant 47 : i64
     %t85tr = func.call @strict_trace_checked(%t85v, %t85tw, %t85twl) : (f64, !llvm.ptr, i64) -> f64
     return %t85tr : f64
   ^bb86:
@@ -129598,7 +129692,7 @@ module {
     %t86a0 = llvm.load %r7 : !llvm.ptr -> f64
     %t86r = func.call @CodeBlock_Add_1(%t86m, %t86a0) : (f64, f64) -> f64
     %t86tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t86twl = arith.constant 45 : i64
+    %t86twl = arith.constant 47 : i64
     %t86tr = func.call @strict_trace(%t86r, %t86tw, %t86twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t86tr, %r8 : f64, !llvm.ptr
     %t87v = llvm.load %r8 : !llvm.ptr -> f64
@@ -129606,7 +129700,7 @@ module {
     cf.cond_br %t87k, ^bb87e, ^bb88
   ^bb87e:
     %t87tw = llvm.mlir.addressof @wTestCodegen_Line_3 : !llvm.ptr
-    %t87twl = arith.constant 45 : i64
+    %t87twl = arith.constant 47 : i64
     %t87tr = func.call @strict_trace_checked(%t87v, %t87tw, %t87twl) : (f64, !llvm.ptr, i64) -> f64
     return %t87tr : f64
   ^bb88:
@@ -131048,7 +131142,7 @@ module {
     %t4a2 = llvm.load %r3 : !llvm.ptr -> f64
     %t4r = func.call @Automatic_Missing_3(%t4m, %t4a0, %t4a1, %t4a2) : (f64, f64, f64, f64) -> f64
     %t4tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t4twl = arith.constant 93 : i64
+    %t4twl = arith.constant 111 : i64
     %t4tr = func.call @strict_trace(%t4r, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t4tr, %r4 : f64, !llvm.ptr
     %t5 = llvm.load %r4 : !llvm.ptr -> f64
@@ -131060,7 +131154,7 @@ module {
     cf.cond_br %t7k, ^bb7e, ^bb8
   ^bb7e:
     %t7tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t7twl = arith.constant 94 : i64
+    %t7twl = arith.constant 112 : i64
     %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     return %t7tr : f64
   ^bb8:
@@ -131072,7 +131166,7 @@ module {
     cf.cond_br %t9k, ^bb9e, ^bb10
   ^bb9e:
     %t9tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t9twl = arith.constant 94 : i64
+    %t9twl = arith.constant 112 : i64
     %t9tr = func.call @strict_trace_checked(%t9v, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
     return %t9tr : f64
   ^bb10:
@@ -131097,7 +131191,7 @@ module {
     cf.cond_br %t17k, ^bb17e, ^bb18
   ^bb17e:
     %t17tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t17twl = arith.constant 96 : i64
+    %t17twl = arith.constant 114 : i64
     %t17tr = func.call @strict_trace_checked(%t17v, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
     return %t17tr : f64
   ^bb18:
@@ -131105,7 +131199,7 @@ module {
     %t18a0 = llvm.load %r0 : !llvm.ptr -> f64
     %t18r = func.call @Automatic_Lines_1(%t18m, %t18a0) : (f64, f64) -> f64
     %t18tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t18twl = arith.constant 96 : i64
+    %t18twl = arith.constant 114 : i64
     %t18tr = func.call @strict_trace(%t18r, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t18tr, %r1 : f64, !llvm.ptr
     %t19 = llvm.load %r1 : !llvm.ptr -> f64
@@ -131124,7 +131218,7 @@ module {
     cf.cond_br %t23k, ^bb23e, ^bb24
   ^bb23e:
     %t23tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t23twl = arith.constant 97 : i64
+    %t23twl = arith.constant 115 : i64
     %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     return %t23tr : f64
   ^bb24:
@@ -131179,7 +131273,7 @@ module {
     cf.cond_br %t35k, ^bb35e, ^bb36
   ^bb35e:
     %t35tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t35twl = arith.constant 99 : i64
+    %t35twl = arith.constant 117 : i64
     %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
     return %t35tr : f64
   ^bb36:
@@ -131190,7 +131284,7 @@ module {
     cf.cond_br %t37k, ^bb37e, ^bb38
   ^bb37e:
     %t37tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t37twl = arith.constant 99 : i64
+    %t37twl = arith.constant 117 : i64
     %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     return %t37tr : f64
   ^bb38:
@@ -131202,7 +131296,7 @@ module {
     cf.cond_br %t39k, ^bb39e, ^bb40
   ^bb39e:
     %t39tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t39twl = arith.constant 99 : i64
+    %t39twl = arith.constant 117 : i64
     %t39tr = func.call @strict_trace_checked(%t39v, %t39tw, %t39twl) : (f64, !llvm.ptr, i64) -> f64
     return %t39tr : f64
   ^bb40:
@@ -131235,7 +131329,7 @@ module {
     cf.cond_br %t42k, ^bb42e, ^bb43
   ^bb42e:
     %t42tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t42twl = arith.constant 100 : i64
+    %t42twl = arith.constant 118 : i64
     %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
     return %t42tr : f64
   ^bb43:
@@ -131246,7 +131340,7 @@ module {
     cf.cond_br %t44k, ^bb44e, ^bb45
   ^bb44e:
     %t44tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t44twl = arith.constant 100 : i64
+    %t44twl = arith.constant 118 : i64
     %t44tr = func.call @strict_trace_checked(%t44v, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
     return %t44tr : f64
   ^bb45:
@@ -131257,7 +131351,7 @@ module {
     cf.cond_br %t46k, ^bb46e, ^bb47
   ^bb46e:
     %t46tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t46twl = arith.constant 100 : i64
+    %t46twl = arith.constant 118 : i64
     %t46tr = func.call @strict_trace_checked(%t46v, %t46tw, %t46twl) : (f64, !llvm.ptr, i64) -> f64
     return %t46tr : f64
   ^bb47:
@@ -131274,7 +131368,7 @@ module {
     cf.cond_br %t49k, ^bb49e, ^bb50
   ^bb49e:
     %t49tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t49twl = arith.constant 100 : i64
+    %t49twl = arith.constant 118 : i64
     %t49tr = func.call @strict_trace_checked(%t49v, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
     return %t49tr : f64
   ^bb50:
@@ -131282,7 +131376,7 @@ module {
     %t50a0 = llvm.load %r7 : !llvm.ptr -> f64
     %t50r = func.call @TypeShape_IsMethodHeader_1(%t50m, %t50a0) : (f64, f64) -> f64
     %t50tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t50twl = arith.constant 100 : i64
+    %t50twl = arith.constant 118 : i64
     %t50tr = func.call @strict_trace(%t50r, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t50tr, %r8 : f64, !llvm.ptr
     %t51v = llvm.load %r8 : !llvm.ptr -> f64
@@ -131290,7 +131384,7 @@ module {
     cf.cond_br %t51k, ^bb51e, ^bb52
   ^bb51e:
     %t51tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t51twl = arith.constant 100 : i64
+    %t51twl = arith.constant 118 : i64
     %t51tr = func.call @strict_trace_checked(%t51v, %t51tw, %t51twl) : (f64, !llvm.ptr, i64) -> f64
     return %t51tr : f64
   ^bb52:
@@ -131312,7 +131406,7 @@ module {
     cf.cond_br %t57k, ^bb57e, ^bb58
   ^bb57e:
     %t57tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t57twl = arith.constant 101 : i64
+    %t57twl = arith.constant 119 : i64
     %t57tr = func.call @strict_trace_checked(%t57v, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
     return %t57tr : f64
   ^bb58:
@@ -131322,7 +131416,7 @@ module {
     %t59a0 = llvm.load %r12 : !llvm.ptr -> f64
     %t59r = func.call @TypeCodegen_Method_1(%t59m, %t59a0) : (f64, f64) -> f64
     %t59tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t59twl = arith.constant 101 : i64
+    %t59twl = arith.constant 119 : i64
     %t59tr = func.call @strict_trace(%t59r, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t59tr, %r13 : f64, !llvm.ptr
     %t60v = llvm.load %r13 : !llvm.ptr -> f64
@@ -131330,7 +131424,7 @@ module {
     cf.cond_br %t60k, ^bb60e, ^bb61
   ^bb60e:
     %t60tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t60twl = arith.constant 101 : i64
+    %t60twl = arith.constant 119 : i64
     %t60tr = func.call @strict_trace_checked(%t60v, %t60tw, %t60twl) : (f64, !llvm.ptr, i64) -> f64
     return %t60tr : f64
   ^bb61:
@@ -131384,7 +131478,7 @@ module {
     cf.cond_br %t71k, ^bb71e, ^bb72
   ^bb71e:
     %t71tw = llvm.mlir.addressof @wAutomatic_Completed_3 : !llvm.ptr
-    %t71twl = arith.constant 102 : i64
+    %t71twl = arith.constant 120 : i64
     %t71tr = func.call @strict_trace_checked(%t71v, %t71tw, %t71twl) : (f64, !llvm.ptr, i64) -> f64
     return %t71tr : f64
   ^bb72:
@@ -173863,16 +173957,6 @@ module {
     llvm.store %zero, %r10 : f64, !llvm.ptr
     %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %r11 : f64, !llvm.ptr
-    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r12 : f64, !llvm.ptr
-    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r13 : f64, !llvm.ptr
-    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r14 : f64, !llvm.ptr
-    %r15 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r15 : f64, !llvm.ptr
-    %r16 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %r16 : f64, !llvm.ptr
     %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_index : f64, !llvm.ptr
     %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
@@ -173887,10 +173971,14 @@ module {
     llvm.store %zero, %v_concrete : f64, !llvm.ptr
     %v_list1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_list1 : f64, !llvm.ptr
+    %v_type = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_type : f64, !llvm.ptr
     %v_conditional2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_conditional2 : f64, !llvm.ptr
-    %v_list4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_list4 : f64, !llvm.ptr
+    %v_argument = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_argument : f64, !llvm.ptr
+    %v_conditional4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional4 : f64, !llvm.ptr
     %loop15 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %loop15 : f64, !llvm.ptr
     %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
@@ -173907,7 +173995,7 @@ module {
     %t1a0 = llvm.load %r0 : !llvm.ptr -> f64
     %t1r = func.call @Instantiation_Arguments_1(%t1m, %t1a0) : (f64, f64) -> f64
     %t1tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
-    %t1twl = arith.constant 49 : i64
+    %t1twl = arith.constant 52 : i64
     %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t1tr, %r1 : f64, !llvm.ptr
     %t2v = llvm.load %r1 : !llvm.ptr -> f64
@@ -173915,7 +174003,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
-    %t2twl = arith.constant 49 : i64
+    %t2twl = arith.constant 52 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -173927,7 +174015,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
-    %t4twl = arith.constant 49 : i64
+    %t4twl = arith.constant 52 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -173993,136 +174081,209 @@ module {
     %t20nb = func.call @strict_bits(%t20n) : (!llvm.ptr) -> f64
     %t20x = func.call @strict_list_read(%t20l, %t20i, %t20nb) : (f64, f64, f64) -> f64
     llvm.store %t20x, %r5 : f64, !llvm.ptr
-    %t21v = llvm.load %r5 : !llvm.ptr -> f64
-    %t21k = func.call @strict_is_failure(%t21v) : (f64) -> i1
-    cf.cond_br %t21k, ^bb21e, ^bb22
-  ^bb21e:
-    %t21tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
-    %t21twl = arith.constant 53 : i64
-    %t21tr = func.call @strict_trace_checked(%t21v, %t21tw, %t21twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t21tr : f64
-  ^bb22:
-    %t22c = llvm.mlir.addressof @cInstantiation_Members_2_22 : !llvm.ptr
-    %t22xf = func.call @strict_bits(%t22c) : (!llvm.ptr) -> f64
-    llvm.store %t22xf, %r6 : f64, !llvm.ptr
-    %t23l = llvm.load %r5 : !llvm.ptr -> f64
-    %t23r = llvm.load %r6 : !llvm.ptr -> f64
-    %t23q = func.call @strict_text_equal(%t23l, %t23r) : (f64, f64) -> f64
-    %t23f = arith.cmpf one, %t23q, %zero : f64
-    llvm.store %t23f, %flag : i1, !llvm.ptr
-    %t24 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t24, ^bb25, ^bb31
+    %t21 = llvm.load %r5 : !llvm.ptr -> f64
+    llvm.store %t21, %v_type : f64, !llvm.ptr
+    %t22g = llvm.mlir.addressof @lInstantiation_Members_2_22 : !llvm.ptr
+    %t22v = llvm.load %t22g : !llvm.ptr -> f64
+    %t22u = arith.cmpf oeq, %t22v, %zero : f64
+    cf.cond_br %t22u, ^l22, ^m22(%t22v : f64)
+  ^l22:
+    %t22q = arith.constant 0x4018000000000000 : f64
+    %t22l = func.call @strict_list_new(%t22q, %zero) : (f64, f64) -> f64
+    %t22e0c = llvm.mlir.addressof @cInstantiation_Members_2_22_0 : !llvm.ptr
+    %t22e0xf = func.call @strict_bits(%t22e0c) : (!llvm.ptr) -> f64
+    %t22e0l = func.call @strict_list_add(%t22l, %t22e0xf) : (f64, f64) -> f64
+    %t22e1c = llvm.mlir.addressof @cInstantiation_Members_2_22_1 : !llvm.ptr
+    %t22e1xf = func.call @strict_bits(%t22e1c) : (!llvm.ptr) -> f64
+    %t22e1l = func.call @strict_list_add(%t22e0l, %t22e1xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t22e1l) : (f64) -> ()
+    llvm.store %t22e1l, %t22g : f64, !llvm.ptr
+    cf.br ^m22(%t22e1l : f64)
+  ^m22(%t22r: f64):
+    llvm.store %t22r, %r2 : f64, !llvm.ptr
+    %t23 = llvm.load %v_type : !llvm.ptr -> f64
+    llvm.store %t23, %r3 : f64, !llvm.ptr
+    %t24v = llvm.load %r3 : !llvm.ptr -> f64
+    %t24k = func.call @strict_is_failure(%t24v) : (f64) -> i1
+    cf.cond_br %t24k, ^bb24e, ^bb25
+  ^bb24e:
+    %t24tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
+    %t24twl = arith.constant 57 : i64
+    %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t24tr : f64
   ^bb25:
-    %t25 = llvm.load %v_typeName : !llvm.ptr -> f64
-    llvm.store %t25, %r7 : f64, !llvm.ptr
-    %t26 = llvm.load %v_value : !llvm.ptr -> f64
-    llvm.store %t26, %r8 : f64, !llvm.ptr
-    %t27m = llvm.load %instance : !llvm.ptr -> f64
-    %t27a0 = llvm.load %r7 : !llvm.ptr -> f64
-    %t27a1 = llvm.load %r8 : !llvm.ptr -> f64
-    %t27r = func.call @Instantiation_Argument_2(%t27m, %t27a0, %t27a1) : (f64, f64, f64) -> f64
-    %t27tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
-    %t27twl = arith.constant 53 : i64
-    %t27tr = func.call @strict_trace(%t27r, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t27tr, %r9 : f64, !llvm.ptr
-    %t28 = llvm.load %r9 : !llvm.ptr -> f64
-    llvm.store %t28, %v_conditional2 : f64, !llvm.ptr
-    %t29c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t29c, %r10 : f64, !llvm.ptr
-    %t30a = llvm.load %r10 : !llvm.ptr -> f64
-    %t30b = llvm.load %r10 : !llvm.ptr -> f64
-    %t30c = arith.cmpf oeq, %t30a, %t30b : f64
-    llvm.store %t30c, %flag : i1, !llvm.ptr
-    cf.br ^bb31
-  ^bb31:
-    %t32 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t32, ^bb39, ^bb33
-  ^bb33:
-    %t33 = llvm.load %v_members : !llvm.ptr -> f64
-    llvm.store %t33, %r11 : f64, !llvm.ptr
-    %t34i = llvm.load %r11 : !llvm.ptr -> f64
-    %t34ip = func.call @strict_ptr(%t34i) : (f64) -> !llvm.ptr
-    %t34m = llvm.getelementptr %t34ip[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t34mv = llvm.load %t34m : !llvm.ptr -> f64
-    llvm.store %t34mv, %r12 : f64, !llvm.ptr
-    %t35 = llvm.load %r12 : !llvm.ptr -> f64
-    llvm.store %t35, %v_list4 : f64, !llvm.ptr
-    %t36 = llvm.load %v_index : !llvm.ptr -> f64
-    llvm.store %t36, %r13 : f64, !llvm.ptr
-    %t37l = llvm.load %v_list4 : !llvm.ptr -> f64
-    %t37i = llvm.load %r13 : !llvm.ptr -> f64
-    %t37n = llvm.mlir.addressof @sInstantiation_Members_2_37 : !llvm.ptr
-    %t37nb = func.call @strict_bits(%t37n) : (!llvm.ptr) -> f64
-    %t37x = func.call @strict_list_read(%t37l, %t37i, %t37nb) : (f64, f64, f64) -> f64
-    llvm.store %t37x, %r14 : f64, !llvm.ptr
-    %t38 = llvm.load %r14 : !llvm.ptr -> f64
+    %t25m = llvm.load %r2 : !llvm.ptr -> f64
+    %t25a0 = llvm.load %r3 : !llvm.ptr -> f64
+    %t25q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t25r = func.call @strict_list_has(%t25m, %t25a0, %t25q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t25r, %r4 : f64, !llvm.ptr
+    %t26c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t26c, %r5 : f64, !llvm.ptr
+    %t27a = llvm.load %r4 : !llvm.ptr -> f64
+    %t27b = llvm.load %r5 : !llvm.ptr -> f64
+    %t27c = arith.cmpf oeq, %t27a, %t27b : f64
+    llvm.store %t27c, %flag : i1, !llvm.ptr
+    %t28 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t28, ^bb29, ^bb35
+  ^bb29:
+    %t29 = llvm.load %v_typeName : !llvm.ptr -> f64
+    llvm.store %t29, %r6 : f64, !llvm.ptr
+    %t30 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %t30, %r7 : f64, !llvm.ptr
+    %t31m = llvm.load %instance : !llvm.ptr -> f64
+    %t31a0 = llvm.load %r6 : !llvm.ptr -> f64
+    %t31a1 = llvm.load %r7 : !llvm.ptr -> f64
+    %t31r = func.call @Instantiation_Argument_2(%t31m, %t31a0, %t31a1) : (f64, f64, f64) -> f64
+    %t31tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
+    %t31twl = arith.constant 57 : i64
+    %t31tr = func.call @strict_trace(%t31r, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t31tr, %r8 : f64, !llvm.ptr
+    %t32 = llvm.load %r8 : !llvm.ptr -> f64
+    llvm.store %t32, %v_conditional2 : f64, !llvm.ptr
+    %t33c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t33c, %r9 : f64, !llvm.ptr
+    %t34a = llvm.load %r9 : !llvm.ptr -> f64
+    %t34b = llvm.load %r9 : !llvm.ptr -> f64
+    %t34c = arith.cmpf oeq, %t34a, %t34b : f64
+    llvm.store %t34c, %flag : i1, !llvm.ptr
+    cf.br ^bb35
+  ^bb35:
+    %t36 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t36, ^bb39, ^bb37
+  ^bb37:
+    %t37 = llvm.load %v_type : !llvm.ptr -> f64
+    llvm.store %t37, %r10 : f64, !llvm.ptr
+    %t38 = llvm.load %r10 : !llvm.ptr -> f64
     llvm.store %t38, %v_conditional2 : f64, !llvm.ptr
     cf.br ^bb39
   ^bb39:
     %t40 = llvm.load %v_conditional2 : !llvm.ptr -> f64
-    llvm.store %t40, %r15 : f64, !llvm.ptr
-    %t41v = llvm.load %r15 : !llvm.ptr -> f64
-    %t41k = func.call @strict_is_failure(%t41v) : (f64) -> i1
-    cf.cond_br %t41k, ^bb41e, ^bb42
-  ^bb41e:
-    %t41tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
-    %t41twl = arith.constant 53 : i64
-    %t41tr = func.call @strict_trace_checked(%t41v, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t41tr : f64
-  ^bb42:
-    %t42l = llvm.load %v_concrete : !llvm.ptr -> f64
-    %t42e = llvm.load %r15 : !llvm.ptr -> f64
-    %t42n = func.call @strict_list_add(%t42l, %t42e) : (f64, f64) -> f64
-    llvm.store %t42n, %v_concrete : f64, !llvm.ptr
-    %t43 = llvm.load %v_concrete : !llvm.ptr -> f64
-    llvm.store %t43, %r16 : f64, !llvm.ptr
-    %t44v = llvm.load %r16 : !llvm.ptr -> f64
-    %t44k = func.call @strict_is_failure(%t44v) : (f64) -> i1
-    cf.cond_br %t44k, ^bb44e, ^bb45
-  ^bb44e:
-    %t44tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
-    %t44twl = arith.constant 53 : i64
-    %t44tr = func.call @strict_trace_checked(%t44v, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t44tr : f64
-  ^bb45:
-    %t45k = llvm.load %loop15 : !llvm.ptr -> f64
-    %t45u = arith.constant 1.0 : f64
-    %t45w = arith.addf %t45k, %t45u : f64
-    llvm.store %t45w, %loop15 : f64, !llvm.ptr
+    llvm.store %t40, %r11 : f64, !llvm.ptr
+    %t41 = llvm.load %r11 : !llvm.ptr -> f64
+    llvm.store %t41, %v_argument : f64, !llvm.ptr
+    %t42 = llvm.load %v_type : !llvm.ptr -> f64
+    llvm.store %t42, %r2 : f64, !llvm.ptr
+    %t43v = llvm.load %r2 : !llvm.ptr -> f64
+    %t43k = func.call @strict_is_failure(%t43v) : (f64) -> i1
+    cf.cond_br %t43k, ^bb43e, ^bb44
+  ^bb43e:
+    %t43tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
+    %t43twl = arith.constant 58 : i64
+    %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t43tr : f64
+  ^bb44:
+    %t44c = llvm.mlir.addressof @cInstantiation_Members_2_44 : !llvm.ptr
+    %t44xf = func.call @strict_bits(%t44c) : (!llvm.ptr) -> f64
+    llvm.store %t44xf, %r3 : f64, !llvm.ptr
+    %t45l = llvm.load %r2 : !llvm.ptr -> f64
+    %t45r = llvm.load %r3 : !llvm.ptr -> f64
+    %t45q = func.call @strict_text_equal(%t45l, %t45r) : (f64, f64) -> f64
+    %t45f = arith.cmpf one, %t45q, %zero : f64
+    llvm.store %t45f, %flag : i1, !llvm.ptr
+    %t46 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t46, ^bb47, ^bb53
+  ^bb47:
+    %t47 = llvm.load %v_argument : !llvm.ptr -> f64
+    llvm.store %t47, %r4 : f64, !llvm.ptr
+    %t48v = llvm.load %r4 : !llvm.ptr -> f64
+    %t48k = func.call @strict_is_failure(%t48v) : (f64) -> i1
+    cf.cond_br %t48k, ^bb48e, ^bb49
+  ^bb48e:
+    %t48tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
+    %t48twl = arith.constant 58 : i64
+    %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t48tr : f64
+  ^bb49:
+    %t49m = llvm.load %instance : !llvm.ptr -> f64
+    %t49a0 = llvm.load %r4 : !llvm.ptr -> f64
+    %t49r = func.call @Instantiation_Plural_1(%t49m, %t49a0) : (f64, f64) -> f64
+    %t49tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
+    %t49twl = arith.constant 58 : i64
+    %t49tr = func.call @strict_trace(%t49r, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t49tr, %r5 : f64, !llvm.ptr
+    %t50 = llvm.load %r5 : !llvm.ptr -> f64
+    llvm.store %t50, %v_conditional4 : f64, !llvm.ptr
+    %t51c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t51c, %r6 : f64, !llvm.ptr
+    %t52a = llvm.load %r6 : !llvm.ptr -> f64
+    %t52b = llvm.load %r6 : !llvm.ptr -> f64
+    %t52c = arith.cmpf oeq, %t52a, %t52b : f64
+    llvm.store %t52c, %flag : i1, !llvm.ptr
+    cf.br ^bb53
+  ^bb53:
+    %t54 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t54, ^bb57, ^bb55
+  ^bb55:
+    %t55 = llvm.load %v_argument : !llvm.ptr -> f64
+    llvm.store %t55, %r7 : f64, !llvm.ptr
+    %t56 = llvm.load %r7 : !llvm.ptr -> f64
+    llvm.store %t56, %v_conditional4 : f64, !llvm.ptr
+    cf.br ^bb57
+  ^bb57:
+    %t58 = llvm.load %v_conditional4 : !llvm.ptr -> f64
+    llvm.store %t58, %r8 : f64, !llvm.ptr
+    %t59v = llvm.load %r8 : !llvm.ptr -> f64
+    %t59k = func.call @strict_is_failure(%t59v) : (f64) -> i1
+    cf.cond_br %t59k, ^bb59e, ^bb60
+  ^bb59e:
+    %t59tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
+    %t59twl = arith.constant 58 : i64
+    %t59tr = func.call @strict_trace_checked(%t59v, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t59tr : f64
+  ^bb60:
+    %t60l = llvm.load %v_concrete : !llvm.ptr -> f64
+    %t60e = llvm.load %r8 : !llvm.ptr -> f64
+    %t60n = func.call @strict_list_add(%t60l, %t60e) : (f64, f64) -> f64
+    llvm.store %t60n, %v_concrete : f64, !llvm.ptr
+    %t61 = llvm.load %v_concrete : !llvm.ptr -> f64
+    llvm.store %t61, %r9 : f64, !llvm.ptr
+    %t62v = llvm.load %r9 : !llvm.ptr -> f64
+    %t62k = func.call @strict_is_failure(%t62v) : (f64) -> i1
+    cf.cond_br %t62k, ^bb62e, ^bb63
+  ^bb62e:
+    %t62tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
+    %t62twl = arith.constant 58 : i64
+    %t62tr = func.call @strict_trace_checked(%t62v, %t62tw, %t62twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t62tr : f64
+  ^bb63:
+    %t63k = llvm.load %loop15 : !llvm.ptr -> f64
+    %t63u = arith.constant 1.0 : f64
+    %t63w = arith.addf %t63k, %t63u : f64
+    llvm.store %t63w, %loop15 : f64, !llvm.ptr
     cf.br ^loop15
   ^loop15exit:
     llvm.store %t15x, %v_index : f64, !llvm.ptr
     llvm.store %t15y, %v_value : f64, !llvm.ptr
-    %t46 = llvm.load %v_members : !llvm.ptr -> f64
-    llvm.store %t46, %r0 : f64, !llvm.ptr
-    %t47i = llvm.load %r0 : !llvm.ptr -> f64
-    %t47ip = func.call @strict_ptr(%t47i) : (f64) -> !llvm.ptr
-    %t47m = llvm.getelementptr %t47ip[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t47mv = llvm.load %t47m : !llvm.ptr -> f64
-    llvm.store %t47mv, %r1 : f64, !llvm.ptr
-    %t48 = llvm.load %v_concrete : !llvm.ptr -> f64
-    llvm.store %t48, %r2 : f64, !llvm.ptr
-    %t49oz = arith.constant 16 : i64
-    %t49op = func.call @strict_alloc(%t49oz) : (i64) -> !llvm.ptr
-    %t49s0 = llvm.getelementptr %t49op[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t49a0 = llvm.load %r1 : !llvm.ptr -> f64
-    llvm.store %t49a0, %t49s0 : f64, !llvm.ptr
-    %t49s1 = llvm.getelementptr %t49op[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t49a1 = llvm.load %r2 : !llvm.ptr -> f64
-    llvm.store %t49a1, %t49s1 : f64, !llvm.ptr
-    %t49of = func.call @strict_bits(%t49op) : (!llvm.ptr) -> f64
-    llvm.store %t49of, %r3 : f64, !llvm.ptr
-    %t50v = llvm.load %r3 : !llvm.ptr -> f64
-    %t50k = func.call @strict_is_failure(%t50v) : (f64) -> i1
-    cf.cond_br %t50k, ^bb50e, ^bb51
-  ^bb50e:
-    %t50tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
-    %t50twl = arith.constant 54 : i64
-    %t50tr = func.call @strict_trace_checked(%t50v, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t50tr : f64
-  ^bb51:
-    %t51 = llvm.load %r3 : !llvm.ptr -> f64
-    return %t51 : f64
+    %t64 = llvm.load %v_members : !llvm.ptr -> f64
+    llvm.store %t64, %r0 : f64, !llvm.ptr
+    %t65i = llvm.load %r0 : !llvm.ptr -> f64
+    %t65ip = func.call @strict_ptr(%t65i) : (f64) -> !llvm.ptr
+    %t65m = llvm.getelementptr %t65ip[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t65mv = llvm.load %t65m : !llvm.ptr -> f64
+    llvm.store %t65mv, %r1 : f64, !llvm.ptr
+    %t66 = llvm.load %v_concrete : !llvm.ptr -> f64
+    llvm.store %t66, %r2 : f64, !llvm.ptr
+    %t67oz = arith.constant 16 : i64
+    %t67op = func.call @strict_alloc(%t67oz) : (i64) -> !llvm.ptr
+    %t67s0 = llvm.getelementptr %t67op[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t67a0 = llvm.load %r1 : !llvm.ptr -> f64
+    llvm.store %t67a0, %t67s0 : f64, !llvm.ptr
+    %t67s1 = llvm.getelementptr %t67op[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t67a1 = llvm.load %r2 : !llvm.ptr -> f64
+    llvm.store %t67a1, %t67s1 : f64, !llvm.ptr
+    %t67of = func.call @strict_bits(%t67op) : (!llvm.ptr) -> f64
+    llvm.store %t67of, %r3 : f64, !llvm.ptr
+    %t68v = llvm.load %r3 : !llvm.ptr -> f64
+    %t68k = func.call @strict_is_failure(%t68v) : (f64) -> i1
+    cf.cond_br %t68k, ^bb68e, ^bb69
+  ^bb68e:
+    %t68tw = llvm.mlir.addressof @wInstantiation_Members_2 : !llvm.ptr
+    %t68twl = arith.constant 59 : i64
+    %t68tr = func.call @strict_trace_checked(%t68v, %t68tw, %t68twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t68tr : f64
+  ^bb69:
+    %t69 = llvm.load %r3 : !llvm.ptr -> f64
+    return %t69 : f64
   }
   func.func private @TypeCodegen_Concrete_1(%p0: f64, %p1: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -178148,7 +178309,7 @@ module {
     %t4m = llvm.load %r0 : !llvm.ptr -> f64
     %t4r = func.call @CodeBlock_WithNextId_0(%t4m) : (f64) -> f64
     %t4tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t4twl = arith.constant 49 : i64
+    %t4twl = arith.constant 51 : i64
     %t4tr = func.call @strict_trace(%t4r, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t4tr, %r1 : f64, !llvm.ptr
     %t5v = llvm.load %r1 : !llvm.ptr -> f64
@@ -178156,7 +178317,7 @@ module {
     cf.cond_br %t5k, ^bb5e, ^bb6
   ^bb5e:
     %t5tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t5twl = arith.constant 49 : i64
+    %t5twl = arith.constant 51 : i64
     %t5tr = func.call @strict_trace_checked(%t5v, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     return %t5tr : f64
   ^bb6:
@@ -178174,7 +178335,7 @@ module {
     cf.cond_br %t9k, ^bb9e, ^bb10
   ^bb9e:
     %t9tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t9twl = arith.constant 49 : i64
+    %t9twl = arith.constant 51 : i64
     %t9tr = func.call @strict_trace_checked(%t9v, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
     return %t9tr : f64
   ^bb10:
@@ -178183,7 +178344,7 @@ module {
     %t10a1 = llvm.load %r4 : !llvm.ptr -> f64
     %t10r = func.call @CodeBlock_Declare_2(%t10m, %t10a0, %t10a1) : (f64, f64, f64) -> f64
     %t10tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t10twl = arith.constant 49 : i64
+    %t10twl = arith.constant 51 : i64
     %t10tr = func.call @strict_trace(%t10r, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t10tr, %r5 : f64, !llvm.ptr
     %t11 = llvm.load %r5 : !llvm.ptr -> f64
@@ -178217,7 +178378,7 @@ module {
     %t22m = llvm.load %instance : !llvm.ptr -> f64
     %t22r = func.call @TestCodegen_Clock_0(%t22m) : (f64) -> f64
     %t22tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t22twl = arith.constant 50 : i64
+    %t22twl = arith.constant 52 : i64
     %t22tr = func.call @strict_trace(%t22r, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t22tr, %r4 : f64, !llvm.ptr
     %t23v = llvm.load %r4 : !llvm.ptr -> f64
@@ -178225,7 +178386,7 @@ module {
     cf.cond_br %t23k, ^bb23e, ^bb24
   ^bb23e:
     %t23tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t23twl = arith.constant 50 : i64
+    %t23twl = arith.constant 52 : i64
     %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     return %t23tr : f64
   ^bb24:
@@ -178239,14 +178400,14 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t26twl = arith.constant 50 : i64
+    %t26twl = arith.constant 52 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
     %t27m = llvm.load %r6 : !llvm.ptr -> f64
     %t27r = func.call @Tokenizer_Tokens_0(%t27m) : (f64) -> f64
     %t27tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t27twl = arith.constant 50 : i64
+    %t27twl = arith.constant 52 : i64
     %t27tr = func.call @strict_trace(%t27r, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t27tr, %r7 : f64, !llvm.ptr
     %t28v = llvm.load %r7 : !llvm.ptr -> f64
@@ -178254,7 +178415,7 @@ module {
     cf.cond_br %t28k, ^bb28e, ^bb29
   ^bb28e:
     %t28tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t28twl = arith.constant 50 : i64
+    %t28twl = arith.constant 52 : i64
     %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
     return %t28tr : f64
   ^bb29:
@@ -178265,14 +178426,14 @@ module {
     cf.cond_br %t30k, ^bb30e, ^bb31
   ^bb30e:
     %t30tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t30twl = arith.constant 50 : i64
+    %t30twl = arith.constant 52 : i64
     %t30tr = func.call @strict_trace_checked(%t30v, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
     return %t30tr : f64
   ^bb31:
     %t31m = llvm.load %r8 : !llvm.ptr -> f64
     %t31r = func.call @SyntaxParser_Parse_0(%t31m) : (f64) -> f64
     %t31tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t31twl = arith.constant 50 : i64
+    %t31twl = arith.constant 52 : i64
     %t31tr = func.call @strict_trace(%t31r, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t31tr, %r9 : f64, !llvm.ptr
     %t32v = llvm.load %r9 : !llvm.ptr -> f64
@@ -178280,7 +178441,7 @@ module {
     cf.cond_br %t32k, ^bb32e, ^bb33
   ^bb32e:
     %t32tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t32twl = arith.constant 50 : i64
+    %t32twl = arith.constant 52 : i64
     %t32tr = func.call @strict_trace_checked(%t32v, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
     return %t32tr : f64
   ^bb33:
@@ -178291,7 +178452,7 @@ module {
     cf.cond_br %t34k, ^bb34e, ^bb35
   ^bb34e:
     %t34tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t34twl = arith.constant 50 : i64
+    %t34twl = arith.constant 52 : i64
     %t34tr = func.call @strict_trace_checked(%t34v, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
     return %t34tr : f64
   ^bb35:
@@ -178300,7 +178461,7 @@ module {
     %t35a1 = llvm.load %r10 : !llvm.ptr -> f64
     %t35r = func.call @ValueCodegen_Expression_2(%t35m, %t35a0, %t35a1) : (f64, f64, f64) -> f64
     %t35tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t35twl = arith.constant 50 : i64
+    %t35twl = arith.constant 52 : i64
     %t35tr = func.call @strict_trace(%t35r, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t35tr, %r11 : f64, !llvm.ptr
     %t36v = llvm.load %r11 : !llvm.ptr -> f64
@@ -178308,7 +178469,7 @@ module {
     cf.cond_br %t36k, ^bb36e, ^bb37
   ^bb36e:
     %t36tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t36twl = arith.constant 50 : i64
+    %t36twl = arith.constant 52 : i64
     %t36tr = func.call @strict_trace_checked(%t36v, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
     return %t36tr : f64
   ^bb37:
@@ -178319,7 +178480,7 @@ module {
     %t38a0 = llvm.load %r12 : !llvm.ptr -> f64
     %t38r = func.call @CodeBlock_Stored_1(%t38m, %t38a0) : (f64, f64) -> f64
     %t38tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t38twl = arith.constant 50 : i64
+    %t38twl = arith.constant 52 : i64
     %t38tr = func.call @strict_trace(%t38r, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t38tr, %r13 : f64, !llvm.ptr
     %t39 = llvm.load %r13 : !llvm.ptr -> f64
@@ -178339,7 +178500,7 @@ module {
     cf.cond_br %t45k, ^bb45e, ^bb46
   ^bb45e:
     %t45tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t45twl = arith.constant 51 : i64
+    %t45twl = arith.constant 53 : i64
     %t45tr = func.call @strict_trace_checked(%t45v, %t45tw, %t45twl) : (f64, !llvm.ptr, i64) -> f64
     return %t45tr : f64
   ^bb46:
@@ -178348,7 +178509,7 @@ module {
     %t46a1 = llvm.load %r1 : !llvm.ptr -> f64
     %t46r = func.call @TestCodegen_Compared_2(%t46m, %t46a0, %t46a1) : (f64, f64, f64) -> f64
     %t46tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t46twl = arith.constant 51 : i64
+    %t46twl = arith.constant 53 : i64
     %t46tr = func.call @strict_trace(%t46r, %t46tw, %t46twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t46tr, %r2 : f64, !llvm.ptr
     %t47v = llvm.load %r2 : !llvm.ptr -> f64
@@ -178356,7 +178517,7 @@ module {
     cf.cond_br %t47k, ^bb47e, ^bb48
   ^bb47e:
     %t47tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t47twl = arith.constant 51 : i64
+    %t47twl = arith.constant 53 : i64
     %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     return %t47tr : f64
   ^bb48:
@@ -178371,7 +178532,7 @@ module {
     %t50a1 = llvm.load %r4 : !llvm.ptr -> f64
     %t50r = func.call @CodeBlock_Declare_2(%t50m, %t50a0, %t50a1) : (f64, f64, f64) -> f64
     %t50tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t50twl = arith.constant 51 : i64
+    %t50twl = arith.constant 53 : i64
     %t50tr = func.call @strict_trace(%t50r, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t50tr, %r5 : f64, !llvm.ptr
     %t51 = llvm.load %r5 : !llvm.ptr -> f64
@@ -178385,7 +178546,7 @@ module {
     %t54a1 = llvm.load %r1 : !llvm.ptr -> f64
     %t54r = func.call @TestCodegen_Place_2(%t54m, %t54a0, %t54a1) : (f64, f64, f64) -> f64
     %t54tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t54twl = arith.constant 52 : i64
+    %t54twl = arith.constant 54 : i64
     %t54tr = func.call @strict_trace(%t54r, %t54tw, %t54twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t54tr, %r2 : f64, !llvm.ptr
     %t55 = llvm.load %r2 : !llvm.ptr -> f64
@@ -178423,7 +178584,7 @@ module {
     cf.cond_br %t67k, ^bb67e, ^bb68
   ^bb67e:
     %t67tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t67twl = arith.constant 53 : i64
+    %t67twl = arith.constant 55 : i64
     %t67tr = func.call @strict_trace_checked(%t67v, %t67tw, %t67twl) : (f64, !llvm.ptr, i64) -> f64
     return %t67tr : f64
   ^bb68:
@@ -178434,7 +178595,7 @@ module {
     cf.cond_br %t69k, ^bb69e, ^bb70
   ^bb69e:
     %t69tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t69twl = arith.constant 53 : i64
+    %t69twl = arith.constant 55 : i64
     %t69tr = func.call @strict_trace_checked(%t69v, %t69tw, %t69twl) : (f64, !llvm.ptr, i64) -> f64
     return %t69tr : f64
   ^bb70:
@@ -178443,7 +178604,7 @@ module {
     %t70a1 = llvm.load %r5 : !llvm.ptr -> f64
     %t70r = func.call @TestCodegen_Passed_2(%t70m, %t70a0, %t70a1) : (f64, f64, f64) -> f64
     %t70tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t70twl = arith.constant 53 : i64
+    %t70twl = arith.constant 55 : i64
     %t70tr = func.call @strict_trace(%t70r, %t70tw, %t70twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t70tr, %r6 : f64, !llvm.ptr
     %t71 = llvm.load %r6 : !llvm.ptr -> f64
@@ -178461,7 +178622,7 @@ module {
     cf.cond_br %t76k, ^bb76e, ^bb77
   ^bb76e:
     %t76tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t76twl = arith.constant 54 : i64
+    %t76twl = arith.constant 56 : i64
     %t76tr = func.call @strict_trace_checked(%t76v, %t76tw, %t76twl) : (f64, !llvm.ptr, i64) -> f64
     return %t76tr : f64
   ^bb77:
@@ -178474,7 +178635,7 @@ module {
     cf.cond_br %t79k, ^bb79e, ^bb80
   ^bb79e:
     %t79tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t79twl = arith.constant 54 : i64
+    %t79twl = arith.constant 56 : i64
     %t79tr = func.call @strict_trace_checked(%t79v, %t79tw, %t79twl) : (f64, !llvm.ptr, i64) -> f64
     return %t79tr : f64
   ^bb80:
@@ -178488,7 +178649,7 @@ module {
     %t81a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t81r = func.call @InstructionEntry_Jump_2(%t81m, %t81a0, %t81a1) : (f64, f64, f64) -> f64
     %t81tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t81twl = arith.constant 54 : i64
+    %t81twl = arith.constant 56 : i64
     %t81tr = func.call @strict_trace(%t81r, %t81tw, %t81twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t81tr, %r4 : f64, !llvm.ptr
     %t82v = llvm.load %r4 : !llvm.ptr -> f64
@@ -178496,7 +178657,7 @@ module {
     cf.cond_br %t82k, ^bb82e, ^bb83
   ^bb82e:
     %t82tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t82twl = arith.constant 54 : i64
+    %t82twl = arith.constant 56 : i64
     %t82tr = func.call @strict_trace_checked(%t82v, %t82tw, %t82twl) : (f64, !llvm.ptr, i64) -> f64
     return %t82tr : f64
   ^bb83:
@@ -178504,7 +178665,7 @@ module {
     %t83a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t83r = func.call @CodeBlock_Add_1(%t83m, %t83a0) : (f64, f64) -> f64
     %t83tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t83twl = arith.constant 54 : i64
+    %t83twl = arith.constant 56 : i64
     %t83tr = func.call @strict_trace(%t83r, %t83tw, %t83twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t83tr, %r5 : f64, !llvm.ptr
     %t84v = llvm.load %r5 : !llvm.ptr -> f64
@@ -178512,14 +178673,14 @@ module {
     cf.cond_br %t84k, ^bb84e, ^bb85
   ^bb84e:
     %t84tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t84twl = arith.constant 54 : i64
+    %t84twl = arith.constant 56 : i64
     %t84tr = func.call @strict_trace_checked(%t84v, %t84tw, %t84twl) : (f64, !llvm.ptr, i64) -> f64
     return %t84tr : f64
   ^bb85:
     %t85m = llvm.load %r5 : !llvm.ptr -> f64
     %t85r = func.call @CodeBlock_WithNextId_0(%t85m) : (f64) -> f64
     %t85tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t85twl = arith.constant 54 : i64
+    %t85twl = arith.constant 56 : i64
     %t85tr = func.call @strict_trace(%t85r, %t85tw, %t85twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t85tr, %r6 : f64, !llvm.ptr
     %t86 = llvm.load %r6 : !llvm.ptr -> f64
@@ -178531,7 +178692,7 @@ module {
     cf.cond_br %t88k, ^bb88e, ^bb89
   ^bb88e:
     %t88tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t88twl = arith.constant 55 : i64
+    %t88twl = arith.constant 57 : i64
     %t88tr = func.call @strict_trace_checked(%t88v, %t88tw, %t88twl) : (f64, !llvm.ptr, i64) -> f64
     return %t88tr : f64
   ^bb89:
@@ -178544,7 +178705,7 @@ module {
     %t91a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t91r = func.call @InstructionEntry_Jump_2(%t91m, %t91a0, %t91a1) : (f64, f64, f64) -> f64
     %t91tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t91twl = arith.constant 55 : i64
+    %t91twl = arith.constant 57 : i64
     %t91tr = func.call @strict_trace(%t91r, %t91tw, %t91twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t91tr, %r3 : f64, !llvm.ptr
     %t92v = llvm.load %r3 : !llvm.ptr -> f64
@@ -178552,7 +178713,7 @@ module {
     cf.cond_br %t92k, ^bb92e, ^bb93
   ^bb92e:
     %t92tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t92twl = arith.constant 55 : i64
+    %t92twl = arith.constant 57 : i64
     %t92tr = func.call @strict_trace_checked(%t92v, %t92tw, %t92twl) : (f64, !llvm.ptr, i64) -> f64
     return %t92tr : f64
   ^bb93:
@@ -178560,7 +178721,7 @@ module {
     %t93a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t93r = func.call @CodeBlock_Add_1(%t93m, %t93a0) : (f64, f64) -> f64
     %t93tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t93twl = arith.constant 55 : i64
+    %t93twl = arith.constant 57 : i64
     %t93tr = func.call @strict_trace(%t93r, %t93tw, %t93twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t93tr, %r4 : f64, !llvm.ptr
     %t94 = llvm.load %r4 : !llvm.ptr -> f64
@@ -178572,7 +178733,7 @@ module {
     cf.cond_br %t96k, ^bb96e, ^bb97
   ^bb96e:
     %t96tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t96twl = arith.constant 56 : i64
+    %t96twl = arith.constant 58 : i64
     %t96tr = func.call @strict_trace_checked(%t96v, %t96tw, %t96twl) : (f64, !llvm.ptr, i64) -> f64
     return %t96tr : f64
   ^bb97:
@@ -178586,7 +178747,7 @@ module {
     cf.cond_br %t99k, ^bb99e, ^bb100
   ^bb99e:
     %t99tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t99twl = arith.constant 56 : i64
+    %t99twl = arith.constant 58 : i64
     %t99tr = func.call @strict_trace_checked(%t99v, %t99tw, %t99twl) : (f64, !llvm.ptr, i64) -> f64
     return %t99tr : f64
   ^bb100:
@@ -178599,7 +178760,7 @@ module {
     %t101a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t101r = func.call @TestCodegen_Timed_2(%t101m, %t101a0, %t101a1) : (f64, f64, f64) -> f64
     %t101tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t101twl = arith.constant 56 : i64
+    %t101twl = arith.constant 58 : i64
     %t101tr = func.call @strict_trace(%t101r, %t101tw, %t101twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t101tr, %r4 : f64, !llvm.ptr
     %t102v = llvm.load %r4 : !llvm.ptr -> f64
@@ -178607,7 +178768,7 @@ module {
     cf.cond_br %t102k, ^bb102e, ^bb103
   ^bb102e:
     %t102tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t102twl = arith.constant 56 : i64
+    %t102twl = arith.constant 58 : i64
     %t102tr = func.call @strict_trace_checked(%t102v, %t102tw, %t102twl) : (f64, !llvm.ptr, i64) -> f64
     return %t102tr : f64
   ^bb103:
@@ -178615,7 +178776,7 @@ module {
     %t103a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t103r = func.call @TestCodegen_Got_1(%t103m, %t103a0) : (f64, f64) -> f64
     %t103tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t103twl = arith.constant 56 : i64
+    %t103twl = arith.constant 58 : i64
     %t103tr = func.call @strict_trace(%t103r, %t103tw, %t103twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t103tr, %r5 : f64, !llvm.ptr
     %t104 = llvm.load %r5 : !llvm.ptr -> f64
@@ -178627,7 +178788,7 @@ module {
     cf.cond_br %t106k, ^bb106e, ^bb107
   ^bb106e:
     %t106tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t106twl = arith.constant 57 : i64
+    %t106twl = arith.constant 59 : i64
     %t106tr = func.call @strict_trace_checked(%t106v, %t106tw, %t106twl) : (f64, !llvm.ptr, i64) -> f64
     return %t106tr : f64
   ^bb107:
@@ -178635,7 +178796,7 @@ module {
     %t107a0 = llvm.load %r0 : !llvm.ptr -> f64
     %t107r = func.call @TestCodegen_Counted_1(%t107m, %t107a0) : (f64, f64) -> f64
     %t107tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t107twl = arith.constant 57 : i64
+    %t107twl = arith.constant 59 : i64
     %t107tr = func.call @strict_trace(%t107r, %t107tw, %t107twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t107tr, %r1 : f64, !llvm.ptr
     %t108v = llvm.load %r1 : !llvm.ptr -> f64
@@ -178643,7 +178804,7 @@ module {
     cf.cond_br %t108k, ^bb108e, ^bb109
   ^bb108e:
     %t108tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t108twl = arith.constant 57 : i64
+    %t108twl = arith.constant 59 : i64
     %t108tr = func.call @strict_trace_checked(%t108v, %t108tw, %t108twl) : (f64, !llvm.ptr, i64) -> f64
     return %t108tr : f64
   ^bb109:
@@ -178656,7 +178817,7 @@ module {
     cf.cond_br %t111k, ^bb111e, ^bb112
   ^bb111e:
     %t111tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t111twl = arith.constant 57 : i64
+    %t111twl = arith.constant 59 : i64
     %t111tr = func.call @strict_trace_checked(%t111v, %t111tw, %t111twl) : (f64, !llvm.ptr, i64) -> f64
     return %t111tr : f64
   ^bb112:
@@ -178676,7 +178837,7 @@ module {
     %t115a1 = llvm.load %r6 : !llvm.ptr -> f64
     %t115r = func.call @InstructionEntry_Jump_2(%t115m, %t115a0, %t115a1) : (f64, f64, f64) -> f64
     %t115tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t115twl = arith.constant 57 : i64
+    %t115twl = arith.constant 59 : i64
     %t115tr = func.call @strict_trace(%t115r, %t115tw, %t115twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t115tr, %r7 : f64, !llvm.ptr
     %t116v = llvm.load %r7 : !llvm.ptr -> f64
@@ -178684,7 +178845,7 @@ module {
     cf.cond_br %t116k, ^bb116e, ^bb117
   ^bb116e:
     %t116tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t116twl = arith.constant 57 : i64
+    %t116twl = arith.constant 59 : i64
     %t116tr = func.call @strict_trace_checked(%t116v, %t116tw, %t116twl) : (f64, !llvm.ptr, i64) -> f64
     return %t116tr : f64
   ^bb117:
@@ -178692,7 +178853,7 @@ module {
     %t117a0 = llvm.load %r7 : !llvm.ptr -> f64
     %t117r = func.call @CodeBlock_Add_1(%t117m, %t117a0) : (f64, f64) -> f64
     %t117tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t117twl = arith.constant 57 : i64
+    %t117twl = arith.constant 59 : i64
     %t117tr = func.call @strict_trace(%t117r, %t117tw, %t117twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t117tr, %r8 : f64, !llvm.ptr
     %t118v = llvm.load %r8 : !llvm.ptr -> f64
@@ -178700,7 +178861,7 @@ module {
     cf.cond_br %t118k, ^bb118e, ^bb119
   ^bb118e:
     %t118tw = llvm.mlir.addressof @wTestCodegen_Checked_3 : !llvm.ptr
-    %t118twl = arith.constant 57 : i64
+    %t118twl = arith.constant 59 : i64
     %t118tr = func.call @strict_trace_checked(%t118v, %t118tw, %t118twl) : (f64, !llvm.ptr, i64) -> f64
     return %t118tr : f64
   ^bb119:
@@ -179770,14 +179931,14 @@ module {
     cf.cond_br %t5k, ^bb5e, ^bb6
   ^bb5e:
     %t5tw = llvm.mlir.addressof @wTestCodegen_Place_2 : !llvm.ptr
-    %t5twl = arith.constant 73 : i64
+    %t5twl = arith.constant 75 : i64
     %t5tr = func.call @strict_trace_checked(%t5v, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     return %t5tr : f64
   ^bb6:
     %t6m = llvm.load %r4 : !llvm.ptr -> f64
     %t6r = func.call @TypeEntry_Source_0(%t6m) : (f64) -> f64
     %t6tw = llvm.mlir.addressof @wTestCodegen_Place_2 : !llvm.ptr
-    %t6twl = arith.constant 73 : i64
+    %t6twl = arith.constant 75 : i64
     %t6tr = func.call @strict_trace(%t6r, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t6tr, %r5 : f64, !llvm.ptr
     %t7 = llvm.load %r5 : !llvm.ptr -> f64
@@ -179793,7 +179954,7 @@ module {
     cf.cond_br %t10k, ^bb10e, ^bb11
   ^bb10e:
     %t10tw = llvm.mlir.addressof @wTestCodegen_Place_2 : !llvm.ptr
-    %t10twl = arith.constant 74 : i64
+    %t10twl = arith.constant 76 : i64
     %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     return %t10tr : f64
   ^bb11:
@@ -179824,7 +179985,7 @@ module {
     cf.cond_br %t18k, ^bb18e, ^bb19
   ^bb18e:
     %t18tw = llvm.mlir.addressof @wTestCodegen_Place_2 : !llvm.ptr
-    %t18twl = arith.constant 74 : i64
+    %t18twl = arith.constant 76 : i64
     %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     return %t18tr : f64
   ^bb19:
@@ -179989,6 +180150,28 @@ module {
     llvm.store %zero, %r5 : f64, !llvm.ptr
     %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
+    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r11 : f64, !llvm.ptr
+    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r12 : f64, !llvm.ptr
+    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r13 : f64, !llvm.ptr
+    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r14 : f64, !llvm.ptr
+    %r15 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r15 : f64, !llvm.ptr
+    %r16 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r16 : f64, !llvm.ptr
+    %r17 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r17 : f64, !llvm.ptr
     %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_index : f64, !llvm.ptr
     %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
@@ -179999,12 +180182,12 @@ module {
     llvm.store %zero, %v_types : f64, !llvm.ptr
     %v_isQuiet = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_isQuiet : f64, !llvm.ptr
-    %v_load = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_load : f64, !llvm.ptr
-    %v_tested = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_tested : f64, !llvm.ptr
-    %v_isText = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_isText : f64, !llvm.ptr
+    %v_isDictionary = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_isDictionary : f64, !llvm.ptr
+    %v_conditional0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional0 : f64, !llvm.ptr
+    %v_shown = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_shown : f64, !llvm.ptr
     %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %instance : f64, !llvm.ptr
     llvm.store %p0, %instance : f64, !llvm.ptr
@@ -180023,167 +180206,279 @@ module {
     llvm.store %t-1u1v, %v_isQuiet : f64, !llvm.ptr
     cf.br ^unpacked
   ^unpacked:
-    %t0c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t0c, %r0 : f64, !llvm.ptr
-    %t1 = llvm.load %v_block : !llvm.ptr -> f64
-    llvm.store %t1, %r1 : f64, !llvm.ptr
-    %t2i = llvm.load %r1 : !llvm.ptr -> f64
-    %t2ip = func.call @strict_ptr(%t2i) : (f64) -> !llvm.ptr
-    %t2m = llvm.getelementptr %t2ip[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t2mv = llvm.load %t2m : !llvm.ptr -> f64
-    llvm.store %t2mv, %r2 : f64, !llvm.ptr
-    %t3c = llvm.mlir.addressof @cTestCodegen_Got_1_3 : !llvm.ptr
-    %t3xf = func.call @strict_bits(%t3c) : (!llvm.ptr) -> f64
-    llvm.store %t3xf, %r3 : f64, !llvm.ptr
-    %t4m = arith.constant 0.0 : f64
-    %t4a0 = llvm.load %r0 : !llvm.ptr -> f64
-    %t4a1 = llvm.load %r2 : !llvm.ptr -> f64
-    %t4a2 = llvm.load %r3 : !llvm.ptr -> f64
-    %t4r = func.call @InstructionEntry_Named_3(%t4m, %t4a0, %t4a1, %t4a2) : (f64, f64, f64, f64) -> f64
+    %t0 = llvm.load %v_block : !llvm.ptr -> f64
+    llvm.store %t0, %r0 : f64, !llvm.ptr
+    %t1i = llvm.load %r0 : !llvm.ptr -> f64
+    %t1ip = func.call @strict_ptr(%t1i) : (f64) -> !llvm.ptr
+    %t1m = llvm.getelementptr %t1ip[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t1mv = llvm.load %t1m : !llvm.ptr -> f64
+    llvm.store %t1mv, %r1 : f64, !llvm.ptr
+    %t2c = llvm.mlir.addressof @cTestCodegen_Got_1_2 : !llvm.ptr
+    %t2xf = func.call @strict_bits(%t2c) : (!llvm.ptr) -> f64
+    llvm.store %t2xf, %r2 : f64, !llvm.ptr
+    %t3m = llvm.load %r1 : !llvm.ptr -> f64
+    %t3a0 = llvm.load %r2 : !llvm.ptr -> f64
+    %t3r = func.call @Scope_TypeOf_1(%t3m, %t3a0) : (f64, f64) -> f64
+    %t3tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t3twl = arith.constant 92 : i64
+    %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t3tr, %r3 : f64, !llvm.ptr
+    %t4v = llvm.load %r3 : !llvm.ptr -> f64
+    %t4k = func.call @strict_is_failure(%t4v) : (f64) -> i1
+    cf.cond_br %t4k, ^bb4e, ^bb5
+  ^bb4e:
     %t4tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t4twl = arith.constant 89 : i64
-    %t4tr = func.call @strict_trace(%t4r, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t4tr, %r4 : f64, !llvm.ptr
-    %t5 = llvm.load %r4 : !llvm.ptr -> f64
-    llvm.store %t5, %v_load : f64, !llvm.ptr
-    %t6 = llvm.load %v_block : !llvm.ptr -> f64
-    llvm.store %t6, %r0 : f64, !llvm.ptr
-    %t7 = llvm.load %v_load : !llvm.ptr -> f64
-    llvm.store %t7, %r1 : f64, !llvm.ptr
-    %t8v = llvm.load %r1 : !llvm.ptr -> f64
-    %t8k = func.call @strict_is_failure(%t8v) : (f64) -> i1
-    cf.cond_br %t8k, ^bb8e, ^bb9
-  ^bb8e:
-    %t8tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t8twl = arith.constant 90 : i64
-    %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t8tr : f64
-  ^bb9:
+    %t4twl = arith.constant 92 : i64
+    %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t4tr : f64
+  ^bb5:
+    %t5c = llvm.mlir.addressof @cTestCodegen_Got_1_5 : !llvm.ptr
+    %t5xf = func.call @strict_bits(%t5c) : (!llvm.ptr) -> f64
+    llvm.store %t5xf, %r4 : f64, !llvm.ptr
+    %t6m = llvm.load %r3 : !llvm.ptr -> f64
+    %t6a0 = llvm.load %r4 : !llvm.ptr -> f64
+    %t6r = func.call @strict_text_starts(%t6m, %t6a0, %zero) : (f64, f64, f64) -> f64
+    llvm.store %t6r, %r5 : f64, !llvm.ptr
+    %t7 = llvm.load %r5 : !llvm.ptr -> f64
+    llvm.store %t7, %v_isDictionary : f64, !llvm.ptr
+    %t8 = llvm.load %v_types : !llvm.ptr -> f64
+    llvm.store %t8, %r0 : f64, !llvm.ptr
     %t9m = llvm.load %r0 : !llvm.ptr -> f64
-    %t9a0 = llvm.load %r1 : !llvm.ptr -> f64
-    %t9r = func.call @CodeBlock_Load_1(%t9m, %t9a0) : (f64, f64) -> f64
+    %t9r = func.call @TypeCodegen_Generator_0(%t9m) : (f64) -> f64
     %t9tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t9twl = arith.constant 90 : i64
+    %t9twl = arith.constant 93 : i64
     %t9tr = func.call @strict_trace(%t9r, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t9tr, %r2 : f64, !llvm.ptr
-    %t10 = llvm.load %r2 : !llvm.ptr -> f64
-    llvm.store %t10, %v_tested : f64, !llvm.ptr
-    %t11 = llvm.load %v_block : !llvm.ptr -> f64
-    llvm.store %t11, %r0 : f64, !llvm.ptr
-    %t12i = llvm.load %r0 : !llvm.ptr -> f64
-    %t12ip = func.call @strict_ptr(%t12i) : (f64) -> !llvm.ptr
-    %t12m = llvm.getelementptr %t12ip[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t12mv = llvm.load %t12m : !llvm.ptr -> f64
-    llvm.store %t12mv, %r1 : f64, !llvm.ptr
-    %t13c = llvm.mlir.addressof @cTestCodegen_Got_1_13 : !llvm.ptr
-    %t13xf = func.call @strict_bits(%t13c) : (!llvm.ptr) -> f64
-    llvm.store %t13xf, %r2 : f64, !llvm.ptr
-    %t14m = llvm.load %r1 : !llvm.ptr -> f64
-    %t14a0 = llvm.load %r2 : !llvm.ptr -> f64
-    %t14r = func.call @Scope_TypeOf_1(%t14m, %t14a0) : (f64, f64) -> f64
-    %t14tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t14twl = arith.constant 91 : i64
-    %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t14tr, %r3 : f64, !llvm.ptr
-    %t15v = llvm.load %r3 : !llvm.ptr -> f64
-    %t15k = func.call @strict_is_failure(%t15v) : (f64) -> i1
-    cf.cond_br %t15k, ^bb15e, ^bb16
-  ^bb15e:
-    %t15tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t15twl = arith.constant 91 : i64
-    %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t15tr : f64
+    llvm.store %t9tr, %r1 : f64, !llvm.ptr
+    %t10v = llvm.load %r1 : !llvm.ptr -> f64
+    %t10k = func.call @strict_is_failure(%t10v) : (f64) -> i1
+    cf.cond_br %t10k, ^bb10e, ^bb11
+  ^bb10e:
+    %t10tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t10twl = arith.constant 93 : i64
+    %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t10tr : f64
+  ^bb11:
+    %t11 = llvm.load %v_isDictionary : !llvm.ptr -> f64
+    llvm.store %t11, %r2 : f64, !llvm.ptr
+    %t12v = llvm.load %r2 : !llvm.ptr -> f64
+    %t12k = func.call @strict_is_failure(%t12v) : (f64) -> i1
+    cf.cond_br %t12k, ^bb12e, ^bb13
+  ^bb12e:
+    %t12tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t12twl = arith.constant 93 : i64
+    %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t12tr : f64
+  ^bb13:
+    %t13c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t13c, %r3 : f64, !llvm.ptr
+    %t14a = llvm.load %r2 : !llvm.ptr -> f64
+    %t14b = llvm.load %r3 : !llvm.ptr -> f64
+    %t14c = arith.cmpf oeq, %t14a, %t14b : f64
+    llvm.store %t14c, %flag : i1, !llvm.ptr
+    %t15 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t15, ^bb16, ^bb27
   ^bb16:
     %t16c = llvm.mlir.addressof @cTestCodegen_Got_1_16 : !llvm.ptr
     %t16xf = func.call @strict_bits(%t16c) : (!llvm.ptr) -> f64
     llvm.store %t16xf, %r4 : f64, !llvm.ptr
-    %t17l = llvm.load %r3 : !llvm.ptr -> f64
-    %t17r = llvm.load %r4 : !llvm.ptr -> f64
-    %t17q = func.call @strict_text_equal(%t17l, %t17r) : (f64, f64) -> f64
-    %t17f = arith.cmpf one, %t17q, %zero : f64
-    llvm.store %t17f, %flag : i1, !llvm.ptr
-    %t17d = arith.uitofp %t17f : i1 to f64
-    llvm.store %t17d, %r5 : f64, !llvm.ptr
-    %t18 = llvm.load %r5 : !llvm.ptr -> f64
-    llvm.store %t18, %v_isText : f64, !llvm.ptr
-    %t19 = llvm.load %v_tested : !llvm.ptr -> f64
-    llvm.store %t19, %r0 : f64, !llvm.ptr
-    %t20v = llvm.load %r0 : !llvm.ptr -> f64
+    %t17o = llvm.load %r4 : !llvm.ptr -> f64
+    llvm.store %t17o, %r5 : f64, !llvm.ptr
+    %t18v = llvm.load %r5 : !llvm.ptr -> f64
+    %t18k = func.call @strict_is_failure(%t18v) : (f64) -> i1
+    cf.cond_br %t18k, ^bb18e, ^bb19
+  ^bb18e:
+    %t18tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t18twl = arith.constant 93 : i64
+    %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t18tr : f64
+  ^bb19:
+    %t19m = llvm.load %r5 : !llvm.ptr -> f64
+    %t19r = func.call @Tokenizer_Tokens_0(%t19m) : (f64) -> f64
+    %t19tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t19twl = arith.constant 93 : i64
+    %t19tr = func.call @strict_trace(%t19r, %t19tw, %t19twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t19tr, %r6 : f64, !llvm.ptr
+    %t20v = llvm.load %r6 : !llvm.ptr -> f64
     %t20k = func.call @strict_is_failure(%t20v) : (f64) -> i1
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t20twl = arith.constant 92 : i64
+    %t20twl = arith.constant 93 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
-    %t21c = llvm.mlir.addressof @cTestCodegen_Got_1_21 : !llvm.ptr
-    %t21xf = func.call @strict_bits(%t21c) : (!llvm.ptr) -> f64
-    llvm.store %t21xf, %r1 : f64, !llvm.ptr
-    %t22 = llvm.load %v_tested : !llvm.ptr -> f64
-    llvm.store %t22, %r2 : f64, !llvm.ptr
-    %t23v = llvm.load %r2 : !llvm.ptr -> f64
-    %t23k = func.call @strict_is_failure(%t23v) : (f64) -> i1
-    cf.cond_br %t23k, ^bb23e, ^bb24
-  ^bb23e:
+    %t21o = llvm.load %r6 : !llvm.ptr -> f64
+    llvm.store %t21o, %r7 : f64, !llvm.ptr
+    %t22v = llvm.load %r7 : !llvm.ptr -> f64
+    %t22k = func.call @strict_is_failure(%t22v) : (f64) -> i1
+    cf.cond_br %t22k, ^bb22e, ^bb23
+  ^bb22e:
+    %t22tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t22twl = arith.constant 93 : i64
+    %t22tr = func.call @strict_trace_checked(%t22v, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t22tr : f64
+  ^bb23:
+    %t23m = llvm.load %r7 : !llvm.ptr -> f64
+    %t23r = func.call @SyntaxParser_Parse_0(%t23m) : (f64) -> f64
     %t23tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t23twl = arith.constant 92 : i64
-    %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t23tr : f64
-  ^bb24:
-    %t24m = llvm.load %r2 : !llvm.ptr -> f64
-    %t24r = func.call @CodeBlock_Result_0(%t24m) : (f64) -> f64
-    %t24tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t24twl = arith.constant 92 : i64
-    %t24tr = func.call @strict_trace(%t24r, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t24tr, %r3 : f64, !llvm.ptr
-    %t25v = llvm.load %r3 : !llvm.ptr -> f64
-    %t25k = func.call @strict_is_failure(%t25v) : (f64) -> i1
-    cf.cond_br %t25k, ^bb25e, ^bb26
-  ^bb25e:
-    %t25tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t25twl = arith.constant 92 : i64
-    %t25tr = func.call @strict_trace_checked(%t25v, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t25tr : f64
-  ^bb26:
-    %t26 = llvm.load %v_isText : !llvm.ptr -> f64
-    llvm.store %t26, %r4 : f64, !llvm.ptr
-    %t27m = arith.constant 0.0 : f64
-    %t27a0 = llvm.load %r1 : !llvm.ptr -> f64
-    %t27a1 = llvm.load %r3 : !llvm.ptr -> f64
-    %t27a2 = llvm.load %r4 : !llvm.ptr -> f64
-    %t27r = func.call @InstructionEntry_PrintValue_3(%t27m, %t27a0, %t27a1, %t27a2) : (f64, f64, f64, f64) -> f64
-    %t27tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t27twl = arith.constant 92 : i64
-    %t27tr = func.call @strict_trace(%t27r, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t27tr, %r5 : f64, !llvm.ptr
-    %t28v = llvm.load %r5 : !llvm.ptr -> f64
-    %t28k = func.call @strict_is_failure(%t28v) : (f64) -> i1
-    cf.cond_br %t28k, ^bb28e, ^bb29
-  ^bb28e:
-    %t28tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t28twl = arith.constant 92 : i64
-    %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t28tr : f64
+    %t23twl = arith.constant 93 : i64
+    %t23tr = func.call @strict_trace(%t23r, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t23tr, %r8 : f64, !llvm.ptr
+    %t24 = llvm.load %r8 : !llvm.ptr -> f64
+    llvm.store %t24, %v_conditional0 : f64, !llvm.ptr
+    %t25c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t25c, %r9 : f64, !llvm.ptr
+    %t26a = llvm.load %r9 : !llvm.ptr -> f64
+    %t26b = llvm.load %r9 : !llvm.ptr -> f64
+    %t26c = arith.cmpf oeq, %t26a, %t26b : f64
+    llvm.store %t26c, %flag : i1, !llvm.ptr
+    cf.br ^bb27
+  ^bb27:
+    %t28 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t28, ^bb38, ^bb29
   ^bb29:
-    %t29m = llvm.load %r0 : !llvm.ptr -> f64
-    %t29a0 = llvm.load %r5 : !llvm.ptr -> f64
-    %t29r = func.call @CodeBlock_Add_1(%t29m, %t29a0) : (f64, f64) -> f64
-    %t29tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t29twl = arith.constant 92 : i64
-    %t29tr = func.call @strict_trace(%t29r, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t29tr, %r6 : f64, !llvm.ptr
-    %t30v = llvm.load %r6 : !llvm.ptr -> f64
-    %t30k = func.call @strict_is_failure(%t30v) : (f64) -> i1
-    cf.cond_br %t30k, ^bb30e, ^bb31
-  ^bb30e:
-    %t30tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
-    %t30twl = arith.constant 92 : i64
-    %t30tr = func.call @strict_trace_checked(%t30v, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t30tr : f64
-  ^bb31:
-    %t31 = llvm.load %r6 : !llvm.ptr -> f64
-    return %t31 : f64
+    %t29c = llvm.mlir.addressof @cTestCodegen_Got_1_29 : !llvm.ptr
+    %t29xf = func.call @strict_bits(%t29c) : (!llvm.ptr) -> f64
+    llvm.store %t29xf, %r10 : f64, !llvm.ptr
+    %t30o = llvm.load %r10 : !llvm.ptr -> f64
+    llvm.store %t30o, %r11 : f64, !llvm.ptr
+    %t31v = llvm.load %r11 : !llvm.ptr -> f64
+    %t31k = func.call @strict_is_failure(%t31v) : (f64) -> i1
+    cf.cond_br %t31k, ^bb31e, ^bb32
+  ^bb31e:
+    %t31tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t31twl = arith.constant 93 : i64
+    %t31tr = func.call @strict_trace_checked(%t31v, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t31tr : f64
+  ^bb32:
+    %t32m = llvm.load %r11 : !llvm.ptr -> f64
+    %t32r = func.call @Tokenizer_Tokens_0(%t32m) : (f64) -> f64
+    %t32tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t32twl = arith.constant 93 : i64
+    %t32tr = func.call @strict_trace(%t32r, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t32tr, %r12 : f64, !llvm.ptr
+    %t33v = llvm.load %r12 : !llvm.ptr -> f64
+    %t33k = func.call @strict_is_failure(%t33v) : (f64) -> i1
+    cf.cond_br %t33k, ^bb33e, ^bb34
+  ^bb33e:
+    %t33tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t33twl = arith.constant 93 : i64
+    %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t33tr : f64
+  ^bb34:
+    %t34o = llvm.load %r12 : !llvm.ptr -> f64
+    llvm.store %t34o, %r13 : f64, !llvm.ptr
+    %t35v = llvm.load %r13 : !llvm.ptr -> f64
+    %t35k = func.call @strict_is_failure(%t35v) : (f64) -> i1
+    cf.cond_br %t35k, ^bb35e, ^bb36
+  ^bb35e:
+    %t35tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t35twl = arith.constant 93 : i64
+    %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t35tr : f64
+  ^bb36:
+    %t36m = llvm.load %r13 : !llvm.ptr -> f64
+    %t36r = func.call @SyntaxParser_Parse_0(%t36m) : (f64) -> f64
+    %t36tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t36twl = arith.constant 93 : i64
+    %t36tr = func.call @strict_trace(%t36r, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t36tr, %r14 : f64, !llvm.ptr
+    %t37 = llvm.load %r14 : !llvm.ptr -> f64
+    llvm.store %t37, %v_conditional0 : f64, !llvm.ptr
+    cf.br ^bb38
+  ^bb38:
+    %t39 = llvm.load %v_conditional0 : !llvm.ptr -> f64
+    llvm.store %t39, %r15 : f64, !llvm.ptr
+    %t40 = llvm.load %v_block : !llvm.ptr -> f64
+    llvm.store %t40, %r16 : f64, !llvm.ptr
+    %t41m = llvm.load %r1 : !llvm.ptr -> f64
+    %t41a0 = llvm.load %r15 : !llvm.ptr -> f64
+    %t41a1 = llvm.load %r16 : !llvm.ptr -> f64
+    %t41r = func.call @ValueCodegen_Expression_2(%t41m, %t41a0, %t41a1) : (f64, f64, f64) -> f64
+    %t41tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t41twl = arith.constant 93 : i64
+    %t41tr = func.call @strict_trace(%t41r, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t41tr, %r17 : f64, !llvm.ptr
+    %t42 = llvm.load %r17 : !llvm.ptr -> f64
+    llvm.store %t42, %v_shown : f64, !llvm.ptr
+    %t43 = llvm.load %v_shown : !llvm.ptr -> f64
+    llvm.store %t43, %r0 : f64, !llvm.ptr
+    %t44v = llvm.load %r0 : !llvm.ptr -> f64
+    %t44k = func.call @strict_is_failure(%t44v) : (f64) -> i1
+    cf.cond_br %t44k, ^bb44e, ^bb45
+  ^bb44e:
+    %t44tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t44twl = arith.constant 94 : i64
+    %t44tr = func.call @strict_trace_checked(%t44v, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t44tr : f64
+  ^bb45:
+    %t45c = llvm.mlir.addressof @cTestCodegen_Got_1_45 : !llvm.ptr
+    %t45xf = func.call @strict_bits(%t45c) : (!llvm.ptr) -> f64
+    llvm.store %t45xf, %r1 : f64, !llvm.ptr
+    %t46 = llvm.load %v_shown : !llvm.ptr -> f64
+    llvm.store %t46, %r2 : f64, !llvm.ptr
+    %t47v = llvm.load %r2 : !llvm.ptr -> f64
+    %t47k = func.call @strict_is_failure(%t47v) : (f64) -> i1
+    cf.cond_br %t47k, ^bb47e, ^bb48
+  ^bb47e:
+    %t47tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t47twl = arith.constant 94 : i64
+    %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t47tr : f64
+  ^bb48:
+    %t48m = llvm.load %r2 : !llvm.ptr -> f64
+    %t48r = func.call @CodeBlock_Result_0(%t48m) : (f64) -> f64
+    %t48tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t48twl = arith.constant 94 : i64
+    %t48tr = func.call @strict_trace(%t48r, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t48tr, %r3 : f64, !llvm.ptr
+    %t49v = llvm.load %r3 : !llvm.ptr -> f64
+    %t49k = func.call @strict_is_failure(%t49v) : (f64) -> i1
+    cf.cond_br %t49k, ^bb49e, ^bb50
+  ^bb49e:
+    %t49tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t49twl = arith.constant 94 : i64
+    %t49tr = func.call @strict_trace_checked(%t49v, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t49tr : f64
+  ^bb50:
+    %t50c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t50c, %r4 : f64, !llvm.ptr
+    %t51m = arith.constant 0.0 : f64
+    %t51a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t51a1 = llvm.load %r3 : !llvm.ptr -> f64
+    %t51a2 = llvm.load %r4 : !llvm.ptr -> f64
+    %t51r = func.call @InstructionEntry_PrintValue_3(%t51m, %t51a0, %t51a1, %t51a2) : (f64, f64, f64, f64) -> f64
+    %t51tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t51twl = arith.constant 94 : i64
+    %t51tr = func.call @strict_trace(%t51r, %t51tw, %t51twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t51tr, %r5 : f64, !llvm.ptr
+    %t52v = llvm.load %r5 : !llvm.ptr -> f64
+    %t52k = func.call @strict_is_failure(%t52v) : (f64) -> i1
+    cf.cond_br %t52k, ^bb52e, ^bb53
+  ^bb52e:
+    %t52tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t52twl = arith.constant 94 : i64
+    %t52tr = func.call @strict_trace_checked(%t52v, %t52tw, %t52twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t52tr : f64
+  ^bb53:
+    %t53m = llvm.load %r0 : !llvm.ptr -> f64
+    %t53a0 = llvm.load %r5 : !llvm.ptr -> f64
+    %t53r = func.call @CodeBlock_Add_1(%t53m, %t53a0) : (f64, f64) -> f64
+    %t53tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t53twl = arith.constant 94 : i64
+    %t53tr = func.call @strict_trace(%t53r, %t53tw, %t53twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t53tr, %r6 : f64, !llvm.ptr
+    %t54v = llvm.load %r6 : !llvm.ptr -> f64
+    %t54k = func.call @strict_is_failure(%t54v) : (f64) -> i1
+    cf.cond_br %t54k, ^bb54e, ^bb55
+  ^bb54e:
+    %t54tw = llvm.mlir.addressof @wTestCodegen_Got_1 : !llvm.ptr
+    %t54twl = arith.constant 94 : i64
+    %t54tr = func.call @strict_trace_checked(%t54v, %t54tw, %t54twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t54tr : f64
+  ^bb55:
+    %t55 = llvm.load %r6 : !llvm.ptr -> f64
+    return %t55 : f64
   }
   func.func private @TestCodegen_Counted_1(%p0: f64, %p1: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -180280,7 +180575,7 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wTestCodegen_Counted_1 : !llvm.ptr
-    %t6twl = arith.constant 95 : i64
+    %t6twl = arith.constant 97 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
@@ -180325,7 +180620,7 @@ module {
     cf.cond_br %t11k, ^bb11e, ^bb12
   ^bb11e:
     %t11tw = llvm.mlir.addressof @wTestCodegen_Counted_1 : !llvm.ptr
-    %t11twl = arith.constant 95 : i64
+    %t11twl = arith.constant 97 : i64
     %t11tr = func.call @strict_trace_checked(%t11v, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     return %t11tr : f64
   ^bb12:
@@ -180358,7 +180653,7 @@ module {
     %t17m = llvm.load %r0 : !llvm.ptr -> f64
     %t17r = func.call @TypeCodegen_Generator_0(%t17m) : (f64) -> f64
     %t17tw = llvm.mlir.addressof @wTestCodegen_Counted_1 : !llvm.ptr
-    %t17twl = arith.constant 96 : i64
+    %t17twl = arith.constant 98 : i64
     %t17tr = func.call @strict_trace(%t17r, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t17tr, %r1 : f64, !llvm.ptr
     %t18v = llvm.load %r1 : !llvm.ptr -> f64
@@ -180366,7 +180661,7 @@ module {
     cf.cond_br %t18k, ^bb18e, ^bb19
   ^bb18e:
     %t18tw = llvm.mlir.addressof @wTestCodegen_Counted_1 : !llvm.ptr
-    %t18twl = arith.constant 96 : i64
+    %t18twl = arith.constant 98 : i64
     %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     return %t18tr : f64
   ^bb19:
@@ -180377,7 +180672,7 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wTestCodegen_Counted_1 : !llvm.ptr
-    %t20twl = arith.constant 96 : i64
+    %t20twl = arith.constant 98 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
@@ -180388,7 +180683,7 @@ module {
     %t22a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t22r = func.call @ValueCodegen_Expression_2(%t22m, %t22a0, %t22a1) : (f64, f64, f64) -> f64
     %t22tw = llvm.mlir.addressof @wTestCodegen_Counted_1 : !llvm.ptr
-    %t22twl = arith.constant 96 : i64
+    %t22twl = arith.constant 98 : i64
     %t22tr = func.call @strict_trace(%t22r, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t22tr, %r4 : f64, !llvm.ptr
     %t23v = llvm.load %r4 : !llvm.ptr -> f64
@@ -180396,7 +180691,7 @@ module {
     cf.cond_br %t23k, ^bb23e, ^bb24
   ^bb23e:
     %t23tw = llvm.mlir.addressof @wTestCodegen_Counted_1 : !llvm.ptr
-    %t23twl = arith.constant 96 : i64
+    %t23twl = arith.constant 98 : i64
     %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     return %t23tr : f64
   ^bb24:
@@ -180407,7 +180702,7 @@ module {
     %t25a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t25r = func.call @CodeBlock_Stored_1(%t25m, %t25a0) : (f64, f64) -> f64
     %t25tw = llvm.mlir.addressof @wTestCodegen_Counted_1 : !llvm.ptr
-    %t25twl = arith.constant 96 : i64
+    %t25twl = arith.constant 98 : i64
     %t25tr = func.call @strict_trace(%t25r, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t25tr, %r6 : f64, !llvm.ptr
     %t26v = llvm.load %r6 : !llvm.ptr -> f64
@@ -180415,7 +180710,7 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wTestCodegen_Counted_1 : !llvm.ptr
-    %t26twl = arith.constant 96 : i64
+    %t26twl = arith.constant 98 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
@@ -182167,7 +182462,7 @@ module {
     %t1u = arith.cmpf oeq, %t1v, %zero : f64
     cf.cond_br %t1u, ^l1, ^m1(%t1v : f64)
   ^l1:
-    %t1q = arith.constant 0x401C000000000000 : f64
+    %t1q = arith.constant 0x4020000000000000 : f64
     %t1l = func.call @strict_list_new(%t1q, %zero) : (f64, f64) -> f64
     %t1e0c = llvm.mlir.addressof @cAutomatic_Missing_3_1_0 : !llvm.ptr
     %t1e0xf = func.call @strict_bits(%t1e0c) : (!llvm.ptr) -> f64
@@ -182178,9 +182473,12 @@ module {
     %t1e2c = llvm.mlir.addressof @cAutomatic_Missing_3_1_2 : !llvm.ptr
     %t1e2xf = func.call @strict_bits(%t1e2c) : (!llvm.ptr) -> f64
     %t1e2l = func.call @strict_list_add(%t1e1l, %t1e2xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t1e2l) : (f64) -> ()
-    llvm.store %t1e2l, %t1g : f64, !llvm.ptr
-    cf.br ^m1(%t1e2l : f64)
+    %t1e3c = llvm.mlir.addressof @cAutomatic_Missing_3_1_3 : !llvm.ptr
+    %t1e3xf = func.call @strict_bits(%t1e3c) : (!llvm.ptr) -> f64
+    %t1e3l = func.call @strict_list_add(%t1e2l, %t1e3xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t1e3l) : (f64) -> ()
+    llvm.store %t1e3l, %t1g : f64, !llvm.ptr
+    cf.br ^m1(%t1e3l : f64)
   ^m1(%t1r: f64):
     llvm.store %t1r, %r0 : f64, !llvm.ptr
     %t2b = arith.constant 0.0 : f64
@@ -182215,7 +182513,7 @@ module {
     %t5a0 = llvm.load %r2 : !llvm.ptr -> f64
     %t5r = func.call @Text_Split_1(%t5m, %t5a0) : (f64, f64) -> f64
     %t5tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t5twl = arith.constant 107 : i64
+    %t5twl = arith.constant 125 : i64
     %t5tr = func.call @strict_trace(%t5r, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t5tr, %r3 : f64, !llvm.ptr
     %t6 = llvm.load %r3 : !llvm.ptr -> f64
@@ -182262,14 +182560,14 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t20twl = arith.constant 108 : i64
+    %t20twl = arith.constant 126 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
     %t21m = llvm.load %r10 : !llvm.ptr -> f64
     %t21r = func.call @List_Text__First_0(%t21m) : (f64) -> f64
     %t21tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t21twl = arith.constant 108 : i64
+    %t21twl = arith.constant 126 : i64
     %t21tr = func.call @strict_trace(%t21r, %t21tw, %t21twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t21tr, %r11 : f64, !llvm.ptr
     %t22v = llvm.load %r11 : !llvm.ptr -> f64
@@ -182277,7 +182575,7 @@ module {
     cf.cond_br %t22k, ^bb22e, ^bb23
   ^bb22e:
     %t22tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t22twl = arith.constant 108 : i64
+    %t22twl = arith.constant 126 : i64
     %t22tr = func.call @strict_trace_checked(%t22v, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
     return %t22tr : f64
   ^bb23:
@@ -182290,14 +182588,14 @@ module {
     cf.cond_br %t25k, ^bb25e, ^bb26
   ^bb25e:
     %t25tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t25twl = arith.constant 108 : i64
+    %t25twl = arith.constant 126 : i64
     %t25tr = func.call @strict_trace_checked(%t25v, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
     return %t25tr : f64
   ^bb26:
     %t26m = llvm.load %r13 : !llvm.ptr -> f64
     %t26r = func.call @List_Text__Last_0(%t26m) : (f64) -> f64
     %t26tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t26twl = arith.constant 108 : i64
+    %t26twl = arith.constant 126 : i64
     %t26tr = func.call @strict_trace(%t26r, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t26tr, %r14 : f64, !llvm.ptr
     %t27v = llvm.load %r14 : !llvm.ptr -> f64
@@ -182305,7 +182603,7 @@ module {
     cf.cond_br %t27k, ^bb27e, ^bb28
   ^bb27e:
     %t27tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t27twl = arith.constant 108 : i64
+    %t27twl = arith.constant 126 : i64
     %t27tr = func.call @strict_trace_checked(%t27v, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     return %t27tr : f64
   ^bb28:
@@ -182318,7 +182616,7 @@ module {
     %t29a3 = llvm.load %r15 : !llvm.ptr -> f64
     %t29r = func.call @TypeEntry_Chosen_4(%t29m, %t29a0, %t29a1, %t29a2, %t29a3) : (f64, f64, f64, f64, f64) -> f64
     %t29tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t29twl = arith.constant 108 : i64
+    %t29twl = arith.constant 126 : i64
     %t29tr = func.call @strict_trace(%t29r, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t29tr, %r16 : f64, !llvm.ptr
     %t30v = llvm.load %r16 : !llvm.ptr -> f64
@@ -182326,7 +182624,7 @@ module {
     cf.cond_br %t30k, ^bb30e, ^bb31
   ^bb30e:
     %t30tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t30twl = arith.constant 108 : i64
+    %t30twl = arith.constant 126 : i64
     %t30tr = func.call @strict_trace_checked(%t30v, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
     return %t30tr : f64
   ^bb31:
@@ -182366,7 +182664,7 @@ module {
     cf.cond_br %t42k, ^bb42e, ^bb43
   ^bb42e:
     %t42tw = llvm.mlir.addressof @wAutomatic_Missing_3 : !llvm.ptr
-    %t42twl = arith.constant 109 : i64
+    %t42twl = arith.constant 127 : i64
     %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
     return %t42tr : f64
   ^bb43:
@@ -182454,7 +182752,7 @@ module {
     %t2u = arith.cmpf oeq, %t2v, %zero : f64
     cf.cond_br %t2u, ^l2, ^m2(%t2v : f64)
   ^l2:
-    %t2q = arith.constant 0x401C000000000000 : f64
+    %t2q = arith.constant 0x4020000000000000 : f64
     %t2l = func.call @strict_list_new(%t2q, %zero) : (f64, f64) -> f64
     %t2e0c = llvm.mlir.addressof @cAutomatic_Lines_1_2_0 : !llvm.ptr
     %t2e0xf = func.call @strict_bits(%t2e0c) : (!llvm.ptr) -> f64
@@ -182465,9 +182763,12 @@ module {
     %t2e2c = llvm.mlir.addressof @cAutomatic_Lines_1_2_2 : !llvm.ptr
     %t2e2xf = func.call @strict_bits(%t2e2c) : (!llvm.ptr) -> f64
     %t2e2l = func.call @strict_list_add(%t2e1l, %t2e2xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t2e2l) : (f64) -> ()
-    llvm.store %t2e2l, %t2g : f64, !llvm.ptr
-    cf.br ^m2(%t2e2l : f64)
+    %t2e3c = llvm.mlir.addressof @cAutomatic_Lines_1_2_3 : !llvm.ptr
+    %t2e3xf = func.call @strict_bits(%t2e3c) : (!llvm.ptr) -> f64
+    %t2e3l = func.call @strict_list_add(%t2e2l, %t2e3xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t2e3l) : (f64) -> ()
+    llvm.store %t2e3l, %t2g : f64, !llvm.ptr
+    cf.br ^m2(%t2e3l : f64)
   ^m2(%t2r: f64):
     llvm.store %t2r, %r0 : f64, !llvm.ptr
     %t3b = arith.constant 0.0 : f64
@@ -221093,7 +221394,7 @@ module {
     %t0u = arith.cmpf oeq, %t0v, %zero : f64
     cf.cond_br %t0u, ^l0, ^m0(%t0v : f64)
   ^l0:
-    %t0q = arith.constant 0x4044000000000000 : f64
+    %t0q = arith.constant 0x4045000000000000 : f64
     %t0l = func.call @strict_list_new(%t0q, %zero) : (f64, f64) -> f64
     %t0e0c = llvm.mlir.addressof @cHosted_IsHosted_0_0_0 : !llvm.ptr
     %t0e0xf = func.call @strict_bits(%t0e0c) : (!llvm.ptr) -> f64
@@ -221203,9 +221504,15 @@ module {
     %t0e35c = llvm.mlir.addressof @cHosted_IsHosted_0_0_35 : !llvm.ptr
     %t0e35xf = func.call @strict_bits(%t0e35c) : (!llvm.ptr) -> f64
     %t0e35l = func.call @strict_list_add(%t0e34l, %t0e35xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t0e35l) : (f64) -> ()
-    llvm.store %t0e35l, %t0g : f64, !llvm.ptr
-    cf.br ^m0(%t0e35l : f64)
+    %t0e36c = llvm.mlir.addressof @cHosted_IsHosted_0_0_36 : !llvm.ptr
+    %t0e36xf = func.call @strict_bits(%t0e36c) : (!llvm.ptr) -> f64
+    %t0e36l = func.call @strict_list_add(%t0e35l, %t0e36xf) : (f64, f64) -> f64
+    %t0e37c = llvm.mlir.addressof @cHosted_IsHosted_0_0_37 : !llvm.ptr
+    %t0e37xf = func.call @strict_bits(%t0e37c) : (!llvm.ptr) -> f64
+    %t0e37l = func.call @strict_list_add(%t0e36l, %t0e37xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t0e37l) : (f64) -> ()
+    llvm.store %t0e37l, %t0g : f64, !llvm.ptr
+    cf.br ^m0(%t0e37l : f64)
   ^m0(%t0r: f64):
     llvm.store %t0r, %r0 : f64, !llvm.ptr
     %t1 = llvm.load %v_call : !llvm.ptr -> f64
@@ -238702,7 +239009,7 @@ module {
     cf.cond_br %t14k, ^bb14e, ^bb15
   ^bb14e:
     %t14tw = llvm.mlir.addressof @wInstantiation_Arguments_1 : !llvm.ptr
-    %t14twl = arith.constant 44 : i64
+    %t14twl = arith.constant 46 : i64
     %t14tr = func.call @strict_trace_checked(%t14v, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     return %t14tr : f64
   ^bb15:
@@ -238761,6 +239068,26 @@ module {
     llvm.store %zero, %r15 : f64, !llvm.ptr
     %r16 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %r16 : f64, !llvm.ptr
+    %r17 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r17 : f64, !llvm.ptr
+    %r18 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r18 : f64, !llvm.ptr
+    %r19 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r19 : f64, !llvm.ptr
+    %r20 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r20 : f64, !llvm.ptr
+    %r21 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r21 : f64, !llvm.ptr
+    %r22 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r22 : f64, !llvm.ptr
+    %r23 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r23 : f64, !llvm.ptr
+    %r24 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r24 : f64, !llvm.ptr
+    %r25 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r25 : f64, !llvm.ptr
+    %r26 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r26 : f64, !llvm.ptr
     %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_index : f64, !llvm.ptr
     %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
@@ -238773,14 +239100,20 @@ module {
     llvm.store %zero, %v_types : f64, !llvm.ptr
     %v_arguments = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_arguments : f64, !llvm.ptr
+    %v_base = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_base : f64, !llvm.ptr
     %v_logical0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_logical0 : f64, !llvm.ptr
-    %v_position = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_position : f64, !llvm.ptr
     %v_logical2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_logical2 : f64, !llvm.ptr
     %v_conditional3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_conditional3 : f64, !llvm.ptr
+    %v_position = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_position : f64, !llvm.ptr
+    %v_logical5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_logical5 : f64, !llvm.ptr
+    %v_conditional6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional6 : f64, !llvm.ptr
     %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %instance : f64, !llvm.ptr
     llvm.store %p0, %instance : f64, !llvm.ptr
@@ -238795,296 +239128,539 @@ module {
     %t1a0 = llvm.load %r0 : !llvm.ptr -> f64
     %t1r = func.call @Instantiation_Arguments_1(%t1m, %t1a0) : (f64, f64) -> f64
     %t1tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t1twl = arith.constant 24 : i64
+    %t1twl = arith.constant 25 : i64
     %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t1tr, %r1 : f64, !llvm.ptr
     %t2 = llvm.load %r1 : !llvm.ptr -> f64
     llvm.store %t2, %v_arguments : f64, !llvm.ptr
-    %t3 = llvm.load %v_arguments : !llvm.ptr -> f64
+    %t3 = llvm.load %v_types : !llvm.ptr -> f64
     llvm.store %t3, %r0 : f64, !llvm.ptr
-    %t4v = llvm.load %r0 : !llvm.ptr -> f64
-    %t4k = func.call @strict_is_failure(%t4v) : (f64) -> i1
-    cf.cond_br %t4k, ^bb4e, ^bb5
-  ^bb4e:
-    %t4tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t4twl = arith.constant 25 : i64
-    %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t4tr : f64
-  ^bb5:
+    %t4 = llvm.load %v_instanceType : !llvm.ptr -> f64
+    llvm.store %t4, %r1 : f64, !llvm.ptr
     %t5m = llvm.load %r0 : !llvm.ptr -> f64
-    %t5r = func.call @strict_list_length(%t5m) : (f64) -> f64
-    llvm.store %t5r, %r1 : f64, !llvm.ptr
-    %t6v = llvm.load %r1 : !llvm.ptr -> f64
-    %t6k = func.call @strict_is_failure(%t6v) : (f64) -> i1
-    cf.cond_br %t6k, ^bb6e, ^bb7
-  ^bb6e:
-    %t6tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t6twl = arith.constant 25 : i64
-    %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t6tr : f64
-  ^bb7:
-    %t7c = arith.constant 0x0000000000000000 : f64
-    llvm.store %t7c, %r2 : f64, !llvm.ptr
-    %t8a = llvm.load %r1 : !llvm.ptr -> f64
-    %t8b = llvm.load %r2 : !llvm.ptr -> f64
-    %t8c = arith.cmpf oeq, %t8a, %t8b : f64
-    llvm.store %t8c, %flag : i1, !llvm.ptr
-    %t8d = arith.uitofp %t8c : i1 to f64
-    llvm.store %t8d, %r3 : f64, !llvm.ptr
-    %t9 = llvm.load %r3 : !llvm.ptr -> f64
-    llvm.store %t9, %v_logical0 : f64, !llvm.ptr
-    %t10c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t10c, %r4 : f64, !llvm.ptr
-    %t11a = llvm.load %r3 : !llvm.ptr -> f64
-    %t11b = llvm.load %r4 : !llvm.ptr -> f64
-    %t11c = arith.cmpf oeq, %t11a, %t11b : f64
-    llvm.store %t11c, %flag : i1, !llvm.ptr
-    %t12 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t12, ^bb20, ^bb13
-  ^bb13:
-    %t13g = llvm.mlir.addressof @lInstantiation_Argument_2_13 : !llvm.ptr
-    %t13v = llvm.load %t13g : !llvm.ptr -> f64
-    %t13u = arith.cmpf oeq, %t13v, %zero : f64
-    cf.cond_br %t13u, ^l13, ^m13(%t13v : f64)
-  ^l13:
-    %t13q = arith.constant 0x401C000000000000 : f64
-    %t13l = func.call @strict_list_new(%t13q, %zero) : (f64, f64) -> f64
-    %t13e0c = llvm.mlir.addressof @cInstantiation_Argument_2_13_0 : !llvm.ptr
-    %t13e0xf = func.call @strict_bits(%t13e0c) : (!llvm.ptr) -> f64
-    %t13e0l = func.call @strict_list_add(%t13l, %t13e0xf) : (f64, f64) -> f64
-    %t13e1c = llvm.mlir.addressof @cInstantiation_Argument_2_13_1 : !llvm.ptr
-    %t13e1xf = func.call @strict_bits(%t13e1c) : (!llvm.ptr) -> f64
-    %t13e1l = func.call @strict_list_add(%t13e0l, %t13e1xf) : (f64, f64) -> f64
-    %t13e2c = llvm.mlir.addressof @cInstantiation_Argument_2_13_2 : !llvm.ptr
-    %t13e2xf = func.call @strict_bits(%t13e2c) : (!llvm.ptr) -> f64
-    %t13e2l = func.call @strict_list_add(%t13e1l, %t13e2xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t13e2l) : (f64) -> ()
-    llvm.store %t13e2l, %t13g : f64, !llvm.ptr
-    cf.br ^m13(%t13e2l : f64)
-  ^m13(%t13r: f64):
-    llvm.store %t13r, %r5 : f64, !llvm.ptr
-    %t14 = llvm.load %v_types : !llvm.ptr -> f64
-    llvm.store %t14, %r6 : f64, !llvm.ptr
-    %t15 = llvm.load %v_instanceType : !llvm.ptr -> f64
-    llvm.store %t15, %r7 : f64, !llvm.ptr
-    %t16m = llvm.load %r6 : !llvm.ptr -> f64
-    %t16a0 = llvm.load %r7 : !llvm.ptr -> f64
-    %t16r = func.call @KnownTypes_BaseName_1(%t16m, %t16a0) : (f64, f64) -> f64
-    %t16tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t16twl = arith.constant 25 : i64
-    %t16tr = func.call @strict_trace(%t16r, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t16tr, %r8 : f64, !llvm.ptr
-    %t17v = llvm.load %r8 : !llvm.ptr -> f64
-    %t17k = func.call @strict_is_failure(%t17v) : (f64) -> i1
-    cf.cond_br %t17k, ^bb17e, ^bb18
-  ^bb17e:
-    %t17tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t17twl = arith.constant 25 : i64
-    %t17tr = func.call @strict_trace_checked(%t17v, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t17tr : f64
-  ^bb18:
-    %t18m = llvm.load %r5 : !llvm.ptr -> f64
-    %t18a0 = llvm.load %r8 : !llvm.ptr -> f64
-    %t18q = func.constant @strict_text_equal : (f64, f64) -> f64
-    %t18r = func.call @strict_list_has(%t18m, %t18a0, %t18q) : (f64, f64, (f64, f64) -> f64) -> f64
-    llvm.store %t18r, %r9 : f64, !llvm.ptr
-    %t19 = llvm.load %r9 : !llvm.ptr -> f64
-    llvm.store %t19, %v_logical0 : f64, !llvm.ptr
-    cf.br ^bb20
+    %t5a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t5r = func.call @KnownTypes_BaseName_1(%t5m, %t5a0) : (f64, f64) -> f64
+    %t5tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t5twl = arith.constant 26 : i64
+    %t5tr = func.call @strict_trace(%t5r, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t5tr, %r2 : f64, !llvm.ptr
+    %t6 = llvm.load %r2 : !llvm.ptr -> f64
+    llvm.store %t6, %v_base : f64, !llvm.ptr
+    %t7 = llvm.load %v_arguments : !llvm.ptr -> f64
+    llvm.store %t7, %r0 : f64, !llvm.ptr
+    %t8v = llvm.load %r0 : !llvm.ptr -> f64
+    %t8k = func.call @strict_is_failure(%t8v) : (f64) -> i1
+    cf.cond_br %t8k, ^bb8e, ^bb9
+  ^bb8e:
+    %t8tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t8twl = arith.constant 27 : i64
+    %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t8tr : f64
+  ^bb9:
+    %t9m = llvm.load %r0 : !llvm.ptr -> f64
+    %t9r = func.call @strict_list_length(%t9m) : (f64) -> f64
+    llvm.store %t9r, %r1 : f64, !llvm.ptr
+    %t10v = llvm.load %r1 : !llvm.ptr -> f64
+    %t10k = func.call @strict_is_failure(%t10v) : (f64) -> i1
+    cf.cond_br %t10k, ^bb10e, ^bb11
+  ^bb10e:
+    %t10tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t10twl = arith.constant 27 : i64
+    %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t10tr : f64
+  ^bb11:
+    %t11c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t11c, %r2 : f64, !llvm.ptr
+    %t12a = llvm.load %r1 : !llvm.ptr -> f64
+    %t12b = llvm.load %r2 : !llvm.ptr -> f64
+    %t12c = arith.cmpf oeq, %t12a, %t12b : f64
+    llvm.store %t12c, %flag : i1, !llvm.ptr
+    %t12d = arith.uitofp %t12c : i1 to f64
+    llvm.store %t12d, %r3 : f64, !llvm.ptr
+    %t13 = llvm.load %r3 : !llvm.ptr -> f64
+    llvm.store %t13, %v_logical0 : f64, !llvm.ptr
+    %t14c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t14c, %r4 : f64, !llvm.ptr
+    %t15a = llvm.load %r3 : !llvm.ptr -> f64
+    %t15b = llvm.load %r4 : !llvm.ptr -> f64
+    %t15c = arith.cmpf oeq, %t15a, %t15b : f64
+    llvm.store %t15c, %flag : i1, !llvm.ptr
+    %t16 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t16, ^bb22, ^bb17
+  ^bb17:
+    %t17g = llvm.mlir.addressof @lInstantiation_Argument_2_17 : !llvm.ptr
+    %t17v = llvm.load %t17g : !llvm.ptr -> f64
+    %t17u = arith.cmpf oeq, %t17v, %zero : f64
+    cf.cond_br %t17u, ^l17, ^m17(%t17v : f64)
+  ^l17:
+    %t17q = arith.constant 0x401C000000000000 : f64
+    %t17l = func.call @strict_list_new(%t17q, %zero) : (f64, f64) -> f64
+    %t17e0c = llvm.mlir.addressof @cInstantiation_Argument_2_17_0 : !llvm.ptr
+    %t17e0xf = func.call @strict_bits(%t17e0c) : (!llvm.ptr) -> f64
+    %t17e0l = func.call @strict_list_add(%t17l, %t17e0xf) : (f64, f64) -> f64
+    %t17e1c = llvm.mlir.addressof @cInstantiation_Argument_2_17_1 : !llvm.ptr
+    %t17e1xf = func.call @strict_bits(%t17e1c) : (!llvm.ptr) -> f64
+    %t17e1l = func.call @strict_list_add(%t17e0l, %t17e1xf) : (f64, f64) -> f64
+    %t17e2c = llvm.mlir.addressof @cInstantiation_Argument_2_17_2 : !llvm.ptr
+    %t17e2xf = func.call @strict_bits(%t17e2c) : (!llvm.ptr) -> f64
+    %t17e2l = func.call @strict_list_add(%t17e1l, %t17e2xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t17e2l) : (f64) -> ()
+    llvm.store %t17e2l, %t17g : f64, !llvm.ptr
+    cf.br ^m17(%t17e2l : f64)
+  ^m17(%t17r: f64):
+    llvm.store %t17r, %r5 : f64, !llvm.ptr
+    %t18 = llvm.load %v_base : !llvm.ptr -> f64
+    llvm.store %t18, %r6 : f64, !llvm.ptr
+    %t19v = llvm.load %r6 : !llvm.ptr -> f64
+    %t19k = func.call @strict_is_failure(%t19v) : (f64) -> i1
+    cf.cond_br %t19k, ^bb19e, ^bb20
+  ^bb19e:
+    %t19tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t19twl = arith.constant 27 : i64
+    %t19tr = func.call @strict_trace_checked(%t19v, %t19tw, %t19twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t19tr : f64
   ^bb20:
-    %t21 = llvm.load %v_logical0 : !llvm.ptr -> f64
-    llvm.store %t21, %r10 : f64, !llvm.ptr
-    %t22c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t22c, %r11 : f64, !llvm.ptr
-    %t23a = llvm.load %r10 : !llvm.ptr -> f64
-    %t23b = llvm.load %r11 : !llvm.ptr -> f64
-    %t23c = arith.cmpf oeq, %t23a, %t23b : f64
-    llvm.store %t23c, %flag : i1, !llvm.ptr
-    %t24 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t24, ^bb25, ^bb29
-  ^bb25:
-    %t25 = llvm.load %v_types : !llvm.ptr -> f64
-    llvm.store %t25, %r12 : f64, !llvm.ptr
-    %t26 = llvm.load %v_instanceType : !llvm.ptr -> f64
-    llvm.store %t26, %r13 : f64, !llvm.ptr
-    %t27m = llvm.load %r12 : !llvm.ptr -> f64
-    %t27a0 = llvm.load %r13 : !llvm.ptr -> f64
-    %t27r = func.call @KnownTypes_ElementType_1(%t27m, %t27a0) : (f64, f64) -> f64
-    %t27tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t27twl = arith.constant 26 : i64
-    %t27tr = func.call @strict_trace(%t27r, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t27tr, %r14 : f64, !llvm.ptr
-    %t28 = llvm.load %r14 : !llvm.ptr -> f64
-    return %t28 : f64
+    %t20m = llvm.load %r5 : !llvm.ptr -> f64
+    %t20a0 = llvm.load %r6 : !llvm.ptr -> f64
+    %t20q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t20r = func.call @strict_list_has(%t20m, %t20a0, %t20q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t20r, %r7 : f64, !llvm.ptr
+    %t21 = llvm.load %r7 : !llvm.ptr -> f64
+    llvm.store %t21, %v_logical0 : f64, !llvm.ptr
+    cf.br ^bb22
+  ^bb22:
+    %t23 = llvm.load %v_logical0 : !llvm.ptr -> f64
+    llvm.store %t23, %r8 : f64, !llvm.ptr
+    %t24c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t24c, %r9 : f64, !llvm.ptr
+    %t25a = llvm.load %r8 : !llvm.ptr -> f64
+    %t25b = llvm.load %r9 : !llvm.ptr -> f64
+    %t25c = arith.cmpf oeq, %t25a, %t25b : f64
+    llvm.store %t25c, %flag : i1, !llvm.ptr
+    %t26 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t26, ^bb27, ^bb63
+  ^bb27:
+    %t27 = llvm.load %v_base : !llvm.ptr -> f64
+    llvm.store %t27, %r10 : f64, !llvm.ptr
+    %t28v = llvm.load %r10 : !llvm.ptr -> f64
+    %t28k = func.call @strict_is_failure(%t28v) : (f64) -> i1
+    cf.cond_br %t28k, ^bb28e, ^bb29
+  ^bb28e:
+    %t28tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t28twl = arith.constant 28 : i64
+    %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t28tr : f64
   ^bb29:
-    %t30 = llvm.load %v_instanceType : !llvm.ptr -> f64
-    llvm.store %t30, %r0 : f64, !llvm.ptr
-    %t31 = llvm.load %v_name : !llvm.ptr -> f64
-    llvm.store %t31, %r1 : f64, !llvm.ptr
-    %t32m = llvm.load %instance : !llvm.ptr -> f64
-    %t32a0 = llvm.load %r0 : !llvm.ptr -> f64
-    %t32a1 = llvm.load %r1 : !llvm.ptr -> f64
-    %t32r = func.call @Instantiation_Position_2(%t32m, %t32a0, %t32a1) : (f64, f64, f64) -> f64
-    %t32tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t32twl = arith.constant 27 : i64
-    %t32tr = func.call @strict_trace(%t32r, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t32tr, %r2 : f64, !llvm.ptr
-    %t33 = llvm.load %r2 : !llvm.ptr -> f64
-    llvm.store %t33, %v_position : f64, !llvm.ptr
-    %t34 = llvm.load %v_position : !llvm.ptr -> f64
-    llvm.store %t34, %r0 : f64, !llvm.ptr
-    %t35v = llvm.load %r0 : !llvm.ptr -> f64
-    %t35k = func.call @strict_is_failure(%t35v) : (f64) -> i1
-    cf.cond_br %t35k, ^bb35e, ^bb36
-  ^bb35e:
-    %t35tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t35twl = arith.constant 28 : i64
-    %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t35tr : f64
-  ^bb36:
-    %t36c = arith.constant 0x0000000000000000 : f64
-    llvm.store %t36c, %r1 : f64, !llvm.ptr
-    %t37a = llvm.load %r0 : !llvm.ptr -> f64
-    %t37b = llvm.load %r1 : !llvm.ptr -> f64
-    %t37c = arith.cmpf olt, %t37a, %t37b : f64
-    llvm.store %t37c, %flag : i1, !llvm.ptr
-    %t37d = arith.uitofp %t37c : i1 to f64
-    llvm.store %t37d, %r2 : f64, !llvm.ptr
-    %t38c = arith.constant 0x0000000000000000 : f64
-    llvm.store %t38c, %r3 : f64, !llvm.ptr
-    %t39a = llvm.load %r2 : !llvm.ptr -> f64
-    %t39b = llvm.load %r3 : !llvm.ptr -> f64
-    %t39c = arith.cmpf oeq, %t39a, %t39b : f64
-    llvm.store %t39c, %flag : i1, !llvm.ptr
-    %t39d = arith.uitofp %t39c : i1 to f64
-    llvm.store %t39d, %r4 : f64, !llvm.ptr
-    %t40 = llvm.load %r4 : !llvm.ptr -> f64
-    llvm.store %t40, %v_logical2 : f64, !llvm.ptr
-    %t41c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t41c, %r5 : f64, !llvm.ptr
-    %t42a = llvm.load %r4 : !llvm.ptr -> f64
-    %t42b = llvm.load %r5 : !llvm.ptr -> f64
-    %t42c = arith.cmpf oeq, %t42a, %t42b : f64
-    llvm.store %t42c, %flag : i1, !llvm.ptr
-    %t43 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t43, ^bb44, ^bb52
-  ^bb44:
-    %t44 = llvm.load %v_position : !llvm.ptr -> f64
-    llvm.store %t44, %r6 : f64, !llvm.ptr
-    %t45v = llvm.load %r6 : !llvm.ptr -> f64
-    %t45k = func.call @strict_is_failure(%t45v) : (f64) -> i1
-    cf.cond_br %t45k, ^bb45e, ^bb46
-  ^bb45e:
-    %t45tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t45twl = arith.constant 28 : i64
-    %t45tr = func.call @strict_trace_checked(%t45v, %t45tw, %t45twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t45tr : f64
-  ^bb46:
-    %t46 = llvm.load %v_arguments : !llvm.ptr -> f64
-    llvm.store %t46, %r7 : f64, !llvm.ptr
-    %t47v = llvm.load %r7 : !llvm.ptr -> f64
-    %t47k = func.call @strict_is_failure(%t47v) : (f64) -> i1
-    cf.cond_br %t47k, ^bb47e, ^bb48
-  ^bb47e:
-    %t47tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t47twl = arith.constant 28 : i64
-    %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t47tr : f64
-  ^bb48:
-    %t48m = llvm.load %r7 : !llvm.ptr -> f64
-    %t48r = func.call @strict_list_length(%t48m) : (f64) -> f64
-    llvm.store %t48r, %r8 : f64, !llvm.ptr
-    %t49v = llvm.load %r8 : !llvm.ptr -> f64
-    %t49k = func.call @strict_is_failure(%t49v) : (f64) -> i1
-    cf.cond_br %t49k, ^bb49e, ^bb50
-  ^bb49e:
-    %t49tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t49twl = arith.constant 28 : i64
-    %t49tr = func.call @strict_trace_checked(%t49v, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t49tr : f64
-  ^bb50:
-    %t50a = llvm.load %r6 : !llvm.ptr -> f64
-    %t50b = llvm.load %r8 : !llvm.ptr -> f64
-    %t50c = arith.cmpf olt, %t50a, %t50b : f64
-    llvm.store %t50c, %flag : i1, !llvm.ptr
-    %t50d = arith.uitofp %t50c : i1 to f64
-    llvm.store %t50d, %r9 : f64, !llvm.ptr
-    %t51 = llvm.load %r9 : !llvm.ptr -> f64
-    llvm.store %t51, %v_logical2 : f64, !llvm.ptr
-    cf.br ^bb52
-  ^bb52:
-    %t53 = llvm.load %v_logical2 : !llvm.ptr -> f64
-    llvm.store %t53, %r10 : f64, !llvm.ptr
-    %t54c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t54c, %r11 : f64, !llvm.ptr
-    %t55a = llvm.load %r10 : !llvm.ptr -> f64
-    %t55b = llvm.load %r11 : !llvm.ptr -> f64
-    %t55c = arith.cmpf oeq, %t55a, %t55b : f64
-    llvm.store %t55c, %flag : i1, !llvm.ptr
-    %t56 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t56, ^bb57, ^bb65
-  ^bb57:
-    %t57 = llvm.load %v_arguments : !llvm.ptr -> f64
-    llvm.store %t57, %r12 : f64, !llvm.ptr
-    %t58v = llvm.load %r12 : !llvm.ptr -> f64
-    %t58k = func.call @strict_is_failure(%t58v) : (f64) -> i1
-    cf.cond_br %t58k, ^bb58e, ^bb59
-  ^bb58e:
+    %t29c = llvm.mlir.addressof @cInstantiation_Argument_2_29 : !llvm.ptr
+    %t29xf = func.call @strict_bits(%t29c) : (!llvm.ptr) -> f64
+    llvm.store %t29xf, %r11 : f64, !llvm.ptr
+    %t30l = llvm.load %r10 : !llvm.ptr -> f64
+    %t30r = llvm.load %r11 : !llvm.ptr -> f64
+    %t30q = func.call @strict_text_equal(%t30l, %t30r) : (f64, f64) -> f64
+    %t30f = arith.cmpf one, %t30q, %zero : f64
+    llvm.store %t30f, %flag : i1, !llvm.ptr
+    %t30d = arith.uitofp %t30f : i1 to f64
+    llvm.store %t30d, %r12 : f64, !llvm.ptr
+    %t31 = llvm.load %r12 : !llvm.ptr -> f64
+    llvm.store %t31, %v_logical2 : f64, !llvm.ptr
+    %t32c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t32c, %r13 : f64, !llvm.ptr
+    %t33a = llvm.load %r12 : !llvm.ptr -> f64
+    %t33b = llvm.load %r13 : !llvm.ptr -> f64
+    %t33c = arith.cmpf oeq, %t33a, %t33b : f64
+    llvm.store %t33c, %flag : i1, !llvm.ptr
+    %t34 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t34, ^bb35, ^bb42
+  ^bb35:
+    %t35 = llvm.load %v_arguments : !llvm.ptr -> f64
+    llvm.store %t35, %r14 : f64, !llvm.ptr
+    %t36v = llvm.load %r14 : !llvm.ptr -> f64
+    %t36k = func.call @strict_is_failure(%t36v) : (f64) -> i1
+    cf.cond_br %t36k, ^bb36e, ^bb37
+  ^bb36e:
+    %t36tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t36twl = arith.constant 28 : i64
+    %t36tr = func.call @strict_trace_checked(%t36v, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t36tr : f64
+  ^bb37:
+    %t37m = llvm.load %r14 : !llvm.ptr -> f64
+    %t37r = func.call @strict_list_length(%t37m) : (f64) -> f64
+    llvm.store %t37r, %r15 : f64, !llvm.ptr
+    %t38v = llvm.load %r15 : !llvm.ptr -> f64
+    %t38k = func.call @strict_is_failure(%t38v) : (f64) -> i1
+    cf.cond_br %t38k, ^bb38e, ^bb39
+  ^bb38e:
+    %t38tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t38twl = arith.constant 28 : i64
+    %t38tr = func.call @strict_trace_checked(%t38v, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t38tr : f64
+  ^bb39:
+    %t39c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t39c, %r16 : f64, !llvm.ptr
+    %t40a = llvm.load %r15 : !llvm.ptr -> f64
+    %t40b = llvm.load %r16 : !llvm.ptr -> f64
+    %t40c = arith.cmpf oeq, %t40a, %t40b : f64
+    llvm.store %t40c, %flag : i1, !llvm.ptr
+    %t40d = arith.uitofp %t40c : i1 to f64
+    llvm.store %t40d, %r17 : f64, !llvm.ptr
+    %t41 = llvm.load %r17 : !llvm.ptr -> f64
+    llvm.store %t41, %v_logical2 : f64, !llvm.ptr
+    cf.br ^bb42
+  ^bb42:
+    %t43 = llvm.load %v_logical2 : !llvm.ptr -> f64
+    llvm.store %t43, %r18 : f64, !llvm.ptr
+    %t44c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t44c, %r19 : f64, !llvm.ptr
+    %t45a = llvm.load %r18 : !llvm.ptr -> f64
+    %t45b = llvm.load %r19 : !llvm.ptr -> f64
+    %t45c = arith.cmpf oeq, %t45a, %t45b : f64
+    llvm.store %t45c, %flag : i1, !llvm.ptr
+    %t46 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t46, ^bb47, ^bb54
+  ^bb47:
+    %t47 = llvm.load %v_arguments : !llvm.ptr -> f64
+    llvm.store %t47, %r20 : f64, !llvm.ptr
+    %t48v = llvm.load %r20 : !llvm.ptr -> f64
+    %t48k = func.call @strict_is_failure(%t48v) : (f64) -> i1
+    cf.cond_br %t48k, ^bb48e, ^bb49
+  ^bb48e:
+    %t48tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t48twl = arith.constant 28 : i64
+    %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t48tr : f64
+  ^bb49:
+    %t49c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t49c, %r20 : f64, !llvm.ptr
+    %t50l = llvm.load %v_arguments : !llvm.ptr -> f64
+    %t50i = llvm.load %r20 : !llvm.ptr -> f64
+    %t50n = llvm.mlir.addressof @sInstantiation_Argument_2_50 : !llvm.ptr
+    %t50nb = func.call @strict_bits(%t50n) : (!llvm.ptr) -> f64
+    %t50x = func.call @strict_list_read(%t50l, %t50i, %t50nb) : (f64, f64, f64) -> f64
+    llvm.store %t50x, %r21 : f64, !llvm.ptr
+    %t51 = llvm.load %r21 : !llvm.ptr -> f64
+    llvm.store %t51, %v_conditional3 : f64, !llvm.ptr
+    %t52c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t52c, %r22 : f64, !llvm.ptr
+    %t53a = llvm.load %r22 : !llvm.ptr -> f64
+    %t53b = llvm.load %r22 : !llvm.ptr -> f64
+    %t53c = arith.cmpf oeq, %t53a, %t53b : f64
+    llvm.store %t53c, %flag : i1, !llvm.ptr
+    cf.br ^bb54
+  ^bb54:
+    %t55 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t55, ^bb60, ^bb56
+  ^bb56:
+    %t56 = llvm.load %v_types : !llvm.ptr -> f64
+    llvm.store %t56, %r23 : f64, !llvm.ptr
+    %t57 = llvm.load %v_instanceType : !llvm.ptr -> f64
+    llvm.store %t57, %r24 : f64, !llvm.ptr
+    %t58m = llvm.load %r23 : !llvm.ptr -> f64
+    %t58a0 = llvm.load %r24 : !llvm.ptr -> f64
+    %t58r = func.call @KnownTypes_ElementType_1(%t58m, %t58a0) : (f64, f64) -> f64
     %t58tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
     %t58twl = arith.constant 28 : i64
-    %t58tr = func.call @strict_trace_checked(%t58v, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t58tr : f64
-  ^bb59:
-    %t59 = llvm.load %v_position : !llvm.ptr -> f64
-    llvm.store %t59, %r12 : f64, !llvm.ptr
-    %t60v = llvm.load %r12 : !llvm.ptr -> f64
-    %t60k = func.call @strict_is_failure(%t60v) : (f64) -> i1
-    cf.cond_br %t60k, ^bb60e, ^bb61
-  ^bb60e:
-    %t60tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t60twl = arith.constant 28 : i64
-    %t60tr = func.call @strict_trace_checked(%t60v, %t60tw, %t60twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t60tr : f64
-  ^bb61:
-    %t61l = llvm.load %v_arguments : !llvm.ptr -> f64
-    %t61i = llvm.load %r12 : !llvm.ptr -> f64
-    %t61n = llvm.mlir.addressof @sInstantiation_Argument_2_61 : !llvm.ptr
-    %t61nb = func.call @strict_bits(%t61n) : (!llvm.ptr) -> f64
-    %t61x = func.call @strict_list_read(%t61l, %t61i, %t61nb) : (f64, f64, f64) -> f64
-    llvm.store %t61x, %r13 : f64, !llvm.ptr
-    %t62 = llvm.load %r13 : !llvm.ptr -> f64
-    llvm.store %t62, %v_conditional3 : f64, !llvm.ptr
-    %t63c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t63c, %r14 : f64, !llvm.ptr
-    %t64a = llvm.load %r14 : !llvm.ptr -> f64
-    %t64b = llvm.load %r14 : !llvm.ptr -> f64
-    %t64c = arith.cmpf oeq, %t64a, %t64b : f64
-    llvm.store %t64c, %flag : i1, !llvm.ptr
-    cf.br ^bb65
-  ^bb65:
-    %t66 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t66, ^bb69, ^bb67
-  ^bb67:
-    %t67c = llvm.mlir.addressof @cInstantiation_Argument_2_67 : !llvm.ptr
-    %t67xf = func.call @strict_bits(%t67c) : (!llvm.ptr) -> f64
-    llvm.store %t67xf, %r15 : f64, !llvm.ptr
-    %t68 = llvm.load %r15 : !llvm.ptr -> f64
-    llvm.store %t68, %v_conditional3 : f64, !llvm.ptr
-    cf.br ^bb69
-  ^bb69:
-    %t70 = llvm.load %v_conditional3 : !llvm.ptr -> f64
-    llvm.store %t70, %r16 : f64, !llvm.ptr
-    %t71v = llvm.load %r16 : !llvm.ptr -> f64
-    %t71k = func.call @strict_is_failure(%t71v) : (f64) -> i1
-    cf.cond_br %t71k, ^bb71e, ^bb72
-  ^bb71e:
-    %t71tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
-    %t71twl = arith.constant 28 : i64
-    %t71tr = func.call @strict_trace_checked(%t71v, %t71tw, %t71twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t71tr : f64
-  ^bb72:
-    %t72 = llvm.load %r16 : !llvm.ptr -> f64
-    return %t72 : f64
+    %t58tr = func.call @strict_trace(%t58r, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t58tr, %r25 : f64, !llvm.ptr
+    %t59 = llvm.load %r25 : !llvm.ptr -> f64
+    llvm.store %t59, %v_conditional3 : f64, !llvm.ptr
+    cf.br ^bb60
+  ^bb60:
+    %t61 = llvm.load %v_conditional3 : !llvm.ptr -> f64
+    llvm.store %t61, %r26 : f64, !llvm.ptr
+    %t62 = llvm.load %r26 : !llvm.ptr -> f64
+    return %t62 : f64
+  ^bb63:
+    %t64 = llvm.load %v_instanceType : !llvm.ptr -> f64
+    llvm.store %t64, %r0 : f64, !llvm.ptr
+    %t65 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t65, %r1 : f64, !llvm.ptr
+    %t66m = llvm.load %instance : !llvm.ptr -> f64
+    %t66a0 = llvm.load %r0 : !llvm.ptr -> f64
+    %t66a1 = llvm.load %r1 : !llvm.ptr -> f64
+    %t66r = func.call @Instantiation_Position_2(%t66m, %t66a0, %t66a1) : (f64, f64, f64) -> f64
+    %t66tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t66twl = arith.constant 29 : i64
+    %t66tr = func.call @strict_trace(%t66r, %t66tw, %t66twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t66tr, %r2 : f64, !llvm.ptr
+    %t67 = llvm.load %r2 : !llvm.ptr -> f64
+    llvm.store %t67, %v_position : f64, !llvm.ptr
+    %t68 = llvm.load %v_position : !llvm.ptr -> f64
+    llvm.store %t68, %r0 : f64, !llvm.ptr
+    %t69v = llvm.load %r0 : !llvm.ptr -> f64
+    %t69k = func.call @strict_is_failure(%t69v) : (f64) -> i1
+    cf.cond_br %t69k, ^bb69e, ^bb70
+  ^bb69e:
+    %t69tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t69twl = arith.constant 30 : i64
+    %t69tr = func.call @strict_trace_checked(%t69v, %t69tw, %t69twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t69tr : f64
+  ^bb70:
+    %t70c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t70c, %r1 : f64, !llvm.ptr
+    %t71a = llvm.load %r0 : !llvm.ptr -> f64
+    %t71b = llvm.load %r1 : !llvm.ptr -> f64
+    %t71c = arith.cmpf olt, %t71a, %t71b : f64
+    llvm.store %t71c, %flag : i1, !llvm.ptr
+    %t71d = arith.uitofp %t71c : i1 to f64
+    llvm.store %t71d, %r2 : f64, !llvm.ptr
+    %t72c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t72c, %r3 : f64, !llvm.ptr
+    %t73a = llvm.load %r2 : !llvm.ptr -> f64
+    %t73b = llvm.load %r3 : !llvm.ptr -> f64
+    %t73c = arith.cmpf oeq, %t73a, %t73b : f64
+    llvm.store %t73c, %flag : i1, !llvm.ptr
+    %t73d = arith.uitofp %t73c : i1 to f64
+    llvm.store %t73d, %r4 : f64, !llvm.ptr
+    %t74 = llvm.load %r4 : !llvm.ptr -> f64
+    llvm.store %t74, %v_logical5 : f64, !llvm.ptr
+    %t75c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t75c, %r5 : f64, !llvm.ptr
+    %t76a = llvm.load %r4 : !llvm.ptr -> f64
+    %t76b = llvm.load %r5 : !llvm.ptr -> f64
+    %t76c = arith.cmpf oeq, %t76a, %t76b : f64
+    llvm.store %t76c, %flag : i1, !llvm.ptr
+    %t77 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t77, ^bb78, ^bb86
+  ^bb78:
+    %t78 = llvm.load %v_position : !llvm.ptr -> f64
+    llvm.store %t78, %r6 : f64, !llvm.ptr
+    %t79v = llvm.load %r6 : !llvm.ptr -> f64
+    %t79k = func.call @strict_is_failure(%t79v) : (f64) -> i1
+    cf.cond_br %t79k, ^bb79e, ^bb80
+  ^bb79e:
+    %t79tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t79twl = arith.constant 30 : i64
+    %t79tr = func.call @strict_trace_checked(%t79v, %t79tw, %t79twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t79tr : f64
+  ^bb80:
+    %t80 = llvm.load %v_arguments : !llvm.ptr -> f64
+    llvm.store %t80, %r7 : f64, !llvm.ptr
+    %t81v = llvm.load %r7 : !llvm.ptr -> f64
+    %t81k = func.call @strict_is_failure(%t81v) : (f64) -> i1
+    cf.cond_br %t81k, ^bb81e, ^bb82
+  ^bb81e:
+    %t81tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t81twl = arith.constant 30 : i64
+    %t81tr = func.call @strict_trace_checked(%t81v, %t81tw, %t81twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t81tr : f64
+  ^bb82:
+    %t82m = llvm.load %r7 : !llvm.ptr -> f64
+    %t82r = func.call @strict_list_length(%t82m) : (f64) -> f64
+    llvm.store %t82r, %r8 : f64, !llvm.ptr
+    %t83v = llvm.load %r8 : !llvm.ptr -> f64
+    %t83k = func.call @strict_is_failure(%t83v) : (f64) -> i1
+    cf.cond_br %t83k, ^bb83e, ^bb84
+  ^bb83e:
+    %t83tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t83twl = arith.constant 30 : i64
+    %t83tr = func.call @strict_trace_checked(%t83v, %t83tw, %t83twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t83tr : f64
+  ^bb84:
+    %t84a = llvm.load %r6 : !llvm.ptr -> f64
+    %t84b = llvm.load %r8 : !llvm.ptr -> f64
+    %t84c = arith.cmpf olt, %t84a, %t84b : f64
+    llvm.store %t84c, %flag : i1, !llvm.ptr
+    %t84d = arith.uitofp %t84c : i1 to f64
+    llvm.store %t84d, %r9 : f64, !llvm.ptr
+    %t85 = llvm.load %r9 : !llvm.ptr -> f64
+    llvm.store %t85, %v_logical5 : f64, !llvm.ptr
+    cf.br ^bb86
+  ^bb86:
+    %t87 = llvm.load %v_logical5 : !llvm.ptr -> f64
+    llvm.store %t87, %r10 : f64, !llvm.ptr
+    %t88c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t88c, %r11 : f64, !llvm.ptr
+    %t89a = llvm.load %r10 : !llvm.ptr -> f64
+    %t89b = llvm.load %r11 : !llvm.ptr -> f64
+    %t89c = arith.cmpf oeq, %t89a, %t89b : f64
+    llvm.store %t89c, %flag : i1, !llvm.ptr
+    %t90 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t90, ^bb91, ^bb99
+  ^bb91:
+    %t91 = llvm.load %v_arguments : !llvm.ptr -> f64
+    llvm.store %t91, %r12 : f64, !llvm.ptr
+    %t92v = llvm.load %r12 : !llvm.ptr -> f64
+    %t92k = func.call @strict_is_failure(%t92v) : (f64) -> i1
+    cf.cond_br %t92k, ^bb92e, ^bb93
+  ^bb92e:
+    %t92tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t92twl = arith.constant 30 : i64
+    %t92tr = func.call @strict_trace_checked(%t92v, %t92tw, %t92twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t92tr : f64
+  ^bb93:
+    %t93 = llvm.load %v_position : !llvm.ptr -> f64
+    llvm.store %t93, %r12 : f64, !llvm.ptr
+    %t94v = llvm.load %r12 : !llvm.ptr -> f64
+    %t94k = func.call @strict_is_failure(%t94v) : (f64) -> i1
+    cf.cond_br %t94k, ^bb94e, ^bb95
+  ^bb94e:
+    %t94tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t94twl = arith.constant 30 : i64
+    %t94tr = func.call @strict_trace_checked(%t94v, %t94tw, %t94twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t94tr : f64
+  ^bb95:
+    %t95l = llvm.load %v_arguments : !llvm.ptr -> f64
+    %t95i = llvm.load %r12 : !llvm.ptr -> f64
+    %t95n = llvm.mlir.addressof @sInstantiation_Argument_2_95 : !llvm.ptr
+    %t95nb = func.call @strict_bits(%t95n) : (!llvm.ptr) -> f64
+    %t95x = func.call @strict_list_read(%t95l, %t95i, %t95nb) : (f64, f64, f64) -> f64
+    llvm.store %t95x, %r13 : f64, !llvm.ptr
+    %t96 = llvm.load %r13 : !llvm.ptr -> f64
+    llvm.store %t96, %v_conditional6 : f64, !llvm.ptr
+    %t97c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t97c, %r14 : f64, !llvm.ptr
+    %t98a = llvm.load %r14 : !llvm.ptr -> f64
+    %t98b = llvm.load %r14 : !llvm.ptr -> f64
+    %t98c = arith.cmpf oeq, %t98a, %t98b : f64
+    llvm.store %t98c, %flag : i1, !llvm.ptr
+    cf.br ^bb99
+  ^bb99:
+    %t100 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t100, ^bb103, ^bb101
+  ^bb101:
+    %t101c = llvm.mlir.addressof @cInstantiation_Argument_2_101 : !llvm.ptr
+    %t101xf = func.call @strict_bits(%t101c) : (!llvm.ptr) -> f64
+    llvm.store %t101xf, %r15 : f64, !llvm.ptr
+    %t102 = llvm.load %r15 : !llvm.ptr -> f64
+    llvm.store %t102, %v_conditional6 : f64, !llvm.ptr
+    cf.br ^bb103
+  ^bb103:
+    %t104 = llvm.load %v_conditional6 : !llvm.ptr -> f64
+    llvm.store %t104, %r16 : f64, !llvm.ptr
+    %t105v = llvm.load %r16 : !llvm.ptr -> f64
+    %t105k = func.call @strict_is_failure(%t105v) : (f64) -> i1
+    cf.cond_br %t105k, ^bb105e, ^bb106
+  ^bb105e:
+    %t105tw = llvm.mlir.addressof @wInstantiation_Argument_2 : !llvm.ptr
+    %t105twl = arith.constant 30 : i64
+    %t105tr = func.call @strict_trace_checked(%t105v, %t105tw, %t105twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t105tr : f64
+  ^bb106:
+    %t106 = llvm.load %r16 : !llvm.ptr -> f64
+    return %t106 : f64
+  }
+  func.func private @Instantiation_Plural_1(%p0: f64, %p1: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
+    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r0 : f64, !llvm.ptr
+    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r1 : f64, !llvm.ptr
+    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r2 : f64, !llvm.ptr
+    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r3 : f64, !llvm.ptr
+    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r4 : f64, !llvm.ptr
+    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r5 : f64, !llvm.ptr
+    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
+    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r11 : f64, !llvm.ptr
+    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r12 : f64, !llvm.ptr
+    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r13 : f64, !llvm.ptr
+    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_index : f64, !llvm.ptr
+    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_value : f64, !llvm.ptr
+    %v_element = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_element : f64, !llvm.ptr
+    %v_types = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_types : f64, !llvm.ptr
+    %v_conditional0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional0 : f64, !llvm.ptr
+    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %instance : f64, !llvm.ptr
+    llvm.store %p0, %instance : f64, !llvm.ptr
+    llvm.store %p0, %v_value : f64, !llvm.ptr
+    llvm.store %p1, %v_element : f64, !llvm.ptr
+    %talias0 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %talias0, %v_types : f64, !llvm.ptr
+    %t0 = llvm.load %v_element : !llvm.ptr -> f64
+    llvm.store %t0, %r0 : f64, !llvm.ptr
+    %t1c = llvm.mlir.addressof @cInstantiation_Plural_1_1 : !llvm.ptr
+    %t1xf = func.call @strict_bits(%t1c) : (!llvm.ptr) -> f64
+    llvm.store %t1xf, %r1 : f64, !llvm.ptr
+    %t2m = llvm.load %r0 : !llvm.ptr -> f64
+    %t2a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t2r = func.call @strict_text_index(%t2m, %t2a0, %zero) : (f64, f64, f64) -> f64
+    llvm.store %t2r, %r2 : f64, !llvm.ptr
+    %t3v = llvm.load %r2 : !llvm.ptr -> f64
+    %t3k = func.call @strict_is_failure(%t3v) : (f64) -> i1
+    cf.cond_br %t3k, ^bb3e, ^bb4
+  ^bb3e:
+    %t3tw = llvm.mlir.addressof @wInstantiation_Plural_1 : !llvm.ptr
+    %t3twl = arith.constant 63 : i64
+    %t3tr = func.call @strict_trace_checked(%t3v, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t3tr : f64
+  ^bb4:
+    %t4c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t4c, %r3 : f64, !llvm.ptr
+    %t5a = llvm.load %r2 : !llvm.ptr -> f64
+    %t5b = llvm.load %r3 : !llvm.ptr -> f64
+    %t5c = arith.cmpf olt, %t5a, %t5b : f64
+    llvm.store %t5c, %flag : i1, !llvm.ptr
+    %t6 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t6, ^bb7, ^bb13
+  ^bb7:
+    %t7 = llvm.load %v_element : !llvm.ptr -> f64
+    llvm.store %t7, %r4 : f64, !llvm.ptr
+    %t8c = llvm.mlir.addressof @cInstantiation_Plural_1_8 : !llvm.ptr
+    %t8xf = func.call @strict_bits(%t8c) : (!llvm.ptr) -> f64
+    llvm.store %t8xf, %r5 : f64, !llvm.ptr
+    %t9lx = llvm.load %r4 : !llvm.ptr -> f64
+    %t9rx = llvm.load %r5 : !llvm.ptr -> f64
+    %t9c = func.call @strict_text_concat(%t9lx, %t9rx) : (f64, f64) -> f64
+    llvm.store %t9c, %r6 : f64, !llvm.ptr
+    %t10 = llvm.load %r6 : !llvm.ptr -> f64
+    llvm.store %t10, %v_conditional0 : f64, !llvm.ptr
+    %t11c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t11c, %r7 : f64, !llvm.ptr
+    %t12a = llvm.load %r7 : !llvm.ptr -> f64
+    %t12b = llvm.load %r7 : !llvm.ptr -> f64
+    %t12c = arith.cmpf oeq, %t12a, %t12b : f64
+    llvm.store %t12c, %flag : i1, !llvm.ptr
+    cf.br ^bb13
+  ^bb13:
+    %t14 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t14, ^bb21, ^bb15
+  ^bb15:
+    %t15c = llvm.mlir.addressof @cInstantiation_Plural_1_15 : !llvm.ptr
+    %t15xf = func.call @strict_bits(%t15c) : (!llvm.ptr) -> f64
+    llvm.store %t15xf, %r8 : f64, !llvm.ptr
+    %t16 = llvm.load %v_element : !llvm.ptr -> f64
+    llvm.store %t16, %r9 : f64, !llvm.ptr
+    %t17lx = llvm.load %r8 : !llvm.ptr -> f64
+    %t17rx = llvm.load %r9 : !llvm.ptr -> f64
+    %t17c = func.call @strict_text_concat(%t17lx, %t17rx) : (f64, f64) -> f64
+    llvm.store %t17c, %r10 : f64, !llvm.ptr
+    %t18c = llvm.mlir.addressof @cInstantiation_Plural_1_18 : !llvm.ptr
+    %t18xf = func.call @strict_bits(%t18c) : (!llvm.ptr) -> f64
+    llvm.store %t18xf, %r11 : f64, !llvm.ptr
+    %t19lx = llvm.load %r10 : !llvm.ptr -> f64
+    %t19rx = llvm.load %r11 : !llvm.ptr -> f64
+    %t19c = func.call @strict_text_concat(%t19lx, %t19rx) : (f64, f64) -> f64
+    llvm.store %t19c, %r12 : f64, !llvm.ptr
+    %t20 = llvm.load %r12 : !llvm.ptr -> f64
+    llvm.store %t20, %v_conditional0 : f64, !llvm.ptr
+    cf.br ^bb21
+  ^bb21:
+    %t22 = llvm.load %v_conditional0 : !llvm.ptr -> f64
+    llvm.store %t22, %r13 : f64, !llvm.ptr
+    %t23 = llvm.load %r13 : !llvm.ptr -> f64
+    return %t23 : f64
   }
   func.func private @Instantiation_Own_2(%p0: f64, %p1: f64, %p2: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -239158,7 +239734,7 @@ module {
     cf.cond_br %t3k, ^bb3e, ^bb4
   ^bb3e:
     %t3tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t3twl = arith.constant 60 : i64
+    %t3twl = arith.constant 69 : i64
     %t3tr = func.call @strict_trace_checked(%t3v, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     return %t3tr : f64
   ^bb4:
@@ -239178,7 +239754,7 @@ module {
     cf.cond_br %t8k, ^bb8e, ^bb9
   ^bb8e:
     %t8tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t8twl = arith.constant 60 : i64
+    %t8twl = arith.constant 69 : i64
     %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     return %t8tr : f64
   ^bb9:
@@ -239196,7 +239772,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t12twl = arith.constant 60 : i64
+    %t12twl = arith.constant 69 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -239261,7 +239837,7 @@ module {
     %t27a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t27r = func.call @KnownTypes_BaseName_1(%t27m, %t27a0) : (f64, f64) -> f64
     %t27tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t27twl = arith.constant 61 : i64
+    %t27twl = arith.constant 70 : i64
     %t27tr = func.call @strict_trace(%t27r, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t27tr, %r6 : f64, !llvm.ptr
     %t28v = llvm.load %r6 : !llvm.ptr -> f64
@@ -239269,7 +239845,7 @@ module {
     cf.cond_br %t28k, ^bb28e, ^bb29
   ^bb28e:
     %t28tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t28twl = arith.constant 61 : i64
+    %t28twl = arith.constant 70 : i64
     %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
     return %t28tr : f64
   ^bb29:
@@ -239282,7 +239858,7 @@ module {
     cf.cond_br %t31k, ^bb31e, ^bb32
   ^bb31e:
     %t31tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t31twl = arith.constant 61 : i64
+    %t31twl = arith.constant 70 : i64
     %t31tr = func.call @strict_trace_checked(%t31v, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     return %t31tr : f64
   ^bb32:
@@ -239290,7 +239866,7 @@ module {
     %t32a0 = llvm.load %r8 : !llvm.ptr -> f64
     %t32r = func.call @KnownTypes_BaseName_1(%t32m, %t32a0) : (f64, f64) -> f64
     %t32tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t32twl = arith.constant 61 : i64
+    %t32twl = arith.constant 70 : i64
     %t32tr = func.call @strict_trace(%t32r, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t32tr, %r9 : f64, !llvm.ptr
     %t33v = llvm.load %r9 : !llvm.ptr -> f64
@@ -239298,7 +239874,7 @@ module {
     cf.cond_br %t33k, ^bb33e, ^bb34
   ^bb33e:
     %t33tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t33twl = arith.constant 61 : i64
+    %t33twl = arith.constant 70 : i64
     %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
     return %t33tr : f64
   ^bb34:
@@ -239340,7 +239916,7 @@ module {
     cf.cond_br %t47k, ^bb47e, ^bb48
   ^bb47e:
     %t47tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t47twl = arith.constant 63 : i64
+    %t47twl = arith.constant 72 : i64
     %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     return %t47tr : f64
   ^bb48:
@@ -239348,7 +239924,7 @@ module {
     %t48a0 = llvm.load %r2 : !llvm.ptr -> f64
     %t48r = func.call @KnownTypes_BaseName_1(%t48m, %t48a0) : (f64, f64) -> f64
     %t48tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t48twl = arith.constant 63 : i64
+    %t48twl = arith.constant 72 : i64
     %t48tr = func.call @strict_trace(%t48r, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t48tr, %r3 : f64, !llvm.ptr
     %t49v = llvm.load %r3 : !llvm.ptr -> f64
@@ -239356,7 +239932,7 @@ module {
     cf.cond_br %t49k, ^bb49e, ^bb50
   ^bb49e:
     %t49tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t49twl = arith.constant 63 : i64
+    %t49twl = arith.constant 72 : i64
     %t49tr = func.call @strict_trace_checked(%t49v, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
     return %t49tr : f64
   ^bb50:
@@ -239390,7 +239966,7 @@ module {
     cf.cond_br %t59k, ^bb59e, ^bb60
   ^bb59e:
     %t59tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t59twl = arith.constant 63 : i64
+    %t59twl = arith.constant 72 : i64
     %t59tr = func.call @strict_trace_checked(%t59v, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
     return %t59tr : f64
   ^bb60:
@@ -239401,7 +239977,7 @@ module {
     %t61a1 = llvm.load %r7 : !llvm.ptr -> f64
     %t61r = func.call @Instantiation_Substituted_2(%t61m, %t61a0, %t61a1) : (f64, f64, f64) -> f64
     %t61tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t61twl = arith.constant 63 : i64
+    %t61twl = arith.constant 72 : i64
     %t61tr = func.call @strict_trace(%t61r, %t61tw, %t61twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t61tr, %r8 : f64, !llvm.ptr
     %t62 = llvm.load %r8 : !llvm.ptr -> f64
@@ -239415,7 +239991,7 @@ module {
     cf.cond_br %t65k, ^bb65e, ^bb66
   ^bb65e:
     %t65tw = llvm.mlir.addressof @wInstantiation_Own_2 : !llvm.ptr
-    %t65twl = arith.constant 63 : i64
+    %t65twl = arith.constant 72 : i64
     %t65tr = func.call @strict_trace_checked(%t65v, %t65tw, %t65twl) : (f64, !llvm.ptr, i64) -> f64
     return %t65tr : f64
   ^bb66:
@@ -243698,7 +244274,7 @@ module {
     cf.cond_br %t5k, ^bb5e, ^bb6
   ^bb5e:
     %t5tw = llvm.mlir.addressof @wTestCodegen_Clock_0 : !llvm.ptr
-    %t5twl = arith.constant 99 : i64
+    %t5twl = arith.constant 101 : i64
     %t5tr = func.call @strict_trace_checked(%t5v, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     return %t5tr : f64
   ^bb6:
@@ -243765,7 +244341,7 @@ module {
     cf.cond_br %t16k, ^bb16e, ^bb17
   ^bb16e:
     %t16tw = llvm.mlir.addressof @wTestCodegen_Clock_0 : !llvm.ptr
-    %t16twl = arith.constant 100 : i64
+    %t16twl = arith.constant 102 : i64
     %t16tr = func.call @strict_trace_checked(%t16v, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     return %t16tr : f64
   ^bb17:
@@ -243776,7 +244352,7 @@ module {
     cf.cond_br %t18k, ^bb18e, ^bb19
   ^bb18e:
     %t18tw = llvm.mlir.addressof @wTestCodegen_Clock_0 : !llvm.ptr
-    %t18twl = arith.constant 100 : i64
+    %t18twl = arith.constant 102 : i64
     %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     return %t18tr : f64
   ^bb19:
@@ -243798,7 +244374,7 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wTestCodegen_Clock_0 : !llvm.ptr
-    %t20twl = arith.constant 100 : i64
+    %t20twl = arith.constant 102 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
@@ -244702,7 +245278,7 @@ module {
     %t36m = llvm.load %r0 : !llvm.ptr -> f64
     %t36r = func.call @TypeCodegen_Generator_0(%t36m) : (f64) -> f64
     %t36tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t36twl = arith.constant 63 : i64
+    %t36twl = arith.constant 65 : i64
     %t36tr = func.call @strict_trace(%t36r, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t36tr, %r1 : f64, !llvm.ptr
     %t37v = llvm.load %r1 : !llvm.ptr -> f64
@@ -244710,7 +245286,7 @@ module {
     cf.cond_br %t37k, ^bb37e, ^bb38
   ^bb37e:
     %t37tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t37twl = arith.constant 63 : i64
+    %t37twl = arith.constant 65 : i64
     %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     return %t37tr : f64
   ^bb38:
@@ -244721,7 +245297,7 @@ module {
     cf.cond_br %t39k, ^bb39e, ^bb40
   ^bb39e:
     %t39tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t39twl = arith.constant 63 : i64
+    %t39twl = arith.constant 65 : i64
     %t39tr = func.call @strict_trace_checked(%t39v, %t39tw, %t39twl) : (f64, !llvm.ptr, i64) -> f64
     return %t39tr : f64
   ^bb40:
@@ -244732,7 +245308,7 @@ module {
     cf.cond_br %t41k, ^bb41e, ^bb42
   ^bb41e:
     %t41tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t41twl = arith.constant 63 : i64
+    %t41twl = arith.constant 65 : i64
     %t41tr = func.call @strict_trace_checked(%t41v, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
     return %t41tr : f64
   ^bb42:
@@ -244743,7 +245319,7 @@ module {
     %t43a1 = llvm.load %r4 : !llvm.ptr -> f64
     %t43r = func.call @ErrorCodegen_Handled_2(%t43m, %t43a0, %t43a1) : (f64, f64, f64) -> f64
     %t43tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t43twl = arith.constant 63 : i64
+    %t43twl = arith.constant 65 : i64
     %t43tr = func.call @strict_trace(%t43r, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t43tr, %r5 : f64, !llvm.ptr
     %t44v = llvm.load %r5 : !llvm.ptr -> f64
@@ -244751,7 +245327,7 @@ module {
     cf.cond_br %t44k, ^bb44e, ^bb45
   ^bb44e:
     %t44tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t44twl = arith.constant 63 : i64
+    %t44twl = arith.constant 65 : i64
     %t44tr = func.call @strict_trace_checked(%t44v, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
     return %t44tr : f64
   ^bb45:
@@ -244762,7 +245338,7 @@ module {
     %t46a0 = llvm.load %r6 : !llvm.ptr -> f64
     %t46r = func.call @CodeBlock_Stored_1(%t46m, %t46a0) : (f64, f64) -> f64
     %t46tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t46twl = arith.constant 63 : i64
+    %t46twl = arith.constant 65 : i64
     %t46tr = func.call @strict_trace(%t46r, %t46tw, %t46twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t46tr, %r7 : f64, !llvm.ptr
     %t47v = llvm.load %r7 : !llvm.ptr -> f64
@@ -244770,7 +245346,7 @@ module {
     cf.cond_br %t47k, ^bb47e, ^bb48
   ^bb47e:
     %t47tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t47twl = arith.constant 63 : i64
+    %t47twl = arith.constant 65 : i64
     %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     return %t47tr : f64
   ^bb48:
@@ -244785,7 +245361,7 @@ module {
     %t50a0 = llvm.load %r9 : !llvm.ptr -> f64
     %t50r = func.call @CodeBlock_At_1(%t50m, %t50a0) : (f64, f64) -> f64
     %t50tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t50twl = arith.constant 63 : i64
+    %t50twl = arith.constant 65 : i64
     %t50tr = func.call @strict_trace(%t50r, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t50tr, %r10 : f64, !llvm.ptr
     %t51 = llvm.load %r10 : !llvm.ptr -> f64
@@ -244797,7 +245373,7 @@ module {
     cf.cond_br %t53k, ^bb53e, ^bb54
   ^bb53e:
     %t53tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t53twl = arith.constant 64 : i64
+    %t53twl = arith.constant 66 : i64
     %t53tr = func.call @strict_trace_checked(%t53v, %t53tw, %t53twl) : (f64, !llvm.ptr, i64) -> f64
     return %t53tr : f64
   ^bb54:
@@ -244809,7 +245385,7 @@ module {
     %t56m = llvm.load %r2 : !llvm.ptr -> f64
     %t56r = func.call @TypeCodegen_Generator_0(%t56m) : (f64) -> f64
     %t56tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t56twl = arith.constant 64 : i64
+    %t56twl = arith.constant 66 : i64
     %t56tr = func.call @strict_trace(%t56r, %t56tw, %t56twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t56tr, %r3 : f64, !llvm.ptr
     %t57v = llvm.load %r3 : !llvm.ptr -> f64
@@ -244817,7 +245393,7 @@ module {
     cf.cond_br %t57k, ^bb57e, ^bb58
   ^bb57e:
     %t57tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t57twl = arith.constant 64 : i64
+    %t57twl = arith.constant 66 : i64
     %t57tr = func.call @strict_trace_checked(%t57v, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
     return %t57tr : f64
   ^bb58:
@@ -244828,7 +245404,7 @@ module {
     cf.cond_br %t59k, ^bb59e, ^bb60
   ^bb59e:
     %t59tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t59twl = arith.constant 64 : i64
+    %t59twl = arith.constant 66 : i64
     %t59tr = func.call @strict_trace_checked(%t59v, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
     return %t59tr : f64
   ^bb60:
@@ -244839,7 +245415,7 @@ module {
     %t61a1 = llvm.load %r5 : !llvm.ptr -> f64
     %t61r = func.call @ValueCodegen_TypeOf_2(%t61m, %t61a0, %t61a1) : (f64, f64, f64) -> f64
     %t61tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t61twl = arith.constant 64 : i64
+    %t61twl = arith.constant 66 : i64
     %t61tr = func.call @strict_trace(%t61r, %t61tw, %t61twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t61tr, %r6 : f64, !llvm.ptr
     %t62v = llvm.load %r6 : !llvm.ptr -> f64
@@ -244847,7 +245423,7 @@ module {
     cf.cond_br %t62k, ^bb62e, ^bb63
   ^bb62e:
     %t62tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t62twl = arith.constant 64 : i64
+    %t62twl = arith.constant 66 : i64
     %t62tr = func.call @strict_trace_checked(%t62v, %t62tw, %t62twl) : (f64, !llvm.ptr, i64) -> f64
     return %t62tr : f64
   ^bb63:
@@ -244856,7 +245432,7 @@ module {
     %t63a1 = llvm.load %r6 : !llvm.ptr -> f64
     %t63r = func.call @CodeBlock_Declare_2(%t63m, %t63a0, %t63a1) : (f64, f64, f64) -> f64
     %t63tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t63twl = arith.constant 64 : i64
+    %t63twl = arith.constant 66 : i64
     %t63tr = func.call @strict_trace(%t63r, %t63tw, %t63twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t63tr, %r7 : f64, !llvm.ptr
     %t64 = llvm.load %r7 : !llvm.ptr -> f64
@@ -245028,7 +245604,7 @@ module {
     cf.cond_br %t108k, ^bb108e, ^bb109
   ^bb108e:
     %t108tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t108twl = arith.constant 67 : i64
+    %t108twl = arith.constant 69 : i64
     %t108tr = func.call @strict_trace_checked(%t108v, %t108tw, %t108twl) : (f64, !llvm.ptr, i64) -> f64
     return %t108tr : f64
   ^bb109:
@@ -245043,7 +245619,7 @@ module {
     cf.cond_br %t111k, ^bb111e, ^bb112
   ^bb111e:
     %t111tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t111twl = arith.constant 67 : i64
+    %t111twl = arith.constant 69 : i64
     %t111tr = func.call @strict_trace_checked(%t111v, %t111tw, %t111twl) : (f64, !llvm.ptr, i64) -> f64
     return %t111tr : f64
   ^bb112:
@@ -245083,7 +245659,7 @@ module {
     %t119m = llvm.load %r0 : !llvm.ptr -> f64
     %t119r = func.call @TypeCodegen_Generator_0(%t119m) : (f64) -> f64
     %t119tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t119twl = arith.constant 68 : i64
+    %t119twl = arith.constant 70 : i64
     %t119tr = func.call @strict_trace(%t119r, %t119tw, %t119twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t119tr, %r1 : f64, !llvm.ptr
     %t120v = llvm.load %r1 : !llvm.ptr -> f64
@@ -245091,7 +245667,7 @@ module {
     cf.cond_br %t120k, ^bb120e, ^bb121
   ^bb120e:
     %t120tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t120twl = arith.constant 68 : i64
+    %t120twl = arith.constant 70 : i64
     %t120tr = func.call @strict_trace_checked(%t120v, %t120tw, %t120twl) : (f64, !llvm.ptr, i64) -> f64
     return %t120tr : f64
   ^bb121:
@@ -245102,7 +245678,7 @@ module {
     cf.cond_br %t122k, ^bb122e, ^bb123
   ^bb122e:
     %t122tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t122twl = arith.constant 68 : i64
+    %t122twl = arith.constant 70 : i64
     %t122tr = func.call @strict_trace_checked(%t122v, %t122tw, %t122twl) : (f64, !llvm.ptr, i64) -> f64
     return %t122tr : f64
   ^bb123:
@@ -245113,7 +245689,7 @@ module {
     cf.cond_br %t124k, ^bb124e, ^bb125
   ^bb124e:
     %t124tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t124twl = arith.constant 68 : i64
+    %t124twl = arith.constant 70 : i64
     %t124tr = func.call @strict_trace_checked(%t124v, %t124tw, %t124twl) : (f64, !llvm.ptr, i64) -> f64
     return %t124tr : f64
   ^bb125:
@@ -245122,7 +245698,7 @@ module {
     %t125a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t125r = func.call @ValueCodegen_Expression_2(%t125m, %t125a0, %t125a1) : (f64, f64, f64) -> f64
     %t125tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t125twl = arith.constant 68 : i64
+    %t125twl = arith.constant 70 : i64
     %t125tr = func.call @strict_trace(%t125r, %t125tw, %t125twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t125tr, %r4 : f64, !llvm.ptr
     %t126 = llvm.load %r4 : !llvm.ptr -> f64
@@ -245134,7 +245710,7 @@ module {
     cf.cond_br %t128k, ^bb128e, ^bb129
   ^bb128e:
     %t128tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t128twl = arith.constant 69 : i64
+    %t128twl = arith.constant 71 : i64
     %t128tr = func.call @strict_trace_checked(%t128v, %t128tw, %t128twl) : (f64, !llvm.ptr, i64) -> f64
     return %t128tr : f64
   ^bb129:
@@ -245145,7 +245721,7 @@ module {
     cf.cond_br %t130k, ^bb130e, ^bb131
   ^bb130e:
     %t130tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t130twl = arith.constant 69 : i64
+    %t130twl = arith.constant 71 : i64
     %t130tr = func.call @strict_trace_checked(%t130v, %t130tw, %t130twl) : (f64, !llvm.ptr, i64) -> f64
     return %t130tr : f64
   ^bb131:
@@ -245161,7 +245737,7 @@ module {
     %t133a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t133r = func.call @InstructionEntry_LoadBoolean_2(%t133m, %t133a0, %t133a1) : (f64, f64, f64) -> f64
     %t133tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t133twl = arith.constant 69 : i64
+    %t133twl = arith.constant 71 : i64
     %t133tr = func.call @strict_trace(%t133r, %t133tw, %t133twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t133tr, %r4 : f64, !llvm.ptr
     %t134v = llvm.load %r4 : !llvm.ptr -> f64
@@ -245169,7 +245745,7 @@ module {
     cf.cond_br %t134k, ^bb134e, ^bb135
   ^bb134e:
     %t134tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t134twl = arith.constant 69 : i64
+    %t134twl = arith.constant 71 : i64
     %t134tr = func.call @strict_trace_checked(%t134v, %t134tw, %t134twl) : (f64, !llvm.ptr, i64) -> f64
     return %t134tr : f64
   ^bb135:
@@ -245177,7 +245753,7 @@ module {
     %t135a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t135r = func.call @CodeBlock_Load_1(%t135m, %t135a0) : (f64, f64) -> f64
     %t135tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t135twl = arith.constant 69 : i64
+    %t135twl = arith.constant 71 : i64
     %t135tr = func.call @strict_trace(%t135r, %t135tw, %t135twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t135tr, %r5 : f64, !llvm.ptr
     %t136 = llvm.load %r5 : !llvm.ptr -> f64
@@ -245189,7 +245765,7 @@ module {
     cf.cond_br %t138k, ^bb138e, ^bb139
   ^bb138e:
     %t138tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t138twl = arith.constant 70 : i64
+    %t138twl = arith.constant 72 : i64
     %t138tr = func.call @strict_trace_checked(%t138v, %t138tw, %t138twl) : (f64, !llvm.ptr, i64) -> f64
     return %t138tr : f64
   ^bb139:
@@ -245204,14 +245780,14 @@ module {
     cf.cond_br %t142k, ^bb142e, ^bb143
   ^bb142e:
     %t142tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t142twl = arith.constant 70 : i64
+    %t142twl = arith.constant 72 : i64
     %t142tr = func.call @strict_trace_checked(%t142v, %t142tw, %t142twl) : (f64, !llvm.ptr, i64) -> f64
     return %t142tr : f64
   ^bb143:
     %t143m = llvm.load %r2 : !llvm.ptr -> f64
     %t143r = func.call @CodeBlock_Result_0(%t143m) : (f64) -> f64
     %t143tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t143twl = arith.constant 70 : i64
+    %t143twl = arith.constant 72 : i64
     %t143tr = func.call @strict_trace(%t143r, %t143tw, %t143twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t143tr, %r3 : f64, !llvm.ptr
     %t144v = llvm.load %r3 : !llvm.ptr -> f64
@@ -245219,7 +245795,7 @@ module {
     cf.cond_br %t144k, ^bb144e, ^bb145
   ^bb144e:
     %t144tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t144twl = arith.constant 70 : i64
+    %t144twl = arith.constant 72 : i64
     %t144tr = func.call @strict_trace_checked(%t144v, %t144tw, %t144twl) : (f64, !llvm.ptr, i64) -> f64
     return %t144tr : f64
   ^bb145:
@@ -245234,14 +245810,14 @@ module {
     cf.cond_br %t147k, ^bb147e, ^bb148
   ^bb147e:
     %t147tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t147twl = arith.constant 70 : i64
+    %t147twl = arith.constant 72 : i64
     %t147tr = func.call @strict_trace_checked(%t147v, %t147tw, %t147twl) : (f64, !llvm.ptr, i64) -> f64
     return %t147tr : f64
   ^bb148:
     %t148m = llvm.load %r2 : !llvm.ptr -> f64
     %t148r = func.call @CodeBlock_Result_0(%t148m) : (f64) -> f64
     %t148tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t148twl = arith.constant 70 : i64
+    %t148twl = arith.constant 72 : i64
     %t148tr = func.call @strict_trace(%t148r, %t148tw, %t148twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t148tr, %r3 : f64, !llvm.ptr
     %t149v = llvm.load %r3 : !llvm.ptr -> f64
@@ -245249,7 +245825,7 @@ module {
     cf.cond_br %t149k, ^bb149e, ^bb150
   ^bb149e:
     %t149tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t149twl = arith.constant 70 : i64
+    %t149twl = arith.constant 72 : i64
     %t149tr = func.call @strict_trace_checked(%t149v, %t149tw, %t149twl) : (f64, !llvm.ptr, i64) -> f64
     return %t149tr : f64
   ^bb150:
@@ -245264,7 +245840,7 @@ module {
     %t152a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t152r = func.call @InstructionEntry_Binary_2(%t152m, %t152a0, %t152a1) : (f64, f64, f64) -> f64
     %t152tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t152twl = arith.constant 70 : i64
+    %t152twl = arith.constant 72 : i64
     %t152tr = func.call @strict_trace(%t152r, %t152tw, %t152twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t152tr, %r3 : f64, !llvm.ptr
     %t153v = llvm.load %r3 : !llvm.ptr -> f64
@@ -245272,7 +245848,7 @@ module {
     cf.cond_br %t153k, ^bb153e, ^bb154
   ^bb153e:
     %t153tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t153twl = arith.constant 70 : i64
+    %t153twl = arith.constant 72 : i64
     %t153tr = func.call @strict_trace_checked(%t153v, %t153tw, %t153twl) : (f64, !llvm.ptr, i64) -> f64
     return %t153tr : f64
   ^bb154:
@@ -245280,7 +245856,7 @@ module {
     %t154a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t154r = func.call @CodeBlock_Add_1(%t154m, %t154a0) : (f64, f64) -> f64
     %t154tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t154twl = arith.constant 70 : i64
+    %t154twl = arith.constant 72 : i64
     %t154tr = func.call @strict_trace(%t154r, %t154tw, %t154twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t154tr, %r4 : f64, !llvm.ptr
     %t155v = llvm.load %r4 : !llvm.ptr -> f64
@@ -245288,7 +245864,7 @@ module {
     cf.cond_br %t155k, ^bb155e, ^bb156
   ^bb155e:
     %t155tw = llvm.mlir.addressof @wTestCodegen_Compared_2 : !llvm.ptr
-    %t155twl = arith.constant 70 : i64
+    %t155twl = arith.constant 72 : i64
     %t155tr = func.call @strict_trace_checked(%t155v, %t155tw, %t155twl) : (f64, !llvm.ptr, i64) -> f64
     return %t155tr : f64
   ^bb156:
@@ -245370,7 +245946,7 @@ module {
     %t3a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t3r = func.call @InstructionEntry_Jump_2(%t3m, %t3a0, %t3a1) : (f64, f64, f64) -> f64
     %t3tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t3twl = arith.constant 77 : i64
+    %t3twl = arith.constant 79 : i64
     %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3tr, %r4 : f64, !llvm.ptr
     %t4v = llvm.load %r4 : !llvm.ptr -> f64
@@ -245378,7 +245954,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t4twl = arith.constant 77 : i64
+    %t4twl = arith.constant 79 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -245386,7 +245962,7 @@ module {
     %t5a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t5r = func.call @CodeBlock_Add_1(%t5m, %t5a0) : (f64, f64) -> f64
     %t5tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t5twl = arith.constant 77 : i64
+    %t5twl = arith.constant 79 : i64
     %t5tr = func.call @strict_trace(%t5r, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t5tr, %r5 : f64, !llvm.ptr
     %t6v = llvm.load %r5 : !llvm.ptr -> f64
@@ -245394,14 +245970,14 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t6twl = arith.constant 77 : i64
+    %t6twl = arith.constant 79 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
     %t7m = llvm.load %r5 : !llvm.ptr -> f64
     %t7r = func.call @CodeBlock_WithNextId_0(%t7m) : (f64) -> f64
     %t7tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t7twl = arith.constant 77 : i64
+    %t7twl = arith.constant 79 : i64
     %t7tr = func.call @strict_trace(%t7r, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t7tr, %r6 : f64, !llvm.ptr
     %t8 = llvm.load %r6 : !llvm.ptr -> f64
@@ -245413,7 +245989,7 @@ module {
     cf.cond_br %t10k, ^bb10e, ^bb11
   ^bb10e:
     %t10tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t10twl = arith.constant 78 : i64
+    %t10twl = arith.constant 80 : i64
     %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     return %t10tr : f64
   ^bb11:
@@ -245431,7 +246007,7 @@ module {
     %t14a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t14r = func.call @TestCodegen_Timed_2(%t14m, %t14a0, %t14a1) : (f64, f64, f64) -> f64
     %t14tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t14twl = arith.constant 78 : i64
+    %t14twl = arith.constant 80 : i64
     %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t14tr, %r4 : f64, !llvm.ptr
     %t15v = llvm.load %r4 : !llvm.ptr -> f64
@@ -245439,7 +246015,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t15twl = arith.constant 78 : i64
+    %t15twl = arith.constant 80 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -245452,7 +246028,7 @@ module {
     cf.cond_br %t18k, ^bb18e, ^bb19
   ^bb18e:
     %t18tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t18twl = arith.constant 78 : i64
+    %t18twl = arith.constant 80 : i64
     %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     return %t18tr : f64
   ^bb19:
@@ -245472,7 +246048,7 @@ module {
     %t22a1 = llvm.load %r9 : !llvm.ptr -> f64
     %t22r = func.call @InstructionEntry_Jump_2(%t22m, %t22a0, %t22a1) : (f64, f64, f64) -> f64
     %t22tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t22twl = arith.constant 78 : i64
+    %t22twl = arith.constant 80 : i64
     %t22tr = func.call @strict_trace(%t22r, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t22tr, %r10 : f64, !llvm.ptr
     %t23v = llvm.load %r10 : !llvm.ptr -> f64
@@ -245480,7 +246056,7 @@ module {
     cf.cond_br %t23k, ^bb23e, ^bb24
   ^bb23e:
     %t23tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t23twl = arith.constant 78 : i64
+    %t23twl = arith.constant 80 : i64
     %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     return %t23tr : f64
   ^bb24:
@@ -245488,7 +246064,7 @@ module {
     %t24a0 = llvm.load %r10 : !llvm.ptr -> f64
     %t24r = func.call @CodeBlock_Add_1(%t24m, %t24a0) : (f64, f64) -> f64
     %t24tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t24twl = arith.constant 78 : i64
+    %t24twl = arith.constant 80 : i64
     %t24tr = func.call @strict_trace(%t24r, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t24tr, %r11 : f64, !llvm.ptr
     %t25v = llvm.load %r11 : !llvm.ptr -> f64
@@ -245496,7 +246072,7 @@ module {
     cf.cond_br %t25k, ^bb25e, ^bb26
   ^bb25e:
     %t25tw = llvm.mlir.addressof @wTestCodegen_Passed_2 : !llvm.ptr
-    %t25twl = arith.constant 78 : i64
+    %t25twl = arith.constant 80 : i64
     %t25tr = func.call @strict_trace_checked(%t25v, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
     return %t25tr : f64
   ^bb26:
@@ -245577,7 +246153,7 @@ module {
     %t6a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t6r = func.call @InstructionEntry_Print_1(%t6m, %t6a0) : (f64, f64) -> f64
     %t6tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t6twl = arith.constant 83 : i64
+    %t6twl = arith.constant 85 : i64
     %t6tr = func.call @strict_trace(%t6r, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t6tr, %r4 : f64, !llvm.ptr
     %t7v = llvm.load %r4 : !llvm.ptr -> f64
@@ -245585,7 +246161,7 @@ module {
     cf.cond_br %t7k, ^bb7e, ^bb8
   ^bb7e:
     %t7tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t7twl = arith.constant 83 : i64
+    %t7twl = arith.constant 85 : i64
     %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     return %t7tr : f64
   ^bb8:
@@ -245593,7 +246169,7 @@ module {
     %t8a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t8r = func.call @CodeBlock_Add_1(%t8m, %t8a0) : (f64, f64) -> f64
     %t8tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t8twl = arith.constant 83 : i64
+    %t8twl = arith.constant 85 : i64
     %t8tr = func.call @strict_trace(%t8r, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t8tr, %r5 : f64, !llvm.ptr
     %t9 = llvm.load %r5 : !llvm.ptr -> f64
@@ -245602,7 +246178,7 @@ module {
     %t11m = llvm.load %instance : !llvm.ptr -> f64
     %t11r = func.call @TestCodegen_Clock_0(%t11m) : (f64) -> f64
     %t11tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t11twl = arith.constant 84 : i64
+    %t11twl = arith.constant 86 : i64
     %t11tr = func.call @strict_trace(%t11r, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t11tr, %r0 : f64, !llvm.ptr
     %t12v = llvm.load %r0 : !llvm.ptr -> f64
@@ -245610,7 +246186,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t12twl = arith.constant 84 : i64
+    %t12twl = arith.constant 86 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -245624,14 +246200,14 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t15twl = arith.constant 84 : i64
+    %t15twl = arith.constant 86 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
     %t16m = llvm.load %r2 : !llvm.ptr -> f64
     %t16r = func.call @Tokenizer_Tokens_0(%t16m) : (f64) -> f64
     %t16tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t16twl = arith.constant 84 : i64
+    %t16twl = arith.constant 86 : i64
     %t16tr = func.call @strict_trace(%t16r, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t16tr, %r3 : f64, !llvm.ptr
     %t17v = llvm.load %r3 : !llvm.ptr -> f64
@@ -245639,7 +246215,7 @@ module {
     cf.cond_br %t17k, ^bb17e, ^bb18
   ^bb17e:
     %t17tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t17twl = arith.constant 84 : i64
+    %t17twl = arith.constant 86 : i64
     %t17tr = func.call @strict_trace_checked(%t17v, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
     return %t17tr : f64
   ^bb18:
@@ -245650,14 +246226,14 @@ module {
     cf.cond_br %t19k, ^bb19e, ^bb20
   ^bb19e:
     %t19tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t19twl = arith.constant 84 : i64
+    %t19twl = arith.constant 86 : i64
     %t19tr = func.call @strict_trace_checked(%t19v, %t19tw, %t19twl) : (f64, !llvm.ptr, i64) -> f64
     return %t19tr : f64
   ^bb20:
     %t20m = llvm.load %r4 : !llvm.ptr -> f64
     %t20r = func.call @SyntaxParser_Parse_0(%t20m) : (f64) -> f64
     %t20tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t20twl = arith.constant 84 : i64
+    %t20twl = arith.constant 86 : i64
     %t20tr = func.call @strict_trace(%t20r, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t20tr, %r5 : f64, !llvm.ptr
     %t21v = llvm.load %r5 : !llvm.ptr -> f64
@@ -245665,7 +246241,7 @@ module {
     cf.cond_br %t21k, ^bb21e, ^bb22
   ^bb21e:
     %t21tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t21twl = arith.constant 84 : i64
+    %t21twl = arith.constant 86 : i64
     %t21tr = func.call @strict_trace_checked(%t21v, %t21tw, %t21twl) : (f64, !llvm.ptr, i64) -> f64
     return %t21tr : f64
   ^bb22:
@@ -245676,7 +246252,7 @@ module {
     %t23a1 = llvm.load %r6 : !llvm.ptr -> f64
     %t23r = func.call @ValueCodegen_Expression_2(%t23m, %t23a0, %t23a1) : (f64, f64, f64) -> f64
     %t23tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t23twl = arith.constant 84 : i64
+    %t23twl = arith.constant 86 : i64
     %t23tr = func.call @strict_trace(%t23r, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t23tr, %r7 : f64, !llvm.ptr
     %t24 = llvm.load %r7 : !llvm.ptr -> f64
@@ -245688,7 +246264,7 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t26twl = arith.constant 85 : i64
+    %t26twl = arith.constant 87 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
@@ -245708,14 +246284,14 @@ module {
     cf.cond_br %t31k, ^bb31e, ^bb32
   ^bb31e:
     %t31tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t31twl = arith.constant 85 : i64
+    %t31twl = arith.constant 87 : i64
     %t31tr = func.call @strict_trace_checked(%t31v, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     return %t31tr : f64
   ^bb32:
     %t32m = llvm.load %r4 : !llvm.ptr -> f64
     %t32r = func.call @CodeBlock_Result_0(%t32m) : (f64) -> f64
     %t32tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t32twl = arith.constant 85 : i64
+    %t32twl = arith.constant 87 : i64
     %t32tr = func.call @strict_trace(%t32r, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t32tr, %r5 : f64, !llvm.ptr
     %t33v = llvm.load %r5 : !llvm.ptr -> f64
@@ -245723,7 +246299,7 @@ module {
     cf.cond_br %t33k, ^bb33e, ^bb34
   ^bb33e:
     %t33tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t33twl = arith.constant 85 : i64
+    %t33twl = arith.constant 87 : i64
     %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
     return %t33tr : f64
   ^bb34:
@@ -245735,7 +246311,7 @@ module {
     %t35a2 = llvm.load %r6 : !llvm.ptr -> f64
     %t35r = func.call @InstructionEntry_PrintValue_3(%t35m, %t35a0, %t35a1, %t35a2) : (f64, f64, f64, f64) -> f64
     %t35tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t35twl = arith.constant 85 : i64
+    %t35twl = arith.constant 87 : i64
     %t35tr = func.call @strict_trace(%t35r, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t35tr, %r7 : f64, !llvm.ptr
     %t36v = llvm.load %r7 : !llvm.ptr -> f64
@@ -245743,7 +246319,7 @@ module {
     cf.cond_br %t36k, ^bb36e, ^bb37
   ^bb36e:
     %t36tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t36twl = arith.constant 85 : i64
+    %t36twl = arith.constant 87 : i64
     %t36tr = func.call @strict_trace_checked(%t36v, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
     return %t36tr : f64
   ^bb37:
@@ -245751,7 +246327,7 @@ module {
     %t37a0 = llvm.load %r7 : !llvm.ptr -> f64
     %t37r = func.call @CodeBlock_Add_1(%t37m, %t37a0) : (f64, f64) -> f64
     %t37tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t37twl = arith.constant 85 : i64
+    %t37twl = arith.constant 87 : i64
     %t37tr = func.call @strict_trace(%t37r, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t37tr, %r8 : f64, !llvm.ptr
     %t38v = llvm.load %r8 : !llvm.ptr -> f64
@@ -245759,7 +246335,7 @@ module {
     cf.cond_br %t38k, ^bb38e, ^bb39
   ^bb38e:
     %t38tw = llvm.mlir.addressof @wTestCodegen_Timed_2 : !llvm.ptr
-    %t38twl = arith.constant 85 : i64
+    %t38twl = arith.constant 87 : i64
     %t38tr = func.call @strict_trace_checked(%t38v, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
     return %t38tr : f64
   ^bb39:
@@ -250775,6 +251351,28 @@ module {
     llvm.store %zero, %r5 : f64, !llvm.ptr
     %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
+    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r11 : f64, !llvm.ptr
+    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r12 : f64, !llvm.ptr
+    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r13 : f64, !llvm.ptr
+    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r14 : f64, !llvm.ptr
+    %r15 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r15 : f64, !llvm.ptr
+    %r16 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r16 : f64, !llvm.ptr
+    %r17 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r17 : f64, !llvm.ptr
     %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_index : f64, !llvm.ptr
     %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
@@ -250789,10 +251387,14 @@ module {
     llvm.store %zero, %v_instantiation : f64, !llvm.ptr
     %v_listResult1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_listResult1 : f64, !llvm.ptr
-    %v_listResult3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_listResult3 : f64, !llvm.ptr
     %v_listResult4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_listResult4 : f64, !llvm.ptr
+    %v_conditional3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional3 : f64, !llvm.ptr
+    %v_listResult6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_listResult6 : f64, !llvm.ptr
+    %v_listResult7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_listResult7 : f64, !llvm.ptr
     %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %instance : f64, !llvm.ptr
     llvm.store %p0, %instance : f64, !llvm.ptr
@@ -250887,141 +251489,251 @@ module {
     %t14 = llvm.load %r6 : !llvm.ptr -> f64
     return %t14 : f64
   ^bb15:
-    %t16 = llvm.load %v_name : !llvm.ptr -> f64
-    llvm.store %t16, %r0 : f64, !llvm.ptr
-    %t17c = llvm.mlir.addressof @cAutomatic_Generated_1_17 : !llvm.ptr
-    %t17xf = func.call @strict_bits(%t17c) : (!llvm.ptr) -> f64
-    llvm.store %t17xf, %r1 : f64, !llvm.ptr
-    %t18l = llvm.load %r0 : !llvm.ptr -> f64
-    %t18r = llvm.load %r1 : !llvm.ptr -> f64
-    %t18q = func.call @strict_text_equal(%t18l, %t18r) : (f64, f64) -> f64
-    %t18f = arith.cmpf one, %t18q, %zero : f64
-    llvm.store %t18f, %flag : i1, !llvm.ptr
-    %t19 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t19, ^bb20, ^bb31
-  ^bb20:
-    %t20l = func.call @strict_list_empty() : () -> f64
-    llvm.store %t20l, %r2 : f64, !llvm.ptr
-    %t21g = llvm.mlir.addressof @lAutomatic_Generated_1_21 : !llvm.ptr
-    %t21v = llvm.load %t21g : !llvm.ptr -> f64
-    %t21u = arith.cmpf oeq, %t21v, %zero : f64
-    cf.cond_br %t21u, ^l21, ^m21(%t21v : f64)
-  ^l21:
-    %t21q = arith.constant 0x4014000000000000 : f64
-    %t21l = func.call @strict_list_new(%t21q, %zero) : (f64, f64) -> f64
-    %t21e0c = llvm.mlir.addressof @cAutomatic_Generated_1_21_0 : !llvm.ptr
-    %t21e0xf = func.call @strict_bits(%t21e0c) : (!llvm.ptr) -> f64
-    %t21e0l = func.call @strict_list_add(%t21l, %t21e0xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t21e0l) : (f64) -> ()
-    llvm.store %t21e0l, %t21g : f64, !llvm.ptr
-    cf.br ^m21(%t21e0l : f64)
-  ^m21(%t21r: f64):
-    llvm.store %t21r, %r3 : f64, !llvm.ptr
-    %t22a = llvm.load %r2 : !llvm.ptr -> f64
-    %t22b = llvm.load %r3 : !llvm.ptr -> f64
-    %t22c = func.call @strict_list_concat(%t22a, %t22b) : (f64, f64) -> f64
-    llvm.store %t22c, %r4 : f64, !llvm.ptr
-    %t23v = llvm.load %r4 : !llvm.ptr -> f64
-    %t23k = func.call @strict_is_failure(%t23v) : (f64) -> i1
-    cf.cond_br %t23k, ^bb23e, ^bb24
-  ^bb23e:
-    %t23tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
-    %t23twl = arith.constant 29 : i64
-    %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t23tr : f64
-  ^bb24:
-    %t24l = func.call @strict_list_empty() : () -> f64
-    llvm.store %t24l, %v_listResult3 : f64, !llvm.ptr
-    %t25m = llvm.load %instance : !llvm.ptr -> f64
-    %t25r = func.call @Automatic_Hashed_0(%t25m) : (f64) -> f64
-    %t25tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
-    %t25twl = arith.constant 29 : i64
-    %t25tr = func.call @strict_trace(%t25r, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t25tr, %r5 : f64, !llvm.ptr
-    %t26v = llvm.load %r5 : !llvm.ptr -> f64
-    %t26k = func.call @strict_is_failure(%t26v) : (f64) -> i1
-    cf.cond_br %t26k, ^bb26e, ^bb27
-  ^bb26e:
-    %t26tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
-    %t26twl = arith.constant 29 : i64
-    %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t26tr : f64
-  ^bb27:
-    %t27l = llvm.load %v_listResult3 : !llvm.ptr -> f64
-    %t27e = llvm.load %r5 : !llvm.ptr -> f64
-    %t27n = func.call @strict_list_add(%t27l, %t27e) : (f64, f64) -> f64
-    llvm.store %t27n, %v_listResult3 : f64, !llvm.ptr
-    %t28 = llvm.load %v_listResult3 : !llvm.ptr -> f64
-    llvm.store %t28, %r5 : f64, !llvm.ptr
-    %t29a = llvm.load %r4 : !llvm.ptr -> f64
-    %t29b = llvm.load %r5 : !llvm.ptr -> f64
-    %t29c = func.call @strict_list_concat(%t29a, %t29b) : (f64, f64) -> f64
-    llvm.store %t29c, %r6 : f64, !llvm.ptr
-    %t30 = llvm.load %r6 : !llvm.ptr -> f64
-    return %t30 : f64
-  ^bb31:
-    %t32l = func.call @strict_list_empty() : () -> f64
-    llvm.store %t32l, %r0 : f64, !llvm.ptr
-    %t33l = func.call @strict_list_empty() : () -> f64
-    llvm.store %t33l, %v_listResult4 : f64, !llvm.ptr
-    %t34c = llvm.mlir.addressof @cAutomatic_Generated_1_34 : !llvm.ptr
-    %t34xf = func.call @strict_bits(%t34c) : (!llvm.ptr) -> f64
-    llvm.store %t34xf, %r1 : f64, !llvm.ptr
-    %t35 = llvm.load %v_instance : !llvm.ptr -> f64
-    llvm.store %t35, %r2 : f64, !llvm.ptr
-    %t36lx = llvm.load %r1 : !llvm.ptr -> f64
-    %t36rx = llvm.load %r2 : !llvm.ptr -> f64
-    %t36c = func.call @strict_text_concat(%t36lx, %t36rx) : (f64, f64) -> f64
-    llvm.store %t36c, %r3 : f64, !llvm.ptr
-    %t37l = llvm.load %v_listResult4 : !llvm.ptr -> f64
-    %t37e = llvm.load %r3 : !llvm.ptr -> f64
-    %t37n = func.call @strict_list_add(%t37l, %t37e) : (f64, f64) -> f64
-    llvm.store %t37n, %v_listResult4 : f64, !llvm.ptr
-    %t38 = llvm.load %v_listResult4 : !llvm.ptr -> f64
-    llvm.store %t38, %r1 : f64, !llvm.ptr
-    %t39a = llvm.load %r0 : !llvm.ptr -> f64
-    %t39b = llvm.load %r1 : !llvm.ptr -> f64
-    %t39c = func.call @strict_list_concat(%t39a, %t39b) : (f64, f64) -> f64
-    llvm.store %t39c, %r2 : f64, !llvm.ptr
-    %t40v = llvm.load %r2 : !llvm.ptr -> f64
-    %t40k = func.call @strict_is_failure(%t40v) : (f64) -> i1
-    cf.cond_br %t40k, ^bb40e, ^bb41
-  ^bb40e:
-    %t40tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
-    %t40twl = arith.constant 30 : i64
-    %t40tr = func.call @strict_trace_checked(%t40v, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t40tr : f64
+    %t16g = llvm.mlir.addressof @lAutomatic_Generated_1_16 : !llvm.ptr
+    %t16v = llvm.load %t16g : !llvm.ptr -> f64
+    %t16u = arith.cmpf oeq, %t16v, %zero : f64
+    cf.cond_br %t16u, ^l16, ^m16(%t16v : f64)
+  ^l16:
+    %t16q = arith.constant 0x4018000000000000 : f64
+    %t16l = func.call @strict_list_new(%t16q, %zero) : (f64, f64) -> f64
+    %t16e0c = llvm.mlir.addressof @cAutomatic_Generated_1_16_0 : !llvm.ptr
+    %t16e0xf = func.call @strict_bits(%t16e0c) : (!llvm.ptr) -> f64
+    %t16e0l = func.call @strict_list_add(%t16l, %t16e0xf) : (f64, f64) -> f64
+    %t16e1c = llvm.mlir.addressof @cAutomatic_Generated_1_16_1 : !llvm.ptr
+    %t16e1xf = func.call @strict_bits(%t16e1c) : (!llvm.ptr) -> f64
+    %t16e1l = func.call @strict_list_add(%t16e0l, %t16e1xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t16e1l) : (f64) -> ()
+    llvm.store %t16e1l, %t16g : f64, !llvm.ptr
+    cf.br ^m16(%t16e1l : f64)
+  ^m16(%t16r: f64):
+    llvm.store %t16r, %r0 : f64, !llvm.ptr
+    %t17 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t17, %r1 : f64, !llvm.ptr
+    %t18m = llvm.load %r0 : !llvm.ptr -> f64
+    %t18a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t18q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t18r = func.call @strict_list_has(%t18m, %t18a0, %t18q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t18r, %r2 : f64, !llvm.ptr
+    %t19c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t19c, %r3 : f64, !llvm.ptr
+    %t20a = llvm.load %r2 : !llvm.ptr -> f64
+    %t20b = llvm.load %r3 : !llvm.ptr -> f64
+    %t20c = arith.cmpf oeq, %t20a, %t20b : f64
+    llvm.store %t20c, %flag : i1, !llvm.ptr
+    %t21 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t21, ^bb22, ^bb55
+  ^bb22:
+    %t22 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t22, %r4 : f64, !llvm.ptr
+    %t23c = llvm.mlir.addressof @cAutomatic_Generated_1_23 : !llvm.ptr
+    %t23xf = func.call @strict_bits(%t23c) : (!llvm.ptr) -> f64
+    llvm.store %t23xf, %r5 : f64, !llvm.ptr
+    %t24l = llvm.load %r4 : !llvm.ptr -> f64
+    %t24r = llvm.load %r5 : !llvm.ptr -> f64
+    %t24q = func.call @strict_text_equal(%t24l, %t24r) : (f64, f64) -> f64
+    %t24f = arith.cmpf one, %t24q, %zero : f64
+    llvm.store %t24f, %flag : i1, !llvm.ptr
+    %t25 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t25, ^bb26, ^bb39
+  ^bb26:
+    %t26l = func.call @strict_list_empty() : () -> f64
+    llvm.store %t26l, %r6 : f64, !llvm.ptr
+    %t27g = llvm.mlir.addressof @lAutomatic_Generated_1_27 : !llvm.ptr
+    %t27v = llvm.load %t27g : !llvm.ptr -> f64
+    %t27u = arith.cmpf oeq, %t27v, %zero : f64
+    cf.cond_br %t27u, ^l27, ^m27(%t27v : f64)
+  ^l27:
+    %t27q = arith.constant 0x4014000000000000 : f64
+    %t27l = func.call @strict_list_new(%t27q, %zero) : (f64, f64) -> f64
+    %t27e0c = llvm.mlir.addressof @cAutomatic_Generated_1_27_0 : !llvm.ptr
+    %t27e0xf = func.call @strict_bits(%t27e0c) : (!llvm.ptr) -> f64
+    %t27e0l = func.call @strict_list_add(%t27l, %t27e0xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t27e0l) : (f64) -> ()
+    llvm.store %t27e0l, %t27g : f64, !llvm.ptr
+    cf.br ^m27(%t27e0l : f64)
+  ^m27(%t27r: f64):
+    llvm.store %t27r, %r7 : f64, !llvm.ptr
+    %t28a = llvm.load %r6 : !llvm.ptr -> f64
+    %t28b = llvm.load %r7 : !llvm.ptr -> f64
+    %t28c = func.call @strict_list_concat(%t28a, %t28b) : (f64, f64) -> f64
+    llvm.store %t28c, %r8 : f64, !llvm.ptr
+    %t29v = llvm.load %r8 : !llvm.ptr -> f64
+    %t29k = func.call @strict_is_failure(%t29v) : (f64) -> i1
+    cf.cond_br %t29k, ^bb29e, ^bb30
+  ^bb29e:
+    %t29tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
+    %t29twl = arith.constant 29 : i64
+    %t29tr = func.call @strict_trace_checked(%t29v, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t29tr : f64
+  ^bb30:
+    %t30l = func.call @strict_list_empty() : () -> f64
+    llvm.store %t30l, %v_listResult4 : f64, !llvm.ptr
+    %t31m = llvm.load %instance : !llvm.ptr -> f64
+    %t31r = func.call @Automatic_Coded_0(%t31m) : (f64) -> f64
+    %t31tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
+    %t31twl = arith.constant 29 : i64
+    %t31tr = func.call @strict_trace(%t31r, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t31tr, %r9 : f64, !llvm.ptr
+    %t32v = llvm.load %r9 : !llvm.ptr -> f64
+    %t32k = func.call @strict_is_failure(%t32v) : (f64) -> i1
+    cf.cond_br %t32k, ^bb32e, ^bb33
+  ^bb32e:
+    %t32tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
+    %t32twl = arith.constant 29 : i64
+    %t32tr = func.call @strict_trace_checked(%t32v, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t32tr : f64
+  ^bb33:
+    %t33l = llvm.load %v_listResult4 : !llvm.ptr -> f64
+    %t33e = llvm.load %r9 : !llvm.ptr -> f64
+    %t33n = func.call @strict_list_add(%t33l, %t33e) : (f64, f64) -> f64
+    llvm.store %t33n, %v_listResult4 : f64, !llvm.ptr
+    %t34 = llvm.load %v_listResult4 : !llvm.ptr -> f64
+    llvm.store %t34, %r9 : f64, !llvm.ptr
+    %t35a = llvm.load %r8 : !llvm.ptr -> f64
+    %t35b = llvm.load %r9 : !llvm.ptr -> f64
+    %t35c = func.call @strict_list_concat(%t35a, %t35b) : (f64, f64) -> f64
+    llvm.store %t35c, %r10 : f64, !llvm.ptr
+    %t36 = llvm.load %r10 : !llvm.ptr -> f64
+    llvm.store %t36, %v_conditional3 : f64, !llvm.ptr
+    %t37c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t37c, %r11 : f64, !llvm.ptr
+    %t38a = llvm.load %r11 : !llvm.ptr -> f64
+    %t38b = llvm.load %r11 : !llvm.ptr -> f64
+    %t38c = arith.cmpf oeq, %t38a, %t38b : f64
+    llvm.store %t38c, %flag : i1, !llvm.ptr
+    cf.br ^bb39
+  ^bb39:
+    %t40 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t40, ^bb52, ^bb41
   ^bb41:
-    %t41g = llvm.mlir.addressof @lAutomatic_Generated_1_41 : !llvm.ptr
-    %t41v = llvm.load %t41g : !llvm.ptr -> f64
-    %t41u = arith.cmpf oeq, %t41v, %zero : f64
-    cf.cond_br %t41u, ^l41, ^m41(%t41v : f64)
-  ^l41:
-    %t41q = arith.constant 0x4014000000000000 : f64
-    %t41l = func.call @strict_list_new(%t41q, %zero) : (f64, f64) -> f64
-    %t41e0c = llvm.mlir.addressof @cAutomatic_Generated_1_41_0 : !llvm.ptr
-    %t41e0xf = func.call @strict_bits(%t41e0c) : (!llvm.ptr) -> f64
-    %t41e0l = func.call @strict_list_add(%t41l, %t41e0xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t41e0l) : (f64) -> ()
-    llvm.store %t41e0l, %t41g : f64, !llvm.ptr
-    cf.br ^m41(%t41e0l : f64)
-  ^m41(%t41r: f64):
-    llvm.store %t41r, %r3 : f64, !llvm.ptr
-    %t42a = llvm.load %r2 : !llvm.ptr -> f64
-    %t42b = llvm.load %r3 : !llvm.ptr -> f64
-    %t42c = func.call @strict_list_concat(%t42a, %t42b) : (f64, f64) -> f64
-    llvm.store %t42c, %r4 : f64, !llvm.ptr
-    %t43v = llvm.load %r4 : !llvm.ptr -> f64
-    %t43k = func.call @strict_is_failure(%t43v) : (f64) -> i1
-    cf.cond_br %t43k, ^bb43e, ^bb44
-  ^bb43e:
-    %t43tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
-    %t43twl = arith.constant 30 : i64
-    %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t43tr : f64
-  ^bb44:
-    %t44 = llvm.load %r4 : !llvm.ptr -> f64
-    return %t44 : f64
+    %t41l = func.call @strict_list_empty() : () -> f64
+    llvm.store %t41l, %r12 : f64, !llvm.ptr
+    %t42g = llvm.mlir.addressof @lAutomatic_Generated_1_42 : !llvm.ptr
+    %t42v = llvm.load %t42g : !llvm.ptr -> f64
+    %t42u = arith.cmpf oeq, %t42v, %zero : f64
+    cf.cond_br %t42u, ^l42, ^m42(%t42v : f64)
+  ^l42:
+    %t42q = arith.constant 0x4014000000000000 : f64
+    %t42l = func.call @strict_list_new(%t42q, %zero) : (f64, f64) -> f64
+    %t42e0c = llvm.mlir.addressof @cAutomatic_Generated_1_42_0 : !llvm.ptr
+    %t42e0xf = func.call @strict_bits(%t42e0c) : (!llvm.ptr) -> f64
+    %t42e0l = func.call @strict_list_add(%t42l, %t42e0xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t42e0l) : (f64) -> ()
+    llvm.store %t42e0l, %t42g : f64, !llvm.ptr
+    cf.br ^m42(%t42e0l : f64)
+  ^m42(%t42r: f64):
+    llvm.store %t42r, %r13 : f64, !llvm.ptr
+    %t43a = llvm.load %r12 : !llvm.ptr -> f64
+    %t43b = llvm.load %r13 : !llvm.ptr -> f64
+    %t43c = func.call @strict_list_concat(%t43a, %t43b) : (f64, f64) -> f64
+    llvm.store %t43c, %r14 : f64, !llvm.ptr
+    %t44v = llvm.load %r14 : !llvm.ptr -> f64
+    %t44k = func.call @strict_is_failure(%t44v) : (f64) -> i1
+    cf.cond_br %t44k, ^bb44e, ^bb45
+  ^bb44e:
+    %t44tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
+    %t44twl = arith.constant 29 : i64
+    %t44tr = func.call @strict_trace_checked(%t44v, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t44tr : f64
+  ^bb45:
+    %t45l = func.call @strict_list_empty() : () -> f64
+    llvm.store %t45l, %v_listResult6 : f64, !llvm.ptr
+    %t46m = llvm.load %instance : !llvm.ptr -> f64
+    %t46r = func.call @Automatic_Hashed_0(%t46m) : (f64) -> f64
+    %t46tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
+    %t46twl = arith.constant 29 : i64
+    %t46tr = func.call @strict_trace(%t46r, %t46tw, %t46twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t46tr, %r15 : f64, !llvm.ptr
+    %t47v = llvm.load %r15 : !llvm.ptr -> f64
+    %t47k = func.call @strict_is_failure(%t47v) : (f64) -> i1
+    cf.cond_br %t47k, ^bb47e, ^bb48
+  ^bb47e:
+    %t47tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
+    %t47twl = arith.constant 29 : i64
+    %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t47tr : f64
+  ^bb48:
+    %t48l = llvm.load %v_listResult6 : !llvm.ptr -> f64
+    %t48e = llvm.load %r15 : !llvm.ptr -> f64
+    %t48n = func.call @strict_list_add(%t48l, %t48e) : (f64, f64) -> f64
+    llvm.store %t48n, %v_listResult6 : f64, !llvm.ptr
+    %t49 = llvm.load %v_listResult6 : !llvm.ptr -> f64
+    llvm.store %t49, %r15 : f64, !llvm.ptr
+    %t50a = llvm.load %r14 : !llvm.ptr -> f64
+    %t50b = llvm.load %r15 : !llvm.ptr -> f64
+    %t50c = func.call @strict_list_concat(%t50a, %t50b) : (f64, f64) -> f64
+    llvm.store %t50c, %r16 : f64, !llvm.ptr
+    %t51 = llvm.load %r16 : !llvm.ptr -> f64
+    llvm.store %t51, %v_conditional3 : f64, !llvm.ptr
+    cf.br ^bb52
+  ^bb52:
+    %t53 = llvm.load %v_conditional3 : !llvm.ptr -> f64
+    llvm.store %t53, %r17 : f64, !llvm.ptr
+    %t54 = llvm.load %r17 : !llvm.ptr -> f64
+    return %t54 : f64
+  ^bb55:
+    %t56l = func.call @strict_list_empty() : () -> f64
+    llvm.store %t56l, %r0 : f64, !llvm.ptr
+    %t57l = func.call @strict_list_empty() : () -> f64
+    llvm.store %t57l, %v_listResult7 : f64, !llvm.ptr
+    %t58c = llvm.mlir.addressof @cAutomatic_Generated_1_58 : !llvm.ptr
+    %t58xf = func.call @strict_bits(%t58c) : (!llvm.ptr) -> f64
+    llvm.store %t58xf, %r1 : f64, !llvm.ptr
+    %t59 = llvm.load %v_instance : !llvm.ptr -> f64
+    llvm.store %t59, %r2 : f64, !llvm.ptr
+    %t60lx = llvm.load %r1 : !llvm.ptr -> f64
+    %t60rx = llvm.load %r2 : !llvm.ptr -> f64
+    %t60c = func.call @strict_text_concat(%t60lx, %t60rx) : (f64, f64) -> f64
+    llvm.store %t60c, %r3 : f64, !llvm.ptr
+    %t61l = llvm.load %v_listResult7 : !llvm.ptr -> f64
+    %t61e = llvm.load %r3 : !llvm.ptr -> f64
+    %t61n = func.call @strict_list_add(%t61l, %t61e) : (f64, f64) -> f64
+    llvm.store %t61n, %v_listResult7 : f64, !llvm.ptr
+    %t62 = llvm.load %v_listResult7 : !llvm.ptr -> f64
+    llvm.store %t62, %r1 : f64, !llvm.ptr
+    %t63a = llvm.load %r0 : !llvm.ptr -> f64
+    %t63b = llvm.load %r1 : !llvm.ptr -> f64
+    %t63c = func.call @strict_list_concat(%t63a, %t63b) : (f64, f64) -> f64
+    llvm.store %t63c, %r2 : f64, !llvm.ptr
+    %t64v = llvm.load %r2 : !llvm.ptr -> f64
+    %t64k = func.call @strict_is_failure(%t64v) : (f64) -> i1
+    cf.cond_br %t64k, ^bb64e, ^bb65
+  ^bb64e:
+    %t64tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
+    %t64twl = arith.constant 30 : i64
+    %t64tr = func.call @strict_trace_checked(%t64v, %t64tw, %t64twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t64tr : f64
+  ^bb65:
+    %t65g = llvm.mlir.addressof @lAutomatic_Generated_1_65 : !llvm.ptr
+    %t65v = llvm.load %t65g : !llvm.ptr -> f64
+    %t65u = arith.cmpf oeq, %t65v, %zero : f64
+    cf.cond_br %t65u, ^l65, ^m65(%t65v : f64)
+  ^l65:
+    %t65q = arith.constant 0x4014000000000000 : f64
+    %t65l = func.call @strict_list_new(%t65q, %zero) : (f64, f64) -> f64
+    %t65e0c = llvm.mlir.addressof @cAutomatic_Generated_1_65_0 : !llvm.ptr
+    %t65e0xf = func.call @strict_bits(%t65e0c) : (!llvm.ptr) -> f64
+    %t65e0l = func.call @strict_list_add(%t65l, %t65e0xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t65e0l) : (f64) -> ()
+    llvm.store %t65e0l, %t65g : f64, !llvm.ptr
+    cf.br ^m65(%t65e0l : f64)
+  ^m65(%t65r: f64):
+    llvm.store %t65r, %r3 : f64, !llvm.ptr
+    %t66a = llvm.load %r2 : !llvm.ptr -> f64
+    %t66b = llvm.load %r3 : !llvm.ptr -> f64
+    %t66c = func.call @strict_list_concat(%t66a, %t66b) : (f64, f64) -> f64
+    llvm.store %t66c, %r4 : f64, !llvm.ptr
+    %t67v = llvm.load %r4 : !llvm.ptr -> f64
+    %t67k = func.call @strict_is_failure(%t67v) : (f64) -> i1
+    cf.cond_br %t67k, ^bb67e, ^bb68
+  ^bb67e:
+    %t67tw = llvm.mlir.addressof @wAutomatic_Generated_1 : !llvm.ptr
+    %t67twl = arith.constant 30 : i64
+    %t67tr = func.call @strict_trace_checked(%t67v, %t67tw, %t67twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t67tr : f64
+  ^bb68:
+    %t68 = llvm.load %r4 : !llvm.ptr -> f64
+    return %t68 : f64
   }
   func.func private @TypeCodegen_Selected_1(%p0: f64, %p1: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -287806,7 +288518,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_VmValue__Last_0 : !llvm.ptr
-    %t2twl = arith.constant 99 : i64
+    %t2twl = arith.constant 106 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -288828,7 +289540,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_VmValue__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -289702,6 +290414,28 @@ module {
     llvm.store %zero, %r11 : f64, !llvm.ptr
     %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %r12 : f64, !llvm.ptr
+    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r13 : f64, !llvm.ptr
+    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r14 : f64, !llvm.ptr
+    %r15 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r15 : f64, !llvm.ptr
+    %r16 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r16 : f64, !llvm.ptr
+    %r17 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r17 : f64, !llvm.ptr
+    %r18 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r18 : f64, !llvm.ptr
+    %r19 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r19 : f64, !llvm.ptr
+    %r20 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r20 : f64, !llvm.ptr
+    %r21 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r21 : f64, !llvm.ptr
+    %r22 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r22 : f64, !llvm.ptr
+    %r23 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r23 : f64, !llvm.ptr
     %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_index : f64, !llvm.ptr
     %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
@@ -289710,10 +290444,16 @@ module {
     llvm.store %zero, %v_call : f64, !llvm.ptr
     %v_type = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_type : f64, !llvm.ptr
-    %v_conditional1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_conditional1 : f64, !llvm.ptr
-    %v_conditional5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_conditional5 : f64, !llvm.ptr
+    %v_logical0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_logical0 : f64, !llvm.ptr
+    %v_logical1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_logical1 : f64, !llvm.ptr
+    %v_conditional3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional3 : f64, !llvm.ptr
+    %v_conditional6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional6 : f64, !llvm.ptr
+    %v_conditional9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional9 : f64, !llvm.ptr
     %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %instance : f64, !llvm.ptr
     llvm.store %p0, %instance : f64, !llvm.ptr
@@ -289746,26 +290486,14 @@ module {
     llvm.store %t3tr, %r2 : f64, !llvm.ptr
     %t4 = llvm.load %r2 : !llvm.ptr -> f64
     llvm.store %t4, %v_type : f64, !llvm.ptr
-    %t5g = llvm.mlir.addressof @lHosted_Result_0_5 : !llvm.ptr
-    %t5v = llvm.load %t5g : !llvm.ptr -> f64
-    %t5u = arith.cmpf oeq, %t5v, %zero : f64
-    cf.cond_br %t5u, ^l5, ^m5(%t5v : f64)
-  ^l5:
-    %t5q = arith.constant 0x4018000000000000 : f64
-    %t5l = func.call @strict_list_new(%t5q, %zero) : (f64, f64) -> f64
-    %t5e0c = llvm.mlir.addressof @cHosted_Result_0_5_0 : !llvm.ptr
-    %t5e0xf = func.call @strict_bits(%t5e0c) : (!llvm.ptr) -> f64
-    %t5e0l = func.call @strict_list_add(%t5l, %t5e0xf) : (f64, f64) -> f64
-    %t5e1c = llvm.mlir.addressof @cHosted_Result_0_5_1 : !llvm.ptr
-    %t5e1xf = func.call @strict_bits(%t5e1c) : (!llvm.ptr) -> f64
-    %t5e1l = func.call @strict_list_add(%t5e0l, %t5e1xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t5e1l) : (f64) -> ()
-    llvm.store %t5e1l, %t5g : f64, !llvm.ptr
-    cf.br ^m5(%t5e1l : f64)
-  ^m5(%t5r: f64):
-    llvm.store %t5r, %r0 : f64, !llvm.ptr
-    %t6 = llvm.load %v_type : !llvm.ptr -> f64
-    llvm.store %t6, %r1 : f64, !llvm.ptr
+    %t5 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t5, %r0 : f64, !llvm.ptr
+    %t6m = llvm.load %r0 : !llvm.ptr -> f64
+    %t6r = func.call @Invocation_MethodName_0(%t6m) : (f64) -> f64
+    %t6tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t6twl = arith.constant 25 : i64
+    %t6tr = func.call @strict_trace(%t6r, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t6tr, %r1 : f64, !llvm.ptr
     %t7v = llvm.load %r1 : !llvm.ptr -> f64
     %t7k = func.call @strict_is_failure(%t7v) : (f64) -> i1
     cf.cond_br %t7k, ^bb7e, ^bb8
@@ -289775,215 +290503,177 @@ module {
     %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     return %t7tr : f64
   ^bb8:
-    %t8m = llvm.load %r0 : !llvm.ptr -> f64
-    %t8a0 = llvm.load %r1 : !llvm.ptr -> f64
-    %t8q = func.constant @strict_text_equal : (f64, f64) -> f64
-    %t8r = func.call @strict_list_has(%t8m, %t8a0, %t8q) : (f64, f64, (f64, f64) -> f64) -> f64
-    llvm.store %t8r, %r2 : f64, !llvm.ptr
-    %t9c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t9c, %r3 : f64, !llvm.ptr
-    %t10a = llvm.load %r2 : !llvm.ptr -> f64
-    %t10b = llvm.load %r3 : !llvm.ptr -> f64
-    %t10c = arith.cmpf oeq, %t10a, %t10b : f64
-    llvm.store %t10c, %flag : i1, !llvm.ptr
-    %t11 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t11, ^bb12, ^bb32
-  ^bb12:
-    %t12 = llvm.load %v_type : !llvm.ptr -> f64
-    llvm.store %t12, %r4 : f64, !llvm.ptr
-    %t13v = llvm.load %r4 : !llvm.ptr -> f64
-    %t13k = func.call @strict_is_failure(%t13v) : (f64) -> i1
-    cf.cond_br %t13k, ^bb13e, ^bb14
-  ^bb13e:
-    %t13tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t13twl = arith.constant 26 : i64
-    %t13tr = func.call @strict_trace_checked(%t13v, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t13tr : f64
+    %t8c = llvm.mlir.addressof @cHosted_Result_0_8 : !llvm.ptr
+    %t8xf = func.call @strict_bits(%t8c) : (!llvm.ptr) -> f64
+    llvm.store %t8xf, %r2 : f64, !llvm.ptr
+    %t9l = llvm.load %r1 : !llvm.ptr -> f64
+    %t9r = llvm.load %r2 : !llvm.ptr -> f64
+    %t9q = func.call @strict_text_equal(%t9l, %t9r) : (f64, f64) -> f64
+    %t9f = arith.cmpf one, %t9q, %zero : f64
+    llvm.store %t9f, %flag : i1, !llvm.ptr
+    %t9d = arith.uitofp %t9f : i1 to f64
+    llvm.store %t9d, %r3 : f64, !llvm.ptr
+    %t10 = llvm.load %r3 : !llvm.ptr -> f64
+    llvm.store %t10, %v_logical0 : f64, !llvm.ptr
+    %t11c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t11c, %r4 : f64, !llvm.ptr
+    %t12a = llvm.load %r3 : !llvm.ptr -> f64
+    %t12b = llvm.load %r4 : !llvm.ptr -> f64
+    %t12c = arith.cmpf oeq, %t12a, %t12b : f64
+    llvm.store %t12c, %flag : i1, !llvm.ptr
+    %t13 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t13, ^bb31, ^bb14
   ^bb14:
-    %t14c = llvm.mlir.addressof @cHosted_Result_0_14 : !llvm.ptr
-    %t14xf = func.call @strict_bits(%t14c) : (!llvm.ptr) -> f64
-    llvm.store %t14xf, %r5 : f64, !llvm.ptr
-    %t15l = llvm.load %r4 : !llvm.ptr -> f64
-    %t15r = llvm.load %r5 : !llvm.ptr -> f64
-    %t15q = func.call @strict_text_equal(%t15l, %t15r) : (f64, f64) -> f64
-    %t15f = arith.cmpf one, %t15q, %zero : f64
-    llvm.store %t15f, %flag : i1, !llvm.ptr
-    %t16 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t16, ^bb17, ^bb21
-  ^bb17:
-    %t17m = llvm.load %instance : !llvm.ptr -> f64
-    %t17r = func.call @Hosted_Processed_0(%t17m) : (f64) -> f64
-    %t17tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t17twl = arith.constant 26 : i64
-    %t17tr = func.call @strict_trace(%t17r, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t17tr, %r6 : f64, !llvm.ptr
-    %t18 = llvm.load %r6 : !llvm.ptr -> f64
-    llvm.store %t18, %v_conditional1 : f64, !llvm.ptr
+    %t14 = llvm.load %v_type : !llvm.ptr -> f64
+    llvm.store %t14, %r5 : f64, !llvm.ptr
+    %t15v = llvm.load %r5 : !llvm.ptr -> f64
+    %t15k = func.call @strict_is_failure(%t15v) : (f64) -> i1
+    cf.cond_br %t15k, ^bb15e, ^bb16
+  ^bb15e:
+    %t15tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t15twl = arith.constant 25 : i64
+    %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t15tr : f64
+  ^bb16:
+    %t16c = llvm.mlir.addressof @cHosted_Result_0_16 : !llvm.ptr
+    %t16xf = func.call @strict_bits(%t16c) : (!llvm.ptr) -> f64
+    llvm.store %t16xf, %r6 : f64, !llvm.ptr
+    %t17l = llvm.load %r5 : !llvm.ptr -> f64
+    %t17r = llvm.load %r6 : !llvm.ptr -> f64
+    %t17q = func.call @strict_text_equal(%t17l, %t17r) : (f64, f64) -> f64
+    %t17f = arith.cmpf one, %t17q, %zero : f64
+    llvm.store %t17f, %flag : i1, !llvm.ptr
+    %t17d = arith.uitofp %t17f : i1 to f64
+    llvm.store %t17d, %r7 : f64, !llvm.ptr
+    %t18 = llvm.load %r7 : !llvm.ptr -> f64
+    llvm.store %t18, %v_logical1 : f64, !llvm.ptr
     %t19c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t19c, %r7 : f64, !llvm.ptr
+    llvm.store %t19c, %r8 : f64, !llvm.ptr
     %t20a = llvm.load %r7 : !llvm.ptr -> f64
-    %t20b = llvm.load %r7 : !llvm.ptr -> f64
+    %t20b = llvm.load %r8 : !llvm.ptr -> f64
     %t20c = arith.cmpf oeq, %t20a, %t20b : f64
     llvm.store %t20c, %flag : i1, !llvm.ptr
-    cf.br ^bb21
-  ^bb21:
-    %t22 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t22, ^bb29, ^bb23
-  ^bb23:
-    %t23 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t23, %r8 : f64, !llvm.ptr
-    %t24l = func.call @strict_list_empty() : () -> f64
-    llvm.store %t24l, %r9 : f64, !llvm.ptr
-    %t25oz = arith.constant 24 : i64
-    %t25op = func.call @strict_alloc(%t25oz) : (i64) -> !llvm.ptr
-    %t25s0 = llvm.getelementptr %t25op[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t25a0 = llvm.load %r8 : !llvm.ptr -> f64
-    llvm.store %t25a0, %t25s0 : f64, !llvm.ptr
-    %t25s1 = llvm.getelementptr %t25op[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t25a1 = llvm.load %r9 : !llvm.ptr -> f64
-    llvm.store %t25a1, %t25s1 : f64, !llvm.ptr
-    %t25s2 = llvm.getelementptr %t25op[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t25d2c = llvm.mlir.addressof @strict_empty : !llvm.ptr
-    %t25d2xf = func.call @strict_bits(%t25d2c) : (!llvm.ptr) -> f64
-    llvm.store %t25d2xf, %t25s2 : f64, !llvm.ptr
-    %t25of = func.call @strict_bits(%t25op) : (!llvm.ptr) -> f64
-    llvm.store %t25of, %r10 : f64, !llvm.ptr
-    %t26v = llvm.load %r10 : !llvm.ptr -> f64
-    %t26k = func.call @strict_is_failure(%t26v) : (f64) -> i1
-    cf.cond_br %t26k, ^bb26e, ^bb27
-  ^bb26e:
-    %t26tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t26twl = arith.constant 26 : i64
-    %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t26tr : f64
-  ^bb27:
-    %t27m = llvm.load %r10 : !llvm.ptr -> f64
-    %t27r = func.call @Foreign_Hosted_0(%t27m) : (f64) -> f64
-    %t27tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t27twl = arith.constant 26 : i64
-    %t27tr = func.call @strict_trace(%t27r, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t27tr, %r11 : f64, !llvm.ptr
-    %t28 = llvm.load %r11 : !llvm.ptr -> f64
-    llvm.store %t28, %v_conditional1 : f64, !llvm.ptr
-    cf.br ^bb29
-  ^bb29:
-    %t30 = llvm.load %v_conditional1 : !llvm.ptr -> f64
-    llvm.store %t30, %r12 : f64, !llvm.ptr
-    %t31 = llvm.load %r12 : !llvm.ptr -> f64
-    return %t31 : f64
-  ^bb32:
-    %t33 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t33, %r0 : f64, !llvm.ptr
-    %t34m = llvm.load %r0 : !llvm.ptr -> f64
-    %t34r = func.call @Invocation_MethodName_0(%t34m) : (f64) -> f64
-    %t34tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t34twl = arith.constant 27 : i64
-    %t34tr = func.call @strict_trace(%t34r, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t34tr, %r1 : f64, !llvm.ptr
-    %t35v = llvm.load %r1 : !llvm.ptr -> f64
-    %t35k = func.call @strict_is_failure(%t35v) : (f64) -> i1
-    cf.cond_br %t35k, ^bb35e, ^bb36
-  ^bb35e:
-    %t35tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t35twl = arith.constant 27 : i64
-    %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t35tr : f64
+    %t21 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t21, ^bb22, ^bb28
+  ^bb22:
+    %t22 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t22, %r9 : f64, !llvm.ptr
+    %t23m = llvm.load %r9 : !llvm.ptr -> f64
+    %t23r = func.call @Invocation_MethodName_0(%t23m) : (f64) -> f64
+    %t23tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t23twl = arith.constant 25 : i64
+    %t23tr = func.call @strict_trace(%t23r, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t23tr, %r10 : f64, !llvm.ptr
+    %t24v = llvm.load %r10 : !llvm.ptr -> f64
+    %t24k = func.call @strict_is_failure(%t24v) : (f64) -> i1
+    cf.cond_br %t24k, ^bb24e, ^bb25
+  ^bb24e:
+    %t24tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t24twl = arith.constant 25 : i64
+    %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t24tr : f64
+  ^bb25:
+    %t25c = llvm.mlir.addressof @cHosted_Result_0_25 : !llvm.ptr
+    %t25xf = func.call @strict_bits(%t25c) : (!llvm.ptr) -> f64
+    llvm.store %t25xf, %r11 : f64, !llvm.ptr
+    %t26l = llvm.load %r10 : !llvm.ptr -> f64
+    %t26r = llvm.load %r11 : !llvm.ptr -> f64
+    %t26q = func.call @strict_text_equal(%t26l, %t26r) : (f64, f64) -> f64
+    %t26f = arith.cmpf one, %t26q, %zero : f64
+    llvm.store %t26f, %flag : i1, !llvm.ptr
+    %t26d = arith.uitofp %t26f : i1 to f64
+    llvm.store %t26d, %r12 : f64, !llvm.ptr
+    %t27 = llvm.load %r12 : !llvm.ptr -> f64
+    llvm.store %t27, %v_logical1 : f64, !llvm.ptr
+    cf.br ^bb28
+  ^bb28:
+    %t29 = llvm.load %v_logical1 : !llvm.ptr -> f64
+    llvm.store %t29, %r13 : f64, !llvm.ptr
+    %t30 = llvm.load %r13 : !llvm.ptr -> f64
+    llvm.store %t30, %v_logical0 : f64, !llvm.ptr
+    cf.br ^bb31
+  ^bb31:
+    %t32 = llvm.load %v_logical0 : !llvm.ptr -> f64
+    llvm.store %t32, %r14 : f64, !llvm.ptr
+    %t33c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t33c, %r15 : f64, !llvm.ptr
+    %t34a = llvm.load %r14 : !llvm.ptr -> f64
+    %t34b = llvm.load %r15 : !llvm.ptr -> f64
+    %t34c = arith.cmpf oeq, %t34a, %t34b : f64
+    llvm.store %t34c, %flag : i1, !llvm.ptr
+    %t35 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t35, ^bb36, ^bb55
   ^bb36:
-    %t36c = llvm.mlir.addressof @cHosted_Result_0_36 : !llvm.ptr
-    %t36xf = func.call @strict_bits(%t36c) : (!llvm.ptr) -> f64
-    llvm.store %t36xf, %r2 : f64, !llvm.ptr
-    %t37l = llvm.load %r1 : !llvm.ptr -> f64
-    %t37r = llvm.load %r2 : !llvm.ptr -> f64
-    %t37q = func.call @strict_text_equal(%t37l, %t37r) : (f64, f64) -> f64
-    %t37f = arith.cmpf one, %t37q, %zero : f64
-    llvm.store %t37f, %flag : i1, !llvm.ptr
-    %t38 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t38, ^bb39, ^bb43
+    %t36 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t36, %r16 : f64, !llvm.ptr
+    %t37m = llvm.load %r16 : !llvm.ptr -> f64
+    %t37r = func.call @Invocation_MethodName_0(%t37m) : (f64) -> f64
+    %t37tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t37twl = arith.constant 26 : i64
+    %t37tr = func.call @strict_trace(%t37r, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t37tr, %r17 : f64, !llvm.ptr
+    %t38v = llvm.load %r17 : !llvm.ptr -> f64
+    %t38k = func.call @strict_is_failure(%t38v) : (f64) -> i1
+    cf.cond_br %t38k, ^bb38e, ^bb39
+  ^bb38e:
+    %t38tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t38twl = arith.constant 26 : i64
+    %t38tr = func.call @strict_trace_checked(%t38v, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t38tr : f64
   ^bb39:
-    %t39m = arith.constant 0.0 : f64
-    %t39r = func.call @strict_directory_current(%t39m) : (f64) -> f64
-    llvm.store %t39r, %r3 : f64, !llvm.ptr
-    %t40v = llvm.load %r3 : !llvm.ptr -> f64
-    %t40k = func.call @strict_is_failure(%t40v) : (f64) -> i1
-    cf.cond_br %t40k, ^bb40e, ^bb41
-  ^bb40e:
-    %t40tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t40twl = arith.constant 28 : i64
-    %t40tr = func.call @strict_trace_checked(%t40v, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t40tr : f64
-  ^bb41:
-    %t41m = arith.constant 0.0 : f64
-    %t41a0 = llvm.load %r3 : !llvm.ptr -> f64
-    %t41r = func.call @VmValue_OfText_1(%t41m, %t41a0) : (f64, f64) -> f64
-    %t41tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t41twl = arith.constant 28 : i64
-    %t41tr = func.call @strict_trace(%t41r, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t41tr, %r4 : f64, !llvm.ptr
-    %t42 = llvm.load %r4 : !llvm.ptr -> f64
-    return %t42 : f64
-  ^bb43:
-    %t44g = llvm.mlir.addressof @lHosted_Result_0_44 : !llvm.ptr
-    %t44v = llvm.load %t44g : !llvm.ptr -> f64
-    %t44u = arith.cmpf oeq, %t44v, %zero : f64
-    cf.cond_br %t44u, ^l44, ^m44(%t44v : f64)
-  ^l44:
-    %t44q = arith.constant 0x4018000000000000 : f64
-    %t44l = func.call @strict_list_new(%t44q, %zero) : (f64, f64) -> f64
-    %t44e0c = llvm.mlir.addressof @cHosted_Result_0_44_0 : !llvm.ptr
-    %t44e0xf = func.call @strict_bits(%t44e0c) : (!llvm.ptr) -> f64
-    %t44e0l = func.call @strict_list_add(%t44l, %t44e0xf) : (f64, f64) -> f64
-    %t44e1c = llvm.mlir.addressof @cHosted_Result_0_44_1 : !llvm.ptr
-    %t44e1xf = func.call @strict_bits(%t44e1c) : (!llvm.ptr) -> f64
-    %t44e1l = func.call @strict_list_add(%t44e0l, %t44e1xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t44e1l) : (f64) -> ()
-    llvm.store %t44e1l, %t44g : f64, !llvm.ptr
-    cf.br ^m44(%t44e1l : f64)
-  ^m44(%t44r: f64):
-    llvm.store %t44r, %r0 : f64, !llvm.ptr
-    %t45 = llvm.load %v_type : !llvm.ptr -> f64
-    llvm.store %t45, %r1 : f64, !llvm.ptr
-    %t46v = llvm.load %r1 : !llvm.ptr -> f64
-    %t46k = func.call @strict_is_failure(%t46v) : (f64) -> i1
-    cf.cond_br %t46k, ^bb46e, ^bb47
-  ^bb46e:
-    %t46tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t46twl = arith.constant 29 : i64
-    %t46tr = func.call @strict_trace_checked(%t46v, %t46tw, %t46twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t46tr : f64
-  ^bb47:
-    %t47m = llvm.load %r0 : !llvm.ptr -> f64
-    %t47a0 = llvm.load %r1 : !llvm.ptr -> f64
-    %t47q = func.constant @strict_text_equal : (f64, f64) -> f64
-    %t47r = func.call @strict_list_has(%t47m, %t47a0, %t47q) : (f64, f64, (f64, f64) -> f64) -> f64
-    llvm.store %t47r, %r2 : f64, !llvm.ptr
-    %t48v = llvm.load %r2 : !llvm.ptr -> f64
-    %t48k = func.call @strict_is_failure(%t48v) : (f64) -> i1
-    cf.cond_br %t48k, ^bb48e, ^bb49
-  ^bb48e:
-    %t48tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t48twl = arith.constant 29 : i64
-    %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t48tr : f64
-  ^bb49:
-    %t49m = llvm.load %r2 : !llvm.ptr -> f64
-    %t49r = func.call @strict_not(%t49m) : (f64) -> f64
-    llvm.store %t49r, %r3 : f64, !llvm.ptr
-    %t50c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t50c, %r4 : f64, !llvm.ptr
-    %t51a = llvm.load %r3 : !llvm.ptr -> f64
-    %t51b = llvm.load %r4 : !llvm.ptr -> f64
-    %t51c = arith.cmpf oeq, %t51a, %t51b : f64
-    llvm.store %t51c, %flag : i1, !llvm.ptr
-    %t52 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t52, ^bb53, ^bb55
+    %t39c = llvm.mlir.addressof @cHosted_Result_0_39 : !llvm.ptr
+    %t39xf = func.call @strict_bits(%t39c) : (!llvm.ptr) -> f64
+    llvm.store %t39xf, %r18 : f64, !llvm.ptr
+    %t40l = llvm.load %r17 : !llvm.ptr -> f64
+    %t40r = llvm.load %r18 : !llvm.ptr -> f64
+    %t40q = func.call @strict_text_equal(%t40l, %t40r) : (f64, f64) -> f64
+    %t40f = arith.cmpf one, %t40q, %zero : f64
+    llvm.store %t40f, %flag : i1, !llvm.ptr
+    %t41 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t41, ^bb42, ^bb46
+  ^bb42:
+    %t42m = arith.constant 0.0 : f64
+    %t42r = func.call @strict_process_input(%t42m) : (f64) -> f64
+    llvm.store %t42r, %r19 : f64, !llvm.ptr
+    %t43 = llvm.load %r19 : !llvm.ptr -> f64
+    llvm.store %t43, %v_conditional3 : f64, !llvm.ptr
+    %t44c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t44c, %r20 : f64, !llvm.ptr
+    %t45a = llvm.load %r20 : !llvm.ptr -> f64
+    %t45b = llvm.load %r20 : !llvm.ptr -> f64
+    %t45c = arith.cmpf oeq, %t45a, %t45b : f64
+    llvm.store %t45c, %flag : i1, !llvm.ptr
+    cf.br ^bb46
+  ^bb46:
+    %t47 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t47, ^bb50, ^bb48
+  ^bb48:
+    %t48m = arith.constant 0.0 : f64
+    %t48r = func.call @strict_directory_current(%t48m) : (f64) -> f64
+    llvm.store %t48r, %r21 : f64, !llvm.ptr
+    %t49 = llvm.load %r21 : !llvm.ptr -> f64
+    llvm.store %t49, %v_conditional3 : f64, !llvm.ptr
+    cf.br ^bb50
+  ^bb50:
+    %t51 = llvm.load %v_conditional3 : !llvm.ptr -> f64
+    llvm.store %t51, %r22 : f64, !llvm.ptr
+    %t52v = llvm.load %r22 : !llvm.ptr -> f64
+    %t52k = func.call @strict_is_failure(%t52v) : (f64) -> i1
+    cf.cond_br %t52k, ^bb52e, ^bb53
+  ^bb52e:
+    %t52tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t52twl = arith.constant 26 : i64
+    %t52tr = func.call @strict_trace_checked(%t52v, %t52tw, %t52twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t52tr : f64
   ^bb53:
-    %t53m = llvm.load %instance : !llvm.ptr -> f64
-    %t53r = func.call @Hosted_Measured_0(%t53m) : (f64) -> f64
+    %t53m = arith.constant 0.0 : f64
+    %t53a0 = llvm.load %r22 : !llvm.ptr -> f64
+    %t53r = func.call @VmValue_OfText_1(%t53m, %t53a0) : (f64, f64) -> f64
     %t53tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t53twl = arith.constant 30 : i64
+    %t53twl = arith.constant 26 : i64
     %t53tr = func.call @strict_trace(%t53r, %t53tw, %t53twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t53tr, %r5 : f64, !llvm.ptr
-    %t54 = llvm.load %r5 : !llvm.ptr -> f64
+    llvm.store %t53tr, %r23 : f64, !llvm.ptr
+    %t54 = llvm.load %r23 : !llvm.ptr -> f64
     return %t54 : f64
   ^bb55:
     %t56g = llvm.mlir.addressof @lHosted_Result_0_56 : !llvm.ptr
@@ -289991,7 +290681,7 @@ module {
     %t56u = arith.cmpf oeq, %t56v, %zero : f64
     cf.cond_br %t56u, ^l56, ^m56(%t56v : f64)
   ^l56:
-    %t56q = arith.constant 0x4020000000000000 : f64
+    %t56q = arith.constant 0x4018000000000000 : f64
     %t56l = func.call @strict_list_new(%t56q, %zero) : (f64, f64) -> f64
     %t56e0c = llvm.mlir.addressof @cHosted_Result_0_56_0 : !llvm.ptr
     %t56e0xf = func.call @strict_bits(%t56e0c) : (!llvm.ptr) -> f64
@@ -289999,90 +290689,280 @@ module {
     %t56e1c = llvm.mlir.addressof @cHosted_Result_0_56_1 : !llvm.ptr
     %t56e1xf = func.call @strict_bits(%t56e1c) : (!llvm.ptr) -> f64
     %t56e1l = func.call @strict_list_add(%t56e0l, %t56e1xf) : (f64, f64) -> f64
-    %t56e2c = llvm.mlir.addressof @cHosted_Result_0_56_2 : !llvm.ptr
-    %t56e2xf = func.call @strict_bits(%t56e2c) : (!llvm.ptr) -> f64
-    %t56e2l = func.call @strict_list_add(%t56e1l, %t56e2xf) : (f64, f64) -> f64
-    %t56e3c = llvm.mlir.addressof @cHosted_Result_0_56_3 : !llvm.ptr
-    %t56e3xf = func.call @strict_bits(%t56e3c) : (!llvm.ptr) -> f64
-    %t56e3l = func.call @strict_list_add(%t56e2l, %t56e3xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t56e3l) : (f64) -> ()
-    llvm.store %t56e3l, %t56g : f64, !llvm.ptr
-    cf.br ^m56(%t56e3l : f64)
+    func.call @strict_list_pin(%t56e1l) : (f64) -> ()
+    llvm.store %t56e1l, %t56g : f64, !llvm.ptr
+    cf.br ^m56(%t56e1l : f64)
   ^m56(%t56r: f64):
     llvm.store %t56r, %r0 : f64, !llvm.ptr
-    %t57 = llvm.load %v_call : !llvm.ptr -> f64
+    %t57 = llvm.load %v_type : !llvm.ptr -> f64
     llvm.store %t57, %r1 : f64, !llvm.ptr
-    %t58m = llvm.load %r1 : !llvm.ptr -> f64
-    %t58r = func.call @Invocation_MethodName_0(%t58m) : (f64) -> f64
+    %t58v = llvm.load %r1 : !llvm.ptr -> f64
+    %t58k = func.call @strict_is_failure(%t58v) : (f64) -> i1
+    cf.cond_br %t58k, ^bb58e, ^bb59
+  ^bb58e:
     %t58tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t58twl = arith.constant 31 : i64
-    %t58tr = func.call @strict_trace(%t58r, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t58tr, %r2 : f64, !llvm.ptr
-    %t59v = llvm.load %r2 : !llvm.ptr -> f64
-    %t59k = func.call @strict_is_failure(%t59v) : (f64) -> i1
-    cf.cond_br %t59k, ^bb59e, ^bb60
-  ^bb59e:
-    %t59tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t59twl = arith.constant 31 : i64
-    %t59tr = func.call @strict_trace_checked(%t59v, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t59tr : f64
-  ^bb60:
-    %t60m = llvm.load %r0 : !llvm.ptr -> f64
-    %t60a0 = llvm.load %r2 : !llvm.ptr -> f64
-    %t60q = func.constant @strict_text_equal : (f64, f64) -> f64
-    %t60r = func.call @strict_list_has(%t60m, %t60a0, %t60q) : (f64, f64, (f64, f64) -> f64) -> f64
-    llvm.store %t60r, %r3 : f64, !llvm.ptr
-    %t61c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t61c, %r4 : f64, !llvm.ptr
-    %t62a = llvm.load %r3 : !llvm.ptr -> f64
-    %t62b = llvm.load %r4 : !llvm.ptr -> f64
-    %t62c = arith.cmpf oeq, %t62a, %t62b : f64
-    llvm.store %t62c, %flag : i1, !llvm.ptr
-    %t63 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t63, ^bb64, ^bb68
-  ^bb64:
-    %t64m = llvm.load %instance : !llvm.ptr -> f64
-    %t64r = func.call @Hosted_Entries_0(%t64m) : (f64) -> f64
+    %t58twl = arith.constant 27 : i64
+    %t58tr = func.call @strict_trace_checked(%t58v, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t58tr : f64
+  ^bb59:
+    %t59m = llvm.load %r0 : !llvm.ptr -> f64
+    %t59a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t59q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t59r = func.call @strict_list_has(%t59m, %t59a0, %t59q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t59r, %r2 : f64, !llvm.ptr
+    %t60c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t60c, %r3 : f64, !llvm.ptr
+    %t61a = llvm.load %r2 : !llvm.ptr -> f64
+    %t61b = llvm.load %r3 : !llvm.ptr -> f64
+    %t61c = arith.cmpf oeq, %t61a, %t61b : f64
+    llvm.store %t61c, %flag : i1, !llvm.ptr
+    %t62 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t62, ^bb63, ^bb83
+  ^bb63:
+    %t63 = llvm.load %v_type : !llvm.ptr -> f64
+    llvm.store %t63, %r4 : f64, !llvm.ptr
+    %t64v = llvm.load %r4 : !llvm.ptr -> f64
+    %t64k = func.call @strict_is_failure(%t64v) : (f64) -> i1
+    cf.cond_br %t64k, ^bb64e, ^bb65
+  ^bb64e:
     %t64tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t64twl = arith.constant 31 : i64
-    %t64tr = func.call @strict_trace(%t64r, %t64tw, %t64twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t64tr, %r5 : f64, !llvm.ptr
-    %t65 = llvm.load %r5 : !llvm.ptr -> f64
-    llvm.store %t65, %v_conditional5 : f64, !llvm.ptr
-    %t66c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t66c, %r6 : f64, !llvm.ptr
-    %t67a = llvm.load %r6 : !llvm.ptr -> f64
-    %t67b = llvm.load %r6 : !llvm.ptr -> f64
-    %t67c = arith.cmpf oeq, %t67a, %t67b : f64
-    llvm.store %t67c, %flag : i1, !llvm.ptr
-    cf.br ^bb68
+    %t64twl = arith.constant 28 : i64
+    %t64tr = func.call @strict_trace_checked(%t64v, %t64tw, %t64twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t64tr : f64
+  ^bb65:
+    %t65c = llvm.mlir.addressof @cHosted_Result_0_65 : !llvm.ptr
+    %t65xf = func.call @strict_bits(%t65c) : (!llvm.ptr) -> f64
+    llvm.store %t65xf, %r5 : f64, !llvm.ptr
+    %t66l = llvm.load %r4 : !llvm.ptr -> f64
+    %t66r = llvm.load %r5 : !llvm.ptr -> f64
+    %t66q = func.call @strict_text_equal(%t66l, %t66r) : (f64, f64) -> f64
+    %t66f = arith.cmpf one, %t66q, %zero : f64
+    llvm.store %t66f, %flag : i1, !llvm.ptr
+    %t67 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t67, ^bb68, ^bb72
   ^bb68:
-    %t69 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t69, ^bb72, ^bb70
-  ^bb70:
-    %t70m = llvm.load %instance : !llvm.ptr -> f64
-    %t70r = func.call @Hosted_Stored_0(%t70m) : (f64) -> f64
-    %t70tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t70twl = arith.constant 31 : i64
-    %t70tr = func.call @strict_trace(%t70r, %t70tw, %t70twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t70tr, %r7 : f64, !llvm.ptr
-    %t71 = llvm.load %r7 : !llvm.ptr -> f64
-    llvm.store %t71, %v_conditional5 : f64, !llvm.ptr
+    %t68m = llvm.load %instance : !llvm.ptr -> f64
+    %t68r = func.call @Hosted_Processed_0(%t68m) : (f64) -> f64
+    %t68tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t68twl = arith.constant 28 : i64
+    %t68tr = func.call @strict_trace(%t68r, %t68tw, %t68twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t68tr, %r6 : f64, !llvm.ptr
+    %t69 = llvm.load %r6 : !llvm.ptr -> f64
+    llvm.store %t69, %v_conditional6 : f64, !llvm.ptr
+    %t70c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t70c, %r7 : f64, !llvm.ptr
+    %t71a = llvm.load %r7 : !llvm.ptr -> f64
+    %t71b = llvm.load %r7 : !llvm.ptr -> f64
+    %t71c = arith.cmpf oeq, %t71a, %t71b : f64
+    llvm.store %t71c, %flag : i1, !llvm.ptr
     cf.br ^bb72
   ^bb72:
-    %t73 = llvm.load %v_conditional5 : !llvm.ptr -> f64
-    llvm.store %t73, %r8 : f64, !llvm.ptr
-    %t74v = llvm.load %r8 : !llvm.ptr -> f64
-    %t74k = func.call @strict_is_failure(%t74v) : (f64) -> i1
-    cf.cond_br %t74k, ^bb74e, ^bb75
-  ^bb74e:
-    %t74tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
-    %t74twl = arith.constant 31 : i64
-    %t74tr = func.call @strict_trace_checked(%t74v, %t74tw, %t74twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t74tr : f64
-  ^bb75:
-    %t75 = llvm.load %r8 : !llvm.ptr -> f64
-    return %t75 : f64
+    %t73 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t73, ^bb80, ^bb74
+  ^bb74:
+    %t74 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t74, %r8 : f64, !llvm.ptr
+    %t75l = func.call @strict_list_empty() : () -> f64
+    llvm.store %t75l, %r9 : f64, !llvm.ptr
+    %t76oz = arith.constant 24 : i64
+    %t76op = func.call @strict_alloc(%t76oz) : (i64) -> !llvm.ptr
+    %t76s0 = llvm.getelementptr %t76op[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t76a0 = llvm.load %r8 : !llvm.ptr -> f64
+    llvm.store %t76a0, %t76s0 : f64, !llvm.ptr
+    %t76s1 = llvm.getelementptr %t76op[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t76a1 = llvm.load %r9 : !llvm.ptr -> f64
+    llvm.store %t76a1, %t76s1 : f64, !llvm.ptr
+    %t76s2 = llvm.getelementptr %t76op[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t76d2c = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %t76d2xf = func.call @strict_bits(%t76d2c) : (!llvm.ptr) -> f64
+    llvm.store %t76d2xf, %t76s2 : f64, !llvm.ptr
+    %t76of = func.call @strict_bits(%t76op) : (!llvm.ptr) -> f64
+    llvm.store %t76of, %r10 : f64, !llvm.ptr
+    %t77v = llvm.load %r10 : !llvm.ptr -> f64
+    %t77k = func.call @strict_is_failure(%t77v) : (f64) -> i1
+    cf.cond_br %t77k, ^bb77e, ^bb78
+  ^bb77e:
+    %t77tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t77twl = arith.constant 28 : i64
+    %t77tr = func.call @strict_trace_checked(%t77v, %t77tw, %t77twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t77tr : f64
+  ^bb78:
+    %t78m = llvm.load %r10 : !llvm.ptr -> f64
+    %t78r = func.call @Foreign_Hosted_0(%t78m) : (f64) -> f64
+    %t78tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t78twl = arith.constant 28 : i64
+    %t78tr = func.call @strict_trace(%t78r, %t78tw, %t78twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t78tr, %r11 : f64, !llvm.ptr
+    %t79 = llvm.load %r11 : !llvm.ptr -> f64
+    llvm.store %t79, %v_conditional6 : f64, !llvm.ptr
+    cf.br ^bb80
+  ^bb80:
+    %t81 = llvm.load %v_conditional6 : !llvm.ptr -> f64
+    llvm.store %t81, %r12 : f64, !llvm.ptr
+    %t82 = llvm.load %r12 : !llvm.ptr -> f64
+    return %t82 : f64
+  ^bb83:
+    %t84g = llvm.mlir.addressof @lHosted_Result_0_84 : !llvm.ptr
+    %t84v = llvm.load %t84g : !llvm.ptr -> f64
+    %t84u = arith.cmpf oeq, %t84v, %zero : f64
+    cf.cond_br %t84u, ^l84, ^m84(%t84v : f64)
+  ^l84:
+    %t84q = arith.constant 0x4018000000000000 : f64
+    %t84l = func.call @strict_list_new(%t84q, %zero) : (f64, f64) -> f64
+    %t84e0c = llvm.mlir.addressof @cHosted_Result_0_84_0 : !llvm.ptr
+    %t84e0xf = func.call @strict_bits(%t84e0c) : (!llvm.ptr) -> f64
+    %t84e0l = func.call @strict_list_add(%t84l, %t84e0xf) : (f64, f64) -> f64
+    %t84e1c = llvm.mlir.addressof @cHosted_Result_0_84_1 : !llvm.ptr
+    %t84e1xf = func.call @strict_bits(%t84e1c) : (!llvm.ptr) -> f64
+    %t84e1l = func.call @strict_list_add(%t84e0l, %t84e1xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t84e1l) : (f64) -> ()
+    llvm.store %t84e1l, %t84g : f64, !llvm.ptr
+    cf.br ^m84(%t84e1l : f64)
+  ^m84(%t84r: f64):
+    llvm.store %t84r, %r0 : f64, !llvm.ptr
+    %t85 = llvm.load %v_type : !llvm.ptr -> f64
+    llvm.store %t85, %r1 : f64, !llvm.ptr
+    %t86v = llvm.load %r1 : !llvm.ptr -> f64
+    %t86k = func.call @strict_is_failure(%t86v) : (f64) -> i1
+    cf.cond_br %t86k, ^bb86e, ^bb87
+  ^bb86e:
+    %t86tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t86twl = arith.constant 29 : i64
+    %t86tr = func.call @strict_trace_checked(%t86v, %t86tw, %t86twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t86tr : f64
+  ^bb87:
+    %t87m = llvm.load %r0 : !llvm.ptr -> f64
+    %t87a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t87q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t87r = func.call @strict_list_has(%t87m, %t87a0, %t87q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t87r, %r2 : f64, !llvm.ptr
+    %t88v = llvm.load %r2 : !llvm.ptr -> f64
+    %t88k = func.call @strict_is_failure(%t88v) : (f64) -> i1
+    cf.cond_br %t88k, ^bb88e, ^bb89
+  ^bb88e:
+    %t88tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t88twl = arith.constant 29 : i64
+    %t88tr = func.call @strict_trace_checked(%t88v, %t88tw, %t88twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t88tr : f64
+  ^bb89:
+    %t89m = llvm.load %r2 : !llvm.ptr -> f64
+    %t89r = func.call @strict_not(%t89m) : (f64) -> f64
+    llvm.store %t89r, %r3 : f64, !llvm.ptr
+    %t90c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t90c, %r4 : f64, !llvm.ptr
+    %t91a = llvm.load %r3 : !llvm.ptr -> f64
+    %t91b = llvm.load %r4 : !llvm.ptr -> f64
+    %t91c = arith.cmpf oeq, %t91a, %t91b : f64
+    llvm.store %t91c, %flag : i1, !llvm.ptr
+    %t92 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t92, ^bb93, ^bb95
+  ^bb93:
+    %t93m = llvm.load %instance : !llvm.ptr -> f64
+    %t93r = func.call @Hosted_Measured_0(%t93m) : (f64) -> f64
+    %t93tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t93twl = arith.constant 30 : i64
+    %t93tr = func.call @strict_trace(%t93r, %t93tw, %t93twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t93tr, %r5 : f64, !llvm.ptr
+    %t94 = llvm.load %r5 : !llvm.ptr -> f64
+    return %t94 : f64
+  ^bb95:
+    %t96g = llvm.mlir.addressof @lHosted_Result_0_96 : !llvm.ptr
+    %t96v = llvm.load %t96g : !llvm.ptr -> f64
+    %t96u = arith.cmpf oeq, %t96v, %zero : f64
+    cf.cond_br %t96u, ^l96, ^m96(%t96v : f64)
+  ^l96:
+    %t96q = arith.constant 0x4020000000000000 : f64
+    %t96l = func.call @strict_list_new(%t96q, %zero) : (f64, f64) -> f64
+    %t96e0c = llvm.mlir.addressof @cHosted_Result_0_96_0 : !llvm.ptr
+    %t96e0xf = func.call @strict_bits(%t96e0c) : (!llvm.ptr) -> f64
+    %t96e0l = func.call @strict_list_add(%t96l, %t96e0xf) : (f64, f64) -> f64
+    %t96e1c = llvm.mlir.addressof @cHosted_Result_0_96_1 : !llvm.ptr
+    %t96e1xf = func.call @strict_bits(%t96e1c) : (!llvm.ptr) -> f64
+    %t96e1l = func.call @strict_list_add(%t96e0l, %t96e1xf) : (f64, f64) -> f64
+    %t96e2c = llvm.mlir.addressof @cHosted_Result_0_96_2 : !llvm.ptr
+    %t96e2xf = func.call @strict_bits(%t96e2c) : (!llvm.ptr) -> f64
+    %t96e2l = func.call @strict_list_add(%t96e1l, %t96e2xf) : (f64, f64) -> f64
+    %t96e3c = llvm.mlir.addressof @cHosted_Result_0_96_3 : !llvm.ptr
+    %t96e3xf = func.call @strict_bits(%t96e3c) : (!llvm.ptr) -> f64
+    %t96e3l = func.call @strict_list_add(%t96e2l, %t96e3xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t96e3l) : (f64) -> ()
+    llvm.store %t96e3l, %t96g : f64, !llvm.ptr
+    cf.br ^m96(%t96e3l : f64)
+  ^m96(%t96r: f64):
+    llvm.store %t96r, %r0 : f64, !llvm.ptr
+    %t97 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t97, %r1 : f64, !llvm.ptr
+    %t98m = llvm.load %r1 : !llvm.ptr -> f64
+    %t98r = func.call @Invocation_MethodName_0(%t98m) : (f64) -> f64
+    %t98tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t98twl = arith.constant 31 : i64
+    %t98tr = func.call @strict_trace(%t98r, %t98tw, %t98twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t98tr, %r2 : f64, !llvm.ptr
+    %t99v = llvm.load %r2 : !llvm.ptr -> f64
+    %t99k = func.call @strict_is_failure(%t99v) : (f64) -> i1
+    cf.cond_br %t99k, ^bb99e, ^bb100
+  ^bb99e:
+    %t99tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t99twl = arith.constant 31 : i64
+    %t99tr = func.call @strict_trace_checked(%t99v, %t99tw, %t99twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t99tr : f64
+  ^bb100:
+    %t100m = llvm.load %r0 : !llvm.ptr -> f64
+    %t100a0 = llvm.load %r2 : !llvm.ptr -> f64
+    %t100q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t100r = func.call @strict_list_has(%t100m, %t100a0, %t100q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t100r, %r3 : f64, !llvm.ptr
+    %t101c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t101c, %r4 : f64, !llvm.ptr
+    %t102a = llvm.load %r3 : !llvm.ptr -> f64
+    %t102b = llvm.load %r4 : !llvm.ptr -> f64
+    %t102c = arith.cmpf oeq, %t102a, %t102b : f64
+    llvm.store %t102c, %flag : i1, !llvm.ptr
+    %t103 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t103, ^bb104, ^bb108
+  ^bb104:
+    %t104m = llvm.load %instance : !llvm.ptr -> f64
+    %t104r = func.call @Hosted_Entries_0(%t104m) : (f64) -> f64
+    %t104tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t104twl = arith.constant 31 : i64
+    %t104tr = func.call @strict_trace(%t104r, %t104tw, %t104twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t104tr, %r5 : f64, !llvm.ptr
+    %t105 = llvm.load %r5 : !llvm.ptr -> f64
+    llvm.store %t105, %v_conditional9 : f64, !llvm.ptr
+    %t106c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t106c, %r6 : f64, !llvm.ptr
+    %t107a = llvm.load %r6 : !llvm.ptr -> f64
+    %t107b = llvm.load %r6 : !llvm.ptr -> f64
+    %t107c = arith.cmpf oeq, %t107a, %t107b : f64
+    llvm.store %t107c, %flag : i1, !llvm.ptr
+    cf.br ^bb108
+  ^bb108:
+    %t109 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t109, ^bb112, ^bb110
+  ^bb110:
+    %t110m = llvm.load %instance : !llvm.ptr -> f64
+    %t110r = func.call @Hosted_Stored_0(%t110m) : (f64) -> f64
+    %t110tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t110twl = arith.constant 31 : i64
+    %t110tr = func.call @strict_trace(%t110r, %t110tw, %t110twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t110tr, %r7 : f64, !llvm.ptr
+    %t111 = llvm.load %r7 : !llvm.ptr -> f64
+    llvm.store %t111, %v_conditional9 : f64, !llvm.ptr
+    cf.br ^bb112
+  ^bb112:
+    %t113 = llvm.load %v_conditional9 : !llvm.ptr -> f64
+    llvm.store %t113, %r8 : f64, !llvm.ptr
+    %t114v = llvm.load %r8 : !llvm.ptr -> f64
+    %t114k = func.call @strict_is_failure(%t114v) : (f64) -> i1
+    cf.cond_br %t114k, ^bb114e, ^bb115
+  ^bb114e:
+    %t114tw = llvm.mlir.addressof @wHosted_Result_0 : !llvm.ptr
+    %t114twl = arith.constant 31 : i64
+    %t114tr = func.call @strict_trace_checked(%t114v, %t114tw, %t114twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t114tr : f64
+  ^bb115:
+    %t115 = llvm.load %r8 : !llvm.ptr -> f64
+    return %t115 : f64
   }
   func.func private @Natives_Searched_3(%p0: f64, %p1: f64, %p2: f64, %p3: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -290867,6 +291747,14 @@ module {
     llvm.store %zero, %r12 : f64, !llvm.ptr
     %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %r13 : f64, !llvm.ptr
+    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r14 : f64, !llvm.ptr
+    %r15 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r15 : f64, !llvm.ptr
+    %r16 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r16 : f64, !llvm.ptr
+    %r17 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r17 : f64, !llvm.ptr
     %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_index : f64, !llvm.ptr
     %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
@@ -290883,6 +291771,8 @@ module {
     llvm.store %zero, %v_foreign : f64, !llvm.ptr
     %v_conditional1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_conditional1 : f64, !llvm.ptr
+    %v_conditional4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional4 : f64, !llvm.ptr
     %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %instance : f64, !llvm.ptr
     llvm.store %p0, %instance : f64, !llvm.ptr
@@ -291071,267 +291961,369 @@ module {
     %t38 = llvm.load %r13 : !llvm.ptr -> f64
     return %t38 : f64
   ^bb39:
-    %t40 = llvm.load %v_name : !llvm.ptr -> f64
-    llvm.store %t40, %r0 : f64, !llvm.ptr
-    %t41v = llvm.load %r0 : !llvm.ptr -> f64
-    %t41k = func.call @strict_is_failure(%t41v) : (f64) -> i1
-    cf.cond_br %t41k, ^bb41e, ^bb42
-  ^bb41e:
-    %t41tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t41twl = arith.constant 17 : i64
-    %t41tr = func.call @strict_trace_checked(%t41v, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t41tr : f64
-  ^bb42:
-    %t42c = llvm.mlir.addressof @cNatives_Result_1_42 : !llvm.ptr
-    %t42xf = func.call @strict_bits(%t42c) : (!llvm.ptr) -> f64
-    llvm.store %t42xf, %r1 : f64, !llvm.ptr
-    %t43l = llvm.load %r0 : !llvm.ptr -> f64
-    %t43r = llvm.load %r1 : !llvm.ptr -> f64
-    %t43q = func.call @strict_text_equal(%t43l, %t43r) : (f64, f64) -> f64
-    %t43f = arith.cmpf one, %t43q, %zero : f64
-    llvm.store %t43f, %flag : i1, !llvm.ptr
-    %t44 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t44, ^bb45, ^bb52
-  ^bb45:
-    %t45 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t45, %r2 : f64, !llvm.ptr
-    %t46i = llvm.load %r2 : !llvm.ptr -> f64
-    %t46ip = func.call @strict_ptr(%t46i) : (f64) -> !llvm.ptr
-    %t46m = llvm.getelementptr %t46ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t46mv = llvm.load %t46m : !llvm.ptr -> f64
-    llvm.store %t46mv, %r3 : f64, !llvm.ptr
-    %t47 = llvm.load %v_call : !llvm.ptr -> f64
+    %t40g = llvm.mlir.addressof @lNatives_Result_1_40 : !llvm.ptr
+    %t40v = llvm.load %t40g : !llvm.ptr -> f64
+    %t40u = arith.cmpf oeq, %t40v, %zero : f64
+    cf.cond_br %t40u, ^l40, ^m40(%t40v : f64)
+  ^l40:
+    %t40q = arith.constant 0x4018000000000000 : f64
+    %t40l = func.call @strict_list_new(%t40q, %zero) : (f64, f64) -> f64
+    %t40e0c = llvm.mlir.addressof @cNatives_Result_1_40_0 : !llvm.ptr
+    %t40e0xf = func.call @strict_bits(%t40e0c) : (!llvm.ptr) -> f64
+    %t40e0l = func.call @strict_list_add(%t40l, %t40e0xf) : (f64, f64) -> f64
+    %t40e1c = llvm.mlir.addressof @cNatives_Result_1_40_1 : !llvm.ptr
+    %t40e1xf = func.call @strict_bits(%t40e1c) : (!llvm.ptr) -> f64
+    %t40e1l = func.call @strict_list_add(%t40e0l, %t40e1xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t40e1l) : (f64) -> ()
+    llvm.store %t40e1l, %t40g : f64, !llvm.ptr
+    cf.br ^m40(%t40e1l : f64)
+  ^m40(%t40r: f64):
+    llvm.store %t40r, %r0 : f64, !llvm.ptr
+    %t41 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t41, %r1 : f64, !llvm.ptr
+    %t42v = llvm.load %r1 : !llvm.ptr -> f64
+    %t42k = func.call @strict_is_failure(%t42v) : (f64) -> i1
+    cf.cond_br %t42k, ^bb42e, ^bb43
+  ^bb42e:
+    %t42tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t42twl = arith.constant 17 : i64
+    %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t42tr : f64
+  ^bb43:
+    %t43m = llvm.load %r0 : !llvm.ptr -> f64
+    %t43a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t43q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t43r = func.call @strict_list_has(%t43m, %t43a0, %t43q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t43r, %r2 : f64, !llvm.ptr
+    %t44c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t44c, %r3 : f64, !llvm.ptr
+    %t45a = llvm.load %r2 : !llvm.ptr -> f64
+    %t45b = llvm.load %r3 : !llvm.ptr -> f64
+    %t45c = arith.cmpf oeq, %t45a, %t45b : f64
+    llvm.store %t45c, %flag : i1, !llvm.ptr
+    %t46 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t46, ^bb47, ^bb74
+  ^bb47:
+    %t47 = llvm.load %v_name : !llvm.ptr -> f64
     llvm.store %t47, %r4 : f64, !llvm.ptr
-    %t48m = llvm.load %r4 : !llvm.ptr -> f64
-    %t48r = func.call @Invocation_ReturnType_0(%t48m) : (f64) -> f64
+    %t48v = llvm.load %r4 : !llvm.ptr -> f64
+    %t48k = func.call @strict_is_failure(%t48v) : (f64) -> i1
+    cf.cond_br %t48k, ^bb48e, ^bb49
+  ^bb48e:
     %t48tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
     %t48twl = arith.constant 18 : i64
-    %t48tr = func.call @strict_trace(%t48r, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t48tr, %r5 : f64, !llvm.ptr
-    %t49v = llvm.load %r5 : !llvm.ptr -> f64
-    %t49k = func.call @strict_is_failure(%t49v) : (f64) -> i1
-    cf.cond_br %t49k, ^bb49e, ^bb50
-  ^bb49e:
-    %t49tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t49twl = arith.constant 18 : i64
-    %t49tr = func.call @strict_trace_checked(%t49v, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t49tr : f64
-  ^bb50:
-    %t50m = llvm.load %instance : !llvm.ptr -> f64
-    %t50a0 = llvm.load %r3 : !llvm.ptr -> f64
-    %t50a1 = llvm.load %r5 : !llvm.ptr -> f64
-    %t50r = func.call @Natives_Converted_2(%t50m, %t50a0, %t50a1) : (f64, f64, f64) -> f64
-    %t50tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t50twl = arith.constant 18 : i64
-    %t50tr = func.call @strict_trace(%t50r, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t50tr, %r6 : f64, !llvm.ptr
-    %t51 = llvm.load %r6 : !llvm.ptr -> f64
-    return %t51 : f64
+    %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t48tr : f64
+  ^bb49:
+    %t49c = llvm.mlir.addressof @cNatives_Result_1_49 : !llvm.ptr
+    %t49xf = func.call @strict_bits(%t49c) : (!llvm.ptr) -> f64
+    llvm.store %t49xf, %r5 : f64, !llvm.ptr
+    %t50l = llvm.load %r4 : !llvm.ptr -> f64
+    %t50r = llvm.load %r5 : !llvm.ptr -> f64
+    %t50q = func.call @strict_text_equal(%t50l, %t50r) : (f64, f64) -> f64
+    %t50f = arith.cmpf one, %t50q, %zero : f64
+    llvm.store %t50f, %flag : i1, !llvm.ptr
+    %t51 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t51, ^bb52, ^bb61
   ^bb52:
-    %t53g = llvm.mlir.addressof @lNatives_Result_1_53 : !llvm.ptr
-    %t53v = llvm.load %t53g : !llvm.ptr -> f64
-    %t53u = arith.cmpf oeq, %t53v, %zero : f64
-    cf.cond_br %t53u, ^l53, ^m53(%t53v : f64)
-  ^l53:
-    %t53q = arith.constant 0x4018000000000000 : f64
-    %t53l = func.call @strict_list_new(%t53q, %zero) : (f64, f64) -> f64
-    %t53e0c = llvm.mlir.addressof @cNatives_Result_1_53_0 : !llvm.ptr
-    %t53e0xf = func.call @strict_bits(%t53e0c) : (!llvm.ptr) -> f64
-    %t53e0l = func.call @strict_list_add(%t53l, %t53e0xf) : (f64, f64) -> f64
-    %t53e1c = llvm.mlir.addressof @cNatives_Result_1_53_1 : !llvm.ptr
-    %t53e1xf = func.call @strict_bits(%t53e1c) : (!llvm.ptr) -> f64
-    %t53e1l = func.call @strict_list_add(%t53e0l, %t53e1xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t53e1l) : (f64) -> ()
-    llvm.store %t53e1l, %t53g : f64, !llvm.ptr
-    cf.br ^m53(%t53e1l : f64)
-  ^m53(%t53r: f64):
-    llvm.store %t53r, %r0 : f64, !llvm.ptr
-    %t54 = llvm.load %v_name : !llvm.ptr -> f64
-    llvm.store %t54, %r1 : f64, !llvm.ptr
-    %t55v = llvm.load %r1 : !llvm.ptr -> f64
-    %t55k = func.call @strict_is_failure(%t55v) : (f64) -> i1
-    cf.cond_br %t55k, ^bb55e, ^bb56
-  ^bb55e:
+    %t52 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t52, %r6 : f64, !llvm.ptr
+    %t53i = llvm.load %r6 : !llvm.ptr -> f64
+    %t53ip = func.call @strict_ptr(%t53i) : (f64) -> !llvm.ptr
+    %t53m = llvm.getelementptr %t53ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t53mv = llvm.load %t53m : !llvm.ptr -> f64
+    llvm.store %t53mv, %r7 : f64, !llvm.ptr
+    %t54 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t54, %r8 : f64, !llvm.ptr
+    %t55m = llvm.load %r8 : !llvm.ptr -> f64
+    %t55r = func.call @Invocation_ReturnType_0(%t55m) : (f64) -> f64
     %t55tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t55twl = arith.constant 19 : i64
-    %t55tr = func.call @strict_trace_checked(%t55v, %t55tw, %t55twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t55tr : f64
-  ^bb56:
-    %t56m = llvm.load %r0 : !llvm.ptr -> f64
-    %t56a0 = llvm.load %r1 : !llvm.ptr -> f64
-    %t56q = func.constant @strict_text_equal : (f64, f64) -> f64
-    %t56r = func.call @strict_list_has(%t56m, %t56a0, %t56q) : (f64, f64, (f64, f64) -> f64) -> f64
-    llvm.store %t56r, %r2 : f64, !llvm.ptr
-    %t57c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t57c, %r3 : f64, !llvm.ptr
-    %t58a = llvm.load %r2 : !llvm.ptr -> f64
-    %t58b = llvm.load %r3 : !llvm.ptr -> f64
-    %t58c = arith.cmpf oeq, %t58a, %t58b : f64
-    llvm.store %t58c, %flag : i1, !llvm.ptr
-    %t59 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t59, ^bb60, ^bb68
-  ^bb60:
-    %t60 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t60, %r4 : f64, !llvm.ptr
-    %t61i = llvm.load %r4 : !llvm.ptr -> f64
-    %t61ip = func.call @strict_ptr(%t61i) : (f64) -> !llvm.ptr
-    %t61m = llvm.getelementptr %t61ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t61mv = llvm.load %t61m : !llvm.ptr -> f64
-    llvm.store %t61mv, %r5 : f64, !llvm.ptr
-    %t62 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t62, %r6 : f64, !llvm.ptr
-    %t63i = llvm.load %r6 : !llvm.ptr -> f64
-    %t63ip = func.call @strict_ptr(%t63i) : (f64) -> !llvm.ptr
-    %t63m = llvm.getelementptr %t63ip[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t63mv = llvm.load %t63m : !llvm.ptr -> f64
-    llvm.store %t63mv, %r7 : f64, !llvm.ptr
-    %t64m = llvm.load %r5 : !llvm.ptr -> f64
-    %t64a0 = llvm.load %r7 : !llvm.ptr -> f64
-    %t64r = func.call @VmValue_Counted_1(%t64m, %t64a0) : (f64, f64) -> f64
-    %t64tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t64twl = arith.constant 20 : i64
-    %t64tr = func.call @strict_trace(%t64r, %t64tw, %t64twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t64tr, %r8 : f64, !llvm.ptr
-    %t65v = llvm.load %r8 : !llvm.ptr -> f64
-    %t65k = func.call @strict_is_failure(%t65v) : (f64) -> i1
-    cf.cond_br %t65k, ^bb65e, ^bb66
-  ^bb65e:
-    %t65tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t65twl = arith.constant 20 : i64
-    %t65tr = func.call @strict_trace_checked(%t65v, %t65tw, %t65twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t65tr : f64
-  ^bb66:
-    %t66m = arith.constant 0.0 : f64
-    %t66a0 = llvm.load %r8 : !llvm.ptr -> f64
-    %t66r = func.call @VmValue_OfNumber_1(%t66m, %t66a0) : (f64, f64) -> f64
+    %t55twl = arith.constant 18 : i64
+    %t55tr = func.call @strict_trace(%t55r, %t55tw, %t55twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t55tr, %r9 : f64, !llvm.ptr
+    %t56v = llvm.load %r9 : !llvm.ptr -> f64
+    %t56k = func.call @strict_is_failure(%t56v) : (f64) -> i1
+    cf.cond_br %t56k, ^bb56e, ^bb57
+  ^bb56e:
+    %t56tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t56twl = arith.constant 18 : i64
+    %t56tr = func.call @strict_trace_checked(%t56v, %t56tw, %t56twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t56tr : f64
+  ^bb57:
+    %t57m = llvm.load %instance : !llvm.ptr -> f64
+    %t57a0 = llvm.load %r7 : !llvm.ptr -> f64
+    %t57a1 = llvm.load %r9 : !llvm.ptr -> f64
+    %t57r = func.call @Natives_Converted_2(%t57m, %t57a0, %t57a1) : (f64, f64, f64) -> f64
+    %t57tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t57twl = arith.constant 18 : i64
+    %t57tr = func.call @strict_trace(%t57r, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t57tr, %r10 : f64, !llvm.ptr
+    %t58 = llvm.load %r10 : !llvm.ptr -> f64
+    llvm.store %t58, %v_conditional4 : f64, !llvm.ptr
+    %t59c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t59c, %r11 : f64, !llvm.ptr
+    %t60a = llvm.load %r11 : !llvm.ptr -> f64
+    %t60b = llvm.load %r11 : !llvm.ptr -> f64
+    %t60c = arith.cmpf oeq, %t60a, %t60b : f64
+    llvm.store %t60c, %flag : i1, !llvm.ptr
+    cf.br ^bb61
+  ^bb61:
+    %t62 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t62, ^bb71, ^bb63
+  ^bb63:
+    %t63 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t63, %r12 : f64, !llvm.ptr
+    %t64i = llvm.load %r12 : !llvm.ptr -> f64
+    %t64ip = func.call @strict_ptr(%t64i) : (f64) -> !llvm.ptr
+    %t64m = llvm.getelementptr %t64ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t64mv = llvm.load %t64m : !llvm.ptr -> f64
+    llvm.store %t64mv, %r13 : f64, !llvm.ptr
+    %t65o = llvm.load %r13 : !llvm.ptr -> f64
+    llvm.store %t65o, %r14 : f64, !llvm.ptr
+    %t66v = llvm.load %r14 : !llvm.ptr -> f64
+    %t66k = func.call @strict_is_failure(%t66v) : (f64) -> i1
+    cf.cond_br %t66k, ^bb66e, ^bb67
+  ^bb66e:
     %t66tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t66twl = arith.constant 20 : i64
-    %t66tr = func.call @strict_trace(%t66r, %t66tw, %t66twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t66tr, %r9 : f64, !llvm.ptr
-    %t67 = llvm.load %r9 : !llvm.ptr -> f64
-    return %t67 : f64
-  ^bb68:
-    %t69g = llvm.mlir.addressof @lNatives_Result_1_69 : !llvm.ptr
-    %t69v = llvm.load %t69g : !llvm.ptr -> f64
-    %t69u = arith.cmpf oeq, %t69v, %zero : f64
-    cf.cond_br %t69u, ^l69, ^m69(%t69v : f64)
-  ^l69:
-    %t69q = arith.constant 0x4020000000000000 : f64
-    %t69l = func.call @strict_list_new(%t69q, %zero) : (f64, f64) -> f64
-    %t69e0c = llvm.mlir.addressof @cNatives_Result_1_69_0 : !llvm.ptr
-    %t69e0xf = func.call @strict_bits(%t69e0c) : (!llvm.ptr) -> f64
-    %t69e0l = func.call @strict_list_add(%t69l, %t69e0xf) : (f64, f64) -> f64
-    %t69e1c = llvm.mlir.addressof @cNatives_Result_1_69_1 : !llvm.ptr
-    %t69e1xf = func.call @strict_bits(%t69e1c) : (!llvm.ptr) -> f64
-    %t69e1l = func.call @strict_list_add(%t69e0l, %t69e1xf) : (f64, f64) -> f64
-    %t69e2c = llvm.mlir.addressof @cNatives_Result_1_69_2 : !llvm.ptr
-    %t69e2xf = func.call @strict_bits(%t69e2c) : (!llvm.ptr) -> f64
-    %t69e2l = func.call @strict_list_add(%t69e1l, %t69e2xf) : (f64, f64) -> f64
-    %t69e3c = llvm.mlir.addressof @cNatives_Result_1_69_3 : !llvm.ptr
-    %t69e3xf = func.call @strict_bits(%t69e3c) : (!llvm.ptr) -> f64
-    %t69e3l = func.call @strict_list_add(%t69e2l, %t69e3xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t69e3l) : (f64) -> ()
-    llvm.store %t69e3l, %t69g : f64, !llvm.ptr
-    cf.br ^m69(%t69e3l : f64)
-  ^m69(%t69r: f64):
-    llvm.store %t69r, %r0 : f64, !llvm.ptr
-    %t70 = llvm.load %v_name : !llvm.ptr -> f64
-    llvm.store %t70, %r1 : f64, !llvm.ptr
-    %t71v = llvm.load %r1 : !llvm.ptr -> f64
-    %t71k = func.call @strict_is_failure(%t71v) : (f64) -> i1
-    cf.cond_br %t71k, ^bb71e, ^bb72
-  ^bb71e:
-    %t71tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t71twl = arith.constant 21 : i64
-    %t71tr = func.call @strict_trace_checked(%t71v, %t71tw, %t71twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t71tr : f64
-  ^bb72:
-    %t72m = llvm.load %r0 : !llvm.ptr -> f64
-    %t72a0 = llvm.load %r1 : !llvm.ptr -> f64
-    %t72q = func.constant @strict_text_equal : (f64, f64) -> f64
-    %t72r = func.call @strict_list_has(%t72m, %t72a0, %t72q) : (f64, f64, (f64, f64) -> f64) -> f64
-    llvm.store %t72r, %r2 : f64, !llvm.ptr
-    %t73c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t73c, %r3 : f64, !llvm.ptr
-    %t74a = llvm.load %r2 : !llvm.ptr -> f64
-    %t74b = llvm.load %r3 : !llvm.ptr -> f64
-    %t74c = arith.cmpf oeq, %t74a, %t74b : f64
-    llvm.store %t74c, %flag : i1, !llvm.ptr
-    %t75 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t75, ^bb76, ^bb83
-  ^bb76:
+    %t66twl = arith.constant 18 : i64
+    %t66tr = func.call @strict_trace_checked(%t66v, %t66tw, %t66twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t66tr : f64
+  ^bb67:
+    %t67m = llvm.load %r14 : !llvm.ptr -> f64
+    %t67r = func.call @ValueCode_Code_0(%t67m) : (f64) -> f64
+    %t67tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t67twl = arith.constant 18 : i64
+    %t67tr = func.call @strict_trace(%t67r, %t67tw, %t67twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t67tr, %r15 : f64, !llvm.ptr
+    %t68v = llvm.load %r15 : !llvm.ptr -> f64
+    %t68k = func.call @strict_is_failure(%t68v) : (f64) -> i1
+    cf.cond_br %t68k, ^bb68e, ^bb69
+  ^bb68e:
+    %t68tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t68twl = arith.constant 18 : i64
+    %t68tr = func.call @strict_trace_checked(%t68v, %t68tw, %t68twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t68tr : f64
+  ^bb69:
+    %t69m = arith.constant 0.0 : f64
+    %t69a0 = llvm.load %r15 : !llvm.ptr -> f64
+    %t69r = func.call @VmValue_OfText_1(%t69m, %t69a0) : (f64, f64) -> f64
+    %t69tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t69twl = arith.constant 18 : i64
+    %t69tr = func.call @strict_trace(%t69r, %t69tw, %t69twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t69tr, %r16 : f64, !llvm.ptr
+    %t70 = llvm.load %r16 : !llvm.ptr -> f64
+    llvm.store %t70, %v_conditional4 : f64, !llvm.ptr
+    cf.br ^bb71
+  ^bb71:
+    %t72 = llvm.load %v_conditional4 : !llvm.ptr -> f64
+    llvm.store %t72, %r17 : f64, !llvm.ptr
+    %t73 = llvm.load %r17 : !llvm.ptr -> f64
+    return %t73 : f64
+  ^bb74:
+    %t75g = llvm.mlir.addressof @lNatives_Result_1_75 : !llvm.ptr
+    %t75v = llvm.load %t75g : !llvm.ptr -> f64
+    %t75u = arith.cmpf oeq, %t75v, %zero : f64
+    cf.cond_br %t75u, ^l75, ^m75(%t75v : f64)
+  ^l75:
+    %t75q = arith.constant 0x4018000000000000 : f64
+    %t75l = func.call @strict_list_new(%t75q, %zero) : (f64, f64) -> f64
+    %t75e0c = llvm.mlir.addressof @cNatives_Result_1_75_0 : !llvm.ptr
+    %t75e0xf = func.call @strict_bits(%t75e0c) : (!llvm.ptr) -> f64
+    %t75e0l = func.call @strict_list_add(%t75l, %t75e0xf) : (f64, f64) -> f64
+    %t75e1c = llvm.mlir.addressof @cNatives_Result_1_75_1 : !llvm.ptr
+    %t75e1xf = func.call @strict_bits(%t75e1c) : (!llvm.ptr) -> f64
+    %t75e1l = func.call @strict_list_add(%t75e0l, %t75e1xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t75e1l) : (f64) -> ()
+    llvm.store %t75e1l, %t75g : f64, !llvm.ptr
+    cf.br ^m75(%t75e1l : f64)
+  ^m75(%t75r: f64):
+    llvm.store %t75r, %r0 : f64, !llvm.ptr
     %t76 = llvm.load %v_name : !llvm.ptr -> f64
-    llvm.store %t76, %r4 : f64, !llvm.ptr
-    %t77v = llvm.load %r4 : !llvm.ptr -> f64
+    llvm.store %t76, %r1 : f64, !llvm.ptr
+    %t77v = llvm.load %r1 : !llvm.ptr -> f64
     %t77k = func.call @strict_is_failure(%t77v) : (f64) -> i1
     cf.cond_br %t77k, ^bb77e, ^bb78
   ^bb77e:
     %t77tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t77twl = arith.constant 22 : i64
+    %t77twl = arith.constant 19 : i64
     %t77tr = func.call @strict_trace_checked(%t77v, %t77tw, %t77twl) : (f64, !llvm.ptr, i64) -> f64
     return %t77tr : f64
   ^bb78:
-    %t78 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t78, %r5 : f64, !llvm.ptr
-    %t79i = llvm.load %r5 : !llvm.ptr -> f64
-    %t79ip = func.call @strict_ptr(%t79i) : (f64) -> !llvm.ptr
-    %t79m = llvm.getelementptr %t79ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t79mv = llvm.load %t79m : !llvm.ptr -> f64
-    llvm.store %t79mv, %r6 : f64, !llvm.ptr
-    %t80 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t80, %r7 : f64, !llvm.ptr
-    %t81m = llvm.load %instance : !llvm.ptr -> f64
-    %t81a0 = llvm.load %r4 : !llvm.ptr -> f64
-    %t81a1 = llvm.load %r6 : !llvm.ptr -> f64
-    %t81a2 = llvm.load %r7 : !llvm.ptr -> f64
-    %t81r = func.call @Natives_Logical_3(%t81m, %t81a0, %t81a1, %t81a2) : (f64, f64, f64, f64) -> f64
-    %t81tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t81twl = arith.constant 22 : i64
-    %t81tr = func.call @strict_trace(%t81r, %t81tw, %t81twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t81tr, %r8 : f64, !llvm.ptr
-    %t82 = llvm.load %r8 : !llvm.ptr -> f64
-    return %t82 : f64
-  ^bb83:
-    %t84 = llvm.load %v_name : !llvm.ptr -> f64
-    llvm.store %t84, %r0 : f64, !llvm.ptr
-    %t85v = llvm.load %r0 : !llvm.ptr -> f64
-    %t85k = func.call @strict_is_failure(%t85v) : (f64) -> i1
-    cf.cond_br %t85k, ^bb85e, ^bb86
-  ^bb85e:
-    %t85tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t85twl = arith.constant 23 : i64
-    %t85tr = func.call @strict_trace_checked(%t85v, %t85tw, %t85twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t85tr : f64
-  ^bb86:
-    %t86 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t86, %r1 : f64, !llvm.ptr
-    %t87i = llvm.load %r1 : !llvm.ptr -> f64
-    %t87ip = func.call @strict_ptr(%t87i) : (f64) -> !llvm.ptr
-    %t87m = llvm.getelementptr %t87ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t87mv = llvm.load %t87m : !llvm.ptr -> f64
-    llvm.store %t87mv, %r2 : f64, !llvm.ptr
-    %t88 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t88, %r3 : f64, !llvm.ptr
-    %t89m = llvm.load %instance : !llvm.ptr -> f64
-    %t89a0 = llvm.load %r0 : !llvm.ptr -> f64
-    %t89a1 = llvm.load %r2 : !llvm.ptr -> f64
-    %t89a2 = llvm.load %r3 : !llvm.ptr -> f64
-    %t89r = func.call @Natives_Queried_3(%t89m, %t89a0, %t89a1, %t89a2) : (f64, f64, f64, f64) -> f64
-    %t89tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t89twl = arith.constant 23 : i64
-    %t89tr = func.call @strict_trace(%t89r, %t89tw, %t89twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t89tr, %r4 : f64, !llvm.ptr
-    %t90v = llvm.load %r4 : !llvm.ptr -> f64
-    %t90k = func.call @strict_is_failure(%t90v) : (f64) -> i1
-    cf.cond_br %t90k, ^bb90e, ^bb91
-  ^bb90e:
-    %t90tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
-    %t90twl = arith.constant 23 : i64
-    %t90tr = func.call @strict_trace_checked(%t90v, %t90tw, %t90twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t90tr : f64
-  ^bb91:
-    %t91 = llvm.load %r4 : !llvm.ptr -> f64
-    return %t91 : f64
+    %t78m = llvm.load %r0 : !llvm.ptr -> f64
+    %t78a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t78q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t78r = func.call @strict_list_has(%t78m, %t78a0, %t78q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t78r, %r2 : f64, !llvm.ptr
+    %t79c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t79c, %r3 : f64, !llvm.ptr
+    %t80a = llvm.load %r2 : !llvm.ptr -> f64
+    %t80b = llvm.load %r3 : !llvm.ptr -> f64
+    %t80c = arith.cmpf oeq, %t80a, %t80b : f64
+    llvm.store %t80c, %flag : i1, !llvm.ptr
+    %t81 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t81, ^bb82, ^bb90
+  ^bb82:
+    %t82 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t82, %r4 : f64, !llvm.ptr
+    %t83i = llvm.load %r4 : !llvm.ptr -> f64
+    %t83ip = func.call @strict_ptr(%t83i) : (f64) -> !llvm.ptr
+    %t83m = llvm.getelementptr %t83ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t83mv = llvm.load %t83m : !llvm.ptr -> f64
+    llvm.store %t83mv, %r5 : f64, !llvm.ptr
+    %t84 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t84, %r6 : f64, !llvm.ptr
+    %t85i = llvm.load %r6 : !llvm.ptr -> f64
+    %t85ip = func.call @strict_ptr(%t85i) : (f64) -> !llvm.ptr
+    %t85m = llvm.getelementptr %t85ip[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t85mv = llvm.load %t85m : !llvm.ptr -> f64
+    llvm.store %t85mv, %r7 : f64, !llvm.ptr
+    %t86m = llvm.load %r5 : !llvm.ptr -> f64
+    %t86a0 = llvm.load %r7 : !llvm.ptr -> f64
+    %t86r = func.call @VmValue_Counted_1(%t86m, %t86a0) : (f64, f64) -> f64
+    %t86tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t86twl = arith.constant 20 : i64
+    %t86tr = func.call @strict_trace(%t86r, %t86tw, %t86twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t86tr, %r8 : f64, !llvm.ptr
+    %t87v = llvm.load %r8 : !llvm.ptr -> f64
+    %t87k = func.call @strict_is_failure(%t87v) : (f64) -> i1
+    cf.cond_br %t87k, ^bb87e, ^bb88
+  ^bb87e:
+    %t87tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t87twl = arith.constant 20 : i64
+    %t87tr = func.call @strict_trace_checked(%t87v, %t87tw, %t87twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t87tr : f64
+  ^bb88:
+    %t88m = arith.constant 0.0 : f64
+    %t88a0 = llvm.load %r8 : !llvm.ptr -> f64
+    %t88r = func.call @VmValue_OfNumber_1(%t88m, %t88a0) : (f64, f64) -> f64
+    %t88tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t88twl = arith.constant 20 : i64
+    %t88tr = func.call @strict_trace(%t88r, %t88tw, %t88twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t88tr, %r9 : f64, !llvm.ptr
+    %t89 = llvm.load %r9 : !llvm.ptr -> f64
+    return %t89 : f64
+  ^bb90:
+    %t91g = llvm.mlir.addressof @lNatives_Result_1_91 : !llvm.ptr
+    %t91v = llvm.load %t91g : !llvm.ptr -> f64
+    %t91u = arith.cmpf oeq, %t91v, %zero : f64
+    cf.cond_br %t91u, ^l91, ^m91(%t91v : f64)
+  ^l91:
+    %t91q = arith.constant 0x4020000000000000 : f64
+    %t91l = func.call @strict_list_new(%t91q, %zero) : (f64, f64) -> f64
+    %t91e0c = llvm.mlir.addressof @cNatives_Result_1_91_0 : !llvm.ptr
+    %t91e0xf = func.call @strict_bits(%t91e0c) : (!llvm.ptr) -> f64
+    %t91e0l = func.call @strict_list_add(%t91l, %t91e0xf) : (f64, f64) -> f64
+    %t91e1c = llvm.mlir.addressof @cNatives_Result_1_91_1 : !llvm.ptr
+    %t91e1xf = func.call @strict_bits(%t91e1c) : (!llvm.ptr) -> f64
+    %t91e1l = func.call @strict_list_add(%t91e0l, %t91e1xf) : (f64, f64) -> f64
+    %t91e2c = llvm.mlir.addressof @cNatives_Result_1_91_2 : !llvm.ptr
+    %t91e2xf = func.call @strict_bits(%t91e2c) : (!llvm.ptr) -> f64
+    %t91e2l = func.call @strict_list_add(%t91e1l, %t91e2xf) : (f64, f64) -> f64
+    %t91e3c = llvm.mlir.addressof @cNatives_Result_1_91_3 : !llvm.ptr
+    %t91e3xf = func.call @strict_bits(%t91e3c) : (!llvm.ptr) -> f64
+    %t91e3l = func.call @strict_list_add(%t91e2l, %t91e3xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t91e3l) : (f64) -> ()
+    llvm.store %t91e3l, %t91g : f64, !llvm.ptr
+    cf.br ^m91(%t91e3l : f64)
+  ^m91(%t91r: f64):
+    llvm.store %t91r, %r0 : f64, !llvm.ptr
+    %t92 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t92, %r1 : f64, !llvm.ptr
+    %t93v = llvm.load %r1 : !llvm.ptr -> f64
+    %t93k = func.call @strict_is_failure(%t93v) : (f64) -> i1
+    cf.cond_br %t93k, ^bb93e, ^bb94
+  ^bb93e:
+    %t93tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t93twl = arith.constant 21 : i64
+    %t93tr = func.call @strict_trace_checked(%t93v, %t93tw, %t93twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t93tr : f64
+  ^bb94:
+    %t94m = llvm.load %r0 : !llvm.ptr -> f64
+    %t94a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t94q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t94r = func.call @strict_list_has(%t94m, %t94a0, %t94q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t94r, %r2 : f64, !llvm.ptr
+    %t95c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t95c, %r3 : f64, !llvm.ptr
+    %t96a = llvm.load %r2 : !llvm.ptr -> f64
+    %t96b = llvm.load %r3 : !llvm.ptr -> f64
+    %t96c = arith.cmpf oeq, %t96a, %t96b : f64
+    llvm.store %t96c, %flag : i1, !llvm.ptr
+    %t97 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t97, ^bb98, ^bb105
+  ^bb98:
+    %t98 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t98, %r4 : f64, !llvm.ptr
+    %t99v = llvm.load %r4 : !llvm.ptr -> f64
+    %t99k = func.call @strict_is_failure(%t99v) : (f64) -> i1
+    cf.cond_br %t99k, ^bb99e, ^bb100
+  ^bb99e:
+    %t99tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t99twl = arith.constant 22 : i64
+    %t99tr = func.call @strict_trace_checked(%t99v, %t99tw, %t99twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t99tr : f64
+  ^bb100:
+    %t100 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t100, %r5 : f64, !llvm.ptr
+    %t101i = llvm.load %r5 : !llvm.ptr -> f64
+    %t101ip = func.call @strict_ptr(%t101i) : (f64) -> !llvm.ptr
+    %t101m = llvm.getelementptr %t101ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t101mv = llvm.load %t101m : !llvm.ptr -> f64
+    llvm.store %t101mv, %r6 : f64, !llvm.ptr
+    %t102 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t102, %r7 : f64, !llvm.ptr
+    %t103m = llvm.load %instance : !llvm.ptr -> f64
+    %t103a0 = llvm.load %r4 : !llvm.ptr -> f64
+    %t103a1 = llvm.load %r6 : !llvm.ptr -> f64
+    %t103a2 = llvm.load %r7 : !llvm.ptr -> f64
+    %t103r = func.call @Natives_Logical_3(%t103m, %t103a0, %t103a1, %t103a2) : (f64, f64, f64, f64) -> f64
+    %t103tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t103twl = arith.constant 22 : i64
+    %t103tr = func.call @strict_trace(%t103r, %t103tw, %t103twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t103tr, %r8 : f64, !llvm.ptr
+    %t104 = llvm.load %r8 : !llvm.ptr -> f64
+    return %t104 : f64
+  ^bb105:
+    %t106 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t106, %r0 : f64, !llvm.ptr
+    %t107v = llvm.load %r0 : !llvm.ptr -> f64
+    %t107k = func.call @strict_is_failure(%t107v) : (f64) -> i1
+    cf.cond_br %t107k, ^bb107e, ^bb108
+  ^bb107e:
+    %t107tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t107twl = arith.constant 23 : i64
+    %t107tr = func.call @strict_trace_checked(%t107v, %t107tw, %t107twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t107tr : f64
+  ^bb108:
+    %t108 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t108, %r1 : f64, !llvm.ptr
+    %t109i = llvm.load %r1 : !llvm.ptr -> f64
+    %t109ip = func.call @strict_ptr(%t109i) : (f64) -> !llvm.ptr
+    %t109m = llvm.getelementptr %t109ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t109mv = llvm.load %t109m : !llvm.ptr -> f64
+    llvm.store %t109mv, %r2 : f64, !llvm.ptr
+    %t110 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t110, %r3 : f64, !llvm.ptr
+    %t111m = llvm.load %instance : !llvm.ptr -> f64
+    %t111a0 = llvm.load %r0 : !llvm.ptr -> f64
+    %t111a1 = llvm.load %r2 : !llvm.ptr -> f64
+    %t111a2 = llvm.load %r3 : !llvm.ptr -> f64
+    %t111r = func.call @Natives_Queried_3(%t111m, %t111a0, %t111a1, %t111a2) : (f64, f64, f64, f64) -> f64
+    %t111tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t111twl = arith.constant 23 : i64
+    %t111tr = func.call @strict_trace(%t111r, %t111tw, %t111twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t111tr, %r4 : f64, !llvm.ptr
+    %t112v = llvm.load %r4 : !llvm.ptr -> f64
+    %t112k = func.call @strict_is_failure(%t112v) : (f64) -> i1
+    cf.cond_br %t112k, ^bb112e, ^bb113
+  ^bb112e:
+    %t112tw = llvm.mlir.addressof @wNatives_Result_1 : !llvm.ptr
+    %t112twl = arith.constant 23 : i64
+    %t112tr = func.call @strict_trace_checked(%t112v, %t112tw, %t112twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t112tr : f64
+  ^bb113:
+    %t113 = llvm.load %r4 : !llvm.ptr -> f64
+    return %t113 : f64
   }
   func.func private @Machine_Executed_3(%p0: f64, %p1: f64, %p2: f64, %p3: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -297669,7 +298661,7 @@ module {
     %t2a0 = llvm.load %r1 : !llvm.ptr -> f64
     %t2r = func.call @KnownTypes_MembersOf_1(%t2m, %t2a0) : (f64, f64) -> f64
     %t2tw = llvm.mlir.addressof @wInstantiation_Position_2 : !llvm.ptr
-    %t2twl = arith.constant 32 : i64
+    %t2twl = arith.constant 34 : i64
     %t2tr = func.call @strict_trace(%t2r, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t2tr, %r2 : f64, !llvm.ptr
     %t3 = llvm.load %r2 : !llvm.ptr -> f64
@@ -297683,7 +298675,7 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wInstantiation_Position_2 : !llvm.ptr
-    %t6twl = arith.constant 34 : i64
+    %t6twl = arith.constant 36 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
@@ -297719,7 +298711,7 @@ module {
     cf.cond_br %t10k, ^bb10e, ^bb11
   ^bb10e:
     %t10tw = llvm.mlir.addressof @wInstantiation_Position_2 : !llvm.ptr
-    %t10twl = arith.constant 35 : i64
+    %t10twl = arith.constant 37 : i64
     %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     return %t10tr : f64
   ^bb11:
@@ -297743,7 +298735,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wInstantiation_Position_2 : !llvm.ptr
-    %t15twl = arith.constant 35 : i64
+    %t15twl = arith.constant 37 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -297765,7 +298757,7 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wInstantiation_Position_2 : !llvm.ptr
-    %t20twl = arith.constant 35 : i64
+    %t20twl = arith.constant 37 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
@@ -297817,7 +298809,7 @@ module {
     cf.cond_br %t38k, ^bb38e, ^bb39
   ^bb38e:
     %t38tw = llvm.mlir.addressof @wInstantiation_Position_2 : !llvm.ptr
-    %t38twl = arith.constant 37 : i64
+    %t38twl = arith.constant 39 : i64
     %t38tr = func.call @strict_trace_checked(%t38v, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
     return %t38tr : f64
   ^bb39:
@@ -297841,7 +298833,7 @@ module {
     cf.cond_br %t43k, ^bb43e, ^bb44
   ^bb43e:
     %t43tw = llvm.mlir.addressof @wInstantiation_Position_2 : !llvm.ptr
-    %t43twl = arith.constant 37 : i64
+    %t43twl = arith.constant 39 : i64
     %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
     return %t43tr : f64
   ^bb44:
@@ -297975,7 +298967,7 @@ module {
     %t2a0 = llvm.load %r1 : !llvm.ptr -> f64
     %t2r = func.call @KnownTypes_MembersOf_1(%t2m, %t2a0) : (f64, f64) -> f64
     %t2tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t2twl = arith.constant 74 : i64
+    %t2twl = arith.constant 83 : i64
     %t2tr = func.call @strict_trace(%t2r, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t2tr, %r2 : f64, !llvm.ptr
     %t3 = llvm.load %r2 : !llvm.ptr -> f64
@@ -297990,7 +298982,7 @@ module {
     %t7a0 = llvm.load %r0 : !llvm.ptr -> f64
     %t7r = func.call @Instantiation_Arguments_1(%t7m, %t7a0) : (f64, f64) -> f64
     %t7tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t7twl = arith.constant 76 : i64
+    %t7twl = arith.constant 85 : i64
     %t7tr = func.call @strict_trace(%t7r, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t7tr, %r1 : f64, !llvm.ptr
     %t8v = llvm.load %r1 : !llvm.ptr -> f64
@@ -297998,7 +298990,7 @@ module {
     cf.cond_br %t8k, ^bb8e, ^bb9
   ^bb8e:
     %t8tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t8twl = arith.constant 76 : i64
+    %t8twl = arith.constant 85 : i64
     %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     return %t8tr : f64
   ^bb9:
@@ -298031,7 +299023,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t12twl = arith.constant 77 : i64
+    %t12twl = arith.constant 86 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -298048,7 +299040,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t15twl = arith.constant 77 : i64
+    %t15twl = arith.constant 86 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -298076,7 +299068,7 @@ module {
     cf.cond_br %t22k, ^bb22e, ^bb23
   ^bb22e:
     %t22tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t22twl = arith.constant 77 : i64
+    %t22twl = arith.constant 86 : i64
     %t22tr = func.call @strict_trace_checked(%t22v, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
     return %t22tr : f64
   ^bb23:
@@ -298100,7 +299092,7 @@ module {
     cf.cond_br %t27k, ^bb27e, ^bb28
   ^bb27e:
     %t27tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t27twl = arith.constant 77 : i64
+    %t27twl = arith.constant 86 : i64
     %t27tr = func.call @strict_trace_checked(%t27v, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     return %t27tr : f64
   ^bb28:
@@ -298138,7 +299130,7 @@ module {
     %t38a1 = llvm.load %r17 : !llvm.ptr -> f64
     %t38r = func.call @Instantiation_Argument_2(%t38m, %t38a0, %t38a1) : (f64, f64, f64) -> f64
     %t38tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t38twl = arith.constant 78 : i64
+    %t38twl = arith.constant 87 : i64
     %t38tr = func.call @strict_trace(%t38r, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t38tr, %r18 : f64, !llvm.ptr
     %t39 = llvm.load %r18 : !llvm.ptr -> f64
@@ -298150,7 +299142,7 @@ module {
     cf.cond_br %t41k, ^bb41e, ^bb42
   ^bb41e:
     %t41tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t41twl = arith.constant 79 : i64
+    %t41twl = arith.constant 88 : i64
     %t41tr = func.call @strict_trace_checked(%t41v, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
     return %t41tr : f64
   ^bb42:
@@ -298177,7 +299169,7 @@ module {
     cf.cond_br %t49k, ^bb49e, ^bb50
   ^bb49e:
     %t49tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t49twl = arith.constant 81 : i64
+    %t49twl = arith.constant 90 : i64
     %t49tr = func.call @strict_trace_checked(%t49v, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
     return %t49tr : f64
   ^bb50:
@@ -298192,7 +299184,7 @@ module {
     cf.cond_br %t52k, ^bb52e, ^bb53
   ^bb52e:
     %t52tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t52twl = arith.constant 81 : i64
+    %t52twl = arith.constant 90 : i64
     %t52tr = func.call @strict_trace_checked(%t52v, %t52tw, %t52twl) : (f64, !llvm.ptr, i64) -> f64
     return %t52tr : f64
   ^bb53:
@@ -298212,7 +299204,7 @@ module {
     %t57a0 = llvm.load %r1 : !llvm.ptr -> f64
     %t57r = func.call @KnownTypes_BaseName_1(%t57m, %t57a0) : (f64, f64) -> f64
     %t57tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t57twl = arith.constant 82 : i64
+    %t57twl = arith.constant 91 : i64
     %t57tr = func.call @strict_trace(%t57r, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t57tr, %r2 : f64, !llvm.ptr
     %t58v = llvm.load %r2 : !llvm.ptr -> f64
@@ -298220,7 +299212,7 @@ module {
     cf.cond_br %t58k, ^bb58e, ^bb59
   ^bb58e:
     %t58tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t58twl = arith.constant 82 : i64
+    %t58twl = arith.constant 91 : i64
     %t58tr = func.call @strict_trace_checked(%t58v, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
     return %t58tr : f64
   ^bb59:
@@ -298246,7 +299238,7 @@ module {
     cf.cond_br %t64k, ^bb64e, ^bb65
   ^bb64e:
     %t64tw = llvm.mlir.addressof @wInstantiation_Substituted_2 : !llvm.ptr
-    %t64twl = arith.constant 82 : i64
+    %t64twl = arith.constant 91 : i64
     %t64tr = func.call @strict_trace_checked(%t64v, %t64tw, %t64twl) : (f64, !llvm.ptr, i64) -> f64
     return %t64tr : f64
   ^bb65:
@@ -310354,7 +311346,7 @@ module {
     %t2a1 = llvm.load %r1 : !llvm.ptr -> f64
     %t2r = func.call @OperatorCodegen_Compared_2(%t2m, %t2a0, %t2a1) : (f64, f64, f64) -> f64
     %t2tw = llvm.mlir.addressof @wOperatorCodegen_Condition_2 : !llvm.ptr
-    %t2twl = arith.constant 119 : i64
+    %t2twl = arith.constant 125 : i64
     %t2tr = func.call @strict_trace(%t2r, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t2tr, %r2 : f64, !llvm.ptr
     %t3 = llvm.load %r2 : !llvm.ptr -> f64
@@ -310366,7 +311358,7 @@ module {
     cf.cond_br %t5k, ^bb5e, ^bb6
   ^bb5e:
     %t5tw = llvm.mlir.addressof @wOperatorCodegen_Condition_2 : !llvm.ptr
-    %t5twl = arith.constant 120 : i64
+    %t5twl = arith.constant 126 : i64
     %t5tr = func.call @strict_trace_checked(%t5v, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     return %t5tr : f64
   ^bb6:
@@ -310379,7 +311371,7 @@ module {
     cf.cond_br %t8k, ^bb8e, ^bb9
   ^bb8e:
     %t8tw = llvm.mlir.addressof @wOperatorCodegen_Condition_2 : !llvm.ptr
-    %t8twl = arith.constant 120 : i64
+    %t8twl = arith.constant 126 : i64
     %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     return %t8tr : f64
   ^bb9:
@@ -310393,7 +311385,7 @@ module {
     %t10a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t10r = func.call @InstructionEntry_Jump_2(%t10m, %t10a0, %t10a1) : (f64, f64, f64) -> f64
     %t10tw = llvm.mlir.addressof @wOperatorCodegen_Condition_2 : !llvm.ptr
-    %t10twl = arith.constant 120 : i64
+    %t10twl = arith.constant 126 : i64
     %t10tr = func.call @strict_trace(%t10r, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t10tr, %r4 : f64, !llvm.ptr
     %t11v = llvm.load %r4 : !llvm.ptr -> f64
@@ -310401,7 +311393,7 @@ module {
     cf.cond_br %t11k, ^bb11e, ^bb12
   ^bb11e:
     %t11tw = llvm.mlir.addressof @wOperatorCodegen_Condition_2 : !llvm.ptr
-    %t11twl = arith.constant 120 : i64
+    %t11twl = arith.constant 126 : i64
     %t11tr = func.call @strict_trace_checked(%t11v, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     return %t11tr : f64
   ^bb12:
@@ -310409,7 +311401,7 @@ module {
     %t12a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t12r = func.call @CodeBlock_Add_1(%t12m, %t12a0) : (f64, f64) -> f64
     %t12tw = llvm.mlir.addressof @wOperatorCodegen_Condition_2 : !llvm.ptr
-    %t12twl = arith.constant 120 : i64
+    %t12twl = arith.constant 126 : i64
     %t12tr = func.call @strict_trace(%t12r, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t12tr, %r5 : f64, !llvm.ptr
     %t13v = llvm.load %r5 : !llvm.ptr -> f64
@@ -310417,14 +311409,14 @@ module {
     cf.cond_br %t13k, ^bb13e, ^bb14
   ^bb13e:
     %t13tw = llvm.mlir.addressof @wOperatorCodegen_Condition_2 : !llvm.ptr
-    %t13twl = arith.constant 120 : i64
+    %t13twl = arith.constant 126 : i64
     %t13tr = func.call @strict_trace_checked(%t13v, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
     return %t13tr : f64
   ^bb14:
     %t14m = llvm.load %r5 : !llvm.ptr -> f64
     %t14r = func.call @CodeBlock_WithNextId_0(%t14m) : (f64) -> f64
     %t14tw = llvm.mlir.addressof @wOperatorCodegen_Condition_2 : !llvm.ptr
-    %t14twl = arith.constant 120 : i64
+    %t14twl = arith.constant 126 : i64
     %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t14tr, %r6 : f64, !llvm.ptr
     %t15v = llvm.load %r6 : !llvm.ptr -> f64
@@ -310432,7 +311424,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wOperatorCodegen_Condition_2 : !llvm.ptr
-    %t15twl = arith.constant 120 : i64
+    %t15twl = arith.constant 126 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -314489,6 +315481,328 @@ module {
     llvm.store %t50, %r0 : f64, !llvm.ptr
     %t51 = llvm.load %r0 : !llvm.ptr -> f64
     return %t51 : f64
+  }
+  func.func private @Automatic_Coded_0(%p0: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
+    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r0 : f64, !llvm.ptr
+    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r1 : f64, !llvm.ptr
+    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r2 : f64, !llvm.ptr
+    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r3 : f64, !llvm.ptr
+    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r4 : f64, !llvm.ptr
+    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r5 : f64, !llvm.ptr
+    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
+    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_index : f64, !llvm.ptr
+    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_value : f64, !llvm.ptr
+    %v_lines = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_lines : f64, !llvm.ptr
+    %v_instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_instance : f64, !llvm.ptr
+    %v_instantiation = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_instantiation : f64, !llvm.ptr
+    %v_name = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_name : f64, !llvm.ptr
+    %v_codes = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_codes : f64, !llvm.ptr
+    %loop25 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %loop25 : f64, !llvm.ptr
+    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %instance : f64, !llvm.ptr
+    llvm.store %p0, %instance : f64, !llvm.ptr
+    llvm.store %p0, %v_value : f64, !llvm.ptr
+    %self = llvm.load %v_value : !llvm.ptr -> f64
+    %hasSelf = arith.cmpf une, %self, %zero : f64
+    cf.cond_br %hasSelf, ^unpack, ^unpacked
+  ^unpack:
+    %t-1selfp = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr
+    %t-1u0 = llvm.getelementptr %t-1selfp[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t-1u0v = llvm.load %t-1u0 : !llvm.ptr -> f64
+    llvm.store %t-1u0v, %v_lines : f64, !llvm.ptr
+    %t-1u1 = llvm.getelementptr %t-1selfp[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t-1u1v = llvm.load %t-1u1 : !llvm.ptr -> f64
+    llvm.store %t-1u1v, %v_instance : f64, !llvm.ptr
+    %t-1u2 = llvm.getelementptr %t-1selfp[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t-1u2v = llvm.load %t-1u2 : !llvm.ptr -> f64
+    llvm.store %t-1u2v, %v_instantiation : f64, !llvm.ptr
+    cf.br ^unpacked
+  ^unpacked:
+    %t0 = llvm.load %v_instance : !llvm.ptr -> f64
+    llvm.store %t0, %r0 : f64, !llvm.ptr
+    %t1c = llvm.mlir.addressof @cAutomatic_Coded_0_1 : !llvm.ptr
+    %t1xf = func.call @strict_bits(%t1c) : (!llvm.ptr) -> f64
+    llvm.store %t1xf, %r1 : f64, !llvm.ptr
+    %t2m = llvm.load %r0 : !llvm.ptr -> f64
+    %t2a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t2r = func.call @Text_Split_1(%t2m, %t2a0) : (f64, f64) -> f64
+    %t2tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t2twl = arith.constant 85 : i64
+    %t2tr = func.call @strict_trace(%t2r, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t2tr, %r2 : f64, !llvm.ptr
+    %t3v = llvm.load %r2 : !llvm.ptr -> f64
+    %t3k = func.call @strict_is_failure(%t3v) : (f64) -> i1
+    cf.cond_br %t3k, ^bb3e, ^bb4
+  ^bb3e:
+    %t3tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t3twl = arith.constant 85 : i64
+    %t3tr = func.call @strict_trace_checked(%t3v, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t3tr : f64
+  ^bb4:
+    %t4m = llvm.load %r2 : !llvm.ptr -> f64
+    %t4r = func.call @List_Text__First_0(%t4m) : (f64) -> f64
+    %t4tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t4twl = arith.constant 85 : i64
+    %t4tr = func.call @strict_trace(%t4r, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t4tr, %r3 : f64, !llvm.ptr
+    %t5 = llvm.load %r3 : !llvm.ptr -> f64
+    llvm.store %t5, %v_name : f64, !llvm.ptr
+    %t6m = llvm.load %instance : !llvm.ptr -> f64
+    %t6r = func.call @Automatic_Stored_0(%t6m) : (f64) -> f64
+    %t6tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t6twl = arith.constant 86 : i64
+    %t6tr = func.call @strict_trace(%t6r, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t6tr, %r0 : f64, !llvm.ptr
+    %t7v = llvm.load %r0 : !llvm.ptr -> f64
+    %t7k = func.call @strict_is_failure(%t7v) : (f64) -> i1
+    cf.cond_br %t7k, ^bb7e, ^bb8
+  ^bb7e:
+    %t7tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t7twl = arith.constant 86 : i64
+    %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t7tr : f64
+  ^bb8:
+    %t8m = llvm.load %r0 : !llvm.ptr -> f64
+    %t8r = func.call @strict_list_length(%t8m) : (f64) -> f64
+    llvm.store %t8r, %r1 : f64, !llvm.ptr
+    %t9v = llvm.load %r1 : !llvm.ptr -> f64
+    %t9k = func.call @strict_is_failure(%t9v) : (f64) -> i1
+    cf.cond_br %t9k, ^bb9e, ^bb10
+  ^bb9e:
+    %t9tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t9twl = arith.constant 86 : i64
+    %t9tr = func.call @strict_trace_checked(%t9v, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t9tr : f64
+  ^bb10:
+    %t10c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t10c, %r2 : f64, !llvm.ptr
+    %t11a = llvm.load %r1 : !llvm.ptr -> f64
+    %t11b = llvm.load %r2 : !llvm.ptr -> f64
+    %t11c = arith.cmpf oeq, %t11a, %t11b : f64
+    llvm.store %t11c, %flag : i1, !llvm.ptr
+    %t12 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t12, ^bb13, ^bb20
+  ^bb13:
+    %t13c = llvm.mlir.addressof @cAutomatic_Coded_0_13 : !llvm.ptr
+    %t13xf = func.call @strict_bits(%t13c) : (!llvm.ptr) -> f64
+    llvm.store %t13xf, %r3 : f64, !llvm.ptr
+    %t14 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t14, %r4 : f64, !llvm.ptr
+    %t15v = llvm.load %r4 : !llvm.ptr -> f64
+    %t15k = func.call @strict_is_failure(%t15v) : (f64) -> i1
+    cf.cond_br %t15k, ^bb15e, ^bb16
+  ^bb15e:
+    %t15tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t15twl = arith.constant 87 : i64
+    %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t15tr : f64
+  ^bb16:
+    %t16lx = llvm.load %r3 : !llvm.ptr -> f64
+    %t16rx = llvm.load %r4 : !llvm.ptr -> f64
+    %t16c = func.call @strict_text_concat(%t16lx, %t16rx) : (f64, f64) -> f64
+    llvm.store %t16c, %r5 : f64, !llvm.ptr
+    %t17c = llvm.mlir.addressof @cAutomatic_Coded_0_17 : !llvm.ptr
+    %t17xf = func.call @strict_bits(%t17c) : (!llvm.ptr) -> f64
+    llvm.store %t17xf, %r6 : f64, !llvm.ptr
+    %t18lx = llvm.load %r5 : !llvm.ptr -> f64
+    %t18rx = llvm.load %r6 : !llvm.ptr -> f64
+    %t18c = func.call @strict_text_concat(%t18lx, %t18rx) : (f64, f64) -> f64
+    llvm.store %t18c, %r7 : f64, !llvm.ptr
+    %t19 = llvm.load %r7 : !llvm.ptr -> f64
+    return %t19 : f64
+  ^bb20:
+    %t21l = func.call @strict_list_empty() : () -> f64
+    llvm.store %t21l, %r0 : f64, !llvm.ptr
+    %t22 = llvm.load %r0 : !llvm.ptr -> f64
+    llvm.store %t22, %v_codes : f64, !llvm.ptr
+    %t23m = llvm.load %instance : !llvm.ptr -> f64
+    %t23r = func.call @Automatic_Stored_0(%t23m) : (f64) -> f64
+    %t23tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t23twl = arith.constant 89 : i64
+    %t23tr = func.call @strict_trace(%t23r, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t23tr, %r0 : f64, !llvm.ptr
+    %t24v = llvm.load %r0 : !llvm.ptr -> f64
+    %t24k = func.call @strict_is_failure(%t24v) : (f64) -> i1
+    cf.cond_br %t24k, ^bb24e, ^bb25
+  ^bb24e:
+    %t24tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t24twl = arith.constant 89 : i64
+    %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t24tr : f64
+  ^bb25:
+    %t25b = arith.constant 0.0 : f64
+    %t25v = llvm.load %r0 : !llvm.ptr -> f64
+    %t25n = func.call @strict_list_length(%t25v) : (f64) -> f64
+    %t25s = arith.constant 1.0 : f64
+    %t25h = func.call @strict_list_items(%t25v) : (f64) -> !llvm.ptr
+    %t25hv = func.call @strict_list_version() : () -> i64
+    %t25x = llvm.load %v_index : !llvm.ptr -> f64
+    %t25y = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %zero, %loop25 : f64, !llvm.ptr
+    cf.br ^loop25
+  ^loop25:
+    %t25k = llvm.load %loop25 : !llvm.ptr -> f64
+    %t25m = arith.cmpf olt, %t25k, %t25n : f64
+    cf.cond_br %t25m, ^loop25body, ^loop25exit
+  ^loop25body:
+    %t25o = arith.mulf %t25k, %t25s : f64
+    %t25c = arith.addf %t25b, %t25o : f64
+    llvm.store %t25c, %v_index : f64, !llvm.ptr
+    %t25g = func.call @strict_hoisted_item(%t25h, %t25c, %t25hv, %t25v) : (!llvm.ptr, f64, i64, f64) -> f64
+    llvm.store %t25g, %v_value : f64, !llvm.ptr
+    %t26 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %t26, %r1 : f64, !llvm.ptr
+    %t27m = llvm.load %instance : !llvm.ptr -> f64
+    %t27a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t27r = func.call @Automatic_MemberType_1(%t27m, %t27a0) : (f64, f64) -> f64
+    %t27tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t27twl = arith.constant 90 : i64
+    %t27tr = func.call @strict_trace(%t27r, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t27tr, %r2 : f64, !llvm.ptr
+    %t28v = llvm.load %r2 : !llvm.ptr -> f64
+    %t28k = func.call @strict_is_failure(%t28v) : (f64) -> i1
+    cf.cond_br %t28k, ^bb28e, ^bb29
+  ^bb28e:
+    %t28tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t28twl = arith.constant 90 : i64
+    %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t28tr : f64
+  ^bb29:
+    %t29c = llvm.mlir.addressof @cAutomatic_Coded_0_29 : !llvm.ptr
+    %t29xf = func.call @strict_bits(%t29c) : (!llvm.ptr) -> f64
+    llvm.store %t29xf, %r3 : f64, !llvm.ptr
+    %t30l = llvm.load %r2 : !llvm.ptr -> f64
+    %t30r = llvm.load %r3 : !llvm.ptr -> f64
+    %t30q = func.call @strict_text_equal(%t30l, %t30r) : (f64, f64) -> f64
+    %t30f = arith.cmpf oeq, %t30q, %zero : f64
+    llvm.store %t30f, %flag : i1, !llvm.ptr
+    %t31 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t31, ^bb32, ^bb38
+  ^bb32:
+    %t32 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %t32, %r4 : f64, !llvm.ptr
+    %t33m = llvm.load %instance : !llvm.ptr -> f64
+    %t33a0 = llvm.load %r4 : !llvm.ptr -> f64
+    %t33r = func.call @Automatic_MemberCode_1(%t33m, %t33a0) : (f64, f64) -> f64
+    %t33tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t33twl = arith.constant 91 : i64
+    %t33tr = func.call @strict_trace(%t33r, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t33tr, %r5 : f64, !llvm.ptr
+    %t34v = llvm.load %r5 : !llvm.ptr -> f64
+    %t34k = func.call @strict_is_failure(%t34v) : (f64) -> i1
+    cf.cond_br %t34k, ^bb34e, ^bb35
+  ^bb34e:
+    %t34tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t34twl = arith.constant 91 : i64
+    %t34tr = func.call @strict_trace_checked(%t34v, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t34tr : f64
+  ^bb35:
+    %t35l = llvm.load %v_codes : !llvm.ptr -> f64
+    %t35e = llvm.load %r5 : !llvm.ptr -> f64
+    %t35n = func.call @strict_list_add(%t35l, %t35e) : (f64, f64) -> f64
+    llvm.store %t35n, %v_codes : f64, !llvm.ptr
+    %t36 = llvm.load %v_codes : !llvm.ptr -> f64
+    llvm.store %t36, %r6 : f64, !llvm.ptr
+    %t37v = llvm.load %r6 : !llvm.ptr -> f64
+    %t37k = func.call @strict_is_failure(%t37v) : (f64) -> i1
+    cf.cond_br %t37k, ^bb37e, ^bb38
+  ^bb37e:
+    %t37tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t37twl = arith.constant 91 : i64
+    %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t37tr : f64
+  ^bb38:
+    %t39k = llvm.load %loop25 : !llvm.ptr -> f64
+    %t39u = arith.constant 1.0 : f64
+    %t39w = arith.addf %t39k, %t39u : f64
+    llvm.store %t39w, %loop25 : f64, !llvm.ptr
+    cf.br ^loop25
+  ^loop25exit:
+    llvm.store %t25x, %v_index : f64, !llvm.ptr
+    llvm.store %t25y, %v_value : f64, !llvm.ptr
+    %t40c = llvm.mlir.addressof @cAutomatic_Coded_0_40 : !llvm.ptr
+    %t40xf = func.call @strict_bits(%t40c) : (!llvm.ptr) -> f64
+    llvm.store %t40xf, %r0 : f64, !llvm.ptr
+    %t41 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t41, %r1 : f64, !llvm.ptr
+    %t42v = llvm.load %r1 : !llvm.ptr -> f64
+    %t42k = func.call @strict_is_failure(%t42v) : (f64) -> i1
+    cf.cond_br %t42k, ^bb42e, ^bb43
+  ^bb42e:
+    %t42tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t42twl = arith.constant 92 : i64
+    %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t42tr : f64
+  ^bb43:
+    %t43lx = llvm.load %r0 : !llvm.ptr -> f64
+    %t43rx = llvm.load %r1 : !llvm.ptr -> f64
+    %t43c = func.call @strict_text_concat(%t43lx, %t43rx) : (f64, f64) -> f64
+    llvm.store %t43c, %r2 : f64, !llvm.ptr
+    %t44c = llvm.mlir.addressof @cAutomatic_Coded_0_44 : !llvm.ptr
+    %t44xf = func.call @strict_bits(%t44c) : (!llvm.ptr) -> f64
+    llvm.store %t44xf, %r3 : f64, !llvm.ptr
+    %t45lx = llvm.load %r2 : !llvm.ptr -> f64
+    %t45rx = llvm.load %r3 : !llvm.ptr -> f64
+    %t45c = func.call @strict_text_concat(%t45lx, %t45rx) : (f64, f64) -> f64
+    llvm.store %t45c, %r4 : f64, !llvm.ptr
+    %t46 = llvm.load %v_codes : !llvm.ptr -> f64
+    llvm.store %t46, %r5 : f64, !llvm.ptr
+    %t47c = llvm.mlir.addressof @cAutomatic_Coded_0_47 : !llvm.ptr
+    %t47xf = func.call @strict_bits(%t47c) : (!llvm.ptr) -> f64
+    llvm.store %t47xf, %r6 : f64, !llvm.ptr
+    %t48m = arith.constant 0.0 : f64
+    %t48a0 = llvm.load %r5 : !llvm.ptr -> f64
+    %t48a1 = llvm.load %r6 : !llvm.ptr -> f64
+    %t48r = func.call @strict_text_combine(%t48m, %t48a0, %t48a1) : (f64, f64, f64) -> f64
+    llvm.store %t48r, %r7 : f64, !llvm.ptr
+    %t49v = llvm.load %r7 : !llvm.ptr -> f64
+    %t49k = func.call @strict_is_failure(%t49v) : (f64) -> i1
+    cf.cond_br %t49k, ^bb49e, ^bb50
+  ^bb49e:
+    %t49tw = llvm.mlir.addressof @wAutomatic_Coded_0 : !llvm.ptr
+    %t49twl = arith.constant 92 : i64
+    %t49tr = func.call @strict_trace_checked(%t49v, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t49tr : f64
+  ^bb50:
+    %t50lx = llvm.load %r4 : !llvm.ptr -> f64
+    %t50rx = llvm.load %r7 : !llvm.ptr -> f64
+    %t50c = func.call @strict_text_concat(%t50lx, %t50rx) : (f64, f64) -> f64
+    llvm.store %t50c, %r8 : f64, !llvm.ptr
+    %t51c = llvm.mlir.addressof @cAutomatic_Coded_0_51 : !llvm.ptr
+    %t51xf = func.call @strict_bits(%t51c) : (!llvm.ptr) -> f64
+    llvm.store %t51xf, %r9 : f64, !llvm.ptr
+    %t52lx = llvm.load %r8 : !llvm.ptr -> f64
+    %t52rx = llvm.load %r9 : !llvm.ptr -> f64
+    %t52c = func.call @strict_text_concat(%t52lx, %t52rx) : (f64, f64) -> f64
+    llvm.store %t52c, %r10 : f64, !llvm.ptr
+    %t53 = llvm.load %r10 : !llvm.ptr -> f64
+    return %t53 : f64
   }
   func.func private @Automatic_Hashed_0(%p0: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -340795,7 +342109,7 @@ module {
     %t1m = llvm.load %r0 : !llvm.ptr -> f64
     %t1r = func.call @Invocation_TypeName_0(%t1m) : (f64) -> f64
     %t1tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t1twl = arith.constant 109 : i64
+    %t1twl = arith.constant 111 : i64
     %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t1tr, %r1 : f64, !llvm.ptr
     %t2v = llvm.load %r1 : !llvm.ptr -> f64
@@ -340803,7 +342117,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t2twl = arith.constant 109 : i64
+    %t2twl = arith.constant 111 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -340811,7 +342125,7 @@ module {
     %t3a0 = llvm.load %r1 : !llvm.ptr -> f64
     %t3r = func.call @TypeEntry_ShortName_1(%t3m, %t3a0) : (f64, f64) -> f64
     %t3tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t3twl = arith.constant 109 : i64
+    %t3twl = arith.constant 111 : i64
     %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3tr, %r2 : f64, !llvm.ptr
     %t4 = llvm.load %r2 : !llvm.ptr -> f64
@@ -340837,7 +342151,7 @@ module {
     cf.cond_br %t10k, ^bb10e, ^bb11
   ^bb10e:
     %t10tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t10twl = arith.constant 111 : i64
+    %t10twl = arith.constant 113 : i64
     %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     return %t10tr : f64
   ^bb11:
@@ -340857,7 +342171,7 @@ module {
     %t15m = llvm.load %r2 : !llvm.ptr -> f64
     %t15r = func.call @Invocation_MethodName_0(%t15m) : (f64) -> f64
     %t15tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t15twl = arith.constant 112 : i64
+    %t15twl = arith.constant 114 : i64
     %t15tr = func.call @strict_trace(%t15r, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t15tr, %r3 : f64, !llvm.ptr
     %t16v = llvm.load %r3 : !llvm.ptr -> f64
@@ -340865,7 +342179,7 @@ module {
     cf.cond_br %t16k, ^bb16e, ^bb17
   ^bb16e:
     %t16tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t16twl = arith.constant 112 : i64
+    %t16twl = arith.constant 114 : i64
     %t16tr = func.call @strict_trace_checked(%t16v, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     return %t16tr : f64
   ^bb17:
@@ -340914,7 +342228,7 @@ module {
     cf.cond_br %t32k, ^bb32e, ^bb33
   ^bb32e:
     %t32tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t32twl = arith.constant 112 : i64
+    %t32twl = arith.constant 114 : i64
     %t32tr = func.call @strict_trace_checked(%t32v, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
     return %t32tr : f64
   ^bb33:
@@ -340922,7 +342236,7 @@ module {
     %t33a0 = llvm.load %r10 : !llvm.ptr -> f64
     %t33r = func.call @VmValue_OfNumber_1(%t33m, %t33a0) : (f64, f64) -> f64
     %t33tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t33twl = arith.constant 112 : i64
+    %t33twl = arith.constant 114 : i64
     %t33tr = func.call @strict_trace(%t33r, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t33tr, %r11 : f64, !llvm.ptr
     %t34 = llvm.load %r11 : !llvm.ptr -> f64
@@ -340935,7 +342249,7 @@ module {
     cf.cond_br %t37k, ^bb37e, ^bb38
   ^bb37e:
     %t37tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t37twl = arith.constant 113 : i64
+    %t37twl = arith.constant 115 : i64
     %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     return %t37tr : f64
   ^bb38:
@@ -340959,7 +342273,7 @@ module {
     cf.cond_br %t43k, ^bb43e, ^bb44
   ^bb43e:
     %t43tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t43twl = arith.constant 114 : i64
+    %t43twl = arith.constant 116 : i64
     %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
     return %t43tr : f64
   ^bb44:
@@ -340967,7 +342281,7 @@ module {
     %t44a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t44r = func.call @Hosted_Turned_1(%t44m, %t44a0) : (f64, f64) -> f64
     %t44tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t44twl = arith.constant 114 : i64
+    %t44twl = arith.constant 116 : i64
     %t44tr = func.call @strict_trace(%t44r, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t44tr, %r4 : f64, !llvm.ptr
     %t45v = llvm.load %r4 : !llvm.ptr -> f64
@@ -340975,7 +342289,7 @@ module {
     cf.cond_br %t45k, ^bb45e, ^bb46
   ^bb45e:
     %t45tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t45twl = arith.constant 114 : i64
+    %t45twl = arith.constant 116 : i64
     %t45tr = func.call @strict_trace_checked(%t45v, %t45tw, %t45twl) : (f64, !llvm.ptr, i64) -> f64
     return %t45tr : f64
   ^bb46:
@@ -340985,7 +342299,7 @@ module {
     %t47a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t47r = func.call @VmValue_OfNumber_1(%t47m, %t47a0) : (f64, f64) -> f64
     %t47tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t47twl = arith.constant 114 : i64
+    %t47twl = arith.constant 116 : i64
     %t47tr = func.call @strict_trace(%t47r, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t47tr, %r6 : f64, !llvm.ptr
     %t48 = llvm.load %r6 : !llvm.ptr -> f64
@@ -340998,7 +342312,7 @@ module {
     cf.cond_br %t51k, ^bb51e, ^bb52
   ^bb51e:
     %t51tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t51twl = arith.constant 115 : i64
+    %t51twl = arith.constant 117 : i64
     %t51tr = func.call @strict_trace_checked(%t51v, %t51tw, %t51twl) : (f64, !llvm.ptr, i64) -> f64
     return %t51tr : f64
   ^bb52:
@@ -341030,7 +342344,7 @@ module {
     %t59m = llvm.load %r4 : !llvm.ptr -> f64
     %t59r = func.call @List_VmValue__First_0(%t59m) : (f64) -> f64
     %t59tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t59twl = arith.constant 116 : i64
+    %t59twl = arith.constant 118 : i64
     %t59tr = func.call @strict_trace(%t59r, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t59tr, %r5 : f64, !llvm.ptr
     %t60v = llvm.load %r5 : !llvm.ptr -> f64
@@ -341038,7 +342352,7 @@ module {
     cf.cond_br %t60k, ^bb60e, ^bb61
   ^bb60e:
     %t60tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t60twl = arith.constant 116 : i64
+    %t60twl = arith.constant 118 : i64
     %t60tr = func.call @strict_trace_checked(%t60v, %t60tw, %t60twl) : (f64, !llvm.ptr, i64) -> f64
     return %t60tr : f64
   ^bb61:
@@ -341066,7 +342380,7 @@ module {
     %t66m = llvm.load %r4 : !llvm.ptr -> f64
     %t66r = func.call @List_VmValue__Last_0(%t66m) : (f64) -> f64
     %t66tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t66twl = arith.constant 116 : i64
+    %t66twl = arith.constant 118 : i64
     %t66tr = func.call @strict_trace(%t66r, %t66tw, %t66twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t66tr, %r5 : f64, !llvm.ptr
     %t67v = llvm.load %r5 : !llvm.ptr -> f64
@@ -341074,7 +342388,7 @@ module {
     cf.cond_br %t67k, ^bb67e, ^bb68
   ^bb67e:
     %t67tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t67twl = arith.constant 116 : i64
+    %t67twl = arith.constant 118 : i64
     %t67tr = func.call @strict_trace_checked(%t67v, %t67tw, %t67twl) : (f64, !llvm.ptr, i64) -> f64
     return %t67tr : f64
   ^bb68:
@@ -341094,7 +342408,7 @@ module {
     %t72m = llvm.load %r3 : !llvm.ptr -> f64
     %t72r = func.call @Vector2_Validated_0(%t72m) : (f64) -> f64
     %t72tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t72twl = arith.constant 116 : i64
+    %t72twl = arith.constant 118 : i64
     %t72tr = func.call @strict_trace(%t72r, %t72tw, %t72twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t72tr, %r4 : f64, !llvm.ptr
     %t73v = llvm.load %r4 : !llvm.ptr -> f64
@@ -341102,7 +342416,7 @@ module {
     cf.cond_br %t73k, ^bb73e, ^bb74
   ^bb73e:
     %t73tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t73twl = arith.constant 116 : i64
+    %t73twl = arith.constant 118 : i64
     %t73tr = func.call @strict_trace_checked(%t73v, %t73tw, %t73twl) : (f64, !llvm.ptr, i64) -> f64
     return %t73tr : f64
   ^bb74:
@@ -341114,7 +342428,7 @@ module {
     cf.cond_br %t75k, ^bb75e, ^bb76
   ^bb75e:
     %t75tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t75twl = arith.constant 116 : i64
+    %t75twl = arith.constant 118 : i64
     %t75tr = func.call @strict_trace_checked(%t75v, %t75tw, %t75twl) : (f64, !llvm.ptr, i64) -> f64
     return %t75tr : f64
   ^bb76:
@@ -341124,7 +342438,7 @@ module {
     %t77a0 = llvm.load %r6 : !llvm.ptr -> f64
     %t77r = func.call @VmValue_OfNumber_1(%t77m, %t77a0) : (f64, f64) -> f64
     %t77tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t77twl = arith.constant 116 : i64
+    %t77twl = arith.constant 118 : i64
     %t77tr = func.call @strict_trace(%t77r, %t77tw, %t77twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t77tr, %r7 : f64, !llvm.ptr
     %t78 = llvm.load %r7 : !llvm.ptr -> f64
@@ -341137,7 +342451,7 @@ module {
     %t82m = llvm.load %r1 : !llvm.ptr -> f64
     %t82r = func.call @Ratio_Validated_0(%t82m) : (f64) -> f64
     %t82tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t82twl = arith.constant 117 : i64
+    %t82twl = arith.constant 119 : i64
     %t82tr = func.call @strict_trace(%t82r, %t82tw, %t82twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t82tr, %r2 : f64, !llvm.ptr
     %t83v = llvm.load %r2 : !llvm.ptr -> f64
@@ -341145,7 +342459,7 @@ module {
     cf.cond_br %t83k, ^bb83e, ^bb84
   ^bb83e:
     %t83tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t83twl = arith.constant 117 : i64
+    %t83twl = arith.constant 119 : i64
     %t83tr = func.call @strict_trace_checked(%t83v, %t83tw, %t83twl) : (f64, !llvm.ptr, i64) -> f64
     return %t83tr : f64
   ^bb84:
@@ -341153,7 +342467,7 @@ module {
     %t84a0 = llvm.load %r2 : !llvm.ptr -> f64
     %t84r = func.call @Hosted_Inverted_1(%t84m, %t84a0) : (f64, f64) -> f64
     %t84tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t84twl = arith.constant 117 : i64
+    %t84twl = arith.constant 119 : i64
     %t84tr = func.call @strict_trace(%t84r, %t84tw, %t84twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t84tr, %r3 : f64, !llvm.ptr
     %t85v = llvm.load %r3 : !llvm.ptr -> f64
@@ -341161,7 +342475,7 @@ module {
     cf.cond_br %t85k, ^bb85e, ^bb86
   ^bb85e:
     %t85tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t85twl = arith.constant 117 : i64
+    %t85twl = arith.constant 119 : i64
     %t85tr = func.call @strict_trace_checked(%t85v, %t85tw, %t85twl) : (f64, !llvm.ptr, i64) -> f64
     return %t85tr : f64
   ^bb86:
@@ -341171,7 +342485,7 @@ module {
     %t87a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t87r = func.call @VmValue_OfNumber_1(%t87m, %t87a0) : (f64, f64) -> f64
     %t87tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t87twl = arith.constant 117 : i64
+    %t87twl = arith.constant 119 : i64
     %t87tr = func.call @strict_trace(%t87r, %t87tw, %t87twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t87tr, %r5 : f64, !llvm.ptr
     %t88v = llvm.load %r5 : !llvm.ptr -> f64
@@ -341179,7 +342493,7 @@ module {
     cf.cond_br %t88k, ^bb88e, ^bb89
   ^bb88e:
     %t88tw = llvm.mlir.addressof @wHosted_Measured_0 : !llvm.ptr
-    %t88twl = arith.constant 117 : i64
+    %t88twl = arith.constant 119 : i64
     %t88tr = func.call @strict_trace_checked(%t88v, %t88tw, %t88twl) : (f64, !llvm.ptr, i64) -> f64
     return %t88tr : f64
   ^bb89:
@@ -341235,7 +342549,7 @@ module {
     %t0m = llvm.load %instance : !llvm.ptr -> f64
     %t0r = func.call @Hosted_Location_0(%t0m) : (f64) -> f64
     %t0tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t0twl = arith.constant 75 : i64
+    %t0twl = arith.constant 77 : i64
     %t0tr = func.call @strict_trace(%t0r, %t0tw, %t0twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t0tr, %r0 : f64, !llvm.ptr
     %t1 = llvm.load %r0 : !llvm.ptr -> f64
@@ -341245,7 +342559,7 @@ module {
     %t3m = llvm.load %r0 : !llvm.ptr -> f64
     %t3r = func.call @Invocation_MethodName_0(%t3m) : (f64) -> f64
     %t3tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t3twl = arith.constant 76 : i64
+    %t3twl = arith.constant 78 : i64
     %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3tr, %r1 : f64, !llvm.ptr
     %t4v = llvm.load %r1 : !llvm.ptr -> f64
@@ -341253,7 +342567,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t4twl = arith.constant 76 : i64
+    %t4twl = arith.constant 78 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -341275,7 +342589,7 @@ module {
     cf.cond_br %t9k, ^bb9e, ^bb10
   ^bb9e:
     %t9tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t9twl = arith.constant 77 : i64
+    %t9twl = arith.constant 79 : i64
     %t9tr = func.call @strict_trace_checked(%t9v, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
     return %t9tr : f64
   ^bb10:
@@ -341286,7 +342600,7 @@ module {
     cf.cond_br %t11k, ^bb11e, ^bb12
   ^bb11e:
     %t11tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t11twl = arith.constant 77 : i64
+    %t11twl = arith.constant 79 : i64
     %t11tr = func.call @strict_trace_checked(%t11v, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     return %t11tr : f64
   ^bb12:
@@ -341298,7 +342612,7 @@ module {
     cf.cond_br %t13k, ^bb13e, ^bb14
   ^bb13e:
     %t13tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t13twl = arith.constant 77 : i64
+    %t13twl = arith.constant 79 : i64
     %t13tr = func.call @strict_trace_checked(%t13v, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
     return %t13tr : f64
   ^bb14:
@@ -341306,7 +342620,7 @@ module {
     %t14a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t14r = func.call @Hosted_Values_1(%t14m, %t14a0) : (f64, f64) -> f64
     %t14tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t14twl = arith.constant 77 : i64
+    %t14twl = arith.constant 79 : i64
     %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t14tr, %r6 : f64, !llvm.ptr
     %t15 = llvm.load %r6 : !llvm.ptr -> f64
@@ -341317,7 +342631,7 @@ module {
     %t18m = llvm.load %r0 : !llvm.ptr -> f64
     %t18r = func.call @Invocation_MethodName_0(%t18m) : (f64) -> f64
     %t18tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t18twl = arith.constant 78 : i64
+    %t18twl = arith.constant 80 : i64
     %t18tr = func.call @strict_trace(%t18r, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t18tr, %r1 : f64, !llvm.ptr
     %t19v = llvm.load %r1 : !llvm.ptr -> f64
@@ -341325,7 +342639,7 @@ module {
     cf.cond_br %t19k, ^bb19e, ^bb20
   ^bb19e:
     %t19tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t19twl = arith.constant 78 : i64
+    %t19twl = arith.constant 80 : i64
     %t19tr = func.call @strict_trace_checked(%t19v, %t19tw, %t19twl) : (f64, !llvm.ptr, i64) -> f64
     return %t19tr : f64
   ^bb20:
@@ -341347,7 +342661,7 @@ module {
     cf.cond_br %t24k, ^bb24e, ^bb25
   ^bb24e:
     %t24tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t24twl = arith.constant 79 : i64
+    %t24twl = arith.constant 81 : i64
     %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
     return %t24tr : f64
   ^bb25:
@@ -341358,7 +342672,7 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t26twl = arith.constant 79 : i64
+    %t26twl = arith.constant 81 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
@@ -341370,7 +342684,7 @@ module {
     cf.cond_br %t28k, ^bb28e, ^bb29
   ^bb28e:
     %t28tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t28twl = arith.constant 79 : i64
+    %t28twl = arith.constant 81 : i64
     %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
     return %t28tr : f64
   ^bb29:
@@ -341378,7 +342692,7 @@ module {
     %t29a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t29r = func.call @Hosted_ByteValues_1(%t29m, %t29a0) : (f64, f64) -> f64
     %t29tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t29twl = arith.constant 79 : i64
+    %t29twl = arith.constant 81 : i64
     %t29tr = func.call @strict_trace(%t29r, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t29tr, %r6 : f64, !llvm.ptr
     %t30 = llvm.load %r6 : !llvm.ptr -> f64
@@ -341399,7 +342713,7 @@ module {
     cf.cond_br %t35k, ^bb35e, ^bb36
   ^bb35e:
     %t35tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t35twl = arith.constant 80 : i64
+    %t35twl = arith.constant 82 : i64
     %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
     return %t35tr : f64
   ^bb36:
@@ -341422,7 +342736,7 @@ module {
     %t41m = llvm.load %r5 : !llvm.ptr -> f64
     %t41r = func.call @List_VmValue__Last_0(%t41m) : (f64) -> f64
     %t41tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t41twl = arith.constant 80 : i64
+    %t41twl = arith.constant 82 : i64
     %t41tr = func.call @strict_trace(%t41r, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t41tr, %r6 : f64, !llvm.ptr
     %t42v = llvm.load %r6 : !llvm.ptr -> f64
@@ -341430,7 +342744,7 @@ module {
     cf.cond_br %t42k, ^bb42e, ^bb43
   ^bb42e:
     %t42tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t42twl = arith.constant 80 : i64
+    %t42twl = arith.constant 82 : i64
     %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
     return %t42tr : f64
   ^bb43:
@@ -341468,7 +342782,7 @@ module {
     %t55m = llvm.load %r0 : !llvm.ptr -> f64
     %t55r = func.call @Invocation_MethodName_0(%t55m) : (f64) -> f64
     %t55tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t55twl = arith.constant 81 : i64
+    %t55twl = arith.constant 83 : i64
     %t55tr = func.call @strict_trace(%t55r, %t55tw, %t55twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t55tr, %r1 : f64, !llvm.ptr
     %t56v = llvm.load %r1 : !llvm.ptr -> f64
@@ -341476,7 +342790,7 @@ module {
     cf.cond_br %t56k, ^bb56e, ^bb57
   ^bb56e:
     %t56tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t56twl = arith.constant 81 : i64
+    %t56twl = arith.constant 83 : i64
     %t56tr = func.call @strict_trace_checked(%t56v, %t56tw, %t56twl) : (f64, !llvm.ptr, i64) -> f64
     return %t56tr : f64
   ^bb57:
@@ -341498,7 +342812,7 @@ module {
     cf.cond_br %t61k, ^bb61e, ^bb62
   ^bb61e:
     %t61tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t61twl = arith.constant 81 : i64
+    %t61twl = arith.constant 83 : i64
     %t61tr = func.call @strict_trace_checked(%t61v, %t61tw, %t61twl) : (f64, !llvm.ptr, i64) -> f64
     return %t61tr : f64
   ^bb62:
@@ -341529,7 +342843,7 @@ module {
     cf.cond_br %t70k, ^bb70e, ^bb71
   ^bb70e:
     %t70tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t70twl = arith.constant 81 : i64
+    %t70twl = arith.constant 83 : i64
     %t70tr = func.call @strict_trace_checked(%t70v, %t70tw, %t70twl) : (f64, !llvm.ptr, i64) -> f64
     return %t70tr : f64
   ^bb71:
@@ -341548,7 +342862,7 @@ module {
     cf.cond_br %t75k, ^bb75e, ^bb76
   ^bb75e:
     %t75tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t75twl = arith.constant 81 : i64
+    %t75twl = arith.constant 83 : i64
     %t75tr = func.call @strict_trace_checked(%t75v, %t75tw, %t75twl) : (f64, !llvm.ptr, i64) -> f64
     return %t75tr : f64
   ^bb76:
@@ -341556,7 +342870,7 @@ module {
     %t76a0 = llvm.load %r9 : !llvm.ptr -> f64
     %t76r = func.call @Hosted_Values_1(%t76m, %t76a0) : (f64, f64) -> f64
     %t76tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t76twl = arith.constant 81 : i64
+    %t76twl = arith.constant 83 : i64
     %t76tr = func.call @strict_trace(%t76r, %t76tw, %t76twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t76tr, %r10 : f64, !llvm.ptr
     %t77v = llvm.load %r10 : !llvm.ptr -> f64
@@ -341564,7 +342878,7 @@ module {
     cf.cond_br %t77k, ^bb77e, ^bb78
   ^bb77e:
     %t77tw = llvm.mlir.addressof @wHosted_Entries_0 : !llvm.ptr
-    %t77twl = arith.constant 81 : i64
+    %t77twl = arith.constant 83 : i64
     %t77tr = func.call @strict_trace_checked(%t77v, %t77tw, %t77twl) : (f64, !llvm.ptr, i64) -> f64
     return %t77tr : f64
   ^bb78:
@@ -341853,7 +343167,7 @@ module {
     %t44u = arith.cmpf oeq, %t44v, %zero : f64
     cf.cond_br %t44u, ^l44, ^m44(%t44v : f64)
   ^l44:
-    %t44q = arith.constant 0x4018000000000000 : f64
+    %t44q = arith.constant 0x401C000000000000 : f64
     %t44l = func.call @strict_list_new(%t44q, %zero) : (f64, f64) -> f64
     %t44e0c = llvm.mlir.addressof @cHosted_Stored_0_44_0 : !llvm.ptr
     %t44e0xf = func.call @strict_bits(%t44e0c) : (!llvm.ptr) -> f64
@@ -341861,9 +343175,12 @@ module {
     %t44e1c = llvm.mlir.addressof @cHosted_Stored_0_44_1 : !llvm.ptr
     %t44e1xf = func.call @strict_bits(%t44e1c) : (!llvm.ptr) -> f64
     %t44e1l = func.call @strict_list_add(%t44e0l, %t44e1xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t44e1l) : (f64) -> ()
-    llvm.store %t44e1l, %t44g : f64, !llvm.ptr
-    cf.br ^m44(%t44e1l : f64)
+    %t44e2c = llvm.mlir.addressof @cHosted_Stored_0_44_2 : !llvm.ptr
+    %t44e2xf = func.call @strict_bits(%t44e2c) : (!llvm.ptr) -> f64
+    %t44e2l = func.call @strict_list_add(%t44e1l, %t44e2xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t44e2l) : (f64) -> ()
+    llvm.store %t44e2l, %t44g : f64, !llvm.ptr
+    cf.br ^m44(%t44e2l : f64)
   ^m44(%t44r: f64):
     llvm.store %t44r, %r0 : f64, !llvm.ptr
     %t45 = llvm.load %v_call : !llvm.ptr -> f64
@@ -344166,6 +345483,339 @@ module {
   ^bb71:
     %t71 = llvm.load %r11 : !llvm.ptr -> f64
     return %t71 : f64
+  }
+  func.func private @ValueCode_Code_0(%p0: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
+    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r0 : f64, !llvm.ptr
+    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r1 : f64, !llvm.ptr
+    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r2 : f64, !llvm.ptr
+    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r3 : f64, !llvm.ptr
+    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r4 : f64, !llvm.ptr
+    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r5 : f64, !llvm.ptr
+    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
+    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r11 : f64, !llvm.ptr
+    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r12 : f64, !llvm.ptr
+    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r13 : f64, !llvm.ptr
+    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_index : f64, !llvm.ptr
+    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_value : f64, !llvm.ptr
+    %v_shown = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_shown : f64, !llvm.ptr
+    %v_kind = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_kind : f64, !llvm.ptr
+    %v_conditional1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional1 : f64, !llvm.ptr
+    %v_list4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_list4 : f64, !llvm.ptr
+    %v_conditional5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional5 : f64, !llvm.ptr
+    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %instance : f64, !llvm.ptr
+    llvm.store %p0, %instance : f64, !llvm.ptr
+    llvm.store %p0, %v_value : f64, !llvm.ptr
+    %talias0 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %talias0, %v_shown : f64, !llvm.ptr
+    %t0 = llvm.load %v_shown : !llvm.ptr -> f64
+    llvm.store %t0, %r0 : f64, !llvm.ptr
+    %t1i = llvm.load %r0 : !llvm.ptr -> f64
+    %t1ip = func.call @strict_ptr(%t1i) : (f64) -> !llvm.ptr
+    %t1m = llvm.getelementptr %t1ip[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t1mv = llvm.load %t1m : !llvm.ptr -> f64
+    llvm.store %t1mv, %r1 : f64, !llvm.ptr
+    %t2 = llvm.load %r1 : !llvm.ptr -> f64
+    llvm.store %t2, %v_kind : f64, !llvm.ptr
+    %t3g = llvm.mlir.addressof @lValueCode_Code_0_3 : !llvm.ptr
+    %t3v = llvm.load %t3g : !llvm.ptr -> f64
+    %t3u = arith.cmpf oeq, %t3v, %zero : f64
+    cf.cond_br %t3u, ^l3, ^m3(%t3v : f64)
+  ^l3:
+    %t3q = arith.constant 0x4020000000000000 : f64
+    %t3l = func.call @strict_list_new(%t3q, %zero) : (f64, f64) -> f64
+    %t3e0c = llvm.mlir.addressof @cValueCode_Code_0_3_0 : !llvm.ptr
+    %t3e0xf = func.call @strict_bits(%t3e0c) : (!llvm.ptr) -> f64
+    %t3e0l = func.call @strict_list_add(%t3l, %t3e0xf) : (f64, f64) -> f64
+    %t3e1c = llvm.mlir.addressof @cValueCode_Code_0_3_1 : !llvm.ptr
+    %t3e1xf = func.call @strict_bits(%t3e1c) : (!llvm.ptr) -> f64
+    %t3e1l = func.call @strict_list_add(%t3e0l, %t3e1xf) : (f64, f64) -> f64
+    %t3e2c = llvm.mlir.addressof @cValueCode_Code_0_3_2 : !llvm.ptr
+    %t3e2xf = func.call @strict_bits(%t3e2c) : (!llvm.ptr) -> f64
+    %t3e2l = func.call @strict_list_add(%t3e1l, %t3e2xf) : (f64, f64) -> f64
+    %t3e3c = llvm.mlir.addressof @cValueCode_Code_0_3_3 : !llvm.ptr
+    %t3e3xf = func.call @strict_bits(%t3e3c) : (!llvm.ptr) -> f64
+    %t3e3l = func.call @strict_list_add(%t3e2l, %t3e3xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t3e3l) : (f64) -> ()
+    llvm.store %t3e3l, %t3g : f64, !llvm.ptr
+    cf.br ^m3(%t3e3l : f64)
+  ^m3(%t3r: f64):
+    llvm.store %t3r, %r0 : f64, !llvm.ptr
+    %t4 = llvm.load %v_kind : !llvm.ptr -> f64
+    llvm.store %t4, %r1 : f64, !llvm.ptr
+    %t5m = llvm.load %r0 : !llvm.ptr -> f64
+    %t5a0 = llvm.load %r1 : !llvm.ptr -> f64
+    %t5q = func.constant @strict_text_equal : (f64, f64) -> f64
+    %t5r = func.call @strict_list_has(%t5m, %t5a0, %t5q) : (f64, f64, (f64, f64) -> f64) -> f64
+    llvm.store %t5r, %r2 : f64, !llvm.ptr
+    %t6c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t6c, %r3 : f64, !llvm.ptr
+    %t7a = llvm.load %r2 : !llvm.ptr -> f64
+    %t7b = llvm.load %r3 : !llvm.ptr -> f64
+    %t7c = arith.cmpf oeq, %t7a, %t7b : f64
+    llvm.store %t7c, %flag : i1, !llvm.ptr
+    %t8 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t8, ^bb9, ^bb27
+  ^bb9:
+    %t9 = llvm.load %v_kind : !llvm.ptr -> f64
+    llvm.store %t9, %r4 : f64, !llvm.ptr
+    %t10c = llvm.mlir.addressof @cValueCode_Code_0_10 : !llvm.ptr
+    %t10xf = func.call @strict_bits(%t10c) : (!llvm.ptr) -> f64
+    llvm.store %t10xf, %r5 : f64, !llvm.ptr
+    %t11l = llvm.load %r4 : !llvm.ptr -> f64
+    %t11r = llvm.load %r5 : !llvm.ptr -> f64
+    %t11q = func.call @strict_text_equal(%t11l, %t11r) : (f64, f64) -> f64
+    %t11f = arith.cmpf one, %t11q, %zero : f64
+    llvm.store %t11f, %flag : i1, !llvm.ptr
+    %t12 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t12, ^bb13, ^bb19
+  ^bb13:
+    %t13 = llvm.load %v_shown : !llvm.ptr -> f64
+    llvm.store %t13, %r6 : f64, !llvm.ptr
+    %t14i = llvm.load %r6 : !llvm.ptr -> f64
+    %t14ip = func.call @strict_ptr(%t14i) : (f64) -> !llvm.ptr
+    %t14m = llvm.getelementptr %t14ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t14mv = llvm.load %t14m : !llvm.ptr -> f64
+    llvm.store %t14mv, %r7 : f64, !llvm.ptr
+    %t15m = llvm.load %r7 : !llvm.ptr -> f64
+    %t15r = func.call @Text_Code_0(%t15m) : (f64) -> f64
+    %t15tw = llvm.mlir.addressof @wValueCode_Code_0 : !llvm.ptr
+    %t15twl = arith.constant 8 : i64
+    %t15tr = func.call @strict_trace(%t15r, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t15tr, %r8 : f64, !llvm.ptr
+    %t16 = llvm.load %r8 : !llvm.ptr -> f64
+    llvm.store %t16, %v_conditional1 : f64, !llvm.ptr
+    %t17c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t17c, %r9 : f64, !llvm.ptr
+    %t18a = llvm.load %r9 : !llvm.ptr -> f64
+    %t18b = llvm.load %r9 : !llvm.ptr -> f64
+    %t18c = arith.cmpf oeq, %t18a, %t18b : f64
+    llvm.store %t18c, %flag : i1, !llvm.ptr
+    cf.br ^bb19
+  ^bb19:
+    %t20 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t20, ^bb24, ^bb21
+  ^bb21:
+    %t21 = llvm.load %v_shown : !llvm.ptr -> f64
+    llvm.store %t21, %r10 : f64, !llvm.ptr
+    %t22v = llvm.load %r10 : !llvm.ptr -> f64
+    %t22vxc = func.constant @VmValue_to_0_Text : (f64) -> f64
+    %t22vx = func.call @strict_converted(%t22v, %t22vxc) : (f64, (f64) -> f64) -> f64
+    llvm.store %t22vx, %r11 : f64, !llvm.ptr
+    %t23 = llvm.load %r11 : !llvm.ptr -> f64
+    llvm.store %t23, %v_conditional1 : f64, !llvm.ptr
+    cf.br ^bb24
+  ^bb24:
+    %t25 = llvm.load %v_conditional1 : !llvm.ptr -> f64
+    llvm.store %t25, %r12 : f64, !llvm.ptr
+    %t26 = llvm.load %r12 : !llvm.ptr -> f64
+    return %t26 : f64
+  ^bb27:
+    %t28 = llvm.load %v_kind : !llvm.ptr -> f64
+    llvm.store %t28, %r0 : f64, !llvm.ptr
+    %t29c = llvm.mlir.addressof @cValueCode_Code_0_29 : !llvm.ptr
+    %t29xf = func.call @strict_bits(%t29c) : (!llvm.ptr) -> f64
+    llvm.store %t29xf, %r1 : f64, !llvm.ptr
+    %t30l = llvm.load %r0 : !llvm.ptr -> f64
+    %t30r = llvm.load %r1 : !llvm.ptr -> f64
+    %t30q = func.call @strict_text_equal(%t30l, %t30r) : (f64, f64) -> f64
+    %t30f = arith.cmpf one, %t30q, %zero : f64
+    llvm.store %t30f, %flag : i1, !llvm.ptr
+    %t31 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t31, ^bb32, ^bb46
+  ^bb32:
+    %t32c = llvm.mlir.addressof @cValueCode_Code_0_32 : !llvm.ptr
+    %t32xf = func.call @strict_bits(%t32c) : (!llvm.ptr) -> f64
+    llvm.store %t32xf, %r2 : f64, !llvm.ptr
+    %t33 = llvm.load %v_shown : !llvm.ptr -> f64
+    llvm.store %t33, %r3 : f64, !llvm.ptr
+    %t34i = llvm.load %r3 : !llvm.ptr -> f64
+    %t34ip = func.call @strict_ptr(%t34i) : (f64) -> !llvm.ptr
+    %t34m = llvm.getelementptr %t34ip[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t34mv = llvm.load %t34m : !llvm.ptr -> f64
+    llvm.store %t34mv, %r4 : f64, !llvm.ptr
+    %t35 = llvm.load %r4 : !llvm.ptr -> f64
+    llvm.store %t35, %v_list4 : f64, !llvm.ptr
+    %t36c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t36c, %r5 : f64, !llvm.ptr
+    %t37l = llvm.load %v_list4 : !llvm.ptr -> f64
+    %t37i = llvm.load %r5 : !llvm.ptr -> f64
+    %t37n = llvm.mlir.addressof @sValueCode_Code_0_37 : !llvm.ptr
+    %t37nb = func.call @strict_bits(%t37n) : (!llvm.ptr) -> f64
+    %t37x = func.call @strict_list_read(%t37l, %t37i, %t37nb) : (f64, f64, f64) -> f64
+    llvm.store %t37x, %r6 : f64, !llvm.ptr
+    %t38v = llvm.load %r6 : !llvm.ptr -> f64
+    %t38k = func.call @strict_is_failure(%t38v) : (f64) -> i1
+    cf.cond_br %t38k, ^bb38e, ^bb39
+  ^bb38e:
+    %t38tw = llvm.mlir.addressof @wValueCode_Code_0 : !llvm.ptr
+    %t38twl = arith.constant 10 : i64
+    %t38tr = func.call @strict_trace_checked(%t38v, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t38tr : f64
+  ^bb39:
+    %t39i = llvm.load %r6 : !llvm.ptr -> f64
+    %t39ip = func.call @strict_ptr(%t39i) : (f64) -> !llvm.ptr
+    %t39m = llvm.getelementptr %t39ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t39mv = llvm.load %t39m : !llvm.ptr -> f64
+    llvm.store %t39mv, %r7 : f64, !llvm.ptr
+    %t40m = llvm.load %r7 : !llvm.ptr -> f64
+    %t40r = func.call @Text_Code_0(%t40m) : (f64) -> f64
+    %t40tw = llvm.mlir.addressof @wValueCode_Code_0 : !llvm.ptr
+    %t40twl = arith.constant 10 : i64
+    %t40tr = func.call @strict_trace(%t40r, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t40tr, %r8 : f64, !llvm.ptr
+    %t41v = llvm.load %r8 : !llvm.ptr -> f64
+    %t41k = func.call @strict_is_failure(%t41v) : (f64) -> i1
+    cf.cond_br %t41k, ^bb41e, ^bb42
+  ^bb41e:
+    %t41tw = llvm.mlir.addressof @wValueCode_Code_0 : !llvm.ptr
+    %t41twl = arith.constant 10 : i64
+    %t41tr = func.call @strict_trace_checked(%t41v, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t41tr : f64
+  ^bb42:
+    %t42lx = llvm.load %r2 : !llvm.ptr -> f64
+    %t42rx = llvm.load %r8 : !llvm.ptr -> f64
+    %t42c = func.call @strict_text_concat(%t42lx, %t42rx) : (f64, f64) -> f64
+    llvm.store %t42c, %r9 : f64, !llvm.ptr
+    %t43c = llvm.mlir.addressof @cValueCode_Code_0_43 : !llvm.ptr
+    %t43xf = func.call @strict_bits(%t43c) : (!llvm.ptr) -> f64
+    llvm.store %t43xf, %r10 : f64, !llvm.ptr
+    %t44lx = llvm.load %r9 : !llvm.ptr -> f64
+    %t44rx = llvm.load %r10 : !llvm.ptr -> f64
+    %t44c = func.call @strict_text_concat(%t44lx, %t44rx) : (f64, f64) -> f64
+    llvm.store %t44c, %r11 : f64, !llvm.ptr
+    %t45 = llvm.load %r11 : !llvm.ptr -> f64
+    return %t45 : f64
+  ^bb46:
+    %t47 = llvm.load %v_kind : !llvm.ptr -> f64
+    llvm.store %t47, %r0 : f64, !llvm.ptr
+    %t48c = llvm.mlir.addressof @cValueCode_Code_0_48 : !llvm.ptr
+    %t48xf = func.call @strict_bits(%t48c) : (!llvm.ptr) -> f64
+    llvm.store %t48xf, %r1 : f64, !llvm.ptr
+    %t49l = llvm.load %r0 : !llvm.ptr -> f64
+    %t49r = llvm.load %r1 : !llvm.ptr -> f64
+    %t49q = func.call @strict_text_equal(%t49l, %t49r) : (f64, f64) -> f64
+    %t49f = arith.cmpf one, %t49q, %zero : f64
+    llvm.store %t49f, %flag : i1, !llvm.ptr
+    %t50 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t50, ^bb51, ^bb55
+  ^bb51:
+    %t51c = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %t51xf = func.call @strict_bits(%t51c) : (!llvm.ptr) -> f64
+    llvm.store %t51xf, %r2 : f64, !llvm.ptr
+    %t52 = llvm.load %r2 : !llvm.ptr -> f64
+    llvm.store %t52, %v_conditional5 : f64, !llvm.ptr
+    %t53c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t53c, %r3 : f64, !llvm.ptr
+    %t54a = llvm.load %r3 : !llvm.ptr -> f64
+    %t54b = llvm.load %r3 : !llvm.ptr -> f64
+    %t54c = arith.cmpf oeq, %t54a, %t54b : f64
+    llvm.store %t54c, %flag : i1, !llvm.ptr
+    cf.br ^bb55
+  ^bb55:
+    %t56 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t56, ^bb60, ^bb57
+  ^bb57:
+    %t57 = llvm.load %v_kind : !llvm.ptr -> f64
+    llvm.store %t57, %r4 : f64, !llvm.ptr
+    %t58m = arith.constant 0.0 : f64
+    %t58a0 = llvm.load %r4 : !llvm.ptr -> f64
+    %t58r = func.call @TypeEntry_ShortName_1(%t58m, %t58a0) : (f64, f64) -> f64
+    %t58tw = llvm.mlir.addressof @wValueCode_Code_0 : !llvm.ptr
+    %t58twl = arith.constant 11 : i64
+    %t58tr = func.call @strict_trace(%t58r, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t58tr, %r5 : f64, !llvm.ptr
+    %t59 = llvm.load %r5 : !llvm.ptr -> f64
+    llvm.store %t59, %v_conditional5 : f64, !llvm.ptr
+    cf.br ^bb60
+  ^bb60:
+    %t61 = llvm.load %v_conditional5 : !llvm.ptr -> f64
+    llvm.store %t61, %r6 : f64, !llvm.ptr
+    %t62v = llvm.load %r6 : !llvm.ptr -> f64
+    %t62k = func.call @strict_is_failure(%t62v) : (f64) -> i1
+    cf.cond_br %t62k, ^bb62e, ^bb63
+  ^bb62e:
+    %t62tw = llvm.mlir.addressof @wValueCode_Code_0 : !llvm.ptr
+    %t62twl = arith.constant 11 : i64
+    %t62tr = func.call @strict_trace_checked(%t62v, %t62tw, %t62twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t62tr : f64
+  ^bb63:
+    %t63c = llvm.mlir.addressof @cValueCode_Code_0_63 : !llvm.ptr
+    %t63xf = func.call @strict_bits(%t63c) : (!llvm.ptr) -> f64
+    llvm.store %t63xf, %r7 : f64, !llvm.ptr
+    %t64lx = llvm.load %r6 : !llvm.ptr -> f64
+    %t64rx = llvm.load %r7 : !llvm.ptr -> f64
+    %t64c = func.call @strict_text_concat(%t64lx, %t64rx) : (f64, f64) -> f64
+    llvm.store %t64c, %r8 : f64, !llvm.ptr
+    %t65m = llvm.load %instance : !llvm.ptr -> f64
+    %t65r = func.call @ValueCode_Items_0(%t65m) : (f64) -> f64
+    %t65tw = llvm.mlir.addressof @wValueCode_Code_0 : !llvm.ptr
+    %t65twl = arith.constant 11 : i64
+    %t65tr = func.call @strict_trace(%t65r, %t65tw, %t65twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t65tr, %r9 : f64, !llvm.ptr
+    %t66v = llvm.load %r9 : !llvm.ptr -> f64
+    %t66k = func.call @strict_is_failure(%t66v) : (f64) -> i1
+    cf.cond_br %t66k, ^bb66e, ^bb67
+  ^bb66e:
+    %t66tw = llvm.mlir.addressof @wValueCode_Code_0 : !llvm.ptr
+    %t66twl = arith.constant 11 : i64
+    %t66tr = func.call @strict_trace_checked(%t66v, %t66tw, %t66twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t66tr : f64
+  ^bb67:
+    %t67m = arith.constant 0.0 : f64
+    %t67a0 = llvm.load %r9 : !llvm.ptr -> f64
+    %t67r = func.call @strict_text_combine(%t67m, %t67a0, %zero) : (f64, f64, f64) -> f64
+    llvm.store %t67r, %r10 : f64, !llvm.ptr
+    %t68v = llvm.load %r10 : !llvm.ptr -> f64
+    %t68k = func.call @strict_is_failure(%t68v) : (f64) -> i1
+    cf.cond_br %t68k, ^bb68e, ^bb69
+  ^bb68e:
+    %t68tw = llvm.mlir.addressof @wValueCode_Code_0 : !llvm.ptr
+    %t68twl = arith.constant 11 : i64
+    %t68tr = func.call @strict_trace_checked(%t68v, %t68tw, %t68twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t68tr : f64
+  ^bb69:
+    %t69lx = llvm.load %r8 : !llvm.ptr -> f64
+    %t69rx = llvm.load %r10 : !llvm.ptr -> f64
+    %t69c = func.call @strict_text_concat(%t69lx, %t69rx) : (f64, f64) -> f64
+    llvm.store %t69c, %r11 : f64, !llvm.ptr
+    %t70c = llvm.mlir.addressof @cValueCode_Code_0_70 : !llvm.ptr
+    %t70xf = func.call @strict_bits(%t70c) : (!llvm.ptr) -> f64
+    llvm.store %t70xf, %r12 : f64, !llvm.ptr
+    %t71lx = llvm.load %r11 : !llvm.ptr -> f64
+    %t71rx = llvm.load %r12 : !llvm.ptr -> f64
+    %t71c = func.call @strict_text_concat(%t71lx, %t71rx) : (f64, f64) -> f64
+    llvm.store %t71c, %r13 : f64, !llvm.ptr
+    %t72 = llvm.load %r13 : !llvm.ptr -> f64
+    return %t72 : f64
   }
   func.func private @VmValue_Counted_1(%p0: f64, %p1: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -347711,7 +349361,7 @@ module {
     cf.cond_br %t7k, ^bb7e, ^bb8
   ^bb7e:
     %t7tw = llvm.mlir.addressof @wAutomatic_Stored_0 : !llvm.ptr
-    %t7twl = arith.constant 84 : i64
+    %t7twl = arith.constant 102 : i64
     %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     return %t7tr : f64
   ^bb8:
@@ -347721,7 +349371,7 @@ module {
     %t9a0 = llvm.load %r2 : !llvm.ptr -> f64
     %t9r = func.call @TypeShape_IsMemberLine_1(%t9m, %t9a0) : (f64, f64) -> f64
     %t9tw = llvm.mlir.addressof @wAutomatic_Stored_0 : !llvm.ptr
-    %t9twl = arith.constant 84 : i64
+    %t9twl = arith.constant 102 : i64
     %t9tr = func.call @strict_trace(%t9r, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t9tr, %r3 : f64, !llvm.ptr
     %t10v = llvm.load %r3 : !llvm.ptr -> f64
@@ -347729,7 +349379,7 @@ module {
     cf.cond_br %t10k, ^bb10e, ^bb11
   ^bb10e:
     %t10tw = llvm.mlir.addressof @wAutomatic_Stored_0 : !llvm.ptr
-    %t10twl = arith.constant 84 : i64
+    %t10twl = arith.constant 102 : i64
     %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     return %t10tr : f64
   ^bb11:
@@ -347758,7 +349408,7 @@ module {
     cf.cond_br %t18k, ^bb18e, ^bb19
   ^bb18e:
     %t18tw = llvm.mlir.addressof @wAutomatic_Stored_0 : !llvm.ptr
-    %t18twl = arith.constant 84 : i64
+    %t18twl = arith.constant 102 : i64
     %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     return %t18tr : f64
   ^bb19:
@@ -347797,7 +349447,7 @@ module {
     %t31a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t31r = func.call @Automatic_Header_1(%t31m, %t31a0) : (f64, f64) -> f64
     %t31tw = llvm.mlir.addressof @wAutomatic_Stored_0 : !llvm.ptr
-    %t31twl = arith.constant 85 : i64
+    %t31twl = arith.constant 103 : i64
     %t31tr = func.call @strict_trace(%t31r, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t31tr, %r4 : f64, !llvm.ptr
     %t32v = llvm.load %r4 : !llvm.ptr -> f64
@@ -347805,7 +349455,7 @@ module {
     cf.cond_br %t32k, ^bb32e, ^bb33
   ^bb32e:
     %t32tw = llvm.mlir.addressof @wAutomatic_Stored_0 : !llvm.ptr
-    %t32twl = arith.constant 85 : i64
+    %t32twl = arith.constant 103 : i64
     %t32tr = func.call @strict_trace_checked(%t32v, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
     return %t32tr : f64
   ^bb33:
@@ -347815,7 +349465,7 @@ module {
     %t34a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t34r = func.call @HeaderTokens_DeclaredType_1(%t34m, %t34a0) : (f64, f64) -> f64
     %t34tw = llvm.mlir.addressof @wAutomatic_Stored_0 : !llvm.ptr
-    %t34twl = arith.constant 85 : i64
+    %t34twl = arith.constant 103 : i64
     %t34tr = func.call @strict_trace(%t34r, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t34tr, %r6 : f64, !llvm.ptr
     %t35v = llvm.load %r6 : !llvm.ptr -> f64
@@ -347823,7 +349473,7 @@ module {
     cf.cond_br %t35k, ^bb35e, ^bb36
   ^bb35e:
     %t35tw = llvm.mlir.addressof @wAutomatic_Stored_0 : !llvm.ptr
-    %t35twl = arith.constant 85 : i64
+    %t35twl = arith.constant 103 : i64
     %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
     return %t35tr : f64
   ^bb36:
@@ -347865,7 +349515,7 @@ module {
     cf.cond_br %t47k, ^bb47e, ^bb48
   ^bb47e:
     %t47tw = llvm.mlir.addressof @wAutomatic_Stored_0 : !llvm.ptr
-    %t47twl = arith.constant 86 : i64
+    %t47twl = arith.constant 104 : i64
     %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     return %t47tr : f64
   ^bb48:
@@ -347936,14 +349586,14 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wAutomatic_Header_1 : !llvm.ptr
-    %t2twl = arith.constant 89 : i64
+    %t2twl = arith.constant 107 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
     %t3m = llvm.load %r1 : !llvm.ptr -> f64
     %t3r = func.call @Tokenizer_Tokens_0(%t3m) : (f64) -> f64
     %t3tw = llvm.mlir.addressof @wAutomatic_Header_1 : !llvm.ptr
-    %t3twl = arith.constant 89 : i64
+    %t3twl = arith.constant 107 : i64
     %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3tr, %r2 : f64, !llvm.ptr
     %t4v = llvm.load %r2 : !llvm.ptr -> f64
@@ -347951,7 +349601,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wAutomatic_Header_1 : !llvm.ptr
-    %t4twl = arith.constant 89 : i64
+    %t4twl = arith.constant 107 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -347962,7 +349612,7 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wAutomatic_Header_1 : !llvm.ptr
-    %t6twl = arith.constant 89 : i64
+    %t6twl = arith.constant 107 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
@@ -356824,7 +358474,7 @@ module {
     %t23a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t23r = func.call @OperatorCodegen_Decided_2(%t23m, %t23a0, %t23a1) : (f64, f64, f64) -> f64
     %t23tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t23twl = arith.constant 125 : i64
+    %t23twl = arith.constant 131 : i64
     %t23tr = func.call @strict_trace(%t23r, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t23tr, %r4 : f64, !llvm.ptr
     %t24v = llvm.load %r4 : !llvm.ptr -> f64
@@ -356832,7 +358482,7 @@ module {
     cf.cond_br %t24k, ^bb24e, ^bb25
   ^bb24e:
     %t24tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t24twl = arith.constant 125 : i64
+    %t24twl = arith.constant 131 : i64
     %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
     return %t24tr : f64
   ^bb25:
@@ -356918,7 +358568,7 @@ module {
     cf.cond_br %t54k, ^bb54e, ^bb55
   ^bb54e:
     %t54tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t54twl = arith.constant 128 : i64
+    %t54twl = arith.constant 134 : i64
     %t54tr = func.call @strict_trace_checked(%t54v, %t54tw, %t54twl) : (f64, !llvm.ptr, i64) -> f64
     return %t54tr : f64
   ^bb55:
@@ -356931,7 +358581,7 @@ module {
     cf.cond_br %t57k, ^bb57e, ^bb58
   ^bb57e:
     %t57tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t57twl = arith.constant 128 : i64
+    %t57twl = arith.constant 134 : i64
     %t57tr = func.call @strict_trace_checked(%t57v, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
     return %t57tr : f64
   ^bb58:
@@ -356943,7 +358593,7 @@ module {
     %t59a2 = llvm.load %r3 : !llvm.ptr -> f64
     %t59r = func.call @ErrorCodegen_Compared_3(%t59m, %t59a0, %t59a1, %t59a2) : (f64, f64, f64, f64) -> f64
     %t59tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t59twl = arith.constant 128 : i64
+    %t59twl = arith.constant 134 : i64
     %t59tr = func.call @strict_trace(%t59r, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t59tr, %r4 : f64, !llvm.ptr
     %t60 = llvm.load %r4 : !llvm.ptr -> f64
@@ -356955,7 +358605,7 @@ module {
     cf.cond_br %t62k, ^bb62e, ^bb63
   ^bb62e:
     %t62tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t62twl = arith.constant 129 : i64
+    %t62twl = arith.constant 135 : i64
     %t62tr = func.call @strict_trace_checked(%t62v, %t62tw, %t62twl) : (f64, !llvm.ptr, i64) -> f64
     return %t62tr : f64
   ^bb63:
@@ -356971,7 +358621,7 @@ module {
     %t65a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t65r = func.call @InstructionEntry_LoadBoolean_2(%t65m, %t65a0, %t65a1) : (f64, f64, f64) -> f64
     %t65tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t65twl = arith.constant 129 : i64
+    %t65twl = arith.constant 135 : i64
     %t65tr = func.call @strict_trace(%t65r, %t65tw, %t65twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t65tr, %r3 : f64, !llvm.ptr
     %t66 = llvm.load %r3 : !llvm.ptr -> f64
@@ -356994,7 +358644,7 @@ module {
     cf.cond_br %t72k, ^bb72e, ^bb73
   ^bb72e:
     %t72tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t72twl = arith.constant 130 : i64
+    %t72twl = arith.constant 136 : i64
     %t72tr = func.call @strict_trace_checked(%t72v, %t72tw, %t72twl) : (f64, !llvm.ptr, i64) -> f64
     return %t72tr : f64
   ^bb73:
@@ -357007,7 +358657,7 @@ module {
     cf.cond_br %t75k, ^bb75e, ^bb76
   ^bb75e:
     %t75tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t75twl = arith.constant 130 : i64
+    %t75twl = arith.constant 136 : i64
     %t75tr = func.call @strict_trace_checked(%t75v, %t75tw, %t75twl) : (f64, !llvm.ptr, i64) -> f64
     return %t75tr : f64
   ^bb76:
@@ -357019,7 +358669,7 @@ module {
     %t77a2 = llvm.load %r5 : !llvm.ptr -> f64
     %t77r = func.call @ErrorCodegen_Right_3(%t77m, %t77a0, %t77a1, %t77a2) : (f64, f64, f64, f64) -> f64
     %t77tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t77twl = arith.constant 130 : i64
+    %t77twl = arith.constant 136 : i64
     %t77tr = func.call @strict_trace(%t77r, %t77tw, %t77twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t77tr, %r6 : f64, !llvm.ptr
     %t78 = llvm.load %r6 : !llvm.ptr -> f64
@@ -357042,7 +358692,7 @@ module {
     cf.cond_br %t84k, ^bb84e, ^bb85
   ^bb84e:
     %t84tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t84twl = arith.constant 130 : i64
+    %t84twl = arith.constant 136 : i64
     %t84tr = func.call @strict_trace_checked(%t84v, %t84tw, %t84twl) : (f64, !llvm.ptr, i64) -> f64
     return %t84tr : f64
   ^bb85:
@@ -357053,7 +358703,7 @@ module {
     cf.cond_br %t86k, ^bb86e, ^bb87
   ^bb86e:
     %t86tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t86twl = arith.constant 130 : i64
+    %t86twl = arith.constant 136 : i64
     %t86tr = func.call @strict_trace_checked(%t86v, %t86tw, %t86twl) : (f64, !llvm.ptr, i64) -> f64
     return %t86tr : f64
   ^bb87:
@@ -357061,7 +358711,7 @@ module {
     %t87a0 = llvm.load %r9 : !llvm.ptr -> f64
     %t87r = func.call @CodeBlock_Load_1(%t87m, %t87a0) : (f64, f64) -> f64
     %t87tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t87twl = arith.constant 130 : i64
+    %t87twl = arith.constant 136 : i64
     %t87tr = func.call @strict_trace(%t87r, %t87tw, %t87twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t87tr, %r10 : f64, !llvm.ptr
     %t88 = llvm.load %r10 : !llvm.ptr -> f64
@@ -357094,7 +358744,7 @@ module {
     %t98a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t98r = func.call @OperatorCodegen_OperatorType_1(%t98m, %t98a0) : (f64, f64) -> f64
     %t98tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t98twl = arith.constant 131 : i64
+    %t98twl = arith.constant 137 : i64
     %t98tr = func.call @strict_trace(%t98r, %t98tw, %t98twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t98tr, %r4 : f64, !llvm.ptr
     %t99 = llvm.load %r4 : !llvm.ptr -> f64
@@ -357127,7 +358777,7 @@ module {
     cf.cond_br %t110k, ^bb110e, ^bb111
   ^bb110e:
     %t110tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t110twl = arith.constant 132 : i64
+    %t110twl = arith.constant 138 : i64
     %t110tr = func.call @strict_trace_checked(%t110v, %t110tw, %t110twl) : (f64, !llvm.ptr, i64) -> f64
     return %t110tr : f64
   ^bb111:
@@ -357138,7 +358788,7 @@ module {
     cf.cond_br %t112k, ^bb112e, ^bb113
   ^bb112e:
     %t112tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t112twl = arith.constant 132 : i64
+    %t112twl = arith.constant 138 : i64
     %t112tr = func.call @strict_trace_checked(%t112v, %t112tw, %t112twl) : (f64, !llvm.ptr, i64) -> f64
     return %t112tr : f64
   ^bb113:
@@ -357151,14 +358801,14 @@ module {
     cf.cond_br %t115k, ^bb115e, ^bb116
   ^bb115e:
     %t115tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t115twl = arith.constant 132 : i64
+    %t115twl = arith.constant 138 : i64
     %t115tr = func.call @strict_trace_checked(%t115v, %t115tw, %t115twl) : (f64, !llvm.ptr, i64) -> f64
     return %t115tr : f64
   ^bb116:
     %t116m = llvm.load %r2 : !llvm.ptr -> f64
     %t116r = func.call @CodeBlock_Result_0(%t116m) : (f64) -> f64
     %t116tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t116twl = arith.constant 132 : i64
+    %t116twl = arith.constant 138 : i64
     %t116tr = func.call @strict_trace(%t116r, %t116tw, %t116twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t116tr, %r3 : f64, !llvm.ptr
     %t117v = llvm.load %r3 : !llvm.ptr -> f64
@@ -357166,7 +358816,7 @@ module {
     cf.cond_br %t117k, ^bb117e, ^bb118
   ^bb117e:
     %t117tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t117twl = arith.constant 132 : i64
+    %t117twl = arith.constant 138 : i64
     %t117tr = func.call @strict_trace_checked(%t117v, %t117tw, %t117twl) : (f64, !llvm.ptr, i64) -> f64
     return %t117tr : f64
   ^bb118:
@@ -357181,14 +358831,14 @@ module {
     cf.cond_br %t120k, ^bb120e, ^bb121
   ^bb120e:
     %t120tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t120twl = arith.constant 132 : i64
+    %t120twl = arith.constant 138 : i64
     %t120tr = func.call @strict_trace_checked(%t120v, %t120tw, %t120twl) : (f64, !llvm.ptr, i64) -> f64
     return %t120tr : f64
   ^bb121:
     %t121m = llvm.load %r2 : !llvm.ptr -> f64
     %t121r = func.call @CodeBlock_Result_0(%t121m) : (f64) -> f64
     %t121tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t121twl = arith.constant 132 : i64
+    %t121twl = arith.constant 138 : i64
     %t121tr = func.call @strict_trace(%t121r, %t121tw, %t121twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t121tr, %r3 : f64, !llvm.ptr
     %t122v = llvm.load %r3 : !llvm.ptr -> f64
@@ -357196,7 +358846,7 @@ module {
     cf.cond_br %t122k, ^bb122e, ^bb123
   ^bb122e:
     %t122tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t122twl = arith.constant 132 : i64
+    %t122twl = arith.constant 138 : i64
     %t122tr = func.call @strict_trace_checked(%t122v, %t122tw, %t122twl) : (f64, !llvm.ptr, i64) -> f64
     return %t122tr : f64
   ^bb123:
@@ -357211,7 +358861,7 @@ module {
     %t125a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t125r = func.call @InstructionEntry_Binary_2(%t125m, %t125a0, %t125a1) : (f64, f64, f64) -> f64
     %t125tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t125twl = arith.constant 132 : i64
+    %t125twl = arith.constant 138 : i64
     %t125tr = func.call @strict_trace(%t125r, %t125tw, %t125twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t125tr, %r3 : f64, !llvm.ptr
     %t126v = llvm.load %r3 : !llvm.ptr -> f64
@@ -357219,7 +358869,7 @@ module {
     cf.cond_br %t126k, ^bb126e, ^bb127
   ^bb126e:
     %t126tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t126twl = arith.constant 132 : i64
+    %t126twl = arith.constant 138 : i64
     %t126tr = func.call @strict_trace_checked(%t126v, %t126tw, %t126twl) : (f64, !llvm.ptr, i64) -> f64
     return %t126tr : f64
   ^bb127:
@@ -357227,7 +358877,7 @@ module {
     %t127a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t127r = func.call @CodeBlock_Add_1(%t127m, %t127a0) : (f64, f64) -> f64
     %t127tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t127twl = arith.constant 132 : i64
+    %t127twl = arith.constant 138 : i64
     %t127tr = func.call @strict_trace(%t127r, %t127tw, %t127twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t127tr, %r4 : f64, !llvm.ptr
     %t128v = llvm.load %r4 : !llvm.ptr -> f64
@@ -357235,7 +358885,7 @@ module {
     cf.cond_br %t128k, ^bb128e, ^bb129
   ^bb128e:
     %t128tw = llvm.mlir.addressof @wOperatorCodegen_Compared_2 : !llvm.ptr
-    %t128twl = arith.constant 132 : i64
+    %t128twl = arith.constant 138 : i64
     %t128tr = func.call @strict_trace_checked(%t128v, %t128tw, %t128twl) : (f64, !llvm.ptr, i64) -> f64
     return %t128tr : f64
   ^bb129:
@@ -361180,6 +362830,211 @@ module {
     %t39 = llvm.load %r8 : !llvm.ptr -> f64
     return %t39 : f64
   }
+  func.func private @Automatic_MemberCode_1(%p0: f64, %p1: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
+    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r0 : f64, !llvm.ptr
+    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r1 : f64, !llvm.ptr
+    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r2 : f64, !llvm.ptr
+    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r3 : f64, !llvm.ptr
+    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r4 : f64, !llvm.ptr
+    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r5 : f64, !llvm.ptr
+    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
+    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r11 : f64, !llvm.ptr
+    %r12 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r12 : f64, !llvm.ptr
+    %r13 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r13 : f64, !llvm.ptr
+    %r14 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r14 : f64, !llvm.ptr
+    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_index : f64, !llvm.ptr
+    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_value : f64, !llvm.ptr
+    %v_line = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_line : f64, !llvm.ptr
+    %v_lines = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_lines : f64, !llvm.ptr
+    %v_instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_instance : f64, !llvm.ptr
+    %v_instantiation = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_instantiation : f64, !llvm.ptr
+    %v_member = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_member : f64, !llvm.ptr
+    %v_conditional0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional0 : f64, !llvm.ptr
+    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %instance : f64, !llvm.ptr
+    llvm.store %p0, %instance : f64, !llvm.ptr
+    llvm.store %p0, %v_value : f64, !llvm.ptr
+    llvm.store %p1, %v_line : f64, !llvm.ptr
+    %self = llvm.load %v_value : !llvm.ptr -> f64
+    %hasSelf = arith.cmpf une, %self, %zero : f64
+    cf.cond_br %hasSelf, ^unpack, ^unpacked
+  ^unpack:
+    %t-1selfp = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr
+    %t-1u0 = llvm.getelementptr %t-1selfp[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t-1u0v = llvm.load %t-1u0 : !llvm.ptr -> f64
+    llvm.store %t-1u0v, %v_lines : f64, !llvm.ptr
+    %t-1u1 = llvm.getelementptr %t-1selfp[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t-1u1v = llvm.load %t-1u1 : !llvm.ptr -> f64
+    llvm.store %t-1u1v, %v_instance : f64, !llvm.ptr
+    %t-1u2 = llvm.getelementptr %t-1selfp[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t-1u2v = llvm.load %t-1u2 : !llvm.ptr -> f64
+    llvm.store %t-1u2v, %v_instantiation : f64, !llvm.ptr
+    cf.br ^unpacked
+  ^unpacked:
+    %t0 = llvm.load %v_line : !llvm.ptr -> f64
+    llvm.store %t0, %r0 : f64, !llvm.ptr
+    %t1m = llvm.load %instance : !llvm.ptr -> f64
+    %t1a0 = llvm.load %r0 : !llvm.ptr -> f64
+    %t1r = func.call @Automatic_Header_1(%t1m, %t1a0) : (f64, f64) -> f64
+    %t1tw = llvm.mlir.addressof @wAutomatic_MemberCode_1 : !llvm.ptr
+    %t1twl = arith.constant 96 : i64
+    %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t1tr, %r1 : f64, !llvm.ptr
+    %t2v = llvm.load %r1 : !llvm.ptr -> f64
+    %t2k = func.call @strict_is_failure(%t2v) : (f64) -> i1
+    cf.cond_br %t2k, ^bb2e, ^bb3
+  ^bb2e:
+    %t2tw = llvm.mlir.addressof @wAutomatic_MemberCode_1 : !llvm.ptr
+    %t2twl = arith.constant 96 : i64
+    %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t2tr : f64
+  ^bb3:
+    %t3m = llvm.load %r1 : !llvm.ptr -> f64
+    %t3r = func.call @HeaderTokens_MemberName_0(%t3m) : (f64) -> f64
+    %t3tw = llvm.mlir.addressof @wAutomatic_MemberCode_1 : !llvm.ptr
+    %t3twl = arith.constant 96 : i64
+    %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t3tr, %r2 : f64, !llvm.ptr
+    %t4 = llvm.load %r2 : !llvm.ptr -> f64
+    llvm.store %t4, %v_member : f64, !llvm.ptr
+    %t5 = llvm.load %v_line : !llvm.ptr -> f64
+    llvm.store %t5, %r0 : f64, !llvm.ptr
+    %t6m = llvm.load %instance : !llvm.ptr -> f64
+    %t6a0 = llvm.load %r0 : !llvm.ptr -> f64
+    %t6r = func.call @Automatic_MemberType_1(%t6m, %t6a0) : (f64, f64) -> f64
+    %t6tw = llvm.mlir.addressof @wAutomatic_MemberCode_1 : !llvm.ptr
+    %t6twl = arith.constant 97 : i64
+    %t6tr = func.call @strict_trace(%t6r, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t6tr, %r1 : f64, !llvm.ptr
+    %t7v = llvm.load %r1 : !llvm.ptr -> f64
+    %t7k = func.call @strict_is_failure(%t7v) : (f64) -> i1
+    cf.cond_br %t7k, ^bb7e, ^bb8
+  ^bb7e:
+    %t7tw = llvm.mlir.addressof @wAutomatic_MemberCode_1 : !llvm.ptr
+    %t7twl = arith.constant 97 : i64
+    %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t7tr : f64
+  ^bb8:
+    %t8c = llvm.mlir.addressof @cAutomatic_MemberCode_1_8 : !llvm.ptr
+    %t8xf = func.call @strict_bits(%t8c) : (!llvm.ptr) -> f64
+    llvm.store %t8xf, %r2 : f64, !llvm.ptr
+    %t9m = llvm.load %r1 : !llvm.ptr -> f64
+    %t9a0 = llvm.load %r2 : !llvm.ptr -> f64
+    %t9r = func.call @strict_text_starts(%t9m, %t9a0, %zero) : (f64, f64, f64) -> f64
+    llvm.store %t9r, %r3 : f64, !llvm.ptr
+    %t10v = llvm.load %r3 : !llvm.ptr -> f64
+    %t10k = func.call @strict_is_failure(%t10v) : (f64) -> i1
+    cf.cond_br %t10k, ^bb10e, ^bb11
+  ^bb10e:
+    %t10tw = llvm.mlir.addressof @wAutomatic_MemberCode_1 : !llvm.ptr
+    %t10twl = arith.constant 97 : i64
+    %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t10tr : f64
+  ^bb11:
+    %t11c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t11c, %r4 : f64, !llvm.ptr
+    %t12a = llvm.load %r3 : !llvm.ptr -> f64
+    %t12b = llvm.load %r4 : !llvm.ptr -> f64
+    %t12c = arith.cmpf oeq, %t12a, %t12b : f64
+    llvm.store %t12c, %flag : i1, !llvm.ptr
+    %t13 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t13, ^bb14, ^bb23
+  ^bb14:
+    %t14c = llvm.mlir.addressof @cAutomatic_MemberCode_1_14 : !llvm.ptr
+    %t14xf = func.call @strict_bits(%t14c) : (!llvm.ptr) -> f64
+    llvm.store %t14xf, %r5 : f64, !llvm.ptr
+    %t15 = llvm.load %v_member : !llvm.ptr -> f64
+    llvm.store %t15, %r6 : f64, !llvm.ptr
+    %t16v = llvm.load %r6 : !llvm.ptr -> f64
+    %t16k = func.call @strict_is_failure(%t16v) : (f64) -> i1
+    cf.cond_br %t16k, ^bb16e, ^bb17
+  ^bb16e:
+    %t16tw = llvm.mlir.addressof @wAutomatic_MemberCode_1 : !llvm.ptr
+    %t16twl = arith.constant 97 : i64
+    %t16tr = func.call @strict_trace_checked(%t16v, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t16tr : f64
+  ^bb17:
+    %t17lx = llvm.load %r5 : !llvm.ptr -> f64
+    %t17rx = llvm.load %r6 : !llvm.ptr -> f64
+    %t17c = func.call @strict_text_concat(%t17lx, %t17rx) : (f64, f64) -> f64
+    llvm.store %t17c, %r7 : f64, !llvm.ptr
+    %t18c = llvm.mlir.addressof @cAutomatic_MemberCode_1_18 : !llvm.ptr
+    %t18xf = func.call @strict_bits(%t18c) : (!llvm.ptr) -> f64
+    llvm.store %t18xf, %r8 : f64, !llvm.ptr
+    %t19lx = llvm.load %r7 : !llvm.ptr -> f64
+    %t19rx = llvm.load %r8 : !llvm.ptr -> f64
+    %t19c = func.call @strict_text_concat(%t19lx, %t19rx) : (f64, f64) -> f64
+    llvm.store %t19c, %r9 : f64, !llvm.ptr
+    %t20 = llvm.load %r9 : !llvm.ptr -> f64
+    llvm.store %t20, %v_conditional0 : f64, !llvm.ptr
+    %t21c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t21c, %r10 : f64, !llvm.ptr
+    %t22a = llvm.load %r10 : !llvm.ptr -> f64
+    %t22b = llvm.load %r10 : !llvm.ptr -> f64
+    %t22c = arith.cmpf oeq, %t22a, %t22b : f64
+    llvm.store %t22c, %flag : i1, !llvm.ptr
+    cf.br ^bb23
+  ^bb23:
+    %t24 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t24, ^bb30, ^bb25
+  ^bb25:
+    %t25 = llvm.load %v_member : !llvm.ptr -> f64
+    llvm.store %t25, %r11 : f64, !llvm.ptr
+    %t26v = llvm.load %r11 : !llvm.ptr -> f64
+    %t26k = func.call @strict_is_failure(%t26v) : (f64) -> i1
+    cf.cond_br %t26k, ^bb26e, ^bb27
+  ^bb26e:
+    %t26tw = llvm.mlir.addressof @wAutomatic_MemberCode_1 : !llvm.ptr
+    %t26twl = arith.constant 97 : i64
+    %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t26tr : f64
+  ^bb27:
+    %t27c = llvm.mlir.addressof @cAutomatic_MemberCode_1_27 : !llvm.ptr
+    %t27xf = func.call @strict_bits(%t27c) : (!llvm.ptr) -> f64
+    llvm.store %t27xf, %r12 : f64, !llvm.ptr
+    %t28lx = llvm.load %r11 : !llvm.ptr -> f64
+    %t28rx = llvm.load %r12 : !llvm.ptr -> f64
+    %t28c = func.call @strict_text_concat(%t28lx, %t28rx) : (f64, f64) -> f64
+    llvm.store %t28c, %r13 : f64, !llvm.ptr
+    %t29 = llvm.load %r13 : !llvm.ptr -> f64
+    llvm.store %t29, %v_conditional0 : f64, !llvm.ptr
+    cf.br ^bb30
+  ^bb30:
+    %t31 = llvm.load %v_conditional0 : !llvm.ptr -> f64
+    llvm.store %t31, %r14 : f64, !llvm.ptr
+    %t32 = llvm.load %r14 : !llvm.ptr -> f64
+    return %t32 : f64
+  }
   func.func private @MlirNatives_DictionaryHelper_1(%p0: f64, %p1: f64) -> f64 {
     %one = arith.constant 1 : i64
     %zero = arith.constant 0.0 : f64
@@ -361666,7 +363521,7 @@ module {
     %t0u = arith.cmpf oeq, %t0v, %zero : f64
     cf.cond_br %t0u, ^l0, ^m0(%t0v : f64)
   ^l0:
-    %t0q = arith.constant 0x4044000000000000 : f64
+    %t0q = arith.constant 0x4045000000000000 : f64
     %t0l = func.call @strict_list_new(%t0q, %zero) : (f64, f64) -> f64
     %t0e0c = llvm.mlir.addressof @cMlirNatives_TypeHelper_2_0_0 : !llvm.ptr
     %t0e0xf = func.call @strict_bits(%t0e0c) : (!llvm.ptr) -> f64
@@ -361776,9 +363631,15 @@ module {
     %t0e35c = llvm.mlir.addressof @cMlirNatives_TypeHelper_2_0_35 : !llvm.ptr
     %t0e35xf = func.call @strict_bits(%t0e35c) : (!llvm.ptr) -> f64
     %t0e35l = func.call @strict_list_add(%t0e34l, %t0e35xf) : (f64, f64) -> f64
-    func.call @strict_list_pin(%t0e35l) : (f64) -> ()
-    llvm.store %t0e35l, %t0g : f64, !llvm.ptr
-    cf.br ^m0(%t0e35l : f64)
+    %t0e36c = llvm.mlir.addressof @cMlirNatives_TypeHelper_2_0_36 : !llvm.ptr
+    %t0e36xf = func.call @strict_bits(%t0e36c) : (!llvm.ptr) -> f64
+    %t0e36l = func.call @strict_list_add(%t0e35l, %t0e36xf) : (f64, f64) -> f64
+    %t0e37c = llvm.mlir.addressof @cMlirNatives_TypeHelper_2_0_37 : !llvm.ptr
+    %t0e37xf = func.call @strict_bits(%t0e37c) : (!llvm.ptr) -> f64
+    %t0e37l = func.call @strict_list_add(%t0e36l, %t0e37xf) : (f64, f64) -> f64
+    func.call @strict_list_pin(%t0e37l) : (f64) -> ()
+    llvm.store %t0e37l, %t0g : f64, !llvm.ptr
+    cf.br ^m0(%t0e37l : f64)
   ^m0(%t0r: f64):
     llvm.store %t0r, %r0 : f64, !llvm.ptr
     %t1 = llvm.load %v_kind : !llvm.ptr -> f64
@@ -374113,7 +375974,7 @@ module {
     %t5a0 = llvm.load %r1 : !llvm.ptr -> f64
     %t5r = func.call @VmValue_OfText_1(%t5m, %t5a0) : (f64, f64) -> f64
     %t5tw = llvm.mlir.addressof @wHosted_Values_1 : !llvm.ptr
-    %t5twl = arith.constant 86 : i64
+    %t5twl = arith.constant 88 : i64
     %t5tr = func.call @strict_trace(%t5r, %t5tw, %t5twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t5tr, %r2 : f64, !llvm.ptr
     %t6v = llvm.load %r2 : !llvm.ptr -> f64
@@ -374121,7 +375982,7 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wHosted_Values_1 : !llvm.ptr
-    %t6twl = arith.constant 86 : i64
+    %t6twl = arith.constant 88 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
@@ -374136,7 +375997,7 @@ module {
     cf.cond_br %t9k, ^bb9e, ^bb10
   ^bb9e:
     %t9tw = llvm.mlir.addressof @wHosted_Values_1 : !llvm.ptr
-    %t9twl = arith.constant 86 : i64
+    %t9twl = arith.constant 88 : i64
     %t9tr = func.call @strict_trace_checked(%t9v, %t9tw, %t9twl) : (f64, !llvm.ptr, i64) -> f64
     return %t9tr : f64
   ^bb10:
@@ -374154,7 +376015,7 @@ module {
     %t12a0 = llvm.load %r0 : !llvm.ptr -> f64
     %t12r = func.call @VmValue_OfList_1(%t12m, %t12a0) : (f64, f64) -> f64
     %t12tw = llvm.mlir.addressof @wHosted_Values_1 : !llvm.ptr
-    %t12twl = arith.constant 87 : i64
+    %t12twl = arith.constant 89 : i64
     %t12tr = func.call @strict_trace(%t12r, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t12tr, %r1 : f64, !llvm.ptr
     %t13v = llvm.load %r1 : !llvm.ptr -> f64
@@ -374162,7 +376023,7 @@ module {
     cf.cond_br %t13k, ^bb13e, ^bb14
   ^bb13e:
     %t13tw = llvm.mlir.addressof @wHosted_Values_1 : !llvm.ptr
-    %t13twl = arith.constant 87 : i64
+    %t13twl = arith.constant 89 : i64
     %t13tr = func.call @strict_trace_checked(%t13v, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
     return %t13tr : f64
   ^bb14:
@@ -374701,7 +376562,7 @@ module {
     %t1m = llvm.load %r0 : !llvm.ptr -> f64
     %t1r = func.call @Invocation_MethodName_0(%t1m) : (f64) -> f64
     %t1tw = llvm.mlir.addressof @wHosted_Turned_1 : !llvm.ptr
-    %t1twl = arith.constant 120 : i64
+    %t1twl = arith.constant 122 : i64
     %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t1tr, %r1 : f64, !llvm.ptr
     %t2v = llvm.load %r1 : !llvm.ptr -> f64
@@ -374709,7 +376570,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wHosted_Turned_1 : !llvm.ptr
-    %t2twl = arith.constant 120 : i64
+    %t2twl = arith.constant 122 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -374747,7 +376608,7 @@ module {
     %t14m = llvm.load %r6 : !llvm.ptr -> f64
     %t14r = func.call @Invocation_MethodName_0(%t14m) : (f64) -> f64
     %t14tw = llvm.mlir.addressof @wHosted_Turned_1 : !llvm.ptr
-    %t14twl = arith.constant 120 : i64
+    %t14twl = arith.constant 122 : i64
     %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t14tr, %r7 : f64, !llvm.ptr
     %t15v = llvm.load %r7 : !llvm.ptr -> f64
@@ -374755,7 +376616,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wHosted_Turned_1 : !llvm.ptr
-    %t15twl = arith.constant 120 : i64
+    %t15twl = arith.constant 122 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -374810,7 +376671,7 @@ module {
     cf.cond_br %t34k, ^bb34e, ^bb35
   ^bb34e:
     %t34tw = llvm.mlir.addressof @wHosted_Turned_1 : !llvm.ptr
-    %t34twl = arith.constant 120 : i64
+    %t34twl = arith.constant 122 : i64
     %t34tr = func.call @strict_trace_checked(%t34v, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
     return %t34tr : f64
   ^bb35:
@@ -375133,7 +376994,7 @@ module {
     %t1m = llvm.load %r0 : !llvm.ptr -> f64
     %t1r = func.call @Invocation_MethodName_0(%t1m) : (f64) -> f64
     %t1tw = llvm.mlir.addressof @wHosted_Inverted_1 : !llvm.ptr
-    %t1twl = arith.constant 123 : i64
+    %t1twl = arith.constant 125 : i64
     %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t1tr, %r1 : f64, !llvm.ptr
     %t2v = llvm.load %r1 : !llvm.ptr -> f64
@@ -375141,7 +377002,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wHosted_Inverted_1 : !llvm.ptr
-    %t2twl = arith.constant 123 : i64
+    %t2twl = arith.constant 125 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -375179,7 +377040,7 @@ module {
     %t14m = llvm.load %r6 : !llvm.ptr -> f64
     %t14r = func.call @Invocation_MethodName_0(%t14m) : (f64) -> f64
     %t14tw = llvm.mlir.addressof @wHosted_Inverted_1 : !llvm.ptr
-    %t14twl = arith.constant 123 : i64
+    %t14twl = arith.constant 125 : i64
     %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t14tr, %r7 : f64, !llvm.ptr
     %t15v = llvm.load %r7 : !llvm.ptr -> f64
@@ -375187,7 +377048,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wHosted_Inverted_1 : !llvm.ptr
-    %t15twl = arith.constant 123 : i64
+    %t15twl = arith.constant 125 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -375242,7 +377103,7 @@ module {
     cf.cond_br %t34k, ^bb34e, ^bb35
   ^bb34e:
     %t34tw = llvm.mlir.addressof @wHosted_Inverted_1 : !llvm.ptr
-    %t34twl = arith.constant 123 : i64
+    %t34twl = arith.constant 125 : i64
     %t34tr = func.call @strict_trace_checked(%t34v, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
     return %t34tr : f64
   ^bb35:
@@ -375302,7 +377163,7 @@ module {
     %t1m = llvm.load %r0 : !llvm.ptr -> f64
     %t1r = func.call @Invocation_TypeName_0(%t1m) : (f64) -> f64
     %t1tw = llvm.mlir.addressof @wHosted_Location_0 : !llvm.ptr
-    %t1twl = arith.constant 104 : i64
+    %t1twl = arith.constant 106 : i64
     %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t1tr, %r1 : f64, !llvm.ptr
     %t2v = llvm.load %r1 : !llvm.ptr -> f64
@@ -375310,7 +377171,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wHosted_Location_0 : !llvm.ptr
-    %t2twl = arith.constant 104 : i64
+    %t2twl = arith.constant 106 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -375318,7 +377179,7 @@ module {
     %t3a0 = llvm.load %r1 : !llvm.ptr -> f64
     %t3r = func.call @TypeEntry_ShortName_1(%t3m, %t3a0) : (f64, f64) -> f64
     %t3tw = llvm.mlir.addressof @wHosted_Location_0 : !llvm.ptr
-    %t3twl = arith.constant 104 : i64
+    %t3twl = arith.constant 106 : i64
     %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3tr, %r2 : f64, !llvm.ptr
     %t4v = llvm.load %r2 : !llvm.ptr -> f64
@@ -375326,7 +377187,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wHosted_Location_0 : !llvm.ptr
-    %t4twl = arith.constant 104 : i64
+    %t4twl = arith.constant 106 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -375354,7 +377215,7 @@ module {
     %t11a0 = llvm.load %r6 : !llvm.ptr -> f64
     %t11r = func.call @VmValue_Member_1(%t11m, %t11a0) : (f64, f64) -> f64
     %t11tw = llvm.mlir.addressof @wHosted_Location_0 : !llvm.ptr
-    %t11twl = arith.constant 104 : i64
+    %t11twl = arith.constant 106 : i64
     %t11tr = func.call @strict_trace(%t11r, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t11tr, %r7 : f64, !llvm.ptr
     %t12v = llvm.load %r7 : !llvm.ptr -> f64
@@ -375362,7 +377223,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wHosted_Location_0 : !llvm.ptr
-    %t12twl = arith.constant 104 : i64
+    %t12twl = arith.constant 106 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -375394,7 +377255,7 @@ module {
     %t21m = llvm.load %r11 : !llvm.ptr -> f64
     %t21r = func.call @List_VmValue__First_0(%t21m) : (f64) -> f64
     %t21tw = llvm.mlir.addressof @wHosted_Location_0 : !llvm.ptr
-    %t21twl = arith.constant 104 : i64
+    %t21twl = arith.constant 106 : i64
     %t21tr = func.call @strict_trace(%t21r, %t21tw, %t21twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t21tr, %r12 : f64, !llvm.ptr
     %t22v = llvm.load %r12 : !llvm.ptr -> f64
@@ -375402,7 +377263,7 @@ module {
     cf.cond_br %t22k, ^bb22e, ^bb23
   ^bb22e:
     %t22tw = llvm.mlir.addressof @wHosted_Location_0 : !llvm.ptr
-    %t22twl = arith.constant 104 : i64
+    %t22twl = arith.constant 106 : i64
     %t22tr = func.call @strict_trace_checked(%t22v, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
     return %t22tr : f64
   ^bb23:
@@ -375490,7 +377351,7 @@ module {
     %t6a0 = llvm.load %r2 : !llvm.ptr -> f64
     %t6r = func.call @VmValue_OfNumber_1(%t6m, %t6a0) : (f64, f64) -> f64
     %t6tw = llvm.mlir.addressof @wHosted_ByteValues_1 : !llvm.ptr
-    %t6twl = arith.constant 92 : i64
+    %t6twl = arith.constant 94 : i64
     %t6tr = func.call @strict_trace(%t6r, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t6tr, %r3 : f64, !llvm.ptr
     %t7v = llvm.load %r3 : !llvm.ptr -> f64
@@ -375498,7 +377359,7 @@ module {
     cf.cond_br %t7k, ^bb7e, ^bb8
   ^bb7e:
     %t7tw = llvm.mlir.addressof @wHosted_ByteValues_1 : !llvm.ptr
-    %t7twl = arith.constant 92 : i64
+    %t7twl = arith.constant 94 : i64
     %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     return %t7tr : f64
   ^bb8:
@@ -375513,7 +377374,7 @@ module {
     cf.cond_br %t10k, ^bb10e, ^bb11
   ^bb10e:
     %t10tw = llvm.mlir.addressof @wHosted_ByteValues_1 : !llvm.ptr
-    %t10twl = arith.constant 92 : i64
+    %t10twl = arith.constant 94 : i64
     %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     return %t10tr : f64
   ^bb11:
@@ -375531,7 +377392,7 @@ module {
     %t13a0 = llvm.load %r0 : !llvm.ptr -> f64
     %t13r = func.call @VmValue_OfList_1(%t13m, %t13a0) : (f64, f64) -> f64
     %t13tw = llvm.mlir.addressof @wHosted_ByteValues_1 : !llvm.ptr
-    %t13twl = arith.constant 93 : i64
+    %t13twl = arith.constant 95 : i64
     %t13tr = func.call @strict_trace(%t13r, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t13tr, %r1 : f64, !llvm.ptr
     %t14v = llvm.load %r1 : !llvm.ptr -> f64
@@ -375539,7 +377400,7 @@ module {
     cf.cond_br %t14k, ^bb14e, ^bb15
   ^bb14e:
     %t14tw = llvm.mlir.addressof @wHosted_ByteValues_1 : !llvm.ptr
-    %t14twl = arith.constant 93 : i64
+    %t14twl = arith.constant 95 : i64
     %t14tr = func.call @strict_trace_checked(%t14v, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     return %t14tr : f64
   ^bb15:
@@ -375625,7 +377486,7 @@ module {
     %t7m = llvm.load %r4 : !llvm.ptr -> f64
     %t7r = func.call @Byte_Validated_0(%t7m) : (f64) -> f64
     %t7tw = llvm.mlir.addressof @wHosted_BytesOf_1 : !llvm.ptr
-    %t7twl = arith.constant 97 : i64
+    %t7twl = arith.constant 99 : i64
     %t7tr = func.call @strict_trace(%t7r, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t7tr, %r5 : f64, !llvm.ptr
     %t8v = llvm.load %r5 : !llvm.ptr -> f64
@@ -375633,7 +377494,7 @@ module {
     cf.cond_br %t8k, ^bb8e, ^bb9
   ^bb8e:
     %t8tw = llvm.mlir.addressof @wHosted_BytesOf_1 : !llvm.ptr
-    %t8twl = arith.constant 97 : i64
+    %t8twl = arith.constant 99 : i64
     %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     return %t8tr : f64
   ^bb9:
@@ -375904,6 +377765,14 @@ module {
     llvm.store %zero, %r5 : f64, !llvm.ptr
     %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
     %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_index : f64, !llvm.ptr
     %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
@@ -375991,48 +377860,43 @@ module {
     cf.br ^bb14
   ^bb14:
     %t15 = llvm.load %flag : !llvm.ptr -> i1
-    cf.cond_br %t15, ^bb27, ^bb16
+    cf.cond_br %t15, ^bb36, ^bb16
   ^bb16:
-    %t16m = llvm.load %instance : !llvm.ptr -> f64
-    %t16r = func.call @Hosted_Location_0(%t16m) : (f64) -> f64
-    %t16tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
-    %t16twl = arith.constant 62 : i64
-    %t16tr = func.call @strict_trace(%t16r, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t16tr, %r0 : f64, !llvm.ptr
-    %t17v = llvm.load %r0 : !llvm.ptr -> f64
-    %t17k = func.call @strict_is_failure(%t17v) : (f64) -> i1
-    cf.cond_br %t17k, ^bb17e, ^bb18
-  ^bb17e:
+    %t16 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t16, %r0 : f64, !llvm.ptr
+    %t17m = llvm.load %r0 : !llvm.ptr -> f64
+    %t17r = func.call @Invocation_MethodName_0(%t17m) : (f64) -> f64
     %t17tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
-    %t17twl = arith.constant 62 : i64
-    %t17tr = func.call @strict_trace_checked(%t17v, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t17tr : f64
-  ^bb18:
-    %t18o = llvm.load %r0 : !llvm.ptr -> f64
-    llvm.store %t18o, %r1 : f64, !llvm.ptr
-    %t19v = llvm.load %r1 : !llvm.ptr -> f64
-    %t19k = func.call @strict_is_failure(%t19v) : (f64) -> i1
-    cf.cond_br %t19k, ^bb19e, ^bb20
-  ^bb19e:
-    %t19tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
-    %t19twl = arith.constant 62 : i64
-    %t19tr = func.call @strict_trace_checked(%t19v, %t19tw, %t19twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t19tr : f64
-  ^bb20:
-    %t20 = llvm.load %v_call : !llvm.ptr -> f64
-    llvm.store %t20, %r2 : f64, !llvm.ptr
-    %t21i = llvm.load %r2 : !llvm.ptr -> f64
-    %t21ip = func.call @strict_ptr(%t21i) : (f64) -> !llvm.ptr
-    %t21m = llvm.getelementptr %t21ip[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t21mv = llvm.load %t21m : !llvm.ptr -> f64
-    llvm.store %t21mv, %r3 : f64, !llvm.ptr
-    %t22m = llvm.load %r3 : !llvm.ptr -> f64
-    %t22r = func.call @List_VmValue__First_0(%t22m) : (f64) -> f64
+    %t17twl = arith.constant 61 : i64
+    %t17tr = func.call @strict_trace(%t17r, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t17tr, %r1 : f64, !llvm.ptr
+    %t18v = llvm.load %r1 : !llvm.ptr -> f64
+    %t18k = func.call @strict_is_failure(%t18v) : (f64) -> i1
+    cf.cond_br %t18k, ^bb18e, ^bb19
+  ^bb18e:
+    %t18tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t18twl = arith.constant 61 : i64
+    %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t18tr : f64
+  ^bb19:
+    %t19c = llvm.mlir.addressof @cHosted_Moved_0_19 : !llvm.ptr
+    %t19xf = func.call @strict_bits(%t19c) : (!llvm.ptr) -> f64
+    llvm.store %t19xf, %r2 : f64, !llvm.ptr
+    %t20l = llvm.load %r1 : !llvm.ptr -> f64
+    %t20r = llvm.load %r2 : !llvm.ptr -> f64
+    %t20q = func.call @strict_text_equal(%t20l, %t20r) : (f64, f64) -> f64
+    %t20f = arith.cmpf one, %t20q, %zero : f64
+    llvm.store %t20f, %flag : i1, !llvm.ptr
+    %t21 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t21, ^bb22, ^bb35
+  ^bb22:
+    %t22m = llvm.load %instance : !llvm.ptr -> f64
+    %t22r = func.call @Hosted_Location_0(%t22m) : (f64) -> f64
     %t22tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
     %t22twl = arith.constant 62 : i64
     %t22tr = func.call @strict_trace(%t22r, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t22tr, %r4 : f64, !llvm.ptr
-    %t23v = llvm.load %r4 : !llvm.ptr -> f64
+    llvm.store %t22tr, %r3 : f64, !llvm.ptr
+    %t23v = llvm.load %r3 : !llvm.ptr -> f64
     %t23k = func.call @strict_is_failure(%t23v) : (f64) -> i1
     cf.cond_br %t23k, ^bb23e, ^bb24
   ^bb23e:
@@ -376041,57 +377905,169 @@ module {
     %t23tr = func.call @strict_trace_checked(%t23v, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     return %t23tr : f64
   ^bb24:
-    %t24i = llvm.load %r4 : !llvm.ptr -> f64
-    %t24ip = func.call @strict_ptr(%t24i) : (f64) -> !llvm.ptr
-    %t24m = llvm.getelementptr %t24ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t24mv = llvm.load %t24m : !llvm.ptr -> f64
-    llvm.store %t24mv, %r5 : f64, !llvm.ptr
-    %t25m = llvm.load %r1 : !llvm.ptr -> f64
-    %t25a0 = llvm.load %r5 : !llvm.ptr -> f64
-    %t25r = func.call @strict_file_rename(%t25m, %t25a0) : (f64, f64) -> f64
-    llvm.store %t25r, %r6 : f64, !llvm.ptr
-    %t26v = llvm.load %r6 : !llvm.ptr -> f64
-    %t26k = func.call @strict_is_failure(%t26v) : (f64) -> i1
-    cf.cond_br %t26k, ^bb26e, ^bb27
-  ^bb26e:
-    %t26tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
-    %t26twl = arith.constant 62 : i64
-    %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t26tr : f64
-  ^bb27:
-    %t28m = llvm.load %instance : !llvm.ptr -> f64
-    %t28r = func.call @Hosted_Location_0(%t28m) : (f64) -> f64
+    %t24o = llvm.load %r3 : !llvm.ptr -> f64
+    llvm.store %t24o, %r4 : f64, !llvm.ptr
+    %t25v = llvm.load %r4 : !llvm.ptr -> f64
+    %t25k = func.call @strict_is_failure(%t25v) : (f64) -> i1
+    cf.cond_br %t25k, ^bb25e, ^bb26
+  ^bb25e:
+    %t25tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t25twl = arith.constant 62 : i64
+    %t25tr = func.call @strict_trace_checked(%t25v, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t25tr : f64
+  ^bb26:
+    %t26 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t26, %r5 : f64, !llvm.ptr
+    %t27i = llvm.load %r5 : !llvm.ptr -> f64
+    %t27ip = func.call @strict_ptr(%t27i) : (f64) -> !llvm.ptr
+    %t27m = llvm.getelementptr %t27ip[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t27mv = llvm.load %t27m : !llvm.ptr -> f64
+    llvm.store %t27mv, %r6 : f64, !llvm.ptr
+    %t28m = llvm.load %r6 : !llvm.ptr -> f64
+    %t28r = func.call @List_VmValue__First_0(%t28m) : (f64) -> f64
     %t28tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
-    %t28twl = arith.constant 63 : i64
+    %t28twl = arith.constant 62 : i64
     %t28tr = func.call @strict_trace(%t28r, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t28tr, %r0 : f64, !llvm.ptr
-    %t29v = llvm.load %r0 : !llvm.ptr -> f64
+    llvm.store %t28tr, %r7 : f64, !llvm.ptr
+    %t29v = llvm.load %r7 : !llvm.ptr -> f64
     %t29k = func.call @strict_is_failure(%t29v) : (f64) -> i1
     cf.cond_br %t29k, ^bb29e, ^bb30
   ^bb29e:
     %t29tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
-    %t29twl = arith.constant 63 : i64
+    %t29twl = arith.constant 62 : i64
     %t29tr = func.call @strict_trace_checked(%t29v, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
     return %t29tr : f64
   ^bb30:
-    %t30m = llvm.load %instance : !llvm.ptr -> f64
-    %t30a0 = llvm.load %r0 : !llvm.ptr -> f64
-    %t30r = func.call @Hosted_Answered_1(%t30m, %t30a0) : (f64, f64) -> f64
-    %t30tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
-    %t30twl = arith.constant 63 : i64
-    %t30tr = func.call @strict_trace(%t30r, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t30tr, %r1 : f64, !llvm.ptr
-    %t31v = llvm.load %r1 : !llvm.ptr -> f64
-    %t31k = func.call @strict_is_failure(%t31v) : (f64) -> i1
-    cf.cond_br %t31k, ^bb31e, ^bb32
-  ^bb31e:
-    %t31tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
-    %t31twl = arith.constant 63 : i64
-    %t31tr = func.call @strict_trace_checked(%t31v, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t31tr : f64
-  ^bb32:
-    %t32 = llvm.load %r1 : !llvm.ptr -> f64
-    return %t32 : f64
+    %t30i = llvm.load %r7 : !llvm.ptr -> f64
+    %t30ip = func.call @strict_ptr(%t30i) : (f64) -> !llvm.ptr
+    %t30m = llvm.getelementptr %t30ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t30mv = llvm.load %t30m : !llvm.ptr -> f64
+    llvm.store %t30mv, %r8 : f64, !llvm.ptr
+    %t31m = llvm.load %r4 : !llvm.ptr -> f64
+    %t31a0 = llvm.load %r8 : !llvm.ptr -> f64
+    %t31r = func.call @strict_file_override(%t31m, %t31a0) : (f64, f64) -> f64
+    llvm.store %t31r, %r9 : f64, !llvm.ptr
+    %t32v = llvm.load %r9 : !llvm.ptr -> f64
+    %t32k = func.call @strict_is_failure(%t32v) : (f64) -> i1
+    cf.cond_br %t32k, ^bb32e, ^bb33
+  ^bb32e:
+    %t32tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t32twl = arith.constant 62 : i64
+    %t32tr = func.call @strict_trace_checked(%t32v, %t32tw, %t32twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t32tr : f64
+  ^bb33:
+    %t33c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t33c, %r10 : f64, !llvm.ptr
+    %t34a = llvm.load %r10 : !llvm.ptr -> f64
+    %t34b = llvm.load %r10 : !llvm.ptr -> f64
+    %t34c = arith.cmpf oeq, %t34a, %t34b : f64
+    llvm.store %t34c, %flag : i1, !llvm.ptr
+    cf.br ^bb35
+  ^bb35:
+    cf.br ^bb36
+  ^bb36:
+    %t37 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t37, ^bb49, ^bb38
+  ^bb38:
+    %t38m = llvm.load %instance : !llvm.ptr -> f64
+    %t38r = func.call @Hosted_Location_0(%t38m) : (f64) -> f64
+    %t38tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t38twl = arith.constant 64 : i64
+    %t38tr = func.call @strict_trace(%t38r, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t38tr, %r0 : f64, !llvm.ptr
+    %t39v = llvm.load %r0 : !llvm.ptr -> f64
+    %t39k = func.call @strict_is_failure(%t39v) : (f64) -> i1
+    cf.cond_br %t39k, ^bb39e, ^bb40
+  ^bb39e:
+    %t39tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t39twl = arith.constant 64 : i64
+    %t39tr = func.call @strict_trace_checked(%t39v, %t39tw, %t39twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t39tr : f64
+  ^bb40:
+    %t40o = llvm.load %r0 : !llvm.ptr -> f64
+    llvm.store %t40o, %r1 : f64, !llvm.ptr
+    %t41v = llvm.load %r1 : !llvm.ptr -> f64
+    %t41k = func.call @strict_is_failure(%t41v) : (f64) -> i1
+    cf.cond_br %t41k, ^bb41e, ^bb42
+  ^bb41e:
+    %t41tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t41twl = arith.constant 64 : i64
+    %t41tr = func.call @strict_trace_checked(%t41v, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t41tr : f64
+  ^bb42:
+    %t42 = llvm.load %v_call : !llvm.ptr -> f64
+    llvm.store %t42, %r2 : f64, !llvm.ptr
+    %t43i = llvm.load %r2 : !llvm.ptr -> f64
+    %t43ip = func.call @strict_ptr(%t43i) : (f64) -> !llvm.ptr
+    %t43m = llvm.getelementptr %t43ip[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t43mv = llvm.load %t43m : !llvm.ptr -> f64
+    llvm.store %t43mv, %r3 : f64, !llvm.ptr
+    %t44m = llvm.load %r3 : !llvm.ptr -> f64
+    %t44r = func.call @List_VmValue__First_0(%t44m) : (f64) -> f64
+    %t44tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t44twl = arith.constant 64 : i64
+    %t44tr = func.call @strict_trace(%t44r, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t44tr, %r4 : f64, !llvm.ptr
+    %t45v = llvm.load %r4 : !llvm.ptr -> f64
+    %t45k = func.call @strict_is_failure(%t45v) : (f64) -> i1
+    cf.cond_br %t45k, ^bb45e, ^bb46
+  ^bb45e:
+    %t45tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t45twl = arith.constant 64 : i64
+    %t45tr = func.call @strict_trace_checked(%t45v, %t45tw, %t45twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t45tr : f64
+  ^bb46:
+    %t46i = llvm.load %r4 : !llvm.ptr -> f64
+    %t46ip = func.call @strict_ptr(%t46i) : (f64) -> !llvm.ptr
+    %t46m = llvm.getelementptr %t46ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t46mv = llvm.load %t46m : !llvm.ptr -> f64
+    llvm.store %t46mv, %r5 : f64, !llvm.ptr
+    %t47m = llvm.load %r1 : !llvm.ptr -> f64
+    %t47a0 = llvm.load %r5 : !llvm.ptr -> f64
+    %t47r = func.call @strict_file_rename(%t47m, %t47a0) : (f64, f64) -> f64
+    llvm.store %t47r, %r6 : f64, !llvm.ptr
+    %t48v = llvm.load %r6 : !llvm.ptr -> f64
+    %t48k = func.call @strict_is_failure(%t48v) : (f64) -> i1
+    cf.cond_br %t48k, ^bb48e, ^bb49
+  ^bb48e:
+    %t48tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t48twl = arith.constant 64 : i64
+    %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t48tr : f64
+  ^bb49:
+    %t50m = llvm.load %instance : !llvm.ptr -> f64
+    %t50r = func.call @Hosted_Location_0(%t50m) : (f64) -> f64
+    %t50tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t50twl = arith.constant 65 : i64
+    %t50tr = func.call @strict_trace(%t50r, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t50tr, %r0 : f64, !llvm.ptr
+    %t51v = llvm.load %r0 : !llvm.ptr -> f64
+    %t51k = func.call @strict_is_failure(%t51v) : (f64) -> i1
+    cf.cond_br %t51k, ^bb51e, ^bb52
+  ^bb51e:
+    %t51tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t51twl = arith.constant 65 : i64
+    %t51tr = func.call @strict_trace_checked(%t51v, %t51tw, %t51twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t51tr : f64
+  ^bb52:
+    %t52m = llvm.load %instance : !llvm.ptr -> f64
+    %t52a0 = llvm.load %r0 : !llvm.ptr -> f64
+    %t52r = func.call @Hosted_Answered_1(%t52m, %t52a0) : (f64, f64) -> f64
+    %t52tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t52twl = arith.constant 65 : i64
+    %t52tr = func.call @strict_trace(%t52r, %t52tw, %t52twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t52tr, %r1 : f64, !llvm.ptr
+    %t53v = llvm.load %r1 : !llvm.ptr -> f64
+    %t53k = func.call @strict_is_failure(%t53v) : (f64) -> i1
+    cf.cond_br %t53k, ^bb53e, ^bb54
+  ^bb53e:
+    %t53tw = llvm.mlir.addressof @wHosted_Moved_0 : !llvm.ptr
+    %t53twl = arith.constant 65 : i64
+    %t53tr = func.call @strict_trace_checked(%t53v, %t53tw, %t53twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t53tr : f64
+  ^bb54:
+    %t54 = llvm.load %r1 : !llvm.ptr -> f64
+    return %t54 : f64
   }
   func.func private @Hosted_Answered_1(%p0: f64, %p1: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -376147,7 +378123,7 @@ module {
     %t1m = llvm.load %r0 : !llvm.ptr -> f64
     %t1r = func.call @Invocation_MethodName_0(%t1m) : (f64) -> f64
     %t1tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t1twl = arith.constant 68 : i64
+    %t1twl = arith.constant 70 : i64
     %t1tr = func.call @strict_trace(%t1r, %t1tw, %t1twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t1tr, %r1 : f64, !llvm.ptr
     %t2v = llvm.load %r1 : !llvm.ptr -> f64
@@ -376155,7 +378131,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t2twl = arith.constant 68 : i64
+    %t2twl = arith.constant 70 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -376179,7 +378155,7 @@ module {
     cf.cond_br %t8k, ^bb8e, ^bb9
   ^bb8e:
     %t8tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t8twl = arith.constant 69 : i64
+    %t8twl = arith.constant 71 : i64
     %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     return %t8tr : f64
   ^bb9:
@@ -376191,7 +378167,7 @@ module {
     cf.cond_br %t10k, ^bb10e, ^bb11
   ^bb10e:
     %t10tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t10twl = arith.constant 69 : i64
+    %t10twl = arith.constant 71 : i64
     %t10tr = func.call @strict_trace_checked(%t10v, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
     return %t10tr : f64
   ^bb11:
@@ -376199,7 +378175,7 @@ module {
     %t11a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t11r = func.call @VmValue_OfNumber_1(%t11m, %t11a0) : (f64, f64) -> f64
     %t11tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t11twl = arith.constant 69 : i64
+    %t11twl = arith.constant 71 : i64
     %t11tr = func.call @strict_trace(%t11r, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t11tr, %r6 : f64, !llvm.ptr
     %t12 = llvm.load %r6 : !llvm.ptr -> f64
@@ -376210,7 +378186,7 @@ module {
     %t15m = llvm.load %r0 : !llvm.ptr -> f64
     %t15r = func.call @Invocation_TypeName_0(%t15m) : (f64) -> f64
     %t15tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t15twl = arith.constant 70 : i64
+    %t15twl = arith.constant 72 : i64
     %t15tr = func.call @strict_trace(%t15r, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t15tr, %r1 : f64, !llvm.ptr
     %t16v = llvm.load %r1 : !llvm.ptr -> f64
@@ -376218,7 +378194,7 @@ module {
     cf.cond_br %t16k, ^bb16e, ^bb17
   ^bb16e:
     %t16tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t16twl = arith.constant 70 : i64
+    %t16twl = arith.constant 72 : i64
     %t16tr = func.call @strict_trace_checked(%t16v, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     return %t16tr : f64
   ^bb17:
@@ -376261,7 +378237,7 @@ module {
     cf.cond_br %t29k, ^bb29e, ^bb30
   ^bb29e:
     %t29tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t29twl = arith.constant 70 : i64
+    %t29twl = arith.constant 72 : i64
     %t29tr = func.call @strict_trace_checked(%t29v, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
     return %t29tr : f64
   ^bb30:
@@ -376281,7 +378257,7 @@ module {
     %t36m = llvm.load %r0 : !llvm.ptr -> f64
     %t36r = func.call @Invocation_MethodName_0(%t36m) : (f64) -> f64
     %t36tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t36twl = arith.constant 71 : i64
+    %t36twl = arith.constant 73 : i64
     %t36tr = func.call @strict_trace(%t36r, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t36tr, %r1 : f64, !llvm.ptr
     %t37v = llvm.load %r1 : !llvm.ptr -> f64
@@ -376289,7 +378265,7 @@ module {
     cf.cond_br %t37k, ^bb37e, ^bb38
   ^bb37e:
     %t37tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t37twl = arith.constant 71 : i64
+    %t37twl = arith.constant 73 : i64
     %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     return %t37tr : f64
   ^bb38:
@@ -376311,7 +378287,7 @@ module {
     cf.cond_br %t42k, ^bb42e, ^bb43
   ^bb42e:
     %t42tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t42twl = arith.constant 71 : i64
+    %t42twl = arith.constant 73 : i64
     %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
     return %t42tr : f64
   ^bb43:
@@ -376319,7 +378295,7 @@ module {
     %t43a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t43r = func.call @VmValue_OfBoolean_1(%t43m, %t43a0) : (f64, f64) -> f64
     %t43tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t43twl = arith.constant 71 : i64
+    %t43twl = arith.constant 73 : i64
     %t43tr = func.call @strict_trace(%t43r, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t43tr, %r4 : f64, !llvm.ptr
     %t44 = llvm.load %r4 : !llvm.ptr -> f64
@@ -376382,7 +378358,7 @@ module {
     cf.cond_br %t57k, ^bb57e, ^bb58
   ^bb57e:
     %t57tw = llvm.mlir.addressof @wHosted_Answered_1 : !llvm.ptr
-    %t57twl = arith.constant 71 : i64
+    %t57twl = arith.constant 73 : i64
     %t57tr = func.call @strict_trace_checked(%t57v, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
     return %t57tr : f64
   ^bb58:
@@ -377557,6 +379533,305 @@ module {
   ^bb60:
     %t60 = llvm.load %r10 : !llvm.ptr -> f64
     return %t60 : f64
+  }
+  func.func private @Text_Code_0(%p0: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
+    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r0 : f64, !llvm.ptr
+    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r1 : f64, !llvm.ptr
+    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r2 : f64, !llvm.ptr
+    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r3 : f64, !llvm.ptr
+    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r4 : f64, !llvm.ptr
+    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r5 : f64, !llvm.ptr
+    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %r9 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r9 : f64, !llvm.ptr
+    %r10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r10 : f64, !llvm.ptr
+    %r11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r11 : f64, !llvm.ptr
+    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_index : f64, !llvm.ptr
+    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_value : f64, !llvm.ptr
+    %v_characters = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_characters : f64, !llvm.ptr
+    %v_escaped = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_escaped : f64, !llvm.ptr
+    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %instance : f64, !llvm.ptr
+    llvm.store %p0, %instance : f64, !llvm.ptr
+    llvm.store %p0, %v_value : f64, !llvm.ptr
+    %talias0 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %talias0, %v_characters : f64, !llvm.ptr
+    %t0c = llvm.mlir.addressof @cText_Code_0_0 : !llvm.ptr
+    %t0xf = func.call @strict_bits(%t0c) : (!llvm.ptr) -> f64
+    llvm.store %t0xf, %r0 : f64, !llvm.ptr
+    %t1c = llvm.mlir.addressof @cText_Code_0_1 : !llvm.ptr
+    %t1xf = func.call @strict_bits(%t1c) : (!llvm.ptr) -> f64
+    llvm.store %t1xf, %r1 : f64, !llvm.ptr
+    %t2m = llvm.load %instance : !llvm.ptr -> f64
+    %t2a0 = llvm.load %r0 : !llvm.ptr -> f64
+    %t2a1 = llvm.load %r1 : !llvm.ptr -> f64
+    %t2r = func.call @Text_Replace_2(%t2m, %t2a0, %t2a1) : (f64, f64, f64) -> f64
+    %t2tw = llvm.mlir.addressof @wText_Code_0 : !llvm.ptr
+    %t2twl = arith.constant 147 : i64
+    %t2tr = func.call @strict_trace(%t2r, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t2tr, %r2 : f64, !llvm.ptr
+    %t3v = llvm.load %r2 : !llvm.ptr -> f64
+    %t3k = func.call @strict_is_failure(%t3v) : (f64) -> i1
+    cf.cond_br %t3k, ^bb3e, ^bb4
+  ^bb3e:
+    %t3tw = llvm.mlir.addressof @wText_Code_0 : !llvm.ptr
+    %t3twl = arith.constant 147 : i64
+    %t3tr = func.call @strict_trace_checked(%t3v, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t3tr : f64
+  ^bb4:
+    %t4c = llvm.mlir.addressof @cText_Code_0_4 : !llvm.ptr
+    %t4xf = func.call @strict_bits(%t4c) : (!llvm.ptr) -> f64
+    llvm.store %t4xf, %r3 : f64, !llvm.ptr
+    %t5c = llvm.mlir.addressof @cText_Code_0_5 : !llvm.ptr
+    %t5xf = func.call @strict_bits(%t5c) : (!llvm.ptr) -> f64
+    llvm.store %t5xf, %r4 : f64, !llvm.ptr
+    %t6m = llvm.load %r2 : !llvm.ptr -> f64
+    %t6a0 = llvm.load %r3 : !llvm.ptr -> f64
+    %t6a1 = llvm.load %r4 : !llvm.ptr -> f64
+    %t6r = func.call @Text_Replace_2(%t6m, %t6a0, %t6a1) : (f64, f64, f64) -> f64
+    %t6tw = llvm.mlir.addressof @wText_Code_0 : !llvm.ptr
+    %t6twl = arith.constant 147 : i64
+    %t6tr = func.call @strict_trace(%t6r, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t6tr, %r5 : f64, !llvm.ptr
+    %t7v = llvm.load %r5 : !llvm.ptr -> f64
+    %t7k = func.call @strict_is_failure(%t7v) : (f64) -> i1
+    cf.cond_br %t7k, ^bb7e, ^bb8
+  ^bb7e:
+    %t7tw = llvm.mlir.addressof @wText_Code_0 : !llvm.ptr
+    %t7twl = arith.constant 147 : i64
+    %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t7tr : f64
+  ^bb8:
+    %t8c = llvm.mlir.addressof @cText_Code_0_8 : !llvm.ptr
+    %t8xf = func.call @strict_bits(%t8c) : (!llvm.ptr) -> f64
+    llvm.store %t8xf, %r6 : f64, !llvm.ptr
+    %t9c = llvm.mlir.addressof @cText_Code_0_9 : !llvm.ptr
+    %t9xf = func.call @strict_bits(%t9c) : (!llvm.ptr) -> f64
+    llvm.store %t9xf, %r7 : f64, !llvm.ptr
+    %t10m = llvm.load %r5 : !llvm.ptr -> f64
+    %t10a0 = llvm.load %r6 : !llvm.ptr -> f64
+    %t10a1 = llvm.load %r7 : !llvm.ptr -> f64
+    %t10r = func.call @Text_Replace_2(%t10m, %t10a0, %t10a1) : (f64, f64, f64) -> f64
+    %t10tw = llvm.mlir.addressof @wText_Code_0 : !llvm.ptr
+    %t10twl = arith.constant 147 : i64
+    %t10tr = func.call @strict_trace(%t10r, %t10tw, %t10twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t10tr, %r8 : f64, !llvm.ptr
+    %t11v = llvm.load %r8 : !llvm.ptr -> f64
+    %t11k = func.call @strict_is_failure(%t11v) : (f64) -> i1
+    cf.cond_br %t11k, ^bb11e, ^bb12
+  ^bb11e:
+    %t11tw = llvm.mlir.addressof @wText_Code_0 : !llvm.ptr
+    %t11twl = arith.constant 147 : i64
+    %t11tr = func.call @strict_trace_checked(%t11v, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t11tr : f64
+  ^bb12:
+    %t12c = llvm.mlir.addressof @cText_Code_0_12 : !llvm.ptr
+    %t12xf = func.call @strict_bits(%t12c) : (!llvm.ptr) -> f64
+    llvm.store %t12xf, %r9 : f64, !llvm.ptr
+    %t13c = llvm.mlir.addressof @cText_Code_0_13 : !llvm.ptr
+    %t13xf = func.call @strict_bits(%t13c) : (!llvm.ptr) -> f64
+    llvm.store %t13xf, %r10 : f64, !llvm.ptr
+    %t14m = llvm.load %r8 : !llvm.ptr -> f64
+    %t14a0 = llvm.load %r9 : !llvm.ptr -> f64
+    %t14a1 = llvm.load %r10 : !llvm.ptr -> f64
+    %t14r = func.call @Text_Replace_2(%t14m, %t14a0, %t14a1) : (f64, f64, f64) -> f64
+    %t14tw = llvm.mlir.addressof @wText_Code_0 : !llvm.ptr
+    %t14twl = arith.constant 147 : i64
+    %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t14tr, %r11 : f64, !llvm.ptr
+    %t15 = llvm.load %r11 : !llvm.ptr -> f64
+    llvm.store %t15, %v_escaped : f64, !llvm.ptr
+    %t16c = llvm.mlir.addressof @cText_Code_0_16 : !llvm.ptr
+    %t16xf = func.call @strict_bits(%t16c) : (!llvm.ptr) -> f64
+    llvm.store %t16xf, %r0 : f64, !llvm.ptr
+    %t17 = llvm.load %v_escaped : !llvm.ptr -> f64
+    llvm.store %t17, %r1 : f64, !llvm.ptr
+    %t18v = llvm.load %r1 : !llvm.ptr -> f64
+    %t18k = func.call @strict_is_failure(%t18v) : (f64) -> i1
+    cf.cond_br %t18k, ^bb18e, ^bb19
+  ^bb18e:
+    %t18tw = llvm.mlir.addressof @wText_Code_0 : !llvm.ptr
+    %t18twl = arith.constant 148 : i64
+    %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t18tr : f64
+  ^bb19:
+    %t19lx = llvm.load %r0 : !llvm.ptr -> f64
+    %t19rx = llvm.load %r1 : !llvm.ptr -> f64
+    %t19c = func.call @strict_text_concat(%t19lx, %t19rx) : (f64, f64) -> f64
+    llvm.store %t19c, %r2 : f64, !llvm.ptr
+    %t20c = llvm.mlir.addressof @cText_Code_0_20 : !llvm.ptr
+    %t20xf = func.call @strict_bits(%t20c) : (!llvm.ptr) -> f64
+    llvm.store %t20xf, %r3 : f64, !llvm.ptr
+    %t21lx = llvm.load %r2 : !llvm.ptr -> f64
+    %t21rx = llvm.load %r3 : !llvm.ptr -> f64
+    %t21c = func.call @strict_text_concat(%t21lx, %t21rx) : (f64, f64) -> f64
+    llvm.store %t21c, %r4 : f64, !llvm.ptr
+    %t22 = llvm.load %r4 : !llvm.ptr -> f64
+    return %t22 : f64
+  }
+  func.func private @ValueCode_Items_0(%p0: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr
+    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r0 : f64, !llvm.ptr
+    %r1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r1 : f64, !llvm.ptr
+    %r2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r2 : f64, !llvm.ptr
+    %r3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r3 : f64, !llvm.ptr
+    %r4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r4 : f64, !llvm.ptr
+    %r5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r5 : f64, !llvm.ptr
+    %r6 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r6 : f64, !llvm.ptr
+    %r7 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r7 : f64, !llvm.ptr
+    %r8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %r8 : f64, !llvm.ptr
+    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_index : f64, !llvm.ptr
+    %v_value = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_value : f64, !llvm.ptr
+    %v_shown = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_shown : f64, !llvm.ptr
+    %v_forResult = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_forResult : f64, !llvm.ptr
+    %loop3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %loop3 : f64, !llvm.ptr
+    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %instance : f64, !llvm.ptr
+    llvm.store %p0, %instance : f64, !llvm.ptr
+    llvm.store %p0, %v_value : f64, !llvm.ptr
+    %talias0 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %talias0, %v_shown : f64, !llvm.ptr
+    %t0l = func.call @strict_list_empty() : () -> f64
+    llvm.store %t0l, %v_forResult : f64, !llvm.ptr
+    %t1 = llvm.load %v_shown : !llvm.ptr -> f64
+    llvm.store %t1, %r0 : f64, !llvm.ptr
+    %t2i = llvm.load %r0 : !llvm.ptr -> f64
+    %t2ip = func.call @strict_ptr(%t2i) : (f64) -> !llvm.ptr
+    %t2m = llvm.getelementptr %t2ip[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t2mv = llvm.load %t2m : !llvm.ptr -> f64
+    llvm.store %t2mv, %r1 : f64, !llvm.ptr
+    %t3b = arith.constant 0.0 : f64
+    %t3v = llvm.load %r1 : !llvm.ptr -> f64
+    %t3n = func.call @strict_list_length(%t3v) : (f64) -> f64
+    %t3s = arith.constant 1.0 : f64
+    %t3h = func.call @strict_list_items(%t3v) : (f64) -> !llvm.ptr
+    %t3hv = func.call @strict_list_version() : () -> i64
+    %t3x = llvm.load %v_index : !llvm.ptr -> f64
+    %t3y = llvm.load %v_value : !llvm.ptr -> f64
+    %t3a = arith.maximumf %t3n, %zero : f64
+    %t3r = func.call @strict_list_new(%t3a, %zero) : (f64, f64) -> f64
+    llvm.store %t3r, %v_forResult : f64, !llvm.ptr
+    llvm.store %zero, %loop3 : f64, !llvm.ptr
+    cf.br ^loop3
+  ^loop3:
+    %t3k = llvm.load %loop3 : !llvm.ptr -> f64
+    %t3m = arith.cmpf olt, %t3k, %t3n : f64
+    cf.cond_br %t3m, ^loop3body, ^loop3exit
+  ^loop3body:
+    %t3o = arith.mulf %t3k, %t3s : f64
+    %t3c = arith.addf %t3b, %t3o : f64
+    llvm.store %t3c, %v_index : f64, !llvm.ptr
+    %t3g = func.call @strict_hoisted_item(%t3h, %t3c, %t3hv, %t3v) : (!llvm.ptr, f64, i64, f64) -> f64
+    llvm.store %t3g, %v_value : f64, !llvm.ptr
+    %t4 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %t4, %r2 : f64, !llvm.ptr
+    %t5i = llvm.load %r2 : !llvm.ptr -> f64
+    %t5ip = func.call @strict_ptr(%t5i) : (f64) -> !llvm.ptr
+    %t5m = llvm.getelementptr %t5ip[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t5mv = llvm.load %t5m : !llvm.ptr -> f64
+    llvm.store %t5mv, %r3 : f64, !llvm.ptr
+    %t6c = llvm.mlir.addressof @cValueCode_Items_0_6 : !llvm.ptr
+    %t6xf = func.call @strict_bits(%t6c) : (!llvm.ptr) -> f64
+    llvm.store %t6xf, %r4 : f64, !llvm.ptr
+    %t7l = llvm.load %r3 : !llvm.ptr -> f64
+    %t7r = llvm.load %r4 : !llvm.ptr -> f64
+    %t7q = func.call @strict_text_equal(%t7l, %t7r) : (f64, f64) -> f64
+    %t7f = arith.cmpf oeq, %t7q, %zero : f64
+    llvm.store %t7f, %flag : i1, !llvm.ptr
+    %t8 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t8, ^bb9, ^bb17
+  ^bb9:
+    %t9 = llvm.load %v_value : !llvm.ptr -> f64
+    llvm.store %t9, %r5 : f64, !llvm.ptr
+    %t10o = llvm.load %r5 : !llvm.ptr -> f64
+    llvm.store %t10o, %r6 : f64, !llvm.ptr
+    %t11v = llvm.load %r6 : !llvm.ptr -> f64
+    %t11k = func.call @strict_is_failure(%t11v) : (f64) -> i1
+    cf.cond_br %t11k, ^bb11e, ^bb12
+  ^bb11e:
+    %t11tw = llvm.mlir.addressof @wValueCode_Items_0 : !llvm.ptr
+    %t11twl = arith.constant 16 : i64
+    %t11tr = func.call @strict_trace_checked(%t11v, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t11tr : f64
+  ^bb12:
+    %t12m = llvm.load %r6 : !llvm.ptr -> f64
+    %t12r = func.call @ValueCode_Code_0(%t12m) : (f64) -> f64
+    %t12tw = llvm.mlir.addressof @wValueCode_Items_0 : !llvm.ptr
+    %t12twl = arith.constant 16 : i64
+    %t12tr = func.call @strict_trace(%t12r, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t12tr, %r7 : f64, !llvm.ptr
+    %t13v = llvm.load %r7 : !llvm.ptr -> f64
+    %t13k = func.call @strict_is_failure(%t13v) : (f64) -> i1
+    cf.cond_br %t13k, ^bb13e, ^bb14
+  ^bb13e:
+    %t13tw = llvm.mlir.addressof @wValueCode_Items_0 : !llvm.ptr
+    %t13twl = arith.constant 16 : i64
+    %t13tr = func.call @strict_trace_checked(%t13v, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t13tr : f64
+  ^bb14:
+    %t14l = llvm.load %v_forResult : !llvm.ptr -> f64
+    %t14e = llvm.load %r7 : !llvm.ptr -> f64
+    %t14n = func.call @strict_list_push(%t14l, %t14e) : (f64, f64) -> f64
+    llvm.store %t14n, %v_forResult : f64, !llvm.ptr
+    %t15 = llvm.load %v_forResult : !llvm.ptr -> f64
+    llvm.store %t15, %r8 : f64, !llvm.ptr
+    %t16v = llvm.load %r8 : !llvm.ptr -> f64
+    %t16k = func.call @strict_is_failure(%t16v) : (f64) -> i1
+    cf.cond_br %t16k, ^bb16e, ^bb17
+  ^bb16e:
+    %t16tw = llvm.mlir.addressof @wValueCode_Items_0 : !llvm.ptr
+    %t16twl = arith.constant 16 : i64
+    %t16tr = func.call @strict_trace_checked(%t16v, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t16tr : f64
+  ^bb17:
+    %t18k = llvm.load %loop3 : !llvm.ptr -> f64
+    %t18u = arith.constant 1.0 : f64
+    %t18w = arith.addf %t18k, %t18u : f64
+    llvm.store %t18w, %loop3 : f64, !llvm.ptr
+    cf.br ^loop3
+  ^loop3exit:
+    llvm.store %t3x, %v_index : f64, !llvm.ptr
+    llvm.store %t3y, %v_value : f64, !llvm.ptr
+    %t19 = llvm.load %v_forResult : !llvm.ptr -> f64
+    llvm.store %t19, %r0 : f64, !llvm.ptr
+    %t20 = llvm.load %r0 : !llvm.ptr -> f64
+    return %t20 : f64
   }
   func.func private @Natives_Bitwise_3(%p0: f64, %p1: f64, %p2: f64, %p3: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -383429,7 +385704,7 @@ module {
     cf.cond_br %t3k, ^bb3e, ^bb4
   ^bb3e:
     %t3tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t3twl = arith.constant 17 : i64
+    %t3twl = arith.constant 18 : i64
     %t3tr = func.call @strict_trace_checked(%t3v, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     return %t3tr : f64
   ^bb4:
@@ -383464,7 +385739,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t12twl = arith.constant 18 : i64
+    %t12twl = arith.constant 19 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -383475,7 +385750,7 @@ module {
     %t14a1 = llvm.load %r8 : !llvm.ptr -> f64
     %t14r = func.call @OperatorCodegen_Negative_2(%t14m, %t14a0, %t14a1) : (f64, f64, f64) -> f64
     %t14tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t14twl = arith.constant 18 : i64
+    %t14twl = arith.constant 19 : i64
     %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t14tr, %r9 : f64, !llvm.ptr
     %t15 = llvm.load %r9 : !llvm.ptr -> f64
@@ -383490,7 +385765,7 @@ module {
     %t19a1 = llvm.load %r1 : !llvm.ptr -> f64
     %t19r = func.call @OperatorCodegen_IsComposite_2(%t19m, %t19a0, %t19a1) : (f64, f64, f64) -> f64
     %t19tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t19twl = arith.constant 19 : i64
+    %t19twl = arith.constant 20 : i64
     %t19tr = func.call @strict_trace(%t19r, %t19tw, %t19twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t19tr, %r2 : f64, !llvm.ptr
     %t20v = llvm.load %r2 : !llvm.ptr -> f64
@@ -383498,7 +385773,7 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t20twl = arith.constant 19 : i64
+    %t20twl = arith.constant 20 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
@@ -383520,7 +385795,7 @@ module {
     %t26a1 = llvm.load %r5 : !llvm.ptr -> f64
     %t26r = func.call @OperatorCodegen_Composite_2(%t26m, %t26a0, %t26a1) : (f64, f64, f64) -> f64
     %t26tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t26twl = arith.constant 20 : i64
+    %t26twl = arith.constant 21 : i64
     %t26tr = func.call @strict_trace(%t26r, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t26tr, %r6 : f64, !llvm.ptr
     %t27 = llvm.load %r6 : !llvm.ptr -> f64
@@ -383535,7 +385810,7 @@ module {
     cf.cond_br %t31k, ^bb31e, ^bb32
   ^bb31e:
     %t31tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t31twl = arith.constant 21 : i64
+    %t31twl = arith.constant 22 : i64
     %t31tr = func.call @strict_trace_checked(%t31v, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     return %t31tr : f64
   ^bb32:
@@ -383561,7 +385836,7 @@ module {
     cf.cond_br %t37k, ^bb37e, ^bb38
   ^bb37e:
     %t37tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t37twl = arith.constant 21 : i64
+    %t37twl = arith.constant 22 : i64
     %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     return %t37tr : f64
   ^bb38:
@@ -383573,7 +385848,7 @@ module {
     %t39a2 = llvm.load %r7 : !llvm.ptr -> f64
     %t39r = func.call @ErrorCodegen_Compared_3(%t39m, %t39a0, %t39a1, %t39a2) : (f64, f64, f64, f64) -> f64
     %t39tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t39twl = arith.constant 21 : i64
+    %t39twl = arith.constant 22 : i64
     %t39tr = func.call @strict_trace(%t39r, %t39tw, %t39twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t39tr, %r8 : f64, !llvm.ptr
     %t40 = llvm.load %r8 : !llvm.ptr -> f64
@@ -383587,7 +385862,7 @@ module {
     cf.cond_br %t43k, ^bb43e, ^bb44
   ^bb43e:
     %t43tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t43twl = arith.constant 22 : i64
+    %t43twl = arith.constant 23 : i64
     %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
     return %t43tr : f64
   ^bb44:
@@ -383600,7 +385875,7 @@ module {
     cf.cond_br %t46k, ^bb46e, ^bb47
   ^bb46e:
     %t46tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t46twl = arith.constant 22 : i64
+    %t46twl = arith.constant 23 : i64
     %t46tr = func.call @strict_trace_checked(%t46v, %t46tw, %t46twl) : (f64, !llvm.ptr, i64) -> f64
     return %t46tr : f64
   ^bb47:
@@ -383612,7 +385887,7 @@ module {
     %t48a2 = llvm.load %r4 : !llvm.ptr -> f64
     %t48r = func.call @ErrorCodegen_Right_3(%t48m, %t48a0, %t48a1, %t48a2) : (f64, f64, f64, f64) -> f64
     %t48tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t48twl = arith.constant 22 : i64
+    %t48twl = arith.constant 23 : i64
     %t48tr = func.call @strict_trace(%t48r, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t48tr, %r5 : f64, !llvm.ptr
     %t49 = llvm.load %r5 : !llvm.ptr -> f64
@@ -383624,7 +385899,7 @@ module {
     cf.cond_br %t51k, ^bb51e, ^bb52
   ^bb51e:
     %t51tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t51twl = arith.constant 23 : i64
+    %t51twl = arith.constant 24 : i64
     %t51tr = func.call @strict_trace_checked(%t51v, %t51tw, %t51twl) : (f64, !llvm.ptr, i64) -> f64
     return %t51tr : f64
   ^bb52:
@@ -383639,7 +385914,7 @@ module {
     %t54a0 = llvm.load %r2 : !llvm.ptr -> f64
     %t54r = func.call @OperatorCodegen_OperatorType_1(%t54m, %t54a0) : (f64, f64) -> f64
     %t54tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t54twl = arith.constant 23 : i64
+    %t54twl = arith.constant 24 : i64
     %t54tr = func.call @strict_trace(%t54r, %t54tw, %t54twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t54tr, %r3 : f64, !llvm.ptr
     %t55v = llvm.load %r3 : !llvm.ptr -> f64
@@ -383647,7 +385922,7 @@ module {
     cf.cond_br %t55k, ^bb55e, ^bb56
   ^bb55e:
     %t55tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t55twl = arith.constant 23 : i64
+    %t55twl = arith.constant 24 : i64
     %t55tr = func.call @strict_trace_checked(%t55v, %t55tw, %t55twl) : (f64, !llvm.ptr, i64) -> f64
     return %t55tr : f64
   ^bb56:
@@ -383660,14 +385935,14 @@ module {
     cf.cond_br %t58k, ^bb58e, ^bb59
   ^bb58e:
     %t58tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t58twl = arith.constant 23 : i64
+    %t58twl = arith.constant 24 : i64
     %t58tr = func.call @strict_trace_checked(%t58v, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
     return %t58tr : f64
   ^bb59:
     %t59m = llvm.load %r4 : !llvm.ptr -> f64
     %t59r = func.call @CodeBlock_Result_0(%t59m) : (f64) -> f64
     %t59tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t59twl = arith.constant 23 : i64
+    %t59twl = arith.constant 24 : i64
     %t59tr = func.call @strict_trace(%t59r, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t59tr, %r5 : f64, !llvm.ptr
     %t60v = llvm.load %r5 : !llvm.ptr -> f64
@@ -383675,7 +385950,7 @@ module {
     cf.cond_br %t60k, ^bb60e, ^bb61
   ^bb60e:
     %t60tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t60twl = arith.constant 23 : i64
+    %t60twl = arith.constant 24 : i64
     %t60tr = func.call @strict_trace_checked(%t60v, %t60tw, %t60twl) : (f64, !llvm.ptr, i64) -> f64
     return %t60tr : f64
   ^bb61:
@@ -383690,14 +385965,14 @@ module {
     cf.cond_br %t63k, ^bb63e, ^bb64
   ^bb63e:
     %t63tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t63twl = arith.constant 23 : i64
+    %t63twl = arith.constant 24 : i64
     %t63tr = func.call @strict_trace_checked(%t63v, %t63tw, %t63twl) : (f64, !llvm.ptr, i64) -> f64
     return %t63tr : f64
   ^bb64:
     %t64m = llvm.load %r4 : !llvm.ptr -> f64
     %t64r = func.call @CodeBlock_Result_0(%t64m) : (f64) -> f64
     %t64tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t64twl = arith.constant 23 : i64
+    %t64twl = arith.constant 24 : i64
     %t64tr = func.call @strict_trace(%t64r, %t64tw, %t64twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t64tr, %r5 : f64, !llvm.ptr
     %t65v = llvm.load %r5 : !llvm.ptr -> f64
@@ -383705,7 +385980,7 @@ module {
     cf.cond_br %t65k, ^bb65e, ^bb66
   ^bb65e:
     %t65tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t65twl = arith.constant 23 : i64
+    %t65twl = arith.constant 24 : i64
     %t65tr = func.call @strict_trace_checked(%t65v, %t65tw, %t65twl) : (f64, !llvm.ptr, i64) -> f64
     return %t65tr : f64
   ^bb66:
@@ -383720,7 +385995,7 @@ module {
     cf.cond_br %t68k, ^bb68e, ^bb69
   ^bb68e:
     %t68tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t68twl = arith.constant 23 : i64
+    %t68twl = arith.constant 24 : i64
     %t68tr = func.call @strict_trace_checked(%t68v, %t68tw, %t68twl) : (f64, !llvm.ptr, i64) -> f64
     return %t68tr : f64
   ^bb69:
@@ -383740,7 +386015,7 @@ module {
     %t72a1 = llvm.load %r4 : !llvm.ptr -> f64
     %t72r = func.call @InstructionEntry_Binary_2(%t72m, %t72a0, %t72a1) : (f64, f64, f64) -> f64
     %t72tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t72twl = arith.constant 23 : i64
+    %t72twl = arith.constant 24 : i64
     %t72tr = func.call @strict_trace(%t72r, %t72tw, %t72twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t72tr, %r5 : f64, !llvm.ptr
     %t73v = llvm.load %r5 : !llvm.ptr -> f64
@@ -383748,7 +386023,7 @@ module {
     cf.cond_br %t73k, ^bb73e, ^bb74
   ^bb73e:
     %t73tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t73twl = arith.constant 23 : i64
+    %t73twl = arith.constant 24 : i64
     %t73tr = func.call @strict_trace_checked(%t73v, %t73tw, %t73twl) : (f64, !llvm.ptr, i64) -> f64
     return %t73tr : f64
   ^bb74:
@@ -383756,7 +386031,7 @@ module {
     %t74a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t74r = func.call @CodeBlock_Load_1(%t74m, %t74a0) : (f64, f64) -> f64
     %t74tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t74twl = arith.constant 23 : i64
+    %t74twl = arith.constant 24 : i64
     %t74tr = func.call @strict_trace(%t74r, %t74tw, %t74twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t74tr, %r6 : f64, !llvm.ptr
     %t75 = llvm.load %r6 : !llvm.ptr -> f64
@@ -383807,14 +386082,14 @@ module {
     cf.cond_br %t84k, ^bb84e, ^bb85
   ^bb84e:
     %t84tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t84twl = arith.constant 24 : i64
+    %t84twl = arith.constant 25 : i64
     %t84tr = func.call @strict_trace_checked(%t84v, %t84tw, %t84twl) : (f64, !llvm.ptr, i64) -> f64
     return %t84tr : f64
   ^bb85:
     %t85m = llvm.load %r5 : !llvm.ptr -> f64
     %t85r = func.call @CodeBlock_Negated_0(%t85m) : (f64) -> f64
     %t85tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t85twl = arith.constant 24 : i64
+    %t85twl = arith.constant 25 : i64
     %t85tr = func.call @strict_trace(%t85r, %t85tw, %t85twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t85tr, %r6 : f64, !llvm.ptr
     %t86 = llvm.load %r6 : !llvm.ptr -> f64
@@ -383843,7 +386118,7 @@ module {
     cf.cond_br %t95k, ^bb95e, ^bb96
   ^bb95e:
     %t95tw = llvm.mlir.addressof @wOperatorCodegen_Operation_2 : !llvm.ptr
-    %t95twl = arith.constant 24 : i64
+    %t95twl = arith.constant 25 : i64
     %t95tr = func.call @strict_trace_checked(%t95v, %t95tw, %t95twl) : (f64, !llvm.ptr, i64) -> f64
     return %t95tr : f64
   ^bb96:
@@ -385874,7 +388149,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t4twl = arith.constant 56 : i64
+    %t4twl = arith.constant 57 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -385906,7 +388181,7 @@ module {
     %t14m = llvm.load %r1 : !llvm.ptr -> f64
     %t14r = func.call @List_SyntaxNode__Last_0(%t14m) : (f64) -> f64
     %t14tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t14twl = arith.constant 58 : i64
+    %t14twl = arith.constant 59 : i64
     %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t14tr, %r2 : f64, !llvm.ptr
     %t15 = llvm.load %r2 : !llvm.ptr -> f64
@@ -385920,7 +388195,7 @@ module {
     cf.cond_br %t18k, ^bb18e, ^bb19
   ^bb18e:
     %t18tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t18twl = arith.constant 59 : i64
+    %t18twl = arith.constant 60 : i64
     %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     return %t18tr : f64
   ^bb19:
@@ -385931,7 +388206,7 @@ module {
     %t20a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t20r = func.call @ValueCodegen_IsTypeName_2(%t20m, %t20a0, %t20a1) : (f64, f64, f64) -> f64
     %t20tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t20twl = arith.constant 59 : i64
+    %t20twl = arith.constant 60 : i64
     %t20tr = func.call @strict_trace(%t20r, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t20tr, %r3 : f64, !llvm.ptr
     %t21v = llvm.load %r3 : !llvm.ptr -> f64
@@ -385939,7 +388214,7 @@ module {
     cf.cond_br %t21k, ^bb21e, ^bb22
   ^bb21e:
     %t21tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t21twl = arith.constant 59 : i64
+    %t21twl = arith.constant 60 : i64
     %t21tr = func.call @strict_trace_checked(%t21v, %t21tw, %t21twl) : (f64, !llvm.ptr, i64) -> f64
     return %t21tr : f64
   ^bb22:
@@ -385961,7 +388236,7 @@ module {
     cf.cond_br %t27k, ^bb27e, ^bb28
   ^bb27e:
     %t27tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t27twl = arith.constant 59 : i64
+    %t27twl = arith.constant 60 : i64
     %t27tr = func.call @strict_trace_checked(%t27v, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     return %t27tr : f64
   ^bb28:
@@ -386018,7 +388293,7 @@ module {
     %t44a1 = llvm.load %r5 : !llvm.ptr -> f64
     %t44r = func.call @OperatorCodegen_IsMismatched_2(%t44m, %t44a0, %t44a1) : (f64, f64, f64) -> f64
     %t44tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t44twl = arith.constant 60 : i64
+    %t44twl = arith.constant 61 : i64
     %t44tr = func.call @strict_trace(%t44r, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t44tr, %r6 : f64, !llvm.ptr
     %t45v = llvm.load %r6 : !llvm.ptr -> f64
@@ -386026,7 +388301,7 @@ module {
     cf.cond_br %t45k, ^bb45e, ^bb46
   ^bb45e:
     %t45tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t45twl = arith.constant 60 : i64
+    %t45twl = arith.constant 61 : i64
     %t45tr = func.call @strict_trace_checked(%t45v, %t45tw, %t45twl) : (f64, !llvm.ptr, i64) -> f64
     return %t45tr : f64
   ^bb46:
@@ -386096,7 +388371,7 @@ module {
     cf.cond_br %t68k, ^bb68e, ^bb69
   ^bb68e:
     %t68tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t68twl = arith.constant 62 : i64
+    %t68twl = arith.constant 63 : i64
     %t68tr = func.call @strict_trace_checked(%t68v, %t68tw, %t68twl) : (f64, !llvm.ptr, i64) -> f64
     return %t68tr : f64
   ^bb69:
@@ -386107,7 +388382,7 @@ module {
     %t70a1 = llvm.load %r7 : !llvm.ptr -> f64
     %t70r = func.call @ValueCodegen_TypeOf_2(%t70m, %t70a0, %t70a1) : (f64, f64, f64) -> f64
     %t70tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t70twl = arith.constant 62 : i64
+    %t70twl = arith.constant 63 : i64
     %t70tr = func.call @strict_trace(%t70r, %t70tw, %t70twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t70tr, %r8 : f64, !llvm.ptr
     %t71v = llvm.load %r8 : !llvm.ptr -> f64
@@ -386115,7 +388390,7 @@ module {
     cf.cond_br %t71k, ^bb71e, ^bb72
   ^bb71e:
     %t71tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t71twl = arith.constant 62 : i64
+    %t71twl = arith.constant 63 : i64
     %t71tr = func.call @strict_trace_checked(%t71v, %t71tw, %t71twl) : (f64, !llvm.ptr, i64) -> f64
     return %t71tr : f64
   ^bb72:
@@ -386126,7 +388401,7 @@ module {
     cf.cond_br %t73k, ^bb73e, ^bb74
   ^bb73e:
     %t73tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t73twl = arith.constant 62 : i64
+    %t73twl = arith.constant 63 : i64
     %t73tr = func.call @strict_trace_checked(%t73v, %t73tw, %t73twl) : (f64, !llvm.ptr, i64) -> f64
     return %t73tr : f64
   ^bb74:
@@ -386140,7 +388415,7 @@ module {
     %t75a1 = llvm.load %r10 : !llvm.ptr -> f64
     %t75r = func.call @OperatorCodegen_Matches_2(%t75m, %t75a0, %t75a1) : (f64, f64, f64) -> f64
     %t75tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t75twl = arith.constant 62 : i64
+    %t75twl = arith.constant 63 : i64
     %t75tr = func.call @strict_trace(%t75r, %t75tw, %t75twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t75tr, %r11 : f64, !llvm.ptr
     %t76v = llvm.load %r11 : !llvm.ptr -> f64
@@ -386148,7 +388423,7 @@ module {
     cf.cond_br %t76k, ^bb76e, ^bb77
   ^bb76e:
     %t76tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t76twl = arith.constant 62 : i64
+    %t76twl = arith.constant 63 : i64
     %t76tr = func.call @strict_trace_checked(%t76v, %t76tw, %t76twl) : (f64, !llvm.ptr, i64) -> f64
     return %t76tr : f64
   ^bb77:
@@ -386194,7 +388469,7 @@ module {
     cf.cond_br %t88k, ^bb88e, ^bb89
   ^bb88e:
     %t88tw = llvm.mlir.addressof @wOperatorCodegen_Decided_2 : !llvm.ptr
-    %t88twl = arith.constant 63 : i64
+    %t88twl = arith.constant 64 : i64
     %t88tr = func.call @strict_trace_checked(%t88v, %t88tw, %t88twl) : (f64, !llvm.ptr, i64) -> f64
     return %t88tr : f64
   ^bb89:
@@ -386654,7 +388929,7 @@ module {
     llvm.store %t3a1, %t3s1 : f64, !llvm.ptr
     %t3ofe = func.call @strict_error_bits(%t3op) : (!llvm.ptr) -> f64
     %t3tw = llvm.mlir.addressof @wOperatorCodegen_OperatorType_1 : !llvm.ptr
-    %t3twl = arith.constant 139 : i64
+    %t3twl = arith.constant 145 : i64
     %t3of = func.call @strict_trace(%t3ofe, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3of, %r2 : f64, !llvm.ptr
     %t4 = llvm.load %r2 : !llvm.ptr -> f64
@@ -386693,7 +388968,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wOperatorCodegen_OperatorType_1 : !llvm.ptr
-    %t15twl = arith.constant 141 : i64
+    %t15twl = arith.constant 147 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -386800,7 +389075,7 @@ module {
     cf.cond_br %t29k, ^bb29e, ^bb30
   ^bb29e:
     %t29tw = llvm.mlir.addressof @wOperatorCodegen_OperatorType_1 : !llvm.ptr
-    %t29twl = arith.constant 143 : i64
+    %t29twl = arith.constant 149 : i64
     %t29tr = func.call @strict_trace_checked(%t29v, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
     return %t29tr : f64
   ^bb30:
@@ -386815,7 +389090,7 @@ module {
     cf.cond_br %t31k, ^bb31e, ^bb32
   ^bb31e:
     %t31tw = llvm.mlir.addressof @wOperatorCodegen_OperatorType_1 : !llvm.ptr
-    %t31twl = arith.constant 143 : i64
+    %t31twl = arith.constant 149 : i64
     %t31tr = func.call @strict_trace_checked(%t31v, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     return %t31tr : f64
   ^bb32:
@@ -393477,7 +395752,7 @@ module {
     cf.cond_br %t2k, ^bb2e, ^bb3
   ^bb2e:
     %t2tw = llvm.mlir.addressof @wList_MethodEntry__First_0 : !llvm.ptr
-    %t2twl = arith.constant 96 : i64
+    %t2twl = arith.constant 103 : i64
     %t2tr = func.call @strict_trace_checked(%t2v, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     return %t2tr : f64
   ^bb3:
@@ -399889,7 +402164,7 @@ module {
     %t3a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t3r = func.call @ValueCodegen_Expression_2(%t3m, %t3a0, %t3a1) : (f64, f64, f64) -> f64
     %t3tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t3twl = arith.constant 27 : i64
+    %t3twl = arith.constant 28 : i64
     %t3tr = func.call @strict_trace(%t3r, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t3tr, %r3 : f64, !llvm.ptr
     %t4 = llvm.load %r3 : !llvm.ptr -> f64
@@ -399901,7 +402176,7 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t6twl = arith.constant 28 : i64
+    %t6twl = arith.constant 29 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
@@ -399912,7 +402187,7 @@ module {
     cf.cond_br %t8k, ^bb8e, ^bb9
   ^bb8e:
     %t8tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t8twl = arith.constant 28 : i64
+    %t8twl = arith.constant 29 : i64
     %t8tr = func.call @strict_trace_checked(%t8v, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     return %t8tr : f64
   ^bb9:
@@ -399928,7 +402203,7 @@ module {
     %t11a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t11r = func.call @InstructionEntry_LoadNumber_2(%t11m, %t11a0, %t11a1) : (f64, f64, f64) -> f64
     %t11tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t11twl = arith.constant 28 : i64
+    %t11twl = arith.constant 29 : i64
     %t11tr = func.call @strict_trace(%t11r, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t11tr, %r4 : f64, !llvm.ptr
     %t12v = llvm.load %r4 : !llvm.ptr -> f64
@@ -399936,7 +402211,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t12twl = arith.constant 28 : i64
+    %t12twl = arith.constant 29 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -399944,7 +402219,7 @@ module {
     %t13a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t13r = func.call @CodeBlock_Load_1(%t13m, %t13a0) : (f64, f64) -> f64
     %t13tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t13twl = arith.constant 28 : i64
+    %t13twl = arith.constant 29 : i64
     %t13tr = func.call @strict_trace(%t13r, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t13tr, %r5 : f64, !llvm.ptr
     %t14 = llvm.load %r5 : !llvm.ptr -> f64
@@ -399956,7 +402231,7 @@ module {
     cf.cond_br %t16k, ^bb16e, ^bb17
   ^bb16e:
     %t16tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t16twl = arith.constant 29 : i64
+    %t16twl = arith.constant 30 : i64
     %t16tr = func.call @strict_trace_checked(%t16v, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     return %t16tr : f64
   ^bb17:
@@ -399971,14 +402246,14 @@ module {
     cf.cond_br %t20k, ^bb20e, ^bb21
   ^bb20e:
     %t20tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t20twl = arith.constant 29 : i64
+    %t20twl = arith.constant 30 : i64
     %t20tr = func.call @strict_trace_checked(%t20v, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     return %t20tr : f64
   ^bb21:
     %t21m = llvm.load %r2 : !llvm.ptr -> f64
     %t21r = func.call @CodeBlock_Result_0(%t21m) : (f64) -> f64
     %t21tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t21twl = arith.constant 29 : i64
+    %t21twl = arith.constant 30 : i64
     %t21tr = func.call @strict_trace(%t21r, %t21tw, %t21twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t21tr, %r3 : f64, !llvm.ptr
     %t22v = llvm.load %r3 : !llvm.ptr -> f64
@@ -399986,7 +402261,7 @@ module {
     cf.cond_br %t22k, ^bb22e, ^bb23
   ^bb22e:
     %t22tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t22twl = arith.constant 29 : i64
+    %t22twl = arith.constant 30 : i64
     %t22tr = func.call @strict_trace_checked(%t22v, %t22tw, %t22twl) : (f64, !llvm.ptr, i64) -> f64
     return %t22tr : f64
   ^bb23:
@@ -400001,14 +402276,14 @@ module {
     cf.cond_br %t25k, ^bb25e, ^bb26
   ^bb25e:
     %t25tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t25twl = arith.constant 29 : i64
+    %t25twl = arith.constant 30 : i64
     %t25tr = func.call @strict_trace_checked(%t25v, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
     return %t25tr : f64
   ^bb26:
     %t26m = llvm.load %r2 : !llvm.ptr -> f64
     %t26r = func.call @CodeBlock_Result_0(%t26m) : (f64) -> f64
     %t26tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t26twl = arith.constant 29 : i64
+    %t26twl = arith.constant 30 : i64
     %t26tr = func.call @strict_trace(%t26r, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t26tr, %r3 : f64, !llvm.ptr
     %t27v = llvm.load %r3 : !llvm.ptr -> f64
@@ -400016,7 +402291,7 @@ module {
     cf.cond_br %t27k, ^bb27e, ^bb28
   ^bb27e:
     %t27tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t27twl = arith.constant 29 : i64
+    %t27twl = arith.constant 30 : i64
     %t27tr = func.call @strict_trace_checked(%t27v, %t27tw, %t27twl) : (f64, !llvm.ptr, i64) -> f64
     return %t27tr : f64
   ^bb28:
@@ -400031,7 +402306,7 @@ module {
     cf.cond_br %t30k, ^bb30e, ^bb31
   ^bb30e:
     %t30tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t30twl = arith.constant 29 : i64
+    %t30twl = arith.constant 30 : i64
     %t30tr = func.call @strict_trace_checked(%t30v, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
     return %t30tr : f64
   ^bb31:
@@ -400051,7 +402326,7 @@ module {
     %t34a1 = llvm.load %r2 : !llvm.ptr -> f64
     %t34r = func.call @InstructionEntry_Binary_2(%t34m, %t34a0, %t34a1) : (f64, f64, f64) -> f64
     %t34tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t34twl = arith.constant 29 : i64
+    %t34twl = arith.constant 30 : i64
     %t34tr = func.call @strict_trace(%t34r, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t34tr, %r3 : f64, !llvm.ptr
     %t35v = llvm.load %r3 : !llvm.ptr -> f64
@@ -400059,7 +402334,7 @@ module {
     cf.cond_br %t35k, ^bb35e, ^bb36
   ^bb35e:
     %t35tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t35twl = arith.constant 29 : i64
+    %t35twl = arith.constant 30 : i64
     %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
     return %t35tr : f64
   ^bb36:
@@ -400067,7 +402342,7 @@ module {
     %t36a0 = llvm.load %r3 : !llvm.ptr -> f64
     %t36r = func.call @CodeBlock_Load_1(%t36m, %t36a0) : (f64, f64) -> f64
     %t36tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t36twl = arith.constant 29 : i64
+    %t36twl = arith.constant 30 : i64
     %t36tr = func.call @strict_trace(%t36r, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t36tr, %r4 : f64, !llvm.ptr
     %t37v = llvm.load %r4 : !llvm.ptr -> f64
@@ -400075,7 +402350,7 @@ module {
     cf.cond_br %t37k, ^bb37e, ^bb38
   ^bb37e:
     %t37tw = llvm.mlir.addressof @wOperatorCodegen_Negative_2 : !llvm.ptr
-    %t37twl = arith.constant 29 : i64
+    %t37twl = arith.constant 30 : i64
     %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     return %t37tr : f64
   ^bb38:
@@ -400235,7 +402510,7 @@ module {
     %t23a1 = llvm.load %r3 : !llvm.ptr -> f64
     %t23r = func.call @OperatorCodegen_IsCustom_2(%t23m, %t23a0, %t23a1) : (f64, f64, f64) -> f64
     %t23tw = llvm.mlir.addressof @wOperatorCodegen_IsComposite_2 : !llvm.ptr
-    %t23twl = arith.constant 51 : i64
+    %t23twl = arith.constant 52 : i64
     %t23tr = func.call @strict_trace(%t23r, %t23tw, %t23twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t23tr, %r4 : f64, !llvm.ptr
     %t24v = llvm.load %r4 : !llvm.ptr -> f64
@@ -400243,7 +402518,7 @@ module {
     cf.cond_br %t24k, ^bb24e, ^bb25
   ^bb24e:
     %t24tw = llvm.mlir.addressof @wOperatorCodegen_IsComposite_2 : !llvm.ptr
-    %t24twl = arith.constant 51 : i64
+    %t24twl = arith.constant 52 : i64
     %t24tr = func.call @strict_trace_checked(%t24v, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
     return %t24tr : f64
   ^bb25:
@@ -400273,7 +402548,7 @@ module {
     %t34a1 = llvm.load %r8 : !llvm.ptr -> f64
     %t34r = func.call @OperatorCodegen_Decided_2(%t34m, %t34a0, %t34a1) : (f64, f64, f64) -> f64
     %t34tw = llvm.mlir.addressof @wOperatorCodegen_IsComposite_2 : !llvm.ptr
-    %t34twl = arith.constant 51 : i64
+    %t34twl = arith.constant 52 : i64
     %t34tr = func.call @strict_trace(%t34r, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t34tr, %r9 : f64, !llvm.ptr
     %t35v = llvm.load %r9 : !llvm.ptr -> f64
@@ -400281,7 +402556,7 @@ module {
     cf.cond_br %t35k, ^bb35e, ^bb36
   ^bb35e:
     %t35tw = llvm.mlir.addressof @wOperatorCodegen_IsComposite_2 : !llvm.ptr
-    %t35twl = arith.constant 51 : i64
+    %t35twl = arith.constant 52 : i64
     %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
     return %t35tr : f64
   ^bb36:
@@ -400365,7 +402640,7 @@ module {
     %t2a1 = llvm.load %r1 : !llvm.ptr -> f64
     %t2r = func.call @OperatorCodegen_Decided_2(%t2m, %t2a0, %t2a1) : (f64, f64, f64) -> f64
     %t2tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t2twl = arith.constant 85 : i64
+    %t2twl = arith.constant 86 : i64
     %t2tr = func.call @strict_trace(%t2r, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t2tr, %r2 : f64, !llvm.ptr
     %t3v = llvm.load %r2 : !llvm.ptr -> f64
@@ -400373,7 +402648,7 @@ module {
     cf.cond_br %t3k, ^bb3e, ^bb4
   ^bb3e:
     %t3tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t3twl = arith.constant 85 : i64
+    %t3twl = arith.constant 86 : i64
     %t3tr = func.call @strict_trace_checked(%t3v, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     return %t3tr : f64
   ^bb4:
@@ -400402,7 +402677,7 @@ module {
     %t11a1 = llvm.load %r7 : !llvm.ptr -> f64
     %t11r = func.call @OperatorCodegen_Decided_2(%t11m, %t11a0, %t11a1) : (f64, f64, f64) -> f64
     %t11tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t11twl = arith.constant 86 : i64
+    %t11twl = arith.constant 87 : i64
     %t11tr = func.call @strict_trace(%t11r, %t11tw, %t11twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t11tr, %r8 : f64, !llvm.ptr
     %t12v = llvm.load %r8 : !llvm.ptr -> f64
@@ -400410,7 +402685,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t12twl = arith.constant 86 : i64
+    %t12twl = arith.constant 87 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -400435,7 +402710,7 @@ module {
     cf.cond_br %t14k, ^bb14e, ^bb15
   ^bb14e:
     %t14tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t14twl = arith.constant 86 : i64
+    %t14twl = arith.constant 87 : i64
     %t14tr = func.call @strict_trace_checked(%t14v, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     return %t14tr : f64
   ^bb15:
@@ -400446,7 +402721,7 @@ module {
     %t16a1 = llvm.load %r10 : !llvm.ptr -> f64
     %t16r = func.call @ValueCodegen_Expression_2(%t16m, %t16a0, %t16a1) : (f64, f64, f64) -> f64
     %t16tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t16twl = arith.constant 86 : i64
+    %t16twl = arith.constant 87 : i64
     %t16tr = func.call @strict_trace(%t16r, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t16tr, %r11 : f64, !llvm.ptr
     %t17 = llvm.load %r11 : !llvm.ptr -> f64
@@ -400479,7 +402754,7 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t26twl = arith.constant 88 : i64
+    %t26twl = arith.constant 89 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
@@ -400492,7 +402767,7 @@ module {
     %t29a1 = llvm.load %r6 : !llvm.ptr -> f64
     %t29r = func.call @ConversionCodegen_Looped_2(%t29m, %t29a0, %t29a1) : (f64, f64, f64) -> f64
     %t29tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t29twl = arith.constant 88 : i64
+    %t29twl = arith.constant 89 : i64
     %t29tr = func.call @strict_trace(%t29r, %t29tw, %t29twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t29tr, %r7 : f64, !llvm.ptr
     %t30 = llvm.load %r7 : !llvm.ptr -> f64
@@ -400507,7 +402782,7 @@ module {
     %t34a1 = llvm.load %r1 : !llvm.ptr -> f64
     %t34r = func.call @OperatorCodegen_IsCustom_2(%t34m, %t34a0, %t34a1) : (f64, f64, f64) -> f64
     %t34tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t34twl = arith.constant 89 : i64
+    %t34twl = arith.constant 90 : i64
     %t34tr = func.call @strict_trace(%t34r, %t34tw, %t34twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t34tr, %r2 : f64, !llvm.ptr
     %t35v = llvm.load %r2 : !llvm.ptr -> f64
@@ -400515,7 +402790,7 @@ module {
     cf.cond_br %t35k, ^bb35e, ^bb36
   ^bb35e:
     %t35tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t35twl = arith.constant 89 : i64
+    %t35twl = arith.constant 90 : i64
     %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
     return %t35tr : f64
   ^bb36:
@@ -400537,7 +402812,7 @@ module {
     cf.cond_br %t41k, ^bb41e, ^bb42
   ^bb41e:
     %t41tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t41twl = arith.constant 90 : i64
+    %t41twl = arith.constant 91 : i64
     %t41tr = func.call @strict_trace_checked(%t41v, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
     return %t41tr : f64
   ^bb42:
@@ -400579,7 +402854,7 @@ module {
     cf.cond_br %t48k, ^bb48e, ^bb49
   ^bb48e:
     %t48tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t48twl = arith.constant 90 : i64
+    %t48twl = arith.constant 91 : i64
     %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
     return %t48tr : f64
   ^bb49:
@@ -400590,7 +402865,7 @@ module {
     %t50a1 = llvm.load %r12 : !llvm.ptr -> f64
     %t50r = func.call @ErrorCodegen_Handled_2(%t50m, %t50a0, %t50a1) : (f64, f64, f64) -> f64
     %t50tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t50twl = arith.constant 90 : i64
+    %t50twl = arith.constant 91 : i64
     %t50tr = func.call @strict_trace(%t50r, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t50tr, %r13 : f64, !llvm.ptr
     %t51 = llvm.load %r13 : !llvm.ptr -> f64
@@ -400644,7 +402919,7 @@ module {
     %t62a1 = llvm.load %r6 : !llvm.ptr -> f64
     %t62r = func.call @OperatorCodegen_Logical_2(%t62m, %t62a0, %t62a1) : (f64, f64, f64) -> f64
     %t62tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t62twl = arith.constant 92 : i64
+    %t62twl = arith.constant 93 : i64
     %t62tr = func.call @strict_trace(%t62r, %t62tw, %t62twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t62tr, %r7 : f64, !llvm.ptr
     %t63 = llvm.load %r7 : !llvm.ptr -> f64
@@ -400677,7 +402952,7 @@ module {
     %t72a1 = llvm.load %r4 : !llvm.ptr -> f64
     %t72r = func.call @OperatorCodegen_Choice_2(%t72m, %t72a0, %t72a1) : (f64, f64, f64) -> f64
     %t72tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t72twl = arith.constant 93 : i64
+    %t72twl = arith.constant 94 : i64
     %t72tr = func.call @strict_trace(%t72r, %t72tw, %t72twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t72tr, %r5 : f64, !llvm.ptr
     %t73 = llvm.load %r5 : !llvm.ptr -> f64
@@ -400702,7 +402977,7 @@ module {
     %t80a1 = llvm.load %r8 : !llvm.ptr -> f64
     %t80r = func.call @OperatorCodegen_Contains_2(%t80m, %t80a0, %t80a1) : (f64, f64, f64) -> f64
     %t80tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t80twl = arith.constant 93 : i64
+    %t80twl = arith.constant 94 : i64
     %t80tr = func.call @strict_trace(%t80r, %t80tw, %t80twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t80tr, %r9 : f64, !llvm.ptr
     %t81 = llvm.load %r9 : !llvm.ptr -> f64
@@ -400716,7 +402991,7 @@ module {
     cf.cond_br %t84k, ^bb84e, ^bb85
   ^bb84e:
     %t84tw = llvm.mlir.addressof @wOperatorCodegen_Composite_2 : !llvm.ptr
-    %t84twl = arith.constant 93 : i64
+    %t84twl = arith.constant 94 : i64
     %t84tr = func.call @strict_trace_checked(%t84v, %t84tw, %t84twl) : (f64, !llvm.ptr, i64) -> f64
     return %t84tr : f64
   ^bb85:
@@ -400999,7 +403274,7 @@ module {
     %t2a1 = llvm.load %r1 : !llvm.ptr -> f64
     %t2r = func.call @OperatorCodegen_IsBitwise_2(%t2m, %t2a0, %t2a1) : (f64, f64, f64) -> f64
     %t2tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t2twl = arith.constant 34 : i64
+    %t2twl = arith.constant 35 : i64
     %t2tr = func.call @strict_trace(%t2r, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t2tr, %r2 : f64, !llvm.ptr
     %t3v = llvm.load %r2 : !llvm.ptr -> f64
@@ -401007,7 +403282,7 @@ module {
     cf.cond_br %t3k, ^bb3e, ^bb4
   ^bb3e:
     %t3tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t3twl = arith.constant 34 : i64
+    %t3twl = arith.constant 35 : i64
     %t3tr = func.call @strict_trace_checked(%t3v, %t3tw, %t3twl) : (f64, !llvm.ptr, i64) -> f64
     return %t3tr : f64
   ^bb4:
@@ -401072,7 +403347,7 @@ module {
     cf.cond_br %t14k, ^bb14e, ^bb15
   ^bb14e:
     %t14tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t14twl = arith.constant 36 : i64
+    %t14twl = arith.constant 37 : i64
     %t14tr = func.call @strict_trace_checked(%t14v, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     return %t14tr : f64
   ^bb15:
@@ -401117,7 +403392,7 @@ module {
     cf.cond_br %t28k, ^bb28e, ^bb29
   ^bb28e:
     %t28tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t28twl = arith.constant 38 : i64
+    %t28twl = arith.constant 39 : i64
     %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
     return %t28tr : f64
   ^bb29:
@@ -401128,7 +403403,7 @@ module {
     %t30a1 = llvm.load %r5 : !llvm.ptr -> f64
     %t30r = func.call @ValueCodegen_TypeOf_2(%t30m, %t30a0, %t30a1) : (f64, f64, f64) -> f64
     %t30tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t30twl = arith.constant 38 : i64
+    %t30twl = arith.constant 39 : i64
     %t30tr = func.call @strict_trace(%t30r, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t30tr, %r6 : f64, !llvm.ptr
     %t31 = llvm.load %r6 : !llvm.ptr -> f64
@@ -401175,7 +403450,7 @@ module {
     cf.cond_br %t38k, ^bb38e, ^bb39
   ^bb38e:
     %t38tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t38twl = arith.constant 40 : i64
+    %t38twl = arith.constant 41 : i64
     %t38tr = func.call @strict_trace_checked(%t38v, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
     return %t38tr : f64
   ^bb39:
@@ -401202,7 +403477,7 @@ module {
     cf.cond_br %t45k, ^bb45e, ^bb46
   ^bb45e:
     %t45tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t45twl = arith.constant 40 : i64
+    %t45twl = arith.constant 41 : i64
     %t45tr = func.call @strict_trace_checked(%t45v, %t45tw, %t45twl) : (f64, !llvm.ptr, i64) -> f64
     return %t45tr : f64
   ^bb46:
@@ -401218,7 +403493,7 @@ module {
     cf.cond_br %t48k, ^bb48e, ^bb49
   ^bb48e:
     %t48tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t48twl = arith.constant 40 : i64
+    %t48twl = arith.constant 41 : i64
     %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
     return %t48tr : f64
   ^bb49:
@@ -401248,7 +403523,7 @@ module {
     cf.cond_br %t58k, ^bb58e, ^bb59
   ^bb58e:
     %t58tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t58twl = arith.constant 40 : i64
+    %t58twl = arith.constant 41 : i64
     %t58tr = func.call @strict_trace_checked(%t58v, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
     return %t58tr : f64
   ^bb59:
@@ -401256,7 +403531,7 @@ module {
     %t59a0 = llvm.load %r10 : !llvm.ptr -> f64
     %t59r = func.call @KnownTypes_IsPlural_1(%t59m, %t59a0) : (f64, f64) -> f64
     %t59tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t59twl = arith.constant 40 : i64
+    %t59twl = arith.constant 41 : i64
     %t59tr = func.call @strict_trace(%t59r, %t59tw, %t59twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t59tr, %r11 : f64, !llvm.ptr
     %t60v = llvm.load %r11 : !llvm.ptr -> f64
@@ -401264,7 +403539,7 @@ module {
     cf.cond_br %t60k, ^bb60e, ^bb61
   ^bb60e:
     %t60tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t60twl = arith.constant 40 : i64
+    %t60twl = arith.constant 41 : i64
     %t60tr = func.call @strict_trace_checked(%t60v, %t60tw, %t60twl) : (f64, !llvm.ptr, i64) -> f64
     return %t60tr : f64
   ^bb61:
@@ -401297,7 +403572,7 @@ module {
     cf.cond_br %t72k, ^bb72e, ^bb73
   ^bb72e:
     %t72tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t72twl = arith.constant 42 : i64
+    %t72twl = arith.constant 43 : i64
     %t72tr = func.call @strict_trace_checked(%t72v, %t72tw, %t72twl) : (f64, !llvm.ptr, i64) -> f64
     return %t72tr : f64
   ^bb73:
@@ -401305,7 +403580,7 @@ module {
     %t73a0 = llvm.load %r1 : !llvm.ptr -> f64
     %t73r = func.call @KnownTypes_MethodsOf_1(%t73m, %t73a0) : (f64, f64) -> f64
     %t73tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t73twl = arith.constant 42 : i64
+    %t73twl = arith.constant 43 : i64
     %t73tr = func.call @strict_trace(%t73r, %t73tw, %t73twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t73tr, %r2 : f64, !llvm.ptr
     %t74v = llvm.load %r2 : !llvm.ptr -> f64
@@ -401313,7 +403588,7 @@ module {
     cf.cond_br %t74k, ^bb74e, ^bb75
   ^bb74e:
     %t74tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t74twl = arith.constant 42 : i64
+    %t74twl = arith.constant 43 : i64
     %t74tr = func.call @strict_trace_checked(%t74v, %t74tw, %t74twl) : (f64, !llvm.ptr, i64) -> f64
     return %t74tr : f64
   ^bb75:
@@ -401328,7 +403603,7 @@ module {
     %t77a0 = llvm.load %r4 : !llvm.ptr -> f64
     %t77r = func.call @Scope_TypeOf_1(%t77m, %t77a0) : (f64, f64) -> f64
     %t77tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t77twl = arith.constant 42 : i64
+    %t77twl = arith.constant 43 : i64
     %t77tr = func.call @strict_trace(%t77r, %t77tw, %t77twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t77tr, %r5 : f64, !llvm.ptr
     %t78v = llvm.load %r5 : !llvm.ptr -> f64
@@ -401336,7 +403611,7 @@ module {
     cf.cond_br %t78k, ^bb78e, ^bb79
   ^bb78e:
     %t78tw = llvm.mlir.addressof @wOperatorCodegen_IsCustom_2 : !llvm.ptr
-    %t78twl = arith.constant 42 : i64
+    %t78twl = arith.constant 43 : i64
     %t78tr = func.call @strict_trace_checked(%t78v, %t78tw, %t78twl) : (f64, !llvm.ptr, i64) -> f64
     return %t78tr : f64
   ^bb79:
@@ -401466,7 +403741,7 @@ module {
     cf.cond_br %t4k, ^bb4e, ^bb5
   ^bb4e:
     %t4tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t4twl = arith.constant 68 : i64
+    %t4twl = arith.constant 69 : i64
     %t4tr = func.call @strict_trace_checked(%t4v, %t4tw, %t4twl) : (f64, !llvm.ptr, i64) -> f64
     return %t4tr : f64
   ^bb5:
@@ -401511,7 +403786,7 @@ module {
     cf.cond_br %t18k, ^bb18e, ^bb19
   ^bb18e:
     %t18tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t18twl = arith.constant 70 : i64
+    %t18twl = arith.constant 71 : i64
     %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     return %t18tr : f64
   ^bb19:
@@ -401522,7 +403797,7 @@ module {
     %t20a1 = llvm.load %r5 : !llvm.ptr -> f64
     %t20r = func.call @ValueCodegen_TypeOf_2(%t20m, %t20a0, %t20a1) : (f64, f64, f64) -> f64
     %t20tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t20twl = arith.constant 70 : i64
+    %t20twl = arith.constant 71 : i64
     %t20tr = func.call @strict_trace(%t20r, %t20tw, %t20twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t20tr, %r6 : f64, !llvm.ptr
     %t21 = llvm.load %r6 : !llvm.ptr -> f64
@@ -401551,7 +403826,7 @@ module {
     cf.cond_br %t28k, ^bb28e, ^bb29
   ^bb28e:
     %t28tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t28twl = arith.constant 71 : i64
+    %t28twl = arith.constant 72 : i64
     %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
     return %t28tr : f64
   ^bb29:
@@ -401562,7 +403837,7 @@ module {
     %t30a1 = llvm.load %r5 : !llvm.ptr -> f64
     %t30r = func.call @ValueCodegen_TypeOf_2(%t30m, %t30a0, %t30a1) : (f64, f64, f64) -> f64
     %t30tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t30twl = arith.constant 71 : i64
+    %t30twl = arith.constant 72 : i64
     %t30tr = func.call @strict_trace(%t30r, %t30tw, %t30twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t30tr, %r6 : f64, !llvm.ptr
     %t31 = llvm.load %r6 : !llvm.ptr -> f64
@@ -401574,7 +403849,7 @@ module {
     cf.cond_br %t33k, ^bb33e, ^bb34
   ^bb33e:
     %t33tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t33twl = arith.constant 72 : i64
+    %t33twl = arith.constant 73 : i64
     %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
     return %t33tr : f64
   ^bb34:
@@ -401590,7 +403865,7 @@ module {
     cf.cond_br %t36k, ^bb36e, ^bb37
   ^bb36e:
     %t36tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t36twl = arith.constant 72 : i64
+    %t36twl = arith.constant 73 : i64
     %t36tr = func.call @strict_trace_checked(%t36v, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
     return %t36tr : f64
   ^bb37:
@@ -401620,7 +403895,7 @@ module {
     cf.cond_br %t44k, ^bb44e, ^bb45
   ^bb44e:
     %t44tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t44twl = arith.constant 72 : i64
+    %t44twl = arith.constant 73 : i64
     %t44tr = func.call @strict_trace_checked(%t44v, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
     return %t44tr : f64
   ^bb45:
@@ -401636,7 +403911,7 @@ module {
     cf.cond_br %t47k, ^bb47e, ^bb48
   ^bb47e:
     %t47tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t47twl = arith.constant 72 : i64
+    %t47twl = arith.constant 73 : i64
     %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     return %t47tr : f64
   ^bb48:
@@ -401672,7 +403947,7 @@ module {
     cf.cond_br %t58k, ^bb58e, ^bb59
   ^bb58e:
     %t58tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t58twl = arith.constant 72 : i64
+    %t58twl = arith.constant 73 : i64
     %t58tr = func.call @strict_trace_checked(%t58v, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
     return %t58tr : f64
   ^bb59:
@@ -401683,7 +403958,7 @@ module {
     cf.cond_br %t60k, ^bb60e, ^bb61
   ^bb60e:
     %t60tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t60twl = arith.constant 72 : i64
+    %t60twl = arith.constant 73 : i64
     %t60tr = func.call @strict_trace_checked(%t60v, %t60tw, %t60twl) : (f64, !llvm.ptr, i64) -> f64
     return %t60tr : f64
   ^bb61:
@@ -401725,7 +404000,7 @@ module {
     cf.cond_br %t72k, ^bb72e, ^bb73
   ^bb72e:
     %t72tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t72twl = arith.constant 74 : i64
+    %t72twl = arith.constant 75 : i64
     %t72tr = func.call @strict_trace_checked(%t72v, %t72tw, %t72twl) : (f64, !llvm.ptr, i64) -> f64
     return %t72tr : f64
   ^bb73:
@@ -401740,7 +404015,7 @@ module {
     %t75a2 = llvm.load %r3 : !llvm.ptr -> f64
     %t75r = func.call @KnownTypes_ParametersOf_3(%t75m, %t75a0, %t75a1, %t75a2) : (f64, f64, f64, f64) -> f64
     %t75tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t75twl = arith.constant 74 : i64
+    %t75twl = arith.constant 75 : i64
     %t75tr = func.call @strict_trace(%t75r, %t75tw, %t75twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t75tr, %r4 : f64, !llvm.ptr
     %t76v = llvm.load %r4 : !llvm.ptr -> f64
@@ -401748,7 +404023,7 @@ module {
     cf.cond_br %t76k, ^bb76e, ^bb77
   ^bb76e:
     %t76tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t76twl = arith.constant 74 : i64
+    %t76twl = arith.constant 75 : i64
     %t76tr = func.call @strict_trace_checked(%t76v, %t76tw, %t76twl) : (f64, !llvm.ptr, i64) -> f64
     return %t76tr : f64
   ^bb77:
@@ -401811,7 +404086,7 @@ module {
     cf.cond_br %t97k, ^bb97e, ^bb98
   ^bb97e:
     %t97tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t97twl = arith.constant 75 : i64
+    %t97twl = arith.constant 76 : i64
     %t97tr = func.call @strict_trace_checked(%t97v, %t97tw, %t97twl) : (f64, !llvm.ptr, i64) -> f64
     return %t97tr : f64
   ^bb98:
@@ -401819,7 +404094,7 @@ module {
     %t98a0 = llvm.load %r8 : !llvm.ptr -> f64
     %t98r = func.call @KnownTypes_BaseName_1(%t98m, %t98a0) : (f64, f64) -> f64
     %t98tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t98twl = arith.constant 75 : i64
+    %t98twl = arith.constant 76 : i64
     %t98tr = func.call @strict_trace(%t98r, %t98tw, %t98twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t98tr, %r9 : f64, !llvm.ptr
     %t99v = llvm.load %r9 : !llvm.ptr -> f64
@@ -401827,7 +404102,7 @@ module {
     cf.cond_br %t99k, ^bb99e, ^bb100
   ^bb99e:
     %t99tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t99twl = arith.constant 75 : i64
+    %t99twl = arith.constant 76 : i64
     %t99tr = func.call @strict_trace_checked(%t99v, %t99tw, %t99twl) : (f64, !llvm.ptr, i64) -> f64
     return %t99tr : f64
   ^bb100:
@@ -401840,7 +404115,7 @@ module {
     cf.cond_br %t102k, ^bb102e, ^bb103
   ^bb102e:
     %t102tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t102twl = arith.constant 75 : i64
+    %t102twl = arith.constant 76 : i64
     %t102tr = func.call @strict_trace_checked(%t102v, %t102tw, %t102twl) : (f64, !llvm.ptr, i64) -> f64
     return %t102tr : f64
   ^bb103:
@@ -401848,7 +404123,7 @@ module {
     %t103a0 = llvm.load %r11 : !llvm.ptr -> f64
     %t103r = func.call @KnownTypes_BaseName_1(%t103m, %t103a0) : (f64, f64) -> f64
     %t103tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t103twl = arith.constant 75 : i64
+    %t103twl = arith.constant 76 : i64
     %t103tr = func.call @strict_trace(%t103r, %t103tw, %t103twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t103tr, %r12 : f64, !llvm.ptr
     %t104v = llvm.load %r12 : !llvm.ptr -> f64
@@ -401856,7 +404131,7 @@ module {
     cf.cond_br %t104k, ^bb104e, ^bb105
   ^bb104e:
     %t104tw = llvm.mlir.addressof @wOperatorCodegen_IsMismatched_2 : !llvm.ptr
-    %t104twl = arith.constant 75 : i64
+    %t104twl = arith.constant 76 : i64
     %t104tr = func.call @strict_trace_checked(%t104v, %t104tw, %t104twl) : (f64, !llvm.ptr, i64) -> f64
     return %t104tr : f64
   ^bb105:
@@ -402009,7 +404284,7 @@ module {
     %t13a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t13r = func.call @KnownTypes_IsPlural_1(%t13m, %t13a0) : (f64, f64) -> f64
     %t13tw = llvm.mlir.addressof @wOperatorCodegen_Matches_2 : !llvm.ptr
-    %t13twl = arith.constant 81 : i64
+    %t13twl = arith.constant 82 : i64
     %t13tr = func.call @strict_trace(%t13r, %t13tw, %t13twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t13tr, %r6 : f64, !llvm.ptr
     %t14v = llvm.load %r6 : !llvm.ptr -> f64
@@ -402017,7 +404292,7 @@ module {
     cf.cond_br %t14k, ^bb14e, ^bb15
   ^bb14e:
     %t14tw = llvm.mlir.addressof @wOperatorCodegen_Matches_2 : !llvm.ptr
-    %t14twl = arith.constant 81 : i64
+    %t14twl = arith.constant 82 : i64
     %t14tr = func.call @strict_trace_checked(%t14v, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     return %t14tr : f64
   ^bb15:
@@ -402046,7 +404321,7 @@ module {
     %t24a0 = llvm.load %r10 : !llvm.ptr -> f64
     %t24r = func.call @KnownTypes_BaseName_1(%t24m, %t24a0) : (f64, f64) -> f64
     %t24tw = llvm.mlir.addressof @wOperatorCodegen_Matches_2 : !llvm.ptr
-    %t24twl = arith.constant 81 : i64
+    %t24twl = arith.constant 82 : i64
     %t24tr = func.call @strict_trace(%t24r, %t24tw, %t24twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t24tr, %r11 : f64, !llvm.ptr
     %t25v = llvm.load %r11 : !llvm.ptr -> f64
@@ -402054,7 +404329,7 @@ module {
     cf.cond_br %t25k, ^bb25e, ^bb26
   ^bb25e:
     %t25tw = llvm.mlir.addressof @wOperatorCodegen_Matches_2 : !llvm.ptr
-    %t25twl = arith.constant 81 : i64
+    %t25twl = arith.constant 82 : i64
     %t25tr = func.call @strict_trace_checked(%t25v, %t25tw, %t25twl) : (f64, !llvm.ptr, i64) -> f64
     return %t25tr : f64
   ^bb26:
@@ -402106,7 +404381,7 @@ module {
     %t41a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t41r = func.call @KnownTypes_BaseName_1(%t41m, %t41a0) : (f64, f64) -> f64
     %t41tw = llvm.mlir.addressof @wOperatorCodegen_Matches_2 : !llvm.ptr
-    %t41twl = arith.constant 82 : i64
+    %t41twl = arith.constant 83 : i64
     %t41tr = func.call @strict_trace(%t41r, %t41tw, %t41twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t41tr, %r6 : f64, !llvm.ptr
     %t42v = llvm.load %r6 : !llvm.ptr -> f64
@@ -402114,7 +404389,7 @@ module {
     cf.cond_br %t42k, ^bb42e, ^bb43
   ^bb42e:
     %t42tw = llvm.mlir.addressof @wOperatorCodegen_Matches_2 : !llvm.ptr
-    %t42twl = arith.constant 82 : i64
+    %t42twl = arith.constant 83 : i64
     %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
     return %t42tr : f64
   ^bb43:
@@ -409803,7 +412078,7 @@ module {
     cf.cond_br %t6k, ^bb6e, ^bb7
   ^bb6e:
     %t6tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t6twl = arith.constant 103 : i64
+    %t6twl = arith.constant 109 : i64
     %t6tr = func.call @strict_trace_checked(%t6v, %t6tw, %t6twl) : (f64, !llvm.ptr, i64) -> f64
     return %t6tr : f64
   ^bb7:
@@ -409814,7 +412089,7 @@ module {
     %t8a1 = llvm.load %r5 : !llvm.ptr -> f64
     %t8r = func.call @ValueCodegen_Expression_2(%t8m, %t8a0, %t8a1) : (f64, f64, f64) -> f64
     %t8tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t8twl = arith.constant 103 : i64
+    %t8twl = arith.constant 109 : i64
     %t8tr = func.call @strict_trace(%t8r, %t8tw, %t8twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t8tr, %r6 : f64, !llvm.ptr
     %t9 = llvm.load %r6 : !llvm.ptr -> f64
@@ -409829,7 +412104,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t12twl = arith.constant 104 : i64
+    %t12twl = arith.constant 110 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -409913,7 +412188,7 @@ module {
     cf.cond_br %t38k, ^bb38e, ^bb39
   ^bb38e:
     %t38tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t38twl = arith.constant 106 : i64
+    %t38twl = arith.constant 112 : i64
     %t38tr = func.call @strict_trace_checked(%t38v, %t38tw, %t38twl) : (f64, !llvm.ptr, i64) -> f64
     return %t38tr : f64
   ^bb39:
@@ -409924,7 +412199,7 @@ module {
     cf.cond_br %t40k, ^bb40e, ^bb41
   ^bb40e:
     %t40tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t40twl = arith.constant 106 : i64
+    %t40twl = arith.constant 112 : i64
     %t40tr = func.call @strict_trace_checked(%t40v, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
     return %t40tr : f64
   ^bb41:
@@ -409937,7 +412212,7 @@ module {
     cf.cond_br %t43k, ^bb43e, ^bb44
   ^bb43e:
     %t43tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t43twl = arith.constant 106 : i64
+    %t43twl = arith.constant 112 : i64
     %t43tr = func.call @strict_trace_checked(%t43v, %t43tw, %t43twl) : (f64, !llvm.ptr, i64) -> f64
     return %t43tr : f64
   ^bb44:
@@ -409946,7 +412221,7 @@ module {
     %t44a1 = llvm.load %r7 : !llvm.ptr -> f64
     %t44r = func.call @CodeBlock_Skipping_2(%t44m, %t44a0, %t44a1) : (f64, f64, f64) -> f64
     %t44tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t44twl = arith.constant 106 : i64
+    %t44twl = arith.constant 112 : i64
     %t44tr = func.call @strict_trace(%t44r, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t44tr, %r8 : f64, !llvm.ptr
     %t45v = llvm.load %r8 : !llvm.ptr -> f64
@@ -409954,7 +412229,7 @@ module {
     cf.cond_br %t45k, ^bb45e, ^bb46
   ^bb45e:
     %t45tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t45twl = arith.constant 106 : i64
+    %t45twl = arith.constant 112 : i64
     %t45tr = func.call @strict_trace_checked(%t45v, %t45tw, %t45twl) : (f64, !llvm.ptr, i64) -> f64
     return %t45tr : f64
   ^bb46:
@@ -409963,7 +412238,7 @@ module {
     %t46a1 = llvm.load %r8 : !llvm.ptr -> f64
     %t46r = func.call @ValueCodegen_Expression_2(%t46m, %t46a0, %t46a1) : (f64, f64, f64) -> f64
     %t46tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t46twl = arith.constant 106 : i64
+    %t46twl = arith.constant 112 : i64
     %t46tr = func.call @strict_trace(%t46r, %t46tw, %t46twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t46tr, %r9 : f64, !llvm.ptr
     %t47v = llvm.load %r9 : !llvm.ptr -> f64
@@ -409971,7 +412246,7 @@ module {
     cf.cond_br %t47k, ^bb47e, ^bb48
   ^bb47e:
     %t47tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t47twl = arith.constant 106 : i64
+    %t47twl = arith.constant 112 : i64
     %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
     return %t47tr : f64
   ^bb48:
@@ -409984,7 +412259,7 @@ module {
     cf.cond_br %t50k, ^bb50e, ^bb51
   ^bb50e:
     %t50tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t50twl = arith.constant 106 : i64
+    %t50twl = arith.constant 112 : i64
     %t50tr = func.call @strict_trace_checked(%t50v, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
     return %t50tr : f64
   ^bb51:
@@ -409998,7 +412273,7 @@ module {
     %t52a1 = llvm.load %r12 : !llvm.ptr -> f64
     %t52r = func.call @CodeBlock_Joined_2(%t52m, %t52a0, %t52a1) : (f64, f64, f64) -> f64
     %t52tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t52twl = arith.constant 106 : i64
+    %t52twl = arith.constant 112 : i64
     %t52tr = func.call @strict_trace(%t52r, %t52tw, %t52twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t52tr, %r13 : f64, !llvm.ptr
     %t53v = llvm.load %r13 : !llvm.ptr -> f64
@@ -410006,7 +412281,7 @@ module {
     cf.cond_br %t53k, ^bb53e, ^bb54
   ^bb53e:
     %t53tw = llvm.mlir.addressof @wOperatorCodegen_Logical_2 : !llvm.ptr
-    %t53twl = arith.constant 106 : i64
+    %t53twl = arith.constant 112 : i64
     %t53tr = func.call @strict_trace_checked(%t53v, %t53tw, %t53twl) : (f64, !llvm.ptr, i64) -> f64
     return %t53tr : f64
   ^bb54:
@@ -410067,10 +412342,26 @@ module {
     llvm.store %zero, %v_name : f64, !llvm.ptr
     %v_list2 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_list2 : f64, !llvm.ptr
-    %v_chosen = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
-    llvm.store %zero, %v_chosen : f64, !llvm.ptr
+    %v_narrowed = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_narrowed : f64, !llvm.ptr
     %v_list3 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %v_list3 : f64, !llvm.ptr
+    %v_chosen = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_chosen : f64, !llvm.ptr
+    %v_isNarrowed = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_isNarrowed : f64, !llvm.ptr
+    %v_list5 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_list5 : f64, !llvm.ptr
+    %v_conditional4 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional4 : f64, !llvm.ptr
+    %v_target = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_target : f64, !llvm.ptr
+    %v_conditional8 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_conditional8 : f64, !llvm.ptr
+    %v_restored = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_restored : f64, !llvm.ptr
+    %v_list10 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %v_list10 : f64, !llvm.ptr
     %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %zero, %instance : f64, !llvm.ptr
     llvm.store %p0, %instance : f64, !llvm.ptr
@@ -410105,7 +412396,7 @@ module {
     cf.cond_br %t7k, ^bb7e, ^bb8
   ^bb7e:
     %t7tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t7twl = arith.constant 97 : i64
+    %t7twl = arith.constant 99 : i64
     %t7tr = func.call @strict_trace_checked(%t7v, %t7tw, %t7twl) : (f64, !llvm.ptr, i64) -> f64
     return %t7tr : f64
   ^bb8:
@@ -410129,7 +412420,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t12twl = arith.constant 97 : i64
+    %t12twl = arith.constant 99 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -410140,7 +412431,7 @@ module {
     %t14a1 = llvm.load %r4 : !llvm.ptr -> f64
     %t14r = func.call @OperatorCodegen_Condition_2(%t14m, %t14a0, %t14a1) : (f64, f64, f64) -> f64
     %t14tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t14twl = arith.constant 97 : i64
+    %t14twl = arith.constant 99 : i64
     %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t14tr, %r5 : f64, !llvm.ptr
     %t15 = llvm.load %r5 : !llvm.ptr -> f64
@@ -410155,7 +412446,7 @@ module {
     cf.cond_br %t18k, ^bb18e, ^bb19
   ^bb18e:
     %t18tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t18twl = arith.constant 98 : i64
+    %t18twl = arith.constant 100 : i64
     %t18tr = func.call @strict_trace_checked(%t18v, %t18tw, %t18twl) : (f64, !llvm.ptr, i64) -> f64
     return %t18tr : f64
   ^bb19:
@@ -410187,7 +412478,7 @@ module {
     cf.cond_br %t26k, ^bb26e, ^bb27
   ^bb26e:
     %t26tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t26twl = arith.constant 99 : i64
+    %t26twl = arith.constant 101 : i64
     %t26tr = func.call @strict_trace_checked(%t26v, %t26tw, %t26twl) : (f64, !llvm.ptr, i64) -> f64
     return %t26tr : f64
   ^bb27:
@@ -410198,7 +412489,7 @@ module {
     cf.cond_br %t28k, ^bb28e, ^bb29
   ^bb28e:
     %t28tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t28twl = arith.constant 99 : i64
+    %t28twl = arith.constant 101 : i64
     %t28tr = func.call @strict_trace_checked(%t28v, %t28tw, %t28twl) : (f64, !llvm.ptr, i64) -> f64
     return %t28tr : f64
   ^bb29:
@@ -410209,7 +412500,7 @@ module {
     llvm.store %t29mv, %r3 : f64, !llvm.ptr
     %t30 = llvm.load %r3 : !llvm.ptr -> f64
     llvm.store %t30, %v_list2 : f64, !llvm.ptr
-    %t31c = arith.constant 0x3FF0000000000000 : f64
+    %t31c = arith.constant 0x0000000000000000 : f64
     llvm.store %t31c, %r4 : f64, !llvm.ptr
     %t32l = llvm.load %v_list2 : !llvm.ptr -> f64
     %t32i = llvm.load %r4 : !llvm.ptr -> f64
@@ -410222,7 +412513,7 @@ module {
     cf.cond_br %t33k, ^bb33e, ^bb34
   ^bb33e:
     %t33tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t33twl = arith.constant 99 : i64
+    %t33twl = arith.constant 101 : i64
     %t33tr = func.call @strict_trace_checked(%t33v, %t33tw, %t33twl) : (f64, !llvm.ptr, i64) -> f64
     return %t33tr : f64
   ^bb34:
@@ -410233,171 +412524,502 @@ module {
     cf.cond_br %t35k, ^bb35e, ^bb36
   ^bb35e:
     %t35tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t35twl = arith.constant 99 : i64
+    %t35twl = arith.constant 101 : i64
     %t35tr = func.call @strict_trace_checked(%t35v, %t35tw, %t35twl) : (f64, !llvm.ptr, i64) -> f64
     return %t35tr : f64
   ^bb36:
     %t36m = llvm.load %r1 : !llvm.ptr -> f64
     %t36a0 = llvm.load %r5 : !llvm.ptr -> f64
     %t36a1 = llvm.load %r6 : !llvm.ptr -> f64
-    %t36r = func.call @ErrorCodegen_Handled_2(%t36m, %t36a0, %t36a1) : (f64, f64, f64) -> f64
+    %t36r = func.call @ErrorCodegen_Narrowed_2(%t36m, %t36a0, %t36a1) : (f64, f64, f64) -> f64
     %t36tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t36twl = arith.constant 99 : i64
+    %t36twl = arith.constant 101 : i64
     %t36tr = func.call @strict_trace(%t36r, %t36tw, %t36twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t36tr, %r7 : f64, !llvm.ptr
-    %t37v = llvm.load %r7 : !llvm.ptr -> f64
-    %t37k = func.call @strict_is_failure(%t37v) : (f64) -> i1
-    cf.cond_br %t37k, ^bb37e, ^bb38
-  ^bb37e:
-    %t37tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t37twl = arith.constant 99 : i64
-    %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t37tr : f64
-  ^bb38:
-    %t38 = llvm.load %v_name : !llvm.ptr -> f64
-    llvm.store %t38, %r8 : f64, !llvm.ptr
-    %t39 = llvm.load %v_condition : !llvm.ptr -> f64
-    llvm.store %t39, %r9 : f64, !llvm.ptr
-    %t40v = llvm.load %r9 : !llvm.ptr -> f64
+    %t37 = llvm.load %r7 : !llvm.ptr -> f64
+    llvm.store %t37, %v_narrowed : f64, !llvm.ptr
+    %t38 = llvm.load %v_values : !llvm.ptr -> f64
+    llvm.store %t38, %r0 : f64, !llvm.ptr
+    %t39o = llvm.load %r0 : !llvm.ptr -> f64
+    llvm.store %t39o, %r1 : f64, !llvm.ptr
+    %t40v = llvm.load %r1 : !llvm.ptr -> f64
     %t40k = func.call @strict_is_failure(%t40v) : (f64) -> i1
     cf.cond_br %t40k, ^bb40e, ^bb41
   ^bb40e:
     %t40tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t40twl = arith.constant 99 : i64
+    %t40twl = arith.constant 102 : i64
     %t40tr = func.call @strict_trace_checked(%t40v, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
     return %t40tr : f64
   ^bb41:
-    %t41i = llvm.load %r9 : !llvm.ptr -> f64
-    %t41ip = func.call @strict_ptr(%t41i) : (f64) -> !llvm.ptr
-    %t41m = llvm.getelementptr %t41ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t41mv = llvm.load %t41m : !llvm.ptr -> f64
-    llvm.store %t41mv, %r10 : f64, !llvm.ptr
-    %t42c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t42c, %r11 : f64, !llvm.ptr
-    %t43a = llvm.load %r10 : !llvm.ptr -> f64
-    %t43b = llvm.load %r11 : !llvm.ptr -> f64
-    %t43c = arith.subf %t43a, %t43b : f64
-    llvm.store %t43c, %r12 : f64, !llvm.ptr
-    %t44m = llvm.load %r7 : !llvm.ptr -> f64
-    %t44a0 = llvm.load %r8 : !llvm.ptr -> f64
-    %t44a1 = llvm.load %r12 : !llvm.ptr -> f64
-    %t44r = func.call @CodeBlock_Chosen_2(%t44m, %t44a0, %t44a1) : (f64, f64, f64) -> f64
-    %t44tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t44twl = arith.constant 99 : i64
-    %t44tr = func.call @strict_trace(%t44r, %t44tw, %t44twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t44tr, %r13 : f64, !llvm.ptr
-    %t45 = llvm.load %r13 : !llvm.ptr -> f64
-    llvm.store %t45, %v_chosen : f64, !llvm.ptr
-    %t46 = llvm.load %v_values : !llvm.ptr -> f64
-    llvm.store %t46, %r0 : f64, !llvm.ptr
-    %t47o = llvm.load %r0 : !llvm.ptr -> f64
-    llvm.store %t47o, %r1 : f64, !llvm.ptr
-    %t48v = llvm.load %r1 : !llvm.ptr -> f64
-    %t48k = func.call @strict_is_failure(%t48v) : (f64) -> i1
-    cf.cond_br %t48k, ^bb48e, ^bb49
-  ^bb48e:
-    %t48tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t48twl = arith.constant 100 : i64
-    %t48tr = func.call @strict_trace_checked(%t48v, %t48tw, %t48twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t48tr : f64
-  ^bb49:
-    %t49 = llvm.load %v_node : !llvm.ptr -> f64
-    llvm.store %t49, %r2 : f64, !llvm.ptr
-    %t50i = llvm.load %r2 : !llvm.ptr -> f64
-    %t50ip = func.call @strict_ptr(%t50i) : (f64) -> !llvm.ptr
-    %t50m = llvm.getelementptr %t50ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t50mv = llvm.load %t50m : !llvm.ptr -> f64
-    llvm.store %t50mv, %r3 : f64, !llvm.ptr
-    %t51 = llvm.load %r3 : !llvm.ptr -> f64
-    llvm.store %t51, %v_list3 : f64, !llvm.ptr
-    %t52c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t52c, %r4 : f64, !llvm.ptr
-    %t53l = llvm.load %v_list3 : !llvm.ptr -> f64
-    %t53i = llvm.load %r4 : !llvm.ptr -> f64
-    %t53n = llvm.mlir.addressof @sOperatorCodegen_Choice_2_53 : !llvm.ptr
-    %t53nb = func.call @strict_bits(%t53n) : (!llvm.ptr) -> f64
-    %t53x = func.call @strict_list_read(%t53l, %t53i, %t53nb) : (f64, f64, f64) -> f64
-    llvm.store %t53x, %r5 : f64, !llvm.ptr
-    %t54v = llvm.load %r5 : !llvm.ptr -> f64
+    %t41 = llvm.load %v_decision : !llvm.ptr -> f64
+    llvm.store %t41, %r2 : f64, !llvm.ptr
+    %t42v = llvm.load %r2 : !llvm.ptr -> f64
+    %t42k = func.call @strict_is_failure(%t42v) : (f64) -> i1
+    cf.cond_br %t42k, ^bb42e, ^bb43
+  ^bb42e:
+    %t42tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t42twl = arith.constant 102 : i64
+    %t42tr = func.call @strict_trace_checked(%t42v, %t42tw, %t42twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t42tr : f64
+  ^bb43:
+    %t43i = llvm.load %r2 : !llvm.ptr -> f64
+    %t43ip = func.call @strict_ptr(%t43i) : (f64) -> !llvm.ptr
+    %t43m = llvm.getelementptr %t43ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t43mv = llvm.load %t43m : !llvm.ptr -> f64
+    llvm.store %t43mv, %r3 : f64, !llvm.ptr
+    %t44 = llvm.load %r3 : !llvm.ptr -> f64
+    llvm.store %t44, %v_list3 : f64, !llvm.ptr
+    %t45c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t45c, %r4 : f64, !llvm.ptr
+    %t46l = llvm.load %v_list3 : !llvm.ptr -> f64
+    %t46i = llvm.load %r4 : !llvm.ptr -> f64
+    %t46n = llvm.mlir.addressof @sOperatorCodegen_Choice_2_46 : !llvm.ptr
+    %t46nb = func.call @strict_bits(%t46n) : (!llvm.ptr) -> f64
+    %t46x = func.call @strict_list_read(%t46l, %t46i, %t46nb) : (f64, f64, f64) -> f64
+    llvm.store %t46x, %r5 : f64, !llvm.ptr
+    %t47v = llvm.load %r5 : !llvm.ptr -> f64
+    %t47k = func.call @strict_is_failure(%t47v) : (f64) -> i1
+    cf.cond_br %t47k, ^bb47e, ^bb48
+  ^bb47e:
+    %t47tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t47twl = arith.constant 102 : i64
+    %t47tr = func.call @strict_trace_checked(%t47v, %t47tw, %t47twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t47tr : f64
+  ^bb48:
+    %t48 = llvm.load %v_narrowed : !llvm.ptr -> f64
+    llvm.store %t48, %r6 : f64, !llvm.ptr
+    %t49v = llvm.load %r6 : !llvm.ptr -> f64
+    %t49k = func.call @strict_is_failure(%t49v) : (f64) -> i1
+    cf.cond_br %t49k, ^bb49e, ^bb50
+  ^bb49e:
+    %t49tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t49twl = arith.constant 102 : i64
+    %t49tr = func.call @strict_trace_checked(%t49v, %t49tw, %t49twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t49tr : f64
+  ^bb50:
+    %t50m = llvm.load %r1 : !llvm.ptr -> f64
+    %t50a0 = llvm.load %r5 : !llvm.ptr -> f64
+    %t50a1 = llvm.load %r6 : !llvm.ptr -> f64
+    %t50r = func.call @ErrorCodegen_Handled_2(%t50m, %t50a0, %t50a1) : (f64, f64, f64) -> f64
+    %t50tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t50twl = arith.constant 102 : i64
+    %t50tr = func.call @strict_trace(%t50r, %t50tw, %t50twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t50tr, %r7 : f64, !llvm.ptr
+    %t51v = llvm.load %r7 : !llvm.ptr -> f64
+    %t51k = func.call @strict_is_failure(%t51v) : (f64) -> i1
+    cf.cond_br %t51k, ^bb51e, ^bb52
+  ^bb51e:
+    %t51tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t51twl = arith.constant 102 : i64
+    %t51tr = func.call @strict_trace_checked(%t51v, %t51tw, %t51twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t51tr : f64
+  ^bb52:
+    %t52 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t52, %r8 : f64, !llvm.ptr
+    %t53 = llvm.load %v_condition : !llvm.ptr -> f64
+    llvm.store %t53, %r9 : f64, !llvm.ptr
+    %t54v = llvm.load %r9 : !llvm.ptr -> f64
     %t54k = func.call @strict_is_failure(%t54v) : (f64) -> i1
     cf.cond_br %t54k, ^bb54e, ^bb55
   ^bb54e:
     %t54tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t54twl = arith.constant 100 : i64
+    %t54twl = arith.constant 102 : i64
     %t54tr = func.call @strict_trace_checked(%t54v, %t54tw, %t54twl) : (f64, !llvm.ptr, i64) -> f64
     return %t54tr : f64
   ^bb55:
-    %t55 = llvm.load %v_chosen : !llvm.ptr -> f64
-    llvm.store %t55, %r6 : f64, !llvm.ptr
-    %t56v = llvm.load %r6 : !llvm.ptr -> f64
-    %t56k = func.call @strict_is_failure(%t56v) : (f64) -> i1
-    cf.cond_br %t56k, ^bb56e, ^bb57
-  ^bb56e:
-    %t56tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t56twl = arith.constant 100 : i64
-    %t56tr = func.call @strict_trace_checked(%t56v, %t56tw, %t56twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t56tr : f64
-  ^bb57:
-    %t57m = llvm.load %r1 : !llvm.ptr -> f64
-    %t57a0 = llvm.load %r5 : !llvm.ptr -> f64
-    %t57a1 = llvm.load %r6 : !llvm.ptr -> f64
-    %t57r = func.call @ErrorCodegen_Handled_2(%t57m, %t57a0, %t57a1) : (f64, f64, f64) -> f64
-    %t57tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t57twl = arith.constant 100 : i64
-    %t57tr = func.call @strict_trace(%t57r, %t57tw, %t57twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t57tr, %r7 : f64, !llvm.ptr
-    %t58v = llvm.load %r7 : !llvm.ptr -> f64
-    %t58k = func.call @strict_is_failure(%t58v) : (f64) -> i1
-    cf.cond_br %t58k, ^bb58e, ^bb59
-  ^bb58e:
+    %t55i = llvm.load %r9 : !llvm.ptr -> f64
+    %t55ip = func.call @strict_ptr(%t55i) : (f64) -> !llvm.ptr
+    %t55m = llvm.getelementptr %t55ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t55mv = llvm.load %t55m : !llvm.ptr -> f64
+    llvm.store %t55mv, %r10 : f64, !llvm.ptr
+    %t56c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t56c, %r11 : f64, !llvm.ptr
+    %t57a = llvm.load %r10 : !llvm.ptr -> f64
+    %t57b = llvm.load %r11 : !llvm.ptr -> f64
+    %t57c = arith.subf %t57a, %t57b : f64
+    llvm.store %t57c, %r12 : f64, !llvm.ptr
+    %t58m = llvm.load %r7 : !llvm.ptr -> f64
+    %t58a0 = llvm.load %r8 : !llvm.ptr -> f64
+    %t58a1 = llvm.load %r12 : !llvm.ptr -> f64
+    %t58r = func.call @CodeBlock_Chosen_2(%t58m, %t58a0, %t58a1) : (f64, f64, f64) -> f64
     %t58tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t58twl = arith.constant 100 : i64
-    %t58tr = func.call @strict_trace_checked(%t58v, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t58tr : f64
-  ^bb59:
-    %t59 = llvm.load %v_name : !llvm.ptr -> f64
-    llvm.store %t59, %r8 : f64, !llvm.ptr
-    %t60 = llvm.load %v_chosen : !llvm.ptr -> f64
-    llvm.store %t60, %r9 : f64, !llvm.ptr
-    %t61v = llvm.load %r9 : !llvm.ptr -> f64
+    %t58twl = arith.constant 102 : i64
+    %t58tr = func.call @strict_trace(%t58r, %t58tw, %t58twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t58tr, %r13 : f64, !llvm.ptr
+    %t59 = llvm.load %r13 : !llvm.ptr -> f64
+    llvm.store %t59, %v_chosen : f64, !llvm.ptr
+    %t60 = llvm.load %v_narrowed : !llvm.ptr -> f64
+    llvm.store %t60, %r0 : f64, !llvm.ptr
+    %t61v = llvm.load %r0 : !llvm.ptr -> f64
     %t61k = func.call @strict_is_failure(%t61v) : (f64) -> i1
     cf.cond_br %t61k, ^bb61e, ^bb62
   ^bb61e:
     %t61tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t61twl = arith.constant 100 : i64
+    %t61twl = arith.constant 103 : i64
     %t61tr = func.call @strict_trace_checked(%t61v, %t61tw, %t61twl) : (f64, !llvm.ptr, i64) -> f64
     return %t61tr : f64
   ^bb62:
-    %t62i = llvm.load %r9 : !llvm.ptr -> f64
+    %t62i = llvm.load %r0 : !llvm.ptr -> f64
     %t62ip = func.call @strict_ptr(%t62i) : (f64) -> !llvm.ptr
-    %t62m = llvm.getelementptr %t62ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t62m = llvm.getelementptr %t62ip[3] : (!llvm.ptr) -> !llvm.ptr, f64
     %t62mv = llvm.load %t62m : !llvm.ptr -> f64
-    llvm.store %t62mv, %r10 : f64, !llvm.ptr
-    %t63c = arith.constant 0x3FF0000000000000 : f64
-    llvm.store %t63c, %r11 : f64, !llvm.ptr
-    %t64a = llvm.load %r10 : !llvm.ptr -> f64
-    %t64b = llvm.load %r11 : !llvm.ptr -> f64
-    %t64c = arith.subf %t64a, %t64b : f64
-    llvm.store %t64c, %r12 : f64, !llvm.ptr
-    %t65m = llvm.load %r7 : !llvm.ptr -> f64
-    %t65a0 = llvm.load %r8 : !llvm.ptr -> f64
-    %t65a1 = llvm.load %r12 : !llvm.ptr -> f64
-    %t65r = func.call @CodeBlock_Joined_2(%t65m, %t65a0, %t65a1) : (f64, f64, f64) -> f64
+    llvm.store %t62mv, %r1 : f64, !llvm.ptr
+    %t63i = llvm.load %r1 : !llvm.ptr -> f64
+    %t63ip = func.call @strict_ptr(%t63i) : (f64) -> !llvm.ptr
+    %t63m = llvm.getelementptr %t63ip[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t63mv = llvm.load %t63m : !llvm.ptr -> f64
+    llvm.store %t63mv, %r2 : f64, !llvm.ptr
+    %t64m = llvm.load %r2 : !llvm.ptr -> f64
+    %t64r = func.call @strict_list_length(%t64m) : (f64) -> f64
+    llvm.store %t64r, %r3 : f64, !llvm.ptr
+    %t65v = llvm.load %r3 : !llvm.ptr -> f64
+    %t65k = func.call @strict_is_failure(%t65v) : (f64) -> i1
+    cf.cond_br %t65k, ^bb65e, ^bb66
+  ^bb65e:
     %t65tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t65twl = arith.constant 100 : i64
-    %t65tr = func.call @strict_trace(%t65r, %t65tw, %t65twl) : (f64, !llvm.ptr, i64) -> f64
-    llvm.store %t65tr, %r13 : f64, !llvm.ptr
-    %t66v = llvm.load %r13 : !llvm.ptr -> f64
-    %t66k = func.call @strict_is_failure(%t66v) : (f64) -> i1
-    cf.cond_br %t66k, ^bb66e, ^bb67
-  ^bb66e:
-    %t66tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
-    %t66twl = arith.constant 100 : i64
-    %t66tr = func.call @strict_trace_checked(%t66v, %t66tw, %t66twl) : (f64, !llvm.ptr, i64) -> f64
-    return %t66tr : f64
-  ^bb67:
-    %t67 = llvm.load %r13 : !llvm.ptr -> f64
-    return %t67 : f64
+    %t65twl = arith.constant 103 : i64
+    %t65tr = func.call @strict_trace_checked(%t65v, %t65tw, %t65twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t65tr : f64
+  ^bb66:
+    %t66 = llvm.load %v_condition : !llvm.ptr -> f64
+    llvm.store %t66, %r4 : f64, !llvm.ptr
+    %t67v = llvm.load %r4 : !llvm.ptr -> f64
+    %t67k = func.call @strict_is_failure(%t67v) : (f64) -> i1
+    cf.cond_br %t67k, ^bb67e, ^bb68
+  ^bb67e:
+    %t67tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t67twl = arith.constant 103 : i64
+    %t67tr = func.call @strict_trace_checked(%t67v, %t67tw, %t67twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t67tr : f64
+  ^bb68:
+    %t68i = llvm.load %r4 : !llvm.ptr -> f64
+    %t68ip = func.call @strict_ptr(%t68i) : (f64) -> !llvm.ptr
+    %t68m = llvm.getelementptr %t68ip[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t68mv = llvm.load %t68m : !llvm.ptr -> f64
+    llvm.store %t68mv, %r5 : f64, !llvm.ptr
+    %t69i = llvm.load %r5 : !llvm.ptr -> f64
+    %t69ip = func.call @strict_ptr(%t69i) : (f64) -> !llvm.ptr
+    %t69m = llvm.getelementptr %t69ip[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t69mv = llvm.load %t69m : !llvm.ptr -> f64
+    llvm.store %t69mv, %r6 : f64, !llvm.ptr
+    %t70m = llvm.load %r6 : !llvm.ptr -> f64
+    %t70r = func.call @strict_list_length(%t70m) : (f64) -> f64
+    llvm.store %t70r, %r7 : f64, !llvm.ptr
+    %t71v = llvm.load %r7 : !llvm.ptr -> f64
+    %t71k = func.call @strict_is_failure(%t71v) : (f64) -> i1
+    cf.cond_br %t71k, ^bb71e, ^bb72
+  ^bb71e:
+    %t71tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t71twl = arith.constant 103 : i64
+    %t71tr = func.call @strict_trace_checked(%t71v, %t71tw, %t71twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t71tr : f64
+  ^bb72:
+    %t72a = llvm.load %r3 : !llvm.ptr -> f64
+    %t72b = llvm.load %r7 : !llvm.ptr -> f64
+    %t72c = arith.cmpf ogt, %t72a, %t72b : f64
+    llvm.store %t72c, %flag : i1, !llvm.ptr
+    %t72d = arith.uitofp %t72c : i1 to f64
+    llvm.store %t72d, %r8 : f64, !llvm.ptr
+    %t73 = llvm.load %r8 : !llvm.ptr -> f64
+    llvm.store %t73, %v_isNarrowed : f64, !llvm.ptr
+    %t74 = llvm.load %v_isNarrowed : !llvm.ptr -> f64
+    llvm.store %t74, %r0 : f64, !llvm.ptr
+    %t75c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t75c, %r1 : f64, !llvm.ptr
+    %t76a = llvm.load %r0 : !llvm.ptr -> f64
+    %t76b = llvm.load %r1 : !llvm.ptr -> f64
+    %t76c = arith.cmpf oeq, %t76a, %t76b : f64
+    llvm.store %t76c, %flag : i1, !llvm.ptr
+    %t77 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t77, ^bb78, ^bb94
+  ^bb78:
+    %t78 = llvm.load %v_decision : !llvm.ptr -> f64
+    llvm.store %t78, %r2 : f64, !llvm.ptr
+    %t79v = llvm.load %r2 : !llvm.ptr -> f64
+    %t79k = func.call @strict_is_failure(%t79v) : (f64) -> i1
+    cf.cond_br %t79k, ^bb79e, ^bb80
+  ^bb79e:
+    %t79tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t79twl = arith.constant 104 : i64
+    %t79tr = func.call @strict_trace_checked(%t79v, %t79tw, %t79twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t79tr : f64
+  ^bb80:
+    %t80i = llvm.load %r2 : !llvm.ptr -> f64
+    %t80ip = func.call @strict_ptr(%t80i) : (f64) -> !llvm.ptr
+    %t80m = llvm.getelementptr %t80ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t80mv = llvm.load %t80m : !llvm.ptr -> f64
+    llvm.store %t80mv, %r3 : f64, !llvm.ptr
+    %t81 = llvm.load %r3 : !llvm.ptr -> f64
+    llvm.store %t81, %v_list5 : f64, !llvm.ptr
+    %t82c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t82c, %r4 : f64, !llvm.ptr
+    %t83l = llvm.load %v_list5 : !llvm.ptr -> f64
+    %t83i = llvm.load %r4 : !llvm.ptr -> f64
+    %t83n = llvm.mlir.addressof @sOperatorCodegen_Choice_2_83 : !llvm.ptr
+    %t83nb = func.call @strict_bits(%t83n) : (!llvm.ptr) -> f64
+    %t83x = func.call @strict_list_read(%t83l, %t83i, %t83nb) : (f64, f64, f64) -> f64
+    llvm.store %t83x, %r5 : f64, !llvm.ptr
+    %t84v = llvm.load %r5 : !llvm.ptr -> f64
+    %t84k = func.call @strict_is_failure(%t84v) : (f64) -> i1
+    cf.cond_br %t84k, ^bb84e, ^bb85
+  ^bb84e:
+    %t84tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t84twl = arith.constant 104 : i64
+    %t84tr = func.call @strict_trace_checked(%t84v, %t84tw, %t84twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t84tr : f64
+  ^bb85:
+    %t85i = llvm.load %r5 : !llvm.ptr -> f64
+    %t85ip = func.call @strict_ptr(%t85i) : (f64) -> !llvm.ptr
+    %t85m = llvm.getelementptr %t85ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t85mv = llvm.load %t85m : !llvm.ptr -> f64
+    llvm.store %t85mv, %r6 : f64, !llvm.ptr
+    %t86 = llvm.load %r6 : !llvm.ptr -> f64
+    llvm.store %t86, %v_list5 : f64, !llvm.ptr
+    %t87c = arith.constant 0x0000000000000000 : f64
+    llvm.store %t87c, %r7 : f64, !llvm.ptr
+    %t88l = llvm.load %v_list5 : !llvm.ptr -> f64
+    %t88i = llvm.load %r7 : !llvm.ptr -> f64
+    %t88n = llvm.mlir.addressof @sOperatorCodegen_Choice_2_88 : !llvm.ptr
+    %t88nb = func.call @strict_bits(%t88n) : (!llvm.ptr) -> f64
+    %t88x = func.call @strict_list_read(%t88l, %t88i, %t88nb) : (f64, f64, f64) -> f64
+    llvm.store %t88x, %r8 : f64, !llvm.ptr
+    %t89v = llvm.load %r8 : !llvm.ptr -> f64
+    %t89k = func.call @strict_is_failure(%t89v) : (f64) -> i1
+    cf.cond_br %t89k, ^bb89e, ^bb90
+  ^bb89e:
+    %t89tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t89twl = arith.constant 104 : i64
+    %t89tr = func.call @strict_trace_checked(%t89v, %t89tw, %t89twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t89tr : f64
+  ^bb90:
+    %t90i = llvm.load %r8 : !llvm.ptr -> f64
+    %t90ip = func.call @strict_ptr(%t90i) : (f64) -> !llvm.ptr
+    %t90m = llvm.getelementptr %t90ip[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t90mv = llvm.load %t90m : !llvm.ptr -> f64
+    llvm.store %t90mv, %r9 : f64, !llvm.ptr
+    %t91 = llvm.load %r9 : !llvm.ptr -> f64
+    llvm.store %t91, %v_conditional4 : f64, !llvm.ptr
+    %t92c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t92c, %r10 : f64, !llvm.ptr
+    %t93a = llvm.load %r10 : !llvm.ptr -> f64
+    %t93b = llvm.load %r10 : !llvm.ptr -> f64
+    %t93c = arith.cmpf oeq, %t93a, %t93b : f64
+    llvm.store %t93c, %flag : i1, !llvm.ptr
+    cf.br ^bb94
+  ^bb94:
+    %t95 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t95, ^bb98, ^bb96
+  ^bb96:
+    %t96c = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %t96xf = func.call @strict_bits(%t96c) : (!llvm.ptr) -> f64
+    llvm.store %t96xf, %r11 : f64, !llvm.ptr
+    %t97 = llvm.load %r11 : !llvm.ptr -> f64
+    llvm.store %t97, %v_conditional4 : f64, !llvm.ptr
+    cf.br ^bb98
+  ^bb98:
+    %t99 = llvm.load %v_conditional4 : !llvm.ptr -> f64
+    llvm.store %t99, %r12 : f64, !llvm.ptr
+    %t100 = llvm.load %r12 : !llvm.ptr -> f64
+    llvm.store %t100, %v_target : f64, !llvm.ptr
+    %t101 = llvm.load %v_isNarrowed : !llvm.ptr -> f64
+    llvm.store %t101, %r0 : f64, !llvm.ptr
+    %t102c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t102c, %r1 : f64, !llvm.ptr
+    %t103a = llvm.load %r0 : !llvm.ptr -> f64
+    %t103b = llvm.load %r1 : !llvm.ptr -> f64
+    %t103c = arith.cmpf oeq, %t103a, %t103b : f64
+    llvm.store %t103c, %flag : i1, !llvm.ptr
+    %t104 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t104, ^bb105, ^bb118
+  ^bb105:
+    %t105 = llvm.load %v_chosen : !llvm.ptr -> f64
+    llvm.store %t105, %r2 : f64, !llvm.ptr
+    %t106v = llvm.load %r2 : !llvm.ptr -> f64
+    %t106k = func.call @strict_is_failure(%t106v) : (f64) -> i1
+    cf.cond_br %t106k, ^bb106e, ^bb107
+  ^bb106e:
+    %t106tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t106twl = arith.constant 105 : i64
+    %t106tr = func.call @strict_trace_checked(%t106v, %t106tw, %t106twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t106tr : f64
+  ^bb107:
+    %t107 = llvm.load %v_target : !llvm.ptr -> f64
+    llvm.store %t107, %r3 : f64, !llvm.ptr
+    %t108 = llvm.load %v_condition : !llvm.ptr -> f64
+    llvm.store %t108, %r4 : f64, !llvm.ptr
+    %t109v = llvm.load %r4 : !llvm.ptr -> f64
+    %t109k = func.call @strict_is_failure(%t109v) : (f64) -> i1
+    cf.cond_br %t109k, ^bb109e, ^bb110
+  ^bb109e:
+    %t109tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t109twl = arith.constant 105 : i64
+    %t109tr = func.call @strict_trace_checked(%t109v, %t109tw, %t109twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t109tr : f64
+  ^bb110:
+    %t110i = llvm.load %r4 : !llvm.ptr -> f64
+    %t110ip = func.call @strict_ptr(%t110i) : (f64) -> !llvm.ptr
+    %t110m = llvm.getelementptr %t110ip[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t110mv = llvm.load %t110m : !llvm.ptr -> f64
+    llvm.store %t110mv, %r5 : f64, !llvm.ptr
+    %t111 = llvm.load %v_target : !llvm.ptr -> f64
+    llvm.store %t111, %r6 : f64, !llvm.ptr
+    %t112m = llvm.load %r5 : !llvm.ptr -> f64
+    %t112a0 = llvm.load %r6 : !llvm.ptr -> f64
+    %t112r = func.call @Scope_TypeOf_1(%t112m, %t112a0) : (f64, f64) -> f64
+    %t112tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t112twl = arith.constant 105 : i64
+    %t112tr = func.call @strict_trace(%t112r, %t112tw, %t112twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t112tr, %r7 : f64, !llvm.ptr
+    %t113v = llvm.load %r7 : !llvm.ptr -> f64
+    %t113k = func.call @strict_is_failure(%t113v) : (f64) -> i1
+    cf.cond_br %t113k, ^bb113e, ^bb114
+  ^bb113e:
+    %t113tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t113twl = arith.constant 105 : i64
+    %t113tr = func.call @strict_trace_checked(%t113v, %t113tw, %t113twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t113tr : f64
+  ^bb114:
+    %t114m = llvm.load %r2 : !llvm.ptr -> f64
+    %t114a0 = llvm.load %r3 : !llvm.ptr -> f64
+    %t114a1 = llvm.load %r7 : !llvm.ptr -> f64
+    %t114r = func.call @CodeBlock_Declare_2(%t114m, %t114a0, %t114a1) : (f64, f64, f64) -> f64
+    %t114tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t114twl = arith.constant 105 : i64
+    %t114tr = func.call @strict_trace(%t114r, %t114tw, %t114twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t114tr, %r8 : f64, !llvm.ptr
+    %t115 = llvm.load %r8 : !llvm.ptr -> f64
+    llvm.store %t115, %v_conditional8 : f64, !llvm.ptr
+    %t116c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t116c, %r9 : f64, !llvm.ptr
+    %t117a = llvm.load %r9 : !llvm.ptr -> f64
+    %t117b = llvm.load %r9 : !llvm.ptr -> f64
+    %t117c = arith.cmpf oeq, %t117a, %t117b : f64
+    llvm.store %t117c, %flag : i1, !llvm.ptr
+    cf.br ^bb118
+  ^bb118:
+    %t119 = llvm.load %flag : !llvm.ptr -> i1
+    cf.cond_br %t119, ^bb122, ^bb120
+  ^bb120:
+    %t120 = llvm.load %v_chosen : !llvm.ptr -> f64
+    llvm.store %t120, %r10 : f64, !llvm.ptr
+    %t121 = llvm.load %r10 : !llvm.ptr -> f64
+    llvm.store %t121, %v_conditional8 : f64, !llvm.ptr
+    cf.br ^bb122
+  ^bb122:
+    %t123 = llvm.load %v_conditional8 : !llvm.ptr -> f64
+    llvm.store %t123, %r11 : f64, !llvm.ptr
+    %t124 = llvm.load %r11 : !llvm.ptr -> f64
+    llvm.store %t124, %v_restored : f64, !llvm.ptr
+    %t125 = llvm.load %v_values : !llvm.ptr -> f64
+    llvm.store %t125, %r0 : f64, !llvm.ptr
+    %t126o = llvm.load %r0 : !llvm.ptr -> f64
+    llvm.store %t126o, %r1 : f64, !llvm.ptr
+    %t127v = llvm.load %r1 : !llvm.ptr -> f64
+    %t127k = func.call @strict_is_failure(%t127v) : (f64) -> i1
+    cf.cond_br %t127k, ^bb127e, ^bb128
+  ^bb127e:
+    %t127tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t127twl = arith.constant 106 : i64
+    %t127tr = func.call @strict_trace_checked(%t127v, %t127tw, %t127twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t127tr : f64
+  ^bb128:
+    %t128 = llvm.load %v_node : !llvm.ptr -> f64
+    llvm.store %t128, %r2 : f64, !llvm.ptr
+    %t129i = llvm.load %r2 : !llvm.ptr -> f64
+    %t129ip = func.call @strict_ptr(%t129i) : (f64) -> !llvm.ptr
+    %t129m = llvm.getelementptr %t129ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t129mv = llvm.load %t129m : !llvm.ptr -> f64
+    llvm.store %t129mv, %r3 : f64, !llvm.ptr
+    %t130 = llvm.load %r3 : !llvm.ptr -> f64
+    llvm.store %t130, %v_list10 : f64, !llvm.ptr
+    %t131c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t131c, %r4 : f64, !llvm.ptr
+    %t132l = llvm.load %v_list10 : !llvm.ptr -> f64
+    %t132i = llvm.load %r4 : !llvm.ptr -> f64
+    %t132n = llvm.mlir.addressof @sOperatorCodegen_Choice_2_132 : !llvm.ptr
+    %t132nb = func.call @strict_bits(%t132n) : (!llvm.ptr) -> f64
+    %t132x = func.call @strict_list_read(%t132l, %t132i, %t132nb) : (f64, f64, f64) -> f64
+    llvm.store %t132x, %r5 : f64, !llvm.ptr
+    %t133v = llvm.load %r5 : !llvm.ptr -> f64
+    %t133k = func.call @strict_is_failure(%t133v) : (f64) -> i1
+    cf.cond_br %t133k, ^bb133e, ^bb134
+  ^bb133e:
+    %t133tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t133twl = arith.constant 106 : i64
+    %t133tr = func.call @strict_trace_checked(%t133v, %t133tw, %t133twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t133tr : f64
+  ^bb134:
+    %t134 = llvm.load %v_restored : !llvm.ptr -> f64
+    llvm.store %t134, %r6 : f64, !llvm.ptr
+    %t135v = llvm.load %r6 : !llvm.ptr -> f64
+    %t135k = func.call @strict_is_failure(%t135v) : (f64) -> i1
+    cf.cond_br %t135k, ^bb135e, ^bb136
+  ^bb135e:
+    %t135tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t135twl = arith.constant 106 : i64
+    %t135tr = func.call @strict_trace_checked(%t135v, %t135tw, %t135twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t135tr : f64
+  ^bb136:
+    %t136m = llvm.load %r1 : !llvm.ptr -> f64
+    %t136a0 = llvm.load %r5 : !llvm.ptr -> f64
+    %t136a1 = llvm.load %r6 : !llvm.ptr -> f64
+    %t136r = func.call @ErrorCodegen_Handled_2(%t136m, %t136a0, %t136a1) : (f64, f64, f64) -> f64
+    %t136tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t136twl = arith.constant 106 : i64
+    %t136tr = func.call @strict_trace(%t136r, %t136tw, %t136twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t136tr, %r7 : f64, !llvm.ptr
+    %t137v = llvm.load %r7 : !llvm.ptr -> f64
+    %t137k = func.call @strict_is_failure(%t137v) : (f64) -> i1
+    cf.cond_br %t137k, ^bb137e, ^bb138
+  ^bb137e:
+    %t137tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t137twl = arith.constant 106 : i64
+    %t137tr = func.call @strict_trace_checked(%t137v, %t137tw, %t137twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t137tr : f64
+  ^bb138:
+    %t138 = llvm.load %v_name : !llvm.ptr -> f64
+    llvm.store %t138, %r8 : f64, !llvm.ptr
+    %t139 = llvm.load %v_chosen : !llvm.ptr -> f64
+    llvm.store %t139, %r9 : f64, !llvm.ptr
+    %t140v = llvm.load %r9 : !llvm.ptr -> f64
+    %t140k = func.call @strict_is_failure(%t140v) : (f64) -> i1
+    cf.cond_br %t140k, ^bb140e, ^bb141
+  ^bb140e:
+    %t140tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t140twl = arith.constant 106 : i64
+    %t140tr = func.call @strict_trace_checked(%t140v, %t140tw, %t140twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t140tr : f64
+  ^bb141:
+    %t141i = llvm.load %r9 : !llvm.ptr -> f64
+    %t141ip = func.call @strict_ptr(%t141i) : (f64) -> !llvm.ptr
+    %t141m = llvm.getelementptr %t141ip[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t141mv = llvm.load %t141m : !llvm.ptr -> f64
+    llvm.store %t141mv, %r10 : f64, !llvm.ptr
+    %t142c = arith.constant 0x3FF0000000000000 : f64
+    llvm.store %t142c, %r11 : f64, !llvm.ptr
+    %t143a = llvm.load %r10 : !llvm.ptr -> f64
+    %t143b = llvm.load %r11 : !llvm.ptr -> f64
+    %t143c = arith.subf %t143a, %t143b : f64
+    llvm.store %t143c, %r12 : f64, !llvm.ptr
+    %t144m = llvm.load %r7 : !llvm.ptr -> f64
+    %t144a0 = llvm.load %r8 : !llvm.ptr -> f64
+    %t144a1 = llvm.load %r12 : !llvm.ptr -> f64
+    %t144r = func.call @CodeBlock_Joined_2(%t144m, %t144a0, %t144a1) : (f64, f64, f64) -> f64
+    %t144tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t144twl = arith.constant 106 : i64
+    %t144tr = func.call @strict_trace(%t144r, %t144tw, %t144twl) : (f64, !llvm.ptr, i64) -> f64
+    llvm.store %t144tr, %r13 : f64, !llvm.ptr
+    %t145v = llvm.load %r13 : !llvm.ptr -> f64
+    %t145k = func.call @strict_is_failure(%t145v) : (f64) -> i1
+    cf.cond_br %t145k, ^bb145e, ^bb146
+  ^bb145e:
+    %t145tw = llvm.mlir.addressof @wOperatorCodegen_Choice_2 : !llvm.ptr
+    %t145twl = arith.constant 106 : i64
+    %t145tr = func.call @strict_trace_checked(%t145v, %t145tw, %t145twl) : (f64, !llvm.ptr, i64) -> f64
+    return %t145tr : f64
+  ^bb146:
+    %t146 = llvm.load %r13 : !llvm.ptr -> f64
+    return %t146 : f64
   }
   func.func private @OperatorCodegen_Contains_2(%p0: f64, %p1: f64, %p2: f64) -> f64 {
     %one = arith.constant 1 : i64
@@ -410535,7 +413157,7 @@ module {
     cf.cond_br %t12k, ^bb12e, ^bb13
   ^bb12e:
     %t12tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t12twl = arith.constant 110 : i64
+    %t12twl = arith.constant 116 : i64
     %t12tr = func.call @strict_trace_checked(%t12v, %t12tw, %t12twl) : (f64, !llvm.ptr, i64) -> f64
     return %t12tr : f64
   ^bb13:
@@ -410546,7 +413168,7 @@ module {
     %t14a1 = llvm.load %r6 : !llvm.ptr -> f64
     %t14r = func.call @ValueCodegen_TypeOf_2(%t14m, %t14a0, %t14a1) : (f64, f64, f64) -> f64
     %t14tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t14twl = arith.constant 110 : i64
+    %t14twl = arith.constant 116 : i64
     %t14tr = func.call @strict_trace(%t14r, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t14tr, %r7 : f64, !llvm.ptr
     %t15v = llvm.load %r7 : !llvm.ptr -> f64
@@ -410554,7 +413176,7 @@ module {
     cf.cond_br %t15k, ^bb15e, ^bb16
   ^bb15e:
     %t15tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t15twl = arith.constant 110 : i64
+    %t15twl = arith.constant 116 : i64
     %t15tr = func.call @strict_trace_checked(%t15v, %t15tw, %t15twl) : (f64, !llvm.ptr, i64) -> f64
     return %t15tr : f64
   ^bb16:
@@ -410562,7 +413184,7 @@ module {
     %t16a0 = llvm.load %r7 : !llvm.ptr -> f64
     %t16r = func.call @KnownTypes_ElementType_1(%t16m, %t16a0) : (f64, f64) -> f64
     %t16tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t16twl = arith.constant 110 : i64
+    %t16twl = arith.constant 116 : i64
     %t16tr = func.call @strict_trace(%t16r, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t16tr, %r8 : f64, !llvm.ptr
     %t17v = llvm.load %r8 : !llvm.ptr -> f64
@@ -410570,7 +413192,7 @@ module {
     cf.cond_br %t17k, ^bb17e, ^bb18
   ^bb17e:
     %t17tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t17twl = arith.constant 110 : i64
+    %t17twl = arith.constant 116 : i64
     %t17tr = func.call @strict_trace_checked(%t17v, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
     return %t17tr : f64
   ^bb18:
@@ -410619,7 +413241,7 @@ module {
     cf.cond_br %t31k, ^bb31e, ^bb32
   ^bb31e:
     %t31tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t31twl = arith.constant 112 : i64
+    %t31twl = arith.constant 118 : i64
     %t31tr = func.call @strict_trace_checked(%t31v, %t31tw, %t31twl) : (f64, !llvm.ptr, i64) -> f64
     return %t31tr : f64
   ^bb32:
@@ -410645,7 +413267,7 @@ module {
     cf.cond_br %t37k, ^bb37e, ^bb38
   ^bb37e:
     %t37tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t37twl = arith.constant 112 : i64
+    %t37twl = arith.constant 118 : i64
     %t37tr = func.call @strict_trace_checked(%t37v, %t37tw, %t37twl) : (f64, !llvm.ptr, i64) -> f64
     return %t37tr : f64
   ^bb38:
@@ -410659,7 +413281,7 @@ module {
     %t40a2 = llvm.load %r9 : !llvm.ptr -> f64
     %t40r = func.call @ErrorCodegen_Kept_3(%t40m, %t40a0, %t40a1, %t40a2) : (f64, f64, f64, f64) -> f64
     %t40tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t40twl = arith.constant 112 : i64
+    %t40twl = arith.constant 118 : i64
     %t40tr = func.call @strict_trace(%t40r, %t40tw, %t40twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t40tr, %r10 : f64, !llvm.ptr
     %t41 = llvm.load %r10 : !llvm.ptr -> f64
@@ -410770,7 +413392,7 @@ module {
     cf.cond_br %t76k, ^bb76e, ^bb77
   ^bb76e:
     %t76tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t76twl = arith.constant 114 : i64
+    %t76twl = arith.constant 120 : i64
     %t76tr = func.call @strict_trace_checked(%t76v, %t76tw, %t76twl) : (f64, !llvm.ptr, i64) -> f64
     return %t76tr : f64
   ^bb77:
@@ -410785,7 +413407,7 @@ module {
     cf.cond_br %t79k, ^bb79e, ^bb80
   ^bb79e:
     %t79tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t79twl = arith.constant 114 : i64
+    %t79twl = arith.constant 120 : i64
     %t79tr = func.call @strict_trace_checked(%t79v, %t79tw, %t79twl) : (f64, !llvm.ptr, i64) -> f64
     return %t79tr : f64
   ^bb80:
@@ -410863,7 +413485,7 @@ module {
     cf.cond_br %t100k, ^bb100e, ^bb101
   ^bb100e:
     %t100tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t100twl = arith.constant 115 : i64
+    %t100twl = arith.constant 121 : i64
     %t100tr = func.call @strict_trace_checked(%t100v, %t100tw, %t100twl) : (f64, !llvm.ptr, i64) -> f64
     return %t100tr : f64
   ^bb101:
@@ -410876,7 +413498,7 @@ module {
     cf.cond_br %t102k, ^bb102e, ^bb103
   ^bb102e:
     %t102tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t102twl = arith.constant 115 : i64
+    %t102twl = arith.constant 121 : i64
     %t102tr = func.call @strict_trace_checked(%t102v, %t102tw, %t102twl) : (f64, !llvm.ptr, i64) -> f64
     return %t102tr : f64
   ^bb103:
@@ -410907,7 +413529,7 @@ module {
     cf.cond_br %t107k, ^bb107e, ^bb108
   ^bb107e:
     %t107tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t107twl = arith.constant 115 : i64
+    %t107twl = arith.constant 121 : i64
     %t107tr = func.call @strict_trace_checked(%t107v, %t107tw, %t107twl) : (f64, !llvm.ptr, i64) -> f64
     return %t107tr : f64
   ^bb108:
@@ -410918,7 +413540,7 @@ module {
     cf.cond_br %t109k, ^bb109e, ^bb110
   ^bb109e:
     %t109tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t109twl = arith.constant 115 : i64
+    %t109twl = arith.constant 121 : i64
     %t109tr = func.call @strict_trace_checked(%t109v, %t109tw, %t109twl) : (f64, !llvm.ptr, i64) -> f64
     return %t109tr : f64
   ^bb110:
@@ -410927,7 +413549,7 @@ module {
     %t110a1 = llvm.load %r13 : !llvm.ptr -> f64
     %t110r = func.call @ValueCodegen_InstanceCall_2(%t110m, %t110a0, %t110a1) : (f64, f64, f64) -> f64
     %t110tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t110twl = arith.constant 115 : i64
+    %t110twl = arith.constant 121 : i64
     %t110tr = func.call @strict_trace(%t110r, %t110tw, %t110twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t110tr, %r14 : f64, !llvm.ptr
     %t111v = llvm.load %r14 : !llvm.ptr -> f64
@@ -410935,7 +413557,7 @@ module {
     cf.cond_br %t111k, ^bb111e, ^bb112
   ^bb111e:
     %t111tw = llvm.mlir.addressof @wOperatorCodegen_Contains_2 : !llvm.ptr
-    %t111twl = arith.constant 115 : i64
+    %t111twl = arith.constant 121 : i64
     %t111tr = func.call @strict_trace_checked(%t111v, %t111tw, %t111twl) : (f64, !llvm.ptr, i64) -> f64
     return %t111tr : f64
   ^bb112:
@@ -411066,7 +413688,7 @@ module {
     cf.cond_br %t14k, ^bb14e, ^bb15
   ^bb14e:
     %t14tw = llvm.mlir.addressof @wOperatorCodegen_IsBitwise_2 : !llvm.ptr
-    %t14twl = arith.constant 46 : i64
+    %t14twl = arith.constant 47 : i64
     %t14tr = func.call @strict_trace_checked(%t14v, %t14tw, %t14twl) : (f64, !llvm.ptr, i64) -> f64
     return %t14tr : f64
   ^bb15:
@@ -411077,7 +413699,7 @@ module {
     %t16a1 = llvm.load %r10 : !llvm.ptr -> f64
     %t16r = func.call @ValueCodegen_TypeOf_2(%t16m, %t16a0, %t16a1) : (f64, f64, f64) -> f64
     %t16tw = llvm.mlir.addressof @wOperatorCodegen_IsBitwise_2 : !llvm.ptr
-    %t16twl = arith.constant 46 : i64
+    %t16twl = arith.constant 47 : i64
     %t16tr = func.call @strict_trace(%t16r, %t16tw, %t16twl) : (f64, !llvm.ptr, i64) -> f64
     llvm.store %t16tr, %r11 : f64, !llvm.ptr
     %t17v = llvm.load %r11 : !llvm.ptr -> f64
@@ -411085,7 +413707,7 @@ module {
     cf.cond_br %t17k, ^bb17e, ^bb18
   ^bb17e:
     %t17tw = llvm.mlir.addressof @wOperatorCodegen_IsBitwise_2 : !llvm.ptr
-    %t17twl = arith.constant 46 : i64
+    %t17twl = arith.constant 47 : i64
     %t17tr = func.call @strict_trace_checked(%t17v, %t17tw, %t17twl) : (f64, !llvm.ptr, i64) -> f64
     return %t17tr : f64
   ^bb18:
@@ -418351,33 +420973,6 @@ module {
   ^different:
     return %zero : f64
   }
-  func.func private @strict_equal_Repositories(%a: f64, %b: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %one = arith.constant 1.0 : f64
-    %same = arith.cmpf oeq, %a, %b : f64
-    %aUnset = arith.cmpf oeq, %a, %zero : f64
-    %bUnset = arith.cmpf oeq, %b, %zero : f64
-    %unset = arith.ori %aUnset, %bUnset : i1
-    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
-    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
-    cf.cond_br %same, ^equal, ^check
-  ^check:
-    cf.cond_br %unset, ^different, ^m0
-  ^m0:
-    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
-    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
-    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
-    %s0 = arith.cmpf one, %e0, %zero : f64
-    cf.cond_br %s0, ^m1, ^different
-  ^m1:
-    cf.br ^equal
-  ^equal:
-    return %one : f64
-  ^different:
-    return %zero : f64
-  }
   func.func private @strict_equal_FileCompiler(%a: f64, %b: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
@@ -418396,6 +420991,33 @@ module {
     %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
     %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
     %e0 = func.call @strict_equal_number(%t0a0v, %t0b0v) : (f64, f64) -> f64
+    %s0 = arith.cmpf one, %e0, %zero : f64
+    cf.cond_br %s0, ^m1, ^different
+  ^m1:
+    cf.br ^equal
+  ^equal:
+    return %one : f64
+  ^different:
+    return %zero : f64
+  }
+  func.func private @strict_equal_Repositories(%a: f64, %b: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %same = arith.cmpf oeq, %a, %b : f64
+    %aUnset = arith.cmpf oeq, %a, %zero : f64
+    %bUnset = arith.cmpf oeq, %b, %zero : f64
+    %unset = arith.ori %aUnset, %bUnset : i1
+    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
+    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
+    cf.cond_br %same, ^equal, ^check
+  ^check:
+    cf.cond_br %unset, ^different, ^m0
+  ^m0:
+    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
+    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
+    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
     %s0 = arith.cmpf one, %e0, %zero : f64
     cf.cond_br %s0, ^m1, ^different
   ^m1:
@@ -418431,6 +421053,42 @@ module {
     %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
     %e1e = func.constant @strict_text_equal : (f64, f64) -> f64
+    %e1 = func.call @strict_list_equal(%t0a1v, %t0b1v, %e1e) : (f64, f64, (f64, f64) -> f64) -> f64
+    %s1 = arith.cmpf one, %e1, %zero : f64
+    cf.cond_br %s1, ^m2, ^different
+  ^m2:
+    cf.br ^equal
+  ^equal:
+    return %one : f64
+  ^different:
+    return %zero : f64
+  }
+  func.func private @strict_equal_Error(%a: f64, %b: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %same = arith.cmpf oeq, %a, %b : f64
+    %aUnset = arith.cmpf oeq, %a, %zero : f64
+    %bUnset = arith.cmpf oeq, %b, %zero : f64
+    %unset = arith.ori %aUnset, %bUnset : i1
+    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
+    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
+    cf.cond_br %same, ^equal, ^check
+  ^check:
+    cf.cond_br %unset, ^different, ^m0
+  ^m0:
+    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
+    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
+    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
+    %s0 = arith.cmpf one, %e0, %zero : f64
+    cf.cond_br %s0, ^m1, ^different
+  ^m1:
+    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
+    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
+    %e1e = func.constant @strict_equal_Stacktrace : (f64, f64) -> f64
     %e1 = func.call @strict_list_equal(%t0a1v, %t0b1v, %e1e) : (f64, f64, (f64, f64) -> f64) -> f64
     %s1 = arith.cmpf one, %e1, %zero : f64
     cf.cond_br %s1, ^m2, ^different
@@ -418776,6 +421434,181 @@ module {
   ^different:
     return %zero : f64
   }
+  func.func private @strict_equal_TypeCodegen(%a: f64, %b: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %same = arith.cmpf oeq, %a, %b : f64
+    %aUnset = arith.cmpf oeq, %a, %zero : f64
+    %bUnset = arith.cmpf oeq, %b, %zero : f64
+    %unset = arith.ori %aUnset, %bUnset : i1
+    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
+    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
+    cf.cond_br %same, ^equal, ^check
+  ^check:
+    cf.cond_br %unset, ^different, ^m0
+  ^m0:
+    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
+    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
+    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
+    %s0 = arith.cmpf one, %e0, %zero : f64
+    cf.cond_br %s0, ^m1, ^different
+  ^m1:
+    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
+    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
+    %e1e = func.constant @strict_text_equal : (f64, f64) -> f64
+    %e1 = func.call @strict_list_equal(%t0a1v, %t0b1v, %e1e) : (f64, f64, (f64, f64) -> f64) -> f64
+    %s1 = arith.cmpf one, %e1, %zero : f64
+    cf.cond_br %s1, ^m2, ^different
+  ^m2:
+    %t0a2 = llvm.getelementptr %pa[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a2v = llvm.load %t0a2 : !llvm.ptr -> f64
+    %t0b2 = llvm.getelementptr %pb[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b2v = llvm.load %t0b2 : !llvm.ptr -> f64
+    %e2 = func.call @strict_equal_TypeInference(%t0a2v, %t0b2v) : (f64, f64) -> f64
+    %s2 = arith.cmpf one, %e2, %zero : f64
+    cf.cond_br %s2, ^m3, ^different
+  ^m3:
+    %t0a3 = llvm.getelementptr %pa[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a3v = llvm.load %t0a3 : !llvm.ptr -> f64
+    %t0b3 = llvm.getelementptr %pb[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b3v = llvm.load %t0b3 : !llvm.ptr -> f64
+    %e3e = func.constant @strict_text_equal : (f64, f64) -> f64
+    %e3 = func.call @strict_list_equal(%t0a3v, %t0b3v, %e3e) : (f64, f64, (f64, f64) -> f64) -> f64
+    %s3 = arith.cmpf one, %e3, %zero : f64
+    cf.cond_br %s3, ^m4, ^different
+  ^m4:
+    cf.br ^equal
+  ^equal:
+    return %one : f64
+  ^different:
+    return %zero : f64
+  }
+  func.func private @strict_equal_TestCodegen(%a: f64, %b: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %same = arith.cmpf oeq, %a, %b : f64
+    %aUnset = arith.cmpf oeq, %a, %zero : f64
+    %bUnset = arith.cmpf oeq, %b, %zero : f64
+    %unset = arith.ori %aUnset, %bUnset : i1
+    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
+    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
+    cf.cond_br %same, ^equal, ^check
+  ^check:
+    cf.cond_br %unset, ^different, ^m0
+  ^m0:
+    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
+    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
+    %e0 = func.call @strict_equal_TypeCodegen(%t0a0v, %t0b0v) : (f64, f64) -> f64
+    %s0 = arith.cmpf one, %e0, %zero : f64
+    cf.cond_br %s0, ^m1, ^different
+  ^m1:
+    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
+    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
+    %e1 = func.call @strict_equal_number(%t0a1v, %t0b1v) : (f64, f64) -> f64
+    %s1 = arith.cmpf one, %e1, %zero : f64
+    cf.cond_br %s1, ^m2, ^different
+  ^m2:
+    cf.br ^equal
+  ^equal:
+    return %one : f64
+  ^different:
+    return %zero : f64
+  }
+  func.func private @strict_equal_Linker(%a: f64, %b: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %same = arith.cmpf oeq, %a, %b : f64
+    %aUnset = arith.cmpf oeq, %a, %zero : f64
+    %bUnset = arith.cmpf oeq, %b, %zero : f64
+    %unset = arith.ori %aUnset, %bUnset : i1
+    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
+    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
+    cf.cond_br %same, ^equal, ^check
+  ^check:
+    cf.cond_br %unset, ^different, ^m0
+  ^m0:
+    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
+    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
+    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
+    %s0 = arith.cmpf one, %e0, %zero : f64
+    cf.cond_br %s0, ^m1, ^different
+  ^m1:
+    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
+    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
+    %e1 = func.call @strict_equal_TypeCodegen(%t0a1v, %t0b1v) : (f64, f64) -> f64
+    %s1 = arith.cmpf one, %e1, %zero : f64
+    cf.cond_br %s1, ^m2, ^different
+  ^m2:
+    cf.br ^equal
+  ^equal:
+    return %one : f64
+  ^different:
+    return %zero : f64
+  }
+  func.func private @strict_equal_SyntaxNode(%a: f64, %b: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %same = arith.cmpf oeq, %a, %b : f64
+    %aUnset = arith.cmpf oeq, %a, %zero : f64
+    %bUnset = arith.cmpf oeq, %b, %zero : f64
+    %unset = arith.ori %aUnset, %bUnset : i1
+    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
+    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
+    cf.cond_br %same, ^equal, ^check
+  ^check:
+    cf.cond_br %unset, ^different, ^m0
+  ^m0:
+    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
+    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
+    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
+    %s0 = arith.cmpf one, %e0, %zero : f64
+    cf.cond_br %s0, ^m1, ^different
+  ^m1:
+    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
+    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
+    %e1 = func.call @strict_text_equal(%t0a1v, %t0b1v) : (f64, f64) -> f64
+    %s1 = arith.cmpf one, %e1, %zero : f64
+    cf.cond_br %s1, ^m2, ^different
+  ^m2:
+    %t0a2 = llvm.getelementptr %pa[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a2v = llvm.load %t0a2 : !llvm.ptr -> f64
+    %t0b2 = llvm.getelementptr %pb[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b2v = llvm.load %t0b2 : !llvm.ptr -> f64
+    %e2e = func.constant @strict_equal_SyntaxNode : (f64, f64) -> f64
+    %e2 = func.call @strict_list_equal(%t0a2v, %t0b2v, %e2e) : (f64, f64, (f64, f64) -> f64) -> f64
+    %s2 = arith.cmpf one, %e2, %zero : f64
+    cf.cond_br %s2, ^m3, ^different
+  ^m3:
+    %t0a3 = llvm.getelementptr %pa[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a3v = llvm.load %t0a3 : !llvm.ptr -> f64
+    %t0b3 = llvm.getelementptr %pb[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b3v = llvm.load %t0b3 : !llvm.ptr -> f64
+    %e3 = func.call @strict_equal_number(%t0a3v, %t0b3v) : (f64, f64) -> f64
+    %s3 = arith.cmpf one, %e3, %zero : f64
+    cf.cond_br %s3, ^m4, ^different
+  ^m4:
+    cf.br ^equal
+  ^equal:
+    return %one : f64
+  ^different:
+    return %zero : f64
+  }
   func.func private @strict_equal_Duplicates(%a: f64, %b: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
@@ -419018,217 +421851,6 @@ module {
   ^different:
     return %zero : f64
   }
-  func.func private @strict_equal_SyntaxNode(%a: f64, %b: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %one = arith.constant 1.0 : f64
-    %same = arith.cmpf oeq, %a, %b : f64
-    %aUnset = arith.cmpf oeq, %a, %zero : f64
-    %bUnset = arith.cmpf oeq, %b, %zero : f64
-    %unset = arith.ori %aUnset, %bUnset : i1
-    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
-    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
-    cf.cond_br %same, ^equal, ^check
-  ^check:
-    cf.cond_br %unset, ^different, ^m0
-  ^m0:
-    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
-    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
-    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
-    %s0 = arith.cmpf one, %e0, %zero : f64
-    cf.cond_br %s0, ^m1, ^different
-  ^m1:
-    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
-    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
-    %e1 = func.call @strict_text_equal(%t0a1v, %t0b1v) : (f64, f64) -> f64
-    %s1 = arith.cmpf one, %e1, %zero : f64
-    cf.cond_br %s1, ^m2, ^different
-  ^m2:
-    %t0a2 = llvm.getelementptr %pa[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a2v = llvm.load %t0a2 : !llvm.ptr -> f64
-    %t0b2 = llvm.getelementptr %pb[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b2v = llvm.load %t0b2 : !llvm.ptr -> f64
-    %e2e = func.constant @strict_equal_SyntaxNode : (f64, f64) -> f64
-    %e2 = func.call @strict_list_equal(%t0a2v, %t0b2v, %e2e) : (f64, f64, (f64, f64) -> f64) -> f64
-    %s2 = arith.cmpf one, %e2, %zero : f64
-    cf.cond_br %s2, ^m3, ^different
-  ^m3:
-    %t0a3 = llvm.getelementptr %pa[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a3v = llvm.load %t0a3 : !llvm.ptr -> f64
-    %t0b3 = llvm.getelementptr %pb[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b3v = llvm.load %t0b3 : !llvm.ptr -> f64
-    %e3 = func.call @strict_equal_number(%t0a3v, %t0b3v) : (f64, f64) -> f64
-    %s3 = arith.cmpf one, %e3, %zero : f64
-    cf.cond_br %s3, ^m4, ^different
-  ^m4:
-    cf.br ^equal
-  ^equal:
-    return %one : f64
-  ^different:
-    return %zero : f64
-  }
-  func.func private @strict_equal_TypeCodegen(%a: f64, %b: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %one = arith.constant 1.0 : f64
-    %same = arith.cmpf oeq, %a, %b : f64
-    %aUnset = arith.cmpf oeq, %a, %zero : f64
-    %bUnset = arith.cmpf oeq, %b, %zero : f64
-    %unset = arith.ori %aUnset, %bUnset : i1
-    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
-    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
-    cf.cond_br %same, ^equal, ^check
-  ^check:
-    cf.cond_br %unset, ^different, ^m0
-  ^m0:
-    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
-    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
-    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
-    %s0 = arith.cmpf one, %e0, %zero : f64
-    cf.cond_br %s0, ^m1, ^different
-  ^m1:
-    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
-    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
-    %e1e = func.constant @strict_text_equal : (f64, f64) -> f64
-    %e1 = func.call @strict_list_equal(%t0a1v, %t0b1v, %e1e) : (f64, f64, (f64, f64) -> f64) -> f64
-    %s1 = arith.cmpf one, %e1, %zero : f64
-    cf.cond_br %s1, ^m2, ^different
-  ^m2:
-    %t0a2 = llvm.getelementptr %pa[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a2v = llvm.load %t0a2 : !llvm.ptr -> f64
-    %t0b2 = llvm.getelementptr %pb[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b2v = llvm.load %t0b2 : !llvm.ptr -> f64
-    %e2 = func.call @strict_equal_TypeInference(%t0a2v, %t0b2v) : (f64, f64) -> f64
-    %s2 = arith.cmpf one, %e2, %zero : f64
-    cf.cond_br %s2, ^m3, ^different
-  ^m3:
-    %t0a3 = llvm.getelementptr %pa[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a3v = llvm.load %t0a3 : !llvm.ptr -> f64
-    %t0b3 = llvm.getelementptr %pb[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b3v = llvm.load %t0b3 : !llvm.ptr -> f64
-    %e3e = func.constant @strict_text_equal : (f64, f64) -> f64
-    %e3 = func.call @strict_list_equal(%t0a3v, %t0b3v, %e3e) : (f64, f64, (f64, f64) -> f64) -> f64
-    %s3 = arith.cmpf one, %e3, %zero : f64
-    cf.cond_br %s3, ^m4, ^different
-  ^m4:
-    cf.br ^equal
-  ^equal:
-    return %one : f64
-  ^different:
-    return %zero : f64
-  }
-  func.func private @strict_equal_TestCodegen(%a: f64, %b: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %one = arith.constant 1.0 : f64
-    %same = arith.cmpf oeq, %a, %b : f64
-    %aUnset = arith.cmpf oeq, %a, %zero : f64
-    %bUnset = arith.cmpf oeq, %b, %zero : f64
-    %unset = arith.ori %aUnset, %bUnset : i1
-    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
-    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
-    cf.cond_br %same, ^equal, ^check
-  ^check:
-    cf.cond_br %unset, ^different, ^m0
-  ^m0:
-    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
-    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
-    %e0 = func.call @strict_equal_TypeCodegen(%t0a0v, %t0b0v) : (f64, f64) -> f64
-    %s0 = arith.cmpf one, %e0, %zero : f64
-    cf.cond_br %s0, ^m1, ^different
-  ^m1:
-    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
-    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
-    %e1 = func.call @strict_equal_number(%t0a1v, %t0b1v) : (f64, f64) -> f64
-    %s1 = arith.cmpf one, %e1, %zero : f64
-    cf.cond_br %s1, ^m2, ^different
-  ^m2:
-    cf.br ^equal
-  ^equal:
-    return %one : f64
-  ^different:
-    return %zero : f64
-  }
-  func.func private @strict_equal_Linker(%a: f64, %b: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %one = arith.constant 1.0 : f64
-    %same = arith.cmpf oeq, %a, %b : f64
-    %aUnset = arith.cmpf oeq, %a, %zero : f64
-    %bUnset = arith.cmpf oeq, %b, %zero : f64
-    %unset = arith.ori %aUnset, %bUnset : i1
-    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
-    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
-    cf.cond_br %same, ^equal, ^check
-  ^check:
-    cf.cond_br %unset, ^different, ^m0
-  ^m0:
-    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
-    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
-    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
-    %s0 = arith.cmpf one, %e0, %zero : f64
-    cf.cond_br %s0, ^m1, ^different
-  ^m1:
-    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
-    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
-    %e1 = func.call @strict_equal_TypeCodegen(%t0a1v, %t0b1v) : (f64, f64) -> f64
-    %s1 = arith.cmpf one, %e1, %zero : f64
-    cf.cond_br %s1, ^m2, ^different
-  ^m2:
-    cf.br ^equal
-  ^equal:
-    return %one : f64
-  ^different:
-    return %zero : f64
-  }
-  func.func private @strict_equal_Error(%a: f64, %b: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %one = arith.constant 1.0 : f64
-    %same = arith.cmpf oeq, %a, %b : f64
-    %aUnset = arith.cmpf oeq, %a, %zero : f64
-    %bUnset = arith.cmpf oeq, %b, %zero : f64
-    %unset = arith.ori %aUnset, %bUnset : i1
-    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
-    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
-    cf.cond_br %same, ^equal, ^check
-  ^check:
-    cf.cond_br %unset, ^different, ^m0
-  ^m0:
-    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
-    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
-    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
-    %s0 = arith.cmpf one, %e0, %zero : f64
-    cf.cond_br %s0, ^m1, ^different
-  ^m1:
-    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
-    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
-    %e1e = func.constant @strict_equal_Stacktrace : (f64, f64) -> f64
-    %e1 = func.call @strict_list_equal(%t0a1v, %t0b1v, %e1e) : (f64, f64, (f64, f64) -> f64) -> f64
-    %s1 = arith.cmpf one, %e1, %zero : f64
-    cf.cond_br %s1, ^m2, ^different
-  ^m2:
-    cf.br ^equal
-  ^equal:
-    return %one : f64
-  ^different:
-    return %zero : f64
-  }
   func.func private @strict_equal_TypeInference(%a: f64, %b: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
@@ -419351,6 +421973,49 @@ module {
     %s1 = arith.cmpf one, %e1, %zero : f64
     cf.cond_br %s1, ^m2, ^different
   ^m2:
+    cf.br ^equal
+  ^equal:
+    return %one : f64
+  ^different:
+    return %zero : f64
+  }
+  func.func private @strict_equal_Stacktrace(%a: f64, %b: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %same = arith.cmpf oeq, %a, %b : f64
+    %aUnset = arith.cmpf oeq, %a, %zero : f64
+    %bUnset = arith.cmpf oeq, %b, %zero : f64
+    %unset = arith.ori %aUnset, %bUnset : i1
+    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
+    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
+    cf.cond_br %same, ^equal, ^check
+  ^check:
+    cf.cond_br %unset, ^different, ^m0
+  ^m0:
+    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
+    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
+    %e0 = func.call @strict_equal_Method(%t0a0v, %t0b0v) : (f64, f64) -> f64
+    %s0 = arith.cmpf one, %e0, %zero : f64
+    cf.cond_br %s0, ^m1, ^different
+  ^m1:
+    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
+    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
+    %e1 = func.call @strict_text_equal(%t0a1v, %t0b1v) : (f64, f64) -> f64
+    %s1 = arith.cmpf one, %e1, %zero : f64
+    cf.cond_br %s1, ^m2, ^different
+  ^m2:
+    %t0a2 = llvm.getelementptr %pa[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a2v = llvm.load %t0a2 : !llvm.ptr -> f64
+    %t0b2 = llvm.getelementptr %pb[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b2v = llvm.load %t0b2 : !llvm.ptr -> f64
+    %e2 = func.call @strict_equal_number(%t0a2v, %t0b2v) : (f64, f64) -> f64
+    %s2 = arith.cmpf one, %e2, %zero : f64
+    cf.cond_br %s2, ^m3, ^different
+  ^m3:
     cf.br ^equal
   ^equal:
     return %one : f64
@@ -420074,69 +422739,6 @@ module {
   ^different:
     return %zero : f64
   }
-  func.func private @strict_equal_UsageRules(%a: f64, %b: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %one = arith.constant 1.0 : f64
-    %same = arith.cmpf oeq, %a, %b : f64
-    %aUnset = arith.cmpf oeq, %a, %zero : f64
-    %bUnset = arith.cmpf oeq, %b, %zero : f64
-    %unset = arith.ori %aUnset, %bUnset : i1
-    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
-    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
-    cf.cond_br %same, ^equal, ^check
-  ^check:
-    cf.cond_br %unset, ^different, ^m0
-  ^m0:
-    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
-    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
-    %e0e = func.constant @strict_text_equal : (f64, f64) -> f64
-    %e0 = func.call @strict_list_equal(%t0a0v, %t0b0v, %e0e) : (f64, f64, (f64, f64) -> f64) -> f64
-    %s0 = arith.cmpf one, %e0, %zero : f64
-    cf.cond_br %s0, ^m1, ^different
-  ^m1:
-    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
-    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
-    %e1e = func.constant @strict_equal_SyntaxNode : (f64, f64) -> f64
-    %e1 = func.call @strict_list_equal(%t0a1v, %t0b1v, %e1e) : (f64, f64, (f64, f64) -> f64) -> f64
-    %s1 = arith.cmpf one, %e1, %zero : f64
-    cf.cond_br %s1, ^m2, ^different
-  ^m2:
-    %t0a2 = llvm.getelementptr %pa[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a2v = llvm.load %t0a2 : !llvm.ptr -> f64
-    %t0b2 = llvm.getelementptr %pb[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b2v = llvm.load %t0b2 : !llvm.ptr -> f64
-    %e2e = func.constant @strict_text_equal : (f64, f64) -> f64
-    %e2 = func.call @strict_list_equal(%t0a2v, %t0b2v, %e2e) : (f64, f64, (f64, f64) -> f64) -> f64
-    %s2 = arith.cmpf one, %e2, %zero : f64
-    cf.cond_br %s2, ^m3, ^different
-  ^m3:
-    %t0a3 = llvm.getelementptr %pa[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a3v = llvm.load %t0a3 : !llvm.ptr -> f64
-    %t0b3 = llvm.getelementptr %pb[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b3v = llvm.load %t0b3 : !llvm.ptr -> f64
-    %e3e = func.constant @strict_text_equal : (f64, f64) -> f64
-    %e3 = func.call @strict_list_equal(%t0a3v, %t0b3v, %e3e) : (f64, f64, (f64, f64) -> f64) -> f64
-    %s3 = arith.cmpf one, %e3, %zero : f64
-    cf.cond_br %s3, ^m4, ^different
-  ^m4:
-    %t0a4 = llvm.getelementptr %pa[4] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a4v = llvm.load %t0a4 : !llvm.ptr -> f64
-    %t0b4 = llvm.getelementptr %pb[4] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b4v = llvm.load %t0b4 : !llvm.ptr -> f64
-    %e4 = func.call @strict_equal_number(%t0a4v, %t0b4v) : (f64, f64) -> f64
-    %s4 = arith.cmpf one, %e4, %zero : f64
-    cf.cond_br %s4, ^m5, ^different
-  ^m5:
-    cf.br ^equal
-  ^equal:
-    return %one : f64
-  ^different:
-    return %zero : f64
-  }
   func.func private @strict_equal_CallTarget(%a: f64, %b: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
@@ -420358,6 +422960,69 @@ module {
     %s2 = arith.cmpf one, %e2, %zero : f64
     cf.cond_br %s2, ^m3, ^different
   ^m3:
+    cf.br ^equal
+  ^equal:
+    return %one : f64
+  ^different:
+    return %zero : f64
+  }
+  func.func private @strict_equal_UsageRules(%a: f64, %b: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %same = arith.cmpf oeq, %a, %b : f64
+    %aUnset = arith.cmpf oeq, %a, %zero : f64
+    %bUnset = arith.cmpf oeq, %b, %zero : f64
+    %unset = arith.ori %aUnset, %bUnset : i1
+    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
+    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
+    cf.cond_br %same, ^equal, ^check
+  ^check:
+    cf.cond_br %unset, ^different, ^m0
+  ^m0:
+    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
+    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
+    %e0e = func.constant @strict_text_equal : (f64, f64) -> f64
+    %e0 = func.call @strict_list_equal(%t0a0v, %t0b0v, %e0e) : (f64, f64, (f64, f64) -> f64) -> f64
+    %s0 = arith.cmpf one, %e0, %zero : f64
+    cf.cond_br %s0, ^m1, ^different
+  ^m1:
+    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
+    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
+    %e1e = func.constant @strict_equal_SyntaxNode : (f64, f64) -> f64
+    %e1 = func.call @strict_list_equal(%t0a1v, %t0b1v, %e1e) : (f64, f64, (f64, f64) -> f64) -> f64
+    %s1 = arith.cmpf one, %e1, %zero : f64
+    cf.cond_br %s1, ^m2, ^different
+  ^m2:
+    %t0a2 = llvm.getelementptr %pa[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a2v = llvm.load %t0a2 : !llvm.ptr -> f64
+    %t0b2 = llvm.getelementptr %pb[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b2v = llvm.load %t0b2 : !llvm.ptr -> f64
+    %e2e = func.constant @strict_text_equal : (f64, f64) -> f64
+    %e2 = func.call @strict_list_equal(%t0a2v, %t0b2v, %e2e) : (f64, f64, (f64, f64) -> f64) -> f64
+    %s2 = arith.cmpf one, %e2, %zero : f64
+    cf.cond_br %s2, ^m3, ^different
+  ^m3:
+    %t0a3 = llvm.getelementptr %pa[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a3v = llvm.load %t0a3 : !llvm.ptr -> f64
+    %t0b3 = llvm.getelementptr %pb[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b3v = llvm.load %t0b3 : !llvm.ptr -> f64
+    %e3e = func.constant @strict_text_equal : (f64, f64) -> f64
+    %e3 = func.call @strict_list_equal(%t0a3v, %t0b3v, %e3e) : (f64, f64, (f64, f64) -> f64) -> f64
+    %s3 = arith.cmpf one, %e3, %zero : f64
+    cf.cond_br %s3, ^m4, ^different
+  ^m4:
+    %t0a4 = llvm.getelementptr %pa[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0a4v = llvm.load %t0a4 : !llvm.ptr -> f64
+    %t0b4 = llvm.getelementptr %pb[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0b4v = llvm.load %t0b4 : !llvm.ptr -> f64
+    %e4 = func.call @strict_equal_number(%t0a4v, %t0b4v) : (f64, f64) -> f64
+    %s4 = arith.cmpf one, %e4, %zero : f64
+    cf.cond_br %s4, ^m5, ^different
+  ^m5:
     cf.br ^equal
   ^equal:
     return %one : f64
@@ -421489,7 +424154,7 @@ module {
   ^different:
     return %zero : f64
   }
-  func.func private @strict_equal_Stacktrace(%a: f64, %b: f64) -> f64 {
+  func.func private @strict_equal_Method(%a: f64, %b: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
     %same = arith.cmpf oeq, %a, %b : f64
@@ -421506,7 +424171,7 @@ module {
     %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
     %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
     %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
-    %e0 = func.call @strict_equal_Method(%t0a0v, %t0b0v) : (f64, f64) -> f64
+    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
     %s0 = arith.cmpf one, %e0, %zero : f64
     cf.cond_br %s0, ^m1, ^different
   ^m1:
@@ -421514,7 +424179,7 @@ module {
     %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
     %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
-    %e1 = func.call @strict_text_equal(%t0a1v, %t0b1v) : (f64, f64) -> f64
+    %e1 = func.call @strict_equal_Type(%t0a1v, %t0b1v) : (f64, f64) -> f64
     %s1 = arith.cmpf one, %e1, %zero : f64
     cf.cond_br %s1, ^m2, ^different
   ^m2:
@@ -421522,7 +424187,8 @@ module {
     %t0a2v = llvm.load %t0a2 : !llvm.ptr -> f64
     %t0b2 = llvm.getelementptr %pb[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %t0b2v = llvm.load %t0b2 : !llvm.ptr -> f64
-    %e2 = func.call @strict_equal_number(%t0a2v, %t0b2v) : (f64, f64) -> f64
+    %e2e = func.constant @strict_equal_Variable : (f64, f64) -> f64
+    %e2 = func.call @strict_list_equal(%t0a2v, %t0b2v, %e2e) : (f64, f64, (f64, f64) -> f64) -> f64
     %s2 = arith.cmpf one, %e2, %zero : f64
     cf.cond_br %s2, ^m3, ^different
   ^m3:
@@ -421564,50 +424230,6 @@ module {
   ^check:
     cf.cond_br %unset, ^different, ^m0
   ^m0:
-    cf.br ^equal
-  ^equal:
-    return %one : f64
-  ^different:
-    return %zero : f64
-  }
-  func.func private @strict_equal_Method(%a: f64, %b: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %one = arith.constant 1.0 : f64
-    %same = arith.cmpf oeq, %a, %b : f64
-    %aUnset = arith.cmpf oeq, %a, %zero : f64
-    %bUnset = arith.cmpf oeq, %b, %zero : f64
-    %unset = arith.ori %aUnset, %bUnset : i1
-    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr
-    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr
-    cf.cond_br %same, ^equal, ^check
-  ^check:
-    cf.cond_br %unset, ^different, ^m0
-  ^m0:
-    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64
-    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64
-    %e0 = func.call @strict_text_equal(%t0a0v, %t0b0v) : (f64, f64) -> f64
-    %s0 = arith.cmpf one, %e0, %zero : f64
-    cf.cond_br %s0, ^m1, ^different
-  ^m1:
-    %t0a1 = llvm.getelementptr %pa[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a1v = llvm.load %t0a1 : !llvm.ptr -> f64
-    %t0b1 = llvm.getelementptr %pb[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b1v = llvm.load %t0b1 : !llvm.ptr -> f64
-    %e1 = func.call @strict_equal_Type(%t0a1v, %t0b1v) : (f64, f64) -> f64
-    %s1 = arith.cmpf one, %e1, %zero : f64
-    cf.cond_br %s1, ^m2, ^different
-  ^m2:
-    %t0a2 = llvm.getelementptr %pa[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0a2v = llvm.load %t0a2 : !llvm.ptr -> f64
-    %t0b2 = llvm.getelementptr %pb[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0b2v = llvm.load %t0b2 : !llvm.ptr -> f64
-    %e2e = func.constant @strict_equal_Variable : (f64, f64) -> f64
-    %e2 = func.call @strict_list_equal(%t0a2v, %t0b2v, %e2e) : (f64, f64, (f64, f64) -> f64) -> f64
-    %s2 = arith.cmpf one, %e2, %zero : f64
-    cf.cond_br %s2, ^m3, ^different
-  ^m3:
     cf.br ^equal
   ^equal:
     return %one : f64
@@ -421792,39 +424414,6 @@ module {
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
-  func.func private @strict_automatic_Repositories(%value: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %unset = arith.cmpf oeq, %value, %zero : f64
-    cf.cond_br %unset, ^unset, ^set
-  ^unset:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
-    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    return %empty : f64
-  ^set:
-    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
-    %l0 = func.call @strict_list_empty() : () -> f64
-    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
-    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
-    %joined = func.call @strict_text_combine(%zero, %l1, %zero) : (f64, f64, f64) -> f64
-    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
-    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
-    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
-    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
-    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
-    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_automatic_list_Repositories(%value: f64) -> f64 {
-    %converter = func.constant @strict_automatic_Repositories : (f64) -> f64
-    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_hash_Repositories(%value: f64) -> i64 {
-    %text = func.call @strict_automatic_Repositories(%value) : (f64) -> f64
-    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
-    return %hash : i64
-  }
   func.func private @strict_automatic_FileCompiler(%value: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %value, %zero : f64
@@ -421856,6 +424445,39 @@ module {
   }
   func.func private @strict_hash_FileCompiler(%value: f64) -> i64 {
     %text = func.call @strict_automatic_FileCompiler(%value) : (f64) -> f64
+    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
+    return %hash : i64
+  }
+  func.func private @strict_automatic_Repositories(%value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %value, %zero : f64
+    cf.cond_br %unset, ^unset, ^set
+  ^unset:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    return %empty : f64
+  ^set:
+    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %l0 = func.call @strict_list_empty() : () -> f64
+    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
+    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
+    %joined = func.call @strict_text_combine(%zero, %l1, %zero) : (f64, f64, f64) -> f64
+    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
+    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_automatic_list_Repositories(%value: f64) -> f64 {
+    %converter = func.constant @strict_automatic_Repositories : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_hash_Repositories(%value: f64) -> i64 {
+    %text = func.call @strict_automatic_Repositories(%value) : (f64) -> f64
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
@@ -421894,6 +424516,43 @@ module {
   }
   func.func private @strict_hash_FileCheck(%value: f64) -> i64 {
     %text = func.call @strict_automatic_FileCheck(%value) : (f64) -> f64
+    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
+    return %hash : i64
+  }
+  func.func private @strict_automatic_Error(%value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %value, %zero : f64
+    cf.cond_br %unset, ^unset, ^set
+  ^unset:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    return %empty : f64
+  ^set:
+    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %l0 = func.call @strict_list_empty() : () -> f64
+    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
+    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
+    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
+    %x1 = func.call @strict_automatic_list_Stacktrace(%t0m1v) : (f64) -> f64
+    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
+    %joined = func.call @strict_text_combine(%zero, %l2, %zero) : (f64, f64, f64) -> f64
+    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
+    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_automatic_list_Error(%value: f64) -> f64 {
+    %converter = func.constant @strict_automatic_Error : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_hash_Error(%value: f64) -> i64 {
+    %text = func.call @strict_automatic_Error(%value) : (f64) -> f64
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
@@ -422216,6 +424875,170 @@ module {
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
+  func.func private @strict_automatic_TypeCodegen(%value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %value, %zero : f64
+    cf.cond_br %unset, ^unset, ^set
+  ^unset:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    return %empty : f64
+  ^set:
+    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %l0 = func.call @strict_list_empty() : () -> f64
+    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
+    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
+    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
+    %x1 = func.call @strict_list_text_text(%t0m1v) : (f64) -> f64
+    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
+    %t0m2 = llvm.getelementptr %p[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m2v = llvm.load %t0m2 : !llvm.ptr -> f64
+    %x2 = func.call @strict_automatic_TypeInference(%t0m2v) : (f64) -> f64
+    %l3 = func.call @strict_list_add_set(%l2, %x2, %t0m2v) : (f64, f64, f64) -> f64
+    %t0m3 = llvm.getelementptr %p[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m3v = llvm.load %t0m3 : !llvm.ptr -> f64
+    %x3 = func.call @strict_list_text_text(%t0m3v) : (f64) -> f64
+    %l4 = func.call @strict_list_add_set(%l3, %x3, %t0m3v) : (f64, f64, f64) -> f64
+    %joined = func.call @strict_text_combine(%zero, %l4, %zero) : (f64, f64, f64) -> f64
+    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
+    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_automatic_list_TypeCodegen(%value: f64) -> f64 {
+    %converter = func.constant @strict_automatic_TypeCodegen : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_hash_TypeCodegen(%value: f64) -> i64 {
+    %text = func.call @strict_automatic_TypeCodegen(%value) : (f64) -> f64
+    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
+    return %hash : i64
+  }
+  func.func private @strict_automatic_TestCodegen(%value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %value, %zero : f64
+    cf.cond_br %unset, ^unset, ^set
+  ^unset:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    return %empty : f64
+  ^set:
+    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %l0 = func.call @strict_list_empty() : () -> f64
+    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
+    %x0 = func.call @strict_automatic_TypeCodegen(%t0m0v) : (f64) -> f64
+    %l1 = func.call @strict_list_add_set(%l0, %x0, %t0m0v) : (f64, f64, f64) -> f64
+    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
+    %x1 = func.call @strict_boolean_text(%t0m1v) : (f64) -> f64
+    %l2 = func.call @strict_list_add(%l1, %x1) : (f64, f64) -> f64
+    %joined = func.call @strict_text_combine(%zero, %l2, %zero) : (f64, f64, f64) -> f64
+    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
+    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_automatic_list_TestCodegen(%value: f64) -> f64 {
+    %converter = func.constant @strict_automatic_TestCodegen : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_hash_TestCodegen(%value: f64) -> i64 {
+    %text = func.call @strict_automatic_TestCodegen(%value) : (f64) -> f64
+    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
+    return %hash : i64
+  }
+  func.func private @strict_automatic_Linker(%value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %value, %zero : f64
+    cf.cond_br %unset, ^unset, ^set
+  ^unset:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    return %empty : f64
+  ^set:
+    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %l0 = func.call @strict_list_empty() : () -> f64
+    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
+    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
+    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
+    %x1 = func.call @strict_automatic_TypeCodegen(%t0m1v) : (f64) -> f64
+    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
+    %joined = func.call @strict_text_combine(%zero, %l2, %zero) : (f64, f64, f64) -> f64
+    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
+    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_automatic_list_Linker(%value: f64) -> f64 {
+    %converter = func.constant @strict_automatic_Linker : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_hash_Linker(%value: f64) -> i64 {
+    %text = func.call @strict_automatic_Linker(%value) : (f64) -> f64
+    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
+    return %hash : i64
+  }
+  func.func private @strict_automatic_SyntaxNode(%value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %value, %zero : f64
+    cf.cond_br %unset, ^unset, ^set
+  ^unset:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    return %empty : f64
+  ^set:
+    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %l0 = func.call @strict_list_empty() : () -> f64
+    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
+    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
+    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
+    %l2 = func.call @strict_list_add_set(%l1, %t0m1v, %t0m1v) : (f64, f64, f64) -> f64
+    %t0m2 = llvm.getelementptr %p[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m2v = llvm.load %t0m2 : !llvm.ptr -> f64
+    %x2 = func.call @strict_automatic_list_SyntaxNode(%t0m2v) : (f64) -> f64
+    %l3 = func.call @strict_list_add_set(%l2, %x2, %t0m2v) : (f64, f64, f64) -> f64
+    %t0m3 = llvm.getelementptr %p[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m3v = llvm.load %t0m3 : !llvm.ptr -> f64
+    %x3 = func.call @strict_number_text(%t0m3v) : (f64) -> f64
+    %l4 = func.call @strict_list_add(%l3, %x3) : (f64, f64) -> f64
+    %joined = func.call @strict_text_combine(%zero, %l4, %zero) : (f64, f64, f64) -> f64
+    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
+    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_automatic_list_SyntaxNode(%value: f64) -> f64 {
+    %converter = func.constant @strict_automatic_SyntaxNode : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_hash_SyntaxNode(%value: f64) -> i64 {
+    %text = func.call @strict_automatic_SyntaxNode(%value) : (f64) -> f64
+    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
+    return %hash : i64
+  }
   func.func private @strict_automatic_Duplicates(%value: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %value, %zero : f64
@@ -422452,207 +425275,6 @@ module {
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
-  func.func private @strict_automatic_SyntaxNode(%value: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %unset = arith.cmpf oeq, %value, %zero : f64
-    cf.cond_br %unset, ^unset, ^set
-  ^unset:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
-    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    return %empty : f64
-  ^set:
-    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
-    %l0 = func.call @strict_list_empty() : () -> f64
-    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
-    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
-    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
-    %l2 = func.call @strict_list_add_set(%l1, %t0m1v, %t0m1v) : (f64, f64, f64) -> f64
-    %t0m2 = llvm.getelementptr %p[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m2v = llvm.load %t0m2 : !llvm.ptr -> f64
-    %x2 = func.call @strict_automatic_list_SyntaxNode(%t0m2v) : (f64) -> f64
-    %l3 = func.call @strict_list_add_set(%l2, %x2, %t0m2v) : (f64, f64, f64) -> f64
-    %t0m3 = llvm.getelementptr %p[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m3v = llvm.load %t0m3 : !llvm.ptr -> f64
-    %x3 = func.call @strict_number_text(%t0m3v) : (f64) -> f64
-    %l4 = func.call @strict_list_add(%l3, %x3) : (f64, f64) -> f64
-    %joined = func.call @strict_text_combine(%zero, %l4, %zero) : (f64, f64, f64) -> f64
-    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
-    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
-    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
-    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
-    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
-    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_automatic_list_SyntaxNode(%value: f64) -> f64 {
-    %converter = func.constant @strict_automatic_SyntaxNode : (f64) -> f64
-    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_hash_SyntaxNode(%value: f64) -> i64 {
-    %text = func.call @strict_automatic_SyntaxNode(%value) : (f64) -> f64
-    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
-    return %hash : i64
-  }
-  func.func private @strict_automatic_TypeCodegen(%value: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %unset = arith.cmpf oeq, %value, %zero : f64
-    cf.cond_br %unset, ^unset, ^set
-  ^unset:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
-    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    return %empty : f64
-  ^set:
-    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
-    %l0 = func.call @strict_list_empty() : () -> f64
-    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
-    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
-    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
-    %x1 = func.call @strict_list_text_text(%t0m1v) : (f64) -> f64
-    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
-    %t0m2 = llvm.getelementptr %p[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m2v = llvm.load %t0m2 : !llvm.ptr -> f64
-    %x2 = func.call @strict_automatic_TypeInference(%t0m2v) : (f64) -> f64
-    %l3 = func.call @strict_list_add_set(%l2, %x2, %t0m2v) : (f64, f64, f64) -> f64
-    %t0m3 = llvm.getelementptr %p[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m3v = llvm.load %t0m3 : !llvm.ptr -> f64
-    %x3 = func.call @strict_list_text_text(%t0m3v) : (f64) -> f64
-    %l4 = func.call @strict_list_add_set(%l3, %x3, %t0m3v) : (f64, f64, f64) -> f64
-    %joined = func.call @strict_text_combine(%zero, %l4, %zero) : (f64, f64, f64) -> f64
-    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
-    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
-    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
-    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
-    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
-    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_automatic_list_TypeCodegen(%value: f64) -> f64 {
-    %converter = func.constant @strict_automatic_TypeCodegen : (f64) -> f64
-    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_hash_TypeCodegen(%value: f64) -> i64 {
-    %text = func.call @strict_automatic_TypeCodegen(%value) : (f64) -> f64
-    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
-    return %hash : i64
-  }
-  func.func private @strict_automatic_TestCodegen(%value: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %unset = arith.cmpf oeq, %value, %zero : f64
-    cf.cond_br %unset, ^unset, ^set
-  ^unset:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
-    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    return %empty : f64
-  ^set:
-    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
-    %l0 = func.call @strict_list_empty() : () -> f64
-    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
-    %x0 = func.call @strict_automatic_TypeCodegen(%t0m0v) : (f64) -> f64
-    %l1 = func.call @strict_list_add_set(%l0, %x0, %t0m0v) : (f64, f64, f64) -> f64
-    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
-    %x1 = func.call @strict_boolean_text(%t0m1v) : (f64) -> f64
-    %l2 = func.call @strict_list_add(%l1, %x1) : (f64, f64) -> f64
-    %joined = func.call @strict_text_combine(%zero, %l2, %zero) : (f64, f64, f64) -> f64
-    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
-    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
-    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
-    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
-    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
-    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_automatic_list_TestCodegen(%value: f64) -> f64 {
-    %converter = func.constant @strict_automatic_TestCodegen : (f64) -> f64
-    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_hash_TestCodegen(%value: f64) -> i64 {
-    %text = func.call @strict_automatic_TestCodegen(%value) : (f64) -> f64
-    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
-    return %hash : i64
-  }
-  func.func private @strict_automatic_Linker(%value: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %unset = arith.cmpf oeq, %value, %zero : f64
-    cf.cond_br %unset, ^unset, ^set
-  ^unset:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
-    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    return %empty : f64
-  ^set:
-    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
-    %l0 = func.call @strict_list_empty() : () -> f64
-    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
-    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
-    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
-    %x1 = func.call @strict_automatic_TypeCodegen(%t0m1v) : (f64) -> f64
-    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
-    %joined = func.call @strict_text_combine(%zero, %l2, %zero) : (f64, f64, f64) -> f64
-    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
-    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
-    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
-    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
-    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
-    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_automatic_list_Linker(%value: f64) -> f64 {
-    %converter = func.constant @strict_automatic_Linker : (f64) -> f64
-    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_hash_Linker(%value: f64) -> i64 {
-    %text = func.call @strict_automatic_Linker(%value) : (f64) -> f64
-    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
-    return %hash : i64
-  }
-  func.func private @strict_automatic_Error(%value: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %unset = arith.cmpf oeq, %value, %zero : f64
-    cf.cond_br %unset, ^unset, ^set
-  ^unset:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
-    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    return %empty : f64
-  ^set:
-    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
-    %l0 = func.call @strict_list_empty() : () -> f64
-    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
-    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
-    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
-    %x1 = func.call @strict_automatic_list_Stacktrace(%t0m1v) : (f64) -> f64
-    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
-    %joined = func.call @strict_text_combine(%zero, %l2, %zero) : (f64, f64, f64) -> f64
-    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
-    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
-    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
-    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
-    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
-    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_automatic_list_Error(%value: f64) -> f64 {
-    %converter = func.constant @strict_automatic_Error : (f64) -> f64
-    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_hash_Error(%value: f64) -> i64 {
-    %text = func.call @strict_automatic_Error(%value) : (f64) -> f64
-    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
-    return %hash : i64
-  }
   func.func private @strict_automatic_TypeInference(%value: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %value, %zero : f64
@@ -422772,6 +425394,47 @@ module {
   }
   func.func private @strict_hash_Scope(%value: f64) -> i64 {
     %text = func.call @strict_automatic_Scope(%value) : (f64) -> f64
+    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
+    return %hash : i64
+  }
+  func.func private @strict_automatic_Stacktrace(%value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %value, %zero : f64
+    cf.cond_br %unset, ^unset, ^set
+  ^unset:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    return %empty : f64
+  ^set:
+    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %l0 = func.call @strict_list_empty() : () -> f64
+    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
+    %x0 = func.call @strict_automatic_Method(%t0m0v) : (f64) -> f64
+    %l1 = func.call @strict_list_add_set(%l0, %x0, %t0m0v) : (f64, f64, f64) -> f64
+    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
+    %l2 = func.call @strict_list_add_set(%l1, %t0m1v, %t0m1v) : (f64, f64, f64) -> f64
+    %t0m2 = llvm.getelementptr %p[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m2v = llvm.load %t0m2 : !llvm.ptr -> f64
+    %x2 = func.call @strict_number_text(%t0m2v) : (f64) -> f64
+    %l3 = func.call @strict_list_add(%l2, %x2) : (f64, f64) -> f64
+    %joined = func.call @strict_text_combine(%zero, %l3, %zero) : (f64, f64, f64) -> f64
+    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
+    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_automatic_list_Stacktrace(%value: f64) -> f64 {
+    %converter = func.constant @strict_automatic_Stacktrace : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_hash_Stacktrace(%value: f64) -> i64 {
+    %text = func.call @strict_automatic_Stacktrace(%value) : (f64) -> f64
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
@@ -423441,56 +426104,6 @@ module {
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
-  func.func private @strict_automatic_UsageRules(%value: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %unset = arith.cmpf oeq, %value, %zero : f64
-    cf.cond_br %unset, ^unset, ^set
-  ^unset:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
-    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    return %empty : f64
-  ^set:
-    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
-    %l0 = func.call @strict_list_empty() : () -> f64
-    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
-    %x0 = func.call @strict_list_text_text(%t0m0v) : (f64) -> f64
-    %l1 = func.call @strict_list_add_set(%l0, %x0, %t0m0v) : (f64, f64, f64) -> f64
-    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
-    %x1 = func.call @strict_automatic_list_SyntaxNode(%t0m1v) : (f64) -> f64
-    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
-    %t0m2 = llvm.getelementptr %p[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m2v = llvm.load %t0m2 : !llvm.ptr -> f64
-    %x2 = func.call @strict_list_text_text(%t0m2v) : (f64) -> f64
-    %l3 = func.call @strict_list_add_set(%l2, %x2, %t0m2v) : (f64, f64, f64) -> f64
-    %t0m3 = llvm.getelementptr %p[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m3v = llvm.load %t0m3 : !llvm.ptr -> f64
-    %x3 = func.call @strict_list_text_text(%t0m3v) : (f64) -> f64
-    %l4 = func.call @strict_list_add_set(%l3, %x3, %t0m3v) : (f64, f64, f64) -> f64
-    %t0m4 = llvm.getelementptr %p[4] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m4v = llvm.load %t0m4 : !llvm.ptr -> f64
-    %x4 = func.call @strict_number_text(%t0m4v) : (f64) -> f64
-    %l5 = func.call @strict_list_add(%l4, %x4) : (f64, f64) -> f64
-    %joined = func.call @strict_text_combine(%zero, %l5, %zero) : (f64, f64, f64) -> f64
-    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
-    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
-    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
-    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
-    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
-    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_automatic_list_UsageRules(%value: f64) -> f64 {
-    %converter = func.constant @strict_automatic_UsageRules : (f64) -> f64
-    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_hash_UsageRules(%value: f64) -> i64 {
-    %text = func.call @strict_automatic_UsageRules(%value) : (f64) -> f64
-    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
-    return %hash : i64
-  }
   func.func private @strict_automatic_CallTarget(%value: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %value, %zero : f64
@@ -423699,6 +426312,56 @@ module {
   }
   func.func private @strict_hash_Automatic(%value: f64) -> i64 {
     %text = func.call @strict_automatic_Automatic(%value) : (f64) -> f64
+    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
+    return %hash : i64
+  }
+  func.func private @strict_automatic_UsageRules(%value: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %value, %zero : f64
+    cf.cond_br %unset, ^unset, ^set
+  ^unset:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    return %empty : f64
+  ^set:
+    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %l0 = func.call @strict_list_empty() : () -> f64
+    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
+    %x0 = func.call @strict_list_text_text(%t0m0v) : (f64) -> f64
+    %l1 = func.call @strict_list_add_set(%l0, %x0, %t0m0v) : (f64, f64, f64) -> f64
+    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
+    %x1 = func.call @strict_automatic_list_SyntaxNode(%t0m1v) : (f64) -> f64
+    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
+    %t0m2 = llvm.getelementptr %p[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m2v = llvm.load %t0m2 : !llvm.ptr -> f64
+    %x2 = func.call @strict_list_text_text(%t0m2v) : (f64) -> f64
+    %l3 = func.call @strict_list_add_set(%l2, %x2, %t0m2v) : (f64, f64, f64) -> f64
+    %t0m3 = llvm.getelementptr %p[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m3v = llvm.load %t0m3 : !llvm.ptr -> f64
+    %x3 = func.call @strict_list_text_text(%t0m3v) : (f64) -> f64
+    %l4 = func.call @strict_list_add_set(%l3, %x3, %t0m3v) : (f64, f64, f64) -> f64
+    %t0m4 = llvm.getelementptr %p[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %t0m4v = llvm.load %t0m4 : !llvm.ptr -> f64
+    %x4 = func.call @strict_number_text(%t0m4v) : (f64) -> f64
+    %l5 = func.call @strict_list_add(%l4, %x4) : (f64, f64) -> f64
+    %joined = func.call @strict_text_combine(%zero, %l5, %zero) : (f64, f64, f64) -> f64
+    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
+    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
+    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_automatic_list_UsageRules(%value: f64) -> f64 {
+    %converter = func.constant @strict_automatic_UsageRules : (f64) -> f64
+    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_hash_UsageRules(%value: f64) -> i64 {
+    %text = func.call @strict_automatic_UsageRules(%value) : (f64) -> f64
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
@@ -424978,7 +427641,7 @@ module {
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
-  func.func private @strict_automatic_Stacktrace(%value: f64) -> f64 {
+  func.func private @strict_automatic_Method(%value: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %value, %zero : f64
     cf.cond_br %unset, ^unset, ^set
@@ -424991,15 +427654,15 @@ module {
     %l0 = func.call @strict_list_empty() : () -> f64
     %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
     %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
-    %x0 = func.call @strict_automatic_Method(%t0m0v) : (f64) -> f64
-    %l1 = func.call @strict_list_add_set(%l0, %x0, %t0m0v) : (f64, f64, f64) -> f64
+    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
     %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
-    %l2 = func.call @strict_list_add_set(%l1, %t0m1v, %t0m1v) : (f64, f64, f64) -> f64
+    %x1 = func.call @strict_automatic_Type(%t0m1v) : (f64) -> f64
+    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
     %t0m2 = llvm.getelementptr %p[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %t0m2v = llvm.load %t0m2 : !llvm.ptr -> f64
-    %x2 = func.call @strict_number_text(%t0m2v) : (f64) -> f64
-    %l3 = func.call @strict_list_add(%l2, %x2) : (f64, f64) -> f64
+    %x2 = func.call @strict_automatic_list_Variable(%t0m2v) : (f64) -> f64
+    %l3 = func.call @strict_list_add_set(%l2, %x2, %t0m2v) : (f64, f64, f64) -> f64
     %joined = func.call @strict_text_combine(%zero, %l3, %zero) : (f64, f64, f64) -> f64
     %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
     %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
@@ -425009,13 +427672,13 @@ module {
     %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
     return %result : f64
   }
-  func.func private @strict_automatic_list_Stacktrace(%value: f64) -> f64 {
-    %converter = func.constant @strict_automatic_Stacktrace : (f64) -> f64
+  func.func private @strict_automatic_list_Method(%value: f64) -> f64 {
+    %converter = func.constant @strict_automatic_Method : (f64) -> f64
     %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
     return %result : f64
   }
-  func.func private @strict_hash_Stacktrace(%value: f64) -> i64 {
-    %text = func.call @strict_automatic_Stacktrace(%value) : (f64) -> f64
+  func.func private @strict_hash_Method(%value: f64) -> i64 {
+    %text = func.call @strict_automatic_Method(%value) : (f64) -> f64
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
@@ -425076,47 +427739,6 @@ module {
   }
   func.func private @strict_hash_Generic(%value: f64) -> i64 {
     %text = func.call @strict_automatic_Generic(%value) : (f64) -> f64
-    %hash = func.call @strict_hash_text(%text) : (f64) -> i64
-    return %hash : i64
-  }
-  func.func private @strict_automatic_Method(%value: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %unset = arith.cmpf oeq, %value, %zero : f64
-    cf.cond_br %unset, ^unset, ^set
-  ^unset:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
-    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    return %empty : f64
-  ^set:
-    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
-    %l0 = func.call @strict_list_empty() : () -> f64
-    %t0m0 = llvm.getelementptr %p[0] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m0v = llvm.load %t0m0 : !llvm.ptr -> f64
-    %l1 = func.call @strict_list_add_set(%l0, %t0m0v, %t0m0v) : (f64, f64, f64) -> f64
-    %t0m1 = llvm.getelementptr %p[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m1v = llvm.load %t0m1 : !llvm.ptr -> f64
-    %x1 = func.call @strict_automatic_Type(%t0m1v) : (f64) -> f64
-    %l2 = func.call @strict_list_add_set(%l1, %x1, %t0m1v) : (f64, f64, f64) -> f64
-    %t0m2 = llvm.getelementptr %p[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    %t0m2v = llvm.load %t0m2 : !llvm.ptr -> f64
-    %x2 = func.call @strict_automatic_list_Variable(%t0m2v) : (f64) -> f64
-    %l3 = func.call @strict_list_add_set(%l2, %x2, %t0m2v) : (f64, f64, f64) -> f64
-    %joined = func.call @strict_text_combine(%zero, %l3, %zero) : (f64, f64, f64) -> f64
-    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
-    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
-    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
-    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
-    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
-    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_automatic_list_Method(%value: f64) -> f64 {
-    %converter = func.constant @strict_automatic_Method : (f64) -> f64
-    %result = func.call @strict_list_text_mapped(%value, %converter) : (f64, (f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_hash_Method(%value: f64) -> i64 {
-    %text = func.call @strict_automatic_Method(%value) : (f64) -> f64
     %hash = func.call @strict_hash_text(%text) : (f64) -> i64
     return %hash : i64
   }
@@ -425230,11 +427852,11 @@ module {
   llvm.mlir.global internal constant @sStrict_Run_1_107("Run\00Strict.Run\00Strict.strict\0017\00") : !llvm.array<32 x i8>
   llvm.mlir.global internal constant @sStrict_Run_1_112("Run\00Strict.Run\00Strict.strict\0017\00") : !llvm.array<32 x i8>
   llvm.mlir.global internal constant @wStrict_Rest_1("Strict.Rest\00Strict.strict\00") : !llvm.array<26 x i8>
-  llvm.mlir.global internal constant @sStrict_Rest_1_7("Rest\00Strict.Rest\00Strict.strict\0045\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @sStrict_Rest_1_7("Rest\00Strict.Rest\00Strict.strict\0047\00") : !llvm.array<34 x i8>
   llvm.mlir.global internal constant @wStrict_Rooted_1("Strict.Rooted\00Strict.strict\00") : !llvm.array<28 x i8>
-  llvm.mlir.global internal constant @sStrict_Rooted_1_19("Rooted\00Strict.Rooted\00Strict.strict\0039\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @sStrict_Rooted_1_19("Rooted\00Strict.Rooted\00Strict.strict\0041\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @cStrict_Rooted_1_21("/Any.strict\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @sStrict_Rooted_1_42("Rooted\00Strict.Rooted\00Strict.strict\0041\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @sStrict_Rooted_1_42("Rooted\00Strict.Rooted\00Strict.strict\0043\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @wStrict_Message_2("Strict.Message\00Strict.strict\00") : !llvm.array<29 x i8>
   llvm.mlir.global internal @lStrict_Message_2_0(0.0 : f64) : f64
   llvm.mlir.global internal constant @cStrict_Message_2_0_0("version\00") : !llvm.array<8 x i8>
@@ -425250,11 +427872,12 @@ module {
   llvm.mlir.global internal constant @cStrict_Message_2_38_0("strict <file> [arguments]  run the Run method on the Strict VM, the fastest, everything stays in memory\00") : !llvm.array<104 x i8>
   llvm.mlir.global internal constant @cStrict_Message_2_38_1("strict build <file>        run the tests, then compile a native executable (Name.test without a Run method)\00") : !llvm.array<108 x i8>
   llvm.mlir.global internal constant @cStrict_Message_2_38_2("strict test <file>         run the inline tests of every method on the Strict VM\00") : !llvm.array<81 x i8>
-  llvm.mlir.global internal constant @cStrict_Message_2_38_3("strict test <file> lines   run them natively and print how often and how long each line ran (with and without callees)\00") : !llvm.array<119 x i8>
-  llvm.mlir.global internal constant @cStrict_Message_2_38_4("strict check <folder>      validate the .strict files: type rules, unused members, limits\00") : !llvm.array<90 x i8>
-  llvm.mlir.global internal constant @cStrict_Message_2_38_5("strict format <file>       print the file in its canonical form, each method body as the parser reads it\00") : !llvm.array<105 x i8>
-  llvm.mlir.global internal constant @cStrict_Message_2_38_6("strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub\00") : !llvm.array<108 x i8>
-  llvm.mlir.global internal constant @cStrict_Message_2_38_7("strict version             show the version number and when this strict executable was built\00") : !llvm.array<93 x i8>
+  llvm.mlir.global internal constant @cStrict_Message_2_38_3("strict test <file> -       test the source read from standard input as <file>, nothing is written\00") : !llvm.array<98 x i8>
+  llvm.mlir.global internal constant @cStrict_Message_2_38_4("strict test <file> lines   run them natively and print how often and how long each line ran (with and without callees)\00") : !llvm.array<119 x i8>
+  llvm.mlir.global internal constant @cStrict_Message_2_38_5("strict check <folder>      validate the .strict files: type rules, unused members, limits\00") : !llvm.array<90 x i8>
+  llvm.mlir.global internal constant @cStrict_Message_2_38_6("strict format <file>       print the file in its canonical form, each method body as the parser reads it\00") : !llvm.array<105 x i8>
+  llvm.mlir.global internal constant @cStrict_Message_2_38_7("strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub\00") : !llvm.array<108 x i8>
+  llvm.mlir.global internal constant @cStrict_Message_2_38_8("strict version             show the version number and when this strict executable was built\00") : !llvm.array<93 x i8>
   llvm.mlir.global internal constant @cStrict_Message_2_39("\0A\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cStrict_Message_2_44("test\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @sStrict_Message_2_51("Message\00Strict.Message\00Strict.strict\0028\00") : !llvm.array<40 x i8>
@@ -425267,20 +427890,22 @@ module {
   llvm.mlir.global internal constant @cStrict_Message_2_96(" not found\00") : !llvm.array<11 x i8>
   llvm.mlir.global internal constant @wStrict_Tool_2("Strict.Tool\00Strict.strict\00") : !llvm.array<26 x i8>
   llvm.mlir.global internal constant @cStrict_Tool_2_1("format\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @sStrict_Tool_2_5("Tool\00Strict.Tool\00Strict.strict\0048\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @sStrict_Tool_2_5("Tool\00Strict.Tool\00Strict.strict\0050\00") : !llvm.array<34 x i8>
   llvm.mlir.global internal constant @cStrict_Tool_2_11(".\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cStrict_Tool_2_15("check\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @sStrict_Tool_2_22("Tool\00Strict.Tool\00Strict.strict\0050\00") : !llvm.array<34 x i8>
-  llvm.mlir.global internal constant @sStrict_Tool_2_25("Tool\00Strict.Tool\00Strict.strict\0050\00") : !llvm.array<34 x i8>
-  llvm.mlir.global internal constant @sStrict_Tool_2_36("Tool\00Strict.Tool\00Strict.strict\0050\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @sStrict_Tool_2_22("Tool\00Strict.Tool\00Strict.strict\0052\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @sStrict_Tool_2_25("Tool\00Strict.Tool\00Strict.strict\0052\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @sStrict_Tool_2_36("Tool\00Strict.Tool\00Strict.strict\0052\00") : !llvm.array<34 x i8>
   llvm.mlir.global internal constant @wStrict_Tested_1("Strict.Tested\00Strict.strict\00") : !llvm.array<28 x i8>
   llvm.mlir.global internal constant @sStrict_Tested_1_7("Tested\00Strict.Tested\00Strict.strict\0032\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @cStrict_Tested_1_13("\00") : !llvm.array<1 x i8>
-  llvm.mlir.global internal constant @cStrict_Tested_1_20("lines\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @sStrict_Tested_1_27("Tested\00Strict.Tested\00Strict.strict\0033\00") : !llvm.array<38 x i8>
-  llvm.mlir.global internal constant @sStrict_Tested_1_30("Tested\00Strict.Tested\00Strict.strict\0033\00") : !llvm.array<38 x i8>
-  llvm.mlir.global internal constant @sStrict_Tested_1_43("Tested\00Strict.Tested\00Strict.strict\0033\00") : !llvm.array<38 x i8>
-  llvm.mlir.global internal constant @sStrict_Tested_1_46("Tested\00Strict.Tested\00Strict.strict\0033\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @cStrict_Tested_1_20("-\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @sStrict_Tested_1_24("Tested\00Strict.Tested\00Strict.strict\0034\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @cStrict_Tested_1_37("lines\00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal constant @sStrict_Tested_1_44("Tested\00Strict.Tested\00Strict.strict\0035\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @sStrict_Tested_1_47("Tested\00Strict.Tested\00Strict.strict\0035\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @sStrict_Tested_1_60("Tested\00Strict.Tested\00Strict.strict\0035\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @sStrict_Tested_1_63("Tested\00Strict.Tested\00Strict.strict\0035\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @wStrict_Built_3("Strict.Built\00Strict.strict\00") : !llvm.array<27 x i8>
   llvm.mlir.global internal constant @wExecute_Run_1("Execute.Run\00Runtime/Execute.strict\00") : !llvm.array<35 x i8>
   llvm.mlir.global internal constant @sExecute_Run_1_3("Run\00Execute.Run\00Runtime/Execute.strict\005\00") : !llvm.array<41 x i8>
@@ -425307,6 +427932,15 @@ module {
   llvm.mlir.global internal constant @cStrict_Updated_2_0("Updated \00") : !llvm.array<9 x i8>
   llvm.mlir.global internal constant @cStrict_Updated_2_6(" packages in \00") : !llvm.array<14 x i8>
   llvm.mlir.global internal constant @sStrict_Updated_2_10("%s\0A\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @wFileCompiler_Normalized_1("FileCompiler.Normalized\00Bytecode/FileCompiler.strict\00") : !llvm.array<53 x i8>
+  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_3("\5C\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_4("/\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_7("/./\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_8("/\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_13("/\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_24(":\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_40("./\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_51("./\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @wNativeBuild_Compile_3("NativeBuild.Compile\00Compiler/NativeBuild.strict\00") : !llvm.array<48 x i8>
   llvm.mlir.global internal constant @cNativeBuild_Compile_3_60("Run\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @cNativeBuild_Compile_3_66("$Tests\00") : !llvm.array<7 x i8>
@@ -425318,7 +427952,7 @@ module {
   llvm.mlir.global internal constant @sExecute_Failures_3_83("%s\0A\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @wExecute_Loaded_2("Execute.Loaded\00Runtime/Execute.strict\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @wList_TypeEntry__First_0("List(TypeEntry).First\00List.strict\00") : !llvm.array<34 x i8>
-  llvm.mlir.global internal constant @sList_TypeEntry__First_0_1("First\00List(TypeEntry).First\00List.strict\0096\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal constant @sList_TypeEntry__First_0_1("First\00List(TypeEntry).First\00List.strict\00103\00") : !llvm.array<44 x i8>
   llvm.mlir.global internal constant @wExecute_HasRun_1("Execute.HasRun\00Runtime/Execute.strict\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @cExecute_HasRun_1_5("Run\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @wExecute_Summary_2("Execute.Summary\00Runtime/Execute.strict\00") : !llvm.array<39 x i8>
@@ -425359,15 +427993,6 @@ module {
   llvm.mlir.global internal constant @cFileCheck_Problem_2_24("\09\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cFileCheck_Problem_2_34("EmptyLineInsideMethod: \00") : !llvm.array<24 x i8>
   llvm.mlir.global internal constant @sFileCheck_Problem_2_37("Problem\00FileCheck.Problem\00Expressions/FileCheck.strict\00156\00") : !llvm.array<59 x i8>
-  llvm.mlir.global internal constant @wFileCompiler_Normalized_1("FileCompiler.Normalized\00Bytecode/FileCompiler.strict\00") : !llvm.array<53 x i8>
-  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_3("\5C\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_4("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_7("/./\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_8("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_13("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_24(":\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_40("./\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @cFileCompiler_Normalized_1_51("./\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @wRoundTrip_Formatted_1("RoundTrip.Formatted\00Validators/RoundTrip.strict\00") : !llvm.array<48 x i8>
   llvm.mlir.global internal constant @cRoundTrip_Formatted_1_11("\09\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wValidateCheck_Run_2("ValidateCheck.Run\00Validators/ValidateCheck.strict\00") : !llvm.array<50 x i8>
@@ -425378,6 +428003,13 @@ module {
   llvm.mlir.global internal constant @cRepositories_Updated_1_36("\5C\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cRepositories_Updated_1_37("/\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cRepositories_Updated_1_60("\00") : !llvm.array<1 x i8>
+  llvm.mlir.global internal constant @wTypeSource_Relative_1("TypeSource.Relative\00Bytecode/TypeSource.strict\00") : !llvm.array<47 x i8>
+  llvm.mlir.global internal constant @cTypeSource_Relative_1_2("\5C\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cTypeSource_Relative_1_3("/\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cTypeSource_Relative_1_6("/\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cTypeSource_Relative_1_10("\5C\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cTypeSource_Relative_1_11("/\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cTypeSource_Relative_1_28("./\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @wNativeBuild_IsProgram_1("NativeBuild.IsProgram\00Compiler/NativeBuild.strict\00") : !llvm.array<50 x i8>
   llvm.mlir.global internal constant @cNativeBuild_IsProgram_1_10("Run\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @wFileCompiler_Compiled_3("FileCompiler.Compiled\00Bytecode/FileCompiler.strict\00") : !llvm.array<51 x i8>
@@ -425447,7 +428079,7 @@ module {
   llvm.mlir.global internal constant @cResolveCheck_Tree_1_54("/\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wExecute_Stale_1("Execute.Stale\00Runtime/Execute.strict\00") : !llvm.array<37 x i8>
   llvm.mlir.global internal constant @wList_Text__First_0("List(Text).First\00List.strict\00") : !llvm.array<29 x i8>
-  llvm.mlir.global internal constant @sList_Text__First_0_1("First\00List(Text).First\00List.strict\0096\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @sList_Text__First_0_1("First\00List(Text).First\00List.strict\00103\00") : !llvm.array<39 x i8>
   llvm.mlir.global internal constant @wSourceFiles_Of_1("SourceFiles.Of\00Bytecode/SourceFiles.strict\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal constant @cSourceFiles_Of_1_2("./Any.strict\00") : !llvm.array<13 x i8>
   llvm.mlir.global internal constant @cSourceFiles_Of_1_16(".\00") : !llvm.array<2 x i8>
@@ -425518,13 +428150,6 @@ module {
   llvm.mlir.global internal constant @cFileCompiler_IsParsed_1_105(")\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wTokenizer_Tokens_0("Tokenizer.Tokens\00Expressions/Tokenizer.strict\00") : !llvm.array<46 x i8>
   llvm.mlir.global internal constant @cTokenizer_Tokens_0_21(" \00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @wTypeSource_Relative_1("TypeSource.Relative\00Bytecode/TypeSource.strict\00") : !llvm.array<47 x i8>
-  llvm.mlir.global internal constant @cTypeSource_Relative_1_2("\5C\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cTypeSource_Relative_1_3("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cTypeSource_Relative_1_6("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cTypeSource_Relative_1_10("\5C\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cTypeSource_Relative_1_11("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @cTypeSource_Relative_1_28("./\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @wRoundTrip_Ended_1("RoundTrip.Ended\00Validators/RoundTrip.strict\00") : !llvm.array<44 x i8>
   llvm.mlir.global internal constant @cRoundTrip_Ended_1_6("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal constant @wTypeShape_IsMethodHeader_1("TypeShape.IsMethodHeader\00Expressions/TypeShape.strict\00") : !llvm.array<54 x i8>
@@ -425571,7 +428196,7 @@ module {
   llvm.mlir.global internal constant @cTypeEntry_Source_0_15(".strict\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @wMlirModule_Functions_0("MlirModule.Functions\00Compiler/MlirModule.strict\00") : !llvm.array<48 x i8>
   llvm.mlir.global internal constant @wList_MlirFunction__First_0("List(MlirFunction).First\00List.strict\00") : !llvm.array<37 x i8>
-  llvm.mlir.global internal constant @sList_MlirFunction__First_0_1("First\00List(MlirFunction).First\00List.strict\0096\00") : !llvm.array<46 x i8>
+  llvm.mlir.global internal constant @sList_MlirFunction__First_0_1("First\00List(MlirFunction).First\00List.strict\00103\00") : !llvm.array<47 x i8>
   llvm.mlir.global internal constant @wMlirLines_Counted_3("MlirLines.Counted\00Compiler/MlirLines.strict\00") : !llvm.array<44 x i8>
   llvm.mlir.global internal constant @wMlirFunction_Text_0("MlirFunction.Text\00Compiler/MlirFunction.strict\00") : !llvm.array<47 x i8>
   llvm.mlir.global internal constant @cMlirFunction_Text_0_13("\0A\00") : !llvm.array<2 x i8>
@@ -425750,7 +428375,7 @@ module {
   llvm.mlir.global internal constant @cBinaryFile_Owned_1_105(".bytecode\00") : !llvm.array<10 x i8>
   llvm.mlir.global internal constant @sBinaryFile_Owned_1_112("Owned\00BinaryFile.Owned\00Bytecode/BinaryFile.strict\00104\00") : !llvm.array<54 x i8>
   llvm.mlir.global internal constant @wList_ZipEntry__First_0("List(ZipEntry).First\00List.strict\00") : !llvm.array<33 x i8>
-  llvm.mlir.global internal constant @sList_ZipEntry__First_0_1("First\00List(ZipEntry).First\00List.strict\0096\00") : !llvm.array<42 x i8>
+  llvm.mlir.global internal constant @sList_ZipEntry__First_0_1("First\00List(ZipEntry).First\00List.strict\00103\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal constant @wByteEncoder_Integers_0("ByteEncoder.Integers\00Bytecode/ByteEncoder.strict\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal constant @wZipReader_Entries_0("ZipReader.Entries\00Bytecode/ZipReader.strict\00") : !llvm.array<44 x i8>
   llvm.mlir.global internal constant @wText_EndsWith_1("Text.EndsWith\00Text.strict\00") : !llvm.array<26 x i8>
@@ -425777,12 +428402,12 @@ module {
   llvm.mlir.global internal constant @cNatives_Initial_1_83("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal @lNatives_Initial_1_85(0.0 : f64) : f64
   llvm.mlir.global internal constant @wList_MemberEntry__Last_0("List(MemberEntry).Last\00List.strict\00") : !llvm.array<35 x i8>
-  llvm.mlir.global internal constant @sList_MemberEntry__Last_0_1("Last\00List(MemberEntry).Last\00List.strict\0099\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal constant @sList_MemberEntry__Last_0_1("Last\00List(MemberEntry).Last\00List.strict\00106\00") : !llvm.array<44 x i8>
   llvm.mlir.global internal constant @wVmValue_OfNumber_1("VmValue.OfNumber\00Runtime/VmValue.strict\00") : !llvm.array<40 x i8>
   llvm.mlir.global internal constant @cVmValue_OfNumber_1_0("Number\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @cVmValue_OfNumber_1_2("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal constant @wList_MemberEntry__First_0("List(MemberEntry).First\00List.strict\00") : !llvm.array<36 x i8>
-  llvm.mlir.global internal constant @sList_MemberEntry__First_0_1("First\00List(MemberEntry).First\00List.strict\0096\00") : !llvm.array<45 x i8>
+  llvm.mlir.global internal constant @sList_MemberEntry__First_0_1("First\00List(MemberEntry).First\00List.strict\00103\00") : !llvm.array<46 x i8>
   llvm.mlir.global internal constant @wVmValue_OfList_1("VmValue.OfList\00Runtime/VmValue.strict\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @cVmValue_OfList_1_0("List\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @cVmValue_OfList_1_2("\00") : !llvm.array<1 x i8>
@@ -425845,14 +428470,14 @@ module {
   llvm.mlir.global internal constant @cStatementParser_ParseStatement_0_25_2("for\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @cStatementParser_ParseStatement_0_25_3("else\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @wList_SyntaxNode__First_0("List(SyntaxNode).First\00List.strict\00") : !llvm.array<35 x i8>
-  llvm.mlir.global internal constant @sList_SyntaxNode__First_0_1("First\00List(SyntaxNode).First\00List.strict\0096\00") : !llvm.array<44 x i8>
+  llvm.mlir.global internal constant @sList_SyntaxNode__First_0_1("First\00List(SyntaxNode).First\00List.strict\00103\00") : !llvm.array<45 x i8>
   llvm.mlir.global internal constant @wSyntaxNode_to_0_Text("SyntaxNode.to\00Expressions/SyntaxNode.strict\00") : !llvm.array<44 x i8>
   llvm.mlir.global internal constant @cSyntaxNode_to_0_Text_1("Binary\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @cSyntaxNode_to_0_Text_8("List\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @cSyntaxNode_to_0_Text_11("(\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cSyntaxNode_to_0_Text_16(")\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wList_SyntaxNode__Last_0("List(SyntaxNode).Last\00List.strict\00") : !llvm.array<34 x i8>
-  llvm.mlir.global internal constant @sList_SyntaxNode__Last_0_1("Last\00List(SyntaxNode).Last\00List.strict\0099\00") : !llvm.array<42 x i8>
+  llvm.mlir.global internal constant @sList_SyntaxNode__Last_0_1("Last\00List(SyntaxNode).Last\00List.strict\00106\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal constant @wFileCompiler_IsComplete_1("FileCompiler.IsComplete\00Bytecode/FileCompiler.strict\00") : !llvm.array<53 x i8>
   llvm.mlir.global internal constant @cFileCompiler_IsComplete_1_5("Missing\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @wTokenizer_TokenLength_1("Tokenizer.TokenLength\00Expressions/Tokenizer.strict\00") : !llvm.array<51 x i8>
@@ -426193,7 +428818,7 @@ module {
   llvm.mlir.global internal constant @wText_Split_1("Text.Split\00Text.strict\00") : !llvm.array<23 x i8>
   llvm.mlir.global internal constant @cText_Split_1_4("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal constant @wList_Text__Last_0("List(Text).Last\00List.strict\00") : !llvm.array<28 x i8>
-  llvm.mlir.global internal constant @sList_Text__Last_0_1("Last\00List(Text).Last\00List.strict\0099\00") : !llvm.array<36 x i8>
+  llvm.mlir.global internal constant @sList_Text__Last_0_1("Last\00List(Text).Last\00List.strict\00106\00") : !llvm.array<37 x i8>
   llvm.mlir.global internal constant @wToolchain_Lowered_1("Toolchain.Lowered\00Compiler/Toolchain.strict\00") : !llvm.array<44 x i8>
   llvm.mlir.global internal constant @cToolchain_Lowered_1_0(" --reconcile-unrealized-casts -o \00") : !llvm.array<34 x i8>
   llvm.mlir.global internal constant @cToolchain_Lowered_1_2(".llvm.mlir\00") : !llvm.array<11 x i8>
@@ -426361,7 +428986,7 @@ module {
   llvm.mlir.global internal constant @cMethodEntry_Fit_4_1("to\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @sMethodEntry_Fit_4_70("Fit\00MethodEntry.Fit\00Bytecode/MethodEntry.strict\0062\00") : !llvm.array<51 x i8>
   llvm.mlir.global internal constant @wList_InstructionEntry__First_0("List(InstructionEntry).First\00List.strict\00") : !llvm.array<41 x i8>
-  llvm.mlir.global internal constant @sList_InstructionEntry__First_0_1("First\00List(InstructionEntry).First\00List.strict\0096\00") : !llvm.array<50 x i8>
+  llvm.mlir.global internal constant @sList_InstructionEntry__First_0_1("First\00List(InstructionEntry).First\00List.strict\00103\00") : !llvm.array<51 x i8>
   llvm.mlir.global internal constant @wPayloadDecoder_Value_1("PayloadDecoder.Value\00Runtime/PayloadDecoder.strict\00") : !llvm.array<51 x i8>
   llvm.mlir.global internal constant @sPayloadDecoder_Value_1_4("Value\00PayloadDecoder.Value\00Runtime/PayloadDecoder.strict\008\00") : !llvm.array<59 x i8>
   llvm.mlir.global internal constant @sPayloadDecoder_Value_1_17("Value\00PayloadDecoder.Value\00Runtime/PayloadDecoder.strict\0010\00") : !llvm.array<60 x i8>
@@ -426409,7 +429034,7 @@ module {
   llvm.mlir.global internal constant @cVmValue_Traces_0_27(":line \00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @sVmValue_Traces_0_33("Traces\00VmValue.Traces\00Runtime/VmValue.strict\00103\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal constant @wList_Number__First_0("List(Number).First\00List.strict\00") : !llvm.array<31 x i8>
-  llvm.mlir.global internal constant @sList_Number__First_0_1("First\00List(Number).First\00List.strict\0096\00") : !llvm.array<40 x i8>
+  llvm.mlir.global internal constant @sList_Number__First_0_1("First\00List(Number).First\00List.strict\00103\00") : !llvm.array<41 x i8>
   llvm.mlir.global internal constant @wStatementParser_Rest_1("StatementParser.Rest\00Expressions/StatementParser.strict\00") : !llvm.array<56 x i8>
   llvm.mlir.global internal constant @wStatementParser_Keyword_1("StatementParser.Keyword\00Expressions/StatementParser.strict\00") : !llvm.array<59 x i8>
   llvm.mlir.global internal constant @cStatementParser_Keyword_1_1("else\00") : !llvm.array<5 x i8>
@@ -426611,7 +429236,7 @@ module {
   llvm.mlir.global internal constant @wMethodCodegen_StoreConstant_2("MethodCodegen.StoreConstant\00Bytecode/MethodCodegen.strict\00") : !llvm.array<58 x i8>
   llvm.mlir.global internal constant @wCodeBlock_Add_1("CodeBlock.Add\00Bytecode/CodeBlock.strict\00") : !llvm.array<40 x i8>
   llvm.mlir.global internal constant @wTestCodegen_Method_2("TestCodegen.Method\00Bytecode/TestCodegen.strict\00") : !llvm.array<47 x i8>
-  llvm.mlir.global internal constant @sTestCodegen_Method_2_4("Method\00TestCodegen.Method\00Bytecode/TestCodegen.strict\0029\00") : !llvm.array<57 x i8>
+  llvm.mlir.global internal constant @sTestCodegen_Method_2_4("Method\00TestCodegen.Method\00Bytecode/TestCodegen.strict\0031\00") : !llvm.array<57 x i8>
   llvm.mlir.global internal constant @cTestCodegen_Method_2_13(" error\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @wCodeBlock_At_1("CodeBlock.At\00Bytecode/CodeBlock.strict\00") : !llvm.array<39 x i8>
   llvm.mlir.global internal constant @wInstructionEntry_Named_3("InstructionEntry.Named\00Bytecode/InstructionEntry.strict\00") : !llvm.array<56 x i8>
@@ -426716,7 +429341,7 @@ module {
   llvm.mlir.global internal constant @sMlirFunction_Emitted_1_4("Emitted\00MlirFunction.Emitted\00Compiler/MlirFunction.strict\00106\00") : !llvm.array<62 x i8>
   llvm.mlir.global internal constant @sMlirFunction_Emitted_1_122("Emitted\00MlirFunction.Emitted\00Compiler/MlirFunction.strict\00114\00") : !llvm.array<62 x i8>
   llvm.mlir.global internal constant @wList_InstructionEntry__Last_0("List(InstructionEntry).Last\00List.strict\00") : !llvm.array<40 x i8>
-  llvm.mlir.global internal constant @sList_InstructionEntry__Last_0_1("Last\00List(InstructionEntry).Last\00List.strict\0099\00") : !llvm.array<48 x i8>
+  llvm.mlir.global internal constant @sList_InstructionEntry__Last_0_1("Last\00List(InstructionEntry).Last\00List.strict\00106\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal constant @wMlirLines_End_0("MlirLines.End\00Compiler/MlirLines.strict\00") : !llvm.array<40 x i8>
   llvm.mlir.global internal constant @cMlirLines_End_0_8("    func.call @strict_line_leave(%linetable, %linestate) : (!llvm.ptr, !llvm.ptr) -> ()\00") : !llvm.array<88 x i8>
   llvm.mlir.global internal constant @wMlirLayout_Returned_1("MlirLayout.Returned\00Compiler/MlirLayout.strict\00") : !llvm.array<47 x i8>
@@ -426964,7 +429589,7 @@ module {
   llvm.mlir.global internal constant @cTypeShape_IsComputed_1_38("=\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wShapeTyping_ComputedType_3("ShapeTyping.ComputedType\00Expressions/ShapeTyping.strict\00") : !llvm.array<56 x i8>
   llvm.mlir.global internal constant @wInstantiation_Template_3("Instantiation.Template\00Expressions/Instantiation.strict\00") : !llvm.array<56 x i8>
-  llvm.mlir.global internal constant @sInstantiation_Template_3_4("Template\00Instantiation.Template\00Expressions/Instantiation.strict\0067\00") : !llvm.array<68 x i8>
+  llvm.mlir.global internal constant @sInstantiation_Template_3_4("Template\00Instantiation.Template\00Expressions/Instantiation.strict\0076\00") : !llvm.array<68 x i8>
   llvm.mlir.global internal constant @cInstantiation_Template_3_31("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal constant @cInstantiation_Template_3_49("Call\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @cInstantiation_Template_3_74("\00") : !llvm.array<1 x i8>
@@ -427005,7 +429630,7 @@ module {
   llvm.mlir.global internal constant @sEntryDecoder_Member_1_10("Member\00EntryDecoder.Member\00Bytecode/EntryDecoder.strict\0026\00") : !llvm.array<59 x i8>
   llvm.mlir.global internal constant @sEntryDecoder_Member_1_20("Member\00EntryDecoder.Member\00Bytecode/EntryDecoder.strict\0026\00") : !llvm.array<59 x i8>
   llvm.mlir.global internal constant @wList_Number__Last_0("List(Number).Last\00List.strict\00") : !llvm.array<30 x i8>
-  llvm.mlir.global internal constant @sList_Number__Last_0_1("Last\00List(Number).Last\00List.strict\0099\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @sList_Number__Last_0_1("Last\00List(Number).Last\00List.strict\00106\00") : !llvm.array<39 x i8>
   llvm.mlir.global internal constant @wEntryDecoder_Method_1("EntryDecoder.Method\00Bytecode/EntryDecoder.strict\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal constant @sEntryDecoder_Method_1_1("Method\00EntryDecoder.Method\00Bytecode/EntryDecoder.strict\0023\00") : !llvm.array<59 x i8>
   llvm.mlir.global internal constant @sEntryDecoder_Method_1_3("Method\00EntryDecoder.Method\00Bytecode/EntryDecoder.strict\0023\00") : !llvm.array<59 x i8>
@@ -427368,7 +429993,7 @@ module {
   llvm.mlir.global internal constant @cLinker_UsedMethods_2_39("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal constant @cLinker_UsedMethods_2_60(".\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wAutomatic_Completed_3("Automatic.Completed\00Bytecode/Automatic.strict\00") : !llvm.array<46 x i8>
-  llvm.mlir.global internal constant @sAutomatic_Completed_3_48("Completed\00Automatic.Completed\00Bytecode/Automatic.strict\00100\00") : !llvm.array<60 x i8>
+  llvm.mlir.global internal constant @sAutomatic_Completed_3_48("Completed\00Automatic.Completed\00Bytecode/Automatic.strict\00118\00") : !llvm.array<60 x i8>
   llvm.mlir.global internal constant @wLinker_Fresh_1("Linker.Fresh\00Bytecode/Linker.strict\00") : !llvm.array<36 x i8>
   llvm.mlir.global internal constant @cLinker_Fresh_1_1(":\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cLinker_Fresh_1_21("\00") : !llvm.array<1 x i8>
@@ -428153,9 +430778,11 @@ module {
   llvm.mlir.global internal constant @cKnownTypes_BaseName_1_6("List\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @cKnownTypes_BaseName_1_10("(\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wInstantiation_Members_2("Instantiation.Members\00Expressions/Instantiation.strict\00") : !llvm.array<55 x i8>
-  llvm.mlir.global internal constant @sInstantiation_Members_2_20("Members\00Instantiation.Members\00Expressions/Instantiation.strict\0053\00") : !llvm.array<66 x i8>
-  llvm.mlir.global internal constant @cInstantiation_Members_2_22("Generic\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @sInstantiation_Members_2_37("Members\00Instantiation.Members\00Expressions/Instantiation.strict\0053\00") : !llvm.array<66 x i8>
+  llvm.mlir.global internal constant @sInstantiation_Members_2_20("Members\00Instantiation.Members\00Expressions/Instantiation.strict\0056\00") : !llvm.array<66 x i8>
+  llvm.mlir.global internal @lInstantiation_Members_2_22(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cInstantiation_Members_2_22_0("Generic\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Members_2_22_1("Generics\00") : !llvm.array<9 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Members_2_44("Generics\00") : !llvm.array<9 x i8>
   llvm.mlir.global internal constant @wTypeCodegen_Concrete_1("TypeCodegen.Concrete\00Bytecode/TypeCodegen.strict\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal constant @cTypeCodegen_Concrete_1_1("(\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cTypeCodegen_Concrete_1_22("Strict/List(\00") : !llvm.array<13 x i8>
@@ -428230,10 +430857,11 @@ module {
   llvm.mlir.global internal constant @wInstructionEntry_Print_1("InstructionEntry.Print\00Bytecode/InstructionEntry.strict\00") : !llvm.array<56 x i8>
   llvm.mlir.global internal @lInstructionEntry_Print_1_5(0.0 : f64) : f64
   llvm.mlir.global internal constant @wTestCodegen_Got_1("TestCodegen.Got\00Bytecode/TestCodegen.strict\00") : !llvm.array<44 x i8>
-  llvm.mlir.global internal constant @cTestCodegen_Got_1_3("tested\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @cTestCodegen_Got_1_13("tested\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @cTestCodegen_Got_1_16("Text\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @cTestCodegen_Got_1_21("  got: \00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @cTestCodegen_Got_1_2("tested\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @cTestCodegen_Got_1_5("Dictionary(\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cTestCodegen_Got_1_16("tested to Text\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @cTestCodegen_Got_1_29("tested is Error then (tested to Text).Replace((tested to Text).Lines.First, tested.Code) else tested.Code\00") : !llvm.array<106 x i8>
+  llvm.mlir.global internal constant @cTestCodegen_Got_1_45("  got: \00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @wTestCodegen_Counted_1("TestCodegen.Counted\00Bytecode/TestCodegen.strict\00") : !llvm.array<48 x i8>
   llvm.mlir.global internal constant @cTestCodegen_Counted_1_0("Binary\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @cTestCodegen_Counted_1_1("+\00") : !llvm.array<2 x i8>
@@ -428286,15 +430914,17 @@ module {
   llvm.mlir.global internal constant @wAutomatic_Missing_3("Automatic.Missing\00Bytecode/Automatic.strict\00") : !llvm.array<44 x i8>
   llvm.mlir.global internal @lAutomatic_Missing_3_1(0.0 : f64) : f64
   llvm.mlir.global internal constant @cAutomatic_Missing_3_1_0("Members\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @cAutomatic_Missing_3_1_1("to HashCode\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @cAutomatic_Missing_3_1_2("Validated\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Missing_3_1_1("Code\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Missing_3_1_2("to HashCode\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Missing_3_1_3("Validated\00") : !llvm.array<10 x i8>
   llvm.mlir.global internal constant @cAutomatic_Missing_3_4(" \00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cAutomatic_Missing_3_9(".\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wAutomatic_Lines_1("Automatic.Lines\00Bytecode/Automatic.strict\00") : !llvm.array<42 x i8>
   llvm.mlir.global internal @lAutomatic_Lines_1_2(0.0 : f64) : f64
   llvm.mlir.global internal constant @cAutomatic_Lines_1_2_0("Members\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @cAutomatic_Lines_1_2_1("to HashCode\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @cAutomatic_Lines_1_2_2("Validated\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Lines_1_2_1("Code\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Lines_1_2_2("to HashCode\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Lines_1_2_3("Validated\00") : !llvm.array<10 x i8>
   llvm.mlir.global internal constant @wLinker_LinkedType_2("Linker.LinkedType\00Bytecode/Linker.strict\00") : !llvm.array<41 x i8>
   llvm.mlir.global internal constant @wMlirCalls_NativeHelper_2("MlirCalls.NativeHelper\00Compiler/MlirCalls.strict\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal constant @sMlirCalls_NativeHelper_2_15("NativeHelper\00MlirCalls.NativeHelper\00Compiler/MlirCalls.strict\0094\00") : !llvm.array<65 x i8>
@@ -429288,28 +431918,30 @@ module {
   llvm.mlir.global internal constant @cHosted_IsHosted_0_0_11("Directory.Exists\00") : !llvm.array<17 x i8>
   llvm.mlir.global internal constant @cHosted_IsHosted_0_0_12("Directory.Create\00") : !llvm.array<17 x i8>
   llvm.mlir.global internal constant @cHosted_IsHosted_0_0_13("Directory.Current\00") : !llvm.array<18 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_14("Process.Find\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_15("Process.RunTool\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_16("Process.OperatingSystem\00") : !llvm.array<24 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_17("Process.Current\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_18("Process.Built\00") : !llvm.array<14 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_19("Process.Elapsed\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_20("Process.FilesRead\00") : !llvm.array<18 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_21("Number.Logarithm\00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_22("Number.Random\00") : !llvm.array<14 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_23("Degrees.Sin\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_24("Degrees.Cos\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_25("Degrees.Tan\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_26("Ratio.Asin\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_27("Ratio.Acos\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_28("Ratio.Atan\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_29("Vector2.Atan\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_30("Library.Call\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_31("Library.TextSlot\00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_32("Library.NumbersSlot\00") : !llvm.array<20 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_33("Library.TextResult\00") : !llvm.array<19 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_34("Library.NumbersResult\00") : !llvm.array<22 x i8>
-  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_35("Library.Failure\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_14("File.Override\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_15("Process.Input\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_16("Process.Find\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_17("Process.RunTool\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_18("Process.OperatingSystem\00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_19("Process.Current\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_20("Process.Built\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_21("Process.Elapsed\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_22("Process.FilesRead\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_23("Number.Logarithm\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_24("Number.Random\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_25("Degrees.Sin\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_26("Degrees.Cos\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_27("Degrees.Tan\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_28("Ratio.Asin\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_29("Ratio.Acos\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_30("Ratio.Atan\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_31("Vector2.Atan\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_32("Library.Call\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_33("Library.TextSlot\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_34("Library.NumbersSlot\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_35("Library.TextResult\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_36("Library.NumbersResult\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @cHosted_IsHosted_0_0_37("Library.Failure\00") : !llvm.array<16 x i8>
   llvm.mlir.global internal constant @cHosted_IsHosted_0_6(".\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wInvocation_TypeName_0("Invocation.TypeName\00Runtime/Invocation.strict\00") : !llvm.array<46 x i8>
   llvm.mlir.global internal constant @wInvocation_MethodName_0("Invocation.MethodName\00Runtime/Invocation.strict\00") : !llvm.array<48 x i8>
@@ -429606,12 +432238,19 @@ module {
   llvm.mlir.global internal constant @cKnownTypes_IsPlural_1_17("s\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wInstantiation_Arguments_1("Instantiation.Arguments\00Expressions/Instantiation.strict\00") : !llvm.array<57 x i8>
   llvm.mlir.global internal constant @wInstantiation_Argument_2("Instantiation.Argument\00Expressions/Instantiation.strict\00") : !llvm.array<56 x i8>
-  llvm.mlir.global internal @lInstantiation_Argument_2_13(0.0 : f64) : f64
-  llvm.mlir.global internal constant @cInstantiation_Argument_2_13_0("List\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @cInstantiation_Argument_2_13_1("Dictionary\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @cInstantiation_Argument_2_13_2("Iterator\00") : !llvm.array<9 x i8>
-  llvm.mlir.global internal constant @sInstantiation_Argument_2_61("Argument\00Instantiation.Argument\00Expressions/Instantiation.strict\0028\00") : !llvm.array<68 x i8>
-  llvm.mlir.global internal constant @cInstantiation_Argument_2_67("Unknown\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal @lInstantiation_Argument_2_17(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cInstantiation_Argument_2_17_0("List\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Argument_2_17_1("Dictionary\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Argument_2_17_2("Iterator\00") : !llvm.array<9 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Argument_2_29("List\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @sInstantiation_Argument_2_50("Argument\00Instantiation.Argument\00Expressions/Instantiation.strict\0028\00") : !llvm.array<68 x i8>
+  llvm.mlir.global internal constant @sInstantiation_Argument_2_95("Argument\00Instantiation.Argument\00Expressions/Instantiation.strict\0030\00") : !llvm.array<68 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Argument_2_101("Unknown\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @wInstantiation_Plural_1("Instantiation.Plural\00Expressions/Instantiation.strict\00") : !llvm.array<54 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Plural_1_1("(\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Plural_1_8("s\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Plural_1_15("List(\00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal constant @cInstantiation_Plural_1_18(")\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wInstantiation_Own_2("Instantiation.Own\00Expressions/Instantiation.strict\00") : !llvm.array<51 x i8>
   llvm.mlir.global internal constant @cInstantiation_Own_2_1("/\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cInstantiation_Own_2_10("/\00") : !llvm.array<2 x i8>
@@ -429687,10 +432326,10 @@ module {
   llvm.mlir.global internal @lTestCodegen_Compared_2_8(0.0 : f64) : f64
   llvm.mlir.global internal constant @cTestCodegen_Compared_2_8_0("is\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @cTestCodegen_Compared_2_8_1("is not\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @sTestCodegen_Compared_2_24("Compared\00TestCodegen.Compared\00Bytecode/TestCodegen.strict\0062\00") : !llvm.array<61 x i8>
+  llvm.mlir.global internal constant @sTestCodegen_Compared_2_24("Compared\00TestCodegen.Compared\00Bytecode/TestCodegen.strict\0064\00") : !llvm.array<61 x i8>
   llvm.mlir.global internal constant @cTestCodegen_Compared_2_45("tested\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @cTestCodegen_Compared_2_54("tested\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @sTestCodegen_Compared_2_73("Compared\00TestCodegen.Compared\00Bytecode/TestCodegen.strict\0065\00") : !llvm.array<61 x i8>
+  llvm.mlir.global internal constant @sTestCodegen_Compared_2_73("Compared\00TestCodegen.Compared\00Bytecode/TestCodegen.strict\0067\00") : !llvm.array<61 x i8>
   llvm.mlir.global internal constant @cTestCodegen_Compared_2_79("Boolean\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @cTestCodegen_Compared_2_80("true\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal @lTestCodegen_Compared_2_81(0.0 : f64) : f64
@@ -429771,12 +432410,17 @@ module {
   llvm.mlir.global internal constant @cAutomatic_Generated_1_1("Members\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal @lAutomatic_Generated_1_5(0.0 : f64) : f64
   llvm.mlir.global internal constant @cAutomatic_Generated_1_5_0("Members Variables\00") : !llvm.array<18 x i8>
-  llvm.mlir.global internal constant @cAutomatic_Generated_1_17("to HashCode\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal @lAutomatic_Generated_1_21(0.0 : f64) : f64
-  llvm.mlir.global internal constant @cAutomatic_Generated_1_21_0("to HashCode\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @cAutomatic_Generated_1_34("Validated \00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal @lAutomatic_Generated_1_41(0.0 : f64) : f64
-  llvm.mlir.global internal constant @cAutomatic_Generated_1_41_0("\09value\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal @lAutomatic_Generated_1_16(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cAutomatic_Generated_1_16_0("to HashCode\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Generated_1_16_1("Code\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Generated_1_23("Code\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal @lAutomatic_Generated_1_27(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cAutomatic_Generated_1_27_0("Code Text\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal @lAutomatic_Generated_1_42(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cAutomatic_Generated_1_42_0("to HashCode\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Generated_1_58("Validated \00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal @lAutomatic_Generated_1_65(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cAutomatic_Generated_1_65_0("\09value\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @wTypeCodegen_Selected_1("TypeCodegen.Selected\00Bytecode/TypeCodegen.strict\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal constant @wMlirNatives_Helper_3("MlirNatives.Helper\00Compiler/MlirNatives.strict\00") : !llvm.array<47 x i8>
   llvm.mlir.global internal constant @cMlirNatives_Helper_3_5("List(\00") : !llvm.array<6 x i8>
@@ -430630,7 +433274,7 @@ module {
   llvm.mlir.global internal constant @wVmValue_Length_0("VmValue.Length\00Runtime/VmValue.strict\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @cVmValue_Length_0_1("Text\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @wList_VmValue__Last_0("List(VmValue).Last\00List.strict\00") : !llvm.array<31 x i8>
-  llvm.mlir.global internal constant @sList_VmValue__Last_0_1("Last\00List(VmValue).Last\00List.strict\0099\00") : !llvm.array<39 x i8>
+  llvm.mlir.global internal constant @sList_VmValue__Last_0_1("Last\00List(VmValue).Last\00List.strict\00106\00") : !llvm.array<40 x i8>
   llvm.mlir.global internal constant @wStorage_Member_2("Storage.Member\00Runtime/Storage.strict\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @wStorage_Replaced_3("Storage.Replaced\00Runtime/Storage.strict\00") : !llvm.array<40 x i8>
   llvm.mlir.global internal constant @cStorage_Replaced_3_16("None\00") : !llvm.array<5 x i8>
@@ -430647,7 +433291,7 @@ module {
   llvm.mlir.global internal constant @cOperations_Comparable_1_44_4("None\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @cOperations_Comparable_1_82("(\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wList_VmValue__First_0("List(VmValue).First\00List.strict\00") : !llvm.array<32 x i8>
-  llvm.mlir.global internal constant @sList_VmValue__First_0_1("First\00List(VmValue).First\00List.strict\0096\00") : !llvm.array<41 x i8>
+  llvm.mlir.global internal constant @sList_VmValue__First_0_1("First\00List(VmValue).First\00List.strict\00103\00") : !llvm.array<42 x i8>
   llvm.mlir.global internal constant @wOperations_Concatenated_2("Operations.Concatenated\00Runtime/Operations.strict\00") : !llvm.array<50 x i8>
   llvm.mlir.global internal constant @cOperations_Concatenated_2_15("Number\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @cOperations_Concatenated_2_42("Text\00") : !llvm.array<5 x i8>
@@ -430663,19 +433307,22 @@ module {
   llvm.mlir.global internal constant @cAccessor_Step_3_30("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal @lAccessor_Step_3_32(0.0 : f64) : f64
   llvm.mlir.global internal constant @wHosted_Result_0("Hosted.Result\00Runtime/Hosted.strict\00") : !llvm.array<36 x i8>
-  llvm.mlir.global internal @lHosted_Result_0_5(0.0 : f64) : f64
-  llvm.mlir.global internal constant @cHosted_Result_0_5_0("Process\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @cHosted_Result_0_5_1("Library\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @cHosted_Result_0_14("Process\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @cHosted_Result_0_36("Current\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal @lHosted_Result_0_44(0.0 : f64) : f64
-  llvm.mlir.global internal constant @cHosted_Result_0_44_0("File\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @cHosted_Result_0_44_1("Directory\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_8("Input\00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_16("Directory\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_25("Current\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_39("Input\00") : !llvm.array<6 x i8>
   llvm.mlir.global internal @lHosted_Result_0_56(0.0 : f64) : f64
-  llvm.mlir.global internal constant @cHosted_Result_0_56_0("ReadLines\00") : !llvm.array<10 x i8>
-  llvm.mlir.global internal constant @cHosted_Result_0_56_1("ReadBytes\00") : !llvm.array<10 x i8>
-  llvm.mlir.global internal constant @cHosted_Result_0_56_2("Files\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @cHosted_Result_0_56_3("Directories\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_56_0("Process\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_56_1("Library\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_65("Process\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal @lHosted_Result_0_84(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cHosted_Result_0_84_0("File\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_84_1("Directory\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal @lHosted_Result_0_96(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cHosted_Result_0_96_0("ReadLines\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_96_1("ReadBytes\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_96_2("Files\00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal constant @cHosted_Result_0_96_3("Directories\00") : !llvm.array<12 x i8>
   llvm.mlir.global internal constant @wNatives_Searched_3("Natives.Searched\00Runtime/Natives.strict\00") : !llvm.array<40 x i8>
   llvm.mlir.global internal constant @sNatives_Searched_3_21("Searched\00Natives.Searched\00Runtime/Natives.strict\0091\00") : !llvm.array<52 x i8>
   llvm.mlir.global internal constant @cNatives_Searched_3_35("Substring\00") : !llvm.array<10 x i8>
@@ -430685,15 +433332,18 @@ module {
   llvm.mlir.global internal constant @cInvocation_IsMemberValue_1_50("(\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wNatives_Result_1("Natives.Result\00Runtime/Natives.strict\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @cNatives_Result_1_10("from\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @cNatives_Result_1_42("to\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal @lNatives_Result_1_53(0.0 : f64) : f64
-  llvm.mlir.global internal constant @cNatives_Result_1_53_0("Length\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @cNatives_Result_1_53_1("Count\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal @lNatives_Result_1_69(0.0 : f64) : f64
-  llvm.mlir.global internal constant @cNatives_Result_1_69_0("not\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @cNatives_Result_1_69_1("and\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @cNatives_Result_1_69_2("or\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @cNatives_Result_1_69_3("xor\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal @lNatives_Result_1_40(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cNatives_Result_1_40_0("to\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @cNatives_Result_1_40_1("Code\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cNatives_Result_1_49("to\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal @lNatives_Result_1_75(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cNatives_Result_1_75_0("Length\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @cNatives_Result_1_75_1("Count\00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal @lNatives_Result_1_91(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cNatives_Result_1_91_0("not\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @cNatives_Result_1_91_1("and\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @cNatives_Result_1_91_2("or\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @cNatives_Result_1_91_3("xor\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @wMachine_Executed_3("Machine.Executed\00Runtime/Machine.strict\00") : !llvm.array<40 x i8>
   llvm.mlir.global internal constant @sMachine_Executed_3_1("Executed\00Machine.Executed\00Runtime/Machine.strict\00126\00") : !llvm.array<53 x i8>
   llvm.mlir.global internal constant @sMachine_Executed_3_10("Executed\00Machine.Executed\00Runtime/Machine.strict\00127\00") : !llvm.array<53 x i8>
@@ -430795,12 +433445,12 @@ module {
   llvm.mlir.global internal @lKnownTypes_ParameterScope_1_13(0.0 : f64) : f64
   llvm.mlir.global internal constant @sKnownTypes_ParameterScope_1_21("ParameterScope\00KnownTypes.ParameterScope\00Expressions/KnownTypes.strict\0049\00") : !llvm.array<74 x i8>
   llvm.mlir.global internal constant @wInstantiation_Position_2("Instantiation.Position\00Expressions/Instantiation.strict\00") : !llvm.array<56 x i8>
-  llvm.mlir.global internal constant @sInstantiation_Position_2_14("Position\00Instantiation.Position\00Expressions/Instantiation.strict\0035\00") : !llvm.array<68 x i8>
+  llvm.mlir.global internal constant @sInstantiation_Position_2_14("Position\00Instantiation.Position\00Expressions/Instantiation.strict\0037\00") : !llvm.array<68 x i8>
   llvm.mlir.global internal constant @cInstantiation_Position_2_16("Generic\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @sInstantiation_Position_2_42("Position\00Instantiation.Position\00Expressions/Instantiation.strict\0037\00") : !llvm.array<68 x i8>
+  llvm.mlir.global internal constant @sInstantiation_Position_2_42("Position\00Instantiation.Position\00Expressions/Instantiation.strict\0039\00") : !llvm.array<68 x i8>
   llvm.mlir.global internal constant @cInstantiation_Position_2_44("Generic\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @wInstantiation_Substituted_2("Instantiation.Substituted\00Expressions/Instantiation.strict\00") : !llvm.array<59 x i8>
-  llvm.mlir.global internal constant @sInstantiation_Substituted_2_26("Substituted\00Instantiation.Substituted\00Expressions/Instantiation.strict\0077\00") : !llvm.array<74 x i8>
+  llvm.mlir.global internal constant @sInstantiation_Substituted_2_26("Substituted\00Instantiation.Substituted\00Expressions/Instantiation.strict\0086\00") : !llvm.array<74 x i8>
   llvm.mlir.global internal constant @cInstantiation_Substituted_2_28("Generic\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @cInstantiation_Substituted_2_42("Unknown\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @cInstantiation_Substituted_2_59("(\00") : !llvm.array<2 x i8>
@@ -431100,6 +433750,15 @@ module {
   llvm.mlir.global internal constant @cAutomatic_Described_0_33("\22, \22\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @cAutomatic_Described_0_39("\22 to Type, \00") : !llvm.array<12 x i8>
   llvm.mlir.global internal constant @cAutomatic_Described_0_46(")\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @wAutomatic_Coded_0("Automatic.Coded\00Bytecode/Automatic.strict\00") : !llvm.array<42 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Coded_0_1("(\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Coded_0_13("\09\22\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Coded_0_17("\22\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Coded_0_29("Iterator\00") : !llvm.array<9 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Coded_0_40("\09\22\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Coded_0_44("(\22 + \00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Coded_0_47(" + \22, \22 + \00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @cAutomatic_Coded_0_51(" + \22)\22\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @wAutomatic_Hashed_0("Automatic.Hashed\00Bytecode/Automatic.strict\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal constant @cAutomatic_Hashed_0_16("\09HashCode(0)\00") : !llvm.array<13 x i8>
   llvm.mlir.global internal constant @cAutomatic_Hashed_0_22("\09HashCode(\00") : !llvm.array<11 x i8>
@@ -431733,6 +434392,7 @@ module {
   llvm.mlir.global internal @lHosted_Stored_0_44(0.0 : f64) : f64
   llvm.mlir.global internal constant @cHosted_Stored_0_44_0("Delete\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @cHosted_Stored_0_44_1("Rename\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @cHosted_Stored_0_44_2("Override\00") : !llvm.array<9 x i8>
   llvm.mlir.global internal constant @cHosted_Stored_0_58("Create\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @wNatives_Edited_2("Natives.Edited\00Runtime/Natives.strict\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @cNatives_Edited_2_1("Upper\00") : !llvm.array<6 x i8>
@@ -431762,6 +434422,21 @@ module {
   llvm.mlir.global internal constant @cNatives_Converted_2_23("Strict/Number\00") : !llvm.array<14 x i8>
   llvm.mlir.global internal constant @cNatives_Converted_2_38("Strict/Number\00") : !llvm.array<14 x i8>
   llvm.mlir.global internal constant @cNatives_Converted_2_49("Strict/Character\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @wValueCode_Code_0("ValueCode.Code\00Runtime/ValueCode.strict\00") : !llvm.array<40 x i8>
+  llvm.mlir.global internal @lValueCode_Code_0_3(0.0 : f64) : f64
+  llvm.mlir.global internal constant @cValueCode_Code_0_3_0("Text\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_3_1("Number\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_3_2("Boolean\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_3_3("None\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_10("Text\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_29("Strict/Error\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_32("Error(\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @sValueCode_Code_0_37("Code\00ValueCode.Code\00Runtime/ValueCode.strict\0010\00") : !llvm.array<48 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_43(")\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_48("List\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_51("\00") : !llvm.array<1 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_63("(\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cValueCode_Code_0_70(")\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @wVmValue_Counted_1("VmValue.Counted\00Runtime/VmValue.strict\00") : !llvm.array<39 x i8>
   llvm.mlir.global internal constant @wNatives_Logical_3("Natives.Logical\00Runtime/Natives.strict\00") : !llvm.array<39 x i8>
   llvm.mlir.global internal constant @cNatives_Logical_3_1("not\00") : !llvm.array<4 x i8>
@@ -432002,7 +434677,7 @@ module {
   llvm.mlir.global internal constant @cOperatorCodegen_Compared_2_8_2("<\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Compared_2_8_3(">\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Compared_2_25("\00") : !llvm.array<1 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Compared_2_39("Compared\00OperatorCodegen.Compared\00Bytecode/OperatorCodegen.strict\00126\00") : !llvm.array<70 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Compared_2_39("Compared\00OperatorCodegen.Compared\00Bytecode/OperatorCodegen.strict\00132\00") : !llvm.array<70 x i8>
   llvm.mlir.global internal constant @wErrorCodegen_IsErrorComparison_2("ErrorCodegen.IsErrorComparison\00Bytecode/ErrorCodegen.strict\00") : !llvm.array<60 x i8>
   llvm.mlir.global internal constant @cErrorCodegen_IsErrorComparison_2_2("Binary\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal @lErrorCodegen_IsErrorComparison_2_8(0.0 : f64) : f64
@@ -432118,6 +434793,11 @@ module {
   llvm.mlir.global internal constant @cConversionCodegen_Changed_3_9("Identifier\00") : !llvm.array<11 x i8>
   llvm.mlir.global internal constant @cConversionCodegen_Changed_3_19("from\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @cConversionCodegen_Changed_3_22("Call\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @wAutomatic_MemberCode_1("Automatic.MemberCode\00Bytecode/Automatic.strict\00") : !llvm.array<47 x i8>
+  llvm.mlir.global internal constant @cAutomatic_MemberCode_1_8("Dictionary(\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cAutomatic_MemberCode_1_14("(\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cAutomatic_MemberCode_1_18(" to Text)\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal constant @cAutomatic_MemberCode_1_27(".Code\00") : !llvm.array<6 x i8>
   llvm.mlir.global internal constant @wMlirNatives_DictionaryHelper_1("MlirNatives.DictionaryHelper\00Compiler/MlirNatives.strict\00") : !llvm.array<57 x i8>
   llvm.mlir.global internal @lMlirNatives_DictionaryHelper_1_0(0.0 : f64) : f64
   llvm.mlir.global internal constant @cMlirNatives_DictionaryHelper_1_0_0("in\00") : !llvm.array<3 x i8>
@@ -432172,28 +434852,30 @@ module {
   llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_11("Directory.Exists\00") : !llvm.array<17 x i8>
   llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_12("Directory.Create\00") : !llvm.array<17 x i8>
   llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_13("Directory.Current\00") : !llvm.array<18 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_14("Process.Find\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_15("Process.RunTool\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_16("Process.OperatingSystem\00") : !llvm.array<24 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_17("Process.Current\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_18("Process.Built\00") : !llvm.array<14 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_19("Process.Elapsed\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_20("Process.FilesRead\00") : !llvm.array<18 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_21("Number.Logarithm\00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_22("Number.Random\00") : !llvm.array<14 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_23("Degrees.Sin\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_24("Degrees.Cos\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_25("Degrees.Tan\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_26("Ratio.Asin\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_27("Ratio.Acos\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_28("Ratio.Atan\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_29("Vector2.Atan\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_30("Library.Call\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_31("Library.TextSlot\00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_32("Library.NumbersSlot\00") : !llvm.array<20 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_33("Library.TextResult\00") : !llvm.array<19 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_34("Library.NumbersResult\00") : !llvm.array<22 x i8>
-  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_35("Library.Failure\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_14("File.Override\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_15("Process.Input\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_16("Process.Find\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_17("Process.RunTool\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_18("Process.OperatingSystem\00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_19("Process.Current\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_20("Process.Built\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_21("Process.Elapsed\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_22("Process.FilesRead\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_23("Number.Logarithm\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_24("Number.Random\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_25("Degrees.Sin\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_26("Degrees.Cos\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_27("Degrees.Tan\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_28("Ratio.Asin\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_29("Ratio.Acos\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_30("Ratio.Atan\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_31("Vector2.Atan\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_32("Library.Call\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_33("Library.TextSlot\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_34("Library.NumbersSlot\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_35("Library.TextResult\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_36("Library.NumbersResult\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_0_37("Library.Failure\00") : !llvm.array<16 x i8>
   llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_2(".\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_12("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal constant @cMlirNatives_TypeHelper_2_15("strict_\00") : !llvm.array<8 x i8>
@@ -432561,6 +435243,7 @@ module {
   llvm.mlir.global internal constant @wHosted_TextsOf_1("Hosted.TextsOf\00Runtime/Hosted.strict\00") : !llvm.array<37 x i8>
   llvm.mlir.global internal constant @wHosted_Moved_0("Hosted.Moved\00Runtime/Hosted.strict\00") : !llvm.array<35 x i8>
   llvm.mlir.global internal constant @cHosted_Moved_0_3("Delete\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @cHosted_Moved_0_19("Override\00") : !llvm.array<9 x i8>
   llvm.mlir.global internal constant @wHosted_Answered_1("Hosted.Answered\00Runtime/Hosted.strict\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal constant @cHosted_Answered_1_3("Modified\00") : !llvm.array<9 x i8>
   llvm.mlir.global internal constant @cHosted_Answered_1_17("Strict/Directory\00") : !llvm.array<17 x i8>
@@ -432577,6 +435260,19 @@ module {
   llvm.mlir.global internal constant @wForeign_Converted_3("Foreign.Converted\00Runtime/Foreign.strict\00") : !llvm.array<41 x i8>
   llvm.mlir.global internal constant @cForeign_Converted_3_1("Boolean\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @cForeign_Converted_3_14("Text\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @wText_Code_0("Text.Code\00Text.strict\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_0("\5C\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_1("\5C\5C\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_4("\22\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_5("\5C\22\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_8("\0A\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_9("\5Cn\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_12("\09\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_13("\5Ct\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_16("\22\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @cText_Code_0_20("\22\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @wValueCode_Items_0("ValueCode.Items\00Runtime/ValueCode.strict\00") : !llvm.array<41 x i8>
+  llvm.mlir.global internal constant @cValueCode_Items_0_6("None\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @wNatives_Bitwise_3("Natives.Bitwise\00Runtime/Natives.strict\00") : !llvm.array<39 x i8>
   llvm.mlir.global internal constant @cNatives_Bitwise_3_1("and\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @cNatives_Bitwise_3_13("or\00") : !llvm.array<3 x i8>
@@ -432701,8 +435397,8 @@ module {
   llvm.mlir.global internal constant @cValueCodegen_Call_2_97_0("Add\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @cValueCodegen_Call_2_97_1("Remove\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @wOperatorCodegen_Operation_2("OperatorCodegen.Operation\00Bytecode/OperatorCodegen.strict\00") : !llvm.array<58 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Operation_2_11("Operation\00OperatorCodegen.Operation\00Bytecode/OperatorCodegen.strict\0018\00") : !llvm.array<71 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Operation_2_36("Operation\00OperatorCodegen.Operation\00Bytecode/OperatorCodegen.strict\0021\00") : !llvm.array<71 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Operation_2_11("Operation\00OperatorCodegen.Operation\00Bytecode/OperatorCodegen.strict\0019\00") : !llvm.array<71 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Operation_2_36("Operation\00OperatorCodegen.Operation\00Bytecode/OperatorCodegen.strict\0022\00") : !llvm.array<71 x i8>
   llvm.mlir.global internal @lOperatorCodegen_Operation_2_76(0.0 : f64) : f64
   llvm.mlir.global internal constant @cOperatorCodegen_Operation_2_76_0(">=\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Operation_2_76_1("<=\00") : !llvm.array<3 x i8>
@@ -432745,7 +435441,7 @@ module {
   llvm.mlir.global internal constant @cOperatorCodegen_Decided_2_9("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Decided_2_29("Error\00") : !llvm.array<6 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Decided_2_54("\00") : !llvm.array<1 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Decided_2_67("Decided\00OperatorCodegen.Decided\00Bytecode/OperatorCodegen.strict\0062\00") : !llvm.array<67 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Decided_2_67("Decided\00OperatorCodegen.Decided\00Bytecode/OperatorCodegen.strict\0063\00") : !llvm.array<67 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Decided_2_84("is\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @wErrorCodegen_Compared_3("ErrorCodegen.Compared\00Bytecode/ErrorCodegen.strict\00") : !llvm.array<51 x i8>
   llvm.mlir.global internal constant @wErrorCodegen_Right_3("ErrorCodegen.Right\00Bytecode/ErrorCodegen.strict\00") : !llvm.array<48 x i8>
@@ -432775,7 +435471,7 @@ module {
   llvm.mlir.global internal constant @cOperatorCodegen_OperatorType_1_26_4("xor\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_OperatorType_1_26_5(">=\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_OperatorType_1_26_6("<=\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_OperatorType_1_30("OperatorType\00OperatorCodegen.OperatorType\00Bytecode/OperatorCodegen.strict\00143\00") : !llvm.array<78 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_OperatorType_1_30("OperatorType\00OperatorCodegen.OperatorType\00Bytecode/OperatorCodegen.strict\00149\00") : !llvm.array<78 x i8>
   llvm.mlir.global internal @lOperatorCodegen_OperatorType_1_100000(0.0 : f64) : f64
   llvm.mlir.global internal constant @wLoopCodegen_UsesValue_2("LoopCodegen.UsesValue\00Bytecode/LoopCodegen.strict\00") : !llvm.array<50 x i8>
   llvm.mlir.global internal constant @cLoopCodegen_UsesValue_2_8("For\00") : !llvm.array<4 x i8>
@@ -432953,7 +435649,7 @@ module {
   llvm.mlir.global internal constant @cNativeSources_Library_2_118("clang failed: \00") : !llvm.array<15 x i8>
   llvm.mlir.global internal constant @cNativeSources_Library_2_128("Built \00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @wList_MethodEntry__First_0("List(MethodEntry).First\00List.strict\00") : !llvm.array<36 x i8>
-  llvm.mlir.global internal constant @sList_MethodEntry__First_0_1("First\00List(MethodEntry).First\00List.strict\0096\00") : !llvm.array<45 x i8>
+  llvm.mlir.global internal constant @sList_MethodEntry__First_0_1("First\00List(MethodEntry).First\00List.strict\00103\00") : !llvm.array<46 x i8>
   llvm.mlir.global internal constant @wForeign_Rows_2("Foreign.Rows\00Runtime/Foreign.strict\00") : !llvm.array<36 x i8>
   llvm.mlir.global internal constant @wVmValue_KeyIndex_1("VmValue.KeyIndex\00Runtime/VmValue.strict\00") : !llvm.array<40 x i8>
   llvm.mlir.global internal constant @wNatives_Changed_4("Natives.Changed\00Runtime/Natives.strict\00") : !llvm.array<39 x i8>
@@ -433094,7 +435790,7 @@ module {
   llvm.mlir.global internal constant @cOperatorCodegen_IsCustom_2_10_3("/\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsCustom_2_10_4("%\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsCustom_2_10_5("^\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_IsCustom_2_27("IsCustom\00OperatorCodegen.IsCustom\00Bytecode/OperatorCodegen.strict\0038\00") : !llvm.array<69 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_IsCustom_2_27("IsCustom\00OperatorCodegen.IsCustom\00Bytecode/OperatorCodegen.strict\0039\00") : !llvm.array<69 x i8>
   llvm.mlir.global internal @lOperatorCodegen_IsCustom_2_36(0.0 : f64) : f64
   llvm.mlir.global internal constant @cOperatorCodegen_IsCustom_2_36_0("Number\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsCustom_2_36_1("Text\00") : !llvm.array<5 x i8>
@@ -433105,8 +435801,8 @@ module {
   llvm.mlir.global internal @lOperatorCodegen_IsMismatched_2_0(0.0 : f64) : f64
   llvm.mlir.global internal constant @cOperatorCodegen_IsMismatched_2_0_0("is\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsMismatched_2_0_1("is not\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_IsMismatched_2_17("IsMismatched\00OperatorCodegen.IsMismatched\00Bytecode/OperatorCodegen.strict\0070\00") : !llvm.array<77 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_IsMismatched_2_27("IsMismatched\00OperatorCodegen.IsMismatched\00Bytecode/OperatorCodegen.strict\0071\00") : !llvm.array<77 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_IsMismatched_2_17("IsMismatched\00OperatorCodegen.IsMismatched\00Bytecode/OperatorCodegen.strict\0071\00") : !llvm.array<77 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_IsMismatched_2_27("IsMismatched\00OperatorCodegen.IsMismatched\00Bytecode/OperatorCodegen.strict\0072\00") : !llvm.array<77 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsMismatched_2_34("(\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsMismatched_2_45("(\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsMismatched_2_73("from types\00") : !llvm.array<11 x i8>
@@ -433238,25 +435934,29 @@ module {
   llvm.mlir.global internal constant @cConversionCodegen_Looped_2_36("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal constant @sConversionCodegen_Looped_2_50("Looped\00ConversionCodegen.Looped\00Bytecode/ConversionCodegen.strict\00130\00") : !llvm.array<70 x i8>
   llvm.mlir.global internal constant @wOperatorCodegen_Logical_2("OperatorCodegen.Logical\00Bytecode/OperatorCodegen.strict\00") : !llvm.array<56 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Logical_2_5("Logical\00OperatorCodegen.Logical\00Bytecode/OperatorCodegen.strict\00103\00") : !llvm.array<68 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Logical_2_5("Logical\00OperatorCodegen.Logical\00Bytecode/OperatorCodegen.strict\00109\00") : !llvm.array<68 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Logical_2_10("logical\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Logical_2_18("and\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Logical_2_37("Logical\00OperatorCodegen.Logical\00Bytecode/OperatorCodegen.strict\00106\00") : !llvm.array<68 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Logical_2_37("Logical\00OperatorCodegen.Logical\00Bytecode/OperatorCodegen.strict\00112\00") : !llvm.array<68 x i8>
   llvm.mlir.global internal constant @wOperatorCodegen_Choice_2("OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\00") : !llvm.array<55 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_4("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\0096\00") : !llvm.array<65 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_11("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\0097\00") : !llvm.array<65 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_4("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\0098\00") : !llvm.array<65 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_11("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\0099\00") : !llvm.array<65 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Choice_2_16("conditional\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_32("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\0099\00") : !llvm.array<65 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_53("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\00100\00") : !llvm.array<66 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_32("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\00101\00") : !llvm.array<66 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_46("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\00102\00") : !llvm.array<66 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_83("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\00104\00") : !llvm.array<66 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_88("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\00104\00") : !llvm.array<66 x i8>
+  llvm.mlir.global internal constant @cOperatorCodegen_Choice_2_96("\00") : !llvm.array<1 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Choice_2_132("Choice\00OperatorCodegen.Choice\00Bytecode/OperatorCodegen.strict\00106\00") : !llvm.array<66 x i8>
   llvm.mlir.global internal constant @wOperatorCodegen_Contains_2("OperatorCodegen.Contains\00Bytecode/OperatorCodegen.strict\00") : !llvm.array<57 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Contains_2_4("Contains\00OperatorCodegen.Contains\00Bytecode/OperatorCodegen.strict\00109\00") : !llvm.array<70 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Contains_2_4("Contains\00OperatorCodegen.Contains\00Bytecode/OperatorCodegen.strict\00115\00") : !llvm.array<70 x i8>
   llvm.mlir.global internal @lOperatorCodegen_Contains_2_6(0.0 : f64) : f64
   llvm.mlir.global internal constant @cOperatorCodegen_Contains_2_6_0("Error\00") : !llvm.array<6 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Contains_2_6_1("ErrorWithValue\00") : !llvm.array<15 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Contains_2_20("contained\00") : !llvm.array<10 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Contains_2_36("Contains\00OperatorCodegen.Contains\00Bytecode/OperatorCodegen.strict\00112\00") : !llvm.array<70 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Contains_2_36("Contains\00OperatorCodegen.Contains\00Bytecode/OperatorCodegen.strict\00118\00") : !llvm.array<70 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Contains_2_55("Identifier\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_Contains_2_67("Contains\00OperatorCodegen.Contains\00Bytecode/OperatorCodegen.strict\00113\00") : !llvm.array<70 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_Contains_2_67("Contains\00OperatorCodegen.Contains\00Bytecode/OperatorCodegen.strict\00119\00") : !llvm.array<70 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Contains_2_72("MethodCall\00") : !llvm.array<11 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Contains_2_73("in\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_Contains_2_87("is in\00") : !llvm.array<6 x i8>
@@ -433267,7 +435967,7 @@ module {
   llvm.mlir.global internal constant @cOperatorCodegen_IsBitwise_2_0_0("and\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsBitwise_2_0_1("or\00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsBitwise_2_0_2("xor\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @sOperatorCodegen_IsBitwise_2_13("IsBitwise\00OperatorCodegen.IsBitwise\00Bytecode/OperatorCodegen.strict\0046\00") : !llvm.array<71 x i8>
+  llvm.mlir.global internal constant @sOperatorCodegen_IsBitwise_2_13("IsBitwise\00OperatorCodegen.IsBitwise\00Bytecode/OperatorCodegen.strict\0047\00") : !llvm.array<71 x i8>
   llvm.mlir.global internal constant @cOperatorCodegen_IsBitwise_2_18("Number\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @wCallTarget_InheritingMember_1("CallTarget.InheritingMember\00Bytecode/CallTarget.strict\00") : !llvm.array<55 x i8>
   llvm.mlir.global internal constant @cCallTarget_InheritingMember_1_17("\00") : !llvm.array<1 x i8>

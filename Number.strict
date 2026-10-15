@@ -3,6 +3,10 @@ constant Epsilon = 0.00001
 constant E = 2.718281828459045
 constant Pi = 3.141592653589793
 constant Phi = 1.618033988749895
+Code Text
+	5.Code is "5"
+	2.5.Code is "2.5"
+	value to Text
 to Text
 	5 to Text is "5"
 	10.1 to Text is "10.1"

@@ -7,3 +7,6 @@ to Text
 	for Stacktraces
 		text = text + "\n" + value to Text
 	text
+Code Text
+	Error("Missing").Code is "Error(\"Missing\")"
+	"Error(" + (Name to Text).Code + ")"

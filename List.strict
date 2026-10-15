@@ -3,6 +3,13 @@ has elements Generics
 to Text
 	(1, 2) to Text is "(1, 2)"
 	Text.Combine(value).ToBrackets
+Code Text
+	(1, 2).Code is "(1, 2)"
+	("a", "b").Code is "(\"a\", \"b\")"
+	mutable codes = List(Mutable(Text))
+	for elements
+		codes.Add(value.Code)
+	"(" + Text.Combine(codes) + ")"
 for Iterator
 	elements
 Length Number

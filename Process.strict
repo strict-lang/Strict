@@ -25,6 +25,8 @@ FilesRead Texts
 	File("Process.strict").ReadLines.Length > 10 is true
 	"Process.strict" is in Process.FilesRead
 	List(Text)
+Input Text
+	""
 Built Text
 	Process.Current.Built.Length is 19
 	""
