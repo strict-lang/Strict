@@ -17,6 +17,9 @@ Values(name Text) Numbers
 	Tiny.Values("h") is (1, 2, 3, 4, 5, 6)
 	Tiny.Values("b") is (1, 2, 3, 4, 5, 6)
 	Tiny.Values("missing") is Error
+	Tiny.Values("k4").Sum is 31000.5
+	Tiny.Values("k6").Sum is 238.25
+	(Tiny.Values("k4").First, Tiny.Values("k6").Last) is (55.75, 36.125)
 	GgufFile.Values(path, name)
 Rows(name Text) List(Numbers)
 	Tiny.Rows("m") is ((1, 2, 3), (4, 5, 6))

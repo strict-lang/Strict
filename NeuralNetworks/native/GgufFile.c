@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "strict.h"
+#pragma STDC FP_CONTRACT OFF
 #ifdef _WIN32
 #define strict_seek _fseeki64
 #define strict_tell _ftelli64
@@ -13,8 +14,9 @@
 #endif
 
 /* A GGUF file (llama.cpp models): the metadata (keys with numbers, texts or arrays of them) and the tensor infos are read
-   once per path, tensors when asked for. Supported tensor types are F32, F16, BF16 and Q8_0. */
-enum { F32 = 0, F16 = 1, Q8_0 = 8, BF16 = 30 };
+   once per path, tensors when asked for. Supported tensor types are F32, F16, BF16, Q8_0, Q4_K and Q6_K, blocks decode to
+   floats exactly like ggml's dequantize_row functions (no fused multiply-add). */
+enum { F32 = 0, F16 = 1, Q8_0 = 8, Q4_K = 12, Q6_K = 14, BF16 = 30 };
 typedef struct { char* key; char* value; } Entry;
 typedef struct { char* name; uint32_t type; uint32_t dimensions; uint64_t shape[4]; uint64_t offset; } Tensor;
 typedef struct { FILE* file; int failed; } Reader;
@@ -237,42 +239,99 @@ static double Half(uint16_t half)
 	return single.value;
 }
 
+static uint64_t BlockNumbers(uint32_t type) { return type == Q8_0 ? 32 : type == Q4_K || type == Q6_K ? 256 : 1; }
+static uint64_t BlockBytes(uint32_t type) { return type == F32 ? 4 : type == Q8_0 ? 34 : type == Q4_K ? 144 : type == Q6_K ? 210 : 2; }
+static float HalfAt(const unsigned char* bytes) { return (float)Half((uint16_t)(bytes[0] | bytes[1] << 8)); }
+
+/* The 6 bit scale and minimum of group j of a Q4_K block (get_scale_min_k4 of ggml). */
+static void ScaleMin(int j, const unsigned char* q, int* scale, int* minimum)
+{
+	*scale = j < 4 ? q[j] & 63 : (q[j + 4] & 0xF) | ((q[j - 4] >> 6) << 4);
+	*minimum = j < 4 ? q[j + 4] & 63 : (q[j + 4] >> 4) | ((q[j] >> 6) << 4);
+}
+
+/* 256 numbers of 4 bits with a scale and minimum per 32 (d, dmin, 12 bytes of scales, 128 bytes of nibbles). */
+static void DecodedQ4K(const unsigned char* block, float* y)
+{
+	float d = HalfAt(block), low = HalfAt(block + 2);
+	const unsigned char* q = block + 16;
+	for (int first = 0; first < 256; first += 64, q += 32)
+	{
+		int scale, minimum;
+		ScaleMin(first / 32, block + 4, &scale, &minimum);
+		float d1 = d * scale, m1 = low * minimum;
+		ScaleMin(first / 32 + 1, block + 4, &scale, &minimum);
+		float d2 = d * scale, m2 = low * minimum;
+		for (int index = 0; index < 32; index++)
+		{
+			y[first + index] = d1 * (q[index] & 0xF) - m1;
+			y[first + 32 + index] = d2 * (q[index] >> 4) - m2;
+		}
+	}
+}
+
+/* 256 numbers of 6 bits (low nibbles, high bit pairs, a signed scale per 16 and d). */
+static void DecodedQ6K(const unsigned char* block, float* y)
+{
+	const unsigned char* low = block;
+	const unsigned char* high = block + 128;
+	const int8_t* scales = (const int8_t*)(block + 192);
+	float d = HalfAt(block + 208);
+	for (int first = 0; first < 256; first += 128, low += 64, high += 32, scales += 8)
+		for (int index = 0; index < 32; index++)
+		{
+			int group = index / 16;
+			y[first + index] = d * scales[group] * (((low[index] & 0xF) | ((high[index] & 3) << 4)) - 32);
+			y[first + index + 32] = d * scales[group + 2] * (((low[index + 32] & 0xF) | (((high[index] >> 2) & 3) << 4)) - 32);
+			y[first + index + 64] = d * scales[group + 4] * (((low[index] >> 4) | (((high[index] >> 4) & 3) << 4)) - 32);
+			y[first + index + 96] = d * scales[group + 6] * (((low[index + 32] >> 4) | (((high[index] >> 6) & 3) << 4)) - 32);
+		}
+}
+
+/* Decodes one block of the tensor's type into floats. */
+static void Decoded(uint32_t type, const unsigned char* block, float* y)
+{
+	if (type == F32)
+		memcpy(y, block, 4);
+	else if (type == F16)
+		*y = HalfAt(block);
+	else if (type == BF16)
+	{
+		union { uint32_t bits; float value; } single = { (uint32_t)(block[0] | block[1] << 8) << 16 };
+		*y = single.value;
+	}
+	else if (type == Q8_0)
+		for (int index = 0; index < 32; index++)
+			y[index] = (float)(Half((uint16_t)(block[0] | block[1] << 8)) * (int8_t)block[2 + index]);
+	else if (type == Q4_K)
+		DecodedQ4K(block, y);
+	else
+		DecodedQ6K(block, y);
+}
+
 /* Reads all numbers of the tensor as floats, 0 and the failure name if it can't. */
 static float* Floats(const char* path, const Tensor* tensor, uint64_t count, const char** failure)
 {
-	uint64_t elementBytes = tensor->type == F32 ? 4 : tensor->type == Q8_0 ? 34 : 2;
-	uint64_t elements = tensor->type == Q8_0 ? count / 32 : count;
-	if ((tensor->type != F32 && tensor->type != F16 && tensor->type != BF16 && tensor->type != Q8_0) ||
-		(tensor->type == Q8_0 && count % 32 != 0))
+	uint32_t type = tensor->type;
+	uint64_t blockNumbers = BlockNumbers(type), blockBytes = BlockBytes(type), blocks = count / blockNumbers;
+	if ((type != F32 && type != F16 && type != BF16 && type != Q8_0 && type != Q4_K && type != Q6_K) ||
+		count % blockNumbers != 0)
 	{
-		*failure = "OnlyF32F16BF16AndQ8_0TensorsAreSupported";
+		*failure = "OnlyF32F16BF16Q8_0Q4_KAndQ6_KTensorsAreSupported";
 		return 0;
 	}
 	FILE* file = fopen(path, "rb");
-	unsigned char* raw = malloc(elements * elementBytes + 1);
+	unsigned char* raw = malloc(blocks * blockBytes + 1);
 	float* floats = malloc(count * sizeof(float) + 1);
 	size_t read = 0;
 	if (file && strict_seek(file, (int64_t)(dataStart + tensor->offset), SEEK_SET) == 0)
-		read = fread(raw, elementBytes, elements, file);
+		read = fread(raw, blockBytes, blocks, file);
 	if (file)
 		fclose(file);
-	for (uint64_t index = 0; read == elements && index < count; index++)
-		if (tensor->type == F32)
-			memcpy(&floats[index], raw + 4 * index, 4);
-		else if (tensor->type == F16)
-			floats[index] = (float)Half((uint16_t)(raw[2 * index] | raw[2 * index + 1] << 8));
-		else if (tensor->type == BF16)
-		{
-			union { uint32_t bits; float value; } single = { (uint32_t)(raw[2 * index] | raw[2 * index + 1] << 8) << 16 };
-			floats[index] = single.value;
-		}
-		else
-		{
-			const unsigned char* block = raw + index / 32 * 34;
-			floats[index] = (float)(Half((uint16_t)(block[0] | block[1] << 8)) * (int8_t)block[2 + index % 32]);
-		}
+	for (uint64_t block = 0; read == blocks && block < blocks; block++)
+		Decoded(type, raw + block * blockBytes, floats + block * blockNumbers);
 	free(raw);
-	if (read == elements)
+	if (read == blocks)
 		return floats;
 	free(floats);
 	*failure = "GgufTensorDataTruncated";
