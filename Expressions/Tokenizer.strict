@@ -42,9 +42,11 @@ WordLength(start Number) Number
 	Tokenizer("x.y").WordLength(0) is 1
 	Tokenizer("1.Lerp").WordLength(0) is 1
 	Tokenizer("Vector2.One").WordLength(0) is 7
+	Tokenizer("1e-5)").WordLength(0) is 4
 	for Range(start, line.Length)
 		let character = line.Substring(value, 1)
-		if (WordCharacters.IndexOf(character) is -1) and (character is not "." or (not IsDecimalPoint(value)))
+		let isNumberPart = (character is ".") and IsDecimalPoint(value) or (character is "-") and IsExponentSign(start, value)
+		if (WordCharacters.IndexOf(character) is -1) and (not isNumberPart)
 			return value - start
 	line.Length - start
 IsDecimalPoint(position Number) Boolean
@@ -53,6 +55,11 @@ IsDecimalPoint(position Number) Boolean
 	if position + 1 >= line.Length or (not IsDigit(line.Substring(position + 1, 1)))
 		return false
 	IsDigit(line.Substring(position - 1, 1))
+IsExponentSign(start Number, position Number) Boolean
+	Tokenizer("1e-5").IsExponentSign(0, 2) is true
+	Tokenizer("e-5").IsExponentSign(0, 1) is false
+	let isExponent = (position > start) and (line.Substring(position - 1, 1) is "e") and IsDigit(line.Substring(start, 1))
+	isExponent and (position + 1 < line.Length) and IsDigit(line.Substring(position + 1, 1))
 IsWordCharacter(character Text) Boolean
 	IsWordCharacter("a") is true
 	IsWordCharacter("7") is true

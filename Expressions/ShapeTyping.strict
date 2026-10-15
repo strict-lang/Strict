@@ -1,4 +1,5 @@
 has inference TypeInference
+constant NoScope = Scope(List(Text), List(Text))
 constant Counting = ShapeTyping(ResolveCheck.Counting)
 constant Twice = TypeShape("Twice = number * 2")
 constant Next = Tokenizer("Next(add = 1) = number + add").Tokens
@@ -10,7 +11,7 @@ Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	for shape.lines
 		let tokens = Tokenizer(value).Tokens
 		if value.StartsWith("constant ") and ((value.IndexOf(".") > 0) or (value.IndexOf("(") > 0))
-			result = Known(result, tokens(1), ChainType(tokens, typeName))
+			result = Known(result, tokens(1), ChainType(tokens, typeName, result))
 		else if shape.IsComputed(value)
 			result = result.With(tokens(0), ComputedType(tokens, typeName, result))
 		else if shape.IsMethodHeader(value)
@@ -20,25 +21,26 @@ Known(scope Scope, name Text, type Text) Scope
 	Counting.Known(KnownTypes.NoMembers, "a", "").names.Length is 0
 	Counting.Known(KnownTypes.NoMembers, "a", "Number").TypeOf("a") is "Number"
 	type is "" then scope else scope.With(name, type)
-ChainType(tokens Texts, typeName Text) Text
-	Counting.ChainType(Tokenizer("constant a = Count(1).Twice(2)").Tokens, "Count") is "Count"
-	Counting.ChainType(Tokenizer("constant a = 1").Tokens, "Count") is ""
-	Counting.ChainType(Tokenizer("constant a = Twice(2)").Tokens, "Count") is "Count"
-	Counting.ChainType(Tokenizer("constant a = List(Number) + 3").Tokens, "Count") is "Numbers"
+ChainType(tokens Texts, typeName Text, known Scope) Text
+	Counting.ChainType(Tokenizer("constant a = Count(1).Twice(2)").Tokens, "Count", KnownTypes.NoMembers) is "Count"
+	Counting.ChainType(Tokenizer("constant a = 1").Tokens, "Count", KnownTypes.NoMembers) is ""
+	Counting.ChainType(Tokenizer("constant a = Twice(2)").Tokens, "Count", KnownTypes.NoMembers) is "Count"
+	Counting.ChainType(Tokenizer("constant a = List(Number) + 3").Tokens, "Count", KnownTypes.NoMembers) is "Numbers"
+	Counting.ChainType(Tokenizer("constant b = a.Twice(2)").Tokens, "C", NoScope.With("a", "Count")) is "Count"
 	if (tokens.Length < 4) or (tokens(2) is not "=")
 		return ""
 	let node = SyntaxParser(tokens).ParseRange(3, tokens.Length)
 	if node.Kind is "Call"
 		return inference.types.MethodsOf(typeName).TypeOf(node.text)
 	let isInferred = node.Kind is in ("MethodCall", "Member", "Binary", "List")
-	isInferred then Inferred(node, typeName) else ""
-Inferred(node SyntaxNode, typeName Text) Text
-	Boxed.Inferred(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse, "User") is "Item"
+	isInferred then Inferred(node, typeName, known) else ""
+Inferred(node SyntaxNode, typeName Text, known Scope) Text
+	Boxed.Inferred(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
 	let owner = node.Kind is "Member" then node.children(0).text else ""
 	let aliased = owner is "" then "" else inference.ConstantOf(owner, node.text)
-	let chained = aliased is "" then "" else ChainType(Tokenizer("constant a = " + aliased).Tokens, owner)
-	let current = inference.types.ShapeScope(typeName)
-	chained is "" then inference.TypeOf(node, Scope(List(Text), List(Text)), current) else chained
+	let chained = aliased is "" then "" else ChainType(Tokenizer("constant a = " + aliased).Tokens, owner, NoScope)
+	let current = inference.types.ShapeScope(typeName).WithAll(known.names, known.types)
+	chained is "" then inference.TypeOf(node, NoScope, current) else chained
 ComputedType(tokens Texts, typeName Text, methods Scope) Text
 	Counting.ComputedType(Next, "Count", KnownTypes.NoMembers) is "Number"
 	let header = HeaderTokens(tokens)

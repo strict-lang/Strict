@@ -6,6 +6,8 @@ constant Shapes = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunctio
 constant MemberBase = 100000
 constant Looping = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)
 constant Outer = TypeEntry("Strict/Outer", (MemberEntry("shape", "Strict/Shape", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
+constant Widened = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("width", "Strict/Number", List(InstructionEntry), false), "None", List(InstructionEntry)))
+constant Sizing = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Outer, Outer, MethodEntry("Run", List(MemberEntry) + MemberEntry("size", "Strict/Number", List(InstructionEntry), false), "None", List(InstructionEntry)))
 constant Nesting = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Outer, Outer, MethodEntry.CountingLoop)
 Stored(owner TypeEntry) List(MemberEntry)
 	MlirInstances(Shapes, 0).Stored(MlirFunction.Shape).Length is 1
@@ -80,15 +82,15 @@ Field(entry InstructionEntry) Texts
 Unpacked Texts
 	MlirInstances(Looping, 0).Unpacked.Length is 10
 	MlirInstances(Looping, 0).Unpacked.Last is "  ^unpacked:"
-	if MlirLayout(function).IsStruct(function.type.Name) is false
+	MlirInstances(Sizing, 0).Unpacked.Length < MlirInstances(Nesting, 0).Unpacked.Length
+	if (MlirLayout(function).IsStruct(function.type.Name) is false) or (Stored(function.type).Length is 0)
 		return Aliased
-	if Stored(function.type).Length is 0
-		return List(Text)
 	let memory = MlirMemory(function, -1)
 	mutable lines = List(Text) + function.Load("%self", "%v_value") + SelfGuard + memory.Pointer("%self", "self")
 	for Stored(function.type)
-		let loaded = memory.Loaded(memory.Temp("selfp"), index, "u" + index)
-		lines = lines + loaded + function.Store(memory.Temp("u" + index + "v"), "%v_" + value.Name)
+		if value.Name is not in function.method.ParameterNames
+			let loaded = memory.Loaded(memory.Temp("selfp"), index, "u" + index)
+			lines = lines + loaded + function.Store(memory.Temp("u" + index + "v"), "%v_" + value.Name)
 	lines + ("    cf.br ^unpacked", "  ^unpacked:")
 SelfGuard Texts
 	MlirInstances(Looping, 0).SelfGuard.Last is "  ^unpack:"
@@ -96,9 +98,11 @@ SelfGuard Texts
 	(check, "    cf.cond_br %hasSelf, ^unpack, ^unpacked", "  ^unpack:")
 Aliased Texts
 	MlirInstances(MlirLayout.Wrapping.function, 0).Aliased.Length is 2
+	MlirInstances(Widened, 0).Aliased.Length is 0
 	mutable lines = List(Mutable(Text))
 	for Stored(function.type)
-		lines = lines + function.Copied("%v_value", "%v_" + value.Name, "%talias" + index)
+		if value.Name is not in function.method.ParameterNames
+			lines = lines + function.Copied("%v_value", "%v_" + value.Name, "%talias" + index)
 	lines
 ReferencedConstants List(MemberEntry)
 	MlirInstances(Shapes, 0).ReferencedConstants.Length is 0

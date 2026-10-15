@@ -1,0 +1,54 @@
+has lines Texts
+has typeName Text
+constant Looping = Recursions(("has name Text", "constant Blood = Parsed(\"blood\")", "Parsed(line Text) Splash", "\tSplash.Parsed(\"a\").name is \"a\"", "\tSplash(Blood.name)"), "Splash")
+constant Hint = ", the only line is the body, write the body after the test"
+constant Placing = Recursions(("Placed Boolean", "\tRecursions(1).Placed", "Run", "\tPlaced"), "Recursions")
+Issues List(ValidationIssue)
+	Looping.Issues.Length is 1
+	Constants + Endless
+Endless List(ValidationIssue)
+	Placing.Endless.First to Text is "OnlyLineCallsItself: Placed" + Hint
+	Looping.Endless.Length is 0
+	Recursions(("+(other) Path", "\tPath(text + other)"), "Path").Endless.Length is 0
+	Recursions(("Loaded(path Text) Terrain", "\tTerrain(Mesh.Loaded(path))"), "Terrain").Endless.Length is 0
+	for lines
+		if TypeShape(lines).IsMethodHeader(value) and (FileCheck.LastLine(lines, index) is index + 1)
+			let method = Tokenizer(value).Tokens.First
+			let only = Tokenizer(lines(index + 1).Trim).Tokens
+			let isNamed = method.Substring(0, 1).Lower is not method.Substring(0, 1)
+			if isNamed and (method is in Called(only)) and ("then" is not in only)
+				ValidationIssue("OnlyLineCallsItself", method + Hint, index + 2)
+Constants List(ValidationIssue)
+	Looping.Constants.First to Text is "ConstantUsesItself: Blood calls Parsed, which uses Blood"
+	Recursions(Duplicates.Copy, "Copy").Constants.Length is 0
+	for lines
+		if value.StartsWith("constant ")
+			let tokens = Tokenizer(value).Tokens
+			let user = Using(tokens(1), tokens, List(Text))
+			if user is not ""
+				ValidationIssue("ConstantUsesItself", tokens(1) + " calls " + user + ", which uses " + tokens(1), index + 1)
+Using(name Text, tokens Texts, visited Texts) Text
+	Looping.Using("Blood", ("Parsed", "(", ")"), List(Text)) is "Parsed"
+	Looping.Using("Blood", List(Text) + "name", List(Text)) is ""
+	Looping.Using("Blood", ("Other", ".", "Parsed"), List(Text)) is ""
+	let called = Called(tokens)
+	for lines
+		if TypeShape(lines).IsMethodHeader(value) and (Tokenizer(value).Tokens.First is in called)
+			let method = Tokenizer(value).Tokens.First
+			let body = Tokenizer(Duplicates.Implementation(lines, index).Replace("\n", " ")).Tokens
+			if (method is not in visited) and ((name is in Called(body)) or (Using(name, body, visited + method) is not ""))
+				return method
+	""
+Called(tokens Texts) Texts
+	"Parsed" is not in Looping.Called(("Other", ".", "Parsed", "Make"))
+	"Blood" is in Looping.Called(("Splash", ".", "Blood"))
+	for tokens
+		if IsOwn(tokens, index)
+			value
+IsOwn(tokens Texts, position Number) Boolean
+	Looping.IsOwn(("Splash", "(", "1", ")", ".", "Blood"), 5) is true
+	Looping.IsOwn(("Other", ".", "Blood"), 2) is false
+	if (position is 0) or (tokens(position - 1) is not ".")
+		return true
+	let instance = tokens(position - 2)
+	(instance is typeName) or (instance is ")") and (tokens.First is typeName)

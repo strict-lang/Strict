@@ -125,9 +125,15 @@ Element(entry InstructionEntry, names Texts) Numbers
 Slot(name Text, names Texts) Number
 	Doubling.Slot("outer", Specials) is OuterSlot
 	Doubling.Slot("index", Specials) is 5
+	Doubling.Slot("index", Specials + "index") is 6
 	if name is "outer"
 		return OuterSlot
-	name is "outer.index" then OuterIndexSlot else names.Index(name)
+	if name is "outer.index"
+		return OuterIndexSlot
+	for Range(0, names.Length).Reverse
+		if names(value) is name
+			return value
+	-1
 Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Number) InstructionEntry
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).payload is (0, 2)
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).Target is 9
