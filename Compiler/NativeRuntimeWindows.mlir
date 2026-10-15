@@ -223,6 +223,47 @@
     %mixed = arith.xori %now, %address : i64
     return %mixed : i64
   }
+  llvm.func @MoveFileExA(!llvm.ptr, !llvm.ptr, i32) -> i32
+  func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %replacing = arith.constant 1 : i32
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %newName = func.call @strict_ptr(%newPath) : (f64) -> !llvm.ptr
+    %moved = llvm.call @MoveFileExA(%name, %newName, %replacing) : (!llvm.ptr, !llvm.ptr, i32) -> i32
+    return %zero : f64
+  }
+  llvm.func @AddVectoredExceptionHandler(i32, !llvm.ptr) -> !llvm.ptr
+  llvm.func @SetThreadStackGuarantee(!llvm.ptr) -> i32
+  llvm.func @ExitProcess(i32)
+  llvm.mlir.global internal constant @strict_overflow_text("Error: StackOverflow, methods called each other without end until the stack was used up\0A\00") : !llvm.array<89 x i8>
+  llvm.func @strict_overflow_handler(%pointers: !llvm.ptr) -> i32 {
+    %record = llvm.load %pointers : !llvm.ptr -> !llvm.ptr
+    %code = llvm.load %record : !llvm.ptr -> i32
+    %overflow = llvm.mlir.constant(-1073741571 : i32) : i32
+    %isOverflow = llvm.icmp "eq" %code, %overflow : i32
+    llvm.cond_br %isOverflow, ^report, ^search
+  ^report:
+    %text = llvm.mlir.addressof @strict_overflow_text : !llvm.ptr
+    %printed = llvm.call @printf(%text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
+    llvm.call @ExitProcess(%code) : (i32) -> ()
+    llvm.br ^search
+  ^search:
+    %continueSearch = llvm.mlir.constant(0 : i32) : i32
+    llvm.return %continueSearch : i32
+  }
+  func.func private @strict_guard() {
+    %first = arith.constant 1 : i32
+    %handler = llvm.mlir.addressof @strict_overflow_handler : !llvm.ptr
+    %added = llvm.call @AddVectoredExceptionHandler(%first, %handler) : (i32, !llvm.ptr) -> !llvm.ptr
+    %one = arith.constant 1 : i64
+    %reserve = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %bytes = arith.constant 65536 : i32
+    llvm.store %bytes, %reserve : i32, !llvm.ptr
+    %guaranteed = llvm.call @SetThreadStackGuarantee(%reserve) : (!llvm.ptr) -> i32
+    return
+  }
   func.func private @strict_file_modified(%path: f64) -> f64 {
     %dataSize = arith.constant 40 : i64
     %data = llvm.alloca %dataSize x i8 : (i64) -> !llvm.ptr

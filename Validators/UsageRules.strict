@@ -4,6 +4,7 @@ has memberNames Texts
 has mutations Texts
 has line Number = 0
 constant Shadowing = UsageRules(HeaderTokens(Tokenizer("Run(value Number)").Tokens), BodyParser("Run(value Number)", "\tlet value = Count(1)", "\tvalue").Block(1, 1).Statements, List(Text), List(Text))
+constant Looping = UsageRules(HeaderTokens(Tokenizer("Run(index Number)").Tokens), BodyParser("Run(index Number)", "\tfor 3", "\t\tindex", "\t1").Block(1, 1).Statements, List(Text), List(Text))
 constant ElementStore = BodyParser("Run", "	list(index) = 5").Block(1, 1).children(0)
 Sample UsageRules
 	Sample.statements.Length is 4
@@ -40,11 +41,12 @@ KindIssues(declaration SyntaxNode, name Text) ValidationIssues
 ParameterIssues ValidationIssues
 	Sample.ParameterIssues.Length is 2
 	Shadowing.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName"
+	Looping.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName"
 	mutable issues = List(Mutable(ValidationIssue))
 	if statements.Length is 0
 		return issues
 	for header.ParameterNames
-		if (value is in memberNames) or (value is "value")
+		if (value is in memberNames) or (value is "value") or (value is in ("index", "outer")) and IsLooping
 			issues.Add(ValidationIssue("ParameterHidesMemberUseDifferentName", value, line))
 		if header.tokens(0) is not "from" and (not IsUsed(value))
 			issues.Add(ValidationIssue("UnusedMethodParameterMustBeRemoved", value, line))
@@ -56,6 +58,13 @@ MutableParameterIssues ValidationIssues
 	for header.MutableParameters
 		issues.Add(ValidationIssue("ParameterMustNotBeMutableReturnTheChangedValue", value, line))
 	issues
+IsLooping Boolean
+	Looping.IsLooping is true
+	Sample.IsLooping is false
+	for statements
+		if value.Kind is "For"
+			return true
+	false
 IsUsed(name Text) Boolean
 	Sample.IsUsed("count") is true
 	Sample.IsUsed("aa") is false

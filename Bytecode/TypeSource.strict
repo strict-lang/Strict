@@ -17,3 +17,10 @@ Located(folder Text) Text
 Location(methodName Text) Text
 	TypeSource(TypeEntry.CharacterEntry).Location("Lower") is "Character.Lower in Character.strict"
 	TypeEntry.ShortName(entry.Name) + "." + methodName + " in " + Located("")
+NativeFolder(path Text, root Text) Text
+	TypeSource(TypeEntry("Gpu", List(MemberEntry), List(MethodEntry))).NativeFolder("Gpu.strict", ".") is "./native"
+	TypeSource(TypeEntry("Strict/P/T", List(MemberEntry), List(MethodEntry))).NativeFolder("A", "C:") is "C:/P/native"
+	let source = File(entry.Source).Exists then entry.Source else root + "/" + entry.Source
+	let file = entry.Name.IndexOf("/") < 0 then path else source
+	let parent = Path(file).PathOnly.text
+	(parent is "" then "." else parent) + "/native"

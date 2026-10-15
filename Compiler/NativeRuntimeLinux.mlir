@@ -238,6 +238,16 @@
     %mixed = arith.xori %now, %address : i64
     return %mixed : i64
   }
+  func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %newName = func.call @strict_ptr(%newPath) : (f64) -> !llvm.ptr
+    %renamed = llvm.call @rename(%name, %newName) : (!llvm.ptr, !llvm.ptr) -> i32
+    return %zero : f64
+  }
+  func.func private @strict_guard() {
+    return
+  }
   func.func private @strict_file_modified(%path: f64) -> f64 {
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr

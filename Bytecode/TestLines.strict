@@ -7,6 +7,8 @@ constant Declared = BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\t2").Blo
 constant Sizing = TestLines(ValueCodegen(ValueCodegen.NoTypes, MethodCodegen.NoScope, CallTarget(CallTarget.NoTypes, TypeShape("has Height Number", "has Width Number with value > 0"), "Strict/Size", List(Text))))
 constant Validating = HeaderTokens(Tokenizer("Validated Size").Tokens)
 constant Even = TestLines(ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text) + "IsEven", List(Text) + "Boolean"), CallTarget(CallTarget.NoTypes, TypeShape("IsEven(number Number) Boolean", "\tnumber % 2 is 0"), "Strict/C", List(Text))))
+constant Attacking = KnownTypes(List(Text) + "C", List(Scope) + Scope(List(Text) + "attack", List(Text) + "Boolean"), List(Scope) + Scope(List(Text) + "Read", List(Text) + "C"), List(Scope) + KnownTypes.NoMembers)
+constant Reading = TestLines(ValueCodegen(TypeInference(Attacking, CallTarget.NoScopes), Scope(List(Text) + "Read", List(Text) + "C"), CallTarget(Attacking, TypeShape("has attack Boolean", "Read C", "\tC(true)"), "Strict/C", List(Text))))
 Without(body SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Without(BodyParser("Run", "	1 is 1", "	2 is not 3", "	2").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.Without(BodyParser("Run", "\t2 is in (1, 2)", "\t2").Block(1, 1), CodeBlock.Empty).children.Length is 1
@@ -33,6 +35,7 @@ Tests(body SyntaxNode, block CodeBlock) SyntaxNodes
 	Plain.Tests(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 2
 	Plain.Tests(BodyParser("Run", "\t1 is 1", "\tconstant a = 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 1
 	Plain.Tests(BodyParser("Run", "\tmutable a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 0
+	Reading.Tests(BodyParser("Run", "\t1 is 1", "\tRead.attack", "\t2").Block(1, 1), CodeBlock.Empty).Length is 2
 	let end = LeadingEnd(body, block)
 	for body.children
 		if index < end
@@ -58,9 +61,15 @@ IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	if line.Kind is in ("If", "ElseIf", "Else", "Declaration", "Reassignment")
 		return false
 	let lineText = line to Text
-	if isLeading and values.IsMethodCall(line, block) or lineText.IndexOf(" is ") >= 0
+	if isLeading and IsCalling(line, block) or lineText.IndexOf(" is ") >= 0
 		return values.TypeOf(line, block) is "Boolean"
 	false
+IsCalling(line SyntaxNode, block CodeBlock) Boolean
+	Reading.IsCalling(SyntaxNode("Member", "attack", SyntaxNode("Identifier", "Read")), CodeBlock.Empty) is true
+	Reading.IsCalling(SyntaxNode("Identifier", "attack"), CodeBlock.Empty) is false
+	if line.Kind is "Member"
+		return values.IsMethodCall(line, block) or IsCalling(line.children(0), block)
+	values.IsMethodCall(line, block)
 Guarded(body SyntaxNode, header HeaderTokens, line Number, scope Scope) SyntaxNode
 	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children(1).Kind is "If"
 	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children.Length is 3

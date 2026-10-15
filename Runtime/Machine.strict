@@ -16,12 +16,9 @@ constant Pairing = Machine(List(TypeEntry) + Paired)
 Launch(typeName Text, arguments List(VmValue)) Number
 	let main = Natives(types).TypeOf(typeName)
 	let exact = main.Callee("Run", arguments.Length, "None", List(Text))
-	let isExact = exact.instructions.Length > 0
-	let run = isExact then exact else main.Callee("Run", 1, "None", List(Text))
-	let typed = Typed(run.parameters, arguments)
-	let bound = isExact then typed else List(VmValue) + VmValue.OfList(typed)
+	let run = exact.instructions.Length > 0 then exact else main.Callee("Run", 1, "None", List(Text))
 	let instance = Natives(types).Fresh(main)
-	let result = Execute(run, Bound(main, instance, run, bound, instance), main.Name)
+	let result = Execute(run, Bound(main, instance, run, Typed(run.parameters, arguments), instance), main.Name)
 	if result.kind is in VmValue.ErrorKinds
 		logger.Log(result to Text)
 		return 1
@@ -29,10 +26,14 @@ Launch(typeName Text, arguments List(VmValue)) Number
 Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("5")).First.number is 5
 	Hello.Typed(List(MemberEntry) + MemberEntry.LoggerMember, List(VmValue) + VmValue.OfText("a")).First.text is "a"
+	Hello.Typed(List(MemberEntry) + MemberEntry.NumbersMember, List(VmValue) + VmValue.OfText("5")).First.items.Length is 1
+	mutable typed = List(Mutable(VmValue))
 	for arguments
 		let parameter = index < parameters.Length then parameters(index) else parameters.Last
 		let isNumber = parameter.typeName is in ("Strict/Number", "Strict/List(Number)")
-		isNumber then VmValue.OfNumber(value.text to Number) else value
+		typed.Add(isNumber then VmValue.OfNumber(value.text to Number) else value)
+	let isListed = (parameters.Length is 1) and parameters.First.typeName.StartsWith("Strict/List(")
+	isListed then List(VmValue) + VmValue.OfList(typed) else typed
 Tested(typeName Text) Number
 	Hello.Tested("HelloLogger") is 0
 	let main = Natives(types).TypeOf(typeName)

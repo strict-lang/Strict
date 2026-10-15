@@ -14,8 +14,21 @@ Flags(platform Number) Text
 	for folders
 		let file = value + "/" + Platform.NameOf(platform) + ".flags"
 		if File(file).Exists
-			flags = flags + " " + Text.Combine(File(file).ReadLines, " ")
+			flags = flags + Rooted(Text.Combine(File(file).ReadLines, " "), value)
 	flags
+Rooted(flags Text, folder Text) Text
+	Adding.Rooted("-DX a/b.c -Ia/c", "../Engine/Frameworks/native") is " -DX ../Engine/a/b.c -I../Engine/a/c"
+	Adding.Rooted("-DX a/b.c", "Frameworks/native") is " -DX a/b.c"
+	if folder.StartsWith("../") is false
+		return " " + flags
+	let parts = folder.Split("/")
+	let project = "../" + parts(1) + "/"
+	mutable rooted = ""
+	for flags.Split(" ")
+		let isInclude = value.StartsWith("-I")
+		let path = isInclude then "-I" + project + value.Substring(2, value.Length - 2) else project + value
+		rooted = rooted + " " + (isInclude or value.EndsWith(".c") then path else value)
+	rooted
 Arguments(platform Number, root Text) Text
 	Adding.Arguments(Platform.Windows, "C:/s") is " \"Examples/NativeAdd/native/Adder.c\" -I\"C:/s/Compiler\""
 	NativeSources(List(Text)).Arguments(Platform.Windows, "C:/s") is ""

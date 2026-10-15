@@ -8,7 +8,7 @@ Of(path Text) Texts
 	for Folders(Added(project, List(Text) + Path(path).PathOnly.text), 3)
 		files = files + Directory.Files(value, "*.strict")
 	let local = Directory.Files(Path(path).PathOnly.text, "*.strict")
-	let closed = Closed(Added(files, Directory.Files(root, "*.strict")), Added(local, List(Text) + path), 3)
+	let closed = Closed(Added(files, Directory.Files(root, "*.strict")), Added(local, List(Text) + path), 9)
 	let lines = File(path).Exists then File(path).ReadLines else List(Text)
 	TypeChoice(lines).Chosen(closed, path)
 Closed(found Texts, sources Texts, depth Number) Texts
@@ -99,10 +99,21 @@ Nearby(types Texts) Texts
 	SourceFiles(".").Nearby(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	mutable files = List(Mutable(Text))
 	for types
-		let folder = SubfolderWith(root, value)
+		let folder = PackageWith(value, "..")
 		if folder is not ""
 			files = Added(files, Directory.Files(folder, "*.strict"))
 	files
+PackageWith(type Text, projects Text) Text
+	SourceFiles(".").PackageWith("Vector2", "C:/Missing") is "./Math"
+	SourceFiles("C:/Missing").PackageWith("Adder", ".") is "./Examples/NativeAdd"
+	let found = SubfolderWith(root, type)
+	if found is not ""
+		return found
+	for Directory.Directories(projects)
+		let folder = SubfolderWith(projects + "/" + Path(value.Replace("\\", "/")).FileName.text, type)
+		if folder is not ""
+			return folder
+	""
 SubfolderWith(parent Text, type Text) Text
 	SourceFiles(".").SubfolderWith(".", "Vector2") is "./Math"
 	for Directory.Directories(parent)

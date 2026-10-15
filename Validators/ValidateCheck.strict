@@ -19,7 +19,8 @@ Checked(folder Text, root Text) Number
 CheckFile(path Text, mutations Texts, isBase Boolean, typeNames Texts) List(ValidationIssue)
 	let lines = File(path).ReadLines
 	let typeName = Path(path).FileName.RemoveExtension.text
-	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + Limits(lines, isBase).Issues
+	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues
+	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	rules + Names(lines, typeNames).Issues
 Logged(path Text, found List(ValidationIssue)) Number
 	for found

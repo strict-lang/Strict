@@ -1,0 +1,39 @@
+has inference TypeInference
+constant Counting = DefaultCheck(TypeInference(KnownTypes.Sample, (Scope(("Limit", "Started"), ("3", "Count(1, 2)")), KnownTypes.NoMembers)))
+constant Sized = List(Text) + "has size Count = Count(1, 2)"
+Unsupported(path Text, lines Texts) Texts
+	Counting.Unsupported("A.strict", Sized).First.StartsWith("UnsupportedDefault: size in A.strict:1, ") is true
+	Counting.Unsupported("A.strict", ("has a Number = 5", "has c Numbers = List(Number)")).Length is 0
+	Counting.Unsupported("A.strict", List(Text) + "has b Text = Text(other)").Length is 1
+	constant hint = ", only constant values, empty lists and dictionaries and types with one member can be defaults"
+	let shape = TypeShape(lines)
+	for lines
+		let tokens = Tokenizer(value).Tokens
+		let equals = tokens.Index("=")
+		let isDefault = shape.IsMemberLine(value) and (value.StartsWith("constant ") is false) and (equals > 0)
+		let end = tokens.Index("with") > 0 then tokens.Index("with") else tokens.Length
+		if isDefault and (IsConstant(SyntaxParser(tokens).ParseRange(equals + 1, end)) is false)
+			"UnsupportedDefault: " + tokens(1) + " in " + path + ":" + (index + 1) + hint + ", pass it to the constructor"
+IsConstant(node SyntaxNode) Boolean
+	Counting.IsConstant(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse) is true
+	Counting.IsConstant(SyntaxParser(Tokenizer("-1 + 2").Tokens).Parse) is true
+	Counting.IsConstant(SyntaxParser(Tokenizer("Count(1, 2)").Tokens).Parse) is false
+	Counting.IsConstant(SyntaxParser(Tokenizer("Count.Started").Tokens).Parse) is false
+	if node.Kind is "Member"
+		return IsConstantMember(node)
+	if node.IsLiteral or (node.Kind is "Identifier")
+		return true
+	if node.Kind is in ("Binary", "Negate")
+		return IsConstant(node.children(0)) and ((node.Kind is "Negate") or IsConstant(node.children.Last))
+	(node.Kind is "Call") and ((node.text is in ("List", "Dictionary")) or IsWrapper(node))
+IsConstantMember(member SyntaxNode) Boolean
+	Counting.IsConstantMember(SyntaxParser(Tokenizer("Count.Missing").Tokens).Parse) is true
+	let expression = inference.ConstantOf(member.children(0).text, member.text)
+	if expression is ""
+		return true
+	IsConstant(SyntaxParser(Tokenizer(expression).Tokens).Parse)
+IsWrapper(call SyntaxNode) Boolean
+	Counting.IsWrapper(SyntaxParser(Tokenizer("Number(1)").Tokens).Parse) is true
+	Counting.IsWrapper(SyntaxParser(Tokenizer("Count(1, 2)").Tokens).Parse) is false
+	let isBase = call.text is in ("Number", "Text", "Boolean")
+	(isBase or inference.types.MembersOf(call.text).names.Length is 1) and SyntaxNode("List", "", call.children).IsLiteral

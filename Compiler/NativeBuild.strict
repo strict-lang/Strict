@@ -41,11 +41,9 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 	imported is List(Text) + ("Examples/NativeAdd" + "/native")
 	mutable folders = List(Mutable(Text))
 	for types
-		let source = File(value.Source).Exists then value.Source else root + "/" + value.Source
-		let file = value.Name.IndexOf("/") < 0 then path else source
-		let folder = Path(file).PathOnly.text
-		if Directory.Exists(folder + "/native") and (folder + "/native" is not in folders)
-			folders.Add(folder + "/native")
+		let folder = TypeSource(value).NativeFolder(path, root)
+		if Directory.Exists(folder) and (folder is not in folders)
+			folders.Add(folder)
 	folders
 CountedFile(path Text, root Text, isCounting Boolean) Text
 	NativeBuild.CountedFile("./Examples/Sum.strict", ".", true) is "Examples/Sum.strict"

@@ -4,6 +4,7 @@ has initial List(InstructionEntry)
 has IsConstant Boolean
 constant SevenMember = MemberEntry("a", "b", InstructionEntry(InstructionType.Set, List(Text), (1, 7, 0)), true)
 constant LoggerMember = MemberEntry("logger", "Strict/Logger", List(InstructionEntry), false)
+constant NumbersMember = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
 Names(names BinaryNames) BinaryNames
 	LoggerMember.Names(BinaryNames("a", "b")).names.Length is 4
 	mutable result = names.With(Name).With(typeName)

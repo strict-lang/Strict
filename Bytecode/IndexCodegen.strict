@@ -1,6 +1,7 @@
 has values ValueCodegen
 constant Plain = IndexCodegen(ValueCodegen.Plain)
 constant OwnA = IndexCodegen(ValueCodegen.OwnA)
+constant MemberA = IndexCodegen(ValueCodegen(ValueCodegen.NoTypes, MethodCodegen.NoScope, CallTarget(CallTarget.NoTypes, TypeShape("has A Text"), "Strict/C", List(Text))))
 constant One = ValueCodegen.One
 constant NoNode = ValueCodegen.NoNode
 constant Hi = ValueCodegen.Hi
@@ -30,12 +31,13 @@ IsConstantList(node SyntaxNode) Boolean
 	ConstantFolding(values.target.TypeName, values.inference).Folded(member).Kind is "List"
 IsIndexedCall(node SyntaxNode, block CodeBlock) Boolean
 	OwnA.IsIndexedCall(SyntaxNode("Call", "limits", One), CodeBlock.Empty) is true
-	OwnA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is false
+	OwnA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is true
+	MemberA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is false
 	let isOwnMember = values.target.IsMember(values.target.TypeName, node.text)
 	let isConstant = values.methods.TypeOf(node.text) is not "" and (values.target.Header(node.text).tokens.Length is 0)
 	let isNamed = block.scope.TypeOf(node.text) is not "" or isOwnMember or isConstant
 	let isIndexed = (node.children.Length is 1) and isNamed or (node.children.Length is 2) and isOwnMember
-	isIndexed and (values.inference.types.IsKnown(node.text) is false)
+	isIndexed and (isConstant or values.inference.types.IsKnown(node.text) is false)
 Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
 	Plain.Indexed(SyntaxNode("Call", "failed", One), Failed).instructions.Last.kind is InstructionType.Invoke

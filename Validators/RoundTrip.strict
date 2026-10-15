@@ -1,4 +1,6 @@
 has logger
+constant Digits = "1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2"
+constant Packed = "\t(" + Digits + "," + Digits + ")"
 Run(folder Text)
 	mutable mismatches = 0
 	for Directory.Files(folder, "*.strict")
@@ -22,14 +24,28 @@ CheckBody(lines Texts, start Number, path Text) Number
 Formatted(lines Texts) Texts
 	RoundTrip.Formatted(("Run", "	let x=(1,2)")) is ("Run", "	let x = (1, 2)")
 	RoundTrip.Formatted(("has number ", "Twice Number", "	number*2")) is ("has number", "Twice Number", "	number * 2")
+	RoundTrip.Formatted(("Run", "\t1", "")) is ("Run", "\t1")
 	let shape = TypeShape(lines)
+	let end = Ended(lines)
 	mutable formatted = List(Mutable(Text))
 	for lines
-		if value.StartsWith("	") is false
+		if (value.StartsWith("	") is false) and (index < end)
 			formatted.Add(value.Trim)
 			if shape.IsMethodHeader(value)
-				formatted = formatted + BodyParser(lines).Block(index + 1, 1).Lines("	")
+				formatted = formatted + Body(lines, index + 1)
 	formatted
+Ended(lines Texts) Number
+	RoundTrip.Ended(("Run", "\t1", "", "")) is 2
+	mutable end = 0
+	for lines
+		if value.Trim is not ""
+			end = index + 1
+	end
+Body(lines Texts, start Number) Texts
+	RoundTrip.Body(("Run", "\t(1,2)"), 1) is ("\t(1, 2)")
+	RoundTrip.Body(("Run", Packed), 1) is (Packed)
+	for BodyParser(lines).Block(start, 1).Lines("	")
+		value.Length > Limits.MaxCharacters then lines(start + index) else value
 Tabbed(lines Texts) Texts
 	RoundTrip.Tabbed(("Run", "    1")) is ("Run", "\t1")
 	RoundTrip.Tabbed(("    Run", "        1")) is ("Run", "\t1")
