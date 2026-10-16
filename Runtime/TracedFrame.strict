@@ -1,7 +1,8 @@
 has frame Frame
 constant Loaded = InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (0, 1, 7), 2)
 constant Stored = InstructionEntry(InstructionType.StoreRegisterToVariable, "a", (0, 6), 3)
-constant Lined = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "Strict/Number", (Loaded, Stored, InstructionEntry.Return(0))), "Strict/Doubler"))
+constant Looped = InstructionEntry(InstructionType.LoopBegin, List(Text), (6, 0, 0), 4)
+constant Lined = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "Strict/Number", (Loaded, Stored, Looped, InstructionEntry.Return(0))), "Strict/Doubler"))
 Finished(arguments List(VmValue)) List(VmValue)
 	TracedFrame(Frame.Twice).Finished(Frame.Listed).Index(VmValue.OfNumber(42)) is Frame.ResultSlot
 	mutable slots = List(VmValue) + arguments
@@ -12,13 +13,15 @@ Finished(arguments List(VmValue)) List(VmValue)
 			return slots
 		let entry = instructions(position)
 		slots(entry.Target) = frame.Value(entry, position, slots)
-		Logged(position, slots(entry.Target))
+		Logged(position, slots)
 		position = entry.kind < InstructionType.Return then position + 1 else frame.Next(entry, position, slots)
 	slots
-Logged(position Number, result VmValue) Number
-	Lined.Logged(2, VmValue.OfNumber(7)) is 0
+Logged(position Number, slots List(VmValue)) Number
+	Lined.Logged(3, Frame.Listed) is 0
 	if frame.method.Name is TestCodegen.Runner
 		return 0
+	let entry = frame.method.instructions(position)
+	let result = entry.kind is InstructionType.LoopBegin then slots(entry.payload(0)) else slots(entry.Target)
 	let events = Events(position, result)
 	for events
 		frame.machine.logger.Log(value)
@@ -26,22 +29,24 @@ Logged(position Number, result VmValue) Number
 Events(position Number, result VmValue) Texts
 	Lined.Events(0, VmValue.OfNumber(7)) is ("$Hit Strict/Doubler|2")
 	Lined.Events(1, VmValue.OfNumber(7)) is ("$Hit Strict/Doubler|3", "$Set Strict/Doubler|3|a|7")
-	Lined.Events(2, VmValue.OfNumber(7)).Length is 0
+	Lined.Events(2, VmValue.OfNumber(7)) is ("$Hit Strict/Doubler|4", "$Set Strict/Doubler|4|for|7")
+	Lined.Events(3, VmValue.OfNumber(7)).Length is 0
 	let entry = frame.method.instructions(position)
 	let previous = position > 0 then frame.method.instructions(position - 1).line else 0
 	let isStart = (entry.line > 0) and (entry.kind is not InstructionType.JumpEnd) and (entry.line is not previous)
 	let place = frame.owner + "|" + entry.line
 	let hit = isStart then List(Text) + ("$Hit " + place) else List(Text)
 	let isStored = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
-	isStored and (entry.line > 0) then hit + ("$Set " + place + "|" + entry.texts(0) + "|" + Shown(result)) else hit
+	let name = entry.kind is InstructionType.LoopBegin then "for" else isStored then entry.texts(0) else ""
+	(name is not "") and (entry.line > 0) then hit + ("$Set " + place + "|" + name + "|" + Shown(result)) else hit
 Shown(result VmValue) Text
 	Lined.Shown(VmValue.OfText("ab")) is "\"ab\""
 	Lined.Shown(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))) is "2: 1, 2"
-	Lined.Shown(VmValue.OfList(List(VmValue))) is "0:"
+	Lined.Shown(VmValue.OfList(List(VmValue))) is "()"
 	Lined.Shown(VmValue.OfText("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz")).Length is 53
 	let items = result.items
 	let elements = result.kind is "List" then (items.Length to Text) + ": " + Text.Combine(Elements(items)) else ""
-	let code = result.kind is "List" then elements.Trim else ValueCode(result).Code
+	let code = result.kind is "List" then (items.Length is 0 then "()" else elements) else ValueCode(result).Code
 	code.Length > 50 then code.Substring(0, 50) + "..." else code
 Elements(items List(VmValue)) Texts
 	Lined.Elements((VmValue.OfNumber(1), VmValue.OfText("b"))) is ("1", "\"b\"")

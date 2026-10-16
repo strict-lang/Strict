@@ -119,12 +119,7 @@ Substring(start Number, length Number) Text
 			characters(index)
 Replace(searchFor Text, replaceWith Text) Text
 	"a,b,c".Replace(",", ";") is "a;b;c"
-	let separatorIndex = IndexOf(searchFor)
-	if separatorIndex is -1
-		return value
-	let rest = Range(separatorIndex + searchFor.Length, characters.Length)
-	let prefix = Substring(0, separatorIndex) + replaceWith
-	prefix + Substring(rest.Start, rest.Length).Replace(searchFor, replaceWith)
+	Combine(Split(searchFor), replaceWith)
 Upper Text
 	"HeLlo".Upper is "HELLO"
 	for
