@@ -29,7 +29,7 @@ Accumulated Texts
 			names.Add(entry.texts(0))
 	names
 IsLocal(store Number) Boolean
-	Sharing.IsLocal(8) is true
+	Sharing.IsLocal(8)
 	Summing.IsLocal(10) is false
 	let name = function.method.instructions(store).texts(0)
 	for at

@@ -5,12 +5,12 @@ constant Lookup = Picking.method.instructions(4)
 constant Types = " : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)"
 constant Measuring = MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Measured)
 IsRows(kind Text) Boolean
-	MlirDeviceRows(Picking, 4).IsRows("List(Numbers)") is true
+	MlirDeviceRows(Picking, 4).IsRows("List(Numbers)")
 	MlirDeviceRows(Picking, 4).IsRows("Numbers") is false
-	Text.Combine(MlirDeviceStatements(Picking, 4).Emitted).IndexOf("@strict_device_row(") > 0 is true
+	Text.Combine(MlirDeviceStatements(Picking, 4).Emitted).IndexOf("@strict_device_row(") > 0
 	MlirLayout(function).Represented(kind) is in ("List(Numbers)", "List(List(Number))")
 Emitted(entry InstructionEntry) Texts
-	Text.Combine(MlirDeviceRows(Picking, 4).Emitted(Lookup)).IndexOf("@strict_device_row(%d4d, %d4k)") > 0 is true
+	Text.Combine(MlirDeviceRows(Picking, 4).Emitted(Lookup)).IndexOf("@strict_device_row(%d4d, %d4k)") > 0
 	MlirDeviceRows(Picking, 4).Emitted(Lookup).Last is "  ^d4done:"
 	if IsRows(MlirKinds(function).VariableKind(at, entry.texts(0))) is false
 		return MlirDeviceStatements(function, at).Indexed(entry)

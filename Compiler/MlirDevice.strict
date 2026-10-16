@@ -32,7 +32,7 @@ Freed Text
 IsList(name Text) Boolean
 	Layering.IsList("input")
 	Doubling.IsList("value") is false
-	MlirDevice(MlirDeviceRows.Picking, 2).IsList("weights") is true
+	MlirDevice(MlirDeviceRows.Picking, 2).IsList("weights")
 	let kind = MlirKinds(function).VariableKind(position, name)
 	MlirDeviceStatements(function, position).IsList(kind) or MlirDeviceRows(function, position).IsRows(kind)
 Given Texts

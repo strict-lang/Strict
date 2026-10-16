@@ -62,7 +62,7 @@ IsCalculated(at Number) Boolean
 IsIndexedByLoop(at Number) Boolean
 	Doubling.IsIndexedByLoop(4)
 	MlirKernel(MlirLists.Listed, 0).IsIndexedByLoop(2) is false
-	Squaring.IsIndexedByLoop(7) is true
+	Squaring.IsIndexedByLoop(7)
 	let entry = function.method.instructions(at)
 	let kind = MlirLayout(function).Represented(MlirKinds(function).VariableKind(at, entry.texts(0)))
 	let reuse = LoadReuse(function.method.instructions)

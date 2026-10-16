@@ -52,7 +52,7 @@ Cached(input Numbers, rotation Numbers) Qwen3Block
 	let valued = Batch.Columns(combined, combined.Length / tokens, (heads + groups) * size, groups * size)
 	Qwen3Block(value, keys = keys + keyed, values = values + valued, queries = queried)
 Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Numbers) Numbers
-	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.414214) is true
+	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.414214)
 	let size = weights.Length
 	let perToken = count * size * 2 / rotation.Length
 	let stride = input.Length * size * 2 / rotation.Length
@@ -78,7 +78,7 @@ Scales(input Numbers, start Number, count Number, size Number) Numbers
 	for count / size
 		HeadScale(input, start + index * size, size)
 HeadScale(input Numbers, first Number, size Number) Number
-	Tiny.HeadScale((3, 4, 0, 1), 2, 2).IsNearlyEqual(1.414213) is true
+	Tiny.HeadScale((3, 4, 0, 1), 2, 2).IsNearlyEqual(1.414213)
 	mutable sum = 0
 	for size
 		sum = sum + input(first + index) * input(first + index)
