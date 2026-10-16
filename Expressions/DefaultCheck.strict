@@ -72,5 +72,8 @@ IsConstantMember(member SyntaxNode) Boolean
 IsWrapper(call SyntaxNode) Boolean
 	Counting.IsWrapper(SyntaxParser(Tokenizer("Number(1)").Tokens).Parse) is true
 	Counting.IsWrapper(SyntaxParser(Tokenizer("Count(1, 2)").Tokens).Parse) is false
+	Counting.IsWrapper(SyntaxParser(Tokenizer("Number(List(Number))").Tokens).Parse) is true
 	let isBase = call.text is in ("Number", "Text", "Boolean")
-	(isBase or inference.types.MembersOf(call.text).names.Length is 1) and SyntaxNode("List", "", call.children).IsLiteral
+	let isNested = (call.children.Length is 1) and (call.children(0).Kind is "Call") and IsConstant(call.children(0))
+	let isConstant = SyntaxNode("List", "", call.children).IsLiteral or isNested
+	(isBase or inference.types.MembersOf(call.text).names.Length is 1) and isConstant

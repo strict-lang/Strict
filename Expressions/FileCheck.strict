@@ -43,7 +43,9 @@ UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 	Counting.UnknownMethods(MissingCall.statement, Counted, KnownTypes.NoMembers) is ("MethodNotFound: Count.Missing")
 	mutable unknown = UnknownMembers(node)
 	let hidden = HiddenType(inference).Ambiguous(node, scope, current) + HiddenType(inference).Issue(node, scope, current)
-	let issue = hidden is not "" then hidden else IsCall(node) then CallIssue(node, scope, current) else ""
+	let called = IsCall(node) then CallIssue(node, scope, current) else ""
+	let typed = called is "" then ArgumentTypes(inference).Issue(node, scope, current) else called
+	let issue = hidden is "" then typed else hidden
 	if issue is not ""
 		unknown = unknown + issue
 	for node.children

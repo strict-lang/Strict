@@ -1,0 +1,42 @@
+has inference TypeInference
+constant Members = (Scope(List(Text) + "number", List(Text) + "Number"), Scope(List(Text) + "size", List(Text) + "Size"), Scope(List(Text) + "width", List(Text) + "Number"))
+constant Methods = (Scope(List(Text) + "Grow", List(Text) + "Count"), KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant Parameters = (Scope(("Grow", "Grow types", "Grow required"), ("area", "Area", "1")), KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant Shapes = (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant Sizing = ArgumentTypes(TypeInference(KnownTypes(("Count", "Area", "Size"), Members, Methods, Parameters), Shapes))
+constant Grown = SyntaxParser(Tokenizer("count.Grow(count)").Tokens).Parse
+constant Counted = Scope(("count", "area", "size"), ("Count", "Area", "Size"))
+Issue(call SyntaxNode, scope Scope, current Scope) Text
+	Sizing.Issue(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch") is true
+	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ""
+	let isCall = (call.Kind is "MethodCall") and (call.children.Length > 1)
+	let instance = isCall then inference.TypeOf(call.children(0), scope, current) else ""
+	let parameters = inference.types.ParameterScope(instance)
+	if parameters.Count(call.text) is not 1
+		return ""
+	let types = parameters.TypeOf(call.text + " types").Split(",")
+	let arguments = Arguments(call, scope, current)
+	let at = Mismatched(arguments, types)
+	let method = instance + "." + call.text
+	at < 0 then "" else "ArgumentTypeMismatch: " + method + " got a " + arguments(at) + " for a " + types(at)
+Arguments(call SyntaxNode, scope Scope, current Scope) Texts
+	Sizing.Arguments(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ("Area")
+	for Range(1, call.children.Length)
+		inference.TypeOf(call.children(value), scope, current)
+Mismatched(arguments Texts, types Texts) Number
+	Sizing.Mismatched(("Area", "Count"), ("Area", "Area")) is 1
+	Sizing.Mismatched(List(Text) + "Area", List(Text) + "Area") is -1
+	for arguments
+		if (index < types.Length) and Mismatch(value, types(index))
+			return index
+	-1
+Mismatch(argument Text, parameter Text) Boolean
+	Sizing.Mismatch("Count", "Area") is true
+	Sizing.Mismatch("Area", "Size") is false
+	Sizing.Mismatch("Number", "Area") is false
+	Sizing.Mismatch("Area", "Area") is false
+	let types = inference.types
+	let isUser = (TypeEntry.IsBaseName(argument) is false) and (TypeEntry.IsBaseName(parameter) is false)
+	let isKnown = types.IsKnown(argument) and types.IsKnown(parameter)
+	let isChecked = isUser and isKnown and (types.MembersOf(parameter).names.Length > 0)
+	isChecked and (argument is not parameter) and (parameter is not in types.MembersOf(argument).types)

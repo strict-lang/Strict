@@ -4,6 +4,7 @@ constant Counts = TypeInference(KnownTypes.Sample, TypeInference.Limits)
 constant Limits = ConstantFolding("Count", Counts)
 constant Calls = ConstantFolding("Count", TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Empty", List(Text) + "Count(1)"), TypeInference.NoShape)))
 constant Outered = ConstantFolding("Count", TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Made", List(Text) + "outer.Count(1)"), TypeInference.NoShape)))
+constant Painting = ConstantFolding("Painter", TypeInference(KnownTypes(("Count", "Painter"), (KnownTypes.CountMembers, KnownTypes.NoMembers), (KnownTypes.CountMethods, Scope(List(Text) + "Count", List(Text) + "Count")), KnownTypes.SampleParameters), TypeInference.Limits))
 constant Limit = SyntaxNode("Identifier", "Limit")
 constant Two = SyntaxNode("Number", "2")
 constant Count = SyntaxNode("Identifier", "Count")
@@ -74,7 +75,8 @@ Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 	if (definition is "") or (owner + "." + node.text is in aliases)
 		return node
 	let tokens = Tokenizer(definition).Tokens
-	let parsed = ConstantFolding(owner, inference).Qualified(Outer(SyntaxParser(tokens).ParseRange(0, tokens.Length)))
+	let qualified = ConstantFolding(owner, inference).Qualified(Outer(SyntaxParser(tokens).ParseRange(0, tokens.Length)))
+	let parsed = Unhidden(qualified)
 	parsed.Kind is "Member" then Aliased(parsed, aliases + (owner + "." + node.text)) else parsed
 Qualified(node SyntaxNode) SyntaxNode
 	Limits.Qualified(SyntaxNode("Binary", "*", (Limit, Two))) to Text is "Count.Limit * 2"
@@ -88,6 +90,16 @@ Qualified(node SyntaxNode) SyntaxNode
 	if (node.Kind is "Call") and (inference.types.MethodsOf(typeName).TypeOf(node.text) is not "")
 		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Type", typeName) + qualified)
 	SyntaxNode(node.Kind, node.text, qualified)
+Unhidden(node SyntaxNode) SyntaxNode
+	Painting.Unhidden(SyntaxNode("Call", "Count", Two)).children(0).Kind is "Type"
+	Limits.Unhidden(SyntaxNode("Call", "Count", Two)).Kind is "Call"
+	mutable children = List(Mutable(SyntaxNode))
+	for node.children
+		children.Add(Unhidden(value))
+	let isHidden = (node.Kind is "Call") and (inference.types.MethodsOf(typeName).TypeOf(node.text) is not "")
+	if isHidden and inference.types.IsKnown(node.text)
+		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Type", node.text) + children, node.line)
+	SyntaxNode(node.Kind, node.text, children, node.line)
 Outer(node SyntaxNode) SyntaxNode
 	Limits.Outer(SyntaxParser(Tokenizer("outer.Count.Twice").Tokens).Parse).children(0).Kind is "Type"
 	Limits.Outer(SyntaxParser(Tokenizer("outer.index").Tokens).Parse).children(0).Kind is "Identifier"
@@ -105,6 +117,17 @@ OuterTyped(call SyntaxNode) List(SyntaxNode)
 	Limits.OuterTyped(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).First.Kind is "Type"
 	for call.children
 		index is 0 then SyntaxNode("Type", call.text) else Outer(value)
+Constructed(node SyntaxNode) SyntaxNode
+	Limits.Constructed(Limits.Qualified(SyntaxNode("Call", "Count", Two))) to Text is "Count(2)"
+	Limits.Constructed(Two) is Two
+	let isTyped = (node.Kind is "MethodCall") and (node.children.Length > 0) and (node.children(0).Kind is "Type")
+	if (isTyped is false) or (node.children(0).text is not node.text)
+		return node
+	SyntaxNode("Call", node.text, Rest(node.children), node.line)
+Rest(nodes SyntaxNodes) SyntaxNodes
+	Limits.Rest((Two, Limit)) is (Limit)
+	for Range(1, nodes.Length)
+		nodes(value)
 Negated(node SyntaxNode) SyntaxNode
 	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Two)).text is "-2"
 	Limits.Negated(Two).text is "2"
@@ -127,7 +150,7 @@ Unwrapped(node SyntaxNode) SyntaxNode
 	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Vector2(Limit)").Tokens).Parse) to Text is "Limit"
 	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Angle(90)").Tokens).Parse) to Text is "Angle(90)"
 	Limits.Unwrapped(Limit).text is "3"
-	let folded = Folded(node)
+	let folded = Constructed(Folded(node))
 	let members = inference.types.MembersOf(folded.text).types
 	let isWrapper = (folded.Kind is "Call") and (members.Length is 1) and (TypeEntry.IsBaseName(folded.text) is false)
 	if (isWrapper is false) or (inference.types.MethodsOf(folded.text).TypeOf("from") is not "")

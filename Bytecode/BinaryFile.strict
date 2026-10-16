@@ -53,6 +53,9 @@ IsCurrent(entries List(ZipEntry)) Boolean
 	fresh
 Types(entries List(ZipEntry)) List(TypeEntry)
 	Probe.Types(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
+	Probe.Types(List(ZipEntry)).Length is 0
+	if entries.Length < 2
+		return List(TypeEntry)
 	for Range(1, entries.Length)
 		let entry = entries(value)
 		entry.Name.EndsWith(".reference") then Referenced(entry) else EntryDecoder.Of(entry.content).Type

@@ -8,12 +8,13 @@ constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, 
 constant Sample = TypeShape("has a Number", "Run", "\tlet b = a", "\tb")
 constant AddOther = HeaderTokens("Add", "(", "other", ")")
 constant Adding = MethodBodies("Demo", Sample, NoInference).HeaderScope(AddOther, NoScope)
+constant Constanted = MethodBodies("Demo", TypeShape("has a Number", "constant Twice = a * 2"), NoInference).Statements.Last
 constant CheckedA = BodyParser("Run", "\tif a is Error", "\t\ta").Block(1, 1).children(0)
 Statements ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Length is 2
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.line is 3
 	MethodBodies("Demo", TypeShape("has a Number", "constant Twice = a * 2"), NoInference).Statements.Last.line is 1
-	let members = shape.MemberScope
+	let members = shape.MemberScope.With("self type", typeName)
 	mutable statements = List(Mutable(ScopedStatement))
 	for shape.lines
 		if shape.IsMethodHeader(value)
@@ -37,6 +38,7 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 	scope
 InstanceType Text
 	MethodBodies("List", Sample, NoInference).InstanceType is "Generics"
+	Constanted.scope.TypeOf("self type") is "Demo"
 	typeName is "List" then "Generics" else typeName
 IteratedType Text
 	MethodBodies("Text", Sample, NoInference).IteratedType is "Characters"
