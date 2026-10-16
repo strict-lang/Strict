@@ -1,0 +1,102 @@
+has text
+constant Bones = Json("{ \"bones\": [ { \"name\": \"root\" }, { \"name\": \"Body\", \"y\": 39.54 } ], \"loop\": true }")
+constant Escaped = Json(" \"a\\\"b\\nc\\u0041\" ")
+constant Spaces = (" ", "\t", "\n", "\r")
+constant Ends = (",", "}", "]", " ", "\t", "\n", "\r")
+Read(path Text) Json
+	Json.Read("Json/BatSkeleton.json").Field("skeleton").Field("width") to Number is 205.28
+	Json.Read("Json/BatSkeleton.json").Field("bones").Elements(2).Field("parent") to Text is "Bat_Bone"
+	Json(Text.Combine(File(path).ReadLines, "\n"))
+Field(key Text) Json
+	Bones.Field("bones").Elements(1).Field("y") to Number is 39.54
+	Bones.Field("loop") to Text is "true"
+	Bones.Field("missing") to Text is ""
+	let open = Skip(0)
+	let parts = Parts(open)
+	for Range(0, text.Substring(open, 1) is "{" then (parts.Length - 1) / 2 else 0)
+		if Unquoted(parts(value * 2)) is key
+			return Slice(MemberValue(parts(value * 2)), parts(value * 2 + 1))
+	Json("")
+Keys Texts
+	Bones.Keys is ("bones", "loop")
+	Bones.Field("bones").Keys.Length is 0
+	let open = Skip(0)
+	let parts = Parts(open)
+	for Range(0, text.Substring(open, 1) is "{" then (parts.Length - 1) / 2 else 0)
+		Unquoted(parts(value * 2))
+Elements Jsons
+	Bones.Field("bones").Elements.Length is 2
+	Bones.Elements(1) to Text is "true"
+	let open = Skip(0)
+	let parts = Parts(open)
+	for Range(0, (parts.Length - 1) / 2)
+		let start = parts(value * 2)
+		Slice(text.Substring(open, 1) is "{" then MemberValue(start) else start, parts(value * 2 + 1))
+Values Numbers
+	Json("[1, -2.5, 1.0E-5]").Values is (1, -2.5, 0.00001)
+	for Elements
+		value to Number
+to Text
+	Escaped to Text is "a\"b\ncA"
+	Json(" 82 ") to Text is "82"
+	Json("\"\\u00e9\\ud83d\\ude00\"") to Text is "é😀"
+	let start = Skip(0)
+	text.Substring(start, 1) is "\"" then Unquoted(start) else text.Trim
+to Number
+	Json(" 82 ") to Number is 82
+	text.Trim to Number
+Parts(open Number) Numbers
+	Json("[1, \"b\"]").Parts(0) is (1, 2, 4, 7, 7)
+	let isObject = text.Substring(open, 1) is "{"
+	mutable parts = List(Mutable(Number))
+	if (isObject is false) and (text.Substring(open, 1) is not "[")
+		return parts + open
+	mutable at = Skip(open + 1)
+	for as long as (at < text.Length) and (text.Substring(at, 1) is not in ("}", "]"))
+		let finish = ValueEnd(isObject then MemberValue(at) else at)
+		parts = parts + at + finish
+		let after = Skip(finish)
+		at = text.Substring(after, 1) is "," then Skip(after + 1) else after
+	parts + at
+ValueEnd(start Number) Number
+	Json("[1, [2]]").ValueEnd(0) is 8
+	Json("12, 3").ValueEnd(0) is 2
+	let first = text.Substring(start, 1)
+	if first is "\""
+		return StringEnd(start)
+	if first is in ("{", "[")
+		return Parts(start).Last + 1
+	mutable after = start
+	for as long as (after < text.Length) and (text.Substring(after, 1) is not in Ends)
+		after = after + 1
+	after
+StringEnd(start Number) Number
+	Escaped.StringEnd(1) is 16
+	Json("\"a\\\\\" ").StringEnd(0) is 5
+	mutable at = text.IndexOf("\"", start + 1)
+	for as long as (at > 0) and (Slashes(at) % 2 is 1)
+		at = text.IndexOf("\"", at + 1)
+	at < 0 then text.Length else at + 1
+Slashes(position Number) Number
+	Escaped.Slashes(4) is 1
+	mutable count = 0
+	for as long as (position > count) and (text.Substring(position - count - 1, 1) is "\\")
+		count = count + 1
+	count
+MemberValue(key Number) Number
+	Bones.MemberValue(2) is 11
+	Json("{\"a\"}").MemberValue(1) is 5
+	let colon = text.IndexOf(":", StringEnd(key))
+	colon < 0 then text.Length else Skip(colon + 1)
+Skip(position Number) Number
+	Json(" \t\n1").Skip(0) is 3
+	mutable at = position
+	for as long as (at < text.Length) and (text.Substring(at, 1) is in Spaces)
+		at = at + 1
+	at
+Slice(start Number, finish Number) Json
+	Bones.Slice(11, 65).Elements.Length is 2
+	Json(text.Substring(start, finish - start))
+Unquoted(start Number) Text
+	Escaped.Unquoted(1) is "a\"b\ncA"
+	JsonText(text.Substring(start + 1, StringEnd(start) - start - 2)).Unescaped

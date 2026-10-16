@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<MeshAnimation Version="1" Mode="0">
+  <MeshAnimationInfo ObjectType="Delta.Rendering.Models.Animations.MeshAnimationMetaInfo,Delta.Rendering.Models" AnimationMeshName="AngelAnimation" NumberOfBodyParts="3" BodyPartSeparationBones="AngelSpine1,AngelSpine2,AngelSpine3,AngelRibcage,AngelLArmCollarbone,AngelLArm1,AngelLArm21,AngelLArm22,AngelLArmPalm,AngelRArmCollarbone,AngelRArm1,AngelRArm21,AngelRArm22,AngelRArmPalm,AngelNeck,AngelHead,AngelRWingCollarbone,AngelRWing1,AngelRWing2,AngelRWingPalm,AngelLWingCollarbone,AngelLWing1,AngelLWing2,AngelLWingPalm;AngelSpine1,AngelPelvis,AngelRLeg1,AngelRLeg2,AngelRLegAnkle,AngelRLegDigit11,AngelLLeg1,AngelLLeg2,AngelLLegAnkle,AngelLLegDigit11">
+    <AnimationGroup ObjectType="Delta.Rendering.Models.Animations.AnimationGroup,Delta.Rendering.Models" Name="Attack" Overridable="False" BodyParts="1" Priority="3" PlayType="2">
+      <AnimationData AnimationFrameRangeStart="211" AnimationFrameRangeEnd="230" AnimationFrameIsLooped="False" AnimationBlendFactor="0.125" />
+      <AnimationData AnimationFrameRangeStart="231" AnimationFrameRangeEnd="250" AnimationFrameIsLooped="False" AnimationBlendFactor="0.125" />
+      <AnimationData AnimationFrameRangeStart="251" AnimationFrameRangeEnd="270" AnimationFrameIsLooped="False" AnimationBlendFactor="0.125" />
+    </AnimationGroup>
+    <AnimationGroup ObjectType="Delta.Rendering.Models.Animations.AnimationGroup,Delta.Rendering.Models" Name="SwordAttack" Overridable="False" BodyParts="0" Priority="3" PlayType="2">
+      <AnimationData AnimationFrameRangeStart="1701" AnimationFrameRangeEnd="1750" AnimationFrameIsLooped="False" AnimationBlendFactor="0.125">
+        <FrameStartIndices>
+          <IntWrapper ObjectType="Delta.Utilities.Xml.Wrapper.IntWrapper,Delta.Utilities.Xml" Value="1710" />
+          <IntWrapper ObjectType="Delta.Utilities.Xml.Wrapper.IntWrapper,Delta.Utilities.Xml" Value="1760" />
+          <IntWrapper ObjectType="Delta.Utilities.Xml.Wrapper.IntWrapper,Delta.Utilities.Xml" Value="1810" />
+          <IntWrapper ObjectType="Delta.Utilities.Xml.Wrapper.IntWrapper,Delta.Utilities.Xml" Value="1860" />
+        </FrameStartIndices>
+        <FrameStopIndices>
+          <IntWrapper ObjectType="Delta.Utilities.Xml.Wrapper.IntWrapper,Delta.Utilities.Xml" Value="1720" />
+          <IntWrapper ObjectType="Delta.Utilities.Xml.Wrapper.IntWrapper,Delta.Utilities.Xml" Value="1770" />
+          <IntWrapper ObjectType="Delta.Utilities.Xml.Wrapper.IntWrapper,Delta.Utilities.Xml" Value="1820" />
+          <IntWrapper ObjectType="Delta.Utilities.Xml.Wrapper.IntWrapper,Delta.Utilities.Xml" Value="1875" />
+        </FrameStopIndices>
+      </AnimationData>
+      <AnimationData AnimationFrameRangeStart="1751" AnimationFrameRangeEnd="1800" AnimationFrameIsLooped="False" AnimationBlendFactor="0.125" />
+      <AnimationData AnimationFrameRangeStart="1801" AnimationFrameRangeEnd="1850" AnimationFrameIsLooped="False" AnimationBlendFactor="0.125" />
+      <AnimationData AnimationFrameRangeStart="1851" AnimationFrameRangeEnd="1900" AnimationFrameIsLooped="False" AnimationBlendFactor="0.125" />
+    </AnimationGroup>
+  </MeshAnimationInfo>
+</MeshAnimation>

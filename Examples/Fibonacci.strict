@@ -1,8 +1,7 @@
 has number
-has logger
-GetNthFibonacci Number
-	Fibonacci(5).GetNthFibonacci is 5
-	Fibonacci(10).GetNthFibonacci is 55
+Get Number
+	Fibonacci(5).Get is 5
+	Fibonacci(10).Get is 55
 	mutable first = 1
 	mutable second = 1
 	for Range(2, number)
@@ -10,6 +9,3 @@ GetNthFibonacci Number
 		first = second
 		second = next
 	second
-Run
-	logger.Log("Fibonacci(10) = " + Fibonacci(10).GetNthFibonacci)
-	logger.Log("Fibonacci(5) = " + Fibonacci(5).GetNthFibonacci)
