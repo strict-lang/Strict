@@ -44,6 +44,7 @@ IsWanted(name Text, names Texts) Boolean
 	Point.IsWanted("Members", Names) is true
 	Point.IsWanted("Members", List(Text)) is false
 	Automatic(List(Text) + "has text", "Name", Instantiation.Pairing).IsWanted("to HashCode", Names) is true
+	Automatic(("has red Number with value >= 0", "has alpha = 1"), "T", Instantiation.Pairing).IsWanted("Validated", Names)
 	if (name is not in names) or ((name is "Validated") and (Constraint.IsConstrained(lines) is false))
 		return false
 	for lines

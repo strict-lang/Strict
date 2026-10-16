@@ -46,14 +46,13 @@ ParameterScope Scope
 	TypeShape("Add(first Number, second) Number", "\tfirst").ParameterScope.TypeOf("Add types") is "Number,Second"
 	TypeShape("Add(first Number) Mutable(Number)", "\tfirst").ParameterScope.TypeOf("Add mutable") is "Mutable"
 	TypeShape("has price Number with Step 0.01").ParameterScope.TypeOf("price step") is "0.01"
-	TypeShape("has light Number = 0").ParameterScope.TypeOf("light default") is "0"
 	mutable scope = Scope(List(Text), List(Text))
 	for lines
 		if IsMethodHeader(value)
 			let entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens)).Parameters
 			scope = scope.WithAll(entries.names, entries.types)
 	let steps = Steps(List(Text)).Members(lines)
-	Defaults(lines).Added(scope.WithAll(steps.names, steps.types))
+	scope.WithAll(steps.names, steps.types)
 UsesGenerics Boolean
 	TypeShape("has value Generic").UsesGenerics is true
 	TypeShape("has value Generic or None").UsesGenerics is false
@@ -77,14 +76,14 @@ CallScope(generics Texts) Scope
 	TypeShape("from(number)", "\tvalue").CallScope(List(Text)).TypeOf("from") is "number"
 	TypeShape("has Name", "has Value Generic", "has Size = 0").CallScope(List(Text)).TypeOf("from") is "Name,Value,Size"
 	TypeShape("has width Number with value > 0").CallScope(List(Text)).TypeOf(Constrained) is "true"
-	constant scope = Constraint.IsConstrained(lines) then ParameterScope.With(Constrained, "true") else ParameterScope
-	if "from" is in scope.names
-		return scope
+	TypeShape("has light Number = 0").CallScope(List(Text)).TypeOf("light default") is "0"
+	constant parameters = Defaults(lines).Added(ParameterScope)
+	constant scope = Constraint.IsConstrained(lines) then parameters.With(Constrained, "true") else parameters
 	mutable names = List(Mutable(Text))
 	for MemberScope.types
 		if (value is not in generics) and ((value is "Generic") or (value.IndexOf("Generic") is -1))
 			names.Add(MemberScope.names(index))
-	scope.With("from", Text.Combine(names, ","))
+	"from" is in scope.names then scope else scope.With("from", Text.Combine(names, ","))
 MethodScope Scope
 	TypeShape("constant Limit = 3", "Add(other Number) Number", "\tother").MethodScope.TypeOf("Add") is "Number"
 	TypeShape("constant Limit = 3", "Add(other Number) Number", "\tother").MethodScope.TypeOf("Limit") is "Number"
