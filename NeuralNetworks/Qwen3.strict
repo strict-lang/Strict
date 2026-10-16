@@ -58,7 +58,27 @@ Scored Numbers
 Next Number
 	Tiny.Step(1, 0).Next is 0
 	let logits = Scored
-	let width = logits.Length % 128 is 0 then 128 else logits.Length
-	let largest = Qwen3Block.Largest(logits, width)
-	let block = largest.Index(largest.Maximum)
-	block * width + Safetensors.Part(logits, block * width, width, 1).Index(largest(block))
+	let best = Best(logits, logits.Length % 128 is 0 then 128 else logits.Length)
+	best(2 * Chosen(best) + 1)
+Best(scores Numbers, width Number) Numbers
+	Tiny.Best((1, 3, 2, 0), 2) is (3, 1, 2, 2)
+	for 2 * scores.Length / width
+		let start = (index / 2).Floor * width
+		let odd = index % 2
+		mutable largest = scores(start)
+		mutable position = start
+		for width
+			position = Above(scores(start + index), largest, start + index, position)
+			largest = Qwen3Block.Larger(largest, scores(start + index))
+		Above(odd, 0, position, largest)
+Above(number Number, limit Number, chosen Number, otherwise Number) Number
+	Tiny.Above(2, 1, 5, 6) is 5
+	Tiny.Above(1, 1, 5, 6) is 6
+	number > limit then chosen else otherwise
+Chosen(pairs Numbers) Number
+	Tiny.Chosen((1, 0, 3, 1, 2, 2)) is 1
+	mutable chosen = 0
+	for pairs.Length / 2
+		if pairs(2 * index) > pairs(2 * chosen)
+			chosen = index
+	chosen

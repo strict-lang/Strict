@@ -6045,15 +6045,31 @@
   }
   // a loop of at least 256 elements tries the GPU, a smaller one too once lists live there, it may read one of them
   func.func private @strict_gpu_wanted(%count: i64) -> i1 attributes {passthrough = ["alwaysinline"]} {
-    %none = arith.constant 0 : i64
     %threshold = arith.constant 256 : i64
     %enough = arith.cmpi sge, %count, %threshold : i64
+    %present = func.call @strict_gpu_present() : () -> i1
+    %wanted = arith.ori %enough, %present : i1
+    return %wanted : i1
+  }
+  func.func private @strict_gpu_present() -> i1 attributes {passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
     %residing = llvm.mlir.addressof @strict_gpu_residing : !llvm.ptr
     %usedSlot = llvm.getelementptr %residing[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
     %used = llvm.load %usedSlot : !llvm.ptr -> i64
     %present = arith.cmpi sgt, %used, %none : i64
-    %wanted = arith.ori %enough, %present : i1
-    return %wanted : i1
+    return %present : i1
+  }
+  // a list a kernel reads without the CPU: on the GPU already, or packed numbers (decoded there) once lists live there
+  func.func private @strict_gpu_readable(%list: f64) -> i1 {
+    %none = arith.constant 0 : i64
+    %device = func.call @strict_gpu_device(%list) : (f64) -> i64
+    %resides = arith.cmpi ne, %device, %none : i64
+    %bits = func.call @strict_list_packed(%list) : (f64) -> i64
+    %packed = arith.cmpi sgt, %bits, %none : i64
+    %present = func.call @strict_gpu_present() : () -> i1
+    %uploaded = arith.andi %packed, %present : i1
+    %readable = arith.ori %resides, %uploaded : i1
+    return %readable : i1
   }
   func.func private @strict_gpu_device(%list: f64) -> i64 {
     %zero = arith.constant 0.0 : f64
@@ -6086,8 +6102,7 @@
     %isList = arith.cmpi eq, %kind, %one : i64
     cf.cond_br %isList, ^source, ^next(%none : i64)
   ^source:
-    %sourceDevice = func.call @strict_gpu_device(%source) : (f64) -> i64
-    %sourceResides = arith.cmpi ne, %sourceDevice, %none : i64
+    %sourceResides = func.call @strict_gpu_readable(%source) : (f64) -> i1
     cf.cond_br %sourceResides, ^found, ^next(%none : i64)
   ^next(%index: i64):
     %more = arith.cmpi slt, %index, %valueCount : i64
@@ -6101,8 +6116,7 @@
   ^listed:
     %slot = llvm.getelementptr %values[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %slot : !llvm.ptr -> f64
-    %device = func.call @strict_gpu_device(%value) : (f64) -> i64
-    %resides = arith.cmpi ne, %device, %none : i64
+    %resides = func.call @strict_gpu_readable(%value) : (f64) -> i1
     cf.cond_br %resides, ^found, ^next(%following : i64)
   ^found:
     return %true : i1

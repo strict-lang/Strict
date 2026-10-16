@@ -66,7 +66,9 @@ IsWarped Boolean
 	false
 IsSummed(inspected MlirFunction, first Number, limit Number) Boolean
 	Summing.IsSummed(Summing.function, 0, 14) is true
+	Summing.IsSummed(MlirDeviceChoice.Choosing, 0, 16) is true
 	for Range(first, limit)
-		if (inspected.method.instructions(value).kind is InstructionType.LoopBegin) and MlirDeviceSums(inspected, value).IsSum
+		let isLoop = inspected.method.instructions(value).kind is InstructionType.LoopBegin
+		if isLoop and (MlirDeviceSums(inspected, value).IsSum or MlirDeviceChoice(inspected, value).IsChoice)
 			return true
 	false

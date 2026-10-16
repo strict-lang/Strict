@@ -29,7 +29,10 @@ Begin(register Text, entry InstructionEntry) Texts
 	Kept + count + start + loop + (check, branch, "  ^d" + at + "body:") + Current(register, isList)
 Started Texts
 	Beginning.Started.Last is "    llvm.store %lane, %loop2 : i64, !llvm.ptr"
+	MlirDeviceLoops(MlirDeviceChoice.Choosing, 4).Started is ("    llvm.store %lane, %loop4 : i64, !llvm.ptr")
 	let sums = MlirDeviceSums(function, at)
+	if MlirDeviceChoice(function, at).IsChoice
+		return List(Text) + MlirTyped.Integer.Store("%lane", "%loop" + at)
 	if sums.IsSum is false
 		return (MlirTyped.Integer.Constant(Temp("z"), "0"), MlirTyped.Integer.Store(Temp("z"), "%loop" + at))
 	mutable lines = List(Text) + MlirTyped.Integer.Constant(Temp("z"), "0")
@@ -64,13 +67,17 @@ Current(register Text, isList Boolean) Texts
 	index + data + sizes + (read, function.Store(Temp("e"), "%v_value"))
 End Texts
 	Ending.End.Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
+	MlirDeviceLoops(MlirDeviceChoice.Choosing, 12).End.Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"
 	let begin = function.method.LoopBeginOf(at)
 	let counter = "%loop" + begin
 	let isSum = MlirDeviceSums(function, begin).IsSum
-	let added = "    " + Temp("n") + " = arith.addi " + Temp("k") + ", " + (isSum then "%lanes" else Temp("o")) + " : i64"
+	let choice = MlirDeviceChoice(function, begin)
+	let step = isSum or choice.IsChoice then "%lanes" else Temp("o")
+	let added = "    " + Temp("n") + " = arith.addi " + Temp("k") + ", " + step + " : i64"
 	let next = (MlirTyped.Integer.Load(Temp("k"), counter), MlirTyped.Integer.Constant(Temp("o"), "1"), added)
 	let stored = (MlirTyped.Integer.Store(Temp("n"), counter), "    cf.br ^d" + begin + "loop", "  ^d" + begin + "exit:")
-	next + stored + Restored(begin) + (isSum then Reduced(begin) else List(Text))
+	let reduced = isSum then Reduced(begin) else choice.IsChoice then choice.Reduced(at) else List(Text)
+	next + stored + Restored(begin) + reduced
 Reduced(begin Number) Texts
 	Ending.Reduced(2).Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
