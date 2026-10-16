@@ -1,0 +1,15 @@
+has line Text
+constant Sample = Xml("<Element Identifier=\"Play\" Margin=\"0 0.5 0 0\" BlendColor=\"(1.00, 0.50, 1.00, 1.00)\">")
+Attribute(key Text) Text
+	Sample.Attribute("Identifier") is "Play"
+	Sample.Attribute("Missing") is ""
+	let found = line.IndexOf(" " + key + "=\"")
+	if found < 0
+		return ""
+	let start = found + key.Length + 3
+	line.Substring(start, line.IndexOf("\"", start) - start)
+Values(key Text) Numbers
+	Sample.Values("Margin") is (0, 0.5, 0, 0)
+	Sample.Values("BlendColor") is (1, 0.5, 1, 1)
+	let text = Attribute(key).Replace("(", "").Replace(")", "").Replace(",", "")
+	text is "" then List(Number) else text.Split(" ") to Numbers
