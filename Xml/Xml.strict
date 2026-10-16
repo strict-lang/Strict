@@ -1,15 +1,104 @@
-has line Text
+has text
 constant Sample = Xml("<Element Identifier=\"Play\" Margin=\"0 0.5 0 0\" BlendColor=\"(1.00, 0.50, 1.00, 1.00)\">")
+constant Menu = Xml("<?xml?><!-- > --><Menu>\n\t<Button\n\t\tText=\"Play\" />\n\t<Label>A &amp; B</Label>\n</Menu>")
+Read(path Text) Xml
+	Xml.Read("Xml/Settings.xml").Child("MusicVolume").Content is "0.75"
+	Xml.Read("Xml/Animation.xml").Child("MeshAnimationInfo").Children.Length is 2
+	Xml(Text.Combine(File(path).ReadLines, "\n"))
 Attribute(key Text) Text
 	Sample.Attribute("Identifier") is "Play"
 	Sample.Attribute("Missing") is ""
-	let found = line.IndexOf(" " + key + "=\"")
+	Menu.Children(0).Attribute("Text") is "Play"
+	Menu.Attribute("Text") is ""
+	let tag = StartTag.Replace("\n", " ").Replace("\t", " ").Replace("\r", " ")
+	let found = tag.IndexOf(" " + key + "=\"")
 	if found < 0
 		return ""
 	let start = found + key.Length + 3
-	line.Substring(start, line.IndexOf("\"", start) - start)
+	Decoded(tag.Substring(start, tag.IndexOf("\"", start) - start))
 Values(key Text) Numbers
 	Sample.Values("Margin") is (0, 0.5, 0, 0)
 	Sample.Values("BlendColor") is (1, 0.5, 1, 1)
-	let text = Attribute(key).Replace("(", "").Replace(")", "").Replace(",", "")
-	text is "" then List(Number) else text.Split(" ") to Numbers
+	let numbers = Attribute(key).Replace("(", "").Replace(")", "").Replace(",", "")
+	numbers is "" then List(Number) else numbers.Split(" ") to Numbers
+Name Text
+	Menu.Name is "Menu"
+	Xml(" A=\"2\"").Name is ""
+	let start = NextTag(0)
+	if start < 0
+		return ""
+	mutable after = start + 1
+	for as long as (after < text.Length) and (text.Substring(after, 1) is not in (" ", ">", "/", "\t", "\n", "\r"))
+		after = after + 1
+	text.Substring(start + 1, after - start - 1)
+Children Xmls
+	Menu.Children.Length is 2
+	Menu.Children(1).Name is "Label"
+	Sample.Children.Length is 0
+	mutable children = List(Mutable(Xml))
+	let start = NextTag(0)
+	let close = start < 0 then 0 else TagEnd(start)
+	mutable at = (start < 0) or (Depth(start, close) is 0) then -1 else NextTag(close)
+	for as long as (at >= 0) and (text.Substring(at + 1, 1) is not "/")
+		let after = ElementEnd(at)
+		children.Add(Xml(text.Substring(at, after - at)))
+		at = NextTag(after)
+	children
+Child(name Text) Xml
+	Menu.Child("Label").Content is "A & B"
+	Menu.Child("Missing").Name is ""
+	for Children
+		if value.Name is name
+			return value
+	Xml("")
+Content Text
+	Menu.Children(1).Content is "A & B"
+	Menu.Children(0).Content is ""
+	let start = NextTag(0)
+	if (start < 0) or (Depth(start, TagEnd(start)) is 0)
+		return ""
+	let inner = TagEnd(start)
+	let closing = text.LastIndexOf("</")
+	Decoded(text.Substring(inner, (closing < inner then text.Length else closing) - inner).Trim)
+StartTag Text
+	Menu.StartTag is "<Menu>"
+	Xml(" A=\"2\"").StartTag is " A=\"2\""
+	let start = NextTag(0)
+	start < 0 then text else text.Substring(start, TagEnd(start) - start)
+NextTag(position Number) Number
+	Menu.NextTag(0) is 17
+	Sample.NextTag(1) is -1
+	mutable at = text.IndexOf("<", position)
+	for as long as (at >= 0) and (text.Substring(at + 1, 1) is in ("?", "!"))
+		let found = text.IndexOf(text.StartsWith("<!--", at) then "-->" else ">", at)
+		at = found < 0 then -1 else text.IndexOf("<", found + 1)
+	at
+TagEnd(position Number) Number
+	Menu.TagEnd(17) is 23
+	Xml("<A").TagEnd(0) is 2
+	let found = text.IndexOf(">", position)
+	found < 0 then text.Length else found + 1
+ElementEnd(start Number) Number
+	Menu.ElementEnd(17) is Menu.text.Length
+	Sample.ElementEnd(0) is Sample.text.Length
+	mutable depth = 0
+	mutable at = start
+	for as long as at >= 0
+		let close = TagEnd(at)
+		depth = depth + Depth(at, close)
+		if depth <= 0
+			return close
+		at = NextTag(close)
+	text.Length
+Depth(at Number, close Number) Number
+	Menu.Depth(17, 23) is 1
+	Xml("</A>").Depth(0, 4) is -1
+	Xml("<A />").Depth(0, 5) is 0
+	if text.Substring(at + 1, 1) is "/"
+		return -1
+	text.Substring(close - 2, 1) is "/" then 0 else 1
+Decoded(raw Text) Text
+	Sample.Decoded("&lt;a&gt; &amp;amp; &quot;") is "<a> &amp; \""
+	if raw.IndexOf("&") < 0
+		return raw
+	raw.Replace("&lt;", "<").Replace("&gt;", ">").Replace("&quot;", "\"").Replace("&apos;", "'").Replace("&amp;", "&")

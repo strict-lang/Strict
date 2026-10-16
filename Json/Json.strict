@@ -1,0 +1,115 @@
+has text
+constant Bones = Json("{ \"bones\": [ { \"name\": \"root\" }, { \"name\": \"Body\", \"y\": 39.54 } ], \"loop\": true }")
+constant Escaped = Json(" \"a\\\"b\\nc\\u0041\" ")
+constant Spaces = (" ", "\t", "\n", "\r")
+constant Ends = (",", "}", "]", " ", "\t", "\n", "\r")
+constant Controls = ("\n", "\t", "\r", Character(8) to Text, Character(12) to Text)
+Read(path Text) Json
+	Json.Read("Json/BatSkeleton.json").Field("skeleton").Field("width") to Number is 205.28
+	Json.Read("Json/BatSkeleton.json").Field("bones").Elements(2).Field("parent") to Text is "Bat_Bone"
+	Json(Text.Combine(File(path).ReadLines, "\n"))
+Field(key Text) Json
+	Bones.Field("bones").Elements(1).Field("y") to Number is 39.54
+	Bones.Field("loop") to Text is "true"
+	Bones.Field("missing") to Text is ""
+	let open = Skip(0)
+	let parts = Parts(open)
+	for Range(0, parts.Length - 1)
+		if (text.Substring(open, 1) is "{") and (Slice(parts(value)) to Text is key)
+			return Slice(MemberValue(parts(value)))
+	Json("")
+Keys Texts
+	Bones.Keys is ("bones", "loop")
+	Bones.Field("bones").Keys.Length is 0
+	let open = Skip(0)
+	let parts = Parts(open)
+	for Range(0, text.Substring(open, 1) is "{" then parts.Length - 1 else 0)
+		Slice(parts(value)) to Text
+Elements Jsons
+	Bones.Field("bones").Elements.Length is 2
+	Bones.Elements(1) to Text is "true"
+	let open = Skip(0)
+	let parts = Parts(open)
+	for Range(0, parts.Length - 1)
+		Slice(text.Substring(open, 1) is "{" then MemberValue(parts(value)) else parts(value))
+Values Numbers
+	Json("[1, -2.5, 1.0E-5]").Values is (1, -2.5, 0.00001)
+	for Elements
+		value to Number
+to Text
+	Escaped to Text is "a\"b\ncA"
+	Json(" 82 ") to Text is "82"
+	let start = Skip(0)
+	if text.Substring(start, 1) is not "\""
+		return text.Trim
+	Unescaped(text.Substring(start + 1, StringEnd(start) - start - 2))
+to Number
+	Json(" 82 ") to Number is 82
+	text.Trim to Number
+Parts(open Number) Numbers
+	Json("[1, 2]").Parts(0) is (1, 4, 5)
+	Json("5").Parts(0) is List(Number) + 0
+	let isObject = text.Substring(open, 1) is "{"
+	mutable parts = List(Mutable(Number))
+	if (isObject is false) and (text.Substring(open, 1) is not "[")
+		return parts + open
+	mutable at = Skip(open + 1)
+	for as long as (at < text.Length) and (text.Substring(at, 1) is not in ("}", "]"))
+		parts.Add(at)
+		let after = Skip(ValueEnd(isObject then MemberValue(at) else at))
+		at = text.Substring(after, 1) is "," then Skip(after + 1) else after
+	parts + at
+ValueEnd(start Number) Number
+	Json("[1, [2]]").ValueEnd(0) is 8
+	Json("12, 3").ValueEnd(0) is 2
+	let first = text.Substring(start, 1)
+	if first is "\""
+		return StringEnd(start)
+	if first is in ("{", "[")
+		return Parts(start).Last + 1
+	mutable after = start
+	for as long as (after < text.Length) and (text.Substring(after, 1) is not in Ends)
+		after = after + 1
+	after
+StringEnd(start Number) Number
+	Escaped.StringEnd(1) is 16
+	mutable at = start + 1
+	for as long as (at < text.Length) and (text.Substring(at, 1) is not "\"")
+		at = at + (text.Substring(at, 1) is "\\" then 2 else 1)
+	at + 1
+MemberValue(key Number) Number
+	Bones.MemberValue(2) is 11
+	Json("{\"a\"}").MemberValue(1) is 5
+	let colon = text.IndexOf(":", StringEnd(key))
+	colon < 0 then text.Length else Skip(colon + 1)
+Skip(position Number) Number
+	Json(" \t\n1").Skip(0) is 3
+	mutable at = position
+	for as long as (at < text.Length) and (text.Substring(at, 1) is in Spaces)
+		at = at + 1
+	at
+Slice(start Number) Json
+	Bones.Slice(11).Elements.Length is 2
+	Json(text.Substring(start, ValueEnd(start) - start))
+Unescaped(raw Text) Text
+	Escaped.Unescaped("a\\\"b\\u0041") is "a\"bA"
+	if raw.IndexOf("\\") < 0
+		return raw
+	mutable result = ""
+	mutable at = 0
+	for as long as at < raw.Length
+		let isEscape = raw.Substring(at, 1) is "\\"
+		result = result + (isEscape then Unicode(raw.Substring(at + 1, 5)) else raw.Substring(at, 1))
+		at = at + (isEscape is false then 1 else raw.Substring(at + 1, 1) is "u" then 6 else 2)
+	result
+Unicode(escape Text) Text
+	Escaped.Unicode("u0041") is "A"
+	Escaped.Unicode("n") is "\n"
+	let code = escape.Substring(0, 1)
+	if code is "u"
+		mutable number = 0
+		for Range(1, 5)
+			number = number * 16 + "0123456789abcdef".IndexOf(escape.Substring(value, 1).Lower)
+		return Character(number) to Text
+	let found = "ntrbf".IndexOf(code)
+	found < 0 then code else Controls(found)

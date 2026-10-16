@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Settings>
+  <Language>en</Language>
+  <SoundVolume>1</SoundVolume>
+  <MusicVolume>0.75</MusicVolume>
+  <DepthBufferBits>24</DepthBufferBits>
+  <ColorBufferBits>32</ColorBufferBits>
+  <AntiAliasingSamples>4</AntiAliasingSamples>
+  <LimitFramerate>0</LimitFramerate>
+</Settings>

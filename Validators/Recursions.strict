@@ -48,7 +48,9 @@ Called(tokens Texts) Texts
 IsOwn(tokens Texts, position Number) Boolean
 	Looping.IsOwn(("Splash", "(", "1", ")", ".", "Blood"), 5)
 	Looping.IsOwn(("Other", ".", "Blood"), 2) is false
-	if (position is 0) or (tokens(position - 1) is not ".")
+	Looping.IsOwn(("Character", "(", "8", ")", "to", "Text"), 4) is false
+	let isConverted = (position > 0) and (tokens(position) is "to")
+	if (isConverted is false) and ((position is 0) or (tokens(position - 1) is not "."))
 		return true
-	let instance = tokens(position - 2)
+	let instance = tokens(position - (isConverted then 1 else 2))
 	(instance is typeName) or (instance is ")") and (tokens.First is typeName)
