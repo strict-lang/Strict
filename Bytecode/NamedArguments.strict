@@ -3,13 +3,15 @@ constant Members = Scope(("buffer", "light", "mask"), ("Number", "Number", "Numb
 constant Constructing = Scope(("from", "from types", "light default", "mask default"), ("buffer,light,mask", "Number,Number,Number", "0", "0"))
 constant Types = KnownTypes(("Part", "Number"), (Members, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Constructing, KnownTypes.NoMembers))
 constant Parts = NamedArguments(ValueCodegen(TypeInference(Types, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(Types, CallTarget.Greeter, "Strict/Part", List(Text))))
+constant Named = SyntaxParser(Tokenizer("Part(buffer = 1, mask = 3)").Tokens).Parse
 constant Masked = SyntaxParser(Tokenizer("Part(1, mask = 3)").Tokens).Parse
 Arranged(call SyntaxNode, block CodeBlock) SyntaxNode
 	Parts.Arranged(Masked, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
 	Parts.Arranged(SyntaxParser(Tokenizer("Part(1, 2)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 2)"
+	Parts.Arranged(Named, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
 	let positional = Positional(call)
-	let isNamed = (call.Kind is "Call") and (positional > 0) and (positional < call.children.Length)
-	if (isNamed is false) or (values.TypeOf(call.children(0), block) is call.text)
+	let isReplacing = (positional > 0) and (values.TypeOf(call.children(0), block) is call.text)
+	if (call.Kind is not "Call") or (positional is call.children.Length) or isReplacing
 		return call
 	let names = values.target.FromNames(call.text)
 	mutable arguments = List(Mutable(SyntaxNode))
