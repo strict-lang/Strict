@@ -27,7 +27,7 @@ Paths(path Text) Texts
 	NativeFolder.Paths("Examples/Sum.strict") is ("Examples/Sum.strict")
 	Directory.Exists(path) then Files(path) else List(Text) + path
 Files(folder Text) Texts
-	NativeFolder.Files("Math").Length > 5 is true
+	NativeFolder.Files("Math").Length > 5
 	mutable files = List(Mutable(Text))
 	for ResolveCheck.Tree(folder)
 		files = files + Directory.Files(value, "*.strict")

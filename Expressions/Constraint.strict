@@ -33,7 +33,7 @@ Checked(constraint Text, line Number) SyntaxNode
 	let body = SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode(failed.Kind, failed.text, failed.children, line))
 	SyntaxNode(check.Kind, check.text, check.children + body, line)
 IsConstrained(lines Texts) Boolean
-	Constraint.IsConstrained(List(Text) + "has width Number with value > 0") is true
+	Constraint.IsConstrained(List(Text) + "has width Number with value > 0")
 	Constraint.IsConstrained(("has width Number", "Area Number", "\t\"with\"")) is false
 	Constraint.IsConstrained(List(Text) + "has price Number with Step 0.01") is false
 	for lines

@@ -33,7 +33,7 @@ Durations(model Qwen3, token Number, start Number, count Number) Numbers
 		last = now
 	durations
 Report(prompt Number, prefill Number, durations Numbers) Text
-	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30)).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)") is true
+	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30)).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)")
 	let median = Median(durations)
 	let mean = durations.Sum / durations.Length
 	let prefilled = "prefill " + prompt + " tokens " + prefill.Round(2) + " ms (" + (1000 / prefill).Round + " tokens/s), "

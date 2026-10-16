@@ -9,7 +9,7 @@ constant Offsets = (16, 8, 4, 2, 1)
 constant Moves = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
 constant Rounded = Looping.Round(MlirDeviceCalls(Choosing, 10, Chooser), "%d12", 0, 4)
 IsChoice Boolean
-	Looping.IsChoice is true
+	Looping.IsChoice
 	Summing.IsChoice is false
 	let names = Chosen
 	mutable loads = 0
@@ -32,7 +32,7 @@ Chosen Texts
 			names.Add(entry.texts(0))
 	names
 IsUpdate(store Number) Boolean
-	Looping.IsUpdate(11) is true
+	Looping.IsUpdate(11)
 	Summing.IsUpdate(10) is false
 	let call = function.method.instructions(store - 1)
 	if (call.kind is not InstructionType.Invoke) or (call.payload(0) is not function.method.instructions(store).payload(0))
@@ -41,7 +41,7 @@ IsUpdate(store Number) Boolean
 	let isPassed = IsPassed(store - 1, function.method.instructions(store).texts(0))
 	(callees.Length is 1) and isPassed and IsChoosing(callees.First)
 IsPassed(call Number, name Text) Boolean
-	Looping.IsPassed(10, "largest") is true
+	Looping.IsPassed(10, "largest")
 	Looping.IsPassed(10, "index") is false
 	let entry = function.method.instructions(call)
 	let countPosition = 5 + entry.payload(3)
@@ -52,7 +52,7 @@ IsPassed(call Number, name Text) Boolean
 			return true
 	false
 IsChoosing(callee MlirFunction) Boolean
-	Looping.IsChoosing(Chooser) is true
+	Looping.IsChoosing(Chooser)
 	Looping.IsChoosing(MlirGpuCheck.Absolute) is false
 	let parameters = callee.method.parameters
 	if (parameters.Length is not 2) or (parameters(0).typeName is not "Strict/Number")
@@ -62,7 +62,7 @@ IsChoosing(callee MlirFunction) Boolean
 			return false
 	(parameters(1).typeName is "Strict/Number") and IsCompared(callee)
 IsPlain(entry InstructionEntry, parameters List(MemberEntry)) Boolean
-	Looping.IsPlain(GpuSamples.Larger.instructions(0), GpuSamples.Larger.parameters) is true
+	Looping.IsPlain(GpuSamples.Larger.instructions(0), GpuSamples.Larger.parameters)
 	Looping.IsPlain(InstructionEntry.LoadNumber(0, 1), GpuSamples.Larger.parameters) is false
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return PayloadDecoder(entry).Value(1).kind is "Boolean"
@@ -71,7 +71,7 @@ IsPlain(entry InstructionEntry, parameters List(MemberEntry)) Boolean
 	let name = entry.texts(0)
 	name.StartsWith("conditional") or (name is parameters(0).Name) or (name is parameters(1).Name)
 IsCompared(callee MlirFunction) Boolean
-	Looping.IsCompared(Chooser) is true
+	Looping.IsCompared(Chooser)
 	Looping.IsCompared(MlirFunction(Choosing.types, GpuSamples.Chosen, GpuSamples.Largest)) is false
 	mutable compared = List(Mutable(Text))
 	for callee.method.instructions
@@ -84,7 +84,7 @@ IsCompared(callee MlirFunction) Boolean
 	(compared is names) or (compared is names.Reverse)
 Reduced(end Number) Texts
 	Looping.Reduced(12).First is "    %d12c0r0 = llvm.load %v_largest : !llvm.ptr -> f64"
-	Text.Combine(Looping.Reduced(12)).IndexOf("@strict_device_shuffle(%d12c0r4, %d12o0r4)") > 0 is true
+	Text.Combine(Looping.Reduced(12)).IndexOf("@strict_device_shuffle(%d12c0r4, %d12o0r4)") > 0
 	Looping.Reduced(12).Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
 	for Range(at + 1, end)
@@ -102,7 +102,7 @@ Rounds(call Number, prefix Text, number Number) Texts
 		lines = lines + Round(calls, prefix, number, index)
 	lines + function.Store(prefix + "c" + number + "r" + Offsets.Length, name)
 Round(calls MlirDeviceCalls, prefix Text, number Number, round Number) Texts
-	Rounded.Last.IndexOf("(%failed, %lane, %lanes, %d12h0, %d12c0r4, %d12s0r4)") > 0 is true
+	Rounded.Last.IndexOf("(%failed, %lane, %lanes, %d12h0, %d12c0r4, %d12s0r4)") > 0
 	let current = prefix + "c" + number + "r" + round
 	let offset = prefix + "o" + number + "r" + round
 	let shuffled = prefix + "s" + number + "r" + round

@@ -71,9 +71,9 @@ Missing(lines Texts, files Texts) Texts
 		if IsKnown(value, known) is false
 			value
 IsKnown(name Text, known Texts) Boolean
-	SourceFiles(".").IsKnown("Numbers", List(Text) + "Number") is true
+	SourceFiles(".").IsKnown("Numbers", List(Text) + "Number")
 	SourceFiles(".").IsKnown("Numbr", List(Text) + "Number") is false
-	SourceFiles(".").IsKnown("Numberss", List(Text) + "Number") is true
+	SourceFiles(".").IsKnown("Numberss", List(Text) + "Number")
 	if name is in known
 		return true
 	(name.Substring(name.Length - 1, 1) is "s") and IsKnown(name.Substring(0, name.Length - 1), known)

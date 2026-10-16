@@ -6,7 +6,7 @@ to Text
 	BooleanExpression(false) to Text is "false"
 	boolean then "true" else "false"
 Parse(text Text) BooleanExpression
-	Parse("true").boolean is true
+	Parse("true").boolean
 	Parse("false").boolean is false
 	if text is "true"
 		return BooleanExpression(true)

@@ -28,7 +28,7 @@ Temp(suffix Text) Text
 	"%t" + position + suffix
 Literal(literal Runtime/VmValue, slot Text, suffix Text, named = "") Texts
 	Copy.Literal(VmValue.OfNumber(1), "%r0", "").First is "    %t0c = arith.constant 0x3FF0000000000000 : f64"
-	Copy.Literal(VmValue.OfText("b"), "%s", "d0", "@dA_b").First.IndexOf(" @dA_b ") > 0 is true
+	Copy.Literal(VmValue.OfText("b"), "%s", "d0", "@dA_b").First.IndexOf(" @dA_b ") > 0
 	if literal.kind is "Text"
 		return MlirConstants(function, position, named).Literal(literal.text, slot, suffix)
 	if literal.kind is "List"
@@ -82,7 +82,7 @@ Calculated(entry InstructionEntry) Texts
 		return loads + Compared(entry, left + ", " + right)
 	loads + Operated(entry.kind, left, right) + function.Store(Temp("c"), "%r" + entry.payload(3))
 Operated(kind Number, left Text, right Text) Text
-	Copy.Operated(InstructionType.Modulo, "%a", "%b").IndexOf("@strict_remainder(%a, %b)") > 0 is true
+	Copy.Operated(InstructionType.Modulo, "%a", "%b").IndexOf("@strict_remainder(%a, %b)") > 0
 	Copy.Operated(InstructionType.Add, "%a", "%b") is "    %t0c = arith.addf %a, %b : f64"
 	Summing.Operated(InstructionType.Add, "%a", "%b") is "    %t5c = arith.addf %a, %b fastmath<reassoc,contract> : f64"
 	MlirStatements(MlirFastLoop.Doubling.function, 6).Operated(InstructionType.Add, "%a", "%b").IndexOf("fastmath") is -1

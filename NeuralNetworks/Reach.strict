@@ -29,7 +29,7 @@ Crossed(first Numbers, second Numbers) Numbers
 		1.Random < 0.5 then value else second(index)
 Mutated(angles Numbers) Numbers
 	Planar.Mutated((10, 20)).Length is 2
-	Planar.Mutated((180, 180)).First <= 180 is true
+	Planar.Mutated((180, 180)).First <= 180
 	for angles
 		(1.Random < 0.2 then value + 10.Random - 5 else value).Clamp(arm.lowest(index), arm.highest(index))
 Tournament(population List(Numbers)) Numbers

@@ -59,7 +59,7 @@ NameJump Text
 		return "FieldLoad"
 	"Unknown"
 IsArithmetic Boolean
-	InstructionNames(InstructionType.Add).IsArithmetic is true
+	InstructionNames(InstructionType.Add).IsArithmetic
 	if code is InstructionType.Add
 		return true
 	if code is InstructionType.Subtract
@@ -72,7 +72,7 @@ IsArithmetic Boolean
 		return true
 	false
 IsComparison Boolean
-	InstructionNames(InstructionType.Equal).IsComparison is true
+	InstructionNames(InstructionType.Equal).IsComparison
 	if code is InstructionType.Equal
 		return true
 	if code is InstructionType.NotEqual
@@ -83,7 +83,7 @@ IsComparison Boolean
 		return true
 	false
 IsJump Boolean
-	InstructionNames(InstructionType.JumpIfFalse).IsJump is true
+	InstructionNames(InstructionType.JumpIfFalse).IsJump
 	if code is InstructionType.Jump
 		return true
 	if code is InstructionType.JumpIfTrue

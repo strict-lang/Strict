@@ -36,7 +36,7 @@ Current(state VmValue, isOuter Boolean, isIndex Boolean, fallback VmValue) VmVal
 	let current = isOuter and (state.items.Length > 0) then state.items(0).items(5) else state
 	current.items.Length is 0 then fallback else current.items(isIndex then 2 else 3)
 IsEmpty(iterable VmValue, ending VmValue) Boolean
-	IsEmpty(VmValue.OfNumber(0), VmValue.None) is true
+	IsEmpty(VmValue.OfNumber(0), VmValue.None)
 	IsEmpty(VmValue.OfText("a"), VmValue.None) is false
 	Start(iterable, ending) is End(iterable, ending)
 Start(iterable VmValue, ending VmValue) Number

@@ -45,9 +45,9 @@ Check(register Number, block CodeBlock) InstructionEntry
 	let jump = ByteEncoder.Empty.SevenBit(failure to Number).bytes
 	InstructionEntry(InstructionType.CheckError, List(Text) + Tested, List(Number) + register + jump)
 MayFail(node SyntaxNode, block CodeBlock) Boolean
-	Plain.MayFail(Greeting, CodeBlock.Empty) is true
+	Plain.MayFail(Greeting, CodeBlock.Empty)
 	Plain.MayFail(BareError, CodeBlock.Empty) is false
-	Plain.MayFail(A, FallibleA) is true
+	Plain.MayFail(A, FallibleA)
 	if values.TypeOf(node, block) is in ErrorTypes
 		return false
 	if node.Kind is "Identifier"
@@ -59,7 +59,7 @@ MayFail(node SyntaxNode, block CodeBlock) Boolean
 	(node.Kind is in ("Call", "MethodCall", "Index")) or (node.Kind is "Member") and values.IsMethodCall(node, block)
 IsFailing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsFailing(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
-	Plain.IsFailing(ValueCodegen.ToText, CodeBlock.Empty) is true
+	Plain.IsFailing(ValueCodegen.ToText, CodeBlock.Empty)
 	if node.text is "else"
 		return MayFail(node.children(0).children(1), block) or MayFail(node.children(1), block)
 	if (node.text is in ("to", "then")) or OperatorCodegen(values).IsCustom(node, block)
@@ -84,7 +84,7 @@ AnyError(node SyntaxNode, block CodeBlock) SyntaxNode
 	let any = SyntaxNode("Call", "Error", SyntaxNode("Text", "\"\""))
 	SyntaxNode(node.Kind, node.text, (node.children(0), any), node.line)
 IsErrorComparison(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsErrorComparison(IsError, CodeBlock.Empty) is true
+	Plain.IsErrorComparison(IsError, CodeBlock.Empty)
 	Plain.IsErrorComparison(IsOne, CodeBlock.Empty) is false
 	if (node.Kind is not "Binary") or (node.text is not in ("is", "is not"))
 		return false

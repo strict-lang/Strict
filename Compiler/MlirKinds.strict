@@ -41,7 +41,7 @@ Calculated(writer Number, entry InstructionEntry) Text
 		return left.StartsWith("List(") then left else right
 	(entry.kind is InstructionType.Add) and ((left is "Text") or (right is "Text")) then "Text" else "Number"
 IsText(position Number, register Number) Boolean
-	Graded.IsText(4, 1) is true
+	Graded.IsText(4, 1)
 	Graded.IsText(4, 2) is false
 	MlirLayout(function).Represented(KindOf(position, register)) is "Text"
 Writer(position Number, register Number) Number

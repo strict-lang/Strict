@@ -98,9 +98,9 @@ MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 		return instance.Member(index)
 	IsOwned(owner, instance.kind) then instance.Member(index) else instance.As(member.typeName)
 IsOwned(type TypeEntry, kind Text) Boolean
-	Hello.IsOwned(Paired, "Strict/Pair(Number)") is true
+	Hello.IsOwned(Paired, "Strict/Pair(Number)")
 	Hello.IsOwned(Paired, "Strict/Other") is false
-	Hello.IsOwned(Paired, "List") is true
+	Hello.IsOwned(Paired, "List")
 	if kind is "List"
 		return true
 	TypeEntry.ShortName(type.Name).Split("(").First is TypeEntry.ShortName(kind).Split("(").First

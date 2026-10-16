@@ -69,7 +69,7 @@ ParametersEnd Number
 			end = index
 	end
 IsParameterStart(position Number) Boolean
-	HeaderTokens("Add", "(", "x", ")").IsParameterStart(2) is true
+	HeaderTokens("Add", "(", "x", ")").IsParameterStart(2)
 	let previous = tokens(position - 1)
 	if previous is "mutable"
 		return true
@@ -103,7 +103,7 @@ ParameterType(position Number) Text
 	HeaderTokens("Add", "(", "x", "=", "\"a\"", ")").ParameterType(2) is "Text"
 	DeclaredType(position)
 ReturnsMutable Boolean
-	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnsMutable is true
+	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnsMutable
 	HeaderTokens("Run", "Number").ReturnsMutable is false
 	constant start = ParametersEnd + 1
 	start < tokens.Length and (tokens(start) is "Mutable")

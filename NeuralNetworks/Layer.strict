@@ -17,7 +17,7 @@ Rows(inputs Number, outputs Number) List(Numbers)
 		Weights(inputs)
 Weights(count Number) Numbers
 	Halves.Weights(3).Length is 3
-	Halves.Weights(4).Maximum <= 0.5 is true
+	Halves.Weights(4).Maximum <= 0.5
 	for count
 		(2.Random - 1) / count.SquareRoot
 Zeros(count Number) Numbers
@@ -70,13 +70,13 @@ Shifted(deltas Numbers, rate Number) Numbers
 		value - rate * deltas(index) + Momentum * (value - previous(index))
 Mutated(strength Number) Layer
 	Halves.Mutated(0) is Halves
-	(Halves.Mutated(0.1).weights.First.First - 0.5).Absolute <= 0.1 is true
+	(Halves.Mutated(0.1).weights.First.First - 0.5).Absolute <= 0.1
 	mutable rows = List(Mutable(Numbers))
 	for weights
 		rows.Add(Noisy(value, strength))
 	Layer(rows, Noisy(biases, strength), activation)
 Noisy(values Numbers, strength Number) Numbers
 	Halves.Noisy((1, 2), 0) is (1, 2)
-	(Halves.Noisy(List(Number) + 1, 0.5).First - 1).Absolute <= 0.5 is true
+	(Halves.Noisy(List(Number) + 1, 0.5).First - 1).Absolute <= 0.5
 	for values
 		value + (2.Random - 1) * strength

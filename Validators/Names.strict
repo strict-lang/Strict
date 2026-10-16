@@ -30,17 +30,17 @@ NameIssues(line Text, name Text, isMethod Boolean, number Number) ValidationIssu
 		issues.Add(ValidationIssue("LoopNameMustNotBeDeclared", name, number))
 	issues
 IsListPrefixed(line Text, name Text) Boolean
-	Sample.IsListPrefixed("Listed Number", "Listed") is true
+	Sample.IsListPrefixed("Listed Number", "Listed")
 	Sample.IsListPrefixed("\tlet listed = 1", "listed") is false
 	let isTyped = TypeShape(lines).IsMethodHeader(line) or line.StartsWith("has ") or line.StartsWith("mutable ")
 	let isListed = (name.StartsWith("List") or name.StartsWith("list")) and (name.Length > 4)
 	isTyped and isListed and (name.Substring(4, 1) is not "(")
 IsMisnamedConstant(line Text, name Text) Boolean
 	Sample.IsMisnamedConstant("constant Number = 3", "Number") is false
-	Sample.IsMisnamedConstant("constant Listed = 1", "Listed") is true
+	Sample.IsMisnamedConstant("constant Listed = 1", "Listed")
 	line.StartsWith("constant ") and IsMethodName(name)
 IsMethodName(name Text) Boolean
-	Sample.IsMethodName("Listed") is true
+	Sample.IsMethodName("Listed")
 	Sample.IsMethodName("Number") is false
 	let shape = TypeShape(lines)
 	for lines

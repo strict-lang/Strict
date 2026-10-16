@@ -82,7 +82,7 @@ ElementWritten(node SyntaxNode) Texts
 		names = names + ElementWritten(value)
 	names
 IsAppend(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsAppend(Appending, Owned) is true
+	Plain.IsAppend(Appending, Owned)
 	Plain.IsAppend(BodyParser("Run", "\tvalues = values + values").Block(1, 1).children(0), Owned) is false
 	Plain.IsAppend(BodyParser("Run", "\tx = values + 1").Block(1, 1).children(0), Owned) is false
 	Plain.IsAppend(BodyParser("Run", "\ttext = text + 1").Block(1, 1).children(0), Owned.Declare("text", "Texts")) is false
@@ -96,7 +96,7 @@ IsAppend(node SyntaxNode, block CodeBlock) Boolean
 	isList and isVariable and (types.IsPlural(values.TypeOf(sum.children(1), block)) is false)
 IsNew(node SyntaxNode) Boolean
 	Plain.IsNew(ValueCodegen.Ones) is false
-	Plain.IsNew(SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Identifier", "x")))) is true
+	Plain.IsNew(SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Identifier", "x"))))
 	Plain.IsNew(ValueCodegen.GreeterText) is false
 	Plain.IsNew(ValueCodegen.ToText) is false
 	Plain.IsNew(SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "values"), SyntaxNode("Number", "3")))) is false
@@ -105,9 +105,9 @@ IsNew(node SyntaxNode) Boolean
 	((node.Kind is "List") and (node.IsLiteral is false)) or ((node.Kind is "Call") and (node.text is "List"))
 Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.Disowned(BodyParser("Run", "\tlet saved = values").Block(1, 1), Owned, false).Owns("values") is false
-	Plain.Disowned(BodyParser("Run", "\tvalues.Add(1)").Block(1, 1), Owned, false).Owns("values") is true
-	Plain.Disowned(BodyParser("Run", "\t1 is not in values").Block(1, 1), Owned, false).Owns("values") is true
-	Plain.Disowned(BodyParser("Run", "\tif 1 > 2", "\t\treturn values").Block(1, 1), Owned, false).Owns("values") is true
+	Plain.Disowned(BodyParser("Run", "\tvalues.Add(1)").Block(1, 1), Owned, false).Owns("values")
+	Plain.Disowned(BodyParser("Run", "\t1 is not in values").Block(1, 1), Owned, false).Owns("values")
+	Plain.Disowned(BodyParser("Run", "\tif 1 > 2", "\t\treturn values").Block(1, 1), Owned, false).Owns("values")
 	if node.Kind is "Identifier"
 		return isUsed then block.Disowned(node.text) else block
 	let reassigned = (node.Kind is "Reassignment") and (IsNew(node.children(1)) is false)
@@ -117,7 +117,7 @@ Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 		result = Disowned(value, result, used)
 	result
 IsUsed(parent SyntaxNode, position Number, isUsed Boolean) Boolean
-	Plain.IsUsed(ValueCodegen.AddOne, 0, true) is true
+	Plain.IsUsed(ValueCodegen.AddOne, 0, true)
 	Plain.IsUsed(ValueCodegen.GreeterText, 0, true) is false
 	let isLast = position is parent.children.Length - 1
 	if parent.Kind is in ("Body", "Return")

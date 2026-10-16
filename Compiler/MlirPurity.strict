@@ -6,7 +6,7 @@ constant Unsafe = (InstructionType.Set, InstructionType.InvokeWriteToTable, Inst
 constant Doubling = MlirPurity(MlirParallel.Doubling.function, 2)
 constant Randomizing = MlirPurity(MlirParallel.Randomizing.function, 2)
 IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
-	Doubling.IsSafe(Doubling.function, 4, 0) is true
+	Doubling.IsSafe(Doubling.function, 4, 0)
 	Randomizing.IsSafe(Randomizing.function, 4, 0) is false
 	let entry = inspected.method.instructions(at)
 	if entry.kind is InstructionType.Invoke
@@ -16,7 +16,7 @@ IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	let isLeaving = (depth is 0) and ((entry.kind is InstructionType.Return) or (entry.kind is in Branches))
 	(isLeaving is false) and IsPlain(inspected, at) and ((depth > 0) or IsLocal(entry))
 IsPlain(inspected MlirFunction, at Number) Boolean
-	Doubling.IsPlain(Doubling.function, 3) is true
+	Doubling.IsPlain(Doubling.function, 3)
 	let entry = inspected.method.instructions(at)
 	let kind = entry.kind
 	if kind is in Unsafe
@@ -30,7 +30,7 @@ IsPlain(inspected MlirFunction, at Number) Boolean
 	(isList is false) and ((isBinary is false) or (MlirTexts(inspected, at).IsSum is false))
 IsLocal(entry InstructionEntry) Boolean
 	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers")) is false
-	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "twice")) is true
+	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "twice"))
 	if entry.kind is not in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		return true
 	let name = entry.kind is InstructionType.StoreConstantToVariable then entry.texts.Last else entry.texts.First
@@ -40,7 +40,7 @@ IsLocal(entry InstructionEntry) Boolean
 			return false
 	name is not in function.Parameters
 IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
-	Doubling.IsPureCall(Doubling.function, 4, 0) is true
+	Doubling.IsPureCall(Doubling.function, 4, 0)
 	Randomizing.IsPureCall(Randomizing.function, 4, 0) is false
 	let entry = inspected.method.instructions(at)
 	let decoder = PayloadDecoder(entry)
@@ -52,7 +52,7 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 		return returned.EndsWith("Number") or returned.EndsWith("Boolean")
 	(depth < 3) and (MlirForeign(callees.First).IsForeign is false) and IsPureMethod(callees.First, depth + 1)
 IsPureMethod(callee MlirFunction, depth Number) Boolean
-	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 1) is true
+	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 1)
 	for callee.method.instructions
 		if IsSafe(callee, index, depth) is false
 			return false

@@ -5,7 +5,7 @@ Run
 	logger.Log(Report("Reber grammar", Reber.Simple, Strings))
 	logger.Log(Report("Embedded Reber grammar", Reber.Embedded, Strings))
 Report(name Text, grammar Reber, strings Number) Text
-	ReberPrediction.Report("Reber", Reber.Simple, 5).StartsWith("Reber: trained on ") is true
+	ReberPrediction.Report("Reber", Reber.Simple, 5).StartsWith("Reber: trained on ")
 	let started = Process.Elapsed
 	let trained = Trained(Untrained, grammar, strings)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
@@ -19,7 +19,7 @@ Trained(network Gru, grammar Reber, count Number) Gru
 		trained = trained.Trained(grammar.Inputs(steps), grammar.Targets(steps), 0.1)
 	trained
 Correct(network Gru, grammar Reber, count Number) Number
-	ReberPrediction.Correct(Untrained, Reber.Simple, 3) <= 3 is true
+	ReberPrediction.Correct(Untrained, Reber.Simple, 3) <= 3
 	mutable correct = 0
 	for count
 		if IsPredicted(network, grammar, grammar.Walk)

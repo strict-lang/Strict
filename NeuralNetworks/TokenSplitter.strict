@@ -36,7 +36,7 @@ QwenEnd(text Text, start Number) Number
 		return start + 1
 	Punctuated(text, start)
 IsWordStart(text Text, start Number) Boolean
-	Qwen.IsWordStart("(a", 0) is true
+	Qwen.IsWordStart("(a", 0)
 	Qwen.IsWordStart("\na", 0) is false
 	let kind = Kind(text, start)
 	let isBreak = text(start) is in ("\r", "\n")

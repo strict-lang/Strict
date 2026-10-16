@@ -6,7 +6,7 @@ IsSquare = Width is Height
 Scaled(factor Number) Number
 	ComputedRectangle(2, 3).Scaled(2) is 24
 	ComputedRectangle(2, 3).IsSquare is false
-	ComputedRectangle(2, 2).IsSquare is true
+	ComputedRectangle(2, 2).IsSquare
 	ComputedRectangle(2, 3).Doubled is 12
 	Doubled(factor) * 2
 Widened(extra Number) ComputedRectangle

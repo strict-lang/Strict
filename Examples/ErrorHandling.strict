@@ -10,11 +10,11 @@ Doubled Number
 	ErrorHandling(0).Doubled is Missing
 	Found * 2
 IsSmall Boolean
-	ErrorHandling(2).IsSmall is true
+	ErrorHandling(2).IsSmall
 	ErrorHandling(0).IsSmall is Missing
 	Found < 3
 IsNearlyFive Boolean
-	ErrorHandling(5).IsNearlyFive is true
+	ErrorHandling(5).IsNearlyFive
 	ErrorHandling(0).IsNearlyFive is Missing
 	Found.IsNearlyEqual(5)
 Checked Number
@@ -26,7 +26,7 @@ Checked Number
 	found * 2
 Described Text
 	ErrorHandling(5).Described is "5"
-	ErrorHandling(0).Described.StartsWith("Error: Missing") is true
+	ErrorHandling(0).Described.StartsWith("Error: Missing")
 	let found = Found
 	if found is Error
 		return found to Text
@@ -71,7 +71,7 @@ Incremented Number
 	count.Increment
 	count
 IsKnown Boolean
-	ErrorHandling(0).IsKnown is true
+	ErrorHandling(0).IsKnown
 	ErrorHandling(5).IsKnown is false
 	let found = Found
 	found is in (Missing, Error("Other"))

@@ -2,18 +2,18 @@ has lines Texts
 constant Constrained = " constrained"
 constant Measured = TypeShape("has Width Number", "Area Number", "\tconstant Big = 3", "\tVector2(Big, Width).Length * Area")
 IsMemberLine(line Text) Boolean
-	TypeShape("has a").IsMemberLine("mutable count Number") is true
+	TypeShape("has a").IsMemberLine("mutable count Number")
 	TypeShape("has a").IsMemberLine("Run") is false
 	line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
 IsMethodHeader(line Text) Boolean
-	TypeShape("has a").IsMethodHeader("Run Number") is true
+	TypeShape("has a").IsMethodHeader("Run Number")
 	TypeShape("has a").IsMethodHeader("\tlogger.Log(1)") is false
 	if (line is "") or line.StartsWith("\t")
 		return false
 	not IsMemberLine(line)
 IsComputed(line Text) Boolean
-	TypeShape("has a").IsComputed("Area = Width * Height") is true
-	TypeShape("has a").IsComputed("Next(add = 1) = add") is true
+	TypeShape("has a").IsComputed("Area = Width * Height")
+	TypeShape("has a").IsComputed("Next(add = 1) = add")
 	TypeShape("has a").IsComputed("Add(other) Number") is false
 	TypeShape("has a").IsComputed("constant Limit = 3") is false
 	if IsMethodHeader(line) is false
@@ -22,8 +22,8 @@ IsComputed(line Text) Boolean
 	let assigned = HeaderTokens(tokens).ParametersEnd + 1
 	(assigned < tokens.Length) and (tokens(assigned) is "=")
 IsTrait Boolean
-	TypeShape("Length Number").IsTrait is true
-	TypeShape("has length", "in(element) Boolean").IsTrait is true
+	TypeShape("Length Number").IsTrait
+	TypeShape("has length", "in(element) Boolean").IsTrait
 	TypeShape("Not Boolean", "\ttrue").IsTrait is false
 	TypeShape("has a", "Twice = a * 2").IsTrait is false
 	for lines
@@ -54,9 +54,9 @@ ParameterScope Scope
 	let steps = Steps(List(Text)).Members(lines)
 	scope.WithAll(steps.names, steps.types)
 UsesGenerics Boolean
-	TypeShape("has value Generic").UsesGenerics is true
+	TypeShape("has value Generic").UsesGenerics
 	TypeShape("has value Generic or None").UsesGenerics is false
-	TypeShape("for Iterator(Generic)", "in(element Generic) Boolean").UsesGenerics is true
+	TypeShape("for Iterator(Generic)", "in(element Generic) Boolean").UsesGenerics
 	TypeShape("constant Names = (\"Generic\")", "Run", "\tNames").UsesGenerics is false
 	for lines
 		if index < 3 and IsGenericLine(index)

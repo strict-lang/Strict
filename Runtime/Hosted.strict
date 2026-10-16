@@ -14,13 +14,13 @@ constant Aiming = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Vector2", 
 constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), List(VmValue), VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing")))
 constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Directory.Current", "File.Override", "Process.Input", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.FilesRead", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
 IsHosted Boolean
-	Hosted(SystemCall).IsHosted is true
+	Hosted(SystemCall).IsHosted
 	Hosted(Invocation.AddCall).IsHosted is false
 	TypeEntry.ShortName(call.TypeName) + "." + call.MethodName is in Methods
 Result VmValue
 	Hosted(SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
-	Hosted(Existing).Result.IsTrue is true
-	Hosted(Timing).Result.number > 0 is true
+	Hosted(Existing).Result.IsTrue
+	Hosted(Timing).Result.number > 0
 	let type = TypeEntry.ShortName(call.TypeName)
 	if (call.MethodName is "Input") or (type is "Directory") and (call.MethodName is "Current")
 		return VmValue.OfText(call.MethodName is "Input" then Process.Input else Directory.Current)
@@ -43,7 +43,7 @@ Processed VmValue
 	let code = VmValue.OfNumber(result.exitCode)
 	VmValue("Strict/ProcessResult", 0, "", (code, VmValue.OfText(result.Output), VmValue.OfText(result.error)))
 Stored VmValue
-	Hosted(Existing).Stored.IsTrue is true
+	Hosted(Existing).Stored.IsTrue
 	if call.MethodName is "Write"
 		if "bytes" is in call.ParameterNames
 			File(Location).Write(BytesOf(call.Arguments.First))
@@ -64,15 +64,15 @@ Moved VmValue
 		File(Location).Rename(call.Arguments.First.text)
 	Answered(Location)
 Answered(path Text) VmValue
-	Hosted(Existing).Answered(".").IsTrue is true
+	Hosted(Existing).Answered(".").IsTrue
 	Hosted(Probing).Answered(".").IsTrue is false
-	Hosted(Dating).Answered("Any.strict").number > 1.7e9 is true
+	Hosted(Dating).Answered("Any.strict").number > 1.7e9
 	if call.MethodName is "Modified"
 		return VmValue.OfNumber(File(path).Modified)
 	let exists = call.TypeName is "Strict/Directory" then Directory.Exists(path) else File(path).Exists
 	call.MethodName is "Exists" then VmValue.OfBoolean(exists) else VmValue.None
 Entries VmValue
-	Hosted(Listing).Entries.Length > 0 is true
+	Hosted(Listing).Entries.Length > 0
 	Hosted(Reading).Entries.items.First.number is 102
 	let path = Location
 	if call.MethodName is "ReadLines"

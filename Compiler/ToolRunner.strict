@@ -6,7 +6,7 @@ IsAvailable Boolean
 	ToolRunner("noSuchStrictTool").IsAvailable is false
 	Process.Find(name).IsAvailable
 Execute(arguments Text) ProcessResult
-	ToolRunner("noSuchStrictTool").Execute("").Failed is true
+	ToolRunner("noSuchStrictTool").Execute("").Failed
 	ToolRunner("cmd").Execute("/c echo a").Output.IndexOf("\r") is -1
 	let result = Process.RunTool(name, arguments)
 	ProcessResult(result.exitCode, result.Output.Replace("\r", ""), result.error.Replace("\r", ""))

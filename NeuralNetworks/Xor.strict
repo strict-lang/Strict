@@ -10,13 +10,13 @@ Run
 	for Inputs
 		logger.Log(value to Text + " gives " + network.Predict(value).First)
 Trained(network Network, steps Number) Network
-	Xor.Error(Xor.Trained(Network.Pair, 200)) < Xor.Error(Network.Pair) is true
+	Xor.Error(Xor.Trained(Network.Pair, 200)) < Xor.Error(Network.Pair)
 	mutable trained = network
 	for steps
 		trained = trained.Trained(Inputs(index % 4), List(Number) + Targets(index % 4), 0.1)
 	trained
 Error(network Network) Number
-	Xor.Error(Network.Pair) > 0 is true
+	Xor.Error(Network.Pair) > 0
 	mutable error = 0
 	for Inputs
 		let difference = network.Difference(network.Predict(value), List(Number) + Targets(index))

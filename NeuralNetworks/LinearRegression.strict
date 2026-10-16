@@ -9,7 +9,7 @@ Described(line Numbers) Text
 	LinearRegression.Described((2, 1)) is "y = 2 x + 1, error 0.017"
 	"y = " + line(0).Round(4) + " x + " + line(1).Round(4) + ", error " + Error(line).Round(4)
 Fitted(line Numbers, steps Number) Numbers
-	Error(LinearRegression.Fitted((0, 0), 100)) < Error((0, 0)) is true
+	Error(LinearRegression.Fitted((0, 0), 100)) < Error((0, 0))
 	mutable current = line
 	for steps
 		current = Stepped(current)

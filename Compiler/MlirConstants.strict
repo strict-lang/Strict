@@ -3,10 +3,10 @@ has position Number
 has named Text = ""
 constant Varying = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), MlirInstances.Built)))
 IsConstant Boolean
-	MlirConstants(MlirTexts.Joined, 0).IsConstant is true
+	MlirConstants(MlirTexts.Joined, 0).IsConstant
 	MlirConstants(MlirTexts.Joined, 1).IsConstant is false
 	MlirConstants(MlirTexts.Joined, 2).IsConstant is false
-	MlirConstants(MlirLists.Literals, 0).IsConstant is true
+	MlirConstants(MlirLists.Literals, 0).IsConstant
 	let isMember = position >= function.method.instructions.Length
 	let kind = isMember then InstructionType.LoadConstantToRegister else function.method.instructions(position).kind
 	if kind is InstructionType.Invoke
@@ -29,7 +29,7 @@ Constant Runtime/VmValue
 	let entry = function.method.instructions(position)
 	PayloadDecoder(entry).Value(entry.kind is InstructionType.LoadConstantToRegister then 1 else 0)
 Global Text
-	MlirConstants(MlirTexts.Joined, 0).Global.IndexOf("@cShape_Run_0_0(\"a%\\00\") : !llvm.array<3 x i8>") > 0 is true
+	MlirConstants(MlirTexts.Joined, 0).Global.IndexOf("@cShape_Run_0_0(\"a%\\00\") : !llvm.array<3 x i8>") > 0
 	MlirConstants(MlirLists.Literals, 0).Global is "  llvm.mlir.global internal @lShape_Run_0_0(0.0 : f64) : f64"
 	constant literal = Constant
 	if literal.kind is "Text"
@@ -40,7 +40,7 @@ Global Text
 		lines = lines + TextGlobal(literal.items(value).text, "_" + value)
 	Text.Combine(lines, "\n")
 IsShared Boolean
-	MlirConstants(MlirInstances.Shapes, 1).IsShared is true
+	MlirConstants(MlirInstances.Shapes, 1).IsShared
 	MlirConstants(Varying, 1).IsShared is false
 	MlirConstants(MlirCalls.Hashes, 1).IsShared is false
 	let entry = function.method.instructions(position)
@@ -49,7 +49,7 @@ IsShared Boolean
 		return false
 	IsPlain(decoder, entry) and AreConstants(entry)
 IsPlain(decoder PayloadDecoder, entry InstructionEntry) Boolean
-	MlirConstants(MlirInstances.Shapes, 1).IsPlain(PayloadDecoder(MlirInstances.Built), MlirInstances.Built) is true
+	MlirConstants(MlirInstances.Shapes, 1).IsPlain(PayloadDecoder(MlirInstances.Built), MlirInstances.Built)
 	MlirConstants(MlirCalls.Hashes, 1).IsPlain(PayloadDecoder(MlirCalls.Hashed), MlirCalls.Hashed) is false
 	let typeName = decoder.Text(1)
 	let short = TypeEntry.ShortName(typeName)
@@ -59,14 +59,14 @@ IsPlain(decoder PayloadDecoder, entry InstructionEntry) Boolean
 	let custom = function.TypeOf(typeName).Callee("from", count, decoder.Text(4 + entry.payload(3)), decoder.Names)
 	custom.instructions.Length is 0
 AreConstants(entry InstructionEntry) Boolean
-	MlirConstants(MlirInstances.Shapes, 1).AreConstants(MlirInstances.Built) is true
+	MlirConstants(MlirInstances.Shapes, 1).AreConstants(MlirInstances.Built)
 	MlirConstants(Varying, 1).AreConstants(MlirInstances.Built) is false
 	for LoadReuse(function.method.instructions).Reads(entry)
 		if IsLoaded(value) is false
 			return false
 	true
 IsLoaded(register Number) Boolean
-	MlirConstants(MlirInstances.Shapes, 1).IsLoaded(0) is true
+	MlirConstants(MlirInstances.Shapes, 1).IsLoaded(0)
 	MlirConstants(Varying, 1).IsLoaded(0) is false
 	MlirConstants(MlirInstances.Shapes, 2).IsLoaded(1) is false
 	let reuse = LoadReuse(function.method.instructions)
@@ -81,20 +81,20 @@ Cache Text
 	MlirConstants(MlirLists.Literals, 0).Cache is "@lShape_Run_0_0"
 	"@l" + function.Symbol + "_" + position
 TextGlobal(text Text, symbol Text) Text
-	MlirConstants(MlirTexts.Joined, 0).TextGlobal("b", "_1").IndexOf("@cShape_Run_0_0_1(") > 0 is true
-	MlirConstants(MlirTexts.Joined, 0, "@dA_b").TextGlobal("b", "_1").IndexOf("@dA_b_1(") > 0 is true
+	MlirConstants(MlirTexts.Joined, 0).TextGlobal("b", "_1").IndexOf("@cShape_Run_0_0_1(") > 0
+	MlirConstants(MlirTexts.Joined, 0, "@dA_b").TextGlobal("b", "_1").IndexOf("@dA_b_1(") > 0
 	let name = Base + symbol + "(\"" + Escaped(text, false) + "\\00\")"
 	"  llvm.mlir.global internal constant " + name + " : !llvm.array<" + (EscapedLength(text, false) + 1) + " x i8>"
 Literal(text Text, slot Text, suffix Text) Texts
 	MlirConstants(MlirTexts.Joined, 0).Literal("a%", "%r0", "").Length is 3
-	MlirConstants(MlirTexts.Joined, 1).Literal("", "%s", "d0").First.IndexOf("@strict_empty") > 0 is true
-	MlirConstants(MlirTexts.Joined, 1).Literal("b", "%s", "").First.StartsWith("unsupported") is true
-	MlirConstants(MlirTexts.Joined, 1, "@dA_b").Literal("b", "%s", "d0").First.IndexOf(" @dA_b ") > 0 is true
+	MlirConstants(MlirTexts.Joined, 1).Literal("", "%s", "d0").First.IndexOf("@strict_empty") > 0
+	MlirConstants(MlirTexts.Joined, 1).Literal("b", "%s", "").First.StartsWith("unsupported")
+	MlirConstants(MlirTexts.Joined, 1, "@dA_b").Literal("b", "%s", "d0").First.IndexOf(" @dA_b ") > 0
 	if (text is not "") and (named is "") and (IsConstant is false)
 		return List(Text) + MlirStatements(function, position).Unsupported("Text constant")
 	Address(text, "", suffix) + function.Store(MlirMemory(function, position).Temp(suffix + "xf"), slot)
 Address(text Text, symbol Text, suffix Text) Texts
-	MlirConstants(MlirTexts.Joined, 0).Address("a", "_2", "e").First.IndexOf("@cShape_Run_0_0_2 ") > 0 is true
+	MlirConstants(MlirTexts.Joined, 0).Address("a", "_2", "e").First.IndexOf("@cShape_Run_0_0_2 ") > 0
 	let memory = MlirMemory(function, position)
 	let name = text is "" then "@strict_empty" else Base + symbol
 	let address = "    " + memory.Temp(suffix + "c") + " = llvm.mlir.addressof " + name + " : !llvm.ptr"

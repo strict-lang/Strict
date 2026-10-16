@@ -95,7 +95,7 @@ Loaded(path Text, root Text) List(TypeEntry)
 	let types = cache.Types(cache.Unpacked(File(cache.Path).ReadBytes))
 	types.Length > 0 then types else FileCompiler(logger).Compiled(path, root, true)
 HasRun(type TypeEntry) Boolean
-	Execute.HasRun(TypeEntry.HelloLogger) is true
+	Execute.HasRun(TypeEntry.HelloLogger)
 	Execute.HasRun(TypeEntry("A", List(MemberEntry), List(MethodEntry))) is false
 	for type.methods
 		if value.Name is "Run"
@@ -107,5 +107,5 @@ Summary(failed Number, path Text) Text
 	failed is 0 then "All tests passed in " + path else failed + " tests failed in " + path
 Started(types List(TypeEntry), path Text, isTracing = false) Machine
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "Examples/HelloLogger.strict").folder is "Examples"
-	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", true).isTracing is true
+	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", true).isTracing
 	Machine(Resolver(types).Resolved, logger, List(VmValue), Path(path).PathOnly.text, isTracing).Prepared

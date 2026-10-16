@@ -73,7 +73,7 @@ Bitwise(name Text, left Number, right Number) Number
 	Shapes.Bitwise("xor", 12, 10) is 6
 	name is "and" then left and right else name is "or" then left or right else left xor right
 Queried(name Text, instance VmValue, call Invocation) VmValue
-	Shapes.Queried("in", VmValue.OfList(VmValue.OfNumber(3)), NewShape).IsTrue is true
+	Shapes.Queried("in", VmValue.OfList(VmValue.OfNumber(3)), NewShape).IsTrue
 	if call.TypeName.StartsWith("Strict/Dictionary(")
 		return Keyed(name, instance, call.Arguments)
 	if name is "in"
@@ -82,7 +82,7 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 		return VmValue.OfNumber(instance.items.Index(call.Arguments.First))
 	Foreign(call, types, folder).Called
 Searched(name Text, text Text, arguments List(VmValue)) VmValue
-	Shapes.Searched("StartsWith", "abc", (VmValue.OfText("bc"), VmValue.OfNumber(1))).IsTrue is true
+	Shapes.Searched("StartsWith", "abc", (VmValue.OfText("bc"), VmValue.OfNumber(1))).IsTrue
 	Shapes.Searched("Substring", "abc", (VmValue.OfNumber(1), VmValue.OfNumber(2))).text is "bc"
 	Shapes.Searched("IndexOf", "abc", List(VmValue) + VmValue.OfText("c")).number is 2
 	if arguments.Length is 0
@@ -150,9 +150,9 @@ TypeOf(name Text) TypeEntry
 			return value
 	TypeEntry(name, List(MemberEntry), List(MethodEntry))
 IsNamed(type TypeEntry, name Text, short Text) Boolean
-	Shapes.IsNamed(Shape, "Shape", "Shape") is true
+	Shapes.IsNamed(Shape, "Shape", "Shape")
 	Shapes.IsNamed(Shape, "Strict/Other", "Other") is false
-	Shapes.IsNamed(TypeEntry("Shape", List(MemberEntry), List(MethodEntry)), "Strict/A/Shape", "Shape") is true
+	Shapes.IsNamed(TypeEntry("Shape", List(MemberEntry), List(MethodEntry)), "Strict/A/Shape", "Shape")
 	if (type.Name is name) or (type.Name is short)
 		return true
 	let start = type.Name.Length - short.Length - 1

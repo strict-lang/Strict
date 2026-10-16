@@ -31,7 +31,7 @@ Negative(operand SyntaxNode, block CodeBlock) CodeBlock
 IsCustom(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsCustom(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
 	Plain.IsCustom(SyntaxNode("Binary", "is", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Size")) is false
-	Characters.IsCustom(SyntaxNode("Binary", "+", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Character")) is true
+	Characters.IsCustom(SyntaxNode("Binary", "+", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Character"))
 	if IsBitwise(node, block)
 		return true
 	if node.text is not in ("+", "-", "*", "/", "%", "^")
@@ -42,11 +42,11 @@ IsCustom(node SyntaxNode, block CodeBlock) Boolean
 		return false
 	types.MethodsOf(type).TypeOf(node.text) is not ""
 IsBitwise(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsBitwise(SyntaxNode("Binary", "xor", (One, One)), CodeBlock.Empty) is true
+	Plain.IsBitwise(SyntaxNode("Binary", "xor", (One, One)), CodeBlock.Empty)
 	Plain.IsBitwise(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Boolean")) is false
 	(node.text is in ("and", "or", "xor")) and (values.TypeOf(node.children(0), block) is "Number")
 IsComposite(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsComposite(Choose, CodeBlock.Empty) is true
+	Plain.IsComposite(Choose, CodeBlock.Empty)
 	Plain.IsComposite(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
 	let isFixed = (node.Kind is "Converted") or (node.text is in ("and", "or", "is in", "is not in", "else"))
 	isFixed or IsCustom(node, block) or (Decided(node, block) is not "")
@@ -63,7 +63,7 @@ Decided(node SyntaxNode, block CodeBlock) Text
 	let matches = isType and Matches(values.TypeOf(node.children(0), block), wanted.text)
 	(matches is (node.text is "is")) to Text
 IsMismatched(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsMismatched(Mismatched, CodeBlock.Empty) is true
+	Plain.IsMismatched(Mismatched, CodeBlock.Empty)
 	Plain.IsMismatched(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is false
 	Hashes.IsMismatched(SyntaxParser(Tokenizer("Hash(1) is Hash(\"a\")").Tokens).Parse, CodeBlock.Empty) is false
 	if node.text is not in ("is", "is not")
@@ -75,8 +75,8 @@ IsMismatched(node SyntaxNode, block CodeBlock) Boolean
 	let isMethodGeneric = "Generic" is in types.ParametersOf(left, "from types", -1)
 	isInstance and (isMethodGeneric is false) and (types.BaseName(left) is types.BaseName(right))
 Matches(type Text, wanted Text) Boolean
-	Plain.Matches("Numbers", "Iterator") is true
-	Plain.Matches("A(Number)", "A") is true
+	Plain.Matches("Numbers", "Iterator")
+	Plain.Matches("A(Number)", "A")
 	Plain.Matches("Number", "B") is false
 	let types = values.inference.types
 	let isIterable = (type is in ("Number", "Range", "Text")) or types.IsPlural(type) or (types.BaseName(type) is "List")

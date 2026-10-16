@@ -2,7 +2,7 @@ has owner TypeEntry
 constant Logged = TypeReference(TypeEntry.HelloLogger)
 constant Memberless = TypeReference(TypeEntry("HelloLogger", MemberEntry.LoggerMember, List(MethodEntry)))
 Covers(needed TypeEntry) Boolean
-	Logged.Covers(TypeEntry.HelloLogger) is true
+	Logged.Covers(TypeEntry.HelloLogger)
 	Logged.Covers(TypeEntry.Converting) is false
 	Memberless.Covers(TypeEntry.HelloLogger) is false
 	if (owner.Name is not needed.Name) or (owner.members is not needed.members)

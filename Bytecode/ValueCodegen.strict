@@ -85,8 +85,8 @@ Field(member Text, owner Text, block CodeBlock, instance Number) CodeBlock
 	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(2).texts is ("text", "Greeter")
 	block.Load(InstructionEntry(InstructionType.FieldLoad, (member, owner), (block.register, instance, -1, -2)))
 IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsMethodCall(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty) is true
-	Plain.IsMethodCall(SyntaxNode("Member", "Greet", NewGreeter), CodeBlock.Empty) is true
+	Plain.IsMethodCall(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty)
+	Plain.IsMethodCall(SyntaxNode("Member", "Greet", NewGreeter), CodeBlock.Empty)
 	Plain.IsMethodCall(GreeterText, CodeBlock.Empty) is false
 	Plain.IsMethodCall(SyntaxNode("Call", "text", One), CodeBlock.Empty) is false
 	Plain.IsMethodCall(ToText, CodeBlock.Empty) is false
@@ -110,9 +110,9 @@ Replacing(node SyntaxNode, block CodeBlock) CodeBlock
 	let renamed = ConversionCodegen(value).Replaced(SyntaxNode(node.Kind, node.text, children, node.line))
 	ErrorCodegen(value).Validated(node, block, Invoke(renamed, stored.WithNextId, -1, TypeOf(node, block)))
 IsTypeName(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is true
+	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty)
 	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false
-	Plain.IsTypeName(SyntaxNode("Type", "Run"), CodeBlock.Empty) is true
+	Plain.IsTypeName(SyntaxNode("Type", "Run"), CodeBlock.Empty)
 	if node.Kind is "Type"
 		return true
 	let isFree = (block.scope.TypeOf(node.text) is "") and (inference.ConstantOf(target.TypeName, node.text) is "")

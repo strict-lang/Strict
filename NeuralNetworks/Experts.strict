@@ -34,8 +34,8 @@ Joined(gates List(Layer), ups List(Layer)) List(Layer)
 	for gates
 		Layer(value.weights + ups(index).weights, value.biases + ups(index).biases)
 Forward(input Numbers) Numbers
-	Tiny.Forward(Probe).First.IsNearlyEqual(0.4825967035647183, 0.000001) is true
-	Tiny.Forward(Probe).Last.IsNearlyEqual(-0.4171537353010468, 0.000001) is true
+	Tiny.Forward(Probe).First.IsNearlyEqual(0.4825967035647183, 0.000001)
+	Tiny.Forward(Probe).Last.IsNearlyEqual(-0.4171537353010468, 0.000001)
 	if router.weights.Length is 0
 		return Expert(0, input)
 	let probabilities = Network.Softmax(router.Sums(input))
@@ -46,7 +46,7 @@ Forward(input Numbers) Numbers
 		mixed = Gpt2Block.Added(mixed, Scaled(Expert(value, input), probabilities(value) / total))
 	mixed
 Added(input Numbers, residual Numbers) Numbers
-	Tiny.Added(Probe, Probe).First.IsNearlyEqual(0.9825967035647183, 0.000001) is true
+	Tiny.Added(Probe, Probe).First.IsNearlyEqual(0.9825967035647183, 0.000001)
 	Single.Added(Probe, Probe) is Gpt2Block.Added(Probe, Tiny.Expert(0, Probe))
 	if router.weights.Length > 0
 		return Gpt2Block.Added(residual, Forward(input))

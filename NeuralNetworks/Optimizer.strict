@@ -12,7 +12,7 @@ Started(untrained Network, decay Number) Optimizer
 		zeros.Add(Moments.Zeros(value))
 	Optimizer(untrained, zeros, decay)
 Trained(input Numbers, target Numbers, rate Number) Optimizer
-	Paired.Trained((1, 1), List(Number) + 0, 0.1).network.Predict((1, 1)).First < 0.7 is true
+	Paired.Trained((1, 1), List(Number) + 0, 0.1).network.Predict((1, 1)).First < 0.7
 	let activations = network.Activations(input)
 	let deltas = network.Deltas(activations, target)
 	let next = step + 1

@@ -1,7 +1,7 @@
 constant Count = 64
 IsValid(index Number) Boolean
-	IsValid(0) is true
-	IsValid(63) is true
+	IsValid(0)
+	IsValid(63)
 	IsValid(64) is false
 	IsValid(-1) is false
 	if index < 0

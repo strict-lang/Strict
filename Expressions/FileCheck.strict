@@ -17,7 +17,7 @@ Unknown(scoped ScopedStatement, current Scope) Text
 	Counting.Unknown(TwiceCall, KnownTypes.NoMembers) is ""
 	Counting.Unknown(MissingCall, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Counting.Unknown(OtherName, KnownTypes.NoMembers) is "NameNotFound: other"
-	Counting.Unknown(FlagLoop, KnownTypes.NoMembers).StartsWith("NotIterable: flag is a Boolean") is true
+	Counting.Unknown(FlagLoop, KnownTypes.NoMembers).StartsWith("NotIterable: flag is a Boolean")
 	if scoped.statement.Kind is "Invalid"
 		return scoped.statement.text
 	let names = UnknownNames(scoped.statement, known + scoped.scope.names + ValueNames(scoped.scope))
@@ -83,13 +83,13 @@ UnknownMembers(call SyntaxNode) Texts
 		if (call.Kind is "Call") and (value.Kind is "Reassignment") and (value.children(0).text is not in members)
 			"MemberNotFound: " + call.text + "." + value.children(0).text
 IsCall(node SyntaxNode) Boolean
-	Counting.IsCall(MissingCall.statement) is true
+	Counting.IsCall(MissingCall.statement)
 	Counting.IsCall(OtherName.statement) is false
 	let isNamed = (node.text.Length > 0) and (node.text.Substring(0, 1).Upper is not node.text.Substring(0, 1).Lower)
 	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
 	isMember and isNamed and (node.text is not in ("value", "index"))
 IsMissing(instance Text, name Text) Boolean
-	Counting.IsMissing("Count", "Missing") is true
+	Counting.IsMissing("Count", "Missing")
 	Counting.IsMissing("Count", "Twice") is false
 	Counting.IsMissing("Generic", "number") is false
 	let types = inference.types
@@ -107,7 +107,7 @@ UnknownNames(statement SyntaxNode, names Texts) Texts
 		if not IsKnown(value, names)
 			value
 IsKnown(name Text, names Texts) Boolean
-	IsKnown("Numbers", ("Number", "a")) is true
+	IsKnown("Numbers", ("Number", "a"))
 	IsKnown("b", ("Number", "a")) is false
 	if name is in names
 		return true
@@ -126,8 +126,8 @@ Unimplemented(path Text, lines Texts) Texts
 		if (value.StartsWith("\t") is false) and IsUnimplemented(lines, index, typeName)
 			"ImplementationNotFound: " + Tokenizer(value).Tokens.First + " in " + path + ":" + (index + 1)
 IsUnimplemented(lines Texts, header Number, typeName Text) Boolean
-	Counting.IsUnimplemented(("Add(other) Number", "\tAdd(1) > 0 is true"), 0, "A") is true
-	Counting.IsUnimplemented(("Add(other) Number", "\tA.Add(1) is 1"), 0, "A") is true
+	Counting.IsUnimplemented(("Add(other) Number", "\tAdd(1) > 0 is true"), 0, "A")
+	Counting.IsUnimplemented(("Add(other) Number", "\tA.Add(1) is 1"), 0, "A")
 	Counting.IsUnimplemented(("Add(other) Number", "\tother + 1"), 0, "A") is false
 	let lastLine = LastLine(lines, header)
 	if (lastLine is header) or (lines(header) is "from") or TypeShape(lines).IsMemberLine(lines(header))
@@ -149,7 +149,7 @@ LastLine(lines Texts, header Number) Number
 	last
 Problem(lines Texts, broken Number) Text
 	Counting.Problem(("Run", "	1 +"), 1) is "ParsingFailed: 1 +"
-	Counting.Problem(("Run", "	let a = for 3"), 1).StartsWith("ForWithBodyOnlyAsMethodResult: let a = for 3, ") is true
+	Counting.Problem(("Run", "	let a = for 3"), 1).StartsWith("ForWithBodyOnlyAsMethodResult: let a = for 3, ")
 	Counting.Problem(("has number", "Run", "	1", "", "	2"), 3) is "EmptyLineInsideMethod: Run"
 	if lines(broken).Trim is not ""
 		let isFor = lines(broken).IndexOf(" = for ") > 0

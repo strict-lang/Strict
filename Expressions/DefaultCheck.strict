@@ -18,7 +18,7 @@ LoopNames(path Text, lines Texts) Texts
 		if isDeclared and (tokens(1) is in ("value", "index")) and HasLoop(lines, index)
 			"LoopNameMustNotBeDeclared: " + tokens(1) + " in " + path + ":" + (index + 1)
 HasLoop(lines Texts, position Number) Boolean
-	DefaultCheck.HasLoop(Countdown, 1) is true
+	DefaultCheck.HasLoop(Countdown, 1)
 	DefaultCheck.HasLoop(("Twice(value Number) Number", "\tvalue * 2"), 1) is false
 	mutable header = 0
 	for Range(0, position + 1)
@@ -41,7 +41,7 @@ Keyworded(path Text, lines Texts) Texts
 					issues.Add("CannotUseKeywordsAsName: " + value + " in " + path + ":" + line)
 	issues
 Defaults(path Text, lines Texts) Texts
-	Counting.Unsupported("A.strict", Sized).First.StartsWith("UnsupportedDefault: size in A.strict:1, ") is true
+	Counting.Unsupported("A.strict", Sized).First.StartsWith("UnsupportedDefault: size in A.strict:1, ")
 	Counting.Unsupported("A.strict", ("has a Number = 5", "has c Numbers = List(Number)")).Length is 0
 	Counting.Unsupported("A.strict", List(Text) + "has b Text = Text(other)").Length is 1
 	let shape = TypeShape(lines)
@@ -52,7 +52,7 @@ Defaults(path Text, lines Texts) Texts
 		if issue is not ""
 			issue
 Issue(tokens Texts, location Text) Text
-	Counting.Issue(Tokenizer(Sized(0)).Tokens, "A.strict:1").EndsWith("pass it to the constructor") is true
+	Counting.Issue(Tokenizer(Sized(0)).Tokens, "A.strict:1").EndsWith("pass it to the constructor")
 	Counting.Issue(Tokenizer("has size Count = Count.Limit").Tokens, "A.strict:1") is ""
 	Counting.Issue(Tokenizer("has size Count = Count.Started").Tokens, "A.strict:1") is ""
 	constant hint = ", only literals, constants, empty lists and dictionaries and types with one member can be defaults"
@@ -69,8 +69,8 @@ Missing(node SyntaxNode) Text
 	let isMissing = isUnknown and (inference.types.MemberType(owner, node.text) is "Unknown")
 	isMissing then "ConstantNotFound: " + owner + "." + node.text else ""
 IsConstant(node SyntaxNode) Boolean
-	Counting.IsConstant(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse) is true
-	Counting.IsConstant(SyntaxParser(Tokenizer("-1 + 2").Tokens).Parse) is true
+	Counting.IsConstant(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse)
+	Counting.IsConstant(SyntaxParser(Tokenizer("-1 + 2").Tokens).Parse)
 	Counting.IsConstant(SyntaxParser(Tokenizer("Count(1, 2)").Tokens).Parse) is false
 	Counting.IsConstant(SyntaxParser(Tokenizer("Count.Started").Tokens).Parse) is false
 	if node.Kind is "Member"
@@ -81,15 +81,15 @@ IsConstant(node SyntaxNode) Boolean
 		return IsConstant(node.children(0)) and ((node.Kind is "Negate") or IsConstant(node.children.Last))
 	(node.Kind is "Call") and ((node.text is in ("List", "Dictionary")) or IsWrapper(node))
 IsConstantMember(member SyntaxNode) Boolean
-	Counting.IsConstantMember(SyntaxParser(Tokenizer("Count.Missing").Tokens).Parse) is true
+	Counting.IsConstantMember(SyntaxParser(Tokenizer("Count.Missing").Tokens).Parse)
 	let expression = inference.ConstantOf(member.children(0).text, member.text)
 	if expression is ""
 		return true
 	IsConstant(SyntaxParser(Tokenizer(expression).Tokens).Parse)
 IsWrapper(call SyntaxNode) Boolean
-	Counting.IsWrapper(SyntaxParser(Tokenizer("Number(1)").Tokens).Parse) is true
+	Counting.IsWrapper(SyntaxParser(Tokenizer("Number(1)").Tokens).Parse)
 	Counting.IsWrapper(SyntaxParser(Tokenizer("Count(1, 2)").Tokens).Parse) is false
-	Counting.IsWrapper(SyntaxParser(Tokenizer("Number(List(Number))").Tokens).Parse) is true
+	Counting.IsWrapper(SyntaxParser(Tokenizer("Number(List(Number))").Tokens).Parse)
 	let isBase = call.text is in ("Number", "Text", "Boolean")
 	let isNested = (call.children.Length is 1) and (call.children(0).Kind is "Call") and IsConstant(call.children(0))
 	let isConstant = SyntaxNode("List", "", call.children).IsLiteral or isNested

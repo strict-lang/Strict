@@ -4,22 +4,22 @@ constant Hashed = VmValue("Strict/HashCode(Type)", 0, "", List(VmValue) + VmValu
 constant Detailed = VmValue("Strict/ErrorWithValue", 0, "", (DimensionError, OneTwo))
 Result(kind Number, left VmValue, right VmValue) VmValue
 	Result(InstructionType.Add, VmValue.OfNumber(3), VmValue.OfNumber(4)).number is 7
-	Result(InstructionType.LessThan, VmValue.OfNumber(3), VmValue.OfNumber(4)).IsTrue is true
+	Result(InstructionType.LessThan, VmValue.OfNumber(3), VmValue.OfNumber(4)).IsTrue
 	if kind > InstructionType.ArithmeticSeparator
 		return VmValue.OfBoolean(Comparison(kind, left, right))
 	Calculated(kind, left, right)
 Comparison(kind Number, left VmValue, right VmValue) Boolean
-	Comparison(InstructionType.GreaterThan, VmValue.OfNumber(3), VmValue.OfNumber(1)) is true
-	Comparison(InstructionType.Equal, VmValue.OfText("a"), VmValue.OfText("a")) is true
-	Comparison(InstructionType.Equal, Detailed, DimensionError) is true
-	Comparison(InstructionType.Equal, Hashed, VmValue("Strict/HashCode(Texts)", 0, "", Hashed.items)) is true
-	Comparison(InstructionType.Equal, Detailed, VmValue.OfError("")) is true
-	Comparison(InstructionType.NotEqual, VmValue.OfNumber(1), VmValue.OfError("")) is true
+	Comparison(InstructionType.GreaterThan, VmValue.OfNumber(3), VmValue.OfNumber(1))
+	Comparison(InstructionType.Equal, VmValue.OfText("a"), VmValue.OfText("a"))
+	Comparison(InstructionType.Equal, Detailed, DimensionError)
+	Comparison(InstructionType.Equal, Hashed, VmValue("Strict/HashCode(Texts)", 0, "", Hashed.items))
+	Comparison(InstructionType.Equal, Detailed, VmValue.OfError(""))
+	Comparison(InstructionType.NotEqual, VmValue.OfNumber(1), VmValue.OfError(""))
 	if kind is in (InstructionType.Equal, InstructionType.NotEqual)
 		return IsSame(left, right) is (kind is InstructionType.Equal)
 	kind is InstructionType.LessThan then left.number < right.number else left.number > right.number
 IsSame(left VmValue, right VmValue) Boolean
-	IsSame(DimensionError, VmValue.OfError("")) is true
+	IsSame(DimensionError, VmValue.OfError(""))
 	IsSame(VmValue.OfNumber(1), VmValue.OfError("")) is false
 	let compared = Comparable(left)
 	let other = Comparable(right)

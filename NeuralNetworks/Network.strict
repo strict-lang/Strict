@@ -25,7 +25,7 @@ Activations(input Numbers) List(Numbers)
 	activations
 Output(layer Layer, input Numbers) Numbers
 	Single.Output(Layer.Halves, (1, 1)) is List(Number) + 0.7310585786300049
-	Classifier.Output(Classifier.layers.First, (2, 0)).First > 0.88 is true
+	Classifier.Output(Classifier.layers.First, (2, 0)).First > 0.88
 	layer.biases.Length > 1 then Softmax(layer.Sums(input)) else layer.Forward(input)
 Softmax(sums Numbers) Numbers
 	Single.Softmax((1, 1)) is (0.5, 0.5)
@@ -39,7 +39,7 @@ Exponentials(sums Numbers) Numbers
 	for sums
 		(value - largest).Exponential
 Trained(input Numbers, target Numbers, rate Number) Network
-	Pair.Trained((1, 1), List(Number) + 0, 1).Predict((1, 1)).First < Pair.Predict((1, 1)).First is true
+	Pair.Trained((1, 1), List(Number) + 0, 1).Predict((1, 1)).First < Pair.Predict((1, 1)).First
 	let activations = Activations(input)
 	Network(Updated(activations, Deltas(activations, target), rate))
 Updated(activations List(Numbers), deltas List(Numbers), rate Number) List(Layer)

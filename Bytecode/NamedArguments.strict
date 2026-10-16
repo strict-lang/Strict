@@ -45,7 +45,7 @@ Last(call SyntaxNode, names Texts) Number
 		last = position > last then position else last
 	last
 IsComputed(type Text, name Text) Boolean
-	Curved.IsComputed("Part", "mask") is true
+	Curved.IsComputed("Part", "mask")
 	Curved.IsComputed("Part", "light") is false
 	let fallback = values.inference.types.ParameterScope(type).TypeOf(name + " default")
 	(fallback is not "") and (SyntaxParser(Tokenizer(fallback).Tokens).Parse.Kind is "Member")

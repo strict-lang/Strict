@@ -35,7 +35,7 @@ Other(typeName Text, lines Texts, header Number) Text
 			return owners(index)
 	""
 CallsOwn(lines Texts, body Text) Boolean
-	Copies.CallsOwn(Looping, "let current = Next(start)") is true
+	Copies.CallsOwn(Looping, "let current = Next(start)")
 	Copies.CallsOwn(Looping, "start + 1") is false
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and (body.IndexOf(Tokenizer(value).Tokens.First + "(") >= 0)
@@ -50,9 +50,9 @@ Implementation(lines Texts, header Number) Text
 			result = result + lines(value).Trim + "\n"
 	result
 IsTest(line Text) Boolean
-	Copies.IsTest("Halve(4) is 2") is true
+	Copies.IsTest("Halve(4) is 2")
 	Copies.IsTest("let half = number / 2") is false
-	Copies.IsTest("Default.Valid") is true
+	Copies.IsTest("Default.Valid")
 	let first = Tokenizer(line).Tokens.First
 	let isStatement = first is in ("let", "mutable", "constant", "if", "for", "return", "else")
 	let isComparing = (line.IndexOf(" is ") > 0) or (line.IndexOf(" < ") > 0) or (line.IndexOf(" > ") > 0)

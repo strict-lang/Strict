@@ -29,8 +29,8 @@ LogicalPrecedence(token Text) Number
 		return 3
 	0
 IsOperator(token Text) Boolean
-	IsOperator("+") is true
-	IsOperator("and") is true
+	IsOperator("+")
+	IsOperator("and")
 	IsOperator("a") is false
 	OperatorPrecedence(token) > 0
 OperandTokens Texts

@@ -8,14 +8,14 @@ constant Arithmetic = (InstructionEntry.Named(InstructionType.LoadVariableToRegi
 constant Downcast = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", (MlirLists.Items, MlirLists.Words), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "words"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))))
 constant Mixed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", Arithmetic))
 IsOperation Boolean
-	MlirListOperators(MlirLists.Listed, 4).IsOperation is true
+	MlirListOperators(MlirLists.Listed, 4).IsOperation
 	MlirListOperators(MlirLists.Listed, 1).IsOperation is false
-	MlirListOperators(Mixed, 5).IsOperation is true
+	MlirListOperators(Mixed, 5).IsOperation
 	let entry = function.method.instructions(position)
 	let isList = IsList(entry.payload(1)) or (entry.kind is InstructionType.Add) and IsList(entry.payload(2))
 	isList and (entry.kind is in Operators)
 IsList(register Number) Boolean
-	MlirListOperators(Mixed, 2).IsList(0) is true
+	MlirListOperators(Mixed, 2).IsList(0)
 	MlirListOperators(Mixed, 2).IsList(1) is false
 	MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register)).StartsWith("List(")
 ElementSuffix(register Number) Text
@@ -44,7 +44,7 @@ Added(entry InstructionEntry, isList Boolean) Text
 	isDowncast then "strict_list_downcast" else (isList then "strict_list_concat" else "strict_list_add")
 Operated(entry InstructionEntry) Texts
 	MlirListOperators(MlirLists.Listed, 4).Operated(Steps(4)).Length is 4
-	Text.Combine(MlirListOperators(MlirLists.Listed, 5).Operated(Steps(5)), "").IndexOf("strict_list_concat") > 0 is true
+	Text.Combine(MlirListOperators(MlirLists.Listed, 5).Operated(Steps(5)), "").IndexOf("strict_list_concat") > 0
 	let names = MlirLists(function, position)
 	let result = names.Temp("c")
 	let operands = (names.Temp("a"), names.Temp("b"))
@@ -55,7 +55,7 @@ Operated(entry InstructionEntry) Texts
 	let right = RightOperand(entry, IsList(entry.payload(2)))
 	(List(Text) + left + right) + call + function.Store(result, "%r" + entry.payload(3))
 RightOperand(entry InstructionEntry, isList Boolean) Texts
-	Text.Combine(MlirListOperators(Worded, 2).RightOperand(WordSteps(2), false)).IndexOf("strict_number_text") > 0 is true
+	Text.Combine(MlirListOperators(Worded, 2).RightOperand(WordSteps(2), false)).IndexOf("strict_number_text") > 0
 	MlirListOperators(MlirLists.Listed, 4).RightOperand(Steps(4), false).Length is 1
 	let kinds = MlirKinds(function)
 	let right = kinds.KindOf(position, entry.payload(2))

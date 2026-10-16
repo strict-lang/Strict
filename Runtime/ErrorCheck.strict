@@ -19,7 +19,7 @@ Value(slots List(VmValue), frame Frame, position Number) VmValue
 		return slots(entry.Target)
 	IsTracedIn(checked, frame) then checked else frame.Traced(checked, position)
 IsTracedIn(error VmValue, frame Frame) Boolean
-	Returning.IsTracedIn(Frame.Twice.Traced(VmValue.OfError("a"), 0), Frame.Twice) is true
+	Returning.IsTracedIn(Frame.Twice.Traced(VmValue.OfError("a"), 0), Frame.Twice)
 	Returning.IsTracedIn(VmValue.OfError("a"), Frame.Twice) is false
 	let traces = (error.kind is "Strict/ErrorWithValue" then error.items(0) else error).items(1).items
 	if traces.Length is 0

@@ -43,7 +43,7 @@ Calculated(left Number, operator Text, right Number) Number
 		return left - right
 	operator is "*" then left * right else left / right
 Logical(left Boolean, operator Text, right Boolean) Boolean
-	Logical(true, "or", false) is true
+	Logical(true, "or", false)
 	operator is "and" then left and right else left or right
 Inner(literal SyntaxNode) Text
 	Inner(SyntaxNode("Text", "\"a\"")) is "a"

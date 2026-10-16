@@ -38,7 +38,7 @@ Tournament(population List(Network)) Network
 	let second = population(population.Length.Random.Floor)
 	Xor.Error(first) < Xor.Error(second) then first else second
 Best(population List(Network)) Network
-	Xor.Error(Neuroevolution.Best((Network.Pair, Network.Single))) <= Xor.Error(Network.Pair) is true
+	Xor.Error(Neuroevolution.Best((Network.Pair, Network.Single))) <= Xor.Error(Network.Pair)
 	mutable best = population.First
 	for population
 		if Xor.Error(value) < Xor.Error(best)

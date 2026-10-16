@@ -96,7 +96,7 @@ HeadNames Texts
 		names = names + (isNamed then value.children.Last.HeadNames else HeadNames)
 	names
 HasBody Boolean
-	SyntaxNode("For", "", (SyntaxNode("Number", "3"), SyntaxNode("Body", ""))).HasBody is true
+	SyntaxNode("For", "", (SyntaxNode("Number", "3"), SyntaxNode("Body", ""))).HasBody
 	SyntaxNode("Number", "3").HasBody is false
 	children.Length > 0 and (children.Last.Kind is "Body")
 HasValue Boolean
@@ -119,9 +119,9 @@ Statements SyntaxNodes
 			statements = statements + value.children.Last.Statements
 	statements
 IsLiteral Boolean
-	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Text", "\"a\""))).IsLiteral is true
+	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Text", "\"a\""))).IsLiteral
 	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Identifier", "a"))).IsLiteral is false
-	SyntaxNode("Boolean", "true").IsLiteral is true
+	SyntaxNode("Boolean", "true").IsLiteral
 	if Kind is in ("Number", "Text", "Boolean")
 		return true
 	if Kind is not "List"

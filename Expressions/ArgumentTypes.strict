@@ -10,13 +10,13 @@ constant Limited = SyntaxParser(Tokenizer("count.Limit").Tokens).Parse
 constant Created = SyntaxParser(Tokenizer("Count(count)").Tokens).Parse
 constant Counted = Scope(("count", "area", "size"), ("Count", "Area", "Size"))
 Checked(node SyntaxNode, scope Scope, current Scope) Text
-	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch") is true
-	Sizing.Checked(Listed, Counted, Counted).StartsWith("LogicalOperandIsAList") is true
-	Sizing.Checked(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName") is true
+	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
+	Sizing.Checked(Listed, Counted, Counted).StartsWith("LogicalOperandIsAList")
+	Sizing.Checked(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName")
 	let operands = Operands(node) + ConstantAccess(node, scope, current)
 	operands is "" then Issue(node, scope, current) else operands
 ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
-	Sizing.ConstantAccess(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName") is true
+	Sizing.ConstantAccess(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName")
 	Sizing.ConstantAccess(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse, Counted, Counted) is ""
 	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
 	let first = isMember then node.children(0) else node
@@ -26,7 +26,7 @@ ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
 		return ""
 	"ConstantNeedsTypeName: " + node.text + " is read from an instance, write " + owner + "." + node.text
 Operands(node SyntaxNode) Text
-	Sizing.Operands(Listed).EndsWith("remove the parentheses") is true
+	Sizing.Operands(Listed).EndsWith("remove the parentheses")
 	Sizing.Operands(SyntaxParser(Tokenizer("(1 > 0) and (2 > 1)").Tokens).Parse) is ""
 	if (node.Kind is not "Binary") or (node.text is not in ("and", "or", "xor"))
 		return ""
@@ -35,9 +35,9 @@ Operands(node SyntaxNode) Text
 			return "LogicalOperandIsAList: " + value + " is a list of one element, remove the parentheses"
 	""
 Issue(call SyntaxNode, scope Scope, current Scope) Text
-	Sizing.Issue(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch") is true
+	Sizing.Issue(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
 	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ""
-	Sizing.Issue(Created, Counted, Counted).EndsWith("Count got a Count for a Size") is true
+	Sizing.Issue(Created, Counted, Counted).EndsWith("Count got a Count for a Size")
 	Sizing.Issue(Created, Counted, Scope(List(Text) + "Count", List(Text) + "Count")) is ""
 	let isConstructor = (call.Kind is "Call") and inference.types.IsKnown(call.text) and (current.TypeOf(call.text) is "")
 	let isCall = (call.Kind is "MethodCall") and (call.children.Length > 1)
@@ -46,7 +46,7 @@ Issue(call SyntaxNode, scope Scope, current Scope) Text
 	let instance = isCall then inference.TypeOf(call.children(0), scope, current) else call.text
 	Compared(call, instance, isCall then call.text else "from", scope, current)
 Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope) Text
-	Sizing.Compared(Grown, "Count", "Grow", Counted, Counted).StartsWith("ArgumentTypeMismatch: Count.Grow") is true
+	Sizing.Compared(Grown, "Count", "Grow", Counted, Counted).StartsWith("ArgumentTypeMismatch: Count.Grow")
 	let parameters = inference.types.ParameterScope(instance)
 	if parameters.Count(method) is not 1
 		return ""
@@ -80,7 +80,7 @@ Mismatched(arguments Texts, types Texts) Number
 			return index
 	-1
 Mismatch(argument Text, parameter Text) Boolean
-	Sizing.Mismatch("Count", "Area") is true
+	Sizing.Mismatch("Count", "Area")
 	Sizing.Mismatch("Area", "Size") is false
 	Sizing.Mismatch("Number", "Area") is false
 	Sizing.Mismatch("Area", "Area") is false

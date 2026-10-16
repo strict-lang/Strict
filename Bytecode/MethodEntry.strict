@@ -35,7 +35,7 @@ Integers(names BinaryNames) Numbers
 		integers = integers + instruction.Length + instruction
 	integers
 IsInitializer(members List(MemberEntry)) Boolean
-	Initializing.IsInitializer(List(MemberEntry) + MemberEntry.LoggerMember) is true
+	Initializing.IsInitializer(List(MemberEntry) + MemberEntry.LoggerMember)
 	GoRun.IsInitializer(List(MemberEntry) + MemberEntry.LoggerMember) is false
 	if Name is not "from"
 		return false

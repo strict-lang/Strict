@@ -26,7 +26,7 @@ Loaded(result Text, address Text, items Text, source Text) Texts
 	Doubling.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = llvm.load %p : !llvm.ptr -> f64"
 	Quartering.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.mulf %xq, %xw : f64"
 	Fours.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.extf %xn : f32 to f64"
-	MlirWidths(Fours.function, 2, "f32").Loaded("%x", "%p", "%h", "numbers").Last.EndsWith("-> f32") is true
+	MlirWidths(Fours.function, 2, "f32").Loaded("%x", "%p", "%h", "numbers").Last.EndsWith("-> f32")
 	let type = Element(source)
 	let pointer = "    " + address + " = llvm.getelementptr " + items + "[" + Temp("ki") + "]" + Pointer + type
 	let loaded = "    " + result + (type is float then "" else "n") + " = llvm.load " + address + " : !llvm.ptr -> " + type
@@ -56,11 +56,11 @@ Scaled(result Text, items Text) Texts
 	let first = (MlirTyped.Integer.Constant(result + "f", "5"), block, address, scale)
 	(float is "f32" then first else first + widened) + (byte, product)
 Pointed(result Text, list Text, source Text, plain Text) Texts
-	Halving.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_list_data(%l)") > 0 is true
-	Quartering.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_list_scales(%l)") > 0 is true
-	Doubling.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_list_start(%l)") > 0 is true
-	Fours.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_list_floats(%l)") > 0 is true
-	Sixes.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_list_floats(%l)") > 0 is true
+	Halving.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_list_data(%l)") > 0
+	Quartering.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_list_scales(%l)") > 0
+	Doubling.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_list_start(%l)") > 0
+	Fours.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_list_floats(%l)") > 0
+	Sixes.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_list_floats(%l)") > 0
 	let packed = Width(source) is in ("6", "4") then "strict_list_floats" else "strict_list_data"
 	let called = Element(source) is "f64" then plain else packed
 	let pointed = "    " + result + " = func.call @" + called + "(" + list + ")" + MlirFastLoop.Items

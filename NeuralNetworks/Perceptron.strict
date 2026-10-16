@@ -32,7 +32,7 @@ Outputs Numbers
 	for Inputs
 		Output(value)
 Epochs(targets Numbers) Number
-	Untrained.Epochs((0, 0, 0, 1)) > 0 is true
+	Untrained.Epochs((0, 0, 0, 1)) > 0
 	Both.Epochs((0, 0, 0, 1)) is 0
 	mutable trained = value
 	for 100

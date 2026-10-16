@@ -12,8 +12,8 @@ Parse(text Text) Binary
 		return Binary(text, "", "", "Any")
 	Binary(tokens.First, tokens(1), tokens.Last, "Any")
 IsArithmetic Boolean
-	Binary("a", "+", "b", "Number").IsArithmetic is true
+	Binary("a", "+", "b", "Number").IsArithmetic
 	(operatorName is "+") or (operatorName is "-") or (operatorName is "*") or (operatorName is "/")
 IsLogical Boolean
-	Binary("a", "and", "b", "Boolean").IsLogical is true
+	Binary("a", "and", "b", "Boolean").IsLogical
 	(operatorName is "and") or (operatorName is "or") or (operatorName is "xor")

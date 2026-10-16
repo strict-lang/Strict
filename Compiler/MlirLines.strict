@@ -22,7 +22,7 @@ Numbers Numbers
 	numbers
 Allocated Texts
 	MlirLines(Lined).Allocated is State
-	MlirLines(Lined).Allocated.Last.IndexOf("@strict_line_enter(%linestate)") > 0 is true
+	MlirLines(Lined).Allocated.Last.IndexOf("@strict_line_enter(%linestate)") > 0
 	MlirLines(Unlined).Allocated.Length is 0
 	function.IsCounted then State else List(Text)
 At(position Number, name Text) Texts
@@ -40,13 +40,13 @@ At(position Number, name Text) Texts
 	entry.kind is InstructionType.Return then started + Stop else started
 Started(position Number, line Number, name Text) Texts
 	MlirLines(Lined).Started(2, 3, "%line").First is "    %line2 = arith.constant 5 : i64"
-	MlirLines(Lined).Started(2, 3, "%t1line").Last.IndexOf("(%linetable, %t1line2, %linestate)") > 0 is true
+	MlirLines(Lined).Started(2, 3, "%t1line").Last.IndexOf("(%linetable, %t1line2, %linestate)") > 0
 	let slot = function.lineSlots(Numbers.Index(line))
 	let call = "    func.call @strict_line(%linetable, " + name + position + ", %linestate)" + Signature
 	("    " + name + position + " = arith.constant " + slot + " : i64", call)
 End Texts
 	MlirLines(Lined).End is List(Text) + Stop
-	Stop.IndexOf("@strict_line_leave(%linetable, %linestate)") > 0 is true
+	Stop.IndexOf("@strict_line_leave(%linetable, %linestate)") > 0
 	MlirLines(Unlined).End.Length is 0
 	function.IsCounted then List(Text) + Stop else List(Text)
 Placed Texts
@@ -88,13 +88,13 @@ Uncompiled(functions List(MlirFunction), mains List(TypeEntry)) List(MlirFunctio
 	uncompiled
 Counted(functions List(MlirFunction), mains List(TypeEntry), files Texts) List(MlirFunction)
 	MlirLines.Counted(Shapes, List(TypeEntry) + MlirFunction.Shape, ("Shape.strict")).First.lineSlots is (0, 1)
-	Module.Text.IndexOf(Print) > 0 is true
+	Module.Text.IndexOf(Print) > 0
 	let names = NativeFolder.Names(mains)
 	let places = Places(functions + Uncompiled(functions, mains), names, files)
 	for functions
 		MlirFunction(value.types, value.type, value.method, MlirLines(value, names, files).Indexes(places))
 Table(functions List(MlirFunction), mains List(TypeEntry), files Texts) Texts
-	MlirLines.Table(Shapes, List(TypeEntry) + MlirFunction.Shape, ("A.strict")).First.IndexOf("tensor<6xf64>") > 0 is true
+	MlirLines.Table(Shapes, List(TypeEntry) + MlirFunction.Shape, ("A.strict")).First.IndexOf("tensor<6xf64>") > 0
 	let places = Places(functions + Uncompiled(functions, mains), NativeFolder.Names(mains), files)
 	let size = places.Length * 3
 	let table = "  llvm.mlir.global internal @strict_lines(dense<0.0> : tensor<" + size + "xf64>)"
@@ -105,13 +105,13 @@ Table(functions List(MlirFunction), mains List(TypeEntry), files Texts) Texts
 		printer = printer + Printed(index)
 	lines + printer + ("    return", "  }")
 Named(place Text, index Number) Text
-	MlirLines(Lined).Named("A.strict:2", 0).EndsWith("place0(\"A.strict:2\\00\") : !llvm.array<11 x i8>") is true
+	MlirLines(Lined).Named("A.strict:2", 0).EndsWith("place0(\"A.strict:2\\00\") : !llvm.array<11 x i8>")
 	let constants = MlirConstants(function, 0)
 	let length = constants.EscapedLength(place, false) + 1
 	let escaped = "(\"" + constants.Escaped(place, false) + "\\00\") : !llvm.array<" + length
 	"  llvm.mlir.global internal constant @strict_line_place" + index + escaped + " x i8>"
 Printed(index Number) Texts
-	MlirLines(Lined).Printed(3).Last.IndexOf("@strict_line_print(%linetable, %lineindex3, %lineplace3)") > 0 is true
+	MlirLines(Lined).Printed(3).Last.IndexOf("@strict_line_print(%linetable, %lineindex3, %lineplace3)") > 0
 	let place = "    %lineplace" + index + " = llvm.mlir.addressof @strict_line_place" + index + " : !llvm.ptr"
 	let position = "    %lineindex" + index + " = arith.constant " + index + " : i64"
 	let call = "    func.call @strict_line_print(%linetable, %lineindex" + index + ", %lineplace" + index + ")"

@@ -66,14 +66,14 @@ MutableParameterIssues ValidationIssues
 		issues.Add(ValidationIssue("ParameterMustNotBeMutableReturnTheChangedValue", value, line))
 	issues
 IsLooping Boolean
-	Looping.IsLooping is true
+	Looping.IsLooping
 	Sample.IsLooping is false
 	for statements
 		if value.Kind is "For"
 			return true
 	false
 IsUsed(name Text) Boolean
-	Sample.IsUsed("count") is true
+	Sample.IsUsed("count")
 	Sample.IsUsed("aa") is false
 	for statements
 		if name is in UsedNames(value)
@@ -93,7 +93,7 @@ IsChanged(name Text) Boolean
 			return true
 	false
 Changes(node SyntaxNode, name Text) Boolean
-	Sample.Changes(Sample.statements(2), "list") is true
+	Sample.Changes(Sample.statements(2), "list")
 	if (node.Kind is "Reassignment") and (RootName(node.children(0)) is name)
 		return true
 	if IsMutatingCall(node, name)
@@ -103,7 +103,7 @@ Changes(node SyntaxNode, name Text) Boolean
 			return true
 	false
 IsMutatingCall(call SyntaxNode, name Text) Boolean
-	Sample.IsMutatingCall(Sample.statements(2), "list") is true
+	Sample.IsMutatingCall(Sample.statements(2), "list")
 	(call.Kind is in ("MethodCall", "Member")) and (call.text is in mutations) and (RootName(call.children(0)) is name)
 RootName(node SyntaxNode) Text
 	Sample.RootName(Sample.statements(3)) is "count"

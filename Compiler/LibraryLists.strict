@@ -24,7 +24,7 @@ Records(typeName Text) Number
 	MlirInstances(MlirFunction(library.types, type, MethodEntry.CountingLoop), 0).Stored(type).Length
 Argument(typeName Text, position Number) Texts
 	Book.Argument("Strict/Numbers", 1) is ("    %v1 = func.call @strict_library_list(%a1) : (!llvm.ptr) -> f64")
-	Book.Argument("Strict/List(Trade)", 0).Last.EndsWith("_records(%a0, %c0) : (!llvm.ptr, i64) -> f64") is true
+	Book.Argument("Strict/List(Trade)", 0).Last.EndsWith("_records(%a0, %c0) : (!llvm.ptr, i64) -> f64")
 	let fields = Records(typeName)
 	let target = "    %v" + position + " = func.call @strict_library_"
 	if fields < 2
@@ -32,7 +32,7 @@ Argument(typeName Text, position Number) Texts
 	let counted = "    %c" + position + " = arith.constant " + fields + " : i64"
 	(counted, target + "records(%a" + position + ", %c" + position + ") : (!llvm.ptr, i64) -> f64")
 Stored(returnType Text) Texts
-	Book.Stored("Strict/List(Number)").First.IndexOf("@strict_library_numbers(%value)") > 0 is true
+	Book.Stored("Strict/List(Number)").First.IndexOf("@strict_library_numbers(%value)") > 0
 	Book.Stored("Strict/List(Trade)").First is "    %fields = arith.constant 2 : i64"
 	let fields = Records(returnType)
 	if fields < 2

@@ -8,11 +8,11 @@ constant Greets = MlirDefaults(MlirFunction(List(TypeEntry) + Greeting, Greeting
 constant LabelGlobal = "  llvm.mlir.global internal constant @dLabeled_label(\"Names\\00\") : !llvm.array<6 x i8>"
 Name(owner TypeEntry, member MemberEntry) Text
 	Labeling.Name(Labeled, Label) is "@dLabeled_label"
-	Text.Combine(Instances.Default(Labeled, Label, "%s", "d")).IndexOf(" @dLabeled_label ") > 0 is true
+	Text.Combine(Instances.Default(Labeled, Label, "%s", "d")).IndexOf(" @dLabeled_label ") > 0
 	"@d" + MlirEquality(function, 0).Symbol(owner.JustName) + "_" + member.Name
 Globals Texts
 	Labeling.Globals.First is LabelGlobal
-	Labeling.Globals.Last.StartsWith("  llvm.mlir.global internal constant @dLabeled_names_1(\"b\\00\")") is true
+	Labeling.Globals.Last.StartsWith("  llvm.mlir.global internal constant @dLabeled_names_1(\"b\\00\")")
 	Labeling.Globals.Length is 3
 	Greets.Globals is List(Text) + "  llvm.mlir.global internal constant @dp0(\"Hi\\00\") : !llvm.array<3 x i8>"
 	mutable lines = List(Mutable(Text))

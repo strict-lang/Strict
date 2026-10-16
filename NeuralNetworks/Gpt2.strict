@@ -19,7 +19,7 @@ Blocks(weights Safetensors) List(Gpt2Block)
 		loaded.Add(Gpt2Block.Loaded(weights, "h." + loaded.Length + "."))
 	loaded
 Step(token Number, position Number) Gpt2
-	Tiny.Step(1, 0).Step(2, 1).hidden.First.IsNearlyEqual(7.284562313542782) is true
+	Tiny.Step(1, 0).Step(2, 1).hidden.First.IsNearlyEqual(7.284562313542782)
 	mutable state = Gpt2Block.Added(tokens(token), positions(position))
 	mutable updated = List(Mutable(Gpt2Block))
 	for blocks

@@ -31,7 +31,7 @@ Best(candidates Texts, source Text) Text
 			return value
 	""
 IsQualified(path Text) Boolean
-	Qualified.IsQualified("./WebWars/Scene.strict") is true
+	Qualified.IsQualified("./WebWars/Scene.strict")
 	Plain.IsQualified("./WebWars/Scene.strict") is false
 	let parts = path.Replace("\\", "/").Split("/")
 	let qualified = parts(parts.Length - 2) + "/" + parts.Last.Replace(".strict", "")
@@ -40,7 +40,7 @@ IsQualified(path Text) Boolean
 			return true
 	false
 Ambiguous(names Texts, path Text) Texts
-	Plain.Ambiguous(("Scene", "Scene", "Unit"), "Catalog.strict").First.StartsWith("AmbiguousType: Scene") is true
+	Plain.Ambiguous(("Scene", "Scene", "Unit"), "Catalog.strict").First.StartsWith("AmbiguousType: Scene")
 	Plain.Ambiguous(("Scene", "Unit"), "./Content/Catalog.strict").Length is 0
 	for names
 		if (names.Index(value) is index) and (names.Count(value) > 1) and (UsedLine(value) > 0)

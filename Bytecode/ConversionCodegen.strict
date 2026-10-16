@@ -101,8 +101,8 @@ Operand(node SyntaxNode, block CodeBlock) SyntaxNode
 	let isList = (operand.Kind is "List") or types.IsPlural(values.TypeOf(operand, block))
 	Converted(operand, (isList then listType else types.ElementType(listType)), block)
 IsElement(collection Text, operand SyntaxNode, block CodeBlock) Boolean
-	Plain.IsElement("List(Numbers)", Nesting.children.Last, CodeBlock.Empty) is true
-	Plain.IsElement("Numberss", Nesting.children.Last, CodeBlock.Empty) is true
+	Plain.IsElement("List(Numbers)", Nesting.children.Last, CodeBlock.Empty)
+	Plain.IsElement("Numberss", Nesting.children.Last, CodeBlock.Empty)
 	Plain.IsElement("Numbers", Nesting.children.Last, CodeBlock.Empty) is false
 	let types = values.inference.types
 	let isSpelled = collection.StartsWith("List(") and (collection.IndexOf(",") < 0)

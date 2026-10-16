@@ -12,7 +12,7 @@ constant Rows = TypeEntry("Strict/Rows", List(MemberEntry), (Twice, Doubled, Ran
 constant Doubling = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Doubled), 2)
 constant Randomizing = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Randomized), 2)
 IsParallel Boolean
-	Doubling.IsParallel is true
+	Doubling.IsParallel
 	Randomizing.IsParallel is false
 	MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Filtered), 2).IsParallel is false
 	MlirParallel(MlirKernel.Doubling.function, 2).IsParallel is false
@@ -38,7 +38,7 @@ Temp(suffix Text) Text
 	Doubling.Temp("pn") is "%t2pn"
 	"%t" + position + suffix
 Forked Texts
-	Text.Combine(Doubling.Forked).IndexOf("func.call @strict_parallel(%t2pf, %t2pc, %t2pn)") > 0 is true
+	Text.Combine(Doubling.Forked).IndexOf("func.call @strict_parallel(%t2pf, %t2pc, %t2pn)") > 0
 	Randomizing.Forked.Length is 0
 	if IsParallel is false
 		return List(Text)
@@ -97,7 +97,7 @@ Restored(first Number, limit Number) Texts
 		lines = lines + address + ("    " + target + " = llvm.load " + Temp("qa" + value) + " : !llvm.ptr -> f64") + stored
 	lines
 Iterated Texts
-	Text.Combine(Doubling.Iterated).IndexOf("cf.br ^loop2child(%from : i64)") > 0 is true
+	Text.Combine(Doubling.Iterated).IndexOf("cf.br ^loop2child(%from : i64)") > 0
 	let loops = MlirLoops(function, position)
 	let entry = function.method.instructions(position)
 	let bounds = entry.payload(1) is 1 then loops.RangeBounds(entry) else loops.CountBounds(entry)
@@ -117,7 +117,7 @@ Next Texts
 	let next = "    " + Temp("kn") + " = arith.addi " + Temp("ki") + ", %one : i64"
 	(next, "    cf.br " + label + "(" + Temp("kn") + " : i64)", "  " + label + "exit:", "    return %zero : f64")
 Body Texts
-	Doubling.Body.Last.StartsWith("    llvm.store %t5e, %t5p") is true
+	Doubling.Body.Last.StartsWith("    llvm.store %t5e, %t5p")
 	mutable lines = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)

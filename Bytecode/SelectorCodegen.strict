@@ -3,6 +3,8 @@ constant Plain = SelectorCodegen(ValueCodegen.Plain)
 constant One = SyntaxNode("Number", "1")
 constant IsOne = SyntaxNode("Binary", "is", (One, One))
 constant Typed = SyntaxNode("Binary", "is", List(SyntaxNode) + SyntaxNode("Identifier", "x"))
+constant Taken = SyntaxNode("Binary", "then", (One, One), 3)
+constant Cased = Plain.Case(IsOne, Taken, CodeBlock.Empty)
 constant ACase = SyntaxNode("Binary", "then", (SyntaxNode("Identifier", "A"), One))
 constant Picked = BodyParser("Pick Number", "\tif 2 is", "\t\t1 then 10", "\t\t2 then 20").Block(1, 1).children(0)
 Selected(node SyntaxNode, block CodeBlock) CodeBlock
@@ -16,7 +18,7 @@ Selected(node SyntaxNode, block CodeBlock) CodeBlock
 	result
 Case(selector SyntaxNode, line SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Case(IsOne, SyntaxNode("ElseValue", "", One), CodeBlock.Empty).instructions.Length is 2
-	Plain.Case(IsOne, SyntaxNode("Binary", "then", (One, One)), CodeBlock.Empty).instructions.Length is 7
+	(Cased.instructions.Length, Cased.instructions(5).line) is (7, 3)
 	let typed = TypeCase(selector, line, block)
 	if typed is "false"
 		return block
@@ -24,7 +26,8 @@ Case(selector SyntaxNode, line SyntaxNode, block CodeBlock) CodeBlock
 	let comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
 	let condition = isElse then block else OperatorCodegen(values).Condition(comparison, block)
 	let generated = ErrorCodegen(values).Handled(line.children.Last, condition)
-	let returned = generated.Add(InstructionEntry.Return(generated.Result))
+	let added = generated.Add(InstructionEntry.Return(generated.Result))
+	let returned = MethodCodegen(values).Lined(added, condition.instructions.Length, line.line)
 	isElse then returned else returned.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
 TypeCase(selector SyntaxNode, line SyntaxNode, block CodeBlock) Text
 	Plain.TypeCase(Typed, ACase, CodeBlock.Empty.Declare("x", "A")) is "true"

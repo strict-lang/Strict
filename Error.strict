@@ -1,7 +1,7 @@
 has Name
 has Stacktraces
 to Text
-	(Error("Missing") to Text).StartsWith("Error: Missing\n\tat Error.") is true
+	(Error("Missing") to Text).StartsWith("Error: Missing\n\tat Error.")
 	Error("Missing").Stacktraces(0).Line is 5
 	mutable text = "Error: " + Name
 	for Stacktraces

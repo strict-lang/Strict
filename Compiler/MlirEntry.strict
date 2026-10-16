@@ -10,7 +10,7 @@ constant CollectorStart = ("    %frameLevel = arith.constant 0 : i32", "    %sta
 Main Texts
 	Counted.Main.Length is 19
 	Counted.Main.Index("    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()") is 3
-	Both.Main.Index("    %total1 = arith.addf %result, %result1 : f64") > 0 is true
+	Both.Main.Index("    %total1 = arith.addf %result, %result1 : f64") > 0
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
 	constant header = List(Text) + "  func.func @main(%argc: i32, %argv: !llvm.ptr) -> i32 {" + CollectorStart + constants
@@ -57,7 +57,7 @@ Defaulted(parameter MemberEntry, index Number) Texts
 	let chosen = "    %arg" + index + " = arith.select " + operands
 	List(Text) + allocated + stored + given + entry.Load("%arg" + index + "default", slot) + chosen
 Argument(kind Text, index Number, name Text) Texts
-	Counted.Argument("Text", 0, "%arg0").Last.StartsWith("    %arg0 = func.call @strict_argument(%argc, %argv") is true
+	Counted.Argument("Text", 0, "%arg0").Last.StartsWith("    %arg0 = func.call @strict_argument(%argc, %argv")
 	Counted.Argument("List(Number)", 1, "%arg1").Length is 1
 	if kind.StartsWith("List(") or (kind is in ("Numbers", "Texts"))
 		return List(Text) + AllArguments(kind, name)
@@ -68,11 +68,11 @@ Argument(kind Text, index Number, name Text) Texts
 	let parsed = "    " + name + " = func.call @strict_text_number(" + read + ") : (f64) -> f64"
 	kind is "Number" then (position, argument, parsed) else (position, argument)
 AllArguments(kind Text, name Text) Text
-	Counted.AllArguments("Texts", "%arg0").IndexOf("@strict_argument_texts(") > 0 is true
+	Counted.AllArguments("Texts", "%arg0").IndexOf("@strict_argument_texts(") > 0
 	let elements = kind is in ("Texts", "List(Text)") then "texts" else "numbers"
 	"    " + name + " = func.call @strict_argument_" + elements + "(%argc, %argv) : (i32, !llvm.ptr) -> f64"
 Other(function MlirFunction, number Number) Texts
-	Both.Other(Counted.entry, 1).Index("    %result1 = func.call @Counter_Run_0(%self1) : (f64) -> f64") > 0 is true
+	Both.Other(Counted.entry, 1).Index("    %result1 = func.call @Counter_Run_0(%self1) : (f64) -> f64") > 0
 	Both.Other(Counted.entry, 2).Last is "    %total2 = arith.addf %total1, %result2 : f64"
 	let slot = "%selfslot" + number
 	let self = "%self" + number

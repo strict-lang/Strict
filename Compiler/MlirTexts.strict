@@ -9,14 +9,14 @@ Temp(suffix Text) Text
 	MlirTexts(Joined, 2).Temp("l") is "%t2l"
 	MlirStatements(function, position).Temp(suffix)
 IsSum Boolean
-	MlirTexts(Joined, 2).IsSum is true
+	MlirTexts(Joined, 2).IsSum
 	MlirTexts(Joined, 1).IsSum is false
 	let entry = function.method.instructions(position)
 	(entry.kind is InstructionType.Add) and MlirKinds(function).IsText(position + 1, entry.payload(3))
 IsConversion Boolean
-	MlirTexts(Joined, 7).IsConversion is true
+	MlirTexts(Joined, 7).IsConversion
 	MlirTexts(Joined, 6).IsConversion is false
-	MlirTexts(Listing, 1).IsConversion is true
+	MlirTexts(Listing, 1).IsConversion
 	let entry = function.method.instructions(position)
 	if entry.kind is not InstructionType.Invoke
 		return false
@@ -25,7 +25,7 @@ IsConversion Boolean
 	let isTo = decoder.Text(2) is "to"
 	isTo and (target.StartsWith("List(") or IsNativeConversion(entry, target))
 IsNativeConversion(entry InstructionEntry, target Text) Boolean
-	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Number") is true
+	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Number")
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Shape") is false
 	let source = MlirKinds(function).KindOf(position, Instance(entry))
 	let layout = MlirLayout(function)
@@ -55,7 +55,7 @@ Textual(instance Number, target Text, result Text) Texts
 	let first = MlirMemory(function, position).Called(Temp("vc"), "strict_text_at", (Temp("vx"), "%zero"))
 	target is "Text" then text + function.Store(Temp("vx"), result) else text + first + function.Store(Temp("vc"), result)
 Elements(instance Number, target Text, result Text) Texts
-	Text.Combine(MlirTexts(Listing, 1).Elements(0, "List(Number)", "%r1")).IndexOf("@strict_list_numbers(") > 0 is true
+	Text.Combine(MlirTexts(Listing, 1).Elements(0, "List(Number)", "%r1")).IndexOf("@strict_list_numbers(") > 0
 	let kinds = MlirKinds(function)
 	let source = kinds.ElementKind(kinds.KindOf(position, instance))
 	let element = kinds.ElementKind(target)
@@ -74,7 +74,7 @@ Numbered(instance Number, target Text) Texts
 	(loaded, parsed, function.Store(Temp("nv"), target))
 TextBits(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).TextBits(2, "b") is ("    %t3bx = llvm.load %r2 : !llvm.ptr -> f64")
-	MlirTexts(Joined, 5).TextBits(2, "b").Last.IndexOf("@strict_converted(%t5b, %t5bxc)") > 0 is true
+	MlirTexts(Joined, 5).TextBits(2, "b").Last.IndexOf("@strict_converted(%t5b, %t5bxc)") > 0
 	MlirTexts(Joined, 6).TextBits(1, "b").Length is 3
 	let kind = Printable(MlirKinds(function).KindOf(position, register))
 	if kind is "Text"
@@ -101,8 +101,8 @@ Helper(kind Text) Text
 	suffix is "" then "" else "strict_list_text_" + suffix
 Described(loaded Text, suffix Text, kind Text) Texts
 	MlirTexts(Joined, 1).Described("", "d", "Shape").Index(ShapeConverter) is 1
-	MlirTexts(Joined, 1).Described("", "d", "Logger").First.StartsWith("unsupported") is true
-	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)").Last.IndexOf("@strict_pair_text(") > 0 is true
+	MlirTexts(Joined, 1).Described("", "d", "Logger").First.StartsWith("unsupported")
+	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)").Last.IndexOf("@strict_pair_text(") > 0
 	let type = function.TypeOf(kind)
 	let method = type.Callee("to", 0, "Text", List(Text))
 	let automatic = MlirAutomatic(function).Conversion(kind)

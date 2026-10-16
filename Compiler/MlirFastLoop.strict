@@ -88,7 +88,7 @@ Widths MlirWidths
 	Doubling.Widths.position is 2
 	MlirWidths(function, position)
 IsAccumulated(at Number) Boolean
-	Summing.IsAccumulated(5) is true
+	Summing.IsAccumulated(5)
 	Doubling.IsAccumulated(6) is false
 	let entry = function.method.instructions(at)
 	let next = function.method.instructions(at + 1)

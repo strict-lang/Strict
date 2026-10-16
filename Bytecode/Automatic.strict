@@ -41,9 +41,9 @@ Validations SyntaxNodes
 			result.Add(checked.Checked(constraint, lines.Index(value) + 1))
 	result
 IsWanted(name Text, names Texts) Boolean
-	Point.IsWanted("Members", Names) is true
+	Point.IsWanted("Members", Names)
 	Point.IsWanted("Members", List(Text)) is false
-	Automatic(List(Text) + "has text", "Name", Instantiation.Pairing).IsWanted("to HashCode", Names) is true
+	Automatic(List(Text) + "has text", "Name", Instantiation.Pairing).IsWanted("to HashCode", Names)
 	Automatic(("has red Number with value >= 0", "has alpha = 1"), "T", Instantiation.Pairing).IsWanted("Validated", Names)
 	if (name is not in names) or ((name is "Validated") and (Constraint.IsConstrained(lines) is false))
 		return false
@@ -53,9 +53,9 @@ IsWanted(name Text, names Texts) Boolean
 	let shape = TypeShape(lines)
 	(shape.IsTrait is false) or (shape.ParameterScope.names.Length is 0)
 Described Text
-	Point.Described.StartsWith("\tList(Variable) + Variable(\"X\", \"Number\" to Type, X) + ") is true
-	Point.Described.EndsWith(" + Variable(\"Y\", \"Number\" to Type, Y, true)") is true
-	Paired.Described.EndsWith(" + Variable(\"second\", \"Number\" to Type, second)") is true
+	Point.Described.StartsWith("\tList(Variable) + Variable(\"X\", \"Number\" to Type, X) + ")
+	Point.Described.EndsWith(" + Variable(\"Y\", \"Number\" to Type, Y, true)")
+	Paired.Described.EndsWith(" + Variable(\"second\", \"Number\" to Type, second)")
 	mutable result = "\tList(Variable)"
 	for Stored
 		let name = Header(value).MemberName
@@ -81,7 +81,7 @@ Hashed Text
 	"\tHashCode((" + Text.Combine(hashes, ", ") + "))"
 Coded Text
 	Point.Coded is "\t\"Point(\" + X.Code + \", \" + Y.Code + \")\""
-	Paired.Coded.StartsWith("\t\"Couple(\" + first.Code") is true
+	Paired.Coded.StartsWith("\t\"Couple(\" + first.Code")
 	Automatic(("Run", "\t1"), "B", Instantiation.Pairing).Coded is "\t\"B\""
 	Automatic(("has Width Number", "has iterator"), "S", Instantiation.Pairing).Coded is "\t\"S(\" + Width.Code + \")\""
 	let name = instance.Split("(").First
