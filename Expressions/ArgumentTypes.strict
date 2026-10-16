@@ -2,10 +2,37 @@ has inference TypeInference
 constant Members = (Scope(List(Text) + "number", List(Text) + "Number"), Scope(List(Text) + "size", List(Text) + "Size"), Scope(List(Text) + "width", List(Text) + "Number"))
 constant Methods = (Scope(List(Text) + "Grow", List(Text) + "Count"), KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant Parameters = (Scope(("Grow", "Grow types", "Grow required"), ("area", "Area", "1")), KnownTypes.NoMembers, KnownTypes.NoMembers)
-constant Shapes = (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant Shapes = (Scope(List(Text) + "Limit", List(Text) + "3"), KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant Sizing = ArgumentTypes(TypeInference(KnownTypes(("Count", "Area", "Size"), Members, Methods, Parameters), Shapes))
 constant Grown = SyntaxParser(Tokenizer("count.Grow(count)").Tokens).Parse
+constant Listed = SyntaxParser(Tokenizer("1 > 0 and (count)").Tokens).Parse
+constant Limited = SyntaxParser(Tokenizer("count.Limit").Tokens).Parse
 constant Counted = Scope(("count", "area", "size"), ("Count", "Area", "Size"))
+Checked(node SyntaxNode, scope Scope, current Scope) Text
+	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch") is true
+	Sizing.Checked(Listed, Counted, Counted).StartsWith("LogicalOperandIsAList") is true
+	Sizing.Checked(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName") is true
+	let operands = Operands(node) + ConstantAccess(node, scope, current)
+	operands is "" then Issue(node, scope, current) else operands
+ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
+	Sizing.ConstantAccess(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName") is true
+	Sizing.ConstantAccess(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse, Counted, Counted) is ""
+	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
+	let first = isMember then node.children(0) else node
+	let isTypeName = (first.Kind is "Type") or (scope.TypeOf(first.text) is "") and inference.types.IsKnown(first.text)
+	let owner = isMember and (isTypeName is false) then inference.TypeOf(first, scope, current) else ""
+	if (owner is "") or (inference.ConstantOf(owner, node.text) is "")
+		return ""
+	"ConstantNeedsTypeName: " + node.text + " is read from an instance, write " + owner + "." + node.text
+Operands(node SyntaxNode) Text
+	Sizing.Operands(Listed).EndsWith("remove the parentheses") is true
+	Sizing.Operands(SyntaxParser(Tokenizer("(1 > 0) and (2 > 1)").Tokens).Parse) is ""
+	if (node.Kind is not "Binary") or (node.text is not in ("and", "or", "xor"))
+		return ""
+	for node.children
+		if (value.Kind is "List") and (value.children.Length is 1)
+			return "LogicalOperandIsAList: " + value + " is a list of one element, remove the parentheses"
+	""
 Issue(call SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch") is true
 	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ""
