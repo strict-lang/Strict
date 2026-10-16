@@ -6126,7 +6126,9 @@
     %six = arith.constant 6 : i64
     %eight = arith.constant 8 : i64
     %unset = llvm.mlir.zero : !llvm.ptr
-    %work = func.call @strict_gpu_work(%count, %source, %kind) : (i64, f64, i64) -> i64
+    %sourceWork = func.call @strict_gpu_work(%count, %source, %kind) : (i64, f64, i64) -> i64
+    %rowsWork = func.call @strict_gpu_rows_work(%count, %values, %rows) : (i64, !llvm.ptr, i64) -> i64
+    %work = arith.maxui %sourceWork, %rowsWork : i64
     %minimum = func.call @strict_gpu_threshold() : () -> i64
     %enough = arith.cmpi sge, %work, %minimum : i64
     cf.cond_br %enough, ^ready, ^small
@@ -7429,6 +7431,36 @@
     return %cells : i64
   ^elements:
     return %count : i64
+  }
+  // a loop reading a list of rows passes a whole row to a dot product per element (`Batch.Sums`), so it reads the
+  // elements times the length of a row
+  func.func private @strict_gpu_rows_work(%count: i64, %values: !llvm.ptr, %rows: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %hasRows = arith.cmpi ne, %rows, %none : i64
+    cf.cond_br %hasRows, ^find(%none : i64), ^none
+  ^find(%index: i64):
+    %shifted = arith.shrui %rows, %index : i64
+    %bit = arith.andi %shifted, %one : i64
+    %found = arith.cmpi ne, %bit, %none : i64
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %found, ^first, ^find(%next : i64)
+  ^first:
+    %slot = llvm.getelementptr %values[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %list = llvm.load %slot : !llvm.ptr -> f64
+    %lengthNumber = func.call @strict_list_length(%list) : (f64) -> f64
+    %isEmpty = arith.cmpf ole, %lengthNumber, %zero : f64
+    cf.cond_br %isEmpty, ^none, ^measure
+  ^measure:
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %row = llvm.load %items : !llvm.ptr -> f64
+    %columnsNumber = func.call @strict_list_length(%row) : (f64) -> f64
+    %columns = arith.fptosi %columnsNumber : f64 to i64
+    %cells = arith.muli %count, %columns : i64
+    return %cells : i64
+  ^none:
+    return %none : i64
   }
   func.func private @strict_gpu_free_all(%buffers: !llvm.ptr, %count: i64) {
     %none = arith.constant 0 : i64
