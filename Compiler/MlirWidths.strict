@@ -1,6 +1,7 @@
 has function MlirFunction
 has position Number
 has float = "f64"
+has index = "ki"
 constant Doubler = MlirKernel.Doubler
 constant Doubling = MlirWidths(MlirFastLoop.Doubling.function, 2)
 constant Halving = MlirWidths(MlirFastLoop.Halving.function, 2)
@@ -28,9 +29,19 @@ Loaded(result Text, address Text, items Text, source Text) Texts
 	Fours.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.extf %xn : f32 to f64"
 	MlirWidths(Fours.function, 2, "f32").Loaded("%x", "%p", "%h", "numbers").Last.EndsWith("-> f32") is true
 	let type = Element(source)
-	let pointer = "    " + address + " = llvm.getelementptr " + items + "[" + Temp("ki") + "]" + Pointer + type
+	let pointer = "    " + address + " = llvm.getelementptr " + items + "[" + Temp(index) + "]" + Pointer + type
 	let loaded = "    " + result + (type is float then "" else "n") + " = llvm.load " + address + " : !llvm.ptr -> " + type
 	(pointer, loaded) + Widened(result, items, source)
+Read(result Text, at Number) Texts
+	Doubling.Read("%x", 4) is Doubling.Loaded("%x", "%t4p", "%t2h_numbers", "numbers")
+	MlirWidths(MlirFastLoop.Squaring.function, 2).Read("%x", 7).Last is "    %x = llvm.load %t7p : !llvm.ptr -> f64"
+	let source = function.method.instructions(at).texts(0)
+	let pointer = "%t" + at + "p"
+	let items = Temp("h_" + source)
+	if MlirKernel(function, position).Offset(at) is ""
+		return Loaded(result, pointer, items, source)
+	let shifted = "    " + Temp("k" + at) + " = arith.addi " + Temp("ki") + ", " + Temp("oi_" + source) + " : i64"
+	List(Text) + shifted + MlirWidths(function, position, float, "k" + at).Loaded(result, pointer, items, source)
 Widened(result Text, items Text, source Text) Texts
 	Halving.Widened("%x", "%h", "numbers") is ("    %x = arith.extf %xn : f16 to f64")
 	Sixes.Widened("%x", "%h", "numbers") is ("    %x = arith.extf %xn : f32 to f64")
@@ -46,7 +57,7 @@ Widened(result Text, items Text, source Text) Texts
 Scaled(result Text, items Text) Texts
 	Quartering.Scaled("%x", "%h").First is "    %xf = arith.constant 5 : i64"
 	Scaling.Scaled("%x", "%h").Last is "    %x = arith.mulf %xq, %xs : f32"
-	let block = "    " + result + "b = arith.shrui " + Temp("ki") + ", " + result + "f : i64"
+	let block = "    " + result + "b = arith.shrui " + Temp(index) + ", " + result + "f : i64"
 	let address = "    " + result + "a = llvm.getelementptr " + items + "s[" + result + "b]" + Pointer + "f32"
 	let scale = "    " + result + "s = llvm.load " + result + "a : !llvm.ptr -> f32"
 	let widened = "    " + result + "w = arith.extf " + result + "s : f32 to f64"

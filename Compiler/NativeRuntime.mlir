@@ -2712,7 +2712,47 @@
     %items = func.call @strict_ptr(%itemsbits) : (f64) -> !llvm.ptr
     return %items : !llvm.ptr
   }
+  llvm.mlir.global internal @strict_restore_mutex(0 : i64) : i64
+  // in a parallel loop one thread unpacks or restores a list while the others wait and then find its items
   func.func private @strict_list_restore(%list: f64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %unset = arith.constant 0.0 : f64
+    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
+    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %shared = arith.cmpi ne, %busy, %none : i64
+    cf.cond_br %shared, ^lock, ^alone
+  ^alone:
+    %items = func.call @strict_list_restoring(%list) : (f64) -> !llvm.ptr
+    return %items : !llvm.ptr
+  ^lock:
+    %mutex = llvm.mlir.addressof @strict_restore_mutex : !llvm.ptr
+    llvm.call @strict_spin_lock(%mutex) : (!llvm.ptr) -> ()
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %itemsBits = llvm.load %holder : !llvm.ptr -> f64
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %used = llvm.load %usedSlot : !llvm.ptr -> f64
+    %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> f64
+    %isNewest = arith.cmpf oge, %used, %unset : f64
+    %narrow = arith.cmpf olt, %capacity, %unset : f64
+    %isPacked = arith.andi %isNewest, %narrow : i1
+    %stale = arith.cmpf oeq, %itemsBits, %unset : f64
+    %outdated = arith.ori %isPacked, %stale : i1
+    cf.cond_br %outdated, ^restore, ^restored
+  ^restore:
+    %fresh = func.call @strict_list_restoring(%list) : (f64) -> !llvm.ptr
+    cf.br ^done(%fresh : !llvm.ptr)
+  ^restored:
+    %present = func.call @strict_ptr(%itemsBits) : (f64) -> !llvm.ptr
+    cf.br ^done(%present : !llvm.ptr)
+  ^done(%result: !llvm.ptr):
+    llvm.call @strict_spin_unlock(%mutex) : (!llvm.ptr) -> ()
+    return %result : !llvm.ptr
+  }
+  func.func private @strict_list_restoring(%list: f64) -> !llvm.ptr {
     %zero = arith.constant 0.0 : f64
     %eight = arith.constant 8.0 : f64
     %minusOne = arith.constant -1.0 : f64
@@ -6086,7 +6126,11 @@
     cf.cond_br %disabled, ^failed, ^inputs
   ^inputs:
     %onDevice = func.call @strict_gpu_residents(%source, %kind, %values, %valueCount, %mask) : (f64, i64, !llvm.ptr, i64, i64) -> i1
-    cf.cond_br %onDevice, ^ready, ^failed
+    %hasRows = arith.cmpi ne, %rows, %none : i64
+    %present = func.call @strict_gpu_present() : () -> i1
+    %rowsLive = arith.andi %hasRows, %present : i1
+    %wanted = arith.ori %onDevice, %rowsLive : i1
+    cf.cond_br %wanted, ^ready, ^failed
   ^ready:
     %isReady = func.call @strict_gpu_ready() : () -> i1
     cf.cond_br %isReady, ^prepare, ^failed

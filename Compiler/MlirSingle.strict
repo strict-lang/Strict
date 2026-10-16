@@ -61,7 +61,7 @@ Statement(at Number) Texts
 	let result = "%t" + at + "s"
 	let widths = MlirWidths(function, position, "f32")
 	if entry.kind is InstructionType.IndexCall
-		return widths.Loaded(result, "%t" + at + "p", Temp("h_" + entry.texts(0)), entry.texts(0))
+		return widths.Read(result, at)
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return Literal(entry, at)
 	if (entry.kind is InstructionType.LoadVariableToRegister) and (Variable(entry.texts(0), at) is result)

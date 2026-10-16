@@ -52,13 +52,16 @@ IsOffsetShaped Boolean
 IsIndexed(load Number) Boolean
 	Squaring.IsIndexed(4) is true
 	Squaring.IsIndexed(3) is false
+	Squaring.IsIndexed(16) is false
 	let instructions = function.method.instructions
-	if (instructions(load).texts(0) is "index") or (instructions(load + 1).texts(0) is not "index")
+	let kinds = (instructions(load).kind, instructions(load + 1).kind, instructions(load + 2).kind)
+	if kinds is not (InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.Add)
 		return false
 	let summed = instructions(load + 2)
-	let registers = (instructions(load).payload(0), instructions(load + 1).payload(0))
-	let isAdded = (summed.payload(1), summed.payload(2)) is registers
-	isAdded and (instructions(load + 3).payload(1) is summed.payload(3))
+	let loads = (instructions(load), instructions(load + 1))
+	let isAdded = (summed.payload(1), summed.payload(2)) is (loads.First.payload(0), loads.Last.payload(0))
+	let isRead = instructions(load + 3).payload(1) is summed.payload(3)
+	isAdded and isRead and (loads.First.texts(0) is not "index") and (loads.Last.texts(0) is "index")
 IsCovered Boolean
 	MlirDeviceDot(Summed, 5).IsCovered is true
 	MlirDeviceDot(Summed, 11).IsCovered is true

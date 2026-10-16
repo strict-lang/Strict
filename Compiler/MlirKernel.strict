@@ -7,6 +7,7 @@ constant Doubling = MlirKernel(Doubler, 2)
 constant Uncollected = MlirKernel(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Doubled", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", Looped)), 1)
 constant Summed = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "sum"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 6))
 constant Summing = MlirKernel(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MlirLists.Items, "Strict/Number", Summed)), 1)
+constant Squaring = MlirKernel(MlirDeviceDot.Squaring.function, 2)
 constant Calling = MlirKernel(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), MethodEntry.GoCall, InstructionEntry.Jump(InstructionType.LoopEnd, 1)))), 1)
 IsSimple Boolean
 	Doubling.IsSimple is true
@@ -61,6 +62,7 @@ IsCalculated(at Number) Boolean
 IsIndexedByLoop(at Number) Boolean
 	Doubling.IsIndexedByLoop(4) is true
 	MlirKernel(MlirLists.Listed, 0).IsIndexedByLoop(2) is false
+	Squaring.IsIndexedByLoop(7) is true
 	let entry = function.method.instructions(at)
 	let kind = MlirLayout(function).Represented(MlirKinds(function).VariableKind(at, entry.texts(0)))
 	let reuse = LoadReuse(function.method.instructions)
@@ -68,8 +70,24 @@ IsIndexedByLoop(at Number) Boolean
 		let earlier = function.method.instructions(at - 1 - index)
 		let isIndex = (earlier.kind is InstructionType.LoadVariableToRegister) and (earlier.texts(0) is "index")
 		if reuse.Written(earlier) is entry.payload(1)
-			return kind.StartsWith("List(") and isIndex
+			return kind.StartsWith("List(") and (isIndex or (Offset(at) is not "")) and (Offset(at) is Shift(entry.texts(0)))
 	false
+Offset(at Number) Text
+	Squaring.Offset(7) is "start"
+	Doubling.Offset(4) is ""
+	Squaring.Offset(16) is ""
+	if (at < position + 4) or (MlirDeviceDot(function, at).IsIndexed(at - 3) is false)
+		return ""
+	let name = function.method.instructions(at - 3).texts(0)
+	name is in MlirSingle(function, position).Carried then "" else name
+Shift(source Text) Text
+	Squaring.Shift("input") is "start"
+	Doubling.Shift("numbers") is ""
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		if (entry.kind is InstructionType.IndexCall) and (entry.texts(0) is source)
+			return Offset(value)
+	""
 Sources Texts
 	Doubling.Sources is ("numbers")
 	mutable names = List(Mutable(Text))

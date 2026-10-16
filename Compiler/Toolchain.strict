@@ -9,7 +9,7 @@ constant LinuxMembers = " LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/
 constant Accept = " --accept-package-agreements --accept-source-agreements"
 constant Pacman = "C:\\msys64\\usr\\bin\\pacman.exe"
 constant SingleThreaded = " --mlir-disable-threading"
-constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -O2 -c -Wno-override-module"
+constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -mf16c -O2 -c -Wno-override-module"
 constant Optimized = " -O2 -march=native -Wno-override-module"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
