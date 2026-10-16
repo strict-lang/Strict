@@ -1,20 +1,36 @@
 has function MlirFunction
 has position Number
 constant UnsafeTypes = ("File", "Directory", "Process", "Library", "Logger", "TextReader", "TextWriter", "BytesReader", "BytesWriter")
-constant Branches = (InstructionType.Jump, InstructionType.JumpIfTrue, InstructionType.JumpIfFalse, InstructionType.JumpIfNotZero, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+constant Branches = (InstructionType.Jump, InstructionType.JumpIfTrue, InstructionType.JumpIfFalse, InstructionType.JumpIfNotZero)
 constant Unsafe = (InstructionType.Set, InstructionType.InvokeWriteToTable, InstructionType.InvokeRemove, InstructionType.Print, InstructionType.ConstructValueType, InstructionType.CopyList)
 constant Doubling = MlirPurity(MlirParallel.Doubling.function, 2)
 constant Randomizing = MlirPurity(MlirParallel.Randomizing.function, 2)
+constant Clamped = MethodEntry("Clamped", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Binary(InstructionType.GreaterThan, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"), InstructionEntry.LoadBoolean(4, true), InstructionEntry.Binary(InstructionType.Equal, (4, 4)), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), InstructionEntry.LoadNumber(5, 0), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "conditional0"), InstructionEntry.Jump(InstructionType.JumpEnd, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "conditional0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 16)))
+constant Clamping = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Clamped), 2)
+constant Filtering = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
 IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsSafe(Doubling.function, 4, 0)
 	Randomizing.IsSafe(Randomizing.function, 4, 0) is false
+	Clamping.IsSafe(Clamping.function, 6, 0) is true
+	Filtering.IsSafe(Filtering.function, 7, 0) is false
 	let entry = inspected.method.instructions(at)
 	if entry.kind is InstructionType.Invoke
 		return IsPureCall(inspected, at, depth)
 	if entry.kind is InstructionType.InvokeWriteToList
-		return (depth is 0) and (entry.texts(0) is "forResult")
+		return (depth is 0) and IsCollected(at)
 	let isLeaving = (depth is 0) and ((entry.kind is InstructionType.Return) or (entry.kind is in Branches))
 	(isLeaving is false) and IsPlain(inspected, at) and ((depth > 0) or IsLocal(entry))
+IsCollected(at Number) Boolean
+	Clamping.IsCollected(17) is true
+	Filtering.IsCollected(7) is false
+	mutable open = 0
+	for Range(position + 1, at)
+		let kind = function.method.instructions(value).kind
+		if kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+			open = open + 1
+		if kind is InstructionType.JumpEnd
+			open = open - 1
+	(open is 0) and (function.method.instructions(at).texts(0) is "forResult")
 IsPlain(inspected MlirFunction, at Number) Boolean
 	Doubling.IsPlain(Doubling.function, 3)
 	let entry = inspected.method.instructions(at)

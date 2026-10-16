@@ -1,15 +1,15 @@
 has function MlirFunction
 has at Number
 constant Choosing = MlirFunction(List(TypeEntry) + GpuSamples.Chosen, GpuSamples.Chosen, GpuSamples.Largest)
-constant Looping = MlirDeviceChoice(Choosing, 4)
+constant Maximum = MlirDeviceChoice(Choosing, 4)
 constant Chooser = MlirFunction(Choosing.types, GpuSamples.Chosen, GpuSamples.Larger)
 constant Summing = MlirDeviceChoice(MlirDeviceStatements.Summed, 2)
 constant Allowed = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.Equal, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Return, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
 constant Offsets = (16, 8, 4, 2, 1)
 constant Moves = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
-constant Rounded = Looping.Round(MlirDeviceCalls(Choosing, 10, Chooser), "%d12", 0, 4)
+constant Rounded = Maximum.Round(MlirDeviceCalls(Choosing, 10, Chooser), "%d12", 0, 4)
 IsChoice Boolean
-	Looping.IsChoice
+	Maximum.IsChoice
 	Summing.IsChoice is false
 	let names = Chosen
 	mutable loads = 0
@@ -21,7 +21,7 @@ IsChoice Boolean
 			loads = loads + 1
 	(names.Length > 0) and (loads is names.Length)
 Chosen Texts
-	Looping.Chosen is ("largest")
+	Maximum.Chosen is ("largest")
 	Summing.Chosen.Length is 0
 	mutable names = List(Mutable(Text))
 	for Range(at + 1, function.method.LoopEndOf(at))
@@ -32,7 +32,7 @@ Chosen Texts
 			names.Add(entry.texts(0))
 	names
 IsUpdate(store Number) Boolean
-	Looping.IsUpdate(11)
+	Maximum.IsUpdate(11)
 	Summing.IsUpdate(10) is false
 	let call = function.method.instructions(store - 1)
 	if (call.kind is not InstructionType.Invoke) or (call.payload(0) is not function.method.instructions(store).payload(0))
@@ -41,8 +41,8 @@ IsUpdate(store Number) Boolean
 	let isPassed = IsPassed(store - 1, function.method.instructions(store).texts(0))
 	(callees.Length is 1) and isPassed and IsChoosing(callees.First)
 IsPassed(call Number, name Text) Boolean
-	Looping.IsPassed(10, "largest")
-	Looping.IsPassed(10, "index") is false
+	Maximum.IsPassed(10, "largest")
+	Maximum.IsPassed(10, "index") is false
 	let entry = function.method.instructions(call)
 	let countPosition = 5 + entry.payload(3)
 	for entry.payload(countPosition)
@@ -52,8 +52,8 @@ IsPassed(call Number, name Text) Boolean
 			return true
 	false
 IsChoosing(callee MlirFunction) Boolean
-	Looping.IsChoosing(Chooser)
-	Looping.IsChoosing(MlirGpuCheck.Absolute) is false
+	Maximum.IsChoosing(Chooser)
+	Maximum.IsChoosing(MlirGpuCheck.Absolute) is false
 	let parameters = callee.method.parameters
 	if (parameters.Length is not 2) or (parameters(0).typeName is not "Strict/Number")
 		return false
@@ -62,8 +62,8 @@ IsChoosing(callee MlirFunction) Boolean
 			return false
 	(parameters(1).typeName is "Strict/Number") and IsCompared(callee)
 IsPlain(entry InstructionEntry, parameters List(MemberEntry)) Boolean
-	Looping.IsPlain(GpuSamples.Larger.instructions(0), GpuSamples.Larger.parameters)
-	Looping.IsPlain(InstructionEntry.LoadNumber(0, 1), GpuSamples.Larger.parameters) is false
+	Maximum.IsPlain(GpuSamples.Larger.instructions(0), GpuSamples.Larger.parameters)
+	Maximum.IsPlain(InstructionEntry.LoadNumber(0, 1), GpuSamples.Larger.parameters) is false
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return PayloadDecoder(entry).Value(1).kind is "Boolean"
 	if entry.kind is not in Moves
@@ -71,8 +71,8 @@ IsPlain(entry InstructionEntry, parameters List(MemberEntry)) Boolean
 	let name = entry.texts(0)
 	name.StartsWith("conditional") or (name is parameters(0).Name) or (name is parameters(1).Name)
 IsCompared(callee MlirFunction) Boolean
-	Looping.IsCompared(Chooser)
-	Looping.IsCompared(MlirFunction(Choosing.types, GpuSamples.Chosen, GpuSamples.Largest)) is false
+	Maximum.IsCompared(Chooser)
+	Maximum.IsCompared(MlirFunction(Choosing.types, GpuSamples.Chosen, GpuSamples.Largest)) is false
 	mutable compared = List(Mutable(Text))
 	for callee.method.instructions
 		if (value.kind is InstructionType.LessThan) or (value.kind is InstructionType.GreaterThan)
@@ -83,9 +83,9 @@ IsCompared(callee MlirFunction) Boolean
 	let names = (callee.method.parameters(0).Name, callee.method.parameters(1).Name)
 	(compared is names) or (compared is names.Reverse)
 Reduced(end Number) Texts
-	Looping.Reduced(12).First is "    %d12c0r0 = llvm.load %v_largest : !llvm.ptr -> f64"
-	Text.Combine(Looping.Reduced(12)).IndexOf("@strict_device_shuffle(%d12c0r4, %d12o0r4)") > 0
-	Looping.Reduced(12).Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"
+	Maximum.Reduced(12).First is "    %d12c0r0 = llvm.load %v_largest : !llvm.ptr -> f64"
+	Text.Combine(Maximum.Reduced(12)).IndexOf("@strict_device_shuffle(%d12c0r4, %d12o0r4)") > 0
+	Maximum.Reduced(12).Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
 	for Range(at + 1, end)
 		let entry = function.method.instructions(value)
@@ -93,7 +93,7 @@ Reduced(end Number) Texts
 			lines = lines + Rounds(value - 1, "%d" + end, Chosen.Index(entry.texts(0)))
 	lines
 Rounds(call Number, prefix Text, number Number) Texts
-	Looping.Rounds(10, "%d12", 0).Length is 18
+	Maximum.Rounds(10, "%d12", 0).Length is 18
 	let calls = MlirDeviceCalls(function, call, MlirModule(function.types, "").Called(function, call).First)
 	let name = "%v_" + function.method.instructions(call + 1).texts(0)
 	let first = function.Load(prefix + "c" + number + "r0", name)

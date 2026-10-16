@@ -13,6 +13,9 @@ Load(target Text, slot Text) Text
 Store(stored Text, slot Text) Text
 	Integer.Store("%a", "%s") is "    llvm.store %a, %s : i64, !llvm.ptr"
 	"    llvm.store " + stored + ", " + slot + " : " + type + ", !llvm.ptr"
+Written(slot Text) Text
+	Pointer.Written("%s") is "    func.call @strict_gc_written(%s) : (!llvm.ptr) -> ()"
+	"    func.call @strict_gc_written(" + slot + ") : (" + type + ") -> ()"
 Constant(target Text, literal Text) Text
 	Integer.Constant("%a", "0") is "    %a = arith.constant 0 : i64"
 	"    " + target + " = arith.constant " + literal + " : " + type

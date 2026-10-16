@@ -20,12 +20,12 @@ Emitted Texts
 	if entry.kind < InstructionType.IndexCall
 		return Moved(entry)
 	if entry.kind is InstructionType.IndexCall
-		return Indexed(entry)
+		return MlirDeviceRows(function, at).Emitted(entry)
 	if entry.kind < InstructionType.BinaryOperatorsSeparator
 		return Calculated(entry)
 	if entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 		return MlirDeviceLoops(function, at).Emitted
-	entry.kind is InstructionType.Invoke then Called(entry) else Finished(entry)
+	entry.kind is InstructionType.Invoke then MlirDeviceRows(function, at).Called(entry) else Finished(entry)
 Temp(suffix Text) Text
 	MlirDeviceStatements(Doubled, 3).Temp("a") is "%d3a"
 	"%d" + at + suffix

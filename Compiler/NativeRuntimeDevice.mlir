@@ -105,12 +105,17 @@
     %minimumNumber = arith.subf %minimumFloat, %magicFloat : f32
     return %scaleNumber, %minimumNumber : f32, f32
   }
-  // a row of a matrix and its width, behind the header of strict_gpu_rows (row stride, one width byte per row)
-  func.func private @strict_device_row(%source: !llvm.ptr, %at: i64, %count: i64) -> (!llvm.ptr, i64) {
+  // a row of a matrix, its width and the number of rows, behind the header of strict_gpu_rows (row stride and row
+  // count in the first word, one width byte per row)
+  func.func private @strict_device_row(%source: !llvm.ptr, %at: i64) -> (!llvm.ptr, i64, i64) {
     %eight = arith.constant 8 : i64
     %fifteen = arith.constant 15 : i64
     %alignMask = arith.constant -16 : i64
-    %stride = llvm.load %source : !llvm.ptr -> i64
+    %lowHalf = arith.constant 4294967295 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %word = llvm.load %source : !llvm.ptr -> i64
+    %stride = arith.andi %word, %lowHalf : i64
+    %count = arith.shrui %word, %thirtyTwo : i64
     %widthAt = arith.addi %at, %eight : i64
     %widthSlot = llvm.getelementptr %source[%widthAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %width = llvm.load %widthSlot : !llvm.ptr -> i8
@@ -121,7 +126,7 @@
     %rowOffset = arith.muli %at, %stride : i64
     %offset = arith.addi %header, %rowOffset : i64
     %row = llvm.getelementptr %source[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    return %row, %bits : !llvm.ptr, i64
+    return %row, %bits, %count : !llvm.ptr, i64, i64
   }
   // the value of the lane whose number differs in the bit of offset, a step of a butterfly reduction over a warp
   func.func private @strict_device_shuffle(%value: f64, %offset: i32) -> f64 {
@@ -1437,21 +1442,29 @@
   ^check:
     %xFloats = arith.cmpi eq, %xBits, %thirtyTwo : i64
     %yFloats = arith.cmpi eq, %yBits, %thirtyTwo : i64
-    %floats = arith.andi %xFloats, %yFloats : i1
     %xFirst = llvm.getelementptr %x[%xStart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %yFirst = llvm.getelementptr %y[%yStart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %xAddress = llvm.ptrtoint %xFirst : !llvm.ptr to i64
     %yAddress = llvm.ptrtoint %yFirst : !llvm.ptr to i64
-    %addresses = arith.ori %xAddress, %yAddress : i64
-    %misaligned = arith.andi %addresses, %fifteen : i64
-    %isAligned = arith.cmpi eq, %misaligned, %none : i64
+    %xMisaligned = arith.andi %xAddress, %fifteen : i64
+    %yMisaligned = arith.andi %yAddress, %fifteen : i64
+    %xAligned = arith.cmpi eq, %xMisaligned, %none : i64
+    %yAligned = arith.cmpi eq, %yMisaligned, %none : i64
+    %xFromStart = arith.cmpi eq, %xStart, %none : i64
+    %xToEnd = arith.cmpi eq, %count, %xCount : i64
+    %xWhole = arith.andi %xFromStart, %xToEnd : i1
+    %xAlignedFloats = arith.andi %xFloats, %xAligned : i1
+    %xReady = arith.ori %xAlignedFloats, %xWhole : i1
+    %yReady = arith.andi %yFloats, %yAligned : i1
     %rest = arith.andi %count, %seven : i64
     %whole = arith.cmpi eq, %rest, %none : i64
-    %alignedFloats = arith.andi %floats, %isAligned : i1
-    %fast = arith.andi %alignedFloats, %whole : i1
+    %ready = arith.andi %xReady, %yReady : i1
+    %fast = arith.andi %ready, %whole : i1
+    %xFirstBits = arith.select %xWhole, %xBits, %thirtyTwo : i64
+    %xDots = llvm.select %xWhole, %x, %xFirst : i1, !llvm.ptr
     cf.cond_br %fast, ^dots, ^generic(%lane, %zero : i64, f32)
   ^dots:
-    %dot = func.call @strict_device_dots(%failed, %xFirst, %thirtyTwo, %count, %yFirst, %thirtyTwo, %count, %lane, %lanes) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64) -> f32
+    %dot = func.call @strict_device_dots(%failed, %xDots, %xFirstBits, %count, %yFirst, %thirtyTwo, %count, %lane, %lanes) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64) -> f32
     return %dot : f32
   ^generic(%index: i64, %sum: f32):
     %more = arith.cmpi slt, %index, %count : i64

@@ -7,7 +7,6 @@ constant Summing = MlirDevice(MlirFunction(MlirGpu.Layering.function.types, GpuS
 constant Fixed = "%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64"
 constant DoublingHeader = "  llvm.func @Rows_Doubled_1_gpu2(" + Fixed + ") attributes {nvvm.kernel} {"
 constant Ending = ("    cf.br ^exit", "  ^exit:", "    llvm.return", "  }")
-constant RowTypes = " : (!llvm.ptr, i64, i64) -> (!llvm.ptr, i64)"
 constant Allocated = " = llvm.alloca %one x "
 Name Text
 	Doubling.Name is "Rows_Doubled_1_gpu2"
@@ -33,7 +32,9 @@ Freed Text
 IsList(name Text) Boolean
 	Layering.IsList("input")
 	Doubling.IsList("value") is false
-	MlirDeviceStatements(function, position).IsList(MlirKinds(function).VariableKind(position, name))
+	MlirDevice(MlirDeviceRows.Picking, 2).IsList("weights") is true
+	let kind = MlirKinds(function).VariableKind(position, name)
+	MlirDeviceStatements(function, position).IsList(kind) or MlirDeviceRows(function, position).IsRows(kind)
 Given Texts
 	Layering.Given.First is "    llvm.store %f_inputd, %v_inputd : !llvm.ptr, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
@@ -115,8 +116,8 @@ Started Texts
 	let read = MlirTyped(function.Float).Read("%element", "(%source, %bits, %at, %count)")
 	index + (read, function.Store("%element", "%v_value"))
 Rowed Texts
-	Layering.Rowed.First.IndexOf("@strict_device_row(%source, %at, %count)") > 0
-	constant row = "    %rowed:2 = func.call @strict_device_row(%source, %at, %count)" + RowTypes
+	Layering.Rowed.First is "    %rowed:3 = func.call @strict_device_row(%source, %at)" + MlirDeviceRows.Types
+	constant row = "    %rowed:3 = func.call @strict_device_row(%source, %at)" + MlirDeviceRows.Types
 	let view = (MlirTyped.Pointer.Store("%rowed#0", "%v_valued"), MlirTyped.Integer.Store("%columns", "%v_valuen"))
 	(List(Text) + row) + view + MlirTyped.Integer.Store("%rowed#1", "%v_valueb")
 Emitted(first Number, limit Number) Texts
