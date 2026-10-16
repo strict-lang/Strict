@@ -1,0 +1,50 @@
+has numbers with Length is 3
+constant Zero = Vector3(0, 0, 0)
+constant One = Vector3(1, 1, 1)
+constant UnitX = Vector3(1, 0, 0)
+constant UnitY = Vector3(0, 1, 0)
+constant UnitZ = Vector3(0, 0, 1)
+X Number
+	Vector3(1, 2, 3).X is 1
+	numbers.X
+Y Number
+	Vector3(1, 2, 3).Y is 2
+	numbers.Y
+Z Number
+	Vector3(1, 2, 3).Z is 3
+	numbers.Z
+Length Number
+	Vector3(2, 3, 6).Length is 7
+	(X * X + Y * Y + Z * Z).SquareRoot
++(other) Vector3
+	Vector3(1, 2, 3) + Vector3.One is Vector3(2, 3, 4)
+	Vector3(X + other.X, Y + other.Y, Z + other.Z)
+-(other) Vector3
+	Vector3(4, 7, 9) - Vector3(1, 2, 3) is Vector3(3, 5, 6)
+	Vector3(X - other.X, Y - other.Y, Z - other.Z)
+*(other) Number
+	Vector3(1, 2, 3) * Vector3(4, 5, 6) is 32
+	X * other.X + Y * other.Y + Z * other.Z
+*(scale Number) Vector3
+	Vector3(1, 2, 3) * 2 is Vector3(2, 4, 6)
+	Vector3(X * scale, Y * scale, Z * scale)
+/(scale Number) Vector3
+	Vector3(2, 4, 6) / 2 is Vector3(1, 2, 3)
+	Vector3(X / scale, Y / scale, Z / scale)
+Cross(other) Vector3
+	Vector3.UnitX.Cross(Vector3.UnitY) is Vector3.UnitZ
+	Vector3.UnitY.Cross(Vector3.UnitX) is Vector3(0, 0, -1)
+	Vector3(Y * other.Z - Z * other.Y, Z * other.X - X * other.Z, X * other.Y - Y * other.X)
+Normalize Vector3
+	Vector3(3, 0, 4).Normalize is Vector3(0.6, 0, 0.8)
+	Vector3.Zero.Normalize is Vector3.Zero
+	Length > 0 then value / Length else value
+DistanceTo(other) Number
+	Vector3(1, 2, 3).DistanceTo(Vector3(3, 5, 9)) is 7
+	(value - other).Length
+Lerp(other, alpha Number) Vector3
+	Vector3(0, 2, 4).Lerp(Vector3(4, 6, 8), 0.25) is Vector3(1, 3, 5)
+	value + (other - value) * alpha
+Flat Vector2
+	Vector3(1, 2, 3).Flat is Vector2(1, 2)
+	Vector2(X, Y)

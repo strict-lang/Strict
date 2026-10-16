@@ -1,0 +1,12 @@
+has origin Vector3
+has direction Vector3
+constant Down = Ray(Vector3(1, 2, 10), Vector3(0, 0, -2))
+At(distance Number) Vector3
+	Down.At(2) is Vector3(1, 2, 6)
+	origin + direction * distance
+Ground(height Number) Vector3
+	Down.Ground(4) is Vector3(1, 2, 4)
+	Ray(Vector3.Zero, Vector3.UnitX).Ground(1) is Error("RayParallelToGround")
+	if direction.Z.Absolute < 0.000001
+		return Error("RayParallelToGround")
+	At((height - origin.Z) / direction.Z)

@@ -1,0 +1,72 @@
+has values Numbers with Length is 16
+constant Identity = Matrix((1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
+constant Moved = Translation(Vector3(1, 2, 3))
+Translation(offset Vector3) Matrix
+	Matrix.Translation(Vector3(1, 2, 3)).Transformed(Vector3.Zero) is Vector3(1, 2, 3)
+	Matrix((1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, offset.X, offset.Y, offset.Z, 1))
+Scaling(scale Number) Matrix
+	Matrix.Scaling(2).Transformed(Vector3.One) is Vector3(2, 2, 2)
+	Matrix((scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, 1))
+Turned(direction Vector2) Matrix
+	Matrix.Turned(Vector2(0, 2)).Transformed(Vector3.UnitX) is Vector3.UnitY
+	Matrix.Turned(Vector2(0, 0)) is Identity
+	let length = direction.Length
+	let cosine = length > 0 then direction.X / length else 1
+	let sine = length > 0 then direction.Y / length else 0
+	Matrix((cosine, sine, 0, 0, 0 - sine, cosine, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
+RotationZ(angle Degrees) Matrix
+	Matrix.RotationZ(Degrees(90)).Transformed(Vector3.UnitX).DistanceTo(Vector3.UnitY) < 0.000001
+	Turned(Vector2(angle.Cos, angle.Sin))
+*(other) Matrix
+	Moved * Identity is Moved
+	(Moved * Matrix.Scaling(2)).Transformed(Vector3.One) is Vector3(3, 4, 5)
+	Matrix(Product(other))
+Product(other Matrix) Numbers
+	Identity.Product(Identity) is Identity.values
+	for 16
+		Cell(index % 4, (index / 4).Floor, other)
+Cell(row Number, column Number, other Matrix) Number
+	Identity.Cell(1, 1, Identity) is 1
+	let first = values(row) * other.values(column * 4) + values(4 + row) * other.values(column * 4 + 1)
+	first + values(8 + row) * other.values(column * 4 + 2) + values(12 + row) * other.values(column * 4 + 3)
+Clip(point Vector3) Numbers
+	Moved.Clip(Vector3.One) is (2, 3, 4, 1)
+	for 4
+		values(index) * point.X + values(4 + index) * point.Y + values(8 + index) * point.Z + values(12 + index)
+Transformed(point Vector3) Vector3
+	Moved.Transformed(Vector3.One) is Vector3(2, 3, 4)
+	let clip = Clip(point)
+	Vector3(clip(0), clip(1), clip(2))
+Axis(column Number) Vector3
+	Moved.Axis(3) is Vector3(1, 2, 3)
+	Vector3(values(column * 4), values(column * 4 + 1), values(column * 4 + 2))
+LookAt(eye Vector3, target Vector3, up Vector3) Matrix
+	Matrix.LookAt(Vector3(0, -10, 0), Vector3.Zero, Vector3.UnitZ).Transformed(Vector3.Zero) is Vector3(0, 0, -10)
+	let forward = (target - eye).Normalize
+	let side = forward.Cross(up).Normalize
+	let top = side.Cross(forward)
+	let rotation = (side.X, top.X, 0 - forward.X, 0, side.Y, top.Y, 0 - forward.Y, 0, side.Z, top.Z, 0 - forward.Z, 0)
+	Matrix(rotation + (0 - side * eye, 0 - top * eye, forward * eye, 1))
+Perspective(fieldOfView Degrees, aspect Number, near Number, far Number) Matrix
+	Matrix.Perspective(Degrees(90), 1, 1, 100).values(0).IsNearlyEqual(1)
+	Matrix.Perspective(Degrees(90), 1, 1, 100).Clip(Vector3(0, 0, -1)).Z.IsNearlyEqual(-1)
+	let focal = 1 / Degrees(fieldOfView.number / 2).Tan
+	let depth = (far + near) / (near - far)
+	Matrix((focal / aspect, 0, 0, 0, 0, focal, 0, 0, 0, 0, depth, -1, 0, 0, 2 * far * near / (near - far), 0))
+Inverse Matrix
+	(Moved * Matrix.Scaling(2)).Inverse.Transformed(Vector3(1, 2, 3)) is Vector3.Zero
+	(Moved * Matrix.RotationZ(Degrees(90))).Inverse.Transformed(Vector3(1, 3, 3)).DistanceTo(Vector3.UnitX) < 0.000001
+	let x = Axis(0)
+	let y = Axis(1)
+	let z = Axis(2)
+	let determinant = x * y.Cross(z)
+	let first = y.Cross(z) / determinant
+	let second = z.Cross(x) / determinant
+	let third = x.Cross(y) / determinant
+	let shift = Axis(3)
+	let rotation = (first.X, second.X, third.X, 0, first.Y, second.Y, third.Y, 0, first.Z, second.Z, third.Z, 0)
+	Matrix(rotation + (0 - first * shift, 0 - second * shift, 0 - third * shift, 1))
+Unscaled Matrix
+	(Moved * Matrix.Scaling(2)).Unscaled is Moved
+	let x = Axis(0).Normalize.numbers + 0
+	Matrix(x + Axis(1).Normalize.numbers + 0 + Axis(2).Normalize.numbers + 0 + Axis(3).numbers + 1)
