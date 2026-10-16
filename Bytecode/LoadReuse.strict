@@ -42,14 +42,14 @@ EarlierLoad(load Number) Number
 			return isSameName and (earlier.kind is InstructionType.LoadVariableToRegister) then position else -1
 	-1
 IsUnchanged(register Number, first Number, load Number) Boolean
-	Twice.IsUnchanged(0, 0, 1) is true
+	Twice.IsUnchanged(0, 0, 1)
 	Twice.IsUnchanged(1, 0, 3) is false
 	for Range(first + 1, load)
 		if Written(instructions(value)) is register
 			return false
 	true
 CanRedirect(load Number, register Number) Boolean
-	Twice.CanRedirect(1, 0) is true
+	Twice.CanRedirect(1, 0)
 	let reloaded = instructions(load).payload(0)
 	mutable isBlocked = false
 	for Range(load + 1, instructions.Length)
@@ -121,7 +121,7 @@ Rebased(entry InstructionEntry, base Number) InstructionEntry
 		content.Add(index is in positions then value + base else value)
 	InstructionEntry(entry.kind, entry.texts, content, entry.line)
 IsBoundary(entry InstructionEntry) Boolean
-	Twice.IsBoundary(InstructionEntry.Jump(InstructionType.JumpEnd, 1)) is true
+	Twice.IsBoundary(InstructionEntry.Jump(InstructionType.JumpEnd, 1))
 	Twice.IsBoundary(AddBoth) is false
 	(entry.kind is InstructionType.Invoke) or entry.kind >= InstructionType.LoopBegin
 Remapped(entry InstructionEntry, position Number) InstructionEntry

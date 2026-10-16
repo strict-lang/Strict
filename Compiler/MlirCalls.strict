@@ -19,7 +19,7 @@ Temp(suffix Text) Text
 Emitted Texts
 	MlirCalls(Shapes, 1).Emitted.Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
 	MlirCalls(Hashes, 1).Emitted.Last is "    llvm.store %t1tr, %r1 : f64, !llvm.ptr"
-	Text.Combine(MlirCalls(Shapes, 1).Emitted).IndexOf("@strict_pin(%t1of)") > 0 is true
+	Text.Combine(MlirCalls(Shapes, 1).Emitted).IndexOf("@strict_pin(%t1of)") > 0
 	let entry = function.method.instructions(position)
 	if entry.kind is InstructionType.Print
 		return Printed(entry)
@@ -31,8 +31,8 @@ Emitted Texts
 	decoder.Text(2) is "from" then Created(entry, decoder) else Invoked(entry, decoder)
 Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 1).Created(NewShape, PayloadDecoder(NewShape)).Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
-	Text.Combine(MlirCalls(Hashes, 1).Created(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0 is true
-	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).IndexOf("@Counter_from_foreign(") > 0 is true
+	Text.Combine(MlirCalls(Hashes, 1).Created(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0
+	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).IndexOf("@Counter_from_foreign(") > 0
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
 	let custom = type.Callee("from", count, decoder.Text(4 + entry.payload(3)), decoder.Names)
@@ -130,7 +130,7 @@ ArgumentTypes(count Number) Texts
 	for count
 		"f64"
 Printed(entry InstructionEntry) Texts
-	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Last.IndexOf("@strict_flush()") > 0 is true
+	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Last.IndexOf("@strict_flush()") > 0
 	let address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	constant printf = " = llvm.call @printf("
 	constant vararg = ") vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr"

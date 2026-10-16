@@ -1,27 +1,76 @@
 has inference TypeInference
 constant Members = (Scope(List(Text) + "number", List(Text) + "Number"), Scope(List(Text) + "size", List(Text) + "Size"), Scope(List(Text) + "width", List(Text) + "Number"))
 constant Methods = (Scope(List(Text) + "Grow", List(Text) + "Count"), KnownTypes.NoMembers, KnownTypes.NoMembers)
-constant Parameters = (Scope(("Grow", "Grow types", "Grow required"), ("area", "Area", "1")), KnownTypes.NoMembers, KnownTypes.NoMembers)
-constant Shapes = (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant Parameters = (Scope(("Grow", "Grow types", "Grow required", "from", "from types"), ("area", "Area", "1", "size", "Size")), KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "width"))
+constant Shapes = (Scope(List(Text) + "Limit", List(Text) + "3"), KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant Sizing = ArgumentTypes(TypeInference(KnownTypes(("Count", "Area", "Size"), Members, Methods, Parameters), Shapes))
 constant Grown = SyntaxParser(Tokenizer("count.Grow(count)").Tokens).Parse
+constant Listed = SyntaxParser(Tokenizer("1 > 0 and (count)").Tokens).Parse
+constant Limited = SyntaxParser(Tokenizer("count.Limit").Tokens).Parse
+constant Created = SyntaxParser(Tokenizer("Count(count)").Tokens).Parse
 constant Counted = Scope(("count", "area", "size"), ("Count", "Area", "Size"))
-Issue(call SyntaxNode, scope Scope, current Scope) Text
-	Sizing.Issue(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch") is true
-	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ""
-	let isCall = (call.Kind is "MethodCall") and (call.children.Length > 1)
-	let instance = isCall then inference.TypeOf(call.children(0), scope, current) else ""
-	let parameters = inference.types.ParameterScope(instance)
-	if parameters.Count(call.text) is not 1
+Checked(node SyntaxNode, scope Scope, current Scope) Text
+	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
+	Sizing.Checked(Listed, Counted, Counted).StartsWith("LogicalOperandIsAList")
+	Sizing.Checked(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName")
+	let operands = Operands(node) + ConstantAccess(node, scope, current)
+	operands is "" then Issue(node, scope, current) else operands
+ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
+	Sizing.ConstantAccess(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName")
+	Sizing.ConstantAccess(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse, Counted, Counted) is ""
+	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
+	let first = isMember then node.children(0) else node
+	let isTypeName = (first.Kind is "Type") or (scope.TypeOf(first.text) is "") and inference.types.IsKnown(first.text)
+	let owner = isMember and (isTypeName is false) then inference.TypeOf(first, scope, current) else ""
+	if (owner is "") or (inference.ConstantOf(owner, node.text) is "")
 		return ""
-	let types = parameters.TypeOf(call.text + " types").Split(",")
+	"ConstantNeedsTypeName: " + node.text + " is read from an instance, write " + owner + "." + node.text
+Operands(node SyntaxNode) Text
+	Sizing.Operands(Listed).EndsWith("remove the parentheses")
+	Sizing.Operands(SyntaxParser(Tokenizer("(1 > 0) and (2 > 1)").Tokens).Parse) is ""
+	if (node.Kind is not "Binary") or (node.text is not in ("and", "or", "xor"))
+		return ""
+	for node.children
+		if (value.Kind is "List") and (value.children.Length is 1)
+			return "LogicalOperandIsAList: " + value + " is a list of one element, remove the parentheses"
+	""
+Issue(call SyntaxNode, scope Scope, current Scope) Text
+	Sizing.Issue(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
+	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ""
+	Sizing.Issue(Created, Counted, Counted).EndsWith("Count got a Count for a Size")
+	Sizing.Issue(Created, Counted, Scope(List(Text) + "Count", List(Text) + "Count")) is ""
+	let isConstructor = (call.Kind is "Call") and inference.types.IsKnown(call.text) and (current.TypeOf(call.text) is "")
+	let isCall = (call.Kind is "MethodCall") and (call.children.Length > 1)
+	if (isCall or isConstructor) is false
+		return ""
+	let instance = isCall then inference.TypeOf(call.children(0), scope, current) else call.text
+	Compared(call, instance, isCall then call.text else "from", scope, current)
+Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope) Text
+	Sizing.Compared(Grown, "Count", "Grow", Counted, Counted).StartsWith("ArgumentTypeMismatch: Count.Grow")
+	let parameters = inference.types.ParameterScope(instance)
+	if parameters.Count(method) is not 1
+		return ""
+	let types = Declared(instance, method)
 	let arguments = Arguments(call, scope, current)
 	let at = Mismatched(arguments, types)
-	let method = instance + "." + call.text
-	at < 0 then "" else "ArgumentTypeMismatch: " + method + " got a " + arguments(at) + " for a " + types(at)
+	let name = method is "from" then instance else instance + "." + method
+	at < 0 then "" else "ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
+Declared(instance Text, method Text) Texts
+	Sizing.Declared("Count", "Grow") is ("Area")
+	Sizing.Declared("Size", "from") is ("Number")
+	ArgumentTypes(TypeInference(Instantiation.Implicit.types, List(Scope))).Declared("Couple", "from").Length is 0
+	let parameters = inference.types.ParameterScope(instance)
+	if (method is "from") and ("Generic" is in inference.types.MembersOf(instance).types)
+		return List(Text)
+	let declared = parameters.TypeOf(method + " types")
+	if (declared is not "") or (method is not "from")
+		return declared.Split(",")
+	for parameters.TypeOf("from").Split(",")
+		inference.types.MembersOf(instance).TypeOf(value)
 Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 	Sizing.Arguments(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ("Area")
-	for Range(1, call.children.Length)
+	let start = call.Kind is "MethodCall" then 1 else 0
+	for Range(start, call.children.Length)
 		inference.TypeOf(call.children(value), scope, current)
 Mismatched(arguments Texts, types Texts) Number
 	Sizing.Mismatched(("Area", "Count"), ("Area", "Area")) is 1
@@ -31,7 +80,7 @@ Mismatched(arguments Texts, types Texts) Number
 			return index
 	-1
 Mismatch(argument Text, parameter Text) Boolean
-	Sizing.Mismatch("Count", "Area") is true
+	Sizing.Mismatch("Count", "Area")
 	Sizing.Mismatch("Area", "Size") is false
 	Sizing.Mismatch("Number", "Area") is false
 	Sizing.Mismatch("Area", "Area") is false

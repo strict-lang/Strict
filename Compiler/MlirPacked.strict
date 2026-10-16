@@ -35,7 +35,7 @@ Case(source Number) Texts
 		let letter = Letters.Substring(Widths.Length * source + index, 1)
 		((value * 64 ^ source) to Text) + ": ^f" + letter + "loop" + position + "fast"
 Dispatched Texts
-	Text.Combine(Summing.Dispatched).IndexOf("[default: ^loop1generic, 0: ^floop1fast, 16: ^faloop1fast") > 0 is true
+	Text.Combine(Summing.Dispatched).IndexOf("[default: ^loop1generic, 0: ^floop1fast, 16: ^faloop1fast") > 0
 	Doubling.Dispatched.Length is 0
 	let names = Packable
 	if names.Length is 0
@@ -49,7 +49,7 @@ Dispatched Texts
 	lines + ("    cf.switch %f" + position + "s" + names.Length + " : i64, " + targets + "]") + Variants
 Variants Texts
 	Summing.Variants.First is "  ^faloop1fast:"
-	Text.Combine(Summing.Variants).IndexOf("arith.extf %fa1gsn : f16 to f32") > 0 is true
+	Text.Combine(Summing.Variants).IndexOf("arith.extf %fa1gsn : f16 to f32") > 0
 	let names = Packable
 	mutable lines = List(Mutable(Text))
 	for names.Length * Widths.Length

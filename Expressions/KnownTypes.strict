@@ -9,11 +9,11 @@ constant CountParameters = Scope(("Increment", "Increment mutable", "Twice", "Tw
 constant SampleParameters = (CountParameters, NoMembers)
 constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers), SampleParameters)
 IsKnown(typeName Text) Boolean
-	Sample.IsKnown("Count") is true
+	Sample.IsKnown("Count")
 	Sample.IsKnown("Missing") is false
 	typeName is in names
 IsPlural(typeName Text) Boolean
-	Sample.IsPlural("Counts") is true
+	Sample.IsPlural("Counts")
 	Sample.IsPlural("Text") is false
 	let isPluralName = typeName.Length > 1 and (typeName.Substring(typeName.Length - 1, 1) is "s")
 	(not IsKnown(typeName)) and isPluralName

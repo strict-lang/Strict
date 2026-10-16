@@ -30,9 +30,9 @@ Temp(suffix Text) Text
 	MlirDeviceStatements(Doubled, 3).Temp("a") is "%d3a"
 	"%d" + at + suffix
 Moved(entry InstructionEntry) Texts
-	MlirDeviceStatements(Twice, 1).Moved(Twice.method.instructions(1)).First.EndsWith("0x4000000000000000 : f64") is true
-	Text.Combine(MlirDeviceStatements(Singled, 1).Moved(Twice.method.instructions(1))).IndexOf("f64 to f32") > 0 is true
-	MlirDeviceStatements(Layered, 4).Moved(Layered.method.instructions(4)).Last.EndsWith(", %r2b : i64, !llvm.ptr") is true
+	MlirDeviceStatements(Twice, 1).Moved(Twice.method.instructions(1)).First.EndsWith("0x4000000000000000 : f64")
+	Text.Combine(MlirDeviceStatements(Singled, 1).Moved(Twice.method.instructions(1))).IndexOf("f64 to f32") > 0
+	MlirDeviceStatements(Layered, 4).Moved(Layered.method.instructions(4)).Last.EndsWith(", %r2b : i64, !llvm.ptr")
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Copied("%v_" + entry.texts(0), "%r" + entry.payload(0), entry.texts(0))
 	if entry.kind is InstructionType.StoreRegisterToVariable
@@ -52,11 +52,11 @@ Copied(source Text, target Text, name Text) Texts
 		lines = lines + MlirTyped(MlirTyped.Types(index)).Store(Temp(value), target + value)
 	lines
 IsList(kind Text) Boolean
-	Reading.IsList("Numbers") is true
+	Reading.IsList("Numbers")
 	Reading.IsList("Number") is false
 	MlirLayout(function).Represented(kind) is "List(Number)"
 Indexed(entry InstructionEntry) Texts
-	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0 is true
+	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
 	let list = "%v_" + entry.texts(0)
 	let index = function.Load(Temp("i"), "%r" + entry.payload(1))
 	let position = "    " + Temp("j") + " = arith.fptosi " + Temp("i") + " : " + function.Float + " to i32"
@@ -81,8 +81,8 @@ Read(list Text, target Text) Texts
 	("  ^d" + at + "read:", data, bits, read, function.Store(Temp(""), target)) + done
 Calculated(entry InstructionEntry) Texts
 	Multiplying.Calculated(Twice.method.instructions(2)).Last is "    llvm.store %d2, %r2 : f64, !llvm.ptr"
-	Text.Combine(MlirDeviceStatements(Singled, 2).Calculated(Twice.method.instructions(2))).IndexOf(" : f32") > 0 is true
-	Text.Combine(Absolute.Calculated(Absolute.function.method.instructions(2))).IndexOf("arith.cmpf olt") > 0 is true
+	Text.Combine(MlirDeviceStatements(Singled, 2).Calculated(Twice.method.instructions(2))).IndexOf(" : f32") > 0
+	Text.Combine(Absolute.Calculated(Absolute.function.method.instructions(2))).IndexOf("arith.cmpf olt") > 0
 	if entry.kind > InstructionType.ArithmeticSeparator
 		return MlirStatements(function, at).Calculated(entry)
 	let left = function.Load(Temp("a"), "%r" + entry.payload(1))
@@ -91,16 +91,16 @@ Calculated(entry InstructionEntry) Texts
 	let calculated = MlirTyped(function.Float).Operated(Temp(""), entry.kind, Temp("a") + ", " + Temp("b") + flags)
 	(left, right, calculated, function.Store(Temp(""), "%r" + entry.payload(3)))
 IsContracted(entry InstructionEntry) Boolean
-	MlirDeviceStatements(Summed, 9).IsContracted(Summed.method.instructions(9)) is true
+	MlirDeviceStatements(Summed, 9).IsContracted(Summed.method.instructions(9))
 	Multiplying.IsContracted(Twice.method.instructions(2)) is false
 	let begin = function.method.LoopBeginOf(at)
 	let isLooped = (begin < at) and (function.method.instructions(begin).kind is InstructionType.LoopBegin)
 	let isCalculation = entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
 	isCalculation and isLooped and MlirDeviceSums(function, begin).IsSum
 Called(entry InstructionEntry) Texts
-	Text.Combine(Calling.Called(Call)).IndexOf("@Rows_Twice_1_device(%failed, %lane, %lanes, %d4i, %d4p0)") > 0 is true
-	Text.Combine(Passing.Called(Layered.method.instructions(5))).IndexOf("%d5p0d, %d5p0n, %d5p0b") > 0 is true
-	MlirDeviceStatements(MlirGpuCheck.Floored, 1).Called(MlirGpuCheck.Flooring)(1).IndexOf("floor(%d1i)") > 0 is true
+	Text.Combine(Calling.Called(Call)).IndexOf("@Rows_Twice_1_device(%failed, %lane, %lanes, %d4i, %d4p0)") > 0
+	Text.Combine(Passing.Called(Layered.method.instructions(5))).IndexOf("%d5p0d, %d5p0n, %d5p0b") > 0
+	MlirDeviceStatements(MlirGpuCheck.Floored, 1).Called(MlirGpuCheck.Flooring)(1).IndexOf("floor(%d1i)") > 0
 	if entry.texts(1) is "Floor"
 		return MlirDeviceCalls(function, at, function).Floored(entry)
 	let calls = MlirDeviceCalls(function, at, Callee)

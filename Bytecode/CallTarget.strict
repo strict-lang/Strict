@@ -62,7 +62,7 @@ Chosen(name Text, argumentTypes Texts) HeaderTokens
 				return header
 	Header(name)
 IsOverloaded(name Text, type Text) Boolean
-	Counting.IsOverloaded("Twice", "Count") is true
+	Counting.IsOverloaded("Twice", "Count")
 	Counting.IsOverloaded("Increment", "Count") is false
 	types.ParameterScope(type).Count(name) > 1
 Declared(type Text, name Text, argumentTypes Texts, suffix Text) Texts
@@ -94,7 +94,7 @@ ImplicitOwner(name Text, scope Scope) Text
 		return "value"
 	Header(name).tokens.Length > 0 then "" else InheritingMember(name)
 IsMember(type Text, name Text) Boolean
-	Plain.IsMember("Greeter", "text") is true
+	Plain.IsMember("Greeter", "text")
 	Plain.IsMember("Greeter", "Greet") is false
 	type is TypeName then shape.MemberScope.TypeOf(name) is not "" else types.MembersOf(type).TypeOf(name) is not ""
 InheritingMember(name Text) Text

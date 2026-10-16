@@ -10,7 +10,7 @@ constant Summing = MlirKernel(MlirFunction(List(TypeEntry) + MlirFunction.Shape,
 constant Squaring = MlirKernel(MlirDeviceDot.Squaring.function, 2)
 constant Calling = MlirKernel(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), MethodEntry.GoCall, InstructionEntry.Jump(InstructionType.LoopEnd, 1)))), 1)
 IsSimple Boolean
-	Doubling.IsSimple is true
+	Doubling.IsSimple
 	Calling.IsSimple is false
 	MlirKernel(MlirLoops.Counting.function, 0).IsSimple is false
 	let entry = function.method.instructions(position)
@@ -23,7 +23,7 @@ IsSimple Boolean
 			return false
 	(-1 is not in function.method.instructions(end).payload) and IsUseful
 IsUseful Boolean
-	Doubling.IsUseful is true
+	Doubling.IsUseful
 	Uncollected.IsUseful is false
 	let loops = MlirLoops(function, position)
 	mutable collected = 0
@@ -33,7 +33,7 @@ IsUseful Boolean
 	let isRead = (Sources.Length > 0) or (loops.Collection is not "")
 	loops.IsCollecting then collected is 1 else (collected is 0) and isRead
 IsAllowed(at Number) Boolean
-	Doubling.IsAllowed(4) is true
+	Doubling.IsAllowed(4)
 	Calling.IsAllowed(2) is false
 	let entry = function.method.instructions(at)
 	let kind = entry.kind
@@ -46,21 +46,21 @@ IsAllowed(at Number) Boolean
 	let isBinary = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 	(kind is InstructionType.LoadVariableToRegister) or (isBinary and IsCalculated(at))
 IsAccessAllowed(at Number) Boolean
-	Doubling.IsAccessAllowed(4) is true
-	Doubling.IsAccessAllowed(7) is true
+	Doubling.IsAccessAllowed(4)
+	Doubling.IsAccessAllowed(7)
 	let entry = function.method.instructions(at)
 	let previous = function.method.instructions(at - 1)
 	if entry.kind is InstructionType.CheckError
 		return (previous.kind is InstructionType.IndexCall) and (previous.payload(0) is entry.payload(0))
 	entry.kind is InstructionType.IndexCall then IsIndexedByLoop(at) else entry.texts(0) is "forResult"
 IsCalculated(at Number) Boolean
-	Doubling.IsCalculated(6) is true
+	Doubling.IsCalculated(6)
 	let isText = MlirTexts(function, at).IsSum
 	let isList = MlirListOperators(function, at).IsOperation
 	let isCompared = MlirEquality(function, at).Handles(function.method.instructions(at))
 	(isText is false) and (isList is false) and (isCompared is false)
 IsIndexedByLoop(at Number) Boolean
-	Doubling.IsIndexedByLoop(4) is true
+	Doubling.IsIndexedByLoop(4)
 	MlirKernel(MlirLists.Listed, 0).IsIndexedByLoop(2) is false
 	Squaring.IsIndexedByLoop(7) is true
 	let entry = function.method.instructions(at)
@@ -97,10 +97,10 @@ Sources Texts
 			names.Add(entry.texts(0))
 	names
 Versioned Texts
-	Text.Combine(Doubling.Versioned).IndexOf("cf.cond_br %f2ok1, ^floop2fast, ^loop2generic") > 0 is true
+	Text.Combine(Doubling.Versioned).IndexOf("cf.cond_br %f2ok1, ^floop2fast, ^loop2generic") > 0
 	Doubling.Versioned.Last is "  ^loop2generic:"
 	Calling.Versioned.Length is 0
-	Text.Combine(Summing.Versioned).IndexOf("cf.cond_br %f1ok1, ^floop1packed, ^loop1generic") > 0 is true
+	Text.Combine(Summing.Versioned).IndexOf("cf.cond_br %f1ok1, ^floop1packed, ^loop1generic") > 0
 	if IsSimple is false
 		return List(Text)
 	let fast = MlirFunction(function.types, function.type, function.method, function.lineSlots, position)

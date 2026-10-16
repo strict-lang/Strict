@@ -24,7 +24,7 @@ Sharing(name Text, shares Boolean) CodeBlock
 	CodeBlock.Empty.Sharing("a", true).Owns("a") is false
 	CodeBlock(instructions, register, nextId, scope.With(name + SharedMarker, (shares then "shared" else "owned")))
 Owns(name Text) Boolean
-	CodeBlock.Empty.Sharing("a", false).Owns("a") is true
+	CodeBlock.Empty.Sharing("a", false).Owns("a")
 	CodeBlock.Empty.Sharing("a", true).Owns("a.b") is false
 	let marker = scope.TypeOf(name + SharedMarker)
 	let dot = name.IndexOf(".")

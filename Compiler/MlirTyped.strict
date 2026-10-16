@@ -24,7 +24,7 @@ Suffix Text
 	Double.Suffix is ""
 	type is "f32" then "s" else ""
 Read(result Text, operands Text) Text
-	Single.Read("%e", "(%d)").EndsWith("@strict_device_elements(%d) : (!llvm.ptr, i64, i64, i64) -> f32") is true
+	Single.Read("%e", "(%d)").EndsWith("@strict_device_elements(%d) : (!llvm.ptr, i64, i64, i64) -> f32")
 	"    " + result + " = func.call @strict_device_element" + Suffix + operands + Elements + type
 Summed(result Text, sum Text) Text
 	Single.Summed("%y", "%x") is "    %y = func.call @strict_device_sums(%x) : (f32) -> f32"
@@ -40,7 +40,7 @@ Number(target Text, hex Text) Texts
 		return List(Text) + Constant(target, hex)
 	(Double.Constant(target + "w", hex), "    " + target + " = arith.truncf " + target + "w : f64 to " + type)
 Operated(result Text, kind Number, operands Text) Text
-	Single.Operated("%c", InstructionType.Power, "%a, %b").EndsWith(PowerCall) is true
+	Single.Operated("%c", InstructionType.Power, "%a, %b").EndsWith(PowerCall)
 	Double.Operated("%c", InstructionType.Modulo, "%a, %b") is "    %c = arith.remf %a, %b : f64"
 	Double.Operated("%c", InstructionType.Add, "%a, %b") is "    %c = arith.addf %a, %b : f64"
 	let power = " = func.call @strict_device_power" + Suffix + "(%failed, " + operands + ") : (!llvm.ptr, "

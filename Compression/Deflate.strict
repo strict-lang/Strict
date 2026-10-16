@@ -27,7 +27,7 @@ Zlib Numbers
 	Inflate(Inflate.Part(Deflate(List(Number)).Zlib, 2, 4)).Inflated.Length is 0
 	(List(Number) + 120 + 1) + Packed(Codes) + Adler
 Codes Numbers
-	Deflate(Repeated).Codes.Length < 24 is true
+	Deflate(Repeated).Codes.Length < 24
 	mutable codes = List(Mutable(Number)) + 3 + 3
 	mutable heads = Heads
 	mutable position = 0

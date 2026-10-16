@@ -15,22 +15,22 @@ Name Text
 Kernel Texts
 	Doubling.Kernel.First is DoublingHeader
 	Doubling.Kernel.Last is "  }"
-	Text.Combine(Doubling.Kernel).IndexOf("func.call @Rows_Twice_1_device(") > 0 is true
-	Layering.Kernel.First.IndexOf("%f_biasesb: i64) attributes") > 0 is true
-	Text.Combine(MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Kernel).IndexOf("i32 to f32") > 0 is true
+	Text.Combine(Doubling.Kernel).IndexOf("func.call @Rows_Twice_1_device(") > 0
+	Layering.Kernel.First.IndexOf("%f_biasesb: i64) attributes") > 0
+	Text.Combine(MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Kernel).IndexOf("i32 to f32") > 0
 	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + ") attributes {nvvm.kernel} {"
 	let body = Emitted(position + 1, function.method.LoopEndOf(position))
 	(List(Text) + header) + Slots + Given + Indexed + Started + body + Ending
 Freed Text
 	Doubling.Freed is ""
-	Layering.Freed.StartsWith(", %f_inputd: !llvm.ptr, %f_inputn: i64") is true
+	Layering.Freed.StartsWith(", %f_inputd: !llvm.ptr, %f_inputn: i64")
 	mutable text = ""
 	for MlirGpuCheck(function, position).Free
 		let parts = ", %f_" + value + "d: !llvm.ptr, %f_" + value + "n: i64, %f_" + value + "b: i64"
 		text = text + (IsList(value) then parts else ", %f_" + value + ": f64")
 	text
 IsList(name Text) Boolean
-	Layering.IsList("input") is true
+	Layering.IsList("input")
 	Doubling.IsList("value") is false
 	MlirDevice(MlirDeviceRows.Picking, 2).IsList("weights") is true
 	let kind = MlirKinds(function).VariableKind(position, name)
@@ -48,7 +48,7 @@ Stores(source Text, target Text) Texts
 	for MlirTyped.Parts
 		MlirTyped(MlirTyped.Types(index)).Store(source + value, target + value)
 Function Texts
-	Twice.Function.First.EndsWith("%lane: i64, %lanes: i64, %p0: f64, %p1: f64) -> f64 {") is true
+	Twice.Function.First.EndsWith("%lane: i64, %lanes: i64, %p0: f64, %p1: f64) -> f64 {")
 	Twice.Function.Last is "  }"
 	let calls = MlirDeviceCalls(function, 0, function)
 	mutable parameters = ("%failed: !llvm.ptr", "%lane: i64", "%lanes: i64", "%p0: " + function.Float)

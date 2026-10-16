@@ -35,7 +35,7 @@ MemberNames Texts
 		if shape.IsMemberLine(value)
 			HeaderTokens(Tokenizer(value).Tokens).MemberName
 IsPublic(name Text) Boolean
-	Sample.IsPublic("Count") is true
+	Sample.IsPublic("Count")
 	Sample.IsPublic("count") is false
 	name.Substring(0, 1) is name.Substring(0, 1).Upper
 UsageCount(name Text) Number
@@ -46,7 +46,7 @@ UsageCount(name Text) Number
 			count = count + 1
 	count
 IsUsedIn(line Text, name Text) Boolean
-	Sample.IsUsedIn("\tlogger.Log(1)", "logger") is true
+	Sample.IsUsedIn("\tlogger.Log(1)", "logger")
 	line.IndexOf(" " + name) is not -1 or line.IndexOf("\t" + name) is not -1 or line.IndexOf("(" + name) is not -1
 IsExempt Boolean
 	Sample.IsExempt is false
@@ -55,7 +55,7 @@ IsExempt Boolean
 	let usesValue = UsageCount("value") > 0 or ("from" is in shape.MethodScope.names)
 	(shape.MemberScope.names.Length is 1) and usesValue
 HasMethodBody Boolean
-	Sample.HasMethodBody is true
+	Sample.HasMethodBody
 	for shape.lines
 		if value.StartsWith("\t")
 			return true
@@ -68,7 +68,7 @@ ConstantIssues ValidationIssues
 			issues.Add(ValidationIssue("UseConstantHere", HeaderTokens(Tokenizer(value).Tokens).MemberName, index + 1))
 	issues
 IsComputedMember(line Text) Boolean
-	Sample.IsComputedMember("has number = 17 + 4") is true
+	Sample.IsComputedMember("has number = 17 + 4")
 	Sample.IsComputedMember("has scale = 1") is false
 	let tokens = Tokenizer(line).Tokens
 	let equals = tokens.Index("=")
@@ -77,7 +77,7 @@ IsComputedMember(line Text) Boolean
 	let initial = SyntaxParser(tokens).ParseRange(equals + 1, tokens.Length)
 	(initial.Kind is "Binary") and IsConstantNode(initial)
 IsConstantNode(node SyntaxNode) Boolean
-	Sample.IsConstantNode(SyntaxNode("Number", "1")) is true
+	Sample.IsConstantNode(SyntaxNode("Number", "1"))
 	if node.Kind is in ("Number", "Text", "Boolean")
 		return true
 	(node.Kind is "Binary") and IsConstantNode(node.children(0)) and IsConstantNode(node.children(1))

@@ -16,13 +16,13 @@ OperatingSystem Text
 	Process.OperatingSystem is in ("Windows", "Linux", "MacOS")
 	"Unknown"
 Current Process
-	Process.Current.IsAvailable is true
+	Process.Current.IsAvailable
 	Process("")
 Elapsed Number
-	Process.Elapsed > 0 is true
+	Process.Elapsed > 0
 	0
 FilesRead Texts
-	File("Process.strict").ReadLines.Length > 10 is true
+	File("Process.strict").ReadLines.Length > 10
 	"Process.strict" is in Process.FilesRead
 	List(Text)
 Input Text

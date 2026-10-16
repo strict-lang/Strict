@@ -4,7 +4,7 @@ constant ElementStore = InstructionEntry.Named(InstructionType.StoreRegisterToVa
 Value(position Number) VmValue
 	PayloadDecoder(InstructionEntry.LoadNumber(0, 7)).Value(1).number is 7
 	PayloadDecoder(InstructionEntry.LoadText(0, "a")).Value(1).text is "a"
-	PayloadDecoder(InstructionEntry.LoadBoolean(0, true)).Value(1).IsTrue is true
+	PayloadDecoder(InstructionEntry.LoadBoolean(0, true)).Value(1).IsTrue
 	let kind = entry.payload(position)
 	if kind is 1
 		return VmValue.OfNumber(entry.payload(position + 1))

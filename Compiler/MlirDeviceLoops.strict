@@ -8,7 +8,7 @@ constant Kinds = ("f64", "!llvm.ptr", "i64", "i64")
 Emitted Texts
 	Beginning.Emitted.Last is "    llvm.store %d2e, %v_value : f64, !llvm.ptr"
 	Ending.Emitted.First is "    %d11k = llvm.load %loop2 : !llvm.ptr -> i64"
-	Text.Combine(MlirDeviceLoops(MlirDeviceDot.Summed, 2).Emitted).IndexOf("@strict_device_dots(") > 0 is true
+	Text.Combine(MlirDeviceLoops(MlirDeviceDot.Summed, 2).Emitted).IndexOf("@strict_device_dots(") > 0
 	let entry = function.method.instructions(at)
 	if MlirDeviceDot(function, at).IsDot
 		return MlirDeviceDot(function, at).Emitted
@@ -17,7 +17,7 @@ Temp(suffix Text) Text
 	Beginning.Temp("k") is "%d2k"
 	"%d" + at + suffix
 Begin(register Text, entry InstructionEntry) Texts
-	Text.Combine(Beginning.Begin("%r0", Opening)).IndexOf("cf.br ^d2loop") > 0 is true
+	Text.Combine(Beginning.Begin("%r0", Opening)).IndexOf("cf.br ^d2loop") > 0
 	let isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).KindOf(at, entry.payload(0)))
 	let converted = "    " + Temp("c") + " = arith.fptosi " + Temp("cf") + " : " + function.Float + " to i64"
 	let number = (function.Load(Temp("cf"), register), converted)

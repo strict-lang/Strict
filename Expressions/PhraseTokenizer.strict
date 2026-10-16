@@ -11,11 +11,11 @@ Token(index Number) Text
 	constant tokens = Tokens
 	tokens(index)
 IsValidInput Boolean
-	PhraseTokenizer("a + b").IsValidInput is true
+	PhraseTokenizer("a + b").IsValidInput
 	PhraseTokenizer("").IsValidInput is false
 	input.Length > 0
 HasSpaces Boolean
-	PhraseTokenizer("a b").HasSpaces is true
+	PhraseTokenizer("a b").HasSpaces
 	input.IndexOf(" ") is not -1
 to Text
 	input

@@ -1,0 +1,50 @@
+has lines Texts
+constant Locking = TestChecks(("has over Boolean", "Locked Boolean", "\tStarted.Locked.over is true", "\tLocked is true", "\tover"))
+constant Hint = ", a passed test line is true already"
+constant Operators = (">", "<", ">=", "<=", "is", "+", "-", "*", "/", "%")
+Issues List(ValidationIssue)
+	Locking.Issues.First to Text is "IsTrueIsNotNeeded: Started.Locked.over" + Hint
+	Locking.Issues.Length is 2
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if TypeShape(lines).IsMethodHeader(value)
+			issues = issues + Leading(index)
+	issues
+Leading(header Number) List(ValidationIssue)
+	Locking.Leading(1).Last.Line is 4
+	(TestChecks(("Run", "\t", "\t1")).Leading(0).Length, TestChecks(List(Text) + "Run").Leading(0).Length) is (0, 0)
+	mutable issues = List(Mutable(ValidationIssue))
+	let last = FileCheck.LastLine(lines, header)
+	for Range(header + 1, last + 1)
+		let code = lines(value).Trim
+		if (value is last) or (code is "") or (Duplicates.IsTest(code) is false)
+			return issues
+		let left = code.EndsWith(" is true") then code.Substring(0, code.Length - 8) else ""
+		if (left is not "") and IsCalling(left)
+			issues.Add(ValidationIssue("IsTrueIsNotNeeded", left + Hint, value + 1))
+	issues
+IsCalling(left Text) Boolean
+	Locking.IsCalling("Started.Locked.over")
+	Locking.IsCalling("Started.over") is false
+	Locking.IsCalling("(false or true)") is false
+	let tokens = Tokenizer(left).Tokens
+	for tokens
+		if IsCallToken(tokens, index)
+			return true
+	false
+IsCallToken(tokens Texts, position Number) Boolean
+	Locking.IsCallToken(("File", "(", "1", ")"), 1)
+	Locking.IsCallToken(("(", "not", "false", ")"), 0) is false
+	Locking.IsCallToken(List(Text) + "Locked", 0)
+	let token = tokens(position)
+	let previous = position > 0 then tokens(position - 1).Substring(0, 1) else ""
+	let first = token.Substring(0, 1)
+	let isMethod = (position > 1) and (tokens(position - 1) is ".") and (first.Lower is not first)
+	let isCall = (token is "(") and (previous.Lower is not previous.Upper)
+	isMethod or isCall or (token is in Operators) or (position is 0) and IsOwnMethod(token)
+IsOwnMethod(name Text) Boolean
+	Locking.IsOwnMethod("Locked")
+	for lines
+		if TypeShape(lines).IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
+			return true
+	false

@@ -14,12 +14,12 @@ constant Computed = BodyParser("Run", "\tvalues(index + 1) = 5").Block(1, 1)
 constant Named = CodeBlock.Empty.Declare("named", "Dictionary(Text, Number)")
 constant KeyedWrite = BodyParser("Run", "\tnamed(\"a\") = 1").Block(1, 1).children(0)
 IsIndexing(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty) is true
+	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty)
 	Plain.IsIndexing(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is false
-	OwnA.IsIndexing(SyntaxNode("Call", "limits", One), CodeBlock.Empty) is true
-	Plain.IsIndexing(SyntaxNode("Call", "text", (One, One)), CodeBlock.Empty) is true
-	Plain.IsIndexing(SyntaxNode("MethodCall", "text", (ValueCodegen.NewGreeter, One, One)), CodeBlock.Empty) is true
-	Primed.IsIndexing(PrimeCall, CodeBlock.Empty) is true
+	OwnA.IsIndexing(SyntaxNode("Call", "limits", One), CodeBlock.Empty)
+	Plain.IsIndexing(SyntaxNode("Call", "text", (One, One)), CodeBlock.Empty)
+	Plain.IsIndexing(SyntaxNode("MethodCall", "text", (ValueCodegen.NewGreeter, One, One)), CodeBlock.Empty)
+	Primed.IsIndexing(PrimeCall, CodeBlock.Empty)
 	if node.Kind is "Call"
 		return IsIndexedCall(node, block)
 	let isMember = (node.Kind is "MethodCall") and (node.children.Length is in (2, 3))
@@ -27,17 +27,17 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	let isOwned = isMember and IsOwnedList(node, block)
 	isMember and (node.text is "value") or isConstant or isOwned or (node.Kind is "Index")
 IsOwnedList(node SyntaxNode, block CodeBlock) Boolean
-	Positioning.IsOwnedList(Indexing.Positioned, CodeBlock.Empty.Declare("t", "Trigger")) is true
+	Positioning.IsOwnedList(Indexing.Positioned, CodeBlock.Empty.Declare("t", "Trigger"))
 	let type = values.TypeOf(node.children(0), block)
 	let isMethod = Indexing(values.inference.types).IsIndexed(type, node.text, node.children.Length - 1)
 	values.target.IsMember(type, node.text) or isMethod
 IsConstantList(node SyntaxNode) Boolean
-	Primed.IsConstantList(PrimeCall) is true
+	Primed.IsConstantList(PrimeCall)
 	let member = SyntaxNode("Member", node.text, node.children(0))
 	ConstantFolding(values.target.TypeName, values.inference).Folded(member).Kind is "List"
 IsIndexedCall(node SyntaxNode, block CodeBlock) Boolean
-	OwnA.IsIndexedCall(SyntaxNode("Call", "limits", One), CodeBlock.Empty) is true
-	OwnA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is true
+	OwnA.IsIndexedCall(SyntaxNode("Call", "limits", One), CodeBlock.Empty)
+	OwnA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty)
 	MemberA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is false
 	let isOwnMember = values.target.IsMember(values.target.TypeName, node.text)
 	let isConstant = values.methods.TypeOf(node.text) is not "" and (values.target.Header(node.text).tokens.Length is 0)

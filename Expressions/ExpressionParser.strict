@@ -44,20 +44,20 @@ LiteralOrVariable(trimmed Text) Text
 		return "TextExpression"
 	"VariableCall"
 IsAssignment(line Text) Boolean
-	ExpressionParser("let x = 1").IsAssignment("let x = 1") is true
+	ExpressionParser("let x = 1").IsAssignment("let x = 1")
 	if line.StartsWith("let ")
 		return true
 	if line.StartsWith("mutable ")
 		return true
 	line.StartsWith("constant ")
 IsReassignment(line Text) Boolean
-	ExpressionParser("x = 1").IsReassignment("x = 1") is true
+	ExpressionParser("x = 1").IsReassignment("x = 1")
 	if IsAssignment(line)
 		return false
 	line.IndexOf(" = ") is not -1
 IsBinary(line Text) Boolean
-	ExpressionParser("a and b").IsBinary("a and b") is true
-	ExpressionParser("a + b").IsBinary("a + b") is true
+	ExpressionParser("a and b").IsBinary("a and b")
+	ExpressionParser("a + b").IsBinary("a + b")
 	if HasLogicalOp(line)
 		return true
 	HasArithmeticOp(line)
@@ -76,10 +76,10 @@ HasArithmeticOp(line Text) Boolean
 		return true
 	line.IndexOf("/") is not -1
 IsTypeCompare(line Text) Boolean
-	ExpressionParser("value is Number").IsTypeCompare("value is Number") is true
+	ExpressionParser("value is Number").IsTypeCompare("value is Number")
 	line.IndexOf(" is ") is not -1
 IsNumberLiteral(line Text) Boolean
-	ExpressionParser("42").IsNumberLiteral("42") is true
+	ExpressionParser("42").IsNumberLiteral("42")
 	ExpressionParser("x").IsNumberLiteral("x") is false
 	NumberChars(line).StartsWithDigit
 to Text

@@ -46,8 +46,8 @@ Flattened(layers List(Layer)) List(Numbers)
 		rows = rows + value.weights
 	rows
 Forward(input Numbers) Numbers
-	Tiny.Forward(Probe).First.IsNearlyEqual(0.4825967035647183, 0.000001) is true
-	Tiny.Forward(Probe).Last.IsNearlyEqual(-0.4171537353010468, 0.000001) is true
+	Tiny.Forward(Probe).First.IsNearlyEqual(0.4825967035647183, 0.000001)
+	Tiny.Forward(Probe).Last.IsNearlyEqual(-0.4171537353010468, 0.000001)
 	if router.weights.Length is 0
 		return Expert(0, input)
 	let scores = router.Sums(input)
@@ -56,7 +56,7 @@ Forward(input Numbers) Numbers
 	let gated = Gated(Expanded(chosen, input), size)
 	Mixed(scores, chosen, Contracted(chosen, gated, size))
 Added(input Numbers, residual Numbers) Numbers
-	Tiny.Added(Probe, Probe).First.IsNearlyEqual(0.9825967035647183, 0.000001) is true
+	Tiny.Added(Probe, Probe).First.IsNearlyEqual(0.9825967035647183, 0.000001)
 	Single.Added(Probe, Probe) is Gpt2Block.Added(Probe, Tiny.Expert(0, Probe))
 	if router.weights.Length > 0
 		return Gpt2Block.Added(residual, Routed(input))

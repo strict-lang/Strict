@@ -9,3 +9,8 @@ Added(other Numbers) Numbers
 	ReverseList(1, 2).Added((10, 20))(1) is 22
 	for numbers
 		value + other(index)
+Reported(other Numbers) Text
+	ReverseList(1, 2, 3).Reported((10, 20)).Split("\n").Length is 3
+	ReverseList(1, 2).Reported((10, 20)) is ""
+	let added = Added(other)
+	added is Error then added to Text else ""

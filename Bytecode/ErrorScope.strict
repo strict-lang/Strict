@@ -51,7 +51,7 @@ Fallible(name Text, block CodeBlock) CodeBlock
 	Plain.Fallible("a", CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
 	block.Declare(name + FallibleMarker, "fallible")
 IsFallible(name Text, block CodeBlock) Boolean
-	Plain.IsFallible("a", Plain.Fallible("a", CodeBlock.Empty)) is true
+	Plain.IsFallible("a", Plain.Fallible("a", CodeBlock.Empty))
 	Plain.IsFallible("a", CodeBlock.Empty) is false
 	block.scope.TypeOf(name + FallibleMarker) is not ""
 Guarded(name Text, block CodeBlock) CodeBlock

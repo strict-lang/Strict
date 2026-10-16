@@ -8,13 +8,13 @@ constant LoggerField = InstructionEntry(InstructionType.FieldLoad, "logger", (2,
 constant Logged = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), MlirInstances.Built, LoggerField)))
 IsAliased(entry InstructionEntry, position Number) Boolean
 	MlirLayout(MlirInstances.Shapes).IsAliased(MlirInstances.Width, 2) is false
-	MlirLayout(Logged).IsAliased(LoggerField, 2) is true
-	MlirLayout(MlirKinds.Graded.function).IsAliased(MlirKinds.Characters, 1) is true
+	MlirLayout(Logged).IsAliased(LoggerField, 2)
+	MlirLayout(MlirKinds.Graded.function).IsAliased(MlirKinds.Characters, 1)
 	let kinds = MlirKinds(function)
 	let isValue = (entry.texts(0) is "value") or (IsStruct(kinds.KindOf(position, entry.payload(1))) is false)
 	isValue or (TypeEntry.ShortName(kinds.WrittenKind(position)) is "Logger")
 IsStruct(typeName Text) Boolean
-	Wrapping.IsStruct("Shape") is true
+	Wrapping.IsStruct("Shape")
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
 	function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
@@ -36,7 +36,7 @@ Wrapped(typeName Text) Text
 	function.TypeOf(TypeEntry.ShortName(typeName)).Wrapped
 IsInitializer Boolean
 	Wrapping.IsInitializer is false
-	Packing.IsInitializer is true
+	Packing.IsInitializer
 	IsStruct(function.type.Name) and function.method.IsInitializer(MlirInstances(function, 0).Stored(function.type))
 Returned(position Number) Texts
 	Wrapping.Returned(-2) is ("    return %zero : f64")

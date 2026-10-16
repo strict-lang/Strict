@@ -40,7 +40,7 @@ TestDictionary Dictionary(Text, Text)
 	Dictionary(("a", "apple"), ("b", "banana")).Length is 2
 	Dictionary(("a", "apple"), ("b", "banana"))
 TestFile Boolean
-	File("README.md").Exists is true
+	File("README.md").Exists
 	File("NonExistentFile.xyz").Exists is false
 	true
 TestError Error

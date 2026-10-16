@@ -75,7 +75,7 @@ Wrapped Text
 IsStruct Boolean
 	HelloLogger.IsStruct is false
 	CharacterEntry.IsStruct is false
-	Converting.IsStruct is true
+	Converting.IsStruct
 	(IsBaseName(ShortName(Name)) is false) and (Wrapped is "")
 Changing List(MemberEntry)
 	HelloLogger.Changing.Length is 1
@@ -84,8 +84,8 @@ Changing List(MemberEntry)
 		if value.IsConstant is false
 			value
 IsBaseName(short Text) Boolean
-	HelloLogger.IsBaseName("Character") is true
-	HelloLogger.IsBaseName("List(Text)") is true
+	HelloLogger.IsBaseName("Character")
+	HelloLogger.IsBaseName("List(Text)")
 	HelloLogger.IsBaseName("Shape") is false
 	(short is in ("Number", "Text", "Boolean", "Character", "None")) or short.StartsWith("List(")
 JustName Text

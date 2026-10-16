@@ -28,7 +28,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 	slots
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 	Twice.Value(InstructionEntry(InstructionType.LoadVariableToRegister, "a", (6, 8)), 0, Listed).number is 5
-	Twice.Value(InstructionEntry.Binary(InstructionType.LessThan, (6, 8)), 0, Listed).IsTrue is true
+	Twice.Value(InstructionEntry.Binary(InstructionType.LessThan, (6, 8)), 0, Listed).IsTrue
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Local(entry.payload(1), slots)
 	if entry.kind < InstructionType.StoreSeparator
@@ -78,12 +78,12 @@ Local(slot Number, slots List(VmValue)) VmValue
 	Looping.Current(state, slot < 0, isIndex, slots(isIndex then IndexSlot else ValueSlot))
 Indexed(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Indexed(InstructionEntry(InstructionType.IndexCall, "list", (6, 6, 7)), Listed, 0).number is 20
-	Twice.Indexed(InstructionEntry(InstructionType.IndexCall, "a", (6, 8, 7)), Listed, 0).Traces.Length > 0 is true
+	Twice.Indexed(InstructionEntry(InstructionType.IndexCall, "a", (6, 8, 7)), Listed, 0).Traces.Length > 0
 	let collection = Local(entry.payload(2), slots)
 	let wrapped = Accessor(machine).Wrapped(collection, slots(entry.payload(1)).number)
 	wrapped < 0 then Traced(VmValue.OfError("IndexOutOfRange"), position) else Accessor(machine).Item(collection, wrapped)
 Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
-	Calling.Invoked(Calling.method.instructions.First, Listed, 0).Traces.IndexOf("at Caller.Run") > 0 is true
+	Calling.Invoked(Calling.method.instructions.First, Listed, 0).Traces.IndexOf("at Caller.Run") > 0
 	let call = Called(entry, slots)
 	let accessed = Accessor(machine).Accessed(call)
 	let result = accessed.kind is "None" then machine.Call(call) else accessed
@@ -101,7 +101,7 @@ Called(entry InstructionEntry, slots List(VmValue)) Invocation
 		arguments.Add(slots(entry.payload(count + 1 + index)))
 	Invocation(entry, arguments, instance)
 Traced(error VmValue, position Number) VmValue
-	Twice.Traced(VmValue.OfError("a"), 0).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0 is true
+	Twice.Traced(VmValue.OfError("a"), 0).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0
 	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0), 0).items(1).items.Length is 1
 	if error.kind is "Strict/ErrorWithValue"
 		return VmValue(error.kind, error.number, error.text, (Traced(error.items(0), position), error.items(1)))

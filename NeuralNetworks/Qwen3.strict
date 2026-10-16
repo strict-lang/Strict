@@ -41,12 +41,12 @@ Sines(angles Numbers) Numbers
 	for angles
 		Degrees(value).Sin
 Step(token Number, position Number) Qwen3
-	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475) is true
-	Tiny.Step(1, 0).Step(2, 1).Scored.Last.IsNearlyEqual(1.1076484232754447) is true
-	TinyMixture.Step(1, 0).Scored.First.IsNearlyEqual(0.9534001625146007, 0.000001) is true
+	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475)
+	Tiny.Step(1, 0).Step(2, 1).Scored.Last.IsNearlyEqual(1.1076484232754447)
+	TinyMixture.Step(1, 0).Scored.First.IsNearlyEqual(0.9534001625146007, 0.000001)
 	Forwarded(tokens(token), Rotation(position))
 Prefilled(prompt Numbers, start Number) Qwen3
-	Tiny.Prefilled((1, 2), 0).Scored.Last.IsNearlyEqual(Tiny.Step(1, 0).Step(2, 1).Scored.Last) is true
+	Tiny.Prefilled((1, 2), 0).Scored.Last.IsNearlyEqual(Tiny.Step(1, 0).Step(2, 1).Scored.Last)
 	Tiny.Prefilled((1, 2), 0).Prefilled((3, 4), 2).Next is Tiny.Step(1, 0).Step(2, 1).Step(3, 2).Step(4, 3).Next
 	TinyMixture.Prefilled((1, 2), 0).Next is TinyMixture.Step(1, 0).Step(2, 1).Next
 	mutable state = List(Number)

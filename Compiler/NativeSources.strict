@@ -39,7 +39,7 @@ Arguments(platform Number, root Text) Text
 		arguments = arguments + " \"" + value + "\""
 	arguments + " -I\"" + root + "/Compiler\"" + Flags(platform)
 Objects(platform Number, root Text) Text
-	Adding.Objects(Platform.Current, ".").StartsWith(" \"Examples/NativeAdd/native/Adder.o\"") is true
+	Adding.Objects(Platform.Current, ".").StartsWith(" \"Examples/NativeAdd/native/Adder.o\"")
 	NativeSources(List(Text)).Objects(Platform.Current, ".") is ""
 	if folders.Length is 0
 		return ""
@@ -76,7 +76,7 @@ Inputs(platform Number, root Text) Texts
 	let flags = folders.First + "/" + Platform.NameOf(platform) + ".flags"
 	Directory.Files(folders.First, "*.h") + (root + "/Compiler/strict.h") + flags
 Library(platform Number, root Text) Text
-	Adding.Library(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.") is true
+	Adding.Library(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
 	let folder = folders.First
 	let base = folder + "/" + Path(Path(folder).PathOnly.text).FileName.text
 	let extension = platform is Platform.Windows then ".dll" else ".so"
@@ -117,7 +117,7 @@ Resource(base Text, platform Number, root Text) Text
 	File(base + ".rc").Delete
 	compiled.Failed then "llvm-rc failed: " + compiled.error else " \"" + base + ".res\""
 LinuxLinked(base Text, program Text, root Text) Text
-	Adding.LinuxLinked("Compiler/output/missing", "missing", ".").StartsWith("Linux build skipped") is true
+	Adding.LinuxLinked("Compiler/output/missing", "missing", ".").StartsWith("Linux build skipped")
 	let tools = Toolchain(Platform.Windows, root)
 	mutable sources = folders.Length is 0 then "" else " -I" + tools.Quoted(tools.WslPath(root + "/Compiler"))
 	for Files

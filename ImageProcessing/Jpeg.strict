@@ -48,7 +48,7 @@ Skipped(start Number) Number
 	bytes.Length
 IsRestart(position Number) Boolean
 	Gray.IsRestart(167) is false
-	Jpeg((255, 208)).IsRestart(0) is true
+	Jpeg((255, 208)).IsRestart(0)
 	(bytes(position + 1) >= 208) and (bytes(position + 1) <= 215)
 Entry(segment Number, info Number, isCodes Boolean) Number
 	Gray.Entry(124, 16, true) is 128

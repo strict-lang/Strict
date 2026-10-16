@@ -4,14 +4,14 @@ has text
 has kind Text
 HasValue Boolean
 	ValueInstance("None", 0, "", "").HasValue is false
-	ValueInstance("Number", 5, "", "").HasValue is true
+	ValueInstance("Number", 5, "", "").HasValue
 	if typeName is not "None"
 		return true
 	if number is not 0
 		return true
 	false
 IsText Boolean
-	ValueInstance("Text", 0, "hi", "").IsText is true
+	ValueInstance("Text", 0, "hi", "").IsText
 	text is not ""
 IsList Boolean
 	kind is "list"

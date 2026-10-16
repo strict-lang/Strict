@@ -1,10 +1,12 @@
 has types KnownTypes
 constant Scaler = KnownTypes(("Scaler", "Byte"), (KnownTypes.NoMembers, Scope(List(Text) + "number", List(Text) + "Number")), (Scope(("Scaled", "Scaled", "*", "*"), ("Number", "Number", "Number", "Scaler")), KnownTypes.NoMembers), (Scope(("Scaled", "Scaled types", "Scaled", "Scaled types", "*", "* types", "*", "* types"), ("text", "Text", "byte", "Byte", "other", "Other", "factor", "Number")), KnownTypes.NoMembers))
 constant Scaling = Overloads(Scaler)
-constant Labeler = KnownTypes(List(Text) + "Labeler", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Labels", "Labels"), ("List(Numbers)", "Numbers")), List(Scope) + Scope(("Labels", "Labels types", "Labels", "Labels types"), ("label,count", "Numbers,Number", "", "")))
+constant Labeler = KnownTypes(List(Text) + "Labeler", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Labels", "Labels"), ("Numbers", "List(Numbers)")), List(Scope) + Scope(("Labels", "Labels types", "Labels", "Labels types"), ("", "", "label,count", "Numbers,Number")))
 constant Labeling = Overloads(Labeler)
 constant LabelInference = TypeInference(Labeler, List(Scope) + KnownTypes.NoMembers)
 constant LabelsCall = SyntaxParser(Tokenizer("Labels((1, 0), 2)").Tokens).Parse
+constant LabelerLabels = SyntaxNode("Member", "Labels", SyntaxNode("Type", "Labeler"))
+constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
 Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Text") is 0
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Number") is 1
@@ -26,7 +28,7 @@ Ordinal(owner Text, method Text, argumentTypes Texts, isExact Boolean) Number
 				return ordinal
 	-1
 Fits(declared Texts, argumentTypes Texts, owner Text, isExact Boolean) Boolean
-	Scaling.Fits(("Other", "Bytes"), ("Scaler", "List(Byte)"), "Scaler", true) is true
+	Scaling.Fits(("Other", "Bytes"), ("Scaler", "List(Byte)"), "Scaler", true)
 	Scaling.Fits(List(Text) + "Texts", List(Text) + "Bytes", "Scaler", true) is false
 	if declared.Length is not argumentTypes.Length
 		return false
@@ -35,18 +37,18 @@ Fits(declared Texts, argumentTypes Texts, owner Text, isExact Boolean) Boolean
 			return false
 	true
 Assignable(argument Text, declared Text, isExact Boolean) Boolean
-	Scaling.Assignable("List(Byte)", "Bytes", true) is true
-	Scaling.Assignable("List(A, B)", "List(A, B)", true) is true
+	Scaling.Assignable("List(Byte)", "Bytes", true)
+	Scaling.Assignable("List(A, B)", "List(A, B)", true)
 	Scaling.Assignable("Number", "Generic", true) is false
-	Scaling.Assignable("Number", "Generic", false) is true
+	Scaling.Assignable("Number", "Generic", false)
 	let isList = argument.StartsWith("List(") and (argument.IndexOf(",") < 0)
 	let plural = isList then argument.Substring(5, argument.Length - 6) + "s" else argument
 	if plural is declared
 		return true
 	(isExact is false) and Converts(argument, declared)
 Converts(argument Text, declared Text) Boolean
-	Scaling.Converts("Byte", "Number") is true
-	Overloads(TypeInference.Colors.types).Converts("ColorValue", "Color") is true
+	Scaling.Converts("Byte", "Number")
+	Overloads(TypeInference.Colors.types).Converts("ColorValue", "Color")
 	Scaling.Converts("Text", "Number") is false
 	if (declared is "Generic") or (types.ValueOf(declared) is argument) or (types.ValueOf(argument) is declared)
 		return true
@@ -55,11 +57,14 @@ Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) T
 	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "List(Numbers)"
 	Labeling.Returned(SyntaxNode("Call", "Labels"), LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
 	Scaling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
+	Labeling.Returned(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
 	let position = types.methods.Index(current)
 	if (position < 0) or (current.Count(node.text) < 2)
 		return ""
-	mutable arguments = List(Mutable(Text))
-	for node.children
-		arguments.Add(inference.TypeOf(value, scope, current))
-	let ordinal = Chosen(types.names(position), node.text, arguments)
+	let ordinal = Chosen(types.names(position), node.text, Arguments(node, inference, scope, current))
 	ordinal < 0 then "" else current.TypeAt(node.text, ordinal)
+Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Texts
+	Labeling.Arguments(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)).Length is 0
+	let start = node.Kind is in ("Member", "MethodCall") then 1 else 0
+	for Range(start, node.children.Length)
+		inference.TypeOf(node.children(value), scope, current)

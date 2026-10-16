@@ -21,14 +21,14 @@ Count Number
 	AddCall.Count is 1
 	entry.payload(5 + entry.payload(3))
 IsNativeConversion Boolean
-	Parsing.IsNativeConversion is true
+	Parsing.IsNativeConversion
 	AddCall.IsNativeConversion is false
 	let source = TypeEntry.ShortName(TypeName)
 	let isBase = (source is in ("Number", "Character", "Boolean", "Text")) or source.StartsWith("List(")
 	let isTextual = (ReturnType is "Strict/Text") and isBase
 	(MethodName is "to") and (isTextual or ((ReturnType is "Strict/Number") and (source is "Text")))
 IsMemberValue(type TypeEntry) Boolean
-	Coding.IsMemberValue(TypeEntry.CharacterEntry) is true
+	Coding.IsMemberValue(TypeEntry.CharacterEntry)
 	Parsing.IsMemberValue(TypeEntry.CharacterEntry) is false
 	if IsWrapping(type) is false
 		return false
@@ -46,6 +46,6 @@ IsResolved Boolean
 	AddCall.IsResolved is false
 	entry.payload.Length > Resolution
 IsWrapping(type TypeEntry) Boolean
-	Coding.IsWrapping(TypeEntry.CharacterEntry) is true
+	Coding.IsWrapping(TypeEntry.CharacterEntry)
 	AddCall.IsWrapping(TypeEntry.CharacterEntry) is false
 	(MethodName is "from") and (type.Changing.Length is 1) and (Count is 1)

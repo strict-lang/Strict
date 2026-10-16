@@ -16,7 +16,7 @@ Trained(network Recurrent, count Number) Recurrent
 		trained = trained.Trained(Pairs(first, second), Bits(first + second), 0.1)
 	trained
 Operand Number
-	BinaryAddition.Operand < 128 is true
+	BinaryAddition.Operand < 128
 	128.Random.Floor
 Pairs(first Number, second Number) List(Numbers)
 	BinaryAddition.Pairs(1, 2).Length is 8
@@ -35,10 +35,10 @@ Decoded(bits List(Numbers)) Number
 		sum = sum + value.First.Round * Powers(index)
 	sum
 Added(network Recurrent, first Number, second Number) Number
-	BinaryAddition.Added(Recurrent.Random(2, 1), 1, 2) < 256 is true
+	BinaryAddition.Added(Recurrent.Random(2, 1), 1, 2) < 256
 	Decoded(network.Predicted(Pairs(first, second)))
 Correct(network Recurrent, count Number) Number
-	BinaryAddition.Correct(Recurrent.Random(2, 1), 3) <= 3 is true
+	BinaryAddition.Correct(Recurrent.Random(2, 1), 3) <= 3
 	mutable correct = 0
 	for count
 		let first = Operand

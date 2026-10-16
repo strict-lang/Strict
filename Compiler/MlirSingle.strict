@@ -6,7 +6,7 @@ constant Unpacked = MlirSingle(MlirFastLoop.Summing.function, 1)
 constant Allowed = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
 constant Operators = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
 IsSingle Boolean
-	Summing.IsSingle is true
+	Summing.IsSingle
 	Unpacked.IsSingle is false
 	if function.Packing is ""
 		return false
@@ -17,7 +17,7 @@ IsSingle Boolean
 Copied Texts
 	Summing.Copied.First is "  ^loop2fast:"
 	Summing.Copied.Last is "    llvm.store %t2y, %v_value : f64, !llvm.ptr"
-	Text.Combine(Summing.Copied).IndexOf("arith.addf %t2u0, %t8s fastmath<reassoc,contract> : f32") > 0 is true
+	Text.Combine(Summing.Copied).IndexOf("arith.addf %t2u0, %t8s fastmath<reassoc,contract> : f32") > 0
 	let fast = MlirFastLoop(function, position)
 	let started = fast.Started
 	List(Text) + started.First + fast.Checked + (started - started.First) + Counted + Current + Looped + Exited

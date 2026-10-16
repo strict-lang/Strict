@@ -82,8 +82,8 @@ IsNative(type Text, method Text) Boolean
 	Sample.IsNative("Strict/Text", "Upper") is false
 	Sample.IsNative("Strict/Range", "Length") is false
 	Sample.IsNative("Strict/Bytecode/B", "to") is false
-	Sample.IsNative("Strict/Dictionary(Number, Number)", "get") is true
-	Sample.IsNative("Strict/Number", "to") is true
+	Sample.IsNative("Strict/Dictionary(Number, Number)", "get")
+	Sample.IsNative("Strict/Number", "to")
 	Sample.IsNative("Strict/Type", "to") is false
 	if type.LastIndexOf("/") > 6
 		return false

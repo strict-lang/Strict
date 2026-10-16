@@ -10,7 +10,7 @@ Letter Text
 		return "B"
 	"F"
 Passed Boolean
-	Grade(95).Passed is true
+	Grade(95).Passed
 	Grade(50).Passed is false
 	if score > 60
 		return true

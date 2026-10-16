@@ -8,7 +8,7 @@ FixedLists Texts
 		if value.typeName.StartsWith("Strict/List(") and IsFixed(value.Name)
 			value.Name
 IsFixed(name Text) Boolean
-	Reading.IsFixed("numbers") is true
+	Reading.IsFixed("numbers")
 	for function.method.instructions
 		if value.kind is in Writers
 			let target = value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else value.texts.First
@@ -30,7 +30,7 @@ Started(name Text, parameter Text) Texts
 	let length = "    %n_" + name + " = func.call @strict_list_length(" + parameter + ") : (f64) -> f64"
 	(items, length, "    %k_" + name + " = func.call @strict_list_version() : () -> i64")
 Read(name Text, list Text, position Text, nameBits Text, result Text) Text
-	Reading.Read("a", "%l", "%i", "%nb", "%x").IndexOf("@strict_hoisted_read(%h_a, %n_a, %i, %nb, %k_a, %l)") > 0 is true
+	Reading.Read("a", "%l", "%i", "%nb", "%x").IndexOf("@strict_hoisted_read(%h_a, %n_a, %i, %nb, %k_a, %l)") > 0
 	let hoisted = "(%h_" + name + ", %n_" + name + ", " + position + ", " + nameBits
 	let operands = hoisted + ", %k_" + name + ", " + list + ")"
 	"    " + result + " = func.call @strict_hoisted_read" + operands + " : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64"

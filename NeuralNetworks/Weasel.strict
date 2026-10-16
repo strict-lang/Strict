@@ -35,7 +35,7 @@ Mutated(parent Text) Text
 	child
 Fittest(parent Text) Text
 	Weasel.Fittest(Target) is Target
-	Weasel.Fitness(Weasel.Fittest("A")) >= Weasel.Fitness("A") is true
+	Weasel.Fitness(Weasel.Fittest("A")) >= Weasel.Fitness("A")
 	mutable best = parent
 	for Offspring
 		let child = Mutated(parent)

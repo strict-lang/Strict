@@ -8,7 +8,7 @@ constant Values = ("Binary", "Number", "Text", "List")
 constant Unchecked = ("None", "Error", "Boolean", "Unknown", "")
 constant Immutable = ScopedStatement(Increment, Counted, 0)
 Issue(scoped ScopedStatement, current Scope) Text
-	Counting.Issue(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment") is true
+	Counting.Issue(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Issue(ScopedStatement(Increment, Counted.With("a mutable", "mutable"), 0), Counted) is ""
 	let statement = scoped.statement
 	if (scoped.scope.TypeOf(" dropped") is "") or (IsMutating(statement, scoped.scope, current) is false)
@@ -19,7 +19,7 @@ Issue(scoped ScopedStatement, current Scope) Text
 	let call = target + "." + statement.text
 	"MutatingCallNeedsMutableVariable: " + call + " has no effect, use a mutable variable or assign the result"
 Unused(scoped ScopedStatement, current Scope) Text
-	Counting.Unused(ScopedStatement(Added, Counted, 0), Counted).StartsWith("UnusedValueMustBeRemoved: a + a is") is true
+	Counting.Unused(ScopedStatement(Added, Counted, 0), Counted).StartsWith("UnusedValueMustBeRemoved: a + a is")
 	Counting.Unused(ScopedStatement(Added, Counted.With(" dropped", ""), 0), Counted) is ""
 	Counting.Unused(ScopedStatement(Twice, Counted, 0), Counted) is ""
 	Counting.Unused(ScopedStatement(SyntaxNode("Identifier", "Twice"), Counted, 0), KnownTypes.CountMethods) is ""
@@ -32,7 +32,7 @@ Unused(scoped ScopedStatement, current Scope) Text
 	let type = inference.TypeOf(statement, scoped.scope, current)
 	type is in Unchecked then "" else "UnusedValueMustBeRemoved: " + statement + " is a " + type + ", assign or return it"
 IsMutating(statement SyntaxNode, scope Scope, current Scope) Boolean
-	Counting.IsMutating(Increment, Counted, Counted) is true
+	Counting.IsMutating(Increment, Counted, Counted)
 	if (statement.Kind is not in ("MethodCall", "Member")) or (statement.children(0).Kind is not "Identifier")
 		return false
 	let type = inference.TypeOf(statement.children(0), scope, current)

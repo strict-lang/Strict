@@ -69,7 +69,7 @@ Key(kind Text) Text
 	let kinds = MlirKinds(function)
 	MlirLayout(function).Represented(pair.Length > 0 then pair(0) else kinds.ElementKind(kinds.ElementKind(short)))
 Keying(helper Text, operands Texts, kind Text) Texts
-	MlirNatives(Texts, 2).Keying("f", ("%m", "%k"), "Dictionary(Text, Text)").Last.IndexOf("trace(%t2k") > 0 is true
+	MlirNatives(Texts, 2).Keying("f", ("%m", "%k"), "Dictionary(Text, Text)").Last.IndexOf("trace(%t2k") > 0
 	let memory = MlirMemory(function, position)
 	let functions = Keyed(kind)
 	let hash = memory.Constant(memory.Temp("h"), functions(0), "(f64) -> i64")

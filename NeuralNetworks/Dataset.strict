@@ -7,7 +7,7 @@ OneHot(label Number, classes Number) Numbers
 		index is label then 1 else 0
 Images(folder Text, classes Number) Dataset
 	Dataset.Images("NeuralNetworks/images", 2).inputs.Length is 2
-	Dataset.Images("NeuralNetworks/images", 1).inputs.First.Sum.IsNearlyEqual(83.99215686274508) is true
+	Dataset.Images("NeuralNetworks/images", 1).inputs.First.Sum.IsNearlyEqual(83.99215686274508)
 	Dataset.Images("NeuralNetworks/images", 2).inputs.Last.Length is 784
 	Dataset.Images("NeuralNetworks/images", 2).targets is ((1, 0), (0, 1))
 	mutable images = List(Mutable(Numbers))
@@ -57,7 +57,7 @@ Kept(rows List(Numbers), isTesting Boolean) List(Numbers)
 		if (index % 5 is 0) is isTesting
 			value
 Evaluated(name Text, sizes Numbers, epochs Number, hidden = Activation.Sigmoid) Text
-	Pairs.Evaluated("Pairs", (4, 3, 2), 1).StartsWith("Pairs test accuracy ") is true
+	Pairs.Evaluated("Pairs", (4, 3, 2), 1).StartsWith("Pairs test accuracy ")
 	let started = Process.Elapsed
 	let network = Network.Random(sizes, hidden).Learned(Training, epochs)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)

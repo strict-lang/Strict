@@ -13,8 +13,8 @@ constant TextStored = ("    %text = func.call @strict_library_text(%value) : (f6
 constant FlagStored = ("    %flag = arith.fptosi %value : f64 to i32", "    llvm.store %flag, %result : i32, !llvm.ptr")
 constant Finished = ("    %ok = arith.constant 0 : i32", "    return %ok : i32", "  }")
 Text Text
-	Policy.Text.StartsWith("module {") is true
-	Policy.Text.IndexOf("  func.func @Policy_Start(") > 0 is true
+	Policy.Text.StartsWith("module {")
+	Policy.Text.IndexOf("  func.func @Policy_Start(") > 0
 	let module = MlirModule(types, Exported.First.Name)
 	mutable roots = List(Mutable(MlirFunction))
 	mutable wrappers = List(Mutable(Text))
@@ -29,7 +29,7 @@ Exported List(MethodEntry)
 		if IsExported(value)
 			value
 IsExported(method MethodEntry) Boolean
-	Policy.IsExported(Start) is true
+	Policy.IsExported(Start)
 	Policy.IsExported(MethodEntry.CountingLoop) is false
 	let first = method.Name.Substring(0, 1)
 	let isNamed = (first.Upper is first) and (first.Lower is not first)
@@ -40,7 +40,7 @@ IsExported(method MethodEntry) Boolean
 	let isPlain = MlirInstances(MlirFunction(types, types.First, method), 0).Stored(types.First).Length is 0
 	isPublic and isSupported and (isPlain or IsRecord(types.First.Name))
 IsRecord(typeName Text) Boolean
-	Trades.IsRecord("Strict/Trade") is true
+	Trades.IsRecord("Strict/Trade")
 	Trades.IsRecord("Strict/Text") is false
 	let type = MlirFunction(types, types.First, MethodEntry.CountingLoop).TypeOf(typeName)
 	let stored = MlirInstances(MlirFunction(types, type, MethodEntry.CountingLoop), 0).Stored(type)
@@ -90,7 +90,7 @@ Kind(typeName Text) Text
 	name is "Number" then "f64" else IsRecord(typeName) or isList then "!llvm.ptr" else ""
 Wrapper(method MethodEntry) Texts
 	Policy.Wrapper(Start).First is "  func.func @Policy_Start(%a0: !llvm.ptr, %a1: i32, %result: !llvm.ptr) -> i32 {"
-	Policy.Wrapper(Start).Index("    %v1 = arith.sitofp %a1 : i32 to f64") > 0 is true
+	Policy.Wrapper(Start).Index("    %v1 = arith.sitofp %a1 : i32 to f64") > 0
 	Trades.Wrapper(Total).First is "  func.func @Trade_Total(%instance: !llvm.ptr, %result: !llvm.ptr) -> i32 {"
 	let isRecord = IsRecord(types.First.Name)
 	mutable parameters = isRecord then List(Text) + "%instance: !llvm.ptr" else List(Text)
@@ -114,7 +114,7 @@ Call(method MethodEntry) Text
 	let joined = outer.Text.Combine(operands, ", ")
 	"    %value = func.call @" + function.Symbol + "(" + joined + ") : (" + signature + ") -> f64"
 Argument(typeName Text, position Number) Texts
-	Policy.Argument("Strict/Text", 0).Last.EndsWith("@strict_bits(%a0) : (!llvm.ptr) -> f64") is true
+	Policy.Argument("Strict/Text", 0).Last.EndsWith("@strict_bits(%a0) : (!llvm.ptr) -> f64")
 	Policy.Argument("Strict/Numbers", 1).Last is "    %v1 = func.call @strict_library_list(%a1) : (!llvm.ptr) -> f64"
 	let argument = "%a" + position
 	if IsRecord(typeName)
@@ -127,8 +127,8 @@ Argument(typeName Text, position Number) Texts
 	let converted = kind is "f64" then "arith.addf " + argument + ", %zero : f64" else flag
 	List(Text) + ("    %v" + position + " = " + converted)
 Stored(returnType Text) Texts
-	Policy.Stored("Strict/Number").First.StartsWith("    llvm.store %value") is true
-	Policy.Stored("Strict/List(Number)").First.IndexOf("@strict_library_numbers(%value)") > 0 is true
+	Policy.Stored("Strict/Number").First.StartsWith("    llvm.store %value")
+	Policy.Stored("Strict/List(Number)").First.IndexOf("@strict_library_numbers(%value)") > 0
 	LibraryLists.Book.library.Stored("Strict/List(Trade)").Length is 3
 	let kind = Kind(returnType)
 	if kind is in ("f64", "i32")

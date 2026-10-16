@@ -50,22 +50,22 @@ WordLength(start Number) Number
 			return value - start
 	line.Length - start
 IsDecimalPoint(position Number) Boolean
-	Tokenizer("1.5").IsDecimalPoint(1) is true
+	Tokenizer("1.5").IsDecimalPoint(1)
 	Tokenizer("a2.b").IsDecimalPoint(2) is false
 	if position + 1 >= line.Length or (not IsDigit(line.Substring(position + 1, 1)))
 		return false
 	IsDigit(line.Substring(position - 1, 1))
 IsExponentSign(start Number, position Number) Boolean
-	Tokenizer("1e-5").IsExponentSign(0, 2) is true
+	Tokenizer("1e-5").IsExponentSign(0, 2)
 	Tokenizer("e-5").IsExponentSign(0, 1) is false
 	let isExponent = (position > start) and (line.Substring(position - 1, 1) is "e") and IsDigit(line.Substring(start, 1))
 	isExponent and (position + 1 < line.Length) and IsDigit(line.Substring(position + 1, 1))
 IsWordCharacter(character Text) Boolean
-	IsWordCharacter("a") is true
-	IsWordCharacter("7") is true
+	IsWordCharacter("a")
+	IsWordCharacter("7")
 	IsWordCharacter("(") is false
 	WordCharacters.IndexOf(character) is not -1
 IsDigit(character Text) Boolean
-	IsDigit("7") is true
+	IsDigit("7")
 	IsDigit("a") is false
 	"0123456789".IndexOf(character) is not -1

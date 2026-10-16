@@ -55,7 +55,7 @@ Copied(source Text, destination Text, temp Text) Texts
 	Counter.Copied("%r0", "%v_a", "%t1").Length is 2
 	(Load(temp, source), Store(temp, destination))
 Text Text
-	Counter.Text.StartsWith("  func.func private @Counter_Run_0(%p0: f64) -> f64 {") is true
+	Counter.Text.StartsWith("  func.func private @Counter_Run_0(%p0: f64) -> f64 {")
 	if MlirForeign(value).IsForeign
 		return outer.Text.Combine(MlirForeign(value).Declaration, "\n")
 	mutable signature = List(Mutable(Text))
@@ -85,7 +85,7 @@ Slot(name Text) Texts
 	("    " + name + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", Store("%zero", name))
 Body Texts
 	Counter.Body.Last is "    return %zero : f64"
-	MlirLines.Lined.Body.Length > MlirLines.Unlined.Body.Length is true
+	MlirLines.Lined.Body.Length > MlirLines.Unlined.Body.Length
 	let counter = MlirLines(value)
 	mutable lines = List(Mutable(Text))
 	for method.instructions

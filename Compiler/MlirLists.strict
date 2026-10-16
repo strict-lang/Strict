@@ -38,7 +38,7 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 		return Built(literal, suffix) + function.Store(result, slot)
 	Cached(Built(literal, suffix), result, "strict_list_pin") + function.Store(Temp("r"), slot)
 Built(literal Runtime/VmValue, suffix Text) Texts
-	MlirLists(Listed, 0).Built(Pair, "").Last.IndexOf("%t0e1l = func.call @strict_list_add(%t0e0l, %t0e1xf)") > 0 is true
+	MlirLists(Listed, 0).Built(Pair, "").Last.IndexOf("%t0e1l = func.call @strict_list_add(%t0e0l, %t0e1xf)") > 0
 	let memory = MlirMemory(function, position)
 	mutable lines = Created(literal.items.Length, suffix)
 	mutable current = Temp(suffix + "l")
@@ -68,7 +68,7 @@ Created(count Number, suffix Text) Texts
 	(capacity, memory.Called(Temp(suffix + "l"), "strict_list_new", (Temp(suffix + "q"), "%zero")))
 Element(item Runtime/VmValue, index Number, element Text) Texts
 	MlirLists(Listed, 0).Element(VmValue.OfNumber(2), 0, "e0") is ("    %t0e0c = arith.constant 0x4000000000000000 : f64")
-	MlirLists(Listed, 0, "@dA_b").Element(VmValue.OfText("a"), 0, "e0").First.IndexOf(" @dA_b_0 ") > 0 is true
+	MlirLists(Listed, 0, "@dA_b").Element(VmValue.OfText("a"), 0, "e0").First.IndexOf(" @dA_b_0 ") > 0
 	if item.kind is "Text"
 		return MlirConstants(function, position, named).Address(item.text, "_" + index, element)
 	if item.kind is not in ("Number", "Boolean")
@@ -81,8 +81,8 @@ ElementName(item Runtime/VmValue, element Text) Text
 	item.kind is "Text" then Temp(element + "xf") else Temp(element + "c")
 Appended(entry InstructionEntry) Texts
 	MlirLists(Listed, 3).Appended(Steps(3)).Last is "    llvm.store %t3n, %v_numbers : f64, !llvm.ptr"
-	Text.Combine(MlirLists(Listed, 3).Appended(Removal)).IndexOf("@strict_list_remove(") > 0 is true
-	Text.Combine(MlirLists(Listed, 3).Appended(Pushing)).IndexOf("@strict_list_push(") > 0 is true
+	Text.Combine(MlirLists(Listed, 3).Appended(Removal)).IndexOf("@strict_list_remove(") > 0
+	Text.Combine(MlirLists(Listed, 3).Appended(Pushing)).IndexOf("@strict_list_push(") > 0
 	let name = "%v_" + entry.texts(0)
 	let kinds = MlirKinds(function)
 	let elements = MlirLayout(function).Represented(kinds.ElementKind(kinds.VariableKind(position, entry.texts(0))))
@@ -93,7 +93,7 @@ Appended(entry InstructionEntry) Texts
 	(function.Load(Temp("l"), name), element) + added + function.Store(Temp("n"), name)
 Indexed(entry InstructionEntry) Texts
 	MlirLists(Listed, 2).Indexed(Steps(2)).Last is "    llvm.store %t2x, %r2 : f64, !llvm.ptr"
-	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_read(") > 0 is true
+	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_read(") > 0
 	let isText = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, entry.texts(0))) is "Text"
 	let memory = MlirMemory(function, position)
 	let arguments = isText then (Temp("l"), Temp("i")) else (Temp("l"), Temp("i"), Temp("nb"))
@@ -105,18 +105,18 @@ Indexed(entry InstructionEntry) Texts
 		return loads + NameBits + parameters.Read(entry.texts(0), Temp("l"), Temp("i"), Temp("nb"), Temp("x")) + stored
 	(isText then loads else loads + NameBits) + access + stored
 NameBits Texts
-	MlirLists(Listed, 2).NameBits.Last.IndexOf("strict_bits") > 0 is true
+	MlirLists(Listed, 2).NameBits.Last.IndexOf("strict_bits") > 0
 	let address = "    " + Temp("n") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	(address, "    " + Temp("nb") + " = func.call @strict_bits(" + Temp("n") + ") : (!llvm.ptr) -> f64")
 IsElementStore Boolean
-	MlirLists(Written, 1).IsElementStore is true
+	MlirLists(Written, 1).IsElementStore
 	MlirLists(Written, 0).IsElementStore is false
 	let entry = function.method.instructions(position)
 	if entry.kind is not InstructionType.StoreRegisterToVariable
 		return false
 	entry.texts(0).IndexOf("(") > 0
 ElementStored(entry InstructionEntry) Texts
-	MlirLists(Written, 1).ElementStored(Written.method.instructions(1)).Last.IndexOf("strict_list_set") > 0 is true
+	MlirLists(Written, 1).ElementStored(Written.method.instructions(1)).Last.IndexOf("strict_list_set") > 0
 	MlirLists(Written, 1).ElementStored(Versioning).Last is "    llvm.store %t1s, %v_numbers : f64, !llvm.ptr"
 	let parts = PayloadDecoder(entry).ElementParts
 	let index = parts(1)

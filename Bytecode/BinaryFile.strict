@@ -12,11 +12,11 @@ Header(sources Texts) Numbers
 		integers = integers + Stamp(value)
 	integers
 Stamp(path Text) Number
-	Probe.Stamp("./Any.strict") > 1.7e12 is true
+	Probe.Stamp("./Any.strict") > 1.7e12
 	Probe.Stamp("./Missing.strict") is 0
 	(File(path).Modified * 1000).Floor
 Packed(header Numbers, types List(TypeEntry), owners List(TypeEntry)) Bytes
-	Probe.Packed((1, 2), List(TypeEntry), List(TypeEntry)).Length > 50 is true
+	Probe.Packed((1, 2), List(TypeEntry), List(TypeEntry)).Length > 50
 	mutable entries = List(Mutable(ZipEntry)) + ZipEntry("sources", ByteEncoder.Empty.SevenBits(header).bytes)
 	for types
 		entries.Add(index is 0 then ZipEntry(value.Name + ".bytecode", value.Bytes) else Entry(value, owners))
@@ -30,7 +30,7 @@ Unpacked(bytes Bytes) List(ZipEntry)
 		numbers.Add(value.number)
 	ZipReader(numbers).Entries
 IsFresh(entries List(ZipEntry)) Boolean
-	Probe.IsFresh(Packing) is true
+	Probe.IsFresh(Packing)
 	Probe.IsFresh(Packing + ZipEntry("Missing.reference", List(Number))) is false
 	if IsCurrent(entries) is false
 		return false
@@ -39,7 +39,7 @@ IsFresh(entries List(ZipEntry)) Boolean
 			return false
 	true
 IsCurrent(entries List(ZipEntry)) Boolean
-	Probe.IsCurrent(Packing) is true
+	Probe.IsCurrent(Packing)
 	Probe.IsCurrent(Outdated) is false
 	Probe.IsCurrent(List(ZipEntry)) is false
 	if (entries.Length is 0) or (entries.First.Name is not "sources")
@@ -86,7 +86,7 @@ Found(name Text) Texts
 		return List(Text)
 	Directory.Files(name, "*.strict").Length is 0 then Contained(name) else List(Text)
 IsInput(name Text) Boolean
-	Probe.IsInput("Compiler/NativeRuntime.mlir") is true
+	Probe.IsInput("Compiler/NativeRuntime.mlir")
 	Probe.IsInput("./Character.test") is false
 	Probe.IsInput("strict") is false
 	let isOutput = name.EndsWith(".exe") or name.EndsWith(".test") or name.EndsWith(".strictbinary")

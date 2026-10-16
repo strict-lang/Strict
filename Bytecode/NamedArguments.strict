@@ -3,17 +3,25 @@ constant Members = Scope(("buffer", "light", "mask"), ("Number", "Number", "Numb
 constant Constructing = Scope(("from", "from types", "light default", "mask default"), ("buffer,light,mask", "Number,Number,Number", "0", "0"))
 constant Types = KnownTypes(("Part", "Number"), (Members, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Constructing, KnownTypes.NoMembers))
 constant Parts = NamedArguments(ValueCodegen(TypeInference(Types, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(Types, CallTarget.Greeter, "Strict/Part", List(Text))))
+constant Curving = Scope(("from", "from types", "light default", "mask default"), ("buffer,light,mask", "Number,Number,Curve", "0", "Curve.Flat"))
+constant Curved = NamedArguments(ValueCodegen(TypeInference(KnownTypes(("Part", "Curve"), (Members, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Curving, KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(Types, CallTarget.Greeter, "Strict/Part", List(Text))))
 constant Named = SyntaxParser(Tokenizer("Part(buffer = 1, mask = 3)").Tokens).Parse
 constant Masked = SyntaxParser(Tokenizer("Part(1, mask = 3)").Tokens).Parse
 Arranged(call SyntaxNode, block CodeBlock) SyntaxNode
 	Parts.Arranged(Masked, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
 	Parts.Arranged(SyntaxParser(Tokenizer("Part(1, 2)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 2)"
 	Parts.Arranged(Named, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
+	Curved.Arranged(SyntaxParser(Tokenizer("Part(1)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 0, Curve.Flat)"
+	Curved.Arranged(SyntaxParser(Tokenizer("Part()").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Identifier"
 	let positional = Positional(call)
-	let isReplacing = (positional > 0) and (values.TypeOf(call.children(0), block) is call.text)
-	if (call.Kind is not "Call") or (positional is call.children.Length) or isReplacing
+	let isType = (call.Kind is "Call") and values.inference.types.IsKnown(call.text)
+	let isReplacing = isType and (positional > 0) and (values.TypeOf(call.children(0), block) is call.text)
+	if (isType is false) or isReplacing
 		return call
 	let names = values.target.FromNames(call.text)
+	Last(call, names) < positional then call else Filled(call, names, positional)
+Filled(call SyntaxNode, names Texts, positional Number) SyntaxNode
+	Parts.Filled(Masked, ("buffer", "light", "mask"), 1) to Text is "Part(1, 0, 3)"
 	mutable arguments = List(Mutable(SyntaxNode))
 	for Range(0, Last(call, names) + 1)
 		arguments.Add(Argument(call, names(value), value < positional then value else -1))
@@ -21,16 +29,26 @@ Arranged(call SyntaxNode, block CodeBlock) SyntaxNode
 Positional(call SyntaxNode) Number
 	Parts.Positional(Masked) is 1
 	for call.children
-		if value.Kind is "Reassignment"
+		if value.Kind is in ("Reassignment", "Missing")
 			return index
 	call.children.Length
 Last(call SyntaxNode, names Texts) Number
 	Parts.Last(Masked, ("buffer", "light", "mask")) is 2
-	mutable last = 0
+	Curved.Last(SyntaxParser(Tokenizer("Part(1)").Tokens).Parse, ("buffer", "light", "mask")) is 2
+	mutable last = -1
+	for names
+		if IsComputed(call.text, value)
+			last = index
 	for call.children
-		let position = value.Kind is "Reassignment" then names.Index(value.children(0).text) else index
+		let given = value.Kind is "Missing" then -1 else index
+		let position = value.Kind is "Reassignment" then names.Index(value.children(0).text) else given
 		last = position > last then position else last
 	last
+IsComputed(type Text, name Text) Boolean
+	Curved.IsComputed("Part", "mask")
+	Curved.IsComputed("Part", "light") is false
+	let fallback = values.inference.types.ParameterScope(type).TypeOf(name + " default")
+	(fallback is not "") and (SyntaxParser(Tokenizer(fallback).Tokens).Parse.Kind is "Member")
 Argument(call SyntaxNode, name Text, position Number) SyntaxNode
 	Parts.Argument(Masked, "light", -1).text is "0"
 	Parts.Argument(Masked, "mask", -1).text is "3"

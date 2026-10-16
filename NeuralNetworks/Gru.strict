@@ -18,26 +18,26 @@ Random(inputs Number, outputs Number) Gru
 	let keeping = Layer(Layer.Halves.Rows(size, Hidden), Filled(Remembering))
 	Gru(keeping, Layer.Random(size, Hidden), tanh, Layer.Random(Hidden, outputs))
 States(inputs List(Numbers)) List(Numbers)
-	Tiny.States(List(Numbers) + One).Last.First.IsNearlyEqual(0.5567699411459397) is true
+	Tiny.States(List(Numbers) + One).Last.First.IsNearlyEqual(0.5567699411459397)
 	mutable states = List(Mutable(Numbers))
 	states.Add(Layer.Halves.Zeros(update.biases.Length))
 	for inputs
 		states.Add(Next(states.Last, value))
 	states
 Next(previous Numbers, step Numbers) Numbers
-	Tiny.Next(Zero, One).First.IsNearlyEqual(0.5567699411459397) is true
+	Tiny.Next(Zero, One).First.IsNearlyEqual(0.5567699411459397)
 	let gates = Gates(previous, step)
 	let size = previous.Length
 	for previous
 		value + gates(index) * (gates(2 * size + index) - value)
 Gates(previous Numbers, step Numbers) Numbers
-	Tiny.Gates(Zero, One).First.IsNearlyEqual(0.7310585786300049) is true
-	Tiny.Gates(Zero, One).Last.IsNearlyEqual(0.7615941559557649) is true
+	Tiny.Gates(Zero, One).First.IsNearlyEqual(0.7310585786300049)
+	Tiny.Gates(Zero, One).Last.IsNearlyEqual(0.7615941559557649)
 	let joined = step + previous
 	let resetting = reset.Forward(joined)
 	update.Forward(joined) + resetting + candidate.Forward(step + resetting * previous)
 Trained(inputs List(Numbers), targets List(Numbers), rate Number) Gru
-	Tiny.Trained(List(Numbers) + One, List(Numbers) + Zero, 2).output.weights.First.First < 1 is true
+	Tiny.Trained(List(Numbers) + One, List(Numbers) + Zero, 2).output.weights.First.First < 1
 	let states = States(inputs)
 	let outputs = Recurrent.OutputDeltas(output, states, targets)
 	let deltas = HiddenDeltas(inputs, states, outputs)

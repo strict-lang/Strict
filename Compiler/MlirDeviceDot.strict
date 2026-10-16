@@ -9,17 +9,17 @@ constant Offsets = (InstructionType.LoadVariableToRegister, InstructionType.Load
 constant Lanes = ", %lane, %lanes)"
 constant OffsetTypes = " : (!llvm.ptr, !llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> f32"
 IsDot Boolean
-	Summing.IsDot is true
+	Summing.IsDot
 	MlirDeviceDot(MlirDeviceStatements.Summed, 2).IsDot is false
 	MlirDeviceDot(Summed, 3).IsDot is false
-	Squaring.IsDot is true
+	Squaring.IsDot
 	let instructions = function.method.instructions
 	if (function.Float is not "f32") or (instructions(at).kind is not InstructionType.LoopBegin)
 		return false
 	let kinds = function.method.LoopEndOf(at) is at + 15 then Offsets else Kinds
 	IsSequence(kinds) and (kinds.Length is 15 then IsOffsetShaped else IsShaped)
 IsSequence(kinds Numbers) Boolean
-	Summing.IsSequence(Kinds) is true
+	Summing.IsSequence(Kinds)
 	Summing.IsSequence(Offsets) is false
 	let instructions = function.method.instructions
 	if (at + kinds.Length >= instructions.Length) or (function.method.LoopEndOf(at) is not at + kinds.Length)
@@ -29,7 +29,7 @@ IsSequence(kinds Numbers) Boolean
 			return false
 	true
 IsShaped Boolean
-	Summing.IsShaped is true
+	Summing.IsShaped
 	let instructions = function.method.instructions
 	let read = instructions(at + 4)
 	let product = instructions(at + 6)
@@ -40,7 +40,7 @@ IsShaped Boolean
 	let isStored = (instructions(at + 8).payload(0) is added.payload(3)) and (instructions(at + 8).texts(0) is Sum)
 	(instructions(at + 2).texts(0) is "value") and isIndexed and isProduct and isSum and isStored
 IsOffsetShaped Boolean
-	Squaring.IsOffsetShaped is true
+	Squaring.IsOffsetShaped
 	let instructions = function.method.instructions
 	let product = instructions(at + 12)
 	let added = instructions(at + 13)
@@ -50,7 +50,7 @@ IsOffsetShaped Boolean
 	let isStored = (instructions(at + 14).payload(0) is added.payload(3)) and (instructions(at + 14).texts(0) is Sum)
 	IsIndexed(at + 2) and IsIndexed(at + 7) and isRead and isSum and isStored
 IsIndexed(load Number) Boolean
-	Squaring.IsIndexed(4) is true
+	Squaring.IsIndexed(4)
 	Squaring.IsIndexed(3) is false
 	Squaring.IsIndexed(16) is false
 	let instructions = function.method.instructions
@@ -63,16 +63,16 @@ IsIndexed(load Number) Boolean
 	let isRead = instructions(load + 3).payload(1) is summed.payload(3)
 	isAdded and isRead and (loads.First.texts(0) is not "index") and (loads.Last.texts(0) is "index")
 IsCovered Boolean
-	MlirDeviceDot(Summed, 5).IsCovered is true
-	MlirDeviceDot(Summed, 11).IsCovered is true
-	MlirDeviceDot(Squaring.function, 17).IsCovered is true
+	MlirDeviceDot(Summed, 5).IsCovered
+	MlirDeviceDot(Summed, 11).IsCovered
+	MlirDeviceDot(Squaring.function, 17).IsCovered
 	Summing.IsCovered is false
 	let begin = function.method.LoopBeginOf(at)
 	(begin >= 0) and (begin < at) and MlirDeviceDot(function, begin).IsDot
 Emitted Texts
-	Text.Combine(Summing.Emitted).IndexOf("@strict_device_dots(%failed, %d2rd, %d2rb, %d2rn, %d2od") > 0 is true
+	Text.Combine(Summing.Emitted).IndexOf("@strict_device_dots(%failed, %d2rd, %d2rb, %d2rn, %d2od") > 0
 	Summing.Emitted.Last is "    llvm.store %d2s1, %v_sum : f32, !llvm.ptr"
-	Text.Combine(Squaring.Emitted).IndexOf("offset_dots(%failed, %d2xd, %d2xb, %d2xn, %d2ai, %d2yd") > 0 is true
+	Text.Combine(Squaring.Emitted).IndexOf("offset_dots(%failed, %d2xd, %d2xb, %d2xn, %d2ai, %d2yd") > 0
 	if function.method.LoopEndOf(at) is at + 15
 		return OffsetEmitted
 	let other = "%v_" + function.method.instructions(at + 4).texts(0)

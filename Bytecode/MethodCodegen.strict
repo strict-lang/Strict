@@ -49,7 +49,7 @@ Lined(block CodeBlock, start Number, line Number) CodeBlock
 		lined.Add(isUnlined then InstructionEntry(value.kind, value.texts, value.payload, line) else value)
 	CodeBlock(lined, block.register, block.nextId, block.scope)
 HasElse(body SyntaxNode, position Number) Boolean
-	Plain.HasElse(ElseBody, 0) is true
+	Plain.HasElse(ElseBody, 0)
 	Plain.HasElse(ElseBody, 1) is false
 	position + 1 < body.children.Length and (body.children(position + 1).Kind is in ("ElseIf", "Else"))
 Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock

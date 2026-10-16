@@ -9,7 +9,7 @@ Temp(suffix Text) Text
 	Twice.Temp("i") is "%d4i"
 	"%d" + at + suffix
 IsList(parameter Number) Boolean
-	Summing.IsList(0) is true
+	Summing.IsList(0)
 	Twice.IsList(0) is false
 	TypeEntry.ShortName(callee.method.parameters(parameter).typeName) is in ("List(Number)", "Numbers")
 Arguments(entry InstructionEntry) Texts
@@ -40,7 +40,7 @@ Instance(entry InstructionEntry, name Text) Text
 	let register = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
 	register < 0 then MlirTyped(function.Float).Constant(name, "0.0") else function.Load(name, "%r" + register)
 Floored(entry InstructionEntry) Texts
-	Flooring.Floored(MlirGpuCheck.Flooring)(1).IndexOf("llvm.intr.floor") > 0 is true
+	Flooring.Floored(MlirGpuCheck.Flooring)(1).IndexOf("llvm.intr.floor") > 0
 	let floored = MlirTyped(function.Float).Floored(Temp(""), Temp("i"))
 	Loaded(entry) + floored + function.Store(Temp(""), "%r" + entry.payload(0))
 Argument(parameter Number, register Text) Texts

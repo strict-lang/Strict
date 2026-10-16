@@ -2,6 +2,6 @@ has amount Byte
 has scale Byte
 from(numberHolder)
 	amount = numberHolder.amount * 255
-	scale = numberHolder.scale * 255
+	scale = NumberHolder.scale * 255
 to NumberHolder
 	NumberHolder(amount / scale)

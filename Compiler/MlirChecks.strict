@@ -7,7 +7,7 @@ Emitted Texts
 	Returning.Emitted.Index("    cf.cond_br %t1k, ^bb1e, ^bb2") is 2
 	Returning.Emitted.Last is "    return %t1tr : f64"
 	Testing.Emitted.Last is "    cf.br ^bb3"
-	Text.Combine(Returning.Emitted).IndexOf("@strict_trace_checked(%t1v,") > 0 is true
+	Text.Combine(Returning.Emitted).IndexOf("@strict_trace_checked(%t1v,") > 0
 	if function.FastLoop >= 0
 		return List(Text)
 	let entry = function.method.instructions(position)

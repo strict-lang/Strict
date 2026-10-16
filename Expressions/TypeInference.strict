@@ -66,9 +66,9 @@ CallType(name Text, scope Scope, current Scope) Text
 		return scope.TypeOf(name) is "Error" then "ErrorWithValue" else types.ElementType(scope.TypeOf(name))
 	ImplicitValueType(name, scope) is "" then name else ImplicitValueType(name, scope)
 IsIndexed(name Text, current Scope) Boolean
-	NoInference.IsIndexed("precedences", NoShape) is true
+	NoInference.IsIndexed("precedences", NoShape)
 	NoInference.IsIndexed("Length", NoShape) is false
-	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Limit", KnownTypes.CountMethods) is true
+	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Limit", KnownTypes.CountMethods)
 	let owner = types.methods.Index(current)
 	let isConstant = owner >= 0 and owner < constants.Length then constants(owner).TypeOf(name) is not "" else false
 	isConstant or name.Substring(0, 1).Lower is name.Substring(0, 1)
@@ -77,11 +77,11 @@ MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.Scaled(3)").Tokens).Parse, Paired, NoShape) is "Pair"
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.Scaled(p)").Tokens).Parse, Paired, NoShape) is "Number"
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.Scaled(3, 1)").Tokens).Parse, Paired, NoShape) is "Pair"
-	let binary = SyntaxNode("Binary", node.text, node.children)
+	Overloads.LabelInference.MemberCallType(Overloads.LabelerLabels, NoShape, NoShape) is "Numbers"
 	let instanceType = TypeOf(node.children(0), scope, current)
-	let isOverloaded = (node.children.Length > 1) and (types.MethodsOf(instanceType).Count(node.text) > 1)
-	if (node.Kind is "MethodCall") and (binary.Precedence >= 11) and (binary.Precedence < 20) or isOverloaded
-		return ArithmeticType(binary, scope, current)
+	let precedence = node.Kind is "MethodCall" then SyntaxNode("Binary", node.text).Precedence else 0
+	if (precedence >= 11) and (precedence < 20) or (types.MethodsOf(instanceType).Count(node.text) > 1)
+		return ArithmeticType(SyntaxNode("Binary", node.text, node.children), scope, current)
 	let type = node.text is "value" then instanceType else types.MemberType(instanceType, node.text)
 	let isMember = (node.text is "value") or Indexing(types).IsIndexed(instanceType, node.text, node.children.Length - 1)
 	(node.Kind is "MethodCall") and isMember then types.ElementType(type) else type

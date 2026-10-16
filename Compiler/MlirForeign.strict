@@ -14,19 +14,19 @@ constant Splitter = MlirFunction(List(TypeEntry), Doubler.type, Splits)
 constant Unimplementing = "TraitHasNoImplementation: Adder.Add has no body and no native/Adder.c, use a Generic member to hold any type with Add"
 constant Started = MethodEntry("from", Add.parameters, "Strict/Examples/NativeAdd/Counter", List(InstructionEntry))
 IsForeign Boolean
-	MlirForeign(Adder).IsForeign is true
+	MlirForeign(Adder).IsForeign
 	MlirForeign(MlirFunction.Counter).IsForeign is false
 	MlirForeign(MlirFunction.Adding).IsForeign is false
 	MlirForeign(Booleans).IsForeign is false
 	MlirForeign(MlirFunction(List(TypeEntry), Adder.type, TypeEntry.ToNumber)).IsForeign is false
-	MlirForeign(Counting).IsForeign is true
+	MlirForeign(Counting).IsForeign
 	let name = function.type.Name
 	let isBase = (name.IndexOf("/") >= 0) and (name.IndexOf("/") is name.LastIndexOf("/"))
 	let isBodyless = (function.method.instructions.Length is 0) and (function.type.members.Length < 2)
 	isBodyless and (isBase is false) and IsNative(function.method)
 IsNative(method MethodEntry) Boolean
-	MlirForeign(Adder).IsNative(Add) is true
-	MlirForeign(Counting).IsNative(Started) is true
+	MlirForeign(Adder).IsNative(Add)
+	MlirForeign(Counting).IsNative(Started)
 	MlirForeign(Counting).IsNative(MethodEntry("from", List(MemberEntry), "None", List(InstructionEntry))) is false
 	let first = method.Name.Substring(0, 1)
 	let isConstructor = (method.Name is "from") and (method.parameters.Length > 0) and (function.type.members.Length is 1)
@@ -73,17 +73,17 @@ Arguments Text
 	Text.Combine(arguments, ", ")
 Returned Texts
 	MlirForeign(Adder).Returned.First is "    %converted = func.call @strict_foreign_number(%result) : (f64) -> f64"
-	MlirForeign(Doubler).Returned.First.IndexOf("@strict_foreign_numbers(") > 0 is true
-	MlirForeign(Splitter).Returned.First.IndexOf("@strict_foreign_rows(") > 0 is true
+	MlirForeign(Doubler).Returned.First.IndexOf("@strict_foreign_numbers(") > 0
+	MlirForeign(Splitter).Returned.First.IndexOf("@strict_foreign_rows(") > 0
 	let returned = function.method.returnType
 	let single = returned.EndsWith("Text") then "text" else "number"
 	let kind = IsNumbers(returned) then "numbers" else IsRows(returned) then "rows" else single
 	("    %converted = func.call @strict_foreign_" + kind + "(%result) : (f64) -> f64", "    return %converted : f64")
 IsNumbers(typeName Text) Boolean
-	MlirForeign(Adder).IsNumbers("Strict/List(Number)") is true
+	MlirForeign(Adder).IsNumbers("Strict/List(Number)")
 	MlirForeign(Adder).IsNumbers("Strict/Number") is false
 	typeName.EndsWith("List(Number)") or typeName.EndsWith("Numbers")
 IsRows(typeName Text) Boolean
-	MlirForeign(Adder).IsRows("Strict/List(Numbers)") is true
+	MlirForeign(Adder).IsRows("Strict/List(Numbers)")
 	MlirForeign(Adder).IsRows("Strict/List(Number)") is false
 	typeName.EndsWith("List(Numbers)") or typeName.EndsWith("List(List(Number))")

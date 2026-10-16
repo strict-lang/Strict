@@ -15,7 +15,7 @@ TypeOf(name Text) Text
 			return types(value)
 	""
 Has(name Text, type Text) Boolean
-	Scope(("to", "to"), ("A", "B")).Has("to", "A") is true
+	Scope(("to", "to"), ("A", "B")).Has("to", "A")
 	Scope(("to", "to"), ("A", "B")).Has("to", "C") is false
 	for names
 		if (value is name) and (types(index) is type)

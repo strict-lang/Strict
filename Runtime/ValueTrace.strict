@@ -1,5 +1,7 @@
 has logger
-constant Events = ("$Hit Strict/Examples/Sum|2", "$Set Strict/Examples/Sum|2|a|7", "$Hit Strict/Examples/Sum|2", "$Set Strict/Examples/Sum|2|a|7", "$Hit Sum|3", "$Set Sum|3|b|1", "$Hit Sum|3", "$Set Sum|3|b|2")
+constant Events = ("$Hit Strict/Examples/Sum|2", "$Use Strict/Examples/Sum|2|b|5", "$Set Strict/Examples/Sum|2|a|7", "$Hit Strict/Examples/Sum|2", "$Use Strict/Examples/Sum|2|b|5", "$Set Strict/Examples/Sum|2|a|7", "$Hit Sum|3", "$Result Sum|3|1", "$Hit Sum|3", "$Result Sum|3|2")
+constant Operators = ("+", "-", "*", "/", "%", "^", "is", "not", "and", "or", "xor", "to", "in", "then", "else", "=", ">", "<", ">=", "<=", ",", "(")
+constant Summed = "\nUse|b|5"
 Run(path Text, root Text) Number
 	ValueTrace(Logger).Run("Missing.strict", ".") is 2
 	if File(path).Exists is false
@@ -23,51 +25,108 @@ Traced(path Text, root Text) Number
 	let types = FileCompiler(logger).Compiled(path, root, true)
 	types.Length is 0 then 1 else Execute(logger).Started(types, path, true).Tested(types.First.Name)
 Valued(lines Texts, folder Text) Texts
-	ValueTrace(Logger).Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times") is true
-	ValueTrace(Logger).Valued(Events, "Examples").Last.EndsWith("line 3 hit 2 times") is true
-	let shown = Shown(lines)
-	for Counts(lines)
-		Line(value.Key, value.Value, shown, folder)
-Counts(lines Texts) Dictionary(Text, Number)
-	ValueTrace(Logger).Counts(Events)("Sum|3") is 2
-	mutable counts = Dictionary(Text, Number)
+	ValueTrace(Logger).Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times")
+	ValueTrace(Logger).Valued(Events, "Examples").Last.EndsWith("line 3 hit 2 times, each: 1, 2")
+	let hits = Hits(lines)
+	for hits
+		Line(value.Key, hits(value.Key), folder)
+Hits(lines Texts) Dictionary(Text, Texts)
+	ValueTrace.Hits(Events)("Sum|3") is ("Hit\nRes|1", "Hit\nRes|2")
+	mutable hits = Dictionary(Text, Texts)
 	for lines
+		let place = Place(value)
 		if value.StartsWith("$Hit ")
-			let place = value.Substring(5, value.Length - 5)
-			counts(place) = (place is in counts then counts(place) else 0) + 1
-	counts
-Shown(lines Texts) Dictionary(Text, Text)
-	ValueTrace(Logger).Shown(Events)("Strict/Examples/Sum|2|a") is "7"
-	ValueTrace(Logger).Shown(Events)("Sum|3|b") is ""
-	ValueTrace(Logger).Shown(List(Text) + "$Set A|2|text|\"a|b\"")("A|2|text") is "\"a|b\""
-	mutable shown = Dictionary(Text, Text)
-	for lines
-		if value.StartsWith("$Set ")
-			let parts = value.Split("|")
-			let key = parts(0).Substring(5, parts(0).Length - 5) + "|" + parts(1) + "|" + parts(2)
-			let start = parts(0).Length + parts(1).Length + parts(2).Length + 3
-			let assigned = value.Substring(start, value.Length - start)
-			shown(key) = (key is in shown) and (shown(key) is not assigned) then "" else assigned
-	shown
-Line(place Text, count Number, shown Dictionary(Text, Text), folder Text) Text
-	ValueTrace(Logger).Line("Sum|3", 1, Dictionary(Text, Text), "Examples").EndsWith("line 3 hit 1 times") is true
+			hits(place) = (place is in hits then hits(place) else List(Text)) + "Hit"
+		else if (place is not "") and (place is in hits)
+			mutable summaries = hits(place)
+			summaries(summaries.Length - 1) = summaries.Last + "\n" + value.Substring(1, 3) + "|" + Rest(value)
+			hits(place) = summaries
+	hits
+Place(event Text) Text
+	ValueTrace.Place("$Result Sum|3|1") is "Sum|3"
+	ValueTrace.Place("a") is ""
+	if event.StartsWith("$") is false
+		return ""
+	let parts = event.Split("|")
+	parts(0).Substring(parts(0).IndexOf(" ") + 1, parts(0).Length - parts(0).IndexOf(" ") - 1) + "|" + parts(1)
+Rest(event Text) Text
+	ValueTrace.Rest("$Set A|2|text|\"a|b\"") is "text|\"a|b\""
+	ValueTrace.Rest("$Hit A|2") is ""
+	let parts = event.Split("|")
+	let start = parts(0).Length + parts(1).Length + 2
+	start < event.Length then event.Substring(start, event.Length - start) else ""
+Line(place Text, summaries Texts, folder Text) Text
+	ValueTrace(Logger).Line("Sum|3", List(Text) + "Hit", "Examples").EndsWith("line 3 hit 1 times")
 	let parts = place.Split("|")
 	let file = TypeSource(TypeEntry(parts(0), List(MemberEntry), List(MethodEntry))).Located(folder)
-	let start = "Value " + file + ":line " + parts(1) + " hit " + count + " times"
+	let start = "Value " + file + ":line " + parts(1) + " hit " + summaries.Length + " times"
 	let source = File(file).ReadLines
 	let number = parts(1) to Number
-	let named = number <= source.Length then Assigned(source(number - 1)) else List(Text)
-	let key = named.Length is 2 then place + "|" + named(0) else ""
-	let assigned = key is in shown then shown(key) else ""
-	assigned is "" then start else start + ": " + named(1) + " = " + assigned
+	start + (number <= source.Length then Help(source(number - 1).Trim, summaries) else "")
+Help(code Text, summaries Texts) Text
+	ValueTrace.Help("for Range(0, 3)", ("\nSet|for|0", "\nSet|for|1")) is ", each: 0, 1"
+	ValueTrace.Help("let sum = a + b", List(Text) + "\nUse|a|5\nUse|b|3\nSet|sum|8") is ": sum = 5 + 3 = 8"
+	ValueTrace.Help("value * 2", ("\nUse|value|1\nRes|2", "\nUse|value|2\nRes|4")) is ", each: 2, 4"
+	let named = Assigned(code)
+	let isLoop = code.StartsWith("for ")
+	let prefix = isLoop then "Set|for|" else named.Length is 2 then "Set|" + named(0) + "|" else "Res|"
+	mutable results = List(Mutable(Text))
+	for summaries
+		if Outcome(value, prefix) is not ""
+			results.Add(Outcome(value, prefix))
+	let isSame = (results.Length is summaries.Length) and (results.Length is results.Count(results.First))
+	isSame and (isLoop is false) then Same(code, named, summaries.First, results.First) else Each(results)
+Each(results Texts) Text
+	ValueTrace.Each(("1", "2")) is ", each: 1, 2"
+	ValueTrace.Each(List(Text)) is ""
+	if results.Length is 0
+		return ""
+	mutable shown = List(Mutable(Text))
+	for Range(0, results.Length > 10 then 10 else results.Length)
+		shown.Add(results(value))
+	", each: " + Text.Combine(shown) + (results.Length > 10 then ", ..." else "")
+Outcome(summary Text, prefix Text) Text
+	ValueTrace.Outcome("\nUse|b|5\nSet|a|7", "Set|a|") is "7"
+	mutable found = ""
+	for summary.Split("\n")
+		if value.StartsWith(prefix)
+			found = value.Substring(prefix.Length, value.Length - prefix.Length)
+	found
+Same(code Text, named Texts, summary Text, result Text) Text
+	ValueTrace.Same("a + b", List(Text), "\nUse|a|5\nUse|b|3", "8") is ": 5 + 3 = 8"
+	ValueTrace.Same("let a = 7", ("a", "a"), "", "7") is ": a = 7"
+	ValueTrace.Same("a > b", List(Text), "", "true") is ""
+	let start = code.IndexOf(" = ") + 3
+	let plain = Unselected(code.Replace("return ", ""))
+	let expression = named.Length is 2 then code.Substring(start, code.Length - start) else plain
+	let isSimple = Tokenizer(expression).Tokens.Length is 1
+	let shown = isSimple then result else Substituted(expression, summary) + " = " + result
+	if named.Length is 2
+		return ": " + named(0) + " = " + shown
+	let isHidden = (result is "true") or isSimple and (expression is result)
+	isHidden then "" else ": " + (isSimple then expression + " = " + shown else shown)
+Unselected(code Text) Text
+	ValueTrace.Unselected("\"add\" then first + second") is "first + second"
+	ValueTrace.Unselected("a > 0 then a else 0") is "a > 0 then a else 0"
+	let at = code.IndexOf(" then ")
+	(at < 0) or (code.IndexOf(" else ") >= 0) then code else code.Substring(at + 6, code.Length - at - 6)
+Substituted(expression Text, summary Text) Text
+	ValueTrace.Substituted("numbers(0) + b", Summed) is "numbers(0) + 5"
+	ValueTrace.Substituted("number.b", Summed) is "number.b"
+	let tokens = Tokenizer(expression).Tokens
+	mutable text = ""
+	for tokens
+		let previous = index > 0 then tokens(index - 1) else ""
+		let used = previous is "." then "" else Outcome(summary, "Use|" + value + "|")
+		let isClosing = (index is 0) or (value is in (")", ",", ".")) or (previous is in ("(", "."))
+		let isTight = isClosing or (value is "(") and (previous is not in Operators)
+		text = text + (isTight then "" else " ") + (used is "" then value else used)
+	text
 Assigned(line Text) Texts
 	ValueTrace.Assigned("\tlet scale = 10 ^ decimals") is ("scale", "scale")
 	ValueTrace.Assigned("\t\tcount = count + 1") is ("count", "count")
-	ValueTrace.Assigned("\tfor Range(1, 16)") is ("for", "Range(1, 16)")
 	ValueTrace.Assigned("has number with value >= -1").Length is 0
 	let code = line.Trim
-	if code.StartsWith("for ")
-		return ("for", code.Substring(4, code.Length - 4))
 	let words = code.Split(" ")
 	let at = words.First is in ("let", "mutable") then 1 else 0
 	(words.Length > at + 2) and (words(at + 1) is "=") then (words(at), words(at)) else List(Text)

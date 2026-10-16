@@ -24,13 +24,13 @@ Called VmValue
 	let failure = library.Failure(bits)
 	failure is "" then Converted(library, method.returnType, bits) else VmValue.OfError(failure)
 Built(type TypeEntry) Text
-	Adding.Built(Framing).StartsWith("TraitHasNoImplementation: Frame.Add has no body") is true
+	Adding.Built(Framing).StartsWith("TraitHasNoImplementation: Frame.Add has no body")
 	let native = Folder(type)
 	if Directory.Exists(native) is false
 		return MlirForeign(MlirFunction(types, type, Method(type))).Unimplemented
 	NativeSources(List(Text) + native).Library(Platform.Current, TypeSource.Root)
 IsForeign(type TypeEntry) Boolean
-	Adding.IsForeign(Adder) is true
+	Adding.IsForeign(Adder)
 	Adding.IsForeign(TypeEntry("Strict/Shape", List(MemberEntry), List(MethodEntry))) is false
 	for type.methods
 		if value.Name is call.MethodName

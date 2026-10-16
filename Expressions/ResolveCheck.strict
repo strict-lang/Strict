@@ -1,5 +1,7 @@
 has logger
 constant Counting = TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Joined = ("Names Texts", "\t\"a\" + \"b\"")
+constant Joining = MethodBodies("Demo", TypeShape(Joined), Counting)
 Run(folder Text, root Text)
 	let inference = Inference(Directory.Files(folder, "*.strict") + AllFiles(root))
 	mutable unresolved = List(Mutable(Text))
@@ -15,12 +17,15 @@ Unresolved(path Text, inference TypeInference) Texts
 	let known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(TypeName(path)).names
 	let check = FileCheck(inference, known)
 	let issues = check.Unimplemented(path, lines) + DefaultCheck(inference).Unsupported(path, lines)
-	mutable unresolved = issues + Constraint.Where(path, lines) + TypeChoice(lines).Ambiguous(inference.types.names, path)
+	let ambiguous = TypeChoice(lines).Ambiguous(inference.types.names, path)
+	issues + Constraint.Where(path, lines) + ambiguous + Found(check, bodies, lines, path)
+Found(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
+	ResolveCheck.Found(FileCheck(Counting, List(Text)), Joining, Joined, "A.strict").First.EndsWith("A.strict:2")
 	for bodies.Statements
-		let unknown = check.Unknown(value, bodies.Methods)
+		let found = check.Unknown(value, bodies.Methods)
+		let unknown = found is "" then ReturnTypes(check.inference).Issue(value, bodies.Methods, lines) else found
 		if unknown is not ""
-			unresolved.Add(unknown + " used in " + path + ":" + (value.line + 1))
-	unresolved
+			unknown + " used in " + path + ":" + (value.line + 1)
 Tree(folder Text) Texts
 	ResolveCheck.Tree("./Math") is List(Text) + "./Math"
 	"./Examples/NativeAdd" is in ResolveCheck.Tree("./Examples")

@@ -78,7 +78,7 @@ Installing(missing Texts) Text
 	let problem = started.Failed then ", could not start it: " + started.error else ""
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
 Built(base Text, executable Text) Text
-	OnWindows.Built("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed") is true
+	OnWindows.Built("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed")
 	let lowered = Lowered(base)
 	if lowered is not ""
 		return lowered
@@ -91,7 +91,7 @@ Built(base Text, executable Text) Text
 	let linked = ToolRunner(Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else "Built " + executable
 CrossBuilt(base Text) Text
-	OnWindows.CrossBuilt("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+	OnWindows.CrossBuilt("Compiler/output/missing").StartsWith("mlir-opt failed")
 	let lowered = Lowered(base + ".linux")
 	if lowered is not ""
 		return lowered
@@ -109,7 +109,7 @@ WslPath(path Text) Text
 	let drive = "/mnt/" + slashed.Substring(0, 1).Lower
 	slashed.IndexOf(":") is 1 then drive + slashed.Substring(2, slashed.Length - 2) else slashed
 Lowered(base Text) Text
-	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed") is true
+	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")
 	constant passes = " --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm"
 	let output = " --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
 	let lowering = Quoted(base + ".mlir") + SingleThreaded + passes + output

@@ -1,4 +1,7 @@
   llvm.func @mmap(!llvm.ptr, i64, i32, i32, i32, i64) -> !llvm.ptr
+  llvm.func @strict_crash_log(%text: !llvm.ptr) {
+    llvm.return
+  }
   llvm.func @madvise(!llvm.ptr, i64, i32) -> i32
   func.func private @strict_reserve(%size: i64) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr

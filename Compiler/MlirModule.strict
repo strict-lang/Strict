@@ -7,8 +7,8 @@ constant Pair = MlirModule(Counters.types + TypeEntry("Strict/Other", List(Membe
 constant NoFunctions = List(MlirFunction)
 constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry)), "Tests")
 Text Text
-	Counters.Text.StartsWith("module {") is true
-	NoRun.Text.StartsWith("unsupported:") is true
+	Counters.Text.StartsWith("module {")
+	NoRun.Text.StartsWith("unsupported:")
 	let functions = Functions
 	if functions.First.method.instructions.Length is 0
 		return "unsupported: no " + entryName + " method without parameters in " + types.First.Name
@@ -21,7 +21,7 @@ Declared(texts List(MlirFunction), functions List(MlirFunction)) Texts
 		lines = lines + value.Text
 	lines + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
 Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
-	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}") is true
+	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
 	let table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
 	let main = MlirEntry(counted.First, Others(counted)).Main
 	let host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
@@ -30,7 +30,7 @@ Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) 
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1
 	Pair.Functions.Length is 2
-	Pair.Text.IndexOf("@Other_Run_0(%self1)") > 0 is true
+	Pair.Text.IndexOf("@Other_Run_0(%self1)") > 0
 	Reachable(Entries, Entries)
 Entries List(MlirFunction)
 	Pair.Entries.Last.Symbol is "Other_Run_0"

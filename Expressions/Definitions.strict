@@ -75,7 +75,7 @@ Names(definitions SyntaxNodes) Texts
 	for definitions
 		value.text
 AreNames(nodes SyntaxNodes) Boolean
-	Positions.AreNames(List(SyntaxNode) + SyntaxNode("Identifier", "a")) is true
+	Positions.AreNames(List(SyntaxNode) + SyntaxNode("Identifier", "a"))
 	Positions.AreNames(List(SyntaxNode) + SyntaxNode("Number", "1")) is false
 	for nodes
 		if value.Kind is not "Identifier"

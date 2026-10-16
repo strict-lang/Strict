@@ -5,10 +5,10 @@ constant Planar = Arm(((0, 0, 0), (0.5, 0, 0), (0.3, 0, 0)), (-180, -180), (180,
 constant Franka = Arm(((0, 0, 0.333), (0, -90, 0), (0, 90, 0.316), (0.0825, 90, 0), (-0.0825, -90, 0.384), (0, 90, 0), (0.088, 90, 0), (0, 0, 0.107)), (-166, -101, -166, -176, -166, -1, -166), (166, 101, 166, -4, 166, 215, 166))
 Reached(angles Numbers) Numbers
 	Planar.Reached((0, 0)) is (0.8, 0, 0)
-	Franka.Reached((0, 0, 0, 0, 0, 0, 0)).First.IsNearlyEqual(0.088) is true
-	Franka.Reached((0, 0, 0, 0, 0, 0, 0)).Last.IsNearlyEqual(0.926) is true
-	Franka.Reached((0, -45, 0, -135, 0, 90, 45)).First.IsNearlyEqual(0.3068905665929411) is true
-	Franka.Reached((0, -45, 0, -135, 0, 90, 45)).Last.IsNearlyEqual(0.5902820523028393) is true
+	Franka.Reached((0, 0, 0, 0, 0, 0, 0)).First.IsNearlyEqual(0.088)
+	Franka.Reached((0, 0, 0, 0, 0, 0, 0)).Last.IsNearlyEqual(0.926)
+	Franka.Reached((0, -45, 0, -135, 0, 90, 45)).First.IsNearlyEqual(0.3068905665929411)
+	Franka.Reached((0, -45, 0, -135, 0, 90, 45)).Last.IsNearlyEqual(0.5902820523028393)
 	mutable rotation = Turned(0)
 	mutable position = (0, 0, 0)
 	for rows
@@ -43,6 +43,6 @@ Moved(position Numbers, frame List(Numbers), link Numbers) Numbers
 		value + link(0) * frame(index).First + link(2) * frame(index).Last
 Random Numbers
 	Franka.Random.Length is 7
-	Planar.Random.First <= 180 is true
+	Planar.Random.First <= 180
 	for lowest
 		value + (highest(index) - value).Random

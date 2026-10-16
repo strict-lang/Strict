@@ -14,7 +14,7 @@ OfText(content Text) VmValue
 	OfText("a").text is "a"
 	VmValue("Text", 0, content, List(VmValue))
 OfBoolean(condition Boolean) VmValue
-	OfBoolean(true).IsTrue is true
+	OfBoolean(true).IsTrue
 	OfBoolean(false).IsTrue is false
 	condition then TrueValue else FalseValue
 OfList(elements List(VmValue)) VmValue

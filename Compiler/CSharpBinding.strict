@@ -47,8 +47,8 @@ Struct(typeName Text) Text
 		fields = fields + " public double " + value.Name + ";"
 	"public struct " + TypeEntry.ShortName(typeName) + " {" + fields + " }"
 Imported(method MethodEntry) Text
-	Policy.Imported(MlirLibrary.Start).EndsWith(" string mode, int enabled, out IntPtr result);") is true
-	Book.Imported(LibraryLists.Valued).EndsWith("(double[] trades, out IntPtr result);") is true
+	Policy.Imported(MlirLibrary.Start).EndsWith(" string mode, int enabled, out IntPtr result);")
+	Book.Imported(LibraryLists.Valued).EndsWith("(double[] trades, out IntPtr result);")
 	let instance = "ref " + TypeEntry.ShortName(library.types.First.Name) + " instance"
 	mutable parameters = library.IsRecord(library.types.First.Name) then List(Text) + instance else List(Text)
 	for method.parameters
@@ -62,7 +62,7 @@ Method(method MethodEntry) Texts
 	Policy.Method(MlirLibrary.Start).First is "\tpublic static string Start(string mode, bool enabled)"
 	Trades.Method(MlirLibrary.Total).First is "\tpublic static double Total(Trade instance)"
 	Money.Method(Echo).First is "\tpublic static decimal Echo(decimal amount)"
-	Money.Method(Echo)(2).IndexOf("Money_Echo(Stepped(decimal.Round(amount / 0.00000001m, ") > 0 is true
+	Money.Method(Echo)(2).IndexOf("Money_Echo(Stepped(decimal.Round(amount / 0.00000001m, ") > 0
 	Money.Method(Echo)(4) is "\t\treturn Decimal(result, 0.00000001m);"
 	let symbol = TypeEntry.ShortName(library.types.First.Name) + "_" + method.Name
 	let step = Step(method, "")

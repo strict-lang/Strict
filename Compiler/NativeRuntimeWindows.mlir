@@ -253,6 +253,37 @@
     %moved = llvm.call @MoveFileExA(%name, %newName, %replacing) : (!llvm.ptr, !llvm.ptr, i32) -> i32
     return %zero : f64
   }
+  llvm.mlir.global internal constant @strict_crash_suffix(".crash.txt\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @strict_crash_mode("wb\00") : !llvm.array<3 x i8>
+  llvm.func @strict_crash_log(%text: !llvm.ptr) {
+    %output = llvm.mlir.constant(-11 : i32) : i32
+    %handle = llvm.call @GetStdHandle(%output) : (i32) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %windowed = llvm.icmp "eq" %handle, %null : !llvm.ptr
+    llvm.cond_br %windowed, ^write, ^done
+  ^write:
+    %size = llvm.mlir.constant(1100 : i32) : i32
+    %path = llvm.alloca %size x i8 : (i32) -> !llvm.ptr
+    %limit = llvm.mlir.constant(1080 : i32) : i32
+    %length = llvm.call @GetModuleFileNameA(%null, %path, %limit) : (!llvm.ptr, !llvm.ptr, i32) -> i32
+    %offset = llvm.zext %length : i32 to i64
+    %end = llvm.getelementptr %path[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %suffix = llvm.mlir.addressof @strict_crash_suffix : !llvm.ptr
+    %suffixBytes = llvm.mlir.constant(11 : i64) : i64
+    %appended = llvm.call @memcpy(%end, %suffix, %suffixBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %mode = llvm.mlir.addressof @strict_crash_mode : !llvm.ptr
+    %file = llvm.call @fopen(%path, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %unopened = llvm.icmp "eq" %file, %null : !llvm.ptr
+    llvm.cond_br %unopened, ^done, ^fill
+  ^fill:
+    %bytes = llvm.call @strlen(%text) : (!llvm.ptr) -> i64
+    %one = llvm.mlir.constant(1 : i64) : i64
+    %written = llvm.call @fwrite(%text, %one, %bytes, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
+    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    llvm.br ^done
+  ^done:
+    llvm.return
+  }
   llvm.func @AddVectoredExceptionHandler(i32, !llvm.ptr) -> !llvm.ptr
   llvm.func @SetThreadStackGuarantee(!llvm.ptr) -> i32
   llvm.func @ExitProcess(i32)
@@ -266,6 +297,7 @@
   ^report:
     %text = llvm.mlir.addressof @strict_overflow_text : !llvm.ptr
     %printed = llvm.call @printf(%text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    llvm.call @strict_crash_log(%text) : (!llvm.ptr) -> ()
     %null = llvm.mlir.zero : !llvm.ptr
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
     llvm.call @ExitProcess(%code) : (i32) -> ()

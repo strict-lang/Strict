@@ -48,16 +48,16 @@ LeadingEnd(body SyntaxNode, block CodeBlock) Number
 			return index
 	body.children.Length
 IsTestConstant(body SyntaxNode, position Number, block CodeBlock) Boolean
-	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), 0, CodeBlock.Empty) is true
+	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), 0, CodeBlock.Empty)
 	let line = body.children(position)
 	let isDeclared = (line.Kind is "Declaration") and line.text.StartsWith("constant ")
 	isDeclared and (position + 2 < body.children.Length) and IsTest(body.children(position + 1), true, block)
 IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	Plain.IsTest(SyntaxNode("Binary", ">", (One, One)), false, CodeBlock.Empty) is false
-	Plain.IsTest(SyntaxNode("Not", "", SyntaxNode("Binary", "is", (One, One))), false, CodeBlock.Empty) is true
+	Plain.IsTest(SyntaxNode("Not", "", SyntaxNode("Binary", "is", (One, One))), false, CodeBlock.Empty)
 	Plain.IsTest(SyntaxNode("Binary", "+", (One, One)), true, CodeBlock.Empty) is false
 	Plain.IsTest(SyntaxNode("Declaration", "let a", SyntaxParser("1", "is", "1").Parse), false, CodeBlock.Empty) is false
-	Even.IsTest(SyntaxNode("Call", "IsEven", One), true, CodeBlock.Empty) is true
+	Even.IsTest(SyntaxNode("Call", "IsEven", One), true, CodeBlock.Empty)
 	if line.Kind is in ("If", "ElseIf", "Else", "Declaration", "Reassignment")
 		return false
 	let lineText = line to Text
@@ -65,7 +65,7 @@ IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 		return values.TypeOf(line, block) is "Boolean"
 	false
 IsCalling(line SyntaxNode, block CodeBlock) Boolean
-	Reading.IsCalling(SyntaxNode("Member", "attack", SyntaxNode("Identifier", "Read")), CodeBlock.Empty) is true
+	Reading.IsCalling(SyntaxNode("Member", "attack", SyntaxNode("Identifier", "Read")), CodeBlock.Empty)
 	Reading.IsCalling(SyntaxNode("Identifier", "attack"), CodeBlock.Empty) is false
 	if line.Kind is "Member"
 		return values.IsMethodCall(line, block) or IsCalling(line.children(0), block)

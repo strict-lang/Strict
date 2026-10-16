@@ -1,7 +1,7 @@
 has line Text
 StartsWithDigit Boolean
-	NumberChars("42").StartsWithDigit is true
-	NumberChars("-1").StartsWithDigit is true
+	NumberChars("42").StartsWithDigit
+	NumberChars("-1").StartsWithDigit
 	NumberChars("x").StartsWithDigit is false
 	NumberChars("").StartsWithDigit is false
 	if line is ""

@@ -30,7 +30,7 @@ Outputs(layer Layer, states List(Numbers)) List(Numbers)
 	for Range(1, states.Length)
 		layer.Forward(states(value))
 Trained(inputs List(Numbers), targets List(Numbers), rate Number) Recurrent
-	Tiny.Trained(Step, List(Numbers) + Zero, 2).Predicted(Step).First.First < 0.5 is true
+	Tiny.Trained(Step, List(Numbers) + Zero, 2).Predicted(Step).First.First < 0.5
 	let states = States(inputs)
 	let outputs = OutputDeltas(output, states, targets)
 	let hiddens = HiddenDeltas(states, outputs)

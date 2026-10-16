@@ -65,16 +65,16 @@ Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Num
 		let other = input(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within)
 		(own + other) * HeadScale(input, first, size)
 Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
-	Tiny.Normalized((3, 4), 0, 2, (1, 2)).First.IsNearlyEqual(0.848528) is true
-	Tiny.Normalized((3, 4, 0, 1), 0, 4, (1, 2)).Last.IsNearlyEqual(2.828424) is true
-	Tiny.Normalized((3, 4, 0, 1), 2, 2, (1, 2)).Last.IsNearlyEqual(2.828424) is true
+	Tiny.Normalized((3, 4), 0, 2, (1, 2)).First.IsNearlyEqual(0.848528)
+	Tiny.Normalized((3, 4, 0, 1), 0, 4, (1, 2)).Last.IsNearlyEqual(2.828424)
+	Tiny.Normalized((3, 4, 0, 1), 2, 2, (1, 2)).Last.IsNearlyEqual(2.828424)
 	let size = weights.Length
 	let scales = Scales(input, start, count, size)
 	for count
 		input(start + index) * weights(index % size) * scales((index / size).Floor)
 Scales(input Numbers, start Number, count Number, size Number) Numbers
-	Tiny.Scales((3, 4, 0, 1), 0, 4, 2).First.IsNearlyEqual(0.2828427) is true
-	Tiny.Scales((3, 4, 0, 1), 2, 2, 2).Last.IsNearlyEqual(1.414213) is true
+	Tiny.Scales((3, 4, 0, 1), 0, 4, 2).First.IsNearlyEqual(0.2828427)
+	Tiny.Scales((3, 4, 0, 1), 2, 2, 2).Last.IsNearlyEqual(1.414213)
 	for count / size
 		HeadScale(input, start + index * size, size)
 HeadScale(input Numbers, first Number, size Number) Number

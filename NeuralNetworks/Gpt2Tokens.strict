@@ -13,7 +13,7 @@ Parsed(vocabulary Text, merges Texts) Gpt2Tokens
 	Gpt2Tokens(ordered, known, Ranked(merges, known))
 Loaded(model Gguf) Gpt2Tokens
 	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).Encoded("ab c") is (4, 5)
-	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).isQwen is true
+	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).isQwen
 	mutable raw = List(Mutable(Text))
 	mutable known = Dictionary(Text, Number)
 	for model.Value("tokenizer.ggml.tokens").Lines

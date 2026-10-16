@@ -18,7 +18,7 @@ Bits(pointer Text, suffix Text) Texts
 	Boxed(pointer, suffix, "")
 Boxed(pointer Text, suffix Text, typeName Text) Texts
 	Sample.Boxed("%p", "a", "Strict/Error").First is "    %t3afe = func.call @strict_error_bits(%p) : (!llvm.ptr) -> f64"
-	Sample.Boxed("%p", "a", "Strict/Error").Last.StartsWith("    %t3af = func.call @strict_trace(%t3afe,") is true
+	Sample.Boxed("%p", "a", "Strict/Error").Last.StartsWith("    %t3af = func.call @strict_trace(%t3afe,")
 	let short = TypeEntry.ShortName(typeName)
 	if short is "Error"
 		let tagged = "    " + Temp(suffix + "fe") + " = func.call @strict_error_bits(" + pointer + ") : (!llvm.ptr) -> f64"
@@ -42,8 +42,8 @@ Called(result Text, name Text, operands Texts) Text
 	"    " + result + " = func.call @" + name + "(" + Text.Combine(operands, ", ") + ") : (" + types + ") -> f64"
 Passed(result Text, helper Text, operands Texts, element Text) Texts
 	Sample.Passed("%r", "f", ("%a", "%b"), "Number") is List(Text) + "    %r = func.call @f(%a, %b) : (f64, f64) -> f64"
-	Sample.Passed("%r", "strict_list_has", ("%a", "%b"), "Text").First.IndexOf("@strict_text_equal") > 0 is true
-	Sample.Passed("%r", "strict_list_has", List(Text) + "%a", "Number").Last.EndsWith(Comparing + ") -> f64") is true
+	Sample.Passed("%r", "strict_list_has", ("%a", "%b"), "Text").First.IndexOf("@strict_text_equal") > 0
+	Sample.Passed("%r", "strict_list_has", List(Text) + "%a", "Number").Last.EndsWith(Comparing + ") -> f64")
 	if helper is not in Equated
 		return List(Text) + Called(result, helper, operands)
 	let equal = Constant(Temp("q"), MlirEquality(function, position).Helper(element), Comparing)
@@ -65,7 +65,7 @@ Member(path Text) Numbers
 	let names = MlirInstances(function, position).StoredNames(ownerType)
 	(names.Index(path.Substring(dot + 1, path.Length - dot - 1)), names.Length)
 Changed(path Text, element Text, result Text) Texts
-	Pairing.Changed("pair.rest", "%c", "%r").Last.IndexOf("@strict_instance_with(%t0o, %t0ms, %c, %t0mc)") > 0 is true
+	Pairing.Changed("pair.rest", "%c", "%r").Last.IndexOf("@strict_instance_with(%t0o, %t0ms, %c, %t0mc)") > 0
 	let member = Member(path)
 	let slot = "    " + Temp("ms") + " = arith.constant " + member.First + ".0 : f64"
 	let count = "    " + Temp("mc") + " = arith.constant " + member.Last + ".0 : f64"
@@ -82,6 +82,6 @@ Constant(target Text, symbol Text, signature Text) Text
 	Sample.Constant("%e", "f", "(f64) -> f64") is "    %e = func.constant @f : (f64) -> f64"
 	"    " + target + " = func.constant @" + symbol + " : " + signature
 Converting(result Text, converter Text, operand Text) Texts
-	Sample.Converting("%x", "f", "%v").Last.IndexOf("@strict_converted(%v, %xc)") > 0 is true
+	Sample.Converting("%x", "f", "%v").Last.IndexOf("@strict_converted(%v, %xc)") > 0
 	let call = "    " + result + " = func.call @strict_converted(" + operand + ", " + result + "c)"
 	(Constant(result + "c", converter, "(f64) -> f64"), call + " : (f64, (f64) -> f64) -> f64")

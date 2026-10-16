@@ -2360,9 +2360,11 @@
     %entry = func.call @strict_list_get(%traces, %index) : (f64, f64) -> f64
     %entryBlock = func.call @strict_ptr(%entry) : (f64) -> !llvm.ptr
     %entryMethod = llvm.load %entryBlock : !llvm.ptr -> f64
-    %entryMethodBits = arith.bitcast %entryMethod : f64 to i64
-    %methodBits = arith.bitcast %method : f64 to i64
-    %same = arith.cmpi eq, %entryMethodBits, %methodBits : i64
+    %entryName = func.call @strict_ptr(%entryMethod) : (f64) -> !llvm.ptr
+    %name = func.call @strict_ptr(%method) : (f64) -> !llvm.ptr
+    %compared = llvm.call @strcmp(%entryName, %name) : (!llvm.ptr, !llvm.ptr) -> i32
+    %equal = arith.constant 0 : i32
+    %same = arith.cmpi eq, %compared, %equal : i32
     return %same : i1
   ^different:
     %false = arith.constant false
@@ -2382,9 +2384,11 @@
     %entry = func.call @strict_list_get(%traces, %index) : (f64, f64) -> f64
     %entryBlock = func.call @strict_ptr(%entry) : (f64) -> !llvm.ptr
     %entryMethod = llvm.load %entryBlock : !llvm.ptr -> f64
-    %entryMethodBits = arith.bitcast %entryMethod : f64 to i64
-    %methodBits = arith.bitcast %method : f64 to i64
-    %sameMethod = arith.cmpi eq, %entryMethodBits, %methodBits : i64
+    %entryName = func.call @strict_ptr(%entryMethod) : (f64) -> !llvm.ptr
+    %name = func.call @strict_ptr(%method) : (f64) -> !llvm.ptr
+    %compared = llvm.call @strcmp(%entryName, %name) : (!llvm.ptr, !llvm.ptr) -> i32
+    %equal = arith.constant 0 : i32
+    %sameMethod = arith.cmpi eq, %compared, %equal : i32
     %lineSlot = llvm.getelementptr %entryBlock[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %entryLine = llvm.load %lineSlot : !llvm.ptr -> f64
     %lineNumber = arith.sitofp %line : i64 to f64
@@ -2404,6 +2408,7 @@
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
     %format = llvm.mlir.addressof @strict_unhandled_format : !llvm.ptr
     %printed = llvm.call @printf(%format, %pointer) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
+    llvm.call @strict_crash_log(%pointer) : (!llvm.ptr) -> ()
     func.call @strict_flush() : () -> ()
     cf.br ^done
   ^done:

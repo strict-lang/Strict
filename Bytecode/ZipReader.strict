@@ -14,7 +14,7 @@ Entries List(ZipEntry)
 		position = End(position)
 	entries
 IsEntry(position Number) Boolean
-	Sample.IsEntry(0) is true
+	Sample.IsEntry(0)
 	Sample.IsEntry(1) is false
 	ZipReader(Sample.Content(0, 60)).IsEntry(0) is false
 	if position + 30 > bytes.Length

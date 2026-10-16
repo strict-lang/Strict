@@ -24,8 +24,8 @@ Tests MethodEntry
 	let failed = block.At(0).Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "failed"))
 	MethodEntry(Runner, List(MemberEntry), "Strict/Number", failed.Add(InstructionEntry.Return(0)).instructions)
 Method(start Number, block CodeBlock) CodeBlock
-	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0 is true
-	Even.Method(0, Counter).instructions.Index(EvenPassed) > 0 is true
+	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0
+	Even.Method(0, Counter).instructions.Index(EvenPassed) > 0
 	TestCodegen(Even.types, true).Method(0, Counter).instructions.Index(EvenPassed) is -1
 	Even.Method(0, Counter).instructions.Last.line is 2
 	let name = Tokenizer(types.lines(start)).Tokens.First
@@ -34,7 +34,7 @@ Method(start Number, block CodeBlock) CodeBlock
 		result = MethodCodegen(types.Generator).Lined(Line(value, name, result.At(0)), result.instructions.Length, value.line)
 	result
 Line(line SyntaxNode, method Text, block CodeBlock) CodeBlock
-	Even.Line(OneIsOne, "IsEven", Counter).instructions.Length > 4 is true
+	Even.Line(OneIsOne, "IsEven", Counter).instructions.Length > 4
 	Even.Line(Declaring, "IsEven", Counter).instructions(0).kind is InstructionType.StoreConstantToVariable
 	if line.Kind is not "Declaration"
 		return Checked(line, method, block)

@@ -2,25 +2,25 @@ has logger
 Run
 	logger.Log("Directory exists: " + Exists(Path(".")))
 Exists(path) Boolean
-	Exists(Path(".")) is true
+	Exists(Path("."))
 	Exists(Path("")) is false
 	Directory.Exists(path)
 Files(path) Texts
-	Files(Path(".")).Length > 0 is true
+	Files(Path(".")).Length > 0
 	Directory.Files(path)
 Directories(path) Texts
-	Directories(Path("..")).Length > 0 is true
+	Directories(Path("..")).Length > 0
 	Directory.Directories(path)
 Create(path)
 	Directory.Create(path)
 Written(path Text) Boolean
-	Written("Examples/BaseTypesTest/Created/written") is true
+	Written("Examples/BaseTypesTest/Created/written")
 	File(path).Write(List(Text) + "written")
 	let exists = File(path).Exists
 	File(path).Delete
 	exists
 Renamed(path Text) Boolean
-	Renamed("Examples/BaseTypesTest/renamed") is true
+	Renamed("Examples/BaseTypesTest/renamed")
 	File(path).Write(List(Text) + "renamed")
 	File(path).Rename(path + "2")
 	let isMoved = File(path + "2").Exists and (File(path).Exists is false)
