@@ -91,14 +91,11 @@ Merged(positions Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Merged(1).Length is 8
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Merged(1).Last is Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).values.Last
 	let size = queryNorm.Length
-	let weights = Softmax.Rows(Scores(positions), positions)
+	let scores = Scores(positions)
 	for queries.Length
 		let row = (index / size).Floor
 		let start = ((row % heads) * groups / heads).Floor * size + index % size
-		mutable sum = 0
-		for positions
-			sum = sum + weights(row * positions + index) * values(start + index * groups * size)
-		sum
+		Softmax.Weighted(scores, row * positions, positions, values, start, groups * size)
 Scores(positions Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Scores(1).Length is 2
 	let size = queryNorm.Length
