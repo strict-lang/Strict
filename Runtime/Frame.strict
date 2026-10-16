@@ -10,7 +10,7 @@ constant IndexSlot = 5
 constant MembersSlot = 6
 constant Doubling = Machine(Resolver(List(TypeEntry) + Machine.Doubler).Resolved)
 constant Twice = Frame(Doubling, Doubling.types.First.methods.First, "Strict/Doubler")
-constant Calling = Frame(Machine(Resolver(List(TypeEntry) + Machine.Failing).Resolved), MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)), "Strict/Caller")
+constant Calling = Frame(Machine(Resolver(List(TypeEntry) + Invocation.Failing).Resolved), MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)), "Strict/Caller")
 constant Listed = (VmValue.OfText("ab"), VmValue.OfText("a"), VmValue.None, VmValue.OfBoolean(true), Looping.Counting, VmValue.None, VmValue.OfNumber(1), VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)), VmValue.OfNumber(5))
 constant StoreSecond = InstructionEntry(InstructionType.StoreRegisterToVariable, "list(1)", (6, 7, Resolver.LiteralIndex, 1))
 Finished(arguments List(VmValue)) List(VmValue)
@@ -106,7 +106,8 @@ Traced(error VmValue, position Number) VmValue
 	if error.kind is "Strict/ErrorWithValue"
 		return VmValue(error.kind, error.number, error.text, (Traced(error.items(0), position), error.items(1)))
 	let called = VmValue.OfText(TypeEntry.ShortName(owner) + "." + method.Name)
-	let file = VmValue.OfText(TypeSource(TypeEntry(owner, List(MemberEntry), List(MethodEntry))).Located(machine.folder))
+	let source = TypeSource(TypeEntry(owner, List(MemberEntry), List(MethodEntry)))
+	let file = VmValue.OfText(owner is in machine.sources then machine.sources(owner) else source.Located(machine.folder))
 	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(method.instructions(position).line)))
 	let traces = error.items(1).items
 	let isRepeated = (traces.Length > 0) and (traces.Last is trace)

@@ -3,6 +3,7 @@ has logger
 has prototypes List(VmValue) = List(VmValue)
 has folder Text = ""
 has isTracing = false
+has sources Dictionary(Text, Text) = Dictionary(Text, Text)
 constant MaxSteps = 1000000000000000
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
@@ -11,7 +12,6 @@ constant Defaulted = MethodEntry("Add", List(MemberEntry) + MemberEntry.SevenMem
 constant Wrapper = TypeEntry("Strict/Wrapper", (MemberEntry.LoggerMember, MemberEntry.SevenMember), List(MethodEntry))
 constant Coded = InstructionEntry(InstructionType.FieldLoad, ("number", "Character"), (1, 0, -1, -2))
 constant Paired = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry.Initializing)
-constant Failing = TypeEntry("Strict/Failing", List(MemberEntry), List(MethodEntry) + MethodEntry("Fail", List(MemberEntry), "Strict/Number", (InstructionEntry(InstructionType.IndexCall, "list", (0, 0, 6)), InstructionEntry.Return(0))))
 constant Pairing = Machine(List(TypeEntry) + Paired)
 Launch(typeName Text, arguments List(VmValue)) Number
 	let main = Natives(types).TypeOf(typeName)
@@ -42,10 +42,13 @@ Tested(typeName Text) Number
 	Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name).number
 Prepared Machine
 	Hello.Prepared.prototypes.First.kind is "HelloLogger"
+	Hello.Prepared.sources("HelloLogger") is "HelloLogger.strict"
 	mutable created = List(Mutable(VmValue))
+	mutable located = Dictionary(Text, Text)
 	for types
 		created.Add(Natives(types).Fresh(value))
-	Machine(types, logger, created, folder, isTracing)
+		located(value.Name) = TypeSource(value).Located(folder)
+	Machine(types, logger, created, folder, isTracing, located)
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue), VmValue.None).Last.number is 7

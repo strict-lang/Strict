@@ -433,7 +433,7 @@ for someDictionary
 
 Dictionaries are just Lists of key+value pairs, so each enumeration just returns one of these pairs, and we can grab the first value as the key with value(0), which is exactly what value.Key will do. Same goes for value(1) for value.Value.
 
-`prices("Apple")` reads the value of a key (`get`, a missing key is the `KeyNotFound` Error), `prices("Apple") = 4` on a `mutable` dictionary replaces the value of an existing key or adds the pair (`set`), like an element write of a list it updates the dictionary in place:
+`prices("Apple")` reads the value of a key (`get`, a missing key is the `KeyNotFound` Error), `prices("Apple") = 4` on a `mutable` dictionary replaces the value of an existing key or adds the pair (`set`), like an element write of a list it updates the dictionary in place. Any type with a `get(key)` method is read the same way (`json("bones")` calls `Json.get`, a chained call needs `.get("bones")`):
 ```
 mutable counts = Dictionary(Text, Number)
 for words

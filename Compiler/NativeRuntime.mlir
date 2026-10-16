@@ -5486,7 +5486,7 @@
     %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  func.func private @strict_file_override(%path: f64, %text: f64) -> f64 {
+  func.func private @strict_file_inmemory(%path: f64, %text: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %keptPath = func.call @strict_kept_text(%path) : (f64) -> f64
     %keptText = func.call @strict_kept_text(%text) : (f64) -> f64

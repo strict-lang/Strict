@@ -22,7 +22,7 @@ Traced(path Text, root Text) Number
 	ValueTrace(Logger).Traced("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	let types = FileCompiler(logger).Compiled(path, root, true)
+	let types = FileCompiler(logger, true).Compiled(path, root, true)
 	types.Length is 0 then 1 else Execute(logger).Started(types, path, true).Tested(types.First.Name)
 Valued(lines Texts, folder Text) Texts
 	ValueTrace(Logger).Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times")

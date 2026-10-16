@@ -2,8 +2,8 @@ has text
 constant Sample = Xml("<Element Identifier=\"Play\" Margin=\"0 0.5 0 0\" BlendColor=\"(1.00, 0.50, 1.00, 1.00)\">")
 constant Menu = Xml("<?xml?><!-- > --><Menu>\n\t<Button\n\t\tText=\"Play\" />\n\t<Label>A &amp; B</Label>\n</Menu>")
 Read(path Text) Xml
-	Xml.Read("Xml/Settings.xml").Child("MusicVolume").Content is "0.75"
-	Xml.Read("Xml/Animation.xml").Child("MeshAnimationInfo").Children.Length is 2
+	Xml.Read("Xml/Settings.xml").get("MusicVolume").Content is "0.75"
+	Xml.Read("Xml/Animation.xml").get("MeshAnimationInfo").Children.Length is 2
 	Xml(Text.Combine(File(path).ReadLines, "\n"))
 Attribute(key Text) Text
 	Sample.Attribute("Identifier") is "Play"
@@ -44,9 +44,9 @@ Children Xmls
 		children.Add(Xml(text.Substring(at, after - at)))
 		at = NextTag(after)
 	children
-Child(name Text) Xml
-	Menu.Child("Label").Content is "A & B"
-	Menu.Child("Missing").Name is ""
+get(name Text) Xml
+	Menu("Label").Content is "A & B"
+	Menu("Missing").Name is ""
 	for Children
 		if value.Name is name
 			return value

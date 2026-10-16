@@ -31,7 +31,7 @@ Tested(rest Texts) Number
 	Strict.Tested(("Examples/HelloLogger.strict", ".")) is 0
 	let option = rest.Length > 2 then rest(2) else ""
 	if option is "-"
-		File(FileCompiler.Normalized(rest(0))).Override(Process.Input)
+		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
 	if option is in ("values", "trace")
 		let trace = ValueTrace(logger)
 		return option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
