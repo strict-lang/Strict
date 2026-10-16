@@ -1,0 +1,53 @@
+has raw Text
+constant Escaped = JsonText("a\\\"b\\u0041\\u00e9\\ud83d\\ude00\\n")
+constant Controls = ("\n", "\t", "\r", Character(8) to Text, Character(12) to Text)
+Unescaped Text
+	JsonText("plain").Unescaped is "plain"
+	Escaped.Unescaped is "a\"bAé😀\n"
+	mutable result = ""
+	mutable at = 0
+	for as long as at < raw.Length
+		let slash = raw.IndexOf("\\", at)
+		let stop = slash < 0 then raw.Length else slash
+		result = result + raw.Substring(at, stop - at) + (slash < 0 then "" else Escape(slash + 1))
+		at = slash < 0 then raw.Length else slash + Step(slash + 1)
+	result
+Step(position Number) Number
+	Escaped.Step(2) is 2
+	Escaped.Step(5) is 6
+	Escaped.Step(17) is 12
+	raw.Substring(position, 1) is not "u" then 2 else IsPair(position) then 12 else 6
+Escape(position Number) Text
+	Escaped.Escape(2) is "\""
+	Escaped.Escape(29) is "\n"
+	Escaped.Escape(17) is "😀"
+	let code = raw.Substring(position, 1)
+	let high = Hex(position + 1)
+	if code is "u"
+		return Utf8(IsPair(position) then 65536 + (high - 55296) * 1024 + Hex(position + 7) - 56320 else high)
+	let found = "ntrbf".IndexOf(code)
+	found < 0 then code else Controls(found)
+IsPair(position Number) Boolean
+	Escaped.IsPair(17)
+	Escaped.IsPair(11) is false
+	let high = Hex(position + 1)
+	(high >= 55296) and (high < 56320) and raw.StartsWith("\\u", position + 5)
+Hex(position Number) Number
+	Escaped.Hex(6) is 65
+	JsonText("D83d").Hex(0) is 55357
+	mutable number = 0
+	for Range(position, position + 4)
+		number = number * 16 + "0123456789abcdef".IndexOf(raw.Substring(value, 1).Lower)
+	number
+Utf8(code Number) Text
+	Escaped.Utf8(65) is "A"
+	Escaped.Utf8(233) is "é"
+	Escaped.Utf8(8364) is "€"
+	Escaped.Utf8(128512) is "😀"
+	if code < 128
+		return Character(code) to Text
+	let count = code < 2048 then 2 else code < 65536 then 3 else 4
+	mutable text = Character((256 - 2 ^ (8 - count)) + (code / 64 ^ (count - 1)).Floor) to Text
+	for Range(1, count)
+		text = text + (Character(128 + (code / 64 ^ (count - 1 - value)).Floor % 64) to Text)
+	text
