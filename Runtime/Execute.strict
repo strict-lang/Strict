@@ -105,6 +105,7 @@ Summary(failed Number, path Text) Text
 	Execute.Summary(0, "A.strict") is "All tests passed in A.strict"
 	Execute.Summary(2, "A.strict") is "2 tests failed in A.strict"
 	failed is 0 then "All tests passed in " + path else failed + " tests failed in " + path
-Started(types List(TypeEntry), path Text) Machine
+Started(types List(TypeEntry), path Text, isTracing = false) Machine
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "Examples/HelloLogger.strict").folder is "Examples"
-	Machine(Resolver(types).Resolved, logger, List(VmValue), Path(path).PathOnly.text).Prepared
+	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", true).isTracing is true
+	Machine(Resolver(types).Resolved, logger, List(VmValue), Path(path).PathOnly.text, isTracing).Prepared

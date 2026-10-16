@@ -1,0 +1,67 @@
+has logger
+constant Events = ("$Hit Strict/Examples/Sum|2", "$Set Strict/Examples/Sum|2|a|7", "$Hit Strict/Examples/Sum|2", "$Set Strict/Examples/Sum|2|a|7", "$Hit Sum|3", "$Set Sum|3|b|1", "$Hit Sum|3", "$Set Sum|3|b|2")
+Run(path Text, root Text) Number
+	ValueTrace(Logger).Run("Missing.strict", ".") is 2
+	if File(path).Exists is false
+		return 2
+	let result = ToolRunner(Process.Current.executable).Execute("test " + path + " " + root + " trace")
+	let lines = result.Output.Lines
+	for Plain(lines) + Valued(lines, Path(path).PathOnly.text)
+		logger.Log(value)
+	if (result.exitCode >= 0) and (result.exitCode < 128)
+		logger.Log(Execute.Summary(result.exitCode, path))
+	result.exitCode
+Plain(lines Texts) Texts
+	ValueTrace.Plain(("a", "$Hit A|1")) is ("a")
+	for lines
+		if value.StartsWith("$") is false
+			value
+Traced(path Text, root Text) Number
+	ValueTrace(Logger).Traced("Missing.strict", ".") is 2
+	if File(path).Exists is false
+		return 2
+	let types = FileCompiler(logger).Compiled(path, root, true)
+	types.Length is 0 then 1 else Execute(logger).Started(types, path, true).Tested(types.First.Name)
+Valued(lines Texts, folder Text) Texts
+	ValueTrace(Logger).Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times") is true
+	ValueTrace(Logger).Valued(Events, "Examples").Last.EndsWith("line 3 hit 2 times") is true
+	let shown = Shown(lines)
+	for Counts(lines)
+		Line(value.Key, value.Value, value.Key is in shown then shown(value.Key) else "", folder)
+Counts(lines Texts) Dictionary(Text, Number)
+	ValueTrace(Logger).Counts(Events)("Sum|3") is 2
+	mutable counts = Dictionary(Text, Number)
+	for lines
+		if value.StartsWith("$Hit ")
+			let place = value.Substring(5, value.Length - 5)
+			counts(place) = (place is in counts then counts(place) else 0) + 1
+	counts
+Shown(lines Texts) Dictionary(Text, Text)
+	ValueTrace(Logger).Shown(Events)("Strict/Examples/Sum|2") is "a = 7"
+	ValueTrace(Logger).Shown(List(Text) + "$Set A|2|text|\"a|b\"")("A|2") is "text = \"a|b\""
+	mutable shown = Dictionary(Text, Text)
+	for lines
+		if value.StartsWith("$Set ")
+			let parts = value.Split("|")
+			let place = parts(0).Substring(5, parts(0).Length - 5) + "|" + parts(1)
+			let start = parts(0).Length + parts(1).Length + parts(2).Length + 3
+			let assigned = parts(2) + " = " + value.Substring(start, value.Length - start)
+			shown(place) = (place is in shown) and (shown(place) is not assigned) then "" else assigned
+	shown
+Line(place Text, count Number, assigned Text, folder Text) Text
+	ValueTrace(Logger).Line("Sum|3", 1, "", "Examples") is "Value Examples/Sum.strict:line 3 hit 1 times"
+	let parts = place.Split("|")
+	let file = TypeSource(TypeEntry(parts(0), List(MemberEntry), List(MethodEntry))).Located(folder)
+	let start = "Value " + file + ":line " + parts(1) + " hit " + count + " times"
+	let source = File(file).ReadLines
+	let number = parts(1) to Number
+	let name = assigned.Split(" ").First
+	let isShown = (assigned is not "") and (number <= source.Length) and IsAssigned(source(number - 1), name)
+	isShown then start + ": " + assigned else start
+IsAssigned(line Text, name Text) Boolean
+	ValueTrace.IsAssigned("	let scale = 10 ^ decimals", "scale") is true
+	ValueTrace.IsAssigned("	mutable count = 0", "count") is true
+	ValueTrace.IsAssigned("		count = count + 1", "count") is true
+	ValueTrace.IsAssigned("has number with value >= -1 and value <= 1", "logical0") is false
+	let code = line.Trim
+	code.StartsWith("let " + name + " ") or code.StartsWith("mutable " + name + " ") or code.StartsWith(name + " = ")

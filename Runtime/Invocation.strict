@@ -3,6 +3,7 @@ has Arguments List(VmValue)
 has Instance VmValue
 constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), List(VmValue) + VmValue.OfNumber(3), VmValue.OfNumber(4))
 constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfText("5"))
+constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper", "Strict/Text"), List(Number), 0), List(VmValue), VmValue.OfText("ab"))
 constant Coding = Invocation(InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character", "text"), 0, -1), List(VmValue) + VmValue.OfNumber(65), VmValue.None)
 TypeName Text
 	AddCall.TypeName is "T"

@@ -2,10 +2,10 @@ has types List(TypeEntry)
 has logger
 has prototypes List(VmValue) = List(VmValue)
 has folder Text = ""
+has isTracing = false
 constant MaxSteps = 1000000000000000
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
-constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper", "Strict/Text"), List(Number), 0), List(VmValue), VmValue.OfText("ab"))
 constant Texts = TypeEntry("Strict/Text", List(MemberEntry) + MemberEntry("characters", "Strict/List(Character)", List(InstructionEntry), false), List(MethodEntry))
 constant Defaulted = MethodEntry("Add", List(MemberEntry) + MemberEntry.SevenMember, "Strict/Number", List(InstructionEntry))
 constant Wrapper = TypeEntry("Strict/Wrapper", (MemberEntry.LoggerMember, MemberEntry.SevenMember), List(MethodEntry))
@@ -45,7 +45,7 @@ Prepared Machine
 	mutable created = List(Mutable(VmValue))
 	for types
 		created.Add(Natives(types).Fresh(value))
-	Machine(types, logger, created, folder)
+	Machine(types, logger, created, folder, isTracing)
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue), VmValue.None).Last.number is 7
@@ -106,11 +106,13 @@ IsOwned(type TypeEntry, kind Text) Boolean
 	TypeEntry.ShortName(type.Name).Split("(").First is TypeEntry.ShortName(kind).Split("(").First
 Execute(method MethodEntry, locals List(VmValue), owner Text) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
-	let slots = Frame(value, method, owner).Finished(locals)
+	Machine(Frame.Doubling, isTracing = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
+	let frame = Frame(value, method, owner)
+	let slots = isTracing then TracedFrame(frame).Finished(locals) else frame.Finished(locals)
 	slots(Frame.ResultSlot)
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
-	Hello.Call(Uppered).text is "AB"
+	Hello.Call(Invocation.Uppered).text is "AB"
 	let at = call.Resolution
 	let entry = call.entry.payload.Length > at then call.entry else Resolver(types).Targeted(call.entry)
 	let route = entry.payload(at)
