@@ -27,9 +27,11 @@ Angles(position Number) Numbers
 	for half
 		Radians(position * theta ^ (-index / half)) to Degrees
 Rotation(position Number) Numbers
-	Tiny.Rotation(0) is (1, 1, 0, 0)
+	Tiny.Rotation(0) is (1, 1, 1, 1, 0, 0, 0, 0)
 	let angles = Angles(position)
-	Cosines(angles) + Sines(angles)
+	let cosines = Cosines(angles)
+	let sines = Sines(angles)
+	cosines + cosines + sines * -1 + sines
 Cosines(angles Numbers) Numbers
 	Tiny.Cosines((0, 180)) is (1, -1)
 	for angles
