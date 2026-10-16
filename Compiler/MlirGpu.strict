@@ -9,7 +9,7 @@ constant Twiced = List(MlirFunction) + MlirDevice.Twice.function
 constant Indexing = "] : (!llvm.ptr) -> !llvm.ptr, f64"
 constant Marker = "// device kernels"
 constant NameGlobal = "  llvm.mlir.global internal constant @kRows_Doubled_1_gpu2(\"Rows_Doubled_1_gpu2\\00Rows_Doubled_1_gpu2s\\00\") : !llvm.array<41 x i8>"
-constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64) -> f64"
+constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64) -> f64"
 Launched Texts
 	Doubling.Launched.Last is "  ^loop2host:"
 	Randomizing.Launched.Length is 0
@@ -22,7 +22,7 @@ Launched Texts
 	let branch = "    cf.cond_br " + Temp("gd") + ", ^loop" + position + "gpu, ^loop" + position + "host"
 	(count, wanted, branch) + Run + ("  ^loop" + position + "host:")
 Run Texts
-	Text.Combine(Doubling.Run).IndexOf("%t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2gy)") > 0
+	Text.Combine(Doubling.Run).IndexOf("%t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2go, %t2gy)") > 0
 	let name = MlirDevice(function, position).Name
 	let addresses = (Address("gp", "strict_gpu_ptx"), Address("gk", "k" + name), Address("gs", "f" + name))
 	let collection = MlirLoops(function, position).Collection
@@ -31,12 +31,13 @@ Run Texts
 	let kind = MlirTyped.Integer.Constant(Temp("gq"), number)
 	let first = (Temp("gp"), Temp("gk"), Temp("gs"), Temp("gc"), source)
 	let lanes = MlirTyped.Integer.Constant(Temp("gy"), MlirDeviceSums(function, position).IsWarped then "32" else "1")
-	let second = (Temp("gq"), Temp("ga"), Temp("gw"), Temp("gm"), Temp("gr"), Temp("gy"))
+	let second = (Temp("gq"), Temp("ga"), Temp("gw"), Temp("gm"), Temp("gr"), Temp("go"), Temp("gy"))
 	let run = "    " + Temp("gl") + " = func.call @strict_gpu_run(" + Text.Combine(first + second, ", ") + ") : " + Running
 	(List(Text) + ("  ^loop" + position + "gpu:")) + addresses + Values + (kind, lanes, run) + Finished
 Values Texts
-	Doubling.Values.Last is "    %t2gr = arith.constant 0 : i64"
-	MlirGpu(MlirDeviceRows.Picking, 2).Values.Last is "    %t2gr = arith.constant 1 : i64"
+	Doubling.Values.Last is "    %t2go = arith.constant 0 : i64"
+	"    %t2gr = arith.constant 1 : i64" is in MlirGpu(MlirDeviceRows.Picking, 2).Values
+	"    %t2go = arith.constant 1 : i64" is in Layering.Values
 	let free = MlirGpuCheck(function, position).Free
 	let size = MlirTyped.Integer.Constant(Temp("gz"), (free.Length + 1) to Text)
 	let array = "    " + Temp("ga") + " = llvm.alloca " + Temp("gz") + " x f64 : (i64) -> !llvm.ptr"
@@ -45,7 +46,7 @@ Values Texts
 	for free
 		lines = lines + Value(index, value)
 		mask = MlirDevice(function, position).IsList(value) then mask + 2 ^ index else mask
-	lines + Counted(free.Length, mask, Rows(free))
+	lines + Counted(free.Length, mask, Rows(free), MlirDots(function, position).Mask(free))
 Rows(free Texts) Number
 	MlirGpu(MlirDeviceRows.Picking, 2).Rows(("weights", "input")) is 1
 	mutable rows = 0
@@ -58,10 +59,11 @@ Value(at Number, name Text) Texts
 	let loaded = Temp("gv" + at)
 	let slot = "    " + Temp("gx" + at) + " = llvm.getelementptr " + Temp("ga") + "[" + at + Indexing
 	(function.Load(loaded, "%v_" + name), slot, function.Store(loaded, Temp("gx" + at)))
-Counted(count Number, mask Number, rows Number) Texts
-	Doubling.Counted(2, 3, 1).Last is "    %t2gr = arith.constant 1 : i64"
-	let counted = MlirTyped.Integer.Constant(Temp("gw"), count to Text)
-	(counted, MlirTyped.Integer.Constant(Temp("gm"), mask to Text), MlirTyped.Integer.Constant(Temp("gr"), rows to Text))
+Counted(count Number, mask Number, rows Number, dots Number) Texts
+	Doubling.Counted(2, 3, 1, 2).Last is "    %t2go = arith.constant 2 : i64"
+	constant names = ("gw", "gm", "gr", "go")
+	for (count, mask, rows, dots)
+		MlirTyped.Integer.Constant(Temp(names(index)), value to Text)
 Finished Texts
 	Doubling.Finished.Last is "    cf.br ^loop2exit"
 	let failed = "    " + Temp("gf") + " = arith.cmpf oeq, " + Temp("gl") + ", %zero : f64"

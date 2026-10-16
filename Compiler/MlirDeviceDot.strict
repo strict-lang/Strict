@@ -89,6 +89,21 @@ OffsetEmitted Texts
 	let second = Temp("yd") + ", " + Temp("yb") + ", " + Temp("yn") + ", " + Temp("bi") + ", " + Temp("ci") + Lanes
 	let call = "    " + Temp("") + " = func.call @strict_device_offset_dots(%failed, " + first + second + OffsetTypes
 	parts + counted + Whole("c", "%r" + instructions(at).payload(0)) + call + Accumulated
+Operands Texts
+	Summing.Operands is ("input")
+	Squaring.Operands is ("input", "input")
+	let instructions = function.method.instructions
+	if function.method.LoopEndOf(at) is at + 15
+		return (instructions(at + 5).texts(0), instructions(at + 10).texts(0))
+	List(Text) + instructions(at + 4).texts(0)
+IsOperand(name Text) Boolean
+	MlirDeviceDot(Summed, 6).IsOperand("input")
+	MlirDeviceDot(Summed, 6).IsOperand("row") is false
+	let begin = function.method.LoopBeginOf(at)
+	if begin < 0
+		return false
+	let dot = MlirDeviceDot(MlirFunction(function, Float = "f32"), begin)
+	dot.IsDot then name is in dot.Operands else false
 Whole(letter Text, slot Text) Texts
 	Squaring.Whole("a", "%v_start").Last is "    %d2ai = arith.fptosi %d2a : f32 to i64"
 	(function.Load(Temp(letter), slot), "    " + Temp(letter + "i") + " = arith.fptosi " + Temp(letter) + " : f32 to i64")

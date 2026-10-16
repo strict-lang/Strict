@@ -5,6 +5,9 @@ has previousWeights List(Numbers) = List(Numbers)
 has previousBiases Numbers = List(Number)
 constant Momentum = 0.5
 constant Halves = Layer(List(Numbers) + (0.5, 0.5), List(Number) + 0)
+constant Fours = Layer(Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r4"), (0, 0))
+constant Sixes = Layer(Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r6"), (0, 0))
+constant Eights = Layer(Gguf("NeuralNetworks/tiny.gguf", 8).Rows("q"), (0, 0))
 Random(inputs Number, outputs Number, function = Activation.Sigmoid) Layer
 	Layer.Random(2, 3).weights.Length is 3
 	Layer.Random(2, 3).weights.First.Length is 2
@@ -31,6 +34,9 @@ Forward(input Numbers) Numbers
 		activation.Output(Summed(value, input) + biases(index))
 Sums(input Numbers) Numbers
 	Halves.Sums((1, 1)) is List(Number) + 1
+	Fours.Sums(Gpt2Block.Added(Fours.weights.First, Sixes.weights.First)).First.IsNearlyEqual(3134903.8125, 6000)
+	Sixes.Sums(Gpt2Block.Added(Fours.weights.First, Sixes.weights.First)).Last.IsNearlyEqual(-71957.5, 1000)
+	Eights.Sums(Gpt2Block.Added(Eights.weights.First, Eights.weights.Last)).Last.IsNearlyEqual(25678.23355948925, 30)
 	for weights
 		Summed(value, input) + biases(index)
 Summed(row Numbers, input Numbers) Number

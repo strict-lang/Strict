@@ -1,0 +1,53 @@
+has function MlirFunction
+has position Number
+constant Layering = MlirDots(MlirGpu.Layering.function, 2)
+Mask(free Texts) Number
+	Layering.Mask(("input", "biases")) is 1
+	mutable dots = 0
+	for free
+		let end = function.method.LoopEndOf(position)
+		dots = IsDotted(function, position + 1, end, value, true) then dots + 2 ^ index else dots
+	dots
+IsDotted(inspected MlirFunction, first Number, last Number, name Text, canPass Boolean) Boolean
+	Layering.IsDotted(Layering.function, 3, 12, "input", true)
+	Layering.IsDotted(Layering.function, 3, 12, "biases", true) is false
+	Layering.IsDotted(Layering.function, 3, 12, "input", false) is false
+	mutable uses = 0
+	for Range(first, last)
+		let use = Use(inspected, value, name, canPass)
+		if use < 0
+			return false
+		uses = uses + use
+	uses > 0
+Use(inspected MlirFunction, at Number, name Text, canPass Boolean) Number
+	Layering.Use(Layering.function, 4, "input", true) is 1
+	Layering.Use(Layering.function, 8, "biases", true) is -1
+	Layering.Use(Layering.function, 10, "biases", true) is 0
+	let entry = inspected.method.instructions(at)
+	let isRead = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
+	if (isRead then entry.texts(0) is not name else true)
+		return 0
+	if entry.kind is InstructionType.IndexCall
+		return MlirDeviceDot(inspected, at).IsOperand(name) then 1 else -1
+	canPass and IsPassed(at) then 1 else -1
+IsPassed(at Number) Boolean
+	Layering.IsPassed(4)
+	Layering.IsPassed(3) is false
+	let register = function.method.instructions(at).payload(0)
+	for Range(at + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		let parameter = entry.kind is InstructionType.Invoke then Argument(entry, register) else -1
+		let callees = parameter >= 0 then MlirModule(function.types, "").Called(function, value) else List(MlirFunction)
+		if callees.Length is 1
+			let callee = callees.First
+			let name = callee.method.parameters(parameter).Name
+			return IsDotted(callee, 0, callee.method.instructions.Length, name, false)
+	false
+Argument(entry InstructionEntry, register Number) Number
+	Layering.Argument(Layering.function.method.instructions(5), 2) is 1
+	Layering.Argument(Layering.function.method.instructions(5), 7) is -1
+	let countPosition = 5 + entry.payload(3)
+	for entry.payload(countPosition)
+		if entry.payload(countPosition + 1 + index) is register
+			return index
+	-1

@@ -442,6 +442,17 @@
     llvm.store %failure, %failed : i64, !llvm.ptr
     return %zero : f32
   ^check:
+    %isQuantizedOther = arith.cmpi eq, %otherBits, %eightBits : i64
+    cf.cond_br %isQuantizedOther, ^quantized, ^plain
+  ^quantized:
+    %eightFits = func.call @strict_device_fits8(%row, %rowBits, %count, %other) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    cf.cond_br %eightFits, ^eights, ^generic(%lane, %zero : i64, f32)
+  ^eights:
+    %otherData = func.call @strict_device_data(%otherCount, %eightBits) : (i64, i64) -> i64
+    %otherScales = llvm.getelementptr %other[%otherData] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %eightDot = func.call @strict_device_dots8(%row, %rowBits, %count, %other, %otherScales, %lane, %lanes) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64) -> f32
+    return %eightDot : f32
+  ^plain:
     %rest = arith.andi %count, %seven : i64
     %whole = arith.cmpi eq, %rest, %none : i64
     %thirtyTwo = arith.constant 32 : i64
@@ -1418,6 +1429,432 @@
     %reduced = func.call @strict_device_sums(%total) : (f32) -> f32
     return %reduced : f32
   }
+  // 32 bit numbers to 8 bit numbers with a scale per 32 (a warp shares the largest magnitude), the numbers that dot
+  // products with packed rows read through dp4a
+  llvm.func @strict_device_quantize(%source: !llvm.ptr, %count: i64, %target: !llvm.ptr) attributes {nvvm.kernel} {
+    %thread = nvvm.read.ptx.sreg.tid.x : i32
+    %block = nvvm.read.ptx.sreg.ctaid.x : i32
+    %width = nvvm.read.ptx.sreg.ntid.x : i32
+    %start = arith.muli %block, %width : i32
+    %sum = arith.addi %start, %thread : i32
+    %at = arith.extui %sum : i32 to i64
+    %inside = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %inside, ^body, ^exit
+  ^body:
+    %slot = llvm.getelementptr %source[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %value = llvm.load %slot : !llvm.ptr -> f32
+    %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
+    %largest = func.call @strict_device_largest(%magnitude) : (f32) -> f32
+    %most = arith.constant 127.0 : f32
+    %zero = arith.constant 0.0 : f32
+    %scale = arith.divf %largest, %most : f32
+    %isEmpty = arith.cmpf oeq, %largest, %zero : f32
+    %inverse = arith.divf %most, %largest : f32
+    %factor = arith.select %isEmpty, %zero, %inverse : f32
+    %scaled = arith.mulf %value, %factor : f32
+    %rounded = llvm.call_intrinsic "llvm.nvvm.f2i.rn"(%scaled) : (f32) -> i32
+    %byte = arith.trunci %rounded : i32 to i8
+    %byteSlot = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %byteSlot : i8, !llvm.ptr
+    %thirtyOne = arith.constant 31 : i64
+    %lane = arith.andi %at, %thirtyOne : i64
+    %none = arith.constant 0 : i64
+    %isFirst = arith.cmpi eq, %lane, %none : i64
+    cf.cond_br %isFirst, ^scale, ^exit
+  ^scale:
+    %scales = llvm.getelementptr %target[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %five = arith.constant 5 : i64
+    %scaleIndex = arith.shrui %at, %five : i64
+    %scaleSlot = llvm.getelementptr %scales[%scaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %scale, %scaleSlot : f32, !llvm.ptr
+    cf.br ^exit
+  ^exit:
+    llvm.return
+  }
+  func.func private @strict_device_largest(%value: f32) -> f32 {
+    %sixteen = arith.constant 16 : i32
+    %one = arith.constant 1 : i32
+    %two = arith.constant 2 : i32
+    cf.br ^round(%value, %sixteen : f32, i32)
+  ^round(%largest: f32, %offset: i32):
+    %more = arith.cmpi sge, %offset, %one : i32
+    cf.cond_br %more, ^shuffle, ^done
+  ^shuffle:
+    %other = func.call @strict_device_shuffles(%largest, %offset) : (f32, i32) -> f32
+    %larger = arith.maxnumf %largest, %other : f32
+    %half = arith.divui %offset, %two : i32
+    cf.br ^round(%larger, %half : f32, i32)
+  ^done:
+    return %largest : f32
+  }
+  func.func private @strict_device_dp4a(%left: i32, %right: i32, %sum: i32) -> i32 attributes {passthrough = ["alwaysinline"]} {
+    %result = llvm.call_intrinsic "llvm.nvvm.idp4a.s.s"(%left, %right, %sum) : (i32, i32, i32) -> i32
+    return %result : i32
+  }
+  func.func private @strict_device_words(%first: i32, %second: i32, %third: i32, %fourth: i32) -> vector<4xi32> attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %empty = llvm.mlir.poison : vector<4xi32>
+    %one = llvm.insertelement %first, %empty[%c0 : i32] : vector<4xi32>
+    %two = llvm.insertelement %second, %one[%c1 : i32] : vector<4xi32>
+    %three = llvm.insertelement %third, %two[%c2 : i32] : vector<4xi32>
+    %four = llvm.insertelement %fourth, %three[%c3 : i32] : vector<4xi32>
+    return %four : vector<4xi32>
+  }
+  // the sum of the products of 4 pairs of 4 bytes
+  func.func private @strict_device_dp4as(%left: vector<4xi32>, %right: vector<4xi32>) -> i32 attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %nothing = arith.constant 0 : i32
+    %left0 = llvm.extractelement %left[%c0 : i32] : vector<4xi32>
+    %left1 = llvm.extractelement %left[%c1 : i32] : vector<4xi32>
+    %left2 = llvm.extractelement %left[%c2 : i32] : vector<4xi32>
+    %left3 = llvm.extractelement %left[%c3 : i32] : vector<4xi32>
+    %right0 = llvm.extractelement %right[%c0 : i32] : vector<4xi32>
+    %right1 = llvm.extractelement %right[%c1 : i32] : vector<4xi32>
+    %right2 = llvm.extractelement %right[%c2 : i32] : vector<4xi32>
+    %right3 = llvm.extractelement %right[%c3 : i32] : vector<4xi32>
+    %sum0 = func.call @strict_device_dp4a(%left0, %right0, %nothing) : (i32, i32, i32) -> i32
+    %sum1 = func.call @strict_device_dp4a(%left1, %right1, %sum0) : (i32, i32, i32) -> i32
+    %sum2 = func.call @strict_device_dp4a(%left2, %right2, %sum1) : (i32, i32, i32) -> i32
+    %sum3 = func.call @strict_device_dp4a(%left3, %right3, %sum2) : (i32, i32, i32) -> i32
+    return %sum3 : i32
+  }
+  // the 6 bit scale and minimum of part j (32 numbers) of a Q4_K block, like get_scale_min_k4 of ggml: the bytes j & 3 of
+  // the three scale words are all it needs (constant indices keep the header in registers)
+  func.func private @strict_device_four_scale(%header: vector<4xi32>, %j: i32) -> (i32, i32) attributes {passthrough = ["alwaysinline"]} {
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %three = arith.constant 3 : i32
+    %four = arith.constant 4 : i32
+    %six = arith.constant 6 : i32
+    %fifteen = arith.constant 15 : i32
+    %sixtyThree = arith.constant 63 : i32
+    %byteMask = arith.constant 255 : i32
+    %isLow = arith.cmpi ult, %j, %four : i32
+    %inWord = arith.andi %j, %three : i32
+    %shift = arith.shli %inWord, %three : i32
+    %firstWord = llvm.extractelement %header[%c1 : i32] : vector<4xi32>
+    %secondWord = llvm.extractelement %header[%c2 : i32] : vector<4xi32>
+    %thirdWord = llvm.extractelement %header[%c3 : i32] : vector<4xi32>
+    %firstShifted = arith.shrui %firstWord, %shift : i32
+    %first = arith.andi %firstShifted, %byteMask : i32
+    %secondShifted = arith.shrui %secondWord, %shift : i32
+    %second = arith.andi %secondShifted, %byteMask : i32
+    %thirdShifted = arith.shrui %thirdWord, %shift : i32
+    %third = arith.andi %thirdShifted, %byteMask : i32
+    %lowScale = arith.andi %first, %sixtyThree : i32
+    %lowMinimum = arith.andi %second, %sixtyThree : i32
+    %thirdLow = arith.andi %third, %fifteen : i32
+    %firstTop = arith.shrui %first, %six : i32
+    %firstUp = arith.shli %firstTop, %four : i32
+    %highScale = arith.ori %thirdLow, %firstUp : i32
+    %thirdHigh = arith.shrui %third, %four : i32
+    %secondTop = arith.shrui %second, %six : i32
+    %secondUp = arith.shli %secondTop, %four : i32
+    %highMinimum = arith.ori %thirdHigh, %secondUp : i32
+    %scale = arith.select %isLow, %lowScale, %highScale : i32
+    %minimum = arith.select %isLow, %lowMinimum, %highMinimum : i32
+    return %scale, %minimum : i32, i32
+  }
+  // the dot product of a packed row (Q4_K, Q6_K or 8 bits) with 8 bit numbers (bytes, then a scale per 32), the whole
+  // warp gets the sum
+  func.func private @strict_device_dots8(%row: !llvm.ptr, %rowBits: i64, %count: i64, %bytes: !llvm.ptr, %scales: !llvm.ptr, %lane: i64, %lanes: i64) -> f32 attributes {passthrough = ["noinline"]} {
+    %zero = arith.constant 0.0 : f32
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
+    %six = arith.constant 6 : i64
+    %seven = arith.constant 7 : i64
+    %eight = arith.constant 8 : i64
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %nothing = arith.constant 0 : i32
+    %onesVector = llvm.mlir.constant(dense<16843009> : vector<4xi32>) : vector<4xi32>
+    %nibbleMasks = llvm.mlir.constant(dense<252645135> : vector<4xi32>) : vector<4xi32>
+    %fourBits = arith.constant 4 : i32
+    %fourShifts = llvm.mlir.constant(dense<4> : vector<4xi32>) : vector<4xi32>
+    cf.switch %rowBits : i64, [
+      default: ^bytes(%lane, %zero : i64, f32),
+      4: ^four(%lane, %zero : i64, f32),
+      6: ^six(%lane, %zero : i64, f32)
+    ]
+  ^four(%unit: i64, %fourSum: f32):
+    %units = arith.shrui %count, %five : i64
+    %fourMore = arith.cmpi slt, %unit, %units : i64
+    cf.cond_br %fourMore, ^fourBody, ^reduce(%fourSum : f32)
+  ^fourBody:
+    %fourBlockBytes = arith.constant 144 : i64
+    %sixteenBytes = arith.constant 16 : i64
+    %fourBlock = arith.shrui %unit, %three : i64
+    %fourParts = arith.shrui %unit, %one : i64
+    %fourPart = arith.andi %fourParts, %three : i64
+    %fourHalf = arith.andi %unit, %one : i64
+    %fourOffset = arith.muli %fourBlock, %fourBlockBytes : i64
+    %fourStart = llvm.getelementptr %row[%fourOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %header = llvm.load %fourStart invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %partBytes = arith.shli %fourPart, %five : i64
+    %halfBytes = arith.shli %fourHalf, %four : i64
+    %inBlock = arith.addi %partBytes, %halfBytes : i64
+    %nibbleAt = arith.addi %inBlock, %sixteenBytes : i64
+    %nibbleSlot = llvm.getelementptr %fourStart[%nibbleAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %nibbles = llvm.load %nibbleSlot invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %blockFirst = arith.shli %fourBlock, %eight : i64
+    %partFirst = arith.shli %fourPart, %six : i64
+    %blockPart = arith.addi %blockFirst, %partFirst : i64
+    %first = arith.addi %blockPart, %halfBytes : i64
+    %lowInputSlot = llvm.getelementptr %bytes[%first] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %lowInputs = llvm.load %lowInputSlot invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %highInputSlot = llvm.getelementptr %lowInputSlot[32] : (!llvm.ptr) -> !llvm.ptr, i8
+    %highInputs = llvm.load %highInputSlot invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %scaleBlock = arith.shli %fourBlock, %three : i64
+    %scalePart = arith.shli %fourPart, %one : i64
+    %scaleIndex = arith.addi %scaleBlock, %scalePart : i64
+    %lowScaleSlot = llvm.getelementptr %scales[%scaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %lowInputScale = llvm.load %lowScaleSlot invariant : !llvm.ptr -> f32
+    %highScaleSlot = llvm.getelementptr %lowScaleSlot[1] : (!llvm.ptr) -> !llvm.ptr, f32
+    %highInputScale = llvm.load %highScaleSlot invariant : !llvm.ptr -> f32
+    %headerWord = llvm.extractelement %header[%c0 : i32] : vector<4xi32>
+    %halves = llvm.bitcast %headerWord : i32 to vector<2xf16>
+    %halfScale = llvm.extractelement %halves[%c0 : i32] : vector<2xf16>
+    %halfMinimum = llvm.extractelement %halves[%c1 : i32] : vector<2xf16>
+    %blockScale = arith.extf %halfScale : f16 to f32
+    %blockMinimum = arith.extf %halfMinimum : f16 to f32
+    %part32 = arith.trunci %fourPart : i64 to i32
+    %lowPart = arith.shli %part32, %c1 : i32
+    %highPart = arith.addi %lowPart, %c1 : i32
+    %lowScaleBits, %lowMinimumBits = func.call @strict_device_four_scale(%header, %lowPart) : (vector<4xi32>, i32) -> (i32, i32)
+    %highScaleBits, %highMinimumBits = func.call @strict_device_four_scale(%header, %highPart) : (vector<4xi32>, i32) -> (i32, i32)
+    %lowNibbles = arith.andi %nibbles, %nibbleMasks : vector<4xi32>
+    %highShifted = arith.shrui %nibbles, %fourShifts : vector<4xi32>
+    %highNibbles = arith.andi %highShifted, %nibbleMasks : vector<4xi32>
+    %lowDot = func.call @strict_device_dp4as(%lowNibbles, %lowInputs) : (vector<4xi32>, vector<4xi32>) -> i32
+    %highDot = func.call @strict_device_dp4as(%highNibbles, %highInputs) : (vector<4xi32>, vector<4xi32>) -> i32
+    %lowTotal = func.call @strict_device_dp4as(%onesVector, %lowInputs) : (vector<4xi32>, vector<4xi32>) -> i32
+    %highTotal = func.call @strict_device_dp4as(%onesVector, %highInputs) : (vector<4xi32>, vector<4xi32>) -> i32
+    %lowDotFloat = arith.sitofp %lowDot : i32 to f32
+    %highDotFloat = arith.sitofp %highDot : i32 to f32
+    %lowTotalFloat = arith.sitofp %lowTotal : i32 to f32
+    %highTotalFloat = arith.sitofp %highTotal : i32 to f32
+    %lowScaleFloat = arith.uitofp %lowScaleBits : i32 to f32
+    %lowMinimumFloat = arith.uitofp %lowMinimumBits : i32 to f32
+    %highScaleFloat = arith.uitofp %highScaleBits : i32 to f32
+    %highMinimumFloat = arith.uitofp %highMinimumBits : i32 to f32
+    %lowWeighted = arith.mulf %lowScaleFloat, %lowDotFloat : f32
+    %lowShifted = arith.mulf %lowMinimumFloat, %lowTotalFloat : f32
+    %highWeighted = arith.mulf %highScaleFloat, %highDotFloat : f32
+    %highShiftedTotal = arith.mulf %highMinimumFloat, %highTotalFloat : f32
+    %lowScaled = arith.mulf %lowWeighted, %blockScale : f32
+    %lowMinimum = arith.mulf %lowShifted, %blockMinimum : f32
+    %lowPartSum = arith.subf %lowScaled, %lowMinimum : f32
+    %highScaled = arith.mulf %highWeighted, %blockScale : f32
+    %highMinimum = arith.mulf %highShiftedTotal, %blockMinimum : f32
+    %highPartSum = arith.subf %highScaled, %highMinimum : f32
+    %lowContribution = arith.mulf %lowPartSum, %lowInputScale : f32
+    %fourAdded = arith.addf %fourSum, %lowContribution : f32
+    %highContribution = arith.mulf %highPartSum, %highInputScale : f32
+    %fourNext = arith.addf %fourAdded, %highContribution : f32
+    %fourFollowing = arith.addi %unit, %lanes : i64
+    cf.br ^four(%fourFollowing, %fourNext : i64, f32)
+  ^six(%chunk: i64, %sixSum: f32):
+    %chunks = arith.shrui %count, %four : i64
+    %sixMore = arith.cmpi slt, %chunk, %chunks : i64
+    cf.cond_br %sixMore, ^sixBody, ^reduce(%sixSum : f32)
+  ^sixBody:
+    %sixBlockBytes = arith.constant 208 : i64
+    %fifteen = arith.constant 15 : i64
+    %sixBlock = arith.shrui %chunk, %four : i64
+    %sixWord = arith.andi %chunk, %fifteen : i64
+    %sixHalf = arith.shrui %sixWord, %three : i64
+    %sixInHalf = arith.andi %sixWord, %seven : i64
+    %sixFirst = arith.shli %sixInHalf, %two : i64
+    %sixOffset = arith.muli %sixBlock, %sixBlockBytes : i64
+    %sixStart = llvm.getelementptr %row[%sixOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %sixLowHalf = arith.shli %sixHalf, %six : i64
+    %sixLowAt = arith.addi %sixLowHalf, %sixFirst : i64
+    %sixLowSlot = llvm.getelementptr %sixStart[%sixLowAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %sixLow = llvm.load %sixLowSlot invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %sixSecondSlot = llvm.getelementptr %sixLowSlot[32] : (!llvm.ptr) -> !llvm.ptr, i8
+    %sixSecond = llvm.load %sixSecondSlot invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %sixHighHalf = arith.shli %sixHalf, %five : i64
+    %sixHighStart = arith.constant 128 : i64
+    %sixHighBase = arith.addi %sixHighStart, %sixHighHalf : i64
+    %sixHighAt = arith.addi %sixHighBase, %sixFirst : i64
+    %sixHighSlot = llvm.getelementptr %sixStart[%sixHighAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %sixHigh = llvm.load %sixHighSlot invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %sixScaleStart = arith.constant 192 : i64
+    %sixScaleHalf = arith.shli %sixHalf, %three : i64
+    %sixSixteenth = arith.shrui %sixInHalf, %two : i64
+    %sixScaleBase = arith.addi %sixScaleStart, %sixScaleHalf : i64
+    %sixScaleAt = arith.addi %sixScaleBase, %sixSixteenth : i64
+    %sixScaleSlot0 = llvm.getelementptr %sixStart[%sixScaleAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %sixScale0 = llvm.load %sixScaleSlot0 invariant : !llvm.ptr -> i8
+    %sixScaleSlot1 = llvm.getelementptr %sixScaleSlot0[2] : (!llvm.ptr) -> !llvm.ptr, i8
+    %sixScale1 = llvm.load %sixScaleSlot1 invariant : !llvm.ptr -> i8
+    %sixScaleSlot2 = llvm.getelementptr %sixScaleSlot0[4] : (!llvm.ptr) -> !llvm.ptr, i8
+    %sixScale2 = llvm.load %sixScaleSlot2 invariant : !llvm.ptr -> i8
+    %sixScaleSlot3 = llvm.getelementptr %sixScaleSlot0[6] : (!llvm.ptr) -> !llvm.ptr, i8
+    %sixScale3 = llvm.load %sixScaleSlot3 invariant : !llvm.ptr -> i8
+    %sixDataBytes = func.call @strict_device_data(%count, %six) : (i64, i64) -> i64
+    %sixHalves = llvm.getelementptr %row[%sixDataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %sixHalfSlot = llvm.getelementptr %sixHalves[%sixBlock] : (!llvm.ptr, i64) -> !llvm.ptr, f16
+    %sixHalfScale = llvm.load %sixHalfSlot invariant : !llvm.ptr -> f16
+    %sixBlockScale = arith.extf %sixHalfScale : f16 to f32
+    %lowNibble = arith.constant 252645135 : i32
+    %topPair = arith.constant 808464432 : i32
+    %twoBits = arith.constant 2 : i32
+    %sixFirstLow = arith.andi %sixLow, %lowNibble : i32
+    %sixHighUp4 = arith.shli %sixHigh, %fourBits : i32
+    %sixHighTop0 = arith.andi %sixHighUp4, %topPair : i32
+    %sixQ0 = arith.ori %sixFirstLow, %sixHighTop0 : i32
+    %sixSecondLow = arith.andi %sixSecond, %lowNibble : i32
+    %sixHighUp2 = arith.shli %sixHigh, %twoBits : i32
+    %sixHighTop1 = arith.andi %sixHighUp2, %topPair : i32
+    %sixQ1 = arith.ori %sixSecondLow, %sixHighTop1 : i32
+    %sixLowDown = arith.shrui %sixLow, %fourBits : i32
+    %sixFirstHigh = arith.andi %sixLowDown, %lowNibble : i32
+    %sixHighTop2 = arith.andi %sixHigh, %topPair : i32
+    %sixQ2 = arith.ori %sixFirstHigh, %sixHighTop2 : i32
+    %sixSecondDown = arith.shrui %sixSecond, %fourBits : i32
+    %sixSecondHigh = arith.andi %sixSecondDown, %lowNibble : i32
+    %sixHighDown2 = arith.shrui %sixHigh, %twoBits : i32
+    %sixHighTop3 = arith.andi %sixHighDown2, %topPair : i32
+    %sixQ3 = arith.ori %sixSecondHigh, %sixHighTop3 : i32
+    %sixWords = func.call @strict_device_words(%sixQ0, %sixQ1, %sixQ2, %sixQ3) : (i32, i32, i32, i32) -> vector<4xi32>
+    %signs = llvm.mlir.constant(dense<-2139062144> : vector<4xi32>) : vector<4xi32>
+    %centers = llvm.mlir.constant(dense<538976288> : vector<4xi32>) : vector<4xi32>
+    %sixMarked = arith.ori %sixWords, %signs : vector<4xi32>
+    %sixLowered = arith.subi %sixMarked, %centers : vector<4xi32>
+    %sixCentered = arith.xori %sixLowered, %signs : vector<4xi32>
+    %sixBlockFirst = arith.shli %sixBlock, %eight : i64
+    %sixHalfFirst = arith.shli %sixHalf, %seven : i64
+    %sixPartStart = arith.addi %sixBlockFirst, %sixHalfFirst : i64
+    %sixInputAt = arith.addi %sixPartStart, %sixFirst : i64
+    %sixInputSlot0 = llvm.getelementptr %bytes[%sixInputAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %sixInput0 = llvm.load %sixInputSlot0 invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %sixInputSlot1 = llvm.getelementptr %sixInputSlot0[32] : (!llvm.ptr) -> !llvm.ptr, i8
+    %sixInput1 = llvm.load %sixInputSlot1 invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %sixInputSlot2 = llvm.getelementptr %sixInputSlot0[64] : (!llvm.ptr) -> !llvm.ptr, i8
+    %sixInput2 = llvm.load %sixInputSlot2 invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %sixInputSlot3 = llvm.getelementptr %sixInputSlot0[96] : (!llvm.ptr) -> !llvm.ptr, i8
+    %sixInput3 = llvm.load %sixInputSlot3 invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %sixScaleIndex = arith.shrui %sixPartStart, %five : i64
+    %sixInputScaleSlot0 = llvm.getelementptr %scales[%sixScaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %sixInputScale0 = llvm.load %sixInputScaleSlot0 invariant : !llvm.ptr -> f32
+    %sixInputScaleSlot1 = llvm.getelementptr %sixInputScaleSlot0[1] : (!llvm.ptr) -> !llvm.ptr, f32
+    %sixInputScale1 = llvm.load %sixInputScaleSlot1 invariant : !llvm.ptr -> f32
+    %sixInputScaleSlot2 = llvm.getelementptr %sixInputScaleSlot0[2] : (!llvm.ptr) -> !llvm.ptr, f32
+    %sixInputScale2 = llvm.load %sixInputScaleSlot2 invariant : !llvm.ptr -> f32
+    %sixInputScaleSlot3 = llvm.getelementptr %sixInputScaleSlot0[3] : (!llvm.ptr) -> !llvm.ptr, f32
+    %sixInputScale3 = llvm.load %sixInputScaleSlot3 invariant : !llvm.ptr -> f32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %sixC0 = llvm.extractelement %sixCentered[%c0 : i32] : vector<4xi32>
+    %sixC1 = llvm.extractelement %sixCentered[%c1 : i32] : vector<4xi32>
+    %sixC2 = llvm.extractelement %sixCentered[%c2 : i32] : vector<4xi32>
+    %sixC3 = llvm.extractelement %sixCentered[%c3 : i32] : vector<4xi32>
+    %sixDot0 = func.call @strict_device_dp4a(%sixC0, %sixInput0, %nothing) : (i32, i32, i32) -> i32
+    %sixDot1 = func.call @strict_device_dp4a(%sixC1, %sixInput1, %nothing) : (i32, i32, i32) -> i32
+    %sixDot2 = func.call @strict_device_dp4a(%sixC2, %sixInput2, %nothing) : (i32, i32, i32) -> i32
+    %sixDot3 = func.call @strict_device_dp4a(%sixC3, %sixInput3, %nothing) : (i32, i32, i32) -> i32
+    %sixDotFloat0 = arith.sitofp %sixDot0 : i32 to f32
+    %sixDotFloat1 = arith.sitofp %sixDot1 : i32 to f32
+    %sixDotFloat2 = arith.sitofp %sixDot2 : i32 to f32
+    %sixDotFloat3 = arith.sitofp %sixDot3 : i32 to f32
+    %sixScaleFloat0 = arith.sitofp %sixScale0 : i8 to f32
+    %sixScaleFloat1 = arith.sitofp %sixScale1 : i8 to f32
+    %sixScaleFloat2 = arith.sitofp %sixScale2 : i8 to f32
+    %sixScaleFloat3 = arith.sitofp %sixScale3 : i8 to f32
+    %sixWeight0 = arith.mulf %sixScaleFloat0, %sixInputScale0 : f32
+    %sixWeight1 = arith.mulf %sixScaleFloat1, %sixInputScale1 : f32
+    %sixWeight2 = arith.mulf %sixScaleFloat2, %sixInputScale2 : f32
+    %sixWeight3 = arith.mulf %sixScaleFloat3, %sixInputScale3 : f32
+    %sixPart0 = arith.mulf %sixWeight0, %sixDotFloat0 : f32
+    %sixPart1 = arith.mulf %sixWeight1, %sixDotFloat1 : f32
+    %sixPart2 = arith.mulf %sixWeight2, %sixDotFloat2 : f32
+    %sixPart3 = arith.mulf %sixWeight3, %sixDotFloat3 : f32
+    %sixPairs0 = arith.addf %sixPart0, %sixPart1 : f32
+    %sixPairs1 = arith.addf %sixPart2, %sixPart3 : f32
+    %sixParts = arith.addf %sixPairs0, %sixPairs1 : f32
+    %sixScaled = arith.mulf %sixParts, %sixBlockScale : f32
+    %sixNext = arith.addf %sixSum, %sixScaled : f32
+    %sixFollowing = arith.addi %chunk, %lanes : i64
+    cf.br ^six(%sixFollowing, %sixNext : i64, f32)
+  ^bytes(%byteUnit: i64, %byteSum: f32):
+    %byteUnits = arith.shrui %count, %four : i64
+    %byteMore = arith.cmpi slt, %byteUnit, %byteUnits : i64
+    cf.cond_br %byteMore, ^bytesBody, ^reduce(%byteSum : f32)
+  ^bytesBody:
+    %byteFirst = arith.shli %byteUnit, %four : i64
+    %rowSlot0 = llvm.getelementptr %row[%byteFirst] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %rowWord0 = llvm.load %rowSlot0 invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %rowSlot1 = llvm.getelementptr %rowSlot0[4] : (!llvm.ptr) -> !llvm.ptr, i8
+    %rowWord1 = llvm.load %rowSlot1 invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %rowSlot2 = llvm.getelementptr %rowSlot0[8] : (!llvm.ptr) -> !llvm.ptr, i8
+    %rowWord2 = llvm.load %rowSlot2 invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %rowSlot3 = llvm.getelementptr %rowSlot0[12] : (!llvm.ptr) -> !llvm.ptr, i8
+    %rowWord3 = llvm.load %rowSlot3 invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %rowWords = func.call @strict_device_words(%rowWord0, %rowWord1, %rowWord2, %rowWord3) : (i32, i32, i32, i32) -> vector<4xi32>
+    %byteInputSlot = llvm.getelementptr %bytes[%byteFirst] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byteInputs = llvm.load %byteInputSlot invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %byteDot = func.call @strict_device_dp4as(%rowWords, %byteInputs) : (vector<4xi32>, vector<4xi32>) -> i32
+    %byteDotFloat = arith.sitofp %byteDot : i32 to f32
+    %rowDataBytes = func.call @strict_device_data(%count, %eight) : (i64, i64) -> i64
+    %rowScales = llvm.getelementptr %row[%rowDataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byteScaleIndex = arith.shrui %byteFirst, %five : i64
+    %rowScaleSlot = llvm.getelementptr %rowScales[%byteScaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %rowScale = llvm.load %rowScaleSlot invariant : !llvm.ptr -> f32
+    %byteInputScaleSlot = llvm.getelementptr %scales[%byteScaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %byteInputScale = llvm.load %byteInputScaleSlot invariant : !llvm.ptr -> f32
+    %byteScale = arith.mulf %rowScale, %byteInputScale : f32
+    %byteScaled = arith.mulf %byteDotFloat, %byteScale : f32
+    %byteNext = arith.addf %byteSum, %byteScaled : f32
+    %byteFollowing = arith.addi %byteUnit, %lanes : i64
+    cf.br ^bytes(%byteFollowing, %byteNext : i64, f32)
+  ^reduce(%total: f32):
+    %reduced = func.call @strict_device_sums(%total) : (f32) -> f32
+    return %reduced : f32
+  }
+  // dots8 needs whole blocks of the row (256 numbers for 4 and 6 bits, 32 for 8) and 16 byte aligned vector loads
+  func.func private @strict_device_fits8(%row: !llvm.ptr, %rowBits: i64, %count: i64, %bytes: !llvm.ptr) -> i1 {
+    %none = arith.constant 0 : i64
+    %four = arith.constant 4 : i64
+    %six = arith.constant 6 : i64
+    %eight = arith.constant 8 : i64
+    %fifteen = arith.constant 15 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %blockMask = arith.constant 255 : i64
+    %true = arith.constant true
+    %isFour = arith.cmpi eq, %rowBits, %four : i64
+    %isSix = arith.cmpi eq, %rowBits, %six : i64
+    %isEight = arith.cmpi eq, %rowBits, %eight : i64
+    %isBlocked = arith.ori %isFour, %isSix : i1
+    %blockRest = arith.andi %count, %blockMask : i64
+    %wholeBlocks = arith.cmpi eq, %blockRest, %none : i64
+    %wordRest = arith.andi %count, %thirtyOne : i64
+    %wholeWords = arith.cmpi eq, %wordRest, %none : i64
+    %blockedFits = arith.andi %isBlocked, %wholeBlocks : i1
+    %eightFits = arith.andi %isEight, %wholeWords : i1
+    %sizeFits = arith.ori %blockedFits, %eightFits : i1
+    %rowAddress = llvm.ptrtoint %row : !llvm.ptr to i64
+    %rowRest = arith.andi %rowAddress, %fifteen : i64
+    %rowAligned = arith.cmpi eq, %rowRest, %none : i64
+    %notFour = arith.xori %isFour, %true : i1
+    %rowFits = arith.ori %notFour, %rowAligned : i1
+    %bytesAddress = llvm.ptrtoint %bytes : !llvm.ptr to i64
+    %bytesRest = arith.andi %bytesAddress, %fifteen : i64
+    %bytesAligned = arith.cmpi eq, %bytesRest, %none : i64
+    %placed = arith.andi %rowFits, %bytesAligned : i1
+    %fits = arith.andi %sizeFits, %placed : i1
+    return %fits : i1
+  }
   // the dot product of count numbers of two lists from their starts, aligned 32 bit floats go through strict_device_dots
   func.func private @strict_device_offset_dots(%failed: !llvm.ptr, %x: !llvm.ptr, %xBits: i64, %xCount: i64, %xStart: i64, %y: !llvm.ptr, %yBits: i64, %yCount: i64, %yStart: i64, %count: i64, %lane: i64, %lanes: i64) -> f32 {
     %zero = arith.constant 0.0 : f32
@@ -1440,6 +1877,30 @@
     llvm.store %failure, %failed : i64, !llvm.ptr
     return %zero : f32
   ^check:
+    %eightBits = arith.constant 8 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %yQuantized = arith.cmpi eq, %yBits, %eightBits : i64
+    %yStartRest = arith.andi %yStart, %thirtyOne : i64
+    %yBlockAligned = arith.cmpi eq, %yStartRest, %none : i64
+    %xFromZero = arith.cmpi eq, %xStart, %none : i64
+    %xToCount = arith.cmpi eq, %count, %xCount : i64
+    %xComplete = arith.andi %xFromZero, %xToCount : i1
+    %yAlignedQuantized = arith.andi %yQuantized, %yBlockAligned : i1
+    %quantizable = arith.andi %yAlignedQuantized, %xComplete : i1
+    cf.cond_br %quantizable, ^quantized, ^plain
+  ^quantized:
+    %yBytes = llvm.getelementptr %y[%yStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %eightFits = func.call @strict_device_fits8(%x, %xBits, %count, %yBytes) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    cf.cond_br %eightFits, ^eights, ^generic(%lane, %zero : i64, f32)
+  ^eights:
+    %yData = func.call @strict_device_data(%yCount, %eightBits) : (i64, i64) -> i64
+    %yScales = llvm.getelementptr %y[%yData] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %five = arith.constant 5 : i64
+    %yScaleStart = arith.shrui %yStart, %five : i64
+    %yFirstScales = llvm.getelementptr %yScales[%yScaleStart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %eightDot = func.call @strict_device_dots8(%x, %xBits, %count, %yBytes, %yFirstScales, %lane, %lanes) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64) -> f32
+    return %eightDot : f32
+  ^plain:
     %xFloats = arith.cmpi eq, %xBits, %thirtyTwo : i64
     %yFloats = arith.cmpi eq, %yBits, %thirtyTwo : i64
     %xFirst = llvm.getelementptr %x[%xStart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
