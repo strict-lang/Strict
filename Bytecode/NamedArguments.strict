@@ -12,6 +12,7 @@ Arranged(call SyntaxNode, block CodeBlock) SyntaxNode
 	Parts.Arranged(SyntaxParser(Tokenizer("Part(1, 2)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 2)"
 	Parts.Arranged(Named, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
 	Curved.Arranged(SyntaxParser(Tokenizer("Part(1)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 0, Curve.Flat)"
+	Curved.Arranged(SyntaxParser(Tokenizer("Part()").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Identifier"
 	let positional = Positional(call)
 	let isType = (call.Kind is "Call") and values.inference.types.IsKnown(call.text)
 	let isReplacing = isType and (positional > 0) and (values.TypeOf(call.children(0), block) is call.text)
@@ -28,7 +29,7 @@ Filled(call SyntaxNode, names Texts, positional Number) SyntaxNode
 Positional(call SyntaxNode) Number
 	Parts.Positional(Masked) is 1
 	for call.children
-		if value.Kind is "Reassignment"
+		if value.Kind is in ("Reassignment", "Missing")
 			return index
 	call.children.Length
 Last(call SyntaxNode, names Texts) Number
@@ -39,7 +40,8 @@ Last(call SyntaxNode, names Texts) Number
 		if IsComputed(call.text, value)
 			last = index
 	for call.children
-		let position = value.Kind is "Reassignment" then names.Index(value.children(0).text) else index
+		let given = value.Kind is "Missing" then -1 else index
+		let position = value.Kind is "Reassignment" then names.Index(value.children(0).text) else given
 		last = position > last then position else last
 	last
 IsComputed(type Text, name Text) Boolean

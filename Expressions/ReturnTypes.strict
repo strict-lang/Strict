@@ -1,0 +1,26 @@
+has inference TypeInference
+constant Naming = ReturnTypes(TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers)))
+constant Named = Scope(List(Text) + "name", List(Text) + "Text")
+constant Joined = ScopedStatement(SyntaxParser(Tokenizer("\"a\" + name").Tokens).Parse, Named, 1)
+constant Splitted = ScopedStatement(SyntaxParser(Tokenizer("name.Split(\",\")").Tokens).Parse, Named, 1)
+constant Lines = ("Names Texts", "\tvalue")
+constant Looped = ("Names Texts", "\tfor names", "\t\tvalue")
+Issue(scoped ScopedStatement, current Scope, lines Texts) Text
+	Naming.Issue(Joined, Named, Lines).StartsWith("ReturnTypeMismatch: a Text is returned for Texts") is true
+	Naming.Issue(Splitted, Named, Lines) is ""
+	Naming.Issue(ScopedStatement(Joined.statement, Named, 2), Named, Looped) is ""
+	constant hint = ", brackets around an operator only group, List(Text) + value is a list of one"
+	let node = scoped.statement
+	let isReturned = (scoped.scope.TypeOf(" dropped") is "") and (lines(scoped.line).StartsWith("\t\t") is false)
+	if (isReturned is false) or node.HasBody or (node.Kind is in ("Declaration", "Reassignment", "Return"))
+		return ""
+	let declared = Declared(lines, scoped.line)
+	let type = inference.TypeOf(node, scoped.scope, current)
+	let isSingle = inference.types.IsPlural(declared) and (inference.types.ElementType(declared) is type)
+	isSingle then "ReturnTypeMismatch: a " + type + " is returned for " + declared + hint else ""
+Declared(lines Texts, line Number) Text
+	Naming.Declared(Lines, 1) is "Texts"
+	for Range(0, line).Reverse
+		if lines(value).StartsWith("\t") is false
+			return HeaderTokens(Tokenizer(lines(value)).Tokens).ReturnType
+	""
