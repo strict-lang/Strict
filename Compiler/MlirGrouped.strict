@@ -1,0 +1,69 @@
+has function MlirFunction
+has position Number
+constant Norming = MlirGrouped(MlirFunction(MlirGroups.Norming.function, Group = 11), 2)
+constant Doubling = MlirGrouped(MlirGpu.Doubling.function, 2)
+constant Calling = MlirGrouped(MlirGroups.Norming.function, 11)
+constant Allocated = " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+constant Plain = ("    %inside = arith.cmpi slt, %at, %count : i64", "    cf.cond_br %inside, ^body, ^exit")
+constant Lanes = ("    %widest = arith.constant 256 : i64", "    %lanes = arith.minsi %group, %widest : i64", "    %single = arith.constant 1 : i64", "    %at = arith.divui %global, %single : i64", "    %lane = arith.remui %global, %lanes : i64")
+Indexed Texts
+	Norming.Indexed.First is "    %groupd = llvm.load %v_size : !llvm.ptr -> f64"
+	Norming.Indexed(3) is "    %lanes = arith.minsi %group, %widest : i64"
+	Doubling.Indexed.Last is "    cf.cond_br %inside, ^body, ^exit"
+	if function.Group < 0
+		return MlirDevice(function, position).Laned + Plain
+	let size = function.Load("%groupd", "%v_" + MlirGroups(function, position).Size(function.Group))
+	(size, "    %group = arith.fptosi %groupd : " + function.Float + " to i64") + Lanes + Plain
+Launched Texts
+	Norming.Launched.Last is "    %t2gg = arith.fptosi %t2ggd : f64 to i64"
+	Doubling.Launched is ("    %t2gg = arith.constant 0 : i64")
+	let name = "%t" + position + "gg"
+	let groups = MlirGroups(function, position)
+	let call = groups.Call
+	if call < 0
+		return List(Text) + MlirTyped.Integer.Constant(name, "0")
+	(function.Load(name + "d", "%v_" + groups.Size(call)), "    " + name + " = arith.fptosi " + name + "d : f64 to i64")
+Memos Texts
+	MlirGrouped(MlirGroups.Norming.function, 0).Memos.First is "    %memo11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Doubling.Memos.Length is 0
+	mutable lines = List(Mutable(Text))
+	for function.method.instructions
+		let call = value.kind is InstructionType.LoopBegin then MlirGroups(function, index).Call else -1
+		if call >= 0
+			let memo = "%memo" + call
+			let unset = ("    " + memo + "n = arith.constant 0x7FF8000000000000 : f64", function.Store(memo + "n", memo + "k"))
+			lines = lines + ("    " + memo + Allocated, "    " + memo + "k" + Allocated) + unset
+	lines
+Kept(called Texts, register Number) Texts
+	Calling.Kept(List(Text) + "    call", 9)(5) is "    %t11gh = arith.cmpf oeq, %t11gk, %t11gm : f64"
+	MlirGrouped(MlirGroups.Norming.function, 7).Kept(List(Text) + "    call", 5) is ("    call")
+	let begin = function.method.LoopBeginOf(position)
+	let counted = begin >= 0 then MlirLoops(function, begin).Collection is "" else false
+	let adding = counted then MlirGroups(function, 0).Adding(position) else 0
+	let call = adding < 1 then -1 else MlirGroups(function, begin).Call
+	if call is not position
+		return called
+	Keyed(MlirGroups(function, begin).Size(position)) + called + Rejoined(register)
+Keyed(size Text) Texts
+	Calling.Keyed("size").Last is "  ^t11call:"
+	let key = (function.Load(Temp("i"), "%v_index"), function.Load(Temp("s"), "%v_" + size))
+	let divided = "    " + Temp("q") + " = arith.divf " + Temp("i") + ", " + Temp("s") + " : f64"
+	let compared = "    " + Temp("h") + " = arith.cmpf oeq, " + Temp("k") + ", " + Temp("m") + " : f64"
+	let label = "^t" + position
+	let branch = ("    cf.cond_br " + Temp("h") + ", " + label + "kept, " + label + "call", "  " + label + "call:")
+	let floored = (divided, MlirTyped.Double.Floored(Temp("k"), Temp("q")), function.Load(Temp("m"), Memo + "k"))
+	key + floored + compared + branch
+Rejoined(register Number) Texts
+	Calling.Rejoined(9).Last is "  ^t11joined:"
+	let memo = Memo
+	let result = "%r" + register
+	let fresh = (function.Store(Temp("k"), memo + "k"), function.Load(Temp("r"), result), function.Store(Temp("r"), memo))
+	let kept = ("  ^t" + position + "kept:", function.Load(Temp("c"), memo), function.Store(Temp("c"), result))
+	let joined = ("    cf.br ^t" + position + "joined", "  ^t" + position + "joined:")
+	fresh + ("    cf.br ^t" + position + "joined") + kept + joined
+Temp(suffix Text) Text
+	Norming.Temp("k") is "%t2gk"
+	"%t" + position + "g" + suffix
+Memo Text
+	Calling.Memo is "%memo11"
+	"%memo" + position

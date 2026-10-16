@@ -5,12 +5,11 @@ has lineSlots Numbers = List(Number)
 has FastLoop Number = -1
 has Packing Text = ""
 has Float Text = "f64"
+has Group Number = -1
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Adding = MlirFunction(List(TypeEntry), Shape, MethodEntry("+", List(MemberEntry), "None", List(InstructionEntry)))
-constant OperatorNames = ("+", "-", "*", "/", "%", "^")
-constant OperatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power")
 constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
 constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 IsCounted = lineSlots.Length > 0
@@ -21,7 +20,9 @@ Symbol Text
 		return MlirForeign(value).Wrapper
 	let name = MlirEquality(value, 0).Symbol(type.JustName)
 	let conversion = method.Name is "to" then "_" + TypeEntry.ShortName(method.returnType) else ""
-	let spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else method.Name
+	constant operatorNames = ("+", "-", "*", "/", "%", "^")
+	constant operatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power")
+	let spelled = method.Name is in operatorNames then operatorWords(operatorNames.Index(method.Name)) else method.Name
 	name + "_" + spelled + "_" + method.parameters.Length + conversion + type.OverloadSuffix(method)
 Parameters Texts
 	Counter.Parameters is ("value")
@@ -65,6 +66,7 @@ Text Text
 	outer.Text.Combine(List(Text) + header + Slots + Body + "  }" + MlirParallel(value, 0).Outlined, "\n")
 Slots Texts
 	Counter.Slots.Length is 15
+	outer.Text.Combine(MlirGroups.Norming.function.Slots).IndexOf("%memo11 = llvm.alloca") > 0
 	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64")
 	lines = lines + "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr"
 	for LoadReuse(method.instructions).RegisterCount
@@ -73,7 +75,7 @@ Slots Texts
 		lines = lines + Slot("%v_" + value)
 	for method.instructions
 		lines = value.kind is InstructionType.LoopBegin then lines + Slot("%loop" + index) else lines
-	lines + MlirLines(value).Allocated + Entry
+	lines + MlirGrouped(value, 0).Memos + MlirLines(value).Allocated + Entry
 Entry Texts
 	Counter.Entry.Length is 4
 	mutable lines = Slot("%instance") + Store("%p0", "%instance")

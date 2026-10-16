@@ -122,10 +122,7 @@ IsCall(inspected MlirFunction, at Number, depth Number) Boolean
 	(instance is "Number") and (depth < 3) and (isFloor or (fits and IsDeviceMethod(callees, depth + 1)))
 Instance(inspected MlirFunction, at Number) Text
 	Layering.Instance(Floored, 1) is "Number"
-	let entry = inspected.method.instructions(at)
-	let countPosition = 5 + entry.payload(3)
-	let flagPosition = countPosition + 1 + entry.payload(countPosition)
-	let register = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
+	let register = MlirDeviceCalls(inspected, at, inspected).Register(inspected.method.instructions(at))
 	register < 0 then "Number" else MlirKinds(inspected).KindOf(at, register)
 IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
 	Doubling.IsDeviceMethod(List(MlirFunction) + MlirDevice.Twice.function, 1)

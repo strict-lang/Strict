@@ -6113,7 +6113,7 @@
   llvm.func @free(!llvm.ptr)
   // a value is a list when its bit in mask is set, a list of rows when its bit in rows is set too
   // dots marks lists only read by dot products, with a list of rows they become 8 bit numbers
-  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64) -> f64 {
+  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -6139,7 +6139,9 @@
     cf.cond_br %wanted, ^ready, ^failed
   ^ready:
     %isReady = func.call @strict_gpu_ready() : () -> i1
-    cf.cond_br %isReady, ^prepare, ^failed
+    %groupFits = func.call @strict_gpu_grouping(%count, %group) : (i64, i64) -> i1
+    %groupReady = arith.andi %isReady, %groupFits : i1
+    cf.cond_br %groupReady, ^prepare, ^failed
   ^prepare:
     func.call @strict_gpu_reset() : () -> ()
     %triple = arith.muli %valueCount, %three : i64
@@ -6252,8 +6254,12 @@
     %chosenSlot = llvm.select %single, %singleSlot, %slot : i1, !llvm.ptr
     %function = func.call @strict_gpu_function(%ptx, %chosenName, %chosenSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
-    %threads = arith.constant 256 : i64
-    %threadTotal = arith.muli %count, %lanes : i64
+    %widest = arith.constant 256 : i64
+    %grouped = arith.cmpi sgt, %group, %none : i64
+    %groupLanes = arith.minsi %group, %widest : i64
+    %laneTotal = arith.muli %count, %lanes : i64
+    %threadTotal = arith.select %grouped, %count, %laneTotal : i64
+    %threads = arith.select %grouped, %groupLanes, %widest : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
     cf.cond_br %single, ^async, ^outputs
@@ -7266,6 +7272,29 @@
     cf.br ^done
   ^done:
     return
+  }
+  // the blocks of a grouped launch (one element per lane, up to 256 lanes) compute the call of their group together, a
+  // block must not reach into the next group: whole warps up to 256 lanes, beyond that whole blocks of 256
+  func.func private @strict_gpu_grouping(%count: i64, %group: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %widest = arith.constant 256 : i64
+    %ungrouped = arith.cmpi sle, %group, %none : i64
+    cf.cond_br %ungrouped, ^fits, ^check
+  ^check:
+    %rest = arith.remui %count, %group : i64
+    %divides = arith.cmpi eq, %rest, %none : i64
+    %lanes = arith.minsi %group, %widest : i64
+    %blockRest = arith.remui %group, %lanes : i64
+    %blocks = arith.cmpi eq, %blockRest, %none : i64
+    %warpRest = arith.andi %lanes, %thirtyOne : i64
+    %warps = arith.cmpi eq, %warpRest, %none : i64
+    %whole = arith.andi %blocks, %warps : i1
+    %fit = arith.andi %divides, %whole : i1
+    return %fit : i1
+  ^fits:
+    %true = arith.constant true
+    return %true : i1
   }
   // rows of 4, 6 or 8 bits are what dot products with 8 bit numbers are made for
   func.func private @strict_gpu_packed(%view: !llvm.ptr, %packedSlot: !llvm.ptr) {

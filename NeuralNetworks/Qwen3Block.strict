@@ -54,12 +54,12 @@ Cached(input Numbers, rotation Numbers) Qwen3Block
 Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Numbers) Numbers
 	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.414214)
 	let size = weights.Length
-	let perToken = count * size * 2 / rotation.Length
-	let stride = input.Length * size * 2 / rotation.Length
+	let gap = (input.Length - count) * size * 2 / rotation.Length
 	for count
-		let token = (index / perToken).Floor
+		let head = (index / size).Floor
+		let token = (head * rotation.Length / count / 2).Floor
 		let within = index % size
-		let first = token * stride + start + index - token * perToken - within
+		let first = token * gap + start + head * size
 		let partner = (within + size / 2) % size
 		let own = input(first + within) * weights(within) * rotation(token * 2 * size + within)
 		let other = input(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within)
@@ -69,14 +69,8 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	Tiny.Normalized((3, 4, 0, 1), 0, 4, (1, 2)).Last.IsNearlyEqual(2.828424)
 	Tiny.Normalized((3, 4, 0, 1), 2, 2, (1, 2)).Last.IsNearlyEqual(2.828424)
 	let size = weights.Length
-	let scales = Scales(input, start, count, size)
 	for count
-		input(start + index) * weights(index % size) * scales((index / size).Floor)
-Scales(input Numbers, start Number, count Number, size Number) Numbers
-	Tiny.Scales((3, 4, 0, 1), 0, 4, 2).First.IsNearlyEqual(0.2828427)
-	Tiny.Scales((3, 4, 0, 1), 2, 2, 2).Last.IsNearlyEqual(1.414213)
-	for count / size
-		HeadScale(input, start + index * size, size)
+		input(start + index) * weights(index % size) * HeadScale(input, start + (index / size).Floor * size, size)
 HeadScale(input Numbers, first Number, size Number) Number
 	Tiny.HeadScale((3, 4, 0, 1), 2, 2).IsNearlyEqual(1.414213)
 	mutable sum = 0

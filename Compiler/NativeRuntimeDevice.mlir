@@ -170,6 +170,68 @@
   ^done:
     return %sum : f64
   }
+  llvm.mlir.global internal @strict_device_partials() {addr_space = 3 : i32} : !llvm.array<32 x f64>
+  // the sum over the lanes of an element: one lane has it, up to 32 lanes are a warp, more lanes are a whole block of
+  // warps (a group) that add their warp sums in shared memory, every lane gets the sum
+  func.func private @strict_device_lanes_sum(%value: f64, %lane: i64, %lanes: i64) -> f64 {
+    %one = arith.constant 1 : i64
+    %warpSize = arith.constant 32 : i64
+    %single = arith.cmpi sle, %lanes, %one : i64
+    cf.cond_br %single, ^done(%value : f64), ^warp
+  ^warp:
+    %warped = func.call @strict_device_sum(%value) : (f64) -> f64
+    %isWarp = arith.cmpi sle, %lanes, %warpSize : i64
+    cf.cond_br %isWarp, ^done(%warped : f64), ^block
+  ^block:
+    %blocked = func.call @strict_device_block_sum(%warped, %lane, %lanes) : (f64, i64, i64) -> f64
+    cf.br ^done(%blocked : f64)
+  ^done(%sum: f64):
+    return %sum : f64
+  }
+  func.func private @strict_device_lanes_sums(%value: f32, %lane: i64, %lanes: i64) -> f32 {
+    %one = arith.constant 1 : i64
+    %warpSize = arith.constant 32 : i64
+    %single = arith.cmpi sle, %lanes, %one : i64
+    cf.cond_br %single, ^done(%value : f32), ^warp
+  ^warp:
+    %warped = func.call @strict_device_sums(%value) : (f32) -> f32
+    %isWarp = arith.cmpi sle, %lanes, %warpSize : i64
+    cf.cond_br %isWarp, ^done(%warped : f32), ^block
+  ^block:
+    %wide = arith.extf %warped : f32 to f64
+    %blocked = func.call @strict_device_block_sum(%wide, %lane, %lanes) : (f64, i64, i64) -> f64
+    %narrow = arith.truncf %blocked : f64 to f32
+    cf.br ^done(%narrow : f32)
+  ^done(%sum: f32):
+    return %sum : f32
+  }
+  // the first lane of each warp shares its warp sum, every warp adds them up, the second barrier keeps the next sum
+  // from overwriting them early
+  func.func private @strict_device_block_sum(%warped: f64, %lane: i64, %lanes: i64) -> f64 {
+    %none = arith.constant 0 : i64
+    %five = arith.constant 5 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %zero = arith.constant 0.0 : f64
+    %partials = llvm.mlir.addressof @strict_device_partials : !llvm.ptr<3>
+    %inWarp = arith.andi %lane, %thirtyOne : i64
+    %warp = arith.shrui %lane, %five : i64
+    %isFirst = arith.cmpi eq, %inWarp, %none : i64
+    cf.cond_br %isFirst, ^share, ^shared
+  ^share:
+    %slot = llvm.getelementptr %partials[0, %warp] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, !llvm.array<32 x f64>
+    llvm.store %warped, %slot : f64, !llvm.ptr<3>
+    cf.br ^shared
+  ^shared:
+    nvvm.barrier0
+    %warps = arith.shrui %lanes, %five : i64
+    %isPartial = arith.cmpi slt, %inWarp, %warps : i64
+    %partialSlot = llvm.getelementptr %partials[0, %inWarp] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, !llvm.array<32 x f64>
+    %partial = llvm.load %partialSlot : !llvm.ptr<3> -> f64
+    %mine = arith.select %isPartial, %partial, %zero : f64
+    %total = func.call @strict_device_sum(%mine) : (f64) -> f64
+    nvvm.barrier0
+    return %total : f64
+  }
   func.func private @strict_device_elements(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f32 {
     %sixteen = arith.constant 16 : i64
     %two = arith.constant 2 : i64
@@ -1426,7 +1488,7 @@
     %genericFollowing = arith.addi %index, %lanes : i64
     cf.br ^generic(%genericFollowing, %genericNext : i64, f32)
   ^reduce(%total: f32):
-    %reduced = func.call @strict_device_sums(%total) : (f32) -> f32
+    %reduced = func.call @strict_device_lanes_sums(%total, %lane, %lanes) : (f32, i64, i64) -> f32
     return %reduced : f32
   }
   // 32 bit numbers to 8 bit numbers with a scale per 32 (a warp shares the largest magnitude), the numbers that dot
@@ -1819,7 +1881,7 @@
     %byteFollowing = arith.addi %byteUnit, %lanes : i64
     cf.br ^bytes(%byteFollowing, %byteNext : i64, f32)
   ^reduce(%total: f32):
-    %reduced = func.call @strict_device_sums(%total) : (f32) -> f32
+    %reduced = func.call @strict_device_lanes_sums(%total, %lane, %lanes) : (f32, i64, i64) -> f32
     return %reduced : f32
   }
   // dots8 needs whole blocks of the row (256 numbers for 4 and 6 bits, 32 for 8) and 16 byte aligned vector loads
@@ -1940,6 +2002,6 @@
     %following = arith.addi %index, %lanes : i64
     cf.br ^generic(%following, %next : i64, f32)
   ^reduce(%total: f32):
-    %reduced = func.call @strict_device_sums(%total) : (f32) -> f32
+    %reduced = func.call @strict_device_lanes_sums(%total, %lane, %lanes) : (f32, i64, i64) -> f32
     return %reduced : f32
   }

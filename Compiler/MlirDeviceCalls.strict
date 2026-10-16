@@ -35,10 +35,14 @@ Loaded(entry InstructionEntry) Texts
 	lines
 Instance(entry InstructionEntry, name Text) Text
 	Twice.Instance(Twicing, "%h") is "    %h = arith.constant 0.0 : f64"
+	let register = Register(entry)
+	register < 0 then MlirTyped(function.Float).Constant(name, "0.0") else function.Load(name, "%r" + register)
+Register(entry InstructionEntry) Number
+	Twice.Register(Twicing) is -1
+	Flooring.Register(MlirGpuCheck.Flooring) is 0
 	let countPosition = 5 + entry.payload(3)
 	let flagPosition = countPosition + 1 + entry.payload(countPosition)
-	let register = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
-	register < 0 then MlirTyped(function.Float).Constant(name, "0.0") else function.Load(name, "%r" + register)
+	entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
 Floored(entry InstructionEntry) Texts
 	Flooring.Floored(MlirGpuCheck.Flooring)(1).IndexOf("llvm.intr.floor") > 0
 	let floored = MlirTyped(function.Float).Floored(Temp(""), Temp("i"))

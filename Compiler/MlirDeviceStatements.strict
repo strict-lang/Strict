@@ -133,6 +133,7 @@ Labeled Texts
 	isTerminated then List(Text) + ("  ^bb" + at + ":") else ("    cf.br ^bb" + at, "  ^bb" + at + ":")
 Collected(entry InstructionEntry) Texts
 	MlirDeviceStatements(Doubled, 5).Collected(Doubled.method.instructions(5)).Last is "  ^d5skip:"
+	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call).First is "    cf.br ^d13write"
 	let pointer = "    " + Temp("p") + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer + function.Float
 	let stored = function.Store(Temp(""), Temp("p"))
 	let compared = "    " + Temp("w") + " = arith.cmpi eq, %lane, " + Temp("z") + " : i64"
@@ -140,4 +141,4 @@ Collected(entry InstructionEntry) Texts
 	let branch = ("    cf.cond_br " + Temp("w") + ", ^d" + at + "write, ^d" + at + "skip", "  ^d" + at + "write:")
 	let skip = ("    cf.br ^d" + at + "skip", "  ^d" + at + "skip:")
 	let written = (function.Load(Temp(""), "%r" + entry.payload(0)), pointer, stored) + skip
-	first + branch + written
+	function.Group >= 0 then ("    cf.br ^d" + at + "write", branch.Last) + written else first + branch + written
