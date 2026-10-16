@@ -44,17 +44,29 @@ Step(token Number, position Number) Qwen3
 	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475) is true
 	Tiny.Step(1, 0).Step(2, 1).Scored.Last.IsNearlyEqual(1.1076484232754447) is true
 	TinyMixture.Step(1, 0).Scored.First.IsNearlyEqual(0.9534001625146007, 0.000001) is true
-	let rotation = Rotation(position)
-	mutable state = tokens(token)
+	Forwarded(tokens(token), Rotation(position))
+Prefilled(prompt Numbers, start Number) Qwen3
+	Tiny.Prefilled((1, 2), 0).Scored.Last.IsNearlyEqual(Tiny.Step(1, 0).Step(2, 1).Scored.Last) is true
+	Tiny.Prefilled((1, 2), 0).Prefilled((3, 4), 2).Next is Tiny.Step(1, 0).Step(2, 1).Step(3, 2).Step(4, 3).Next
+	TinyMixture.Prefilled((1, 2), 0).Next is TinyMixture.Step(1, 0).Step(2, 1).Next
+	mutable state = List(Number)
+	mutable rotation = List(Number)
+	for prompt
+		state = state + tokens(value)
+		rotation = rotation + Rotation(start + index)
+	Forwarded(state, rotation)
+Forwarded(state Numbers, rotation Numbers) Qwen3
+	Tiny.Forwarded(Tiny.tokens(1), Tiny.Rotation(0)).hidden.Length is 8
+	mutable current = state
 	mutable updated = List(Mutable(Qwen3Block))
 	for blocks
-		let cached = value.Cached(state, rotation)
-		state = cached.Output(state)
+		let cached = value.Cached(current, rotation)
+		current = cached.Output(current)
 		updated.Add(cached)
-	Qwen3(value, blocks = updated, hidden = state)
+	Qwen3(value, blocks = updated, hidden = current)
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 6
-	let normed = Qwen3Block.Normalized(hidden, 0, hidden.Length, norm)
+	let normed = Qwen3Block.Normalized(hidden, hidden.Length - norm.Length, norm.Length, norm)
 	for outputs
 		Layer.Summed(value, normed)
 Next Number
@@ -71,7 +83,7 @@ Best(scores Numbers, width Number) Numbers
 		mutable position = start
 		for width
 			position = Above(scores(start + index), largest, start + index, position)
-			largest = Qwen3Block.Larger(largest, scores(start + index))
+			largest = Softmax.Larger(largest, scores(start + index))
 		Above(odd, 0, position, largest)
 Above(number Number, limit Number, chosen Number, otherwise Number) Number
 	Tiny.Above(2, 1, 5, 6) is 5

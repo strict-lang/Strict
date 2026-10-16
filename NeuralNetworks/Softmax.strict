@@ -1,0 +1,28 @@
+Rows(scores Numbers, positions Number) Numbers
+	Softmax.Rows((1, 1, 0, 0), 2) is (0.5, 0.5, 0.5, 0.5)
+	let largest = Largest(scores, positions)
+	let totals = Totals(scores, largest, positions)
+	for scores
+		let head = (index / positions).Floor
+		(value - largest(head)).Exponential / totals(head)
+Largest(scores Numbers, positions Number) Numbers
+	Softmax.Largest((1, 3, 2, 0), 2) is (3, 2)
+	for scores.Length / positions
+		let start = index * positions
+		mutable largest = scores(start)
+		for positions
+			largest = Larger(largest, scores(start + index))
+		largest
+Larger(left Number, right Number) Number
+	Softmax.Larger(1, 2) is 2
+	Softmax.Larger(3, 2) is 3
+	left > right then left else right
+Totals(scores Numbers, largest Numbers, positions Number) Numbers
+	Softmax.Totals((0, 0, 1, 1), (0, 1), 2) is (2, 2)
+	for largest
+		let start = index * positions
+		let maximum = value
+		mutable sum = 0
+		for positions
+			sum = sum + (scores(start + index) - maximum).Exponential
+		sum
