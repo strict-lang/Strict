@@ -5829,9 +5829,9 @@
   // stay on the CPU (STRICT_GPU=all sends every loop), loops reading a list that is already on the GPU run there at any size
   llvm.mlir.global internal @strict_gpu_minimum(4194304 : i64) : i64
   llvm.mlir.global internal @strict_gpu_setting(0 : i64) : i64
-  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<25xi64>) : !llvm.array<25 x i64>
+  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<26xi64>) : !llvm.array<26 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
-  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00") : !llvm.array<433 x i8>
+  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00") : !llvm.array<447 x i8>
   llvm.mlir.global internal constant @strict_gpu_switch("STRICT_GPU\00") : !llvm.array<11 x i8>
   func.func private @strict_gpu_ready() -> i1 {
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
@@ -5899,7 +5899,7 @@
   func.func private @strict_gpu_resolve(%library: !llvm.ptr) -> i1 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %count = arith.constant 25 : i64
+    %count = arith.constant 26 : i64
     %names = llvm.mlir.addressof @strict_gpu_names : !llvm.ptr
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
@@ -5915,7 +5915,7 @@
     cf.cond_br %missing, ^failed, ^store
   ^store:
     %bits = llvm.ptrtoint %function : !llvm.ptr to i64
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<25 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<26 x i64>
     llvm.store %bits, %slot : i64, !llvm.ptr
     %length = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
     %skipped = arith.addi %length, %one : i64
@@ -5941,7 +5941,7 @@
     cf.br ^lookup
   ^lookup:
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<25 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<26 x i64>
     %bits = llvm.load %slot : !llvm.ptr -> i64
     %function = llvm.inttoptr %bits : i64 to !llvm.ptr
     return %function : !llvm.ptr
@@ -6995,6 +6995,10 @@
     %launchIndex = arith.constant 21 : i64
     %launchGraph = func.call @strict_gpu_call(%launchIndex) : (i64) -> !llvm.ptr
     %launched = llvm.call %launchGraph(%runnable, %stream) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    // under WDDM the launch waits in the driver until something submits it, a query does (it is not ready yet)
+    %queryIndex = arith.constant 25 : i64
+    %query = func.call @strict_gpu_call(%queryIndex) : (i64) -> !llvm.ptr
+    %queried = llvm.call %query(%stream) : !llvm.ptr, (!llvm.ptr) -> i32
     %destroyIndex = arith.constant 22 : i64
     %destroy = func.call @strict_gpu_call(%destroyIndex) : (i64) -> !llvm.ptr
     %destroyed = llvm.call %destroy(%captured) : !llvm.ptr, (!llvm.ptr) -> i32
