@@ -17,12 +17,12 @@ IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	if entry.kind is InstructionType.Invoke
 		return IsPureCall(inspected, at, depth)
 	if entry.kind is InstructionType.InvokeWriteToList
-		return (depth is 0) and (entry.texts(0) is "forResult") and (IsConditional(at) is false)
+		return (depth is 0) and IsCollected(at)
 	let isLeaving = (depth is 0) and ((entry.kind is InstructionType.Return) or (entry.kind is in Branches))
 	(isLeaving is false) and IsPlain(inspected, at) and ((depth > 0) or IsLocal(entry))
-IsConditional(at Number) Boolean
-	Filtering.IsConditional(7) is true
-	Clamping.IsConditional(17) is false
+IsCollected(at Number) Boolean
+	Clamping.IsCollected(17) is true
+	Filtering.IsCollected(7) is false
 	mutable open = 0
 	for Range(position + 1, at)
 		let kind = function.method.instructions(value).kind
@@ -30,7 +30,7 @@ IsConditional(at Number) Boolean
 			open = open + 1
 		if kind is InstructionType.JumpEnd
 			open = open - 1
-	open > 0
+	(open is 0) and (function.method.instructions(at).texts(0) is "forResult")
 IsPlain(inspected MlirFunction, at Number) Boolean
 	Doubling.IsPlain(Doubling.function, 3) is true
 	let entry = inspected.method.instructions(at)

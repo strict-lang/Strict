@@ -71,15 +71,16 @@ IsList(inspected MlirFunction, at Number, name Text) Boolean
 IsControl(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsControl(Doubling.function, 5, 0) is true
 	Layering.IsControl(Summed, 2, 1) is true
+	Doubling.IsControl(MlirPurity.Clamping.function, 6, 0) is true
+	Doubling.IsControl(MlirPurity.Filtering.function, 7, 0) is false
 	let entry = inspected.method.instructions(at)
 	if entry.kind is InstructionType.Return
 		return depth > 0
 	if entry.kind is InstructionType.InvokeWriteToList
-		return (depth is 0) and (entry.texts(0) is "forResult")
+		return (depth is 0) and MlirPurity(inspected, position).IsCollected(at)
 	if entry.kind is InstructionType.LoopBegin
 		return IsInnerLoop(inspected, at)
-	let isJump = (depth > 0) and (entry.kind is in Jumps)
-	isJump or (entry.kind is InstructionType.LoopEnd) or (entry.kind is InstructionType.CheckError)
+	(entry.kind is in Jumps) or (entry.kind is InstructionType.LoopEnd) or (entry.kind is InstructionType.CheckError)
 IsInnerLoop(inspected MlirFunction, at Number) Boolean
 	Layering.IsInnerLoop(Summed, 2) is true
 	Layering.IsInnerLoop(Layering.function, 2) is false
