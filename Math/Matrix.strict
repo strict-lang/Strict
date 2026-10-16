@@ -53,6 +53,10 @@ Perspective(fieldOfView Degrees, aspect Number, near Number, far Number) Matrix
 	let focal = 1 / Degrees(fieldOfView.number / 2).Tan
 	let depth = (far + near) / (near - far)
 	Matrix((focal / aspect, 0, 0, 0, 0, focal, 0, 0, 0, 0, depth, -1, 0, 0, 2 * far * near / (near - far), 0))
+Orthographic(width Number, height Number, near Number, far Number) Matrix
+	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(2, 1, -1)) is (1, 1, -1, 1)
+	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(0, 0, -11)).Z.IsNearlyEqual(1)
+	Matrix((2 / width, 0, 0, 0, 0, 2 / height, 0, 0, 0, 0, 2 / (near - far), 0, 0, 0, (far + near) / (near - far), 1))
 Inverse Matrix
 	(Moved * Matrix.Scaling(2)).Inverse.Transformed(Vector3(1, 2, 3)) is Vector3.Zero
 	(Moved * Matrix.RotationZ(Degrees(90))).Inverse.Transformed(Vector3(1, 3, 3)).DistanceTo(Vector3.UnitX) < 0.000001
