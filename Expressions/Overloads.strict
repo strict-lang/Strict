@@ -5,6 +5,7 @@ constant Labeler = KnownTypes(List(Text) + "Labeler", List(Scope) + KnownTypes.N
 constant Labeling = Overloads(Labeler)
 constant LabelInference = TypeInference(Labeler, List(Scope) + KnownTypes.NoMembers)
 constant LabelsCall = SyntaxParser(Tokenizer("Labels((1, 0), 2)").Tokens).Parse
+constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
 Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Text") is 0
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Number") is 1
@@ -55,11 +56,14 @@ Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) T
 	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "List(Numbers)"
 	Labeling.Returned(SyntaxNode("Call", "Labels"), LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
 	Scaling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
+	Labeling.Returned(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
 	let position = types.methods.Index(current)
 	if (position < 0) or (current.Count(node.text) < 2)
 		return ""
-	mutable arguments = List(Mutable(Text))
-	for node.children
-		arguments.Add(inference.TypeOf(value, scope, current))
-	let ordinal = Chosen(types.names(position), node.text, arguments)
+	let ordinal = Chosen(types.names(position), node.text, Arguments(node, inference, scope, current))
 	ordinal < 0 then "" else current.TypeAt(node.text, ordinal)
+Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Texts
+	Labeling.Arguments(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)).Length is 0
+	let start = node.Kind is in ("Member", "MethodCall") then 1 else 0
+	for Range(start, node.children.Length)
+		inference.TypeOf(node.children(value), scope, current)
