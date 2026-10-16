@@ -3744,9 +3744,13 @@
   ^both:
     %leftDevice = func.call @strict_gpu_device(%left) : (f64) -> i64
     %leftResides = arith.cmpi ne, %leftDevice, %none : i64
-    cf.cond_br %leftResides, ^joined, ^host
-  ^joined:
-    %joined = func.call @strict_gpu_concat(%left, %right) : (f64, f64) -> f64
+    cf.cond_br %leftResides, ^joined(%left : f64), ^move
+  ^move:
+    %moved = func.call @strict_gpu_moved(%left) : (f64) -> f64
+    %isMoved = arith.cmpf une, %moved, %zero : f64
+    cf.cond_br %isMoved, ^joined(%moved : f64), ^host
+  ^joined(%resident: f64):
+    %joined = func.call @strict_gpu_concat(%resident, %right) : (f64, f64) -> f64
     %isJoined = arith.cmpf une, %joined, %zero : f64
     cf.cond_br %isJoined, ^done(%joined : f64), ^host
   ^host:
@@ -6799,6 +6803,55 @@
   }
   // appends in place when the left list is the newest version of its block and the block has room, otherwise both go
   // into a block of twice the size, so a list growing one step at a time (a cache of keys) copies rarely
+  // a host list of doubles appended with a list on the GPU moves there as 32 bit floats (like every result there), so the
+  // append and the next loops stay on the GPU instead of downloading the new part and uploading everything again
+  func.func private @strict_gpu_moved(%list: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %bits = func.call @strict_gpu_bits(%list) : (f64) -> i64
+    %isPlain = arith.cmpi eq, %bits, %sixtyFour : i64
+    cf.cond_br %isPlain, ^plain, ^failed
+  ^plain:
+    %lengthNumber = func.call @strict_list_length(%list) : (f64) -> f64
+    %length = arith.fptosi %lengthNumber : f64 to i64
+    %bytes = arith.muli %length, %four : i64
+    %doubled = arith.shli %bytes, %one : i64
+    %class = func.call @strict_gpu_class(%doubled) : (i64) -> i64
+    %block = func.call @strict_gpu_obtain(%class) : (i64) -> i64
+    %hasBlock = arith.cmpi ne, %block, %none : i64
+    cf.cond_br %hasBlock, ^convert, ^failed
+  ^convert:
+    %floats = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    cf.br ^loop(%none : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi slt, %index, %length : i64
+    cf.cond_br %more, ^item, ^upload
+  ^item:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    %single = arith.truncf %value : f64 to f32
+    %target = llvm.getelementptr %floats[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %single, %target : f32, !llvm.ptr
+    %next = arith.addi %index, %one : i64
+    cf.br ^loop(%next : i64)
+  ^upload:
+    func.call @strict_gpu_replay() : () -> ()
+    %put = func.call @strict_gpu_put_async(%block, %floats, %bytes) : (i64, !llvm.ptr, i64) -> i1
+    llvm.call @free(%floats) : (!llvm.ptr) -> ()
+    cf.cond_br %put, ^moved, ^returned
+  ^moved:
+    %moved = func.call @strict_gpu_resident(%length, %block, %class) : (i64, i64, i64) -> f64
+    return %moved : f64
+  ^returned:
+    func.call @strict_gpu_give(%block, %class) : (i64, i64) -> ()
+    cf.br ^failed
+  ^failed:
+    return %zero : f64
+  }
   func.func private @strict_gpu_concat(%left: f64, %right: f64) -> f64 {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
@@ -7410,7 +7463,8 @@
   ^counted:
     %none = arith.constant 0 : i64
     %sixtyFour = arith.constant 64 : i64
-    func.call @strict_gpu_view(%out, %none, %none, %sixtyFour) : (!llvm.ptr, i64, i64, i64) -> ()
+    %start = llvm.bitcast %source : f64 to i64
+    func.call @strict_gpu_view(%out, %none, %start, %sixtyFour) : (!llvm.ptr, i64, i64, i64) -> ()
     %true = arith.constant true
     return %true : i1
   }

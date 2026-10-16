@@ -1,0 +1,32 @@
+has queries Numbers
+has keys Numbers
+has values Numbers
+has heads Number
+has groups Number
+has size Number
+constant Single = Attention((1, 0), (1, 0, 0, 1), (3, 4, 5, 6), 1, 1, 2)
+Merged Numbers
+	Single.Merged.First.IsNearlyEqual(3.6604769013466867)
+	Single.Merged.Last.IsNearlyEqual(4.660476901346686)
+	let positions = keys.Length / groups / size
+	let scores = Scores(positions)
+	for queries.Length
+		let row = (index / size).Floor
+		let start = ((row % heads) * groups / heads).Floor * size + index % size
+		Softmax.Weighted(scores, row * positions, positions, values, start, groups * size)
+Scores(positions Number) Numbers
+	Single.Scores(2).First.IsNearlyEqual(0.7071067811865476)
+	Single.Scores(2).Last is 0
+	let tokens = queries.Length / heads / size
+	for tokens * heads * positions
+		let row = (index / positions).Floor
+		let keyStart = ((index % positions) * groups + ((row % heads) * groups / heads).Floor) * size
+		let queryStart = row * size
+		mutable sum = 0
+		for size
+			sum = sum + queries(queryStart + index) * keys(keyStart + index)
+		Visible(sum / size.SquareRoot, index % positions, positions - tokens + (row / heads).Floor)
+Visible(score Number, position Number, limit Number) Number
+	Single.Visible(2, 1, 1) is 2
+	Single.Visible(2, 2, 1) is -1000000000
+	position > limit then -1000000000 else score

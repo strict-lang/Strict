@@ -108,7 +108,7 @@ Started Texts
 	Doubling.Started.Last is "    llvm.store %element, %v_value : f64, !llvm.ptr"
 	Layering.Started.Last is "    llvm.store %rowed#1, %v_valueb : i64, !llvm.ptr"
 	constant narrow = "    %narrow = arith.trunci %at : i64 to i32"
-	let converted = ("  ^body:", narrow, "    %index = arith.sitofp %narrow : i32 to " + function.Float)
+	let converted = ("  ^body:", narrow) + MlirDeviceLoops(function, position).Counted
 	let index = converted + function.Store("%index", "%v_index")
 	let collection = MlirLoops(function, position).Collection
 	if collection is ""

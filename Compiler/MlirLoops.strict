@@ -8,6 +8,7 @@ constant Listing = MlirLoops(MlirFunction(List(TypeEntry) + MlirFunction.Shape, 
 constant Emptied = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "forResult")
 constant Collecting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (Emptied, InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))), 1)
 constant Doubling = MlirLoops(MlirKernel.Doubler, 2)
+constant Ranging = MlirLoops(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, GpuSamples.Ranged), 3)
 constant Repeated = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry(InstructionType.LoopEnd, List(Text), (1, -1)))))
 Temp(suffix Text) Text
 	Counting.Temp("k") is "%t0k"
@@ -47,6 +48,15 @@ Collection Text
 		return ""
 	let kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, entry.payload(0)))
 	(kind is "Text") or kind.StartsWith("List(") then kind else ""
+Wanted Texts
+	Doubling.Wanted is ("    %t2gd = func.call @strict_gpu_wanted(%t2gc) : (i64) -> i1")
+	Ranging.Wanted.Last is "    %t3gd = arith.andi %t3gu, %t3ge : i1"
+	let wanted = " = func.call @strict_gpu_wanted(" + Temp("gc") + ") : (i64) -> i1"
+	if function.method.instructions(position).payload(1) is not 1
+		return List(Text) + ("    " + Temp("gd") + wanted)
+	let flipped = "    " + Temp("ge") + " = arith.xori " + Temp("d") + ", " + Temp("gt") + " : i1"
+	let ascending = ("    " + Temp("gu") + wanted, "    " + Temp("gt") + " = arith.constant true", flipped)
+	ascending + ("    " + Temp("gd") + " = arith.andi " + Temp("gu") + ", " + Temp("ge") + " : i1")
 RangeBounds(entry InstructionEntry) Texts
 	Counting.RangeBounds(InstructionEntry.LoopBegin(0, 1)).Length is 9
 	let start = function.Load(Temp("b"), "%r" + entry.payload(0))

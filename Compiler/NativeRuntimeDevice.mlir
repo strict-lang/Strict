@@ -393,6 +393,18 @@
     return %sum : f32
   }
   // exact double powers need libdevice, so the launch fails and the CPU runs the loop
+  // like ^ a logarithm on the GPU only exists in 32 bits (lg2.approx), a 64 bit kernel goes back to the CPU
+  func.func private @strict_device_logarithm(%failed: !llvm.ptr, %number: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    llvm.store %one, %failed : i64, !llvm.ptr
+    return %number : f64
+  }
+  func.func private @strict_device_logarithms(%failed: !llvm.ptr, %number: f32) -> f32 {
+    %binary = llvm.call_intrinsic "llvm.nvvm.lg2.approx.f"(%number) : (f32) -> f32
+    %natural = arith.constant 0.693147182 : f32
+    %logarithm = arith.mulf %binary, %natural : f32
+    return %logarithm : f32
+  }
   func.func private @strict_device_power(%failed: !llvm.ptr, %left: f64, %right: f64) -> f64 {
     %one = arith.constant 1 : i64
     llvm.store %one, %failed : i64, !llvm.ptr
