@@ -9,8 +9,9 @@ Run(path Text, bits Number, count Number)
 	logger.Log(Prompt + tokenizer.Decoded(Generation(model).Generated(prompt, count)))
 	let before = Process.Elapsed
 	let prefilled = Prefilled(model, prompt)
+	let first = prefilled.Next
 	let prefill = (Process.Elapsed - before) * 1000 / prompt.Length
-	let durations = Durations(prefilled, prompt.Length, count)
+	let durations = Durations(prefilled, first, prompt.Length, count)
 	logger.Log(Report(prompt.Length, prefill, durations) + ", loaded in " + (loaded - started).Round(1) + " s")
 Prefilled(model Qwen3, prompt Numbers) Qwen3
 	Qwen3Benchmark(Logger).Prefilled(Qwen3.Tiny, (1, 2, 3)).Next is 2
@@ -18,13 +19,15 @@ Prefilled(model Qwen3, prompt Numbers) Qwen3
 	for prompt
 		current = current.Step(value, index)
 	current
-Durations(model Qwen3, start Number, count Number) Numbers
-	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0), 1, 2).Length is 2
+Durations(model Qwen3, token Number, start Number, count Number) Numbers
+	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0), 0, 1, 2).Length is 2
 	mutable current = model
+	mutable next = token
 	mutable last = Process.Elapsed
 	mutable durations = List(Mutable(Number))
 	for count
-		current = current.Step(current.Next, start + index)
+		current = current.Step(next, start + index)
+		next = current.Next
 		let now = Process.Elapsed
 		durations.Add((now - last) * 1000)
 		last = now

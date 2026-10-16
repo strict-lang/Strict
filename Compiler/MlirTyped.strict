@@ -26,6 +26,10 @@ Read(result Text, operands Text) Text
 Summed(result Text, sum Text) Text
 	Single.Summed("%y", "%x") is "    %y = func.call @strict_device_sums(%x) : (f32) -> f32"
 	"    " + result + " = func.call @strict_device_sum" + Suffix + "(" + sum + ") : (" + type + ") -> " + type
+Shuffled(result Text, source Text, offset Text) Text
+	Single.Shuffled("%y", "%x", "%o") is "    %y = func.call @strict_device_shuffles(%x, %o) : (f32, i32) -> f32"
+	let call = "    " + result + " = func.call @strict_device_shuffle" + Suffix + "(" + source + ", " + offset + ")"
+	call + " : (" + type + ", i32) -> " + type
 Number(target Text, hex Text) Texts
 	Double.Number("%c", "0x0") is ("    %c = arith.constant 0x0 : f64")
 	Single.Number("%c", "0x0").Last is "    %c = arith.truncf %cw : f64 to f32"

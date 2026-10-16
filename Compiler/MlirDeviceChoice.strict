@@ -1,0 +1,114 @@
+has function MlirFunction
+has at Number
+constant Choosing = MlirFunction(List(TypeEntry) + GpuSamples.Chosen, GpuSamples.Chosen, GpuSamples.Largest)
+constant Looping = MlirDeviceChoice(Choosing, 4)
+constant Chooser = MlirFunction(Choosing.types, GpuSamples.Chosen, GpuSamples.Larger)
+constant Summing = MlirDeviceChoice(MlirDeviceStatements.Summed, 2)
+constant Allowed = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.Equal, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Return, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+constant Offsets = (16, 8, 4, 2, 1)
+constant Moves = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
+constant Rounded = Looping.Round(MlirDeviceCalls(Choosing, 10, Chooser), "%d12", 0, 4)
+IsChoice Boolean
+	Looping.IsChoice is true
+	Summing.IsChoice is false
+	let names = Chosen
+	mutable loads = 0
+	for Range(at + 1, function.method.LoopEndOf(at))
+		let entry = function.method.instructions(value)
+		if (entry.kind is InstructionType.LoopBegin) or (entry.kind is InstructionType.InvokeWriteToList)
+			return false
+		if (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is in names)
+			loads = loads + 1
+	(names.Length > 0) and (loads is names.Length)
+Chosen Texts
+	Looping.Chosen is ("largest")
+	Summing.Chosen.Length is 0
+	mutable names = List(Mutable(Text))
+	for Range(at + 1, function.method.LoopEndOf(at))
+		let entry = function.method.instructions(value)
+		if entry.kind is InstructionType.StoreRegisterToVariable
+			if IsUpdate(value) is false
+				return List(Text)
+			names.Add(entry.texts(0))
+	names
+IsUpdate(store Number) Boolean
+	Looping.IsUpdate(11) is true
+	Summing.IsUpdate(10) is false
+	let call = function.method.instructions(store - 1)
+	if (call.kind is not InstructionType.Invoke) or (call.payload(0) is not function.method.instructions(store).payload(0))
+		return false
+	let callees = MlirModule(function.types, "").Called(function, store - 1)
+	let isPassed = IsPassed(store - 1, function.method.instructions(store).texts(0))
+	(callees.Length is 1) and isPassed and IsChoosing(callees.First)
+IsPassed(call Number, name Text) Boolean
+	Looping.IsPassed(10, "largest") is true
+	Looping.IsPassed(10, "index") is false
+	let entry = function.method.instructions(call)
+	let countPosition = 5 + entry.payload(3)
+	for entry.payload(countPosition)
+		let writer = MlirDeviceSums(function, at).Writer(call, entry.payload(countPosition + 1 + index))
+		let loaded = writer >= 0 then function.method.instructions(writer) else entry
+		if (loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is name)
+			return true
+	false
+IsChoosing(callee MlirFunction) Boolean
+	Looping.IsChoosing(Chooser) is true
+	Looping.IsChoosing(MlirGpuCheck.Absolute) is false
+	let parameters = callee.method.parameters
+	if (parameters.Length is not 2) or (parameters(0).typeName is not "Strict/Number")
+		return false
+	for callee.method.instructions
+		if (value.kind is not in Allowed) or (IsPlain(value, parameters) is false)
+			return false
+	(parameters(1).typeName is "Strict/Number") and IsCompared(callee)
+IsPlain(entry InstructionEntry, parameters List(MemberEntry)) Boolean
+	Looping.IsPlain(GpuSamples.Larger.instructions(0), GpuSamples.Larger.parameters) is true
+	Looping.IsPlain(InstructionEntry.LoadNumber(0, 1), GpuSamples.Larger.parameters) is false
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return PayloadDecoder(entry).Value(1).kind is "Boolean"
+	if entry.kind is not in Moves
+		return true
+	let name = entry.texts(0)
+	name.StartsWith("conditional") or (name is parameters(0).Name) or (name is parameters(1).Name)
+IsCompared(callee MlirFunction) Boolean
+	Looping.IsCompared(Chooser) is true
+	Looping.IsCompared(MlirFunction(Choosing.types, GpuSamples.Chosen, GpuSamples.Largest)) is false
+	mutable compared = List(Mutable(Text))
+	for callee.method.instructions
+		if (value.kind is InstructionType.LessThan) or (value.kind is InstructionType.GreaterThan)
+			let position = index
+			for (value.payload(1), value.payload(2))
+				let writer = MlirDeviceSums(callee, -1).Writer(position, value)
+				compared.Add(writer >= 0 then callee.method.instructions(writer).texts(0) else "")
+	let names = (callee.method.parameters(0).Name, callee.method.parameters(1).Name)
+	(compared is names) or (compared is names.Reverse)
+Reduced(end Number) Texts
+	Looping.Reduced(12).First is "    %d12c0r0 = llvm.load %v_largest : !llvm.ptr -> f64"
+	Text.Combine(Looping.Reduced(12)).IndexOf("@strict_device_shuffle(%d12c0r4, %d12o0r4)") > 0 is true
+	Looping.Reduced(12).Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"
+	mutable lines = List(Mutable(Text))
+	for Range(at + 1, end)
+		let entry = function.method.instructions(value)
+		if entry.kind is InstructionType.StoreRegisterToVariable
+			lines = lines + Rounds(value - 1, "%d" + end, Chosen.Index(entry.texts(0)))
+	lines
+Rounds(call Number, prefix Text, number Number) Texts
+	Looping.Rounds(10, "%d12", 0).Length is 18
+	let calls = MlirDeviceCalls(function, call, MlirModule(function.types, "").Called(function, call).First)
+	let name = "%v_" + function.method.instructions(call + 1).texts(0)
+	let first = function.Load(prefix + "c" + number + "r0", name)
+	mutable lines = (first, calls.Instance(function.method.instructions(call), prefix + "h" + number))
+	for Offsets
+		lines = lines + Round(calls, prefix, number, index)
+	lines + function.Store(prefix + "c" + number + "r" + Offsets.Length, name)
+Round(calls MlirDeviceCalls, prefix Text, number Number, round Number) Texts
+	Rounded.Last.IndexOf("(%failed, %lane, %lanes, %d12h0, %d12c0r4, %d12s0r4)") > 0 is true
+	let current = prefix + "c" + number + "r" + round
+	let offset = prefix + "o" + number + "r" + round
+	let shuffled = prefix + "s" + number + "r" + round
+	let symbol = calls.callee.Symbol + "_device" + MlirTyped(function.Float).Suffix
+	let operands = "(%failed, %lane, %lanes, " + prefix + "h" + number + ", " + current + ", " + shuffled + ")"
+	let combined = "    " + prefix + "c" + number + "r" + (round + 1) + " = func.call @" + symbol + operands
+	let offsetLine = "    " + offset + " = arith.constant " + Offsets(round) + " : i32"
+	let typed = combined + " : (" + calls.Types + ") -> " + function.Float
+	(offsetLine, MlirTyped(function.Float).Shuffled(shuffled, current, offset), typed)
