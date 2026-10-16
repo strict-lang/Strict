@@ -3744,9 +3744,13 @@
   ^both:
     %leftDevice = func.call @strict_gpu_device(%left) : (f64) -> i64
     %leftResides = arith.cmpi ne, %leftDevice, %none : i64
-    cf.cond_br %leftResides, ^joined, ^host
-  ^joined:
-    %joined = func.call @strict_gpu_concat(%left, %right) : (f64, f64) -> f64
+    cf.cond_br %leftResides, ^joined(%left : f64), ^move
+  ^move:
+    %moved = func.call @strict_gpu_moved(%left) : (f64) -> f64
+    %isMoved = arith.cmpf une, %moved, %zero : f64
+    cf.cond_br %isMoved, ^joined(%moved : f64), ^host
+  ^joined(%resident: f64):
+    %joined = func.call @strict_gpu_concat(%resident, %right) : (f64, f64) -> f64
     %isJoined = arith.cmpf une, %joined, %zero : f64
     cf.cond_br %isJoined, ^done(%joined : f64), ^host
   ^host:
@@ -6113,7 +6117,7 @@
   llvm.func @free(!llvm.ptr)
   // a value is a list when its bit in mask is set, a list of rows when its bit in rows is set too
   // dots marks lists only read by dot products, with a list of rows they become 8 bit numbers
-  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64) -> f64 {
+  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -6139,7 +6143,9 @@
     cf.cond_br %wanted, ^ready, ^failed
   ^ready:
     %isReady = func.call @strict_gpu_ready() : () -> i1
-    cf.cond_br %isReady, ^prepare, ^failed
+    %groupFits = func.call @strict_gpu_grouping(%count, %group) : (i64, i64) -> i1
+    %groupReady = arith.andi %isReady, %groupFits : i1
+    cf.cond_br %groupReady, ^prepare, ^failed
   ^prepare:
     func.call @strict_gpu_reset() : () -> ()
     %triple = arith.muli %valueCount, %three : i64
@@ -6252,8 +6258,12 @@
     %chosenSlot = llvm.select %single, %singleSlot, %slot : i1, !llvm.ptr
     %function = func.call @strict_gpu_function(%ptx, %chosenName, %chosenSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
-    %threads = arith.constant 256 : i64
-    %threadTotal = arith.muli %count, %lanes : i64
+    %widest = arith.constant 256 : i64
+    %grouped = arith.cmpi sgt, %group, %none : i64
+    %groupLanes = arith.minsi %group, %widest : i64
+    %laneTotal = arith.muli %count, %lanes : i64
+    %threadTotal = arith.select %grouped, %count, %laneTotal : i64
+    %threads = arith.select %grouped, %groupLanes, %widest : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
     cf.cond_br %single, ^async, ^outputs
@@ -6793,6 +6803,55 @@
   }
   // appends in place when the left list is the newest version of its block and the block has room, otherwise both go
   // into a block of twice the size, so a list growing one step at a time (a cache of keys) copies rarely
+  // a host list of doubles appended with a list on the GPU moves there as 32 bit floats (like every result there), so the
+  // append and the next loops stay on the GPU instead of downloading the new part and uploading everything again
+  func.func private @strict_gpu_moved(%list: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %bits = func.call @strict_gpu_bits(%list) : (f64) -> i64
+    %isPlain = arith.cmpi eq, %bits, %sixtyFour : i64
+    cf.cond_br %isPlain, ^plain, ^failed
+  ^plain:
+    %lengthNumber = func.call @strict_list_length(%list) : (f64) -> f64
+    %length = arith.fptosi %lengthNumber : f64 to i64
+    %bytes = arith.muli %length, %four : i64
+    %doubled = arith.shli %bytes, %one : i64
+    %class = func.call @strict_gpu_class(%doubled) : (i64) -> i64
+    %block = func.call @strict_gpu_obtain(%class) : (i64) -> i64
+    %hasBlock = arith.cmpi ne, %block, %none : i64
+    cf.cond_br %hasBlock, ^convert, ^failed
+  ^convert:
+    %floats = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    cf.br ^loop(%none : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi slt, %index, %length : i64
+    cf.cond_br %more, ^item, ^upload
+  ^item:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    %single = arith.truncf %value : f64 to f32
+    %target = llvm.getelementptr %floats[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %single, %target : f32, !llvm.ptr
+    %next = arith.addi %index, %one : i64
+    cf.br ^loop(%next : i64)
+  ^upload:
+    func.call @strict_gpu_replay() : () -> ()
+    %put = func.call @strict_gpu_put_async(%block, %floats, %bytes) : (i64, !llvm.ptr, i64) -> i1
+    llvm.call @free(%floats) : (!llvm.ptr) -> ()
+    cf.cond_br %put, ^moved, ^returned
+  ^moved:
+    %moved = func.call @strict_gpu_resident(%length, %block, %class) : (i64, i64, i64) -> f64
+    return %moved : f64
+  ^returned:
+    func.call @strict_gpu_give(%block, %class) : (i64, i64) -> ()
+    cf.br ^failed
+  ^failed:
+    return %zero : f64
+  }
   func.func private @strict_gpu_concat(%left: f64, %right: f64) -> f64 {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
@@ -7267,6 +7326,29 @@
   ^done:
     return
   }
+  // the blocks of a grouped launch (one element per lane, up to 256 lanes) compute the call of their group together, a
+  // block must not reach into the next group: whole warps up to 256 lanes, beyond that whole blocks of 256
+  func.func private @strict_gpu_grouping(%count: i64, %group: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %widest = arith.constant 256 : i64
+    %ungrouped = arith.cmpi sle, %group, %none : i64
+    cf.cond_br %ungrouped, ^fits, ^check
+  ^check:
+    %rest = arith.remui %count, %group : i64
+    %divides = arith.cmpi eq, %rest, %none : i64
+    %lanes = arith.minsi %group, %widest : i64
+    %blockRest = arith.remui %group, %lanes : i64
+    %blocks = arith.cmpi eq, %blockRest, %none : i64
+    %warpRest = arith.andi %lanes, %thirtyOne : i64
+    %warps = arith.cmpi eq, %warpRest, %none : i64
+    %whole = arith.andi %blocks, %warps : i1
+    %fit = arith.andi %divides, %whole : i1
+    return %fit : i1
+  ^fits:
+    %true = arith.constant true
+    return %true : i1
+  }
   // rows of 4, 6 or 8 bits are what dot products with 8 bit numbers are made for
   func.func private @strict_gpu_packed(%view: !llvm.ptr, %packedSlot: !llvm.ptr) {
     %four = arith.constant 4 : i64
@@ -7381,7 +7463,8 @@
   ^counted:
     %none = arith.constant 0 : i64
     %sixtyFour = arith.constant 64 : i64
-    func.call @strict_gpu_view(%out, %none, %none, %sixtyFour) : (!llvm.ptr, i64, i64, i64) -> ()
+    %start = llvm.bitcast %source : f64 to i64
+    func.call @strict_gpu_view(%out, %none, %start, %sixtyFour) : (!llvm.ptr, i64, i64, i64) -> ()
     %true = arith.constant true
     return %true : i1
   }

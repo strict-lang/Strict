@@ -6,9 +6,9 @@ has mlpGain Numbers
 has mlpBias Numbers
 has expansion Layer
 has contraction Layer
-has keys List(Numbers) = List(Numbers)
-has values List(Numbers) = List(Numbers)
-has queries List(Numbers) = List(Numbers)
+has keys Numbers = List(Number)
+has values Numbers = List(Number)
+has queries Numbers = List(Number)
 constant Heads = 12
 constant Weights = Safetensors("NeuralNetworks/tinygpt2.safetensors")
 constant Tiny = Gpt2Block.Loaded(Weights, "h.0.")
@@ -28,55 +28,36 @@ Dense(weights Safetensors, name Text) Layer
 	Layer(weights.Columns(name + ".weight"), weights.Values(name + ".bias"))
 Cached(input Numbers) Gpt2Block
 	Tiny.Cached(Embedded).keys.Length is 12
-	Tiny.Cached(Embedded).Cached(Embedded).values.First.Length is 2
+	Tiny.Cached(Embedded).Cached(Embedded).values.Length is 24
 	let combined = attention.Sums(Normalized(input, attentionGain, attentionBias))
 	let size = combined.Length / 3
-	let queried = Split(combined, 0)
-	Gpt2Block(value, keys = keys + Split(combined, size), values = Appended(values, combined, 2 * size), queries = queried)
-Split(combined Numbers, start Number) List(Numbers)
-	Tiny.Split(Tiny.attention.biases, 12).First is List(Number) + Tiny.attention.biases(12)
-	let size = combined.Length / 3 / Heads
-	for Heads
-		Safetensors.Part(combined, start + index * size, size, 1)
+	let keyed = Safetensors.Part(combined, size, size, 1)
+	let valued = Safetensors.Part(combined, 2 * size, size, 1)
+	Gpt2Block(value, keys = keys + keyed, values = values + valued, queries = Safetensors.Part(combined, 0, size, 1))
 Output(input Numbers) Numbers
 	Tiny.Cached(Embedded).Output(Embedded).Length is 12
-	let attended = Added(input, projection.Sums(Merged))
+	let merged = Attention(queries, keys, values, Heads, Heads, queries.Length / Heads).Merged
+	let attended = Added(input, projection.Sums(merged))
 	let hidden = expansion.Sums(Normalized(attended, mlpGain, mlpBias))
 	Added(attended, contraction.Sums(Gelu(hidden)))
-Merged Numbers
-	Tiny.Cached(Embedded).Merged.Length is 12
-	mutable merged = List(Number)
-	for Heads
-		merged = merged + Attended(index)
-	merged
-Attended(head Number) Numbers
-	Tiny.Cached(Embedded).Attended(0).Length is 1
-	Tiny.Cached(Embedded).Attended(0).First is Tiny.Cached(Embedded).values.First.First
-	let weights = Network.Softmax(Scores(head))
-	let size = values.Length / Heads
-	for size
-		Layer.Summed(values(head * size + index), weights)
-Scores(head Number) Numbers
-	Tiny.Cached(Embedded).Scores(0).Length is 1
-	let query = queries(head)
-	let scale = query.Length.SquareRoot
-	for keys.Length / Heads
-		Layer.Summed(keys(index * Heads + head), query) / scale
-Appended(cached List(Numbers), combined Numbers, start Number) List(Numbers)
-	Tiny.Appended(List(Numbers), (1, 2, 3, 4, 5), 3).Last is List(Number) + 5
-	Tiny.Appended(List(Numbers) + (1, 2), (3, 4, 5), 2).First is (1, 2, 5)
-	for combined.Length - start
-		(cached.Length is 0 then List(Number) else cached(index)) + combined(start + index)
 Normalized(input Numbers, gain Numbers, bias Numbers) Numbers
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).First.IsNearlyEqual(-1.2247356859083902)
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).Last.IsNearlyEqual(2.2247356859083902)
-	let mean = input.Sum / input.Length
-	mutable variance = 0
-	for input
-		variance = variance + (value - mean) * (value - mean)
-	let deviation = (variance / input.Length + 0.00001).SquareRoot
-	for input
-		gain(index) * (value - mean) / deviation + bias(index)
+	let size = gain.Length
+	let centered = Centered(input, size)
+	for centered.Length
+		let first = (index / size).Floor * size
+		gain(index % size) * centered(index) * Qwen3Block.HeadScale(centered, first, size, 0.00001) + bias(index % size)
+Centered(input Numbers, size Number) Numbers
+	Tiny.Centered((1, 2, 4, 8), 2) is (-0.5, 0.5, -2, 2)
+	for input.Length
+		input(index) - Mean(input, (index / size).Floor * size, size)
+Mean(input Numbers, first Number, size Number) Number
+	Tiny.Mean((1, 2, 4, 8), 2, 2) is 6
+	mutable sum = 0
+	for size
+		sum = sum + input(first + index)
+	sum / size
 Gelu(input Numbers) Numbers
 	Tiny.Gelu((0, 1)).Last.IsNearlyEqual(0.8411919906082768)
 	for input

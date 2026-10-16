@@ -9,31 +9,33 @@ constant Twiced = List(MlirFunction) + MlirDevice.Twice.function
 constant Indexing = "] : (!llvm.ptr) -> !llvm.ptr, f64"
 constant Marker = "// device kernels"
 constant NameGlobal = "  llvm.mlir.global internal constant @kRows_Doubled_1_gpu2(\"Rows_Doubled_1_gpu2\\00Rows_Doubled_1_gpu2s\\00\") : !llvm.array<41 x i8>"
-constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64) -> f64"
+constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> f64"
 Launched Texts
 	Doubling.Launched.Last is "  ^loop2host:"
 	Randomizing.Launched.Length is 0
 	Text.Combine(Doubling.Launched).IndexOf("strict_gpu_ready") is -1
 	Text.Combine(Doubling.Launched).IndexOf("@strict_gpu_wanted(%t2gc)") > 0
+	Text.Combine(MlirGpu(MlirLoops.Ranging.function, 3).Launched).IndexOf("%t3gd = arith.andi %t3gu, %t3ge : i1") > 0
+	Text.Combine(MlirGpu(MlirLoops.Ranging.function, 3).Launched).IndexOf("%t3gc, %t3b, %t3gq") > 0
 	if MlirGpuCheck(function, position).IsGpu is false
 		return List(Text)
 	let count = "    " + Temp("gc") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
-	let wanted = "    " + Temp("gd") + " = func.call @strict_gpu_wanted(" + Temp("gc") + ") : (i64) -> i1"
 	let branch = "    cf.cond_br " + Temp("gd") + ", ^loop" + position + "gpu, ^loop" + position + "host"
-	(count, wanted, branch) + Run + ("  ^loop" + position + "host:")
+	let wanted = (List(Text) + count) + MlirLoops(function, position).Wanted
+	wanted + branch + Run + ("  ^loop" + position + "host:")
 Run Texts
-	Text.Combine(Doubling.Run).IndexOf("%t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2go, %t2gy)") > 0
+	Text.Combine(Doubling.Run).IndexOf("%t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2go, %t2gy, %t2gg)") > 0
 	let name = MlirDevice(function, position).Name
 	let addresses = (Address("gp", "strict_gpu_ptx"), Address("gk", "k" + name), Address("gs", "f" + name))
 	let collection = MlirLoops(function, position).Collection
-	let source = collection is "" then "%zero" else Temp("v")
+	let source = collection is "" then Temp("b") else Temp("v")
 	let number = collection is "" then "0" else collection is "List(Number)" then "1" else "2"
-	let kind = MlirTyped.Integer.Constant(Temp("gq"), number)
-	let first = (Temp("gp"), Temp("gk"), Temp("gs"), Temp("gc"), source)
 	let lanes = MlirTyped.Integer.Constant(Temp("gy"), MlirDeviceSums(function, position).IsWarped then "32" else "1")
-	let second = (Temp("gq"), Temp("ga"), Temp("gw"), Temp("gm"), Temp("gr"), Temp("go"), Temp("gy"))
+	let sizes = (MlirTyped.Integer.Constant(Temp("gq"), number), lanes) + MlirGrouped(function, position).Launched
+	let first = (Temp("gp"), Temp("gk"), Temp("gs"), Temp("gc"), source, Temp("gq"))
+	let second = (Temp("ga"), Temp("gw"), Temp("gm"), Temp("gr"), Temp("go"), Temp("gy"), Temp("gg"))
 	let run = "    " + Temp("gl") + " = func.call @strict_gpu_run(" + Text.Combine(first + second, ", ") + ") : " + Running
-	(List(Text) + ("  ^loop" + position + "gpu:")) + addresses + Values + (kind, lanes, run) + Finished
+	(List(Text) + ("  ^loop" + position + "gpu:")) + addresses + Values + sizes + run + Finished
 Values Texts
 	Doubling.Values.Last is "    %t2go = arith.constant 0 : i64"
 	"    %t2gr = arith.constant 1 : i64" is in MlirGpu(MlirDeviceRows.Picking, 2).Values

@@ -54,61 +54,31 @@ Cached(input Numbers, rotation Numbers) Qwen3Block
 Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Numbers) Numbers
 	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.414214)
 	let size = weights.Length
-	let perToken = count * size * 2 / rotation.Length
-	let stride = input.Length * size * 2 / rotation.Length
+	let gap = (input.Length - count) * size * 2 / rotation.Length
 	for count
-		let token = (index / perToken).Floor
+		let head = (index / size).Floor
+		let token = (head * rotation.Length / count / 2).Floor
 		let within = index % size
-		let first = token * stride + start + index - token * perToken - within
+		let first = token * gap + start + head * size
 		let partner = (within + size / 2) % size
 		let own = input(first + within) * weights(within) * rotation(token * 2 * size + within)
 		let other = input(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within)
-		(own + other) * HeadScale(input, first, size)
+		(own + other) * HeadScale(input, first, size, Epsilon)
 Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	Tiny.Normalized((3, 4), 0, 2, (1, 2)).First.IsNearlyEqual(0.848528)
 	Tiny.Normalized((3, 4, 0, 1), 0, 4, (1, 2)).Last.IsNearlyEqual(2.828424)
 	Tiny.Normalized((3, 4, 0, 1), 2, 2, (1, 2)).Last.IsNearlyEqual(2.828424)
 	let size = weights.Length
-	let scales = Scales(input, start, count, size)
 	for count
-		input(start + index) * weights(index % size) * scales((index / size).Floor)
-Scales(input Numbers, start Number, count Number, size Number) Numbers
-	Tiny.Scales((3, 4, 0, 1), 0, 4, 2).First.IsNearlyEqual(0.2828427)
-	Tiny.Scales((3, 4, 0, 1), 2, 2, 2).Last.IsNearlyEqual(1.414213)
-	for count / size
-		HeadScale(input, start + index * size, size)
-HeadScale(input Numbers, first Number, size Number) Number
-	Tiny.HeadScale((3, 4, 0, 1), 2, 2).IsNearlyEqual(1.414213)
+		input(start + index) * weights(index % size) * HeadScale(input, start + (index / size).Floor * size, size, Epsilon)
+HeadScale(input Numbers, first Number, size Number, epsilon Number) Number
+	Tiny.HeadScale((3, 4, 0, 1), 2, 2, Epsilon).IsNearlyEqual(1.414213)
 	mutable sum = 0
 	for size
 		sum = sum + input(first + index) * input(first + index)
-	1 / (sum / size + Epsilon).SquareRoot
+	1 / (sum / size + epsilon).SquareRoot
 Output(input Numbers) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Output(Tiny.attentionNorm).Length is 8
-	let attended = Batch(projection.weights, input).Sums(Merged(keys.Length / groups / queryNorm.Length))
+	let merged = Attention(queries, keys, values, heads, groups, queryNorm.Length).Merged
+	let attended = Batch(projection.weights, input).Sums(merged)
 	experts.Added(Normalized(attended, 0, attended.Length, mlpNorm), attended)
-Merged(positions Number) Numbers
-	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Merged(1).Length is 8
-	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Merged(1).Last is Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).values.Last
-	let size = queryNorm.Length
-	let scores = Scores(positions)
-	for queries.Length
-		let row = (index / size).Floor
-		let start = ((row % heads) * groups / heads).Floor * size + index % size
-		Softmax.Weighted(scores, row * positions, positions, values, start, groups * size)
-Scores(positions Number) Numbers
-	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Scores(1).Length is 2
-	let size = queryNorm.Length
-	let tokens = queries.Length / heads / size
-	for tokens * heads * positions
-		let row = (index / positions).Floor
-		let keyStart = ((index % positions) * groups + ((row % heads) * groups / heads).Floor) * size
-		let queryStart = row * size
-		mutable sum = 0
-		for size
-			sum = sum + queries(queryStart + index) * keys(keyStart + index)
-		Visible(sum / size.SquareRoot, index % positions, positions - tokens + (row / heads).Floor)
-Visible(score Number, position Number, limit Number) Number
-	Tiny.Visible(2, 1, 1) is 2
-	Tiny.Visible(2, 2, 1) is -1000000000
-	position > limit then -1000000000 else score

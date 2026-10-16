@@ -1,0 +1,102 @@
+has function MlirFunction
+has position Number
+constant Normed = MethodEntry("Normed", (MemberEntry("input", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("count", "Strict/Number", List(InstructionEntry), false)), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "input"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "size"), InstructionEntry.Binary(InstructionType.Divide, (2, 3, 4)), InstructionEntry.Invoke(5, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 4), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "size"), InstructionEntry.Binary(InstructionType.Multiply, (5, 6, 7)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "size"), InstructionEntry.Invoke(9, ("Strict/Grouped", "Squared", "Strict/Number", "input", "start", "size"), (1, 7, 8), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 9), InstructionEntry.Named(InstructionType.InvokeWriteToList, 9, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 12), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))
+constant Grouped = TypeEntry("Strict/Grouped", List(MemberEntry), (Normed, GpuSamples.Squared))
+constant Norming = MlirGroups(MlirFunction(List(TypeEntry) + Grouped, Grouped, Normed), 2)
+Call Number
+	Norming.Call is 11
+	MlirGroups(MlirGpu.Layering.function, 2).Call is -1
+	if MlirLoops(function, position).Collection is not ""
+		return -1
+	mutable found = -1
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let adding = Adding(value)
+		if (function.method.instructions(value).kind is InstructionType.LoopBegin) or (adding < 0)
+			return -1
+		if adding > 0
+			found = (found >= 0) or (Size(value) is "") then -2 else value
+	found < 0 then -1 else found
+Adding(at Number) Number
+	Norming.Adding(11) is 1
+	Norming.Adding(7) is 0
+	let callees = MlirModule(function.types, "").Called(function, at)
+	if callees.Length is not 1
+		return 0
+	let callee = callees.First
+	for callee.method.instructions
+		if (value.kind is InstructionType.LoopBegin) and MlirDeviceChoice(callee, index).IsChoice
+			return -1
+	MlirDeviceSums(callee, 0).IsSummed(callee, 0, callee.method.instructions.Length) then 1 else 0
+Size(at Number) Text
+	Norming.Size(11) is "size"
+	Norming.Size(7) is ""
+	let size = Arguments(function.method.instructions(at), at)
+	size.StartsWith("!") or size.StartsWith("?") then "" else size
+Arguments(entry InstructionEntry, at Number) Text
+	Norming.Arguments(Normed.instructions(11), 11) is "size"
+	let countPosition = 5 + entry.payload(3)
+	mutable grouping = ""
+	for entry.payload(countPosition)
+		grouping = Combined(grouping, Grouping(entry.payload(countPosition + 1 + index), at))
+	grouping
+Grouping(register Number, before Number) Text
+	Norming.Grouping(7, 11) is "size"
+	Norming.Grouping(4, 7) is "?size"
+	Norming.Grouping(1, 11) is ""
+	let writer = Writer(register, before)
+	let entry = function.method.instructions(writer < 0 then before else writer)
+	if (writer < 0) or (entry.kind is InstructionType.LoadConstantToRegister)
+		return ""
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return Loaded(entry.texts(0), writer)
+	let kind = entry.kind
+	let isBinary = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
+	kind is InstructionType.Invoke then Invoked(entry, writer) else isBinary then Calculated(entry, writer) else "!"
+Invoked(entry InstructionEntry, at Number) Text
+	Norming.Invoked(Normed.instructions(7), 7) is "size"
+	Norming.Invoked(Normed.instructions(11), 11) is "!"
+	let register = MlirDeviceCalls(function, at, function).Register(entry)
+	let instance = register < 0 then "" else Grouping(register, at)
+	if entry.texts(1) is "Floor"
+		return Floored(instance)
+	Combined(instance, Arguments(entry, at)) is "" then "" else "!"
+Writer(register Number, before Number) Number
+	Norming.Writer(7, 11) is 9
+	Norming.Writer(0, 5) is -1
+	for before - position - 1
+		let candidate = before - 1 - index
+		if LoadReuse(function.method.instructions).Written(function.method.instructions(candidate)) is register
+			return candidate
+	-1
+Loaded(name Text, at Number) Text
+	Norming.Loaded("index", 4) is "!"
+	Norming.Loaded("size", 5) is ""
+	if name is in ("index", "value")
+		return "!"
+	for at - position - 1
+		let earlier = function.method.instructions(at - 1 - index)
+		if (earlier.kind is InstructionType.StoreRegisterToVariable) and (earlier.texts(0) is name)
+			return Grouping(earlier.payload(0), at - 1 - index)
+	""
+Calculated(entry InstructionEntry, at Number) Text
+	Norming.Calculated(Normed.instructions(6), 6) is "?size"
+	Norming.Calculated(Normed.instructions(9), 9) is "size"
+	let left = Grouping(entry.payload(1), at)
+	let right = Grouping(entry.payload(2), at)
+	let divisor = Writer(entry.payload(2), at)
+	let named = function.method.instructions(divisor < 0 then at else divisor)
+	let isNamed = (divisor >= 0) and (named.kind is InstructionType.LoadVariableToRegister)
+	let isGrouping = (entry.kind is InstructionType.Divide) and (left is "!") and (right is "") and isNamed
+	isGrouping then "?" + named.texts(0) else Combined(left, right)
+Combined(left Text, right Text) Text
+	Norming.Combined("", "size") is "size"
+	Norming.Combined("size", "count") is "!"
+	Norming.Combined("?size", "") is "!"
+	let isOpen = left.StartsWith("!") or left.StartsWith("?") or right.StartsWith("!") or right.StartsWith("?")
+	if isOpen or ((left is not "") and (right is not "") and (left is not right))
+		return "!"
+	left is "" then right else left
+Floored(grouping Text) Text
+	Norming.Floored("?size") is "size"
+	Norming.Floored("!") is "!"
+	grouping.StartsWith("?") then grouping.Substring(1, grouping.Length - 1) else grouping

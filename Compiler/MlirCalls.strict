@@ -61,12 +61,13 @@ IsMemberValue(entry InstructionEntry, type TypeEntry) Boolean
 	isSame or (layout.Represented(argument) is layout.Represented(TypeEntry.ShortName(members.First.typeName)))
 Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2tr, %r2 : f64, !llvm.ptr"
+	Text.Combine(MlirCalls(MlirGroups.Norming.function, 11).Emitted).IndexOf("^t11kept") > 0
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
 	let helper = NativeHelper(entry, decoder)
 	if helper is not ""
 		return MlirNatives(function, position).Emitted(entry, type, helper)
-	Compiled(entry, decoder, type, count)
+	MlirGrouped(function, position).Kept(Compiled(entry, decoder, type, count), entry.payload(0))
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 6
 	let callee = type.Callee(decoder.Text(2), count, decoder.Text(4 + entry.payload(3)), decoder.Names)

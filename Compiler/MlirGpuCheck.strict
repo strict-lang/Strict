@@ -19,10 +19,9 @@ IsGpu Boolean
 	Layering.IsGpu
 	MlirGpuCheck(MlirKernel.Doubler, 2).IsGpu
 	MlirGpuCheck(MlirDeviceRows.Picking, 2).IsGpu
-	MlirGpuCheck(MlirFunction(Doubling.function.types, MlirParallel.Rows, GpuSamples.Ranged), 3).IsGpu is false
+	MlirGpuCheck(MlirLoops.Ranging.function, 3).IsGpu
 	let isListed = MlirLoops(function, position).Collection is in Rows
-	let isRange = function.method.instructions(position).payload(1) is 1
-	if isRange or (isListed is false) or (IsPure is false)
+	if (isListed is false) or (IsPure is false)
 		return false
 	IsDeviceBody
 IsPure Boolean
@@ -56,13 +55,17 @@ IsValued(inspected MlirFunction, at Number, depth Number) Boolean
 	Layering.IsValued(Layering.function, 4, 0)
 	let entry = inspected.method.instructions(at)
 	if entry.kind is InstructionType.LoadConstantToRegister
-		return PayloadDecoder(entry).Value(1).kind is in ("Number", "Boolean")
+		return IsNumbered(inspected, PayloadDecoder(entry).Value(1).kind)
 	if entry.kind is InstructionType.StoreConstantToVariable
-		return PayloadDecoder(entry).Value(0).kind is in ("Number", "Boolean")
+		return IsNumbered(inspected, PayloadDecoder(entry).Value(0).kind)
 	let name = entry.texts(0)
-	let isValue = (MlirKinds(inspected).VariableKind(at, name) is in ("Number", "Boolean")) or IsList(inspected, at, name)
+	let isValue = IsNumbered(inspected, MlirKinds(inspected).VariableKind(at, name)) or IsList(inspected, at, name)
 	let isFree = (depth is 0) and (name is not "forResult")
 	isValue and ((entry.kind is InstructionType.StoreRegisterToVariable) or isFree or IsKnown(inspected, at, name, depth))
+IsNumbered(inspected MlirFunction, kind Text) Boolean
+	Doubling.IsNumbered(MlirLayout.Wrapping.function, "Angle")
+	Doubling.IsNumbered(MlirLayout.Wrapping.function, "Text") is false
+	MlirLayout(inspected).Represented(kind) is in Values
 IsList(inspected MlirFunction, at Number, name Text) Boolean
 	Layering.IsList(Layering.function, 8, "biases")
 	Doubling.IsList(Doubling.function, 3, "value") is false
@@ -94,7 +97,8 @@ IsArithmetic(inspected MlirFunction, at Number) Boolean
 	let isCalculated = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.ArithmeticSeparator)
 	let isOperator = isCalculated or (entry.kind > InstructionType.ArithmeticSeparator)
 	let kinds = MlirKinds(inspected)
-	isOperator and (kinds.KindOf(at, entry.payload(1)) is in Values) and (kinds.KindOf(at, entry.payload(2)) is in Values)
+	let isLeft = IsNumbered(inspected, kinds.KindOf(at, entry.payload(1)))
+	isOperator and isLeft and IsNumbered(inspected, kinds.KindOf(at, entry.payload(2)))
 IsKnown(inspected MlirFunction, at Number, name Text, depth Number) Boolean
 	Doubling.IsKnown(Doubling.function, 3, "value", 0)
 	Doubling.IsKnown(Doubling.function, 3, "numbers", 0) is false
@@ -108,7 +112,6 @@ IsKnown(inspected MlirFunction, at Number, name Text, depth Number) Boolean
 			return true
 	name is in given
 IsCall(inspected MlirFunction, at Number, depth Number) Boolean
-	Doubling.IsCall(Doubling.function, 4, 0)
 	Layering.IsCall(Layering.function, 5, 0)
 	Layering.IsCall(Floored, 1, 0)
 	Layering.IsCall(MlirDeviceRows.Measuring, 1, 1)
@@ -118,14 +121,12 @@ IsCall(inspected MlirFunction, at Number, depth Number) Boolean
 		return MlirDeviceStatements(inspected, at).IsList(instance)
 	let callees = MlirModule(inspected.types, "").Called(inspected, at)
 	let fits = (callees.Length is 1) and (callees.First.method.parameters.Length is entry.payload(5 + entry.payload(3)))
-	let isFloor = entry.texts(1) is "Floor"
-	(instance is "Number") and (depth < 3) and (isFloor or (fits and IsDeviceMethod(callees, depth + 1)))
+	let isMade = (entry.texts(1) is "from") and IsNumbered(inspected, TypeEntry.ShortName(entry.texts(0)))
+	let isNative = (entry.texts(1) is in ("Floor", "Logarithm")) or isMade
+	IsNumbered(inspected, instance) and (depth < 3) and (isNative or (fits and IsDeviceMethod(callees, depth + 1)))
 Instance(inspected MlirFunction, at Number) Text
 	Layering.Instance(Floored, 1) is "Number"
-	let entry = inspected.method.instructions(at)
-	let countPosition = 5 + entry.payload(3)
-	let flagPosition = countPosition + 1 + entry.payload(countPosition)
-	let register = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
+	let register = MlirDeviceCalls(inspected, at, inspected).Register(inspected.method.instructions(at))
 	register < 0 then "Number" else MlirKinds(inspected).KindOf(at, register)
 IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
 	Doubling.IsDeviceMethod(List(MlirFunction) + MlirDevice.Twice.function, 1)

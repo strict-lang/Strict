@@ -5,6 +5,7 @@ constant Ending = MlirDeviceLoops(MlirDeviceStatements.Summed, 11)
 constant Opening = MlirDeviceStatements.Summed.method.instructions(2)
 constant Saved = ("", "d", "n", "b")
 constant Kinds = ("f64", "!llvm.ptr", "i64", "i64")
+constant Ranging = MlirDeviceLoops(MlirLoops.Ranging.function, 3)
 Emitted Texts
 	Beginning.Emitted.Last is "    llvm.store %d2e, %v_value : f64, !llvm.ptr"
 	Ending.Emitted.First is "    %d11k = llvm.load %loop2 : !llvm.ptr -> i64"
@@ -92,6 +93,17 @@ Restored(begin Number) Texts
 	for Saved
 		lines = lines + Part(index).Store("%d" + begin + "s" + value, "%v_value" + value)
 	lines + function.Store("%d" + begin + "sx", "%v_index")
+Counted Texts
+	Beginning.Counted is ("    %index = arith.sitofp %narrow : i32 to f64")
+	Ranging.Counted.Last is "    %index = arith.addf %counted, %ranged : f64"
+	let converted = " = arith.sitofp %narrow : i32 to " + function.Float
+	if function.method.instructions(at).payload(1) is not 1
+		return List(Text) + ("    %index" + converted)
+	constant bitcast = " = llvm.bitcast %columns : i64 to f64"
+	constant narrowed = ("    %rangedw" + bitcast, "    %ranged = arith.truncf %rangedw : f64 to f32")
+	let ranged = function.Float is "f64" then List(Text) + ("    %ranged" + bitcast) else narrowed
+	let counted = List(Text) + ("    %counted" + converted)
+	counted + ranged + ("    %index = arith.addf %counted, %ranged : " + function.Float)
 Part(number Number) MlirTyped
 	Beginning.Part(0).type is "f64"
 	Beginning.Part(1).type is "!llvm.ptr"
