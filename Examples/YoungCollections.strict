@@ -1,0 +1,9 @@
+has logger
+Kept(count Number) Text
+	YoungCollections.Kept(300000) is "item 250000"
+	mutable kept = List(Text)
+	for count
+		kept = kept + ("item " + index)
+	kept(count - 50000)
+Run
+	logger.Log(Kept(300000))
