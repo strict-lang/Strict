@@ -22,7 +22,7 @@ Text Text
 		roots.Add(MlirFunction(types, types.First, value))
 		wrappers = wrappers + Wrapper(value)
 	let functions = module.Reachable(roots, roots)
-	Text.Combine(module.Declared(functions, functions) + MlirGlobals(functions).Lines + wrappers + "}", "\n")
+	outer.Text.Combine(module.Declared(functions, functions) + MlirGlobals(functions).Lines + wrappers + "}", "\n")
 Exported List(MethodEntry)
 	Policy.Exported is List(MethodEntry) + Start
 	for types.First.methods
@@ -99,7 +99,7 @@ Wrapper(method MethodEntry) Texts
 		parameters = parameters + ("%a" + index + ": " + Kind(value.typeName))
 		arguments = arguments + Argument(value.typeName, index)
 	let name = TypeEntry.ShortName(types.First.Name) + "_" + method.Name
-	let header = "  func.func @" + name + "(" + Text.Combine(parameters + "%result: !llvm.ptr", ", ") + ") -> i32 {"
+	let header = "  func.func @" + name + "(" + outer.Text.Combine(parameters + "%result: !llvm.ptr", ", ") + ") -> i32 {"
 	List(Text) + header + Entered + arguments + Call(method) + Checked + Stored(method.returnType) + Finished
 Instance Texts
 	Trades.Instance.Last is "    %self = arith.addf %t0instancef, %zero : f64"
@@ -110,8 +110,9 @@ Call(method MethodEntry) Text
 	mutable operands = List(Text) + "%self"
 	for method.parameters
 		operands = operands + ("%v" + index)
-	let signature = Text.Combine(MlirCalls(function, 0).ArgumentTypes(operands.Length), ", ")
-	"    %value = func.call @" + function.Symbol + "(" + Text.Combine(operands, ", ") + ") : (" + signature + ") -> f64"
+	let signature = outer.Text.Combine(MlirCalls(function, 0).ArgumentTypes(operands.Length), ", ")
+	let joined = outer.Text.Combine(operands, ", ")
+	"    %value = func.call @" + function.Symbol + "(" + joined + ") : (" + signature + ") -> f64"
 Argument(typeName Text, position Number) Texts
 	Policy.Argument("Strict/Text", 0).Last.EndsWith("@strict_bits(%a0) : (!llvm.ptr) -> f64") is true
 	Policy.Argument("Strict/Numbers", 1).Last is "    %v1 = func.call @strict_library_list(%a1) : (!llvm.ptr) -> f64"

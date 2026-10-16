@@ -63,6 +63,8 @@ Counted(paths Texts, root Text) List(TypeEntry)
 	Merged(mains, used)
 Typed(path Text, root Text, files Texts, inference TypeInference) List(TypeEntry)
 	NativeFolder(Logger).Typed("Missing.strict", ".", List(Text), ResolveCheck.Counting).Length is 0
+	if File(path).Exists is false
+		return List(TypeEntry)
 	let isFresh = Execute(logger).Stale(List(Text) + path).Length is 0
 	isFresh then Execute(logger).Loaded(path, root) else FileCompiler(logger).Built(path, root, true, files, inference)
 Merged(known List(TypeEntry), added List(TypeEntry)) List(TypeEntry)

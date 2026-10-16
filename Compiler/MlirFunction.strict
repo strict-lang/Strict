@@ -57,12 +57,12 @@ Copied(source Text, destination Text, temp Text) Texts
 Text Text
 	Counter.Text.StartsWith("  func.func private @Counter_Run_0(%p0: f64) -> f64 {") is true
 	if MlirForeign(value).IsForeign
-		return Text.Combine(MlirForeign(value).Declaration, "\n")
+		return outer.Text.Combine(MlirForeign(value).Declaration, "\n")
 	mutable signature = List(Mutable(Text))
 	for Parameters
 		signature.Add("%p" + index + ": f64")
-	let header = "  func.func private @" + Symbol + "(" + Text.Combine(signature, ", ") + ") -> f64 {"
-	Text.Combine(List(Text) + header + Slots + Body + "  }" + MlirParallel(value, 0).Outlined, "\n")
+	let header = "  func.func private @" + Symbol + "(" + outer.Text.Combine(signature, ", ") + ") -> f64 {"
+	outer.Text.Combine(List(Text) + header + Slots + Body + "  }" + MlirParallel(value, 0).Outlined, "\n")
 Slots Texts
 	Counter.Slots.Length is 15
 	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64")

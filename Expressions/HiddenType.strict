@@ -1,0 +1,36 @@
+has inference TypeInference
+constant Counting = HiddenType(FileCheck.Counting.inference)
+constant Created = SyntaxParser(Tokenizer("Count(1)").Tokens).Parse
+constant Twiced = SyntaxParser(Tokenizer("Count.Twice").Tokens).Parse
+constant Owning = FileCheck.Counted.With("Count", "Count")
+constant Constants = HiddenType(TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Count", List(Text) + "Count(1)"), KnownTypes.NoMembers)))
+constant Valued = FileCheck.Counted.With("self type", "Count")
+Issue(call SyntaxNode, scope Scope, current Scope) Text
+	Counting.Issue(Created, Valued, Owning).EndsWith("use outer.Count") is true
+	Counting.Issue(Created, Valued, FileCheck.Counted) is ""
+	Constants.Issue(Created, Valued, Owning) is ""
+	let owner = scope.TypeOf("self type")
+	let count = call.children.Length
+	let isHiding = (call.Kind is "Call") and IsMethod(call.text, scope, current)
+	if (isHiding is false) or (inference.types.ParametersOf(owner, call.text, count).Length >= count)
+		return ""
+	let method = (owner is "" then "" else owner + ".") + call.text
+	"MethodNotFound: " + method + " with " + count + " arguments" + Hint(call.text)
+Ambiguous(call SyntaxNode, scope Scope, current Scope) Text
+	Counting.Ambiguous(Twiced, Valued, Owning).StartsWith("AmbiguousName: Count") is true
+	Counting.Ambiguous(Twiced, Valued, FileCheck.Counted) is ""
+	let first = call.children.Length > 0 then call.children(0) else call
+	let isMember = (call.Kind is in ("Member", "MethodCall")) and (first.Kind is "Identifier")
+	if (isMember is false) or (IsMethod(first.text, scope, current) is false)
+		return ""
+	let tip = ", use outer." + first.text + " for the type or value." + first.text + " for the method"
+	"AmbiguousName: " + first.text + " is a method and a type" + tip
+IsMethod(name Text, scope Scope, current Scope) Boolean
+	Counting.IsMethod("Count", Valued, Owning) is true
+	Constants.IsMethod("Count", Valued, Owning) is false
+	Counting.IsMethod("Count", Valued, FileCheck.Counted) is false
+	let isOwn = (current.TypeOf(name) is not "") and (inference.ConstantOf(scope.TypeOf("self type"), name) is "")
+	isOwn and inference.types.IsKnown(name)
+Hint(name Text) Text
+	HiddenType.Hint("Size") is ", local Size hides the type Size, use outer.Size"
+	", local " + name + " hides the type " + name + ", use outer." + name

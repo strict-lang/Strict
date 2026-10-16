@@ -3,6 +3,7 @@ has inference Expressions/TypeInference
 constant Counts = TypeInference(KnownTypes.Sample, TypeInference.Limits)
 constant Limits = ConstantFolding("Count", Counts)
 constant Calls = ConstantFolding("Count", TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Empty", List(Text) + "Count(1)"), TypeInference.NoShape)))
+constant Outered = ConstantFolding("Count", TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Made", List(Text) + "outer.Count(1)"), TypeInference.NoShape)))
 constant Limit = SyntaxNode("Identifier", "Limit")
 constant Two = SyntaxNode("Number", "2")
 constant Count = SyntaxNode("Identifier", "Count")
@@ -55,6 +56,7 @@ Constant(node SyntaxNode) SyntaxNode
 	Limits.Constant(SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count"))).text is "3"
 	Limits.Constant(Two).text is "2"
 	Calls.Constant(SyntaxNode("Identifier", "Empty")).Kind is "Call"
+	Outered.Constant(SyntaxNode("Identifier", "Made")).children(0).Kind is "Type"
 	Owned.Constant(SyntaxNode("Member", "Twice", Count)) to Text is "Count.Limit * 2"
 	Owned.Constant(SyntaxNode("Member", "Alias", Count)).text is "3"
 	Owned.Constant(SyntaxNode("Member", "Loop", Count)).Kind is "Member"
@@ -72,7 +74,7 @@ Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 	if (definition is "") or (owner + "." + node.text is in aliases)
 		return node
 	let tokens = Tokenizer(definition).Tokens
-	let parsed = ConstantFolding(owner, inference).Qualified(SyntaxParser(tokens).ParseRange(0, tokens.Length))
+	let parsed = ConstantFolding(owner, inference).Qualified(Outer(SyntaxParser(tokens).ParseRange(0, tokens.Length)))
 	parsed.Kind is "Member" then Aliased(parsed, aliases + (owner + "." + node.text)) else parsed
 Qualified(node SyntaxNode) SyntaxNode
 	Limits.Qualified(SyntaxNode("Binary", "*", (Limit, Two))) to Text is "Count.Limit * 2"
@@ -89,12 +91,20 @@ Qualified(node SyntaxNode) SyntaxNode
 Outer(node SyntaxNode) SyntaxNode
 	Limits.Outer(SyntaxParser(Tokenizer("outer.Count.Twice").Tokens).Parse).children(0).Kind is "Type"
 	Limits.Outer(SyntaxParser(Tokenizer("outer.index").Tokens).Parse).children(0).Kind is "Identifier"
+	Limits.Outer(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).children(0).Kind is "Type"
 	if (node.Kind is "Member") and (node.children(0) to Text is "outer") and inference.types.IsKnown(node.text)
 		return SyntaxNode("Type", node.text, List(SyntaxNode), node.line)
+	let isOuterCall = (node.Kind is "MethodCall") and (node.children.Length > 0) and (node.children(0) to Text is "outer")
+	if isOuterCall and inference.types.IsKnown(node.text)
+		return SyntaxNode("MethodCall", node.text, OuterTyped(node), node.line)
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
 		children.Add(Outer(value))
 	SyntaxNode(node.Kind, node.text, children, node.line)
+OuterTyped(call SyntaxNode) List(SyntaxNode)
+	Limits.OuterTyped(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).First.Kind is "Type"
+	for call.children
+		index is 0 then SyntaxNode("Type", call.text) else Outer(value)
 Negated(node SyntaxNode) SyntaxNode
 	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Two)).text is "-2"
 	Limits.Negated(Two).text is "2"

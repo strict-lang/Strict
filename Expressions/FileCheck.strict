@@ -42,7 +42,8 @@ NotIterable(scoped ScopedStatement, current Scope) Text
 UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 	Counting.UnknownMethods(MissingCall.statement, Counted, KnownTypes.NoMembers) is ("MethodNotFound: Count.Missing")
 	mutable unknown = UnknownMembers(node)
-	let issue = IsCall(node) then CallIssue(node, scope, current) else ""
+	let hidden = HiddenType(inference).Ambiguous(node, scope, current) + HiddenType(inference).Issue(node, scope, current)
+	let issue = hidden is not "" then hidden else IsCall(node) then CallIssue(node, scope, current) else ""
 	if issue is not ""
 		unknown = unknown + issue
 	for node.children
@@ -56,7 +57,7 @@ CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 	let instance = inference.TypeOf(call.children(0), scope, current)
 	let hidden = call.children(0).text
 	let isHidden = (call.children(0).Kind is "Identifier") and inference.types.IsKnown(hidden) and (instance is not hidden)
-	let hint = isHidden then ", local " + hidden + " hides the type " + hidden + ", use outer." + hidden else ""
+	let hint = isHidden then HiddenType.Hint(hidden) else ""
 	if IsMissing(instance, call.text)
 		return "MethodNotFound: " + instance + "." + call.text + hint
 	let fewest = Fewest(instance, call.text)

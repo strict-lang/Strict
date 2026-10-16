@@ -1,0 +1,41 @@
+has values ValueCodegen
+constant Members = Scope(("buffer", "light", "mask"), ("Number", "Number", "Number"))
+constant Constructing = Scope(("from", "from types", "light default", "mask default"), ("buffer,light,mask", "Number,Number,Number", "0", "0"))
+constant Types = KnownTypes(("Part", "Number"), (Members, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Constructing, KnownTypes.NoMembers))
+constant Parts = NamedArguments(ValueCodegen(TypeInference(Types, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(Types, CallTarget.Greeter, "Strict/Part", List(Text))))
+constant Masked = SyntaxParser(Tokenizer("Part(1, mask = 3)").Tokens).Parse
+Arranged(call SyntaxNode, block CodeBlock) SyntaxNode
+	Parts.Arranged(Masked, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
+	Parts.Arranged(SyntaxParser(Tokenizer("Part(1, 2)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 2)"
+	let positional = Positional(call)
+	let isNamed = (call.Kind is "Call") and (positional > 0) and (positional < call.children.Length)
+	if (isNamed is false) or (values.TypeOf(call.children(0), block) is call.text)
+		return call
+	let names = values.target.FromNames(call.text)
+	mutable arguments = List(Mutable(SyntaxNode))
+	for Range(0, Last(call, names) + 1)
+		arguments.Add(Argument(call, names(value), value < positional then value else -1))
+	SyntaxNode("Call", call.text, arguments, call.line)
+Positional(call SyntaxNode) Number
+	Parts.Positional(Masked) is 1
+	for call.children
+		if value.Kind is "Reassignment"
+			return index
+	call.children.Length
+Last(call SyntaxNode, names Texts) Number
+	Parts.Last(Masked, ("buffer", "light", "mask")) is 2
+	mutable last = 0
+	for call.children
+		let position = value.Kind is "Reassignment" then names.Index(value.children(0).text) else index
+		last = position > last then position else last
+	last
+Argument(call SyntaxNode, name Text, position Number) SyntaxNode
+	Parts.Argument(Masked, "light", -1).text is "0"
+	Parts.Argument(Masked, "mask", -1).text is "3"
+	if position >= 0
+		return call.children(position)
+	for call.children
+		if (value.Kind is "Reassignment") and (value.children(0).text is name)
+			return value.children(1)
+	let fallback = values.inference.types.ParameterScope(call.text).TypeOf(name + " default")
+	fallback is "" then SyntaxNode("Identifier", name) else SyntaxParser(Tokenizer(fallback).Tokens).Parse

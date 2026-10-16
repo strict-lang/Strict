@@ -7,6 +7,7 @@ constant NoScopes = (NoScope, NoScope)
 constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes), NoScopes)
 constant Sample = TypeShape("has a Number", "Run", "\tlet b = a", "\tb")
 constant AddOther = HeaderTokens("Add", "(", "other", ")")
+constant Adding = MethodBodies("Demo", Sample, NoInference).HeaderScope(AddOther, NoScope)
 constant CheckedA = BodyParser("Run", "\tif a is Error", "\t\ta").Block(1, 1).children(0)
 Statements ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Length is 2
@@ -22,7 +23,7 @@ Statements ScopedStatements
 			statements.Add(ScopedStatement(BodyParser(shape.lines).Statement(index, 0), members, index))
 	statements
 HeaderScope(header HeaderTokens, members Scope) Scope
-	MethodBodies("Demo", Sample, NoInference).HeaderScope(AddOther, NoScope).TypeOf("other") is "Demo"
+	(Adding.TypeOf("other"), Adding.TypeOf("self type")) is ("Demo", "Demo")
 	MethodBodies("Demo(Number)", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("generic") is "Number"
 	let open = typeName.IndexOf("(")
 	let argument = open < 0 then "Generic" else typeName.Substring(open + 1, typeName.Length - open - 2)
@@ -30,7 +31,7 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 	for header.ParameterTypes
 		types.Add(value is "Other" then typeName else (value is "Generic" then argument else value))
 	let concrete = Instantiation(inference.types).Members(typeName, members)
-	mutable scope = concrete.With("value", InstanceType).WithAll(header.ParameterNames, types)
+	mutable scope = concrete.With("value", InstanceType).With("self type", typeName).WithAll(header.ParameterNames, types)
 	for header.MutableParameters
 		scope = scope.With(value + " mutable", "mutable")
 	scope
