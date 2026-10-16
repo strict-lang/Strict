@@ -8,8 +8,9 @@ Exported(library MlirLibrary, base Text, root Text) Number
 	if library.Exported.Length is 0
 		logger.Log("No exported methods in " + base + ".strict" + NoExports)
 		return 1
-	File(base + ".mlir").Write(NativeBuild(logger).Mlir(library.Text, root, Platform.Current))
-	let error = Linked(base, Toolchain(Platform.Current, root), library)
+	let program = NativeBuild(logger).Device(library.Text, base, root)
+	File(base + ".mlir").Write(NativeBuild(logger).Mlir(program, root, Platform.Current))
+	let error = program is "" then "Failed " + base else Linked(base, Toolchain(Platform.Current, root), library)
 	logger.Log(error is "" then "Built " + Target(base, Platform.Current) + " and " + base + ".cs" else error)
 	if error is not ""
 		return 1

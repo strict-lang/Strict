@@ -84,8 +84,8 @@ Built(base Text, executable Text) Text
 		return lowered
 	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else " -lm -lpthread"
 	let sources = NativeSources(natives).Objects(platform, root)
-	let resource = NativeSources(natives).Resource(base, platform, root)
-	if resource.StartsWith("llvm-rc failed")
+	let resource = sources.StartsWith("clang") then sources else NativeSources(natives).Resource(base, platform, root)
+	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")
 		return resource
 	let linking = Quoted(base + ".ll") + sources + resource + " -o " + Quoted(executable) + Optimized + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)

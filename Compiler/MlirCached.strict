@@ -1,21 +1,24 @@
 has function MlirFunction
 constant Seven = MethodEntry("B", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Return(0)))
 constant Kept = MlirCached(MlirFunction(List(TypeEntry) + TypeEntry.Kept, TypeEntry.Kept, Seven))
-constant Checked = ("    %zero = arith.constant 0.0 : f64", "    %cached = llvm.load %cache : !llvm.ptr -> f64", "    %unset = arith.cmpf oeq, %cached, %zero : f64", "    cf.cond_br %unset, ^compute, ^done(%cached : f64)", "  ^compute:")
-constant Stored = ("    func.call @strict_pin(%computed) : (f64) -> ()", "    llvm.store %computed, %cache : f64, !llvm.ptr", "    cf.br ^done(%computed : f64)", "  ^done(%result: f64):", "    return %result : f64", "  }")
+constant Global = "  llvm.mlir.global internal @"
+constant Pointer = " : !llvm.ptr"
+constant Address = " = llvm.mlir.addressof @"
+constant Checked = ("    %isSet = llvm.load %set : !llvm.ptr -> i1", "    %cached = llvm.load %cache : !llvm.ptr -> f64", "    cf.cond_br %isSet, ^done(%cached : f64), ^compute", "  ^compute:")
+constant Stored = ("    func.call @strict_pin(%computed) : (f64) -> ()", "    llvm.store %computed, %cache : f64, !llvm.ptr", "    %true = arith.constant true", "    llvm.store %true, %set : i1, !llvm.ptr", "    cf.br ^done(%computed : f64)", "  ^done(%result: f64):", "    return %result : f64", "  }")
 Called Text
 	Kept.Called is "A_B_0Cached"
 	MlirCached(MlirFunction.Counter).Called is "Counter_Run_0"
 	function.type.ConstantSlot(function.method) >= 0 then function.Symbol + "Cached" else function.Symbol
 Wrapper Texts
-	Kept.Wrapper.First is "  llvm.mlir.global internal @kA_B_0(0.0 : f64) : f64"
-	Kept.Wrapper(1) is "  func.func private @A_B_0Cached(%p0: f64) -> f64 {"
+	Kept.Wrapper(1) is "  llvm.mlir.global internal @sA_B_0(false) : i1"
 	Kept.Wrapper.Index("    %computed = func.call @A_B_0(%p0) : (f64) -> f64") > 0
 	MlirCached(MlirFunction.Counter).Wrapper.Length is 0
 	if function.type.ConstantSlot(function.method) < 0
 		return List(Text)
-	let global = "  llvm.mlir.global internal @k" + function.Symbol + "(0.0 : f64) : f64"
-	let header = (global, "  func.func private @" + Called + "(%p0: f64) -> f64 {")
-	let address = "    %cache = llvm.mlir.addressof @k" + function.Symbol + " : !llvm.ptr"
-	let call = "    %computed = func.call @" + function.Symbol + "(%p0) : (f64) -> f64"
-	header + address + Checked + call + Stored
+	let symbol = function.Symbol
+	let globals = (Global + "k" + symbol + "(0.0 : f64) : f64", Global + "s" + symbol + "(false) : i1")
+	let header = "  func.func private @" + Called + "(%p0: f64) -> f64 {"
+	let addresses = ("    %cache" + Address + "k" + symbol + Pointer, "    %set" + Address + "s" + symbol + Pointer)
+	let call = "    %computed = func.call @" + symbol + "(%p0) : (f64) -> f64"
+	globals + header + addresses + Checked + call + Stored

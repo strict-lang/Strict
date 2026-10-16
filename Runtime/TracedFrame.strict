@@ -4,6 +4,8 @@ constant Stored = InstructionEntry(InstructionType.StoreRegisterToVariable, "a",
 constant Looped = InstructionEntry(InstructionType.LoopBegin, List(Text), (6, 0, 0), 4)
 constant Used = InstructionEntry(InstructionType.LoadVariableToRegister, "a", (1, -1), 5)
 constant Lined = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "Strict/Number", (Loaded, Stored, Looped, Used, InstructionEntry.Return(0))), "Strict/Doubler"))
+constant Reporting = TracedFrame(Frame(Frame.Doubling, MethodEntry(TestCodegen.Runner, List(MemberEntry), "Strict/Number", List(InstructionEntry)), "Strict/Doubler"))
+constant Pairs = TracedFrame(Frame(Machine.Pairing, Frame.Twice.method, "Strict/Pair"))
 constant Seven = VmValue.OfNumber(7)
 constant Letters = "abcdefghijklmnopqrstuvwxyz"
 constant Started = (VmValue.None, VmValue.None, VmValue.None, VmValue.None, Looping.Begun(VmValue.None, VmValue.OfNumber(3), VmValue.None, 2))
@@ -12,15 +14,22 @@ Finished(arguments List(VmValue)) List(VmValue)
 	TracedFrame(Frame.Twice).Finished(Frame.Listed).Index(VmValue.OfNumber(42)) is Frame.ResultSlot
 	mutable slots = List(VmValue) + arguments
 	mutable position = 0
-	let instructions = frame.method.instructions
-	for Machine.MaxSteps
-		if position >= instructions.Length
-			return slots
-		let entry = instructions(position)
-		slots(entry.Target) = frame.Value(entry, position, slots)
+	mutable isReporting = false
+	let untraced = Frame(Machine(frame.machine, isTracing = false), frame.method, frame.owner, frame.depth)
+	for as long as position < frame.method.instructions.Length
+		let entry = frame.method.instructions(position)
+		isReporting = IsReporting(entry, isReporting)
+		slots(entry.Target) = (isReporting then untraced else frame).Value(entry, position, slots)
 		Logged(position, slots)
 		position = entry.kind < InstructionType.Return then position + 1 else frame.Next(entry, position, slots)
 	slots
+IsReporting(entry InstructionEntry, isReporting Boolean) Boolean
+	Reporting.IsReporting(InstructionEntry.Print("Test failed: a"), false)
+	Reporting.IsReporting(InstructionEntry.PrintValue("  got: ", 1, true), true) is false
+	Lined.IsReporting(InstructionEntry.Print("Test failed: a"), false) is false
+	if (frame.method.Name is not TestCodegen.Runner) or (entry.kind is not InstructionType.Print)
+		return isReporting
+	entry.texts(0).StartsWith("Test failed: ") or isReporting and (entry.texts(0) is not "  got: ")
 Logged(position Number, slots List(VmValue)) Number
 	Lined.Logged(4, Frame.Listed) is 0
 	if frame.method.Name is TestCodegen.Runner
@@ -84,8 +93,20 @@ Shown(result VmValue) Text
 	Lined.Shown(VmValue.OfText(Letters + Letters + Letters + "abcdef")).Length is 83
 	let items = result.items
 	let elements = "(" + Text.Combine(Elements(items)) + (items.Length > 5 then ", ...)" else ")")
-	let code = result.kind is "List" then elements else ValueCode(result).Code
+	let isRecord = (result.items.Length > 0) and (result.kind is not in ("List", "Strict/Error"))
+	let code = result.kind is "List" then elements else isRecord then Named(result) else ValueCode(result).Code
 	code.Length > 80 then code.Substring(0, 80) + "..." else code
+Named(record VmValue) Text
+	Pairs.Named(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))) is "Pair(b = 2)"
+	TypeEntry.ShortName(record.kind) + "(" + Text.Combine(Members(record, true) + Members(record, false)) + ")"
+Members(record VmValue, isChanged Boolean) Texts
+	Pairs.Members(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(0))), true).Length is 0
+	let natives = Natives(frame.machine.types)
+	for natives.TypeOf(record.kind).members
+		let item = index < record.items.Length then record.items(index) else VmValue.None
+		let isShown = (value.IsConstant is false) and (item.kind is not "None")
+		if isShown and ((item is natives.Initial(value)) is not isChanged)
+			value.Name + " = " + ValueCode(item).Code
 Elements(items List(VmValue)) Texts
 	Lined.Elements((VmValue.OfNumber(1), VmValue.OfText("b"))) is ("1", "\"b\"")
 	for Range(0, items.Length < 5 then items.Length else 5)

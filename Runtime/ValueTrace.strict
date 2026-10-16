@@ -29,7 +29,7 @@ Valued(lines Texts, folder Text) Texts
 	ValueTrace(Logger).Valued(Events, "Examples").Last.EndsWith("line 3 hit 2 times, each: 1, 2")
 	let hits = Hits(lines)
 	for hits
-		Line(value.Key, hits(value.Key), folder)
+		Line(value.Key, value.Value, folder)
 Hits(lines Texts) Dictionary(Text, Texts)
 	ValueTrace.Hits(Events)("Sum|3") is ("Hit\nRes|1", "Hit\nRes|2")
 	mutable hits = Dictionary(Text, Texts)

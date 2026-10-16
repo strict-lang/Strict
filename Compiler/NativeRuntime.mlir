@@ -2657,26 +2657,6 @@
     %result = func.call @strict_list_remove(%copy, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
     return %result : f64
   }
-  func.func private @strict_list_removed_text(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_text_equal : (f64, f64) -> f64
-    %result = func.call @strict_list_removed(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_list_removed_number(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_equal_number : (f64, f64) -> f64
-    %result = func.call @strict_list_removed(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_list_remove_text(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_text_equal : (f64, f64) -> f64
-    %result = func.call @strict_list_remove(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_list_remove_number(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_equal_number : (f64, f64) -> f64
-    %result = func.call @strict_list_remove(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
   func.func private @strict_is_dot_name(%name: !llvm.ptr) -> i1 {
     %dot = arith.constant 46 : i8
     %end = arith.constant 0 : i8
@@ -3896,16 +3876,6 @@
   ^done:
     return %current : f64
   }
-  func.func private @strict_list_without_number(%left: f64, %right: f64) -> f64 {
-    %equal = func.constant @strict_equal_number : (f64, f64) -> f64
-    %result = func.call @strict_list_without(%left, %right, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_list_without_text(%left: f64, %right: f64) -> f64 {
-    %equal = func.constant @strict_text_equal : (f64, f64) -> f64
-    %result = func.call @strict_list_without(%left, %right, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
   func.func private @strict_error_named(%name: !llvm.ptr) -> f64 {
     %sixteen = arith.constant 16 : i64
     %block = func.call @strict_alloc(%sixteen) : (i64) -> !llvm.ptr
@@ -4803,16 +4773,6 @@
   ^missing:
     return %none : f64
   }
-  func.func private @strict_list_index_number(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_equal_number : (f64, f64) -> f64
-    %result = func.call @strict_list_find(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_list_index_text(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_text_equal : (f64, f64) -> f64
-    %result = func.call @strict_list_find(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
   func.func private @strict_list_count(%list: f64, %item: f64, %equal: (f64, f64) -> f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
@@ -4835,26 +4795,6 @@
     cf.br ^check(%next, %total : i64, f64)
   ^done:
     return %found : f64
-  }
-  func.func private @strict_list_count_number(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_equal_number : (f64, f64) -> f64
-    %result = func.call @strict_list_count(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_list_count_text(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_text_equal : (f64, f64) -> f64
-    %result = func.call @strict_list_count(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_list_has_number(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_equal_number : (f64, f64) -> f64
-    %result = func.call @strict_list_has(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
-  }
-  func.func private @strict_list_has_text(%list: f64, %item: f64) -> f64 {
-    %equal = func.constant @strict_text_equal : (f64, f64) -> f64
-    %result = func.call @strict_list_has(%list, %item, %equal) : (f64, f64, (f64, f64) -> f64) -> f64
-    return %result : f64
   }
   func.func private @strict_list_has(%list: f64, %item: f64, %equal: (f64, f64) -> f64) -> f64 {
     %zero = arith.constant 0.0 : f64

@@ -85,13 +85,13 @@ IsNative(type Text, method Text) Boolean
 	Sample.IsNative("Strict/Bytecode/B", "to") is false
 	Sample.IsNative("Strict/Dictionary(Number, Number)", "get")
 	Sample.IsNative("Strict/Number", "to")
-	Sample.IsNative("Strict/Type", "to") is false
+	Sample.IsNative("Strict/NativeIO", "Exists") is false
 	if type.LastIndexOf("/") > 6
 		return false
 	if (method is in ("Length", "Count")) or (SourceName(type) is "Dictionary")
 		return (SourceName(type) is in ("List", "File", "Dictionary")) or ((type is "Strict/Text") and (method is "Length"))
-	let name = method.Split(" ").First
-	(name is in Natives) and ((name is not "to") or TypeEntry.IsBaseName(TypeEntry.ShortName(type)))
+	let isOwn = TypeEntry.IsBaseName(TypeEntry.ShortName(type)) or (SourceName(type) is in ("File", "Directory"))
+	(method.Split(" ").First is in Natives) and isOwn
 SourceName(type Text) Text
 	Sample.SourceName("Strict/List(Number)") is "List"
 	Sample.SourceName("Strict/Process") is "Process"

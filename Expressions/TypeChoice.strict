@@ -1,6 +1,7 @@
 has lines Texts
 constant Project = ("./LogoApp/Scene.strict", "./WebWars/Scene.strict", "./WebWars/Unit.strict")
 constant Scenes = ("./LogoApp/Scene.strict", "./WebWars/Scene.strict")
+constant Both = TypeChoice(("has logo LogoApp/Scene", "has web WebWars/Scene", "Loaded Number", "\tweb.Units.Length"))
 constant Plain = TypeChoice(("Loaded Number", "\tScene.Units.Length"))
 constant Qualified = TypeChoice(("has scene WebWars/Scene", "Loaded Number", "\tscene.Units.Length"))
 Chosen(files Texts, source Text) Texts
@@ -20,16 +21,20 @@ SameNamed(files Texts, path Text) Texts
 Best(candidates Texts, source Text) Text
 	Qualified.Best(Scenes, "./Content/Catalog.strict") is "./WebWars/Scene.strict"
 	Plain.Best(Scenes, "./Content/Catalog.strict") is ""
-	if candidates.Length is 1
-		return candidates.First
-	for candidates
-		if IsQualified(value)
-			return value
+	Both.Best(Scenes, "./Content/Catalog.strict") is ""
+	let qualified = Qualifying(candidates)
+	if (candidates.Length is 1) or (qualified.Length > 0)
+		return candidates.Length is 1 then candidates.First else (qualified.Length is 1 then qualified.First else "")
 	let folder = Path(source.Replace("\\", "/")).PathOnly.text
 	for candidates
 		if Path(value.Replace("\\", "/")).PathOnly.text is folder
 			return value
 	""
+Qualifying(candidates Texts) Texts
+	Both.Qualifying(Scenes) is Scenes
+	for candidates
+		if IsQualified(value)
+			value
 IsQualified(path Text) Boolean
 	Qualified.IsQualified("./WebWars/Scene.strict")
 	Plain.IsQualified("./WebWars/Scene.strict") is false
@@ -42,10 +47,24 @@ IsQualified(path Text) Boolean
 Ambiguous(names Texts, path Text) Texts
 	Plain.Ambiguous(("Scene", "Scene", "Unit"), "Catalog.strict").First.StartsWith("AmbiguousType: Scene")
 	Plain.Ambiguous(("Scene", "Unit"), "./Content/Catalog.strict").Length is 0
+	Both.Ambiguous(("Scene", "Scene"), "A.strict").First.StartsWith("SameNamedTypes: Scene used in A.strict:1 from")
 	for names
 		if (names.Index(value) is index) and (names.Count(value) > 1) and (UsedLine(value) > 0)
+			let packages = Packages(value)
+			let clash = " from " + Text.Combine(packages, " and ") + ", a build keys types by their plain name, rename one"
 			let advice = " is defined in several packages here, write Package/" + value + " in a declaration"
-			"AmbiguousType: " + value + " used in " + path + ":" + UsedLine(value) + advice
+			let issue = packages.Length > 1 then "SameNamedTypes: " else "AmbiguousType: "
+			issue + value + " used in " + path + ":" + UsedLine(value) + (packages.Length > 1 then clash else advice)
+Packages(name Text) Texts
+	Both.Packages("Scene") is ("LogoApp", "WebWars")
+	Plain.Packages("Scene").Length is 0
+	mutable packages = List(Mutable(Text))
+	for lines
+		let tokens = Tokenizer(value).Tokens
+		for Range(0, tokens.Length > 2 then tokens.Length - 2 else 0)
+			if (tokens(value + 1) is "/") and (tokens(value + 2) is name) and (tokens(value) is not in packages)
+				packages.Add(tokens(value))
+	packages
 UsedLine(name Text) Number
 	Plain.UsedLine("Scene") is 2
 	Plain.UsedLine("Unit") is 0

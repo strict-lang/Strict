@@ -125,6 +125,16 @@ Fresh(type TypeEntry) VmValue
 	for type.members
 		values.Add(Initial(value))
 	VmValue(type.Name, 0, "", values)
+Constructed(type TypeEntry, finished List(VmValue)) VmValue
+	Shapes.Constructed(Shape, Frame.Listed).items.First.number is 1
+	Shapes.Constructed(Shape, (VmValue.None, VmValue.None, VmValue.OfError("a"))).kind is "Strict/Error"
+	let result = finished(Frame.ResultSlot)
+	if result.kind is in VmValue.ErrorKinds
+		return result
+	mutable values = List(Mutable(VmValue))
+	for type.members
+		values.Add(finished(Frame.MembersSlot + index))
+	VmValue(type.Name, 0, "", values)
 Initial(member MemberEntry) VmValue
 	Shapes.Initial(Width).number is 0
 	Shapes.Initial(MemberEntry.SevenMember).number is 7

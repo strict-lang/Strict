@@ -35,13 +35,14 @@ Method(start Number, block CodeBlock) CodeBlock
 Line(line SyntaxNode, method Text, block CodeBlock) CodeBlock
 	Even.Line(OneIsOne, "IsEven", Counter).instructions.Length > 4
 	Even.Line(Declaring, "IsEven", Counter).instructions(0).kind is InstructionType.StoreConstantToVariable
+	Even.Line(Declaring, "IsEven", Counter).scope.TypeOf(ErrorCodegen.Tested) is "Error"
 	if line.Kind is not "Declaration"
 		return Checked(line, method, block)
 	let failure = block.nextId
 	let marked = block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text)
 	let declared = MethodCodegen(types.Generator).Statement(line, marked, false).Declare(ErrorCodegen.FailureMarker, "")
 	let skipped = declared.Flagged.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, declared.nextId)).WithNextId
-	let failed = skipped.Add(InstructionEntry.Jump(InstructionType.JumpEnd, failure))
+	let failed = skipped.Add(InstructionEntry.Jump(InstructionType.JumpEnd, failure)).Declare(ErrorCodegen.Tested, "Error")
 	let printed = Got(failed.Add(InstructionEntry.Print("Test failed: " + Place(line, method))))
 	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, skipped.nextId - 1))
 Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock

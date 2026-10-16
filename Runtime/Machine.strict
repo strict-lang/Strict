@@ -107,10 +107,13 @@ IsOwned(type TypeEntry, kind Text) Boolean
 	if kind is "List"
 		return true
 	TypeEntry.ShortName(type.Name).Split("(").First is TypeEntry.ShortName(kind).Split("(").First
-Execute(method MethodEntry, locals List(VmValue), owner Text) VmValue
+Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
 	Machine(Frame.Doubling, isTracing = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
-	let frame = Frame(value, method, owner)
+	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "D", Invocation.MaxDepth + 1).items(0).text is "StackOverflow"
+	if depth > Invocation.MaxDepth
+		return VmValue.OfError("StackOverflow")
+	let frame = Frame(value, method, owner, depth)
 	let slots = isTracing then TracedFrame(frame).Finished(locals) else frame.Finished(locals)
 	slots(Frame.ResultSlot)
 Call(call Invocation) VmValue
@@ -132,13 +135,9 @@ Executed(route Number, method MethodEntry, call Invocation) VmValue
 	let prototype = route < prototypes.Length then prototypes(route) else Natives(types).Fresh(type)
 	let isInitializer = method.Name is "from" then type.IsStruct and method.IsInitializer(type.Changing) else false
 	if isInitializer is false
-		return Execute(method, Bound(type, call.Instance, method, call.Arguments, prototype), type.Name)
-	let finished = Frame(value, method, type.Name).Finished(Bound(type, prototype, method, call.Arguments, prototype))
-	let result = finished(Frame.ResultSlot)
-	mutable values = List(Mutable(VmValue))
-	for type.members
-		values.Add(finished(Frame.MembersSlot + index))
-	result.kind is in VmValue.ErrorKinds then result else VmValue(type.Name, 0, "", values)
+		return Execute(method, Bound(type, call.Instance, method, call.Arguments, prototype), type.Name, call.Depth)
+	let frame = Frame(value, method, type.Name, call.Depth)
+	Natives(types).Constructed(type, frame.Finished(Bound(type, prototype, method, call.Arguments, prototype)))
 Field(entry InstructionEntry, instance VmValue) VmValue
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1)), VmValue.OfText("ab")).text is "ab"
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "c", (1, 0, -1)), VmValue.OfError("a")).kind is "Strict/Error"

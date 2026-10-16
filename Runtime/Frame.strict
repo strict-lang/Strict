@@ -1,6 +1,7 @@
 has machine Machine
 has method Bytecode/MethodEntry
 has owner Text = ""
+has depth Number = 0
 constant ThisSlot = 0
 constant ValueSlot = 1
 constant ResultSlot = 2
@@ -12,7 +13,6 @@ constant Doubling = Machine(Resolver(List(TypeEntry) + Machine.Doubler).Resolved
 constant Twice = Frame(Doubling, Doubling.types.First.methods.First, "Strict/Doubler")
 constant Calling = Frame(Machine(Resolver(List(TypeEntry) + Invocation.Failing).Resolved), MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)), "Strict/Caller")
 constant Listed = (VmValue.OfText("ab"), VmValue.OfText("a"), VmValue.None, VmValue.OfBoolean(true), Looping.Counting, VmValue.None, VmValue.OfNumber(1), VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)), VmValue.OfNumber(5))
-constant StoreSecond = InstructionEntry(InstructionType.StoreRegisterToVariable, "list(1)", (6, 7, Resolver.LiteralIndex, 1))
 Finished(arguments List(VmValue)) List(VmValue)
 	Twice.Finished(Listed).Index(VmValue.OfNumber(42)) is ResultSlot
 	mutable slots = List(VmValue) + arguments
@@ -60,7 +60,7 @@ Stored(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 		return Indexed(entry, slots, position)
 	entry.payload.Length < 3 then slots(entry.payload(0)) else Written(entry, slots)
 Written(entry InstructionEntry, slots List(VmValue)) VmValue
-	Twice.Written(StoreSecond, Listed).items(1).number is 1
+	Twice.Written(Storage.StoreSecond, Listed).items(1).number is 1
 	let index = entry.payload(2)
 	let position = index is Resolver.LiteralIndex then entry.payload(3) else Local(index, slots).number
 	let target = PayloadDecoder(entry).ElementParts.First
@@ -99,7 +99,7 @@ Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	mutable arguments = List(Mutable(VmValue))
 	for entry.payload(count)
 		arguments.Add(slots(entry.payload(count + 1 + index)))
-	Invocation(entry, arguments, instance)
+	Invocation(entry, arguments, instance, depth + 1)
 Traced(error VmValue, position Number) VmValue
 	Twice.Traced(VmValue.OfError("a"), 0).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0
 	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0), 0).items(1).items.Length is 1
@@ -110,8 +110,8 @@ Traced(error VmValue, position Number) VmValue
 	let file = VmValue.OfText(owner is in machine.sources then machine.sources(owner) else source.Located(machine.folder))
 	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(method.instructions(position).line)))
 	let traces = error.items(1).items
-	let isRepeated = (traces.Length > 0) and (traces.Last is trace)
-	let traced = isRepeated then error.items(1) else VmValue.OfList(traces + trace)
+	let isKept = (traces.Length >= Invocation.MaxTraces) or (traces.Length > 0) and (traces.Last is trace)
+	let traced = isKept then error.items(1) else VmValue.OfList(traces + trace)
 	VmValue(error.kind, error.number, error.text, (error.items(0), traced))
 Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Looped(InstructionEntry.LoopBegin(6, 8), Listed, 0).items(3).number is 1

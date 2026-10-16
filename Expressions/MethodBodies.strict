@@ -78,12 +78,13 @@ Item(arguments Text) Text
 	MethodBodies.Item("Number") is "Number"
 	MethodBodies.Item("Text, Text") is "Texts"
 	MethodBodies.Item("Text, Number") is "List(Text, Number)"
+	MethodBodies.Item("Text, Texts") is "List(Text, Texts)"
 	MethodBodies.Item("List(Text, Number), List(Text, Number)") is "List(Text, Number)s"
 	if arguments.IndexOf(", ") < 0
 		return arguments
 	let half = ((arguments.Length - 2) / 2).Floor
 	let first = arguments.Substring(0, half)
-	first is arguments.Substring(half + 2, half) then first + "s" else "List(" + arguments + ")"
+	first + ", " + first is arguments then first + "s" else "List(" + arguments + ")"
 Pair(type Text) Texts
 	MethodBodies.Pair("List(Text, Number)") is ("Text", "Number")
 	MethodBodies.Pair("List(List(Text, Number))").Length is 0
