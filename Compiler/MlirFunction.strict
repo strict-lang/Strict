@@ -62,7 +62,8 @@ Text Text
 	for Parameters
 		signature.Add("%p" + index + ": f64")
 	let header = "  func.func private @" + Symbol + "(" + outer.Text.Combine(signature, ", ") + ") -> f64 {"
-	outer.Text.Combine(List(Text) + header + Slots + Body + "  }" + MlirParallel(value, 0).Outlined, "\n")
+	let outlined = MlirParallel(value, 0).Outlined + MlirCached(value).Wrapper
+	outer.Text.Combine(List(Text) + header + Slots + Body + "  }" + outlined, "\n")
 Slots Texts
 	Counter.Slots.Length is 15
 	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64")

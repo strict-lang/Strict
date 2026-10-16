@@ -9,6 +9,7 @@ Without(fruit Text) Dictionary(Text, Number)
 	constant fruits = FruitPrices(Dictionary(("Apple", 3), ("Pear", 2), ("Plum", 5)))
 	fruits.Without("Pear").Length is 2
 	fruits.prices("Pear") is 2
+	fruits.prices.Code is "((\"Apple\", 3), (\"Pear\", 2), (\"Plum\", 5))"
 	prices.Remove(fruit)
 Raised(fruit Text, amount Number) Dictionary(Text, Number)
 	FruitPrices(Dictionary(("Pear", 2))).Raised("Plum", 5) is Dictionary(("Pear", 2), ("Plum", 5))

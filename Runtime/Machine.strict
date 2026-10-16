@@ -48,7 +48,7 @@ Prepared Machine
 	for types
 		created.Add(Natives(types).Fresh(value))
 		located(value.Name) = TypeSource(value).Located(folder)
-	Machine(types, logger, created, folder, isTracing, located)
+	Constants(Machine(types, logger, created, folder, isTracing, located)).Computed
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue), VmValue.None).Last.number is 7

@@ -69,11 +69,20 @@ Accessed(call Invocation) VmValue
 	let payload = call.entry.payload
 	let at = call.Resolution + 3
 	if payload.Length <= at
-		return VmValue.None
+		return Constant(call)
 	mutable found = call.Instance
 	for (payload.Length - at) / 2
 		found = Step(found, payload(at + index * 2), payload(at + index * 2 + 1))
 	found.kind is in ("Error", "Strict/Error") then VmValue.None else found
+Constant(call Invocation) VmValue
+	Getting.Constant(Invocation(FirstResolved, List(VmValue), Held)).kind is "None"
+	let at = call.Resolution
+	let route = call.entry.payload.Length > at + 1 then call.entry.payload(at) else -1
+	if (route < 0) or (route >= machine.prototypes.Length)
+		return VmValue.None
+	let type = machine.types(route)
+	let slot = type.ConstantSlot(type.methods(call.entry.payload(at + 1)))
+	slot < 0 then VmValue.None else machine.prototypes(route).items(slot)
 Step(instance VmValue, route Number, number Number) VmValue
 	Getting.Step(Held, 0, 1).Length is 2
 	Getting.Step(Held.items(1), -1, 1).number is 5

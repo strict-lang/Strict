@@ -23,7 +23,8 @@ IsConversion Boolean
 	let decoder = PayloadDecoder(entry)
 	let target = TypeEntry.ShortName(decoder.Text(4 + entry.payload(3)))
 	let isTo = decoder.Text(2) is "to"
-	isTo and (target.StartsWith("List(") or IsNativeConversion(entry, target))
+	let isPairCode = MlirCodes(function, position).IsPairCode(entry)
+	isPairCode or (isTo and (target.StartsWith("List(") or IsNativeConversion(entry, target)))
 IsNativeConversion(entry InstructionEntry, target Text) Boolean
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Number")
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Shape") is false
@@ -43,6 +44,8 @@ Converted(entry InstructionEntry) Texts
 	let instance = Instance(entry)
 	let result = "%r" + entry.payload(0)
 	let target = TypeEntry.ShortName(PayloadDecoder(entry).Text(4 + entry.payload(3)))
+	if PayloadDecoder(entry).Text(2) is "Code"
+		return MlirCodes(function, position).Coded(instance, result)
 	if target is "Number"
 		return Numbered(instance, result)
 	if target.StartsWith("List(")

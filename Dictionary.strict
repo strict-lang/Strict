@@ -7,6 +7,9 @@ from
 	Dictionary(("a", 1)) is not Dictionary(("a", 2))
 	Dictionary(("a", 1), ("b", 2)) to Text is "((a, 1), (b, 2))"
 	Dictionary((1, 1), (2, 2)).Length is 2
+Code Text
+	Dictionary((1, "a"), (2, "b")).Code is "((1, \"a\"), (2, \"b\"))"
+	keysAndValues.Code
 in(key Generic) Boolean
 	2 is in Dictionary((1, 1), (2, 2))
 	3 is not in Dictionary((1, 1), (2, 2))

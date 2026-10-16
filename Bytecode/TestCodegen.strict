@@ -9,7 +9,6 @@ constant Declaring = SyntaxNode("Declaration", "let a", MethodCodegen.One)
 constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 25, 1), 2)
 constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 15, 1), 2)
 constant Shown = SyntaxParser(Tokenizer("tested is Error then (tested to Text).Replace((tested to Text).Lines.First, tested.Code) else tested.Code").Tokens).Parse
-constant Texted = SyntaxParser(Tokenizer("tested to Text").Tokens).Parse
 constant Runner = "$Tests"
 constant Processing = TestCodegen(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(KnownTypes(("Process", "Image"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + "Elapsed", List(Text) + "Number"), Scope(List(Text) + "Process", List(Text) + "Image")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text)))
 Tests MethodEntry
@@ -88,10 +87,8 @@ Timed(block CodeBlock, message Text) CodeBlock
 	duration.Add(InstructionEntry.PrintValue(message + " (", duration.Result, true))
 Got(block CodeBlock) CodeBlock
 	Even.Got(Counter.Declare(ErrorCodegen.Tested, "Number")).instructions.Last.kind is InstructionType.Print
-	Even.Got(Counter.Declare(ErrorCodegen.Tested, "Dictionary(Text, Number)")).instructions(1).texts(1) is "to"
 	Even.Got(Counter.Declare(ErrorCodegen.Tested, "Number")).instructions.First.texts is List(Text) + ErrorCodegen.Tested
-	let isDictionary = block.scope.TypeOf(ErrorCodegen.Tested).StartsWith("Dictionary(")
-	let shown = types.Generator.Expression((isDictionary then Texted else Shown), block)
+	let shown = types.Generator.Expression(Shown, block)
 	shown.Add(InstructionEntry.PrintValue("  got: ", shown.Result, true))
 Counted(block CodeBlock) CodeBlock
 	Even.Counted(Counter).instructions.Last.texts is ("failed")

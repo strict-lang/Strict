@@ -1,0 +1,18 @@
+has machine Machine
+constant Keeping = TypeEntry("Strict/Keeping", List(MemberEntry) + MemberEntry("Seven", "Strict/Number", List(InstructionEntry), true), List(MethodEntry) + MethodEntry("Seven", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Return(0))))
+Computed Machine
+	Machine(Resolver(List(TypeEntry) + Keeping).Resolved).Prepared.prototypes.First.items.First.number is 7
+	mutable prototypes = machine.prototypes
+	for machine.types
+		prototypes(index) = Filled(index, Machine(machine, prototypes = prototypes))
+	Machine(machine, prototypes = prototypes)
+Filled(route Number, current Machine) VmValue
+	Constants(Machine.Hello).Filled(0, Machine.Hello.Prepared).kind is "HelloLogger"
+	let type = current.types(route)
+	let prototype = current.prototypes(route)
+	mutable items = prototype.items
+	for type.methods
+		let slot = type.ConstantSlot(value)
+		if slot >= 0
+			items(slot) = current.Executed(route, value, Invocation(InstructionEntry.Return(0), List(VmValue), prototype))
+	VmValue(prototype.kind, prototype.number, prototype.text, items)

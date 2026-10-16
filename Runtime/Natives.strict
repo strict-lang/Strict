@@ -129,8 +129,8 @@ Initial(member MemberEntry) VmValue
 	Shapes.Initial(Width).number is 0
 	Shapes.Initial(MemberEntry.SevenMember).number is 7
 	Shapes.Initial(MemberEntry("table", "Strict/Dictionary(Number, Number)", List(InstructionEntry), false)).kind is "List"
-	if member.initial.Length > 0
-		return PayloadDecoder(member.initial.First).Value(0)
+	if member.IsConstant or (member.initial.Length > 0)
+		return member.initial.Length is 0 then VmValue.None else PayloadDecoder(member.initial.First).Value(0)
 	if member.typeName is "Strict/Number"
 		return VmValue.OfNumber(0)
 	if member.typeName is in ("Strict/Text", "Strict/Boolean")

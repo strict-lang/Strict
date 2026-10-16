@@ -10,6 +10,7 @@ constant Sample = Linker(".", TypeCodegen("Strict/Bytecode/FileCompiler", List(T
 constant Hello = Linker(".", TypeCodegen.Hello)
 constant Reading = TypeEntry("A", List(MemberEntry) + MemberEntry("b", "Strict/List(Byte)", List(InstructionEntry), false), List(MethodEntry))
 constant Parameters = TypeEntry("Strict/Bytecode/MethodEntry", List(MemberEntry) + MemberEntry("parameters", "Strict/List(MemberEntry)", List(InstructionEntry), false), List(MethodEntry))
+constant DictionaryCode = MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Dictionary(Number, Text)", "Code", "Strict/Text"), List(Number), -1))
 constant Natives = ("to", "not", "and", "or", "xor", "Exists", "ReadLines")
 Linked(entries List(TypeEntry), signatures Texts, depth Number) List(TypeEntry)
 	Hello.Linked(TypeEntry.HelloLogger, List(Text), 3).Length is 4
@@ -128,7 +129,11 @@ Targets(entries List(TypeEntry)) Texts
 	Sample.Targets(Go) is ("Strict/B.Go")
 	Sample.Targets(Counted) is ("Strict/Range.Count")
 	Sample.Targets((Go, Counted)) is ("Strict/B.Go", "Strict/Range.Count")
+	Sample.Targets(TypeEntry("A", List(MemberEntry), List(MethodEntry) + DictionaryCode)).Last is "Strict/Text.Code"
 	mutable targets = List(Mutable(Text))
 	for entries
 		targets = targets + value.Invoked
+	for targets
+		if value.StartsWith("Strict/Dictionary(") and value.EndsWith(".Code")
+			return targets + "Strict/Text.Code"
 	targets

@@ -75,7 +75,8 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	let names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
-	let call = "    " + Temp("r") + " = func.call @" + target.Symbol + "(" + names + ") : (" + types + ") -> f64"
+	let called = "    " + Temp("r") + " = func.call @" + MlirCached(target).Called
+	let call = called + "(" + names + ") : (" + types + ") -> f64"
 	let traced = MlirMemory(function, position).Traced(Temp("r"), Temp("tr"), "strict_trace")
 	Loads(entry, type) + Defaults(callee, count) + call + traced + function.Store(Temp("tr"), "%r" + entry.payload(0))
 Defaults(callee MethodEntry, count Number) Texts
@@ -90,6 +91,8 @@ Defaults(callee MethodEntry, count Number) Texts
 	lines
 NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
 	MlirCalls(Shapes, 2).NativeHelper(Area, PayloadDecoder(Area)) is ""
+	if MlirCodes(function, position).IsPairCode(entry)
+		return "strict_pairs_text"
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
 	let natives = MlirNatives(function, position)

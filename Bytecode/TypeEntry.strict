@@ -5,6 +5,7 @@ constant FormatVersion = 4
 constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
 constant CharacterEntry = TypeEntry("Strict/Character", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
 constant Scaling = TypeEntry("Strict/Vector", List(MemberEntry), (MethodEntry("*", List(MemberEntry) + MemberEntry("other", "Strict/Vector", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry)), MethodEntry("*", List(MemberEntry) + MemberEntry("scale", "Strict/Number", List(InstructionEntry), false), "Strict/Vector", List(InstructionEntry))))
+constant Kept = TypeEntry("A", List(MemberEntry) + MemberEntry("B", "C", List(InstructionEntry), true), List(MethodEntry) + MethodEntry("B", List(MemberEntry), "C", List(InstructionEntry)))
 constant ToNumber = MethodEntry("to", List(MemberEntry), "Strict/Number", List(InstructionEntry))
 constant Converting = TypeEntry("Strict/Digit", List(MemberEntry), (ToNumber, MethodEntry("to", List(MemberEntry) + MemberEntry.SevenMember, "Strict/Text", List(InstructionEntry))))
 Names BinaryNames
@@ -103,6 +104,15 @@ UsedTypes Texts
 	for types
 		if value.StartsWith("Strict/")
 			value
+ConstantSlot(method MethodEntry) Number
+	Kept.ConstantSlot(Kept.methods.First) is 0
+	HelloLogger.ConstantSlot(HelloLogger.methods.First) is -1
+	if method.parameters.Length > 0
+		return -1
+	for members
+		if value.IsConstant and (value.Name is method.Name)
+			return index
+	-1
 Invoked Texts
 	TypeEntry("A", List(MemberEntry), MethodEntry.GoRun).Invoked is ("Strict/B.Go")
 	mutable targets = List(Mutable(Text))
