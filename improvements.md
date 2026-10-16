@@ -11,7 +11,8 @@ In priority order. Remove what is done, add what is found, keep each item to wha
 - **Same-named types in one build**: a build needing `WebWars/Scene` and `LogoApp/Scene` at once is not supported (types and native symbols are keyed by the plain name).
 - **Stack overflows show no Strict stack** and the other tests of the file do not run (a depth counter in the VM needs room in `Frame` and `Machine`, both at 15 members and methods).
 - **`Code` of a Dictionary natively** links nothing (Dictionary methods are runtime helpers), `got:` uses `to Text` for dictionaries; needs code converters for `strict_pairs_text`.
-- Native `and` does not short-circuit like the VM: `let lance = active >= 0 and (list(active).Name.StartsWith("Lance"))` with active -1 aborts the native SoulCraft exe (exit code 3) while the VM runs it, SoulCraft now guards with `if active < 0 return`. Either short-circuit natively or reject indexing on the right side of `and`.
+- **`and`/`or` with a list operand is accepted**: `active >= 0 and (skills(active).name.StartsWith("Lance"))` is `Boolean and List` because `(x)` is a one-element list, the list (and its index -1) is built before `and`, the result is `(true)` on both backends (SoulCraft aborted natively with exit code 3). Operands of `and`, `or`, `xor` must be Booleans or Numbers, anything else should be a compile error naming the parentheses.
+- **Arc tangent**: `Vector2.Atan` returns `Degrees(0)` (a stub), there is no atan2, arc sine or arc cosine on either backend (DeltaEngine 3D math needs them).
 - A native runtime abort (index out of range) in a windowed exe exits with code 3 and prints nothing; print the error and Strict stack to stderr or a crash log next to the exe.
 
 ## Rebalancing: exact values and C# integration (../Rebalancing)
