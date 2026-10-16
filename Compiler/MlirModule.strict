@@ -1,7 +1,9 @@
 has types List(TypeEntry)
 has entryName Text
-has countedFile Text = ""
+has countedFiles Texts = List(Text)
+has entries = 1
 constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run")
+constant Pair = MlirModule(Counters.types + TypeEntry("Strict/Other", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run", List(Text), 2)
 constant NoFunctions = List(MlirFunction)
 constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry)), "Tests")
 Text Text
@@ -10,7 +12,7 @@ Text Text
 	let functions = Functions
 	if functions.First.method.instructions.Length is 0
 		return "unsupported: no " + entryName + " method without parameters in " + types.First.Name
-	let counted = countedFile is "" then functions else MlirLines.Counted(functions, types.First, countedFile)
+	let counted = countedFiles.Length is 0 then functions else MlirLines.Counted(functions, Mains, countedFiles)
 	Combined(Declared(counted, functions), functions, counted)
 Declared(texts List(MlirFunction), functions List(MlirFunction)) Texts
 	Counters.Declared(Counters.Functions, Counters.Functions).First is "module {"
@@ -20,15 +22,28 @@ Declared(texts List(MlirFunction), functions List(MlirFunction)) Texts
 	lines + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
 Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
 	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}") is true
-	let table = countedFile is "" then List(Text) else MlirLines.Table(functions, types.First, countedFile)
-	let host = Text.Combine(lines + MlirGlobals(functions).Lines + table + MlirEntry(counted.First).Main + "}", "\n")
+	let table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
+	let main = MlirEntry(counted.First, Others(counted)).Main
+	let host = Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
 	let device = MlirGpu.Module(functions)
 	device is "" then host else host + "\n" + device
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1
-	let main = types.First
-	let first = List(MlirFunction) + MlirFunction(types, main, RunMethod(main))
-	Reachable(first, first)
+	Pair.Functions.Length is 2
+	Pair.Text.IndexOf("@Other_Run_0(%self1)") > 0 is true
+	Reachable(Entries, Entries)
+Entries List(MlirFunction)
+	Pair.Entries.Last.Symbol is "Other_Run_0"
+	for Range(0, entries)
+		MlirFunction(types, types(value), RunMethod(types(value)))
+Mains List(TypeEntry)
+	Pair.Mains.Last.Name is "Strict/Other"
+	for Range(0, entries)
+		types(value)
+Others(counted List(MlirFunction)) List(MlirFunction)
+	Pair.Others(Pair.Functions).First.Symbol is "Other_Run_0"
+	for Range(1, entries)
+		counted(value)
 RunMethod(main TypeEntry) MethodEntry
 	Counters.RunMethod(TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry))).instructions.Length is 0
 	for main.methods
@@ -37,16 +52,15 @@ RunMethod(main TypeEntry) MethodEntry
 	MethodEntry(entryName, List(MemberEntry), "None", List(InstructionEntry))
 Reachable(known List(MlirFunction), fresh List(MlirFunction)) List(MlirFunction)
 	Counters.Reachable(Counters.Functions, Counters.Functions).Length is 1
+	mutable symbols = Symbols(known)
 	mutable found = List(Mutable(MlirFunction))
 	for fresh
-		found = found + Unknown(known + found, Callees(value))
+		for Callees(value)
+			let symbol = value.Symbol
+			if symbol is not in symbols
+				found.Add(value)
+				symbols = symbols + symbol
 	found.Length is 0 then known else Reachable(known + found, found)
-Unknown(known List(MlirFunction), candidates List(MlirFunction)) List(MlirFunction)
-	Counters.Unknown(Counters.Functions, Counters.Functions).Length is 0
-	mutable result = List(Mutable(MlirFunction))
-	for candidates
-		result = Symbols(known + result).Index(value.Symbol) < 0 then result + value else result
-	result
 Symbols(functions List(MlirFunction)) Texts
 	Counters.Symbols(Counters.Functions) is ("Counter_Run_0")
 	for functions

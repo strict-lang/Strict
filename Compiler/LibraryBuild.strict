@@ -13,7 +13,7 @@ Exported(library MlirLibrary, base Text, root Text) Number
 	logger.Log(error is "" then "Built " + Target(base, Platform.Current) + " and " + base + ".cs" else error)
 	if error is not ""
 		return 1
-	File(base + ".cs").Write(CSharpBinding(library).Lines)
+	File(base + ".cs").Write(CSharpBinding(library, File(base + ".strict").ReadLines).Lines)
 	NativeBuild(logger).Removed(base)
 	0
 Linked(base Text, tools Toolchain, library MlirLibrary) Text

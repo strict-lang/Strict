@@ -48,10 +48,11 @@ Writer(position Number, register Number) Number
 	Graded.Writer(5, 1) is 2
 	Graded.Writer(1, 7) is -1
 	let reuse = LoadReuse(function.method.instructions)
-	mutable found = -1
 	for position
-		found = reuse.Written(function.method.instructions(index)) is register then index else found
-	found
+		let at = position - 1 - index
+		if reuse.Written(function.method.instructions(at)) is register
+			return at
+	-1
 VariableKind(position Number, name Text) Text
 	Graded.VariableKind(2, "letter") is "Text"
 	Graded.VariableKind(2, "width") is "Number"

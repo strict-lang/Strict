@@ -1,0 +1,97 @@
+has logger
+constant Counting = TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop)
+constant Initializing = TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + MethodEntry.Initializing)
+constant Hellos = ("Examples/HelloLogger.strict", "Examples/HelloLogger.strict")
+constant Other = TypeEntry("Strict/B", List(MemberEntry), List(MethodEntry))
+Module(path Text, root Text, isCounting Boolean, isProgram Boolean) MlirModule
+	NativeFolder(Logger).Module("Examples/HelloLogger.strict", ".", false, true).entryName is "Run"
+	let paths = Paths(path)
+	let folders = Directory.Exists(path) then ResolveCheck.Tree(path) else List(Text) + path
+	let types = isCounting then Collected(folders, root) else Execute(logger).Loaded(path, root)
+	let counted = isCounting then CountedFiles(paths, root) else List(Text)
+	MlirModule(types, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length)
+Natives(path Text, root Text, types List(TypeEntry)) Texts
+	NativeFolder(Logger).Natives("Examples", ".", List(TypeEntry) + Foreign.Adder) is ("Examples/NativeAdd/native")
+	let paths = Paths(path)
+	mutable folders = List(Mutable(Text))
+	for paths
+		for NativeBuild(logger).Natives(value, root, types)
+			if value is not in folders
+				folders.Add(value)
+	folders
+CountedFiles(paths Texts, root Text) Texts
+	NativeFolder(Logger).CountedFiles(List(Text) + "./Examples/Sum.strict", ".") is ("Examples/Sum.strict")
+	for paths
+		NativeBuild(logger).CountedFile(value, root)
+Paths(path Text) Texts
+	NativeFolder.Paths("Examples/Sum.strict") is ("Examples/Sum.strict")
+	Directory.Exists(path) then Files(path) else List(Text) + path
+Files(folder Text) Texts
+	NativeFolder.Files("Math").Length > 5 is true
+	mutable files = List(Mutable(Text))
+	for ResolveCheck.Tree(folder)
+		files = files + Directory.Files(value, "*.strict")
+	files
+Collected(folders Texts, root Text) List(TypeEntry)
+	NativeFolder(Logger).Collected(List(Text) + "Examples/NativeAdd/native", ".").Length is 0
+	mutable mains = List(Mutable(TypeEntry))
+	mutable used = List(Mutable(TypeEntry))
+	for folders
+		let paths = Directory.Exists(value) then Directory.Files(value, "*.strict") else List(Text) + value
+		let counted = paths.Length is 0 then List(TypeEntry) else Counted(paths, root)
+		if counted.Length < paths.Length
+			return List(TypeEntry)
+		mains = mains + Leading(counted, paths.Length)
+		used = used + counted
+	Merged(mains, used)
+Leading(types List(TypeEntry), count Number) List(TypeEntry)
+	NativeFolder.Leading((Counting, Other), 1) is List(TypeEntry) + Counting
+	for Range(0, count)
+		types(value)
+Counted(paths Texts, root Text) List(TypeEntry)
+	NativeFolder(Logger).Counted(Hellos, ".")(1).Name is "HelloLogger"
+	let files = SourceFiles(root).Of(FileCompiler.Normalized(paths.First))
+	let inference = ResolveCheck.Inference(files)
+	mutable mains = List(Mutable(TypeEntry))
+	mutable used = List(Mutable(TypeEntry))
+	for paths
+		let types = Typed(value, root, files, inference)
+		if types.Length is 0
+			return List(TypeEntry)
+		mains.Add(types.First)
+		used = used + types
+	Merged(mains, used)
+Typed(path Text, root Text, files Texts, inference TypeInference) List(TypeEntry)
+	NativeFolder(Logger).Typed("Missing.strict", ".", List(Text), ResolveCheck.Counting).Length is 0
+	let isFresh = Execute(logger).Stale(List(Text) + path).Length is 0
+	isFresh then Execute(logger).Loaded(path, root) else FileCompiler(logger).Built(path, root, true, files, inference)
+Merged(known List(TypeEntry), added List(TypeEntry)) List(TypeEntry)
+	NativeFolder.Merged(List(TypeEntry) + Counting, (Initializing, Counting)).First.methods.Length is 2
+	NativeFolder.Merged(List(TypeEntry) + Counting, List(TypeEntry) + Other).Length is 2
+	mutable merged = List(TypeEntry) + known
+	mutable names = Names(known)
+	for added
+		let at = names.Index(value.Name)
+		if at < 0
+			merged = merged + value
+			names = names + value.Name
+		else
+			merged(at) = Joined(merged(at), value)
+	merged
+Names(types List(TypeEntry)) Texts
+	NativeFolder.Names((Counting, Other)) is ("Strict/A", "Strict/B")
+	for types
+		value.Name
+Joined(type TypeEntry, other TypeEntry) TypeEntry
+	NativeFolder.Joined(Counting, Counting).methods.Length is 1
+	let known = Signatures(type.methods)
+	let added = Signatures(other.methods)
+	mutable methods = type.methods
+	for other.methods
+		if added(index) is not in known
+			methods = methods + value
+	TypeEntry(type.Name, type.members, methods)
+Signatures(methods List(MethodEntry)) Texts
+	NativeFolder.Signatures(Counting.methods) is ("Run(None)")
+	for methods
+		value.Name + "(" + Text.Combine(value.SignatureTypes) + ")"

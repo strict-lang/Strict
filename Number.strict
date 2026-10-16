@@ -57,9 +57,10 @@ Counted(rounding Text) Number
 	13.5.Counted("Even") is 14
 	12.1.Counted("Ceiling") is 13
 	12.999999999999998.Counted("Floor") is 13
+	1234567812345678.Counted("Even") is 1234567812345678
 	if Absolute > 2251799813685248
 		return Error("DecimalOverflow")
-	let tolerance = Absolute * 0.000000000000001 + 0.000000001
+	let tolerance = Absolute * 0.0000000000000002 + 0.000000001
 	let floor = (value + tolerance).Floor
 	let fraction = value - floor
 	let isEvenUp = (fraction > 0.5 + tolerance) or ((fraction - 0.5).Absolute <= tolerance) and ((floor % 2).Absolute is 1)

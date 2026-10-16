@@ -8,16 +8,16 @@ IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Character.strict") is false
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
 Compile(path Text, root Text, isCounting = false) Number
-	let isProgram = IsProgram(path) and (isCounting is false)
-	let types = isCounting then FileCompiler(logger).Compiled(path, root, true) else Execute(logger).Loaded(path, root)
-	if types.Length is 0
+	let isProgram = (isCounting is false) and IsProgram(path)
+	let module = NativeFolder(logger).Module(path, root, isCounting, isProgram)
+	if module.types.Length is 0
 		return 1
 	let base = Output(path, isProgram)
-	let module = MlirModule(types, isProgram then "Run" else TestCodegen.Runner, CountedFile(path, root, isCounting))
 	let program = Device(module.Text, base, root)
 	if program is ""
 		return 1
-	let built = Build(base, program, Toolchain(Platform.Current, root, Natives(path, root, types)), isCounting)
+	let natives = NativeFolder(logger).Natives(path, root, module.types)
+	let built = Build(base, program, Toolchain(Platform.Current, root, natives), isCounting)
 	isCounting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path) else built
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n}"
@@ -45,10 +45,9 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 		if Directory.Exists(folder) and (folder is not in folders)
 			folders.Add(folder)
 	folders
-CountedFile(path Text, root Text, isCounting Boolean) Text
-	NativeBuild.CountedFile("./Examples/Sum.strict", ".", true) is "Examples/Sum.strict"
-	NativeBuild.CountedFile("./Examples/Sum.strict", ".", false) is ""
-	isCounting then TypeEntry(FileCompiler.FullName(path, root), List(MemberEntry), List(MethodEntry)).Source else ""
+CountedFile(path Text, root Text) Text
+	NativeBuild.CountedFile("./Examples/Sum.strict", ".") is "Examples/Sum.strict"
+	TypeEntry(FileCompiler.FullName(path, root), List(MemberEntry), List(MethodEntry)).Source
 Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	let missing = tools.Missing(Toolchain.Needed)
 	if missing.Length > 0
@@ -97,7 +96,10 @@ Removed(base Text)
 Output(path Text, isProgram Boolean) Text
 	NativeBuild.Output("Character.strict", false) is "./Character.test"
 	NativeBuild.Output("C:/s/A.strict", true) is "C:/s/A"
+	NativeBuild.Output("Math", false) is "./Math/Tests.test"
 	let source = FileCompiler.Normalized(path)
+	if Directory.Exists(path)
+		return source + "/Tests.test"
 	source.Substring(0, source.Length - 7) + (isProgram then "" else ".test")
 Mlir(program Text, root Text, platform Number) Text
 	NativeBuild.Mlir("module {\n}", ".", Platform.Linux).Length > 100000 is true
