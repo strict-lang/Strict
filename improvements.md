@@ -12,6 +12,7 @@ In priority order. Remove what is done, add what is found, keep each item to wha
 - **Stack overflows show no Strict stack** and the other tests of the file do not run (a depth counter in the VM needs room in `Frame` and `Machine`, both at 15 members and methods).
 - **`Code` of a Dictionary natively** links nothing (Dictionary methods are runtime helpers), `got:` uses `to Text` for dictionaries; needs code converters for `strict_pairs_text`.
 - **`and`/`or` with a list operand is accepted**: `active >= 0 and (skills(active).name.StartsWith("Lance"))` is `Boolean and List` because `(x)` is a one-element list, the list (and its index -1) is built before `and`, the result is `(true)` on both backends (SoulCraft aborted natively with exit code 3). Operands of `and`, `or`, `xor` must be Booleans or Numbers, anything else should be a compile error naming the parentheses.
+- **A method named like a type**: `Matrix Matrix` in `Math/Quaternion` (body builds `Matrix(...)`) is "Unsupported native call Strict/Math/Quaternion.Matrix" and an empty list on the VM, README says the innermost name wins (the method); same as `Echo(amount)` in `Echo.strict` natively being the constructor.
 - **Arc tangent**: `Vector2.Atan` returns `Degrees(0)` (a stub), there is no atan2, arc sine or arc cosine on either backend (DeltaEngine 3D math needs them).
 - A native runtime abort (index out of range) in a windowed exe exits with code 3 and prints nothing; print the error and Strict stack to stderr or a crash log next to the exe.
 
