@@ -1,10 +1,11 @@
 has types KnownTypes
 constant Scaler = KnownTypes(("Scaler", "Byte"), (KnownTypes.NoMembers, Scope(List(Text) + "number", List(Text) + "Number")), (Scope(("Scaled", "Scaled", "*", "*"), ("Number", "Number", "Number", "Scaler")), KnownTypes.NoMembers), (Scope(("Scaled", "Scaled types", "Scaled", "Scaled types", "*", "* types", "*", "* types"), ("text", "Text", "byte", "Byte", "other", "Other", "factor", "Number")), KnownTypes.NoMembers))
 constant Scaling = Overloads(Scaler)
-constant Labeler = KnownTypes(List(Text) + "Labeler", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Labels", "Labels"), ("List(Numbers)", "Numbers")), List(Scope) + Scope(("Labels", "Labels types", "Labels", "Labels types"), ("label,count", "Numbers,Number", "", "")))
+constant Labeler = KnownTypes(List(Text) + "Labeler", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Labels", "Labels"), ("Numbers", "List(Numbers)")), List(Scope) + Scope(("Labels", "Labels types", "Labels", "Labels types"), ("", "", "label,count", "Numbers,Number")))
 constant Labeling = Overloads(Labeler)
 constant LabelInference = TypeInference(Labeler, List(Scope) + KnownTypes.NoMembers)
 constant LabelsCall = SyntaxParser(Tokenizer("Labels((1, 0), 2)").Tokens).Parse
+constant LabelerLabels = SyntaxNode("Member", "Labels", SyntaxNode("Type", "Labeler"))
 constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
 Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Text") is 0

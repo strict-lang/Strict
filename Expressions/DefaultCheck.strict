@@ -3,10 +3,12 @@ constant Counting = DefaultCheck(TypeInference(KnownTypes.Sample, (Scope(("Limit
 constant Keywords = ("has", "constant", "let", "mutable", "if", "else", "for", "with", "return", "is", "in", "to", "and", "or", "xor", "not", "from", "then")
 constant Moving = List(Text) + "M(from Number) Number"
 constant Countdown = ("Run Number", "\tmutable index = 3", "\tfor as long as index > 0", "\t\tindex", "\tindex")
+constant Missed = List(Text) + "has c Count = Count.Missing"
 constant Sized = List(Text) + "has size Count = Count(1, 2)"
 Unsupported(path Text, lines Texts) Texts
 	Counting.Unsupported("A.strict", Moving).First is "CannotUseKeywordsAsName: from in A.strict:1"
 	Counting.Unsupported("A.strict", Countdown).First is "LoopNameMustNotBeDeclared: index in A.strict:2"
+	Counting.Unsupported("A.strict", Missed).First is "ConstantNotFound: Count.Missing in A.strict:1"
 	Defaults(path, lines) + Keyworded(path, lines) + LoopNames(path, lines)
 LoopNames(path Text, lines Texts) Texts
 	Counting.LoopNames("A.strict", Moving).Length is 0
@@ -42,15 +44,30 @@ Defaults(path Text, lines Texts) Texts
 	Counting.Unsupported("A.strict", Sized).First.StartsWith("UnsupportedDefault: size in A.strict:1, ") is true
 	Counting.Unsupported("A.strict", ("has a Number = 5", "has c Numbers = List(Number)")).Length is 0
 	Counting.Unsupported("A.strict", List(Text) + "has b Text = Text(other)").Length is 1
-	constant hint = ", only constant values, empty lists and dictionaries and types with one member can be defaults"
 	let shape = TypeShape(lines)
 	for lines
 		let tokens = Tokenizer(value).Tokens
-		let equals = tokens.Index("=")
-		let isDefault = shape.IsMemberLine(value) and (value.StartsWith("constant ") is false) and (equals > 0)
-		let end = tokens.Index("with") > 0 then tokens.Index("with") else tokens.Length
-		if isDefault and (IsConstant(SyntaxParser(tokens).ParseRange(equals + 1, end)) is false)
-			"UnsupportedDefault: " + tokens(1) + " in " + path + ":" + (index + 1) + hint + ", pass it to the constructor"
+		let isDefault = shape.IsMemberLine(value) and (value.StartsWith("constant ") is false) and (tokens.Index("=") > 0)
+		let issue = isDefault then Issue(tokens, path + ":" + (index + 1)) else ""
+		if issue is not ""
+			issue
+Issue(tokens Texts, location Text) Text
+	Counting.Issue(Tokenizer(Sized(0)).Tokens, "A.strict:1").EndsWith("pass it to the constructor") is true
+	Counting.Issue(Tokenizer("has size Count = Count.Limit").Tokens, "A.strict:1") is ""
+	Counting.Issue(Tokenizer("has size Count = Count.Started").Tokens, "A.strict:1") is ""
+	constant hint = ", only literals, constants, empty lists and dictionaries and types with one member can be defaults"
+	let end = tokens.Index("with") > 0 then tokens.Index("with") else tokens.Length
+	let node = SyntaxParser(tokens).ParseRange(tokens.Index("=") + 1, end)
+	if (node.Kind is not "Member") and (IsConstant(node) is false)
+		return "UnsupportedDefault: " + tokens(1) + " in " + location + hint + ", pass it to the constructor"
+	Missing(node) is "" then "" else Missing(node) + " in " + location
+Missing(node SyntaxNode) Text
+	Counting.Missing(SyntaxParser(Tokenizer("Count.Missing").Tokens).Parse) is "ConstantNotFound: Count.Missing"
+	Counting.Missing(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse) is ""
+	let owner = node.Kind is "Member" then node.children(0).text else ""
+	let isUnknown = inference.types.IsKnown(owner) and (inference.ConstantOf(owner, node.text) is "")
+	let isMissing = isUnknown and (inference.types.MemberType(owner, node.text) is "Unknown")
+	isMissing then "ConstantNotFound: " + owner + "." + node.text else ""
 IsConstant(node SyntaxNode) Boolean
 	Counting.IsConstant(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse) is true
 	Counting.IsConstant(SyntaxParser(Tokenizer("-1 + 2").Tokens).Parse) is true
