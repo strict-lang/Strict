@@ -18,6 +18,7 @@ IsGpu Boolean
 	MlirGpuCheck(MlirGpu.Checking.function, 2).IsGpu is true
 	Layering.IsGpu is true
 	MlirGpuCheck(MlirKernel.Doubler, 2).IsGpu is true
+	MlirGpuCheck(MlirDeviceRows.Picking, 2).IsGpu is true
 	MlirGpuCheck(MlirFunction(Doubling.function.types, MlirParallel.Rows, GpuSamples.Ranged), 3).IsGpu is false
 	let isListed = MlirLoops(function, position).Collection is in Rows
 	let isRange = function.method.instructions(position).payload(1) is 1
@@ -65,7 +66,8 @@ IsValued(inspected MlirFunction, at Number, depth Number) Boolean
 IsList(inspected MlirFunction, at Number, name Text) Boolean
 	Layering.IsList(Layering.function, 8, "biases") is true
 	Doubling.IsList(Doubling.function, 3, "value") is false
-	MlirDeviceStatements(inspected, at).IsList(MlirKinds(inspected).VariableKind(at, name))
+	let kind = MlirKinds(inspected).VariableKind(at, name)
+	MlirDeviceStatements(inspected, at).IsList(kind) or MlirDeviceRows(inspected, at).IsRows(kind)
 IsControl(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsControl(Doubling.function, 5, 0) is true
 	Layering.IsControl(Summed, 2, 1) is true
@@ -108,15 +110,22 @@ IsCall(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsCall(Doubling.function, 4, 0) is true
 	Layering.IsCall(Layering.function, 5, 0) is true
 	Layering.IsCall(Floored, 1, 0) is true
+	Layering.IsCall(MlirDeviceRows.Measuring, 1, 1) is true
+	let entry = inspected.method.instructions(at)
+	let instance = Instance(inspected, at)
+	if entry.texts(1) is "Length"
+		return MlirDeviceStatements(inspected, at).IsList(instance)
+	let callees = MlirModule(inspected.types, "").Called(inspected, at)
+	let fits = (callees.Length is 1) and (callees.First.method.parameters.Length is entry.payload(5 + entry.payload(3)))
+	let isFloor = entry.texts(1) is "Floor"
+	(instance is "Number") and (depth < 3) and (isFloor or (fits and IsDeviceMethod(callees, depth + 1)))
+Instance(inspected MlirFunction, at Number) Text
+	Layering.Instance(Floored, 1) is "Number"
 	let entry = inspected.method.instructions(at)
 	let countPosition = 5 + entry.payload(3)
 	let flagPosition = countPosition + 1 + entry.payload(countPosition)
 	let register = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
-	let instance = register < 0 then "Number" else MlirKinds(inspected).KindOf(at, register)
-	let callees = MlirModule(inspected.types, "").Called(inspected, at)
-	let isComplete = (callees.Length is 1) and (callees.First.method.parameters.Length is entry.payload(countPosition))
-	let isFloor = entry.texts(1) is "Floor"
-	(instance is "Number") and (depth < 3) and (isFloor or (isComplete and IsDeviceMethod(callees, depth + 1)))
+	register < 0 then "Number" else MlirKinds(inspected).KindOf(at, register)
 IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
 	Doubling.IsDeviceMethod(List(MlirFunction) + MlirDevice.Twice.function, 1) is true
 	Layering.IsDeviceMethod(List(MlirFunction) + Summed, 1) is true

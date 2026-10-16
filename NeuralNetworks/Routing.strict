@@ -1,0 +1,38 @@
+has scores Numbers
+constant Sample = Routing((0.1, 0.5, 0.15, 0.25))
+Ranks Numbers
+	Sample.Ranks is (3, 0, 2, 1)
+	Routing((0.2, 0.2)).Ranks is (0, 1)
+	for scores
+		let expert = index
+		let own = value
+		mutable rank = 0
+		for scores
+			rank = rank + Ahead(value, index, own, expert)
+		rank
+Ahead(other Number, position Number, own Number, expert Number) Number
+	Sample.Ahead(0.5, 1, 0.1, 0) is 1
+	Sample.Ahead(0.1, 0, 0.1, 1) is 1
+	Sample.Ahead(0.1, 2, 0.1, 1) is 0
+	other > own then 1 else Tied(other, position, own, expert)
+Tied(other Number, position Number, own Number, expert Number) Number
+	Sample.Tied(0.1, 0, 0.1, 1) is 1
+	Sample.Tied(0.2, 0, 0.1, 1) is 0
+	other is own then Earlier(position, expert) else 0
+Earlier(position Number, expert Number) Number
+	Sample.Earlier(0, 1) is 1
+	Sample.Earlier(1, 1) is 0
+	position < expert then 1 else 0
+Chosen(used Number) Numbers
+	Sample.Chosen(2) is (1, 3)
+	let ranks = Ranks
+	for used
+		let slot = index
+		mutable expert = 0
+		for ranks
+			expert = expert + Matched(value, slot, index)
+		expert
+Matched(rank Number, slot Number, expert Number) Number
+	Sample.Matched(1, 1, 3) is 3
+	Sample.Matched(0, 1, 3) is 0
+	rank is slot then expert else 0

@@ -6066,7 +6066,8 @@
     return %launched : i1
   }
   llvm.func @free(!llvm.ptr)
-  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %lanes: i64) -> f64 {
+  // a value is a list when its bit in mask is set, a list of rows when its bit in rows is set too
+  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %lanes: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -6142,10 +6143,20 @@
   ^list:
     %listBuffer = arith.addi %valueIndex, %three : i64
     %listBufferSlot = llvm.getelementptr %buffers[%listBuffer] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %rowsShifted = arith.shrui %rows, %valueIndex : i64
+    %rowsLowest = arith.andi %rowsShifted, %one : i64
+    %isRows = arith.cmpi ne, %rowsLowest, %none : i64
+    cf.cond_br %isRows, ^rowsValue, ^listValue
+  ^rowsValue:
+    %rowsReady = func.call @strict_gpu_rows(%value, %target, %listBufferSlot) : (f64, !llvm.ptr, !llvm.ptr) -> i1
+    cf.br ^listed(%rowsReady : i1)
+  ^listValue:
     %listReady = func.call @strict_gpu_list(%value, %target, %listBufferSlot) : (f64, !llvm.ptr, !llvm.ptr) -> i1
+    cf.br ^listed(%listReady : i1)
+  ^listed(%ready: i1):
     func.call @strict_gpu_narrowed(%target, %narrowSlot) : (!llvm.ptr, !llvm.ptr) -> ()
     %afterList = arith.addi %slotIndex, %three : i64
-    cf.cond_br %listReady, ^values(%nextValue, %afterList : i64, i64), ^release
+    cf.cond_br %ready, ^values(%nextValue, %afterList : i64, i64), ^release
   ^choose:
     %narrowed = llvm.load %narrowSlot : !llvm.ptr -> i64
     %single = arith.cmpi ne, %narrowed, %none : i64
@@ -7316,7 +7327,10 @@
     %total = arith.addi %header, %rowsBytes : i64
     %big = arith.cmpi uge, %total, %cacheable : i64
     %staging = llvm.call @malloc(%total) : (i64) -> !llvm.ptr
-    llvm.store %rowStride, %staging : i64, !llvm.ptr
+    %countShift = arith.constant 32 : i64
+    %countHigh = arith.shli %count, %countShift : i64
+    %strideAndCount = arith.ori %rowStride, %countHigh : i64
+    llvm.store %strideAndCount, %staging : i64, !llvm.ptr
     cf.br ^row(%none : i64)
   ^row(%rowIndex: i64):
     %moreRows = arith.cmpi slt, %rowIndex, %count : i64
@@ -7365,13 +7379,13 @@
     llvm.call @free(%staging) : (!llvm.ptr) -> ()
     return %false : i1
   }
-  llvm.mlir.global internal @strict_gpu_cache(dense<0> : tensor<32768xi64>) : !llvm.array<32768 x i64>
+  llvm.mlir.global internal @strict_gpu_cache(dense<0> : tensor<524288xi64>) : !llvm.array<524288 x i64>
   llvm.mlir.global internal @strict_gpu_clock(0 : i64) : i64
   func.func private @strict_gpu_entry(%index: i64) -> !llvm.ptr {
     %eight = arith.constant 8 : i64
     %cache = llvm.mlir.addressof @strict_gpu_cache : !llvm.ptr
     %offset = arith.muli %index, %eight : i64
-    %entry = llvm.getelementptr %cache[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32768 x i64>
+    %entry = llvm.getelementptr %cache[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<524288 x i64>
     return %entry : !llvm.ptr
   }
   func.func private @strict_gpu_tick() -> i64 {
@@ -7382,7 +7396,7 @@
     llvm.store %next, %clockSlot : i64, !llvm.ptr
     return %next : i64
   }
-  // device copies of host lists are found by a hash of the list block, 16 of the 4096 entries are probed
+  // device copies of host lists are found by a hash of the list block, 16 of the 65536 entries are probed
   func.func private @strict_gpu_cached(%list: f64, %kind: i64, %count: i64, %out: !llvm.ptr) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -7426,8 +7440,8 @@
   func.func private @strict_gpu_slot(%listBits: i64, %probe: i64) -> !llvm.ptr {
     %four = arith.constant 4 : i64
     %golden = arith.constant -7046029254386353131 : i64
-    %topShift = arith.constant 52 : i64
-    %mask = arith.constant 4095 : i64
+    %topShift = arith.constant 48 : i64
+    %mask = arith.constant 65535 : i64
     %shifted = arith.shrui %listBits, %four : i64
     %mixed = arith.muli %shifted, %golden : i64
     %top = arith.shrui %mixed, %topShift : i64
@@ -7559,7 +7573,7 @@
   func.func private @strict_gpu_sweep(%full: i1) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %entries = arith.constant 4096 : i64
+    %entries = arith.constant 65536 : i64
     cf.br ^next(%none : i64)
   ^next(%index: i64):
     %more = arith.cmpi slt, %index, %entries : i64
