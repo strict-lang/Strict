@@ -30,8 +30,8 @@ Run Texts
 	let addresses = (Address("gp", "strict_gpu_ptx"), Address("gk", "k" + name), Address("gs", "f" + name))
 	let tokens = MlirTokens(function, position)
 	let sourced = tokens.Sourced
-	let lanes = MlirTyped.Integer.Constant(Temp("gy"), MlirDeviceSums(function, position).IsWarped then "32" else "1")
-	let sizes = (MlirTyped.Integer.Constant(Temp("gq"), sourced.Last), lanes) + MlirGrouped(function, position).Launched
+	let lanes = MlirDeviceSums(function, position).Lanes(Temp("gy"), Temp("gc")) + MlirGrouped(function, position).Launched
+	let sizes = (List(Text) + MlirTyped.Integer.Constant(Temp("gq"), sourced.Last)) + lanes
 	let first = (Temp("gp"), Temp("gk"), Temp("gs"), Temp("gc"), sourced.First, Temp("gq"))
 	let second = (Temp("ga"), Temp("gw"), Temp("gm"), Temp("gr"), Temp("go"), Temp("gy"), Temp("gg"))
 	let run = "    " + Temp("gl") + " = func.call @strict_gpu_run(" + Text.Combine(first + second, ", ") + ") : " + Running

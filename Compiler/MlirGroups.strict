@@ -26,7 +26,7 @@ Adding(at Number) Number
 	for callee.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirDeviceChoice(callee, index).IsChoice
 			return -1
-	MlirDeviceSums(callee, 0).IsSummed(callee, 0, callee.method.instructions.Length) then 1 else 0
+	MlirDeviceSums(callee, 0).IsSummed(callee, 0, callee.method.instructions.Length, false) then 1 else 0
 Size(at Number) Text
 	Norming.Size(11) is "size"
 	Norming.Size(7) is ""

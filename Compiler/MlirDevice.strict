@@ -8,6 +8,7 @@ constant Fixed = "%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: 
 constant DoublingHeader = "  llvm.func @Rows_Doubled_1_gpu2(" + Fixed + ") attributes {nvvm.kernel} {"
 constant Ending = ("    cf.br ^exit", "  ^exit:", "    llvm.return", "  }")
 constant Allocated = " = llvm.alloca %one x "
+constant Launches = ("    %lanesWanted = arith.constant 32 : i64", "    %lanesSingle = arith.constant 1 : i64", "    %launchBlocks = nvvm.read.ptx.sreg.nctaid.x : i32", "    %launchBlocksWide = arith.extui %launchBlocks : i32 to i64", "    %launchWidth = arith.extui %width : i32 to i64", "    %launchThreads = arith.muli %launchBlocksWide, %launchWidth : i64", "    %warpThreads = arith.muli %count, %lanesWanted : i64", "    %laneWarped = arith.cmpi uge, %launchThreads, %warpThreads : i64", "    %lanes = arith.select %laneWarped, %lanesWanted, %lanesSingle : i64")
 Name Text
 	Doubling.Name is "Rows_Doubled_1_gpu2"
 	MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Name is "Rows_Doubled_1_gpu2s"
@@ -101,9 +102,12 @@ Indexed Texts
 Laned Texts
 	Layering.Laned.First is "    %lanes = arith.constant 32 : i64"
 	Doubling.Laned.First is "    %lanes = arith.constant 1 : i64"
-	let lanes = MlirDeviceSums(function, position).IsWarped then "32" else "1"
+	Text.Combine(MlirDevice(MlirDeviceSums.Spreading.function, 2).Laned).IndexOf("nvvm.read.ptx.sreg.nctaid.x") > 0
 	constant divided = ("    %at = arith.divui %global, %lanes : i64", "    %lane = arith.remui %global, %lanes : i64")
-	List(Text) + MlirTyped.Integer.Constant("%lanes", lanes) + divided
+	let sums = MlirDeviceSums(function, position)
+	if sums.IsSpread
+		return Launches + divided
+	List(Text) + MlirTyped.Integer.Constant("%lanes", sums.IsWarped then "32" else "1") + divided
 Started Texts
 	Doubling.Started.Last is "    llvm.store %element, %v_value : f64, !llvm.ptr"
 	Layering.Started.Last is "    llvm.store %rowed#1, %v_valueb : i64, !llvm.ptr"
