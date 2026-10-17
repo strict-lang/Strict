@@ -53,14 +53,17 @@ Deltas(activations List(Numbers), target Numbers) List(Numbers)
 	deltas.Add(delta)
 	for Range(1, layers.Length)
 		let next = layers.Length - index
-		delta = Derived(layers(next - 1).activation, activations(next), layers(next).Spread(delta))
+		let layer = layers(next - 1)
+		let sums = layer.activation is Activation.Swish then layer.Sums(activations(next - 1)) else activations(next)
+		delta = Derived(layer.activation, sums, activations(next), layers(next).Spread(delta))
 		deltas.Add(delta)
 	deltas.Reverse
-Derived(function Activation, activation Numbers, errors Numbers) Numbers
-	Single.Derived(Activation.Sigmoid, List(Number) + 0.5, List(Number) + 2) is List(Number) + 0.5
-	Single.Derived(Activation.Tanh, List(Number) + 0.5, List(Number) + 2) is List(Number) + 1.5
+Derived(function Activation, sums Numbers, activation Numbers, errors Numbers) Numbers
+	Single.Derived(Activation.Sigmoid, List(Number) + 0, List(Number) + 0.5, List(Number) + 2) is List(Number) + 0.5
+	Single.Derived(Activation.Tanh, List(Number) + 0, List(Number) + 0.5, List(Number) + 2) is List(Number) + 1.5
+	Single.Derived(Activation.Swish, List(Number) + 0, List(Number) + 0, List(Number) + 2) is List(Number) + 1
 	for activation
-		errors(index) * function.Derivative(value)
+		errors(index) * function.Derivative(sums(index), value)
 Difference(output Numbers, target Numbers) Numbers
 	Single.Difference((1, 0.5), (0, 0.5)) is (1, 0)
 	for output
