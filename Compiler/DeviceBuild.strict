@@ -1,6 +1,7 @@
 has tools Toolchain
 constant Nvptx = "--target=nvptx64-nvidia-cuda -march=sm_75 -O3 -S -Wno-override-module "
 constant Missing = DeviceBuild(Toolchain.OnWindows)
+constant Local = DeviceBuild(Toolchain(Platform.Current, "."))
 Ptx(base Text) Text
 	Missing.Ptx("Compiler/output/missing").StartsWith("mlir-opt failed")
 	let lowered = tools.Lowered(base + ".gpu")
@@ -9,13 +10,15 @@ Ptx(base Text) Text
 	let arguments = Nvptx + tools.Quoted(base + ".gpu.ll") + " -o " + tools.Quoted(base + ".ptx")
 	let compiled = ToolRunner(tools.Located("clang")).Execute(arguments)
 	compiled.Failed then "clang failed: " + compiled.error else Text.Combine(File(base + ".ptx").ReadLines, "\n")
-Combined(device Text, isBatched Boolean) Text
-	DeviceBuild(Toolchain(Platform.Current, ".")).Combined("module {\n}", false).IndexOf("@strict_device_element(") > 0
-	DeviceBuild(Toolchain(Platform.Current, ".")).Combined("module {\n}", false).IndexOf("@strict_device_tokens(") is -1
-	DeviceBuild(Toolchain(Platform.Current, ".")).Combined("module {\n}", true).IndexOf("@strict_device_tokens(") > 0
-	let runtime = Text.Combine(File(tools.root + "/Compiler/NativeRuntimeDevice.mlir").ReadLines, "\n")
-	let batched = isBatched then "\n" + Text.Combine(File(tools.root + "/Compiler/NativeRuntimeTokens.mlir").ReadLines, "\n") else ""
-	device.Substring(0, device.Length - 1) + runtime + batched + "\n}"
+Combined(device Text) Text
+	Local.Combined("module {\n}").IndexOf("@strict_device_element(") > 0
+	Local.Combined("module {\n}").IndexOf("@strict_device_tokens(") is -1
+	Local.Combined("module {\n" + MlirTokens.Marker + "\n}").IndexOf("@strict_device_tokens(") > 0
+	let batched = device.IndexOf(MlirTokens.Marker) >= 0 then "\n" + Runtime("Tokens") else ""
+	device.Substring(0, device.Length - 1) + Runtime("Device") + batched + "\n}"
+Runtime(name Text) Text
+	Local.Runtime("Tokens").IndexOf("@strict_device_tokens(") > 0
+	Text.Combine(File(tools.root + "/Compiler/NativeRuntime" + name + ".mlir").ReadLines, "\n")
 Embedded(host Text, ptx Text) Text
 	Missing.Embedded("module {\n}", "// a").EndsWith("@strict_gpu_ptx(\"// a\\00\") : !llvm.array<5 x i8>\n}")
 	let content = MlirConstants.Escaped(ptx, false)

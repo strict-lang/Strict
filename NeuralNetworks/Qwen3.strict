@@ -6,6 +6,7 @@ has theta Number
 has hidden Numbers = List(Number)
 constant Tiny = Qwen3.Loaded("NeuralNetworks/tinyqwen3.gguf", 32)
 constant TinyMixture = Qwen3.Loaded("NeuralNetworks/tinyqwen3moe.gguf", 32)
+constant Prompted = Tiny.Prefilled((1, 2), 0)
 Loaded(path Text, bits = 8) Qwen3
 	Tiny.blocks.Length is 1
 	Tiny.theta is 1000000
@@ -44,24 +45,27 @@ Step(token Number, position Number) Qwen3
 	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475)
 	Tiny.Step(1, 0).Step(2, 1).Scored.Last.IsNearlyEqual(1.1076484232754447)
 	TinyMixture.Step(1, 0).Scored.First.IsNearlyEqual(0.9534001625146007, 0.000001)
-	Forwarded(tokens(token), Rotation(position))
+	Steps(List(Number) + token, List(Number) + position, 1)
+Positions(start Number, count Number) Numbers
+	Tiny.Positions(2, 3) is (2, 3, 4)
+	for count
+		start + index
 Prefilled(prompt Numbers, start Number) Qwen3
-	Tiny.Prefilled((1, 2), 0).Scored.Last.IsNearlyEqual(Tiny.Step(1, 0).Step(2, 1).Scored.Last)
-	Tiny.Prefilled((1, 2), 0).Prefilled((3, 4), 2).Next is Tiny.Step(1, 0).Step(2, 1).Step(3, 2).Step(4, 3).Next
+	Prompted.Scored.Last.IsNearlyEqual(Tiny.Step(1, 0).Step(2, 1).Scored.Last)
+	Prompted.Prefilled((3, 4), 2).Next is Tiny.Step(1, 0).Step(2, 1).Step(3, 2).Step(4, 3).Next
 	TinyMixture.Prefilled((1, 2), 0).Next is TinyMixture.Step(1, 0).Step(2, 1).Next
-	mutable state = List(Number)
+	Steps(prompt, Positions(start, prompt.Length), 1)
+Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
+	Tiny.Steps(List(Number) + 1, List(Number) + 0, 1).hidden.Length is 8
+	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).hidden.Length is 16
+	mutable current = Embedded(chosen)
 	mutable rotation = List(Number)
-	for prompt
-		state = state + tokens(value)
-		rotation = rotation + Rotation(start + index)
-	Forwarded(state, rotation)
-Forwarded(state Numbers, rotation Numbers) Qwen3
-	Tiny.Forwarded(Tiny.tokens(1), Tiny.Rotation(0)).hidden.Length is 8
-	mutable current = state
+	for positions
+		rotation = rotation + Rotation(value)
 	mutable updated = List(Mutable(Qwen3Block))
 	for blocks
 		let cached = value.Cached(current, rotation)
-		current = cached.Output(current)
+		current = cached.Output(current, sequences)
 		updated.Add(cached)
 	Qwen3(value, blocks = updated, hidden = current)
 Scored Numbers
@@ -71,31 +75,26 @@ Scored Numbers
 		Layer.Summed(value, normed)
 Next Number
 	Tiny.Step(1, 0).Next is 0
-	Largest(Scored)
-Largest(logits Numbers) Number
-	Tiny.Largest((1, 3, 2)) is 1
-	let best = Best(logits, 128)
-	best(2 * Chosen(best) + 1)
-Best(scores Numbers, width Number) Numbers
-	Tiny.Best((1, 3, 2, 0), 2) is (3, 1, 2, 2)
-	Tiny.Best((1, 3, 2), 2) is (3, 1, 2, 2)
-	for 2 * (scores.Length / width).Ceiling
-		let start = (index / 2).Floor * width
-		let odd = index % 2
-		mutable largest = scores(start)
-		mutable position = start
-		for (scores.Length - start).Clamp(0, width)
-			position = Above(scores(start + index), largest, start + index, position)
-			largest = Softmax.Larger(largest, scores(start + index))
-		Above(odd, 0, position, largest)
-Above(number Number, limit Number, chosen Number, otherwise Number) Number
-	Tiny.Above(2, 1, 5, 6) is 5
-	Tiny.Above(1, 1, 5, 6) is 6
-	number > limit then chosen else otherwise
-Chosen(pairs Numbers) Number
-	Tiny.Chosen((1, 0, 3, 1, 2, 2)) is 1
-	mutable chosen = 0
-	for pairs.Length / 2
-		if pairs(2 * index) > pairs(2 * chosen)
-			chosen = index
-	chosen
+	Greedy.Largest(Scored)
+Nexts Numbers
+	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).Nexts is (Prompted.Step(3, 2).Next, Prompted.Step(4, 2).Next)
+	let logits = Batch(outputs, List(Number) + 0).Sums(Qwen3Block.Normalized(hidden, 0, hidden.Length, norm))
+	let width = outputs.Length % 128 is 0 then 128 else outputs.Length
+	let best = Greedy.Best(logits, width)
+	let groups = outputs.Length / width
+	for hidden.Length / norm.Length
+		best(2 * Greedy.Chosen(best, index * groups, groups) + 1) - index * outputs.Length
+Embedded(chosen Numbers) Numbers
+	Tiny.Embedded((1, 2)).Length is 16
+	if chosen.Length is 1
+		return tokens(chosen.First)
+	mutable state = List(Number)
+	for chosen
+		state = state + tokens(value)
+	state
+Copies(count Number) Qwen3
+	Prompted.Copies(2).blocks.First.keys.Length is 16
+	mutable copied = List(Mutable(Qwen3Block))
+	for blocks
+		copied.Add(value.Copies(count))
+	Qwen3(value, blocks = copied)

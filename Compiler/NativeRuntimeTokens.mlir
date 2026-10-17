@@ -10,8 +10,8 @@
     %tokenScales = llvm.getelementptr %scales[%scaleOffset] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     return %tokenBytes, %tokenScales : !llvm.ptr, !llvm.ptr
   }
-  // dots8 for 8 tokens whose 8 bit numbers lie stride apart (a prompt in `Batch.Sums`): each part of the row is decoded
-  // once for all of them, a token after last repeats it, the sums come back added up over the warp
+  // dots8 for up to 8 tokens whose 8 bit numbers lie stride apart (a prompt in `Batch.Sums`): each part of the row is
+  // decoded once for all of them, tokens after last are left out, the sums come back added up over the warp
   func.func private @strict_device_dots8_tokens(%row: !llvm.ptr, %rowBits: i64, %count: i64, %bytes: !llvm.ptr, %scales: !llvm.ptr, %stride: i64, %last: i64, %lane: i64, %lanes: i64) -> vector<8xf32> attributes {passthrough = ["noinline"]} {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -33,14 +33,19 @@
     cf.br ^fourToken(%none, %fourSums : i64, vector<8xf32>)
   ^fourToken(%fourIndex: i64, %fourTotals: vector<8xf32>):
     %fourTokens = arith.cmpi slt, %fourIndex, %eight : i64
-    cf.cond_br %fourTokens, ^fourAdd, ^fourNext
+    cf.cond_br %fourTokens, ^fourUsed, ^fourNext
+  ^fourUsed:
+    %fourUsed = arith.cmpi sle, %fourIndex, %last : i64
+    cf.cond_br %fourUsed, ^fourAdd, ^fourJoined(%fourTotals : vector<8xf32>)
   ^fourAdd:
     %fourInputs:2 = func.call @strict_device_token_inputs(%bytes, %scales, %stride, %fourIndex, %last) : (!llvm.ptr, !llvm.ptr, i64, i64, i64) -> (!llvm.ptr, !llvm.ptr)
     %fourOld = llvm.extractelement %fourTotals[%fourIndex : i64] : vector<8xf32>
     %fourNew = func.call @strict_device_four_token(%fourWeights#0, %fourWeights#1, %fourWeights#2, %fourWeights#3, %fourWeights#4, %fourWeights#5, %fourWeights#6, %fourWeights#7, %fourWeights#8, %fourWeights#9, %fourInputs#0, %fourInputs#1, %fourOld) : (vector<4xi32>, vector<4xi32>, f32, f32, f32, f32, f32, f32, i64, i64, !llvm.ptr, !llvm.ptr, f32) -> f32
     %fourUpdated = llvm.insertelement %fourNew, %fourTotals[%fourIndex : i64] : vector<8xf32>
+    cf.br ^fourJoined(%fourUpdated : vector<8xf32>)
+  ^fourJoined(%fourKept: vector<8xf32>):
     %fourAfter = arith.addi %fourIndex, %one : i64
-    llvm.br ^fourToken(%fourAfter, %fourUpdated : i64, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+    llvm.br ^fourToken(%fourAfter, %fourKept : i64, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^fourNext:
     %fourFollowing = arith.addi %unit, %lanes : i64
     cf.br ^four(%fourFollowing, %fourTotals : i64, vector<8xf32>)
@@ -53,14 +58,19 @@
     cf.br ^sixToken(%none, %sixSums : i64, vector<8xf32>)
   ^sixToken(%sixIndex: i64, %sixTotals: vector<8xf32>):
     %sixTokens = arith.cmpi slt, %sixIndex, %eight : i64
-    cf.cond_br %sixTokens, ^sixAdd, ^sixNext
+    cf.cond_br %sixTokens, ^sixUsed, ^sixNext
+  ^sixUsed:
+    %sixUsed = arith.cmpi sle, %sixIndex, %last : i64
+    cf.cond_br %sixUsed, ^sixAdd, ^sixJoined(%sixTotals : vector<8xf32>)
   ^sixAdd:
     %sixInputs:2 = func.call @strict_device_token_inputs(%bytes, %scales, %stride, %sixIndex, %last) : (!llvm.ptr, !llvm.ptr, i64, i64, i64) -> (!llvm.ptr, !llvm.ptr)
     %sixOld = llvm.extractelement %sixTotals[%sixIndex : i64] : vector<8xf32>
     %sixNew = func.call @strict_device_six_token(%sixWeights#0, %sixWeights#1, %sixWeights#2, %sixWeights#3, %sixWeights#4, %sixWeights#5, %sixWeights#6, %sixWeights#7, %sixInputs#0, %sixInputs#1, %sixOld) : (vector<4xi32>, f32, f32, f32, f32, f32, i64, i64, !llvm.ptr, !llvm.ptr, f32) -> f32
     %sixUpdated = llvm.insertelement %sixNew, %sixTotals[%sixIndex : i64] : vector<8xf32>
+    cf.br ^sixJoined(%sixUpdated : vector<8xf32>)
+  ^sixJoined(%sixKept: vector<8xf32>):
     %sixAfter = arith.addi %sixIndex, %one : i64
-    llvm.br ^sixToken(%sixAfter, %sixUpdated : i64, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+    llvm.br ^sixToken(%sixAfter, %sixKept : i64, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^sixNext:
     %sixFollowing = arith.addi %chunk, %lanes : i64
     cf.br ^six(%sixFollowing, %sixTotals : i64, vector<8xf32>)
@@ -73,14 +83,19 @@
     cf.br ^byteToken(%none, %byteSums : i64, vector<8xf32>)
   ^byteToken(%byteIndex: i64, %byteTotals: vector<8xf32>):
     %byteTokens = arith.cmpi slt, %byteIndex, %eight : i64
-    cf.cond_br %byteTokens, ^byteAdd, ^byteNext
+    cf.cond_br %byteTokens, ^byteUsed, ^byteNext
+  ^byteUsed:
+    %byteUsed = arith.cmpi sle, %byteIndex, %last : i64
+    cf.cond_br %byteUsed, ^byteAdd, ^byteJoined(%byteTotals : vector<8xf32>)
   ^byteAdd:
     %byteInputs:2 = func.call @strict_device_token_inputs(%bytes, %scales, %stride, %byteIndex, %last) : (!llvm.ptr, !llvm.ptr, i64, i64, i64) -> (!llvm.ptr, !llvm.ptr)
     %byteOld = llvm.extractelement %byteTotals[%byteIndex : i64] : vector<8xf32>
     %byteNew = func.call @strict_device_byte_token(%byteWeights#0, %byteWeights#1, %byteWeights#2, %byteWeights#3, %byteInputs#0, %byteInputs#1, %byteOld) : (vector<4xi32>, f32, i64, i64, !llvm.ptr, !llvm.ptr, f32) -> f32
     %byteUpdated = llvm.insertelement %byteNew, %byteTotals[%byteIndex : i64] : vector<8xf32>
+    cf.br ^byteJoined(%byteUpdated : vector<8xf32>)
+  ^byteJoined(%byteKept: vector<8xf32>):
     %byteAfter = arith.addi %byteIndex, %one : i64
-    llvm.br ^byteToken(%byteAfter, %byteUpdated : i64, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+    llvm.br ^byteToken(%byteAfter, %byteKept : i64, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^byteNext:
     %byteFollowing = arith.addi %byteUnit, %lanes : i64
     cf.br ^bytes(%byteFollowing, %byteTotals : i64, vector<8xf32>)

@@ -36,7 +36,7 @@ Cached(input Numbers) Gpt2Block
 	Gpt2Block(value, keys = keys + keyed, values = values + valued, queries = Safetensors.Part(combined, 0, size, 1))
 Output(input Numbers) Numbers
 	Tiny.Cached(Embedded).Output(Embedded).Length is 12
-	let merged = Attention(queries, keys, values, Heads, Heads, queries.Length / Heads).Merged
+	let merged = Attention(queries, keys, values, Heads, Heads, queries.Length / Heads, 1).Merged
 	let attended = Added(input, projection.Sums(merged))
 	let hidden = expansion.Sums(Normalized(attended, mlpGain, mlpBias))
 	Added(attended, contraction.Sums(Gelu(hidden)))

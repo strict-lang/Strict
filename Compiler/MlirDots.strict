@@ -3,6 +3,9 @@ has position Number
 constant Layering = MlirDots(MlirGpu.Layering.function, 2)
 Mask(free Texts) Number
 	Layering.Mask(("input", "biases")) is 1
+	MlirDots(MlirTokens.Summing.function, 2).Mask(("weights", "input")) is 0
+	if MlirTokens(function, position).Call >= 0
+		return 0
 	mutable dots = 0
 	for free
 		let end = function.method.LoopEndOf(position)

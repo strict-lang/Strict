@@ -1,6 +1,6 @@
 has logger
 constant Prompt = "Alan Turing theorized that computers would one day become"
-Run(path Text, bits Number, count Number, repeats = 1)
+Run(path Text, bits Number, count Number, repeats = 1, batch = 1)
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	let started = Process.Elapsed
 	let model = Qwen3.Loaded(path, bits)
@@ -11,31 +11,33 @@ Run(path Text, bits Number, count Number, repeats = 1)
 	let prefilled = model.Prefilled(prompt, 0)
 	let first = prefilled.Next
 	let prefill = (Process.Elapsed - before) * 1000 / prompt.Length
-	let durations = Durations(prefilled, first, prompt.Length, count)
-	logger.Log(Report(prompt.Length, prefill, durations) + ", loaded in " + (loaded - started).Round(1) + " s")
+	let durations = Durations(batch is 1 then prefilled else prefilled.Copies(batch), first, prompt.Length, count, batch)
+	logger.Log(Report(prompt.Length, prefill, durations, batch) + ", loaded in " + (loaded - started).Round(1) + " s")
 Repeated(tokens Numbers, repeats Number) Numbers
 	Qwen3Benchmark(Logger).Repeated((1, 2), 2) is (1, 2, 1, 2)
 	for tokens.Length * repeats
 		tokens(index % tokens.Length)
-Durations(model Qwen3, token Number, start Number, count Number) Numbers
-	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0), 0, 1, 2).Length is 2
+Durations(model Qwen3, token Number, start Number, count Number, batch Number) Numbers
+	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0), 0, 1, 2, 1).Length is 2
+	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0).Copies(2), 0, 1, 2, 2).Length is 2
 	mutable current = model
-	mutable next = token
+	mutable chosen = Repeated(List(Number) + token, batch)
 	mutable last = Process.Elapsed
-	mutable durations = List(Mutable(Number))
 	for count
-		current = current.Step(next, start + index)
-		next = current.Next
+		current = current.Steps(chosen, Repeated(List(Number) + (start + index), batch), batch)
+		chosen = batch is 1 then List(Number) + current.Next else current.Nexts
 		let now = Process.Elapsed
-		durations.Add((now - last) * 1000)
+		let duration = (now - last) * 1000
 		last = now
-	durations
-Report(prompt Number, prefill Number, durations Numbers) Text
-	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30)).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)")
+		duration
+Report(prompt Number, prefill Number, durations Numbers, batch Number) Text
+	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30), 1).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)")
+	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30), 8).EndsWith("of 8 tokens median 20 ms (400 tokens/s) mean 20 ms")
 	let median = Median(durations)
 	let mean = durations.Sum / durations.Length
 	let prefilled = "prefill " + prompt + " tokens " + prefill.Round(2) + " ms (" + (1000 / prefill).Round + " tokens/s), "
-	let decoded = "decode " + durations.Length + " tokens median " + median.Round(2) + " ms (" + (1000 / median).Round
+	let steps = batch is 1 then durations.Length + " tokens" else durations.Length + " steps of " + batch + " tokens"
+	let decoded = "decode " + steps + " median " + median.Round(2) + " ms (" + (batch * 1000 / median).Round
 	prefilled + decoded + " tokens/s) mean " + mean.Round(2) + " ms"
 Median(numbers Numbers) Number
 	Qwen3Benchmark(Logger).Median((3, 1, 2)) is 2

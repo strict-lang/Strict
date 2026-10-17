@@ -5,7 +5,7 @@ Sums(input Numbers) Numbers
 	Pair.Sums((1, 1)) is (13, 27)
 	Pair.Sums((1, 1, 2, 0)) is (13, 27, 12, 26)
 	let width = weights.First.Length
-	if input.Length is width
+	if (input.Length is width) and (biases.Length is weights.Length)
 		return Layer(weights, biases).Sums(input)
 	let rows = weights.Length
 	for rows * input.Length / width

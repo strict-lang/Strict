@@ -51,6 +51,14 @@ Cached(input Numbers, rotation Numbers) Qwen3Block
 	let keyed = Rotated(combined, heads * size, tokens * groups * size, keyNorm, rotation)
 	let valued = Batch.Columns(combined, combined.Length / tokens, (heads + groups) * size, groups * size)
 	Qwen3Block(value, keys = keys + keyed, values = values + valued, queries = queried)
+Copies(count Number) Qwen3Block
+	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Copies(2).keys.Length is 8
+	Qwen3Block(value, keys = Interleaved(keys, count), values = Interleaved(values, count))
+Interleaved(cache Numbers, count Number) Numbers
+	Tiny.Interleaved((1, 2, 3, 4, 5, 6, 7, 8), 2) is (1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 5, 6, 7, 8)
+	let stride = groups * queryNorm.Length
+	for cache.Length * count
+		cache((index / (count * stride)).Floor * stride + index % stride)
 Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Numbers) Numbers
 	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.414214)
 	let size = weights.Length
@@ -77,8 +85,8 @@ HeadScale(input Numbers, first Number, size Number, epsilon Number) Number
 	for size
 		sum = sum + input(first + index) * input(first + index)
 	1 / (sum / size + epsilon).SquareRoot
-Output(input Numbers) Numbers
-	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Output(Tiny.attentionNorm).Length is 8
-	let merged = Attention(queries, keys, values, heads, groups, queryNorm.Length).Merged
+Output(input Numbers, sequences Number) Numbers
+	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm).Output(Tiny.attentionNorm, 1).Length is 8
+	let merged = Attention(queries, keys, values, heads, groups, queryNorm.Length, sequences).Merged
 	let attended = Batch(projection.weights, input).Sums(merged)
 	experts.Added(Normalized(attended, 0, attended.Length, mlpNorm), attended)
