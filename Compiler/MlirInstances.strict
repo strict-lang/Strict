@@ -87,11 +87,12 @@ Field(entry InstructionEntry) Texts
 Unpacked Texts
 	MlirInstances(Looping, 0).Unpacked.Length is 10
 	MlirInstances(Looping, 0).Unpacked.Last is "  ^unpacked:"
+	"    %self = llvm.load %instance : !llvm.ptr -> f64" is in MlirInstances(Looping, 0).Unpacked
 	MlirInstances(Sizing, 0).Unpacked.Length < MlirInstances(Nesting, 0).Unpacked.Length
 	if (MlirLayout(function).IsStruct(function.type.Name) is false) or (Stored(function.type).Length is 0)
 		return Aliased
 	let memory = MlirMemory(function, -1)
-	mutable lines = List(Text) + function.Load("%self", "%v_value") + SelfGuard + memory.Pointer("%self", "self")
+	mutable lines = List(Text) + function.Load("%self", "%instance") + SelfGuard + memory.Pointer("%self", "self")
 	for Stored(function.type)
 		if value.Name is not in function.method.ParameterNames
 			let loaded = memory.Loaded(memory.Temp("selfp"), index, "u" + index)
@@ -103,11 +104,12 @@ ErrorName(entry InstructionEntry) Texts
 	(function.Load(Temp("e"), "%r" + entry.payload(1)), named, function.Store(Temp("n"), "%r" + entry.payload(0)))
 Aliased Texts
 	MlirInstances(MlirLayout.Wrapping.function, 0).Aliased.Length is 2
+	MlirInstances(MlirLayout.Wrapping.function, 0).Aliased.First is "    %talias0 = llvm.load %instance : !llvm.ptr -> f64"
 	MlirInstances(Widened, 0).Aliased.Length is 0
 	mutable lines = List(Mutable(Text))
 	for Stored(function.type)
 		if value.Name is not in function.method.ParameterNames
-			lines = lines + function.Copied("%v_value", "%v_" + value.Name, "%talias" + index)
+			lines = lines + function.Copied("%instance", "%v_" + value.Name, "%talias" + index)
 	lines
 ReferencedConstants List(MemberEntry)
 	MlirInstances(Shapes, 0).ReferencedConstants.Length is 0

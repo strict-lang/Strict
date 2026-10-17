@@ -13,7 +13,6 @@ In priority order. Remove what is done, add what is found, keep each item to wha
 
 ## Language and compiler
 - **A method called in a GPU loop may only read its parameters** (`MlirGpuCheck.IsKnown` at depth > 0): one reading a member keeps the whole loop on the CPU without any message (`Attention.Last` takes the token row instead of reading `heads`), the members it reads could be passed like the free values of the loop.
-- **`value` parameter of a one-member type** (found 2026-10-16): in compiled code a parameter named `value` of a method of a type with one member is that member (`MlirTyped.Shuffled` printed its value as the type), the Strict VM keeps them apart, `strict check` could reject the name.
 - **Natively a stack overflow ends the test executable** with the runtime message (`Error: StackOverflow, ...`, exit 127): no Strict stack and the other tests of the file do not run (the Strict VM returns a `StackOverflow` Error after 20000 nested calls, `Invocation.MaxDepth`).
 
 ## Rebalancing: native runner and C# integration (../Rebalancing)
