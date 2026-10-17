@@ -13,25 +13,25 @@ Merged Numbers
 	Pair.Merged(1).IsNearlyEqual(4.660476901346686)
 	Pair.Merged(2).IsNearlyEqual(5.660476901346686)
 	let positions = keys.Length / groups / size / sequences
-	let scores = Scores(positions)
+	let shares = Softmax.Shares(Scores(positions), positions)
 	let perSequence = queries.Length / sequences
 	for queries.Length
 		let row = (index / size).Floor
 		let group = (index / perSequence).Floor * groups + ((row % heads) * groups / heads).Floor
-		Softmax.Weighted(scores, row * positions, positions, values, group * size + index % size, sequences * groups * size)
+		Softmax.Weighted(shares, row * positions, positions, values, group * size + index % size, sequences * groups * size)
 Scores(positions Number) Numbers
 	Single.Scores(2).First.IsNearlyEqual(0.7071067811865476)
 	Single.Scores(2).Last is 0
 	let tokens = queries.Length / heads / size / sequences
 	for tokens * sequences * heads * positions
 		let row = (index / positions).Floor
-		let token = (row / heads).Floor
-		let sequence = (token / tokens).Floor
-		let keyStart = (((index % positions) * sequences + sequence) * groups + ((row % heads) * groups / heads).Floor) * size
+		let group = ((row / heads).Floor / tokens).Floor * groups + ((row % heads) * groups / heads).Floor
+		let keyStart = ((index % positions) * sequences * groups + group) * size
+		let queryStart = row * size
 		mutable sum = 0
 		for size
-			sum = sum + queries(row * size + index) * keys(keyStart + index)
-		Visible(sum / size.SquareRoot, index % positions, positions - tokens + token % tokens)
+			sum = sum + queries(queryStart + index) * keys(keyStart + index)
+		Visible(sum / size.SquareRoot, index % positions, positions - tokens + (row / heads).Floor % tokens)
 Visible(score Number, position Number, limit Number) Number
 	Single.Visible(2, 1, 1) is 2
 	Single.Visible(2, 2, 1) is -1000000000

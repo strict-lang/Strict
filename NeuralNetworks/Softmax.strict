@@ -1,14 +1,32 @@
-Weighted(scores Numbers, first Number, count Number, values Numbers, start Number, stride Number) Number
-	Softmax.Weighted((0, 0), 0, 2, (1, 3), 0, 1) is 2
-	Softmax.Weighted((5, 0, 0, 9), 1, 2, (7, 1, 3), 1, 1) is 2
-	let largest = Largest(scores, first, count)
-	mutable total = 0
+Weighted(shares Numbers, first Number, count Number, values Numbers, start Number, stride Number) Number
+	Softmax.Weighted((0.5, 0.5), 0, 2, (1, 3), 0, 1) is 2
+	Softmax.Weighted((5, 0.25, 0.75, 9), 1, 2, (7, 1, 3), 1, 1) is 2.5
 	mutable sum = 0
 	for count
-		let share = (scores(first + index) - largest).Exponential
-		total = total + share
-		sum = sum + share * values(start + index * stride)
-	sum / total
+		sum = sum + shares(first + index) * values(start + index * stride)
+	sum
+Shares(scores Numbers, width Number) Numbers
+	Softmax.Shares((0, 1, 5, 5), 2)(1).IsNearlyEqual(0.7310585786300049)
+	Softmax.Shares((0, 1, 5, 5), 2)(2) is 0.5
+	let largests = Largests(scores, width)
+	let totals = Totals(scores, largests, width)
+	for scores.Length
+		let row = (index / width).Floor
+		(scores(index) - largests(row)).Exponential / totals(row)
+Largests(scores Numbers, width Number) Numbers
+	Softmax.Largests((0, 1, 5, 3), 2) is (1, 5)
+	for scores.Length / width
+		Largest(scores, index * width, width)
+Totals(scores Numbers, largests Numbers, width Number) Numbers
+	Softmax.Totals((0, 0, 1, 1), (0, 1), 2) is (2, 2)
+	for largests
+		Total(scores, index * width, width, value)
+Total(scores Numbers, first Number, count Number, largest Number) Number
+	Softmax.Total((1, 0, 0), 1, 2, 0) is 2
+	mutable total = 0
+	for count
+		total = total + (scores(first + index) - largest).Exponential
+	total
 Largest(scores Numbers, start Number, count Number) Number
 	Softmax.Largest((1, 3, 2, 0), 2, 2) is 2
 	mutable largest = scores(start)
