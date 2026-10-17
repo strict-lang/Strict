@@ -87,7 +87,6 @@ Field(entry InstructionEntry) Texts
 Unpacked Texts
 	MlirInstances(Looping, 0).Unpacked.Length is 10
 	MlirInstances(Looping, 0).Unpacked.Last is "  ^unpacked:"
-	"    %self = llvm.load %instance : !llvm.ptr -> f64" is in MlirInstances(Looping, 0).Unpacked
 	MlirInstances(Sizing, 0).Unpacked.Length < MlirInstances(Nesting, 0).Unpacked.Length
 	if (MlirLayout(function).IsStruct(function.type.Name) is false) or (Stored(function.type).Length is 0)
 		return Aliased

@@ -11,9 +11,11 @@ constant Flooring = Floored.method.instructions(1)
 constant Moves = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
 constant Jumps = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
 constant Values = ("Number", "Boolean")
+constant Heading = MlirGpuCheck(MlirFunction(List(TypeEntry) + GpuSamples.Headed, GpuSamples.Headed, GpuSamples.Heading), 2)
 constant Rows = ("", "List(Number)", "List(Numbers)", "List(List(Number))")
 IsGpu Boolean
 	Doubling.IsGpu
+	Heading.IsGpu
 	Randomizing.IsGpu is false
 	MlirGpuCheck(MlirGpu.Checking.function, 2).IsGpu
 	Layering.IsGpu
@@ -110,7 +112,7 @@ IsKnown(inspected MlirFunction, at Number, name Text, depth Number) Boolean
 		let isStore = earlier.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		if isStore and (earlier.texts.Last is name)
 			return true
-	name is in given
+	(name is in given) or ((depth > 0) and MlirDeviceMembers(inspected).IsMember(at, name))
 IsCall(inspected MlirFunction, at Number, depth Number) Boolean
 	Layering.IsCall(Layering.function, 5, 0)
 	Layering.IsCall(Floored, 1, 0)
@@ -119,7 +121,7 @@ IsCall(inspected MlirFunction, at Number, depth Number) Boolean
 	let instance = Instance(inspected, at)
 	if entry.texts(1) is "Length"
 		return MlirDeviceStatements(inspected, at).IsList(instance)
-	let callees = MlirModule(inspected.types, "").Called(inspected, at)
+	let callees = MlirDeviceMembers(inspected).Passable(at)
 	let fits = (callees.Length is 1) and (callees.First.method.parameters.Length is entry.payload(5 + entry.payload(3)))
 	let isMade = (entry.texts(1) is "from") and IsNumbered(inspected, TypeEntry.ShortName(entry.texts(0)))
 	let isNative = (entry.texts(1) is in ("Floor", "Logarithm")) or isMade
@@ -143,6 +145,7 @@ IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
 	true
 Free Texts
 	Doubling.Free.Length is 0
+	Heading.Free is ("heads")
 	Layering.Free is ("input", "biases")
 	mutable names = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
@@ -151,4 +154,4 @@ Free Texts
 		let name = isRead then entry.texts(0) else ""
 		if isRead and (name is not in names) and (IsKnown(function, value, name, 0) is false)
 			names.Add(name)
-	names
+	names + MlirDeviceMembers(function).Calling(position + 1, function.method.LoopEndOf(position), names)
