@@ -19,7 +19,15 @@
   ^other:
     %eight = arith.constant 8 : i64
     %isQuantized = arith.cmpi eq, %bits, %eight : i64
-    cf.cond_br %isQuantized, ^quantized, ^double
+    cf.cond_br %isQuantized, ^quantized, ^unscaled
+  ^unscaled:
+    %seven = arith.constant 7 : i64
+    %isFloat8 = arith.cmpi eq, %bits, %seven : i64
+    cf.cond_br %isFloat8, ^float8, ^double
+  ^float8:
+    %float8Single = func.call @strict_device_float8_read(%data, %at) : (!llvm.ptr, i64) -> f32
+    %float8Number = arith.extf %float8Single : f32 to f64
+    return %float8Number : f64
   ^quantized:
     %byteSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %byte = llvm.load %byteSlot : !llvm.ptr -> i8
@@ -40,6 +48,103 @@
     %doubleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %doubleValue = llvm.load %doubleSlot : !llvm.ptr -> f64
     return %doubleValue : f64
+  }
+  // an 8 bit float of a list in format 7 (E4M3: sign, 4 exponent bits with bias 7, 3 mantissa bits, at most 448)
+  func.func private @strict_device_float8_number(%byte: i8) -> f32 attributes {passthrough = ["alwaysinline"]} {
+    %bits = arith.extui %byte : i8 to i32
+    %three = arith.constant 3 : i32
+    %seven = arith.constant 7 : i32
+    %fifteen = arith.constant 15 : i32
+    %twenty = arith.constant 20 : i32
+    %twentyThree = arith.constant 23 : i32
+    %rebias = arith.constant 120 : i32
+    %signBit = arith.constant 128 : i32
+    %none = arith.constant 0 : i32
+    %smallest = arith.constant 0.001953125 : f32
+    %shifted = arith.shrui %bits, %three : i32
+    %exponent = arith.andi %shifted, %fifteen : i32
+    %mantissa = arith.andi %bits, %seven : i32
+    %biased = arith.addi %exponent, %rebias : i32
+    %exponentBits = arith.shli %biased, %twentyThree : i32
+    %mantissaBits = arith.shli %mantissa, %twenty : i32
+    %normalBits = arith.ori %exponentBits, %mantissaBits : i32
+    %normal = arith.bitcast %normalBits : i32 to f32
+    %mantissaNumber = arith.uitofp %mantissa : i32 to f32
+    %subnormal = arith.mulf %mantissaNumber, %smallest : f32
+    %isSubnormal = arith.cmpi eq, %exponent, %none : i32
+    %magnitude = arith.select %isSubnormal, %subnormal, %normal : f32
+    %sign = arith.andi %bits, %signBit : i32
+    %isNegative = arith.cmpi ne, %sign, %none : i32
+    %negated = arith.negf %magnitude : f32
+    %number = arith.select %isNegative, %negated, %magnitude : f32
+    return %number : f32
+  }
+  // number at of a list in format 7, kept out of the element readers so their callers keep their registers
+  func.func private @strict_device_float8_read(%data: !llvm.ptr, %at: i64) -> f32 attributes {passthrough = ["noinline"]} {
+    %slot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %slot : !llvm.ptr -> i8
+    %number = func.call @strict_device_float8_number(%byte) : (i8) -> f32
+    return %number : f32
+  }
+  // the dot product of count 32 bit floats of x from xStart with 8 bit floats of y (format 7) from yStart, the lanes
+  // add it up (keys of `Attention.Scores` in 8 bits), kept out of line like strict_device_float8_read
+  func.func private @strict_device_float8_dots(%x: !llvm.ptr, %xStart: i64, %y: !llvm.ptr, %yStart: i64, %count: i64, %lane: i64, %lanes: i64) -> f32 attributes {passthrough = ["noinline"]} {
+    %zero = arith.constant 0.0 : f32
+    cf.br ^loop(%lane, %zero : i64, f32)
+  ^loop(%index: i64, %sum: f32):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %xAt = arith.addi %xStart, %index : i64
+    %xSlot = llvm.getelementptr %x[%xAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %left = llvm.load %xSlot : !llvm.ptr -> f32
+    %yAt = arith.addi %yStart, %index : i64
+    %ySlot = llvm.getelementptr %y[%yAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %ySlot : !llvm.ptr -> i8
+    %right = func.call @strict_device_float8_number(%byte) : (i8) -> f32
+    %product = arith.mulf %left, %right fastmath<contract> : f32
+    %next = arith.addf %sum, %product fastmath<contract> : f32
+    %following = arith.addi %index, %lanes : i64
+    cf.br ^loop(%following, %next : i64, f32)
+  ^done:
+    %reduced = func.call @strict_device_lanes_sums(%sum, %lane, %lanes) : (f32, i64, i64) -> f32
+    return %reduced : f32
+  }
+  // the nearest 8 bit float (format 7, see strict_device_float8_number) of value, larger magnitudes become 448
+  func.func private @strict_device_float8(%value: f32) -> i8 attributes {passthrough = ["alwaysinline"]} {
+    %bits = arith.bitcast %value : f32 to i32
+    %twentyFour = arith.constant 24 : i32
+    %twentyThree = arith.constant 23 : i32
+    %twenty = arith.constant 20 : i32
+    %three = arith.constant 3 : i32
+    %signBit = arith.constant 128 : i32
+    %rebias = arith.constant 120 : i32
+    %mantissaMask = arith.constant 8388607 : i32
+    %half = arith.constant 524288 : i32
+    %largest = arith.constant 448.0 : f32
+    %smallestNormal = arith.constant 0.015625 : f32
+    %steps = arith.constant 512.0 : f32
+    %halfStep = arith.constant 0.5 : f32
+    %shiftedSign = arith.shrui %bits, %twentyFour : i32
+    %sign = arith.andi %shiftedSign, %signBit : i32
+    %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
+    %clamped = arith.minnumf %magnitude, %largest : f32
+    %scaled = arith.mulf %clamped, %steps : f32
+    %roundedScaled = arith.addf %scaled, %halfStep : f32
+    %subnormal = arith.fptoui %roundedScaled : f32 to i32
+    %clampedBits = arith.bitcast %clamped : f32 to i32
+    %exponentField = arith.shrui %clampedBits, %twentyThree : i32
+    %exponent = arith.subi %exponentField, %rebias : i32
+    %mantissaField = arith.andi %clampedBits, %mantissaMask : i32
+    %roundedField = arith.addi %mantissaField, %half : i32
+    %mantissa = arith.shrui %roundedField, %twenty : i32
+    %exponentBits = arith.shli %exponent, %three : i32
+    %normal = arith.addi %exponentBits, %mantissa : i32
+    %isSubnormal = arith.cmpf olt, %clamped, %smallestNormal : f32
+    %code = arith.select %isSubnormal, %subnormal, %normal : i32
+    %signed = arith.ori %code, %sign : i32
+    %byte = arith.trunci %signed : i32 to i8
+    return %byte : i8
   }
   // mirrors strict_packed_data of the host runtime: the bytes of the numbers, after them come the scales
   func.func private @strict_device_data(%count: i64, %bits: i64) -> i64 {
@@ -281,7 +386,14 @@
   ^blocked:
     cf.cond_br %isFour, ^four, ^sixOrDouble
   ^sixOrDouble:
-    cf.cond_br %isSix, ^six, ^double
+    cf.cond_br %isSix, ^six, ^floatOrDouble
+  ^floatOrDouble:
+    %float8Code = arith.constant 7 : i64
+    %isFloat8 = arith.cmpi eq, %bits, %float8Code : i64
+    cf.cond_br %isFloat8, ^float8, ^double
+  ^float8:
+    %float8Number = func.call @strict_device_float8_read(%data, %at) : (!llvm.ptr, i64) -> f32
+    return %float8Number : f32
   ^four:
     %fourBytes = arith.constant 144 : i64
     %fourOffset = arith.muli %block, %fourBytes : i64
@@ -2005,6 +2117,15 @@
     %xComplete = arith.andi %xFromZero, %xToCount : i1
     %yAlignedQuantized = arith.andi %yQuantized, %yBlockAligned : i1
     %quantizable = arith.andi %yAlignedQuantized, %xComplete : i1
+    %float8Code = arith.constant 7 : i64
+    %yFloat8 = arith.cmpi eq, %yBits, %float8Code : i64
+    %xSingles = arith.cmpi eq, %xBits, %thirtyTwo : i64
+    %singleEights = arith.andi %xSingles, %yFloat8 : i1
+    cf.cond_br %singleEights, ^float8s, ^scaled
+  ^float8s:
+    %float8Dot = func.call @strict_device_float8_dots(%x, %xStart, %y, %yStart, %count, %lane, %lanes) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, i64, i64) -> f32
+    return %float8Dot : f32
+  ^scaled:
     cf.cond_br %quantizable, ^quantized, ^plain
   ^quantized:
     %yBytes = llvm.getelementptr %y[%yStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8

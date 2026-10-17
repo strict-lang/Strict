@@ -129,10 +129,10 @@
     %widthAligned = arith.cmpi eq, %widthRest, %none : i64
     %blocked = arith.andi %quantized, %widthAligned : i1
     %bytes = llvm.getelementptr %input[%start] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    cf.cond_br %blocked, ^check, ^plain(%none, %zeros : i64, vector<8xf32>)
+    cf.cond_br %blocked, ^check, ^plain
   ^check:
     %fits = func.call @strict_device_fits8(%rowData, %rowBits, %rowCount, %bytes) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
-    cf.cond_br %fits, ^eights, ^plain(%none, %zeros : i64, vector<8xf32>)
+    cf.cond_br %fits, ^eights, ^plain
   ^eights:
     %data = func.call @strict_device_data(%inputCount, %eight) : (i64, i64) -> i64
     %allScales = llvm.getelementptr %input[%data] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -140,6 +140,19 @@
     %scales = llvm.getelementptr %allScales[%scaleStart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %sums = func.call @strict_device_dots8_tokens(%rowData, %rowBits, %rowCount, %bytes, %scales, %width, %relativeLast, %lane, %thirtyTwo) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i64) -> vector<8xf32>
     return %sums : vector<8xf32>
+  ^plain:
+    %plain = func.call @strict_device_tokens_plain(%failed, %rowData, %rowBits, %rowCount, %input, %inputCount, %inputBits, %width, %first, %relativeLast, %lane) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> vector<8xf32>
+    return %plain : vector<8xf32>
+  }
+  // the 8 sums of strict_device_tokens_sums for numbers that are not 8 bit, one dot product per token, kept out of line
+  // so the 8 bit path keeps its registers
+  func.func private @strict_device_tokens_plain(%failed: !llvm.ptr, %rowData: !llvm.ptr, %rowBits: i64, %rowCount: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: i64, %first: i64, %relativeLast: i64, %lane: i64) -> vector<8xf32> attributes {passthrough = ["noinline"]} {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %zeros = arith.constant dense<0.0> : vector<8xf32>
+    cf.br ^plain(%none, %zeros : i64, vector<8xf32>)
   ^plain(%index: i64, %plainSums: vector<8xf32>):
     %more = arith.cmpi slt, %index, %eight : i64
     cf.cond_br %more, ^plainOne, ^plainDone
@@ -150,7 +163,7 @@
     %dot = func.call @strict_device_offset_dots(%failed, %rowData, %rowBits, %rowCount, %none, %input, %inputBits, %inputCount, %tokenStart, %rowCount, %lane, %thirtyTwo) : (!llvm.ptr, !llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> f32
     %updated = llvm.insertelement %dot, %plainSums[%index : i64] : vector<8xf32>
     %following = arith.addi %index, %one : i64
-    llvm.br ^plain(%following, %updated : i64, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+    llvm.br ^plain(%following, %updated : i64, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<disable = true>>}
   ^plainDone:
     return %plainSums : vector<8xf32>
   }

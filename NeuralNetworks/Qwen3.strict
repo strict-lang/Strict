@@ -4,6 +4,7 @@ has outputs List(Numbers)
 has norm Numbers
 has theta Number
 has hidden Numbers = List(Number)
+has cacheBits Number = 32
 constant Tiny = Qwen3.Loaded("NeuralNetworks/tinyqwen3.gguf", 32)
 constant TinyMixture = Qwen3.Loaded("NeuralNetworks/tinyqwen3moe.gguf", 32)
 constant Prompted = Tiny.Prefilled((1, 2), 0)
@@ -50,11 +51,18 @@ Positions(start Number, count Number) Numbers
 	Tiny.Positions(2, 3) is (2, 3, 4)
 	for count
 		start + index
-Prefilled(prompt Numbers, start Number) Qwen3
+Prefilled(prompt Numbers, start Number, chunk = 128) Qwen3
 	Prompted.Scored.Last.IsNearlyEqual(Tiny.Step(1, 0).Step(2, 1).Scored.Last)
 	Prompted.Prefilled((3, 4), 2).Next is Tiny.Step(1, 0).Step(2, 1).Step(3, 2).Step(4, 3).Next
 	TinyMixture.Prefilled((1, 2), 0).Next is TinyMixture.Step(1, 0).Step(2, 1).Next
-	Steps(prompt, Positions(start, prompt.Length), 1)
+	Tiny.Prefilled((1, 2, 3), 0, 2).hidden.Length is 8
+	Tiny.Prefilled((1, 2, 3), 0, 2).Next is Tiny.Prefilled((1, 2, 3), 0).Next
+	mutable current = value
+	for (prompt.Length / chunk).Ceiling
+		let first = index * chunk
+		let count = (prompt.Length - first).Clamp(0, chunk)
+		current = current.Steps(Safetensors.Part(prompt, first, count, 1), Positions(start + first, count), 1)
+	current
 Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	Tiny.Steps(List(Number) + 1, List(Number) + 0, 1).hidden.Length is 8
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).hidden.Length is 16
@@ -64,7 +72,7 @@ Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 		rotation = rotation + Rotation(value)
 	mutable updated = List(Mutable(Qwen3Block))
 	for blocks
-		let cached = value.Cached(current, rotation)
+		let cached = value.Cached(current, rotation, cacheBits)
 		current = cached.Output(current, sequences)
 		updated.Add(cached)
 	Qwen3(value, blocks = updated, hidden = current)
@@ -95,5 +103,5 @@ Copies(count Number) Qwen3
 	Prompted.Copies(2).blocks.First.keys.Length is 16
 	mutable copied = List(Mutable(Qwen3Block))
 	for blocks
-		copied.Add(value.Copies(count))
+		copied.Add(value.Copies(count, cacheBits))
 	Qwen3(value, blocks = copied)

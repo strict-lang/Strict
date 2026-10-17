@@ -1,0 +1,6 @@
+has number
+Packed(numbers Numbers) Float8s
+	Float8.Packed((0.5, 1.125, -3.25)) is (0.5, 1.125, -3.25)
+	Float8.Packed(List(Number) + 0.3).First.number.IsNearlyEqual(0.3, 0.02)
+	for numbers
+		Float8(value)
