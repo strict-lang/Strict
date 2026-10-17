@@ -1,19 +1,25 @@
 Largest(logits Numbers) Number
 	Greedy.Largest((1, 3, 2)) is 1
-	let best = Best(logits, 128)
+	let best = Best(logits, 128, logits.Length)
 	best(2 * Chosen(best, 0, best.Length / 2) + 1)
-Best(scores Numbers, width Number) Numbers
-	Greedy.Best((1, 3, 2, 0), 2) is (3, 1, 2, 2)
-	Greedy.Best((1, 3, 2), 2) is (3, 1, 2, 2)
-	for 2 * (scores.Length / width).Ceiling
-		let start = (index / 2).Floor * width
-		let odd = index % 2
-		mutable largest = scores(start)
-		mutable position = start
-		for (scores.Length - start).Clamp(0, width)
-			position = Above(scores(start + index), largest, start + index, position)
-			largest = Softmax.Larger(largest, scores(start + index))
-		Above(odd, 0, position, largest)
+Best(scores Numbers, width Number, length Number) Numbers
+	Greedy.Best((1, 3, 2, 0), 2, 4) is (3, 1, 2, 2)
+	Greedy.Best((1, 3, 2), 2, 3) is (3, 1, 2, 2)
+	Greedy.Best((1, 3, 2, 5, 4, 0), 2, 3) is (3, 1, 2, 2, 5, 3, 0, 5)
+	let chunks = (length / width).Ceiling
+	for 2 * chunks * scores.Length / length
+		let chunk = (index / 2).Floor
+		let start = (chunk / chunks).Floor * length + (chunk % chunks) * width
+		let position = Position(scores, start, (length - (chunk % chunks) * width).Clamp(0, width))
+		index % 2 is 1 then position else scores(position)
+Position(scores Numbers, start Number, count Number) Number
+	Greedy.Position((1, 3, 2, 5), 0, 3) is 1
+	mutable largest = scores(start)
+	mutable position = start
+	for count
+		position = Above(scores(start + index), largest, start + index, position)
+		largest = Softmax.Larger(largest, scores(start + index))
+	position
 Maxima(pairs Numbers) Numbers
 	Greedy.Maxima((3, 1, 2, 2)) is (3, 2)
 	for pairs.Length / 2

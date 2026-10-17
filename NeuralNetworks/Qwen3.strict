@@ -89,10 +89,12 @@ Nexts Numbers
 	let logits = Batch(outputs, List(Number) + 0).Sums(Qwen3Block.Normalized(hidden, 0, hidden.Length, norm))
 	let vocabulary = outputs.Length
 	let width = vocabulary % 128 is 0 then 128 else vocabulary
-	let best = Greedy.Best(logits, width)
-	let chunks = Greedy.Best(Greedy.Maxima(best), vocabulary / width)
+	let best = Greedy.Best(logits, width, vocabulary)
+	let groups = vocabulary / width
+	let second = Greedy.Best(Greedy.Maxima(best), 128, groups)
+	let third = Greedy.Best(Greedy.Maxima(second), 128, (groups / 128).Ceiling)
 	for hidden.Length / norm.Length
-		best(2 * chunks(2 * index + 1) + 1) - index * vocabulary
+		best(2 * second(2 * third(2 * index + 1) + 1) + 1) - index * vocabulary
 Embedded(chosen Numbers) Numbers
 	Tiny.Embedded((1, 2)).Length is 16
 	Tiny.Embedded((1, 2))(8) is Tiny.tokens(2).First
