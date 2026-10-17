@@ -22,13 +22,16 @@ Packable Texts
 	(loops.IsCollecting or (names.Length > 3)) then List(Text) else names
 Keyed(name Text, index Number) Texts
 	Summing.Keyed("numbers", 1).Last is "    %f1s2 = arith.addi %f1s1, %f1w1 : i64"
+	Summing.Keyed("for", 0).First is "    %f1k_for = func.call @strict_list_holder(%f1v) : (f64) -> !llvm.ptr"
 	let prefix = "%f" + position
 	let list = name is MlirFastLoop.Iterated then prefix + "v" else prefix + "l_" + name
-	let packed = "    " + prefix + "q" + index + " = func.call @strict_list_packed(" + list + ") : (f64) -> i64"
+	let holder = prefix + "k_" + name
+	let held = "    " + holder + " = func.call @strict_list_holder(" + list + ") : (f64) -> !llvm.ptr"
+	let packed = "    " + prefix + "q" + index + " = func.call @strict_holder_packed(" + holder + ") : (!llvm.ptr) -> i64"
 	let shift = "    " + prefix + "m" + index + " = arith.constant " + 6 * index + " : i64"
 	let shifted = " = arith.shli " + prefix + "q" + index + ", " + prefix + "m" + index + " : i64"
 	let sum = " = arith.addi " + prefix + "s" + index + ", " + prefix + "w" + index + " : i64"
-	(packed, shift, "    " + prefix + "w" + index + shifted, "    " + prefix + "s" + (index + 1) + sum)
+	(held, packed, shift, "    " + prefix + "w" + index + shifted, "    " + prefix + "s" + (index + 1) + sum)
 Case(source Number) Texts
 	Summing.Case(1) is SecondCases
 	for Widths

@@ -3412,15 +3412,33 @@
     return %null : !llvm.ptr
   }
   func.func private @strict_list_packed(%list: f64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+    %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
+    %bits = func.call @strict_holder_packed(%holder) : (!llvm.ptr) -> i64
+    return %bits : i64
+  }
+  // the holder of a list once, a fast loop reads the packed data of the holder it chose its width by, another thread
+  // can unpack the list meanwhile (strict_list_restore gives the list a new holder, the old one stays until it ends)
+  func.func private @strict_list_holder(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
-    %none = arith.constant 0 : i64
     %unset = arith.cmpf oeq, %list, %zero : f64
-    cf.cond_br %unset, ^plain, ^check
-  ^check:
+    cf.cond_br %unset, ^none, ^some
+  ^none:
+    %null = llvm.mlir.zero : !llvm.ptr
+    return %null : !llvm.ptr
+  ^some:
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
     %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
     %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    return %holder : !llvm.ptr
+  }
+  func.func private @strict_holder_packed(%holder: !llvm.ptr) -> i64 attributes {passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %unset = llvm.icmp "eq" %holder, %null : !llvm.ptr
+    cf.cond_br %unset, ^plain, ^check
+  ^check:
     %itemsBits = llvm.load %holder : !llvm.ptr -> f64
     %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %used = llvm.load %usedSlot : !llvm.ptr -> f64
@@ -3439,26 +3457,38 @@
     return %none : i64
   }
   func.func private @strict_list_scales(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
-    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
-    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
-    %length = llvm.load %view : !llvm.ptr -> f64
-    %count = arith.fptosi %length : f64 to i64
-    %bits = func.call @strict_list_packed(%list) : (f64) -> i64
+    %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
+    %scales = func.call @strict_holder_scales(%holder) : (!llvm.ptr) -> !llvm.ptr
+    return %scales : !llvm.ptr
+  }
+  func.func private @strict_holder_scales(%holder: !llvm.ptr) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %data = func.call @strict_holder_data(%holder) : (!llvm.ptr) -> !llvm.ptr
+    %count = func.call @strict_holder_count(%holder) : (!llvm.ptr) -> i64
+    %bits = func.call @strict_holder_packed(%holder) : (!llvm.ptr) -> i64
     %scales = func.call @strict_packed_scales(%data, %count, %bits) : (!llvm.ptr, i64, i64) -> !llvm.ptr
     return %scales : !llvm.ptr
+  }
+  func.func private @strict_holder_count(%holder: !llvm.ptr) -> i64 attributes {passthrough = ["alwaysinline"]} {
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %used = llvm.load %usedSlot : !llvm.ptr -> f64
+    %count = arith.fptosi %used : f64 to i64
+    return %count : i64
   }
   // ponytail: one buffer per thread, a fast loop has at most one packed source; rows of 4 or 6 bits decode to floats
   llvm.mlir.global internal thread_local @strict_float_buffer(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_float_capacity(0 : i64) : i64
   func.func private @strict_list_floats(%list: f64) -> !llvm.ptr {
+    %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
+    %floats = func.call @strict_holder_floats(%holder) : (!llvm.ptr) -> !llvm.ptr
+    return %floats : !llvm.ptr
+  }
+  func.func private @strict_holder_floats(%holder: !llvm.ptr) -> !llvm.ptr {
     %eight = arith.constant 8 : i64
     %spare = arith.constant 255 : i64
     %four = arith.constant 4 : i64
-    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
-    %length = llvm.load %view : !llvm.ptr -> f64
-    %count = arith.fptosi %length : f64 to i64
-    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
-    %bits = func.call @strict_list_packed(%list) : (f64) -> i64
+    %count = func.call @strict_holder_count(%holder) : (!llvm.ptr) -> i64
+    %data = func.call @strict_holder_data(%holder) : (!llvm.ptr) -> !llvm.ptr
+    %bits = func.call @strict_holder_packed(%holder) : (!llvm.ptr) -> i64
     %rounded = arith.addi %count, %spare : i64
     %blocks = arith.shrui %rounded, %eight : i64
     %floats = arith.shli %blocks, %eight : i64
@@ -3754,10 +3784,11 @@
     return
   }
   func.func private @strict_list_data(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
-    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
-    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
-    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
+    %data = func.call @strict_holder_data(%holder) : (!llvm.ptr) -> !llvm.ptr
+    return %data : !llvm.ptr
+  }
+  func.func private @strict_holder_data(%holder: !llvm.ptr) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
     %dataSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
     %dataBits = llvm.load %dataSlot : !llvm.ptr -> f64
     %zero = arith.constant 0.0 : f64
