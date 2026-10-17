@@ -70,10 +70,11 @@ Writer(before Number, register Number) Number
 IsWarped Boolean
 	MlirDeviceSums(MlirGpu.Layering.function, 2).IsWarped
 	Doubling.IsWarped is false
+	MlirDeviceSums(MlirTokens.Summing.function, 2).IsWarped is false
 	let end = function.method.LoopEndOf(at)
 	if IsSummed(function, at + 1, end)
 		return true
-	for MlirGpu.Devices(function, at + 1, end, 0)
+	for MlirTokens(function, at).Devices(end)
 		if IsSummed(value, 0, value.method.instructions.Length)
 			return true
 	false

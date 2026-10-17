@@ -101,7 +101,8 @@ Called(entry InstructionEntry) Texts
 	Text.Combine(Calling.Called(Call)).IndexOf("@Rows_Twice_1_device(%failed, %lane, %lanes, %d4i, %d4p0)") > 0
 	Text.Combine(Passing.Called(Layered.method.instructions(5))).IndexOf("%d5p0d, %d5p0n, %d5p0b") > 0
 	MlirDeviceStatements(MlirGpuCheck.Floored, 1).Called(MlirGpuCheck.Flooring)(1).IndexOf("floor(%d1i)") > 0
-	if entry.texts(1) is in ("Floor", "Logarithm", "from")
+	MlirDeviceStatements(MlirTokens.Summing.function, 15).Called(MlirTokens.Dotting)(1).IndexOf("%source") > 0
+	if MlirDeviceCalls(function, at, function).IsNative(entry)
 		return MlirDeviceCalls(function, at, function).Native(entry)
 	let calls = MlirDeviceCalls(function, at, Callee)
 	let arguments = "(" + Text.Combine(calls.Arguments(entry), ", ") + ")"

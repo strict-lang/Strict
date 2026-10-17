@@ -5,6 +5,7 @@ constant Twice = MlirDeviceCalls(MlirParallel.Doubling.function, 4, MlirDevice.T
 constant Twicing = Twice.function.method.instructions(4)
 constant Flooring = MlirDeviceCalls(MlirGpuCheck.Floored, 1, MlirGpuCheck.Floored)
 constant Making = InstructionEntry.Invoke(1, ("Strict/Degrees", "from", "Strict/Degrees", "number"), List(Number) + 0, -1)
+constant Natives = ("Floor", "Logarithm", "from")
 constant Summing = MlirDeviceCalls(MlirGpu.Layering.function, 5, MlirDeviceStatements.Summed)
 Temp(suffix Text) Text
 	Twice.Temp("i") is "%d4i"
@@ -44,9 +45,16 @@ Register(entry InstructionEntry) Number
 	let countPosition = 5 + entry.payload(3)
 	let flagPosition = countPosition + 1 + entry.payload(countPosition)
 	entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
+IsNative(entry InstructionEntry) Boolean
+	Flooring.IsNative(MlirGpuCheck.Flooring)
+	Twice.IsNative(Twicing) is false
+	let loop = function.method.LoopBeginOf(at)
+	(entry.texts(1) is in Natives) or ((loop >= 0) then MlirTokens(function, loop).Call is at else false)
 Native(entry InstructionEntry) Texts
 	Flooring.Native(MlirGpuCheck.Flooring)(1).IndexOf("llvm.intr.floor") > 0
 	Flooring.Native(Making).Last is "    llvm.store %d1, %r1 : f64, !llvm.ptr"
+	if entry.texts(1) is not in Natives
+		return MlirTokens(function, function.method.LoopBeginOf(at)).Read(at)
 	if entry.texts(1) is "Logarithm"
 		return Logarithmic(entry)
 	if entry.texts(1) is "from"

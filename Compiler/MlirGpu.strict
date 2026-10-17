@@ -25,17 +25,17 @@ Launched Texts
 	wanted + branch + Run + ("  ^loop" + position + "host:")
 Run Texts
 	Text.Combine(Doubling.Run).IndexOf("%t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2go, %t2gy, %t2gg)") > 0
+	Text.Combine(MlirGpu(MlirTokens.Summing.function, 2).Run).IndexOf("@strict_gpu_tokens(%t2gp, %t2gc, %t2gh0") > 0
 	let name = MlirDevice(function, position).Name
 	let addresses = (Address("gp", "strict_gpu_ptx"), Address("gk", "k" + name), Address("gs", "f" + name))
-	let collection = MlirLoops(function, position).Collection
-	let source = collection is "" then Temp("b") else Temp("v")
-	let number = collection is "" then "0" else collection is "List(Number)" then "1" else "2"
+	let tokens = MlirTokens(function, position)
+	let sourced = tokens.Sourced
 	let lanes = MlirTyped.Integer.Constant(Temp("gy"), MlirDeviceSums(function, position).IsWarped then "32" else "1")
-	let sizes = (MlirTyped.Integer.Constant(Temp("gq"), number), lanes) + MlirGrouped(function, position).Launched
-	let first = (Temp("gp"), Temp("gk"), Temp("gs"), Temp("gc"), source, Temp("gq"))
+	let sizes = (MlirTyped.Integer.Constant(Temp("gq"), sourced.Last), lanes) + MlirGrouped(function, position).Launched
+	let first = (Temp("gp"), Temp("gk"), Temp("gs"), Temp("gc"), sourced.First, Temp("gq"))
 	let second = (Temp("ga"), Temp("gw"), Temp("gm"), Temp("gr"), Temp("go"), Temp("gy"), Temp("gg"))
 	let run = "    " + Temp("gl") + " = func.call @strict_gpu_run(" + Text.Combine(first + second, ", ") + ") : " + Running
-	(List(Text) + ("  ^loop" + position + "gpu:")) + addresses + Values + sizes + run + Finished
+	(List(Text) + ("  ^loop" + position + "gpu:")) + addresses + tokens.Launched + Values + sizes + run + Finished
 Values Texts
 	Doubling.Values.Last is "    %t2go = arith.constant 0 : i64"
 	"    %t2gr = arith.constant 1 : i64" is in MlirGpu(MlirDeviceRows.Picking, 2).Values

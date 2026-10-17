@@ -6264,7 +6264,10 @@
     %grouped = arith.cmpi sgt, %group, %none : i64
     %groupLanes = arith.minsi %group, %widest : i64
     %laneTotal = arith.muli %count, %lanes : i64
-    %threadTotal = arith.select %grouped, %count, %laneTotal : i64
+    %tokened = arith.cmpi slt, %lanes, %none : i64
+    %tokenTotal = func.call @strict_gpu_token_threads(%count, %lanes, %values, %rows) : (i64, i64, !llvm.ptr, i64) -> i64
+    %elementTotal = arith.select %tokened, %tokenTotal, %laneTotal : i64
+    %threadTotal = arith.select %grouped, %count, %elementTotal : i64
     %threads = arith.select %grouped, %groupLanes, %widest : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
@@ -7208,7 +7211,8 @@
   llvm.mlir.global internal constant @strict_gpu_quantize_name("strict_device_quantize\00") : !llvm.array<23 x i8>
   llvm.mlir.global internal @strict_gpu_quantize_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // device address, size and next offset of the 8 bit numbers made for dot products, one stream runs everything in order
-  // so a quantization only overwrites bytes of dot products that ran already
+  // so a quantization only overwrites bytes of dot products that ran already, it grows to 4 times a list that needs more
+  // than a quarter (the inputs of a long prompt)
   llvm.mlir.global internal @strict_gpu_scratch(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
   llvm.mlir.global internal constant @strict_gpu_dp4a_switch("STRICT_DP4A\00") : !llvm.array<12 x i8>
   llvm.mlir.global internal @strict_gpu_dp4a_state(0 : i64) : i64
@@ -7289,7 +7293,22 @@
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
     %quarter = arith.shrui %capacity, %two : i64
     %small = arith.cmpi ule, %bytes, %quarter : i64
-    cf.cond_br %small, ^offset, ^done
+    cf.cond_br %small, ^offset, ^grow
+  ^grow:
+    %roomy = arith.shli %bytes, %two : i64
+    %grownClass = func.call @strict_gpu_class(%roomy) : (i64) -> i64
+    %grown = func.call @strict_gpu_obtain(%grownClass) : (i64) -> i64
+    %hasGrown = arith.cmpi ne, %grown, %none : i64
+    cf.cond_br %hasGrown, ^replace, ^done
+  ^replace:
+    %oldClass = func.call @strict_gpu_class(%capacity) : (i64) -> i64
+    func.call @strict_gpu_give(%start, %oldClass) : (i64, i64) -> ()
+    %smallestBlock = arith.constant 256 : i64
+    %grownSize = arith.shli %smallestBlock, %grownClass : i64
+    llvm.store %grown, %scratch : i64, !llvm.ptr
+    llvm.store %grownSize, %capacitySlot : i64, !llvm.ptr
+    llvm.store %none, %nextSlot : i64, !llvm.ptr
+    cf.br ^place(%grown : i64)
   ^offset:
     %next = llvm.load %nextSlot : !llvm.ptr -> i64
     %end = arith.addi %next, %bytes : i64
@@ -7432,9 +7451,8 @@
   ^elements:
     return %count : i64
   }
-  // a loop reading a list of rows passes a whole row to a dot product per element (`Batch.Sums`), so it reads the
-  // elements times the length of a row
-  func.func private @strict_gpu_rows_work(%count: i64, %values: !llvm.ptr, %rows: i64) -> i64 {
+  // the first list of rows among the values of a loop (0.0 for none)
+  func.func private @strict_gpu_first_rows(%values: !llvm.ptr, %rows: i64) -> f64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %zero = arith.constant 0.0 : f64
@@ -7449,6 +7467,19 @@
   ^first:
     %slot = llvm.getelementptr %values[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %list = llvm.load %slot : !llvm.ptr -> f64
+    return %list : f64
+  ^none:
+    return %zero : f64
+  }
+  // a loop reading a list of rows passes a whole row to a dot product per element (`Batch.Sums`), so it reads the
+  // elements times the length of a row
+  func.func private @strict_gpu_rows_work(%count: i64, %values: !llvm.ptr, %rows: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %zero = arith.constant 0.0 : f64
+    %list = func.call @strict_gpu_first_rows(%values, %rows) : (!llvm.ptr, i64) -> f64
+    %isUnset = arith.cmpf oeq, %list, %zero : f64
+    cf.cond_br %isUnset, ^none, ^sized
+  ^sized:
     %lengthNumber = func.call @strict_list_length(%list) : (f64) -> f64
     %isEmpty = arith.cmpf ole, %lengthNumber, %zero : f64
     cf.cond_br %isEmpty, ^none, ^measure
@@ -7461,6 +7492,77 @@
     return %cells : i64
   ^none:
     return %none : i64
+  }
+  // threads of strict_device_tokens (negative lanes are the tokens of a warp): 32 in a tile of 8 rows, 8 for one row
+  func.func private @strict_gpu_token_threads(%count: i64, %lanes: i64, %values: !llvm.ptr, %rows: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %zero = arith.constant 0.0 : f64
+    %list = func.call @strict_gpu_first_rows(%values, %rows) : (!llvm.ptr, i64) -> f64
+    %isUnset = arith.cmpf oeq, %list, %zero : f64
+    cf.cond_br %isUnset, ^counted(%none : i64), ^measure
+  ^measure:
+    %lengthNumber = func.call @strict_list_length(%list) : (f64) -> f64
+    %measured = arith.fptosi %lengthNumber : f64 to i64
+    cf.br ^counted(%measured : i64)
+  ^counted(%rowCount: i64):
+    %seven = arith.constant 7 : i64
+    %three = arith.constant 3 : i64
+    %five = arith.constant 5 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %rowTotal = arith.maxsi %rowCount, %one : i64
+    %tokens = arith.divui %count, %rowTotal : i64
+    %rowsRounded = arith.addi %rowTotal, %seven : i64
+    %rowTiles = arith.shrui %rowsRounded, %three : i64
+    %tokensRounded = arith.addi %tokens, %thirtyOne : i64
+    %tokenTiles = arith.shrui %tokensRounded, %five : i64
+    %tileWarps = arith.muli %rowTiles, %tokenTiles : i64
+    %chunksRounded = arith.addi %tokens, %seven : i64
+    %chunks = arith.shrui %chunksRounded, %three : i64
+    %rowWarps = arith.muli %rowTotal, %chunks : i64
+    %perWarp = arith.subi %none, %lanes : i64
+    %tiled = arith.cmpi eq, %perWarp, %thirtyTwo : i64
+    %warps = arith.select %tiled, %tileWarps, %rowWarps : i64
+    %threads = arith.muli %warps, %thirtyTwo : i64
+    return %threads : i64
+  }
+  llvm.mlir.global internal constant @strict_gpu_tokens_name("strict_device_tokens\00strict_device_tokenss\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal @strict_gpu_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // the dot products of `Batch.Sums` for a whole prompt (strict_device_tokens): every row with the numbers of every
+  // token (token t at t * width of input), row r and token t at t * rows + r of the result, 0.0 when the GPU can not
+  func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
+    %eightTokens = arith.constant 8.0 : f64
+    %thirtyTwoTokens = arith.constant 32.0 : f64
+    %oneRow = arith.constant 1.0 : f64
+    %rowsAtLeast = arith.maximumf %rowCount, %oneRow : f64
+    %countNumber = arith.sitofp %count : i64 to f64
+    %tokens = arith.divf %countNumber, %rowsAtLeast : f64
+    %long = arith.cmpf oge, %tokens, %thirtyTwoTokens : f64
+    %tileTokens = arith.select %long, %thirtyTwoTokens, %eightTokens : f64
+    %tileLanes = arith.fptosi %tileTokens : f64 to i64
+    %perWarp = arith.subi %none, %tileLanes : i64
+    %values = llvm.alloca %five x f64 : (i64) -> !llvm.ptr
+    llvm.store %rows, %values : f64, !llvm.ptr
+    %inputSlot = llvm.getelementptr %values[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %input, %inputSlot : f64, !llvm.ptr
+    %widthSlot = llvm.getelementptr %values[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %width, %widthSlot : f64, !llvm.ptr
+    %rowCountSlot = llvm.getelementptr %values[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %rowCount, %rowCountSlot : f64, !llvm.ptr
+    %tileSlot = llvm.getelementptr %values[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %tileTokens, %tileSlot : f64, !llvm.ptr
+    %name = llvm.mlir.addressof @strict_gpu_tokens_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_tokens_slot : !llvm.ptr
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %five, %three, %one, %two, %perWarp, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
   }
   func.func private @strict_gpu_free_all(%buffers: !llvm.ptr, %count: i64) {
     %none = arith.constant 0 : i64
