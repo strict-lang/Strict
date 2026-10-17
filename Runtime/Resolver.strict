@@ -37,7 +37,7 @@ Targeted(entry InstructionEntry) InstructionEntry
 	Accessor.FirstResolved.payload is (1, -1, -2, 0, -3, 0, 1, 0, 0, 1, 0, 0, 1, -1, 0)
 	let call = Invocation(entry, List(VmValue), VmValue.None)
 	let target = Target(call)
-	let path = Accessor(Machine(types)).Path(target, call.Count, 0)
+	let path = Accessor(Machine(types)).Marked(target, call.Count)
 	InstructionEntry(entry.kind, entry.texts, entry.payload + target + path, entry.line)
 Target(call Invocation) Numbers
 	Doubling.Target(Invocation.Uppered) is (Searching, 0, 0)

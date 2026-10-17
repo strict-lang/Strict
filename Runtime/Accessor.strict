@@ -1,4 +1,5 @@
 has machine Machine
+constant Computed = -2
 constant Listed = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
 constant Holder = TypeEntry("Strict/Holder", (MemberEntry.LoggerMember, Listed), (MethodEntry("Numbers", List(MemberEntry), "Strict/List(Number)", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Return(0))), MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0, -1)), InstructionEntry.Return(1)))))
 constant FirstCall = InstructionEntry.Invoke(1, ("Strict/Holder", "First", "Strict/Number"), List(Number), 0)
@@ -6,6 +7,14 @@ constant Outer = TypeEntry("Strict/Outer", List(MemberEntry) + MemberEntry("hold
 constant Getting = Accessor(Machine((Holder, Outer)))
 constant FirstResolved = Resolver(Getting.machine.types).Targeted(FirstCall)
 constant Held = VmValue("Strict/Holder", 0, "", (VmValue.None, VmValue.OfList(VmValue.OfNumber(3), VmValue.OfNumber(5))))
+Marked(target Numbers, count Number) Numbers
+	Accessor(Machine(List(TypeEntry) + TypeEntry.Kept)).Marked((0, 0, 0), 0) is (Computed, 0)
+	Getting.Marked((0, 0, 0), 0) is (0, 1)
+	if (target(0) < 0) or (count > 0)
+		return Path(target, count, 0)
+	let type = machine.types(target(0))
+	let slot = type.ConstantSlot(type.methods(target(1)))
+	slot < 0 then Path(target, count, 0) else (Computed, slot)
 Path(target Numbers, count Number, depth Number) Numbers
 	Getting.Path((0, 0, 0), 0, 0) is (0, 1)
 	Getting.Path((1, 0, 0), 0, 0) is (1, 0, 0, 1, -1, 0)
@@ -69,20 +78,13 @@ Accessed(call Invocation) VmValue
 	let payload = call.entry.payload
 	let at = call.Resolution + 3
 	if payload.Length <= at
-		return Constant(call)
+		return VmValue.None
+	if payload(at) is Computed
+		return machine.prototypes(payload(call.Resolution)).items(payload(at + 1))
 	mutable found = call.Instance
 	for (payload.Length - at) / 2
 		found = Step(found, payload(at + index * 2), payload(at + index * 2 + 1))
 	found.kind is in ("Error", "Strict/Error") then VmValue.None else found
-Constant(call Invocation) VmValue
-	Getting.Constant(Invocation(FirstResolved, List(VmValue), Held)).kind is "None"
-	let at = call.Resolution
-	let route = call.entry.payload.Length > at + 1 then call.entry.payload(at) else -1
-	if (route < 0) or (route >= machine.prototypes.Length)
-		return VmValue.None
-	let type = machine.types(route)
-	let slot = type.ConstantSlot(type.methods(call.entry.payload(at + 1)))
-	slot < 0 then VmValue.None else machine.prototypes(route).items(slot)
 Step(instance VmValue, route Number, number Number) VmValue
 	Getting.Step(Held, 0, 1).Length is 2
 	Getting.Step(Held.items(1), -1, 1).number is 5
