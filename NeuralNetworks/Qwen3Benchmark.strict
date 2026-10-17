@@ -1,9 +1,9 @@
 has logger
 constant Prompt = "Alan Turing theorized that computers would one day become"
-Run(path Text, bits Number, count Number, repeats = 1, batch = 1)
+Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32)
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	let started = Process.Elapsed
-	let model = Qwen3.Loaded(path, bits)
+	let model = Qwen3(Qwen3.Loaded(path, bits), cacheBits = cacheBits)
 	let loaded = Process.Elapsed
 	let prompt = Repeated(tokenizer.Encoded(Prompt), repeats)
 	logger.Log(Prompt + tokenizer.Decoded(Generation(model).Generated(prompt, count)))
@@ -25,10 +25,10 @@ Durations(model Qwen3, token Number, start Number, count Number, batch Number) N
 	mutable last = Process.Elapsed
 	for count
 		current = current.Steps(chosen, Repeated(List(Number) + (start + index), batch), batch)
-		chosen = Repeated(List(Number) + current.Nexts.First, batch)
-		let now = Process.Elapsed
-		let duration = (now - last) * 1000
-		last = now
+		chosen.First >= 0
+		chosen = current.Nexts
+		let duration = (Process.Elapsed - last) * 1000
+		last = last + duration / 1000
 		duration
 Report(prompt Number, prefill Number, durations Numbers, batch Number) Text
 	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30), 1).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)")

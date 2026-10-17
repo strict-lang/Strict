@@ -6,6 +6,7 @@ constant Widened = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(In
 constant Packing = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("from", List(MemberEntry), "Strict/Shape", Widened)))
 constant LoggerField = InstructionEntry(InstructionType.FieldLoad, "logger", (2, 1, -1))
 constant Logged = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), MlirInstances.Built, LoggerField)))
+constant Eights = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Packed", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Float8s", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/Float8s", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))), List(Number), -1, "", "f32")
 IsAliased(entry InstructionEntry, position Number) Boolean
 	MlirLayout(MlirInstances.Shapes).IsAliased(MlirInstances.Width, 2) is false
 	MlirLayout(Logged).IsAliased(LoggerField, 2)
@@ -61,3 +62,16 @@ Paired(kind Text) Texts
 	let represented = Represented(kind)
 	let pair = MethodBodies.Pair(represented)
 	pair.Length > 0 then pair else MethodBodies.Pair(MlirKinds(function).ElementKind(represented))
+Packed(position Number) Number
+	MlirLayout(Eights).Packed(2) is 7
+	Wrapping.Packed(0) is 0
+	let kind = MlirKinds(function).VariableKind(position, "forResult")
+	kind is in ("Float8s", "List(Float8)") then 7 else 0
+Collected(register Text, pointer Text, at Number) Texts
+	MlirLayout(Eights).Collected("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5).Last is "    llvm.store %d, %p : f64, !llvm.ptr"
+	let address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer
+	if (function.Float is "f64") or (Packed(function.method.LoopBeginOf(at)) is 0)
+		return (address + function.Float, function.Store(register, pointer))
+	let encoded = "    " + register + "b = func.call @strict_device_float8(" + register + ") : (f32) -> i8"
+	(address + "i8", encoded, "    llvm.store " + register + "b, " + pointer + " : i8, !llvm.ptr")
