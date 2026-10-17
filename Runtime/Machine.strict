@@ -3,6 +3,7 @@ has logger
 has prototypes List(VmValue) = List(VmValue)
 has folder Text = ""
 has isTracing = false
+has sources Dictionary(Text, Text) = Dictionary(Text, Text)
 constant MaxSteps = 1000000000000000
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
@@ -11,7 +12,6 @@ constant Defaulted = MethodEntry("Add", List(MemberEntry) + MemberEntry.SevenMem
 constant Wrapper = TypeEntry("Strict/Wrapper", (MemberEntry.LoggerMember, MemberEntry.SevenMember), List(MethodEntry))
 constant Coded = InstructionEntry(InstructionType.FieldLoad, ("number", "Character"), (1, 0, -1, -2))
 constant Paired = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry.Initializing)
-constant Failing = TypeEntry("Strict/Failing", List(MemberEntry), List(MethodEntry) + MethodEntry("Fail", List(MemberEntry), "Strict/Number", (InstructionEntry(InstructionType.IndexCall, "list", (0, 0, 6)), InstructionEntry.Return(0))))
 constant Pairing = Machine(List(TypeEntry) + Paired)
 Launch(typeName Text, arguments List(VmValue)) Number
 	let main = Natives(types).TypeOf(typeName)
@@ -42,10 +42,13 @@ Tested(typeName Text) Number
 	Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name).number
 Prepared Machine
 	Hello.Prepared.prototypes.First.kind is "HelloLogger"
+	Hello.Prepared.sources("HelloLogger") is "HelloLogger.strict"
 	mutable created = List(Mutable(VmValue))
+	mutable located = Dictionary(Text, Text)
 	for types
 		created.Add(Natives(types).Fresh(value))
-	Machine(types, logger, created, folder, isTracing)
+		located(value.Name) = TypeSource(value).Located(folder)
+	Constants(Machine(types, logger, created, folder, isTracing, located)).Computed
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue), VmValue.None).Last.number is 7
@@ -104,10 +107,13 @@ IsOwned(type TypeEntry, kind Text) Boolean
 	if kind is "List"
 		return true
 	TypeEntry.ShortName(type.Name).Split("(").First is TypeEntry.ShortName(kind).Split("(").First
-Execute(method MethodEntry, locals List(VmValue), owner Text) VmValue
+Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
 	Machine(Frame.Doubling, isTracing = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
-	let frame = Frame(value, method, owner)
+	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "D", Invocation.MaxDepth + 1).items(0).text is "StackOverflow"
+	if depth > Invocation.MaxDepth
+		return VmValue.OfError("StackOverflow")
+	let frame = Frame(value, method, owner, depth)
 	let slots = isTracing then TracedFrame(frame).Finished(locals) else frame.Finished(locals)
 	slots(Frame.ResultSlot)
 Call(call Invocation) VmValue
@@ -129,13 +135,9 @@ Executed(route Number, method MethodEntry, call Invocation) VmValue
 	let prototype = route < prototypes.Length then prototypes(route) else Natives(types).Fresh(type)
 	let isInitializer = method.Name is "from" then type.IsStruct and method.IsInitializer(type.Changing) else false
 	if isInitializer is false
-		return Execute(method, Bound(type, call.Instance, method, call.Arguments, prototype), type.Name)
-	let finished = Frame(value, method, type.Name).Finished(Bound(type, prototype, method, call.Arguments, prototype))
-	let result = finished(Frame.ResultSlot)
-	mutable values = List(Mutable(VmValue))
-	for type.members
-		values.Add(finished(Frame.MembersSlot + index))
-	result.kind is in VmValue.ErrorKinds then result else VmValue(type.Name, 0, "", values)
+		return Execute(method, Bound(type, call.Instance, method, call.Arguments, prototype), type.Name, call.Depth)
+	let frame = Frame(value, method, type.Name, call.Depth)
+	Natives(types).Constructed(type, frame.Finished(Bound(type, prototype, method, call.Arguments, prototype)))
 Field(entry InstructionEntry, instance VmValue) VmValue
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1)), VmValue.OfText("ab")).text is "ab"
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "c", (1, 0, -1)), VmValue.OfError("a")).kind is "Strict/Error"

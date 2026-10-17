@@ -1,6 +1,6 @@
 has logger
-constant Anything = BinaryFile("./Any.strict")
-constant AnyFiles = SourceFiles(".").Of(Anything.source)
+constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
+constant AdderFiles = SourceFiles(".").Of(Adder.source)
 Run(arguments Texts) Number
 	let failed = Failures(List(Text) + arguments(0), arguments(1), true)
 	if failed > 0
@@ -71,7 +71,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 		File(cache.Path).Write(cache.Packed(Completed(cache, root, files, header, before), types, List(TypeEntry)))
 	failed
 Completed(cache BinaryFile, root Text, files Texts, header Numbers, before Number) Numbers
-	Execute(Logger).Completed(Anything, ".", AnyFiles, (1, 2), Process.FilesRead.Length) is (1, 2)
+	Execute(Logger).Completed(Adder, ".", AdderFiles, (1, 2), Process.FilesRead.Length) is (1, 2)
 	let read = Read(before)
 	let current = SourceFiles(root).Of(cache.source)
 	let isSame = (current.Length is files.Length) and (read.Length is 0)

@@ -65,7 +65,8 @@ ElementType(typeName Text) Text
 	if typeName.StartsWith("Iterator(") or typeName.StartsWith("Dictionary(")
 		let start = typeName.LastIndexOf(", ") > 0 then typeName.LastIndexOf(", ") + 2 else typeName.IndexOf("(") + 1
 		return typeName.Substring(start, typeName.Length - start - 1)
-	IsPlural(typeName) then typeName.Substring(0, typeName.Length - 1) else "Unknown"
+	let keyed = MethodsOf(typeName).TypeOf("get")
+	IsPlural(typeName) then typeName.Substring(0, typeName.Length - 1) else keyed is "" then "Unknown" else keyed
 MemberType(instanceType Text, name Text) Text
 	Sample.MemberType("Count", "Increment") is "Count"
 	Sample.MemberType("Unknown", "Length") is "Unknown"

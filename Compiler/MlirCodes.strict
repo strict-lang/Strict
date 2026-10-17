@@ -1,0 +1,21 @@
+has function MlirFunction
+has position Number
+constant PricesCode = InstructionEntry.Invoke(1, ("Strict/Dictionary(Text, Number)", "Code", "Strict/Text"), List(Number), 0)
+constant Pricing = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("prices", "Strict/Dictionary(Text, Number)", List(InstructionEntry), false), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "prices"), PricesCode)))
+IsPairCode(entry InstructionEntry) Boolean
+	MlirCodes(Pricing, 1).IsPairCode(Pricing.method.instructions(1))
+	MlirCodes(MlirTexts.Joined, 7).IsPairCode(MlirTexts.Joined.method.instructions(7)) is false
+	let countPosition = 5 + entry.payload(3)
+	let hasInstance = entry.payload.Length > countPosition + 2 + entry.payload(countPosition)
+	if (PayloadDecoder(entry).Text(2) is not "Code") or (hasInstance is false)
+		return false
+	MlirLayout(function).Paired(TypeEntry.ShortName(PayloadDecoder(entry).Text(1))).Length > 0
+Coded(instance Number, result Text) Texts
+	Text.Combine(MlirCodes(Pricing, 1).Coded(0, "%r1")).IndexOf("@Text_Code_0 :") > 0
+	let texts = MlirTexts(function, position)
+	let kind = TypeEntry.ShortName(PayloadDecoder(function.method.instructions(position)).Text(1))
+	let loaded = function.Load(texts.Temp("c"), "%r" + instance)
+	mutable pairs = List(Mutable(Text))
+	for MlirAutomatic(function).Pairs(texts.Temp("cx"), kind, texts.Temp("c"))
+		pairs.Add(value.Replace("@strict_text_itself :", "@Text_Code_0 :"))
+	List(Text) + loaded + pairs + function.Store(texts.Temp("cx"), result)

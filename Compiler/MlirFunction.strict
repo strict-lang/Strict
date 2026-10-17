@@ -63,7 +63,8 @@ Text Text
 	for Parameters
 		signature.Add("%p" + index + ": f64")
 	let header = "  func.func private @" + Symbol + "(" + outer.Text.Combine(signature, ", ") + ") -> f64 {"
-	outer.Text.Combine(List(Text) + header + Slots + Body + "  }" + MlirParallel(value, 0).Outlined, "\n")
+	let outlined = MlirParallel(value, 0).Outlined + MlirCached(value).Wrapper
+	outer.Text.Combine(List(Text) + header + Slots + Body + "  }" + outlined, "\n")
 Slots Texts
 	Counter.Slots.Length is 15
 	outer.Text.Combine(MlirGroups.Norming.function.Slots).IndexOf("%memo11 = llvm.alloca") > 0

@@ -4,13 +4,13 @@ constant Escaped = Json(" \"a\\\"b\\nc\\u0041\" ")
 constant Spaces = (" ", "\t", "\n", "\r")
 constant Ends = (",", "}", "]", " ", "\t", "\n", "\r")
 Read(path Text) Json
-	Json.Read("Json/BatSkeleton.json").Field("skeleton").Field("width") to Number is 205.28
-	Json.Read("Json/BatSkeleton.json").Field("bones").Elements(2).Field("parent") to Text is "Bat_Bone"
+	Json.Read("Json/BatSkeleton.json").get("skeleton").get("width") to Number is 205.28
+	Json.Read("Json/BatSkeleton.json").get("bones").Elements(2).get("parent") to Text is "Bat_Bone"
 	Json(Text.Combine(File(path).ReadLines, "\n"))
-Field(key Text) Json
-	Bones.Field("bones").Elements(1).Field("y") to Number is 39.54
-	Bones.Field("loop") to Text is "true"
-	Bones.Field("missing") to Text is ""
+get(key Text) Json
+	Bones("bones").Elements(1).get("y") to Number is 39.54
+	Bones("loop") to Text is "true"
+	Bones("missing") to Text is ""
 	let open = Skip(0)
 	let parts = Parts(open)
 	for Range(0, text.Substring(open, 1) is "{" then (parts.Length - 1) / 2 else 0)
@@ -19,13 +19,13 @@ Field(key Text) Json
 	Json("")
 Keys Texts
 	Bones.Keys is ("bones", "loop")
-	Bones.Field("bones").Keys.Length is 0
+	Bones("bones").Keys.Length is 0
 	let open = Skip(0)
 	let parts = Parts(open)
 	for Range(0, text.Substring(open, 1) is "{" then (parts.Length - 1) / 2 else 0)
 		Unquoted(parts(value * 2))
 Elements Jsons
-	Bones.Field("bones").Elements.Length is 2
+	Bones("bones").Elements.Length is 2
 	Bones.Elements(1) to Text is "true"
 	let open = Skip(0)
 	let parts = Parts(open)

@@ -55,6 +55,9 @@ Paired(kind Text) Texts
 	Wrapping.Paired("List(Text, Number)") is ("Text", "Number")
 	Wrapping.Paired("Dictionary(Text, Shape)") is ("Text", "Shape")
 	Wrapping.Paired("Texts").Length is 0
+	Wrapping.Paired("Dictionary(Number, Number)") is ("Number", "Number")
+	if kind.StartsWith("Dictionary(")
+		return MethodBodies.Pair("List(" + kind.Substring(11, kind.Length - 12) + ")")
 	let represented = Represented(kind)
 	let pair = MethodBodies.Pair(represented)
 	pair.Length > 0 then pair else MethodBodies.Pair(MlirKinds(function).ElementKind(represented))

@@ -22,14 +22,14 @@ Traced(path Text, root Text) Number
 	ValueTrace(Logger).Traced("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	let types = FileCompiler(logger).Compiled(path, root, true)
+	let types = FileCompiler(logger, true).Compiled(path, root, true)
 	types.Length is 0 then 1 else Execute(logger).Started(types, path, true).Tested(types.First.Name)
 Valued(lines Texts, folder Text) Texts
 	ValueTrace(Logger).Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times")
 	ValueTrace(Logger).Valued(Events, "Examples").Last.EndsWith("line 3 hit 2 times, each: 1, 2")
 	let hits = Hits(lines)
 	for hits
-		Line(value.Key, hits(value.Key), folder)
+		Line(value.Key, value.Value, folder)
 Hits(lines Texts) Dictionary(Text, Texts)
 	ValueTrace.Hits(Events)("Sum|3") is ("Hit\nRes|1", "Hit\nRes|2")
 	mutable hits = Dictionary(Text, Texts)

@@ -1,4 +1,5 @@
 has logger
+has isCrossing Boolean = true
 constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".ptx", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o")
 Built(path Text, root Text) Number
 	let failed = Execute(logger).Test(path, root)
@@ -85,7 +86,8 @@ Linked(base Text, tools Toolchain) Text
 	built.Replace(target, executable)
 CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	NativeBuild(Logger).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is 0
-	if (Platform.Current is not Platform.Windows) or isCounting
+	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is 0
+	if (Platform.Current is not Platform.Windows) or isCounting or (isCrossing is false)
 		return 0
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
 	let crossed = tools.CrossBuilt(base)

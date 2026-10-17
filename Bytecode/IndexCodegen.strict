@@ -50,7 +50,8 @@ Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "named", One), Named).instructions.Last.kind is InstructionType.Invoke
 	let isCall = node.Kind is "Call"
 	let named = Source(node)
-	if values.TypeOf(named, block).StartsWith("Dictionary(")
+	let type = values.TypeOf(named, block)
+	if type.StartsWith("Dictionary(") or (values.inference.types.MethodsOf(type).TypeOf("get") is not "")
 		return ErrorCodegen(values).Handled(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
 	let isError = isCall and (block.scope.TypeOf(node.text) is "Error")
 	isError then WithValue(node, block) else Element(node, block)

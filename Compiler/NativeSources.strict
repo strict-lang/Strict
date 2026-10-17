@@ -46,7 +46,10 @@ Objects(platform Number, root Text) Text
 	let tokens = Flags(platform).Split(" ")
 	mutable arguments = ""
 	for Files + Sources(tokens)
-		arguments = arguments + " \"" + Object(value, platform, root, Options(tokens, false)) + "\""
+		let object = Object(value, platform, root, Options(tokens, false))
+		if object.StartsWith("clang failed")
+			return object
+		arguments = arguments + " \"" + object + "\""
 	arguments + Options(tokens, true)
 Sources(tokens Texts) Texts
 	Adding.Sources(("-DX", "a/b.c", "-lgdi32")) is ("a/b.c")
@@ -70,7 +73,7 @@ Object(source Text, platform Number, root Text, options Text) Text
 	let building = Path(source).RemoveExtension.text + "." + 999999.Random.Floor + ".o"
 	let compile = "-c \"" + source + "\" -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
 	let compiled = ToolRunner(Toolchain(platform, root).Located("clang")).Execute(compile + " -o \"" + building + "\"")
-	compiled.Failed then source else Placed(building, target)
+	compiled.Failed then "clang failed for " + source + ": " + compiled.error else Placed(building, target)
 Inputs(platform Number, root Text) Texts
 	Adding.Inputs(Platform.Windows, ".").Last is "Examples/NativeAdd/native/Windows.flags"
 	let flags = folders.First + "/" + Platform.NameOf(platform) + ".flags"

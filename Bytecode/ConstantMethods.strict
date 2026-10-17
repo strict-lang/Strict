@@ -1,0 +1,59 @@
+has inference Expressions/TypeInference
+constant Known = KnownTypes(("Count"), (KnownTypes.CountMembers), (Scope(("Increment", "Twice", "Started"), ("Count", "Count", "Count"))), (KnownTypes.CountParameters))
+constant Growing = ConstantMethods(TypeInference(Known, (Scope(("Started", "Alias", "Plain"), ("Count(1).Twice", "Count.Started", "Count(1)")), TypeInference.NoShape)))
+constant Counting = TypeCodegen("Strict/Count", ("has number", "constant Started = Count(1).Twice", "Twice Count", "\tCount(number * 2)"), Growing.inference, List(Text))
+Definition(owner Text, name Text) SyntaxNode
+	Growing.Definition("Count", "Plain").Kind is "Call"
+	Growing.Definition("Count", "Alias").children(0).Kind is "Identifier"
+	let tokens = Tokenizer(inference.ConstantOf(owner, name)).Tokens
+	let folding = ConstantFolding(owner, inference)
+	folding.Unhidden(folding.Qualified(folding.Outer(SyntaxParser(tokens).ParseRange(0, tokens.Length))))
+IsCached(owner Text, name Text) Boolean
+	Growing.IsCached("Count", "Started")
+	Growing.IsCached("Count", "Alias") is false
+	Growing.IsCached("Count", "Plain") is false
+	Growing.IsCached("Count", "Missing") is false
+	let definition = Definition(owner, name)
+	let isOther = (definition.Kind is "Member") and (definition.children(0).Kind is in ("Identifier", "Type"))
+	let isAlias = isOther and (inference.ConstantOf(definition.children(0).text, definition.text) is not "")
+	(isAlias is false) and HasCall(definition)
+HasCall(node SyntaxNode) Boolean
+	Growing.HasCall(SyntaxNode("Member", "Started", SyntaxNode("Type", "Count")))
+	Growing.HasCall(SyntaxNode("Member", "Plain", SyntaxNode("Type", "Count"))) is false
+	let first = node.children.Length > 0 then node.children(0) else node
+	let isOwned = (node.Kind is "Member") and (first.Kind is in ("Identifier", "Type"))
+	if isOwned and (inference.ConstantOf(first.text, node.text) is not "")
+		return IsCached(first.text, node.text)
+	if IsCall(node, first)
+		return true
+	for node.children
+		if HasCall(value)
+			return true
+	false
+IsCall(node SyntaxNode, first SyntaxNode) Boolean
+	Growing.IsCall(SyntaxParser(Tokenizer("Count(1).Twice(2)").Tokens).Parse, SyntaxNode("Call", "Count"))
+	Growing.IsCall(SyntaxNode("MethodCall", "Count", SyntaxNode("Type", "Count")), SyntaxNode("Type", "Count")) is false
+	let isConstructor = (first.Kind is "Type") and (first.text is node.text)
+	(node.Kind is "Member") or (node.Kind is "MethodCall") and (isConstructor is false)
+Methods(types TypeCodegen, names Texts) List(MethodEntry)
+	Growing.Methods(Counting, List(Text)).First.Name is "Started"
+	Growing.Methods(Counting, List(Text) + "Twice").Length is 0
+	let owner = types.Generator.target.TypeName
+	mutable methods = List(Mutable(MethodEntry))
+	for types.lines
+		let name = value.StartsWith("constant ") and (value.IndexOf(" = ") > 0) then Tokenizer(value).Tokens(1) else ""
+		if (name is not "") and ((names.Length is 0) or (name is in names)) and IsCached(owner, name)
+			methods.Add(Method(types, name, index + 1))
+	methods
+Method(types TypeCodegen, name Text, line Number) MethodEntry
+	Growing.Method(Counting, "Started", 2).instructions.Last.line is 2
+	Growing.Method(Counting, "Started", 2).returnType is "Strict/Count"
+	let owner = types.Generator.target.TypeName
+	let header = name + " " + inference.types.MethodsOf(owner).TypeOf(name)
+	let body = "\t" + inference.ConstantOf(owner, name)
+	let extended = TypeCodegen(types.fullName, types.lines + header + body, inference, types.typeNames)
+	let method = extended.Method(types.lines.Length)
+	mutable lined = List(Mutable(InstructionEntry))
+	for method.instructions
+		lined.Add(InstructionEntry(value.kind, value.texts, value.payload, line))
+	MethodEntry(method.Name, method.parameters, method.returnType, lined)

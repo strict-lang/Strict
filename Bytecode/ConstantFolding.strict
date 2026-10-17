@@ -74,9 +74,9 @@ Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 	let definition = inference.ConstantOf(owner, node.text)
 	if (definition is "") or (owner + "." + node.text is in aliases)
 		return node
-	let tokens = Tokenizer(definition).Tokens
-	let qualified = ConstantFolding(owner, inference).Qualified(Outer(SyntaxParser(tokens).ParseRange(0, tokens.Length)))
-	let parsed = Unhidden(qualified)
+	let parsed = ConstantMethods(inference).Definition(owner, node.text)
+	if ConstantMethods(inference).IsCached(owner, node.text)
+		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Type", owner), node.line)
 	parsed.Kind is "Member" then Aliased(parsed, aliases + (owner + "." + node.text)) else parsed
 Qualified(node SyntaxNode) SyntaxNode
 	Limits.Qualified(SyntaxNode("Binary", "*", (Limit, Two))) to Text is "Count.Limit * 2"

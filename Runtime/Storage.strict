@@ -1,5 +1,6 @@
 has types List(TypeEntry)
 constant Pair = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry))
+constant StoreSecond = InstructionEntry(InstructionType.StoreRegisterToVariable, "list(1)", (6, 7, Resolver.LiteralIndex, 1))
 constant Pairing = Storage(List(TypeEntry) + Pair)
 constant OneTwo = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))
 constant Paired = VmValue("Strict/Pair", 0, "", (VmValue.None, OneTwo))

@@ -9,4 +9,4 @@ Exists Boolean
 Modified Number
 Delete
 Rename(newPath Text)
-Override(content Text)
+InMemory(content Text)
