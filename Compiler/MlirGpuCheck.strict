@@ -145,7 +145,7 @@ IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
 	true
 Free Texts
 	Doubling.Free.Length is 0
-	Heading.Free is ("heads")
+	Heading.Free is ("heads", "weights")
 	Layering.Free is ("input", "biases")
 	mutable names = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))

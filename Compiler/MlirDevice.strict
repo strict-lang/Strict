@@ -91,9 +91,7 @@ Entry Texts
 		let number = "%p" + (index + 1)
 		let slot = "%v_" + value.Name
 		lines = calls.IsList(index) then lines + Stores(number, slot) else lines + function.Store(number, slot)
-	for MlirDeviceMembers(function).Names
-		lines = lines + function.Store("%m" + index, "%v_" + value)
-	lines
+	lines + MlirDeviceMembers(function).Stored(function.Float)
 Indexed Texts
 	Doubling.Indexed.Last is "    cf.cond_br %inside, ^body, ^exit"
 	constant thread = "    %thread = nvvm.read.ptx.sreg.tid.x : i32"

@@ -13,7 +13,6 @@ In priority order. Remove what is done, add what is found, keep each item to wha
 10. **Research** (when all other work is done): pruning (attention heads, MLP neurons, structured, low rank, skipping layers) and speculative decoding with a small draft model, start with GPT-2, judged by perplexity, coding tests and measured speed.
 
 ## Language and compiler
-- **A method called in a GPU loop reads only number members**: number members of its own instance are passed to the device function (`MlirDeviceMembers`), a list member it reads (`Numbers`) still keeps the loop on the CPU without a message.
 - **Positions in 32 bit kernels** (found 2026-10-17): a 32 bit GPU kernel computes `index` and positions like `row * positions + index` in floats, exact only up to 2^24, so a loop of more elements or reading a longer list now runs as the double kernel and its result comes back to the host (a 750 token prompt in one piece took 138 ms per token, before it failed with "a loop on the GPU read outside of a list", a loop over the 24576 gate and up rows times about 683 tokens already has more positions); integer positions in 32 bit kernels would keep them fast.
 
 ## Rebalancing: native runner and C# integration (../Rebalancing)
