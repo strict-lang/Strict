@@ -689,15 +689,22 @@
     %tokenBlocks = arith.divui %tokensUp, %blockTokens : i64
     %tokenBlock = arith.remui %block, %tokenBlocks : i64
     %rowBlock = arith.divui %block, %tokenBlocks : i64
-    %rowFirst = arith.shli %rowBlock, %three : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %prompt = arith.cmpi sgt, %tokens, %thirtyTwo : i64
+    %rowGroupShift = arith.select %prompt, %three, %none : i64
+    %splitShift = arith.subi %three, %rowGroupShift : i64
+    %rowShift = arith.addi %rowGroupShift, %three : i64
+    %blockRows = arith.shli %one, %rowShift : i64
+    %rowFirst = arith.shli %rowBlock, %rowShift : i64
     %tokenFirst = arith.muli %tokenBlock, %blockTokens : i64
     %rowLast = arith.subi %rows, %one : i64
     %tokenLast = arith.subi %tokens, %one : i64
     %inside = arith.cmpi sle, %rowFirst, %rowLast : i64
     cf.cond_br %inside, ^check, ^exit
   ^check:
-    %blockEnd = arith.addi %rowFirst, %seven : i64
-    %lastRow = arith.minsi %blockEnd, %rowLast : i64
+    %blockEnd = arith.addi %rowFirst, %blockRows : i64
+    %blockLast = arith.subi %blockEnd, %one : i64
+    %lastRow = arith.minsi %blockLast, %rowLast : i64
     %firstData, %firstBits, %firstTotal = func.call @strict_device_row(%rowsData, %rowFirst) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
     %lastData, %lastBits, %lastTotal = func.call @strict_device_row(%rowsData, %lastRow) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
     %six = arith.constant 6 : i64
@@ -720,7 +727,14 @@
   ^start:
     %scalesOffset = func.call @strict_device_data(%inputCount, %eight) : (i64, i64) -> i64
     %inputScales = llvm.getelementptr %input[%scalesOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %ownRow = arith.addi %rowFirst, %laneRow : i64
+    %rowGroups = arith.shrui %blockRows, %three : i64
+    %rowGroupCount = arith.subi %rowGroups, %one : i64
+    %rowGroup = arith.andi %warp, %rowGroupCount : i64
+    %split = arith.shrui %warp, %rowGroupShift : i64
+    %splits = arith.shli %one, %splitShift : i64
+    %rowGroupStart = arith.shli %rowGroup, %three : i64
+    %groupRow = arith.addi %rowFirst, %rowGroupStart : i64
+    %ownRow = arith.addi %groupRow, %laneRow : i64
     %row = arith.minsi %ownRow, %rowLast : i64
     %rowData, %rowBits, %rowTotal = func.call @strict_device_row(%rowsData, %row) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
     %pairToken = arith.shli %quad, %one : i64
@@ -733,9 +747,10 @@
     %groups32 = arith.trunci %groups : i64 to i32
     %place = func.call @strict_device_words(%tokenFirst32, %tokenLast32, %width32, %lane32) : (i32, i32, i32, i32) -> vector<4xi32>
     %blocksPerRow = arith.shrui %columns, %eight : i64
-    %blocksSpare = arith.addi %blocksPerRow, %seven : i64
-    %warpBlocks = arith.shrui %blocksSpare, %three : i64
-    %firstBlock = arith.muli %warp, %warpBlocks : i64
+    %splitSpare = arith.subi %splits, %one : i64
+    %blocksSpare = arith.addi %blocksPerRow, %splitSpare : i64
+    %warpBlocks = arith.shrui %blocksSpare, %splitShift : i64
+    %firstBlock = arith.muli %split, %warpBlocks : i64
     %blocksEnd = arith.addi %firstBlock, %warpBlocks : i64
     %lastBlock = arith.minsi %blocksEnd, %blocksPerRow : i64
     cf.br ^blockLoop(%firstBlock, %zeros : i64, vector<8xf32>)
@@ -790,23 +805,28 @@
     llvm.br ^keep(%keptNext : i64) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^kept:
     nvvm.barrier0
-    cf.br ^gather(%none, %zeroSum : i64, f32)
+    cf.br ^slot(%split : i64)
+  ^slot(%slot: i64):
+    %moreSlots = arith.cmpi slt, %slot, %eight : i64
+    cf.cond_br %moreSlots, ^gather(%none, %zeroSum : i64, f32), ^exit
   ^gather(%other: i64, %gathered: f32):
-    %moreOthers = arith.cmpi slt, %other, %eight : i64
+    %moreOthers = arith.cmpi slt, %other, %splits : i64
     cf.cond_br %moreOthers, ^gatherAdd, ^write
   ^gatherAdd:
-    %otherStart = arith.shli %other, %three : i64
-    %otherRow = arith.addi %otherStart, %warp : i64
+    %otherSplit = arith.shli %other, %rowGroupShift : i64
+    %otherWarp = arith.addi %otherSplit, %rowGroup : i64
+    %otherStart = arith.shli %otherWarp, %three : i64
+    %otherRow = arith.addi %otherStart, %slot : i64
     %otherRowStart = arith.shli %otherRow, %five : i64
     %otherAt = arith.addi %otherRowStart, %lane : i64
     %otherPointer = llvm.getelementptr %partials[0, %otherAt] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, !llvm.array<2048 x f32>
     %otherValue = llvm.load %otherPointer : !llvm.ptr<3> -> f32
     %gatheredNext = arith.addf %gathered, %otherValue : f32
     %otherFollowing = arith.addi %other, %one : i64
-    llvm.br ^gather(%otherFollowing, %gatheredNext : i64, f32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+    cf.br ^gather(%otherFollowing, %gatheredNext : i64, f32)
   ^write:
-    %writeGroup = arith.shrui %warp, %one : i64
-    %writeOdd = arith.andi %warp, %one : i64
+    %writeGroup = arith.shrui %slot, %one : i64
+    %writeOdd = arith.andi %slot, %one : i64
     %writeGroupStart = arith.shli %writeGroup, %three : i64
     %inBlock = arith.addi %writeGroupStart, %pairToken : i64
     %withOdd = arith.addi %inBlock, %writeOdd : i64
@@ -816,14 +836,17 @@
     %rowUsed = arith.cmpi sle, %ownRow, %rowLast : i64
     %groupToken = arith.andi %groupUsed, %tokenUsed : i1
     %writing = arith.andi %groupToken, %rowUsed : i1
-    cf.cond_br %writing, ^writeStore, ^exit
+    cf.cond_br %writing, ^writeStore, ^slotNext
   ^writeStore:
     %writeTokenStart = arith.muli %writeToken, %rows : i64
     %writeElement = arith.addi %writeTokenStart, %ownRow : i64
     func.call @strict_device_tokens_store(%result, %wide, %writeElement, %gathered) : (!llvm.ptr, i1, i64, f32) -> ()
-    cf.br ^exit
+    cf.br ^slotNext
+  ^slotNext:
+    %slotFollowing = arith.addi %slot, %splits : i64
+    cf.br ^slot(%slotFollowing : i64)
   ^pairs(%pair: i64):
-    %pairCount = arith.shli %groups, %three : i64
+    %pairCount = arith.muli %blockRows, %groups : i64
     %morePairs = arith.cmpi slt, %pair, %pairCount : i64
     cf.cond_br %morePairs, ^pairBody, ^exit
   ^pairBody:

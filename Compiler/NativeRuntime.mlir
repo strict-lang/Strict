@@ -7567,8 +7567,10 @@
     %targetParameter = llvm.getelementptr %parameters[2] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
     llvm.store %targetArgument, %targetParameter : !llvm.ptr, !llvm.ptr
     %threads = arith.constant 256 : i64
+    %flushed = func.call @strict_gpu_flush() : () -> i1
     %launched = func.call @strict_gpu_launch(%function, %length, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
-    cf.cond_br %launched, ^swap, ^done
+    %quantized = arith.andi %flushed, %launched : i1
+    cf.cond_br %quantized, ^swap, ^done
   ^swap:
     llvm.store %target, %view : i64, !llvm.ptr
     llvm.store %eight, %bitsSlot : i64, !llvm.ptr
@@ -7761,8 +7763,14 @@
     %fewestGroups = arith.minsi %chunks, %four : i64
     %groups = arith.maxsi %fewestGroups, %one : i64
     %blockTokens = arith.shli %groups, %three : i64
-    %rowsUp = arith.addi %rowTotal, %seven : i64
-    %rowBlocks = arith.shrui %rowsUp, %three : i64
+    %thirtyTwoTokens = arith.constant 32 : i64
+    %prompt = arith.cmpi sgt, %tokens, %thirtyTwoTokens : i64
+    %eightRows = arith.constant 8 : i64
+    %sixtyFourRows = arith.constant 64 : i64
+    %blockRows = arith.select %prompt, %sixtyFourRows, %eightRows : i64
+    %spareRows = arith.subi %blockRows, %one : i64
+    %rowsUp = arith.addi %rowTotal, %spareRows : i64
+    %rowBlocks = arith.divui %rowsUp, %blockRows : i64
     %spareTokens = arith.subi %blockTokens, %one : i64
     %tokensUp = arith.addi %tokens, %spareTokens : i64
     %tokenBlocks = arith.divui %tokensUp, %blockTokens : i64

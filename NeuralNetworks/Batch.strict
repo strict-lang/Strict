@@ -3,13 +3,14 @@ has biases Numbers
 constant Pair = Batch(((1, 2), (3, 4)), (10, 20))
 constant Blocks = Gguf("NeuralNetworks/blocks.gguf", 4)
 constant Tokens = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("tokens").First
+constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
 Sums(input Numbers) Numbers
 	Pair.Sums((1, 1)) is (13, 27)
 	Pair.Sums((1, 1, 2, 0)) is (13, 27, 12, 26)
 	Batch(Blocks.Rows("four"), List(Number) + 0).Sums(Tokens)(2).IsNearlyEqual(34.943, 0.5)
-	Batch(Blocks.Rows("four"), List(Number) + 0).Sums(Tokens)(255).IsNearlyEqual(24.025, 0.5)
-	Batch(Blocks.Rows("six"), List(Number) + 0).Sums(Tokens)(69).IsNearlyEqual(4.301, 0.2)
 	Batch(Blocks.Rows("eight"), List(Number) + 0).Sums(Tokens)(140).IsNearlyEqual(-2.042, 0.05)
+	Batch(Blocks.Rows("four"), List(Number) + 0).Sums(Prompt)(637).IsNearlyEqual(5.001, 0.5)
+	Batch(Blocks.Rows("six"), List(Number) + 0).Sums(Prompt)(500).IsNearlyEqual(-3.413, 0.2)
 	let width = weights.First.Length
 	if (input.Length is width) and (biases.Length is weights.Length)
 		return Layer(weights, biases).Sums(input)
