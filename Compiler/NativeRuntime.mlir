@@ -7446,7 +7446,7 @@
   ^none:
     return %none : i64
   }
-  // threads of strict_device_tokens (negative lanes are the tokens of a warp): 32 in a tile of 8 rows, 8 for one row
+  // threads of strict_device_tokens (negative lanes are the tokens of a warp): 32 in a tile of 32 rows, 8 for one row
   func.func private @strict_gpu_token_threads(%count: i64, %lanes: i64, %values: !llvm.ptr, %rows: i64) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -7466,8 +7466,8 @@
     %thirtyOne = arith.constant 31 : i64
     %rowTotal = arith.maxsi %rowCount, %one : i64
     %tokens = arith.divui %count, %rowTotal : i64
-    %rowsRounded = arith.addi %rowTotal, %seven : i64
-    %rowTiles = arith.shrui %rowsRounded, %three : i64
+    %rowsRounded = arith.addi %rowTotal, %thirtyOne : i64
+    %rowTiles = arith.shrui %rowsRounded, %five : i64
     %tokensRounded = arith.addi %tokens, %thirtyOne : i64
     %tokenTiles = arith.shrui %tokensRounded, %five : i64
     %tileWarps = arith.muli %rowTiles, %tokenTiles : i64
