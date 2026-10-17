@@ -79,19 +79,18 @@ Next Number
 Nexts Numbers
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).Nexts is (Prompted.Step(3, 2).Next, Prompted.Step(4, 2).Next)
 	let logits = Batch(outputs, List(Number) + 0).Sums(Qwen3Block.Normalized(hidden, 0, hidden.Length, norm))
-	let width = outputs.Length % 128 is 0 then 128 else outputs.Length
+	let vocabulary = outputs.Length
+	let width = vocabulary % 128 is 0 then 128 else vocabulary
 	let best = Greedy.Best(logits, width)
-	let groups = outputs.Length / width
+	let chunks = Greedy.Best(Greedy.Maxima(best), vocabulary / width)
 	for hidden.Length / norm.Length
-		best(2 * Greedy.Chosen(best, index * groups, groups) + 1) - index * outputs.Length
+		best(2 * chunks(2 * index + 1) + 1) - index * vocabulary
 Embedded(chosen Numbers) Numbers
 	Tiny.Embedded((1, 2)).Length is 16
-	if chosen.Length is 1
-		return tokens(chosen.First)
-	mutable state = List(Number)
-	for chosen
-		state = state + tokens(value)
-	state
+	Tiny.Embedded((1, 2))(8) is Tiny.tokens(2).First
+	let width = norm.Length
+	for chosen.Length * width
+		tokens(chosen((index / width).Floor))(index % width)
 Copies(count Number) Qwen3
 	Prompted.Copies(2).blocks.First.keys.Length is 16
 	mutable copied = List(Mutable(Qwen3Block))

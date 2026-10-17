@@ -6883,10 +6883,10 @@
   ^done:
     return %true : i1
   }
-  // launches are captured into graphs of 48 and replayed, a graph of the same kernels runs again with updated arguments
-  // (cuGraphExecUpdate), so a decode step costs about 1.5 instead of 6 us of driver time per launch, STRICT_GRAPHS=0
-  // launches directly
-  llvm.mlir.global internal @strict_gpu_graph(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
+  // launches are captured into graphs of up to 96 and replayed, a graph of the same kernels runs again with updated
+  // arguments (cuGraphExecUpdate), so a decode step costs about 1.5 instead of 6 us of driver time per launch,
+  // STRICT_GRAPHS=0 launches directly; state (0 unknown, 1 graphs, 2 direct), capturing, launches, print, segment size
+  llvm.mlir.global internal @strict_gpu_graph(dense<[0, 0, 0, 0, 96]> : tensor<5xi64>) : !llvm.array<5 x i64>
   llvm.mlir.global internal @strict_gpu_graphs(dense<0> : tensor<512xi64>) : !llvm.array<512 x i64>
   llvm.mlir.global internal constant @strict_gpu_graph_switch("STRICT_GRAPHS\00") : !llvm.array<14 x i8>
   llvm.mlir.global internal constant @strict_gpu_graph_failed("Error: the GPU launches of a graph failed\0A\00") : !llvm.array<43 x i8>
@@ -6970,7 +6970,8 @@
     %functionBits = llvm.ptrtoint %function : !llvm.ptr to i64
     %combined = arith.xori %mixed, %functionBits : i64
     llvm.store %combined, %printSlot : i64, !llvm.ptr
-    %segment = arith.constant 96 : i64
+    %segmentSlot = llvm.getelementptr %graph[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %segment = llvm.load %segmentSlot : !llvm.ptr -> i64
     %full = arith.cmpi sge, %more, %segment : i64
     cf.cond_br %full, ^replay, ^done
   ^replay:
@@ -6990,6 +6991,18 @@
     cf.cond_br %isCapturing, ^end, ^done
   ^end:
     llvm.store %none, %capturingSlot : i64, !llvm.ptr
+    // after an early end (a download waits for the GPU) the GPU runs dry, segments of 8 doubling up to 96 refill it
+    %segmentSlot = llvm.getelementptr %graph[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %segment = llvm.load %segmentSlot : !llvm.ptr -> i64
+    %countSlot = llvm.getelementptr %graph[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %early = arith.cmpi slt, %count, %segment : i64
+    %doubled = arith.addi %segment, %segment : i64
+    %largest = arith.constant 96 : i64
+    %grown = arith.minsi %doubled, %largest : i64
+    %smallest = arith.constant 8 : i64
+    %nextSegment = arith.select %early, %smallest, %grown : i64
+    llvm.store %nextSegment, %segmentSlot : i64, !llvm.ptr
     %stream = func.call @strict_gpu_stream() : () -> !llvm.ptr
     %graphSlot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
     llvm.store %none, %graphSlot : i64, !llvm.ptr
@@ -7616,9 +7629,14 @@
     %hasBlock = arith.cmpi ne, %block, %none : i64
     cf.cond_br %hasBlock, ^promoted, ^temporary
   ^promoted:
-    func.call @strict_gpu_replay() : () -> ()
+    // staged and copied on the device, so the captured launches go on (a direct upload would end the graph)
+    %staged = func.call @strict_gpu_temporary(%size, %buffer) : (i64, !llvm.ptr) -> i64
     %source = func.call @strict_gpu_host(%list) : (f64) -> !llvm.ptr
-    %uploaded = func.call @strict_gpu_put_async(%block, %source, %bytes) : (i64, !llvm.ptr, i64) -> i1
+    %stagedCopy = func.call @strict_gpu_stage(%staged, %source, %bytes) : (i64, !llvm.ptr, i64) -> i1
+    %stagedUp = func.call @strict_gpu_flush() : () -> i1
+    %moved = func.call @strict_gpu_copy(%block, %staged, %bytes) : (i64, i64, i64) -> i1
+    %stagedMoved = arith.andi %stagedCopy, %stagedUp : i1
+    %uploaded = arith.andi %stagedMoved, %moved : i1
     func.call @strict_gpu_view(%out, %block, %length, %bits) : (!llvm.ptr, i64, i64, i64) -> ()
     %pool = arith.addi %class, %one : i64
     func.call @strict_gpu_remember(%list, %one, %length, %out, %pool) : (f64, i64, i64, !llvm.ptr, i64) -> ()

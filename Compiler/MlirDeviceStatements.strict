@@ -44,7 +44,8 @@ Moved(entry InstructionEntry) Texts
 	loaded + function.Store(Temp(""), target)
 Copied(source Text, target Text, name Text) Texts
 	MlirDeviceStatements(Doubled, 3).Copied("%v_value", "%r1", "value").Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
-	if IsList(MlirKinds(function).VariableKind(at, name)) is false
+	MlirDeviceStatements(MlirDeviceRows.Nesting, 5).Emitted.Last.EndsWith("%v_list0b : i64, !llvm.ptr")
+	if IsList(MlirKinds(function).VariableKind(at + 1, name)) is false
 		return (function.Load(Temp(""), source), function.Store(Temp(""), target))
 	mutable lines = List(Mutable(Text))
 	for MlirTyped.Parts
