@@ -7984,7 +7984,8 @@
   ^done(%total: i64):
     return %total : i64
   }
-  // strict_device_attention takes a block of 256 threads per sequence, group of keys and 128 rows of tokens and heads
+  // strict_device_attention takes a block of 256 threads per sequence, group of keys and 128 rows of tokens and heads,
+  // when one warp holds all tokens (decoding) a group gets a block per 128 positions (at most 16, 512 blocks in all)
   func.func private @strict_gpu_attention_threads(%count: i64, %values: !llvm.ptr) -> i64 {
     %one = arith.constant 1 : i64
     %sixteen = arith.constant 16 : i64
@@ -8012,15 +8013,33 @@
     %tokensUp = arith.addi %tokens, %spare : i64
     %tokenBlocks = arith.divui %tokensUp, %blockTokens : i64
     %sequenceGroups = arith.muli %sequences, %groups : i64
-    %blocks = arith.muli %sequenceGroups, %tokenBlocks : i64
+    %promptBlocks = arith.muli %sequenceGroups, %tokenBlocks : i64
+    %decoding = arith.cmpi sle, %tokens, %warpTokens : i64
+    %keysSlot = llvm.getelementptr %values[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %keysList = llvm.load %keysSlot : !llvm.ptr -> f64
+    %keysLength = func.call @strict_list_length(%keysList) : (f64) -> f64
+    %keysCount = arith.fptosi %keysLength : f64 to i64
+    %positionSize = arith.muli %sequenceGroups, %size : i64
+    %positions = arith.divui %keysCount, %positionSize : i64
+    %spread = arith.constant 127 : i64
+    %positionsUp = arith.addi %positions, %spread : i64
+    %seven = arith.constant 7 : i64
+    %parts = arith.shrui %positionsUp, %seven : i64
+    %mostParts = arith.minui %parts, %sixteen : i64
+    %allPartials = arith.constant 512 : i64
+    %partialsEach = arith.divui %allPartials, %sequenceGroups : i64
+    %fewerParts = arith.minui %mostParts, %partialsEach : i64
+    %splits = arith.maxui %fewerParts, %one : i64
+    %decodeBlocks = arith.muli %sequenceGroups, %splits : i64
+    %blocks = arith.select %decoding, %decodeBlocks, %promptBlocks : i64
     %threads = arith.muli %blocks, %perBlock : i64
     return %threads : i64
   }
   llvm.mlir.global internal constant @strict_gpu_attention_name("strict_device_attention\00strict_device_attentions\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal @strict_gpu_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
-  // `Attention.Merged` of a prompt on the 16 bit tensor cores (strict_device_attention): queries, keys and values like
-  // there, 0.0 when the GPU can not, then the method itself runs (a single token per sequence, head size not a multiple
-  // of 8 or above 128, more than 16 heads per group of keys, lists that do not match)
+  // `Attention.Merged` on the 16 bit tensor cores (strict_device_attention): queries, keys and values like there, 0.0
+  // when the GPU can not, then the method itself runs (head size not a multiple of 8 or above 128, more than 16 heads
+  // per group of keys, lists that do not match)
   func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -8071,8 +8090,7 @@
     %wholeRows = arith.cmpi eq, %rowsRest, %none : i64
     %wholeQueries = arith.cmpi eq, %queriesRest, %none : i64
     %wholeKeys = arith.cmpi eq, %keysRest, %none : i64
-    %one = arith.constant 1 : i64
-    %someTokens = arith.cmpi sgt, %tokens, %one : i64
+    %someTokens = arith.cmpi sgt, %tokens, %none : i64
     %enoughPositions = arith.cmpi sge, %positions, %tokens : i64
     %sameValues = arith.cmpf oeq, %valueLength, %keyLength : f64
     %listsFit = arith.andi %wholeQueries, %wholeKeys : i1
