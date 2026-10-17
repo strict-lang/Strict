@@ -15,7 +15,7 @@ constant Calling = Frame(Machine(Resolver(List(TypeEntry) + Invocation.Failing).
 constant Listed = (VmValue.OfText("ab"), VmValue.OfText("a"), VmValue.None, VmValue.OfBoolean(true), Looping.Counting, VmValue.None, VmValue.OfNumber(1), VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)), VmValue.OfNumber(5))
 Finished(arguments List(VmValue)) List(VmValue)
 	Twice.Finished(Listed).Index(VmValue.OfNumber(42)) is ResultSlot
-	mutable slots = List(VmValue) + arguments
+	mutable slots = arguments
 	mutable position = 0
 	let instructions = method.instructions
 	for Machine.MaxSteps
@@ -99,7 +99,7 @@ Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	mutable arguments = List(Mutable(VmValue))
 	for entry.payload(count)
 		arguments.Add(slots(entry.payload(count + 1 + index)))
-	Invocation(entry, arguments, instance, depth + 1)
+	Invocation(entry, arguments, instance, depth + 1, flag + 1 + entry.payload(flag))
 Traced(error VmValue, position Number) VmValue
 	Twice.Traced(VmValue.OfError("a"), 0).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0
 	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0), 0).items(1).items.Length is 1
