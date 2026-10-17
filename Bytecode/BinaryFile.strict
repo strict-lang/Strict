@@ -1,20 +1,10 @@
 has source Text
 constant Probe = BinaryFile("./Bytecode/Probe.strict")
-constant Packing = Probe.Unpacked(Probe.Packed(Probe.Header(List(Text)), List(TypeEntry) + TypeEntry.HelloLogger, List(TypeEntry)))
+constant Packing = Probe.Unpacked(Probe.Packed(BinarySources(List(Text)).Header, List(TypeEntry) + TypeEntry.HelloLogger, List(TypeEntry)))
 constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + 5, List(TypeEntry), List(TypeEntry)))
 Path Text
 	Probe.Path is "./Bytecode/Probe.strictbinary"
 	source.Substring(0, source.Length - 7) + ".strictbinary"
-Header(sources Texts) Numbers
-	Probe.Header(List(Text)) is (1, 0, 4)
-	mutable integers = BinaryNames(sources).Integers + TypeEntry.FormatVersion
-	for sources
-		integers = integers + Stamp(value)
-	integers
-Stamp(path Text) Number
-	Probe.Stamp("./Any.strict") > 1.7e12
-	Probe.Stamp("./Missing.strict") is 0
-	(File(path).Modified * 1000).Floor
 Packed(header Numbers, types List(TypeEntry), owners List(TypeEntry)) Bytes
 	Probe.Packed((1, 2), List(TypeEntry), List(TypeEntry)).Length > 50
 	mutable entries = List(Mutable(ZipEntry)) + ZipEntry("sources", ByteEncoder.Empty.SevenBits(header).bytes)
@@ -47,10 +37,8 @@ IsCurrent(entries List(ZipEntry)) Boolean
 	let header = EntryDecoder.Of(entries.First.content)
 	let start = 1 + header.stream(0)
 	let complete = header.stream.Length is start + 1 + header.names.Length
-	mutable fresh = complete and (header.stream(start) is TypeEntry.FormatVersion)
-	for header.names
-		fresh = fresh and (Stamp(value) is header.stream(start + 1 + index))
-	fresh
+	let stamped = BinarySources(header.names).Stamped
+	complete and (header.stream(start) is TypeEntry.FormatVersion) and stamped.Matches(header.stream, start + 1)
 Types(entries List(ZipEntry)) List(TypeEntry)
 	Probe.Types(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
 	Probe.Types(List(ZipEntry)).Length is 0
