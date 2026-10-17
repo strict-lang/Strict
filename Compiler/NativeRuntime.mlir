@@ -1301,7 +1301,7 @@
     %pooledSlot = llvm.mlir.addressof @strict_gc_pooled : !llvm.ptr
     %spareSlot = llvm.mlir.addressof @strict_gc_spare : !llvm.ptr
     %spareCountSlot = llvm.mlir.addressof @strict_gc_spare_count : !llvm.ptr
-    cf.cond_br %single, ^pool, ^grow
+    cf.cond_br %single, ^pool, ^runs
   ^pool:
     %pooled = llvm.load %poolSlot : !llvm.ptr -> i64
     %hasPooled = arith.cmpi ne, %pooled, %zero : i64
@@ -1319,7 +1319,7 @@
   ^spare:
     %spareCount = llvm.load %spareCountSlot : !llvm.ptr -> i64
     %hasSpare = arith.cmpi ne, %spareCount, %zero : i64
-    cf.cond_br %hasSpare, ^recommit, ^grow
+    cf.cond_br %hasSpare, ^recommit, ^runs
   ^recommit:
     %last = arith.subi %spareCount, %one : i64
     llvm.store %last, %spareCountSlot : i64, !llvm.ptr
@@ -1330,6 +1330,12 @@
     %sparePagePointer = llvm.inttoptr %sparePage : i64 to !llvm.ptr
     func.call @strict_commit(%sparePagePointer, %pageSize) : (!llvm.ptr, i64) -> ()
     return %sparePage : i64
+  ^runs:
+    %reused = func.call @strict_gc_reuse_run(%count) : (i64) -> i64
+    %found = arith.cmpi ne, %reused, %zero : i64
+    cf.cond_br %found, ^reusing, ^grow
+  ^reusing:
+    return %reused : i64
   ^grow:
     %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
     %top = llvm.load %topSlot : !llvm.ptr -> i64
@@ -2035,6 +2041,141 @@
   ^done:
     return
   }
+  // freed large blocks become decommitted runs merged with their neighbors, any page request takes the first run that
+  // fits before the heap grows: a program allocating and freeing large lists for long reuses its address space
+  llvm.mlir.global internal @strict_gc_runs(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_run_count(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_run_capacity(0 : i64) : i64
+  func.func private @strict_gc_run_entry(%index: i64) -> !llvm.ptr {
+    %two = arith.constant 2 : i64
+    %runsSlot = llvm.mlir.addressof @strict_gc_runs : !llvm.ptr
+    %runs = llvm.load %runsSlot : !llvm.ptr -> i64
+    %runsPointer = llvm.inttoptr %runs : i64 to !llvm.ptr
+    %offset = arith.muli %index, %two : i64
+    %entry = llvm.getelementptr %runsPointer[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    return %entry : !llvm.ptr
+  }
+  func.func private @strict_gc_remove_run(%index: i64) {
+    %one = arith.constant 1 : i64
+    %countSlot = llvm.mlir.addressof @strict_gc_run_count : !llvm.ptr
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %last = arith.subi %count, %one : i64
+    %lastEntry = func.call @strict_gc_run_entry(%last) : (i64) -> !llvm.ptr
+    %entry = func.call @strict_gc_run_entry(%index) : (i64) -> !llvm.ptr
+    %lastStart = llvm.load %lastEntry : !llvm.ptr -> i64
+    %lastPagesSlot = llvm.getelementptr %lastEntry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %lastPages = llvm.load %lastPagesSlot : !llvm.ptr -> i64
+    llvm.store %lastStart, %entry : i64, !llvm.ptr
+    %pagesSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %lastPages, %pagesSlot : i64, !llvm.ptr
+    llvm.store %last, %countSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_free_run(%first: i64, %firstPages: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %pageSize = arith.constant 65536 : i64
+    %freedBytes = arith.muli %firstPages, %pageSize : i64
+    %freedPointer = llvm.inttoptr %first : i64 to !llvm.ptr
+    func.call @strict_decommit(%freedPointer, %freedBytes) : (!llvm.ptr, i64) -> ()
+    %countSlot = llvm.mlir.addressof @strict_gc_run_count : !llvm.ptr
+    cf.br ^merge(%first, %firstPages : i64, i64)
+  ^merge(%start: i64, %pages: i64):
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %length = arith.muli %pages, %pageSize : i64
+    %end = arith.addi %start, %length : i64
+    cf.br ^scan(%zero : i64)
+  ^scan(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^compare, ^append
+  ^compare:
+    %entry = func.call @strict_gc_run_entry(%index) : (i64) -> !llvm.ptr
+    %runStart = llvm.load %entry : !llvm.ptr -> i64
+    %runPagesSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %runPages = llvm.load %runPagesSlot : !llvm.ptr -> i64
+    %runLength = arith.muli %runPages, %pageSize : i64
+    %runEnd = arith.addi %runStart, %runLength : i64
+    %before = arith.cmpi eq, %runEnd, %start : i64
+    %after = arith.cmpi eq, %runStart, %end : i64
+    %adjacent = arith.ori %before, %after : i1
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %adjacent, ^join, ^scan(%next : i64)
+  ^join:
+    func.call @strict_gc_remove_run(%index) : (i64) -> ()
+    %joinedStart = arith.minui %start, %runStart : i64
+    %joinedPages = arith.addi %pages, %runPages : i64
+    cf.br ^merge(%joinedStart, %joinedPages : i64, i64)
+  ^append:
+    %capacitySlot = llvm.mlir.addressof @strict_gc_run_capacity : !llvm.ptr
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
+    %full = arith.cmpi uge, %count, %capacity : i64
+    cf.cond_br %full, ^grow, ^store
+  ^grow:
+    %initial = arith.constant 256 : i64
+    %sixteen = arith.constant 16 : i64
+    %doubled = arith.addi %capacity, %capacity : i64
+    %isFirst = arith.cmpi eq, %capacity, %zero : i64
+    %newCapacity = arith.select %isFirst, %initial, %doubled : i64
+    %grownBytes = arith.muli %newCapacity, %sixteen : i64
+    %runsSlot = llvm.mlir.addressof @strict_gc_runs : !llvm.ptr
+    %runs = llvm.load %runsSlot : !llvm.ptr -> i64
+    %runsPointer = llvm.inttoptr %runs : i64 to !llvm.ptr
+    %grown = llvm.call @realloc(%runsPointer, %grownBytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %grownBits = llvm.ptrtoint %grown : !llvm.ptr to i64
+    %failed = arith.cmpi eq, %grownBits, %zero : i64
+    cf.cond_br %failed, ^fail, ^grown
+  ^fail:
+    func.call @strict_gc_fail() : () -> ()
+    return
+  ^grown:
+    llvm.store %grownBits, %runsSlot : i64, !llvm.ptr
+    llvm.store %newCapacity, %capacitySlot : i64, !llvm.ptr
+    cf.br ^store
+  ^store:
+    %stored = func.call @strict_gc_run_entry(%count) : (i64) -> !llvm.ptr
+    llvm.store %start, %stored : i64, !llvm.ptr
+    %storedPagesSlot = llvm.getelementptr %stored[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %pages, %storedPagesSlot : i64, !llvm.ptr
+    %counted = arith.addi %count, %one : i64
+    llvm.store %counted, %countSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_reuse_run(%wanted: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %pageSize = arith.constant 65536 : i64
+    %countSlot = llvm.mlir.addressof @strict_gc_run_count : !llvm.ptr
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    cf.br ^scan(%zero : i64)
+  ^scan(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^compare, ^missing
+  ^compare:
+    %entry = func.call @strict_gc_run_entry(%index) : (i64) -> !llvm.ptr
+    %pagesSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pages = llvm.load %pagesSlot : !llvm.ptr -> i64
+    %fits = arith.cmpi uge, %pages, %wanted : i64
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %fits, ^take, ^scan(%next : i64)
+  ^take:
+    %start = llvm.load %entry : !llvm.ptr -> i64
+    %bytes = arith.muli %wanted, %pageSize : i64
+    %rest = arith.subi %pages, %wanted : i64
+    %restStart = arith.addi %start, %bytes : i64
+    llvm.store %restStart, %entry : i64, !llvm.ptr
+    llvm.store %rest, %pagesSlot : i64, !llvm.ptr
+    %used = arith.cmpi eq, %rest, %zero : i64
+    cf.cond_br %used, ^remove, ^commit
+  ^remove:
+    func.call @strict_gc_remove_run(%index) : (i64) -> ()
+    cf.br ^commit
+  ^commit:
+    %pointer = llvm.inttoptr %start : i64 to !llvm.ptr
+    func.call @strict_commit(%pointer, %bytes) : (!llvm.ptr, i64) -> ()
+    return %start : i64
+  ^missing:
+    return %zero : i64
+  }
   func.func private @strict_gc_sweep_large() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -2062,13 +2203,16 @@
     cf.br ^release(%zero : i64)
   ^release(%index: i64):
     %more = arith.cmpi ult, %index, %pages : i64
-    cf.cond_br %more, ^releaseOne, ^visit(%link : !llvm.ptr)
+    cf.cond_br %more, ^releaseOne, ^freed
   ^releaseOne:
     %pageOffset = arith.muli %index, %pageSize : i64
     %pageAddress = arith.addi %current, %pageOffset : i64
-    func.call @strict_gc_release_page(%pageAddress) : (i64) -> ()
+    func.call @strict_gc_page_kind(%pageAddress, %zero) : (i64, i64) -> ()
     %nextIndex = arith.addi %index, %one : i64
     cf.br ^release(%nextIndex : i64)
+  ^freed:
+    func.call @strict_gc_free_run(%current, %pages) : (i64, i64) -> ()
+    cf.br ^visit(%link : !llvm.ptr)
   ^done:
     return
   }

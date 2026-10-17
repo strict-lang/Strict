@@ -1,0 +1,16 @@
+has logger
+Copied(times Number) Number
+	LargeCollections.Copied(1100) is 1100 * 67108865
+	let large = Doubled("ab", 25)
+	mutable length = 0
+	for times
+		length = length + (large + "!").Length
+	length
+Doubled(text Text, times Number) Text
+	LargeCollections.Doubled("ab", 2) is "abababab"
+	mutable doubled = text
+	for times
+		doubled = doubled + doubled
+	doubled
+Run
+	logger.Log(Copied(1100))
