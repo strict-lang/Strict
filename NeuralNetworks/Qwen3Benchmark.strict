@@ -25,10 +25,10 @@ Durations(model Qwen3, token Number, start Number, count Number, batch Number) N
 	mutable last = Process.Elapsed
 	for count
 		current = current.Steps(chosen, Repeated(List(Number) + (start + index), batch), batch)
-		chosen = Repeated(List(Number) + current.Nexts.First, batch)
-		let now = Process.Elapsed
-		let duration = (now - last) * 1000
-		last = now
+		chosen.First >= 0
+		chosen = current.Nexts
+		let duration = (Process.Elapsed - last) * 1000
+		last = last + duration / 1000
 		duration
 Report(prompt Number, prefill Number, durations Numbers, batch Number) Text
 	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30), 1).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)")

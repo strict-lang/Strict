@@ -5818,9 +5818,9 @@
   // stay on the CPU (STRICT_GPU=all sends every loop), loops reading a list that is already on the GPU run there at any size
   llvm.mlir.global internal @strict_gpu_minimum(4194304 : i64) : i64
   llvm.mlir.global internal @strict_gpu_setting(0 : i64) : i64
-  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<26xi64>) : !llvm.array<26 x i64>
+  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<31xi64>) : !llvm.array<31 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
-  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00") : !llvm.array<447 x i8>
+  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00") : !llvm.array<535 x i8>
   llvm.mlir.global internal constant @strict_gpu_switch("STRICT_GPU\00") : !llvm.array<11 x i8>
   func.func private @strict_gpu_ready() -> i1 {
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
@@ -5888,7 +5888,7 @@
   func.func private @strict_gpu_resolve(%library: !llvm.ptr) -> i1 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %count = arith.constant 26 : i64
+    %count = arith.constant 31 : i64
     %names = llvm.mlir.addressof @strict_gpu_names : !llvm.ptr
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
@@ -5904,7 +5904,7 @@
     cf.cond_br %missing, ^failed, ^store
   ^store:
     %bits = llvm.ptrtoint %function : !llvm.ptr to i64
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<26 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<31 x i64>
     llvm.store %bits, %slot : i64, !llvm.ptr
     %length = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
     %skipped = arith.addi %length, %one : i64
@@ -5930,7 +5930,7 @@
     cf.br ^lookup
   ^lookup:
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<26 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<31 x i64>
     %bits = llvm.load %slot : !llvm.ptr -> i64
     %function = llvm.inttoptr %bits : i64 to !llvm.ptr
     return %function : !llvm.ptr
@@ -6064,6 +6064,190 @@
     %put = func.call @strict_gpu_call(%putIndex) : (i64) -> !llvm.ptr
     %result = llvm.call %put(%device, %host, %bytes) : !llvm.ptr, (i64, !llvm.ptr, i64) -> i32
     %done = arith.cmpi eq, %result, %zero32 : i32
+    return %done : i1
+  }
+  // a download of a small result (up to 256 numbers, like the tokens of a step) waits only for the event recorded after
+  // the graph segment of its last write and copies on a stream of its own, the launches after it go on: the last 64
+  // segments (numbers, events), launched count, download stream; the last 128 small results (holders, segments), next
+  llvm.mlir.global internal @strict_gpu_segments(dense<0> : tensor<130xi64>) : !llvm.array<130 x i64>
+  llvm.mlir.global internal @strict_gpu_marks(dense<0> : tensor<257xi64>) : !llvm.array<257 x i64>
+  // the segment a launch just captured runs in, 0 when launched directly (no event follows those)
+  func.func private @strict_gpu_segment() -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %segments = llvm.mlir.addressof @strict_gpu_segments : !llvm.ptr
+    %launchedSlot = llvm.getelementptr %segments[0, 128] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<130 x i64>
+    %launched = llvm.load %launchedSlot : !llvm.ptr -> i64
+    %graph = llvm.mlir.addressof @strict_gpu_graph : !llvm.ptr
+    %capturingSlot = llvm.getelementptr %graph[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %capturing = llvm.load %capturingSlot : !llvm.ptr -> i64
+    %pending = arith.cmpi ne, %capturing, %none : i64
+    %following = arith.addi %launched, %one : i64
+    %segment = arith.select %pending, %following, %launched : i64
+    return %segment : i64
+  }
+  func.func private @strict_gpu_segment_launched(%stream: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %mask = arith.constant 63 : i64
+    %eventsStart = arith.constant 64 : i64
+    %segments = llvm.mlir.addressof @strict_gpu_segments : !llvm.ptr
+    %launchedSlot = llvm.getelementptr %segments[0, 128] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<130 x i64>
+    %launched = llvm.load %launchedSlot : !llvm.ptr -> i64
+    %segment = arith.addi %launched, %one : i64
+    llvm.store %segment, %launchedSlot : i64, !llvm.ptr
+    %slot = arith.andi %segment, %mask : i64
+    %eventIndex = arith.addi %slot, %eventsStart : i64
+    %eventSlot = llvm.getelementptr %segments[0, %eventIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<130 x i64>
+    %existing = llvm.load %eventSlot : !llvm.ptr -> i64
+    %isNew = arith.cmpi eq, %existing, %none : i64
+    cf.cond_br %isNew, ^create, ^record
+  ^create:
+    %createIndex = arith.constant 26 : i64
+    %create = func.call @strict_gpu_call(%createIndex) : (i64) -> !llvm.ptr
+    %withoutTiming = arith.constant 2 : i32
+    %created = llvm.call %create(%eventSlot, %withoutTiming) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    cf.br ^record
+  ^record:
+    %eventBits = llvm.load %eventSlot : !llvm.ptr -> i64
+    %event = llvm.inttoptr %eventBits : i64 to !llvm.ptr
+    %recordIndex = arith.constant 27 : i64
+    %record = func.call @strict_gpu_call(%recordIndex) : (i64) -> !llvm.ptr
+    %recorded = llvm.call %record(%event, %stream) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %numberSlot = llvm.getelementptr %segments[0, %slot] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<130 x i64>
+    llvm.store %segment, %numberSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gpu_mark(%list: f64, %count: i64, %segment: i64) {
+    %smallest = arith.constant 256 : i64
+    %isSmall = arith.cmpi sle, %count, %smallest : i64
+    cf.cond_br %isSmall, ^mark, ^done
+  ^mark:
+    %one = arith.constant 1 : i64
+    %mask = arith.constant 127 : i64
+    %segmentsStart = arith.constant 128 : i64
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %holder = llvm.load %holderSlot : !llvm.ptr -> i64
+    %marks = llvm.mlir.addressof @strict_gpu_marks : !llvm.ptr
+    %nextSlot = llvm.getelementptr %marks[0, 256] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<257 x i64>
+    %next = llvm.load %nextSlot : !llvm.ptr -> i64
+    %index = arith.andi %next, %mask : i64
+    %holderEntry = llvm.getelementptr %marks[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<257 x i64>
+    llvm.store %holder, %holderEntry : i64, !llvm.ptr
+    %segmentIndex = arith.addi %index, %segmentsStart : i64
+    %segmentEntry = llvm.getelementptr %marks[0, %segmentIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<257 x i64>
+    llvm.store %segment, %segmentEntry : i64, !llvm.ptr
+    %following = arith.addi %next, %one : i64
+    llvm.store %following, %nextSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the event after the segment of this small result once it is launched, none for other lists
+  func.func private @strict_gpu_marked(%holder: !llvm.ptr) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %marksMask = arith.constant 127 : i64
+    %marksCount = arith.constant 128 : i64
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %holderBits = llvm.ptrtoint %holder : !llvm.ptr to i64
+    %marks = llvm.mlir.addressof @strict_gpu_marks : !llvm.ptr
+    %nextSlot = llvm.getelementptr %marks[0, 256] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<257 x i64>
+    %next = llvm.load %nextSlot : !llvm.ptr -> i64
+    %newest = arith.subi %next, %one : i64
+    cf.br ^check(%none : i64)
+  ^check(%age: i64):
+    %more = arith.cmpi slt, %age, %marksCount : i64
+    cf.cond_br %more, ^compare, ^missing
+  ^compare:
+    %position = arith.subi %newest, %age : i64
+    %index = arith.andi %position, %marksMask : i64
+    %entry = llvm.getelementptr %marks[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<257 x i64>
+    %marked = llvm.load %entry : !llvm.ptr -> i64
+    %same = arith.cmpi eq, %marked, %holderBits : i64
+    %older = arith.addi %age, %one : i64
+    cf.cond_br %same, ^found(%index : i64), ^check(%older : i64)
+  ^found(%found: i64):
+    %segmentIndex = arith.addi %found, %marksCount : i64
+    %segmentEntry = llvm.getelementptr %marks[0, %segmentIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<257 x i64>
+    %segment = llvm.load %segmentEntry : !llvm.ptr -> i64
+    func.call @strict_gpu_replay() : () -> ()
+    %segmentsMask = arith.constant 63 : i64
+    %eventsStart = arith.constant 64 : i64
+    %segments = llvm.mlir.addressof @strict_gpu_segments : !llvm.ptr
+    %slot = arith.andi %segment, %segmentsMask : i64
+    %numberSlot = llvm.getelementptr %segments[0, %slot] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<130 x i64>
+    %number = llvm.load %numberSlot : !llvm.ptr -> i64
+    %eventIndex = arith.addi %slot, %eventsStart : i64
+    %eventSlot = llvm.getelementptr %segments[0, %eventIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<130 x i64>
+    %eventBits = llvm.load %eventSlot : !llvm.ptr -> i64
+    %sameSegment = arith.cmpi eq, %number, %segment : i64
+    %hasEvent = arith.cmpi ne, %eventBits, %none : i64
+    %usable = arith.andi %sameSegment, %hasEvent : i1
+    %event = llvm.inttoptr %eventBits : i64 to !llvm.ptr
+    %result = llvm.select %usable, %event, %nothing : i1, !llvm.ptr
+    return %result : !llvm.ptr
+  ^missing:
+    return %nothing : !llvm.ptr
+  }
+  // a collected list may give its holder to a new one
+  func.func private @strict_gpu_unmark_collected() {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %sixteen = arith.constant 16 : i64
+    %count = arith.constant 128 : i64
+    %marks = llvm.mlir.addressof @strict_gpu_marks : !llvm.ptr
+    cf.br ^next(%none : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %entry = llvm.getelementptr %marks[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<257 x i64>
+    %holder = llvm.load %entry : !llvm.ptr -> i64
+    %following = arith.addi %index, %one : i64
+    %isUsed = arith.cmpi ne, %holder, %none : i64
+    cf.cond_br %isUsed, ^alive, ^next(%following : i64)
+  ^alive:
+    %list = arith.subi %holder, %sixteen : i64
+    %kept = func.call @strict_gc_is_marked(%list) : (i64) -> i1
+    cf.cond_br %kept, ^next(%following : i64), ^clear
+  ^clear:
+    llvm.store %none, %entry : i64, !llvm.ptr
+    cf.br ^next(%following : i64)
+  ^done:
+    return
+  }
+  // bytes of device into host once event has passed, on the download stream (the launches after it go on)
+  func.func private @strict_gpu_get_after(%host: !llvm.ptr, %device: i64, %bytes: i64, %event: !llvm.ptr) -> i1 {
+    %zero32 = arith.constant 0 : i32
+    %none = arith.constant 0 : i64
+    %waitIndex = arith.constant 28 : i64
+    %wait = func.call @strict_gpu_call(%waitIndex) : (i64) -> !llvm.ptr
+    %waited = llvm.call %wait(%event) : !llvm.ptr, (!llvm.ptr) -> i32
+    %segments = llvm.mlir.addressof @strict_gpu_segments : !llvm.ptr
+    %streamSlot = llvm.getelementptr %segments[0, 129] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<130 x i64>
+    %existing = llvm.load %streamSlot : !llvm.ptr -> i64
+    %isNew = arith.cmpi eq, %existing, %none : i64
+    cf.cond_br %isNew, ^create, ^copy
+  ^create:
+    %createIndex = arith.constant 16 : i64
+    %create = func.call @strict_gpu_call(%createIndex) : (i64) -> !llvm.ptr
+    %nonBlocking = arith.constant 1 : i32
+    %created = llvm.call %create(%streamSlot, %nonBlocking) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    cf.br ^copy
+  ^copy:
+    %streamBits = llvm.load %streamSlot : !llvm.ptr -> i64
+    %stream = llvm.inttoptr %streamBits : i64 to !llvm.ptr
+    %getIndex = arith.constant 29 : i64
+    %get = func.call @strict_gpu_call(%getIndex) : (i64) -> !llvm.ptr
+    %result = llvm.call %get(%host, %device, %bytes, %stream) : !llvm.ptr, (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
+    %synchronizeIndex = arith.constant 30 : i64
+    %synchronize = func.call @strict_gpu_call(%synchronizeIndex) : (i64) -> !llvm.ptr
+    %synchronized = llvm.call %synchronize(%stream) : !llvm.ptr, (!llvm.ptr) -> i32
+    %copied = arith.cmpi eq, %result, %zero32 : i32
+    %finished = arith.cmpi eq, %synchronized, %zero32 : i32
+    %done = arith.andi %copied, %finished : i1
     return %done : i1
   }
   func.func private @strict_gpu_get(%host: !llvm.ptr, %device: i64, %bytes: i64) -> i1 {
@@ -6289,7 +6473,9 @@
     %asyncLaunched = func.call @strict_gpu_launch(%function, %threadTotal, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
     cf.cond_br %asyncLaunched, ^asyncDone, ^asyncFailed
   ^asyncDone:
+    %segment = func.call @strict_gpu_segment() : () -> i64
     %residentList = func.call @strict_gpu_resident(%count, %resident, %class, %resultBits) : (i64, i64, i64, i64) -> f64
+    func.call @strict_gpu_mark(%residentList, %count, %segment) : (f64, i64, i64) -> ()
     func.call @strict_gpu_settle(%buffers, %bufferCount) : (!llvm.ptr, i64) -> ()
     return %residentList : f64
   ^asyncFailed:
@@ -6753,7 +6939,17 @@
     %host = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %current = func.call @strict_gpu_current() : () -> i1
     %bounce = func.call @strict_gpu_bounce(%size) : (i64) -> !llvm.ptr
-    %got = func.call @strict_gpu_get(%bounce, %device, %bytes) : (!llvm.ptr, i64, i64) -> i1
+    %event = func.call @strict_gpu_marked(%holder) : (!llvm.ptr) -> !llvm.ptr
+    %noEvent = llvm.mlir.zero : !llvm.ptr
+    %isMarked = llvm.icmp "ne" %event, %noEvent : !llvm.ptr
+    cf.cond_br %isMarked, ^marked, ^unmarked
+  ^marked:
+    %markedGot = func.call @strict_gpu_get_after(%bounce, %device, %bytes, %event) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    cf.br ^copy(%markedGot : i1)
+  ^unmarked:
+    %plainGot = func.call @strict_gpu_get(%bounce, %device, %bytes) : (!llvm.ptr, i64, i64) -> i1
+    cf.br ^copy(%plainGot : i1)
+  ^copy(%got: i1):
     %copied = llvm.call @memcpy(%host, %bounce, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %failureSlot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
     %word = llvm.load %failureSlot : !llvm.ptr -> i64
@@ -6916,6 +7112,8 @@
     %longerHolder = llvm.getelementptr %longer[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %holderBits, %longerHolder : f64, !llvm.ptr
     %longerList = func.call @strict_bits(%longer) : (!llvm.ptr) -> f64
+    %appendSegment = func.call @strict_gpu_segment() : () -> i64
+    func.call @strict_gpu_mark(%longerList, %leftCount, %appendSegment) : (f64, i64, i64) -> ()
     return %longerList : f64
   ^copy:
     %doubled = arith.shli %bytes, %one : i64
@@ -7124,6 +7322,7 @@
     %launchIndex = arith.constant 21 : i64
     %launchGraph = func.call @strict_gpu_call(%launchIndex) : (i64) -> !llvm.ptr
     %launched = llvm.call %launchGraph(%runnable, %stream) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    func.call @strict_gpu_segment_launched(%stream) : (!llvm.ptr) -> ()
     // under WDDM the launch waits in the driver until something submits it, a query does (it is not ready yet)
     %queryIndex = arith.constant 25 : i64
     %query = func.call @strict_gpu_call(%queryIndex) : (i64) -> !llvm.ptr
@@ -8090,6 +8289,7 @@
     func.call @strict_gpu_evict(%entry) : (!llvm.ptr) -> ()
     cf.br ^next(%following : i64)
   ^done:
+    func.call @strict_gpu_unmark_collected() : () -> ()
     func.call @strict_gpu_sweep_residents(%full) : (i1) -> ()
     return
   }
