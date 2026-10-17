@@ -81,17 +81,11 @@ Slots Texts
 Entry Texts
 	Counter.Entry.Length is 4
 	"  ^stackChecked:" is in MlirGroups.Norming.function.Entry
-	mutable lines = Slot("%instance") + Store("%p0", "%instance") + (IsCalling then StackChecked else List(Text))
+	let checked = method.Invoked.Length > 0 then StackChecked else List(Text)
+	mutable lines = Slot("%instance") + Store("%p0", "%instance") + checked
 	for Parameters
 		lines = lines + Store("%p" + index, "%v_" + value)
 	lines + MlirParameters(value).Hoisted + MlirInstances(value, 0).Unpacked + MlirInstances(value, 0).Constants
-IsCalling Boolean
-	Counter.IsCalling is false
-	MlirGroups.Norming.function.IsCalling
-	for method.instructions
-		if value.kind is InstructionType.Invoke
-			return true
-	false
 Slot(name Text) Texts
 	Counter.Slot("%r0").Length is 2
 	("    " + name + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", Store("%zero", name))

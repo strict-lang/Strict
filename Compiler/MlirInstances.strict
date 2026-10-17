@@ -85,8 +85,7 @@ Field(entry InstructionEntry) Texts
 	let loaded = List(Text) + function.Load(Temp("i"), "%r" + entry.payload(1)) + memory.Pointer(Temp("i"), "i")
 	loaded + memory.Loaded(Temp("ip"), slot, "m") + function.Store(Temp("mv"), "%r" + entry.payload(0))
 Unpacked Texts
-	MlirInstances(Looping, 0).Unpacked.Length is 10
-	MlirInstances(Looping, 0).Unpacked.Last is "  ^unpacked:"
+	(MlirInstances(Looping, 0).Unpacked.Length, MlirInstances(Looping, 0).Unpacked.Last) is (10, "  ^unpacked:")
 	"    %self = llvm.load %instance : !llvm.ptr -> f64" is in MlirInstances(Looping, 0).Unpacked
 	MlirInstances(Sizing, 0).Unpacked.Length < MlirInstances(Nesting, 0).Unpacked.Length
 	if (MlirLayout(function).IsStruct(function.type.Name) is false) or (Stored(function.type).Length is 0)
