@@ -6144,7 +6144,8 @@
   ^done:
     return
   }
-  // the event after the segment of this small result once it is launched, none for other lists
+  // the event after the segment of this small result once it is launched, none for other lists; the GPU keeps running,
+  // so the next segments keep their size instead of starting at 8 again
   func.func private @strict_gpu_marked(%holder: !llvm.ptr) -> !llvm.ptr {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -6172,7 +6173,11 @@
     %segmentIndex = arith.addi %found, %marksCount : i64
     %segmentEntry = llvm.getelementptr %marks[0, %segmentIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<257 x i64>
     %segment = llvm.load %segmentEntry : !llvm.ptr -> i64
+    %graph = llvm.mlir.addressof @strict_gpu_graph : !llvm.ptr
+    %sizeSlot = llvm.getelementptr %graph[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %size = llvm.load %sizeSlot : !llvm.ptr -> i64
     func.call @strict_gpu_replay() : () -> ()
+    llvm.store %size, %sizeSlot : i64, !llvm.ptr
     %segmentsMask = arith.constant 63 : i64
     %eventsStart = arith.constant 64 : i64
     %segments = llvm.mlir.addressof @strict_gpu_segments : !llvm.ptr
@@ -7153,10 +7158,10 @@
   ^done:
     return %true : i1
   }
-  // launches are captured into graphs of up to 96 and replayed, a graph of the same kernels runs again with updated
+  // launches are captured into graphs of up to 256 and replayed, a graph of the same kernels runs again with updated
   // arguments (cuGraphExecUpdate), so a decode step costs about 1.5 instead of 6 us of driver time per launch,
   // STRICT_GRAPHS=0 launches directly; state (0 unknown, 1 graphs, 2 direct), capturing, launches, print, segment size
-  llvm.mlir.global internal @strict_gpu_graph(dense<[0, 0, 0, 0, 96]> : tensor<5xi64>) : !llvm.array<5 x i64>
+  llvm.mlir.global internal @strict_gpu_graph(dense<[0, 0, 0, 0, 256]> : tensor<5xi64>) : !llvm.array<5 x i64>
   llvm.mlir.global internal @strict_gpu_graphs(dense<0> : tensor<512xi64>) : !llvm.array<512 x i64>
   llvm.mlir.global internal constant @strict_gpu_graph_switch("STRICT_GRAPHS\00") : !llvm.array<14 x i8>
   llvm.mlir.global internal constant @strict_gpu_graph_failed("Error: the GPU launches of a graph failed\0A\00") : !llvm.array<43 x i8>
@@ -7261,14 +7266,14 @@
     cf.cond_br %isCapturing, ^end, ^done
   ^end:
     llvm.store %none, %capturingSlot : i64, !llvm.ptr
-    // after an early end (a download waits for the GPU) the GPU runs dry, segments of 8 doubling up to 96 refill it
+    // after an early end (a download waits for the GPU) the GPU runs dry, segments of 8 doubling up to 256 refill it
     %segmentSlot = llvm.getelementptr %graph[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %segment = llvm.load %segmentSlot : !llvm.ptr -> i64
     %countSlot = llvm.getelementptr %graph[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %count = llvm.load %countSlot : !llvm.ptr -> i64
     %early = arith.cmpi slt, %count, %segment : i64
     %doubled = arith.addi %segment, %segment : i64
-    %largest = arith.constant 96 : i64
+    %largest = arith.constant 256 : i64
     %grown = arith.minsi %doubled, %largest : i64
     %smallest = arith.constant 8 : i64
     %nextSegment = arith.select %early, %smallest, %grown : i64
