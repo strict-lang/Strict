@@ -20,6 +20,22 @@
   ^done:
     return %reserved : !llvm.ptr
   }
+  llvm.func @getrlimit(i32, !llvm.ptr) -> i32
+  // the main stack grows up to its limit (RLIMIT_STACK, at most 64 MB counted) below where it started
+  func.func private @strict_stack_lowest(%stack: !llvm.ptr) -> i64 {
+    %none = arith.constant 0 : i64
+    %two = arith.constant 2 : i64
+    %stackResource = arith.constant 3 : i32
+    %most = arith.constant 67108864 : i64
+    %limits = llvm.alloca %two x i64 : (i64) -> !llvm.ptr
+    llvm.store %none, %limits : i64, !llvm.ptr
+    %got = llvm.call @getrlimit(%stackResource, %limits) : (i32, !llvm.ptr) -> i32
+    %current = llvm.load %limits : !llvm.ptr -> i64
+    %size = arith.minui %current, %most : i64
+    %top = llvm.ptrtoint %stack : !llvm.ptr to i64
+    %lowest = arith.subi %top, %size : i64
+    return %lowest : i64
+  }
   func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
     return
   }

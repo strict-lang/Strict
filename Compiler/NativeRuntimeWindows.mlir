@@ -306,6 +306,15 @@
     %continueSearch = llvm.mlir.constant(0 : i32) : i32
     llvm.return %continueSearch : i32
   }
+  llvm.func @GetCurrentThreadStackLimits(!llvm.ptr, !llvm.ptr)
+  func.func private @strict_stack_lowest(%stack: !llvm.ptr) -> i64 {
+    %one = arith.constant 1 : i64
+    %low = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %high = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    llvm.call @GetCurrentThreadStackLimits(%low, %high) : (!llvm.ptr, !llvm.ptr) -> ()
+    %lowest = llvm.load %low : !llvm.ptr -> i64
+    return %lowest : i64
+  }
   func.func private @strict_guard() {
     %first = arith.constant 1 : i32
     %handler = llvm.mlir.addressof @strict_overflow_handler : !llvm.ptr
