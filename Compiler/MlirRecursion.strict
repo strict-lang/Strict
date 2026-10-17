@@ -1,0 +1,51 @@
+has functions List(MlirFunction)
+has entries Number
+constant Again = MethodEntry("Again", List(MemberEntry), "Strict/Number", (InstructionEntry.Invoke(0, ("Strict/Looped", "Again", "Strict/Number"), List(Number), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))
+constant Starting = MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.Invoke(0, ("Strict/Looped", "Again", "Strict/Number"), List(Number), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))
+constant Looped = MlirModule(List(TypeEntry) + TypeEntry("Strict/Looped", List(MemberEntry), (Starting, Again)), "Run")
+constant StackChecked = ("    %stackShort = func.call @strict_stack_short() : () -> i1", "    cf.cond_br %stackShort, ^stackOverflowed, ^stackChecked", "  ^stackOverflowed:", "    %stackOverflow = func.call @strict_stack_overflowed() : () -> f64", "    return %stackOverflow : f64", "  ^stackChecked:")
+constant Looping = MlirRecursion(Looped.Functions, 1)
+Recursive Texts
+	Looping.Recursive is ("Looped_Again_0")
+	MlirRecursion(MlirModule.Counters.Functions, 1).Recursive.Length is 0
+	let edges = Edges
+	let order = Order(edges)
+	for functions
+		if IsBack(edges(index), order.Index(index), order)
+			value.Symbol
+Edges List(Numbers)
+	Looping.Edges(1) is (1)
+	Looping.Edges(0) is (1)
+	let symbols = MlirModule.Counters.Symbols(functions)
+	mutable edges = List(Mutable(Numbers))
+	for functions
+		edges.Add(Indexes(MlirModule(value.types, "").Callees(value), symbols))
+	edges
+Indexes(callees List(MlirFunction), symbols Texts) Numbers
+	Looping.Indexes(Looping.functions, ("Looped_Again_0", "Looped_Run_0")) is (1, 0)
+	for callees
+		symbols.Index(value.Symbol)
+Order(edges List(Numbers)) Numbers
+	Looping.Order(Looping.Edges) is (1, 0)
+	mutable order = List(Number)
+	for Range(0, entries)
+		if value is not in order
+			order = Finished(value, List(Number), order, edges)
+	order
+Finished(node Number, path Numbers, order Numbers, edges List(Numbers)) Numbers
+	Looping.Finished(0, List(Number), List(Number), Looping.Edges) is (1, 0)
+	let onPath = path + node
+	mutable done = order
+	for edges(node)
+		if (value is not in done) and (value is not in onPath)
+			done = Finished(value, onPath, done, edges)
+	done + node
+IsBack(callees Numbers, rank Number, order Numbers) Boolean
+	Looping.IsBack((1), 0, (1, 0))
+	Looping.IsBack((1), 1, (1, 0)) is false
+	if rank < 0
+		return true
+	for callees
+		if (value < 0) or (order.Index(value) >= rank)
+			return true
+	false

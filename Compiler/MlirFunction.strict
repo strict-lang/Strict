@@ -6,12 +6,12 @@ has FastLoop Number = -1
 has Packing Text = ""
 has Float Text = "f64"
 has Group Number = -1
+has IsRecursive Boolean = true
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Adding = MlirFunction(List(TypeEntry), Shape, MethodEntry("+", List(MemberEntry), "None", List(InstructionEntry)))
 constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
-constant StackChecked = ("    %stackShort = func.call @strict_stack_short() : () -> i1", "    cf.cond_br %stackShort, ^stackOverflowed, ^stackChecked", "  ^stackOverflowed:", "    %stackOverflow = func.call @strict_stack_overflowed() : () -> f64", "    return %stackOverflow : f64", "  ^stackChecked:")
 constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 IsCounted = lineSlots.Length > 0
 Symbol Text
@@ -82,7 +82,7 @@ Entry Texts
 	Counter.Entry.Length is 4
 	"  ^stackChecked:" is in MlirGroups.Norming.function.Entry
 	"    %self = llvm.load %instance : !llvm.ptr -> f64" is in MlirInstances.Looping.Entry
-	let checked = method.Invoked.Length > 0 then StackChecked else List(Text)
+	let checked = IsRecursive and (method.Invoked.Length > 0) then MlirRecursion.StackChecked else List(Text)
 	mutable lines = Slot("%instance") + Store("%p0", "%instance") + checked
 	for Parameters
 		lines = lines + Store("%p" + index, "%v_" + value)
