@@ -10,12 +10,14 @@ Ptx(base Text) Text
 	let arguments = Nvptx + tools.Quoted(base + ".gpu.ll") + " -o " + tools.Quoted(base + ".ptx")
 	let compiled = ToolRunner(tools.Located("clang")).Execute(arguments)
 	compiled.Failed then "clang failed: " + compiled.error else Text.Combine(File(base + ".ptx").ReadLines, "\n")
-Combined(device Text) Text
+Combined(device Text, isAttending = false) Text
 	Local.Combined("module {\n}").IndexOf("@strict_device_element(") > 0
 	Local.Combined("module {\n}").IndexOf("@strict_device_tokens(") is -1
 	Local.Combined("module {\n" + MlirTokens.Marker + "\n}").IndexOf("@strict_device_tokens(") > 0
+	Local.Combined("module {\n}", true).IndexOf("@strict_device_attention(") > 0
 	let batched = device.IndexOf(MlirTokens.Marker) >= 0 then "\n" + Runtime("Tokens") else ""
-	device.Substring(0, device.Length - 1) + Runtime("Device") + batched + "\n}"
+	let attending = isAttending then "\n" + Runtime("Attention") else ""
+	device.Substring(0, device.Length - 1) + Runtime("Device") + batched + attending + "\n}"
 Runtime(name Text) Text
 	Local.Runtime("Tokens").IndexOf("@strict_device_tokens(") > 0
 	Text.Combine(File(tools.root + "/Compiler/NativeRuntime" + name + ".mlir").ReadLines, "\n")

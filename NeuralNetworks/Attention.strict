@@ -7,6 +7,8 @@ has size Number
 has sequences Number = 1
 constant Single = Attention((1, 0), (1, 0, 0, 1), (3, 4, 5, 6), 1, 1, 2)
 constant Pair = Attention((1, 0, 0, 1), (1, 0, 1, 0, 0, 1, 0, 1), (3, 4, 7, 8, 5, 6, 5, 6), 1, 1, 2, 2)
+constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
+constant Prompted = Attention(Safetensors.Part(Prompt, 0, 4096, 1), Safetensors.Part(Prompt, 4096, 3072, 1), Safetensors.Part(Prompt, 7168, 3072, 1), 4, 2, 64)
 Merged Numbers
 	Single.Merged.First.IsNearlyEqual(3.6604769013466867)
 	Single.Merged.Last.IsNearlyEqual(4.660476901346686)
@@ -35,8 +37,10 @@ Scores(positions Number) Numbers
 		sum / size.SquareRoot
 Last(token Number, positions Number, tokens Number) Number
 	Single.Last(3, 5, 2) is 4
+	Prompted.Merged(4095).IsNearlyEqual(0.061657, 0.005)
 	positions - tokens + token % tokens
 Visible(score Number, position Number, limit Number) Number
 	Single.Visible(2, 1, 1) is 2
 	Single.Visible(2, 2, 1) is -1000000000
+	Prompted.Merged(1866).IsNearlyEqual(-0.025784, 0.005)
 	position > limit then -1000000000 else score

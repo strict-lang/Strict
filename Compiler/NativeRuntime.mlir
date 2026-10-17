@@ -7975,7 +7975,135 @@
     %blockThreads = arith.muli %blockCount, %perBlock : i64
     %blocked = arith.cmpi eq, %perWarp, %sixtyFour : i64
     %chosen = arith.select %blocked, %blockThreads, %threads : i64
-    return %chosen : i64
+    %attentionLanes = arith.constant 128 : i64
+    %attending = arith.cmpi eq, %perWarp, %attentionLanes : i64
+    cf.cond_br %attending, ^attention, ^done(%chosen : i64)
+  ^attention:
+    %attentionThreads = func.call @strict_gpu_attention_threads(%count, %values) : (i64, !llvm.ptr) -> i64
+    cf.br ^done(%attentionThreads : i64)
+  ^done(%total: i64):
+    return %total : i64
+  }
+  // strict_device_attention takes a block of 256 threads per sequence, group of keys and 128 rows of tokens and heads
+  func.func private @strict_gpu_attention_threads(%count: i64, %values: !llvm.ptr) -> i64 {
+    %one = arith.constant 1 : i64
+    %sixteen = arith.constant 16 : i64
+    %perBlock = arith.constant 256 : i64
+    %eight = arith.constant 8 : i64
+    %headsSlot = llvm.getelementptr %values[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %headsNumber = llvm.load %headsSlot : !llvm.ptr -> f64
+    %groupsSlot = llvm.getelementptr %values[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %groupsNumber = llvm.load %groupsSlot : !llvm.ptr -> f64
+    %sizeSlot = llvm.getelementptr %values[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %sizeNumber = llvm.load %sizeSlot : !llvm.ptr -> f64
+    %sequencesSlot = llvm.getelementptr %values[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    %sequencesNumber = llvm.load %sequencesSlot : !llvm.ptr -> f64
+    %heads = arith.fptosi %headsNumber : f64 to i64
+    %groups = arith.fptosi %groupsNumber : f64 to i64
+    %size = arith.fptosi %sizeNumber : f64 to i64
+    %sequences = arith.fptosi %sequencesNumber : f64 to i64
+    %headsSize = arith.muli %heads, %size : i64
+    %sequenceQueries = arith.muli %headsSize, %sequences : i64
+    %tokens = arith.divui %count, %sequenceQueries : i64
+    %perGroup = arith.divui %heads, %groups : i64
+    %warpTokens = arith.divui %sixteen, %perGroup : i64
+    %blockTokens = arith.muli %warpTokens, %eight : i64
+    %spare = arith.subi %blockTokens, %one : i64
+    %tokensUp = arith.addi %tokens, %spare : i64
+    %tokenBlocks = arith.divui %tokensUp, %blockTokens : i64
+    %sequenceGroups = arith.muli %sequences, %groups : i64
+    %blocks = arith.muli %sequenceGroups, %tokenBlocks : i64
+    %threads = arith.muli %blocks, %perBlock : i64
+    return %threads : i64
+  }
+  llvm.mlir.global internal constant @strict_gpu_attention_name("strict_device_attention\00strict_device_attentions\00") : !llvm.array<49 x i8>
+  llvm.mlir.global internal @strict_gpu_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // `Attention.Merged` of a prompt on the 16 bit tensor cores (strict_device_attention): queries, keys and values like
+  // there, 0.0 when the GPU can not, then the method itself runs (a single token per sequence, head size not a multiple
+  // of 8 or above 128, more than 16 heads per group of keys, lists that do not match)
+  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %seven = arith.constant 7 : i64
+    %sixteen = arith.constant 16 : i64
+    %largest = arith.constant 128 : i64
+    %headCount = arith.fptosi %heads : f64 to i64
+    %groupCount = arith.fptosi %groups : f64 to i64
+    %numbers = arith.fptosi %size : f64 to i64
+    %sequenceCount = arith.fptosi %sequences : f64 to i64
+    %queryLength = func.call @strict_list_length(%queries) : (f64) -> f64
+    %keyLength = func.call @strict_list_length(%keys) : (f64) -> f64
+    %valueLength = func.call @strict_list_length(%values) : (f64) -> f64
+    %queryCount = arith.fptosi %queryLength : f64 to i64
+    %keyCount = arith.fptosi %keyLength : f64 to i64
+    %positive = arith.cmpi sgt, %groupCount, %none : i64
+    %someNumbers = arith.cmpi sgt, %numbers, %none : i64
+    %someSequences = arith.cmpi sgt, %sequenceCount, %none : i64
+    %numbersRest = arith.andi %numbers, %seven : i64
+    %wholeSteps = arith.cmpi eq, %numbersRest, %none : i64
+    %fewNumbers = arith.cmpi sle, %numbers, %largest : i64
+    %positives = arith.andi %positive, %someNumbers : i1
+    %shaped = arith.andi %positives, %someSequences : i1
+    %sized = arith.andi %wholeSteps, %fewNumbers : i1
+    %usable = arith.andi %shaped, %sized : i1
+    cf.cond_br %usable, ^grouping, ^unable
+  ^grouping:
+    %headsRest = arith.remui %headCount, %groupCount : i64
+    %perGroup = arith.divui %headCount, %groupCount : i64
+    %headSize = arith.muli %headCount, %numbers : i64
+    %sequenceQueries = arith.muli %headSize, %sequenceCount : i64
+    %groupSize = arith.muli %groupCount, %numbers : i64
+    %positionSize = arith.muli %groupSize, %sequenceCount : i64
+    %wholeHeads = arith.cmpi eq, %headsRest, %none : i64
+    %somePerGroup = arith.cmpi sgt, %perGroup, %none : i64
+    %fewHeads = arith.cmpi sle, %perGroup, %sixteen : i64
+    %someQueries = arith.cmpi sgt, %sequenceQueries, %none : i64
+    %headsCounted = arith.andi %wholeHeads, %somePerGroup : i1
+    %headsSmall = arith.andi %fewHeads, %someQueries : i1
+    %headsUsable = arith.andi %headsCounted, %headsSmall : i1
+    cf.cond_br %headsUsable, ^fit, ^unable
+  ^fit:
+    %rowsRest = arith.remui %sixteen, %perGroup : i64
+    %queriesRest = arith.remui %queryCount, %sequenceQueries : i64
+    %keysRest = arith.remui %keyCount, %positionSize : i64
+    %tokens = arith.divui %queryCount, %sequenceQueries : i64
+    %positions = arith.divui %keyCount, %positionSize : i64
+    %wholeRows = arith.cmpi eq, %rowsRest, %none : i64
+    %wholeQueries = arith.cmpi eq, %queriesRest, %none : i64
+    %wholeKeys = arith.cmpi eq, %keysRest, %none : i64
+    %one = arith.constant 1 : i64
+    %someTokens = arith.cmpi sgt, %tokens, %one : i64
+    %enoughPositions = arith.cmpi sge, %positions, %tokens : i64
+    %sameValues = arith.cmpf oeq, %valueLength, %keyLength : f64
+    %listsFit = arith.andi %wholeQueries, %wholeKeys : i1
+    %tokensFit = arith.andi %someTokens, %enoughPositions : i1
+    %rowsFit = arith.andi %wholeRows, %sameValues : i1
+    %fitting = arith.andi %listsFit, %tokensFit : i1
+    %attending = arith.andi %fitting, %rowsFit : i1
+    cf.cond_br %attending, ^run, ^unable
+  ^run:
+    %valuesSlots = llvm.alloca %seven x f64 : (i64) -> !llvm.ptr
+    llvm.store %queries, %valuesSlots : f64, !llvm.ptr
+    %keysSlot = llvm.getelementptr %valuesSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %keys, %keysSlot : f64, !llvm.ptr
+    %valuesSlot = llvm.getelementptr %valuesSlots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %values, %valuesSlot : f64, !llvm.ptr
+    %headsSlot = llvm.getelementptr %valuesSlots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %heads, %headsSlot : f64, !llvm.ptr
+    %groupsSlot = llvm.getelementptr %valuesSlots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %groups, %groupsSlot : f64, !llvm.ptr
+    %sizeSlot = llvm.getelementptr %valuesSlots[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %size, %sizeSlot : f64, !llvm.ptr
+    %sequencesSlot = llvm.getelementptr %valuesSlots[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %sequences, %sequencesSlot : f64, !llvm.ptr
+    %name = llvm.mlir.addressof @strict_gpu_attention_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_attention_slot : !llvm.ptr
+    %lanes = arith.constant -128 : i64
+    %integers = arith.constant -1 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %seven, %seven, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^unable:
+    return %zero : f64
   }
   llvm.mlir.global internal constant @strict_gpu_tokens_name("strict_device_tokens\00strict_device_tokenss\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal @strict_gpu_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
