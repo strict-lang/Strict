@@ -11,6 +11,15 @@ constant Summing = MlirDeviceCalls(MlirGpu.Layering.function, 5, MlirDeviceState
 Temp(suffix Text) Text
 	Twice.Temp("i") is "%d4i"
 	"%d" + at + suffix
+Parameters Texts
+	Twice.Parameters.Last is "%p1: f64"
+	let exact = MlirExact(function, at)
+	mutable parameters = ("%failed: !llvm.ptr", "%lane: i64", "%lanes: i64") + exact.Parameters("%p0")
+	for callee.method.parameters
+		let name = "%p" + (index + 1)
+		let parts = (name + "d: !llvm.ptr", name + "n: i64", name + "b: i64")
+		parameters = IsList(index) then parameters + parts else parameters + exact.Parameters(name)
+	parameters
 IsList(parameter Number) Boolean
 	Summing.IsList(0)
 	Twice.IsList(0) is false
@@ -18,10 +27,11 @@ IsList(parameter Number) Boolean
 Arguments(entry InstructionEntry) Texts
 	Twice.Arguments(Twicing) is ("%failed", "%lane", "%lanes", "%d4i", "%d4p0")
 	Heads.Arguments(GpuSamples.Heading.instructions(4)).Last is "%d4m1b"
-	mutable names = ("%failed", "%lane", "%lanes", Temp("i"))
+	let exact = MlirExact(function, at)
+	mutable names = ("%failed", "%lane", "%lanes") + exact.Names(Temp("i"))
 	for entry.payload(5 + entry.payload(3))
 		let parts = (Temp("p" + index + "d"), Temp("p" + index + "n"), Temp("p" + index + "b"))
-		names = IsList(index) then names + parts else names + Temp("p" + index)
+		names = IsList(index) then names + parts else names + exact.Names(Temp("p" + index))
 	names + MemberArguments
 MemberArguments Texts
 	Heads.MemberArguments is ("%d4m0", "%d4m1d", "%d4m1n", "%d4m1b")
@@ -29,24 +39,28 @@ MemberArguments Texts
 Types Text
 	Twice.Types is "!llvm.ptr, i64, i64, f64, f64"
 	Summing.Types is "!llvm.ptr, i64, i64, f64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64"
-	mutable types = ("!llvm.ptr", "i64", "i64", function.Float)
+	let numbers = MlirExact(function, at).Types
+	mutable types = ("!llvm.ptr", "i64", "i64") + numbers
 	for callee.method.parameters
-		types = IsList(index) then types + MlirTyped.Types else types + function.Float
+		types = IsList(index) then types + MlirTyped.Types else types + numbers
 	Text.Combine(types + MlirDeviceMembers(callee).Types(function.Float), ", ")
 Loaded(entry InstructionEntry) Texts
 	Twice.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
 	let countPosition = 5 + entry.payload(3)
-	mutable lines = List(Text) + Instance(entry, Temp("i"))
+	mutable lines = Instance(entry, Temp("i"))
 	for entry.payload(countPosition)
 		lines = lines + Argument(index, "%r" + entry.payload(countPosition + 1 + index))
 	lines + MemberLoads
 MemberLoads Texts
 	Heads.MemberLoads.First is "    %d4m0 = llvm.load %v_heads : !llvm.ptr -> f64"
 	MlirDeviceMembers(callee).Loads(Temp("m"), function.Float)
-Instance(entry InstructionEntry, name Text) Text
-	Twice.Instance(Twicing, "%h") is "    %h = arith.constant 0.0 : f64"
+Instance(entry InstructionEntry, name Text) Texts
+	Twice.Instance(Twicing, "%h") is ("    %h = arith.constant 0.0 : f64")
 	let register = Register(entry)
-	register < 0 then MlirTyped(function.Float).Constant(name, "0.0") else function.Load(name, "%r" + register)
+	let exact = MlirExact(function, at)
+	if register < 0
+		return (List(Text) + MlirTyped(function.Float).Constant(name, "0.0")) + exact.Whole(name, "0")
+	(List(Text) + function.Load(name, "%r" + register)) + exact.Loaded(name, "%r" + register)
 Register(entry InstructionEntry) Number
 	Twice.Register(Twicing) is -1
 	Flooring.Register(MlirGpuCheck.Flooring) is 0
@@ -65,10 +79,12 @@ Native(entry InstructionEntry) Texts
 		return MlirTokens(function, function.method.LoopBeginOf(at)).Read(at)
 	if entry.texts(1) is "Logarithm"
 		return Logarithmic(entry)
+	let target = "%r" + entry.payload(0)
 	if entry.texts(1) is "from"
-		return function.Copied("%r" + entry.payload(6 + entry.payload(3)), "%r" + entry.payload(0), Temp(""))
-	let floored = MlirTyped(function.Float).Floored(Temp(""), Temp("i"))
-	Loaded(entry) + floored + function.Store(Temp(""), "%r" + entry.payload(0))
+		let source = "%r" + entry.payload(6 + entry.payload(3))
+		return function.Copied(source, target, Temp("")) + MlirExact(function, at).Copied(source, target)
+	let exact = MlirRational(MlirExact(function, at)).Floored("%r" + Register(entry), target)
+	(Loaded(entry) + MlirTyped(function.Float).Floored(Temp(""), Temp("i")) + function.Store(Temp(""), target)) + exact
 Logarithmic(entry InstructionEntry) Texts
 	Text.Combine(Flooring.Logarithmic(MlirGpuCheck.Flooring)).IndexOf("@strict_device_logarithm(%failed, %d1i)") > 0
 	let typed = MlirTyped(function.Float)
@@ -79,6 +95,7 @@ Argument(parameter Number, register Text) Texts
 	Twice.Argument(0, "%r1") is ("    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64")
 	Summing.Argument(0, "%r1").Last is "    %d5p0b = llvm.load %r1b : !llvm.ptr -> i64"
 	if IsList(parameter) is false
-		return List(Text) + function.Load(Temp("p" + parameter), register)
+		let exact = MlirExact(function, at).Loaded(Temp("p" + parameter), register)
+		return (List(Text) + function.Load(Temp("p" + parameter), register)) + exact
 	for MlirTyped.Parts
 		MlirTyped(MlirTyped.Types(index)).Load(Temp("p" + parameter + value), register + value)

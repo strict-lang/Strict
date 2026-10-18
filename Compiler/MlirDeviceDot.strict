@@ -71,7 +71,7 @@ IsCovered Boolean
 	(begin >= 0) and (begin < at) and MlirDeviceDot(function, begin).IsDot
 Emitted Texts
 	Text.Combine(Summing.Emitted).IndexOf("@strict_device_dots(%failed, %d2rd, %d2rb, %d2rn, %d2od") > 0
-	Summing.Emitted.Last is "    llvm.store %d2s1, %v_sum : f32, !llvm.ptr"
+	Summing.Emitted.Last.StartsWith("    llvm.store %d2s1, %v_sum : f32, !llvm.ptr")
 	Text.Combine(Squaring.Emitted).IndexOf("offset_dots(%failed, %d2xd, %d2xb, %d2xn, %d2ai, %d2yd") > 0
 	if function.method.LoopEndOf(at) is at + 15
 		return OffsetEmitted
@@ -81,7 +81,7 @@ Emitted Texts
 	let call = "    " + Temp("") + " = func.call @strict_device_dots(%failed, " + operands + Types
 	Parts("r", "%r" + function.method.instructions(at).payload(0)) + Parts("o", other) + call + Accumulated
 OffsetEmitted Texts
-	Squaring.OffsetEmitted.Last is "    llvm.store %d2s1, %v_sum : f32, !llvm.ptr"
+	Squaring.OffsetEmitted.Last.StartsWith("    llvm.store %d2s1, %v_sum : f32, !llvm.ptr")
 	let instructions = function.method.instructions
 	let parts = Parts("x", "%v_" + instructions(at + 5).texts(0)) + Parts("y", "%v_" + instructions(at + 10).texts(0))
 	let counted = Whole("a", "%v_" + instructions(at + 2).texts(0)) + Whole("b", "%v_" + instructions(at + 7).texts(0))
@@ -105,8 +105,8 @@ IsOperand(name Text) Boolean
 	let dot = MlirDeviceDot(MlirFunction(function, Float = "f32"), begin)
 	dot.IsDot then name is in dot.Operands else false
 Whole(letter Text, slot Text) Texts
-	Squaring.Whole("a", "%v_start").Last is "    %d2ai = arith.fptosi %d2a : f32 to i64"
-	(function.Load(Temp(letter), slot), "    " + Temp(letter + "i") + " = arith.fptosi " + Temp(letter) + " : f32 to i64")
+	Squaring.Whole("a", "%v_start").Last is "    %d2ai = arith.select %d2aiv, %d2ait, %d2aij : i64"
+	MlirExact(function, at).Position(slot, Temp(letter + "i"))
 Accumulated Texts
 	Summing.Accumulated.First is "    %d2s0 = llvm.load %v_sum : !llvm.ptr -> f32"
 	let added = "    " + Temp("s1") + " = arith.addf " + Temp("s0") + ", " + Temp("") + " : f32"

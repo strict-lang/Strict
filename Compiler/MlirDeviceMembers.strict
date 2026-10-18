@@ -102,5 +102,8 @@ Stored(float Text) Texts
 	MlirDeviceMembers(Head).Stored("f64").First is "    llvm.store %m0, %v_heads : f64, !llvm.ptr"
 	let types = Types(float)
 	let slots = Arguments("%v_", true)
+	mutable lines = List(Mutable(Text))
 	for Arguments("%m", false)
-		MlirTyped(types(index)).Store(value, slots(index))
+		let exact = types(index) is float then MlirExact(function, 0).Converted(value, float, slots(index)) else List(Text)
+		lines = (lines + MlirTyped(types(index)).Store(value, slots(index))) + exact
+	lines

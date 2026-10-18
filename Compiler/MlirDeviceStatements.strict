@@ -46,7 +46,8 @@ Copied(source Text, target Text, name Text) Texts
 	MlirDeviceStatements(Doubled, 3).Copied("%v_value", "%r1", "value").Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
 	MlirDeviceStatements(MlirDeviceRows.Nesting, 5).Emitted.Last.EndsWith("%v_list0b : i64, !llvm.ptr")
 	if IsList(MlirKinds(function).VariableKind(at + 1, name)) is false
-		return (function.Load(Temp(""), source), function.Store(Temp(""), target))
+		let moved = (function.Load(Temp(""), source), function.Store(Temp(""), target))
+		return moved + MlirExact(function, at).Copied(source, target)
 	mutable lines = List(Mutable(Text))
 	for MlirTyped.Parts
 		lines = lines + MlirTyped(MlirTyped.Types(index)).Load(Temp(value), source + value)
@@ -59,15 +60,13 @@ IsList(kind Text) Boolean
 Indexed(entry InstructionEntry) Texts
 	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
 	let list = "%v_" + entry.texts(0)
-	let index = function.Load(Temp("i"), "%r" + entry.payload(1))
-	let position = "    " + Temp("j") + " = arith.fptosi " + Temp("i") + " : " + function.Float + " to i32"
-	let widened = "    " + Temp("k") + " = arith.extsi " + Temp("j") + " : i32 to i64"
+	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	let length = (MlirTyped.Integer.Load(Temp("n"), list + "n"), MlirTyped.Integer.Constant(Temp("z"), "0"))
 	let low = "    " + Temp("l") + " = arith.cmpi sge, " + Temp("k") + ", " + Temp("z") + " : i64"
 	let high = "    " + Temp("h") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("n") + " : i64"
 	let inside = "    " + Temp("o") + " = arith.andi " + Temp("l") + ", " + Temp("h") + " : i1"
 	let branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "read, ^d" + at + "fail"
-	(index, position, widened) + length + (low, high, inside, branch) + Failed + Read(list, "%r" + entry.payload(0))
+	position + length + (low, high, inside, branch) + Failed + Read(list, "%r" + entry.payload(0))
 Failed Texts
 	Reading.Failed.First is "  ^d6fail:"
 	let one = MlirTyped.Integer.Constant(Temp("f"), "1")
@@ -90,7 +89,8 @@ Calculated(entry InstructionEntry) Texts
 	let right = function.Load(Temp("b"), "%r" + entry.payload(2))
 	let flags = IsContracted(entry) then " fastmath<contract>" else ""
 	let calculated = MlirTyped(function.Float).Operated(Temp(""), entry.kind, Temp("a") + ", " + Temp("b") + flags)
-	(left, right, calculated, function.Store(Temp(""), "%r" + entry.payload(3)))
+	let exact = MlirRational(MlirExact(function, at)).Operated(entry)
+	(left, right, calculated, function.Store(Temp(""), "%r" + entry.payload(3))) + exact
 IsContracted(entry InstructionEntry) Boolean
 	MlirDeviceStatements(Summed, 9).IsContracted(Summed.method.instructions(9))
 	Multiplying.IsContracted(Twice.method.instructions(2)) is false

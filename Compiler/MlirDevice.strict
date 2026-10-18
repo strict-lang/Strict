@@ -45,7 +45,9 @@ Given Texts
 	for MlirGpuCheck(function, position).Free
 		let given = "%f_" + value
 		let slot = "%v_" + value
-		lines = IsList(value) then lines + Stores(given, slot) else lines + MlirTyped(function.Float).Given(given, slot)
+		let typed = MlirTyped(function.Float).Given(given, slot)
+		let number = typed + MlirExact(function, position).Converted(given, "f64", slot)
+		lines = IsList(value) then lines + Stores(given, slot) else lines + number
 	lines
 Stores(source Text, target Text) Texts
 	Doubling.Stores("%a", "%b").First is "    llvm.store %ad, %bd : !llvm.ptr, !llvm.ptr"
@@ -54,19 +56,14 @@ Stores(source Text, target Text) Texts
 Function Texts
 	Twice.Function.First.EndsWith("%lane: i64, %lanes: i64, %p0: f64, %p1: f64) -> f64 {")
 	Twice.Function.Last is "  }"
-	let calls = MlirDeviceCalls(function, 0, function)
-	mutable parameters = ("%failed: !llvm.ptr", "%lane: i64", "%lanes: i64", "%p0: " + function.Float)
-	for function.method.parameters
-		let name = "%p" + (index + 1)
-		let parts = (name + "d: !llvm.ptr", name + "n: i64", name + "b: i64")
-		parameters = calls.IsList(index) then parameters + parts else parameters + (name + ": " + function.Float)
-	let typed = parameters + MlirDeviceMembers(function).Typed(function.Float)
+	let typed = MlirDeviceCalls(function, 0, function).Parameters + MlirDeviceMembers(function).Typed(function.Float)
 	let symbol = function.Symbol + "_device" + MlirTyped(function.Float).Suffix
 	let header = "  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + ") -> " + function.Float + " {"
 	(List(Text) + header) + Slots + Entry + Emitted(0, function.method.instructions.Length) + "  }"
 Slots Texts
 	Doubling.Slots.Last is "    %loop2 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
 	mutable lines = ("    %one = arith.constant 1 : i64", "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr")
+	lines = function.Float is "f32" then lines + MlirTyped.Integer.Constant("%inexact", "0") else lines
 	for LoadReuse(function.method.instructions).RegisterCount
 		lines = lines + Slot("%r" + index)
 	for function.VariableNames
@@ -80,17 +77,19 @@ Slot(name Text) Texts
 	mutable lines = List(Text) + ("    " + name + Allocated + function.Float + " : (i64) -> !llvm.ptr")
 	for MlirTyped.Parts
 		lines = lines + ("    " + name + value + Allocated + MlirTyped.Types(index) + " : (i64) -> !llvm.ptr")
-	lines
+	lines + MlirExact(function, 0).Slots(name)
 Entry Texts
 	Twice.Entry is ("    llvm.store %p0, %v_value : f64, !llvm.ptr", "    llvm.store %p1, %v_number : f64, !llvm.ptr")
 	"    llvm.store %m0, %v_heads : f64, !llvm.ptr" is in MlirDevice(MlirDeviceMembers.Head, 0).Entry
 	Summing.Entry.Last is "    llvm.store %p2b, %v_inputb : i64, !llvm.ptr"
 	let calls = MlirDeviceCalls(function, 0, function)
-	mutable lines = List(Text) + function.Store("%p0", "%v_value")
+	let exact = MlirExact(function, 0)
+	mutable lines = (List(Text) + function.Store("%p0", "%v_value")) + exact.Set("%p0e", "%p0q", "%v_value")
 	for function.method.parameters
 		let number = "%p" + (index + 1)
 		let slot = "%v_" + value.Name
-		lines = calls.IsList(index) then lines + Stores(number, slot) else lines + function.Store(number, slot)
+		let stored = (List(Text) + function.Store(number, slot)) + exact.Set(number + "e", number + "q", slot)
+		lines = calls.IsList(index) then lines + Stores(number, slot) else lines + stored
 	lines + MlirDeviceMembers(function).Stored(function.Float)
 Indexed Texts
 	Doubling.Indexed.Last is "    cf.cond_br %inside, ^body, ^exit"
@@ -114,11 +113,11 @@ Started Texts
 	Doubling.Started.Last is "    llvm.store %element, %v_value : f64, !llvm.ptr"
 	Layering.Started.Last is "    llvm.store %rowed#1, %v_valueb : i64, !llvm.ptr"
 	constant narrow = "    %narrow = arith.trunci %at : i64 to i32"
-	let converted = ("  ^body:", narrow) + MlirDeviceLoops(function, position).Counted
-	let index = converted + function.Store("%index", "%v_index")
+	let loops = MlirDeviceLoops(function, position)
+	let index = (("  ^body:", narrow) + loops.Counted + loops.Indexes) + loops.Indexed("%v_index")
 	let collection = MlirLoops(function, position).Collection
 	if collection is ""
-		return index + function.Store("%index", "%v_value")
+		return index + loops.Indexed("%v_value")
 	if collection is not "List(Number)"
 		return index + Rowed
 	let read = MlirTyped(function.Float).Read("%element", "(%source, %bits, %at, %count)")

@@ -6235,10 +6235,21 @@
   ^failed:
     return %unset : !llvm.ptr
   }
+  // the driver on Windows (WDDM) does not fail an allocation past the free memory, it pages memory out and every
+  // kernel gets several times slower, so the pool gives its free big blocks back first when memory runs short
   func.func private @strict_gpu_alloc(%bytes: i64) -> i64 {
     %zero = arith.constant 0 : i64
     %zero32 = arith.constant 0 : i32
     %one = arith.constant 1 : i64
+    %free = func.call @strict_gpu_free_memory() : () -> i64
+    %reserve = arith.constant 536870912 : i64
+    %needed = arith.addi %bytes, %reserve : i64
+    %short = arith.cmpi ult, %free, %needed : i64
+    cf.cond_br %short, ^release, ^allocate
+  ^release:
+    %releasedEarly = func.call @strict_gpu_starved() : () -> i1
+    cf.br ^allocate
+  ^allocate:
     %slot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
     llvm.store %zero, %slot : i64, !llvm.ptr
     %allocIndex = arith.constant 6 : i64
@@ -6246,7 +6257,14 @@
     %result = llvm.call %alloc(%slot, %bytes) : !llvm.ptr, (!llvm.ptr, i64) -> i32
     %failed = arith.cmpi ne, %result, %zero32 : i32
     %device = llvm.load %slot : !llvm.ptr -> i64
-    %chosen = arith.select %failed, %zero, %device : i64
+    cf.cond_br %failed, ^starved, ^done(%device : i64)
+  ^starved:
+    %released = func.call @strict_gpu_starved() : () -> i1
+    cf.cond_br %released, ^again, ^done(%zero : i64)
+  ^again:
+    %again = func.call @strict_gpu_alloc(%bytes) : (i64) -> i64
+    cf.br ^done(%again : i64)
+  ^done(%chosen: i64):
     return %chosen : i64
   }
   func.func private @strict_gpu_free(%device: i64) {
@@ -6617,27 +6635,17 @@
     func.call @strict_gpu_quantized(%ptx, %quantizedView) : (!llvm.ptr, !llvm.ptr) -> ()
     cf.br ^quantize(%followingValue, %followingSlot : i64, i64)
   ^chooseKernel:
-    // a 32 bit float counts integers exactly up to 2^24, a longer loop or one reading a longer list takes the double
-    // kernel (packed -1: a runtime kernel counting in integers), which writes 32 or 8 bit floats that stay on the GPU
-    // like those of the 32 bit kernel when its inputs allow that (the last parameter, 64 for doubles to the host)
+    // with a packed list the 32 bit kernel runs (its positions stay exact as integers, MlirExact), otherwise the double
+    // kernel, which writes 32 or 8 bit floats that stay on the GPU like those of the 32 bit kernel when its inputs allow
+    // that (the last parameter, 64 for doubles to the host)
     %narrowed = llvm.load %narrowSlot : !llvm.ptr -> i64
-    %narrowBit = arith.andi %narrowed, %one : i64
-    %narrowSingle = arith.cmpi ne, %narrowBit, %none : i64
-    %longFlag = arith.constant 2 : i64
-    %longBit = arith.andi %narrowed, %longFlag : i64
-    %shortLists = arith.cmpi eq, %longBit, %none : i64
-    %exactLimit = arith.constant 16777216 : i64
-    %shortCount = arith.cmpi slt, %count, %exactLimit : i64
-    %countsExactly = arith.andi %shortCount, %shortLists : i1
-    %countsIntegers = arith.cmpi slt, %packed, %none : i64
-    %exactSingle = arith.ori %countsExactly, %countsIntegers : i1
-    %single = arith.andi %narrowSingle, %exactSingle : i1
+    %narrowSingle = arith.cmpi ne, %narrowed, %none : i64
     %nameLength = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
     %skipped = arith.addi %nameLength, %one : i64
     %singleName = llvm.getelementptr %name[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %singleSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    %chosenName = llvm.select %single, %singleName, %name : i1, !llvm.ptr
-    %chosenSlot = llvm.select %single, %singleSlot, %slot : i1, !llvm.ptr
+    %chosenName = llvm.select %narrowSingle, %singleName, %name : i1, !llvm.ptr
+    %chosenSlot = llvm.select %narrowSingle, %singleSlot, %slot : i1, !llvm.ptr
     %function = func.call @strict_gpu_function(%ptx, %chosenName, %chosenSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
     %widest = arith.constant 256 : i64
@@ -6823,6 +6831,22 @@
   ^carve:
     %smallest = arith.constant 256 : i64
     %size = arith.shli %smallest, %class : i64
+    // blocks of 64 MB and more are allocations of their own, so a big block neither ends the chunk smaller ones are
+    // cut from nor stays in the pool when an allocation runs out of memory (strict_gpu_starved)
+    %ownBytes = arith.constant 67108864 : i64
+    %isOwn = arith.cmpi uge, %size, %ownBytes : i64
+    cf.cond_br %isOwn, ^own, ^cutSmall
+  ^own:
+    %owned = func.call @strict_gpu_alloc(%size) : (i64) -> i64
+    %hasOwned = arith.cmpi ne, %owned, %none : i64
+    cf.cond_br %hasOwned, ^ownedBlock, ^none
+  ^ownedBlock:
+    %sinceOwned = llvm.load %sinceSlot : !llvm.ptr -> i64
+    %grownOwned = arith.addi %sinceOwned, %size : i64
+    llvm.store %grownOwned, %sinceSlot : i64, !llvm.ptr
+    func.call @strict_gpu_obtained(%size) : (i64) -> ()
+    return %owned : i64
+  ^cutSmall:
     %base = llvm.load %chunk : !llvm.ptr -> i64
     %offsetSlot = llvm.getelementptr %chunk[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %offset = llvm.load %offsetSlot : !llvm.ptr -> i64
@@ -6834,14 +6858,12 @@
     %usable = arith.andi %fits, %hasChunk : i1
     cf.cond_br %usable, ^cut(%base, %offset : i64, i64), ^chunk
   ^chunk:
-    %sixtyFourMegabytes = arith.constant 67108864 : i64
-    %wanted = arith.maxui %size, %sixtyFourMegabytes : i64
-    %fresh = func.call @strict_gpu_alloc(%wanted) : (i64) -> i64
+    %fresh = func.call @strict_gpu_alloc(%ownBytes) : (i64) -> i64
     %allocated = arith.cmpi ne, %fresh, %none : i64
     cf.cond_br %allocated, ^keep, ^none
   ^keep:
     llvm.store %fresh, %chunk : i64, !llvm.ptr
-    llvm.store %wanted, %chunkSizeSlot : i64, !llvm.ptr
+    llvm.store %ownBytes, %chunkSizeSlot : i64, !llvm.ptr
     %free = func.call @strict_gpu_free_memory() : () -> i64
     %half = arith.shrui %free, %one : i64
     llvm.store %half, %limitSlot : i64, !llvm.ptr
@@ -6857,6 +6879,43 @@
     return %device2 : i64
   ^none:
     return %none : i64
+  }
+  // when the GPU memory runs out: a full collection, then the free blocks of 64 MB and more go back to the driver
+  // after the captured launches ran (they may still use a block that died meanwhile), true when one did
+  func.func private @strict_gpu_starved() -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %full = arith.constant true
+    %nothing = arith.constant false
+    %firstOwn = arith.constant 18 : i64
+    %classes = arith.constant 48 : i64
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    cf.br ^class(%firstOwn, %nothing : i64, i1)
+  ^class(%class: i64, %freed: i1):
+    %more = arith.cmpi ult, %class, %classes : i64
+    cf.cond_br %more, ^stack, ^done
+  ^stack:
+    %stack = func.call @strict_gpu_stack(%class) : (i64) -> !llvm.ptr
+    %countSlot = llvm.getelementptr %stack[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %hasBlock = arith.cmpi sgt, %count, %none : i64
+    cf.cond_br %hasBlock, ^free, ^next
+  ^free:
+    %itemsBits = llvm.load %stack : !llvm.ptr -> i64
+    %items = llvm.inttoptr %itemsBits : i64 to !llvm.ptr
+    %top = arith.subi %count, %one : i64
+    %topSlot = llvm.getelementptr %items[%top] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %device = llvm.load %topSlot : !llvm.ptr -> i64
+    llvm.store %top, %countSlot : i64, !llvm.ptr
+    func.call @strict_gpu_free(%device) : (i64) -> ()
+    cf.br ^class(%class, %full : i64, i1)
+  ^next:
+    %nextClass = arith.addi %class, %one : i64
+    cf.br ^class(%nextClass, %freed : i64, i1)
+  ^done:
+    return %freed : i1
   }
   func.func private @strict_gpu_obtained(%bytes: i64) {
     %chunk = llvm.mlir.addressof @strict_gpu_chunk : !llvm.ptr
@@ -7826,24 +7885,15 @@
     llvm.store %combined, %packedSlot : i64, !llvm.ptr
     return
   }
-  // bit 1: a packed list (the 32 bit kernel can run), bit 2: a list of 2^24 numbers or more (its positions are no longer
-  // exact as 32 bit floats, the double kernel has to run)
+  // 1 once a list is packed (the 32 bit kernel can run)
   func.func private @strict_gpu_narrowed(%view: !llvm.ptr, %narrowSlot: !llvm.ptr) {
     %sixtyFour = arith.constant 64 : i64
     %bitsSlot = llvm.getelementptr %view[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
     %isNarrow = arith.cmpi ult, %bits, %sixtyFour : i64
     %narrow = arith.extui %isNarrow : i1 to i64
-    %lengthSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    %length = llvm.load %lengthSlot : !llvm.ptr -> i64
-    %exactLimit = arith.constant 16777216 : i64
-    %isLong = arith.cmpi sge, %length, %exactLimit : i64
-    %longBit = arith.constant 2 : i64
-    %none = arith.constant 0 : i64
-    %long = arith.select %isLong, %longBit, %none : i64
-    %flags = arith.ori %narrow, %long : i64
     %before = llvm.load %narrowSlot : !llvm.ptr -> i64
-    %combined = arith.ori %before, %flags : i64
+    %combined = arith.ori %before, %narrow : i64
     llvm.store %combined, %narrowSlot : i64, !llvm.ptr
     return
   }

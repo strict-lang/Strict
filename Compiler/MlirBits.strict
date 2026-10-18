@@ -1,0 +1,42 @@
+has name Text
+constant Converting = MlirBits("%n")
+Converted(number Text) Texts
+	Converting.Converted("%v").First is "    %nb = llvm.bitcast %v : f64 to i64"
+	Converting.Converted("%v").Last is "    %nq = arith.extui %nv : i1 to i64"
+	let fields = (Line("b", "llvm.bitcast " + number + " : f64 to i64"), Constant("0", "0"), Constant("1", "1"))
+	fields + Integers + Magnitude + Exact
+Integers Texts
+	Converting.Integers(5) is "    %nm = arith.andi %nb, %nmm : i64"
+	let exponent = (Constant("52", "52"), Constant("k1", "2047"), Operation("x", "shrui", "b", "52"))
+	let masked = (Operation("k", "andi", "x", "k1"), Constant("mm", "4503599627370495"), Operation("m", "andi", "b", "mm"))
+	let implicit = (Constant("ii", "4503599627370496"), Operation("i", "ori", "m", "ii"))
+	exponent + masked + implicit + (Constant("rr", "1075"), Operation("r", "subi", "rr", "k"))
+Magnitude Texts
+	Converting.Magnitude.Last is "    %ne = arith.select %nn, %nc, %nf : i64"
+	let shifted = (Constant("63", "63"), Operation("t", "minui", "r", "63"), Operation("f", "shrui", "i", "t"))
+	let negative = (Operation("n", "cmpi slt,", "b", "0"), Operation("c", "subi", "0", "f"))
+	shifted + negative + Line("e", "arith.select " + Named("n") + ", " + Named("c") + ", " + Named("f") + " : i64")
+Exact Texts
+	Converting.Exact(1) is "    %ny = arith.subi %nh, %n1 : i64"
+	Converting.Exact.Last is "    %nq = arith.extui %nv : i1 to i64"
+	let lost = (Operation("h", "shli", "1", "t"), Operation("y", "subi", "h", "1"), Operation("j", "andi", "i", "y"))
+	let range = (Operation("w", "cmpi eq,", "j", "0"), Operation("p", "cmpi sge,", "r", "0"))
+	let inside = Operation("s", "cmpi sle,", "r", "52")
+	let zero = (Operation("z", "shli", "b", "1"), Operation("o", "cmpi eq,", "z", "0"))
+	let whole = (Logical("a", "andi", "w", "p"), Logical("g", "andi", "a", "s"), Logical("v", "ori", "g", "o"))
+	lost + range + inside + zero + whole + Line("q", "arith.extui " + Named("v") + " : i1 to i64")
+Operation(result Text, operation Text, left Text, right Text) Text
+	Converting.Operation("k", "andi", "x", "k1") is "    %nk = arith.andi %nx, %nk1 : i64"
+	Line(result, "arith." + operation + " " + Named(left) + ", " + Named(right) + " : i64")
+Logical(result Text, operation Text, left Text, right Text) Text
+	Converting.Logical("a", "andi", "w", "p") is "    %na = arith.andi %nw, %np : i1"
+	Line(result, "arith." + operation + " " + Named(left) + ", " + Named(right) + " : i1")
+Constant(result Text, number Text) Text
+	Converting.Constant("52", "52") is "    %n52 = arith.constant 52 : i64"
+	Line(result, "arith.constant " + number + " : i64")
+Line(result Text, operation Text) Text
+	Converting.Line("e", "arith.addi %a, %b : i64") is "    %ne = arith.addi %a, %b : i64"
+	"    " + Named(result) + " = " + operation
+Named(suffix Text) Text
+	Converting.Named("b") is "%nb"
+	name + suffix
