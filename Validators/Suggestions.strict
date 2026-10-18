@@ -1,0 +1,52 @@
+has path Text
+has root Text
+has lines Texts
+has inference TypeInference
+Run(name Text, files Texts) Number
+	let header = Header(name)
+	if header < 0
+		Logger.Log("MethodNotFound: " + name + " in " + path)
+		return 2
+	if Tests(header).Length is 0
+		return 0
+	let method = HeaderTokens(Tokenizer(lines(header)).Tokens)
+	let source = FileCompiler.FullName(path, root)
+	let code = TypeCodegen(source, WithBody(header), inference, FileCompiler.FullNames(files, root))
+	for SuggestionTests(code, method, root, path).Passing(Search(method).Candidates)
+		Logger.Log("Suggestion: " + value)
+	0
+Header(name Text) Number
+	for lines
+		if TypeShape(lines).IsMethodHeader(value)
+			if (Tokenizer(value).Tokens.First is name) or ((index + 1) to Text is name)
+				return index
+	-1
+Search(header HeaderTokens) SuggestionCalls
+	let members = TypeShape(lines).MemberScope
+	let values = Scope(header.ParameterNames, header.ParameterTypes).WithAll(members.names, members.types)
+	SuggestionCalls(Path(path).FileName.RemoveExtension.text, header, values, inference.types)
+Tests(header Number) Texts
+	let code = TypeCodegen(FileCompiler.FullName(path, root), lines, inference, List(Text))
+	let body = BodyParser(lines).Method(header + 1)
+	let extended = SyntaxNode("Body", "", body.children + MethodCodegen.One)
+	let tests = TestLines(code.Generator).Tests(extended, CodeBlock.Empty)
+	SyntaxNode("Body", "", tests).Lines("\t")
+WithBody(header Number) Texts
+	mutable changed = List(Mutable(Text))
+	for lines
+		if TypeShape(lines).IsMethodHeader(value)
+			changed = changed + Method(index, header)
+		else if value.StartsWith("\t") is false
+			changed.Add(value)
+	changed
+Method(header Number, selected Number) Texts
+	if header is selected
+		return (List(Text) + lines(header)) + Tests(header) + "\t0"
+	let first = header + Tests(header).Length + 1
+	let last = FileCheck.LastLine(lines, header)
+	if first > last
+		return List(Text)
+	mutable kept = List(Text) + lines(header)
+	for Range(first, last + 1)
+		kept = kept + lines(value)
+	kept

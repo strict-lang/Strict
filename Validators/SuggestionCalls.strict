@@ -1,0 +1,81 @@
+has own Text
+has header HeaderTokens
+has values Scope
+has known KnownTypes
+constant Operators = ("+", "-", "*", "/", "%", "and", "or", "xor", "is")
+Candidates Texts
+	mutable found = Calls(true)
+	for values.names
+		if values.types(index) is header.ReturnType
+			found = found + value
+	Unique(found + Binary + Calls(false))
+Binary Texts
+	mutable found = List(Mutable(Text))
+	for values.names
+		found = found + Operations(value, values.types(index))
+	found
+Operations(left Text, type Text) Texts
+	mutable found = List(Mutable(Text))
+	let methods = known.MethodsOf(type)
+	for methods.names
+		let operator = value
+		let parameters = known.ParameterNames(known.ParameterScope(type).TypeOf(operator + " types"))
+		if (operator is in Operators) and (methods.TypeOf(operator) is header.ReturnType) and (parameters.Length is 1)
+			for values.names
+				if values.types(index) is (parameters.First is "Other" then type else parameters.First)
+					found = found + (left + " " + operator + " " + value)
+	found
+Receivers Texts
+	mutable receivers = List(Mutable(Text))
+	for Range(header.ParameterNames.Length, values.names.Length)
+		receivers.Add(values.names(value))
+	receivers + header.ParameterNames + own
+Calls(sameName Boolean) Texts
+	mutable calls = List(Mutable(Text))
+	for Receivers
+		let declared = values.TypeOf(value)
+		let type = declared is "" then value else declared
+		calls = calls + Receiver(value, type, sameName)
+	calls
+Receiver(receiver Text, type Text, sameName Boolean) Texts
+	mutable calls = List(Mutable(Text))
+	for known.MethodsOf(type).names
+		let recursive = (type is own) and (value is header.tokens.First)
+		if Named(value) and (recursive is false) and ((Stem(value) is Stem(header.tokens.First)) is sameName)
+			if (known.MemberType(type, value) is header.ReturnType) and (value is in known.ParameterScope(type).names)
+				let prefix = type is own then value else receiver + "." + value
+				let call = Call(prefix, type, value, receiver)
+				if call is not ""
+					calls.Add(call)
+	calls
+Named(name Text) Boolean
+	let first = name.Substring(0, 1)
+	let named = Tokenizer.IsWordCharacter(first) and (Tokenizer.IsDigit(first) is false)
+	named and (name is not in DefaultCheck.Keywords) and (name is not "Run")
+Call(prefix Text, type Text, name Text, receiver Text) Text
+	let scope = known.ParameterScope(type)
+	let parameters = known.ParameterNames(scope.TypeOf(name + " types"))
+	let required = scope.TypeOf(name + " required") to Number
+	mutable arguments = List(Mutable(Text))
+	for parameters
+		let matched = Argument(value, arguments + receiver)
+		if matched is ""
+			return index >= required then Called(prefix, arguments) else ""
+		arguments.Add(matched)
+	Called(prefix, arguments)
+Argument(type Text, used Texts) Text
+	for values.names
+		if (values.types(index) is type) and (value is not in used)
+			return value
+	""
+Called(prefix Text, arguments Texts) Text
+	arguments.Length is 0 then prefix else prefix + "(" + Text.Combine(arguments, ", ") + ")"
+Stem(name Text) Text
+	let lower = name.Lower
+	lower.EndsWith("ed") then lower.Substring(0, lower.Length - 2) else lower
+Unique(candidates Texts) Texts
+	mutable found = List(Mutable(Text))
+	for candidates
+		if (value is not in found) and (found.Length < 32)
+			found.Add(value)
+	found

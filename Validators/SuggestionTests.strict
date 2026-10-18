@@ -1,0 +1,50 @@
+has main TypeCodegen
+has header HeaderTokens
+has root Text
+has path Text
+Passing(candidates Texts) Texts
+	if candidates.Length is 0
+		return List(Text)
+	let types = Prepared(candidates)
+	mutable passed = List(Mutable(Text))
+	for candidates
+		let changed = Changed(types, index)
+		let machine = Machine(changed, Logger, List(VmValue), Path(path).PathOnly.text).Prepared
+		if machine.Tested(changed.First.Name) is 0
+			passed.Add(value)
+	passed
+Prepared(candidates Texts) List(TypeEntry)
+	mutable methods = List(Mutable(MethodEntry))
+	for candidates
+		methods.Add(Compiled(value, index))
+	let entry = main.Entry
+	let tests = TestCodegen(main, true).Tests
+	let runner = MethodEntry(tests, instructions = Silent(tests.instructions))
+	let combined = TypeEntry(entry, methods = entry.methods + methods + runner)
+	Resolver(Linker(root, main).Linked(combined, List(Text), 20)).Resolved
+Compiled(body Text, index Number) MethodEntry
+	let generator = main.Generator
+	let scope = main.MethodScope(header, generator.target)
+	let expression = SyntaxParser(Tokenizer(body).Tokens).Parse
+	let code = MethodCodegen(generator).Generate(SyntaxNode("Body", "", expression), scope, main.BodyType(header))
+	let returned = generator.target.FullName(main.Concrete(main.Returned(header)))
+	MethodEntry("$Suggestion" + index, main.Parameters(header), returned, LoadReuse(code.instructions).Optimized)
+Silent(instructions List(InstructionEntry)) List(InstructionEntry)
+	for instructions
+		if value.kind is not InstructionType.Print
+			value
+Changed(types List(TypeEntry), candidate Number) List(TypeEntry)
+	mutable methods = types.First.methods
+	mutable replacement = methods.First
+	for methods
+		if value.Name is "$Suggestion" + candidate
+			replacement = value
+	for methods
+		if Matches(value, replacement)
+			methods(index) = MethodEntry(replacement, Name = value.Name)
+	mutable changed = types
+	changed(0) = TypeEntry(types.First, methods = methods)
+	changed
+Matches(method MethodEntry, replacement MethodEntry) Boolean
+	let same = (method.Name is header.tokens.First) and (method.returnType is replacement.returnType)
+	same and (method.parameters is replacement.parameters)
