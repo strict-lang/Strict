@@ -6517,7 +6517,8 @@
   ^prepare:
     func.call @strict_gpu_reset() : () -> ()
     %triple = arith.muli %valueCount, %three : i64
-    %slotCount = arith.addi %triple, %six : i64
+    %seven = arith.constant 7 : i64
+    %slotCount = arith.addi %triple, %seven : i64
     %slots = llvm.alloca %slotCount x i64 : (i64) -> !llvm.ptr
     %parameters = llvm.alloca %slotCount x !llvm.ptr : (i64) -> !llvm.ptr
     %bufferCount = arith.addi %valueCount, %three : i64
@@ -6617,7 +6618,8 @@
     cf.br ^quantize(%followingValue, %followingSlot : i64, i64)
   ^chooseKernel:
     // a 32 bit float counts integers exactly up to 2^24, a longer loop or one reading a longer list takes the double
-    // kernel (packed -1: a runtime kernel counting in integers)
+    // kernel (packed -1: a runtime kernel counting in integers), which writes 32 or 8 bit floats that stay on the GPU
+    // like those of the 32 bit kernel when its inputs allow that (the last parameter, 64 for doubles to the host)
     %narrowed = llvm.load %narrowSlot : !llvm.ptr -> i64
     %narrowBit = arith.andi %narrowed, %one : i64
     %narrowSingle = arith.cmpi ne, %narrowBit, %none : i64
@@ -6649,7 +6651,15 @@
     %threads = arith.select %grouped, %groupLanes, %widest : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
-    cf.cond_br %single, ^async, ^outputs
+    %eightBits = arith.constant 7 : i64
+    %isEightBits = arith.cmpi eq, %packed, %eightBits : i64
+    %floatBits = arith.constant 32 : i64
+    %doubleBits = arith.constant 64 : i64
+    %narrowBits = arith.select %isEightBits, %eightBits, %floatBits : i64
+    %resultFormat = arith.select %narrowSingle, %narrowBits, %doubleBits : i64
+    %resultFormatSlot = llvm.getelementptr %slots[%slotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %resultFormat, %resultFormatSlot : i64, !llvm.ptr
+    cf.cond_br %narrowSingle, ^async, ^outputs
   ^async:
     %floatsBytes = arith.muli %count, %four : i64
     %float8Code = arith.constant 7 : i64

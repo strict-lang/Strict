@@ -5,7 +5,7 @@ constant Twice = MlirDevice(MlirFunction(Doubling.function.types, MlirParallel.R
 constant Layering = MlirDevice(MlirGpu.Layering.function, 2)
 constant Summing = MlirDevice(MlirFunction(MlirGpu.Layering.function.types, GpuSamples.Layered, GpuSamples.Summed), 0)
 constant Fixed = "%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64"
-constant DoublingHeader = "  llvm.func @Rows_Doubled_1_gpu2(" + Fixed + ") attributes {nvvm.kernel} {"
+constant DoublingHeader = "  llvm.func @Rows_Doubled_1_gpu2(" + Fixed + ", %results: i64) attributes {nvvm.kernel} {"
 constant Ending = ("    cf.br ^exit", "  ^exit:", "    llvm.return", "  }")
 constant Allocated = " = llvm.alloca %one x "
 constant Launches = ("    %lanesWanted = arith.constant 32 : i64", "    %lanesSingle = arith.constant 1 : i64", "    %launchBlocks = nvvm.read.ptx.sreg.nctaid.x : i32", "    %launchBlocksWide = arith.extui %launchBlocks : i32 to i64", "    %launchWidth = arith.extui %width : i32 to i64", "    %launchThreads = arith.muli %launchBlocksWide, %launchWidth : i64", "    %warpThreads = arith.muli %count, %lanesWanted : i64", "    %laneWarped = arith.cmpi uge, %launchThreads, %warpThreads : i64", "    %lanes = arith.select %laneWarped, %lanesWanted, %lanesSingle : i64")
@@ -17,12 +17,12 @@ Kernel Texts
 	Doubling.Kernel.First is DoublingHeader
 	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("arith.minsi %group") > 0
 	Text.Combine(Doubling.Kernel).IndexOf("func.call @Rows_Twice_1_device(") > 0
-	Layering.Kernel.First.IndexOf("%f_biasesb: i64) attributes") > 0
+	Layering.Kernel.First.IndexOf("%f_biasesb: i64, %results: i64) attributes") > 0
 	Text.Combine(MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Kernel).IndexOf("i32 to f32") > 0
 	let call = MlirGroups(function, position).Call
 	if (function.Group < 0) and (call >= 0)
 		return MlirDevice(MlirFunction(function, Group = call), position).Kernel
-	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + ") attributes {nvvm.kernel} {"
+	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + ", %results: i64) attributes {nvvm.kernel} {"
 	let body = Emitted(position + 1, function.method.LoopEndOf(position))
 	(List(Text) + header) + Slots + Given + Indexed + Started + body + Ending
 Freed Text

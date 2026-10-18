@@ -6,9 +6,13 @@ Generated(prompt Numbers, count Number) Numbers
 	mutable current = model
 	for prompt
 		current = current.Step(value, index)
+	Generation(current).Continued(prompt.Length, count)
+Continued(position Number, count Number) Numbers
+	Generation(Qwen3.Tiny.Step(1, 0).Step(2, 1).Step(3, 2)).Continued(3, 6) is (2, 1, 0, 4, 4, 4)
+	mutable current = model
 	mutable generated = List(Mutable(Number))
 	for count
 		let token = current.Next
 		generated.Add(token)
-		current = current.Step(token, prompt.Length + index)
+		current = current.Step(token, position + index)
 	generated

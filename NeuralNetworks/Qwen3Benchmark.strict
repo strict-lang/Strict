@@ -6,7 +6,7 @@ Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32
 	let model = Qwen3(Qwen3.Loaded(path, bits), cacheBits = cacheBits)
 	let loaded = Process.Elapsed
 	let prompt = Repeated(tokenizer.Encoded(Prompt), repeats)
-	logger.Log(Prompt + tokenizer.Decoded(Generation(model).Generated(prompt, count)))
+	logger.Log(Prompt + tokenizer.Decoded(Generation(model.Prefilled(prompt, 0)).Continued(prompt.Length, count)))
 	let before = Process.Elapsed
 	let prefilled = model.Prefilled(prompt, 0)
 	let first = prefilled.Next

@@ -69,9 +69,23 @@ Packed(position Number) Number
 	kind is in ("Float8s", "List(Float8)") then 7 else 0
 Collected(register Text, pointer Text, at Number) Texts
 	MlirLayout(Eights).Collected("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5).Last is "    llvm.store %d, %p : f64, !llvm.ptr"
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(5) is "    llvm.store %d, %p : f64, !llvm.ptr"
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5).Last is "  ^d5stored:"
+	function.Float is "f64" then Narrowed(register, pointer, at) else Stored(register, pointer, at)
+Stored(register Text, pointer Text, at Number) Texts
+	MlirLayout(Eights).Stored("%d", "%p", 4).Last is "    llvm.store %db, %p : i8, !llvm.ptr"
 	let address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer
-	if (function.Float is "f64") or (Packed(function.method.LoopBeginOf(at)) is 0)
-		return (address + function.Float, function.Store(register, pointer))
+	if Packed(function.method.LoopBeginOf(at)) is 0
+		return (address + "f32", "    llvm.store " + register + ", " + pointer + " : f32, !llvm.ptr")
 	let encoded = "    " + register + "b = func.call @strict_device_float8(" + register + ") : (f32) -> i8"
 	(address + "i8", encoded, "    llvm.store " + register + "b, " + pointer + " : i8, !llvm.ptr")
+Narrowed(register Text, pointer Text, at Number) Texts
+	MlirLayout(MlirDeviceStatements.Doubled).Narrowed("%d", "%p", 5)(3) is "    cf.cond_br %pv, ^d5wide, ^d5narrow"
+	let address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer + "f64"
+	let compared = "    " + pointer + "v = arith.cmpi eq, %results, " + pointer + "w : i64"
+	let branch = "    cf.cond_br " + pointer + "v, ^d" + at + "wide, ^d" + at + "narrow"
+	let wide = (address, MlirTyped.Integer.Constant(pointer + "w", "64"), compared, branch, "  ^d" + at + "wide:")
+	let truncated = "    " + register + "n = arith.truncf " + register + " : f64 to f32"
+	let narrow = ("    cf.br ^d" + at + "stored", "  ^d" + at + "narrow:", truncated)
+	let stored = Stored(register + "n", pointer + "n", at) + ("    cf.br ^d" + at + "stored", "  ^d" + at + "stored:")
+	(wide + function.Store(register, pointer)) + narrow + stored
