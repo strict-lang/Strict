@@ -1,0 +1,53 @@
+has lines Texts
+constant Squared = DroppedResults(("has width Number", "Area Number", "\tSquared.Area is 0", "\twidth * width", "Run", "\tlogger.Log(width)", "\tArea", "\tlogger.Log(width)"))
+constant Hint = " never fails, so dropping its result does nothing: use it or remove the line"
+constant Operators = ("+", "-", "*", "/", "%", "^", "is", "and", "or", "then", "else", "<", ">", "<=", ">=", "to")
+Issues List(ValidationIssue)
+	Squared.Issues.First to Text is "DroppedResultMustBeUsed: Area" + Hint
+	Squared.Issues.First.Line is 7
+	Squared.Issues.Length is 1
+	let plain = Plain
+	mutable inBody = false
+	for lines
+		inBody = TypeShape(lines).IsMethodHeader(value) then false else inBody or IsBodyStart(value)
+		let next = index + 1 < lines.Length then lines(index + 1) else ""
+		let isFollowed = next.StartsWith("\t") and (next.StartsWith("\t\t") is false)
+		if inBody and isFollowed and IsDropped(value, plain)
+			ValidationIssue("DroppedResultMustBeUsed", Tokenizer(value.Trim).Tokens.First + Hint, index + 1)
+IsBodyStart(line Text) Boolean
+	Squared.IsBodyStart("\tlogger.Log(width)")
+	Squared.IsBodyStart("\tSquared.Area is 0") is false
+	Squared.IsBodyStart("") is false
+	(line.Trim is not "") and (Duplicates.IsTest(line.Trim) is false)
+Plain Texts
+	Squared.Plain is ("Area")
+	for lines
+		let body = TypeShape(lines).IsMethodHeader(value) then Duplicates.Implementation(lines, index) else ""
+		if (body.Count("\n") is 1) and IsPlain(Tokenizer(body.Trim).Tokens)
+			Tokenizer(value).Tokens.First
+IsPlain(tokens Texts) Boolean
+	Squared.IsPlain(("width", "*", "(", "width", "+", "1", ")"))
+	Squared.IsPlain(("numbers", ".", "X")) is false
+	Squared.IsPlain(("Counted", "(", "3", ")")) is false
+	for tokens
+		if (value is in (".", "Error", "for", "return")) or (value is "(") and IsCall(tokens, index)
+			return false
+	true
+IsCall(tokens Texts, position Number) Boolean
+	Squared.IsCall(("Counted", "(", "3", ")"), 1)
+	Squared.IsCall(("2", "*", "(", "3", ")"), 2) is false
+	let previous = position > 0 then tokens(position - 1) else ""
+	let first = previous.Length > 0 then previous.Substring(0, 1) else "0"
+	(first.Lower is not first.Upper) and (previous is not in Operators)
+IsDropped(line Text, plain Texts) Boolean
+	Squared.IsDropped("\tArea", ("Area"))
+	Squared.IsDropped("\tArea(2)", ("Area"))
+	Squared.IsDropped("\tlet area = Area", ("Area")) is false
+	Squared.IsDropped("\tArea(2) + 1", ("Area")) is false
+	let tokens = Tokenizer(line.Trim).Tokens
+	if line.StartsWith("\t\t") or (tokens.Length is 0) or (tokens.First is not in plain)
+		return false
+	for tokens
+		if value is in Operators
+			return false
+	(tokens.Length is 1) or (tokens(1) is "(") and (tokens.Last is ")")

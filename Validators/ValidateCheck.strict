@@ -20,7 +20,8 @@ CheckFile(path Text, mutations Texts, isBase Boolean) List(ValidationIssue)
 	let typeName = Path(path).FileName.RemoveExtension.text
 	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
-	rules + Names(lines).Issues + Recursions(lines, typeName).Issues + TestChecks(lines).Issues
+	let shaped = Names(lines).Issues + Recursions(lines, typeName).Issues + TestChecks(lines).Issues
+	rules + shaped + DroppedResults(lines).Issues
 Logged(path Text, found List(ValidationIssue)) Number
 	for found
 		logger.Log(path + ":line " + value.Line + ": " + value)
