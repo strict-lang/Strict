@@ -1,0 +1,107 @@
+has function MlirFunction
+has position Number
+constant Constraint = "ConstraintNotMet: numbers with Length is 2 is false for "
+constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Pairing", (InstructionEntry.LoadText(0, Constraint), InstructionEntry.Return(0)))
+constant Pairing = TypeEntry("Strict/Pairing", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry) + Validating)
+constant Constructing = InstructionEntry.Invoke(1, ("Strict/Pairing", "from", "Pairing", "numbers"), List(Number) + 0, -1)
+constant Reading = InstructionEntry.Invoke(1, ("Strict/List(Number)", "X", "Strict/Number"), List(Number), 0)
+constant Building = MethodEntry("Doubled", List(MemberEntry), "Strict/Pairing", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult0"), InstructionEntry.Invoke(3, ("Strict/Pairing", "from", "Pairing", "numbers"), List(Number) + 2, -1), InstructionEntry.Return(3)))
+constant Built = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Building), 3)
+constant Sample = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Validating), 1)
+constant Instances = MlirInstances(Sample.function, 1)
+IsPaired(kind Text) Boolean
+	Sample.IsPaired("Pairing")
+	Sample.IsPaired("Strict/Pairing")
+	Sample.IsPaired("Number") is false
+	let type = function.TypeOf(TypeEntry.ShortName(kind))
+	let member = type.Changing.Length is 1 then TypeEntry.ShortName(type.Changing.First.typeName) else ""
+	if member is not in ("List(Number)", "Numbers")
+		return false
+	for type.methods
+		if (value.Name is "Validated") and IsConstrained(value)
+			return true
+	false
+IsConstrained(method MethodEntry) Boolean
+	Sample.IsConstrained(Validating)
+	Sample.IsConstrained(MethodEntry.CountingLoop) is false
+	for method.instructions
+		let isConstant = value.kind is InstructionType.LoadConstantToRegister
+		if isConstant and (value.texts.Length > 0) and (value.texts.First is Constraint)
+			return true
+	false
+Helper(entry InstructionEntry, owner Text, name Text) Text
+	Sample.Helper(Reading, "Pairing", "X") is "strict_two_x"
+	Sample.Helper(Reading, "Pairing", "Length") is "strict_two_length"
+	Sample.Helper(Reading, "Number", "X") is ""
+	Sample.Helper(Constructing, "Pairing", "Atan") is "strict_two_atan"
+	if IsPaired(owner) is false
+		return ""
+	if name is "Atan"
+		return "strict_two_atan"
+	let isList = entry.texts.First.StartsWith("Strict/List(")
+	if isList and (name is in ("Length", "Count"))
+		return "strict_two_length"
+	isList and (name is in ("X", "Y")) then "strict_two_" + name.Lower else ""
+Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
+	Sample.Constructed(Constructing, "Strict/Pairing", Instances).Last is "    llvm.store %t1pp, %r1 : f64, !llvm.ptr"
+	if IsPaired(typeName) is false
+		return instances.Constructed(entry, typeName)
+	let argument = "%r" + entry.payload(5 + entry.payload(3) + 1)
+	if IsBuiltArgument(entry)
+		return function.Copied(argument, "%r" + entry.payload(0), "%t" + position + "pp")
+	let call = "    %t" + position + "pp = func.call @strict_two_from_list(%t" + position + "pa) : (f64) -> f64"
+	let loaded = function.Load("%t" + position + "pa", argument)
+	(loaded, call, function.Store("%t" + position + "pp", "%r" + entry.payload(0)))
+IsBuilt(name Text) Boolean
+	Built.IsBuilt("listResult0")
+	Built.IsBuilt("numbers") is false
+	let instructions = function.method.instructions
+	mutable writes = 0
+	mutable isPacked = false
+	for instructions
+		if (value.kind is InstructionType.InvokeWriteToList) and (value.texts(0) is name)
+			writes = writes + 1
+		if (value.kind is InstructionType.LoadVariableToRegister) and (value.texts(0) is name)
+			isPacked = (index + 1 < instructions.Length) and IsPacking(instructions(index + 1), value.payload(0))
+	isPacked and (writes is 2)
+IsPacking(entry InstructionEntry, register Number) Boolean
+	Built.IsPacking(Building.instructions(5), 2)
+	Built.IsPacking(Building.instructions(5), 1) is false
+	let isFrom = (entry.kind is InstructionType.Invoke) and (entry.texts(1) is "from") and IsPaired(entry.texts(0))
+	isFrom and (entry.payload(5 + entry.payload(3)) is 1) and (entry.payload(6 + entry.payload(3)) is register)
+IsBuiltArgument(entry InstructionEntry) Boolean
+	MlirPairs(Built.function, 5).IsBuiltArgument(Building.instructions(5))
+	let previous = position > 0 then function.method.instructions(position - 1) else entry
+	(previous.kind is InstructionType.LoadVariableToRegister) and IsBuilt(previous.texts(0))
+Appended(entry InstructionEntry, fallback MlirLists) Texts
+	MlirPairs(Built.function, 2).Appended(Building.instructions(2), MlirLists(Built.function, 2)).Length is 5
+	if (entry.kind is not InstructionType.InvokeWriteToList) or (IsBuilt(entry.texts(0)) is false)
+		return fallback.Appended(entry)
+	let slot = "%v_" + entry.texts(0)
+	let temp = "%t" + position
+	let isFirst = Written(entry.texts(0)) is 0
+	let half = isFirst then "y" else "x"
+	let kept = "    " + temp + "pk = func.call @strict_two_" + half + "(" + temp + "pl) : (f64) -> f64"
+	let parts = isFirst then temp + "pe, " + temp + "pk" else temp + "pk, " + temp + "pe"
+	let packed = "    " + temp + "pp = func.call @strict_two_packed(" + parts + ") : (f64, f64) -> f64"
+	let loads = (function.Load(temp + "pl", slot), function.Load(temp + "pe", "%r" + entry.payload(0)))
+	loads + kept + packed + function.Store(temp + "pp", slot)
+Written(name Text) Number
+	MlirPairs(Built.function, 3).Written("listResult0") is 1
+	mutable count = 0
+	for position
+		let earlier = function.method.instructions(index)
+		if (earlier.kind is InstructionType.InvokeWriteToList) and (earlier.texts(0) is name)
+			count = count + 1
+	count
+Defaulted(initial Runtime/VmValue, slot Text) Texts
+	Sample.Defaulted(VmValue.OfList(List(VmValue)), "%s") is ("    llvm.store %zero, %s : f64, !llvm.ptr")
+	Sample.Defaulted(VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2))), "%s").Length is 4
+	if initial.items.Length is not 2
+		return List(Text) + function.Store("%zero", slot)
+	let temp = "%t" + position
+	let statements = MlirStatements(function, position)
+	let first = "    " + temp + "dx = arith.constant " + statements.Hex(initial.items.First.number) + " : f64"
+	let second = "    " + temp + "dy = arith.constant " + statements.Hex(initial.items.Last.number) + " : f64"
+	let packed = "    " + temp + "dp = func.call @strict_two_packed(" + temp + "dx, " + temp + "dy) : (f64, f64) -> f64"
+	(first, second, packed, function.Store(temp + "dp", slot))

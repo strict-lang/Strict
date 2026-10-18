@@ -28,7 +28,7 @@ Length Number
 Normalize Vector2
 	Vector2(1, 0).Normalize is Vector2(1, 0)
 	Vector2(0, 5).Normalize is Vector2(0, 1)
-	Vector2(3, 4).Normalize.Length is 1
+	Vector2(3, 4).Normalize.Length.IsNearlyEqual(1)
 	Vector2(X / Length, Y / Length)
 Atan Degrees
 	Vector2(0, 0).Atan is 0
