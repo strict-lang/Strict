@@ -9,8 +9,8 @@ constant LinuxMembers = " LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/
 constant Accept = " --accept-package-agreements --accept-source-agreements"
 constant Pacman = "C:\\msys64\\usr\\bin\\pacman.exe"
 constant SingleThreaded = " --mlir-disable-threading"
-constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -mf16c -Os -c -Wno-override-module"
-constant Optimized = " -Os -march=native -Wno-override-module"
+constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -mf16c -c -Wno-override-module"
+constant Optimized = " -march=native -Wno-override-module"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
 Located(name Text) Text
@@ -77,25 +77,25 @@ Installing(missing Texts) Text
 	let where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
 	let problem = started.Failed then ", could not start it: " + started.error else ""
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
-Built(base Text, executable Text) Text
-	OnWindows.Built("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed")
+Built(base Text, executable Text, level Text) Text
+	OnWindows.Built("Compiler/output/missing", "missing.exe", NativeBuild.Fast).StartsWith("mlir-opt failed")
 	let lowered = Lowered(base)
 	if lowered is not ""
 		return lowered
 	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else " -lm -lpthread"
-	let sources = NativeSources(natives).Objects(platform, root)
+	let sources = NativeSources(natives).Objects(platform, root, level)
 	let resource = sources.StartsWith("clang") then sources else NativeSources(natives).Resource(base, platform, root)
 	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")
 		return resource
-	let linking = Quoted(base + ".ll") + sources + resource + " -o " + Quoted(executable) + Optimized + system
+	let linking = Quoted(base + ".ll") + sources + resource + " -o " + Quoted(executable) + Optimized + level + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else "Built " + executable
-CrossBuilt(base Text) Text
-	OnWindows.CrossBuilt("Compiler/output/missing").StartsWith("mlir-opt failed")
+CrossBuilt(base Text, level Text) Text
+	OnWindows.CrossBuilt("Compiler/output/missing", NativeBuild.Fast).StartsWith("mlir-opt failed")
 	let lowered = Lowered(base + ".linux")
 	if lowered is not ""
 		return lowered
-	let compiling = Quoted(base + ".linux.ll") + " -o " + Quoted(base + ".linux.o") + LinuxTarget
+	let compiling = Quoted(base + ".linux.ll") + " -o " + Quoted(base + ".linux.o") + LinuxTarget + level
 	let compiled = ToolRunner(Located("clang")).Execute(compiling)
 	if compiled.Failed
 		return "clang failed: " + compiled.error

@@ -1,5 +1,8 @@
 has logger
 has isCrossing Boolean = true
+has level Text = Fast
+constant Fast = " -O2"
+constant Small = " -Os"
 constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o")
 Built(path Text, root Text) Number
 	let failed = Execute(logger).Test(path, root)
@@ -76,7 +79,7 @@ Linked(base Text, tools Toolchain) Text
 	let executable = tools.Executable(base)
 	let isSwapped = (Platform.Current is Platform.Windows) and File(executable).Exists
 	let target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
-	let built = tools.Built(base, target)
+	let built = tools.Built(base, target, level)
 	if isSwapped and built.StartsWith("Built ")
 		let old = executable.Replace(".exe", ".old.exe")
 		File(executable).Rename(old)
@@ -89,7 +92,7 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	if (Platform.Current is not Platform.Windows) or isCounting or (isCrossing is false)
 		return 0
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
-	let crossed = tools.CrossBuilt(base)
+	let crossed = tools.CrossBuilt(base, level)
 	logger.Log(crossed)
 	crossed.StartsWith("Built ") or crossed.StartsWith("Linux build skipped") then 0 else 1
 Removed(base Text)

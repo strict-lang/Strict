@@ -39,15 +39,15 @@ Arguments(platform Number, root Text) Text
 	for Files
 		arguments = arguments + " \"" + value + "\""
 	arguments + " -I\"" + root + "/Compiler\"" + Flags(platform)
-Objects(platform Number, root Text) Text
-	Adding.Objects(Platform.Current, ".").StartsWith(" \"Examples/NativeAdd/native/Adder.o\"")
-	NativeSources(List(Text)).Objects(Platform.Current, ".") is ""
+Objects(platform Number, root Text, level Text) Text
+	Adding.Objects(Platform.Current, ".", NativeBuild.Fast).StartsWith(" \"Examples/NativeAdd/native/Adder.o\"")
+	NativeSources(List(Text)).Objects(Platform.Current, ".", NativeBuild.Fast) is ""
 	if folders.Length is 0
 		return ""
 	let tokens = Flags(platform).Split(" ")
 	mutable arguments = ""
 	for Files + Sources(tokens)
-		let object = Object(value, platform, root, Options(tokens, false))
+		let object = Object(value, platform, root, level + Options(tokens, false))
 		if object.StartsWith("clang failed")
 			return object
 		arguments = arguments + " \"" + object + "\""
@@ -72,7 +72,7 @@ Object(source Text, platform Number, root Text, options Text) Text
 	if IsCurrent(target, Inputs(platform, root) + source)
 		return target
 	let building = Path(source).RemoveExtension.text + "." + 999999.Random.Floor + ".o"
-	let compile = "-c \"" + source + "\" -I\"" + root + "/Compiler\"" + Toolchain.Optimized + options
+	let compile = "-c \"" + source + "\" -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
 	let compiled = ToolRunner(Toolchain(platform, root).Located("clang")).Execute(compile + " -o \"" + building + "\"")
 	compiled.Failed then "clang failed for " + source + ": " + compiled.error else Placed(building, target)
 Inputs(platform Number, root Text) Texts
@@ -87,7 +87,7 @@ Library(platform Number, root Text) Text
 	if IsCurrent(base + extension, Files + Inputs(platform, root))
 		return "Built " + base + extension
 	let building = base + "." + 999999.Random.Floor + extension
-	let shared = platform is Platform.Windows then "-shared -Os -DSTRICT_LIBRARY" else "-shared -fPIC -Os -DSTRICT_LIBRARY"
+	let shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
 	let clang = Toolchain(platform, root).Located("clang")
 	let result = ToolRunner(clang).Execute(shared + Arguments(platform, root) + " -o \"" + building + "\"")
 	result.Failed then "clang failed: " + result.error else "Built " + Placed(building, base + extension)

@@ -13,6 +13,7 @@ In priority order. Remove what is done, add what is found, keep each item to wha
 10. **Research** (when all other work is done): pruning (attention heads, MLP neurons, structured, low rank, skipping layers) and speculative decoding with a small draft model, start with GPT-2, judged by perplexity, coding tests and measured speed.
 
 ## Language and compiler
+- **Member type from a constant default** (found 2026-10-19): natively `has level = Fast` (a Text constant of the same type) gets the type `Fast`, its text fails with "unsupported: text of Fast"; `has level Text = Fast` works.
 - **GPU kernels beyond NVIDIA** (found 2026-10-17): the device runtime and the tensor core kernels (`NativeRuntimeTokens.mlir`, `NativeRuntimeAttention.mlir`) call NVVM intrinsics directly. MLIR 22 lowers `gpu.subgroup_mma_*` to NVVM (wmma) but not to ROCDL ("failed to legalize gpu.subgroup_mma_load_matrix"), SPIR-V needs `spirv.entry_point_abi`. Before writing the next kernel by hand, check what MLIR already provides (`linalg` with the transform dialect's tensor core tiling, `nvgpu`/`amdgpu` mma ops), then port the existing kernels to it so AMD (ROCDL) and Vulkan (SPIR-V) get them too.
 
 ## Rebalancing: native runner and C# integration (../Rebalancing)

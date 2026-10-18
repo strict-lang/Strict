@@ -57,6 +57,7 @@ strict build Examples/Sum.strict          run the tests, then the native executa
 strict test Examples/Sum.strict           run the inline tests of every method on the Strict VM (a folder: every file in it and its package sub folders)
 strict build Games/App/App.strict         a Run program that opens a window goes into Games/App/Release (kept between builds, only the executable is replaced), Games/App/ContentBuild.strict builds Release/Content when it exists (strict ContentBuild.strict Content Release/Content), otherwise Content is copied incrementally (new and changed files, removed ones deleted)
 strict build Examples/Sum.strict windows  the same without the Linux executable (when the native code only exists for Windows)
+strict build Examples/Sum.strict small    optimized for size (-Os) instead of speed (-O2, the default), also its C natives, combines with windows
 strict build Policy.strict library        Policy.dll (Linux libPolicy.so) exporting its public methods for C# and C, plus Policy.cs
 strict check Examples                     validate a folder and its package sub folders (type rules, unused members, limits)
 strict format Examples/Sum.strict         print the file in its canonical form, each method body as the parser reads it
