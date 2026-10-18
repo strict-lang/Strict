@@ -1,6 +1,6 @@
 has Center Vector2
-has Width Number with value >= 0
-has Height Number with value >= 0
+has Width Number with value >= 0 and value.Bits is 32
+has Height Number with value >= 0 and value.Bits is 32
 Left = Center.X - Width / 2
 Right = Center.X + Width / 2
 Bottom = Center.Y - Height / 2

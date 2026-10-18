@@ -1,5 +1,5 @@
-has Width Number with value > 0
-has Height Number with value > 0
+has Width Number with value > 0 and value.Bits is 32
+has Height Number with value > 0 and value.Bits is 32
 has iterator
 for Iterator(Vector2)
 	for Height

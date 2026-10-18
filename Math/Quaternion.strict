@@ -1,4 +1,4 @@
-has numbers with Length is 4
+has numbers with Length is 4 and value.Bits is 32
 constant Identity = Quaternion(0, 0, 0, 1)
 constant HalfTurn = Quaternion(0, 0, 1, 0)
 X Number

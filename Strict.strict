@@ -1,8 +1,8 @@
 has logger
 constant Version = "1.0"
-constant Commands = ("build", "test", "check", "update", "format")
+constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant Informing = ("version", "--version", "help", "--help")
-constant Help = ("strict <file> [arguments]  run the Run method on the Strict VM, the fastest, everything stays in memory", "strict build <file>        run the tests, then compile a native executable (Name.test without a Run method)", "strict build <file> windows  the same without the Linux executable", "strict build <file> library  build a shared library of its public methods and a C# binding", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> -       test the source read from standard input as <file>, nothing is written", "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)", "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built")
+constant Help = ("strict <file> [arguments]  run the Run method on the Strict VM, the fastest, everything stays in memory", "strict build <file>        run the tests, then compile a native executable (Name.test without a Run method)", "strict build <file> windows  the same without the Linux executable", "strict build <file> library  build a shared library of its public methods and a C# binding", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> -       test the source read from standard input as <file>, nothing is written", "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)", "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built", "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source")
 Run(arguments Texts) Number
 	let command = arguments.Length > 0 then arguments(0) else "help"
 	let rest = Rooted(command is in Commands then Rest(arguments) else arguments)
@@ -10,7 +10,7 @@ Run(arguments Texts) Number
 	if message is not ""
 		logger.Log(message)
 		return command is in Informing then 0 else 2
-	if command is in ("check", "update", "format")
+	if command is in ("check", "update", "format", "suggest")
 		return Tool(command, rest)
 	if command is "test"
 		return Tested(rest)
@@ -49,6 +49,8 @@ Rest(arguments Texts) Texts
 	for Range(1, arguments.Length)
 		arguments(value)
 Tool(command Text, rest Texts) Number
+	if command is "suggest"
+		return Suggested(rest)
 	if command is "format"
 		return Format(rest(0))
 	let updater = Repositories(logger, ".")
@@ -72,3 +74,11 @@ Format(path Text) Number
 		return 1
 	logger.Log(Text.Combine(RoundTrip(logger).Formatted(lines), "\n"))
 	0
+Suggested(rest Texts) Number
+	if rest.Length < 3
+		return 2
+	let source = FileCompiler.Normalized(rest(0))
+	if (rest.Length > 3) and (rest(3) is "-")
+		File(source).InMemory(Process.Input)
+	let files = SourceFiles(rest(1)).Of(source)
+	Suggestions(source, rest(1), File(source).ReadLines, ResolveCheck.Inference(files)).Run(rest(2), files)

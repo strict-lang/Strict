@@ -2,6 +2,7 @@ has Name Text
 has typeName Text
 has initial List(InstructionEntry)
 has IsConstant Boolean
+has Bits Number = 64
 constant SevenMember = MemberEntry("a", "b", InstructionEntry(InstructionType.Set, List(Text), (1, 7, 0)), true)
 constant LoggerMember = MemberEntry("logger", "Strict/Logger", List(InstructionEntry), false)
 constant NumbersMember = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
@@ -14,7 +15,8 @@ Names(names BinaryNames) BinaryNames
 Integers(names BinaryNames) Numbers
 	LoggerMember.Integers(BinaryNames("logger", "Strict/Logger")) is (0, 1, 0, 0)
 	SevenMember.Integers(BinaryNames("a", "b")) is (0, 1, 1, 1, 6, 4, 0, 3, 2, 14, 0)
-	let flag = IsConstant then 1 else 0
+	MemberEntry("a", "b", List(InstructionEntry), false, 32).Integers(BinaryNames("a", "b")) is (0, 1, 64, 0)
+	let flag = (IsConstant then 1 else 0) + (Bits is 64 then 0 else Bits * 2)
 	mutable integers = List(Number) + names.Index(Name) + names.Index(typeName) + flag + initial.Length
 	for initial
 		let instruction = value.Integers(names)

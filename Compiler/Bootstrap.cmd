@@ -7,5 +7,5 @@ set "PATH=%PATH%;C:\msys64\ucrt64\bin;C:\Program Files\LLVM\bin"
 set "PASSES=--convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
 mlir-opt Strict.mlir --mlir-disable-threading %PASSES% -o Strict.llvm.mlir || exit /b 1
 mlir-translate --mlir-disable-threading --mlir-to-llvmir Strict.llvm.mlir -o Strict.ll || exit /b 1
-clang Strict.ll -o ..\strict.exe -O2 -march=native -Wno-override-module -Wl,-Brepro || exit /b 1
+clang Strict.ll -o ..\strict.exe -O2 -march=native -Wno-override-module -Wl,-Brepro -Wl,/STACK:67108864 || exit /b 1
 echo Built %~dp0..\strict.exe

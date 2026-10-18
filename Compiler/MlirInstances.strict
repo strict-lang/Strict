@@ -80,7 +80,7 @@ Field(entry InstructionEntry) Texts
 		return ErrorName(entry)
 	let kind = MlirKinds(function).KindOf(position, entry.payload(1))
 	if MlirLayout(function).IsAliased(entry, position)
-		return function.Copied("%r" + entry.payload(1), "%r" + entry.payload(0), Temp("a"))
+		return MlirCouples(function, position).Aliased(entry, kind)
 	let slot = StoredNames(function.TypeOf(kind)).Index(entry.texts(0))
 	if slot < 0
 		return List(Text) + MlirStatements(function, position).Unsupported("member " + kind + "." + entry.texts(0))
@@ -108,6 +108,9 @@ Aliased Texts
 	MlirInstances(MlirLayout.Wrapping.function, 0).Aliased.Length is 2
 	MlirInstances(MlirLayout.Wrapping.function, 0).Aliased.First is "    %talias0 = llvm.load %instance : !llvm.ptr -> f64"
 	MlirInstances(Widened, 0).Aliased.Length is 0
+	MlirInstances(MlirCouples.Own.function, 0).Aliased.Length is 5
+	if MlirCouples(function, 0).IsCoupled(function.type.Name)
+		return MlirCouples(function, 0).Unpacked
 	mutable lines = List(Mutable(Text))
 	for Stored(function.type)
 		if value.Name is not in function.method.ParameterNames

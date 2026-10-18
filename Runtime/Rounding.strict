@@ -1,0 +1,30 @@
+has bits Number
+constant Single = Rounding(32)
+Of(original VmValue) VmValue
+	Single.Of(VmValue.OfNumber(0.1)).number is 0.10000000149011612
+	Rounding(64).Of(VmValue.OfNumber(0.1)).number is 0.1
+	Single.Of(VmValue.OfList(VmValue.OfNumber(0.1), VmValue.OfNumber(1))).items.First.number is 0.10000000149011612
+	Single.Of(VmValue.OfError("a")).kind is "Strict/Error"
+	if (bits is 64) or (original.kind is in VmValue.ErrorKinds)
+		return original
+	if original.kind is "Number"
+		return VmValue.OfNumber(original.number.Rounded(bits))
+	mutable rounded = List(Mutable(VmValue))
+	for original.items
+		rounded.Add(Of(value))
+	VmValue(original.kind, original.number, original.text, rounded)
+Wrapped(type TypeEntry, call Invocation) VmValue
+	Single.Wrapped(Natives.Single, Natives.NewSingle).number is 0.10000000149011612
+	Single.Wrapped(Natives.Degree, Natives.NewDegree).number is 3
+	if call.Arguments.Length is 0
+		return VmValue.None
+	let memberBits = type.members.Length is 0 then 64 else type.members.First.Bits
+	Rounding(memberBits).Of(call.Arguments.First).As(call.TypeName)
+Members(type TypeEntry, call Invocation, natives Natives) List(VmValue)
+	Single.Members(Natives.Shape, Natives.NewShape, Natives.Shapes).First.number is 3
+	let arguments = call.Arguments
+	for type.members
+		let argument = call.ParameterNames.Index(value.Name)
+		let chosen = argument < 0 then index else argument
+		let isGiven = (value.IsConstant is false) and (chosen < arguments.Length)
+		isGiven then Rounding(value.Bits).Of(arguments(chosen)) else natives.Initial(value)

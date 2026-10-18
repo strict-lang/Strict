@@ -1,24 +1,27 @@
 has function MlirFunction
 has position Number
 constant Constraint = "ConstraintNotMet: numbers with Length is 2 is false for "
-constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Pairing", (InstructionEntry.LoadText(0, Constraint), InstructionEntry.Return(0)))
-constant Pairing = TypeEntry("Strict/Pairing", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry) + Validating)
-constant Constructing = InstructionEntry.Invoke(1, ("Strict/Pairing", "from", "Pairing", "numbers"), List(Number) + 0, -1)
+constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Pairing", (InstructionEntry.LoadText(0, Constraint), InstructionEntry.Return(0)))
+constant Pairing = TypeEntry("Strict/Math/Pairing", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 32), List(MethodEntry) + Validating)
+constant Constructing = InstructionEntry.Invoke(1, ("Strict/Math/Pairing", "from", "Pairing", "numbers"), List(Number) + 0, -1)
 constant Reading = InstructionEntry.Invoke(1, ("Strict/List(Number)", "X", "Strict/Number"), List(Number), 0)
-constant Building = MethodEntry("Doubled", List(MemberEntry), "Strict/Pairing", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult0"), InstructionEntry.Invoke(3, ("Strict/Pairing", "from", "Pairing", "numbers"), List(Number) + 2, -1), InstructionEntry.Return(3)))
+constant Building = MethodEntry("Doubled", List(MemberEntry), "Strict/Math/Pairing", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult0"), InstructionEntry.Invoke(3, ("Strict/Math/Pairing", "from", "Pairing", "numbers"), List(Number) + 2, -1), InstructionEntry.Return(3)))
 constant Built = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Building), 3)
 constant Sample = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Validating), 1)
-constant Summing = InstructionEntry.Invoke(0, ("Strict/Pairing", "Doubled", "Strict/Pairing"), List(Number), -1)
+constant Summing = InstructionEntry.Invoke(0, ("Strict/Math/Pairing", "Doubled", "Strict/Math/Pairing"), List(Number), -1)
 constant Rewrapped = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, MethodEntry("Run", List(MemberEntry), "None", (Summing, Constructing))), 1)
 constant Twice = VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2)))
 constant Instances = MlirInstances(Sample.function, 1)
 IsPaired(kind Text) Boolean
 	Sample.IsPaired("Pairing")
-	Sample.IsPaired("Strict/Pairing")
-	Sample.IsPaired("Number") is false
+	MlirPairs(MlirCouples.Sample.function, 0).IsPaired("Sizing")
+	IsListed(kind) or MlirCouples(function, position).IsCoupled(kind)
+IsListed(kind Text) Boolean
+	Sample.IsListed("Strict/Math/Pairing")
+	Sample.IsListed("Number") is false
 	let type = function.TypeOf(TypeEntry.ShortName(kind))
 	let member = type.Changing.Length is 1 then TypeEntry.ShortName(type.Changing.First.typeName) else ""
-	if member is not in ("List(Number)", "Numbers")
+	if (member is not in ("List(Number)", "Numbers")) or (type.Changing.First.Bits is not 32)
 		return false
 	for type.methods
 		if (value.Name is "Validated") and IsConstrained(value)
@@ -46,10 +49,10 @@ Helper(entry InstructionEntry, owner Text, name Text) Text
 		return "strict_two_length"
 	isList and (name is in ("X", "Y")) then "strict_two_" + name.Lower else ""
 Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
-	Sample.Constructed(Constructing, "Strict/Pairing", Instances).Last is "    llvm.store %t1pp, %r1 : f64, !llvm.ptr"
-	Text.Combine(Rewrapped.Constructed(Constructing, "Strict/Pairing", Instances)).IndexOf("strict_two_from_list") is -1
-	if IsPaired(typeName) is false
-		return instances.Constructed(entry, typeName)
+	Sample.Constructed(Constructing, "Strict/Math/Pairing", Instances).Last is "    llvm.store %t1pp, %r1 : f64, !llvm.ptr"
+	Text.Combine(Rewrapped.Constructed(Constructing, "Pairing", Instances)).IndexOf("strict_two_from_list") is -1
+	if IsListed(typeName) is false
+		return MlirCouples(function, position).Constructed(entry, typeName, instances)
 	let register = entry.payload(5 + entry.payload(3) + 1)
 	let argument = "%r" + register
 	if IsBuiltArgument(entry) or IsPaired(MlirKinds(function).KindOf(position, register))

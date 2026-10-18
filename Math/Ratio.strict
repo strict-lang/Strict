@@ -1,4 +1,4 @@
-﻿has number with value >= -1 and value <= 1
+﻿has number with value >= -1 and value <= 1 and value.Bits is 32
 Asin Degrees
 	Ratio(0).Asin is Degrees(0)
 	Ratio(1).Asin is Degrees(90)

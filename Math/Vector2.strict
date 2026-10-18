@@ -1,4 +1,4 @@
-has numbers with Length is 2
+has numbers with Length is 2 and value.Bits is 32
 constant One = Vector2(1, 1)
 constant Left = Vector2(-1, 0)
 constant Right = Vector2(1, 0)

@@ -18,7 +18,8 @@ IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("Shape")
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
-	function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
+	let isStruct = function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
+	isStruct and (MlirCouples(function, 0).IsCoupled(typeName) is false)
 Represented(kind Text) Text
 	Wrapping.Represented("Angle") is "Number"
 	Wrapping.Represented("Shape") is "Shape"
