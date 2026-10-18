@@ -88,7 +88,8 @@ Looped Texts
 Exited Texts
 	Doubling.Exited.First is "  ^loop2exit:"
 	let loops = MlirLoops(function, function.method.LoopEndOf(position))
-	let filled = MlirMemory(function, position).Called(Temp("fill"), "strict_list_filled", (Temp("r"), Temp("n")))
+	let helper = MlirParallel(function, position).Filler
+	let filled = MlirMemory(function, position).Called(Temp("fill"), helper, (Temp("r"), Temp("n")))
 	let restored = (function.Store(Temp("x"), "%v_index"), function.Store(Temp("y"), "%v_value"))
 	let collected = MlirLoops(function, position).IsCollecting then List(Text) + filled else List(Text)
 	List(Text) + ("  ^loop" + position + "exit:") + collected + restored + loops.Restored(position)

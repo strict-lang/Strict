@@ -2,6 +2,7 @@ has function MlirFunction
 has position Number
 constant Sample = MlirMemory(MlirFunction.Counter, 3)
 constant Equated = ("strict_list_find", "strict_list_has", "strict_list_count", "strict_list_remove", "strict_list_removed", "strict_list_without")
+constant Counted = "    func.call @strict_rc_object(%p, %z) : (!llvm.ptr, i64) -> ()"
 constant Comparing = "(f64, f64) -> f64"
 constant Pair = TypeEntry("Strict/Pair", (MemberEntry("first", "Strict/Number", List(InstructionEntry), false), MemberEntry("rest", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry))
 constant Box = TypeEntry("Strict/Box", List(MemberEntry) + MemberEntry("values", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry))

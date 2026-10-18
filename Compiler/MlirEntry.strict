@@ -5,10 +5,11 @@ constant Frames = MemberEntry("frames", "Strict/Number", List(InstructionEntry) 
 constant Both = MlirEntry(Counted.entry, List(MlirFunction) + Counted.entry)
 constant Framed = MlirEntry(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Frames, "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))))
 constant Unhandled = ("    %unhandled = func.call @strict_unhandled(%result) : (f64) -> i1", "    %failing = arith.constant 1 : i32")
+constant Finished = "    func.call @strict_rc_finished() : () -> ()"
 constant Exit = "    %exit = arith.select %unhandled, %failing, %code : i32"
 constant CollectorStart = ("    %frameLevel = arith.constant 0 : i32", "    %stackBase = llvm.call_intrinsic \"llvm.frameaddress.p0\"(%frameLevel) : (i32) -> !llvm.ptr", "    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()")
 Main Texts
-	Counted.Main.Length is 19
+	Counted.Main.Length is 20
 	Counted.Main.Index("    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()") is 3
 	Both.Main.Index("    %total1 = arith.addf %result, %result1 : f64") > 0
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
@@ -18,7 +19,7 @@ Main Texts
 	let prepared = header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot", "", List(Text)) + Arguments
 	let printed = entry.IsCounted then List(Text) + MlirLines.Print else List(Text)
 	let called = prepared + (self, EntryCall) + Others + Code
-	called + Unhandled + Exit + printed + ("    return %exit : i32", "  }")
+	called + Finished + Unhandled + Exit + printed + ("    return %exit : i32", "  }")
 Code Text
 	Counted.Code is "    %code = arith.constant 0 : i32"
 	let total = others.Length is 0 then "%result" else "%total" + others.Length

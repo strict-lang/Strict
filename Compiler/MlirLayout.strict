@@ -48,12 +48,12 @@ Returned(position Number) Texts
 	if IsInitializer is false
 		return List(Text) + "    return %zero : f64"
 	let memory = MlirMemory(function, position)
-	let stored = MlirInstances(function, 0).Stored(function.type)
-	mutable lines = memory.Allocated(stored.Length, "n")
-	for stored
+	mutable lines = memory.Allocated(MlirInstances(function, 0).Stored(function.type).Length, "n")
+	for MlirInstances(function, 0).Stored(function.type)
 		let temp = memory.Temp("v" + index)
 		let copied = (function.Load(temp, "%v_" + value.Name), function.Store(temp, memory.Temp("n" + index)))
 		lines = lines + memory.Slot(memory.Temp("np"), index, "n" + index) + copied
+	lines = lines + MlirMemory.Counted.Replace("%p", memory.Temp("np")).Replace("%z", memory.Temp("nz"))
 	lines + memory.Bits(memory.Temp("np"), "n") + ("    return " + memory.Temp("nf") + " : f64")
 Paired(kind Text) Texts
 	Wrapping.Paired("List(Text, Number)") is ("Text", "Number")

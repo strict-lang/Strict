@@ -11,6 +11,7 @@ constant Sizing = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Outer, Out
 constant SelfGuard = ("    %hasSelf = arith.cmpf une, %self, %zero : f64", "    cf.cond_br %hasSelf, ^unpack, ^unpacked", "  ^unpack:")
 constant Named = InstructionEntry(InstructionType.FieldLoad, ("Name", "Error"), (2, 1, -1))
 constant Nesting = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Outer, Outer, MethodEntry.CountingLoop)
+constant Counting = "    func.call @strict_rc_written(%s) : (!llvm.ptr) -> ()"
 constant Written = "    func.call @strict_gc_written(%s) : (!llvm.ptr) -> ()"
 Stored(owner TypeEntry) List(MemberEntry)
 	MlirInstances(Shapes, 0).Stored(MlirFunction.Shape).Length is 1
@@ -35,7 +36,7 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 		lines = lines + MemberValue(entry, owner, value, index)
 	lines + memory.Boxed(Temp("op"), "o", typeName) + function.Store(Temp("of"), "%r" + entry.payload(0))
 MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Number) Texts
-	MlirInstances(Shapes, 1).MemberValue(Built, MlirFunction.Shape, MlirFunction.Shape.members.First, 0).Length is 3
+	MlirInstances(Shapes, 1).MemberValue(Built, Shapes.type, Shapes.type.members.First, 0).Length is 4
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	let argument = names.Index(member.Name)
 	let chosen = argument < 0 then slot else argument
@@ -43,7 +44,7 @@ MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Nu
 	let target = MlirMemory(function, position).Slot(Temp("op"), slot, "s" + slot)
 	if chosen < entry.payload(countPosition)
 		let source = function.Load(Temp("a" + slot), "%r" + entry.payload(countPosition + 1 + chosen))
-		return (target, source, function.Store(Temp("a" + slot), Temp("s" + slot)))
+		return (target, source, function.Store(Temp("a" + slot), Temp("s" + slot)), Counting.Replace("%s", Temp("s" + slot)))
 	let written = MlirTyped.Pointer.Written(Temp("s" + slot))
 	List(Text) + target + Default(owner, member, Temp("s" + slot), "d" + slot) + written
 Default(owner TypeEntry, member MemberEntry, slot Text, suffix Text) Texts

@@ -49,7 +49,7 @@ Forked Texts
 	let branch = "    cf.cond_br " + Temp("pb") + ", " + label + "parallel, " + label + "serial"
 	(count, threshold, enough, branch, "  " + label + "parallel:") + Context + Joined + ("  " + label + "serial:")
 Context Texts
-	Doubling.Context.Last is "    llvm.store %t2pv8, %t2pa8 : f64, !llvm.ptr"
+	Doubling.Context.Last is "    func.call @strict_rc_object(%t2pc, %t2ps) : (!llvm.ptr, i64) -> ()"
 	let names = Snapshot
 	let size = "    " + Temp("ps") + " = arith.constant " + names.Length * 8 + " : i64"
 	mutable lines = (size, "    " + Temp("pc") + " = func.call @strict_alloc(" + Temp("ps") + ") : (i64) -> !llvm.ptr")
@@ -59,14 +59,18 @@ Context Texts
 		let loaded = value.StartsWith("%p") then List(Text) else List(Text) + function.Load(stored, value)
 		let store = "    llvm.store " + stored + ", " + Temp("pa" + index) + " : f64, !llvm.ptr"
 		lines = lines + loaded + (address + Slot) + store
-	lines
+	lines + MlirMemory.Counted.Replace("%p", Temp("pc")).Replace("%z", Temp("ps"))
+Filler Text
+	Doubling.Filler is "strict_list_filled_numbers"
+	let kind = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, "forResult"))
+	kind is "List(Number)" then "strict_list_filled_numbers" else "strict_list_filled"
 Joined Texts
 	Doubling.Joined.Last is "    cf.br ^loop2exit"
 	let body = "    " + Temp("pf") + " = func.constant @" + function.Symbol + "_loop" + position + " : " + Shape
 	let operands = "(" + Temp("pf") + ", " + Temp("pc") + ", " + Temp("pn") + ") : (" + Shape + ", !llvm.ptr, i64) -> f64"
 	let failed = "    " + Temp("pe") + " = func.call @strict_is_failure(" + Temp("pr") + ") : (f64) -> i1"
 	let branch = "    cf.cond_br " + Temp("pe") + ", ^loop" + position + "failed, ^loop" + position + "filled"
-	let filled = MlirMemory(function, position).Called(Temp("pz"), "strict_list_filled", (Temp("pl"), Temp("n")))
+	let filled = MlirMemory(function, position).Called(Temp("pz"), Filler, (Temp("pl"), Temp("n")))
 	let label = "  ^loop" + position
 	let returned = (label + "failed:", "    return " + Temp("pr") + " : f64", label + "filled:")
 	let called = (body, "    " + Temp("pr") + " = func.call @strict_parallel" + operands, failed, branch)
