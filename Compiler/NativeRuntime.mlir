@@ -2288,7 +2288,8 @@
   llvm.mlir.global internal @strict_rc_allocated(0 : i64) : i64
   llvm.mlir.global internal @strict_rc_freed(0 : i64) : i64
   llvm.mlir.global internal constant @strict_rc_freed_format("Reference counts freed %lld objects\0A\00") : !llvm.array<37 x i8>
-  llvm.mlir.global internal @strict_rc_enabled(1 : i64) : i64
+  llvm.mlir.global internal @strict_rc_enabled(0 : i64) : i64
+  llvm.mlir.global internal @strict_rc_disabled(0 : i64) : i64
   llvm.mlir.global internal @strict_rc_recycled(dense<0> : tensor<64xi64>) : !llvm.array<64 x i64>
   llvm.mlir.global internal constant @strict_rc_switch("STRICT_RC\00") : !llvm.array<10 x i8>
   func.func private @strict_rc_init() {
@@ -2312,11 +2313,22 @@
     %isOff = arith.cmpi eq, %first, %zeroCharacter : i8
     cf.cond_br %isOff, ^off, ^done
   ^off:
-    %none = arith.constant 0 : i64
-    %enabledSlot = llvm.mlir.addressof @strict_rc_enabled : !llvm.ptr
-    llvm.store %none, %enabledSlot : i64, !llvm.ptr
+    %off = arith.constant 1 : i64
+    %disabledSlot = llvm.mlir.addressof @strict_rc_disabled : !llvm.ptr
+    llvm.store %off, %disabledSlot : i64, !llvm.ptr
     cf.br ^done
   ^done:
+    return
+  }
+  // the program was compiled with counting hooks in all its stores (main says so): freeing is safe, unless STRICT_RC=0;
+  // code from an older compiler with the newer runtime leaves everything to the collector
+  func.func private @strict_rc_counted() {
+    %one = arith.constant 1 : i64
+    %disabledSlot = llvm.mlir.addressof @strict_rc_disabled : !llvm.ptr
+    %disabled = llvm.load %disabledSlot : !llvm.ptr -> i64
+    %enabled = arith.subi %one, %disabled : i64
+    %enabledSlot = llvm.mlir.addressof @strict_rc_enabled : !llvm.ptr
+    llvm.store %enabled, %enabledSlot : i64, !llvm.ptr
     return
   }
   // appends object to the table, growing it when it is full

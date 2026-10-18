@@ -7,9 +7,9 @@ constant Framed = MlirEntry(MlirFunction(List(TypeEntry), MlirFunction.Shape, Me
 constant Unhandled = ("    %unhandled = func.call @strict_unhandled(%result) : (f64) -> i1", "    %failing = arith.constant 1 : i32")
 constant Finished = "    func.call @strict_rc_finished() : () -> ()"
 constant Exit = "    %exit = arith.select %unhandled, %failing, %code : i32"
-constant CollectorStart = ("    %frameLevel = arith.constant 0 : i32", "    %stackBase = llvm.call_intrinsic \"llvm.frameaddress.p0\"(%frameLevel) : (i32) -> !llvm.ptr", "    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()")
+constant CollectorStart = ("    %frameLevel = arith.constant 0 : i32", "    %stackBase = llvm.call_intrinsic \"llvm.frameaddress.p0\"(%frameLevel) : (i32) -> !llvm.ptr", "    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()", "    func.call @strict_rc_counted() : () -> ()")
 Main Texts
-	Counted.Main.Length is 20
+	Counted.Main.Length is 21
 	Counted.Main.Index("    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()") is 3
 	Both.Main.Index("    %total1 = arith.addf %result, %result1 : f64") > 0
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
