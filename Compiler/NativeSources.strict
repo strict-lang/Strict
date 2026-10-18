@@ -2,6 +2,7 @@ has folders Texts
 constant Adding = NativeSources(List(Text) + "Examples/NativeAdd/native")
 constant Iconed = "Examples/NativeAdd/NativeAdd"
 constant Resourced = " \"Examples/NativeAdd/NativeAdd.res\""
+constant Summed = " \"Examples/Sum.res\""
 Files Texts
 	Adding.Files is List(Text) + "Examples/NativeAdd/native/Adder.c"
 	mutable files = List(Mutable(Text))
@@ -108,13 +109,14 @@ IsCurrent(target Text, inputs Texts) Boolean
 			return false
 	true
 Resource(base Text, platform Number, root Text) Text
-	Adding.Resource("Examples/Sum", Platform.Windows, ".") is ""
+	Adding.Resource("Examples/Sum", Platform.Current, ".") is (Platform.Current is Platform.Windows then Summed else "")
 	Adding.Resource(Iconed, Platform.Linux, ".") is ""
 	Adding.Resource(Iconed, Platform.Current, ".") is (Platform.Current is Platform.Windows then Resourced else "")
 	let icon = Release(Logger, base).Icon
 	if (platform is not Platform.Windows) or (File(icon).Exists is false)
 		return ""
-	File(base + ".rc").Write("GLFW_ICON ICON \"" + Path(icon).FileName.text + "\"")
+	let full = icon.IndexOf(":") > 0 then icon else Directory.Current.Replace("\\", "/") + "/" + icon
+	File(base + ".rc").Write("GLFW_ICON ICON \"" + full + "\"")
 	let compiler = Toolchain(platform, root).Located("llvm-rc")
 	let compiled = ToolRunner(compiler).Execute("/FO \"" + base + ".res\" \"" + base + ".rc\"")
 	File(base + ".rc").Delete
