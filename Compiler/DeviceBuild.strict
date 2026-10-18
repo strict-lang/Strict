@@ -1,6 +1,7 @@
 has tools Toolchain
 constant Nvptx = "--target=nvptx64-nvidia-cuda -O3 -S -Wno-override-module -march="
 constant Missing = DeviceBuild(Toolchain.OnWindows)
+constant Kernels = "Compiler/output/Kernels"
 constant Local = DeviceBuild(Toolchain(Platform.Current, "."))
 Ptx(base Text, isTiling = false) Texts
 	Missing.Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
@@ -24,14 +25,14 @@ Combined(device Text, isAttending = false) Text
 Runtime(name Text) Text
 	Local.Runtime("Tokens").IndexOf("@strict_device_tokens(") > 0
 	Text.Combine(File(tools.root + "/Compiler/NativeRuntime" + name + ".mlir").ReadLines, "\n")
-Embedded(host Text, ptx Texts) Text
-	Missing.Embedded("module {\n}", List(Text) + "// a").EndsWith("(\"// a\\00\\00\") : !llvm.array<6 x i8>\n}")
-	Missing.Embedded("module {\n}", ("// a", "// b")).EndsWith("(\"// a\\00// b\\00\") : !llvm.array<10 x i8>\n}")
-	Missing.Embedded("module {\n}", List(Text) + "clang failed: x") is "GPU kernels failed: clang failed: x"
+Embedded(host Text, ptx Texts, base Text) Text
+	Missing.Embedded("module {\n}", List(Text) + "// a", Kernels).EndsWith("file:Kernels\\00\") : !llvm.array<13 x i8>\n}")
+	File(Kernels + ".ptx").ReadLines is ("// a")
+	Missing.Embedded("module {\n}", List(Text) + "clang failed: x", Kernels) is "GPU kernels failed: clang failed: x"
 	if ptx.First.StartsWith("//") is false
 		return "GPU kernels failed: " + ptx.First
-	let fallback = ptx.Length > 1 then ptx.Last else ""
-	let content = MlirConstants.Escaped(ptx.First, false) + "\\00" + MlirConstants.Escaped(fallback, false)
-	let length = MlirConstants.EscapedLength(ptx.First, false) + MlirConstants.EscapedLength(fallback, false) + 2
-	let global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"" + content + "\\00\")"
-	host.Substring(0, host.Length - 1) + global + " : !llvm.array<" + length + " x i8>\n}"
+	File(base + ".ptx").Write(ptx.First)
+	File(base + ".older.ptx").Write(ptx.Length > 1 then ptx.Last else "")
+	let stem = Path(base).FileName.text
+	let global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"file:" + stem + "\\00\")"
+	host.Substring(0, host.Length - 1) + global + " : !llvm.array<" + (stem.Length + 6) + " x i8>\n}"

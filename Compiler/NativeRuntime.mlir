@@ -7556,6 +7556,115 @@
     llvm.store %remembered, %madeSlot : i64, !llvm.ptr
     return %isSet : i1
   }
+  // the PTX of a program lives next to its executable (Name.ptx, Name.older.ptx for older GPUs), the generated code
+  // only names it ("file:Name"), the first launch reads both into "newer\0older\0", programs without GPU skip it
+  llvm.mlir.global internal @strict_gpu_code(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @strict_gpu_reading("rb\00") : !llvm.array<3 x i8>
+  func.func private @strict_gpu_text(%ptx: !llvm.ptr) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %first = llvm.load %ptx : !llvm.ptr -> i8
+    %fileMark = arith.constant 102 : i8
+    %isFile = arith.cmpi eq, %first, %fileMark : i8
+    cf.cond_br %isFile, ^cached, ^embedded
+  ^embedded:
+    return %ptx : !llvm.ptr
+  ^cached:
+    %codeSlot = llvm.mlir.addressof @strict_gpu_code : !llvm.ptr
+    %code = llvm.load %codeSlot : !llvm.ptr -> i64
+    %isRead = arith.cmpi ne, %code, %zero : i64
+    cf.cond_br %isRead, ^known(%code : i64), ^read
+  ^known(%known: i64):
+    %knownPointer = llvm.inttoptr %known : i64 to !llvm.ptr
+    return %knownPointer : !llvm.ptr
+  ^read:
+    %five = arith.constant 5 : i64
+    %stem = llvm.getelementptr %ptx[5] : (!llvm.ptr) -> !llvm.ptr, i8
+    %newerEnding = llvm.mlir.addressof @strict_gpu_ptx_ending : !llvm.ptr
+    %olderEnding = llvm.mlir.addressof @strict_gpu_older_ending : !llvm.ptr
+    %newer = func.call @strict_gpu_beside(%stem, %newerEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %older = func.call @strict_gpu_beside(%stem, %olderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %newerLength = llvm.call @strlen(%newer) : (!llvm.ptr) -> i64
+    %olderLength = llvm.call @strlen(%older) : (!llvm.ptr) -> i64
+    %both = arith.addi %newerLength, %olderLength : i64
+    %two = arith.constant 2 : i64
+    %total = arith.addi %both, %two : i64
+    %buffer = llvm.call @malloc(%total) : (i64) -> !llvm.ptr
+    %newerCopied = llvm.call @memcpy(%buffer, %newer, %newerLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %terminator = arith.constant 0 : i8
+    %newerEnd = llvm.getelementptr %buffer[%newerLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %newerEnd : i8, !llvm.ptr
+    %olderStart = arith.addi %newerLength, %one : i64
+    %olderTarget = llvm.getelementptr %buffer[%olderStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %olderCopied = llvm.call @memcpy(%olderTarget, %older, %olderLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %olderEnd = llvm.getelementptr %olderTarget[%olderLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %olderEnd : i8, !llvm.ptr
+    %bufferBits = llvm.ptrtoint %buffer : !llvm.ptr to i64
+    llvm.store %bufferBits, %codeSlot : i64, !llvm.ptr
+    return %buffer : !llvm.ptr
+  }
+  // the whole file stem + ending in the folder of the executable as text, an empty text when it cannot be read
+  func.func private @strict_gpu_beside(%stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %none = arith.constant 0.0 : f64
+    %executableBits = func.call @strict_process_current(%none) : (f64) -> f64
+    %executable = func.call @strict_ptr(%executableBits) : (f64) -> !llvm.ptr
+    %length = llvm.call @strlen(%executable) : (!llvm.ptr) -> i64
+    cf.br ^find(%length : i64)
+  ^find(%at: i64):
+    %atStart = arith.cmpi eq, %at, %zero : i64
+    cf.cond_br %atStart, ^folder(%zero : i64), ^check
+  ^check:
+    %before = arith.subi %at, %one : i64
+    %characterSlot = llvm.getelementptr %executable[%before] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %character = llvm.load %characterSlot : !llvm.ptr -> i8
+    %slash = arith.constant 47 : i8
+    %backslash = arith.constant 92 : i8
+    %isSlash = arith.cmpi eq, %character, %slash : i8
+    %isBackslash = arith.cmpi eq, %character, %backslash : i8
+    %isSeparator = arith.ori %isSlash, %isBackslash : i1
+    cf.cond_br %isSeparator, ^folder(%at : i64), ^find(%before : i64)
+  ^folder(%folderLength: i64):
+    %stemLength = llvm.call @strlen(%stem) : (!llvm.ptr) -> i64
+    %endingLength = llvm.call @strlen(%ending) : (!llvm.ptr) -> i64
+    %named = arith.addi %folderLength, %stemLength : i64
+    %pathLength = arith.addi %named, %endingLength : i64
+    %pathSize = arith.addi %pathLength, %one : i64
+    %path = llvm.call @malloc(%pathSize) : (i64) -> !llvm.ptr
+    %folderCopied = llvm.call @memcpy(%path, %executable, %folderLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %stemTarget = llvm.getelementptr %path[%folderLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %stemCopied = llvm.call @memcpy(%stemTarget, %stem, %stemLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %endingTarget = llvm.getelementptr %path[%named] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %endingCopied = llvm.call @memcpy(%endingTarget, %ending, %endingLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %pathEnd = llvm.getelementptr %path[%pathLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %pathEnd : i8, !llvm.ptr
+    %mode = llvm.mlir.addressof @strict_gpu_reading : !llvm.ptr
+    %file = llvm.call @fopen(%path, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isMissing = llvm.icmp "eq" %file, %unset : !llvm.ptr
+    cf.cond_br %isMissing, ^empty, ^read
+  ^empty:
+    %nothing = llvm.call @malloc(%one) : (i64) -> !llvm.ptr
+    llvm.store %terminator, %nothing : i8, !llvm.ptr
+    return %nothing : !llvm.ptr
+  ^read:
+    %fromEnd = arith.constant 2 : i32
+    %fromStart = arith.constant 0 : i32
+    %toEnd = llvm.call @fseek(%file, %zero, %fromEnd) : (!llvm.ptr, i64, i32) -> i32
+    %size = llvm.call @ftell(%file) : (!llvm.ptr) -> i64
+    %toStart = llvm.call @fseek(%file, %zero, %fromStart) : (!llvm.ptr, i64, i32) -> i32
+    %bufferSize = arith.addi %size, %one : i64
+    %buffer = llvm.call @malloc(%bufferSize) : (i64) -> !llvm.ptr
+    %got = llvm.call @fread(%buffer, %one, %size, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
+    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    %end = llvm.getelementptr %buffer[%got] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    return %buffer : !llvm.ptr
+  }
   func.func private @strict_gpu_function(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     %zero32 = arith.constant 0 : i32
@@ -7577,14 +7686,15 @@
   ^load:
     %loadIndex = arith.constant 4 : i64
     %loadData = func.call @strict_gpu_call(%loadIndex) : (i64) -> !llvm.ptr
-    %loaded = llvm.call %loadData(%moduleSlot, %ptx) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %code = func.call @strict_gpu_text(%ptx) : (!llvm.ptr) -> !llvm.ptr
+    %loaded = llvm.call %loadData(%moduleSlot, %code) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %loadFailed = arith.cmpi ne, %loaded, %zero32 : i32
     cf.cond_br %loadFailed, ^older, ^loaded
   ^older:
     // the PTX of a newer GPU (sm_80, DeviceBuild.Ptx) is followed by the one for older GPUs, or by an empty text
-    %length = llvm.call @strlen(%ptx) : (!llvm.ptr) -> i64
+    %length = llvm.call @strlen(%code) : (!llvm.ptr) -> i64
     %skipped = arith.addi %length, %one : i64
-    %olderPtx = llvm.getelementptr %ptx[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %olderPtx = llvm.getelementptr %code[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %olderFirst = llvm.load %olderPtx : !llvm.ptr -> i8
     %nothing8 = arith.constant 0 : i8
     %noOlder = arith.cmpi eq, %olderFirst, %nothing8 : i8

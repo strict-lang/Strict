@@ -23,7 +23,7 @@ Icon Text
 	File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
 Refreshed(release Text) Number
 	Directory.Create(release)
-	for (".exe", "")
+	for (".exe", "", ".ptx", ".older.ptx")
 		let built = base + value
 		if File(built).Exists
 			File(built).Rename(release + "/" + Named(built))

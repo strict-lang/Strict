@@ -31,7 +31,7 @@ Device(program Text, base Text, root Text) Text
 	let gpu = DeviceBuild(Toolchain(Platform.Current, root))
 	let device = program.Substring(marker + 1, program.Length - marker - 1)
 	File(base + ".gpu.mlir").Write(gpu.Combined(device, program.IndexOf(MlirAttention.Marker) >= 0))
-	let embedded = gpu.Embedded(program.Substring(0, marker), gpu.Ptx(base, device.IndexOf(MlirTokens.Marker) >= 0))
+	let embedded = gpu.Embedded(program.Substring(0, marker), gpu.Ptx(base, device.IndexOf(MlirTokens.Marker) >= 0), base)
 	embedded.StartsWith("GPU kernels failed") then Failed(embedded) else embedded
 Failed(message Text) Text
 	logger.Log(message)
