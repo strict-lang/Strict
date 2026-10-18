@@ -1,0 +1,106 @@
+has function MlirFunction
+constant Head = MlirFunction(List(TypeEntry) + GpuSamples.Headed, GpuSamples.Headed, GpuSamples.Head)
+constant Heading = MlirDeviceMembers(MlirGpuCheck.Heading.function)
+Names Texts
+	MlirDeviceMembers(Head).Names is ("heads", "weights")
+	Heading.Names is ("heads", "weights")
+	MlirDeviceMembers(MlirParallel.Doubling.function).Names.Length is 0
+	MlirDevice(Head, 0).Function.First.EndsWith("%m0: f64, %m1d: !llvm.ptr, %m1n: i64, %m1b: i64) -> f64 {")
+	Read(function, 0)
+Read(inspected MlirFunction, depth Number) Texts
+	Heading.Read(Head, 3).Length is 0
+	if (depth > 2) or (inspected.type.members.Length < 2)
+		return List(Text)
+	mutable names = Direct(inspected)
+	for inspected.method.instructions
+		for Inner(inspected, index, depth)
+			if value is not in names
+				names = names + value
+	names
+Direct(inspected MlirFunction) Texts
+	Heading.Direct(Head) is ("heads", "weights")
+	Heading.Direct(Heading.function).Length is 0
+	let parameters = inspected.method.ParameterNames
+	for inspected.type.members
+		if (value.IsConstant is false) and (value.Name is not in parameters) and IsLoaded(inspected, value.Name)
+			value.Name
+Inner(inspected MlirFunction, at Number, depth Number) Texts
+	Heading.Inner(Heading.function, 4, 0) is ("heads", "weights")
+	Heading.Inner(Heading.function, 3, 0).Length is 0
+	let owned = Owned(inspected, at)
+	owned.Length is 1 then Read(owned.First, depth + 1) else List(Text)
+Owned(inspected MlirFunction, at Number) List(MlirFunction)
+	Heading.Owned(Heading.function, 4).First.method.Name is "Head"
+	Heading.Owned(Heading.function, 3).Length is 0
+	let entry = inspected.method.instructions(at)
+	if (entry.kind is not InstructionType.Invoke) or (MlirDeviceCalls(inspected, at, inspected).Register(entry) >= 0)
+		return List(MlirFunction)
+	let callees = MlirModule(inspected.types, "").Called(inspected, at)
+	(callees.Length is 1) and (callees.First.type.Name is inspected.type.Name) then callees else List(MlirFunction)
+IsLoaded(inspected MlirFunction, name Text) Boolean
+	Heading.IsLoaded(Head, "heads")
+	Heading.IsLoaded(Head, "size") is false
+	for inspected.method.instructions
+		if (value.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)) and (value.texts(0) is name)
+			return true
+	false
+IsMember(at Number, name Text) Boolean
+	MlirDeviceMembers(Head).IsMember(3, "heads")
+	MlirDeviceMembers(Head).IsMember(1, "weights")
+	MlirDeviceMembers(Head).IsMember(0, "position") is false
+	let kind = MlirLayout(function).Represented(MlirKinds(function).VariableKind(at, name))
+	(name is in Direct(function)) and ((kind is in MlirGpuCheck.Values) or IsList(name))
+Passable(at Number) List(MlirFunction)
+	Heading.Passable(4).Length is 1
+	Heading.Passable(4).First.method.Name is "Head"
+	let callees = MlirModule(function.types, "").Called(function, at)
+	let isOwn = MlirDeviceCalls(function, at, function).Register(function.method.instructions(at)) < 0
+	let isPlain = (callees.Length is not 1) or (MlirDeviceMembers(callees.First).Names.Length is 0)
+	isOwn or isPlain then callees else List(MlirFunction)
+Calling(first Number, limit Number, known Texts) Texts
+	Heading.Calling(3, 7, List(Text)) is ("heads", "weights")
+	Heading.Calling(3, 7, ("heads", "weights")).Length is 0
+	mutable names = List(Text)
+	for Range(first, limit)
+		for Inner(function, value, 0)
+			if (value is not in names) and (value is not in known)
+				names = names + value
+	names
+Typed(float Text) Texts
+	MlirDeviceMembers(Head).Typed("f64") is ("%m0: f64", "%m1d: !llvm.ptr", "%m1n: i64", "%m1b: i64")
+	let types = Types(float)
+	for Arguments("%m", false)
+		value + ": " + types(index)
+IsList(name Text) Boolean
+	MlirDeviceMembers(Head).IsList("weights")
+	MlirDeviceMembers(Head).IsList("heads") is false
+	for function.type.members
+		if value.Name is name
+			return TypeEntry.ShortName(value.typeName) is in ("List(Number)", "Numbers")
+	false
+Arguments(prefix Text, isNamed Boolean) Texts
+	MlirDeviceMembers(Head).Arguments("%m", false) is ("%m0", "%m1d", "%m1n", "%m1b")
+	MlirDeviceMembers(Head).Arguments("%v_", true).Last is "%v_weightsb"
+	mutable names = List(Text)
+	for Names
+		let name = prefix + (isNamed then value else index to Text)
+		names = IsList(value) then names + (name + "d", name + "n", name + "b") else names + name
+	names
+Types(float Text) Texts
+	MlirDeviceMembers(Head).Types("f32") is ("f32", "!llvm.ptr", "i64", "i64")
+	mutable types = List(Text)
+	for Names
+		types = IsList(value) then types + MlirTyped.Types else types + float
+	types
+Loads(prefix Text, float Text) Texts
+	MlirDeviceMembers(Head).Loads("%x", "f64").Last is "    %x1b = llvm.load %v_weightsb : !llvm.ptr -> i64"
+	let types = Types(float)
+	let slots = Arguments("%v_", true)
+	for Arguments(prefix, false)
+		MlirTyped(types(index)).Load(value, slots(index))
+Stored(float Text) Texts
+	MlirDeviceMembers(Head).Stored("f64").First is "    llvm.store %m0, %v_heads : f64, !llvm.ptr"
+	let types = Types(float)
+	let slots = Arguments("%v_", true)
+	for Arguments("%m", false)
+		MlirTyped(types(index)).Store(value, slots(index))

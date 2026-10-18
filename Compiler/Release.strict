@@ -15,9 +15,12 @@ Parent Text
 Icon Text
 	Release(Logger, "Examples/NativeAdd/NativeAdd").Icon is "Examples/NativeAdd/NativeAdd.ico"
 	Release(Logger, "Examples/NativeAdd/Adder").Icon is "Examples/NativeAdd/NativeAdd.ico"
+	Release(Logger, "Missing/App").Icon is TypeSource.Root + "/Strict.ico"
 	let own = base + ".ico"
 	let folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
-	File(own).Exists or (File(folder).Exists is false) then own else folder
+	if File(own).Exists
+		return own
+	File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
 Refreshed(release Text) Number
 	if Directory.Exists(release) and (Directory.Delete(release) is false)
 		logger.Log("Release folder could not be refreshed: " + release)

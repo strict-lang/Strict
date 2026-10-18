@@ -106,3 +106,14 @@ LoopEndOf(position Number) Number
 		let change = kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0
 		depth = depth + change
 	instructions.Length
+IsWritingResult(position Number) Boolean
+	MlirLoops.Collecting.function.method.IsWritingResult(1)
+	CountingLoop.IsWritingResult(0) is false
+	mutable at = position + 1
+	let end = LoopEndOf(position)
+	for as long as at < end
+		let entry = instructions(at)
+		if (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts.Last is "forResult")
+			return true
+		at = entry.kind is InstructionType.LoopBegin then LoopEndOf(at) + 1 else at + 1
+	false

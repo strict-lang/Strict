@@ -5,6 +5,7 @@ constant Twice = MlirDeviceCalls(MlirParallel.Doubling.function, 4, MlirDevice.T
 constant Twicing = Twice.function.method.instructions(4)
 constant Flooring = MlirDeviceCalls(MlirGpuCheck.Floored, 1, MlirGpuCheck.Floored)
 constant Making = InstructionEntry.Invoke(1, ("Strict/Degrees", "from", "Strict/Degrees", "number"), List(Number) + 0, -1)
+constant Heads = MlirDeviceCalls(MlirGpuCheck.Heading.function, 4, MlirDeviceMembers.Head)
 constant Natives = ("Floor", "Logarithm", "from")
 constant Summing = MlirDeviceCalls(MlirGpu.Layering.function, 5, MlirDeviceStatements.Summed)
 Temp(suffix Text) Text
@@ -16,25 +17,32 @@ IsList(parameter Number) Boolean
 	TypeEntry.ShortName(callee.method.parameters(parameter).typeName) is in ("List(Number)", "Numbers")
 Arguments(entry InstructionEntry) Texts
 	Twice.Arguments(Twicing) is ("%failed", "%lane", "%lanes", "%d4i", "%d4p0")
+	Heads.Arguments(GpuSamples.Heading.instructions(4)).Last is "%d4m1b"
 	mutable names = ("%failed", "%lane", "%lanes", Temp("i"))
 	for entry.payload(5 + entry.payload(3))
 		let parts = (Temp("p" + index + "d"), Temp("p" + index + "n"), Temp("p" + index + "b"))
 		names = IsList(index) then names + parts else names + Temp("p" + index)
-	names
+	names + MemberArguments
+MemberArguments Texts
+	Heads.MemberArguments is ("%d4m0", "%d4m1d", "%d4m1n", "%d4m1b")
+	MlirDeviceMembers(callee).Arguments(Temp("m"), false)
 Types Text
 	Twice.Types is "!llvm.ptr, i64, i64, f64, f64"
 	Summing.Types is "!llvm.ptr, i64, i64, f64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64"
 	mutable types = ("!llvm.ptr", "i64", "i64", function.Float)
 	for callee.method.parameters
 		types = IsList(index) then types + MlirTyped.Types else types + function.Float
-	Text.Combine(types, ", ")
+	Text.Combine(types + MlirDeviceMembers(callee).Types(function.Float), ", ")
 Loaded(entry InstructionEntry) Texts
 	Twice.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
 	let countPosition = 5 + entry.payload(3)
 	mutable lines = List(Text) + Instance(entry, Temp("i"))
 	for entry.payload(countPosition)
 		lines = lines + Argument(index, "%r" + entry.payload(countPosition + 1 + index))
-	lines
+	lines + MemberLoads
+MemberLoads Texts
+	Heads.MemberLoads.First is "    %d4m0 = llvm.load %v_heads : !llvm.ptr -> f64"
+	MlirDeviceMembers(callee).Loads(Temp("m"), function.Float)
 Instance(entry InstructionEntry, name Text) Text
 	Twice.Instance(Twicing, "%h") is "    %h = arith.constant 0.0 : f64"
 	let register = Register(entry)

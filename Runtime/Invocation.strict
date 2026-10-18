@@ -2,6 +2,7 @@ has entry InstructionEntry
 has Arguments List(VmValue)
 has Instance VmValue
 has Depth Number = 0
+has Resolved Number = -1
 constant MaxDepth = 20000
 constant MaxTraces = 100
 constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), List(VmValue) + VmValue.OfNumber(3), VmValue.OfNumber(4))
@@ -44,6 +45,9 @@ Flag Number
 	6 + entry.payload(3) + Count
 Resolution Number
 	AddCall.Resolution is 10
+	Invocation(AddCall.entry, List(VmValue), VmValue.None, 0, 4).Resolution is 4
+	if Resolved >= 0
+		return Resolved
 	let flag = Flag
 	flag + 1 + entry.payload(flag)
 IsResolved Boolean

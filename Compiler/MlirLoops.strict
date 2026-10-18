@@ -6,7 +6,7 @@ constant Nested = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, Ou
 constant ListLoop = MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))
 constant Listing = MlirLoops(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, ListLoop), 1)
 constant Emptied = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "forResult")
-constant Collecting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (Emptied, InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))), 1)
+constant Collecting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (Emptied, InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 2)))), 1)
 constant Doubling = MlirLoops(MlirKernel.Doubler, 2)
 constant Ranging = MlirLoops(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, GpuSamples.Ranged), 3)
 constant Repeated = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry(InstructionType.LoopEnd, List(Text), (1, -1)))))
@@ -107,7 +107,7 @@ IsCollecting Boolean
 		if entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 			return false
 		if (entry.kind is InstructionType.StoreConstantToVariable) and (entry.texts.Last is "forResult")
-			return entry.payload(0) is 6
+			return (entry.payload(0) is 6) and function.method.IsWritingResult(position)
 	false
 Presized Texts
 	Counting.Presized.Length is 0

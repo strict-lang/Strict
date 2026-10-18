@@ -97,7 +97,7 @@ Rounds(call Number, prefix Text, number Number) Texts
 	let calls = MlirDeviceCalls(function, call, MlirModule(function.types, "").Called(function, call).First)
 	let name = "%v_" + function.method.instructions(call + 1).texts(0)
 	let first = function.Load(prefix + "c" + number + "r0", name)
-	mutable lines = (first, calls.Instance(function.method.instructions(call), prefix + "h" + number))
+	mutable lines = (first, calls.Instance(function.method.instructions(call), prefix + "h" + number)) + calls.MemberLoads
 	for Offsets
 		lines = lines + Round(calls, prefix, number, index)
 	lines + function.Store(prefix + "c" + number + "r" + Offsets.Length, name)
@@ -107,7 +107,8 @@ Round(calls MlirDeviceCalls, prefix Text, number Number, round Number) Texts
 	let offset = prefix + "o" + number + "r" + round
 	let shuffled = prefix + "s" + number + "r" + round
 	let symbol = calls.callee.Symbol + "_device" + MlirTyped(function.Float).Suffix
-	let operands = "(%failed, %lane, %lanes, " + prefix + "h" + number + ", " + current + ", " + shuffled + ")"
+	let arguments = ("%failed", "%lane", "%lanes", prefix + "h" + number, current, shuffled) + calls.MemberArguments
+	let operands = "(" + Text.Combine(arguments, ", ") + ")"
 	let combined = "    " + prefix + "c" + number + "r" + (round + 1) + " = func.call @" + symbol + operands
 	let offsetLine = "    " + offset + " = arith.constant " + Offsets(round) + " : i32"
 	let typed = combined + " : (" + calls.Types + ") -> " + function.Float

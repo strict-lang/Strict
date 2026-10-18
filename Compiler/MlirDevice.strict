@@ -60,8 +60,9 @@ Function Texts
 		let name = "%p" + (index + 1)
 		let parts = (name + "d: !llvm.ptr", name + "n: i64", name + "b: i64")
 		parameters = calls.IsList(index) then parameters + parts else parameters + (name + ": " + function.Float)
+	let typed = parameters + MlirDeviceMembers(function).Typed(function.Float)
 	let symbol = function.Symbol + "_device" + MlirTyped(function.Float).Suffix
-	let header = "  func.func private @" + symbol + "(" + Text.Combine(parameters, ", ") + ") -> " + function.Float + " {"
+	let header = "  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + ") -> " + function.Float + " {"
 	(List(Text) + header) + Slots + Entry + Emitted(0, function.method.instructions.Length) + "  }"
 Slots Texts
 	Doubling.Slots.Last is "    %loop2 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
@@ -82,6 +83,7 @@ Slot(name Text) Texts
 	lines
 Entry Texts
 	Twice.Entry is ("    llvm.store %p0, %v_value : f64, !llvm.ptr", "    llvm.store %p1, %v_number : f64, !llvm.ptr")
+	"    llvm.store %m0, %v_heads : f64, !llvm.ptr" is in MlirDevice(MlirDeviceMembers.Head, 0).Entry
 	Summing.Entry.Last is "    llvm.store %p2b, %v_inputb : i64, !llvm.ptr"
 	let calls = MlirDeviceCalls(function, 0, function)
 	mutable lines = List(Text) + function.Store("%p0", "%v_value")
@@ -89,7 +91,7 @@ Entry Texts
 		let number = "%p" + (index + 1)
 		let slot = "%v_" + value.Name
 		lines = calls.IsList(index) then lines + Stores(number, slot) else lines + function.Store(number, slot)
-	lines
+	lines + MlirDeviceMembers(function).Stored(function.Float)
 Indexed Texts
 	Doubling.Indexed.Last is "    cf.cond_br %inside, ^body, ^exit"
 	constant thread = "    %thread = nvvm.read.ptx.sreg.tid.x : i32"

@@ -1,0 +1,8 @@
+has number
+Multiples(count Number) Numbers
+	Halvings(48).Multiples(2) is (3, 6)
+	mutable odd = number
+	for as long as odd % 2 is 0
+		odd = odd / 2
+	for count
+		odd * 2 ^ index
