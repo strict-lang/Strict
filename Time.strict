@@ -1,0 +1,6 @@
+Now Number
+	Time.Now > 1.7e9
+	0
+Day Number
+	Time.Day > 20000
+	(Now / 86400).Floor

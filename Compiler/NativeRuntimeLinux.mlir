@@ -251,10 +251,19 @@
   llvm.func @time(!llvm.ptr) -> i64
   llvm.func @clock_gettime(i32, !llvm.ptr) -> i32
   func.func private @strict_clock() -> f64 {
-    %two = arith.constant 2 : i64
     %monotonic = arith.constant 1 : i32
+    %seconds = func.call @strict_clock_read(%monotonic) : (i32) -> f64
+    return %seconds : f64
+  }
+  func.func private @strict_time_now(%self: f64) -> f64 {
+    %realtime = arith.constant 0 : i32
+    %seconds = func.call @strict_clock_read(%realtime) : (i32) -> f64
+    return %seconds : f64
+  }
+  func.func private @strict_clock_read(%clock: i32) -> f64 {
+    %two = arith.constant 2 : i64
     %timespec = llvm.alloca %two x i64 : (i64) -> !llvm.ptr
-    %read = llvm.call @clock_gettime(%monotonic, %timespec) : (i32, !llvm.ptr) -> i32
+    %read = llvm.call @clock_gettime(%clock, %timespec) : (i32, !llvm.ptr) -> i32
     %secondsSlot = llvm.getelementptr %timespec[0] : (!llvm.ptr) -> !llvm.ptr, i64
     %nanosecondsSlot = llvm.getelementptr %timespec[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %whole = llvm.load %secondsSlot : !llvm.ptr -> i64

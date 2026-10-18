@@ -235,6 +235,19 @@
     %seconds = arith.divf %ticksFloat, %perSecondFloat : f64
     return %seconds : f64
   }
+  llvm.func @GetSystemTimePreciseAsFileTime(!llvm.ptr)
+  func.func private @strict_time_now(%self: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %slot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    llvm.call @GetSystemTimePreciseAsFileTime(%slot) : (!llvm.ptr) -> ()
+    %fileTime = llvm.load %slot : !llvm.ptr -> i64
+    %epoch = arith.constant 116444736000000000 : i64
+    %since = arith.subi %fileTime, %epoch : i64
+    %ticks = arith.sitofp %since : i64 to f64
+    %perSecond = arith.constant 1.0e7 : f64
+    %seconds = arith.divf %ticks, %perSecond : f64
+    return %seconds : f64
+  }
   func.func private @strict_random_seed() -> i64 {
     %null = llvm.mlir.zero : !llvm.ptr
     %now = llvm.call @_time64(%null) : (!llvm.ptr) -> i64

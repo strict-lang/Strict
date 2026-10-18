@@ -1,6 +1,6 @@
 has function MlirFunction
 has position Number
-constant UnsafeTypes = ("File", "Directory", "Process", "Library", "Logger", "TextReader", "TextWriter", "BytesReader", "BytesWriter")
+constant UnsafeTypes = ("File", "Directory", "Process", "Time", "Library", "Logger", "TextReader", "TextWriter", "BytesReader", "BytesWriter")
 constant Branches = (InstructionType.Jump, InstructionType.JumpIfTrue, InstructionType.JumpIfFalse, InstructionType.JumpIfNotZero)
 constant Unsafe = (InstructionType.Set, InstructionType.InvokeWriteToTable, InstructionType.InvokeRemove, InstructionType.Print, InstructionType.ConstructValueType, InstructionType.CopyList)
 constant Doubling = MlirPurity(MlirParallel.Doubling.function, 2)
