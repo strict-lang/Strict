@@ -1,6 +1,90 @@
+has seconds = 0
+constant Moment = Time(1700000000)
+constant Units = ("year", "month", "day", "hour", "minute", "second")
+constant Sizes = (31536000, 2592000, 86400, 3600, 60, 1)
 Now Number
 	Time.Now > 1.7e9
 	0
 Day Number
 	Time.Day > 20000
 	(Now / 86400).Floor
+Date Numbers
+	Moment.Date is (2023, 11, 14)
+	Time(0).Date is (1970, 1, 1)
+	Time(951782400).Date is (2000, 2, 29)
+	let shifted = (seconds / 86400).Floor + 719468
+	let era = (shifted / 146097).Floor
+	let dayOfEra = shifted - era * 146097
+	let corrected = dayOfEra - (dayOfEra / 1460).Floor + (dayOfEra / 36524).Floor - (dayOfEra / 146096).Floor
+	let yearOfEra = (corrected / 365).Floor
+	let dayOfYear = dayOfEra - (365 * yearOfEra + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor)
+	let monthIndex = ((5 * dayOfYear + 2) / 153).Floor
+	let month = monthIndex < 10 then monthIndex + 3 else monthIndex - 9
+	(yearOfEra + era * 400 + (month <= 2 then 1 else 0), month, dayOfYear - ((153 * monthIndex + 2) / 5).Floor + 1)
+Clock Numbers
+	Moment.Clock is (22, 13, 20)
+	let ofDay = seconds - (seconds / 86400).Floor * 86400
+	((ofDay / 3600).Floor, ((ofDay % 3600) / 60).Floor, ofDay % 60)
+IsoDate Text
+	Moment.IsoDate is "2023-11-14"
+	let date = Date
+	date(0) + "-" + Padded(date(1)) + "-" + Padded(date(2))
+IsoTime Text
+	Moment.IsoTime is "22:13:20"
+	let clock = Clock
+	Padded(clock(0)) + ":" + Padded(clock(1)) + ":" + Padded(clock(2))
+to Text
+	Moment to Text is "2023-11-14 22:13:20"
+	IsoDate + " " + IsoTime
+Iso8601 Text
+	Moment.Iso8601 is "2023-11-14T22:13:20Z"
+	IsoDate + "T" + IsoTime + "Z"
+Padded(number Number) Text
+	Moment.Padded(7) is "07"
+	Moment.Padded(12) is "12"
+	number < 10 then "0" + number else "" + number
+Parse(text Text) Time
+	Time.Parse("2023-11-14 22:13:20") is Moment
+	Time.Parse("2023-11-14T22:13:20Z") is Moment
+	Time.Parse("1970-01-01") is Time(0)
+	Time.Parse("Nov 14") is Error
+	if (text.Length < 10) or (text.Substring(4, 1) is not "-") or (text.Substring(7, 1) is not "-")
+		return Error("InvalidTime")
+	let date = Days(text.Substring(0, 4) to Number, text.Substring(5, 2) to Number, text.Substring(8, 2) to Number)
+	let hasClock = text.Length >= 19
+	let hours = hasClock then text.Substring(11, 2) to Number else 0
+	let minutes = hasClock then text.Substring(14, 2) to Number else 0
+	Time(date * 86400 + hours * 3600 + minutes * 60 + (hasClock then text.Substring(17, 2) to Number else 0))
+Days(year Number, month Number, day Number) Number
+	Moment.Days(2023, 11, 14) is 19675
+	Moment.Days(1970, 1, 1) is 0
+	let shiftedYear = month <= 2 then year - 1 else year
+	let era = (shiftedYear / 400).Floor
+	let yearOfEra = shiftedYear - era * 400
+	let dayOfYear = ((153 * (month > 2 then month - 3 else month + 9) + 2) / 5).Floor + day - 1
+	let dayOfEra = yearOfEra * 365 + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor + dayOfYear
+	era * 146097 + dayOfEra - 719468
+RoundUp(step Number) Time
+	Time(61).RoundUp(60) is Time(120)
+	Time(120).RoundUp(60) is Time(120)
+	Time(((seconds + step - 1) / step).Floor * step)
+IsWithin(start Time, end Time) Boolean
+	Moment.IsWithin(Time(0), Time(1800000000))
+	Moment.IsWithin(Time(0), Time(10)) is false
+	(seconds >= start.seconds) and (seconds <= end.seconds)
+Elapsed(current Time) Text
+	Moment.Elapsed(Time(1700000003)) is "just now"
+	Moment.Elapsed(Time(1700000180)) is "about 3 minutes ago"
+	Moment.Elapsed(Time(1700086400)) is "about 1 day ago"
+	Moment.Elapsed(Time(1800000000)) is "about 3 years ago"
+	let passed = current.seconds - seconds
+	if passed <= 5
+		return "just now"
+	for Units
+		if passed >= Sizes(index)
+			return Ago((passed / Sizes(index)).Floor, value)
+	"just now"
+Ago(count Number, unit Text) Text
+	Moment.Ago(1, "day") is "about 1 day ago"
+	Moment.Ago(2, "hour") is "about 2 hours ago"
+	"about " + count + " " + unit + (count is 1 then "" else "s") + " ago"
