@@ -1,0 +1,56 @@
+has callee MethodEntry
+has call InstructionEntry
+has base Number
+has member Text
+has kept Texts
+constant Sample = InlineSplice(Inliner.First, Inliner.Calling.instructions(1), 2, "elements", List(Text))
+Spliced List(InstructionEntry)
+	Sample.Spliced.Length is 3
+	Sample.Spliced(2).texts.First is "inline2_elements"
+	let returned = callee.instructions.Last.payload(0) + base
+	mutable result = Prologue
+	for callee.instructions
+		if index < callee.instructions.Length - (IsChecked then 2 else 1)
+			result = result + Moved(value, returned)
+	result
+Prefix Text
+	Sample.Prefix is "inline2_"
+	"inline" + base + "_"
+Prologue List(InstructionEntry)
+	Sample.Prologue.Length is 1
+	Sample.Prologue.First.texts.First is "inline2_elements"
+	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
+	mutable lines = List(Mutable(InstructionEntry))
+	for callee.parameters
+		lines.Add(Stored(call.payload(reads(index)), value.Name))
+	if member is ""
+		return lines
+	let instance = call.payload(reads.Last)
+	IsValued then lines + (Stored(instance, member), Stored(instance, "value")) else lines + Stored(instance, member)
+Moved(entry InstructionEntry, returned Number) InstructionEntry
+	Sample.Moved(Inliner.First.instructions(1), 3).payload is (1, 2, -1)
+	Sample.Moved(Inliner.First.instructions(1), 3).line is Inliner.Calling.instructions(1).line
+	let rebased = LoadReuse(List(InstructionEntry)).Rebased(entry, base)
+	let isNamed = (entry.kind is in Inliner.Renamed) and (entry.texts.First is not in kept)
+	let texts = isNamed then List(Text) + (Prefix + entry.texts.First) else entry.texts
+	InstructionEntry(entry.kind, texts, Registered(rebased, returned, call.payload(0)), call.line)
+Registered(entry InstructionEntry, source Number, target Number) Numbers
+	Sample.Registered(InstructionEntry.Return(5), 5, 9) is (9)
+	let reuse = LoadReuse(List(InstructionEntry))
+	let positions = reuse.ReadPositions(entry) + reuse.WritePosition(entry)
+	for entry.payload
+		(index is in positions) and (value is source) then target else value
+IsChecked Boolean
+	Sample.IsChecked
+	let instructions = callee.instructions
+	let last = instructions.Length > 1 then instructions(instructions.Length - 2) else instructions.Last
+	(last.kind is InstructionType.CheckError) and (last.payload(0) is instructions.Last.payload(0))
+Stored(register Number, name Text) InstructionEntry
+	Sample.Stored(4, "a").line is Inliner.Calling.instructions(1).line
+	InstructionEntry(Inliner.Store, List(Text) + (Prefix + name), (register, -1), call.line)
+IsValued Boolean
+	Sample.IsValued is false
+	for callee.instructions
+		if (value.kind is InstructionType.LoadVariableToRegister) and (value.texts.First is "value")
+			return true
+	false
