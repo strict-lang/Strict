@@ -1,0 +1,102 @@
+has temperature Number
+has topK Number
+has topP Number
+has random PseudoRandom
+has token Number = -1
+constant Plain = Sampling(0, 0, 1, PseudoRandom.Seeded(1))
+constant Warm = Sampling(1, 0, 1, PseudoRandom.Seeded(5))
+constant Paired = Sampling(1, 2, 1, PseudoRandom.Seeded(3))
+constant Chunk = 128
+Drawn(logits Numbers) Sampling
+	Plain.Drawn((1, 3, 2)).token is 1
+	Warm.Drawn((0, 0, 0, 20)).token is 3
+	Paired.Drawn((5, 0, 0, 5)).token % 3 is 0
+	if (temperature is 0) or (topK is 1)
+		return Sampling(value, token = Greedy.Largest(logits))
+	let maxima = Greedy.Maxima(Greedy.Best(logits, Chunk, logits.Length))
+	let bound = (topK is 0) or (topK >= maxima.Length) then maxima.Minimum else Threshold(maxima, topK)
+	let chunks = Selected(maxima, bound)
+	let state = random.Next
+	Sampling(value, random = state, token = Picked(Gathered(logits, chunks), chunks, bound, state.Get(0, 1)))
+Draws(logits Numbers, count Number) Numbers
+	Warm.Draws((0, 0.6931), 60).Sum.IsNearlyEqual(40, 5)
+	mutable current = value
+	mutable tokens = List(Mutable(Number))
+	for count
+		current = current.Drawn(logits)
+		tokens.Add(current.token)
+	tokens
+Selected(numbers Numbers, bound Number) Numbers
+	Warm.Selected((3, 1, 2), 2) is (0, 2)
+	for numbers
+		if value >= bound
+			index
+Kept(numbers Numbers, bound Number) Numbers
+	Warm.Kept((3, 1, 2), 2) is (3, 2)
+	for numbers
+		if value >= bound
+			value
+Gathered(logits Numbers, chunks Numbers) Numbers
+	Warm.Gathered((1, 2, 3), List(Number) + 0) is (1, 2, 3)
+	let short = chunks.Last * Chunk + Chunk - logits.Length
+	for chunks.Length * Chunk - (short > 0 then short else 0)
+		logits(chunks((index / Chunk).Floor) * Chunk + index % Chunk)
+Picked(candidates Numbers, chunks Numbers, bound Number, uniform Number) Number
+	Sampling(1, 0, 0.3, PseudoRandom.Seeded(5)).Picked((2, 3, 2.9), List(Number) + 0, 2, 0.1) is 1
+	Warm.Picked((0, 0, 0, 1), List(Number) + 2, 0, 0.99) is 259
+	let lowest = topK > 0 then bound else candidates.Minimum
+	let positions = Selected(candidates, lowest)
+	let values = Kept(candidates, lowest)
+	let limit = topK > 0 then Threshold(values, topK) else lowest
+	let largest = values.Maximum
+	let cut = topP >= 1 then limit else Nucleus(values, largest, limit)
+	let chosen = positions(Index(values, largest, cut, uniform * Mass(values, largest, cut)))
+	chunks((chosen / Chunk).Floor) * Chunk + chosen % Chunk
+Threshold(numbers Numbers, count Number) Number
+	Warm.Threshold((3, 1, 2, 5), 2) is 3
+	Warm.Threshold((5, 5, 1), 2) is 5
+	mutable limit = numbers.Maximum
+	for count
+		if Above(numbers, limit) >= count
+			return limit
+		limit = Below(numbers, limit)
+	limit
+Nucleus(candidates Numbers, largest Number, limit Number) Number
+	Sampling(1, 0, 0.3, PseudoRandom.Seeded(5)).Nucleus((2, 3, 2.9), 3, 2) is 3
+	let wanted = topP * Mass(candidates, largest, limit)
+	mutable cut = largest
+	for candidates
+		if Mass(candidates, largest, cut) >= wanted
+			return cut
+		cut = Below(candidates, cut)
+	limit
+Mass(candidates Numbers, largest Number, cut Number) Number
+	Warm.Mass((0, 1, 1), 1, 1) is 2
+	mutable sum = 0
+	for candidates
+		sum = sum + Weight(value, largest, cut)
+	sum
+Index(candidates Numbers, largest Number, cut Number, target Number) Number
+	Warm.Index((1, 1, 0), 1, 1, 1.5) is 1
+	mutable sum = 0
+	for candidates
+		sum = sum + Weight(value, largest, cut)
+		if sum > target
+			return index
+	candidates.Length - 1
+Weight(logit Number, largest Number, cut Number) Number
+	Warm.Weight(1, 1, 0) is 1
+	Warm.Weight(0, 1, 0.5) is 0
+	logit >= cut then ((logit - largest) / temperature).Exponential else 0
+Above(numbers Numbers, limit Number) Number
+	Warm.Above((1, 2, 3), 2) is 2
+	mutable count = 0
+	for numbers
+		count = count + (value >= limit then 1 else 0)
+	count
+Below(numbers Numbers, limit Number) Number
+	Warm.Below((1, 2, 3), 3) is 2
+	mutable below = numbers.Minimum
+	for numbers
+		below = (value < limit) and (value > below) then value else below
+	below

@@ -29,7 +29,10 @@ Step(token Number, position Number) Gpt2
 	Gpt2(value, blocks = updated, hidden = state)
 Next Number
 	Tiny.Step(1, 0).Step(2, 1).Next is 3
-	Greedy.Largest(Logits(Gpt2Block.Normalized(hidden, gain, bias)))
+	Greedy.Largest(Scored)
+Scored Numbers
+	Tiny.Step(1, 0).Scored.Length is 5
+	Logits(Gpt2Block.Normalized(hidden, gain, bias))
 Logits(normed Numbers) Numbers
 	Tiny.Logits((1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)).Length is 5
 	for tokens

@@ -1,4 +1,5 @@
 has model Generic
+has sampling Sampling = Sampling.Plain
 Generated(prompt Numbers, count Number) Numbers
 	Generation(Gpt2.Tiny).Generated((1, 2), 4) is (3, 2, 2, 3)
 	Generation(Qwen3.Tiny).Generated((1, 2, 3), 6) is (2, 1, 0, 4, 4, 4)
@@ -9,10 +10,12 @@ Generated(prompt Numbers, count Number) Numbers
 	Generation(current).Continued(prompt.Length, count)
 Continued(position Number, count Number) Numbers
 	Generation(Qwen3.Tiny.Step(1, 0).Step(2, 1).Step(3, 2)).Continued(3, 6) is (2, 1, 0, 4, 4, 4)
+	Generation(Qwen3.Tiny.Step(1, 0), Sampling.Warm).Continued(1, 4) is (4, 0, 0, 3)
 	mutable current = model
+	mutable drawn = sampling
 	mutable generated = List(Mutable(Number))
 	for count
-		let token = current.Next
-		generated.Add(token)
-		current = current.Step(token, position + index)
+		drawn = drawn.Drawn(current.Scored)
+		generated.Add(drawn.token)
+		current = current.Step(drawn.token, position + index)
 	generated

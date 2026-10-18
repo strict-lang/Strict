@@ -1,18 +1,26 @@
 has logger
 constant Prompt = "Alan Turing theorized that computers would one day become"
-Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32)
+Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32, temperature = 0)
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	let started = Process.Elapsed
 	let model = Qwen3(Qwen3.Loaded(path, bits), cacheBits = cacheBits)
 	let loaded = Process.Elapsed
 	let prompt = Repeated(tokenizer.Encoded(Prompt), repeats)
-	logger.Log(Prompt + tokenizer.Decoded(Generation(model.Prefilled(prompt, 0)).Continued(prompt.Length, count)))
+	logger.Log(Prompt + tokenizer.Decoded(Sampled(model.Prefilled(prompt, 0), prompt.Length, count, temperature)))
 	let before = Process.Elapsed
 	let prefilled = model.Prefilled(prompt, 0)
 	let first = prefilled.Next
 	let prefill = (Process.Elapsed - before) * 1000 / prompt.Length
 	let durations = Durations(batch is 1 then prefilled else prefilled.Copies(batch), first, prompt.Length, count, batch)
 	logger.Log(Report(prompt.Length, prefill, durations, batch) + ", loaded in " + (loaded - started).Round(1) + " s")
+Sampled(model Qwen3, position Number, count Number, temperature Number) Numbers
+	Qwen3Benchmark(Logger).Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
+	let started = Process.Elapsed
+	let tokens = Generation(model, Sampling(temperature, 40, 0.95, PseudoRandom.Seeded(1))).Continued(position, count)
+	let milliseconds = ((Process.Elapsed - started) * 1000 / count).Round(2)
+	if temperature > 0
+		logger.Log("sampled " + count + " tokens at temperature " + temperature + " in " + milliseconds + " ms per token")
+	tokens
 Repeated(tokens Numbers, repeats Number) Numbers
 	Qwen3Benchmark(Logger).Repeated((1, 2), 2) is (1, 2, 1, 2)
 	for tokens.Length * repeats
