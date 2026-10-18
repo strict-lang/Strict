@@ -8,6 +8,8 @@ constant Reading = InstructionEntry.Invoke(1, ("Strict/List(Number)", "X", "Stri
 constant Building = MethodEntry("Doubled", List(MemberEntry), "Strict/Pairing", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult0"), InstructionEntry.Invoke(3, ("Strict/Pairing", "from", "Pairing", "numbers"), List(Number) + 2, -1), InstructionEntry.Return(3)))
 constant Built = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Building), 3)
 constant Sample = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Validating), 1)
+constant Summing = InstructionEntry.Invoke(0, ("Strict/Pairing", "Doubled", "Strict/Pairing"), List(Number), -1)
+constant Rewrapped = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, MethodEntry("Run", List(MemberEntry), "None", (Summing, Constructing))), 1)
 constant Twice = VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2)))
 constant Instances = MlirInstances(Sample.function, 1)
 IsPaired(kind Text) Boolean
@@ -45,10 +47,12 @@ Helper(entry InstructionEntry, owner Text, name Text) Text
 	isList and (name is in ("X", "Y")) then "strict_two_" + name.Lower else ""
 Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
 	Sample.Constructed(Constructing, "Strict/Pairing", Instances).Last is "    llvm.store %t1pp, %r1 : f64, !llvm.ptr"
+	Text.Combine(Rewrapped.Constructed(Constructing, "Strict/Pairing", Instances)).IndexOf("strict_two_from_list") is -1
 	if IsPaired(typeName) is false
 		return instances.Constructed(entry, typeName)
-	let argument = "%r" + entry.payload(5 + entry.payload(3) + 1)
-	if IsBuiltArgument(entry)
+	let register = entry.payload(5 + entry.payload(3) + 1)
+	let argument = "%r" + register
+	if IsBuiltArgument(entry) or IsPaired(MlirKinds(function).KindOf(position, register))
 		return function.Copied(argument, "%r" + entry.payload(0), "%t" + position + "pp")
 	let call = "    %t" + position + "pp = func.call @strict_two_from_list(%t" + position + "pa) : (f64) -> f64"
 	let loaded = function.Load("%t" + position + "pa", argument)
