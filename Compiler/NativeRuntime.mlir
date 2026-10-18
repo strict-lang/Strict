@@ -6789,8 +6789,23 @@
     %loadData = func.call @strict_gpu_call(%loadIndex) : (i64) -> !llvm.ptr
     %loaded = llvm.call %loadData(%moduleSlot, %ptx) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %loadFailed = arith.cmpi ne, %loaded, %zero32 : i32
+    cf.cond_br %loadFailed, ^older, ^loaded
+  ^older:
+    // the PTX of a newer GPU (sm_80, DeviceBuild.Ptx) is followed by the one for older GPUs, or by an empty text
+    %length = llvm.call @strlen(%ptx) : (!llvm.ptr) -> i64
+    %skipped = arith.addi %length, %one : i64
+    %olderPtx = llvm.getelementptr %ptx[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %olderFirst = llvm.load %olderPtx : !llvm.ptr -> i8
+    %nothing8 = arith.constant 0 : i8
+    %noOlder = arith.cmpi eq, %olderFirst, %nothing8 : i8
+    cf.cond_br %noOlder, ^failed, ^loadOlder
+  ^loadOlder:
+    %olderLoaded = llvm.call %loadData(%moduleSlot, %olderPtx) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %olderFailed = arith.cmpi ne, %olderLoaded, %zero32 : i32
+    cf.cond_br %olderFailed, ^failed, ^loaded
+  ^loaded:
     %newModule = llvm.load %moduleSlot : !llvm.ptr -> i64
-    cf.cond_br %loadFailed, ^failed, ^lookup(%newModule : i64)
+    cf.br ^lookup(%newModule : i64)
   ^lookup(%moduleValue: i64):
     %module = llvm.inttoptr %moduleValue : i64 to !llvm.ptr
     %getIndex = arith.constant 5 : i64
