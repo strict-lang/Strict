@@ -2,10 +2,12 @@ has lines Texts
 has typeName Text
 constant Looping = Recursions(("has name Text", "constant Blood = Parsed(\"blood\")", "Parsed(line Text) Splash", "\tSplash.Parsed(\"a\").name is \"a\"", "\tSplash(Blood.name)"), "Splash")
 constant Hint = ", the only line is the body, write the body after the test"
+constant LetHint = ", a let ends the tests, so this line is the body and calls the method again: write the call into each test line"
+constant Measuring = Recursions(("has number", "constant Sample = Shape(1)", "Area Number", "	let area = Sample.Area", "	area is 1"), "Shape")
 constant Placing = Recursions(("Placed Boolean", "\tRecursions(1).Placed", "Run", "\tPlaced"), "Recursions")
 Issues List(ValidationIssue)
 	Looping.Issues.Length is 1
-	Constants + Endless
+	Constants + Endless + Lets
 Endless List(ValidationIssue)
 	Placing.Endless.First to Text is "OnlyLineCallsItself: Placed" + Hint
 	Looping.Endless.Length is 0
@@ -54,3 +56,29 @@ IsOwn(tokens Texts, position Number) Boolean
 		return true
 	let instance = tokens(position - (isConverted then 1 else 2))
 	(instance is typeName) or (instance is ")") and (tokens.First is typeName)
+Lets List(ValidationIssue)
+	Measuring.Lets.First to Text is "LetCallsItself: Area" + LetHint
+	Placing.Lets.Length is 0
+	mutable method = ""
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if TypeShape(lines).IsMethodHeader(value)
+			method = Tokenizer(value).Tokens.First
+		if value.Trim.StartsWith("let ") and IsThroughSample(value, method)
+			issues.Add(ValidationIssue("LetCallsItself", method + LetHint, index + 1))
+	issues
+IsThroughSample(line Text, method Text) Boolean
+	Measuring.IsThroughSample("	let area = Sample.Area", "Area")
+	Measuring.IsThroughSample("	let area = Other.Area", "Area") is false
+	Measuring.IsThroughSample("	let area = Other.Sample.Area", "Area") is false
+	let tokens = Tokenizer(line.Trim).Tokens
+	for tokens
+		let isOwn = (index > 1) and (tokens(index - 2) is in Samples) and ((index < 3) or (tokens(index - 3) is not "."))
+		if (value is method) and isOwn and (tokens(index - 1) is ".")
+			return true
+	false
+Samples Texts
+	Measuring.Samples is ("Sample")
+	for lines
+		if value.StartsWith("constant ") and (value.IndexOf(" = " + typeName + "(") > 0)
+			Tokenizer(value).Tokens(1)

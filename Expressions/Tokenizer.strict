@@ -69,3 +69,14 @@ IsDigit(character Text) Boolean
 	IsDigit("7")
 	IsDigit("a") is false
 	"0123456789".IndexOf(character) is not -1
+IsGrouped Boolean
+	Tokenizer("value.None is ()").IsGrouped is false
+	Tokenizer("(a + b) * c").IsGrouped
+	Tokenizer("(a + b").IsGrouped is false
+	let tokens = Tokens
+	if tokens.Count("(") is not tokens.Count(")")
+		return false
+	for tokens
+		if (value is "(") and (index + 1 < tokens.Length) and (tokens(index + 1) is ")")
+			return false
+	true
