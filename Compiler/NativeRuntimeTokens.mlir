@@ -916,44 +916,46 @@
     %slot = llvm.getelementptr %array[%offset64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i8
     return %slot : !llvm.ptr<3>
   }
-  // block number superblock of 64 rows and of 64 tokens into the tile (rows and tokens after the last repeat the last),
-  // every thread of the block copies parts of 16 bytes
-  func.func private @strict_device_tile_stage(%rowsData: !llvm.ptr, %rowFirst: i64, %rowLast: i64, %superblock: i64, %input: !llvm.ptr, %inputScales: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %thread: i32, %rowBits: i64, %columns: i64) attributes {passthrough = ["alwaysinline"]} {
+  // the parts of 16 bytes of block number superblock of 64 rows and of 64 tokens a thread copies into the tile (rows and
+  // tokens after the last repeat the last): up to 4 parts of the rows, 4 of the tokens, 2 token scales and the 16 bit
+  // scale of a Q6_K row, loaded into registers so the loads of the next block wait while the tile computes
+  func.func private @strict_device_tile_fetch(%rowsData: !llvm.ptr, %rowFirst: i64, %rowLast: i64, %superblock: i64, %input: !llvm.ptr, %inputScales: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %thread: i32, %rowBits: i64, %columns: i64) -> (vector<16xi32>, vector<16xi32>, vector<4xf32>) attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
     %c4 = llvm.mlir.constant(4 : i32) : i32
     %c8 = llvm.mlir.constant(8 : i32) : i32
-    %c9 = llvm.mlir.constant(9 : i32) : i32
+    %c15 = llvm.mlir.constant(15 : i32) : i32
     %c16 = llvm.mlir.constant(16 : i32) : i32
-    %c144 = llvm.mlir.constant(144 : i32) : i32
-    %c256 = llvm.mlir.constant(256 : i32) : i32
-    %c272 = llvm.mlir.constant(272 : i32) : i32
-    %c512 = llvm.mlir.constant(512 : i32) : i32
-    %c576 = llvm.mlir.constant(576 : i32) : i32
-    %c1024 = llvm.mlir.constant(1024 : i32) : i32
-    %five = arith.constant 5 : i64
-    %c13 = llvm.mlir.constant(13 : i32) : i32
     %c64 = llvm.mlir.constant(64 : i32) : i32
-    %c208 = llvm.mlir.constant(208 : i32) : i32
-    %c832 = llvm.mlir.constant(832 : i32) : i32
+    %c256 = llvm.mlir.constant(256 : i32) : i32
+    %five = arith.constant 5 : i64
     %fourBits = arith.constant 4 : i64
     %isFour = arith.cmpi eq, %rowBits, %fourBits : i64
-    %isSix = arith.cmpi ne, %rowBits, %fourBits : i64
     %fourBlockBytes = arith.constant 144 : i64
     %sixBlockBytes = arith.constant 208 : i64
     %blockBytes = arith.select %isFour, %fourBlockBytes, %sixBlockBytes : i64
+    %c9 = llvm.mlir.constant(9 : i32) : i32
+    %c13 = llvm.mlir.constant(13 : i32) : i32
+    %c576 = llvm.mlir.constant(576 : i32) : i32
+    %c832 = llvm.mlir.constant(832 : i32) : i32
     %rowParts = arith.select %isFour, %c9, %c13 : i32
-    %rowBytes = arith.select %isFour, %c144, %c208 : i32
     %weightParts = arith.select %isFour, %c576, %c832 : i32
     %blockNumbers = arith.constant 256 : i64
-    %weights = llvm.mlir.addressof @strict_device_tile_weights : !llvm.ptr<3>
-    %rowBlocks = llvm.mlir.addressof @strict_device_tile_row_blocks : !llvm.ptr<3>
-    %tokens = llvm.mlir.addressof @strict_device_tile_tokens : !llvm.ptr<3>
-    %tokenScales = llvm.mlir.addressof @strict_device_tile_token_scales : !llvm.ptr<3>
     %blockOffset = arith.muli %superblock, %blockBytes : i64
     %columnOffset = arith.muli %superblock, %blockNumbers : i64
-    cf.br ^weight(%thread : i32)
-  ^weight(%weightPart: i32):
-    %moreWeights = arith.cmpi slt, %weightPart, %weightParts : i32
-    cf.cond_br %moreWeights, ^weightBody, ^blockScale
+    %zeroWords = arith.constant dense<0> : vector<16xi32>
+    %zeroScales = arith.constant dense<0.0> : vector<4xf32>
+    cf.br ^weight(%c0, %zeroWords : i32, vector<16xi32>)
+  ^weight(%step: i32, %weights: vector<16xi32>):
+    %moreSteps = arith.cmpi slt, %step, %c4 : i32
+    cf.cond_br %moreSteps, ^weightCheck, ^tokens
+  ^weightCheck:
+    %stepStart = arith.muli %step, %c256 : i32
+    %weightPart = arith.addi %thread, %stepStart : i32
+    %usedPart = arith.cmpi slt, %weightPart, %weightParts : i32
+    cf.cond_br %usedPart, ^weightBody, ^weightNext(%weights : vector<16xi32>)
   ^weightBody:
     %row = arith.divui %weightPart, %rowParts : i32
     %rowPart = arith.remui %weightPart, %rowParts : i32
@@ -965,17 +967,63 @@
     %rowPartBytes64 = arith.extui %rowPartBytes : i32 to i64
     %sourceOffset = arith.addi %blockOffset, %rowPartBytes64 : i64
     %source = llvm.getelementptr %rowData[%sourceOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %weightWords = llvm.load %source invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
-    %rowStart = arith.muli %row, %rowBytes : i32
-    %weightAt = arith.addi %rowStart, %rowPartBytes : i32
-    %weightSlot = func.call @strict_device_tile_at(%weights, %weightAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
-    llvm.store %weightWords, %weightSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
-    %weightNext = arith.addi %weightPart, %c256 : i32
-    cf.br ^weight(%weightNext : i32)
+    %words = llvm.load %source invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %withWords = func.call @strict_device_tile_placed(%weights, %step, %words) : (vector<16xi32>, i32, vector<4xi32>) -> vector<16xi32>
+    cf.br ^weightNext(%withWords : vector<16xi32>)
+  ^weightNext(%nextWeights: vector<16xi32>):
+    %stepNext = arith.addi %step, %c1 : i32
+    llvm.br ^weight(%stepNext, %nextWeights : i32, vector<16xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^tokens:
+    cf.br ^token(%c0, %zeroWords : i32, vector<16xi32>)
+  ^token(%tokenStep: i32, %tokenWords: vector<16xi32>):
+    %moreTokens = arith.cmpi slt, %tokenStep, %c4 : i32
+    cf.cond_br %moreTokens, ^tokenBody, ^scales
+  ^tokenBody:
+    %tokenStepStart = arith.muli %tokenStep, %c256 : i32
+    %tokenPart = arith.addi %thread, %tokenStepStart : i32
+    %token = arith.shrui %tokenPart, %c4 : i32
+    %tokenChunk = arith.andi %tokenPart, %c15 : i32
+    %token64 = arith.extui %token : i32 to i64
+    %ownToken = arith.addi %tokenFirst, %token64 : i64
+    %tokenIndex = arith.minsi %ownToken, %tokenLast : i64
+    %tokenStart = arith.muli %tokenIndex, %width : i64
+    %tokenColumn = arith.addi %tokenStart, %columnOffset : i64
+    %tokenChunkBytes = arith.muli %tokenChunk, %c16 : i32
+    %tokenChunkBytes64 = arith.extui %tokenChunkBytes : i32 to i64
+    %tokenOffset = arith.addi %tokenColumn, %tokenChunkBytes64 : i64
+    %tokenSource = llvm.getelementptr %input[%tokenOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %numbers = llvm.load %tokenSource invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %withNumbers = func.call @strict_device_tile_placed(%tokenWords, %tokenStep, %numbers) : (vector<16xi32>, i32, vector<4xi32>) -> vector<16xi32>
+    %tokenStepNext = arith.addi %tokenStep, %c1 : i32
+    llvm.br ^token(%tokenStepNext, %withNumbers : i32, vector<16xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^scales:
+    cf.br ^scale(%c0, %zeroScales : i32, vector<4xf32>)
+  ^scale(%scaleStep: i32, %scales: vector<4xf32>):
+    %moreScales = arith.cmpi slt, %scaleStep, %c2 : i32
+    cf.cond_br %moreScales, ^scaleBody, ^blockScale
+  ^scaleBody:
+    %scaleStepStart = arith.muli %scaleStep, %c256 : i32
+    %scalePart = arith.addi %thread, %scaleStepStart : i32
+    %scaleSubFull = arith.remui %scalePart, %c8 : i32
+    %scaleToken = arith.divui %scalePart, %c8 : i32
+    %scaleToken64 = arith.extui %scaleToken : i32 to i64
+    %scaleOwnToken = arith.addi %tokenFirst, %scaleToken64 : i64
+    %scaleTokenIndex = arith.minsi %scaleOwnToken, %tokenLast : i64
+    %scaleTokenStart = arith.muli %scaleTokenIndex, %width : i64
+    %scaleColumn = arith.addi %scaleTokenStart, %columnOffset : i64
+    %scaleBlock = arith.shrui %scaleColumn, %five : i64
+    %scaleSub64 = arith.extui %scaleSubFull : i32 to i64
+    %scaleIndex = arith.addi %scaleBlock, %scaleSub64 : i64
+    %scaleSource = llvm.getelementptr %inputScales[%scaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %scaleValue = llvm.load %scaleSource invariant : !llvm.ptr -> f32
+    %withScale = llvm.insertelement %scaleValue, %scales[%scaleStep : i32] : vector<4xf32>
+    %scaleStepNext = arith.addi %scaleStep, %c1 : i32
+    llvm.br ^scale(%scaleStepNext, %withScale : i32, vector<4xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^blockScale:
     %scaleRow = arith.cmpi slt, %thread, %c64 : i32
+    %isSix = arith.cmpi ne, %rowBits, %fourBits : i64
     %sixScale = arith.andi %scaleRow, %isSix : i1
-    cf.cond_br %sixScale, ^blockScaleBody, ^token(%thread : i32)
+    cf.cond_br %sixScale, ^blockScaleBody, ^done(%scales : vector<4xf32>)
   ^blockScaleBody:
     %threadRow = arith.extui %thread : i32 to i64
     %ownScaleRow = arith.addi %rowFirst, %threadRow : i64
@@ -986,52 +1034,137 @@
     %halfSlot = llvm.getelementptr %halves[%superblock] : (!llvm.ptr, i64) -> !llvm.ptr, f16
     %half = llvm.load %halfSlot invariant : !llvm.ptr -> f16
     %blockScaleValue = arith.extf %half : f16 to f32
-    %blockScaleSlot = llvm.getelementptr %rowBlocks[%threadRow] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
-    llvm.store %blockScaleValue, %blockScaleSlot : f32, !llvm.ptr<3>
-    cf.br ^token(%thread : i32)
-  ^token(%tokenPart: i32):
-    %moreTokens = arith.cmpi slt, %tokenPart, %c1024 : i32
-    cf.cond_br %moreTokens, ^tokenBody, ^scale(%thread : i32)
+    %withBlockScale = llvm.insertelement %blockScaleValue, %scales[%c2 : i32] : vector<4xf32>
+    cf.br ^done(%withBlockScale : vector<4xf32>)
+  ^done(%fetchedScales: vector<4xf32>):
+    return %weights, %tokenWords, %fetchedScales : vector<16xi32>, vector<16xi32>, vector<4xf32>
+  }
+  // words with the 4 words of part number step (0 to 3)
+  func.func private @strict_device_tile_placed(%words: vector<16xi32>, %step: i32, %part: vector<4xi32>) -> vector<16xi32> attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %first = arith.shli %step, %c2 : i32
+    %second = arith.addi %first, %c1 : i32
+    %third = arith.addi %first, %c2 : i32
+    %fourth = arith.addi %first, %c3 : i32
+    %word0 = llvm.extractelement %part[%c0 : i32] : vector<4xi32>
+    %word1 = llvm.extractelement %part[%c1 : i32] : vector<4xi32>
+    %word2 = llvm.extractelement %part[%c2 : i32] : vector<4xi32>
+    %word3 = llvm.extractelement %part[%c3 : i32] : vector<4xi32>
+    %with0 = llvm.insertelement %word0, %words[%first : i32] : vector<16xi32>
+    %with1 = llvm.insertelement %word1, %with0[%second : i32] : vector<16xi32>
+    %with2 = llvm.insertelement %word2, %with1[%third : i32] : vector<16xi32>
+    %with3 = llvm.insertelement %word3, %with2[%fourth : i32] : vector<16xi32>
+    return %with3 : vector<16xi32>
+  }
+  // the 4 words of part number step (0 to 3) of words
+  func.func private @strict_device_tile_part(%words: vector<16xi32>, %step: i32) -> vector<4xi32> attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %first = arith.shli %step, %c2 : i32
+    %second = arith.addi %first, %c1 : i32
+    %third = arith.addi %first, %c2 : i32
+    %fourth = arith.addi %first, %c3 : i32
+    %word0 = llvm.extractelement %words[%first : i32] : vector<16xi32>
+    %word1 = llvm.extractelement %words[%second : i32] : vector<16xi32>
+    %word2 = llvm.extractelement %words[%third : i32] : vector<16xi32>
+    %word3 = llvm.extractelement %words[%fourth : i32] : vector<16xi32>
+    %empty = llvm.mlir.undef : vector<4xi32>
+    %with0 = llvm.insertelement %word0, %empty[%c0 : i32] : vector<4xi32>
+    %with1 = llvm.insertelement %word1, %with0[%c1 : i32] : vector<4xi32>
+    %with2 = llvm.insertelement %word2, %with1[%c2 : i32] : vector<4xi32>
+    %with3 = llvm.insertelement %word3, %with2[%c3 : i32] : vector<4xi32>
+    return %with3 : vector<4xi32>
+  }
+  // the parts strict_device_tile_fetch loaded into the tile
+  func.func private @strict_device_tile_put(%weights: vector<16xi32>, %tokenWords: vector<16xi32>, %scales: vector<4xf32>, %thread: i32, %rowBits: i64) attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c4 = llvm.mlir.constant(4 : i32) : i32
+    %c9 = llvm.mlir.constant(9 : i32) : i32
+    %c13 = llvm.mlir.constant(13 : i32) : i32
+    %c15 = llvm.mlir.constant(15 : i32) : i32
+    %c16 = llvm.mlir.constant(16 : i32) : i32
+    %c64 = llvm.mlir.constant(64 : i32) : i32
+    %c144 = llvm.mlir.constant(144 : i32) : i32
+    %c208 = llvm.mlir.constant(208 : i32) : i32
+    %c256 = llvm.mlir.constant(256 : i32) : i32
+    %c272 = llvm.mlir.constant(272 : i32) : i32
+    %c576 = llvm.mlir.constant(576 : i32) : i32
+    %c832 = llvm.mlir.constant(832 : i32) : i32
+    %fourBits = arith.constant 4 : i64
+    %isFour = arith.cmpi eq, %rowBits, %fourBits : i64
+    %rowParts = arith.select %isFour, %c9, %c13 : i32
+    %rowBytes = arith.select %isFour, %c144, %c208 : i32
+    %weightParts = arith.select %isFour, %c576, %c832 : i32
+    %weightTile = llvm.mlir.addressof @strict_device_tile_weights : !llvm.ptr<3>
+    %tokenTile = llvm.mlir.addressof @strict_device_tile_tokens : !llvm.ptr<3>
+    %tokenScales = llvm.mlir.addressof @strict_device_tile_token_scales : !llvm.ptr<3>
+    %rowBlocks = llvm.mlir.addressof @strict_device_tile_row_blocks : !llvm.ptr<3>
+    cf.br ^weight(%c0 : i32)
+  ^weight(%step: i32):
+    %moreSteps = arith.cmpi slt, %step, %c4 : i32
+    cf.cond_br %moreSteps, ^weightCheck, ^tokens
+  ^weightCheck:
+    %stepStart = arith.muli %step, %c256 : i32
+    %weightPart = arith.addi %thread, %stepStart : i32
+    %usedPart = arith.cmpi slt, %weightPart, %weightParts : i32
+    cf.cond_br %usedPart, ^weightBody, ^weightNext
+  ^weightBody:
+    %row = arith.divui %weightPart, %rowParts : i32
+    %rowPart = arith.remui %weightPart, %rowParts : i32
+    %rowStart = arith.muli %row, %rowBytes : i32
+    %rowPartBytes = arith.muli %rowPart, %c16 : i32
+    %weightAt = arith.addi %rowStart, %rowPartBytes : i32
+    %weightSlot = func.call @strict_device_tile_at(%weightTile, %weightAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    %words = func.call @strict_device_tile_part(%weights, %step) : (vector<16xi32>, i32) -> vector<4xi32>
+    llvm.store %words, %weightSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    cf.br ^weightNext
+  ^weightNext:
+    %stepNext = arith.addi %step, %c1 : i32
+    llvm.br ^weight(%stepNext : i32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^tokens:
+    cf.br ^token(%c0 : i32)
+  ^token(%tokenStep: i32):
+    %moreTokens = arith.cmpi slt, %tokenStep, %c4 : i32
+    cf.cond_br %moreTokens, ^tokenBody, ^scales
   ^tokenBody:
+    %tokenStepStart = arith.muli %tokenStep, %c256 : i32
+    %tokenPart = arith.addi %thread, %tokenStepStart : i32
     %token = arith.shrui %tokenPart, %c4 : i32
-    %tokenPartIndex = arith.remui %tokenPart, %c16 : i32
-    %token64 = arith.extui %token : i32 to i64
-    %ownToken = arith.addi %tokenFirst, %token64 : i64
-    %tokenIndex = arith.minsi %ownToken, %tokenLast : i64
-    %tokenStart = arith.muli %tokenIndex, %width : i64
-    %tokenColumn = arith.addi %tokenStart, %columnOffset : i64
-    %tokenPartBytes = arith.muli %tokenPartIndex, %c16 : i32
-    %tokenPartBytes64 = arith.extui %tokenPartBytes : i32 to i64
-    %tokenOffset = arith.addi %tokenColumn, %tokenPartBytes64 : i64
-    %tokenSource = llvm.getelementptr %input[%tokenOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %tokenWords = llvm.load %tokenSource invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %tokenChunk = arith.andi %tokenPart, %c15 : i32
     %tokenRowStart = arith.muli %token, %c272 : i32
-    %tokenAt = arith.addi %tokenRowStart, %tokenPartBytes : i32
-    %tokenSlot = func.call @strict_device_tile_at(%tokens, %tokenAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
-    llvm.store %tokenWords, %tokenSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
-    %tokenNext = arith.addi %tokenPart, %c256 : i32
-    cf.br ^token(%tokenNext : i32)
-  ^scale(%scalePart: i32):
-    %moreScales = arith.cmpi slt, %scalePart, %c512 : i32
-    cf.cond_br %moreScales, ^scaleBody, ^done
-  ^scaleBody:
-    %scaleSub = arith.remui %scalePart, %c8 : i32
-    %scaleTokenIndex = arith.divui %scalePart, %c8 : i32
-    %scaleToken64 = arith.extui %scaleTokenIndex : i32 to i64
-    %scaleOwnToken = arith.addi %tokenFirst, %scaleToken64 : i64
-    %scaleTokenClamped = arith.minsi %scaleOwnToken, %tokenLast : i64
-    %scaleTokenStart = arith.muli %scaleTokenClamped, %width : i64
-    %scaleColumn = arith.addi %scaleTokenStart, %columnOffset : i64
-    %scaleBlock = arith.shrui %scaleColumn, %five : i64
-    %scaleSub64 = arith.extui %scaleSub : i32 to i64
-    %scaleIndex = arith.addi %scaleBlock, %scaleSub64 : i64
-    %scaleSource = llvm.getelementptr %inputScales[%scaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %scaleValue = llvm.load %scaleSource invariant : !llvm.ptr -> f32
-    %scaleSlotIndex = arith.extui %scalePart : i32 to i64
-    %scaleSlot = llvm.getelementptr %tokenScales[0, %scaleSlotIndex] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, !llvm.array<512 x f32>
-    llvm.store %scaleValue, %scaleSlot : f32, !llvm.ptr<3>
-    %scaleNext = arith.addi %scalePart, %c256 : i32
-    cf.br ^scale(%scaleNext : i32)
+    %tokenChunkBytes = arith.muli %tokenChunk, %c16 : i32
+    %tokenAt = arith.addi %tokenRowStart, %tokenChunkBytes : i32
+    %tokenSlot = func.call @strict_device_tile_at(%tokenTile, %tokenAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    %numbers = func.call @strict_device_tile_part(%tokenWords, %tokenStep) : (vector<16xi32>, i32) -> vector<4xi32>
+    llvm.store %numbers, %tokenSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    %tokenStepNext = arith.addi %tokenStep, %c1 : i32
+    llvm.br ^token(%tokenStepNext : i32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^scales:
+    %firstScale = llvm.extractelement %scales[%c0 : i32] : vector<4xf32>
+    %secondScale = llvm.extractelement %scales[%c1 : i32] : vector<4xf32>
+    %first64 = arith.extui %thread : i32 to i64
+    %secondPart = arith.addi %thread, %c256 : i32
+    %second64 = arith.extui %secondPart : i32 to i64
+    %firstSlot = llvm.getelementptr %tokenScales[%first64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    llvm.store %firstScale, %firstSlot : f32, !llvm.ptr<3>
+    %secondSlot = llvm.getelementptr %tokenScales[%second64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    llvm.store %secondScale, %secondSlot : f32, !llvm.ptr<3>
+    %scaleRow = arith.cmpi slt, %thread, %c64 : i32
+    %isSix = arith.cmpi ne, %rowBits, %fourBits : i64
+    %sixScale = arith.andi %scaleRow, %isSix : i1
+    cf.cond_br %sixScale, ^blockScale, ^done
+  ^blockScale:
+    %blockScaleValue = llvm.extractelement %scales[%c2 : i32] : vector<4xf32>
+    %blockSlot = llvm.getelementptr %rowBlocks[%first64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    llvm.store %blockScaleValue, %blockSlot : f32, !llvm.ptr<3>
+    cf.br ^done
   ^done:
     return
   }
@@ -1440,16 +1573,20 @@
     %firstData, %rowBits, %firstTotal = func.call @strict_device_row(%rowsData, %rowFirst) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
     %fourBits = arith.constant 4 : i64
     %isFour = arith.cmpi eq, %rowBits, %fourBits : i64
+    %firstWeights, %firstTokens, %firstScales = func.call @strict_device_tile_fetch(%rowsData, %rowFirst, %rowLast, %none, %input, %inputScales, %width, %tokenFirst, %tokenLast, %thread, %rowBits, %columns) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i32, i64, i64) -> (vector<16xi32>, vector<16xi32>, vector<4xf32>)
+    func.call @strict_device_tile_put(%firstWeights, %firstTokens, %firstScales, %thread, %rowBits) : (vector<16xi32>, vector<16xi32>, vector<4xf32>, i32, i64) -> ()
+    nvvm.barrier0
+    func.call @strict_device_tile_prepare(%thread, %rowBits) : (i32, i64) -> ()
+    nvvm.barrier0
+    %lastBlock = arith.subi %blocks, %one : i64
     cf.br ^superblock(%none, %zeros : i64, vector<16xf32>)
   ^superblock(%superblock: i64, %sums: vector<16xf32>):
     %moreBlocks = arith.cmpi slt, %superblock, %blocks : i64
     cf.cond_br %moreBlocks, ^stage, ^write(%c0 : i32)
   ^stage:
-    nvvm.barrier0
-    func.call @strict_device_tile_stage(%rowsData, %rowFirst, %rowLast, %superblock, %input, %inputScales, %width, %tokenFirst, %tokenLast, %thread, %rowBits, %columns) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i32, i64, i64) -> ()
-    nvvm.barrier0
-    func.call @strict_device_tile_prepare(%thread, %rowBits) : (i32, i64) -> ()
-    nvvm.barrier0
+    %nextBlock = arith.addi %superblock, %one : i64
+    %fetchedBlock = arith.minsi %nextBlock, %lastBlock : i64
+    %nextWeights, %nextTokens, %nextScales = func.call @strict_device_tile_fetch(%rowsData, %rowFirst, %rowLast, %fetchedBlock, %input, %inputScales, %width, %tokenFirst, %tokenLast, %thread, %rowBits, %columns) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i32, i64, i64) -> (vector<16xi32>, vector<16xi32>, vector<4xf32>)
     cf.br ^sub(%c0, %sums : i32, vector<16xf32>)
   ^sub(%sub: i32, %subSums: vector<16xf32>):
     %moreSubs = arith.cmpi slt, %sub, %c8 : i32
@@ -1466,8 +1603,15 @@
     %subFollowing = arith.addi %sub, %c1 : i32
     llvm.br ^sub(%subFollowing, %added : i32, vector<16xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^superblockNext:
-    %superblockFollowing = arith.addi %superblock, %one : i64
-    cf.br ^superblock(%superblockFollowing, %subSums : i64, vector<16xf32>)
+    %hasNext = arith.cmpi slt, %nextBlock, %blocks : i64
+    cf.cond_br %hasNext, ^put, ^superblock(%nextBlock, %subSums : i64, vector<16xf32>)
+  ^put:
+    nvvm.barrier0
+    func.call @strict_device_tile_put(%nextWeights, %nextTokens, %nextScales, %thread, %rowBits) : (vector<16xi32>, vector<16xi32>, vector<4xf32>, i32, i64) -> ()
+    nvvm.barrier0
+    func.call @strict_device_tile_prepare(%thread, %rowBits) : (i32, i64) -> ()
+    nvvm.barrier0
+    cf.br ^superblock(%nextBlock, %subSums : i64, vector<16xf32>)
   ^write(%slot: i32):
     %moreSlots = arith.cmpi slt, %slot, %c16 : i32
     cf.cond_br %moreSlots, ^writeBody, ^exit
@@ -1504,12 +1648,12 @@
   ^exit:
     return
   }
-  llvm.func @strict_device_tiles(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel} {
+  llvm.func @strict_device_tiles(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
     %wide = llvm.mlir.constant(true) : i1
     func.call @strict_device_tiles_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1) -> ()
     llvm.return
   }
-  llvm.func @strict_device_tiless(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel} {
+  llvm.func @strict_device_tiless(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
     %wide = llvm.mlir.constant(false) : i1
     func.call @strict_device_tiles_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1) -> ()
     llvm.return
