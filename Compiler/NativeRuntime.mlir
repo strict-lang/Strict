@@ -8307,8 +8307,9 @@
   llvm.mlir.global internal @strict_gpu_tiles_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // the dot products of `Batch.Sums` for several tokens (strict_device_blocks, 64 or more with Q4_K or Q6_K rows and 8 bit tokens
   // strict_device_tiles, one token strict_device_tokens): every row with the numbers of every token (token t at
-  // t * width of input), row r and token t at t * rows + r of the result, 0.0 when the GPU can not
-  func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64) -> f64 {
+  // t * width of input), row r and token t at t * rows + r of the result plus biases(index % biases.Length) unless
+  // biases is 0.0, 0.0 when the GPU can not
+  func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %biases: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -8325,7 +8326,7 @@
     %blockLanes = arith.constant -64 : i64
     %rowLanes = arith.constant -8 : i64
     %perWarp = arith.select %long, %blockLanes, %rowLanes : i64
-    %values = llvm.alloca %four x f64 : (i64) -> !llvm.ptr
+    %values = llvm.alloca %five x f64 : (i64) -> !llvm.ptr
     llvm.store %rows, %values : f64, !llvm.ptr
     %inputSlot = llvm.getelementptr %values[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %input, %inputSlot : f64, !llvm.ptr
@@ -8333,6 +8334,9 @@
     llvm.store %width, %widthSlot : f64, !llvm.ptr
     %rowCountSlot = llvm.getelementptr %values[3] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %rowCount, %rowCountSlot : f64, !llvm.ptr
+    %biasesSlot = llvm.getelementptr %values[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %biases, %biasesSlot : f64, !llvm.ptr
+    %listsMask = arith.constant 19 : i64
     %tokensName = llvm.mlir.addressof @strict_gpu_tokens_name : !llvm.ptr
     %tokensSlot = llvm.mlir.addressof @strict_gpu_tokens_slot : !llvm.ptr
     %blocksName = llvm.mlir.addressof @strict_gpu_blocks_name : !llvm.ptr
@@ -8347,7 +8351,7 @@
     %slot = llvm.select %tiled, %tilesSlot, %shortSlot : i1, !llvm.ptr
     %lanes = arith.select %tiled, %tileLanes, %perWarp : i64
     %integers = arith.constant -1 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %four, %three, %one, %two, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %five, %listsMask, %one, %two, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   }
   // strict_device_tiles fits 64 tokens or more with Q4_K or Q6_K rows whose 32 bit tokens become 8 bit numbers (width a

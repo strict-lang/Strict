@@ -169,7 +169,7 @@
   }
   // `Batch.Sums` of a single token (or numbers that are not 8 bit): a warp takes one row and 8 tokens, the dot
   // of row r and token t becomes number t * rows + r of the result (doubles when wide)
-  func.func private @strict_device_tokens_rows(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1) {
+  func.func private @strict_device_tokens_rows(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %five = arith.constant 5 : i64
@@ -211,7 +211,7 @@
     %element = arith.addi %tokenStart, %row : i64
     cf.cond_br %writing, ^store, ^stored
   ^store:
-    func.call @strict_device_tokens_store(%result, %wide, %element, %value) : (!llvm.ptr, i1, i64, f32) -> ()
+    func.call @strict_device_tokens_store(%result, %wide, %element, %value, %row, %rows, %biases, %biasesCount, %biasesBits) : (!llvm.ptr, i1, i64, f32, i64, i64, !llvm.ptr, i64, i64) -> ()
     cf.br ^stored
   ^stored:
     %next = arith.addi %index, %one : i64
@@ -653,7 +653,7 @@
   // `Batch.Sums` of 2 tokens or more: a block takes 8 rows and up to 32 tokens, each of its 8 warps an eighth of the
   // parts of 256 numbers of Q4_K, Q6_K or 8 bit rows on the 8 bit tensor cores, added up in shared memory (other rows go
   // row by row); the dot of row r and token t becomes number t * rows + r of the result
-  func.func private @strict_device_tokens_blocks(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1) {
+  func.func private @strict_device_tokens_blocks(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -840,7 +840,7 @@
   ^writeStore:
     %writeTokenStart = arith.muli %writeToken, %rows : i64
     %writeElement = arith.addi %writeTokenStart, %ownRow : i64
-    func.call @strict_device_tokens_store(%result, %wide, %writeElement, %gathered) : (!llvm.ptr, i1, i64, f32) -> ()
+    func.call @strict_device_tokens_store(%result, %wide, %writeElement, %gathered, %ownRow, %rows, %biases, %biasesCount, %biasesBits) : (!llvm.ptr, i1, i64, f32, i64, i64, !llvm.ptr, i64, i64) -> ()
     cf.br ^slotNext
   ^slotNext:
     %slotFollowing = arith.addi %slot, %splits : i64
@@ -876,7 +876,7 @@
     %element = arith.addi %tokenStart, %fallbackRow : i64
     cf.cond_br %tokenWriting, ^pairStore, ^pairStored
   ^pairStore:
-    func.call @strict_device_tokens_store(%result, %wide, %element, %value) : (!llvm.ptr, i1, i64, f32) -> ()
+    func.call @strict_device_tokens_store(%result, %wide, %element, %value, %fallbackRow, %rows, %biases, %biasesCount, %biasesBits) : (!llvm.ptr, i1, i64, f32, i64, i64, !llvm.ptr, i64, i64) -> ()
     cf.br ^pairStored
   ^pairStored:
     %nextWrite = arith.addi %writeIndex, %one : i64
@@ -887,7 +887,26 @@
   ^exit:
     return
   }
-  func.func private @strict_device_tokens_store(%result: !llvm.ptr, %wide: i1, %element: i64, %value: f32) attributes {passthrough = ["alwaysinline"]} {
+  // number element of the result (row of rows), plus the bias of the row when there is one per row, the bias at element
+  // when there are as many as results, otherwise at element modulo their count (`Batch.Sums` adds biases(index % length))
+  func.func private @strict_device_tokens_store(%result: !llvm.ptr, %wide: i1, %element: i64, %sum: f32, %row: i64, %rows: i64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
+    %hasBiases = arith.cmpi sgt, %biasesCount, %none : i64
+    cf.cond_br %hasBiases, ^biased, ^stored(%sum : f32)
+  ^biased:
+    %perRow = arith.cmpi eq, %biasesCount, %rows : i64
+    cf.cond_br %perRow, ^read(%row : i64), ^element
+  ^element:
+    %inside = arith.cmpi slt, %element, %biasesCount : i64
+    cf.cond_br %inside, ^read(%element : i64), ^wrapped
+  ^wrapped:
+    %wrapped = arith.remui %element, %biasesCount : i64
+    cf.br ^read(%wrapped : i64)
+  ^read(%biasIndex: i64):
+    %bias = func.call @strict_device_elements(%biases, %biasesBits, %biasIndex, %biasesCount) : (!llvm.ptr, i64, i64, i64) -> f32
+    %biasedSum = arith.addf %sum, %bias : f32
+    cf.br ^stored(%biasedSum : f32)
+  ^stored(%value: f32):
     cf.cond_br %wide, ^double, ^single
   ^double:
     %wideValue = arith.extf %value : f32 to f64
@@ -903,7 +922,10 @@
   // their scales (per 32 or 16 numbers) and minimums (Q4_K per 32) and the 16 bit scale of each Q6_K block, the 8 bit
   // numbers of 64 tokens for the same 256 columns (272 bytes apart so the lanes of an mma operand read different banks),
   // their scales and scaled sums per 32 numbers
-  llvm.mlir.global internal @strict_device_tile_weights() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<13312 x i8>
+  // Q4_K rows unpacked to 8 bit numbers, 272 bytes per row like the tokens, Q6_K rows as they are (208 bytes)
+  llvm.mlir.global internal @strict_device_tile_weights() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<17408 x i8>
+  // the 16 header bytes of each Q4_K row (16 bit scale and minimum, 6 bit scales and minimums of its 8 subs)
+  llvm.mlir.global internal @strict_device_tile_headers() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<1024 x i8>
   llvm.mlir.global internal @strict_device_tile_tokens() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<17408 x i8>
   llvm.mlir.global internal @strict_device_tile_row_scales() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<1024 x f32>
   llvm.mlir.global internal @strict_device_tile_row_blocks() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<64 x f32>
@@ -1080,6 +1102,48 @@
     %with3 = llvm.insertelement %word3, %with2[%c3 : i32] : vector<4xi32>
     return %with3 : vector<4xi32>
   }
+  // part rowPart of a Q4_K row into the tile: part 0 is the header, part 1 + 2 * g + h holds the bytes 16 * h to + 15 of
+  // the 64 numbers group g, their low 4 bits are the numbers from 64 * g + 16 * h, their high bits those 32 later
+  func.func private @strict_device_tile_unpacked(%words: vector<4xi32>, %row: i32, %rowPart: i32) attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c4 = llvm.mlir.constant(4 : i32) : i32
+    %c6 = llvm.mlir.constant(6 : i32) : i32
+    %c16 = llvm.mlir.constant(16 : i32) : i32
+    %c32 = llvm.mlir.constant(32 : i32) : i32
+    %c272 = llvm.mlir.constant(272 : i32) : i32
+    %lowBits = arith.constant dense<252645135> : vector<4xi32>
+    %shift = arith.constant dense<4> : vector<4xi32>
+    %weightTile = llvm.mlir.addressof @strict_device_tile_weights : !llvm.ptr<3>
+    %headers = llvm.mlir.addressof @strict_device_tile_headers : !llvm.ptr<3>
+    %isHeader = arith.cmpi eq, %rowPart, %c0 : i32
+    cf.cond_br %isHeader, ^header, ^numbers
+  ^header:
+    %headerAt = arith.muli %row, %c16 : i32
+    %headerSlot = func.call @strict_device_tile_at(%headers, %headerAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    llvm.store %words, %headerSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    cf.br ^done
+  ^numbers:
+    %chunk = arith.subi %rowPart, %c1 : i32
+    %group = arith.shrui %chunk, %c1 : i32
+    %chunkHalf = arith.andi %chunk, %c1 : i32
+    %groupBytes = arith.shli %group, %c6 : i32
+    %halfBytes = arith.shli %chunkHalf, %c4 : i32
+    %rowStart = arith.muli %row, %c272 : i32
+    %groupStart = arith.addi %rowStart, %groupBytes : i32
+    %lowAt = arith.addi %groupStart, %halfBytes : i32
+    %highAt = arith.addi %lowAt, %c32 : i32
+    %low = arith.andi %words, %lowBits : vector<4xi32>
+    %shifted = arith.shrui %words, %shift : vector<4xi32>
+    %high = arith.andi %shifted, %lowBits : vector<4xi32>
+    %lowSlot = func.call @strict_device_tile_at(%weightTile, %lowAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    llvm.store %low, %lowSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    %highSlot = func.call @strict_device_tile_at(%weightTile, %highAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    llvm.store %high, %highSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    cf.br ^done
+  ^done:
+    return
+  }
   // the parts strict_device_tile_fetch loaded into the tile
   func.func private @strict_device_tile_put(%weights: vector<16xi32>, %tokenWords: vector<16xi32>, %scales: vector<4xf32>, %thread: i32, %rowBits: i64) attributes {passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
@@ -1118,12 +1182,17 @@
   ^weightBody:
     %row = arith.divui %weightPart, %rowParts : i32
     %rowPart = arith.remui %weightPart, %rowParts : i32
+    %words = func.call @strict_device_tile_part(%weights, %step) : (vector<16xi32>, i32) -> vector<4xi32>
+    cf.cond_br %isFour, ^fourPart, ^rawPart
+  ^rawPart:
     %rowStart = arith.muli %row, %rowBytes : i32
     %rowPartBytes = arith.muli %rowPart, %c16 : i32
     %weightAt = arith.addi %rowStart, %rowPartBytes : i32
     %weightSlot = func.call @strict_device_tile_at(%weightTile, %weightAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
-    %words = func.call @strict_device_tile_part(%weights, %step) : (vector<16xi32>, i32) -> vector<4xi32>
     llvm.store %words, %weightSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    cf.br ^weightNext
+  ^fourPart:
+    func.call @strict_device_tile_unpacked(%words, %row, %rowPart) : (vector<4xi32>, i32, i32) -> ()
     cf.br ^weightNext
   ^weightNext:
     %stepNext = arith.addi %step, %c1 : i32
@@ -1202,8 +1271,10 @@
     %owner = arith.divui %part, %c8 : i32
     %sub = arith.remui %part, %c8 : i32
     %part64 = arith.extui %part : i32 to i64
-    %headerAt = arith.muli %owner, %c144 : i32
-    %headerSlot = func.call @strict_device_tile_at(%weights, %headerAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    %headers = llvm.mlir.addressof @strict_device_tile_headers : !llvm.ptr<3>
+    %headerBytes = llvm.mlir.constant(16 : i32) : i32
+    %headerAt = arith.muli %owner, %headerBytes : i32
+    %headerSlot = func.call @strict_device_tile_at(%headers, %headerAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
     %header = llvm.load %headerSlot {alignment = 16 : i64} : !llvm.ptr<3> -> vector<4xi32>
     %headerWord = llvm.extractelement %header[%c0 : i32] : vector<4xi32>
     %halves = llvm.bitcast %headerWord : i32 to vector<2xf16>
@@ -1395,29 +1466,6 @@
     %updated = llvm.insertelement %new, %sums[%slot : i32] : vector<16xf32>
     return %updated : vector<16xf32>
   }
-  // the 4 bit numbers of row (in the tile) for 4 numbers from at of the 32 numbers sub as 8 bit numbers
-  func.func private @strict_device_tile_four(%row: i32, %sub: i32, %at: i32) -> i32 attributes {passthrough = ["alwaysinline"]} {
-    %c1 = llvm.mlir.constant(1 : i32) : i32
-    %c2 = llvm.mlir.constant(2 : i32) : i32
-    %c5 = llvm.mlir.constant(5 : i32) : i32
-    %c16 = llvm.mlir.constant(16 : i32) : i32
-    %c144 = llvm.mlir.constant(144 : i32) : i32
-    %mask = arith.constant 252645135 : i32
-    %weights = llvm.mlir.addressof @strict_device_tile_weights : !llvm.ptr<3>
-    %pair = arith.shrui %sub, %c1 : i32
-    %pairBytes = arith.shli %pair, %c5 : i32
-    %rowStart = arith.muli %row, %c144 : i32
-    %numbersStart = arith.addi %rowStart, %c16 : i32
-    %pairStart = arith.addi %numbersStart, %pairBytes : i32
-    %wordAt = arith.addi %pairStart, %at : i32
-    %slot = func.call @strict_device_tile_at(%weights, %wordAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
-    %word = llvm.load %slot {alignment = 4 : i64} : !llvm.ptr<3> -> i32
-    %high = arith.andi %sub, %c1 : i32
-    %shift = arith.shli %high, %c2 : i32
-    %shifted = arith.shrui %word, %shift : i32
-    %numbers = arith.andi %shifted, %mask : i32
-    return %numbers : i32
-  }
   // 4 token numbers from at of the 32 numbers sub of token (in the tile)
   func.func private @strict_device_tile_token(%token: i32, %sub: i32, %at: i32) -> i32 attributes {passthrough = ["alwaysinline"]} {
     %c5 = llvm.mlir.constant(5 : i32) : i32
@@ -1442,22 +1490,45 @@
     return %value : f32
   }
   // the 32 numbers sub of the tile for the 32 rows and 16 tokens of a warp: 4 x 2 tiles of 8 rows by 8 tokens, each two
-  // mma of 16 numbers (mma.m8n8k16), the integer sums scaled by row and token, minus the row minimums times the scaled
-  // token sums; a lane has row lane / 4 and tokens 2 * (lane % 4) and the next of each tile
+  // mma of 16 numbers (mma.m8n8k16) on the 8 bit numbers the Q4_K rows were unpacked to, the integer sums scaled by row
+  // and token, minus the row minimums times the scaled token sums; a lane has row lane / 4 and tokens 2 * (lane % 4) and
+  // the next of each tile, three ldmatrix load the operands of all tiles (lanes give the rows of 4 matrices of 8 x 16)
   func.func private @strict_device_tile_sub(%sums: vector<16xf32>, %sub: i32, %warpRow: i32, %warpToken: i32, %laneRow: i32, %quad: i32) -> vector<16xf32> attributes {passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
+    %c4 = llvm.mlir.constant(4 : i32) : i32
+    %c5 = llvm.mlir.constant(5 : i32) : i32
+    %c7 = llvm.mlir.constant(7 : i32) : i32
     %c8 = llvm.mlir.constant(8 : i32) : i32
     %c16 = llvm.mlir.constant(16 : i32) : i32
+    %c272 = llvm.mlir.constant(272 : i32) : i32
     %nothing = arith.constant 0 : i32
+    %weights = llvm.mlir.addressof @strict_device_tile_weights : !llvm.ptr<3>
+    %tokens = llvm.mlir.addressof @strict_device_tile_tokens : !llvm.ptr<3>
     %rowScales = llvm.mlir.addressof @strict_device_tile_row_scales : !llvm.ptr<3>
     %rowMinimums = llvm.mlir.addressof @strict_device_tile_row_minimums : !llvm.ptr<3>
     %tokenScales = llvm.mlir.addressof @strict_device_tile_token_scales : !llvm.ptr<3>
     %tokenSums = llvm.mlir.addressof @strict_device_tile_token_sums : !llvm.ptr<3>
-    %quadBytes = arith.shli %quad, %c2 : i32
-    %upperBytes = arith.addi %quadBytes, %c16 : i32
+    %laneRowStart = arith.shli %laneRow, %c2 : i32
+    %lane = arith.addi %laneRowStart, %quad : i32
+    %matrix = arith.shrui %lane, %c3 : i32
+    %matrixRow = arith.andi %lane, %c7 : i32
+    %matrixPair = arith.shrui %matrix, %c1 : i32
+    %pairStart = arith.muli %matrixPair, %c8 : i32
+    %pairRow = arith.addi %pairStart, %matrixRow : i32
+    %matrixHalf = arith.andi %matrix, %c1 : i32
+    %halfBytes = arith.shli %matrixHalf, %c4 : i32
+    %subBytes = arith.shli %sub, %c5 : i32
+    %column = arith.addi %subBytes, %halfBytes : i32
+    %firstRow = arith.addi %warpRow, %pairRow : i32
+    %secondRow = arith.addi %firstRow, %c16 : i32
+    %tokenRow = arith.addi %warpToken, %pairRow : i32
+    %first = func.call @strict_device_tile_matrices(%weights, %firstRow, %column) : (!llvm.ptr<3>, i32, i32) -> vector<4xi32>
+    %second = func.call @strict_device_tile_matrices(%weights, %secondRow, %column) : (!llvm.ptr<3>, i32, i32) -> vector<4xi32>
+    %rowOperands = llvm.shufflevector %first, %second [0, 1, 2, 3, 4, 5, 6, 7] : vector<4xi32>
+    %tokenOperands = func.call @strict_device_tile_matrices(%tokens, %tokenRow, %column) : (!llvm.ptr<3>, i32, i32) -> vector<4xi32>
     %pairToken = arith.shli %quad, %c1 : i32
     cf.br ^tile(%c0, %sums : i32, vector<16xf32>)
   ^tile(%tile: i32, %current: vector<16xf32>):
@@ -1466,18 +1537,21 @@
   ^body:
     %rowTile = arith.shrui %tile, %c1 : i32
     %tokenTile = arith.andi %tile, %c1 : i32
+    %rowLow = arith.shli %rowTile, %c1 : i32
+    %rowHigh = arith.addi %rowLow, %c1 : i32
+    %tokenLow = arith.shli %tokenTile, %c1 : i32
+    %tokenHigh = arith.addi %tokenLow, %c1 : i32
+    %lowWeights = llvm.extractelement %rowOperands[%rowLow : i32] : vector<8xi32>
+    %highWeights = llvm.extractelement %rowOperands[%rowHigh : i32] : vector<8xi32>
+    %lowTokens = llvm.extractelement %tokenOperands[%tokenLow : i32] : vector<4xi32>
+    %highTokens = llvm.extractelement %tokenOperands[%tokenHigh : i32] : vector<4xi32>
     %rowTileStart = arith.muli %rowTile, %c8 : i32
     %rowBase = arith.addi %warpRow, %rowTileStart : i32
     %row = arith.addi %rowBase, %laneRow : i32
     %tokenTileStart = arith.muli %tokenTile, %c8 : i32
     %tokenBase = arith.addi %warpToken, %tokenTileStart : i32
-    %operandToken = arith.addi %tokenBase, %laneRow : i32
     %firstToken = arith.addi %tokenBase, %pairToken : i32
     %secondToken = arith.addi %firstToken, %c1 : i32
-    %lowWeights = func.call @strict_device_tile_four(%row, %sub, %quadBytes) : (i32, i32, i32) -> i32
-    %highWeights = func.call @strict_device_tile_four(%row, %sub, %upperBytes) : (i32, i32, i32) -> i32
-    %lowTokens = func.call @strict_device_tile_token(%operandToken, %sub, %quadBytes) : (i32, i32, i32) -> i32
-    %highTokens = func.call @strict_device_tile_token(%operandToken, %sub, %upperBytes) : (i32, i32, i32) -> i32
     %half = llvm.call_intrinsic "llvm.nvvm.mma.m8n8k16.row.col.s8"(%lowWeights, %lowTokens, %nothing, %nothing) : (i32, i32, i32, i32) -> !llvm.struct<(i32, i32)>
     %half0 = llvm.extractvalue %half[0] : !llvm.struct<(i32, i32)>
     %half1 = llvm.extractvalue %half[1] : !llvm.struct<(i32, i32)>
@@ -1499,6 +1573,29 @@
   ^done:
     return %current : vector<16xf32>
   }
+  // 4 matrices of 8 rows by 16 bytes for mma operands (ldmatrix.x4): lane l gives the address of its row (rows 272 bytes
+  // apart from row, at byte column), each lane gets 4 bytes of row lane / 4 of each matrix
+  func.func private @strict_device_tile_matrices(%array: !llvm.ptr<3>, %row: i32, %column: i32) -> vector<4xi32> attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %c272 = llvm.mlir.constant(272 : i32) : i32
+    %rowStart = arith.muli %row, %c272 : i32
+    %at = arith.addi %rowStart, %column : i32
+    %slot = func.call @strict_device_tile_at(%array, %at) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    %loaded = llvm.call_intrinsic "llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.b16.p3"(%slot) : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    %first = llvm.extractvalue %loaded[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %second = llvm.extractvalue %loaded[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %third = llvm.extractvalue %loaded[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %fourth = llvm.extractvalue %loaded[3] : !llvm.struct<(i32, i32, i32, i32)>
+    %empty = llvm.mlir.undef : vector<4xi32>
+    %with0 = llvm.insertelement %first, %empty[%c0 : i32] : vector<4xi32>
+    %with1 = llvm.insertelement %second, %with0[%c1 : i32] : vector<4xi32>
+    %with2 = llvm.insertelement %third, %with1[%c2 : i32] : vector<4xi32>
+    %with3 = llvm.insertelement %fourth, %with2[%c3 : i32] : vector<4xi32>
+    return %with3 : vector<4xi32>
+  }
   // sums at slot plus the integer dot times row and token scale minus the row minimum times the scaled token sum
   func.func private @strict_device_tile_added(%sums: vector<16xf32>, %slot: i32, %dot: i32, %rowScale: f32, %tokenScale: f32, %rowMinimum: f32, %tokenSum: f32) -> vector<16xf32> attributes {passthrough = ["alwaysinline"]} {
     %dotFloat = arith.sitofp %dot : i32 to f32
@@ -1513,7 +1610,7 @@
   // `Batch.Sums` of 64 tokens or more with Q4_K or Q6_K rows: a block of 8 warps takes 64 rows and 64 tokens, stages one block
   // of 256 columns of all of them in shared memory at a time and each warp computes 32 rows by 16 tokens of it on the 8
   // bit tensor cores; the dot of row r and token t becomes number t * rows + r of the result
-  func.func private @strict_device_tiles_run(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1) {
+  func.func private @strict_device_tiles_run(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -1640,7 +1737,7 @@
     %value = llvm.extractelement %sums[%slot : i32] : vector<16xf32>
     %tokenStart = arith.muli %token, %rows : i64
     %resultIndex = arith.addi %tokenStart, %row : i64
-    func.call @strict_device_tokens_store(%result, %wide, %resultIndex, %value) : (!llvm.ptr, i1, i64, f32) -> ()
+    func.call @strict_device_tokens_store(%result, %wide, %resultIndex, %value, %row, %rows, %biases, %biasesCount, %biasesBits) : (!llvm.ptr, i1, i64, f32, i64, i64, !llvm.ptr, i64, i64) -> ()
     cf.br ^writeNext
   ^writeNext:
     %slotNext = arith.addi %slot, %c1 : i32
@@ -1648,33 +1745,33 @@
   ^exit:
     return
   }
-  llvm.func @strict_device_tiles(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
+  llvm.func @strict_device_tiles(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
     %wide = llvm.mlir.constant(true) : i1
-    func.call @strict_device_tiles_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1) -> ()
+    func.call @strict_device_tiles_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64) -> ()
     llvm.return
   }
-  llvm.func @strict_device_tiless(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
+  llvm.func @strict_device_tiless(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
     %wide = llvm.mlir.constant(false) : i1
-    func.call @strict_device_tiles_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1) -> ()
+    func.call @strict_device_tiles_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64) -> ()
     llvm.return
   }
-  llvm.func @strict_device_tokens(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel} {
+  llvm.func @strict_device_tokens(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {nvvm.kernel} {
     %wide = llvm.mlir.constant(true) : i1
-    func.call @strict_device_tokens_rows(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1) -> ()
+    func.call @strict_device_tokens_rows(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64) -> ()
     llvm.return
   }
-  llvm.func @strict_device_blocks(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel} {
+  llvm.func @strict_device_blocks(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {nvvm.kernel} {
     %wide = llvm.mlir.constant(true) : i1
-    func.call @strict_device_tokens_blocks(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1) -> ()
+    func.call @strict_device_tokens_blocks(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64) -> ()
     llvm.return
   }
-  llvm.func @strict_device_blockss(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel} {
+  llvm.func @strict_device_blockss(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {nvvm.kernel} {
     %wide = llvm.mlir.constant(false) : i1
-    func.call @strict_device_tokens_blocks(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1) -> ()
+    func.call @strict_device_tokens_blocks(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64) -> ()
     llvm.return
   }
-  llvm.func @strict_device_tokenss(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64) attributes {nvvm.kernel} {
+  llvm.func @strict_device_tokenss(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {nvvm.kernel} {
     %wide = llvm.mlir.constant(false) : i1
-    func.call @strict_device_tokens_rows(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1) -> ()
+    func.call @strict_device_tokens_rows(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64) -> ()
     llvm.return
   }
