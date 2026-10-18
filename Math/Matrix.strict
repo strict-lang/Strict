@@ -1,4 +1,4 @@
-has values Numbers with Length is 16
+has values Numbers with Length is 16 and value.Bits is 32
 constant Identity = Matrix((1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
 constant Moved = Translation(Vector3(1, 2, 3))
 Translation(offset Vector3) Matrix
@@ -54,7 +54,8 @@ Perspective(fieldOfView Degrees, aspect Number, near Number, far Number) Matrix
 	let depth = (far + near) / (near - far)
 	Matrix((focal / aspect, 0, 0, 0, 0, focal, 0, 0, 0, 0, depth, -1, 0, 0, 2 * far * near / (near - far), 0))
 Orthographic(width Number, height Number, near Number, far Number) Matrix
-	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(2, 1, -1)) is (1, 1, -1, 1)
+	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(2, 1, -1)).First is 1
+	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(2, 1, -1))(2).IsNearlyEqual(-1)
 	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(0, 0, -11)).Z.IsNearlyEqual(1)
 	Matrix((2 / width, 0, 0, 0, 0, 2 / height, 0, 0, 0, 0, 2 / (near - far), 0, 0, 0, (far + near) / (near - far), 1))
 Inverse Matrix

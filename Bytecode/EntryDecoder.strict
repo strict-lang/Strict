@@ -23,7 +23,10 @@ Method(start Number) MethodEntry
 	MethodEntry(names(stream(start)), Members(start + 2), names(stream(start + 1)), Instructions(After(start + 2)))
 Member(start Number) MemberEntry
 	EntryDecoder((0, 1, 1, 0), ("a", "b")).Member(0) is MemberEntry("a", "b", List(InstructionEntry), true)
-	MemberEntry(names(stream(start)), names(stream(start + 1)), Instructions(start + 3), (stream(start + 2) is 1))
+	EntryDecoder((0, 1, 65, 0), ("a", "b")).Member(0) is MemberEntry("a", "b", List(InstructionEntry), true, 32)
+	let flag = stream(start + 2)
+	let bits = flag < 2 then 64 else (flag / 2).Floor
+	MemberEntry(names(stream(start)), names(stream(start + 1)), Instructions(start + 3), flag % 2 is 1, bits)
 Instruction(start Number) InstructionEntry
 	EntryDecoder((45, 1, 0, 2, 1, 0), List(Text) + "Hi").Instruction(0) is InstructionEntry.Print("Hi")
 	EntryDecoder((160, 0, 1, 6, 7), List(Text)).Instruction(0) is InstructionEntry.ReturnLined

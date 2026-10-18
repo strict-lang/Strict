@@ -1,0 +1,69 @@
+has types List(TypeEntry)
+constant Kinds = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo, InstructionType.Power, InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Invoke, InstructionType.CheckError, InstructionType.Return)
+constant Renamed = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall)
+constant Elements = MemberEntry("elements", "Strict/List(Number)", List(InstructionEntry), false)
+constant First = MethodEntry("X", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "elements", (1, 0, -1)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))
+constant Listed = TypeEntry("Strict/List(Number)", List(MemberEntry) + Elements, List(MethodEntry) + First)
+constant Calling = MethodEntry("Run", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Invoke(1, ("Strict/List(Number)", "X", "Strict/Number"), List(Number), 0), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))
+constant Caller = TypeEntry("Strict/Caller", List(MemberEntry), List(MethodEntry) + Calling)
+constant Sample = Inliner((Caller, Listed))
+constant Again = MethodEntry("Again", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Caller", "Run", "Strict/Number"), List(Number), -1))
+constant Store = InstructionType.StoreRegisterToVariable
+constant NoMethod = MethodEntry("", List(MemberEntry), "None", List(InstructionEntry))
+Inlined List(TypeEntry)
+	Sample.Inlined.First.methods.First.instructions.Length is 6
+	for types
+		TypeEntry(value.Name, value.members, Methods(value))
+Methods(type TypeEntry) List(MethodEntry)
+	Sample.Methods(Caller).First.instructions(3).kind is InstructionType.IndexCall
+	for type.methods
+		MethodEntry(value.Name, value.parameters, value.returnType, Expanded(type, value.instructions, 3), value.Slots)
+Expanded(owner TypeEntry, instructions List(InstructionEntry), depth Number) List(InstructionEntry)
+	Sample.Expanded(Caller, Calling.instructions, 0) is Calling.instructions
+	Sample.Expanded(Caller, Calling.instructions, 1).Length is 6
+	mutable result = List(Mutable(InstructionEntry))
+	mutable base = LoadReuse(instructions).RegisterCount
+	for instructions
+		let next = index + 1 < instructions.Length then instructions(index + 1) else value
+		let callee = depth > 0 then Inlinable(owner, value, next) else NoMethod
+		let spliced = callee.Name is "" then List(InstructionEntry) + value else Splice(owner, callee, value, base).Spliced
+		base = base + (callee.Name is "" then 0 else LoadReuse(callee.instructions).RegisterCount)
+		result = result + spliced
+	result.Length is instructions.Length then instructions else Expanded(owner, Looped(result), depth - 1)
+Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry) MethodEntry
+	Sample.Inlinable(Caller, Calling.instructions(1), Calling.instructions(2)).Name is "X"
+	Sample.Inlinable(Caller, Calling.instructions(1), Calling.instructions(3)).Name is ""
+	let isChecked = (next.kind is InstructionType.CheckError) and (next.texts.Length is 0)
+	if (call.kind is not InstructionType.Invoke) or (isChecked is false) or (next.payload(0) is not call.payload(0))
+		return NoMethod
+	let type = TypeOf(call.texts(0))
+	let callee = type.Name is "" then NoMethod else Callee(type, call)
+	InlineRules(callee).Fits(owner, type, call) then callee else NoMethod
+TypeOf(name Text) TypeEntry
+	Sample.TypeOf("Strict/List(Number)").methods.Length is 1
+	Sample.TypeOf("Strict/Missing").Name is ""
+	for types
+		if (value.Name is name) or (TypeEntry.ShortName(value.Name) is TypeEntry.ShortName(name))
+			return value
+	TypeEntry("", List(MemberEntry), List(MethodEntry))
+Callee(type TypeEntry, call InstructionEntry) MethodEntry
+	Sample.Callee(Listed, Calling.instructions(1)).Name is "X"
+	mutable names = List(Text)
+	for call.texts
+		if index > 2
+			names = names + value
+	type.Callee(call.texts(1), call.payload(5 + call.payload(3)), call.texts(2), names)
+Splice(owner TypeEntry, callee MethodEntry, call InstructionEntry, base Number) InlineSplice
+	Sample.Splice(Caller, First, Calling.instructions(1), 2).member is "elements"
+	let rules = InlineRules(callee)
+	let member = rules.IsOwn(call) then "" else rules.Wrapped(TypeOf(call.texts(0)))
+	let kept = rules.IsOwn(call) then rules.MemberNames(owner) + "value" else List(Text)
+	InlineSplice(callee, call, base, member, kept)
+Looped(instructions List(InstructionEntry)) List(InstructionEntry)
+	Sample.Looped(MethodEntry.CountingLoop.instructions) is MethodEntry.CountingLoop.instructions
+	let method = MethodEntry("", List(MemberEntry), "None", instructions)
+	for instructions
+		value.kind is InstructionType.LoopEnd then Ended(value, index - method.LoopBeginOf(index)) else value
+Ended(entry InstructionEntry, steps Number) InstructionEntry
+	Sample.Ended(InstructionEntry.Jump(InstructionType.LoopEnd, 2), 5).payload is (5)
+	InstructionEntry(entry.kind, entry.texts, InstructionEntry.Jump(entry.kind, steps).payload, entry.line)

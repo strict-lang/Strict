@@ -40,7 +40,7 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let target = "%r" + entry.payload(0)
 	let isForeign = MlirForeign(MlirFunction(function.types, type, custom)).IsForeign
 	if ((custom.instructions.Length is 0) and (isForeign is false)) or IsMemberValue(entry, type)
-		return Shared(instances.Constructed(entry, decoder.Text(1)), target)
+		return Shared(MlirPairs(function, position).Constructed(entry, decoder.Text(1), instances), target)
 	instances.Fresh(type, target, "f", List(Text)) + Compiled(entry, decoder, type, count)
 Shared(constructed Texts, target Text) Texts
 	MlirCalls(Shapes, 1).Shared(List(Text), "%r1").Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
@@ -62,7 +62,10 @@ IsMemberValue(entry InstructionEntry, type TypeEntry) Boolean
 Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2tr, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(MlirGroups.Norming.function, 11).Emitted).IndexOf("^t11kept") > 0
+	MlirCalls(MlirTails.Sample.function, 1).Emitted.Last is "  ^tail1:"
 	let type = function.TypeOf(decoder.Text(1))
+	if MlirTails(function, position).IsTail
+		return MlirTails(function, position).Jumped(entry, type)
 	let count = entry.payload(5 + entry.payload(3))
 	let helper = NativeHelper(entry, decoder)
 	if helper is not ""
@@ -96,13 +99,13 @@ NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
 		return "strict_pairs_text"
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
-	let natives = MlirNatives(function, position)
 	let isWrite = (decoder.Text(2) is "Write") and (decoder.Names.Length is 1)
 	let name = isWrite then "Write" + decoder.Names.First.Capitalize else decoder.Text(2)
-	let declared = natives.Helper(type.Name, name, count)
-	let owned = natives.Helper(Owner(entry, type), name, count)
-	let isDictionary = TypeEntry.ShortName(type.Name).StartsWith("Dictionary")
-	isDictionary or (owned is "") then declared else owned
+	let declared = MlirNatives(function, position).Helper(type.Name, name, count)
+	let owned = MlirNatives(function, position).Helper(Owner(entry, type), name, count)
+	let paired = MlirPairs(function, position).Helper(entry, Owner(entry, type), name)
+	let fallback = TypeEntry.ShortName(type.Name).StartsWith("Dictionary") or (owned is "") then declared else owned
+	paired is "" then fallback else paired
 Owner(entry InstructionEntry, type TypeEntry) Text
 	MlirCalls(Shapes, 2).Owner(Area, AreaShape) is "Shape"
 	let countPosition = 5 + entry.payload(3)

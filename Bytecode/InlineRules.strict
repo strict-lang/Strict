@@ -1,0 +1,75 @@
+has callee MethodEntry
+constant Accessors = ("X", "Y", "Z", "W")
+constant Listing = InlineRules(Inliner.First)
+constant Placeholder = MethodEntry("Cos", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), InstructionEntry.Return(0)))
+constant Constant = MethodEntry("Built", List(MemberEntry), "Strict/Text", (InstructionEntry.LoadText(0, ""), InstructionEntry.Return(0)))
+Fits(owner TypeEntry, type TypeEntry, call InstructionEntry) Boolean
+	Listing.Fits(Inliner.Caller, Inliner.Listed, Inliner.Calling.instructions(1))
+	Listing.Fits(Inliner.Caller, Inliner.Caller, Inliner.Calling.instructions(1)) is false
+	let isOwn = IsOwn(call)
+	let own = isOwn and (type.Name is owner.Name) and IsContained(MemberNames(owner))
+	let member = Wrapped(type)
+	let wrapped = (isOwn is false) and (member is not "") and (HasOwnCall is false) and IsContained((member, "value"))
+	(own or wrapped) and IsSmall and IsComputed and IsReplaceable(type)
+IsOwn(call InstructionEntry) Boolean
+	Listing.IsOwn(Inliner.Calling.instructions(1)) is false
+	Listing.IsOwn(Inliner.Again.instructions.First)
+	let instance = 6 + call.payload(3) + call.payload(5 + call.payload(3))
+	call.payload(instance) is not 1
+Wrapped(type TypeEntry) Text
+	Listing.Wrapped(Inliner.Listed) is "elements"
+	Listing.Wrapped(Inliner.Caller) is ""
+	if type.Name.StartsWith("Strict/List(")
+		return "elements"
+	type.Changing.Length is 1 then type.Changing.First.Name else ""
+MemberNames(type TypeEntry) Texts
+	Listing.MemberNames(Inliner.Listed) is ("elements")
+	for type.members
+		value.Name
+IsSmall Boolean
+	Listing.IsSmall
+	InlineRules(MethodEntry.CountingLoop).IsSmall is false
+	let instructions = callee.instructions
+	if (instructions.Length is 0) or (instructions.Length > 6) or (instructions.Last.kind is not InstructionType.Return)
+		return false
+	for instructions
+		let isEarly = (value.kind is InstructionType.Return) and (index < instructions.Length - 1)
+		if (value.kind is not in Inliner.Kinds) or isEarly
+			return false
+	true
+HasOwnCall Boolean
+	Listing.HasOwnCall is false
+	InlineRules(Inliner.Again).HasOwnCall
+	for callee.instructions
+		if (value.kind is InstructionType.Invoke) and IsOwn(value)
+			return true
+	false
+IsContained(names Texts) Boolean
+	Listing.IsContained(("elements", "value"))
+	Listing.IsContained(("numbers", "value")) is false
+	let allowed = callee.ParameterNames + names
+	mutable stored = List(Text)
+	for callee.instructions
+		if value.kind is Inliner.Store
+			stored = stored + value.texts.First
+		let isRead = value.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
+		if isRead and (value.texts.First is not in allowed + stored)
+			return false
+	true
+IsComputed Boolean
+	Listing.IsComputed
+	InlineRules(Constant).IsComputed is false
+	InlineRules(Placeholder).IsComputed is false
+	for callee.instructions
+		let kind = value.kind
+		let isCalculated = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
+		if isCalculated or (value.kind is in (InstructionType.IndexCall, InstructionType.Invoke))
+			return true
+	false
+IsReplaceable(type TypeEntry) Boolean
+	Listing.IsReplaceable(Inliner.Listed)
+	Listing.IsReplaceable(TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry))) is false
+	Listing.IsReplaceable(Inliner.Caller) is false
+	if type.Name.StartsWith("Strict/List(")
+		return callee.Name is in Accessors
+	type.Name.LastIndexOf("/") is not 6

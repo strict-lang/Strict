@@ -26,13 +26,15 @@ Emitted Texts
 		return Copied(entry)
 	if IsElementStore
 		return ElementStored(entry)
-	entry.kind is InstructionType.IndexCall then Indexed(entry) else Appended(entry)
+	entry.kind is InstructionType.IndexCall then Indexed(entry) else MlirPairs(function, position).Appended(entry, value)
 Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	MlirLists(Listed, 0).Literal(Pair, "%v_a", "").Last is "    llvm.store %t0e1l, %v_a : f64, !llvm.ptr"
 	MlirLists(Listed, 0).Literal(VmValue.OfList(List(VmValue)), "%v_a", "").Length is 2
 	MlirLists(Literals, 0).Literal(Pair, "%r0", "").First is "    %t0g = llvm.mlir.addressof @lShape_Run_0_0 : !llvm.ptr"
 	MlirLists(Literals, 0).Literal(Pair, "%r0", "").Last is "    llvm.store %t0r, %r0 : f64, !llvm.ptr"
 	let count = literal.items.Length
+	if (count is 0) and MlirPairs(function, position).IsBuilt(slot.Substring(3, slot.Length - 3))
+		return List(Text) + function.Store("%zero", slot)
 	let result = count is 0 then Temp(suffix + "l") else Temp(suffix + "e" + (count - 1) + "l")
 	if (suffix is not "") or (count is 0) or (MlirConstants(function, position).IsConstant is false)
 		return Built(literal, suffix) + function.Store(result, slot)

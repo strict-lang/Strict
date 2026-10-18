@@ -2,10 +2,16 @@ has lines Texts
 has typeName Text
 constant Looping = Recursions(("has name Text", "constant Blood = Parsed(\"blood\")", "Parsed(line Text) Splash", "\tSplash.Parsed(\"a\").name is \"a\"", "\tSplash(Blood.name)"), "Splash")
 constant Hint = ", the only line is the body, write the body after the test"
+constant LetHint = ", a let ends the tests, so this line is the body and calls the method again: write the call into each test line"
+constant Measuring = Recursions(("has number", "constant Sample = Shape(1)", "Area Number", "	let area = Sample.Area", "	area is 1"), "Shape")
+constant Counting = Recursions(("Count(number) Number", "\tRecursions(1).Count(5000) is 5000", "\tnumber is 0 then 0 else 1 + Count(number - 1)"), "Recursions")
+constant DeepHint = ", more than 1000 nested calls overflow the stack: use a loop or make it the only call of a line"
+constant Tailing = Recursions(("Count(number) Number", "\tRecursions(1).Count(5000) is 5000", "\tnumber is 0 then 0 else Count(number - 1)"), "Recursions")
+constant Operators = ("+", "-", "*", "/", "(", ",", "and", "or")
 constant Placing = Recursions(("Placed Boolean", "\tRecursions(1).Placed", "Run", "\tPlaced"), "Recursions")
 Issues List(ValidationIssue)
 	Looping.Issues.Length is 1
-	Constants + Endless
+	Constants + Endless + Lets + Deep
 Endless List(ValidationIssue)
 	Placing.Endless.First to Text is "OnlyLineCallsItself: Placed" + Hint
 	Looping.Endless.Length is 0
@@ -18,6 +24,45 @@ Endless List(ValidationIssue)
 			let isNamed = method.Substring(0, 1).Lower is not method.Substring(0, 1)
 			if isNamed and (method is in Called(only)) and ("then" is not in only)
 				ValidationIssue("OnlyLineCallsItself", method + Hint, index + 2)
+Deep List(ValidationIssue)
+	Counting.Deep.First to Text is "DeepRecursion: Count nests 5000 calls" + DeepHint
+	Placing.Deep.Length is 0
+	Tailing.Deep.Length is 0
+	for lines
+		if TypeShape(lines).IsMethodHeader(value)
+			let method = Tokenizer(value).Tokens.First
+			let step = Step(method, Tokenizer(Duplicates.Implementation(lines, index).Replace("\n", " ")).Tokens)
+			let depth = step > 0 then Deepest(method) / step else 0
+			if depth > 1000
+				ValidationIssue("DeepRecursion", method + " nests " + depth + " calls" + DeepHint, index + 1)
+Step(method Text, tokens Texts) Number
+	Counting.Step("Count", ("1", "+", "Count", "(", "number", "-", "2", ")")) is 2
+	Counting.Step("Count", ("else", "Count", "(", "number", "-", "1", ")")) is 0
+	Counting.Step("Count", ("1", "+", "Count", "(", "number", "/", "2", ")")) is 0
+	for tokens
+		let isNested = (index > 0) and (tokens(index - 1) is in Operators)
+		let isCall = (index + 4 < tokens.Length) and (tokens(index + 1) is "(")
+		let isStepping = isNested and isCall and (tokens(index + 3) is "-")
+		if (value is method) and isStepping
+			return tokens(index + 4) to Number
+	0
+Deepest(method Text) Number
+	Counting.Deepest("Count") is 5000
+	Counting.Deepest("Other") is 0
+	mutable deepest = 0
+	for lines
+		let argument = Argument(method, Tokenizer(value.Trim).Tokens)
+		if argument > deepest
+			deepest = argument
+	deepest
+Argument(method Text, tokens Texts) Number
+	Counting.Argument("Count", ("Count", "(", "5000", ")")) is 5000
+	Counting.Argument("Count", ("Count", "(", "number", ")")) is 0
+	for tokens
+		let isLiteral = (index + 3 < tokens.Length) and (tokens(index + 1) is "(") and (tokens(index + 3) is ")")
+		if (value is method) and isLiteral and (tokens(index + 2).Substring(0, 1) is in "0123456789")
+			return tokens(index + 2) to Number
+	0
 Constants List(ValidationIssue)
 	Looping.Constants.First to Text is "ConstantUsesItself: Blood calls Parsed, which uses Blood"
 	Recursions(Duplicates.Copy, "Copy").Constants.Length is 0
@@ -54,3 +99,29 @@ IsOwn(tokens Texts, position Number) Boolean
 		return true
 	let instance = tokens(position - (isConverted then 1 else 2))
 	(instance is typeName) or (instance is ")") and (tokens.First is typeName)
+Lets List(ValidationIssue)
+	Measuring.Lets.First to Text is "LetCallsItself: Area" + LetHint
+	Placing.Lets.Length is 0
+	mutable method = ""
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if TypeShape(lines).IsMethodHeader(value)
+			method = Tokenizer(value).Tokens.First
+		if value.Trim.StartsWith("let ") and IsThroughSample(value, method)
+			issues.Add(ValidationIssue("LetCallsItself", method + LetHint, index + 1))
+	issues
+IsThroughSample(line Text, method Text) Boolean
+	Measuring.IsThroughSample("	let area = Sample.Area", "Area")
+	Measuring.IsThroughSample("	let area = Other.Area", "Area") is false
+	Measuring.IsThroughSample("	let area = Other.Sample.Area", "Area") is false
+	let tokens = Tokenizer(line.Trim).Tokens
+	for tokens
+		let isOwn = (index > 1) and (tokens(index - 2) is in Samples) and ((index < 3) or (tokens(index - 3) is not "."))
+		if (value is method) and isOwn and (tokens(index - 1) is ".")
+			return true
+	false
+Samples Texts
+	Measuring.Samples is ("Sample")
+	for lines
+		if value.StartsWith("constant ") and (value.IndexOf(" = " + typeName + "(") > 0)
+			Tokenizer(value).Tokens(1)

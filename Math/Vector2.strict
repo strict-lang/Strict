@@ -1,4 +1,4 @@
-has numbers with Length is 2
+has numbers with Length is 2 and value.Bits is 32
 constant One = Vector2(1, 1)
 constant Left = Vector2(-1, 0)
 constant Right = Vector2(1, 0)
@@ -14,10 +14,11 @@ Length Number
 	Vector2(0, 0).Length is 0
 	Vector2(3, 4).Length is 5
 	(X * X + Y * Y).SquareRoot
-+(other) Numbers
++(other) Vector2
 	Vector2(0, 0) + Vector2.One is (1, 1)
 	Vector2(1, 2) + Vector2(4, 5) is (5, 7)
-	(X + other.X, Y + other.Y)
+	Vector2(1, 0) + Vector2(0, 1) - Vector2(0, -2) is Vector2(1, 3)
+	Vector2(X + other.X, Y + other.Y)
 *(other) Number
 	Vector2(1, 2) * Vector2(3, 4) is 11
 	X * other.X + Y * other.Y
@@ -27,7 +28,7 @@ Length Number
 Normalize Vector2
 	Vector2(1, 0).Normalize is Vector2(1, 0)
 	Vector2(0, 5).Normalize is Vector2(0, 1)
-	Vector2(3, 4).Normalize.Length is 1
+	Vector2(3, 4).Normalize.Length.IsNearlyEqual(1)
 	Vector2(X / Length, Y / Length)
 Atan Degrees
 	Vector2(0, 0).Atan is 0

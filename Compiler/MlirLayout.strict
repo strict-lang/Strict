@@ -18,7 +18,8 @@ IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("Shape")
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
-	function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
+	let isStruct = function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
+	isStruct and (MlirCouples(function, 0).IsCoupled(typeName) is false)
 Represented(kind Text) Text
 	Wrapping.Represented("Angle") is "Number"
 	Wrapping.Represented("Shape") is "Shape"
@@ -28,6 +29,8 @@ Represented(kind Text) Text
 		return "List(" + kind.Substring(0, kind.Length - 1) + ")"
 	if kind.StartsWith("Dictionary(")
 		return "List(" + Represented(MethodBodies.Item(kind.Substring(11, kind.Length - 12))) + ")"
+	if MlirPairs(function, 0).IsPaired(kind)
+		return "Pair"
 	let wrapped = Wrapped(kind)
 	wrapped is "" then kind else Represented(wrapped)
 Wrapped(typeName Text) Text

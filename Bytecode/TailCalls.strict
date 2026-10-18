@@ -1,0 +1,84 @@
+has types List(TypeEntry)
+constant Counted = MemberEntry("number", "Strict/Number", List(InstructionEntry), false)
+constant Again = InstructionEntry.Invoke(1, ("Strict/Counting", "Count", "Strict/Number", "number"), List(Number) + 0, -1)
+constant Counting = MethodEntry("Count", List(MemberEntry) + Counted, "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "number"), Again, InstructionEntry.Return(1)))
+constant Counter = TypeEntry("Strict/Counting", List(MemberEntry), List(MethodEntry) + Counting)
+constant Kept = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "conditional0")
+constant Branched = (Again, Kept, InstructionEntry(InstructionType.JumpEnd, List(Text), List(Number)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "conditional0"), InstructionEntry.Return(2))
+constant Sample = TailCalls(List(TypeEntry) + Counter)
+constant TailId = 1000000
+constant Start = InstructionEntry.Jump(InstructionType.JumpEnd, TailId)
+constant Restart = InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, TailId)
+Rewritten List(TypeEntry)
+	Sample.Rewritten.First.methods.First.instructions.Length is 7
+	for types
+		TypeEntry(value.Name, value.members, Methods(value))
+Methods(type TypeEntry) List(MethodEntry)
+	Sample.Methods(Counter).First.instructions.First is Start
+	for type.methods
+		Looped(type, value)
+Looped(type TypeEntry, method MethodEntry) MethodEntry
+	Sample.Looped(Counter, Counting).instructions.First is Start
+	Sample.Looped(Counter, MethodEntry.CountingLoop) is MethodEntry.CountingLoop
+	mutable instructions = List(Mutable(InstructionEntry))
+	for method.instructions
+		let replaced = IsTail(type, method, index) then Jumped(method, value) else List(InstructionEntry) + value
+		instructions = instructions + replaced
+	if instructions.Length is method.instructions.Length
+		return method
+	MethodEntry(method.Name, method.parameters, method.returnType, Start + instructions, method.Slots)
+IsTail(type TypeEntry, method MethodEntry, position Number) Boolean
+	Sample.IsTail(Counter, Counting, 1)
+	Sample.IsTail(Counter, Counting, 0) is false
+	let call = method.instructions(position)
+	if (call.kind is not InstructionType.Invoke) or IsLooped(method, position)
+		return false
+	let count = 5 + call.payload(3)
+	let isOwn = TypeEntry.ShortName(call.texts(0)) is TypeEntry.ShortName(type.Name)
+	let arguments = call.payload(count)
+	let isCounted = (arguments is method.parameters.Length) and (call.payload(count + 1 + arguments) is 0)
+	let isSame = isOwn and isCounted and (Inliner(types).Callee(type, call) is method)
+	isSame and Returns(method.instructions, call.payload(0), position + 1)
+IsLooped(method MethodEntry, position Number) Boolean
+	Sample.IsLooped(MethodEntry.CountingLoop, 1)
+	Sample.IsLooped(Counting, 1) is false
+	mutable depth = 0
+	for Range(0, position)
+		let kind = method.instructions(value).kind
+		let step = kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0
+		depth = depth + step
+	depth > 0
+Jumped(method MethodEntry, call InstructionEntry) List(InstructionEntry)
+	Sample.Jumped(Counting, Again).Length is 4
+	Sample.Jumped(Counting, Again).First.texts is ("number")
+	Sample.Jumped(Counting, Again).Last is Restart
+	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
+	let result = call.payload(0)
+	mutable lines = List(Mutable(InstructionEntry))
+	for method.parameters
+		lines.Add(InstructionEntry(Inliner.Store, List(Text) + value.Name, (call.payload(reads(index)), -1), call.line))
+	let flagged = InstructionEntry.Binary(InstructionType.Equal, (result, result))
+	lines + (InstructionEntry.LoadNumber(result, 0), flagged, Restart)
+Returns(instructions List(InstructionEntry), register Number, start Number) Boolean
+	Sample.Returns(Counting.instructions, 1, 2)
+	Sample.Returns(Counting.instructions, 0, 2) is false
+	Sample.Returns(Branched, 1, 1)
+	Sample.Returns(Branched, 2, 1) is false
+	mutable current = "%r" + register
+	for Range(start, instructions.Length)
+		current = Followed(instructions(value), current)
+		if current is in ("", "returned")
+			return current is "returned"
+	false
+Followed(entry InstructionEntry, current Text) Text
+	Sample.Followed(Kept, "%r1") is "%v_conditional0"
+	Sample.Followed(InstructionEntry.Return(2), "%r1") is ""
+	if entry.kind is InstructionType.JumpEnd
+		return current
+	let register = "%r" + entry.payload(0)
+	if (entry.kind is InstructionType.StoreRegisterToVariable) and (register is current)
+		return "%v_" + entry.texts(0)
+	let isLoaded = (entry.kind is InstructionType.LoadVariableToRegister) and ("%v_" + entry.texts(0) is current)
+	let isChecked = (entry.kind is InstructionType.CheckError) and (register is current)
+	let isReturned = (entry.kind is InstructionType.Return) and (register is current)
+	isReturned then "returned" else isLoaded then register else isChecked then current else ""

@@ -4786,6 +4786,111 @@
     %result = func.call @strict_degrees(%angle) : (f64) -> f64
     return %result : f64
   }
+  // a type of two numbers (Vector2) is one 64-bit slot: the first number as f32 in the low, the second in the high 32 bits
+  llvm.mlir.global internal constant @strict_two_constraint("ConstraintNotMet: numbers with Length is 2\00") : !llvm.array<43 x i8>
+  func.func private @strict_two_packed(%first: f64, %second: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %firstSingle = arith.truncf %first : f64 to f32
+    %secondSingle = arith.truncf %second : f64 to f32
+    %firstBits = arith.bitcast %firstSingle : f32 to i32
+    %secondBits = arith.bitcast %secondSingle : f32 to i32
+    %low = arith.extui %firstBits : i32 to i64
+    %high = arith.extui %secondBits : i32 to i64
+    %shift = arith.constant 32 : i64
+    %shifted = arith.shli %high, %shift : i64
+    %bits = arith.ori %low, %shifted : i64
+    %pair = arith.bitcast %bits : i64 to f64
+    return %pair : f64
+  }
+  func.func private @strict_two_half(%pair: f64, %shift: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %bits = arith.bitcast %pair : f64 to i64
+    %shifted = arith.shrui %bits, %shift : i64
+    %half = arith.trunci %shifted : i64 to i32
+    %single = arith.bitcast %half : i32 to f32
+    %number = arith.extf %single : f32 to f64
+    return %number : f64
+  }
+  func.func private @strict_two_x(%pair: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
+    %number = func.call @strict_two_half(%pair, %none) : (f64, i64) -> f64
+    return %number : f64
+  }
+  func.func private @strict_two_y(%pair: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %shift = arith.constant 32 : i64
+    %number = func.call @strict_two_half(%pair, %shift) : (f64, i64) -> f64
+    return %number : f64
+  }
+  func.func private @strict_two_length(%pair: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %two = arith.constant 2.0 : f64
+    return %two : f64
+  }
+  func.func private @strict_two_at(%pair: f64, %index: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %isFirst = arith.cmpf oeq, %index, %zero : f64
+    %isSecond = arith.cmpf oeq, %index, %one : f64
+    %inside = arith.ori %isFirst, %isSecond : i1
+    cf.cond_br %inside, ^read, ^outside
+  ^read:
+    %none = arith.constant 0 : i64
+    %high = arith.constant 32 : i64
+    %shift = arith.select %isSecond, %high, %none : i64
+    %number = func.call @strict_two_half(%pair, %shift) : (f64, i64) -> f64
+    return %number : f64
+  ^outside:
+    %name = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
+  }
+  func.func private @strict_two_from_list(%list: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %two = arith.constant 2.0 : f64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %isPair = arith.cmpf oeq, %length, %two : f64
+    cf.cond_br %isPair, ^pack, ^failed
+  ^pack:
+    %first = func.call @strict_list_get(%list, %zero) : (f64, f64) -> f64
+    %second = func.call @strict_list_get(%list, %one) : (f64, f64) -> f64
+    %pair = func.call @strict_two_packed(%first, %second) : (f64, f64) -> f64
+    return %pair : f64
+  ^failed:
+    %name = llvm.mlir.addressof @strict_two_constraint : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
+  }
+  func.func private @strict_two_list(%pair: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %two = arith.constant 2.0 : f64
+    %empty = func.call @strict_list_new(%two, %zero) : (f64, f64) -> f64
+    %first = func.call @strict_two_x(%pair) : (f64) -> f64
+    %second = func.call @strict_two_y(%pair) : (f64) -> f64
+    %once = func.call @strict_list_add(%empty, %first) : (f64, f64) -> f64
+    %list = func.call @strict_list_add(%once, %second) : (f64, f64) -> f64
+    return %list : f64
+  }
+  func.func private @strict_two_equal(%left: f64, %right: f64) -> f64 {
+    %leftX = func.call @strict_two_x(%left) : (f64) -> f64
+    %rightX = func.call @strict_two_x(%right) : (f64) -> f64
+    %leftY = func.call @strict_two_y(%left) : (f64) -> f64
+    %rightY = func.call @strict_two_y(%right) : (f64) -> f64
+    %sameX = arith.cmpf oeq, %leftX, %rightX : f64
+    %sameY = arith.cmpf oeq, %leftY, %rightY : f64
+    %same = arith.andi %sameX, %sameY : i1
+    %result = arith.uitofp %same : i1 to f64
+    return %result : f64
+  }
+  func.func private @strict_two_text(%pair: f64) -> f64 {
+    %list = func.call @strict_two_list(%pair) : (f64) -> f64
+    %text = func.call @strict_list_text_number(%list) : (f64) -> f64
+    return %text : f64
+  }
+  func.func private @strict_two_atan(%pair: f64) -> f64 {
+    %x = func.call @strict_two_x(%pair) : (f64) -> f64
+    %y = func.call @strict_two_y(%pair) : (f64) -> f64
+    %angle = llvm.call @atan2(%x, %y) : (f64, f64) -> f64
+    %result = func.call @strict_degrees(%angle) : (f64) -> f64
+    return %result : f64
+  }
   func.func private @strict_vector2_atan(%vector: f64) -> f64 {
     %first = arith.constant 0.0 : f64
     %second = arith.constant 1.0 : f64

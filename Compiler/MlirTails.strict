@@ -1,0 +1,32 @@
+has function MlirFunction
+has position Number
+constant Short = TypeEntry("Counting", List(MemberEntry), List(MethodEntry) + TailCalls.Counting)
+constant Sample = MlirTails(MlirFunction(List(TypeEntry) + TailCalls.Counter, TailCalls.Counter, TailCalls.Counting), 1)
+IsTail Boolean
+	Sample.IsTail
+	MlirTails(Sample.function, 0).IsTail is false
+	MlirTails(MlirFunction(List(TypeEntry) + Short, Short, TailCalls.Counting), 1).IsTail
+	IsCall and TailCalls(function.types).IsTail(function.type, function.method, position)
+IsCall Boolean
+	Sample.IsCall
+	MlirTails(Sample.function, 0).IsCall is false
+	let isPlain = (function.Group is -1) and (function.FastLoop is -1) and (function.Packing is "")
+	isPlain and (function.Float is "f64") and (function.method.instructions(position).kind is InstructionType.Invoke)
+Jumped(entry InstructionEntry, type TypeEntry) Texts
+	Sample.Jumped(TailCalls.Again, TailCalls.Counter).Last is "  ^tail1:"
+	"    llvm.store %t1a0, %v_number : f64, !llvm.ptr" is in Sample.Jumped(TailCalls.Again, TailCalls.Counter)
+	"    cf.cond_br %t1tail, ^tail1, ^tailed" is in Sample.Jumped(TailCalls.Again, TailCalls.Counter)
+	let calls = MlirCalls(function, position)
+	mutable lines = calls.Loads(entry, type)
+	for function.method.parameters
+		lines = lines + function.Store("%t" + position + "a" + index, "%v_" + value.Name)
+	let flag = "%t" + position + "tail"
+	let jump = ("    " + flag + " = arith.constant false", "    cf.cond_br " + flag + ", ^tail" + position + ", ^tailed")
+	lines + jump + ("  ^tail" + position + ":")
+Restart Texts
+	MlirTails(Sample.function, 0).Restart is ("    cf.br ^tailed", "  ^tailed:")
+	MlirTails(MlirFunction.Counter, 0).Restart.Length is 0
+	for function.method.instructions
+		if MlirTails(function, index).IsTail
+			return ("    cf.br ^tailed", "  ^tailed:")
+	List(Text)

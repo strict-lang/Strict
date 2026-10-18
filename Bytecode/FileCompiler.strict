@@ -77,7 +77,7 @@ IsParsed(line Text) Boolean
 	FileCompiler.IsParsed("number + other other") is false
 	let tokens = Tokenizer(line).Tokens
 	let statement = StatementParser(tokens).ParseStatement
-	if (statement is Error) or (tokens.Count("(") is not tokens.Count(")"))
+	if (statement is Error) or (Tokenizer(line).IsGrouped is false)
 		return false
 	let isReduce = (statement.Kind is "Binary") and (statement.children.First.Kind is "Missing")
 	let regenerated = Tokenizer(statement to Text).Tokens - "(" - ")"

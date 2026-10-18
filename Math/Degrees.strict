@@ -1,4 +1,4 @@
-﻿has number
+﻿has number with value.Bits is 32
 Sin Ratio
 	Degrees(0).Sin is 0
 	Degrees(90).Sin is 1

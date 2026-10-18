@@ -163,6 +163,20 @@ Logarithm Number
 	1.Logarithm is 0
 	E.Logarithm is 1
 	value
+Bits Number
+	5.Bits is 64
+	64
+Rounded(bits Number) Number
+	0.1.Rounded(32) is 0.10000000149011612
+	0.1.Rounded(64) is 0.1
+	(1 / 0).Rounded(32) is 1 / 0
+	16777217.Rounded(32) is 16777216
+	(0 - 0.1).Rounded(32) is -0.10000000149011612
+	3.Rounded(32) is 3
+	if (bits is not 32) or (IsFinite is false) or (value is 0)
+		return value
+	let step = 2 ^ ((Absolute.Logarithm / 2.Logarithm).Floor - 23)
+	(value / step).Counted("Even") * step
 Random Number
 	10.Random < 10
 	10.Random >= 0

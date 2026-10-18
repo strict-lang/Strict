@@ -37,6 +37,7 @@ Member(header HeaderTokens, position Number) MemberEntry
 	Hello.Member(HeaderTokens("has", "logger"), 0).typeName is "Strict/Logger"
 	Hello.Member(HeaderTokens("constant", "Add"), 0).initial.First.payload is (1, 0, 0)
 	Hello.Member(HeaderTokens("has", "alpha", "=", "1", "with", "value", ">", "0"), 0).initial.First.payload is (1, 1, 0)
+	Hello.Member(HeaderTokens("has", "x", "Number", "with", "value", ".", "Bits", "is", "32"), 0).Bits is 32
 	let declared = Scope(List(Text) + header.MemberName, List(Text) + header.DeclaredType(1))
 	let member = Instantiation(inference.types).Members(Generator.target.TypeName, declared)
 	let type = Generator.target.FullName(Concrete(member.types.First))
@@ -44,7 +45,7 @@ Member(header HeaderTokens, position Number) MemberEntry
 	if isConstant and (header.tokens.Length is 2)
 		let number = InstructionEntry.NumberValue(TypeShape(lines).EnumValue(position))
 		return MemberEntry(header.MemberName, type, InstructionEntry.Set(List(Text), number), true)
-	MemberEntry(header.MemberName, type, InitialOf(header), isConstant)
+	MemberEntry(header.MemberName, type, InitialOf(header), isConstant, Constraint.Bits(Text.Combine(header.tokens, " ")))
 InitialOf(header HeaderTokens) List(InstructionEntry)
 	Hello.InitialOf(HeaderTokens("has", "count", "Number")).Length is 0
 	let equals = header.tokens.Index("=")

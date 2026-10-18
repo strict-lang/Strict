@@ -1,4 +1,4 @@
-has numbers with Length is 3
+has numbers with Length is 3 and value.Bits is 32
 constant Zero = Vector3(0, 0, 0)
 constant One = Vector3(1, 1, 1)
 constant UnitX = Vector3(1, 0, 0)

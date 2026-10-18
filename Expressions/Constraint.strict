@@ -36,11 +36,33 @@ IsConstrained(lines Texts) Boolean
 	Constraint.IsConstrained(List(Text) + "has width Number with value > 0")
 	Constraint.IsConstrained(("has width Number", "Area Number", "\t\"with\"")) is false
 	Constraint.IsConstrained(List(Text) + "has price Number with Step 0.01") is false
+	Constraint.IsConstrained(List(Text) + "has x Number with value.Bits is 32") is false
 	for lines
-		let tokens = Tokenizer(value).Tokens
-		if TypeShape(lines).IsMemberLine(value) and ("with" is in tokens) and (Steps(tokens).Of(1) is "")
+		if TypeShape(lines).IsMemberLine(value) and (Of(value) is not "")
 			return true
 	false
+Bits(constraint Text) Number
+	Constraint.Bits("value > 0 and value.Bits is 32") is 32
+	Constraint.Bits("value > 0") is 64
+	Constraint.Bits("value . Bits is 16") is 16
+	let start = constraint.IndexOf("Bits is ")
+	if start < 0
+		return 64
+	Tokenizer(constraint.Substring(start + 8, constraint.Length - start - 8)).Tokens.First to Number
+Checking(constraint Text) Text
+	Constraint.Checking("value > 0 and value.Bits is 32") is "value > 0"
+	Constraint.Checking("value.Bits is 32 and value > 0") is "value > 0"
+	Constraint.Checking("value.Bits is 32") is ""
+	let clause = "value.Bits is " + Bits(constraint)
+	constraint.Replace(" and " + clause, "").Replace(clause + " and ", "").Replace(clause, "")
+Of(line Text) Text
+	Constraint.Of("has width Number with value > 0") is "value > 0"
+	Constraint.Of("has price Number with Step 0.01") is ""
+	Constraint.Of("has width Number") is ""
+	let start = line.IndexOf(" with ")
+	if (start < 0) or (line.IndexOf(" with Step ") >= 0)
+		return ""
+	Checking(line.Substring(start + 6, line.Length - start - 6))
 Parameter(header HeaderTokens, parameter Text) Text
 	Constraint.Parameter(HeaderTokens(Tokenizer(Framed).Tokens), "frames") is "value >= 0"
 	Constraint.Parameter(HeaderTokens(Tokenizer("Run(frames Number)").Tokens), "frames") is ""

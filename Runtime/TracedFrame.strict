@@ -35,8 +35,10 @@ Logged(position Number, slots List(VmValue)) Number
 	if frame.method.Name is TestCodegen.Runner
 		return 0
 	let entry = frame.method.instructions(position)
-	let isLoop = entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
-	let events = isLoop then Iteration(position, slots) else Events(position, slots(entry.Target))
+	let loop = entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+	let branch = entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+	let slot = entry.kind is InstructionType.CheckError then entry.payload(0) else entry.Target
+	let events = loop then Iteration(position, slots) else Events(position, slots(branch then Frame.FlagSlot else slot))
 	for events
 		frame.machine.logger.Log(value)
 	events.Length
@@ -74,7 +76,7 @@ Ended(position Number, place Text, result VmValue) Texts
 	let instructions = frame.method.instructions
 	let entry = instructions(position)
 	let isLast = (position + 1 >= instructions.Length) or (instructions(position + 1).line is not entry.line)
-	let isControl = (entry.kind > InstructionType.Return) and (entry.kind <= InstructionType.JumpToIdIfTrue)
+	let isControl = (entry.kind > InstructionType.Return) and (entry.kind <= InstructionType.JumpEnd)
 	isLast and (isControl is false) then List(Text) + ("$Result " + place + "|" + Shown(result)) else List(Text)
 Iteration(position Number, slots List(VmValue)) Texts
 	Lined.Iteration(2, Counted).Length is 0

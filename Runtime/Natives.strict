@@ -6,6 +6,8 @@ constant Shapes = Natives(List(TypeEntry) + Shape)
 constant NewShape = Invocation(InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), List(VmValue) + VmValue.OfNumber(3), VmValue.None)
 constant Degree = TypeEntry("Strict/Degree", List(MemberEntry) + Width, List(MethodEntry))
 constant NewDegree = Invocation(InstructionEntry.Invoke(1, ("Strict/Degree", "from", "Strict/Degree", "width"), 0, -1), NewShape.Arguments, VmValue.None)
+constant Single = TypeEntry("Strict/Single", List(MemberEntry) + MemberEntry("width", "Strict/Number", List(InstructionEntry), false, 32), List(MethodEntry))
+constant NewSingle = Invocation(InstructionEntry.Invoke(1, ("Strict/Single", "from", "Strict/Single", "width"), 0, -1), List(VmValue) + VmValue.OfNumber(0.1), VmValue.None)
 constant Pairs = VmValue.OfList(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.OfList(VmValue.OfNumber(2), VmValue.OfNumber(4)))
 constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
 Result(call Invocation) VmValue
@@ -109,16 +111,11 @@ Edited(name Text, text Text) VmValue
 Constructed(call Invocation) VmValue
 	Shapes.Constructed(NewShape).kind is "Strict/Shape"
 	Natives(List(TypeEntry) + Degree).Constructed(NewDegree).number is 3
+	Natives(List(TypeEntry) + Single).Constructed(NewSingle).number is 0.10000000149011612
 	let type = TypeOf(call.TypeName)
-	let arguments = call.Arguments
 	if (type.members.Length is 0) or (type.IsStruct is false)
-		return arguments.Length > 0 then arguments.First.As(call.TypeName) else VmValue.None
-	mutable values = List(Mutable(VmValue))
-	for type.members
-		let argument = call.ParameterNames.Index(value.Name)
-		let chosen = argument < 0 then index else argument
-		values.Add((value.IsConstant is false) and (chosen < arguments.Length) then arguments(chosen) else Initial(value))
-	VmValue(call.TypeName, 0, "", values)
+		return Rounding.Single.Wrapped(type, call)
+	VmValue(call.TypeName, 0, "", Rounding.Single.Members(type, call, value))
 Fresh(type TypeEntry) VmValue
 	Shapes.Fresh(Shape).items.First.number is 0
 	mutable values = List(Mutable(VmValue))

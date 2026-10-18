@@ -1,0 +1,61 @@
+has function MlirFunction
+has position Number
+constant Sizing = TypeEntry("Strict/Math/Sizing", (MemberEntry("Width", "Strict/Number", List(InstructionEntry), false, 32), MemberEntry("Height", "Strict/Number", List(InstructionEntry), false, 32), MemberEntry("iterator", "Strict/Iterator", List(InstructionEntry), false)), List(MethodEntry))
+constant Sized = InstructionEntry.Invoke(2, ("Strict/Math/Sizing", "from", "Sizing", "Width", "Height"), (0, 1), -1)
+constant Heights = InstructionEntry(InstructionType.FieldLoad, "Height", (3, 2, -1))
+constant Sample = MlirCouples(MlirFunction(List(TypeEntry) + Sizing, Sizing, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 4), Sized, Heights))), 2)
+constant Instances = MlirInstances(Sample.function, 2)
+constant Own = MlirCouples(MlirFunction(List(TypeEntry) + Sizing, Sizing, MethodEntry.CountingLoop), 0)
+IsCoupled(kind Text) Boolean
+	Sample.IsCoupled("Sizing")
+	Sample.IsCoupled("Strict/Math/Sizing")
+	Sample.IsCoupled("Number") is false
+	let type = function.TypeOf(TypeEntry.ShortName(kind))
+	let halves = Halves(type)
+	(halves.Length is 2) and IsHalf(halves.First) and IsHalf(halves.Last)
+Halves(type TypeEntry) List(MemberEntry)
+	Sample.Halves(Sizing).Length is 2
+	for MlirInstances(function, 0).Stored(type)
+		if TypeEntry.ShortName(value.typeName) is not "Iterator"
+			value
+IsHalf(member MemberEntry) Boolean
+	Sample.IsHalf(Sizing.members.First)
+	Sample.IsHalf(Sizing.members.Last) is false
+	Sample.IsHalf(MemberEntry("Width", "Strict/Number", List(InstructionEntry), false)) is false
+	let isNumber = member.typeName is in ("Number", "Strict/Number")
+	isNumber and (member.initial.Length is 0) and (member.Bits is 32)
+Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
+	Sample.Constructed(Sized, "Sizing", Instances).Last is "    llvm.store %t2cp, %r2 : f64, !llvm.ptr"
+	Sample.Constructed(Sized, "Sizing", Instances).First is "    %t2cx = llvm.load %r0 : !llvm.ptr -> f64"
+	if IsCoupled(typeName) is false
+		return instances.Constructed(entry, typeName)
+	let halves = Halves(function.TypeOf(TypeEntry.ShortName(typeName)))
+	let temp = "%t" + position + "c"
+	let packed = "    " + temp + "p = func.call @strict_two_packed(" + temp + "x, " + temp + "y) : (f64, f64) -> f64"
+	let first = function.Load(temp + "x", Argument(entry, halves.First.Name, 0))
+	let second = function.Load(temp + "y", Argument(entry, halves.Last.Name, 1))
+	(first, second, packed, function.Store(temp + "p", "%r" + entry.payload(0)))
+Argument(entry InstructionEntry, name Text, fallback Number) Text
+	Sample.Argument(Sized, "Height", 0) is "%r1"
+	Sample.Argument(Sized, "Other", 0) is "%r0"
+	let named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
+	"%r" + entry.payload(5 + entry.payload(3) + 1 + (named < 0 then fallback else named))
+Aliased(entry InstructionEntry, kind Text) Texts
+	Sample.Aliased(Heights, "Sizing")(1) is "    %t2hv = func.call @strict_two_y(%t2hp) : (f64) -> f64"
+	if (entry.texts(0) is "value") or (IsCoupled(kind) is false)
+		return function.Copied("%r" + entry.payload(1), "%r" + entry.payload(0), "%t" + position + "a")
+	let halves = Halves(function.TypeOf(TypeEntry.ShortName(kind)))
+	let half = halves.First.Name is entry.texts(0) then "x" else "y"
+	let temp = "%t" + position + "h"
+	let read = "    " + temp + "v = func.call @strict_two_" + half + "(" + temp + "p) : (f64) -> f64"
+	(function.Load(temp + "p", "%r" + entry.payload(1)), read, function.Store(temp + "v", "%r" + entry.payload(0)))
+Unpacked Texts
+	Own.Unpacked.Length is 5
+	Own.Unpacked.Last is "    llvm.store %tcouple1, %v_Height : f64, !llvm.ptr"
+	mutable lines = List(Text) + function.Load("%tcouple", "%instance")
+	for Halves(function.type)
+		if value.Name is not in function.method.ParameterNames
+			let half = index is 0 then "x" else "y"
+			let read = "    %tcouple" + index + " = func.call @strict_two_" + half + "(%tcouple) : (f64) -> f64"
+			lines = lines + read + function.Store("%tcouple" + index, "%v_" + value.Name)
+	lines

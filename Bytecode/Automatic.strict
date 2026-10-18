@@ -6,6 +6,7 @@ constant Wanted = ("Strict/HelloLogger.Run", "Strict/HelloLogger.Members")
 constant Greeter = Automatic(TypeCodegen.Hello.lines, "HelloLogger", Instantiation.Pairing)
 constant Point = Automatic(("has X Number", "mutable Y Number", "has logger", "constant Limit = 3", "Area Number", "\tX * Y"), "Point", Instantiation.Pairing)
 constant Paired = Automatic(("has first Generic", "has second Generic"), "Couple(Text, Number)", Instantiation.Pairing)
+constant Bitted = Automatic(List(Text) + "has x Number with value > 0 and value.Bits is 32", "P", Instantiation.Pairing)
 constant Sized = Automatic(("has Width Number with value > 0", "has Height Number"), "Size", Instantiation.Pairing)
 Lines(names Texts) Texts
 	Point.Lines(List(Text)) is Point.lines
@@ -32,11 +33,11 @@ Validations SyntaxNodes
 	Sized.Validations.First to Text is "if Width > 0 is false"
 	Sized.Validations.First.line is 1
 	Automatic(List(Text) + "has price Number with Step 0.01", "P", Instantiation.Pairing).Validations.Length is 0
+	Bitted.Validations.First to Text is "if x > 0 is false"
 	mutable result = List(Mutable(SyntaxNode))
 	for Stored
-		let start = value.IndexOf(" with ")
-		if (start > 0) and (value.IndexOf(" with Step ") < 0)
-			let constraint = value.Substring(start + 6, value.Length - start - 6)
+		let constraint = Constraint.Of(value)
+		if constraint is not ""
 			let checked = Constraint(Header(value).MemberName, MemberType(value), instantiation.types)
 			result.Add(checked.Checked(constraint, lines.Index(value) + 1))
 	result
