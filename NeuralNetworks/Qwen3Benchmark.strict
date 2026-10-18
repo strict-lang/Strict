@@ -7,12 +7,20 @@ Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32
 	let loaded = Process.Elapsed
 	let prompt = Repeated(tokenizer.Encoded(Prompt), repeats)
 	logger.Log(Prompt + tokenizer.Decoded(Sampled(model.Prefilled(prompt, 0), prompt.Length, count, temperature)))
-	let before = Process.Elapsed
+	let prefill = Fastest(model, prompt)
 	let prefilled = model.Prefilled(prompt, 0)
 	let first = prefilled.Next
-	let prefill = (Process.Elapsed - before) * 1000 / prompt.Length
 	let durations = Durations(batch is 1 then prefilled else prefilled.Copies(batch), first, prompt.Length, count, batch)
 	logger.Log(Report(prompt.Length, prefill, durations, batch) + ", loaded in " + (loaded - started).Round(1) + " s")
+Fastest(model Qwen3, prompt Numbers) Number
+	Qwen3Benchmark(Logger).Fastest(Qwen3.Tiny, (1, 2)) > 0
+	mutable fastest = 1000000
+	for 3
+		let before = Process.Elapsed
+		let first = model.Prefilled(prompt, 0).Next
+		let milliseconds = (Process.Elapsed - before) * 1000 / prompt.Length
+		fastest = (first >= 0) and (milliseconds < fastest) then milliseconds else fastest
+	fastest
 Sampled(model Qwen3, position Number, count Number, temperature Number) Numbers
 	Qwen3Benchmark(Logger).Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
 	let started = Process.Elapsed

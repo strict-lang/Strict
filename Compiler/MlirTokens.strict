@@ -6,7 +6,7 @@ constant Tokens = TypeEntry("Strict/Tokens", List(MemberEntry) + MemberEntry("we
 constant Summing = MlirTokens(MlirFunction(List(TypeEntry) + Tokens, Tokens, Batched), 2)
 constant Dotting = Batched.instructions(15)
 constant Ends = (InstructionType.LoadVariableToRegister, InstructionType.Invoke, InstructionType.LoadVariableToRegister, InstructionType.Return)
-constant Signature = " : (!llvm.ptr, i64, f64, f64, f64, f64) -> f64"
+constant Signature = " : (!llvm.ptr, i64, f64, f64, f64, f64, f64) -> f64"
 constant Marker = "    // reads the dot products of strict_device_tokens"
 Call Number
 	Summing.Call is 15
@@ -117,17 +117,18 @@ Sourced Texts
 	let number = collection is "" then "0" else collection is "List(Number)" then "1" else "2"
 	(collection is "" then gpu.Temp("b") else gpu.Temp("v"), number)
 Launched Texts
-	Summing.Launched.Last is "  ^loop2tokens:"
+	Summing.Launched.Last is "  ^loop2kernel:"
 	if Call < 0
 		return List(Text)
 	let gpu = MlirGpu(function, position)
+	let biased = MlirBiased(function, position)
 	mutable lines = List(Mutable(Text))
 	mutable operands = gpu.Temp("gp") + ", " + gpu.Temp("gc")
 	for Names(Call)
 		lines = lines + function.Load(gpu.Temp("gh" + index), "%v_" + value)
 		operands = operands + ", " + gpu.Temp("gh" + index)
-	let call = "    " + gpu.Temp("gb") + " = func.call @strict_gpu_tokens(" + operands + ")" + Signature
-	lines + call + Checked
+	let call = "    " + gpu.Temp("gb") + " = func.call @strict_gpu_tokens(" + operands + ", " + biased.Operand + ")"
+	(lines + biased.Loaded + (call + Signature) + Checked) + biased.Fused
 Checked Texts
 	Summing.Checked.First is "    %t2gn = arith.cmpf une, %t2gb, %zero : f64"
 	let gpu = MlirGpu(function, position)

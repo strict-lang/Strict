@@ -1,0 +1,75 @@
+has function MlirFunction
+has position Number
+constant Biased = MethodEntry("Sums", (MemberEntry("input", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("rows", "Strict/Number", List(InstructionEntry), false), MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry("count", "Strict/Number", List(InstructionEntry), false)), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "rows"), InstructionEntry.Binary(InstructionType.Modulo, (1, 2, 3)), InstructionEntry(InstructionType.IndexCall, "weights", (4, 3, -1)), InstructionEntry.LoadNumber(5, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "input"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "rows"), InstructionEntry.Binary(InstructionType.Divide, (7, 8, 9)), InstructionEntry.Invoke(10, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 9), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 11, "width"), InstructionEntry.Binary(InstructionType.Multiply, (10, 11, 12)), InstructionEntry.Invoke(13, ("Strict/Tokens", "Dot", "Strict/Number", "row", "first", "input", "start"), (4, 5, 6, 12), -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 14, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 15, "biases"), InstructionEntry.Invoke(16, ("Strict/List(Number)", "Length", "Strict/Number"), List(Number), 15), InstructionEntry.Binary(InstructionType.Modulo, (14, 16, 17)), InstructionEntry(InstructionType.IndexCall, "biases", (18, 17, -1)), InstructionEntry.Binary(InstructionType.Add, (13, 18, 19)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 19, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 21), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))
+constant Tokens = TypeEntry("Strict/Tokens", (MemberEntry("weights", "Strict/List(Numbers)", List(InstructionEntry), false), MemberEntry("biases", "Strict/List(Number)", List(InstructionEntry), false)), (Biased, MlirTokens.Dotted))
+constant Biasing = MlirBiased(MlirFunction(List(TypeEntry) + Tokens, Tokens, Biased), 2)
+constant Summing = MlirBiased(MlirTokens.Summing.function, 2)
+Biases Text
+	Summing.Biases is ""
+	Biasing.Biases is "biases"
+	let call = MlirTokens(function, position).Call
+	if (call < 0) or (Written < 0)
+		return ""
+	let groups = MlirGroups(function, position)
+	let sum = groups.Writer(function.method.instructions(Written).payload(0), Written)
+	let bias = Added(sum, function.method.instructions(call).payload(0))
+	bias < 0 then "" else Read(groups.Writer(bias, sum))
+Written Number
+	Summing.Written is 16
+	Biasing.Written is 22
+	let last = function.method.LoopEndOf(position) - 1
+	function.method.instructions(last).kind is InstructionType.InvokeWriteToList then last else -1
+Added(at Number, dot Number) Number
+	Biasing.Added(21, 13) is 18
+	Biasing.Added(20, 13) is -1
+	if at < 0
+		return -1
+	let entry = function.method.instructions(at)
+	if entry.kind is not InstructionType.Add
+		return -1
+	entry.payload(1) is dot then entry.payload(2) else entry.payload(2) is dot then entry.payload(1) else -1
+Read(at Number) Text
+	Biasing.Read(20) is "biases"
+	Biasing.Read(6) is ""
+	let entry = function.method.instructions(at < 0 then position else at)
+	if (at < 0) or (entry.kind is not InstructionType.IndexCall)
+		return ""
+	let modulo = MlirGroups(function, position).Writer(entry.payload(1), at)
+	Measured(modulo) is entry.texts(0) then entry.texts(0) else ""
+Measured(at Number) Text
+	Biasing.Measured(19) is "biases"
+	Biasing.Measured(5) is ""
+	let entry = function.method.instructions(at < 0 then position else at)
+	if (at < 0) or (entry.kind is not InstructionType.Modulo)
+		return ""
+	let tokens = MlirTokens(function, position)
+	let length = MlirGroups(function, position).Writer(entry.payload(2), at)
+	let call = function.method.instructions(length < 0 then position else length)
+	let isLength = (length >= 0) and (call.kind is InstructionType.Invoke) and (call.texts(1) is "Length")
+	let list = isLength then tokens.Variable(MlirDeviceCalls(function, length, function).Register(call), length) else ""
+	tokens.Variable(entry.payload(1), at) is "index" then list else ""
+IsFused Boolean
+	Summing.IsFused
+	Biasing.IsFused
+	let call = MlirTokens(function, position).Call
+	if (Written < 0) or (call < 0)
+		return false
+	let dot = function.method.instructions(call).payload(0)
+	(function.method.instructions(Written).payload(0) is dot) or (Biases is not "")
+Operand Text
+	Summing.Operand is "%zero"
+	Biasing.Operand is "%t2gbias"
+	(IsFused and (Biases is not "")) then MlirGpu(function, position).Temp("gbias") else "%zero"
+Loaded Texts
+	Summing.Loaded.Length is 0
+	Biasing.Loaded is ("    %t2gbias = llvm.load %v_biases : !llvm.ptr -> f64")
+	Operand is "%zero" then List(Text) else List(Text) + function.Load(Operand, "%v_" + Biases)
+Fused Texts
+	Biasing.Fused(1) is "    cf.cond_br %t2gn, ^loop2exit, ^loop2kernel"
+	MlirBiased(MlirGpu.Doubling.function, 2).Fused.Length is 0
+	if IsFused is false
+		return List(Text)
+	let gpu = MlirGpu(function, position)
+	let label = "^loop" + position
+	let exit = "    cf.cond_br " + gpu.Temp("gn") + ", " + label + "exit, " + label + "kernel"
+	(function.Store(gpu.Temp("gb"), "%v_forResult"), exit, "  " + label + "kernel:")
