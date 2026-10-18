@@ -109,4 +109,5 @@ Summary(failed Number, path Text) Text
 Started(types List(TypeEntry), path Text, isTracing = false) Machine
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "Examples/HelloLogger.strict").folder is "Examples"
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", true).isTracing
-	Machine(Resolver(Inliner(types).Inlined).Resolved, logger, List(VmValue), Path(path).PathOnly.text, isTracing).Prepared
+	let rewritten = TailCalls(Inliner(types).Inlined).Rewritten
+	Machine(Resolver(rewritten).Resolved, logger, List(VmValue), Path(path).PathOnly.text, isTracing).Prepared
