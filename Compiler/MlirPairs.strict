@@ -8,6 +8,7 @@ constant Reading = InstructionEntry.Invoke(1, ("Strict/List(Number)", "X", "Stri
 constant Building = MethodEntry("Doubled", List(MemberEntry), "Strict/Pairing", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult0"), InstructionEntry.Invoke(3, ("Strict/Pairing", "from", "Pairing", "numbers"), List(Number) + 2, -1), InstructionEntry.Return(3)))
 constant Built = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Building), 3)
 constant Sample = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Validating), 1)
+constant Twice = VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2)))
 constant Instances = MlirInstances(Sample.function, 1)
 IsPaired(kind Text) Boolean
 	Sample.IsPaired("Pairing")
@@ -94,12 +95,13 @@ Written(name Text) Number
 		if (earlier.kind is InstructionType.InvokeWriteToList) and (earlier.texts(0) is name)
 			count = count + 1
 	count
-Defaulted(initial Runtime/VmValue, slot Text) Texts
-	Sample.Defaulted(VmValue.OfList(List(VmValue)), "%s") is ("    llvm.store %zero, %s : f64, !llvm.ptr")
-	Sample.Defaulted(VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2))), "%s").Length is 4
+Defaulted(initial Runtime/VmValue, slot Text, suffix Text) Texts
+	Sample.Defaulted(VmValue.OfList(List(VmValue)), "%s", "d3") is ("    llvm.store %zero, %s : f64, !llvm.ptr")
+	Sample.Defaulted(Twice, "%s", "d3").Length is 4
+	Sample.Defaulted(Twice, "%s", "d3").First.StartsWith("    %t1d3dx")
 	if initial.items.Length is not 2
 		return List(Text) + function.Store("%zero", slot)
-	let temp = "%t" + position
+	let temp = "%t" + position + suffix
 	let statements = MlirStatements(function, position)
 	let first = "    " + temp + "dx = arith.constant " + statements.Hex(initial.items.First.number) + " : f64"
 	let second = "    " + temp + "dy = arith.constant " + statements.Hex(initial.items.Last.number) + " : f64"
