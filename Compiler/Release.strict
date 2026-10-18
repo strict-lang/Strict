@@ -22,22 +22,52 @@ Icon Text
 		return own
 	File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
 Refreshed(release Text) Number
-	if Directory.Exists(release) and (Directory.Delete(release) is false)
-		logger.Log("Release folder could not be refreshed: " + release)
-		return 1
 	Directory.Create(release)
 	for (".exe", "")
-		if File(base + value).Exists
-			File(base + value).Rename(release + "/" + Path(base).FileName.text + value)
-	Copied(Parent + "/Content", release + "/Content")
+		let built = base + value
+		if File(built).Exists
+			File(built).Rename(release + "/" + Named(built))
+			if File(built).Exists
+				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
+				return 1
 	logger.Log("Release: " + release)
-	0
+	Content(release + "/Content") < 0 then 1 else 0
+Content(target Text) Number
+	Release(Logger, "Missing/App").Content("Missing/Release/Content") is 0
+	let source = Parent + "/Content"
+	let builder = Parent + "/ContentBuild.strict"
+	if File(builder).Exists is false
+		return Copied(source, target) + Removed(source, target)
+	let arguments = "\"" + builder + "\" \"" + source + "\" \"" + target + "\""
+	let built = ToolRunner(Process.Current.executable).Execute(arguments)
+	if built.Failed
+		logger.Log("Content build failed: " + builder + " " + built.error + built.Output)
+	built.Failed then -1 else 0
 Copied(source Text, target Text) Number
 	if Directory.Exists(source) is false
 		return 0
 	Directory.Create(target)
+	mutable copied = 0
 	for Directory.Files(source)
-		File(target + "/" + Path(value.Replace("\\", "/")).FileName.text).Write(File(value).ReadBytes)
+		let copy = target + "/" + Named(value)
+		if (File(copy).Exists is false) or (File(value).Modified > File(copy).Modified)
+			File(copy).Write(File(value).ReadBytes)
+			copied = copied + 1
 	for Directory.Directories(source)
-		Copied(value, target + "/" + Path(value.Replace("\\", "/")).FileName.text)
-	1
+		copied = copied + Copied(value, target + "/" + Named(value))
+	copied
+Removed(source Text, target Text) Number
+	Release(Logger, "Missing/App").Removed("Missing/Content", "Missing/Release/Content") is 0
+	if Directory.Exists(source) is false
+		return Directory.Exists(target) and Directory.Delete(target) then 1 else 0
+	mutable removed = 0
+	for Directory.Files(target)
+		if File(source + "/" + Named(value)).Exists is false
+			File(value).Delete
+			removed = removed + 1
+	for Directory.Directories(target)
+		removed = removed + Removed(source + "/" + Named(value), value)
+	removed
+Named(path Text) Text
+	Release(Logger, "App").Named("a\b/c.png") is "c.png"
+	Path(path.Replace("\\", "/")).FileName.text
