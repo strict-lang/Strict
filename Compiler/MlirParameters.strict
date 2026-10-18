@@ -16,12 +16,12 @@ IsFixed(name Text) Boolean
 				return false
 	true
 Hoisted Texts
-	Reading.Hoisted.Length is 3
+	Reading.Hoisted.Length is 4
 	let fixed = FixedLists
 	mutable lines = List(Mutable(Text))
 	for function.method.parameters
 		if value.Name is in fixed
-			lines = lines + Started(value.Name, "%p" + (index + 1))
+			lines = lines + function.Load("%q_" + value.Name, "%v_" + value.Name) + Started(value.Name, "%q_" + value.Name)
 	lines
 Started(name Text, parameter Text) Texts
 	Reading.Started("numbers", "%p1").First is "    %h_numbers = func.call @strict_list_hoisted(%p1) : (f64) -> !llvm.ptr"

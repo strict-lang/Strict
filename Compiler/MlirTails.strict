@@ -1,0 +1,70 @@
+has function MlirFunction
+has position Number
+constant Counted = MemberEntry("number", "Strict/Number", List(InstructionEntry), false)
+constant Again = InstructionEntry.Invoke(1, ("Strict/Counting", "Count", "Strict/Number", "number"), List(Number) + 0, -1)
+constant Counting = MethodEntry("Count", List(MemberEntry) + Counted, "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "number"), Again, InstructionEntry.Return(1)))
+constant Counter = TypeEntry("Strict/Counting", List(MemberEntry), List(MethodEntry) + Counting)
+constant Short = TypeEntry("Counting", List(MemberEntry), List(MethodEntry) + Counting)
+constant Sample = MlirTails(MlirFunction(List(TypeEntry) + Counter, Counter, Counting), 1)
+constant Kept = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "conditional0")
+constant Branched = MethodEntry("Count", List(MemberEntry) + Counted, "Strict/Number", (Again, Kept, InstructionEntry(InstructionType.JumpEnd, List(Text), List(Number)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "conditional0"), InstructionEntry.Return(2)))
+constant Branching = MlirTails(MlirFunction(List(TypeEntry) + Counter, Counter, Branched), 0)
+IsTail Boolean
+	Sample.IsTail
+	MlirTails(Sample.function, 0).IsTail is false
+	MlirTails(MlirFunction(List(TypeEntry) + Short, Short, Counting), 1).IsTail
+	if IsCall is false
+		return false
+	let entry = function.method.instructions(position)
+	let decoder = PayloadDecoder(entry)
+	let count = 5 + entry.payload(3)
+	let isOwn = function.TypeOf(decoder.Text(1)).Name is function.type.Name
+	let isOwnInstance = isOwn and (entry.payload(count + 1 + entry.payload(count)) is 0)
+	let callee = function.type.Callee(decoder.Text(2), entry.payload(count), decoder.Text(count - 1), decoder.Names)
+	isOwnInstance and (callee is function.method) and Returns(entry.payload(0), position + 1)
+IsCall Boolean
+	Sample.IsCall
+	MlirTails(Sample.function, 0).IsCall is false
+	let isPlain = (function.Group is -1) and (function.FastLoop is -1) and (function.Packing is "")
+	isPlain and (function.Float is "f64") and (function.method.instructions(position).kind is InstructionType.Invoke)
+Returns(register Number, start Number) Boolean
+	Sample.Returns(1, 2)
+	Sample.Returns(0, 2) is false
+	Branching.Returns(1, 1)
+	Branching.Returns(2, 1) is false
+	mutable current = "%r" + register
+	for Range(start, function.method.instructions.Length)
+		current = Followed(function.method.instructions(value), current)
+		if current is in ("", "returned")
+			return current is "returned"
+	false
+Followed(entry InstructionEntry, current Text) Text
+	Sample.Followed(Kept, "%r1") is "%v_conditional0"
+	Sample.Followed(InstructionEntry.Return(2), "%r1") is ""
+	if entry.kind is InstructionType.JumpEnd
+		return current
+	let register = "%r" + entry.payload(0)
+	if (entry.kind is InstructionType.StoreRegisterToVariable) and (register is current)
+		return "%v_" + entry.texts(0)
+	let isLoaded = (entry.kind is InstructionType.LoadVariableToRegister) and ("%v_" + entry.texts(0) is current)
+	let isChecked = (entry.kind is InstructionType.CheckError) and (register is current)
+	let isReturned = (entry.kind is InstructionType.Return) and (register is current)
+	isReturned then "returned" else isLoaded then register else isChecked then current else ""
+Jumped(entry InstructionEntry, type TypeEntry) Texts
+	Sample.Jumped(Again, Counter).Last is "  ^tail1:"
+	"    llvm.store %t1a0, %v_number : f64, !llvm.ptr" is in Sample.Jumped(Again, Counter)
+	"    cf.cond_br %t1tail, ^tail1, ^tailed" is in Sample.Jumped(Again, Counter)
+	let calls = MlirCalls(function, position)
+	mutable lines = calls.Loads(entry, type) + calls.Defaults(function.method, entry.payload(5 + entry.payload(3)))
+	for function.method.parameters
+		lines = lines + function.Store("%t" + position + "a" + index, "%v_" + value.Name)
+	let flag = "%t" + position + "tail"
+	let jump = ("    " + flag + " = arith.constant false", "    cf.cond_br " + flag + ", ^tail" + position + ", ^tailed")
+	lines + jump + ("  ^tail" + position + ":")
+Restart Texts
+	MlirTails(Sample.function, 0).Restart is ("    cf.br ^tailed", "  ^tailed:")
+	MlirTails(MlirFunction.Counter, 0).Restart.Length is 0
+	for function.method.instructions
+		if MlirTails(function, index).IsTail
+			return ("    cf.br ^tailed", "  ^tailed:")
+	List(Text)

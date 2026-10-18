@@ -82,11 +82,13 @@ Slots Texts
 Entry Texts
 	Counter.Entry.Length is 4
 	"  ^stackChecked:" is in MlirGroups.Norming.function.Entry
+	"  ^tailed:" is in MlirTails.Sample.function.Entry
 	"    %self = llvm.load %instance : !llvm.ptr -> f64" is in MlirInstances.Looping.Entry
 	let checked = IsRecursive and (method.Invoked.Length > 0) then MlirRecursion.StackChecked else List(Text)
 	mutable lines = Slot("%instance") + Store("%p0", "%instance") + checked
 	for Parameters
 		lines = lines + Store("%p" + index, "%v_" + value)
+	lines = lines + MlirTails(value, 0).Restart
 	lines + MlirParameters(value).Hoisted + MlirInstances(value, 0).Unpacked + MlirInstances(value, 0).Constants
 Slot(name Text) Texts
 	Counter.Slot("%r0").Length is 2
