@@ -5,6 +5,7 @@ constant Blocks = Gguf("NeuralNetworks/blocks.gguf", 4)
 constant Tokens = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("tokens").First
 constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
 constant Long = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("long").First
+constant Wide = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("wider").First
 Sums(input Numbers) Numbers
 	Pair.Sums((1, 1)) is (13, 27)
 	Pair.Sums((1, 1, 2, 0)) is (13, 27, 12, 26)
@@ -23,6 +24,7 @@ Dot(row Numbers, first Number, input Numbers, start Number) Number
 	Batch(Blocks.Rows("four"), List(Number) + 0).Sums(Long)(1277).IsNearlyEqual(5.001, 0.5)
 	Batch(Blocks.Rows("six"), List(Number) + 0).Sums(Long)(1140).IsNearlyEqual(-3.413, 0.2)
 	Batch(Blocks.Rows("four"), Long).Sums(Long)(1277).IsNearlyEqual(4.533, 0.5)
+	Batch(Blocks.Rows("wide"), List(Number) + 0).Sums(Wide)(1000).IsNearlyEqual(-9.015, 0.5)
 	mutable sum = 0
 	for row.Length
 		sum = sum + row(first + index) * input(start + index)

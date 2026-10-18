@@ -981,7 +981,7 @@
     cf.cond_br %isLarge, ^large, ^search(%firstLarger : i64)
   ^search(%candidate: i64):
     %sizes = llvm.mlir.addressof @strict_gc_sizes : !llvm.ptr
-    %sizeSlot = llvm.getelementptr %sizes[0, %candidate] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %sizeSlot = llvm.getelementptr %sizes[0, %candidate] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
     %candidateSize = llvm.load %sizeSlot : !llvm.ptr -> i64
     %fits = arith.cmpi uge, %candidateSize, %size : i64
     %one = arith.constant 1 : i64
@@ -1039,7 +1039,7 @@
     %sizeMask = arith.constant 31 : i64
     %sizeClass = arith.andi %class, %sizeMask : i64
     %sizes = llvm.mlir.addressof @strict_gc_sizes : !llvm.ptr
-    %sizeSlot = llvm.getelementptr %sizes[0, %sizeClass] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %sizeSlot = llvm.getelementptr %sizes[0, %sizeClass] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
     %objectSize = llvm.load %sizeSlot : !llvm.ptr -> i64
     %cursors = llvm.mlir.addressof @strict_gc_cursors : !llvm.ptr
     %cursorSlot = llvm.getelementptr %cursors[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
@@ -1385,7 +1385,7 @@
     %sizeMask = arith.constant 31 : i64
     %sizeClass = arith.andi %class, %sizeMask : i64
     %sizes = llvm.mlir.addressof @strict_gc_sizes : !llvm.ptr
-    %sizeSlot = llvm.getelementptr %sizes[0, %sizeClass] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<32 x i64>
+    %sizeSlot = llvm.getelementptr %sizes[0, %sizeClass] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
     %objectSize = llvm.load %sizeSlot : !llvm.ptr -> i64
     %six = arith.constant 6 : i64
     %four = arith.constant 4 : i64
@@ -7365,9 +7365,9 @@
   // stay on the CPU (STRICT_GPU=all sends every loop), loops reading a list that is already on the GPU run there at any size
   llvm.mlir.global internal @strict_gpu_minimum(4194304 : i64) : i64
   llvm.mlir.global internal @strict_gpu_setting(0 : i64) : i64
-  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<31xi64>) : !llvm.array<31 x i64>
+  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<33xi64>) : !llvm.array<33 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
-  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00") : !llvm.array<535 x i8>
+  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00cuFuncSetAttribute\00cuDeviceGetAttribute\00") : !llvm.array<575 x i8>
   llvm.mlir.global internal constant @strict_gpu_switch("STRICT_GPU\00") : !llvm.array<11 x i8>
   func.func private @strict_gpu_ready() -> i1 {
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
@@ -7435,7 +7435,7 @@
   func.func private @strict_gpu_resolve(%library: !llvm.ptr) -> i1 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %count = arith.constant 31 : i64
+    %count = arith.constant 33 : i64
     %names = llvm.mlir.addressof @strict_gpu_names : !llvm.ptr
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
@@ -7451,7 +7451,7 @@
     cf.cond_br %missing, ^failed, ^store
   ^store:
     %bits = llvm.ptrtoint %function : !llvm.ptr to i64
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<31 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
     llvm.store %bits, %slot : i64, !llvm.ptr
     %length = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
     %skipped = arith.addi %length, %one : i64
@@ -7477,7 +7477,7 @@
     cf.br ^lookup
   ^lookup:
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<31 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
     %bits = llvm.load %slot : !llvm.ptr -> i64
     %function = llvm.inttoptr %bits : i64 to !llvm.ptr
     return %function : !llvm.ptr
@@ -7510,6 +7510,16 @@
     %contextBits = llvm.ptrtoint %context : !llvm.ptr to i64
     %handles = llvm.mlir.addressof @strict_gpu_handles : !llvm.ptr
     llvm.store %contextBits, %handles : i64, !llvm.ptr
+    %processorsSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    llvm.store %zero32, %processorsSlot : i32, !llvm.ptr
+    %attributeIndex = arith.constant 32 : i64
+    %getAttribute = func.call @strict_gpu_call(%attributeIndex) : (i64) -> !llvm.ptr
+    %multiprocessorCount = arith.constant 16 : i32
+    %queried = llvm.call %getAttribute(%processorsSlot, %multiprocessorCount, %device) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
+    %processors = llvm.load %processorsSlot : !llvm.ptr -> i32
+    %processors64 = arith.extui %processors : i32 to i64
+    %processorsHandle = llvm.getelementptr %handles[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %processors64, %processorsHandle : i64, !llvm.ptr
     %current = func.call @strict_gpu_current() : () -> i1
     %streamSlot = llvm.getelementptr %handles[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %createIndex = arith.constant 16 : i64
@@ -7569,8 +7579,23 @@
     %loadData = func.call @strict_gpu_call(%loadIndex) : (i64) -> !llvm.ptr
     %loaded = llvm.call %loadData(%moduleSlot, %ptx) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %loadFailed = arith.cmpi ne, %loaded, %zero32 : i32
+    cf.cond_br %loadFailed, ^older, ^loaded
+  ^older:
+    // the PTX of a newer GPU (sm_80, DeviceBuild.Ptx) is followed by the one for older GPUs, or by an empty text
+    %length = llvm.call @strlen(%ptx) : (!llvm.ptr) -> i64
+    %skipped = arith.addi %length, %one : i64
+    %olderPtx = llvm.getelementptr %ptx[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %olderFirst = llvm.load %olderPtx : !llvm.ptr -> i8
+    %nothing8 = arith.constant 0 : i8
+    %noOlder = arith.cmpi eq, %olderFirst, %nothing8 : i8
+    cf.cond_br %noOlder, ^failed, ^loadOlder
+  ^loadOlder:
+    %olderLoaded = llvm.call %loadData(%moduleSlot, %olderPtx) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %olderFailed = arith.cmpi ne, %olderLoaded, %zero32 : i32
+    cf.cond_br %olderFailed, ^failed, ^loaded
+  ^loaded:
     %newModule = llvm.load %moduleSlot : !llvm.ptr -> i64
-    cf.cond_br %loadFailed, ^failed, ^lookup(%newModule : i64)
+    cf.br ^lookup(%newModule : i64)
   ^lookup(%moduleValue: i64):
     %module = llvm.inttoptr %moduleValue : i64 to !llvm.ptr
     %getIndex = arith.constant 5 : i64
@@ -7828,10 +7853,24 @@
     %done = arith.cmpi eq, %result, %zero32 : i32
     return %done : i1
   }
+  // blocks of 512 threads are those of strict_device_tiles, which keep their rows and tokens in 52224 bytes of dynamic
+  // shared memory (more than the 48 KB a kernel gets without asking)
   func.func private @strict_gpu_launch(%function: !llvm.ptr, %count: i64, %threads: i64, %parameters: !llvm.ptr) -> i1 {
     %zero32 = arith.constant 0 : i32
     %one32 = arith.constant 1 : i32
     %one = arith.constant 1 : i64
+    %tileThreads = arith.constant 512 : i64
+    %isTiles = arith.cmpi eq, %threads, %tileThreads : i64
+    %tileShared = arith.constant 52224 : i32
+    %shared = arith.select %isTiles, %tileShared, %zero32 : i32
+    cf.cond_br %isTiles, ^allowShared, ^launch
+  ^allowShared:
+    %attributeIndex = arith.constant 31 : i64
+    %setAttribute = func.call @strict_gpu_call(%attributeIndex) : (i64) -> !llvm.ptr
+    %maximumDynamicShared = arith.constant 8 : i32
+    %allowed = llvm.call %setAttribute(%function, %maximumDynamicShared, %tileShared) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
+    cf.br ^launch
+  ^launch:
     %spare = arith.subi %threads, %one : i64
     %rounded = arith.addi %count, %spare : i64
     %blocks = arith.divui %rounded, %threads : i64
@@ -7843,7 +7882,7 @@
     func.call @strict_gpu_capture() : () -> ()
     %launchIndex = arith.constant 10 : i64
     %launch = func.call @strict_gpu_call(%launchIndex) : (i64) -> !llvm.ptr
-    %result = llvm.call %launch(%function, %blocks32, %one32, %one32, %threads32, %one32, %one32, %zero32, %stream, %parameters, %none) : !llvm.ptr, (!llvm.ptr, i32, i32, i32, i32, i32, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %result = llvm.call %launch(%function, %blocks32, %one32, %one32, %threads32, %one32, %one32, %shared, %stream, %parameters, %none) : !llvm.ptr, (!llvm.ptr, i32, i32, i32, i32, i32, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %launched = arith.cmpi eq, %result, %zero32 : i32
     func.call @strict_gpu_captured(%function) : (!llvm.ptr) -> ()
     return %launched : i1
@@ -8006,7 +8045,11 @@
     %tokenTotal = func.call @strict_gpu_token_threads(%count, %lanes, %values, %rows) : (i64, i64, !llvm.ptr, i64) -> i64
     %elementTotal = arith.select %tokened, %tokenTotal, %laneTotal : i64
     %threadTotal = arith.select %grouped, %count, %elementTotal : i64
-    %threads = arith.select %grouped, %groupLanes, %widest : i64
+    %tileLanes = arith.constant -512 : i64
+    %tiling = arith.cmpi eq, %lanes, %tileLanes : i64
+    %tileBlock = arith.constant 512 : i64
+    %laneThreads = arith.select %grouped, %groupLanes, %widest : i64
+    %threads = arith.select %tiling, %tileBlock, %laneThreads : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
     %eightBits = arith.constant 7 : i64
@@ -9343,6 +9386,29 @@
     return %none : i64
   }
   // threads of strict_device_tokens (negative lanes are the tokens of a warp): 32 in a tile of 32 rows, 8 for one row
+  // when there are fewer tiles of strict_device_tiles than multiprocessors their columns are split over up to 4 blocks
+  // each (at most 256 blocks, each split keeps at least one block of 256 columns)
+  func.func private @strict_gpu_tile_splits(%tiles: i64, %values: !llvm.ptr) -> i64 {
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %eight = arith.constant 8 : i64
+    %most = arith.constant 256 : i64
+    %handles = llvm.mlir.addressof @strict_gpu_handles : !llvm.ptr
+    %processorsSlot = llvm.getelementptr %handles[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %processors = llvm.load %processorsSlot : !llvm.ptr -> i64
+    %tileCount = arith.maxui %tiles, %one : i64
+    %filling = arith.divui %processors, %tileCount : i64
+    %fitting = arith.divui %most, %tileCount : i64
+    %widthSlot = llvm.getelementptr %values[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %widthNumber = llvm.load %widthSlot : !llvm.ptr -> f64
+    %width = arith.fptosi %widthNumber : f64 to i64
+    %columnBlocks = arith.shrui %width, %eight : i64
+    %fewest = arith.minui %filling, %fitting : i64
+    %limited = arith.minui %fewest, %four : i64
+    %columnLimited = arith.minui %limited, %columnBlocks : i64
+    %splits = arith.maxui %columnLimited, %one : i64
+    return %splits : i64
+  }
   func.func private @strict_gpu_token_threads(%count: i64, %lanes: i64, %values: !llvm.ptr, %rows: i64) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -9386,16 +9452,20 @@
     %blockThreads = arith.muli %blockCount, %perBlock : i64
     %blocked = arith.cmpi eq, %perWarp, %sixtyFour : i64
     %chosen = arith.select %blocked, %blockThreads, %threads : i64
-    %tileLanes = arith.constant 256 : i64
+    %tileLanes = arith.constant 512 : i64
     %tiling = arith.cmpi eq, %perWarp, %tileLanes : i64
     %sixtyThree = arith.constant 63 : i64
     %six = arith.constant 6 : i64
-    %tileRowsUp = arith.addi %rowTotal, %sixtyThree : i64
-    %tileRows = arith.shrui %tileRowsUp, %six : i64
+    %tileRowSpare = arith.constant 127 : i64
+    %tileRowShift = arith.constant 7 : i64
+    %tileRowsUp = arith.addi %rowTotal, %tileRowSpare : i64
+    %tileRows = arith.shrui %tileRowsUp, %tileRowShift : i64
     %tileTokensUp = arith.addi %tokens, %sixtyThree : i64
     %tileTokens = arith.shrui %tileTokensUp, %six : i64
     %tileCount = arith.muli %tileRows, %tileTokens : i64
-    %tileThreads = arith.muli %tileCount, %perBlock : i64
+    %tileSplits = func.call @strict_gpu_tile_splits(%tileCount, %values) : (i64, !llvm.ptr) -> i64
+    %tileBlocks = arith.muli %tileCount, %tileSplits : i64
+    %tileThreads = arith.muli %tileBlocks, %tileLanes : i64
     %chosenTiles = arith.select %tiling, %tileThreads, %chosen : i64
     %attentionLanes = arith.constant 128 : i64
     %attending = arith.cmpi eq, %perWarp, %attentionLanes : i64
@@ -9592,7 +9662,7 @@
     %tiled = func.call @strict_gpu_tiled(%rows, %input, %tokens, %width) : (f64, f64, f64, f64) -> i1
     %tilesName = llvm.mlir.addressof @strict_gpu_tiles_name : !llvm.ptr
     %tilesSlot = llvm.mlir.addressof @strict_gpu_tiles_slot : !llvm.ptr
-    %tileLanes = arith.constant -256 : i64
+    %tileLanes = arith.constant -512 : i64
     %name = llvm.select %tiled, %tilesName, %shortName : i1, !llvm.ptr
     %slot = llvm.select %tiled, %tilesSlot, %shortSlot : i1, !llvm.ptr
     %lanes = arith.select %tiled, %tileLanes, %perWarp : i64
