@@ -7,6 +7,7 @@ constant TrueValue = VmValue("Boolean", 1, "", List(VmValue))
 constant FalseValue = VmValue("Boolean", 0, "", List(VmValue))
 constant ErrorKinds = ("Strict/Error", "Strict/ErrorWithValue")
 constant Failed = VmValue("Strict/Error", 0, "", (OfText("x"), OfList(List(VmValue) + VmValue("Strict/Stacktrace", 0, "", (OfText("B.C"), OfText("B.strict"), OfNumber(7))))))
+constant Numbered = VmValue("Strict/List(Number)", 0, "", (OfNumber(5), OfNumber(6)))
 OfNumber(amount Number) VmValue
 	OfNumber(3).number is 3
 	VmValue("Number", amount, "", List(VmValue))
@@ -43,7 +44,8 @@ Member(index Number) VmValue
 	VmValue("Strict/Shape", 0, "", List(VmValue) + OfNumber(3)).Member(0).number is 3
 	None.Member(1).kind is "None"
 	OfNumber(3).Member(0).number is 3
-	let isBase = kind is in ("Text", "Number", "Boolean", "List")
+	Numbered.Member(1).items.Length is 2
+	let isBase = TypeEntry.ShortName(kind).Split("(").First is in ("Text", "Number", "Boolean", "List")
 	isBase then value else index < items.Length then items(index) else None
 As(typeName Text) VmValue
 	OfText("a").As("Strict/Number").number is 97

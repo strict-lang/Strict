@@ -31,7 +31,8 @@ Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Kinded.Converted(SyntaxNode("Call", "Kind"), "Text", CodeBlock.Empty).text is "to"
 	if values.inference.types.IsPlural(type)
 		return Elements(node, type, block)
-	if (node.Kind is "List") and values.inference.types.IsKnown(type) and type is not in TypeInference.Primitives
+	let isConstructed = values.inference.types.IsKnown(type) and (type is not in TypeInference.Primitives)
+	if (node.Kind is "List") and isConstructed and (type is not "List")
 		return SyntaxNode("Call", type, node.children)
 	let converter = values.inference.Converter(values.TypeOf(node, block), type)
 	(type is "Text") and (converter is "") then Bracketed(node, block) else Changed(node, converter, type)

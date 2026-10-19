@@ -115,7 +115,7 @@ Presized Texts
 	if IsCollecting is false
 		return List(Text)
 	constant capacity = "    " + Temp("a") + " = arith.maximumf " + Temp("n") + ", %zero : f64"
-	let created = MlirMemory(function, position).Called(Temp("r"), "strict_list_new", (Temp("a"), "%zero"))
+	let created = MlirListDestined(function, position).Created(Temp("r"), Temp("a"))
 	(capacity, created, function.Store(Temp("r"), "%v_forResult"))
 Restored(begin Number) Texts
 	MlirLoops(Nested.function, 2).Restored(0) is List(Text) + "    llvm.store %t0z, %v_outer : f64, !llvm.ptr"

@@ -1,0 +1,44 @@
+has function MlirFunction
+constant Rebuilt = MlirAlone(MlirOwned.Rebuilt.function)
+constant Moving = MlirAlone(MlirFunction((MlirFunction.Shape, MlirInstances.Outer), MlirInstances.Outer, MethodEntry("Run", List(MemberEntry), "None", MlirOwned.Rebuilding.Slice(4, 7))))
+constant Checking = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "moved"), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0))
+constant Checked = MlirAlone(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Checking)))
+constant Reading = (InstructionType.FieldLoad, InstructionType.CheckError, InstructionType.Return)
+IsAlone(name Text) Boolean
+	Moving.IsAlone("moved")
+	Rebuilt.IsAlone("moved") is false
+	MlirAlone(MlirOwned.Copying).IsAlone("moved") is false
+	if MlirOwned(function, 0).IsOwned(name) is false
+		return false
+	for function.method.instructions
+		let isNamed = (value.kind is in MlirOwned.Named) and (value.texts(0) is name)
+		if isNamed and (IsKept(value, index) is false)
+			return false
+	true
+IsKept(entry InstructionEntry, at Number) Boolean
+	Moving.IsKept(MlirOwned.Rebuilding(8), 4)
+	Rebuilt.IsKept(MlirOwned.Rebuilding(3), 3) is false
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return IsRead(at, entry.payload(0))
+	let writer = MlirKinds(function).Writer(at, entry.payload(0))
+	let source = writer >= 0 then function.method.instructions(writer) else entry
+	let isBuilt = source.kind is InstructionType.Invoke then source.texts(1) is "from" else false
+	isBuilt then MlirConstants(function, writer).IsConstant is false else false
+IsRead(at Number, register Number) Boolean
+	Moving.IsRead(0, 3)
+	Moving.IsRead(5, 7)
+	MlirAlone(MlirOwned.Copying).IsRead(3, 1) is false
+	Checked.IsRead(0, 0)
+	let steps = function.method.instructions
+	let reuse = LoadReuse(steps)
+	for Range(at + 1, steps.Length)
+		if (register is in reuse.Reads(steps(value))) and (steps(value).kind is not in Reading)
+			return false
+		if reuse.Written(steps(value)) is register
+			return true
+	true
+Check(name Text, position Number) Text
+	Moving.Check("moved", 3) is "    %t3re = arith.cmpf une, %t3old, %zero : f64"
+	Rebuilt.Check("moved", 7) is "    %t7re = func.call @strict_rc_unshared(%t7old) : (f64) -> i1"
+	let line = IsAlone(name) then "    %t#re = arith.cmpf une, %t#old, %zero : f64" else MlirOwned.Reusing(0)
+	line.Replace("#", position to Text)

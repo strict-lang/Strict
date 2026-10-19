@@ -148,3 +148,91 @@ Reverse List
 	(5, 10, 5).Reverse is (5, 10, 5)
 	for Range(0, Length).Reverse
 		elements(value)
+Slice(start Number, count Number) List
+	(1, 2, 3, 4).Slice(1, 2) is (2, 3)
+	(1, 2).Slice(2, 0) is List(Number)
+	for Range(start, start + count)
+		elements(value)
+Insert(position Number, element Generic) List
+	(1, 3).Insert(1, 2) is (1, 2, 3)
+	(1, 2).Insert(2, 3) is (1, 2, 3)
+	elements.Slice(0, position) + element + elements.Slice(position, Length - position)
+Unique List
+	(1, 2, 1, 3, 2).Unique is (1, 2, 3)
+	for elements
+		if Index(value) is index
+			value
+Sorted List
+	(3, 1, 2).Sorted is (1, 2, 3)
+	(2, 1, 2, 0).Sorted is (0, 1, 2, 2)
+	(1).Sorted is (1)
+	if Length < 2
+		return elements
+	let half = (Length / 2).Floor
+	elements.Slice(0, half).Sorted.Merged(elements.Slice(half, Length - half).Sorted)
+Merged(other) List
+	(1, 3, 5).Merged((2, 4)) is (1, 2, 3, 4, 5)
+	(2).Merged((1, 2)) is (1, 2, 2)
+	mutable merged = elements.Slice(0, 0)
+	mutable left = 0
+	mutable right = 0
+	for Range(0, Length + other.elements.Length)
+		let isDone = right >= other.elements.Length
+		let isLeft = isDone then true else (left < elements.Length then elements(left) <= other.elements(right) else false)
+		merged = merged + (isLeft then elements(left) else other.elements(right))
+		left = isLeft then left + 1 else left
+		right = isLeft then right else right + 1
+	merged
+Average Number
+	(1, 2, 6).Average is 3
+	Sum / Length
+Median Number
+	(3, 1, 2).Median is 2
+	(4, 1, 3, 2).Median is 2.5
+	let sorted = Sorted
+	let middle = (Length / 2).Floor
+	Length % 2 is 1 then sorted(middle) else (sorted(middle - 1) + sorted(middle)) / 2
+Normalized List
+	(2, 4, 6).Normalized is (0, 0.5, 1)
+	(5, 5).Normalized is (0, 0)
+	let lowest = Minimum
+	let range = Maximum - lowest
+	for elements
+		range is 0 then 0 else (value - lowest) / range
+IndexOfMaximum Number
+	(1, 3, 2).IndexOfMaximum is 1
+	(3, 3).IndexOfMaximum is 0
+	mutable best = 0
+	for elements
+		if value > elements(best)
+			best = index
+	best
+IndexOfMinimum Number
+	(2, 1, 3).IndexOfMinimum is 1
+	mutable best = 0
+	for elements
+		if value < elements(best)
+			best = index
+	best
+Pick(random PseudoRandom) Generic
+	(10, 20, 30).Pick(PseudoRandom.Seeded(1).Next) is 20
+	elements(random.Uint % elements.Length)
+Shuffled(random PseudoRandom) List
+	(1, 2, 3, 4).Shuffled(PseudoRandom.Seeded(1).Next) is (3, 2, 4, 1)
+	(1, 2, 3, 4).Shuffled(PseudoRandom.Seeded(1).Next).Sum is 10
+	List(Number).Shuffled(PseudoRandom.Seeded(1)) is List(Number)
+	mutable shuffled = elements
+	mutable generator = random
+	for Range(0, (elements.Length - 1).Clamp(0, elements.Length))
+		generator = generator.Next
+		let other = value + generator.Uint % (elements.Length - value)
+		let kept = shuffled(value)
+		shuffled(value) = shuffled(other)
+		shuffled(other) = kept
+	shuffled
+SwapRemoved(position Number) List
+	(1, 2, 3, 4).SwapRemoved(1) is (1, 4, 3)
+	(1, 2, 3).SwapRemoved(2) is (1, 2)
+	mutable swapped = elements
+	swapped(position) = elements.Last
+	swapped.Slice(0, elements.Length - 1)

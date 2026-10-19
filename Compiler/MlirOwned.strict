@@ -2,11 +2,17 @@ has function MlirFunction
 has position Number
 constant Empty = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0")
 constant Built = (Empty, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "listResult0"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved"))
-constant Moving = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved") + InstructionEntry.Return(1)))
+constant Moving = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved") + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "inline3_elements") + InstructionEntry.Return(1)))
 constant Copying = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved") + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "kept")))
 constant Owner = MlirOwned(Moving, 2)
 constant Temporaries = ("index", "value", "outer", "forResult")
 constant Named = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
+constant Making = InstructionEntry.Invoke(2, ("Strict/Outer", "from", "Strict/Outer", "shape", "size"), (0, 1), -1)
+constant Rebuilding = (InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 2), Making, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "moved"), InstructionEntry(InstructionType.FieldLoad, "shape", (4, 3, -1)), InstructionEntry.LoadNumber(5, 7), InstructionEntry.Invoke(6, ("Strict/Outer", "from", "Strict/Outer", "shape", "size"), (4, 5), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "moved"), InstructionEntry.Return(7))
+constant Fresh = List(Text) + "fresh"
+constant Reusing = ("    %t#re = func.call @strict_rc_unshared(%t#old) : (f64) -> i1", "    cf.cond_br %t#re, ^t#reuse, ^t#fresh", "  ^t#reuse:", "    %t#rp = func.call @strict_ptr(%t#old) : (f64) -> !llvm.ptr", "    cf.br ^t#join", "  ^t#fresh:", "    cf.br ^t#join", "  ^t#join:", "    %t#same = arith.cmpf oeq, %t#o, %t# : f64", "    cf.cond_br %t#same, ^t#kept, ^t#dead", "  ^t#dead:", "    func.call @strict_rc_dead(%t#o, %t#) : (f64, f64) -> ()", "    cf.br ^t#kept", "  ^t#kept:")
+constant Putting = ("    %t#r$ = llvm.getelementptr %t#rp[$] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t#ra$ = llvm.load %r& : !llvm.ptr -> f64", "    func.call @strict_rc_put(%t#r$, %t#ra$) : (!llvm.ptr, f64) -> ()")
+constant Rebuilt = MlirOwned(MlirFunction((MlirFunction.Shape, MlirInstances.Outer), MlirInstances.Outer, MethodEntry("Run", List(MemberEntry), "None", Rebuilding)), 7)
 IsOwned(name Text) Boolean
 	Owner.IsOwned("moved")
 	MlirOwned(Copying, 2).IsOwned("moved") is false
@@ -77,33 +83,74 @@ IsEscaped(at Number, register Number, name Text) Boolean
 	let entry = function.method.instructions(at)
 	let isStored = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
 	let isLooped = (entry.kind is InstructionType.LoopBegin) and (entry.payload(0) is register)
-	(isStored and (entry.texts(0) is not name)) or isLooped or IsLeaked(at, register)
+	let isAlias = isStored then (entry.texts(0) is name) or entry.texts(0).StartsWith("inline") else false
+	(isStored and (isAlias is false)) or isLooped or IsLeaked(at, register)
 IsLeaked(at Number, register Number) Boolean
 	Owner.IsLeaked(4, 1) is false
 	let entry = function.method.instructions(at)
-	if (entry.kind is not InstructionType.Invoke) or (Takes(entry, register) is false)
+	if entry.kind is not InstructionType.Invoke
 		return false
+	mutable isTaken = false
+	for LoadReuse(function.method.instructions).InvokeReads(entry)
+		if entry.payload(value) is register
+			isTaken = true
 	let returned = MlirLayout(function).Represented(TypeEntry.ShortName(entry.texts(2)))
-	(returned is not in ("Number", "Boolean", "None", "Text")) and (IsFreshCall(function, at, 0) is false)
-Takes(entry InstructionEntry, register Number) Boolean
-	Owner.Takes(InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1), 1)
-	Owner.Takes(InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1), 0)
-	Owner.Takes(InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1), 2) is false
-	let first = 6 + entry.payload(3)
-	let arguments = entry.payload(5 + entry.payload(3))
-	let instance = entry.payload(first + arguments) is 1 then entry.payload(first + arguments + 1) else -1
-	if instance is register
-		return true
-	for arguments
-		if entry.payload(first + index) is register
-			return true
-	false
+	isTaken and (returned is not in ("Number", "Boolean", "None", "Text")) and (IsFreshCall(function, at, 0) is false)
 Stored(entry InstructionEntry) Texts
-	Owner.Stored(Built(2)).Last is "    func.call @strict_rc_dead(%t2o, %t2) : (f64, f64) -> ()"
+	Owner.Stored(Built(2)).Index("    func.call @strict_rc_dead(%t2o, %t2) : (f64, f64) -> ()") is 6
 	MlirOwned(Copying, 4).Stored(Copying.method.instructions(4)).Length is 2
 	let slot = "%v_" + entry.texts(0)
 	let copied = function.Copied("%r" + entry.payload(0), slot, "%t" + position)
 	if IsOwned(entry.texts(0)) is false
 		return copied
-	let released = "    func.call @strict_rc_dead(%t" + position + "o, %t" + position + ") : (f64, f64) -> ()"
-	(List(Text) + function.Load("%t" + position + "o", slot)) + copied + released
+	(List(Text) + function.Load("%t" + position + "o", slot)) + copied + Placed(Reusing.Slice(8, 6), 0, 0)
+Reconstructed(entry InstructionEntry, owner TypeEntry, fresh Texts) Texts
+	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("@strict_rc_unshared(") > 0
+	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("%t7rp[1]") > 0
+	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("%t7rp[0]") is -1
+	MlirOwned(Rebuilt.function, 4).Reconstructed(Making, MlirInstances.Outer, Fresh) is Fresh
+	let name = Target(entry, owner)
+	if name is ""
+		return fresh
+	let old = "%t" + position + "old"
+	let checked = (function.Load(old, "%v_" + name), MlirAlone(function).Check(name, position))
+	let opened = checked + Placed(Reusing.Slice(1, 3), 0, 0)
+	let reused = Rewritten(entry, owner, name) + function.Store(old, "%r" + entry.payload(0))
+	opened + reused + Placed(Reusing.Slice(4, 2), 0, 0) + fresh + Placed(Reusing.Slice(6, 2), 0, 0)
+Target(entry InstructionEntry, owner TypeEntry) Text
+	Rebuilt.Target(Rebuilding(7), MlirInstances.Outer) is "moved"
+	MlirOwned(Rebuilt.function, 4).Target(Making, MlirInstances.Outer) is ""
+	MlirOwned(Rebuilt.function, 2).Target(Making, MlirInstances.Outer) is ""
+	let steps = function.method.instructions
+	let next = position + 1 < steps.Length then steps(position + 1) else entry
+	let isStored = (next.kind is Inliner.Store) and (next.payload(0) is entry.payload(0))
+	let isFull = entry.payload(5 + entry.payload(3)) >= MlirInstances(function, 0).Stored(owner).Length
+	let isBuilt = isFull and (MlirConstants(function, position).IsConstant is false)
+	let isOwned = isStored and isBuilt then IsOwned(next.texts(0)) else false
+	isOwned then next.texts(0) else ""
+Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
+	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved").Last.IndexOf("(%t7r1, %t7ra1)") > 0
+	let countPosition = 5 + entry.payload(3)
+	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
+	mutable lines = List(Text)
+	for MlirInstances(function, 0).Stored(owner)
+		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
+		let register = entry.payload(countPosition + 1 + chosen)
+		if IsKept(register, value.Name, name) is false
+			lines = lines + Placed(Putting, index, register)
+	lines
+Placed(lines Texts, slot Number, register Number) Texts
+	Rebuilt.Placed(Putting, 1, 5)(1) is "    %t7ra1 = llvm.load %r5 : !llvm.ptr -> f64"
+	for lines
+		value.Replace("#", position to Text).Replace("$", slot to Text).Replace("&", register to Text)
+IsKept(register Number, member Text, name Text) Boolean
+	Rebuilt.IsKept(4, "shape", "moved")
+	Rebuilt.IsKept(5, "size", "moved") is false
+	let kinds = MlirKinds(function)
+	let writer = kinds.Writer(position, register)
+	let field = writer >= 0 then function.method.instructions(writer) else InstructionEntry.Return(0)
+	if (field.kind is not InstructionType.FieldLoad) or (field.texts(0) is not member)
+		return false
+	let source = kinds.Writer(writer, field.payload(1))
+	let loaded = source >= 0 then function.method.instructions(source) else field
+	(loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is name)

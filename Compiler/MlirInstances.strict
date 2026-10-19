@@ -29,12 +29,12 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 	if (TypeEntry.ShortName(typeName) is "File") or (MlirLayout(function).IsStruct(typeName) is false)
 		return function.Copied("%r" + entry.payload(5 + entry.payload(3) + 1), "%r" + entry.payload(0), Temp("o"))
 	let owner = function.TypeOf(typeName)
-	let members = Stored(owner)
 	let memory = MlirMemory(function, position)
-	mutable lines = memory.Allocated(members.Length, "o")
-	for members
+	mutable lines = memory.Allocated(Stored(owner).Length, "o")
+	for Stored(owner)
 		lines = lines + MemberValue(entry, owner, value, index)
-	lines + memory.Boxed(Temp("op"), "o", typeName) + function.Store(Temp("of"), "%r" + entry.payload(0))
+	let built = lines + memory.Boxed(Temp("op"), "o", typeName) + function.Store(Temp("of"), "%r" + entry.payload(0))
+	MlirOwned(function, position).Reconstructed(entry, owner, built)
 MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Number) Texts
 	MlirInstances(Shapes, 1).MemberValue(Built, Shapes.type, Shapes.type.members.First, 0).Length is 4
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames

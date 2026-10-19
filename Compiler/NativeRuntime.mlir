@@ -2565,13 +2565,33 @@
   // the old value of a local that only ever holds fresh values and never leaks (MlirOwned) dies when it is
   // overwritten: without a count it is freed at once and its block is the next one allocated of its size
   func.func private @strict_rc_dead(%old: f64, %new: f64) {
-    %zero = arith.constant 0 : i64
-    %zeroCount = arith.constant 0 : i32
     %oldPointer = func.call @strict_ptr(%old) : (f64) -> !llvm.ptr
     %object = llvm.ptrtoint %oldPointer : !llvm.ptr to i64
     %newPointer = func.call @strict_ptr(%new) : (f64) -> !llvm.ptr
     %kept = llvm.ptrtoint %newPointer : !llvm.ptr to i64
     %isSame = arith.cmpi eq, %object, %kept : i64
+    cf.cond_br %isSame, ^done, ^check
+  ^check:
+    %unshared = func.call @strict_rc_unshared(%old) : (f64) -> i1
+    cf.cond_br %unshared, ^dispose, ^done
+  ^dispose:
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %disposed = func.call @strict_rc_dispose(%object, %located#0, %located#2, %flags, %counter) : (i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
+    cf.br ^done
+  ^done:
+    return
+  }
+
+  // true for a small object no heap object counts, not pinned, not free and not on the GPU: a local proven to be
+  // its only holder (MlirOwned) may free it or write into it
+  func.func private @strict_rc_unshared(%value: f64) -> i1 {
+    %zero = arith.constant 0 : i64
+    %zeroCount = arith.constant 0 : i32
+    %no = arith.constant false
+    %pointer = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %pointer : !llvm.ptr to i64
     %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
     %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %shared = arith.cmpi ne, %busy, %zero : i64
@@ -2579,24 +2599,22 @@
     %enabled = llvm.load %enabledSlot : !llvm.ptr -> i64
     %disabled = arith.cmpi eq, %enabled, %zero : i64
     %blocked = arith.ori %shared, %disabled : i1
-    %skipped = arith.ori %blocked, %isSame : i1
-    cf.cond_br %skipped, ^done, ^locate
+    cf.cond_br %blocked, ^no, ^locate
   ^locate:
     %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
     %unset = llvm.mlir.zero : !llvm.ptr
     %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
-    %false = arith.constant false
-    %isSmall = arith.cmpi eq, %located#3, %false : i1
+    %isSmall = arith.cmpi eq, %located#3, %no : i1
     %isStart = arith.cmpi eq, %located#1, %object : i64
     %found2 = arith.andi %found, %isSmall : i1
     %usable = arith.andi %found2, %isStart : i1
-    cf.cond_br %usable, ^counter, ^done
+    cf.cond_br %usable, ^counter, ^no
   ^counter:
     %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %count = llvm.load %counter : !llvm.ptr -> i32
     %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %isCounted = arith.cmpi ne, %count, %zeroCount : i32
-    %markerSlot = llvm.getelementptr %oldPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %markerSlot = llvm.getelementptr %pointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %marker = llvm.load %markerSlot : !llvm.ptr -> i64
     %freeMarker = arith.constant -1 : i64
     %isFree = arith.cmpi eq, %marker, %freeMarker : i64
@@ -2605,14 +2623,14 @@
     %pinned = arith.andi %flagByte, %pinnedFlag : i8
     %noFlags = arith.constant 0 : i8
     %isPinned = arith.cmpi ne, %pinned, %noFlags : i8
+    %bound = func.call @strict_rc_device_bound(%object, %located#2) : (i64, i64) -> i1
     %isLeft = arith.ori %isCounted, %isFree : i1
-    %ignored = arith.ori %isLeft, %isPinned : i1
-    cf.cond_br %ignored, ^done, ^dispose
-  ^dispose:
-    %disposed = func.call @strict_rc_dispose(%object, %located#0, %located#2, %flags, %counter) : (i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
-    cf.br ^done
-  ^done:
-    return
+    %isHeld = arith.ori %isPinned, %bound : i1
+    %ignored = arith.ori %isLeft, %isHeld : i1
+    %unshared = arith.cmpi eq, %ignored, %no : i1
+    return %unshared : i1
+  ^no:
+    return %no : i1
   }
   // STRICT_RC_CHECK marks everything from the roots before a reclaim: an object it would free that the marking
   // reached is still referenced somewhere the counts do not see, it is reported and kept
@@ -5228,6 +5246,57 @@
     llvm.store %length, %usedSlot : f64, !llvm.ptr
     return %list : f64
   }
+  // a collecting loop of a list destined method (MlirDestined) refills the dying list of an alone local: a new
+  // empty view onto its items, every push releases the element it overwrites; shared or packed items are left alone
+  llvm.mlir.global internal @strict_list_destination(0.0 : f64) : f64
+  func.func private @strict_list_destine(%old: f64) attributes {passthrough = ["alwaysinline"]} {
+    %slot = llvm.mlir.addressof @strict_list_destination : !llvm.ptr
+    llvm.store %old, %slot : f64, !llvm.ptr
+    return
+  }
+  func.func private @strict_list_into(%destination: f64, %capacity: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %zeroCount = arith.constant 0 : i32
+    %one = arith.constant 1 : i32
+    %unset = arith.cmpf oeq, %destination, %zero : f64
+    cf.cond_br %unset, ^fresh, ^check
+  ^check:
+    %view = func.call @strict_ptr(%destination) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %held = llvm.load %capacitySlot : !llvm.ptr -> f64
+    %isGrowable = arith.cmpf ogt, %held, %zero : f64
+    %holderAddress = llvm.ptrtoint %holder : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%holderAddress) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unknown = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
+    %usable = arith.andi %found, %isGrowable : i1
+    cf.cond_br %usable, ^counted, ^fresh
+  ^counted:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %viewAddress = llvm.ptrtoint %view : !llvm.ptr to i64
+    %isOwnView = arith.cmpi eq, %viewAddress, %located#1 : i64
+    %expected = arith.select %isOwnView, %zeroCount, %one : i32
+    %isAlone = arith.cmpi eq, %count, %expected : i32
+    cf.cond_br %isAlone, ^reuse, ^fresh
+  ^reuse:
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %zero, %usedSlot : f64, !llvm.ptr
+    %bytes = arith.constant 16 : i64
+    %refilled = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    llvm.store %zero, %refilled : f64, !llvm.ptr
+    %refilledHolder = llvm.getelementptr %refilled[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %holderBits, %refilledHolder : f64, !llvm.ptr
+    func.call @strict_rc_written(%refilledHolder) : (!llvm.ptr) -> ()
+    %result = func.call @strict_bits(%refilled) : (!llvm.ptr) -> f64
+    return %result : f64
+  ^fresh:
+    %created = func.call @strict_list_new(%capacity, %zero) : (f64, f64) -> f64
+    return %created : f64
+  }
   func.func private @strict_list_push(%list: f64, %element: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
@@ -5262,8 +5331,18 @@
     %items = func.call @strict_ptr(%itemsBits) : (f64) -> !llvm.ptr
     %at = arith.fptosi %used : f64 to i64
     %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %replaced = llvm.load %slot : !llvm.ptr -> i64
     llvm.store %element, %slot : f64, !llvm.ptr
     func.call @strict_gc_written(%slot) : (!llvm.ptr) -> ()
+    %noneReplaced = arith.constant 0 : i64
+    %isReplacing = arith.cmpi ne, %replaced, %noneReplaced : i64
+    cf.cond_br %isReplacing, ^released, ^counted
+  ^released:
+    %down = arith.constant -1 : i32
+    %container = func.call @strict_rc_container(%slot) : (!llvm.ptr) -> i64
+    func.call @strict_rc_add(%replaced, %container, %down) : (i64, i64, i32) -> ()
+    cf.br ^counted
+  ^counted:
     %next = arith.addf %used, %one : f64
     llvm.store %next, %usedSlot : f64, !llvm.ptr
     llvm.store %next, %view : f64, !llvm.ptr
@@ -6175,8 +6254,88 @@
   func.func private @strict_flat_length(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
     %single = llvm.load %block : !llvm.ptr -> f32
-    %count = arith.extf %single : f32 to f64
+    %signed = arith.extf %single : f32 to f64
+    %negative = arith.negf %signed : f64
+    %none = arith.constant 0.0 : f64
+    %isNegative = arith.cmpf olt, %signed, %none : f64
+    %count = arith.select %isNegative, %negative, %signed : f64
     return %count : f64
+  }
+  // a cached flat constant is pinned and its count negated, so no caller hands it on as a destination
+  func.func private @strict_flat_pin(%flat: f64) {
+    func.call @strict_pin(%flat) : (f64) -> ()
+    %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
+    %single = llvm.load %block : !llvm.ptr -> f32
+    %negated = arith.negf %single : f32
+    llvm.store %negated, %block : f32, !llvm.ptr
+    return
+  }
+  // the dying flat value of an alone local (MlirDestined) becomes the block the next destined call writes into
+  llvm.mlir.global internal @strict_flat_destination(0.0 : f64) : f64
+  func.func private @strict_flat_destine(%old: f64) attributes {passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0.0 : f64
+    %slot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr
+    %unset = arith.cmpf oeq, %old, %zero : f64
+    cf.cond_br %unset, ^none, ^check
+  ^check:
+    %block = func.call @strict_ptr(%old) : (f64) -> !llvm.ptr
+    %single = llvm.load %block : !llvm.ptr -> f32
+    %nothing = arith.constant 0.0 : f32
+    %isOwn = arith.cmpf ogt, %single, %nothing : f32
+    %chosen = arith.select %isOwn, %old, %zero : f64
+    llvm.store %chosen, %slot : f64, !llvm.ptr
+    return
+  ^none:
+    llvm.store %zero, %slot : f64, !llvm.ptr
+    return
+  }
+  // in a loop refilling its own list, the old element is the destination of the destined call making the new one
+  // when only the list holds it (count 1): the slot keeps its block and nothing is allocated or released
+  func.func private @strict_flat_destine_element(%element: f64, %destination: f64, %iterated: f64) {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1 : i32
+    %slot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr
+    llvm.store %zero, %slot : f64, !llvm.ptr
+    %unset = arith.cmpf oeq, %destination, %zero : f64
+    %destinationPointer = func.call @strict_ptr(%destination) : (f64) -> !llvm.ptr
+    %iteratedPointer = func.call @strict_ptr(%iterated) : (f64) -> !llvm.ptr
+    %destinationAddress = llvm.ptrtoint %destinationPointer : !llvm.ptr to i64
+    %iteratedAddress = llvm.ptrtoint %iteratedPointer : !llvm.ptr to i64
+    %isOther = arith.cmpi ne, %destinationAddress, %iteratedAddress : i64
+    %skipped = arith.ori %unset, %isOther : i1
+    cf.cond_br %skipped, ^done, ^locate
+  ^locate:
+    %pointer = func.call @strict_ptr(%element) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %pointer : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unknown = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
+    %isStart = arith.cmpi eq, %located#1, %object : i64
+    %usable = arith.andi %found, %isStart : i1
+    cf.cond_br %usable, ^counted, ^done
+  ^counted:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %isListOnly = arith.cmpi eq, %count, %one : i32
+    %single = llvm.load %pointer : !llvm.ptr -> f32
+    %nothing = arith.constant 0.0 : f32
+    %isOwn = arith.cmpf ogt, %single, %nothing : f32
+    %isReusable = arith.andi %isListOnly, %isOwn : i1
+    %chosen = arith.select %isReusable, %element, %zero : f64
+    llvm.store %chosen, %slot : f64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_flat_into(%destination: f64, %count: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0.0 : f64
+    %unset = arith.cmpf oeq, %destination, %zero : f64
+    cf.cond_br %unset, ^fresh, ^given
+  ^given:
+    return %destination : f64
+  ^fresh:
+    %created = func.call @strict_flat_new(%count) : (f64) -> f64
+    return %created : f64
   }
   func.func private @strict_flat_list(%flat: f64) -> f64 {
     %zero = arith.constant 0.0 : f64

@@ -9,6 +9,8 @@ constant Turning = TypeEntry("Strict/Math/Turning", List(MemberEntry) + MemberEn
 constant Turned = InstructionEntry.Invoke(1, ("Strict/Math/Turning", "from", "Turning", "number"), 0, -1)
 constant Turns = MlirCouples(MlirFunction(List(TypeEntry) + Turning, Turning, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Turned))), 1)
 constant Listing = InstructionEntry(InstructionType.FieldLoad, "numbers", (1, 0, -1))
+constant Cells = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "other"), Listing, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"), InstructionEntry.LoadNumber(2, 1), InstructionEntry(InstructionType.IndexCall, "list0", (3, 2)), InstructionEntry.Return(3))
+constant Celled = MlirCouples(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("Cell", List(MemberEntry) + MemberEntry("other", "Strict/Math/Tripling", List(InstructionEntry), false), "Strict/Number", Cells)), 1)
 constant Listed = MlirCouples(MlirPairs.Sample.function, 2)
 constant Own = MlirCouples(MlirFunction(List(TypeEntry) + Sizing, Sizing, MethodEntry.CountingLoop), 0)
 IsCoupled(kind Text) Boolean
@@ -64,7 +66,7 @@ Aliased(entry InstructionEntry, kind Text) Texts
 	Sample.Aliased(Heights, "Sizing")(1) is "    %t2hv = func.call @strict_two_y(%t2hp) : (f64) -> f64"
 	Listed.Aliased(Listing, "Pairing")(1) is "    %t2hv = func.call @strict_two_list(%t2hp) : (f64) -> f64"
 	MlirCouples(MlirFlats.Sample.function, 2).Aliased(Listing, "Tripling")(1).IndexOf("@strict_flat_list(") > 0
-	let isListed = (entry.texts(0) is not "value") and MlirFlats(function, position).IsListed(kind)
+	let isListed = (entry.texts(0) is not "value") and MlirFlats(function, position).IsListed(kind) and (IsBlock is false)
 	if (entry.texts(0) is "value") or ((IsCoupled(kind) is false) and (isListed is false))
 		return function.Copied("%r" + entry.payload(1), "%r" + entry.payload(0), "%t" + position + "a")
 	let halves = Halves(function.TypeOf(TypeEntry.ShortName(kind)))
@@ -83,3 +85,31 @@ Unpacked Texts
 			let read = "    %tcouple" + index + " = func.call @strict_two_" + half + "(%tcouple) : (f64) -> f64"
 			lines = lines + read + function.Store("%tcouple" + index, "%v_" + value.Name)
 	lines
+IsFlatAlias(name Text) Boolean
+	Celled.IsFlatAlias("list0")
+	Celled.IsFlatAlias("other") is false
+	let steps = function.method.instructions
+	mutable source = -1
+	for steps
+		let isNamed = value.texts.Length > 0 then value.texts(0) is name else false
+		if isNamed and (value.kind is not in (Inliner.Store, InstructionType.IndexCall))
+			return false
+		let isStore = isNamed and (value.kind is Inliner.Store)
+		source = isStore then (source is -1 then MlirKinds(function).Writer(index, value.payload(0)) else -2) else source
+	IsFlatField(source)
+IsFlatField(at Number) Boolean
+	Celled.IsFlatField(1)
+	Celled.IsFlatField(0) is false
+	MlirFlats(Celled.function, 4).Indexed(Cells(4), MlirLists(Celled.function, 4))(2).IndexOf("flat_at(") > 0
+	let field = at >= 0 then function.method.instructions(at) else InstructionEntry.Return(0)
+	let isField = field.kind is InstructionType.FieldLoad
+	isField then MlirFlats(function, at).Count(MlirKinds(function).KindOf(at, field.payload(1))) > 0 else false
+IsBlock Boolean
+	Celled.IsBlock
+	MlirCouples(Celled.function, 0).IsBlock is false
+	let steps = function.method.instructions
+	if position + 1 >= steps.Length
+		return false
+	let next = steps(position + 1)
+	let isStored = (next.kind is Inliner.Store) and (next.payload(0) is steps(position).payload(0))
+	isStored then IsFlatAlias(next.texts(0)) else false

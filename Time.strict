@@ -88,3 +88,9 @@ Ago(count Number, unit Text) Text
 	Moment.Ago(1, "day") is "about 1 day ago"
 	Moment.Ago(2, "hour") is "about 2 hours ago"
 	"about " + count + " " + unit + (count is 1 then "" else "s") + " ago"
++(duration Duration) Time
+	Moment + Duration.Day is Time(1700086400)
+	Time(seconds + duration.seconds)
+-(earlier Time) Duration
+	Time(1700000090) - Moment is Duration(90)
+	Duration(seconds - earlier.seconds)

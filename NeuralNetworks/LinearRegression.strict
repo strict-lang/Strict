@@ -35,8 +35,8 @@ Error(line Numbers) Number
 	sum / Inputs.Length
 Exact Numbers
 	LinearRegression.Exact.First.Round(4) is 2.0006
-	let meanInput = Inputs.Sum / Inputs.Length
-	let meanTarget = Targets.Sum / Targets.Length
+	let meanInput = Inputs.Average
+	let meanTarget = Targets.Average
 	mutable covariance = 0
 	mutable variance = 0
 	for Inputs

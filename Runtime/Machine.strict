@@ -56,8 +56,7 @@ Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmVal
 	Hello.Bound(Texts, VmValue.OfText("ab"), Doubler.methods.First, List(VmValue), VmValue.None).Last.text is "ab"
 	let start = Frame.MembersSlot + type.members.Length
 	let end = start + method.parameters.Length
-	let isSame = type.Name is instance.kind
-	let ownership = isSame then 2 else IsOwned(type, instance.kind) then 1 else 0
+	let ownership = Ownership(type, instance.kind)
 	let indexed = Indexed(method, arguments)
 	for end > method.Slots then end else method.Slots
 		let found = index < start then Member(type, instance, index, ownership, prototype) else VmValue.None
@@ -99,14 +98,18 @@ MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 		return Natives(types).Initial(member)
 	if owner.Name is instance.kind
 		return instance.Member(index)
-	IsOwned(owner, instance.kind) then instance.Member(index) else instance.As(member.typeName)
-IsOwned(type TypeEntry, kind Text) Boolean
-	Hello.IsOwned(Paired, "Strict/Pair(Number)")
-	Hello.IsOwned(Paired, "Strict/Other") is false
-	Hello.IsOwned(Paired, "List")
-	if kind is "List"
-		return true
-	TypeEntry.ShortName(type.Name).Split("(").First is TypeEntry.ShortName(kind).Split("(").First
+	Ownership(owner, instance.kind) > 0 then instance.Member(index) else instance.As(member.typeName)
+Ownership(type TypeEntry, kind Text) Number
+	Hello.Ownership(Paired, "Strict/Pair(Number)") > 0
+	Hello.Ownership(Paired, "Strict/Other") is 0
+	Hello.Ownership(Paired, "List") is 1
+	Hello.Ownership(Doubler, "Strict/Doubler") is 2
+	Hello.Ownership(TypeEntry.Numbers, VmValue.Numbered.kind) is 1
+	Hello.Ownership(TypeEntry("Strict/List", List(MemberEntry), List(MethodEntry)), "Strict/List") is 1
+	if (type.Name is kind) and (TypeEntry.ShortName(type.Name).Split("(").First is not "List")
+		return 2
+	let base = TypeEntry.ShortName(type.Name).Split("(").First
+	(kind is "List") or (base is TypeEntry.ShortName(kind).Split("(").First) then 1 else 0
 Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
 	Machine(Frame.Doubling, isTracing = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42

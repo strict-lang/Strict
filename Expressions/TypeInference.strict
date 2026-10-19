@@ -82,7 +82,7 @@ MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
 	let precedence = node.Kind is "MethodCall" then SyntaxNode("Binary", node.text).Precedence else 0
 	if (precedence >= 11) and (precedence < 20) or (types.MethodsOf(instanceType).Count(node.text) > 1)
 		return ArithmeticType(SyntaxNode("Binary", node.text, node.children), scope, current)
-	let type = node.text is "value" then instanceType else types.MemberType(instanceType, node.text)
+	let type = Overloads(types).Typed(node, instanceType, value, scope, current)
 	let isMember = (node.text is "value") or Indexing(types).IsIndexed(instanceType, node.text, node.children.Length - 1)
 	(node.Kind is "MethodCall") and isMember then types.ElementType(type) else type
 ImplicitValueType(name Text, scope Scope) Text

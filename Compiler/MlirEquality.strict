@@ -1,5 +1,6 @@
 has function MlirFunction
 has position Number
+constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual)
 constant Built = InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1)
 constant Same = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Built, InstructionEntry.Binary(InstructionType.Equal, (1, 1)))))
 constant ListSignature = " : (f64, f64, (f64, f64) -> f64) -> f64"
@@ -18,7 +19,7 @@ Handles(entry InstructionEntry) Boolean
 		return true
 	let kind = ComparedKind(entry, false)
 	let isValue = (kind is in (Packed + "Error")) or kind.StartsWith("List(") or MlirLayout(function).IsStruct(kind)
-	isValue and (entry.kind is in (InstructionType.Equal, InstructionType.NotEqual))
+	isValue and (entry.kind is in Comparisons)
 ComparedKind(entry InstructionEntry, isText Boolean) Text
 	MlirEquality(Same, 2).ComparedKind(Same.method.instructions(2), true) is "Text"
 	MlirEquality(Same, 2).ComparedKind(Same.method.instructions(2), false) is "Shape"
@@ -34,7 +35,7 @@ ComparedKind(entry InstructionEntry, isText Boolean) Text
 	isText then "Text" else left
 Compared(entry InstructionEntry) Texts
 	MlirEquality(Same, 2).Compared(Same.method.instructions(2)).Length is 5
-	if entry.kind is not in (InstructionType.Equal, InstructionType.NotEqual)
+	if entry.kind is not in Comparisons
 		return List(Text) + MlirStatements(function, position).Unsupported("Text operator " + entry.kind)
 	let kinds = MlirKinds(function)
 	let isText = kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))

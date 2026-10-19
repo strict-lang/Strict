@@ -6,6 +6,10 @@ constant Labeling = Overloads(Labeler)
 constant LabelInference = TypeInference(Labeler, List(Scope) + KnownTypes.NoMembers)
 constant LabelsCall = SyntaxParser(Tokenizer("Labels((1, 0), 2)").Tokens).Parse
 constant LabelerLabels = SyntaxNode("Member", "Labels", SyntaxNode("Type", "Labeler"))
+constant Picker = KnownTypes(List(Text) + "Picker", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Mixed", "Chosen"), ("Generics", "Generic")), List(Scope) + Scope(("Mixed", "Mixed types", "Chosen", "Chosen types"), ("items", "Generics", "items", "Generics")))
+constant Picking = Overloads(Picker)
+constant Mixing = SyntaxParser(Tokenizer("p.Mixed((1, 2))").Tokens).Parse
+constant Choosing = SyntaxParser(Tokenizer("p.Chosen((\"a\", \"b\"))").Tokens).Parse
 constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
 Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Text") is 0
@@ -68,3 +72,25 @@ Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) 
 	let start = node.Kind is in ("Member", "MethodCall") then 1 else 0
 	for Range(start, node.children.Length)
 		inference.TypeOf(node.children(value), scope, current)
+Typed(node SyntaxNode, instanceType Text, inference TypeInference, scope Scope, current Scope) Text
+	Picking.Typed(Mixing, "Picker", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Numbers"
+	Picking.Typed(Choosing, "Picker", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Text"
+	Labeling.Typed(LabelerLabels, "Labeler", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "List(Numbers)"
+	if node.text is "value"
+		return instanceType
+	let position = types.names.Index(instanceType)
+	let declared = position < 0 then "" else types.methods(position).TypeOf(node.text)
+	if declared is not in ("Generic", "Generics")
+		return types.MemberType(instanceType, node.text)
+	let parameters = types.parameters(position).TypeOf(node.text + " types").Split(",")
+	let specialized = Specialized(declared, parameters, Arguments(node, inference, scope, current))
+	specialized is declared then types.MemberType(instanceType, node.text) else specialized
+Specialized(type Text, declared Texts, arguments Texts) Text
+	Picking.Specialized("Generics", ("Generics"), ("Numbers")) is "Numbers"
+	Picking.Specialized("Generic", ("Number", "Generics"), ("Number", "Texts")) is "Text"
+	Picking.Specialized("Generic", ("Number"), ("Number")) is "Generic"
+	let at = declared.Index("Generics") >= 0 then declared.Index("Generics") else declared.Index("Generic")
+	if (at < 0) or (at >= arguments.Length)
+		return type
+	let element = declared(at) is "Generics" then types.ElementType(arguments(at)) else arguments(at)
+	type is "Generics" then Instantiation(types).Plural(element) else element

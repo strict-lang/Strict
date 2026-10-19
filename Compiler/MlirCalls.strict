@@ -47,7 +47,9 @@ Shared(constructed Texts, target Text) Texts
 	MlirCalls(Hashes, 1).Shared(List(Text), "%r1").Length is 0
 	if MlirConstants(function, position).IsConstant is false
 		return constructed
-	MlirLists(function, position).Cached(constructed, Temp("of"), "strict_pin") + function.Store(Temp("r"), target)
+	let isFlat = MlirFlats(function, position).Count(function.method.instructions(position).texts(0)) > 0
+	let pin = isFlat then "strict_flat_pin" else "strict_pin"
+	MlirLists(function, position).Cached(constructed, Temp("of"), pin) + function.Store(Temp("r"), target)
 IsMemberValue(entry InstructionEntry, type TypeEntry) Boolean
 	MlirCalls(Hashes, 1).IsMemberValue(Hashed, Hash) is false
 	let layout = MlirLayout(function)
@@ -70,7 +72,8 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let helper = NativeHelper(entry, decoder)
 	if helper is not ""
 		return MlirNatives(function, position).Emitted(entry, type, helper)
-	MlirGrouped(function, position).Kept(Compiled(entry, decoder, type, count), entry.payload(0))
+	let compiled = MlirDestined(function, position).Destined(entry, Compiled(entry, decoder, type, count))
+	MlirGrouped(function, position).Kept(compiled, entry.payload(0))
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 6
 	let callee = decoder.Callee(type)

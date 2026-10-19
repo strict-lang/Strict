@@ -1,4 +1,5 @@
 has function MlirFunction
+constant Indexing = (InstructionType.IndexCall, InstructionType.FieldLoad)
 constant Passed = InstructionEntry.Invoke(2, ("Strict/Shape", "Passed", "Strict/Boolean"), List(Number), -1)
 constant NewShape = InstructionEntry.Invoke(6, ("Strict/Shape", "from", "Strict/Shape", "width"), 4, -1)
 constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (5, 6, -1))
