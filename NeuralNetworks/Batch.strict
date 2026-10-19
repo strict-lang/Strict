@@ -16,7 +16,7 @@ Sums(input Numbers) Numbers
 	Batch(Blocks.Rows("four"), List(Number) + 0).Sums(Prompt)(637).IsNearlyEqual(5.001, 0.5)
 	Batch(Blocks.Rows("six"), List(Number) + 0).Sums(Prompt)(500).IsNearlyEqual(-3.413, 0.2)
 	let width = weights.First.Length
-	if (input.Length is width) and (biases.Length is weights.Length)
+	if input.Length is width
 		return Layer(weights, biases).Sums(input)
 	let rows = weights.Length
 	for rows * input.Length / width

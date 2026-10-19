@@ -38,7 +38,7 @@ Sums(input Numbers) Numbers
 	Sixes.Sums(Gpt2Block.Added(Fours.weights.First, Sixes.weights.First)).Last.IsNearlyEqual(-71957.5, 1000)
 	Eights.Sums(Gpt2Block.Added(Eights.weights.First, Eights.weights.Last)).Last.IsNearlyEqual(25678.23355948925, 30)
 	for weights
-		Summed(value, input) + biases(index)
+		Summed(value, input) + biases(index % biases.Length)
 Summed(row Numbers, input Numbers) Number
 	Halves.Summed((1, 2), (1, 3)) is 7
 	mutable sum = 0

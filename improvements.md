@@ -22,7 +22,8 @@ In priority order. Remove what is done, add what is found, keep each item to wha
       token), unseen Strict coding tasks with executable assertions and the time until they pass,
       weight bytes, peak VRAM, cold load and time to first token next to every perplexity.
       RTX 3080 baseline (10 GB, 2026-10-19, `Qwen3Benchmark` defaults, 10 prompt tokens, 100 steps):
-      Qwen3-0.6B Q4_K_M median 2.58 ms (387 tokens/s), batch 4 3.46 ms (1155 tokens/s), Q8_0 2.84 ms.
+      Qwen3-0.6B Q4_K_M median 2.58 ms (387 tokens/s), batch 4 3.46 ms (1155 tokens/s), Q8_0 2.84 ms; the
+      logits of one token row by row (2026-10-20): Q4_K_M 2.30 ms (435 tokens/s), Q8_0 2.63 ms.
 
     - **Training.** Done: BitFit for GPT-2 (`Gpt2Training`, `Finetuning`, README: 100 steps make GPT-2
       2.2 times better at Strict and English 27% better, distilgpt2 2.3 times better at Strict). Open:
