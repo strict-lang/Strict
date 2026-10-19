@@ -89,3 +89,14 @@ Substituted(instanceType Text, template Text) Text
 				return instanceType
 			arguments.Add(argument)
 	types.BaseName(instanceType) + "(" + Text.Combine(arguments, ", ") + ")"
+Filled(owner Text, type Text) Text
+	Pairing.Filled("Strict/List(Number)", "Dictionary(Generic, Boolean)") is "Dictionary(Number, Boolean)"
+	Pairing.Filled("Strict/List(Number)", "List(Generic)") is "List(Number)"
+	Pairing.Filled("Strict/Dictionary(Text, Number)", "List(Generic)") is "List(Generic)"
+	Pairing.Filled("Strict/List(Number)", "Number") is "Number"
+	let open = owner.IndexOf("(")
+	if (open < 0) or (owner.IndexOf(",") > 0) or (type.IndexOf("Generic") < 0)
+		return type
+	let argument = owner.Substring(open + 1, owner.Length - open - 2)
+	let first = type.Replace("(Generic)", "(" + argument + ")").Replace("(Generic, ", "(" + argument + ", ")
+	first.Replace(", Generic)", ", " + argument + ")").Replace(", Generic,", ", " + argument + ",")

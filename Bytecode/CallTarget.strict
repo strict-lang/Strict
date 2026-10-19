@@ -111,11 +111,12 @@ FullName(type Text) Text
 	Plain.FullName("Helper") is "Strict/Examples/Helper"
 	Plain.FullName("None") is "None"
 	Plain.FullName("Other") is Plain.FullName(Plain.TypeName)
+	CallTarget(NoTypes, Greeter, "Strict/List(Number)", List(Text)).FullName("List(Generic)") is "Strict/List(Number)"
 	if type is in ("None", "Other", TypeName)
 		return type is "None" then type else fullName
-	if types.IsPlural(type)
-		return "Strict/List(" + types.ElementType(type) + ")"
-	PackageType(type) is "" then "Strict/" + type else PackageType(type)
+	let filled = Instantiation(types).Filled(fullName, type)
+	let plural = types.IsPlural(filled) then "Strict/List(" + types.ElementType(filled) + ")" else ""
+	plural is "" then (PackageType(filled) is "" then "Strict/" + filled else PackageType(filled)) else plural
 PackageType(type Text) Text
 	Plain.PackageType("Helper") is "Strict/Examples/Helper"
 	Plain.PackageType("Number") is ""
