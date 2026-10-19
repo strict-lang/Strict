@@ -15,8 +15,10 @@ constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, "
 Width(source Text) Text
 	Halving.Width("numbers") is "16"
 	Doubling.Width("numbers") is ""
+	MlirWidths(MlirFunction(Halving.function, Packing = "for 16 numbers 8"), 2).Width("numbers") is "8"
 	let parts = function.Packing.Split(" ")
-	parts.First is source then parts.Last else ""
+	let at = parts.Index(source)
+	at < 0 then "" else parts(at + 1)
 Element(source Text) Text
 	Halving.Element("numbers") is "f16"
 	(Quartering.Element("numbers"), Fours.Element("numbers"), Sixes.Element("numbers")) is ("i8", "f32", "f32")

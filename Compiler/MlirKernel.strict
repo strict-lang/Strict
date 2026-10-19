@@ -97,7 +97,7 @@ Sources Texts
 			names.Add(entry.texts(0))
 	names
 Versioned Texts
-	Text.Combine(Doubling.Versioned).IndexOf("cf.cond_br %f2ok1, ^floop2fast, ^loop2generic") > 0
+	Text.Combine(Doubling.Versioned).IndexOf("cf.cond_br %f2ok1, ^floop2packed, ^loop2generic") > 0
 	Doubling.Versioned.Last is "  ^loop2generic:"
 	Calling.Versioned.Length is 0
 	Text.Combine(Summing.Versioned).IndexOf("cf.cond_br %f1ok1, ^floop1packed, ^loop1generic") > 0
