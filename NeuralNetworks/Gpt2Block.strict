@@ -36,10 +36,31 @@ Cached(input Numbers) Gpt2Block
 	Gpt2Block(value, keys = keys + keyed, values = values + valued, queries = Safetensors.Part(combined, 0, size, 1))
 Output(input Numbers) Numbers
 	Tiny.Cached(Embedded).Output(Embedded).Length is 12
+	let attended = Attended(input)
+	Contracted(attended, Activated(attended))
+Attended(input Numbers) Numbers
+	Tiny.Cached(Embedded).Attended(Embedded).Length is 12
 	let merged = Attention(queries, keys, values, Heads, Heads, queries.Length / Heads, 1).Merged
-	let attended = Added(input, projection.Sums(merged))
-	let hidden = expansion.Sums(Normalized(attended, mlpGain, mlpBias))
-	Added(attended, contraction.Sums(Gelu(hidden)))
+	Added(input, projection.Sums(merged))
+Activated(attended Numbers) Numbers
+	Tiny.Activated(Embedded).Length is 48
+	Gelu(expansion.Sums(Normalized(attended, mlpGain, mlpBias)))
+Contracted(attended Numbers, activated Numbers) Numbers
+	Tiny.Contracted(Embedded, Tiny.Activated(Embedded)).Length is 12
+	Added(attended, contraction.Sums(activated))
+Vectors List(Numbers)
+	Tiny.Vectors.Length is 8
+	Tiny.Vectors(2).Length is 36
+	let combined = (attentionGain, attentionBias, attention.biases, projection.biases)
+	combined + (mlpGain, mlpBias, expansion.biases, contraction.biases)
+Changed(vectors List(Numbers), first Number) Gpt2Block
+	Tiny.Changed(Tiny.Vectors, 0).Vectors is Tiny.Vectors
+	let combine = Layer(attention.weights, vectors(first + 2))
+	let project = Layer(projection.weights, vectors(first + 3))
+	let expand = Layer(expansion.weights, vectors(first + 6))
+	let contract = Layer(contraction.weights, vectors(first + 7))
+	let second = (vectors(first + 4), vectors(first + 5))
+	Gpt2Block(vectors(first), vectors(first + 1), combine, project, second(0), second(1), expand, contract)
 Normalized(input Numbers, gain Numbers, bias Numbers) Numbers
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).First.IsNearlyEqual(-1.2247356859083902)
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).Last.IsNearlyEqual(2.2247356859083902)

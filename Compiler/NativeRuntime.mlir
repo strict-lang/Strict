@@ -9963,7 +9963,8 @@
     return %total : i64
   }
   // strict_device_attention takes a block of 256 threads per sequence, group of keys and 128 rows of tokens and heads,
-  // when one warp holds all tokens (decoding) a group gets a block per 128 positions (at most 16, 512 blocks in all)
+  // up to 4 warps of tokens (decoding, verifying drafts) get a block per tile of a warp and 128 positions (at most 16,
+  // 512 blocks in all)
   func.func private @strict_gpu_attention_threads(%count: i64, %values: !llvm.ptr) -> i64 {
     %one = arith.constant 1 : i64
     %sixteen = arith.constant 16 : i64
@@ -9992,7 +9993,13 @@
     %tokenBlocks = arith.divui %tokensUp, %blockTokens : i64
     %sequenceGroups = arith.muli %sequences, %groups : i64
     %promptBlocks = arith.muli %sequenceGroups, %tokenBlocks : i64
-    %decoding = arith.cmpi sle, %tokens, %warpTokens : i64
+    %two = arith.constant 2 : i64
+    %decodeTokens = arith.shli %warpTokens, %two : i64
+    %decoding = arith.cmpi sle, %tokens, %decodeTokens : i64
+    %spareTile = arith.subi %warpTokens, %one : i64
+    %tileTokensUp = arith.addi %tokens, %spareTile : i64
+    %tiles = arith.divui %tileTokensUp, %warpTokens : i64
+    %tileSlots = arith.muli %sequenceGroups, %tiles : i64
     %keysSlot = llvm.getelementptr %values[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %keysList = llvm.load %keysSlot : !llvm.ptr -> f64
     %keysLength = func.call @strict_list_length(%keysList) : (f64) -> f64
@@ -10005,10 +10012,10 @@
     %parts = arith.shrui %positionsUp, %seven : i64
     %mostParts = arith.minui %parts, %sixteen : i64
     %allPartials = arith.constant 512 : i64
-    %partialsEach = arith.divui %allPartials, %sequenceGroups : i64
+    %partialsEach = arith.divui %allPartials, %tileSlots : i64
     %fewerParts = arith.minui %mostParts, %partialsEach : i64
     %splits = arith.maxui %fewerParts, %one : i64
-    %decodeBlocks = arith.muli %sequenceGroups, %splits : i64
+    %decodeBlocks = arith.muli %tileSlots, %splits : i64
     %blocks = arith.select %decoding, %decodeBlocks, %promptBlocks : i64
     %threads = arith.muli %blocks, %perBlock : i64
     return %threads : i64

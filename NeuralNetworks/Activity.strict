@@ -1,0 +1,57 @@
+has model Gpt2
+has sums List(Numbers) = List(Numbers)
+has count = 0
+Measured(tokenizer Gpt2Tokens, texts Texts) Activity
+	Activity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny, ("ab ab", "ab")).sums.First.Length is 96
+	Activity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny, ("ab ab", "ab")).count is 3
+	mutable current = Activity(model, Zeros)
+	for texts
+		current = Activity(model, current.sums, current.count).Continued(tokenizer.Encoded(value))
+	current
+Continued(tokens Numbers) Activity
+	Activity(Gpt2.Tiny, Activity(Gpt2.Tiny).Zeros).Continued((1, 2)).count is 2
+	mutable current = value
+	for tokens
+		current = current.Step(value, index)
+	current
+Step(token Number, position Number) Activity
+	Activity(Gpt2.Tiny, Activity(Gpt2.Tiny).Zeros).Step(1, 0).sums.Length is 1
+	mutable state = Gpt2Block.Added(model.tokens(token), model.positions(position))
+	mutable updated = List(Mutable(Gpt2Block))
+	mutable added = List(Mutable(Numbers))
+	for model.blocks
+		let cached = value.Cached(state)
+		let attended = cached.Attended(state)
+		let activated = cached.Activated(attended)
+		added.Add(Accumulated(sums(index), activated))
+		state = cached.Contracted(attended, activated)
+		updated.Add(cached)
+	Activity(Gpt2(model, blocks = updated, hidden = state), added, count + 1)
+Zeros List(Numbers)
+	Activity(Gpt2.Tiny).Zeros.First.Length is 96
+	for model.blocks
+		Layer.Halves.Zeros(2 * value.expansion.biases.Length)
+Accumulated(previous Numbers, activated Numbers) Numbers
+	Activity(Gpt2.Tiny).Accumulated((1, 0, 0, 3), (1, -2)) is (2, 4, 1, 1)
+	for previous
+		let activation = activated(index % activated.Length)
+		value + (index < activated.Length then activation * activation else activation)
+Means(block Number) Numbers
+	Activity(Gpt2.Tiny, List(Numbers) + (0, 0, 2, 4), 2).Means(0) is (1, 2)
+	let neurons = sums(block).Length / 2
+	for neurons
+		sums(block)(neurons + index) / count
+Scores(block Number) Numbers
+	Activity(Gpt2.Tiny, Activity(Gpt2.Tiny).Zeros).Continued((1, 2)).Scores(0).Length is 48
+	Activity(Gpt2.Tiny, List(Numbers) + (2, 10, 2, 4), 2).Scores(0).First is 0
+	Activity(Gpt2.Tiny, List(Numbers) + (2, 10, 2, 4), 2).Scores(0)(1) > 0
+	let weights = model.blocks(block).contraction.weights
+	let means = Means(block)
+	for means
+		(sums(block)(index) - count * value * value) * ColumnSquares(weights, index)
+ColumnSquares(rows List(Numbers), column Number) Number
+	Activity(Gpt2.Tiny).ColumnSquares(((1, 2), (3, 4)), 1) is 20
+	mutable squares = 0
+	for rows
+		squares = squares + value(column) * value(column)
+	squares

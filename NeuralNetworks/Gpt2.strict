@@ -9,10 +9,13 @@ Loaded(path Text, bits = 32) Gpt2
 	Tiny.tokens.Length is 5
 	Gpt2.Loaded("NeuralNetworks/tinygpt2.safetensors", 16).Step(1, 0).Next is 3
 	Gpt2.Loaded("NeuralNetworks/tinygpt2.safetensors", 8).Step(1, 0).Next is 3
-	let plain = Safetensors(path, bits)
-	let weights = plain.Entry("wte.weight") is "" then Safetensors(path, bits, "transformer.") else plain
+	let weights = Opened(path, bits)
 	let final = (weights.Values("ln_f.weight"), weights.Values("ln_f.bias"))
 	Gpt2(Blocks(weights), weights.Rows("wte.weight"), weights.Rows("wpe.weight"), final(0), final(1))
+Opened(path Text, bits Number) Safetensors
+	Tiny.Opened("NeuralNetworks/tinygpt2.safetensors", 32).prefix is ""
+	let plain = Safetensors(path, bits)
+	plain.Entry("wte.weight") is "" then Safetensors(path, bits, "transformer.") else plain
 Blocks(weights Safetensors) List(Gpt2Block)
 	Tiny.Blocks(Gpt2Block.Weights).Length is 1
 	mutable loaded = List(Mutable(Gpt2Block))
@@ -38,6 +41,21 @@ Logits(normed Numbers) Numbers
 	Tiny.Logits((1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)).Length is 5
 	for tokens
 		Layer.Summed(value, normed)
+Vectors List(Numbers)
+	Tiny.Vectors.Length is 10
+	Tiny.Vectors.Last is Tiny.bias
+	mutable vectors = List(Mutable(Numbers))
+	for blocks
+		vectors = vectors + value.Vectors
+	vectors.Add(gain)
+	vectors.Add(bias)
+	vectors
+Changed(vectors List(Numbers)) Gpt2
+	Tiny.Changed(Tiny.Vectors).Step(1, 0).Next is 3
+	mutable changed = List(Mutable(Gpt2Block))
+	for blocks
+		changed.Add(value.Changed(vectors, index * 8))
+	Gpt2(value, blocks = changed, gain = vectors(vectors.Length - 2), bias = vectors.Last)
 Without(removed Number) Gpt2
 	Tiny.Without(0).blocks.Length is 0
 	Tiny.Without(0).Step(1, 0).Scored.Length is 5

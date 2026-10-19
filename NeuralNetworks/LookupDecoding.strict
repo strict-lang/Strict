@@ -1,0 +1,42 @@
+has logger
+constant Story = "Alan Turing theorized that computers would one day become"
+Run(path Text, count = 200, bits = 4)
+	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
+	let model = Qwen3.Loaded(path, bits)
+	let code = Text.Combine(File("Math/Vector2.strict").ReadLines, "\n")
+	let copying = tokenizer.Encoded(code + "\n\n" + code.Substring(0, 300))
+	logger.Log(path + " warming up: " + Compared(model, tokenizer.Encoded(Story), 20))
+	logger.Log(path + " copying code: " + Compared(model, copying, count))
+	logger.Log(path + " writing prose: " + Compared(model, tokenizer.Encoded(Story), count))
+	for (1, 2, 4, 8, 16)
+		let verified = Verified(model.Prefilled(copying, 0), copying.Length, value)
+		logger.Log("verifying " + value + " tokens after " + copying.Length + ": " + verified + " ms")
+Verified(prefilled Qwen3, start Number, count Number) Number
+	LookupDecoding(Logger).Verified(Qwen3.Tiny.Prefilled((1, 2), 0), 2, 2) > 0
+	let block = Safetensors.Part((1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2), 0, count, 1)
+	mutable current = prefilled
+	mutable fastest = 1000
+	for 10
+		let started = Process.Elapsed
+		current = current.Steps(block, Qwen3.Positions(start + index * count, count), 1)
+		current = current.Nexts.First >= 0 then current else prefilled
+		fastest = (Process.Elapsed - started).Clamp(0, fastest)
+	(fastest * 1000).Round(2)
+Compared(model Qwen3, prompt Numbers, count Number) Text
+	LookupDecoding(Logger).Compared(Qwen3.Tiny, (1, 2, 3), 6).StartsWith("same tokens")
+	let prefilled = model.Prefilled(prompt, 0)
+	let started = Process.Elapsed
+	let finished = Speculation(prefilled, prompt, prefilled.Next).Finished(count)
+	let middle = Process.Elapsed
+	let plain = Generation(model.Prefilled(prompt, 0)).Continued(prompt.Length, count)
+	let ended = Process.Elapsed
+	let drafted = Safetensors.Part(finished.context, prompt.Length, count, 1)
+	let speed = (count / (middle - started)).Round(1) + " instead of " + (count / (ended - middle)).Round(1) + " tokens/s"
+	Agreement(drafted, plain) + ", " + (count / finished.steps).Round(2) + " tokens per step, " + speed
+Agreement(drafted Numbers, plain Numbers) Text
+	LookupDecoding(Logger).Agreement((1, 2), (1, 2)) is "same tokens"
+	LookupDecoding(Logger).Agreement((1, 2, 3), (1, 4, 3)) is "same tokens up to 1"
+	for drafted
+		if value is not plain(index)
+			return "same tokens up to " + index
+	"same tokens"

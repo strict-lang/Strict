@@ -1,0 +1,21 @@
+has logger
+constant Tuning = Finetuning(Logger)
+Run(path Text, steps = 100, length = 256)
+	let tokenizer = Gpt2Tokens.Folder(path)
+	let evaluation = Evaluation(logger)
+	let heldout = evaluation.Heldout(8)
+	let dropping = LayerDropping(logger)
+	mutable training = Gpt2Training.Loaded(path + "/model.safetensors", 16)
+	logger.Log(path + " before training: " + dropping.Reported(training.model, tokenizer, heldout))
+	let windows = Windows(tokenizer, evaluation.Calibration((steps / 2).Ceiling), length)
+	let started = Process.Elapsed
+	for steps
+		training = training.Trained(windows(index))
+	let seconds = (Process.Elapsed - started).Round(1)
+	logger.Log("after " + steps + " steps in " + seconds + " s: " + dropping.Reported(training.model, tokenizer, heldout))
+Windows(tokenizer Gpt2Tokens, texts List(Texts), length Number) List(Numbers)
+	Tuning.Windows(Gpt2Tokens.Tiny, List(Texts) + ("ab ab", "ab") + ("ab", "ab ab"), 1).Length is 4
+	Tuning.Windows(Gpt2Tokens.Tiny, List(Texts) + ("ab ab", "ab") + ("ab", "ab ab"), 1)(1).Length is 1
+	for 2 * texts.First.Length
+		let tokens = tokenizer.Encoded(texts(index % 2)((index / 2).Floor))
+		Safetensors.Part(tokens, 0, tokens.Length.Clamp(0, length), 1)

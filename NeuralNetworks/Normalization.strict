@@ -1,0 +1,48 @@
+has input Numbers
+has gain Numbers
+constant Sample = Normalization((1, 2, 4, 3, 1, 2), (1, 2, 0.5))
+constant Gradient = (0.1, -0.2, 0.3, 0.5, 0.4, -0.1)
+Normed Numbers
+	Sample.Normed(0).IsNearlyEqual(-1.0690415315)
+	Sample.Normed(4).IsNearlyEqual(-1.2247356859)
+	let centered = Gpt2Block.Centered(input, gain.Length)
+	let scales = Scales(centered)
+	for centered
+		value * scales((index / gain.Length).Floor)
+Scales(centered Numbers) Numbers
+	Sample.Scales((1, -1, 0, 2, -2, 0)).Last.IsNearlyEqual(0.612372)
+	for centered.Length / gain.Length
+		Qwen3Block.HeadScale(centered, index * gain.Length, gain.Length, 0.00001)
+Inputs(gradient Numbers) Numbers
+	Sample.Inputs(Gradient)(0).IsNearlyEqual(0.17753688616769236)
+	Sample.Inputs(Gradient)(5).IsNearlyEqual(-0.5715433200905821)
+	let normed = Normed
+	let scales = Scales(Gpt2Block.Centered(input, gain.Length))
+	let scaled = Scaled(gradient)
+	let firstMeans = Means(scaled)
+	let secondMeans = Means(scaled * normed)
+	for gradient.Length
+		let token = (index / gain.Length).Floor
+		scales(token) * (scaled(index) - firstMeans(token) - normed(index) * secondMeans(token))
+Scaled(gradient Numbers) Numbers
+	Sample.Scaled((1, 1, 1)) is (1, 2, 0.5)
+	for gradient
+		value * gain(index % gain.Length)
+Means(values Numbers) Numbers
+	Sample.Means((1, 2, 3, 4, 5, 6)) is (2, 5)
+	for values.Length / gain.Length
+		Gpt2Block.Mean(values, index * gain.Length, gain.Length)
+Gains(gradient Numbers) Numbers
+	Sample.Gains(Gradient)(1).IsNearlyEqual(-0.43644219779084115)
+	Biases(gradient * Normed)
+Biases(gradient Numbers) Numbers
+	Sample.Biases(Gradient).First.IsNearlyEqual(0.6)
+	Sample.Biases(Gradient).Last.IsNearlyEqual(0.2)
+	for gain.Length
+		Column(gradient, index)
+Column(values Numbers, column Number) Number
+	Sample.Column((1, 2, 3, 4, 5, 6), 1) is 7
+	mutable sum = 0
+	for values.Length / gain.Length
+		sum = sum + values(index * gain.Length + column)
+	sum
