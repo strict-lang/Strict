@@ -6488,6 +6488,57 @@
     llvm.store %zero, %slot : f64, !llvm.ptr
     return
   }
+  // a method returning a struct it constructs takes the dying block a caller hands it (MlirStructs) and rebuilds
+  // it in place, its prologue reads and clears the global right away so no other call sees it
+  llvm.mlir.global internal @strict_struct_destination(0.0 : f64) : f64
+  func.func private @strict_struct_destine(%old: f64) attributes {passthrough = ["alwaysinline"]} {
+    %slot = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr
+    llvm.store %old, %slot : f64, !llvm.ptr
+    return
+  }
+  // the old element of a list slot about to be overwritten is the destination when only the list holds it
+  func.func private @strict_struct_destine_element(%list: f64, %index: f64) {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i32
+    %pinnedFlag = arith.constant 32 : i8
+    %noFlags = arith.constant 0 : i8
+    %slot = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr
+    llvm.store %zero, %slot : f64, !llvm.ptr
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %below = arith.cmpf olt, %index, %zero : f64
+    %above = arith.cmpf oge, %index, %length : f64
+    %outside = arith.ori %below, %above : i1
+    cf.cond_br %outside, ^done, ^element
+  ^element:
+    %element = func.call @strict_list_get(%list, %index) : (f64, f64) -> f64
+    %bits = arith.bitcast %element : f64 to i64
+    %target = func.call @strict_rc_target(%bits) : (i64) -> i64
+    %isTarget = arith.cmpi ne, %target, %none : i64
+    cf.cond_br %isTarget, ^locate, ^done
+  ^locate:
+    %located:5 = func.call @strict_gc_locate(%target) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unknown = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
+    %isStart = arith.cmpi eq, %located#1, %target : i64
+    %usable = arith.andi %found, %isStart : i1
+    cf.cond_br %usable, ^counted, ^done
+  ^counted:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags : !llvm.ptr -> i8
+    %pinned = arith.andi %flagByte, %pinnedFlag : i8
+    %isPinned = arith.cmpi ne, %pinned, %noFlags : i8
+    %isListOnly = arith.cmpi eq, %count, %one : i32
+    %isFree = arith.xori %isPinned, %isListOnly : i1
+    %reusable = arith.andi %isFree, %isListOnly : i1
+    %chosen = arith.select %reusable, %element, %zero : f64
+    llvm.store %chosen, %slot : f64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
   // a struct rebuilt in place (MlirMembered) hands the old block of the member a destined call recomputes to that call,
   // when only the struct holds it (count 1) and it is no pinned constant
   func.func private @strict_flat_destine_member(%owner: f64, %member: f64) {

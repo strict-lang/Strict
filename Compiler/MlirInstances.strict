@@ -34,7 +34,7 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 	for Stored(owner)
 		lines = lines + MemberValue(entry, owner, value, index)
 	let built = lines + memory.Boxed(Temp("op"), "o", typeName) + function.Store(Temp("of"), "%r" + entry.payload(0))
-	MlirOwned(function, position).Reconstructed(entry, owner, built)
+	MlirStructs(function, position).Constructed(entry, owner, built)
 MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Number) Texts
 	MlirInstances(Shapes, 1).MemberValue(Built, Shapes.type, Shapes.type.members.First, 0).Length is 4
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames

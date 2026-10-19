@@ -134,7 +134,7 @@ Immutable values are rewritten in place natively whenever nobody else can see th
 | 50k `numbers = numbers.SwapRemoved(0)` on 100k numbers (the dying list swaps and shrinks in place instead of being copied) | O(n) per removal | 38 ms total |
 | 1M `matrix * step` (Matrix reads the other matrix in place instead of copying it into a list) | 6.6 s | 270 ms |
 | 1M `Quaternion.Lerp` (Quaternion packed into 32 bit floats, results now equal the Strict VM, a construction from exactly its count of numbers skips `Validated`) | 255 ms | 157 ms |
-| Strict VM: 100k `position = position + velocity` (frames write their slots in place, no `Validated` frame) | 1.07 s | 0.77 s |
+| Strict VM: 100k `position = position + velocity` (frames write their slots in place, no `Validated` frame, VM values rebuilt in the dying old value) | 1.07 s | 0.60 s |
 
 ## Open work
 See [improvements.md](improvements.md), in priority order.

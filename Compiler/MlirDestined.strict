@@ -41,7 +41,8 @@ Prologue Texts
 	Made.Prologue.Length is 3
 	Swapped.Prologue.Length is 0
 	MlirDestined(MlirListDestined.Copied.function, 0).Prologue is MlirListDestined.Taking
-	(IsDestined then Taking else List(Text)) + MlirListDestined(function, 0).Prologue
+	MlirDestined(MlirStructs.Made.function, 0).Prologue is MlirStructs.Taking
+	(IsDestined then Taking else List(Text)) + MlirListDestined(function, 0).Prologue + MlirStructs(function, 0).Prologue
 Started(temp Text, name Text) Texts
 	Made.Started("%t1", "listResult0").Last.IndexOf("@strict_flat_into(%flatDestination, %t1n)") > 0
 	Swapped.Started("%t1", "listResult0").Last.IndexOf("@strict_flat_new(%t1n)") > 0
@@ -79,7 +80,7 @@ Stored(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	let isStored = (next.kind is Inliner.Store) and (next.payload(0) is entry.payload(0))
 	let helper = isStored then Handed(entry) else ""
 	if helper is ""
-		return compiled
+		return MlirStructs(function, position).Destined(entry, next, compiled)
 	if IsAlone(next.texts(0)) is false
 		return compiled
 	let old = "%t" + position + "dold"

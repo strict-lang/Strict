@@ -1,0 +1,101 @@
+has function MlirFunction
+has position Number
+constant Sizing = MemberEntry("size", "Strict/Number", List(InstructionEntry), false)
+constant Making = MethodEntry("Made", List(MemberEntry) + Sizing, "Strict/Shape", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), InstructionEntry.Return(1)))
+constant Maker = TypeEntry("Strict/Shape", MlirFunction.Shape.members, List(MethodEntry) + Making)
+constant Made = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Making), 1)
+constant Calling = InstructionEntry.Invoke(1, ("Strict/Shape", "Made", "Strict/Shape", "size"), 0, -1)
+constant Forwarding = MethodEntry("Forwarded", List(MemberEntry) + Sizing, "Strict/Shape", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), Calling, InstructionEntry.Return(1)))
+constant Forwarder = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Forwarding), 1)
+constant Items = MemberEntry("items", "Strict/List(Strict/Shape)", List(InstructionEntry), false)
+constant Filling = MethodEntry("Filled", (Items, Sizing), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), Calling, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "items(0)"), InstructionEntry.Return(1)))
+constant Filler = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Filling), 1)
+constant Taking = ("    %structDestinationGlobal = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr", "    %structDestinationValue = llvm.load %structDestinationGlobal : !llvm.ptr -> f64", "    llvm.store %zero, %structDestinationGlobal : f64, !llvm.ptr", "    %structDestination = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", "    llvm.store %structDestinationValue, %structDestination : f64, !llvm.ptr")
+Consumes(depth Number) Boolean
+	Made.Consumes(0)
+	Forwarder.Consumes(0)
+	MlirStructs(MlirInstances.Shapes, 0).Consumes(0) is false
+	let returned = TypeEntry.ShortName(function.method.returnType)
+	let isStruct = MlirLayout(function).IsStruct(returned) and (MlirFlats(function, 0).Kind(returned) is "")
+	if (depth > 2) or (isStruct is false)
+		return false
+	for function.method.instructions
+		if (value.kind is InstructionType.Return) and IsSource(index, value.payload(0), depth)
+			return true
+	false
+IsSource(at Number, register Number, depth Number) Boolean
+	Made.IsSource(2, 1, 0)
+	Made.IsSource(2, 0, 0) is false
+	let writer = MlirKinds(function).Writer(at, register)
+	let entry = writer >= 0 then function.method.instructions(writer) else InstructionEntry.Return(0)
+	if entry.kind is not InstructionType.Invoke
+		return false
+	if entry.texts(1) is "from"
+		return (entry.texts(0) is function.method.returnType) and (MlirConstants(function, writer).IsConstant is false)
+	let callees = MlirModule(function.types, "").Called(function, writer)
+	callees.Length > 0 then MlirStructs(callees.First, 0).Consumes(depth + 1) else false
+Prologue Texts
+	Made.Prologue is Taking
+	MlirStructs(MlirInstances.Shapes, 0).Prologue.Length is 0
+	Consumes(0) then Taking else List(Text)
+IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
+	Made.IsRebuilt(Making.instructions(1), Maker)
+	MlirStructs(Made.function, 0).IsRebuilt(Making.instructions(0), Maker) is false
+	Made.IsRebuilt(Making.instructions(1), MlirInstances.Outer) is false
+	if entry.kind is not InstructionType.Invoke
+		return false
+	let next = MlirDestined(function, position).Next(entry)
+	let isFull = entry.payload(5 + entry.payload(3)) >= MlirInstances(function, 0).Stored(owner).Length
+	let isReturned = (next.kind is InstructionType.Return) and (next.payload(0) is entry.payload(0))
+	isReturned and isFull and (MlirConstants(function, position).IsConstant is false)
+Constructed(entry InstructionEntry, owner TypeEntry, built Texts) Texts
+	Text.Combine(Made.Constructed(Making.instructions(1), Maker, MlirOwned.Fresh)).IndexOf("%structDestination") > 0
+	MlirStructs(MlirInstances.Shapes, 1).Constructed(MlirInstances.Built, Maker, MlirOwned.Fresh) is MlirOwned.Fresh
+	let owned = MlirOwned(function, position)
+	if (owned.Target(entry, owner) is not "") or (IsRebuilt(entry, owner) is false) or (Consumes(0) is false)
+		return owned.Reconstructed(entry, owner, built)
+	let old = "%t" + position + "old"
+	let compared = "    %t" + position + "re = arith.cmpf une, " + old + ", %zero : f64"
+	let checked = (function.Load(old, "%structDestination"), compared)
+	let opened = checked + owned.Placed(MlirOwned.Reusing.Slice(1, 3), 0, 0)
+	let reused = owned.Rewritten(entry, owner, "") + function.Store(old, "%r" + entry.payload(0))
+	let fresh = owned.Placed(MlirOwned.Reusing.Slice(4, 2), 0, 0) + built
+	opened + reused + fresh + owned.Placed(MlirOwned.Reusing.Slice(6, 2), 0, 0)
+Destined(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
+	Forwarder.Destined(Calling, Forwarding.instructions(2), List(Text) + "call")(1) is Forwarder.Destine("sd")
+	Text.Combine(Filler.Destined(Calling, Filling.instructions(2), List(Text) + "call")).IndexOf("_destine_element(") > 0
+	Made.Destined(Calling, Making.instructions(2), List(Text) + "call") is ("call")
+	Text.Combine(MlirDestined(Filler.function, 1).Destined(Calling, List(Text) + "call")).IndexOf("_destine_element(") > 0
+	Text.Combine(MlirDestined(Forwarder.function, 1).Destined(Calling, List(Text) + "call")).IndexOf("struct_destine(") > 0
+	let callees = MlirModule(function.types, "").Called(function, position)
+	if (callees.Length is 0 then true else MlirStructs(callees.First, 0).Consumes(1) is false)
+		return compiled
+	let isForwarded = (next.kind is InstructionType.Return) and (next.payload(0) is entry.payload(0))
+	if isForwarded and Consumes(0)
+		return (function.Load("%t" + position + "sd", "%structDestination"), Destine("sd")) + compiled
+	Element(entry, next, compiled, TypeEntry.ShortName(callees.First.method.returnType))
+Element(entry InstructionEntry, next InstructionEntry, compiled Texts, returned Text) Texts
+	Made.Element(Calling, Making.instructions(2), List(Text) + "call", "Shape") is ("call")
+	if IsTarget(entry, next, returned) is false
+		return compiled
+	let parts = PayloadDecoder(next).ElementParts
+	let isNumber = "0123456789".IndexOf(parts(1).Substring(0, 1)) is not -1
+	let temp = "%t" + position + "s"
+	let literal = "    " + temp + "i = arith.constant " + parts(1) + ".0 : f64"
+	let index = isNumber then literal else function.Load(temp + "i", "%v_" + parts(1))
+	let destined = "    func.call @strict_struct_destine_element(" + temp + "l, " + temp + "i) : (f64, f64) -> ()"
+	(function.Load(temp + "l", "%v_" + parts(0)), index, destined) + compiled
+Destine(suffix Text) Text
+	Made.Destine("sd") is "    func.call @strict_struct_destine(%t1sd) : (f64) -> ()"
+	"    func.call @strict_struct_destine(%t" + position + suffix + ") : (f64) -> ()"
+IsTarget(entry InstructionEntry, next InstructionEntry, returned Text) Boolean
+	Filler.IsTarget(Calling, Filling.instructions(2), "Shape")
+	Filler.IsTarget(Calling, Filling.instructions(2), "Number") is false
+	Made.IsTarget(Calling, Making.instructions(2), "Shape") is false
+	let isStored = (next.kind is Inliner.Store) and (next.payload.Length is 2) and (next.payload(0) is entry.payload(0))
+	if (isStored then next.texts(0).IndexOf("(") > 0 else false) is false
+		return false
+	let kinds = MlirKinds(function)
+	let list = PayloadDecoder(next).ElementParts(0)
+	let element = function.TypeOf(TypeEntry.ShortName(kinds.ElementKind(kinds.VariableKind(position, list))))
+	(element.members.Length > 0) and (element.Name is function.TypeOf(TypeEntry.ShortName(returned)).Name)

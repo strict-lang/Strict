@@ -12,7 +12,7 @@ Destined(entry InstructionEntry, compiled Texts) Texts
 	let slot = at < 0 then -1 else Slot(at, entry.payload(0))
 	let name = slot < 0 then "" else Target(at, slot)
 	if name is ""
-		return compiled
+		return MlirStructs(function, position).Destined(entry, MlirDestined(function, position).Next(entry), compiled)
 	let temp = "%t" + position + "m"
 	let counted = "    " + temp + "s = arith.constant " + slot + ".0 : f64"
 	let destined = "    func.call @strict_flat_destine_member(" + temp + "o, " + temp + "s) : (f64, f64) -> ()"
