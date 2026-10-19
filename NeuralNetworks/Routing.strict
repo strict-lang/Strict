@@ -1,14 +1,18 @@
 has scores Numbers
-constant Sample = Routing((0.1, 0.5, 0.15, 0.25))
+has experts Number
+constant Sample = Routing((0.1, 0.5, 0.15, 0.25), 4)
+constant Pair = Routing((0.1, 0.5, 0.15, 0.25, 0.9, 0.2, 0.3, 0.1), 4)
 Ranks Numbers
 	Sample.Ranks is (3, 0, 2, 1)
-	Routing((0.2, 0.2)).Ranks is (0, 1)
+	Routing((0.2, 0.2), 2).Ranks is (0, 1)
+	Pair.Ranks is (3, 0, 2, 1, 0, 2, 1, 3)
 	for scores
-		let expert = index
+		let expert = index % experts
+		let first = index - expert
 		let own = value
 		mutable rank = 0
-		for scores
-			rank = rank + Ahead(value, index, own, expert)
+		for experts
+			rank = rank + Ahead(scores(first + index), index, own, expert)
 		rank
 Ahead(other Number, position Number, own Number, expert Number) Number
 	Sample.Ahead(0.5, 1, 0.1, 0) is 1
@@ -25,12 +29,14 @@ Earlier(position Number, expert Number) Number
 	position < expert then 1 else 0
 Chosen(used Number) Numbers
 	Sample.Chosen(2) is (1, 3)
+	Pair.Chosen(2) is (1, 3, 0, 2)
 	let ranks = Ranks
-	for used
-		let slot = index
+	for scores.Length / experts * used
+		let first = (index / used).Floor * experts
+		let slot = index % used
 		mutable expert = 0
-		for ranks
-			expert = expert + Matched(value, slot, index)
+		for experts
+			expert = expert + Matched(ranks(first + index), slot, index)
 		expert
 Matched(rank Number, slot Number, expert Number) Number
 	Sample.Matched(1, 1, 3) is 3

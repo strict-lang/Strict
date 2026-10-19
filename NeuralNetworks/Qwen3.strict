@@ -49,18 +49,20 @@ Step(token Number, position Number) Qwen3
 	Steps(List(Number) + token, List(Number) + position, 1)
 Positions(start Number, count Number) Numbers
 	Tiny.Positions(2, 3) is (2, 3, 4)
+	TinyMixture.Prefilled((1, 2, 3), 0, 4).hidden.Length is 8
 	for count
 		start + index
-Prefilled(prompt Numbers, start Number, chunk = 2048) Qwen3
+Prefilled(prompt Numbers, start Number, chunk = 8192) Qwen3
 	Prompted.Scored.Last.IsNearlyEqual(Tiny.Step(1, 0).Step(2, 1).Scored.Last)
 	Prompted.Prefilled((3, 4), 2).Next is Tiny.Step(1, 0).Step(2, 1).Step(3, 2).Step(4, 3).Next
 	TinyMixture.Prefilled((1, 2), 0).Next is TinyMixture.Step(1, 0).Step(2, 1).Next
 	Tiny.Prefilled((1, 2, 3), 0, 2).hidden.Length is 8
 	Tiny.Prefilled((1, 2, 3), 0, 2).Next is Tiny.Prefilled((1, 2, 3), 0).Next
 	mutable current = value
-	for (prompt.Length / chunk).Ceiling
-		let first = index * chunk
-		let count = (prompt.Length - first).Clamp(0, chunk)
+	let size = (chunk / blocks.First.experts.used).Ceiling
+	for (prompt.Length / size).Ceiling
+		let first = index * size
+		let count = (prompt.Length - first).Clamp(0, size)
 		current = current.Steps(Safetensors.Part(prompt, first, count, 1), Positions(start + first, count), 1)
 	current
 Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3

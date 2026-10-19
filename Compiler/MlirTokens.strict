@@ -4,9 +4,10 @@ constant Dotted = MethodEntry("Dot", (MemberEntry("row", "Strict/List(Number)", 
 constant Batched = MethodEntry("Sums", (MemberEntry("input", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("rows", "Strict/Number", List(InstructionEntry), false), MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry("count", "Strict/Number", List(InstructionEntry), false)), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "rows"), InstructionEntry.Binary(InstructionType.Modulo, (1, 2, 3)), InstructionEntry(InstructionType.IndexCall, "weights", (4, 3, -1)), InstructionEntry.LoadNumber(5, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "input"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "rows"), InstructionEntry.Binary(InstructionType.Divide, (7, 8, 9)), InstructionEntry.Invoke(10, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 9), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 11, "width"), InstructionEntry.Binary(InstructionType.Multiply, (10, 11, 12)), InstructionEntry.Invoke(13, ("Strict/Tokens", "Dot", "Strict/Number", "row", "first", "input", "start"), (4, 5, 6, 12), -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 13, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 15), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))
 constant Tokens = TypeEntry("Strict/Tokens", List(MemberEntry) + MemberEntry("weights", "Strict/List(Numbers)", List(InstructionEntry), false), (Batched, Dotted))
 constant Summing = MlirTokens(MlirFunction(List(TypeEntry) + Tokens, Tokens, Batched), 2)
+constant Grouped = MlirTokens(MlirFunction(List(TypeEntry) + Tokens, Tokens, MethodEntry("Grouped", Batched.parameters + MemberEntry("bases", "Strict/List(Number)", List(InstructionEntry), false), "Strict/List(Number)", Batched.instructions.Slice(0, 6) + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 20, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 21, "rows"), InstructionEntry.Binary(InstructionType.Divide, (20, 21, 22)), InstructionEntry.LoadNumber(26, 64), InstructionEntry.Binary(InstructionType.Divide, (22, 26, 27)), InstructionEntry.Invoke(23, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 27), InstructionEntry(InstructionType.IndexCall, "bases", (24, 23, -1)), InstructionEntry.Binary(InstructionType.Add, (24, 3, 25)), InstructionEntry(InstructionType.IndexCall, "weights", (4, 25, -1))) + Batched.instructions.Slice(7, 13))), 2)
 constant Dotting = Batched.instructions(15)
 constant Ends = (InstructionType.LoadVariableToRegister, InstructionType.Invoke, InstructionType.LoadVariableToRegister, InstructionType.Return)
-constant Signature = " : (!llvm.ptr, i64, f64, f64, f64, f64, f64) -> f64"
+constant Tile = 64
 constant Marker = "    // reads the dot products of strict_device_tokens"
 Call Number
 	Summing.Call is 15
@@ -16,7 +17,7 @@ Call Number
 	if MlirLoops(function, position).Collection is not ""
 		return -1
 	for Range(position + 1, function.method.LoopEndOf(position))
-		if Names(value).Length is 4
+		if Names(value).Length >= 4
 			return value
 	-1
 Names(at Number) Texts
@@ -29,9 +30,9 @@ Names(at Number) Texts
 	let row = Row(entry.payload(first), at)
 	let start = Start(entry.payload(first + 3), at)
 	let input = Variable(entry.payload(first + 2), at)
-	let isShared = (row.Length is 2) and (start.Length is 2) and (input is not "")
-	let isMatched = isShared and (row.Last is start.First) and IsZero(entry.payload(first + 1), at)
-	isMatched then (row.First, input, start.Last, row.Last) else List(Text)
+	let isShared = (row.Length >= 2) and (start.Length is 2) and (input is not "")
+	let isMatched = isShared and (row(1) is start.First) and IsZero(entry.payload(first + 1), at)
+	isMatched then (row.First, input, start.Last) + row.Slice(1, row.Length - 1) else List(Text)
 IsDotted(at Number) Boolean
 	Summing.IsDotted(15)
 	Summing.IsDotted(12) is false
@@ -60,8 +61,30 @@ Row(register Number, before Number) Texts
 	let read = function.method.instructions(writer < 0 then before else writer)
 	if (writer < 0) or (read.kind is not InstructionType.IndexCall)
 		return List(Text)
-	let rows = Indexed(groups.Writer(read.payload(1), writer), InstructionType.Modulo)
-	rows is "" then List(Text) else (read.texts(0), rows)
+	let rows = Ranged(groups.Writer(read.payload(1), writer))
+	rows.Length is 0 then rows else (List(Text) + read.texts(0)) + rows
+Ranged(at Number) Texts
+	Summing.Ranged(5) is List(Text) + "rows"
+	Grouped.Ranged(13) is ("rows", "bases")
+	Summing.Ranged(11).Length is 0
+	let rows = Indexed(at, InstructionType.Modulo)
+	if rows is not ""
+		return List(Text) + rows
+	let sum = function.method.instructions(at < 0 then position else at)
+	if (at < 0) or (sum.kind is not InstructionType.Add)
+		return List(Text)
+	let modulo = Indexed(MlirGroups(function, position).Writer(sum.payload(2), at), InstructionType.Modulo)
+	let bases = Based(sum.payload(1), at, modulo)
+	(modulo is "") or (bases is "") then List(Text) else (modulo, bases)
+Based(register Number, before Number, rows Text) Text
+	Grouped.Based(24, 13, "rows") is "bases"
+	Grouped.Based(24, 13, "width") is ""
+	let groups = MlirGroups(function, position)
+	let writer = groups.Writer(register, before)
+	let read = function.method.instructions(writer < 0 then before else writer)
+	if (writer < 0) or (read.kind is not InstructionType.IndexCall)
+		return ""
+	Tiled(groups.Writer(read.payload(1), writer)) is rows then read.texts(0) else ""
 Start(register Number, before Number) Texts
 	Summing.Start(12, 15) is ("rows", "width")
 	Summing.Start(4, 15).Length is 0
@@ -73,16 +96,31 @@ Start(register Number, before Number) Texts
 	let rows = Floored(groups.Writer(product.payload(1), writer))
 	let width = Variable(product.payload(2), writer)
 	(rows is "") or (width is "") then List(Text) else (rows, width)
+Floor(at Number) Number
+	Summing.Floor(12) is 11
+	Summing.Floor(11) is -1
+	let floor = function.method.instructions(at < 0 then position else at)
+	if (at < 0) or (floor.kind is not InstructionType.Invoke)
+		return -1
+	if floor.texts(1) is not "Floor"
+		return -1
+	MlirGroups(function, position).Writer(MlirDeviceCalls(function, at, function).Register(floor), at)
 Floored(at Number) Text
 	Summing.Floored(12) is "rows"
 	Summing.Floored(11) is ""
-	let floor = function.method.instructions(at < 0 then position else at)
-	if (at < 0) or (floor.kind is not InstructionType.Invoke)
+	Indexed(Floor(at), InstructionType.Divide)
+Tiled(at Number) Text
+	Grouped.Tiled(11) is "rows"
+	Summing.Tiled(12) is ""
+	let quotient = Floor(at)
+	let divide = function.method.instructions(quotient < 0 then position else quotient)
+	if (quotient < 0) or (divide.kind is not InstructionType.Divide)
 		return ""
-	if floor.texts(1) is not "Floor"
-		return ""
-	let instance = MlirDeviceCalls(function, at, function).Register(floor)
-	Indexed(MlirGroups(function, position).Writer(instance, at), InstructionType.Divide)
+	let groups = MlirGroups(function, position)
+	let tile = groups.Writer(divide.payload(2), quotient)
+	let tiles = function.method.instructions(tile < 0 then position else tile)
+	let isTile = (tile >= 0) and (tiles.payload is (divide.payload(2), 1, Tile))
+	isTile then Indexed(groups.Writer(divide.payload(1), quotient), InstructionType.Divide) else ""
 Indexed(at Number, kind Number) Text
 	Summing.Indexed(5, InstructionType.Modulo) is "rows"
 	Summing.Indexed(11, InstructionType.Modulo) is ""
@@ -102,41 +140,3 @@ IsZero(register Number, before Number) Boolean
 	let writer = MlirGroups(function, position).Writer(register, before)
 	let entry = function.method.instructions(writer < 0 then before else writer)
 	(writer >= 0) and (entry.kind is InstructionType.LoadConstantToRegister) and (entry.payload is (register, 1, 0))
-Devices(end Number) List(MlirFunction)
-	Summing.Devices(17).Length is 0
-	let call = Call
-	let before = MlirGpu.Devices(function, position + 1, call < 0 then end else call, 0)
-	call < 0 then before else before + MlirGpu.Devices(function, call + 1, end, 0)
-Sourced Texts
-	MlirTokens(MlirGpu.Doubling.function, 2).Sourced is ("%t2v", "1")
-	Summing.Sourced is ("%t2gb", "1")
-	let gpu = MlirGpu(function, position)
-	if Call >= 0
-		return (gpu.Temp("gb"), "1")
-	let collection = MlirLoops(function, position).Collection
-	let number = collection is "" then "0" else collection is "List(Number)" then "1" else "2"
-	(collection is "" then gpu.Temp("b") else gpu.Temp("v"), number)
-Launched Texts
-	Summing.Launched.Last is "  ^loop2kernel:"
-	if Call < 0
-		return List(Text)
-	let gpu = MlirGpu(function, position)
-	let biased = MlirBiased(function, position)
-	mutable lines = List(Mutable(Text))
-	mutable operands = gpu.Temp("gp") + ", " + gpu.Temp("gc")
-	for Names(Call)
-		lines = lines + function.Load(gpu.Temp("gh" + index), "%v_" + value)
-		operands = operands + ", " + gpu.Temp("gh" + index)
-	let call = "    " + gpu.Temp("gb") + " = func.call @strict_gpu_tokens(" + operands + ", " + biased.Operand + ")"
-	(lines + biased.Loaded + (call + Signature) + Checked) + biased.Fused
-Checked Texts
-	Summing.Checked.First is "    %t2gn = arith.cmpf une, %t2gb, %zero : f64"
-	let gpu = MlirGpu(function, position)
-	let check = "    " + gpu.Temp("gn") + " = arith.cmpf une, " + gpu.Temp("gb") + ", %zero : f64"
-	let branch = "    cf.cond_br " + gpu.Temp("gn") + ", ^loop" + position + "tokens, ^loop" + position + "host"
-	(check, branch, "  ^loop" + position + "tokens:")
-Read(at Number) Texts
-	Summing.Read(15).First is Marker
-	Summing.Read(15)(1).StartsWith("    %d15t = func.call @strict_device_element(%source, %bits, %at, %count)")
-	let read = MlirTyped(function.Float).Read("%d" + at + "t", "(%source, %bits, %at, %count)")
-	(Marker, read, function.Store("%d" + at + "t", "%r" + function.method.instructions(at).payload(0)))

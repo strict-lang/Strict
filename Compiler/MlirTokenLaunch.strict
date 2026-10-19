@@ -1,0 +1,52 @@
+has function MlirFunction
+has position Number
+constant Summing = MlirTokenLaunch(MlirTokens.Summing.function, 2)
+constant Grouped = MlirTokenLaunch(MlirTokens.Grouped.function, 2)
+constant Signature = " : (!llvm.ptr, i64, f64, f64, f64, f64, f64, f64) -> f64"
+Sourced Texts
+	MlirTokenLaunch(MlirGpu.Doubling.function, 2).Sourced is ("%t2v", "1")
+	Summing.Sourced is ("%t2gb", "1")
+	let gpu = MlirGpu(function, position)
+	if MlirTokens(function, position).Call >= 0
+		return (gpu.Temp("gb"), "1")
+	let collection = MlirLoops(function, position).Collection
+	let number = collection is "" then "0" else collection is "List(Number)" then "1" else "2"
+	(collection is "" then gpu.Temp("b") else gpu.Temp("v"), number)
+Launched Texts
+	Summing.Launched.Last is "  ^loop2kernel:"
+	let tokens = MlirTokens(function, position)
+	if tokens.Call < 0
+		return List(Text)
+	let gpu = MlirGpu(function, position)
+	let biased = MlirBiased(function, position)
+	mutable lines = List(Mutable(Text))
+	for tokens.Names(tokens.Call)
+		lines = lines + function.Load(gpu.Temp("gh" + index), "%v_" + value)
+	let call = "    " + gpu.Temp("gb") + " = func.call @strict_gpu_tokens(" + Operands + ")"
+	(lines + biased.Loaded + (call + Signature) + Checked) + biased.Fused
+Operands Text
+	Summing.Operands is "%t2gp, %t2gc, %t2gh0, %t2gh1, %t2gh2, %t2gh3, %zero, %zero"
+	Grouped.Operands is "%t2gp, %t2gc, %t2gh0, %t2gh1, %t2gh2, %t2gh3, %t2gh4, %zero"
+	let tokens = MlirTokens(function, position)
+	let gpu = MlirGpu(function, position)
+	let names = tokens.Names(tokens.Call)
+	mutable operands = gpu.Temp("gp") + ", " + gpu.Temp("gc")
+	for names
+		operands = operands + ", " + gpu.Temp("gh" + index)
+	operands + (names.Length is 4 then ", %zero, " else ", ") + MlirBiased(function, position).Operand
+Checked Texts
+	Summing.Checked.First is "    %t2gn = arith.cmpf une, %t2gb, %zero : f64"
+	let gpu = MlirGpu(function, position)
+	let check = "    " + gpu.Temp("gn") + " = arith.cmpf une, " + gpu.Temp("gb") + ", %zero : f64"
+	let branch = "    cf.cond_br " + gpu.Temp("gn") + ", ^loop" + position + "tokens, ^loop" + position + "host"
+	(check, branch, "  ^loop" + position + "tokens:")
+Devices(end Number) List(MlirFunction)
+	Summing.Devices(17).Length is 0
+	let call = MlirTokens(function, position).Call
+	let before = MlirGpu.Devices(function, position + 1, call < 0 then end else call, 0)
+	call < 0 then before else before + MlirGpu.Devices(function, call + 1, end, 0)
+Read(at Number) Texts
+	Summing.Read(15).First is MlirTokens.Marker
+	Summing.Read(15)(1).StartsWith("    %d15t = func.call @strict_device_element(%source, %bits, %at, %count)")
+	let read = MlirTyped(function.Float).Read("%d" + at + "t", "(%source, %bits, %at, %count)")
+	(MlirTokens.Marker, read, function.Store("%d" + at + "t", "%r" + function.method.instructions(at).payload(0)))
