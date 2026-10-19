@@ -8,6 +8,7 @@ constant Appending = BodyParser("Run", "\tvalues = values + 1").Block(1, 1).chil
 constant WritingLoop = BodyParser("Run", "\tfor 3", "\t\tvalues(index) = index").Block(1, 1).children(0)
 constant SharingLoop = BodyParser("Run", "\tfor values", "\t\tvalues(index) = index").Block(1, 1).children(0)
 constant BranchCopy = BodyParser("Run", "\tmutable other = (1, 2)", "\tlet saved = other", "\tif 1 > 2", "\t\tother(0) = 5", "\tother(1) = 6").Block(1, 1)
+constant Iterated = ListCodegen(LoopCodegen.Iterating.methods.values)
 constant Colored = ListCodegen(ConversionCodegen.Colored.values)
 constant AddColor = SyntaxNode("MethodCall", "Add", (ConversionCodegen.Pixels, ConversionCodegen.NewColor))
 Of(node SyntaxNode, block CodeBlock) CodeBlock
@@ -133,6 +134,7 @@ Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) Co
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Numbers", Declared).instructions.Length is 4
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Number", Declared).instructions.Length is 1
 	Plain.Argument(ValueCodegen.NoNode, 1, List(Text), Declared).instructions.Length is 1
+	Iterated.Argument(ValueCodegen.Ones, 0, ("List"), Declared).instructions(0).payload(3) is 2
 	let parameter = position < parameters.Length then parameters(position) else ""
 	let element = values.inference.types.ElementType(parameter) is values.TypeOf(node, block)
 	let wraps = values.inference.types.IsPlural(parameter) and element

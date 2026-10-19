@@ -4,6 +4,7 @@ constant Methods = (Scope(List(Text) + "Grow", List(Text) + "Count"), KnownTypes
 constant Parameters = (Scope(("Grow", "Grow types", "Grow required", "from", "from types"), ("area", "Area", "1", "size", "Size")), KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "width"))
 constant Shapes = (Scope(List(Text) + "Limit", List(Text) + "3"), KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant Sizing = ArgumentTypes(TypeInference(KnownTypes(("Count", "Area", "Size"), Members, Methods, Parameters), Shapes))
+constant Generics = ArgumentTypes(TypeInference(KnownTypes(("Range", "Generic"), (Scope(List(Text) + "start", List(Text) + "Number"), Scope(List(Text) + "type", List(Text) + "Range")), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers)), Shapes))
 constant Grown = SyntaxParser(Tokenizer("count.Grow(count)").Tokens).Parse
 constant Listed = SyntaxParser(Tokenizer("1 > 0 and (count)").Tokens).Parse
 constant Limited = SyntaxParser(Tokenizer("count.Limit").Tokens).Parse
@@ -84,8 +85,9 @@ Mismatch(argument Text, parameter Text) Boolean
 	Sizing.Mismatch("Area", "Size") is false
 	Sizing.Mismatch("Number", "Area") is false
 	Sizing.Mismatch("Area", "Area") is false
+	Generics.Mismatch("Range", "Generic") is false
 	let types = inference.types
-	let isUser = (TypeEntry.IsBaseName(argument) is false) and (TypeEntry.IsBaseName(parameter) is false)
+	let isUser = (TypeEntry.IsBaseName(argument) or TypeEntry.IsBaseName(parameter) or (parameter is "Generic")) is false
 	let isKnown = types.IsKnown(argument) and types.IsKnown(parameter)
 	let isChecked = isUser and isKnown and (types.MembersOf(parameter).names.Length > 0)
 	isChecked and (argument is not parameter) and (parameter is not in types.MembersOf(argument).types)

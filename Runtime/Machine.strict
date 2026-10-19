@@ -105,7 +105,8 @@ Ownership(type TypeEntry, kind Text) Number
 	Hello.Ownership(Paired, "List") is 1
 	Hello.Ownership(Doubler, "Strict/Doubler") is 2
 	Hello.Ownership(TypeEntry.Numbers, VmValue.Numbered.kind) is 1
-	if (type.Name is kind) and (TypeEntry.ShortName(type.Name).StartsWith("List(") is false)
+	Hello.Ownership(TypeEntry("Strict/List", List(MemberEntry), List(MethodEntry)), "Strict/List") is 1
+	if (type.Name is kind) and (TypeEntry.ShortName(type.Name).Split("(").First is not "List")
 		return 2
 	let base = TypeEntry.ShortName(type.Name).Split("(").First
 	(kind is "List") or (base is TypeEntry.ShortName(kind).Split("(").First) then 1 else 0
