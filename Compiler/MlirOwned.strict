@@ -18,7 +18,7 @@ IsReference(name Text) Boolean
 	Owner.IsReference("moved")
 	let kind = MlirKinds(function).VariableKind(function.method.instructions.Length, name)
 	let represented = MlirLayout(function).Represented(kind)
-	let isHeap = represented.StartsWith("List(") or MlirLayout(function).IsStruct(kind)
+	let isHeap = represented.StartsWith("List(") or (represented is "Flat") or MlirLayout(function).IsStruct(kind)
 	isHeap and (MlirPairs(function, 0).IsPaired(kind) is false)
 IsContained(name Text) Boolean
 	Owner.IsContained("moved")
@@ -91,8 +91,8 @@ Takes(entry InstructionEntry, register Number) Boolean
 	Owner.Takes(InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1), 2) is false
 	let first = 6 + entry.payload(3)
 	let arguments = entry.payload(5 + entry.payload(3))
-	let hasInstance = entry.payload(first + arguments) is 1
-	if hasInstance and (entry.payload(first + arguments + 1) is register)
+	let instance = entry.payload(first + arguments) is 1 then entry.payload(first + arguments + 1) else -1
+	if instance is register
 		return true
 	for arguments
 		if entry.payload(first + index) is register

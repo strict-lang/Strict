@@ -100,8 +100,8 @@ Helper(kind Text) Text
 		return "strict_" + kind.Lower + "_text"
 	if kind is "Error"
 		return "strict_error_report"
-	if kind is "Pair"
-		return "strict_two_text"
+	if kind is in ("Pair", "Flat")
+		return kind is "Pair" then "strict_two_text" else "strict_flat_text"
 	let suffix = kind.StartsWith("List(") then MlirKinds(function).ElementSuffix(kind) else ""
 	suffix is "" then "" else "strict_list_text_" + suffix
 Described(loaded Text, suffix Text, kind Text) Texts

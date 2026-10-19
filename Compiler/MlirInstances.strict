@@ -51,8 +51,8 @@ Default(owner TypeEntry, member MemberEntry, slot Text, suffix Text) Texts
 	MlirInstances(Shapes, 1).Default(MlirFunction.Shape, MlirFunction.Shape.members.First, "%s", "d0").Length is 2
 	let named = MlirDefaults(function).Name(owner, member)
 	let initial = Natives(function.types).Initial(member)
-	if MlirPairs(function, position).IsPaired(member.typeName)
-		return MlirPairs(function, position).Defaulted(initial, slot, suffix)
+	if MlirFlats(function, position).Kind(member.typeName) is not ""
+		return MlirFlats(function, position).Defaulted(member.typeName, initial, slot, suffix)
 	MlirStatements(function, position).Literal(initial, slot, suffix, named)
 Fresh(type TypeEntry, target Text, prefix Text, creating Texts) Texts
 	MlirInstances(Shapes, 0).Fresh(MlirFunction.Shape, "%self", "", List(Text)).Length is 8

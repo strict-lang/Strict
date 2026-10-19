@@ -35,7 +35,7 @@ Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Text
 	if IsSingle(typeName)
 		return Single(entry, typeName)
 	if IsCoupled(typeName) is false
-		return instances.Constructed(entry, typeName)
+		return MlirFlats(function, position).Constructed(entry, typeName, instances)
 	let halves = Halves(function.TypeOf(TypeEntry.ShortName(typeName)))
 	let temp = "%t" + position + "c"
 	let packed = "    " + temp + "p = func.call @strict_two_packed(" + temp + "x, " + temp + "y) : (f64, f64) -> f64"
@@ -63,13 +63,15 @@ Argument(entry InstructionEntry, name Text, fallback Number) Text
 Aliased(entry InstructionEntry, kind Text) Texts
 	Sample.Aliased(Heights, "Sizing")(1) is "    %t2hv = func.call @strict_two_y(%t2hp) : (f64) -> f64"
 	Listed.Aliased(Listing, "Pairing")(1) is "    %t2hv = func.call @strict_two_list(%t2hp) : (f64) -> f64"
-	let isListed = (entry.texts(0) is not "value") and MlirPairs(function, position).IsListed(kind)
+	MlirCouples(MlirFlats.Sample.function, 2).Aliased(Listing, "Tripling")(1).IndexOf("@strict_flat_list(") > 0
+	let isListed = (entry.texts(0) is not "value") and MlirFlats(function, position).IsListed(kind)
 	if (entry.texts(0) is "value") or ((IsCoupled(kind) is false) and (isListed is false))
 		return function.Copied("%r" + entry.payload(1), "%r" + entry.payload(0), "%t" + position + "a")
 	let halves = Halves(function.TypeOf(TypeEntry.ShortName(kind)))
 	let half = isListed then "list" else (halves.First.Name is entry.texts(0) then "x" else "y")
+	let helper = MlirFlats(function, position).Count(kind) > 0 then "flat_list" else "two_" + half
 	let temp = "%t" + position + "h"
-	let read = "    " + temp + "v = func.call @strict_two_" + half + "(" + temp + "p) : (f64) -> f64"
+	let read = "    " + temp + "v = func.call @strict_" + helper + "(" + temp + "p) : (f64) -> f64"
 	(function.Load(temp + "p", "%r" + entry.payload(1)), read, function.Store(temp + "v", "%r" + entry.payload(0)))
 Unpacked Texts
 	Own.Unpacked.Length is 5

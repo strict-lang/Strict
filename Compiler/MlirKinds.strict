@@ -86,7 +86,7 @@ DeclaredKind(position Number, name Text) Text
 		return OwnValueKind(position, name)
 	let member = MembersKind(function.type.members, name)
 	let own = TypeEntry.ShortName(function.type.Name)
-	member is "" then "Number" else MlirPairs(function, position).IsListed(own) then own else member
+	member is "" then "Number" else MlirFlats(function, position).IsListed(own) then own else member
 OwnValueKind(position Number, name Text) Text
 	Graded.OwnValueKind(0, "value") is "Shape"
 	Graded.OwnValueKind(11, "value") is "Number"

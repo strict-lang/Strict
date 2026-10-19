@@ -41,7 +41,7 @@ Helper(entry InstructionEntry, owner Text, name Text) Text
 	Sample.Helper(Reading, "Number", "X") is ""
 	Sample.Helper(Constructing, "Pairing", "Atan") is "strict_two_atan"
 	if IsPaired(owner) is false
-		return ""
+		return MlirFlats(function, position).Helper(entry, owner, name)
 	if name is "Atan"
 		return "strict_two_atan"
 	let isList = entry.texts.First.StartsWith("Strict/List(")
@@ -84,7 +84,7 @@ IsBuiltArgument(entry InstructionEntry) Boolean
 Appended(entry InstructionEntry, fallback MlirLists) Texts
 	MlirPairs(Built.function, 2).Appended(Building.instructions(2), MlirLists(Built.function, 2)).Length is 5
 	if (entry.kind is not InstructionType.InvokeWriteToList) or (IsBuilt(entry.texts(0)) is false)
-		return fallback.Appended(entry)
+		return MlirFlats(function, position).Appended(entry, fallback)
 	let slot = "%v_" + entry.texts(0)
 	let temp = "%t" + position
 	let isFirst = Written(entry.texts(0)) is 0

@@ -40,10 +40,10 @@ Represented(kind Text) Text
 		return "List(" + kind.Substring(0, kind.Length - 1) + ")"
 	if kind.StartsWith("Dictionary(")
 		return "List(" + Represented(MethodBodies.Item(kind.Substring(11, kind.Length - 12))) + ")"
-	if MlirPairs(function, 0).IsPaired(kind)
-		return "Pair"
-	let wrapped = Wrapped(kind)
-	wrapped is "" then kind else Represented(wrapped)
+	let packed = MlirFlats(function, 0).Kind(kind)
+	if packed is not ""
+		return packed
+	Wrapped(kind) is "" then kind else Represented(Wrapped(kind))
 Wrapped(typeName Text) Text
 	Wrapping.Wrapped("Angle") is "Degrees"
 	Wrapping.Wrapped("Shape") is ""

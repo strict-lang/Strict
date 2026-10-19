@@ -6119,6 +6119,129 @@
   }
   // a type of two numbers (Vector2) is one 64-bit slot: the first number as f32 in the low, the second in the high 32 bits
   llvm.mlir.global internal constant @strict_two_constraint("ConstraintNotMet: numbers with Length is 2\00") : !llvm.array<43 x i8>
+  // a type of 3 to 16 numbers of 32 bits (Vector3, MlirFlats) is one block of floats, its count in front
+  func.func private @strict_flat_new(%count: f64) -> f64 {
+    %one = arith.constant 1.0 : f64
+    %four = arith.constant 4.0 : f64
+    %slots = arith.addf %count, %one : f64
+    %bytesFloat = arith.mulf %slots, %four : f64
+    %bytes = arith.fptosi %bytesFloat : f64 to i64
+    %block = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    %single = arith.truncf %count : f64 to f32
+    llvm.store %single, %block : f32, !llvm.ptr
+    %result = func.call @strict_bits(%block) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_flat_set(%flat: f64, %index: f64, %value: f64) attributes {passthrough = ["alwaysinline"]} {
+    %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
+    %at = arith.fptosi %index : f64 to i64
+    %one = arith.constant 1 : i64
+    %slotIndex = arith.addi %at, %one : i64
+    %slot = llvm.getelementptr %block[%slotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %single = arith.truncf %value : f64 to f32
+    llvm.store %single, %slot : f32, !llvm.ptr
+    return
+  }
+  func.func private @strict_flat_at(%flat: f64, %index: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
+    %at = arith.fptosi %index : f64 to i64
+    %one = arith.constant 1 : i64
+    %slotIndex = arith.addi %at, %one : i64
+    %slot = llvm.getelementptr %block[%slotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %single = llvm.load %slot : !llvm.ptr -> f32
+    %value = arith.extf %single : f32 to f64
+    return %value : f64
+  }
+  func.func private @strict_flat_x(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %index = arith.constant 0.0 : f64
+    %value = func.call @strict_flat_at(%flat, %index) : (f64, f64) -> f64
+    return %value : f64
+  }
+  func.func private @strict_flat_y(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %index = arith.constant 1.0 : f64
+    %value = func.call @strict_flat_at(%flat, %index) : (f64, f64) -> f64
+    return %value : f64
+  }
+  func.func private @strict_flat_z(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %index = arith.constant 2.0 : f64
+    %value = func.call @strict_flat_at(%flat, %index) : (f64, f64) -> f64
+    return %value : f64
+  }
+  func.func private @strict_flat_w(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %index = arith.constant 3.0 : f64
+    %value = func.call @strict_flat_at(%flat, %index) : (f64, f64) -> f64
+    return %value : f64
+  }
+  func.func private @strict_flat_length(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
+    %single = llvm.load %block : !llvm.ptr -> f32
+    %count = arith.extf %single : f32 to f64
+    return %count : f64
+  }
+  func.func private @strict_flat_list(%flat: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %count = func.call @strict_flat_length(%flat) : (f64) -> f64
+    %list = func.call @strict_list_new(%count, %zero) : (f64, f64) -> f64
+    cf.br ^loop(%zero, %list : f64, f64)
+  ^loop(%index: f64, %built: f64):
+    %more = arith.cmpf olt, %index, %count : f64
+    cf.cond_br %more, ^push, ^done
+  ^push:
+    %value = func.call @strict_flat_at(%flat, %index) : (f64, f64) -> f64
+    %pushed = func.call @strict_list_push(%built, %value) : (f64, f64) -> f64
+    %next = arith.addf %index, %one : f64
+    cf.br ^loop(%next, %pushed : f64, f64)
+  ^done:
+    return %built : f64
+  }
+  func.func private @strict_flat_from_list(%list: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %count = func.call @strict_list_length(%list) : (f64) -> f64
+    %flat = func.call @strict_flat_new(%count) : (f64) -> f64
+    cf.br ^loop(%zero : f64)
+  ^loop(%index: f64):
+    %more = arith.cmpf olt, %index, %count : f64
+    cf.cond_br %more, ^copy, ^done
+  ^copy:
+    %value = func.call @strict_list_read(%list, %index, %zero) : (f64, f64, f64) -> f64
+    func.call @strict_flat_set(%flat, %index, %value) : (f64, f64, f64) -> ()
+    %next = arith.addf %index, %one : f64
+    cf.br ^loop(%next : f64)
+  ^done:
+    return %flat : f64
+  }
+  func.func private @strict_flat_equal(%left: f64, %right: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %leftCount = func.call @strict_flat_length(%left) : (f64) -> f64
+    %rightCount = func.call @strict_flat_length(%right) : (f64) -> f64
+    %sameCount = arith.cmpf oeq, %leftCount, %rightCount : f64
+    cf.cond_br %sameCount, ^loop(%zero : f64), ^different
+  ^loop(%index: f64):
+    %more = arith.cmpf olt, %index, %leftCount : f64
+    cf.cond_br %more, ^compare, ^same
+  ^compare:
+    %leftValue = func.call @strict_flat_at(%left, %index) : (f64, f64) -> f64
+    %rightValue = func.call @strict_flat_at(%right, %index) : (f64, f64) -> f64
+    %equal = arith.cmpf oeq, %leftValue, %rightValue : f64
+    %next = arith.addf %index, %one : f64
+    cf.cond_br %equal, ^loop(%next : f64), ^different
+  ^same:
+    %yes = arith.constant true
+    %sameResult = func.call @strict_boolean(%yes) : (i1) -> f64
+    return %sameResult : f64
+  ^different:
+    %no = arith.constant false
+    %differentResult = func.call @strict_boolean(%no) : (i1) -> f64
+    return %differentResult : f64
+  }
+  func.func private @strict_flat_text(%flat: f64) -> f64 {
+    %list = func.call @strict_flat_list(%flat) : (f64) -> f64
+    %text = func.call @strict_list_text_number(%list) : (f64) -> f64
+    return %text : f64
+  }
   func.func private @strict_two_packed(%first: f64, %second: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %firstSingle = arith.truncf %first : f64 to f32
     %secondSingle = arith.truncf %second : f64 to f32

@@ -1,0 +1,143 @@
+has function MlirFunction
+has position Number
+constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Tripling", (InstructionEntry.LoadText(0, "ConstraintNotMet: numbers with Length is 3 is false for "), InstructionEntry.Return(0)))
+constant Reading = InstructionEntry.Invoke(1, ("Strict/List(Number)", "Z", "Strict/Number"), List(Number), 0)
+constant Zed = MethodEntry("Z", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), Reading, InstructionEntry.Return(1)))
+constant Numbers = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 32)
+constant Tripling = TypeEntry("Strict/Math/Tripling", List(MemberEntry) + Numbers, (Validating, Zed))
+constant Summing = TypeEntry("Strict/Math/Summing", List(MemberEntry) + Numbers, (Validating, MethodEntry("Sum", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Invoke(1, ("Strict/List(Number)", "Sum", "Strict/Number"), List(Number), 0), InstructionEntry.Return(1)))))
+constant Indexing = TypeEntry("Strict/Math/Indexing", List(MemberEntry) + Numbers, (Validating, MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)), InstructionEntry.Return(1)))))
+constant Accessors = ("X", "Y", "Z", "W", "Length", "Count")
+constant Three = VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2), VmValue.OfNumber(3)))
+constant Construction = InstructionEntry.Invoke(4, ("Strict/Math/Tripling", "from", "Strict/Math/Tripling", "numbers"), List(Number) + 3, -1)
+constant Making = MethodEntry("Made", List(MemberEntry), "Strict/Math/Tripling", (List(InstructionEntry) + MlirOwned.Empty) + (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.LoadNumber(2, 3), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "listResult0")) + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "listResult0") + Construction + InstructionEntry.Return(4))
+constant Made = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Making), 2)
+constant Sample = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Zed), 1)
+Count(kind Text) Number
+	Sample.Count("Tripling") is 3
+	Sample.Count("Strict/Math/Tripling") is 3
+	Sample.Count("Summing") is 0
+	Sample.Count("Number") is 0
+	let type = function.TypeOf(TypeEntry.ShortName(kind))
+	let member = type.Changing.Length is 1 then type.Changing.First else Numbers
+	let isNumbers = TypeEntry.ShortName(member.typeName) is in ("List(Number)", "Numbers")
+	if (type.Changing.Length is not 1) or (isNumbers is false) or (member.Bits is not 32)
+		return 0
+	let count = Constrained(type)
+	(count >= 3) and (count <= 16) and IsSupported(type, member.Name) then count else 0
+Constrained(type TypeEntry) Number
+	Sample.Constrained(Tripling) is 3
+	for type.methods
+		for value.Name is "Validated" then value.instructions else List(InstructionEntry)
+			let text = value.texts.Length > 0 then value.texts.First else ""
+			let at = text.IndexOf(" with Length is ")
+			if (value.kind is InstructionType.LoadConstantToRegister) and text.StartsWith("ConstraintNotMet: ") and (at > 0)
+				return text.Substring(at + 16, text.Length - at - 16).Split(" ").First to Number
+	0
+IsSupported(type TypeEntry, member Text) Boolean
+	Sample.IsSupported(Tripling, "numbers")
+	Sample.IsSupported(Summing, "numbers") is false
+	Sample.IsSupported(Indexing, "numbers") is false
+	for type.methods
+		let instructions = value.instructions
+		for instructions
+			let name = value.texts.Length > 0 then value.texts(0) else ""
+			let isNamed = (name is member) or name.StartsWith(member + "(") or name.StartsWith(member + ".")
+			let isRead = (value.kind is InstructionType.LoadVariableToRegister) and (index + 1 < instructions.Length)
+			if isNamed and ((isRead is false) or (IsAccessor(instructions(index + 1), value.payload(0)) is false))
+				return false
+	true
+IsAccessor(entry InstructionEntry, register Number) Boolean
+	Sample.IsAccessor(Reading, 0)
+	Sample.IsAccessor(Reading, 1) is false
+	Sample.IsAccessor(InstructionEntry.Return(0), 0) is false
+	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "to", "Strict/Text"), List(Number), 0), 0)
+	if entry.kind is not InstructionType.Invoke
+		return false
+	let countPosition = 5 + entry.payload(3)
+	let flagPosition = countPosition + 1 + entry.payload(countPosition)
+	let instance = entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
+	let isText = (entry.texts(1) is "to") and entry.texts(2).EndsWith("Text")
+	(instance is register) and ((entry.texts(1) is in Accessors) or isText)
+Helper(entry InstructionEntry, owner Text, name Text) Text
+	Sample.Helper(Reading, "Tripling", "Z") is "strict_flat_z"
+	Sample.Helper(Reading, "Tripling", "Length") is "strict_flat_length"
+	Sample.Helper(Reading, "Summing", "Z") is ""
+	if (Count(owner) is 0) or (entry.texts.First.StartsWith("Strict/List(") is false)
+		return ""
+	if name is in ("Length", "Count")
+		return "strict_flat_length"
+	name is in ("X", "Y", "Z", "W") then "strict_flat_" + name.Lower else ""
+Packed(name Text) Number
+	Made.Packed("listResult0") is 3
+	Sample.Packed("listResult0") is 0
+	let instructions = function.method.instructions
+	mutable writes = 0
+	mutable count = 0
+	for instructions
+		if (value.kind is InstructionType.InvokeWriteToList) and (value.texts(0) is name)
+			writes = writes + 1
+		let isLoaded = (value.kind is InstructionType.LoadVariableToRegister) and (value.texts(0) is name)
+		if isLoaded and (index + 1 < instructions.Length)
+			count = Constructing(instructions(index + 1), value.payload(0))
+	(count > 0) and (writes is count) then count else 0
+Constructing(entry InstructionEntry, register Number) Number
+	Made.Constructing(Construction, 3) is 3
+	Made.Constructing(Construction, 2) is 0
+	if entry.kind is not InstructionType.Invoke
+		return 0
+	let arguments = 5 + entry.payload(3)
+	let isOnly = (entry.texts(1) is "from") and (entry.payload(arguments) is 1) and (entry.payload(arguments + 1) is register)
+	isOnly then Count(entry.texts(0)) else 0
+Appended(entry InstructionEntry, fallback MlirLists) Texts
+	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2)).Last.IndexOf("_set(%t2f, %t2k, %t2e)") > 0
+	MlirFlats(Made.function, 4).Appended(Making.instructions(4), MlirLists(Made.function, 4)).Last.IndexOf("%t4k") > 0
+	let count = entry.kind is InstructionType.InvokeWriteToList then Packed(entry.texts(0)) else 0
+	if count is 0
+		return fallback.Appended(entry)
+	let written = MlirPairs(function, position).Written(entry.texts(0))
+	let temp = "%t" + position
+	let index = "    " + temp + "k = arith.constant " + written + ".0 : f64"
+	let set = "    func.call @strict_flat_set(" + temp + "f, " + temp + "k, " + temp + "e) : (f64, f64, f64) -> ()"
+	Started(count, written, "%v_" + entry.texts(0)) + index + function.Load(temp + "e", "%r" + entry.payload(0)) + set
+Started(count Number, written Number, slot Text) Texts
+	Made.Started(3, 0, "%s").Last is "    llvm.store %t2f, %s : f64, !llvm.ptr"
+	Made.Started(3, 1, "%s") is ("    %t2f = llvm.load %s : !llvm.ptr -> f64")
+	let temp = "%t" + position
+	if written > 0
+		return List(Text) + function.Load(temp + "f", slot)
+	let counted = "    " + temp + "n = arith.constant " + count + ".0 : f64"
+	let created = "    " + temp + "f = func.call @strict_flat_new(" + temp + "n) : (f64) -> f64"
+	(counted, created, function.Store(temp + "f", slot))
+Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
+	MlirFlats(Made.function, 8).Constructed(Construction, "Tripling", MlirInstances(Made.function, 8)).Length is 2
+	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("flat_from_list(") > 0
+	let argument = entry.payload(6 + entry.payload(3))
+	let writer = MlirKinds(function).Writer(position, argument)
+	let loaded = writer >= 0 then function.method.instructions(writer) else entry
+	let isBuilt = (loaded.kind is InstructionType.LoadVariableToRegister) and (Packed(loaded.texts(0)) > 0)
+	if (Count(typeName) is 0) or isBuilt
+		return instances.Constructed(entry, typeName)
+	let temp = "%t" + position
+	let converted = "    " + temp + "f = func.call @strict_flat_from_list(" + temp + "l) : (f64) -> f64"
+	(function.Load(temp + "l", "%r" + argument), converted, function.Store(temp + "f", "%r" + entry.payload(0)))
+Kind(kind Text) Text
+	Sample.Kind("Tripling") is "Flat"
+	Sample.Kind("Summing") is ""
+	MlirFlats(MlirPairs.Sample.function, 0).Kind("Pairing") is "Pair"
+	MlirPairs(function, 0).IsPaired(kind) then "Pair" else (Count(kind) > 0 then "Flat" else "")
+IsListed(kind Text) Boolean
+	Sample.IsListed("Tripling")
+	MlirFlats(MlirPairs.Sample.function, 0).IsListed("Pairing")
+	MlirFlats(MlirCouples.Sample.function, 0).IsListed("Sizing") is false
+	MlirPairs(function, 0).IsListed(kind) or (Count(kind) > 0)
+Defaulted(kind Text, initial Runtime/VmValue, slot Text, suffix Text) Texts
+	Sample.Defaulted("Tripling", Three, "%s", "d0").Last is "    llvm.store %t1d0f, %s : f64, !llvm.ptr"
+	if Kind(kind) is "Pair"
+		return MlirPairs(function, position).Defaulted(initial, slot, suffix)
+	let built = MlirStatements(function, position).Literal(initial, slot, suffix)
+	if Kind(kind) is not "Flat"
+		return built
+	let temp = "%t" + position + suffix
+	let converted = "    " + temp + "f = func.call @strict_flat_from_list(" + temp + "fl) : (f64) -> f64"
+	built + function.Load(temp + "fl", slot) + converted + function.Store(temp + "f", slot)
