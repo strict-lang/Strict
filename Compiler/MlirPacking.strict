@@ -73,7 +73,7 @@ Indexed(entry InstructionEntry, fallback MlirLists) Texts
 	Text.Combine(Listing.Indexed(Fetching, MlirLists(Listing.function, 0))).IndexOf("@strict_two_at(%t0l, %t0i)") > 0
 	Plain.Indexed(MlirLists.Steps(2), MlirLists(MlirLists.Listed, 2)).Last.EndsWith("%r2 : f64, !llvm.ptr")
 	if IsPair(MlirKinds(function).VariableKind(position, entry.texts(0))) is false
-		return fallback.Indexed(entry)
+		return MlirFlats(function, position).Indexed(entry, fallback)
 	let temp = "%t" + position
 	let loads = (function.Load(temp + "l", "%v_" + entry.texts(0)), function.Load(temp + "i", "%r" + entry.payload(1)))
 	let call = MlirMemory(function, position).Called(temp + "x", "strict_two_at", (temp + "l", temp + "i"))

@@ -9,7 +9,7 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean) MlirModule
 	let folders = Directory.Exists(path) then ResolveCheck.Tree(path) else List(Text) + path
 	let types = isCounting then Collected(folders, root) else Execute(logger).Loaded(path, root)
 	let counted = isCounting then CountedFiles(paths, root) else List(Text)
-	MlirModule(types, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length)
+	MlirModule(Inliner(types).Inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length)
 Natives(path Text, root Text, types List(TypeEntry)) Texts
 	NativeFolder(Logger).Natives("Examples", ".", List(TypeEntry) + Foreign.Adder) is ("Examples/NativeAdd/native")
 	let paths = Paths(path)
