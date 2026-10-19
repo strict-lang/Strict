@@ -2530,27 +2530,89 @@
   ^again:
     return %kept : i64
   ^freeable:
+    %disposed = func.call @strict_rc_dispose(%object, %located#0, %located#2, %flags, %counter) : (i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
+    return %disposed : i64
+  ^nothing:
+    return %none : i64
+  }
+
+  // 1 when the object with no count was freed, 0 when its page is being swept, the GPU holds it or it is reachable
+  func.func private @strict_rc_dispose(%object: i64, %markSlot: !llvm.ptr, %size: i64, %flags: !llvm.ptr, %counter: !llvm.ptr) -> i64 {
+    %none = arith.constant 0 : i64
+    %freed = arith.constant 1 : i64
     %pageMask = arith.constant -65536 : i64
     %page = arith.andi %object, %pageMask : i64
     %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
     %pendingSlot = llvm.getelementptr %pagePointer[7] : (!llvm.ptr) -> !llvm.ptr, i64
     %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
     %isPending = arith.cmpi ne, %pending, %none : i64
-    %packed = func.call @strict_rc_device_bound(%object, %located#2) : (i64, i64) -> i1
-    %reachable = func.call @strict_rc_reachable(%object, %located#0, %located#2) : (i64, !llvm.ptr, i64) -> i1
+    %packed = func.call @strict_rc_device_bound(%object, %size) : (i64, i64) -> i1
+    %reachable = func.call @strict_rc_reachable(%object, %markSlot, %size) : (i64, !llvm.ptr, i64) -> i1
     %bound = arith.ori %isPending, %packed : i1
     %left = arith.ori %bound, %reachable : i1
     cf.cond_br %left, ^nothing, ^free
   ^free:
-    func.call @strict_rc_free(%object, %located#0, %located#2, %flags, %counter, %page) : (i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i64) -> ()
+    func.call @strict_rc_free(%object, %markSlot, %size, %flags, %counter, %page) : (i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i64) -> ()
     %freedSlot = llvm.mlir.addressof @strict_rc_freed : !llvm.ptr
     %freedCount = llvm.load %freedSlot : !llvm.ptr -> i64
-    %oneMore = arith.constant 1 : i64
-    %moreFreed = arith.addi %freedCount, %oneMore : i64
+    %moreFreed = arith.addi %freedCount, %freed : i64
     llvm.store %moreFreed, %freedSlot : i64, !llvm.ptr
     return %freed : i64
   ^nothing:
     return %none : i64
+  }
+
+  // the old value of a local that only ever holds fresh values and never leaks (MlirOwned) dies when it is
+  // overwritten: without a count it is freed at once and its block is the next one allocated of its size
+  func.func private @strict_rc_dead(%old: f64, %new: f64) {
+    %zero = arith.constant 0 : i64
+    %zeroCount = arith.constant 0 : i32
+    %oldPointer = func.call @strict_ptr(%old) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %oldPointer : !llvm.ptr to i64
+    %newPointer = func.call @strict_ptr(%new) : (f64) -> !llvm.ptr
+    %kept = llvm.ptrtoint %newPointer : !llvm.ptr to i64
+    %isSame = arith.cmpi eq, %object, %kept : i64
+    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
+    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %shared = arith.cmpi ne, %busy, %zero : i64
+    %enabledSlot = llvm.mlir.addressof @strict_rc_enabled : !llvm.ptr
+    %enabled = llvm.load %enabledSlot : !llvm.ptr -> i64
+    %disabled = arith.cmpi eq, %enabled, %zero : i64
+    %blocked = arith.ori %shared, %disabled : i1
+    %skipped = arith.ori %blocked, %isSame : i1
+    cf.cond_br %skipped, ^done, ^locate
+  ^locate:
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    %false = arith.constant false
+    %isSmall = arith.cmpi eq, %located#3, %false : i1
+    %isStart = arith.cmpi eq, %located#1, %object : i64
+    %found2 = arith.andi %found, %isSmall : i1
+    %usable = arith.andi %found2, %isStart : i1
+    cf.cond_br %usable, ^counter, ^done
+  ^counter:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %isCounted = arith.cmpi ne, %count, %zeroCount : i32
+    %markerSlot = llvm.getelementptr %oldPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %marker = llvm.load %markerSlot : !llvm.ptr -> i64
+    %freeMarker = arith.constant -1 : i64
+    %isFree = arith.cmpi eq, %marker, %freeMarker : i64
+    %flagByte = llvm.load %flags : !llvm.ptr -> i8
+    %pinnedFlag = arith.constant 32 : i8
+    %pinned = arith.andi %flagByte, %pinnedFlag : i8
+    %noFlags = arith.constant 0 : i8
+    %isPinned = arith.cmpi ne, %pinned, %noFlags : i8
+    %isLeft = arith.ori %isCounted, %isFree : i1
+    %ignored = arith.ori %isLeft, %isPinned : i1
+    cf.cond_br %ignored, ^done, ^dispose
+  ^dispose:
+    %disposed = func.call @strict_rc_dispose(%object, %located#0, %located#2, %flags, %counter) : (i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
+    cf.br ^done
+  ^done:
+    return
   }
   // STRICT_RC_CHECK marks everything from the roots before a reclaim: an object it would free that the marking
   // reached is still referenced somewhere the counts do not see, it is reported and kept
@@ -3463,6 +3525,20 @@
     %slot = llvm.getelementptr %grown[%count] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     llvm.store %value, %slot : f64, !llvm.ptr
     llvm.store %next, %countSlot : i64, !llvm.ptr
+    %pointer = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %pointer : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    cf.cond_br %found, ^flag, ^done
+  ^flag:
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags : !llvm.ptr -> i8
+    %pinnedFlag = arith.constant 32 : i8
+    %withPinned = arith.ori %flagByte, %pinnedFlag : i8
+    llvm.store %withPinned, %flags : i8, !llvm.ptr
+    cf.br ^done
+  ^done:
     return
   }
   func.func private @strict_list_pin(%value: f64) {
@@ -5156,7 +5232,12 @@
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
     %unset = arith.cmpf oeq, %list, %zero : f64
-    cf.cond_br %unset, ^add, ^check
+    cf.cond_br %unset, ^fresh, ^check
+  ^fresh:
+    %four = arith.constant 4.0 : f64
+    %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
+    %first = func.call @strict_list_push(%created, %element) : (f64, f64) -> f64
+    return %first : f64
   ^check:
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
     %length = llvm.load %view : !llvm.ptr -> f64
@@ -5167,6 +5248,11 @@
     %used = llvm.load %usedSlot : !llvm.ptr -> f64
     %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> f64
+    %isEmpty = arith.cmpf oeq, %length, %zero : f64
+    %isFixed = arith.cmpf oeq, %capacity, %zero : f64
+    %isShared = arith.andi %isEmpty, %isFixed : i1
+    cf.cond_br %isShared, ^fresh, ^grown
+  ^grown:
     %newest = arith.cmpf oeq, %length, %used : f64
     %room = arith.cmpf olt, %used, %capacity : f64
     %inPlace = arith.andi %newest, %room : i1

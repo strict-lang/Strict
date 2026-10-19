@@ -85,11 +85,12 @@ Appended(entry InstructionEntry) Texts
 	MlirLists(Listed, 3).Appended(Steps(3)).Last is "    llvm.store %t3n, %v_numbers : f64, !llvm.ptr"
 	Text.Combine(MlirLists(Listed, 3).Appended(Removal)).IndexOf("@strict_list_remove(") > 0
 	Text.Combine(MlirLists(Listed, 3).Appended(Pushing)).IndexOf("@strict_list_push(") > 0
+	Text.Combine(MlirLists(Listed, 3).Appended(MlirPairs.Building.instructions(2))).IndexOf("@strict_list_push(") > 0
 	let name = "%v_" + entry.texts(0)
 	let kinds = MlirKinds(function)
 	let elements = MlirLayout(function).Represented(kinds.ElementKind(kinds.VariableKind(position, entry.texts(0))))
-	let adder = entry.texts(0) is "forResult" then "strict_list_push" else "strict_list_add"
-	let helper = entry.kind is InstructionType.InvokeRemove then "strict_list_remove" else adder
+	let adder = (entry.texts(0) is "forResult") or entry.texts(0).StartsWith("listResult") then "push" else "add"
+	let helper = entry.kind is InstructionType.InvokeRemove then "strict_list_remove" else "strict_list_" + adder
 	let added = MlirMemory(function, position).Passed(Temp("n"), helper, (Temp("l"), Temp("e")), elements)
 	let element = function.Load(Temp("e"), "%r" + entry.payload(0))
 	(function.Load(Temp("l"), name), element) + added + function.Store(Temp("n"), name)

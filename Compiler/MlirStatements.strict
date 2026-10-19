@@ -13,7 +13,7 @@ Emitted Texts
 	if kind is InstructionType.LoadVariableToRegister
 		return function.Copied("%v_" + entry.texts(0), "%r" + entry.payload(0), Temp(""))
 	if kind is InstructionType.StoreRegisterToVariable
-		return function.Copied("%r" + entry.payload(0), "%v_" + entry.texts(0), Temp(""))
+		return MlirOwned(function, position).Stored(entry)
 	kind is InstructionType.Return then Returned(entry) else Jumped(entry)
 Binary(entry InstructionEntry) Texts
 	Copy.Binary(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))).Length is 4
