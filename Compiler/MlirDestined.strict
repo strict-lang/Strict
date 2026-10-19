@@ -78,8 +78,9 @@ Stored(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	Caller.Stored(Calling(2), Calling(3), List(Text) + "call")(1).EndsWith("@strict_flat_destine(%t2dold) : (f64) -> ()")
 	Caller.Stored(Calling(2), Calling(5), List(Text) + "call") is ("call")
 	let isStored = (next.kind is Inliner.Store) and (next.payload(0) is entry.payload(0))
+	let isElement = isStored then next.texts(0).IndexOf("(") > 0 else false
 	let helper = isStored then Handed(entry) else ""
-	if helper is ""
+	if (helper is "") or isElement
 		return MlirStructs(function, position).Destined(entry, next, compiled)
 	if IsAlone(next.texts(0)) is false
 		return compiled

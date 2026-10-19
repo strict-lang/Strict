@@ -31,3 +31,16 @@ Untouched Number
 	let before = Line(3)
 	let after = before.SwapRemoved(0)
 	before.Length + after.Length - 2
+Nudged(count Number) Vector3
+	Swarm(Logger).Nudged(2) is Vector3(2, 0, 0)
+	mutable positions = (Vector3(0, 0, 0), Vector3(1, 0, 0))
+	for count
+		positions(0) = positions(0) + Vector3(1, 0, 0)
+	positions(0)
+Remembered(count Number) Vector3
+	Swarm(Logger).Remembered(2) is Vector3(1, 0, 0)
+	mutable positions = (Vector3(0, 0, 0), Vector3(1, 0, 0))
+	let first = positions(1)
+	for count
+		positions(1) = positions(1) + Vector3(1, 0, 0)
+	first

@@ -5159,8 +5159,15 @@
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %at = arith.fptosi %index : f64 to i64
     %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %old = llvm.load %slot : !llvm.ptr -> i64
+    %new = arith.bitcast %element : f64 to i64
+    %isSame = arith.cmpi eq, %old, %new : i64
+    cf.cond_br %isSame, ^done, ^store
+  ^store:
     llvm.store %element, %slot : f64, !llvm.ptr
     func.call @strict_gc_written(%slot) : (!llvm.ptr) -> ()
+    cf.br ^done
+  ^done:
     return %zero : f64
   }
   func.func private @strict_list_add(%list: f64, %element: f64) -> f64 {
@@ -6534,6 +6541,73 @@
     %isFree = arith.xori %isPinned, %isListOnly : i1
     %reusable = arith.andi %isFree, %isListOnly : i1
     %chosen = arith.select %reusable, %element, %zero : f64
+    llvm.store %chosen, %slot : f64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the old flat element of a list slot about to be overwritten is the destination of the destined call making
+  // the new one (MlirElements): an inline block of the list when nothing outside holds the list, a separate block
+  // when only the list holds it
+  func.func private @strict_flat_destine_list_element(%list: f64, %index: f64) {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %zeroCount = arith.constant 0 : i32
+    %one = arith.constant 1 : i32
+    %slot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr
+    llvm.store %zero, %slot : f64, !llvm.ptr
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %below = arith.cmpf olt, %index, %zero : f64
+    %above = arith.cmpf oge, %index, %length : f64
+    %outside = arith.ori %below, %above : i1
+    cf.cond_br %outside, ^done, ^element
+  ^element:
+    %element = func.call @strict_list_get(%list, %index) : (f64, f64) -> f64
+    %bits = arith.bitcast %element : f64 to i64
+    %target = func.call @strict_rc_target(%bits) : (i64) -> i64
+    %isTarget = arith.cmpi ne, %target, %none : i64
+    cf.cond_br %isTarget, ^list, ^done
+  ^list:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %holderAddress = llvm.ptrtoint %holder : !llvm.ptr to i64
+    %owner:5 = func.call @strict_gc_locate(%holderAddress) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unknown = llvm.mlir.zero : !llvm.ptr
+    %ownerFound = llvm.icmp "ne" %owner#0, %unknown : !llvm.ptr
+    %end = arith.addi %owner#1, %owner#2 : i64
+    %afterStart = arith.cmpi sgt, %target, %owner#1 : i64
+    %beforeEnd = arith.cmpi slt, %target, %end : i64
+    %within = arith.andi %afterStart, %beforeEnd : i1
+    %isInline = arith.andi %ownerFound, %within : i1
+    cf.cond_br %isInline, ^inline, ^separate
+  ^inline:
+    %ownerCounter = func.call @strict_rc_counter(%owner#0, %owner#1, %owner#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %ownerCount = llvm.load %ownerCounter : !llvm.ptr -> i32
+    %viewAddress = llvm.ptrtoint %view : !llvm.ptr to i64
+    %isOwnView = arith.cmpi eq, %viewAddress, %owner#1 : i64
+    %expected = arith.select %isOwnView, %zeroCount, %one : i32
+    %isAlone = arith.cmpi eq, %ownerCount, %expected : i32
+    %inlineChosen = arith.select %isAlone, %element, %zero : f64
+    llvm.store %inlineChosen, %slot : f64, !llvm.ptr
+    cf.br ^done
+  ^separate:
+    %located:5 = func.call @strict_gc_locate(%target) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
+    %isStart = arith.cmpi eq, %located#1, %target : i64
+    %usable = arith.andi %found, %isStart : i1
+    cf.cond_br %usable, ^counted, ^done
+  ^counted:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %isListOnly = arith.cmpi eq, %count, %one : i32
+    %pointer = func.call @strict_ptr(%element) : (f64) -> !llvm.ptr
+    %single = llvm.load %pointer : !llvm.ptr -> f32
+    %nothing = arith.constant 0.0 : f32
+    %isOwn = arith.cmpf ogt, %single, %nothing : f32
+    %isReusable = arith.andi %isListOnly, %isOwn : i1
+    %chosen = arith.select %isReusable, %element, %zero : f64
     llvm.store %chosen, %slot : f64, !llvm.ptr
     cf.br ^done
   ^done:

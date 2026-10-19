@@ -69,7 +69,7 @@ Destined(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	Text.Combine(MlirDestined(Forwarder.function, 1).Destined(Calling, List(Text) + "call")).IndexOf("struct_destine(") > 0
 	let callees = MlirModule(function.types, "").Called(function, position)
 	if (callees.Length is 0 then true else MlirStructs(callees.First, 0).Consumes(1) is false)
-		return compiled
+		return MlirElements(function, position).Destined(entry, next, compiled)
 	let isForwarded = (next.kind is InstructionType.Return) and (next.payload(0) is entry.payload(0))
 	if isForwarded and Consumes(0)
 		return (function.Load("%t" + position + "sd", "%structDestination"), Destine("sd")) + compiled
