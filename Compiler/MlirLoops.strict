@@ -116,7 +116,7 @@ Presized Texts
 		return List(Text)
 	constant capacity = "    " + Temp("a") + " = arith.maximumf " + Temp("n") + ", %zero : f64"
 	let created = MlirListDestined(function, position).Created(Temp("r"), Temp("a"))
-	(capacity, created, function.Store(Temp("r"), "%v_forResult"))
+	(List(Text) + capacity) + created + function.Store(Temp("r"), "%v_forResult")
 Restored(begin Number) Texts
 	MlirLoops(Nested.function, 2).Restored(0) is List(Text) + "    llvm.store %t0z, %v_outer : f64, !llvm.ptr"
 	let names = function.VariableNames

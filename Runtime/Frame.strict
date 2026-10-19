@@ -39,7 +39,7 @@ Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 Next(entry InstructionEntry, position Number, slots List(VmValue)) Number
 	Twice.Next(InstructionEntry(InstructionType.JumpToIdIfTrue, List(Text), (0, 7)), 1, Listed) is 7
 	if (entry.kind < InstructionType.Return) or (entry.kind > InstructionType.JumpToIdIfTrue)
-		return ErrorCheck(entry).Next(position, slots, method.instructions.Length)
+		return ErrorCheck(entry).Next(position, slots(entry.payload(0)), method.instructions.Length)
 	if entry.kind is InstructionType.Return
 		return method.instructions.Length
 	if entry.kind is InstructionType.LoopBegin
@@ -137,7 +137,7 @@ Other(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	if entry.kind is InstructionType.Return
 		return slots(entry.payload(0))
 	if entry.kind is InstructionType.CheckError
-		return ErrorCheck(entry).Value(slots, value, position)
+		return ErrorCheck(entry).Value(slots(entry.payload(0)), slots(entry.Target), value, position)
 	entry.kind is InstructionType.FieldLoad then machine.Field(entry, slots(entry.payload(1))) else Changed(entry, slots)
 Changed(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Changed(InstructionEntry(InstructionType.InvokeWriteToList, "list", (8, 7)), Listed).Length is 3

@@ -1946,6 +1946,11 @@
   // scans the old objects of marked cards: they are the only old objects that can point to young ones
   func.func private @strict_gc_written(%slot: !llvm.ptr) attributes {passthrough = ["alwaysinline"]} {
     func.call @strict_rc_written(%slot) : (!llvm.ptr) -> ()
+    func.call @strict_gc_card(%slot) : (!llvm.ptr) -> ()
+    return
+  }
+  // marks the card of a written heap address for the young collection, the count of the value is not touched
+  func.func private @strict_gc_card(%slot: !llvm.ptr) attributes {passthrough = ["alwaysinline"]} {
     %address = llvm.ptrtoint %slot : !llvm.ptr to i64
     %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
     %base = llvm.load %baseSlot : !llvm.ptr -> i64
@@ -1983,14 +1988,14 @@
     cf.cond_br %hasBytes, ^loop(%zero : i64), ^done
   ^loop(%offset: i64):
     %slot = llvm.getelementptr %start[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    func.call @strict_gc_written(%slot) : (!llvm.ptr) -> ()
+    func.call @strict_gc_card(%slot) : (!llvm.ptr) -> ()
     %next = arith.addi %offset, %card : i64
     %more = arith.cmpi slt, %next, %bytes : i64
     cf.cond_br %more, ^loop(%next : i64), ^last
   ^last:
     %end = arith.subi %bytes, %one : i64
     %lastSlot = llvm.getelementptr %start[%end] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    func.call @strict_gc_written(%lastSlot) : (!llvm.ptr) -> ()
+    func.call @strict_gc_card(%lastSlot) : (!llvm.ptr) -> ()
     cf.br ^done
   ^done:
     return
@@ -3990,12 +3995,19 @@
     %f = arith.bitcast %i : i64 to f64
     return %f : f64
   }
-  func.func private @strict_list_new(%capacity: f64, %length: f64) -> f64 {
+  func.func private @strict_list_new(%capacity: f64, %length: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
+    %list = func.call @strict_list_reserved(%capacity, %length, %none) : (f64, f64, i64) -> f64
+    return %list : f64
+  }
+  // a list with room for its items and extra bytes after them in the same allocation (strict_flat_list_new)
+  func.func private @strict_list_reserved(%capacity: f64, %length: f64, %extra: i64) -> f64 {
     %headers = arith.constant 56 : i64
     %eight = arith.constant 8.0 : f64
     %bytesf = arith.mulf %capacity, %eight : f64
     %bytes = arith.fptosi %bytesf : f64 to i64
-    %total = arith.addi %headers, %bytes : i64
+    %itemsEnd = arith.addi %headers, %bytes : i64
+    %total = arith.addi %itemsEnd, %extra : i64
     %view = func.call @strict_alloc(%total) : (i64) -> !llvm.ptr
     %holder = llvm.getelementptr %view[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %items = llvm.getelementptr %view[56] : (!llvm.ptr) -> !llvm.ptr, i8
@@ -5246,6 +5258,107 @@
     llvm.store %length, %usedSlot : f64, !llvm.ptr
     return %list : f64
   }
+  // a new list for a collecting loop, a flat list when its elements are flat blocks of count numbers
+  func.func private @strict_list_created(%capacity: f64, %count: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0.0 : f64
+    %isFlat = arith.cmpf ogt, %count, %zero : f64
+    cf.cond_br %isFlat, ^flat, ^plain
+  ^flat:
+    %flat = func.call @strict_flat_list_new(%capacity, %count) : (f64, f64) -> f64
+    return %flat : f64
+  ^plain:
+    %plain = func.call @strict_list_new(%capacity, %zero) : (f64, f64) -> f64
+    return %plain : f64
+  }
+  // a list of a flat type (Vector3, Matrix, components) keeps its elements in one block after its items, every item
+  // points at its own flat block [count, numbers] there, so elements are read without copies and built in place
+  func.func private @strict_flat_list_new(%capacity: f64, %count: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %oneFloat = arith.constant 1.0 : f64
+    %four = arith.constant 4.0 : f64
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    %slots = arith.addf %count, %oneFloat : f64
+    %blockFloat = arith.mulf %slots, %four : f64
+    %blockBytes = arith.fptosi %blockFloat : f64 to i64
+    %wanted = arith.fptosi %capacity : f64 to i64
+    %dataBytes = arith.muli %wanted, %blockBytes : i64
+    %list = func.call @strict_list_reserved(%capacity, %zero, %dataBytes) : (f64, f64, i64) -> f64
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %items = llvm.getelementptr %view[56] : (!llvm.ptr) -> !llvm.ptr, i8
+    %data = llvm.getelementptr %items[%wanted] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %single = arith.truncf %count : f64 to f32
+    cf.br ^wire(%start : i64)
+  ^wire(%index: i64):
+    %more = arith.cmpi slt, %index, %wanted : i64
+    cf.cond_br %more, ^block, ^done
+  ^block:
+    %offset = arith.muli %index, %blockBytes : i64
+    %block = llvm.getelementptr %data[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %single, %block : f32, !llvm.ptr
+    %blockBits = func.call @strict_bits(%block) : (!llvm.ptr) -> f64
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %blockBits, %slot : f64, !llvm.ptr
+    %next = arith.addi %index, %step : i64
+    cf.br ^wire(%next : i64)
+  ^done:
+    return %list : f64
+  }
+  // the block of the next element of a list a collecting loop fills, when it is one of the list's own inline flat
+  // blocks (strict_flat_list_new), otherwise 0; only the loop holds the list, the compiler checked that the iterated
+  // old element is not kept anywhere (MlirListDestined.IsElement), so nothing else can see the block it rebuilds
+  func.func private @strict_flat_slot(%list: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %four = arith.constant 4 : i64
+    %eight = arith.constant 8 : i64
+    %forty = arith.constant 40 : i64
+    %unset = arith.cmpf oeq, %list, %zero : f64
+    cf.cond_br %unset, ^none, ^check
+  ^check:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %length = llvm.load %view : !llvm.ptr -> f64
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %used = llvm.load %usedSlot : !llvm.ptr -> f64
+    %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> f64
+    %itemsBits = llvm.load %holder : !llvm.ptr -> f64
+    %items = func.call @strict_ptr(%itemsBits) : (f64) -> !llvm.ptr
+    %holderAddress = llvm.ptrtoint %holder : !llvm.ptr to i64
+    %itemsAddress = llvm.ptrtoint %items : !llvm.ptr to i64
+    %inlineAddress = arith.addi %holderAddress, %forty : i64
+    %isInline = arith.cmpi eq, %itemsAddress, %inlineAddress : i64
+    %newest = arith.cmpf oeq, %length, %used : f64
+    %room = arith.cmpf olt, %used, %capacity : f64
+    %open = arith.andi %newest, %room : i1
+    %candidate = arith.andi %open, %isInline : i1
+    cf.cond_br %candidate, ^block, ^none
+  ^block:
+    %at = arith.fptosi %used : f64 to i64
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %block = llvm.load %slot : !llvm.ptr -> f64
+    %blockPointer = func.call @strict_ptr(%block) : (f64) -> !llvm.ptr
+    %blockAddress = llvm.ptrtoint %blockPointer : !llvm.ptr to i64
+    %slots = arith.fptosi %capacity : f64 to i64
+    %itemBytes = arith.muli %slots, %eight : i64
+    %dataStart = arith.addi %itemsAddress, %itemBytes : i64
+    %single = llvm.load %blockPointer : !llvm.ptr -> f32
+    %count = arith.fptosi %single : f32 to i64
+    %one = arith.constant 1 : i64
+    %floats = arith.addi %count, %one : i64
+    %blockBytes = arith.muli %floats, %four : i64
+    %dataBytes = arith.muli %slots, %blockBytes : i64
+    %dataEnd = arith.addi %dataStart, %dataBytes : i64
+    %afterStart = arith.cmpi uge, %blockAddress, %dataStart : i64
+    %beforeEnd = arith.cmpi ult, %blockAddress, %dataEnd : i64
+    %isOwnBlock = arith.andi %afterStart, %beforeEnd : i1
+    %chosen = arith.select %isOwnBlock, %block, %zero : f64
+    return %chosen : f64
+  ^none:
+    return %zero : f64
+  }
   // a collecting loop of a list destined method (MlirDestined) refills the dying list of an alone local: a new
   // empty view onto its items, every push releases the element it overwrites; shared or packed items are left alone
   llvm.mlir.global internal @strict_list_destination(0.0 : f64) : f64
@@ -5254,7 +5367,7 @@
     llvm.store %old, %slot : f64, !llvm.ptr
     return
   }
-  func.func private @strict_list_into(%destination: f64, %capacity: f64) -> f64 {
+  func.func private @strict_list_into(%destination: f64, %capacity: f64, %flatCount: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %zeroCount = arith.constant 0 : i32
     %one = arith.constant 1 : i32
@@ -5294,8 +5407,84 @@
     %result = func.call @strict_bits(%refilled) : (!llvm.ptr) -> f64
     return %result : f64
   ^fresh:
-    %created = func.call @strict_list_new(%capacity, %zero) : (f64, f64) -> f64
+    %created = func.call @strict_list_created(%capacity, %flatCount) : (f64, f64) -> f64
     return %created : f64
+  }
+  // List.SwapRemoved: the last element takes the removed place, a dying list its alone local handed over
+  // (strict_list_destine) changes in place in O(1), any other list is copied first
+  func.func private @strict_list_swap_removed(%list: f64, %position: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %zeroCount = arith.constant 0 : i32
+    %oneCount = arith.constant 1 : i32
+    %down = arith.constant -1 : i32
+    %destinationSlot = llvm.mlir.addressof @strict_list_destination : !llvm.ptr
+    %destination = llvm.load %destinationSlot : !llvm.ptr -> f64
+    llvm.store %zero, %destinationSlot : f64, !llvm.ptr
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %below = arith.cmpf olt, %position, %zero : f64
+    %above = arith.cmpf oge, %position, %length : f64
+    %outside = arith.ori %below, %above : i1
+    cf.cond_br %outside, ^error, ^inside
+  ^error:
+    %errorName = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %errorNameBits = func.call @strict_bits(%errorName) : (!llvm.ptr) -> f64
+    %error = func.call @strict_error_text(%errorNameBits) : (f64) -> f64
+    return %error : f64
+  ^inside:
+    %listBits = arith.bitcast %list : f64 to i64
+    %destinationBits = arith.bitcast %destination : f64 to i64
+    %isGiven = arith.cmpi eq, %listBits, %destinationBits : i64
+    cf.cond_br %isGiven, ^check, ^copy
+  ^check:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %used = llvm.load %usedSlot : !llvm.ptr -> f64
+    %newest = arith.cmpf oeq, %length, %used : f64
+    %holderAddress = llvm.ptrtoint %holder : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%holderAddress) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unknown = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
+    %located2 = arith.andi %found, %newest : i1
+    cf.cond_br %located2, ^counted, ^copy
+  ^counted:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %viewAddress = llvm.ptrtoint %view : !llvm.ptr to i64
+    %isOwnView = arith.cmpi eq, %viewAddress, %located#1 : i64
+    %expected = arith.select %isOwnView, %zeroCount, %oneCount : i32
+    %isAlone = arith.cmpi eq, %count, %expected : i32
+    cf.cond_br %isAlone, ^swap(%list : f64), ^copy
+  ^copy:
+    %copy = func.call @strict_list_copy(%list, %zero) : (f64, f64) -> f64
+    cf.br ^swap(%copy : f64)
+  ^swap(%target: f64):
+    %items = func.call @strict_list_items(%target) : (f64) -> !llvm.ptr
+    %targetView = func.call @strict_ptr(%target) : (f64) -> !llvm.ptr
+    %targetHolderSlot = llvm.getelementptr %targetView[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %targetHolderBits = llvm.load %targetHolderSlot : !llvm.ptr -> f64
+    %targetHolder = func.call @strict_ptr(%targetHolderBits) : (f64) -> !llvm.ptr
+    %targetUsedSlot = llvm.getelementptr %targetHolder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %shorter = arith.subf %length, %one : f64
+    %last = arith.fptosi %shorter : f64 to i64
+    %at = arith.fptosi %position : f64 to i64
+    %removedSlot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %lastSlot = llvm.getelementptr %items[%last] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %removed = llvm.load %removedSlot : !llvm.ptr -> i64
+    %moved = llvm.load %lastSlot : !llvm.ptr -> f64
+    %movedBits = arith.bitcast %moved : f64 to i64
+    llvm.store %moved, %removedSlot : f64, !llvm.ptr
+    func.call @strict_gc_written(%removedSlot) : (!llvm.ptr) -> ()
+    llvm.store %zero, %lastSlot : f64, !llvm.ptr
+    %container = func.call @strict_rc_container(%removedSlot) : (!llvm.ptr) -> i64
+    func.call @strict_rc_add(%movedBits, %container, %down) : (i64, i64, i32) -> ()
+    func.call @strict_rc_add(%removed, %container, %down) : (i64, i64, i32) -> ()
+    llvm.store %shorter, %targetUsedSlot : f64, !llvm.ptr
+    llvm.store %shorter, %targetView : f64, !llvm.ptr
+    return %target : f64
   }
   func.func private @strict_list_push(%list: f64, %element: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -5332,6 +5521,10 @@
     %at = arith.fptosi %used : f64 to i64
     %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %replaced = llvm.load %slot : !llvm.ptr -> i64
+    %elementBits = arith.bitcast %element : f64 to i64
+    %isBuiltInPlace = arith.cmpi eq, %replaced, %elementBits : i64
+    cf.cond_br %isBuiltInPlace, ^counted, ^store
+  ^store:
     llvm.store %element, %slot : f64, !llvm.ptr
     func.call @strict_gc_written(%slot) : (!llvm.ptr) -> ()
     %noneReplaced = arith.constant 0 : i64
@@ -6291,11 +6484,15 @@
   }
   // in a loop refilling its own list, the old element is the destination of the destined call making the new one
   // when only the list holds it (count 1): the slot keeps its block and nothing is allocated or released
-  func.func private @strict_flat_destine_element(%element: f64, %destination: f64, %iterated: f64) {
+  func.func private @strict_flat_destine_element(%element: f64, %destination: f64, %iterated: f64, %result: f64) {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1 : i32
     %slot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr
-    llvm.store %zero, %slot : f64, !llvm.ptr
+    %ownBlock = func.call @strict_flat_slot(%result) : (f64) -> f64
+    llvm.store %ownBlock, %slot : f64, !llvm.ptr
+    %hasBlock = arith.cmpf une, %ownBlock, %zero : f64
+    cf.cond_br %hasBlock, ^done, ^element
+  ^element:
     %unset = arith.cmpf oeq, %destination, %zero : f64
     %destinationPointer = func.call @strict_ptr(%destination) : (f64) -> !llvm.ptr
     %iteratedPointer = func.call @strict_ptr(%iterated) : (f64) -> !llvm.ptr
@@ -6395,6 +6592,11 @@
     %no = arith.constant false
     %differentResult = func.call @strict_boolean(%no) : (i1) -> f64
     return %differentResult : f64
+  }
+  func.func private @strict_list_text_flat(%list: f64) -> f64 {
+    %converter = func.constant @strict_flat_text : (f64) -> f64
+    %text = func.call @strict_list_text_mapped(%list, %converter) : (f64, (f64) -> f64) -> f64
+    return %text : f64
   }
   func.func private @strict_flat_text(%flat: f64) -> f64 {
     %list = func.call @strict_flat_list(%flat) : (f64) -> f64
@@ -6928,6 +7130,11 @@
   }
   func.func private @strict_list_equal_text(%left: f64, %right: f64) -> f64 {
     %element = func.constant @strict_text_equal : (f64, f64) -> f64
+    %result = func.call @strict_list_equal(%left, %right, %element) : (f64, f64, (f64, f64) -> f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_equal_flat(%left: f64, %right: f64) -> f64 {
+    %element = func.constant @strict_flat_equal : (f64, f64) -> f64
     %result = func.call @strict_list_equal(%left, %right, %element) : (f64, f64, (f64, f64) -> f64) -> f64
     return %result : f64
   }

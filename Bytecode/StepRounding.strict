@@ -1,5 +1,6 @@
 has values ValueCodegen
 constant Plain = StepRounding(ValueCodegen.Plain)
+constant OwnStepped = SyntaxNode("MethodCall", "Stepped", (SyntaxNode("Call", "Greet"), SyntaxNode("Number", "2")))
 constant Price = SyntaxNode("Identifier", "price")
 Rounded(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Rounded(Price, CodeBlock.Empty) is Price
@@ -61,7 +62,9 @@ Compared(node SyntaxNode, block CodeBlock) SyntaxNode
 	SyntaxNode(node.Kind, node.text, (Wrapped(node.children(0), step), Wrapped(node.children(1), step)), node.line)
 StepOf(node SyntaxNode, block CodeBlock) Text
 	Plain.StepOf(SyntaxNode("Number", "1"), CodeBlock.Empty) is ""
-	if (node.Kind is "MethodCall") and (node.text is "Stepped")
+	Plain.StepOf(OwnStepped, CodeBlock.Empty) is ""
+	let isStepped = (node.Kind is "MethodCall") and (node.text is "Stepped")
+	if isStepped then values.TypeOf(node.children(0), block) is "Number" else false
 		return node.children(1).text
 	if (node.Kind is "Binary") and (node.text is in ("+", "-"))
 		return Finest(StepOf(node.children(0), block), StepOf(node.children(1), block))

@@ -2,7 +2,7 @@ has function MlirFunction
 has position Number
 constant Constraint = "ConstraintNotMet: numbers with Length is 2 is false for "
 constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Pairing", (InstructionEntry.LoadText(0, Constraint), InstructionEntry.Return(0)))
-constant Pairing = TypeEntry("Strict/Math/Pairing", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 32), List(MethodEntry) + Validating)
+constant Pairing = TypeEntry("Strict/Math/Pairing", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 32, 2), List(MethodEntry) + Validating)
 constant Constructing = InstructionEntry.Invoke(1, ("Strict/Math/Pairing", "from", "Pairing", "numbers"), List(Number) + 0, -1)
 constant Reading = InstructionEntry.Invoke(1, ("Strict/List(Number)", "X", "Strict/Number"), List(Number), 0)
 constant Building = MethodEntry("Doubled", List(MemberEntry), "Strict/Math/Pairing", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult0"), InstructionEntry.Invoke(3, ("Strict/Math/Pairing", "from", "Pairing", "numbers"), List(Number) + 2, -1), InstructionEntry.Return(3)))
@@ -21,20 +21,8 @@ IsListed(kind Text) Boolean
 	Sample.IsListed("Number") is false
 	let type = function.TypeOf(TypeEntry.ShortName(kind))
 	let member = type.Changing.Length is 1 then TypeEntry.ShortName(type.Changing.First.typeName) else ""
-	if (member is not in ("List(Number)", "Numbers")) or (type.Changing.First.Bits is not 32)
-		return false
-	for type.methods
-		if (value.Name is "Validated") and IsConstrained(value)
-			return true
-	false
-IsConstrained(method MethodEntry) Boolean
-	Sample.IsConstrained(Validating)
-	Sample.IsConstrained(MethodEntry.CountingLoop) is false
-	for method.instructions
-		let isConstant = value.kind is InstructionType.LoadConstantToRegister
-		if isConstant and (value.texts.Length > 0) and (value.texts.First is Constraint)
-			return true
-	false
+	let isNumbers = member is in ("List(Number)", "Numbers")
+	isNumbers then (type.Changing.First.Bits is 32) and (type.Changing.First.Count is 2) else false
 Helper(entry InstructionEntry, owner Text, name Text) Text
 	Sample.Helper(Reading, "Pairing", "X") is "strict_two_x"
 	Sample.Helper(Reading, "Pairing", "Length") is "strict_two_length"

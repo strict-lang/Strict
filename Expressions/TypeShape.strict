@@ -78,7 +78,7 @@ CallScope(generics Texts) Scope
 	TypeShape("has width Number with value > 0").CallScope(List(Text)).TypeOf(Constrained) is "true"
 	TypeShape("has light Number = 0").CallScope(List(Text)).TypeOf("light default") is "0"
 	constant parameters = Defaults(lines).Added(ParameterScope)
-	constant scope = Constraint.IsConstrained(lines) then parameters.With(Constrained, "true") else parameters
+	constant scope = Constraint.Kind(lines) is "" then parameters else parameters.With(Constrained, Constraint.Kind(lines))
 	mutable names = List(Mutable(Text))
 	for MemberScope.types
 		if (value is not in generics) and ((value is "Generic") or (value.IndexOf("Generic") is -1))

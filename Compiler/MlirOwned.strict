@@ -57,6 +57,8 @@ IsFreshCall(inspected MlirFunction, at Number, depth Number) Boolean
 	if entry.texts(1) is "from"
 		let isBuilt = (arguments > 0) and IsFresh(inspected, at, entry.payload(first), depth)
 		return MlirLayout(inspected).IsStruct(entry.texts(0)) or isBuilt
+	if MlirNatives(inspected, at).Helper(entry.texts(0), entry.texts(1), arguments) is in MlirNatives.Destining
+		return true
 	let callees = MlirModule(inspected.types, "").Called(inspected, at)
 	(depth < 3) and (callees.Length > 0) and IsFreshMethod(callees.First, depth + 1)
 IsFreshMethod(callee MlirFunction, depth Number) Boolean

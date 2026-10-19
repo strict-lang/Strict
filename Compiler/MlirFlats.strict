@@ -3,7 +3,7 @@ has position Number
 constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Tripling", (InstructionEntry.LoadText(0, "ConstraintNotMet: numbers with Length is 3 is false for "), InstructionEntry.Return(0)))
 constant Reading = InstructionEntry.Invoke(1, ("Strict/List(Number)", "Z", "Strict/Number"), List(Number), 0)
 constant Zed = MethodEntry("Z", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), Reading, InstructionEntry.Return(1)))
-constant Numbers = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 32)
+constant Numbers = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 32, 3)
 constant Tripling = TypeEntry("Strict/Math/Tripling", List(MemberEntry) + Numbers, (Validating, Zed, MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)), InstructionEntry.Return(1)))))
 constant Summing = TypeEntry("Strict/Math/Summing", List(MemberEntry) + Numbers, (Validating, MethodEntry("Sum", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Invoke(1, ("Strict/List(Number)", "Sum", "Strict/Number"), List(Number), 0), InstructionEntry.Return(1)))))
 constant Reader = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Tripling.methods.Last), 1)
@@ -28,13 +28,7 @@ Count(kind Text) Number
 	(count >= 3) and (count <= 16) and IsSupported(type, member.Name) then count else 0
 Constrained(type TypeEntry) Number
 	Sample.Constrained(Tripling) is 3
-	for type.methods
-		for value.Name is "Validated" then value.instructions else List(InstructionEntry)
-			let text = value.texts.Length > 0 then value.texts.First else ""
-			let at = text.IndexOf(" with Length is ")
-			if (value.kind is InstructionType.LoadConstantToRegister) and text.StartsWith("ConstraintNotMet: ") and (at > 0)
-				return text.Substring(at + 16, text.Length - at - 16).Split(" ").First to Number
-	0
+	type.Changing.Length is 1 then type.Changing.First.Count else 0
 IsSupported(type TypeEntry, member Text) Boolean
 	Sample.IsSupported(Tripling, "numbers")
 	Sample.IsSupported(Summing, "numbers") is false
@@ -110,8 +104,8 @@ Started(count Number, written Number, slot Text) Texts
 	if written > 0
 		return List(Text) + function.Load(temp + "f", slot)
 	let counted = "    " + temp + "n = arith.constant " + count + ".0 : f64"
-	let created = MlirDestined(function, position).Started(temp)
-	(counted, created, function.Store(temp + "f", slot))
+	let created = MlirDestined(function, position).Started(temp, slot.Substring(3, slot.Length - 3))
+	(List(Text) + counted) + created + function.Store(temp + "f", slot)
 Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
 	MlirFlats(Made.function, 8).Constructed(Construction, "Tripling", MlirInstances(Made.function, 8)).Length is 2
 	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("flat_from_list(") > 0
@@ -156,11 +150,12 @@ Indexed(entry InstructionEntry, fallback MlirLists) Texts
 IsConsumed(steps List(InstructionEntry), at Number, register Number) Boolean
 	Sample.IsConsumed(Zed.instructions, 0, 0)
 	Sample.IsConsumed(Halving.methods.Last.instructions, 0, 0)
+	Sample.IsConsumed(MlirAlone.Checking.Slice(0, 2) + Reading, 0, 0)
 	Sample.IsConsumed((InstructionEntry.LoadNumber(0, 1), InstructionEntry.Return(0)), 0, 0) is false
 	let reuse = LoadReuse(steps)
 	for Range(at + 1, steps.Length)
 		let kind = steps(value).kind
 		let isArithmetic = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.ArithmeticSeparator)
-		if register is in reuse.Reads(steps(value))
+		if (register is in reuse.Reads(steps(value))) and (kind is not InstructionType.CheckError)
 			return isArithmetic or (kind is in MlirEquality.Comparisons) or IsAccessor(steps(value), register)
 	true

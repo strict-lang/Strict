@@ -151,5 +151,6 @@ ElementSuffix(kind Text) Text
 	Graded.ElementSuffix("List(Text, Number)") is ""
 	Graded.ElementSuffix("List(Text)") is "text"
 	Graded.ElementSuffix("List(Shape)") is ""
+	MlirKinds(MlirFlats.Sample.function).ElementSuffix("List(Tripling)") is "flat"
 	let element = MlirLayout(function).Represented(ElementKind(kind))
-	element is in ("Text", "Number") then element.Lower else ""
+	element is in ("Text", "Number", "Flat") then element.Lower else ""

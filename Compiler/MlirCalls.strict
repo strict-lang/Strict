@@ -71,7 +71,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let count = entry.payload(5 + entry.payload(3))
 	let helper = NativeHelper(entry, decoder)
 	if helper is not ""
-		return MlirNatives(function, position).Emitted(entry, type, helper)
+		return MlirDestined(function, position).Destined(entry, MlirNatives(function, position).Emitted(entry, type, helper))
 	let compiled = MlirDestined(function, position).Destined(entry, Compiled(entry, decoder, type, count))
 	MlirGrouped(function, position).Kept(compiled, entry.payload(0))
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
