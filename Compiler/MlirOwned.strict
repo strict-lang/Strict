@@ -113,7 +113,8 @@ Reconstructed(entry InstructionEntry, owner TypeEntry, fresh Texts) Texts
 	if name is ""
 		return fresh
 	let old = "%t" + position + "old"
-	let opened = (List(Text) + function.Load(old, "%v_" + name)) + Placed(Reusing.Slice(0, 4), 0, 0)
+	let checked = (function.Load(old, "%v_" + name), MlirAlone(function).Check(name, position))
+	let opened = checked + Placed(Reusing.Slice(1, 3), 0, 0)
 	let reused = Rewritten(entry, owner, name) + function.Store(old, "%r" + entry.payload(0))
 	opened + reused + Placed(Reusing.Slice(4, 2), 0, 0) + fresh + Placed(Reusing.Slice(6, 2), 0, 0)
 Target(entry InstructionEntry, owner TypeEntry) Text
