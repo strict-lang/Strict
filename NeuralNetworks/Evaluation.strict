@@ -1,0 +1,38 @@
+has logger
+constant Corpus = "NeuralNetworks/corpus/"
+constant Book = "https://www.gutenberg.org/cache/epub/1661/pg1661.txt"
+constant Width = 1500
+Run(path Text)
+	let texts = (Spans(Downloaded(Corpus + "heldout.txt", Book), "To Sherlock Holmes", 8), Spans(Sources("Math"), "", 8))
+	let isQwen = path.EndsWith(".gguf")
+	let vocabulary = isQwen then "" else File(path + "/vocab.json").ReadLines.First
+	let merges = isQwen then List(Text) else File(path + "/merges.txt").ReadLines
+	let tokenizer = isQwen then Gpt2Tokens.Loaded(Gguf(path)) else Gpt2Tokens.Parsed(vocabulary, merges)
+	let weights = path + "/model.safetensors"
+	let gpt2 = isQwen then List(Numbers) else Perplexity(Gpt2.Loaded(weights, 16)).Reports(tokenizer, texts)
+	let reports = isQwen then Perplexity(Qwen3.Loaded(path, 8)).Reports(tokenizer, texts) else gpt2
+	logger.Log(path + " English: " + Described(reports(0)))
+	logger.Log(path + " Strict: " + Described(reports(1)))
+Downloaded(path Text, address Text) Text
+	Evaluation(Logger).Downloaded("NeuralNetworks/Perplexity.strict", "").StartsWith("has model")
+	if File(path).Exists is false
+		Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + address + "\"")
+	Text.Combine(File(path).ReadLines, "\n")
+Spans(text Text, anchor Text, count Number) Texts
+	Evaluation(Logger).Spans(Text.Combine(("x", "To Sherlock"), "\n"), "To", 0).Length is 0
+	Evaluation(Logger).Spans(Sources("Math"), "", 2)(1).Length is Width
+	let start = anchor is "" then 0 else text.IndexOf(anchor)
+	for count
+		text.Substring(start + index * Width, Width)
+Sources(folder Text) Text
+	Evaluation(Logger).Sources("Math").Length > 10000
+	mutable joined = ""
+	for Directory.Files(folder, "*.strict")
+		joined = joined + Text.Combine(File(value).ReadLines, "\n") + "\n"
+	joined
+Described(report Numbers) Text
+	Evaluation(Logger).Described((6.931471805599453, 10, 20, 0.5)).StartsWith("perplexity 2, 0.5 bits per character")
+	let perplexity = (report(0) / report(1)).Exponential.Round(3)
+	let bits = (report(0) / 0.6931471805599453 / report(2)).Round(4)
+	let speed = (report(3) * 1000 / report(1)).Round(2)
+	"perplexity " + perplexity + ", " + bits + " bits per character, " + speed + " ms per token (" + report(1) + " tokens)"

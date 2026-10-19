@@ -1,5 +1,5 @@
 has function MlirFunction
-constant Degrees = TypeEntry("Strict/Degrees", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false, 32)), List(MethodEntry))
+constant Degrees = TypeEntry("Strict/Degrees", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
 constant Angle = TypeEntry("Strict/Angle", (MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false)), List(MethodEntry))
 constant Wrapping = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Degrees + Angle, Degrees, MethodEntry.CountingLoop))
 constant Widened = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "width"), InstructionEntry.Return(0))
@@ -20,17 +20,6 @@ IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("List(Number)") is false
 	let isStruct = function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
 	isStruct and (MlirCouples(function, 0).IsCoupled(typeName) is false)
-Constructed(entry InstructionEntry, typeName Text, temp Text) Texts
-	Wrapping.Constructed(MlirInstances.Built, "Strict/Angle", "%t1o").Length is 2
-	Wrapping.Constructed(MlirInstances.Built, "Strict/Degrees", "%t1o")(1) is "    %t1on = arith.truncf %t1o : f64 to f32"
-	let source = "%r" + entry.payload(5 + entry.payload(3) + 1)
-	let type = function.TypeOf(typeName)
-	let isSingle = type.Wrapped is "Number" then type.Changing.First.Bits is 32 else false
-	if isSingle is false
-		return function.Copied(source, "%r" + entry.payload(0), temp)
-	let narrowed = "    " + temp + "n = arith.truncf " + temp + " : f64 to f32"
-	let widened = "    " + temp + "w = arith.extf " + temp + "n : f32 to f64"
-	(function.Load(temp, source), narrowed, widened, function.Store(temp + "w", "%r" + entry.payload(0)))
 Represented(kind Text) Text
 	Wrapping.Represented("Angle") is "Number"
 	Wrapping.Represented("Shape") is "Shape"

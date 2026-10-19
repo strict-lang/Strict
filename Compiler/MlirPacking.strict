@@ -1,7 +1,7 @@
 has function MlirFunction
 has position Number
 constant Adder = TypeEntry("Strict/Math/Adder", List(MemberEntry), (MethodEntry("Summed", List(MemberEntry) + MemberEntry("list", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry)), MethodEntry("Moved", List(MemberEntry) + MemberEntry("other", "Strict/Math/Pairing", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry))))
-constant Listing = MlirPacking(MlirFunction((MlirPairs.Pairing, Adder), MlirPairs.Pairing, MethodEntry("Total", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Invoke(1, ("Strict/List(Number)", "Sum", "Strict/Number"), List(Number), 0), InstructionEntry.Invoke(2, ("Strict/Math/Adder", "Summed", "Strict/Number", "list"), List(Number) + 0, -1), InstructionEntry.Invoke(3, ("Strict/Math/Pairing", "from", "Pairing", "numbers"), List(Number) + 0, -1), InstructionEntry(InstructionType.FieldLoad, "numbers", (4, 3, -1)), InstructionEntry.Invoke(5, ("Strict/List(Number)", "Sum", "Strict/Number"), List(Number), 4), InstructionEntry.Return(1)))), 0)
+constant Listing = MlirPacking(MlirFunction((MlirPairs.Pairing, Adder), MlirPairs.Pairing, MethodEntry("Total", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Invoke(1, ("Strict/List(Number)", "Sum", "Strict/Number"), List(Number), 0), InstructionEntry.Invoke(2, ("Strict/Math/Adder", "Summed", "Strict/Number", "list"), List(Number) + 0, -1), InstructionEntry.Return(1)))), 0)
 constant Packed = MlirPacking(MlirFunction((MlirPairs.Pairing, Adder), MlirPairs.Pairing, MethodEntry("Moved", List(MemberEntry) + MemberEntry("list", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Math/Pairing", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "list"), InstructionEntry.Invoke(1, ("Strict/Math/Adder", "Moved", "Strict/Number", "other"), List(Number) + 0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "list"), InstructionEntry.Return(2)))), 0)
 constant Fetching = InstructionEntry(InstructionType.IndexCall, "numbers", (7, 1, -1))
 constant Plain = MlirPacking(MlirLists.Listed, 2)
@@ -59,7 +59,6 @@ IsPair(kind Text) Boolean
 	(TypeEntry.IsBaseName(kind) is false) and MlirPairs(function, position).IsListed(kind)
 Repacked Texts
 	Listing.Repacked(1) is "    %t0cl = func.call @strict_two_list(%t0c) : (f64) -> f64"
-	MlirPacking(Listing.function, 4).Repacked(1) is "    %t4cl = func.call @strict_two_list(%t4c) : (f64) -> f64"
 	Packed.Repacked(1) is "    %t0cl = func.call @strict_two_from_list(%t0c) : (f64) -> f64"
 	let register = LoadReuse(function.method.instructions).Written(function.method.instructions(position))
 	let written = register < 0 then "" else MlirKinds(function).WrittenKind(position)

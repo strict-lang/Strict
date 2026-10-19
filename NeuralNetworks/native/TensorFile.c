@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include "strict.h"
 #ifdef _WIN32
 #define strict_seek _fseeki64
@@ -48,10 +49,59 @@ STRICT_EXPORT double TensorFile_Header(double self, double path)
 	return strict_text_result(header);
 }
 
-/* Reads count float32 values starting start bytes into the data after the header, 0 and the failure if it can't. */
-static float* Read(double path, double start, uint64_t count, const char** failure)
+/* A tensor as its header entry describes it: "dtype":"F16","shape":[2,3],"data_offsets":[24,36]. */
+typedef struct { uint64_t bytes, isBrain, rank, height, width, start; } Tensor;
+
+/* Reads the numbers of a list like [2,3] at text into numbers (at most limit), their count or -1 when it is malformed. */
+static int Listed(const char* text, uint64_t* numbers, int limit)
 {
-	uint64_t length = 0;
+	int count = 0;
+	char* next = (char*)text;
+	while (*next != ']')
+	{
+		if (count == limit || *next < '0' || *next > '9')
+			return -1;
+		numbers[count++] = strtoull(next, &next, 10);
+		if (*next == ',')
+			next++;
+		else if (*next != ']')
+			return -1;
+	}
+	return count;
+}
+
+/* Fills tensor from entry, 0 or the name of what is wrong with it. */
+static const char* Described(const char* entry, Tensor* tensor)
+{
+	const char* type = strstr(entry, "\"dtype\":\"");
+	const char* shape = strstr(entry, "\"shape\":[");
+	const char* offsets = strstr(entry, "\"data_offsets\":[");
+	if (!type || !shape || !offsets)
+		return "TensorNotFound";
+	type += 9;
+	tensor->isBrain = strncmp(type, "BF16\"", 5) == 0;
+	tensor->bytes = strncmp(type, "F32\"", 4) == 0 ? 4 : strncmp(type, "F16\"", 4) == 0 || tensor->isBrain ? 2 : 0;
+	if (!tensor->bytes)
+		return "OnlyF32F16AndBF16TensorsAreSupported";
+	uint64_t dimensions[2] = { 1, 1 }, range[2];
+	int rank = Listed(shape + 9, dimensions, 2);
+	if (rank < 0 || Listed(offsets + 16, range, 2) != 2)
+		return "OnlyVectorsAndMatricesAreSupported";
+	tensor->rank = (uint64_t)rank;
+	tensor->height = rank == 2 ? dimensions[0] : 1;
+	tensor->width = rank == 2 ? dimensions[1] : dimensions[0];
+	tensor->start = range[0];
+	if (tensor->height > (1ull << 30) || tensor->width > (1ull << 30))
+		return "TensorTooLarge";
+	if (range[1] < range[0] || range[1] - range[0] != tensor->height * tensor->width * tensor->bytes)
+		return "TensorSizeMismatch";
+	return 0;
+}
+
+/* Reads the numbers of a tensor as 32 bit floats, 0 and the failure if it can't. */
+static float* Read(double path, const Tensor* tensor, const char** failure)
+{
+	uint64_t length = 0, count = tensor->height * tensor->width;
 	FILE* file = Opened(strict_text(path), &length);
 	if (!file)
 	{
@@ -59,25 +109,39 @@ static float* Read(double path, double start, uint64_t count, const char** failu
 		return 0;
 	}
 	float* floats = malloc(count * sizeof(float) + 1);
-	strict_seek(file, (int64_t)(8 + length + (uint64_t)start), SEEK_SET);
-	size_t read = fread(floats, sizeof(float), count, file);
+	if (!floats)
+	{
+		fclose(file);
+		*failure = "TensorTooLarge";
+		return 0;
+	}
+	strict_seek(file, (int64_t)(8 + length + tensor->start), SEEK_SET);
+	size_t read = fread(floats, (size_t)tensor->bytes, count, file);
 	fclose(file);
-	if (read == count)
-		return floats;
-	free(floats);
-	*failure = "TensorFileDataTruncated";
-	return 0;
+	if (read != count)
+	{
+		free(floats);
+		*failure = "TensorFileDataTruncated";
+		return 0;
+	}
+	/* 16 bit numbers fill the first half, widened from the last one down so none is overwritten before it is read */
+	const uint16_t* halves = (const uint16_t*)floats;
+	for (uint64_t index = count; tensor->bytes == 2 && index-- > 0;)
+		floats[index] = tensor->isBrain ? strict_brain_float(halves[index]) : strict_half_float(halves[index]);
+	return floats;
 }
 
-/* Reads count float32 values starting start bytes into the data after the header, as doubles. */
-STRICT_EXPORT double TensorFile_Floats(double self, double path, double start, double count)
+/* The numbers of the tensor that entry describes, as doubles. */
+STRICT_EXPORT double TensorFile_Floats(double self, double path, double entry)
 {
 	static strict_numbers* numbers = 0;
 	const char* failure = 0;
-	uint64_t total = (uint64_t)count;
-	float* floats = Read(path, start, total, &failure);
+	Tensor tensor;
+	failure = Described(strict_text(entry), &tensor);
+	float* floats = failure ? 0 : Read(path, &tensor, &failure);
 	if (!floats)
 		return strict_fail(failure);
+	uint64_t total = tensor.height * tensor.width;
 	free(numbers);
 	numbers = malloc(sizeof(strict_numbers) + total * sizeof(double));
 	numbers->count = (double)total;
@@ -87,18 +151,20 @@ STRICT_EXPORT double TensorFile_Floats(double self, double path, double start, d
 	return strict_numbers_result(numbers);
 }
 
-/* The rows (or the columns when transposed) of the float32 matrix of shape (rows, columns) at start, each as numbers with
-   bits 32 (exact), 16 (rounded to halves) or 8 (quantized, strict_quantized). */
-static double Matrix(double path, double start, double shape, double bits, int transposed)
+/* The rows (or the columns when transposed) of the matrix that entry describes, each as numbers with bits 32 (exact for
+   32 and 16 bit tensors), 16 (rounded to halves) or 8 (quantized, strict_quantized). */
+static double Matrix(double path, double entry, double bits, int transposed)
 {
 	static double* rows = 0;
 	static unsigned char* storage = 0;
-	const strict_numbers* dimensions = strict_numbers_of(shape);
-	if (dimensions->count != 2 || (bits != 8 && bits != 16 && bits != 32))
+	Tensor tensor;
+	const char* failure = Described(strict_text(entry), &tensor);
+	if (failure)
+		return strict_fail(failure);
+	if (tensor.rank != 2 || (bits != 8 && bits != 16 && bits != 32))
 		return strict_fail("OnlyMatricesOf8Or16Or32BitsAreSupported");
-	uint64_t height = (uint64_t)dimensions->items[0], width = (uint64_t)dimensions->items[1];
-	const char* failure = 0;
-	float* floats = Read(path, start, height * width, &failure);
+	uint64_t height = tensor.height, width = tensor.width;
+	float* floats = Read(path, &tensor, &failure);
 	if (!floats)
 		return strict_fail(failure);
 	uint64_t outer = transposed ? width : height, inner = transposed ? height : width;
@@ -128,12 +194,12 @@ static double Matrix(double path, double start, double shape, double bits, int t
 	return strict_numbers_result((strict_numbers*)rows);
 }
 
-STRICT_EXPORT double TensorFile_Rows(double self, double path, double start, double shape, double bits)
+STRICT_EXPORT double TensorFile_Rows(double self, double path, double entry, double bits)
 {
-	return Matrix(path, start, shape, bits, 0);
+	return Matrix(path, entry, bits, 0);
 }
 
-STRICT_EXPORT double TensorFile_Columns(double self, double path, double start, double shape, double bits)
+STRICT_EXPORT double TensorFile_Columns(double self, double path, double entry, double bits)
 {
-	return Matrix(path, start, shape, bits, 1);
+	return Matrix(path, entry, bits, 1);
 }

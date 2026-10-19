@@ -167,10 +167,13 @@ MachineLearning/shakespeare.txt
 **/native/*.exp
 
 NeuralNetworks/gpt2/
+NeuralNetworks/distilgpt2/
+NeuralNetworks/corpus/
 NeuralNetworks/qwen3/
 *.safetensors
 !NeuralNetworks/tiny.safetensors
 !NeuralNetworks/tinygpt2.safetensors
+!NeuralNetworks/tinyhalves.safetensors
 *.gguf
 !NeuralNetworks/tiny.gguf
 !NeuralNetworks/tinyqwen3.gguf

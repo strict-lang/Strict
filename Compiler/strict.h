@@ -78,6 +78,21 @@ static inline uint16_t strict_half(float number)
 	uint32_t rest = significand & ((1u << shift) - 1), middle = 1u << (shift - 1);
 	return (uint16_t)(sign | (half + (rest > middle || (rest == middle && (half & 1)))));
 }
+/* The 32 bit float of a 16 bit float (IEEE half) and of a bfloat16 (the upper half of a 32 bit float). */
+static inline float strict_half_float(uint16_t half)
+{
+	uint32_t sign = (half & 0x8000u) << 16, exponent = (half >> 10) & 31, mantissa = half & 1023;
+	union { uint32_t bits; float value; } single;
+	if (exponent == 0)
+		return (sign ? -1.0f : 1.0f) * (float)mantissa / 16777216.0f;
+	single.bits = sign | (exponent == 31 ? 0x7F800000u : (exponent + 112) << 23) | mantissa << 13;
+	return single.value;
+}
+static inline float strict_brain_float(uint16_t brain)
+{
+	union { uint32_t bits; float value; } single = { (uint32_t)brain << 16 };
+	return single.value;
+}
 /* Returns an Error with this name, the name must live as long as the program. */
 static inline double strict_fail(const char* name) { return strict_value(0x7FFC000000000000ull | (uint64_t)(uintptr_t)name); }
 #endif

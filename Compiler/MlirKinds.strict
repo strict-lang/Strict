@@ -115,7 +115,7 @@ FieldKind(writer Number, entry InstructionEntry) Text
 	let kind = KindOf(writer, entry.payload(1))
 	let wrapped = entry.texts is ("Name", "Error") then "Text" else MlirLayout(function).Wrapped(kind)
 	if (entry.texts(0) is "value") or (wrapped is not "")
-		return (entry.texts(0) is "value") or MlirPairs(function, writer).IsListed(kind) then kind else wrapped
+		return entry.texts(0) is "value" then kind else wrapped
 	let member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
 	let isStruct = MlirLayout(function).IsStruct(kind)
 	isStruct then (member is "" then "Number" else member) else (member is "Number" then member else kind)

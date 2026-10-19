@@ -229,19 +229,10 @@ STRICT_EXPORT double GgufFile_Shape(double self, double path, double name)
 	return strict_numbers_result(shape);
 }
 
-static double Half(uint16_t half)
-{
-	uint32_t sign = (half & 0x8000u) << 16, exponent = (half >> 10) & 31, mantissa = half & 1023;
-	union { uint32_t bits; float value; } single;
-	if (exponent == 0)
-		return (sign ? -1.0 : 1.0) * mantissa / 16777216.0;
-	single.bits = sign | (exponent == 31 ? 0x7F800000u : (exponent + 112) << 23) | mantissa << 13;
-	return single.value;
-}
 
 static uint64_t BlockNumbers(uint32_t type) { return type == Q8_0 ? 32 : type == Q4_K || type == Q6_K ? 256 : 1; }
 static uint64_t BlockBytes(uint32_t type) { return type == F32 ? 4 : type == Q8_0 ? 34 : type == Q4_K ? 144 : type == Q6_K ? 210 : 2; }
-static float HalfAt(const unsigned char* bytes) { return (float)Half((uint16_t)(bytes[0] | bytes[1] << 8)); }
+static float HalfAt(const unsigned char* bytes) { return strict_half_float((uint16_t)(bytes[0] | bytes[1] << 8)); }
 
 /* The 6 bit scale and minimum of group j of a Q4_K block (get_scale_min_k4 of ggml). */
 static void ScaleMin(int j, const unsigned char* q, int* scale, int* minimum)
@@ -296,13 +287,10 @@ static void Decoded(uint32_t type, const unsigned char* block, float* y)
 	else if (type == F16)
 		*y = HalfAt(block);
 	else if (type == BF16)
-	{
-		union { uint32_t bits; float value; } single = { (uint32_t)(block[0] | block[1] << 8) << 16 };
-		*y = single.value;
-	}
+		*y = strict_brain_float((uint16_t)(block[0] | block[1] << 8));
 	else if (type == Q8_0)
 		for (int index = 0; index < 32; index++)
-			y[index] = (float)(Half((uint16_t)(block[0] | block[1] << 8)) * (int8_t)block[2 + index]);
+			y[index] = HalfAt(block) * (int8_t)block[2 + index];
 	else if (type == Q4_K)
 		DecodedQ4K(block, y);
 	else

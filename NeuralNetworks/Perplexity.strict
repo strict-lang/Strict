@@ -1,0 +1,32 @@
+has model Generic
+Measured(tokens Numbers) Number
+	Perplexity(Gpt2.Tiny).Measured((1, 2)) is 0 - Perplexity(Gpt2.Tiny).LogShare(Gpt2.Tiny.Step(1, 0).Scored, 2)
+	Perplexity(Gpt2.Tiny).Measured((1, 2, 3)) > Perplexity(Gpt2.Tiny).Measured((1, 2))
+	mutable current = model
+	mutable total = 0
+	for tokens.Length - 1
+		current = current.Step(tokens(index), index)
+		total = total - LogShare(current.Scored, tokens(index + 1))
+	total
+Report(tokenizer Gpt2Tokens, texts Texts) Numbers
+	Perplexity(Gpt2.Tiny).Report(Gpt2Tokens.Tiny, ("ab ab", "ab"))(1) is 1
+	Perplexity(Gpt2.Tiny).Report(Gpt2Tokens.Tiny, ("ab ab", "ab"))(2) is 7
+	mutable loss = 0
+	mutable scored = 0
+	mutable characters = 0
+	let started = Process.Elapsed
+	for texts
+		let tokens = tokenizer.Encoded(value)
+		loss = loss + Measured(tokens)
+		scored = scored + tokens.Length - 1
+		characters = characters + value.Length
+	(loss, scored, characters, Process.Elapsed - started)
+Reports(tokenizer Gpt2Tokens, texts List(Texts)) List(Numbers)
+	Perplexity(Qwen3.Tiny).Reports(Gpt2Tokens.Tiny, List(Texts) + ("ab ab", "ab")).First(1) is 1
+	for texts
+		Report(tokenizer, value)
+LogShare(scores Numbers, token Number) Number
+	Perplexity(Gpt2.Tiny).LogShare((0, 0), 1).IsNearlyEqual(-0.6931471805599453)
+	Perplexity(Gpt2.Tiny).LogShare((1000, 0), 0) is 0
+	let largest = Softmax.Largest(scores, 0, scores.Length)
+	scores(token) - largest - Softmax.Total(scores, 0, scores.Length, largest).Logarithm

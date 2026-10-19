@@ -21,6 +21,9 @@ Loaded(model Gguf) Gpt2Tokens
 		known(raw.Last) = index
 	let ranked = Ranked(model.Value("tokenizer.ggml.merges").Lines, known)
 	Gpt2Tokens(raw, known, ranked, model.Value("tokenizer.ggml.pre") is "qwen2")
+Folder(folder Text) Gpt2Tokens
+	Gpt2Tokens.Folder("NeuralNetworks/missing") is Error
+	Gpt2Tokens.Parsed(File(folder + "/vocab.json").ReadLines.First, File(folder + "/merges.txt").ReadLines)
 Vocabulary(json Text) Texts
 	Vocabulary("{\"\\\"\": 0, \"\\\\\": 1, \"\\u0120a\": 2}") is ("\"", "\\", " a")
 	mutable parsed = List(Mutable(Text))

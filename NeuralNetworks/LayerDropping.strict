@@ -1,0 +1,31 @@
+has logger
+Run(path Text, count = 4)
+	let evaluation = Evaluation(logger)
+	let novel = evaluation.Downloaded(Evaluation.Corpus + "calibration.txt", Evaluation.Novel)
+	let calibrating = evaluation.Texts(novel, "It is a truth", "Compiler", 2)
+	let book = evaluation.Downloaded(Evaluation.Corpus + "heldout.txt", Evaluation.Book)
+	let heldout = evaluation.Texts(book, "To Sherlock Holmes", "Math", 8)
+	let tokenizer = Gpt2Tokens.Folder(path)
+	mutable model = Gpt2.Loaded(path + "/model.safetensors", 16)
+	mutable kept = Range(0, model.blocks.Length).Numbers
+	logger.Log(path + " with all " + kept.Length + " blocks: " + Reported(model, tokenizer, heldout))
+	for count
+		let removed = Weakest(model, tokenizer, calibrating(0) + calibrating(1))
+		model = model.Without(removed)
+		logger.Log("without block " + kept(removed) + ": " + Reported(model, tokenizer, heldout))
+		kept.Remove(kept(removed))
+Weakest(model Gpt2, tokenizer Gpt2Tokens, texts Texts) Number
+	LayerDropping(Logger).Weakest(Gpt2.Tiny, Gpt2Tokens.Tiny, ("ab ab")) is 0
+	mutable weakest = 0
+	mutable lowest = -1
+	for model.blocks.Length
+		let loss = Perplexity(model.Without(index)).Report(tokenizer, texts)(0)
+		weakest = (lowest < 0) or (loss < lowest) then index else weakest
+		lowest = (lowest < 0) or (loss < lowest) then loss else lowest
+	weakest
+Reported(model Gpt2, tokenizer Gpt2Tokens, texts List(Texts)) Text
+	LayerDropping(Logger).Reported(Gpt2.Tiny, Gpt2Tokens.Tiny, List(Texts) + ("ab ab")).StartsWith("English perplexity")
+	let reports = Perplexity(model).Reports(tokenizer, texts)
+	let evaluation = Evaluation(logger)
+	let strict = texts.Length > 1 then ", Strict " + evaluation.Described(reports(1)) else ""
+	"English " + evaluation.Described(reports(0)) + strict
