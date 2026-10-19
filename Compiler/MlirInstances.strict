@@ -27,7 +27,7 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Character").Length is 2
 	Text.Combine(MlirInstances(Shapes, 1).Constructed(Built, "Strict/Error")).IndexOf("@strict_error_bits(") > 0
 	if (TypeEntry.ShortName(typeName) is "File") or (MlirLayout(function).IsStruct(typeName) is false)
-		return function.Copied("%r" + entry.payload(5 + entry.payload(3) + 1), "%r" + entry.payload(0), Temp("o"))
+		return MlirLayout(function).Constructed(entry, typeName, Temp("o"))
 	let owner = function.TypeOf(typeName)
 	let members = Stored(owner)
 	let memory = MlirMemory(function, position)

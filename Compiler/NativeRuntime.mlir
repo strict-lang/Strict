@@ -10008,10 +10008,10 @@
     %firstRow = llvm.load %items : !llvm.ptr -> f64
     %columnsNumber = func.call @strict_list_length(%firstRow) : (f64) -> f64
     %columns = arith.fptosi %columnsNumber : f64 to i64
-    cf.br ^widest(%none, %none, %sixtyFour : i64, i64, i64)
-  ^widest(%index: i64, %stride: i64, %narrowest: i64):
+    cf.br ^widest(%none, %none, %sixtyFour, %none : i64, i64, i64, i64)
+  ^widest(%index: i64, %stride: i64, %narrowest: i64, %packedStride: i64):
     %more = arith.cmpi slt, %index, %count : i64
-    cf.cond_br %more, ^width, ^sized
+    cf.cond_br %more, ^width, ^narrowing
   ^width:
     %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %row = llvm.load %slot : !llvm.ptr -> f64
@@ -10022,17 +10022,24 @@
     %bytes = func.call @strict_packed_bytes(%columns, %bits) : (i64, i64) -> i64
     %wider = arith.maxui %stride, %bytes : i64
     %narrower = arith.minui %narrowest, %bits : i64
+    %isWide = arith.cmpi eq, %bits, %sixtyFour : i64
+    %packedBytes = arith.select %isWide, %none, %bytes : i64
+    %packedWider = arith.maxui %packedStride, %packedBytes : i64
     %following = arith.addi %index, %one : i64
-    cf.cond_br %sameLength, ^widest(%following, %wider, %narrower : i64, i64, i64), ^mismatch
+    cf.cond_br %sameLength, ^widest(%following, %wider, %narrower, %packedWider : i64, i64, i64, i64), ^mismatch
   ^mismatch:
     return %false : i1
+  ^narrowing:
+    %narrowed = func.call @strict_gpu_narrowable(%items, %count, %columns, %narrowest) : (!llvm.ptr, i64, i64, i64) -> i1
+    %chosenStride = arith.select %narrowed, %packedStride, %stride : i64
+    cf.br ^sized
   ^sized:
     %fifteen = arith.constant 15 : i64
     %sixteenMask = arith.constant -16 : i64
     %withTable = arith.addi %count, %eight : i64
     %paddedHeader = arith.addi %withTable, %fifteen : i64
     %header = arith.andi %paddedHeader, %sixteenMask : i64
-    %paddedStride = arith.addi %stride, %fifteen : i64
+    %paddedStride = arith.addi %chosenStride, %fifteen : i64
     %rowStride = arith.andi %paddedStride, %sixteenMask : i64
     %rowsBytes = arith.muli %rowStride, %count : i64
     %total = arith.addi %header, %rowsBytes : i64
@@ -10050,16 +10057,26 @@
     %rowSlot = llvm.getelementptr %items[%rowIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %gathered = llvm.load %rowSlot : !llvm.ptr -> f64
     %rowBits = func.call @strict_gpu_bits(%gathered) : (f64) -> i64
+    %isWideRow = arith.cmpi eq, %rowBits, %sixtyFour : i64
+    %repacking = arith.andi %narrowed, %isWideRow : i1
+    %storedBits = arith.select %repacking, %narrowest, %rowBits : i64
     %widthAt = arith.addi %rowIndex, %eight : i64
     %widthSlot = llvm.getelementptr %staging[%widthAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %width = arith.trunci %rowBits : i64 to i8
+    %width = arith.trunci %storedBits : i64 to i8
     llvm.store %width, %widthSlot : i8, !llvm.ptr
-    %rowBytes = func.call @strict_packed_bytes(%columns, %rowBits) : (i64, i64) -> i64
+    %rowBytes = func.call @strict_packed_bytes(%columns, %storedBits) : (i64, i64) -> i64
     %rowOffset = arith.muli %rowIndex, %rowStride : i64
     %offset = arith.addi %header, %rowOffset : i64
     %destination = llvm.getelementptr %staging[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %rowData = func.call @strict_gpu_host(%gathered) : (f64) -> !llvm.ptr
+    cf.cond_br %repacking, ^repack, ^copyRow
+  ^repack:
+    %repacked = func.call @strict_gpu_repacked(%rowData, %columns, %narrowest, %destination) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    cf.br ^gathered
+  ^copyRow:
     %copied = llvm.call @memcpy(%destination, %rowData, %rowBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^gathered
+  ^gathered:
     %nextRow = arith.addi %rowIndex, %one : i64
     cf.br ^row(%nextRow : i64)
   ^upload:
@@ -10089,6 +10106,144 @@
   ^unavailable:
     llvm.call @free(%staging) : (!llvm.ptr) -> ()
     return %false : i1
+  }
+  // a matrix of packed rows (8, 16 or 32 bits) and rows unpacked on the CPU (doubles, like the token embeddings read for
+  // a prompt) goes up all packed when that format keeps every number of the unpacked rows exactly, not 64 bits wide
+  func.func private @strict_gpu_narrowable(%items: !llvm.ptr, %count: i64, %columns: i64, %bits: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %sixteen = arith.constant 16 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isEight = arith.cmpi eq, %bits, %eight : i64
+    %isSixteen = arith.cmpi eq, %bits, %sixteen : i64
+    %isThirtyTwo = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %isWider = arith.ori %isSixteen, %isThirtyTwo : i1
+    %isSupported = arith.ori %isEight, %isWider : i1
+    cf.cond_br %isSupported, ^next(%none, %false : i64, i1), ^done(%false : i1)
+  ^next(%index: i64, %hasWide: i1):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^row, ^done(%hasWide : i1)
+  ^row:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %row = llvm.load %slot : !llvm.ptr -> f64
+    %rowBits = func.call @strict_gpu_bits(%row) : (f64) -> i64
+    %following = arith.addi %index, %one : i64
+    %isWide = arith.cmpi eq, %rowBits, %sixtyFour : i64
+    cf.cond_br %isWide, ^check, ^next(%following, %hasWide : i64, i1)
+  ^check:
+    %numbers = func.call @strict_gpu_host(%row) : (f64) -> !llvm.ptr
+    %exact = func.call @strict_gpu_repacked(%numbers, %columns, %bits, %unset) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    cf.cond_br %exact, ^next(%following, %true : i64, i1), ^done(%false : i1)
+  ^done(%narrowable: i1):
+    return %narrowable : i1
+  }
+  // packs count doubles into the list format bits (8, 16 or 32) at destination (only checks without one), true when every
+  // number reads back exactly; an 8 bit block of 32 numbers has its largest magnitude at 127 times its scale
+  func.func private @strict_gpu_repacked(%numbers: !llvm.ptr, %count: i64, %bits: i64, %destination: !llvm.ptr) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %five = arith.constant 5 : i64
+    %eight = arith.constant 8 : i64
+    %sixteen = arith.constant 16 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %zeroFloat = arith.constant 0.0 : f64
+    %limit = arith.constant 127.0 : f64
+    %true = arith.constant true
+    %false = arith.constant false
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isWriting = llvm.icmp "ne" %destination, %unset : !llvm.ptr
+    %isEight = arith.cmpi eq, %bits, %eight : i64
+    %isSixteen = arith.cmpi eq, %bits, %sixteen : i64
+    cf.cond_br %isEight, ^block(%none : i64), ^number(%none : i64)
+  ^number(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^convert, ^done(%true : i1)
+  ^convert:
+    %slot = llvm.getelementptr %numbers[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %isSixteen, ^half, ^single
+  ^half:
+    %halfSingle = arith.truncf %value : f64 to f32
+    %half = arith.truncf %halfSingle : f32 to f16
+    %halfBack = arith.extf %half : f16 to f64
+    %halfExact = arith.cmpf oeq, %halfBack, %value : f64
+    cf.cond_br %isWriting, ^writeHalf, ^checked(%halfExact : i1)
+  ^writeHalf:
+    %halfSlot = llvm.getelementptr %destination[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f16
+    llvm.store %half, %halfSlot : f16, !llvm.ptr
+    cf.br ^checked(%halfExact : i1)
+  ^single:
+    %single = arith.truncf %value : f64 to f32
+    %singleBack = arith.extf %single : f32 to f64
+    %singleExact = arith.cmpf oeq, %singleBack, %value : f64
+    cf.cond_br %isWriting, ^writeSingle, ^checked(%singleExact : i1)
+  ^writeSingle:
+    %singleSlot = llvm.getelementptr %destination[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %single, %singleSlot : f32, !llvm.ptr
+    cf.br ^checked(%singleExact : i1)
+  ^checked(%exact: i1):
+    cf.cond_br %exact, ^number(%next : i64), ^done(%false : i1)
+  ^block(%start: i64):
+    %moreBlocks = arith.cmpi slt, %start, %count : i64
+    %blockEnd = arith.addi %start, %thirtyTwo : i64
+    %end = arith.minui %blockEnd, %count : i64
+    cf.cond_br %moreBlocks, ^largest(%start, %zeroFloat : i64, f64), ^done(%true : i1)
+  ^largest(%at: i64, %largestSoFar: f64):
+    %inBlock = arith.cmpi slt, %at, %end : i64
+    cf.cond_br %inBlock, ^magnitude, ^scaled
+  ^magnitude:
+    %magnitudeSlot = llvm.getelementptr %numbers[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %magnitudeValue = llvm.load %magnitudeSlot : !llvm.ptr -> f64
+    %magnitude = llvm.intr.fabs(%magnitudeValue) : (f64) -> f64
+    %larger = arith.maximumf %largestSoFar, %magnitude : f64
+    %atNext = arith.addi %at, %one : i64
+    cf.br ^largest(%atNext, %larger : i64, f64)
+  ^scaled:
+    %scale = arith.divf %largestSoFar, %limit : f64
+    %narrowScale = arith.truncf %scale : f64 to f32
+    %scaleBack = arith.extf %narrowScale : f32 to f64
+    %scaleExact = arith.cmpf oeq, %scaleBack, %scale : f64
+    %isZeroScale = arith.cmpf oeq, %scale, %zeroFloat : f64
+    cf.cond_br %isWriting, ^writeScale, ^scaleChecked
+  ^writeScale:
+    %scales = func.call @strict_packed_scales(%destination, %count, %eight) : (!llvm.ptr, i64, i64) -> !llvm.ptr
+    %blockIndex = arith.shrui %start, %five : i64
+    %scaleSlot = llvm.getelementptr %scales[%blockIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %narrowScale, %scaleSlot : f32, !llvm.ptr
+    cf.br ^scaleChecked
+  ^scaleChecked:
+    cf.cond_br %scaleExact, ^byte(%start : i64), ^done(%false : i1)
+  ^byte(%position: i64):
+    %moreBytes = arith.cmpi slt, %position, %end : i64
+    cf.cond_br %moreBytes, ^quantize, ^block(%end : i64)
+  ^quantize:
+    %byteSlot = llvm.getelementptr %numbers[%position] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %byteValue = llvm.load %byteSlot : !llvm.ptr -> f64
+    %ratio = arith.divf %byteValue, %scale : f64
+    %safeRatio = arith.select %isZeroScale, %zeroFloat, %ratio : f64
+    %rounded = llvm.intr.roundeven(%safeRatio) : (f64) -> f64
+    %decoded = arith.mulf %rounded, %scaleBack : f64
+    %byteExact = arith.cmpf oeq, %decoded, %byteValue : f64
+    %roundedMagnitude = llvm.intr.fabs(%rounded) : (f64) -> f64
+    %fits = arith.cmpf ole, %roundedMagnitude, %limit : f64
+    %byteFits = arith.andi %byteExact, %fits : i1
+    %positionNext = arith.addi %position, %one : i64
+    cf.cond_br %isWriting, ^writeByte, ^byteChecked(%byteFits : i1)
+  ^writeByte:
+    %byte = arith.fptosi %rounded : f64 to i8
+    %byteTarget = llvm.getelementptr %destination[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %byteTarget : i8, !llvm.ptr
+    cf.br ^byteChecked(%byteFits : i1)
+  ^byteChecked(%byteOk: i1):
+    cf.cond_br %byteOk, ^byte(%positionNext : i64), ^done(%false : i1)
+  ^done(%result: i1):
+    return %result : i1
   }
   llvm.mlir.global internal @strict_gpu_cache(dense<0> : tensor<524288xi64>) : !llvm.array<524288 x i64>
   llvm.mlir.global internal @strict_gpu_clock(0 : i64) : i64

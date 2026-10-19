@@ -110,8 +110,8 @@ WslPath(path Text) Text
 	slashed.IndexOf(":") is 1 then drive + slashed.Substring(2, slashed.Length - 2) else slashed
 Lowered(base Text) Text
 	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")
-	constant passes = " --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm"
-	let output = " --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
+	constant passes = " --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm"
+	let output = " --convert-cf-to-llvm --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
 	let lowering = Quoted(base + ".mlir") + SingleThreaded + passes + output
 	let lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
 	if lowered.Failed

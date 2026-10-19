@@ -35,7 +35,7 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).IndexOf("@Counter_from_foreign(") > 0
 	let type = function.TypeOf(decoder.Text(1))
 	let count = entry.payload(5 + entry.payload(3))
-	let custom = type.Callee("from", count, decoder.Text(4 + entry.payload(3)), decoder.Names)
+	let custom = decoder.Callee(type)
 	let instances = MlirInstances(function, position)
 	let target = "%r" + entry.payload(0)
 	let isForeign = MlirForeign(MlirFunction(function.types, type, custom)).IsForeign
@@ -73,7 +73,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirGrouped(function, position).Kept(Compiled(entry, decoder, type, count), entry.payload(0))
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 6
-	let callee = type.Callee(decoder.Text(2), count, decoder.Text(4 + entry.payload(3)), decoder.Names)
+	let callee = decoder.Callee(type)
 	let target = MlirFunction(function.types, type, callee)
 	if (callee.instructions.Length is 0) and (MlirForeign(target).IsForeign is false)
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))

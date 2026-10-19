@@ -1,0 +1,81 @@
+has function MlirFunction
+has position Number
+constant Adder = TypeEntry("Strict/Math/Adder", List(MemberEntry), (MethodEntry("Summed", List(MemberEntry) + MemberEntry("list", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry)), MethodEntry("Moved", List(MemberEntry) + MemberEntry("other", "Strict/Math/Pairing", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry))))
+constant Listing = MlirPacking(MlirFunction((MlirPairs.Pairing, Adder), MlirPairs.Pairing, MethodEntry("Total", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Invoke(1, ("Strict/List(Number)", "Sum", "Strict/Number"), List(Number), 0), InstructionEntry.Invoke(2, ("Strict/Math/Adder", "Summed", "Strict/Number", "list"), List(Number) + 0, -1), InstructionEntry.Invoke(3, ("Strict/Math/Pairing", "from", "Pairing", "numbers"), List(Number) + 0, -1), InstructionEntry(InstructionType.FieldLoad, "numbers", (4, 3, -1)), InstructionEntry.Invoke(5, ("Strict/List(Number)", "Sum", "Strict/Number"), List(Number), 4), InstructionEntry.Return(1)))), 0)
+constant Packed = MlirPacking(MlirFunction((MlirPairs.Pairing, Adder), MlirPairs.Pairing, MethodEntry("Moved", List(MemberEntry) + MemberEntry("list", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Math/Pairing", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "list"), InstructionEntry.Invoke(1, ("Strict/Math/Adder", "Moved", "Strict/Number", "other"), List(Number) + 0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "list"), InstructionEntry.Return(2)))), 0)
+constant Fetching = InstructionEntry(InstructionType.IndexCall, "numbers", (7, 1, -1))
+constant Plain = MlirPacking(MlirLists.Listed, 2)
+Kind(written Text) Text
+	Listing.Kind("Pairing") is "List(Number)"
+	MlirPacking(Packed.function, 2).Kind("List(Number)") is "Pairing"
+	let reuse = LoadReuse(function.method.instructions)
+	let register = reuse.Written(function.method.instructions(position))
+	if (register < 0) or (written is not in ("List(Number)", "Numbers")) and (IsPair(written) is false)
+		return written
+	for Range(position + 1, function.method.instructions.Length)
+		let reader = function.method.instructions(value)
+		let expected = register is in reuse.Reads(reader) then Expected(reader, register, written) else ""
+		if (expected is not "") or (reuse.Written(reader) is register)
+			return expected is "" then written else expected
+	written
+Expected(reader InstructionEntry, register Number, written Text) Text
+	Listing.Expected(InstructionEntry.LoopBegin(0, -1), 0, "Pairing") is "List(Number)"
+	Listing.Expected(InstructionEntry.Binary(InstructionType.Add, (1, 0, 2)), 0, "Pairing") is "List(Number)"
+	Listing.Expected(InstructionEntry.Binary(InstructionType.Equal, (1, 0)), 0, "Pairing") is ""
+	Listing.Expected(MlirPairs.Reading, 0, "Pairing") is ""
+	Listing.Expected(MlirPairs.Constructing, 0, "Pairing") is ""
+	Packed.Expected(InstructionEntry.Return(2), 2, "List(Number)") is "Pairing"
+	if reader.kind is InstructionType.Invoke
+		return PayloadDecoder(reader).Text(2) is "from" then "" else Argument(PayloadDecoder(reader), register, written)
+	let isArithmetic = reader.kind > InstructionType.StoreSeparator and reader.kind < InstructionType.ArithmeticSeparator
+	let isListed = isArithmetic or (reader.kind is InstructionType.LoopBegin)
+	let declared = reader.kind is InstructionType.Return then function.method.returnType else "List(Number)"
+	isListed or (reader.kind is InstructionType.Return) then Converted(written, declared) else ""
+Argument(decoder PayloadDecoder, register Number, written Text) Text
+	Listing.Argument(PayloadDecoder(Listing.function.method.instructions(1)), 0, "Pairing") is "List(Number)"
+	Packed.Argument(PayloadDecoder(Packed.function.method.instructions(1)), 0, "List(Number)") is "Pairing"
+	let count = decoder.entry.payload(5 + decoder.entry.payload(3))
+	let instance = 6 + decoder.entry.payload(3) + count
+	if (decoder.entry.payload(instance) is 1) and (decoder.entry.payload(instance + 1) is register)
+		let helper = MlirPairs(function, position).Helper(decoder.entry, written, decoder.Text(2))
+		return helper is "" then Converted(written, decoder.entry.texts.First) else ""
+	let parameters = decoder.Callee(function.TypeOf(decoder.Text(1))).parameters
+	for count
+		if (decoder.entry.payload(instance - count + index) is register) and (index < parameters.Length)
+			return Converted(written, parameters(index).typeName)
+	""
+Converted(written Text, declared Text) Text
+	Listing.Converted("Pairing", "Strict/List(Number)") is "List(Number)"
+	Listing.Converted("List(Number)", "Strict/Math/Pairing") is "Pairing"
+	Listing.Converted("Pairing", "Strict/Math/Pairing") is ""
+	Listing.Converted("Text", "Strict/List(Number)") is ""
+	let target = TypeEntry.ShortName(declared)
+	if IsPair(written)
+		return MlirLayout(function).Represented(target).StartsWith("List(") then "List(Number)" else ""
+	(written is in ("List(Number)", "Numbers")) and IsPair(target) then target else ""
+IsPair(kind Text) Boolean
+	Listing.IsPair("Pairing")
+	Listing.IsPair("List(Number)") is false
+	(TypeEntry.IsBaseName(kind) is false) and MlirPairs(function, position).IsListed(kind)
+Repacked Texts
+	Listing.Repacked(1) is "    %t0cl = func.call @strict_two_list(%t0c) : (f64) -> f64"
+	MlirPacking(Listing.function, 4).Repacked(1) is "    %t4cl = func.call @strict_two_list(%t4c) : (f64) -> f64"
+	Packed.Repacked(1) is "    %t0cl = func.call @strict_two_from_list(%t0c) : (f64) -> f64"
+	let register = LoadReuse(function.method.instructions).Written(function.method.instructions(position))
+	let written = register < 0 then "" else MlirKinds(function).WrittenKind(position)
+	let converted = register < 0 then "" else Kind(written)
+	if converted is written
+		return List(Text)
+	let helper = converted is "List(Number)" then "strict_two_list" else "strict_two_from_list"
+	let temp = "%t" + position + "c"
+	let call = "    " + temp + "l = func.call @" + helper + "(" + temp + ") : (f64) -> f64"
+	(function.Load(temp, "%r" + register), call, function.Store(temp + "l", "%r" + register))
+Indexed(entry InstructionEntry, fallback MlirLists) Texts
+	Text.Combine(Listing.Indexed(Fetching, MlirLists(Listing.function, 0))).IndexOf("@strict_two_at(%t0l, %t0i)") > 0
+	Plain.Indexed(MlirLists.Steps(2), MlirLists(MlirLists.Listed, 2)).Last.EndsWith("%r2 : f64, !llvm.ptr")
+	if IsPair(MlirKinds(function).VariableKind(position, entry.texts(0))) is false
+		return fallback.Indexed(entry)
+	let temp = "%t" + position
+	let loads = (function.Load(temp + "l", "%v_" + entry.texts(0)), function.Load(temp + "i", "%r" + entry.payload(1)))
+	let call = MlirMemory(function, position).Called(temp + "x", "strict_two_at", (temp + "l", temp + "i"))
+	loads + call + function.Store(temp + "x", "%r" + entry.payload(0))

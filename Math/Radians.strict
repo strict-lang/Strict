@@ -2,6 +2,7 @@ has number with value.Bits is 32
 constant DegreesPerRadian = 180 / Number.Pi
 to Degrees
 	Radians(0) to Degrees is 0
+	Radians(0.1).number is 0.10000000149011612
 	(Radians(Number.Pi / 4) to Degrees).number.IsNearlyEqual(45)
 	(Radians(Number.Pi / 2) to Degrees).number.IsNearlyEqual(90)
 	value * DegreesPerRadian

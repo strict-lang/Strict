@@ -12,8 +12,10 @@ KindOf(position Number, register Number) Text
 	Graded.KindOf(1, 0) is "Text"
 	Graded.KindOf(6, 4) is "Number"
 	Graded.KindOf(0, 7) is "Number"
+	MlirKinds(MlirPacking.Listing.function).KindOf(1, 0) is "List(Number)"
 	let writer = Writer(position, register)
-	writer < 0 then "Number" else WrittenKind(writer)
+	let written = writer < 0 then "Number" else WrittenKind(writer)
+	writer < 0 then written else MlirPacking(function, writer).Kind(written)
 WrittenKind(writer Number) Text
 	Graded.WrittenKind(3) is "Boolean"
 	Graded.WrittenKind(6) is "Shape"
@@ -113,7 +115,7 @@ FieldKind(writer Number, entry InstructionEntry) Text
 	let kind = KindOf(writer, entry.payload(1))
 	let wrapped = entry.texts is ("Name", "Error") then "Text" else MlirLayout(function).Wrapped(kind)
 	if (entry.texts(0) is "value") or (wrapped is not "")
-		return entry.texts(0) is "value" then kind else wrapped
+		return (entry.texts(0) is "value") or MlirPairs(function, writer).IsListed(kind) then kind else wrapped
 	let member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
 	let isStruct = MlirLayout(function).IsStruct(kind)
 	isStruct then (member is "" then "Number" else member) else (member is "Number" then member else kind)
