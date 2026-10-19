@@ -6,6 +6,8 @@ constant Tokens = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("tokens").First
 constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
 constant Long = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("long").First
 constant Wide = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("wider").First
+constant Fours = Batch(Blocks.Rows("four"), List(Number) + 0)
+constant Tile = 64
 Sums(input Numbers) Numbers
 	Pair.Sums((1, 1)) is (13, 27)
 	Pair.Sums((1, 1, 2, 0)) is (13, 27, 12, 26)
@@ -19,6 +21,15 @@ Sums(input Numbers) Numbers
 	let rows = weights.Length
 	for rows * input.Length / width
 		Dot(weights(index % rows), 0, input, (index / rows).Floor * width) + biases(index % biases.Length)
+Grouped(bases Numbers, count Number, input Numbers) Numbers
+	Pair.Grouped(List(Number) + 1, 1, (1, 1, 2, 0)) is (7, 6)
+	Pair.Grouped(List(Number) + 0, 2, (1, 1, 2, 0)) is (3, 7, 2, 6)
+	Fours.Grouped(List(Number) + 8, 8, Tokens)(3) is Fours.Sums(Tokens)(11)
+	Fours.Grouped((0, 8), 8, Long)(83).IsNearlyEqual(Fours.Sums(Long)(163), 0.5)
+	Fours.Grouped((0, 8), 8, Long)(523).IsNearlyEqual(Fours.Sums(Long)(1051), 0.5)
+	let width = weights.First.Length
+	for count * input.Length / width
+		Dot(weights(bases((index / count / Tile).Floor) + index % count), 0, input, (index / count).Floor * width)
 Dot(row Numbers, first Number, input Numbers, start Number) Number
 	Pair.Dot((1, 2), 0, (5, 1, 3), 1) is 7
 	Batch(Blocks.Rows("four"), List(Number) + 0).Sums(Long)(1277).IsNearlyEqual(5.001, 0.5)

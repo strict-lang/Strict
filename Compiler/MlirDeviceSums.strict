@@ -6,6 +6,7 @@ constant Shared = MethodEntry("Shared", GpuSamples.Summed.parameters, "Strict/Nu
 constant Sharing = MlirDeviceSums(MlirFunction(MlirDeviceStatements.Summed.types, GpuSamples.Layered, Shared), 2)
 constant Strided = MethodEntry("Strided", (MemberEntry("row", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("stride", "Strict/Number", List(InstructionEntry), false)), "Strict/Number", (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "stride"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "stride"), InstructionEntry.Binary(InstructionType.Multiply, (2, 3, 4)), InstructionEntry(InstructionType.IndexCall, "row", (5, 4, -1)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 5), InstructionEntry.Binary(InstructionType.Add, (1, 5, 6)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 9), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "sum"), InstructionEntry.Return(0)))
 constant Striding = MlirDeviceSums(MlirFunction(MlirDeviceStatements.Summed.types, GpuSamples.Layered, Strided), 2)
+constant Shifting = MlirDeviceSums(MlirFunction(MlirDeviceStatements.Summed.types, GpuSamples.Layered, MethodEntry("Shifted", Strided.parameters + MemberEntry("first", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Strided.instructions.Slice(0, 5) + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "first"), InstructionEntry.Binary(InstructionType.Add, (2, 7, 8)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "stride"), InstructionEntry.Binary(InstructionType.Multiply, (8, 3, 4))) + Strided.instructions.Slice(7, 7))), 2)
 constant Spreader = MethodEntry("Spread", List(MemberEntry) + MemberEntry("stride", "Strict/Number", List(InstructionEntry), false), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "weights"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "stride"), InstructionEntry.Invoke(3, ("Strict/Layered", "Strided", "Strict/Number", "row", "stride"), (1, 2), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 3), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 6), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))
 constant Spreads = TypeEntry("Strict/Layered", GpuSamples.Layered.members, (Spreader, Strided))
 constant Spreading = MlirDeviceSums(MlirFunction(List(TypeEntry) + Spreads, Spreads, Spreader), 2)
@@ -82,7 +83,7 @@ Found(strided Boolean) Boolean
 	let end = function.method.LoopEndOf(at)
 	if IsSummed(function, at + 1, end, strided)
 		return true
-	for MlirTokens(function, at).Devices(end)
+	for MlirTokenLaunch(function, at).Devices(end)
 		if IsSummed(value, 0, value.method.instructions.Length, strided)
 			return true
 	false
@@ -117,12 +118,14 @@ Lanes(target Text, count Text) Texts
 	warp + (limit, many) + ("    " + target + " = arith.select " + target + "m, " + target + "s, " + target + "w : i64")
 IsStrided Boolean
 	Striding.IsStrided
+	Shifting.IsStrided
 	Summing.IsStrided is false
 	mutable indexed = -1
 	for Range(at + 1, function.method.LoopEndOf(at))
 		let entry = function.method.instructions(value)
-		if (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is "index")
-			indexed = entry.payload(0)
+		let isIndex = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is "index")
+		let isShifted = (entry.kind is InstructionType.Add) and (indexed is in (entry.payload(1), entry.payload(2)))
+		indexed = isIndex then entry.payload(0) else isShifted then entry.payload(3) else indexed
 		if (entry.kind is InstructionType.Multiply) and (indexed is in (entry.payload(1), entry.payload(2)))
 			return true
 	false

@@ -25,10 +25,12 @@ Verified(prefilled Qwen3, start Number, count Number) Number
 Compared(model Qwen3, prompt Numbers, count Number) Text
 	LookupDecoding(Logger).Compared(Qwen3.Tiny, (1, 2, 3), 6).StartsWith("same tokens")
 	let prefilled = model.Prefilled(prompt, 0)
-	let started = Process.Elapsed
-	let finished = Speculation(prefilled, prompt, prefilled.Next).Finished(count)
+	let next = prefilled.Next
+	let again = model.Prefilled(prompt, 0)
+	let started = again.Next >= 0 then Process.Elapsed else 0
+	let finished = Speculation(prefilled, prompt, next).Finished(count)
 	let middle = Process.Elapsed
-	let plain = Generation(model.Prefilled(prompt, 0)).Continued(prompt.Length, count)
+	let plain = Generation(again).Continued(prompt.Length, count)
 	let ended = Process.Elapsed
 	let drafted = Safetensors.Part(finished.context, prompt.Length, count, 1)
 	let speed = (count / (middle - started)).Round(1) + " instead of " + (count / (ended - middle)).Round(1) + " tokens/s"

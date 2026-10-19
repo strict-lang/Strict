@@ -76,7 +76,7 @@ Native(entry InstructionEntry) Texts
 	Flooring.Native(MlirGpuCheck.Flooring)(1).IndexOf("llvm.intr.floor") > 0
 	Flooring.Native(Making).Last is "    llvm.store %d1, %r1 : f64, !llvm.ptr"
 	if entry.texts(1) is not in Natives
-		return MlirTokens(function, function.method.LoopBeginOf(at)).Read(at)
+		return MlirTokenLaunch(function, function.method.LoopBeginOf(at)).Read(at)
 	if entry.texts(1) is "Logarithm"
 		return Logarithmic(entry)
 	let target = "%r" + entry.payload(0)

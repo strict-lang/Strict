@@ -9,6 +9,8 @@ constant Tiny = Experts.Loaded(Model, "blk.0.")
 constant Single = Experts.Dense(Tiny.expansions.First, Tiny.contractions.First)
 constant Probe = (0.5, -1, 1.5, 2, -0.25, 0.75, 1, -2)
 constant Gating = Tiny.Gated(Tiny.Expanded((1, 3), Probe), 4)
+constant Pairs = (1, 3, 0, 1)
+constant Twice = Probe + Probe.Reverse
 Loaded(model Gguf, prefix Text) Experts
 	Tiny.expansions.Length is 4
 	Tiny.expansions.First.weights.Length is 8
@@ -27,11 +29,7 @@ Stacked(rows List(Numbers), count Number) List(Layer)
 	Tiny.Stacked(((1, 2), (3, 4), (5, 6), (7, 8)), 2).Last.weights is ((5, 6), (7, 8))
 	let size = rows.Length / count
 	for count
-		Layer(Slice(rows, index * size, size), Layer.Zeros(size))
-Slice(rows List(Numbers), start Number, size Number) List(Numbers)
-	Tiny.Slice(((1, 2), (3, 4), (5, 6)), 1, 2) is ((3, 4), (5, 6))
-	for size
-		rows(start + index)
+		Layer(rows.Slice(index * size, size), Layer.Zeros(size))
 Joined(model Gguf, prefix Text, count Number) List(Layer)
 	Tiny.Joined(Model, "blk.0.", 4).First.weights.Length is 8
 	let gates = Stacked(model.Rows(prefix + "ffn_gate_exps.weight"), count)
@@ -48,54 +46,68 @@ Flattened(layers List(Layer)) List(Numbers)
 Forward(input Numbers) Numbers
 	Tiny.Forward(Probe).First.IsNearlyEqual(0.4825967035647183, 0.000001)
 	Tiny.Forward(Probe).Last.IsNearlyEqual(-0.4171537353010468, 0.000001)
+	Tiny.Forward(Probe + Probe).Last is Tiny.Forward(Probe).Last
+	Tiny.Forward(Twice)(8).IsNearlyEqual(Tiny.Forward(Probe.Reverse).First, 0.000001)
 	if router.weights.Length is 0
 		return Expert(0, input)
-	let scores = router.Sums(input)
-	let chosen = Routing(scores).Chosen(used)
+	let scores = Batch(router.weights, router.biases).Sums(input)
+	let chosen = Routing(scores, router.weights.Length).Chosen(used)
+	if chosen.Length >= Grouping.Fewest
+		return Mixed(scores, chosen, Grouped(chosen, input))
 	let size = expansions.First.weights.Length / 2
-	let gated = Gated(Expanded(chosen, input), size)
-	Mixed(scores, chosen, Contracted(chosen, gated, size))
+	Mixed(scores, chosen, Contracted(chosen, Gated(Expanded(chosen, input), size), size))
 Added(input Numbers, residual Numbers) Numbers
 	Tiny.Added(Probe, Probe).First.IsNearlyEqual(0.9825967035647183, 0.000001)
 	Single.Added(Probe, Probe) is Gpt2Block.Added(Probe, Tiny.Expert(0, Probe))
 	if router.weights.Length > 0
-		return Gpt2Block.Added(residual, Routed(input))
+		return Gpt2Block.Added(residual, Forward(input))
 	let expanded = Batch(expansions.First.weights, expansions.First.biases).Sums(input)
 	Batch(contractions.First.weights, residual).Sums(Gated(expanded, expansions.First.weights.Length / 2))
-Routed(input Numbers) Numbers
-	Tiny.Routed(Probe + Probe).Last is Tiny.Forward(Probe).Last
-	let hidden = contractions.First.weights.Length
-	if input.Length is hidden
-		return Forward(input)
-	mutable mixed = List(Number)
-	for input.Length / hidden
-		mixed = mixed + Forward(Safetensors.Part(input, index * hidden, hidden, 1))
-	mixed
 Expanded(chosen Numbers, input Numbers) Numbers
 	Tiny.Expanded((1, 3), Probe).Length is 16
 	Tiny.Expanded((1, 3), Probe).Last is Tiny.expansions(3).Sums(Probe).Last
 	let size = expansions.First.weights.Length
+	let hidden = contractions.First.weights.Length
 	for chosen.Length * size
-		Layer.Summed(gateUps(chosen((index / size).Floor) * size + index % size), input)
+		let slot = (index / size).Floor
+		Batch.Dot(gateUps(chosen(slot) * size + index % size), 0, input, (slot / used).Floor * hidden)
 Contracted(chosen Numbers, gated Numbers, size Number) Numbers
 	Tiny.Contracted((1, 3), Gating, 4).Last.IsNearlyEqual(Tiny.Expert(3, Probe).Last)
 	let hidden = contractions.First.weights.Length
 	for chosen.Length * hidden
 		let expert = (index / hidden).Floor
 		Batch.Dot(downs(chosen(expert) * hidden + index % hidden), 0, gated, expert * size)
+Grouped(chosen Numbers, input Numbers) Numbers
+	Tiny.Grouped(Pairs, Twice) is Tiny.Contracted(Pairs, Tiny.Gated(Tiny.Expanded(Pairs, Twice), 4), 4)
+	let grouping = Grouping(chosen, router.weights.Length, used, Batch.Tile)
+	let starts = grouping.Starts
+	let rows = grouping.Rows
+	let positions = grouping.Positions(starts)
+	let size = expansions.First.weights.Length
+	let hidden = contractions.First.weights.Length
+	let gathered = grouping.Gathered(input, grouping.Ordered(positions, rows))
+	let expanded = Batch(gateUps, List(Number) + 0).Grouped(grouping.Bases(starts, rows, size), size, gathered)
+	let gated = Gated(expanded, size / 2)
+	let contracted = Batch(downs, List(Number) + 0).Grouped(grouping.Bases(starts, rows, hidden), hidden, gated)
+	grouping.Unsorted(contracted, positions, hidden)
 Mixed(scores Numbers, chosen Numbers, contracted Numbers) Numbers
 	Tiny.Mixed((0, 1, 0, 1), (1, 3), (2, 2, 4, 4)) is (3, 3)
+	Tiny.Mixed((0, 1, 0, 1, 1, 0, 0, 0), (1, 3, 0, 1), (2, 2, 4, 4, 1, 1, 3, 3)).Last.IsNearlyEqual(1.537883)
 	let hidden = contracted.Length / chosen.Length
-	for hidden
-		let output = index
-		let top = scores(chosen(0))
-		mutable total = 0
-		mutable sum = 0
-		for chosen
-			let share = (scores(value) - top).Exponential
-			total = total + share
-			sum = sum + share * contracted(index * hidden + output)
-		sum / total
+	let experts = scores.Length * used / chosen.Length
+	for chosen.Length / used * hidden
+		Blended(scores, chosen, contracted, (index / hidden).Floor, index % hidden, experts)
+Blended(scores Numbers, chosen Numbers, contracted Numbers, token Number, output Number, experts Number) Number
+	Tiny.Blended((0, 1, 0, 1), (1, 3), (2, 2, 4, 4), 0, 1, 4) is 3
+	let hidden = contracted.Length / chosen.Length
+	let top = scores(token * experts + chosen(token * used))
+	mutable total = 0
+	mutable sum = 0
+	for used
+		let share = (scores(token * experts + chosen(token * used + index)) - top).Exponential
+		total = total + share
+		sum = sum + share * contracted((token * used + index) * hidden + output)
+	sum / total
 Expert(chosen Number, input Numbers) Numbers
 	Tiny.Expert(0, Probe).Length is 8
 	let expanded = expansions(chosen).Sums(input)

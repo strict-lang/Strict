@@ -2,6 +2,7 @@ has model Qwen3
 has context Numbers
 has next Number
 has drafts = 15
+constant Longest = 15
 has steps = 0
 constant Started = Speculation(Qwen3.Tiny.Prefilled((1, 2, 3), 0), (1, 2, 3), Qwen3.Tiny.Prefilled((1, 2, 3), 0).Next)
 Generated(count Number) Numbers
@@ -25,7 +26,16 @@ Advanced Speculation
 	let accepted = Accepted(draft, predictions)
 	let kept = Safetensors.Part(block, 0, accepted + 1, 1)
 	let truncated = accepted is draft.Length then verified else Truncated(verified, context.Length + accepted + 1)
-	Speculation(truncated, context + kept, predictions(accepted), drafts, steps + 1)
+	Speculation(truncated, context + kept, predictions(accepted), Adapted(draft.Length, accepted), steps + 1)
+Adapted(drafted Number, accepted Number) Number
+	Started.Adapted(0, 0) is Started.drafts
+	Started.Adapted(15, 3) is 15
+	Started.Adapted(15, 0) is 7
+	Speculation(Started, drafts = 7).Adapted(7, 7) is 15
+	Speculation(Started, drafts = 3).Adapted(3, 0) is 3
+	let longer = (2 * drafts + 1).Clamp(3, Longest)
+	let shorter = ((drafts - 1) / 2).Clamp(3, Longest)
+	drafted is 0 then drafts else (accepted is drafted then longer else (accepted is 0 then shorter else drafts))
 Lookup(tokens Numbers) Numbers
 	Started.Lookup((5, 6, 7, 8, 5, 6, 7)) is (8, 5, 6, 7)
 	Started.Lookup((1, 2, 3, 4)).Length is 0

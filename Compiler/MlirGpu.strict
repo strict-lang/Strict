@@ -28,7 +28,7 @@ Run Texts
 	Text.Combine(MlirGpu(MlirTokens.Summing.function, 2).Run).IndexOf("@strict_gpu_tokens(%t2gp, %t2gc, %t2gh0") > 0
 	let name = MlirDevice(function, position).Name
 	let addresses = (Address("gp", "strict_gpu_ptx"), Address("gk", "k" + name), Address("gs", "f" + name))
-	let tokens = MlirTokens(function, position)
+	let tokens = MlirTokenLaunch(function, position)
 	let sourced = tokens.Sourced
 	let lanes = MlirDeviceSums(function, position).Lanes(Temp("gy"), Temp("gc")) + MlirGrouped(function, position).Launched
 	let sizes = (List(Text) + MlirTyped.Integer.Constant(Temp("gq"), sourced.Last)) + lanes

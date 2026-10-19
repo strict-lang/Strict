@@ -1,0 +1,63 @@
+has chosen Numbers
+has experts Number
+has used Number
+has tile Number
+constant Sample = Grouping((2, 0, 2, 1), 3, 2, 2)
+constant Fewest = 512
+Counts Numbers
+	Sample.Counts is (1, 1, 2)
+	for experts
+		let expert = index
+		mutable count = 0
+		for chosen
+			count = count + (value is expert then 1 else 0)
+		count
+Starts Numbers
+	Sample.Starts is (0, 2, 4, 6)
+	Grouping((0, 0, 0), 2, 1, 2).Starts is (0, 4, 4)
+	let counts = Counts
+	for experts + 1
+		let expert = index
+		mutable start = 0
+		for counts
+			start = index < expert then start + (value / tile).Ceiling * tile else start
+		start
+Positions(starts Numbers) Numbers
+	Sample.Positions(Sample.Starts) is (4, 0, 5, 2)
+	for chosen
+		let pair = index
+		let expert = value
+		mutable position = starts(expert)
+		for pair
+			position = position + (chosen(index) is expert then 1 else 0)
+		position
+Ordered(positions Numbers, rows Number) Numbers
+	Sample.Ordered((4, 0, 5, 2), 6) is (1, -1, 3, -1, 0, 2)
+	for rows
+		let row = index
+		mutable pair = -1
+		for positions
+			pair = pair + (value is row then index + 1 else 0)
+		pair
+Rows Number
+	Sample.Rows is 8
+	Grouping((0, 0, 0), 2, 1, 2).Rows is 6
+	((chosen.Length + experts * (tile - 1)) / tile).Ceiling * tile
+Bases(starts Numbers, rows Number, count Number) Numbers
+	Sample.Bases(Sample.Starts, 8, 10) is (0, 10, 20, 20)
+	for rows / tile
+		let row = index * tile
+		mutable expert = 0
+		for experts - 1
+			expert = starts(index + 1) <= row then index + 1 else expert
+		expert * count
+Gathered(input Numbers, ordered Numbers) Numbers
+	Sample.Gathered((1, 2, 3, 4), (1, -1, 3)) is (1, 2, 1, 2, 3, 4)
+	let width = input.Length * used / chosen.Length
+	for ordered.Length * width
+		let pair = ordered((index / width).Floor)
+		input(((pair < 0 then 0 else pair) / used).Floor * width + index % width)
+Unsorted(rows Numbers, positions Numbers, width Number) Numbers
+	Sample.Unsorted((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), (4, 0, 5, 2), 2) is (9, 10, 1, 2, 11, 12, 5, 6)
+	for chosen.Length * width
+		rows(positions((index / width).Floor) * width + index % width)
