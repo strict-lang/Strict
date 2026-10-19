@@ -10,7 +10,7 @@ Fits(owner TypeEntry, type TypeEntry, call InstructionEntry) Boolean
 	let own = isOwn and (type.Name is owner.Name) and IsContained(MemberNames(owner))
 	let member = Wrapped(type)
 	let wrapped = (isOwn is false) and (member is not "") and (HasOwnCall is false) and IsContained((member, "value"))
-	(own or wrapped) and IsSmall and IsComputed and IsReplaceable(type)
+	(own or wrapped) and IsSmall and IsComputed and IsReplaceable(type) and IsReturningComputed
 IsOwn(call InstructionEntry) Boolean
 	Listing.IsOwn(Inliner.Calling.instructions(1)) is false
 	Listing.IsOwn(Inliner.Again.instructions.First)
@@ -73,3 +73,13 @@ IsReplaceable(type TypeEntry) Boolean
 	if type.Name.StartsWith("Strict/List(")
 		return callee.Name is in Accessors
 	type.Name.LastIndexOf("/") is not 6
+IsReturningComputed Boolean
+	Listing.IsReturningComputed
+	InlineRules(Placeholder).IsReturningComputed is false
+	let instructions = callee.instructions
+	let reuse = LoadReuse(instructions)
+	mutable isLoaded = false
+	for instructions
+		if (reuse.Written(value) is instructions.Last.payload(0)) and (value.kind is not InstructionType.CheckError)
+			isLoaded = value.kind is InstructionType.LoadVariableToRegister
+	isLoaded is false

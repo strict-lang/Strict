@@ -1,0 +1,115 @@
+has function MlirFunction
+has position Number
+constant Made = MlirDestined(MlirFlats.Made.function, 2)
+constant Swapping = MethodEntry("Swapped", List(MemberEntry), "Strict/Math/Tripling", (MlirOwned.Empty, InstructionEntry.LoadNumber(0, 1), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.LoadNumber(2, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (3, 2)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "listResult0"), InstructionEntry.LoadNumber(4, 2), InstructionEntry(InstructionType.IndexCall, "numbers", (5, 4)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 5, "listResult0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "listResult0"), InstructionEntry.Invoke(7, ("Strict/Math/Tripling", "from", "Strict/Math/Tripling", "numbers"), List(Number) + 6, -1), InstructionEntry.Return(7)))
+constant Maker = TypeEntry("Strict/Math/Tripling", List(MemberEntry) + MlirFlats.Numbers, (MlirFlats.Validating, MlirFlats.Making))
+constant Calling = (InstructionEntry.Invoke(0, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved"), InstructionEntry.Invoke(1, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "moved"), InstructionEntry.Return(2))
+constant Caller = MlirDestined(MlirFunction((Maker, MlirFlats.Summing), Maker, MethodEntry("Run", List(MemberEntry), "None", Calling)), 2)
+constant Taking = ("    %flatDestinationSlot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr", "    %flatDestination = llvm.load %flatDestinationSlot : !llvm.ptr -> f64", "    llvm.store %zero, %flatDestinationSlot : f64, !llvm.ptr")
+constant Write = InstructionType.InvokeWriteToList
+constant Swapped = MlirDestined(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, Swapping), 0)
+IsDestined Boolean
+	Made.IsDestined
+	Swapped.IsDestined is false
+	if MlirFlats(function, 0).Count(function.method.returnType) is 0
+		return false
+	mutable builder = ""
+	for function.method.instructions
+		let isWrite = value.kind is Write then MlirFlats(function, index).Packed(value.texts(0)) > 0 else false
+		let writes = builder is "" then 0 else MlirPairs(function, index).Written(builder)
+		if (IsSafe(value, index, writes) is false) or isWrite and (builder is not "") and (value.texts(0) is not builder)
+			return false
+		builder = isWrite then value.texts(0) else builder
+	builder is not ""
+IsSafe(entry InstructionEntry, at Number, writes Number) Boolean
+	Swapped.IsSafe(Swapping.instructions(5), 5, 1) is false
+	Swapped.IsSafe(Swapping.instructions(8), 8, 2)
+	Swapped.IsSafe(Swapping.instructions(5), 5, 0)
+	if writes is 0
+		return true
+	if entry.kind is InstructionType.Invoke
+		return entry.texts(1) is in ("from", "Validated")
+	if entry.kind is not InstructionType.IndexCall
+		return true
+	let writer = MlirKinds(function).Writer(at, entry.payload(1))
+	let source = writer >= 0 then function.method.instructions(writer) else entry
+	source.kind is InstructionType.LoadConstantToRegister then PayloadDecoder(source).Value(1).number >= writes else false
+Prologue Texts
+	Made.Prologue.Length is 3
+	Swapped.Prologue.Length is 0
+	MlirDestined(MlirListDestined.Copied.function, 0).Prologue is MlirListDestined.Taking
+	(IsDestined then Taking else List(Text)) + MlirListDestined(function, 0).Prologue
+Started(temp Text) Text
+	Made.Started("%t1").IndexOf("@strict_flat_into(%flatDestination, %t1n)") > 0
+	Swapped.Started("%t1").IndexOf("@strict_flat_new(%t1n)") > 0
+	let into = "@strict_flat_into(%flatDestination, " + temp + "n) : (f64, f64)"
+	let call = IsDestined then into else "@strict_flat_new(" + temp + "n) : (f64)"
+	"    " + temp + "f = func.call " + call + " -> f64"
+Destined(entry InstructionEntry, compiled Texts) Texts
+	Caller.Destined(Calling(2), List(Text) + "call").Length is 3
+	Caller.Destined(Calling(2), List(Text) + "call")(1) is "    func.call @strict_flat_destine(%t2dold) : (f64) -> ()"
+	MlirDestined(Caller.function, 4).Destined(Calling(4), List(Text) + "load") is ("load")
+	if entry.kind is not InstructionType.Invoke
+		return compiled
+	let next = Next(entry)
+	if next.kind is Write
+		return MlirListDestined(function, position).Element(entry, next, compiled)
+	Stored(entry, next, compiled)
+Next(entry InstructionEntry) InstructionEntry
+	Caller.Next(Calling(2)) is Calling(3)
+	MlirDestined(Caller.function, 5).Next(Calling(5)) is Calling(5)
+	let steps = function.method.instructions
+	let following = position + 1 < steps.Length then steps(position + 1) else entry
+	let isChecked = (following.kind is InstructionType.CheckError) and (position + 2 < steps.Length)
+	isChecked then steps(position + 2) else following
+Stored(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
+	Caller.Stored(Calling(2), Calling(3), List(Text) + "call")(1).EndsWith("@strict_flat_destine(%t2dold) : (f64) -> ()")
+	Caller.Stored(Calling(2), Calling(5), List(Text) + "call") is ("call")
+	let isStored = (next.kind is Inliner.Store) and (next.payload(0) is entry.payload(0))
+	let callees = isStored then MlirModule(function.types, "").Called(function, position) else List(MlirFunction)
+	let helper = callees.Length > 0 then Destine(callees.First) else ""
+	if helper is ""
+		return compiled
+	if IsAlone(next.texts(0)) is false
+		return compiled
+	let old = "%t" + position + "dold"
+	let destine = "    func.call @" + helper + "(" + old + ") : (f64) -> ()"
+	(List(Text) + function.Load(old, "%v_" + next.texts(0)) + destine) + compiled
+Destine(callee MlirFunction) Text
+	Caller.Destine(Made.function) is "strict_flat_destine"
+	Caller.Destine(MlirListDestined.Copied.function) is "strict_list_destine"
+	Caller.Destine(Swapped.function) is ""
+	let isList = MlirListDestined(callee, 0).IsDestined
+	MlirDestined(callee, 0).IsDestined then "strict_flat_destine" else (isList then "strict_list_destine" else "")
+IsAlone(name Text) Boolean
+	Caller.IsAlone("moved")
+	if MlirOwned(function, position).IsOwned(name) is false
+		return false
+	for function.method.instructions
+		let isLoad = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is name else false
+		if isLoad and (IsPure(index, value.payload(0)) is false)
+			return false
+	true
+IsPure(at Number, register Number) Boolean
+	Caller.IsPure(4, 2)
+	let steps = function.method.instructions
+	let reuse = LoadReuse(steps)
+	for Range(at + 1, steps.Length)
+		let entry = steps(value)
+		if (register is in reuse.Reads(entry)) and (IsKept(entry, value) is false)
+			return false
+		if reuse.Written(entry) is register
+			return true
+	true
+IsKept(entry InstructionEntry, at Number) Boolean
+	Caller.IsKept(InstructionEntry.Return(2), 5)
+	Caller.IsKept(InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 2), 5)
+	Caller.IsKept(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "kept"), 5) is false
+	if entry.kind is Inliner.Store
+		return entry.texts(0).StartsWith("inline")
+	if entry.kind is not InstructionType.Invoke
+		return entry.kind is in (InstructionType.Return, InstructionType.CheckError)
+	let isText = (entry.texts(1) is "to") and entry.texts(2).EndsWith("Text")
+	let callees = MlirModule(function.types, "").Called(function, at)
+	let isDestined = callees.Length > 0 then Destine(callees.First) is not "" else false
+	isText or (entry.texts(1) is in MlirFlats.Accessors) or isDestined

@@ -7,8 +7,8 @@ constant Numbers = MemberEntry("numbers", "Strict/List(Number)", List(Instructio
 constant Tripling = TypeEntry("Strict/Math/Tripling", List(MemberEntry) + Numbers, (Validating, Zed, MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)), InstructionEntry.Return(1)))))
 constant Summing = TypeEntry("Strict/Math/Summing", List(MemberEntry) + Numbers, (Validating, MethodEntry("Sum", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Invoke(1, ("Strict/List(Number)", "Sum", "Strict/Number"), List(Number), 0), InstructionEntry.Return(1)))))
 constant Reader = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Tripling.methods.Last), 1)
+constant Comparing = (InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2)))
 constant Accessors = ("X", "Y", "Z", "W", "Length", "Count")
-constant Three = VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2), VmValue.OfNumber(3)))
 constant Construction = InstructionEntry.Invoke(4, ("Strict/Math/Tripling", "from", "Strict/Math/Tripling", "numbers"), List(Number) + 3, -1)
 constant Making = MethodEntry("Made", List(MemberEntry), "Strict/Math/Tripling", (List(InstructionEntry) + MlirOwned.Empty) + (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.LoadNumber(2, 3), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "listResult0")) + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "listResult0") + Construction + InstructionEntry.Return(4))
 constant Made = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Making), 2)
@@ -42,8 +42,8 @@ IsSupported(type TypeEntry, member Text) Boolean
 		for steps
 			let name = value.texts.Length > 0 then value.texts(0) else ""
 			let isNamed = (name is member) or name.StartsWith(member + "(") or name.StartsWith(member + ".")
-			let isRead = (value.kind is InstructionType.LoadVariableToRegister) and (index + 1 < steps.Length)
-			let isKept = isRead then IsAccessor(steps(index + 1), value.payload(0)) else value.kind is InstructionType.IndexCall
+			let isRead = value.kind is InstructionType.LoadVariableToRegister
+			let isKept = isRead then IsConsumed(steps, index, value.payload(0)) else value.kind is in MlirKinds.Indexing
 			if isNamed and (isKept is false)
 				return false
 	true
@@ -58,16 +58,17 @@ IsAccessor(step InstructionEntry, register Number) Boolean
 	let countPosition = 5 + step.payload(3)
 	let flagPosition = countPosition + 1 + step.payload(countPosition)
 	let instance = step.payload(flagPosition) is 1 then step.payload(flagPosition + 1) else -1
-	let isText = (step.texts(1) is "to") and step.texts(2).EndsWith("Text")
+	let isText = (step.texts(1) is "Code") or ((step.texts(1) is "to") and step.texts(2).EndsWith("Text"))
 	(instance is register) and ((step.texts(1) is in Accessors) or isText)
 Helper(entry InstructionEntry, owner Text, name Text) Text
 	Sample.Helper(Reading, "Tripling", "Z") is "strict_flat_z"
 	Sample.Helper(Reading, "Tripling", "Length") is "strict_flat_length"
 	Sample.Helper(Reading, "Summing", "Z") is ""
+	Sample.Helper(Reading, "Tripling", "Code") is "strict_flat_text"
 	if (Count(owner) is 0) or (entry.texts.First.StartsWith("Strict/List(") is false)
 		return ""
-	if name is in ("Length", "Count")
-		return "strict_flat_length"
+	if name is in ("Length", "Count", "Code")
+		return name is "Code" then "strict_flat_text" else "strict_flat_length"
 	name is in ("X", "Y", "Z", "W") then "strict_flat_" + name.Lower else ""
 Packed(name Text) Number
 	Made.Packed("listResult0") is 3
@@ -108,7 +109,7 @@ Started(count Number, written Number, slot Text) Texts
 	if written > 0
 		return List(Text) + function.Load(temp + "f", slot)
 	let counted = "    " + temp + "n = arith.constant " + count + ".0 : f64"
-	let created = "    " + temp + "f = func.call @strict_flat_new(" + temp + "n) : (f64) -> f64"
+	let created = MlirDestined(function, position).Started(temp)
 	(counted, created, function.Store(temp + "f", slot))
 Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
 	MlirFlats(Made.function, 8).Constructed(Construction, "Tripling", MlirInstances(Made.function, 8)).Length is 2
@@ -133,7 +134,7 @@ IsListed(kind Text) Boolean
 	MlirFlats(MlirCouples.Sample.function, 0).IsListed("Sizing") is false
 	MlirPairs(function, 0).IsListed(kind) or (Count(kind) > 0)
 Defaulted(kind Text, initial Runtime/VmValue, slot Text, suffix Text) Texts
-	Sample.Defaulted("Tripling", Three, "%s", "d0").Last is "    llvm.store %t1d0f, %s : f64, !llvm.ptr"
+	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0").Last is "    llvm.store %t1d0f, %s : f64, !llvm.ptr"
 	if Kind(kind) is "Pair"
 		return MlirPairs(function, position).Defaulted(initial, slot, suffix)
 	let built = MlirStatements(function, position).Literal(initial, slot, suffix)
@@ -150,3 +151,12 @@ Indexed(entry InstructionEntry, fallback MlirLists) Texts
 	let read = "    " + temp + "x = func.call @strict_flat_at(" + temp + "l, " + temp + "i) : (f64, f64) -> f64"
 	let loads = (function.Load(temp + "l", "%v_" + entry.texts(0)), function.Load(temp + "i", "%r" + entry.payload(1)))
 	loads + read + function.Store(temp + "x", "%r" + entry.payload(0))
+IsConsumed(steps List(InstructionEntry), at Number, register Number) Boolean
+	Sample.IsConsumed(Zed.instructions, 0, 0)
+	Sample.IsConsumed(Comparing, 0, 0)
+	Sample.IsConsumed((InstructionEntry.LoadNumber(0, 1), InstructionEntry.Return(0)), 0, 0) is false
+	let reuse = LoadReuse(steps)
+	for Range(at + 1, steps.Length)
+		if register is in reuse.Reads(steps(value))
+			return (steps(value).kind is in MlirEquality.Comparisons) or IsAccessor(steps(value), register)
+	true

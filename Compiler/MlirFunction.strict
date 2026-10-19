@@ -92,7 +92,7 @@ Entry Texts
 	mutable lines = Slot("%instance") + Store("%p0", "%instance") + checked
 	for Parameters
 		lines = lines + Store("%p" + index, "%v_" + value)
-	lines = lines + MlirTails(value, 0).Restart
+	lines = lines + MlirDestined(value, 0).Prologue + MlirTails(value, 0).Restart
 	lines + MlirParameters(value).Hoisted + MlirInstances(value, 0).Unpacked + MlirInstances(value, 0).Constants
 Slot(name Text) Texts
 	Counter.Slot("%r0").Length is 2
