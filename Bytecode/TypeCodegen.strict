@@ -10,6 +10,7 @@ constant Iterating = TypeCodegen("Strict/Size", ("has Width Number", "for Iterat
 constant Grid = TypeCodegen("Strict/Size", ("has Width Number", "has Height Number", "for Iterator(Vector2)", "\tfor Height", "\t\tfor Width", "\t\t\tVector2(index, outer.index)"), NoTypes, List(Text))
 constant Created = TypeCodegen("Strict/C", ("has a Number", "from(b Number)", "\ta = b"), NoTypes, List(Text))
 constant Vectors = TypeCodegen("Strict/C", List(Text), TypeInference(KnownTypes(List(Text) + "Vector2", List(Scope) + Scope(List(Text) + "numbers", List(Text) + "Numbers"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers), List(Text))
+constant Leveled = TypeCodegen("Strict/L", ("has level = Fast", "constant Fast = \"a\""), NoTypes, List(Text))
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
 Entry TypeEntry
 	Hello.Entry is TypeEntry.HelloLogger
@@ -28,6 +29,7 @@ Generator ValueCodegen
 	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target)
 Members List(MemberEntry)
 	Limit.Members.First.initial.First.payload is (1, 10, 0)
+	Leveled.Members.First.typeName is "Strict/Text"
 	mutable members = List(Mutable(MemberEntry))
 	for lines
 		if TypeShape(lines).IsMemberLine(value)
@@ -38,16 +40,19 @@ Member(header HeaderTokens, position Number) MemberEntry
 	Hello.Member(HeaderTokens("constant", "Add"), 0).initial.First.payload is (1, 0, 0)
 	Hello.Member(HeaderTokens("has", "alpha", "=", "1", "with", "value", ">", "0"), 0).initial.First.payload is (1, 1, 0)
 	Hello.Member(HeaderTokens("has", "x", "Number", "with", "value", ".", "Bits", "is", "32"), 0).Bits is 32
-	let declared = Scope(List(Text) + header.MemberName, List(Text) + header.DeclaredType(1))
+	let isConstant = header.tokens(0) is "constant"
+	let typed = header.DeclaredType(1)
+	let own = isConstant or ("=" is not in header.tokens) then "" else TypeShape(lines).MethodScope.TypeOf(typed)
+	let declared = Scope(List(Text) + header.MemberName, List(Text) + (own is "" then typed else own))
 	let member = Instantiation(inference.types).Members(Generator.target.TypeName, declared)
 	let type = Generator.target.FullName(Concrete(member.types.First))
-	let isConstant = header.tokens(0) is "constant"
-	if isConstant and (header.tokens.Length is 2)
+	let bits = Constraint.Bits(Text.Combine(header.tokens, " "))
+	MemberEntry(header.MemberName, type, InitialOf(header, position), isConstant, bits)
+InitialOf(header HeaderTokens, position Number) List(InstructionEntry)
+	Hello.InitialOf(HeaderTokens("has", "count", "Number"), 0).Length is 0
+	if (header.tokens(0) is "constant") and (header.tokens.Length is 2)
 		let number = InstructionEntry.NumberValue(TypeShape(lines).EnumValue(position))
-		return MemberEntry(header.MemberName, type, InstructionEntry.Set(List(Text), number), true)
-	MemberEntry(header.MemberName, type, InitialOf(header), isConstant, Constraint.Bits(Text.Combine(header.tokens, " ")))
-InitialOf(header HeaderTokens) List(InstructionEntry)
-	Hello.InitialOf(HeaderTokens("has", "count", "Number")).Length is 0
+		return List(InstructionEntry) + InstructionEntry.Set(List(Text), number)
 	let equals = header.tokens.Index("=")
 	if equals is -1
 		return List(InstructionEntry)

@@ -6046,6 +6046,14 @@
     %pair = arith.bitcast %bits : i64 to f64
     return %pair : f64
   }
+  // a number of a type whose one member is 32 bit (Degrees), an Error keeps its NaN tag
+  func.func private @strict_single(%number: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %single = arith.truncf %number : f64 to f32
+    %rounded = arith.extf %single : f32 to f64
+    %isTagged = arith.cmpf uno, %number, %number : f64
+    %result = arith.select %isTagged, %number, %rounded : f64
+    return %result : f64
+  }
   func.func private @strict_two_half(%pair: f64, %shift: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %bits = arith.bitcast %pair : f64 to i64
     %shifted = arith.shrui %bits, %shift : i64

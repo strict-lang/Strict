@@ -5,6 +5,11 @@ constant Sized = InstructionEntry.Invoke(2, ("Strict/Math/Sizing", "from", "Sizi
 constant Heights = InstructionEntry(InstructionType.FieldLoad, "Height", (3, 2, -1))
 constant Sample = MlirCouples(MlirFunction(List(TypeEntry) + Sizing, Sizing, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 4), Sized, Heights))), 2)
 constant Instances = MlirInstances(Sample.function, 2)
+constant Turning = TypeEntry("Strict/Math/Turning", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false, 32), List(MethodEntry))
+constant Turned = InstructionEntry.Invoke(1, ("Strict/Math/Turning", "from", "Turning", "number"), 0, -1)
+constant Turns = MlirCouples(MlirFunction(List(TypeEntry) + Turning, Turning, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Turned))), 1)
+constant Listing = InstructionEntry(InstructionType.FieldLoad, "numbers", (1, 0, -1))
+constant Listed = MlirCouples(MlirPairs.Sample.function, 2)
 constant Own = MlirCouples(MlirFunction(List(TypeEntry) + Sizing, Sizing, MethodEntry.CountingLoop), 0)
 IsCoupled(kind Text) Boolean
 	Sample.IsCoupled("Sizing")
@@ -27,6 +32,8 @@ IsHalf(member MemberEntry) Boolean
 Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
 	Sample.Constructed(Sized, "Sizing", Instances).Last is "    llvm.store %t2cp, %r2 : f64, !llvm.ptr"
 	Sample.Constructed(Sized, "Sizing", Instances).First is "    %t2cx = llvm.load %r0 : !llvm.ptr -> f64"
+	if IsSingle(typeName)
+		return Single(entry, typeName)
 	if IsCoupled(typeName) is false
 		return instances.Constructed(entry, typeName)
 	let halves = Halves(function.TypeOf(TypeEntry.ShortName(typeName)))
@@ -35,6 +42,19 @@ Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Text
 	let first = function.Load(temp + "x", Argument(entry, halves.First.Name, 0))
 	let second = function.Load(temp + "y", Argument(entry, halves.Last.Name, 1))
 	(first, second, packed, function.Store(temp + "p", "%r" + entry.payload(0)))
+IsSingle(kind Text) Boolean
+	Turns.IsSingle("Turning")
+	Sample.IsSingle("Sizing") is false
+	let halves = Halves(function.TypeOf(TypeEntry.ShortName(kind)))
+	(halves.Length is 1) and IsHalf(halves.First)
+Single(entry InstructionEntry, kind Text) Texts
+	Turns.Single(Turned, "Turning")(1) is "    %t1cr = func.call @strict_single(%t1cx) : (f64) -> f64"
+	Turns.Single(Turned, "Turning").Last is "    llvm.store %t1cr, %r1 : f64, !llvm.ptr"
+	let member = Halves(function.TypeOf(TypeEntry.ShortName(kind))).First
+	let temp = "%t" + position + "c"
+	let rounded = "    " + temp + "r = func.call @strict_single(" + temp + "x) : (f64) -> f64"
+	let loaded = function.Load(temp + "x", Argument(entry, member.Name, 0))
+	(loaded, rounded, function.Store(temp + "r", "%r" + entry.payload(0)))
 Argument(entry InstructionEntry, name Text, fallback Number) Text
 	Sample.Argument(Sized, "Height", 0) is "%r1"
 	Sample.Argument(Sized, "Other", 0) is "%r0"
@@ -42,10 +62,12 @@ Argument(entry InstructionEntry, name Text, fallback Number) Text
 	"%r" + entry.payload(5 + entry.payload(3) + 1 + (named < 0 then fallback else named))
 Aliased(entry InstructionEntry, kind Text) Texts
 	Sample.Aliased(Heights, "Sizing")(1) is "    %t2hv = func.call @strict_two_y(%t2hp) : (f64) -> f64"
-	if (entry.texts(0) is "value") or (IsCoupled(kind) is false)
+	Listed.Aliased(Listing, "Pairing")(1) is "    %t2hv = func.call @strict_two_list(%t2hp) : (f64) -> f64"
+	let isListed = (entry.texts(0) is not "value") and MlirPairs(function, position).IsListed(kind)
+	if (entry.texts(0) is "value") or ((IsCoupled(kind) is false) and (isListed is false))
 		return function.Copied("%r" + entry.payload(1), "%r" + entry.payload(0), "%t" + position + "a")
 	let halves = Halves(function.TypeOf(TypeEntry.ShortName(kind)))
-	let half = halves.First.Name is entry.texts(0) then "x" else "y"
+	let half = isListed then "list" else (halves.First.Name is entry.texts(0) then "x" else "y")
 	let temp = "%t" + position + "h"
 	let read = "    " + temp + "v = func.call @strict_two_" + half + "(" + temp + "p) : (f64) -> f64"
 	(function.Load(temp + "p", "%r" + entry.payload(1)), read, function.Store(temp + "v", "%r" + entry.payload(0)))
