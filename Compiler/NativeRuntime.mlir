@@ -2231,6 +2231,12 @@
     %up = arith.constant 1 : i32
     %down = arith.constant -1 : i32
     %old = llvm.load %slot : !llvm.ptr -> i64
+    %valueBits = arith.bitcast %value : f64 to i64
+    %isSame = arith.cmpi eq, %old, %valueBits : i64
+    cf.cond_br %isSame, ^same, ^put
+  ^same:
+    return
+  ^put:
     llvm.store %value, %slot : f64, !llvm.ptr
     %container = func.call @strict_rc_container(%slot) : (!llvm.ptr) -> i64
     %new = arith.bitcast %value : f64 to i64
@@ -6480,6 +6486,45 @@
     return
   ^none:
     llvm.store %zero, %slot : f64, !llvm.ptr
+    return
+  }
+  // a struct rebuilt in place (MlirMembered) hands the old block of the member a destined call recomputes to that call,
+  // when only the struct holds it (count 1) and it is no pinned constant
+  func.func private @strict_flat_destine_member(%owner: f64, %member: f64) {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1 : i32
+    %slot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr
+    llvm.store %zero, %slot : f64, !llvm.ptr
+    %unset = arith.cmpf oeq, %owner, %zero : f64
+    cf.cond_br %unset, ^done, ^member
+  ^member:
+    %ownerPointer = func.call @strict_ptr(%owner) : (f64) -> !llvm.ptr
+    %at = arith.fptosi %member : f64 to i64
+    %memberSlot = llvm.getelementptr %ownerPointer[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %element = llvm.load %memberSlot : !llvm.ptr -> f64
+    %noElement = arith.cmpf oeq, %element, %zero : f64
+    cf.cond_br %noElement, ^done, ^locate
+  ^locate:
+    %pointer = func.call @strict_ptr(%element) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %pointer : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unknown = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
+    %isStart = arith.cmpi eq, %located#1, %object : i64
+    %usable = arith.andi %found, %isStart : i1
+    cf.cond_br %usable, ^counted, ^done
+  ^counted:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %isStructOnly = arith.cmpi eq, %count, %one : i32
+    %single = llvm.load %pointer : !llvm.ptr -> f32
+    %nothing = arith.constant 0.0 : f32
+    %isOwn = arith.cmpf ogt, %single, %nothing : f32
+    %isReusable = arith.andi %isStructOnly, %isOwn : i1
+    %chosen = arith.select %isReusable, %element, %zero : f64
+    llvm.store %chosen, %slot : f64, !llvm.ptr
+    cf.br ^done
+  ^done:
     return
   }
   // in a loop refilling its own list, the old element is the destination of the destined call making the new one

@@ -57,12 +57,15 @@ Destined(entry InstructionEntry, compiled Texts) Texts
 	Caller.Destined(Calling(2), List(Text) + "call").Length is 3
 	Caller.Destined(Calling(2), List(Text) + "call")(1) is "    func.call @strict_flat_destine(%t2dold) : (f64) -> ()"
 	MlirDestined(Caller.function, 4).Destined(Calling(4), List(Text) + "load") is ("load")
+	MlirDestined(MlirMembered.Moved.function, 4).Destined(MlirMembered.Moving(4), List(Text) + "x").Length is 4
 	if entry.kind is not InstructionType.Invoke
 		return compiled
 	let next = Next(entry)
 	if next.kind is Write
 		return MlirListDestined(function, position).Element(entry, next, compiled)
-	Stored(entry, next, compiled)
+	if next.kind is Inliner.Store
+		return Stored(entry, next, compiled)
+	MlirMembered(function, position).Destined(entry, compiled)
 Next(entry InstructionEntry) InstructionEntry
 	Caller.Next(Calling(2)) is Calling(3)
 	MlirDestined(Caller.function, 5).Next(Calling(5)) is Calling(5)

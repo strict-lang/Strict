@@ -1,0 +1,18 @@
+has position Vector3
+has velocity Vector3
+Walked Walker
+	Walker(Vector3(1, 2, 3), Vector3(1, 1, 1)).Walked.position is Vector3(2, 3, 4)
+	Walker(value, position = position + velocity)
+Steps(count Number) Vector3
+	Walker(Vector3(0, 0, 0), Vector3(1, 2, 3)).Steps(2) is Vector3(2, 4, 6)
+	mutable walker = Walker(position, velocity)
+	for count
+		walker = Walker(walker, position = walker.position + walker.velocity)
+	walker.position
+Kept(count Number) Vector3
+	Walker(Vector3(0, 0, 0), Vector3(1, 2, 3)).Kept(2) is Vector3(0, 0, 0)
+	mutable walker = Walker(position, velocity)
+	let start = walker.position
+	for count
+		walker = Walker(walker, position = walker.position + walker.velocity)
+	start + walker.position - walker.position
