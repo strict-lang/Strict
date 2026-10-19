@@ -87,8 +87,8 @@ Constructing(entry InstructionEntry, register Number) Number
 	if entry.kind is not InstructionType.Invoke
 		return 0
 	let arguments = 5 + entry.payload(3)
-	let isOnly = (entry.texts(1) is "from") and (entry.payload(arguments) is 1) and (entry.payload(arguments + 1) is register)
-	isOnly then Count(entry.texts(0)) else 0
+	let isOnly = (entry.texts(1) is "from") and (entry.payload(arguments) is 1)
+	isOnly and (entry.payload(arguments + 1) is register) then Count(entry.texts(0)) else 0
 Appended(entry InstructionEntry, fallback MlirLists) Texts
 	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2)).Last.IndexOf("_set(%t2f, %t2k, %t2e)") > 0
 	MlirFlats(Made.function, 4).Appended(Making.instructions(4), MlirLists(Made.function, 4)).Last.IndexOf("%t4k") > 0
