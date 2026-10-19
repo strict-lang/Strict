@@ -41,6 +41,26 @@ IsConstrained(lines Texts) Boolean
 		if TypeShape(lines).IsMemberLine(value) and (Of(value) is not "")
 			return true
 	false
+Kind(lines Texts) Text
+	Constraint.Kind(List(Text) + "has width Number with value > 0") is "true"
+	Constraint.Kind(List(Text) + "has numbers with Length is 3 and value.Bits is 32") is "3"
+	Constraint.Kind(("has numbers with Length is 3", "has name Text")) is "true"
+	mutable checked = List(Text)
+	for lines
+		if TypeShape(lines).IsMemberLine(value) and (Of(value) is not "")
+			checked = checked + value
+	if checked.Length is 0
+		return ""
+	let isOnly = (checked.Length is 1) and (TypeShape(lines).MemberScope.names.Length is 1)
+	let length = isOnly then Length(checked.First) else 0
+	length > 0 then length to Text else "true"
+Length(line Text) Number
+	Constraint.Length("has numbers with Length is 3 and value.Bits is 32") is 3
+	Constraint.Length("has width Number with value > 0") is 0
+	Constraint.Length("has numbers with Length is 3 and value . Bits is 32") is 3
+	let checking = Of(line.Replace(" . ", "."))
+	let words = checking.Split(" ")
+	(words.Length is 3) and checking.StartsWith("Length is ") then words.Last to Number else 0
 Bits(constraint Text) Number
 	Constraint.Bits("value > 0 and value.Bits is 32") is 32
 	Constraint.Bits("value > 0") is 64

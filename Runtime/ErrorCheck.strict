@@ -1,22 +1,19 @@
 has entry Bytecode/InstructionEntry
 constant Returning = ErrorCheck(InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0, 0, 0))
 constant Testing = ErrorCheck(InstructionEntry(InstructionType.CheckError, List(Text) + "tested", (0, 7, 8, 12)))
-constant Failed = List(VmValue) + VmValue.Failed
-constant Passed = List(VmValue) + VmValue.OfNumber(1)
-Next(position Number, slots List(VmValue), length Number) Number
-	Returning.Next(3, Failed, 10) is 10
-	Testing.Next(3, Failed, 10) is 12
-	Returning.Next(3, Passed, 10) is 4
-	ErrorCheck(InstructionEntry.Return(0)).Next(3, Failed, 10) is 4
-	if (entry.kind is not InstructionType.CheckError) or (slots(entry.payload(0)).kind is not in VmValue.ErrorKinds)
+Next(position Number, checked VmValue, length Number) Number
+	Returning.Next(3, VmValue.Failed, 10) is 10
+	Testing.Next(3, VmValue.Failed, 10) is 12
+	Returning.Next(3, VmValue.OfNumber(1), 10) is 4
+	ErrorCheck(InstructionEntry.Return(0)).Next(3, VmValue.Failed, 10) is 4
+	if (entry.kind is not InstructionType.CheckError) or (checked.kind is not in VmValue.ErrorKinds)
 		return position + 1
 	entry.texts.Length is 0 then length else entry.payload.Last
-Value(slots List(VmValue), frame Frame, position Number) VmValue
-	Returning.Value(Failed, Frame.Twice, 0).kind is "Strict/Error"
-	Returning.Value(Passed, Frame.Twice, 0).number is 1
-	let checked = slots(entry.payload(0))
+Value(checked VmValue, target VmValue, frame Frame, position Number) VmValue
+	Returning.Value(VmValue.Failed, VmValue.Failed, Frame.Twice, 0).kind is "Strict/Error"
+	Returning.Value(VmValue.OfNumber(1), VmValue.OfNumber(1), Frame.Twice, 0).number is 1
 	if checked.kind is not in VmValue.ErrorKinds
-		return slots(entry.Target)
+		return target
 	IsTracedIn(checked, frame) then checked else frame.Traced(checked, position)
 IsTracedIn(error VmValue, frame Frame) Boolean
 	Returning.IsTracedIn(Frame.Twice.Traced(VmValue.OfError("a"), 0), Frame.Twice)

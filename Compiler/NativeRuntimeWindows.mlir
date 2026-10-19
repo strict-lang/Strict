@@ -198,8 +198,7 @@
   llvm.mlir.global internal constant @strict_temp_prefix("str\00") : !llvm.array<4 x i8>
   llvm.mlir.global internal constant @strict_quote_space("\22 \00") : !llvm.array<3 x i8>
   llvm.mlir.global internal constant @strict_start_failed("could not start \00") : !llvm.array<17 x i8>
-  // ponytail: a tool or download running longer than 10 minutes is stopped, a timeout argument for Process.Run would let
-  // callers choose (30 s stopped clang in parallel builds and the curl downloads of the GPT-2 and Qwen3 models)
+  // tools and downloads stop after 10 minutes (30 s stopped clang in parallel builds and model downloads)
   llvm.mlir.global internal constant @strict_timed_out("timed out after 10 minutes\00") : !llvm.array<27 x i8>
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
     %name = llvm.mlir.addressof @strict_windows : !llvm.ptr
@@ -583,7 +582,7 @@
     %wide = arith.extui %processors : i32 to i64
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    // ponytail: a quarter of the logical processors was fastest for memory bound GPT-2 decoding (13900KF), compute bound loops could use all
+    // a quarter of the logical processors was fastest for memory bound GPT-2 decoding (13900KF), compute bound loops could use all
     %four = arith.constant 4 : i64
     %two = arith.constant 2 : i64
     %quarter = arith.divsi %wide, %four : i64

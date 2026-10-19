@@ -159,8 +159,10 @@ Insert(position Number, element Generic) List
 	elements.Slice(0, position) + element + elements.Slice(position, Length - position)
 Unique List
 	(1, 2, 1, 3, 2).Unique is (1, 2, 3)
+	mutable seen = Dictionary(Generic, Boolean)
 	for elements
-		if Index(value) is index
+		if value is not in seen
+			seen.Add(value, true)
 			value
 Sorted List
 	(3, 1, 2).Sorted is (1, 2, 3)

@@ -46,9 +46,11 @@ Arguments(start Number, inner Text) Text
 	HeaderTokens("Iterator", "(", "Vector2", ")").Arguments(0, "Vector2") is "Iterator(Vector2)"
 	HeaderTokens(Tokenizer("Dictionary(Text, Number)").Tokens).Arguments(0, "Text") is "Dictionary(Text, Number)"
 	HeaderTokens("Range", "(", "Number", ")").Arguments(0, "Number") is "Range"
+	HeaderTokens(Tokenizer("Wrapped(Halver)").Tokens).Arguments(0, "Halver") is "Wrapped(Halver)"
 	if (tokens(start) is "Dictionary") and (tokens(start + 3) is ",")
 		return "Dictionary(" + inner + ", " + TypeName(start + 4) + ")"
-	tokens(start) + (tokens(start) is "Iterator" then "(" + inner + ")" else "")
+	let isKept = (tokens(start) is not "Range") and (tokens(start + 3) is in (")", "("))
+	tokens(start) + (isKept then "(" + inner + ")" else "")
 ReturnType Text
 	HeaderTokens("Run", "Number").ReturnType is "Number"
 	HeaderTokens("Add", "(", "x", ")").ReturnType is "None"

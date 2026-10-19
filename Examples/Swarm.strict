@@ -1,0 +1,46 @@
+has logger
+Line(count Number) List(Vector3)
+	Swarm(Logger).Line(2) is (Vector3(0, 0, 0), Vector3(1, 0, 0))
+	for count
+		Vector3(index, 0, 0)
+Moved(positions List(Vector3), velocity Vector3) List(Vector3)
+	Swarm(Logger).Moved(Swarm(Logger).Line(2), Vector3(1, 2, 3)) is (Vector3(1, 2, 3), Vector3(2, 2, 3))
+	for positions
+		value + velocity
+Stepped(steps Number) Vector3
+	Swarm(Logger).Stepped(2) is Vector3(4, 0, 0)
+	mutable positions = Line(3)
+	for steps
+		positions = Moved(positions, Vector3(1, 0, 0))
+	positions(2)
+Kept(steps Number) Vector3
+	Swarm(Logger).Kept(2) is Vector3(0, 0, 0)
+	mutable positions = Line(3)
+	let first = positions(0)
+	for steps
+		positions = Moved(positions, Vector3(1, 0, 0))
+	first + positions(0) - positions(0)
+Thinned(count Number) List(Vector3)
+	Swarm(Logger).Thinned(2) is (Vector3(2, 0, 0), Vector3(1, 0, 0))
+	mutable positions = Line(4)
+	for count
+		positions = positions.SwapRemoved(0)
+	positions
+Untouched Number
+	Swarm(Logger).Untouched is 3
+	let before = Line(3)
+	let after = before.SwapRemoved(0)
+	before.Length + after.Length - 2
+Nudged(count Number) Vector3
+	Swarm(Logger).Nudged(2) is Vector3(2, 0, 0)
+	mutable positions = (Vector3(0, 0, 0), Vector3(1, 0, 0))
+	for count
+		positions(0) = positions(0) + Vector3(1, 0, 0)
+	positions(0)
+Remembered(count Number) Vector3
+	Swarm(Logger).Remembered(2) is Vector3(1, 0, 0)
+	mutable positions = (Vector3(0, 0, 0), Vector3(1, 0, 0))
+	let first = positions(1)
+	for count
+		positions(1) = positions(1) + Vector3(1, 0, 0)
+	first

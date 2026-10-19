@@ -1,0 +1,4 @@
+has inner Generic
+Rounded Number
+	Boxed(2.5).Rounded is 2
+	inner.Floor

@@ -5,6 +5,7 @@ constant Search = InstructionEntry.Invoke(2, ("Strict/Text", "IndexOf", "Strict/
 constant TextType = TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry))
 constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Combine")
 constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end", "strict_text_combine")
+constant Destining = List(Text) + "strict_list_swap_removed"
 constant DefaultedLast = ("strict_text_index", "strict_text_starts", "strict_directory_files", "strict_text_combine")
 constant Texts = MlirFunction(List(TypeEntry), MlirFunction.Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), LengthCall, Search)))
 Helper(typeName Text, name Text, count Number) Text
@@ -38,11 +39,12 @@ CollectionHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).CollectionHelper("List(Number)", "Count", 1) is "strict_list_count"
 	MlirNatives(Texts, 1).CollectionHelper("List(Range)", "Index", 1) is "strict_list_find"
 	MlirNatives(Texts, 1).CollectionHelper("Dictionary(Text, Number)", "Add", 2) is "strict_dictionary_add"
+	MlirNatives(Texts, 1).CollectionHelper("List(Number)", "SwapRemoved", 1) is "strict_list_swap_removed"
 	if kind.StartsWith("Dictionary(")
 		return DictionaryHelper(name)
-	if name is not in ("in", "Index", "Count") or count is not 1
+	if name is not in ("in", "Index", "Count", "SwapRemoved") or count is not 1
 		return ""
-	let operation = name is "in" then "has" else name.Lower
+	let operation = name is "in" then "has" else (name is "SwapRemoved" then "swap_removed" else name.Lower)
 	"strict_list_" + (operation is "index" then "find" else operation)
 DictionaryHelper(name Text) Text
 	MlirNatives(Texts, 1).DictionaryHelper("in") is "strict_dictionary_has"

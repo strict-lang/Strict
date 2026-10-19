@@ -23,7 +23,8 @@ Symbol Text
 	let conversion = method.Name is "to" then "_" + TypeEntry.ShortName(method.returnType) else ""
 	constant operatorNames = ("+", "-", "*", "/", "%", "^")
 	constant operatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power")
-	let spelled = method.Name is in operatorNames then operatorWords(operatorNames.Index(method.Name)) else method.Name
+	let plain = MlirEquality(value, 0).Symbol(method.Name)
+	let spelled = method.Name is in operatorNames then operatorWords(operatorNames.Index(method.Name)) else plain
 	name + "_" + spelled + "_" + method.parameters.Length + conversion + type.OverloadSuffix(method)
 Parameters Texts
 	Counter.Parameters is ("value")

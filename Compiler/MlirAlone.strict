@@ -3,6 +3,7 @@ constant Rebuilt = MlirAlone(MlirOwned.Rebuilt.function)
 constant Moving = MlirAlone(MlirFunction((MlirFunction.Shape, MlirInstances.Outer), MlirInstances.Outer, MethodEntry("Run", List(MemberEntry), "None", MlirOwned.Rebuilding.Slice(4, 7))))
 constant Checking = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "moved"), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0))
 constant Checked = MlirAlone(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Checking)))
+constant Aliased = MlirAlone(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "moved"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "inline1_self"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "inline1_self"), InstructionEntry.Return(1)))))
 constant Reading = (InstructionType.FieldLoad, InstructionType.CheckError, InstructionType.Return)
 IsAlone(name Text) Boolean
 	Moving.IsAlone("moved")
@@ -32,13 +33,29 @@ IsRead(at Number, register Number) Boolean
 	let steps = function.method.instructions
 	let reuse = LoadReuse(steps)
 	for Range(at + 1, steps.Length)
-		if (register is in reuse.Reads(steps(value))) and (steps(value).kind is not in Reading)
+		if (register is in reuse.Reads(steps(value))) and (IsPlain(steps(value)) is false)
 			return false
 		if reuse.Written(steps(value)) is register
 			return true
 	true
+IsPlain(entry InstructionEntry) Boolean
+	Moving.IsPlain(InstructionEntry.Invoke(1, ("Strict/Outer", "Size", "Strict/Number"), List(Number), 0))
+	Moving.IsPlain(InstructionEntry.Invoke(1, ("Strict/Outer", "Moved", "Strict/Outer"), List(Number), 0)) is false
+	Aliased.IsPlain(Aliased.function.method.instructions(1))
+	if entry.kind is Inliner.Store
+		return entry.texts(0).StartsWith("inline") then IsAlias(entry.texts(0)) else false
+	if entry.kind is not InstructionType.Invoke
+		return entry.kind is in Reading
+	MlirLayout(function).Represented(TypeEntry.ShortName(entry.texts(2))) is in ("Number", "Boolean", "None", "Text")
 Check(name Text, position Number) Text
 	Moving.Check("moved", 3) is "    %t3re = arith.cmpf une, %t3old, %zero : f64"
 	Rebuilt.Check("moved", 7) is "    %t7re = func.call @strict_rc_unshared(%t7old) : (f64) -> i1"
 	let line = IsAlone(name) then "    %t#re = arith.cmpf une, %t#old, %zero : f64" else MlirOwned.Reusing(0)
 	line.Replace("#", position to Text)
+IsAlias(name Text) Boolean
+	Aliased.IsAlias("inline1_self")
+	for function.method.instructions
+		let isLoad = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is name else false
+		if isLoad and (IsRead(index, value.payload(0)) is false)
+			return false
+	true

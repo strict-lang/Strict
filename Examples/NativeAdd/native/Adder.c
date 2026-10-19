@@ -78,7 +78,7 @@ STRICT_EXPORT double Adder_Undefined(double self)
 	return value.number;
 }
 
-/* ponytail: 16 counters per process; a handle table would grow when a real package needs more. */
+/* 16 counters per process; a handle table would grow when a real package needs more. */
 static double counters[16][2];
 static int used;
 

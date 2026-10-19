@@ -40,14 +40,14 @@ Member(header HeaderTokens, position Number) MemberEntry
 	Hello.Member(HeaderTokens("constant", "Add"), 0).initial.First.payload is (1, 0, 0)
 	Hello.Member(HeaderTokens("has", "alpha", "=", "1", "with", "value", ">", "0"), 0).initial.First.payload is (1, 1, 0)
 	Hello.Member(HeaderTokens("has", "x", "Number", "with", "value", ".", "Bits", "is", "32"), 0).Bits is 32
+	Hello.Member(HeaderTokens("has", "numbers", "with", "Length", "is", "3"), 0).Count is 3
 	let isConstant = header.tokens(0) is "constant"
 	let typed = header.DeclaredType(1)
 	let own = isConstant or ("=" is not in header.tokens) then "" else TypeShape(lines).MethodScope.TypeOf(typed)
 	let declared = Scope(List(Text) + header.MemberName, List(Text) + (own is "" then typed else own))
 	let member = Instantiation(inference.types).Members(Generator.target.TypeName, declared)
 	let type = Generator.target.FullName(Concrete(member.types.First))
-	let bits = Constraint.Bits(Text.Combine(header.tokens, " "))
-	MemberEntry(header.MemberName, type, InitialOf(header, position), isConstant, bits)
+	MemberEntry(header.MemberName, type, InitialOf(header, position), isConstant).Limited(Text.Combine(header.tokens, " "))
 InitialOf(header HeaderTokens, position Number) List(InstructionEntry)
 	Hello.InitialOf(HeaderTokens("has", "count", "Number"), 0).Length is 0
 	if (header.tokens(0) is "constant") and (header.tokens.Length is 2)
@@ -75,7 +75,7 @@ Methods(names Texts) List(MethodEntry)
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and ((names.Length is 0) or (Tokenizer(value).Tokens.First is in names))
 			methods.Add(Method(index))
-	methods + ConstantMethods(inference).Methods(value, names)
+	methods + ConstantMethods(inference).Methods(value, names) + Specialization(Generator).Methods(value, names)
 Method(start Number) MethodEntry
 	(Hello.Method(1).returnType, Created.Method(1).returnType) is ("None", "Strict/C")
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"

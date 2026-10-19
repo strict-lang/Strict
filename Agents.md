@@ -17,7 +17,7 @@ Before writing any code, stop at the first rung that holds:
 - Deletion over addition. Boring over clever. Fewest files possible.
 - Question complex requests: "Do you actually need X, or does Y cover it?"
 - Pick the edge-case-correct option when two stdlib approaches are the same size, lazy means less code, not the flimsier algorithm.
-- Mark intentional simplifications with a ponytail: comment. If the shortcut has a known ceiling (global lock, O(n²) scan, naive heuristic), the comment names the ceiling and the upgrade path.
+- No `ponytail:` or other marker comments. A comment is rarely needed (.strict files have none), when one is needed keep it short and precise.
 - Not lazy about: input validation at trust boundaries, error handling that prevents data loss, security, accessibility, the calibration real hardware needs (the platform is never the spec ideal, a clock drifts, a sensor reads off), anything explicitly requested. Lazy code without its check is unfinished: non-trivial logic leaves ONE runnable check behind, the smallest thing that fails if the logic breaks (an assert-based demo/self-check or one small test file; no frameworks, no fixtures). Trivial one-liners need no test.
 
 ## General Guidelines
@@ -57,7 +57,7 @@ Strict compiles itself natively (`Strict.strict` builds the `strict` command `st
 - Do not remove TODOs until the code has actually been improved and fixed. When there are tests failing that cover the TODO, the TODO still needs to be tested and fixed before removal.
 
 ## Tests
-- Tests are the lines at the start of every method. `strict test <file>` runs them on the Strict VM, its exit code is the number of failed tests. A file whose `.strictbinary` is up to date counts as passed without running, a new `strict.exe` does not change that: after compiler or runtime changes delete the `.strictbinary` files before trusting results. `strict build <file>` of a type without Run compiles them into `Name.test.exe`, its exit code is the number of failed tests too (above 128 or negative: crashed). Run the tests of every changed file; after compiler or runtime changes also `strict test` and `strict build` every file of every folder and build every Example, all must pass before work is done (failing tests listed in improvements.md excepted).
+- Tests are the lines at the start of every method. `strict test <file>` runs them on the Strict VM, its exit code is the number of failed tests. A file whose `.strictbinary` is up to date counts as passed without running, a new `strict.exe` does not change that: after compiler or runtime changes delete the `.strictbinary` files before trusting results. `strict build <file>` of a type without Run compiles them into `Name.test.exe`, its exit code is the number of failed tests too (above 128 or negative: crashed). Run the tests of every changed file and of the changed package (VM and native), plus one obvious user of it (a change to Math or NeuralNetworks: build one of the games or programs using it). After compiler or runtime changes the bootstrap above covers the compiler itself. `strict test` and `strict build` of every file of every folder and every game runs once a day, not per change (failing tests listed in improvements.md excepted).
 - `strict check <folder>` must report 0 issues for every changed folder.
 - Do not ignore linker or platform-build errors; failures must surface instead of being swallowed.
 - User prefers minimal test additions in this repo; rely on existing coverage when possible and add at most one focused regression test for a bug fix.
@@ -65,7 +65,7 @@ Strict compiles itself natively (`Strict.strict` builds the `strict` command `st
 
 ## Time Limits
 - Fast feedback over thoroughness: no tool call over 5 minutes, no sub-agent or workflow over 10 minutes, never sit idle 15 minutes waiting on anything. Hitting a limit means something is wrong: stop it (TaskStop), report what was slow and why, do not keep waiting. Never poll with sleep loops.
-- Sub-agents and workflows only run tests affected by their change (seconds), never the tests of all folders. Only the main session runs those, before a big commit.
+- Only run the tests a change can reach (seconds to a few minutes): the changed package and one obvious user. The full run of all folders and games (about 30 minutes) is once a day in the main session, never per change and never in sub-agents or workflows.
 - Test sets that may take long run in calls of at most 4.5 minutes with per-file results written to a file as they finish, never piped through grep at the end (no progress is visible until it ends). Split by folder when a set needs longer. A stopped run can leave test executables running, kill them.
 - No Workflow tool runs and at most 3 parallel sub-agents unless the user asks for it in the current prompt, also when ultracode is on (its workflows ran 1-3 hours each).
 
