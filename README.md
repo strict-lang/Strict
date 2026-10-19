@@ -21,7 +21,7 @@ This repository is not just the runtime, but contains the standard library. It i
 - Boolean
 - Number
 - Text
-- List (also `Sorted`, `Merged`, `Slice`, `Insert`, `Unique`, `Average`, `Median`, `Normalized`, `IndexOfMaximum`, `IndexOfMinimum`, `Pick` and `Shuffled` with a `PseudoRandom`)
+- List (also `Sorted`, `Merged`, `Slice`, `Insert`, `SwapRemoved` (the last element takes the removed place), `Unique`, `Average`, `Median`, `Normalized`, `IndexOfMaximum`, `IndexOfMinimum`, `Pick` and `Shuffled` with a `PseudoRandom`)
 - Dictionary
 - Range
 - Error (with Stacktraces, Type and Methods support)

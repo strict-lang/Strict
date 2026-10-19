@@ -230,3 +230,9 @@ Shuffled(random PseudoRandom) List
 		shuffled(value) = shuffled(other)
 		shuffled(other) = kept
 	shuffled
+SwapRemoved(position Number) List
+	(1, 2, 3, 4).SwapRemoved(1) is (1, 4, 3)
+	(1, 2, 3).SwapRemoved(2) is (1, 2)
+	mutable swapped = elements
+	swapped(position) = elements.Last
+	swapped.Slice(0, elements.Length - 1)

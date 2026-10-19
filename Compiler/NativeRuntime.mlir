@@ -2565,13 +2565,33 @@
   // the old value of a local that only ever holds fresh values and never leaks (MlirOwned) dies when it is
   // overwritten: without a count it is freed at once and its block is the next one allocated of its size
   func.func private @strict_rc_dead(%old: f64, %new: f64) {
-    %zero = arith.constant 0 : i64
-    %zeroCount = arith.constant 0 : i32
     %oldPointer = func.call @strict_ptr(%old) : (f64) -> !llvm.ptr
     %object = llvm.ptrtoint %oldPointer : !llvm.ptr to i64
     %newPointer = func.call @strict_ptr(%new) : (f64) -> !llvm.ptr
     %kept = llvm.ptrtoint %newPointer : !llvm.ptr to i64
     %isSame = arith.cmpi eq, %object, %kept : i64
+    cf.cond_br %isSame, ^done, ^check
+  ^check:
+    %unshared = func.call @strict_rc_unshared(%old) : (f64) -> i1
+    cf.cond_br %unshared, ^dispose, ^done
+  ^dispose:
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %disposed = func.call @strict_rc_dispose(%object, %located#0, %located#2, %flags, %counter) : (i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
+    cf.br ^done
+  ^done:
+    return
+  }
+
+  // true for a small object no heap object counts, not pinned, not free and not on the GPU: a local proven to be
+  // its only holder (MlirOwned) may free it or write into it
+  func.func private @strict_rc_unshared(%value: f64) -> i1 {
+    %zero = arith.constant 0 : i64
+    %zeroCount = arith.constant 0 : i32
+    %no = arith.constant false
+    %pointer = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %pointer : !llvm.ptr to i64
     %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
     %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %shared = arith.cmpi ne, %busy, %zero : i64
@@ -2579,24 +2599,22 @@
     %enabled = llvm.load %enabledSlot : !llvm.ptr -> i64
     %disabled = arith.cmpi eq, %enabled, %zero : i64
     %blocked = arith.ori %shared, %disabled : i1
-    %skipped = arith.ori %blocked, %isSame : i1
-    cf.cond_br %skipped, ^done, ^locate
+    cf.cond_br %blocked, ^no, ^locate
   ^locate:
     %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
     %unset = llvm.mlir.zero : !llvm.ptr
     %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
-    %false = arith.constant false
-    %isSmall = arith.cmpi eq, %located#3, %false : i1
+    %isSmall = arith.cmpi eq, %located#3, %no : i1
     %isStart = arith.cmpi eq, %located#1, %object : i64
     %found2 = arith.andi %found, %isSmall : i1
     %usable = arith.andi %found2, %isStart : i1
-    cf.cond_br %usable, ^counter, ^done
+    cf.cond_br %usable, ^counter, ^no
   ^counter:
     %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %count = llvm.load %counter : !llvm.ptr -> i32
     %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %isCounted = arith.cmpi ne, %count, %zeroCount : i32
-    %markerSlot = llvm.getelementptr %oldPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %markerSlot = llvm.getelementptr %pointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %marker = llvm.load %markerSlot : !llvm.ptr -> i64
     %freeMarker = arith.constant -1 : i64
     %isFree = arith.cmpi eq, %marker, %freeMarker : i64
@@ -2605,14 +2623,14 @@
     %pinned = arith.andi %flagByte, %pinnedFlag : i8
     %noFlags = arith.constant 0 : i8
     %isPinned = arith.cmpi ne, %pinned, %noFlags : i8
+    %bound = func.call @strict_rc_device_bound(%object, %located#2) : (i64, i64) -> i1
     %isLeft = arith.ori %isCounted, %isFree : i1
-    %ignored = arith.ori %isLeft, %isPinned : i1
-    cf.cond_br %ignored, ^done, ^dispose
-  ^dispose:
-    %disposed = func.call @strict_rc_dispose(%object, %located#0, %located#2, %flags, %counter) : (i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
-    cf.br ^done
-  ^done:
-    return
+    %isHeld = arith.ori %isPinned, %bound : i1
+    %ignored = arith.ori %isLeft, %isHeld : i1
+    %unshared = arith.cmpi eq, %ignored, %no : i1
+    return %unshared : i1
+  ^no:
+    return %no : i1
   }
   // STRICT_RC_CHECK marks everything from the roots before a reclaim: an object it would free that the marking
   // reached is still referenced somewhere the counts do not see, it is reported and kept
