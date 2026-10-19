@@ -140,8 +140,7 @@ Defaulted(kind Text, initial Runtime/VmValue, slot Text, suffix Text) Texts
 	built + function.Load(temp + "fl", slot) + converted + function.Store(temp + "f", slot)
 Indexed(entry InstructionEntry, fallback MlirLists) Texts
 	Reader.Indexed(Tripling.methods.Last.instructions(1), MlirLists(Sample.function, 1))(2).IndexOf("flat_at(") > 0
-	let isFlat = Count(MlirKinds(function).VariableKind(position, entry.texts(0))) > 0
-	if (isFlat or MlirCouples(function, position).IsFlatAlias(entry.texts(0))) is false
+	if MlirCouples(function, position).IsFlatRead(entry) is false
 		return fallback.Indexed(entry)
 	let temp = "%t" + position
 	let read = "    " + temp + "x = func.call @strict_flat_at(" + temp + "l, " + temp + "i) : (f64, f64) -> f64"

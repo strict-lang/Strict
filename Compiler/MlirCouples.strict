@@ -85,6 +85,10 @@ Unpacked Texts
 			let read = "    %tcouple" + index + " = func.call @strict_two_" + half + "(%tcouple) : (f64) -> f64"
 			lines = lines + read + function.Store("%tcouple" + index, "%v_" + value.Name)
 	lines
+IsFlatRead(entry InstructionEntry) Boolean
+	MlirCouples(MlirFlats.Reader.function, 1).IsFlatRead(MlirFlats.Tripling.methods.Last.instructions(1))
+	let isFlat = MlirFlats(function, position).Count(MlirKinds(function).VariableKind(position, entry.texts(0))) > 0
+	isFlat or IsFlatAlias(entry.texts(0))
 IsFlatAlias(name Text) Boolean
 	Celled.IsFlatAlias("list0")
 	Celled.IsFlatAlias("other") is false

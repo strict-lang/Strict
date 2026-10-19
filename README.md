@@ -131,6 +131,7 @@ Immutable values are rewritten in place natively whenever nobody else can see th
 | 10M `entity = Mover(entity, position = entity.position + entity.velocity)` (proven unshared at compile time) | 134 ms | 94 ms |
 | 10M of the same with Vector3 members (`position + velocity` is built into the old member block) | 230 ms | 103 ms |
 | 1000 frames of `for positions` giving `value + velocity` over 10k Vector3 (the old list is refilled, its elements live in one block and are rebuilt in place) | 474 ms | 118 ms |
+| 4100 times `for positions` summing `value.X + value.Y + value.Z` over 100k Vector3 (reads of a flat element need no error check) | 680 ms | 470 ms |
 | 50k `numbers = numbers.SwapRemoved(0)` on 100k numbers (the dying list swaps and shrinks in place instead of being copied) | O(n) per removal | 38 ms total |
 | 1M `matrix * step` (Matrix reads the other matrix in place instead of copying it into a list) | 6.6 s | 270 ms |
 | 1M `Quaternion.Lerp` (Quaternion packed into 32 bit floats, results now equal the Strict VM, a construction from exactly its count of numbers skips `Validated`) | 255 ms | 157 ms |

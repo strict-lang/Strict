@@ -3,19 +3,29 @@ has position Number
 constant Tracing = " : (f64, !llvm.ptr, i64) -> f64"
 constant Returning = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))), 1)
 constant Testing = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text) + "tested", (0, 5)), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.JumpEnd, 5)))), 1)
+constant FlatRead = MlirChecks(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))), 2)
 Emitted Texts
+	FlatRead.Emitted is ("    cf.br ^bb3")
 	Returning.Emitted.Index("    cf.cond_br %t1k, ^bb1e, ^bb2") is 2
 	Returning.Emitted.Last is "    return %t1tr : f64"
 	Testing.Emitted.Last is "    cf.br ^bb3"
-	Text.Combine(Returning.Emitted).IndexOf("@strict_trace_checked(%t1v,") > 0
 	if function.FastLoop >= 0
 		return List(Text)
-	let entry = function.method.instructions(position)
+	IsFlatRead then List(Text) + ("    cf.br ^bb" + (position + 1)) else Checked(function.method.instructions(position))
+Checked(entry InstructionEntry) Texts
+	Text.Combine(Returning.Checked(Returning.function.method.instructions(1))).IndexOf("@strict_trace_checked(%t1v,") > 0
 	let checked = "%t" + position + "v"
 	let test = "    %t" + position + "k = func.call @strict_is_failure(" + checked + ") : (f64) -> i1"
 	let branch = "    cf.cond_br %t" + position + "k, ^bb" + position + "e, ^bb" + (position + 1)
 	let traced = MlirMemory(function, position).Traced(checked, "%t" + position + "tr", "strict_trace_checked")
 	(function.Load(checked, "%r" + entry.payload(0)), test, branch, "  ^bb" + position + "e:") + traced + Left(entry)
+IsFlatRead Boolean
+	FlatRead.IsFlatRead
+	Returning.IsFlatRead is false
+	let previous = function.method.instructions(position - 1)
+	let register = function.method.instructions(position).payload(0)
+	let isRead = previous.kind is InstructionType.IndexCall and (previous.payload(0) is register)
+	isRead then MlirCouples(function, position - 1).IsFlatRead(previous) else false
 Left(entry InstructionEntry) Texts
 	Returning.Left(Returning.function.method.instructions(1)) is ("    return %t1tr : f64")
 	if entry.texts.Length is 0
