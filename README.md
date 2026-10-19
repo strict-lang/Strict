@@ -1,15 +1,21 @@
 # Strict
 
 ![Strict Programming Language](https://strict-lang.org/img/StrictBanner.png)
-<div style="text-align: center;">Create well-written and efficient code quickly</div>
+<div style="text-align: center;">Clean code. Native speed.</div>
 
-## Strict is a language computers can understand
+## A fast, low level engine for AI to write
 
-Strict is a simple-to-understand programming language that not only humans can read and understand, but also computers are able to understand, modify and write it.
+Strict is a small programming language that AI can write, read and change as reliably as people can. Every type is one file, every method starts with its own tests, values are immutable and there is exactly one way to solve each problem, so generated code is checked by `strict check` and its tests within seconds instead of being reviewed line by line.
 
-The long-term goal is NOT to create just another programming language, but use Strict as the foundation for a higher level language for computers to understand and write code. This is the first step towards a future where computers can write their own code, which is the ultimate goal of Strict. Again, this is very different from other programming languages that are designed for humans to write code but not for computers to understand it. Even though LLMs can be trained to repeat and imitate, which is amazing to see, they still don't understand anything really and make the most ridiculous mistakes on any project bigger than a handful of files. Strict needs to be very fast, both in execution and writing code (much faster than any existing system), so millions of lines of code can be thought of by computers and be evaluated in real time (seconds).
+Large language models became very good at writing code, but they still imitate: they learn from billions of lines of text and need ever bigger models and more data to improve, and their output has to be verified by someone. Strict takes a different route and needs no huge training corpus. It is best understood as the DNA of an organism: a compact, exact and fast low level layer whose rules a computer can fully understand, verify and evolve. The long term goal stays the same: a higher level language on top of Strict in which computers design and write whole programs, with millions of lines of code generated, tested and discarded in real time.
 
-More at https://strict-lang.org
+That only works if Strict is fast everywhere:
+- **Self-hosted**: the parser, type inference, validators, the Strict VM and the native code generator (MLIR and LLVM) are written in Strict, `strict` builds itself.
+- **Instant feedback**: `strict test` runs the inline tests on the Strict VM in memory, the VS Code extension shows passing lines and the values each line produces while you type.
+- **Native speed**: SIMD, CPU workers and NVIDIA GPU kernels for numeric work, number types packed into 32 bit floats, values rewritten in place, reference counting with a generational collector (see Performance below).
+- **Real workloads**: Qwen3-8B inference at about 150 tokens/s on an RTX 4090 (up to 2,357 tokens/s over 32 sequences) and Qwen3-Coder-30B-A3B at about 200 tokens/s with the transformer logic written in Strict, game logic of the DeltaEngine and SoulCraft games, C and C# libraries with generated bindings.
+
+More at https://strict-lang.org (Getting Started, Language Guide, Cheat Sheet, Blog).
 
 ## Layers
 
@@ -32,7 +38,7 @@ This repository is not just the runtime, but contains the standard library. It i
 - MovingWindow (the last values of a fixed capacity with their running `Sum` and `Average`, `Minimum`, `Maximum`) and PriorityQueue (a binary min-heap of numbers, `Pushed`, `Popped`)
 - common traits like Any (applies to all types), App, Generic (replaced by concrete type in implementation), Mutable, File, Directory, FileReader, FileWriter, etc.
 
-That is pretty much it, there are not many more things needed to write code. For more specific things see the Math folder, ImageProcessing, Examples, etc. here in this repository. Keep in mind that Strict is NOT a general purpose language. It is supposed to be writeable, readable and understandable by computers. If you want to build a website, a complex app, database code, a game, etc. you should use external code for that (you can keep the logic in Strict, but it is unlikely that Strict will have those things unless some people work on it and need it). It is quite easy to interface with external code, you can use any web api, C++, C#, Java, Python, etc. libraries. Those are threated as black boxes (thus not longer computer understandable, here we would be limited to LLMs) and will not follow the strict rules in Strict. The main issue here would be if an external library changes, then all your calls to it also have to change, which is less of a problem with Strict code calling Strict code as any changes can be fixed in a more automated manner.
+That is pretty much it, there are not many more things needed to write code. For more specific things see the Math folder, ImageProcessing, Examples, etc. here in this repository. Keep in mind that Strict is NOT a general purpose language. It is supposed to be writeable, readable and understandable by computers. If you want to build a website, a complex app, database code, etc. you should use external code for that (you can keep the logic in Strict, but it is unlikely that Strict will have those things unless some people work on it and need it). It is quite easy to interface with external code, you can use any web api, C++, C#, Java, Python, etc. libraries. Those are threated as black boxes (thus not longer computer understandable, here we would be limited to LLMs) and will not follow the strict rules in Strict. The main issue here would be if an external library changes, then all your calls to it also have to change, which is less of a problem with Strict code calling Strict code as any changes can be fixed in a more automated manner.
 
 In the rare case you need an optional value you can specify it with the or None type constraint (any other type also works). Keep in mind you still cannot assign None to anything, but we can check if something is None and simply not assigning it will keep it at the None state.
 
@@ -115,6 +121,17 @@ Native packages: a type without members whose methods have no body (a trait like
 Strict VM model: when the types are loaded `Resolver` numbers the locals and registers of every method into slots, resolves every call target and jump, decodes number constants and gives every instruction the slot its result goes to (`InstructionEntry.Target`). A call runs in one list of slots that its `Frame` owns and writes in place (the compiler keeps a list owned when it is only passed to methods of the same type that neither store nor return it), member values come from one decoded instance per type, constant instances like `VmValue.None` are built once natively. A call nested more than 20000 calls deep returns a `StackOverflow` Error with the Strict stack, the other tests of the file still run. Training `NeuralNetworks/Iris.strict` on the VM takes 2.1 s (4.0 s with a new frame per instruction), `ImageProcessing/ProcessImage.strict` 27 s (82 s).
 
 Speed (1M loop iterations): native executable 40 ms (269 KB), Strict VM 105 ms, C# Strict.exe 420 ms. `strict` builds itself in 14.5 s, most of it in mlir-opt and clang. The neural network samples (`NeuralNetworks/`) log their training time, the MNIST digits of [Mnist](https://github.com/strict-lang/Mnist) train a 256-32-4 network on 128 images for 100 epochs in 0.49 s natively.
+
+## Performance
+Immutable values are rewritten in place natively whenever nobody else can see the old value (native executables, measured 2026-10-19):
+
+| Code | Before | After |
+|------|--------|-------|
+| 10M `position = Moved(position)` (Vector3, the result is built into the old block) | 793 ms | 84 ms |
+| 10M `entity = Mover(entity, position = entity.position + entity.velocity)` (proven unshared at compile time) | 134 ms | 94 ms |
+| 1000 frames of `for positions` giving `value + velocity` over 10k Vector3 (the old list and elements are refilled) | 474 ms | 225 ms |
+| 1M `matrix * step` (Matrix reads the other matrix in place instead of copying it into a list) | 6.6 s | 270 ms |
+| 1M `Quaternion.Lerp` (Quaternion packed into 32 bit floats, results now equal the Strict VM) | 255 ms | 200 ms |
 
 ## Open work
 See [improvements.md](improvements.md), in priority order.
