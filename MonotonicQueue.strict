@@ -1,0 +1,34 @@
+has isMaximum Boolean
+has ages Numbers = List(Number)
+has first Number = 0
+has last Number = 0
+constant Lows = MonotonicQueue(false)
+constant Highs = MonotonicQueue(true)
+Pushed(age Number, values Numbers, capacity Number) MonotonicQueue
+	Lows.Pushed(0, (3), 2).Value((3), 2) is 3
+	Lows.Pushed(0, (3), 2).Pushed(1, (3, 1), 2).Value((3, 1), 2) is 1
+	Lows.Pushed(0, (1), 2).Pushed(1, (1, 3), 2).Pushed(2, (2, 3), 2).Value((2, 3), 2) is 2
+	Highs.Pushed(0, (1), 2).Pushed(1, (1, 3), 2).Pushed(2, (2, 3), 2).Value((2, 3), 2) is 3
+	let expired = (last > first) and (ages(first % capacity) <= age - capacity)
+	let started = MonotonicQueue(value, first = expired then first + 1 else first)
+	started.Popped(values(age % capacity), values, capacity).Appended(age, capacity)
+Popped(number Number, values Numbers, capacity Number) MonotonicQueue
+	Lows.Pushed(0, (3), 2).Popped(1, (3), 2).last is 0
+	Highs.Pushed(0, (3), 2).Popped(1, (3), 2).last is 1
+	if last is first
+		return value
+	let back = values(ages((last - 1) % capacity) % capacity)
+	let isWorse = isMaximum then back <= number else back >= number
+	isWorse then MonotonicQueue(value, last = last - 1).Popped(number, values, capacity) else value
+Appended(age Number, capacity Number) MonotonicQueue
+	Lows.Appended(4, 2).ages is (4)
+	Lows.Appended(4, 2).Appended(5, 2).Appended(6, 2).ages is (6, 5)
+	mutable kept = ages
+	if last % capacity < ages.Length
+		kept(last % capacity) = age
+	else
+		kept = kept + age
+	MonotonicQueue(value, ages = kept, last = last + 1)
+Value(values Numbers, capacity Number) Number
+	Highs.Pushed(0, (4), 1).Value((4), 1) is 4
+	values(ages(first % capacity) % capacity)

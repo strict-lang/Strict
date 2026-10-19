@@ -6272,6 +6272,15 @@
     %result = func.call @strict_boolean(%same) : (i1) -> f64
     return %result : f64
   }
+  func.func private @strict_text_less(%left: f64, %right: f64) -> f64 {
+    %zero = arith.constant 0 : i32
+    %a = func.call @strict_ptr(%left) : (f64) -> !llvm.ptr
+    %b = func.call @strict_ptr(%right) : (f64) -> !llvm.ptr
+    %compared = llvm.call @strcmp(%a, %b) : (!llvm.ptr, !llvm.ptr) -> i32
+    %less = arith.cmpi slt, %compared, %zero : i32
+    %result = func.call @strict_boolean(%less) : (i1) -> f64
+    return %result : f64
+  }
   func.func private @strict_text_starts(%text: f64, %prefix: f64, %start: f64) -> f64 {
     %zero = arith.constant 0 : i32
     %offset = arith.fptosi %start : f64 to i64

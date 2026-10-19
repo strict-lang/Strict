@@ -150,3 +150,15 @@ is(other) Boolean
 	"A" is "A"
 	"Hi" is not "hi"
 	value is other
+<(other) Boolean
+	"a" < "b"
+	"ab" < "b"
+	"a" < "ab"
+	"B" < "a"
+	"b" < "a" is false
+	"a" < "a" is false
+	"" < "a"
+	for Length < other.Length then Length else other.Length
+		if characters(index) is not other.characters(index)
+			return characters(index) < other.characters(index)
+	Length < other.Length

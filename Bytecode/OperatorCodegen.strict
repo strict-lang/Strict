@@ -3,6 +3,7 @@ constant Plain = OperatorCodegen(ValueCodegen.Plain)
 constant One = SyntaxNode("Number", "1")
 constant NoNode = SyntaxNode("Identifier", "x")
 constant Characters = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Character"), (KnownTypes.NoMembers), (Scope(("+"), ("Text"))), (KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
+constant Texts = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Text"), (KnownTypes.NoMembers), (Scope(("+", "<"), ("Text", "Boolean"))), (KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant Hashes = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Hash"), (Scope(("number"), ("Number"))), (KnownTypes.NoMembers), (Scope(("from", "from types"), ("generic", "Generic")))), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant InOnes = SyntaxNode("Binary", "is in", (One, ValueCodegen.Ones))
 constant Choose = SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (NoNode, One)), One))
@@ -32,19 +33,23 @@ IsCustom(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsCustom(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
 	Plain.IsCustom(SyntaxNode("Binary", "is", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Size")) is false
 	Characters.IsCustom(SyntaxNode("Binary", "+", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Character"))
-	if IsBitwise(node, block)
+	Texts.IsCustom(SyntaxNode("Binary", "<", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Text"))
+	Plain.IsCustom(SyntaxNode("Binary", "xor", (One, One)), CodeBlock.Empty)
+	Plain.IsCustom(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Boolean")) is false
+	if (node.text is in ("and", "or", "xor")) and (values.TypeOf(node.children(0), block) is "Number")
 		return true
-	if node.text is not in ("+", "-", "*", "/", "%", "^")
+	if node.text is not in ("+", "-", "*", "/", "%", "^", "<", ">", "<=", ">=")
 		return false
-	let type = values.TypeOf(node.children(0), block)
-	let types = values.inference.types
-	if (type is in ("Number", "Text", "Boolean")) or type.StartsWith("List(") or types.IsPlural(type)
+	HasOperator(values.TypeOf(node.children(0), block), node.text)
+HasOperator(type Text, operator Text) Boolean
+	Texts.HasOperator("Text", "<")
+	Texts.HasOperator("Text", "+") is false
+	Plain.HasOperator("Number", "<") is false
+	let isOrdered = operator is in ("<", ">", "<=", ">=")
+	let isBase = (type is in ("Number", "Boolean")) or ((type is "Text") and (isOrdered is false))
+	if isBase or type.StartsWith("List(") or values.inference.types.IsPlural(type)
 		return false
-	types.MethodsOf(type).TypeOf(node.text) is not ""
-IsBitwise(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsBitwise(SyntaxNode("Binary", "xor", (One, One)), CodeBlock.Empty)
-	Plain.IsBitwise(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Boolean")) is false
-	(node.text is in ("and", "or", "xor")) and (values.TypeOf(node.children(0), block) is "Number")
+	values.inference.types.MethodsOf(type).TypeOf(operator) is not ""
 IsComposite(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsComposite(Choose, CodeBlock.Empty)
 	Plain.IsComposite(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
@@ -128,7 +133,7 @@ Compared(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 3
 	Plain.Compared(NoNode, CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
 	let isCompared = (node.Kind is "Binary") and (node.text is in ("is", "is not", "<", ">"))
-	let isComparison = isCompared and (Decided(node, block) is "")
+	let isComparison = isCompared and (Decided(node, block) is "") and (IsCustom(node, block) is false)
 	let operand = isComparison then node.children(0) else node
 	let errors = ErrorCodegen(values)
 	let left = errors.Compared(node, operand, block)

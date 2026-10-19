@@ -1,6 +1,7 @@
 constant OneTwo = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))
 constant DimensionError = VmValue.OfError("listsHaveDifferentDimensions")
 constant Hashed = VmValue("Strict/HashCode(Type)", 0, "", List(VmValue) + VmValue.OfNumber(5))
+constant Letter = VmValue("Strict/Character", 0, "", List(VmValue) + VmValue.OfNumber(97))
 constant Detailed = VmValue("Strict/ErrorWithValue", 0, "", (DimensionError, OneTwo))
 Result(kind Number, left VmValue, right VmValue) VmValue
 	Result(InstructionType.Add, VmValue.OfNumber(3), VmValue.OfNumber(4)).number is 7
@@ -17,7 +18,16 @@ Comparison(kind Number, left VmValue, right VmValue) Boolean
 	Comparison(InstructionType.NotEqual, VmValue.OfNumber(1), VmValue.OfError(""))
 	if kind is in (InstructionType.Equal, InstructionType.NotEqual)
 		return IsSame(left, right) is (kind is InstructionType.Equal)
-	kind is InstructionType.LessThan then left.number < right.number else left.number > right.number
+	Ordered(kind is InstructionType.LessThan, left, right)
+Ordered(isLess Boolean, left VmValue, right VmValue) Boolean
+	Ordered(false, Letter, VmValue.OfNumber(10))
+	Ordered(true, VmValue.OfText("a"), VmValue.OfText("b"))
+	Ordered(false, VmValue.OfText("b"), VmValue.OfText("ab"))
+	if left.kind is "Text"
+		return isLess then left.text < right.text else right.text < left.text
+	let leftNumber = left.items.Length is 0 then left.number else Comparable(left).number
+	let rightNumber = right.items.Length is 0 then right.number else Comparable(right).number
+	isLess then leftNumber < rightNumber else leftNumber > rightNumber
 IsSame(left VmValue, right VmValue) Boolean
 	IsSame(DimensionError, VmValue.OfError(""))
 	IsSame(VmValue.OfNumber(1), VmValue.OfError("")) is false

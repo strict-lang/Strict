@@ -17,12 +17,13 @@ IsCounted = lineSlots.Length > 0
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
 	Adding.Symbol is "Shape_Plus_0"
+	MlirFunction(Adding, method = MethodEntry(Adding.method, Name = "<")).Symbol is "Shape_Less_0"
 	if MlirForeign(value).IsForeign
 		return MlirForeign(value).Wrapper
 	let name = MlirEquality(value, 0).Symbol(type.JustName)
 	let conversion = method.Name is "to" then "_" + TypeEntry.ShortName(method.returnType) else ""
-	constant operatorNames = ("+", "-", "*", "/", "%", "^")
-	constant operatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power")
+	constant operatorNames = ("+", "-", "*", "/", "%", "^", "<", ">", "<=", ">=")
+	constant operatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power", "Less", "More", "AtMost", "AtLeast")
 	let plain = MlirEquality(value, 0).Symbol(method.Name)
 	let spelled = method.Name is in operatorNames then operatorWords(operatorNames.Index(method.Name)) else plain
 	name + "_" + spelled + "_" + method.parameters.Length + conversion + type.OverloadSuffix(method)

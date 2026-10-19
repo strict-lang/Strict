@@ -168,6 +168,7 @@ Sorted List
 	(3, 1, 2).Sorted is (1, 2, 3)
 	(2, 1, 2, 0).Sorted is (0, 1, 2, 2)
 	(1).Sorted is (1)
+	("b", "c", "a").Sorted is ("a", "b", "c")
 	if Length < 2
 		return elements
 	let half = (Length / 2).Floor
@@ -180,7 +181,7 @@ Merged(other) List
 	mutable right = 0
 	for Range(0, Length + other.elements.Length)
 		let isDone = right >= other.elements.Length
-		let isLeft = isDone then true else (left < elements.Length then elements(left) <= other.elements(right) else false)
+		let isLeft = isDone or ((left < elements.Length) and ((other.elements(right) < elements(left)) is false))
 		merged = merged + (isLeft then elements(left) else other.elements(right))
 		left = isLeft then left + 1 else left
 		right = isLeft then right else right + 1

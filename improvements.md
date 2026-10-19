@@ -141,7 +141,6 @@ Measured on Qwen3-8B Q4_K_M and the RTX 4090, results in `NeuralNetworks/README.
 - Qwen3-Coder-30B-A3B launches 1157 kernels per token and its first upload of the 18.6 GB of experts is bound by the CPU copy (a pinned double buffered upload made the copies 13 times faster on the GPU but not the first token); GPT-2 captures its launches again after every download (5 graph segments per token, the main thread is in the CUDA driver); per row `Summed` still checks its lists on the CPU; MXFP4 for gpt-oss; paged caches, prefix caching and inactive caches on the CPU for bigger models.
 
 ## Base library (found 2026-10-19 comparing DeltaEngine, AiInvest, old SoulCraft, .NET, std, Go and Rust)
-- **Ceilings**: `MovingWindow.Minimum` and `Maximum` scan the window (a monotonic queue would make them O(1)), `Sorted` needs `<` on the elements (Text has none yet).
 - **Not added yet** (chosen 2026-10-19 to wait): Number `Sign`, `Wrap`, inverse trigonometry (`ArcTangent2` has 53 uses in the C# DeltaEngine), Text to Numbers, fixed decimal number text, `Truncated`.
 
 ## Deferred

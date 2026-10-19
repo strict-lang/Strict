@@ -10,6 +10,7 @@ constant Prologue = ("    %zero = arith.constant 0.0 : f64", "    %one = arith.c
 constant ErrorKinds = ("Error", "ErrorWithValue")
 constant Packed = ("Pair", "Flat")
 constant Failing = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a"), InstructionEntry.Invoke(1, ("Strict/Error", "from", "Strict/Error", "Name"), 0, -1), InstructionEntry.Binary(InstructionType.Equal, (0, 1)))))
+constant Greater = InstructionEntry.Binary(InstructionType.GreaterThan, (1, 1))
 constant Epilogue = ("    cf.br ^equal", "  ^equal:", "    return %one : f64", "  ^different:", "    return %zero : f64", "  }")
 Handles(entry InstructionEntry) Boolean
 	MlirEquality(Same, 2).Handles(Same.method.instructions(2))
@@ -35,17 +36,26 @@ ComparedKind(entry InstructionEntry, isText Boolean) Text
 	isText then "Text" else left
 Compared(entry InstructionEntry) Texts
 	MlirEquality(Same, 2).Compared(Same.method.instructions(2)).Length is 5
-	if entry.kind is not in Comparisons
+	if entry.kind is not in (Comparisons + InstructionType.LessThan + InstructionType.GreaterThan)
 		return List(Text) + MlirStatements(function, position).Unsupported("Text operator " + entry.kind)
 	let kinds = MlirKinds(function)
 	let isText = kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))
 	let kind = ComparedKind(entry, isText)
 	let loads = Operand(entry.payload(1), "l", kind) + Operand(entry.payload(2), "r", kind)
-	let predicate = entry.kind is InstructionType.Equal then "one" else "oeq"
+	let predicate = entry.kind is InstructionType.NotEqual then "oeq" else "one"
 	let flag = "    " + Temp("f") + " = arith.cmpf " + predicate + ", " + Temp("q") + ", %zero : f64"
 	constant stored = "    llvm.store " + Temp("f") + ", %flag : i1, !llvm.ptr"
-	let lines = loads + Call(kind, Temp("q"), Temp("l"), Temp("r")) + flag + stored
+	let lines = loads + Ordered(entry, kind) + flag + stored
 	entry.payload(0) is not 3 then lines else lines + MlirStatements(function, position).Numbered(Temp("f"), entry)
+Ordered(entry InstructionEntry, kind Text) Texts
+	MlirEquality(Same, 2).Ordered(Greater, "Text").First.IndexOf("@strict_text_less(%t2r, %t2l)") > 0
+	MlirEquality(Same, 2).Ordered(Same.method.instructions(2), "Shape").Length is 1
+	let memory = MlirMemory(function, position)
+	if entry.kind is InstructionType.LessThan
+		return List(Text) + memory.Called(Temp("q"), "strict_text_less", (Temp("l"), Temp("r")))
+	if entry.kind is InstructionType.GreaterThan
+		return List(Text) + memory.Called(Temp("q"), "strict_text_less", (Temp("r"), Temp("l")))
+	Call(kind, Temp("q"), Temp("l"), Temp("r"))
 Operand(register Number, suffix Text, compared Text) Texts
 	MlirEquality(Same, 2).Operand(1, "l", "Shape") is ("    %t2l = llvm.load %r1 : !llvm.ptr -> f64")
 	MlirEquality(Same, 2).Operand(1, "l", "Pair").Last.IndexOf("@strict_two_from_list(%t2lc)") > 0
