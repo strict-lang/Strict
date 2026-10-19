@@ -24,7 +24,7 @@ Members(samples List(Numbers), labels Numbers, kind Number) List(Numbers)
 Mean(members List(Numbers)) Numbers
 	NaiveBayes.Mean(((1, 2), (3, 4))) is (2, 3)
 	for members.First
-		Csv.Sample.Column(members, index).Sum / members.Length
+		Csv.Sample.Column(members, index).Average
 Variance(members List(Numbers), mean Numbers) Numbers
 	NaiveBayes.Variance(((1, 2), (3, 4)), (2, 3)).First.Round(6) is 1
 	for mean

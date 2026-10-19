@@ -21,12 +21,15 @@ This repository is not just the runtime, but contains the standard library. It i
 - Boolean
 - Number
 - Text
-- List
+- List (also `Sorted`, `Merged`, `Slice`, `Insert`, `Unique`, `Average`, `Median`, `Normalized`, `IndexOfMaximum`, `IndexOfMinimum`, `Pick` and `Shuffled` with a `PseudoRandom`)
 - Dictionary
 - Range
 - Error (with Stacktraces, Type and Methods support)
 - Log
-- Time (seconds since 1970 UTC: `Time.Now`, `Time.Day`, calendar `Date` and `Clock`, ISO texts and `Parse`, `RoundUp`, `IsWithin`, `Elapsed` like "about 3 minutes ago")
+- Time (seconds since 1970 UTC: `Time.Now`, `Time.Day`, calendar `Date` and `Clock`, ISO texts and `Parse`, `RoundUp`, `IsWithin`, `Elapsed` like "about 3 minutes ago", `Time - Time` is a `Duration`, `Time + Duration` a `Time`)
+- PseudoRandom (the multiply-with-carry generator of the C# DeltaEngine: `Seeded` takes a nonzero integer, keep the state returned by `Next`, then read `Uint` or `Get(minimum, maximum)` or `WeightedIndex(weights)`, none of them advance it; zero seeds are rejected instead of reading the clock, so simulations stay deterministic)
+- Duration (seconds with `Milliseconds`, `Minutes`, `Hours`, `Days`, `+`, `-`, `*`)
+- MovingWindow (the last values of a fixed capacity with their running `Sum` and `Average`, `Minimum`, `Maximum`) and PriorityQueue (a binary min-heap of numbers, `Pushed`, `Popped`)
 - common traits like Any (applies to all types), App, Generic (replaced by concrete type in implementation), Mutable, File, Directory, FileReader, FileWriter, etc.
 
 That is pretty much it, there are not many more things needed to write code. For more specific things see the Math folder, ImageProcessing, Examples, etc. here in this repository. Keep in mind that Strict is NOT a general purpose language. It is supposed to be writeable, readable and understandable by computers. If you want to build a website, a complex app, database code, a game, etc. you should use external code for that (you can keep the logic in Strict, but it is unlikely that Strict will have those things unless some people work on it and need it). It is quite easy to interface with external code, you can use any web api, C++, C#, Java, Python, etc. libraries. Those are threated as black boxes (thus not longer computer understandable, here we would be limited to LLMs) and will not follow the strict rules in Strict. The main issue here would be if an external library changes, then all your calls to it also have to change, which is less of a problem with Strict code calling Strict code as any changes can be fixed in a more automated manner.

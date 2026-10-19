@@ -1,0 +1,51 @@
+has entries Numbers
+has size Number
+constant Empty = PriorityQueue(List(Number), 0)
+Pushed(entry Number) PriorityQueue
+	Empty.Pushed(5).Pushed(3).Pushed(4).entries is (3, 5, 4)
+	Empty.Pushed(5).Popped.Pushed(2).entries is List(Number) + 2
+	mutable list = entries
+	if size < entries.Length
+		list(size) = entry
+	else
+		list = list + entry
+	PriorityQueue(Raised(list, size), size + 1)
+Popped PriorityQueue
+	Empty.Pushed(5).Pushed(3).Pushed(4).Popped.entries.First is 4
+	Empty.Pushed(5).Popped.size is 0
+	let last = entries(size - 1)
+	mutable list = entries
+	list(0) = last
+	PriorityQueue(Lowered(list, size - 1), size - 1)
+Raised(list Numbers, start Number) Numbers
+	Raised((1, 5, 3, 0), 3) is (0, 1, 3, 5)
+	mutable heap = list
+	mutable slot = start
+	for as long as slot > 0 and heap(((slot - 1) / 2).Floor) > heap(slot)
+		heap = Swapped(heap, slot, ((slot - 1) / 2).Floor)
+		slot = ((slot - 1) / 2).Floor
+	heap
+Lowered(list Numbers, count Number) Numbers
+	Lowered((5, 1, 3), 3) is (1, 5, 3)
+	Lowered((9, 1, 3, 0), 3) is (1, 9, 3, 0)
+	mutable heap = list
+	mutable slot = 0
+	mutable child = Child(heap, 0, count)
+	for as long as child < count and heap(child) < heap(slot)
+		heap = Swapped(heap, slot, child)
+		slot = child
+		child = Child(heap, slot, count)
+	heap
+Child(heap Numbers, parent Number, count Number) Number
+	Child((1, 5, 3), 0, 3) is 2
+	Child((1, 5, 3), 0, 2) is 1
+	let left = parent * 2 + 1
+	left + 1 < count and heap(left + 1) < heap(left) then left + 1 else left
+Swapped(list Numbers, first Number, second Number) Numbers
+	Swapped((1, 2, 3), 0, 2) is (3, 2, 1)
+	let left = list(first)
+	let right = list(second)
+	mutable swapped = list
+	swapped(first) = right
+	swapped(second) = left
+	swapped

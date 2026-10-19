@@ -1,0 +1,29 @@
+has seconds Number
+constant Minute = Duration(60)
+constant Hour = Duration(3600)
+constant Day = Duration(86400)
+Milliseconds Number
+	Duration(1.5).Milliseconds is 1500
+	seconds * 1000
+Minutes Number
+	Duration(90).Minutes is 1.5
+	seconds / 60
+Hours Number
+	Day.Hours is 24
+	seconds / 3600
+Days Number
+	Duration(43200).Days is 0.5
+	seconds / 86400
++(other Duration) Duration
+	Minute + Hour is Duration(3660)
+	Duration(seconds + other.seconds)
+-(other Duration) Duration
+	Hour - Minute is Duration(3540)
+	Duration(seconds - other.seconds)
+*(scale Number) Duration
+	Minute * 3 is Duration(180)
+	Duration(seconds * scale)
+to Text
+	Duration(1.5) to Text is "1.5s"
+	Day to Text is "86400s"
+	seconds + "s"
