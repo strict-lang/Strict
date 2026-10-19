@@ -20,8 +20,13 @@ Calibration(count Number) List(Texts)
 	Texts(Downloaded(Corpus + "calibration.txt", Novel), "It is a truth", "Compiler", count)
 Downloaded(path Text, address Text) Text
 	Evaluation(Logger).Downloaded("NeuralNetworks/Perplexity.strict", "").StartsWith("has model")
+	Evaluation(Logger).Downloaded("NeuralNetworks/corpus/missing-download.txt", "") is Error
 	if File(path).Exists is false
-		Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + address + "\"")
+		let partial = path + ".part"
+		let download = Process.RunTool("curl", "-sfL --create-dirs -o \"" + partial + "\" \"" + address + "\"")
+		if download.Failed
+			return Error("Corpus download failed for " + path + ": " + download to Text)
+		File(partial).Rename(path)
 	Text.Combine(File(path).ReadLines, "\n")
 Texts(english Text, anchor Text, folder Text, count Number) List(Texts)
 	Evaluation(Logger).Texts(Sources("Math"), "has", "Math", 2)(0)(1).Length is Width
@@ -30,7 +35,12 @@ Texts(english Text, anchor Text, folder Text, count Number) List(Texts)
 Spans(text Text, anchor Text, count Number) Texts
 	Evaluation(Logger).Spans(Text.Combine(("x", "To Sherlock"), "\n"), "To", 0).Length is 0
 	Evaluation(Logger).Spans(Sources("Math"), "", 2)(1).Length is Width
+	Evaluation(Logger).Spans("short", "missing", 1) is Error
 	let start = anchor is "" then 0 else text.IndexOf(anchor)
+	if start < 0
+		return Error("Corpus anchor not found: " + anchor)
+	if (count < 0) or (count % 1 is not 0) or (start + count * Width > text.Length)
+		return Error("Corpus cannot provide " + count + " spans of " + Width + " characters")
 	for count
 		text.Substring(start + index * Width, Width)
 Sources(folder Text) Text

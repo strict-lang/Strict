@@ -97,7 +97,8 @@ Statement(node SyntaxNode, block CodeBlock) CodeBlock
 Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
 	Plain.Right(IsError, CodeBlock.Empty, false).instructions.Last.kind is InstructionType.Invoke
 	let any = AnyError(node, block)
-	Compared(node, isConverted then ConversionCodegen(values).Operand(any, block) else any.children(1), block)
+	let convert = isConverted and (IsErrorComparison(node, block) is false)
+	Compared(node, convert then ConversionCodegen(values).Operand(any, block) else any.children(1), block)
 Kept(node SyntaxNode, name Text, block CodeBlock) CodeBlock
 	Plain.Kept(Greeting, "kept", CodeBlock.Empty).instructions.Last.kind is InstructionType.StoreRegisterToVariable
 	let stored = Handled(node, block).Stored(name).At(block.register).WithNextId

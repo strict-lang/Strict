@@ -15,16 +15,11 @@ Trained(input Numbers, target Numbers, rate Number) Optimizer
 	Paired.Trained((1, 1), List(Number) + 0, 0.1).network.Predict((1, 1)).First < 0.7
 	let activations = network.Activations(input)
 	let deltas = network.Deltas(activations, target)
-	let next = step + 1
-	let scaled = rate * (1 - Power(Moments.SquareBeta, next)).SquareRoot / (1 - Power(beta, next))
+	let scaled = rate * (1 - Moments.SquareBeta ^ (step + 1)).SquareRoot / (1 - beta ^ (step + 1))
 	mutable layers = List(Mutable(Layer))
 	mutable updated = List(Mutable(Moments))
 	for network.layers
 		let moment = moments(index).Updated(deltas(index), activations(index), beta)
 		updated.Add(moment)
 		layers.Add(moment.Applied(value, scaled))
-	Optimizer(Network(layers), updated, beta, next)
-Power(base Number, exponent Number) Number
-	Optimizer.Power(0.5, 2).Round(6) is 0.25
-	Optimizer.Power(0, 3) is 0
-	(exponent * base.Logarithm).Exponential
+	Optimizer(Network(layers), updated, beta, step + 1)

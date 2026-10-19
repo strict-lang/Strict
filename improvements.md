@@ -21,6 +21,8 @@ In priority order. Remove what is done, add what is found, keep each item to wha
     - **Measurement.** Open: scoring on the GPU (every position downloads its logits, 4-5 ms per
       token), unseen Strict coding tasks with executable assertions and the time until they pass,
       weight bytes, peak VRAM, cold load and time to first token next to every perplexity.
+      RTX 3080 baseline (10 GB, 2026-10-19, `Qwen3Benchmark` defaults, 10 prompt tokens, 100 steps):
+      Qwen3-0.6B Q4_K_M median 2.58 ms (387 tokens/s), batch 4 3.46 ms (1155 tokens/s), Q8_0 2.84 ms.
 
     - **Training.** Done: BitFit for GPT-2 (`Gpt2Training`, `Finetuning`, README: 100 steps make GPT-2
       2.2 times better at Strict and English 27% better, distilgpt2 2.3 times better at Strict). Open:
@@ -124,4 +126,4 @@ Measured on Qwen3-8B Q4_K_M and the RTX 4090, results in `NeuralNetworks/README.
 
 ## Base library (found 2026-10-19 comparing DeltaEngine, AiInvest, old SoulCraft, .NET, std, Go and Rust)
 - **Ceilings**: `MovingWindow.Minimum` and `Maximum` scan the window (a monotonic queue would make them O(1)), `Sorted` needs `<` on the elements (Text has none yet).
-- **Not added yet** (chosen 2026-10-19 to wait): Number `Sign`, `Wrap`, inverse trigonometry (`ArcTangent2` has 53 uses in the C# DeltaEngine), Text to Numbers, fixed decimal number text, `Truncated`; `NeuralNetworks/Optimizer.Power` duplicates `^`.
+- **Not added yet** (chosen 2026-10-19 to wait): Number `Sign`, `Wrap`, inverse trigonometry (`ArcTangent2` has 53 uses in the C# DeltaEngine), Text to Numbers, fixed decimal number text, `Truncated`.
