@@ -1,0 +1,74 @@
+has values ValueCodegen
+constant Boxes = KnownTypes(("Wrapped", "Halver", "Using"), (Scope(List(Text) + "inner", List(Text) + "Generic"), Scope(List(Text) + "amount", List(Text) + "Number"), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers, Scope(List(Text) + "Through", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers, Scope(("Through", "Through types"), ("wrapped", "Wrapped"))))
+constant Using = ("has logger", "Through(wrapped Wrapped) Number", "\t1")
+constant Plain = Specialization(ValueCodegen(TypeInference(Boxes, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)), Scope(List(Text), List(Text)), CallTarget(Boxes, TypeShape(Using), "Strict/Boxes/Using", List(Text))))
+constant Wrapping = CodeBlock.Empty.Declare("w", "Wrapped(Halver)")
+constant Passing = SyntaxParser(Tokenizer("Through(w)").Tokens).Parse
+constant Coding = TypeCodegen("Strict/Boxes/Using", Using, TypeInference(Boxes, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text))
+constant Unused = TypeEntry("Strict/Boxes/Using", List(MemberEntry), List(MethodEntry))
+constant Halving = "Through(Wrapped(Halver))"
+Signed(node SyntaxNode, owner Text, returnType Text, block CodeBlock) Texts
+	Plain.Signed(Passing, "Using", "Number", Wrapping)(1) is Halving
+	Plain.Signed(Passing, "Using", "Number", CodeBlock.Empty.Declare("w", "Wrapped"))(1) is "Through"
+	let argumentTypes = ConversionCodegen(values).ArgumentTypes(node, owner, block)
+	let signature = values.target.Signature(node.text, owner, returnType, argumentTypes)
+	let parameters = values.target.ParameterTypes(node.text, owner, argumentTypes)
+	let named = signature(1) is "from" then node.text else Name(node, parameters, block)
+	named is node.text then signature else signature.Slice(0, 1) + named + signature.Slice(2, signature.Length - 2)
+Name(node SyntaxNode, parameters Texts, block CodeBlock) Text
+	Plain.Name(Passing, List(Text) + "Wrapped", Wrapping) is Halving
+	Plain.Name(Passing, List(Text) + "Number", Wrapping) is "Through"
+	let start = values.ArgumentStart(node)
+	mutable actuals = List(Text)
+	for parameters
+		let isTyped = IsGeneric(value) and (start + index < node.children.Length)
+		let actual = isTyped then values.TypeOf(node.children(start + index), block) else ""
+		if actual.StartsWith(value + "(")
+			actuals = actuals + actual
+	actuals.Length is 0 then node.text else node.text + "(" + Text.Combine(actuals) + ")"
+IsGeneric(type Text) Boolean
+	Plain.IsGeneric("Wrapped")
+	Plain.IsGeneric("Halver") is false
+	let members = values.target.types.MembersOf(type).types
+	values.target.types.IsKnown(type) and (("Generic" is in members) or ("Generics" is in members))
+Header(line Text, name Text) Text
+	Plain.Header(Using(1), Halving) is "Through(wrapped Wrapped(Halver)) Number"
+	mutable header = line
+	mutable after = line.IndexOf("(")
+	for Instantiation(values.target.types).Arguments(name)
+		let base = " " + value.Substring(0, value.IndexOf("("))
+		let at = header.IndexOf(base, after)
+		let rest = header.Substring(at + base.Length, header.Length - at - base.Length)
+		header = at < 0 then header else header.Substring(0, at + 1) + value + rest
+		after = at < 0 then after else at + value.Length
+	header
+Methods(codegen TypeCodegen, names Texts) List(MethodEntry)
+	Plain.Methods(Coding, List(Text) + Halving).First.Name is Halving
+	Plain.Methods(Coding, List(Text) + Halving).First.parameters.First.typeName.EndsWith("Wrapped(Halver)")
+	Plain.Methods(Coding, List(Text) + "Through").Length is 0
+	for names
+		let start = value.IndexOf("(") > 0 then Start(codegen.lines, value.Substring(0, value.IndexOf("("))) else -1
+		if start >= 0
+			Specialized(codegen, start, value)
+Start(lines Texts, method Text) Number
+	Plain.Start(Using, "Through") is 1
+	Plain.Start(Using, "Missing") is -1
+	for lines
+		if TypeShape(lines).IsMethodHeader(value) and (Tokenizer(value).Tokens.First is method)
+			return index
+	-1
+Specialized(codegen TypeCodegen, start Number, name Text) MethodEntry
+	Plain.Specialized(Coding, 1, Halving).Name is Halving
+	let header = Header(codegen.lines(start), name)
+	let lines = codegen.lines.Slice(0, start) + header + codegen.lines.Slice(start + 1, codegen.lines.Length - start - 1)
+	let method = TypeCodegen(codegen.fullName, lines, codegen.inference, codegen.typeNames).Method(start)
+	MethodEntry(name, method.parameters, method.returnType, method.instructions)
+Completed(codegen TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
+	Plain.Completed(Coding, Unused, List(Text) + "Strict/Boxes/Using.Through(Wrapped(Halver))").methods.Length is 1
+	let prefix = codegen.fullName + "."
+	mutable names = List(Text)
+	for targets
+		let method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
+		if (method.IndexOf("(") > 0) and (entry.Chosen(method, -1, "", List(Text)) < 0) and (method is not in names)
+			names = names + method
+	names.Length is 0 then entry else TypeEntry(entry.Name, entry.members, entry.methods + Methods(codegen, names))

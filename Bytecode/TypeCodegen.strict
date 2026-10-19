@@ -75,7 +75,7 @@ Methods(names Texts) List(MethodEntry)
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and ((names.Length is 0) or (Tokenizer(value).Tokens.First is in names))
 			methods.Add(Method(index))
-	methods + ConstantMethods(inference).Methods(value, names)
+	methods + ConstantMethods(inference).Methods(value, names) + Specialization(Generator).Methods(value, names)
 Method(start Number) MethodEntry
 	(Hello.Method(1).returnType, Created.Method(1).returnType) is ("None", "Strict/C")
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"

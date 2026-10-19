@@ -121,7 +121,7 @@ Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeB
 	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1, "Text").instructions(0).texts.Last is "Strict/Text"
 	let owner = Owner(node, block)
 	let argumentTypes = ConversionCodegen(value).ArgumentTypes(node, owner, block)
-	let signature = target.Signature(node.text, owner, returnType, argumentTypes)
+	let signature = Specialization(value).Signed(node, owner, returnType, block)
 	let call = Elements.Grouped(target.WithErrorArguments(node, block.scope), ArgumentStart(node), signature.Length - 3)
 	let parameters = target.ParameterTypes(node.text, owner, argumentTypes)
 	mutable result = block
