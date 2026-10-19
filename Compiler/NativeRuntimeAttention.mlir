@@ -492,7 +492,8 @@
     %keys32 = arith.trunci %keysCount : i64 to i32
     %positions = arith.divui %keys32, %stride : i32
     %warpTokens = arith.divui %c16, %perGroup : i32
-    %decoding = arith.cmpi sle, %tokens, %warpTokens : i32
+    %decodeTokens = arith.shli %warpTokens, %c2 : i32
+    %decoding = arith.cmpi sle, %tokens, %decodeTokens : i32
     cf.cond_br %decoding, ^decode, ^prompt
   ^decode:
     func.call @strict_device_attention_decode(%result, %queries, %queryBits, %keys, %keyBits, %values, %valueBits, %heads, %groups, %size, %sequences, %tokens, %positions, %wide) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1) -> ()
@@ -1128,9 +1129,9 @@
     %slot = llvm.getelementptr %start[%offset64] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     return %slot : !llvm.ptr
   }
-  // `Attention.Merged` of a few tokens (all rows of a group in the 16 of one warp) like flash decoding: the 8 warps of
-  // a block and the blocks of a group split the positions 8 at a time, read keys and values straight into the mma
-  // operands and merge their largest scores, sums and outputs, the last block of a group writes the result
+  // `Attention.Merged` of a few tokens (the rows of a group in tiles of 16, one per warp, up to 4 tiles verify drafts)
+  // like flash decoding: the 8 warps of a block and the blocks of a tile split the positions 8 at a time, read keys and
+  // values straight into the mma operands and merge their largest scores, sums and outputs, the last block writes them
   func.func private @strict_device_attention_decode(%result: !llvm.ptr, %queries: !llvm.ptr, %queryBits: i64, %keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %heads: i32, %groups: i32, %size: i32, %sequences: i32, %tokens: i32, %positions: i32, %wide: i1) {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
@@ -1152,19 +1153,28 @@
     %row = arith.shrui %lane, %c2 : i32
     %quad = arith.andi %lane, %c3 : i32
     %perGroup = arith.divui %heads, %groups : i32
-    %slots = arith.muli %sequences, %groups : i32
+    %c16 = llvm.mlir.constant(16 : i32) : i32
+    %warpTokens = arith.divui %c16, %perGroup : i32
+    %spareTokens = arith.subi %warpTokens, %c1 : i32
+    %tokensUp = arith.addi %tokens, %spareTokens : i32
+    %tiles = arith.divui %tokensUp, %warpTokens : i32
+    %groupSlots = arith.muli %sequences, %groups : i32
+    %slots = arith.muli %groupSlots, %tiles : i32
     %splits = arith.divui %blocks, %slots : i32
     %split = arith.remui %block, %splits : i32
     %slot = arith.divui %block, %splits : i32
-    %group = arith.remui %slot, %groups : i32
-    %sequence = arith.divui %slot, %groups : i32
+    %tile = arith.remui %slot, %tiles : i32
+    %groupSlot = arith.divui %slot, %tiles : i32
+    %group = arith.remui %groupSlot, %groups : i32
+    %sequence = arith.divui %groupSlot, %groups : i32
+    %warpFirst = arith.muli %tile, %warpTokens : i32
     %tokenLast = arith.subi %tokens, %c1 : i32
     %before = arith.subi %positions, %tokens : i32
     %groupHeads = arith.muli %group, %perGroup : i32
     %sequenceTokens = arith.muli %sequence, %tokens : i32
     %upperRow = arith.addi %row, %c8 : i32
-    %lowerToken, %lowerLast, %lowerQuery = func.call @strict_device_attention_row(%row, %perGroup, %c0, %tokenLast, %before, %groupHeads, %sequenceTokens, %heads, %size) : (i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (i32, i32, i64)
-    %upperToken, %upperLast, %upperQuery = func.call @strict_device_attention_row(%upperRow, %perGroup, %c0, %tokenLast, %before, %groupHeads, %sequenceTokens, %heads, %size) : (i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (i32, i32, i64)
+    %lowerToken, %lowerLast, %lowerQuery = func.call @strict_device_attention_row(%row, %perGroup, %warpFirst, %tokenLast, %before, %groupHeads, %sequenceTokens, %heads, %size) : (i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (i32, i32, i64)
+    %upperToken, %upperLast, %upperQuery = func.call @strict_device_attention_row(%upperRow, %perGroup, %warpFirst, %tokenLast, %before, %groupHeads, %sequenceTokens, %heads, %size) : (i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (i32, i32, i64)
     %groupsSize = arith.muli %groups, %size : i32
     %stride = arith.muli %groupsSize, %sequences : i32
     %sequenceGroups = arith.muli %sequence, %groups : i32

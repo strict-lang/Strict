@@ -1,23 +1,32 @@
 has logger
 constant Corpus = "NeuralNetworks/corpus/"
 constant Book = "https://www.gutenberg.org/cache/epub/1661/pg1661.txt"
+constant Novel = "https://www.gutenberg.org/cache/epub/1342/pg1342.txt"
 constant Width = 1500
 Run(path Text)
-	let texts = (Spans(Downloaded(Corpus + "heldout.txt", Book), "To Sherlock Holmes", 8), Spans(Sources("Math"), "", 8))
+	let texts = Heldout(8)
 	let isQwen = path.EndsWith(".gguf")
-	let vocabulary = isQwen then "" else File(path + "/vocab.json").ReadLines.First
-	let merges = isQwen then List(Text) else File(path + "/merges.txt").ReadLines
-	let tokenizer = isQwen then Gpt2Tokens.Loaded(Gguf(path)) else Gpt2Tokens.Parsed(vocabulary, merges)
+	let tokenizer = isQwen then Gpt2Tokens.Loaded(Gguf(path)) else Gpt2Tokens.Folder(path)
 	let weights = path + "/model.safetensors"
 	let gpt2 = isQwen then List(Numbers) else Perplexity(Gpt2.Loaded(weights, 16)).Reports(tokenizer, texts)
 	let reports = isQwen then Perplexity(Qwen3.Loaded(path, 8)).Reports(tokenizer, texts) else gpt2
 	logger.Log(path + " English: " + Described(reports(0)))
 	logger.Log(path + " Strict: " + Described(reports(1)))
+Heldout(count Number) List(Texts)
+	Evaluation(Logger).Heldout(1)(1).First.StartsWith("has number")
+	Texts(Downloaded(Corpus + "heldout.txt", Book), "To Sherlock Holmes", "Math", count)
+Calibration(count Number) List(Texts)
+	Evaluation(Logger).Calibration(1)(0).First.StartsWith("It is a truth")
+	Texts(Downloaded(Corpus + "calibration.txt", Novel), "It is a truth", "Compiler", count)
 Downloaded(path Text, address Text) Text
 	Evaluation(Logger).Downloaded("NeuralNetworks/Perplexity.strict", "").StartsWith("has model")
 	if File(path).Exists is false
 		Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + address + "\"")
 	Text.Combine(File(path).ReadLines, "\n")
+Texts(english Text, anchor Text, folder Text, count Number) List(Texts)
+	Evaluation(Logger).Texts(Sources("Math"), "has", "Math", 2)(0)(1).Length is Width
+	Evaluation(Logger).Texts(Sources("Math"), "has", "Math", 2)(1).First.StartsWith("has number")
+	(Spans(english, anchor, count), Spans(Sources(folder), "", count))
 Spans(text Text, anchor Text, count Number) Texts
 	Evaluation(Logger).Spans(Text.Combine(("x", "To Sherlock"), "\n"), "To", 0).Length is 0
 	Evaluation(Logger).Spans(Sources("Math"), "", 2)(1).Length is Width

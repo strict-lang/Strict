@@ -1,0 +1,101 @@
+has block Gpt2Block
+has input Numbers
+has normed Numbers
+has combined Numbers
+has merged Numbers
+has middle Numbers
+has second Numbers
+has expanded Numbers
+has Output Numbers
+constant Rows = Gpt2Block.Weights.Rows("wte.weight")
+constant Tiny = Gpt2Pass.Forwarded(Gpt2Block.Tiny, Rows(0) + Rows(1))
+constant Backwards = Gpt2Pass.Transposed(Gpt2Block.Weights, "h.0.")
+constant Gradient = (-0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25)
+constant Zero = List(Number) + 0
+Forwarded(source Gpt2Block, start Numbers) Gpt2Pass
+	Tiny.Output(0).IsNearlyEqual(-4.932905037164028)
+	Tiny.Output(12).IsNearlyEqual(5.159402482792729)
+	let normedStart = Gpt2Block.Normalized(start, source.attentionGain, source.attentionBias)
+	let projections = Batch(source.attention.weights, source.attention.biases).Sums(normedStart)
+	let attended = Gpt2Pass.Attended(projections, source.attentionGain.Length).Merged
+	let residual = Gpt2Block.Added(start, Batch(source.projection.weights, source.projection.biases).Sums(attended))
+	let normedResidual = Gpt2Block.Normalized(residual, source.mlpGain, source.mlpBias)
+	let hidden = Batch(source.expansion.weights, source.expansion.biases).Sums(normedResidual)
+	let contracted = Batch(source.contraction.weights, source.contraction.biases).Sums(Gpt2Block.Gelu(hidden))
+	let output = Gpt2Block.Added(residual, contracted)
+	Gpt2Pass(source, start, normedStart, projections, attended, residual, normedResidual, hidden, output)
+Attended(numbers Numbers, width Number) Attention
+	Tiny.Attended(Tiny.combined, 12).queries.Length is 24
+	let stride = 3 * width
+	let queries = Batch.Columns(numbers, stride, 0, width)
+	let keys = Batch.Columns(numbers, stride, width, width)
+	let size = width / Gpt2Block.Heads
+	Attention(queries, keys, Batch.Columns(numbers, stride, 2 * width, width), Gpt2Block.Heads, Gpt2Block.Heads, size)
+Transposed(weights Safetensors, prefix Text) Gpt2Block
+	Backwards.expansion.weights.Length is 12
+	let attention = Flipped(weights, prefix + "attn.c_attn")
+	let projection = Flipped(weights, prefix + "attn.c_proj")
+	let expansion = Flipped(weights, prefix + "mlp.c_fc")
+	Gpt2Block(Zero, Zero, attention, projection, Zero, Zero, expansion, Flipped(weights, prefix + "mlp.c_proj"))
+Flipped(weights Safetensors, name Text) Layer
+	Tiny.Flipped(Gpt2Block.Weights, "h.0.mlp.c_fc").weights.First.Length is 48
+	Layer(weights.Rows(name + ".weight"), Zero)
+Backward(gradient Numbers, transposed Gpt2Block) List(Numbers)
+	Tiny.Backward(Gradient, Backwards)(0)(0).IsNearlyEqual(-4.159665552472472)
+	Tiny.Backward(Gradient, Backwards)(1).Last.IsNearlyEqual(3.024086765129935)
+	Tiny.Backward(Gradient, Backwards)(3)(0).IsNearlyEqual(-0.08754558329563321)
+	Tiny.Backward(Gradient, Backwards)(3).Last.IsNearlyEqual(0.6714282002496881)
+	Tiny.Backward(Gradient, Backwards)(5)(0).IsNearlyEqual(-0.9611910075857536)
+	Tiny.Backward(Gradient, Backwards)(7).Last.IsNearlyEqual(-0.18117107675255428)
+	Tiny.Backward(Gradient, Backwards)(8)(0).IsNearlyEqual(-1)
+	let mlp = Expanding(gradient, transposed)
+	let attention = Attending(mlp.First, transposed)
+	(attention(0), attention(1), attention(2), attention(3), attention(4), mlp(1), mlp(2), mlp(3), mlp(4))
+Expanding(gradient Numbers, transposed Gpt2Block) List(Numbers)
+	Tiny.Expanding(Gradient, Backwards).Length is 5
+	let expandedGradient = Gelued(Batch(transposed.contraction.weights, Zero).Sums(gradient))
+	let secondGradient = Batch(transposed.expansion.weights, Zero).Sums(expandedGradient)
+	let normalization = Normalization(middle, block.mlpGain)
+	let middleGradient = Gpt2Block.Added(gradient, normalization.Inputs(secondGradient))
+	let width = block.mlpGain.Length
+	let biases = Gpt2Pass.Sums(expandedGradient, expandedGradient.Length / (input.Length / width))
+	let norms = (normalization.Gains(secondGradient), normalization.Biases(secondGradient))
+	(middleGradient, norms(0), norms(1), biases, Gpt2Pass.Sums(gradient, width))
+Attending(gradient Numbers, transposed Gpt2Block) List(Numbers)
+	Tiny.Attending(Gradient, Backwards).Length is 5
+	let width = block.attentionGain.Length
+	let mergedGradient = Batch(transposed.projection.weights, Zero).Sums(gradient)
+	let attended = AttentionGradients(Attended(combined, width), mergedGradient)
+	let shares = attended.Shares
+	let scores = attended.Scored(shares)
+	let combinedGradient = Combined(attended.Queries(scores), attended.Keys(scores), attended.Values(shares), width)
+	let firstGradient = Batch(transposed.attention.weights, Zero).Sums(combinedGradient)
+	let normalization = Normalization(input, block.attentionGain)
+	let inputGradient = Gpt2Block.Added(gradient, normalization.Inputs(firstGradient))
+	let norms = (normalization.Gains(firstGradient), normalization.Biases(firstGradient))
+	(inputGradient, norms(0), norms(1), Gpt2Pass.Sums(combinedGradient, 3 * width), Gpt2Pass.Sums(gradient, width))
+Combined(queries Numbers, keys Numbers, values Numbers, width Number) Numbers
+	Tiny.Combined((1, 2), (3, 4), (5, 6), 1) is (1, 3, 5, 2, 4, 6)
+	for 3 * queries.Length
+		let at = (index / (3 * width)).Floor * width + index % width
+		let part = ((index % (3 * width)) / width).Floor
+		part is 0 then queries(at) else (part is 1 then keys(at) else values(at))
+Gelued(gradient Numbers) Numbers
+	Tiny.Gelued(Tiny.expanded).Length is 96
+	for gradient
+		value * Slope(expanded(index))
+Slope(number Number) Number
+	Tiny.Slope(1).IsNearlyEqual(1.0829640838457826)
+	Tiny.Slope(0) is 0.5
+	let tangent = Activation.Tanh.Output(0.7978845608028654 * (number + 0.044715 * number * number * number))
+	0.5 * (1 + tangent) + 0.5 * number * (1 - tangent * tangent) * 0.7978845608028654 * (1 + 0.134145 * number * number)
+Sums(values Numbers, width Number) Numbers
+	Tiny.Sums((1, 2, 3, 4, 5, 6), 3) is (5, 7, 9)
+	for width
+		Column(values, width, index)
+Column(values Numbers, width Number, column Number) Number
+	Tiny.Column((1, 2, 3, 4, 5, 6), 3, 1) is 7
+	mutable sum = 0
+	for values.Length / width
+		sum = sum + values(index * width + column)
+	sum

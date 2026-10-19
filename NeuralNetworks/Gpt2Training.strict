@@ -1,0 +1,97 @@
+has model Gpt2
+has transposed List(Gpt2Block)
+has columns List(Numbers)
+has firsts List(Numbers)
+has seconds List(Numbers)
+has step = 0
+has rate = 0.001
+constant Tiny = Gpt2Training.Loaded("NeuralNetworks/tinygpt2.safetensors", 32)
+constant Chosen = (1, 2, 3, 4)
+Loaded(path Text, bits Number) Gpt2Training
+	Tiny.columns.Length is 12
+	Tiny.firsts.Length is 10
+	let weights = Gpt2.Opened(path, bits)
+	let loaded = Gpt2.Loaded(path, bits)
+	let zeros = Moments.Start.Zeroed(loaded.Vectors)
+	Gpt2Training(loaded, Transposes(weights, loaded.blocks.Length), weights.Columns("wte.weight"), zeros, zeros)
+Transposes(weights Safetensors, count Number) List(Gpt2Block)
+	Tiny.Transposes(Gpt2Block.Weights, 1).First.contraction.weights.Length is 48
+	for count
+		Gpt2Pass.Transposed(weights, "h." + index + ".")
+Loss(chosen Numbers) Number
+	Tiny.Loss(Chosen).IsNearlyEqual(5.32793779522955)
+	let logits = Logits(Hidden(Passes(chosen), chosen))
+	let width = model.tokens.Length
+	let largests = Softmax.Largests(logits, width)
+	let totals = Softmax.Totals(logits, largests, width)
+	mutable loss = 0
+	for chosen.Length - 1
+		loss = loss - logits(index * width + chosen(index + 1)) + largests(index) + totals(index).Logarithm
+	loss
+Passes(chosen Numbers) List(Gpt2Pass)
+	Tiny.Passes(Chosen).Length is 1
+	mutable state = Embedded(chosen)
+	mutable passes = List(Mutable(Gpt2Pass))
+	for model.blocks
+		let pass = Gpt2Pass.Forwarded(value, state)
+		passes.Add(pass)
+		state = pass.Output
+	passes
+Embedded(chosen Numbers) Numbers
+	Tiny.Embedded((1, 2))(13) is Tiny.model.tokens(2)(1) + Tiny.model.positions(1)(1)
+	let width = model.gain.Length
+	for chosen.Length * width
+		let token = (index / width).Floor
+		model.tokens(chosen(token))(index % width) + model.positions(token)(index % width)
+Hidden(passes List(Gpt2Pass), chosen Numbers) Numbers
+	Tiny.Hidden(List(Gpt2Pass), (1, 2)) is Tiny.Embedded((1, 2))
+	passes.Length is 0 then Embedded(chosen) else passes.Last.Output
+Logits(hidden Numbers) Numbers
+	Tiny.Logits(Tiny.Embedded((1, 2))).Length is 10
+	Batch(model.tokens, Gpt2Pass.Zero).Sums(Gpt2Block.Normalized(hidden, model.gain, model.bias))
+Errors(logits Numbers, chosen Numbers) Numbers
+	Tiny.Errors((0, 0, 0, 0, 0, 0, 0, 0, 0, 0), (1, 2)) is (0.2, 0.2, -0.8, 0.2, 0.2, 0, 0, 0, 0, 0)
+	let width = model.tokens.Length
+	let largests = Softmax.Largests(logits, width)
+	let totals = Softmax.Totals(logits, largests, width)
+	for logits.Length
+		let row = (index / width).Floor
+		let share = (logits(index) - largests(row)).Exponential / totals(row)
+		row + 1 < chosen.Length then share - (index % width is chosen(row + 1) then 1 else 0) else 0
+Gradients(chosen Numbers) List(Numbers)
+	Tiny.Gradients(Chosen)(0).First.IsNearlyEqual(-0.19843020833636585 * 3)
+	Tiny.Gradients(Chosen)(2).Last.IsNearlyEqual(-0.06007311713118976 * 3)
+	Tiny.Gradients(Chosen)(7).First.IsNearlyEqual(0.017515594512004032 * 3)
+	Tiny.Gradients(Chosen)(8).First.IsNearlyEqual(0.14709516099923814 * 3)
+	Tiny.Gradients(Chosen)(9).Last.IsNearlyEqual(0.045781142343486875 * 3)
+	let passes = Passes(chosen)
+	let hidden = Hidden(passes, chosen)
+	let finalGradient = Batch(columns, Gpt2Pass.Zero).Sums(Errors(Logits(hidden), chosen))
+	let normalization = Normalization(hidden, model.gain)
+	let blocks = Backwarded(passes, normalization.Inputs(finalGradient))
+	blocks + (normalization.Gains(finalGradient), normalization.Biases(finalGradient))
+Backwarded(passes List(Gpt2Pass), gradient Numbers) List(Numbers)
+	Tiny.Backwarded(List(Gpt2Pass), (1, 2)).Length is 0
+	mutable current = gradient
+	mutable reversed = List(Mutable(List(Numbers)))
+	for passes.Length
+		let at = passes.Length - 1 - index
+		let backward = passes(at).Backward(current, transposed(at))
+		reversed.Add(backward)
+		current = backward.First
+	Flattened(reversed)
+Flattened(reversed List(List(Numbers))) List(Numbers)
+	Tiny.Flattened(List(List(Numbers))).Length is 0
+	for reversed.Length * 8
+		reversed(reversed.Length - 1 - (index / 8).Floor)(1 + index % 8)
+Trained(chosen Numbers) Gpt2Training
+	Tiny.Trained(Chosen).Trained(Chosen).Loss(Chosen) < Tiny.Loss(Chosen)
+	Tiny.Trained(Chosen).step is 1
+	let gradients = Gradients(chosen)
+	let next = step + 1
+	let squareCorrection = (1 - Optimizer.Power(Moments.SquareBeta, next)).SquareRoot
+	let corrected = rate * squareCorrection / (1 - Optimizer.Power(Optimizer.Adam, next))
+	let averaged = Moments.Start.Averaged(firsts, gradients, Optimizer.Adam, false)
+	let squared = Moments.Start.Averaged(seconds, gradients, Moments.SquareBeta, true)
+	let changed = model.Changed(Moments.Start.Stepped(model.Vectors, averaged, squared, corrected))
+	Gpt2Training(value, model = changed, firsts = averaged, seconds = squared, step = next)

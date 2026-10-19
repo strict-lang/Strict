@@ -1,0 +1,56 @@
+has attention Attention
+has gradient Numbers
+constant Pair = AttentionGradients(Attention((1, 0, 0, 1), (1, 0, 2, 1), (3, 4, 5, 6), 1, 1, 2), (0.1, 0.2, 0.3, 0.4))
+Queries(scores Numbers) Numbers
+	Pair.Queries(Pair.Scored(Pair.Shares))(3).IsNearlyEqual(0.21895803516315468)
+	Pair.Queries(Pair.Scored(Pair.Shares))(0) is 0
+	let size = attention.size
+	let positions = Positions
+	for attention.queries.Length
+		let row = (index / size).Floor
+		let start = index % size + (row % attention.heads) * size
+		Softmax.Weighted(scores, row * positions, positions, attention.keys, start, attention.heads * size) / size.SquareRoot
+Keys(scores Numbers) Numbers
+	Pair.Keys(Pair.Scored(Pair.Shares))(1).IsNearlyEqual(-0.2189580351631546)
+	Pair.Keys(Pair.Scored(Pair.Shares))(3).IsNearlyEqual(0.21895803516315468)
+	Transposed(scores, attention.queries) / attention.size.SquareRoot
+Values(shares Numbers) Numbers
+	Pair.Values(Pair.Shares)(0).IsNearlyEqual(0.19907153520200294)
+	Pair.Values(Pair.Shares)(3).IsNearlyEqual(0.26790461973066276)
+	Transposed(shares, gradient)
+Transposed(shares Numbers, numbers Numbers) Numbers
+	Pair.Transposed((1, 0, 0.5, 0.5), (1, 2, 3, 4)) is (2.5, 4, 1.5, 2)
+	let width = attention.heads * attention.size
+	let positions = Positions
+	for attention.keys.Length
+		let head = (index / attention.size).Floor % attention.heads
+		let start = head * positions + (index / width).Floor
+		Strided(shares, start, attention.heads * positions, numbers, index % width, width, numbers.Length / width)
+Strided(left Numbers, leftStart Number, leftStride Number, right Numbers, rightStart Number, rightStride Number, count Number) Number
+	Pair.Strided((1, 9, 2), 0, 2, (3, 9, 4), 0, 2, 2) is 11
+	mutable sum = 0
+	for count
+		sum = sum + left(leftStart + index * leftStride) * right(rightStart + index * rightStride)
+	sum
+Shares Numbers
+	Pair.Shares(1) is 0
+	Pair.Shares(3).IsNearlyEqual(0.6697615493266569)
+	Softmax.Shares(attention.Scores(Positions), Positions)
+Positions Number
+	Pair.Positions is 2
+	attention.keys.Length / attention.groups / attention.size
+Scored(shares Numbers) Numbers
+	Pair.Scored((1, 0, 0.5, 0.5))(0) is 0
+	let weighed = Weighed(shares)
+	let positions = Positions
+	for shares
+		let row = (index / positions).Floor
+		value * (weighed(index) - Softmax.Weighted(shares, row * positions, positions, weighed, row * positions, 1))
+Weighed(shares Numbers) Numbers
+	Pair.Weighed((1, 0, 0.5, 0.5))(3).IsNearlyEqual(3.9)
+	let size = attention.size
+	let positions = Positions
+	for shares.Length
+		let row = (index / positions).Floor
+		let start = (index % positions) * attention.heads * size + (row % attention.heads) * size
+		Softmax.Weighted(gradient, row * size, size, attention.values, start, 1)

@@ -1,0 +1,68 @@
+has logger
+constant Pruning = NeuronPruning(Logger)
+constant Measured = Activity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny, ("ab ab", "ab"))
+Run(path Text)
+	let evaluation = Evaluation(logger)
+	let calibrating = evaluation.Calibration(8)
+	let tokenizer = Gpt2Tokens.Folder(path)
+	let model = Gpt2.Loaded(path + "/model.safetensors", 16)
+	let measuring = Gpt2.Loaded(path + "/model.safetensors", 16)
+	let activity = Activity(measuring).Measured(tokenizer, calibrating(0) + calibrating(1))
+	let heldout = evaluation.Heldout(8)
+	logger.Log(path + " with all MLP neurons: " + LayerDropping(logger).Reported(model, tokenizer, heldout))
+	for (0.1, 0.2, 0.3, 0.5)
+		let pruned = Pruned(model, activity, value)
+		logger.Log("without " + value * 100 + "% of them: " + LayerDropping(logger).Reported(pruned, tokenizer, heldout))
+Pruned(model Gpt2, activity Activity, fraction Number) Gpt2
+	Pruning.Pruned(Gpt2.Tiny, Measured, 0.5).blocks.First.expansion.biases.Length is 24
+	mutable blocks = List(Mutable(Gpt2Block))
+	for model.blocks
+		let scores = activity.Scores(index)
+		blocks.Add(Narrowed(value, Kept(scores, (scores.Length * (1 - fraction)).Round), activity.Means(index)))
+	Gpt2(model, blocks = blocks)
+Narrowed(block Gpt2Block, kept Numbers, means Numbers) Gpt2Block
+	Pruning.Narrowed(Gpt2Block.Tiny, (0, 2), Layer.Halves.Zeros(48)).contraction.weights.First.Length is 2
+	let expansion = Layer(Rows(block.expansion.weights, kept), Picked(block.expansion.biases, kept))
+	let columns = Columns(block.contraction.weights, kept)
+	let contraction = Layer(columns, Compensated(block.contraction, columns, means, kept))
+	Gpt2Block(block, expansion = expansion, contraction = contraction)
+Compensated(layer Layer, columns List(Numbers), means Numbers, kept Numbers) Numbers
+	Pruning.Compensated(Layer(((1, 2, 3), (4, 5, 6)), (0, 1)), ((1, 3), (4, 6)), (5, 7, 9), (0, 2)) is (14, 36)
+	let picked = Picked(means, kept)
+	for layer.weights
+		layer.biases(index) + layer.Summed(value, means) - layer.Summed(columns(index), picked)
+Rows(rows List(Numbers), kept Numbers) List(Numbers)
+	Pruning.Rows(((1, 2), (3, 4), (5, 6)), (0, 2)) is ((1, 2), (5, 6))
+	for kept
+		rows(value)
+Columns(rows List(Numbers), kept Numbers) List(Numbers)
+	Pruning.Columns(((1, 2, 3), (4, 5, 6)), (0, 2)) is ((1, 3), (4, 6))
+	for rows
+		Picked(value, kept)
+Picked(row Numbers, kept Numbers) Numbers
+	Pruning.Picked((4, 5, 6), (0, 2)) is (4, 6)
+	for kept
+		row(value)
+Kept(scores Numbers, count Number) Numbers
+	Pruning.Kept((3, 1, 2, 5), 2) is (0, 3)
+	let threshold = Threshold(scores, count)
+	for scores
+		if value >= threshold
+			index
+Threshold(scores Numbers, count Number) Number
+	Pruning.Threshold((3, 1, 2, 5), 2) > 2
+	Pruning.Threshold((3, 1, 2, 5), 2) <= 3
+	mutable low = scores.Minimum
+	mutable high = scores.Maximum + 1
+	for 60
+		let middle = (low + high) / 2
+		let isEnough = Above(scores, middle) >= count
+		low = isEnough then middle else low
+		high = isEnough then high else middle
+	low
+Above(scores Numbers, threshold Number) Number
+	Pruning.Above((3, 1, 2, 5), 2) is 3
+	mutable count = 0
+	for scores
+		count = value >= threshold then count + 1 else count
+	count

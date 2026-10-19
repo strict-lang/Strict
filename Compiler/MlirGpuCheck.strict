@@ -9,7 +9,7 @@ constant Powered = MlirFunction(List(TypeEntry) + GpuSamples.Numbered, GpuSample
 constant Floored = MlirFunction(Powered.types, Powered.type, GpuSamples.Floored)
 constant Flooring = Floored.method.instructions(1)
 constant Moves = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
-constant Jumps = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
+constant Controls = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd, InstructionType.LoopEnd, InstructionType.CheckError)
 constant Values = ("Number", "Boolean")
 constant Heading = MlirGpuCheck(MlirFunction(List(TypeEntry) + GpuSamples.Headed, GpuSamples.Headed, GpuSamples.Heading), 2)
 constant Rows = ("", "List(Number)", "List(Numbers)", "List(List(Number))")
@@ -35,6 +35,7 @@ IsPure Boolean
 IsDeviceBody Boolean
 	Doubling.IsDeviceBody
 	Randomizing.IsDeviceBody is false
+	MlirGpuCheck(GpuSamples.Gathering, 2).IsDeviceBody is false
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if IsDevice(function, value, 0) is false
 			return false
@@ -79,13 +80,12 @@ IsControl(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsControl(MlirPurity.Clamping.function, 6, 0)
 	Doubling.IsControl(MlirPurity.Filtering.function, 7, 0) is false
 	let entry = inspected.method.instructions(at)
-	if entry.kind is InstructionType.Return
-		return depth > 0
 	if entry.kind is InstructionType.InvokeWriteToList
-		return (depth is 0) and MlirPurity(inspected, position).IsCollected(at)
+		let isNumber = IsNumbered(inspected, MlirKinds(inspected).KindOf(at, entry.payload(0)))
+		return (depth is 0) and isNumber and MlirPurity(inspected, position).IsCollected(at)
 	if entry.kind is InstructionType.LoopBegin
 		return IsInnerLoop(inspected, at)
-	(entry.kind is in Jumps) or (entry.kind is InstructionType.LoopEnd) or (entry.kind is InstructionType.CheckError)
+	entry.kind is InstructionType.Return then depth > 0 else entry.kind is in Controls
 IsInnerLoop(inspected MlirFunction, at Number) Boolean
 	Layering.IsInnerLoop(Summed, 2)
 	Layering.IsInnerLoop(Layering.function, 2) is false
