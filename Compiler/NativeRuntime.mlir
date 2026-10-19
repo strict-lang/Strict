@@ -1055,7 +1055,7 @@
   ^take:
     llvm.store %next, %cursorSlot : i64, !llvm.ptr
     %pointer = llvm.inttoptr %cursor : i64 to !llvm.ptr
-    // ponytail: objects below 256 bytes stay with the collector, freeing each one costs more than sweeping them
+    // objects below 256 bytes stay with the collector, freeing each one costs more than sweeping them
     %freedSize = arith.constant 256 : i64
     %isFreed = arith.cmpi uge, %objectSize, %freedSize : i64
     cf.cond_br %isFreed, ^remember, ^taken
@@ -4814,7 +4814,7 @@
     %count = arith.fptosi %used : f64 to i64
     return %count : i64
   }
-  // ponytail: one buffer per thread, a fast loop has at most one packed source; rows of 4 or 6 bits decode to floats
+  // one buffer per thread, a fast loop has at most one packed source; rows of 4 or 6 bits decode to floats
   llvm.mlir.global internal thread_local @strict_float_buffer(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_float_capacity(0 : i64) : i64
   func.func private @strict_list_floats(%list: f64) -> !llvm.ptr {
@@ -6103,7 +6103,7 @@
     %cachedResult = arith.uitofp %cachedLength : i64 to f64
     return %cachedResult : f64
   ^measure:
-    // ponytail: only one long text stays cached, alternating two long texts re-measures, upgrade: length in a text header
+    // only one long text stays cached, alternating two long texts re-measures, upgrade: length in a text header
     %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
     %longText = arith.constant 256 : i64
     %isLong = arith.cmpi uge, %length, %longText : i64
@@ -8040,8 +8040,7 @@
     return %result : f64
   }
   llvm.mlir.global internal @strict_gpu_state(0 : i64) : i64
-  // ponytail: a launch costs about 130 us of copies and synchronization, so loops reading fewer than 4M numbers
-  // stay on the CPU (STRICT_GPU=all sends every loop), loops reading a list that is already on the GPU run there at any size
+  // loops reading fewer than 4M numbers stay on the CPU unless STRICT_GPU=all (a launch costs about 130 us), lists already on the GPU run there
   llvm.mlir.global internal @strict_gpu_minimum(4194304 : i64) : i64
   llvm.mlir.global internal @strict_gpu_setting(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<33xi64>) : !llvm.array<33 x i64>
@@ -8937,7 +8936,7 @@
   // the stack of its class; when a class has none, a young collection frees unreachable lists once 256 MB were taken
   // since the last collection, a full one once more than half of the free device memory (at least 1 GB) was cut from
   // chunks since the last full collection, the free memory is measured with every new chunk
-  // ponytail: chunks are never returned and the rest of a chunk too small for the next block is lost
+  // chunks are never returned and the rest of a chunk too small for the next block is lost
   llvm.mlir.global internal @strict_gpu_blocks(dense<0> : tensor<144xi64>) : !llvm.array<144 x i64>
   llvm.mlir.global internal @strict_gpu_chunk(dense<0> : tensor<6xi64>) : !llvm.array<6 x i64>
   llvm.mlir.global internal @strict_gpu_residing(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
