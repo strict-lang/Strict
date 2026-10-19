@@ -47,17 +47,15 @@ IsShared Boolean
 	let decoder = PayloadDecoder(entry)
 	if decoder.Text(2) is not "from"
 		return false
-	IsPlain(decoder, entry) and AreConstants(entry)
-IsPlain(decoder PayloadDecoder, entry InstructionEntry) Boolean
-	MlirConstants(MlirInstances.Shapes, 1).IsPlain(PayloadDecoder(MlirInstances.Built), MlirInstances.Built)
-	MlirConstants(MlirCalls.Hashes, 1).IsPlain(PayloadDecoder(MlirCalls.Hashed), MlirCalls.Hashed) is false
+	IsPlain(decoder) and AreConstants(entry)
+IsPlain(decoder PayloadDecoder) Boolean
+	MlirConstants(MlirInstances.Shapes, 1).IsPlain(PayloadDecoder(MlirInstances.Built))
+	MlirConstants(MlirCalls.Hashes, 1).IsPlain(PayloadDecoder(MlirCalls.Hashed)) is false
 	let typeName = decoder.Text(1)
 	let short = TypeEntry.ShortName(typeName)
 	if (MlirLayout(function).IsStruct(typeName) is false) or (short is in ("File", "Error", "ErrorWithValue"))
 		return false
-	let count = entry.payload(5 + entry.payload(3))
-	let custom = function.TypeOf(typeName).Callee("from", count, decoder.Text(4 + entry.payload(3)), decoder.Names)
-	custom.instructions.Length is 0
+	decoder.Callee(function.TypeOf(typeName)).instructions.Length is 0
 AreConstants(entry InstructionEntry) Boolean
 	MlirConstants(MlirInstances.Shapes, 1).AreConstants(MlirInstances.Built)
 	MlirConstants(Varying, 1).AreConstants(MlirInstances.Built) is false

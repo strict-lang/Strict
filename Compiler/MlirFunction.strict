@@ -100,6 +100,7 @@ Slot(name Text) Texts
 Body Texts
 	Counter.Body.Last is "    return %zero : f64"
 	MlirLines.Lined.Body.Length > MlirLines.Unlined.Body.Length
+	outer.Text.Combine(MlirPacking.Listing.function.Body).IndexOf("@strict_two_list(") > 0
 	let counter = MlirLines(value)
 	mutable lines = List(Mutable(Text))
 	for method.instructions
@@ -122,10 +123,11 @@ Emitted(position Number) Texts
 	let kind = method.instructions(position).kind
 	if kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 		return kind is InstructionType.LoopBegin then MlirLoops(value, position).Begin else MlirLoops(value, position).End
-	if kind is in (InstructionType.Invoke, InstructionType.Print, InstructionType.FieldLoad)
-		return MlirCalls(value, position).Emitted
-	if (kind is in ListKinds) or MlirLists(value, position).IsElementStore
-		return MlirLists(value, position).Emitted
+	let statements = MlirStatements(value, position)
 	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
-		return MlirStatements(value, position).Binary(method.instructions(position))
-	MlirStatements(value, position).Emitted
+		return statements.Binary(method.instructions(position))
+	let isCall = kind is in (InstructionType.Invoke, InstructionType.Print, InstructionType.FieldLoad)
+	let lists = MlirLists(value, position)
+	let isList = (kind is in ListKinds) or lists.IsElementStore
+	let emitted = isCall then MlirCalls(value, position).Emitted else isList then lists.Emitted else statements.Emitted
+	emitted + MlirPacking(value, position).Repacked

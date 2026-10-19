@@ -1,5 +1,8 @@
 has lines Texts
+has shared Texts = List(Text)
 constant Squared = DroppedResults(("has width Number", "Area Number", "\tSquared.Area is 0", "\twidth * width", "Run", "\tlogger.Log(width)", "\tArea", "\tlogger.Log(width)"))
+constant Shaped = DroppedResults(Squared.lines, ("Size"))
+constant Mixed = Duplicates(("A.Area", "B.Area", "B.Size", "B.Grow"), ("width * width\n", "Measured(1)\n", "2\n", "3\n"))
 constant Hint = " never fails, so dropping its result does nothing: use it or remove the line"
 constant Operators = ("+", "-", "*", "/", "%", "^", "is", "and", "or", "then", "else", "<", ">", "<=", ">=", "to")
 Issues List(ValidationIssue)
@@ -12,8 +15,9 @@ Issues List(ValidationIssue)
 		inBody = TypeShape(lines).IsMethodHeader(value) then false else inBody or IsBodyStart(value)
 		let next = index + 1 < lines.Length then lines(index + 1) else ""
 		let isFollowed = next.StartsWith("\t") and (next.StartsWith("\t\t") is false)
-		if inBody and isFollowed and IsDropped(value, plain)
-			ValidationIssue("DroppedResultMustBeUsed", Tokenizer(value.Trim).Tokens.First + Hint, index + 1)
+		let dropped = inBody and isFollowed then Dropped(value, plain) else ""
+		if dropped is not ""
+			ValidationIssue("DroppedResultMustBeUsed", dropped + Hint, index + 1)
 IsBodyStart(line Text) Boolean
 	Squared.IsBodyStart("\tlogger.Log(width)")
 	Squared.IsBodyStart("\tSquared.Area is 0") is false
@@ -23,8 +27,22 @@ Plain Texts
 	Squared.Plain is ("Area")
 	for lines
 		let body = TypeShape(lines).IsMethodHeader(value) then Duplicates.Implementation(lines, index) else ""
-		if (body.Count("\n") is 1) and IsPlain(Tokenizer(body.Trim).Tokens)
+		if IsPlainBody(body)
 			Tokenizer(value).Tokens.First
+Shared(duplicates Duplicates, mutations Texts) Texts
+	Squared.Shared(Mixed, List(Text) + "Grow") is ("Size")
+	mutable failing = List(Mutable(Text))
+	for duplicates.owners
+		if IsPlainBody(duplicates.bodies(index)) is false
+			failing.Add(Tokenizer(value).Tokens.Last)
+	for duplicates.owners
+		let name = Tokenizer(value).Tokens.Last
+		if IsPlainBody(duplicates.bodies(index)) and (name is not in failing) and (name is not in mutations)
+			name
+IsPlainBody(body Text) Boolean
+	Squared.IsPlainBody("width * width\n")
+	Squared.IsPlainBody("let area = 1\narea\n") is false
+	(body.Count("\n") is 1) and IsPlain(Tokenizer(body.Trim).Tokens)
 IsPlain(tokens Texts) Boolean
 	Squared.IsPlain(("width", "*", "(", "width", "+", "1", ")"))
 	Squared.IsPlain(("numbers", ".", "X")) is false
@@ -39,15 +57,27 @@ IsCall(tokens Texts, position Number) Boolean
 	let previous = position > 0 then tokens(position - 1) else ""
 	let first = previous.Length > 0 then previous.Substring(0, 1) else "0"
 	(first.Lower is not first.Upper) and (previous is not in Operators)
-IsDropped(line Text, plain Texts) Boolean
-	Squared.IsDropped("\tArea", ("Area"))
-	Squared.IsDropped("\tArea(2)", ("Area"))
-	Squared.IsDropped("\tlet area = Area", ("Area")) is false
-	Squared.IsDropped("\tArea(2) + 1", ("Area")) is false
+Called(tokens Texts) Number
+	Squared.Called(("Area")) is 0
+	Squared.Called(("shape", ".", "Area", "(", "2", ")")) is 2
+	Squared.Called(("Make", "(", ")", ".", "Area")) is -1
+	Squared.Called(("Shape", ".", "Area")) is -1
+	let first = tokens.First.Substring(0, 1)
+	let isQualified = (tokens.Length > 2) and (tokens(1) is ".")
+	if isQualified and (first.Upper is first)
+		return -1
+	let at = isQualified then 2 else 0
+	(tokens.Length is at + 1) or (tokens(at + 1) is "(") and (tokens.Last is ")") then at else -1
+Dropped(line Text, plain Texts) Text
+	Squared.Dropped("\tArea", ("Area")) is "Area"
+	Squared.Dropped("\tArea(2)", ("Area")) is "Area"
+	Squared.Dropped("\tlet area = Area", ("Area")) is ""
+	Squared.Dropped("\tArea(2) + 1", ("Area")) is ""
+	Shaped.Dropped("\tshape.Size(2)", ("Area")) is "Size"
 	let tokens = Tokenizer(line.Trim).Tokens
-	if line.StartsWith("\t\t") or (tokens.Length is 0) or (tokens.First is not in plain)
-		return false
+	let at = line.StartsWith("\t\t") or (tokens.Length is 0) then -1 else Called(tokens)
 	for tokens
 		if value is in Operators
-			return false
-	(tokens.Length is 1) or (tokens(1) is "(") and (tokens.Last is ")")
+			return ""
+	let isOwn = (at is 0) and (tokens.First is in plain)
+	isOwn or (at > 0) and (tokens(at) is in shared) then tokens(at) else ""
