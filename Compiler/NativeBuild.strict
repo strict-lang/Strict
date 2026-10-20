@@ -111,9 +111,11 @@ Output(path Text, isProgram Boolean) Text
 Mlir(program Text, root Text, platform Number) Text
 	NativeBuild.Mlir("module {\n}", ".", Platform.Linux).Length > 100000
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
+	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@memset(!llvm.ptr, i32, i64)") is -1
 	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
 	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(platform) + ".mlir").ReadLines
-	program.Substring(0, program.Length - 1) + runtime + "\n" + Text.Combine(system, "\n") + "\n}"
+	let shared = program.Substring(0, program.Length - 1) + runtime
+	(platform is Platform.Web then WebBuild.Sized(shared) else shared) + "\n" + Text.Combine(system, "\n") + "\n}"
 Unsupported(mlir Text) Number
 	NativeBuild.Unsupported("a\nunsupported: x") is 2
 	NativeBuild.Unsupported("unsupported: x") is 0

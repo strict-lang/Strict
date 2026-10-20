@@ -13,6 +13,19 @@
     %top = llvm.ptrtoint %stack : !llvm.ptr to i64
     return %top : i64
   }
+  // snprintf with one or two numbers, its size is 32 bits in wasm32
+  llvm.func @strict_print_precise(%buffer: !llvm.ptr, %size: i64, %format: !llvm.ptr, %precision: i32, %number: f64) -> i32 {
+    %written = llvm.call @snprintf(%buffer, %size, %format, %precision, %number) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, i32, f64) -> i32
+    llvm.return %written : i32
+  }
+  llvm.func @strict_print_number(%buffer: !llvm.ptr, %size: i64, %format: !llvm.ptr, %number: f64) -> i32 {
+    %written = llvm.call @snprintf(%buffer, %size, %format, %number) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, f64) -> i32
+    llvm.return %written : i32
+  }
+  llvm.func @strict_print_integer(%buffer: !llvm.ptr, %size: i64, %format: !llvm.ptr, %number: i32) -> i32 {
+    %written = llvm.call @snprintf(%buffer, %size, %format, %number) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, i32) -> i32
+    llvm.return %written : i32
+  }
   llvm.func @VirtualAlloc(!llvm.ptr, i64, i32, i32) -> !llvm.ptr
   llvm.func @VirtualFree(!llvm.ptr, i64, i32) -> i32
   func.func private @strict_reserve(%size: i64) -> !llvm.ptr {

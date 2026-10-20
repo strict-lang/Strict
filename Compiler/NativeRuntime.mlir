@@ -7123,7 +7123,7 @@
     cf.cond_br %scientific, ^exponent, ^plain(%first : i32)
   ^plain(%precision: i32):
     %format = llvm.mlir.addressof @strict_precise : !llvm.ptr
-    %written = llvm.call @snprintf(%buffer, %size, %format, %precision, %number) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, i32, f64) -> i32
+    %written = llvm.call @strict_print_precise(%buffer, %size, %format, %precision, %number) : (!llvm.ptr, i64, !llvm.ptr, i32, f64) -> i32
     %null = llvm.mlir.zero : !llvm.ptr
     %parsed = llvm.call @strtod(%buffer, %null) : (!llvm.ptr, !llvm.ptr) -> f64
     %exact = arith.cmpf oeq, %parsed, %number : f64
@@ -7135,7 +7135,7 @@
     cf.cond_br %finished, ^done, ^plain(%more : i32)
   ^exponent:
     %scientificFormat = llvm.mlir.addressof @strict_scientific : !llvm.ptr
-    %digits = llvm.call @snprintf(%buffer, %size, %scientificFormat, %number) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, f64) -> i32
+    %digits = llvm.call @strict_print_number(%buffer, %size, %scientificFormat, %number) : (!llvm.ptr, i64, !llvm.ptr, f64) -> i32
     %letter = arith.constant 101 : i32
     %marker = llvm.call @strchr(%buffer, %letter) : (!llvm.ptr, i32) -> !llvm.ptr
     %null2 = llvm.mlir.zero : !llvm.ptr
@@ -7166,7 +7166,7 @@
     %remaining = arith.subi %size, %next : i64
     %exponentFormat = llvm.mlir.addressof @strict_exponent : !llvm.ptr
     %wide = arith.trunci %power : i64 to i32
-    %appended = llvm.call @snprintf(%tail, %remaining, %exponentFormat, %wide) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, i32) -> i32
+    %appended = llvm.call @strict_print_integer(%tail, %remaining, %exponentFormat, %wide) : (!llvm.ptr, i64, !llvm.ptr, i32) -> i32
     cf.br ^done
   ^done:
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64

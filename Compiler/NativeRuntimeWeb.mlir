@@ -9,7 +9,7 @@
   llvm.mlir.global internal @strict_registers(dense<0> : tensor<262144xi64>) : !llvm.array<262144 x i64>
   llvm.mlir.global internal @strict_registers_end(0 : i64) : i64
   llvm.func @emscripten_scan_registers(!llvm.ptr)
-  llvm.func @emscripten_stack_get_base() -> i64
+  llvm.func @emscripten_stack_get_base() -> !llvm.ptr
   llvm.func @strict_registers_copy(%begin: !llvm.ptr, %end: !llvm.ptr) {
     %start = llvm.ptrtoint %begin : !llvm.ptr to i64
     %finish = llvm.ptrtoint %end : !llvm.ptr to i64
@@ -18,7 +18,7 @@
     %isLarger = llvm.icmp "ugt" %length, %most : i64
     %bytes = llvm.select %isLarger, %most, %length : i1, i64
     %buffer = llvm.mlir.addressof @strict_registers : !llvm.ptr
-    %first = llvm.call @memcpy(%buffer, %begin, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %first = llvm.call @strict_c_memcpy(%buffer, %begin, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %seven = llvm.mlir.constant(7 : i64) : i64
     %alignMask = llvm.mlir.constant(-8 : i64) : i64
     %rounded = llvm.add %bytes, %seven : i64
@@ -26,7 +26,7 @@
     %four = llvm.mlir.constant(4 : i64) : i64
     %shift = llvm.add %aligned, %four : i64
     %shifted = llvm.getelementptr %buffer[%shift] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %second = llvm.call @memcpy(%shifted, %begin, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %second = llvm.call @strict_c_memcpy(%shifted, %begin, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %bufferStart = llvm.ptrtoint %buffer : !llvm.ptr to i64
     %copied = llvm.add %shift, %bytes : i64
     %copiedEnd = llvm.add %bufferStart, %copied : i64
@@ -43,8 +43,110 @@
     %end = llvm.load %endSlot : !llvm.ptr -> i64
     return %start, %end : i64, i64
   }
+  // wasm32 has 32 bit sizes and longs: the shared runtime and the program call these instead (WebBuild.Sized)
+  llvm.func @malloc(i32) -> !llvm.ptr
+  llvm.func @calloc(i32, i32) -> !llvm.ptr
+  llvm.func @realloc(!llvm.ptr, i32) -> !llvm.ptr
+  llvm.func @memcpy(!llvm.ptr, !llvm.ptr, i32) -> !llvm.ptr
+  llvm.func @memset(!llvm.ptr, i32, i32) -> !llvm.ptr
+  llvm.func @strlen(!llvm.ptr) -> i32
+  llvm.func @strncmp(!llvm.ptr, !llvm.ptr, i32) -> i32
+  llvm.func @strftime(!llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @fread(!llvm.ptr, i32, i32, !llvm.ptr) -> i32
+  llvm.func @fwrite(!llvm.ptr, i32, i32, !llvm.ptr) -> i32
+  llvm.func @fseek(!llvm.ptr, i32, i32) -> i32
+  llvm.func @ftell(!llvm.ptr) -> i32
+  llvm.func @strtol(!llvm.ptr, !llvm.ptr, i32) -> i32
+  llvm.func @snprintf(!llvm.ptr, i32, !llvm.ptr, ...) -> i32
+  llvm.func @strict_c_malloc(%size: i64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %narrow = llvm.trunc %size : i64 to i32
+    %result = llvm.call @malloc(%narrow) : (i32) -> !llvm.ptr
+    llvm.return %result : !llvm.ptr
+  }
+  llvm.func @strict_c_calloc(%count: i64, %size: i64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %narrowCount = llvm.trunc %count : i64 to i32
+    %narrow = llvm.trunc %size : i64 to i32
+    %result = llvm.call @calloc(%narrowCount, %narrow) : (i32, i32) -> !llvm.ptr
+    llvm.return %result : !llvm.ptr
+  }
+  llvm.func @strict_c_realloc(%old: !llvm.ptr, %size: i64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %narrow = llvm.trunc %size : i64 to i32
+    %result = llvm.call @realloc(%old, %narrow) : (!llvm.ptr, i32) -> !llvm.ptr
+    llvm.return %result : !llvm.ptr
+  }
+  llvm.func @strict_c_memcpy(%target: !llvm.ptr, %source: !llvm.ptr, %size: i64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %narrow = llvm.trunc %size : i64 to i32
+    %result = llvm.call @memcpy(%target, %source, %narrow) : (!llvm.ptr, !llvm.ptr, i32) -> !llvm.ptr
+    llvm.return %result : !llvm.ptr
+  }
+  llvm.func @strict_c_memset(%target: !llvm.ptr, %byte: i32, %size: i64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %narrow = llvm.trunc %size : i64 to i32
+    %result = llvm.call @memset(%target, %byte, %narrow) : (!llvm.ptr, i32, i32) -> !llvm.ptr
+    llvm.return %result : !llvm.ptr
+  }
+  llvm.func @strict_c_strlen(%text: !llvm.ptr) -> i64 attributes {passthrough = ["alwaysinline"]} {
+    %length = llvm.call @strlen(%text) : (!llvm.ptr) -> i32
+    %wide = llvm.zext %length : i32 to i64
+    llvm.return %wide : i64
+  }
+  llvm.func @strict_c_strncmp(%left: !llvm.ptr, %right: !llvm.ptr, %size: i64) -> i32 attributes {passthrough = ["alwaysinline"]} {
+    %narrow = llvm.trunc %size : i64 to i32
+    %result = llvm.call @strncmp(%left, %right, %narrow) : (!llvm.ptr, !llvm.ptr, i32) -> i32
+    llvm.return %result : i32
+  }
+  llvm.func @strict_c_strftime(%text: !llvm.ptr, %size: i64, %format: !llvm.ptr, %time: !llvm.ptr) -> i64 {
+    %narrow = llvm.trunc %size : i64 to i32
+    %written = llvm.call @strftime(%text, %narrow, %format, %time) : (!llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+    %wide = llvm.zext %written : i32 to i64
+    llvm.return %wide : i64
+  }
+  llvm.func @strict_c_fread(%data: !llvm.ptr, %size: i64, %count: i64, %stream: !llvm.ptr) -> i64 {
+    %narrowSize = llvm.trunc %size : i64 to i32
+    %narrowCount = llvm.trunc %count : i64 to i32
+    %read = llvm.call @fread(%data, %narrowSize, %narrowCount, %stream) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i32
+    %wide = llvm.zext %read : i32 to i64
+    llvm.return %wide : i64
+  }
+  llvm.func @strict_c_fwrite(%data: !llvm.ptr, %size: i64, %count: i64, %stream: !llvm.ptr) -> i64 {
+    %narrowSize = llvm.trunc %size : i64 to i32
+    %narrowCount = llvm.trunc %count : i64 to i32
+    %written = llvm.call @fwrite(%data, %narrowSize, %narrowCount, %stream) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i32
+    %wide = llvm.zext %written : i32 to i64
+    llvm.return %wide : i64
+  }
+  llvm.func @strict_c_fseek(%stream: !llvm.ptr, %offset: i64, %origin: i32) -> i32 {
+    %narrow = llvm.trunc %offset : i64 to i32
+    %result = llvm.call @fseek(%stream, %narrow, %origin) : (!llvm.ptr, i32, i32) -> i32
+    llvm.return %result : i32
+  }
+  llvm.func @strict_c_ftell(%stream: !llvm.ptr) -> i64 {
+    %position = llvm.call @ftell(%stream) : (!llvm.ptr) -> i32
+    %wide = llvm.sext %position : i32 to i64
+    llvm.return %wide : i64
+  }
+  llvm.func @strict_c_strtol(%text: !llvm.ptr, %end: !llvm.ptr, %base: i32) -> i64 {
+    %number = llvm.call @strtol(%text, %end, %base) : (!llvm.ptr, !llvm.ptr, i32) -> i32
+    %wide = llvm.sext %number : i32 to i64
+    llvm.return %wide : i64
+  }
+  llvm.func @strict_print_precise(%buffer: !llvm.ptr, %size: i64, %format: !llvm.ptr, %precision: i32, %number: f64) -> i32 {
+    %narrow = llvm.trunc %size : i64 to i32
+    %written = llvm.call @snprintf(%buffer, %narrow, %format, %precision, %number) vararg(!llvm.func<i32 (ptr, i32, ptr, ...)>) : (!llvm.ptr, i32, !llvm.ptr, i32, f64) -> i32
+    llvm.return %written : i32
+  }
+  llvm.func @strict_print_number(%buffer: !llvm.ptr, %size: i64, %format: !llvm.ptr, %number: f64) -> i32 {
+    %narrow = llvm.trunc %size : i64 to i32
+    %written = llvm.call @snprintf(%buffer, %narrow, %format, %number) vararg(!llvm.func<i32 (ptr, i32, ptr, ...)>) : (!llvm.ptr, i32, !llvm.ptr, f64) -> i32
+    llvm.return %written : i32
+  }
+  llvm.func @strict_print_integer(%buffer: !llvm.ptr, %size: i64, %format: !llvm.ptr, %number: i32) -> i32 {
+    %narrow = llvm.trunc %size : i64 to i32
+    %written = llvm.call @snprintf(%buffer, %narrow, %format, %number) vararg(!llvm.func<i32 (ptr, i32, ptr, ...)>) : (!llvm.ptr, i32, !llvm.ptr, i32) -> i32
+    llvm.return %written : i32
+  }
   func.func private @strict_stack_top(%stack: !llvm.ptr) -> i64 {
-    %top = llvm.call @emscripten_stack_get_base() : () -> i64
+    %base = llvm.call @emscripten_stack_get_base() : () -> !llvm.ptr
+    %top = llvm.ptrtoint %base : !llvm.ptr to i64
     return %top : i64
   }
   llvm.func @strict_crash_log(%text: !llvm.ptr) {
@@ -52,7 +154,7 @@
   }
   func.func private @strict_reserve(%size: i64) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
-    %reserved = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %reserved = llvm.call @strict_c_malloc(%size) : (i64) -> !llvm.ptr
     %failed = llvm.icmp "eq" %reserved, %null : !llvm.ptr
     cf.cond_br %failed, ^fail, ^done
   ^fail:
@@ -61,9 +163,10 @@
   ^done:
     return %reserved : !llvm.ptr
   }
-  llvm.func @emscripten_stack_get_end() -> i64
+  llvm.func @emscripten_stack_get_end() -> !llvm.ptr
   func.func private @strict_stack_lowest(%stack: !llvm.ptr) -> i64 {
-    %lowest = llvm.call @emscripten_stack_get_end() : () -> i64
+    %end = llvm.call @emscripten_stack_get_end() : () -> !llvm.ptr
+    %lowest = llvm.ptrtoint %end : !llvm.ptr to i64
     return %lowest : i64
   }
   func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
@@ -71,7 +174,7 @@
   }
   func.func private @strict_decommit(%at: !llvm.ptr, %size: i64) {
     %zero = arith.constant 0 : i32
-    %cleared = llvm.call @memset(%at, %zero, %size) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %cleared = llvm.call @strict_c_memset(%at, %zero, %size) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     return
   }
   llvm.func @opendir(!llvm.ptr) -> !llvm.ptr
@@ -79,7 +182,7 @@
   llvm.func @closedir(!llvm.ptr) -> i32
   llvm.func @mkdir(!llvm.ptr, i32) -> i32
   llvm.func @fnmatch(!llvm.ptr, !llvm.ptr, i32) -> i32
-  llvm.func @qsort(!llvm.ptr, i64, i64, !llvm.ptr)
+  llvm.func @qsort(!llvm.ptr, i32, i32, !llvm.ptr)
   llvm.func @strcasecmp(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @getenv(!llvm.ptr) -> !llvm.ptr
   llvm.func @stat(!llvm.ptr, !llvm.ptr) -> i32
@@ -99,7 +202,7 @@
     %result = func.call @strict_boolean(%exists) : (i1) -> f64
     return %result : f64
   }
-  llvm.func @getcwd(!llvm.ptr, i64) -> !llvm.ptr
+  llvm.func @getcwd(!llvm.ptr, i32) -> !llvm.ptr
   llvm.func @fdopen(i32, !llvm.ptr) -> !llvm.ptr
   func.func private @strict_process_input(%self: f64) -> f64 {
     %standardInput = arith.constant 0 : i32
@@ -113,7 +216,8 @@
     %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %path : i8, !llvm.ptr
-    %found = llvm.call @getcwd(%path, %size) : (!llvm.ptr, i64) -> !llvm.ptr
+    %narrow = arith.trunci %size : i64 to i32
+    %found = llvm.call @getcwd(%path, %narrow) : (!llvm.ptr, i32) -> !llvm.ptr
     %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
     return %result : f64
   }
@@ -141,7 +245,7 @@
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
     %none = arith.constant 0 : i32
-    %slotSize = arith.constant 8 : i64
+    %slotSize = arith.constant 8 : i32
     %directoryType = arith.constant 4 : i8
     %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
@@ -181,10 +285,10 @@
   ^close(%all: f64):
     %closed = llvm.call @closedir(%directory) : (!llvm.ptr) -> i32
     %length = func.call @strict_list_length(%all) : (f64) -> f64
-    %count = arith.fptosi %length : f64 to i64
+    %count = arith.fptosi %length : f64 to i32
     %items = func.call @strict_list_items(%all) : (f64) -> !llvm.ptr
     %compare = llvm.mlir.addressof @strict_compare_names : !llvm.ptr
-    llvm.call @qsort(%items, %count, %slotSize, %compare) : (!llvm.ptr, i64, i64, !llvm.ptr) -> ()
+    llvm.call @qsort(%items, %count, %slotSize, %compare) : (!llvm.ptr, i32, i32, !llvm.ptr) -> ()
     cf.br ^done(%all : f64)
   ^done(%result: f64):
     return %result : f64
@@ -192,7 +296,7 @@
   func.func private @strict_directory_directories(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
-    %slotSize = arith.constant 8 : i64
+    %slotSize = arith.constant 8 : i32
     %directoryType = arith.constant 4 : i8
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
@@ -224,10 +328,10 @@
   ^close(%all: f64):
     %closed = llvm.call @closedir(%directory) : (!llvm.ptr) -> i32
     %length = func.call @strict_list_length(%all) : (f64) -> f64
-    %count = arith.fptosi %length : f64 to i64
+    %count = arith.fptosi %length : f64 to i32
     %items = func.call @strict_list_items(%all) : (f64) -> !llvm.ptr
     %compare = llvm.mlir.addressof @strict_compare_names : !llvm.ptr
-    llvm.call @qsort(%items, %count, %slotSize, %compare) : (!llvm.ptr, i64, i64, !llvm.ptr) -> ()
+    llvm.call @qsort(%items, %count, %slotSize, %compare) : (!llvm.ptr, i32, i32, !llvm.ptr) -> ()
     cf.br ^done(%all : f64)
   ^done(%result: f64):
     return %result : f64
@@ -263,7 +367,8 @@
     %secondsSlot = llvm.getelementptr %timespec[0] : (!llvm.ptr) -> !llvm.ptr, i64
     %nanosecondsSlot = llvm.getelementptr %timespec[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %whole = llvm.load %secondsSlot : !llvm.ptr -> i64
-    %nanoseconds = llvm.load %nanosecondsSlot : !llvm.ptr -> i64
+    %nanosecondsLong = llvm.load %nanosecondsSlot : !llvm.ptr -> i32
+    %nanoseconds = arith.extsi %nanosecondsLong : i32 to i64
     %wholeFloat = arith.sitofp %whole : i64 to f64
     %nanosecondsFloat = arith.sitofp %nanoseconds : i64 to f64
     %billion = arith.constant 1.0e9 : f64
@@ -307,10 +412,11 @@
     %zero = arith.constant 0.0 : f64
     cf.cond_br %failed, ^done(%zero : f64), ^time
   ^time:
-    %secondsSlot = llvm.getelementptr %buffer[64] : (!llvm.ptr) -> !llvm.ptr, i8
+    %secondsSlot = llvm.getelementptr %buffer[56] : (!llvm.ptr) -> !llvm.ptr, i8
     %seconds = llvm.load %secondsSlot : !llvm.ptr -> i64
-    %nanosecondsSlot = llvm.getelementptr %buffer[72] : (!llvm.ptr) -> !llvm.ptr, i8
-    %nanoseconds = llvm.load %nanosecondsSlot : !llvm.ptr -> i64
+    %nanosecondsSlot = llvm.getelementptr %buffer[64] : (!llvm.ptr) -> !llvm.ptr, i8
+    %nanosecondsLong = llvm.load %nanosecondsSlot : !llvm.ptr -> i32
+    %nanoseconds = arith.extsi %nanosecondsLong : i32 to i64
     %whole = arith.sitofp %seconds : i64 to f64
     %part = arith.sitofp %nanoseconds : i64 to f64
     %billion = arith.constant 1.0e9 : f64
@@ -330,7 +436,7 @@
     %null = llvm.mlir.zero : !llvm.ptr
     cf.cond_br %failed, ^done(%null : !llvm.ptr), ^time
   ^time:
-    %modified = llvm.getelementptr %buffer[64] : (!llvm.ptr) -> !llvm.ptr, i8
+    %modified = llvm.getelementptr %buffer[56] : (!llvm.ptr) -> !llvm.ptr, i8
     %local = llvm.call @localtime(%modified) : (!llvm.ptr) -> !llvm.ptr
     cf.br ^done(%local : !llvm.ptr)
   ^done(%time: !llvm.ptr):
