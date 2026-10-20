@@ -8,7 +8,7 @@ constant Fixed = "%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: 
 constant DoublingHeader = "  llvm.func @Rows_Doubled_1_gpu2(" + Fixed + ", %results: i64) attributes {nvvm.kernel} {"
 constant Ending = ("    cf.br ^exit", "  ^exit:", "    llvm.return", "  }")
 constant Allocated = " = llvm.alloca %one x "
-constant Launches = ("    %lanesWanted = arith.constant 32 : i64", "    %lanesSingle = arith.constant 1 : i64", "    %launchBlocks = nvvm.read.ptx.sreg.nctaid.x : i32", "    %launchBlocksWide = arith.extui %launchBlocks : i32 to i64", "    %launchWidth = arith.extui %width : i32 to i64", "    %launchThreads = arith.muli %launchBlocksWide, %launchWidth : i64", "    %warpThreads = arith.muli %count, %lanesWanted : i64", "    %laneWarped = arith.cmpi uge, %launchThreads, %warpThreads : i64", "    %lanes = arith.select %laneWarped, %lanesWanted, %lanesSingle : i64")
+constant Launches = ("    %lanesWanted = arith.constant 32 : i64", "    %lanesSingle = arith.constant 1 : i64", "    %launchBlocks = func.call @strict_device_block_count() : () -> i32", "    %launchBlocksWide = arith.extui %launchBlocks : i32 to i64", "    %launchWidth = arith.extui %width : i32 to i64", "    %launchThreads = arith.muli %launchBlocksWide, %launchWidth : i64", "    %warpThreads = arith.muli %count, %lanesWanted : i64", "    %laneWarped = arith.cmpi uge, %launchThreads, %warpThreads : i64", "    %lanes = arith.select %laneWarped, %lanesWanted, %lanesSingle : i64")
 Name Text
 	Doubling.Name is "Rows_Doubled_1_gpu2"
 	MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Name is "Rows_Doubled_1_gpu2s"
@@ -93,9 +93,10 @@ Entry Texts
 	lines + MlirDeviceMembers(function).Stored(function.Float)
 Indexed Texts
 	Doubling.Indexed.Last is "    cf.cond_br %inside, ^body, ^exit"
-	constant thread = "    %thread = nvvm.read.ptx.sreg.tid.x : i32"
-	constant block = "    %block = nvvm.read.ptx.sreg.ctaid.x : i32"
-	constant width = "    %width = nvvm.read.ptx.sreg.ntid.x : i32"
+	Doubling.Indexed.First is "    %thread = func.call @strict_device_thread_index() : () -> i32"
+	constant thread = "    %thread = func.call @strict_device_thread_index() : () -> i32"
+	constant block = "    %block = func.call @strict_device_block_index() : () -> i32"
+	constant width = "    %width = func.call @strict_device_block_size() : () -> i32"
 	constant start = "    %start = arith.muli %block, %width : i32"
 	constant sum = "    %sum = arith.addi %start, %thread : i32"
 	constant global = "    %global = arith.extui %sum : i32 to i64"
@@ -103,7 +104,7 @@ Indexed Texts
 Laned Texts
 	Layering.Laned.First is "    %lanes = arith.constant 32 : i64"
 	Doubling.Laned.First is "    %lanes = arith.constant 1 : i64"
-	Text.Combine(MlirDevice(MlirDeviceSums.Spreading.function, 2).Laned).IndexOf("nvvm.read.ptx.sreg.nctaid.x") > 0
+	Text.Combine(MlirDevice(MlirDeviceSums.Spreading.function, 2).Laned).IndexOf("func.call @strict_device_block_count()") > 0
 	constant divided = ("    %at = arith.divui %global, %lanes : i64", "    %lane = arith.remui %global, %lanes : i64")
 	let sums = MlirDeviceSums(function, position)
 	if sums.IsSpread
