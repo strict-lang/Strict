@@ -137,6 +137,7 @@ ipch/
 /.dotnet-home
 *.strictbinary
 *.exe
+*.wasm
 *.ptx
 *.asm
 *.ll

@@ -1,14 +1,18 @@
 constant Windows
 constant Linux
 constant MacOS
+constant Web
 NameOf(code Number) Text
 	NameOf(Windows) is "Windows"
+	NameOf(Web) is "Web"
 	if code is Windows
 		return "Windows"
 	if code is Linux
 		return "Linux"
 	if code is MacOS
 		return "MacOS"
+	if code is Web
+		return "Web"
 	"Unknown"
 Current Number
 	Platform.Current is in (Windows, Linux, MacOS)

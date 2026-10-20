@@ -699,9 +699,12 @@
     %startedNow = func.call @strict_clock() : () -> f64
     %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
     llvm.store %startedNow, %startedSlot : f64, !llvm.ptr
-    %tableBytes = arith.constant 8388608 : i64
-    %cardBytes = arith.constant 134217728 : i64
-    %heapBytes = arith.constant 68719476736 : i64
+    %heapSlot = llvm.mlir.addressof @strict_heap_bytes : !llvm.ptr
+    %heapBytes = llvm.load %heapSlot : !llvm.ptr -> i64
+    %tableShift = arith.constant 13 : i64
+    %cardShift = arith.constant 9 : i64
+    %tableBytes = arith.shrui %heapBytes, %tableShift : i64
+    %cardBytes = arith.shrui %heapBytes, %cardShift : i64
     %pageSize = arith.constant 65536 : i64
     %pageRest = arith.constant 65535 : i64
     %pageMask = arith.constant -65536 : i64
@@ -736,7 +739,7 @@
     %emptyViewHolder = llvm.getelementptr %emptyView[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %emptyHolderBits, %emptyViewHolder : f64, !llvm.ptr
     func.call @strict_characters_init() : () -> ()
-    %stackBits = llvm.ptrtoint %stack : !llvm.ptr to i64
+    %stackBits = func.call @strict_stack_top(%stack) : (!llvm.ptr) -> i64
     %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
     llvm.store %stackBits, %stackSlot : i64, !llvm.ptr
     %stackBottom = func.call @strict_stack_lowest(%stack) : (!llvm.ptr) -> i64
@@ -878,7 +881,7 @@
     %finished = arith.cmpi sge, %done, %count : i64
     cf.cond_br %finished, ^finish, ^spin
   ^spin:
-    llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
+    llvm.call @strict_pause() : () -> ()
     cf.br ^wait
   ^finish:
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
@@ -996,7 +999,7 @@
     %tired = llvm.icmp "sge" %spins, %limit : i64
     llvm.cond_br %tired, ^sleep, ^spin
   ^spin:
-    llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
+    llvm.call @strict_pause() : () -> ()
     %counted = llvm.add %spins, %one : i64
     llvm.br ^wait(%seen, %counted : i64, i64)
   ^sleep:
@@ -1020,7 +1023,7 @@
     %taken = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
     llvm.cond_br %taken, ^done, ^spin
   ^spin:
-    llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
+    llvm.call @strict_pause() : () -> ()
     llvm.br ^try
   ^done:
     llvm.return
@@ -2541,6 +2544,8 @@
     %pinnedBytes = arith.muli %pinnedCount, %eight : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
     func.call @strict_rc_seen_range(%pinnedStart, %pinnedEnd, %seen) : (i64, i64, i1) -> ()
+    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
+    func.call @strict_rc_seen_range(%spilled#0, %spilled#1, %seen) : (i64, i64, i1) -> ()
     return
   }
   // frees what the table holds with no count and no stack reference, keeps the ones the stack still references
@@ -2822,6 +2827,8 @@
     %pinnedBytes = arith.muli %pinnedCount, %eight : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
     func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> ()
+    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
+    func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> ()
     func.call @strict_gc_drain() : () -> ()
     return
   }
@@ -3773,6 +3780,8 @@
     %pinnedBytes = arith.muli %pinnedCount, %wordBytes : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
     func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> ()
+    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
+    func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> ()
     func.call @strict_gc_drain() : () -> ()
     %checkingSlot = llvm.mlir.addressof @strict_rc_checking : !llvm.ptr
     %checking = llvm.load %checkingSlot : !llvm.ptr -> i64
