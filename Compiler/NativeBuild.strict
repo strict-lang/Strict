@@ -85,7 +85,8 @@ Linked(base Text, tools Toolchain) Text
 		File(executable).Rename(old)
 		File(target).Rename(executable)
 		File(old).Delete
-	built.Replace(target, executable)
+	let failed = "Could not replace " + executable + " (still running?), the new build is " + target
+	isSwapped and File(target).Exists then failed else built.Replace(target, executable)
 CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	NativeBuild(Logger).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is 0
 	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is 0
