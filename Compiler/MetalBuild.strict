@@ -1,0 +1,11 @@
+has tools Toolchain
+constant Optimized = "--target=nvptx64-nvidia-cuda -O2 -S -emit-llvm -Wno-override-module "
+Source(base Text) Text
+	MetalBuild(Toolchain.OnWindows).Source("Compiler/output/missing").StartsWith("clang failed")
+	let output = " -o " + tools.Quoted(base + ".gpu.opt.ll")
+	let arguments = Optimized + tools.Quoted(base + ".gpu.ll") + output
+	let optimized = ToolRunner(tools.Located("clang")).Execute(arguments)
+	if optimized.Failed
+		return "clang failed: " + optimized.error
+	let prelude = File(tools.root + "/Compiler/MetalPrelude.metal").ReadLines
+	Text.Combine(MetalShader(File(base + ".gpu.opt.ll").ReadLines).Source(prelude), "\n")
