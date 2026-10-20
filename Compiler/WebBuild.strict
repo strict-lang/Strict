@@ -1,6 +1,7 @@
 has tools Toolchain
 constant Missing = WebBuild(Toolchain(Toolchain.OnWindows, isWeb = true))
-constant Options = " -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB -sSTACK_SIZE=16MB -sASYNCIFY -sASYNCIFY_STACK_SIZE=1048576 -sEXPORTED_RUNTIME_METHODS=callMain -Wl,--fatal-warnings -Wno-override-module"
+constant Options = " -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB -sSTACK_SIZE=16MB -sASYNCIFY -sASYNCIFY_STACK_SIZE=1048576 -sEXPORTED_RUNTIME_METHODS=callMain --profiling-funcs -Wl,--fatal-warnings -Wno-override-module"
+constant OneCallerInlining = " --one-caller-inline-max-function-size=1000"
 constant Features = " --enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals"
 constant Sizes = ("malloc", "calloc", "realloc", "memcpy", "memset", "strlen", "strncmp", "strftime", "fread", "fwrite", "fseek", "ftell", "strtol", "snprintf")
 Linked(base Text, executable Text, level Text) Text
@@ -12,7 +13,8 @@ Linked(base Text, executable Text, level Text) Text
 	let folder = Release(Logger, base).Parent
 	let content = Preloaded(folder + "/Content") + Mirrored(folder, base)
 	let page = " --shell-file " + tools.Quoted(tools.root + "/Compiler/WebShell.html")
-	let inputs = tools.Quoted(base + ".o") + sources + content + page
+	let runtime = " --js-library " + tools.Quoted(tools.root + "/Compiler/WebRuntime.js")
+	let inputs = tools.Quoted(base + ".o") + sources + content + page + runtime
 	let linked = ToolRunner(tools.Located("emcc")).Execute(inputs + " -o " + tools.Quoted(executable) + Options + " -O1")
 	linked.Failed then "emcc failed: " + linked.error else Optimized(executable, level)
 Compiled(base Text, level Text) Text
@@ -26,7 +28,7 @@ Compiled(base Text, level Text) Text
 Optimized(executable Text, level Text) Text
 	Missing.Optimized("Compiler/output/missing.html", " -O2").StartsWith("wasm-opt failed")
 	let wasm = tools.Quoted(executable.Replace(".html", ".wasm"))
-	let optimizing = wasm + level + " --skip-pass=coalesce-locals" + Features + " -o " + wasm
+	let optimizing = wasm + level + " -g --skip-pass=coalesce-locals" + OneCallerInlining + Features + " -o " + wasm
 	let optimized = ToolRunner(tools.Located("wasm-opt")).Execute(optimizing)
 	optimized.Failed then "wasm-opt failed: " + optimized.error else "Built " + executable
 Sized(mlir Text) Text
