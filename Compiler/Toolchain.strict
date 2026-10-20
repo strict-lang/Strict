@@ -1,6 +1,7 @@
 has platform Number
 has root Text
 has natives Texts = List(Text)
+has isWeb Boolean = false
 constant Needed = ("mlir-opt", "mlir-translate", "clang")
 constant WindowsFolders = ("C:/msys64/ucrt64/bin/", "C:/Program Files/LLVM/bin/")
 constant LinuxRelease = "LLVM-22.1.0-Linux-X64"
@@ -9,7 +10,6 @@ constant LinuxMembers = " LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/
 constant Accept = " --accept-package-agreements --accept-source-agreements"
 constant Pacman = "C:\\msys64\\usr\\bin\\pacman.exe"
 constant SingleThreaded = " --mlir-disable-threading"
-constant LinuxTarget = " --target=x86_64-unknown-linux-gnu -mf16c -c -Wno-override-module"
 constant Optimized = " -march=native -Wno-override-module"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
@@ -23,9 +23,10 @@ Located(name Text) Text
 	""
 Folders Texts
 	OnLinux.Folders is ("/s/Tools/LLVM-22.1.0-Linux-X64/bin/")
-	if platform is Platform.Windows
-		return WindowsFolders
-	List(Text) + (root + "/Tools/" + LinuxRelease + "/bin/")
+	Toolchain(OnWindows, isWeb = true).Folders.Last is "C:/s/Tools/emsdk/upstream/emscripten/"
+	let linux = List(Text) + (root + "/Tools/" + LinuxRelease + "/bin/")
+	let folders = platform is Platform.Windows then WindowsFolders else linux
+	isWeb then folders + (root + "/Tools/emsdk/upstream/emscripten/") else folders
 Extension Text
 	OnWindows.Extension is ".exe"
 	OnLinux.Extension is ""
@@ -33,6 +34,9 @@ Extension Text
 Executable(base Text) Text
 	OnWindows.Executable("./Strict") is "./strict.exe"
 	OnLinux.Executable("./Examples/ProcessImage") is "./Examples/ProcessImage"
+	Toolchain(OnWindows, isWeb = true).Executable("./Examples/HelloLogger") is "./Examples/HelloLogger.html"
+	if isWeb
+		return base + ".html"
 	let isCommand = Path(base).FileName.text is "Strict"
 	(isCommand then base.Substring(0, base.Length - 6) + "strict" else base) + Extension
 Missing(names Texts) Texts
@@ -42,7 +46,11 @@ Missing(names Texts) Texts
 			value
 InstallLines(missing Texts) Texts
 	OnLinux.InstallLines(("clang")).Length is 2
-	platform is Platform.Windows then WindowsLines(missing) else LinuxLines
+	Toolchain(OnWindows, isWeb = true).InstallLines(("emcc")).First.StartsWith("git clone --depth 1 ")
+	let others = missing - "emcc"
+	let hostLines = platform is Platform.Windows then WindowsLines(others) else LinuxLines
+	let host = others.Length is 0 then List(Text) else hostLines
+	host + ("emcc" is in missing then WebBuild(value).InstallLines else List(Text))
 WindowsLines(missing Texts) Texts
 	OnWindows.WindowsLines(("clang")).First is "winget install -e --id LLVM.LLVM" + Accept
 	mutable lines = List(Mutable(Text))
@@ -95,7 +103,8 @@ CrossBuilt(base Text, level Text) Text
 	let lowered = Lowered(base + ".linux")
 	if lowered is not ""
 		return lowered
-	let compiling = Quoted(base + ".linux.ll") + " -o " + Quoted(base + ".linux.o") + LinuxTarget + level
+	constant target = " --target=x86_64-unknown-linux-gnu -mf16c -c -Wno-override-module"
+	let compiling = Quoted(base + ".linux.ll") + " -o " + Quoted(base + ".linux.o") + target + level
 	let compiled = ToolRunner(Located("clang")).Execute(compiling)
 	if compiled.Failed
 		return "clang failed: " + compiled.error

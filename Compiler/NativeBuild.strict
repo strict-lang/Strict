@@ -1,6 +1,7 @@
 has logger
 has isCrossing Boolean = true
 has level Text = Fast
+has isWeb Boolean = false
 constant Fast = " -O2"
 constant Small = " -Os"
 constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o")
@@ -21,7 +22,7 @@ Compile(path Text, root Text, isCounting = false) Number
 	if program is ""
 		return 1
 	let natives = NativeFolder(logger).Natives(path, root, module.types)
-	let built = Build(base, program, Toolchain(Platform.Current, root, natives), isCounting)
+	let built = Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
 	isCounting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path) else built
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n}"
@@ -53,11 +54,11 @@ CountedFile(path Text, root Text) Text
 	NativeBuild.CountedFile("./Examples/Sum.strict", ".") is "Examples/Sum.strict"
 	TypeEntry(FileCompiler.FullName(path, root), List(MemberEntry), List(MethodEntry)).Source
 Build(base Text, program Text, tools Toolchain, isCounting = false) Number
-	let missing = tools.Missing(Toolchain.Needed)
+	let missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
 	if missing.Length > 0
 		logger.Log(tools.Installing(missing))
 		return 1
-	File(base + ".mlir").Write(Mlir(program, tools.root, Platform.Current))
+	File(base + ".mlir").Write(Mlir(program, tools.root, tools.isWeb then Platform.Web else Platform.Current))
 	let built = Linked(base, tools)
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
@@ -77,9 +78,9 @@ Ran(base Text, tools Toolchain, path Text) Number
 Linked(base Text, tools Toolchain) Text
 	NativeBuild.Linked("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	let executable = tools.Executable(base)
-	let isSwapped = (Platform.Current is Platform.Windows) and File(executable).Exists
+	let isSwapped = (Platform.Current is Platform.Windows) and (tools.isWeb is false) and File(executable).Exists
 	let target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
-	let built = tools.Built(base, target, level)
+	let built = tools.isWeb then WebBuild(tools).Linked(base, target, level) else tools.Built(base, target, level)
 	if isSwapped and built.StartsWith("Built ")
 		let old = executable.Replace(".exe", ".old.exe")
 		File(executable).Rename(old)
@@ -109,6 +110,7 @@ Output(path Text, isProgram Boolean) Text
 	source.Substring(0, source.Length - 7) + (isProgram then "" else ".test")
 Mlir(program Text, root Text, platform Number) Text
 	NativeBuild.Mlir("module {\n}", ".", Platform.Linux).Length > 100000
+	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
 	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
 	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(platform) + ".mlir").ReadLines
 	program.Substring(0, program.Length - 1) + runtime + "\n" + Text.Combine(system, "\n") + "\n}"

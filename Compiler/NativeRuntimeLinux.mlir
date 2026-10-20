@@ -1,3 +1,9 @@
+  // the heap the collector reserves (its page table and cards are an 8192th and a 512th of it), a pause while spinning
+  llvm.mlir.global internal constant @strict_heap_bytes(68719476736 : i64) : i64
+  llvm.func @strict_pause() attributes {passthrough = ["alwaysinline"]} {
+    llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
+    llvm.return
+  }
   llvm.func @mmap(!llvm.ptr, i64, i32, i32, i32, i64) -> !llvm.ptr
   llvm.func @strict_crash_log(%text: !llvm.ptr) {
     llvm.return
