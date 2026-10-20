@@ -104,7 +104,7 @@ Indexed Texts
 Laned Texts
 	Layering.Laned.First is "    %lanes = arith.constant 32 : i64"
 	Doubling.Laned.First is "    %lanes = arith.constant 1 : i64"
-	Text.Combine(MlirDevice(MlirDeviceSums.Spreading.function, 2).Laned).IndexOf("func.call @strict_device_block_count()") > 0
+	Text.Combine(MlirDevice(MlirDeviceSums.Spreading.function, 2).Laned).IndexOf("call @strict_device_block_count()") > 0
 	constant divided = ("    %at = arith.divui %global, %lanes : i64", "    %lane = arith.remui %global, %lanes : i64")
 	let sums = MlirDeviceSums(function, position)
 	if sums.IsSpread

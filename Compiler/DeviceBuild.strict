@@ -5,6 +5,9 @@ constant Kernels = "Compiler/output/Kernels"
 constant Local = DeviceBuild(Toolchain(Platform.Current, "."))
 Ptx(base Text, isTiling = false) Texts
 	Missing.Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
+	DeviceBuild(Toolchain(Platform.MacOS, ".")).Ptx("Compiler/output/missing").Length is 0
+	if tools.platform is Platform.MacOS
+		return List(Text)
 	let lowered = tools.Lowered(base + ".gpu")
 	let older = lowered is "" then Compiled(base, "sm_75") else lowered
 	(isTiling is false) or (older.StartsWith("//") is false) then List(Text) + older else (Compiled(base, "sm_80"), older)
@@ -29,10 +32,16 @@ Embedded(host Text, ptx Texts, base Text) Text
 	Missing.Embedded("module {\n}", List(Text) + "// a", Kernels).EndsWith("file:Kernels\\00\") : !llvm.array<13 x i8>\n}")
 	File(Kernels + ".ptx").ReadLines is ("// a")
 	Missing.Embedded("module {\n}", List(Text) + "clang failed: x", Kernels) is "GPU kernels failed: clang failed: x"
+	Missing.Embedded("module {\n}", List(Text), "Compiler/output/N").EndsWith("file:N\\00\") : !llvm.array<7 x i8>\n}")
+	if ptx.Length is 0
+		return Referenced(host, base)
 	if ptx.First.StartsWith("//") is false
 		return "GPU kernels failed: " + ptx.First
 	File(base + ".ptx").Write(ptx.First)
 	File(base + ".older.ptx").Write(ptx.Length > 1 then ptx.Last else "")
+	Referenced(host, base)
+Referenced(host Text, base Text) Text
+	Missing.Referenced("module {\n}", "A").EndsWith("file:A\\00\") : !llvm.array<7 x i8>\n}")
 	let stem = Path(base).FileName.text
 	let global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"file:" + stem + "\\00\")"
 	host.Substring(0, host.Length - 1) + global + " : !llvm.array<" + (stem.Length + 6) + " x i8>\n}"
