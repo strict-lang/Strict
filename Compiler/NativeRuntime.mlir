@@ -1936,8 +1936,9 @@
   // words pointing into the large object marked last are skipped (the rows of a matrix share one, strict_packed_rows)
   func.func private @strict_gc_mark_range(%from: i64, %to: i64) {
     %none = arith.constant 0 : i64
-    %eight = arith.constant 8 : i64
-    %alignMask = arith.constant -8 : i64
+    %wordSlot = llvm.mlir.addressof @strict_word_bytes : !llvm.ptr
+    %eight = llvm.load %wordSlot : !llvm.ptr -> i64
+    %alignMask = arith.subi %none, %eight : i64
     %address = arith.constant 281474976710655 : i64
     %aligned = arith.andi %from, %alignMask : i64
     cf.br ^loop(%aligned, %none, %none : i64, i64, i64)
@@ -1945,8 +1946,7 @@
     %more = arith.cmpi ult, %at, %to : i64
     cf.cond_br %more, ^word, ^done
   ^word:
-    %pointer = llvm.inttoptr %at : i64 to !llvm.ptr
-    %value = llvm.load %pointer : !llvm.ptr -> i64
+    %value = llvm.call @strict_word(%at) : (i64) -> i64
     %next = arith.addi %at, %eight : i64
     %word = arith.andi %value, %address : i64
     %afterStart = arith.cmpi uge, %word, %skipStart : i64
@@ -2490,17 +2490,17 @@
   }
   // the count word: bits 0-28 count, bit 29 free, bit 31 seen on the stack
   func.func private @strict_rc_seen_range(%from: i64, %to: i64, %seen: i1) {
-    %eight = arith.constant 8 : i64
-    %alignMask = arith.constant -8 : i64
     %zero = arith.constant 0 : i64
+    %wordSlot = llvm.mlir.addressof @strict_word_bytes : !llvm.ptr
+    %eight = llvm.load %wordSlot : !llvm.ptr -> i64
+    %alignMask = arith.subi %zero, %eight : i64
     %aligned = arith.andi %from, %alignMask : i64
     cf.br ^loop(%aligned : i64)
   ^loop(%at: i64):
     %more = arith.cmpi ult, %at, %to : i64
     cf.cond_br %more, ^word, ^done
   ^word:
-    %pointer = llvm.inttoptr %at : i64 to !llvm.ptr
-    %word = llvm.load %pointer : !llvm.ptr -> i64
+    %word = llvm.call @strict_word(%at) : (i64) -> i64
     %next = arith.addi %at, %eight : i64
     %lowBits = arith.constant 281474976710655 : i64
     %target = arith.andi %word, %lowBits : i64

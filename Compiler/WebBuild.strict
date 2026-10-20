@@ -41,7 +41,7 @@ Mirrored(folder Text, base Text) Text
 		return ""
 	let path = "/" + (folder.StartsWith("./") then folder.Substring(2, folder.Length - 2) else folder)
 	let linked = "FS.symlink(\"/Content\", \"" + path + "/Content\")"
-	File(base + ".pre.js").Write("Module.preRun = [() => { FS.mkdirTree(\"" + path + "\"); " + linked + " }]")
+	File(base + ".pre.js").Write("(Module.preRun ||= []).push(() => { FS.mkdirTree(\"" + path + "\"); " + linked + " })")
 	" --pre-js \"" + base + ".pre.js\""
 InstallLines Texts
 	Missing.InstallLines.Last is "C:/s/Tools/emsdk/emsdk activate latest"

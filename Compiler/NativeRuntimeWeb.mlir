@@ -4,9 +4,16 @@
   llvm.func @strict_pause() attributes {passthrough = ["alwaysinline"]} {
     llvm.return
   }
-  // locals live in wasm, not on the stack in memory: Asyncify unwinds them into memory, they are copied twice (the second
-  // copy 4 bytes later, a local of 8 bytes may follow one of 4) so the collector reads every value 8 bytes at a time
-  llvm.mlir.global internal @strict_registers(dense<0> : tensor<262144xi64>) : !llvm.array<262144 x i64>
+  // pointers are 4 bytes, locals of 4 and 8 bytes follow each other: the collector reads every 4 bytes as a possible
+  // reference (the address of a boxed value is its lower half), locals live in wasm, Asyncify unwinds them into memory
+  llvm.mlir.global internal constant @strict_word_bytes(4 : i64) : i64
+  llvm.func @strict_word(%at: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+    %pointer = llvm.inttoptr %at : i64 to !llvm.ptr
+    %word = llvm.load %pointer : !llvm.ptr -> i32
+    %wide = llvm.zext %word : i32 to i64
+    llvm.return %wide : i64
+  }
+  llvm.mlir.global internal @strict_registers(dense<0> : tensor<131072xi64>) : !llvm.array<131072 x i64>
   llvm.mlir.global internal @strict_registers_end(0 : i64) : i64
   llvm.func @emscripten_scan_registers(!llvm.ptr)
   llvm.func @emscripten_stack_get_base() -> !llvm.ptr
@@ -18,18 +25,9 @@
     %isLarger = llvm.icmp "ugt" %length, %most : i64
     %bytes = llvm.select %isLarger, %most, %length : i1, i64
     %buffer = llvm.mlir.addressof @strict_registers : !llvm.ptr
-    %first = llvm.call @strict_c_memcpy(%buffer, %begin, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %seven = llvm.mlir.constant(7 : i64) : i64
-    %alignMask = llvm.mlir.constant(-8 : i64) : i64
-    %rounded = llvm.add %bytes, %seven : i64
-    %aligned = llvm.and %rounded, %alignMask : i64
-    %four = llvm.mlir.constant(4 : i64) : i64
-    %shift = llvm.add %aligned, %four : i64
-    %shifted = llvm.getelementptr %buffer[%shift] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %second = llvm.call @strict_c_memcpy(%shifted, %begin, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %copiedData = llvm.call @strict_c_memcpy(%buffer, %begin, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %bufferStart = llvm.ptrtoint %buffer : !llvm.ptr to i64
-    %copied = llvm.add %shift, %bytes : i64
-    %copiedEnd = llvm.add %bufferStart, %copied : i64
+    %copiedEnd = llvm.add %bufferStart, %bytes : i64
     %endSlot = llvm.mlir.addressof @strict_registers_end : !llvm.ptr
     llvm.store %copiedEnd, %endSlot : i64, !llvm.ptr
     llvm.return

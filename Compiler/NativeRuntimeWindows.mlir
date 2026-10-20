@@ -5,6 +5,13 @@
     llvm.return
   }
   // all values the collector has to see are on the stack (locals in wasm are not, see NativeRuntimeWeb.mlir)
+  // the collector reads possible references 8 bytes at a time (wasm32 keeps pointers in 4 bytes)
+  llvm.mlir.global internal constant @strict_word_bytes(8 : i64) : i64
+  llvm.func @strict_word(%at: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+    %pointer = llvm.inttoptr %at : i64 to !llvm.ptr
+    %word = llvm.load %pointer : !llvm.ptr -> i64
+    llvm.return %word : i64
+  }
   func.func private @strict_registers_spilled() -> (i64, i64) {
     %none = arith.constant 0 : i64
     return %none, %none : i64, i64
