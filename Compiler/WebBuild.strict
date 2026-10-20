@@ -8,7 +8,8 @@ Linked(base Text, executable Text, level Text) Text
 	if lowered is not ""
 		return lowered
 	let sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root)
-	let content = Preloaded(Release(Logger, base).Parent + "/Content")
+	let folder = Release(Logger, base).Parent
+	let content = Preloaded(folder + "/Content") + Mirrored(folder, base)
 	let page = " --shell-file " + tools.Quoted(tools.root + "/Compiler/WebShell.html")
 	let inputs = tools.Quoted(base + ".ll") + sources + content + page
 	let linking = inputs + " -o " + tools.Quoted(executable) + Options + level
@@ -33,6 +34,15 @@ Preloaded(content Text) Text
 	Missing.Preloaded("Compiler/output/missing") is ""
 	Missing.Preloaded("Compiler") is " --preload-file \"Compiler@/Content\""
 	Directory.Exists(content) then " --preload-file \"" + content + "@/Content\"" else ""
+Mirrored(folder Text, base Text) Text
+	Missing.Mirrored(".", "Compiler/output/missing") is ""
+	Missing.Mirrored("./Compiler", "Compiler/output/missing") is ""
+	if (folder is ".") or (Directory.Exists(folder + "/Content") is false)
+		return ""
+	let path = "/" + (folder.StartsWith("./") then folder.Substring(2, folder.Length - 2) else folder)
+	let linked = "FS.symlink(\"/Content\", \"" + path + "/Content\")"
+	File(base + ".pre.js").Write("Module.preRun = [() => { FS.mkdirTree(\"" + path + "\"); " + linked + " }]")
+	" --pre-js \"" + base + ".pre.js\""
 InstallLines Texts
 	Missing.InstallLines.Last is "C:/s/Tools/emsdk/emsdk activate latest"
 	let folder = tools.root + "/Tools/emsdk"
