@@ -739,7 +739,7 @@
     %emptyViewHolder = llvm.getelementptr %emptyView[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %emptyHolderBits, %emptyViewHolder : f64, !llvm.ptr
     func.call @strict_characters_init() : () -> ()
-    %stackBits = llvm.ptrtoint %stack : !llvm.ptr to i64
+    %stackBits = func.call @strict_stack_top(%stack) : (!llvm.ptr) -> i64
     %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
     llvm.store %stackBits, %stackSlot : i64, !llvm.ptr
     %stackBottom = func.call @strict_stack_lowest(%stack) : (!llvm.ptr) -> i64
@@ -2544,6 +2544,8 @@
     %pinnedBytes = arith.muli %pinnedCount, %eight : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
     func.call @strict_rc_seen_range(%pinnedStart, %pinnedEnd, %seen) : (i64, i64, i1) -> ()
+    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
+    func.call @strict_rc_seen_range(%spilled#0, %spilled#1, %seen) : (i64, i64, i1) -> ()
     return
   }
   // frees what the table holds with no count and no stack reference, keeps the ones the stack still references
@@ -2820,6 +2822,8 @@
     %pinnedBytes = arith.muli %pinnedCount, %eight : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
     func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> ()
+    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
+    func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> ()
     func.call @strict_gc_drain() : () -> ()
     return
   }
@@ -3771,6 +3775,8 @@
     %pinnedBytes = arith.muli %pinnedCount, %wordBytes : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
     func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> ()
+    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
+    func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> ()
     func.call @strict_gc_drain() : () -> ()
     %checkingSlot = llvm.mlir.addressof @strict_rc_checking : !llvm.ptr
     %checking = llvm.load %checkingSlot : !llvm.ptr -> i64

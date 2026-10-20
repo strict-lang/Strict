@@ -2,7 +2,8 @@ has tools Toolchain
 constant Missing = WebBuild(Toolchain(Toolchain.OnWindows, isWeb = true))
 Linked(base Text, executable Text, level Text) Text
 	Missing.Linked("Compiler/output/missing", "missing.html", "").StartsWith("mlir-opt failed")
-	constant options = " -sMEMORY64=2 -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -Wno-override-module -Wno-deprecated"
+	constant memory = " -sMEMORY64=2 -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB -sSTACK_SIZE=16MB"
+	constant options = memory + " -sASYNCIFY -sASYNCIFY_STACK_SIZE=1048576 -Wno-override-module -Wno-deprecated"
 	let lowered = tools.Lowered(base)
 	if lowered is not ""
 		return lowered

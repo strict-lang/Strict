@@ -4,6 +4,15 @@
     llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
     llvm.return
   }
+  // all values the collector has to see are on the stack (locals in wasm are not, see NativeRuntimeWeb.mlir)
+  func.func private @strict_registers_spilled() -> (i64, i64) {
+    %none = arith.constant 0 : i64
+    return %none, %none : i64, i64
+  }
+  func.func private @strict_stack_top(%stack: !llvm.ptr) -> i64 {
+    %top = llvm.ptrtoint %stack : !llvm.ptr to i64
+    return %top : i64
+  }
   llvm.func @mmap(!llvm.ptr, i64, i32, i32, i32, i64) -> !llvm.ptr
   llvm.func @strict_crash_log(%text: !llvm.ptr) {
     llvm.return

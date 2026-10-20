@@ -4,6 +4,49 @@
   llvm.func @strict_pause() attributes {passthrough = ["alwaysinline"]} {
     llvm.return
   }
+  // locals live in wasm, not on the stack in memory: Asyncify unwinds them into memory, they are copied twice (the second
+  // copy 4 bytes later, a local of 8 bytes may follow one of 4) so the collector reads every value 8 bytes at a time
+  llvm.mlir.global internal @strict_registers(dense<0> : tensor<262144xi64>) : !llvm.array<262144 x i64>
+  llvm.mlir.global internal @strict_registers_end(0 : i64) : i64
+  llvm.func @emscripten_scan_registers(!llvm.ptr)
+  llvm.func @emscripten_stack_get_base() -> i64
+  llvm.func @strict_registers_copy(%begin: !llvm.ptr, %end: !llvm.ptr) {
+    %start = llvm.ptrtoint %begin : !llvm.ptr to i64
+    %finish = llvm.ptrtoint %end : !llvm.ptr to i64
+    %length = llvm.sub %finish, %start : i64
+    %most = llvm.mlir.constant(1048568 : i64) : i64
+    %isLarger = llvm.icmp "ugt" %length, %most : i64
+    %bytes = llvm.select %isLarger, %most, %length : i1, i64
+    %buffer = llvm.mlir.addressof @strict_registers : !llvm.ptr
+    %first = llvm.call @memcpy(%buffer, %begin, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %seven = llvm.mlir.constant(7 : i64) : i64
+    %alignMask = llvm.mlir.constant(-8 : i64) : i64
+    %rounded = llvm.add %bytes, %seven : i64
+    %aligned = llvm.and %rounded, %alignMask : i64
+    %four = llvm.mlir.constant(4 : i64) : i64
+    %shift = llvm.add %aligned, %four : i64
+    %shifted = llvm.getelementptr %buffer[%shift] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %second = llvm.call @memcpy(%shifted, %begin, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %bufferStart = llvm.ptrtoint %buffer : !llvm.ptr to i64
+    %copied = llvm.add %shift, %bytes : i64
+    %copiedEnd = llvm.add %bufferStart, %copied : i64
+    %endSlot = llvm.mlir.addressof @strict_registers_end : !llvm.ptr
+    llvm.store %copiedEnd, %endSlot : i64, !llvm.ptr
+    llvm.return
+  }
+  func.func private @strict_registers_spilled() -> (i64, i64) {
+    %copy = llvm.mlir.addressof @strict_registers_copy : !llvm.ptr
+    llvm.call @emscripten_scan_registers(%copy) : (!llvm.ptr) -> ()
+    %buffer = llvm.mlir.addressof @strict_registers : !llvm.ptr
+    %start = llvm.ptrtoint %buffer : !llvm.ptr to i64
+    %endSlot = llvm.mlir.addressof @strict_registers_end : !llvm.ptr
+    %end = llvm.load %endSlot : !llvm.ptr -> i64
+    return %start, %end : i64, i64
+  }
+  func.func private @strict_stack_top(%stack: !llvm.ptr) -> i64 {
+    %top = llvm.call @emscripten_stack_get_base() : () -> i64
+    return %top : i64
+  }
   llvm.func @strict_crash_log(%text: !llvm.ptr) {
     llvm.return
   }
