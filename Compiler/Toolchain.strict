@@ -2,11 +2,11 @@ has platform Number
 has root Text
 has natives Texts = List(Text)
 has isWeb Boolean = false
-constant Needed = ("mlir-opt", "mlir-translate", "clang")
-constant WindowsFolders = ("C:/msys64/ucrt64/bin/", "C:/Program Files/LLVM/bin/")
+constant Needed = ("mlir-opt", "mlir-translate", "clang", "opt", "llc")
+constant WindowsFolders = ("C:/Program Files/LLVM/bin/", "C:/msys64/ucrt64/bin/")
 constant LinuxRelease = "LLVM-22.1.0-Linux-X64"
 constant LinuxDownload = "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz"
-constant LinuxMembers = " LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate LLVM-22.1.0-Linux-X64/lib/clang/22/include"
+constant LinuxMembers = " LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate LLVM-22.1.0-Linux-X64/bin/opt LLVM-22.1.0-Linux-X64/bin/llc LLVM-22.1.0-Linux-X64/bin/lld LLVM-22.1.0-Linux-X64/bin/ld.lld LLVM-22.1.0-Linux-X64/bin/clang-offload-bundler LLVM-22.1.0-Linux-X64/lib/clang/22/include"
 constant Accept = " --accept-package-agreements --accept-source-agreements"
 constant Pacman = "C:\\msys64\\usr\\bin\\pacman.exe"
 constant SingleThreaded = " --mlir-disable-threading"
@@ -53,12 +53,13 @@ InstallLines(missing Texts) Texts
 	host + ("emcc" is in missing then WebBuild(value).InstallLines else List(Text))
 WindowsLines(missing Texts) Texts
 	OnWindows.WindowsLines(("clang")).First is "winget install -e --id LLVM.LLVM" + Accept
+	OnWindows.WindowsLines(("llc")).Last.EndsWith("mingw-w64-ucrt-x86_64-llvm")
 	mutable lines = List(Mutable(Text))
-	let needsMlir = ("mlir-opt" is in missing) or ("mlir-translate" is in missing)
-	if needsMlir and (File(Pacman).Exists is false)
+	let needsMsys = (missing - "clang").Length > 0
+	if needsMsys and (File(Pacman).Exists is false)
 		lines.Add("winget install -e --id MSYS2.MSYS2" + Accept)
-	if needsMlir
-		lines.Add(Pacman + " -S --noconfirm --needed mingw-w64-ucrt-x86_64-mlir")
+	if needsMsys
+		lines.Add(Pacman + " -S --noconfirm --needed mingw-w64-ucrt-x86_64-mlir mingw-w64-ucrt-x86_64-llvm")
 	if "clang" is in missing
 		lines.Add("winget install -e --id LLVM.LLVM" + Accept)
 	lines

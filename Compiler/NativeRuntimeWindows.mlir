@@ -22,7 +22,8 @@
     %top = llvm.ptrtoint %stack : !llvm.ptr to i64
     return %top : i64
   }
-  // snprintf with one or two numbers, its size is 32 bits in wasm32
+  // snprintf with one or two numbers, its size is 32 bits in wasm32, newer Windows SDKs only have it inline in stdio.h
+  llvm.linker_options ["/DEFAULTLIB:legacy_stdio_definitions.lib"]
   llvm.func @strict_print_precise(%buffer: !llvm.ptr, %size: i64, %format: !llvm.ptr, %precision: i32, %number: f64) -> i32 {
     %written = llvm.call @snprintf(%buffer, %size, %format, %precision, %number) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, i32, f64) -> i32
     llvm.return %written : i32
@@ -681,8 +682,11 @@
     llvm.return
   }
   llvm.mlir.global internal constant @strict_gpu_driver("nvcuda.dll\00") : !llvm.array<11 x i8>
-  func.func private @strict_gpu_library() -> !llvm.ptr {
-    %name = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+  llvm.mlir.global internal constant @strict_gpu_amd_driver("amdhip64.dll\00") : !llvm.array<13 x i8>
+  func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
+    %nvidia = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %amd = llvm.mlir.addressof @strict_gpu_amd_driver : !llvm.ptr
+    %name = arith.select %isAmd, %amd, %nvidia : !llvm.ptr
     %library = llvm.call @LoadLibraryA(%name) : (!llvm.ptr) -> !llvm.ptr
     return %library : !llvm.ptr
   }
