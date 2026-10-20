@@ -4955,7 +4955,7 @@
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     return %items : !llvm.ptr
   }
-  func.func private @strict_list_hoisted(%list: f64) -> !llvm.ptr {
+  func.func private @strict_list_hoisted(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
     %packed = func.call @strict_list_packed(%list) : (f64) -> i64
     %none = arith.constant 0 : i64
     %isPlain = arith.cmpi eq, %packed, %none : i64
