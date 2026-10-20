@@ -1,21 +1,21 @@
   // the target specific operations of the device runtime and of the kernels generated from loops, AMDGPU for AMD: the
   // block size and count come from the dispatch packet (16 bit workgroup size x at 4, 32 bit grid size x at 12)
-  func.func private @strict_device_thread_index() -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_thread_index() -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %thread = llvm.call_intrinsic "llvm.amdgcn.workitem.id.x"() : () -> i32
     return %thread : i32
   }
-  func.func private @strict_device_block_index() -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_block_index() -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %block = llvm.call_intrinsic "llvm.amdgcn.workgroup.id.x"() : () -> i32
     return %block : i32
   }
-  func.func private @strict_device_block_size() -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_block_size() -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %packet = llvm.call_intrinsic "llvm.amdgcn.dispatch.ptr"() : () -> !llvm.ptr<4>
     %sizeSlot = llvm.getelementptr %packet[4] : (!llvm.ptr<4>) -> !llvm.ptr<4>, i8
     %size = llvm.load %sizeSlot : !llvm.ptr<4> -> i16
     %width = arith.extui %size : i16 to i32
     return %width : i32
   }
-  func.func private @strict_device_block_count() -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_block_count() -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %packet = llvm.call_intrinsic "llvm.amdgcn.dispatch.ptr"() : () -> !llvm.ptr<4>
     %gridSlot = llvm.getelementptr %packet[12] : (!llvm.ptr<4>) -> !llvm.ptr<4>, i8
     %grid = llvm.load %gridSlot : !llvm.ptr<4> -> i32
@@ -24,7 +24,7 @@
     return %blocks : i32
   }
   // a warp is each half of a 64 lane wavefront, lanes 0 to 31 of it
-  func.func private @strict_device_lane_index() -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_lane_index() -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %all = arith.constant -1 : i32
     %zero = arith.constant 0 : i32
     %thirtyOne = arith.constant 31 : i32
@@ -34,7 +34,7 @@
     return %inWarp : i32
   }
   // the bits lane source of the own warp has
-  func.func private @strict_device_lane(%bits: i32, %source: i32) -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_lane(%bits: i32, %source: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %all = arith.constant -1 : i32
     %zero = arith.constant 0 : i32
     %two = arith.constant 2 : i32
@@ -48,24 +48,24 @@
     return %other : i32
   }
   // the bits of the lane whose number differs in the bit of offset, a step of a butterfly over a warp
-  func.func private @strict_device_swap(%bits: i32, %offset: i32) -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_swap(%bits: i32, %offset: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %lane = func.call @strict_device_lane_index() : () -> i32
     %source = arith.xori %lane, %offset : i32
     %other = func.call @strict_device_lane(%bits, %source) : (i32, i32) -> i32
     return %other : i32
   }
-  func.func private @strict_device_fence() attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_fence() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     llvm.fence syncscope("agent") seq_cst
     return
   }
   // the kernels take the paths of NVIDIA GPUs before sm_80 (one m8n8k16 product at a time)
-  func.func private @strict_device_arch() -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_arch() -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %arch = arith.constant 750 : i32
     return %arch : i32
   }
   // the tensor core operations of an NVIDIA warp with the same fragments per lane (lane l has row l / 4 and the k or
   // columns of l % 4), every lane gathers its row and columns from the lanes holding them
-  func.func private @strict_device_mma8(%a: i32, %b: i32, %c0: i32, %c1: i32) -> !llvm.struct<(i32, i32)> {
+  func.func private @strict_device_mma8(%a: i32, %b: i32, %c0: i32, %c1: i32) -> !llvm.struct<(i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>} {
     %c0i = arith.constant 0 : i32
     %c1i = arith.constant 1 : i32
     %c2i = arith.constant 2 : i32
@@ -99,7 +99,7 @@
     return %both : !llvm.struct<(i32, i32)>
   }
   // m16n8k32: rows g and g + 8 (a0, a1) of k 0 to 15 (b0) and then of k 16 to 31 (a2, a3 with b1)
-  func.func private @strict_device_mma16(%a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %c0: i32, %c1: i32, %c2: i32, %c3: i32) -> !llvm.struct<(i32, i32, i32, i32)> {
+  func.func private @strict_device_mma16(%a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %c0: i32, %c1: i32, %c2: i32, %c3: i32) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>} {
     %upper = func.call @strict_device_mma8(%a0, %b0, %c0, %c1) : (i32, i32, i32, i32) -> !llvm.struct<(i32, i32)>
     %upper0 = llvm.extractvalue %upper[0] : !llvm.struct<(i32, i32)>
     %upper1 = llvm.extractvalue %upper[1] : !llvm.struct<(i32, i32)>
@@ -120,7 +120,7 @@
     return %with3 : !llvm.struct<(i32, i32, i32, i32)>
   }
   // m16n8k8 of 16 bit floats: a0 has 2 numbers of row g, a1 of row g + 8, b 2 numbers of column g, k is 2 * (l % 4)
-  func.func private @strict_device_halves_mma(%a0: vector<2xf16>, %a1: vector<2xf16>, %b: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32) -> !llvm.struct<(f32, f32, f32, f32)> {
+  func.func private @strict_device_halves_mma(%a0: vector<2xf16>, %a1: vector<2xf16>, %b: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32) -> !llvm.struct<(f32, f32, f32, f32)> attributes {llvm.linkage = #llvm.linkage<internal>} {
     %c0i = arith.constant 0 : i32
     %c1i = arith.constant 1 : i32
     %c2i = arith.constant 2 : i32
@@ -162,7 +162,7 @@
     return %with3 : !llvm.struct<(f32, f32, f32, f32)>
   }
   // sum plus the products of the two 16 bit floats in the bits of left and right
-  func.func private @strict_device_halves_dot(%left: i32, %right: i32, %sum: f32) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_halves_dot(%left: i32, %right: i32, %sum: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %leftHalves = llvm.bitcast %left : i32 to vector<2xf16>
     %rightHalves = llvm.bitcast %right : i32 to vector<2xf16>
     %leftWide = arith.extf %leftHalves : vector<2xf16> to vector<2xf32>
@@ -177,7 +177,7 @@
     return %total : f32
   }
   // ldmatrix.x4: lane j * 8 + r has the address of row r of matrix j, lane l gets 4 bytes of row l / 4 of each matrix
-  func.func private @strict_device_matrices(%slot: !llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)> {
+  func.func private @strict_device_matrices(%slot: !llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>} {
     %c2 = arith.constant 2 : i32
     %c3 = arith.constant 3 : i32
     %c8 = arith.constant 8 : i32
@@ -202,30 +202,30 @@
     %with3 = llvm.insertvalue %m3, %with2[3] : !llvm.struct<(i32, i32, i32, i32)>
     return %with3 : !llvm.struct<(i32, i32, i32, i32)>
   }
-  func.func private @strict_device_matrix_part(%address: i32, %source: i32, %column: i32) -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_matrix_part(%address: i32, %source: i32, %column: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %rowAddress = func.call @strict_device_lane(%address, %source) : (i32, i32) -> i32
     %at = arith.addi %rowAddress, %column : i32
     %pointer = llvm.inttoptr %at : i32 to !llvm.ptr<3>
     %bits = llvm.load %pointer {alignment = 4 : i64} : !llvm.ptr<3> -> i32
     return %bits : i32
   }
-  func.func private @strict_device_barrier() attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_barrier() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     llvm.fence syncscope("workgroup") release
     llvm.call_intrinsic "llvm.amdgcn.s.barrier"() : () -> ()
     llvm.fence syncscope("workgroup") acquire
     return
   }
-  func.func private @strict_device_binary_logarithm(%number: f32) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_binary_logarithm(%number: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %binary = llvm.call_intrinsic "llvm.log2.f32"(%number) : (f32) -> f32
     return %binary : f32
   }
-  func.func private @strict_device_rounded(%number: f32) -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_rounded(%number: f32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %even = llvm.call_intrinsic "llvm.rint.f32"(%number) : (f32) -> f32
     %rounded = arith.fptosi %even : f32 to i32
     return %rounded : i32
   }
   // older GPUs have no 8 bit dot product instruction (sdot4 needs gfx906), four multiplies of the signed bytes
-  func.func private @strict_device_dp4a(%left: i32, %right: i32, %sum: i32) -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_dp4a(%left: i32, %right: i32, %sum: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %leftBytes = llvm.bitcast %left : i32 to vector<4xi8>
     %rightBytes = llvm.bitcast %right : i32 to vector<4xi8>
     %leftWide = arith.extsi %leftBytes : vector<4xi8> to vector<4xi32>
