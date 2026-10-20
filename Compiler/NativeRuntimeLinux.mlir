@@ -647,11 +647,10 @@
     %processors = llvm.call @sysconf(%online) : (i32) -> i64
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    // a quarter of the logical processors was fastest for memory bound GPT-2 decoding (13900KF), compute bound loops could use all
-    %four = arith.constant 4 : i64
+    // half of the logical processors: a 4K blur 35% faster than a quarter, GPT-2 decoding the same, all of them slow GPT-2 down (13900KF)
     %two = arith.constant 2 : i64
-    %quarter = arith.divsi %processors, %four : i64
-    %threads = arith.maxsi %quarter, %two : i64
+    %half = arith.divsi %processors, %two : i64
+    %threads = arith.maxsi %half, %two : i64
     %workers = arith.subi %threads, %one : i64
     %null = llvm.mlir.zero : !llvm.ptr
     %procedure = llvm.mlir.addressof @strict_pool_thread : !llvm.ptr
