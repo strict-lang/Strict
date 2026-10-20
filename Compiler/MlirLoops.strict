@@ -23,10 +23,10 @@ Begin Texts
 	let header = (function.Store("%zero", "%loop" + position), "    cf.br " + label, "  " + label + ":")
 	constant check = "    " + Temp("m") + " = arith.cmpf olt, " + Temp("k") + ", " + Temp("n") + " : f64"
 	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
-	let iteration = (function.Load(Temp("k"), "%loop" + position), check, branch, "  " + label + "body:")
+	let step = (function.Load(Temp("k"), "%loop" + position), check, branch, "  " + label + "body:")
 	let saved = bounds + (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value")) + Outered
 	let begun = saved + MlirGpu(function, position).Launched + MlirKernel(function, position).Versioned + Items + Presized
-	begun + MlirParallel(function, position).Forked + header + iteration + Current
+	begun + MlirParallel(function, position).Forked + MlirWholeLoop(function, position).Versioned + header + step + Current
 Current Texts
 	Counting.Current.Length is 4
 	Text.Combine(Listing.Current).IndexOf("llvm.store %t1g, %v_value") > 0

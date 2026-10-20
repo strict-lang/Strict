@@ -1,0 +1,132 @@
+has function MlirFunction
+has position Number
+constant Row = MlirWholeLoop(MlirWhole.Row.function, 6)
+constant Entering = "cf.cond_br %t6whok, ^loop6whole(%t6whz, %t6wh2 : i64, i64), ^loop6generic"
+Versioned Texts
+	Text.Combine(Row.Versioned).IndexOf(Entering) > 0
+	Row.Versioned.Last is "  ^loop6generic:"
+	MlirWholeLoop(MlirLoops.Counting.function, 0).Versioned.Length is 0
+	Text.Combine(MlirLoops(MlirWhole.Row.function, 6).Begin).IndexOf("  ^loop6generic:") > 0
+	if MlirWhole(function, position).IsWhole is false
+		return List(Text)
+	Guarded + Counted + Looped + Exited + ("  ^loop" + position + "generic:")
+Guarded Texts
+	Text.Combine(Row.Guarded).IndexOf("%t6whf0 = llvm.load %v_middle") > 0
+	Row.Guarded.Last is "    %t6whok = arith.andi %t6whc4, %t6whc0 : i1"
+	let names = MlirWhole(function, position).Inputs + MlirSingle(function, position).Carried
+	let lists = MlirKernel(function, position).Sources
+	let counted = Line("whc0", "arith.cmpf olt, " + Temp("n") + ", " + Temp("whlimit") + " : f64")
+	mutable lines = (Line("whlimit", "arith.constant 2147483648.0 : f64"), Line("whz", "arith.constant 0 : i64"), counted)
+	for names + lists
+		let both = Line("whc" + (index + 1), "arith.andi " + Temp("whc" + index) + ", " + Temp("who" + index) + " : i1")
+		lines = lines + (index < names.Length then Guard(value, index) else Present(value, index)) + both
+	let total = Temp("whc" + (names.Length + lists.Length))
+	lines + Line("whok", "arith.andi " + total + ", " + Temp("whc0") + " : i1")
+Guard(name Text, number Number) Texts
+	Row.Guard("middle", 0).Last is "    %t6wh0 = arith.fptosi %t6whf0 : f64 to i64"
+	let loaded = Temp("whf" + number)
+	let whole = Line("wht" + number, "llvm.intr.trunc(" + loaded + ") : (f64) -> f64")
+	let equal = Line("whe" + number, "arith.cmpf oeq, " + Temp("wht" + number) + ", " + loaded + " : f64")
+	let magnitude = Line("wha" + number, "llvm.intr.fabs(" + loaded + ") : (f64) -> f64")
+	let small = Line("whs" + number, "arith.cmpf olt, " + Temp("wha" + number) + ", " + Temp("whlimit") + " : f64")
+	let both = Line("who" + number, "arith.andi " + Temp("whe" + number) + ", " + Temp("whs" + number) + " : i1")
+	let converted = Line("wh" + number, "arith.fptosi " + loaded + " : f64 to i64")
+	(function.Load(loaded, "%v_" + name), whole, equal, magnitude, small, both, converted)
+Present(name Text, number Number) Texts
+	Row.Present("pixels", 3).Last is "    %t6who3 = arith.cmpi ne, %t6whi3, %t6whz : i64"
+	let address = Line("whi" + number, "llvm.ptrtoint %b_" + name + " : !llvm.ptr to i64")
+	(address, Line("who" + number, "arith.cmpi ne, " + Temp("whi" + number) + ", " + Temp("whz") + " : i64"))
+Counted Texts
+	Row.Counted.Last is "    %t6cs = arith.addi %t6ki, %t6whz : i64"
+	let label = "^loop" + position + "whole"
+	let header = "  " + label + "(" + Temp("ki") + ": i64" + MlirSingle(function, position).Repeated("u", ": i64") + "):"
+	let check = Line("whm", "arith.cmpi slt, " + Temp("ki") + ", " + Temp("whn") + " : i64")
+	let started = (Line("whn", "arith.fptosi " + Temp("n") + " : f64 to i64"), Entered, header, check)
+	let counter = "arith.addi " + Temp("ki") + ", " + Temp("whz") + " : i64"
+	let body = ("    cf.cond_br " + Temp("whm") + ", " + label + "body, " + label + "exit", "  " + label + "body:")
+	started + body + (Line("whone", "arith.constant 1 : i64"), Line("gs", counter), Line("cs", counter))
+Entered Text
+	Row.Entered is "    " + Entering
+	let single = MlirSingle(function, position)
+	let first = MlirWhole(function, position).Inputs.Length
+	mutable initial = ""
+	for single.Carried
+		initial = initial + ", " + Temp("wh" + (first + index))
+	let arguments = "(" + Temp("whz") + initial + " : i64" + single.Repeated("", "i64") + ")"
+	"    cf.cond_br " + Temp("whok") + ", ^loop" + position + "whole" + arguments + ", ^loop" + position + "generic"
+Looped Texts
+	Row.Looped.Last is "    cf.br ^loop6whole(%t6whnext, %t17s : i64, i64)"
+	let single = MlirSingle(function, position)
+	let end = function.method.LoopEndOf(position)
+	mutable lines = List(Mutable(Text))
+	for Range(position + 1, end)
+		lines = lines + Statement(value)
+	mutable carried = ""
+	for single.Carried
+		carried = carried + ", " + single.Variable(value, end)
+	let next = Line("whnext", "arith.addi " + Temp("ki") + ", " + Temp("whone") + " : i64")
+	let types = " : i64" + single.Repeated("", "i64") + ")"
+	lines + next + ("    cf.br ^loop" + position + "whole(" + Temp("whnext") + carried + types)
+Statement(at Number) Texts
+	Row.Statement(12) is ("    %t12s = arith.constant 4 : i64")
+	Row.Statement(13) is ("    %t13s = arith.muli %t11s, %t12s : i64")
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.IndexCall
+		return Read(at)
+	let isLoad = entry.kind is in (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister)
+	isLoad then Loaded(entry, at) else Operated(entry, at)
+Loaded(entry InstructionEntry, at Number) Texts
+	Row.Loaded(MlirWhole.Rows(8), 8) is ("    %t8s = arith.addi %t6wh0, %t6whz : i64")
+	Row.Loaded(MlirWhole.Rows(9), 9).Length is 0
+	let result = "%t" + at + "s"
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return List(Text) + ("    " + result + " = arith.constant " + PayloadDecoder(entry).Value(1).number + " : i64")
+	if MlirSingle(function, position).Variable(entry.texts(0), at) is not result
+		return List(Text)
+	let input = Temp("wh" + MlirWhole(function, position).Inputs.Index(entry.texts(0)))
+	List(Text) + ("    " + result + " = arith.addi " + input + ", " + Temp("whz") + " : i64")
+Operated(entry InstructionEntry, at Number) Texts
+	Row.Operated(MlirWhole.Rows(13), 13) is ("    %t13s = arith.muli %t11s, %t12s : i64")
+	Row.Operated(MlirWhole.Rows(11), 11) is ("    %t11s = arith.subi %t6gs, %t10s : i64")
+	Row.Operated(MlirWhole.Rows(18), 18).Length is 0
+	let isOperator = entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+	if isOperator is false
+		return List(Text)
+	let single = MlirSingle(function, position)
+	let operands = single.Register(entry.payload(1), at) + ", " + single.Register(entry.payload(2), at)
+	let subtracted = entry.kind is InstructionType.Subtract then "subi" else "muli"
+	let operation = entry.kind is InstructionType.Add then "addi" else subtracted
+	List(Text) + ("    %t" + at + "s = arith." + operation + " " + operands + " : i64")
+Read(at Number) Texts
+	Row.Read(15).Last is "    %t15s = arith.extui %t15whb : i8 to i64"
+	let entry = function.method.instructions(at)
+	let offset = MlirSingle(function, position).Register(entry.payload(1), at)
+	let name = entry.texts(0)
+	let read = "    %t" + at + "wh"
+	let inside = read + "i = arith.cmpi ult, " + offset + ", %t" + at + "whl : i64"
+	let branch = "    cf.cond_br %t" + at + "whi, ^bb" + at + "whole, ^bb" + at + "wholefailed"
+	let slot = read + "p = llvm.getelementptr %b_" + name + "[" + offset + "] : (!llvm.ptr, i64) -> !llvm.ptr, i8"
+	let widened = "    %t" + at + "s = arith.extui %t" + at + "whb : i8 to i64"
+	let byte = (read + "b = llvm.load %t" + at + "whp : !llvm.ptr -> i8", widened)
+	let checked = (read + "l = arith.fptosi %n_" + name + " : f64 to i64", inside, branch, "  ^bb" + at + "wholefailed:")
+	checked + Failed(at, offset) + ("  ^bb" + at + "whole:", slot) + byte
+Failed(at Number, offset Text) Texts
+	Row.Failed(15, "%t14s").Last is "    llvm.unreachable"
+	let converted = "    %t" + at + "whf = arith.sitofp " + offset + " : i64 to f64"
+	let stored = function.Store("%t" + at + "whf", "%r" + function.method.instructions(at).payload(1))
+	let generic = MlirKernel(function, position).Renamed(function.Emitted(at) + function.Emitted(at + 1), "w")
+	(converted, stored) + generic + ("  ^fwbb" + (at + 2) + ":", "    llvm.unreachable")
+Exited Texts
+	Row.Exited.Last is "    cf.br ^loop6exit"
+	Row.Exited(2) is "    llvm.store %t6whw0, %v_sum : f64, !llvm.ptr"
+	mutable lines = List(Text) + ("  ^loop" + position + "wholeexit:")
+	for MlirSingle(function, position).Carried
+		let widened = Line("whw" + index, "arith.sitofp " + Temp("u" + index) + " : i64 to f64")
+		lines = lines + widened + function.Store(Temp("whw" + index), "%v_" + value)
+	lines + ("    cf.br ^loop" + position + "exit")
+Line(suffix Text, operation Text) Text
+	Row.Line("whz", "arith.constant 0 : i64") is "    %t6whz = arith.constant 0 : i64"
+	"    " + Temp(suffix) + " = " + operation
+Temp(suffix Text) Text
+	Row.Temp("whz") is "%t6whz"
+	"%t" + position + suffix

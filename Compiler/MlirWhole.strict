@@ -1,0 +1,100 @@
+has function MlirFunction
+has position Number
+constant Rows = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "radius"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Multiply, (0, 1, 2)), InstructionEntry.LoadNumber(3, 1), InstructionEntry.Binary(InstructionType.Add, (2, 3, 4)), InstructionEntry.LoopBegin(4, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "middle"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "value"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "radius"), InstructionEntry.Binary(InstructionType.Subtract, (7, 8, 9)), InstructionEntry.LoadNumber(10, 4), InstructionEntry.Binary(InstructionType.Multiply, (9, 10, 11)), InstructionEntry.Binary(InstructionType.Add, (6, 11, 12)), InstructionEntry(InstructionType.IndexCall, "pixels", (13, 12)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 13), InstructionEntry.Binary(InstructionType.Add, (5, 13, 14)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 14, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 13), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "sum"), InstructionEntry.Return(0))
+constant Parameters = (MemberEntry("pixels", "Strict/List(Byte)", List(InstructionEntry), false), MemberEntry("middle", "Strict/Number", List(InstructionEntry), false), MemberEntry("radius", "Strict/Number", List(InstructionEntry), false))
+constant Row = MlirWhole(MlirFunction(List(TypeEntry) + MlirFunction.Shape + MlirLayout.Byting, MlirFunction.Shape, MethodEntry("Row", Parameters, "Strict/Number", Rows)), 6)
+constant Counting = MlirWhole(MlirLoops.Counting.function, 0)
+IsWhole Boolean
+	Row.IsWhole
+	Counting.IsWhole is false
+	let entry = function.method.instructions(position)
+	if (entry.kind is not InstructionType.LoopBegin) or (entry.payload(1) is 1) or (function.FastLoop >= 0)
+		return false
+	if MlirLoops(function, position).Collection is not ""
+		return false
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if IsAllowed(value) is false
+			return false
+	MlirSingle(function, position).Carried.Length > 0
+IsAllowed(at Number) Boolean
+	Row.IsAllowed(13)
+	Row.IsAllowed(17)
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return MlirLayout(function).Represented(MlirKinds(function).VariableKind(at, entry.texts(0))) is "Number"
+	if entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.CheckError)
+		return entry.kind is InstructionType.StoreRegisterToVariable then IsStored(at) else IsRead(at)
+	let next = function.method.instructions(at + 1)
+	let written = LoadReuse(function.method.instructions).Written(entry)
+	let bits = written < 0 then -1 else Bits(written, at + 1)
+	((next.kind is InstructionType.StoreRegisterToVariable) and IsStored(at + 1)) or ((bits >= 0) and (bits <= 53))
+IsStored(at Number) Boolean
+	Row.IsStored(18)
+	Row.IsStored(17) is false
+	let added = function.method.instructions(at - 1)
+	if MlirDeviceSums(function, position).IsAccumulation(at) is false
+		return false
+	let bits = Bits(added.payload(2), at - 1)
+	(bits >= 0) and (bits <= 20)
+IsRead(at Number) Boolean
+	Row.IsRead(15)
+	Row.IsRead(16)
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.CheckError
+		return (entry.texts.Length is 0) and IsRead(at - 1)
+	let next = function.method.instructions(at + 1)
+	let isChecked = (next.kind is InstructionType.CheckError) and (next.payload(0) is entry.payload(0))
+	let parameters = MlirParameters(function)
+	let bits = Bits(entry.payload(1), at)
+	isChecked and (entry.texts(0) is in parameters.FixedLists) and parameters.IsBytes(entry.texts(0)) and (bits <= 53)
+Bits(register Number, at Number) Number
+	Row.Bits(13, 17) is 8
+	Row.Bits(12, 15) is 36
+	let writer = Writer(register, at)
+	if writer < 0
+		return -1
+	let entry = function.method.instructions(writer)
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return Magnitude(PayloadDecoder(entry).Value(1).number)
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return entry.texts(0) is in MlirSingle(function, position).Carried then 60 else 31
+	entry.kind is InstructionType.IndexCall then 8 else Grown(entry, writer)
+Grown(entry InstructionEntry, at Number) Number
+	Row.Grown(Row.function.method.instructions(13), 13) is 35
+	Row.Grown(Row.function.method.instructions(15), 15) is -1
+	let left = entry.payload.Length > 3 then Bits(entry.payload(1), at) else -1
+	let right = entry.payload.Length > 3 then Bits(entry.payload(2), at) else -1
+	let isOperator = entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+	if (left < 0) or (right < 0) or (isOperator is false)
+		return -1
+	entry.kind is InstructionType.Multiply then left + right else (left > right then left else right) + 1
+Writer(register Number, at Number) Number
+	Row.Writer(13, 17) is 15
+	Row.Writer(4, 8) is -1
+	for at - position - 1
+		let earlier = at - 1 - index
+		if LoadReuse(function.method.instructions).Written(function.method.instructions(earlier)) is register
+			return earlier
+	-1
+Magnitude(number Number) Number
+	Row.Magnitude(4) is 3
+	Row.Magnitude(0) is 0
+	Row.Magnitude(0.5) is -1
+	if number.Floor is not number
+		return -1
+	mutable limit = 1
+	for 54
+		if number.Absolute < limit
+			return index
+		limit = limit * 2
+	-1
+Inputs Texts
+	Row.Inputs is ("middle", "radius")
+	let carried = MlirSingle(function, position).Carried
+	mutable names = List(Mutable(Text))
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		let name = entry.kind is InstructionType.LoadVariableToRegister then entry.texts(0) else "value"
+		if (name is not in carried) and (name is not in ("value", "index")) and (name is not in names)
+			names.Add(name)
+	names
