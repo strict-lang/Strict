@@ -7,6 +7,8 @@
   // pointers are 4 bytes, locals of 4 and 8 bytes follow each other: the collector reads every 4 bytes as a possible
   // reference (the address of a boxed value is its lower half), locals live in wasm, Asyncify unwinds them into memory
   llvm.mlir.global internal constant @strict_word_bytes(4 : i64) : i64
+  // a reclaim unwinds the whole stack to find the values in locals, the collector mostly frees instead
+  llvm.mlir.global internal constant @strict_reclaim_bytes(268435456 : i64) : i64
   llvm.func @strict_word(%at: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
     %pointer = llvm.inttoptr %at : i64 to !llvm.ptr
     %word = llvm.load %pointer : !llvm.ptr -> i32

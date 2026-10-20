@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Strict</title>
 <style>
-	html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0f14; color: #d8dee9; font: 16px system-ui, sans-serif; }
-	#canvas { display: block; position: absolute; inset: 0; margin: auto; max-width: 100vw; max-height: 100vh; outline: none; }
+	html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: #0b0f14; color: #d8dee9; font: 16px system-ui, sans-serif; }
+	#canvas { display: block; position: absolute; inset: 0; margin: auto; max-width: 100vw; max-height: 100dvh; outline: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 	#overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #0b0f14; }
 	#name { font-size: 32px; letter-spacing: 1px; }
 	#play { font: inherit; font-size: 22px; padding: 12px 44px; color: inherit; background: none; border: 2px solid #d8dee9; border-radius: 8px; cursor: pointer; }
@@ -52,11 +52,19 @@
 	};
 	play.onclick = () => {
 		overlay.style.display = "none";
-		fullscreen.style.display = "block";
+		fullscreen.style.display = document.fullscreenEnabled ? "block" : "none";
 		canvas.focus();
 		Module.callMain([]);
 	};
 	fullscreen.onclick = () => canvas.requestFullscreen();
+	const afterFrames = (count, action) => count ? requestAnimationFrame(() => afterFrames(count - 1, action)) : action();
+	const mouse = (type, touch) => canvas.dispatchEvent(new MouseEvent(type, { clientX: touch.clientX, clientY: touch.clientY,
+		bubbles: true, button: 0, buttons: type === "mouseup" ? 0 : 1 }));
+	const touched = (type, handle) => canvas.addEventListener(type, event => { event.preventDefault(); handle(event.changedTouches[0]); }, { passive: false });
+	touched("touchstart", touch => { mouse("mousemove", touch); mouse("mousedown", touch); });
+	touched("touchmove", touch => mouse("mousemove", touch));
+	touched("touchend", touch => afterFrames(2, () => mouse("mouseup", touch)));
+	touched("touchcancel", touch => mouse("mouseup", touch));
 	window.addEventListener("keydown", event => {
 		if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(event.key)) event.preventDefault();
 	});

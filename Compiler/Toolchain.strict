@@ -26,7 +26,7 @@ Folders Texts
 	Toolchain(OnWindows, isWeb = true).Folders.Last is "C:/s/Tools/emsdk/upstream/emscripten/"
 	let linux = List(Text) + (root + "/Tools/" + LinuxRelease + "/bin/")
 	let folders = platform is Platform.Windows then WindowsFolders else linux
-	isWeb then folders + (root + "/Tools/emsdk/upstream/emscripten/") else folders
+	isWeb then folders + (root + "/Tools/emsdk/upstream/bin/") + (root + "/Tools/emsdk/upstream/emscripten/") else folders
 Extension Text
 	OnWindows.Extension is ".exe"
 	OnLinux.Extension is ""

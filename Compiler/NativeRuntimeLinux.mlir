@@ -7,6 +7,8 @@
   // all values the collector has to see are on the stack (locals in wasm are not, see NativeRuntimeWeb.mlir)
   // the collector reads possible references 8 bytes at a time (wasm32 keeps pointers in 4 bytes)
   llvm.mlir.global internal constant @strict_word_bytes(8 : i64) : i64
+  // a reclaim of objects without references after every MB allocated
+  llvm.mlir.global internal constant @strict_reclaim_bytes(1048576 : i64) : i64
   llvm.func @strict_word(%at: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
     %pointer = llvm.inttoptr %at : i64 to !llvm.ptr
     %word = llvm.load %pointer : !llvm.ptr -> i64

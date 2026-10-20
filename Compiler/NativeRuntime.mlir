@@ -1164,7 +1164,8 @@
     cf.br ^try
   }
   func.func private @strict_rc_refill(%class: i64) {
-    %limit = arith.constant 1048576 : i64
+    %limitSlot = llvm.mlir.addressof @strict_reclaim_bytes : !llvm.ptr
+    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
     %allocatedSlot = llvm.mlir.addressof @strict_rc_allocated : !llvm.ptr
     %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
     %isDue = arith.cmpi uge, %allocated, %limit : i64
