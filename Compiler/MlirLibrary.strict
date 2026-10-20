@@ -7,7 +7,7 @@ constant Price = MemberEntry("price", "Strict/Number", List(InstructionEntry), f
 constant Amount = MemberEntry("amount", "Strict/Number", List(InstructionEntry), false)
 constant Total = MethodEntry("Total", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Return(0)))
 constant Trades = MlirLibrary(List(TypeEntry) + TypeEntry("Strict/Trade", (Price, Amount), List(MethodEntry) + Total))
-constant Entered = ("    %frameLevel = arith.constant 0 : i32", "    %stackBase = llvm.call_intrinsic \"llvm.frameaddress.p0\"(%frameLevel) : (i32) -> !llvm.ptr", "    func.call @strict_library_enter(%stackBase) : (!llvm.ptr) -> ()", "    %zero = arith.constant 0.0 : f64")
+constant Entered = ("    %stackBase = llvm.call_intrinsic \"llvm.addressofreturnaddress.p0\"() : () -> !llvm.ptr", "    func.call @strict_library_enter(%stackBase) : (!llvm.ptr) -> ()", "    %zero = arith.constant 0.0 : f64")
 constant Checked = ("    %failed = func.call @strict_is_failure(%value) : (f64) -> i1", "    cf.cond_br %failed, ^failed, ^done", "  ^failed:", "    %code = func.call @strict_library_failed(%value) : (f64) -> i32", "    return %code : i32", "  ^done:")
 constant TextStored = ("    %text = func.call @strict_library_text(%value) : (f64) -> !llvm.ptr", "    llvm.store %text, %result : !llvm.ptr, !llvm.ptr")
 constant FlagStored = ("    %flag = arith.fptosi %value : f64 to i32", "    llvm.store %flag, %result : i32, !llvm.ptr")

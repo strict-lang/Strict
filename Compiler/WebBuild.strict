@@ -34,6 +34,7 @@ Optimized(executable Text, level Text) Text
 Sized(mlir Text) Text
 	WebBuild.Sized("  llvm.func @malloc(i64) -> !llvm.ptr\n  llvm.call @malloc(%b)") is "  llvm.call @strict_c_malloc(%b)"
 	WebBuild.Sized("  llvm.func @free(!llvm.ptr)") is "  llvm.func @free(!llvm.ptr)"
+	WebBuild.Sized(MlirEntry.CollectorStart.First).IndexOf("\"llvm.stacksave.p0\"()") > 0
 	mutable kept = List(Mutable(Text))
 	for mlir.Lines
 		if Declared(value) is not in Sizes
@@ -41,7 +42,7 @@ Sized(mlir Text) Text
 	mutable sized = Text.Combine(kept, "\n")
 	for Sizes
 		sized = sized.Replace("@" + value + "(", "@strict_c_" + value + "(")
-	sized
+	sized.Replace("\"llvm.addressofreturnaddress.p0\"()", "\"llvm.stacksave.p0\"()")
 Declared(line Text) Text
 	WebBuild.Declared("  llvm.func @malloc(i64) -> !llvm.ptr") is "malloc"
 	WebBuild.Declared("    %a = llvm.call @malloc(%b)") is ""

@@ -1,0 +1,21 @@
+constant Accept = " --accept-package-agreements --accept-source-agreements"
+constant Pacman = "C:\\msys64\\usr\\bin\\pacman.exe"
+constant Version = "22.1.8"
+constant Repository = " https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-"
+constant Packages = ("mlir", "llvm", "llvm-libs", "llvm-tools")
+Lines(missing Texts) Texts
+	WindowsTools.Lines(("clang")).First is "winget install -e --id LLVM.LLVM --version " + Version + Accept
+	WindowsTools.Lines(("llc")).Last.EndsWith("llvm-tools-22.1.8-1-any.pkg.tar.zst")
+	mutable lines = List(Mutable(Text))
+	let needsMsys = (missing - "clang").Length > 0
+	if needsMsys and (File(Pacman).Exists is false)
+		lines.Add("winget install -e --id MSYS2.MSYS2" + Accept)
+	if needsMsys
+		lines.Add(Pacman + " -U --noconfirm --needed" + Text.Combine(Urls, ""))
+	if "clang" is in missing
+		lines.Add("winget install -e --id LLVM.LLVM --version " + Version + Accept)
+	lines
+Urls Texts
+	WindowsTools.Urls.First is Repository + "mlir-22.1.8-1-any.pkg.tar.zst"
+	for Packages
+		Repository + value + "-" + Version + "-1-any.pkg.tar.zst"

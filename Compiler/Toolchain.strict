@@ -7,8 +7,6 @@ constant WindowsFolders = ("C:/Program Files/LLVM/bin/", "C:/msys64/ucrt64/bin/"
 constant LinuxRelease = "LLVM-22.1.0-Linux-X64"
 constant LinuxDownload = "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz"
 constant LinuxMembers = " LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate LLVM-22.1.0-Linux-X64/bin/opt LLVM-22.1.0-Linux-X64/bin/llc LLVM-22.1.0-Linux-X64/bin/lld LLVM-22.1.0-Linux-X64/bin/ld.lld LLVM-22.1.0-Linux-X64/bin/clang-offload-bundler LLVM-22.1.0-Linux-X64/bin/amdgpu-arch LLVM-22.1.0-Linux-X64/lib/clang/22/include"
-constant Accept = " --accept-package-agreements --accept-source-agreements"
-constant Pacman = "C:\\msys64\\usr\\bin\\pacman.exe"
 constant SingleThreaded = " --mlir-disable-threading"
 constant Optimized = " -march=native -Wno-override-module"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
@@ -52,21 +50,9 @@ InstallLines(missing Texts) Texts
 	Toolchain(OnWindows, isWeb = true).InstallLines(("emcc")).First.StartsWith("git clone --depth 1 ")
 	let others = missing - "emcc"
 	let unixLines = platform is Platform.MacOS then MacOSTools(root).Lines else LinuxLines
-	let hostLines = platform is Platform.Windows then WindowsLines(others) else unixLines
+	let hostLines = platform is Platform.Windows then WindowsTools.Lines(others) else unixLines
 	let host = others.Length is 0 then List(Text) else hostLines
 	host + ("emcc" is in missing then WebBuild(value).InstallLines else List(Text))
-WindowsLines(missing Texts) Texts
-	OnWindows.WindowsLines(("clang")).First is "winget install -e --id LLVM.LLVM" + Accept
-	OnWindows.WindowsLines(("llc")).Last.EndsWith("mingw-w64-ucrt-x86_64-llvm")
-	mutable lines = List(Mutable(Text))
-	let needsMsys = (missing - "clang").Length > 0
-	if needsMsys and (File(Pacman).Exists is false)
-		lines.Add("winget install -e --id MSYS2.MSYS2" + Accept)
-	if needsMsys
-		lines.Add(Pacman + " -S --noconfirm --needed mingw-w64-ucrt-x86_64-mlir mingw-w64-ucrt-x86_64-llvm")
-	if "clang" is in missing
-		lines.Add("winget install -e --id LLVM.LLVM" + Accept)
-	lines
 LinuxLines Texts
 	OnLinux.LinuxLines.First is "mkdir -p /s/Tools"
 	let extract = " | tar -xJ --occurrence -C " + root + "/Tools" + LinuxMembers
