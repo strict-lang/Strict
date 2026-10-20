@@ -1,0 +1,13 @@
+has logger
+Run
+	let folder = Gpt2Text.Folder
+	let tokenizer = Gpt2Tokens.Parsed(File(folder + "vocab.json").ReadLines.First, File(folder + "merges.txt").ReadLines)
+	let model = Gpt2.Loaded(folder + "model.safetensors", 16)
+	let prompt = tokenizer.Encoded(Gpt2Text.Prompt)
+	let warmup = Generation(model).Generated(prompt, 10)
+	let started = Process.Elapsed
+	let short = Generation(model).Generated(prompt, 10)
+	let middle = Process.Elapsed
+	let long = Generation(model).Generated(prompt, 110)
+	let milliseconds = ((Process.Elapsed - middle - (middle - started)) * 10).Round(2)
+	logger.Log("GPT-2 decodes in " + milliseconds + " ms per token " + (warmup is short) + ":" + tokenizer.Decoded(long))

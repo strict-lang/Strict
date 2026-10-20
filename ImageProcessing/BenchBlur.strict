@@ -1,0 +1,33 @@
+has logger
+constant Width = 1920
+constant Height = 1080
+constant Passes = 10
+constant Dot = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Run
+	mutable pixels = Pattern(Width * Height * 3)
+	let started = Process.Elapsed
+	for Passes
+		pixels = Blurred(pixels, Width * 3)
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	logger.Log("Blurred " + Width + "x" + Height + " " + Passes + " times in " + milliseconds + " ms, pixel " + pixels(3000003))
+Pattern(count Number) Numbers
+	BenchBlur.Pattern(3) is (0, 239 / 255, 222 / 255)
+	for count
+		(index * 7919 % 256) / 255
+Blurred(pixels Numbers, stride Number) Numbers
+	BenchBlur.Blurred((1, 2, 3, 4, 5, 6, 7, 8, 9), 3) is (1, 2, 3, 4, 5, 6, 7, 8, 9)
+	BenchBlur.Blurred(Dot, 9)(13) is 1
+	BenchBlur.Blurred(Dot, 9).Sum is 1
+	for pixels
+		IsEdge(index, stride, pixels.Length) then value else Averaged(pixels, index, stride)
+IsEdge(index Number, stride Number, length Number) Boolean
+	BenchBlur.IsEdge(0, 9, 27)
+	BenchBlur.IsEdge(13, 9, 27) is false
+	BenchBlur.IsEdge(11, 9, 27)
+	index < stride or index >= length - stride or index % stride < 3 or index % stride >= stride - 3
+Averaged(pixels Numbers, index Number, stride Number) Number
+	BenchBlur.Averaged(Dot, 13, 9) is 1
+	let above = pixels(index - stride - 3) + pixels(index - stride) + pixels(index - stride + 3)
+	let middle = pixels(index - 3) + pixels(index) + pixels(index + 3)
+	let below = pixels(index + stride - 3) + pixels(index + stride) + pixels(index + stride + 3)
+	(above + middle + below) / 9

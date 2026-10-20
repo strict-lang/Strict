@@ -3950,10 +3950,17 @@
     func.call @strict_gc_written(%tracesSlot) : (!llvm.ptr) -> ()
     return %value : f64
   }
-  func.func private @strict_trace_checked(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["noinline"]} {
+  // every checked value passes here: the failure test is inlined, only an Error calls the trace
+  func.func private @strict_trace_checked(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %failed = func.call @strict_is_failure(%value) : (f64) -> i1
     cf.cond_br %failed, ^check, ^done
   ^check:
+    %traced = func.call @strict_trace_failed(%value, %where, %line) : (f64, !llvm.ptr, i64) -> f64
+    return %traced : f64
+  ^done:
+    return %value : f64
+  }
+  func.func private @strict_trace_failed(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["noinline", "cold"]} {
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
     %method = func.call @strict_bits(%where) : (!llvm.ptr) -> f64
     %here = func.call @strict_traced_in(%error, %method) : (f64, f64) -> i1
@@ -4628,7 +4635,7 @@
     %version = llvm.load %slot : !llvm.ptr -> i64
     return %version : i64
   }
-  func.func private @strict_hoisted_item(%items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 {
+  func.func private @strict_hoisted_item(%items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %now = func.call @strict_list_version() : () -> i64
     %same = arith.cmpi eq, %now, %version : i64
     %null = llvm.mlir.zero : !llvm.ptr
@@ -4833,7 +4840,7 @@
     %value = func.call @strict_list_get(%list, %chosen) : (f64, f64) -> f64
     return %value : f64
   }
-  func.func private @strict_hoisted_read(%items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 {
+  func.func private @strict_hoisted_read(%items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %negative = arith.cmpf olt, %index, %zero : f64
     %wrapped = arith.addf %index, %length : f64
