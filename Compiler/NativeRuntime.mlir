@@ -521,7 +521,10 @@
     %isFour = arith.cmpi eq, %bits, %four : i64
     %seven = arith.constant 7 : i64
     %isFloat8 = arith.cmpi eq, %bits, %seven : i64
-    %orFloat8 = arith.select %isFloat8, %aligned, %plainBytes : i64
+    %nine = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %bits, %nine : i64
+    %isByteWide = arith.ori %isFloat8, %isBytes : i1
+    %orFloat8 = arith.select %isByteWide, %aligned, %plainBytes : i64
     %orFour = arith.select %isFour, %fourBytes, %orFloat8 : i64
     %orSix = arith.select %isSix, %sixBytes, %orFour : i64
     %bytes = arith.select %isQuantized, %quantizedBytes, %orSix : i64
@@ -3950,10 +3953,17 @@
     func.call @strict_gc_written(%tracesSlot) : (!llvm.ptr) -> ()
     return %value : f64
   }
-  func.func private @strict_trace_checked(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["noinline"]} {
+  // every checked value passes here: the failure test is inlined, only an Error calls the trace
+  func.func private @strict_trace_checked(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %failed = func.call @strict_is_failure(%value) : (f64) -> i1
     cf.cond_br %failed, ^check, ^done
   ^check:
+    %traced = func.call @strict_trace_failed(%value, %where, %line) : (f64, !llvm.ptr, i64) -> f64
+    return %traced : f64
+  ^done:
+    return %value : f64
+  }
+  func.func private @strict_trace_failed(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["noinline", "cold"]} {
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
     %method = func.call @strict_bits(%where) : (!llvm.ptr) -> f64
     %here = func.call @strict_traced_in(%error, %method) : (f64, f64) -> i1
@@ -4499,7 +4509,16 @@
   ^narrower:
     %float8Capacity = arith.constant -7.0 : f64
     %isFloat8 = arith.cmpf oeq, %capacity, %float8Capacity : f64
-    cf.cond_br %isFloat8, ^float8, ^single
+    cf.cond_br %isFloat8, ^float8, ^unsigned
+  ^unsigned:
+    %bytesCapacity = arith.constant -9.0 : f64
+    %isBytes = arith.cmpf oeq, %capacity, %bytesCapacity : f64
+    cf.cond_br %isBytes, ^unsignedByte, ^single
+  ^unsignedByte:
+    %unsignedSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %unsignedValue = llvm.load %unsignedSlot : !llvm.ptr -> i8
+    %fromByte = arith.uitofp %unsignedValue : i8 to f64
+    cf.br ^store(%fromByte : f64)
   ^float8:
     %float8Slot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %float8Byte = llvm.load %float8Slot : !llvm.ptr -> i8
@@ -4628,7 +4647,37 @@
     %version = llvm.load %slot : !llvm.ptr -> i64
     return %version : i64
   }
-  func.func private @strict_hoisted_item(%items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 {
+  // the items to iterate a list with, none for a list in format 9 (Bytes), strict_hoisted_byte_item reads those
+  func.func private @strict_list_byte_items(%list: f64) -> !llvm.ptr {
+    %bytes = func.call @strict_list_bytes(%list) : (f64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isPlain = llvm.icmp "eq" %bytes, %null : !llvm.ptr
+    cf.cond_br %isPlain, ^plain, ^bytes
+  ^plain:
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    return %items : !llvm.ptr
+  ^bytes:
+    return %null : !llvm.ptr
+  }
+  // an element of a list iterated with strict_list_byte_items: a byte where it is, other lists like strict_hoisted_item
+  func.func private @strict_hoisted_byte_item(%bytes: !llvm.ptr, %items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %now = func.call @strict_list_version() : () -> i64
+    %same = arith.cmpi eq, %now, %version : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %hasBytes = llvm.icmp "ne" %bytes, %null : !llvm.ptr
+    %unchanged = arith.andi %same, %hasBytes : i1
+    cf.cond_br %unchanged, ^byte, ^other
+  ^byte:
+    %at = arith.fptosi %index : f64 to i64
+    %slot = llvm.getelementptr %bytes[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %value = llvm.load %slot : !llvm.ptr -> i8
+    %number = arith.uitofp %value : i8 to f64
+    return %number : f64
+  ^other:
+    %item = func.call @strict_hoisted_item(%items, %index, %version, %list) : (!llvm.ptr, f64, i64, f64) -> f64
+    return %item : f64
+  }
+  func.func private @strict_hoisted_item(%items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %now = func.call @strict_list_version() : () -> i64
     %same = arith.cmpi eq, %now, %version : i64
     %null = llvm.mlir.zero : !llvm.ptr
@@ -4785,6 +4834,18 @@
     %wrapped = arith.addf %index, %length : f64
     %chosen = arith.select %negative, %wrapped, %index : f64
     %at = arith.fptosi %chosen : f64 to i64
+    // Bytes (format 9) are read where they are, unpacking would turn every byte into 8
+    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %byteFormat = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %packed, %byteFormat : i64
+    cf.cond_br %isBytes, ^byte, ^items
+  ^byte:
+    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    %byteSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %byteSlot : !llvm.ptr -> i8
+    %number = arith.uitofp %byte : i8 to f64
+    return %number : f64
+  ^items:
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %slot : !llvm.ptr -> f64
@@ -4833,7 +4894,41 @@
     %value = func.call @strict_list_get(%list, %chosen) : (f64, f64) -> f64
     return %value : f64
   }
-  func.func private @strict_hoisted_read(%items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 {
+  // the bytes of a list in format 9 (Bytes) for reads in place, null for any other list
+  func.func private @strict_list_bytes(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %byteFormat = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %packed, %byteFormat : i64
+    cf.cond_br %isBytes, ^bytes, ^other
+  ^bytes:
+    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    return %data : !llvm.ptr
+  ^other:
+    %null = llvm.mlir.zero : !llvm.ptr
+    return %null : !llvm.ptr
+  }
+  // a read of a Bytes parameter: a byte where it is, other lists like strict_hoisted_read
+  func.func private @strict_hoisted_byte_read(%bytes: !llvm.ptr, %items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isPlain = llvm.icmp "eq" %bytes, %null : !llvm.ptr
+    cf.cond_br %isPlain, ^plain, ^checked
+  ^plain:
+    %plainValue = func.call @strict_hoisted_read(%items, %length, %index, %name, %version, %list) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
+    return %plainValue : f64
+  ^checked:
+    %zero = arith.constant 0.0 : f64
+    %below = arith.cmpf olt, %index, %zero : f64
+    %above = arith.cmpf uge, %index, %length : f64
+    %outside = arith.ori %below, %above : i1
+    cf.cond_br %outside, ^plain, ^byte
+  ^byte:
+    %at = arith.fptosi %index : f64 to i64
+    %slot = llvm.getelementptr %bytes[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %slot : !llvm.ptr -> i8
+    %number = arith.uitofp %byte : i8 to f64
+    return %number : f64
+  }
+  func.func private @strict_hoisted_read(%items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %negative = arith.cmpf olt, %index, %zero : f64
     %wrapped = arith.addf %index, %length : f64
@@ -4860,7 +4955,7 @@
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     return %items : !llvm.ptr
   }
-  func.func private @strict_list_hoisted(%list: f64) -> !llvm.ptr {
+  func.func private @strict_list_hoisted(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
     %packed = func.call @strict_list_packed(%list) : (f64) -> i64
     %none = arith.constant 0 : i64
     %isPlain = arith.cmpi eq, %packed, %none : i64
@@ -6924,6 +7019,22 @@
     %result = arith.select %isTagged, %number, %rounded : f64
     return %result : f64
   }
+  // a Byte keeps the whole part of a number like a C cast (0.5 * 255 is 127), Errors keep their tag
+  func.func private @strict_byte(%number: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %whole = llvm.intr.trunc(%number) : (f64) -> f64
+    %isTagged = arith.cmpf uno, %number, %number : f64
+    %result = arith.select %isTagged, %number, %whole : f64
+    return %result : f64
+  }
+  // a number stored into a Bytes list (format 9): its whole part like a C cast, below 0 is 0, above 255 is 255
+  func.func private @strict_byte_packed(%number: f64) -> i8 attributes {passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0.0 : f64
+    %largest = arith.constant 255.0 : f64
+    %low = arith.maximumf %number, %zero : f64
+    %clamped = arith.minimumf %low, %largest : f64
+    %byte = arith.fptoui %clamped : f64 to i8
+    return %byte : i8
+  }
   func.func private @strict_two_half(%pair: f64, %shift: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %bits = arith.bitcast %pair : f64 to i64
     %shifted = arith.shrui %bits, %shift : i64
@@ -8250,6 +8361,10 @@
   llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<33xi64>) : !llvm.array<33 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
   llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00cuFuncSetAttribute\00cuDeviceGetAttribute\00") : !llvm.array<575 x i8>
+  // AMD GPUs through HIP when there is no NVIDIA driver, its functions mirror the CUDA driver ones in the same order
+  // (hipCtxSynchronize is not supported and hipMemAllocHost fails on the Windows driver, their replacements work)
+  llvm.mlir.global internal constant @strict_gpu_amd_names("hipInit\00hipDeviceGet\00hipDevicePrimaryCtxRetain\00hipCtxSetCurrent\00hipModuleLoadData\00hipModuleGetFunction\00hipMalloc\00hipFree\00hipMemcpyHtoD\00hipMemcpyDtoH\00hipModuleLaunchKernel\00hipDeviceSynchronize\00hipMallocHost\00hipHostFree\00hipMemcpyHtoDAsync\00hipMemcpyDtoDAsync\00hipStreamCreateWithFlags\00hipStreamBeginCapture\00hipStreamEndCapture\00hipGraphInstantiateWithFlags\00hipGraphExecUpdate\00hipGraphLaunch\00hipGraphDestroy\00hipGraphExecDestroy\00hipMemGetInfo\00hipStreamQuery\00hipEventCreateWithFlags\00hipEventRecord\00hipEventSynchronize\00hipMemcpyDtoHAsync\00hipStreamSynchronize\00hipFuncSetAttribute\00hipDeviceGetAttribute\00") : !llvm.array<592 x i8>
+  llvm.mlir.global internal @strict_gpu_amd(0 : i64) : i64
   llvm.mlir.global internal constant @strict_gpu_switch("STRICT_GPU\00") : !llvm.array<11 x i8>
   func.func private @strict_gpu_ready() -> i1 {
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
@@ -8301,12 +8416,36 @@
   }
   func.func private @strict_gpu_open() -> i1 {
     %false = arith.constant false
+    %true = arith.constant true
+    %nvidia = func.call @strict_gpu_opened(%false) : (i1) -> i1
+    cf.cond_br %nvidia, ^done, ^amd
+  ^amd:
+    %amd = func.call @strict_gpu_opened(%true) : (i1) -> i1
+    return %amd : i1
+  ^done:
+    return %true : i1
+  }
+  func.func private @strict_gpu_is_amd() -> i1 {
+    %amdSlot = llvm.mlir.addressof @strict_gpu_amd : !llvm.ptr
+    %amd = llvm.load %amdSlot : !llvm.ptr -> i64
+    %one = arith.constant 1 : i64
+    %isAmd = arith.cmpi eq, %amd, %one : i64
+    return %isAmd : i1
+  }
+  func.func private @strict_gpu_opened(%isAmd: i1) -> i1 {
+    %false = arith.constant false
     %unset = llvm.mlir.zero : !llvm.ptr
-    %library = func.call @strict_gpu_library() : () -> !llvm.ptr
+    %amdSlot = llvm.mlir.addressof @strict_gpu_amd : !llvm.ptr
+    %amd = arith.extui %isAmd : i1 to i64
+    llvm.store %amd, %amdSlot : i64, !llvm.ptr
+    %library = func.call @strict_gpu_library(%isAmd) : (i1) -> !llvm.ptr
     %missing = llvm.icmp "eq" %library, %unset : !llvm.ptr
     cf.cond_br %missing, ^failed, ^resolve
   ^resolve:
-    %resolved = func.call @strict_gpu_resolve(%library) : (!llvm.ptr) -> i1
+    %nvidiaNames = llvm.mlir.addressof @strict_gpu_names : !llvm.ptr
+    %amdNames = llvm.mlir.addressof @strict_gpu_amd_names : !llvm.ptr
+    %names = arith.select %isAmd, %amdNames, %nvidiaNames : !llvm.ptr
+    %resolved = func.call @strict_gpu_resolve(%library, %names) : (!llvm.ptr, !llvm.ptr) -> i1
     cf.cond_br %resolved, ^start, ^failed
   ^start:
     %started = func.call @strict_gpu_start() : () -> i1
@@ -8314,11 +8453,10 @@
   ^failed:
     return %false : i1
   }
-  func.func private @strict_gpu_resolve(%library: !llvm.ptr) -> i1 {
+  func.func private @strict_gpu_resolve(%library: !llvm.ptr, %names: !llvm.ptr) -> i1 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %count = arith.constant 33 : i64
-    %names = llvm.mlir.addressof @strict_gpu_names : !llvm.ptr
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %true = arith.constant true
@@ -8396,7 +8534,10 @@
     llvm.store %zero32, %processorsSlot : i32, !llvm.ptr
     %attributeIndex = arith.constant 32 : i64
     %getAttribute = func.call @strict_gpu_call(%attributeIndex) : (i64) -> !llvm.ptr
-    %multiprocessorCount = arith.constant 16 : i32
+    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
+    %nvidiaProcessors = arith.constant 16 : i32
+    %amdProcessors = arith.constant 63 : i32
+    %multiprocessorCount = arith.select %isAmd, %amdProcessors, %nvidiaProcessors : i32
     %queried = llvm.call %getAttribute(%processorsSlot, %multiprocessorCount, %device) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
     %processors = llvm.load %processorsSlot : !llvm.ptr -> i32
     %processors64 = arith.extui %processors : i32 to i64
@@ -8441,6 +8582,7 @@
   // the PTX of a program lives next to its executable (Name.ptx, Name.older.ptx for older GPUs), the generated code
   // only names it ("file:Name"), the first launch reads both into "newer\0older\0", programs without GPU skip it
   llvm.mlir.global internal @strict_gpu_code(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_amd_ending(".hsaco\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @strict_gpu_reading("rb\00") : !llvm.array<3 x i8>
   func.func private @strict_gpu_text(%ptx: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
@@ -8460,8 +8602,16 @@
     %knownPointer = llvm.inttoptr %known : i64 to !llvm.ptr
     return %knownPointer : !llvm.ptr
   ^read:
-    %five = arith.constant 5 : i64
     %stem = llvm.getelementptr %ptx[5] : (!llvm.ptr) -> !llvm.ptr, i8
+    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
+    cf.cond_br %isAmd, ^amd, ^nvidia
+  ^amd:
+    %amdEnding = llvm.mlir.addressof @strict_gpu_amd_ending : !llvm.ptr
+    %bundle = func.call @strict_gpu_beside(%stem, %amdEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %bundleBits = llvm.ptrtoint %bundle : !llvm.ptr to i64
+    llvm.store %bundleBits, %codeSlot : i64, !llvm.ptr
+    return %bundle : !llvm.ptr
+  ^nvidia:
     %newerEnding = llvm.mlir.addressof @strict_gpu_ptx_ending : !llvm.ptr
     %olderEnding = llvm.mlir.addressof @strict_gpu_older_ending : !llvm.ptr
     %newer = func.call @strict_gpu_beside(%stem, %newerEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
@@ -8569,6 +8719,10 @@
     %code = func.call @strict_gpu_text(%ptx) : (!llvm.ptr) -> !llvm.ptr
     %loaded = llvm.call %loadData(%moduleSlot, %code) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %loadFailed = arith.cmpi ne, %loaded, %zero32 : i32
+    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
+    %amdFailed = arith.andi %loadFailed, %isAmd : i1
+    cf.cond_br %amdFailed, ^failed, ^loadChecked
+  ^loadChecked:
     cf.cond_br %loadFailed, ^older, ^loaded
   ^older:
     // the PTX of a newer GPU (sm_80, DeviceBuild.Ptx) is followed by the one for older GPUs, or by an empty text
@@ -9019,6 +9173,14 @@
     // that (the last parameter, 64 for doubles to the host)
     %narrowed = llvm.load %narrowSlot : !llvm.ptr -> i64
     %narrowSingle = arith.cmpi ne, %narrowed, %none : i64
+    // a loop collecting 8 bit floats (7) or bytes (9) keeps its result on the GPU also from the double kernel, which
+    // computes its values exactly (only positions stay exact in the 32 bit kernel)
+    %eightBits = arith.constant 7 : i64
+    %isEightBits = arith.cmpi eq, %packed, %eightBits : i64
+    %byteBits = arith.constant 9 : i64
+    %isByteResult = arith.cmpi eq, %packed, %byteBits : i64
+    %isPackedResult = arith.ori %isEightBits, %isByteResult : i1
+    %staysResident = arith.ori %narrowSingle, %isPackedResult : i1
     %nameLength = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
     %skipped = arith.addi %nameLength, %one : i64
     %singleName = llvm.getelementptr %name[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -9042,22 +9204,18 @@
     %threads = arith.select %tiling, %tileBlock, %laneThreads : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
-    %eightBits = arith.constant 7 : i64
-    %isEightBits = arith.cmpi eq, %packed, %eightBits : i64
     %floatBits = arith.constant 32 : i64
     %doubleBits = arith.constant 64 : i64
-    %narrowBits = arith.select %isEightBits, %eightBits, %floatBits : i64
-    %resultFormat = arith.select %narrowSingle, %narrowBits, %doubleBits : i64
+    %byteOrFloat = arith.select %isByteResult, %byteBits, %floatBits : i64
+    %narrowBits = arith.select %isEightBits, %eightBits, %byteOrFloat : i64
+    %resultFormat = arith.select %staysResident, %narrowBits, %doubleBits : i64
     %resultFormatSlot = llvm.getelementptr %slots[%slotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     llvm.store %resultFormat, %resultFormatSlot : i64, !llvm.ptr
-    cf.cond_br %narrowSingle, ^async, ^outputs
+    cf.cond_br %staysResident, ^async, ^outputs
   ^async:
     %floatsBytes = arith.muli %count, %four : i64
-    %float8Code = arith.constant 7 : i64
-    %isFloat8 = arith.cmpi eq, %packed, %float8Code : i64
-    %singleBytes = arith.select %isFloat8, %count, %floatsBytes : i64
-    %floatsCode = arith.constant 32 : i64
-    %resultBits = arith.select %isFloat8, %float8Code, %floatsCode : i64
+    %singleBytes = arith.select %isPackedResult, %count, %floatsBytes : i64
+    %resultBits = arith.addi %narrowBits, %none : i64
     %class = func.call @strict_gpu_class(%singleBytes) : (i64) -> i64
     %resident = func.call @strict_gpu_obtain(%class) : (i64) -> i64
     %failure = func.call @strict_gpu_failure_word() : () -> i64
@@ -9794,7 +9952,10 @@
     %sameFormat = arith.cmpi eq, %leftFormat, %rightFormat : i64
     %float8Format = arith.constant 7 : i64
     %isFloat8 = arith.cmpi eq, %leftFormat, %float8Format : i64
-    %width = arith.select %isFloat8, %one, %four : i64
+    %byteFormat = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %leftFormat, %byteFormat : i64
+    %isByteWide = arith.ori %isFloat8, %isBytes : i1
+    %width = arith.select %isByteWide, %one, %four : i64
     %bytes = arith.muli %total, %width : i64
     %leftBytes = arith.muli %leftCount, %width : i64
     %rightBytes = arith.muli %rightCount, %width : i64
@@ -9900,7 +10061,10 @@
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
-    cf.cond_br %isUnset, ^decided(%one : i64), ^setting
+    // HIP 5.2 on Windows runs out of memory after about 70 executable graphs, AMD launches directly unless asked
+    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
+    %default = arith.select %isAmd, %two, %one : i64
+    cf.cond_br %isUnset, ^decided(%default : i64), ^setting
   ^setting:
     %first = llvm.load %setting : !llvm.ptr -> i8
     %off = arith.constant 48 : i8
@@ -10018,9 +10182,11 @@
     %exec = llvm.inttoptr %execBits : i64 to !llvm.ptr
     %three = arith.constant 3 : i64
     %info = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    %result = llvm.getelementptr %info[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %updateIndex = arith.constant 20 : i64
     %update = func.call @strict_gpu_call(%updateIndex) : (i64) -> !llvm.ptr
-    %updated = llvm.call %update(%exec, %captured, %info) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    // CUDA fills the info, HIP takes the failed node and the result separately (CUDA ignores the fourth argument)
+    %updated = llvm.call %update(%exec, %captured, %info, %result) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %updateFailed = arith.cmpi ne, %updated, %zero32 : i32
     cf.cond_br %updateFailed, ^replace, ^launch(%exec : !llvm.ptr)
   ^replace:

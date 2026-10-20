@@ -2,17 +2,26 @@ has bits Number
 constant Single = Rounding(32)
 Of(original VmValue) VmValue
 	Single.Of(VmValue.OfNumber(0.1)).number is 0.10000000149011612
-	Rounding(64).Of(VmValue.OfNumber(0.1)).number is 0.1
 	Single.Of(VmValue.OfList(VmValue.OfNumber(0.1), VmValue.OfNumber(1))).items.First.number is 0.10000000149011612
 	Single.Of(VmValue.OfError("a")).kind is "Strict/Error"
+	Rounding(8).Of(VmValue("Strict/Byte", 127.5, "", List(VmValue))).number is 127
 	if (bits is 64) or (original.kind is in VmValue.ErrorKinds)
 		return original
-	if original.kind is "Number"
-		return VmValue.OfNumber(original.number.Rounded(bits))
+	if original.items.Length is 0
+		return VmValue(original.kind, Rounded(original.number), original.text, original.items)
 	mutable rounded = List(Mutable(VmValue))
 	for original.items
 		rounded.Add(Of(value))
 	VmValue(original.kind, original.number, original.text, rounded)
+Rounded(number Number) Number
+	Rounding(8).Rounded(127.5) is 127
+	Single.Rounded(0.1) is 0.10000000149011612
+	bits is 8 then number.Floor else number.Rounded(bits)
+Bits(member MemberEntry, natives Natives) Number
+	Single.Bits(Natives.Width, Natives.Shapes) is 64
+	Single.Bits(Natives.Pixel.members.First, Natives(List(TypeEntry) + Natives.Byted)) is 8
+	let type = natives.TypeOf(member.typeName)
+	(member.Bits is not 64) or (type.Changing.Length is not 1) then member.Bits else type.Changing.First.Bits
 Wrapped(type TypeEntry, call Invocation) VmValue
 	Single.Wrapped(Natives.Single, Natives.NewSingle).number is 0.10000000149011612
 	Single.Wrapped(Natives.Degree, Natives.NewDegree).number is 3
@@ -27,4 +36,4 @@ Members(type TypeEntry, call Invocation, natives Natives) List(VmValue)
 		let argument = call.ParameterNames.Index(value.Name)
 		let chosen = argument < 0 then index else argument
 		let isGiven = (value.IsConstant is false) and (chosen < arguments.Length)
-		isGiven then Rounding(value.Bits).Of(arguments(chosen)) else natives.Initial(value)
+		isGiven then Rounding(Bits(value, natives)).Of(arguments(chosen)) else natives.Initial(value)

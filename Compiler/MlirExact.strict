@@ -7,12 +7,12 @@ Parts Texts
 	Double.Parts.Length is 0
 	function.Float is "f32" then ("e", "q") else List(Text)
 Slots(name Text) Texts
-	Single.Slots("%r0").First is "    %r0e = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
+	Single.Slots("%r0").First is "    %r0e.private = llvm.alloca %one x i64 : (i64) -> !llvm.ptr<5>"
 	Single.Slots("%r0").Last is "    llvm.store %inexact, %r0q : i64, !llvm.ptr"
 	Double.Slots("%r0").Length is 0
 	mutable lines = List(Mutable(Text))
 	for Parts
-		lines = lines + ("    " + name + value + MlirDevice.Allocated + "i64 : (i64) -> !llvm.ptr")
+		lines = lines + MlirTyped.Integer.Private(name + value)
 	Parts.Length is 0 then lines else lines + MlirTyped.Integer.Store("%inexact", name + "q")
 Exact(number Text, type Text, name Text) Texts
 	Single.Exact("%a", "f32", "%b").First.EndsWith("\"llvm.fptosi.sat.i32.f32\"(%a) : (f32) -> i32")

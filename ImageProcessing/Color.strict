@@ -3,6 +3,8 @@ has Green Byte
 has Blue Byte
 has Alpha Byte = 255
 from(colorValue)
+	Byte(127.5) is 127
+	Color(ColorValue(0.5, 0, 0)).Red is 127
 	Red = colorValue.Red * 255
 	Green = colorValue.Green * 255
 	Blue = colorValue.Blue * 255

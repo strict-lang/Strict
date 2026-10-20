@@ -7,7 +7,6 @@ constant Summing = MlirDevice(MlirFunction(MlirGpu.Layering.function.types, GpuS
 constant Fixed = "%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64"
 constant DoublingHeader = "  llvm.func @Rows_Doubled_1_gpu2(" + Fixed + ", %results: i64) attributes {nvvm.kernel} {"
 constant Ending = ("    cf.br ^exit", "  ^exit:", "    llvm.return", "  }")
-constant Allocated = " = llvm.alloca %one x "
 constant Launches = ("    %lanesWanted = arith.constant 32 : i64", "    %lanesSingle = arith.constant 1 : i64", "    %launchBlocks = func.call @strict_device_block_count() : () -> i32", "    %launchBlocksWide = arith.extui %launchBlocks : i32 to i64", "    %launchWidth = arith.extui %width : i32 to i64", "    %launchThreads = arith.muli %launchBlocksWide, %launchWidth : i64", "    %warpThreads = arith.muli %count, %lanesWanted : i64", "    %laneWarped = arith.cmpi uge, %launchThreads, %warpThreads : i64", "    %lanes = arith.select %laneWarped, %lanesWanted, %lanesSingle : i64")
 Name Text
 	Doubling.Name is "Rows_Doubled_1_gpu2"
@@ -61,8 +60,8 @@ Function Texts
 	let header = "  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + ") -> " + function.Float + " {"
 	(List(Text) + header) + Slots + Entry + Emitted(0, function.method.instructions.Length) + "  }"
 Slots Texts
-	Doubling.Slots.Last is "    %loop2 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
-	mutable lines = ("    %one = arith.constant 1 : i64", "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr")
+	Doubling.Slots.Last is "    %loop2 = llvm.addrspacecast %loop2.private : !llvm.ptr<5> to !llvm.ptr"
+	mutable lines = (List(Text) + "    %one = arith.constant 1 : i64") + MlirTyped("i1").Private("%flag")
 	lines = function.Float is "f32" then lines + MlirTyped.Integer.Constant("%inexact", "0") else lines
 	for LoadReuse(function.method.instructions).RegisterCount
 		lines = lines + Slot("%r" + index)
@@ -70,13 +69,13 @@ Slots Texts
 		lines = lines + Slot("%v_" + value)
 	for function.method.instructions
 		if value.kind is InstructionType.LoopBegin
-			lines = lines + ("    %loop" + index + Allocated + "i64 : (i64) -> !llvm.ptr")
+			lines = lines + MlirTyped.Integer.Private("%loop" + index)
 	lines
 Slot(name Text) Texts
-	Doubling.Slot("%r0").Last is "    %r0b = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
-	mutable lines = List(Text) + ("    " + name + Allocated + function.Float + " : (i64) -> !llvm.ptr")
+	Doubling.Slot("%r0").Last is "    %r0b = llvm.addrspacecast %r0b.private : !llvm.ptr<5> to !llvm.ptr"
+	mutable lines = MlirTyped(function.Float).Private(name)
 	for MlirTyped.Parts
-		lines = lines + ("    " + name + value + Allocated + MlirTyped.Types(index) + " : (i64) -> !llvm.ptr")
+		lines = lines + MlirTyped(MlirTyped.Types(index)).Private(name + value)
 	lines + MlirExact(function, 0).Slots(name)
 Entry Texts
 	Twice.Entry is ("    llvm.store %p0, %v_value : f64, !llvm.ptr", "    llvm.store %p1, %v_number : f64, !llvm.ptr")
@@ -104,7 +103,7 @@ Indexed Texts
 Laned Texts
 	Layering.Laned.First is "    %lanes = arith.constant 32 : i64"
 	Doubling.Laned.First is "    %lanes = arith.constant 1 : i64"
-	Text.Combine(MlirDevice(MlirDeviceSums.Spreading.function, 2).Laned).IndexOf("call @strict_device_block_count()") > 0
+	Text.Combine(MlirDevice(MlirDeviceSums.Spreading.function, 2).Laned).IndexOf("@strict_device_block_count()") > 0
 	constant divided = ("    %at = arith.divui %global, %lanes : i64", "    %lane = arith.remui %global, %lanes : i64")
 	let sums = MlirDeviceSums(function, position)
 	if sums.IsSpread

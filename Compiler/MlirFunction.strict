@@ -63,14 +63,15 @@ Copied(source Text, destination Text, temp Text) Texts
 	Counter.Copied("%r0", "%v_a", "%t1").Length is 2
 	(Load(temp, source), Store(temp, destination))
 Text Text
-	Counter.Text.StartsWith("  func.func private @Counter_Run_0(%p0: f64) -> f64 {")
+	Counter.Text.StartsWith("  func.func private @Counter_Run_0(%p0: f64) -> f64 attributes {llvm.linkage")
 	MlirAttention.Attending.function.Text.IndexOf(MlirAttention.Marker) > 0
 	if MlirForeign(value).IsForeign
 		return outer.Text.Combine(MlirForeign(value).Declaration, "\n")
 	mutable signature = List(Mutable(Text))
 	for Parameters
 		signature.Add("%p" + index + ": f64")
-	let header = "  func.func private @" + Symbol + "(" + outer.Text.Combine(signature, ", ") + ") -> f64 {"
+	let signed = "(" + outer.Text.Combine(signature, ", ") + ") -> f64"
+	let header = "  func.func private @" + Symbol + signed + " attributes {llvm.linkage = #llvm.linkage<internal>} {"
 	let outlined = MlirParallel(value, 0).Outlined + MlirCached(value).Wrapper
 	outer.Text.Combine(List(Text) + header + Slots + MlirAttention(value).Prologue + Body + "  }" + outlined, "\n")
 Slots Texts

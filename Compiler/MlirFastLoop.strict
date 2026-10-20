@@ -8,6 +8,7 @@ constant Halving = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Double
 constant Quartering = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2, "numbers 8"), 2)
 constant Squared = MlirKernel.Squaring.function
 constant Squaring = MlirFastLoop(MlirFunction(Squared.types, Squared.type, Squared.method, List(Number), 2), 2)
+constant Byting = MlirFastLoop(MlirFunction(MlirLayout.Bytings.types, MlirLayout.Bytings.type, MlirLayout.Bytings.method), 2)
 constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, "
 constant Iterated = "for"
 constant Items = " : (f64) -> !llvm.ptr"
@@ -48,6 +49,7 @@ Joined(name Text, left Text, right Text) Text
 Started Texts
 	Doubling.Started.First is "  ^loop2fast:"
 	Doubling.Started.Last is "    %t2ri = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"
+	Byting.Started.Last is "    %t2ri = func.call @strict_list_data(%t2r) : (f64) -> !llvm.ptr"
 	let loops = MlirLoops(function, position)
 	let collected = Widths.Pointed(Temp("h"), Temp("v"), Iterated, "strict_list_items")
 	let items = loops.Items.Length is 0 then loops.Items else collected + loops.Items.Last
@@ -55,8 +57,8 @@ Started Texts
 	for MlirKernel(function, position).Sources
 		lines = lines + Widths.Pointed(Temp("h_" + value), Temp("l_" + value), value, "strict_list_start")
 	let saved = (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value"))
-	let results = "    " + Temp("ri") + " = func.call @strict_list_items(" + Temp("r") + ")" + Items
-	lines + saved + loops.Outered + (loops.IsCollecting then loops.Presized + results else List(Text))
+	let results = MlirBytes(function, position).Started(Temp("r"), Temp("ri"))
+	lines + saved + loops.Outered + (loops.IsCollecting then results else List(Text))
 Counted Texts
 	Doubling.Counted.Last is "  ^loop2body:"
 	let label = "^loop" + position
@@ -102,9 +104,10 @@ Emitted(at Number) Texts
 	let pointer = "%t" + at + "p"
 	if entry.kind is InstructionType.IndexCall
 		return Widths.Read("%t" + at + "x", at) + function.Store("%t" + at + "x", "%r" + entry.payload(0))
-	let address = "    " + pointer + " = llvm.getelementptr " + Temp("ri") + "[" + Temp("ki") + "]" + Pointer + "f64"
-	let stored = "    llvm.store %t" + at + "e, " + pointer + " : f64, !llvm.ptr"
-	(function.Load("%t" + at + "e", "%r" + entry.payload(0)), address, stored)
+	let element = "%t" + at + "e"
+	let bytes = MlirBytes(function, position)
+	let address = "    " + pointer + " = llvm.getelementptr " + Temp("ri") + "[" + Temp("ki") + "]" + Pointer + bytes.Width
+	(function.Load(element, "%r" + entry.payload(0)), address) + bytes.Stored(element, pointer)
 Widths MlirWidths
 	Doubling.Widths.position is 2
 	MlirWidths(function, position)

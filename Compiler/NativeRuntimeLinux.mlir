@@ -647,11 +647,10 @@
     %processors = llvm.call @sysconf(%online) : (i32) -> i64
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    // a quarter of the logical processors was fastest for memory bound GPT-2 decoding (13900KF), compute bound loops could use all
-    %four = arith.constant 4 : i64
+    // half of the logical processors: a 4K blur 35% faster than a quarter, GPT-2 decoding the same, all of them slow GPT-2 down (13900KF)
     %two = arith.constant 2 : i64
-    %quarter = arith.divsi %processors, %four : i64
-    %threads = arith.maxsi %quarter, %two : i64
+    %half = arith.divsi %processors, %two : i64
+    %threads = arith.maxsi %half, %two : i64
     %workers = arith.subi %threads, %one : i64
     %null = llvm.mlir.zero : !llvm.ptr
     %procedure = llvm.mlir.addressof @strict_pool_thread : !llvm.ptr
@@ -705,8 +704,11 @@
     llvm.return
   }
   llvm.mlir.global internal constant @strict_gpu_driver("libcuda.so.1\00") : !llvm.array<13 x i8>
-  func.func private @strict_gpu_library() -> !llvm.ptr {
-    %name = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+  llvm.mlir.global internal constant @strict_gpu_amd_driver("libamdhip64.so\00") : !llvm.array<15 x i8>
+  func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
+    %nvidia = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %amd = llvm.mlir.addressof @strict_gpu_amd_driver : !llvm.ptr
+    %name = arith.select %isAmd, %amd, %nvidia : !llvm.ptr
     %now = arith.constant 2 : i32
     %library = llvm.call @dlopen(%name, %now) : (!llvm.ptr, i32) -> !llvm.ptr
     return %library : !llvm.ptr

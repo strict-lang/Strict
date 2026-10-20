@@ -23,7 +23,7 @@ Parameters Texts
 IsList(parameter Number) Boolean
 	Summing.IsList(0)
 	Twice.IsList(0) is false
-	TypeEntry.ShortName(callee.method.parameters(parameter).typeName) is in ("List(Number)", "Numbers")
+	MlirLayout(callee).Represented(TypeEntry.ShortName(callee.method.parameters(parameter).typeName)) is "List(Number)"
 Arguments(entry InstructionEntry) Texts
 	Twice.Arguments(Twicing) is ("%failed", "%lane", "%lanes", "%d4i", "%d4p0")
 	Heads.Arguments(GpuSamples.Heading.instructions(4)).Last is "%d4m1b"

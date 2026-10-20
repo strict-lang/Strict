@@ -141,6 +141,7 @@ ipch/
 *.ptx
 *.metal
 !Compiler/MetalPrelude.metal
+*.hsaco
 *.asm
 *.ll
 *.mlir

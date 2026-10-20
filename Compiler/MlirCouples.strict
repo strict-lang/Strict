@@ -48,13 +48,14 @@ IsSingle(kind Text) Boolean
 	Turns.IsSingle("Turning")
 	Sample.IsSingle("Sizing") is false
 	let halves = Halves(function.TypeOf(TypeEntry.ShortName(kind)))
-	(halves.Length is 1) and IsHalf(halves.First)
+	(halves.Length is 1) and (IsHalf(halves.First) or (halves.First.Bits is 8))
 Single(entry InstructionEntry, kind Text) Texts
 	Turns.Single(Turned, "Turning")(1) is "    %t1cr = func.call @strict_single(%t1cx) : (f64) -> f64"
 	Turns.Single(Turned, "Turning").Last is "    llvm.store %t1cr, %r1 : f64, !llvm.ptr"
 	let member = Halves(function.TypeOf(TypeEntry.ShortName(kind))).First
 	let temp = "%t" + position + "c"
-	let rounded = "    " + temp + "r = func.call @strict_single(" + temp + "x) : (f64) -> f64"
+	let rounding = member.Bits is 8 then "@strict_byte(" else "@strict_single("
+	let rounded = "    " + temp + "r = func.call " + rounding + temp + "x) : (f64) -> f64"
 	let loaded = function.Load(temp + "x", Argument(entry, member.Name, 0))
 	(loaded, rounded, function.Store(temp + "r", "%r" + entry.payload(0)))
 Argument(entry InstructionEntry, name Text, fallback Number) Text

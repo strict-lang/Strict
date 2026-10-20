@@ -7,6 +7,9 @@ constant NewShape = Invocation(InstructionEntry.Invoke(1, ("Strict/Shape", "from
 constant Degree = TypeEntry("Strict/Degree", List(MemberEntry) + Width, List(MethodEntry))
 constant NewDegree = Invocation(InstructionEntry.Invoke(1, ("Strict/Degree", "from", "Strict/Degree", "width"), 0, -1), NewShape.Arguments, VmValue.None)
 constant Single = TypeEntry("Strict/Single", List(MemberEntry) + MemberEntry("width", "Strict/Number", List(InstructionEntry), false, 32), List(MethodEntry))
+constant Byted = TypeEntry("Strict/Byte", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false, 8), MemberEntry("Max", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry))
+constant Pixel = TypeEntry("Strict/Pixel", (MemberEntry("Red", "Strict/Byte", List(InstructionEntry), false), MemberEntry("Green", "Strict/Byte", List(InstructionEntry), false)), List(MethodEntry))
+constant NewPixel = Invocation(InstructionEntry.Invoke(1, ("Strict/Pixel", "from", "Strict/Pixel", "Red", "Green"), 0, -1), (VmValue.OfNumber(127.5), VmValue.OfNumber(3)), VmValue.None)
 constant NewSingle = Invocation(InstructionEntry.Invoke(1, ("Strict/Single", "from", "Strict/Single", "width"), 0, -1), List(VmValue) + VmValue.OfNumber(0.1), VmValue.None)
 constant Pairs = VmValue.OfList(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.OfList(VmValue.OfNumber(2), VmValue.OfNumber(4)))
 constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
@@ -112,6 +115,7 @@ Constructed(call Invocation) VmValue
 	Shapes.Constructed(NewShape).kind is "Strict/Shape"
 	Natives(List(TypeEntry) + Degree).Constructed(NewDegree).number is 3
 	Natives(List(TypeEntry) + Single).Constructed(NewSingle).number is 0.10000000149011612
+	Natives((Byted, Pixel)).Constructed(NewPixel).items.First.number is 127
 	let type = TypeOf(call.TypeName)
 	if (type.members.Length is 0) or (type.IsStruct is false)
 		return Rounding.Single.Wrapped(type, call)
@@ -128,9 +132,10 @@ Constructed(type TypeEntry, finished List(VmValue)) VmValue
 	let result = finished(Frame.ResultSlot)
 	if result.kind is in VmValue.ErrorKinds
 		return result
+	let natives = value
 	mutable values = List(Mutable(VmValue))
 	for type.members
-		values.Add(finished(Frame.MembersSlot + index))
+		values.Add(Rounding(Rounding.Single.Bits(value, natives)).Of(finished(Frame.MembersSlot + index)))
 	VmValue(type.Name, 0, "", values)
 Initial(member MemberEntry) VmValue
 	Shapes.Initial(Width).number is 0

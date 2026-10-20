@@ -22,7 +22,8 @@
     %top = llvm.ptrtoint %stack : !llvm.ptr to i64
     return %top : i64
   }
-  // snprintf with one or two numbers, its size is 32 bits in wasm32
+  // snprintf with one or two numbers, its size is 32 bits in wasm32, newer Windows SDKs only have it inline in stdio.h
+  llvm.linker_options ["/DEFAULTLIB:legacy_stdio_definitions.lib"]
   llvm.func @strict_print_precise(%buffer: !llvm.ptr, %size: i64, %format: !llvm.ptr, %precision: i32, %number: f64) -> i32 {
     %written = llvm.call @snprintf(%buffer, %size, %format, %precision, %number) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, i32, f64) -> i32
     llvm.return %written : i32
@@ -619,11 +620,10 @@
     %wide = arith.extui %processors : i32 to i64
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    // a quarter of the logical processors was fastest for memory bound GPT-2 decoding (13900KF), compute bound loops could use all
-    %four = arith.constant 4 : i64
+    // half of the logical processors: a 4K blur 35% faster than a quarter, GPT-2 decoding the same, all of them slow GPT-2 down (13900KF)
     %two = arith.constant 2 : i64
-    %quarter = arith.divsi %wide, %four : i64
-    %threads = arith.maxsi %quarter, %two : i64
+    %half = arith.divsi %wide, %two : i64
+    %threads = arith.maxsi %half, %two : i64
     %workers = arith.subi %threads, %one : i64
     %null = llvm.mlir.zero : !llvm.ptr
     %procedure = llvm.mlir.addressof @strict_pool_thread : !llvm.ptr
@@ -681,8 +681,11 @@
     llvm.return
   }
   llvm.mlir.global internal constant @strict_gpu_driver("nvcuda.dll\00") : !llvm.array<11 x i8>
-  func.func private @strict_gpu_library() -> !llvm.ptr {
-    %name = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+  llvm.mlir.global internal constant @strict_gpu_amd_driver("amdhip64.dll\00") : !llvm.array<13 x i8>
+  func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
+    %nvidia = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %amd = llvm.mlir.addressof @strict_gpu_amd_driver : !llvm.ptr
+    %name = arith.select %isAmd, %amd, %nvidia : !llvm.ptr
     %library = llvm.call @LoadLibraryA(%name) : (!llvm.ptr) -> !llvm.ptr
     return %library : !llvm.ptr
   }

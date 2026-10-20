@@ -1,0 +1,55 @@
+has function MlirFunction
+has position Number
+constant Iterating = MlirBytes(MlirLoops.Bytewise.function, 1)
+constant Collecting = MlirBytes(MlirFastLoop.Byting.function, 2)
+constant Doubling = MlirBytes(MlirFastLoop.Doubling.function, 2)
+IsIterated Boolean
+	Iterating.IsIterated
+	MlirBytes(MlirLoops.Listing.function, 1).IsIterated is false
+	let entry = function.method.instructions(position)
+	let kind = entry.payload(1) is 1 then "" else MlirKinds(function).KindOf(position, entry.payload(0))
+	kind is in ("Bytes", "List(Byte)")
+IsCollected Boolean
+	Collecting.IsCollected
+	Doubling.IsCollected is false
+	MlirLayout(function).Packed(position) is 9
+Itemizer Text
+	Collecting.Itemizer is "@strict_list_data"
+	Doubling.Itemizer is "@strict_list_items"
+	IsCollected then "@strict_list_data" else "@strict_list_items"
+Width Text
+	Collecting.Width is "i8"
+	Doubling.Width is "f64"
+	IsCollected then "i8" else "f64"
+Started(result Text, items Text) Texts
+	Collecting.Started("%r", "%i").Last is "    %i = func.call @strict_list_data(%r) : (f64) -> !llvm.ptr"
+	Doubling.Started("%t2r", "%i").Last is "    %i = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"
+	let created = IsCollected then Created(result) else MlirLoops(function, position).Presized
+	created + ("    " + items + " = func.call " + Itemizer + "(" + result + ") : (f64) -> !llvm.ptr")
+Hoisted(items Text, list Text) Texts
+	Iterating.Hoisted("%h", "%v")(1) is "    %h = func.call @strict_list_byte_items(%v) : (f64) -> !llvm.ptr"
+	Doubling.Hoisted("%h", "%v") is ("    %h = func.call @strict_list_items(%v) : (f64) -> !llvm.ptr")
+	let plain = "    " + items + " = func.call @strict_list_items(" + list + ") : (f64) -> !llvm.ptr"
+	if IsIterated is false
+		return List(Text) + plain
+	let bytes = "    " + items + "b = func.call @strict_list_bytes(" + list + ") : (f64) -> !llvm.ptr"
+	(bytes, "    " + items + " = func.call @strict_list_byte_items(" + list + ") : (f64) -> !llvm.ptr")
+Created(result Text) Texts
+	Collecting.Created("%r")(3) is "    %r = func.call @strict_packed_new(%relements, %rformat) : (i64, i64) -> f64"
+	Doubling.Created("%r").Length is 0
+	if IsCollected is false
+		return List(Text)
+	let count = "    " + result + "positive = arith.maximumf %t" + position + "n, %zero : f64"
+	let whole = "    " + result + "elements = arith.fptosi " + result + "positive : f64 to i64"
+	let format = "    " + result + "format = arith.constant 9 : i64"
+	let operands = "(" + result + "elements, " + result + "format) : (i64, i64) -> f64"
+	let created = "    " + result + " = func.call @strict_packed_new" + operands
+	(count, whole, format, created, function.Store(result, "%v_forResult"))
+Stored(element Text, pointer Text) Texts
+	Collecting.Stored("%e", "%p").First is "    %eb = func.call @strict_byte_packed(%e) : (f64) -> i8"
+	Collecting.Stored("%e", "%p").Last is "    llvm.store %eb, %p : i8, !llvm.ptr"
+	Doubling.Stored("%e", "%p") is ("    llvm.store %e, %p : f64, !llvm.ptr")
+	if IsCollected is false
+		return List(Text) + ("    llvm.store " + element + ", " + pointer + " : f64, !llvm.ptr")
+	let encoded = "    " + element + "b = func.call @strict_byte_packed(" + element + ") : (f64) -> i8"
+	(encoded, "    llvm.store " + element + "b, " + pointer + " : i8, !llvm.ptr")

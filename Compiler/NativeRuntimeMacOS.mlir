@@ -1393,8 +1393,10 @@
     llvm.return %result : i32
   }
   // Metal and the Objective-C runtime it loads, the functions above take the place of the CUDA driver
-  func.func private @strict_gpu_library() -> !llvm.ptr {
+  func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
+    cf.cond_br %isAmd, ^failed, ^open
+  ^open:
     %path = llvm.mlir.addressof @strict_metal_n_library : !llvm.ptr
     %now = arith.constant 2 : i32
     %library = llvm.call @dlopen(%path, %now) : (!llvm.ptr, i32) -> !llvm.ptr
