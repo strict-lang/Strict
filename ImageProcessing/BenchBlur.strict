@@ -28,8 +28,16 @@ IsEdge(position Number, stride Number, length Number, radius Number) Boolean
 	x < radius or x >= stride / 4 - radius or y < radius or y >= length / stride - radius
 Averaged(pixels Bytes, center Number, stride Number, radius Number) Number
 	BenchBlur.Averaged(Dot, 16, 12, 1) is 1
-	let side = radius * 2 + 1
+	BenchBlur.Averaged(Dot, 17, 12, 1) is 0
+	BenchBlur.Averaged(Dot, 19, 12, 1) is 0
 	mutable sum = 0
-	for side * side
-		sum = sum + pixels(center + ((value / side).Floor - radius) * stride + (value % side - radius) * 4)
-	(sum / (side * side)).Floor
+	for radius * 2 + 1
+		sum = sum + Row(pixels, center + (value - radius) * stride, radius)
+	(sum / ((radius * 2 + 1) * (radius * 2 + 1))).Floor
+Row(pixels Bytes, middle Number, radius Number) Number
+	BenchBlur.Row(Dot, 16, 1) is 9
+	BenchBlur.Row(Dot, 4, 1) is 0
+	mutable sum = 0
+	for radius * 2 + 1
+		sum = sum + pixels(middle + (value - radius) * 4)
+	sum

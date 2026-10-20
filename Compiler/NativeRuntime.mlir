@@ -4804,6 +4804,18 @@
     %wrapped = arith.addf %index, %length : f64
     %chosen = arith.select %negative, %wrapped, %index : f64
     %at = arith.fptosi %chosen : f64 to i64
+    // Bytes (format 9) are read where they are, unpacking would turn every byte into 8
+    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %byteFormat = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %packed, %byteFormat : i64
+    cf.cond_br %isBytes, ^byte, ^items
+  ^byte:
+    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    %byteSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %byteSlot : !llvm.ptr -> i8
+    %number = arith.uitofp %byte : i8 to f64
+    return %number : f64
+  ^items:
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %slot : !llvm.ptr -> f64
