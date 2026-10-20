@@ -1,0 +1,50 @@
+has logger
+has base Text
+constant Listing = "  1) 0A1B \"Developer ID Application: Some One (T1)\"\n     1 valid identities found"
+constant Header = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "<plist version=\"1.0\"><dict>")
+constant Footer = ("<key>CFBundlePackageType</key><string>APPL</string>", "<key>NSHighResolutionCapable</key><true/>", "</dict></plist>")
+Name Text
+	MacOSBundle(Logger, "Games/App/App").Name is "App"
+	Path(base).FileName.text
+Contents Text
+	MacOSBundle(Logger, "Games/App/App").Contents is "Games/App/Release/App.app/Contents"
+	Release(logger, base).Parent + "/Release/" + Name + ".app/Contents"
+Plist Texts
+	"<key>CFBundleExecutable</key><string>App</string>" is in MacOSBundle(Logger, "Games/App/App").Plist
+	let executable = "<key>CFBundleExecutable</key><string>" + Name + "</string>"
+	let identifier = "<key>CFBundleIdentifier</key><string>lang.strict." + Name + "</string>"
+	let icon = "<key>CFBundleIconFile</key><string>" + Name + "</string>"
+	Header + executable + identifier + ("<key>CFBundleName</key><string>" + Name + "</string>") + icon + Footer
+Identity(identities Text) Text
+	MacOSBundle.Identity(Listing) is "Developer ID Application: Some One (T1)"
+	MacOSBundle.Identity("     0 valid identities found") is "-"
+	let start = identities.IndexOf("\"Developer ID Application: ")
+	if start < 0
+		return "-"
+	let rest = identities.Substring(start + 1, identities.Length - start - 1)
+	rest.Substring(0, rest.IndexOf("\""))
+Signing(identity Text, app Text) Text
+	MacOSBundle.Signing("-", "A.app") is "--force --sign - \"A.app\""
+	MacOSBundle.Signing("D", "A.app") is "--force --options runtime --timestamp --sign \"D\" \"A.app\""
+	let quoted = "\"" + app + "\""
+	let developer = "--force --options runtime --timestamp --sign \"" + identity + "\" " + quoted
+	identity is "-" then "--force --sign - " + quoted else developer
+Released Number
+	MacOSBundle(Logger, "Compiler/output/App").Released is 1
+	Directory.Exists("Compiler/output/Release/App.app/Contents/Resources")
+	let app = Contents.Substring(0, Contents.Length - 9)
+	for (Release(logger, base).Parent + "/Release", app, Contents, Contents + "/Resources")
+		Directory.Create(value)
+	let refreshed = Release(logger, base).Refreshed(Contents + "/MacOS", Contents + "/Resources/Content")
+	refreshed is not 0 then refreshed else Completed(Release(logger, base).Icon)
+Completed(icon Text) Number
+	MacOSBundle(Logger, "Missing/App").Completed("Missing.ico") is 1
+	if File(Contents + "/MacOS/" + Name).Exists is false
+		return 1
+	File(Contents + "/Info.plist").Write(Text.Combine(Plist, "\n"))
+	ToolRunner("sips").Execute("-s format icns \"" + icon + "\" --out \"" + Contents + "/Resources/" + Name + ".icns\"")
+	let identity = Identity(ToolRunner("security").Execute("find-identity -v -p codesigning").Output)
+	let app = Contents.Substring(0, Contents.Length - 9)
+	let signed = ToolRunner("codesign").Execute(Signing(identity, app))
+	logger.Log(signed.Failed then "codesign failed: " + signed.error else "Signed " + app + " (" + identity + ")")
+	signed.Failed then 1 else 0

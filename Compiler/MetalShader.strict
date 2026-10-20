@@ -1,0 +1,57 @@
+has lines Texts
+constant Doubling = ("define float @twice(float %0) {", "  %2 = fmul float %0, 2.000000e+00", "  ret float %2", "}")
+constant Kernel = ("define ptx_kernel void @K(ptr %0) {", "  %2 = tail call float @twice(float 1.000000e+00)", "  store float %2, ptr %0, align 4", "  ret void", "}")
+constant Rejected = ("define double @wide(double %0) {", "  %2 = fmul double %0, %0", "  ret double %2", "}")
+constant Calling = ("define ptx_kernel void @L(ptr %0) {", "  %2 = tail call double @wide(double 0x3FF0000000000000)", "  ret void", "}")
+constant Sample = MetalShader(Doubling + Kernel + Rejected + Calling)
+Functions List(MetalFunction)
+	Sample.Functions.Length is 4
+	Sample.Functions(1).Name is "K"
+	mutable start = -1
+	mutable functions = List(Mutable(MetalFunction))
+	for lines
+		if value.StartsWith("define ")
+			start = index
+		if (value is "}") and (start >= 0)
+			functions.Add(MetalFunction(lines.Slice(start, index - start + 1)))
+	functions
+Translated(functions List(MetalFunction)) Texts
+	Sample.Translated(Sample.Functions)(2) is ""
+	for functions
+		Text.Combine(value.Source, "\n")
+Kept(names Texts, functions List(MetalFunction)) Texts
+	Sample.Kept(("twice", "K", "L"), Sample.Functions) is ("twice", "K")
+	let kept = Supporting(names, functions)
+	kept.Length is names.Length then names else Kept(kept, functions)
+Supporting(names Texts, functions List(MetalFunction)) Texts
+	Sample.Supporting(("twice", "K", "L"), Sample.Functions) is ("twice", "K")
+	for functions
+		if (value.Name is in names) and ((value.Callees - names).Length is 0)
+			value.Name
+Source(prelude Texts) Texts
+	Sample.Source(List(Text)).First is "// parameters K 1"
+	Sample.Source(List(Text)).Last.StartsWith("kernel void K(")
+	let functions = Functions
+	let translated = Translated(functions)
+	let kept = Kept(Translatable(translated, functions), functions)
+	prelude + Markers(functions, kept) + Prototypes(functions, kept) + Bodies(translated, functions, kept)
+Translatable(translated Texts, functions List(MetalFunction)) Texts
+	Sample.Translatable(Sample.Translated(Sample.Functions), Sample.Functions) is ("twice", "K", "L")
+	for functions
+		if translated(index) is not ""
+			value.Name
+Markers(functions List(MetalFunction), kept Texts) Texts
+	Sample.Markers(Sample.Functions, ("K")) is ("// parameters K 1")
+	for functions
+		if value.IsKernel and (value.Name is in kept)
+			"// parameters " + value.Name + " " + value.Parameters.Length
+Prototypes(functions List(MetalFunction), kept Texts) Texts
+	Sample.Prototypes(Sample.Functions, ("twice", "K")) is ("float twice(float v0);")
+	for functions
+		if (value.IsKernel is false) and (value.Name is in kept)
+			value.Signature + ";"
+Bodies(translated Texts, functions List(MetalFunction), kept Texts) Texts
+	Sample.Bodies(Sample.Translated(Sample.Functions), Sample.Functions, ("K")).Length is 1
+	for functions
+		if value.Name is in kept
+			translated(index)

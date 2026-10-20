@@ -28,9 +28,10 @@ Linked(base Text, tools Toolchain, library MlirLibrary) Text
 Target(base Text, platform Number) Text
 	LibraryBuild(Logger).Target("./Games/Policy", Platform.Windows) is "./Games/Policy.dll"
 	LibraryBuild(Logger).Target("./Games/Policy", Platform.Linux) is "./Games/libPolicy.so"
+	LibraryBuild(Logger).Target("./Games/Policy", Platform.MacOS) is "./Games/libPolicy.dylib"
 	let name = Path(base).FileName.text
 	let folder = base.Substring(0, base.Length - name.Length)
-	platform is Platform.Windows then base + ".dll" else folder + "lib" + name + ".so"
+	platform is Platform.Windows then base + ".dll" else folder + "lib" + name + Platform.LibraryExtension(platform)
 Shared(library MlirLibrary) Text
 	LibraryBuild(Logger).Shared(MlirLibrary.Policy).EndsWith("Policy_Start") is (Platform.Current is Platform.Windows)
 	if Platform.Current is not Platform.Windows

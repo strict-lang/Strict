@@ -1,0 +1,53 @@
+has line Text
+has isKernel Boolean
+constant Intrinsics = ("llvm.fabs.f32", "llvm.floor.f32", "llvm.ceil.f32", "llvm.sqrt.f32", "llvm.exp2.f32", "llvm.log2.f32", "llvm.nvvm.lg2.approx.f", "llvm.nvvm.ex2.approx.f", "llvm.fma.f32", "llvm.minnum.f32", "llvm.maxnum.f32", "llvm.smin.i32", "llvm.smax.i32", "llvm.smin.i64", "llvm.smax.i64", "llvm.fptosi.sat.i32.f32", "llvm.nvvm.f2i.rn", "llvm.nvvm.shfl.sync.bfly.i32", "llvm.nvvm.shfl.sync.bfly.f32")
+constant Functions = ("fabs", "floor", "ceil", "sqrt", "exp2", "log2", "log2", "exp2", "fma", "fmin", "fmax", "min", "max", "min", "max", "strict_saturated", "strict_rounded", "strict_shuffled", "strict_shuffled")
+constant Identities = ("llvm.nvvm.read.ptx.sreg.tid.x", "llvm.nvvm.read.ptx.sreg.ctaid.x", "llvm.nvvm.read.ptx.sreg.ntid.x", "llvm.nvvm.read.ptx.sreg.nctaid.x")
+constant Positions = ("(int)strict_lane.x", "(int)strict_group.x", "(int)strict_size.x", "(int)strict_groups.x")
+constant Ignored = ("llvm.assume", "llvm.lifetime.start.p0", "llvm.lifetime.end.p0")
+constant Barriers = ("llvm.nvvm.barrier0", "llvm.nvvm.barrier.cta.sync.aligned.all")
+constant Thread = MetalCall("%8 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x()", true)
+constant Reading = MetalCall("%47 = tail call float @strict_device_float8_read(ptr readonly %3, i64 %13)", true)
+Callee Text
+	Reading.Callee is "strict_device_float8_read"
+	let cleaned = MetalInstruction(line, isKernel).Cleaned
+	let start = cleaned.IndexOf("@") + 1
+	cleaned.Substring(start, cleaned.IndexOf("(", start) - start)
+Type Text
+	Reading.Type is "float"
+	MetalCall("call void @llvm.assume(i1 %3)", true).Type is "void"
+	let words = MetalInstruction(line, isKernel).Words
+	for words
+		if value.StartsWith("@")
+			return words(index - 1)
+	""
+Values Texts
+	Reading.Values is ("v3", "v13")
+	Thread.Values.Length is 0
+	let cleaned = MetalInstruction(line, isKernel).Cleaned
+	let start = cleaned.IndexOf("(", cleaned.IndexOf("@")) + 1
+	let inside = cleaned.Substring(start, cleaned.LastIndexOf(")") - start).Trim
+	for inside is "" then List(Text) else inside.Split(", ")
+		let words = MetalInstruction(value, isKernel).Words
+		MetalValue(words.Last).Operand(words.First)
+Expression Text
+	Thread.Expression is "(int)strict_lane.x"
+	MetalCall("%8 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x()", false).Expression is ""
+	Reading.Expression is "strict_device_float8_read(v3, v13)"
+	let callee = Callee
+	if callee is in Identities
+		return isKernel then Positions(Identities.Index(callee)) else ""
+	if callee.StartsWith("llvm.")
+		return callee is in Intrinsics then Functions(Intrinsics.Index(callee)) + "(" + Text.Combine(Values) + ")" else ""
+	callee + "(" + Text.Combine(Values) + ")"
+Statement Text
+	Thread.Statement is "v8 = (int)strict_lane.x;"
+	MetalCall("call void @llvm.assume(i1 %3)", true).Statement is ";"
+	MetalCall("tail call void @llvm.nvvm.barrier0()", true).Statement is "threadgroup_barrier(mem_flags::mem_device);"
+	if (Callee is in Ignored) or (Callee is in Barriers)
+		return Callee is in Ignored then ";" else "threadgroup_barrier(mem_flags::mem_device);"
+	let result = MetalInstruction(line, isKernel).Result
+	let expression = Expression
+	if (expression is "") or (MetalValue(Type).Type is "")
+		return ""
+	result is "" then expression + ";" else MetalValue(result).Operand("") + " = " + expression + ";"

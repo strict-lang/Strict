@@ -6,7 +6,10 @@ Packaged(program Text, built Number) Number
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 2) is 2
 	Release(Logger, "Missing/App.test").Packaged(Opening, 0) is 0
 	let isWindowed = program.IndexOf(Opening) >= 0
-	(built is not 0) or base.EndsWith(".test") or (isWindowed is false) then built else Refreshed(Parent + "/Release")
+	if (built is not 0) or base.EndsWith(".test") or (isWindowed is false)
+		return built
+	let folder = Parent + "/Release"
+	Platform.Current is Platform.MacOS then MacOSBundle(logger, base).Released else Refreshed(folder, folder + "/Content")
 Parent Text
 	Release(Logger, "Missing/App").Parent is "Missing"
 	Release(Logger, "App").Parent is "."
@@ -21,9 +24,9 @@ Icon Text
 	if File(own).Exists
 		return own
 	File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
-Refreshed(release Text) Number
+Refreshed(release Text, content Text) Number
 	Directory.Create(release)
-	for (".exe", "", ".ptx", ".older.ptx")
+	for (".exe", "", ".ptx", ".older.ptx", ".metal", ".older.metal")
 		let built = base + value
 		if File(built).Exists
 			File(built).Rename(release + "/" + Named(built))
@@ -31,7 +34,7 @@ Refreshed(release Text) Number
 				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
 				return 1
 	logger.Log("Release: " + release)
-	Content(release + "/Content") < 0 then 1 else 0
+	Content(content) < 0 then 1 else 0
 Content(target Text) Number
 	Release(Logger, "Missing/App").Content("Missing/Release/Content") is 0
 	let source = Parent + "/Content"

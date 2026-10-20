@@ -1,0 +1,51 @@
+has arguments Texts
+has operation Text
+constant Operations = ("zext", "sext", "trunc", "fpext", "fptrunc", "sitofp", "uitofp", "fptosi", "fptoui", "bitcast", "ptrtoint", "inttoptr", "freeze")
+Expression Text
+	MetalCast(("i32", "%1", "to", "i64"), "zext").Expression is "(long)(uint)v1"
+	MetalCast(("i32", "%1"), "freeze").Expression is "v1"
+	MetalCast(("i64", "%1", "to", "double"), "bitcast").Expression is "as_type<ulong>(v1)"
+	if operation is "freeze"
+		return Value
+	if (arguments.Length is not 4) or (Source.Type is "") or (Target.Type is "")
+		return ""
+	if operation is in ("zext", "sext", "trunc")
+		return Integer
+	if operation is in ("fpext", "fptrunc", "sitofp", "uitofp", "fptosi", "fptoui")
+		return Floating
+	operation is "bitcast" then "as_type<" + Target.Type + ">(" + Value + ")" else "(" + Target.Type + ")" + Value
+Value Text
+	MetalCast(("i1", "true", "to", "i32"), "zext").Value is "true"
+	MetalValue(arguments(1)).Operand(arguments(0))
+Source MetalValue
+	MetalCast(("i8", "%1", "to", "i32"), "sext").Source.Type is "char"
+	MetalValue(arguments(0))
+Target MetalValue
+	MetalCast(("i8", "%1", "to", "i32"), "sext").Target.Type is "int"
+	MetalValue(arguments(3))
+Integer Text
+	MetalCast(("i1", "%1", "to", "i32"), "sext").Integer is "(int)(v1 ? -1 : 0)"
+	MetalCast(("i64", "%1", "to", "i1"), "trunc").Integer is "(bool)(v1 & 1)"
+	let cast = "(" + Target.Type + ")"
+	if operation is "zext"
+		return arguments(0) is "i1" then cast + Value else cast + "(" + Source.UnsignedType + ")" + Value
+	if operation is "sext"
+		return arguments(0) is "i1" then cast + "(" + Value + " ? -1 : 0)" else cast + Value
+	arguments(3) is "i1" then "(bool)(" + Value + " & 1)" else cast + Value
+Floating Text
+	MetalCast(("double", "%1", "to", "float"), "fptrunc").Floating is "strict_float(v1)"
+	MetalCast(("float", "%1", "to", "double"), "fpext").Floating is "strict_double(v1)"
+	MetalCast(("i32", "%1", "to", "double"), "sitofp").Floating is ""
+	let isDouble = (arguments(0) is "double") or (arguments(3) is "double")
+	if operation is "fptrunc" and (arguments(0) is "double")
+		return arguments(3) is "float" then "strict_float(" + Value + ")" else ""
+	if operation is "fpext" and (arguments(3) is "double")
+		return arguments(0) is "float" then "strict_double(" + Value + ")" else ""
+	if isDouble
+		return ""
+	"(" + Target.Type + ")" + Unsigned + Value
+Unsigned Text
+	MetalCast(("i32", "%1", "to", "float"), "uitofp").Unsigned is "(uint)"
+	if operation is "uitofp"
+		return "(" + Source.UnsignedType + ")"
+	operation is "fptoui" then "(" + Target.UnsignedType + ")" else ""

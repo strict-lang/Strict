@@ -690,3 +690,5 @@
     %function = llvm.call @GetProcAddress(%library, %name) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     return %function : !llvm.ptr
   }
+  llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>

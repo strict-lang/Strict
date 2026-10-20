@@ -18,7 +18,7 @@ Flags(platform Number) Text
 			flags = flags + Rooted(Text.Combine(File(file).ReadLines, " "), value)
 	flags
 Rooted(flags Text, folder Text) Text
-	Adding.Rooted("-DX a/b.c -Ia/c", "../Engine/Frameworks/native") is " -DX ../Engine/a/b.c -I../Engine/a/c"
+	Adding.Rooted("-DX a/b.c a/d.m -Ia/c", "../E/F/native") is " -DX ../E/a/b.c ../E/a/d.m -I../E/a/c"
 	Adding.Rooted("-DX a/b.c", "Frameworks/native") is " -DX a/b.c"
 	if folder.StartsWith("../") is false
 		return " " + flags
@@ -28,7 +28,7 @@ Rooted(flags Text, folder Text) Text
 	for flags.Split(" ")
 		let isInclude = value.StartsWith("-I")
 		let path = isInclude then "-I" + project + value.Substring(2, value.Length - 2) else project + value
-		rooted = rooted + " " + (isInclude or value.EndsWith(".c") then path else value)
+		rooted = rooted + " " + (isInclude or IsSource(value) then path else value)
 	rooted
 Arguments(platform Number, root Text) Text
 	Adding.Arguments(Platform.Windows, "C:/s") is " \"Examples/NativeAdd/native/Adder.c\" -I\"C:/s/Compiler\""
@@ -54,16 +54,22 @@ Objects(platform Number, root Text, level Text) Text
 	arguments + Options(tokens, true)
 Sources(tokens Texts) Texts
 	Adding.Sources(("-DX", "a/b.c", "-lgdi32")) is ("a/b.c")
+	Adding.Sources(("a/b.m", "-Wl,-framework,Cocoa")) is ("a/b.m")
 	for tokens
-		if value.EndsWith(".c")
+		if IsSource(value)
 			value
+IsSource(token Text) Boolean
+	Adding.IsSource("a/b.m")
+	Adding.IsSource("-lm") is false
+	token.EndsWith(".c") or token.EndsWith(".m")
 Options(tokens Texts, isLinking Boolean) Text
 	Adding.Options(("-DX", "a/b.c", "-lgdi32", "-Wl,/OPT:REF"), true) is " -lgdi32 -Wl,/OPT:REF"
 	Adding.Options(("-DX", "a/b.c", "-lgdi32"), false) is " -DX"
+	Adding.Options(("-DX", "a/b.m"), false) is " -DX"
 	mutable options = ""
 	for tokens
 		let isLinked = value.StartsWith("-l") or value.StartsWith("-Wl")
-		if (value is not "") and (value.EndsWith(".c") is false) and (isLinked is isLinking)
+		if (value is not "") and (IsSource(value) is false) and (isLinked is isLinking)
 			options = options + " " + value
 	options
 Object(source Text, platform Number, root Text, options Text) Text
@@ -83,7 +89,7 @@ Library(platform Number, root Text) Text
 	Adding.Library(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
 	let folder = folders.First
 	let base = folder + "/" + Path(Path(folder).PathOnly.text).FileName.text
-	let extension = platform is Platform.Windows then ".dll" else ".so"
+	let extension = Platform.LibraryExtension(platform)
 	if IsCurrent(base + extension, Files + Inputs(platform, root))
 		return "Built " + base + extension
 	let building = base + "." + 999999.Random.Floor + extension

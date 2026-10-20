@@ -1,0 +1,94 @@
+has lines Texts
+constant Kernel = MetalFunction(("define ptx_kernel void @K(i64 %0, ptr writeonly captures(none) %1) local_unnamed_addr #0 {", "  %3 = icmp sgt i64 %0, 4", "  br i1 %3, label %4, label %6", "", "4:                                                ; preds = %2", "  %5 = getelementptr float, ptr %1, i64 %0", "  br label %6", "", "6:", "  %7 = phi i64 [ 1, %4 ], [ 2, %2 ]", "  ret void", "}"))
+constant Helper = MetalFunction(("define float @strict_device.largest(float %0) local_unnamed_addr #6 {", "  %2 = fmul float %0, %0", "  ret float %2", "}"))
+constant Arguments = "(constant ulong* strict_parameters [[buffer(0)]], uint3 strict_lane [[thread_position_in_threadgroup]], "
+constant Positions = "uint3 strict_group [[threadgroup_position_in_grid]], uint3 strict_size [[threads_per_threadgroup]], "
+constant Counts = "uint3 strict_groups [[threadgroups_per_grid]])"
+constant Opened = ("int strict_block = 0;", "while (true) {", "switch (strict_block) {", "case 0: {")
+Name Text
+	Kernel.Name is "K"
+	Helper.Name is "strict_device_largest"
+	let header = lines.First
+	let start = header.IndexOf("@") + 1
+	header.Substring(start, header.IndexOf("(", start) - start).Replace(".", "_")
+IsKernel Boolean
+	Kernel.IsKernel
+	Helper.IsKernel is false
+	lines.First.IndexOf(" ptx_kernel ") > 0
+ReturnType Text
+	Helper.ReturnType is "float"
+	let words = MetalInstruction(lines.First, false).Words
+	for words
+		if value.StartsWith("@")
+			return words(index - 1)
+	""
+Parameters Texts
+	Kernel.Parameters is ("i64 %0", "ptr %1")
+	let cleaned = MetalInstruction(lines.First, false).Cleaned
+	let start = cleaned.IndexOf("(", cleaned.IndexOf("@")) + 1
+	let inside = cleaned.Substring(start, cleaned.IndexOf(")", start) - start).Trim
+	for inside is "" then List(Text) else inside.Split(", ")
+		let words = MetalInstruction(value, false).Words
+		words.First + " " + words.Last
+Body Texts
+	Kernel.Body(2) is "4:"
+	Kernel.Body.Length is 8
+	for lines.Slice(1, lines.Length - 2)
+		let trimmed = value.Trim
+		let label = trimmed.IndexOf(":") > 0 and (value.StartsWith(" ") is false)
+		if trimmed is not ""
+			label then trimmed.Substring(0, trimmed.IndexOf(":") + 1) else trimmed
+Labels Texts
+	Kernel.Labels is ("%2", "%4", "%6")
+	(List(Text) + ("%" + Parameters.Length)) + Named
+Named Texts
+	Kernel.Named is ("%4", "%6")
+	for Body
+		if value.EndsWith(":")
+			"%" + value.Substring(0, value.Length - 1)
+Declarations Texts
+	Kernel.Declarations is ("bool v3;", "ulong v5;", "long v7;\nlong v7_in;")
+	for Body
+		if MetalInstruction(value, IsKernel).Result is not ""
+			Declared(MetalInstruction(value, IsKernel))
+Declared(instruction MetalInstruction) Text
+	Kernel.Declared(MetalInstruction("%7 = phi i64 [ 1, %4 ]", true)) is "long v7;\nlong v7_in;"
+	let type = MetalValue(instruction.Type).Type
+	let name = MetalValue(instruction.Result).Operand("")
+	instruction.Operation is "phi" then type + " " + name + ";\n" + type + " " + name + "_in;" else type + " " + name + ";"
+Signature Text
+	Helper.Signature is "float strict_device_largest(float v0)"
+	if IsKernel
+		return "kernel void " + Name + Arguments + Positions + Counts
+	MetalValue(ReturnType).Type + " " + Name + "(" + Text.Combine(Typed) + ")"
+Typed Texts
+	Helper.Typed is ("float v0")
+	for Parameters
+		MetalValue(value.Split(" ").First).Type + " " + MetalValue(value.Split(" ").Last).Operand("")
+Prologue Texts
+	Kernel.Prologue is ("long v0 = (long)strict_parameters[0];", "ulong v1 = (ulong)strict_parameters[1];")
+	for Parameters
+		let type = MetalValue(value.Split(" ").First).Type
+		let slot = "strict_parameters[" + index + "]"
+		let read = type is "float" then "as_type<float>((uint)" + slot + ")" else "(" + type + ")" + slot
+		type + " " + MetalValue(value.Split(" ").Last).Operand("") + " = " + read + ";"
+Callees Texts
+	Helper.Callees.Length is 0
+	for Body
+		if value.IndexOf("call ") >= 0 and (value.IndexOf("@llvm.") < 0)
+			MetalCall(value, IsKernel).Callee.Replace(".", "_")
+Statements Texts
+	Kernel.Statements(1).EndsWith("else { v7_in = ((long)2); strict_block = 2; continue; }")
+	let body = Body
+	let labels = Labels
+	let isVoid = ReturnType is "void"
+	for body
+		MetalBranch(body, labels, index, IsKernel, isVoid).Translated
+Source Texts
+	Helper.Source.Last is "}"
+	Kernel.Source.Length > 10
+	let statements = Statements
+	if "" is in statements
+		return List(Text)
+	let parameters = IsKernel then Prologue else List(Text)
+	(List(Text) + (Signature + " {")) + Declarations + parameters + Opened + statements + ("}", "}", "}", "}")

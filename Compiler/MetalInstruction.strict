@@ -1,0 +1,137 @@
+has line Text
+has isKernel Boolean
+constant Flags = ("nuw", "nsw", "exact", "disjoint", "samesign", "nneg", "inbounds", "tail", "musttail", "notail", "fast", "reassoc", "nnan", "ninf", "nsz", "arcp", "contract", "afn", "noundef", "readonly", "readnone", "writeonly", "nonnull", "zeroext", "signext", "volatile", "noalias")
+constant Wrapped = ("range(", "captures(", "dereferenceable(", "nofpclass(", "align(")
+constant Symbols = ("add", "sub", "mul", "and", "or", "xor", "shl", "sdiv", "srem", "ashr", "fadd", "fsub", "fmul", "fdiv", "udiv", "urem", "lshr")
+constant Operators = ("+", "-", "*", "&", "|", "^", "<<", "/", "%", ">>", "+", "-", "*", "/", "/", "%", ">>")
+constant Integers = ("eq", "ne", "sgt", "sge", "slt", "sle", "ugt", "uge", "ult", "ule")
+constant Comparisons = ("==", "!=", ">", ">=", "<", "<=", ">", ">=", "<", "<=")
+constant Ordered = ("oeq", "ogt", "oge", "olt", "ole")
+constant Floating = ("==", ">", ">=", "<", "<=")
+constant Unordered = ("une", "ule", "ult", "uge", "ugt")
+constant Adding = MetalInstruction("%12 = add nuw i32 %11, %8", true)
+constant Loading = MetalInstruction("%22 = load float, ptr %21, align 4", true)
+Cleaned Text
+	Loading.Cleaned is "%22 = load float, ptr %21"
+	MetalInstruction("%8 = call noundef range(i32 0, 1024) i32 @f()", true).Cleaned is "%8 = call noundef  i32 @f()"
+	let aligned = line.IndexOf(", align ")
+	let marked = line.IndexOf(", !")
+	let cut = aligned >= 0 then aligned else marked
+	let kept = cut >= 0 then line.Substring(0, cut) else line
+	for Wrapped
+		kept = Unwrapped(kept, value)
+	kept
+Unwrapped(text Text, word Text) Text
+	Adding.Unwrapped("ptr captures(none) %1, ptr captures(none) %2", "captures(") is "ptr  %1, ptr  %2"
+	let start = text.IndexOf(word)
+	if start < 0
+		return text
+	let end = text.IndexOf(")", start)
+	Unwrapped(text.Substring(0, start) + text.Substring(end + 1, text.Length - end - 1), word)
+Words Texts
+	Adding.Words is ("%12", "=", "add", "i32", "%11", "%8")
+	for Cleaned.Replace(",", "").Split(" ")
+		if (value is not "") and (value is not in Flags)
+			value
+Result Text
+	Adding.Result is "%12"
+	MetalInstruction("store float %1, ptr %2", true).Result is ""
+	let words = Words
+	(words.Length > 1) and (words(1) is "=") then words(0) else ""
+Operation Text
+	Adding.Operation is "add"
+	let words = Words
+	(words.Length > 1) and (words(1) is "=") then words(2) else words(0)
+Arguments Texts
+	Adding.Arguments is ("i32", "%11", "%8")
+	let words = Words
+	let start = (words.Length > 1) and (words(1) is "=") then 3 else 1
+	words.Slice(start, words.Length - start)
+Type Text
+	Adding.Type is "i32"
+	MetalInstruction("%9 = icmp eq i64 %5, 4", true).Type is "i1"
+	let operation = Operation
+	if operation is in ("icmp", "fcmp")
+		return "i1"
+	let arguments = Arguments
+	if operation is in MetalCast.Operations
+		return arguments.Last
+	if operation is in ("getelementptr", "inttoptr")
+		return "ptr"
+	let called = operation is "call" then MetalCall(line, isKernel).Type else arguments(0)
+	operation is "select" then arguments(2) else called
+Statement Text
+	Adding.Statement is "v12 = (int)(v11 + v8);"
+	Loading.Statement is "v22 = *reinterpret_cast<device float*>(v21);"
+	MetalInstruction("%3 = atomicrmw add ptr %1, i64 1 seq_cst", true).Statement is ""
+	let operation = Operation
+	if operation is "store"
+		return Stored
+	if operation is "call"
+		return MetalCall(line, isKernel).Statement
+	let expression = operation is in MetalCast.Operations then MetalCast(Arguments, operation).Expression else Expression
+	expression is "" then "" else MetalValue(Result).Operand("") + " = " + expression + ";"
+Expression Text
+	Adding.Expression is "(int)(v11 + v8)"
+	MetalInstruction("%15 = fneg float %14", true).Expression is "-v14"
+	let operation = Operation
+	if operation is in Symbols
+		return Binary(Symbols.Index(operation))
+	if operation is in ("icmp", "fcmp")
+		return operation is "icmp" then Compared else Ordering
+	if operation is "select"
+		return Operand(1, "i1") + " ? " + Operand(3, Arguments.Slice(2, 1).First) + " : " + Operand(5, Arguments.Last)
+	if operation is "fneg"
+		return Arguments.First is "float" then "-" + Operand(1, "float") else ""
+	operation is in ("getelementptr", "load") then Memory else ""
+Operand(at Number, type Text) Text
+	Adding.Operand(1, "i32") is "v11"
+	let arguments = Arguments
+	MetalValue(arguments(at)).Operand(type)
+Binary(symbol Number) Text
+	Adding.Binary(0) is "(int)(v11 + v8)"
+	let llvm = Arguments.First
+	let type = MetalValue(llvm)
+	if (llvm is "double") or (type.Type is "")
+		return ""
+	let prefix = symbol >= 14 then "(" + type.UnsignedType + ")" else ""
+	let operands = prefix + Operand(1, llvm) + " " + Operators(symbol) + " " + prefix + Operand(2, llvm)
+	"(" + type.Type + ")(" + operands + ")"
+Compared Text
+	MetalInstruction("%9 = icmp ult i64 %5, 4", true).Compared is "(ulong)v5 < (ulong)((long)4)"
+	let arguments = Arguments
+	let predicate = Integers.Index(arguments(0))
+	let cast = predicate >= 6 then "(" + MetalValue(arguments(1)).UnsignedType + ")" else ""
+	cast + Operand(2, arguments(1)) + " " + Comparisons(predicate) + " " + cast + Operand(3, arguments(1))
+Ordering Text
+	MetalInstruction("%9 = fcmp ord float %5, %6", true).Ordering is "!(isnan(v5) || isnan(v6))"
+	let arguments = Arguments
+	let predicate = arguments(0)
+	let left = Operand(2, arguments(1))
+	let right = Operand(3, arguments(1))
+	let nan = "isnan(" + left + ") || isnan(" + right + ")"
+	if (arguments(1) is "double") or (predicate is not in Ordered + Unordered + "ord" + "uno")
+		return ""
+	if predicate is in ("ord", "uno")
+		return predicate is "ord" then "!(" + nan + ")" else nan
+	let symbol = Floating(predicate is in Ordered then Ordered.Index(predicate) else Unordered.Index(predicate))
+	predicate is in Ordered then left + " " + symbol + " " + right else "!(" + left + " " + symbol + " " + right + ")"
+Memory Text
+	MetalInstruction("%17 = getelementptr half, ptr %3, i64 %13", true).Memory is "(ulong)((long)v3 + (long)v13 * 2)"
+	let arguments = Arguments
+	let type = MetalValue(arguments(0))
+	if (type.Type is "") or (arguments(1) is not "ptr")
+		return ""
+	if Operation is "load"
+		return "*reinterpret_cast<device " + type.Type + "*>(" + Operand(2, "ptr") + ")"
+	if (arguments.Length is not 5) or (type.Bytes is 0)
+		return ""
+	let offset = " + (long)" + Operand(4, arguments(3)) + " * " + type.Bytes
+	"(ulong)((long)" + Operand(2, "ptr") + offset + ")"
+Stored Text
+	MetalInstruction("store float %152, ptr %153", true).Stored is "*reinterpret_cast<device float*>(v153) = v152;"
+	let arguments = Arguments
+	let type = MetalValue(arguments(0)).Type
+	if (type is "") or (arguments(2) is not "ptr")
+		return ""
+	"*reinterpret_cast<device " + type + "*>(" + Operand(3, "ptr") + ") = " + Operand(1, arguments(0)) + ";"

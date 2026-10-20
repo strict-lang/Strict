@@ -139,6 +139,8 @@ ipch/
 *.exe
 *.wasm
 *.ptx
+*.metal
+!Compiler/MetalPrelude.metal
 *.asm
 *.ll
 *.mlir
@@ -165,6 +167,7 @@ MachineLearning/shakespeare.txt
 # libraries strict builds from the C sources of a native package
 **/native/*.dll
 **/native/*.so
+**/native/*.dylib
 **/native/*.exp
 
 NeuralNetworks/gpt2/

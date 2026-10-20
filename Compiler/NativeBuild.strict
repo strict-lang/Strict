@@ -4,7 +4,7 @@ has level Text = Fast
 has isWeb Boolean = false
 constant Fast = " -O2"
 constant Small = " -Os"
-constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o")
+constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o", ".gpu.opt.ll")
 Built(path Text, root Text) Number
 	let failed = Execute(logger).Test(path, root)
 	failed > 0 then failed else Compile(path, root)
@@ -110,10 +110,11 @@ Output(path Text, isProgram Boolean) Text
 	source.Substring(0, source.Length - 7) + (isProgram then "" else ".test")
 Mlir(program Text, root Text, platform Number) Text
 	NativeBuild.Mlir("module {\n}", ".", Platform.Linux).Length > 100000
+	NativeBuild.Mlir("module {\n}", ".", Platform.MacOS).IndexOf("llvm.func @strict_opendir(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@memset(!llvm.ptr, i32, i64)") is -1
 	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
-	let system = File(root + "/Compiler/NativeRuntime" + Platform.NameOf(platform) + ".mlir").ReadLines
+	let system = Platform.Runtime(platform, root)
 	let shared = program.Substring(0, program.Length - 1) + runtime
 	(platform is Platform.Web then WebBuild.Sized(shared) else shared) + "\n" + Text.Combine(system, "\n") + "\n}"
 Unsupported(mlir Text) Number

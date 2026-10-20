@@ -8441,8 +8441,6 @@
   // the PTX of a program lives next to its executable (Name.ptx, Name.older.ptx for older GPUs), the generated code
   // only names it ("file:Name"), the first launch reads both into "newer\0older\0", programs without GPU skip it
   llvm.mlir.global internal @strict_gpu_code(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
   llvm.mlir.global internal constant @strict_gpu_reading("rb\00") : !llvm.array<3 x i8>
   func.func private @strict_gpu_text(%ptx: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64

@@ -1,14 +1,15 @@
 has tools Toolchain
 constant Nvptx = "--target=nvptx64-nvidia-cuda -O3 -S -Wno-override-module -march="
+constant Optimized = "--target=nvptx64-nvidia-cuda -O2 -S -emit-llvm -Wno-override-module "
 constant Missing = DeviceBuild(Toolchain.OnWindows)
 constant Kernels = "Compiler/output/Kernels"
 constant Local = DeviceBuild(Toolchain(Platform.Current, "."))
 Ptx(base Text, isTiling = false) Texts
 	Missing.Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
-	DeviceBuild(Toolchain(Platform.MacOS, ".")).Ptx("Compiler/output/missing").Length is 0
-	if tools.platform is Platform.MacOS
-		return List(Text)
+	DeviceBuild(Toolchain(Platform.MacOS, ".")).Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
 	let lowered = tools.Lowered(base + ".gpu")
+	if tools.platform is Platform.MacOS
+		return List(Text) + (lowered is "" then Metal(base) else lowered)
 	let older = lowered is "" then Compiled(base, "sm_75") else lowered
 	(isTiling is false) or (older.StartsWith("//") is false) then List(Text) + older else (Compiled(base, "sm_80"), older)
 Compiled(base Text, target Text) Text
@@ -17,6 +18,15 @@ Compiled(base Text, target Text) Text
 	let arguments = Nvptx + target + " " + tools.Quoted(base + ".gpu.ll") + " -o " + tools.Quoted(output)
 	let compiled = ToolRunner(tools.Located("clang")).Execute(arguments)
 	compiled.Failed then "clang failed: " + compiled.error else Text.Combine(File(output).ReadLines, "\n")
+Metal(base Text) Text
+	Missing.Metal("Compiler/output/missing").StartsWith("clang failed")
+	let output = " -o " + tools.Quoted(base + ".gpu.opt.ll")
+	let arguments = Optimized + tools.Quoted(base + ".gpu.ll") + output
+	let optimized = ToolRunner(tools.Located("clang")).Execute(arguments)
+	if optimized.Failed
+		return "clang failed: " + optimized.error
+	let prelude = File(tools.root + "/Compiler/MetalPrelude.metal").ReadLines
+	Text.Combine(MetalShader(File(base + ".gpu.opt.ll").ReadLines).Source(prelude), "\n")
 Combined(device Text, isAttending = false) Text
 	Local.Combined("module {\n}").IndexOf("@strict_device_element(") > 0
 	Local.Combined("module {\n}").IndexOf("@strict_device_tokens(") is -1
@@ -37,8 +47,9 @@ Embedded(host Text, ptx Texts, base Text) Text
 		return Referenced(host, base)
 	if ptx.First.StartsWith("//") is false
 		return "GPU kernels failed: " + ptx.First
-	File(base + ".ptx").Write(ptx.First)
-	File(base + ".older.ptx").Write(ptx.Length > 1 then ptx.Last else "")
+	let ending = tools.platform is Platform.MacOS then ".metal" else ".ptx"
+	File(base + ending).Write(ptx.First)
+	File(base + ".older" + ending).Write(ptx.Length > 1 then ptx.Last else "")
 	Referenced(host, base)
 Referenced(host Text, base Text) Text
 	Missing.Referenced("module {\n}", "A").EndsWith("file:A\\00\") : !llvm.array<7 x i8>\n}")

@@ -1,0 +1,92 @@
+has body Texts
+has labels Texts
+has at Number
+has isKernel Boolean
+has isVoid Boolean
+constant Body = ("%3 = icmp sgt i64 %0, 4", "br i1 %3, label %4, label %6", "4:", "%5 = getelementptr float, ptr %1, i64 %0", "switch i64 %0, label %6 [", "i64 16, label %4", "]", "6:", "%7 = phi i64 [ 1, %4 ], [ 2, %2 ]", "ret void")
+constant Labels = ("%2", "%4", "%6")
+constant Branching = MetalBranch(Body, Labels, 1, true, true)
+constant Casting = "%3 = select i1 %2, ptr addrspacecast (ptr addrspace(3) @s to ptr), ptr null"
+constant Switching = ("switch", "i64", "%0", "label", "%6", "[")
+constant Branched = "if (v3) { strict_block = 1; continue; } else { v7_in = ((long)2); strict_block = 2; continue; }"
+Translated Text
+	Branching.Translated is Branched
+	MetalBranch(Body, Labels, 8, true, true).Translated is ";"
+	MetalBranch(List(Text) + Casting, Labels, 0, true, true).Translated is ""
+	let line = body(at)
+	if line.EndsWith(":")
+		return Entered
+	if (line is "]") or IsCase(line) or (line.IndexOf(" = phi ") > 0)
+		return ";"
+	let operation = MetalInstruction(line, isKernel).Operation
+	let isTerminator = operation is in ("br", "switch", "ret", "unreachable")
+	let translated = isTerminator then Terminator else MetalInstruction(line, isKernel).Statement
+	translated.IndexOf("@") >= 0 then "" else translated
+Owner Text
+	MetalBranch(Body, Labels, 4, true, true).Owner is "%4"
+	Branching.Owner is "%2"
+	mutable owner = labels.First
+	for at
+		if body(index).EndsWith(":")
+			owner = "%" + body(index).Substring(0, body(index).Length - 1)
+	owner
+Entered Text
+	MetalBranch(Body, Labels, 7, true, true).Entered is "} case 2: { v7 = v7_in;"
+	let entered = "} case " + labels.Index("%" + body(at).Substring(0, body(at).Length - 1)) + ": {"
+	mutable loads = ""
+	for Phis(at)
+		loads = loads + " " + MetalValue(MetalInstruction(value, isKernel).Result).Operand("") + " = "
+		loads = loads + MetalValue(MetalInstruction(value, isKernel).Result + "_in").Operand("") + ";"
+	entered + loads
+Phis(label Number) Texts
+	Branching.Phis(7) is ("%7 = phi i64 [ 1, %4 ], [ 2, %2 ]")
+	mutable phis = List(Mutable(Text))
+	mutable isPhi = true
+	for body.Slice(label + 1, body.Length - label - 1)
+		isPhi = isPhi and (value.IndexOf(" = phi ") > 0)
+		if isPhi
+			phis.Add(value)
+	phis
+Jump(target Text) Text
+	MetalBranch(Body, Labels, 4, true, true).Jump("%6") is "v7_in = ((long)1); strict_block = 2; continue;"
+	mutable copies = ""
+	for Phis(body.Index(target.Substring(1, target.Length - 1) + ":"))
+		let phi = MetalInstruction(value, isKernel)
+		copies = copies + MetalValue(phi.Result + "_in").Operand("") + " = " + Incoming(value, phi.Arguments.First) + "; "
+	copies + "strict_block = " + labels.Index(target) + "; continue;"
+Incoming(phi Text, type Text) Text
+	Branching.Incoming("%7 = phi i64 [ 1, %4 ], [ 2, %2 ]", "i64") is "((long)2)"
+	let owner = Owner
+	let pairs = phi.Substring(phi.IndexOf("["), phi.Length - phi.IndexOf("[")).Split("], [")
+	for pairs
+		let pair = value.Replace("[", "").Replace("]", "").Trim.Split(", ")
+		if pair.Last is owner
+			return MetalValue(pair.First).Operand(type)
+	""
+Terminator Text
+	MetalBranch(Body, Labels, 9, true, true).Terminator is "return;"
+	MetalBranch(Body, Labels, 4, true, true).Terminator.EndsWith("} v7_in = ((long)1); strict_block = 2; continue;")
+	let words = MetalInstruction(body(at), isKernel).Words
+	if words.First is "switch"
+		return Switched(words)
+	if words.First is "br"
+		let condition = words.Length is 3 then "" else "if (" + MetalValue(words(2)).Operand("i1") + ") { "
+		return words.Length is 3 then Jump(words.Last) else condition + Jump(words(4)) + " } else { " + Jump(words(6)) + " }"
+	if (words.First is "ret") and (words.Length is 3)
+		return "return " + MetalValue(words.Last).Operand(words(1)) + ";"
+	isVoid then "return;" else "return {};"
+Switched(words Texts) Text
+	MetalBranch(Body, Labels, 4, true, true).Switched(Switching).StartsWith("if (v0 == ((long)16))")
+	mutable cases = ""
+	mutable next = at + 1
+	for body.Slice(at + 1, body.Length - at - 1)
+		if IsCase(value) and (next is at + 1 + index)
+			let parts = MetalInstruction(value, isKernel).Words
+			let compared = MetalValue(words(2)).Operand(words(1)) + " == " + MetalValue(parts(1)).Operand(parts.First)
+			cases = cases + "if (" + compared + ") { " + Jump(parts.Last) + " } "
+			next = next + 1
+	cases + Jump(words(4))
+IsCase(line Text) Boolean
+	Branching.IsCase("i64 16, label %4")
+	Branching.IsCase("br label %4") is false
+	line.StartsWith("i") and (line.IndexOf(", label %") > 0)

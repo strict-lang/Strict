@@ -24,7 +24,7 @@ Located(name Text) Text
 	""
 Folders Texts
 	OnLinux.Folders is ("/s/Tools/LLVM-22.1.0-Linux-X64/bin/")
-	Toolchain(Platform.MacOS, "/s").Folders is ("/s/Tools/LLVM-22.1.8-MacOS-X64/bin/")
+	Toolchain(Platform.MacOS, "/s").Folders is ("/s/Tools/LLVM-22.1.8-MacOS/bin/")
 	Toolchain(OnWindows, isWeb = true).Folders.Last is "C:/s/Tools/emsdk/upstream/emscripten/"
 	let release = platform is Platform.MacOS then MacOSTools.Release else LinuxRelease
 	let unix = List(Text) + (root + "/Tools/" + release + "/bin/")

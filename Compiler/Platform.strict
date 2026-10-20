@@ -23,6 +23,24 @@ FromName(name Text) Number
 	if name is "Windows"
 		return Windows
 	name is "MacOS" then MacOS else Linux
+Architecture Text
+	Platform.Architecture is in ("X64", "Arm64")
+	Process.RunTool("uname", "-m").Output.Trim is "arm64" then "Arm64" else "X64"
+Runtimes(code Number) Texts
+	Platform.Runtimes(Linux) is ("Linux")
+	Platform.Runtimes(MacOS) is ("MacOS", "MacOS" + Platform.Architecture)
+	code is MacOS then ("MacOS", "MacOS" + Architecture) else List(Text) + NameOf(code)
+Runtime(code Number, root Text) Texts
+	Platform.Runtime(Linux, ".").First.StartsWith("  // the heap")
+	for Runtimes(code)
+		Text.Combine(File(root + "/Compiler/NativeRuntime" + value + ".mlir").ReadLines, "\n")
+LibraryExtension(code Number) Text
+	Platform.LibraryExtension(Windows) is ".dll"
+	Platform.LibraryExtension(Linux) is ".so"
+	Platform.LibraryExtension(MacOS) is ".dylib"
+	if code is Windows
+		return ".dll"
+	code is MacOS then ".dylib" else ".so"
 IsWindows(code Number) Boolean
 	if code is Windows
 		return true

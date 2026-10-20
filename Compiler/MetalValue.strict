@@ -1,0 +1,67 @@
+has text Text
+constant Names = ("i1", "i8", "i16", "i32", "i64", "half", "float", "double", "ptr", "void")
+constant Types = ("bool", "char", "short", "int", "long", "half", "float", "ulong", "ulong", "void")
+constant Unsigned = ("bool", "uchar", "ushort", "uint", "ulong", "half", "float", "ulong", "ulong", "void")
+constant Sizes = (1, 1, 2, 4, 8, 2, 4, 8, 8, 0)
+constant Digits = "0123456789ABCDEF"
+Type Text
+	MetalValue("i32").Type is "int"
+	MetalValue("double").Type is "ulong"
+	MetalValue("<4 x float>").Type is ""
+	text is in Names then Types(Names.Index(text)) else ""
+UnsignedType Text
+	MetalValue("i8").UnsignedType is "uchar"
+	MetalValue("ptr").UnsignedType is "ulong"
+	text is in Names then Unsigned(Names.Index(text)) else ""
+Bytes Number
+	MetalValue("half").Bytes is 2
+	MetalValue("[4 x i8]").Bytes is 0
+	text is in Names then Sizes(Names.Index(text)) else 0
+Operand(type Text) Text
+	MetalValue("%13").Operand("i64") is "v13"
+	MetalValue("%common.ret.op.i").Operand("float") is "vcommon_ret_op_i"
+	MetalValue("poison").Operand("i32") is "0"
+	MetalValue("addrspacecast").Operand("ptr") is "@addrspacecast"
+	if text.StartsWith("%")
+		return "v" + text.Substring(1, text.Length - 1).Replace(".", "_").Replace("-", "_")
+	if text is in ("true", "false", "poison", "undef", "null", "zeroinitializer")
+		return text is in ("true", "false") then text else "0"
+	if text.StartsWith("0x")
+		return Hexed(type)
+	Literal(type)
+Literal(type Text) Text
+	MetalValue("-3").Literal("i64") is "((long)-3)"
+	MetalValue("2.500000e-01").Literal("float") is "2.500000e-01f"
+	MetalValue("1.500000e+00").Literal("double") is "@1.500000e+00"
+	let isNumber = (text is not "") and ("0123456789-".IndexOf(text.Substring(0, 1)) >= 0)
+	if (isNumber is false) or (type is "double") or (MetalValue(type).Type is "")
+		return "@" + text
+	type is "float" then text + "f" else "((" + MetalValue(type).Type + ")" + text + ")"
+Hexed(type Text) Text
+	MetalValue("0xH3C00").Hexed("half") is "as_type<half>((ushort)0x3C00)"
+	MetalValue("0x3FF0000000000000").Hexed("double") is "0x3FF0000000000000ul"
+	if text.StartsWith("0xH")
+		return "as_type<half>((ushort)0x" + text.Substring(3, text.Length - 3) + ")"
+	type is "float" then "as_type<float>(" + FloatBits + "u)" else text + "ul"
+FloatBits Text
+	MetalValue("0x3FF0000000000000").FloatBits is "0x3F800000"
+	MetalValue("0xC160000000000000").FloatBits is "0xCB000000"
+	let high = Hexadecimal(text.Substring(2, 8))
+	let low = Hexadecimal(text.Substring(10, 8))
+	let mantissa = (high % 1048576) * 8 + (low / 536870912).Floor
+	let sign = high >= 2147483648 then 2147483648 else 0
+	"0x" + Hex(sign + Exponent((high / 1048576).Floor % 2048) * 8388608 + mantissa, 8)
+Exponent(double Number) Number
+	MetalValue("").Exponent(1023) is 127
+	MetalValue("").Exponent(2047) is 255
+	if double is 0
+		return 0
+	double is 2047 then 255 else double - 896
+Hex(number Number, count Number) Text
+	MetalValue("").Hex(3212836864, 8) is "BF800000"
+	MetalValue("").Hex(10, 2) is "0A"
+	count is 0 then "" else Hex((number / 16).Floor, count - 1) + Digits.Substring(number % 16, 1)
+Hexadecimal(digits Text) Number
+	MetalValue("").Hexadecimal("3FF00000") is 1072693248
+	for digits
+		Digits.IndexOf(value to Text) * 16 ^ (digits.Length - 1 - index)
