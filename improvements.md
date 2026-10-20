@@ -139,6 +139,22 @@ In priority order. Remove what is done, add what is found, keep each item to wha
       on Strict methods, measured as the share of generated methods that pass their tests and the time to
       them against Qwen3-0.6B with lookup speculation; only a winner gets built in Strict (codebook lookups,
       block-diagonal and prefix attention masks in the attention kernel).
+    - **Latent reasoning with HybridAgent, inference only** (added 2026-10-20).
+      [HybridAgent](https://arxiv.org/abs/2610.18861) ([code](https://github.com/togethercomputer/HybridAgent), MIT):
+      Qwen3-8B and 14B Base checkpoints that think partly without tokens: after the sampled anchor
+      `<latent>` the last hidden state (after the final norm, `hidden_states[-1]`) goes through HybridLink
+      `post_ln(h + W2 gelu(W1 pre_ln(h)))` (two d by d matrices with biases, two LayerNorms, about 34M
+      weights for 8B) and becomes the next input instead of a token embedding, 4 to 200 latent steps
+      until the nearest token embedding by cosine is `</latent>`. Reported 35-55% fewer steps and 63-73%
+      less decode compute than text reasoning at higher accuracy (AIME, GPQA, search agents), measured as
+      FLOPs on H100 estimates, not tokens/s; no coding benchmark. Training needs 8-32 GPUs, so only the
+      released `HybridAgent-8B-Agentic` and `14B` (Hugging Face bf16 plus `adapter.pt`) are usable here:
+      they need loading Qwen3 from safetensors or converting to Q4_K GGUF with the two anchor tokens, a
+      `Qwen3.Steps` from an input vector instead of a token, the adapter from existing `Layer` and norm
+      code, and the exit check as one product with the embedding table per latent step (as costly as the
+      logits). Latent steps cannot be drafted, so lookup speculation only helps the text parts. Worth it
+      for the robot arm's complex questions (14B Q4_K is about 9 GB) once `Qwen3` decodes cleanly on the
+      4090; measure time to a correct answer against plain Qwen3-8B thinking.
 
 ## Language and compiler
 - **A `Generic` parameter of a non-generic type is not specialized** (found 2026-10-19, narrowed 2026-10-20): `Scored(model Generic)` calling `model.Area` or `Perplexity(model).Measured` fails on the Strict VM with "Unsupported native call Strict/Generic.Area" and `strict check` does not report it. A parameter of a generic type works (`Passed(scorer Perplexity)` takes `Perplexity(Gpt2.Tiny)` and `Perplexity(Qwen3.Tiny)`, VM and native, the earlier failure was an outdated `strict.exe`). Naming the specialization after the argument like `Specialization.Name` does for generic types (`Scored(Gpt2)`) passed its own tests but broke `Dictionary` and `List.Unique` (their `Generic` parameters mean the element type, also through `List(key Generic, mappedValue Generic)` and calls on the elements), so either the owner check must be exact or `strict check` should reject calls on such a parameter.
