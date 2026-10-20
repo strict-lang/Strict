@@ -13,7 +13,8 @@ Linked(base Text, executable Text, level Text) Text
 	let folder = Release(Logger, base).Parent
 	let content = Preloaded(folder + "/Content") + Mirrored(folder, base)
 	let page = " --shell-file " + tools.Quoted(tools.root + "/Compiler/WebShell.html")
-	let inputs = tools.Quoted(base + ".o") + sources + content + page
+	let runtime = " --js-library " + tools.Quoted(tools.root + "/Compiler/WebRuntime.js")
+	let inputs = tools.Quoted(base + ".o") + sources + content + page + runtime
 	let linked = ToolRunner(tools.Located("emcc")).Execute(inputs + " -o " + tools.Quoted(executable) + Options + " -O1")
 	linked.Failed then "emcc failed: " + linked.error else Optimized(executable, level)
 Compiled(base Text, level Text) Text
