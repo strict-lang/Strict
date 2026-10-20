@@ -1,3 +1,20 @@
+  // the ids of a thread, the only target specific operations of the kernels generated from loops
+  func.func private @strict_device_thread_index() -> i32 attributes {passthrough = ["alwaysinline"]} {
+    %thread = nvvm.read.ptx.sreg.tid.x : i32
+    return %thread : i32
+  }
+  func.func private @strict_device_block_index() -> i32 attributes {passthrough = ["alwaysinline"]} {
+    %block = nvvm.read.ptx.sreg.ctaid.x : i32
+    return %block : i32
+  }
+  func.func private @strict_device_block_size() -> i32 attributes {passthrough = ["alwaysinline"]} {
+    %width = nvvm.read.ptx.sreg.ntid.x : i32
+    return %width : i32
+  }
+  func.func private @strict_device_block_count() -> i32 attributes {passthrough = ["alwaysinline"]} {
+    %blocks = nvvm.read.ptx.sreg.nctaid.x : i32
+    return %blocks : i32
+  }
   func.func private @strict_device_element(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f64 {
     %sixteen = arith.constant 16 : i64
     %isHalf = arith.cmpi eq, %bits, %sixteen : i64
