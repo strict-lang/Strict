@@ -1,33 +1,35 @@
 has logger
-constant Width = 1920
-constant Height = 1080
-constant Passes = 10
-constant Dot = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+constant Width = 3840
+constant Height = 2160
+constant Radius = 4
+constant Dot = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 Run
-	mutable pixels = Pattern(Width * Height * 3)
+	let pixels = Pattern(Width * Height * 4)
 	let started = Process.Elapsed
-	for Passes
-		pixels = Blurred(pixels, Width * 3)
+	let blurred = Blurred(pixels, Width, Radius)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-	logger.Log("Blurred " + Width + "x" + Height + " " + Passes + " times in " + milliseconds + " ms: " + pixels(3000003))
+	logger.Log("Blurred " + Width + "x" + Height + " in " + milliseconds + " ms: " + blurred(Width * (Height + 1) * 2))
 Pattern(count Number) Numbers
-	BenchBlur.Pattern(3) is (0, 239 / 255, 222 / 255)
+	BenchBlur.Pattern(3) is (0, 239, 222)
 	for count
-		(index * 7919 % 256) / 255
-Blurred(pixels Numbers, stride Number) Numbers
-	BenchBlur.Blurred((1, 2, 3, 4, 5, 6, 7, 8, 9), 3) is (1, 2, 3, 4, 5, 6, 7, 8, 9)
-	BenchBlur.Blurred(Dot, 9)(13) is 1
-	BenchBlur.Blurred(Dot, 9).Sum is 1
+		index * 7919 % 256
+Blurred(pixels Numbers, width Number, radius Number) Numbers
+	BenchBlur.Blurred((1, 2, 3, 4, 5, 6, 7, 8), 2, 1) is (1, 2, 3, 4, 5, 6, 7, 8)
+	BenchBlur.Blurred(Dot, 3, 1)(16) is 1
 	for pixels
-		IsEdge(index, stride, pixels.Length) then value else Averaged(pixels, index, stride)
-IsEdge(index Number, stride Number, length Number) Boolean
-	BenchBlur.IsEdge(0, 9, 27)
-	BenchBlur.IsEdge(13, 9, 27) is false
-	BenchBlur.IsEdge(11, 9, 27)
-	index < stride or index >= length - stride or index % stride < 3 or index % stride >= stride - 3
-Averaged(pixels Numbers, index Number, stride Number) Number
-	BenchBlur.Averaged(Dot, 13, 9) is 1
-	let above = pixels(index - stride - 3) + pixels(index - stride) + pixels(index - stride + 3)
-	let middle = pixels(index - 3) + pixels(index) + pixels(index + 3)
-	let below = pixels(index + stride - 3) + pixels(index + stride) + pixels(index + stride + 3)
-	(above + middle + below) / 9
+		IsEdge(index, width * 4, pixels.Length, radius) then value else Averaged(pixels, index, width * 4, radius)
+IsEdge(position Number, stride Number, length Number, radius Number) Boolean
+	BenchBlur.IsEdge(0, 12, 36, 1)
+	BenchBlur.IsEdge(16, 12, 36, 1) is false
+	BenchBlur.IsEdge(17, 12, 36, 1) is false
+	BenchBlur.IsEdge(20, 12, 36, 1)
+	let x = ((position % stride) / 4).Floor
+	let y = (position / stride).Floor
+	x < radius or x >= stride / 4 - radius or y < radius or y >= length / stride - radius
+Averaged(pixels Numbers, center Number, stride Number, radius Number) Number
+	BenchBlur.Averaged(Dot, 16, 12, 1) is 1
+	let side = radius * 2 + 1
+	mutable sum = 0
+	for side * side
+		sum = sum + pixels(center + ((value / side).Floor - radius) * stride + (value % side - radius) * 4)
+	(sum / (side * side)).Floor
