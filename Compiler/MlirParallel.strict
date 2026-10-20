@@ -9,6 +9,8 @@ constant Doubled = MethodEntry("Doubled", List(MemberEntry) + MlirLists.Items, "
 constant Randomized = MethodEntry("Randomized", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Invoke(2, ("Strict/Number", "Random", "Strict/Number"), List(Number), 1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 4)))
 constant Filtered = MethodEntry("Filtered", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Binary(InstructionType.GreaterThan, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.LoopEnd, 7)))
 constant Rows = TypeEntry("Strict/Rows", List(MemberEntry), (Twice, Doubled, Randomized, Filtered))
+constant Byted = MethodEntry("Byted", Doubled.parameters, "Strict/Bytes", (List(InstructionEntry) + MlirLayout.Bytings.method.instructions(0)) + Doubled.instructions.Slice(1, 5))
+constant Byting = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Byted), 2)
 constant Doubling = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Doubled), 2)
 constant Randomizing = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Randomized), 2)
 IsParallel Boolean
@@ -40,6 +42,7 @@ Temp(suffix Text) Text
 Forked Texts
 	Text.Combine(Doubling.Forked).IndexOf("func.call @strict_parallel(%t2pf, %t2pc, %t2pn)") > 0
 	Randomizing.Forked.Length is 0
+	Text.Combine(Byting.Forked).IndexOf("@strict_packed_new(%t2pkelements, %t2pkformat)") > 0
 	if IsParallel is false
 		return List(Text)
 	let count = "    " + Temp("pn") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
@@ -47,7 +50,8 @@ Forked Texts
 	let enough = "    " + Temp("pb") + " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
 	let label = "^loop" + position
 	let branch = "    cf.cond_br " + Temp("pb") + ", " + label + "parallel, " + label + "serial"
-	(count, threshold, enough, branch, "  " + label + "parallel:") + Context + Joined + ("  " + label + "serial:")
+	let packed = MlirBytes(function, position).Created(Temp("pk"))
+	(count, threshold, enough, branch, "  " + label + "parallel:") + packed + Context + Joined + ("  " + label + "serial:")
 Context Texts
 	Doubling.Context.Last is "    func.call @strict_rc_object(%t2pc, %t2ps) : (!llvm.ptr, i64) -> ()"
 	let names = Snapshot
@@ -102,10 +106,12 @@ Restored(first Number, limit Number) Texts
 	lines
 Iterated Texts
 	Text.Combine(Doubling.Iterated).IndexOf("cf.br ^loop2child(%from : i64)") > 0
+	Text.Combine(Byting.Iterated).IndexOf("@strict_list_data(%t2rv)") > 0
 	let loops = MlirLoops(function, position)
 	let entry = function.method.instructions(position)
 	let bounds = entry.payload(1) is 1 then loops.RangeBounds(entry) else loops.CountBounds(entry)
-	let items = "    " + Temp("ri") + " = func.call @strict_list_items(" + Temp("rv") + ") : (f64) -> !llvm.ptr"
+	let itemizer = MlirBytes(function, position).Itemizer
+	let items = "    " + Temp("ri") + " = func.call " + itemizer + "(" + Temp("rv") + ") : (f64) -> !llvm.ptr"
 	let started = (function.Load(Temp("rv"), "%v_forResult"), items, "    cf.br ^loop" + position + "child(%from : i64)")
 	bounds + loops.Items + started + Checked + loops.Current + Body + Next
 Checked Texts

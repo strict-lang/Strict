@@ -5,6 +5,7 @@ constant OuterLoop = MethodEntry("Run", List(MemberEntry), "None", (InstructionE
 constant Nested = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, OuterLoop), 0)
 constant ListLoop = MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1)))
 constant Listing = MlirLoops(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, ListLoop), 1)
+constant Bytewise = MlirLoops(MlirFunction(List(TypeEntry) + MlirFunction.Shape + MlirLayout.Byting, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("numbers", "Strict/Bytes", List(InstructionEntry), false), "None", ListLoop.instructions)), 1)
 constant Emptied = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "forResult")
 constant Collecting = MlirLoops(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (Emptied, InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 2)))), 1)
 constant Doubling = MlirLoops(MlirKernel.Doubler, 2)
@@ -39,8 +40,12 @@ Current Texts
 	indexed + (collection is "Text" then character else Element) + function.Store(Temp("g"), "%v_value")
 Element Text
 	Listing.Element.StartsWith("    %t1g = func.call @strict_hoisted_item(%t1h, %t1c, %t1hv, %t1v)")
-	constant operands = "(" + Temp("h") + ", " + Temp("c") + ", " + Temp("hv") + ", " + Temp("v") + ")"
-	"    " + Temp("g") + " = func.call @strict_hoisted_item" + operands + " : (!llvm.ptr, f64, i64, f64) -> f64"
+	Bytewise.Element.StartsWith("    %t1g = func.call @strict_hoisted_byte_item(%t1hb, %t1h, %t1c, %t1hv, %t1v)")
+	constant operands = Temp("h") + ", " + Temp("c") + ", " + Temp("hv") + ", " + Temp("v") + ")"
+	if MlirBytes(function, position).IsIterated
+		constant types = " : (!llvm.ptr, !llvm.ptr, f64, i64, f64) -> f64"
+		return "    " + Temp("g") + " = func.call @strict_hoisted_byte_item(" + Temp("hb") + ", " + operands + types
+	"    " + Temp("g") + " = func.call @strict_hoisted_item(" + operands + " : (!llvm.ptr, f64, i64, f64) -> f64"
 Collection Text
 	Counting.Collection is ""
 	let entry = function.method.instructions(position)
@@ -84,11 +89,13 @@ CountBounds(entry InstructionEntry) Texts
 Items Texts
 	Listing.Items.First.IndexOf("@strict_list_items(%t1v)") > 0
 	Listing.Items.Last is "    %t1hv = func.call @strict_list_version() : () -> i64"
+	Bytewise.Items.First is "    %t1hb = func.call @strict_list_bytes(%t1v) : (f64) -> !llvm.ptr"
+	Bytewise.Items(1).IndexOf("@strict_list_byte_items(%t1v)") > 0
 	constant collection = Collection
 	if (collection is "") or (collection is "Text")
 		return List(Text)
-	let items = "    " + Temp("h") + " = func.call @strict_list_items(" + Temp("v") + ") : (f64) -> !llvm.ptr"
-	(items, "    " + Temp("hv") + " = func.call @strict_list_version() : () -> i64")
+	let version = "    " + Temp("hv") + " = func.call @strict_list_version() : () -> i64"
+	MlirBytes(function, position).Hoisted(Temp("h"), Temp("v")) + version
 Outered Texts
 	Counting.Outered.Length is 0
 	Nested.Outered.Last is "    llvm.store %t0y, %v_outer : f64, !llvm.ptr"

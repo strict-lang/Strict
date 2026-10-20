@@ -4647,6 +4647,36 @@
     %version = llvm.load %slot : !llvm.ptr -> i64
     return %version : i64
   }
+  // the items to iterate a list with, none for a list in format 9 (Bytes), strict_hoisted_byte_item reads those
+  func.func private @strict_list_byte_items(%list: f64) -> !llvm.ptr {
+    %bytes = func.call @strict_list_bytes(%list) : (f64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isPlain = llvm.icmp "eq" %bytes, %null : !llvm.ptr
+    cf.cond_br %isPlain, ^plain, ^bytes
+  ^plain:
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    return %items : !llvm.ptr
+  ^bytes:
+    return %null : !llvm.ptr
+  }
+  // an element of a list iterated with strict_list_byte_items: a byte where it is, other lists like strict_hoisted_item
+  func.func private @strict_hoisted_byte_item(%bytes: !llvm.ptr, %items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %now = func.call @strict_list_version() : () -> i64
+    %same = arith.cmpi eq, %now, %version : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %hasBytes = llvm.icmp "ne" %bytes, %null : !llvm.ptr
+    %unchanged = arith.andi %same, %hasBytes : i1
+    cf.cond_br %unchanged, ^byte, ^other
+  ^byte:
+    %at = arith.fptosi %index : f64 to i64
+    %slot = llvm.getelementptr %bytes[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %value = llvm.load %slot : !llvm.ptr -> i8
+    %number = arith.uitofp %value : i8 to f64
+    return %number : f64
+  ^other:
+    %item = func.call @strict_hoisted_item(%items, %index, %version, %list) : (!llvm.ptr, f64, i64, f64) -> f64
+    return %item : f64
+  }
   func.func private @strict_hoisted_item(%items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %now = func.call @strict_list_version() : () -> i64
     %same = arith.cmpi eq, %now, %version : i64
@@ -6995,6 +7025,15 @@
     %isTagged = arith.cmpf uno, %number, %number : f64
     %result = arith.select %isTagged, %number, %whole : f64
     return %result : f64
+  }
+  // a number stored into a Bytes list (format 9): its whole part like a C cast, below 0 is 0, above 255 is 255
+  func.func private @strict_byte_packed(%number: f64) -> i8 attributes {passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0.0 : f64
+    %largest = arith.constant 255.0 : f64
+    %low = arith.maximumf %number, %zero : f64
+    %clamped = arith.minimumf %low, %largest : f64
+    %byte = arith.fptoui %clamped : f64 to i8
+    return %byte : i8
   }
   func.func private @strict_two_half(%pair: f64, %shift: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %bits = arith.bitcast %pair : f64 to i64
