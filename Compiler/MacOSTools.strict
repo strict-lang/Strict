@@ -1,0 +1,15 @@
+has root Text
+constant Release = "LLVM-22.1.8-MacOS-X64"
+constant Micromamba = "https://micro.mamba.pm/api/micromamba/osx-64/latest"
+constant Packages = " -c conda-forge clang=22.1.8 mlir=22.1.8 llvm-tools=22.1.8"
+Linked(platform Number) Text
+	MacOSTools.Linked(Platform.Linux) is " -lm -lpthread"
+	MacOSTools.Linked(Platform.MacOS) is " -lm -lpthread -Wl,-stack_size,0x4000000"
+	platform is Platform.MacOS then " -lm -lpthread -Wl,-stack_size,0x4000000" else " -lm -lpthread"
+Lines Texts
+	MacOSTools("/s").Lines.First is "mkdir -p /s/Tools/micromamba"
+	MacOSTools("/s").Lines.Last.EndsWith(Packages)
+	let mamba = root + "/Tools/micromamba"
+	let created = mamba + "/bin/micromamba create -y -q -p " + root + "/Tools/" + Release + Packages
+	let download = "curl -sL " + Micromamba + " | tar -xj -C " + mamba + " bin/micromamba"
+	("mkdir -p " + mamba, download, "MAMBA_ROOT_PREFIX=" + mamba + " " + created)

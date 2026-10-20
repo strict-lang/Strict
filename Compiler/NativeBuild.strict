@@ -4,7 +4,7 @@ has level Text = Fast
 has isWeb Boolean = false
 constant Fast = " -O2"
 constant Small = " -Os"
-constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o")
+constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o")
 Built(path Text, root Text) Number
 	let failed = Execute(logger).Test(path, root)
 	failed > 0 then failed else Compile(path, root)
@@ -34,8 +34,8 @@ Device(program Text, base Text, root Text) Text
 		return program
 	let gpu = DeviceBuild(Toolchain(Platform.Current, root))
 	let device = program.Substring(marker + 1, program.Length - marker - 1)
-	File(base + ".gpu.mlir").Write(gpu.Combined(device, program.IndexOf(MlirAttention.Marker) >= 0))
-	let embedded = gpu.Embedded(program.Substring(0, marker), gpu.Ptx(base, device.IndexOf(MlirTokens.Marker) >= 0), base)
+	let kernels = gpu.Built(base, device, program.IndexOf(MlirAttention.Marker) >= 0)
+	let embedded = gpu.Embedded(program.Substring(0, marker), kernels, base)
 	embedded.StartsWith("GPU kernels failed") then Failed(embedded) else embedded
 Failed(message Text) Text
 	logger.Log(message)

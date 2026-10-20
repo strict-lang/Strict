@@ -1,20 +1,3 @@
-  // the ids of a thread, the only target specific operations of the kernels generated from loops
-  func.func private @strict_device_thread_index() -> i32 attributes {passthrough = ["alwaysinline"]} {
-    %thread = nvvm.read.ptx.sreg.tid.x : i32
-    return %thread : i32
-  }
-  func.func private @strict_device_block_index() -> i32 attributes {passthrough = ["alwaysinline"]} {
-    %block = nvvm.read.ptx.sreg.ctaid.x : i32
-    return %block : i32
-  }
-  func.func private @strict_device_block_size() -> i32 attributes {passthrough = ["alwaysinline"]} {
-    %width = nvvm.read.ptx.sreg.ntid.x : i32
-    return %width : i32
-  }
-  func.func private @strict_device_block_count() -> i32 attributes {passthrough = ["alwaysinline"]} {
-    %blocks = nvvm.read.ptx.sreg.nctaid.x : i32
-    return %blocks : i32
-  }
   func.func private @strict_device_element(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f64 {
     %sixteen = arith.constant 16 : i64
     %isHalf = arith.cmpi eq, %bits, %sixteen : i64
@@ -252,15 +235,13 @@
   }
   // the value of the lane whose number differs in the bit of offset, a step of a butterfly reduction over a warp
   func.func private @strict_device_shuffle(%value: f64, %offset: i32) -> f64 {
-    %all = arith.constant -1 : i32
-    %clamp = arith.constant 31 : i32
     %thirtyTwo = arith.constant 32 : i64
     %bits = arith.bitcast %value : f64 to i64
     %low = arith.trunci %bits : i64 to i32
     %shifted = arith.shrui %bits, %thirtyTwo : i64
     %high = arith.trunci %shifted : i64 to i32
-    %otherLow = nvvm.shfl.sync bfly %all, %low, %offset, %clamp : i32 -> i32
-    %otherHigh = nvvm.shfl.sync bfly %all, %high, %offset, %clamp : i32 -> i32
+    %otherLow = func.call @strict_device_swap(%low, %offset) : (i32, i32) -> i32
+    %otherHigh = func.call @strict_device_swap(%high, %offset) : (i32, i32) -> i32
     %lowWide = arith.extui %otherLow : i32 to i64
     %highWide = arith.extui %otherHigh : i32 to i64
     %highPlaced = arith.shli %highWide, %thirtyTwo : i64
@@ -269,10 +250,8 @@
     return %other : f64
   }
   func.func private @strict_device_shuffles(%value: f32, %offset: i32) -> f32 {
-    %all = arith.constant -1 : i32
-    %clamp = arith.constant 31 : i32
     %bits = arith.bitcast %value : f32 to i32
-    %otherBits = nvvm.shfl.sync bfly %all, %bits, %offset, %clamp : i32 -> i32
+    %otherBits = func.call @strict_device_swap(%bits, %offset) : (i32, i32) -> i32
     %other = arith.bitcast %otherBits : i32 to f32
     return %other : f32
   }
@@ -344,14 +323,14 @@
     llvm.store %warped, %slot : f64, !llvm.ptr<3>
     cf.br ^shared
   ^shared:
-    nvvm.barrier0
+    func.call @strict_device_barrier() : () -> ()
     %warps = arith.shrui %lanes, %five : i64
     %isPartial = arith.cmpi slt, %inWarp, %warps : i64
     %partialSlot = llvm.getelementptr %partials[0, %inWarp] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, !llvm.array<32 x f64>
     %partial = llvm.load %partialSlot : !llvm.ptr<3> -> f64
     %mine = arith.select %isPartial, %partial, %zero : f64
     %total = func.call @strict_device_sum(%mine) : (f64) -> f64
-    nvvm.barrier0
+    func.call @strict_device_barrier() : () -> ()
     return %total : f64
   }
   func.func private @strict_device_elements(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f32 {
@@ -529,7 +508,7 @@
     return %number : f64
   }
   func.func private @strict_device_logarithms(%failed: !llvm.ptr, %number: f32) -> f32 {
-    %binary = llvm.call_intrinsic "llvm.nvvm.lg2.approx.f"(%number) : (f32) -> f32
+    %binary = func.call @strict_device_binary_logarithm(%number) : (f32) -> f32
     %natural = arith.constant 0.693147182 : f32
     %logarithm = arith.mulf %binary, %natural : f32
     return %logarithm : f32
@@ -568,7 +547,7 @@
     cf.cond_br %isE, ^exponential(%log2e, %one : f32, f32), ^signed
   ^signed:
     %size = llvm.intr.fabs(%left) : (f32) -> f32
-    %logarithm = llvm.call_intrinsic "llvm.nvvm.lg2.approx.f"(%size) : (f32) -> f32
+    %logarithm = func.call @strict_device_binary_logarithm(%size) : (f32) -> f32
     %isNegative = arith.cmpf olt, %left, %zero : f32
     %floored = llvm.call_intrinsic "llvm.floor.f32"(%right) : (f32) -> f32
     %isInteger = arith.cmpf oeq, %floored, %right : f32
@@ -1635,9 +1614,9 @@
   // 32 bit numbers to 8 bit numbers with a scale per 32 (a warp shares the largest magnitude), the numbers that dot
   // products with packed rows read through dp4a
   llvm.func @strict_device_quantize(%source: !llvm.ptr, %count: i64, %target: !llvm.ptr) attributes {nvvm.kernel} {
-    %thread = nvvm.read.ptx.sreg.tid.x : i32
-    %block = nvvm.read.ptx.sreg.ctaid.x : i32
-    %width = nvvm.read.ptx.sreg.ntid.x : i32
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block = func.call @strict_device_block_index() : () -> i32
+    %width = func.call @strict_device_block_size() : () -> i32
     %start = arith.muli %block, %width : i32
     %sum = arith.addi %start, %thread : i32
     %at = arith.extui %sum : i32 to i64
@@ -1655,7 +1634,7 @@
     %inverse = arith.divf %most, %largest : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
     %scaled = arith.mulf %value, %factor : f32
-    %rounded = llvm.call_intrinsic "llvm.nvvm.f2i.rn"(%scaled) : (f32) -> i32
+    %rounded = func.call @strict_device_rounded(%scaled) : (f32) -> i32
     %byte = arith.trunci %rounded : i32 to i8
     %byteSlot = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %byte, %byteSlot : i8, !llvm.ptr
@@ -1689,10 +1668,6 @@
     cf.br ^round(%larger, %half : f32, i32)
   ^done:
     return %largest : f32
-  }
-  func.func private @strict_device_dp4a(%left: i32, %right: i32, %sum: i32) -> i32 attributes {passthrough = ["alwaysinline"]} {
-    %result = llvm.call_intrinsic "llvm.nvvm.idp4a.s.s"(%left, %right, %sum) : (i32, i32, i32) -> i32
-    return %result : i32
   }
   func.func private @strict_device_words(%first: i32, %second: i32, %third: i32, %fourth: i32) -> vector<4xi32> attributes {passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32

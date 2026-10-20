@@ -139,6 +139,7 @@ ipch/
 *.exe
 *.wasm
 *.ptx
+*.hsaco
 *.asm
 *.ll
 *.mlir

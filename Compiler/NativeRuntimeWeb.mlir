@@ -477,7 +477,7 @@
   llvm.func @strict_pool_wake() {
     llvm.return
   }
-  func.func private @strict_gpu_library() -> !llvm.ptr {
+  func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
     return %null : !llvm.ptr
   }

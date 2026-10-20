@@ -13,6 +13,11 @@ Load(target Text, slot Text) Text
 Store(stored Text, slot Text) Text
 	Integer.Store("%a", "%s") is "    llvm.store %a, %s : i64, !llvm.ptr"
 	"    llvm.store " + stored + ", " + slot + " : " + type + ", !llvm.ptr"
+Private(name Text) Texts
+	Double.Private("%r0").First is "    %r0.private = llvm.alloca %one x f64 : (i64) -> !llvm.ptr<5>"
+	Double.Private("%r0").Last is "    %r0 = llvm.addrspacecast %r0.private : !llvm.ptr<5> to !llvm.ptr"
+	let allocated = "    " + name + ".private = llvm.alloca %one x " + type + " : (i64) -> !llvm.ptr<5>"
+	(allocated, "    " + name + " = llvm.addrspacecast " + name + ".private : !llvm.ptr<5> to !llvm.ptr")
 Written(slot Text) Text
 	Pointer.Written("%s") is "    func.call @strict_gc_written(%s) : (!llvm.ptr) -> ()"
 	"    func.call @strict_gc_written(" + slot + ") : (" + type + ") -> ()"

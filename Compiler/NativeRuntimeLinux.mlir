@@ -704,8 +704,11 @@
     llvm.return
   }
   llvm.mlir.global internal constant @strict_gpu_driver("libcuda.so.1\00") : !llvm.array<13 x i8>
-  func.func private @strict_gpu_library() -> !llvm.ptr {
-    %name = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+  llvm.mlir.global internal constant @strict_gpu_amd_driver("libamdhip64.so\00") : !llvm.array<15 x i8>
+  func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
+    %nvidia = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %amd = llvm.mlir.addressof @strict_gpu_amd_driver : !llvm.ptr
+    %name = arith.select %isAmd, %amd, %nvidia : !llvm.ptr
     %now = arith.constant 2 : i32
     %library = llvm.call @dlopen(%name, %now) : (!llvm.ptr, i32) -> !llvm.ptr
     return %library : !llvm.ptr

@@ -248,7 +248,7 @@
     %secondBits = llvm.extractelement %queries[%slotNext : i32] : vector<32xi32>
     %first = llvm.bitcast %firstBits : i32 to vector<2xf16>
     %second = llvm.bitcast %secondBits : i32 to vector<2xf16>
-    %dot = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k8.row.col.f32.f32"(%first, %second, %key, %sum0, %sum1, %sum2, %sum3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    %dot = func.call @strict_device_halves_mma(%first, %second, %key, %sum0, %sum1, %sum2, %sum3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
     %dot0 = llvm.extractvalue %dot[0] : !llvm.struct<(f32, f32, f32, f32)>
     %dot1 = llvm.extractvalue %dot[1] : !llvm.struct<(f32, f32, f32, f32)>
     %dot2 = llvm.extractvalue %dot[2] : !llvm.struct<(f32, f32, f32, f32)>
@@ -414,7 +414,7 @@
     %upperShares = func.call @strict_device_attention_pair(%share2, %share3) : (f32, f32) -> i32
     %lowerOperand = llvm.bitcast %lowerShares : i32 to vector<2xf16>
     %upperOperand = llvm.bitcast %upperShares : i32 to vector<2xf16>
-    %weighted = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k8.row.col.f32.f32"(%lowerOperand, %upperOperand, %value, %sum0, %sum1, %sum2, %sum3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    %weighted = func.call @strict_device_halves_mma(%lowerOperand, %upperOperand, %value, %sum0, %sum1, %sum2, %sum3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
     %weighted0 = llvm.extractvalue %weighted[0] : !llvm.struct<(f32, f32, f32, f32)>
     %weighted1 = llvm.extractvalue %weighted[1] : !llvm.struct<(f32, f32, f32, f32)>
     %weighted2 = llvm.extractvalue %weighted[2] : !llvm.struct<(f32, f32, f32, f32)>
@@ -472,8 +472,8 @@
     %zero = arith.constant 0.0 : f32
     %logarithm = arith.constant 1.44269504 : f32
     %zeros = arith.constant dense<0.0> : vector<64xf32>
-    %thread = nvvm.read.ptx.sreg.tid.x : i32
-    %block = nvvm.read.ptx.sreg.ctaid.x : i32
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block = func.call @strict_device_block_index() : () -> i32
     %warp = arith.shrui %thread, %c5 : i32
     %lane = arith.andi %thread, %c31 : i32
     %row = arith.shrui %lane, %c2 : i32
@@ -545,9 +545,9 @@
     cf.cond_br %moreTiles, ^load, ^finish
   ^load:
     %first = arith.shli %tile, %c6 : i32
-    nvvm.barrier0
+    func.call @strict_device_barrier() : () -> ()
     func.call @strict_device_attention_tile(%keys, %keyBits, %values, %valueBits, %first, %positions, %stride, %base, %size, %thread) : (!llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32) -> ()
-    nvvm.barrier0
+    func.call @strict_device_barrier() : () -> ()
     %visible = arith.cmpi sle, %first, %warpLast : i32
     %computing = arith.andi %warpActive, %visible : i1
     cf.cond_br %computing, ^compute, ^tileNext(%outputs, %state : vector<64xf32>, vector<4xf32>)
@@ -794,7 +794,7 @@
     %upperBits = llvm.extractelement %queries[%slotNext : i32] : vector<32xi32>
     %lowerQuery = llvm.bitcast %lowerBits : i32 to vector<2xf16>
     %upperQuery = llvm.bitcast %upperBits : i32 to vector<2xf16>
-    %dot = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k8.row.col.f32.f32"(%lowerQuery, %upperQuery, %key, %sum0, %sum1, %sum2, %sum3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    %dot = func.call @strict_device_halves_mma(%lowerQuery, %upperQuery, %key, %sum0, %sum1, %sum2, %sum3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
     %dot0 = llvm.extractvalue %dot[0] : !llvm.struct<(f32, f32, f32, f32)>
     %dot1 = llvm.extractvalue %dot[1] : !llvm.struct<(f32, f32, f32, f32)>
     %dot2 = llvm.extractvalue %dot[2] : !llvm.struct<(f32, f32, f32, f32)>
@@ -873,7 +873,7 @@
     %scaled1 = arith.mulf %output1, %lowerScale : f32
     %scaled2 = arith.mulf %output2, %upperScale : f32
     %scaled3 = arith.mulf %output3, %upperScale : f32
-    %weighted = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k8.row.col.f32.f32"(%lowerShares, %upperShares, %value, %scaled0, %scaled1, %scaled2, %scaled3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    %weighted = func.call @strict_device_halves_mma(%lowerShares, %upperShares, %value, %scaled0, %scaled1, %scaled2, %scaled3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
     %weighted0 = llvm.extractvalue %weighted[0] : !llvm.struct<(f32, f32, f32, f32)>
     %weighted1 = llvm.extractvalue %weighted[1] : !llvm.struct<(f32, f32, f32, f32)>
     %weighted2 = llvm.extractvalue %weighted[2] : !llvm.struct<(f32, f32, f32, f32)>
@@ -1082,7 +1082,7 @@
     %more = arith.cmpi sgt, %receivers, %c0 : i32
     cf.cond_br %more, ^roundBody, ^done
   ^roundBody:
-    nvvm.barrier0
+    func.call @strict_device_barrier() : () -> ()
     %above = arith.cmpi sge, %warp, %receivers : i32
     %below = arith.cmpi slt, %warp, %active : i32
     %isSender = arith.andi %above, %below : i1
@@ -1093,7 +1093,7 @@
     func.call @strict_device_attention_put(%sendStart, %lane, %current, %currentState) : (!llvm.ptr, i32, vector<64xf32>, vector<4xf32>) -> ()
     cf.br ^sent
   ^sent:
-    nvvm.barrier0
+    func.call @strict_device_barrier() : () -> ()
     %regions = arith.subi %active, %receivers : i32
     cf.br ^receive(%warp, %current, %currentState : i32, vector<64xf32>, vector<4xf32>)
   ^receive(%region: i32, %received: vector<64xf32>, %receivedState: vector<4xf32>):
@@ -1145,9 +1145,9 @@
     %zero = arith.constant 0.0 : f32
     %logarithm = arith.constant 1.44269504 : f32
     %zeros = arith.constant dense<0.0> : vector<64xf32>
-    %thread = nvvm.read.ptx.sreg.tid.x : i32
-    %block = nvvm.read.ptx.sreg.ctaid.x : i32
-    %blocks = nvvm.read.ptx.sreg.nctaid.x : i32
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block = func.call @strict_device_block_index() : () -> i32
+    %blocks = func.call @strict_device_block_count() : () -> i32
     %warp = arith.shrui %thread, %c5 : i32
     %lane = arith.andi %thread, %c31 : i32
     %row = arith.shrui %lane, %c2 : i32
@@ -1226,10 +1226,10 @@
   ^store:
     %partialStart = func.call @strict_device_attention_partial(%partialAt) : (i32) -> !llvm.ptr
     func.call @strict_device_attention_put(%partialStart, %lane, %merged, %mergedState) : (!llvm.ptr, i32, vector<64xf32>, vector<4xf32>) -> ()
-    llvm.call_intrinsic "llvm.nvvm.membar.gl"() : () -> ()
+    func.call @strict_device_fence() : () -> ()
     cf.br ^stored
   ^stored:
-    nvvm.barrier0
+    func.call @strict_device_barrier() : () -> ()
     %lastSlot = llvm.mlir.addressof @strict_device_attention_last : !llvm.ptr<3>
     %isFirstThread = arith.cmpi eq, %thread, %c0 : i32
     cf.cond_br %isFirstThread, ^count, ^counted
@@ -1247,13 +1247,13 @@
     llvm.store %c0, %counter : i32, !llvm.ptr<1>
     cf.br ^counted
   ^counted:
-    nvvm.barrier0
+    func.call @strict_device_barrier() : () -> ()
     %flag = llvm.load %lastSlot : !llvm.ptr<3> -> i32
     %isLastBlock = arith.cmpi ne, %flag, %c0 : i32
     %collecting = arith.andi %isLastBlock, %isFirstWarp : i1
     cf.cond_br %collecting, ^collect, ^done
   ^collect:
-    llvm.call_intrinsic "llvm.nvvm.membar.gl"() : () -> ()
+    func.call @strict_device_fence() : () -> ()
     cf.br ^gather(%c0, %zeros, %started : i32, vector<64xf32>, vector<4xf32>)
   ^gather(%part: i32, %gathered: vector<64xf32>, %gatheredState: vector<4xf32>):
     %moreParts = arith.cmpi slt, %part, %splits : i32
