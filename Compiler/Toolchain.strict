@@ -15,7 +15,8 @@ constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
 Located(name Text) Text
 	OnWindows.Located("noSuchStrictTool") is ""
-	if Process.Find(name).IsAvailable
+	Toolchain(Platform.MacOS, "/s").Located("clang") is ""
+	if (platform is not Platform.MacOS) and Process.Find(name).IsAvailable
 		return name
 	for Folders
 		if File(value + name + Extension).Exists
@@ -23,9 +24,11 @@ Located(name Text) Text
 	""
 Folders Texts
 	OnLinux.Folders is ("/s/Tools/LLVM-22.1.0-Linux-X64/bin/")
+	Toolchain(Platform.MacOS, "/s").Folders is ("/s/Tools/LLVM-22.1.8-MacOS-X64/bin/")
 	Toolchain(OnWindows, isWeb = true).Folders.Last is "C:/s/Tools/emsdk/upstream/emscripten/"
-	let linux = List(Text) + (root + "/Tools/" + LinuxRelease + "/bin/")
-	let folders = platform is Platform.Windows then WindowsFolders else linux
+	let release = platform is Platform.MacOS then MacOSTools.Release else LinuxRelease
+	let unix = List(Text) + (root + "/Tools/" + release + "/bin/")
+	let folders = platform is Platform.Windows then WindowsFolders else unix
 	isWeb then folders + (root + "/Tools/emsdk/upstream/bin/") + (root + "/Tools/emsdk/upstream/emscripten/") else folders
 Extension Text
 	OnWindows.Extension is ".exe"
@@ -48,7 +51,8 @@ InstallLines(missing Texts) Texts
 	OnLinux.InstallLines(("clang")).Length is 2
 	Toolchain(OnWindows, isWeb = true).InstallLines(("emcc")).First.StartsWith("git clone --depth 1 ")
 	let others = missing - "emcc"
-	let hostLines = platform is Platform.Windows then WindowsLines(others) else LinuxLines
+	let unixLines = platform is Platform.MacOS then MacOSTools(root).Lines else LinuxLines
+	let hostLines = platform is Platform.Windows then WindowsLines(others) else unixLines
 	let host = others.Length is 0 then List(Text) else hostLines
 	host + ("emcc" is in missing then WebBuild(value).InstallLines else List(Text))
 WindowsLines(missing Texts) Texts
@@ -91,7 +95,7 @@ Built(base Text, executable Text, level Text) Text
 	let lowered = Lowered(base)
 	if lowered is not ""
 		return lowered
-	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else " -lm -lpthread"
+	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Linked(platform)
 	let sources = NativeSources(natives).Objects(platform, root, level)
 	let resource = sources.StartsWith("clang") then sources else NativeSources(natives).Resource(base, platform, root)
 	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")

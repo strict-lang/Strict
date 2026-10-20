@@ -17,7 +17,7 @@
   }
   llvm.mlir.global internal @strict_registers(dense<0> : tensor<131072xi64>) : !llvm.array<131072 x i64>
   llvm.mlir.global internal @strict_registers_end(0 : i64) : i64
-  llvm.func @emscripten_scan_registers(!llvm.ptr)
+  llvm.func @strict_scan_registers(!llvm.ptr)
   llvm.func @emscripten_stack_get_base() -> !llvm.ptr
   llvm.func @strict_registers_copy(%begin: !llvm.ptr, %end: !llvm.ptr) {
     %start = llvm.ptrtoint %begin : !llvm.ptr to i64
@@ -36,7 +36,7 @@
   }
   func.func private @strict_registers_spilled() -> (i64, i64) {
     %copy = llvm.mlir.addressof @strict_registers_copy : !llvm.ptr
-    llvm.call @emscripten_scan_registers(%copy) : (!llvm.ptr) -> ()
+    llvm.call @strict_scan_registers(%copy) : (!llvm.ptr) -> ()
     %buffer = llvm.mlir.addressof @strict_registers : !llvm.ptr
     %start = llvm.ptrtoint %buffer : !llvm.ptr to i64
     %endSlot = llvm.mlir.addressof @strict_registers_end : !llvm.ptr
