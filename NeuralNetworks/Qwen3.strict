@@ -76,7 +76,7 @@ Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	for blocks
 		let cached = value.Cached(current, rotation, cacheBits)
 		current = cached.Output(current, sequences)
-		updated.Add(cached)
+		updated.Add(Qwen3Block(cached, queries = List(Number)))
 	Qwen3(value, blocks = updated, hidden = current)
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 6

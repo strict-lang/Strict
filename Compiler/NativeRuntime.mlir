@@ -2659,7 +2659,8 @@
     return %none : i64
   }
 
-  // 1 when the object with no count was freed, 0 when its page is being swept, the GPU holds it or it is reachable
+  // 1 when the object with no count was freed, 0 when its page is being swept, it is reachable or it is a packed
+  // list not on the GPU (the collector keeps those)
   func.func private @strict_rc_dispose(%object: i64, %markSlot: !llvm.ptr, %size: i64, %flags: !llvm.ptr, %counter: !llvm.ptr) -> i64 {
     %none = arith.constant 0 : i64
     %freed = arith.constant 1 : i64
@@ -2671,9 +2672,13 @@
     %isPending = arith.cmpi ne, %pending, %none : i64
     %packed = func.call @strict_rc_device_bound(%object, %size) : (i64, i64) -> i1
     %reachable = func.call @strict_rc_reachable(%object, %markSlot, %size) : (i64, !llvm.ptr, i64) -> i1
-    %bound = arith.ori %isPending, %packed : i1
-    %left = arith.ori %bound, %reachable : i1
-    cf.cond_br %left, ^nothing, ^free
+    %left = arith.ori %isPending, %reachable : i1
+    cf.cond_br %left, ^nothing, ^unreached
+  ^unreached:
+    cf.cond_br %packed, ^device, ^free
+  ^device:
+    %released = func.call @strict_gpu_forget_resident(%object) : (i64) -> i1
+    cf.cond_br %released, ^free, ^nothing
   ^free:
     func.call @strict_rc_free(%object, %markSlot, %size, %flags, %counter, %page) : (i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i64) -> ()
     %freedSlot = llvm.mlir.addressof @strict_rc_freed : !llvm.ptr
@@ -9469,6 +9474,71 @@
     return
   ^kept:
     return
+  }
+  // a GPU list freed by its reference count: its block goes back to its class (launches on the one stream that still
+  // read it run before any that reuse it), its entry in the residents table and its small result mark go, false when
+  // it is not in the table (the collector keeps it then)
+  func.func private @strict_gpu_forget_resident(%object: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %false = arith.constant false
+    %residing = llvm.mlir.addressof @strict_gpu_residing : !llvm.ptr
+    %usedSlot = llvm.getelementptr %residing[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    %entriesBits = llvm.load %residing : !llvm.ptr -> i64
+    %entries = llvm.inttoptr %entriesBits : i64 to !llvm.ptr
+    cf.br ^find(%none : i64)
+  ^find(%index: i64):
+    %more = arith.cmpi slt, %index, %used : i64
+    cf.cond_br %more, ^compare, ^missing
+  ^compare:
+    %offset = arith.muli %index, %three : i64
+    %entry = llvm.getelementptr %entries[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %listBits = llvm.load %entry : !llvm.ptr -> i64
+    %following = arith.addi %index, %one : i64
+    %isObject = arith.cmpi eq, %listBits, %object : i64
+    cf.cond_br %isObject, ^remove, ^find(%following : i64)
+  ^remove:
+    %deviceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %device = llvm.load %deviceSlot : !llvm.ptr -> i64
+    %classSlot = llvm.getelementptr %entry[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %class = llvm.load %classSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_give(%device, %class) : (i64, i64) -> ()
+    %last = arith.subi %used, %one : i64
+    %lastOffset = arith.muli %last, %three : i64
+    %lastEntry = llvm.getelementptr %entries[%lastOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %lastList = llvm.load %lastEntry : !llvm.ptr -> i64
+    llvm.store %lastList, %entry : i64, !llvm.ptr
+    %lastDeviceSlot = llvm.getelementptr %lastEntry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %lastDevice = llvm.load %lastDeviceSlot : !llvm.ptr -> i64
+    llvm.store %lastDevice, %deviceSlot : i64, !llvm.ptr
+    %lastClassSlot = llvm.getelementptr %lastEntry[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %lastClass = llvm.load %lastClassSlot : !llvm.ptr -> i64
+    llvm.store %lastClass, %classSlot : i64, !llvm.ptr
+    llvm.store %last, %usedSlot : i64, !llvm.ptr
+    %sixteen = arith.constant 16 : i64
+    %holder = arith.addi %object, %sixteen : i64
+    %marks = llvm.mlir.addressof @strict_gpu_marks : !llvm.ptr
+    %markCount = arith.constant 128 : i64
+    cf.br ^mark(%none : i64)
+  ^mark(%markIndex: i64):
+    %moreMarks = arith.cmpi slt, %markIndex, %markCount : i64
+    cf.cond_br %moreMarks, ^markCheck, ^released
+  ^markCheck:
+    %markEntry = llvm.getelementptr %marks[0, %markIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<257 x i64>
+    %marked = llvm.load %markEntry : !llvm.ptr -> i64
+    %nextMark = arith.addi %markIndex, %one : i64
+    %isHolder = arith.cmpi eq, %marked, %holder : i64
+    cf.cond_br %isHolder, ^unmark, ^mark(%nextMark : i64)
+  ^unmark:
+    llvm.store %none, %markEntry : i64, !llvm.ptr
+    cf.br ^mark(%nextMark : i64)
+  ^released:
+    %true = arith.constant true
+    return %true : i1
+  ^missing:
+    return %false : i1
   }
   // a loop of at least 256 elements tries the GPU, a smaller one too once lists live there, it may read one of them
   func.func private @strict_gpu_wanted(%count: i64) -> i1 attributes {passthrough = ["alwaysinline"]} {
