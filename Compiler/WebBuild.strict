@@ -8,9 +8,14 @@ Linked(base Text, executable Text, level Text) Text
 	if lowered is not ""
 		return lowered
 	let sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root)
-	let linking = tools.Quoted(base + ".ll") + sources + " -o " + tools.Quoted(executable) + options + level
+	let content = Preloaded(Release(Logger, base).Parent + "/Content")
+	let linking = tools.Quoted(base + ".ll") + sources + content + " -o " + tools.Quoted(executable) + options + level
 	let linked = ToolRunner(tools.Located("emcc")).Execute(linking)
 	linked.Failed then "emcc failed: " + linked.error else "Built " + executable
+Preloaded(content Text) Text
+	Missing.Preloaded("Compiler/output/missing") is ""
+	Missing.Preloaded("Compiler") is " --preload-file \"Compiler@/Content\""
+	Directory.Exists(content) then " --preload-file \"" + content + "@/Content\"" else ""
 InstallLines Texts
 	Missing.InstallLines.Last is "C:/s/Tools/emsdk/emsdk activate latest"
 	let folder = tools.root + "/Tools/emsdk"
