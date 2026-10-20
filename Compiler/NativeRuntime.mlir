@@ -4864,6 +4864,40 @@
     %value = func.call @strict_list_get(%list, %chosen) : (f64, f64) -> f64
     return %value : f64
   }
+  // the bytes of a list in format 9 (Bytes) for reads in place, null for any other list
+  func.func private @strict_list_bytes(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %byteFormat = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %packed, %byteFormat : i64
+    cf.cond_br %isBytes, ^bytes, ^other
+  ^bytes:
+    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    return %data : !llvm.ptr
+  ^other:
+    %null = llvm.mlir.zero : !llvm.ptr
+    return %null : !llvm.ptr
+  }
+  // a read of a Bytes parameter: a byte where it is, other lists like strict_hoisted_read
+  func.func private @strict_hoisted_byte_read(%bytes: !llvm.ptr, %items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isPlain = llvm.icmp "eq" %bytes, %null : !llvm.ptr
+    cf.cond_br %isPlain, ^plain, ^checked
+  ^plain:
+    %plainValue = func.call @strict_hoisted_read(%items, %length, %index, %name, %version, %list) : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64
+    return %plainValue : f64
+  ^checked:
+    %zero = arith.constant 0.0 : f64
+    %below = arith.cmpf olt, %index, %zero : f64
+    %above = arith.cmpf uge, %index, %length : f64
+    %outside = arith.ori %below, %above : i1
+    cf.cond_br %outside, ^plain, ^byte
+  ^byte:
+    %at = arith.fptosi %index : f64 to i64
+    %slot = llvm.getelementptr %bytes[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %slot : !llvm.ptr -> i8
+    %number = arith.uitofp %byte : i8 to f64
+    return %number : f64
+  }
   func.func private @strict_hoisted_read(%items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %negative = arith.cmpf olt, %index, %zero : f64

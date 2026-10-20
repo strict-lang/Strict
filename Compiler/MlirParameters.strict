@@ -1,6 +1,8 @@
 has function MlirFunction
 constant Writers = (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable, InstructionType.InvokeWriteToList, InstructionType.InvokeRemove, InstructionType.CopyList)
 constant Reading = MlirParameters(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1))))))
+constant ByteReadTypes = " : (!llvm.ptr, !llvm.ptr, f64, f64, f64, i64, f64) -> f64"
+constant Bytes = MlirParameters(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("pixels", "Strict/List(Byte)", List(InstructionEntry), false), "None", List(InstructionEntry))))
 FixedLists Texts
 	Reading.FixedLists is ("numbers")
 	MlirParameters(MlirLists.Listed).FixedLists.Length is 0
@@ -26,11 +28,25 @@ Hoisted Texts
 Started(name Text, parameter Text) Texts
 	Reading.Started("numbers", "%p1").First is "    %h_numbers = func.call @strict_list_hoisted(%p1) : (f64) -> !llvm.ptr"
 	Reading.Started("numbers", "%p1").Last is "    %k_numbers = func.call @strict_list_version() : () -> i64"
+	Bytes.Started("pixels", "%p1").Last is "    %b_pixels = func.call @strict_list_bytes(%p1) : (f64) -> !llvm.ptr"
 	let items = "    %h_" + name + " = func.call @strict_list_hoisted(" + parameter + ") : (f64) -> !llvm.ptr"
 	let length = "    %n_" + name + " = func.call @strict_list_length(" + parameter + ") : (f64) -> f64"
-	(items, length, "    %k_" + name + " = func.call @strict_list_version() : () -> i64")
+	let started = (items, length, "    %k_" + name + " = func.call @strict_list_version() : () -> i64")
+	let bytes = "    %b_" + name + " = func.call @strict_list_bytes(" + parameter + ") : (f64) -> !llvm.ptr"
+	IsBytes(name) then started + bytes else started
 Read(name Text, list Text, position Text, nameBits Text, result Text) Text
 	Reading.Read("a", "%l", "%i", "%nb", "%x").IndexOf("@strict_hoisted_read(%h_a, %n_a, %i, %nb, %k_a, %l)") > 0
+	Bytes.Read("pixels", "%l", "%i", "%nb", "%x").IndexOf("@strict_hoisted_byte_read(%b_pixels, %h_pixels") > 0
 	let hoisted = "(%h_" + name + ", %n_" + name + ", " + position + ", " + nameBits
 	let operands = hoisted + ", %k_" + name + ", " + list + ")"
+	if IsBytes(name)
+		let call = "    " + result + " = func.call @strict_hoisted_byte_read(%b_" + name + ", "
+		return call + operands.Substring(1, operands.Length - 1) + ByteReadTypes
 	"    " + result + " = func.call @strict_hoisted_read" + operands + " : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64"
+IsBytes(name Text) Boolean
+	Bytes.IsBytes("pixels")
+	Reading.IsBytes("numbers") is false
+	for function.method.parameters
+		if (value.Name is name) and (value.typeName is in ("Strict/List(Byte)", "Strict/Bytes"))
+			return true
+	false
