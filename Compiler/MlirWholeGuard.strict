@@ -1,0 +1,106 @@
+has function MlirFunction
+has position Number
+constant Row = MlirWholeGuard(MlirWhole.Row.function, 6)
+Guarded Texts
+	Text.Combine(Row.Guarded).IndexOf("%t6wh0f = llvm.load %v_middle") > 0
+	Row.Guarded.Last.StartsWith("    %t6whok = arith.andi")
+	let names = MlirWhole(function, position).Inputs + MlirSingle(function, position).Carried
+	let counted = Line("whc", "arith.cmpf olt, " + Temp("n") + ", " + Temp("whlimit") + " : f64")
+	let limit = Line("whlimit", "arith.constant 4503599627370496.0 : f64")
+	mutable lines = (limit, Line("whz", "arith.constant 0 : i64"), counted)
+	for names + MlirKernel(function, position).Sources
+		lines = lines + (index < names.Length then Guard(value, index) else Present(value, index))
+	for Range(position + 1, function.method.LoopEndOf(position))
+		lines = lines + Bound(value)
+	lines + Joined(Conditions)
+Guard(name Text, number Number) Texts
+	Row.Guard("middle", 0).Last is "    %t6wh0 = arith.fptosi %t6wh0f : f64 to i64"
+	let loaded = Temp("wh" + number + "f")
+	let converted = Line("wh" + number, "arith.fptosi " + loaded + " : f64 to i64")
+	List(Text) + function.Load(loaded, "%v_" + name) + Checked(loaded, Temp("wh" + number), Temp("whlimit")) + converted
+Checked(number Text, prefix Text, limit Text) Texts
+	Row.Checked("%x", "%p", "%l").Last is "    %po = arith.andi %pe, %ps : i1"
+	let whole = "    " + prefix + "t = llvm.intr.trunc(" + number + ") : (f64) -> f64"
+	let equal = "    " + prefix + "e = arith.cmpf oeq, " + prefix + "t, " + number + " : f64"
+	let magnitude = "    " + prefix + "a = llvm.intr.fabs(" + number + ") : (f64) -> f64"
+	let small = "    " + prefix + "s = arith.cmpf olt, " + prefix + "a, " + limit + " : f64"
+	(whole, equal, magnitude, small, "    " + prefix + "o = arith.andi " + prefix + "e, " + prefix + "s : i1")
+Present(name Text, number Number) Texts
+	Row.Present("pixels", 3).Last is "    %t6wh3o = arith.cmpi ne, %t6wh3i, %t6whz : i64"
+	let address = Line("wh" + number + "i", "llvm.ptrtoint %b_" + name + " : !llvm.ptr to i64")
+	(address, Line("wh" + number + "o", "arith.cmpi ne, " + Temp("wh" + number + "i") + ", " + Temp("whz") + " : i64"))
+Bound(at Number) Texts
+	Row.Bound(13).First is "    %t13wb = arith.mulf %t11wb, %t12wb : f64"
+	Row.Bound(13).Last is "    %t13wk = arith.cmpf olt, %t13wb, %t6whlimit : f64"
+	Row.Bound(18)(3) is "    %t18wb = arith.addf %t18wi, %t18wm : f64"
+	Row.Bound(16).Length is 0
+	if HasBound(at) is false
+		return List(Text)
+	let entry = function.method.instructions(at)
+	let isStored = entry.kind is InstructionType.StoreRegisterToVariable
+	let measured = isStored then Accumulated(at) else List(Text) + Measured(at)
+	measured + ("    %t" + at + "wk = arith.cmpf olt, %t" + at + "wb, " + Temp("whlimit") + " : f64")
+HasBound(at Number) Boolean
+	Row.HasBound(18)
+	Row.HasBound(7) is false
+	let entry = function.method.instructions(at)
+	let isStored = entry.kind is InstructionType.StoreRegisterToVariable
+	isStored or MlirWhole(function, position).IsBounded(LoadReuse(function.method.instructions).Written(entry), at + 1)
+Measured(at Number) Text
+	Row.Measured(10) is "    %t10wb = llvm.intr.fabs(%t6wh1f) : (f64) -> f64"
+	Row.Measured(12) is "    %t12wb = arith.constant 0x4010000000000000 : f64"
+	let entry = function.method.instructions(at)
+	let bound = "    %t" + at + "wb = "
+	if entry.kind is InstructionType.LoadConstantToRegister
+		let magnitude = PayloadDecoder(entry).Value(1).number.Absolute
+		return bound + "arith.constant " + MlirStatements(function, at).Hex(magnitude) + " : f64"
+	if entry.kind is InstructionType.LoadVariableToRegister
+		let input = MlirWhole(function, position).Inputs.Index(entry.texts(0))
+		return bound + "llvm.intr.fabs(" + (input < 0 then Temp("n") else Temp("wh" + input + "f")) + ") : (f64) -> f64"
+	bound + (entry.kind is InstructionType.IndexCall then "arith.constant 255.0 : f64" else Grown(at))
+Grown(at Number) Text
+	Row.Grown(13) is "arith.mulf %t11wb, %t12wb : f64"
+	Row.Grown(14) is "arith.addf %t8wb, %t13wb : f64"
+	let entry = function.method.instructions(at)
+	let whole = MlirWhole(function, position)
+	let left = "%t" + whole.Writer(entry.payload(1), at) + "wb"
+	let right = "%t" + whole.Writer(entry.payload(2), at) + "wb"
+	(entry.kind is InstructionType.Multiply then "arith.mulf " else "arith.addf ") + left + ", " + right + " : f64"
+Accumulated(at Number) Texts
+	Row.Accumulated(18)(2) is "    %t18wm = arith.mulf %t18wc, %t15wb : f64"
+	let whole = MlirWhole(function, position)
+	let added = function.method.instructions(at - 1)
+	let term = "%t" + whole.Writer(added.payload(2), at - 1) + "wb"
+	let carried = MlirSingle(function, position).Carried.Index(function.method.instructions(at).texts(0))
+	let start = Temp("wh" + (whole.Inputs.Length + carried) + "f")
+	let initial = "    %t" + at + "wi = llvm.intr.fabs(" + start + ") : (f64) -> f64"
+	let count = "    %t" + at + "wc = llvm.intr.fabs(" + Temp("n") + ") : (f64) -> f64"
+	let grown = "    %t" + at + "wm = arith.mulf %t" + at + "wc, " + term + " : f64"
+	(initial, count, grown, "    %t" + at + "wb = arith.addf %t" + at + "wi, %t" + at + "wm : f64")
+Conditions Texts
+	Row.Conditions(1) is "%t6wh0o"
+	Row.Conditions.Last is "%t18wk"
+	let count = MlirWhole(function, position).Inputs.Length + MlirSingle(function, position).Carried.Length
+	mutable conditions = List(Text) + Temp("whc")
+	for count + MlirKernel(function, position).Sources.Length
+		conditions = conditions + Temp("wh" + index + "o")
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if HasBound(value)
+			conditions = conditions + ("%t" + value + "wk")
+	conditions
+Joined(conditions Texts) Texts
+	Row.Joined(("%a", "%b"))(1) is "    %t6whj0 = arith.andi %t6whj, %a : i1"
+	Row.Joined(("%a", "%b")).Last is "    %t6whok = arith.andi %t6whj0, %b : i1"
+	mutable lines = List(Text) + Line("whj", "arith.constant true")
+	mutable previous = Temp("whj")
+	for conditions
+		let name = index is conditions.Length - 1 then "whok" else "whj" + index
+		lines = lines + Line(name, "arith.andi " + previous + ", " + value + " : i1")
+		previous = Temp(name)
+	lines
+Line(suffix Text, operation Text) Text
+	Row.Line("whz", "arith.constant 0 : i64") is "    %t6whz = arith.constant 0 : i64"
+	"    " + Temp(suffix) + " = " + operation
+Temp(suffix Text) Text
+	Row.Temp("whz") is "%t6whz"
+	"%t" + position + suffix
