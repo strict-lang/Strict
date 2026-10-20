@@ -125,6 +125,20 @@ In priority order. Remove what is done, add what is found, keep each item to wha
       externally scheduled baseline. Combine batching with speculation and compression only
       after each wins separately. Transfer successful methods to larger locally runnable models;
       distinguish reduced resident weight size from reduced active work in mixtures of experts.
+    - **Next-concept modeling, later** (added 2026-10-20). [NCM](https://arxiv.org/abs/2610.14162)
+      ([code](https://github.com/HazyResearch/ncm), MIT): a multiscale residual VQ-VAE turns a text of fixed
+      length L into K levels of codes (coarse to fine, the last one code per token, codebooks of 4096-8192),
+      a transformer predicts all codes of a level in one pass, so a whole sequence takes K passes (8-32)
+      instead of L. Measured only against diffusion models (H100, 10-31 times faster at similar quality);
+      autoregressive models still win on quality (TinyStories 8.89 against 15.41, OpenWebText 35.45 against
+      83.12 generative perplexity), Sudoku 86% solved on hard against 81% of diffusion. Fits the parallel
+      goal and Strict methods (at most 13 lines of 120 characters, so a method is a natural fixed L, a
+      prompt as prefix LM), but it is trained from scratch per dataset (tokenizer frozen first, generators
+      of 25-725M), cannot reuse the Qwen3 or GPT-2 weights and needs training of all weights, which Strict
+      cannot do yet. Order: after the weights themselves train, a PyTorch prototype from their repository
+      on Strict methods, measured as the share of generated methods that pass their tests and the time to
+      them against Qwen3-0.6B with lookup speculation; only a winner gets built in Strict (codebook lookups,
+      block-diagonal and prefix attention masks in the attention kernel).
 
 ## Language and compiler
 - **A `Generic` parameter of a non-generic type is not specialized** (found 2026-10-19, narrowed 2026-10-20): `Scored(model Generic)` calling `model.Area` or `Perplexity(model).Measured` fails on the Strict VM with "Unsupported native call Strict/Generic.Area" and `strict check` does not report it. A parameter of a generic type works (`Passed(scorer Perplexity)` takes `Perplexity(Gpt2.Tiny)` and `Perplexity(Qwen3.Tiny)`, VM and native, the earlier failure was an outdated `strict.exe`). Naming the specialization after the argument like `Specialization.Name` does for generic types (`Scored(Gpt2)`) passed its own tests but broke `Dictionary` and `List.Unique` (their `Generic` parameters mean the element type, also through `List(key Generic, mappedValue Generic)` and calls on the elements), so either the owner check must be exact or `strict check` should reject calls on such a parameter.
