@@ -1,7 +1,9 @@
 has function MlirFunction
 constant Degrees = TypeEntry("Strict/Degrees", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
 constant Angle = TypeEntry("Strict/Angle", (MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false)), List(MethodEntry))
-constant Wrapping = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Degrees + Angle, Degrees, MethodEntry.CountingLoop))
+constant Byting = TypeEntry("Strict/Byte", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false, 8), MemberEntry("Max", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry))
+constant Red = MemberEntry("red", "Strict/Byte", List(InstructionEntry), false)
+constant Wrapping = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Degrees + Angle + Byting, Degrees, MethodEntry.CountingLoop))
 constant Widened = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "width"), InstructionEntry.Return(0))
 constant Packing = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("from", List(MemberEntry), "Strict/Shape", Widened)))
 constant LoggerField = InstructionEntry(InstructionType.FieldLoad, "logger", (2, 1, -1))
@@ -50,11 +52,22 @@ Returned(position Number) Texts
 	let memory = MlirMemory(function, position)
 	mutable lines = memory.Allocated(MlirInstances(function, 0).Stored(function.type).Length, "n")
 	for MlirInstances(function, 0).Stored(function.type)
-		let temp = memory.Temp("v" + index)
-		let copied = (function.Load(temp, "%v_" + value.Name), function.Store(temp, memory.Temp("n" + index)))
+		let copied = Copied(value, memory.Temp("v" + index), memory.Temp("n" + index))
 		lines = lines + memory.Slot(memory.Temp("np"), index, "n" + index) + copied
 	lines = lines + MlirMemory.Counted.Replace("%p", memory.Temp("np")).Replace("%z", memory.Temp("nz"))
 	lines + memory.Bits(memory.Temp("np"), "n") + ("    return " + memory.Temp("nf") + " : f64")
+Copied(member MemberEntry, temp Text, slot Text) Texts
+	Wrapping.Copied(Byting.members.First, "%v", "%n").Length is 2
+	Wrapping.Copied(Red, "%v", "%n")(1) is "    %vb = func.call @strict_byte(%v) : (f64) -> f64"
+	let loaded = function.Load(temp, "%v_" + member.Name)
+	if IsByte(member.typeName) is false
+		return (loaded, function.Store(temp, slot))
+	(loaded, "    " + temp + "b = func.call @strict_byte(" + temp + ") : (f64) -> f64", function.Store(temp + "b", slot))
+IsByte(typeName Text) Boolean
+	Wrapping.IsByte("Byte")
+	Wrapping.IsByte("Number") is false
+	let type = function.TypeOf(TypeEntry.ShortName(typeName))
+	(type.Changing.Length is 1) and (type.Changing.First.Bits is 8)
 Paired(kind Text) Texts
 	Wrapping.Paired("List(Text, Number)") is ("Text", "Number")
 	Wrapping.Paired("Dictionary(Text, Shape)") is ("Text", "Shape")

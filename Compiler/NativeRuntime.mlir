@@ -6931,6 +6931,13 @@
     %result = arith.select %isTagged, %number, %rounded : f64
     return %result : f64
   }
+  // a Byte keeps the whole part of a number like a C cast (0.5 * 255 is 127), Errors keep their tag
+  func.func private @strict_byte(%number: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %whole = llvm.intr.trunc(%number) : (f64) -> f64
+    %isTagged = arith.cmpf uno, %number, %number : f64
+    %result = arith.select %isTagged, %number, %whole : f64
+    return %result : f64
+  }
   func.func private @strict_two_half(%pair: f64, %shift: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
     %bits = arith.bitcast %pair : f64 to i64
     %shifted = arith.shrui %bits, %shift : i64
