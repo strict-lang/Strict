@@ -9,7 +9,7 @@ Run
 	for Passes
 		pixels = Blurred(pixels, Width * 3)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-	logger.Log("Blurred " + Width + "x" + Height + " " + Passes + " times in " + milliseconds + " ms, pixel " + pixels(3000003))
+	logger.Log("Blurred " + Width + "x" + Height + " " + Passes + " times in " + milliseconds + " ms: " + pixels(3000003))
 Pattern(count Number) Numbers
 	BenchBlur.Pattern(3) is (0, 239 / 255, 222 / 255)
 	for count
