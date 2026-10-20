@@ -9,6 +9,7 @@ constant Packing = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape,
 constant LoggerField = InstructionEntry(InstructionType.FieldLoad, "logger", (2, 1, -1))
 constant Logged = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), MlirInstances.Built, LoggerField)))
 constant Eights = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Packed", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Float8s", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/Float8s", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))), List(Number), -1, "", "f32")
+constant Bytings = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Packed", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Bytes", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/Bytes", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))), List(Number), -1, "", "f32")
 IsAliased(entry InstructionEntry, position Number) Boolean
 	MlirLayout(MlirInstances.Shapes).IsAliased(MlirInstances.Width, 2) is false
 	MlirLayout(Logged).IsAliased(LoggerField, 2)
@@ -34,7 +35,16 @@ Represented(kind Text) Text
 	let packed = MlirFlats(function, 0).Kind(kind)
 	if packed is not ""
 		return packed
-	Wrapped(kind) is "" then kind else Represented(Wrapped(kind))
+	Wrapped(kind) is "" then Plural(kind) else Represented(Wrapped(kind))
+Plural(kind Text) Text
+	Wrapping.Plural("Bytes") is "List(Number)"
+	Wrapping.Plural("List(Byte)") is "List(Number)"
+	Wrapping.Plural("Degrees") is "Degrees"
+	if kind.StartsWith("List(") and kind.EndsWith(")")
+		return Represented(kind.Substring(5, kind.Length - 6)) is "Number" then "List(Number)" else kind
+	let type = function.TypeOf(kind)
+	let isUnknown = (type.members.Length is 0) and (type.methods.Length is 0) and kind.EndsWith("s")
+	isUnknown and (Represented(kind.Substring(0, kind.Length - 1)) is "Number") then "List(Number)" else kind
 Wrapped(typeName Text) Text
 	Wrapping.Wrapped("Angle") is "Degrees"
 	Wrapping.Wrapped("Shape") is ""
@@ -80,9 +90,10 @@ Paired(kind Text) Texts
 	pair.Length > 0 then pair else MethodBodies.Pair(MlirKinds(function).ElementKind(represented))
 Packed(position Number) Number
 	MlirLayout(Eights).Packed(2) is 7
+	MlirLayout(Bytings).Packed(2) is 9
 	Wrapping.Packed(0) is 0
 	let kind = MlirKinds(function).VariableKind(position, "forResult")
-	kind is in ("Float8s", "List(Float8)") then 7 else 0
+	kind is in ("Float8s", "List(Float8)") then 7 else (kind is in ("Bytes", "List(Byte)") then 9 else 0)
 Collected(register Text, pointer Text, at Number) Texts
 	MlirLayout(Eights).Collected("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(5) is "    llvm.store %d, %p : f64, !llvm.ptr"
@@ -90,10 +101,12 @@ Collected(register Text, pointer Text, at Number) Texts
 	function.Float is "f64" then Narrowed(register, pointer, at) else Stored(register, pointer, at)
 Stored(register Text, pointer Text, at Number) Texts
 	MlirLayout(Eights).Stored("%d", "%p", 4).Last is "    llvm.store %db, %p : i8, !llvm.ptr"
+	MlirLayout(Bytings).Stored("%d", "%p", 4)(1) is "    %db = func.call @strict_device_byte(%d) : (f32) -> i8"
 	let address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer
 	if Packed(function.method.LoopBeginOf(at)) is 0
 		return (address + "f32", "    llvm.store " + register + ", " + pointer + " : f32, !llvm.ptr")
-	let encoded = "    " + register + "b = func.call @strict_device_float8(" + register + ") : (f32) -> i8"
+	let encoder = Packed(function.method.LoopBeginOf(at)) is 9 then "@strict_device_byte(" else "@strict_device_float8("
+	let encoded = "    " + register + "b = func.call " + encoder + register + ") : (f32) -> i8"
 	(address + "i8", encoded, "    llvm.store " + register + "b, " + pointer + " : i8, !llvm.ptr")
 Narrowed(register Text, pointer Text, at Number) Texts
 	MlirLayout(MlirDeviceStatements.Doubled).Narrowed("%d", "%p", 5)(3) is "    cf.cond_br %pv, ^d5wide, ^d5narrow"

@@ -23,7 +23,15 @@
   ^unscaled:
     %seven = arith.constant 7 : i64
     %isFloat8 = arith.cmpi eq, %bits, %seven : i64
-    cf.cond_br %isFloat8, ^float8, ^double
+    cf.cond_br %isFloat8, ^float8, ^bytes
+  ^bytes:
+    %nine = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %bits, %nine : i64
+    cf.cond_br %isBytes, ^byte, ^double
+  ^byte:
+    %byteSingle = func.call @strict_device_byte_read(%data, %at) : (!llvm.ptr, i64) -> f32
+    %unsignedNumber = arith.extf %byteSingle : f32 to f64
+    return %unsignedNumber : f64
   ^float8:
     %float8Single = func.call @strict_device_float8_read(%data, %at) : (!llvm.ptr, i64) -> f32
     %float8Number = arith.extf %float8Single : f32 to f64
@@ -109,6 +117,22 @@
   ^done:
     %reduced = func.call @strict_device_lanes_sums(%sum, %lane, %lanes) : (f32, i64, i64) -> f32
     return %reduced : f32
+  }
+  // a byte of a list in format 9 (Bytes), kept out of the element readers like strict_device_float8_read
+  func.func private @strict_device_byte_read(%data: !llvm.ptr, %at: i64) -> f32 attributes {passthrough = ["noinline"]} {
+    %slot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %slot : !llvm.ptr -> i8
+    %number = arith.uitofp %byte : i8 to f32
+    return %number : f32
+  }
+  // the byte of value (format 9): its whole part like a C cast, below 0 is 0, above 255 is 255
+  func.func private @strict_device_byte(%value: f32) -> i8 attributes {passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0.0 : f32
+    %largest = arith.constant 255.0 : f32
+    %low = arith.maximumf %value, %zero : f32
+    %clamped = arith.minimumf %low, %largest : f32
+    %byte = arith.fptoui %clamped : f32 to i8
+    return %byte : i8
   }
   // the nearest 8 bit float (format 7, see strict_device_float8_number) of value, larger magnitudes become 448
   func.func private @strict_device_float8(%value: f32) -> i8 attributes {passthrough = ["alwaysinline"]} {
@@ -386,7 +410,14 @@
   ^floatOrDouble:
     %float8Code = arith.constant 7 : i64
     %isFloat8 = arith.cmpi eq, %bits, %float8Code : i64
-    cf.cond_br %isFloat8, ^float8, ^double
+    cf.cond_br %isFloat8, ^float8, ^bytesOrDouble
+  ^bytesOrDouble:
+    %bytesCode = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %bits, %bytesCode : i64
+    cf.cond_br %isBytes, ^byte, ^double
+  ^byte:
+    %unsignedSingle = func.call @strict_device_byte_read(%data, %at) : (!llvm.ptr, i64) -> f32
+    return %unsignedSingle : f32
   ^float8:
     %float8Number = func.call @strict_device_float8_read(%data, %at) : (!llvm.ptr, i64) -> f32
     return %float8Number : f32

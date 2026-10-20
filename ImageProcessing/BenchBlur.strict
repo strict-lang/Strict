@@ -6,14 +6,14 @@ constant Dot = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0
 Run
 	let pixels = Pattern(Width * Height * 4)
 	let started = Process.Elapsed
-	let blurred = Blurred(pixels, Width, Radius)
+	let center = Blurred(pixels, Width, Radius)(Width * (Height + 1) * 2)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-	logger.Log("Blurred " + Width + "x" + Height + " in " + milliseconds + " ms: " + blurred(Width * (Height + 1) * 2))
-Pattern(count Number) Numbers
+	logger.Log("Blurred " + Width + "x" + Height + " in " + milliseconds + " ms: " + center)
+Pattern(count Number) Bytes
 	BenchBlur.Pattern(3) is (0, 239, 222)
 	for count
 		index * 7919 % 256
-Blurred(pixels Numbers, width Number, radius Number) Numbers
+Blurred(pixels Bytes, width Number, radius Number) Bytes
 	BenchBlur.Blurred((1, 2, 3, 4, 5, 6, 7, 8), 2, 1) is (1, 2, 3, 4, 5, 6, 7, 8)
 	BenchBlur.Blurred(Dot, 3, 1)(16) is 1
 	for pixels
@@ -26,7 +26,7 @@ IsEdge(position Number, stride Number, length Number, radius Number) Boolean
 	let x = ((position % stride) / 4).Floor
 	let y = (position / stride).Floor
 	x < radius or x >= stride / 4 - radius or y < radius or y >= length / stride - radius
-Averaged(pixels Numbers, center Number, stride Number, radius Number) Number
+Averaged(pixels Bytes, center Number, stride Number, radius Number) Number
 	BenchBlur.Averaged(Dot, 16, 12, 1) is 1
 	let side = radius * 2 + 1
 	mutable sum = 0

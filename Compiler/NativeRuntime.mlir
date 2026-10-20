@@ -521,7 +521,10 @@
     %isFour = arith.cmpi eq, %bits, %four : i64
     %seven = arith.constant 7 : i64
     %isFloat8 = arith.cmpi eq, %bits, %seven : i64
-    %orFloat8 = arith.select %isFloat8, %aligned, %plainBytes : i64
+    %nine = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %bits, %nine : i64
+    %isByteWide = arith.ori %isFloat8, %isBytes : i1
+    %orFloat8 = arith.select %isByteWide, %aligned, %plainBytes : i64
     %orFour = arith.select %isFour, %fourBytes, %orFloat8 : i64
     %orSix = arith.select %isSix, %sixBytes, %orFour : i64
     %bytes = arith.select %isQuantized, %quantizedBytes, %orSix : i64
@@ -4506,7 +4509,16 @@
   ^narrower:
     %float8Capacity = arith.constant -7.0 : f64
     %isFloat8 = arith.cmpf oeq, %capacity, %float8Capacity : f64
-    cf.cond_br %isFloat8, ^float8, ^single
+    cf.cond_br %isFloat8, ^float8, ^unsigned
+  ^unsigned:
+    %bytesCapacity = arith.constant -9.0 : f64
+    %isBytes = arith.cmpf oeq, %capacity, %bytesCapacity : f64
+    cf.cond_br %isBytes, ^unsignedByte, ^single
+  ^unsignedByte:
+    %unsignedSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %unsignedValue = llvm.load %unsignedSlot : !llvm.ptr -> i8
+    %fromByte = arith.uitofp %unsignedValue : i8 to f64
+    cf.br ^store(%fromByte : f64)
   ^float8:
     %float8Slot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %float8Byte = llvm.load %float8Slot : !llvm.ptr -> i8
@@ -9078,6 +9090,14 @@
     // that (the last parameter, 64 for doubles to the host)
     %narrowed = llvm.load %narrowSlot : !llvm.ptr -> i64
     %narrowSingle = arith.cmpi ne, %narrowed, %none : i64
+    // a loop collecting 8 bit floats (7) or bytes (9) keeps its result on the GPU also from the double kernel, which
+    // computes its values exactly (only positions stay exact in the 32 bit kernel)
+    %eightBits = arith.constant 7 : i64
+    %isEightBits = arith.cmpi eq, %packed, %eightBits : i64
+    %byteBits = arith.constant 9 : i64
+    %isByteResult = arith.cmpi eq, %packed, %byteBits : i64
+    %isPackedResult = arith.ori %isEightBits, %isByteResult : i1
+    %staysResident = arith.ori %narrowSingle, %isPackedResult : i1
     %nameLength = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
     %skipped = arith.addi %nameLength, %one : i64
     %singleName = llvm.getelementptr %name[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -9101,22 +9121,18 @@
     %threads = arith.select %tiling, %tileBlock, %laneThreads : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
-    %eightBits = arith.constant 7 : i64
-    %isEightBits = arith.cmpi eq, %packed, %eightBits : i64
     %floatBits = arith.constant 32 : i64
     %doubleBits = arith.constant 64 : i64
-    %narrowBits = arith.select %isEightBits, %eightBits, %floatBits : i64
-    %resultFormat = arith.select %narrowSingle, %narrowBits, %doubleBits : i64
+    %byteOrFloat = arith.select %isByteResult, %byteBits, %floatBits : i64
+    %narrowBits = arith.select %isEightBits, %eightBits, %byteOrFloat : i64
+    %resultFormat = arith.select %staysResident, %narrowBits, %doubleBits : i64
     %resultFormatSlot = llvm.getelementptr %slots[%slotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     llvm.store %resultFormat, %resultFormatSlot : i64, !llvm.ptr
-    cf.cond_br %narrowSingle, ^async, ^outputs
+    cf.cond_br %staysResident, ^async, ^outputs
   ^async:
     %floatsBytes = arith.muli %count, %four : i64
-    %float8Code = arith.constant 7 : i64
-    %isFloat8 = arith.cmpi eq, %packed, %float8Code : i64
-    %singleBytes = arith.select %isFloat8, %count, %floatsBytes : i64
-    %floatsCode = arith.constant 32 : i64
-    %resultBits = arith.select %isFloat8, %float8Code, %floatsCode : i64
+    %singleBytes = arith.select %isPackedResult, %count, %floatsBytes : i64
+    %resultBits = arith.addi %narrowBits, %none : i64
     %class = func.call @strict_gpu_class(%singleBytes) : (i64) -> i64
     %resident = func.call @strict_gpu_obtain(%class) : (i64) -> i64
     %failure = func.call @strict_gpu_failure_word() : () -> i64
@@ -9853,7 +9869,10 @@
     %sameFormat = arith.cmpi eq, %leftFormat, %rightFormat : i64
     %float8Format = arith.constant 7 : i64
     %isFloat8 = arith.cmpi eq, %leftFormat, %float8Format : i64
-    %width = arith.select %isFloat8, %one, %four : i64
+    %byteFormat = arith.constant 9 : i64
+    %isBytes = arith.cmpi eq, %leftFormat, %byteFormat : i64
+    %isByteWide = arith.ori %isFloat8, %isBytes : i1
+    %width = arith.select %isByteWide, %one, %four : i64
     %bytes = arith.muli %total, %width : i64
     %leftBytes = arith.muli %leftCount, %width : i64
     %rightBytes = arith.muli %rightCount, %width : i64
