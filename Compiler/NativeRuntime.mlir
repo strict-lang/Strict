@@ -8792,7 +8792,7 @@
     %short = arith.cmpi ult, %free, %needed : i64
     cf.cond_br %short, ^release, ^allocate
   ^release:
-    %releasedEarly = func.call @strict_gpu_starved() : () -> i1
+    %releasedEarly = func.call @strict_gpu_starved(%needed) : (i64) -> i1
     cf.br ^allocate
   ^allocate:
     %slot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
@@ -8804,7 +8804,7 @@
     %device = llvm.load %slot : !llvm.ptr -> i64
     cf.cond_br %failed, ^starved, ^done(%device : i64)
   ^starved:
-    %released = func.call @strict_gpu_starved() : () -> i1
+    %released = func.call @strict_gpu_starved(%needed) : (i64) -> i1
     cf.cond_br %released, ^again, ^done(%zero : i64)
   ^again:
     %again = func.call @strict_gpu_alloc(%bytes) : (i64) -> i64
@@ -9452,22 +9452,25 @@
   ^none:
     return %none : i64
   }
-  // when the GPU memory runs out: a full collection, then the free blocks of 2 MB and more go back to the driver
-  // after the captured launches ran (they may still use a block that died meanwhile), true when one did
-  func.func private @strict_gpu_starved() -> i1 {
+  // when the GPU memory runs out: a full collection, then free blocks of 2 MB and more go back to the driver, the
+  // largest first until needed bytes are, after the captured launches ran (they may still use a block that died
+  // meanwhile, giving back every block made the next prefill allocate them again), true when one did
+  func.func private @strict_gpu_starved(%needed: i64) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
+    %smallest = arith.constant 256 : i64
     %full = arith.constant true
-    %nothing = arith.constant false
     %firstOwn = arith.constant 13 : i64
-    %classes = arith.constant 48 : i64
+    %largest = arith.constant 47 : i64
     func.call @strict_gc_run(%full) : (i1) -> ()
     func.call @strict_gpu_replay() : () -> ()
     func.call @strict_gpu_synchronize() : () -> ()
-    cf.br ^class(%firstOwn, %nothing : i64, i1)
-  ^class(%class: i64, %freed: i1):
-    %more = arith.cmpi ult, %class, %classes : i64
-    cf.cond_br %more, ^stack, ^done
+    cf.br ^class(%largest, %none : i64, i64)
+  ^class(%class: i64, %released: i64):
+    %more = arith.cmpi uge, %class, %firstOwn : i64
+    %short = arith.cmpi ult, %released, %needed : i64
+    %going = arith.andi %more, %short : i1
+    cf.cond_br %going, ^stack, ^done
   ^stack:
     %stack = func.call @strict_gpu_stack(%class) : (i64) -> !llvm.ptr
     %countSlot = llvm.getelementptr %stack[1] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -9482,12 +9485,15 @@
     %device = llvm.load %topSlot : !llvm.ptr -> i64
     llvm.store %top, %countSlot : i64, !llvm.ptr
     func.call @strict_gpu_free(%device) : (i64) -> ()
-    cf.br ^class(%class, %full : i64, i1)
+    %size = arith.shli %smallest, %class : i64
+    %freed = arith.addi %released, %size : i64
+    cf.br ^class(%class, %freed : i64, i64)
   ^next:
-    %nextClass = arith.addi %class, %one : i64
-    cf.br ^class(%nextClass, %freed : i64, i1)
+    %nextClass = arith.subi %class, %one : i64
+    cf.br ^class(%nextClass, %released : i64, i64)
   ^done:
-    return %freed : i1
+    %any = arith.cmpi sgt, %released, %none : i64
+    return %any : i1
   }
   func.func private @strict_gpu_obtained(%bytes: i64) {
     %chunk = llvm.mlir.addressof @strict_gpu_chunk : !llvm.ptr
