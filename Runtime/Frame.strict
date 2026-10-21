@@ -110,8 +110,8 @@ Traced(error VmValue, position Number) VmValue
 	let file = VmValue.OfText(owner is in machine.sources then machine.sources(owner) else source.Located(machine.folder))
 	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(method.instructions(position).line)))
 	let traces = error.items(1).items
-	let isKept = (traces.Length >= Invocation.MaxTraces) or (traces.Length > 0) and (traces.Last is trace)
-	let traced = isKept then error.items(1) else VmValue.OfList(traces + trace)
+	let isRepeated = (traces.Length > 0) and (traces.Last is trace)
+	let traced = isRepeated then error.items(1) else VmValue.OfList(Invocation.Kept(traces, trace))
 	VmValue(error.kind, error.number, error.text, (error.items(0), traced))
 Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Looped(InstructionEntry.LoopBegin(6, 8), Listed, 0).items(3).number is 1

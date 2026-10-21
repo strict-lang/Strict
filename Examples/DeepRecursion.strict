@@ -5,3 +5,15 @@ Down Number
 Endless Number
 	DeepRecursion(1).Endless is Error
 	DeepRecursion(number + 1).Endless
+TraceLines Number
+	DeepRecursion(1).TraceLines is 52
+	let failure = Ping
+	if failure is Error
+		return (failure to Text).Lines.Length
+	0
+Ping Number
+	DeepRecursion(1).Ping is Error
+	DeepRecursion(number + 1).Pong + 1
+Pong Number
+	DeepRecursion(1).Pong is Error
+	DeepRecursion(number + 1).Ping + 1

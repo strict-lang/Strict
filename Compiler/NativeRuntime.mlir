@@ -3959,10 +3959,63 @@
     %block = func.call @strict_ptr(%error) : (f64) -> !llvm.ptr
     %tracesSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %traces = llvm.load %tracesSlot : !llvm.ptr -> f64
-    %added = func.call @strict_list_add(%traces, %entry) : (f64, f64) -> f64
-    llvm.store %added, %tracesSlot : f64, !llvm.ptr
+    %kept = func.call @strict_traces_kept(%traces, %entry) : (f64, f64) -> f64
+    llvm.store %kept, %tracesSlot : f64, !llvm.ptr
     func.call @strict_gc_written(%tracesSlot) : (!llvm.ptr) -> ()
     return %value : f64
+  }
+  llvm.mlir.global internal constant @strict_trace_skipped("...\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @strict_trace_nowhere("\00") : !llvm.array<1 x i8>
+  // like Frame.Kept of the Strict VM: the first 40 traces, then one without a file counting the skipped ones, the last 10
+  func.func private @strict_traces_kept(%traces: f64, %entry: f64) -> f64 {
+    %one = arith.constant 1.0 : f64
+    %first = arith.constant 40.0 : f64
+    %full = arith.constant 50.0 : f64
+    %count = func.call @strict_list_length(%traces) : (f64) -> f64
+    %isShort = arith.cmpf olt, %count, %full : f64
+    cf.cond_br %isShort, ^append, ^long
+  ^append:
+    %added = func.call @strict_list_add(%traces, %entry) : (f64, f64) -> f64
+    return %added : f64
+  ^long:
+    %hasMarker = arith.cmpf ogt, %count, %full : f64
+    cf.cond_br %hasMarker, ^shift, ^mark
+  ^mark:
+    %size = arith.constant 24 : i64
+    %markerBlock = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %skipped = llvm.mlir.addressof @strict_trace_skipped : !llvm.ptr
+    %skippedBits = func.call @strict_bits(%skipped) : (!llvm.ptr) -> f64
+    llvm.store %skippedBits, %markerBlock : f64, !llvm.ptr
+    %nowhere = llvm.mlir.addressof @strict_trace_nowhere : !llvm.ptr
+    %nowhereBits = func.call @strict_bits(%nowhere) : (!llvm.ptr) -> f64
+    %fileSlot = llvm.getelementptr %markerBlock[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %nowhereBits, %fileSlot : f64, !llvm.ptr
+    %countSlot = llvm.getelementptr %markerBlock[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %one, %countSlot : f64, !llvm.ptr
+    %marker = func.call @strict_bits(%markerBlock) : (!llvm.ptr) -> f64
+    %marked = func.call @strict_list_set(%traces, %first, %marker) : (f64, f64, f64) -> f64
+    %appended = func.call @strict_list_add(%traces, %entry) : (f64, f64) -> f64
+    return %appended : f64
+  ^shift:
+    %markerEntry = func.call @strict_list_get(%traces, %first) : (f64, f64) -> f64
+    %markerPointer = func.call @strict_ptr(%markerEntry) : (f64) -> !llvm.ptr
+    %skippedSlot = llvm.getelementptr %markerPointer[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %counted = llvm.load %skippedSlot : !llvm.ptr -> f64
+    %more = arith.addf %counted, %one : f64
+    llvm.store %more, %skippedSlot : f64, !llvm.ptr
+    %start = arith.addf %first, %one : f64
+    cf.br ^loop(%start : f64)
+  ^loop(%index: f64):
+    %isLast = arith.cmpf oeq, %index, %full : f64
+    cf.cond_br %isLast, ^done, ^move
+  ^move:
+    %next = arith.addf %index, %one : f64
+    %moved = func.call @strict_list_get(%traces, %next) : (f64, f64) -> f64
+    %written = func.call @strict_list_set(%traces, %index, %moved) : (f64, f64, f64) -> f64
+    cf.br ^loop(%next : f64)
+  ^done:
+    %replaced = func.call @strict_list_set(%traces, %full, %entry) : (f64, f64, f64) -> f64
+    return %traces : f64
   }
   // every checked value passes here: the failure test is inlined, only an Error calls the trace
   func.func private @strict_trace_checked(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
@@ -4053,6 +4106,8 @@
   ^done:
     return %failed : i1
   }
+  llvm.mlir.global internal constant @strict_trace_skipping("\09... (skipped \00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_trace_lines(" lines)\00") : !llvm.array<8 x i8>
   func.func private @strict_trace_text(%entry: f64) -> f64 {
     %block = func.call @strict_ptr(%entry) : (f64) -> !llvm.ptr
     %method = llvm.load %block : !llvm.ptr -> f64
@@ -4060,6 +4115,21 @@
     %file = llvm.load %fileSlot : !llvm.ptr -> f64
     %lineSlot = llvm.getelementptr %block[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %line = llvm.load %lineSlot : !llvm.ptr -> f64
+    %filePointer = func.call @strict_ptr(%file) : (f64) -> !llvm.ptr
+    %firstCharacter = llvm.load %filePointer : !llvm.ptr -> i8
+    %nothing = arith.constant 0 : i8
+    %isSkipped = arith.cmpi eq, %firstCharacter, %nothing : i8
+    cf.cond_br %isSkipped, ^skipped, ^traced
+  ^skipped:
+    %skipping = llvm.mlir.addressof @strict_trace_skipping : !llvm.ptr
+    %skippingBits = func.call @strict_bits(%skipping) : (!llvm.ptr) -> f64
+    %count = func.call @strict_number_text(%line) : (f64) -> f64
+    %lines = llvm.mlir.addressof @strict_trace_lines : !llvm.ptr
+    %linesBits = func.call @strict_bits(%lines) : (!llvm.ptr) -> f64
+    %counted = func.call @strict_text_concat(%skippingBits, %count) : (f64, f64) -> f64
+    %skippedText = func.call @strict_text_concat(%counted, %linesBits) : (f64, f64) -> f64
+    return %skippedText : f64
+  ^traced:
     %at = llvm.mlir.addressof @strict_trace_at : !llvm.ptr
     %atBits = func.call @strict_bits(%at) : (!llvm.ptr) -> f64
     %in = llvm.mlir.addressof @strict_trace_in : !llvm.ptr

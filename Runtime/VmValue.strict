@@ -102,5 +102,8 @@ Traces Text
 	Failed.Traces is "\n\tat B.C in B.strict:line 7"
 	mutable result = ""
 	for items(1).items
-		result = result + "\n\tat " + value.items(0).text + " in " + value.items(1).text + ":line " + value.items(2).number
+		let file = value.items(1).text
+		let line = value.items(2).number
+		let at = "at " + value.items(0).text + " in " + file + ":line " + line
+		result = result + "\n\t" + (file is "" then "... (skipped " + line + " lines)" else at)
 	result

@@ -4,7 +4,8 @@ has Instance VmValue
 has Depth Number = 0
 has Resolved Number = -1
 constant MaxDepth = 20000
-constant MaxTraces = 100
+constant FirstTraces = 40
+constant LastTraces = 10
 constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), List(VmValue) + VmValue.OfNumber(3), VmValue.OfNumber(4))
 constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfText("5"))
 constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper", "Strict/Text"), List(Number), 0), List(VmValue), VmValue.OfText("ab"))
@@ -57,3 +58,11 @@ IsWrapping(type TypeEntry) Boolean
 	Coding.IsWrapping(TypeEntry.CharacterEntry)
 	AddCall.IsWrapping(TypeEntry.CharacterEntry) is false
 	(MethodName is "from") and (type.Changing.Length is 1) and (Count is 1)
+Kept(traces List(VmValue), trace VmValue) List(VmValue)
+	AddCall.Kept(List(VmValue), VmValue.None).Length is 1
+	let last = LastTraces - 1
+	if traces.Length < FirstTraces + LastTraces
+		return traces + trace
+	let skipped = traces.Length > FirstTraces + LastTraces then traces(FirstTraces).items(2).number + 1 else 1
+	let gap = VmValue("Strict/Stacktrace", 0, "", (VmValue.OfText("..."), VmValue.OfText(""), VmValue.OfNumber(skipped)))
+	traces.Slice(0, FirstTraces) + gap + traces.Slice(traces.Length - last, last) + trace

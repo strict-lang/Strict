@@ -2,4 +2,4 @@ has Method
 has FilePath Text
 has Line Number
 to Text
-	"	at " + Method + " in " + FilePath + ":line " + Line
+	FilePath is "" then "	... (skipped " + Line + " lines)" else "	at " + Method + " in " + FilePath + ":line " + Line
