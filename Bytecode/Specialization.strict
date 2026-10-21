@@ -13,19 +13,27 @@ Signed(node SyntaxNode, owner Text, returnType Text, block CodeBlock) Texts
 	let argumentTypes = ConversionCodegen(values).ArgumentTypes(node, owner, block)
 	let signature = values.target.Signature(node.text, owner, returnType, argumentTypes)
 	let parameters = values.target.ParameterTypes(node.text, owner, argumentTypes)
-	let named = signature(1) is "from" then node.text else Name(node, parameters, block)
+	let named = signature(1) is "from" then node.text else Name(node, parameters, owner, block)
 	named is node.text then signature else signature.Slice(0, 1) + named + signature.Slice(2, signature.Length - 2)
-Name(node SyntaxNode, parameters Texts, block CodeBlock) Text
-	Plain.Name(Passing, List(Text) + "Wrapped", Wrapping) is Halving
-	Plain.Name(Passing, List(Text) + "Number", Wrapping) is "Through"
+Name(node SyntaxNode, parameters Texts, owner Text, block CodeBlock) Text
+	Plain.Name(Passing, List(Text) + "Wrapped", "Using", Wrapping) is Halving
+	Plain.Name(Passing, List(Text) + "Number", "Using", Wrapping) is "Through"
+	Plain.Name(Passing, List(Text) + "Generic", "Using", CodeBlock.Empty.Declare("w", "Halver")) is "Through(Halver)"
 	let start = values.ArgumentStart(node)
+	let isPlain = IsPlain(owner)
 	mutable actuals = List(Text)
 	for parameters
-		let isTyped = IsGeneric(value) and (start + index < node.children.Length)
+		let isTyped = (IsGeneric(value) or isPlain and (value is "Generic")) and (start + index < node.children.Length)
 		let actual = isTyped then values.TypeOf(node.children(start + index), block) else ""
-		if actual.StartsWith(value + "(")
+		if actual.StartsWith(value + "(") or (value is "Generic") and (actual is not in ("", "Generic"))
 			actuals = actuals + actual
 	actuals.Length is 0 then node.text else node.text + "(" + Text.Combine(actuals) + ")"
+IsPlain(owner Text) Boolean
+	Plain.IsPlain("Using")
+	Plain.IsPlain("Strict/Wrapped(Halver)") is false
+	let short = TypeEntry.ShortName(owner)
+	let members = Text.Combine(values.target.types.MembersOf(short).types)
+	(values.target.types.BaseName(short) is short) and (members.IndexOf("Generic") < 0)
 IsGeneric(type Text) Boolean
 	Plain.IsGeneric("Wrapped")
 	Plain.IsGeneric("Halver") is false
@@ -33,10 +41,11 @@ IsGeneric(type Text) Boolean
 	values.target.types.IsKnown(type) and (("Generic" is in members) or ("Generics" is in members))
 Header(line Text, name Text) Text
 	Plain.Header(Using(1), Halving) is "Through(wrapped Wrapped(Halver)) Number"
+	Plain.Header("Scored(model Generic) Number", "Scored(Halver)") is "Scored(model Halver) Number"
 	mutable header = line
 	mutable after = line.IndexOf("(")
 	for Instantiation(values.target.types).Arguments(name)
-		let base = " " + value.Substring(0, value.IndexOf("("))
+		let base = " " + (value.IndexOf("(") > 0 then value.Substring(0, value.IndexOf("(")) else "Generic")
 		let at = header.IndexOf(base, after)
 		let rest = header.Substring(at + base.Length, header.Length - at - base.Length)
 		header = at < 0 then header else header.Substring(0, at + 1) + value + rest
