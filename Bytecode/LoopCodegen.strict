@@ -14,17 +14,17 @@ constant BareFor = BodyParser("Upper Text", "\tfor", "\t\tUpper").Block(1, 1).ch
 constant OnText = LoopCodegen(MethodCodegen(ValueCodegen(ValueCodegen.NoTypes, ValueCodegen.Plain.methods, CallTarget(CallTarget.NoTypes, TypeShape("has characters"), "Strict/Text", List(Text)))))
 Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
-	Plain.Aggregation(ProductBody, "Number") is "product"
-	Plain.Aggregation(DoubledBody, "Numbers") is "list"
 	Plain.Aggregation(DoubledBody, "Boolean") is "any"
+	LoopCodegen(TypeSums.Paired.methods).Aggregation(MethodCodegen.SumBody, "Pair") is "add"
 	if (body.children.Length is 0) or body.children.Last.Kind is not "For"
 		return ""
-	if returnType is "Boolean"
-		return "any"
+	let isList = methods.values.inference.types.IsPlural(returnType) or returnType.StartsWith("List(")
+	if (returnType is "Boolean") or isList
+		return isList then "list" else "any"
+	let reduction = Reduction(body.children.Last.children.Last.children.Last)
 	if returnType is in ("Number", "Text")
-		let reduction = Reduction(body.children.Last.children.Last.children.Last)
 		return reduction is in ("", "+") then "sum" else (reduction is "*" then "product" else "")
-	methods.values.inference.types.IsPlural(returnType) or returnType.StartsWith("List(") then "list" else ""
+	(reduction is "") and OperatorCodegen(methods.values).HasOperator(returnType, "+") then "add" else ""
 Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	Plain.Aggregated(MethodCodegen.SumBody, CodeBlock.Empty, "Number").Result is 0
 	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Numbers").instructions(0).texts.Last is "forResult"
@@ -60,6 +60,8 @@ Started(block CodeBlock, returnType Text, aggregation Text) CodeBlock
 	let start = aggregation is "product" then 1 else 0
 	if returnType is "Number"
 		return block.Load(InstructionEntry.LoadNumber(block.register, start)).Stored("forResult")
+	if aggregation is "add"
+		return TypeSums(methods).Started(block, returnType)
 	let type = methods.values.target.FullName(returnType)
 	let empty = InstructionEntry(InstructionType.LoadConstantToRegister, type, (0, 6, -1, 0))
 	block.Add(MethodCodegen.StoreConstant(empty, "forResult"))
@@ -73,6 +75,8 @@ Collected(block CodeBlock, aggregation Text) CodeBlock
 	Plain.Collected(CodeBlock.Empty.At(1), "product").instructions(1).kind is InstructionType.Multiply
 	if aggregation is "list"
 		return block.Add(InstructionEntry.Named(InstructionType.InvokeWriteToList, block.Result, "forResult"))
+	if aggregation is "add"
+		return TypeSums(methods).Added(block)
 	let loaded = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "forResult"))
 	let operation = aggregation is "product" then InstructionType.Multiply else InstructionType.Add
 	let added = InstructionEntry.Binary(operation, (loaded.Result, block.Result, loaded.register))

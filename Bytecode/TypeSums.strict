@@ -1,0 +1,16 @@
+has methods MethodCodegen
+constant Paired = TypeSums(MethodCodegen(ValueCodegen(TypeInference(KnownTypes(("Pair"), (Scope(("x", "y"), ("Number", "Number"))), (Scope(("+"), ("Pair"))), (KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain)))
+constant Pairs = CodeBlock.Empty.Declare("forResult", "Pair").Declare("forValue", "Pair").Load(InstructionEntry.LoadNumber(0, 1))
+Started(block CodeBlock, type Text) CodeBlock
+	Paired.Started(CodeBlock.Empty, "Pair").instructions(0) is InstructionEntry.LoadNumber(0, 0)
+	let zeros = Zeros(methods.values.inference.types.MembersOf(type).names)
+	methods.values.Expression(SyntaxNode("Call", type, zeros), block).Stored("forResult").Declare("forValue", type)
+Zeros(names Texts) SyntaxNodes
+	Paired.Zeros(("x", "y")).Length is 2
+	for names
+		SyntaxNode("Number", "0")
+Added(block CodeBlock) CodeBlock
+	Text.Combine(Paired.Added(Pairs).instructions.Last.texts) is "forResult"
+	let operands = (SyntaxNode("Identifier", "forResult"), SyntaxNode("Identifier", "forValue"))
+	let sum = SyntaxNode("MethodCall", "+", operands)
+	ErrorCodegen(methods.values).Handled(sum, block.Stored("forValue")).Stored("forResult")

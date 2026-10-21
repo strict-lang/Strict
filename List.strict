@@ -186,7 +186,7 @@ Merged(other) List
 		left = isLeft then left + 1 else left
 		right = isLeft then right else right + 1
 	merged
-Average Number
+Average Generic
 	(1, 2, 6).Average is 3
 	Sum / Length
 Median Number

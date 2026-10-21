@@ -6,3 +6,10 @@ to ColorValue
 	Color(10, 20, 30).Green is 20
 	Color(255, 0, 0) to ColorValue is ColorValue(1, 0, 0)
 	ColorValue(Red / 255, Green / 255, Blue / 255, Alpha / 255)
++(other) Color
+	Color(1, 2, 3, 4) + Color(5, 6, 7, 8) is Color(6, 8, 10, 12)
+	Color(Red + other.Red, Green + other.Green, Blue + other.Blue, Alpha + other.Alpha)
+/(divisor Number) Color
+	Color(9, 9, 9, 9) / 2 is Color(4, 4, 4, 4)
+	(Color(0, 0, 0), Color(2, 4, 6)).Average is Color(1, 2, 3)
+	Color(Byte(Red / divisor), Byte(Green / divisor), Byte(Blue / divisor), Byte(Alpha / divisor))
