@@ -20,7 +20,8 @@ NativePackaged(isCrossing Boolean) Number
 	let folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
 	let ending = Platform.Current is Platform.Windows then ".exe" else ""
 	let result = Refreshed(folder, folder + "/Content", List(Text) + ending)
-	if (result is not 0) or (isCrossing is false) or (Platform.Current is not Platform.Windows) or (File(base).Exists is false)
+	let crossing = isCrossing and (Platform.Current is Platform.Windows)
+	if (result is not 0) or (crossing is false) or (File(base).Exists is false)
 		return result
 	Refreshed(Parent + "/Release/Linux", Parent + "/Release/Linux/Content", List(Text) + "")
 Parent Text
@@ -47,10 +48,12 @@ Refreshed(release Text, content Text, endings Texts) Number
 				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
 				return 1
 	logger.Log("Release: " + release)
-	if content is not ""
+	Mirrored(content)
+Mirrored(target Text) Number
+	if target is not ""
 		let shared = Parent + "/Release/Content"
-		Copied(shared, content)
-		Removed(shared, content)
+		Copied(shared, target)
+		Removed(shared, target)
 	0
 Content(target Text) Number
 	Release(Logger, "Missing/App").Content("Missing/Release/Content") is 0

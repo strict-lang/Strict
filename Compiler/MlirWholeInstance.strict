@@ -116,6 +116,7 @@ IsMemberList(name Text) Boolean
 		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is name)
 			let at = MlirKinds(function).Writer(index, value.payload(0))
 			let writer = at < 0 then value else function.method.instructions(at)
-			let isList = MemberKind(writer.texts(1), writer.texts(0)) is in ("d", "p")
-			found = (writer.kind is InstructionType.FieldLoad) and isList
+			found = false
+			if writer.kind is InstructionType.FieldLoad
+				found = MemberKind(writer.texts(1), writer.texts(0)) is in ("d", "p")
 	found

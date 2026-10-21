@@ -5,6 +5,7 @@ constant Empty = MlirWholeFunction(MlirFunction(List(TypeEntry), MlirFunction.Sh
 constant Pairing = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.LoadNumber(0, 0), InstructionEntry.LoadNumber(1, 3), InstructionEntry.LoopBegin(0, 1), InstructionEntry.LoadNumber(2, 0), InstructionEntry.LoadNumber(3, 3), InstructionEntry.LoopBegin(2, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "value"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "outer"), InstructionEntry.Binary(InstructionType.Multiply, (5, 6, 7)), InstructionEntry.Binary(InstructionType.Add, (4, 7, 8)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 8, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 7), InstructionEntry.Jump(InstructionType.LoopEnd, 11), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 9, "sum"), InstructionEntry.Return(9))
 constant Nesting = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Pairs", List(MemberEntry), "Strict/Number", Pairing))
 constant Painted = MlirFunction(MlirLanes.Sample.function.types, MlirLanes.Rgb, MethodEntry("Painted", List(MemberEntry) + MemberEntry("colors", "Strict/List(Rgb)", List(InstructionEntry), false), "Strict/Rgb", List(InstructionEntry)))
+constant Nested = MlirWholeFunction(MlirFunction(List(TypeEntry), TypeEntry("Strict/Nested", List(MemberEntry) + MemberEntry("position", "Strict/Text", List(InstructionEntry), false), List(MethodEntry)), MethodEntry("Read", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "position"), InstructionEntry.Return(0)))))
 constant Allowed = (InstructionType.FieldLoad, InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo, InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Invoke, InstructionType.Return, InstructionType.LoopBegin, InstructionType.LoopEnd, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.CheckError)
 Symbol Text
 	Row.Symbol.EndsWith("_whole")
@@ -31,7 +32,11 @@ IsCallable(depth Number) Boolean
 			return false
 	true
 HasWholeParameters Boolean
+	Nested.HasWholeParameters is false
 	Row.HasWholeParameters
+	for MlirInstances(function, 0).Stored(function.type)
+		if (value.Name is in function.VariableNames) and (MlirWholeInstance(function).Kind(value.typeName) is "")
+			return false
 	for function.method.parameters
 		if (value.typeName is not "Strict/Number") and (MlirWholeInstance(function).ParameterKind(value) is "i")
 			return false
