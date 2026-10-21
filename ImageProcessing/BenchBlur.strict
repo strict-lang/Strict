@@ -2,30 +2,23 @@ has logger
 constant Source = "ImageProcessing/Compare/Landscape.ppm"
 constant Target = "ImageProcessing/Compare/Landscape.strict.ppm"
 constant Radius = 4
-constant Window = 9
-constant Dot = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 Run
 	let bitmap = Ppm.Loaded(Source)
-	if bitmap.Pixels.Length is 0
+	if bitmap.Colors.Length is 0
 		logger.Log("Missing " + Source + ", see ImageProcessing/Compare/README.md")
 	else
 		let started = Process.Elapsed
-		let blurred = Blurred(bitmap.Pixels, bitmap.width, bitmap.height)
+		let blurred = Blurred(bitmap)
 		let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 		Ppm.Save(Bitmap(bitmap.width, bitmap.height, blurred, bitmap.IsOpaque), Target)
-		logger.Log("Blurred " + bitmap.width + "x" + bitmap.height + " in " + milliseconds + " ms: " + blurred(bitmap.Center))
-Blurred(pixels Bytes, width Number, height Number) Bytes
-	BenchBlur.Blurred(Dot, 3, 3)(16) is 1
-	for pixels
-		Averaged(pixels, width, height, index)
-Averaged(pixels Bytes, width Number, height Number, position Number) Number
-	BenchBlur.Averaged(Dot, 3, 3, 16) is 1
-	mutable sum = 0
-	mutable count = 0
-	for Window * Window
-		let x = (position / 4).Floor % width + value % Window - Radius
-		let y = (position / 4 / width).Floor + (value / Window).Floor - Radius
-		if x >= 0 and x < width and y >= 0 and y < height
-			sum = sum + pixels((y * width + x) * 4 + position % 4)
-			count = count + 1
-	(sum / count).Floor
+		logger.Log("Blurred " + bitmap.width + "x" + bitmap.height + " in " + milliseconds + " ms")
+Blurred(bitmap Bitmap) Colors
+	BenchBlur.Blurred(Bitmap.Tiny)(0) is Color(4, 4, 4)
+	for bitmap.Colors
+		Neighbors(bitmap, index).Average
+Neighbors(bitmap Bitmap, pixel Number) Colors
+	BenchBlur.Neighbors(Bitmap.Tiny, 0).Length is 9
+	for Range(-Radius, Radius + 1)
+		for Range(-Radius, Radius + 1)
+			if bitmap.IsInside(pixel, value, outer)
+				bitmap.Colors(pixel + outer * bitmap.width + value)
