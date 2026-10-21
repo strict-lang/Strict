@@ -1,6 +1,5 @@
 has function MlirFunction
 has position Number
-constant Threshold = 256
 constant Shape = "(!llvm.ptr, i64, i64) -> f64"
 constant Signature = "(%context: !llvm.ptr, %from: i64, %to: i64) -> f64 {"
 constant Slot = " : (!llvm.ptr) -> !llvm.ptr, f64"
@@ -9,6 +8,7 @@ constant Doubled = MethodEntry("Doubled", List(MemberEntry) + MlirLists.Items, "
 constant Randomized = MethodEntry("Randomized", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Invoke(2, ("Strict/Number", "Random", "Strict/Number"), List(Number), 1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 4)))
 constant Filtered = MethodEntry("Filtered", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Binary(InstructionType.GreaterThan, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.LoopEnd, 7)))
 constant Rows = TypeEntry("Strict/Rows", List(MemberEntry), (Twice, Doubled, Randomized, Filtered))
+constant Trailing = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, GpuSamples.Trailing), 2)
 constant Byted = MethodEntry("Byted", Doubled.parameters, "Strict/Bytes", (List(InstructionEntry) + MlirLayout.Bytings.method.instructions(0)) + Doubled.instructions.Slice(1, 5))
 constant Byting = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Byted), 2)
 constant Doubling = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Doubled), 2)
@@ -46,7 +46,7 @@ Forked Texts
 	if IsParallel is false
 		return List(Text)
 	let count = "    " + Temp("pn") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
-	let threshold = "    " + Temp("pt") + " = arith.constant " + Threshold + " : i64"
+	let threshold = "    " + Temp("pt") + " = arith.constant 256 : i64"
 	let enough = "    " + Temp("pb") + " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
 	let label = "^loop" + position
 	let branch = "    cf.cond_br " + Temp("pb") + ", " + label + "parallel, " + label + "serial"
@@ -132,10 +132,12 @@ Next Texts
 	(next, "    cf.br " + label + "(" + Temp("kn") + " : i64)", "  " + label + "exit:", "    return %zero : f64")
 Body Texts
 	Doubling.Body.Last.StartsWith("    llvm.store %t5e, %t5p")
+	Trailing.Body.Last is "  ^bb7:"
 	mutable lines = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
 		let isCollect = (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts(0) is "forResult")
 		let emitted = isCollect then MlirFastLoop(function, position).Emitted(value) else function.Emitted(value)
 		lines = lines + function.Label(value) + emitted
-	lines
+	let end = function.method.LoopEndOf(position)
+	end < function.method.instructions.Length then lines + function.Label(end) else lines

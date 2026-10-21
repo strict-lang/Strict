@@ -1,6 +1,6 @@
 has logger
 constant Source = "ImageProcessing/Compare/Landscape.ppm"
-constant Target = "ImageProcessing/Compare/Landscape.strict.ppm"
+constant Target = Source.Replace(".ppm", ".strict.ppm")
 constant Radius = 4
 Run
 	let bitmap = Ppm.Loaded(Source)
