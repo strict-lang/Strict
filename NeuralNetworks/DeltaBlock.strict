@@ -29,21 +29,13 @@ Loaded(model Gguf, prefix Text, zeros Numbers) DeltaBlock
 KeyHeads Number
 	Tiny.KeyHeads is 2
 	(convolution.Length / 4 / norm.Length - decays.Length) / 2
-Layers(model Gguf, first Number, count Number, zeros Numbers) List(DeltaBlock)
-	DeltaBlock.Layers(Model, 0, 3, Tiny.memory).Length is 3
-	for count
-		DeltaBlock.Loaded(model, "blk." + (first + index) + ".", zeros)
-Memory(model Gguf) Numbers
-	DeltaBlock.Memory(Model) is Tiny.memory
-	let architecture = model.Value("general.architecture")
-	let heads = model.Value(architecture + ".ssm.time_step_rank")
-	let size = model.Value(architecture + ".ssm.state_size")
-	Layer.Zeros(heads is "" then 0 else (heads to Number) * (size to Number) * (size to Number))
-Cached(input Numbers) DeltaBlock
-	Tiny.Cached(Rows(1)).Output(Rows(1)).First.IsNearlyEqual(0.54408, 0.00001)
-	Tiny.Cached(Rows(1) + Rows(2)).Output(Rows(1) + Rows(2))(8).IsNearlyEqual(1.773538, 0.00001)
-	let combined = Batch(inputs.weights, inputs.biases).Sums(Qwen3Block.Normalized(input, 0, input.Length, attentionNorm))
-	let tokens = input.Length / attentionNorm.Length
+Combined(input Numbers) Numbers
+	Tiny.Combined(Rows(1) + Rows(2)).Length is 64
+	Batch(inputs.weights, inputs.biases).Sums(Qwen3Block.Normalized(input, 0, input.Length, attentionNorm))
+Cached(combined Numbers) DeltaBlock
+	Tiny.Cached(Tiny.Combined(Rows(1))).Output(Rows(1)).First.IsNearlyEqual(0.54408, 0.00001)
+	Tiny.Cached(Tiny.Combined(Rows(1) + Rows(2))).Output(Rows(1) + Rows(2))(8).IsNearlyEqual(1.773538, 0.00001)
+	let tokens = combined.Length / inputs.weights.Length
 	let keyed = Keyed(Convolved(combined, tokens))
 	let chunks = DeltaChunks(decays.Length, KeyHeads, norm.Length, 16, tokens, keyed, Decayed(combined, tokens), memory)
 	let read = tokens is 1 then Stepped(chunks) else chunks.Read
@@ -69,7 +61,7 @@ Tapped(combined Numbers, width Number, token Number, channel Number) Number
 	Tiny.Tapped((1, 2, 3, 4), 2, -1, 0) is 0
 	token < 0 then window((3 + token) * convolution.Length / 4 + channel) else combined(token * width + channel)
 Shifted(combined Numbers, tokens Number) Numbers
-	Tiny.Cached(Rows(1)).Cached(Rows(2)).Output(Rows(2)).First.IsNearlyEqual(1.773538, 0.00001)
+	Tiny.Cached(Tiny.Combined(Rows(1))).Cached(Tiny.Combined(Rows(2))).Output(Rows(2))(0).IsNearlyEqual(1.773538, 0.00001)
 	Tiny.Shifted(Layer.Zeros(32), 1).Length is 48
 	let channels = convolution.Length / 4
 	for 3 * channels
@@ -134,6 +126,6 @@ Gated(raw Numbers, combined Numbers) Numbers
 		let scale = Qwen3Block.HeadScale(raw, (index / size).Floor * size, size, Qwen3Block.Epsilon)
 		value * scale * norm(index % size) * gate / (1 + (0 - gate).Exponential)
 Output(input Numbers) Numbers
-	Tiny.Cached(Rows(1)).Output(Rows(1)).Length is 8
+	Tiny.Cached(Tiny.Combined(Rows(1))).Output(Rows(1)).Length is 8
 	let attended = Batch(projection.weights, input).Sums(merged)
 	experts.Added(Qwen3Block.Normalized(attended, 0, attended.Length, mlpNorm), attended)

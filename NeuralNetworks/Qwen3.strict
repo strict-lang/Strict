@@ -31,10 +31,10 @@ Blocks(model Gguf) List(Qwen3Block)
 	let interval = given is "" then 1 else given to Number
 	let extra = model.Value(architecture + ".nextn_predict_layers")
 	let layers = (model.Value(architecture + ".block_count") to Number) - (extra is "" then 0 else extra to Number)
-	let memory = DeltaBlock.Memory(model)
+	let memory = Hybrid.Memory(model)
 	for layers / interval
 		let attention = Qwen3Block.Loaded(model, "blk." + (index * interval + interval - 1) + ".", heads)
-		Qwen3Block(attention, hybrid = Hybrid(DeltaBlock.Layers(model, index * interval, interval - 1, memory)))
+		Qwen3Block(attention, hybrid = Hybrid.Loaded(model, index * interval, interval - 1, memory))
 Rotations(positions Numbers) Numbers
 	Tiny.Rotations(List(Number) + 0) is (1, 1, 1, 1, 0, 0, 0, 0)
 	Tiny.Rotations(List(Number) + 1)(4).IsNearlyEqual(-0.8414709848078965)
@@ -83,7 +83,7 @@ Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 		let prepared = value.hybrid.Prepared(current)
 		let cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits)
 		current = cached.Output(prepared.entered, sequences)
-		updated.Add(Qwen3Block(cached, queries = List(Number), hybrid = Hybrid(prepared.layers)))
+		updated.Add(Qwen3Block(cached, queries = List(Number), hybrid = Hybrid(prepared.layers, inputs = prepared.inputs)))
 	Qwen3(value, blocks = updated, hidden = current)
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 6

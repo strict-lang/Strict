@@ -1,17 +1,42 @@
 has layers List(DeltaBlock)
 has entered Numbers = List(Number)
 has gates Numbers = List(Number)
+has inputs List(Numbers) = List(Numbers)
 constant None = Hybrid(List(DeltaBlock))
+constant Tiny = Hybrid(List(DeltaBlock) + DeltaBlock.Tiny)
+constant Single = Tiny.Prepared(DeltaBlock.Rows(1))
+Loaded(model Gguf, first Number, count Number, zeros Numbers) Hybrid
+	Hybrid.Loaded(DeltaBlock.Model, 0, 3, DeltaBlock.Tiny.memory).layers.Length is 3
+	mutable loaded = List(Mutable(DeltaBlock))
+	for count
+		loaded.Add(DeltaBlock.Loaded(model, "blk." + (first + index) + ".", zeros))
+	Hybrid(loaded)
+Memory(model Gguf) Numbers
+	Hybrid.Memory(DeltaBlock.Model) is DeltaBlock.Tiny.memory
+	let architecture = model.Value("general.architecture")
+	let heads = model.Value(architecture + ".ssm.time_step_rank")
+	let size = model.Value(architecture + ".ssm.state_size")
+	Layer.Zeros(heads is "" then 0 else (heads to Number) * (size to Number) * (size to Number))
+Rewound(before Hybrid, tokens Number) Hybrid
+	Tiny.Prepared(DeltaBlock.Rows(1) + DeltaBlock.Rows(2)).Rewound(Tiny, 1).layers(0).memory is Single.layers(0).memory
+	mutable rewound = List(Mutable(DeltaBlock))
+	for before.layers
+		let combined = Safetensors.Part(inputs(index), 0, tokens * value.inputs.weights.Length, 1)
+		rewound.Add(DeltaBlock(value.Cached(combined), merged = List(Number)))
+	Hybrid(value, layers = rewound, inputs = List(Numbers))
 Prepared(input Numbers) Hybrid
 	None.Prepared((1, 2)).entered is (1, 2)
-	Hybrid(List(DeltaBlock) + DeltaBlock.Tiny).Prepared(DeltaBlock.Rows(1)).entered(0).IsNearlyEqual(0.54408, 0.00001)
+	Single.entered(0).IsNearlyEqual(0.54408, 0.00001)
 	mutable hidden = input
 	mutable stepped = List(Mutable(DeltaBlock))
+	mutable combinations = List(Mutable(Numbers))
 	for layers
-		let cached = value.Cached(hidden)
+		let combined = value.Combined(hidden)
+		let cached = value.Cached(combined)
 		hidden = cached.Output(hidden)
 		stepped.Add(DeltaBlock(cached, merged = List(Number)))
-	Hybrid(stepped, hidden)
+		combinations.Add(combined.Length > 16 * value.inputs.weights.Length then List(Number) else combined)
+	Hybrid(stepped, hidden, inputs = combinations)
 Opened(combined Numbers, tokens Number, start Number) Hybrid
 	None.Opened((1, 2, 3, 4), 2, 1).gates is (2, 4)
 	None.Opened((1, 2, 3, 4), 1, 4).gates.Length is 0

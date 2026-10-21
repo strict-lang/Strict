@@ -4,12 +4,16 @@ has next Number
 has drafts = 15
 constant Longest = 15
 has steps = 0
+has drafter = Drafter.None
 constant Started = Speculation(Qwen3.Tiny.Prefilled((1, 2, 3), 0), (1, 2, 3), Qwen3.Tiny.Prefilled((1, 2, 3), 0).Next)
 constant Prompted = Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0)
 constant Verified = Prompted.Steps((5, 4, 1), Qwen3.Positions(3, 3), 1)
+constant Drafting = Speculation(Prompted, (1, 2, 3), Prompted.Next, 3, 0, Drafter.Tiny)
+constant Kept = Speculation(Prompted, (1, 2, 3), 5).Truncated(Verified, (5))
 Generated(count Number) Numbers
 	Started.Generated(6) is Generation(Qwen3.Tiny).Generated((1, 2, 3), 6)
 	Started.Generated(1) is (2)
+	Drafting.Generated(6) is Generation(Qwen3.TinyHybrid).Generated((1, 2, 3), 6)
 	Safetensors.Part(Finished(count).context, context.Length, count, 1)
 Finished(count Number) Speculation
 	Started.Finished(6).context.Length >= 9
@@ -20,7 +24,7 @@ Finished(count Number) Speculation
 Advanced Speculation
 	Started.Advanced.context is (1, 2, 3, 2)
 	Started.Advanced.steps is 1
-	let draft = Lookup(context + next)
+	let draft = Drafted
 	let block = List(Number) + next + draft
 	let positions = Qwen3.Positions(context.Length, block.Length)
 	let verified = draft.Length is 0 then model.Step(next, context.Length) else model.Steps(block, positions, 1)
@@ -28,13 +32,30 @@ Advanced Speculation
 	let accepted = Accepted(draft, predictions)
 	let kept = Safetensors.Part(block, 0, accepted + 1, 1)
 	let truncated = accepted is draft.Length then verified else Truncated(verified, kept)
-	Speculation(truncated, context + kept, predictions(accepted), Adapted(draft.Length, accepted), steps + 1)
+	let remembered = Remembered(verified, kept)
+	Speculation(truncated, context + kept, predictions(accepted), Adapted(draft.Length, accepted), steps + 1, remembered)
+Drafted Numbers
+	Started.Drafted.Length is 0
+	Drafting.Drafted.Length is 3
+	drafter.headNorm.Length is 0 then Lookup(context + next) else drafter.Drafts(model, next, context.Length, drafts)
+Remembered(verified Qwen3, kept Numbers) Drafter
+	Started.Remembered(Started.model, List(Number) + 2).headNorm.Length is 0
+	Drafting.Remembered(Verified, (5, 4)).blocks.First.keys.Length is 8
+	if drafter.headNorm.Length is 0
+		return drafter
+	let width = drafter.embedNorm.Length
+	let last = Safetensors.Part(model.hidden, model.hidden.Length - width, width, 1)
+	let rows = last + Safetensors.Part(verified.hidden, 0, (kept.Length - 1) * width, 1)
+	drafter.Extended(model, rows, kept, Qwen3.Positions(context.Length, kept.Length))
 Adapted(drafted Number, accepted Number) Number
 	Started.Adapted(0, 0) is Started.drafts
 	Started.Adapted(15, 3) is 15
 	Started.Adapted(15, 0) is 7
 	Speculation(Started, drafts = 7).Adapted(7, 7) is 15
 	Speculation(Started, drafts = 3).Adapted(3, 0) is 3
+	Drafting.Adapted(3, 3) is 3
+	if drafter.headNorm.Length > 0
+		return drafts
 	let longer = (2 * drafts + 1).Clamp(3, Longest)
 	let shorter = ((drafts - 1) / 2).Clamp(3, Longest)
 	drafted is 0 then drafts else (accepted is drafted then longer else (accepted is 0 then shorter else drafts))
@@ -70,13 +91,13 @@ Accepted(draft Numbers, predictions Numbers) Number
 	count
 Truncated(verified Qwen3, kept Numbers) Qwen3
 	Speculation(Started, context = (1)).Truncated(Started.model, (5)).blocks.First.keys.Length is 2 * 4
-	Speculation(Prompted, (1, 2, 3), 5).Truncated(Verified, (5)).Step(2, 4).Scored is Prompted.Step(5, 3).Step(2, 4).Scored
-	if model.blocks.First.hybrid.layers.Length > 0
-		return model.Steps(kept, Qwen3.Positions(context.Length, kept.Length), 1)
+	Kept.Step(2, 4).Scored.Last.IsNearlyEqual(Prompted.Step(5, 3).Step(2, 4).Scored.Last)
+	Kept.hidden.Length is 8
 	let length = context.Length + kept.Length
 	mutable blocks = List(Mutable(Qwen3Block))
 	for verified.blocks
 		let width = length * value.groups * value.queryNorm.Length
 		let keys = Safetensors.Part(value.keys, 0, width, 1)
-		blocks.Add(Qwen3Block(value, keys = keys, values = Safetensors.Part(value.values, 0, width, 1)))
-	Qwen3(verified, blocks = blocks)
+		let hybrid = value.hybrid.Rewound(model.blocks(index).hybrid, kept.Length)
+		blocks.Add(Qwen3Block(value, keys = keys, values = Safetensors.Part(value.values, 0, width, 1), hybrid = hybrid))
+	Qwen3(verified, blocks = blocks, hidden = Safetensors.Part(verified.hidden, 0, kept.Length * verified.norm.Length, 1))
