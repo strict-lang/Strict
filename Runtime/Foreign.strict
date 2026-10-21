@@ -78,7 +78,8 @@ Folder(type TypeEntry) Text
 	Foreign(Invocation.AddCall, List(TypeEntry), "Examples/NativeAdd").Folder(Shorter) is "Examples/NativeAdd/native"
 	let file = type.Name.IndexOf("/") < 0 then folder + "/" + type.Source else type.Source
 	let parent = Path(file).PathOnly.text
-	parent is "" then "native" else parent + "/native"
+	let native = parent is "" then "native" else parent + "/native"
+	Directory.Exists(native) or (TypeSource.Root is ".") then native else TypeSource.Root + "/" + native
 Numbers(values List(VmValue)) Numbers
 	Adding.Numbers((VmValue.OfNumber(1), VmValue.OfNumber(2))) is (1, 2)
 	for values

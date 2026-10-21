@@ -93,7 +93,10 @@ IsErrorComparison(node SyntaxNode, block CodeBlock) Boolean
 Statement(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Statement(SyntaxNode("Return", "", Greeting), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	Plain.Statement(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
-	node.Kind is "Return" then Handled(node.children(0), block) else Checked(node, block)
+	Plain.Statement(SyntaxNode("Return", ""), CodeBlock.Empty).instructions.Last.kind is InstructionType.Return
+	if node.Kind is "Return"
+		return node.HasValue then Handled(node.children(0), block) else block.Add(InstructionEntry.Return(0))
+	Checked(node, block)
 Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
 	Plain.Right(IsError, CodeBlock.Empty, false).instructions.Last.kind is InstructionType.Invoke
 	let any = AnyError(node, block)

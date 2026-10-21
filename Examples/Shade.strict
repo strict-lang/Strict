@@ -1,0 +1,4 @@
+has Red Byte
+Half Number
+	Shade(Byte(9)).Half is 4
+	(Red / 2).Floor

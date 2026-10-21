@@ -3,6 +3,7 @@ has bits Number = 32
 has prefix Text = ""
 constant Tiny = Safetensors("NeuralNetworks/tiny.safetensors")
 constant Halves = Safetensors("NeuralNetworks/tinyhalves.safetensors")
+constant Bytes = Safetensors("NeuralNetworks/tinyint8.safetensors")
 Entry(name Text) Text
 	Tiny.Entry("b") is "\"dtype\":\"F32\",\"shape\":[3],\"data_offsets\":[24,36]"
 	Tiny.Entry("missing") is ""
@@ -29,6 +30,9 @@ Values(name Text) Numbers
 	Halves.Values("a") is (1, 2, 3, 4, 5, 6)
 	Halves.Values("b") is (0.5, -1.5, 2.25)
 	Tiny.Values("missing") is Error
+	Bytes.Values("a.weight").Length is 256
+	Bytes.Values("a.weight")(1) is -126
+	Bytes.Values("a.comfy_quant")(0) is 123
 	TensorFile.Floats(path, Entry(name))
 Rows(name Text) List(Numbers)
 	Tiny.Rows("a") is ((1, 2, 3), (4, 5, 6))
@@ -36,6 +40,11 @@ Rows(name Text) List(Numbers)
 	Safetensors("NeuralNetworks/tiny.safetensors", 16).Rows("a") is ((1, 2, 3), (4, 5, 6))
 	Safetensors("NeuralNetworks/tiny.safetensors", 8).Rows("a").First.First.IsNearlyEqual(0.992126)
 	TensorFile.Rows(path, Entry(name), bits)
+Quantized(name Text) List(Numbers)
+	Bytes.Quantized("a").Length is 4
+	Bytes.Quantized("a").First(1) is -63
+	Bytes.Quantized("a")(2).First is 2
+	TensorFile.Quantized(path, Entry(name + ".weight"), Entry(name + ".weight_scale"))
 Columns(name Text) List(Numbers)
 	Tiny.Columns("a") is ((1, 4), (2, 5), (3, 6))
 	Halves.Columns("a") is ((1, 4), (2, 5), (3, 6))

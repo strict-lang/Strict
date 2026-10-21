@@ -49,8 +49,11 @@ Target(call Invocation) Numbers
 Called(call Invocation) Numbers
 	Doubling.Called(Twice) is (0, 0, 0)
 	Doubling.Called(Invocation.AddCall) is (Native, 0, 0)
-	let type = Natives(types).TypeOf(call.TypeName)
-	let method = type.Chosen(call.MethodName, call.Count, call.ReturnType, call.ParameterNames)
+	let name = call.MethodName
+	let own = Natives(types).TypeOf(call.TypeName)
+	let isMissing = (own.Chosen(name, call.Count, call.ReturnType, call.ParameterNames) < 0) and (name is not "from")
+	let type = isMissing and (own.Changing.Length is 1) then Natives(types).TypeOf(own.Changing.First.typeName) else own
+	let method = type.Chosen(name, call.Count, call.ReturnType, call.ParameterNames)
 	if (method < 0) or call.IsNativeConversion or (type.methods(method).instructions.Length is 0)
 		return (Native, 0, 0)
 	(Position(type), method, call.IsWrapping(type) then 1 else 0)

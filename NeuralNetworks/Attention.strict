@@ -5,6 +5,7 @@ has heads Number
 has groups Number
 has size Number
 has sequences Number = 1
+has causal Boolean = true
 constant Single = Attention((1, 0), (1, 0, 0, 1), (3, 4, 5, 6), 1, 1, 2)
 constant Pair = Attention((1, 0, 0, 1), (1, 0, 1, 0, 0, 1, 0, 1), (3, 4, 7, 8, 5, 6, 5, 6), 1, 1, 2, 2)
 constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
@@ -44,11 +45,17 @@ Last(row Number, positions Number, tokens Number) Number
 	Stepped.Merged(255).IsNearlyEqual(0.104795, 0.005)
 	Tiled.Merged(1500).IsNearlyEqual(0.031491, 0.005)
 	Tiled.Merged(4095).IsNearlyEqual(0.045206, 0.005)
-	positions - tokens + (row / heads).Floor % tokens
+	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2, 1, false).Merged.First.IsNearlyEqual(5.6604769)
+	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2).Merged.First is 5
+	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2, 1, false).Merged(3).IsNearlyEqual(7.3395231)
+	causal then positions - tokens + (row / heads).Floor % tokens else positions - 1
 Visible(score Number, position Number, limit Number) Number
 	Single.Visible(2, 1, 1) is 2
 	Single.Visible(2, 2, 1) is -1000000000
 	Prompted.Merged(1866).IsNearlyEqual(-0.025784, 0.005)
 	Spread.Merged(14).IsNearlyEqual(0.050249, 0.001)
 	Spread.Merged(30).IsNearlyEqual(0.043154, 0.001)
+	Attention(Prompted.queries, Prompted.keys, Prompted.values, 4, 2, 64, 1, false).Merged(0).IsNearlyEqual(-0.2334, 0.005)
+	Attention(Prompted.queries, Prompted.keys, Prompted.values, 2, 1, 16, 1, false).Merged(0).IsNearlyEqual(-0.0168, 0.005)
+	Attention(Prompted.queries, Prompted.keys, Prompted.values, 2, 1, 16, 1, false).Merged(2047).IsNearlyEqual(0.02, 0.005)
 	position > limit then -1000000000 else score

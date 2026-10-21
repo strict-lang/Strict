@@ -50,7 +50,7 @@ STRICT_EXPORT double TensorFile_Header(double self, double path)
 }
 
 /* A tensor as its header entry describes it: "dtype":"F16","shape":[2,3],"data_offsets":[24,36]. */
-typedef struct { uint64_t bytes, isBrain, rank, height, width, start; } Tensor;
+typedef struct { uint64_t bytes, isBrain, isSigned, rank, height, width, start; } Tensor;
 
 /* Reads the numbers of a list like [2,3] at text into numbers (at most limit), their count or -1 when it is malformed. */
 static int Listed(const char* text, uint64_t* numbers, int limit)
@@ -80,16 +80,20 @@ static const char* Described(const char* entry, Tensor* tensor)
 		return "TensorNotFound";
 	type += 9;
 	tensor->isBrain = strncmp(type, "BF16\"", 5) == 0;
-	tensor->bytes = strncmp(type, "F32\"", 4) == 0 ? 4 : strncmp(type, "F16\"", 4) == 0 || tensor->isBrain ? 2 : 0;
+	tensor->isSigned = strncmp(type, "I8\"", 3) == 0;
+	tensor->bytes = strncmp(type, "F32\"", 4) == 0 ? 4 : strncmp(type, "F16\"", 4) == 0 || tensor->isBrain ? 2 :
+		tensor->isSigned || strncmp(type, "U8\"", 3) == 0 ? 1 : 0;
 	if (!tensor->bytes)
-		return "OnlyF32F16AndBF16TensorsAreSupported";
-	uint64_t dimensions[2] = { 1, 1 }, range[2];
-	int rank = Listed(shape + 9, dimensions, 2);
+		return "OnlyF32F16BF16I8AndU8TensorsAreSupported";
+	uint64_t dimensions[4] = { 1, 1, 1, 1 }, range[2];
+	int rank = Listed(shape + 9, dimensions, 4);
 	if (rank < 0 || Listed(offsets + 16, range, 2) != 2)
-		return "OnlyVectorsAndMatricesAreSupported";
+		return "OnlyTensorsUpToFourDimensionsAreSupported";
 	tensor->rank = (uint64_t)rank;
-	tensor->height = rank == 2 ? dimensions[0] : 1;
-	tensor->width = rank == 2 ? dimensions[1] : dimensions[0];
+	tensor->width = rank > 0 ? dimensions[rank - 1] : 1;
+	tensor->height = 1;
+	for (int dimension = 0; dimension + 1 < rank; dimension++)
+		tensor->height *= dimensions[dimension];
 	tensor->start = range[0];
 	if (tensor->height > (1ull << 30) || tensor->width > (1ull << 30))
 		return "TensorTooLarge";
@@ -124,10 +128,13 @@ static float* Read(double path, const Tensor* tensor, const char** failure)
 		*failure = "TensorFileDataTruncated";
 		return 0;
 	}
-	/* 16 bit numbers fill the first half, widened from the last one down so none is overwritten before it is read */
+	/* 8 and 16 bit numbers fill the start, widened from the last one down so none is overwritten before it is read */
 	const uint16_t* halves = (const uint16_t*)floats;
+	const unsigned char* bytes = (const unsigned char*)floats;
 	for (uint64_t index = count; tensor->bytes == 2 && index-- > 0;)
 		floats[index] = tensor->isBrain ? strict_brain_float(halves[index]) : strict_half_float(halves[index]);
+	for (uint64_t index = count; tensor->bytes == 1 && index-- > 0;)
+		floats[index] = tensor->isSigned ? (float)(int8_t)bytes[index] : (float)bytes[index];
 	return floats;
 }
 
@@ -202,4 +209,49 @@ STRICT_EXPORT double TensorFile_Rows(double self, double path, double entry, dou
 STRICT_EXPORT double TensorFile_Columns(double self, double path, double entry, double bits)
 {
 	return Matrix(path, entry, bits, 1);
+}
+
+/* The rows of an I8 matrix with one F32 scale per row (comfy_quant int8 rows, convrot keeps them rotated), packed as 8 bit
+   rows whose per-32 scales all are the scale of their row, so every number is exact. */
+STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry, double scales)
+{
+	static double* rows = 0;
+	static unsigned char* storage = 0;
+	Tensor tensor, scaled;
+	const char* failure = Described(strict_text(entry), &tensor);
+	if (!failure)
+		failure = Described(strict_text(scales), &scaled);
+	if (!failure && (!tensor.isSigned || tensor.rank != 2 || scaled.bytes != 4 || scaled.height * scaled.width != tensor.height))
+		failure = "OnlyI8MatricesWithAnF32ScalePerRowAreSupported";
+	if (failure)
+		return strict_fail(failure);
+	float* values = Read(path, &tensor, &failure);
+	float* factors = values ? Read(path, &scaled, &failure) : 0;
+	if (!factors)
+	{
+		free(values);
+		return strict_fail(failure);
+	}
+	uint64_t height = tensor.height, width = tensor.width;
+	uint64_t size = (sizeof(strict_packed) + strict_packed_bytes(width, 8) + 7) / 8 * 8;
+	free(rows);
+	free(storage);
+	rows = malloc((1 + height) * sizeof(double));
+	storage = malloc(height * size + 1);
+	rows[0] = (double)height;
+	for (uint64_t row = 0; row < height; row++)
+	{
+		strict_packed* packed = (strict_packed*)(storage + row * size);
+		float* parts = (float*)(packed->data + strict_packed_data(width, 8));
+		packed->count = (double)width;
+		packed->bits = 8;
+		for (uint64_t column = 0; column < width; column++)
+			((int8_t*)packed->data)[column] = (int8_t)values[row * width + column];
+		for (uint64_t part = 0; part < (width + 31) / 32; part++)
+			parts[part] = factors[row];
+		rows[1 + row] = strict_packed_result(packed);
+	}
+	free(values);
+	free(factors);
+	return strict_numbers_result((strict_numbers*)rows);
 }
