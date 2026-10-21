@@ -1,0 +1,129 @@
+has lines Texts
+has folder = ""
+constant Blurring = Unswitching(Callees.Sums, "ImageProcessing")
+constant Nested = Callees.Sums.Slice(0, 4)
+constant Checked = "\t\t\t\tif bitmap.IsInside(pixel, value, outer)"
+constant LoopVariables = Monotone(("value", "outer", "index"))
+Lines Texts
+	Blurring.Lines(2) is "\tif " + Text.Combine(Corners(Blurring, 2).Calls, " and ")
+	Blurring.Lines(5) is Callees.Sums(5)
+	Blurring.Lines(6) is "\telse"
+	Blurring.Lines(9) is Checked
+	Blurring.Lines.Length is 12
+	Unswitching(Fusion.Grays, "ImageProcessing").Lines is Fusion.Grays
+	Rewritten(0)
+Rewritten(start Number) Texts
+	Blurring.Rewritten(3) is Callees.Sums.Slice(3, 4)
+	let at = Found(start)
+	if at < 0
+		return lines.Slice(start, lines.Length - start)
+	lines.Slice(start, at - start) + Hoisted(at) + Rewritten(Callees(lines, folder).BlockEnd(at))
+Found(start Number) Number
+	Blurring.Found(0) is 2
+	Blurring.Found(3) is -1
+	for Range(start, lines.Length)
+		if IsHoistable(value)
+			return value
+	-1
+Hoisted(at Number) Texts
+	Blurring.Hoisted(2).Length is 9
+	let tabs = lines(at).Substring(0, Callees(lines, folder).Depth(lines(at)))
+	let condition = at + Loops(at)
+	let end = Callees(lines, folder).BlockEnd(at)
+	let corners = Text.Combine(Corners(Unswitching(lines, folder), at).Calls, " and ")
+	mutable result = List(Mutable(Text)) + (tabs + "if " + corners)
+	for Range(at, end)
+		if value is not condition
+			result.Add(value < condition then "\t" + lines(value) else lines(value))
+	result + (tabs + "else") + Indented(at, end)
+Indented(start Number, end Number) Texts
+	Blurring.Indented(2, 3) is List(Text) + "\t\tfor Range(-1, 2)"
+	for Range(start, end)
+		"\t" + lines(value)
+IsHoistable(at Number) Boolean
+	Blurring.IsHoistable(2)
+	Blurring.IsHoistable(3) is false
+	Blurring.IsHoistable(4) is false
+	Unswitching(Nested + "\t\t\tif bitmap.IsInside(pixel, value, outer)", "ImageProcessing").IsHoistable(2) is false
+	let callees = Callees(lines, folder)
+	let loops = Loops(at)
+	let condition = at + loops
+	if (loops is 0) or (condition >= lines.Length) or (lines(condition).TrimStart.StartsWith("if ") is false)
+		return false
+	let isBody = (callees.BlockEnd(condition) is callees.BlockEnd(at)) and IsStatements(condition)
+	isBody and (callees.Depth(lines(condition)) is callees.Depth(lines(at)) + loops) and IsMonotone(at)
+IsStatements(condition Number) Boolean
+	Blurring.IsStatements(4)
+	Unswitching(Nested + Checked + "\t\t\t\t\tbitmap.Colors(pixel)", "ImageProcessing").IsStatements(4) is false
+	Unswitching(Nested + Checked, "ImageProcessing").IsStatements(4) is false
+	let end = Callees(lines, folder).BlockEnd(condition)
+	for Range(condition + 1, end)
+		let tokens = Tokenizer(lines(value).TrimStart).Tokens
+		if (tokens.First is not in ("let", "mutable")) and ((tokens.Length < 2) or (tokens(1) is not "="))
+			return false
+	end > condition + 1
+Loops(at Number) Number
+	Blurring.Loops(2) is 2
+	Blurring.Loops(3) is 1
+	Blurring.Loops(1) is 0
+	if Bounds(at).Length is 0
+		return 0
+	let depth = Callees(lines, folder).Depth(lines(at))
+	let isNested = (Bounds(at + 1).Length is 2) and (Callees(lines, folder).Depth(lines(at + 1)) is depth + 1)
+	isNested then 2 else 1
+Bounds(at Number) Texts
+	Blurring.Bounds(2) is ("-1", "2")
+	Blurring.Bounds(1).Length is 0
+	Blurring.Bounds(7).Length is 0
+	Unswitching(List(Text) + "\tfor Range(0, value)", "").Bounds(0).Length is 0
+	let line = at < lines.Length then lines(at).TrimStart else ""
+	if (line.StartsWith("for Range(") is false) or (line.EndsWith(")") is false)
+		return List(Text)
+	let parts = Callees(lines, folder).Parts(line.Substring(10, line.Length - 11))
+	(parts.Length is 2) and (LoopVariables.Mentions(Tokenizer(line).Tokens) is false) then parts else List(Text)
+Call(at Number) Texts
+	Blurring.Call(4) is ("bitmap", "IsInside", "pixel", "value", "outer")
+	Blurring.Call(5).Length is 0
+	Unswitching(List(Text) + "\tif IsInside(1)", "").Call(0) is ("", "IsInside", "1")
+	Unswitching(List(Text) + "\tif f(1).Is(value)", "").Call(0).Length is 0
+	let line = lines(at).TrimStart
+	let text = line.StartsWith("if ") then line.Substring(3, line.Length - 3) else ""
+	let open = text.IndexOf("(")
+	if (open < 1) or (text.EndsWith(")") is false) or (Callees(lines, folder).Closing(text, open) is not text.Length - 1)
+		return List(Text)
+	let dot = text.Substring(0, open).IndexOf(".")
+	let named = List(Text) + (dot < 0 then "" else text.Substring(0, dot)) + text.Substring(dot + 1, open - dot - 1)
+	named + Callees(lines, folder).Parts(text.Substring(open + 1, text.Length - open - 2))
+LoopNames(at Number) Texts
+	Blurring.LoopNames(2) is ("value", "outer")
+	Blurring.LoopNames(3) is List(Text) + "value"
+	let call = Call(at + Loops(at))
+	mutable names = List(Mutable(Text))
+	for call.Slice(2, call.Length - 2)
+		if (value is in ("value", "outer")) and (value is not in names) and ((value is "value") or (Loops(at) is 2))
+			names.Add(value)
+	names
+IsMonotone(at Number) Boolean
+	Blurring.IsMonotone(2)
+	Unswitching(Nested + "\t\t\tif bitmap.IsInside(pixel, value, 1)", "ImageProcessing").IsMonotone(2)
+	Unswitching(Nested + "\t\t\tif bitmap.IsInside(pixel, value, index)", "ImageProcessing").IsMonotone(2) is false
+	Unswitching(Nested + "\t\t\tif bitmap.IsOpaque", "ImageProcessing").IsMonotone(2) is false
+	let call = Call(at + Loops(at))
+	let callee = call.Length < 3 then List(Text) else Callees(lines, folder).Lines(call(0), call(1), at)
+	let parameters = callee.Length < 2 then List(Text) else Callees(lines, folder).ParameterNames(callee.First)
+	if (callee.Length < 2) or (parameters.Length is not call.Length - 2)
+		return false
+	let bound = Bound(at, parameters)
+	(bound.Length > 0) and Monotone(bound).IsBounded(Monotone(bound).Condition(callee.Slice(1, callee.Length - 1)))
+Bound(at Number, parameters Texts) Texts
+	Blurring.Bound(2, ("pixel", "x", "y")) is ("x", "y")
+	Blurring.Bound(3, ("pixel", "x", "y")).Length is 0
+	let names = LoopNames(at)
+	let call = Call(at + Loops(at))
+	mutable bound = List(Mutable(Text))
+	for call.Slice(2, call.Length - 2)
+		if value is in names
+			bound.Add(parameters(index))
+		else if LoopVariables.Mentions(Tokenizer(value).Tokens)
+			return List(Text)
+	bound

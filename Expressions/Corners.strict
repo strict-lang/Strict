@@ -1,0 +1,31 @@
+has unswitching Unswitching
+has at Number
+constant Blurring = Corners(Unswitching.Blurring, 2)
+Calls Texts
+	Blurring.Calls.Length is 4
+	Blurring.Calls(0) is "bitmap.IsInside(pixel, -1, -1)"
+	Blurring.Calls(1) is "bitmap.IsInside(pixel, 2 - 1, -1)"
+	Blurring.Calls(3) is "bitmap.IsInside(pixel, 2 - 1, 2 - 1)"
+	Corners(Unswitching.Blurring, 3).Calls.Length is 2
+	for 2 ^ unswitching.LoopNames(at).Length
+		Call(value)
+Call(corner Number) Text
+	Blurring.Call(2) is "bitmap.IsInside(pixel, -1, 2 - 1)"
+	let call = unswitching.Call(at + unswitching.Loops(at))
+	let names = unswitching.LoopNames(at)
+	mutable arguments = List(Mutable(Text))
+	for call.Slice(2, call.Length - 2)
+		let bit = names.Index(value)
+		let isHigh = (corner / (2 ^ bit)).Floor % 2 is 1
+		let line = at + (value is "value" then unswitching.Loops(at) - 1 else 0)
+		arguments.Add(bit < 0 then value else Value(line, isHigh))
+	let name = call(0) is "" then call(1) else call(0) + "." + call(1)
+	name + "(" + Text.Combine(arguments, ", ") + ")"
+Value(line Number, isHigh Boolean) Text
+	Blurring.Value(2, false) is "-1"
+	Blurring.Value(2, true) is "2 - 1"
+	Corners(Unswitching(List(Text) + "\tfor Range(0, n + 1)", ""), 0).Value(0, true) is "n"
+	let bounds = unswitching.Bounds(line)
+	if isHigh is false
+		return bounds.First
+	bounds.Last.EndsWith(" + 1") then bounds.Last.Substring(0, bounds.Last.Length - 4) else bounds.Last + " - 1"

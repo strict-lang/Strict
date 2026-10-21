@@ -10,7 +10,7 @@ Fused Texts
 	mutable result = Rewritten
 	for Called
 		result = result + FusedAverage(Fusion(lines, folder), value).Lines
-	result
+	Unswitching(result, folder).Lines
 Rewritten Texts
 	Averaging.Rewritten(2) is "Ones(count Number) Numbers"
 	for lines

@@ -1,0 +1,82 @@
+has lines Texts
+has folder = ""
+constant Sums = ("Sums(bitmap Bitmap, pixel Number) Number", "\tmutable sum = 0", "\tfor Range(-1, 2)", "\t\tfor Range(-1, 2)", "\t\t\tif bitmap.IsInside(pixel, value, outer)", "\t\t\t\tsum = sum + bitmap.Colors(pixel + outer * bitmap.width + value).Red", "\tsum")
+constant Blurring = Callees(Sums, "ImageProcessing")
+Lines(receiver Text, method Text, at Number) Texts
+	Blurring.Lines("bitmap", "IsInside", 4).Last is "\tcolumn >= 0 and column < width and row >= 0 and row < height"
+	Blurring.Lines("bitmap", "IsInside", 4).First is "IsInside(pixel Number, x Number, y Number) Boolean"
+	Blurring.Lines("bitmap", "Missing", 4).Length is 0
+	Blurring.Lines("pixel", "Floor", 4).Length is 0
+	Blurring.Lines("", "Sums", 4) is Sums
+	let found = receiver is "" then lines else Source(TypeOf(receiver, at))
+	for found
+		if value.StartsWith(method + "(") or (value is method)
+			return found.Slice(index, Callees(found, folder).BlockEnd(index) - index)
+	List(Text)
+Source(type Text) Texts
+	Blurring.Source("Bitmap").First is "has width Number"
+	Blurring.Source("").Length is 0
+	Blurring.Source("Missing").Length is 0
+	let path = folder + "/" + type + ".strict"
+	(type is not "") and (folder is not "") and File(path).Exists then File(path).ReadLines else List(Text)
+TypeOf(name Text, at Number) Text
+	Blurring.TypeOf("bitmap", 2) is "Bitmap"
+	Blurring.TypeOf("pixel", 2) is "Number"
+	Blurring.TypeOf("nothing", 2) is ""
+	Callees(("has bitmap Bitmap", "Run", "\tbitmap"), "").TypeOf("bitmap", 2) is "Bitmap"
+	mutable header = 0
+	for at
+		header = Depth(lines(index)) is 0 then index else header
+	for Parameters(lines(header)) + Members
+		let words = value.Split(" ")
+		if (words.First is name) and (words.Length > 1)
+			return words(1)
+	""
+Members Texts
+	Callees(("has bitmap Bitmap", "Run"), "").Members is List(Text) + "bitmap Bitmap"
+	for lines
+		if value.StartsWith("has ")
+			value.Substring(4, value.Length - 4)
+Parameters(header Text) Texts
+	Blurring.Parameters("IsInside(pixel Number, x Number, y Number) Boolean") is ("pixel Number", "x Number", "y Number")
+	Blurring.Parameters("Center Number").Length is 0
+	let open = header.IndexOf("(")
+	open < 0 then List(Text) else Parts(header.Substring(open + 1, header.LastIndexOf(")") - open - 1))
+ParameterNames(header Text) Texts
+	Blurring.ParameterNames("IsInside(pixel Number, x Number, y Number) Boolean") is ("pixel", "x", "y")
+	for Parameters(header)
+		value.Split(" ").First
+Parts(text Text) Texts
+	Blurring.Parts("pixel, f(a, b), value") is ("pixel", "f(a, b)", "value")
+	mutable parts = List(Mutable(Text))
+	mutable depth = 0
+	mutable start = 0
+	for text.Length
+		let character = text.Substring(index, 1)
+		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
+		if (depth is 0) and (character is ",")
+			parts.Add(text.Substring(start, index - start))
+			start = index + 2
+	parts + text.Substring(start, text.Length - start)
+Closing(text Text, open Number) Number
+	Blurring.Closing("f(a, (b)) + 1", 1) is 8
+	Blurring.Closing("(a", 0) is -1
+	mutable depth = 0
+	for Range(open, text.Length)
+		let character = text.Substring(value, 1)
+		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
+		if depth is 0
+			return value
+	-1
+Depth(line Text) Number
+	Blurring.Depth("\t\tx") is 2
+	line.Length - line.TrimStart.Length
+BlockEnd(at Number) Number
+	Blurring.BlockEnd(2) is 6
+	Blurring.BlockEnd(4) is 6
+	Blurring.BlockEnd(6) is 7
+	Blurring.BlockEnd(0) is 7
+	for Range(at + 1, lines.Length)
+		if Depth(lines(value)) <= Depth(lines(at))
+			return value
+	lines.Length

@@ -1,0 +1,103 @@
+has names Texts
+constant Operators = ("+", "-", "*", "/", "%", "(", ",", "<", ">", "<=", ">=", "=", "and", "or", "is", "not")
+constant Compares = ("<", ">", "<=", ">=")
+constant InX = Monotone(List(Text) + "x")
+Condition(body Texts) Texts
+	InX.Condition(("\tlet a = x + 1", "\ta > 0")) is ("(", "x", "+", "1", ")", ">", "0")
+	InX.Condition(("\tlet a = x + 1", "\tlet b = a - 1", "\tb > 0")).Length is 11
+	InX.Condition(("\tif x", "\t\treturn 1", "\tx > 0")).Length is 0
+	InX.Condition(List(Text) + "\treturn x > 0").Length is 0
+	mutable tokens = Tokenizer(body.Last.TrimStart).Tokens
+	for body.Length
+		let line = body(body.Length - 1 - index)
+		if line.StartsWith("\tlet ")
+			tokens = Substituted(tokens, Tokenizer(line.Substring(5, line.Length - 5)).Tokens)
+		else if Tokenizer(line.TrimStart).Tokens.First is in ("for", "mutable", "if", "return")
+			return List(Text)
+	tokens
+Substituted(tokens Texts, definition Texts) Texts
+	InX.Substituted(("a", "+", "b"), ("b", "=", "c", "*", "2")) is ("a", "+", "(", "c", "*", "2", ")")
+	mutable result = List(Mutable(Text))
+	for tokens
+		if value is definition.First
+			result = result + "(" + definition.Slice(2, definition.Length - 2) + ")"
+		else
+			result.Add(value)
+	result
+IsBounded(tokens Texts) Boolean
+	InX.IsBounded(Tokenizer("a + x >= 0 and (b - x) < w").Tokens)
+	InX.IsBounded(Tokenizer("a + x >= 0 or x < w").Tokens) is false
+	InX.IsBounded(Tokenizer("x * 2 < w").Tokens) is false
+	InX.IsBounded(Tokenizer("x is 1").Tokens) is false
+	InX.IsBounded(Tokenizer("x").Tokens) is false
+	let at = Split(tokens, List(Text) + "and")
+	if at < 0
+		return IsCompared(tokens)
+	IsCompared(tokens.Slice(0, at)) and IsBounded(tokens.Slice(at + 1, tokens.Length - at - 1))
+IsCompared(tokens Texts) Boolean
+	InX.IsCompared(Tokenizer("a + x >= 0").Tokens)
+	InX.IsCompared(Tokenizer("not (x < 0)").Tokens) is false
+	InX.IsCompared(Tokenizer("(x < 0) < 1").Tokens) is false
+	let at = Split(tokens, Compares)
+	let right = at < 0 then List(Text) else tokens.Slice(at + 1, tokens.Length - at - 1)
+	if (at < 1) or (Split(right, Compares) >= 0) or Monotone(("or", "is", "not")).Mentions(tokens)
+		return false
+	IsAdditive(tokens.Slice(0, at)) and IsAdditive(right)
+Split(tokens Texts, operators Texts) Number
+	InX.Split(("(", "a", "and", "b", ")", "and", "c"), List(Text) + "and") is 5
+	InX.Split(("a", "+", "b"), List(Text) + "and") is -1
+	mutable depth = 0
+	for tokens
+		depth = depth + (value is "(" then 1 else (value is ")" then -1 else 0))
+		if (depth is 0) and (value is in operators)
+			return index
+	-1
+IsAdditive(tokens Texts) Boolean
+	InX.IsAdditive(Tokenizer("pixel % width + x").Tokens)
+	InX.IsAdditive(Tokenizer("x * 2").Tokens) is false
+	InX.IsAdditive(Tokenizer("(a + x) - 1").Tokens)
+	InX.IsAdditive(Tokenizer("(a + x) * 2").Tokens) is false
+	InX.IsAdditive(Tokenizer("a * -x").Tokens) is false
+	InX.IsAdditive(Tokenizer("-x + 1").Tokens)
+	let at = Binary(tokens)
+	if at > 0
+		return IsAdditive(tokens.Slice(0, at)) and IsAdditive(tokens.Slice(at + 1, tokens.Length - at - 1))
+	IsTerm(tokens)
+Binary(tokens Texts) Number
+	InX.Binary(Tokenizer("a * -x").Tokens) is -1
+	InX.Binary(Tokenizer("(a - b) + c").Tokens) is 5
+	mutable depth = 0
+	for tokens
+		depth = depth + (value is "(" then 1 else (value is ")" then -1 else 0))
+		if (depth is 0) and (index > 0) and (value is in ("+", "-")) and (tokens(index - 1) is not in Operators)
+			return index
+	-1
+IsTerm(tokens Texts) Boolean
+	InX.IsTerm(List(Text) + "x")
+	InX.IsTerm(("-", "x"))
+	InX.IsTerm(("a", ".", "x")) is false
+	InX.IsTerm(("(", "x", ")"))
+	InX.IsTerm(("(", "x", "<", "0", ")")) is false
+	if Mentions(tokens) is false
+		return true
+	let unsigned = tokens.First is "-" then tokens.Slice(1, tokens.Length - 1) else tokens
+	if unsigned.Length is 1
+		return true
+	let isGrouped = (unsigned.First is "(") and (Matching(unsigned, 0) is unsigned.Length - 1)
+	isGrouped and IsAdditive(unsigned.Slice(1, unsigned.Length - 2))
+Matching(tokens Texts, open Number) Number
+	InX.Matching(("(", "a", "(", "b", ")", ")", "+", "c"), 0) is 5
+	InX.Matching(("(", "a"), 0) is -1
+	mutable depth = 0
+	for Range(open, tokens.Length)
+		depth = depth + (tokens(value) is "(" then 1 else (tokens(value) is ")" then -1 else 0))
+		if depth is 0
+			return value
+	-1
+Mentions(tokens Texts) Boolean
+	InX.Mentions(("a", "+", "x"))
+	InX.Mentions(("a", "+", "b")) is false
+	for tokens
+		if value is in names
+			return true
+	false
