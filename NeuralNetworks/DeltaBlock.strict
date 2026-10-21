@@ -1,0 +1,125 @@
+has attentionNorm Numbers
+has inputs Layer
+has convolution Numbers
+has decays Numbers
+has steps Numbers
+has norm Numbers
+has projection Layer
+has mlpNorm Numbers
+has experts Experts
+has window Numbers = List(Number)
+has memory Numbers = List(Number)
+has merged Numbers = List(Number)
+constant Model = Gguf("NeuralNetworks/tinyqwen35.gguf")
+constant Tiny = DeltaBlock.Loaded(Model, "blk.0.")
+constant Rows = Model.Rows("token_embd.weight")
+Loaded(model Gguf, prefix Text) DeltaBlock
+	Tiny.inputs.weights.Length is 32
+	Tiny.KeyHeads is 2
+	let combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
+	let taps = model.Values(prefix + "ssm_conv1d.weight")
+	let logarithms = model.Values(prefix + "ssm_a")
+	let projected = Qwen3Block.Dense(model, prefix, List(Text) + "ssm_out")
+	let after = model.Values(prefix + "post_attention_norm.weight")
+	let normed = model.Values(prefix + "attn_norm.weight")
+	let biases = model.Values(prefix + "ssm_dt.bias")
+	let headNorm = model.Values(prefix + "ssm_norm.weight")
+	let feedForward = Qwen3Block.FeedForward(model, prefix)
+	DeltaBlock(normed, combined, taps, logarithms, biases, headNorm, projected, after, feedForward)
+KeyHeads Number
+	Tiny.KeyHeads is 2
+	(convolution.Length / 4 / norm.Length - decays.Length) / 2
+Layers(model Gguf, first Number, count Number) List(DeltaBlock)
+	DeltaBlock.Layers(Model, 0, 3).Length is 3
+	for count
+		DeltaBlock.Loaded(model, "blk." + (first + index) + ".")
+Cached(input Numbers) DeltaBlock
+	Tiny.Cached(Rows(1)).Output(Rows(1)).First.IsNearlyEqual(0.54408, 0.00001)
+	Tiny.Cached(Rows(1) + Rows(2)).Output(Rows(1) + Rows(2))(8).IsNearlyEqual(1.773538, 0.00001)
+	Tiny.Cached(Rows(1)).Cached(Rows(2)).Output(Rows(2)).First.IsNearlyEqual(1.773538, 0.00001)
+	let normed = Qwen3Block.Normalized(input, 0, input.Length, attentionNorm)
+	let combined = Batch(inputs.weights, inputs.biases).Sums(normed)
+	let width = inputs.weights.Length
+	mutable state = memory.Length > 0 then value else Started
+	mutable outputs = List(Number)
+	for input.Length / attentionNorm.Length
+		state = state.Step(Safetensors.Part(combined, index * width, width, 1))
+		outputs = outputs + state.merged
+	DeltaBlock(state, merged = outputs)
+Started DeltaBlock
+	Tiny.Started.memory.Length is 16
+	Tiny.Started.window.Length is 48
+	let size = norm.Length
+	DeltaBlock(value, window = Layer.Zeros(convolution.Length / 4 * 3), memory = Layer.Zeros(decays.Length * size * size))
+Step(row Numbers) DeltaBlock
+	Tiny.Started.Step(Layer.Zeros(32)).merged.Length is 8
+	let channels = convolution.Length / 4
+	let keyed = Keyed(Convolved(row))
+	let decay = Decayed(row)
+	let updated = Updated(keyed, decay, Remembered(keyed, decay), row)
+	let shifted = Safetensors.Part(window, channels, 2 * channels, 1) + Safetensors.Part(row, 0, channels, 1)
+	DeltaBlock(value, window = shifted, memory = updated, merged = Gated(Read(keyed, updated), row))
+Convolved(row Numbers) Numbers
+	Tiny.Started.Convolved(Layer.Zeros(32)) is Layer.Zeros(16)
+	let channels = convolution.Length / 4
+	for channels
+		let older = window(index) * convolution(4 * index) + window(channels + index) * convolution(4 * index + 1)
+		let sum = older + window(2 * channels + index) * convolution(4 * index + 2) + row(index) * convolution(4 * index + 3)
+		sum / (1 + (0 - sum).Exponential)
+Keyed(mixed Numbers) Numbers
+	Tiny.Keyed((3, 4, 0, 1, 6, 8, 0, 0, 5))(3).IsNearlyEqual(0.7071064)
+	Tiny.Keyed((3, 4, 0, 1, 6, 8, 0, 0, 5))(5).IsNearlyEqual(0.8)
+	let size = norm.Length
+	let keys = 2 * KeyHeads * size
+	let epsilon = Qwen3Block.Epsilon / size
+	for mixed
+		let query = index < keys / 2 then 1 / size else 1 / size.SquareRoot
+		index >= keys then value else value * Qwen3Block.HeadScale(mixed, (index / size).Floor * size, size, epsilon) * query
+Decayed(row Numbers) Numbers
+	Tiny.Decayed(Layer.Zeros(32)).Length is 4
+	let start = convolution.Length / 4 + decays.Length * norm.Length + decays.Length
+	for decays
+		(value * (1 + (row(start + index) + steps(index)).Exponential).Logarithm).Exponential
+Remembered(keyed Numbers, decay Numbers) Numbers
+	Tiny.Started.Remembered(Layer.Zeros(16), (1, 1, 1, 1)) is Layer.Zeros(8)
+	let size = norm.Length
+	let keyHeads = KeyHeads
+	for decay.Length * size
+		let head = (index / size).Floor
+		Strided(keyed, (keyHeads + head % keyHeads) * size, memory, head * size * size + index % size) * decay(head)
+Updated(keyed Numbers, decay Numbers, remembered Numbers, row Numbers) Numbers
+	Tiny.Started.Updated(Layer.Zeros(16), (1, 1, 1, 1), Layer.Zeros(8), Layer.Zeros(32)) is Layer.Zeros(16)
+	let size = norm.Length
+	let keyHeads = KeyHeads
+	let betas = convolution.Length / 4 + decay.Length * size
+	for memory
+		let head = (index / (size * size)).Floor
+		let column = head * size + index % size
+		let change = (keyed(2 * keyHeads * size + column) - remembered(column)) / (1 + (0 - row(betas + head)).Exponential)
+		value * decay(head) + keyed((keyHeads + head % keyHeads) * size + (index / size).Floor % size) * change
+Read(keyed Numbers, updated Numbers) Numbers
+	Tiny.Read(Layer.Zeros(16), Layer.Zeros(16)) is Layer.Zeros(8)
+	let size = norm.Length
+	let keyHeads = KeyHeads
+	for decays.Length * size
+		let head = (index / size).Floor
+		Strided(keyed, (head % keyHeads) * size, updated, head * size * size + index % size)
+Strided(values Numbers, first Number, matrix Numbers, start Number) Number
+	Tiny.Strided((1, 2), 0, (3, 0, 4, 0), 0) is 11
+	let size = norm.Length
+	mutable sum = 0
+	for size
+		sum = sum + values(first + index) * matrix(start + index * size)
+	sum
+Gated(raw Numbers, row Numbers) Numbers
+	Tiny.Gated(Layer.Zeros(8), Layer.Zeros(32)) is Layer.Zeros(8)
+	let size = norm.Length
+	let gates = convolution.Length / 4
+	for raw
+		let gate = row(gates + index)
+		let scale = Qwen3Block.HeadScale(raw, (index / size).Floor * size, size, Qwen3Block.Epsilon)
+		value * scale * norm(index % size) * gate / (1 + (0 - gate).Exponential)
+Output(input Numbers) Numbers
+	Tiny.Cached(Rows(1)).Output(Rows(1)).Length is 8
+	let attended = Batch(projection.weights, input).Sums(merged)
+	experts.Added(Qwen3Block.Normalized(attended, 0, attended.Length, mlpNorm), attended)

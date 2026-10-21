@@ -4572,6 +4572,14 @@
   ^done:
     llvm.store %copyHolderBits, %holderSlot : f64, !llvm.ptr
     func.call @strict_gc_written(%holderSlot) : (!llvm.ptr) -> ()
+    %viewAddress = llvm.ptrtoint %view : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%viewAddress) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    cf.cond_br %located#4, ^unpacked, ^unscanned
+  ^unscanned:
+    // a row of a matrix lives in an unscanned block (strict_packed_rows), only its view knows the new holder
+    func.call @strict_pin(%copyHolderBits) : (f64) -> ()
+    cf.br ^unpacked
+  ^unpacked:
     return %copyItems : !llvm.ptr
   }
   // an 8 bit float of a list in format 7 (E4M3: sign, 4 exponent bits with bias 7, 3 mantissa bits, at most 448)
@@ -9714,12 +9722,16 @@
   ^missing:
     return %false : i1
   }
-  // a loop of at least 256 elements tries the GPU, a smaller one too once lists live there, it may read one of them
+  // a loop of at least 256 elements tries the GPU, a smaller one too once lists live there (it may read one of them),
+  // an empty one never (a launch without blocks fails a graph)
   func.func private @strict_gpu_wanted(%count: i64) -> i1 attributes {passthrough = ["alwaysinline"]} {
     %threshold = arith.constant 256 : i64
     %enough = arith.cmpi sge, %count, %threshold : i64
     %present = func.call @strict_gpu_present() : () -> i1
-    %wanted = arith.ori %enough, %present : i1
+    %none = arith.constant 0 : i64
+    %some = arith.cmpi sgt, %count, %none : i64
+    %readable = arith.andi %present, %some : i1
+    %wanted = arith.ori %enough, %readable : i1
     return %wanted : i1
   }
   func.func private @strict_gpu_present() -> i1 attributes {passthrough = ["alwaysinline"]} {
