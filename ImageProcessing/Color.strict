@@ -2,13 +2,7 @@ has Red Byte
 has Green Byte
 has Blue Byte
 has Alpha Byte = 255
-from(colorValue)
-	Byte(127.5) is 127
-	Color(ColorValue(0.5, 0, 0)).Red is 127
-	Red = colorValue.Red * 255
-	Green = colorValue.Green * 255
-	Blue = colorValue.Blue * 255
-	Alpha = colorValue.Alpha * 255
 to ColorValue
-	Color(1, 0, 0) to ColorValue is ColorValue(1, 0, 0)
+	Color(10, 20, 30).Green is 20
+	Color(255, 0, 0) to ColorValue is ColorValue(1, 0, 0)
 	ColorValue(Red / 255, Green / 255, Blue / 255, Alpha / 255)

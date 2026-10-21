@@ -2,3 +2,6 @@ has Red Number with value >= 0 and value <= 1
 has Green Number with value >= 0 and value <= 1
 has Blue Number with value >= 0 and value <= 1
 has Alpha = 1 with value >= 0 and value <= 1
+to Color
+	ColorValue(0.5, 0, 0) to Color is Color(127, 0, 0, 255)
+	Color(Red * 255, Green * 255, Blue * 255, Alpha * 255)
