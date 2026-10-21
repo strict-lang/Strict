@@ -8,9 +8,9 @@ Create the input once (Python with Pillow): `python -c "from PIL import Image; I
 |---|---|
 | Strict | `strict build ImageProcessing/BenchBlur.strict` in the repository root, then `ImageProcessing/BenchBlur.exe` there (`STRICT_THREADS=1` for one thread, `STRICT_GPU=0` for the CPU only) |
 | C | `clang -O3 -march=native blur.c` (add `-fopenmp` for the rows on all cores) |
-| Rust | `rustc -C opt-level=3 -C target-cpu=native blur.rs` |
+| Rust | `rustc -C opt-level=3 -C target-cpu=native blur.rs` (`blur_parallel.rs` splits the rows over all cores with scoped threads) |
 | C# | `dotnet run -c Release blur.cs` (`blur_parallel.cs` uses `Parallel.For`) |
 | TypeScript | `node blur.ts` |
-| Python | `python blur.py` (a few minutes) |
+| Python | `python blur.py` (a few minutes), `python blur_numpy.py` adds each of the 81 offsets for all pixels at once with NumPy |
 
-Strict keeps 4 bytes per pixel. A PPM has no alpha, so the loaded `Bitmap` is opaque and BenchBlur keeps its alpha bytes instead of blurring them.
+Every version blurs the raw RGBA bytes (a PPM has no alpha, it is loaded as 255) with the same loop and no hand optimizations. Strict averages the Colors of the neighbors inside the image (`Neighbors(bitmap, index).Average`), the compiler turns that into one loop with a sum per member, keeps a Color as one whole number and picks the threads.
