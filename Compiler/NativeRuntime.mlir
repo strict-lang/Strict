@@ -9398,10 +9398,12 @@
   ^carve:
     %smallest = arith.constant 256 : i64
     %size = arith.shli %smallest, %class : i64
-    // blocks of 64 MB and more are allocations of their own, so a big block neither ends the chunk smaller ones are
-    // cut from nor stays in the pool when an allocation runs out of memory (strict_gpu_starved)
+    // blocks of 2 MB and more are allocations of their own, so a big block neither ends the 64 MB chunk smaller ones
+    // are cut from nor stays in the pool when an allocation runs out of memory (strict_gpu_starved gives them back, the
+    // free blocks of other sizes once held 5.5 of the 6 GB left next to Qwen3.8 27B)
     %ownBytes = arith.constant 67108864 : i64
-    %isOwn = arith.cmpi uge, %size, %ownBytes : i64
+    %ownLimit = arith.constant 2097152 : i64
+    %isOwn = arith.cmpi uge, %size, %ownLimit : i64
     cf.cond_br %isOwn, ^own, ^cutSmall
   ^own:
     %owned = func.call @strict_gpu_alloc(%size) : (i64) -> i64
@@ -9411,6 +9413,9 @@
     %sinceOwned = llvm.load %sinceSlot : !llvm.ptr -> i64
     %grownOwned = arith.addi %sinceOwned, %size : i64
     llvm.store %grownOwned, %sinceSlot : i64, !llvm.ptr
+    %freeOwned = func.call @strict_gpu_free_memory() : () -> i64
+    %halfOwned = arith.shrui %freeOwned, %one : i64
+    llvm.store %halfOwned, %limitSlot : i64, !llvm.ptr
     func.call @strict_gpu_obtained(%size) : (i64) -> ()
     return %owned : i64
   ^cutSmall:
@@ -9447,14 +9452,14 @@
   ^none:
     return %none : i64
   }
-  // when the GPU memory runs out: a full collection, then the free blocks of 64 MB and more go back to the driver
+  // when the GPU memory runs out: a full collection, then the free blocks of 2 MB and more go back to the driver
   // after the captured launches ran (they may still use a block that died meanwhile), true when one did
   func.func private @strict_gpu_starved() -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %full = arith.constant true
     %nothing = arith.constant false
-    %firstOwn = arith.constant 18 : i64
+    %firstOwn = arith.constant 13 : i64
     %classes = arith.constant 48 : i64
     func.call @strict_gc_run(%full) : (i1) -> ()
     func.call @strict_gpu_replay() : () -> ()
