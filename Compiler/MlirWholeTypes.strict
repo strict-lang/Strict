@@ -1,0 +1,134 @@
+has function MlirFunction
+constant Halves = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "number"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)), InstructionEntry.Invoke(3, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2), InstructionEntry.Return(3))
+constant Halved = MethodEntry("Halved", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Halves)
+constant Halving = MlirWholeTypes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, Halved))
+constant Row = MlirWholeTypes(MlirWhole.Row.function)
+constant Shadowed = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", MlirArguments.Calls.Slice(0, 3) + InstructionEntry.Binary(InstructionType.Add, (2, 0, 3)) + InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)) + InstructionEntry.Return(3))))
+constant Reused = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", MlirArguments.Calls.Slice(0, 4) + InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)) + InstructionEntry.Return(3))))
+Part(number Number) Text
+	Halving.Part(0) is "iifi"
+	Halving.Part(2) is "iifii"
+	Row.Part(0).IndexOf("x") is -1
+	Row.Part(1).Substring(Row.function.VariableNames.Index("pixels"), 1) is "p"
+	Shadowed.Part(2).Substring(3, 1) is "i"
+	Settled.Split("|")(number)
+Returned Text
+	Halving.Returned is "i"
+	let registers = Part(0)
+	for function.method.instructions
+		if (value.kind is InstructionType.Return) and (registers.Substring(value.payload(0), 1) is "f")
+			return "f"
+	"i"
+Settled Text
+	Halving.Settled.StartsWith("iifi|")
+	mutable combined = Initial
+	for 64
+		let next = Step(combined)
+		if next is combined
+			return combined
+		combined = next
+	combined
+Initial Text
+	Halving.Initial.StartsWith("----|")
+	mutable registers = ""
+	for LoadReuse(function.method.instructions).RegisterCount
+		registers = registers + "-"
+	let parameters = MlirParameters(function)
+	mutable variables = ""
+	for function.VariableNames
+		variables = variables + (parameters.IsBytes(value) then "p" else (value is in function.Parameters then "i" else "-"))
+	registers + "|" + variables + "|"
+Step(combined Text) Text
+	Halving.Step(Halving.Initial).StartsWith("iifi|")
+	mutable registers = combined.Split("|")(0)
+	mutable variables = combined.Split("|")(1)
+	mutable naturals = ""
+	for function.method.instructions
+		let natural = Natural(index, registers, variables, naturals)
+		naturals = naturals + natural
+		let written = LoadReuse(function.method.instructions).Written(value)
+		registers = written < 0 then registers else Marked(registers, written, natural)
+		let stored = Stored(index, registers, naturals)
+		variables = stored is "" then variables else Marked(variables, function.VariableNames.Index(value.texts.Last), stored)
+	registers + "|" + variables + "|" + naturals
+Stored(at Number, registers Text, naturals Text) Text
+	Row.Stored(18, Row.Part(0), Row.Part(2)) is "i"
+	Row.Stored(17, Row.Part(0), Row.Part(2)) is ""
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.StoreRegisterToVariable
+		return Reaching(entry.payload(0), at, registers, naturals)
+	if entry.kind is InstructionType.StoreConstantToVariable
+		return IsWhole(PayloadDecoder(entry).Value(0)) then "i" else "f"
+	""
+IsExact Boolean
+	Halving.IsExact
+	MlirWholeTypes(MlirArguments.Halfway.functions.First).IsExact is false
+	Reused.IsExact
+	let settled = Settled
+	if settled.Split("|")(0).IndexOf("x") >= 0
+		return false
+	for function.method.instructions
+		if IsFractional(index, settled)
+			return false
+	true
+IsFractional(at Number, settled Text) Boolean
+	Halving.IsFractional(3, Halving.Settled) is false
+	Reused.IsFractional(3, Reused.Settled) is false
+	let parts = settled.Split("|")
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.IndexCall
+		return Reaching(entry.payload(1), at, parts(0), parts(2)) is "f"
+	if (entry.kind is not InstructionType.Invoke) or (PayloadDecoder(entry).Text(2) is "Floor")
+		return false
+	for LoadReuse(function.method.instructions).InvokeReads(entry)
+		if Reaching(entry.payload(value), at, parts(0), parts(2)) is "f"
+			return true
+	false
+Reaching(register Number, at Number, registers Text, naturals Text) Text
+	Reused.Reaching(2, 3, Reused.Part(0), Reused.Part(2)) is "i"
+	Reused.Reaching(2, 5, Reused.Part(0), Reused.Part(2)) is "f"
+	let writer = MlirArguments(List(MlirFunction)).Writer(function, register, at)
+	if writer < 0
+		return registers.Substring(register, 1)
+	for Range(writer + 1, at)
+		if function.method.instructions(value).kind is InstructionType.JumpEnd
+			return registers.Substring(register, 1)
+	naturals.Substring(writer, 1)
+Natural(at Number, registers Text, variables Text, naturals Text) Text
+	Halving.Natural(2, "iiii", "i", "ii") is "f"
+	Halving.Natural(3, "iifi", "i", "iif") is "i"
+	let entry = function.method.instructions(at)
+	let kind = entry.kind
+	if kind is InstructionType.LoadConstantToRegister
+		return IsWhole(PayloadDecoder(entry).Value(1)) then "i" else "f"
+	if kind is InstructionType.LoadVariableToRegister
+		return variables.Substring(function.VariableNames.Index(entry.texts(0)), 1)
+	if kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Modulo)
+		return Operands(entry, at, registers, naturals)
+	kind is InstructionType.Invoke then Called(entry) else (kind is InstructionType.Divide then "f" else "i")
+Operands(entry InstructionEntry, at Number, registers Text, naturals Text) Text
+	Shadowed.Operands(MlirArguments.Calls(2), 2, Shadowed.Part(0), Shadowed.Part(2)) is "i"
+	let left = Reaching(entry.payload(1), at, registers, naturals)
+	(left + Reaching(entry.payload(2), at, registers, naturals)).IndexOf("f") < 0 then "i" else "f"
+Called(entry InstructionEntry) Text
+	Halving.Called(Halves(3)) is "i"
+	let decoder = PayloadDecoder(entry)
+	if (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
+		return "i"
+	let type = function.TypeOf(decoder.Text(1))
+	MlirWholeTypes(MlirFunction(function.types, type, decoder.Callee(type))).Returned
+IsWhole(literal Runtime/VmValue) Boolean
+	Halving.IsWhole(VmValue.OfNumber(4))
+	Halving.IsWhole(VmValue.OfNumber(0.5)) is false
+	let number = literal.number
+	(literal.kind is "Boolean") or ((number.Floor is number) and (number.Absolute < MlirWhole.Limit))
+Marked(types Text, at Number, type Text) Text
+	Halving.Marked("iii", 1, "f") is "ifi"
+	Halving.Marked("-p-", 1, "i") is "-x-"
+	Halving.Marked("-f-", 1, "i") is "-f-"
+	if at < 0
+		return types
+	let old = types.Substring(at, 1)
+	let isConflict = (old is "x") or (((old is "p") is not (type is "p")) and (old is not "-"))
+	let combined = isConflict then "x" else (((old is "f") or (type is "f")) then "f" else type)
+	types.Substring(0, at) + combined + types.Substring(at + 1, types.Length - at - 1)

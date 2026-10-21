@@ -1,0 +1,46 @@
+has position Number
+constant Sample = MlirWholeValues(3)
+Typed(type Text) Text
+	Sample.Typed("f") is "f64"
+	Sample.Typed("p") is "!llvm.ptr"
+	Sample.Typed("-") is "i64"
+	type is "f" then "f64" else (type is "p" then "!llvm.ptr" else "i64")
+Converted(source Text, given Text, wanted Text, result Text) Text
+	Sample.Converted("%a", "i", "f", "%b") is "    %b = arith.sitofp %a : i64 to f64"
+	Sample.Converted("%a", "f", "i", "%b") is "    %b = arith.fptosi %a : f64 to i64"
+	let operation = Typed(given) is "i64" then " = arith.sitofp " else " = arith.fptosi "
+	"    " + result + operation + source + " : " + Typed(given) + " to " + Typed(wanted)
+Loaded(name Text, slot Text, given Text, wanted Text) Texts
+	Sample.Loaded("%a", "%r1", "i", "-") is ("    %a = llvm.load %r1 : !llvm.ptr -> i64")
+	Sample.Loaded("%a", "%r1", "i", "f").Last is "    %a = arith.sitofp %al : i64 to f64"
+	if Typed(given) is Typed(wanted)
+		return List(Text) + ("    " + name + " = llvm.load " + slot + " : !llvm.ptr -> " + Typed(given))
+	let loaded = "    " + name + "l = llvm.load " + slot + " : !llvm.ptr -> " + Typed(given)
+	(loaded, Converted(name + "l", given, wanted, name))
+Stored(source Text, given Text, slot Text, wanted Text) Texts
+	Sample.Stored("%a", "i", "%r1", "i") is ("    llvm.store %a, %r1 : i64, !llvm.ptr")
+	Sample.Stored("%a", "i", "%r1", "f").First is "    %as = arith.sitofp %a : i64 to f64"
+	if Typed(given) is Typed(wanted)
+		return List(Text) + ("    llvm.store " + source + ", " + slot + " : " + Typed(wanted) + ", !llvm.ptr")
+	let stored = "    llvm.store " + source + "s, " + slot + " : " + Typed(wanted) + ", !llvm.ptr"
+	(Converted(source, given, wanted, source + "s"), stored)
+Constant(literal Runtime/VmValue, slot Text, wanted Text) Texts
+	Sample.Constant(VmValue.OfNumber(4), "%r0", "i").Last is "    llvm.store %t3k, %r0 : i64, !llvm.ptr"
+	Sample.Constant(VmValue.OfNumber(0.5), "%r0", "f").Last is "    llvm.store %t3c, %r0 : f64, !llvm.ptr"
+	let number = "    %t" + position + "c = arith.constant " + MlirStatements.Copy.Hex(literal.number) + " : f64"
+	if Typed(wanted) is "f64"
+		return (number, "    llvm.store %t" + position + "c, " + slot + " : f64, !llvm.ptr")
+	let converted = Converted("%t" + position + "c", "f", "i", "%t" + position + "k")
+	(number, converted, "    llvm.store %t" + position + "k, " + slot + " : i64, !llvm.ptr")
+Called(result Text, symbol Text, prefix Text, kinds Texts, returned Text) Text
+	Sample.Called("%r", "F", "%a", ("p", "i"), "i") is "    %r = func.call @F(%a0, %a1) : (!llvm.ptr, i64) -> i64"
+	mutable names = List(Mutable(Text))
+	mutable types = List(Mutable(Text))
+	for kinds
+		names.Add(prefix + index)
+		types.Add(Typed(value))
+	let signature = "(" + Text.Combine(types, ", ") + ") -> " + Typed(returned)
+	"    " + result + " = func.call @" + symbol + "(" + Text.Combine(names, ", ") + ") : " + signature
+Line(suffix Text, operation Text) Text
+	Sample.Line("z", "arith.constant 0 : i64") is "    %t3z = arith.constant 0 : i64"
+	"    %t" + position + suffix + " = " + operation

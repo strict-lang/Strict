@@ -119,7 +119,9 @@ IsCollecting Boolean
 Presized Texts
 	Counting.Presized.Length is 0
 	Collecting.Presized.Last is "    llvm.store %t1r, %v_forResult : f64, !llvm.ptr"
-	if IsCollecting is false
+	MlirLoops(MlirParallel.Byting.function, 2).Presized.Length is 0
+	let isForked = MlirBytes(function, position).IsCollected and MlirParallel(function, position).IsParallel
+	if (IsCollecting is false) or isForked
 		return List(Text)
 	constant capacity = "    " + Temp("a") + " = arith.maximumf " + Temp("n") + ", %zero : f64"
 	let created = MlirListDestined(function, position).Created(Temp("r"), Temp("a"))

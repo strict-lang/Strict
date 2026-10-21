@@ -1,0 +1,103 @@
+has function MlirFunction
+constant Row = MlirWholeFunction(MlirWhole.Row.function)
+constant Halving = MlirWholeFunction(MlirWholeTypes.Halving.function)
+constant Empty = MlirWholeFunction(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Empty", List(MemberEntry), "Strict/Number", List(InstructionEntry))))
+constant Allowed = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo, InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Invoke, InstructionType.Return, InstructionType.LoopBegin, InstructionType.LoopEnd, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.CheckError)
+Symbol Text
+	Row.Symbol.EndsWith("_whole")
+	function.Symbol + "_whole"
+IsWhole Boolean
+	Row.IsWhole
+	Halving.IsWhole
+	MlirWholeFunction(MlirLoops.Counting.function).IsWhole is false
+	Empty.IsWhole is false
+	MlirWholeFunction(MlirArguments.Halfway.functions.First).IsWhole is false
+	IsCallable(0) and MlirWholeTypes(function).IsExact
+IsCallable(depth Number) Boolean
+	Row.IsCallable(0)
+	Row.IsCallable(4) is false
+	let isReturned = function.method.returnType is in ("Strict/Number", "Strict/Boolean")
+	let instructions = function.method.instructions
+	let isEnded = (instructions.Length > 0) and (instructions.Last.kind is InstructionType.Return)
+	if (depth > 3) or (isReturned is false) or (isEnded is false) or (HasWholeParameters is false)
+		return false
+	for function.method.instructions
+		if IsAllowed(index, depth) is false
+			return false
+	true
+HasWholeParameters Boolean
+	Row.HasWholeParameters
+	for function.method.parameters
+		if (value.typeName is not "Strict/Number") and (IsByteList(value.Name) is false)
+			return false
+	true
+IsByteList(name Text) Boolean
+	Row.IsByteList("pixels")
+	Row.IsByteList("middle") is false
+	MlirParameters(function).IsBytes(name) and (name is in MlirParameters(function).FixedLists)
+IsAllowed(at Number, depth Number) Boolean
+	Row.IsAllowed(15, 0)
+	Row.IsAllowed(7, 0)
+	let entry = function.method.instructions(at)
+	if entry.kind is not in Allowed
+		return false
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return IsLocal(entry.texts(0), at)
+	if entry.kind is InstructionType.IndexCall
+		return IsByteList(entry.texts(0))
+	if entry.kind is InstructionType.Invoke
+		return IsCalled(at, depth)
+	entry.kind is InstructionType.LoopBegin then IsCounted(at) else IsPlain(entry)
+IsPlain(entry InstructionEntry) Boolean
+	Row.IsPlain(MlirWhole.Rows(18))
+	Row.IsPlain(MlirWhole.Rows(1))
+	let isPlain = (entry.texts.Length is 0) or (entry.texts.Last.IndexOf(".") < 0)
+	if entry.kind is not in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
+		return isPlain
+	let literal = PayloadDecoder(entry).Value(entry.kind is InstructionType.LoadConstantToRegister then 1 else 0)
+	isPlain and (literal.kind is in ("Number", "Boolean"))
+IsCounted(at Number) Boolean
+	Row.IsCounted(6)
+	let entry = function.method.instructions(at)
+	(entry.payload(1) is not 1) and (MlirLoops(function, at).Collection is "") and (IsInsideLoop(at) is false)
+IsLocal(name Text, at Number) Boolean
+	Row.IsLocal("sum", 7)
+	Row.IsLocal("value", 9)
+	Row.IsLocal("value", 1) is false
+	let isCounter = (name is in ("value", "index")) and IsInsideLoop(at)
+	if (name is in function.method.ParameterNames) or isCounter
+		return true
+	for function.method.instructions
+		let isStore = value.kind is in (InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
+		if isStore and (value.texts.Last is name)
+			return true
+	false
+IsInsideLoop(at Number) Boolean
+	Row.IsInsideLoop(9)
+	Row.IsInsideLoop(20) is false
+	for at
+		let isBegin = function.method.instructions(index).kind is InstructionType.LoopBegin
+		if isBegin and (function.method.LoopEndOf(index) > at)
+			return true
+	false
+IsCalled(at Number, depth Number) Boolean
+	Halving.IsCalled(3, 0)
+	let entry = function.method.instructions(at)
+	let decoder = PayloadDecoder(entry)
+	if (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
+		return true
+	if MlirCalls(function, at).NativeHelper(entry, decoder) is not ""
+		return false
+	let callee = Callee(entry)
+	let isMatched = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.method.parameters.Length
+	isMatched and (callee.method.instructions.Length > 0) and MlirWholeFunction(callee).IsCallable(depth + 1)
+Callee(entry InstructionEntry) MlirFunction
+	Halving.Callee(MlirWholeTypes.Halves(3)).method.Name is "Floor"
+	let decoder = PayloadDecoder(entry)
+	let type = function.TypeOf(decoder.Text(1))
+	MlirFunction(function.types, type, decoder.Callee(type))
+Kinds Texts
+	Halving.Kinds is ("i")
+	Row.Kinds is ("p", "i", "i")
+	for function.method.parameters
+		MlirParameters(function).IsBytes(value.Name) then "p" else "i"

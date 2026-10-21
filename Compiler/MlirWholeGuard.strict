@@ -6,13 +6,15 @@ Guarded Texts
 	Row.Guarded.Last.StartsWith("    %t6whok = arith.andi")
 	let names = MlirWhole(function, position).Inputs + MlirSingle(function, position).Carried
 	let counted = Line("whc", "arith.cmpf olt, " + Temp("n") + ", " + Temp("whlimit") + " : f64")
-	let limit = Line("whlimit", "arith.constant 4503599627370496.0 : f64")
-	mutable lines = (limit, Line("whz", "arith.constant 0 : i64"), counted)
+	mutable lines = Started + counted
 	for names + MlirKernel(function, position).Sources
-		lines = lines + (index < names.Length then Guard(value, index) else Present(value, index))
+		lines = lines + (index < names.Length then Guard(value, index) else Present("%b_" + value, index))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		lines = lines + Bound(value)
 	lines + Joined(Conditions)
+Started Texts
+	Row.Started.Last is "    %t6whz = arith.constant 0 : i64"
+	(Line("whlimit", "arith.constant 4503599627370496.0 : f64"), Line("whz", "arith.constant 0 : i64"))
 Guard(name Text, number Number) Texts
 	Row.Guard("middle", 0).Last is "    %t6wh0 = arith.fptosi %t6wh0f : f64 to i64"
 	let loaded = Temp("wh" + number + "f")
@@ -25,9 +27,9 @@ Checked(number Text, prefix Text, limit Text) Texts
 	let magnitude = "    " + prefix + "a = llvm.intr.fabs(" + number + ") : (f64) -> f64"
 	let small = "    " + prefix + "s = arith.cmpf olt, " + prefix + "a, " + limit + " : f64"
 	(whole, equal, magnitude, small, "    " + prefix + "o = arith.andi " + prefix + "e, " + prefix + "s : i1")
-Present(name Text, number Number) Texts
-	Row.Present("pixels", 3).Last is "    %t6wh3o = arith.cmpi ne, %t6wh3i, %t6whz : i64"
-	let address = Line("wh" + number + "i", "llvm.ptrtoint %b_" + name + " : !llvm.ptr to i64")
+Present(pointer Text, number Number) Texts
+	Row.Present("%b_pixels", 3).Last is "    %t6wh3o = arith.cmpi ne, %t6wh3i, %t6whz : i64"
+	let address = Line("wh" + number + "i", "llvm.ptrtoint " + pointer + " : !llvm.ptr to i64")
 	(address, Line("wh" + number + "o", "arith.cmpi ne, " + Temp("wh" + number + "i") + ", " + Temp("whz") + " : i64"))
 Bound(at Number) Texts
 	Row.Bound(13).First is "    %t13wb = arith.mulf %t11wb, %t12wb : f64"

@@ -1,0 +1,72 @@
+has functions List(MlirFunction)
+constant Calls = (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 4), InstructionEntry.Binary(InstructionType.Multiply, (0, 1, 2)), InstructionEntry.Invoke(3, ("Strict/Halves", "Halved", "Strict/Number", "number"), List(Number) + 2, -1), InstructionEntry.Return(3))
+constant Caller = MethodEntry("Run", List(MemberEntry), "Strict/Number", Calls)
+constant Halves = TypeEntry("Strict/Halves", List(MemberEntry), (MlirWholeTypes.Halved, Caller))
+constant Called = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Halves, Halves, MlirWholeTypes.Halved)
+constant Unknown = (0, 0)
+constant Halfway = MlirArguments((MlirFunction(Called.types, Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(2, 0.5), Calls(3), Calls(4)))), Called))
+constant Calling = MlirArguments((MlirFunction(Called.types, Halves, Caller), Called))
+Constant(callee MlirFunction, parameter Number, depth Number) Numbers
+	Calling.Constant(Called, 0, 0) is (12)
+	mutable found = List(Number)
+	if depth > 4
+		return found
+	for functions
+		let matched = Matched(value, callee, parameter, depth)
+		if (matched.Length > 1) or ((matched.Length is 1) and (found.Length is 1) and (found.First is not matched.First))
+			return List(Number)
+		found = matched.Length is 1 then matched else found
+	found
+Matched(caller MlirFunction, callee MlirFunction, parameter Number, depth Number) Numbers
+	Calling.Matched(Calling.functions.First, Called, 0, 0) is (12)
+	Calling.Matched(Called, Called, 0, 0).Length is 0
+	mutable found = List(Number)
+	for caller.method.instructions
+		if IsTargeting(caller, index, callee)
+			let register = value.payload(LoadReuse(caller.method.instructions).InvokeReads(value)(parameter))
+			let argument = Evaluated(caller, register, index, depth)
+			if (argument.Length is 0) or ((found.Length > 0) and (found.First is not argument.First))
+				return Unknown
+			found = argument
+	found
+Evaluated(caller MlirFunction, register Number, at Number, depth Number) Numbers
+	Calling.Evaluated(Calling.functions.First, 2, 3, 0) is (12)
+	let writer = Writer(caller, register, at)
+	if writer < 0
+		return List(Number)
+	let entry = caller.method.instructions(writer)
+	if entry.kind is InstructionType.LoadConstantToRegister
+		let literal = PayloadDecoder(entry).Value(1)
+		return literal.kind is "Number" then List(Number) + literal.number else List(Number)
+	if entry.kind is InstructionType.LoadVariableToRegister
+		let parameter = caller.method.ParameterNames.Index(entry.texts(0))
+		return parameter < 0 then List(Number) else Constant(caller, parameter, depth + 1)
+	Combined(caller, entry, writer, depth)
+Combined(caller MlirFunction, entry InstructionEntry, at Number, depth Number) Numbers
+	Calling.Combined(Calling.functions.First, Calls(2), 2, 0) is (12)
+	Calling.Combined(Calling.functions.First, Calls(3), 3, 0).Length is 0
+	if entry.kind is not in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+		return List(Number)
+	let left = Evaluated(caller, entry.payload(1), at, depth)
+	let right = Evaluated(caller, entry.payload(2), at, depth)
+	if (left.Length is 0) or (right.Length is 0)
+		return List(Number)
+	let sum = entry.kind is InstructionType.Add then left.First + right.First else left.First - right.First
+	List(Number) + (entry.kind is InstructionType.Multiply then left.First * right.First else sum)
+Writer(caller MlirFunction, register Number, at Number) Number
+	Calling.Writer(Calling.functions.First, 2, 3) is 2
+	for at
+		let earlier = at - 1 - index
+		if LoadReuse(caller.method.instructions).Written(caller.method.instructions(earlier)) is register
+			return earlier
+	-1
+IsTargeting(caller MlirFunction, at Number, callee MlirFunction) Boolean
+	Calling.IsTargeting(Calling.functions.First, 3, Called)
+	Calling.IsTargeting(Calling.functions.First, 2, Called) is false
+	let entry = caller.method.instructions(at)
+	if entry.kind is not InstructionType.Invoke
+		return false
+	let decoder = PayloadDecoder(entry)
+	let isType = TypeEntry.ShortName(decoder.Text(1)) is TypeEntry.ShortName(callee.type.Name)
+	let isCounted = LoadReuse(caller.method.instructions).InvokeReads(entry).Length is callee.method.parameters.Length
+	isType and (decoder.Text(2) is callee.method.Name) and isCounted

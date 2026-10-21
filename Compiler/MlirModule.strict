@@ -20,7 +20,8 @@ Declared(texts List(MlirFunction), functions List(MlirFunction)) Texts
 	let recursive = MlirRecursion(functions, entries).Recursive
 	mutable lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
 	for texts
-		lines = lines + MlirFunction(value, IsRecursive = value.Symbol is in recursive).Text
+		let emitted = MlirFunction(value, IsRecursive = value.Symbol is in recursive).Text
+		lines = lines + emitted + MlirWholeBody(value, functions).Lines
 	lines + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
 Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
 	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")

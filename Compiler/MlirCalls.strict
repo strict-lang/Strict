@@ -85,7 +85,8 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 	let called = "    " + Temp("r") + " = func.call @" + MlirCached(target).Called
 	let call = called + "(" + names + ") : (" + types + ") -> f64"
 	let traced = MlirMemory(function, position).Traced(Temp("r"), Temp("tr"), "strict_trace")
-	Loads(entry, type) + Defaults(callee, count) + call + traced + function.Store(Temp("tr"), "%r" + entry.payload(0))
+	let stored = function.Store(Temp("tr"), "%r" + entry.payload(0))
+	MlirWholeCall(function, position).Dispatched(Loads(entry, type) + Defaults(callee, count) + call + traced + stored)
 Defaults(callee MethodEntry, count Number) Texts
 	MlirCalls(Hashes, 1).Defaults(Defaulted, 0).Last is "    %t1a0 = llvm.load %r1 : !llvm.ptr -> f64"
 	let scratch = "%r" + function.method.instructions(position).payload(0)

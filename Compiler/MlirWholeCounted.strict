@@ -1,0 +1,41 @@
+has statements MlirWholeStatements
+constant Begin = MlirWholeCounted(MlirWholeStatements.Row.At(6))
+constant End = MlirWholeCounted(MlirWholeStatements.Row.At(19))
+Emitted(entry InstructionEntry) Texts
+	Begin.Emitted(MlirWhole.Rows(6)).Length is 11
+	MlirWholeCounted(MlirWholeStatements.Row.At(16)).Emitted(MlirWhole.Rows(16)) is ("    cf.br ^bb17")
+	if entry.kind is InstructionType.LoopBegin
+		return Begun(entry)
+	if entry.kind is InstructionType.LoopEnd
+		return Ended
+	if entry.kind is InstructionType.CheckError
+		return List(Text) + ("    cf.br ^bb" + (statements.position + 1))
+	MlirStatements(statements.function, statements.position).Jumped(entry)
+Begun(entry InstructionEntry) Texts
+	Begin.Begun(MlirWhole.Rows(6))(4) is "  ^loop6:"
+	let values = MlirWholeValues(statements.position)
+	let label = "^loop" + statements.position
+	let zero = values.Line("z", "arith.constant 0 : i64")
+	let stored = "    llvm.store " + statements.Temp("z") + ", %loop" + statements.position + " : i64, !llvm.ptr"
+	statements.Load("n", entry.payload(0), "i") + zero + stored + ("    cf.br " + label, "  " + label + ":") + Checked
+Checked Texts
+	Begin.Checked.Last is "    llvm.store %t6k, %v_index : i64, !llvm.ptr"
+	let values = MlirWholeValues(statements.position)
+	let label = "^loop" + statements.position
+	let counted = statements.Temp("k")
+	let loaded = values.Line("k", "llvm.load %loop" + statements.position + " : !llvm.ptr -> i64")
+	let compared = values.Line("m", "arith.cmpi slt, " + counted + ", " + statements.Temp("n") + " : i64")
+	let branch = "    cf.cond_br " + statements.Temp("m") + ", " + label + "body, " + label + "exit"
+	let current = values.Stored(counted, "i", "%v_value", statements.Variable("value"))
+	let indexed = current + values.Stored(counted, "i", "%v_index", statements.Variable("index"))
+	(loaded, compared, branch, "  " + label + "body:") + indexed
+Ended Texts
+	End.Ended.Last is "  ^loop6exit:"
+	let values = MlirWholeValues(statements.position)
+	let begin = statements.function.method.LoopBeginOf(statements.position)
+	let counter = "%loop" + begin
+	let loaded = values.Line("k", "llvm.load " + counter + " : !llvm.ptr -> i64")
+	let added = values.Line("w", "arith.addi " + statements.Temp("k") + ", " + statements.Temp("o") + " : i64")
+	let stored = "    llvm.store " + statements.Temp("w") + ", " + counter + " : i64, !llvm.ptr"
+	let jumped = ("    cf.br ^loop" + begin, "  ^loop" + begin + "exit:")
+	(loaded, values.Line("o", "arith.constant 1 : i64"), added, stored) + jumped

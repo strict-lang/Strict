@@ -1,0 +1,74 @@
+has function MlirFunction
+has position Number
+constant Twice = MethodEntry("Twice", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "number"), InstructionEntry.Invoke(1, ("Strict/Halves", "Halved", "Strict/Number", "number"), List(Number) + 0, -1), InstructionEntry.Return(1)))
+constant Halves = TypeEntry("Strict/Halves", List(MemberEntry), (MlirWholeTypes.Halved, Twice))
+constant Calling = MlirWholeCall(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Halves, Halves, Twice), 1)
+IsDispatched Boolean
+	Calling.IsDispatched
+	MlirWholeCall(MlirWholeTypes.Halving.function, 3).IsDispatched is false
+	let entry = function.method.instructions(position)
+	if entry.kind is not InstructionType.Invoke
+		return false
+	let decoder = PayloadDecoder(entry)
+	let isFloor = (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
+	if isFloor or (MlirCalls(function, position).NativeHelper(entry, decoder) is not "")
+		return false
+	let callee = MlirWholeFunction(function).Callee(entry)
+	let isMatched = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.method.parameters.Length
+	isMatched and (callee.method.instructions.Length > 0) and MlirWholeFunction(callee).IsWhole
+Dispatched(compiled Texts) Texts
+	Calling.Dispatched(List(Text) + "slow")(Calling.Dispatched(List(Text) + "slow").Index("  ^bb1slowcall:") + 1) is "slow"
+	Calling.Dispatched(List(Text) + "slow").Last is "  ^bb1called:"
+	MlirWholeCall(MlirWholeTypes.Halving.function, 3).Dispatched(List(Text) + "slow") is ("slow")
+	if IsDispatched is false
+		return compiled
+	let label = "^bb" + position
+	let branch = "    cf.cond_br " + Temp("whok") + ", " + label + "wholecall, " + label + "slowcall"
+	let called = ("    cf.br " + label + "called", "  " + label + "slowcall:")
+	let slow = called + compiled + ("    cf.br " + label + "called", "  " + label + "called:")
+	Guarded + branch + ("  " + label + "wholecall:") + Direct + slow
+Guarded Texts
+	Text.Combine(Calling.Guarded).IndexOf("%t1wh0t = llvm.intr.trunc(%t1wl0)") > 0
+	Calling.Guarded.Last.StartsWith("    %t1whok = arith.andi")
+	let guard = MlirWholeGuard(function, position)
+	let entry = function.method.instructions(position)
+	let kinds = MlirWholeFunction(MlirWholeFunction(function).Callee(entry)).Kinds
+	mutable lines = guard.Started
+	for LoadReuse(function.method.instructions).InvokeReads(entry)
+		let loaded = Temp("wl" + index)
+		let checked = kinds(index) is "p" then Present(index) else guard.Checked(loaded, Temp("wh" + index), Temp("whlimit"))
+		lines = lines + function.Load(loaded, "%r" + entry.payload(value)) + checked
+	lines + guard.Joined(Conditions(kinds.Length))
+Conditions(count Number) Texts
+	Calling.Conditions(1) is ("%t1wh0o")
+	for count
+		Temp("wh" + index + "o")
+Present(number Number) Texts
+	Calling.Present(0).Last is "    %t1wh0o = arith.cmpi ne, %t1wh0i, %t1whz : i64"
+	Text.Combine(MlirCalls(Calling.function, 1).Emitted).IndexOf("^bb1wholecall") > 0
+	let pointer = Temp("wa" + number)
+	let bytes = "    " + pointer + " = func.call @strict_list_bytes(" + Temp("wl" + number) + ") : (f64) -> !llvm.ptr"
+	List(Text) + bytes + MlirWholeGuard(function, position).Present(pointer, number)
+Direct Texts
+	Text.Combine(Calling.Direct).IndexOf("func.call @Halves_Halved_1_whole(%t1wa0) : (i64) -> i64") > 0
+	Calling.Direct.Last is "    llvm.store %t1wf, %r1 : f64, !llvm.ptr"
+	let callee = MlirWholeFunction(function).Callee(function.method.instructions(position))
+	let kinds = MlirWholeFunction(callee).Kinds
+	mutable lines = List(Mutable(Text))
+	for kinds
+		let converted = MlirWholeValues(position).Converted(Temp("wl" + index), "f", "i", Temp("wa" + index))
+		lines = value is "p" then lines else lines + converted
+	let returned = MlirWholeTypes(callee).Returned
+	let result = Temp(returned is "f" then "wf" else "wr")
+	let call = MlirWholeValues(position).Called(result, MlirWholeFunction(callee).Symbol, Temp("wa"), kinds, returned)
+	lines + call + Returned(returned)
+Returned(returned Text) Texts
+	Calling.Returned("i").Last is "    llvm.store %t1wf, %r1 : f64, !llvm.ptr"
+	Calling.Returned("f") is ("    llvm.store %t1wf, %r1 : f64, !llvm.ptr")
+	let target = "%r" + function.method.instructions(position).payload(0)
+	if returned is "f"
+		return List(Text) + function.Store(Temp("wf"), target)
+	(MlirWholeValues(position).Converted(Temp("wr"), "i", "f", Temp("wf")), function.Store(Temp("wf"), target))
+Temp(suffix Text) Text
+	Calling.Temp("wr") is "%t1wr"
+	"%t" + position + suffix
