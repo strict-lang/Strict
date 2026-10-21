@@ -15,7 +15,7 @@ constant Tiny = DeltaBlock.Loaded(Model, "blk.0.")
 constant Rows = Model.Rows("token_embd.weight")
 Loaded(model Gguf, prefix Text) DeltaBlock
 	Tiny.inputs.weights.Length is 32
-	Tiny.KeyHeads is 2
+	Tiny.memory.Length is 16
 	let combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
 	let taps = model.Values(prefix + "ssm_conv1d.weight")
 	let logarithms = model.Values(prefix + "ssm_a")
@@ -25,7 +25,7 @@ Loaded(model Gguf, prefix Text) DeltaBlock
 	let biases = model.Values(prefix + "ssm_dt.bias")
 	let headNorm = model.Values(prefix + "ssm_norm.weight")
 	let feedForward = Qwen3Block.FeedForward(model, prefix)
-	DeltaBlock(normed, combined, taps, logarithms, biases, headNorm, projected, after, feedForward)
+	DeltaBlock(normed, combined, taps, logarithms, biases, headNorm, projected, after, feedForward).Started
 KeyHeads Number
 	Tiny.KeyHeads is 2
 	(convolution.Length / 4 / norm.Length - decays.Length) / 2
@@ -38,7 +38,7 @@ Cached(input Numbers) DeltaBlock
 	Tiny.Cached(Rows(1) + Rows(2)).Output(Rows(1) + Rows(2))(8).IsNearlyEqual(1.773538, 0.00001)
 	let combined = Batch(inputs.weights, inputs.biases).Sums(Qwen3Block.Normalized(input, 0, input.Length, attentionNorm))
 	let tokens = input.Length / attentionNorm.Length
-	mutable state = Started
+	mutable state = value
 	let keyed = Keyed(state.Convolved(combined, tokens))
 	let decayed = Decayed(combined, tokens)
 	mutable reads = List(Number)
@@ -47,14 +47,11 @@ Cached(input Numbers) DeltaBlock
 		reads = reads + state.Read(keyed, index, 0)
 	DeltaBlock(state, window = state.Shifted(combined, tokens), merged = Gated(reads, combined))
 Started DeltaBlock
-	Tiny.Started.memory.Length is 16
 	Tiny.Started.window.Length is 48
-	if memory.Length > 0
-		return value
 	let size = norm.Length
 	DeltaBlock(value, window = Layer.Zeros(convolution.Length / 4 * 3), memory = Layer.Zeros(decays.Length * size * size))
 Convolved(combined Numbers, tokens Number) Numbers
-	Tiny.Started.Convolved(Layer.Zeros(64), 2) is Layer.Zeros(32)
+	Tiny.Convolved(Layer.Zeros(64), 2) is Layer.Zeros(32)
 	let channels = convolution.Length / 4
 	let width = combined.Length / tokens
 	for tokens * channels
@@ -66,12 +63,12 @@ Convolved(combined Numbers, tokens Number) Numbers
 		let all = sum + Tapped(combined, width, token, channel) * convolution(4 * channel + 3)
 		all / (1 + (0 - all).Exponential)
 Tapped(combined Numbers, width Number, token Number, channel Number) Number
-	Tiny.Started.Tapped((1, 2, 3, 4), 2, 1, 0) is 3
-	Tiny.Started.Tapped((1, 2, 3, 4), 2, -1, 0) is 0
+	Tiny.Tapped((1, 2, 3, 4), 2, 1, 0) is 3
+	Tiny.Tapped((1, 2, 3, 4), 2, -1, 0) is 0
 	token < 0 then window((3 + token) * convolution.Length / 4 + channel) else combined(token * width + channel)
 Shifted(combined Numbers, tokens Number) Numbers
 	Tiny.Cached(Rows(1)).Cached(Rows(2)).Output(Rows(2)).First.IsNearlyEqual(1.773538, 0.00001)
-	Tiny.Started.Shifted(Layer.Zeros(32), 1).Length is 48
+	Tiny.Shifted(Layer.Zeros(32), 1).Length is 48
 	let channels = convolution.Length / 4
 	for 3 * channels
 		Tapped(combined, combined.Length / tokens, tokens - 3 + (index / channels).Floor, index % channels)
@@ -100,7 +97,7 @@ Decayed(combined Numbers, tokens Number) Numbers
 		let decay = (decays(head) * (1 + alpha.Exponential).Logarithm).Exponential
 		index % (2 * heads) >= heads then 1 / (1 + (0 - rate).Exponential) else decay
 Updated(keyed Numbers, decayed Numbers, remembered Numbers, token Number) Numbers
-	Tiny.Started.Updated(Layer.Zeros(16), (1, 1, 1, 1, 1, 1, 1, 1), Layer.Zeros(8), 0) is Layer.Zeros(16)
+	Tiny.Updated(Layer.Zeros(16), (1, 1, 1, 1, 1, 1, 1, 1), Layer.Zeros(8), 0) is Layer.Zeros(16)
 	let size = norm.Length
 	let groups = KeyHeads
 	let heads = decays.Length
@@ -113,8 +110,8 @@ Updated(keyed Numbers, decayed Numbers, remembered Numbers, token Number) Number
 		let key = keyed(start + (groups + head % groups) * size + (index / size).Floor % size)
 		value * decay + key * change * decayed((2 * token + 1) * heads + head)
 Read(keyed Numbers, token Number, part Number) Numbers
-	Tiny.Started.Read(Layer.Zeros(16), 0, 0) is Layer.Zeros(8)
-	Tiny.Started.Read(Layer.Zeros(16), 0, 1).Length is 8
+	Tiny.Read(Layer.Zeros(16), 0, 0) is Layer.Zeros(8)
+	Tiny.Read(Layer.Zeros(16), 0, 1).Length is 8
 	let size = norm.Length
 	let groups = KeyHeads
 	let start = token * convolution.Length / 4
