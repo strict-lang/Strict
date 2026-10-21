@@ -18,24 +18,26 @@ Loaded(model Gguf, prefix Text) Experts
 	let architecture = model.Value("general.architecture")
 	let count = model.Value(architecture + ".expert_count") to Number
 	let routing = Layer(model.Rows(prefix + "ffn_gate_inp.weight"), Layer.Zeros(count))
-	let joined = Joined(model, prefix, count)
-	let contracting = Stacked(model.Rows(prefix + "ffn_down_exps.weight"), count)
+	let joined = Flattened(Joined(model, prefix, count))
+	let contracting = model.Rows(prefix + "ffn_down_exps.weight")
 	let chosen = model.Value(architecture + ".expert_used_count") to Number
-	Experts(routing, joined, contracting, chosen, Flattened(joined), Flattened(contracting))
+	Experts(routing, Stacked(joined, count), Stacked(contracting, count), chosen, joined, contracting)
 Dense(expansion Layer, contraction Layer) Experts
 	Experts.Dense(Tiny.expansions.First, Tiny.contractions.First).Forward(Probe) is Tiny.Expert(0, Probe)
 	Experts(Layer(List(Numbers), List(Number)), List(Layer) + expansion, List(Layer) + contraction, 1)
 Stacked(rows List(Numbers), count Number) List(Layer)
 	Tiny.Stacked(((1, 2), (3, 4), (5, 6), (7, 8)), 2).Last.weights is ((5, 6), (7, 8))
 	let size = rows.Length / count
+	let zeros = Layer.Zeros(size)
 	for count
-		Layer(rows.Slice(index * size, size), Layer.Zeros(size))
+		Layer(rows.Slice(index * size, size), zeros)
 Joined(model Gguf, prefix Text, count Number) List(Layer)
 	Tiny.Joined(Model, "blk.0.", 4).First.weights.Length is 8
 	let gates = Stacked(model.Rows(prefix + "ffn_gate_exps.weight"), count)
 	let ups = Stacked(model.Rows(prefix + "ffn_up_exps.weight"), count)
+	let zeros = gates.First.biases + ups.First.biases
 	for gates
-		Layer(value.weights + ups(index).weights, value.biases + ups(index).biases)
+		Layer(value.weights + ups(index).weights, zeros)
 Flattened(layers List(Layer)) List(Numbers)
 	Tiny.Flattened(Tiny.contractions).Length is 32
 	Tiny.Flattened(Tiny.expansions)(8) is Tiny.expansions(1).weights.First
