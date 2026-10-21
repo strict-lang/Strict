@@ -1,0 +1,22 @@
+has Amount Number with Step 0.00000001
+Scalar Boolean
+	0.20000000298023224 is 0.2
+	0.03412500023841858 is 0.056875 * 0.6
+	0.8453124761581421 is 1 - 0.1546875
+	0.8888888955116272 is 8 / 9
+	0.00000001 is 0.00000002
+	0.2 is not 0.2001
+	true
+Composite Boolean
+	(0.20000000298023224, 0.05999999865889549) is (0.2, 0.06)
+	Vector2(-1.033333420753479, 0.574999988079071) is Vector2(-15.5 * (128 / 1920), 11.5 * (96 / 1920))
+	true
+Stepped Boolean
+	AssertionPrecision(0.00000001).Amount is not AssertionPrecision(0.00000002).Amount
+	AssertionPrecision(0.00000001) is not AssertionPrecision(0.00000002)
+	true
+Special Boolean
+	1 / 0 is 1 / 0
+	1 / 0 is not 1
+	true
+

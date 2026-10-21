@@ -67,12 +67,11 @@ Found(name Text) Texts
 	Probe.Found("Compiler/NativeRuntime.mlir") is List(Text) + "Compiler/NativeRuntime.mlir"
 	Probe.Found("Bytecode").Length is 0
 	Probe.Found("NeuralNetworks/images").Length is 2
-	Probe.Found("..").Length is 0
-	Probe.Found("/").Length is 0
+	(Probe.Found("..") + Probe.Found("/") + Probe.Found(".") + Probe.Found("./")).Length is 0
 	if File(name).Exists
 		return IsInput(name) then List(Text) + name else List(Text)
 	let isOutside = (name.IndexOf(":") >= 0) or name.StartsWith("..") or name.StartsWith("/")
-	if (Directory.Exists(name) is false) or isOutside
+	if (Directory.Exists(name) is false) or isOutside or (name is in (".", "./"))
 		return List(Text)
 	Directory.Files(name, "*.strict").Length is 0 then Contained(name) else List(Text)
 IsInput(name Text) Boolean

@@ -89,6 +89,8 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 	MlirWholeCall(function, position).Dispatched(Loads(entry, type) + Defaults(callee, count) + call + traced + stored)
 Defaults(callee MethodEntry, count Number) Texts
 	MlirCalls(Hashes, 1).Defaults(Defaulted, 0).Last is "    %t1a0 = llvm.load %r1 : !llvm.ptr -> f64"
+	if count > callee.parameters.Length
+		return Error("InvalidCallArity: " + function.type.Name + "." + function.method.name + " calls " + callee.name + " with " + count + " instead of " + callee.parameters.Length)
 	let scratch = "%r" + function.method.instructions(position).payload(0)
 	mutable lines = List(Mutable(Text))
 	for Range(count, callee.parameters.Length)

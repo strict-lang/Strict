@@ -305,6 +305,25 @@
   }
   llvm.mlir.global internal constant @strict_crash_suffix(".crash.txt\00") : !llvm.array<11 x i8>
   llvm.mlir.global internal constant @strict_crash_mode("wb\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_dialog_library("user32.dll\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @strict_dialog_symbol("MessageBoxA\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @strict_dialog_title("Application error\00") : !llvm.array<18 x i8>
+  llvm.func @strict_error_dialog(%text: !llvm.ptr) {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %libraryName = llvm.mlir.addressof @strict_dialog_library : !llvm.ptr
+    %library = llvm.call @LoadLibraryA(%libraryName) : (!llvm.ptr) -> !llvm.ptr
+    %symbol = llvm.mlir.addressof @strict_dialog_symbol : !llvm.ptr
+    %function = llvm.call @GetProcAddress(%library, %symbol) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %missing = llvm.icmp "eq" %function, %null : !llvm.ptr
+    llvm.cond_br %missing, ^done, ^show
+  ^show:
+    %title = llvm.mlir.addressof @strict_dialog_title : !llvm.ptr
+    %flags = llvm.mlir.constant(16 : i32) : i32
+    %shown = llvm.call %function(%null, %text, %title, %flags) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32) -> i32
+    llvm.br ^done
+  ^done:
+    llvm.return
+  }
   llvm.func @strict_crash_log(%text: !llvm.ptr) {
     %output = llvm.mlir.constant(-11 : i32) : i32
     %handle = llvm.call @GetStdHandle(%output) : (i32) -> !llvm.ptr
@@ -312,6 +331,7 @@
     %windowed = llvm.icmp "eq" %handle, %null : !llvm.ptr
     llvm.cond_br %windowed, ^write, ^done
   ^write:
+    llvm.call @strict_error_dialog(%text) : (!llvm.ptr) -> ()
     %size = llvm.mlir.constant(1100 : i32) : i32
     %path = llvm.alloca %size x i8 : (i32) -> !llvm.ptr
     %limit = llvm.mlir.constant(1080 : i32) : i32

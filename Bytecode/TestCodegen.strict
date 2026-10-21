@@ -66,9 +66,7 @@ Compared(test SyntaxNode, block CodeBlock) CodeBlock
 	let stored = ErrorCodegen(types.Generator).Handled(left, block).Stored(ErrorCodegen.Tested).At(block.register)
 	let declared = stored.Declare(ErrorCodegen.Tested, types.Generator.TypeOf(left, block))
 	let right = isComparison then test.children(1) else SyntaxNode("Boolean", "true")
-	let tested = SyntaxNode("Identifier", ErrorCodegen.Tested)
-	let comparison = SyntaxNode("Binary", (isComparison then test.text else "is"), (tested, right), test.line)
-	let generated = types.Generator.Expression(comparison, declared)
+	let generated = TestComparison(types.Generator).Checked(test, left, right, declared)
 	let truth = generated.Load(InstructionEntry.LoadBoolean(generated.register, true))
 	truth.Add(InstructionEntry.Binary(InstructionType.Equal, (generated.Result, truth.Result)))
 Place(test SyntaxNode, method Text) Text
