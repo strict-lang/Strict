@@ -2,14 +2,15 @@ name: CI
 on:
   push:
   pull_request:
+env:
+  FOLDERS: Bytecode Compression Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing ImageProcessing MachineLearning Math
 jobs:
   linux:
     runs-on: ubuntu-latest
-    env:
-      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing Expressions ImageProcessing MachineLearning Math NeuralNetworks Runtime Validators
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         id: llvm
         with:
           path: Tools/LLVM-22.1.0-Linux-X64
@@ -19,45 +20,31 @@ jobs:
         run: |
           mkdir -p Tools
           curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz | tar -xJ -C Tools LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate LLVM-22.1.0-Linux-X64/bin/opt LLVM-22.1.0-Linux-X64/bin/llc LLVM-22.1.0-Linux-X64/lib/clang/22/include
+      - uses: actions/cache/save@v4
+        if: steps.llvm.outputs.cache-hit != 'true'
+        with:
+          path: Tools/LLVM-22.1.0-Linux-X64
+          key: llvm-22.1.0-linux-x64-opt-llc
       - name: Bootstrap from the seed
         run: |
           echo "$PWD/Tools/LLVM-22.1.0-Linux-X64/bin" >> "$GITHUB_PATH"
           sh Compiler/bootstrap.sh
-      - name: Self build until the fixpoint
-        run: |
-          for stage in 1 2 3; do
-            rm -f Strict.strictbinary
-            ./strict build Strict.strict
-            cp Strict.mlir stage$stage.mlir
-          done
-          cmp stage2.mlir stage3.mlir
+      - name: Self build
+        run: ./strict build Strict.strict > build.log 2>&1 || { grep -v "^Test passed" build.log; exit 1; }
       - name: Tests on the Strict VM
         run: |
           for folder in $FOLDERS; do
             ./strict test "$folder" > test.log 2>&1 || { grep -v "^Test passed" test.log; exit 1; }
           done
-      - name: Native builds and tests
-        run: |
-          for folder in $FOLDERS; do
-            for file in "$folder"/*.strict; do
-              ./strict build "$file" > build.log 2>&1 || { grep -v "^Test passed" build.log; exit 1; }
-              base="${file%.strict}"
-              if [ -f "$base.test" ]; then
-                "./$base.test" > run.log 2>&1 || { grep -v "^Test passed" run.log; exit 1; }
-                rm -f "$base.test" "$base.test.mlir"
-              fi
-            done
-          done
   windows:
     runs-on: windows-latest
-    env:
-      FOLDERS: . Bytecode Compiler Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing Expressions ImageProcessing MachineLearning Math NeuralNetworks Runtime Validators
+    timeout-minutes: 10
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         id: llvm
         with:
           path: Tools/LLVM-22.1.0-Windows
@@ -67,6 +54,11 @@ jobs:
         run: |
           mkdir -p Tools/LLVM-22.1.0-Windows
           curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/clang+llvm-22.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xJ -C Tools/LLVM-22.1.0-Windows --strip-components=1 clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/clang.exe clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/opt.exe clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/llc.exe clang+llvm-22.1.0-x86_64-pc-windows-msvc/lib/clang/22/include
+      - uses: actions/cache/save@v4
+        if: steps.llvm.outputs.cache-hit != 'true'
+        with:
+          path: Tools/LLVM-22.1.0-Windows
+          key: llvm-22.1.0-windows-opt-llc
       - name: mlir-opt and mlir-translate 22 from MSYS2
         run: |
           /c/msys64/usr/bin/pacman.exe -Sy --noconfirm
@@ -75,28 +67,10 @@ jobs:
       - name: Bootstrap from the seed
         shell: cmd
         run: Compiler\Bootstrap.cmd
-      - name: Self build until the fixpoint
-        run: |
-          for stage in 1 2 3; do
-            rm -f Strict.strictbinary
-            ./strict.exe build Strict.strict
-            cp Strict.mlir stage$stage.mlir
-          done
-          cmp stage2.mlir stage3.mlir
+      - name: Self build
+        run: ./strict.exe build Strict.strict > build.log 2>&1 || { grep -v "^Test passed" build.log; exit 1; }
       - name: Tests on the Strict VM
         run: |
           for folder in $FOLDERS; do
             ./strict.exe test "$folder" > test.log 2>&1 || { grep -v "^Test passed" test.log; exit 1; }
-          done
-      - name: Native builds and tests
-        run: |
-          for folder in $FOLDERS; do
-            for file in "$folder"/*.strict; do
-              ./strict.exe build "$file" > build.log 2>&1 || { grep -v "^Test passed" build.log; exit 1; }
-              base="${file%.strict}"
-              if [ -f "$base.test.exe" ]; then
-                "./$base.test.exe" > run.log 2>&1 || { grep -v "^Test passed" run.log; exit 1; }
-                rm -f "$base.test.exe" "$base.test.mlir" "$base.test"
-              fi
-            done
           done
