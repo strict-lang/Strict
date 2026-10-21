@@ -2,12 +2,12 @@ name: CI
 on:
   push:
   pull_request:
-env:
-  FOLDERS: Bytecode Compression Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing ImageProcessing MachineLearning Math
 jobs:
   linux:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      FOLDERS: Bytecode Compression Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing ImageProcessing MachineLearning Math
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -39,6 +39,8 @@ jobs:
   windows:
     runs-on: windows-latest
     timeout-minutes: 10
+    env:
+      FOLDERS: Compression Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing Math
     defaults:
       run:
         shell: bash

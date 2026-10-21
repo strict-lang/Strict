@@ -13,15 +13,11 @@ In priority order, short and actionable. Remove what is done (results go into th
 9. **AMD GPUs**: about 250 us of host work per launch (GPT-2 48 ms per token on the RX 480), `sdot4`, WMMA and MFMA, the 512 thread tiles need more than the 64 KB of an AMD workgroup, ROCm on Linux.
 
 ## Bugs
-- A bare `return` crashes the bytecode generator (`ErrorCodegen.Statement`, a Return without children).
 - A collecting nested `Range` loop with a parameter instance condition loses elements on the Strict VM (`bitmap.IsInside(...)` gives 6 of 9 Colors).
 - A Byte member of a lane packed value prints as a tuple natively (`red (9, 0, 0, 0)`).
 - `List.Average` of Colors clamps natively (`Color.test.exe`, Alpha 127): needs wide sums per member.
 - `for y in Range(-4, 5)` gives `NameNotFound: y` on the Strict VM.
 - `Byte.Floor` has no native route on the Strict VM.
-- `constant Window = Radius * 2 + 1` is typed by its name ("Radiu").
-- A parameter named `index` inside a `for` is the parameter on the VM but the loop counter natively.
-- `constant Name ="..."` without a space is `""` on the VM and a call of `Type.nstant` natively.
 - A `let` from the inner index in a warp summed loop of a 32 bit kernel reads wrong positions (RTX 4090, chunked `DeltaBlock`).
 - A `Generic` parameter of a non-generic type is not specialized (`Unsupported native call Strict/Generic.Area`), `strict check` misses it.
 - Unpacked rows of a matrix stay pinned while the model lives.

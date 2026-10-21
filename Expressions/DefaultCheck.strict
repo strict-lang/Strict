@@ -5,11 +5,13 @@ constant Moving = List(Text) + "M(from Number) Number"
 constant Countdown = ("Run Number", "\tmutable index = 3", "\tfor as long as index > 0", "\t\tindex", "\tindex")
 constant Missed = List(Text) + "has c Count = Count.Missing"
 constant Sized = List(Text) + "has size Count = Count(1, 2)"
+constant Shifting = ("Shifted(index Number) Numbers", "\tfor 2", "\t\tindex")
 Unsupported(path Text, lines Texts) Texts
 	Counting.Unsupported("A.strict", Moving).First is "CannotUseKeywordsAsName: from in A.strict:1"
 	Counting.Unsupported("A.strict", Countdown).First is "LoopNameMustNotBeDeclared: index in A.strict:2"
 	Counting.Unsupported("A.strict", Missed).First is "ConstantNotFound: Count.Missing in A.strict:1"
-	Defaults(path, lines) + Keyworded(path, lines) + LoopNames(path, lines)
+	Counting.Unsupported("A.strict", Shifting).First is "LoopNameMustNotBeDeclared: index in A.strict:1"
+	Defaults(path, lines) + Keyworded(path, lines) + LoopNames(path, lines) + LoopParameters(path, lines)
 LoopNames(path Text, lines Texts) Texts
 	Counting.LoopNames("A.strict", Moving).Length is 0
 	for lines
@@ -39,6 +41,16 @@ Keyworded(path Text, lines Texts) Texts
 			for HeaderTokens(Tokenizer(value).Tokens).ParameterNames
 				if value is in Keywords
 					issues.Add("CannotUseKeywordsAsName: " + value + " in " + path + ":" + line)
+	issues
+LoopParameters(path Text, lines Texts) Texts
+	Counting.LoopParameters("A.strict", Moving).Length is 0
+	mutable issues = List(Mutable(Text))
+	for lines
+		let line = index + 1
+		if TypeShape(lines).IsMethodHeader(value) and HasLoop(lines, index)
+			for HeaderTokens(Tokenizer(value).Tokens).ParameterNames
+				if value is in ("value", "index")
+					issues.Add("LoopNameMustNotBeDeclared: " + value + " in " + path + ":" + line)
 	issues
 Defaults(path Text, lines Texts) Texts
 	Counting.Unsupported("A.strict", Sized).First.StartsWith("UnsupportedDefault: size in A.strict:1, ")

@@ -30,3 +30,8 @@ ExtractKind(text Text) Text
 	if text.StartsWith("let ")
 		return "let"
 	"let"
+IsUnspaced(line Text) Boolean
+	IsUnspaced("constant Value =\" a\"")
+	IsUnspaced("constant Value = \" a\"") is false
+	IsUnspaced("has width Number with value >= 0") is false
+	(line.IndexOf(" = ") < 0) and ("=" is in Tokenizer(line).Tokens)

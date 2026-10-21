@@ -64,7 +64,7 @@ Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 	if (node.Kind is "MethodCall") and (node.text is "Log")
 		return Log(node.children(1), block)
 	let generated = ErrorCodegen(values).Statement(node, block)
-	node.Kind is "Return" then generated.Add(InstructionEntry.Return(generated.Result)) else generated
+	(node.Kind is "Return") and node.HasValue then generated.Add(InstructionEntry.Return(generated.Result)) else generated
 Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).instructions.First.payload is (1, 1, -1, 0)
