@@ -1,0 +1,103 @@
+has function MlirFunction
+has position Number
+constant Cells = MemberEntry("cells", "Strict/List(Rgb)", List(InstructionEntry), false)
+constant Picking = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "board"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Board"), (1, 0, -1, -2)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "pixel"), InstructionEntry(InstructionType.IndexCall, "list0", (3, 2, -1)), InstructionEntry.Return(3))
+constant Picked = MethodEntry("Picked", (MemberEntry("board", "Strict/Board", List(InstructionEntry), false), MemberEntry("pixel", "Strict/Number", List(InstructionEntry), false)), "Strict/Rgb", Picking)
+constant Blurring = (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Rgb)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "board"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Board"), (1, 0, -1, -2)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "list0"), InstructionEntry.LoopBegin(2, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "index"), InstructionEntry.Invoke(5, ("Strict/Board", "Picked", "Strict/Rgb", "board", "pixel"), (3, 4), -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 5, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 9))
+constant Blurred = MethodEntry("Blurred", List(MemberEntry) + MemberEntry("board", "Strict/Board", List(InstructionEntry), false), "Strict/List(Rgb)", Blurring)
+constant Board = TypeEntry("Strict/Board", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), Cells), (Picked, Blurred))
+constant Types = (MlirLayout.Byting, MlirLanes.Rgb, Board)
+constant Kernel = MlirWholeKernel(MlirFunction(Types, Board, Blurred), 5)
+IsKernel Boolean
+	Kernel.IsKernel
+	MlirWholeKernel(MlirParallel.Doubling.function, 2).IsKernel is false
+	MlirWholeKernel(Kernel.function, 0).IsKernel is false
+	let isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
+	if (isBegin is false) or (Call < 0) or (MlirLayout(function).Packed(position) is not MlirBytes.Lanes)
+		return false
+	let callee = Callee
+	let isWhole = MlirWholeFunction(callee).IsWhole and MlirWholeFlat(callee).IsFlat
+	isWhole and IsPlain and IsSourced and MlirParallel(function, position).IsParallel
+Call Number
+	Kernel.Call is 8
+	MlirWholeKernel(MlirParallel.Doubling.function, 2).Call is 4
+	mutable found = -1
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if function.method.instructions(value).kind is InstructionType.Invoke
+			found = found < 0 then value else -2
+	found
+Callee MlirFunction
+	Kernel.Callee.method.Name is "Picked"
+	MlirWholeFunction(function).Callee(function.method.instructions(Call))
+IsPlain Boolean
+	Kernel.IsPlain
+	let invoke = function.method.instructions(Call)
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		let isWrite = (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts(0) is "forResult")
+		let isCollected = isWrite and (entry.payload(0) is invoke.payload(0))
+		let isMove = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is not "value")
+		if (isMove or isCollected or (value is Call) or (entry.kind is InstructionType.CheckError)) is false
+			return false
+	true
+IsSourced Boolean
+	Kernel.IsSourced
+	let kinds = MlirWholeFunction(Callee).Kinds
+	for Reads
+		let name = MlirWholeFlat(function).Source(value, Call)
+		let isIndexed = (name is "") and (Source(value) is "index")
+		if (kinds(index) is "o") and ((name is "") or (MemberKinds(index).Length is 0))
+			return false
+		if (kinds(index) is "i") and (isIndexed is false) and (name is "")
+			return false
+	true
+Reads Numbers
+	Kernel.Reads is (3, 4)
+	let invoke = function.method.instructions(Call)
+	for LoadReuse(function.method.instructions).InvokeReads(invoke)
+		invoke.payload(value)
+Source(register Number) Text
+	Kernel.Source(4) is "index"
+	let writer = MlirKinds(function).Writer(Call, register)
+	let loaded = function.method.instructions(writer < 0 then Call else writer)
+	loaded.kind is InstructionType.LoadVariableToRegister then loaded.texts(0) else ""
+MemberKinds(input Number) Texts
+	Kernel.MemberKinds(0) is List(Text) + "d"
+	let callee = Callee
+	mutable kinds = List(Mutable(Text))
+	for MlirWholeInstance(callee).Members(input)
+		let kind = MlirWholeInstance(callee).MemberKind(MlirWholeFlat(callee).Owner(input), value)
+		if kind is not in ("i", "d")
+			return List(Text)
+		kinds.Add(kind)
+	kinds
+Free Texts
+	Kernel.Free is List(Text) + "board_cells"
+	let kinds = MlirWholeFunction(Callee).Kinds
+	mutable names = List(Mutable(Text))
+	for Reads
+		let name = Source(value)
+		if (kinds(index) is "o") and (name is not in names)
+			for MlirWholeInstance(Callee).Members(index)
+				names.Add(name + "_" + value)
+		else if (name is not "index") and (name is not in names)
+			names.Add(name)
+	names
+IsList(name Text) Boolean
+	Kernel.IsList("board_cells")
+	Kernel.IsList("board_width") is false
+	Kind(name) is "d"
+Kind(name Text) Text
+	Kernel.Kind("board_width") is "i"
+	Kernel.Kind("x") is "i"
+	let dot = name.IndexOf("_")
+	if dot < 0
+		return "i"
+	let member = name.Substring(dot + 1, name.Length - dot - 1)
+	MlirWholeInstance(function).MemberKind(TypeName(name.Substring(0, dot)), member)
+TypeName(variable Text) Text
+	Kernel.TypeName("board") is "Strict/Board"
+	for function.method.parameters
+		if value.Name is variable
+			return value.typeName
+	MlirKinds(function).VariableKind(position, variable)

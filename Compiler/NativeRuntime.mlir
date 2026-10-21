@@ -9336,7 +9336,10 @@
     %isEightBits = arith.cmpi eq, %packed, %eightBits : i64
     %byteBits = arith.constant 9 : i64
     %isByteResult = arith.cmpi eq, %packed, %byteBits : i64
-    %isPackedResult = arith.ori %isEightBits, %isByteResult : i1
+    %laneBits = arith.constant 33 : i64
+    %isLaneResult = arith.cmpi eq, %packed, %laneBits : i64
+    %isNarrowResult = arith.ori %isEightBits, %isByteResult : i1
+    %isPackedResult = arith.ori %isNarrowResult, %isLaneResult : i1
     %staysResident = arith.ori %narrowSingle, %isPackedResult : i1
     %nameLength = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
     %skipped = arith.addi %nameLength, %one : i64
@@ -9364,14 +9367,15 @@
     %floatBits = arith.constant 32 : i64
     %doubleBits = arith.constant 64 : i64
     %byteOrFloat = arith.select %isByteResult, %byteBits, %floatBits : i64
-    %narrowBits = arith.select %isEightBits, %eightBits, %byteOrFloat : i64
+    %laneOrByte = arith.select %isLaneResult, %laneBits, %byteOrFloat : i64
+    %narrowBits = arith.select %isEightBits, %eightBits, %laneOrByte : i64
     %resultFormat = arith.select %staysResident, %narrowBits, %doubleBits : i64
     %resultFormatSlot = llvm.getelementptr %slots[%slotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     llvm.store %resultFormat, %resultFormatSlot : i64, !llvm.ptr
     cf.cond_br %staysResident, ^async, ^outputs
   ^async:
     %floatsBytes = arith.muli %count, %four : i64
-    %singleBytes = arith.select %isPackedResult, %count, %floatsBytes : i64
+    %singleBytes = arith.select %isNarrowResult, %count, %floatsBytes : i64
     %resultBits = arith.addi %narrowBits, %none : i64
     %class = func.call @strict_gpu_class(%singleBytes) : (i64) -> i64
     %resident = func.call @strict_gpu_obtain(%class) : (i64) -> i64

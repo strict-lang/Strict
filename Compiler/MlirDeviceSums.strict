@@ -108,7 +108,7 @@ Lanes(target Text, count Text) Texts
 	MlirDeviceSums(MlirGpu.Layering.function, 2).Lanes("%y", "%c") is List(Text) + "    %y = arith.constant 32 : i64"
 	Doubling.Lanes("%y", "%c") is List(Text) + "    %y = arith.constant 1 : i64"
 	Spreading.Lanes("%y", "%c").Last is "    %y = arith.select %ym, %ys, %yw : i64"
-	if IsWarped is false
+	if (IsWarped is false) or MlirWholeKernel(function, at).IsKernel
 		return List(Text) + MlirTyped.Integer.Constant(target, "1")
 	if IsSpread is false
 		return List(Text) + MlirTyped.Integer.Constant(target, "32")

@@ -58,6 +58,8 @@ Rows(free Texts) Number
 	rows
 Value(at Number, name Text) Texts
 	Doubling.Value(0, "input").Last is "    llvm.store %t2gv0, %t2gx0 : f64, !llvm.ptr"
+	if MlirWholeKernel(function, position).IsKernel and (name.IndexOf("_") > 0)
+		return MlirKernelBody(function, position).Value(at, name)
 	let loaded = Temp("gv" + at)
 	let slot = "    " + Temp("gx" + at) + " = llvm.getelementptr " + Temp("ga") + "[" + at + Indexing
 	(function.Load(loaded, "%v_" + name), slot, function.Store(loaded, Temp("gx" + at)))
@@ -110,7 +112,9 @@ Kernels(inspected MlirFunction) Texts
 	for inspected.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, index).IsGpu
 			let single = MlirFunction(inspected, Float = "f32")
-			lines = lines + MlirDevice(inspected, index).Kernel + MlirDevice(single, index).Kernel
+			let kernels = MlirDevice(inspected, index).Kernel + MlirDevice(single, index).Kernel
+			let isKernel = MlirWholeKernel(inspected, index).IsKernel
+			lines = lines + (isKernel then MlirKernelBody(inspected, index).Kernels else kernels)
 	lines
 Callees(inspected MlirFunction) List(MlirFunction)
 	MlirGpu.Callees(Doubling.function).First.Symbol is "Rows_Twice_1"
@@ -118,7 +122,8 @@ Callees(inspected MlirFunction) List(MlirFunction)
 	mutable found = List(Mutable(MlirFunction))
 	for inspected.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, index).IsGpu
-			found = found + Devices(inspected, index + 1, inspected.method.LoopEndOf(index), 0)
+			let isKernel = MlirWholeKernel(inspected, index).IsKernel
+			found = isKernel then found else found + Devices(inspected, index + 1, inspected.method.LoopEndOf(index), 0)
 	found
 Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(MlirFunction)
 	MlirGpu.Devices(Doubling.function, 0, 7, 0).First.Symbol is "Rows_Twice_1"

@@ -3,6 +3,7 @@ has position Number
 has registers Text
 has variables Text
 has naturals Text
+has isFlat Boolean = false
 constant Row = MlirWholeStatements(MlirWhole.Row.function, 0, MlirWholeTypes.Row.Part(0), MlirWholeTypes.Row.Part(1), MlirWholeTypes.Row.Part(2))
 constant Halving = MlirWholeStatements(MlirWholeTypes.Halving.function, 0, MlirWholeTypes.Halving.Part(0), MlirWholeTypes.Halving.Part(1), MlirWholeTypes.Halving.Part(2))
 constant Mixed = MlirWholeStatements(MlirWholeTypes.Reused.function, 3, MlirWholeTypes.Reused.Part(0), MlirWholeTypes.Reused.Part(1), MlirWholeTypes.Reused.Part(2))
@@ -21,7 +22,7 @@ Emitted Texts
 	if entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
 		return entry.kind > InstructionType.ArithmeticSeparator then Compared(entry) else Calculated(entry)
 	if entry.kind is InstructionType.Invoke
-		return Called(entry)
+		return isFlat then MlirFlatCall(At(position), entry).Called else Called(entry)
 	if entry.kind is in (InstructionType.IndexCall, InstructionType.FieldLoad)
 		return entry.kind is InstructionType.IndexCall then Read(entry) else MlirWholeNative(At(position)).Read(entry)
 	entry.kind is InstructionType.Return then Returned(entry) else MlirWholeCounted(At(position)).Emitted(entry)
@@ -126,7 +127,7 @@ Variable(name Text) Text
 	variables.Substring(function.VariableNames.Index(name), 1)
 At(at Number) MlirWholeStatements
 	Row.At(5).position is 5
-	MlirWholeStatements(function, at, registers, variables, naturals)
+	MlirWholeStatements(function, at, registers, variables, naturals, isFlat)
 Operation(suffix Text, operation Text, left Text, right Text) Text
 	Row.At(6).Operation("u", "arith.subi", "e", "b") is "    %t6u = arith.subi %t6e, %t6b : i64"
 	MlirWholeValues(position).Line(suffix, operation + " " + Temp(left) + ", " + Temp(right) + " : i64")

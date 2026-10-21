@@ -22,10 +22,10 @@ IsGpu Boolean
 	MlirGpuCheck(MlirKernel.Doubler, 2).IsGpu
 	MlirGpuCheck(MlirDeviceRows.Picking, 2).IsGpu
 	MlirGpuCheck(MlirLoops.Ranging.function, 3).IsGpu
-	let isListed = MlirLoops(function, position).Collection is in Rows
+	let isListed = (MlirLoops(function, position).Collection is in Rows) or MlirWholeKernel(function, position).IsKernel
 	if (isListed is false) or (IsPure is false) or MlirLanes(function, position).IsTouched
-		return false
-	IsDeviceBody
+		return MlirWholeKernel(function, position).IsKernel
+	IsDeviceBody or MlirWholeKernel(function, position).IsKernel
 IsPure Boolean
 	Doubling.IsPure
 	MlirGpuCheck(MlirKernel.Doubler, 2).IsPure
@@ -147,11 +147,12 @@ Free Texts
 	Doubling.Free.Length is 0
 	Heading.Free is ("heads", "weights")
 	Layering.Free is ("input", "biases")
+	let kernel = MlirWholeKernel(function, position)
 	mutable names = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
 		let isRead = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
-		let name = isRead then entry.texts(0) else ""
-		if isRead and (name is not in names) and (IsKnown(function, value, name, 0) is false)
-			names.Add(name)
-	names + MlirDeviceMembers(function).Calling(position + 1, function.method.LoopEndOf(position), names)
+		if isRead and (entry.texts(0) is not in names) and (IsKnown(function, value, entry.texts(0), 0) is false)
+			names.Add(entry.texts(0))
+	let called = MlirDeviceMembers(function).Calling(position + 1, function.method.LoopEndOf(position), names)
+	kernel.IsKernel then kernel.Free else names + called

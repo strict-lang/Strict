@@ -1,0 +1,52 @@
+has statements MlirWholeStatements
+has entry InstructionEntry
+constant Sized = MlirWholeFlat.Sized.function
+constant Fits = MlirWholeFlat.Fits.function
+constant Calling = MlirFlatCall(MlirWholeStatements(Sized, 5, "iiiii", "o-", "iiiii", true), MlirWholeFlat.Fitting)
+Called Texts
+	Calling.Called.Last is "    llvm.store %t5c, %r4 : i64, !llvm.ptr"
+	Calling.Called(2).EndsWith("@Grid_Fits_1_whole_flat(%t5a0, %t5a1_width) : (i64, i64) -> i64")
+	let native = MlirWholeNative(statements).Emitted(entry)
+	if native.Length > 0
+		return native
+	let callee = MlirWholeFunction(statements.function).Callee(entry)
+	let call = Call(statements.Temp("c"), MlirWholeFlat(callee), Arguments(callee))
+	Loaded(callee) + call + statements.Store("c", MlirWholeTypes(callee).Returned, entry.payload(0))
+Loaded(callee MlirFunction) Texts
+	Calling.Loaded(Fits).Last is "    %t5a1_width = llvm.load %v_grid_width : !llvm.ptr -> i64"
+	let kinds = MlirWholeFunction(callee).Kinds
+	mutable lines = List(Mutable(Text))
+	for LoadReuse(statements.function.method.instructions).InvokeReads(entry)
+		let register = entry.payload(value)
+		let plain = statements.Load("a" + index, register, kinds(index))
+		lines = lines + (kinds(index) is "o" then Expanded(register, callee, index) else plain)
+	lines
+Arguments(callee MlirFunction) Texts
+	Calling.Arguments(Fits) is ("%t5a0", "%t5a1_width")
+	let kinds = MlirWholeFunction(callee).Kinds
+	mutable names = List(Mutable(Text))
+	for LoadReuse(statements.function.method.instructions).InvokeReads(entry)
+		names = names + (kinds(index) is "o" then Temps(callee, index) else List(Text) + statements.Temp("a" + index))
+	names
+Temps(callee MlirFunction, input Number) Texts
+	Calling.Temps(Fits, 1) is List(Text) + "%t5a1_width"
+	for MlirWholeInstance(callee).Members(input)
+		statements.Temp("a" + input + "_" + value)
+Call(result Text, flat MlirWholeFlat, names Texts) Text
+	Calling.Call("%r", MlirWholeFlat.Fits, ("%a", "%b")).EndsWith("@Grid_Fits_1_whole_flat(%a, %b) : (i64, i64) -> i64")
+	mutable types = List(Mutable(Text))
+	for flat.Kinds
+		types.Add(MlirWholeValues(0).Typed(value))
+	let returned = MlirWholeValues(0).Typed(MlirWholeTypes(flat.function).Returned)
+	let signature = " : (" + Text.Combine(types, ", ") + ") -> " + returned
+	"    " + result + " = func.call @" + flat.Symbol + "(" + Text.Combine(names, ", ") + ")" + signature
+Expanded(register Number, callee MlirFunction, input Number) Texts
+	Calling.Expanded(2, Fits, 1) is List(Text) + "    %t5a1_width = llvm.load %v_grid_width : !llvm.ptr -> i64"
+	let name = MlirWholeFlat(statements.function).Source(register, statements.position)
+	let flat = MlirWholeFlat(callee)
+	mutable lines = List(Mutable(Text))
+	for MlirWholeInstance(callee).Members(input)
+		let kind = MlirWholeInstance(callee).MemberKind(flat.Owner(input), value)
+		let temp = statements.Temp("a" + input + "_" + value)
+		lines = lines + MlirWholeValues(statements.position).Loaded(temp, "%v_" + name + "_" + value, kind, kind)
+	lines

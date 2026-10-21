@@ -1,0 +1,101 @@
+has function MlirFunction
+constant Sized = MlirWholeFlat(MlirWholeInstance.Sized.function)
+constant Fits = MlirWholeFlat(MlirWholeInstance.Fits.function)
+constant Fitting = MlirWholeInstance.Sizing.instructions(5)
+Symbol Text
+	Sized.Symbol is "Grid_Sized_1_whole_flat"
+	MlirWholeFunction(function).Symbol + "_flat"
+Kinds Texts
+	Sized.Kinds is ("d", "i")
+	Fits.Kinds is ("i", "i")
+	mutable kinds = List(Mutable(Text))
+	for MlirWholeFunction(function).Kinds
+		kinds = value is "o" then kinds + MemberKinds(index) else kinds + value
+	kinds
+MemberKinds(input Number) Texts
+	Sized.MemberKinds(0) is ("d", "i")
+	for MlirWholeInstance(function).Members(input)
+		MlirWholeInstance(function).MemberKind(Owner(input), value)
+Owner(input Number) Text
+	Sized.Owner(0) is "Strict/Grid"
+	Fits.Owner(1) is "Strict/Grid"
+	let isSelf = input >= function.method.parameters.Length
+	isSelf then function.type.Name else function.method.parameters(input).typeName
+Names Texts
+	Sized.Names is ("%p0_cells", "%p0_width")
+	Fits.Names is ("%p0", "%p1_width")
+	mutable names = List(Mutable(Text))
+	for MlirWholeFunction(function).Kinds
+		names = value is "o" then names + MemberNames(index) else names + ("%p" + index)
+	names
+MemberNames(input Number) Texts
+	Sized.MemberNames(0) is ("%p0_cells", "%p0_width")
+	for MlirWholeInstance(function).Members(input)
+		"%p" + input + "_" + value
+Lines Texts
+	Sized.Lines.First.StartsWith("  func.func private @Grid_Sized_1_whole_flat(%p0_cells: !llvm.ptr, %p0_width: i64)")
+	Sized.Lines.Last is "  }"
+	Text.Combine(Sized.Lines).IndexOf("@Grid_Fits_1_whole_flat(") > 0
+	let parts = MlirWholeTypes(function).Settled.Split("|")
+	let body = MlirWholeBody(function)
+	let slots = body.Allocated(parts(0), parts(1)) + Parameters(parts(1)) + Prologue
+	(List(Text) + Header) + slots + body.Body(parts(0), parts(1), parts(2), true) + "  }"
+Header Text
+	Sized.Header.EndsWith(") -> i64" + MlirWholeBody.Inlined)
+	let kinds = Kinds
+	mutable typed = List(Mutable(Text))
+	for Names
+		typed.Add(value + ": " + MlirWholeValues(0).Typed(kinds(index)))
+	let returned = ") -> " + MlirWholeValues(0).Typed(MlirWholeTypes(function).Returned)
+	"  func.func private @" + Symbol + "(" + Text.Combine(typed, ", ") + returned + MlirWholeBody.Inlined
+Parameters(variables Text) Texts
+	Sized.Parameters("o-").Length is 0
+	Fits.Parameters("i-") is List(Text) + "    llvm.store %p0, %v_x : i64, !llvm.ptr"
+	let kinds = MlirWholeFunction(function).Kinds
+	mutable lines = List(Mutable(Text))
+	for function.method.parameters
+		let type = MlirWholeValues(0).Typed(variables.Substring(function.VariableNames.Index(value.Name), 1))
+		lines = kinds(index) is "o" then lines else lines + MlirWholeBody(function).Parameter(index, type)
+	lines
+Prologue Texts
+	Sized.Prologue.Last is "    llvm.store %p0_width, %v_grid_width : i64, !llvm.ptr"
+	Fits.Prologue is List(Text) + "    llvm.store %p1_width, %v_width : i64, !llvm.ptr"
+	mutable lines = List(Mutable(Text))
+	for MlirWholeFunction(function).Kinds
+		if value is "o"
+			lines = lines + Stored(index)
+	lines
+Stored(input Number) Texts
+	Sized.Stored(0).First.StartsWith("    %v_grid_cells = llvm.alloca")
+	let isSelf = input >= function.method.parameters.Length
+	let fields = MlirWholeFields(function)
+	mutable lines = List(Mutable(Text))
+	for MlirWholeInstance(function).Members(input)
+		let kind = MlirWholeInstance(function).MemberKind(Owner(input), value)
+		let name = isSelf then value else function.method.parameters(input).Name + "_" + value
+		lines = lines + fields.Slot(name, kind, isSelf) + fields.Stored("%p" + input + "_" + value, kind, name)
+	lines
+Source(register Number, at Number) Text
+	Sized.Source(2, 5) is "grid"
+	let writer = MlirKinds(function).Writer(at, register)
+	let loaded = function.method.instructions(writer < 0 then at else writer)
+	let isLoaded = loaded.kind is InstructionType.LoadVariableToRegister
+	isLoaded and (loaded.texts(0) is in function.method.ParameterNames) then loaded.texts(0) else ""
+IsFlat Boolean
+	Sized.IsFlat
+	for function.method.instructions
+		if (value.kind is InstructionType.Invoke) and (IsFlatCall(value, index) is false)
+			return false
+	true
+IsFlatCall(entry InstructionEntry, at Number) Boolean
+	Sized.IsFlatCall(Fitting, 5)
+	let helper = MlirCalls(function, at).NativeHelper(entry, PayloadDecoder(entry))
+	let isNative = (PayloadDecoder(entry).Text(2) is in ("Floor", "Length")) or (helper is not "")
+	if MlirWholeFunction(function).IsBuilt(entry, at) or isNative
+		return true
+	let callee = MlirWholeFunction(function).Callee(entry)
+	let kinds = MlirWholeFunction(callee).Kinds
+	for LoadReuse(function.method.instructions).InvokeReads(entry)
+		if (kinds(index) is "o") and (Source(entry.payload(value), at) is "")
+			return false
+	MlirWholeFlat(callee).IsFlat

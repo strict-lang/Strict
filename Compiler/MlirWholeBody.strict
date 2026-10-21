@@ -13,12 +13,13 @@ Lines Texts
 	if MlirWholeFunction(function).IsWhole is false
 		return List(Text)
 	let parts = MlirWholeTypes(function).Settled.Split("|")
-	(List(Text) + Header) + Slots(parts(0), parts(1)) + Body(parts(0), parts(1), parts(2)) + "  }"
-Body(registers Text, variables Text, naturals Text) Texts
-	Text.Combine(Halving.Body("iiii", "--i", "iiiii")).IndexOf("arith.floordivsi") > 0
+	(List(Text) + Header) + Slots(parts(0), parts(1)) + Body(parts(0), parts(1), parts(2), false) + "  }"
+Body(registers Text, variables Text, naturals Text, isFlat Boolean) Texts
+	Text.Combine(Halving.Body("iiii", "--i", "iiiii", false)).IndexOf("arith.floordivsi") > 0
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
-		lines = lines + function.Label(index) + MlirWholeStatements(function, index, registers, variables, naturals).Emitted
+		let statements = MlirWholeStatements(function, index, registers, variables, naturals, isFlat)
+		lines = lines + function.Label(index) + statements.Emitted
 	lines
 Header Text
 	Halving.Header.StartsWith("  func.func private @Shape_Halved_1_whole(%p0: i64) -> i64")

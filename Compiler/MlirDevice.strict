@@ -36,6 +36,8 @@ IsList(name Text) Boolean
 	Layering.IsList("input")
 	Doubling.IsList("value") is false
 	MlirDevice(MlirDeviceRows.Picking, 2).IsList("weights")
+	if MlirWholeKernel(function, position).IsKernel
+		return MlirWholeKernel(function, position).IsList(name)
 	let kind = MlirKinds(function).VariableKind(position, name)
 	MlirDeviceStatements(function, position).IsList(kind) or MlirDeviceRows(function, position).IsRows(kind)
 Given Texts

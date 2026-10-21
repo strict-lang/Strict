@@ -6,11 +6,13 @@ constant Signature = " : (!llvm.ptr, i64, f64, f64, f64, f64, f64, f64) -> f64"
 Sourced Texts
 	MlirTokenLaunch(MlirGpu.Doubling.function, 2).Sourced is ("%t2v", "1")
 	Summing.Sourced is ("%t2gb", "1")
+	MlirTokenLaunch(MlirWholeKernel.Kernel.function, 5).Sourced is ("%t5v", "1")
 	let gpu = MlirGpu(function, position)
 	if MlirTokens(function, position).Call >= 0
 		return (gpu.Temp("gb"), "1")
 	let collection = MlirLoops(function, position).Collection
-	let number = collection is "" then "0" else collection is "List(Number)" then "1" else "2"
+	let isPlain = (collection is "List(Number)") or (MlirBytes(function, position).Iterated is MlirBytes.Lanes)
+	let number = collection is "" then "0" else isPlain then "1" else "2"
 	(collection is "" then gpu.Temp("b") else gpu.Temp("v"), number)
 Launched Texts
 	Summing.Launched.Last is "  ^loop2kernel:"
