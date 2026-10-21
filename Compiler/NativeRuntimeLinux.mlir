@@ -642,6 +642,21 @@
     %null = llvm.mlir.zero : !llvm.ptr
     llvm.return %null : !llvm.ptr
   }
+  llvm.func @strict_gpu_thread(%argument: !llvm.ptr) -> !llvm.ptr {
+    func.call @strict_gpu_warming() : () -> ()
+    %null = llvm.mlir.zero : !llvm.ptr
+    llvm.return %null : !llvm.ptr
+  }
+  func.func private @strict_gpu_spawn() -> i1 {
+    %zero32 = arith.constant 0 : i32
+    %one = arith.constant 1 : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %procedure = llvm.mlir.addressof @strict_gpu_thread : !llvm.ptr
+    %handle = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %created = llvm.call @pthread_create(%handle, %null, %procedure, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %spawned = arith.cmpi eq, %created, %zero32 : i32
+    return %spawned : i1
+  }
   func.func private @strict_pool_spawn() -> i64 {
     %online = arith.constant 84 : i32
     %processors = llvm.call @sysconf(%online) : (i32) -> i64

@@ -1,0 +1,28 @@
+has function MlirFunction
+has position Number
+constant Launch = MlirKernelLaunch(MlirWholeKernel.Kernel.function, 5)
+constant Sharing = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, (!llvm.ptr, i64, i64) -> f64, !llvm.ptr, f64) -> f64"
+Ran(operands Text) Texts
+	Launch.Ran("(x)").Last.EndsWith("%t5pf, %t5pc, %t5pk) : " + Sharing)
+	MlirKernelLaunch(MlirParallel.Doubling.function, 2).Ran("(x)").First.EndsWith("= func.call @strict_parallel(x)")
+	let temp = "%t" + position
+	if MlirWholeKernel(function, position).IsKernel is false
+		return List(Text) + ("    " + temp + "pr = func.call @strict_parallel" + operands)
+	let gpu = MlirGpu(function, position)
+	let name = MlirDevice(function, position).Name
+	let addresses = (gpu.Address("gp", "strict_gpu_ptx"), gpu.Address("gk", "k" + name), gpu.Address("gs", "f" + name))
+	addresses + gpu.Values + Sizes + ("    " + temp + "pr = func.call @strict_gpu_shared(" + Shared + ") : " + Sharing)
+Sizes Texts
+	Launch.Sizes.First is "    %t5gq = arith.constant 1 : i64"
+	Launch.Sizes(1) is "    %t5gy = arith.constant 1 : i64"
+	let temp = "%t" + position
+	let sourced = MlirTokenLaunch(function, position).Sourced
+	let lanes = MlirDeviceSums(function, position).Lanes(temp + "gy", temp + "pn")
+	(List(Text) + MlirTyped.Integer.Constant(temp + "gq", sourced.Last)) + lanes + MlirGrouped(function, position).Launched
+Shared Text
+	Launch.Shared.StartsWith("%t5gp, %t5gk, %t5gs, %t5pn, %t5v, %t5gq, %t5ga, %t5gw, %t5gm, %t5gr, %t5go")
+	let temp = "%t" + position
+	let source = MlirTokenLaunch(function, position).Sourced.First
+	let first = (temp + "gp", temp + "gk", temp + "gs", temp + "pn", source, temp + "gq", temp + "ga", temp + "gw")
+	let second = (temp + "gm", temp + "gr", temp + "go", temp + "gy", temp + "gg", temp + "gpf")
+	Text.Combine(first + second + (temp + "pf", temp + "pc", temp + "pk"), ", ")

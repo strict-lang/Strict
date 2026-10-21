@@ -81,7 +81,7 @@ Joined Texts
 	let filled = MlirMemory(function, position).Called(Temp("pz"), Filler, (Temp("pl"), Temp("n")))
 	let label = "  ^loop" + position
 	let returned = (label + "failed:", "    return " + Temp("pr") + " : f64", label + "filled:")
-	let called = (body, "    " + Temp("pr") + " = func.call @strict_parallel" + operands, failed, branch)
+	let called = (List(Text) + body) + MlirKernelLaunch(function, position).Ran(operands) + (failed, branch)
 	called + returned + function.Load(Temp("pl"), "%v_forResult") + filled + ("    cf.br ^loop" + position + "exit")
 Outlined Texts
 	Doubling.Outlined.First is "  func.func private @Rows_Doubled_1_loop2" + Signature

@@ -17,7 +17,7 @@ Launched Texts
 	Text.Combine(Doubling.Launched).IndexOf("@strict_gpu_wanted(%t2gc)") > 0
 	Text.Combine(MlirGpu(MlirLoops.Ranging.function, 3).Launched).IndexOf("%t3gd = arith.andi %t3gu, %t3ge : i1") > 0
 	Text.Combine(MlirGpu(MlirLoops.Ranging.function, 3).Launched).IndexOf("%t3gc, %t3b, %t3gq") > 0
-	if MlirGpuCheck(function, position).IsGpu is false
+	if (MlirGpuCheck(function, position).IsGpu is false) or MlirWholeKernel(function, position).IsKernel
 		return List(Text)
 	let count = "    " + Temp("gc") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
 	let branch = "    cf.cond_br " + Temp("gd") + ", ^loop" + position + "gpu, ^loop" + position + "host"
