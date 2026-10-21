@@ -1,27 +1,29 @@
 has lines Texts
+has folder = ""
 constant Averaging = Fusion(("Run Number", "\tOnes(2).Average + 1", "Ones(count Number) Numbers", "\tOnes(2) is (1, 1)", "\tfor count", "\t\t1"))
+constant Grays = ("Run Color", "\tGrays(2).Average", "Grays(count Number) Colors", "\tfor count", "\t\tColor(1, 1, 1)")
+constant Coloring = Fusion(Grays, "ImageProcessing")
 Fused Texts
-	Averaging.Fused(1) is "\t(OnesSummed(2) / OnesCounted(2)) + 1"
-	Averaging.Fused.Length is 12
-	Averaging.Fused(9) is "OnesCounted(count Number) Number"
+	Averaging.Fused(1) is "\tOnesAveraged(2) + 1"
+	Averaging.Fused(6) is "OnesAveraged(count Number) Number"
+	Averaging.Fused.Last is "\tfusedSum / fusedCount"
 	mutable result = Rewritten
 	for Called
-		result = result + Generated(value)
+		result = result + FusedAverage(Fusion(lines, folder), value).Lines
 	result
 Rewritten Texts
 	Averaging.Rewritten(2) is "Ones(count Number) Numbers"
 	for lines
 		FusedLine(value)
 FusedLine(line Text) Text
-	Averaging.FusedLine("\tOnes(2).Average") is "\t(OnesSummed(2) / OnesCounted(2))"
+	Averaging.FusedLine("\tOnes(2).Average") is "\tOnesAveraged(2)"
 	let name = Averaged(line)
 	if name is ""
 		return line
 	let at = line.IndexOf(").Average")
 	let start = Opening(line, at)
-	let arguments = line.Substring(start + 1, at - start - 1)
-	let fused = "(" + name + "Summed(" + arguments + ") / " + name + "Counted(" + arguments + "))"
-	line.Substring(0, start - name.Length) + fused + line.Substring(at + 9, line.Length - at - 9)
+	let call = "Averaged" + line.Substring(start, at + 1 - start)
+	line.Substring(0, start) + call + line.Substring(at + 9, line.Length - at - 9)
 Called Texts
 	Averaging.Called is ("Ones")
 	mutable names = List(Mutable(Text))
@@ -61,8 +63,8 @@ IsFusable(name Text) Boolean
 	Averaging.IsFusable("Ones")
 	Averaging.IsFusable("Run") is false
 	let header = Header(name)
-	let returned = header < 0 then "" else Returned(lines(header))
-	if (returned.EndsWith("s") is false) and (returned.StartsWith("List(") is false)
+	let element = header < 0 then "" else Element(lines(header))
+	if (element is "") or ((element is not "Number") and (Members(element).Length is 0))
 		return false
 	let ending = Ending(header)
 	mutable last = ""
@@ -81,30 +83,19 @@ Ending(header Number) Number
 		if lines(value).StartsWith("\t") is false
 			return value
 	lines.Length
-Returned(header Text) Text
-	Averaging.Returned("Ones(count Number) Numbers") is "Numbers"
-	header.Substring(header.LastIndexOf(" ") + 1, header.Length - header.LastIndexOf(" ") - 1)
-Element(returned Text) Text
-	Averaging.Element("Colors") is "Color"
-	Averaging.Element("List(Color)") is "Color"
-	let isList = returned.StartsWith("List(")
-	isList then returned.Substring(5, returned.Length - 6) else returned.Substring(0, returned.Length - 1)
-Generated(name Text) Texts
-	Averaging.Generated("Ones")(3) is "OnesCounted(count Number) Number"
-	let header = Header(name)
-	let ending = Ending(header)
-	let line = lines(header)
-	let parameters = line.Substring(name.Length, line.LastIndexOf(" ") - name.Length)
-	let start = Statements(header, ending)
-	let body = lines.Slice(start, ending - start)
-	let tabs = body.Last.Substring(0, body.Last.Length - body.Last.TrimStart.Length)
-	let counted = body.Slice(0, body.Length - 1) + (tabs + "1")
-	let summed = List(Text) + (name + "Summed" + parameters + " " + Element(Returned(line))) + body
-	summed + (name + "Counted" + parameters + " Number") + counted
-Statements(header Number, ending Number) Number
-	Averaging.Statements(2, 6) is 4
-	for Range(header + 1, ending)
-		let isStatement = Tokenizer(lines(value).TrimStart).Tokens.First is in ("for", "let", "mutable", "if", "return")
-		if isStatement and (lines(value).StartsWith("\t\t") is false)
-			return value
-	ending
+Element(header Text) Text
+	Averaging.Element("Ones(count Number) Numbers") is "Number"
+	Averaging.Element("Grays List(Color)") is "Color"
+	Averaging.Element("Run") is ""
+	let returned = header.Substring(header.LastIndexOf(" ") + 1, header.Length - header.LastIndexOf(" ") - 1)
+	if returned.StartsWith("List(")
+		return returned.Substring(5, returned.Length - 6)
+	returned.EndsWith("s") and (header.IndexOf(" ") > 0) then returned.Substring(0, returned.Length - 1) else ""
+Members(element Text) Texts
+	Coloring.Members("Color") is ("Red", "Green", "Blue", "Alpha")
+	Averaging.Members("Color").Length is 0
+	let path = folder + "/" + element + ".strict"
+	let found = (folder is not "") and File(path).Exists then File(path).ReadLines else List(Text)
+	for found
+		if value.StartsWith("has ")
+			Tokenizer(value).Tokens(1)

@@ -51,7 +51,7 @@ Fresh(signature Text) TypeEntry
 LinkedType(type Text, methods Texts) TypeEntry
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
-	let source = Fusion(File(SourcePath(type)).ReadLines).Fused
+	let source = Fusion(File(SourcePath(type)).ReadLines, Path(SourcePath(type)).PathOnly.text).Fused
 	let automatic = Automatic(source, TypeEntry.ShortName(type), Instantiation(main.inference.types)).Lines(methods)
 	let entry = TypeCodegen(type, automatic, main.inference, main.typeNames).Selected(methods)
 	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text

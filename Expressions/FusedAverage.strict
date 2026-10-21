@@ -1,0 +1,54 @@
+has fusion Fusion
+has name Text
+constant Ones = FusedAverage(Fusion.Averaging, "Ones")
+constant Grays = FusedAverage(Fusion.Coloring, "Grays")
+Lines Texts
+	Ones.Lines.Last is "\tfusedSum / fusedCount"
+	Grays.Lines(6) is "\tfor count"
+	Grays.Lines(8) is "\t\tfusedRed = fusedRed + fused.Red"
+	let lines = fusion.lines
+	let ending = fusion.Ending(fusion.Header(name))
+	let last = lines(ending - 1)
+	let tabs = last.Substring(0, last.Length - last.TrimStart.Length)
+	let start = Statements(ending)
+	let body = lines.Slice(start, ending - start - 1) + (tabs + "let fused = " + last.TrimStart)
+	Signature + body + Accumulated(tabs) + Result
+Element Text
+	Grays.Element is "Color"
+	fusion.Element(fusion.lines(fusion.Header(name)))
+Members Texts
+	Ones.Members is ("Sum")
+	Element is "Number" then List(Text) + "Sum" else fusion.Members(Element)
+Signature Texts
+	Grays.Signature(0) is "GraysAveraged(count Number) Color"
+	Grays.Signature(2) is "\tmutable fusedRed = 0"
+	let header = fusion.lines(fusion.Header(name))
+	let parameters = header.Substring(name.Length, header.LastIndexOf(" ") - name.Length)
+	mutable result = List(Text) + (name + "Averaged" + parameters + " " + Element)
+	for List(Text) + "Count" + Members
+		result = result + ("\tmutable fused" + value + " = 0")
+	result
+Accumulated(tabs Text) Texts
+	Ones.Accumulated("\t") is ("\tfusedSum = fusedSum + fused", "\tfusedCount = fusedCount + 1")
+	Grays.Accumulated("\t").First is "\tfusedRed = fusedRed + fused.Red"
+	mutable result = List(Mutable(Text))
+	for Members
+		result.Add(tabs + "fused" + value + " = fused" + value + " + fused" + (value is "Sum" then "" else "." + value))
+	result + (tabs + "fusedCount = fusedCount + 1")
+Result Text
+	Ones.Result is "\tfusedSum / fusedCount"
+	Grays.Result is "\tColor(fusedRed, fusedGreen, fusedBlue, fusedAlpha) / fusedCount"
+	if Element is "Number"
+		return "\tfusedSum / fusedCount"
+	mutable sums = List(Mutable(Text))
+	for Members
+		sums.Add("fused" + value)
+	"\t" + Element + "(" + Text.Combine(sums) + ") / fusedCount"
+Statements(ending Number) Number
+	Ones.Statements(6) is 4
+	for Range(fusion.Header(name) + 1, ending)
+		let line = fusion.lines(value)
+		let isStatement = Tokenizer(line.TrimStart).Tokens.First is in ("for", "let", "mutable", "if", "return")
+		if isStatement and (line.StartsWith("\t\t") is false)
+			return value
+	ending
