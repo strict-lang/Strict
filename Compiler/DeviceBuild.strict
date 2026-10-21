@@ -6,6 +6,8 @@ constant AmdTriple = "hipv4-amdgcn-amd-amdhsa--"
 constant Missing = DeviceBuild(Toolchain.OnWindows)
 constant Kernels = "Compiler/output/Kernels"
 constant Local = DeviceBuild(Toolchain(Platform.Current, "."))
+constant Attending = List(Text) + "Attention"
+constant Without = List(Text)
 Ptx(base Text, isTiling = false) Texts
 	Missing.Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
@@ -20,34 +22,34 @@ Compiled(base Text, target Text) Text
 	let arguments = Nvptx + target + " " + tools.Quoted(base + ".gpu.ll") + " -o " + tools.Quoted(output)
 	let compiled = ToolRunner(tools.Located("clang")).Execute(arguments)
 	compiled.Failed then "clang failed: " + compiled.error else Text.Combine(File(output).ReadLines, "\n")
-Combined(device Text, isAttending = false, target = "Nvidia") Text
-	Local.Combined("module {\n}").IndexOf("@strict_device_element(") > 0
-	Local.Combined("module {\n}").IndexOf("@strict_device_tokens(") is -1
-	Local.Combined("module {\n" + MlirTokens.Marker + "\n}").IndexOf("@strict_device_tokens(") > 0
-	Local.Combined("module {\n}", true).IndexOf("@strict_device_attention(") > 0
-	let batched = device.IndexOf(MlirTokens.Marker) >= 0 then "\n" + Runtime("Tokens") else ""
-	let attending = isAttending then "\n" + Runtime("Attention") else ""
-	device.Substring(0, device.Length - 1) + Runtime("Device") + "\n" + Runtime(target) + batched + attending + "\n}"
-Amd(device Text, isAttending = false) Text
-	Local.Amd("module {\n}").IndexOf("llvm.amdgcn.workitem.id.x") > 0
-	Local.Amd("module {\n}").IndexOf("nvvm.") is -1
-	Local.Amd("module {\n" + MlirTokens.Marker + "\n}", true).IndexOf("{rocdl.kernel, nvvm.maxntid") > 0
-	Local.Amd("module {\n}", true).IndexOf("llvm.nvvm.") is -1
-	let combined = Combined(device, isAttending, "Amd")
+Combined(device Text, runtimes Texts, target = "Nvidia") Text
+	Local.Combined("module {\n}", Without).IndexOf("@strict_device_element(") > 0
+	Local.Combined("module {\n}", Without).IndexOf("@strict_device_tokens(") is -1
+	Local.Combined("module {\n" + MlirTokens.Marker + "\n}", Without).IndexOf("@strict_device_tokens(") > 0
+	Local.Combined("module {\n}", Attending).IndexOf("@strict_device_attention(") > 0
+	Local.Combined("module {\n}", Attending).IndexOf("@strict_gpu_run(") is -1
+	let batched = device.IndexOf(MlirTokens.Marker) >= 0 then List(Text) + "Tokens" else List(Text)
+	device.Substring(0, device.Length - 1) + Runtime(("Device", target) + batched + runtimes) + "\n}"
+Amd(device Text, runtimes Texts) Text
+	Local.Amd("module {\n}", Without).IndexOf("llvm.amdgcn.workitem.id.x") > 0
+	Local.Amd("module {\n}", Without).IndexOf("nvvm.") is -1
+	Local.Amd("module {\n" + MlirTokens.Marker + "\n}", Attending).IndexOf("{rocdl.kernel, nvvm.maxntid") > 0
+	Local.Amd("module {\n}", Attending).IndexOf("llvm.nvvm.") is -1
+	let combined = Combined(device, runtimes, "Amd")
 	combined.Replace("{nvvm.kernel", "{rocdl.kernel").Replace("nvptx64-nvidia-cuda", "amdgcn-amd-amdhsa")
-Built(base Text, device Text, isAttending Boolean) Texts
-	Local.Built(Kernels, "module {\n  x\n}", false).First.StartsWith("mlir-opt failed")
-	File(base + ".gpu.mlir").Write(Combined(device, isAttending))
-	let amd = Hsaco(base, device, isAttending)
+Built(base Text, device Text, runtimes Texts) Texts
+	Local.Built(Kernels, "module {\n  x\n}", List(Text)).First.StartsWith("mlir-opt failed")
+	File(base + ".gpu.mlir").Write(Combined(device, runtimes))
+	let amd = Hsaco(base, device, runtimes)
 	amd is "" then Ptx(base, device.IndexOf(MlirTokens.Marker) >= 0) else List(Text) + amd
-Hsaco(base Text, device Text, isAttending Boolean) Text
-	DeviceBuild(Toolchain(Platform.MacOS, ".")).Hsaco(Kernels, "module {\n}", false) is ""
+Hsaco(base Text, device Text, runtimes Texts) Text
+	DeviceBuild(Toolchain(Platform.MacOS, ".")).Hsaco(Kernels, "module {\n}", List(Text)) is ""
 	File(Kernels + ".hsaco").Exists is false
 	let targets = Targets
 	if targets.Length is 0
 		File(base + ".hsaco").Delete
 		return ""
-	File(base + ".amd.mlir").Write(Amd(device, isAttending))
+	File(base + ".amd.mlir").Write(Amd(device, runtimes))
 	AmdCompiled(base, targets)
 Targets Texts
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Targets.Length is 0
@@ -99,9 +101,13 @@ Bundled(targets Texts, prefix Text, suffix Text) Texts
 	Local.Bundled(("gfx803", "gfx1100"), "-", "").Last is "-gfx1100"
 	for targets
 		prefix + value + suffix
-Runtime(name Text) Text
-	Local.Runtime("Tokens").IndexOf("@strict_device_tokens(") > 0
-	Text.Combine(File(tools.root + "/Compiler/NativeRuntime" + name + ".mlir").ReadLines, "\n")
+Runtime(names Texts) Text
+	Local.Runtime(List(Text) + "Tokens").IndexOf("@strict_device_tokens(") > 0
+	mutable combined = ""
+	for names
+		let path = tools.root + "/Compiler/NativeRuntime" + value + ".mlir"
+		combined = combined + "\n" + Text.Combine(File(path).ReadLines, "\n")
+	combined
 Embedded(host Text, ptx Texts, base Text) Text
 	Missing.Embedded("module {\n}", List(Text) + "// a", Kernels).EndsWith("file:Kernels\\00\") : !llvm.array<13 x i8>\n}")
 	File(Kernels + ".ptx").ReadLines is ("// a")

@@ -21,9 +21,9 @@ Read DeltaChunks
 	mutable state = memory
 	mutable outputs = List(Number)
 	for (tokens / chunk).Ceiling
-		let projected = prepared.Projected(state, index * chunk)
-		outputs = outputs + prepared.Outputs(projected, index * chunk)
-		state = prepared.Remembered(projected, state, index * chunk)
+		let fresh = prepared.Fresh(state, index * chunk)
+		outputs = outputs + prepared.Outputs(fresh, state, index * chunk)
+		state = prepared.Remembered(fresh, state, index * chunk)
 	DeltaChunks(prepared, memory = state, reads = outputs)
 Prepared DeltaChunks
 	Probe.Prepared.logs.Length is 6
@@ -89,14 +89,17 @@ Multiplied(left Numbers, right Numbers, kept Number) Numbers
 		sum
 Corrected(inverse Numbers) Numbers
 	Probe.Prepared.corrected(14).IsNearlyEqual(0.284474)
-	Probe.Prepared.corrected(26).IsNearlyEqual(0.080257)
+	Probe.Prepared.corrected(36).IsNearlyEqual(0.491239)
 	let values = heads * tokens * size
-	for 3 * values
+	for 4 * values
 		let row = (index / size).Floor % (heads * tokens)
 		let head = (row / tokens).Floor
 		let token = row % tokens
+		let part = (index / values).Floor
+		let last = token - (token % chunk) + chunk > tokens then tokens - 1 else token - (token % chunk) + chunk - 1
+		let key = Decay(last, token, head) * keyed(Position(token, head, 1) + (index % size))
 		let query = logs(token * heads + head).Exponential * keyed(Position(token, head, 0) + (index % size))
-		index < values then query else Weighted(inverse, row, (index / values).Floor, index % size)
+		part is 0 then query else part is 3 then key else Weighted(inverse, row, part, index % size)
 Weighted(inverse Numbers, row Number, part Number, element Number) Number
 	Probe.Prepared.Weighted((1, 0, -0.5, 1, 1, 0, 1, 0, 0, 1, 1, 0), 1, 2, 0) is 0.125
 	let token = row % tokens
@@ -109,40 +112,34 @@ Weighted(inverse Numbers, row Number, part Number, element Number) Number
 		let weight = inverse(row * chunk + index) * decayed((2 * (start + index) + 1) * heads + head) * scale
 		sum = sum + weight * keyed(first + index * (2 * groups + heads) * size)
 	sum
-Projected(state Numbers, first Number) Numbers
-	Probe.Prepared.Projected(Probe.memory, 0)(11).IsNearlyEqual(-1.069386)
+Fresh(state Numbers, first Number) Numbers
+	Probe.Prepared.Fresh(Probe.memory, 0)(3).IsNearlyEqual(-1.069386)
 	let length = Length(first)
-	for 2 * heads * length * size
-		let row = (index / size).Floor
-		let head = (row / length).Floor % heads
-		let part = (row / (heads * length)).Floor
-		let source = ((part * heads + head) * tokens + first + (row % length)) * size
-		let element = index % size
-		mutable sum = 0
-		for size
-			sum = sum + corrected(source + index) * state((head * size + index) * size + element)
-		part is 0 then sum else corrected(source + heads * tokens * size + element) - sum
-Outputs(projected Numbers, first Number) Numbers
-	Probe.Prepared.Outputs(Probe.Prepared.Projected(Probe.memory, 0), 0)(5).IsNearlyEqual(-0.269071)
+	let corrections = (heads * tokens + first) * size
+	let shape = (heads, length, size, size)
+	let product = Products(corrected, state, shape, (corrections, tokens * size, size, 1, 0, size * size, size, 1))
+	for product.Multiplied
+		let row = (index / (length * size)).Floor * tokens + first + ((index / size).Floor % length)
+		corrected((2 * heads * tokens + row) * size + (index % size)) - value
+Outputs(fresh Numbers, state Numbers, first Number) Numbers
+	Probe.Prepared.Outputs(Probe.Prepared.Fresh(Probe.memory, 0), Probe.memory, 0)(5).IsNearlyEqual(-0.269071)
 	let length = Length(first)
+	let stride = tokens * size
+	let shape = (heads, length, size, size)
+	let queried = Products(corrected, state, shape, (first * size, stride, size, 1, 0, size * size, size, 1))
+	let pairs = (first * chunk, tokens * chunk, chunk, 1, 0, length * size, size, 1)
+	let attending = Products(attended, fresh, (heads, length, length, size), pairs).Multiplied
+	let queries = queried.Multiplied
 	for length * heads * size
-		let token = first + (index / (heads * size)).Floor
-		let head = (index / size).Floor % heads
-		let element = index % size
-		let attending = (head * tokens + token) * chunk
-		mutable sum = projected((head * length + token - first) * size + element)
-		for token - first + 1
-			sum = sum + attended(attending + index) * projected(((heads + head) * length + index) * size + element)
-		sum
-Remembered(parts Numbers, state Numbers, at Number) Numbers
-	Probe.Prepared.Remembered(Probe.Prepared.Projected(Probe.memory, 0), Probe.memory, 0)(4).IsNearlyEqual(1.466728)
-	let length = Length(at)
-	let last = at + length - 1
+		let token = (index / (heads * size)).Floor
+		let at = (((index / size).Floor % heads) * length + token) * size + (index % size)
+		queries(at) + attending(at)
+Remembered(fresh Numbers, state Numbers, first Number) Numbers
+	Probe.Prepared.Remembered(Probe.Prepared.Fresh(Probe.memory, 0), Probe.memory, 0)(4).IsNearlyEqual(1.466728)
+	let length = Length(first)
+	let last = first + length - 1
+	let keys = (3 * heads * tokens + first) * size
+	let shape = (heads, size, length, size)
+	let product = Products(corrected, fresh, shape, (keys, tokens * size, 1, size, 0, length * size, size, 1)).Multiplied
 	for state
-		let head = (index / (size * size)).Floor
-		let row = (index / size).Floor % size
-		let fresh = (heads + head) * length * size + (index % size)
-		mutable sum = value * logs(last * heads + head).Exponential
-		for length
-			sum = sum + keyed(Position(at + index, head, 1) + row) * Decay(last, at + index, head) * parts(fresh + index * size)
-		sum
+		value * logs(last * heads + (index / (size * size)).Floor).Exponential + product(index)

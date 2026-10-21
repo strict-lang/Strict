@@ -1,0 +1,63 @@
+has function MlirFunction
+constant Kinds = ("Attention", "Products")
+constant Attentions = ("queries", "keys", "values", "heads", "groups", "size", "sequences")
+constant Productions = ("left", "right", "shape", "strides")
+constant Merging = MethodEntry("Merged", List(MemberEntry), "Strict/List(Number)", (InstructionEntry.Invoke(0, ("Strict/Softmax", "Shares", "Strict/List(Number)"), List(Number), -1), InstructionEntry.Invoke(1, ("Strict/Softmax", "Weighted", "Strict/Number"), List(Number), -1), MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "queries"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))
+constant Attended = TypeEntry("Strict/Attention", (MemberEntry("queries", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("keys", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("values", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("heads", "Strict/Number", List(InstructionEntry), false), MemberEntry("groups", "Strict/Number", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("sequences", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + Merging)
+constant Ending = ("    %isTensored = arith.cmpf une, %tensored, %zero : f64", "    cf.cond_br %isTensored, ^tensored, ^computed", "  ^tensored:", "    return %tensored : f64", "  ^computed:")
+constant Attending = MlirTensors(MlirFunction(List(TypeEntry) + Attended, Attended, Merging))
+constant Multiply = MethodEntry("Multiplied", List(MemberEntry), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "left"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))
+constant Multiplied = TypeEntry("Strict/Products", (MemberEntry("left", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("right", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("shape", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("strides", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry) + Multiply)
+constant Multiplying = MlirTensors(MlirFunction(List(TypeEntry) + Multiplied, Multiplied, Multiply))
+Kind Text
+	Attending.Kind is "Attention"
+	Multiplying.Kind is "Products"
+	MlirTensors(MlirGpu.Layering.function).Kind is ""
+	let stored = MlirInstances(function, 0).StoredNames(function.type)
+	if function.method.parameters.Length > 0
+		return ""
+	if (stored is Attentions) and IsInvoked("Softmax.Shares") and IsInvoked("Softmax.Weighted")
+		return "Attention"
+	(stored is Productions) and (function.method.Name is "Multiplied") then "Products" else ""
+IsInvoked(name Text) Boolean
+	Attending.IsInvoked("Softmax.Shares")
+	Attending.IsInvoked("Softmax.Largests") is false
+	for function.method.Invoked
+		if value.EndsWith("/" + name)
+			return true
+	false
+IsComputed Boolean
+	Attending.IsComputed
+	MlirTensors(MlirFunction.Counter).IsComputed is false
+	for function.method.instructions
+		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(function, index).IsGpu
+			return true
+	false
+Prologue Texts
+	Attending.Prologue.Length is 14
+	"    cf.cond_br %isTensored, ^tensored, ^computed" is in Multiplying.Prologue
+	MlirTensors(MlirGpu.Layering.function).Prologue.Length is 0
+	let kind = Kind
+	(kind is "") or (IsComputed is false) then List(Text) else Loads(kind) + Called(kind)
+Loads(kind Text) Texts
+	Attending.Loads("Attention").First is "    %tensor0 = llvm.load %v_queries : !llvm.ptr -> f64"
+	for kind is "Attention" then Attentions else Productions
+		function.Load("%tensor" + index, "%v_" + value)
+Called(kind Text) Texts
+	Multiplying.Called("Products")(1).EndsWith("%tensor3) : (!llvm.ptr, f64, f64, f64, f64) -> f64")
+	let count = (kind is "Attention" then Attentions else Productions).Length
+	mutable arguments = "%tensorPtx"
+	mutable types = "!llvm.ptr"
+	for count
+		arguments = arguments + ", %tensor" + index
+		types = types + ", f64"
+	let call = "    %tensored = func.call " + Marker(kind) + arguments + ") : (" + types + ") -> f64"
+	("    %tensorPtx = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr", call) + Ending
+Marker(kind Text) Text
+	Attending.Marker("Products") is "@strict_gpu_products("
+	"@strict_gpu_" + kind.Lower + "("
+Used(program Text) Texts
+	Attending.Used("x @strict_gpu_products(y") is ("Products")
+	for Kinds
+		if program.IndexOf(Marker(value)) >= 0
+			value

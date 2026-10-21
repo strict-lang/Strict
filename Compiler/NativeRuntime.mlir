@@ -11230,6 +11230,145 @@
   ^unable:
     return %zero : f64
   }
+  llvm.mlir.global internal constant @strict_gpu_products_name("strict_device_products\00strict_device_productss\00") : !llvm.array<47 x i8>
+  llvm.mlir.global internal @strict_gpu_products_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // the largest position a list is read at: start plus every stride times its count less one, -1 for a negative stride
+  func.func private @strict_gpu_products_last(%start: i64, %batchStride: i64, %batches: i64, %rowStride: i64, %rows: i64, %innerStride: i64, %inner: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %batchLast = arith.subi %batches, %one : i64
+    %rowLast = arith.subi %rows, %one : i64
+    %innerLast = arith.subi %inner, %one : i64
+    %batchPart = arith.muli %batchStride, %batchLast : i64
+    %rowPart = arith.muli %rowStride, %rowLast : i64
+    %innerPart = arith.muli %innerStride, %innerLast : i64
+    %startRow = arith.addi %start, %rowPart : i64
+    %startBatch = arith.addi %startRow, %batchPart : i64
+    %last = arith.addi %startBatch, %innerPart : i64
+    %lowest = arith.minsi %start, %batchStride : i64
+    %lower = arith.minsi %rowStride, %innerStride : i64
+    %smallest = arith.minsi %lowest, %lower : i64
+    %negative = arith.cmpi slt, %smallest, %none : i64
+    %minus = arith.constant -1 : i64
+    %chosen = arith.select %negative, %minus, %last : i64
+    return %chosen : i64
+  }
+  // `Products.Multiplied` on the 16 bit tensor cores (strict_device_products): shape is batches, rows, inner and columns,
+  // strides the start and the batch, row and inner strides of left, then of right with inner and column strides, 0.0
+  // when the GPU can not (shape or strides of other lengths, reads outside the lists), then the method itself runs
+  func.func private @strict_gpu_products(%ptx: !llvm.ptr, %left: f64, %right: f64, %shape: f64, %strides: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %seven = arith.constant 7 : i64
+    %fifteen = arith.constant 15 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %twelve = arith.constant 12 : i64
+    %fourNumber = arith.constant 4.0 : f64
+    %eightNumber = arith.constant 8.0 : f64
+    %shapeLength = func.call @strict_list_length(%shape) : (f64) -> f64
+    %stridesLength = func.call @strict_list_length(%strides) : (f64) -> f64
+    %isShape = arith.cmpf oeq, %shapeLength, %fourNumber : f64
+    %isStrides = arith.cmpf oeq, %stridesLength, %eightNumber : f64
+    %shaped = arith.andi %isShape, %isStrides : i1
+    cf.cond_br %shaped, ^read, ^unable
+  ^read:
+    %values = llvm.alloca %twelve x f64 : (i64) -> !llvm.ptr
+    %fourteen = arith.constant 14 : i64
+    %slots = llvm.alloca %fourteen x f64 : (i64) -> !llvm.ptr
+    llvm.store %left, %slots : f64, !llvm.ptr
+    %rightSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %right, %rightSlot : f64, !llvm.ptr
+    cf.br ^copy(%none : i64)
+  ^copy(%index: i64):
+    %copying = arith.cmpi slt, %index, %twelve : i64
+    cf.cond_br %copying, ^item, ^copied
+  ^item:
+    %four = arith.constant 4 : i64
+    %isShapeItem = arith.cmpi slt, %index, %four : i64
+    %strideIndex = arith.subi %index, %four : i64
+    %itemIndex = arith.select %isShapeItem, %index, %strideIndex : i64
+    %itemList = arith.select %isShapeItem, %shape, %strides : f64
+    %itemNumber = arith.sitofp %itemIndex : i64 to f64
+    %item = func.call @strict_list_get(%itemList, %itemNumber) : (f64, f64) -> f64
+    %valueSlot = llvm.getelementptr %values[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %item, %valueSlot : f64, !llvm.ptr
+    %two = arith.constant 2 : i64
+    %slotIndex = arith.addi %index, %two : i64
+    %slot = llvm.getelementptr %slots[%slotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %item, %slot : f64, !llvm.ptr
+    %nextIndex = arith.addi %index, %one : i64
+    cf.br ^copy(%nextIndex : i64)
+  ^copied:
+    %numbers = llvm.load %values : !llvm.ptr -> vector<12xf64>
+    %ints = arith.fptosi %numbers : vector<12xf64> to vector<12xi64>
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %c4 = llvm.mlir.constant(4 : i32) : i32
+    %c5 = llvm.mlir.constant(5 : i32) : i32
+    %c6 = llvm.mlir.constant(6 : i32) : i32
+    %c7 = llvm.mlir.constant(7 : i32) : i32
+    %c8 = llvm.mlir.constant(8 : i32) : i32
+    %c9 = llvm.mlir.constant(9 : i32) : i32
+    %c10 = llvm.mlir.constant(10 : i32) : i32
+    %c11 = llvm.mlir.constant(11 : i32) : i32
+    %batches = llvm.extractelement %ints[%c0 : i32] : vector<12xi64>
+    %rows = llvm.extractelement %ints[%c1 : i32] : vector<12xi64>
+    %inner = llvm.extractelement %ints[%c2 : i32] : vector<12xi64>
+    %columns = llvm.extractelement %ints[%c3 : i32] : vector<12xi64>
+    %leftStart = llvm.extractelement %ints[%c4 : i32] : vector<12xi64>
+    %leftBatch = llvm.extractelement %ints[%c5 : i32] : vector<12xi64>
+    %leftRow = llvm.extractelement %ints[%c6 : i32] : vector<12xi64>
+    %leftInner = llvm.extractelement %ints[%c7 : i32] : vector<12xi64>
+    %rightStart = llvm.extractelement %ints[%c8 : i32] : vector<12xi64>
+    %rightBatch = llvm.extractelement %ints[%c9 : i32] : vector<12xi64>
+    %rightInner = llvm.extractelement %ints[%c10 : i32] : vector<12xi64>
+    %rightColumn = llvm.extractelement %ints[%c11 : i32] : vector<12xi64>
+    %leftLast = func.call @strict_gpu_products_last(%leftStart, %leftBatch, %batches, %leftRow, %rows, %leftInner, %inner) : (i64, i64, i64, i64, i64, i64, i64) -> i64
+    %rightLast = func.call @strict_gpu_products_last(%rightStart, %rightBatch, %batches, %rightColumn, %columns, %rightInner, %inner) : (i64, i64, i64, i64, i64, i64, i64) -> i64
+    %leftLength = func.call @strict_list_length(%left) : (f64) -> f64
+    %rightLength = func.call @strict_list_length(%right) : (f64) -> f64
+    %leftCount = arith.fptosi %leftLength : f64 to i64
+    %rightCount = arith.fptosi %rightLength : f64 to i64
+    %batchRows = arith.muli %batches, %rows : i64
+    %count = arith.muli %batchRows, %columns : i64
+    %someCount = arith.cmpi sgt, %count, %none : i64
+    %someInner = arith.cmpi sgt, %inner, %none : i64
+    %leftFrom = arith.cmpi sge, %leftLast, %none : i64
+    %rightFrom = arith.cmpi sge, %rightLast, %none : i64
+    %leftInside = arith.cmpi slt, %leftLast, %leftCount : i64
+    %rightInside = arith.cmpi slt, %rightLast, %rightCount : i64
+    %sized = arith.andi %someCount, %someInner : i1
+    %leftFits = arith.andi %leftFrom, %leftInside : i1
+    %rightFits = arith.andi %rightFrom, %rightInside : i1
+    %bothFit = arith.andi %leftFits, %rightFits : i1
+    %fits = arith.andi %sized, %bothFit : i1
+    cf.cond_br %fits, ^run, ^unable
+  ^run:
+    %sixteen = arith.constant 16 : i64
+    %eight = arith.constant 8 : i64
+    %rowsUp = arith.addi %rows, %fifteen : i64
+    %rowTiles = arith.divui %rowsUp, %sixteen : i64
+    %columnsUp = arith.addi %columns, %seven : i64
+    %columnTiles = arith.divui %columnsUp, %eight : i64
+    %perBatch = arith.muli %rowTiles, %columnTiles : i64
+    %tiles = arith.muli %batches, %perBatch : i64
+    %threads = arith.muli %tiles, %thirtyTwo : i64
+    %spare = arith.subi %count, %one : i64
+    %threadsUp = arith.addi %threads, %spare : i64
+    %lanesNeeded = arith.divui %threadsUp, %count : i64
+    %lanes = arith.maxui %lanesNeeded, %one : i64
+    %name = llvm.mlir.addressof @strict_gpu_products_name : !llvm.ptr
+    %slotPair = llvm.mlir.addressof @strict_gpu_products_slot : !llvm.ptr
+    %listsMask = arith.constant 3 : i64
+    %integers = arith.constant -1 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %fourteen, %listsMask, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^unable:
+    return %zero : f64
+  }
   llvm.mlir.global internal constant @strict_gpu_tokens_name("strict_device_tokens\00strict_device_tokenss\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal @strict_gpu_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_blocks_name("strict_device_blocks\00strict_device_blockss\00") : !llvm.array<43 x i8>
