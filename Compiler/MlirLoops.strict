@@ -29,13 +29,15 @@ Begin Texts
 	begun + MlirParallel(function, position).Forked + MlirWholeLoop(function, position).Versioned + header + step + Current
 Current Texts
 	Counting.Current.Length is 4
-	Text.Combine(Listing.Current).IndexOf("llvm.store %t1g, %v_value") > 0
+	Text.Combine(MlirLoops(MlirBytes.Valuing.function, 1).Current).IndexOf("llvm.store %t1g, %v_value") > 0
 	constant offset = "    " + Temp("o") + " = arith.mulf " + Temp("k") + ", " + Temp("s") + " : f64"
 	constant current = "    " + Temp("c") + " = arith.addf " + Temp("b") + ", " + Temp("o") + " : f64"
 	let indexed = (offset, current, function.Store(Temp("c"), "%v_index"))
 	constant collection = Collection
 	if collection is ""
 		return indexed + function.Store(Temp("c"), "%v_value")
+	if MlirBytes(function, position).IsValued is false
+		return indexed
 	let character = MlirMemory(function, position).Called(Temp("g"), "strict_text_at", (Temp("v"), Temp("c")))
 	indexed + (collection is "Text" then character else Element) + function.Store(Temp("g"), "%v_value")
 Element Text

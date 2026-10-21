@@ -3,6 +3,7 @@ has position Number
 constant Twice = MethodEntry("Twice", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "number"), InstructionEntry.Invoke(1, ("Strict/Halves", "Halved", "Strict/Number", "number"), List(Number) + 0, -1), InstructionEntry.Return(1)))
 constant Halves = TypeEntry("Strict/Halves", List(MemberEntry), (MlirWholeTypes.Halved, Twice))
 constant Sizing = MlirWholeCall(MlirFunction(MlirWholeInstance.Types, MlirWholeInstance.Grid, MethodEntry("Run", List(MemberEntry) + MemberEntry("grid", "Strict/Grid", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "grid"), InstructionEntry.Invoke(1, ("Strict/Grid", "Sized", "Strict/Number", "grid"), List(Number) + 0, -1), InstructionEntry.Return(1)))), 1)
+constant Pointed = ") : (f64) -> !llvm.ptr"
 constant Calling = MlirWholeCall(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Halves, Halves, Twice), 1)
 IsDispatched Boolean
 	Calling.IsDispatched
@@ -14,9 +15,9 @@ IsDispatched Boolean
 	let isFloor = (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
 	if isFloor or (MlirCalls(function, position).NativeHelper(entry, decoder) is not "")
 		return false
-	let callee = MlirWholeFunction(function).Callee(entry)
-	let isMatched = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.method.parameters.Length
-	isMatched and (callee.method.instructions.Length > 0) and MlirWholeFunction(callee).IsWhole
+	let callee = MlirWholeFunction(MlirWholeFunction(function).Callee(entry))
+	let isMatched = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.Kinds.Length
+	isMatched and (callee.function.method.instructions.Length > 0) and callee.IsWhole
 Dispatched(compiled Texts) Texts
 	Calling.Dispatched(List(Text) + "slow")(Calling.Dispatched(List(Text) + "slow").Index("  ^bb1slowcall:") + 1) is "slow"
 	Calling.Dispatched(List(Text) + "slow").Last is "  ^bb1called:"
@@ -48,14 +49,15 @@ Checked(number Number, kind Text) Texts
 		return Present(number, kind)
 	MlirWholeGuard(function, position).Checked(Temp("wl" + number), Temp("wh" + number), Temp("whlimit"))
 Members(number Number) Texts
-	Text.Combine(Sizing.Members(0)).IndexOf("@strict_list_hoisted(%t1wh0m0v)") > 0
+	Text.Combine(Sizing.Members(0)).IndexOf("@strict_list_packed(%t1wh0m0v)") > 0
+	Sizing.Members(0).First is "    %t1wa0 = func.call @strict_ptr(%t1wl0) : (f64) -> !llvm.ptr"
 	let callee = MlirWholeFunction(function).Callee(function.method.instructions(position))
 	let instance = MlirWholeInstance(callee)
-	let stored = MlirInstances(callee, 0).StoredNames(function.TypeOf(Owner(number, callee)))
-	let pointer = MlirMemory(function, position).Pointer(Temp("wl" + number), "wa" + number).First
+	let pointer = "    " + Temp("wa" + number) + " = func.call @strict_ptr(" + Temp("wl" + number) + Pointed
 	mutable lines = List(Text) + pointer + MlirWholeValues(position).Line("wh" + number + "c0", "arith.constant true")
 	for instance.Members(number)
-		let read = MlirWholeFields(callee).Read(Temp("wa" + number), stored.Index(value), Temp("wh" + number + "m" + index))
+		let slot = MlirWholeFields(callee).SlotOf(Owner(number, callee), value)
+		let read = MlirWholeFields(callee).Read(Temp("wa" + number), slot, Temp("wh" + number + "m" + index))
 		lines = lines + read + Member(number, index, instance.MemberKind(Owner(number, callee), value))
 	let last = Temp("wh" + number + "c" + instance.Members(number).Length)
 	lines + ("    " + Temp("wh" + number + "o") + " = arith.andi " + last + ", " + Temp("wh" + number + "c0") + " : i1")
@@ -64,15 +66,20 @@ Owner(number Number, callee MlirFunction) Text
 	number < callee.method.parameters.Length then callee.method.parameters(number).typeName else callee.type.Name
 Member(number Number, member Number, kind Text) Texts
 	Calling.Member(0, 1, "i").Last is "    %t1wh0c2 = arith.andi %t1wh0c1, %t1wh0m1o : i1"
-	Calling.Member(0, 1, "d")(2) is "    %t1wh0m1o = arith.cmpi ne, %t1wh0m1i, %t1whz : i64"
+	Calling.Member(0, 1, "d").First is "    %t1wh0m1k = func.call @strict_list_packed(%t1wh0m1v) : (f64) -> i64"
 	let prefix = Temp("wh" + number + "m" + member)
-	let address = "    " + prefix + "i = llvm.ptrtoint " + prefix + "p : !llvm.ptr to i64"
-	let present = (address, "    " + prefix + "o = arith.cmpi ne, " + prefix + "i, " + Temp("whz") + " : i64")
-	let listed = MlirWholeFields(function).Converted(prefix + "v", kind, prefix + "p") + present
 	let whole = MlirWholeGuard(function, position).Checked(prefix + "v", prefix, Temp("whlimit"))
-	let checked = kind is "i" then whole else listed
+	let checked = kind is "i" then whole else Usable(prefix, kind)
 	let previous = Temp("wh" + number + "c" + member)
 	checked + ("    " + Temp("wh" + number + "c" + (member + 1)) + " = arith.andi " + previous + ", " + prefix + "o : i1")
+Usable(prefix Text, kind Text) Texts
+	Calling.Usable("%a", "p").Last is "    %ao = arith.cmpi ne, %ai, %t1whz : i64"
+	if kind is "d"
+		let packed = "    " + prefix + "k = func.call @strict_list_packed(" + prefix + "v) : (f64) -> i64"
+		return (packed, "    " + prefix + "o = arith.cmpi eq, " + prefix + "k, " + Temp("whz") + " : i64")
+	let address = "    " + prefix + "i = llvm.ptrtoint " + prefix + "p : !llvm.ptr to i64"
+	let present = (address, "    " + prefix + "o = arith.cmpi ne, " + prefix + "i, " + Temp("whz") + " : i64")
+	MlirWholeFields(function).Converted(prefix + "v", kind, prefix + "p") + present
 Conditions(count Number) Texts
 	Calling.Conditions(1) is ("%t1wh0o")
 	for count

@@ -1,5 +1,7 @@
 has function MlirFunction
 has position Number
+constant Valuing = MlirBytes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Jump(InstructionType.LoopEnd, 2)))), 1)
+constant Indexing = MlirBytes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "value", (2, 1, -1)), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))), 1)
 constant Iterating = MlirBytes(MlirLoops.Bytewise.function, 1)
 constant Collecting = MlirBytes(MlirFastLoop.Byting.function, 2)
 constant Doubling = MlirBytes(MlirFastLoop.Doubling.function, 2)
@@ -53,3 +55,13 @@ Stored(element Text, pointer Text) Texts
 		return List(Text) + ("    llvm.store " + element + ", " + pointer + " : f64, !llvm.ptr")
 	let encoded = "    " + element + "b = func.call @strict_byte_packed(" + element + ") : (f64) -> i8"
 	(encoded, "    llvm.store " + element + "b, " + pointer + " : i8, !llvm.ptr")
+IsValued Boolean
+	Valuing.IsValued
+	Indexing.IsValued
+	MlirBytes(MlirLoops.Listing.function, 1).IsValued is false
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let texts = function.method.instructions(value).texts
+		let named = texts.Length > 0 then texts(0) else ""
+		if (named is in ("value", "outer")) or named.StartsWith("value(") or named.StartsWith("outer.")
+			return true
+	false
