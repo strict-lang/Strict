@@ -44,3 +44,8 @@ Called(result Text, symbol Text, prefix Text, kinds Texts, returned Text) Text
 Line(suffix Text, operation Text) Text
 	Sample.Line("z", "arith.constant 0 : i64") is "    %t3z = arith.constant 0 : i64"
 	"    %t" + position + suffix + " = " + operation
+IsWhole(literal Runtime/VmValue) Boolean
+	Sample.IsWhole(VmValue.OfNumber(4))
+	Sample.IsWhole(VmValue.OfNumber(0.5)) is false
+	let number = literal.number
+	(literal.kind is "Boolean") or ((number.Floor is number) and (number.Absolute < MlirWhole.Limit))

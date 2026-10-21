@@ -35,7 +35,7 @@ Moved(entry InstructionEntry) Texts
 		return loaded + Store("", Register(entry.payload(0)), entry.payload(0))
 	Load("", entry.payload(0), Variable(name)) + values.Stored(Temp(""), Variable(name), "%v_" + name, Variable(name))
 Calculated(entry InstructionEntry) Texts
-	Halving.At(2).Calculated(MlirWholeTypes.Halves(2))(4) is "    %t2c = arith.divf %t2a, %t2b : f64"
+	Halving.At(2).Calculated(MlirWholeTypes.Halves(2))(2) is "    %t2c = arith.floordivsi %t2a, %t2b : i64"
 	let isWhole = naturals.Substring(position, 1) is "i"
 	let type = isWhole then "i" else "f"
 	let loads = Load("a", entry.payload(1), type) + Load("b", entry.payload(2), type)
@@ -47,7 +47,8 @@ Operation(kind Number, isWhole Boolean) Text
 	if (kind is InstructionType.Modulo) and (isWhole is false)
 		return "    " + Temp("c") + " = func.call @strict_remainder(" + operands + ") : (f64, f64) -> f64"
 	let generic = MlirStatements.Copy.Operation(kind)
-	let whole = kind is InstructionType.Modulo then "remsi" else generic.Substring(0, 3) + "i"
+	let divided = kind is InstructionType.Divide then "floordivsi" else generic.Substring(0, 3) + "i"
+	let whole = kind is InstructionType.Modulo then "remsi" else divided
 	let type = isWhole then "i64" else "f64"
 	"    " + Temp("c") + " = arith." + (isWhole then whole else generic) + " " + operands + " : " + type
 Compared(entry InstructionEntry) Texts
@@ -63,8 +64,8 @@ Compared(entry InstructionEntry) Texts
 		return flagged
 	flagged + ("    " + Temp("d") + " = arith.extui " + Temp("c") + " : i1 to i64") + Store("d", "i", entry.payload(3))
 Called(entry InstructionEntry) Texts
-	Text.Combine(Halving.At(3).Called(MlirWholeTypes.Halves(3))).IndexOf("llvm.intr.floor(%t3a)") > 0
-	let native = Native(entry)
+	Halving.At(3).Called(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
+	let native = MlirWholeNative(At(position)).Emitted(entry)
 	if native.Length > 0
 		return native
 	let callee = MlirWholeFunction(function).Callee(entry)
@@ -75,19 +76,6 @@ Called(entry InstructionEntry) Texts
 	let returned = MlirWholeTypes(callee).Returned
 	let call = MlirWholeValues(position).Called(Temp("c"), MlirWholeFunction(callee).Symbol, Temp("a"), kinds, returned)
 	lines + call + Store("c", returned, entry.payload(0))
-Native(entry InstructionEntry) Texts
-	Halving.At(3).Native(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3c, %r3 : i64, !llvm.ptr"
-	Halving.At(1).Native(MlirWholeCall.Twice.instructions(1)).Length is 0
-	let listed = MlirWholeTypes(function).Length(position)
-	if listed is not ""
-		let length = MlirWholeValues(position).Loaded(Temp("c"), "%v_" + listed + "_length", "i", "i")
-		return length + Store("c", "i", entry.payload(0))
-	if (PayloadDecoder(entry).Text(1) is not "Strict/Number") or (PayloadDecoder(entry).Text(2) is not "Floor")
-		return List(Text)
-	let source = entry.payload(LoadReuse(function.method.instructions).InvokeReads(entry).Last)
-	let floored = "    " + Temp("f") + " = llvm.intr.floor(" + Temp("a") + ") : (f64) -> f64"
-	let converted = MlirWholeValues(position).Converted(Temp("f"), "f", "i", Temp("c"))
-	Load("a", source, "f") + floored + converted + Store("c", "i", entry.payload(0))
 Read(entry InstructionEntry) Texts
 	Row.At(15).Read(MlirWhole.Rows(15))(2).EndsWith("[%t15i]" + Bytes)
 	let pointer = MlirWholeValues(position).Loaded(Temp("p"), "%v_" + entry.texts(0), "p", "p")
@@ -100,13 +88,13 @@ Returned(entry InstructionEntry) Texts
 	let returned = MlirWholeTypes(function).Returned
 	Load("", entry.payload(0), returned) + ("    return " + Temp("") + " : " + MlirWholeValues(position).Typed(returned))
 Load(suffix Text, register Number, wanted Text) Texts
-	Halving.At(2).Load("a", 2, "f") is ("    %t2a = llvm.load %r2 : !llvm.ptr -> f64")
+	Halving.At(2).Load("a", 2, "f").Last is "    %t2a = arith.sitofp %t2al : i64 to f64"
 	MlirWholeValues(position).Loaded(Temp(suffix), "%r" + register, Register(register), wanted)
 Store(suffix Text, given Text, register Number) Texts
-	Halving.At(2).Store("c", "f", 2) is ("    llvm.store %t2c, %r2 : f64, !llvm.ptr")
+	Halving.At(2).Store("c", "f", 2).First is "    %t2cs = arith.fptosi %t2c : f64 to i64"
 	MlirWholeValues(position).Stored(Temp(suffix), given, "%r" + register, Register(register))
 Register(register Number) Text
-	Halving.Register(2) is "f"
+	Halving.Register(2) is "i"
 	registers.Substring(register, 1)
 Variable(name Text) Text
 	Row.Variable("pixels") is "p"
