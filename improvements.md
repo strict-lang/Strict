@@ -13,15 +13,11 @@ In priority order, short and actionable. Remove what is done (results go into th
 9. **AMD GPUs**: about 250 us of host work per launch (GPT-2 48 ms per token on the RX 480), `sdot4`, WMMA and MFMA, the 512 thread tiles need more than the 64 KB of an AMD workgroup, ROCm on Linux.
 
 ## Bugs
-- A Byte member that overflows in arithmetic (`Color(255, 0, 0) + Color(1, 0, 0)`) keeps 256 on the Strict VM and saturates at 255 natively, decided 2026-10-22: both keep the lowest 8 bits like a native byte, no checks (only an explicit `Byte(256)` is ConstraintNotMet), intermediate sums may stay wide.
 - A `let` from the inner index in a warp summed loop of a 32 bit kernel reads wrong positions (RTX 4090, chunked `DeltaBlock`).
 - Unpacked rows of a matrix stay pinned while the model lives.
 - `strict test NeuralNetworks lines` crashes natively on macOS (`strict_list_restoring` reaches a null link).
 - `strict test` sometimes crashes at start (segfault, no output) or hangs, and `strict check Bytecode` / `strict check Runtime` hung for 2 hours 3 times on 2026-10-21 (the same command takes 1 s on a rerun). Not reproduced with 40 concurrent runs of one file or with `CUDA_CACHE_DISABLE=1`; suspects: dozens of parallel `strict test` processes (VS Code) sharing the base type `.strictbinary` files, which `Execute` writes in place (`File(cache.Path).Write`, no temporary file and rename).
-- Implicit self calls in replacement constructors fail natively (`Creature(value, previous = Pose(9))`).
-- A program crashes natively without output when a model is built in one chained expression (`mutable current = Qwen3(Qwen3.Loaded(path, 4)).Prefilled(prompt, 0)` or `Gpt2Tokens.Loaded(Gguf(path)).Encoded(...)`), the same steps with `let` per call work.
-- `strict test Examples` crashed once at start (segfault, 2026-10-21), not reproduced.
-- `strict test` prints `Unsupported native call` for a test calling a method with too many arguments and still reports all tests passed (DeltaBlock, 2026-10-21).
+- `Qwen3Text` (Q8_0 through `Generation`) takes 196.6 ms per token on the RTX 3080 while `Qwen3Benchmark` decodes Q4_K_M in 2.4 ms (2026-10-22): find which loops of `Generation` stay on the CPU.
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.

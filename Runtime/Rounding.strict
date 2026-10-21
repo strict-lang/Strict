@@ -15,8 +15,10 @@ Of(original VmValue) VmValue
 	VmValue(original.kind, original.number, original.text, rounded)
 Rounded(number Number) Number
 	Rounding(8).Rounded(127.5) is 127
+	Rounding(8).Rounded(256) is 0
+	Rounding(8).Rounded(-1) is 255
 	Single.Rounded(0.1) is 0.10000000149011612
-	bits is 8 then number.Floor else number.Rounded(bits)
+	bits is 8 then (number.Floor % 256 + 256) % 256 else number.Rounded(bits)
 Bits(member MemberEntry, natives Natives) Number
 	Single.Bits(Natives.Width, Natives.Shapes) is 64
 	Single.Bits(Natives.Pixel.members.First, Natives(List(TypeEntry) + Natives.Byted)) is 8

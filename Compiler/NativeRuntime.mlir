@@ -7185,14 +7185,12 @@
     %result = arith.select %isTagged, %number, %whole : f64
     return %result : f64
   }
-  // a member of a type made of Bytes (Color) in its lane of one whole number: its whole part clamped to 0..255, shifted
+  // a member of a type made of Bytes (Color) in its lane of one whole number: the lowest 8 bits of its whole part, shifted
   func.func private @strict_byte_lane(%number: f64, %shift: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
-    %low = arith.constant 0.0 : f64
-    %high = arith.constant 255.0 : f64
-    %above = arith.maxnumf %number, %low : f64
-    %clamped = arith.minnumf %above, %high : f64
-    %whole = arith.fptosi %clamped : f64 to i64
-    %lane = arith.shli %whole, %shift : i64
+    %mask = arith.constant 255 : i64
+    %whole = arith.fptosi %number : f64 to i64
+    %low = arith.andi %whole, %mask : i64
+    %lane = arith.shli %low, %shift : i64
     return %lane : i64
   }
   // the member of a type made of Bytes at its lane (8 bits from shift)
