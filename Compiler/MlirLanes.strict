@@ -5,7 +5,7 @@ constant Rgba = TypeEntry("Strict/Rgba", Rgb.members + MemberEntry("alpha", "Str
 constant Tinted = InstructionEntry.Invoke(3, ("Strict/Rgba", "from", "Rgba", "red", "green", "blue"), (0, 1, 2), -1)
 constant Painted = InstructionEntry.Invoke(3, ("Strict/Rgba", "from", "Rgba", "red", "green", "blue", "alpha"), (0, 1, 2), -1)
 constant Made = InstructionEntry.Invoke(3, ("Strict/Rgb", "from", "Rgb", "red", "green", "blue"), (0, 1, 2), -1)
-constant Greens = InstructionEntry(InstructionType.FieldLoad, "green", (4, 3, -1))
+constant Greens = InstructionEntry(InstructionType.FieldLoad, ("green", "Rgb"), (4, 3, -1))
 constant Making = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 2), InstructionEntry.LoadNumber(2, 3), Made, Greens))
 constant Sample = MlirLanes(MlirFunction((MlirLayout.Byting, Rgb, Rgba), Rgb, Making), 3)
 IsPacked(kind Text) Boolean

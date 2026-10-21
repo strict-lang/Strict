@@ -2,6 +2,7 @@ has function MlirFunction
 has position Number
 constant Twice = MethodEntry("Twice", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "number"), InstructionEntry.Invoke(1, ("Strict/Halves", "Halved", "Strict/Number", "number"), List(Number) + 0, -1), InstructionEntry.Return(1)))
 constant Halves = TypeEntry("Strict/Halves", List(MemberEntry), (MlirWholeTypes.Halved, Twice))
+constant Sizing = MlirWholeCall(MlirFunction(MlirWholeInstance.Types, MlirWholeInstance.Grid, MethodEntry("Run", List(MemberEntry) + MemberEntry("grid", "Strict/Grid", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "grid"), InstructionEntry.Invoke(1, ("Strict/Grid", "Sized", "Strict/Number", "grid"), List(Number) + 0, -1), InstructionEntry.Return(1)))), 1)
 constant Calling = MlirWholeCall(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Halves, Halves, Twice), 1)
 IsDispatched Boolean
 	Calling.IsDispatched
@@ -36,10 +37,42 @@ Guarded Texts
 	mutable lines = guard.Started
 	for LoadReuse(function.method.instructions).InvokeReads(entry)
 		let loaded = Temp("wl" + index)
-		let isList = kinds(index) is in ("p", "d")
-		let checked = isList then Present(index, kinds(index)) else guard.Checked(loaded, Temp("wh" + index), Temp("whlimit"))
+		let checked = Checked(index, kinds(index))
 		lines = lines + function.Load(loaded, "%r" + entry.payload(value)) + checked
 	lines + guard.Joined(Conditions(kinds.Length))
+Checked(number Number, kind Text) Texts
+	Calling.Checked(0, "i").First is "    %t1wh0t = llvm.intr.trunc(%t1wl0) : (f64) -> f64"
+	if kind is "o"
+		return Members(number)
+	if kind is in ("p", "d")
+		return Present(number, kind)
+	MlirWholeGuard(function, position).Checked(Temp("wl" + number), Temp("wh" + number), Temp("whlimit"))
+Members(number Number) Texts
+	Text.Combine(Sizing.Members(0)).IndexOf("@strict_list_hoisted(%t1wh0m0v)") > 0
+	let callee = MlirWholeFunction(function).Callee(function.method.instructions(position))
+	let instance = MlirWholeInstance(callee)
+	let stored = MlirInstances(callee, 0).StoredNames(function.TypeOf(Owner(number, callee)))
+	let pointer = MlirMemory(function, position).Pointer(Temp("wl" + number), "wa" + number).First
+	mutable lines = List(Text) + pointer + MlirWholeValues(position).Line("wh" + number + "c0", "arith.constant true")
+	for instance.Members(number)
+		let read = MlirWholeFields(callee).Read(Temp("wa" + number), stored.Index(value), Temp("wh" + number + "m" + index))
+		lines = lines + read + Member(number, index, instance.MemberKind(Owner(number, callee), value))
+	let last = Temp("wh" + number + "c" + instance.Members(number).Length)
+	lines + ("    " + Temp("wh" + number + "o") + " = arith.andi " + last + ", " + Temp("wh" + number + "c0") + " : i1")
+Owner(number Number, callee MlirFunction) Text
+	Sizing.Owner(1, MlirWholeInstance.Fits.function) is "Strict/Grid"
+	number < callee.method.parameters.Length then callee.method.parameters(number).typeName else callee.type.Name
+Member(number Number, member Number, kind Text) Texts
+	Calling.Member(0, 1, "i").Last is "    %t1wh0c2 = arith.andi %t1wh0c1, %t1wh0m1o : i1"
+	Calling.Member(0, 1, "d")(2) is "    %t1wh0m1o = arith.cmpi ne, %t1wh0m1i, %t1whz : i64"
+	let prefix = Temp("wh" + number + "m" + member)
+	let address = "    " + prefix + "i = llvm.ptrtoint " + prefix + "p : !llvm.ptr to i64"
+	let present = (address, "    " + prefix + "o = arith.cmpi ne, " + prefix + "i, " + Temp("whz") + " : i64")
+	let listed = MlirWholeFields(function).Converted(prefix + "v", kind, prefix + "p") + present
+	let whole = MlirWholeGuard(function, position).Checked(prefix + "v", prefix, Temp("whlimit"))
+	let checked = kind is "i" then whole else listed
+	let previous = Temp("wh" + number + "c" + member)
+	checked + ("    " + Temp("wh" + number + "c" + (member + 1)) + " = arith.andi " + previous + ", " + prefix + "o : i1")
 Conditions(count Number) Texts
 	Calling.Conditions(1) is ("%t1wh0o")
 	for count
@@ -59,7 +92,7 @@ Direct Texts
 	mutable lines = List(Mutable(Text))
 	for kinds
 		let converted = MlirWholeValues(position).Converted(Temp("wl" + index), "f", "i", Temp("wa" + index))
-		lines = value is in ("p", "d") then lines else lines + converted
+		lines = value is in ("p", "d", "o") then lines else lines + converted
 	let returned = MlirWholeTypes(callee).Returned
 	let result = Temp(returned is "f" then "wf" else "wr")
 	let call = MlirWholeValues(position).Called(result, MlirWholeFunction(callee).Symbol, Temp("wa"), kinds, returned)

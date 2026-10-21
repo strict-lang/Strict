@@ -31,8 +31,8 @@ Moved(entry InstructionEntry) Texts
 	if entry.kind is InstructionType.StoreConstantToVariable
 		return values.Constant(PayloadDecoder(entry).Value(0), "%v_" + name, Variable(name))
 	if entry.kind is InstructionType.LoadVariableToRegister
-		let loaded = values.Loaded(Temp(""), "%v_" + name, Variable(name), Register(entry.payload(0)))
-		return loaded + Store("", Register(entry.payload(0)), entry.payload(0))
+		let target = values.IsPointer(Variable(name)) then Variable(name) else Register(entry.payload(0))
+		return values.Loaded(Temp(""), "%v_" + name, Variable(name), target) + Store("", target, entry.payload(0))
 	Load("", entry.payload(0), Variable(name)) + values.Stored(Temp(""), Variable(name), "%v_" + name, Variable(name))
 Calculated(entry InstructionEntry) Texts
 	Halving.At(2).Calculated(MlirWholeTypes.Halves(2))(2) is "    %t2c = arith.floordivsi %t2a, %t2b : i64"
@@ -93,9 +93,15 @@ Returned(entry InstructionEntry) Texts
 	Load("", entry.payload(0), returned) + ("    return " + Temp("") + " : " + MlirWholeValues(position).Typed(returned))
 Load(suffix Text, register Number, wanted Text) Texts
 	Halving.At(2).Load("a", 2, "f").Last is "    %t2a = arith.sitofp %t2al : i64 to f64"
+	Halving.At(2).Load("a", 2, "o") is ("    %t2a = llvm.load %r2p : !llvm.ptr -> !llvm.ptr")
+	if MlirWholeValues(position).IsPointer(wanted)
+		return MlirWholeValues(position).Loaded(Temp(suffix), "%r" + register + "p", wanted, wanted)
 	MlirWholeValues(position).Loaded(Temp(suffix), "%r" + register, Register(register), wanted)
 Store(suffix Text, given Text, register Number) Texts
 	Halving.At(2).Store("c", "f", 2).First is "    %t2cs = arith.fptosi %t2c : f64 to i64"
+	Halving.At(2).Store("c", "d", 2) is ("    llvm.store %t2c, %r2p : !llvm.ptr, !llvm.ptr")
+	if MlirWholeValues(position).IsPointer(given)
+		return MlirWholeValues(position).Stored(Temp(suffix), given, "%r" + register + "p", given)
 	MlirWholeValues(position).Stored(Temp(suffix), given, "%r" + register, Register(register))
 Register(register Number) Text
 	Halving.Register(2) is "i"

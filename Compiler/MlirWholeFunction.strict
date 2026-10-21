@@ -33,7 +33,7 @@ IsCallable(depth Number) Boolean
 HasWholeParameters Boolean
 	Row.HasWholeParameters
 	for function.method.parameters
-		if (value.typeName is not "Strict/Number") and (IsListed(value.Name) is false)
+		if (value.typeName is not "Strict/Number") and (MlirWholeInstance(function).ParameterKind(value) is "i")
 			return false
 	true
 IsByteList(name Text) Boolean
@@ -49,7 +49,8 @@ IsListed(name Text) Boolean
 	for function.method.parameters
 		if value.Name is name
 			isLanes = MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(TypeEntry.ShortName(value.typeName)))
-	(parameters.IsBytes(name) or isLanes) and (name is in parameters.FixedLists)
+	let isParameter = (parameters.IsBytes(name) or isLanes) and (name is in parameters.FixedLists)
+	isParameter or MlirWholeInstance(function).IsMemberList(name)
 IsAllowed(at Number, depth Number) Boolean
 	Row.IsAllowed(15, 0)
 	Row.IsAllowed(7, 0)
@@ -79,7 +80,7 @@ IsLocal(name Text, at Number) Boolean
 	Row.IsLocal("value", 9)
 	Row.IsLocal("value", 1) is false
 	let isCounter = (name is in ("value", "index", "outer")) and IsInsideLoop(at)
-	if (name is in function.method.ParameterNames) or isCounter
+	if (name is in function.method.ParameterNames) or isCounter or (MlirWholeInstance(function).OwnKind(name) is not "-")
 		return true
 	for function.method.instructions
 		let isStore = value.kind is in (InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
@@ -97,23 +98,23 @@ IsInsideLoop(at Number) Boolean
 IsCalled(at Number, depth Number) Boolean
 	Halving.IsCalled(3, 0)
 	let entry = function.method.instructions(at)
-	if entry.kind is InstructionType.FieldLoad
+	if (entry.kind is InstructionType.FieldLoad) or IsBuilt(entry, at)
 		return IsBuilt(entry, at)
 	let decoder = PayloadDecoder(entry)
-	if ((decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")) or IsBuilt(entry, at)
+	if (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
 		return true
 	if MlirCalls(function, at).NativeHelper(entry, decoder) is not ""
 		return false
-	let callee = Callee(entry)
-	let isMatched = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.method.parameters.Length
-	isMatched and (callee.method.instructions.Length > 0) and MlirWholeFunction(callee).IsCallable(depth + 1)
+	let callee = MlirWholeFunction(Callee(entry))
+	let isMatched = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.Kinds.Length
+	isMatched and (callee.function.method.instructions.Length > 0) and callee.IsCallable(depth + 1)
 IsBuilt(entry InstructionEntry, at Number) Boolean
 	MlirWholeFunction(MlirLanes.Sample.function).IsBuilt(MlirLanes.Made, 3)
 	MlirWholeFunction(MlirLanes.Sample.function).IsBuilt(MlirLanes.Greens, 4)
 	Halving.IsBuilt(MlirWholeTypes.Halves(3), 3) is false
 	let lanes = MlirLanes(function, at)
 	if entry.kind is InstructionType.FieldLoad
-		return lanes.IsPacked(MlirKinds(function).KindOf(at, entry.payload(1)))
+		return MlirWholeInstance(function).IsReadable(entry)
 	let decoder = PayloadDecoder(entry)
 	let isByte = MlirLayout(function).IsByte(decoder.Text(1))
 	let isBuilt = (decoder.Text(2) is "from") and (isByte or lanes.IsPacked(decoder.Text(1)))
@@ -126,5 +127,7 @@ Callee(entry InstructionEntry) MlirFunction
 Kinds Texts
 	Halving.Kinds is ("i")
 	Row.Kinds is ("p", "i", "i")
+	mutable kinds = List(Mutable(Text))
 	for function.method.parameters
-		MlirParameters(function).IsBytes(value.Name) then "p" else (IsListed(value.Name) then "d" else "i")
+		kinds.Add(MlirWholeInstance(function).ParameterKind(value))
+	MlirWholeInstance(function).UsesSelf then kinds + "o" else kinds

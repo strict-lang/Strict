@@ -1,5 +1,6 @@
 has statements MlirWholeStatements
 constant Floor = MlirWholeNative(MlirWholeStatements.Halving.At(3))
+constant Sizing = MlirWholeNative(MlirWholeStatements(MlirWholeInstance.Sized.function, 1, "od-ii", "-o-", "odoii"))
 constant Painting = MlirWholeStatements(MlirLanes.Sample.function, 3, "iiiii", "--", "iiiii")
 Emitted(entry InstructionEntry) Texts
 	Floor.Emitted(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
@@ -64,6 +65,8 @@ Lane(entry InstructionEntry, name Text, lane Number) Texts
 	loaded + bounds + low + high + statements.Operation("b" + lane, "arith.shli", "h" + lane, "s" + lane)
 Read(entry InstructionEntry) Texts
 	MlirWholeNative(Painting.At(4)).Read(MlirLanes.Greens).Last is "    llvm.store %t4m, %r4 : i64, !llvm.ptr"
+	if MlirWholeInstance(statements.function).IsInstance(entry.texts(1))
+		return Member(entry)
 	let kind = MlirKinds(statements.function).KindOf(statements.position, entry.payload(1))
 	let shift = MlirLanes(statements.function, statements.position).Members(kind).Index(entry.texts(0)) * 8
 	let values = MlirWholeValues(statements.position)
@@ -71,3 +74,15 @@ Read(entry InstructionEntry) Texts
 	let moved = statements.Operation("v", "arith.shrui", "a", "s")
 	let masked = statements.Operation("m", "arith.andi", "v", "y")
 	statements.Load("a", entry.payload(1), "i") + constants + moved + masked + statements.Store("m", "i", entry.payload(0))
+Member(entry InstructionEntry) Texts
+	Sizing.Member(MlirWholeInstance.Sizing.instructions(1)).First.EndsWith("%v_grid_cells : !llvm.ptr -> !llvm.ptr")
+	let instance = MlirWholeInstance(statements.function)
+	let kind = instance.MemberKind(entry.texts(1), entry.texts(0))
+	let field = instance.Field(entry, statements.position)
+	let stored = statements.Store("c", kind, entry.payload(0))
+	if field is not ""
+		return MlirWholeValues(statements.position).Loaded(statements.Temp("c"), field, kind, kind) + stored
+	let owner = statements.function.TypeOf(entry.texts(1))
+	let slot = MlirInstances(statements.function, 0).StoredNames(owner).Index(entry.texts(0))
+	let read = MlirWholeFields(statements.function).Field(statements.Temp("a"), slot, statements.Temp("m"), kind)
+	statements.Load("a", entry.payload(1), "o") + read + statements.Store("m" + kind, kind, entry.payload(0))

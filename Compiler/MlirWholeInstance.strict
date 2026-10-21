@@ -1,0 +1,121 @@
+has function MlirFunction
+constant Fitting = MethodEntry("Fits", List(MemberEntry) + MemberEntry("x", "Strict/Number", List(InstructionEntry), false), "Strict/Boolean", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "x"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "width"), InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2)), InstructionEntry.Return(2)))
+constant Sizing = MethodEntry("Sized", List(MemberEntry) + MemberEntry("grid", "Strict/Grid", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "grid"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Grid"), (1, 0, -1, -2)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "grid"), InstructionEntry.LoadNumber(3, 1), InstructionEntry.Invoke(4, ("Strict/Grid", "Fits", "Strict/Boolean", "x"), List(Number) + 3, 2), InstructionEntry.Return(4)))
+constant Grid = TypeEntry("Strict/Grid", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry("cells", "Strict/List(Rgb)", List(InstructionEntry), false)), (Fitting, Sizing))
+constant Types = (MlirLayout.Byting, MlirLanes.Rgb, Grid)
+constant Fits = MlirWholeInstance(MlirFunction(Types, Grid, Fitting))
+constant Sized = MlirWholeInstance(MlirFunction(Types, Grid, Sizing))
+IsInstance(typeName Text) Boolean
+	Sized.IsInstance("Grid")
+	Sized.IsInstance("Number") is false
+	let short = TypeEntry.ShortName(typeName)
+	if MlirLayout(function).IsStruct(short) is false
+		return false
+	for MlirInstances(function, 0).Stored(function.TypeOf(short))
+		if Kind(value.typeName) is ""
+			return false
+	true
+MemberKind(typeName Text, member Text) Text
+	Sized.MemberKind("Grid", "width") is "i"
+	Sized.MemberKind("Grid", "cells") is "d"
+	for MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(typeName)))
+		if value.Name is member
+			return Kind(value.typeName)
+	""
+Kind(typeName Text) Text
+	Sized.Kind("Strict/Number") is "i"
+	Sized.Kind("Strict/Grid") is ""
+	let short = TypeEntry.ShortName(typeName)
+	if (short is in ("Number", "Boolean")) or MlirLayout(function).IsByte(short)
+		return "i"
+	if MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(short))
+		return "d"
+	short is in ("Bytes", "List(Byte)") then "p" else ""
+UsesSelf Boolean
+	Fits.UsesSelf
+	Sized.UsesSelf is false
+	if MlirLayout(function).IsStruct(function.type.Name) is false
+		return false
+	for function.method.instructions
+		if Used(index, "", true).Length > 0
+			return true
+	false
+Members(input Number) Texts
+	Sized.Members(0) is ("cells", "width")
+	Fits.Members(1) is ("width")
+	let isSelf = input >= function.method.parameters.Length
+	let name = isSelf then "" else function.method.parameters(input).Name
+	mutable names = List(Mutable(Text))
+	for function.method.instructions
+		for Used(index, name, isSelf)
+			if value is not in names
+				names.Add(value)
+	names
+Used(at Number, name Text, isSelf Boolean) Texts
+	Sized.Used(1, "grid", false) is ("cells")
+	Sized.Used(5, "grid", false) is ("width")
+	let entry = function.method.instructions(at)
+	let isLoad = entry.kind is InstructionType.LoadVariableToRegister
+	let isOwn = isSelf and isLoad and (entry.texts(0) is not in function.method.ParameterNames)
+	if isOwn and (entry.texts(0) is in MlirInstances(function, 0).StoredNames(function.type))
+		return List(Text) + entry.texts(0)
+	if (entry.kind is InstructionType.FieldLoad) and IsFrom(entry.payload(1), at, name)
+		return List(Text) + entry.texts(0)
+	entry.kind is InstructionType.Invoke then Passed(entry, at, name) else List(Text)
+Passed(entry InstructionEntry, at Number, name Text) Texts
+	Sized.Passed(Sizing.instructions(5), 5, "grid") is ("width")
+	let reads = LoadReuse(function.method.instructions).InvokeReads(entry)
+	let callee = MlirWholeFunction(function).Callee(entry)
+	mutable names = List(Mutable(Text))
+	for reads
+		let isSame = callee.method.Name is function.method.Name
+		if (isSame is false) and IsFrom(entry.payload(value), at, name)
+			names = names + MlirWholeInstance(callee).Members(index)
+	names
+IsFrom(register Number, at Number, name Text) Boolean
+	Sized.IsFrom(0, 1, "grid")
+	Sized.IsFrom(3, 5, "grid") is false
+	let writer = MlirKinds(function).Writer(at, register)
+	if (writer < 0) or (name is "")
+		return false
+	let loaded = function.method.instructions(writer)
+	(loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is name)
+Field(entry InstructionEntry, at Number) Text
+	Sized.Field(Sizing.instructions(1), 1) is "%v_grid_cells"
+	Fits.Field(Fitting.instructions(1), 1) is ""
+	if entry.kind is not InstructionType.FieldLoad
+		return ""
+	let writer = MlirKinds(function).Writer(at, entry.payload(1))
+	let loaded = writer < 0 then entry else function.method.instructions(writer)
+	let isLoaded = loaded.kind is InstructionType.LoadVariableToRegister
+	let isParameter = isLoaded and (loaded.texts(0) is in function.method.ParameterNames)
+	isParameter then "%v_" + loaded.texts(0) + "_" + entry.texts(0) else ""
+ParameterKind(parameter MemberEntry) Text
+	Sized.ParameterKind(Sizing.parameters.First) is "o"
+	MlirWholeInstance(MlirWhole.Row.function).ParameterKind(MlirWhole.Parameters.First) is "p"
+	if IsInstance(parameter.typeName)
+		return "o"
+	if MlirParameters(function).IsBytes(parameter.Name)
+		return "p"
+	MlirWholeFunction(function).IsListed(parameter.Name) then "d" else "i"
+OwnKind(name Text) Text
+	Fits.OwnKind("width") is "i"
+	Sized.OwnKind("width") is "-"
+	let isOwn = UsesSelf and (name is in MlirInstances(function, 0).StoredNames(function.type))
+	isOwn then MemberKind(function.type.Name, name) else "-"
+IsReadable(entry InstructionEntry) Boolean
+	Sized.IsReadable(Sizing.instructions(1))
+	MlirWholeInstance(MlirLanes.Sample.function).IsReadable(MlirLanes.Greens)
+	let isOwner = IsInstance(entry.texts(1)) or MlirLanes(function, 0).IsPacked(entry.texts(1))
+	isOwner and (MemberKind(entry.texts(1), entry.texts(0)) is not "")
+IsMemberList(name Text) Boolean
+	Sized.IsMemberList("list0")
+	Sized.IsMemberList("grid") is false
+	mutable found = false
+	for function.method.instructions
+		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is name)
+			let at = MlirKinds(function).Writer(index, value.payload(0))
+			let writer = at < 0 then value else function.method.instructions(at)
+			let isList = MemberKind(writer.texts(1), writer.texts(0)) is in ("d", "p")
+			found = (writer.kind is InstructionType.FieldLoad) and isList
+	found

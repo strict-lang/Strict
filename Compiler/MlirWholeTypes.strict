@@ -38,7 +38,8 @@ Initial Text
 	for function.VariableNames
 		let parameter = function.method.ParameterNames.Index(value)
 		let isNumber = value is in function.Parameters
-		variables = variables + (parameter >= 0 then kinds(parameter) else (isNumber then "i" else "-"))
+		let other = isNumber then "i" else MlirWholeInstance(function).OwnKind(value)
+		variables = variables + (parameter >= 0 then kinds(parameter) else other)
 	registers + "|" + variables + "|"
 Step(combined Text) Text
 	Halving.Step(Halving.Initial).StartsWith("iiii|")
@@ -48,7 +49,7 @@ Step(combined Text) Text
 	for function.method.instructions
 		let natural = Natural(index, registers, variables, naturals)
 		naturals = naturals + natural
-		registers = MlirWholeValues(index).Marked(registers, LoadReuse(function.method.instructions).Written(value), natural)
+		registers = MlirWholeValues(index).Written(registers, LoadReuse(function.method.instructions).Written(value), natural)
 		let stored = Stored(index, registers, naturals)
 		let named = stored is "" then -1 else function.VariableNames.Index(value.texts.Last)
 		variables = MlirWholeValues(index).Marked(variables, named, stored)
@@ -115,7 +116,7 @@ Natural(at Number, registers Text, variables Text, naturals Text) Text
 		return variables.Substring(function.VariableNames.Index(entry.texts(0)), 1)
 	if kind > InstructionType.StoreSeparator and kind < InstructionType.Power
 		return Calculated(entry, at, registers, naturals)
-	kind is InstructionType.Invoke then Called(entry) else "i"
+	kind is in (InstructionType.Invoke, InstructionType.FieldLoad) then Called(entry) else "i"
 Calculated(entry InstructionEntry, at Number, registers Text, naturals Text) Text
 	Halving.Calculated(Halves(2), 2, "iiii", "ii") is "i"
 	Shadowed.Calculated(Shadowed.function.method.instructions(4), 4, Shadowed.Part(0), Shadowed.Part(2)) is "f"
@@ -132,6 +133,8 @@ Operands(entry InstructionEntry, at Number, registers Text, naturals Text) Text
 	(left + Reaching(entry.payload(2), at, registers, naturals)).IndexOf("f") < 0 then "i" else "f"
 Called(entry InstructionEntry) Text
 	Halving.Called(Halves(3)) is "i"
+	if entry.kind is InstructionType.FieldLoad
+		return MlirWholeInstance(function).MemberKind(entry.texts(1), entry.texts(0))
 	let decoder = PayloadDecoder(entry)
 	let isFloor = (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
 	if isFloor or (decoder.Text(2) is in ("Length", "Validated", "from"))
