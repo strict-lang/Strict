@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      FOLDERS: Bytecode Compression Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing ImageProcessing MachineLearning Math
+      FOLDERS: Bytecode Compression Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing ImageProcessing MachineLearning Math
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
