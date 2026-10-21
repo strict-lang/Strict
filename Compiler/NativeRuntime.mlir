@@ -9704,12 +9704,16 @@
   ^missing:
     return %false : i1
   }
-  // a loop of at least 256 elements tries the GPU, a smaller one too once lists live there, it may read one of them
+  // a loop of at least 256 elements tries the GPU, a smaller one too once lists live there (it may read one of them),
+  // an empty one never (a launch without blocks fails a graph)
   func.func private @strict_gpu_wanted(%count: i64) -> i1 attributes {passthrough = ["alwaysinline"]} {
     %threshold = arith.constant 256 : i64
     %enough = arith.cmpi sge, %count, %threshold : i64
     %present = func.call @strict_gpu_present() : () -> i1
-    %wanted = arith.ori %enough, %present : i1
+    %none = arith.constant 0 : i64
+    %some = arith.cmpi sgt, %count, %none : i64
+    %readable = arith.andi %present, %some : i1
+    %wanted = arith.ori %enough, %readable : i1
     return %wanted : i1
   }
   func.func private @strict_gpu_present() -> i1 attributes {passthrough = ["alwaysinline"]} {
