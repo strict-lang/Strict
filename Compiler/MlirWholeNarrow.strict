@@ -1,0 +1,93 @@
+has function MlirFunction
+has position Number
+constant Lanes = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.LoadNumber(0, 9), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "color"), InstructionEntry(InstructionType.FieldLoad, ("red", "Rgb"), (2, 1, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "sum"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 7), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "sum"), InstructionEntry.Return(5))
+constant Summed = MethodEntry("Summed", List(MemberEntry) + MemberEntry("color", "Strict/Rgb", List(InstructionEntry), false), "Strict/Number", Lanes)
+constant Summing = MlirFunction(MlirLanes.Sample.function.types, MlirLanes.Rgb, Summed)
+constant Adding = MlirWholeNarrow(Summing, 6)
+constant Most = 8192
+IsNarrow Boolean
+	Adding.IsNarrow
+	MlirWholeNarrow(Summing, 4).IsNarrow is false
+	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).IsNarrow is false
+	let name = Accumulated
+	(name is not "") and IsBounded(name)
+Accumulated Text
+	Adding.Accumulated is "sum"
+	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Accumulated is ""
+	let steps = function.method.instructions
+	let entry = steps(position)
+	let next = steps(position + 1 < steps.Length then position + 1 else position)
+	let isStored = (next.kind is InstructionType.StoreRegisterToVariable) and (next.payload(0) is entry.payload(3))
+	if (entry.kind is not InstructionType.Add) or (isStored is false)
+		return ""
+	let loaded = Writer(entry.payload(1))
+	let isLoaded = (loaded >= 0) and (steps(loaded).kind is InstructionType.LoadVariableToRegister)
+	let isSelf = isLoaded and (steps(loaded).texts.Last is next.texts.Last)
+	isSelf and IsSmall(Writer(entry.payload(2))) and (Trips > 0) and (Trips <= Most) then next.texts.Last else ""
+Writer(register Number) Number
+	Adding.Writer(3) is 5
+	MlirArguments(List(MlirFunction)).Writer(function, register, position)
+IsSmall(at Number) Boolean
+	Adding.IsSmall(4)
+	Adding.IsSmall(3) is false
+	Adding.IsSmall(1)
+	if at < 0
+		return false
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.FieldLoad
+		return MlirLanes(function, at).IsPacked(entry.texts(1))
+	if entry.kind is not InstructionType.LoadConstantToRegister
+		return false
+	let number = PayloadDecoder(entry).Value(1).number
+	(number >= 0) and (number <= 255) and (number.Floor is number)
+Trips Number
+	Adding.Trips is 9
+	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Trips is 9
+	mutable trips = 1
+	for position
+		let entry = function.method.instructions(index)
+		if (entry.kind is InstructionType.LoopBegin) and (function.method.LoopEndOf(index) > position)
+			trips = trips * Count(index)
+	trips
+Count(at Number) Number
+	Adding.Count(2) is 9
+	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Count(6) is 3
+	let isRange = function.method.instructions(at).payload(1) is 1
+	let bounds = Bounds(at)
+	if bounds.Length < (isRange then 2 else 1)
+		return 0
+	isRange then (bounds(1) - bounds(0)).Absolute else bounds(0)
+Bounds(at Number) Numbers
+	Adding.Bounds(2) is (9)
+	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Bounds(6) is (0, 3)
+	let entry = function.method.instructions(at)
+	let registers = entry.payload(1) is 1 then (entry.payload(0), entry.payload(2)) else List(Number) + entry.payload(0)
+	for registers
+		let writer = MlirArguments(List(MlirFunction)).Writer(function, value, at)
+		if (writer >= 0) and (function.method.instructions(writer).kind is InstructionType.LoadConstantToRegister)
+			PayloadDecoder(function.method.instructions(writer)).Value(1).number
+IsBounded(name Text) Boolean
+	Adding.IsBounded("sum")
+	Adding.IsBounded("color")
+	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).IsBounded("sum") is false
+	for function.method.instructions
+		let isStore = value.kind is in (InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
+		if isStore and (value.texts.Last is name) and (IsSmallStore(index) is false)
+			return false
+	true
+IsSmallStore(at Number) Boolean
+	Adding.IsSmallStore(0)
+	Adding.IsSmallStore(7)
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.StoreConstantToVariable
+		let number = PayloadDecoder(entry).Value(0).number
+		return (number >= 0) and (number <= 255) and (number.Floor is number)
+	let writer = MlirArguments(List(MlirFunction)).Writer(function, entry.payload(0), at)
+	(writer >= 0) and (MlirWholeNarrow(function, writer).Accumulated is entry.texts.Last)
+Emitted Texts
+	Adding.Emitted.Last is "    %t6c = arith.extui %t6cn : i32 to i64"
+	let temp = "%t" + position
+	let left = "    " + temp + "an = arith.trunci " + temp + "a : i64 to i32"
+	let right = "    " + temp + "bn = arith.trunci " + temp + "b : i64 to i32"
+	let added = "    " + temp + "cn = arith.addi " + temp + "an, " + temp + "bn : i32"
+	(left, right, added, "    " + temp + "c = arith.extui " + temp + "cn : i32 to i64")

@@ -11,6 +11,7 @@ constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2))
 constant Bytes = " : (!llvm.ptr, i64) -> !llvm.ptr, i8"
 constant Lanes = MlirWholeStatements(MlirWholeFunction.Painted, 0, "ii", "iidiii", "i")
 constant Reading = InstructionEntry(InstructionType.IndexCall, "colors", (1, 0, -1))
+constant Narrowing = MlirWholeStatements(MlirWholeNarrow.Summing, 6, "iiiiii", "ii", "iiiiiii")
 Emitted Texts
 	Row.At(13).Emitted.Last is "    llvm.store %t13c, %r11 : i64, !llvm.ptr"
 	Row.At(16).Emitted is ("    cf.br ^bb17")
@@ -39,9 +40,12 @@ Moved(entry InstructionEntry) Texts
 	Load("", entry.payload(0), Variable(name)) + values.Stored(Temp(""), Variable(name), "%v_" + name, Variable(name))
 Calculated(entry InstructionEntry) Texts
 	Halving.At(2).Calculated(MlirWholeTypes.Halves(2))(2) is "    %t2c = arith.floordivsi %t2a, %t2b : i64"
+	Text.Combine(Narrowing.Calculated(MlirWholeNarrow.Lanes(6))).IndexOf(" : i32") > 0
 	let isWhole = naturals.Substring(position, 1) is "i"
 	let type = isWhole then "i" else "f"
 	let loads = Load("a", entry.payload(1), type) + Load("b", entry.payload(2), type)
+	if isWhole and MlirWholeNarrow(function, position).IsNarrow
+		return loads + MlirWholeNarrow(function, position).Emitted + Store("c", type, entry.payload(3))
 	loads + Operation(entry.kind, isWhole) + Store("c", type, entry.payload(3))
 Operation(kind Number, isWhole Boolean) Text
 	Row.Operation(InstructionType.Modulo, true) is "    %t0c = arith.remsi %t0a, %t0b : i64"
