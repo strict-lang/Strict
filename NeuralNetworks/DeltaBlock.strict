@@ -13,9 +13,8 @@ has merged Numbers = List(Number)
 constant Model = Gguf("NeuralNetworks/tinyqwen35.gguf")
 constant Tiny = DeltaBlock.Loaded(Model, "blk.0.", Layer.Zeros(16))
 constant Rows = Model.Rows("token_embd.weight")
-Loaded(model Gguf, prefix Text, memory Numbers) DeltaBlock
+Loaded(model Gguf, prefix Text, zeros Numbers) DeltaBlock
 	Tiny.inputs.weights.Length is 32
-	Tiny.memory.Length is 16
 	let combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
 	let taps = model.Values(prefix + "ssm_conv1d.weight")
 	let logarithms = model.Values(prefix + "ssm_a")
@@ -25,15 +24,15 @@ Loaded(model Gguf, prefix Text, memory Numbers) DeltaBlock
 	let biases = model.Values(prefix + "ssm_dt.bias")
 	let headNorm = model.Values(prefix + "ssm_norm.weight")
 	let feedForward = Qwen3Block.FeedForward(model, prefix)
-	let window = Layer.Zeros(taps.Length / 4 * 3)
-	DeltaBlock(normed, combined, taps, logarithms, biases, headNorm, projected, after, feedForward, window, memory)
+	let shifted = Layer.Zeros(taps.Length / 4 * 3)
+	DeltaBlock(normed, combined, taps, logarithms, biases, headNorm, projected, after, feedForward, shifted, zeros)
 KeyHeads Number
 	Tiny.KeyHeads is 2
 	(convolution.Length / 4 / norm.Length - decays.Length) / 2
-Layers(model Gguf, first Number, count Number, memory Numbers) List(DeltaBlock)
+Layers(model Gguf, first Number, count Number, zeros Numbers) List(DeltaBlock)
 	DeltaBlock.Layers(Model, 0, 3, Tiny.memory).Length is 3
 	for count
-		DeltaBlock.Loaded(model, "blk." + (first + index) + ".", memory)
+		DeltaBlock.Loaded(model, "blk." + (first + index) + ".", zeros)
 Memory(model Gguf) Numbers
 	DeltaBlock.Memory(Model) is Tiny.memory
 	let architecture = model.Value("general.architecture")
