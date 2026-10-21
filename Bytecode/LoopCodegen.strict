@@ -158,9 +158,10 @@ RangeFields(iterator SyntaxNode, block CodeBlock) CodeBlock
 AggregatedLoop(body SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.AggregatedLoop(FilterLoop, CodeBlock.Empty, "sum").instructions.Last.kind is InstructionType.JumpEnd
 	Plain.AggregatedLoop(NestedLoop, CodeBlock.Empty, "list").instructions.Last.kind is InstructionType.LoopEnd
+	Plain.AggregatedLoop(NestedLoop, CodeBlock.Empty, "sum").instructions.Last.kind is InstructionType.LoopEnd
 	Plain.AggregatedLoop(ProductBody.children(0).children.Last, CodeBlock.Empty, "product").instructions.Length is 4
 	let last = body.children.Last
-	if (aggregation is "list") and (last.Kind is "For")
+	if last.Kind is "For"
 		return Loop(last, Leading(body, block), aggregation)
 	if Reduction(last) is not ""
 		return Collected(methods.values.Expression(last.children(1), Leading(body, block)), aggregation)

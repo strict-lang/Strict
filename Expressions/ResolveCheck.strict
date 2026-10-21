@@ -81,7 +81,7 @@ Inference(files Texts) TypeInference
 	Refined(TypeInference(KnownTypes(TypeNames(files), members, methods, parameters), constants), shapes)
 Shapes(files Texts) List(TypeShape)
 	for files
-		TypeShape(File(value).ReadLines)
+		TypeShape(Fusion(File(value).ReadLines).Fused)
 Generics(files Texts, shapes List(TypeShape)) Texts
 	for shapes
 		if value.UsesGenerics

@@ -12,7 +12,7 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 		return Located(source, root, withTests, missing.First)
 	if (Parsed(List(Text) + source) is false) or (Resolved(source, inference) is false)
 		return List(TypeEntry)
-	let main = TypeCodegen(FullName(source, root), File(source).ReadLines, inference, FullNames(files, root))
+	let main = TypeCodegen(FullName(source, root), Fusion(File(source).ReadLines).Fused, inference, FullNames(files, root))
 	let entry = main.Entry
 	let methods = withTests then entry.methods + TestCodegen(main, isQuiet).Tests else entry.methods
 	let linker = Linker(root, main)

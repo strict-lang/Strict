@@ -1,0 +1,110 @@
+has lines Texts
+constant Averaging = Fusion(("Run Number", "\tOnes(2).Average + 1", "Ones(count Number) Numbers", "\tOnes(2) is (1, 1)", "\tfor count", "\t\t1"))
+Fused Texts
+	Averaging.Fused(1) is "\t(OnesSummed(2) / OnesCounted(2)) + 1"
+	Averaging.Fused.Length is 12
+	Averaging.Fused(9) is "OnesCounted(count Number) Number"
+	mutable result = Rewritten
+	for Called
+		result = result + Generated(value)
+	result
+Rewritten Texts
+	Averaging.Rewritten(2) is "Ones(count Number) Numbers"
+	for lines
+		FusedLine(value)
+FusedLine(line Text) Text
+	Averaging.FusedLine("\tOnes(2).Average") is "\t(OnesSummed(2) / OnesCounted(2))"
+	let name = Averaged(line)
+	if name is ""
+		return line
+	let at = line.IndexOf(").Average")
+	let start = Opening(line, at)
+	let arguments = line.Substring(start + 1, at - start - 1)
+	let fused = "(" + name + "Summed(" + arguments + ") / " + name + "Counted(" + arguments + "))"
+	line.Substring(0, start - name.Length) + fused + line.Substring(at + 9, line.Length - at - 9)
+Called Texts
+	Averaging.Called is ("Ones")
+	mutable names = List(Mutable(Text))
+	for lines
+		let name = Averaged(value)
+		if (name is not "") and (name is not in names)
+			names.Add(name)
+	names
+Averaged(line Text) Text
+	Averaging.Averaged("\tOnes(2).Average") is "Ones"
+	Averaging.Averaged("\tx.Ones(2).Average") is ""
+	let at = line.IndexOf(").Average")
+	let start = at < 0 then -1 else Opening(line, at)
+	if start < 1
+		return ""
+	let name = Name(line, start)
+	let isOwn = (start - name.Length is 0) or (line.Substring(start - name.Length - 1, 1) is not ".")
+	isOwn and IsFusable(name) then name else ""
+Opening(line Text, closing Number) Number
+	Averaging.Opening("Ones(f(2)).Average", 9) is 4
+	mutable depth = 0
+	for closing
+		let character = line.Substring(closing - 1 - index, 1)
+		if (character is "(") and (depth is 0)
+			return closing - 1 - index
+		depth = character is ")" then depth + 1 else (character is "(" then depth - 1 else depth)
+	-1
+Name(line Text, start Number) Text
+	Averaging.Name("\t(Ones(2)", 6) is "Ones"
+	mutable begin = start
+	for start
+		let character = line.Substring(start - 1 - index, 1)
+		if (begin is start - index) and (character.Upper is not character.Lower)
+			begin = start - 1 - index
+	line.Substring(begin, start - begin)
+IsFusable(name Text) Boolean
+	Averaging.IsFusable("Ones")
+	Averaging.IsFusable("Run") is false
+	let header = Header(name)
+	let returned = header < 0 then "" else Returned(lines(header))
+	if (returned.EndsWith("s") is false) and (returned.StartsWith("List(") is false)
+		return false
+	let ending = Ending(header)
+	mutable last = ""
+	for Range(header + 1, ending)
+		last = lines(value).StartsWith("\t\t") then last else lines(value)
+	last.StartsWith("\tfor") and lines(ending - 1).StartsWith("\t\t")
+Header(name Text) Number
+	Averaging.Header("Ones") is 2
+	for lines
+		if TypeShape(lines).IsMethodHeader(value) and (value.StartsWith(name + "(") or value.StartsWith(name + " "))
+			return index
+	-1
+Ending(header Number) Number
+	Averaging.Ending(2) is 6
+	for Range(header + 1, lines.Length)
+		if lines(value).StartsWith("\t") is false
+			return value
+	lines.Length
+Returned(header Text) Text
+	Averaging.Returned("Ones(count Number) Numbers") is "Numbers"
+	header.Substring(header.LastIndexOf(" ") + 1, header.Length - header.LastIndexOf(" ") - 1)
+Element(returned Text) Text
+	Averaging.Element("Colors") is "Color"
+	Averaging.Element("List(Color)") is "Color"
+	let isList = returned.StartsWith("List(")
+	isList then returned.Substring(5, returned.Length - 6) else returned.Substring(0, returned.Length - 1)
+Generated(name Text) Texts
+	Averaging.Generated("Ones")(3) is "OnesCounted(count Number) Number"
+	let header = Header(name)
+	let ending = Ending(header)
+	let line = lines(header)
+	let parameters = line.Substring(name.Length, line.LastIndexOf(" ") - name.Length)
+	let start = Statements(header, ending)
+	let body = lines.Slice(start, ending - start)
+	let tabs = body.Last.Substring(0, body.Last.Length - body.Last.TrimStart.Length)
+	let counted = body.Slice(0, body.Length - 1) + (tabs + "1")
+	let summed = List(Text) + (name + "Summed" + parameters + " " + Element(Returned(line))) + body
+	summed + (name + "Counted" + parameters + " Number") + counted
+Statements(header Number, ending Number) Number
+	Averaging.Statements(2, 6) is 4
+	for Range(header + 1, ending)
+		let isStatement = Tokenizer(lines(value).TrimStart).Tokens.First is in ("for", "let", "mutable", "if", "return")
+		if isStatement and (lines(value).StartsWith("\t\t") is false)
+			return value
+	ending

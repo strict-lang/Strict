@@ -51,12 +51,13 @@ Wrapped(line SyntaxNode) SyntaxNode
 	BranchValues("list").Wrapped(Value).text is "Add"
 	BranchValues("product").Wrapped(Value).children.Last.text is "*"
 	BranchValues("any").Wrapped(Value).Kind is "If"
+	BranchValues("add").Wrapped(Value).Kind is "Reassignment"
 	Returning.Wrapped(SyntaxNode("Number", "1", List(SyntaxNode), 6)).line is 6
 	if IsValue(line) is false
 		return line
 	if mode is "any"
 		return SyntaxNode("If", "", (line, ReturnTrue), line.line)
-	mode is in ("sum", "product", "list") then Accumulated(line) else SyntaxNode("Return", "", line, line.line)
+	mode is in ("sum", "product", "list", "add") then Accumulated(line) else SyntaxNode("Return", "", line, line.line)
 Accumulated(line SyntaxNode) SyntaxNode
 	BranchValues("sum").Accumulated(Value).Kind is "Reassignment"
 	BranchValues("sum").Accumulated(SyntaxNode("Number", "1", List(SyntaxNode), 6)).line is 6
