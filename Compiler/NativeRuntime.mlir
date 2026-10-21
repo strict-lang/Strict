@@ -4572,6 +4572,14 @@
   ^done:
     llvm.store %copyHolderBits, %holderSlot : f64, !llvm.ptr
     func.call @strict_gc_written(%holderSlot) : (!llvm.ptr) -> ()
+    %viewAddress = llvm.ptrtoint %view : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%viewAddress) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    cf.cond_br %located#4, ^unpacked, ^unscanned
+  ^unscanned:
+    // a row of a matrix lives in an unscanned block (strict_packed_rows), only its view knows the new holder
+    func.call @strict_pin(%copyHolderBits) : (f64) -> ()
+    cf.br ^unpacked
+  ^unpacked:
     return %copyItems : !llvm.ptr
   }
   // an 8 bit float of a list in format 7 (E4M3: sign, 4 exponent bits with bias 7, 3 mantissa bits, at most 448)
