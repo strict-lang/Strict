@@ -1,0 +1,7 @@
+has energy Number
+Pose Numbers
+	IndexedCall(1).Pose is (1, 2)
+	(energy, energy + 1)
+Second Number
+	IndexedCall(1).Second is 2
+	Pose(1)

@@ -41,9 +41,11 @@ IsIndexedCall(node SyntaxNode, block CodeBlock) Boolean
 	MemberA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is false
 	let isOwnMember = values.target.IsMember(values.target.TypeName, node.text)
 	let isConstant = values.methods.TypeOf(node.text) is not "" and (values.target.Header(node.text).tokens.Length is 0)
-	let isNamed = block.scope.TypeOf(node.text) is not "" or isOwnMember or isConstant
+	let isMethod = values.target.Header(node.text).tokens.Length > 0
+	let isOwnList = isMethod and Indexing(values.inference.types).IsIndexed(values.target.TypeName, node.text, 1)
+	let isNamed = block.scope.TypeOf(node.text) is not "" or isOwnMember or isConstant or isOwnList
 	let isIndexed = (node.children.Length is 1) and isNamed or (node.children.Length is 2) and isOwnMember
-	isIndexed and (isConstant or values.inference.types.IsKnown(node.text) is false)
+	isIndexed and (isConstant or isOwnList or values.inference.types.IsKnown(node.text) is false)
 Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
 	Plain.Indexed(SyntaxNode("Call", "failed", One), Failed).instructions.Last.kind is InstructionType.Invoke
@@ -75,9 +77,10 @@ Element(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Element(SyntaxNode("MethodCall", "text", (ValueCodegen.NewGreeter, One)), CodeBlock.Empty).nextId is 1
 	let named = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))
 	let isComputed = (named.Kind is not "Identifier") and (named.IsLiteral is false)
-	let isNamed = (node.Kind is "Call") and (isComputed is false)
+	let isMethod = values.target.Header(node.text).tokens.Length > 0
+	let isNamed = (node.Kind is "Call") and (isComputed is false) and (isMethod is false)
 	let name = isNamed then node.text else "list" + block.nextId
-	let source = node.Kind is "Call" then named else Source(node)
+	let source = node.Kind is "Call" then (isMethod then SyntaxNode("Call", node.text) else named) else Source(node)
 	let list = isNamed then ErrorScope(values).Guarded(node.text, block) else values.Expression(source, block)
 	let stored = isNamed then list else list.Stored(name).WithNextId
 	let index = values.Expression(GridIndex(node), stored)

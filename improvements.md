@@ -13,13 +13,11 @@ In priority order, short and actionable. Remove what is done (results go into th
 9. **AMD GPUs**: about 250 us of host work per launch (GPT-2 48 ms per token on the RX 480), `sdot4`, WMMA and MFMA, the 512 thread tiles need more than the 64 KB of an AMD workgroup, ROCm on Linux.
 
 ## Bugs
-- A collecting nested `Range` loop with a parameter instance condition loses elements on the Strict VM (`bitmap.IsInside(...)` gives 6 of 9 Colors).
 - `List.Average` of Colors clamps natively (`Color.test.exe`, Alpha 127): needs wide sums per member.
 - A `let` from the inner index in a warp summed loop of a 32 bit kernel reads wrong positions (RTX 4090, chunked `DeltaBlock`).
 - A `Generic` parameter of a non-generic type is not specialized (`Unsupported native call Strict/Generic.Area`), `strict check` misses it.
 - Unpacked rows of a matrix stay pinned while the model lives.
 - `strict test NeuralNetworks lines` crashes natively on macOS (`strict_list_restoring` reaches a null link).
-- Implicit self calls in replacement constructors fail natively (`Creature(value, previous = Pose(9))`).
 - `strict test Examples` crashed once at start (segfault, 2026-10-21), not reproduced.
 - `strict test` prints `Unsupported native call` for a test calling a method with too many arguments and still reports all tests passed (DeltaBlock, 2026-10-21).
 
