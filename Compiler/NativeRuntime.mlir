@@ -7027,6 +7027,24 @@
     return %result : f64
   }
   // a number stored into a Bytes list (format 9): its whole part like a C cast, below 0 is 0, above 255 is 255
+  llvm.mlir.global internal constant @strict_threads_name("STRICT_THREADS\00") : !llvm.array<15 x i8>
+  // the threads of the pool: STRICT_THREADS when it is a positive number (1 runs every loop on the calling thread), else the default
+  func.func private @strict_pool_size(%default: i64) -> i64 {
+    %name = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
+    %text = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isSet = llvm.icmp "ne" %text, %null : !llvm.ptr
+    cf.cond_br %isSet, ^parse, ^unset
+  ^parse:
+    %ten = arith.constant 10 : i32
+    %parsed = llvm.call @strtol(%text, %null, %ten) : (!llvm.ptr, !llvm.ptr, i32) -> i64
+    %zero = arith.constant 0 : i64
+    %isPositive = arith.cmpi sgt, %parsed, %zero : i64
+    %chosen = arith.select %isPositive, %parsed, %default : i64
+    return %chosen : i64
+  ^unset:
+    return %default : i64
+  }
   func.func private @strict_byte_packed(%number: f64) -> i8 attributes {passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %largest = arith.constant 255.0 : f64

@@ -1,5 +1,5 @@
 // Same blur as BenchBlur.strict: RGBA image of 4 bytes per pixel, box blur of (2 * radius + 1)^2 pixels, edges kept
-// usage: blur width height radius passes opaque (1: alpha is always 255 and kept, only RGB is blurred)
+// usage: blur width height radius passes
 // clang -O3 -march=native blur.c, with -fopenmp the rows run on all threads (OMP_NUM_THREADS limits them)
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,11 +10,10 @@ int main(int count, char** arguments)
 {
 	int width = count > 1 ? atoi(arguments[1]) : 3840, height = count > 2 ? atoi(arguments[2]) : 2160;
 	int radius = count > 3 ? atoi(arguments[3]) : 4, passes = count > 4 ? atoi(arguments[4]) : 1;
-	int opaque = count > 5 ? atoi(arguments[5]) : 0;
 	long length = (long)width * height * 4, stride = (long)width * 4;
 	uint8_t* pixels = malloc(length);
 	uint8_t* blurred = malloc(length);
-	for (long index = 0; index < length; index++) pixels[index] = opaque && index % 4 == 3 ? 255 : (uint8_t)(index * 7919 % 256);
+	for (long index = 0; index < length; index++) pixels[index] = (uint8_t)(index * 7919 % 256);
 	int area = (2 * radius + 1) * (2 * radius + 1);
 	double started = now();
 	for (int pass = 0; pass < passes; pass++)
@@ -25,7 +24,7 @@ int main(int count, char** arguments)
 				for (long channel = 0; channel < 4; channel++)
 				{
 					long index = y * stride + x * 4 + channel;
-					if (x < radius || x >= width - radius || y < radius || y >= height - radius || (opaque && channel == 3))
+					if (x < radius || x >= width - radius || y < radius || y >= height - radius)
 						blurred[index] = pixels[index];
 					else
 					{

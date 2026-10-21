@@ -650,7 +650,8 @@
     // half of the logical processors: a 4K blur 35% faster than a quarter, GPT-2 decoding the same, all of them slow GPT-2 down (13900KF)
     %two = arith.constant 2 : i64
     %half = arith.divsi %processors, %two : i64
-    %threads = arith.maxsi %half, %two : i64
+    %standard = arith.maxsi %half, %two : i64
+    %threads = func.call @strict_pool_size(%standard) : (i64) -> i64
     %workers = arith.subi %threads, %one : i64
     %null = llvm.mlir.zero : !llvm.ptr
     %procedure = llvm.mlir.addressof @strict_pool_thread : !llvm.ptr

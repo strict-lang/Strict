@@ -649,7 +649,8 @@
     %four = arith.constant 4 : i64
     %two = arith.constant 2 : i64
     %quarter = arith.divsi %processors, %four : i64
-    %threads = arith.maxsi %quarter, %two : i64
+    %standard = arith.maxsi %quarter, %two : i64
+    %threads = func.call @strict_pool_size(%standard) : (i64) -> i64
     %workers = arith.subi %threads, %one : i64
     %null = llvm.mlir.zero : !llvm.ptr
     %procedure = llvm.mlir.addressof @strict_pool_thread : !llvm.ptr
