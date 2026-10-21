@@ -67,6 +67,7 @@ Owner(number Number, callee MlirFunction) Text
 Member(number Number, member Number, kind Text) Texts
 	Calling.Member(0, 1, "i").Last is "    %t1wh0c2 = arith.andi %t1wh0c1, %t1wh0m1o : i1"
 	Calling.Member(0, 1, "d").First is "    %t1wh0m1k = func.call @strict_list_packed(%t1wh0m1v) : (f64) -> i64"
+	Calling.Member(0, 1, "d")(2) is "    %t1wh0m1o = arith.cmpi eq, %t1wh0m1k, %t1wh0m1l : i64"
 	let prefix = Temp("wh" + number + "m" + member)
 	let whole = MlirWholeGuard(function, position).Checked(prefix + "v", prefix, Temp("whlimit"))
 	let checked = kind is "i" then whole else Usable(prefix, kind)
@@ -76,7 +77,8 @@ Usable(prefix Text, kind Text) Texts
 	Calling.Usable("%a", "p").Last is "    %ao = arith.cmpi ne, %ai, %t1whz : i64"
 	if kind is "d"
 		let packed = "    " + prefix + "k = func.call @strict_list_packed(" + prefix + "v) : (f64) -> i64"
-		return (packed, "    " + prefix + "o = arith.cmpi eq, " + prefix + "k, " + Temp("whz") + " : i64")
+		let lanes = "    " + prefix + "l = arith.constant " + MlirBytes.Lanes + " : i64"
+		return (packed, lanes, "    " + prefix + "o = arith.cmpi eq, " + prefix + "k, " + prefix + "l : i64")
 	let address = "    " + prefix + "i = llvm.ptrtoint " + prefix + "p : !llvm.ptr to i64"
 	let present = (address, "    " + prefix + "o = arith.cmpi ne, " + prefix + "i, " + Temp("whz") + " : i64")
 	MlirWholeFields(function).Converted(prefix + "v", kind, prefix + "p") + present
@@ -86,9 +88,10 @@ Conditions(count Number) Texts
 		Temp("wh" + index + "o")
 Present(number Number, kind Text) Texts
 	Calling.Present(0, "p").Last is "    %t1wh0o = arith.cmpi ne, %t1wh0i, %t1whz : i64"
+	Calling.Present(0, "d").First is "    %t1wa0 = func.call @strict_list_lanes(%t1wl0) : (f64) -> !llvm.ptr"
 	Text.Combine(MlirCalls(Calling.function, 1).Emitted).IndexOf("^bb1wholecall") > 0
 	let pointer = Temp("wa" + number)
-	let listed = kind is "d" then "strict_list_hoisted" else "strict_list_bytes"
+	let listed = kind is "d" then "strict_list_lanes" else "strict_list_bytes"
 	let bytes = "    " + pointer + " = func.call @" + listed + "(" + Temp("wl" + number) + ") : (f64) -> !llvm.ptr"
 	List(Text) + bytes + MlirWholeGuard(function, position).Present(pointer, number)
 Direct Texts

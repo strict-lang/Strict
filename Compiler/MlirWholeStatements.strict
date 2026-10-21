@@ -9,6 +9,8 @@ constant Mixed = MlirWholeStatements(MlirWholeTypes.Reused.function, 3, MlirWhol
 constant Copies = (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2))
 constant Bytes = " : (!llvm.ptr, i64) -> !llvm.ptr, i8"
+constant Lanes = MlirWholeStatements(MlirWholeFunction.Painted, 0, "ii", "iidiii", "i")
+constant Reading = InstructionEntry(InstructionType.IndexCall, "colors", (1, 0, -1))
 Emitted Texts
 	Row.At(13).Emitted.Last is "    llvm.store %t13c, %r11 : i64, !llvm.ptr"
 	Row.At(16).Emitted is ("    cf.br ^bb17")
@@ -79,14 +81,14 @@ Called(entry InstructionEntry) Texts
 	lines + call + Store("c", returned, entry.payload(0))
 Read(entry InstructionEntry) Texts
 	Row.At(15).Read(MlirWhole.Rows(15))(2).EndsWith("[%t15i]" + Bytes)
+	Lanes.Read(Reading)(4) is "    %t0c = arith.extui %t0b : i32 to i64"
 	let kind = Variable(entry.texts(0))
 	let pointer = MlirWholeValues(position).Loaded(Temp("p"), "%v_" + entry.texts(0), kind, kind)
-	let element = kind is "d" then "f64" else "i8"
+	let element = kind is "d" then "i32" else "i8"
 	let indexed = Temp("p") + "[" + Temp("i") + "]"
 	let slot = "    " + Temp("s") + " = llvm.getelementptr " + indexed + Bytes.Replace("i8", element)
 	let read = "    " + Temp("b") + " = llvm.load " + Temp("s") + " : !llvm.ptr -> " + element
-	let converted = kind is "d" then " = arith.fptosi " + Temp("b") + " : f64" else " = arith.extui " + Temp("b") + " : i8"
-	let widened = "    " + Temp("c") + converted + " to i64"
+	let widened = "    " + Temp("c") + " = arith.extui " + Temp("b") + " : " + element + " to i64"
 	pointer + Load("i", entry.payload(1), "i") + slot + read + widened + Store("c", "i", entry.payload(0))
 Returned(entry InstructionEntry) Texts
 	Halving.At(4).Returned(MlirWholeTypes.Halves(4)).Last is "    return %t4 : i64"

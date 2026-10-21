@@ -42,8 +42,8 @@ Stored(source Text, kind Text, name Text) Text
 	"    llvm.store " + source + ", %v_" + name + " : " + MlirWholeValues(0).Typed(kind) + ", !llvm.ptr"
 Converted(source Text, kind Text, target Text) Texts
 	Sized.Converted("%v", "i", "%w") is ("    %w = arith.fptosi %v : f64 to i64")
-	Sized.Converted("%v", "d", "%w") is ("    %w = func.call @strict_list_hoisted(%v) : (f64) -> !llvm.ptr")
+	Sized.Converted("%v", "d", "%w") is ("    %w = func.call @strict_list_lanes(%v) : (f64) -> !llvm.ptr")
 	if kind is "i"
 		return List(Text) + ("    " + target + " = arith.fptosi " + source + " : f64 to i64")
-	let helper = kind is "d" then "strict_list_hoisted" else "strict_list_bytes"
+	let helper = kind is "d" then "strict_list_lanes" else "strict_list_bytes"
 	List(Text) + ("    " + target + " = func.call @" + helper + "(" + source + ") : (f64) -> !llvm.ptr")

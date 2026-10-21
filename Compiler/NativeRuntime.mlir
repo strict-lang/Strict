@@ -524,7 +524,11 @@
     %nine = arith.constant 9 : i64
     %isBytes = arith.cmpi eq, %bits, %nine : i64
     %isByteWide = arith.ori %isFloat8, %isBytes : i1
-    %orFloat8 = arith.select %isByteWide, %aligned, %plainBytes : i64
+    %lanes = arith.constant 33 : i64
+    %isLanes = arith.cmpi eq, %bits, %lanes : i64
+    %laneBytes = arith.shli %count, %two : i64
+    %orLanes = arith.select %isLanes, %laneBytes, %plainBytes : i64
+    %orFloat8 = arith.select %isByteWide, %aligned, %orLanes : i64
     %orFour = arith.select %isFour, %fourBytes, %orFloat8 : i64
     %orSix = arith.select %isSix, %sixBytes, %orFour : i64
     %bytes = arith.select %isQuantized, %quantizedBytes, %orSix : i64
@@ -4513,7 +4517,16 @@
   ^unsigned:
     %bytesCapacity = arith.constant -9.0 : f64
     %isBytes = arith.cmpf oeq, %capacity, %bytesCapacity : f64
-    cf.cond_br %isBytes, ^unsignedByte, ^single
+    cf.cond_br %isBytes, ^unsignedByte, ^wide
+  ^wide:
+    %lanesCapacity = arith.constant -33.0 : f64
+    %isLanes = arith.cmpf oeq, %capacity, %lanesCapacity : f64
+    cf.cond_br %isLanes, ^lanes, ^single
+  ^lanes:
+    %laneSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+    %laneValue = llvm.load %laneSlot : !llvm.ptr -> i32
+    %fromLanes = arith.uitofp %laneValue : i32 to f64
+    cf.br ^store(%fromLanes : f64)
   ^unsignedByte:
     %unsignedSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %unsignedValue = llvm.load %unsignedSlot : !llvm.ptr -> i8
@@ -4666,6 +4679,47 @@
     return %items : !llvm.ptr
   ^bytes:
     return %null : !llvm.ptr
+  }
+  // the 4 byte lanes of a list in format 33 (a type of 2 to 6 bytes like Color) for reads in place, null otherwise
+  func.func private @strict_list_lanes(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %laneFormat = arith.constant 33 : i64
+    %isLanes = arith.cmpi eq, %packed, %laneFormat : i64
+    cf.cond_br %isLanes, ^lanes, ^other
+  ^lanes:
+    %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    return %data : !llvm.ptr
+  ^other:
+    %null = llvm.mlir.zero : !llvm.ptr
+    return %null : !llvm.ptr
+  }
+  func.func private @strict_list_lane_items(%list: f64) -> !llvm.ptr {
+    %lanes = func.call @strict_list_lanes(%list) : (f64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isPlain = llvm.icmp "eq" %lanes, %null : !llvm.ptr
+    cf.cond_br %isPlain, ^plain, ^lanes
+  ^plain:
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    return %items : !llvm.ptr
+  ^lanes:
+    return %null : !llvm.ptr
+  }
+  func.func private @strict_hoisted_lane_item(%lanes: !llvm.ptr, %items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %now = func.call @strict_list_version() : () -> i64
+    %same = arith.cmpi eq, %now, %version : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %hasLanes = llvm.icmp "ne" %lanes, %null : !llvm.ptr
+    %unchanged = arith.andi %same, %hasLanes : i1
+    cf.cond_br %unchanged, ^lane, ^other
+  ^lane:
+    %at = arith.fptosi %index : f64 to i64
+    %slot = llvm.getelementptr %lanes[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+    %value = llvm.load %slot : !llvm.ptr -> i32
+    %number = arith.uitofp %value : i32 to f64
+    return %number : f64
+  ^other:
+    %item = func.call @strict_hoisted_item(%items, %index, %version, %list) : (!llvm.ptr, f64, i64, f64) -> f64
+    return %item : f64
   }
   // an element of a list iterated with strict_list_byte_items: a byte where it is, other lists like strict_hoisted_item
   func.func private @strict_hoisted_byte_item(%bytes: !llvm.ptr, %items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
@@ -4846,13 +4900,24 @@
     %packed = func.call @strict_list_packed(%list) : (f64) -> i64
     %byteFormat = arith.constant 9 : i64
     %isBytes = arith.cmpi eq, %packed, %byteFormat : i64
-    cf.cond_br %isBytes, ^byte, ^items
+    cf.cond_br %isBytes, ^byte, ^wider
   ^byte:
     %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
     %byteSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %byte = llvm.load %byteSlot : !llvm.ptr -> i8
     %number = arith.uitofp %byte : i8 to f64
     return %number : f64
+  ^wider:
+    // 4 byte lanes (format 33, a Color) are read where they are too
+    %laneFormat = arith.constant 33 : i64
+    %isLanes = arith.cmpi eq, %packed, %laneFormat : i64
+    cf.cond_br %isLanes, ^lane, ^items
+  ^lane:
+    %laneData = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    %laneSlot = llvm.getelementptr %laneData[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+    %lane = llvm.load %laneSlot : !llvm.ptr -> i32
+    %laneNumber = arith.uitofp %lane : i32 to f64
+    return %laneNumber : f64
   ^items:
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64

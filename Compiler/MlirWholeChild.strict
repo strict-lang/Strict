@@ -16,9 +16,9 @@ constant Element = ("    %wvp = llvm.getelementptr %witems[%wk]" + Pointer, "   
 IsWhole Boolean
 	Brightening.IsWhole
 	MlirWholeChild(MlirParallel.Doubling.function, 2).IsWhole is false
-	if (MlirParallel(function, position).IsParallel is false) or (MlirBytes(function, position).IsCollected is false)
+	if (MlirParallel(function, position).IsParallel is false) or (MlirLayout(function).Packed(position) is not 9)
 		return false
-	if (MlirLoops(function, position).Collection is not "") and (MlirBytes(function, position).IsIterated is false)
+	if (MlirLoops(function, position).Collection is not "") and (MlirBytes(function, position).Iterated is not 9)
 		return false
 	let settled = MlirWholeTypes(function).Settled
 	for Range(position + 1, function.method.LoopEndOf(position))

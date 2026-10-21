@@ -101,10 +101,10 @@ Packed(position Number) Number
 	MlirLayout(Eights).Packed(2) is 7
 	MlirLayout(Bytings).Packed(2) is 9
 	Wrapping.Packed(0) is 0
-	MlirLayout(MlirLanes.Collecting).Packed(2) is 64
+	MlirLayout(MlirLanes.Collecting).Packed(2) is 33
 	let kind = MlirKinds(function).VariableKind(position, "forResult")
 	if MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(kind))
-		return 64
+		return 33
 	kind is in ("Float8s", "List(Float8)") then 7 else (kind is in ("Bytes", "List(Byte)") then 9 else 0)
 Collected(register Text, pointer Text, at Number) Texts
 	MlirLayout(Eights).Collected("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"

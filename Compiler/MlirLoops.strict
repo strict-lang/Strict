@@ -44,9 +44,11 @@ Element Text
 	Listing.Element.StartsWith("    %t1g = func.call @strict_hoisted_item(%t1h, %t1c, %t1hv, %t1v)")
 	Bytewise.Element.StartsWith("    %t1g = func.call @strict_hoisted_byte_item(%t1hb, %t1h, %t1c, %t1hv, %t1v)")
 	constant operands = Temp("h") + ", " + Temp("c") + ", " + Temp("hv") + ", " + Temp("v") + ")"
-	if MlirBytes(function, position).IsIterated
+	let bytes = MlirBytes(function, position)
+	if bytes.IsIterated
 		constant types = " : (!llvm.ptr, !llvm.ptr, f64, i64, f64) -> f64"
-		return "    " + Temp("g") + " = func.call @strict_hoisted_byte_item(" + Temp("hb") + ", " + operands + types
+		let call = " = func.call @strict_hoisted_" + bytes.Item + "_item(" + Temp("hb") + ", "
+		return "    " + Temp("g") + call + operands + types
 	"    " + Temp("g") + " = func.call @strict_hoisted_item(" + operands + " : (!llvm.ptr, f64, i64, f64) -> f64"
 Collection Text
 	Counting.Collection is ""

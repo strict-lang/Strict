@@ -66,8 +66,10 @@ Context Texts
 	lines + MlirMemory.Counted.Replace("%p", Temp("pc")).Replace("%z", Temp("ps"))
 Filler Text
 	Doubling.Filler is "strict_list_filled_numbers"
+	Byting.Filler is "strict_list_filled_numbers"
 	let kind = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, "forResult"))
-	kind is "List(Number)" then "strict_list_filled_numbers" else "strict_list_filled"
+	let isPlain = (kind is "List(Number)") or MlirBytes(function, position).IsCollected
+	isPlain then "strict_list_filled_numbers" else "strict_list_filled"
 Joined Texts
 	Doubling.Joined.Last is "    cf.br ^loop2exit"
 	let child = MlirWholeChild(function, position)
