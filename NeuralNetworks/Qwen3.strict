@@ -31,9 +31,10 @@ Blocks(model Gguf) List(Qwen3Block)
 	let interval = given is "" then 1 else given to Number
 	let extra = model.Value(architecture + ".nextn_predict_layers")
 	let layers = (model.Value(architecture + ".block_count") to Number) - (extra is "" then 0 else extra to Number)
+	let memory = DeltaBlock.Memory(model)
 	for layers / interval
 		let attention = Qwen3Block.Loaded(model, "blk." + (index * interval + interval - 1) + ".", heads)
-		Qwen3Block(attention, hybrid = Hybrid(DeltaBlock.Layers(model, index * interval, interval - 1)))
+		Qwen3Block(attention, hybrid = Hybrid(DeltaBlock.Layers(model, index * interval, interval - 1, memory)))
 Rotations(positions Numbers) Numbers
 	Tiny.Rotations(List(Number) + 0) is (1, 1, 1, 1, 0, 0, 0, 0)
 	Tiny.Rotations(List(Number) + 1)(4).IsNearlyEqual(-0.8414709848078965)

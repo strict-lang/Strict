@@ -1948,7 +1948,8 @@
     llvm.store %more, %markedSlot : i64, !llvm.ptr
     return
   }
-  // words pointing into the large object marked last are skipped (the rows of a matrix share one, strict_packed_rows)
+  // words pointing into the large object marked last are skipped (the rows of a matrix share one, strict_packed_rows),
+  // so are words outside the heap without a call (numbers: a full collection of Qwen3.8 scans 57 million words)
   func.func private @strict_gc_mark_range(%from: i64, %to: i64) {
     %none = arith.constant 0 : i64
     %wordSlot = llvm.mlir.addressof @strict_word_bytes : !llvm.ptr
@@ -1956,6 +1957,10 @@
     %alignMask = arith.subi %none, %eight : i64
     %address = arith.constant 281474976710655 : i64
     %aligned = arith.andi %from, %alignMask : i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
     cf.br ^loop(%aligned, %none, %none : i64, i64, i64)
   ^loop(%at: i64, %skipStart: i64, %skipEnd: i64):
     %more = arith.cmpi ult, %at, %to : i64
@@ -1967,7 +1972,11 @@
     %afterStart = arith.cmpi uge, %word, %skipStart : i64
     %beforeEnd = arith.cmpi ult, %word, %skipEnd : i64
     %inside = arith.andi %afterStart, %beforeEnd : i1
-    cf.cond_br %inside, ^loop(%next, %skipStart, %skipEnd : i64, i64, i64), ^mark
+    %belowBase = arith.cmpi ult, %word, %base : i64
+    %aboveTop = arith.cmpi uge, %word, %top : i64
+    %outside = arith.ori %belowBase, %aboveTop : i1
+    %skipped = arith.ori %inside, %outside : i1
+    cf.cond_br %skipped, ^loop(%next, %skipStart, %skipEnd : i64, i64, i64), ^mark
   ^mark:
     %range:2 = func.call @strict_gc_mark(%value) : (i64) -> (i64, i64)
     %isLarge = arith.cmpi ne, %range#1, %none : i64

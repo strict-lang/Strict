@@ -11,11 +11,10 @@ has window Numbers = List(Number)
 has memory Numbers = List(Number)
 has merged Numbers = List(Number)
 constant Model = Gguf("NeuralNetworks/tinyqwen35.gguf")
-constant Tiny = DeltaBlock.Loaded(Model, "blk.0.")
+constant Tiny = DeltaBlock.Loaded(Model, "blk.0.", Layer.Zeros(16))
 constant Rows = Model.Rows("token_embd.weight")
-Loaded(model Gguf, prefix Text) DeltaBlock
+Loaded(model Gguf, prefix Text, zeros Numbers) DeltaBlock
 	Tiny.inputs.weights.Length is 32
-	Tiny.memory.Length is 16
 	let combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
 	let taps = model.Values(prefix + "ssm_conv1d.weight")
 	let logarithms = model.Values(prefix + "ssm_a")
@@ -25,14 +24,21 @@ Loaded(model Gguf, prefix Text) DeltaBlock
 	let biases = model.Values(prefix + "ssm_dt.bias")
 	let headNorm = model.Values(prefix + "ssm_norm.weight")
 	let feedForward = Qwen3Block.FeedForward(model, prefix)
-	DeltaBlock(normed, combined, taps, logarithms, biases, headNorm, projected, after, feedForward).Started
+	let shifted = Layer.Zeros(taps.Length / 4 * 3)
+	DeltaBlock(normed, combined, taps, logarithms, biases, headNorm, projected, after, feedForward, shifted, zeros)
 KeyHeads Number
 	Tiny.KeyHeads is 2
 	(convolution.Length / 4 / norm.Length - decays.Length) / 2
-Layers(model Gguf, first Number, count Number) List(DeltaBlock)
-	DeltaBlock.Layers(Model, 0, 3).Length is 3
+Layers(model Gguf, first Number, count Number, zeros Numbers) List(DeltaBlock)
+	DeltaBlock.Layers(Model, 0, 3, Tiny.memory).Length is 3
 	for count
-		DeltaBlock.Loaded(model, "blk." + (first + index) + ".")
+		DeltaBlock.Loaded(model, "blk." + (first + index) + ".", zeros)
+Memory(model Gguf) Numbers
+	DeltaBlock.Memory(Model) is Tiny.memory
+	let architecture = model.Value("general.architecture")
+	let heads = model.Value(architecture + ".ssm.time_step_rank")
+	let size = model.Value(architecture + ".ssm.state_size")
+	Layer.Zeros(heads is "" then 0 else (heads to Number) * (size to Number) * (size to Number))
 Cached(input Numbers) DeltaBlock
 	Tiny.Cached(Rows(1)).Output(Rows(1)).First.IsNearlyEqual(0.54408, 0.00001)
 	Tiny.Cached(Rows(1) + Rows(2)).Output(Rows(1) + Rows(2))(8).IsNearlyEqual(1.773538, 0.00001)
@@ -46,10 +52,6 @@ Stepped(chunks DeltaChunks) DeltaChunks
 	Tiny.Stepped(DeltaChunks(4, 2, 2, 16, 1, Layer.Zeros(16), Layer.Zeros(8), Tiny.memory)).reads is Layer.Zeros(8)
 	let updated = DeltaBlock(value, memory = Updated(chunks.keyed, chunks.decayed, Read(chunks.keyed, 0, 1), 0))
 	DeltaChunks(chunks, memory = updated.memory, reads = updated.Read(chunks.keyed, 0, 0))
-Started DeltaBlock
-	Tiny.Started.window.Length is 48
-	let size = norm.Length
-	DeltaBlock(value, window = Layer.Zeros(convolution.Length / 4 * 3), memory = Layer.Zeros(decays.Length * size * size))
 Convolved(combined Numbers, tokens Number) Numbers
 	Tiny.Convolved(Layer.Zeros(64), 2) is Layer.Zeros(32)
 	let channels = convolution.Length / 4
