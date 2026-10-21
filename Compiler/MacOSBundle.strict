@@ -7,8 +7,8 @@ Name Text
 	MacOSBundle(Logger, "Games/App/App").Name is "App"
 	Path(base).FileName.text
 Contents Text
-	MacOSBundle(Logger, "Games/App/App").Contents is "Games/App/Release/App.app/Contents"
-	Release(logger, base).Parent + "/Release/" + Name + ".app/Contents"
+	MacOSBundle(Logger, "Games/App/App").Contents is "Games/App/Release/MacOS/App.app/Contents"
+	Release(logger, base).Parent + "/Release/MacOS/" + Name + ".app/Contents"
 Plist Texts
 	"<key>CFBundleExecutable</key><string>App</string>" is in MacOSBundle(Logger, "Games/App/App").Plist
 	let executable = "<key>CFBundleExecutable</key><string>" + Name + "</string>"
@@ -31,11 +31,11 @@ Signing(identity Text, app Text) Text
 	identity is "-" then "--force --sign - " + quoted else developer
 Released Number
 	MacOSBundle(Logger, "Compiler/output/App").Released is 1
-	Directory.Exists("Compiler/output/Release/App.app/Contents/Resources")
+	Directory.Exists("Compiler/output/Release/MacOS/App.app/Contents/Resources")
 	let app = Contents.Substring(0, Contents.Length - 9)
-	for (Release(logger, base).Parent + "/Release", app, Contents, Contents + "/Resources")
+	for (Release(logger, base).Parent + "/Release", Release(logger, base).Parent + "/Release/MacOS", app, Contents, Contents + "/Resources")
 		Directory.Create(value)
-	let refreshed = Release(logger, base).Refreshed(Contents + "/MacOS", Contents + "/Resources/Content")
+	let refreshed = Release(logger, base).Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", List(Text) + "")
 	refreshed is not 0 then refreshed else Completed(Release(logger, base).Icon)
 Completed(icon Text) Number
 	MacOSBundle(Logger, "Missing/App").Completed("Missing.ico") is 1

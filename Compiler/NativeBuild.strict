@@ -65,7 +65,7 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 		return 1
 	let crossed = CrossBuild(base, program, tools, isCounting)
 	Removed(base)
-	tools.isWeb then crossed else Release(logger, base).Packaged(program, crossed)
+	Release(logger, base).Packaged(program, crossed, tools.isWeb, isCrossing)
 Ran(base Text, tools Toolchain, path Text) Number
 	let executable = tools.Executable(base)
 	let result = ToolRunner(executable).Execute("")
@@ -91,7 +91,7 @@ Linked(base Text, tools Toolchain) Text
 CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	NativeBuild(Logger).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is 0
 	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is 0
-	if (Platform.Current is not Platform.Windows) or isCounting or (isCrossing is false)
+	if (Platform.Current is not Platform.Windows) or isCounting or (isCrossing is false) or tools.isWeb
 		return 0
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
 	let crossed = tools.CrossBuilt(base, level)
