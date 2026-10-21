@@ -13,14 +13,16 @@ jobs:
         id: llvm
         with:
           path: Tools/LLVM-22.1.0-Linux-X64
-          key: llvm-22.1.0-linux-x64-headers
-      - name: LLVM 22 (clang, mlir-opt, mlir-translate)
+          key: llvm-22.1.0-linux-x64-opt-llc
+      - name: LLVM 22 (clang, mlir-opt, mlir-translate, opt, llc)
         if: steps.llvm.outputs.cache-hit != 'true'
         run: |
           mkdir -p Tools
-          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz | tar -xJ -C Tools LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate LLVM-22.1.0-Linux-X64/lib/clang/22/include
+          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/LLVM-22.1.0-Linux-X64.tar.xz | tar -xJ -C Tools LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate LLVM-22.1.0-Linux-X64/bin/opt LLVM-22.1.0-Linux-X64/bin/llc LLVM-22.1.0-Linux-X64/lib/clang/22/include
       - name: Bootstrap from the seed
-        run: sh Compiler/bootstrap.sh
+        run: |
+          echo "$PWD/Tools/LLVM-22.1.0-Linux-X64/bin" >> "$GITHUB_PATH"
+          sh Compiler/bootstrap.sh
       - name: Self build until the fixpoint
         run: |
           for stage in 1 2 3; do
@@ -59,15 +61,16 @@ jobs:
         id: llvm
         with:
           path: Tools/LLVM-22.1.0-Windows
-          key: llvm-22.1.0-windows-clang-headers
-      - name: clang 22
+          key: llvm-22.1.0-windows-opt-llc
+      - name: clang, opt and llc 22
         if: steps.llvm.outputs.cache-hit != 'true'
         run: |
           mkdir -p Tools/LLVM-22.1.0-Windows
-          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/clang+llvm-22.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xJ -C Tools/LLVM-22.1.0-Windows --strip-components=1 clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/clang.exe clang+llvm-22.1.0-x86_64-pc-windows-msvc/lib/clang/22/include
-      - name: mlir-opt and mlir-translate from MSYS2
+          curl -fsSL https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.0/clang+llvm-22.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xJ -C Tools/LLVM-22.1.0-Windows --strip-components=1 clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/clang.exe clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/opt.exe clang+llvm-22.1.0-x86_64-pc-windows-msvc/bin/llc.exe clang+llvm-22.1.0-x86_64-pc-windows-msvc/lib/clang/22/include
+      - name: mlir-opt and mlir-translate 22 from MSYS2
         run: |
-          /c/msys64/usr/bin/pacman.exe -Sy --noconfirm --needed mingw-w64-ucrt-x86_64-mlir
+          /c/msys64/usr/bin/pacman.exe -Sy --noconfirm
+          /c/msys64/usr/bin/pacman.exe -U --noconfirm https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-llvm-libs-22.1.8-1-any.pkg.tar.zst https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-mlir-22.1.8-1-any.pkg.tar.zst
           cygpath -w "$PWD/Tools/LLVM-22.1.0-Windows/bin" >> "$GITHUB_PATH"
       - name: Bootstrap from the seed
         shell: cmd
