@@ -94,8 +94,17 @@ Element(header Text) Text
 Members(element Text) Texts
 	Coloring.Members("Color") is ("Red", "Green", "Blue", "Alpha")
 	Averaging.Members("Color").Length is 0
+	for MemberLines(element)
+		Tokenizer(value).Tokens(1)
+MemberTypes(element Text) Texts
+	Coloring.MemberTypes("Color") is ("Byte", "Byte", "Byte", "Byte")
+	for MemberLines(element)
+		let tokens = Tokenizer(value).Tokens
+		tokens.Length > 2 then tokens(2) else "Number"
+MemberLines(element Text) Texts
+	Coloring.MemberLines("Color").First is "has Red Byte"
 	let path = folder + "/" + element + ".strict"
 	let found = (folder is not "") and File(path).Exists then File(path).ReadLines else List(Text)
 	for found
 		if value.StartsWith("has ")
-			Tokenizer(value).Tokens(1)
+			value

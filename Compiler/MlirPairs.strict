@@ -40,7 +40,7 @@ Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Text
 	Sample.Constructed(Constructing, "Strict/Math/Pairing", Instances).Last is "    llvm.store %t1pp, %r1 : f64, !llvm.ptr"
 	Text.Combine(Rewrapped.Constructed(Constructing, "Pairing", Instances)).IndexOf("strict_two_from_list") is -1
 	if IsListed(typeName) is false
-		return MlirCouples(function, position).Constructed(entry, typeName, instances)
+		return MlirLanes(function, position).Built(entry, typeName, instances)
 	let register = entry.payload(5 + entry.payload(3) + 1)
 	let argument = "%r" + register
 	if IsBuiltArgument(entry) or IsPaired(MlirKinds(function).KindOf(position, register))

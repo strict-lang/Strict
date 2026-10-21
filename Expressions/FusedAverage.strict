@@ -37,13 +37,15 @@ Accumulated(tabs Text) Texts
 	result + (tabs + "fusedCount = fusedCount + 1")
 Result Text
 	Ones.Result is "\tfusedSum / fusedCount"
-	Grays.Result is "\tColor(fusedRed, fusedGreen, fusedBlue, fusedAlpha) / fusedCount"
+	Grays.Result.StartsWith("\tColor(Byte(fusedRed / fusedCount), Byte(fusedGreen / fusedCount), ")
 	if Element is "Number"
 		return "\tfusedSum / fusedCount"
-	mutable sums = List(Mutable(Text))
+	let types = fusion.MemberTypes(Element)
+	mutable averages = List(Mutable(Text))
 	for Members
-		sums.Add("fused" + value)
-	"\t" + Element + "(" + Text.Combine(sums) + ") / fusedCount"
+		let average = "fused" + value + " / fusedCount"
+		averages.Add(types(index) is "Number" then average else types(index) + "(" + average + ")")
+	"\t" + Element + "(" + Text.Combine(averages) + ")"
 Statements(ending Number) Number
 	Ones.Statements(6) is 4
 	for Range(fusion.Header(name) + 1, ending)

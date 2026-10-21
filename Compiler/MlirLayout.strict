@@ -22,7 +22,8 @@ IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
 	let isStruct = function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
-	isStruct and (MlirCouples(function, 0).IsCoupled(typeName) is false)
+	let isPacked = MlirCouples(function, 0).IsCoupled(typeName) or MlirLanes(function, 0).IsPacked(typeName)
+	isStruct and (isPacked is false)
 Represented(kind Text) Text
 	Wrapping.Represented("Angle") is "Number"
 	Wrapping.Represented("Shape") is "Shape"
@@ -32,7 +33,7 @@ Represented(kind Text) Text
 		return "List(" + kind.Substring(0, kind.Length - 1) + ")"
 	if kind.StartsWith("Dictionary(")
 		return "List(" + Represented(MethodBodies.Item(kind.Substring(11, kind.Length - 12))) + ")"
-	let packed = MlirFlats(function, 0).Kind(kind)
+	let packed = MlirLanes(function, 0).IsPacked(kind) then "Number" else MlirFlats(function, 0).Kind(kind)
 	if packed is not ""
 		return packed
 	Wrapped(kind) is "" then Plural(kind) else Represented(Wrapped(kind))
@@ -40,11 +41,16 @@ Plural(kind Text) Text
 	Wrapping.Plural("Bytes") is "List(Number)"
 	Wrapping.Plural("List(Byte)") is "List(Number)"
 	Wrapping.Plural("Degrees") is "Degrees"
+	MlirLayout(MlirLanes.Sample.function).Plural("List(Rgb)") is "List(Rgb)"
 	if kind.StartsWith("List(") and kind.EndsWith(")")
-		return Represented(kind.Substring(5, kind.Length - 6)) is "Number" then "List(Number)" else kind
+		return IsNumeric(kind.Substring(5, kind.Length - 6)) then "List(Number)" else kind
 	let type = function.TypeOf(kind)
 	let isUnknown = (type.members.Length is 0) and (type.methods.Length is 0) and kind.EndsWith("s")
-	isUnknown and (Represented(kind.Substring(0, kind.Length - 1)) is "Number") then "List(Number)" else kind
+	isUnknown and IsNumeric(kind.Substring(0, kind.Length - 1)) then "List(Number)" else kind
+IsNumeric(kind Text) Boolean
+	Wrapping.IsNumeric("Byte")
+	MlirLayout(MlirLanes.Sample.function).IsNumeric("Rgb") is false
+	(Represented(kind) is "Number") and (MlirLanes(function, 0).IsPacked(kind) is false)
 Wrapped(typeName Text) Text
 	Wrapping.Wrapped("Angle") is "Degrees"
 	Wrapping.Wrapped("Shape") is ""

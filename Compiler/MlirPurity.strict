@@ -8,6 +8,7 @@ constant Randomizing = MlirPurity(MlirParallel.Randomizing.function, 2)
 constant Clamped = MethodEntry("Clamped", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Binary(InstructionType.GreaterThan, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"), InstructionEntry.LoadBoolean(4, true), InstructionEntry.Binary(InstructionType.Equal, (4, 4)), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), InstructionEntry.LoadNumber(5, 0), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "conditional0"), InstructionEntry.Jump(InstructionType.JumpEnd, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "conditional0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 16)))
 constant Clamping = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Clamped), 2)
 constant Making = MlirFunction(MlirLayout.Wrapping.function.types, MlirLayout.Degrees, MethodEntry("Made", List(MemberEntry), "Strict/Degrees", (InstructionEntry.LoadNumber(0, 1), MlirDeviceCalls.Making, InstructionEntry.Return(1))))
+constant Checking = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Pairing", (InstructionEntry.LoadText(0, "a"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "number"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2)))
 constant Filtering = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
 IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsSafe(Doubling.function, 4, 0)
@@ -71,6 +72,9 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	(depth < 3) and (MlirForeign(callees.First).IsForeign is false) and IsPureMethod(callees.First, depth + 1)
 IsPureMethod(callee MlirFunction, depth Number) Boolean
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 1)
+	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, Checking), 1)
+	if callee.method.Name is "Validated"
+		return true
 	for callee.method.instructions
 		if IsSafe(callee, index, depth) is false
 			return false

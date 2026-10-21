@@ -7034,6 +7034,72 @@
     %result = arith.select %isTagged, %number, %whole : f64
     return %result : f64
   }
+  // a member of a type made of Bytes (Color) in its lane of one whole number: its whole part clamped to 0..255, shifted
+  func.func private @strict_byte_lane(%number: f64, %shift: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+    %low = arith.constant 0.0 : f64
+    %high = arith.constant 255.0 : f64
+    %above = arith.maxnumf %number, %low : f64
+    %clamped = arith.minnumf %above, %high : f64
+    %whole = arith.fptosi %clamped : f64 to i64
+    %lane = arith.shli %whole, %shift : i64
+    return %lane : i64
+  }
+  // the member of a type made of Bytes at its lane (8 bits from shift)
+  func.func private @strict_byte_of(%packed: f64, %shift: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %bits = arith.fptosi %packed : f64 to i64
+    %moved = arith.shrui %bits, %shift : i64
+    %mask = arith.constant 255 : i64
+    %byte = arith.andi %moved, %mask : i64
+    %number = arith.sitofp %byte : i64 to f64
+    return %number : f64
+  }
+  // the members of a type made of Bytes (Color) as a list of numbers, shown like (1, 2, 3, 255)
+  func.func private @strict_lanes_text(%packed: f64, %count: i64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %countNumber = arith.sitofp %count : i64 to f64
+    %empty = func.call @strict_list_new(%countNumber, %zero) : (f64, f64) -> f64
+    cf.br ^next(%none, %empty : i64, f64)
+  ^next(%lane: i64, %list: f64):
+    %more = arith.cmpi slt, %lane, %count : i64
+    cf.cond_br %more, ^add, ^done
+  ^add:
+    %shift = arith.muli %lane, %eight : i64
+    %member = func.call @strict_byte_of(%packed, %shift) : (f64, i64) -> f64
+    %added = func.call @strict_list_add(%list, %member) : (f64, f64) -> f64
+    %following = arith.addi %lane, %one : i64
+    cf.br ^next(%following, %added : i64, f64)
+  ^done:
+    %text = func.call @strict_list_text_number(%list) : (f64) -> f64
+    return %text : f64
+  }
+  func.func private @strict_lanes2_text(%packed: f64) -> f64 {
+    %count = arith.constant 2 : i64
+    %text = func.call @strict_lanes_text(%packed, %count) : (f64, i64) -> f64
+    return %text : f64
+  }
+  func.func private @strict_lanes3_text(%packed: f64) -> f64 {
+    %count = arith.constant 3 : i64
+    %text = func.call @strict_lanes_text(%packed, %count) : (f64, i64) -> f64
+    return %text : f64
+  }
+  func.func private @strict_lanes4_text(%packed: f64) -> f64 {
+    %count = arith.constant 4 : i64
+    %text = func.call @strict_lanes_text(%packed, %count) : (f64, i64) -> f64
+    return %text : f64
+  }
+  func.func private @strict_lanes5_text(%packed: f64) -> f64 {
+    %count = arith.constant 5 : i64
+    %text = func.call @strict_lanes_text(%packed, %count) : (f64, i64) -> f64
+    return %text : f64
+  }
+  func.func private @strict_lanes6_text(%packed: f64) -> f64 {
+    %count = arith.constant 6 : i64
+    %text = func.call @strict_lanes_text(%packed, %count) : (f64, i64) -> f64
+    return %text : f64
+  }
   // a number stored into a Bytes list (format 9): its whole part like a C cast, below 0 is 0, above 255 is 255
   llvm.mlir.global internal constant @strict_threads_name("STRICT_THREADS\00") : !llvm.array<15 x i8>
   // the threads of the pool: STRICT_THREADS when it is a positive number (1 runs every loop on the calling thread), else the default

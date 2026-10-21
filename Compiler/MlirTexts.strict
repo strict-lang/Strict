@@ -89,7 +89,10 @@ TextBits(register Number, suffix Text) Texts
 	List(Text) + loaded + MlirMemory(function, position).Converting(Temp(suffix + "x"), helper, Temp(suffix))
 Printable(kind Text) Text
 	MlirTexts(Joined, 0).Printable("Number") is "Number"
+	MlirTexts(MlirLanes.Sample.function, 0).Printable("Rgb") is "Lanes3"
 	let own = function.TypeOf(kind).Callee("to", 0, "Text", List(Text))
+	if (own.instructions.Length is 0) and MlirLanes(function, 0).IsPacked(kind)
+		return "Lanes" + MlirLanes(function, 0).Members(kind).Length
 	own.instructions.Length > 0 then kind else MlirLayout(function).Represented(kind)
 Helper(kind Text) Text
 	MlirTexts(Joined, 0).Helper("Boolean") is "strict_boolean_text"
@@ -100,8 +103,8 @@ Helper(kind Text) Text
 		return "strict_" + kind.Lower + "_text"
 	if kind is "Error"
 		return "strict_error_report"
-	if kind is in ("Pair", "Flat")
-		return kind is "Pair" then "strict_two_text" else "strict_flat_text"
+	if (kind is in ("Pair", "Flat")) or kind.StartsWith("Lanes")
+		return kind is "Pair" then "strict_two_text" else "strict_" + kind.Lower + "_text"
 	let suffix = kind.StartsWith("List(") then MlirKinds(function).ElementSuffix(kind) else ""
 	suffix is "" then "" else "strict_list_text_" + suffix
 Described(loaded Text, suffix Text, kind Text) Texts
