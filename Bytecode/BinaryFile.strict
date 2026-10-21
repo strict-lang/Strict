@@ -5,6 +5,12 @@ constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.
 Path Text
 	Probe.Path is "./Bytecode/Probe.strictbinary"
 	source.Substring(0, source.Length - 7) + ".strictbinary"
+Saved(bytes Bytes) Boolean
+	Probe.Saved(Probe.Packed((1, 2), List(TypeEntry), List(TypeEntry)))
+	let temporary = Path + "." + 1000000000.Random.Floor + ".tmp"
+	File(temporary).Write(bytes)
+	File(temporary).Rename(Path)
+	File(Path).Exists
 Packed(header Numbers, types List(TypeEntry), owners List(TypeEntry)) Bytes
 	Probe.Packed((1, 2), List(TypeEntry), List(TypeEntry)).Length > 50
 	mutable entries = List(Mutable(ZipEntry)) + ZipEntry("sources", ByteEncoder.Empty.SevenBits(header).bytes)
