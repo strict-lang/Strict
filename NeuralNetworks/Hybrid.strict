@@ -1,0 +1,28 @@
+has layers List(DeltaBlock)
+has entered Numbers = List(Number)
+has gates Numbers = List(Number)
+constant None = Hybrid(List(DeltaBlock))
+Prepared(input Numbers) Hybrid
+	None.Prepared((1, 2)).entered is (1, 2)
+	Hybrid(List(DeltaBlock) + DeltaBlock.Tiny).Prepared(DeltaBlock.Rows(1)).entered(0).IsNearlyEqual(0.54408, 0.00001)
+	mutable hidden = input
+	mutable stepped = List(Mutable(DeltaBlock))
+	for layers
+		let cached = value.Cached(hidden)
+		hidden = cached.Output(hidden)
+		stepped.Add(DeltaBlock(cached, merged = List(Number)))
+	Hybrid(stepped, hidden)
+Opened(combined Numbers, tokens Number, start Number) Hybrid
+	None.Opened((1, 2, 3, 4), 2, 1).gates is (2, 4)
+	None.Opened((1, 2, 3, 4), 1, 4).gates.Length is 0
+	let width = combined.Length / tokens
+	if start is width
+		return value
+	Hybrid(value, gates = Batch.Columns(combined, width, start, width - start))
+Gated(merged Numbers) Numbers
+	None.Gated((1, 2)) is (1, 2)
+	Hybrid(List(DeltaBlock), gates = (0, 0)).Gated((1, 2)) is (0.5, 1)
+	if gates.Length is 0
+		return merged
+	for merged
+		value / (1 + (0 - gates(index)).Exponential)

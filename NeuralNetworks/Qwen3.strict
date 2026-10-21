@@ -5,47 +5,54 @@ has norm Numbers
 has theta Number
 has hidden Numbers = List(Number)
 has cacheBits Number = 32
+has rotary Number = 0
 constant Tiny = Qwen3.Loaded("NeuralNetworks/tinyqwen3.gguf", 32)
 constant TinyMixture = Qwen3.Loaded("NeuralNetworks/tinyqwen3moe.gguf", 32)
 constant Prompted = Tiny.Prefilled((1, 2), 0)
+constant TinyHybrid = Qwen3.Loaded("NeuralNetworks/tinyqwen35.gguf", 32)
 Loaded(path Text, bits = 8) Qwen3
 	Tiny.blocks.Length is 1
 	Tiny.theta is 1000000
 	TinyMixture.outputs is not TinyMixture.tokens
 	let model = Gguf(path, bits)
-	let base = model.Value(model.Value("general.architecture") + ".rope.freq_base") to Number
+	let architecture = model.Value("general.architecture")
+	let base = model.Value(architecture + ".rope.freq_base") to Number
+	let dimensions = model.Value(architecture + ".rope.dimension_count")
 	let embedding = model.Rows("token_embd.weight")
 	let output = model.Shape("output.weight").Length > 0 then model.Rows("output.weight") else embedding
-	Qwen3(Blocks(model), embedding, output, model.Values("output_norm.weight"), base)
+	let normed = model.Values("output_norm.weight")
+	Qwen3(Blocks(model), embedding, output, normed, base, rotary = (dimensions is "" then 0 else dimensions to Number))
 Blocks(model Gguf) List(Qwen3Block)
-	Tiny.Blocks(Qwen3Block.Weights).First.heads is 2
+	Tiny.Blocks(Gguf("NeuralNetworks/tinyqwen3.gguf")).First.heads is 2
+	TinyHybrid.blocks.First.hybrid.layers.Length is 3
 	let architecture = model.Value("general.architecture")
 	let heads = model.Value(architecture + ".attention.head_count") to Number
-	for model.Value(architecture + ".block_count") to Number
-		Qwen3Block.Loaded(model, "blk." + index + ".", heads)
-Angles(position Number) Numbers
-	Tiny.Angles(1) is (Radians(1) to Degrees, Radians(0.001) to Degrees)
+	let given = model.Value(architecture + ".full_attention_interval")
+	let interval = given is "" then 1 else given to Number
+	let extra = model.Value(architecture + ".nextn_predict_layers")
+	let layers = (model.Value(architecture + ".block_count") to Number) - (extra is "" then 0 else extra to Number)
+	for layers / interval
+		let attention = Qwen3Block.Loaded(model, "blk." + (index * interval + interval - 1) + ".", heads)
+		Qwen3Block(attention, hybrid = Hybrid(DeltaBlock.Layers(model, index * interval, interval - 1)))
+Rotations(positions Numbers) Numbers
+	Tiny.Rotations(List(Number) + 0) is (1, 1, 1, 1, 0, 0, 0, 0)
+	Tiny.Rotations(List(Number) + 1)(4).IsNearlyEqual(-0.8414709848078965)
+	Tiny.Rotations((0, 1))(13).IsNearlyEqual(-0.0009999998333333417)
+	Qwen3(Tiny, rotary = 2).Rotations(List(Number) + 1)(1) is 1
 	let half = blocks.First.queryNorm.Length / 2
-	for half
-		Radians(position * theta ^ (-index / half)) to Degrees
-Rotation(position Number) Numbers
-	Tiny.Rotation(0) is (1, 1, 1, 1, 0, 0, 0, 0)
-	let angles = Angles(position)
-	let cosines = Cosines(angles)
-	let sines = Sines(angles)
-	cosines + cosines + sines * -1 + sines
-Cosines(angles Numbers) Numbers
-	Tiny.Cosines((0, 180)) is (1, -1)
-	for angles
-		Degrees(value).Cos
-Sines(angles Numbers) Numbers
-	Tiny.Sines((0, 90)) is (0, 1)
-	for angles
-		Degrees(value).Sin
+	let pairs = rotary > 0 then rotary / 2 else half
+	for positions.Length * 4 * half
+		let at = index % (4 * half)
+		let pair = at % half
+		let radians = pair < pairs then positions((index / (4 * half)).Floor) * theta ^ (-pair / pairs) else 0
+		let angle = Degrees(Radians(radians) to Degrees)
+		at < 2 * half then angle.Cos else (at < 3 * half then 0 - angle.Sin else angle.Sin)
 Step(token Number, position Number) Qwen3
 	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475)
 	Tiny.Step(1, 0).Step(2, 1).Scored.Last.IsNearlyEqual(1.1076484232754447)
 	TinyMixture.Step(1, 0).Scored.First.IsNearlyEqual(0.9534001625146007, 0.000001)
+	TinyHybrid.Step(1, 0).Scored.First.IsNearlyEqual(0.307727, 0.000001)
+	TinyHybrid.Step(1, 0).Step(2, 1).Scored.First.IsNearlyEqual(2.182707, 0.000001)
 	Steps(List(Number) + token, List(Number) + position, 1)
 Positions(start Number, count Number) Numbers
 	Tiny.Positions(2, 3) is (2, 3, 4)
@@ -69,14 +76,13 @@ Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	Tiny.Steps(List(Number) + 1, List(Number) + 0, 1).hidden.Length is 8
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).hidden.Length is 16
 	mutable current = Embedded(chosen)
-	mutable rotation = List(Number)
-	for positions
-		rotation = rotation + Rotation(value)
+	let rotation = Rotations(positions)
 	mutable updated = List(Mutable(Qwen3Block))
 	for blocks
-		let cached = value.Cached(current, rotation, cacheBits)
-		current = cached.Output(current, sequences)
-		updated.Add(Qwen3Block(cached, queries = List(Number)))
+		let prepared = value.hybrid.Prepared(current)
+		let cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits)
+		current = cached.Output(prepared.entered, sequences)
+		updated.Add(Qwen3Block(cached, queries = List(Number), hybrid = Hybrid(prepared.layers)))
 	Qwen3(value, blocks = updated, hidden = current)
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 6
