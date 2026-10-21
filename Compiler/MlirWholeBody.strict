@@ -39,7 +39,7 @@ Allocated(registers Text, variables Text) Texts
 	mutable lines = ("    %one = arith.constant 1 : i64", Slot("%flag", "i1"))
 	for registers.Length
 		let typed = Slot("%r" + index, values.Typed(registers.Substring(index, 1)))
-		lines = lines + typed + Slot("%r" + index + "p", "!llvm.ptr")
+		lines = lines + typed + Slot("%r" + index + "p", "!llvm.ptr") + Slot("%r" + index + "i", "i64")
 	for function.VariableNames
 		lines = lines + Slot("%v_" + value, values.Typed(variables.Substring(index, 1)))
 	for function.method.instructions

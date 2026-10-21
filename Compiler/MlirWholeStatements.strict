@@ -5,6 +5,7 @@ has variables Text
 has naturals Text
 constant Row = MlirWholeStatements(MlirWhole.Row.function, 0, MlirWholeTypes.Row.Part(0), MlirWholeTypes.Row.Part(1), MlirWholeTypes.Row.Part(2))
 constant Halving = MlirWholeStatements(MlirWholeTypes.Halving.function, 0, MlirWholeTypes.Halving.Part(0), MlirWholeTypes.Halving.Part(1), MlirWholeTypes.Halving.Part(2))
+constant Mixed = MlirWholeStatements(MlirWholeTypes.Reused.function, 3, MlirWholeTypes.Reused.Part(0), MlirWholeTypes.Reused.Part(1), MlirWholeTypes.Reused.Part(2))
 constant Copies = (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2))
 constant Bytes = " : (!llvm.ptr, i64) -> !llvm.ptr, i8"
@@ -27,11 +28,11 @@ Moved(entry InstructionEntry) Texts
 	let values = MlirWholeValues(position)
 	let name = entry.texts.Length is 0 then "" else entry.texts.Last
 	if entry.kind is InstructionType.LoadConstantToRegister
-		return values.Constant(PayloadDecoder(entry).Value(1), "%r" + entry.payload(0), Register(entry.payload(0)))
+		return MlirWholeNative(At(position)).Constant(entry)
 	if entry.kind is InstructionType.StoreConstantToVariable
 		return values.Constant(PayloadDecoder(entry).Value(0), "%v_" + name, Variable(name))
 	if entry.kind is InstructionType.LoadVariableToRegister
-		let target = values.IsPointer(Variable(name)) then Variable(name) else Register(entry.payload(0))
+		let target = Variable(name) is "-" then "i" else Variable(name)
 		return values.Loaded(Temp(""), "%v_" + name, Variable(name), target) + Store("", target, entry.payload(0))
 	Load("", entry.payload(0), Variable(name)) + values.Stored(Temp(""), Variable(name), "%v_" + name, Variable(name))
 Calculated(entry InstructionEntry) Texts
@@ -94,15 +95,23 @@ Returned(entry InstructionEntry) Texts
 Load(suffix Text, register Number, wanted Text) Texts
 	Halving.At(2).Load("a", 2, "f").Last is "    %t2a = arith.sitofp %t2al : i64 to f64"
 	Halving.At(2).Load("a", 2, "o") is ("    %t2a = llvm.load %r2p : !llvm.ptr -> !llvm.ptr")
+	Mixed.Load("a", 2, "i") is ("    %t3a = llvm.load %r2i : !llvm.ptr -> i64")
 	if MlirWholeValues(position).IsPointer(wanted)
 		return MlirWholeValues(position).Loaded(Temp(suffix), "%r" + register + "p", wanted, wanted)
+	let reaching = MlirWholeTypes(function).Reaching(register, position, registers, naturals)
+	if (Register(register) is "f") and (reaching is "i")
+		return MlirWholeValues(position).Loaded(Temp(suffix), "%r" + register + "i", "i", wanted)
 	MlirWholeValues(position).Loaded(Temp(suffix), "%r" + register, Register(register), wanted)
 Store(suffix Text, given Text, register Number) Texts
 	Halving.At(2).Store("c", "f", 2).First is "    %t2cs = arith.fptosi %t2c : f64 to i64"
 	Halving.At(2).Store("c", "d", 2) is ("    llvm.store %t2c, %r2p : !llvm.ptr, !llvm.ptr")
+	Mixed.Store("c", "i", 2).First is "    llvm.store %t3c, %r2i : i64, !llvm.ptr"
 	if MlirWholeValues(position).IsPointer(given)
 		return MlirWholeValues(position).Stored(Temp(suffix), given, "%r" + register + "p", given)
-	MlirWholeValues(position).Stored(Temp(suffix), given, "%r" + register, Register(register))
+	let stored = MlirWholeValues(position).Stored(Temp(suffix), given, "%r" + register, Register(register))
+	if (Register(register) is "f") and (given is "i")
+		return MlirWholeValues(position).Stored(Temp(suffix), "i", "%r" + register + "i", "i") + stored
+	stored
 Register(register Number) Text
 	Halving.Register(2) is "i"
 	registers.Substring(register, 1)
