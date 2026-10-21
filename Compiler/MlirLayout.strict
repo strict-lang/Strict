@@ -46,7 +46,10 @@ Plural(kind Text) Text
 		return IsNumeric(kind.Substring(5, kind.Length - 6)) then "List(Number)" else kind
 	let type = function.TypeOf(kind)
 	let isUnknown = (type.members.Length is 0) and (type.methods.Length is 0) and kind.EndsWith("s")
-	isUnknown and IsNumeric(kind.Substring(0, kind.Length - 1)) then "List(Number)" else kind
+	let single = kind.Substring(0, kind.Length - 1)
+	if isUnknown and MlirLanes(function, 0).IsPacked(single)
+		return "List(" + single + ")"
+	isUnknown and IsNumeric(single) then "List(Number)" else kind
 IsNumeric(kind Text) Boolean
 	Wrapping.IsNumeric("Byte")
 	MlirLayout(MlirLanes.Sample.function).IsNumeric("Rgb") is false

@@ -36,18 +36,20 @@ Guarded Texts
 	mutable lines = guard.Started
 	for LoadReuse(function.method.instructions).InvokeReads(entry)
 		let loaded = Temp("wl" + index)
-		let checked = kinds(index) is "p" then Present(index) else guard.Checked(loaded, Temp("wh" + index), Temp("whlimit"))
+		let isList = kinds(index) is in ("p", "d")
+		let checked = isList then Present(index, kinds(index)) else guard.Checked(loaded, Temp("wh" + index), Temp("whlimit"))
 		lines = lines + function.Load(loaded, "%r" + entry.payload(value)) + checked
 	lines + guard.Joined(Conditions(kinds.Length))
 Conditions(count Number) Texts
 	Calling.Conditions(1) is ("%t1wh0o")
 	for count
 		Temp("wh" + index + "o")
-Present(number Number) Texts
-	Calling.Present(0).Last is "    %t1wh0o = arith.cmpi ne, %t1wh0i, %t1whz : i64"
+Present(number Number, kind Text) Texts
+	Calling.Present(0, "p").Last is "    %t1wh0o = arith.cmpi ne, %t1wh0i, %t1whz : i64"
 	Text.Combine(MlirCalls(Calling.function, 1).Emitted).IndexOf("^bb1wholecall") > 0
 	let pointer = Temp("wa" + number)
-	let bytes = "    " + pointer + " = func.call @strict_list_bytes(" + Temp("wl" + number) + ") : (f64) -> !llvm.ptr"
+	let listed = kind is "d" then "strict_list_hoisted" else "strict_list_bytes"
+	let bytes = "    " + pointer + " = func.call @" + listed + "(" + Temp("wl" + number) + ") : (f64) -> !llvm.ptr"
 	List(Text) + bytes + MlirWholeGuard(function, position).Present(pointer, number)
 Direct Texts
 	Text.Combine(Calling.Direct).IndexOf("func.call @Halves_Halved_1_whole(%t1wa0) : (i64) -> i64") > 0
@@ -57,7 +59,7 @@ Direct Texts
 	mutable lines = List(Mutable(Text))
 	for kinds
 		let converted = MlirWholeValues(position).Converted(Temp("wl" + index), "f", "i", Temp("wa" + index))
-		lines = value is "p" then lines else lines + converted
+		lines = value is in ("p", "d") then lines else lines + converted
 	let returned = MlirWholeTypes(callee).Returned
 	let result = Temp(returned is "f" then "wf" else "wr")
 	let call = MlirWholeValues(position).Called(result, MlirWholeFunction(callee).Symbol, Temp("wa"), kinds, returned)

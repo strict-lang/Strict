@@ -33,10 +33,12 @@ Initial Text
 	mutable registers = ""
 	for LoadReuse(function.method.instructions).RegisterCount
 		registers = registers + "-"
-	let parameters = MlirParameters(function)
+	let kinds = MlirWholeFunction(function).Kinds
 	mutable variables = ""
 	for function.VariableNames
-		variables = variables + (parameters.IsBytes(value) then "p" else (value is in function.Parameters then "i" else "-"))
+		let parameter = function.method.ParameterNames.Index(value)
+		let isNumber = value is in function.Parameters
+		variables = variables + (parameter >= 0 then kinds(parameter) else (isNumber then "i" else "-"))
 	registers + "|" + variables + "|"
 Step(combined Text) Text
 	Halving.Step(Halving.Initial).StartsWith("iiii|")
@@ -46,10 +48,10 @@ Step(combined Text) Text
 	for function.method.instructions
 		let natural = Natural(index, registers, variables, naturals)
 		naturals = naturals + natural
-		let written = LoadReuse(function.method.instructions).Written(value)
-		registers = written < 0 then registers else Marked(registers, written, natural)
+		registers = MlirWholeValues(index).Marked(registers, LoadReuse(function.method.instructions).Written(value), natural)
 		let stored = Stored(index, registers, naturals)
-		variables = stored is "" then variables else Marked(variables, function.VariableNames.Index(value.texts.Last), stored)
+		let named = stored is "" then -1 else function.VariableNames.Index(value.texts.Last)
+		variables = MlirWholeValues(index).Marked(variables, named, stored)
 	registers + "|" + variables + "|" + naturals
 Stored(at Number, registers Text, naturals Text) Text
 	Row.Stored(18, Row.Part(0), Row.Part(2)) is "i"
@@ -76,14 +78,21 @@ IsFractional(at Number, settled Text) Boolean
 	Reused.IsFractional(3, Reused.Settled) is false
 	let parts = settled.Split("|")
 	let entry = function.method.instructions(at)
-	if entry.kind is InstructionType.IndexCall
-		return Reaching(entry.payload(1), at, parts(0), parts(2)) is "f"
-	if (entry.kind is not InstructionType.Invoke) or (PayloadDecoder(entry).Text(2) is "Floor")
-		return false
-	for LoadReuse(function.method.instructions).InvokeReads(entry)
-		if Reaching(entry.payload(value), at, parts(0), parts(2)) is "f"
+	for Checked(entry)
+		if Reaching(value, at, parts(0), parts(2)) is "f"
 			return true
 	false
+Checked(entry InstructionEntry) Numbers
+	Halving.Checked(Halves(3)).Length is 0
+	MlirWholeTypes(MlirWholeFunction.Nesting).Checked(MlirWholeFunction.Pairing(3)) is (0, 1)
+	if entry.kind is InstructionType.IndexCall
+		return List(Number) + entry.payload(1)
+	if entry.kind is InstructionType.LoopBegin
+		return entry.payload(1) is 1 then (entry.payload(0), entry.payload(2)) else List(Number)
+	if (entry.kind is not InstructionType.Invoke) or (PayloadDecoder(entry).Text(2) is in ("Floor", "from", "Validated"))
+		return List(Number)
+	for LoadReuse(function.method.instructions).InvokeReads(entry)
+		entry.payload(value)
 Reaching(register Number, at Number, registers Text, naturals Text) Text
 	Reused.Reaching(2, 3, Reused.Part(0), Reused.Part(2)) is "i"
 	Reused.Reaching(2, 5, Reused.Part(0), Reused.Part(2)) is "f"
@@ -124,7 +133,8 @@ Operands(entry InstructionEntry, at Number, registers Text, naturals Text) Text
 Called(entry InstructionEntry) Text
 	Halving.Called(Halves(3)) is "i"
 	let decoder = PayloadDecoder(entry)
-	if ((decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")) or (decoder.Text(2) is "Length")
+	let isFloor = (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
+	if isFloor or (decoder.Text(2) is in ("Length", "Validated", "from"))
 		return "i"
 	let type = function.TypeOf(decoder.Text(1))
 	MlirWholeTypes(MlirFunction(function.types, type, decoder.Callee(type))).Returned
@@ -138,13 +148,3 @@ Length(at Number) Text
 	let writer = MlirArguments(List(MlirFunction)).Writer(function, instance, at)
 	let loaded = writer < 0 then "" else function.method.instructions(writer).texts.Last
 	MlirParameters(function).IsBytes(loaded) then loaded else ""
-Marked(types Text, at Number, type Text) Text
-	Halving.Marked("iii", 1, "f") is "ifi"
-	Halving.Marked("-p-", 1, "i") is "-x-"
-	Halving.Marked("-f-", 1, "i") is "-f-"
-	if at < 0
-		return types
-	let old = types.Substring(at, 1)
-	let isConflict = (old is "x") or (((old is "p") is not (type is "p")) and (old is not "-"))
-	let combined = isConflict then "x" else (((old is "f") or (type is "f")) then "f" else type)
-	types.Substring(0, at) + combined + types.Substring(at + 1, types.Length - at - 1)

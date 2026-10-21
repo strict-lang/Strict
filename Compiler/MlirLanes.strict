@@ -42,14 +42,20 @@ Lane(entry InstructionEntry, name Text, lane Number) Texts
 	Sample.Lane(Tinted, "alpha", 3)(0) is "    %t3a3 = arith.constant 0x406FE00000000000 : f64"
 	Sample.Lane(Painted, "alpha", 3)(0).EndsWith("0x406FE00000000000 : f64")
 	let temp = "%t" + position
-	let named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
 	let shift = "    " + temp + "s" + lane + " = arith.constant " + (lane * 8) + " : i64"
 	let operands = "(" + temp + "a" + lane + ", " + temp + "s" + lane + ") : (f64, i64) -> i64"
 	let call = "    " + temp + "b" + lane + " = func.call @strict_byte_lane" + operands
-	let argument = "%r" + entry.payload(5 + entry.payload(3) + 1 + named)
-	let isPassed = (named >= 0) and (named < entry.payload(5 + entry.payload(3)))
-	let loaded = isPassed then function.Load(temp + "a" + lane, argument) else Default(entry, name, temp + "a" + lane)
+	let passed = Passed(entry, name)
+	let target = temp + "a" + lane
+	let loaded = passed >= 0 then function.Load(target, "%r" + passed) else Default(entry, name, target)
 	(loaded, shift, call)
+Passed(entry InstructionEntry, name Text) Number
+	Sample.Passed(Made, "green") is 1
+	Sample.Passed(Tinted, "alpha") is -1
+	Sample.Passed(Painted, "alpha") is -1
+	let named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
+	let isPassed = (named >= 0) and (named < entry.payload(5 + entry.payload(3)))
+	isPassed then entry.payload(5 + entry.payload(3) + 1 + named) else -1
 Read(entry InstructionEntry, kind Text) Texts
 	MlirLanes(Sample.function, 4).Read(Greens, "Rgb")(2).EndsWith("@strict_byte_of(%t4p, %t4s) : (f64, i64) -> f64")
 	let temp = "%t" + position
@@ -77,8 +83,12 @@ Aliased(entry InstructionEntry, kind Text) Texts
 Default(entry InstructionEntry, name Text, target Text) Text
 	Sample.Default(Tinted, "alpha", "%a") is "    %a = arith.constant 0x406FE00000000000 : f64"
 	Sample.Default(Made, "alpha", "%a") is "    %a = arith.constant 0x0000000000000000 : f64"
+	"    " + target + " = arith.constant " + MlirStatements.Copy.Hex(Initial(entry, name)) + " : f64"
+Initial(entry InstructionEntry, name Text) Number
+	Sample.Initial(Tinted, "alpha") is 255
+	Sample.Initial(Made, "alpha") is 0
 	mutable number = 0
 	for MlirCouples(function, 0).Halves(function.TypeOf(TypeEntry.ShortName(entry.texts(0))))
 		if (value.Name is name) and (value.initial.Length > 0)
 			number = PayloadDecoder(value.initial.First).Value(0).number
-	"    " + target + " = arith.constant " + MlirStatements.Copy.Hex(number) + " : f64"
+	number

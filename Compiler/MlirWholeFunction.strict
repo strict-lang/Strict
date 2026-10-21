@@ -2,7 +2,10 @@ has function MlirFunction
 constant Row = MlirWholeFunction(MlirWhole.Row.function)
 constant Halving = MlirWholeFunction(MlirWholeTypes.Halving.function)
 constant Empty = MlirWholeFunction(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Empty", List(MemberEntry), "Strict/Number", List(InstructionEntry))))
-constant Allowed = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo, InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Invoke, InstructionType.Return, InstructionType.LoopBegin, InstructionType.LoopEnd, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.CheckError)
+constant Pairing = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.LoadNumber(0, 0), InstructionEntry.LoadNumber(1, 3), InstructionEntry.LoopBegin(0, 1), InstructionEntry.LoadNumber(2, 0), InstructionEntry.LoadNumber(3, 3), InstructionEntry.LoopBegin(2, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "value"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "outer"), InstructionEntry.Binary(InstructionType.Multiply, (5, 6, 7)), InstructionEntry.Binary(InstructionType.Add, (4, 7, 8)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 8, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 7), InstructionEntry.Jump(InstructionType.LoopEnd, 11), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 9, "sum"), InstructionEntry.Return(9))
+constant Nesting = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Pairs", List(MemberEntry), "Strict/Number", Pairing))
+constant Painted = MlirFunction(MlirLanes.Sample.function.types, MlirLanes.Rgb, MethodEntry("Painted", List(MemberEntry) + MemberEntry("colors", "Strict/List(Rgb)", List(InstructionEntry), false), "Strict/Rgb", List(InstructionEntry)))
+constant Allowed = (InstructionType.FieldLoad, InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo, InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Invoke, InstructionType.Return, InstructionType.LoopBegin, InstructionType.LoopEnd, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.CheckError)
 Symbol Text
 	Row.Symbol.EndsWith("_whole")
 	function.Symbol + "_whole"
@@ -12,11 +15,13 @@ IsWhole Boolean
 	MlirWholeFunction(MlirLoops.Counting.function).IsWhole is false
 	Empty.IsWhole is false
 	MlirWholeFunction(MlirArguments.Halfway.functions.First).IsWhole is false
+	MlirWholeFunction(Nesting).IsWhole
 	IsCallable(0) and MlirWholeTypes(function).IsExact
 IsCallable(depth Number) Boolean
 	Row.IsCallable(0)
 	Row.IsCallable(4) is false
-	let isReturned = function.method.returnType is in ("Strict/Number", "Strict/Boolean")
+	let returned = function.method.returnType
+	let isReturned = (returned is in ("Strict/Number", "Strict/Boolean")) or MlirLanes(function, 0).IsPacked(returned)
 	let instructions = function.method.instructions
 	let isEnded = (instructions.Length > 0) and (instructions.Last.kind is InstructionType.Return)
 	if (depth > 3) or (isReturned is false) or (isEnded is false) or (HasWholeParameters is false)
@@ -28,13 +33,23 @@ IsCallable(depth Number) Boolean
 HasWholeParameters Boolean
 	Row.HasWholeParameters
 	for function.method.parameters
-		if (value.typeName is not "Strict/Number") and (IsByteList(value.Name) is false)
+		if (value.typeName is not "Strict/Number") and (IsListed(value.Name) is false)
 			return false
 	true
 IsByteList(name Text) Boolean
 	Row.IsByteList("pixels")
 	Row.IsByteList("middle") is false
 	MlirParameters(function).IsBytes(name) and (name is in MlirParameters(function).FixedLists)
+IsListed(name Text) Boolean
+	Row.IsListed("pixels")
+	Row.IsListed("middle") is false
+	MlirWholeFunction(Painted).IsListed("colors")
+	let parameters = MlirParameters(function)
+	mutable isLanes = false
+	for function.method.parameters
+		if value.Name is name
+			isLanes = MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(TypeEntry.ShortName(value.typeName)))
+	(parameters.IsBytes(name) or isLanes) and (name is in parameters.FixedLists)
 IsAllowed(at Number, depth Number) Boolean
 	Row.IsAllowed(15, 0)
 	Row.IsAllowed(7, 0)
@@ -44,8 +59,8 @@ IsAllowed(at Number, depth Number) Boolean
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return IsLocal(entry.texts(0), at)
 	if entry.kind is InstructionType.IndexCall
-		return IsByteList(entry.texts(0))
-	if entry.kind is InstructionType.Invoke
+		return IsListed(entry.texts(0))
+	if entry.kind is in (InstructionType.Invoke, InstructionType.FieldLoad)
 		return IsCalled(at, depth)
 	entry.kind is InstructionType.LoopBegin then IsCounted(at) else IsPlain(entry)
 IsPlain(entry InstructionEntry) Boolean
@@ -58,13 +73,12 @@ IsPlain(entry InstructionEntry) Boolean
 	isPlain and (literal.kind is in ("Number", "Boolean"))
 IsCounted(at Number) Boolean
 	Row.IsCounted(6)
-	let entry = function.method.instructions(at)
-	(entry.payload(1) is not 1) and (MlirLoops(function, at).Collection is "") and (IsInsideLoop(at) is false)
+	MlirLoops(function, at).Collection is ""
 IsLocal(name Text, at Number) Boolean
 	Row.IsLocal("sum", 7)
 	Row.IsLocal("value", 9)
 	Row.IsLocal("value", 1) is false
-	let isCounter = (name is in ("value", "index")) and IsInsideLoop(at)
+	let isCounter = (name is in ("value", "index", "outer")) and IsInsideLoop(at)
 	if (name is in function.method.ParameterNames) or isCounter
 		return true
 	for function.method.instructions
@@ -83,14 +97,27 @@ IsInsideLoop(at Number) Boolean
 IsCalled(at Number, depth Number) Boolean
 	Halving.IsCalled(3, 0)
 	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.FieldLoad
+		return IsBuilt(entry, at)
 	let decoder = PayloadDecoder(entry)
-	if (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
+	if ((decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")) or IsBuilt(entry, at)
 		return true
 	if MlirCalls(function, at).NativeHelper(entry, decoder) is not ""
 		return false
 	let callee = Callee(entry)
 	let isMatched = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.method.parameters.Length
 	isMatched and (callee.method.instructions.Length > 0) and MlirWholeFunction(callee).IsCallable(depth + 1)
+IsBuilt(entry InstructionEntry, at Number) Boolean
+	MlirWholeFunction(MlirLanes.Sample.function).IsBuilt(MlirLanes.Made, 3)
+	MlirWholeFunction(MlirLanes.Sample.function).IsBuilt(MlirLanes.Greens, 4)
+	Halving.IsBuilt(MlirWholeTypes.Halves(3), 3) is false
+	let lanes = MlirLanes(function, at)
+	if entry.kind is InstructionType.FieldLoad
+		return lanes.IsPacked(MlirKinds(function).KindOf(at, entry.payload(1)))
+	let decoder = PayloadDecoder(entry)
+	let isByte = MlirLayout(function).IsByte(decoder.Text(1))
+	let isBuilt = (decoder.Text(2) is "from") and (isByte or lanes.IsPacked(decoder.Text(1)))
+	isBuilt or ((decoder.Text(2) is "Validated") and isByte)
 Callee(entry InstructionEntry) MlirFunction
 	Halving.Callee(MlirWholeTypes.Halves(3)).method.Name is "Floor"
 	let decoder = PayloadDecoder(entry)
@@ -100,4 +127,4 @@ Kinds Texts
 	Halving.Kinds is ("i")
 	Row.Kinds is ("p", "i", "i")
 	for function.method.parameters
-		MlirParameters(function).IsBytes(value.Name) then "p" else "i"
+		MlirParameters(function).IsBytes(value.Name) then "p" else (IsListed(value.Name) then "d" else "i")

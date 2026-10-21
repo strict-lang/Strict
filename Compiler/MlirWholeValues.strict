@@ -3,8 +3,9 @@ constant Sample = MlirWholeValues(3)
 Typed(type Text) Text
 	Sample.Typed("f") is "f64"
 	Sample.Typed("p") is "!llvm.ptr"
+	Sample.Typed("d") is "!llvm.ptr"
 	Sample.Typed("-") is "i64"
-	type is "f" then "f64" else (type is "p" then "!llvm.ptr" else "i64")
+	type is "f" then "f64" else (type is in ("p", "d") then "!llvm.ptr" else "i64")
 Converted(source Text, given Text, wanted Text, result Text) Text
 	Sample.Converted("%a", "i", "f", "%b") is "    %b = arith.sitofp %a : i64 to f64"
 	Sample.Converted("%a", "f", "i", "%b") is "    %b = arith.fptosi %a : f64 to i64"
@@ -49,3 +50,14 @@ IsWhole(literal Runtime/VmValue) Boolean
 	Sample.IsWhole(VmValue.OfNumber(0.5)) is false
 	let number = literal.number
 	(literal.kind is "Boolean") or ((number.Floor is number) and (number.Absolute < MlirWhole.Limit))
+Marked(types Text, at Number, type Text) Text
+	Sample.Marked("iii", 1, "f") is "ifi"
+	Sample.Marked("-p-", 1, "i") is "-x-"
+	Sample.Marked("-f-", 1, "i") is "-f-"
+	if at < 0
+		return types
+	let old = types.Substring(at, 1)
+	let isPointer = (old is in ("p", "d")) or (type is in ("p", "d"))
+	let isConflict = (old is "x") or (isPointer and (old is not type) and (old is not "-"))
+	let combined = isConflict then "x" else (((old is "f") or (type is "f")) then "f" else type)
+	types.Substring(0, at) + combined + types.Substring(at + 1, types.Length - at - 1)

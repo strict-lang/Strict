@@ -1,8 +1,11 @@
 has statements MlirWholeStatements
 constant Begin = MlirWholeCounted(MlirWholeStatements.Row.At(6))
 constant End = MlirWholeCounted(MlirWholeStatements.Row.At(19))
+constant Types = MlirWholeTypes(MlirWholeFunction.Nesting)
+constant Inner = MlirWholeCounted(MlirWholeStatements(MlirWholeFunction.Nesting, 6, Types.Part(0), Types.Part(1), Types.Part(2)))
+constant Closing = MlirWholeCounted(Inner.statements.At(13))
 Emitted(entry InstructionEntry) Texts
-	Begin.Emitted(MlirWhole.Rows(6)).Length is 11
+	Begin.Emitted(MlirWhole.Rows(6)).Length is 17
 	MlirWholeCounted(MlirWholeStatements.Row.At(16)).Emitted(MlirWhole.Rows(16)) is ("    cf.br ^bb17")
 	if entry.kind is InstructionType.LoopBegin
 		return Begun(entry)
@@ -12,30 +15,67 @@ Emitted(entry InstructionEntry) Texts
 		return List(Text) + ("    cf.br ^bb" + (statements.position + 1))
 	MlirStatements(statements.function, statements.position).Jumped(entry)
 Begun(entry InstructionEntry) Texts
-	Begin.Begun(MlirWhole.Rows(6))(4) is "  ^loop6:"
-	let values = MlirWholeValues(statements.position)
+	Begin.Begun(MlirWhole.Rows(6))(8) is "  ^loop6:"
+	Text.Combine(Inner.Begun(MlirWholeFunction.Pairing(6))).IndexOf("llvm.store %t6y, %v_outer : i64, !llvm.ptr") > 0
 	let label = "^loop" + statements.position
-	let zero = values.Line("z", "arith.constant 0 : i64")
-	let stored = "    llvm.store " + statements.Temp("z") + ", %loop" + statements.position + " : i64, !llvm.ptr"
-	statements.Load("n", entry.payload(0), "i") + zero + stored + ("    cf.br " + label, "  " + label + ":") + Checked
+	let zero = MlirWholeValues(statements.position).Line("a", "arith.constant 0 : i64")
+	let stored = "    llvm.store " + statements.Temp("a") + ", %loop" + statements.position + " : i64, !llvm.ptr"
+	Bounds(entry) + Saved + zero + stored + ("    cf.br " + label, "  " + label + ":") + Checked
+Bounds(entry InstructionEntry) Texts
+	Begin.Bounds(MlirWhole.Rows(6)).Last is "    %t6s = arith.constant 1 : i64"
+	Inner.Bounds(MlirWholeFunction.Pairing(6)).Last is "    %t6s = arith.select %t6d, %t6q, %t6p : i64"
+	let values = MlirWholeValues(statements.position)
+	if entry.payload(1) is not 1
+		let first = values.Line("b", "arith.constant 0 : i64")
+		return statements.Load("n", entry.payload(0), "i") + first + values.Line("s", "arith.constant 1 : i64")
+	let start = statements.Load("b", entry.payload(0), "i") + statements.Load("e", entry.payload(2), "i")
+	let counts = (statements.Operation("u", "arith.subi", "e", "b"), statements.Operation("w", "arith.subi", "b", "e"))
+	let select = "arith.select " + statements.Temp("d") + ","
+	let signs = (values.Line("p", "arith.constant 1 : i64"), values.Line("q", "arith.constant -1 : i64"))
+	let chosen = (statements.Operation("n", select, "w", "u"), statements.Operation("s", select, "q", "p"))
+	start + counts + statements.Operation("d", "arith.cmpi slt,", "e", "b") + signs + chosen
+Saved Texts
+	Inner.Saved.Last is "    llvm.store %t6y, %v_outer : i64, !llvm.ptr"
+	Begin.Saved.Length is 2
+	let names = statements.function.VariableNames
+	let values = MlirWholeValues(statements.position)
+	mutable lines = List(Mutable(Text))
+	for ("index", "value", "outer")
+		if value is in names
+			lines = lines + values.Loaded(statements.Temp(Kept(value)), "%v_" + value, statements.Variable(value), "i")
+	let isOuter = ("outer" is in names) and ("value" is in names)
+	isOuter then lines + values.Stored(statements.Temp("y"), "i", "%v_outer", statements.Variable("outer")) else lines
+Kept(name Text) Text
+	Begin.Kept("outer") is "z"
+	name is "index" then "x" else (name is "value" then "y" else "z")
 Checked Texts
-	Begin.Checked.Last is "    llvm.store %t6k, %v_index : i64, !llvm.ptr"
+	Begin.Checked.Last is "    llvm.store %t6c, %v_index : i64, !llvm.ptr"
 	let values = MlirWholeValues(statements.position)
 	let label = "^loop" + statements.position
-	let counted = statements.Temp("k")
 	let loaded = values.Line("k", "llvm.load %loop" + statements.position + " : !llvm.ptr -> i64")
-	let compared = values.Line("m", "arith.cmpi slt, " + counted + ", " + statements.Temp("n") + " : i64")
+	let compared = statements.Operation("m", "arith.cmpi slt,", "k", "n")
 	let branch = "    cf.cond_br " + statements.Temp("m") + ", " + label + "body, " + label + "exit"
-	let current = values.Stored(counted, "i", "%v_value", statements.Variable("value"))
-	let indexed = current + values.Stored(counted, "i", "%v_index", statements.Variable("index"))
-	(loaded, compared, branch, "  " + label + "body:") + indexed
+	let current = (statements.Operation("o", "arith.muli", "k", "s"), statements.Operation("c", "arith.addi", "b", "o"))
+	let valued = values.Stored(statements.Temp("c"), "i", "%v_value", statements.Variable("value"))
+	let indexed = values.Stored(statements.Temp("c"), "i", "%v_index", statements.Variable("index"))
+	(loaded, compared, branch, "  " + label + "body:") + current + valued + indexed
 Ended Texts
-	End.Ended.Last is "  ^loop6exit:"
+	"  ^loop6exit:" is in End.Ended
+	Closing.Ended.Last is "    llvm.store %t6z, %v_outer : i64, !llvm.ptr"
 	let values = MlirWholeValues(statements.position)
 	let begin = statements.function.method.LoopBeginOf(statements.position)
 	let counter = "%loop" + begin
 	let loaded = values.Line("k", "llvm.load " + counter + " : !llvm.ptr -> i64")
-	let added = values.Line("w", "arith.addi " + statements.Temp("k") + ", " + statements.Temp("o") + " : i64")
+	let added = statements.Operation("w", "arith.addi", "k", "o")
 	let stored = "    llvm.store " + statements.Temp("w") + ", " + counter + " : i64, !llvm.ptr"
 	let jumped = ("    cf.br ^loop" + begin, "  ^loop" + begin + "exit:")
-	(loaded, values.Line("o", "arith.constant 1 : i64"), added, stored) + jumped
+	(loaded, values.Line("o", "arith.constant 1 : i64"), added, stored) + jumped + Restored(begin)
+Restored(begin Number) Texts
+	End.Restored(6).Length is 2
+	let names = statements.function.VariableNames
+	let values = MlirWholeValues(statements.position)
+	mutable lines = List(Mutable(Text))
+	for ("index", "value", "outer")
+		if value is in names
+			lines = lines + values.Stored("%t" + begin + Kept(value), "i", "%v_" + value, statements.Variable(value))
+	lines

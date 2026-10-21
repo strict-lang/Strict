@@ -1,21 +1,73 @@
 has statements MlirWholeStatements
 constant Floor = MlirWholeNative(MlirWholeStatements.Halving.At(3))
+constant Painting = MlirWholeStatements(MlirLanes.Sample.function, 3, "iiiii", "--", "iiiii")
 Emitted(entry InstructionEntry) Texts
 	Floor.Emitted(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
 	MlirWholeNative(MlirWholeStatements.Halving.At(1)).Emitted(MlirWholeCall.Twice.instructions(1)).Length is 0
+	let decoder = PayloadDecoder(entry)
+	if decoder.Text(2) is "Length"
+		return Lengthed(entry)
+	if decoder.Text(2) is "Validated"
+		return Copied(entry)
+	if decoder.Text(2) is "from"
+		return Built(entry)
+	(decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor") then Floored(entry) else List(Text)
+Lengthed(entry InstructionEntry) Texts
+	Floor.Lengthed(MlirWholeTypes.Halves(3)).Length is 0
 	let listed = MlirWholeTypes(statements.function).Length(statements.position)
-	if listed is not ""
-		let length = MlirWholeValues(statements.position).Loaded(statements.Temp("c"), "%v_" + listed + "_length", "i", "i")
-		return length + statements.Store("c", "i", entry.payload(0))
-	if (PayloadDecoder(entry).Text(1) is not "Strict/Number") or (PayloadDecoder(entry).Text(2) is not "Floor")
+	if listed is ""
 		return List(Text)
-	Floored(entry)
+	let length = MlirWholeValues(statements.position).Loaded(statements.Temp("c"), "%v_" + listed + "_length", "i", "i")
+	length + statements.Store("c", "i", entry.payload(0))
+Copied(entry InstructionEntry) Texts
+	Floor.Copied(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
+	let source = entry.payload(LoadReuse(statements.function.method.instructions).InvokeReads(entry).Last)
+	statements.Load("a", source, "i") + statements.Store("a", "i", entry.payload(0))
 Floored(entry InstructionEntry) Texts
 	Floor.Floored(MlirWholeTypes.Halves(3)).First is "    %t3a = llvm.load %r2 : !llvm.ptr -> i64"
 	let source = entry.payload(LoadReuse(statements.function.method.instructions).InvokeReads(entry).Last)
 	let types = MlirWholeTypes(statements.function)
 	if types.Reaching(source, statements.position, statements.registers, statements.naturals) is "i"
-		return statements.Load("a", source, "i") + statements.Store("a", "i", entry.payload(0))
+		return Copied(entry)
 	let floored = "    " + statements.Temp("f") + " = llvm.intr.floor(" + statements.Temp("a") + ") : (f64) -> f64"
 	let converted = MlirWholeValues(statements.position).Converted(statements.Temp("f"), "f", "i", statements.Temp("c"))
 	statements.Load("a", source, "f") + floored + converted + statements.Store("c", "i", entry.payload(0))
+Built(entry InstructionEntry) Texts
+	MlirWholeNative(Painting).Built(MlirLanes.Made).Last is "    llvm.store %t3o2, %r3 : i64, !llvm.ptr"
+	let typeName = PayloadDecoder(entry).Text(1)
+	if MlirLayout(statements.function).IsByte(typeName)
+		return Copied(entry)
+	MlirLanes(statements.function, statements.position).IsPacked(typeName) then Packed(entry, typeName) else List(Text)
+Packed(entry InstructionEntry, typeName Text) Texts
+	MlirWholeNative(Painting).Packed(MlirLanes.Made, "Rgb")(1) is "    %t3z0 = arith.constant 0 : i64"
+	let members = MlirLanes(statements.function, statements.position).Members(typeName)
+	let values = MlirWholeValues(statements.position)
+	mutable lines = List(Text)
+	for members
+		lines = lines + Lane(entry, value, index)
+	for Range(1, members.Length)
+		let previous = value is 1 then statements.Temp("b0") else statements.Temp("o" + (value - 1))
+		lines = lines + values.Line("o" + value, "arith.ori " + previous + ", " + statements.Temp("b" + value) + " : i64")
+	lines + statements.Store("o" + (members.Length - 1), "i", entry.payload(0))
+Lane(entry InstructionEntry, name Text, lane Number) Texts
+	MlirWholeNative(Painting).Lane(MlirLanes.Made, "green", 1).Last is "    %t3b1 = arith.shli %t3h1, %t3s1 : i64"
+	let values = MlirWholeValues(statements.position)
+	let lanes = MlirLanes(statements.function, statements.position)
+	let passed = lanes.Passed(entry, name)
+	let initial = List(Text) + values.Line("a" + lane, "arith.constant " + lanes.Initial(entry, name) + " : i64")
+	let loaded = passed >= 0 then statements.Load("a" + lane, passed, "i") else initial
+	let shift = values.Line("s" + lane, "arith.constant " + (lane * 8) + " : i64")
+	let zero = values.Line("z" + lane, "arith.constant 0 : i64")
+	let bounds = (zero, values.Line("y" + lane, "arith.constant 255 : i64"), shift)
+	let low = statements.Operation("l" + lane, "arith.maxsi", "a" + lane, "z" + lane)
+	let high = statements.Operation("h" + lane, "arith.minsi", "l" + lane, "y" + lane)
+	loaded + bounds + low + high + statements.Operation("b" + lane, "arith.shli", "h" + lane, "s" + lane)
+Read(entry InstructionEntry) Texts
+	MlirWholeNative(Painting.At(4)).Read(MlirLanes.Greens).Last is "    llvm.store %t4m, %r4 : i64, !llvm.ptr"
+	let kind = MlirKinds(statements.function).KindOf(statements.position, entry.payload(1))
+	let shift = MlirLanes(statements.function, statements.position).Members(kind).Index(entry.texts(0)) * 8
+	let values = MlirWholeValues(statements.position)
+	let constants = (values.Line("s", "arith.constant " + shift + " : i64"), values.Line("y", "arith.constant 255 : i64"))
+	let moved = statements.Operation("v", "arith.shrui", "a", "s")
+	let masked = statements.Operation("m", "arith.andi", "v", "y")
+	statements.Load("a", entry.payload(1), "i") + constants + moved + masked + statements.Store("m", "i", entry.payload(0))
