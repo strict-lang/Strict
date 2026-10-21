@@ -118,7 +118,7 @@ FieldKind(writer Number, entry InstructionEntry) Text
 	if (entry.texts(0) is "value") or (wrapped is not "")
 		return entry.texts(0) is "value" then kind else wrapped
 	let member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
-	let isStruct = MlirLayout(function).IsStruct(kind)
+	let isStruct = MlirLayout(function).IsStruct(kind) or MlirLanes(function, 0).IsPacked(kind)
 	isStruct then (member is "" then "Number" else member) else (member is "Number" then member else kind)
 MembersKind(members List(MemberEntry), name Text) Text
 	Graded.MembersKind(MlirFunction.Shape.members, "width") is "Number"
