@@ -41,12 +41,21 @@ Issue(call SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ""
 	Sizing.Issue(Created, Counted, Counted).EndsWith("Count got a Count for a Size")
 	Sizing.Issue(Created, Counted, Scope(List(Text) + "Count", List(Text) + "Count")) is ""
+	Sizing.Issue(SyntaxParser(Tokenizer("Area(area)").Tokens).Parse, Counted, Counted).StartsWith("CopyWithoutChanges")
 	let isConstructor = (call.Kind is "Call") and inference.types.IsKnown(call.text) and (current.TypeOf(call.text) is "")
 	let isCall = (call.Kind is "MethodCall") and (call.children.Length > 1)
 	if (isCall or isConstructor) is false
 		return ""
 	let instance = isCall then inference.TypeOf(call.children(0), scope, current) else call.text
-	Compared(call, instance, isCall then call.text else "from", scope, current)
+	let compared = Compared(call, instance, isCall then call.text else "from", scope, current)
+	(compared is "") and isConstructor then Copied(call, scope, current) else compared
+Copied(call SyntaxNode, scope Scope, current Scope) Text
+	Sizing.Copied(SyntaxParser(Tokenizer("Area(area)").Tokens).Parse, Counted, Counted).EndsWith("use area itself")
+	Sizing.Copied(SyntaxParser(Tokenizer("Area(size)").Tokens).Parse, Counted, Counted) is ""
+	let argument = call.children.Length is 1 then call.children(0) else call
+	if (argument is call) or (inference.TypeOf(argument, scope, current) is not call.text)
+		return ""
+	"CopyWithoutChanges: " + call + " copies " + argument + " without naming a changed member, use " + argument + " itself"
 Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope) Text
 	Sizing.Compared(Grown, "Count", "Grow", Counted, Counted).StartsWith("ArgumentTypeMismatch: Count.Grow")
 	Sizing.Compared(Spread, "Count", "Spread", Counted, Counted) is "TooManyArguments: Count.Spread got 3 of 2"
