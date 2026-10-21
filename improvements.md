@@ -18,7 +18,7 @@ In priority order, short and actionable. Remove what is done (results go into th
 - A `Generic` parameter of a non-generic type is not specialized (`Scored(model Generic)` calling `model.Area`: `Unsupported native call Strict/Generic.Area`). Rejecting such calls when the types load also rejects `HashCode.from`, which narrows its parameter with `if generic is` / `Character then generic.number`: needs narrowing in the type inference or dispatch on the runtime type of a Generic value.
 - Unpacked rows of a matrix stay pinned while the model lives.
 - `strict test NeuralNetworks lines` crashes natively on macOS (`strict_list_restoring` reaches a null link).
-- `strict test` sometimes crashes at start (segfault, no output) right after `strict.exe` was rebuilt, the same run passes again (3 times on 2026-10-21/22).
+- `strict test` sometimes crashes at start (segfault, no output) or hangs, and `strict check Bytecode` / `strict check Runtime` hung for 2 hours 3 times on 2026-10-21 (the same command takes 1 s on a rerun). Not reproduced with 40 concurrent runs of one file or with `CUDA_CACHE_DISABLE=1`; suspects: dozens of parallel `strict test` processes (VS Code) sharing the base type `.strictbinary` files, which `Execute` writes in place (`File(cache.Path).Write`, no temporary file and rename).
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.
