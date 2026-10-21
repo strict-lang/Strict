@@ -1,0 +1,145 @@
+has heads Number
+has groups Number
+has size Number
+has chunk Number
+has tokens Number
+has keyed Numbers
+has decayed Numbers
+has memory Numbers = List(Number)
+has logs Numbers = List(Number)
+has attended Numbers = List(Number)
+has corrected Numbers = List(Number)
+has reads Numbers = List(Number)
+constant Keys = (0.5, -1, 0.6, 0.8, 1, 2, -1, 0.5, 1, 0.25, 0.8, 0.6, 0.5, -0.5, 2, 1, -0.5, 0.5, 1, 0, 1, 1, 0, -1)
+constant Rates = (-0.1, -0.5, 0.5, 0.25, -0.2, -0.05, 0.75, 1, -1, -0.3, 0.3, 0.6)
+constant Probe = DeltaChunks(2, 1, 2, 2, 3, Keys, Rates, (0.1, 0.2, 0.3, 0.4, -0.2, 0, 0.5, 1))
+Read DeltaChunks
+	Probe.Read.reads(9).IsNearlyEqual(-0.076604)
+	Probe.Read.memory(7).IsNearlyEqual(0.71862)
+	DeltaChunks(Probe, chunk = 4).Read.reads(4).IsNearlyEqual(0.383253)
+	let prepared = Prepared
+	mutable state = memory
+	mutable outputs = List(Number)
+	for (tokens / chunk).Ceiling
+		let fresh = prepared.Fresh(state, index * chunk)
+		outputs = outputs + prepared.Outputs(fresh, state, index * chunk)
+		state = prepared.Remembered(fresh, state, index * chunk)
+	DeltaChunks(prepared, memory = state, reads = outputs)
+Prepared DeltaChunks
+	Probe.Prepared.logs.Length is 6
+	let ready = DeltaChunks(value, logs = Logs)
+	let lower = ready.Paired(1)
+	let inverse = ready.Inverted(ready.Unit(lower), lower, 2)
+	DeltaChunks(ready, attended = ready.Paired(0), corrected = ready.Corrected(inverse))
+Position(token Number, head Number, part Number) Number
+	Probe.Position(1, 1, 2) is 14
+	Probe.Position(2, 1, 1) is 18
+	let offset = part < 2 then part * groups + (head % groups) else 2 * groups + head
+	(token * (2 * groups + heads) + offset) * size
+Length(start Number) Number
+	Probe.Length(2) is 1
+	tokens - start < chunk then tokens - start else chunk
+Logs Numbers
+	Probe.Logs(2).IsNearlyEqual(-0.3)
+	Probe.Logs(4) is -1
+	for tokens * heads
+		let token = (index / heads).Floor
+		let head = index % heads
+		let start = token - (token % chunk)
+		mutable sum = 0
+		for token + 1 - start
+			sum = sum + decayed(2 * (start + index) * heads + head)
+		sum
+Decay(token Number, other Number, head Number) Number
+	Probe.Prepared.Decay(1, 0, 0).IsNearlyEqual(0.818731)
+	(logs(token * heads + head) - logs(other * heads + head)).Exponential
+Paired(part Number) Numbers
+	Probe.Prepared.Paired(1)(2).IsNearlyEqual(0.589486)
+	Probe.Prepared.attended(3).IsNearlyEqual(0.95)
+	for heads * tokens * chunk
+		let token = (index / chunk).Floor % tokens
+		let head = (index / chunk / tokens).Floor
+		let other = token - (token % chunk) + (index % chunk)
+		let isPaired = (other < token) or ((part is 0) and (other is token))
+		mutable sum = 0
+		for isPaired then size else 0
+			sum = sum + keyed(Position(token, head, part) + index) * keyed(Position(other, head, 1) + index)
+		isPaired then sum * Decay(token, other, head) * (part is 1 then decayed((2 * token + 1) * heads + head) else 1) else 0
+Unit(lower Numbers) Numbers
+	Probe.Unit((0, 0, 0.5, 0))(2) is -0.5
+	Probe.Unit((0, 0, 0.5, 0))(3) is 1
+	for lower
+		(((index / chunk).Floor % tokens) % chunk) is index % chunk then 1 - value else 0 - value
+Inverted(result Numbers, power Numbers, span Number) Numbers
+	Probe.Inverted((1, 2), (3, 4), 2) is (1, 2)
+	if (span >= chunk) or (span >= tokens)
+		return result
+	let squared = Multiplied(power, power, 0)
+	Inverted(Multiplied(result, squared, 1), squared, span * 2)
+Multiplied(left Numbers, right Numbers, kept Number) Numbers
+	Probe.Multiplied((1, 0, 2, 1), (1, 0, 2, 1), 0)(2) is 4
+	for left
+		let row = (index / chunk).Floor
+		let token = row % tokens
+		let column = index % chunk
+		let base = row - (token % chunk)
+		mutable sum = value * kept
+		for (token % chunk) + 1
+			sum = sum + left(row * chunk + index) * right((base + index) * chunk + column)
+		sum
+Corrected(inverse Numbers) Numbers
+	Probe.Prepared.corrected(14).IsNearlyEqual(0.284474)
+	Probe.Prepared.corrected(36).IsNearlyEqual(0.491239)
+	let values = heads * tokens * size
+	for 4 * values
+		let row = (index / size).Floor % (heads * tokens)
+		let head = (row / tokens).Floor
+		let token = row % tokens
+		let part = (index / values).Floor
+		let last = token - (token % chunk) + chunk > tokens then tokens - 1 else token - (token % chunk) + chunk - 1
+		let key = Decay(last, token, head) * keyed(Position(token, head, 1) + (index % size))
+		let query = logs(token * heads + head).Exponential * keyed(Position(token, head, 0) + (index % size))
+		part is 0 then query else part is 3 then key else Weighted(inverse, row, part, index % size)
+Weighted(inverse Numbers, row Number, part Number, element Number) Number
+	Probe.Prepared.Weighted((1, 0, -0.5, 1, 1, 0, 1, 0, 0, 1, 1, 0), 1, 2, 0) is 0.125
+	let token = row % tokens
+	let head = (row / tokens).Floor
+	let start = token - (token % chunk)
+	let first = Position(start, head, part) + element
+	mutable sum = 0
+	for (token % chunk) + 1
+		let scale = part is 1 then logs((start + index) * heads + head).Exponential else 1
+		let weight = inverse(row * chunk + index) * decayed((2 * (start + index) + 1) * heads + head) * scale
+		sum = sum + weight * keyed(first + index * (2 * groups + heads) * size)
+	sum
+Fresh(state Numbers, first Number) Numbers
+	Probe.Prepared.Fresh(Probe.memory, 0)(3).IsNearlyEqual(-1.069386)
+	let length = Length(first)
+	let corrections = (heads * tokens + first) * size
+	let shape = (heads, length, size, size)
+	let product = Products(corrected, state, shape, (corrections, tokens * size, size, 1, 0, size * size, size, 1))
+	for product.Multiplied
+		let row = (index / (length * size)).Floor * tokens + first + ((index / size).Floor % length)
+		corrected((2 * heads * tokens + row) * size + (index % size)) - value
+Outputs(fresh Numbers, state Numbers, first Number) Numbers
+	Probe.Prepared.Outputs(Probe.Prepared.Fresh(Probe.memory, 0), Probe.memory, 0)(5).IsNearlyEqual(-0.269071)
+	let length = Length(first)
+	let stride = tokens * size
+	let shape = (heads, length, size, size)
+	let queried = Products(corrected, state, shape, (first * size, stride, size, 1, 0, size * size, size, 1))
+	let pairs = (first * chunk, tokens * chunk, chunk, 1, 0, length * size, size, 1)
+	let attending = Products(attended, fresh, (heads, length, length, size), pairs).Multiplied
+	let queries = queried.Multiplied
+	for length * heads * size
+		let token = (index / (heads * size)).Floor
+		let at = (((index / size).Floor % heads) * length + token) * size + (index % size)
+		queries(at) + attending(at)
+Remembered(fresh Numbers, state Numbers, first Number) Numbers
+	Probe.Prepared.Remembered(Probe.Prepared.Fresh(Probe.memory, 0), Probe.memory, 0)(4).IsNearlyEqual(1.466728)
+	let length = Length(first)
+	let last = first + length - 1
+	let keys = (3 * heads * tokens + first) * size
+	let shape = (heads, size, length, size)
+	let product = Products(corrected, fresh, shape, (keys, tokens * size, 1, size, 0, length * size, size, 1)).Multiplied
+	for state
+		value * logs(last * heads + (index / (size * size)).Floor).Exponential + product(index)

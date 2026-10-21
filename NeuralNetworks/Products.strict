@@ -1,0 +1,17 @@
+has left Numbers
+has right Numbers
+has shape Numbers
+has strides Numbers
+constant Pair = Products((1, 2, 3, 4), (5, 6, 7, 8), (1, 2, 2, 2), (0, 0, 2, 1, 0, 0, 2, 1))
+Multiplied Numbers
+	Pair.Multiplied is (19, 22, 43, 50)
+	Products(Pair.left, Pair.right, (1, 2, 2, 2), (0, 0, 1, 2, 0, 0, 2, 1)).Multiplied is (26, 30, 38, 44)
+	Products((1, 2), (3, 4), (2, 1, 1, 1), (0, 1, 0, 0, 0, 1, 0, 0)).Multiplied is (3, 8)
+	for shape(0) * shape(1) * shape(3)
+		let batch = (index / (shape(1) * shape(3))).Floor
+		let first = strides(0) + batch * strides(1) + ((index / shape(3)).Floor % shape(1)) * strides(2)
+		let second = strides(4) + batch * strides(5) + (index % shape(3)) * strides(7)
+		mutable sum = 0
+		for shape(2)
+			sum = sum + left(first + index * strides(3)) * right(second + index * strides(6))
+		sum

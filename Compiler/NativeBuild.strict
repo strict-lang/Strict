@@ -34,7 +34,7 @@ Device(program Text, base Text, root Text) Text
 		return program
 	let gpu = DeviceBuild(Toolchain(Platform.Current, root))
 	let device = program.Substring(marker + 1, program.Length - marker - 1)
-	let kernels = gpu.Built(base, device, program.IndexOf(MlirAttention.Marker) >= 0)
+	let kernels = gpu.Built(base, device, MlirTensors.Attending.Used(program))
 	let embedded = gpu.Embedded(program.Substring(0, marker), kernels, base)
 	embedded.StartsWith("GPU kernels failed") then Failed(embedded) else embedded
 Failed(message Text) Text
