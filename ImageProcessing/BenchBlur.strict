@@ -1,43 +1,31 @@
 has logger
-constant Width = 3840
-constant Height = 2160
+constant Source = "ImageProcessing/Compare/Landscape.ppm"
+constant Target = "ImageProcessing/Compare/Landscape.strict.ppm"
 constant Radius = 4
+constant Window = 9
 constant Dot = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 Run
-	let pixels = Pattern(Width * Height * 4)
-	let started = Process.Elapsed
-	let center = Blurred(pixels, Width, Radius)(Width * (Height + 1) * 2)
-	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-	logger.Log("Blurred " + Width + "x" + Height + " in " + milliseconds + " ms: " + center)
-Pattern(count Number) Bytes
-	BenchBlur.Pattern(3) is (0, 239, 222)
-	for count
-		index * 7919 % 256
-Blurred(pixels Bytes, width Number, radius Number) Bytes
-	BenchBlur.Blurred((1, 2, 3, 4, 5, 6, 7, 8), 2, 1) is (1, 2, 3, 4, 5, 6, 7, 8)
-	BenchBlur.Blurred(Dot, 3, 1)(16) is 1
+	let bitmap = Ppm.Loaded(Source)
+	if bitmap.Pixels.Length is 0
+		logger.Log("Missing " + Source + ", see ImageProcessing/Compare/README.md")
+	else
+		let started = Process.Elapsed
+		let blurred = Blurred(bitmap.Pixels, bitmap.width, bitmap.height)
+		let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+		Ppm.Save(Bitmap(bitmap.width, bitmap.height, blurred, bitmap.IsOpaque), Target)
+		logger.Log("Blurred " + bitmap.width + "x" + bitmap.height + " in " + milliseconds + " ms: " + blurred(bitmap.Center))
+Blurred(pixels Bytes, width Number, height Number) Bytes
+	BenchBlur.Blurred(Dot, 3, 3)(16) is 1
 	for pixels
-		IsEdge(index, width * 4, pixels.Length, radius) then value else Averaged(pixels, index, width * 4, radius)
-IsEdge(position Number, stride Number, length Number, radius Number) Boolean
-	BenchBlur.IsEdge(0, 12, 36, 1)
-	BenchBlur.IsEdge(16, 12, 36, 1) is false
-	BenchBlur.IsEdge(17, 12, 36, 1) is false
-	BenchBlur.IsEdge(20, 12, 36, 1)
-	let x = ((position % stride) / 4).Floor
-	let y = (position / stride).Floor
-	x < radius or x >= stride / 4 - radius or y < radius or y >= length / stride - radius
-Averaged(pixels Bytes, center Number, stride Number, radius Number) Number
-	BenchBlur.Averaged(Dot, 16, 12, 1) is 1
-	BenchBlur.Averaged(Dot, 17, 12, 1) is 0
-	BenchBlur.Averaged(Dot, 19, 12, 1) is 0
+		Averaged(pixels, width, height, index)
+Averaged(pixels Bytes, width Number, height Number, position Number) Number
+	BenchBlur.Averaged(Dot, 3, 3, 16) is 1
 	mutable sum = 0
-	for radius * 2 + 1
-		sum = sum + Row(pixels, center + (value - radius) * stride, radius)
-	(sum / ((radius * 2 + 1) * (radius * 2 + 1))).Floor
-Row(pixels Bytes, middle Number, radius Number) Number
-	BenchBlur.Row(Dot, 16, 1) is 9
-	BenchBlur.Row(Dot, 4, 1) is 0
-	mutable sum = 0
-	for radius * 2 + 1
-		sum = sum + pixels(middle + (value - radius) * 4)
-	sum
+	mutable count = 0
+	for Window * Window
+		let x = (position / 4).Floor % width + value % Window - Radius
+		let y = (position / 4 / width).Floor + (value / Window).Floor - Radius
+		if x >= 0 and x < width and y >= 0 and y < height
+			sum = sum + pixels((y * width + x) * 4 + position % 4)
+			count = count + 1
+	(sum / count).Floor

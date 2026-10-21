@@ -1,28 +1,35 @@
-// Same blur as BenchBlur.strict and blur.c, usage: dotnet run -c Release blur.cs width height radius
+// Same 9x9 blur as BenchBlur.strict on Landscape.ppm, dotnet run -c Release blur.cs
 using System.Diagnostics;
-var numbers = args.Select(int.Parse).Concat(new[] { 3840, 2160, 4 }.Skip(args.Length)).ToArray();
-int width = numbers[0], height = numbers[1], radius = numbers[2];
-int length = width * height * 4, stride = width * 4;
-var pixels = new byte[length];
-for (var index = 0; index < length; index++)
-	pixels[index] = (byte)((long)index * 7919 % 256);
-var blurred = new byte[length];
-var area = (2 * radius + 1) * (2 * radius + 1);
+using System.Text;
+var file = File.ReadAllBytes("Landscape.ppm");
+var fields = Encoding.ASCII.GetString(file, 0, 40).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+int width = int.Parse(fields[1]), height = int.Parse(fields[2]);
+var rgb = file[^(width * height * 3)..];
+var data = new byte[width * height * 4];
+for (var pixel = 0; pixel < width * height; ++pixel)
+	(data[pixel * 4], data[pixel * 4 + 1], data[pixel * 4 + 2], data[pixel * 4 + 3]) = (rgb[pixel * 3], rgb[pixel * 3 + 1], rgb[pixel * 3 + 2], 255);
+var blurred = new byte[width * height * 4];
 var watch = Stopwatch.StartNew();
-for (var y = 0; y < height; y++)
-	for (var x = 0; x < width; x++)
-		for (var channel = 0; channel < 4; channel++)
-		{
-			var index = y * stride + x * 4 + channel;
-			if (x < radius || x >= width - radius || y < radius || y >= height - radius)
-				blurred[index] = pixels[index];
-			else
-			{
-				var sum = 0;
-				for (var dy = -radius; dy <= radius; dy++)
-					for (var dx = -radius; dx <= radius; dx++)
-						sum += pixels[index + dy * stride + dx * 4];
-				blurred[index] = (byte)(sum / area);
-			}
-		}
-Console.WriteLine($"C#: blurred {width}x{height} with {2 * radius + 1}x{2 * radius + 1} in {watch.Elapsed.TotalMilliseconds:F1} ms, pixel {blurred[length / 2 + stride / 2]}");
+for (var y = 0; y < height; ++y)
+	for (var x = 0; x < width; ++x)
+	{
+		int red = 0, green = 0, blue = 0, alpha = 0, count = 0;
+		for (var dy = -4; dy <= 4; ++dy)
+			for (var dx = -4; dx <= 4; ++dx)
+				if (x + dx >= 0 && x + dx < width && y + dy >= 0 && y + dy < height)
+				{
+					var sourceIndex = ((y + dy) * width + x + dx) * 4;
+					red += data[sourceIndex];
+					green += data[sourceIndex + 1];
+					blue += data[sourceIndex + 2];
+					alpha += data[sourceIndex + 3];
+					++count;
+				}
+		var targetIndex = (y * width + x) * 4;
+		blurred[targetIndex] = (byte)(red / count);
+		blurred[targetIndex + 1] = (byte)(green / count);
+		blurred[targetIndex + 2] = (byte)(blue / count);
+		blurred[targetIndex + 3] = (byte)(alpha / count);
+	}
+Console.WriteLine($"C#: blurred {width}x{height} in {watch.Elapsed.TotalMilliseconds:F1} ms");
+File.WriteAllBytes("Landscape.csharp.ppm", [.. Encoding.ASCII.GetBytes($"P6\n{width} {height}\n255\n"), .. blurred.Where((_, index) => index % 4 != 3)]);

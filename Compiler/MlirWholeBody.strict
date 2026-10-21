@@ -15,7 +15,7 @@ Lines Texts
 	let parts = MlirWholeTypes(function).Settled.Split("|")
 	(List(Text) + Header) + Slots(parts(0), parts(1)) + Body(parts(0), parts(1), parts(2)) + "  }"
 Body(registers Text, variables Text, naturals Text) Texts
-	Text.Combine(Halving.Body("iifi", "--i", "iifii")).IndexOf("llvm.intr.floor(%t3a)") > 0
+	Text.Combine(Halving.Body("iiii", "--i", "iiiii")).IndexOf("arith.floordivsi") > 0
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
 		lines = lines + function.Label(index) + MlirWholeStatements(function, index, registers, variables, naturals).Emitted

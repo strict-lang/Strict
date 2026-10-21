@@ -1,0 +1,21 @@
+has statements MlirWholeStatements
+constant Floor = MlirWholeNative(MlirWholeStatements.Halving.At(3))
+Emitted(entry InstructionEntry) Texts
+	Floor.Emitted(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
+	MlirWholeNative(MlirWholeStatements.Halving.At(1)).Emitted(MlirWholeCall.Twice.instructions(1)).Length is 0
+	let listed = MlirWholeTypes(statements.function).Length(statements.position)
+	if listed is not ""
+		let length = MlirWholeValues(statements.position).Loaded(statements.Temp("c"), "%v_" + listed + "_length", "i", "i")
+		return length + statements.Store("c", "i", entry.payload(0))
+	if (PayloadDecoder(entry).Text(1) is not "Strict/Number") or (PayloadDecoder(entry).Text(2) is not "Floor")
+		return List(Text)
+	Floored(entry)
+Floored(entry InstructionEntry) Texts
+	Floor.Floored(MlirWholeTypes.Halves(3)).First is "    %t3a = llvm.load %r2 : !llvm.ptr -> i64"
+	let source = entry.payload(LoadReuse(statements.function.method.instructions).InvokeReads(entry).Last)
+	let types = MlirWholeTypes(statements.function)
+	if types.Reaching(source, statements.position, statements.registers, statements.naturals) is "i"
+		return statements.Load("a", source, "i") + statements.Store("a", "i", entry.payload(0))
+	let floored = "    " + statements.Temp("f") + " = llvm.intr.floor(" + statements.Temp("a") + ") : (f64) -> f64"
+	let converted = MlirWholeValues(statements.position).Converted(statements.Temp("f"), "f", "i", statements.Temp("c"))
+	statements.Load("a", source, "f") + floored + converted + statements.Store("c", "i", entry.payload(0))

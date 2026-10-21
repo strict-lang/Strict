@@ -93,6 +93,9 @@ Conditions Texts
 Joined(conditions Texts) Texts
 	Row.Joined(("%a", "%b"))(1) is "    %t6whj0 = arith.andi %t6whj, %a : i1"
 	Row.Joined(("%a", "%b")).Last is "    %t6whok = arith.andi %t6whj0, %b : i1"
+	Row.Joined(List(Text)).Last is "    %t6whok = arith.constant true"
+	if conditions.Length is 0
+		return List(Text) + Line("whok", "arith.constant true")
 	mutable lines = List(Text) + Line("whj", "arith.constant true")
 	mutable previous = Temp("whj")
 	for conditions

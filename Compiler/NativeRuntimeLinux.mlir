@@ -647,10 +647,14 @@
     %processors = llvm.call @sysconf(%online) : (i32) -> i64
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    // half of the logical processors: a 4K blur 35% faster than a quarter, GPT-2 decoding the same, all of them slow GPT-2 down (13900KF)
+    // three quarters of the logical processors (24 of 32 on a 13900KF): a 4K blur 20% faster than with half, GPT-2 decoding
+    // as fast as with half, with all of them GPT-2 is 20% slower
     %two = arith.constant 2 : i64
-    %half = arith.divsi %processors, %two : i64
-    %standard = arith.maxsi %half, %two : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %triple = arith.muli %processors, %three : i64
+    %threeQuarters = arith.divsi %triple, %four : i64
+    %standard = arith.maxsi %threeQuarters, %two : i64
     %threads = func.call @strict_pool_size(%standard) : (i64) -> i64
     %workers = arith.subi %threads, %one : i64
     %null = llvm.mlir.zero : !llvm.ptr
