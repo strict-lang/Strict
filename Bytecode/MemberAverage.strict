@@ -1,0 +1,49 @@
+has type Text
+has types Expressions/KnownTypes
+constant Bytes = (Scope(("Red", "Green"), ("Byte", "Byte")), Scope(List(Text) + "number", List(Text) + "Number"))
+constant Rg = MemberAverage("Strict/List(Rg)", KnownTypes(("Rg", "Byte"), Bytes, Bytes, Bytes))
+constant Averaging = ("has elements Generics", "Average Generic", "\t(1, 2, 6).Average is 3", "\tSum / Length", "Median Number")
+Element Text
+	Rg.Element is "Rg"
+	MemberAverage("Strict/Number", Rg.types).Element is ""
+	let start = type.IndexOf("List(")
+	let inner = start < 0 then "" else type.Substring(start + 5, type.Length - start - 6)
+	inner.IndexOf(",") >= 0 then "" else TypeEntry.ShortName(inner)
+IsAveraged Boolean
+	Rg.IsAveraged
+	MemberAverage("Strict/List(Byte)", Rg.types).IsAveraged is false
+	let members = types.MembersOf(Element)
+	if (Element is "") or (members.names.Length < 2)
+		return false
+	for members.types
+		if (value is not "Number") and (types.MembersOf(value).TypeOf("number") is not "Number")
+			return false
+	true
+Lines Texts
+	Rg.Lines(1) is "\tmutable sumRed = 0"
+	Rg.Lines(5) is "\t\tsumGreen = sumGreen + value.Green"
+	Rg.Lines.Last is "\tRg(Byte(sumRed / Length), Byte(sumGreen / Length))"
+	let members = types.MembersOf(Element)
+	mutable lines = List(Text) + ("Average " + Element)
+	for members.names
+		lines = lines + ("\tmutable sum" + value + " = 0")
+	lines = lines + "\tfor elements"
+	for members.names
+		lines = lines + ("\t\tsum" + value + " = sum" + value + " + value." + value)
+	lines + ("\t" + Element + "(" + Text.Combine(Averages(members)) + ")")
+Averages(members Scope) Texts
+	Rg.Averages(Rg.types.MembersOf("Rg")) is ("Byte(sumRed / Length)", "Byte(sumGreen / Length)")
+	for members.names
+		let average = "sum" + value + " / Length"
+		members.types(index) is "Number" then average else members.types(index) + "(" + average + ")"
+Replaced(lines Texts) Texts
+	Rg.Replaced(Averaging)(1) is "Average Rg"
+	Rg.Replaced(Averaging).Last is "Median Number"
+	MemberAverage("Strict/List(Byte)", Rg.types).Replaced(Averaging) is Averaging
+	let start = lines.Index("Average Generic")
+	if (start < 0) or (IsAveraged is false)
+		return lines
+	mutable ending = start + 1
+	for as long as (ending < lines.Length) and lines(ending).StartsWith("\t")
+		ending = ending + 1
+	lines.Slice(0, start) + Lines + lines.Slice(ending, lines.Length - ending)

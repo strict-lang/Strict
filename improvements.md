@@ -13,7 +13,7 @@ In priority order, short and actionable. Remove what is done (results go into th
 9. **AMD GPUs**: about 250 us of host work per launch (GPT-2 48 ms per token on the RX 480), `sdot4`, WMMA and MFMA, the 512 thread tiles need more than the 64 KB of an AMD workgroup, ROCm on Linux.
 
 ## Bugs
-- `List.Average` of Colors clamps natively (`Color.test.exe`, Alpha 127): needs wide sums per member.
+- Byte overflow (`Color(255, 0, 0) + Color(1, 0, 0)`) keeps 256 on the Strict VM and saturates at 255 natively, decided 2026-10-22: a `ConstraintNotMet` Error on both, `Validated` of a type also checks the constraints of its constrained one-member members (Byte), measure the blur afterwards (`FusedAverage` constructs a Color per pixel).
 - A `let` from the inner index in a warp summed loop of a 32 bit kernel reads wrong positions (RTX 4090, chunked `DeltaBlock`).
 - A `Generic` parameter of a non-generic type is not specialized (`Scored(model Generic)` calling `model.Area`: `Unsupported native call Strict/Generic.Area`). Rejecting such calls when the types load also rejects `HashCode.from`, which narrows its parameter with `if generic is` / `Character then generic.number`: needs narrowing in the type inference or dispatch on the runtime type of a Generic value.
 - Unpacked rows of a matrix stay pinned while the model lives.

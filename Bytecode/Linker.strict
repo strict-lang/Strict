@@ -53,7 +53,8 @@ LinkedType(type Text, methods Texts) TypeEntry
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
 	let source = Fusion(File(SourcePath(type)).ReadLines, Path(SourcePath(type)).PathOnly.text).Fused
 	let automatic = Automatic(source, TypeEntry.ShortName(type), Instantiation(main.inference.types)).Lines(methods)
-	let entry = TypeCodegen(type, automatic, main.inference, main.typeNames).Selected(methods)
+	let averaged = MemberAverage(type, main.inference.types).Replaced(automatic)
+	let entry = TypeCodegen(type, averaged, main.inference, main.typeNames).Selected(methods)
 	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
 	isLocal then TypeEntry(Path(type).FileName.text, entry.members, entry.methods) else entry
 BaseTypes(entries List(TypeEntry), targets Texts) Texts
