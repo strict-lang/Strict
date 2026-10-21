@@ -11226,10 +11226,11 @@
   // `Attention.Merged` on the 16 bit tensor cores (strict_device_attention): queries, keys and values like there, 0.0
   // when the GPU can not, then the method itself runs (head size not a multiple of 8 or above 128, more than 16 heads
   // per group of keys, lists that do not match)
-  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64) -> f64 {
+  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %seven = arith.constant 7 : i64
+    %eight = arith.constant 8 : i64
     %sixteen = arith.constant 16 : i64
     %largest = arith.constant 128 : i64
     %headCount = arith.fptosi %heads : f64 to i64
@@ -11286,7 +11287,7 @@
     %attending = arith.andi %fitting, %rowsFit : i1
     cf.cond_br %attending, ^run, ^unable
   ^run:
-    %valuesSlots = llvm.alloca %seven x f64 : (i64) -> !llvm.ptr
+    %valuesSlots = llvm.alloca %eight x f64 : (i64) -> !llvm.ptr
     llvm.store %queries, %valuesSlots : f64, !llvm.ptr
     %keysSlot = llvm.getelementptr %valuesSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %keys, %keysSlot : f64, !llvm.ptr
@@ -11300,11 +11301,13 @@
     llvm.store %size, %sizeSlot : f64, !llvm.ptr
     %sequencesSlot = llvm.getelementptr %valuesSlots[6] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %sequences, %sequencesSlot : f64, !llvm.ptr
+    %causalSlot = llvm.getelementptr %valuesSlots[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %causal, %causalSlot : f64, !llvm.ptr
     %name = llvm.mlir.addressof @strict_gpu_attention_name : !llvm.ptr
     %slot = llvm.mlir.addressof @strict_gpu_attention_slot : !llvm.ptr
     %lanes = arith.constant -128 : i64
     %integers = arith.constant -1 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %seven, %seven, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %eight, %seven, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64

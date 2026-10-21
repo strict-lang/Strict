@@ -179,6 +179,7 @@ NeuralNetworks/qwen3/
 !NeuralNetworks/tiny.safetensors
 !NeuralNetworks/tinygpt2.safetensors
 !NeuralNetworks/tinyhalves.safetensors
+!NeuralNetworks/tinyint8.safetensors
 *.gguf
 !NeuralNetworks/tiny.gguf
 !NeuralNetworks/tinyqwen3.gguf
