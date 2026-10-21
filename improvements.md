@@ -19,7 +19,6 @@ In priority order, short and actionable. Remove what is done (results go into th
 - Unpacked rows of a matrix stay pinned while the model lives.
 - `strict test NeuralNetworks lines` crashes natively on macOS (`strict_list_restoring` reaches a null link).
 - `strict test Examples` crashed once at start (segfault, 2026-10-21), not reproduced.
-- `strict test` prints `Unsupported native call` for a test calling a method with too many arguments and still reports all tests passed (DeltaBlock, 2026-10-21).
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.

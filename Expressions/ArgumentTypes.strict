@@ -1,7 +1,7 @@
 has inference TypeInference
 constant Members = (Scope(List(Text) + "number", List(Text) + "Number"), Scope(List(Text) + "size", List(Text) + "Size"), Scope(List(Text) + "width", List(Text) + "Number"))
-constant Methods = (Scope(List(Text) + "Grow", List(Text) + "Count"), KnownTypes.NoMembers, KnownTypes.NoMembers)
-constant Parameters = (Scope(("Grow", "Grow types", "Grow required", "from", "from types"), ("area", "Area", "1", "size", "Size")), KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "width"))
+constant Methods = (Scope(("Grow", "Spread"), ("Count", "Count")), KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant Parameters = (Scope(("Grow", "Grow types", "Grow required", "Spread", "Spread types", "from", "from types"), ("area", "Area", "1", "area,size", "Area,Size", "size", "Size")), KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "width"))
 constant Shapes = (Scope(List(Text) + "Limit", List(Text) + "3"), KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant Sizing = ArgumentTypes(TypeInference(KnownTypes(("Count", "Area", "Size"), Members, Methods, Parameters), Shapes))
 constant Generics = ArgumentTypes(TypeInference(KnownTypes(("Range", "Generic"), (Scope(List(Text) + "start", List(Text) + "Number"), Scope(List(Text) + "type", List(Text) + "Range")), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers)), Shapes))
@@ -9,6 +9,7 @@ constant Grown = SyntaxParser(Tokenizer("count.Grow(count)").Tokens).Parse
 constant Listed = SyntaxParser(Tokenizer("1 > 0 and (count)").Tokens).Parse
 constant Limited = SyntaxParser(Tokenizer("count.Limit").Tokens).Parse
 constant Created = SyntaxParser(Tokenizer("Count(count)").Tokens).Parse
+constant Spread = SyntaxParser(Tokenizer("count.Spread(area, size, size)").Tokens).Parse
 constant Counted = Scope(("count", "area", "size"), ("Count", "Area", "Size"))
 Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
@@ -48,6 +49,7 @@ Issue(call SyntaxNode, scope Scope, current Scope) Text
 	Compared(call, instance, isCall then call.text else "from", scope, current)
 Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope) Text
 	Sizing.Compared(Grown, "Count", "Grow", Counted, Counted).StartsWith("ArgumentTypeMismatch: Count.Grow")
+	Sizing.Compared(Spread, "Count", "Spread", Counted, Counted) is "TooManyArguments: Count.Spread got 3 of 2"
 	let parameters = inference.types.ParameterScope(instance)
 	if parameters.Count(method) is not 1
 		return ""
@@ -55,6 +57,8 @@ Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope
 	let arguments = Arguments(call, scope, current)
 	let at = Mismatched(arguments, types)
 	let name = method is "from" then instance else instance + "." + method
+	if (method is not "from") and (types.Length > 1) and (arguments.Length > types.Length)
+		return "TooManyArguments: " + name + " got " + arguments.Length + " of " + types.Length
 	at < 0 then "" else "ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
 Declared(instance Text, method Text) Texts
 	Sizing.Declared("Count", "Grow") is ("Area")
