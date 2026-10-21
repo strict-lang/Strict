@@ -1,15 +1,28 @@
 has logger
 has base Text
 constant Opening = "= func.call @" + "Window_Open("
-Packaged(program Text, built Number) Number
+Packaged(program Text, built Number, isWeb = false, isCrossing = false) Number
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 0) is 0
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 2) is 2
 	Release(Logger, "Missing/App.test").Packaged(Opening, 0) is 0
 	let isWindowed = program.IndexOf(Opening) >= 0
 	if (built is not 0) or base.EndsWith(".test") or (isWindowed is false)
 		return built
-	let folder = Parent + "/Release"
-	Platform.Current is Platform.MacOS then MacOSBundle(logger, base).Released else Refreshed(folder, folder + "/Content")
+	if isWeb
+		return Refreshed(Parent + "/Release/Web", "", (".html", ".js", ".wasm", ".data"))
+	NativePackaged(isCrossing)
+NativePackaged(isCrossing Boolean) Number
+	let shared = Parent + "/Release/Content"
+	if Content(shared) < 0
+		return 1
+	if Platform.Current is Platform.MacOS
+		return MacOSBundle(logger, base).Released
+	let folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
+	let ending = Platform.Current is Platform.Windows then ".exe" else ""
+	let result = Refreshed(folder, folder + "/Content", List(Text) + ending)
+	if (result is not 0) or (isCrossing is false) or (Platform.Current is not Platform.Windows) or (File(base).Exists is false)
+		return result
+	Refreshed(Parent + "/Release/Linux", Parent + "/Release/Linux/Content", List(Text) + "")
 Parent Text
 	Release(Logger, "Missing/App").Parent is "Missing"
 	Release(Logger, "App").Parent is "."
@@ -24,9 +37,9 @@ Icon Text
 	if File(own).Exists
 		return own
 	File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
-Refreshed(release Text, content Text) Number
+Refreshed(release Text, content Text, endings Texts) Number
 	Directory.Create(release)
-	for (".exe", "", ".ptx", ".older.ptx", ".hsaco", ".metal", ".older.metal")
+	for endings
 		let built = base + value
 		if File(built).Exists
 			File(built).Rename(release + "/" + Named(built))
@@ -34,7 +47,11 @@ Refreshed(release Text, content Text) Number
 				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
 				return 1
 	logger.Log("Release: " + release)
-	Content(content) < 0 then 1 else 0
+	if content is not ""
+		let shared = Parent + "/Release/Content"
+		Copied(shared, content)
+		Removed(shared, content)
+	0
 Content(target Text) Number
 	Release(Logger, "Missing/App").Content("Missing/Release/Content") is 0
 	let source = Parent + "/Content"
