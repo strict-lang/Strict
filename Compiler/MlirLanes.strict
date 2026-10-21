@@ -7,6 +7,7 @@ constant Painted = InstructionEntry.Invoke(3, ("Strict/Rgba", "from", "Rgba", "r
 constant Made = InstructionEntry.Invoke(3, ("Strict/Rgb", "from", "Rgb", "red", "green", "blue"), (0, 1, 2), -1)
 constant Greens = InstructionEntry(InstructionType.FieldLoad, ("green", "Rgb"), (4, 3, -1))
 constant Making = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 2), InstructionEntry.LoadNumber(2, 3), Made, Greens))
+constant Collecting = MlirFunction((MlirLayout.Byting, Rgb), Rgb, MethodEntry("Collected", List(MemberEntry) + MemberEntry("colors", "Strict/List(Rgb)", List(InstructionEntry), false), "Strict/List(Rgb)", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Rgb)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "colors"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))))
 constant Sample = MlirLanes(MlirFunction((MlirLayout.Byting, Rgb, Rgba), Rgb, Making), 3)
 IsPacked(kind Text) Boolean
 	Sample.IsPacked("Rgb")
@@ -92,3 +93,21 @@ Initial(entry InstructionEntry, name Text) Number
 		if (value.Name is name) and (value.initial.Length > 0)
 			number = PayloadDecoder(value.initial.First).Value(0).number
 	number
+IsLaneEntry(at Number) Boolean
+	MlirLanes(Sample.function, 0).IsLaneEntry(3)
+	MlirLanes(Sample.function, 0).IsLaneEntry(0) is false
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.IndexCall
+		return IsPacked(MlirKinds(function).ElementKind(MlirKinds(function).VariableKind(at, entry.texts(0))))
+	let isNamed = entry.kind is in (InstructionType.FieldLoad, InstructionType.Invoke)
+	isNamed and IsPacked(entry.texts(entry.kind is InstructionType.FieldLoad then 1 else 0))
+IsTouched Boolean
+	MlirLanes(Collecting, 2).IsTouched
+	MlirLanes(MlirLoops.Listing.function, 1).IsTouched is false
+	let kinds = MlirKinds(function)
+	if IsPacked(kinds.ElementKind(kinds.KindOf(position, function.method.instructions(position).payload(0))))
+		return true
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if IsLaneEntry(value)
+			return true
+	IsPacked(kinds.ElementKind(kinds.VariableKind(position, "forResult")))

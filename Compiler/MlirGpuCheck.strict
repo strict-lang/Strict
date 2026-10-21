@@ -23,7 +23,7 @@ IsGpu Boolean
 	MlirGpuCheck(MlirDeviceRows.Picking, 2).IsGpu
 	MlirGpuCheck(MlirLoops.Ranging.function, 3).IsGpu
 	let isListed = MlirLoops(function, position).Collection is in Rows
-	if (isListed is false) or (IsPure is false)
+	if (isListed is false) or (IsPure is false) or MlirLanes(function, position).IsTouched
 		return false
 	IsDeviceBody
 IsPure Boolean
