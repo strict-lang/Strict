@@ -5,6 +5,8 @@ has drafts = 15
 constant Longest = 15
 has steps = 0
 constant Started = Speculation(Qwen3.Tiny.Prefilled((1, 2, 3), 0), (1, 2, 3), Qwen3.Tiny.Prefilled((1, 2, 3), 0).Next)
+constant Prompted = Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0)
+constant Verified = Prompted.Steps((5, 4, 1), Qwen3.Positions(3, 3), 1)
 Generated(count Number) Numbers
 	Started.Generated(6) is Generation(Qwen3.Tiny).Generated((1, 2, 3), 6)
 	Started.Generated(1) is (2)
@@ -25,7 +27,7 @@ Advanced Speculation
 	let predictions = draft.Length is 0 then List(Number) + verified.Next else verified.Nexts
 	let accepted = Accepted(draft, predictions)
 	let kept = Safetensors.Part(block, 0, accepted + 1, 1)
-	let truncated = accepted is draft.Length then verified else Truncated(verified, context.Length + accepted + 1)
+	let truncated = accepted is draft.Length then verified else Truncated(verified, kept)
 	Speculation(truncated, context + kept, predictions(accepted), Adapted(draft.Length, accepted), steps + 1)
 Adapted(drafted Number, accepted Number) Number
 	Started.Adapted(0, 0) is Started.drafts
@@ -66,8 +68,12 @@ Accepted(draft Numbers, predictions Numbers) Number
 	for draft
 		count = (count is index) and (value is predictions(index)) then count + 1 else count
 	count
-Truncated(verified Qwen3, length Number) Qwen3
-	Started.Truncated(Started.model, 2).blocks.First.keys.Length is 2 * Started.model.blocks.First.queryNorm.Length
+Truncated(verified Qwen3, kept Numbers) Qwen3
+	Speculation(Started, context = (1)).Truncated(Started.model, (5)).blocks.First.keys.Length is 2 * 4
+	Speculation(Prompted, (1, 2, 3), 5).Truncated(Verified, (5)).Step(2, 4).Scored is Prompted.Step(5, 3).Step(2, 4).Scored
+	if model.blocks.First.hybrid.layers.Length > 0
+		return model.Steps(kept, Qwen3.Positions(context.Length, kept.Length), 1)
+	let length = context.Length + kept.Length
 	mutable blocks = List(Mutable(Qwen3Block))
 	for verified.blocks
 		let width = length * value.groups * value.queryNorm.Length
