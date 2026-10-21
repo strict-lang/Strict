@@ -113,10 +113,20 @@ Operands(entry InstructionEntry, at Number, registers Text, naturals Text) Text
 Called(entry InstructionEntry) Text
 	Halving.Called(Halves(3)) is "i"
 	let decoder = PayloadDecoder(entry)
-	if (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
+	if ((decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")) or (decoder.Text(2) is "Length")
 		return "i"
 	let type = function.TypeOf(decoder.Text(1))
 	MlirWholeTypes(MlirFunction(function.types, type, decoder.Callee(type))).Returned
+Length(at Number) Text
+	MlirWholeTypes(MlirWholeChild.Brightening.function).Length(4) is "pixels"
+	Halving.Length(3) is ""
+	let entry = function.method.instructions(at)
+	if (entry.kind is not InstructionType.Invoke) or (PayloadDecoder(entry).Text(2) is not "Length")
+		return ""
+	let instance = entry.payload(LoadReuse(function.method.instructions).InvokeReads(entry).Last)
+	let writer = MlirArguments(List(MlirFunction)).Writer(function, instance, at)
+	let loaded = writer < 0 then "" else function.method.instructions(writer).texts.Last
+	MlirParameters(function).IsBytes(loaded) then loaded else ""
 IsWhole(literal Runtime/VmValue) Boolean
 	Halving.IsWhole(VmValue.OfNumber(4))
 	Halving.IsWhole(VmValue.OfNumber(0.5)) is false

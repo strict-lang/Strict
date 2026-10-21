@@ -1,0 +1,133 @@
+has function MlirFunction
+has position Number
+constant Lengths = (MlirLayout.Bytings.method.instructions(0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "pixels"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pixels"), InstructionEntry.Invoke(2, ("Strict/List", "Length", "Strict/Number"), List(Number), 1), InstructionEntry.Invoke(3, ("Strict/Rows", "Twice", "Strict/Number", "number"), List(Number) + 2, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
+constant Brightened = MethodEntry("Brightened", List(MemberEntry) + MemberEntry("pixels", "Strict/List(Byte)", List(InstructionEntry), false), "Strict/Bytes", Lengths)
+constant Brightening = MlirWholeChild(MlirFunction(List(TypeEntry) + MlirFunction.Shape + MlirLayout.Byting + MlirParallel.Rows, MlirParallel.Rows, Brightened), 2)
+constant Types = MlirWholeTypes(Brightening.function)
+constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, i8"
+constant Items = "    %witems = func.call @strict_list_bytes(%wil) : (f64) -> !llvm.ptr"
+constant Started = ("  ^wholestart:", "    llvm.store %from, %wloop : i64, !llvm.ptr", "    cf.br ^wloop", "  ^wloop:")
+constant Checked = ("    %wk = llvm.load %wloop : !llvm.ptr -> i64", "    %wm = arith.cmpi slt, %wk, %to : i64", "    cf.cond_br %wm, ^wbody, ^wexit", "  ^wbody:")
+constant Next = ("    %wk1 = arith.addi %wk, %one : i64", "    llvm.store %wk1, %wloop : i64, !llvm.ptr", "    cf.br ^wloop")
+constant Exit = ("  ^wexit:", "    %wz = arith.constant 0.0 : f64", "    return %wz : f64")
+constant Element = ("    %wvp = llvm.getelementptr %witems[%wk]" + Pointer, "    %wvb = llvm.load %wvp : !llvm.ptr -> i8", "    %wv = arith.extui %wvb : i8 to i64")
+IsWhole Boolean
+	Brightening.IsWhole
+	MlirWholeChild(MlirParallel.Doubling.function, 2).IsWhole is false
+	if (MlirParallel(function, position).IsParallel is false) or (MlirBytes(function, position).IsCollected is false)
+		return false
+	if (MlirLoops(function, position).Collection is not "") and (MlirBytes(function, position).IsIterated is false)
+		return false
+	let settled = MlirWholeTypes(function).Settled
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if (IsAllowed(value, settled) is false) or MlirWholeTypes(function).IsFractional(value, settled)
+			return false
+	true
+IsAllowed(at Number, settled Text) Boolean
+	Brightening.IsAllowed(4, "----||")
+	Brightening.IsAllowed(6, "----||")
+	Brightening.IsAllowed(4, "--x-||") is false
+	let entry = function.method.instructions(at)
+	let written = LoadReuse(function.method.instructions).Written(entry)
+	if (written >= 0) and (settled.Substring(written, 1) is "x")
+		return false
+	if entry.kind is InstructionType.InvokeWriteToList
+		return entry.texts(0) is "forResult"
+	(MlirWholeTypes(function).Length(at) is not "") or MlirWholeFunction(function).IsAllowed(at, 0)
+Symbol Text
+	Brightening.Symbol is "Rows_Brightened_1_loop2_whole"
+	function.Symbol + "_loop" + position + "_whole"
+Lines Texts
+	Brightening.Lines.First is "  func.func private @Rows_Brightened_1_loop2_whole" + MlirParallel.Signature
+	Brightening.Lines.Last is "  }"
+	MlirWholeChild(MlirParallel.Doubling.function, 2).Lines.Length is 0
+	if IsWhole is false
+		return List(Text)
+	let parts = MlirWholeTypes(function).Settled.Split("|")
+	let header = "  func.func private @" + Symbol + MlirParallel.Signature
+	let allocated = MlirWholeBody(function).Allocated(parts(0), parts(1)) + MlirWholeBody(function).Slot("%wloop", "i64")
+	let generic = "    %wg = func.call @" + function.Symbol + "_loop" + position + "(%context, %from, %to)"
+	let fallback = ("  ^generic:", generic + " : " + MlirParallel.Shape, "    return %wg : f64")
+	(List(Text) + header) + allocated + Guarded + fallback + Looped(parts(0), parts(1), parts(2)) + "  }"
+Inputs Texts
+	Brightening.Inputs is ("pixels")
+	mutable names = List(Mutable(Text))
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		let isLoad = entry.kind is InstructionType.LoadVariableToRegister
+		if isLoad and (entry.texts(0) is not in ("value", "index")) and (entry.texts(0) is not in names)
+			names.Add(entry.texts(0))
+	names
+Guarded Texts
+	Brightening.Guarded.Last is "    cf.cond_br %t2whok, ^wholestart, ^generic"
+	let guard = MlirWholeGuard(function, position)
+	mutable lines = guard.Started
+	for Inputs
+		let context = Loaded("%wl" + index, "%v_" + value)
+		let input = MlirWholeFunction(function).IsByteList(value) then Bytes(value, index) else Number(value, index)
+		lines = lines + context + input
+	let count = Inputs.Length + (MlirLoops(function, position).Collection is "" then 0 else 1)
+	let joined = guard.Joined(MlirWholeCall(function, position).Conditions(count))
+	lines + Collections + joined + ("    cf.cond_br " + guard.Temp("whok") + ", ^wholestart, ^generic")
+Number(name Text, number Number) Texts
+	Brightening.Number("radius", 1).Last is "    llvm.store %wi1, %v_radius : i64, !llvm.ptr"
+	let guard = MlirWholeGuard(function, position)
+	let converted = MlirWholeValues(position).Converted("%wl" + number, "f", "i", "%wi" + number)
+	let checked = guard.Checked("%wl" + number, guard.Temp("wh" + number), guard.Temp("whlimit"))
+	checked + converted + ("    llvm.store %wi" + number + ", %v_" + name + " : i64, !llvm.ptr")
+Bytes(name Text, number Number) Texts
+	Brightening.Bytes("pixels", 0).Last is "    llvm.store %wn0i, %v_pixels_length : i64, !llvm.ptr"
+	let pointer = "%wp" + number
+	let bytes = "    " + pointer + " = func.call @strict_list_bytes(%wl" + number + ") : (f64) -> !llvm.ptr"
+	let stored = "    llvm.store " + pointer + ", %v_" + name + " : !llvm.ptr, !llvm.ptr"
+	let length = "    %wn" + number + " = func.call @strict_list_length(%wl" + number + ") : (f64) -> f64"
+	let converted = MlirWholeValues(position).Converted("%wn" + number, "f", "i", "%wn" + number + "i")
+	let slot = MlirWholeBody(function).Slot("%v_" + name + "_length", "i64")
+	let present = MlirWholeGuard(function, position).Present(pointer, number)
+	let counted = "    llvm.store %wn" + number + "i, %v_" + name + "_length : i64, !llvm.ptr"
+	(bytes, stored) + present + (length, converted, slot, counted)
+Loaded(name Text, slot Text) Texts
+	Brightening.Loaded("%x", "%v_pixels").Last is "    %x = llvm.load %xa : !llvm.ptr -> f64"
+	let index = MlirParallel(function, position).Snapshot.Index(slot)
+	let address = "    " + name + "a = llvm.getelementptr %context[" + index + "]" + MlirParallel.Slot
+	(address, "    " + name + " = llvm.load " + name + "a : !llvm.ptr -> f64")
+Collections Texts
+	Brightening.Collections.Last.EndsWith("%t2wh1o = arith.cmpi ne, %t2wh1i, %t2whz : i64")
+	let result = Loaded("%wrl", "%v_forResult") + "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
+	if MlirLoops(function, position).Collection is ""
+		return result
+	let iterated = Loaded("%wil", "%r" + function.method.instructions(position).payload(0))
+	result + iterated + Items + MlirWholeGuard(function, position).Present("%witems", Inputs.Length)
+Looped(registers Text, variables Text, naturals Text) Texts
+	Text.Combine(Brightening.Looped(Types.Part(0), Types.Part(1), Types.Part(2))).IndexOf("@Rows_Twice_1_whole(") > 0
+	mutable lines = Started + Checked + Current(variables)
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let statements = MlirWholeStatements(function, value, registers, variables, naturals)
+		let isWrite = function.method.instructions(value).kind is InstructionType.InvokeWriteToList
+		lines = lines + function.Label(value) + (isWrite then Written(value, registers, naturals) else statements.Emitted)
+	lines + Next + Exit
+Current(variables Text) Texts
+	Brightening.Current(Types.Part(1)).Last is "    llvm.store %wv, %v_value : i64, !llvm.ptr"
+	let values = MlirWholeValues(position)
+	let index = values.Stored("%wk", "i", "%v_index", variables.Substring(function.VariableNames.Index("index"), 1))
+	let type = variables.Substring(function.VariableNames.Index("value"), 1)
+	if MlirLoops(function, position).Collection is ""
+		return index + values.Stored("%wk", "i", "%v_value", type)
+	index + Element + values.Stored("%wv", "i", "%v_value", type)
+Written(at Number, registers Text, naturals Text) Texts
+	Brightening.Written(6, Types.Part(0), Types.Part(2)).Last is "    llvm.store %t6b, %t6p : i8, !llvm.ptr"
+	let register = function.method.instructions(at).payload(0)
+	let type = MlirWholeTypes(function).Reaching(register, at, registers, naturals)
+	let loaded = MlirWholeValues(at).Loaded("%t" + at + "v", "%r" + register, registers.Substring(register, 1), type)
+	let slot = "    %t" + at + "p = llvm.getelementptr %wout[%wk]" + Pointer
+	let stored = "    llvm.store %t" + at + "b, %t" + at + "p : i8, !llvm.ptr"
+	if type is "f"
+		return loaded + ("    %t" + at + "b = func.call @strict_byte_packed(%t" + at + "v) : (f64) -> i8", slot, stored)
+	loaded + Clamped(at) + (slot, stored)
+Clamped(at Number) Texts
+	Brightening.Clamped(6).Last is "    %t6b = arith.trunci %t6c : i64 to i8"
+	let values = MlirWholeValues(at)
+	let low = values.Line("l", "arith.maxsi %t" + at + "v, %t" + at + "z : i64")
+	let high = values.Line("c", "arith.minsi %t" + at + "l, %t" + at + "h : i64")
+	let limits = (values.Line("z", "arith.constant 0 : i64"), values.Line("h", "arith.constant 255 : i64"))
+	limits + low + high + values.Line("b", "arith.trunci %t" + at + "c : i64 to i8")

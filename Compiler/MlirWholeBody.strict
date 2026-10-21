@@ -32,6 +32,9 @@ Header Text
 Slots(registers Text, variables Text) Texts
 	Halving.Slots("iifi", "--i").Last is "    llvm.store %p0, %v_number : i64, !llvm.ptr"
 	Constants.Slots("iifi", "--i").Last is "    llvm.store %c0i, %v_number : i64, !llvm.ptr"
+	Allocated(registers, variables) + Parameters(variables)
+Allocated(registers Text, variables Text) Texts
+	"    %v_number = llvm.alloca %one x i64 : (i64) -> !llvm.ptr" is in Halving.Allocated("iifi", "--i")
 	let values = MlirWholeValues(0)
 	mutable lines = ("    %one = arith.constant 1 : i64", Slot("%flag", "i1"))
 	for registers.Length
@@ -40,7 +43,7 @@ Slots(registers Text, variables Text) Texts
 		lines = lines + Slot("%v_" + value, values.Typed(variables.Substring(index, 1)))
 	for function.method.instructions
 		lines = value.kind is InstructionType.LoopBegin then lines + Slot("%loop" + index, "i64") else lines
-	lines + Parameters(variables)
+	lines
 Parameters(variables Text) Texts
 	Halving.Parameters("--i") is ("    llvm.store %p0, %v_number : i64, !llvm.ptr")
 	mutable lines = List(Mutable(Text))

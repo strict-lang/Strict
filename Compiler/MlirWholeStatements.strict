@@ -64,9 +64,9 @@ Compared(entry InstructionEntry) Texts
 	flagged + ("    " + Temp("d") + " = arith.extui " + Temp("c") + " : i1 to i64") + Store("d", "i", entry.payload(3))
 Called(entry InstructionEntry) Texts
 	Text.Combine(Halving.At(3).Called(MlirWholeTypes.Halves(3))).IndexOf("llvm.intr.floor(%t3a)") > 0
-	let floored = Floored(entry)
-	if floored.Length > 0
-		return floored
+	let native = Native(entry)
+	if native.Length > 0
+		return native
 	let callee = MlirWholeFunction(function).Callee(entry)
 	let kinds = MlirWholeFunction(callee).Kinds
 	mutable lines = List(Mutable(Text))
@@ -75,12 +75,14 @@ Called(entry InstructionEntry) Texts
 	let returned = MlirWholeTypes(callee).Returned
 	let call = MlirWholeValues(position).Called(Temp("c"), MlirWholeFunction(callee).Symbol, Temp("a"), kinds, returned)
 	lines + call + Store("c", returned, entry.payload(0))
-Floored(entry InstructionEntry) Texts
-	Halving.At(3).Floored(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3c, %r3 : i64, !llvm.ptr"
-	Halving.At(2).Floored(MlirWholeTypes.Halves(2)).Length is 0
-	let decoder = PayloadDecoder(entry)
-	let isFloor = (entry.kind is InstructionType.Invoke) and (decoder.Text(1) is "Strict/Number")
-	if (isFloor is false) or (decoder.Text(2) is not "Floor")
+Native(entry InstructionEntry) Texts
+	Halving.At(3).Native(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3c, %r3 : i64, !llvm.ptr"
+	Halving.At(1).Native(MlirWholeCall.Twice.instructions(1)).Length is 0
+	let listed = MlirWholeTypes(function).Length(position)
+	if listed is not ""
+		let length = MlirWholeValues(position).Loaded(Temp("c"), "%v_" + listed + "_length", "i", "i")
+		return length + Store("c", "i", entry.payload(0))
+	if (PayloadDecoder(entry).Text(1) is not "Strict/Number") or (PayloadDecoder(entry).Text(2) is not "Floor")
 		return List(Text)
 	let source = entry.payload(LoadReuse(function.method.instructions).InvokeReads(entry).Last)
 	let floored = "    " + Temp("f") + " = llvm.intr.floor(" + Temp("a") + ") : (f64) -> f64"

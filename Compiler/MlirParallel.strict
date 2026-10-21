@@ -70,7 +70,9 @@ Filler Text
 	kind is "List(Number)" then "strict_list_filled_numbers" else "strict_list_filled"
 Joined Texts
 	Doubling.Joined.Last is "    cf.br ^loop2exit"
-	let body = "    " + Temp("pf") + " = func.constant @" + function.Symbol + "_loop" + position + " : " + Shape
+	let child = MlirWholeChild(function, position)
+	let symbol = child.IsWhole then child.Symbol else function.Symbol + "_loop" + position
+	let body = "    " + Temp("pf") + " = func.constant @" + symbol + " : " + Shape
 	let operands = "(" + Temp("pf") + ", " + Temp("pc") + ", " + Temp("pn") + ") : (" + Shape + ", !llvm.ptr, i64) -> f64"
 	let failed = "    " + Temp("pe") + " = func.call @strict_is_failure(" + Temp("pr") + ") : (f64) -> i1"
 	let branch = "    cf.cond_br " + Temp("pe") + ", ^loop" + position + "failed, ^loop" + position + "filled"
@@ -85,7 +87,7 @@ Outlined Texts
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirParallel(function, index).IsParallel
-			lines = lines + MlirParallel(function, index).Child
+			lines = lines + MlirParallel(function, index).Child + MlirWholeChild(function, index).Lines
 	lines
 Child Texts
 	Doubling.Child.Last is "  }"
