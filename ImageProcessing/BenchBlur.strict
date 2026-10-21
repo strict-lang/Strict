@@ -1,23 +1,27 @@
 has logger
-constant Width = 3840
-constant Height = 2160
+constant Source = "ImageProcessing/Compare/Landscape.ppm"
+constant Target = "ImageProcessing/Compare/Landscape.strict.ppm"
 constant Radius = 4
 constant Dot = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+constant Alpha = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 Run
-	let pixels = Pattern(Width * Height * 4)
-	let started = Process.Elapsed
-	let center = Blurred(pixels, Width, Radius)(Width * (Height + 1) * 2)
-	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-	logger.Log("Blurred " + Width + "x" + Height + " in " + milliseconds + " ms: " + center)
-Pattern(count Number) Bytes
-	BenchBlur.Pattern(3) is (0, 239, 222)
-	for count
-		index * 7919 % 256
-Blurred(pixels Bytes, width Number, radius Number) Bytes
-	BenchBlur.Blurred((1, 2, 3, 4, 5, 6, 7, 8), 2, 1) is (1, 2, 3, 4, 5, 6, 7, 8)
-	BenchBlur.Blurred(Dot, 3, 1)(16) is 1
+	let bitmap = Ppm.Loaded(Source)
+	if bitmap.Pixels.Length is 0
+		logger.Log("Missing " + Source + ", see ImageProcessing/Compare/README.md")
+	else
+		let started = Process.Elapsed
+		let blurred = Blurred(bitmap.Pixels, bitmap.width, Radius, bitmap.IsOpaque)
+		let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+		Ppm.Save(Bitmap(bitmap.width, bitmap.height, blurred, bitmap.IsOpaque), Target)
+		logger.Log("Blurred " + bitmap.width + "x" + bitmap.height + " in " + milliseconds + " ms: " + blurred(bitmap.Center))
+Blurred(pixels Bytes, width Number, radius Number, isOpaque Boolean) Bytes
+	BenchBlur.Blurred((1, 2, 3, 4, 5, 6, 7, 8), 2, 1, false) is (1, 2, 3, 4, 5, 6, 7, 8)
+	BenchBlur.Blurred(Dot, 3, 1, false)(16) is 1
+	BenchBlur.Blurred(Alpha, 3, 1, false)(19) is 1
+	BenchBlur.Blurred(Alpha, 3, 1, true)(19) is 9
 	for pixels
-		IsEdge(index, width * 4, pixels.Length, radius) then value else Averaged(pixels, index, width * 4, radius)
+		let isKept = IsEdge(index, width * 4, pixels.Length, radius) or (isOpaque and (index % 4 is 3))
+		isKept then value else Averaged(pixels, index, width * 4, radius)
 IsEdge(position Number, stride Number, length Number, radius Number) Boolean
 	BenchBlur.IsEdge(0, 12, 36, 1)
 	BenchBlur.IsEdge(16, 12, 36, 1) is false

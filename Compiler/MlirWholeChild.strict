@@ -3,6 +3,8 @@ has position Number
 constant Lengths = (MlirLayout.Bytings.method.instructions(0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "pixels"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pixels"), InstructionEntry.Invoke(2, ("Strict/List", "Length", "Strict/Number"), List(Number), 1), InstructionEntry.Invoke(3, ("Strict/Rows", "Twice", "Strict/Number", "number"), List(Number) + 2, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
 constant Brightened = MethodEntry("Brightened", List(MemberEntry) + MemberEntry("pixels", "Strict/List(Byte)", List(InstructionEntry), false), "Strict/Bytes", Lengths)
 constant Brightening = MlirWholeChild(MlirFunction(List(TypeEntry) + MlirFunction.Shape + MlirLayout.Byting + MlirParallel.Rows, MlirParallel.Rows, Brightened), 2)
+constant Reads = (MlirLayout.Bytings.method.instructions(0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "pixels"), InstructionEntry.Invoke(1, ("Strict/List", "Length", "Strict/Number"), List(Number), 0), InstructionEntry.LoopBegin(1, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "index"), InstructionEntry(InstructionType.IndexCall, "pixels", (3, 2)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 3), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
+constant Reading = MlirWholeChild(MlirFunction(Brightening.function.types, MlirParallel.Rows, MethodEntry("Copied", Brightened.parameters, "Strict/Bytes", Reads)), 3)
 constant Types = MlirWholeTypes(Brightening.function)
 constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, i8"
 constant Items = "    %witems = func.call @strict_list_bytes(%wil) : (f64) -> !llvm.ptr"
@@ -51,11 +53,12 @@ Lines Texts
 	(List(Text) + header) + allocated + Guarded + fallback + Looped(parts(0), parts(1), parts(2)) + "  }"
 Inputs Texts
 	Brightening.Inputs is ("pixels")
+	Reading.Inputs is ("pixels")
 	mutable names = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
-		let isLoad = entry.kind is InstructionType.LoadVariableToRegister
-		if isLoad and (entry.texts(0) is not in ("value", "index")) and (entry.texts(0) is not in names)
+		let isUsed = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
+		if isUsed and (entry.texts(0) is not in ("value", "index")) and (entry.texts(0) is not in names)
 			names.Add(entry.texts(0))
 	names
 Guarded Texts
