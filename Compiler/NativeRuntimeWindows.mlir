@@ -376,6 +376,21 @@
     %continueSearch = llvm.mlir.constant(0 : i32) : i32
     llvm.return %continueSearch : i32
   }
+  llvm.func @SetUnhandledExceptionFilter(!llvm.ptr) -> !llvm.ptr
+  llvm.mlir.global internal constant @strict_access_text("Error: AccessViolation, the program read or wrote memory it does not own (an instance used as a list or a missing value)\0A\00") : !llvm.array<122 x i8>
+  // an access violation nothing handled (the driver handles its own first) is reported instead of ending silently
+  llvm.func @strict_crash_handler(%pointers: !llvm.ptr) -> i32 {
+    %record = llvm.load %pointers : !llvm.ptr -> !llvm.ptr
+    %code = llvm.load %record : !llvm.ptr -> i32
+    %text = llvm.mlir.addressof @strict_access_text : !llvm.ptr
+    %printed = llvm.call @printf(%text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    llvm.call @strict_crash_log(%text) : (!llvm.ptr) -> ()
+    %null = llvm.mlir.zero : !llvm.ptr
+    %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
+    llvm.call @ExitProcess(%code) : (i32) -> ()
+    %handled = llvm.mlir.constant(1 : i32) : i32
+    llvm.return %handled : i32
+  }
   llvm.func @GetCurrentThreadStackLimits(!llvm.ptr, !llvm.ptr)
   func.func private @strict_stack_lowest(%stack: !llvm.ptr) -> i64 {
     %one = arith.constant 1 : i64
@@ -389,6 +404,8 @@
     %first = arith.constant 1 : i32
     %handler = llvm.mlir.addressof @strict_overflow_handler : !llvm.ptr
     %added = llvm.call @AddVectoredExceptionHandler(%first, %handler) : (i32, !llvm.ptr) -> !llvm.ptr
+    %crashHandler = llvm.mlir.addressof @strict_crash_handler : !llvm.ptr
+    %previousFilter = llvm.call @SetUnhandledExceptionFilter(%crashHandler) : (!llvm.ptr) -> !llvm.ptr
     %one = arith.constant 1 : i64
     %reserve = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
     %bytes = arith.constant 65536 : i32
