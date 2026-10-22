@@ -820,7 +820,7 @@ static unsigned char* Activated(const Tensor* down, float* gated, const float* u
 /* The outputs of the chosen experts of the layer prefix for one input one after the other like llama.cpp's CPU backend
    computes them: down(silu(gate input) * up input), each product ggml's dot product of rows as stored (mapped from the
    files, Q4_K, Q5_K, Q5_1 or Q8_0) with the input quantized for them, the rows spread over all threads. */
-STRICT_EXPORT double GgufFile_Experts(double self, double path, double prefix, double chosen, double input)
+STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double prefix, double chosen, double input)
 {
 	static strict_numbers* outputs = 0;
 	static int isTabled = 0;

@@ -16,13 +16,18 @@ Loaded(model Gguf, prefix Text) Experts
 	Tiny.expansions.Length is 4
 	Tiny.expansions.First.weights.Length is 8
 	Tiny.used is 2
+	let routed = Routed(model, prefix)
+	let count = routed.router.weights.Length
+	let joined = Flattened(Joined(model, prefix, count))
+	let contracting = model.Rows(prefix + "ffn_down_exps.weight")
+	Experts(routed.router, Stacked(joined, count), Stacked(contracting, count), routed.used, joined, contracting)
+Routed(model Gguf, prefix Text) Experts
+	Experts.Routed(Model, "blk.0.").router is Tiny.router
+	Experts.Routed(Model, "blk.0.").expansions.Length is 0
 	let architecture = model.Value("general.architecture")
 	let count = model.Value(architecture + ".expert_count") to Number
 	let routing = Layer(model.Rows(prefix + "ffn_gate_inp.weight"), Layer.Zeros(count))
-	let joined = Flattened(Joined(model, prefix, count))
-	let contracting = model.Rows(prefix + "ffn_down_exps.weight")
-	let chosen = model.Value(architecture + ".expert_used_count") to Number
-	Experts(routing, Stacked(joined, count), Stacked(contracting, count), chosen, joined, contracting)
+	Experts(routing, List(Layer), List(Layer), model.Value(architecture + ".expert_used_count") to Number)
 Dense(expansion Layer, contraction Layer) Experts
 	Experts.Dense(Tiny.expansions.First, Tiny.contractions.First).Forward(Probe) is Tiny.Expert(0, Probe)
 	Experts(Layer(List(Numbers), List(Number)), List(Layer) + expansion, List(Layer) + contraction, 1)
