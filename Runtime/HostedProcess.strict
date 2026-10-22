@@ -1,6 +1,20 @@
 has call Invocation
+constant Running = Invocation(InstructionEntry.Invoke(2, ("Strict/Process", "RunTools", "Strict/List(ProcessResult)", "name", "arguments"), (0, 1), -1), (VmValue.OfText("missingStrictTool"), VmValue.OfList((VmValue.OfText("a"), VmValue.OfText("b")))), VmValue.None)
 Result VmValue
 	HostedProcess(Hosted.SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
+	HostedProcess(Running).Result.items.Last.items.First.number is 127
 	if call.MethodName is "Started"
 		return VmValue.OfNumber(Process(call.Instance.Member(0).text).Started(call.Arguments.First.text))
+	if call.MethodName is "RunTools"
+		return Ran(Process.RunTools(call.Arguments.First.text, Hosted(call).TextsOf(call.Arguments.Last)))
 	Hosted(call).Processed
+Ran(results List(ProcessResult)) VmValue
+	HostedProcess(Running).Ran(List(ProcessResult) + ProcessResult(1, "a", "b")).items.First.items.Last.text is "b"
+	mutable values = List(Mutable(VmValue))
+	for results
+		values.Add(Resulted(value))
+	VmValue.OfList(values)
+Resulted(result ProcessResult) VmValue
+	HostedProcess(Running).Resulted(ProcessResult(2, "a", "b")).items.First.number is 2
+	let code = VmValue.OfNumber(result.exitCode)
+	VmValue("Strict/ProcessResult", 0, "", (code, VmValue.OfText(result.Output), VmValue.OfText(result.error)))

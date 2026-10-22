@@ -15,6 +15,11 @@ RunTool(name Text, arguments Text) ProcessResult
 	if not tool.IsAvailable
 		return ProcessResult(127, "", "tool not found: " + name)
 	tool.Run(arguments)
+RunTools(name Text, arguments Texts) List(ProcessResult)
+	Process.RunTools("missingStrictTool", ("a", "b")).Length is 2
+	Process.RunTools("missingStrictTool", ("a", "b")).Last.exitCode is 127
+	for arguments
+		RunTool(name, value)
 OperatingSystem Text
 	Process.OperatingSystem is in ("Windows", "Linux", "MacOS")
 	"Unknown"

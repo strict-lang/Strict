@@ -88,21 +88,31 @@ Built(base Text, executable Text, level Text) Text
 	let resource = sources.StartsWith("clang") then sources else NativeSources(natives).Resource(base, platform, root)
 	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")
 		return resource
-	let linking = Inputs(base) + sources + resource + " -o " + Quoted(executable) + Optimized + level + system
+	let linking = Inputs(base, level) + sources + resource + " -o " + Quoted(executable) + Optimized + level + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else "Built " + executable
-Inputs(base Text) Text
-	OnLinux.Inputs("Compiler/output/missing") is "\"Compiler/output/missing.ll\""
+Inputs(base Text, level Text) Text
+	OnLinux.Inputs("Compiler/output/missing", "") is "\"Compiler/output/missing.ll\""
 	let splitter = platform is Platform.Windows then Located("llvm-split") else ""
 	if splitter is ""
 		return Quoted(base + ".ll")
 	let split = ToolRunner(splitter).Execute("-j " + Parts + " " + Quoted(base + ".ll") + " -o " + Quoted(base + "-"))
-	if split.Failed
+	if split.Failed or (PartsCompiled(base, level) is false)
 		return Quoted(base + ".ll")
-	mutable parts = " -x ir"
+	mutable parts = ""
 	for Parts
-		parts = parts + " " + Quoted(base + "-" + value)
+		parts = parts + " " + Quoted(base + "-" + value + ".o")
 	parts + Thin + " -Wno-unused-command-line-argument"
+PartsCompiled(base Text, level Text) Boolean
+	OnWindows.PartsCompiled("Compiler/output/missing", "") is false
+	mutable compiling = List(Mutable(Text))
+	for Parts
+		let part = base + "-" + value
+		compiling.Add("-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + Optimized + level)
+	for ToolRunner(Located("clang")).ExecuteAll(compiling)
+		if value.Failed
+			return false
+	true
 CrossBuilt(base Text, level Text) Text
 	OnWindows.CrossBuilt("Compiler/output/missing", NativeBuild.Fast).StartsWith("mlir-opt failed")
 	let lowered = Lowered(base + ".linux")

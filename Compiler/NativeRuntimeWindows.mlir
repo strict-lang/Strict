@@ -566,6 +566,8 @@
     %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
     return %exitNumber : f64
   }
+  // Process.RunTools starts several at once: a child must not inherit the output files of another one
+  llvm.mlir.global internal @strict_process_lock(0 : i64) : i64
   func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
     %count = arith.constant 1 : i64
     %startupSize = arith.constant 104 : i64
@@ -584,6 +586,8 @@
     %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
     %outputPath = func.call @strict_temp_file() : () -> f64
     %errorPath = func.call @strict_temp_file() : () -> f64
+    %lock = llvm.mlir.addressof @strict_process_lock : !llvm.ptr
+    llvm.call @strict_spin_lock(%lock) : (!llvm.ptr) -> ()
     %output = func.call @strict_inherited_file(%outputPath) : (f64) -> !llvm.ptr
     %error = func.call @strict_inherited_file(%errorPath) : (f64) -> !llvm.ptr
     %startup = llvm.call @calloc(%count, %startupSize) : (i64, i64) -> !llvm.ptr
@@ -601,11 +605,12 @@
     %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %null, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %closedOutput = llvm.call @CloseHandle(%output) : (!llvm.ptr) -> i32
+    %closedError = llvm.call @CloseHandle(%error) : (!llvm.ptr) -> i32
+    llvm.call @strict_spin_unlock(%lock) : (!llvm.ptr) -> ()
     %failed = arith.cmpi eq, %started, %noFlags : i32
     cf.cond_br %failed, ^notStarted, ^running
   ^notStarted:
-    %closedOutput = llvm.call @CloseHandle(%output) : (!llvm.ptr) -> i32
-    %closedError = llvm.call @CloseHandle(%error) : (!llvm.ptr) -> i32
     %unusedOutput = func.call @strict_removed_file(%outputPath) : (f64) -> f64
     %unusedError = func.call @strict_removed_file(%errorPath) : (f64) -> f64
     %startCode = arith.constant 1.0 : f64
@@ -639,8 +644,6 @@
   ^collect(%code: f64):
     %closedProcess = llvm.call @CloseHandle(%process) : (!llvm.ptr) -> i32
     %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
-    %closedOut = llvm.call @CloseHandle(%output) : (!llvm.ptr) -> i32
-    %closedErr = llvm.call @CloseHandle(%error) : (!llvm.ptr) -> i32
     %written = func.call @strict_removed_file(%outputPath) : (f64) -> f64
     %reported = func.call @strict_removed_file(%errorPath) : (f64) -> f64
     %timedOutText = llvm.mlir.addressof @strict_timed_out : !llvm.ptr

@@ -8680,6 +8680,53 @@
     %result = func.call @strict_process_execute(%path, %arguments) : (f64, f64) -> f64
     return %result : f64
   }
+  // Process.RunTools: the pool runs the tool for every argument line at the same time, the results keep their order
+  func.func private @strict_process_runtools(%self: f64, %name: f64, %arguments: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %size = arith.constant 32 : i64
+    %count = func.call @strict_list_length(%arguments) : (f64) -> f64
+    %results = func.call @strict_list_new(%count, %zero) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%results) : (f64) -> !llvm.ptr
+    %context = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    llvm.store %self, %context : f64, !llvm.ptr
+    %nameSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %name, %nameSlot : f64, !llvm.ptr
+    %argumentsSlot = llvm.getelementptr %context[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %arguments, %argumentsSlot : f64, !llvm.ptr
+    %itemsSlot = llvm.getelementptr %context[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %items, %itemsSlot : !llvm.ptr, !llvm.ptr
+    %body = func.constant @strict_process_tools : (!llvm.ptr, i64, i64) -> f64
+    %lines = arith.fptosi %count : f64 to i64
+    %ran = func.call @strict_parallel(%body, %context, %lines) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    llvm.call @free(%context) : (!llvm.ptr) -> ()
+    %filled = func.call @strict_list_filled(%results, %count) : (f64, f64) -> f64
+    return %filled : f64
+  }
+  func.func private @strict_process_tools(%context: !llvm.ptr, %start: i64, %end: i64) -> f64 {
+    %one = arith.constant 1 : i64
+    %self = llvm.load %context : !llvm.ptr -> f64
+    %nameSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %name = llvm.load %nameSlot : !llvm.ptr -> f64
+    %argumentsSlot = llvm.getelementptr %context[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %arguments = llvm.load %argumentsSlot : !llvm.ptr -> f64
+    %itemsSlot = llvm.getelementptr %context[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %items = llvm.load %itemsSlot : !llvm.ptr -> !llvm.ptr
+    cf.br ^next(%start : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %end : i64
+    cf.cond_br %more, ^run, ^done
+  ^run:
+    %at = arith.sitofp %index : i64 to f64
+    %line = func.call @strict_list_get(%arguments, %at) : (f64, f64) -> f64
+    %result = func.call @strict_process_runtool(%self, %name, %line) : (f64, f64, f64) -> f64
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %result, %slot : f64, !llvm.ptr
+    %following = arith.addi %index, %one : i64
+    cf.br ^next(%following : i64)
+  ^done:
+    %passed = arith.constant 0.0 : f64
+    return %passed : f64
+  }
   llvm.mlir.global internal @strict_gpu_state(0 : i64) : i64
   // loops reading fewer than 4M numbers stay on the CPU unless STRICT_GPU=all (a launch costs about 130 us), lists already on the GPU run there
   llvm.mlir.global internal @strict_gpu_minimum(4194304 : i64) : i64

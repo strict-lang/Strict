@@ -113,6 +113,7 @@ Removed(base Text)
 		File(base + value).Delete
 	for Toolchain.Parts
 		File(base + "-" + value).Delete
+		File(base + "-" + value + ".o").Delete
 Output(path Text, isProgram Boolean) Text
 	NativeBuild.Output("Character.strict", false) is "./Character.test"
 	NativeBuild.Output("C:/s/A.strict", true) is "C:/s/A"
