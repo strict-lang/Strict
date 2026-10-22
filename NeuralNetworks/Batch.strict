@@ -16,11 +16,24 @@ Sums(input Numbers) Numbers
 	Batch(Blocks.Rows("four"), List(Number) + 0).Sums(Prompt)(637).IsNearlyEqual(5.001, 0.5)
 	Batch(Blocks.Rows("six"), List(Number) + 0).Sums(Prompt)(500).IsNearlyEqual(-3.413, 0.2)
 	let width = weights.First.Length
-	if input.Length is width
-		return Layer(weights, biases).Sums(input)
+	if (input.Length <= 4 * width) and (weights.Length < 100000)
+		return input.Length is width then Layer(weights, biases).Sums(input) else Ordered(input)
 	let rows = weights.Length
 	for rows * input.Length / width
 		Dot(weights(index % rows), 0, input, (index / rows).Floor * width) + biases(index % biases.Length)
+Ordered(input Numbers) Numbers
+	Pair.Ordered((1, 1, 2, 0)) is (13, 27, 12, 26)
+	Batch(Pair.weights, (1, 2, 3, 4)).Ordered((1, 1, 2, 0)) is (4, 9, 5, 10)
+	let rows = weights.Length
+	let tokens = input.Length / weights.First.Length
+	let sums = Interleaved(input, tokens)
+	for sums
+		sums((index % rows) * tokens + (index / rows).Floor) + biases(index % biases.Length)
+Interleaved(input Numbers, tokens Number) Numbers
+	Pair.Interleaved((1, 1, 2, 0), 2) is (3, 2, 7, 6)
+	let width = weights.First.Length
+	for weights.Length * tokens
+		Dot(weights((index / tokens).Floor), 0, input, (index % tokens) * width)
 Grouped(bases Numbers, count Number, input Numbers) Numbers
 	Pair.Grouped(List(Number) + 1, 1, (1, 1, 2, 0)) is (7, 6)
 	Pair.Grouped(List(Number) + 0, 2, (1, 1, 2, 0)) is (3, 7, 2, 6)

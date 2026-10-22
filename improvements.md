@@ -17,6 +17,9 @@ In priority order, short and actionable. Remove what is done (results go into th
 - `Qwen3Text` (Q8_0 through `Generation`) takes 196.6 ms per token on the RTX 3080 while `Qwen3Benchmark` decodes Q4_K_M in 2.4 ms (2026-10-22): find which loops of `Generation` stay on the CPU.
 - GPU device functions name the parts of a variable slot by appending d, n, b (and e for exact numbers), so a parameter `gate` has `%v_gated` as its part and a local `gated` in the same method collides: `redefinition of SSA value '%v_gated.private'` (StrictComfy `MossBlock.Situ`, `MossImage` does not build). Fix: a separator in `MlirTyped.Parts` and the literal suffixes of the device code (`_d`, `_n`, `_b`, `_e`).
 
+- Qwen3.8 prompts of 920 tokens and more stop with `a loop on the GPU read outside of a list` in `DeltaChunks.Corrected` (22.7M outputs, 900 tokens work, the same kernel with zero inputs at 925 tokens works): the exact integer shadows past 2^24.
+- Native programs (`strict.exe` builds, `Qwen3Benchmark`) crash at start about 1 in 8 runs with an access violation (2026-10-22, after the merge of 3332b94a and 0b84868e); a second start works.
+
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.
 - Qwen3-Coder-Next 80B-A3B pruned to 18-20 GB: needs more VRAM and the `qwen3next` architecture.
