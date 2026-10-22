@@ -1,0 +1,33 @@
+has values Numbers
+has affine Numbers
+has weights Numbers
+has shape Numbers
+constant Square = (1, 2, 3, 4)
+constant Box = (1, 1, 1, 1, 1, 1, 1, 1, 1)
+constant Large = Convolved(Layer.Weights(480), Layer.Weights(64), Layer.Weights(11520), (3, 5, 32, 40, 1))
+Summed Numbers
+	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0)).Summed is (10, 10, 10, 10)
+	Convolved(Square, (1, 0), (0, 1, 0, 0, 0, 0, 0, 0, 0), (2, 2, 1, 1, 0)).Summed is (0, 0, 1, 2)
+	Convolved(Square, (2, 1), (0, 0, 0, 0, 1, 0, 0, 0, 0), (2, 2, 1, 1, 1)).Summed(1).IsNearlyEqual(4.966533)
+	Convolved((1, 2, 3, 4), (1, 1, 0, 0), Box + Box, (1, 2, 2, 1, 0)).Summed is (10, 10)
+	Large.Summed(599).IsNearlyEqual(Large.Tapped(14, 39), 0.0001)
+	Large.Summed(283).IsNearlyEqual(Large.Tapped(7, 3), 0.0001)
+	for shape(0) * shape(1) * shape(3)
+		Tapped((index / shape(3)).Floor, index % shape(3))
+Tapped(pixel Number, output Number) Number
+	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0)).Tapped(3, 0) is 10
+	let channels = shape(2)
+	mutable sum = 0
+	for 9 * channels
+		let source = Source(pixel, (index / channels).Floor)
+		let channel = index % channels
+		let number = source < 0 then 0 else values(source * channels + channel)
+		let activated = FeatureMap.Activated(number, affine(channel), affine(channels + channel), shape(4) is 1)
+		sum = sum + (source < 0 then 0 else activated) * weights(output * 9 * channels + index)
+	sum
+Source(pixel Number, tap Number) Number
+	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0)).Source(3, 0) is 0
+	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0)).Source(0, 0) is -1
+	let row = (pixel / shape(1)).Floor + (tap / 3).Floor - 1
+	let column = pixel % shape(1) + tap % 3 - 1
+	row >= 0 and row < shape(0) and column >= 0 and column < shape(1) then row * shape(1) + column else -1

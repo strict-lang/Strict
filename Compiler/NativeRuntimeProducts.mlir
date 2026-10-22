@@ -426,7 +426,7 @@
     return
   }
   // the 4 sums from slot plus the 16 x 8 by 8 products of 16 numbers along inner (a: rows g and g + 8 of numbers 0 to 7,
-  // then of 8 to 15, b: 0 to 7 and 8 to 15 of column g), one m16n8k16 from sm_80 on, two m16n8k8 before
+  // then of 8 to 15, b: 0 to 7 and 8 to 15 of column g)
   func.func private @strict_device_product_mma(%sums: vector<64xf32>, %slot: i32, %a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32) -> vector<64xf32> attributes {passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -444,22 +444,7 @@
     %h3 = llvm.bitcast %a3 : i32 to vector<2xf16>
     %k0 = llvm.bitcast %b0 : i32 to vector<2xf16>
     %k1 = llvm.bitcast %b1 : i32 to vector<2xf16>
-    %arch = func.call @strict_device_arch() : () -> i32
-    %c800 = arith.constant 800 : i32
-    %isWide = arith.cmpi sge, %arch, %c800 : i32
-    cf.cond_br %isWide, ^wide, ^narrow
-  ^wide:
-    %wideDot = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k16.row.col.f32.f32"(%h0, %h1, %h2, %h3, %k0, %k1, %old0, %old1, %old2, %old3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
-    cf.br ^summed(%wideDot : !llvm.struct<(f32, f32, f32, f32)>)
-  ^narrow:
-    %firstDot = func.call @strict_device_halves_mma(%h0, %h1, %k0, %old0, %old1, %old2, %old3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
-    %first0 = llvm.extractvalue %firstDot[0] : !llvm.struct<(f32, f32, f32, f32)>
-    %first1 = llvm.extractvalue %firstDot[1] : !llvm.struct<(f32, f32, f32, f32)>
-    %first2 = llvm.extractvalue %firstDot[2] : !llvm.struct<(f32, f32, f32, f32)>
-    %first3 = llvm.extractvalue %firstDot[3] : !llvm.struct<(f32, f32, f32, f32)>
-    %secondDot = func.call @strict_device_halves_mma(%h2, %h3, %k1, %first0, %first1, %first2, %first3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
-    cf.br ^summed(%secondDot : !llvm.struct<(f32, f32, f32, f32)>)
-  ^summed(%dot: !llvm.struct<(f32, f32, f32, f32)>):
+    %dot = func.call @strict_device_halves_mma16(%h0, %h1, %h2, %h3, %k0, %k1, %old0, %old1, %old2, %old3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
     %new0 = llvm.extractvalue %dot[0] : !llvm.struct<(f32, f32, f32, f32)>
     %new1 = llvm.extractvalue %dot[1] : !llvm.struct<(f32, f32, f32, f32)>
     %new2 = llvm.extractvalue %dot[2] : !llvm.struct<(f32, f32, f32, f32)>

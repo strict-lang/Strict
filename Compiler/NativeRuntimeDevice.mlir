@@ -1792,6 +1792,16 @@
   ^done:
     return %largest : f32
   }
+  // m16n8k16 of 16 bit floats as two m16n8k8 (numbers 0 to 7, then 8 to 15)
+  func.func private @strict_device_halves_mma8x2(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32) -> !llvm.struct<(f32, f32, f32, f32)> attributes {passthrough = ["alwaysinline"]} {
+    %first = func.call @strict_device_halves_mma(%a0, %a1, %b0, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    %first0 = llvm.extractvalue %first[0] : !llvm.struct<(f32, f32, f32, f32)>
+    %first1 = llvm.extractvalue %first[1] : !llvm.struct<(f32, f32, f32, f32)>
+    %first2 = llvm.extractvalue %first[2] : !llvm.struct<(f32, f32, f32, f32)>
+    %first3 = llvm.extractvalue %first[3] : !llvm.struct<(f32, f32, f32, f32)>
+    %second = func.call @strict_device_halves_mma(%a2, %a3, %b1, %first0, %first1, %first2, %first3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    return %second : !llvm.struct<(f32, f32, f32, f32)>
+  }
   func.func private @strict_device_words(%first: i32, %second: i32, %third: i32, %fourth: i32) -> vector<4xi32> attributes {passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32

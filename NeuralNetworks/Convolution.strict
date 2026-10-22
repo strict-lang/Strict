@@ -18,20 +18,8 @@ Applied(map FeatureMap, affine Numbers, swish Boolean) FeatureMap
 	Center.Applied(Square, (1, 0), false) is FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0.5)
 	Above.Applied(Square, (1, 0), false).values is (0, 0, 1, 2)
 	Convolution((0, 0, 0, 1, 0, 0, 0, 0, 0), Center.biases).Applied(Square, (1, 0), false).values is (0, 1, 0, 3)
-	let padded = map.Padded(affine, swish)
-	let summed = Summed(Shifted(padded, map, 0), Shifted(padded, map, 1), Shifted(padded, map, 2))
-	FeatureMap(summed, map.width, biases.Length, biases)
-Shifted(padded Numbers, map FeatureMap, row Number) Numbers
-	Box.Shifted(Padded, Square, 1) is (3, 3, 7, 7)
-	let inputs = map.channels
-	let columns = map.width + 2
-	let shape = (map.Height, map.width, 3 * inputs, biases.Length)
-	let strides = (row * columns * inputs, columns * inputs, inputs, 1, row * 3 * inputs, 0, 1, 9 * inputs)
-	Products(padded, weights, shape, strides).Multiplied
-Summed(first Numbers, second Numbers, third Numbers) Numbers
-	Box.Summed((1, 2), (2, 3), (3, 4)) is (6, 9)
-	for first
-		value + second(index) + third(index)
+	let shape = (map.Height, map.width, map.channels, biases.Length, swish then 1 else 0)
+	FeatureMap(Convolved(map.values, affine, weights, shape).Summed, map.width, biases.Length, biases)
 Doubled(map FeatureMap) FeatureMap
 	Center.Doubled(Square).values is (1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 4, 4)
 	Above.Doubled(Square).values is (0, 0, 0, 0, 1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4)

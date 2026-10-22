@@ -85,6 +85,20 @@
     %d = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k8.row.col.f32.f32"(%a0, %a1, %b, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
     return %d : !llvm.struct<(f32, f32, f32, f32)>
   }
+  // m16n8k16 of 16 bit floats (a0, a1 numbers 0 to 7 of rows g and g + 8, a2, a3 numbers 8 to 15, b0 and b1 those of
+  // column g), one mma from sm_80 on, two m16n8k8 before
+  func.func private @strict_device_halves_mma16(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32) -> !llvm.struct<(f32, f32, f32, f32)> attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isWide = arith.cmpi sge, %arch, %c800 : i32
+    cf.cond_br %isWide, ^wide, ^narrow
+  ^wide:
+    %d = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k16.row.col.f32.f32"(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    return %d : !llvm.struct<(f32, f32, f32, f32)>
+  ^narrow:
+    %halves = func.call @strict_device_halves_mma8x2(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    return %halves : !llvm.struct<(f32, f32, f32, f32)>
+  }
   func.func private @strict_device_matrices(%slot: !llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %loaded = llvm.call_intrinsic "llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.b16.p3"(%slot) : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
     return %loaded : !llvm.struct<(i32, i32, i32, i32)>

@@ -177,6 +177,11 @@
     return %total : f32
   }
   // ldmatrix.x4: lane j * 8 + r has the address of row r of matrix j, lane l gets 4 bytes of row l / 4 of each matrix
+  // m16n8k16 of 16 bit floats as two m16n8k8
+  func.func private @strict_device_halves_mma16(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32) -> !llvm.struct<(f32, f32, f32, f32)> attributes {llvm.linkage = #llvm.linkage<internal>} {
+    %halves = func.call @strict_device_halves_mma8x2(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    return %halves : !llvm.struct<(f32, f32, f32, f32)>
+  }
   func.func private @strict_device_matrices(%slot: !llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>} {
     %c2 = arith.constant 2 : i32
     %c3 = arith.constant 3 : i32

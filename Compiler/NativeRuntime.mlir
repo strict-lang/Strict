@@ -11269,11 +11269,21 @@
     %chosenEights = arith.select %eighting, %eightThreads, %chosenTiles : i64
     %productLanes = arith.constant 1024 : i64
     %producing = arith.cmpi eq, %perWarp, %productLanes : i64
+    cf.cond_br %producing, ^products, ^others
+  ^products:
     %productThreads = func.call @strict_gpu_product_threads(%values) : (!llvm.ptr) -> i64
-    %chosenProducts = arith.select %producing, %productThreads, %chosenEights : i64
+    cf.br ^done(%productThreads : i64)
+  ^others:
+    %convolutionLanes = arith.constant 2048 : i64
+    %convolving = arith.cmpi eq, %perWarp, %convolutionLanes : i64
+    cf.cond_br %convolving, ^convolutions, ^attentions
+  ^convolutions:
+    %convolutionThreads = func.call @strict_gpu_convolution_threads(%values) : (!llvm.ptr) -> i64
+    cf.br ^done(%convolutionThreads : i64)
+  ^attentions:
     %attentionLanes = arith.constant 128 : i64
     %attending = arith.cmpi eq, %perWarp, %attentionLanes : i64
-    cf.cond_br %attending, ^attention, ^done(%chosenProducts : i64)
+    cf.cond_br %attending, ^attention, ^done(%chosenEights : i64)
   ^attention:
     %attentionThreads = func.call @strict_gpu_attention_threads(%count, %values) : (i64, !llvm.ptr) -> i64
     cf.br ^done(%attentionThreads : i64)
@@ -11631,6 +11641,120 @@
     return %result : f64
   ^unable:
     return %zero : f64
+  }
+  llvm.mlir.global internal constant @strict_gpu_convolution_name("strict_device_convolution\00strict_device_convolutions\00") : !llvm.array<53 x i8>
+  llvm.mlir.global internal @strict_gpu_convolution_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // `Convolved.Summed` on the 16 bit tensor cores (strict_device_convolution): a 3x3 convolution of values (height by
+  // width pixels of channels numbers, the affine scale and shift and swish applied on load, zeros around) with weights
+  // (outputs rows of 9 taps of channels numbers), shape is height, width, channels, outputs and swish (1 or 0); 0.0 when
+  // the GPU can not (channels not a multiple of 32 or above 512, lists of other lengths), then the method itself runs
+  func.func private @strict_gpu_convolution(%ptx: !llvm.ptr, %values: f64, %affine: f64, %weights: f64, %shape: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
+    %eight = arith.constant 8 : i64
+    %nine = arith.constant 9 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %fiveNumber = arith.constant 5.0 : f64
+    %shapeLength = func.call @strict_list_length(%shape) : (f64) -> f64
+    %isShape = arith.cmpf oeq, %shapeLength, %fiveNumber : f64
+    cf.cond_br %isShape, ^read, ^unable
+  ^read:
+    %slots = llvm.alloca %eight x f64 : (i64) -> !llvm.ptr
+    llvm.store %values, %slots : f64, !llvm.ptr
+    %affineSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %affine, %affineSlot : f64, !llvm.ptr
+    %weightsSlot = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %weights, %weightsSlot : f64, !llvm.ptr
+    cf.br ^copy(%none : i64)
+  ^copy(%index: i64):
+    %copying = arith.cmpi slt, %index, %five : i64
+    cf.cond_br %copying, ^item, ^copied
+  ^item:
+    %itemNumber = arith.sitofp %index : i64 to f64
+    %item = func.call @strict_list_get(%shape, %itemNumber) : (f64, f64) -> f64
+    %slotIndex = arith.addi %index, %three : i64
+    %slot = llvm.getelementptr %slots[%slotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %item, %slot : f64, !llvm.ptr
+    %nextIndex = arith.addi %index, %one : i64
+    cf.br ^copy(%nextIndex : i64)
+  ^copied:
+    %heightSlot = llvm.getelementptr %slots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %widthSlot = llvm.getelementptr %slots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %channelsSlot = llvm.getelementptr %slots[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %outputsSlot = llvm.getelementptr %slots[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    %heightNumber = llvm.load %heightSlot : !llvm.ptr -> f64
+    %widthNumber = llvm.load %widthSlot : !llvm.ptr -> f64
+    %channelsNumber = llvm.load %channelsSlot : !llvm.ptr -> f64
+    %outputsNumber = llvm.load %outputsSlot : !llvm.ptr -> f64
+    %height = arith.fptosi %heightNumber : f64 to i64
+    %width = arith.fptosi %widthNumber : f64 to i64
+    %channels = arith.fptosi %channelsNumber : f64 to i64
+    %outputs = arith.fptosi %outputsNumber : f64 to i64
+    %pixels = arith.muli %height, %width : i64
+    %valuesCount = arith.muli %pixels, %channels : i64
+    %affineCount = arith.muli %channels, %two : i64
+    %tapCount = arith.muli %channels, %nine : i64
+    %weightsCount = arith.muli %tapCount, %outputs : i64
+    %count = arith.muli %pixels, %outputs : i64
+    %valuesLength = func.call @strict_list_length(%values) : (f64) -> f64
+    %affineLength = func.call @strict_list_length(%affine) : (f64) -> f64
+    %weightsLength = func.call @strict_list_length(%weights) : (f64) -> f64
+    %valuesHas = arith.fptosi %valuesLength : f64 to i64
+    %affineHas = arith.fptosi %affineLength : f64 to i64
+    %weightsHas = arith.fptosi %weightsLength : f64 to i64
+    %valuesFit = arith.cmpi eq, %valuesHas, %valuesCount : i64
+    %affineFit = arith.cmpi eq, %affineHas, %affineCount : i64
+    %weightsFit = arith.cmpi eq, %weightsHas, %weightsCount : i64
+    %channelRest = arith.andi %channels, %thirtyOne : i64
+    %whole = arith.cmpi eq, %channelRest, %none : i64
+    %mostChannels = arith.constant 512 : i64
+    %positive = arith.cmpi sgt, %channels, %none : i64
+    %notTooMany = arith.cmpi sle, %channels, %mostChannels : i64
+    %someChannels = arith.andi %positive, %notTooMany : i1
+    %some = arith.cmpi sgt, %count, %none : i64
+    %listsFit = arith.andi %valuesFit, %affineFit : i1
+    %allFit = arith.andi %listsFit, %weightsFit : i1
+    %wholeSome = arith.andi %whole, %someChannels : i1
+    %countFit = arith.andi %wholeSome, %some : i1
+    %fits = arith.andi %allFit, %countFit : i1
+    cf.cond_br %fits, ^run, ^unable
+  ^run:
+    %name = llvm.mlir.addressof @strict_gpu_convolution_name : !llvm.ptr
+    %slotPair = llvm.mlir.addressof @strict_gpu_convolution_slot : !llvm.ptr
+    %listsMask = arith.constant 7 : i64
+    %lanes = arith.constant -2048 : i64
+    %integers = arith.constant -1 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %eight, %listsMask, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^unable:
+    return %zero : f64
+  }
+  // strict_device_convolution takes a block of 256 threads per tile of 128 pixels by 128 outputs
+  func.func private @strict_gpu_convolution_threads(%values: !llvm.ptr) -> i64 {
+    %seven = arith.constant 7 : i64
+    %spare = arith.constant 127 : i64
+    %perBlock = arith.constant 256 : i64
+    %heightSlot = llvm.getelementptr %values[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %widthSlot = llvm.getelementptr %values[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %outputsSlot = llvm.getelementptr %values[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    %heightNumber = llvm.load %heightSlot : !llvm.ptr -> f64
+    %widthNumber = llvm.load %widthSlot : !llvm.ptr -> f64
+    %outputsNumber = llvm.load %outputsSlot : !llvm.ptr -> f64
+    %pixelsNumber = arith.mulf %heightNumber, %widthNumber : f64
+    %pixels = arith.fptosi %pixelsNumber : f64 to i64
+    %outputs = arith.fptosi %outputsNumber : f64 to i64
+    %pixelsUp = arith.addi %pixels, %spare : i64
+    %pixelTiles = arith.shrui %pixelsUp, %seven : i64
+    %outputsUp = arith.addi %outputs, %spare : i64
+    %outputTiles = arith.shrui %outputsUp, %seven : i64
+    %tiles = arith.muli %pixelTiles, %outputTiles : i64
+    %threads = arith.muli %tiles, %perBlock : i64
+    return %threads : i64
   }
   llvm.mlir.global internal constant @strict_gpu_tokens_name("strict_device_tokens\00strict_device_tokenss\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal @strict_gpu_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
