@@ -2,6 +2,7 @@ has exact MlirExact
 constant Single = MlirRational(MlirExact.Single)
 constant Double = MlirRational(MlirExact.Double)
 constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
+constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1))
 constant Kinds = MlirSingle.Operators + InstructionType.Modulo
 Operated(entry InstructionEntry) Texts
 	Single.Operated(Adding).Last is "    llvm.store %x2d, %r2q : i64, !llvm.ptr"
@@ -11,6 +12,24 @@ Operated(entry InstructionEntry) Texts
 		return List(Text)
 	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
 	operands + Rational(entry.kind) + exact.Set(Temp("n"), Temp("d"), "%r" + entry.payload(3))
+Compared(entry InstructionEntry, float Text, target Text) Texts
+	Single.Compared(Less, "%f", "%c").Last is "    %c = arith.select %x2v, %x2i, %f : i1"
+	Double.Compared(Adding, "%f", "%c").Length is 0
+	if exact.Parts.Length is 0
+		return List(Text)
+	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
+	let whole = Predicate(entry.kind)
+	let left = "    " + Temp("w") + " = arith.cmpi ne, " + Temp("aq") + ", %inexact : i64"
+	let right = "    " + Temp("y") + " = arith.cmpi ne, " + Temp("bq") + ", %inexact : i64"
+	let valid = "    " + Temp("v") + " = arith.andi " + Temp("w") + ", " + Temp("y") + " : i1"
+	let compared = "    " + Temp("i") + " = arith.cmpi " + whole + ", " + Temp("l") + ", " + Temp("r") + " : i64"
+	let chosen = "    " + target + " = arith.select " + Temp("v") + ", " + Temp("i") + ", " + float + " : i1"
+	operands + Crossed + (left, right, valid, compared, chosen)
+Predicate(kind Number) Text
+	Single.Predicate(InstructionType.LessThan) is "slt"
+	Single.Predicate(InstructionType.NotEqual) is "ne"
+	let predicate = MlirStatements.Copy.Predicate(kind)
+	predicate is "oeq" then "eq" else (predicate is "une" then "ne" else "s" + predicate.Substring(1, 2))
 Rational(kind Number) Texts
 	Single.Rational(InstructionType.Multiply).First is "    %x2n = arith.muli %x2ae, %x2be : i64"
 	Single.Rational(InstructionType.Subtract)(2) is "    %x2n = arith.subi %x2l, %x2r : i64"

@@ -1,5 +1,0 @@
-has logger
-Run
-	let scores = Float8.Packed(Qwen3Block.Tiny.Interleaved((1, 2, 3, 4, 5, 6, 7, 8), 1048577))
-	let best = Greedy.Best(scores, 1, scores.Length)
-	logger.Log("length " + scores.Length + " best " + best(16777217) + " " + best(16777219) + " " + best(7))

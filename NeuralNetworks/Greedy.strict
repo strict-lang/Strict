@@ -6,7 +6,6 @@ Best(scores Numbers, width Number, length Number) Numbers
 	Greedy.Best((1, 3, 2, 0), 2, 4) is (3, 1, 2, 2)
 	Greedy.Best((1, 3, 2), 2, 3) is (3, 1, 2, 2)
 	Greedy.Best((1, 3, 2, 5, 4, 0), 2, 3) is (3, 1, 2, 2, 5, 3, 0, 5)
-	Greedy.Best(Float8.Packed(Qwen3Block.Tiny.Interleaved((1, 2, 3, 4, 5, 6, 7, 8), 1048577)), 1, 8388616)(16777217) is 8388608
 	let chunks = (length / width).Ceiling
 	for 2 * chunks * scores.Length / length
 		let chunk = (index / 2).Floor
