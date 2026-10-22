@@ -4,14 +4,15 @@ has weights Numbers
 has shape Numbers
 constant Square = (1, 2, 3, 4)
 constant Box = (1, 1, 1, 1, 1, 1, 1, 1, 1)
+constant Center = (0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0)
 constant Large = Convolved(Layer.Weights(480), Layer.Weights(64), Layer.Weights(11520), (3, 5, 32, 40, 1, 1))
-constant Doubling = Convolved(Layer.Weights(480), Layer.Weights(64), Layer.Weights(11520), (6, 10, 32, 40, 0, 2))
+constant Doubling = Convolved(Layer.Weights(480), Layer.Weights(64), Layer.Weights(20480), (6, 10, 32, 40, 0, 2))
 Summed Numbers
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0, 1)).Summed is (10, 10, 10, 10)
 	Convolved(Square, (1, 0), (0, 1, 0, 0, 0, 0, 0, 0, 0), (2, 2, 1, 1, 0, 1)).Summed is (0, 0, 1, 2)
 	Convolved(Square, (2, 1), (0, 0, 0, 0, 1, 0, 0, 0, 0), (2, 2, 1, 1, 1, 1)).Summed(1).IsNearlyEqual(4.966533)
 	Convolved((1, 2, 3, 4), (1, 1, 0, 0), Box + Box, (1, 2, 2, 1, 0, 1)).Summed is (10, 10)
-	Convolved(Square, (1, 0), (0, 0, 0, 0, 1, 0, 0, 0, 0), (4, 4, 1, 1, 0, 2)).Summed(6) is 2
+	Convolved(Square, (1, 0), Center, (4, 4, 1, 1, 0, 2)).Summed(6) is 2
 	Large.Summed(599).IsNearlyEqual(Large.Tapped(14, 39), 0.0001)
 	Large.Summed(283).IsNearlyEqual(Large.Tapped(7, 3), 0.0001)
 	Doubling.Summed(2399).IsNearlyEqual(Doubling.Tapped(59, 39), 0.0001)
@@ -21,19 +22,28 @@ Summed Numbers
 Tapped(pixel Number, output Number) Number
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0, 1)).Tapped(3, 0) is 10
 	let channels = shape(2)
+	let taps = (4 - shape(5)) * (4 - shape(5))
+	let first = (Parity(pixel) * shape(3) + output) * taps * channels
 	mutable sum = 0
-	for 9 * channels
+	for taps * channels
 		let source = Source(pixel, (index / channels).Floor)
 		let channel = index % channels
 		let number = source < 0 then 0 else values(source * channels + channel)
 		let activated = FeatureMap.Activated(number, affine(channel), affine(channels + channel), shape(4) is 1)
-		sum = sum + (source < 0 then 0 else activated) * weights(output * 9 * channels + index)
+		sum = sum + (source < 0 then 0 else activated) * weights(first + index)
 	sum
 Source(pixel Number, tap Number) Number
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0, 1)).Source(3, 0) is 0
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0, 1)).Source(0, 0) is -1
 	Convolved(Square, (1, 0), Box, (4, 4, 1, 1, 0, 2)).Source(15, 0) is 3
-	let row = (pixel / shape(1)).Floor + (tap / 3).Floor - 1
-	let column = pixel % shape(1) + tap % 3 - 1
-	let inside = row >= 0 and row < shape(0) and column >= 0 and column < shape(1)
-	inside then (row / shape(5)).Floor * shape(1) / shape(5) + (column / shape(5)).Floor else -1
+	let factor = shape(5)
+	let side = 4 - factor
+	let outputRow = (pixel / shape(1)).Floor
+	let row = (outputRow / factor).Floor + (tap / side).Floor - 1 + outputRow % factor
+	let column = ((pixel % shape(1)) / factor).Floor + tap % side - 1 + (pixel % shape(1)) % factor
+	let inside = row >= 0 and row < shape(0) / factor and column >= 0 and column < shape(1) / factor
+	inside then row * shape(1) / factor + column else -1
+Parity(pixel Number) Number
+	Convolved(Square, (1, 0), Center, (4, 4, 1, 1, 0, 2)).Parity(6) is 2
+	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0, 1)).Parity(3) is 0
+	shape(5) is 1 then 0 else ((pixel / shape(1)).Floor % 2) * 2 + (pixel % shape(1)) % 2

@@ -45,7 +45,7 @@
     %exponent = arith.mulf %shifted, %factor : vector<4xf32>
     %power = llvm.call_intrinsic "llvm.exp2.v4f32"(%exponent) : (vector<4xf32>) -> vector<4xf32>
     %below = arith.addf %units, %power : vector<4xf32>
-    %swished = arith.divf %shifted, %below : vector<4xf32>
+    %swished = arith.divf %shifted, %below fastmath<afn, arcp> : vector<4xf32>
     cf.br ^done(%swished : vector<4xf32>)
   ^done(%activated: vector<4xf32>):
     %halves = arith.truncf %activated : vector<4xf32> to vector<4xf16>
@@ -64,9 +64,9 @@
     return %with3 : vector<4xf32>
   }
   // the 16 numbers a thread copies of its 4 pixels (rows and columns, the row is -2 past the last pixel) by the 32
-  // numbers of stage along the 9 taps of channels: 4 channels of the pixel the tap shifts to (row and column - 1 to + 1)
-  // each, zeros outside of the image; with a factor of 2 the image is doubled (nearest) before
-  func.func private @strict_device_convolution_fetch(%values: !llvm.ptr, %count: i64, %bits: i64, %affined: !llvm.ptr<3>, %height: i32, %width: i32, %channels: i32, %factor: i32, %rows: vector<4xi32>, %columns: vector<4xi32>, %stage: i32, %thread: i32, %fast: i1, %swish: i1) -> vector<16xf16> attributes {passthrough = ["alwaysinline"]} {
+  // numbers of stage along the side x side taps of channels: 4 channels of the pixel the tap shifts to (row and column
+  // - 1 to + 1, for the 2 x 2 taps of a doubled image - 1 to 0 plus the parity of the output), zeros outside of the image
+  func.func private @strict_device_convolution_fetch(%values: !llvm.ptr, %count: i64, %bits: i64, %affined: !llvm.ptr<3>, %height: i32, %width: i32, %channels: i32, %side: i32, %rowParity: i32, %columnParity: i32, %rows: vector<4xi32>, %columns: vector<4xi32>, %stage: i32, %thread: i32, %fast: i1, %swish: i1) -> vector<16xf16> attributes {passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -78,11 +78,13 @@
     %tap = arith.divui %inner, %channels : i32
     %tapStart = arith.muli %tap, %channels : i32
     %channelFirst = arith.subi %inner, %tapStart : i32
-    %tapRow = arith.divui %tap, %c3 : i32
-    %tapRowStart = arith.muli %tapRow, %c3 : i32
+    %tapRow = arith.divui %tap, %side : i32
+    %tapRowStart = arith.muli %tapRow, %side : i32
     %tapColumn = arith.subi %tap, %tapRowStart : i32
-    %rowShift = arith.subi %tapRow, %c1 : i32
-    %columnShift = arith.subi %tapColumn, %c1 : i32
+    %tapRowParity = arith.addi %tapRow, %rowParity : i32
+    %tapColumnParity = arith.addi %tapColumn, %columnParity : i32
+    %rowShift = arith.subi %tapRowParity, %c1 : i32
+    %columnShift = arith.subi %tapColumnParity, %c1 : i32
     %quad = arith.andi %thread, %c7 : i32
     %quadChannels = arith.shli %quad, %c2 : i32
     %channel = arith.addi %channelFirst, %quadChannels : i32
@@ -105,11 +107,8 @@
     %rowInside = arith.andi %rowFrom, %rowTo : i1
     %columnInside = arith.andi %columnFrom, %columnTo : i1
     %inside = arith.andi %rowInside, %columnInside : i1
-    %inputRow = arith.divui %sourceRow, %factor : i32
-    %inputColumn = arith.divui %sourceColumn, %factor : i32
-    %inputWidth = arith.divui %width, %factor : i32
-    %sourceRowStart = arith.muli %inputRow, %inputWidth : i32
-    %source = arith.addi %sourceRowStart, %inputColumn : i32
+    %sourceRowStart = arith.muli %sourceRow, %width : i32
+    %source = arith.addi %sourceRowStart, %sourceColumn : i32
     %source64 = arith.extsi %source : i32 to i64
     %sourceStart = arith.muli %source64, %channels64 : i64
     %at = arith.addi %sourceStart, %channel64 : i64
@@ -220,19 +219,36 @@
     %block32 = func.call @strict_device_block_index() : () -> i32
     %block = arith.extui %block32 : i32 to i64
     %pixels = arith.muli %height, %width : i64
+    %gridHeight = arith.divui %height, %factor : i64
+    %gridWidth = arith.divui %width, %factor : i64
+    %gridPixels = arith.muli %gridHeight, %gridWidth : i64
+    %parities = arith.muli %factor, %factor : i64
+    %four = arith.constant 4 : i64
+    %sideNumber = arith.subi %four, %factor : i64
+    %tapCount = arith.muli %sideNumber, %sideNumber : i64
     %outputsUp = arith.addi %outputs, %hundredTwentySeven : i64
     %outputTiles = arith.shrui %outputsUp, %seven : i64
-    %pixelsUp = arith.addi %pixels, %hundredTwentySeven : i64
+    %pixelsUp = arith.addi %gridPixels, %hundredTwentySeven : i64
     %pixelTiles = arith.shrui %pixelsUp, %seven : i64
-    %tiles = arith.muli %pixelTiles, %outputTiles : i64
+    %parityTiles = arith.muli %pixelTiles, %outputTiles : i64
+    %tiles = arith.muli %parities, %parityTiles : i64
     %working = arith.cmpi ult, %block, %tiles : i64
     cf.cond_br %working, ^tile, ^exit
   ^tile:
-    %pixelTile = arith.divui %block, %outputTiles : i64
-    %outputTile = arith.remui %block, %outputTiles : i64
+    %parity = arith.divui %block, %parityTiles : i64
+    %withinParity = arith.remui %block, %parityTiles : i64
+    %pixelTile = arith.divui %withinParity, %outputTiles : i64
+    %outputTile = arith.remui %withinParity, %outputTiles : i64
     %pixelFirst = arith.shli %pixelTile, %seven : i64
     %outputFirst = arith.shli %outputTile, %seven : i64
-    %taps = arith.muli %channels, %nine : i64
+    %taps = arith.muli %channels, %tapCount : i64
+    %parityRows = arith.muli %parity, %outputs : i64
+    %parityStart = arith.muli %parityRows, %taps : i64
+    %rowParity64 = arith.shrui %parity, %one : i64
+    %columnParity64 = arith.andi %parity, %one : i64
+    %rowParity = arith.trunci %rowParity64 : i64 to i32
+    %columnParity = arith.trunci %columnParity64 : i64 to i32
+    %side = arith.trunci %sideNumber : i64 to i32
     %stages = arith.shrui %taps, %five : i64
     %lastStage = arith.subi %stages, %one : i64
     %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
@@ -241,7 +257,7 @@
     %aligned = arith.cmpi eq, %addressRest, %none : i64
     %fast = arith.andi %isSingle, %aligned : i1
     %false = arith.constant false
-    %rightFast = func.call @strict_device_product_fast(%weights, %weightsBits, %none, %taps, %one, %false) : (!llvm.ptr, i64, i64, i64, i64, i1) -> i1
+    %rightFast = func.call @strict_device_product_fast(%weights, %weightsBits, %parityStart, %taps, %one, %false) : (!llvm.ptr, i64, i64, i64, i64, i1) -> i1
     %lefts = llvm.mlir.addressof @strict_device_product_lefts : !llvm.ptr<3>
     %rights = llvm.mlir.addressof @strict_device_product_rights : !llvm.ptr<3>
     %warp = arith.shrui %thread, %c5 : i32
@@ -251,14 +267,13 @@
     %warpRow = arith.shli %warpRowIndex, %c6 : i32
     %warpColumn = arith.shli %warpColumnIndex, %c5 : i32
     %affined = func.call @strict_device_convolution_staged(%affine, %affineCount, %affineBits, %thread) : (!llvm.ptr, i64, i64, i32) -> !llvm.ptr<3>
-    %height32 = arith.trunci %height : i64 to i32
-    %width32 = arith.trunci %width : i64 to i32
+    %height32 = arith.trunci %gridHeight : i64 to i32
+    %width32 = arith.trunci %gridWidth : i64 to i32
     %channels32 = arith.trunci %channels : i64 to i32
-    %factor32 = arith.trunci %factor : i64 to i32
-    %pixelRows, %pixelColumns = func.call @strict_device_convolution_pixels(%pixelFirst, %pixels, %width32, %thread) : (i64, i64, i32, i32) -> (vector<4xi32>, vector<4xi32>)
+    %pixelRows, %pixelColumns = func.call @strict_device_convolution_pixels(%pixelFirst, %gridPixels, %width32, %thread) : (i64, i64, i32, i32) -> (vector<4xi32>, vector<4xi32>)
     func.call @strict_device_barrier() : () -> ()
-    %firstLefts = func.call @strict_device_convolution_fetch(%values, %count, %bits, %affined, %height32, %width32, %channels32, %factor32, %pixelRows, %pixelColumns, %c0, %thread, %fast, %swish) : (!llvm.ptr, i64, i64, !llvm.ptr<3>, i32, i32, i32, i32, vector<4xi32>, vector<4xi32>, i32, i32, i1, i1) -> vector<16xf16>
-    %firstRights = func.call @strict_device_product_fetch(%weights, %weightsCount, %weightsBits, %none, %taps, %one, %outputs, %outputFirst, %taps, %none, %thread, %false, %rightFast) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i1, i1) -> vector<16xf16>
+    %firstLefts = func.call @strict_device_convolution_fetch(%values, %count, %bits, %affined, %height32, %width32, %channels32, %side, %rowParity, %columnParity, %pixelRows, %pixelColumns, %c0, %thread, %fast, %swish) : (!llvm.ptr, i64, i64, !llvm.ptr<3>, i32, i32, i32, i32, i32, i32, vector<4xi32>, vector<4xi32>, i32, i32, i1, i1) -> vector<16xf16>
+    %firstRights = func.call @strict_device_product_fetch(%weights, %weightsCount, %weightsBits, %parityStart, %taps, %one, %outputs, %outputFirst, %taps, %none, %thread, %false, %rightFast) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i1, i1) -> vector<16xf16>
     func.call @strict_device_product_put(%firstLefts, %lefts, %c0, %thread, %false) : (vector<16xf16>, !llvm.ptr<3>, i32, i32, i1) -> ()
     func.call @strict_device_product_put(%firstRights, %rights, %c0, %thread, %false) : (vector<16xf16>, !llvm.ptr<3>, i32, i32, i1) -> ()
     func.call @strict_device_barrier() : () -> ()
@@ -270,8 +285,8 @@
     %nextStage = arith.addi %stage, %one : i64
     %fetchedStage = arith.minsi %nextStage, %lastStage : i64
     %fetchedStage32 = arith.trunci %fetchedStage : i64 to i32
-    %nextLefts = func.call @strict_device_convolution_fetch(%values, %count, %bits, %affined, %height32, %width32, %channels32, %factor32, %pixelRows, %pixelColumns, %fetchedStage32, %thread, %fast, %swish) : (!llvm.ptr, i64, i64, !llvm.ptr<3>, i32, i32, i32, i32, vector<4xi32>, vector<4xi32>, i32, i32, i1, i1) -> vector<16xf16>
-    %nextRights = func.call @strict_device_product_fetch(%weights, %weightsCount, %weightsBits, %none, %taps, %one, %outputs, %outputFirst, %taps, %fetchedStage, %thread, %false, %rightFast) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i1, i1) -> vector<16xf16>
+    %nextLefts = func.call @strict_device_convolution_fetch(%values, %count, %bits, %affined, %height32, %width32, %channels32, %side, %rowParity, %columnParity, %pixelRows, %pixelColumns, %fetchedStage32, %thread, %fast, %swish) : (!llvm.ptr, i64, i64, !llvm.ptr<3>, i32, i32, i32, i32, i32, i32, vector<4xi32>, vector<4xi32>, i32, i32, i1, i1) -> vector<16xf16>
+    %nextRights = func.call @strict_device_product_fetch(%weights, %weightsCount, %weightsBits, %parityStart, %taps, %one, %outputs, %outputFirst, %taps, %fetchedStage, %thread, %false, %rightFast) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i1, i1) -> vector<16xf16>
     %stageParity = arith.andi %stage, %one : i64
     %buffer = arith.trunci %stageParity : i64 to i32
     %firstHalf = func.call @strict_device_product_half(%sums, %buffer, %c0, %warpRow, %warpColumn, %lane) : (vector<64xf32>, i32, i32, i32, i32, i32) -> vector<64xf32>
@@ -310,7 +325,17 @@
     %columnLocal = arith.addi %pairColumnLocal, %oddColumn : i32
     %rowLocal64 = arith.extui %rowLocal : i32 to i64
     %columnLocal64 = arith.extui %columnLocal : i32 to i64
-    %pixel = arith.addi %pixelFirst, %rowLocal64 : i64
+    %gridPixel = arith.addi %pixelFirst, %rowLocal64 : i64
+    %gridRow = arith.divui %gridPixel, %gridWidth : i64
+    %gridColumn = arith.remui %gridPixel, %gridWidth : i64
+    %outputRowScaled = arith.muli %gridRow, %factor : i64
+    %outputRow = arith.addi %outputRowScaled, %rowParity64 : i64
+    %outputColumnScaled = arith.muli %gridColumn, %factor : i64
+    %outputColumn = arith.addi %outputColumnScaled, %columnParity64 : i64
+    %outputRowStart = arith.muli %outputRow, %width : i64
+    %outputPixel = arith.addi %outputRowStart, %outputColumn : i64
+    %isGridPixel = arith.cmpi ult, %gridPixel, %gridPixels : i64
+    %pixel = arith.select %isGridPixel, %outputPixel, %pixels : i64
     %output = arith.addi %outputFirst, %columnLocal64 : i64
     %value = llvm.extractelement %sums[%slot : i32] : vector<64xf32>
     func.call @strict_device_products_written(%result, %wide, %value, %none, %pixel, %output, %pixels, %outputs) : (!llvm.ptr, i1, f32, i64, i64, i64, i64, i64) -> ()

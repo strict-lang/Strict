@@ -11645,9 +11645,10 @@
   llvm.mlir.global internal constant @strict_gpu_convolution_name("strict_device_convolution\00strict_device_convolutions\00") : !llvm.array<53 x i8>
   llvm.mlir.global internal @strict_gpu_convolution_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // `Convolved.Summed` on the 16 bit tensor cores (strict_device_convolution): a 3x3 convolution of values (height by
-  // width pixels of channels numbers divided by factor, doubled when it is 2, the affine scale and shift and swish applied
-  // on load, zeros around) with weights (outputs rows of 9 taps of channels numbers), shape is height, width, channels,
-  // outputs, swish (1 or 0) and factor; 0.0 when
+  // width pixels of channels numbers divided by factor, the affine scale and shift and swish applied on load, zeros
+  // around) with weights (outputs rows of 9 taps of channels numbers; with a factor of 2 the image is doubled and the
+  // weights are the 2x2 taps of each of the 4 output parities), shape is height, width, channels, outputs, swish (1 or 0)
+  // and factor (1 or 2); 0.0 when
   // the GPU can not (channels not a multiple of 32 or above 512, lists of other lengths), then the method itself runs
   func.func private @strict_gpu_convolution(%ptx: !llvm.ptr, %values: f64, %affine: f64, %weights: f64, %shape: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -11703,6 +11704,7 @@
     %factor = arith.fptosi %factorNumber : f64 to i64
     %pixels = arith.muli %height, %width : i64
     %factorPositive = arith.cmpi sgt, %factor, %none : i64
+    %factorSmall = arith.cmpi sle, %factor, %two : i64
     %safeFactor = arith.select %factorPositive, %factor, %one : i64
     %inputHeight = arith.divui %height, %safeFactor : i64
     %inputWidth = arith.divui %width, %safeFactor : i64
@@ -11712,11 +11714,16 @@
     %heightWhole = arith.cmpi eq, %heightBack, %height : i64
     %widthWhole = arith.cmpi eq, %widthBack, %width : i64
     %bothWhole = arith.andi %heightWhole, %widthWhole : i1
-    %factorFits = arith.andi %bothWhole, %factorPositive : i1
+    %factorKnown = arith.andi %factorPositive, %factorSmall : i1
+    %factorFits = arith.andi %bothWhole, %factorKnown : i1
     %valuesCount = arith.muli %inputPixels, %channels : i64
     %affineCount = arith.muli %channels, %two : i64
-    %tapCount = arith.muli %channels, %nine : i64
-    %weightsCount = arith.muli %tapCount, %outputs : i64
+    %side = arith.subi %four, %safeFactor : i64
+    %sideTaps = arith.muli %side, %side : i64
+    %parities = arith.muli %safeFactor, %safeFactor : i64
+    %tapCount = arith.muli %channels, %sideTaps : i64
+    %parityWeights = arith.muli %tapCount, %outputs : i64
+    %weightsCount = arith.muli %parityWeights, %parities : i64
     %count = arith.muli %pixels, %outputs : i64
     %valuesLength = func.call @strict_list_length(%values) : (f64) -> f64
     %affineLength = func.call @strict_list_length(%affine) : (f64) -> f64
@@ -11752,7 +11759,8 @@
   ^unable:
     return %zero : f64
   }
-  // strict_device_convolution takes a block of 256 threads per tile of 128 pixels by 128 outputs
+  // strict_device_convolution takes a block of 256 threads per tile of 128 pixels (of the input when doubled, for each
+  // of the 4 output parities) by 128 outputs
   func.func private @strict_gpu_convolution_threads(%values: !llvm.ptr) -> i64 {
     %seven = arith.constant 7 : i64
     %spare = arith.constant 127 : i64
@@ -11763,14 +11771,21 @@
     %heightNumber = llvm.load %heightSlot : !llvm.ptr -> f64
     %widthNumber = llvm.load %widthSlot : !llvm.ptr -> f64
     %outputsNumber = llvm.load %outputsSlot : !llvm.ptr -> f64
-    %pixelsNumber = arith.mulf %heightNumber, %widthNumber : f64
+    %factorSlot = llvm.getelementptr %values[8] : (!llvm.ptr) -> !llvm.ptr, f64
+    %factorNumber = llvm.load %factorSlot : !llvm.ptr -> f64
+    %gridHeight = arith.divf %heightNumber, %factorNumber : f64
+    %gridWidth = arith.divf %widthNumber, %factorNumber : f64
+    %pixelsNumber = arith.mulf %gridHeight, %gridWidth : f64
     %pixels = arith.fptosi %pixelsNumber : f64 to i64
     %outputs = arith.fptosi %outputsNumber : f64 to i64
+    %factor = arith.fptosi %factorNumber : f64 to i64
+    %parities = arith.muli %factor, %factor : i64
     %pixelsUp = arith.addi %pixels, %spare : i64
     %pixelTiles = arith.shrui %pixelsUp, %seven : i64
     %outputsUp = arith.addi %outputs, %spare : i64
     %outputTiles = arith.shrui %outputsUp, %seven : i64
-    %tiles = arith.muli %pixelTiles, %outputTiles : i64
+    %parityTiles = arith.muli %pixelTiles, %outputTiles : i64
+    %tiles = arith.muli %parities, %parityTiles : i64
     %threads = arith.muli %tiles, %perBlock : i64
     return %threads : i64
   }
