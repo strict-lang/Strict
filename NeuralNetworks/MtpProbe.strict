@@ -5,10 +5,12 @@ Run(path Text, count Number, drafts Number)
 	let prompt = tokenizer.Encoded(Qwen3Benchmark.Prompt)
 	let gguf = Gguf(path, 4)
 	let drafter = Drafter.Loaded(gguf, gguf.Value("qwen35.attention.head_count") to Number)
-	let prefilled = model.Prefilled(prompt, 0)
-	let warmed = Speculation(prefilled, prompt, prefilled.Next, drafts, 0, drafter).Finished(8)
-	let started = warmed.steps > 0 then Process.Elapsed else 0
-	let finished = Speculation(model.Prefilled(prompt, 0), prompt, prefilled.Next, drafts, 0, drafter).Finished(count)
-	let milliseconds = ((Process.Elapsed - started) * 1000 / count).Round(2)
-	logger.Log(tokenizer.Decoded(Safetensors.Part(finished.context, prompt.Length, count, 1)))
-	logger.Log(milliseconds + " ms per token, " + (count / finished.steps).Round(2) + " tokens per step")
+	let started = Speculation(model.Prefilled(prompt, 0), prompt, model.Prefilled(prompt, 0).Next, drafts, 0, drafter)
+	logger.Log("warmed up: " + Timed(started, 8))
+	logger.Log(Timed(started, count))
+Timed(started Speculation, count Number) Text
+	MtpProbe(Logger).Timed(Speculation.Drafting, 2).EndsWith("tokens per step")
+	let before = Process.Elapsed
+	let finished = started.Finished(count)
+	let milliseconds = ((Process.Elapsed - before) * 1000 / count).Round(2)
+	milliseconds + " ms per token, " + (count / finished.steps).Round(2) + " tokens per step"

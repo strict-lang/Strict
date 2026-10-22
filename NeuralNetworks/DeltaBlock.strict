@@ -40,6 +40,16 @@ Cached(combined Numbers) DeltaBlock
 	let chunks = DeltaChunks(decays.Length, KeyHeads, norm.Length, 16, tokens, keyed, Decayed(combined, tokens), memory)
 	let read = tokens is 1 then Stepped(chunks) else chunks.Read
 	DeltaBlock(value, memory = read.memory, window = Shifted(combined, tokens), merged = Gated(read.reads, combined))
+Rewound(combined Numbers) DeltaBlock
+	Tiny.Rewound(Tiny.Combined(Rows(1))).memory is Tiny.Cached(Tiny.Combined(Rows(1))).memory
+	Tiny.Rewound(Tiny.Combined(Rows(1) + Rows(2))).window is Tiny.Cached(Tiny.Combined(Rows(1) + Rows(2))).window
+	let tokens = combined.Length / inputs.weights.Length
+	let keyed = Keyed(Convolved(combined, tokens))
+	let decayed = Decayed(combined, tokens)
+	mutable current = value
+	for tokens
+		current = DeltaBlock(current, memory = current.Updated(keyed, decayed, current.Read(keyed, index, 1), index))
+	DeltaBlock(current, window = Shifted(combined, tokens))
 Stepped(chunks DeltaChunks) DeltaChunks
 	Tiny.Stepped(DeltaChunks(4, 2, 2, 16, 1, Layer.Zeros(16), Layer.Zeros(8), Tiny.memory)).reads is Layer.Zeros(8)
 	let updated = DeltaBlock(value, memory = Updated(chunks.keyed, chunks.decayed, Read(chunks.keyed, 0, 1), 0))

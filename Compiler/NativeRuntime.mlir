@@ -10543,7 +10543,7 @@
   // launches are captured into graphs of up to 256 and replayed, a graph of the same kernels runs again with updated
   // arguments (cuGraphExecUpdate), so a decode step costs about 1.5 instead of 6 us of driver time per launch,
   // STRICT_GRAPHS=0 launches directly; state (0 unknown, 1 graphs, 2 direct), capturing, launches, print, segment size
-  llvm.mlir.global internal @strict_gpu_graph(dense<[0, 0, 0, 0, 256]> : tensor<5xi64>) : !llvm.array<5 x i64>
+  llvm.mlir.global internal @strict_gpu_graph(dense<[0, 0, 0, 0, 1024]> : tensor<5xi64>) : !llvm.array<5 x i64>
   llvm.mlir.global internal @strict_gpu_graphs(dense<0> : tensor<512xi64>) : !llvm.array<512 x i64>
   llvm.mlir.global internal constant @strict_gpu_graph_switch("STRICT_GRAPHS\00") : !llvm.array<14 x i8>
   llvm.mlir.global internal constant @strict_gpu_graph_failed("Error: the GPU launches of a graph failed\0A\00") : !llvm.array<43 x i8>

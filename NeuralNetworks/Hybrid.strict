@@ -22,7 +22,7 @@ Rewound(before Hybrid, tokens Number) Hybrid
 	mutable rewound = List(Mutable(DeltaBlock))
 	for before.layers
 		let combined = Safetensors.Part(inputs(index), 0, tokens * value.inputs.weights.Length, 1)
-		rewound.Add(DeltaBlock(value.Cached(combined), merged = List(Number)))
+		rewound.Add(value.Rewound(combined))
 	Hybrid(value, layers = rewound, inputs = List(Numbers))
 Prepared(input Numbers) Hybrid
 	None.Prepared((1, 2)).entered is (1, 2)
