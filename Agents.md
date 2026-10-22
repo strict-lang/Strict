@@ -17,7 +17,7 @@ Before writing any code, stop at the first rung that holds:
 - Deletion over addition. Boring over clever. Fewest files possible.
 - Question complex requests: "Do you actually need X, or does Y cover it?"
 - Pick the edge-case-correct option when two stdlib approaches are the same size, lazy means less code, not the flimsier algorithm.
-- No `ponytail:` or other marker comments. A comment is rarely needed (.strict files have none), when one is needed keep it short and precise.
+- No marker comments. A comment is rarely needed (.strict files have none), when one is needed keep it short and precise.
 - Not lazy about: input validation at trust boundaries, error handling that prevents data loss, security, accessibility, the calibration real hardware needs (the platform is never the spec ideal, a clock drifts, a sensor reads off), anything explicitly requested. Lazy code without its check is unfinished: non-trivial logic leaves ONE runnable check behind, the smallest thing that fails if the logic breaks (an assert-based demo/self-check or one small test file; no frameworks, no fixtures). Trivial one-liners need no test.
 
 ## General Guidelines
