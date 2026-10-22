@@ -7,11 +7,13 @@ Run
 	if bitmap.Colors.Length is 0
 		logger.Log("Missing " + Source + ", see ImageProcessing/Compare/README.md")
 	else
+		let warmup = Blurred(bitmap)
 		let started = Process.Elapsed
 		let blurred = Blurred(bitmap)
 		let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+		let difference = warmup is blurred then "" else ", the first call differs"
 		Ppm.Save(Bitmap(bitmap.width, bitmap.height, blurred, bitmap.IsOpaque), Target)
-		logger.Log("Blurred " + bitmap.width + "x" + bitmap.height + " in " + milliseconds + " ms")
+		logger.Log("Blurred " + bitmap.width + "x" + bitmap.height + " in " + milliseconds + " ms" + difference)
 Blurred(bitmap Bitmap) Colors
 	BenchBlur.Blurred(Bitmap.Tiny)(0) is Color(4, 4, 4)
 	for bitmap.Colors
