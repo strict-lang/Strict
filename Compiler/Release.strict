@@ -12,8 +12,7 @@ Packaged(program Text, built Number, isWeb = false, isCrossing = false) Number
 		return IsDemo then built else Refreshed(Parent + "/Release/Web", "", (".html", ".js", ".wasm", ".data"))
 	NativePackaged(isCrossing)
 NativePackaged(isCrossing Boolean) Number
-	let shared = Parent + "/Release/Content"
-	if Content(shared) < 0
+	if Content(Parent + "/Release/Content") < 0
 		return 1
 	let ending = Platform.Current is Platform.Windows then ".exe" else ""
 	if IsDemo
@@ -22,10 +21,9 @@ NativePackaged(isCrossing Boolean) Number
 		return MacOSBundle(logger, base).Released
 	let folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
 	let result = Refreshed(folder, folder + "/Content", List(Text) + ending)
-	let crossing = isCrossing and (Platform.Current is Platform.Windows)
-	if (result is not 0) or (crossing is false) or (File(base).Exists is false)
-		return result
-	Refreshed(Parent + "/Release/Linux", Parent + "/Release/Linux/Content", List(Text) + "")
+	let isCrossed = isCrossing and (Platform.Current is Platform.Windows) and File(base).Exists
+	let linux = Parent + "/Release/Linux"
+	(result is 0) and isCrossed then Refreshed(linux, linux + "/Content", List(Text) + "") else result
 IsDemo Boolean
 	Release(Logger, TypeSource.Root + "/Examples/NativeAdd/AtlasDemo").IsDemo
 	Release(Logger, "Missing/AtlasDemo").IsDemo is false
