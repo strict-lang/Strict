@@ -11,6 +11,7 @@ constant Probe = (0.5, -1, 1.5, 2, -0.25, 0.75, 1, -2)
 constant Gating = Tiny.Gated(Tiny.Expanded((1, 3), Probe), 4)
 constant Pairs = (1, 3, 0, 1)
 constant Twice = Probe + Probe.Reverse
+constant Sharing = Single.expansions + Single.contractions + Layer(List(Numbers) + Probe.Reverse, Layer.Unbiased)
 Loaded(model Gguf, prefix Text) Experts
 	Tiny.expansions.Length is 4
 	Tiny.expansions.First.weights.Length is 8
@@ -65,6 +66,11 @@ Added(input Numbers, residual Numbers) Numbers
 		return Gpt2Block.Added(residual, Forward(input))
 	let expanded = Batch(expansions.First.weights, expansions.First.biases).Sums(input)
 	Batch(contractions.First.weights, residual).Sums(Gated(expanded, expansions.First.weights.Length / 2))
+Shared(layers List(Layer), input Numbers) Numbers
+	Tiny.Shared(Sharing, Probe).First.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).First, 0.000001)
+	Tiny.Shared(Sharing, Probe).Last.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).Last, 0.000001)
+	let scale = Activation.Sigmoid.Output(layers.Last.Sums(input).First)
+	Experts.Dense(layers.First, layers(1)).Expert(0, input) * scale
 Expanded(chosen Numbers, input Numbers) Numbers
 	Tiny.Expanded((1, 3), Probe).Length is 16
 	Tiny.Expanded((1, 3), Probe).Last is Tiny.expansions(3).Sums(Probe).Last
