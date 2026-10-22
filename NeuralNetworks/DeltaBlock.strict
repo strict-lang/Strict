@@ -82,11 +82,11 @@ Keyed(mixed Numbers) Numbers
 	let size = norm.Length
 	let channels = convolution.Length / 4
 	let keys = 2 * KeyHeads * size
-	let epsilon = Qwen3Block.Epsilon / size
+	let scales = Qwen3Block.Scales(mixed, size, Qwen3Block.Epsilon / size)
 	for mixed
 		let within = index % channels
 		let query = within < keys / 2 then 1 / size else 1 / size.SquareRoot
-		within >= keys then value else value * Qwen3Block.HeadScale(mixed, (index / size).Floor * size, size, epsilon) * query
+		within >= keys then value else value * scales((index / size).Floor) * query
 Decayed(combined Numbers, tokens Number) Numbers
 	Tiny.Decayed(Layer.Zeros(64), 2).Length is 16
 	Tiny.Decayed(Layer.Zeros(32), 1)(4) is 0.5
@@ -131,10 +131,10 @@ Gated(raw Numbers, combined Numbers) Numbers
 	let size = norm.Length
 	let values = decays.Length * size
 	let width = combined.Length * values / raw.Length
+	let scales = Qwen3Block.Scales(raw, size, Qwen3Block.Epsilon)
 	for raw
 		let gate = combined((index / values).Floor * width + convolution.Length / 4 + index % values)
-		let scale = Qwen3Block.HeadScale(raw, (index / size).Floor * size, size, Qwen3Block.Epsilon)
-		value * scale * norm(index % size) * gate / (1 + (0 - gate).Exponential)
+		value * scales((index / size).Floor) * norm(index % size) * gate / (1 + (0 - gate).Exponential)
 Output(input Numbers) Numbers
 	Tiny.Cached(Tiny.Combined(Rows(1))).Output(Rows(1)).Length is 8
 	let attended = Batch(projection.weights, input).Sums(merged)

@@ -5,14 +5,14 @@ constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1))
 constant Kinds = MlirSingle.Operators + InstructionType.Modulo
 Operated(entry InstructionEntry) Texts
-	Single.Operated(Adding).Last is "    llvm.store %x2hr, %r2 : f32, !llvm.ptr"
+	Single.Operated(Adding).Last is "    llvm.store %x2d, %r2_q : i64, !llvm.ptr"
 	Double.Operated(Adding).Length is 0
 	Single.Operated(InstructionEntry.Binary(InstructionType.Power, (0, 1, 2))).Length is 0
 	if (exact.Parts.Length is 0) or (entry.kind is not in Kinds)
 		return List(Text)
 	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
 	let target = "%r" + entry.payload(3)
-	operands + Rational(entry.kind) + exact.Set(Temp("n"), Temp("d"), target) + Refreshed(Temp("n"), Temp("d"), target)
+	operands + Rational(entry.kind) + exact.Set(Temp("n"), Temp("d"), target)
 Compared(entry InstructionEntry, float Text, target Text) Texts
 	Single.Compared(Less, "%f", "%c").Last is "    %c = arith.select %x2v, %x2i, %f : i1"
 	Double.Compared(Adding, "%f", "%c").Length is 0
@@ -66,27 +66,15 @@ Divided Texts
 	let denominator = Integer("d", "arith.select " + Temp("z") + ", %inexact, " + Temp("p"))
 	(List(Text) + negative) + negated + (numerator, positive, zero, denominator)
 Floored(source Text, target Text) Texts
-	Single.Floored("%r1", "%r2").Last is "    llvm.store %x2hr, %r2 : f32, !llvm.ptr"
+	Single.Floored("%r1", "%r2").Last is "    llvm.store %x2fy, %r2_q : i64, !llvm.ptr"
 	Double.Floored("%r1", "%r2").Length is 0
 	if exact.Parts.Length is 0
 		return List(Text)
 	let numerator = Integer("fx", "arith.select " + Temp("fv") + ", " + Temp("ff") + ", " + Temp("o_e"))
 	let denominator = Integer("fy", "arith.select " + Temp("fv") + ", %one, " + Temp("o_q"))
 	let kept = exact.Loaded(Temp("o"), target) + (numerator, denominator)
-	let refreshed = exact.Set(Temp("fx"), Temp("fy"), target) + Refreshed(Temp("fx"), Temp("fy"), target)
+	let refreshed = exact.Set(Temp("fx"), Temp("fy"), target)
 	exact.Loaded(Temp("f"), source) + Quotient + kept + refreshed
-Refreshed(numerator Text, denominator Text, slot Text) Texts
-	Single.Refreshed("%n", "%d", "%r1").First is "    %x2hv = arith.cmpi ne, %d, %inexact : i64"
-	Single.Refreshed("%n", "%d", "%r1")(5) is "    %x2ho = llvm.load %r1 : !llvm.ptr -> f32"
-	let float = exact.function.Float
-	let valid = Integer("hv", "arith.cmpi ne, " + denominator + ", %inexact")
-	let safe = Integer("hs", "arith.select " + Temp("hv") + ", " + denominator + ", %one")
-	let numerators = "    " + Temp("hn") + " = arith.sitofp " + numerator + " : i64 to " + float
-	let denominators = "    " + Temp("hd") + " = arith.sitofp " + Temp("hs") + " : i64 to " + float
-	let divided = "    " + Temp("hc") + " = arith.divf " + Temp("hn") + ", " + Temp("hd") + " : " + float
-	let chosen = "    " + Temp("hr") + " = arith.select " + Temp("hv") + ", " + Temp("hc") + ", " + Temp("ho") + " : "
-	let loaded = MlirTyped(float).Load(Temp("ho"), slot)
-	(valid, safe, numerators, denominators, divided, loaded, chosen + float, MlirTyped(float).Store(Temp("hr"), slot))
 Quotient Texts
 	Single.Quotient.Last is "    %x2ff = arith.select %x2fn, %x2fb, %x2ft : i64"
 	let valid = Integer("fv", "arith.cmpi ne, " + Temp("f_q") + ", %inexact")
