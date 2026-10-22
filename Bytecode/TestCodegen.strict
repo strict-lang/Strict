@@ -98,5 +98,6 @@ Counted(block CodeBlock) CodeBlock
 	types.Generator.Expression(sum, block).Stored("failed")
 Neutral ValueCodegen
 	Processing.Neutral.Expression(Elapsed, Counter).instructions.First.texts.First is "Strict/Process"
-	let neutral = CallTarget(types.inference.types, TypeShape(List(Text)), types.fullName, List(Text))
+	TestCodegen(TypeCodegen("P/H", List(Text), Even.types.inference, ("P/S"))).Neutral.target.FullName("S") is "P/S"
+	let neutral = CallTarget(types.inference.types, TypeShape(List(Text)), types.fullName, types.typeNames)
 	ValueCodegen(types.inference, MethodCodegen.NoScope, neutral)
