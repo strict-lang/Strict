@@ -3,22 +3,9 @@ has width Number
 has channels Number
 has offsets Numbers
 constant Square = FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0)
-constant Plain = (1, 0)
 Height Number
 	Square.Height is 2
 	values.Length / width / channels
-Padded(affine Numbers, swish Boolean) Numbers
-	Square.Padded(Plain, false) is (0, 0, 0, 0, 0, 1, 2, 0, 0, 3, 4, 0, 0, 0, 0, 0)
-	Square.Padded((2, 1), true)(10).IsNearlyEqual(8.9988895)
-	FeatureMap((1, 2, 3, 4), 1, 2, (0, 0)).Padded((1, 1, 0, 0), false)(15) is 4
-	let columns = width + 2
-	for (Height + 2) * columns * channels
-		let row = (index / (columns * channels)).Floor - 1
-		let column = (index / channels).Floor % columns - 1
-		let channel = index % channels
-		let inside = row >= 0 and row < Height and column >= 0 and column < width
-		let number = inside then values(index - (columns + 1 + 2 * row) * channels) else 0
-		inside then Activated(number, affine(channel), affine(channels + channel), swish) else 0
 Activated(number Number, scale Number, shift Number, swish Boolean) Number
 	Square.Activated(2, 3, -5, false) is 1
 	Square.Activated(0.5, 2, 0, true).IsNearlyEqual(0.7310585786300049)

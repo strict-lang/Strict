@@ -11645,8 +11645,9 @@
   llvm.mlir.global internal constant @strict_gpu_convolution_name("strict_device_convolution\00strict_device_convolutions\00") : !llvm.array<53 x i8>
   llvm.mlir.global internal @strict_gpu_convolution_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // `Convolved.Summed` on the 16 bit tensor cores (strict_device_convolution): a 3x3 convolution of values (height by
-  // width pixels of channels numbers, the affine scale and shift and swish applied on load, zeros around) with weights
-  // (outputs rows of 9 taps of channels numbers), shape is height, width, channels, outputs and swish (1 or 0); 0.0 when
+  // width pixels of channels numbers divided by factor, doubled when it is 2, the affine scale and shift and swish applied
+  // on load, zeros around) with weights (outputs rows of 9 taps of channels numbers), shape is height, width, channels,
+  // outputs, swish (1 or 0) and factor; 0.0 when
   // the GPU can not (channels not a multiple of 32 or above 512, lists of other lengths), then the method itself runs
   func.func private @strict_gpu_convolution(%ptx: !llvm.ptr, %values: f64, %affine: f64, %weights: f64, %shape: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -11659,12 +11660,14 @@
     %eight = arith.constant 8 : i64
     %nine = arith.constant 9 : i64
     %thirtyOne = arith.constant 31 : i64
-    %fiveNumber = arith.constant 5.0 : f64
+    %six = arith.constant 6 : i64
+    %slotCount = arith.constant 9 : i64
+    %sixNumber = arith.constant 6.0 : f64
     %shapeLength = func.call @strict_list_length(%shape) : (f64) -> f64
-    %isShape = arith.cmpf oeq, %shapeLength, %fiveNumber : f64
+    %isShape = arith.cmpf oeq, %shapeLength, %sixNumber : f64
     cf.cond_br %isShape, ^read, ^unable
   ^read:
-    %slots = llvm.alloca %eight x f64 : (i64) -> !llvm.ptr
+    %slots = llvm.alloca %slotCount x f64 : (i64) -> !llvm.ptr
     llvm.store %values, %slots : f64, !llvm.ptr
     %affineSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %affine, %affineSlot : f64, !llvm.ptr
@@ -11672,7 +11675,7 @@
     llvm.store %weights, %weightsSlot : f64, !llvm.ptr
     cf.br ^copy(%none : i64)
   ^copy(%index: i64):
-    %copying = arith.cmpi slt, %index, %five : i64
+    %copying = arith.cmpi slt, %index, %six : i64
     cf.cond_br %copying, ^item, ^copied
   ^item:
     %itemNumber = arith.sitofp %index : i64 to f64
@@ -11695,8 +11698,22 @@
     %width = arith.fptosi %widthNumber : f64 to i64
     %channels = arith.fptosi %channelsNumber : f64 to i64
     %outputs = arith.fptosi %outputsNumber : f64 to i64
+    %factorSlot = llvm.getelementptr %slots[8] : (!llvm.ptr) -> !llvm.ptr, f64
+    %factorNumber = llvm.load %factorSlot : !llvm.ptr -> f64
+    %factor = arith.fptosi %factorNumber : f64 to i64
     %pixels = arith.muli %height, %width : i64
-    %valuesCount = arith.muli %pixels, %channels : i64
+    %factorPositive = arith.cmpi sgt, %factor, %none : i64
+    %safeFactor = arith.select %factorPositive, %factor, %one : i64
+    %inputHeight = arith.divui %height, %safeFactor : i64
+    %inputWidth = arith.divui %width, %safeFactor : i64
+    %inputPixels = arith.muli %inputHeight, %inputWidth : i64
+    %heightBack = arith.muli %inputHeight, %safeFactor : i64
+    %widthBack = arith.muli %inputWidth, %safeFactor : i64
+    %heightWhole = arith.cmpi eq, %heightBack, %height : i64
+    %widthWhole = arith.cmpi eq, %widthBack, %width : i64
+    %bothWhole = arith.andi %heightWhole, %widthWhole : i1
+    %factorFits = arith.andi %bothWhole, %factorPositive : i1
+    %valuesCount = arith.muli %inputPixels, %channels : i64
     %affineCount = arith.muli %channels, %two : i64
     %tapCount = arith.muli %channels, %nine : i64
     %weightsCount = arith.muli %tapCount, %outputs : i64
@@ -11721,7 +11738,8 @@
     %allFit = arith.andi %listsFit, %weightsFit : i1
     %wholeSome = arith.andi %whole, %someChannels : i1
     %countFit = arith.andi %wholeSome, %some : i1
-    %fits = arith.andi %allFit, %countFit : i1
+    %sized = arith.andi %allFit, %countFit : i1
+    %fits = arith.andi %sized, %factorFits : i1
     cf.cond_br %fits, ^run, ^unable
   ^run:
     %name = llvm.mlir.addressof @strict_gpu_convolution_name : !llvm.ptr
@@ -11729,7 +11747,7 @@
     %listsMask = arith.constant 7 : i64
     %lanes = arith.constant -2048 : i64
     %integers = arith.constant -1 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %eight, %listsMask, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %slotCount, %listsMask, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
