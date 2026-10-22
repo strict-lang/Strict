@@ -28,7 +28,7 @@ Kernel Texts
 		return MlirDevice(MlirFunction(function, Group = call), position).Kernel
 	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + MlirPassed(function, position).Header
 	let body = Emitted(position + 1, function.method.LoopEndOf(position))
-	(List(Text) + header) + Slots + Given + Indexed + Started + body + Ending
+	(List(Text) + header) + Slots + Given + Indexed + Started + body + MlirGrouped(function, position).Ending
 Freed Text
 	Doubling.Freed is ""
 	Layering.Freed.StartsWith(", %f_input_d: !llvm.ptr, %f_input_n: i64")
@@ -125,9 +125,8 @@ Laned Texts
 Started Texts
 	Doubling.Started.Last is "    llvm.store %element, %v_value : f64, !llvm.ptr"
 	Layering.Started.Last is "    llvm.store %rowed#1, %v_value_b : i64, !llvm.ptr"
-	constant narrow = "    %narrow = arith.trunci %at : i64 to i32"
 	let loops = MlirDeviceLoops(function, position)
-	let index = (("  ^body:", narrow) + loops.Counted + loops.Indexes) + loops.Indexed("%v_index")
+	let index = (MlirGrouped(function, position).Body + loops.Counted + loops.Indexes) + loops.Indexed("%v_index")
 	let collection = MlirLoops(function, position).Collection
 	if collection is ""
 		return index + loops.Indexed("%v_value")
@@ -146,5 +145,6 @@ Emitted(first Number, limit Number) Texts
 	mutable lines = List(Mutable(Text))
 	for Range(first, limit)
 		if MlirDeviceDot(function, value).IsCovered is false
-			lines = lines + MlirDeviceStatements(function, value).Labeled + MlirDeviceStatements(function, value).Emitted
+			let emitted = MlirGrouped(function, value).Remembered(MlirDeviceStatements(function, value).Emitted)
+			lines = lines + MlirDeviceStatements(function, value).Labeled + emitted
 	lines

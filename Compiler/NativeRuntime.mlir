@@ -10067,7 +10067,10 @@
     %tokened = arith.cmpi slt, %lanes, %none : i64
     %tokenTotal = func.call @strict_gpu_token_threads(%count, %lanes, %values, %rows) : (i64, i64, !llvm.ptr, i64) -> i64
     %elementTotal = arith.select %tokened, %tokenTotal, %laneTotal : i64
-    %threadTotal = arith.select %grouped, %count, %elementTotal : i64
+    %groupDivisor = arith.select %grouped, %group, %one : i64
+    %groupCount = arith.divui %count, %groupDivisor : i64
+    %groupThreads = arith.muli %groupCount, %groupLanes : i64
+    %threadTotal = arith.select %grouped, %groupThreads, %elementTotal : i64
     %tileLanes = arith.constant -512 : i64
     %tiling = arith.cmpi eq, %lanes, %tileLanes : i64
     %tileBlock = arith.constant 512 : i64
@@ -11589,8 +11592,8 @@
   ^done:
     return
   }
-  // the blocks of a grouped launch (one element per lane, up to 256 lanes) compute the call of their group together, a
-  // block must not reach into the next group: whole warps up to 256 lanes, beyond that whole blocks of 256
+  // a grouped launch runs a block of up to 256 lanes per group (every lane takes every 256th element of it), which
+  // computes the call of its group once together: whole warps up to 256 lanes, beyond that whole blocks of 256
   func.func private @strict_gpu_grouping(%count: i64, %group: i64) -> i1 {
     %none = arith.constant 0 : i64
     %thirtyOne = arith.constant 31 : i64

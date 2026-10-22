@@ -3,17 +3,22 @@ has position Number
 constant Norming = MlirGrouped(MlirFunction(MlirGroups.Norming.function, Group = 11), 2)
 constant Doubling = MlirGrouped(MlirGpu.Doubling.function, 2)
 constant Calling = MlirGrouped(MlirGroups.Norming.function, 11)
+constant Remembering = MlirGrouped(Norming.function, 11)
 constant Allocated = " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 constant Plain = ("    %inside = arith.cmpi slt, %at, %count : i64", "    cf.cond_br %inside, ^body, ^exit")
-constant Lanes = ("    %widest = arith.constant 256 : i64", "    %lanes = arith.minsi %group, %widest : i64", "    %single = arith.constant 1 : i64", "    %at = arith.divui %global, %single : i64", "    %lane = arith.remui %global, %lanes : i64")
+constant Looped = ("    %inside = arith.cmpi slt, %atFirst, %count : i64", "    cf.cond_br %inside, ^body(%atFirst : i64), ^exit")
+constant Next = ("    cf.br ^next", "  ^next:", "    %atNext = arith.addi %at, %lanes : i64", "    %more = arith.cmpi slt, %atNext, %groupEnd : i64", "    cf.cond_br %more, ^body(%atNext : i64), ^last", "  ^last:")
+constant Lanes = ("    %widest = arith.constant 256 : i64", "    %lanes = arith.minsi %group, %widest : i64", "    %lane = arith.remui %global, %lanes : i64", "    %groupIndex = arith.divui %global, %lanes : i64", "    %groupStart = arith.muli %groupIndex, %group : i64", "    %groupEnd = arith.addi %groupStart, %group : i64", "    %atFirst = arith.addi %groupStart, %lane : i64")
 Indexed Texts
 	Norming.Indexed.First is "    %groupd = llvm.load %v_size : !llvm.ptr -> f64"
 	Norming.Indexed(3) is "    %lanes = arith.minsi %group, %widest : i64"
 	Doubling.Indexed.Last is "    cf.cond_br %inside, ^body, ^exit"
+	Norming.Indexed.Last is "    cf.cond_br %inside, ^body(%atFirst : i64), ^exit"
 	if function.Group < 0
 		return MlirDevice(function, position).Laned + Plain
 	let size = function.Load("%groupd", "%v_" + MlirGroups(function, position).Size(function.Group))
-	(size, "    %group = arith.fptosi %groupd : " + function.Float + " to i64") + Lanes + Plain
+	let memo = MlirDevice(function, position).Slot("%groupMemo")
+	(size, "    %group = arith.fptosi %groupd : " + function.Float + " to i64") + Lanes + memo + Looped
 Launched Texts
 	Norming.Launched.Last is "    %t2gg = arith.fptosi %t2ggd : f64 to i64"
 	Doubling.Launched is ("    %t2gg = arith.constant 0 : i64")
@@ -67,3 +72,35 @@ Temp(suffix Text) Text
 Memo Text
 	Calling.Memo is "%memo11"
 	"%memo" + position
+Body Texts
+	Norming.Body.First is "  ^body(%at: i64):"
+	Doubling.Body is ("  ^body:", "    %narrow = arith.trunci %at : i64 to i32")
+	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("  ^body(%at: i64):") > 0
+	constant narrow = "    %narrow = arith.trunci %at : i64 to i32"
+	(function.Group < 0 then "  ^body:" else "  ^body(%at: i64):", narrow)
+Ending Texts
+	Norming.Ending(4) is "    cf.cond_br %more, ^body(%atNext : i64), ^last"
+	Doubling.Ending is MlirDevice.Ending
+	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("^body(%atNext : i64)") > 0
+	function.Group < 0 then MlirDevice.Ending else Next + MlirDevice.Ending
+Remembered(called Texts) Texts
+	Remembering.Remembered(List(Text) + "    call").First is "    %t11gf = arith.cmpi eq, %at, %atFirst : i64"
+	Remembering.Remembered(List(Text) + "    call").Last is "  ^t11joined:"
+	Norming.Remembered(List(Text) + "    call") is ("    call")
+	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("%t11gf = arith.cmpi eq") > 0
+	if position is not function.Group
+		return called
+	let register = "%r" + function.method.instructions(position).payload(0)
+	let kept = ("    cf.br ^t" + position + "joined", "  ^t" + position + "kept:")
+	let joined = ("    cf.br ^t" + position + "joined", "  ^t" + position + "joined:")
+	(Branched + called + Saved(register, "%groupMemo", "n")) + kept + Saved("%groupMemo", register, "o") + joined
+Branched Texts
+	Remembering.Branched(1) is "    cf.cond_br %t11gf, ^t11call, ^t11kept"
+	let first = "    " + Temp("f") + " = arith.cmpi eq, %at, %atFirst : i64"
+	let branch = "    cf.cond_br " + Temp("f") + ", ^t" + position + "call, ^t" + position + "kept"
+	(first, branch, "  ^t" + position + "call:")
+Saved(source Text, target Text, suffix Text) Texts
+	Remembering.Saved("%r9", "%groupMemo", "n").First is "    %t11gn = llvm.load %r9 : !llvm.ptr -> f64"
+	let exact = MlirExact(function, position)
+	let moved = (function.Load(Temp(suffix), source), function.Store(Temp(suffix), target))
+	moved + exact.Loaded(Temp(suffix + "x"), source) + exact.Set(Temp(suffix + "x_e"), Temp(suffix + "x_q"), target)
