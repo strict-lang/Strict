@@ -3,7 +3,6 @@ constant Degrees = TypeEntry("Strict/Degrees", (MemberEntry("number", "Strict/Nu
 constant Angle = TypeEntry("Strict/Angle", (MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false)), List(MethodEntry))
 constant Byting = TypeEntry("Strict/Byte", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false, 8), MemberEntry("Max", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry))
 constant Red = MemberEntry("red", "Strict/Byte", List(InstructionEntry), false)
-constant BrainFloats = 17
 constant Storing = " : (!llvm.ptr, i64, f32, i64) -> ()"
 constant Wrapping = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Degrees + Angle + Byting, Degrees, MethodEntry.CountingLoop))
 constant Widened = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "width"), InstructionEntry.Return(0))
