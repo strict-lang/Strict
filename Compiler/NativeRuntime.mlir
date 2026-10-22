@@ -10211,14 +10211,7 @@
     %topSlot = llvm.getelementptr %items[%top] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %device = llvm.load %topSlot : !llvm.ptr -> i64
     llvm.store %top, %countSlot : i64, !llvm.ptr
-    %pair = arith.shli %lentCount, %one : i64
-    %deviceIndex = arith.addi %pair, %one : i64
-    %deviceSlot = llvm.getelementptr %lent[0, %deviceIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<129 x i64>
-    llvm.store %device, %deviceSlot : i64, !llvm.ptr
-    %classSlot = llvm.getelementptr %deviceSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %larger, %classSlot : i64, !llvm.ptr
-    %moreLent = arith.addi %lentCount, %one : i64
-    llvm.store %moreLent, %lent : i64, !llvm.ptr
+    %stored = func.call @strict_gpu_pair_put(%lent, %most, %device, %larger) : (!llvm.ptr, i64, i64, i64) -> i1
     %smallestBlock = arith.constant 256 : i64
     %blockSize = arith.shli %smallestBlock, %larger : i64
     func.call @strict_gpu_obtained(%blockSize) : (i64) -> ()
@@ -10229,37 +10222,67 @@
   // the real class of a block given back as class (it was lent for a smaller one), its entry goes
   func.func private @strict_gpu_lent_class(%device: i64, %class: i64) -> i64 {
     %none = arith.constant 0 : i64
-    %one = arith.constant 1 : i64
     %lent = llvm.mlir.addressof @strict_gpu_lent : !llvm.ptr
-    %lentCount = llvm.load %lent : !llvm.ptr -> i64
+    %real = func.call @strict_gpu_pair_taken(%lent, %device, %none) : (!llvm.ptr, i64, i64) -> i64
+    %wasLent = arith.cmpi ne, %real, %none : i64
+    %chosen = arith.select %wasLent, %real, %class : i64
+    return %chosen : i64
+  }
+  // tables of pairs (count, then the two words of each): adds one, false when most are there
+  func.func private @strict_gpu_pair_put(%table: !llvm.ptr, %most: i64, %first: i64, %second: i64) -> i1 {
+    %one = arith.constant 1 : i64
+    %count = llvm.load %table : !llvm.ptr -> i64
+    %room = arith.cmpi slt, %count, %most : i64
+    cf.cond_br %room, ^put, ^full
+  ^put:
+    %pair = arith.shli %count, %one : i64
+    %firstIndex = arith.addi %pair, %one : i64
+    %firstSlot = llvm.getelementptr %table[%firstIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %first, %firstSlot : i64, !llvm.ptr
+    %secondSlot = llvm.getelementptr %firstSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %second, %secondSlot : i64, !llvm.ptr
+    %more = arith.addi %count, %one : i64
+    llvm.store %more, %table : i64, !llvm.ptr
+    return %room : i1
+  ^full:
+    return %room : i1
+  }
+  // takes the pair whose word at keyWord (0 or 1) is key out of the table, its other word, 0 when there is none
+  func.func private @strict_gpu_pair_taken(%table: !llvm.ptr, %key: i64, %keyWord: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %count = llvm.load %table : !llvm.ptr -> i64
+    %otherWord = arith.xori %keyWord, %one : i64
     cf.br ^find(%none : i64)
   ^find(%index: i64):
-    %more = arith.cmpi slt, %index, %lentCount : i64
-    cf.cond_br %more, ^compare, ^own
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^compare, ^missing
   ^compare:
     %pair = arith.shli %index, %one : i64
-    %deviceIndex = arith.addi %pair, %one : i64
-    %deviceSlot = llvm.getelementptr %lent[0, %deviceIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<129 x i64>
-    %stored = llvm.load %deviceSlot : !llvm.ptr -> i64
+    %firstIndex = arith.addi %pair, %one : i64
+    %firstSlot = llvm.getelementptr %table[%firstIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %keySlot = llvm.getelementptr %firstSlot[%keyWord] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %stored = llvm.load %keySlot : !llvm.ptr -> i64
     %following = arith.addi %index, %one : i64
-    %isDevice = arith.cmpi eq, %stored, %device : i64
-    cf.cond_br %isDevice, ^found(%deviceSlot : !llvm.ptr), ^find(%following : i64)
-  ^found(%found: !llvm.ptr):
-    %classSlot = llvm.getelementptr %found[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    %real = llvm.load %classSlot : !llvm.ptr -> i64
-    %last = arith.subi %lentCount, %one : i64
+    %matches = arith.cmpi eq, %stored, %key : i64
+    cf.cond_br %matches, ^take(%firstSlot : !llvm.ptr), ^find(%following : i64)
+  ^take(%found: !llvm.ptr):
+    %otherSlot = llvm.getelementptr %found[%otherWord] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %other = llvm.load %otherSlot : !llvm.ptr -> i64
+    %last = arith.subi %count, %one : i64
     %lastPair = arith.shli %last, %one : i64
     %lastIndex = arith.addi %lastPair, %one : i64
-    %lastSlot = llvm.getelementptr %lent[0, %lastIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<129 x i64>
-    %lastDevice = llvm.load %lastSlot : !llvm.ptr -> i64
-    %lastClassSlot = llvm.getelementptr %lastSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    %lastClass = llvm.load %lastClassSlot : !llvm.ptr -> i64
-    llvm.store %lastDevice, %found : i64, !llvm.ptr
-    llvm.store %lastClass, %classSlot : i64, !llvm.ptr
-    llvm.store %last, %lent : i64, !llvm.ptr
-    return %real : i64
-  ^own:
-    return %class : i64
+    %lastSlot = llvm.getelementptr %table[%lastIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %lastFirst = llvm.load %lastSlot : !llvm.ptr -> i64
+    %lastSecondSlot = llvm.getelementptr %lastSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %lastSecond = llvm.load %lastSecondSlot : !llvm.ptr -> i64
+    llvm.store %lastFirst, %found : i64, !llvm.ptr
+    %foundSecond = llvm.getelementptr %found[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %lastSecond, %foundSecond : i64, !llvm.ptr
+    llvm.store %last, %table : i64, !llvm.ptr
+    return %other : i64
+  ^missing:
+    return %none : i64
   }
   // when the GPU memory runs out: a full collection, then the kept allocations of evicted lists and the free blocks of
   // 16 MB and more go back to the driver, the largest first until needed bytes are, after the captured launches ran
@@ -13422,60 +13445,22 @@
   // allocations of evicted lists by size for the next upload: count, then 16 times device and bytes
   llvm.mlir.global internal @strict_gpu_spares(dense<0> : tensor<33xi64>) : !llvm.array<33 x i64>
   func.func private @strict_gpu_spared(%device: i64, %bytes: i64) {
-    %one = arith.constant 1 : i64
     %most = arith.constant 16 : i64
     %spares = llvm.mlir.addressof @strict_gpu_spares : !llvm.ptr
-    %count = llvm.load %spares : !llvm.ptr -> i64
-    %room = arith.cmpi slt, %count, %most : i64
-    cf.cond_br %room, ^keep, ^free
-  ^keep:
-    %pair = arith.shli %count, %one : i64
-    %deviceIndex = arith.addi %pair, %one : i64
-    %deviceSlot = llvm.getelementptr %spares[0, %deviceIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
-    llvm.store %device, %deviceSlot : i64, !llvm.ptr
-    %bytesSlot = llvm.getelementptr %deviceSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %bytes, %bytesSlot : i64, !llvm.ptr
-    %more = arith.addi %count, %one : i64
-    llvm.store %more, %spares : i64, !llvm.ptr
-    return
+    %kept = func.call @strict_gpu_pair_put(%spares, %most, %device, %bytes) : (!llvm.ptr, i64, i64, i64) -> i1
+    cf.cond_br %kept, ^done, ^free
   ^free:
     func.call @strict_gpu_release(%device) : (i64) -> ()
+    cf.br ^done
+  ^done:
     return
   }
   // a kept allocation of exactly bytes, 0 when there is none
   func.func private @strict_gpu_spare(%bytes: i64) -> i64 {
-    %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %spares = llvm.mlir.addressof @strict_gpu_spares : !llvm.ptr
-    %count = llvm.load %spares : !llvm.ptr -> i64
-    cf.br ^find(%none : i64)
-  ^find(%index: i64):
-    %more = arith.cmpi slt, %index, %count : i64
-    cf.cond_br %more, ^compare, ^missing
-  ^compare:
-    %pair = arith.shli %index, %one : i64
-    %deviceIndex = arith.addi %pair, %one : i64
-    %deviceSlot = llvm.getelementptr %spares[0, %deviceIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
-    %bytesSlot = llvm.getelementptr %deviceSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    %stored = llvm.load %bytesSlot : !llvm.ptr -> i64
-    %following = arith.addi %index, %one : i64
-    %fits = arith.cmpi eq, %stored, %bytes : i64
-    cf.cond_br %fits, ^take, ^find(%following : i64)
-  ^take:
-    %device = llvm.load %deviceSlot : !llvm.ptr -> i64
-    %last = arith.subi %count, %one : i64
-    %lastPair = arith.shli %last, %one : i64
-    %lastIndex = arith.addi %lastPair, %one : i64
-    %lastSlot = llvm.getelementptr %spares[0, %lastIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
-    %lastDevice = llvm.load %lastSlot : !llvm.ptr -> i64
-    %lastBytesSlot = llvm.getelementptr %lastSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    %lastBytes = llvm.load %lastBytesSlot : !llvm.ptr -> i64
-    llvm.store %lastDevice, %deviceSlot : i64, !llvm.ptr
-    llvm.store %lastBytes, %bytesSlot : i64, !llvm.ptr
-    llvm.store %last, %spares : i64, !llvm.ptr
+    %device = func.call @strict_gpu_pair_taken(%spares, %bytes, %one) : (!llvm.ptr, i64, i64) -> i64
     return %device : i64
-  ^missing:
-    return %none : i64
   }
   // gives all kept allocations back to the driver, their bytes
   func.func private @strict_gpu_unspared() -> i64 {
