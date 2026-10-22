@@ -14,14 +14,20 @@ Ptx(base Text, isTiling = false) Texts
 	let lowered = tools.Lowered(base + ".gpu")
 	if tools.platform is Platform.MacOS
 		return List(Text) + (lowered is "" then MetalBuild(tools).Source(base) else lowered)
-	let older = lowered is "" then Compiled(base, "sm_75") else lowered
-	(isTiling is false) or (older.StartsWith("//") is false) then List(Text) + older else (Compiled(base, "sm_80"), older)
-Compiled(base Text, target Text) Text
-	Missing.Compiled("Compiler/output/missing", "sm_75").StartsWith("clang failed")
-	let output = base + "." + target + ".ptx"
-	let arguments = Nvptx + target + " " + tools.Quoted(base + ".gpu.ll") + " -o " + tools.Quoted(output)
-	let compiled = ToolRunner(tools.Located("clang")).Execute(arguments)
-	compiled.Failed then "clang failed: " + compiled.error else Text.Combine(File(output).ReadLines, "\n")
+	if lowered is not ""
+		return List(Text) + lowered
+	let compiled = Compiled(base, isTiling then ("sm_80", "sm_75") else List(Text) + "sm_75")
+	compiled.Last.StartsWith("//") then compiled else List(Text) + compiled.Last
+Compiled(base Text, targets Texts) Texts
+	Missing.Compiled("Compiler/output/missing", List(Text) + "sm_75").First.StartsWith("clang failed")
+	Missing.Compiled("Compiler/output/missing", ("sm_80", "sm_75")).Length is 2
+	mutable arguments = List(Mutable(Text))
+	for targets
+		let output = tools.Quoted(base + "." + value + ".ptx")
+		arguments.Add(Nvptx + value + " " + tools.Quoted(base + ".gpu.ll") + " -o " + output)
+	for ToolRunner(tools.Located("clang")).ExecuteAll(arguments)
+		let output = base + "." + targets(index) + ".ptx"
+		value.Failed then "clang failed: " + value.error else Text.Combine(File(output).ReadLines, "\n")
 Combined(device Text, runtimes Texts, target = "Nvidia") Text
 	Local.Combined("module {\n}", Without).IndexOf("@strict_device_element(") > 0
 	Local.Combined("module {\n}", Without).IndexOf("@strict_device_tokens(") is -1
@@ -32,7 +38,7 @@ Combined(device Text, runtimes Texts, target = "Nvidia") Text
 	device.Substring(0, device.Length - 1) + Runtime(("Device", target) + batched + runtimes) + "\n}"
 Amd(device Text, runtimes Texts) Text
 	Local.Amd("module {\n}", Without).IndexOf("llvm.amdgcn.workitem.id.x") > 0
-	Local.Amd("module {\n}", Without).IndexOf("nvvm.") is -1
+	Local.Amd("module {\n}", Without).IndexOf("nvvm.kernel") is -1
 	Local.Amd("module {\n" + MlirTokens.Marker + "\n}", Attending).IndexOf("{rocdl.kernel, nvvm.maxntid") > 0
 	Local.Amd("module {\n}", Attending).IndexOf("llvm.nvvm.") is -1
 	let combined = Combined(device, runtimes, "Amd")

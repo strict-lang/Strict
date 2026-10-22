@@ -5,6 +5,7 @@ constant Twice = MlirDeviceCalls(MlirParallel.Doubling.function, 4, MlirDevice.T
 constant Twicing = Twice.function.method.instructions(4)
 constant Flooring = MlirDeviceCalls(MlirGpuCheck.Floored, 1, MlirGpuCheck.Floored)
 constant Making = InstructionEntry.Invoke(1, ("Strict/Degrees", "from", "Strict/Degrees", "number"), List(Number) + 0, -1)
+constant Rounding = InstructionEntry.Invoke(1, ("Strict/Float8", "from", "Strict/Float8", "number"), List(Number) + 0, -1)
 constant Heads = MlirDeviceCalls(MlirGpuCheck.Heading.function, 4, MlirDeviceMembers.Head)
 constant Natives = ("Floor", "Logarithm", "from")
 constant Summing = MlirDeviceCalls(MlirGpu.Layering.function, 5, MlirDeviceStatements.Summed)
@@ -75,16 +76,34 @@ IsNative(entry InstructionEntry) Boolean
 Native(entry InstructionEntry) Texts
 	Flooring.Native(MlirGpuCheck.Flooring)(1).IndexOf("llvm.intr.floor") > 0
 	Flooring.Native(Making).Last is "    llvm.store %d1, %r1 : f64, !llvm.ptr"
+	Text.Combine(Flooring.Native(Rounding)).IndexOf("@strict_device_float8_rounded(%d1)") > 0
 	if entry.texts(1) is not in Natives
 		return MlirTokenLaunch(function, function.method.LoopBeginOf(at)).Read(at)
 	if entry.texts(1) is "Logarithm"
 		return Logarithmic(entry)
-	let target = "%r" + entry.payload(0)
 	if entry.texts(1) is "from"
-		let source = "%r" + entry.payload(6 + entry.payload(3))
-		return function.Copied(source, target, Temp("")) + MlirExact(function, at).Copied(source, target)
+		return Made(entry)
+	let target = "%r" + entry.payload(0)
 	let exact = MlirRational(MlirExact(function, at)).Floored("%r" + Register(entry), target)
 	(Loaded(entry) + MlirTyped(function.Float).Floored(Temp(""), Temp("i")) + function.Store(Temp(""), target)) + exact
+Made(entry InstructionEntry) Texts
+	Flooring.Made(Making).Length is 2
+	Flooring.Made(Rounding)(1) is "    %d1r = func.call @strict_device_float8_rounded(%d1) : (f64) -> f64"
+	let source = "%r" + entry.payload(6 + entry.payload(3))
+	let target = "%r" + entry.payload(0)
+	if IsRounding(entry) is false
+		return function.Copied(source, target, Temp("")) + MlirExact(function, at).Copied(source, target)
+	let typed = MlirTyped(function.Float)
+	let types = " : (" + typed.type + ") -> " + typed.type
+	let call = " = func.call @strict_device_float8_rounded" + typed.Suffix + "(" + Temp("") + ")" + types
+	(function.Load(Temp(""), source), "    " + Temp("r") + call, function.Store(Temp("r"), target))
+IsRounding(entry InstructionEntry) Boolean
+	Flooring.IsRounding(Rounding)
+	Flooring.IsRounding(Making) is false
+	Flooring.IsRounding(MlirGpuCheck.Floored.method.instructions(0)) is false
+	if entry.kind is not InstructionType.Invoke
+		return false
+	(entry.texts(1) is "from") and (TypeEntry.ShortName(entry.texts(0)) is "Float8")
 Logarithmic(entry InstructionEntry) Texts
 	Text.Combine(Flooring.Logarithmic(MlirGpuCheck.Flooring)).IndexOf("@strict_device_logarithm(%failed, %d1i)") > 0
 	let typed = MlirTyped(function.Float)

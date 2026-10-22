@@ -1,6 +1,18 @@
 has number
+from(unrounded Number)
+	Float8(0.3) is 0.3125
+	Float8(-0.3) is -0.3125
+	Float8(1000) is 448
+	Float8(-1000) is -448
+	Float8(0.001) is 0.001953125
+	Float8(1.0625) is 1
+	Float8(1.1875) is 1.25
+	Float8(0) is 0
+	let exponent = unrounded is 0 then 0 else (unrounded.Absolute.Logarithm / 2.Logarithm).Floor
+	let step = 2 ^ ((exponent < -6 then -6 else exponent) - 3)
+	((unrounded / step).Counted("Even") * step).Clamp(-448, 448)
 Packed(numbers Numbers) Float8s
 	Float8.Packed((0.5, 1.125, -3.25)) is (0.5, 1.125, -3.25)
-	Float8.Packed(List(Number) + 0.3).First.number.IsNearlyEqual(0.3, 0.02)
+	Float8.Packed(List(Number) + 0.3).First.number is 0.3125
 	for numbers
 		Float8(value)

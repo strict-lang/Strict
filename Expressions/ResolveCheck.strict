@@ -44,18 +44,19 @@ AllFiles(root Text) Texts
 Refined(inference TypeInference, shapes List(TypeShape)) TypeInference
 	ResolveCheck.Refined(Counting, List(TypeShape)).types.methods.Length is 0
 	Inference(("File.strict", "TextWriter.strict", "BytesWriter.strict")).types.ParameterScope("File").Count("Write") is 2
-	let types = inference.types
+	let types = KnownTypes(inference.types, positions = Positions(inference.types.names))
+	let indexed = TypeInference(types, inference.constants)
 	mutable methods = List(Mutable(Scope))
 	mutable parameters = List(Mutable(Scope))
 	for shapes
-		methods.Add(ShapeTyping(inference).Typed(value, types.methods(index), types.names(index)))
+		methods.Add(ShapeTyping(indexed).Typed(value, types.methods(index), types.names(index)))
 		parameters.Add(Overloaded(types, shapes, value, types.parameters(index)))
-	TypeInference(KnownTypes(types.names, types.members, methods, parameters), inference.constants)
+	TypeInference(KnownTypes(types, methods = methods, parameters = parameters), inference.constants)
 Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scope) Scope
 	ResolveCheck.Overloaded(Counting.types, List(TypeShape), TypeShape("has a"), KnownTypes.NoMembers).names.Length is 0
 	mutable traits = KnownTypes.NoMembers
 	for shape.MemberScope.types
-		let position = types.names.Index(value)
+		let position = types.Index(value)
 		if (position >= 0) and shapes(position).IsTrait
 			traits = traits.WithAll(types.parameters(position).names, types.parameters(position).types)
 	mutable result = scope
@@ -63,6 +64,14 @@ Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scop
 		if (traits.Count(value) > 1) and (scope.Count(value) is 0) and (value is not TypeShape.Constrained)
 			result = result.With(value, traits.types(index))
 	result
+Positions(names Texts) Dictionary(Text, Number)
+	ResolveCheck.Positions(("A", "B", "A"))("A") is 0
+	ResolveCheck.Positions(("A", "B", "A"))("B") is 1
+	mutable positions = Dictionary(Text, Number)
+	for names
+		if value is not in positions
+			positions(value) = index
+	positions
 TypeNames(files Texts) Texts
 	for files
 		TypeName(value)

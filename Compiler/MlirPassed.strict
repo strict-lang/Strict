@@ -1,0 +1,90 @@
+has function MlirFunction
+has position Number
+constant Wrapping = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "offset"), InstructionEntry.Binary(InstructionType.Modulo, (1, 2, 3)), InstructionEntry(InstructionType.IndexCall, "numbers", (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "value"), InstructionEntry.Binary(InstructionType.Divide, (4, 2, 6)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 8))
+constant Wrapped = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Wrapped", (MlirLists.Items, MlirGuards.Offset), "Strict/List(Number)", Wrapping), Float = "f32", Guarded = 2)
+constant Wraps = MlirPassed(Wrapped, 5)
+constant Doubled = MlirPassed(MlirFunction(Wrapped, Float = "f64"), 2)
+Header Text
+	MlirPassed(Wrapped, 2).Header is ", %results: i64, %e_offset: i64, %m_offset: i64) attributes {nvvm.kernel} {"
+	Doubled.Header is ", %results: i64) attributes {nvvm.kernel} {"
+	mutable text = ", %results: i64"
+	for MlirGpuCheck(function, position).Free
+		if (function.Float is "f32") and (MlirDevice(function, position).IsList(value) is false)
+			text = text + ", %e_" + value + ": i64, %m_" + value + ": i64"
+	text + ") attributes {nvvm.kernel} {"
+Given(name Text, slot Text) Texts
+	Wraps.Given("offset", "%v_offset")(1) is "    %e_offset_w = arith.cmpi ne, %e_offset, %e_offset_s : i64"
+	Doubled.Given("offset", "%v_offset").Length is 0
+	if function.Float is not "f32"
+		return List(Text)
+	let exact = "%e_" + name
+	let sentinel = MlirTyped.Integer.Constant(exact + "_s", "-9223372036854775808")
+	let whole = "    " + exact + "_w = arith.cmpi ne, " + exact + ", " + exact + "_s : i64"
+	let known = "    " + exact + "_q = arith.extui " + exact + "_w : i1 to i64"
+	(sentinel, whole, known) + MlirExact(function, position).Set(exact, exact + "_q", slot)
+Candidate(slot Text) Text
+	Wraps.Candidate("%r2") is "offset"
+	MlirPassed(Wrapped, 9).Candidate("%r6") is "offset"
+	MlirPassed(MlirFunction(Wrapped, Guarded = -1), 5).Candidate("%r2") is ""
+	if (function.Guarded < 0) or (slot.StartsWith("%r") is false)
+		return ""
+	let register = slot.Substring(2, slot.Length - 2) to Number
+	let writer = MlirKinds(function).Writer(position, register)
+	let isDivided = (writer > function.Guarded) and (function.method.instructions(writer).kind is InstructionType.Divide)
+	let source = isDivided then function.method.instructions(writer).payload(2) else register
+	let origins = MlirGuards(function, function.Guarded).Origins(isDivided then writer else position, source)
+	let free = MlirGpuCheck(function, function.Guarded).Free
+	(origins.Length is 1) and (origins(0) is in free) then origins(0) else ""
+Divided(numerator Text, divisor Text, slot Text, quotient Text) Texts
+	MlirPassed(Wrapped, 3).Divided("%a", "%b", "%r2", "%q") is ("    %q = arith.divsi %a, %b : i64")
+	Wraps.Divided("%a", "%b", "%r2", "%q").Last is "  ^qdivided(%q: i64):"
+	Wraps.Divided("%a", "%b", "%r2", "%q")(8) is "  ^qfast:"
+	let name = Candidate(slot)
+	let divided = " = arith.divsi " + numerator + ", " + divisor + " : i64"
+	if name is ""
+		return List(Text) + ("    " + quotient + divided)
+	let slow = ("  " + Label(quotient) + "slow:", "    " + quotient + "s" + divided, Joined(quotient, quotient + "s"))
+	let chosen = Chosen(numerator, divisor, name, quotient) + Magic(numerator, name, quotient)
+	(chosen + slow) + ("  " + Label(quotient) + "divided(" + quotient + ": i64):")
+Chosen(numerator Text, divisor Text, name Text, quotient Text) Texts
+	Wraps.Chosen("%a", "%b", "offset", "%q").Last is "    cf.cond_br %qb, ^qfast, ^qslow"
+	let exact = MlirTyped.Integer.Load(quotient + "e", "%v_" + name + "_e")
+	let same = Line(quotient, "m", "cmpi eq, " + divisor + ", " + quotient + "e : i64")
+	let limit = MlirTyped.Integer.Constant(quotient + "k", "4294967296")
+	let fits = Line(quotient, "l", "cmpi ult, " + numerator + ", " + quotient + "k : i64")
+	let known = Line(quotient, "p", "cmpi ne, %m_" + name + ", %inexact : i64")
+	let both = Line(quotient, "a", "andi " + quotient + "m, " + quotient + "l : i1")
+	let all = Line(quotient, "b", "andi " + quotient + "a, " + quotient + "p : i1")
+	let branch = "    cf.cond_br " + quotient + "b, " + Label(quotient) + "fast, " + Label(quotient) + "slow"
+	(exact, same, limit, fits, known, both, all, branch)
+Magic(numerator Text, name Text, temp Text) Texts
+	Wraps.Magic("%a", "offset", "%q").Last is "    cf.br ^qdivided(%qq : i64)"
+	Wraps.Magic("%a", "offset", "%q")(3) is "    %qt:2 = arith.mului_extended %qx, %qw : i32"
+	let magic = "%m_" + name
+	let narrowed = Line(temp, "x", "trunci " + numerator + " : i64 to i32")
+	let multiplier = Line(temp, "w", "trunci " + magic + " : i64 to i32")
+	let high = "    " + temp + "t:2 = arith.mului_extended " + temp + "x, " + temp + "w : i32"
+	let rest = Line(temp, "r", "subi " + temp + "x, " + temp + "t#1 : i32")
+	(("  " + Label(temp) + "fast:", narrowed, multiplier, high, rest) + Shifted(magic, temp)) + Joined(temp, temp + "q")
+Shifted(magic Text, temp Text) Texts
+	Wraps.Shifted("%m", "%q")(3) is "    %qc = arith.trunci %qf : i64 to i8"
+	let constants = (MlirTyped.Integer.Constant(temp + "o", "32"), MlirTyped.Integer.Constant(temp + "n", "40"))
+	let first = Line(temp, "f", "shrui " + magic + ", " + temp + "o : i64")
+	let narrowed = Line(temp, "c", "trunci " + temp + "f : i64 to i8")
+	let widened = Line(temp, "y", "extui " + temp + "c : i8 to i32")
+	let second = Line(temp, "u", "shrui " + magic + ", " + temp + "n : i64")
+	let last = Line(temp, "v", "trunci " + temp + "u : i64 to i32")
+	let halved = Line(temp, "g", "shrui " + temp + "r, " + temp + "y : i32")
+	let added = Line(temp, "h", "addi " + temp + "t#1, " + temp + "g : i32")
+	let shifted = Line(temp, "z", "shrui " + temp + "h, " + temp + "v : i32")
+	let quotient = Line(temp, "q", "extui " + temp + "z : i32 to i64")
+	constants + (first, narrowed, widened, second, last, halved, added, shifted, quotient)
+Line(quotient Text, suffix Text, operation Text) Text
+	Wraps.Line("%q", "m", "cmpi eq, %a, %b : i64") is "    %qm = arith.cmpi eq, %a, %b : i64"
+	"    " + quotient + suffix + " = arith." + operation
+Label(temp Text) Text
+	Wraps.Label("%q") is "^q"
+	"^" + temp.Substring(1, temp.Length - 1)
+Joined(temp Text, result Text) Text
+	Wraps.Joined("%q", "%qs") is "    cf.br ^qdivided(%qs : i64)"
+	"    cf.br " + Label(temp) + "divided(" + result + " : i64)"

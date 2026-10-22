@@ -78,7 +78,7 @@ Typed(node SyntaxNode, instanceType Text, inference TypeInference, scope Scope, 
 	Labeling.Typed(LabelerLabels, "Labeler", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "List(Numbers)"
 	if node.text is "value"
 		return instanceType
-	let position = types.names.Index(instanceType)
+	let position = types.Index(instanceType)
 	let declared = position < 0 then "" else types.methods(position).TypeOf(node.text)
 	if declared is not in ("Generic", "Generics")
 		return types.MemberType(instanceType, node.text)

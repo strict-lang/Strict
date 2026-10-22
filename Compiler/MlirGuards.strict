@@ -83,16 +83,39 @@ IsUseful Boolean
 	false
 Entry Texts
 	Shifts.Entry(2) is "    cf.cond_br %g_offset_w, ^g_offset, ^generic"
+	Shifts.Entry.Last is "  ^g_numbers:"
 	mutable lines = List(Mutable(Text))
 	for Parameters
-		lines = lines + Entered(value)
+		let loaded = MlirTyped.Integer.Load("%g_" + value + "_q", "%v_" + value + "_q")
+		let whole = "    %g_" + value + "_w = arith.cmpi eq, %g_" + value + "_q, %one : i64"
+		lines = lines + Entered(value, (loaded, whole)) + MlirTyped.Integer.Store("%one", "%v_" + value + "_q")
+	for Reads
+		lines = lines + Entered(value, Formatted(value))
 	lines
-Entered(name Text) Texts
-	Shifts.Entered("offset").Last is "    llvm.store %one, %v_offset_q : i64, !llvm.ptr"
-	let loaded = MlirTyped.Integer.Load("%g_" + name + "_q", "%v_" + name + "_q")
-	let whole = "    %g_" + name + "_w = arith.cmpi eq, %g_" + name + "_q, %one : i64"
-	let branch = "    cf.cond_br %g_" + name + "_w, ^g_" + name + ", ^generic"
-	(loaded, whole, branch, "  ^g_" + name + ":", MlirTyped.Integer.Store("%one", "%v_" + name + "_q"))
+Entered(name Text, tested Texts) Texts
+	Shifts.Entered("numbers", List(Text)) is ("    cf.cond_br %g_numbers_w, ^g_numbers, ^generic", "  ^g_numbers:")
+	tested + ("    cf.cond_br %g_" + name + "_w, ^g_" + name + ", ^generic", "  ^g_" + name + ":")
+Formatted(name Text) Texts
+	Shifts.Formatted("numbers").Last is "    %g_numbers_w = arith.cmpi eq, %g_numbers_b, %g_numbers_s : i64"
+	let bits = MlirTyped.Integer.Load("%g_" + name + "_b", "%v_" + name + "_b")
+	let single = MlirTyped.Integer.Constant("%g_" + name + "_s", "32")
+	(bits, single, "    %g_" + name + "_w = arith.cmpi eq, %g_" + name + "_b, %g_" + name + "_s : i64")
+Reads Texts
+	Shifts.Reads is ("numbers")
+	mutable names = List(Mutable(Text))
+	for Range(at + 1, function.method.LoopEndOf(at))
+		if IsSingle(value)
+			names = names + function.method.instructions(value).texts(0)
+	names.Unique
+IsSingle(position Number) Boolean
+	Shifts.IsSingle(6)
+	Shifts.IsSingle(5) is false
+	let entry = function.method.instructions(position)
+	if (function.Guarded < 0) or (entry.kind is not InstructionType.IndexCall)
+		return false
+	let name = entry.texts(0)
+	let isRows = MlirDeviceRows(function, position).IsRows(MlirKinds(function).VariableKind(position, name))
+	(isRows is false) and (MlirKinds(function).Stored(position, name) < function.Guarded)
 Copy Texts
 	Text.Combine(Shifts.Copy).IndexOf("%gd6k = arith.select %gd6kv, %gd6k_e, %gd6k_e : i64") > 0
 	Shifts.Copy.Last is "  ^generic:"

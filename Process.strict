@@ -9,12 +9,17 @@ Run(arguments Text) ProcessResult
 	ProcessResult(1, "", "Process.Run is not available for: " + arguments)
 Started(arguments Text) Number
 	Process.Find("missingStrictTool").Started("") is 127
-	1
+	Run(arguments).exitCode
 RunTool(name Text, arguments Text) ProcessResult
 	let tool = Find(name)
 	if not tool.IsAvailable
 		return ProcessResult(127, "", "tool not found: " + name)
 	tool.Run(arguments)
+RunTools(name Text, arguments Texts) List(ProcessResult)
+	Process.RunTools("missingStrictTool", ("a", "b")).Length is 2
+	Process.RunTools("missingStrictTool", ("a", "b")).Last.exitCode is 127
+	for arguments
+		RunTool(name, value)
 OperatingSystem Text
 	Process.OperatingSystem is in ("Windows", "Linux", "MacOS")
 	"Unknown"
