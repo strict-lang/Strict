@@ -1,0 +1,24 @@
+has experts Experts
+has model Gguf
+has prefix Text
+constant Mixture = MappedExperts.Loaded(Gguf("NeuralNetworks/experts.gguf"), "blk.0.")
+constant Small = Mixture.model.Values("blk.0.ffn_gate_inp.weight").Slice(0, 256) * 0.02
+Loaded(gguf Gguf, layer Text) MappedExperts
+	Mixture.experts.used is 2
+	Mixture.prefix is "blk.0."
+	MappedExperts(Experts.Routed(gguf, layer), gguf, layer)
+Forward(input Numbers) Numbers
+	Mixture.Forward(Small)(5).IsNearlyEqual(0.0046048, 0.00005)
+	let scores = Batch(experts.router.weights, experts.router.biases).Sums(input)
+	let chosen = Routing(scores, experts.router.weights.Length).Chosen(experts.used)
+	experts.Mixed(scores, chosen, Outputs(chosen, input))
+Outputs(chosen Numbers, input Numbers) Numbers
+	Mixture.Outputs((1, 0), Small * 50)(261).IsNearlyEqual(12.111, 0.05)
+	Mixture.Outputs((1, 0, 0, 1), Small + Small).Length is 1024
+	let used = experts.used
+	let hidden = input.Length * used / chosen.Length
+	mutable outputs = List(Number)
+	for chosen.Length / used
+		let token = input.Slice(index * hidden, hidden)
+		outputs = outputs + model.ExpertOutputs(prefix, chosen.Slice(index * used, used), token)
+	outputs

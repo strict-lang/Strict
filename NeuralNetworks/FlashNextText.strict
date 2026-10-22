@@ -1,0 +1,13 @@
+has logger
+constant Weights = "Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf"
+constant Count = 30
+Run(folder Text)
+	let path = folder + "/" + Weights
+	let started = Process.Elapsed
+	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
+	let model = FlashNext.Loaded(path, 8)
+	let loaded = Process.Elapsed
+	let generated = Generation(model).Generated(tokenizer.Encoded(Qwen3Text.Prompt), Count)
+	let milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
+	logger.Log(Qwen3Text.Prompt + tokenizer.Decoded(generated))
+	logger.Log("Qwen3.8-Flash-Next loaded in " + (loaded - started).Round(1) + " s, " + milliseconds + " ms per token")

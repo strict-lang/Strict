@@ -43,9 +43,14 @@ IsRead(at Number) Boolean
 		return (entry.texts.Length is 0) and IsRead(at - 1)
 	let next = function.method.instructions(at + 1)
 	let isChecked = (next.kind is InstructionType.CheckError) and (next.payload(0) is entry.payload(0))
+	isChecked and IsByteList(entry.texts) and IsBounded(entry.payload(1), at)
+IsByteList(names Texts) Boolean
+	Row.IsByteList(List(Text) + "pixels")
+	Row.IsByteList(List(Text)) is false
+	if names.Length is 0
+		return false
 	let parameters = MlirParameters(function)
-	let isBytes = (entry.texts(0) is in parameters.FixedLists) and parameters.IsBytes(entry.texts(0))
-	isChecked and isBytes and IsBounded(entry.payload(1), at)
+	(names(0) is in parameters.FixedLists) and parameters.IsBytes(names(0))
 IsBounded(register Number, at Number) Boolean
 	Row.IsBounded(12, 15)
 	Row.IsBounded(5, 17) is false

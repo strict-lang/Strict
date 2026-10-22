@@ -17,15 +17,23 @@ Loaded(model Gguf, prefix Text, queryHeads Number) Qwen3Block
 	Tiny.attention.weights.Length is 16
 	Tiny.experts.expansions.First.weights.Length is 32
 	Tiny.groups is 1
+	let attending = Attending(model, prefix, queryHeads, FeedForward(model, prefix))
+	let after = model.Shape(prefix + "ffn_norm.weight").Length > 0 then "ffn_norm" else "post_attention_norm"
+	let normed = model.Values(prefix + "attn_norm.weight")
+	Qwen3Block(attending, attentionNorm = normed, mlpNorm = model.Values(prefix + after + ".weight"))
+Attending(model Gguf, prefix Text, queryHeads Number, feedForward Experts) Qwen3Block
+	Tiny.Attending(Drafter.Model, "blk.3.", 2, Tiny.experts).queryNorm.Length is 4
+	Tiny.Attending(Drafter.Model, "blk.3.", 2, Tiny.experts).attentionNorm.Length is 0
 	let rows = HeadRows.Of(model, model.Shape(prefix + "attn_q_norm.weight").First, queryHeads)
-	let norms = Norms(model, prefix, rows)
 	let queried = model.Rows(prefix + "attn_q.weight")
 	let keyed = rows.Permuted(model.Rows(prefix + "attn_k.weight"))
 	let attended = rows.Queries(queried) + keyed + model.Rows(prefix + "attn_v.weight") + rows.Gates(queried)
 	let layer = Layer(attended, Layer.Unbiased)
 	let projected = Dense(model, prefix, List(Text) + "attn_output")
-	let feedForward = FeedForward(model, prefix)
-	Qwen3Block(norms(0), layer, projected, norms(1), norms(2), norms(3), feedForward, queryHeads, keyed.Length / rows.size)
+	let queryNormed = rows.Norm(model.Values(prefix + "attn_q_norm.weight"))
+	let keyNormed = rows.Norm(model.Values(prefix + "attn_k_norm.weight"))
+	let keyHeads = keyed.Length / rows.size
+	Qwen3Block(List(Number), layer, projected, queryNormed, keyNormed, List(Number), feedForward, queryHeads, keyHeads)
 FeedForward(model Gguf, prefix Text) Experts
 	Tiny.FeedForward(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.").used is 1
 	Tiny.FeedForward(Experts.Model, "blk.0.").used is 2
@@ -39,20 +47,13 @@ Dense(model Gguf, prefix Text, names Texts) Layer
 	for names
 		rows = rows + model.Rows(prefix + value + ".weight")
 	Layer(rows, Layer.Unbiased)
-Norms(model Gguf, prefix Text, rows HeadRows) List(Numbers)
-	Tiny.Norms(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.", HeadRows(4, 4, 2)).Length is 4
-	Tiny.Norms(Drafter.Model, "blk.3.", HeadRows(4, 2, 2))(1).Length is 4
-	let after = model.Shape(prefix + "ffn_norm.weight").Length > 0 then "ffn_norm" else "post_attention_norm"
-	for ("attn_norm", "attn_q_norm", "attn_k_norm", after)
-		let weights = model.Values(prefix + value + ".weight")
-		index is 1 or index is 2 then rows.Norm(weights) else weights
 Cached(input Numbers, rotation Numbers, bits Number) Qwen3Block
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).keys.Length is 4
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).queries.Length is 8
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 8).Cached(Tiny.mlpNorm, Tiny.mlpNorm, 8).values.Length is 8
 	let combined = Batch(attention.weights, attention.biases).Sums(Normalized(input, 0, input.Length, attentionNorm))
 	let size = queryNorm.Length
-	let tokens = input.Length / attentionNorm.Length
+	let tokens = input.Length / attention.weights.First.Length
 	let queried = Rotated(combined, 0, tokens * heads * size, queryNorm, rotation)
 	let keyed = Rotated(combined, heads * size, tokens * groups * size, keyNorm, rotation)
 	let valued = Batch.Columns(combined, combined.Length / tokens, (heads + groups) * size, groups * size)
@@ -87,8 +88,11 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	Tiny.Normalized((3, 4), 0, 2, (1, 2)).First.IsNearlyEqual(0.848528)
 	Tiny.Normalized((3, 4, 0, 1), 0, 4, (1, 2)).Last.IsNearlyEqual(2.828424)
 	Tiny.Normalized((3, 4, 0, 1), 2, 2, (1, 2)).Last.IsNearlyEqual(2.828424)
+	Tiny.Normalized((3, 4, 0, 1), 2, 2, List(Number)) is (0, 1)
 	let size = weights.Length
 	let part = (start is 0) and (count is input.Length) then input else Safetensors.Part(input, start, count, 1)
+	if size is 0
+		return part
 	let scales = Scales(part, size, Epsilon)
 	for count
 		part(index) * weights(index % size) * scales((index / size).Floor)
@@ -104,6 +108,8 @@ HeadScale(input Numbers, first Number, size Number, epsilon Number) Number
 	1 / (sum / size + epsilon).SquareRoot
 Output(input Numbers, sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Output(Tiny.attentionNorm, 1).Length is 8
-	let merged = Attention(queries, keys, values, heads, groups, queryNorm.Length, sequences).Merged
-	let attended = Batch(projection.weights, input).Sums(hybrid.Gated(merged))
+	let attended = Batch(projection.weights, input).Sums(Merged(sequences))
 	experts.Added(Normalized(attended, 0, attended.Length, mlpNorm), attended)
+Merged(sequences Number) Numbers
+	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Merged(1).Length is 8
+	hybrid.Gated(Attention(queries, keys, values, heads, groups, queryNorm.Length, sequences).Merged)

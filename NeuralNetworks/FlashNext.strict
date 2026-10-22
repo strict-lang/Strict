@@ -1,0 +1,69 @@
+has layers List(FlashLayer)
+has source Gguf
+has ngrams Ngrams
+has embedding NgramEmbedding
+has pleLayer Number
+has head HyperStreams
+has outputs List(Numbers)
+has rope Qwen3
+has history List(Numbers)
+has tokens Numbers = List(Number)
+has streams Numbers = List(Number)
+constant Tiny = FlashNext.Loaded("NeuralNetworks/tinyqwen4exp.gguf", 32)
+Loaded(path Text, bits = 8) FlashNext
+	Tiny.layers.Length is 4
+	Tiny.pleLayer is 1
+	let model = Gguf(path, bits)
+	let architecture = model.Value("general.architecture")
+	let loaded = Layers(model, model.Value(architecture + ".block_count") to Number)
+	let ple = Ngrams.Numbers(model.Value(architecture + ".ple.layers")).First
+	let interval = model.Value(architecture + ".full_attention_interval") to Number
+	let width = (model.Value(architecture + ".embedding_length") to Number) * HyperStreams.Count
+	let mixer = NgramEmbedding.Loaded(model, "blk." + ple + ".")
+	let rotary = Rope(model, loaded(interval - 1).attention.First)
+	let mixed = HyperStreams.Loaded(model, "output_hc")
+	FlashNext(loaded, model, Ngrams.Loaded(model), mixer, ple, mixed, model.Rows("output.weight"), rotary, Silence(width))
+Layers(model Gguf, count Number) List(FlashLayer)
+	Tiny.Layers(Tiny.source, 2).Length is 2
+	mutable loaded = List(Mutable(FlashLayer))
+	for count
+		loaded.Add(FlashLayer.Loaded(model, index))
+	loaded
+Rope(model Gguf, attending Qwen3Block) Qwen3
+	Tiny.rope.rotary is 16
+	let architecture = model.Value("general.architecture")
+	let theta = model.Value(architecture + ".rope.freq_base") to Number
+	let rotary = model.Value(architecture + ".rope.dimension_count") to Number
+	Qwen3(List(Qwen3Block) + attending, List(Numbers), List(Numbers), List(Number), theta, rotary = rotary)
+Silence(width Number) List(Numbers)
+	Tiny.Silence(2) is ((0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0))
+	for 10
+		Layer.Zeros(width)
+Step(token Number, position Number) FlashNext
+	Tiny.Step(1, 0).Scored(0).IsNearlyEqual(-0.699458, 0.00001)
+	Tiny.Step(1, 0).Step(2, 1).Scored(0).IsNearlyEqual(-0.842374, 0.00001)
+	let rotation = rope.Rotations(List(Number) + position)
+	mutable current = Started(token)
+	mutable stepped = List(Mutable(FlashLayer))
+	for layers
+		if index is pleLayer
+			current = current.Remembered(position)
+		let forwarded = value.Forward(current.streams, rotation)
+		current = FlashNext(current, streams = forwarded.streams)
+		stepped.Add(forwarded)
+	FlashNext(current, layers = stepped)
+Started(token Number) FlashNext
+	Tiny.Started(1).streams.Length is 256
+	let embedded = source.Picked("token_embd.weight", List(Number) + token)
+	FlashNext(value, tokens = tokens + token, streams = head.Started(embedded))
+Remembered(position Number) FlashNext
+	Tiny.Step(1, 0).Remembered(0).history.Last.Length is 256
+	Tiny.Step(1, 0).Step(2, 1).Step(3, 2).Scored(1).IsNearlyEqual(0.874213, 0.00001)
+	let gated = embedding.Gated(streams, source.Picked(Ngrams.Table, ngrams.Rows(tokens, position)))
+	let remembered = embedding.Shifted(history, gated)
+	FlashNext(value, history = remembered, streams = embedding.Combined(streams, gated, remembered))
+Scored Numbers
+	Tiny.Step(1, 0).Scored.Length is 32
+	Tiny.Step(1, 0).Scored(2).IsNearlyEqual(1.48686, 0.00001)
+	Generation(Tiny).Generated((1, 2), 2) is (19, 13)
+	Batch(outputs, List(Number) + 0).Sums(head.Mixed(streams))

@@ -3,6 +3,9 @@ has bits Number = 32
 constant Tiny = Gguf("NeuralNetworks/tiny.gguf")
 constant Quants = Gguf("NeuralNetworks/quants.gguf")
 constant Split = Gguf("NeuralNetworks/tinysplit-00001-of-00003.gguf")
+constant Mixture = Gguf("NeuralNetworks/experts.gguf")
+constant Down = "blk.1.ffn_down_exps.weight"
+constant Routed = Mixture.Values("blk.0.ffn_gate_inp.weight").Slice(0, 256)
 Value(key Text) Text
 	Tiny.Value("general.architecture") is "qwen3"
 	Tiny.Value("qwen3.block_count") is "1"
@@ -37,3 +40,15 @@ Rows(name Text) List(Numbers)
 	Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r6") is Tiny.Rows("r6")
 	Gguf("NeuralNetworks/tinyqwen3moe.gguf").Rows("blk.0.ffn_gate_exps.weight").Length is 16
 	GgufFile.Rows(path, name, bits)
+Picked(name Text, rows Numbers) Numbers
+	Tiny.Picked("m", (1, 0)) is (4, 5, 6, 1, 2, 3)
+	Mixture.Picked(Down, (300, 2)) is Mixture.Rows(Down)(300) + Mixture.Rows(Down)(2)
+	Tiny.Picked("m", List(Number) + 2) is Error
+	GgufFile.Picked(path, name, rows)
+ExpertOutputs(prefix Text, chosen Numbers, input Numbers) Numbers
+	Mixture.ExpertOutputs("blk.0.", (1, 0), Routed).Length is 512
+	Mixture.ExpertOutputs("blk.0.", (1, 0), Routed)(5).IsNearlyEqual(-21.617, 0.05)
+	Mixture.ExpertOutputs("blk.0.", (1, 0), Routed)(261).IsNearlyEqual(12.111, 0.05)
+	Mixture.ExpertOutputs("blk.1.", (1, 0), Routed)(261).IsNearlyEqual(100.175, 0.05)
+	Mixture.ExpertOutputs("blk.0.", (2), Routed) is Error
+	GgufFile.ExpertOutputs(path, prefix, chosen, input)

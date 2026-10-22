@@ -3,12 +3,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>
+#include <stdatomic.h>
 #include "strict.h"
+#include "ggml-cpu/quants.h"
+#include "ggml-impl.h"
 #pragma STDC FP_CONTRACT OFF
 #ifdef _WIN32
+#include <windows.h>
 #define strict_seek _fseeki64
 #define strict_tell _ftelli64
 #else
+#include <fcntl.h>
+#include <pthread.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #define strict_seek fseeko
 #define strict_tell ftello
 #endif
@@ -21,6 +30,7 @@ typedef struct { char* key; char* value; } Entry;
 typedef struct { char* name; uint32_t type; uint32_t dimensions; uint64_t shape[4]; uint64_t offset; uint32_t shard; uint64_t start; } Tensor;
 typedef struct { FILE* file; int failed; } Reader;
 typedef struct { char* data; uint64_t length; uint64_t capacity; } Builder;
+typedef struct { const unsigned char* data; uint64_t size; } Mapping;
 static char* loadedPath = 0;
 static Entry* entries = 0;
 static uint64_t entryCount = 0;
@@ -28,6 +38,7 @@ static Tensor* tensors = 0;
 static uint64_t tensorCount = 0;
 static char** shardPaths = 0;
 static uint32_t shardCount = 0;
+static Mapping* mappings = 0;
 
 static void Read(Reader* reader, void* target, uint64_t size)
 {
@@ -120,6 +131,44 @@ static char* Value(Reader* reader)
 	return text.data;
 }
 
+#ifdef _WIN32
+/* The whole file at path mapped read only (pages load when used), no data if it can't be mapped. */
+static Mapping MappedFile(const char* path)
+{
+	Mapping mapping = { 0, 0 };
+	LARGE_INTEGER size;
+	HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	if (file == INVALID_HANDLE_VALUE)
+		return mapping;
+	int isSized = GetFileSizeEx(file, &size) && size.QuadPart > 0;
+	HANDLE view = isSized ? CreateFileMappingA(file, 0, PAGE_READONLY, 0, 0, 0) : 0;
+	CloseHandle(file);
+	mapping.data = view ? MapViewOfFile(view, FILE_MAP_READ, 0, 0, 0) : 0;
+	mapping.size = mapping.data ? (uint64_t)size.QuadPart : 0;
+	if (view)
+		CloseHandle(view);
+	return mapping;
+}
+
+static void Unmapped(Mapping mapping) { UnmapViewOfFile(mapping.data); }
+#else
+static Mapping MappedFile(const char* path)
+{
+	Mapping mapping = { 0, 0 };
+	int file = open(path, O_RDONLY);
+	if (file < 0)
+		return mapping;
+	off_t size = lseek(file, 0, SEEK_END);
+	void* data = size > 0 ? mmap(0, (size_t)size, PROT_READ, MAP_SHARED, file, 0) : MAP_FAILED;
+	close(file);
+	mapping.data = data == MAP_FAILED ? 0 : data;
+	mapping.size = mapping.data ? (uint64_t)size : 0;
+	return mapping;
+}
+
+static void Unmapped(Mapping mapping) { munmap((void*)mapping.data, (size_t)mapping.size); }
+#endif
+
 static void Forget(void)
 {
 	for (uint64_t index = 0; index < entryCount; index++)
@@ -130,7 +179,13 @@ static void Forget(void)
 	for (uint64_t index = 0; index < tensorCount; index++)
 		free(tensors[index].name);
 	for (uint32_t shard = 0; shard < shardCount; shard++)
+	{
 		free(shardPaths[shard]);
+		if (mappings && mappings[shard].data)
+			Unmapped(mappings[shard]);
+	}
+	free(mappings);
+	mappings = 0;
 	free(entries);
 	free(tensors);
 	free(shardPaths);
@@ -528,4 +583,332 @@ STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double
 	free(floats);
 	free(raw);
 	return strict_numbers_result((strict_numbers*)rows);
+}
+
+/* ggml's tables (ggml-cpu.c fills them in ggml_cpu_init) and the functions of ggml.c its quantization code refers to:
+   the kernels used here only read the halves table, the rest is never used. */
+float ggml_table_f32_f16[1 << 16];
+float ggml_table_f32_e8m0_half[1 << 8];
+float ggml_table_f32_ue4m3[1 << 8];
+
+void ggml_abort(const char* file, int line, const char* format, ...)
+{
+	fprintf(stderr, "ggml failed at %s:%d: %s\n", file, line, format);
+	abort();
+}
+
+size_t ggml_type_size(enum ggml_type type) { GGML_ABORT("ggml_type_size is not available"); }
+size_t ggml_row_size(enum ggml_type type, int64_t count) { GGML_ABORT("ggml_row_size is not available"); }
+const char* ggml_type_name(enum ggml_type type) { GGML_ABORT("ggml_type_name is not available"); }
+
+typedef void (*Dot)(int, float*, size_t, const void*, size_t, const void*, size_t, int);
+typedef struct { Dot dot; void (*quantize)(const float*, void*, int64_t); uint64_t numbers; uint64_t bytes; } Product;
+
+/* ggml's dot product of a row of type with an input quantized to the type ggml pairs with it, no dot without one. */
+static Product Multiplied(uint32_t type)
+{
+	Product none = { 0, 0, 1, 0 };
+	Product q4k = { ggml_vec_dot_q4_K_q8_K, quantize_row_q8_K, QK_K, sizeof(block_q8_K) };
+	Product q5k = { ggml_vec_dot_q5_K_q8_K, quantize_row_q8_K, QK_K, sizeof(block_q8_K) };
+	Product q51 = { ggml_vec_dot_q5_1_q8_1, quantize_row_q8_1, QK8_1, sizeof(block_q8_1) };
+	Product q80 = { ggml_vec_dot_q8_0_q8_0, quantize_row_q8_0, QK8_0, sizeof(block_q8_0) };
+	return type == Q4_K ? q4k : type == Q5_K ? q5k : type == Q5_1 ? q51 : type == Q8_0 ? q80 : none;
+}
+
+/* The data of the tensor in its mapped file, 0 if the file can't be mapped or is shorter than the tensor. */
+static const unsigned char* Mapped(const Tensor* tensor)
+{
+	if (!mappings)
+		mappings = calloc(shardCount, sizeof(Mapping));
+	if (!mappings[tensor->shard].data)
+		mappings[tensor->shard] = MappedFile(shardPaths[tensor->shard]);
+	uint64_t start = tensor->start + tensor->offset;
+	uint64_t end = start + Elements(tensor) / BlockNumbers(tensor->type) * BlockBytes(tensor->type);
+	return end <= mappings[tensor->shard].size ? mappings[tensor->shard].data + start : 0;
+}
+
+/* The stacked expert matrices name (columns, rows, experts) of the layer prefix, of a type ggml multiplies. */
+static const Tensor* Stacked(double path, double prefix, const char* name, const char** failure)
+{
+	char full[256];
+	snprintf(full, sizeof(full), "%s%s", strict_text(prefix), name);
+	*failure = *failure ? *failure : Loaded(strict_text(path));
+	const Tensor* tensor = *failure ? 0 : Found(full);
+	if (!*failure && (!tensor || tensor->dimensions != 3))
+		*failure = "GgufExpertsNotFound";
+	else if (!*failure && (!Multiplied(tensor->type).dot || tensor->shape[0] % Multiplied(tensor->type).numbers != 0))
+		*failure = "OnlyQ4_KQ5_KQ5_1AndQ8_0ExpertsAreSupported";
+	else if (!*failure && !Mapped(tensor))
+		*failure = "GgufTensorDataTruncated";
+	return *failure ? 0 : tensor;
+}
+
+static int IsIndex(double number, uint64_t count) { return number >= 0 && number < count && number == floor(number); }
+
+static const char* Mismatched(const Tensor* gate, const Tensor* up, const Tensor* down, const strict_numbers* chosen,
+	const strict_numbers* input)
+{
+	uint64_t hidden = gate->shape[0], width = gate->shape[1], count = gate->shape[2];
+	if (memcmp(up->shape, gate->shape, sizeof(gate->shape)) != 0 || down->shape[0] != width ||
+		down->shape[1] != hidden || down->shape[2] != count)
+		return "GgufExpertsShapesDiffer";
+	if (Multiplied(up->type).quantize != Multiplied(gate->type).quantize)
+		return "GgufExpertsGateAndUpTypesDiffer";
+	if ((uint64_t)input->count != hidden)
+		return "ExpertsInputLengthDiffers";
+	for (uint64_t index = 0; index < (uint64_t)chosen->count; index++)
+		if (!IsIndex(chosen->items[index], count))
+			return "ExpertNumberOutOfRange";
+	return 0;
+}
+
+/* The values quantized to the type ggml multiplies rows of type with. */
+static void* Quantized(uint32_t type, const float* values, uint64_t count)
+{
+	Product product = Multiplied(type);
+	void* quantized = malloc(count / product.numbers * product.bytes + 1);
+	product.quantize(values, quantized, (int64_t)count);
+	return quantized;
+}
+
+#ifdef _WIN32
+typedef SRWLOCK Lock;
+typedef CONDITION_VARIABLE Condition;
+static Lock poolLock = SRWLOCK_INIT;
+static Condition poolStarted = CONDITION_VARIABLE_INIT, poolDone = CONDITION_VARIABLE_INIT;
+static void Locked(Lock* lock) { AcquireSRWLockExclusive(lock); }
+static void Unlocked(Lock* lock) { ReleaseSRWLockExclusive(lock); }
+static void Waited(Condition* condition, Lock* lock) { SleepConditionVariableSRW(condition, lock, INFINITE, 0); }
+static void Woken(Condition* condition) { WakeAllConditionVariable(condition); }
+static uint64_t Processors(void) { return GetActiveProcessorCount(ALL_PROCESSOR_GROUPS); }
+#else
+typedef pthread_mutex_t Lock;
+typedef pthread_cond_t Condition;
+static Lock poolLock = PTHREAD_MUTEX_INITIALIZER;
+static Condition poolStarted = PTHREAD_COND_INITIALIZER, poolDone = PTHREAD_COND_INITIALIZER;
+static void Locked(Lock* lock) { pthread_mutex_lock(lock); }
+static void Unlocked(Lock* lock) { pthread_mutex_unlock(lock); }
+static void Waited(Condition* condition, Lock* lock) { pthread_cond_wait(condition, lock); }
+static void Woken(Condition* condition) { pthread_cond_broadcast(condition); }
+static uint64_t Processors(void) { return (uint64_t)sysconf(_SC_NPROCESSORS_ONLN); }
+#endif
+#if defined(__x86_64__) || defined(_M_X64)
+#define Paused() _mm_pause()
+#else
+#define Paused() ((void)0)
+#endif
+enum { Spins = 20000 };
+static uint64_t poolThreads = 0, poolCount = 0;
+static atomic_uint_fast64_t poolGeneration, poolBusy, poolNext;
+static void (*poolWork)(void*, uint64_t) = 0;
+static void* poolContext = 0;
+
+static void Worked(void)
+{
+	for (uint64_t item = atomic_fetch_add(&poolNext, 1); item < poolCount; item = atomic_fetch_add(&poolNext, 1))
+		poolWork(poolContext, item);
+}
+
+/* Waits until counter is no longer value, spinning a while (jobs follow each other quickly) before sleeping. */
+static void Awaited(atomic_uint_fast64_t* counter, uint64_t value, Condition* condition)
+{
+	for (int spin = 0; atomic_load(counter) == value && spin < Spins; spin++)
+		Paused();
+	Locked(&poolLock);
+	while (atomic_load(counter) == value)
+		Waited(condition, &poolLock);
+	Unlocked(&poolLock);
+}
+
+static void Wake(Condition* condition)
+{
+	Locked(&poolLock);
+	Woken(condition);
+	Unlocked(&poolLock);
+}
+
+/* A thread of the pool: works on every job started after it, the last one done wakes the starter. */
+static void Serve(void)
+{
+	for (uint64_t seen = 0;; seen++)
+	{
+		Awaited(&poolGeneration, seen, &poolStarted);
+		Worked();
+		if (atomic_fetch_sub(&poolBusy, 1) == 1)
+			Wake(&poolDone);
+	}
+}
+
+#ifdef _WIN32
+static DWORD WINAPI Served(void* unused) { Serve(); return 0; }
+static int Started(void)
+{
+	HANDLE thread = CreateThread(0, 0, Served, 0, 0, 0);
+	return thread && CloseHandle(thread);
+}
+#else
+static void* Served(void* unused) { Serve(); return 0; }
+static int Started(void)
+{
+	pthread_t thread;
+	return pthread_create(&thread, 0, Served, 0) == 0 && pthread_detach(thread) == 0;
+}
+#endif
+
+/* Runs work for the items 0 to count on this thread and the pool's: STRICT_THREADS in all, else a quarter of the
+   logical processors (experts of Qwen3.8-Flash-Next on a Threadripper 3990X: 16 threads 47, 32 threads 40, 64 threads
+   58 and 128 threads 135 ms per token). */
+static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t count)
+{
+	const char* wanted = poolThreads ? 0 : getenv("STRICT_THREADS");
+	uint64_t threads = poolThreads ? 0 : wanted && atoi(wanted) > 0 ? (uint64_t)atoi(wanted) : Processors() / 4;
+	for (poolThreads = poolThreads ? poolThreads : 1; poolThreads < threads && Started(); )
+		poolThreads++;
+	poolWork = work;
+	poolContext = context;
+	poolCount = count;
+	atomic_store(&poolNext, 0);
+	atomic_store(&poolBusy, poolThreads - 1);
+	atomic_fetch_add(&poolGeneration, 1);
+	Wake(&poolStarted);
+	Worked();
+	for (uint64_t busy = atomic_load(&poolBusy); busy > 0; busy = atomic_load(&poolBusy))
+		Awaited(&poolBusy, busy, &poolDone);
+}
+
+enum { RowChunk = 16 };
+typedef struct
+{
+	const unsigned char* rows;
+	uint64_t rowBytes, width, height;
+	Dot dot;
+	const void* input;
+	float* output;
+} Task;
+typedef struct { const Task* tasks; uint64_t chunks; } Job;
+
+/* The rows of the matrix of expert in stacked times the quantized input into output. */
+static Task Rows(const Tensor* stacked, uint64_t expert, const void* input, float* output)
+{
+	uint64_t width = stacked->shape[0], height = stacked->shape[1];
+	uint64_t rowBytes = width / BlockNumbers(stacked->type) * BlockBytes(stacked->type);
+	const unsigned char* rows = Mapped(stacked) + expert * height * rowBytes;
+	Task task = { rows, rowBytes, width, height, Multiplied(stacked->type).dot, input, output };
+	return task;
+}
+
+/* RowChunk rows of a task of the job, one ggml dot product per row. */
+static void Products(void* context, uint64_t item)
+{
+	const Job* job = context;
+	const Task* task = &job->tasks[item / job->chunks];
+	uint64_t first = item % job->chunks * RowChunk, end = first + RowChunk;
+	for (uint64_t row = first; row < end && row < task->height; row++)
+		task->dot((int)task->width, task->output + row, 0, task->rows + row * task->rowBytes, 0, task->input, 0, 1);
+}
+
+/* The tasks (all of the same height) on all threads. */
+static void Ran(const Task* tasks, uint64_t count)
+{
+	Job job = { tasks, (tasks[0].height + RowChunk - 1) / RowChunk };
+	Parallel(Products, &job, count * job.chunks);
+}
+
+/* silu(gate) * up of every expert quantized for the down matrices. */
+static unsigned char* Activated(const Tensor* down, float* gated, const float* upped, uint64_t count)
+{
+	uint64_t width = down->shape[0], bytes = width / Multiplied(down->type).numbers * Multiplied(down->type).bytes;
+	unsigned char* activated = malloc(count * bytes + 1);
+	for (uint64_t column = 0; column < count * width; column++)
+		gated[column] = gated[column] / (1 + expf(-gated[column])) * upped[column];
+	for (uint64_t index = 0; index < count; index++)
+		Multiplied(down->type).quantize(gated + index * width, activated + index * bytes, (int64_t)width);
+	return activated;
+}
+
+/* The outputs of the chosen experts of the layer prefix for one input one after the other like llama.cpp's CPU backend
+   computes them: down(silu(gate input) * up input), each product ggml's dot product of rows as stored (mapped from the
+   files, Q4_K, Q5_K, Q5_1 or Q8_0) with the input quantized for them, the rows spread over all threads. */
+STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double prefix, double chosen, double input)
+{
+	static strict_numbers* outputs = 0;
+	static int isTabled = 0;
+	const char* failure = 0;
+	const Tensor* gate = Stacked(path, prefix, "ffn_gate_exps.weight", &failure);
+	const Tensor* up = Stacked(path, prefix, "ffn_up_exps.weight", &failure);
+	const Tensor* down = Stacked(path, prefix, "ffn_down_exps.weight", &failure);
+	const strict_numbers* experts = strict_numbers_of(chosen), * values = strict_numbers_of(input);
+	failure = failure ? failure : Mismatched(gate, up, down, experts, values);
+	if (failure)
+		return strict_fail(failure);
+	for (uint32_t bits = 0; !isTabled && bits < 65536; bits++)
+		ggml_table_f32_f16[bits] = ggml_compute_fp16_to_fp32((ggml_fp16_t)bits);
+	isTabled = 1;
+	uint64_t hidden = gate->shape[0], width = gate->shape[1], count = (uint64_t)experts->count;
+	float* floats = malloc((hidden + count * (width * 2 + hidden) + 1) * sizeof(float));
+	float* gated = floats + hidden, * upped = gated + count * width, * downs = upped + count * width;
+	for (uint64_t index = 0; index < hidden; index++)
+		floats[index] = (float)values->items[index];
+	void* quantized = Quantized(gate->type, floats, hidden);
+	Task* tasks = malloc((count * 2 + 1) * sizeof(Task));
+	for (uint64_t index = 0; index < count; index++)
+	{
+		tasks[index * 2] = Rows(gate, (uint64_t)experts->items[index], quantized, gated + index * width);
+		tasks[index * 2 + 1] = Rows(up, (uint64_t)experts->items[index], quantized, upped + index * width);
+	}
+	Ran(tasks, count * 2);
+	unsigned char* activated = Activated(down, gated, upped, count);
+	uint64_t activatedBytes = width / Multiplied(down->type).numbers * Multiplied(down->type).bytes;
+	for (uint64_t index = 0; index < count; index++)
+	{
+		const void* input = activated + index * activatedBytes;
+		tasks[index] = Rows(down, (uint64_t)experts->items[index], input, downs + index * hidden);
+	}
+	Ran(tasks, count);
+	free(outputs);
+	outputs = malloc(sizeof(strict_numbers) + count * hidden * sizeof(double));
+	outputs->count = (double)(count * hidden);
+	for (uint64_t index = 0; index < count * hidden; index++)
+		outputs->items[index] = downs[index];
+	free(activated);
+	free(tasks);
+	free(quantized);
+	free(floats);
+	return strict_numbers_result(outputs);
+}
+
+/* The numbers of the rows (the contiguous dimension) of the tensor name one after the other, decoded like Values from
+   the mapped file, so a huge table (the n-gram embeddings of Qwen3.8-Flash-Next) is never loaded as a whole. */
+STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, double rows)
+{
+	static strict_numbers* picked = 0;
+	const char* failure = 0;
+	const Tensor* tensor = Requested(path, name, 0, &failure);
+	const strict_numbers* chosen = strict_numbers_of(rows);
+	uint32_t type = tensor ? tensor->type : F32;
+	uint64_t width = tensor ? tensor->shape[0] : 0, height = tensor ? Elements(tensor) / width : 0;
+	if (tensor && (BlockBytes(type) == 0 || width % BlockNumbers(type) != 0))
+		failure = "OnlyF32F16BF16Q8_0Q5_1Q4_KQ5_KQ6_KAndIQ4_NLTensorsAreSupported";
+	const unsigned char* data = failure ? 0 : Mapped(tensor);
+	failure = failure ? failure : data ? 0 : "GgufTensorDataTruncated";
+	for (uint64_t index = 0; !failure && index < (uint64_t)chosen->count; index++)
+		if (!IsIndex(chosen->items[index], height))
+			failure = "GgufRowOutOfRange";
+	if (failure)
+		return strict_fail(failure);
+	uint64_t count = (uint64_t)chosen->count, blockNumbers = BlockNumbers(type);
+	uint64_t rowBytes = width / blockNumbers * BlockBytes(type);
+	float decoded[256];
+	free(picked);
+	picked = malloc(sizeof(strict_numbers) + count * width * sizeof(double));
+	picked->count = (double)(count * width);
+	for (uint64_t index = 0; index < count; index++)
+		for (uint64_t column = 0; column < width; column += blockNumbers)
+		{
+			const unsigned char* row = data + (uint64_t)chosen->items[index] * rowBytes;
+			Decoded(type, row + column / blockNumbers * BlockBytes(type), decoded);
+			for (uint64_t number = 0; number < blockNumbers; number++)
+				picked->items[index * width + column + number] = decoded[number];
+		}
+	return strict_numbers_result(picked);
 }

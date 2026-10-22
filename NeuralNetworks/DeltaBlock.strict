@@ -15,17 +15,20 @@ constant Tiny = DeltaBlock.Loaded(Drafter.Model, "blk.0.", Layer.Zeros(16))
 constant Rows = Drafter.Model.Rows("token_embd.weight")
 Loaded(model Gguf, prefix Text, zeros Numbers) DeltaBlock
 	Tiny.inputs.weights.Length is 32
+	let mixing = Mixing(model, prefix, zeros, Qwen3Block.FeedForward(model, prefix))
+	let normed = model.Values(prefix + "attn_norm.weight")
+	DeltaBlock(mixing, attentionNorm = normed, mlpNorm = model.Values(prefix + "post_attention_norm.weight"))
+Mixing(model Gguf, prefix Text, zeros Numbers, feedForward Experts) DeltaBlock
+	DeltaBlock.Mixing(Drafter.Model, "blk.0.", Layer.Zeros(16), Tiny.experts).attentionNorm.Length is 0
 	let combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
 	let taps = model.Values(prefix + "ssm_conv1d.weight")
 	let logarithms = model.Values(prefix + "ssm_a")
 	let projected = Qwen3Block.Dense(model, prefix, List(Text) + "ssm_out")
-	let after = model.Values(prefix + "post_attention_norm.weight")
-	let normed = model.Values(prefix + "attn_norm.weight")
 	let biases = model.Values(prefix + "ssm_dt.bias")
 	let headNorm = model.Values(prefix + "ssm_norm.weight")
-	let feedForward = Qwen3Block.FeedForward(model, prefix)
 	let shifted = Layer.Zeros(taps.Length / 4 * 3)
-	DeltaBlock(normed, combined, taps, logarithms, biases, headNorm, projected, after, feedForward, shifted, zeros)
+	let none = List(Number)
+	DeltaBlock(none, combined, taps, logarithms, biases, headNorm, projected, none, feedForward, shifted, zeros)
 KeyHeads Number
 	Tiny.KeyHeads is 2
 	(convolution.Length / 4 / norm.Length - decays.Length) / 2
