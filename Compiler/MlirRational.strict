@@ -79,31 +79,8 @@ Floored(source Text, target Text) Texts
 	let numerator = Integer("fx", "arith.select " + Temp("fv") + ", " + Temp("ff") + ", " + fallback(0))
 	let denominator = Integer("fy", "arith.select " + Temp("fv") + ", %one, " + fallback(1))
 	let kept = exact.Loaded(Temp("o"), target) + (numerator, denominator)
-	let refreshed = exact.Set(Temp("fx"), Temp("fy"), target) + Refreshed(Temp("fx"), Temp("fy"), target)
+	let refreshed = exact.Set(Temp("fx"), Temp("fy"), target)
 	exact.Loaded(Temp("f"), source) + Quotient + guards + kept + refreshed
-Refreshed(numerator Text, denominator Text, slot Text) Texts
-	Single.Refreshed("%n", "%d", "%r1").First is "    %x2hv = arith.cmpi eq, %d, %one : i64"
-	Single.Refreshed("%n", "%d", "%r1")(5) is "    %x2hn = arith.sitofp %x2hi : i32 to f32"
-	if IsFloated is false
-		return List(Text)
-	let float = exact.function.Float
-	let whole = Integer("hv", "arith.cmpi eq, " + denominator + ", %one")
-	let both = "    " + Temp("hu") + " = arith.andi " + Temp("hv") + ", " + Temp("hf") + " : i1"
-	let numerators = "    " + Temp("hn") + " = arith.sitofp " + Temp("hi") + " : i32 to " + float
-	let chosen = "    " + Temp("hr") + " = arith.select " + Temp("hu") + ", " + Temp("hn") + ", " + Temp("ho") + " : "
-	let loaded = MlirTyped(float).Load(Temp("ho"), slot)
-	let stored = MlirTyped(float).Store(Temp("hr"), slot)
-	((List(Text) + whole) + Narrowed(numerator)) + (both, numerators, loaded, chosen + float, stored)
-Narrowed(numerator Text) Texts
-	Single.Narrowed("%n").Last is "    %x2hf = arith.cmpi eq, %x2hw, %n : i64"
-	let narrow = "    " + Temp("hi") + " = arith.trunci " + numerator + " : i64 to i32"
-	let widened = "    " + Temp("hw") + " = arith.extsi " + Temp("hi") + " : i32 to i64"
-	(narrow, widened, Integer("hf", "arith.cmpi eq, " + Temp("hw") + ", " + numerator))
-IsFloated Boolean
-	Single.IsFloated
-	MlirRational(MlirExact(MlirFeeding.Chained.function, 1)).IsFloated is false
-	let written = LoadReuse(exact.function.method.instructions).Written(exact.function.method.instructions(exact.at))
-	MlirFeeding(exact.function, exact.at).IsFloated(exact.at, written)
 Quotient Texts
 	Single.Quotient.Last is "    %x2ff = arith.select %x2fn, %x2fb, %x2ft : i64"
 	let valid = Integer("fv", "arith.cmpi ne, " + Temp("f_q") + ", %inexact")

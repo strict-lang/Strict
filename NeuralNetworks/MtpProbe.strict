@@ -8,6 +8,7 @@ Run(path Text, count Number, drafts Number)
 	let started = Speculation(model.Prefilled(prompt, 0), prompt, model.Prefilled(prompt, 0).Next, drafts, 0, drafter)
 	logger.Log("warmed up: " + Timed(started, 8))
 	logger.Log(Timed(started, count))
+	logger.Log(tokenizer.Decoded(Safetensors.Part(started.Finished(count).context, prompt.Length, count, 1)))
 Timed(started Speculation, count Number) Text
 	MtpProbe(Logger).Timed(Speculation.Drafting, 2).EndsWith("tokens per step")
 	let before = Process.Elapsed
