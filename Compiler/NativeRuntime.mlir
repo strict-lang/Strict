@@ -9246,7 +9246,8 @@
     %short = arith.cmpi ult, %free, %needed : i64
     cf.cond_br %short, ^release, ^allocate
   ^release:
-    %releasedEarly = func.call @strict_gpu_starved(%needed) : (i64) -> i1
+    %shortfall = arith.subi %needed, %free : i64
+    %releasedEarly = func.call @strict_gpu_starved(%shortfall) : (i64) -> i1
     cf.br ^allocate
   ^allocate:
     %slot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
