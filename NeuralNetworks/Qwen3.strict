@@ -46,7 +46,7 @@ Rotations(positions Numbers) Numbers
 		let at = index % (4 * half)
 		let pair = at % half
 		let radians = pair < pairs then positions((index / (4 * half)).Floor) * theta ^ (-pair / pairs) else 0
-		let angle = Degrees(Radians(radians) to Degrees)
+		let angle = Radians(radians) to Degrees
 		at < 2 * half then angle.Cos else (at < 3 * half then 0 - angle.Sin else angle.Sin)
 Step(token Number, position Number) Qwen3
 	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475)
