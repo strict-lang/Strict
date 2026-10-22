@@ -4,6 +4,7 @@ has activation = Activation.Sigmoid
 has previousWeights List(Numbers) = List(Numbers)
 has previousBiases Numbers = List(Number)
 constant Momentum = 0.5
+constant Unbiased = List(Number) + 0
 constant Halves = Layer(List(Numbers) + (0.5, 0.5), List(Number) + 0)
 constant Fours = Layer(Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r4"), (0, 0))
 constant Sixes = Layer(Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r6"), (0, 0))
