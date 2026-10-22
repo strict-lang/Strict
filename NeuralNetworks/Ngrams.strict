@@ -50,6 +50,12 @@ Convolved(taps List(Numbers), weights List(Numbers)) Numbers
 	Flash.Convolved(Window, ((0.5, 1, 1, 0.25), (1, 1, 1, 1)))(1).IsNearlyEqual(1.7615941559557646)
 	for taps.First
 		Activation.Swish.Output(Batch.Dot(weights(index), 0, Tap(taps, index), 0))
+Shifted(history List(Numbers), row Numbers) List(Numbers)
+	Flash.Shifted(((1, 1), (2, 2), (3, 3)), (4, 4)) is ((2, 2), (3, 3), (4, 4))
+	history.Slice(1, history.Length - 1) + row
+Taps(history List(Numbers)) List(Numbers)
+	Flash.Taps(((0), (1), (2), (3), (4), (5), (6), (7), (8), (9))) is ((0), (3), (6), (9))
+	(history(0), history(3), history(6), history(9))
 Tap(rows List(Numbers), channel Number) Numbers
 	Flash.Tap(((1, 2), (3, 4)), 1) is (2, 4)
 	for rows
