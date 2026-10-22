@@ -11152,9 +11152,18 @@
     %tileBlocks = arith.muli %tileCount, %tileSplits : i64
     %tileThreads = arith.muli %tileBlocks, %tileLanes : i64
     %chosenTiles = arith.select %tiling, %tileThreads, %chosen : i64
+    %eightLanes = arith.constant 256 : i64
+    %eighting = arith.cmpi eq, %perWarp, %eightLanes : i64
+    %eightRowsUp = arith.addi %rowTotal, %tileRowSpare : i64
+    %eightRowTiles = arith.shrui %eightRowsUp, %tileRowShift : i64
+    %eightTokensUp = arith.addi %tokens, %tileRowSpare : i64
+    %eightTokenTiles = arith.shrui %eightTokensUp, %tileRowShift : i64
+    %eightTiles = arith.muli %eightRowTiles, %eightTokenTiles : i64
+    %eightThreads = arith.muli %eightTiles, %eightLanes : i64
+    %chosenEights = arith.select %eighting, %eightThreads, %chosenTiles : i64
     %attentionLanes = arith.constant 128 : i64
     %attending = arith.cmpi eq, %perWarp, %attentionLanes : i64
-    cf.cond_br %attending, ^attention, ^done(%chosenTiles : i64)
+    cf.cond_br %attending, ^attention, ^done(%chosenEights : i64)
   ^attention:
     %attentionThreads = func.call @strict_gpu_attention_threads(%count, %values) : (i64, !llvm.ptr) -> i64
     cf.br ^done(%attentionThreads : i64)
@@ -11455,8 +11464,10 @@
   llvm.mlir.global internal @strict_gpu_blocks_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_tiles_name("strict_device_tiles\00strict_device_tiless\00") : !llvm.array<41 x i8>
   llvm.mlir.global internal @strict_gpu_tiles_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
-  // the dot products of `Batch.Sums` for several tokens (strict_device_blocks, 64 or more with Q4_K or Q6_K rows and 8 bit tokens
-  // strict_device_tiles, one token strict_device_tokens): every row with the numbers of every token (token t at
+  llvm.mlir.global internal constant @strict_gpu_eights_name("strict_device_eights\00strict_device_eightss\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal @strict_gpu_eights_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // the dot products of `Batch.Sums` for several tokens (strict_device_blocks, 64 or more with 8 bit tokens and Q4_K or Q6_K
+  // rows strict_device_tiles, with 8 bit rows strict_device_eights, one token strict_device_tokens): every row with the numbers of every token (token t at
   // t * width of input), row r and token t at t * rows + r of the result plus biases(index % biases.Length) unless
   // biases is 0.0, the rows of token t start at bases(t / 64) unless bases is 0.0 (`Batch.Grouped`), 0.0 when the GPU
   // can not
@@ -11501,9 +11512,16 @@
     %tilesName = llvm.mlir.addressof @strict_gpu_tiles_name : !llvm.ptr
     %tilesSlot = llvm.mlir.addressof @strict_gpu_tiles_slot : !llvm.ptr
     %tileLanes = arith.constant -512 : i64
-    %name = llvm.select %tiled, %tilesName, %shortName : i1, !llvm.ptr
-    %slot = llvm.select %tiled, %tilesSlot, %shortSlot : i1, !llvm.ptr
-    %lanes = arith.select %tiled, %tileLanes, %perWarp : i64
+    %eights = func.call @strict_gpu_eights(%rows, %input, %tokens, %width, %bases) : (f64, f64, f64, f64, f64) -> i1
+    %eightsName = llvm.mlir.addressof @strict_gpu_eights_name : !llvm.ptr
+    %eightsSlot = llvm.mlir.addressof @strict_gpu_eights_slot : !llvm.ptr
+    %eightLanes = arith.constant -256 : i64
+    %longName = llvm.select %tiled, %tilesName, %shortName : i1, !llvm.ptr
+    %longSlot = llvm.select %tiled, %tilesSlot, %shortSlot : i1, !llvm.ptr
+    %longLanes = arith.select %tiled, %tileLanes, %perWarp : i64
+    %name = llvm.select %eights, %eightsName, %longName : i1, !llvm.ptr
+    %slot = llvm.select %eights, %eightsSlot, %longSlot : i1, !llvm.ptr
+    %lanes = arith.select %eights, %eightLanes, %longLanes : i64
     %integers = arith.constant -1 : i64
     %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
@@ -11539,6 +11557,38 @@
     cf.br ^done(%fits : i1)
   ^done(%tiled: i1):
     return %tiled : i1
+  }
+  // strict_device_eights fits 64 tokens or more with 8 bit rows whose 32 bit tokens become 8 bit numbers (width a
+  // multiple of 64) unless the rows of the tokens start at bases
+  func.func private @strict_gpu_eights(%rows: f64, %input: f64, %tokens: f64, %width: f64, %bases: f64) -> i1 {
+    %false = arith.constant false
+    %none = arith.constant 0 : i64
+    %sixtyThree = arith.constant 63 : i64
+    %enough = arith.constant 64.0 : f64
+    %zero = arith.constant 0.0 : f64
+    %isLong = arith.cmpf oge, %tokens, %enough : f64
+    %enabled = func.call @strict_gpu_dp4a() : () -> i1
+    %basesBits = arith.bitcast %bases : f64 to i64
+    %unbased = arith.cmpi eq, %basesBits, %none : i64
+    %wholeWidth = arith.fptosi %width : f64 to i64
+    %widthRest = arith.andi %wholeWidth, %sixtyThree : i64
+    %aligned = arith.cmpi eq, %widthRest, %none : i64
+    %longEnabled = arith.andi %isLong, %enabled : i1
+    %unbasedAligned = arith.andi %unbased, %aligned : i1
+    %wanted = arith.andi %longEnabled, %unbasedAligned : i1
+    cf.cond_br %wanted, ^row, ^done(%false : i1)
+  ^row:
+    %first = func.call @strict_list_get(%rows, %zero) : (f64, f64) -> f64
+    %bits = func.call @strict_list_packed(%first) : (f64) -> i64
+    %eight = arith.constant 8 : i64
+    %isEight = arith.cmpi eq, %bits, %eight : i64
+    %inputBits = func.call @strict_gpu_bits(%input) : (f64) -> i64
+    %singles = arith.constant 32 : i64
+    %isSingle = arith.cmpi eq, %inputBits, %singles : i64
+    %fits = arith.andi %isEight, %isSingle : i1
+    cf.br ^done(%fits : i1)
+  ^done(%fitting: i1):
+    return %fitting : i1
   }
   func.func private @strict_gpu_free_all(%buffers: !llvm.ptr, %count: i64) {
     %none = arith.constant 0 : i64

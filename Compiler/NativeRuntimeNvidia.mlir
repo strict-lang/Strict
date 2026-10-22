@@ -52,9 +52,34 @@
     %d = llvm.call_intrinsic "llvm.nvvm.mma.m8n8k16.row.col.s8"(%a, %b, %c0, %c1) : (i32, i32, i32, i32) -> !llvm.struct<(i32, i32)>
     return %d : !llvm.struct<(i32, i32)>
   }
+  // before sm_80 m16n8k32 is four m8n8k16: rows g and g + 8 (a0, a1) of k 0 to 15 (b0), then of k 16 to 31 (a2, a3, b1)
   func.func private @strict_device_mma16(%a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %c0: i32, %c1: i32, %c2: i32, %c3: i32) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isWide = arith.cmpi sge, %arch, %c800 : i32
+    cf.cond_br %isWide, ^wide, ^narrow
+  ^wide:
     %d = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k32.row.col.s8"(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
     return %d : !llvm.struct<(i32, i32, i32, i32)>
+  ^narrow:
+    %upper = func.call @strict_device_mma8(%a0, %b0, %c0, %c1) : (i32, i32, i32, i32) -> !llvm.struct<(i32, i32)>
+    %upper0 = llvm.extractvalue %upper[0] : !llvm.struct<(i32, i32)>
+    %upper1 = llvm.extractvalue %upper[1] : !llvm.struct<(i32, i32)>
+    %upperDone = func.call @strict_device_mma8(%a2, %b1, %upper0, %upper1) : (i32, i32, i32, i32) -> !llvm.struct<(i32, i32)>
+    %lower = func.call @strict_device_mma8(%a1, %b0, %c2, %c3) : (i32, i32, i32, i32) -> !llvm.struct<(i32, i32)>
+    %lower0 = llvm.extractvalue %lower[0] : !llvm.struct<(i32, i32)>
+    %lower1 = llvm.extractvalue %lower[1] : !llvm.struct<(i32, i32)>
+    %lowerDone = func.call @strict_device_mma8(%a3, %b1, %lower0, %lower1) : (i32, i32, i32, i32) -> !llvm.struct<(i32, i32)>
+    %d0 = llvm.extractvalue %upperDone[0] : !llvm.struct<(i32, i32)>
+    %d1 = llvm.extractvalue %upperDone[1] : !llvm.struct<(i32, i32)>
+    %d2 = llvm.extractvalue %lowerDone[0] : !llvm.struct<(i32, i32)>
+    %d3 = llvm.extractvalue %lowerDone[1] : !llvm.struct<(i32, i32)>
+    %empty = llvm.mlir.undef : !llvm.struct<(i32, i32, i32, i32)>
+    %with0 = llvm.insertvalue %d0, %empty[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %with1 = llvm.insertvalue %d1, %with0[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %with2 = llvm.insertvalue %d2, %with1[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %with3 = llvm.insertvalue %d3, %with2[3] : !llvm.struct<(i32, i32, i32, i32)>
+    return %with3 : !llvm.struct<(i32, i32, i32, i32)>
   }
   func.func private @strict_device_halves_mma(%a0: vector<2xf16>, %a1: vector<2xf16>, %b: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32) -> !llvm.struct<(f32, f32, f32, f32)> attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %d = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k8.row.col.f32.f32"(%a0, %a1, %b, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>

@@ -2019,6 +2019,422 @@
   ^exit:
     return
   }
+  // `Batch.Sums` of 64 tokens or more with 8 bit rows: a block of 8 warps takes 128 rows and 128 tokens, 64 columns of
+  // both at a time in shared memory (80 bytes per row or token so the rows of an ldmatrix lie in distinct banks, two
+  // stages in turn), with the scales of their 32 numbers
+  llvm.mlir.global internal @strict_device_eights_rows() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<20480 x i8>
+  llvm.mlir.global internal @strict_device_eights_tokens() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<20480 x i8>
+  llvm.mlir.global internal @strict_device_eights_row_scales() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<512 x f32>
+  llvm.mlir.global internal @strict_device_eights_token_scales() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<512 x f32>
+  // the 2 parts of 16 bytes of the rows and of the tokens and the row and token scale a thread copies for the 64 columns
+  // of stage (rows and tokens after the last repeat the last), loaded into registers while the other stage computes
+  func.func private @strict_device_eights_fetch(%firstData: !llvm.ptr, %stride: i64, %rowFirst: i64, %rowLast: i64, %columns: i64, %input: !llvm.ptr, %inputScales: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %stage: i64, %thread: i32) -> (vector<16xi32>, vector<2xf32>) attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
+    %six = arith.constant 6 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %zeroWords = arith.constant dense<0> : vector<16xi32>
+    %thread64 = arith.extui %thread : i32 to i64
+    %column = arith.shli %stage, %six : i64
+    %piece = arith.andi %thread64, %three : i64
+    %pieceBytes = arith.shli %piece, %four : i64
+    %pieceColumn = arith.addi %column, %pieceBytes : i64
+    %firstLocal = arith.shrui %thread64, %two : i64
+    cf.br ^part(%c0, %firstLocal, %zeroWords : i32, i64, vector<16xi32>)
+  ^part(%step: i32, %local: i64, %words: vector<16xi32>):
+    %moreParts = arith.cmpi slt, %step, %c2 : i32
+    cf.cond_br %moreParts, ^partBody, ^scales
+  ^partBody:
+    %ownRow = arith.addi %rowFirst, %local : i64
+    %row = arith.minsi %ownRow, %rowLast : i64
+    %rowNumber = arith.subi %row, %rowFirst : i64
+    %rowStart = arith.muli %rowNumber, %stride : i64
+    %rowOffset = arith.addi %rowStart, %pieceColumn : i64
+    %rowSource = llvm.getelementptr %firstData[%rowOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %rowWords = llvm.load %rowSource invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %ownToken = arith.addi %tokenFirst, %local : i64
+    %token = arith.minsi %ownToken, %tokenLast : i64
+    %tokenStart = arith.muli %token, %width : i64
+    %tokenOffset = arith.addi %tokenStart, %pieceColumn : i64
+    %tokenSource = llvm.getelementptr %input[%tokenOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %tokenWords = llvm.load %tokenSource invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %withRow = func.call @strict_device_tile_placed(%words, %step, %rowWords) : (vector<16xi32>, i32, vector<4xi32>) -> vector<16xi32>
+    %tokenStep = arith.addi %step, %c2 : i32
+    %withToken = func.call @strict_device_tile_placed(%withRow, %tokenStep, %tokenWords) : (vector<16xi32>, i32, vector<4xi32>) -> vector<16xi32>
+    %stepNext = arith.addi %step, %c1 : i32
+    %localNext = arith.addi %local, %sixtyFour : i64
+    llvm.br ^part(%stepNext, %localNext, %withToken : i32, i64, vector<16xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^scales:
+    %scaleLocal = arith.shrui %thread64, %one : i64
+    %sub = arith.andi %thread64, %one : i64
+    %columnScale = arith.shrui %column, %five : i64
+    %scaleIndex = arith.addi %columnScale, %sub : i64
+    %scaleBytes = arith.shli %scaleIndex, %two : i64
+    %ownScaleRow = arith.addi %rowFirst, %scaleLocal : i64
+    %scaleRow = arith.minsi %ownScaleRow, %rowLast : i64
+    %scaleRowNumber = arith.subi %scaleRow, %rowFirst : i64
+    %scaleRowStart = arith.muli %scaleRowNumber, %stride : i64
+    %scaleRowData = arith.addi %scaleRowStart, %columns : i64
+    %rowScaleOffset = arith.addi %scaleRowData, %scaleBytes : i64
+    %rowScaleSource = llvm.getelementptr %firstData[%rowScaleOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %rowScale = llvm.load %rowScaleSource invariant : !llvm.ptr -> f32
+    %ownScaleToken = arith.addi %tokenFirst, %scaleLocal : i64
+    %scaleToken = arith.minsi %ownScaleToken, %tokenLast : i64
+    %scaleTokenStart = arith.muli %scaleToken, %width : i64
+    %scaleTokenBlock = arith.shrui %scaleTokenStart, %five : i64
+    %tokenScaleIndex = arith.addi %scaleTokenBlock, %scaleIndex : i64
+    %tokenScaleSource = llvm.getelementptr %inputScales[%tokenScaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %tokenScale = llvm.load %tokenScaleSource invariant : !llvm.ptr -> f32
+    %noScales = llvm.mlir.undef : vector<2xf32>
+    %withRowScale = llvm.insertelement %rowScale, %noScales[%c0 : i32] : vector<2xf32>
+    %scales = llvm.insertelement %tokenScale, %withRowScale[%c1 : i32] : vector<2xf32>
+    return %words, %scales : vector<16xi32>, vector<2xf32>
+  }
+  // the parts strict_device_eights_fetch loaded into stage buffer (0 or 1) of the shared memory
+  func.func private @strict_device_eights_put(%words: vector<16xi32>, %scales: vector<2xf32>, %buffer: i32, %thread: i32) attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %c4 = llvm.mlir.constant(4 : i32) : i32
+    %c7 = llvm.mlir.constant(7 : i32) : i32
+    %c8 = llvm.mlir.constant(8 : i32) : i32
+    %c80 = llvm.mlir.constant(80 : i32) : i32
+    %c5120 = llvm.mlir.constant(5120 : i32) : i32
+    %c10240 = llvm.mlir.constant(10240 : i32) : i32
+    %rows = llvm.mlir.addressof @strict_device_eights_rows : !llvm.ptr<3>
+    %tokens = llvm.mlir.addressof @strict_device_eights_tokens : !llvm.ptr<3>
+    %rowScales = llvm.mlir.addressof @strict_device_eights_row_scales : !llvm.ptr<3>
+    %tokenScales = llvm.mlir.addressof @strict_device_eights_token_scales : !llvm.ptr<3>
+    %bufferStart = arith.muli %buffer, %c10240 : i32
+    %firstLocal = arith.shrui %thread, %c2 : i32
+    %piece = arith.andi %thread, %c3 : i32
+    %pieceBytes = arith.shli %piece, %c4 : i32
+    %firstStart = arith.muli %firstLocal, %c80 : i32
+    %firstOffset = arith.addi %firstStart, %pieceBytes : i32
+    %firstAt = arith.addi %bufferStart, %firstOffset : i32
+    %secondAt = arith.addi %firstAt, %c5120 : i32
+    %firstRows = func.call @strict_device_tile_part(%words, %c0) : (vector<16xi32>, i32) -> vector<4xi32>
+    %secondRows = func.call @strict_device_tile_part(%words, %c1) : (vector<16xi32>, i32) -> vector<4xi32>
+    %firstTokens = func.call @strict_device_tile_part(%words, %c2) : (vector<16xi32>, i32) -> vector<4xi32>
+    %secondTokens = func.call @strict_device_tile_part(%words, %c3) : (vector<16xi32>, i32) -> vector<4xi32>
+    %firstRowSlot = func.call @strict_device_tile_at(%rows, %firstAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    llvm.store %firstRows, %firstRowSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    %secondRowSlot = func.call @strict_device_tile_at(%rows, %secondAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    llvm.store %secondRows, %secondRowSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    %firstTokenSlot = func.call @strict_device_tile_at(%tokens, %firstAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    llvm.store %firstTokens, %firstTokenSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    %secondTokenSlot = func.call @strict_device_tile_at(%tokens, %secondAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    llvm.store %secondTokens, %secondTokenSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    %scaleBuffer = arith.shli %buffer, %c8 : i32
+    %sub = arith.andi %thread, %c1 : i32
+    %subStart = arith.shli %sub, %c7 : i32
+    %scaleLocal = arith.shrui %thread, %c1 : i32
+    %scaleStart = arith.addi %scaleBuffer, %subStart : i32
+    %scaleAt = arith.addi %scaleStart, %scaleLocal : i32
+    %scaleAt64 = arith.extui %scaleAt : i32 to i64
+    %rowScale = llvm.extractelement %scales[%c0 : i32] : vector<2xf32>
+    %tokenScale = llvm.extractelement %scales[%c1 : i32] : vector<2xf32>
+    %rowScaleSlot = llvm.getelementptr %rowScales[%scaleAt64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    llvm.store %rowScale, %rowScaleSlot : f32, !llvm.ptr<3>
+    %tokenScaleSlot = llvm.getelementptr %tokenScales[%scaleAt64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    llvm.store %tokenScale, %tokenScaleSlot : f32, !llvm.ptr<3>
+    return
+  }
+  // sums at slot plus the integer dot times scale
+  func.func private @strict_device_eights_added(%sums: vector<64xf32>, %slot: i32, %dot: i32, %scale: f32) -> vector<64xf32> attributes {passthrough = ["alwaysinline"]} {
+    %dotFloat = arith.sitofp %dot : i32 to f32
+    %old = llvm.extractelement %sums[%slot : i32] : vector<64xf32>
+    %new = llvm.call_intrinsic "llvm.fma.f32"(%dotFloat, %scale, %old) : (f32, f32, f32) -> f32
+    %updated = llvm.insertelement %new, %sums[%slot : i32] : vector<64xf32>
+    return %updated : vector<64xf32>
+  }
+  // the 32 numbers sub (0 or 1) of stage buffer for the 64 rows and 32 tokens of a warp: an ldmatrix.x4 per 16 rows and
+  // per 16 tokens, 16 mma.m16n8k32 scaled by row and token; sums holds the 4 results (rows g and g + 8 of the lane by
+  // tokens 2 * (lane % 4) and the next) of the 4 x 4 tiles of 16 rows by 8 tokens, row tile first
+  func.func private @strict_device_eights_sub(%sums: vector<64xf32>, %buffer: i32, %sub: i32, %warpRow: i32, %warpToken: i32, %lane: i32) -> vector<64xf32> attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %c4 = llvm.mlir.constant(4 : i32) : i32
+    %c5 = llvm.mlir.constant(5 : i32) : i32
+    %c7 = llvm.mlir.constant(7 : i32) : i32
+    %c8 = llvm.mlir.constant(8 : i32) : i32
+    %c80 = llvm.mlir.constant(80 : i32) : i32
+    %c1280 = llvm.mlir.constant(1280 : i32) : i32
+    %c10240 = llvm.mlir.constant(10240 : i32) : i32
+    %nothing = arith.constant 0 : i32
+    %rows = llvm.mlir.addressof @strict_device_eights_rows : !llvm.ptr<3>
+    %tokens = llvm.mlir.addressof @strict_device_eights_tokens : !llvm.ptr<3>
+    %rowScales = llvm.mlir.addressof @strict_device_eights_row_scales : !llvm.ptr<3>
+    %tokenScales = llvm.mlir.addressof @strict_device_eights_token_scales : !llvm.ptr<3>
+    %bufferStart = arith.muli %buffer, %c10240 : i32
+    %scaleBuffer = arith.shli %buffer, %c8 : i32
+    %subScales = arith.shli %sub, %c7 : i32
+    %scaleStart = arith.addi %scaleBuffer, %subScales : i32
+    %matrix = arith.shrui %lane, %c3 : i32
+    %matrixRow = arith.andi %lane, %c7 : i32
+    %matrixHalf = arith.andi %matrix, %c1 : i32
+    %matrixPair = arith.shrui %matrix, %c1 : i32
+    %subBytes = arith.shli %sub, %c5 : i32
+    %halfRows = arith.shli %matrixHalf, %c3 : i32
+    %rowInTile = arith.addi %halfRows, %matrixRow : i32
+    %pairBytes = arith.shli %matrixPair, %c4 : i32
+    %rowColumn = arith.addi %pairBytes, %subBytes : i32
+    %pairRows = arith.shli %matrixPair, %c3 : i32
+    %tokenInTile = arith.addi %pairRows, %matrixRow : i32
+    %halfBytes = arith.shli %matrixHalf, %c4 : i32
+    %tokenColumn = arith.addi %halfBytes, %subBytes : i32
+    %group = arith.shrui %lane, %c2 : i32
+    %quad = arith.andi %lane, %c3 : i32
+    %pairToken = arith.shli %quad, %c1 : i32
+    %laneToken = arith.addi %warpToken, %tokenInTile : i32
+    %tokenRowStart = arith.muli %laneToken, %c80 : i32
+    %tokenRowAt = arith.addi %tokenRowStart, %tokenColumn : i32
+    %firstTokenAt = arith.addi %bufferStart, %tokenRowAt : i32
+    %secondTokenAt = arith.addi %firstTokenAt, %c1280 : i32
+    %firstTokenSlot = func.call @strict_device_tile_at(%tokens, %firstTokenAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    %secondTokenSlot = func.call @strict_device_tile_at(%tokens, %secondTokenAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    %firstTokens = func.call @strict_device_matrices(%firstTokenSlot) : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    %secondTokens = func.call @strict_device_matrices(%secondTokenSlot) : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    %t0 = llvm.extractvalue %firstTokens[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %t1 = llvm.extractvalue %firstTokens[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %t2 = llvm.extractvalue %firstTokens[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %t3 = llvm.extractvalue %firstTokens[3] : !llvm.struct<(i32, i32, i32, i32)>
+    %t4 = llvm.extractvalue %secondTokens[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %t5 = llvm.extractvalue %secondTokens[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %t6 = llvm.extractvalue %secondTokens[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %t7 = llvm.extractvalue %secondTokens[3] : !llvm.struct<(i32, i32, i32, i32)>
+    %firstHalf = func.call @strict_device_words(%t0, %t1, %t2, %t3) : (i32, i32, i32, i32) -> vector<4xi32>
+    %secondHalf = func.call @strict_device_words(%t4, %t5, %t6, %t7) : (i32, i32, i32, i32) -> vector<4xi32>
+    %tokenOperands = llvm.shufflevector %firstHalf, %secondHalf [0, 1, 2, 3, 4, 5, 6, 7] : vector<4xi32>
+    %laneTokenScales = arith.addi %scaleStart, %warpToken : i32
+    %firstScaleAt = arith.addi %laneTokenScales, %pairToken : i32
+    %noScales = arith.constant dense<0.0> : vector<8xf32>
+    cf.br ^scale(%c0, %firstScaleAt, %noScales : i32, i32, vector<8xf32>)
+  ^scale(%scaleTile: i32, %scaleAt: i32, %tokenScaleValues: vector<8xf32>):
+    %moreScales = arith.cmpi slt, %scaleTile, %c4 : i32
+    cf.cond_br %moreScales, ^scaleBody, ^rowTiles
+  ^scaleBody:
+    %scaleAt64 = arith.extui %scaleAt : i32 to i64
+    %scaleSlot = llvm.getelementptr %tokenScales[%scaleAt64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %pairScales = llvm.load %scaleSlot {alignment = 8 : i64} : !llvm.ptr<3> -> vector<2xf32>
+    %lowScale = llvm.extractelement %pairScales[%c0 : i32] : vector<2xf32>
+    %highScale = llvm.extractelement %pairScales[%c1 : i32] : vector<2xf32>
+    %lowIndex = arith.shli %scaleTile, %c1 : i32
+    %highIndex = arith.addi %lowIndex, %c1 : i32
+    %withLow = llvm.insertelement %lowScale, %tokenScaleValues[%lowIndex : i32] : vector<8xf32>
+    %withHigh = llvm.insertelement %highScale, %withLow[%highIndex : i32] : vector<8xf32>
+    %scaleTileNext = arith.addi %scaleTile, %c1 : i32
+    %scaleAtNext = arith.addi %scaleAt, %c8 : i32
+    llvm.br ^scale(%scaleTileNext, %scaleAtNext, %withHigh : i32, i32, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^rowTiles:
+    cf.br ^rowTile(%c0, %sums : i32, vector<64xf32>)
+  ^rowTile(%rowTileIndex: i32, %rowSums: vector<64xf32>):
+    %moreRowTiles = arith.cmpi slt, %rowTileIndex, %c4 : i32
+    cf.cond_br %moreRowTiles, ^rowTileBody, ^done
+  ^rowTileBody:
+    %tileRows = arith.shli %rowTileIndex, %c4 : i32
+    %tileRow = arith.addi %warpRow, %tileRows : i32
+    %laneRow = arith.addi %tileRow, %rowInTile : i32
+    %rowStart = arith.muli %laneRow, %c80 : i32
+    %rowAt = arith.addi %rowStart, %rowColumn : i32
+    %rowBufferAt = arith.addi %bufferStart, %rowAt : i32
+    %rowSlot = func.call @strict_device_tile_at(%rows, %rowBufferAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
+    %rowOperands = func.call @strict_device_matrices(%rowSlot) : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    %a0 = llvm.extractvalue %rowOperands[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %a1 = llvm.extractvalue %rowOperands[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %a2 = llvm.extractvalue %rowOperands[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %a3 = llvm.extractvalue %rowOperands[3] : !llvm.struct<(i32, i32, i32, i32)>
+    %groupRow = arith.addi %tileRow, %group : i32
+    %upperScaleAt = arith.addi %scaleStart, %groupRow : i32
+    %lowerScaleAt = arith.addi %upperScaleAt, %c8 : i32
+    %upperScale = func.call @strict_device_tile_float(%rowScales, %upperScaleAt) : (!llvm.ptr<3>, i32) -> f32
+    %lowerScale = func.call @strict_device_tile_float(%rowScales, %lowerScaleAt) : (!llvm.ptr<3>, i32) -> f32
+    %tileSlots = arith.shli %rowTileIndex, %c4 : i32
+    cf.br ^tokenTile(%c0, %rowSums : i32, vector<64xf32>)
+  ^tokenTile(%tokenTileIndex: i32, %tokenSums: vector<64xf32>):
+    %moreTokenTiles = arith.cmpi slt, %tokenTileIndex, %c4 : i32
+    cf.cond_br %moreTokenTiles, ^tokenTileBody, ^rowTileNext
+  ^tokenTileBody:
+    %lowOperand = arith.shli %tokenTileIndex, %c1 : i32
+    %highOperand = arith.addi %lowOperand, %c1 : i32
+    %b0 = llvm.extractelement %tokenOperands[%lowOperand : i32] : vector<8xi32>
+    %b1 = llvm.extractelement %tokenOperands[%highOperand : i32] : vector<8xi32>
+    %dot = func.call @strict_device_mma16(%a0, %a1, %a2, %a3, %b0, %b1, %nothing, %nothing, %nothing, %nothing) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
+    %dot0 = llvm.extractvalue %dot[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %dot1 = llvm.extractvalue %dot[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %dot2 = llvm.extractvalue %dot[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %dot3 = llvm.extractvalue %dot[3] : !llvm.struct<(i32, i32, i32, i32)>
+    %lowTokenScale = llvm.extractelement %tokenScaleValues[%lowOperand : i32] : vector<8xf32>
+    %highTokenScale = llvm.extractelement %tokenScaleValues[%highOperand : i32] : vector<8xf32>
+    %scale0 = arith.mulf %upperScale, %lowTokenScale : f32
+    %scale1 = arith.mulf %upperScale, %highTokenScale : f32
+    %scale2 = arith.mulf %lowerScale, %lowTokenScale : f32
+    %scale3 = arith.mulf %lowerScale, %highTokenScale : f32
+    %tokenSlots = arith.shli %tokenTileIndex, %c2 : i32
+    %slot0 = arith.addi %tileSlots, %tokenSlots : i32
+    %slot1 = arith.addi %slot0, %c1 : i32
+    %slot2 = arith.addi %slot0, %c2 : i32
+    %slot3 = arith.addi %slot0, %c3 : i32
+    %with0 = func.call @strict_device_eights_added(%tokenSums, %slot0, %dot0, %scale0) : (vector<64xf32>, i32, i32, f32) -> vector<64xf32>
+    %with1 = func.call @strict_device_eights_added(%with0, %slot1, %dot1, %scale1) : (vector<64xf32>, i32, i32, f32) -> vector<64xf32>
+    %with2 = func.call @strict_device_eights_added(%with1, %slot2, %dot2, %scale2) : (vector<64xf32>, i32, i32, f32) -> vector<64xf32>
+    %with3 = func.call @strict_device_eights_added(%with2, %slot3, %dot3, %scale3) : (vector<64xf32>, i32, i32, f32) -> vector<64xf32>
+    %tokenTileNext = arith.addi %tokenTileIndex, %c1 : i32
+    llvm.br ^tokenTile(%tokenTileNext, %with3 : i32, vector<64xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^rowTileNext:
+    %rowTileFollowing = arith.addi %rowTileIndex, %c1 : i32
+    llvm.br ^rowTile(%rowTileFollowing, %tokenSums : i32, vector<64xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^done:
+    return %rowSums : vector<64xf32>
+  }
+  // each warp computes 64 rows by 32 tokens of the tile, the dot of row r and token t becomes number t * rows + r of the
+  // result
+  func.func private @strict_device_eights_run(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %c4 = llvm.mlir.constant(4 : i32) : i32
+    %c5 = llvm.mlir.constant(5 : i32) : i32
+    %c6 = llvm.mlir.constant(6 : i32) : i32
+    %c31 = llvm.mlir.constant(31 : i32) : i32
+    %c64 = llvm.mlir.constant(64 : i32) : i32
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %six = arith.constant 6 : i64
+    %seven = arith.constant 7 : i64
+    %eight = arith.constant 8 : i64
+    %sixtyThree = arith.constant 63 : i64
+    %oneHundredTwentySeven = arith.constant 127 : i64
+    %zeros = arith.constant dense<0.0> : vector<64xf32>
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block32 = func.call @strict_device_block_index() : () -> i32
+    %block = arith.extui %block32 : i32 to i64
+    %warp = arith.shrui %thread, %c5 : i32
+    %lane = arith.andi %thread, %c31 : i32
+    %rowsGiven = arith.fptosi %rowsNumber : f64 to i64
+    %rows = arith.maxsi %rowsGiven, %one : i64
+    %width = arith.fptosi %widthNumber : f64 to i64
+    %tokens = arith.divui %count, %rows : i64
+    %tokensUp = arith.addi %tokens, %oneHundredTwentySeven : i64
+    %tokenTiles = arith.shrui %tokensUp, %seven : i64
+    %tokenTile = arith.remui %block, %tokenTiles : i64
+    %rowTile = arith.divui %block, %tokenTiles : i64
+    %rowFirst = arith.shli %rowTile, %seven : i64
+    %tokenFirst = arith.shli %tokenTile, %seven : i64
+    %rowLast = arith.subi %rows, %one : i64
+    %tokenLast = arith.subi %tokens, %one : i64
+    %isQuantized = arith.cmpi eq, %inputBits, %eight : i64
+    %widthRest = arith.andi %width, %sixtyThree : i64
+    %widthAligned = arith.cmpi eq, %widthRest, %none : i64
+    %sameWidth = arith.cmpi eq, %columns, %width : i64
+    %alignedSame = arith.andi %widthAligned, %sameWidth : i1
+    %usable = arith.andi %isQuantized, %alignedSame : i1
+    cf.cond_br %usable, ^start, ^unusable
+  ^unusable:
+    %isFirst = arith.cmpi eq, %thread, %c0 : i32
+    cf.cond_br %isFirst, ^markFailed, ^exit
+  ^markFailed:
+    llvm.store %one, %failed : i64, !llvm.ptr
+    cf.br ^exit
+  ^start:
+    %scalesOffset = func.call @strict_device_data(%inputCount, %eight) : (i64, i64) -> i64
+    %inputScales = llvm.getelementptr %input[%scalesOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %firstData, %rowBits, %rowTotal = func.call @strict_device_row(%rowsData, %rowFirst) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
+    %rowsWord = llvm.load %rowsData : !llvm.ptr -> i64
+    %lowHalf = arith.constant 4294967295 : i64
+    %stride = arith.andi %rowsWord, %lowHalf : i64
+    %stages = arith.shrui %columns, %six : i64
+    %lastStage = arith.subi %stages, %one : i64
+    %warpRowIndex = arith.andi %warp, %c1 : i32
+    %warpTokenIndex = arith.shrui %warp, %c1 : i32
+    %warpRow = arith.shli %warpRowIndex, %c6 : i32
+    %warpToken = arith.shli %warpTokenIndex, %c5 : i32
+    %firstWords, %firstScales = func.call @strict_device_eights_fetch(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %inputScales, %width, %tokenFirst, %tokenLast, %none, %thread) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i32) -> (vector<16xi32>, vector<2xf32>)
+    func.call @strict_device_eights_put(%firstWords, %firstScales, %c0, %thread) : (vector<16xi32>, vector<2xf32>, i32, i32) -> ()
+    func.call @strict_device_barrier() : () -> ()
+    cf.br ^stage(%none, %zeros : i64, vector<64xf32>)
+  ^stage(%stage: i64, %sums: vector<64xf32>):
+    %moreStages = arith.cmpi slt, %stage, %stages : i64
+    cf.cond_br %moreStages, ^compute, ^written
+  ^compute:
+    %nextStage = arith.addi %stage, %one : i64
+    %fetchedStage = arith.minsi %nextStage, %lastStage : i64
+    %nextWords, %nextScales = func.call @strict_device_eights_fetch(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %inputScales, %width, %tokenFirst, %tokenLast, %fetchedStage, %thread) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i32) -> (vector<16xi32>, vector<2xf32>)
+    %stageParity = arith.andi %stage, %one : i64
+    %buffer = arith.trunci %stageParity : i64 to i32
+    %firstSub = func.call @strict_device_eights_sub(%sums, %buffer, %c0, %warpRow, %warpToken, %lane) : (vector<64xf32>, i32, i32, i32, i32, i32) -> vector<64xf32>
+    %bothSubs = func.call @strict_device_eights_sub(%firstSub, %buffer, %c1, %warpRow, %warpToken, %lane) : (vector<64xf32>, i32, i32, i32, i32, i32) -> vector<64xf32>
+    %hasNext = arith.cmpi slt, %nextStage, %stages : i64
+    cf.cond_br %hasNext, ^put, ^stage(%nextStage, %bothSubs : i64, vector<64xf32>)
+  ^put:
+    %otherBuffer = arith.xori %buffer, %c1 : i32
+    func.call @strict_device_eights_put(%nextWords, %nextScales, %otherBuffer, %thread) : (vector<16xi32>, vector<2xf32>, i32, i32) -> ()
+    func.call @strict_device_barrier() : () -> ()
+    cf.br ^stage(%nextStage, %bothSubs : i64, vector<64xf32>)
+  ^written:
+    %group = arith.shrui %lane, %c2 : i32
+    %quad = arith.andi %lane, %c3 : i32
+    %pairToken = arith.shli %quad, %c1 : i32
+    cf.br ^write(%c0 : i32)
+  ^write(%slot: i32):
+    %moreSlots = arith.cmpi slt, %slot, %c64 : i32
+    cf.cond_br %moreSlots, ^writeBody, ^exit
+  ^writeBody:
+    %rowTileIndex = arith.shrui %slot, %c4 : i32
+    %slotPair = arith.shrui %slot, %c2 : i32
+    %tokenTileIndex = arith.andi %slotPair, %c3 : i32
+    %element = arith.andi %slot, %c3 : i32
+    %lowerHalf = arith.shrui %element, %c1 : i32
+    %oddToken = arith.andi %element, %c1 : i32
+    %tileRows = arith.shli %rowTileIndex, %c4 : i32
+    %lowerRows = arith.shli %lowerHalf, %c3 : i32
+    %warpTileRow = arith.addi %warpRow, %tileRows : i32
+    %groupRow = arith.addi %warpTileRow, %group : i32
+    %rowLocal = arith.addi %groupRow, %lowerRows : i32
+    %tileTokens = arith.shli %tokenTileIndex, %c3 : i32
+    %warpTileToken = arith.addi %warpToken, %tileTokens : i32
+    %pairTokenLocal = arith.addi %warpTileToken, %pairToken : i32
+    %tokenLocal = arith.addi %pairTokenLocal, %oddToken : i32
+    %rowLocal64 = arith.extui %rowLocal : i32 to i64
+    %tokenLocal64 = arith.extui %tokenLocal : i32 to i64
+    %row = arith.addi %rowFirst, %rowLocal64 : i64
+    %token = arith.addi %tokenFirst, %tokenLocal64 : i64
+    %rowUsed = arith.cmpi sle, %row, %rowLast : i64
+    %tokenUsed = arith.cmpi sle, %token, %tokenLast : i64
+    %writing = arith.andi %rowUsed, %tokenUsed : i1
+    cf.cond_br %writing, ^store, ^writeNext
+  ^store:
+    %value = llvm.extractelement %sums[%slot : i32] : vector<64xf32>
+    %tokenStart = arith.muli %token, %rows : i64
+    %resultIndex = arith.addi %tokenStart, %row : i64
+    func.call @strict_device_tokens_store(%result, %wide, %resultIndex, %value, %row, %rows, %biases, %biasesCount, %biasesBits) : (!llvm.ptr, i1, i64, f32, i64, i64, !llvm.ptr, i64, i64) -> ()
+    cf.br ^writeNext
+  ^writeNext:
+    %slotNext = arith.addi %slot, %c1 : i32
+    llvm.br ^write(%slotNext : i32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^exit:
+    return
+  }
+  llvm.func @strict_device_eights(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
+    %wide = llvm.mlir.constant(true) : i1
+    func.call @strict_device_eights_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64) -> ()
+    llvm.return
+  }
+  llvm.func @strict_device_eightss(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
+    %wide = llvm.mlir.constant(false) : i1
+    func.call @strict_device_eights_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64) -> ()
+    llvm.return
+  }
   llvm.func @strict_device_tiles(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 512, 1, 1>, nvvm.minctasm = 1 : i32} {
     %wide = llvm.mlir.constant(true) : i1
     func.call @strict_device_tiles_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits, %bases, %basesCount, %basesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64) -> ()
